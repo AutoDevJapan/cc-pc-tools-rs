@@ -1,5 +1,35 @@
 # Linux runner and the Windows Cargo gate
 
+## Bounded additional capacity (ToDo3122)
+
+The default compiled profile remains `primary`; its names, labels, finite mode,
+admission and resident lifecycle are unchanged. Build both Windows host and
+Linux guest with `-ldflags '-X main.normalBuildProfile=burst-3122'` for the single
+additional slot. Its container/image are `todo3122-linux-capacity[:local]`, runner
+name is `cc-pc-tools-linux-3122`, and bridge port is 17862. It retains the existing
+`cc-pc-tools-linux` label to accept already queued jobs without redispatch.
+The fixed build profile cannot be selected by a job's environment.
+
+The additional slot uses official ephemeral registration without `--replace`,
+the normal current-head hook and the same Cargo gate. Its supervisor runs one
+`--once` session, drains it and reclaims only its owned scratch, then both guest
+and host exit. A host exit is not proof that the GitHub job passed.
+
+`bridge.exe pool <this-worktree>/.ci-work/target` supplies at most one such host
+at a time, at most 16 per invocation, with a two-hour admission window. Before
+each one it reads current same-repository queued jobs and fresh Windows/VM
+capacity. Windows must have at least 24 GiB free, commit below 85%, CPU below
+75%, and 30 GiB free on each of C/D; the Docker VM must have 9 GiB available.
+The additional container is separately capped at 4 CPUs, 8 GiB and 1024 PIDs.
+Use the existing hidden S4U/Limited Task Scheduler management pattern, IgnoreNew,
+and a five-minute recurrence to recheck remaining work. The pool holds loopback
+port 17863 to reject duplicate managers before registration. It stops when the
+queue drains or admission fails, never interrupts an active job to meet its
+admission deadline, and records its stage in `.ci-runtime/pool-status.private.json`.
+`bridge.exe queue` returns the observed eligible count and oldest UTC queue age.
+Keep this supporting worktree/runtime while the task uses it; remove only owned
+test resources after verification. Reboot recovery is not claimed.
+
 The bridge keeps ToDo2511's finite mode available and adds a resident mode for
 ordinary `AutoDevJapan/cc-pc-tools-rs` CI. The finite invocation still requires
 one fixed revision and its approved task branch, uses port 17851 and the

@@ -32,3 +32,20 @@ GitHubの日時はUTCの元文字列を保持する。PowerShellはConvertFrom-J
 
 一次資料: [GitHubのrunner割当](https://docs.github.com/en/actions/reference/runners/self-hosted-runners)。
 同じlabelsを持つonline/idle runnerが割当対象であり、1台のrunnerは同時に1jobを実行する。
+
+## 有限の再供給
+
+既存bridgeの`pool TARGET`入口を、Windowsの同じ定期タスク管理方式で実行する。
+1回のpoolは最大16回、入場する時間は2時間まで。1回ずつ本物のephemeral jobの
+終了と排出を待ち、次の現在headの未割当キューと資源を再取得する。成功済みjobを
+再実行する操作はない。原検査の成功はGitHubの個別job APIで別に確認する。
+
+hostは空きRAM24GiB以上（追加8GiBを使っても16GiB残す）、commit85%未満、
+CPU75%未満、C/D各30GiB以上を要求する。Docker VMは空き9GiB以上を要求し、
+追加8GiBと残り1GiBを確保する。不明/不足/API失敗時はその回を終了する。
+タスクのIgnoreNewとpool専用loopback portの保持で管理処理の重複を防ぐ。
+子hostも独立portを保持してから登録する。追加profileは`--replace`を使わない。
+
+タスクの反復は5分ごとに同じ入口だけを起動する。待機がなければ登録せず終了する。
+PCのOS再起動/ログオン後の復帰は未検証のままとし、実検証なしに保証しない。
+追加containerはこの管理が使う継続資源と、検査終了後に回収する資源を区別する。

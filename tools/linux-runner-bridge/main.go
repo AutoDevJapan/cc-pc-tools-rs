@@ -1035,7 +1035,9 @@ func register() int {
 	if strings.TrimSpace(ephemeral) == "true" {
 		cargs = append(cargs, "--ephemeral", "--disableupdate")
 	}
-	cargs = append(cargs, "--replace")
+	if !compiledNormalProfile.ephemeral {
+		cargs = append(cargs, "--replace")
+	}
 	_ = os.Remove(filepath.Join(os.TempDir(), "runner-config-summary.json"))
 	c := exec.Command("/runner/config.sh", cargs...)
 	c.Dir = "/runner"
@@ -1087,6 +1089,15 @@ func main() {
 		os.Exit(1)
 	}
 	switch args[0] {
+	case "queue":
+		snapshot, err := currentQueue(runnerAPI, time.Now().UTC())
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		_ = json.NewEncoder(os.Stdout).Encode(snapshot)
+	case "pool":
+		os.Exit(burstPoolMain(args[1:]))
 	case "host":
 		os.Exit(hostMain(args[1:]))
 	case "execute":

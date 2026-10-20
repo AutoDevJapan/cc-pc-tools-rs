@@ -1,0 +1,120 @@
+package main
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"strings"
+	"testing"
+	"time"
+)
+
+func TestQueueCountsOnlyUnassignedCurrentSameRepoLinuxJobs(t *testing.T) {
+	now := time.Date(2026, 10, 20, 14, 13, 52, 0, time.UTC)
+	head := strings.Repeat("a", 40)
+	old := strings.Repeat("b", 40)
+	api := func(path string, out any) error {
+		var body string
+		switch {
+		case strings.Contains(path, "/actions/runs?status="):
+			body = fmt.Sprintf(`{"total_count":3,"workflow_runs":[{"id":1,"head_sha":%q,"head_branch":"current","event":"pull_request","head_repository":{"full_name":%q}},{"id":2,"head_sha":%q,"head_branch":"current","event":"pull_request","head_repository":{"full_name":%q}},{"id":3,"head_sha":%q,"head_branch":"current","event":"pull_request","head_repository":{"full_name":"external/fork"}}]}`, head, repo, old, repo, head)
+		case strings.Contains(path, "/git/ref/heads/current"):
+			body = fmt.Sprintf(`{"object":{"sha":%q}}`, head)
+		case strings.Contains(path, "/actions/runs/1/jobs?"):
+			body = `{"total_count":4,"jobs":[{"id":10,"status":"queued","runner_id":0,"created_at":"2026-10-20T12:45:46Z","labels":["self-hosted","Linux","X64","cc-pc-tools-linux"]},{"id":11,"status":"completed","runner_id":27,"labels":["self-hosted","Linux","X64","cc-pc-tools-linux"]},{"id":12,"status":"queued","runner_id":0,"labels":["self-hosted","Windows","X64","cc-pc-tools-windows"]},{"id":13,"status":"queued","runner_id":27,"labels":["self-hosted","Linux","X64","cc-pc-tools-linux"]}]}`
+		default:
+			t.Fatalf("unexpected source request: %s", path)
+		}
+		return json.Unmarshal([]byte(body), out)
+	}
+	q, err := currentQueue(api, now)
+	if err != nil || q.Queued != 1 || q.OldestSecs != 5286 {
+		t.Fatalf("queue and UTC age differ: %+v %v", q, err)
+	}
+}
+
+func TestBurstPoolResuppliesAfterEachRealHostExit(t *testing.T) {
+	now := time.Now()
+	remaining, active, started, admitted := 3, 0, 0, 0
+	var stages []string
+	code := supplyBurstPool(burstPoolDeps{
+		now: func() time.Time { return now },
+		queue: func() (queueSnapshot, error) {
+			if active != 0 {
+				t.Fatal("queried next supply before the prior host drained")
+			}
+			return queueSnapshot{Queued: remaining}, nil
+		},
+		capacity: func() error { admitted++; return nil },
+		run: func() int {
+			active++
+			started++
+			remaining--
+			now = now.Add(time.Minute)
+			active--
+			return 0
+		},
+		record: func(stage string, _ int, _ queueSnapshot) { stages = append(stages, stage) },
+	})
+	if code != 0 || started != 3 || admitted != 3 || remaining != 0 || stages[len(stages)-1] != "queue-drained" {
+		t.Fatalf("finite resupply did not drain the queue: code=%d started=%d admitted=%d remaining=%d stages=%v", code, started, admitted, remaining, stages)
+	}
+}
+
+func TestBurstPoolDoesNotStartWithoutFreshCapacityOrAfterDeadline(t *testing.T) {
+	for _, test := range []string{"resource", "deadline", "metadata", "host-error", "limit"} {
+		t.Run(test, func(t *testing.T) {
+			now := time.Now()
+			started := 0
+			d := burstPoolDeps{
+				now: func() time.Time { return now },
+				queue: func() (queueSnapshot, error) {
+					if test == "metadata" {
+						return queueSnapshot{}, errors.New("unavailable")
+					}
+					return queueSnapshot{Queued: 100}, nil
+				},
+				capacity: func() error {
+					if test == "resource" {
+						return errors.New("busy")
+					}
+					if test == "deadline" {
+						now = now.Add(burstPoolWindow)
+					}
+					return nil
+				},
+				run: func() int {
+					started++
+					if test == "host-error" {
+						return 7
+					}
+					return 0
+				},
+				record: func(string, int, queueSnapshot) {},
+			}
+			code := supplyBurstPool(d)
+			if test == "limit" {
+				if code != 0 || started != burstPoolLimit {
+					t.Fatal("finite pool limit not enforced")
+				}
+			} else if test == "host-error" {
+				if code != 7 || started != 1 {
+					t.Fatal("failed host was repeated")
+				}
+			} else if started != 0 {
+				t.Fatal("runner started without admission")
+			}
+		})
+	}
+}
+
+func TestBurstVMCapacityKeepsReserve(t *testing.T) {
+	for _, data := range []string{"", "MemAvailable: 8388608 kB", "MemAvailable: 9437183 kB", "MemAvailable: bad kB"} {
+		if burstVMCapacity(data) == nil {
+			t.Fatalf("insufficient or unknown capacity admitted: %q", data)
+		}
+	}
+	if err := burstVMCapacity("MemAvailable: 9437184 kB\n"); err != nil {
+		t.Fatal(err)
+	}
+}

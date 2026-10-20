@@ -1,0 +1,9 @@
+{
+  "stage": "pre-test archive verification",
+  "cargo_started": false,
+  "path": "tools/codex-progress-tui/activation/codex.cmd",
+  "blob_sha256": "75f91be497de0715a44cce14081f2b57e441161cece7c8d29ef837e3a33bd086",
+  "initial_extracted_sha256": "5a9e168dbdd7319fe497901deb0b0f5e07184085062a721ef7b02540051f3ad3",
+  "reason": "Tracked eol=crlf attribute overrides core.autocrlf=false/core.eol=lf in git archive",
+  "remedy": "Attribute overrides from the original cwd still produced 3222 bytes. A focused archive from the temporary attribute cwd with explicit --git-dir/--work-tree produced the exact 3146 bytes. Use that cwd for both complete archives and compare all blob hashes. No Cargo test has run."
+}

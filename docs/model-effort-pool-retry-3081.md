@@ -49,12 +49,14 @@ private IDとメールはCLI応答のメモリ内での照合にだけ使い、j
   cc-job-policyのmodel_effortは0合格/1失敗（effort実high、期待max）。
   cc-jobsのmodel_effortは1合格/1失敗（Fastの明示引数が欠落）。実終了コードはいずれも100。
   コンパイルエラーをRedへ読み替えていない。後続assertの未到達も実行済みと数えない。
-- pool再試行の実装前受入commitはbb7cb6b。実Red/Greenはこれから確認する。
+- pool再試行の実装前受入commitはbb7cb6b。検査3087で実Sonnet/期待Solによる実Redを確認した。
+- 871e184の関連36件は35合格/1失敗。親と除外情報がないレビューの候補を返す失敗を修正した。
+  この候補の全体Green、4crate全体検査、doctestは未確認。
 - 本実装担当のnative turn_contextはSol/maxを確認。これは新しい実行ファイルの確認ではない。
 - 本担当の要求ログはrequested/served Sol、requested effort max、要求tier priority。
   response tierはdefaultでauthoritative=false、Fastのconfirmationはassumed。
   実upstream Fastとactual effortは未確認。
-- 正式CI、別モデルレビュー、マージ、配布は未実施。
+- 正式CI、マージ、配布は未実施。別モデルレビューは3088で実行中、結果未受領。
 
 ### 既存OAuthによる限定した実要求
 
@@ -69,6 +71,8 @@ private IDとメールはCLI応答のメモリ内での照合にだけ使い、j
   providerメタデータにactual effortは無い。SolのFastはconfirmation=assumedのまま未確認。
 - 追加のspec/検査対応: 関連検査3087、別モデル読取3088。両方の固定候補は871e184。
   その後の待機中の世代照合と観察時刻、文書・exampleの修正は追加差分として検査・レビューする。
+- account selectorが非表示でも元モデルの能力と文脈長を保つため、job専用catalogへnative metadataを渡す。
+  global catalogとpickerは変えない。追加検査3091が比較用Red 0e48665とGreen 6b6e7d9を確認する。
 
 要求本文、応答本文、秘密情報を受入記録へ残さず、モデル・公開selector・HTTP終端・effort/tier要求だけを保持した。
 公開adapterの根拠: [Anthropic adapter](https://github.com/lidge-jun/opencodex/blob/v2.83.0/src/adapters/anthropic.ts)。

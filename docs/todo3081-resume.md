@@ -19,8 +19,12 @@ Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/277 。まだ完了
 
 1. 検査3083は固定c4eea9aの実Redを完了。
    policyはhigh/期待maxで失敗。jobsはFast引数なしで失敗。明示model/effort保持は合格。
-2. 検査3087は固定bb7cb6bのpool Redと固定871e184の関連Greenを担当。
-   最後の観測時は実行中。結果と固定HEAD、終了コード、原ログを回収する。
+2. 検査3087は完了。bb7cb6bのpool Redは実Sonnet/期待Solでexit100。
+   871e184はmodel_effort/pool_retryが8/8合格、parityの関連28件は27合格/1失敗。
+   失敗はcapacity_preserves_scope_wait_and_review_constraintsで、親も除外情報もないレビューに候補を返した点。
+   f4b026d以降の早期returnで修正したが、再実行結果はまだ無い。
+   完全ログは検査3087のdocs/evidence/todo-3087-cargo-check。
+   4crate全体とdoctestは、関連検査の失敗により未実行だった。
 3. 別モデル読取3088はc8d71fb..871e184を担当。最後の観測時は実行中。
    native turn_contextでanthropic/claude-opus-5-5 / maxを確認した。
    検査3087もnative Sol/maxを確認した。どちらも結果未受領。
@@ -37,10 +41,14 @@ Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/277 。まだ完了
    response authoritative=false / confirmation=assumedだった。
 7. この担当ではCargo/GPUを起動していない。rustfmtの構文確認とgit diff --checkだけ実行した。
    正式CI・PR・マージ・release build・配布はまだ行っていない。
+8. 追加検査3091を登録した。native metadata用のRed専用commitは0e48665f2aabb5c6d28c7cc13fbd4f9ad80a56d0。
+   これは871e184へfixture/parityの2ファイルだけを載せた比較用refで、作業ブランチを切り替えず別indexから作った。
+   3091はこのRedと、Green候補6b6e7d9を固定して検査する。catalogと実process fixture、
+   4crateの関連検査・doctest・変更exampleのコンパイルを含む。登録を検証成功とは数えない。
 
 ## 次の工程
 
-- 3087/3088の結果を、元の固定HEAD・実モデル・原ログと照合する。
+- 3091/3088の結果を、元の固定HEAD・実モデル・原ログと照合する。3087の結果は受領済み。
 - 実害のある指摘とコンパイル/検査失敗を直す。871e184以降の差分も含めて関連検査を行い、
   追加差分とMust修正を別モデルへ確認する。重いCargoは割当のある正規ToDoへ登録する。
 - 新しいcatalog処理は本体とfixtureの経路を検査する。通常テストではAIを呼ばない。

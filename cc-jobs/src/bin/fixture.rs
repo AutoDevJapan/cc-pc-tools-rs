@@ -61,10 +61,10 @@ fn main() {
     if args.iter().any(|a| a == "catalog") {
         println!(
             "{}",
-            json!({"models":["gpt-6.1-sol","gpt-6-luna"].map(|slug|json!({
+            json!({"models":(["gpt-6.1-sol","gpt-6-luna"].map(|slug|json!({
                 "slug":slug,"context_window":1000000,"supports_reasoning_summaries":true,
                 "supported_reasoning_levels":[{"effort":"max"}],"base_instructions":"fixture"
-            }))})
+            })))})
         );
         return;
     }

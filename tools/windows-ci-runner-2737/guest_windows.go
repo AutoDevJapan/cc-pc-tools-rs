@@ -30,6 +30,7 @@ const hookRoot = sdkRoot + `\runner-hooks`
 const planPath = agentRoot + `\runner-seed.json`
 const helperPath = agentRoot + `\windows-ci-runner-agent.exe`
 const stockArchive = agentRoot + `\actions-runner-win-x64-2.338.0.zip`
+const proofTempRoot = sdkRoot + `\private\source-proof`
 
 func readBounded(path string, max int) ([]byte, error) {
 	f, e := os.Open(path)
@@ -90,6 +91,11 @@ func (o *windowsOps) prepare(ctx context.Context, p sourcepacket.Packet) (source
 	if e != nil {
 		return sourcepacket.Receipt{}, e
 	}
+	// The retained SDK's private parent is SYSTEM-only. Refuse an existing
+	// entry rather than following a stale directory/link or changing its ACL.
+	if e = os.Mkdir(proofTempRoot, 0700); e != nil {
+		return sourcepacket.Receipt{}, errors.New("private proof temp not fresh")
+	}
 	// This process is the single-use service, no other work runs in it.
 	os.Clearenv()
 	for _, entry := range o.env {
@@ -130,6 +136,10 @@ func fixedEnvironment(p Plan) ([]string, error) {
 	if e != nil {
 		return nil, e
 	}
+	return fixedEnvironmentValues(p, sccache), nil
+}
+
+func fixedEnvironmentValues(p Plan, sccache string) []string {
 	env := []string{
 		`SystemRoot=C:\Windows`, `WINDIR=C:\Windows`, `SystemDrive=C:`, `ComSpec=C:\Windows\System32\cmd.exe`,
 		`ProgramFiles=C:\Program Files`, `ProgramFiles(x86)=C:\Program Files (x86)`, `ProgramData=C:\ProgramData`,
@@ -137,14 +147,29 @@ func fixedEnvironment(p Plan) ([]string, error) {
 		`PATH=` + fixedServicePath(sccache),
 		`USERPROFILE=` + sdkRoot + `\service-profile`, `HOME=` + sdkRoot + `\service-profile`,
 		`APPDATA=` + sdkRoot + `\service-profile\AppData\Roaming`, `LOCALAPPDATA=` + sdkRoot + `\service-profile\AppData\Local`,
-		`TEMP=` + sdkRoot + `\staging`, `TMP=` + sdkRoot + `\staging`,
+		`TEMP=` + proofTempRoot, `TMP=` + proofTempRoot, `SystemTemp=` + proofTempRoot,
 		`CARGO_HOME=` + sdkRoot + `\cargo-home`, `RUSTUP_HOME=` + sdkRoot + `\rustup-home`,
 		`CARGO_TARGET_DIR=` + sdkRoot + `\target`, `CARGO_BUILD_JOBS=` + strconv.Itoa(p.Jobs), `RUST_TEST_THREADS=` + strconv.Itoa(p.Threads),
 		`SCCACHE_DIR=` + sdkRoot + `\sccache-cache`, `SCCACHE_CACHE_SIZE=30G`, `RUSTC_WRAPPER=` + sccache,
 		`GIT_CONFIG_NOSYSTEM=1`, `GIT_CONFIG_GLOBAL=NUL`, `GIT_TERMINAL_PROMPT=0`,
 		`RUNNER_LOGSIZE=1`, `WORKER_LOGSIZE=1`,
 	}
-	return env, nil
+	return env
+}
+
+// Service-global TEMP/TMP (including Windows GetTempPath2's SYSTEM override)
+// stay private throughout the session. Only the unprivileged child gets the
+// writable staging directory; never install this environment in the service.
+func runnerEnvironment(service []string) []string {
+	env := make([]string, 0, len(service))
+	for _, entry := range service {
+		key, _, _ := strings.Cut(entry, "=")
+		if strings.EqualFold(key, "TEMP") || strings.EqualFold(key, "TMP") || strings.EqualFold(key, "SystemTemp") {
+			continue
+		}
+		env = append(env, entry)
+	}
+	return append(env, `TEMP=`+sdkRoot+`\staging`, `TMP=`+sdkRoot+`\staging`)
 }
 
 func fixedServicePath(sccache string) string {
@@ -185,7 +210,7 @@ func (o *windowsOps) configure(ctx context.Context, token []byte) error {
 	defer cancel()
 	// Stock CommandSettings consumes and removes this secret environment input.
 	// Neither the process command line nor our log files contain the token.
-	env := append(append([]string(nil), o.env...), "ACTIONS_RUNNER_INPUT_TOKEN="+string(token))
+	env := append(runnerEnvironment(o.env), "ACTIONS_RUNNER_INPUT_TOKEN="+string(token))
 	line := `"C:\Windows\System32\cmd.exe" /d /s /c ""` + runnerRoot + `\config.cmd" --unattended --ephemeral --no-default-labels --disableupdate --url https://github.com/` + Repository + ` --name ` + o.plan.Name + ` --labels ` + o.plan.Label + ` --work _work"`
 	r := withDiagnosticBound(ctx, func(ctx context.Context) processResult {
 		return runRunnerTree(ctx, `C:\Windows\System32\cmd.exe`, line, runnerRoot, env, "", o.runnerToken)
@@ -203,7 +228,7 @@ func (o *windowsOps) listen(ctx context.Context, id int64) <-chan processResult 
 	go func() {
 		ctx, cancel := context.WithTimeout(ctx, 23*time.Minute)
 		defer cancel()
-		env := append(append([]string(nil), o.env...), "CC2737_HOOK_ENDPOINT="+o.listener.Addr().String(), "CC2737_HOOK_CAPABILITY="+o.capability,
+		env := append(runnerEnvironment(o.env), "CC2737_HOOK_ENDPOINT="+o.listener.Addr().String(), "CC2737_HOOK_CAPABILITY="+o.capability,
 			"ACTIONS_RUNNER_HOOK_JOB_STARTED="+hookRoot+`\start.ps1`, "ACTIONS_RUNNER_HOOK_JOB_COMPLETED="+hookRoot+`\complete.ps1`)
 		// The original workflow's thirteen Cargo commands/profile/serial flags
 		// execute in the stock runner. This is SDK setup, never a workflow rewrite.

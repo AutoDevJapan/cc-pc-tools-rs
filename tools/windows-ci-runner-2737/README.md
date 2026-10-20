@@ -25,6 +25,22 @@ receive no runner grant. The verified checkout is owned by its actual executor,
 without adding `safe.directory`; the SYSTEM source auditor still reads anchored
 bytes and runs Git only against its own private metadata snapshot.
 
+Review 3123 found that the service's former staging-based temporary environment
+could place those snapshots in a worker-writable directory. The service now
+creates a fresh `private\source-proof` directory under the retained SYSTEM-only
+private parent before any source preparation. Its process-global `TMP`, `TEMP`
+and `SystemTemp` remain there for the whole session. Configuration/listening
+receive a separate copied environment with staging-based `TMP`/`TEMP` and no
+`SystemTemp`; clearing child inputs cannot mutate the service environment.
+An existing proof-temp entry is rejected. No runner grant includes that path or
+its private parent. Real synthetic materialization and repeated Git proof pass
+even with an unusable worker temp, and a child-process fixture confirms that
+the worker temp selection does not change the parent's proof temp. These are
+host synthetic checks, not actual LocalService/guest ACL acceptance.
+
+The SYSTEM-specific variable follows [GetTempPath2's documented SystemTemp
+override and ACL requirement](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettemppath2w).
+
 Related Windows race tests and vet pass for this module and its controller.
 Returning the launcher to inherited identity makes the new denial regression
 fail; it is a mutation check of that former behavior. Actual LocalService

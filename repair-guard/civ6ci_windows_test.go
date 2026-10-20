@@ -17,8 +17,14 @@ func civ6Fixture(t *testing.T) (civ6Access, *civ6Deployment, func()) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// CI runs as a dedicated service account. Pin the fixture's actual creator,
+	// while production keeps civ6Owner from the embedded reviewed contract.
+	creator, err := resourceIdentity(base, true)
+	if err != nil || creator.Owner == "" {
+		t.Fatalf("fixture owner unavailable: %v", err)
+	}
 	a := civ6Access{home: filepath.Join(base, "runtime"), receipt: filepath.Join(base, "source-receipt.json"),
-		owner: civ6Owner, notBefore: 1, at: civ6Filetime(time.Now()),
+		owner: creator.Owner, notBefore: 1, at: civ6Filetime(time.Now()),
 		ancestor:  func(a, b string) bool { return a == b },
 		protected: func(string) bool { return false }, qualified: func() (string, bool) { return civ6Floor, true },
 		identity: func(p string) (audio2906Metadata, error) { return resourceIdentity(p, true) },
@@ -351,6 +357,55 @@ func TestCiv6GitEnvironmentCannotRedirectSource(t *testing.T) {
 	got := civ6GitEnvironment([]string{"PATH=keep", "GIT_DIR=other", "git_work_tree=other", "GIT_CONFIG_COUNT=2", "GIT_CONFIG_KEY_0=remote.origin.url"})
 	if len(got) != 1 || got[0] != "PATH=keep" {
 		t.Fatal("Git override retained")
+	}
+}
+
+func TestCiv6SourceIsAnExactGitRootAndCannotDiscoverAncestorRepository(t *testing.T) {
+	root, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	currentFixtureGit(t, root, "init", "-q")
+	if !civ6GitRoot(root) {
+		t.Fatal("exact repository rejected")
+	}
+	child := filepath.Join(root, "not-a-repository")
+	if err := os.Mkdir(child, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if civ6GitRoot(child) {
+		t.Fatal("ancestor repository qualified an unrelated child directory")
+	}
+}
+
+func TestCiv6IndependentOwnerChecksAndClockFailClosed(t *testing.T) {
+	a, r, save := civ6Fixture(t)
+	civ6MakeRoot(t, a, r)
+	p := filepath.Join(a.home, "civ6-ci-queue.exe")
+	if err := os.WriteFile(p, []byte("binary"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	r.Objects[filepath.Base(p)] = civ6Record(t, p)
+	save()
+	if !civ6Allowed(p, a) {
+		t.Fatal("initial owner fixture rejected")
+	}
+	for _, target := range []string{p, a.receipt} {
+		b := a
+		b.identity = func(path string) (audio2906Metadata, error) {
+			m, e := a.identity(path)
+			if same(path, target) {
+				m.Owner = "different-owner"
+			}
+			return m, e
+		}
+		if civ6Allowed(p, b) {
+			t.Fatal("child or receipt owner mismatch accepted")
+		}
+	}
+	a.at = a.notBefore - 1
+	if civ6Allowed(p, a) {
+		t.Fatal("before-contract clock accepted")
 	}
 }
 

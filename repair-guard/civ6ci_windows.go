@@ -35,6 +35,7 @@ var civ6Key = regexp.MustCompile(`^[1-9][0-9]{0,17}-[1-9][0-9]{0,3}-[1-9][0-9]{0
 var civ6Cache = regexp.MustCompile(`^(?:[0-9a-f]{64}\.json|\.c-[0-9]{1,20}\.tmp)$`)
 var civ6LedgerTemp = regexp.MustCompile(`^\.ledger-[0-9]{1,20}\.tmp$`)
 var civ6ResultTemp = regexp.MustCompile(`^\.r-[0-9]{1,20}\.tmp$`)
+var civ6Commit = regexp.MustCompile(`^[0-9a-f]{40}$`)
 
 // State is restricted to queue-generated names, never an arbitrary subtree.
 // Existing state still requires an independently saved identity entry below.
@@ -139,12 +140,16 @@ func civ6GitAt(root string, args ...string) ([]byte, error) {
 }
 
 func civ6Ancestor(older, newer string) bool {
-	valid := regexp.MustCompile(`^[0-9a-f]{40}$`)
-	if !valid.MatchString(older) || !valid.MatchString(newer) {
+	if !civ6Commit.MatchString(older) || !civ6Commit.MatchString(newer) {
 		return false
 	}
 	_, err := civ6Git("merge-base", "--is-ancestor", older, newer)
 	return err == nil
+}
+
+func civ6GitRoot(root string) bool {
+	b, err := civ6GitAt(root, "rev-parse", "--show-toplevel")
+	return err == nil && same(strings.TrimSpace(string(b)), root) && conversationPhysical(root)
 }
 
 func civ6SourceHead() (string, bool) {
@@ -152,6 +157,9 @@ func civ6SourceHead() (string, bool) {
 		return "", false
 	}
 	for _, root := range []string{base, civ6Source} {
+		if !civ6GitRoot(root) {
+			return "", false
+		}
 		b, err := civ6GitAt(root, "remote", "get-url", "origin")
 		origin := strings.ToLower(strings.TrimSpace(string(b)))
 		if err != nil || (origin != "https://github.com/autodevjapan/cc-pc-tools-rs.git" && origin != "https://github.com/autodevjapan/cc-pc-tools-rs" && origin != "git@github.com:autodevjapan/cc-pc-tools-rs.git") {
@@ -160,7 +168,7 @@ func civ6SourceHead() (string, bool) {
 	}
 	b, err := civ6Git("rev-parse", "HEAD")
 	head := strings.TrimSpace(string(b))
-	if err != nil || !regexp.MustCompile(`^[0-9a-f]{40}$`).MatchString(head) {
+	if err != nil || !civ6Commit.MatchString(head) {
 		return "", false
 	}
 	if !civ6Ancestor(civ6Floor, head) {
@@ -324,7 +332,7 @@ func civ6ReceiptKeys(m object) bool {
 		return false
 	}
 	for name, v := range obj(m["Objects"]) {
-		if _, valid := civ6Name(filepath.FromSlash(name)); !valid || !keys(obj(v), fields) {
+		if _, valid := civ6Name(filepath.FromSlash(name)); !valid || name == "." || strings.Contains(name, `\`) || filepath.ToSlash(filepath.Clean(filepath.FromSlash(name))) != name || !keys(obj(v), fields) {
 			return false
 		}
 	}

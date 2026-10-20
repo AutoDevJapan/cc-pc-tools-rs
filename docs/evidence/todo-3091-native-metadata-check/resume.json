@@ -1,0 +1,13 @@
+{
+  "todo": 3091,
+  "job": "20261020-193448-todo-3091",
+  "completed": [
+    "rules and guard",
+    "Red attempted at exact commit"
+  ],
+  "red_result": "compile error, exit 101, no tests started; not the expected specification Red",
+  "next": "checkpoint then pin Green and run selected tests",
+  "red": "0e48665f2aabb5c6d28c7cc13fbd4f9ad80a56d0",
+  "green": "6b6e7d941063cd3a6b1cdea50fe6f59d0b03aebd",
+  "source_changes_allowed": false
+}

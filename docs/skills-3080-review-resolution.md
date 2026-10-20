@@ -65,3 +65,10 @@ Kepano候補は3件15ファイル、最大入口2616bytes、bundle SHAbe842b7d3b
 3165はb570/旧Kepano bundle全文と固定原文、MIT、treeを確認しMust0。具体Suggestion1〜6を反映し、CLI引数/対象不足/上書き/stdin/batch/代替通常手段と出典の適用範囲を補った。v2 bundle SHA 1c9d347e347a315d9c315c1bec8142743c4cbf5624512ab161789bf2aaf7b516。原文3/MIT3は不変。実CLI・vaultは起動していない。
 3168は初回所有3名の実15 before SHAと提案15 after SHAを照合。Must1（source.jsonのCRLF）をLFへ修正し、指摘の期待SHA3/3に一致。意味内容はレビュー版と同一。反復指摘の説明2件とgrilling経路を更新する。独立レビューのSuggestion1〜5を実更新手順へ採用し、固定SHAと旧版保全を限定計画に記録。新規専用installerで既存を上書きしない。両方まだ実反映前の記録。
 3165のモデル指示はClaude Sonnet5.5/max、静的3正例6負例1turn。3168もSonnet5.5/max、実モデルtrace/OAuth経路はレビュー内部で未確認。新しい説明の実選択やcontext予算の測定ではない。残る全候補の完了ではない。
+
+## 2026-10-21: 配置と実検査の結果
+Kepano新3を固定v2で配置し15file読戻し成功。所有3件の9file更新も別の限定審査後に反映し、旧15を新規永続backupで保持。初回更新のnull引数エラーは置換0/9beforeで停止し、原因修正を所有tempで実証してから別の審査と別backupで成功した。新規専用installerやguardの条件を緩めていない。
+実3048検査は新3・更新3と現行25の全125fileで成功。fresh Codex skills/listは322metadata中、新3/更新3が各3found/enabled/description一致、parse0、同名別path0。モデルturnのcontext予算やCLI/app/vaultの実行は証明しない。3180へ最新6件と台帳の配置後限定確認を登録した。
+導入25/統合0/除外0/残73195=本文有72120+未取得428+拒否保持647。元3048新規4/改善10は別集合。残る候補に上限を設けず継続する。
+Tencentの7つのskill.md名ファイルも全本文/SHAを確認。内訳は4workflow/1stub/2guideで、7独立Skillと呼ばない。現行方針との具体的な衝突と有用な部分を採否前の表へ記録し、25supportは未読。実配置/統合/除外0。全5repoの本文読取64パスは全16資料73220記録の全意味監査を示さない。
+今回の親job metadataはgpt-6.1-sol/highを再確認した。本人指定max/Fastとの一致は確認できず、実測と指定を区別する。グローバル設定をこの資料作業から変更していない。

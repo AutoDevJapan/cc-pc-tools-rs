@@ -234,11 +234,11 @@
       "tree_complete": true,
       "skill_files": 7,
       "license_evidence": {
-        "identifier": null,
-        "path": null,
-        "sha256": null,
-        "scope": "individual rights review incomplete",
-        "checked_at": null
+        "identifier": "MIT",
+        "path": "LICENSE",
+        "sha256": "31154d9c1a8bd8d37b449bdbb8a04f9b4618e5d330b52b0fdb7c452414d75a41",
+        "scope": "Exact root notice and7selected skill-named bodies assessed;complete tree root notice only;support25unread,notblanketpermission",
+        "checked_at": "2026-10-20T19:05:55.3884829Z"
       }
     },
     {
@@ -374,5 +374,17 @@
     "policy_rewrite_candidates": 4,
     "installed": 0,
     "not_blanket_excluded": true
+  },
+  "full_source_body_read_coverage": {
+    "repos": 5,
+    "case_insensitive_skill_named_paths": 64,
+    "by_repo": {
+      "mattpocock": 38,
+      "docker": 12,
+      "cloudflare": 1,
+      "kepano": 6,
+      "tencent": 7
+    },
+    "limits": "Tencent7 includes2usage guides+1discovery stub+4workflows;not64standalone approved Skills; supporting resources incomplete"
   }
 }

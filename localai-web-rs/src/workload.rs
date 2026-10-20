@@ -1,13 +1,13 @@
 //! Incremental, local-only work accounting. Never reads credential files or tool arguments.
 use axum::{
+    Json,
     extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
-    Json,
 };
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs::{self, File},
@@ -17,6 +17,9 @@ use std::{
     sync::{Arc, RwLock},
     time::{Duration, Instant},
 };
+
+#[path = "workload_observation.rs"]
+mod observation;
 
 const DAY: i64 = 86_400_000;
 const JST: i64 = 9 * 3_600_000;
@@ -309,6 +312,7 @@ struct Cursor {
     last: Option<i64>,
     #[serde(skip_serializing_if = "zero_u64")]
     cumulative_tokens: u64,
+    cumulative_seen: bool,
     // Claude streams several records for one assistant message; retain only the largest usage.
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     message_tokens: BTreeMap<String, u64>,
@@ -467,6 +471,7 @@ pub struct Workload {
     sources: Sources,
     cache: RwLock<Cache>,
     phase: RwLock<String>,
+    observed: RwLock<observation::Ledger>,
 }
 impl Workload {
     pub fn production() -> Self {
@@ -509,6 +514,9 @@ impl Workload {
             _ => Cache::default(),
         };
         Self {
+            observed: RwLock::new(observation::Ledger::load(
+                &sources.cache.with_file_name("workload-observations.json"),
+            )),
             sources,
             cache: RwLock::new(cache),
             phase: RwLock::new(String::new()),
@@ -520,7 +528,11 @@ impl Workload {
             .ok()
             .is_none_or(|e| hash(&e.0.join("\n")) != c.exclusion_hash)
         {
-            return json!({"date":date,"collecting":true,"updated_at":null,"warnings":["除外設定の確認が終わるまで、集計を表示しません。"],"totals":Numbers::default(),"projects":[],"timeline":[],"history":[]});
+            return self
+                .observed
+                .read()
+                .unwrap_or_else(|e| e.into_inner())
+                .snapshot(date, Utc::now().timestamp_millis());
         }
         let projects = c.days.get(date).cloned().unwrap_or_default();
         let mut totals = Numbers::default();
@@ -591,6 +603,12 @@ pub async fn handle(
     if date_ms(&date).is_none() {
         return (StatusCode::BAD_REQUEST,Json(json!({"ok":false,"version":1,"error":{"code":"invalid_date","message":"日付はYYYY-MM-DDで指定してください。"}}))).into_response();
     }
+    state
+        .workload
+        .observed
+        .write()
+        .unwrap_or_else(|e| e.into_inner())
+        .observe(&state.operations.snapshot(), Utc::now().timestamp_millis());
     Json(json!({"ok":true,"version":1,"data":state.workload.snapshot(&date)})).into_response()
 }
 
@@ -670,6 +688,7 @@ fn session_record(cursor: &mut Cursor, v: &Value, earliest: i64, now: i64) {
     }
     if ms < earliest {
         if kind == "event_msg" && string(p, "type") == "token_count" {
+            cursor.cumulative_seen = true;
             cursor.cumulative_tokens = cursor
                 .cumulative_tokens
                 .max(number(&p["info"]["total_token_usage"], "total_tokens"));
@@ -703,7 +722,12 @@ fn session_record(cursor: &mut Cursor, v: &Value, earliest: i64, now: i64) {
     } else if kind == "event_msg" && string(p, "type") == "token_count" {
         let info = &p["info"];
         let total = number(&info["total_token_usage"], "total_tokens");
-        let delta = total.saturating_sub(cursor.cumulative_tokens);
+        let delta = if cursor.cumulative_seen || cursor.cumulative_tokens > 0 {
+            total.saturating_sub(cursor.cumulative_tokens)
+        } else {
+            number(&info["last_token_usage"], "total_tokens").min(total)
+        };
+        cursor.cumulative_seen = true;
         cursor.cumulative_tokens = cursor.cumulative_tokens.max(total);
         cursor.days.entry(d.clone()).or_default().tokens += delta;
     }
@@ -1369,18 +1393,20 @@ fn aggregate_progress(
     let todo = match cc_todo::read_store(&sources.todo) {
         Ok(todo) => todo,
         Err(error) => {
-            cache.warnings = vec![match error {
-                cc_todo::StoreError::TooLarge => {
-                    "共有ToDoが上限64MiBを超えています。集計を更新できません。"
+            cache.warnings = vec![
+                match error {
+                    cc_todo::StoreError::TooLarge => {
+                        "共有ToDoが上限64MiBを超えています。集計を更新できません。"
+                    }
+                    cc_todo::StoreError::InvalidJson(_) => {
+                        "共有ToDoのJSONが不正です。集計を更新できません。"
+                    }
+                    cc_todo::StoreError::Io(_) => {
+                        "共有ToDoを取得できませんでした。集計を更新できません。"
+                    }
                 }
-                cc_todo::StoreError::InvalidJson(_) => {
-                    "共有ToDoのJSONが不正です。集計を更新できません。"
-                }
-                cc_todo::StoreError::Io(_) => {
-                    "共有ToDoを取得できませんでした。集計を更新できません。"
-                }
-            }
-            .into()];
+                .into(),
+            ];
             return cache;
         }
     };
@@ -2310,7 +2336,31 @@ async fn persistence_worker(workload: Arc<Workload>) {
     }
 }
 
-pub async fn resident(workload: Arc<Workload>) {
+async fn observation_worker(
+    workload: Arc<Workload>,
+    operations: Arc<crate::operations::Operations>,
+) {
+    let mut tick = tokio::time::interval(Duration::from_secs(15));
+    tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    loop {
+        tick.tick().await;
+        let board = operations.snapshot();
+        let workload = workload.clone();
+        let _ = tokio::task::spawn_blocking(move || {
+            let mut ledger = workload.observed.write().unwrap_or_else(|e| e.into_inner());
+            ledger.observe(&board, Utc::now().timestamp_millis());
+            ledger.save(
+                &workload
+                    .sources
+                    .cache
+                    .with_file_name("workload-observations.json"),
+            );
+        })
+        .await;
+    }
+}
+pub async fn resident(workload: Arc<Workload>, operations: Arc<crate::operations::Operations>) {
+    tokio::spawn(observation_worker(workload.clone(), operations));
     tokio::spawn(repository_worker(workload.clone()));
     tokio::spawn(summary_worker(workload.clone()));
     tokio::spawn(persistence_worker(workload.clone()));

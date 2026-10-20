@@ -51,6 +51,10 @@ func TestRetiredPagesAreAbsent(t *testing.T) {
 	}
 }
 
+func TestCompiledPageScriptSyntax(t *testing.T) {
+	node(t, `for(const html of Object.values(input))for(const match of html.matchAll(/<script>([\s\S]*?)<\/script>/g))new vm.Script(match[1]);`)
+}
+
 func TestProgressNavigation(t *testing.T) {
 	node(t, `
 const nodes=new Map(['kanban','progress','systems','workload','music'].map(view=>[view,{id:'view-'+view,dataset:{view},attrs:{},active:false,classList:{toggle(_,on){this.node.active=on}},setAttribute(k,v){this.attrs[k]=v},removeAttribute(k){delete this.attrs[k]}}]));for(const n of nodes.values())n.classList.node=n;
@@ -76,7 +80,7 @@ assert.deepEqual(Array.from(ctx.processingRows(board,100),x=>x.worker.id),['todo
 func TestFetchesBelongToTheVisiblePage(t *testing.T) {
 	node(t, `
 let view='systems',calls=[];
-const ctx={document:{hidden:false},state:{},$:s=>s==='#view-systems'?{classList:{contains:()=>view==='systems'}}:null,publishConsoleSource(){},renderHealth(){},api:async(path)=>{calls.push(path);return{}},AbortController,setTimeout,clearTimeout};
+const ctx={document:{hidden:false},state:{},$:s=>s==='#view-systems'?{classList:{contains:()=>view==='systems'}}:{classList:{contains:()=>false}},publishConsoleSource(){},renderHealth(){},api:async(path)=>{calls.push(path);return{}},AbortController,setTimeout,clearTimeout};
 vm.createContext(ctx);vm.runInContext(line(input.index,'let refreshInFlight=')+'\n'+between(input.index,'async function refresh(){','function esc('),ctx);
 (async()=>{await ctx.refresh();assert.deepEqual(calls,['/api/health']);view='kanban';await ctx.refresh();assert.deepEqual(calls,['/api/health']);view='systems';ctx.document.hidden=true;await ctx.refresh();assert.equal(calls.length,1)})().catch(e=>{console.error(e);process.exitCode=1});
 `)

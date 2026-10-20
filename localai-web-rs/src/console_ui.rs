@@ -944,7 +944,7 @@ function production(start,end){const at=input.shell.indexOf(start);const stop=in
 const functions=production('    const array=value=>','    const waiting=')+
   production('    function sharedResponse(', '    function retrySource(')+
   production('    const short=value=>','    if(operationsView){');
-const run=new Function('assert','document','window','make','todoList','jobsHost','handoffHost','todoSearch','todoProject','todoStatus','jobsSearch','musicBusy','sources','receive','shared','operationsView','refreshAgents','fetch','input',
+const run=new Function('assert','document','window','make','todoList','jobsHost','handoffHost','todoSearch','todoProject','todoStatus','jobsSearch','musicBusy','sharedControllers','sources','receive','shared','operationsView','refreshAgents','fetch','input',
   'let sharedData={},sharedSignature={},pendingShared={},sharedComposing=false;'+functions+`
 return (async()=>{
   loadShared(); await new Promise(resolve=>setImmediate(resolve));
@@ -996,10 +996,10 @@ return (async()=>{
   assert.equal(sources.get('operations').error,'');
 })();`;
 (async()=>{
-  await run(assert,document,window,make,todoList,jobsHost,handoffHost,todoSearch,todoProject,todoStatus,jobsSearch,musicBusy,sources,receive,shared,operationsView,refreshAgents,fetch,input);
+  await run(assert,document,window,make,todoList,jobsHost,handoffHost,todoSearch,todoProject,todoStatus,jobsSearch,musicBusy,new Map(),sources,receive,shared,operationsView,refreshAgents,fetch,input);
   assert.deepEqual(calls.slice(0,3),['/api/agent/display/todo','/api/agent/display/jobs','/api/agent/display/handoff']);
-  const verify=new Function('assert','document','window','make','todoList','jobsHost','handoffHost','todoSearch','todoProject','todoStatus','jobsSearch','musicBusy','sources','receive','shared','operationsView','refreshAgents','fetch','input','setResponse','sharedData','sharedSignature','pendingShared','sharedComposing',checks);
-  await verify(assert,document,window,make,todoList,jobsHost,handoffHost,todoSearch,todoProject,todoStatus,jobsSearch,musicBusy,sources,receive,shared,operationsView,refreshAgents,fetch,input,value=>nextResponse=value,{}, {}, {}, false);
+  const verify=new Function('assert','document','window','make','todoList','jobsHost','handoffHost','todoSearch','todoProject','todoStatus','jobsSearch','musicBusy','sharedControllers','sources','receive','shared','operationsView','refreshAgents','fetch','input','setResponse','sharedData','sharedSignature','pendingShared','sharedComposing',checks);
+  await verify(assert,document,window,make,todoList,jobsHost,handoffHost,todoSearch,todoProject,todoStatus,jobsSearch,musicBusy,new Map(),sources,receive,shared,operationsView,refreshAgents,fetch,input,value=>nextResponse=value,{}, {}, {}, false);
   process.stdout.write('shared display response/render regression passed\n');
 })().catch(error=>{console.error(error);process.exitCode=1;});
 "#;

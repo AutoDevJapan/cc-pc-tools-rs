@@ -1147,7 +1147,7 @@ func register() int {
 	c.Stderr = &configOutput
 	if configErr := runRunnerConfiguration(c, compiledNormalProfile.ephemeral); configErr != nil {
 		if errors.Is(configErr, errConfigurationUnverified) {
-			return 39
+			return burstSetupUnverifiedExit
 		}
 		failureClass := runnerConfigFailureClass(configOutput.Bytes())
 		reportRunnerConfigSummary(configOutput.Bytes())
@@ -1197,6 +1197,8 @@ func main() {
 	switch args[0] {
 	case "unconfigure-idle":
 		os.Exit(unconfigureBurstIdle())
+	case "configuration-absent":
+		os.Exit(burstConfigurationState())
 	case "stop-idle":
 		os.Exit(stopBurstIdleListener())
 	case "export-diagnostics":

@@ -53,8 +53,9 @@ not substitute for that binding. After removal is confirmed as 404 and no Worker
 exists, only the owned idle run.sh group is signalled. The existing group drain
 must finish before the official SDK's remove command clears local configuration
 using a RAM-only removal token. No authentication file is manually deleted.
-Withdrawal/removal/stop stages survive transient failures and retry every 30
-seconds for up to ten minutes. A removed ID resumes at listener stop, including
+Discovery/withdrawal/removal/stop/group-drain/SDK stages share one retained
+transaction and one ten-minute retry window, with 30 seconds between retries.
+Current API/SDK operations retain their own finite deadlines. A removed ID resumes at listener stop, including
 expected NotFound responses. Accepted work retains its RPC host. Otherwise an
 atomic admission retirement prevents new source from starting, exits 74 for an
 unverified attempt and retains diagnostic state. Idle completion uses exit 75,
@@ -74,6 +75,17 @@ failed session retains the container and fails registration with 96; do not
 delete that file to force reuse. Archive/verify idle first, then recreate only
 the owned container. Normal successful ephemeral local removal is verified by
 the finite acceptance; interrupted reuse is not silently accepted.
+
+SDK cleanup probes file existence/type only and succeeds idempotently when
+`.runner`, `.credentials`, and `.credentials_rsaparams` are already absent.
+The official SDK handles removal; its transient token/transport failures retry
+without repeating committed remote deletion. Exit 19 proves this attempt's
+config.sh succeeded before ACK failed, so its ID discovery is retried too.
+Other unbound config failures and existing-config exit 96 never authorize
+adopting/deleting a same-name registration. An ACK-bound pre-job failure gets
+the same cleanup, and completed jobs keep their original result after cleanup.
+Worker presence uses exit 73, unknown probes remain errors, and unverified
+configuration setup uses 71, distinct from SDK failure class 39.
 
 Keep the repeating task disabled while the existing highest-priority finite
 operation (currently ToDo3059) needs its shared resource window. Coordinate that

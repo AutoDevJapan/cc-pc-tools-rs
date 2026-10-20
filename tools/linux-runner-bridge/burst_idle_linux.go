@@ -31,7 +31,7 @@ func burstWorkerIdle() int {
 			return 1
 		}
 		if strings.TrimSpace(string(name)) == "Runner.Worker" {
-			return 2
+			return burstWorkerActiveExit
 		}
 	}
 	return 0

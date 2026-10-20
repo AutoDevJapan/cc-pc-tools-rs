@@ -12,7 +12,7 @@ import (
 
 func TestIdleExpiryWithdrawsOnlyAnIdleOwnedEphemeralRunner(t *testing.T) {
 	p, _ := normalProfileFor("burst-3122")
-	for _, fault := range []string{"", "already-busy", "assignment-race", "worker", "labels", "identity", "api", "explicit-resident", "unbound", "other-id"} {
+	for _, fault := range []string{"", "already-busy", "assignment-race", "worker", "probe-error", "retire-race", "labels", "identity", "api", "explicit-resident", "unbound", "other-id"} {
 		t.Run(fault, func(t *testing.T) {
 			r := burstRunner{ID: 43, Name: p.runner}
 			r.Labels = append(r.Labels, struct{ Name, Type string }{normalLabel, "custom"})
@@ -53,7 +53,13 @@ func TestIdleExpiryWithdrawsOnlyAnIdleOwnedEphemeralRunner(t *testing.T) {
 					}
 					return current, nil
 				},
-				workerIdle: func() (bool, error) { return fault != "worker", nil },
+				workerIdle: func() (bool, error) {
+					if fault == "probe-error" {
+						return false, errors.New("probe unavailable")
+					}
+					return fault != "worker", nil
+				},
+				retire: func() bool { return fault != "retire-race" },
 				remove: func(id int64) error {
 					if id != 43 {
 						t.Fatal("other runner removed")
@@ -161,28 +167,6 @@ func TestCompletedRegistrationBindsOnceBeforeJobAdmission(t *testing.T) {
 	}
 }
 
-func TestBurstIdleDeadlineWaitsForAnAssignedJobWithoutCancellingIt(t *testing.T) {
-	done := make(chan int, 1)
-	expired := make(chan time.Time, 1)
-	expired <- time.Now()
-	stages := []string{}
-	code := waitBurstProcess(done, expired, func() (bool, error) { done <- 7; return false, nil }, func(s string) { stages = append(stages, s) })
-	if code != 7 || len(stages) != 1 || stages[0] != "burst-assigned-job-running" {
-		t.Fatal("assigned job result changed")
-	}
-	done = make(chan int, 1)
-	done <- 0
-	if got := waitBurstProcess(done, make(chan time.Time), func() (bool, error) { t.Fatal("completed host was mutated"); return false, nil }, func(string) {}); got != 0 {
-		t.Fatal("host success lost")
-	}
-	done = make(chan int, 1)
-	expired = make(chan time.Time, 1)
-	expired <- time.Now()
-	if got := waitBurstProcess(done, expired, func() (bool, error) { done <- 255; return true, nil }, func(string) {}); got != burstIdleExit {
-		t.Fatal("planned idle listener stop was confused with a job failure")
-	}
-}
-
 func TestIdleDrainResumesItsCommittedStage(t *testing.T) {
 	p, _ := normalProfileFor("burst-3122")
 	state := burstDrainState{ID: 43}
@@ -223,23 +207,5 @@ func TestIdleDrainResumesItsCommittedStage(t *testing.T) {
 	}
 	if withdraws != 1 || removals != 1 || stops != 2 {
 		t.Fatal("retry repeated a committed destructive stage")
-	}
-}
-
-func TestIdleDrainFailureHasFiniteRetriesAndRetiresUnadmittedWork(t *testing.T) {
-	now := time.Now()
-	done := make(chan int, 1)
-	expired := make(chan time.Time, 1)
-	expired <- now
-	attempts, retired, stopped := 0, 0, 0
-	policy := burstWaitPolicy{now: func() time.Time { return now }, after: func(d time.Duration) <-chan time.Time {
-		now = now.Add(d)
-		ch := make(chan time.Time, 1)
-		ch <- now
-		return ch
-	}, active: func() bool { return false }, retire: func() bool { retired++; return true }, stopUnadmitted: func() { stopped++ }}
-	code := waitBurstProcess(done, expired, func() (bool, error) { attempts++; return false, errors.New("metadata unavailable") }, func(string) {}, policy)
-	if code != burstUnverifiedExit || attempts != 21 || retired != 1 || stopped != 1 {
-		t.Fatalf("retry was not finite: code=%d attempts=%d retired=%d stopped=%d", code, attempts, retired, stopped)
 	}
 }

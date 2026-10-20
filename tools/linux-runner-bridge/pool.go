@@ -119,7 +119,7 @@ func currentQueue(api func(string, any) error, now time.Time) (queueSnapshot, er
 				Object struct{ SHA string } `json:"object"`
 			}
 			if err := api("repos/"+repo+"/git/ref/heads/"+url.PathEscape(run.HeadBranch), &ref); err != nil {
-				if errors.Is(err, errRunnerMetadataNotFound) {
+				if errors.Is(err, errRunnerMetadataNotFound) && run.HeadBranch != normalBranch {
 					// A deleted branch cannot be a current source. Keep unrelated
 					// queued jobs eligible; do not hide network/auth/API failures.
 					heads[run.HeadBranch] = ""

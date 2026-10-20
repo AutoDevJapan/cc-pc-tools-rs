@@ -247,6 +247,18 @@ func TestOwned3107RechecksAfterExternalVerification(t *testing.T) {
 func TestOwned3107OfficialImmutableIdentity(t *testing.T) {
 	run := object{"id": uint64(39423559387), "run_attempt": 1, "head_sha": owned3107Head, "path": ".github/workflows/rust.yml", "event": "pull_request", "repository_id": uint64(1392152644), "head_repository_id": uint64(1392152644)}
 	job := object{"id": uint64(118630300541), "run_id": uint64(39423559387), "run_attempt": 1, "head_sha": owned3107Head, "name": "test (windows-latest)", "labels": []any{"self-hosted", "Windows", "X64", "civ6-ci-windows", "civ6-ci-run-39423559387-1-test-Windows"}}
+	// The real API path uses the strict JSON reader's json.Number values.
+	for _, v := range []*object{&run, &job} {
+		b, e := json.Marshal(*v)
+		if e != nil {
+			t.Fatal(e)
+		}
+		var ok bool
+		*v, ok = conversationJSON(b)
+		if !ok {
+			t.Fatal("fixture JSON invalid")
+		}
+	}
 	if !owned3107OfficialRunMatches(run) || !owned3107OfficialJobMatches(job) {
 		t.Fatal("original run/job rejected")
 	}

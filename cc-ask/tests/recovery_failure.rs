@@ -63,7 +63,7 @@ fn remedies_preserve_work_and_permissions_but_replace_full_or_bad_model_sessions
         }
         if class == Failure::Model {
             assert_eq!(repaired["model"], "gpt-6-astra");
-            assert_eq!(repaired["effort"], "high");
+            assert_eq!(repaired["effort"], "max");
         } else {
             assert_eq!(repaired["model"], job["model"]);
         }

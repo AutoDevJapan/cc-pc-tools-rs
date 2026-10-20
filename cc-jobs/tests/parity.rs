@@ -1,17 +1,17 @@
 use cc_jobs::notify::*;
 use cc_jobs::*;
-#[path = "../../cc-job-policy/tests/support/mod.rs"]
-mod subwork_support;
-#[path = "support/product_retry.rs"]
-mod original_product_retry;
-#[path = "support/owner_wait_repair.rs"]
-mod finite_owner_wait_repair;
 #[path = "support/finished_review.rs"]
 mod finished_review;
 #[path = "support/finished_work_handoff.rs"]
 mod finished_work_handoff;
+#[path = "support/owner_wait_repair.rs"]
+mod finite_owner_wait_repair;
 #[path = "support/no_action.rs"]
 mod no_action;
+#[path = "support/product_retry.rs"]
+mod original_product_retry;
+#[path = "../../cc-job-policy/tests/support/mod.rs"]
+mod subwork_support;
 
 mod independent_subwork {
     use super::*;
@@ -64,20 +64,50 @@ mod independent_subwork {
     }
     #[test]
     fn unqualified_original_research_is_not_published_as_another_ordinary_reader() {
-        let (t,mut f)=setup(1);
-        f.db["items"][1]["id"]=json!(2939);
-        f.db["items"][1]["subwork"]["kind"]=json!("research");
-        f.db["items"][1]["scheduler"]["worktree"]=json!(subwork_support::tree(&f.repo,"todo-2939-research","scheduler/todo-2939-research"));
-        f.db["items"][1]["scheduler"]["branch"]=json!("scheduler/todo-2939-research");
-        f.db["items"][1]["scheduler"]["subwork_admission"]=cc_job_policy::subwork::admission(&f.db["items"][1]);
-        fs::write(f.dir.path().join("todo.json"),f.db.to_string()).unwrap();
-        let row=&f.db["items"][1];
-        let error=t.run(&["--todo-id","2939","--subwork-of","1","--parent-job-id","parent",
-            "--assigned-needs","","--launch-key",s(&row["scheduler"],"key"),
-            "--cwd",s(&row["scheduler"],"worktree"),"--sandbox","read-only"],b"finite original research")
+        let (t, mut f) = setup(1);
+        f.db["items"][1]["id"] = json!(2939);
+        f.db["items"][1]["subwork"]["kind"] = json!("research");
+        f.db["items"][1]["scheduler"]["worktree"] = json!(subwork_support::tree(
+            &f.repo,
+            "todo-2939-research",
+            "scheduler/todo-2939-research"
+        ));
+        f.db["items"][1]["scheduler"]["branch"] = json!("scheduler/todo-2939-research");
+        f.db["items"][1]["scheduler"]["subwork_admission"] =
+            cc_job_policy::subwork::admission(&f.db["items"][1]);
+        fs::write(f.dir.path().join("todo.json"), f.db.to_string()).unwrap();
+        let row = &f.db["items"][1];
+        let error = t
+            .run(
+                &[
+                    "--todo-id",
+                    "2939",
+                    "--subwork-of",
+                    "1",
+                    "--parent-job-id",
+                    "parent",
+                    "--assigned-needs",
+                    "",
+                    "--launch-key",
+                    s(&row["scheduler"], "key"),
+                    "--cwd",
+                    s(&row["scheduler"], "worktree"),
+                    "--sandbox",
+                    "read-only",
+                ],
+                b"finite original research",
+            )
             .expect_err("unqualified original research must not be registered");
-        assert!(error.message.contains("no reader retry was registered"),"{error:?}");
-        assert!(!t.ctx.list_jobs(&HashSet::new()).iter().any(|j|j["todo_id"]==2939));
+        assert!(
+            error.message.contains("no reader retry was registered"),
+            "{error:?}"
+        );
+        assert!(
+            !t.ctx
+                .list_jobs(&HashSet::new())
+                .iter()
+                .any(|j| j["todo_id"] == 2939)
+        );
     }
     #[test]
     fn queued_subwork_admits_after_todo_start_releases_its_reservation() {
@@ -893,20 +923,20 @@ mod claude_routing {
         )));
     }
     #[test]
-    fn automatic_models_route_at_admission_and_explicit_or_session_models_stay() {
+    fn provider_pacing_cannot_bypass_same_model_capacity_policy() {
         for (extra, expected) in [
-            (json!({}), "anthropic/claude-sonnet-5-5"),
+            (json!({}), "gpt-6.1-sol"),
             (
                 json!({"task_type":"single_file_summary","sandbox":"read-only"}),
-                "anthropic/claude-haiku-5-5",
+                "gpt-6.1-sol",
             ),
             (
                 json!({"task_type":"review","sandbox":"read-only"}),
-                "anthropic/claude-sonnet-5-5",
+                "gpt-6.1-sol",
             ),
             (
                 json!({"task_type":"single_file_summary","sandbox":"danger-full-access"}),
-                "anthropic/claude-sonnet-5-5",
+                "gpt-6.1-sol",
             ),
             (json!({"model_explicit":true}), "gpt-6.1-sol"),
             (json!({"model_explicit":null}), "gpt-6.1-sol"),
@@ -942,7 +972,11 @@ mod claude_routing {
         }
         waiting(&t, "codex-extra", json!({"model_explicit":true}));
         for n in 0..5 {
-            waiting(&t, &format!("claude{n}"), json!({}));
+            waiting(
+                &t,
+                &format!("claude{n}"),
+                json!({"model":"anthropic/claude-sonnet-5-5"}),
+            );
         }
         let report = t
             .ctx
@@ -1363,6 +1397,9 @@ mod capacity_regressions {
             patch_value,
         ));
         fs::write(t.ctx.job_dir(s(&j, "id")).join("prompt.md"), "continue").unwrap();
+        if j["todo_id"].is_number() {
+            fs::write(t.ctx.root.join("todo.json"),json!({"items":[{"id":j["todo_id"],"status":"doing","jobs":[j["id"]],"scheduler":{"job":j["id"]}}]}).to_string()).unwrap();
+        }
         let count = AtomicUsize::new(0);
         *t.rt.spawn_hook.lock().unwrap() = Some(Box::new(move || {
             let text = if count.fetch_add(1, Ordering::Relaxed) < failures {
@@ -1397,10 +1434,8 @@ mod capacity_regressions {
             saved["capacity_history"][0]["to_model"],
             "anthropic/claude-sonnet-5-5"
         );
-        assert_eq!(
-            saved["capacity_history"][0]["error"],
-            "Selected model is at capacity"
-        );
+        assert_eq!(saved["capacity_history"][0]["failure_kind"], "capacity");
+        assert!(saved["capacity_history"][0]["error"].is_null());
         assert_eq!(saved["todo_id"], 1793);
         let args = t.rt.spawn_args.lock().unwrap();
         assert_eq!(args.len(), 2);
@@ -1412,7 +1447,7 @@ mod capacity_regressions {
                 .any(|w| w == ["-m", "anthropic/claude-sonnet-5-5"])
         );
         assert!(args[1].windows(2).any(|w| w == ["-s", "read-only"]));
-        assert!(args[1].iter().any(|a| a == "model_reasoning_effort=high"));
+        assert!(args[1].iter().any(|a| a == "model_reasoning_effort=max"));
         assert!(t.rt.kills.lock().unwrap().is_empty());
         assert_eq!(t.rt.supervisors.load(Ordering::Relaxed), 0);
         assert!(
@@ -1425,26 +1460,25 @@ mod capacity_regressions {
     }
 
     #[test]
-    fn capacity_supervisor_stops_after_three_switches() {
+    fn capacity_supervisor_stops_after_finite_eligible_models() {
         let (t, saved) = supervise(usize::MAX, json!({}));
         assert_eq!(saved["status"], "failed");
-        assert_eq!(saved["capacity_retry_count"], 3);
-        assert_eq!(saved["capacity_history"].as_array().unwrap().len(), 3);
+        assert_eq!(saved["capacity_retry_count"], 2);
+        assert_eq!(saved["capacity_history"].as_array().unwrap().len(), 2);
         assert_eq!(saved["last_error"], "Selected model is at capacity");
         assert!(
             t.rt.diagnostics
                 .lock()
                 .unwrap()
                 .iter()
-                .any(|line| line.contains("最大3回に達しました"))
+                .any(|line| line.contains("有限の候補と待機回数"))
         );
         let args = t.rt.spawn_args.lock().unwrap();
-        assert_eq!(args.len(), 4);
+        assert_eq!(args.len(), 3);
         for (arg, model) in args.iter().zip([
             "gpt-6.1-sol",
             "anthropic/claude-sonnet-5-5",
-            "gpt-6-astra",
-            "gpt-6-luna",
+            "anthropic/claude-opus-5-5",
         ]) {
             assert!(arg.windows(2).any(|w| w == ["-m", model]));
         }
@@ -1823,7 +1857,10 @@ mod capacity_regressions {
                 assert_eq!(j[field], original[field], "{field}");
             }
             let argv = codex_args(&j);
-            assert!(argv.windows(2).any(|w| w == ["-m", &format!("{selector}/gpt-6.1-sol")]));
+            assert!(
+                argv.windows(2)
+                    .any(|w| w == ["-m", &format!("{selector}/gpt-6.1-sol")])
+            );
             j["status"] = json!("failed");
             j["last_failure_kind"] = json!("capacity");
             j["last_error"] = json!("Selected model is at capacity");
@@ -1867,6 +1904,45 @@ mod capacity_regressions {
         assert_eq!(j["capacity_wait_pending"], true);
         assert!(j["capacity_retry_count"].is_null());
         assert!(t.rt.spawn_args.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn registration_rejects_known_same_model_review_with_provider_spelling() {
+        for model in ["gpt-6.1-sol", "openai/gpt-6.1-sol"] {
+            let t = Test::new();
+            t.put(job(
+                json!({"id":"author","status":"running","pid":std::process::id(),
+                "pid_created":123,"model":"gpt-6.1-sol","requested_model":"gpt-6.1-sol"}),
+            ));
+            let error = t
+                .run(
+                    &[
+                        "--name",
+                        "rev-fixed",
+                        "--model",
+                        model,
+                        "--effort",
+                        "max",
+                        "--task-type",
+                        "code_review",
+                        "--parent-job-id",
+                        "author",
+                    ],
+                    b"Review fixed source",
+                )
+                .unwrap_err();
+            assert!(
+                error.message.contains("different from the source author"),
+                "{}",
+                error.message
+            );
+            assert!(
+                t.ctx
+                    .list_jobs(&HashSet::new())
+                    .iter()
+                    .all(|j| s(j, "id") == "author")
+            );
+        }
     }
 }
 mod queue_regressions {
@@ -5716,10 +5792,10 @@ fn new_job() -> Value {
 #[test]
 fn job_cli_defaults_preserve_each_explicit_model_and_effort_independently() {
     for (name, kind, expected) in [
-        ("rev-19", "review", "gpt-6-luna"),
-        ("task-review", "", "gpt-6-luna"),
+        ("rev-19", "review", "gpt-6.1-sol"),
+        ("task-review", "", "gpt-6.1-sol"),
         ("req-19", "implementation", "gpt-6.1-sol"),
-        ("req-19", "research", "gpt-6-luna"),
+        ("req-19", "research", "gpt-6.1-sol"),
     ] {
         let base = [
             "run",
@@ -5733,7 +5809,7 @@ fn job_cli_defaults_preserve_each_explicit_model_and_effort_independently() {
         let defaults =
             cc_jobs::cli::parse(&base.iter().map(|s| s.to_string()).collect::<Vec<_>>()).unwrap();
         assert_eq!(defaults.required("model").unwrap(), expected);
-        assert_eq!(defaults.required("effort").unwrap(), "high");
+        assert_eq!(defaults.required("effort").unwrap(), "max");
         for explicit in [
             vec!["--model", "gpt-6-astra"],
             vec!["--effort", "max"],
@@ -5758,7 +5834,7 @@ fn job_cli_defaults_preserve_each_explicit_model_and_effort_independently() {
                 if explicit.contains(&"--effort") {
                     "max"
                 } else {
-                    "high"
+                    "max"
                 }
             );
         }
@@ -6016,6 +6092,11 @@ impl Read for BadReader {
     }
 }
 impl Runtime for Fake {
+    fn capacity_pool_sample(&self, _job: &Value, at: f64) -> Value {
+        // The legacy fixture has exactly one eligible account, already failed.
+        // Tests of multiple slots provide their own explicit inventory snapshot.
+        json!({"at":at,"verified":true,"eligible":["p000001"],"failed":["p000001"]})
+    }
     fn supports_process_tree_job(&self) -> bool {
         self.process_tree_job_supported.load(Ordering::Relaxed)
     }
@@ -6733,13 +6814,26 @@ mod finite_research_execution {
     #[test]
     fn a_saved_approval_claim_cannot_bypass_current_qualification_before_prompt_generation() {
         let t = Test::new();
-        fs::write(t.ctx.root.join("todo.json"), json!({"items":[]}).to_string()).unwrap();
+        fs::write(
+            t.ctx.root.join("todo.json"),
+            json!({"items":[]}).to_string(),
+        )
+        .unwrap();
         let j = t.put(job(json!({"id":"finite-research-forged","todo_id":2939,
             "sandbox":"read-only","network":false,"approval_policy":"on-request",
             "approvals_reviewer":"auto_review","finite_research_approval":{"forged":true}})));
-        let error = t.ctx.execution_spawn(&j).err().expect("current qualification must fail");
+        let error = t
+            .ctx
+            .execution_spawn(&j)
+            .err()
+            .expect("current qualification must fail");
         assert!(error.message.contains("qualification changed or expired"));
-        assert!(!t.ctx.job_dir("finite-research-forged").join("execution-prompt.md").exists());
+        assert!(
+            !t.ctx
+                .job_dir("finite-research-forged")
+                .join("execution-prompt.md")
+                .exists()
+        );
     }
     #[test]
     fn ordinary_reader_execution_keeps_never_despite_saved_approval_hints() {
@@ -6747,7 +6841,7 @@ mod finite_research_execution {
         let j = t.put(job(json!({"id":"ordinary-reader","sandbox":"read-only",
             "network":false,"approval_policy":"on-request","approvals_reviewer":"auto_review"})));
         let spawn = t.ctx.execution_spawn(&j).unwrap();
-        assert!(spawn.argv.windows(2).any(|a| a == ["-s","read-only"]));
+        assert!(spawn.argv.windows(2).any(|a| a == ["-s", "read-only"]));
         assert!(spawn.argv.contains(&"approval_policy=never".into()));
         assert!(spawn.argv.contains(&"approvals_reviewer=user".into()));
         assert!(!spawn.argv.iter().any(|a| a.contains("network_access=true")));
@@ -10059,22 +10153,25 @@ mod end_to_end {
     }
     #[test]
     fn real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit() {
-        for (mode, expected, count) in [
-            ("capacity-once", "succeeded", 1),
-            ("capacity-always", "failed", 3),
+        for (mode, expected, count, switches) in [
+            ("capacity-once", "succeeded", 1, 0),
+            ("capacity-always", "failed", 3, 2),
         ] {
             let t = E2e::new();
             let jid = t.start(mode, &t.tmp.0, "再開する内容\nsecond line".as_bytes());
-            t.until(|| TERMINAL.contains(&s(&t.job(&jid), "status")));
+            t.until_phase_for("finite_capacity_retry", Duration::from_secs(120), || {
+                TERMINAL.contains(&s(&t.job(&jid), "status"))
+            });
             let job = t.job(&jid);
             assert_eq!(job["status"], expected);
-            assert_eq!(job["capacity_retry_count"], count);
+            assert_eq!(job["capacity_same_model_retry_count"], count);
+            assert_eq!(job["capacity_retry_count"].as_u64().unwrap_or(0), switches);
             let calls: Vec<Value> = fs::read_to_string(t.rec.join("capacity-calls.jsonl"))
                 .unwrap()
                 .lines()
                 .map(|line| serde_json::from_str(line).unwrap())
                 .collect();
-            assert_eq!(calls.len(), count as usize + 1);
+            assert_eq!(calls.len(), (count + switches) as usize + 1);
             for call in &calls {
                 assert_eq!(call["cwd"], t.tmp.0.to_string_lossy().as_ref());
                 assert_eq!(call["prompt"], calls[0]["prompt"]);
@@ -10097,9 +10194,11 @@ mod end_to_end {
                         "-m",
                         [
                             "gpt-6-luna",
+                            "p000002/gpt-6-luna",
+                            "p000003/gpt-6-luna",
+                            "p000004/gpt-6-luna",
                             "anthropic/claude-sonnet-5-5",
-                            "gpt-6.1-sol",
-                            "gpt-6-astra"
+                            "anthropic/claude-opus-5-5"
                         ][index]
                     ]));
                 if index > 0 {
@@ -10451,7 +10550,9 @@ mod end_to_end {
         }
         fn cli(&self, args: &[&str], mode: &str) -> std::process::Output {
             let mut c = hidden_command(self.exe.to_str().unwrap());
-            if mode == "report-only" { c.env("CC_TODO_HOME", self.tmp.0.join("todo")); }
+            if mode == "report-only" {
+                c.env("CC_TODO_HOME", self.tmp.0.join("todo"));
+            }
             c.args(args)
                 .env(
                     "PATH",
@@ -10643,8 +10744,16 @@ mod end_to_end {
                 "index_complete":index["scan_complete"],"scanned_at":index["scanned_at"],"index_ids":index["ids"].as_array().into_iter().flatten().map(|id|alias(id.as_str().unwrap_or(""))).collect::<Vec<_>>()})
         }
         fn until_phase(&self, phase: &str, mut condition: impl FnMut() -> bool) {
+            self.until_phase_for(phase, Duration::from_secs(20), &mut condition);
+        }
+        fn until_phase_for(
+            &self,
+            phase: &str,
+            timeout: Duration,
+            mut condition: impl FnMut() -> bool,
+        ) {
             let started = Instant::now();
-            let end = Instant::now() + Duration::from_secs(20);
+            let end = Instant::now() + timeout;
             while !condition() {
                 if self.diagnostic.load(Ordering::Relaxed) {
                     self.retain_fixture_processes();
@@ -11087,53 +11196,190 @@ mod end_to_end {
     #[test]
     fn no_action_real_fixture_cancels_exits_and_restarts_once_in_same_workspace() {
         use cc_job_policy::action_progress::{self, Progress};
-        let t=E2e::new();let repo=t.tmp.0.join("repo");
+        let t = E2e::new();
+        let repo = t.tmp.0.join("repo");
         fs::create_dir_all(repo.join(".git")).unwrap();
-        fs::write(repo.join(".git/config"),"[remote \"origin\"]\nurl = https://github.com/AutoDevJapan/cc-pc-tools-rs.git\n").unwrap();
-        fs::write(repo.join(".git/HEAD"),"ref: refs/heads/scheduler/todo-1-fixture\n").unwrap();
-        fs::write(repo.join("unfinished.txt"),"preserve this unfinished work").unwrap();
-        fs::copy(env!("CARGO_BIN_EXE_cc_jobs_fixture"),t.tmp.0.join("bin/codex.exe")).unwrap();
-        fs::write(t.tmp.0.join("bin/codex.cmd"),b"@echo off\r\n\"%~dp0codex.exe\" %*\r\n").unwrap();
-        let first_prompt=t.tmp.0.join("first.md");fs::write(&first_prompt,"harmless report-only fixture").unwrap();
-        let launched=t.cli(&["run","--name","fixture-first","--model","gpt-6.1-sol","--task-type","implementation","--sandbox","danger-full-access","--cwd",repo.to_str().unwrap(),"--prompt-file",first_prompt.to_str().unwrap()],"report-only");
-        assert!(launched.status.success(),"{}",String::from_utf8_lossy(&launched.stderr));
-        let first=String::from_utf8(launched.stdout).unwrap().trim().to_owned();
-        let events=t.tmp.0.join("tool/jobs").join(&first).join("events.jsonl");
-        t.until(|| fs::read_to_string(&events).is_ok_and(|s|s.lines().count()>=4));
-        let source=t.job(&first);
-        let row=json!({"id":1,"project":"cc-pc-tools-rs","status":"doing","dispatchable":true,"spec":first_prompt,"jobs":[first],"resume_generation":1,
+        fs::write(
+            repo.join(".git/config"),
+            "[remote \"origin\"]\nurl = https://github.com/AutoDevJapan/cc-pc-tools-rs.git\n",
+        )
+        .unwrap();
+        fs::write(
+            repo.join(".git/HEAD"),
+            "ref: refs/heads/scheduler/todo-1-fixture\n",
+        )
+        .unwrap();
+        fs::write(repo.join("unfinished.txt"), "preserve this unfinished work").unwrap();
+        fs::copy(
+            env!("CARGO_BIN_EXE_cc_jobs_fixture"),
+            t.tmp.0.join("bin/codex.exe"),
+        )
+        .unwrap();
+        fs::write(
+            t.tmp.0.join("bin/codex.cmd"),
+            b"@echo off\r\n\"%~dp0codex.exe\" %*\r\n",
+        )
+        .unwrap();
+        let first_prompt = t.tmp.0.join("first.md");
+        fs::write(&first_prompt, "harmless report-only fixture").unwrap();
+        let launched = t.cli(
+            &[
+                "run",
+                "--name",
+                "fixture-first",
+                "--model",
+                "gpt-6.1-sol",
+                "--task-type",
+                "implementation",
+                "--sandbox",
+                "danger-full-access",
+                "--cwd",
+                repo.to_str().unwrap(),
+                "--prompt-file",
+                first_prompt.to_str().unwrap(),
+            ],
+            "report-only",
+        );
+        assert!(
+            launched.status.success(),
+            "{}",
+            String::from_utf8_lossy(&launched.stderr)
+        );
+        let first = String::from_utf8(launched.stdout)
+            .unwrap()
+            .trim()
+            .to_owned();
+        let events = t.tmp.0.join("tool/jobs").join(&first).join("events.jsonl");
+        t.until(|| fs::read_to_string(&events).is_ok_and(|s| s.lines().count() >= 4));
+        let source = t.job(&first);
+        let row = json!({"id":1,"project":"cc-pc-tools-rs","status":"doing","dispatchable":true,"spec":first_prompt,"jobs":[first],"resume_generation":1,
             "worker_receipt":{"job":first,"generation":1},"scheduler":{"job":first,"worktree":repo,"branch":"scheduler/todo-1-fixture"}});
-        let mut db=json!({"projects":{"cc-pc-tools-rs":repo},"items":[row]});
-        let diagnostic=json!({"id_match":db["items"][0]["scheduler"]["job"]==source["id"],"owner_wait":source["waiting_for_work_owner"],"resource_wait":source["resource_wait"],"capacity_wait":source["capacity_wait_pending"],"sandbox":source["sandbox"],"pid_birth":source["pid_created"],"child_birth":source["codex_pid_created"],"started":source["started_at"],"stop":source["stopped"],"cancel":source["cancel_requested"],"work_on":source["work_wait_on"]});
-        assert!(action_progress::eligible(&db,&db["items"][0],&source),"fixture is not eligible: {diagnostic}");
-        assert_eq!(db["items"][0]["scheduler"]["worktree"],source["cwd"]);
-        let store=t.tmp.0.join("todo/todo.json");fs::create_dir_all(store.parent().unwrap()).unwrap();fs::write(&store,db.to_string()).unwrap();
+        let mut db = json!({"projects":{"cc-pc-tools-rs":repo},"items":[row]});
+        let diagnostic = json!({"id_match":db["items"][0]["scheduler"]["job"]==source["id"],"owner_wait":source["waiting_for_work_owner"],"resource_wait":source["resource_wait"],"capacity_wait":source["capacity_wait_pending"],"sandbox":source["sandbox"],"pid_birth":source["pid_created"],"child_birth":source["codex_pid_created"],"started":source["started_at"],"stop":source["stopped"],"cancel":source["cancel_requested"],"work_on":source["work_wait_on"]});
+        assert!(
+            action_progress::eligible(&db, &db["items"][0], &source),
+            "fixture is not eligible: {diagnostic}"
+        );
+        assert_eq!(db["items"][0]["scheduler"]["worktree"], source["cwd"]);
+        let store = t.tmp.0.join("todo/todo.json");
+        fs::create_dir_all(store.parent().unwrap()).unwrap();
+        fs::write(&store, db.to_string()).unwrap();
         // Virtualize only observation time, never production thresholds or OS identities.
-        let p=action_progress::scan(&events,&source,&Progress::default(),System::default().epoch()-(action_progress::QUIET_S+1.)).unwrap();
-        let proof=t.tmp.0.join("proof.json");fs::write(&proof,json!({"ticket":action_progress::ticket(&db,&db["items"][0],&source),"progress":p}).to_string()).unwrap();
-        let cancel=["cancel",&first,"--recovery","--if-todo-ready","--todo-id","1","--todo-file",store.to_str().unwrap(),"--cancel-key","no-action-fixture","--no-action-check",proof.to_str().unwrap()];
-        let held=FileLock::acquire(&store.with_file_name("todo.lock")).unwrap();
-        let deferred=t.cli(&cancel,"report-only");assert!(deferred.status.success());
-        let deferred:Value=serde_json::from_slice(&deferred.stdout).unwrap();assert_eq!(deferred["reason"],"todo_lock_busy");
-        let pause:Value=serde_json::from_slice(&fs::read(events.parent().unwrap().join("yield-paused.json")).unwrap()).unwrap();assert_eq!(pause["complete"],true);
-        let length=fs::metadata(&events).unwrap().len();t.until(||fs::metadata(&events).unwrap().len()>length);
+        let p = action_progress::scan(
+            &events,
+            &source,
+            &Progress::default(),
+            System::default().epoch() - (action_progress::QUIET_S + 1.),
+        )
+        .unwrap();
+        let proof = t.tmp.0.join("proof.json");
+        fs::write(
+            &proof,
+            json!({"ticket":action_progress::ticket(&db,&db["items"][0],&source),"progress":p})
+                .to_string(),
+        )
+        .unwrap();
+        let cancel = [
+            "cancel",
+            &first,
+            "--recovery",
+            "--if-todo-ready",
+            "--todo-id",
+            "1",
+            "--todo-file",
+            store.to_str().unwrap(),
+            "--cancel-key",
+            "no-action-fixture",
+            "--no-action-check",
+            proof.to_str().unwrap(),
+        ];
+        let held = FileLock::acquire(&store.with_file_name("todo.lock")).unwrap();
+        let deferred = t.cli(&cancel, "report-only");
+        assert!(deferred.status.success());
+        let deferred: Value = serde_json::from_slice(&deferred.stdout).unwrap();
+        assert_eq!(deferred["reason"], "todo_lock_busy");
+        let pause: Value = serde_json::from_slice(
+            &fs::read(events.parent().unwrap().join("yield-paused.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(pause["complete"], true);
+        let length = fs::metadata(&events).unwrap().len();
+        t.until(|| fs::metadata(&events).unwrap().len() > length);
         drop(held);
-        let out=t.cli(&cancel,"report-only");assert!(out.status.success(),"{}",String::from_utf8_lossy(&out.stderr));
-        assert_eq!(serde_json::from_slice::<Value>(&out.stdout).unwrap()["outcome"],"cancelled", "{}", String::from_utf8_lossy(&out.stdout));
-        t.until(||proc_created(source["pid"].as_u64().unwrap() as u32)!=source["pid_created"].as_u64()
-            && proc_created(source["codex_pid"].as_u64().unwrap() as u32)!=source["codex_pid_created"].as_u64());
-        assert_eq!(t.job(&first)["status"],"cancelled");
-        let out=t.cli(&cancel,"report-only");assert!(out.status.success());assert_eq!(serde_json::from_slice::<Value>(&out.stdout).unwrap()["outcome"],"deferred");
-        db["items"][0]["status"]=json!("todo");db["items"][0]["scheduler"]["job"]=Value::Null;fs::write(&store,db.to_string()).unwrap();
-        let prompt=t.tmp.0.join("resume.md");fs::write(&prompt,"same fixture continuation").unwrap();
-        let args=["run","--name","fixture-resume","--model","gpt-6.1-sol","--task-type","implementation","--sandbox","danger-full-access","--todo-id","1","--cwd",repo.to_str().unwrap(),"--prompt-file",prompt.to_str().unwrap(),"--launch-key","28272827282728272827282728272827"];
-        let a=t.cli(&args,"report-only");let b=t.cli(&args,"report-only");assert!(a.status.success());assert!(b.status.success());assert_eq!(a.stdout,b.stdout);
-        let next=String::from_utf8(a.stdout).unwrap().trim().to_owned();assert_ne!(next,first);
-        t.until(|| t.job(&next)["status"]=="running" && t.job(&next)["codex_pid"].as_u64().is_some());
-        assert_eq!(t.job(&next)["cwd"],source["cwd"]);assert_eq!(t.job(&next)["todo_id"],1);
-        assert_eq!(fs::read_to_string(repo.join("unfinished.txt")).unwrap(),"preserve this unfinished work");
-        assert_eq!(fs::read_dir(t.tmp.0.join("tool/jobs")).unwrap().flatten().filter(|e|e.path().join("job.json").is_file()).count(),2);
-        let stop=t.cli(&["cancel",&next,"--recovery"],"report-only");assert!(stop.status.success());
+        let out = t.cli(&cancel, "report-only");
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert_eq!(
+            serde_json::from_slice::<Value>(&out.stdout).unwrap()["outcome"],
+            "cancelled",
+            "{}",
+            String::from_utf8_lossy(&out.stdout)
+        );
+        t.until(|| {
+            proc_created(source["pid"].as_u64().unwrap() as u32) != source["pid_created"].as_u64()
+                && proc_created(source["codex_pid"].as_u64().unwrap() as u32)
+                    != source["codex_pid_created"].as_u64()
+        });
+        assert_eq!(t.job(&first)["status"], "cancelled");
+        let out = t.cli(&cancel, "report-only");
+        assert!(out.status.success());
+        assert_eq!(
+            serde_json::from_slice::<Value>(&out.stdout).unwrap()["outcome"],
+            "deferred"
+        );
+        db["items"][0]["status"] = json!("todo");
+        db["items"][0]["scheduler"]["job"] = Value::Null;
+        fs::write(&store, db.to_string()).unwrap();
+        let prompt = t.tmp.0.join("resume.md");
+        fs::write(&prompt, "same fixture continuation").unwrap();
+        let args = [
+            "run",
+            "--name",
+            "fixture-resume",
+            "--model",
+            "gpt-6.1-sol",
+            "--task-type",
+            "implementation",
+            "--sandbox",
+            "danger-full-access",
+            "--todo-id",
+            "1",
+            "--cwd",
+            repo.to_str().unwrap(),
+            "--prompt-file",
+            prompt.to_str().unwrap(),
+            "--launch-key",
+            "28272827282728272827282728272827",
+        ];
+        let a = t.cli(&args, "report-only");
+        let b = t.cli(&args, "report-only");
+        assert!(a.status.success());
+        assert!(b.status.success());
+        assert_eq!(a.stdout, b.stdout);
+        let next = String::from_utf8(a.stdout).unwrap().trim().to_owned();
+        assert_ne!(next, first);
+        t.until(|| {
+            t.job(&next)["status"] == "running" && t.job(&next)["codex_pid"].as_u64().is_some()
+        });
+        assert_eq!(t.job(&next)["cwd"], source["cwd"]);
+        assert_eq!(t.job(&next)["todo_id"], 1);
+        assert_eq!(
+            fs::read_to_string(repo.join("unfinished.txt")).unwrap(),
+            "preserve this unfinished work"
+        );
+        assert_eq!(
+            fs::read_dir(t.tmp.0.join("tool/jobs"))
+                .unwrap()
+                .flatten()
+                .filter(|e| e.path().join("job.json").is_file())
+                .count(),
+            2
+        );
+        let stop = t.cli(&["cancel", &next, "--recovery"], "report-only");
+        assert!(stop.status.success());
     }
     #[test]
     fn test_native_recovery_cancel_preserves_intent_after_process_tree_stops() {
@@ -11534,17 +11780,23 @@ mod additional_compatibility {
             assert_eq!(code, case["code"].as_i64().unwrap() as i32, "{args:?}");
             // Preserve the historical Python baseline, allowing only the new
             // explicitly documented finite retry option in run's help.
-            let legacy_out = if args.first() == Some(&"run") && args.iter().any(|arg| ["-h","--help"].contains(arg)) {
-                let usage="                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n";
-                let option="  --original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY\n                        reserved retry key for original ToDo 1626 only (32\n                        lowercase hex); requires the same --launch-key and\n                        waits for product-retry-bind before execution\n";
-                assert_eq!(out.matches(usage).count(),1);
-                assert_eq!(out.matches(option).count(),1);
-                out.replace(usage,"").replace(option,"")
-            }else{out};
+            let legacy_out = if args.first() == Some(&"run")
+                && args.iter().any(|arg| ["-h", "--help"].contains(arg))
+            {
+                let usage = "                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n";
+                let option = "  --original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY\n                        reserved retry key for original ToDo 1626 only (32\n                        lowercase hex); requires the same --launch-key and\n                        waits for product-retry-bind before execution\n";
+                assert_eq!(out.matches(usage).count(), 1);
+                assert_eq!(out.matches(option).count(), 1);
+                out.replace(usage, "").replace(option, "")
+            } else {
+                out
+            };
             assert_eq!(legacy_out, s(&case, "stdout"), "{args:?} stdout");
-            let legacy_err=if args.first()==Some(&"run"){
+            let legacy_err = if args.first() == Some(&"run") {
                 err.replace("                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n","")
-            }else{err};
+            } else {
+                err
+            };
             assert_eq!(legacy_err, s(&case, "stderr"), "{args:?} stderr");
         }
         assert!(t.rt.calls.lock().unwrap().is_empty());

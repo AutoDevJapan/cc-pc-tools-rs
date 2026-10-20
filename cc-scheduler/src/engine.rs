@@ -1,6 +1,6 @@
 use crate::preparation::{failure_reason, owns_workspace};
 use crate::{
-    backend::{safe_text, valid_effort, valid_model, Backend},
+    backend::{Backend, safe_text, valid_effort, valid_model},
     common::*,
     policy::*,
 };
@@ -12,7 +12,7 @@ fn todo_store_error(error: cc_job_policy::todo_store::Error) -> Error {
         cc_job_policy::todo_store::Error::Io(e) => e.into(),
     }
 }
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -594,13 +594,17 @@ impl<B: Backend> Scheduler<B> {
                     .is_none_or(|id| id.is_empty())
                 || (truth(&item["scheduler"]["question"]) && !truth(&item["scheduler"]["answer"]))
                 || !((["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
-                    && self.backend.repair_scope_allowed(s(&db["projects"][project])))
+                    && self
+                        .backend
+                        .repair_scope_allowed(s(&db["projects"][project])))
                     || self.current_product_without_registry(&item, s(&db["projects"][project])))
             {
                 continue;
             }
             if !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
-                && !self.backend.repair_scope_allowed(s(&item["scheduler"]["worktree"]))
+                && !self
+                    .backend
+                    .repair_scope_allowed(s(&item["scheduler"]["worktree"]))
             {
                 continue;
             }
@@ -626,12 +630,15 @@ impl<B: Backend> Scheduler<B> {
                 || !matches!(s(&item["status"]), "todo" | "doing")
                 || item["dispatchable"] != true
                 || !item["subwork"].is_object()
-                || key.len() != 32 || !key.bytes().all(|c| c.is_ascii_hexdigit())
+                || key.len() != 32
+                || !key.bytes().all(|c| c.is_ascii_hexdigit())
                 || truth(&scheduler["job"])
                 || truth(&scheduler["question"])
                 || truth(&scheduler["owner_stop_job"])
-                || item["stopped"] == true || item["owner_stopped"] == true
-                || s(&item["spec"]).is_empty() || s(&scheduler["worktree"]).is_empty()
+                || item["stopped"] == true
+                || item["owner_stopped"] == true
+                || s(&item["spec"]).is_empty()
+                || s(&scheduler["worktree"]).is_empty()
                 || s(&scheduler["selection"]["model"]).is_empty()
                 || item["stall_recovery"]["pending"].is_object()
                 || todo_wait::waiting(&db, &item)
@@ -649,29 +656,51 @@ impl<B: Backend> Scheduler<B> {
                     && job["model"] == scheduler["selection"]["model"]
                     && job["effort"] == scheduler["selection"]["effort"]
             };
-            let live_matches = jobs.iter().filter(matching).filter(|job| live(job)).collect::<Vec<_>>();
+            let live_matches = jobs
+                .iter()
+                .filter(matching)
+                .filter(|job| live(job))
+                .collect::<Vec<_>>();
             if live_matches.len() > 1 {
                 continue;
             }
-            let Some(job) = live_matches.first().copied().or_else(|| jobs.iter().rev().find(matching)) else { continue; };
-            if result_received(&item, &job["id"]) { continue; }
-            if !self.backend.repair_scope_allowed(s(&db["projects"][project]))
+            let Some(job) = live_matches
+                .first()
+                .copied()
+                .or_else(|| jobs.iter().rev().find(matching))
+            else {
+                continue;
+            };
+            if result_received(&item, &job["id"]) {
+                continue;
+            }
+            if !self
+                .backend
+                .repair_scope_allowed(s(&db["projects"][project]))
                 || !self.backend.repair_scope_allowed(s(&scheduler["worktree"]))
             {
                 continue;
             }
             let saved = self.edit(&item["id"], |row| {
                 // A new instruction, dependency, owner stop or handoff wins.
-                if *row != item { return; }
+                if *row != item {
+                    return;
+                }
                 row["status"] = json!("doing");
                 if !arr(&row["jobs"]).contains(&job["id"]) {
                     push(&mut row["jobs"], job["id"].clone());
                 }
-                merge(&mut row["scheduler"], json!({"job":job["id"],"phase":"running",
-                    "started_s":epoch(&job["created_at"])}));
+                merge(
+                    &mut row["scheduler"],
+                    json!({"job":job["id"],"phase":"running",
+                    "started_s":epoch(&job["created_at"])}),
+                );
             })?;
             if saved["scheduler"]["job"] == job["id"] {
-                push(&mut self.report["repair_dispatches_adopted"], item["id"].clone());
+                push(
+                    &mut self.report["repair_dispatches_adopted"],
+                    item["id"].clone(),
+                );
             }
         }
         Ok(())
@@ -1300,6 +1329,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         let model = s(&selection["model"]);
         selection["model"] = json!(match model {
             "sonnet" => "anthropic/claude-sonnet-5-5".to_owned(),
+            "opus" => "anthropic/claude-opus-5-5".to_owned(),
             "haiku" => "anthropic/claude-haiku-5-5".to_owned(),
             _ if model.starts_with("claude-") => format!("anthropic/{model}"),
             _ => model.to_owned(),
@@ -1666,10 +1696,13 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 // Recheck the finite receipt after preparation and sampling.
                 // A changed spec/root or a newly restored deny wins admission.
                 if !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"]
-                    .contains(&s(&current["project"])) && current["id"] != 2407
+                    .contains(&s(&current["project"]))
+                    && current["id"] != 2407
                     && matches!(&exclusions, Err(e) if e.kind() == std::io::ErrorKind::NotFound)
                     && !self.current_product_without_registry(
-                        &current, s(&db["projects"][s(&current["project"])]))
+                        &current,
+                        s(&db["projects"][s(&current["project"])]),
+                    )
                 {
                     return Ok(());
                 }

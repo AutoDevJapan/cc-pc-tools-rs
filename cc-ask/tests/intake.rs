@@ -3,7 +3,7 @@ use cc_ask::core::*;
 use common::*;
 use serde_json::json;
 use std::{
-    panic::{catch_unwind, AssertUnwindSafe},
+    panic::{AssertUnwindSafe, catch_unwind},
     path::Path,
 };
 const COMPLETE: &str = "状態: 完了\n直しました https://example.test/pr/1";
@@ -514,8 +514,10 @@ fn bot_created_request_starts_only_on_owner_post_and_keeps_opening_context() {
     h.tick();
     let f = h.fake.borrow();
     assert_eq!(f.launches.len(), 1);
-    assert!(s(&f.launches[0]["prompt"])
-        .contains("オーナーのアイデア原文: 敵国を早く全滅させるゲームにしたい。"));
+    assert!(
+        s(&f.launches[0]["prompt"])
+            .contains("オーナーのアイデア原文: 敵国を早く全滅させるゲームにしたい。")
+    );
     assert!(s(&f.launches[0]["prompt"]).contains("Civ6と7のUXを掛け合わせたい。"));
     assert_eq!(f.posts[0].1["message_reference"]["message_id"], reply);
     assert_eq!(f.posts[0].1["flags"], SILENT);
@@ -540,12 +542,15 @@ fn another_running_worker_gets_same_session_delivery_without_a_request_launch() 
         assert_eq!(f.launches[0]["effort"], "high");
         assert!(s(&f.launches[0]["prompt"]).contains("200|別のアイデア"));
         assert!(s(&f.launches[0]["prompt"]).contains("UXをCiv6と7に寄せたい。"));
-        assert!(s(&f.launches[0]["prompt"])
-            .contains("オーナーのアイデア原文: 敵国を早く全滅させるゲームにしたい。"));
-        assert!(f
-            .runs
-            .iter()
-            .any(|(args, _)| args.windows(2).any(|a| a == ["cancel", "idea-brainstorm"])));
+        assert!(
+            s(&f.launches[0]["prompt"])
+                .contains("オーナーのアイデア原文: 敵国を早く全滅させるゲームにしたい。")
+        );
+        assert!(
+            f.runs
+                .iter()
+                .any(|(args, _)| args.windows(2).any(|a| a == ["cancel", "idea-brainstorm"]))
+        );
         drop(f);
         assert_eq!(h.state()["answer_receipts"][&reply]["handled_by"], "job1");
         h.tick();
@@ -749,7 +754,7 @@ impl Effects for QuestionDuringLaunch {
         let out = self.0.run(a, t)?;
         if a.iter().any(|v| v == "--launch-key") && out.code == 0 {
             let job = out.stdout.trim();
-            let dir = self.0 .0.borrow().root.join("jobs").join(job);
+            let dir = self.0.0.borrow().root.join("jobs").join(job);
             atomic_json(
                 &dir.join("discord-threads.json"),
                 &json!({"question_thread_ids":["700"],"question_routes":{"700":{"question_thread_id":"700","posting_job":job}}}),
@@ -832,7 +837,7 @@ fn test_model_effort_and_type_from_pick_are_shown_and_used() {
 }
 
 #[test]
-fn automatic_router_choices_use_the_implementation_default_and_high() {
+fn automatic_router_choices_use_sol_and_max() {
     let mut h = Harness::new();
     h.fake.borrow_mut().pick_replies.push_back(json!({
         "model":"gpt-6-astra",
@@ -844,7 +849,7 @@ fn automatic_router_choices_use_the_implementation_default_and_high() {
     h.tick();
     let f = h.fake.borrow();
     assert_eq!(f.launches[0]["model"], "gpt-6.1-sol");
-    assert_eq!(f.launches[0]["effort"], "high");
+    assert_eq!(f.launches[0]["effort"], "max");
 }
 #[test]
 fn test_fallback_when_pick_is_down_and_fallback_is_logged() {
@@ -863,7 +868,7 @@ fn test_fallback_when_pick_is_down_and_fallback_is_logged() {
     assert_eq!(h.fake.borrow().picks.len(), 1);
 }
 #[test]
-fn test_review_fallback_uses_luna() {
+fn unqualified_review_uses_the_ordinary_sol_max_default() {
     let mut h = Harness::new();
     {
         let mut f = h.fake.borrow_mut();
@@ -871,8 +876,8 @@ fn test_review_fallback_uses_luna() {
         f.messages.get_mut("100").unwrap()[0]["content"] = json!("変更をレビューして");
     }
     h.tick();
-    assert_eq!(h.fake.borrow().launches[0]["model"], "gpt-6-luna");
-    assert_eq!(h.fake.borrow().launches[0]["effort"], "high");
+    assert_eq!(h.fake.borrow().launches[0]["model"], "gpt-6.1-sol");
+    assert_eq!(h.fake.borrow().launches[0]["effort"], "max");
 }
 
 #[test]
@@ -887,7 +892,7 @@ fn review_word_inside_implementation_request_keeps_implementation_profile() {
     h.tick();
     let f = h.fake.borrow();
     assert_eq!(f.launches[0]["model"], "gpt-6.1-sol");
-    assert_eq!(f.launches[0]["effort"], "high");
+    assert_eq!(f.launches[0]["effort"], "max");
     assert_eq!(f.launches[0]["task_type"], "implementation");
 }
 #[test]
@@ -1036,8 +1041,10 @@ fn test_failure_resumes_same_session_model_effort_cwd_without_mention() {
     for field in ["model", "effort", "cwd"] {
         assert_eq!(f.launches[1][field], f.launches[0][field]);
     }
-    assert!(s(&f.launches[1]["prompt"])
-        .starts_with("前回のジョブが止まったので続きから再開してください"));
+    assert!(
+        s(&f.launches[1]["prompt"])
+            .starts_with("前回のジョブが止まったので続きから再開してください")
+    );
     assert!(s(&f.launches[1]["prompt"]).contains("READMEを直して"));
     assert_eq!(f.posts.len(), posts);
     assert_eq!(h.state()["requests"]["100"]["job"], "job2");
@@ -1099,10 +1106,12 @@ fn test_retry_cap_posts_one_silent_line_and_keeps_todo_then_expires() {
             .unwrap()
             > h.fake.borrow().now
     );
-    assert!(db["items"][0]["jobs"]
-        .as_array()
-        .unwrap()
-        .contains(&json!("job3")));
+    assert!(
+        db["items"][0]["jobs"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("job3"))
+    );
     h.reply("再開すればいいじゃん", "100");
     h.tick();
     assert_eq!(h.fake.borrow().launches.len(), 3);
@@ -1295,9 +1304,11 @@ fn test_ack_failure_does_not_launch_twice() {
     h.tick();
     assert_eq!(h.fake.borrow().launches.len(), 1);
     assert!(h.text().contains("受け取りました。今の作業に反映します。"));
-    assert!(h.state()["requests"]["100"]
-        .get("acknowledgement")
-        .is_none());
+    assert!(
+        h.state()["requests"]["100"]
+            .get("acknowledgement")
+            .is_none()
+    );
 }
 #[test]
 fn test_failure_recovers_even_when_discord_post_is_unavailable() {
@@ -1429,9 +1440,11 @@ fn test_crash_after_restart_launch_is_adopted_without_another_launch() {
     assert_eq!(h.fake.borrow().launches.len(), 2);
     assert_eq!(h.fake.borrow().launches[1]["launch_key"], key);
     assert_eq!(h.state()["requests"]["100"]["job"], "job2");
-    assert!(h.state()["requests"]["100"]["restart"]
-        .get("pending")
-        .is_none());
+    assert!(
+        h.state()["requests"]["100"]["restart"]
+            .get("pending")
+            .is_none()
+    );
 }
 #[test]
 fn test_invalid_pick_and_excluded_pick_use_fallback() {
@@ -1443,7 +1456,7 @@ fn test_invalid_pick_and_excluded_pick_use_fallback() {
     h.tick();
     assert_eq!(
         h.fake.borrow().launches.last().unwrap()["model"],
-        "gpt-6-luna"
+        "gpt-6.1-sol"
     );
     h.fake.borrow_mut().pick_replies.push_back(
         json!({"model":"gpt-6.1-sol","effort":"max","task_type":"implementation","reason":"選択"}),

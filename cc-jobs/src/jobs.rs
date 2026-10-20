@@ -549,6 +549,17 @@ impl Context {
             {
                 apply_token_count(j, &v["payload"]);
             }
+            if raw
+                .windows(b"\"turn_context\"".len())
+                .any(|w| w == b"\"turn_context\"")
+                && let Ok(v) = serde_json::from_slice::<Value>(raw)
+                && s(&v, "type") == "turn_context"
+                && parse_iso(s(&v, "timestamp"))
+                    .zip(parse_iso(s(j, "started_at")))
+                    .is_some_and(|(observed, started)| observed >= started)
+            {
+                crate::pool_retry::observe_turn_context(j, &v["payload"]);
+            }
         }
         Ok(true)
     }
@@ -1017,7 +1028,7 @@ impl Context {
                 continue;
             }
             if job["capacity_wait_pending"] == true {
-                let inventory = self.capacity_inventory();
+                let inventory = self.capacity_inventory(&job);
                 let _state = self.job_lock(jid, "state.lock")?;
                 let mut fresh = self.load(jid)?;
                 if s(&fresh, "status") == "queued"
@@ -1365,7 +1376,7 @@ impl Context {
             self.yield_diagnostic(&error);
         }
         if s(&job, "last_failure_kind") == "capacity" && !cleanup_failed && !setup_failed {
-            job["capacity_inventory"] = self.capacity_inventory();
+            job["capacity_inventory"] = self.capacity_inventory(&job);
         }
         let gate = match self.queue_lock() {
             Ok(gate) => Some(gate),
@@ -1378,10 +1389,34 @@ impl Context {
         let fresh = self.load(jid)?;
         if fresh["cancel_requested"] == true || s(&fresh, "status") == "cancelled" {
             job = fresh;
+        } else if s(&job, "last_failure_kind") == "capacity"
+            && !crate::pool_retry::same_attempt(&job, &fresh)
+        {
+            self.rt
+                .diagnostic("モデル混雑の再開を保存せず終了: 元の実行世代が更新されています");
+            return Ok(false);
         }
+        let todo_guard = if gate.is_some()
+            && s(&job, "last_failure_kind") == "capacity"
+            && job["todo_id"].is_number()
+        {
+            Some(FileLock::acquire(
+                &self.todo_store().with_file_name("todo.lock"),
+            )?)
+        } else {
+            None
+        };
+        let owner_current = if todo_guard.is_some() {
+            self.read_json(&self.todo_store())
+                .is_ok_and(|db| crate::pool_retry::todo_owns_attempt(&db, &job))
+        } else {
+            true
+        };
         // Capacity switches have their own bound. A combined capacity/429
         // message must not escape that bound through the same-model retry.
-        let retry = !cleanup_failed
+        let retry = gate.is_some()
+            && owner_current
+            && !cleanup_failed
             && !setup_failed
             && if s(&job, "last_failure_kind") == "capacity" {
                 self.retry_capacity(&mut job)
@@ -1391,7 +1426,12 @@ impl Context {
                 self.retry_429(&mut job, cfg)
             };
         let mut yielded = false;
-        if gate.is_some() && !cleanup_failed && !setup_failed && !retry {
+        if gate.is_some()
+            && !cleanup_failed
+            && !setup_failed
+            && !retry
+            && s(&job, "last_failure_kind") != "capacity"
+        {
             let mut candidate = job.clone();
             let attempt = (|| -> Result<bool> {
                 if !self.complete_context_summary(&mut candidate)?
@@ -1422,6 +1462,7 @@ impl Context {
             }
         }
         self.save(&job)?;
+        drop(todo_guard);
         drop(state);
         drop(gate);
         #[cfg(windows)]
@@ -1496,12 +1537,38 @@ pub(crate) fn codex_args_with_policy(j: &Value, policy: cc_job_policy::Policy) -
         "-c".into(),
         format!("approvals_reviewer={}", policy.reviewer),
         "-m".into(),
-        getstr(j, "model"),
+        crate::pool_retry::launch_model(j),
         "-c".into(),
         format!("model_reasoning_effort={}", getstr(j, "effort")),
         "-s".into(),
         policy.sandbox.into(),
     ];
+    if s(j, "model")
+        .strip_prefix("openai/")
+        .unwrap_or(s(j, "model"))
+        .starts_with("gpt-")
+    {
+        // A user's reasoning level is independent from processing speed. Keep
+        // explicit effort above, but do not inherit a slower global tier.
+        args.extend([
+            "-c".into(),
+            "service_tier=fast".into(),
+            "-c".into(),
+            "features.fast_mode=true".into(),
+        ]);
+    } else if s(j, "model")
+        .strip_prefix("anthropic/")
+        .unwrap_or(s(j, "model"))
+        .starts_with("claude-")
+    {
+        // GPT Fast is not authorization to request Anthropic's separate Fast tier.
+        args.extend([
+            "-c".into(),
+            "service_tier=default".into(),
+            "-c".into(),
+            "features.fast_mode=false".into(),
+        ]);
+    }
     if profile.isolated() {
         // Disable the whole plugin/app features and every configured server
         // discovered in this job's working directory before the stop.

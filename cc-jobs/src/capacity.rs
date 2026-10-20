@@ -1,8 +1,9 @@
 //! Resume a capacity failure inside the existing supervisor and queue entry.
 use crate::{queue::prepare_resume, *};
 
-const MODELS: [&str; 4] = [
+const MODELS: [&str; 5] = [
     "anthropic/claude-sonnet-5-5",
+    "anthropic/claude-opus-5-5",
     "gpt-6.1-sol",
     "gpt-6-astra",
     "gpt-6-luna",
@@ -13,7 +14,7 @@ const MAX_WAITS: u64 = 3;
 pub fn provider(model: &str) -> Option<&'static str> {
     if model.starts_with("anthropic/claude-") || model.starts_with("claude-") {
         Some("anthropic")
-    } else if MODELS.contains(&model) {
+    } else if crate::pool_retry::native_model(model).is_some() {
         Some("openai")
     } else {
         None
@@ -60,6 +61,7 @@ pub fn failure_kind(event: &Value) -> Option<&'static str> {
 pub fn review_job(job: &Value) -> bool {
     let task = s(job, "task_type");
     task.contains("review")
+        || s(&job["subwork"], "kind") == "review"
         || s(job, "name").ends_with("-review")
         || s(job, "name").starts_with("rev-")
 }
@@ -81,14 +83,19 @@ pub fn candidates(job: &Value) -> Vec<&'static str> {
                     || ((review_job(job) || s(job, "task_type").starts_with("single_file_"))
                         && s(job, "sandbox") == "read-only"
                         && *model == "gpt-6-luna"))
-                && (!review_job(job)
-                    || ["anthropic/claude-sonnet-5-5", "gpt-6-luna"].contains(model))
+                && (lightweight
+                    || provider(current) != Some("openai")
+                    || provider(model) == Some("anthropic"))
+                && (provider(model) != Some("openai")
+                    || lightweight
+                    || crate::pool_retry::native_model(requested).unwrap_or("gpt-6.1-sol")
+                        == *model)
                 && (!review_job(job) || provider(model) != provider(requested))
                 && !job["review_excluded_models"]
                     .as_array()
                     .into_iter()
                     .flatten()
-                    .any(|v| v.as_str() == Some(model))
+                    .any(|v| same_model(s_value(v), model))
                 && !job["capacity_history"]
                     .as_array()
                     .into_iter()
@@ -96,8 +103,42 @@ pub fn candidates(job: &Value) -> Vec<&'static str> {
                     .any(|entry| s(entry, "from_model") == *model || s(entry, "to_model") == *model)
         })
         .collect();
-    options.sort_by_key(|model| provider(model) == provider(current));
+    let preferred_claude = if [
+        "implementation",
+        "architecture",
+        "design",
+        "live_debug",
+        "review",
+        "code_review",
+        "pr_shepherd",
+    ]
+    .contains(&s(job, "task_type"))
+    {
+        "anthropic/claude-opus-5-5"
+    } else {
+        "anthropic/claude-sonnet-5-5"
+    };
+    options.sort_by_key(|model| {
+        (
+            provider(model) == provider(current),
+            *model != preferred_claude,
+        )
+    });
     options
+}
+
+fn s_value(value: &Value) -> &str {
+    value.as_str().unwrap_or("")
+}
+
+fn same_model(left: &str, right: &str) -> bool {
+    fn bare(model: &str) -> &str {
+        model
+            .strip_prefix("openai/")
+            .or_else(|| model.strip_prefix("anthropic/"))
+            .unwrap_or(model)
+    }
+    bare(left) == bare(right)
 }
 
 pub fn is_capacity(message: &str) -> bool {
@@ -107,8 +148,46 @@ pub fn is_capacity(message: &str) -> bool {
 }
 
 impl Context {
+    /// Registration must never publish a known same-model review. Selection
+    /// callers can choose another model; this boundary must not guess an author.
+    pub(crate) fn validate_review_launch(&self, job: &mut Value) -> Result<()> {
+        if !review_job(job) {
+            return Ok(());
+        }
+        let mut excluded = job["review_excluded_models"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        if !s(job, "parent_job_id").is_empty() {
+            let parent = self.load(s(job, "parent_job_id"))?;
+            for field in ["model", "requested_model"] {
+                if parent[field].is_string() {
+                    excluded.push(parent[field].clone());
+                }
+            }
+            for entry in parent["capacity_history"].as_array().into_iter().flatten() {
+                for field in ["from_model", "to_model"] {
+                    if entry[field].is_string() {
+                        excluded.push(entry[field].clone());
+                    }
+                }
+            }
+        }
+        if excluded
+            .iter()
+            .any(|v| same_model(s_value(v), s(job, "model")))
+        {
+            return Err(Error::new(
+                "independent review requires a model different from the source author",
+            ));
+        }
+        if !excluded.is_empty() {
+            job["review_excluded_models"] = json!(excluded);
+        }
+        Ok(())
+    }
     /// Query before taking queue/state locks. Persist only safe provider metadata.
-    pub fn capacity_inventory(&self) -> Value {
+    pub fn capacity_inventory(&self, job: &Value) -> Value {
         let at = self.rt.epoch();
         let mut inventory = json!({"at":at});
         for provider in ["openai", "anthropic"] {
@@ -118,6 +197,9 @@ impl Context {
                     .iter()
                     .any(|a| a.reset_at > at && a.used_percent < 100. && !a.short_exhausted)
             );
+        }
+        if crate::pool_retry::native_model(s(job, "model")).is_some() {
+            inventory["pool"] = self.rt.capacity_pool_sample(job, at);
         }
         inventory
     }
@@ -230,6 +312,79 @@ impl Context {
             }
             selection["review_excluded_models"] = json!(excluded);
         }
+        // An older incorrectly routed reviewer cannot acquire a second attempt
+        // on its author's model, including the provider-qualified spelling.
+        if review_job(job)
+            && selection["review_excluded_models"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|v| same_model(s_value(v), s(job, "model")))
+        {
+            job["capacity_exhausted"] = json!(true);
+            return stop("実装担当と同じモデルではレビューを再開できません");
+        }
+        let same_count = job["capacity_same_model_retry_count"].as_u64().unwrap_or(0);
+        let observed_same = job["capacity_history"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter(|entry| s(entry, "kind") == "same_model_account_retry")
+            .count() as u64;
+        if (!job["capacity_same_model_retry_count"].is_null()
+            && job["capacity_same_model_retry_count"].as_u64().is_none())
+            || same_count > crate::pool_retry::MAX_SAME_MODEL_RETRIES
+            || same_count < observed_same
+        {
+            job["capacity_exhausted"] = json!(true);
+            return stop("保存された同モデル再試行回数が不正です");
+        }
+        if crate::pool_retry::native_model(s(job, "model")).is_some()
+            && same_count < crate::pool_retry::MAX_SAME_MODEL_RETRIES
+            && !s(job, "requested_model").contains("haiku")
+        {
+            let pool = if job["capacity_inventory"]["pool"].is_object() {
+                job["capacity_inventory"]["pool"].clone()
+            } else {
+                self.rt.capacity_pool_sample(job, at)
+            };
+            match crate::pool_retry::next_selector(job, &pool, at) {
+                Some(Some(selector)) => {
+                    let tried = crate::pool_retry::tried_accounts(job, &pool, &selector);
+                    let deadline = at + crate::pool_retry::RETRY_DELAYS[same_count as usize];
+                    let entry = json!({"kind":"same_model_account_retry","attempt":same_count+1,
+                        "at":self.rt.now(),"session":session,"from_model":job["model"],"to_model":job["model"],
+                        "account_selector":selector,"failure_kind":"capacity","requested_effort":job["effort"],
+                        "requested_tier":"fast","observation":pool["observation"],"retry_not_before":deadline});
+                    if job["capacity_history"].is_null() {
+                        job["capacity_history"] = json!([]);
+                    }
+                    job["capacity_history"].as_array_mut().unwrap().push(entry);
+                    job["capacity_same_model_retry_count"] = json!(same_count + 1);
+                    job["capacity_tried_accounts"] = json!(tried);
+                    job["capacity_account_selector"] = json!(selector);
+                    job["capacity_wait_error"] = job["last_error"].clone();
+                    prepare_resume(job, &session, &self.rt.now());
+                    job["capacity_wait_pending"] = json!(false);
+                    job["capacity_wait_error"] = Value::Null;
+                    job["last_failure_kind"] = Value::Null;
+                    job["capacity_error"] = Value::Null;
+                    job["retry_not_before"] = json!(deadline);
+                    job["activity"] = json!(format!(
+                        "モデルの混雑: 同じモデルの別OAuth枠で再試行（{}回目、最大3回）",
+                        same_count + 1
+                    ));
+                    self.rt.diagnostic(s(job, "activity"));
+                    return true;
+                }
+                None if job["capacity_wait_count"].as_u64().unwrap_or(0) < MAX_WAITS => {
+                    // Missing attribution cannot prove a different account. Use
+                    // the persisted ordinary cooldown, never a blind repeat.
+                    return self.wait_capacity(job, &session, at);
+                }
+                _ => (), // Verified alternatives exhausted, or finite metadata waits spent.
+            }
+        }
         let mut snapshots = std::collections::HashMap::new();
         let next = if count < MAX_SWITCHES {
             candidates(&selection).into_iter().find(|model| {
@@ -258,23 +413,14 @@ impl Context {
                 job["capacity_exhausted"] = json!(true);
                 return stop("有限の候補と待機回数を使い切りました");
             }
-            job["capacity_wait_error"] = job["last_error"].clone();
-            prepare_resume(job, &session, &self.rt.now());
-            job["capacity_wait_pending"] = json!(true);
-            job["capacity_wait_count"] = json!(waits + 1);
-            job["retry_not_before"] = json!(at + 900.);
-            job["activity"] = json!(format!(
-                "モデルの混雑: 15分後に既存OAuth枠を再確認（{}回目、最大3回）",
-                waits + 1
-            ));
-            return true;
+            return self.wait_capacity(job, &session, at);
         };
         let now = self.rt.now();
         let entry = json!({
             "attempt": count + 1, "at": now, "session": session,
             "from_model": job["model"], "to_model": next,
             "from_provider":provider(s(job,"model")), "to_provider":provider(next),
-            "error": short(&redact_local_log_secrets(s(job, "last_error"), &self.rt.env()), 1000)
+            "failure_kind":"capacity", "requested_effort":"max"
         });
         if job["capacity_history"].is_null() {
             job["capacity_history"] = json!([]);
@@ -288,6 +434,10 @@ impl Context {
             job["requested_model"] = job["model"].clone();
         }
         job["model"] = json!(next);
+        // Fallback effort is a policy decision, not the source model's default.
+        // Explicit effort on the original model was retained by account retries.
+        job["effort"] = json!("max");
+        job["capacity_account_selector"] = Value::Null;
         prepare_resume(job, &session, &now);
         job["last_failure_kind"] = Value::Null;
         job["capacity_error"] = Value::Null;
@@ -300,6 +450,20 @@ impl Context {
             count + 1
         ));
         self.rt.diagnostic(s(job, "activity"));
+        true
+    }
+
+    fn wait_capacity(&self, job: &mut Value, session: &str, at: f64) -> bool {
+        let waits = job["capacity_wait_count"].as_u64().unwrap_or(0);
+        job["capacity_wait_error"] = job["last_error"].clone();
+        prepare_resume(job, session, &self.rt.now());
+        job["capacity_wait_pending"] = json!(true);
+        job["capacity_wait_count"] = json!(waits + 1);
+        job["retry_not_before"] = json!(at + 900.);
+        job["activity"] = json!(format!(
+            "モデルの混雑: 15分後に既存OAuth枠を再確認（{}回目、最大3回）",
+            waits + 1
+        ));
         true
     }
 }

@@ -32,48 +32,13 @@ pub struct ModelProfile {
 /// Shared classifier for launchers that know a job name and/or a router task
 /// type. Prompt text is deliberately not inspected: implementation requests
 /// often mention reviews while still requiring full implementation capability.
-pub fn model_profile(job_name: &str, task_type: &str) -> ModelProfile {
-    let name = job_name.to_ascii_lowercase();
-    let kind = task_type.to_ascii_lowercase();
-    let light_name = name.starts_with("rev-")
-        || name.ends_with("-review")
-        || [
-            "diag-",
-            "audit-",
-            "inspect-",
-            "check-",
-            "verify-",
-            "research-",
-            "cleanup-",
-            "clean-",
-        ]
-        .iter()
-        .any(|prefix| name.starts_with(prefix));
-    let light_kind = [
-        "review",
-        "code_review",
-        "documentation",
-        "research",
-        "live_debug",
-        "verification",
-        "check",
-        "confirmation",
-        "audit",
-        "inspection",
-        "cleanup",
-        "housekeeping",
-    ]
-    .contains(&kind.as_str());
-    if light_name || light_kind {
-        ModelProfile {
-            model: "gpt-6-luna",
-            effort: "high",
-        }
-    } else {
-        ModelProfile {
-            model: "gpt-6.1-sol",
-            effort: "high",
-        }
+pub fn model_profile(_job_name: &str, _task_type: &str) -> ModelProfile {
+    // Owner policy 2026-10-20: task labels must not silently lower effort or
+    // select Luna. Explicit model/effort and independent-review exclusions are
+    // resolved by callers; this function supplies only ordinary defaults.
+    ModelProfile {
+        model: "gpt-6.1-sol",
+        effort: "max",
     }
 }
 
@@ -211,13 +176,9 @@ mod tests {
 
     #[test]
     fn model_profiles_classify_job_names_and_task_types_without_reading_prompts() {
-        let light = ModelProfile {
-            model: "gpt-6-luna",
-            effort: "high",
-        };
         let full = ModelProfile {
             model: "gpt-6.1-sol",
-            effort: "high",
+            effort: "max",
         };
         for name in [
             "rev-123",
@@ -231,7 +192,7 @@ mod tests {
             "clean-123",
             "research-123",
         ] {
-            assert_eq!(model_profile(name, "implementation"), light, "{name}");
+            assert_eq!(model_profile(name, "implementation"), full, "{name}");
         }
         for kind in [
             "review",
@@ -243,7 +204,7 @@ mod tests {
             "cleanup",
             "confirmation",
         ] {
-            assert_eq!(model_profile("req-123", kind), light, "{kind}");
+            assert_eq!(model_profile("req-123", kind), full, "{kind}");
         }
         assert_eq!(model_profile("shep-123", "pr_shepherd"), full);
         assert_eq!(model_profile("req-123", "implementation"), full);

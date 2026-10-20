@@ -18,9 +18,42 @@ fn main() {
     }
     if args.iter().any(|a| a == "account") {
         let at = chrono::Local::now().timestamp() as f64;
+        if args.iter().any(|a| a == "openai") {
+            println!(
+                "{}",
+                json!({"accounts":(1..=4).map(|n| json!({
+                "id":format!("fixture-{n}"),"type":"codex","health":"healthy","creditsAfterLimit":false,
+                "quota":{"weeklyPercent":10.,"weeklyResetAt":at+86400.}
+            })).collect::<Vec<_>>()})
+            );
+            return;
+        }
         println!(
             "{}",
             json!({"accounts":[{"id":"fixture-oauth","type":"oauth","health":"healthy","quota":{"weeklyPercent":10.,"weeklyResetAt":at+86400.}}]})
+        );
+        return;
+    }
+    if args
+        .windows(2)
+        .any(|a| a == ["get", "codexAccountNamespaces"])
+    {
+        println!(
+            "{}",
+            json!({"p000001":"fixture-1","p000002":"fixture-2","p000003":"fixture-3","p000004":"fixture-4"})
+        );
+        return;
+    }
+    if args.iter().any(|a| a == "logs") {
+        let model = args
+            .windows(2)
+            .find(|w| w[0] == "--model")
+            .map(|w| w[1].as_str())
+            .unwrap_or("gpt-6-luna");
+        println!(
+            "{}",
+            json!({"logs":[{"model":model,"accountLogLabel":"p000001","status":503,
+            "timestamp":chrono::Local::now().timestamp_millis()}]})
         );
         return;
     }

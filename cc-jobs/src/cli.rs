@@ -1087,6 +1087,10 @@ impl Context {
                 .into_iter()
                 .flatten()
                 .find(|i| i["id"] == job["todo_id"]);
+            if let Some(item) = item {
+                job["todo_dependency_generation"] =
+                    json!(item["dependency_generation"].as_u64().unwrap_or(0));
+            }
             if a.value("subwork-of").is_some() || item.is_some_and(|i| i["subwork"].is_object()) {
                 let item = item.ok_or_else(|| Error::new("subwork ToDo is missing"))?;
                 let parent = a
@@ -1144,6 +1148,7 @@ impl Context {
         } else if a.value("subwork-of").is_some() {
             return Err(Error::new("subwork ToDo store is missing"));
         }
+        self.validate_review_launch(&mut job)?;
         let bad = codex_args(&job)
             .into_iter()
             .filter(|s| s.chars().any(|c| "&|<>^%!\"".contains(c)))

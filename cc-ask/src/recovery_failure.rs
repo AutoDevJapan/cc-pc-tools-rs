@@ -150,18 +150,23 @@ pub fn retry_at(history: &[Value], now: f64) -> f64 {
         }
     }
 }
-pub fn alternate_model(model: &str) -> &'static str {
-    if model == "gpt-6.1-sol" {
-        "gpt-6-astra"
-    } else {
-        "gpt-6.1-sol"
+pub fn alternate_model(model: &str) -> &str {
+    match model {
+        "gpt-6.1-sol" => "gpt-6-astra",
+        "gpt-6-astra" | "gpt-6-luna" => "gpt-6.1-sol",
+        _ => model,
     }
 }
 pub fn repaired_job(job: &Value, failure: Failure) -> Value {
     let mut job = job.clone();
     if failure == Failure::Model {
-        job["model"] = alternate_model(job["model"].as_str().unwrap_or("")).into();
-        job["effort"] = "high".into();
+        let model = job["model"].as_str().unwrap_or("");
+        let alternate = alternate_model(model);
+        if alternate == model {
+            return job;
+        }
+        job["model"] = alternate.into();
+        job["effort"] = "max".into();
     }
     if matches!(failure, Failure::Context | Failure::Model | Failure::Writer) {
         job["thread_id"] = Value::Null;

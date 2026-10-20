@@ -1,5 +1,5 @@
 use crate::{common::*, native, policy::*};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     collections::BTreeMap,
     fs,
@@ -7,10 +7,10 @@ use std::{
     time::Duration,
 };
 
-#[path = "process_birth_fallback.rs"]
-mod process_birth_fallback;
 #[path = "current_succession.rs"]
 mod current_succession;
+#[path = "process_birth_fallback.rs"]
+mod process_birth_fallback;
 pub(crate) const BIRTH_FALLBACK_MARGIN: u64 = 10_000_000;
 pub(crate) const BIRTH_FALLBACK_MAX_SPAN: u64 = BIRTH_FALLBACK_MARGIN * 2;
 
@@ -95,7 +95,7 @@ pub struct Network;
 pub fn token() -> Result<String> {
     let mut value = std::env::var("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
     if value.is_empty() {
-        use winreg::{enums::HKEY_CURRENT_USER, RegKey};
+        use winreg::{RegKey, enums::HKEY_CURRENT_USER};
         value = RegKey::predef(HKEY_CURRENT_USER)
             .open_subkey("Environment")
             .and_then(|k| k.get_value("GODD_DISCORD_BOT_TOKEN"))
@@ -225,7 +225,11 @@ pub fn valid_model(m: &str) -> bool {
     m.len() <= 80
         && MODEL_SYNTAX
             .get_or_init(|| regex::Regex::new(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$").unwrap())
-            .is_match(m.strip_prefix("anthropic/").unwrap_or(m))
+            .is_match(
+                m.strip_prefix("anthropic/")
+                    .or_else(|| m.strip_prefix("openai/"))
+                    .unwrap_or(m),
+            )
 }
 pub fn valid_effort(e: &str) -> bool {
     matches!(

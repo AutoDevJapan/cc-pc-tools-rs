@@ -5,7 +5,7 @@
 旧記録を書き換えたり、空の原本を作ったり、過去の質問を再送したりしない。
 
 ```text
-unattended-runner.exe conversation [--config <path>] ask --request-id <id> --todo-id <元ToDo番号> --origin-thread <元スレッドID> --body-file <本文ファイル> --decision-file <判断範囲JSON> [--title <題名>] [--wait]
+unattended-runner.exe conversation [--config <path>] ask --request-id <id> --todo-id <元ToDo番号> --origin-thread <元スレッドID> --body-file <本文ファイル> --decision-file <判断範囲JSON> [--title <題名>] [--wait] [--attach <元画像> ...]
 unattended-runner.exe conversation [--config <path>] log --request-id <id> --title <題名> --body-file <本文ファイル> [--thread <進捗スレッドID>] [--notify] [--attach <画像> ...]
 unattended-runner.exe conversation [--config <path>] replies --request-id <id>
 unattended-runner.exe conversation [--config <path>] status
@@ -88,7 +88,10 @@ CLIは設定の開始時刻・用途・絶対パス、投稿先のID、独立し
 元スレッドは `--thread`、JSONの `origin_thread_id`、または `scope.origin_thread_id`
 で指定し、複数ある指定は一致させる。通常の質問にはGo側へ `--wait` を渡す。
 既存の別の待機状態を質問待ちへ勝手に変更しない。
-質問そのものへの添付は新しい `ask` の契約に含まれないため明示的に拒否する。
+`ask --attach <元画像>` は画像を質問の開始メッセージへ直接添付する。
+長い質問の背景・選択肢も同じ質問スレッドへ通知なしで続ける。
+本人は質問側だけを開いて回答できる。AIの進捗は別の通知なし投稿へ記録する。
+既に送信予約した旧質問の本文と配置は変えず、同じ記録を読み返して回復する。
 
 本文・判断範囲・対応する画像はツールの私的な保存先へ固定して保存する。
 送信IDは本文・題名・通知指定・画像の内容などから決まり、同じ入力の再試行では
@@ -108,20 +111,61 @@ Go側の失敗時は旧APIへ切り替えず、同じ入力での再試行を案
 用途は `discord-conversation-media-source-v1` で、元の正規パス、コピーのパス、SHAとサイズだけを持つ。
 パスは私的なファイルにだけ置く。同じ内容での再試行では最初の証跡を保持する。
 
-新しい送信側は、用途が有効な設定と `conversation-log-<32桁のSHA>` の送信IDだけについて、
+新しい送信側は、用途が有効な設定と `conversation-log-<32桁のSHA>` または
+質問の `conversation-v1-<32桁のSHA>` の送信IDだけについて、
 固定したGo実行ファイルの `--verify-conversation-media --path <画像> --request-id <送信ID>` を呼ぶ。
 これは `runner.lock` を取らない読取専用の検証で、HTTP・モデル・旧台帳の読込や状態の書込を行わない。
 元ファイルを毎回 `scrub391` で調べ、保護対象ではなく、判定未確認でもないことを確認する。
 
-コピーはツール保存先の `conversation-bridge/<normal-log-ID>/attachment-N.<画像形式>` に限定する。
+コピーはツール保存先の `conversation-bridge/<normal-log-ID または normal-ask-ID>/attachment-N.<画像形式>` に限定する。
 送信ID、証跡の厳密な形式、両パス、サイズ、元の現在の内容とコピーのSHAを照合する。
-コピーの一般的なファイル名で元の保護範囲を隠さない。元ファイルが変更・移動・削除されていれば送らない。
+コピーの一般的なファイル名で元の保護範囲を隠さない。新規アップロード前に元ファイルが変更・移動・削除されていれば送らない。
 Go CLIへ元画像を直接渡す場合も、同じ現在の保護判定とサイズ・形式検査を通す。
 
 Goは用途・確認済みの印・SHA・サイズ・MIME・画像形式だけを返す。
 Rust側は、送信に使うメモリ上のバイト列がその結果と一致することを確かめる。
 既存の秘密値検査、名簿がある場合の除外、送信サイズ制限、APIによる送信後の照合も維持する。
 Go側の検査に失敗した場合、旧方式への切り替えや名簿欠落の一律許可は行わない。
+
+質問の添付とSHAは送信予約へ保存し、自動再試行でも同じ入力を使う。
+送信前に期待SHAと実際のバイト列を照合し、API読み返しでは添付の件数・ファイル名（SHA先頭20桁）・サイズを確認する。
+これらが揃うまで質問待ちを登録しない。APIの添付メタデータだけを全バイトのSHA検査と呼ばない。
+同じ判断範囲が既に異なる画像へ結び付いている場合は既存質問を保持し、成功として返さない。
+通常の会話で同じdecisionが一致する場合は、既存質問を読み返してURLと`duplicate`を返す。
+新しい送信予約や本人待ちを作らず、元の質問の回答配送を維持する。
+画像の出所未確認・欠落・変更は送信未完了のまま残す。別の画像へのコピーでは解消しない。
+この配送はUIの実装承認ではなく、現在の本人確認待ちを解除しない。
+
+送信の応答だけを失った場合、Goは保存した添付パスと期待SHAを使う。
+送信側に質問の予約があれば、原画像を読み直さず既存のAPI受領情報でGET回復する。
+その予約は新しいPOSTを許可しない。未投稿のアップロードでは必ず画像を再検証し、
+Goから渡された期待SHAと異なればHTTP送信前に拒否する。
+
+### 新しく生成した確認画像の送信資格
+
+一般の `scrub391 --guard-path` の未分類結果は変更しない。
+通常の[用途別証拠登録](generated-question-evidence.md)で、元imagegen session・実ツールイベントのSHA・
+元出力パス・生成記録と入力promptのSHA・画像SHA/サイズを質問ごとに照合する。
+原セッションの選択した記録だけを読み、他のメッセージは出力しない。
+さらに質問本文とdecisionのSHA、元ToDo、本人・guild・質問forumを固定照合する。
+原sessionのユーザー依頼で元ToDoを、原tool応答のPNG全バイトで元画像を照合する。
+事前確認と送信時の検証は既存Go実行物の読取専用モードで行い、HTTP・モデル・状態更新は行わない。
+登録だけは固定の用途別保存先へ署名付きデータを新規保存する。画像別のコード追加や再配布は不要。
+
+結果は `owner-generated-question-image-v1` の用途付き `qualified` であり、
+一般のclient判定をfalseにしない。未知・コピー先・偽造記録・別質問/別送信先・
+変更済み画像・既存の除外に合う画像は拒否する。原一覧の復旧とは扱わない。
+通常askからの事前検証後も元パスをsource receiptに保持し、送信直前の検証を繰り返す。
+下位Rust送信側も実際の質問内容と用途付き資格を照合し、logへ流用できない。
+今回の実検査はToDo3084のA-v3/B-v2。旧v1の資格は流用しない。資格は実生成callから最大7日までとする。
+
+`outcome=existing_question_images_differ`は、新しい画像を送っていない終了結果である。
+元の質問が投稿済みならGET確認したURLを返す。まだ予約中ならURLは返さない。
+新しい予約を再試行対象に残さず、元の質問・回答・待機を保持する。
+画像案を更新して新しい判断が必要な場合は、画像の版/SHAを含む判断範囲も分ける。
+
+Discord公式仕様: [forum thread creation](https://docs.discord.com/developers/resources/channel#start-thread-in-forum-or-media-channel)、
+[uploading files](https://docs.discord.com/developers/reference#uploading-files)。
 
 ## 新しい会話のアーカイブ
 

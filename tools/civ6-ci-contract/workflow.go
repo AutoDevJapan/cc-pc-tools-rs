@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 
@@ -108,9 +109,9 @@ $hashes = @($files | ForEach-Object { @{ name = $_.Name; bytes = $_.Length; sha2
 
 func Route(w Workflow) string {
 	if w.Job == "test" {
-		return `${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && matrix.os || fromJSON(matrix.os == 'ubuntu-latest' && '["self-hosted","Linux","X64","civ6-ci-linux"]' || '["self-hosted","Windows","X64","civ6-ci-windows"]') }}`
+		return `${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && matrix.os || fromJSON(format(matrix.os == 'ubuntu-latest' && '["self-hosted","Linux","X64","civ6-ci-linux","civ6-ci-run-{0}-{1}-test-Linux"]' || '["self-hosted","Windows","X64","civ6-ci-windows","civ6-ci-run-{0}-{1}-test-Windows"]', github.run_id, github.run_attempt)) }}`
 	}
-	return `${{ fromJSON((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && '["windows-latest"]' || '["self-hosted","Windows","X64","civ6-ci-windows"]') }}`
+	return fmt.Sprintf(`${{ fromJSON(format((github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository) && '["windows-latest"]' || '["self-hosted","Windows","X64","civ6-ci-windows","civ6-ci-run-{0}-{1}-%s-Windows"]', github.run_id, github.run_attempt)) }}`, w.Job)
 }
 
 // Propose changes only routing and checkout source/auth. Byte-level edits keep
@@ -130,6 +131,11 @@ func Propose(data []byte, w Workflow) ([]byte, error) {
 	}
 	out := bytes.Replace(data, []byte(oldLine), []byte("    runs-on: "+Route(w)), 1)
 	if w.Job == "test" {
+		matrixLine := "        os: [ubuntu-latest, windows-latest]\n"
+		if bytes.Count(out, []byte(matrixLine)) != 1 {
+			return nil, errors.New("original OS matrix differs")
+		}
+		out = bytes.Replace(out, []byte(matrixLine), []byte("        os: [windows-latest]\n"), 1)
 		marker := "      - name: Install Rust\n"
 		if bytes.Count(out, []byte(marker)) != 1 {
 			return nil, errors.New("original checkout boundary differs")
@@ -169,6 +175,13 @@ func Propose(data []byte, w Workflow) ([]byte, error) {
 	}
 	*field(a, "runs-on") = *field(b, "runs-on")
 	if w.Job == "test" {
+		// Restore only the explicitly removed unused OS before proving that
+		// every other original acceptance command and setting is unchanged.
+		osList := field(field(field(a, "strategy"), "matrix"), "os")
+		if osList == nil || osList.Kind != yaml.SequenceNode || len(osList.Content) != 1 || osList.Content[0].Value != "windows-latest" {
+			return nil, errors.New("Windows acceptance matrix differs")
+		}
+		*osList = *field(field(field(b, "strategy"), "matrix"), "os")
 		steps := field(a, "steps")
 		var kept []*yaml.Node
 		docSteps, hashSteps := 0, 0

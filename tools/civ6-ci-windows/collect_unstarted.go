@@ -35,7 +35,8 @@ func checkUnstartedFiles(root, runner string) error {
 }
 
 func checkUnstartedJob(p Plan, j apiJob, steps int) error {
-	if checkJob(p, j, false) != nil || j.Status != "queued" || j.Runner != "" || steps != 0 {
+	neverAssigned := j.Status == "queued" || (j.Status == "completed" && j.Conclusion == "cancelled")
+	if checkJob(p, j, false) != nil || !neverAssigned || j.Runner != "" || steps != 0 {
 		return errors.New("official target job has begun or differs")
 	}
 	return nil

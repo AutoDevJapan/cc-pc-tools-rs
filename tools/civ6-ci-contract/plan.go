@@ -136,14 +136,21 @@ func (p Plan) Ref() string {
 	}
 	return "refs/heads/" + p.Branch
 }
+
+// JobLabel selects one workflow run/attempt/job and matrix OS. A listener never
+// competes for another workflow's job or the other test matrix entry.
+func JobLabel(p Plan) string {
+	return fmt.Sprintf("civ6-ci-run-%d-%d-%s-%s", p.RunID, p.Attempt, p.Job, p.OS())
+}
+
 func Labels(p Plan) []string {
 	if p.Workflow == CodeQLWorkflow {
 		return []string{CodeQLLabel}
 	}
 	if p.JobName == "test (ubuntu-latest)" {
-		return []string{"self-hosted", "Linux", "X64", LinuxLabel}
+		return []string{"self-hosted", "Linux", "X64", LinuxLabel, JobLabel(p)}
 	}
-	return []string{"self-hosted", "Windows", "X64", WindowsLabel}
+	return []string{"self-hosted", "Windows", "X64", WindowsLabel, JobLabel(p)}
 }
 func (p Plan) OS() string {
 	if p.Workflow == CodeQLWorkflow || p.JobName == "test (ubuntu-latest)" {

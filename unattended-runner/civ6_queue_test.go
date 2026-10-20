@@ -124,7 +124,7 @@ func (civ6FailTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 
 // The queue runs after intake, scheduling and retries, and its failure leaves
 // the earlier stages' results untouched.
-func TestCiv6QueueRunsLastInTheExistingTick(t *testing.T) {
+func TestCiv6QueueRunsLastInTheExistingPeriodicTick(t *testing.T) {
 	r, _ := fixture(t)
 	r.Client.Transport = civ6FailTransport{}
 	r.Config.Civ6Queue = civ6Config()
@@ -143,7 +143,7 @@ func TestCiv6QueueRunsLastInTheExistingTick(t *testing.T) {
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
-	h := r.tick(ctx)
+	h := r.periodicTick(ctx)
 	if len(order) < 2 || order[0] != "scheduler" || order[len(order)-1] != "civ6" || !h.Scheduler {
 		t.Fatalf("order %v scheduler=%v", order, h.Scheduler)
 	}

@@ -26,6 +26,7 @@ type Outcome struct {
 	Runner    string // unique runner name for the contract's RequireSuccess
 	Collected bool   // services, registration, namespace and lock are confirmed gone
 	Residue   bool   // collection ended "residue only" (profile/hive left behind)
+	Deferred  bool   // only after strict unstarted collection proves no job ran
 	Failure   string
 }
 
@@ -38,8 +39,9 @@ type ExecFunc func(ctx context.Context, pin Pinned, args []string, stdin []byte,
 type AdminFunc func(ctx context.Context, scriptPath string, timeoutSec int) ([]byte, error)
 
 type StepResult struct {
-	Exit   int
-	Output []byte
+	Exit     int
+	Output   []byte
+	TreeGone bool // retained root/member handles signalled and Job active count zero
 }
 
 // LifeCtx gives a lifecycle everything it may touch: the owned root, the
@@ -53,7 +55,6 @@ type LifeCtx struct {
 	EntryDir string
 	Exec     ExecFunc
 	Admin    AdminFunc
-	Token    TokenSource
 	Fence    func(reason string)
 	Running  func()
 	OnHelper func(ProcID)
@@ -77,7 +78,10 @@ const maxStepOutput = 1 << 20
 // every start.
 func runPinned(ctx context.Context, pin Pinned, args []string, stdin []byte, onStart func(ProcID)) (StepResult, error) {
 	if e := pin.Verify(); e != nil {
-		return StepResult{}, e
+		return StepResult{TreeGone: true}, e // no process was created
+	}
+	if len(args) > 0 && args[0] == "execute" {
+		return runOwnedExe(ctx, pin.Path, args, stdin, onStart)
 	}
 	return runExe(ctx, pin.Path, args, stdin, onStart)
 }
@@ -220,12 +224,6 @@ func copyPinned(from Pinned, to string) error {
 	return Pinned{Path: to, SHA256: from.SHA256}.Verify()
 }
 
-func zero(b []byte) {
-	for i := range b {
-		b[i] = 0
-	}
-}
-
 func timeout(sec int) time.Duration { return time.Duration(sec) * time.Second }
 
 // ---------------------------------------------------------------- Windows
@@ -248,6 +246,7 @@ type windowsPlan struct {
 	ControllerSID  string `json:"controller_sid"`
 	Seconds        int    `json:"seconds"`
 	CleanupSeconds int    `json:"cleanup_seconds,omitempty"`
+	ExecuteBefore  int64  `json:"execute_before,omitempty"`
 }
 
 func adminScript(entryDir, verb, root string, extra ...string) (string, error) {
@@ -300,6 +299,21 @@ func (h windowsHelper) collect(ctx context.Context, lc *LifeCtx, verb string) (d
 func (h windowsHelper) Lifecycle(ctx context.Context, lc *LifeCtx) (o Outcome) {
 	o.Collected = true // nothing exists outside the owned root yet
 	p := windowsPlan{Plan: lc.Plan, Instance: lc.Instance, Root: lc.Root, RunnerVersion: h.cfg.RunnerVersion, RunnerDigest: h.cfg.RunnerDigest, ControllerSID: h.cfg.ControllerSID, Seconds: h.cfg.Seconds, CleanupSeconds: h.cfg.CleanupSeconds}
+	// Reserve collection time before starting anything. Gate waits do not move
+	// this absolute bound; the helper checks it after acquiring Cargo and the
+	// service refuses to run past it. Allow the final drain before cancelling.
+	executeEnd := time.Now().Add(timeout(h.cfg.Seconds + 1800))
+	if outer, ok := ctx.Deadline(); ok {
+		limit := outer.Add(-timeout(h.cleanup() + 300))
+		if limit.Before(executeEnd) {
+			executeEnd = limit
+		}
+	}
+	if !executeEnd.After(time.Now()) {
+		o.Failure = "no execution budget before collection"
+		return o
+	}
+	p.ExecuteBefore = executeEnd.UnixNano()
 	if filepath.Base(lc.Root) != "codex-owned-"+lc.Instance || !hex32.MatchString(lc.Instance) {
 		o.Failure = "owned root does not match the instance"
 		return o
@@ -333,19 +347,12 @@ func (h windowsHelper) Lifecycle(ctx context.Context, lc *LifeCtx) (o Outcome) {
 		o.Collected, o.Residue = h.collect(ctx, lc, "collect-unstarted")
 		return o
 	}
-	tok, e := lc.Token.Registration(ctx)
-	if e != nil {
-		o.Failure = "registration credential unavailable"
-		o.Collected, o.Residue = h.collect(ctx, lc, "collect-unstarted")
-		return o
-	}
 	lc.Running()
 	helper := Pinned{Path: filepath.Join(lc.Root, "helper.exe"), SHA256: h.cfg.Exe.SHA256}
 	o.Started, o.Runner = true, windowsRunner(lc.Instance)
-	ectx, ecancel := context.WithTimeout(ctx, timeout(h.cfg.Seconds+120))
-	res, e := lc.Exec(ectx, helper, []string{"execute", lc.Root}, tok, lc.OnHelper)
+	ectx, ecancel := context.WithDeadline(ctx, executeEnd.Add(120*time.Second))
+	res, e := lc.Exec(ectx, helper, []string{"execute", lc.Root}, nil, lc.OnHelper)
 	ecancel()
-	zero(tok)
 	lc.Log("execute.log", res.Output)
 	end := lastEvent(res.Output, "execute-end")
 	o.Exit = res.Exit
@@ -356,7 +363,13 @@ func (h windowsHelper) Lifecycle(ctx context.Context, lc *LifeCtx) (o Outcome) {
 		o.Failure = fmt.Sprintf("execute exited %d", res.Exit)
 	}
 	o.HelperOK = e == nil && res.Exit == 0 && end != nil && boolField(end, "ok")
-	if end == nil {
+	noBegin := lastEvent(res.Output, "execute-begin") == nil
+	if !res.TreeGone {
+		o.Collected = false
+		o.Failure = "controller process tree completion not verified"
+		return o
+	}
+	if end == nil && !noBegin {
 		// The helper did not finish its own handling (it makes exactly one stop
 		// attempt itself when it does), so one stop is tried here. A reported
 		// fence is never stopped again: collect verifies it and fences on failure.
@@ -365,7 +378,20 @@ func (h windowsHelper) Lifecycle(ctx context.Context, lc *LifeCtx) (o Outcome) {
 		scancel()
 		lc.Log("stop.log", sres.Output)
 	}
-	o.Collected, o.Residue = h.collect(ctx, lc, "collect")
+	collectVerb := "collect"
+	started, known := end["service_started"].(bool)
+	if (known && !started) || (end == nil && noBegin) {
+		// A rejected/expired gate child did not start SCM or configure a runner.
+		// The strict unstarted collector verifies that proof and the queued job.
+		// Never try the normal collector first and then bypass its refusal.
+		o.Started, o.Runner, o.HelperOK = false, "", false
+		collectVerb = "collect-unstarted"
+	}
+	o.Collected, o.Residue = h.collect(ctx, lc, collectVerb)
+	// No begin is retryable only when the owned wait actually hit its deadline,
+	// never on creation/pin/gate rejection. A gate child classifies its error.
+	retryable := boolField(end, "retryable_prestart") || (end == nil && noBegin && errors.Is(e, context.DeadlineExceeded))
+	o.Deferred = collectVerb == "collect-unstarted" && o.Collected && retryable
 	return o
 }
 

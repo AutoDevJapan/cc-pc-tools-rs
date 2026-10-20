@@ -24,7 +24,6 @@ type Deps struct {
 	Exec    ExecFunc
 	Admin   AdminFunc
 	SD      SafeDelete
-	Token   TokenSource
 	Alive   func(ProcID) bool
 	Spawn   func(key string) (ProcID, bool, error)
 	Self    func() ProcID
@@ -63,7 +62,6 @@ func NewDeps(cfgPath string) (*Deps, error) {
 		return &Reader{GH: cfg.GH, Run: realRun, CacheDir: filepath.Join(cfg.Home, "cache"), MaxCalls: 40}
 	}
 	d.SD = fixedSafeDelete{Exe: cfg.SafeDelete, Run: realRun}
-	d.Token = ghToken{GH: cfg.GH, Run: realRun}
 	d.Helpers = map[string]Helper{}
 	for name, h := range cfg.Helpers {
 		if name == "Windows" {

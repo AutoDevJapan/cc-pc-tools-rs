@@ -28,7 +28,7 @@ func TestGuestRunnerRejectsRegistrationIdentityDrift(t *testing.T) {
 	old := configureRunner
 	configureRunner = func(guestPacket) error { reached++; return sentinel }
 	t.Cleanup(func() { configureRunner = old })
-	good := guestPacket{Plan: rustPlan(), Kind: KindRust, Name: "civ6-ci-linux-rust-1", Token: "X", Nonce: rep("a", 64), Custom: linuxLabel, Defaults: true}
+	good := guestPacket{Plan: rustPlan(), Kind: KindRust, Name: "civ6-ci-linux-rust-1", Token: "X", Nonce: rep("a", 64), Custom: linuxLabel + "," + jobLabel(rustPlan()), Defaults: true}
 	cq := guestPacket{Plan: codeQLPlan("Analyze (rust)"), Kind: KindCodeQL, Name: "civ6-ci-linux-codeql-1", Token: "X", Nonce: rep("a", 64), Custom: codeQLLabel}
 	mutations := map[string]guestPacket{}
 	add := func(name string, p guestPacket, m func(*guestPacket)) { m(&p); mutations[name] = p }

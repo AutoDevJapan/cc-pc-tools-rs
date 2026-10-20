@@ -36,11 +36,12 @@ parent's `contract.Plan` tags; the rest are local operational fields.
 | `runner_version`, `runner_digest` | pinned official `actions-runner-win-x64-<v>.zip` release asset and SHA-256 |
 | `controller_sid` | SID of the user that runs `execute`/`stop`/`status` (non-admin) |
 | `seconds` 1..14400, `cleanup_seconds` 60..14400 or 0 (=1800) | run deadline; per-ACL-propagation budget |
+| `execute_before` Unix nanoseconds (optional, 0 for standalone) | queue's absolute bound, fixed before prepare; gate waits never extend it |
 | `fixture` \| `runtime_fixture` | credential-free lifecycle fixtures only; never official |
 
 `Plan.validate` = local checks + `contract.Plan.Validate` + Windows-only rules: workflow
 and job must be one of the three, OS must be Windows, labels must be exactly
-`[self-hosted, Windows, X64, civ6-ci-windows]`, the original unrouted PR149 pins are
+`[self-hosted, Windows, X64, civ6-ci-windows, civ6-ci-run-<run>-<attempt>-<job>-Windows]`, the original unrouted PR149 pins are
 rejected for official use, runner pin required.
 
 Example (pull request; compact):
@@ -62,7 +63,7 @@ Build into the owned root: `go build -trimpath -o <root>/bootstrap.exe .`
 | command | who | input | result |
 | --- | --- | --- | --- |
 | `bootstrap.exe prepare <root> <runner.zip>` | CC-AdminBroker (admin) | plan.json, official zip | copies immutable `helper.exe`; **claims the fixed shared service identity first** (see below); materializes **the pinned commit from GitHub objects** (`contract.Verify` first) into RAM then `<root>/runtime` only; installs rustup/Rust 1.95.0 + stable under the new CARGO_HOME/RUSTUP_HOME; grants ACEs on the new root/runtime only; writes `prepared.json`. Single use, exit 0/1. |
-| `helper.exe execute <root>` | controller (non-admin) **inside the scheduler's Cargo allocation** | registration token on **stdin** (RAM only) | enters `cargo_gate.exe test --target-dir <root target>` as a child; `contract.Verify` + own-runner-absent check; token goes through a one-message pipe to the service (kernel client/server PIDs checked) and only into the official configure input; waits for the service to stop; checks start/complete/after (below). Exit 0 only for a verified successful job. |
+| `helper.exe execute <root>` | controller (non-admin) **inside the scheduler's Cargo allocation** | no credential input; acquire once after gate/audit (RAM and authenticated pipe only) | enters `cargo_gate.exe test --target-dir <root target>` as a child; `contract.Verify` + own-runner-absent check; token goes through a one-message pipe to the service (kernel client/server PIDs checked) and only into the official configure input; waits for the service to stop; checks start/complete/after (below). Exit 0 only for a verified successful job. |
 | `helper.exe stop <root>` | controller | - | one SCM stop request, refused unless the shared service is currently bound to this root; the Job Object drain is confirmed by `execute`'s hold, not by this command. |
 | `helper.exe status <root>` | controller | - | one line: `{"instance","service","service_present","state","pid","exit_code","prepared.json"}` (SCM state 1 = stopped). |
 | `bootstrap.exe collect <root>` | CC-AdminBroker | stopped service, PID 0, protected launcher drain report | holds the identity lock for the whole run; removes the two service ACEs and the launcher-report grant, **resets the ACL of every descendant** to what it inherits from the root, resets the owner of the whole root to Administrators, returns the root to the controller, **verifies recursively that no entry grants the shared SID**, checks the account has no process and the service is idle and still bound to this root, **keeps** the shared service and its one profile, writes `collection-<ns>.json` (`service_retained`, `service_idle_confirmed`, `owner_reset`, `tree_acl_reset`, `tree_entries_verified_without_service_grant`, `shared_profile_retained`, profile counts) and, as the very last step, the durable marker `HKLM\SOFTWARE\CC\civ6-ci-windows\<service>\CollectedRoot` (REG_SZ naming an owned root; the key's DACL is replaced on every write: SYSTEM/Administrators full, authenticated users read; measured: a non-admin write is denied). Every entry's DACL is read through its own handle opened with `FILE_FLAG_OPEN_REPARSE_POINT`, so no entry is judged by a link target (`tree_links_verified_without_service_grant` counts links); exit 0 or 1. |
@@ -94,7 +95,7 @@ run/attempt/job/labels, whole source tree, reviewed bytes of all three workflows
 (`monitor_windows.go`); a policy mismatch stops the service at once, GitHub read
 failures are tolerated for up to 5 consecutive polls (the 6th ends the run). While the job is still queued the plan is also re-verified once a minute, and a job that is
 completed without ever being assigned to this runner (cancelled while queued) ends the run at once, so it does not hold the Cargo slot. The job's runner must be
-the unique runner name `CC-CIW-<instance>` with exactly the labels `self-hosted, Windows, X64, civ6-ci-windows`.
+the unique runner name `CC-CIW-<instance>` with the default Windows labels, `civ6-ci-windows`, and the shared contract's unique `JobLabel(plan)`.
 Only this plan's unique registration is inspected; the long-lived workers and the Linux
 ephemeral runner are neither read nor affected. The hook checks the actual SDK context
 with `contract.CheckEvent` (PR merge context vs checked-out head are separate), source
@@ -102,7 +103,7 @@ HEAD/tree/index/raw bytes, credential-key absence and the shared gate allocation
 Success requires the three hook receipts, the service result, and an official job
 `completed/success` on this runner with the registration gone - listener exit alone is not success.
 
-Registration uses `--ephemeral --disableupdate --labels civ6-ci-windows` (default
+Registration uses `--ephemeral --disableupdate --labels civ6-ci-windows,<JobLabel(plan)>` (default
 labels `self-hosted, Windows, X64` are kept so it matches the reviewed `runs-on` array).
 
 ## Runtime pins and shared resources (read/execute only, no shared ACL change)
@@ -114,10 +115,16 @@ labels `self-hosted, Windows, X64` are kept so it matches the reviewed `runs-on`
 - rustup-init from `static.rust-lang.org` verified against its published SHA-256;
   toolchains `1.95.0` (default) and `stable` with rustfmt/clippy; installed MSVC (vswhere),
   Git for Windows, PowerShell 7 discovered by fixed path.
-- Source and registration token never come from an existing product folder or an owner
+- Source never comes from an existing product folder; the token uses the existing host OAuth store, not a worker or product
   profile; the token is never in argv, SCM, a file or a log.
 
 ## Crash and uncertainty
+
+The queue fixes `execute_before` before prepare and reserves collection time beyond it.
+After Cargo admission, the controller uses the earlier of this bound and its normal service deadline,
+and passes that same bound to the launcher. The gate holds another 90 seconds for drain, while the
+queue allows 120 seconds before cancelling execute. If the bound expired before service start,
+`execute-end` reports `service_started:false` and the queue invokes only `collect-unstarted`.
 
 `execute-begin` without `execute-end`, or `fence=true`, means the service may still own the
 namespace: the queue must not start another Windows worker until `status` shows state 1 and
@@ -206,8 +213,10 @@ Local results: `go test -race ./...`, `go vet ./...` and `go build -trimpath` pa
 
 ## Queue contract notes
 
-One Windows worker at a time. If several queued jobs carry the same labels, the listener may take a job other than
-the plan's; the hook then rejects it and that job fails. The shared identity enforces this: a second `prepare` is refused until the previous job was collected. The queue should admit only one Windows plan at a time,
+One Windows worker at a time. The workflow requests and the registration supplies a selecting label containing
+the run ID, attempt, fixed job key and matrix OS. Native-driver, live-chain, Rust Windows, another run and another
+attempt therefore do not match the same listener. The hook still verifies the actual assignment. The shared identity
+also refuses a second `prepare` until the previous job was collected. The queue admits only one Windows plan at a time,
 count each admitted run/attempt/job once in the 12-job budget, and never rerun a failed one automatically.
 A cancelled or failed collection of that case is handled like any other.
 
@@ -227,3 +236,7 @@ Runtime fixtures (`runtime_fixture`) from the old module were not re-run.
   minimal ACL on this PC. Delete/subkey/DACL-change denials were not measured separately.
 - `evidence/shared-identity-fixtures-4-20261019.json` names its code as "working tree on top of 772fbce"; no binary digest ties it to a
   commit. The last live run (normal job, 30 entries, 0 links) used the final collect code and is recorded here, not in a saved file.
+
+The supported official entry point is the queue-owned bounded Job Object. The queue retains process/member handles and terminates/drains the entire helper + Cargo gate tree before collection. Direct standalone execute does not provide that outer wait bound. Official plans require execute_before; less than 60 seconds remaining refuses SCM startup before audit and again before start. Registration credentials are obtained once after gate/audit/queue checks, never held while waiting for Cargo, and errors discard raw credential output.
+
+Standalone execute is not an intake path for a new resident/unbounded runner. execute-end.retryable_prestart is true only for a startup-budget deadline, registration queue conflict, or explicitly classified GET transport failure; credential and policy errors remain permanent refusals. The queue additionally enforces six deferrals or 24 hours.

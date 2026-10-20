@@ -73,7 +73,7 @@ fn sha(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
 
-fn canonical(value: &Value) -> Value {
+pub(crate) fn canonical(value: &Value) -> Value {
     match value {
         Value::Object(values) => {
             let sorted: std::collections::BTreeMap<_, _> = values.iter().collect();
@@ -193,6 +193,7 @@ fn attachments(
     root: &Path,
     effects: &mut dyn Effects,
     paths: &[PathBuf],
+    question: Option<&crate::question_images::Scope>,
 ) -> Result<Vec<Attachment>> {
     if paths.len() > 10 {
         return Err("新しい投稿に添付できる画像は10件までです".into());
@@ -235,12 +236,23 @@ fn attachments(
             .map_err(|_| "添付元の保護範囲を確認できません。画像は送信していません")?;
         let proof: Value = serde_json::from_str(&guard.stdout)
             .map_err(|_| "添付元の保護範囲を確認できません。画像は送信していません")?;
-        if guard.code != 0
-            || proof["client_resource"] != false
-            || proof["classification_unverified"] != false
+        let qualified = if guard.code == 0
+            && proof["client_resource"] == true
+            && proof["classification_unverified"] == true
         {
+            Some(crate::question_images::preflight(
+                effects,
+                &source,
+                question.ok_or("添付元の保護範囲を確認できません。画像は送信していません")?,
+            )?)
+        } else if guard.code == 0
+            && proof["client_resource"] == false
+            && proof["classification_unverified"] == false
+        {
+            None
+        } else {
             return Err("添付元の保護範囲を確認できません。画像は送信していません".into());
-        }
+        };
         let input = fs::File::open(&source).map_err(|_| INVALID_INPUT)?;
         let info = input.metadata().map_err(|_| INVALID_INPUT)?;
         if !info.is_file() || info.len() != expected_size || info.len() > IMAGE_LIMIT {
@@ -268,10 +280,14 @@ fn attachments(
         if size != info.len() {
             return Err(INVALID_INPUT.into());
         }
+        let hash = format!("{:x}", digest.finalize());
+        if qualified.is_some_and(|proof| proof.sha256 != hash || proof.size != size) {
+            return Err(INVALID_INPUT.into());
+        }
         snapshot.as_file().sync_all().map_err(|_| SAVE_FAILED)?;
         result.push(Attachment {
             file: snapshot,
-            hash: format!("{:x}", digest.finalize()),
+            hash,
             size,
             extension,
             source,
@@ -390,9 +406,16 @@ fn metadata(raw: &str, ask: bool) -> Result<Value> {
         return Err(CHILD_FAILED.into());
     }
     if ask {
+        if result["phase"] == "duplicate"
+            && (result["outcome"] != "existing_question_images_differ"
+                || result["wait_requested"] != false
+                || result.get("url").is_some_and(|url| !url.is_string()))
+        {
+            return Err(CHILD_FAILED.into());
+        }
         if !matches!(
             result["phase"].as_str(),
-            Some("posted" | "waiting" | "answered" | "applied" | "closed")
+            Some("posted" | "waiting" | "answered" | "applied" | "closed" | "duplicate")
         ) {
             return Err(CHILD_FAILED.into());
         }
@@ -427,9 +450,10 @@ fn metadata(raw: &str, ask: bool) -> Result<Value> {
             "wait_requested" | "reused" => value.is_boolean(),
             "phase" => matches!(
                 value.as_str(),
-                Some("posted" | "waiting" | "answered" | "applied" | "closed")
+                Some("posted" | "waiting" | "answered" | "applied" | "closed" | "duplicate")
             ),
             "delivery" => value == "verified",
+            "outcome" => value == "existing_question_images_differ",
             "domain" => value == "discord-conversation-v1",
             "url" => value.as_str().is_some_and(|url| {
                 url.strip_prefix("https://discord.com/channels/")
@@ -489,11 +513,12 @@ pub fn try_ask(home: &Path, effects: &mut dyn Effects, args: &AskArgs) -> Result
         .filter(|id| *id != 0)
         .ok_or(DECISION_REQUIRED)?;
     let origin = origin(args, &decision)?;
-    if !args.attach.is_empty() {
-        return Err("新しい質問の添付は log または post で進捗投稿へ送ってください".into());
-    }
+    let root = home.join("conversation-bridge");
+    private_directory(&root)?;
+    let scope = crate::question_images::Scope::from_decision(todo, &text, &decision);
+    let snapshots = attachments(&root, effects, &args.attach, scope.as_ref())?;
     let decision = canonical(&decision).to_string();
-    let identity = json!([
+    let mut identity = json!([
         "normal-ask-v1",
         sha(text.as_bytes()),
         sha(decision.as_bytes()),
@@ -501,8 +526,16 @@ pub fn try_ask(home: &Path, effects: &mut dyn Effects, args: &AskArgs) -> Result
         args.title,
         origin
     ]);
+    if !snapshots.is_empty() {
+        identity
+            .as_array_mut()
+            .ok_or(INVALID_INPUT)?
+            .push(json!(snapshots
+                .iter()
+                .map(|file| json!([file.hash, file.extension]))
+                .collect::<Vec<_>>()));
+    }
     let request = format!("normal-ask-{}", sha(identity.to_string().as_bytes()));
-    let root = home.join("conversation-bridge");
     let directory = root.join(&request);
     private_directory(&directory)?;
     let body_path = directory.join("body.txt");
@@ -525,6 +558,7 @@ pub fn try_ask(home: &Path, effects: &mut dyn Effects, args: &AskArgs) -> Result
         args.title.clone(),
         "--wait".into(),
     ]);
+    append_attachments(&root, &directory, snapshots, &mut argv)?;
     execute(effects, &argv, true)
 }
 
@@ -599,7 +633,7 @@ fn send_log(
     }
     let root = home.join("conversation-bridge");
     private_directory(&root)?;
-    let snapshots = attachments(&root, effects, attach)?;
+    let snapshots = attachments(&root, effects, attach, None)?;
     let files: Vec<_> = snapshots
         .iter()
         .map(|file| json!([file.hash, file.extension]))
@@ -632,11 +666,21 @@ fn send_log(
     if notify {
         argv.push("--notify".into());
     }
+    append_attachments(&root, &directory, snapshots, &mut argv)?;
+    execute(effects, &argv, false)
+}
+
+fn append_attachments(
+    root: &Path,
+    directory: &Path,
+    snapshots: Vec<Attachment>,
+    argv: &mut Vec<String>,
+) -> Result<()> {
     for (index, file) in snapshots.into_iter().enumerate() {
         let path = directory.join(format!("attachment-{index}.{}", file.extension));
         install(file.file, &path, &file.hash, file.size)?;
         save_media_source(
-            &root,
+            root,
             &directory.join(format!("attachment-{index}.source.json")),
             &file.source,
             &path,
@@ -645,5 +689,5 @@ fn send_log(
         )?;
         argv.extend(["--attach".into(), string_path(&path)?]);
     }
-    execute(effects, &argv, false)
+    Ok(())
 }

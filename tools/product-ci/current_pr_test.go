@@ -321,6 +321,30 @@ func TestCurrentPRMatrixCompletionAndFreshInvocation(t *testing.T) {
 	}
 }
 
+func TestCurrentPRGeneratedCodeQLRefBindsExactPRAndSHA(t *testing.T) {
+	root := "repos/AutoDevJapan/opaque-fixture"
+	for _, fault := range []string{"", "different-pr", "changed-ref", "unrelated-branch"} {
+		b, read, path, bytes := currentPRFixture(t, "codeql", func(d map[string]any) {
+			run := d[root+"/actions/runs/7"].(map[string]any)
+			run["head_branch"] = "refs/pull/995/head"
+			sha := strings.Repeat("a", 40)
+			if fault == "different-pr" {
+				run["head_branch"] = "refs/pull/996/head"
+			}
+			if fault == "changed-ref" {
+				sha = strings.Repeat("e", 40)
+			}
+			if fault == "unrelated-branch" {
+				run["head_branch"] = "unrelated"
+			}
+			d[root+"/git/ref/pull/995/head"] = map[string]any{"object": map[string]string{"sha": sha}}
+		})
+		if _, e := planCurrentPRWithPolicy(context.Background(), b, read, path, bytes); (e == nil) != (fault == "") {
+			t.Fatalf("generated PR ref %q: %v", fault, e)
+		}
+	}
+}
+
 func TestCurrentPRHookRejectsOtherAssignedJob(t *testing.T) {
 	b, read, path, bytes := currentPRFixture(t, "codeql", nil)
 	p, e := planCurrentPRWithPolicy(context.Background(), b, read, path, bytes)

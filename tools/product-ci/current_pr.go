@@ -182,8 +182,24 @@ func planCurrentPRWithPolicy(ctx context.Context, b currentPRBinding, read api, 
 		if e = read(ctx, fmt.Sprintf("repos/%s/actions/runs/%d", p.Repo, b.RunID), &run); e != nil {
 			return codeQLPlan{}, e
 		}
-		if pr.Head.Ref == "" || run.HeadBranch != pr.Head.Ref {
+		if pr.Head.Ref == "" {
 			return codeQLPlan{}, errors.New("current PR CodeQL branch differs")
+		}
+		if run.HeadBranch != pr.Head.Ref {
+			// GitHub's generated PR CodeQL run uses this numeric PR head ref,
+			// rather than the contributor's branch name. Bind both its exact PR
+			// and its independently queried ref SHA; never accept another PR ref.
+			ref := fmt.Sprintf("refs/pull/%d/head", b.PR)
+			if run.HeadBranch != ref {
+				return codeQLPlan{}, errors.New("current PR CodeQL branch differs")
+			}
+			var observed struct{ Object struct{ SHA string } }
+			if e = read(ctx, "repos/"+p.Repo+"/git/ref/"+strings.TrimPrefix(ref, "refs/"), &observed); e != nil {
+				return codeQLPlan{}, e
+			}
+			if observed.Object.SHA != b.Head {
+				return codeQLPlan{}, errors.New("current PR generated head ref differs")
+			}
 		}
 	}
 	type officialJob struct {

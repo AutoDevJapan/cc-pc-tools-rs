@@ -239,7 +239,9 @@ Execution additionally requires an unassigned queued frozen job. Live hooks
 still accept the already assigned job. Only an as-yet-unobserved assignment
 gets up to three API reads separated by 500 ms within the existing callback
 deadline; an invalid observed assignment is rejected immediately. CodeQL's
-head branch must also equal this PR's branch. A new invocation can retain
+head branch must equal this PR's branch or its exact numeric
+`refs/pull/995/head`, whose Git ref SHA is independently checked. Other PR
+refs and unrelated branches are rejected. A new invocation can retain
 successful members of the same frozen matrix while serving its remaining jobs.
 
 `secret-job <repo-id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF>`

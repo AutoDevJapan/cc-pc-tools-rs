@@ -345,6 +345,30 @@ func TestCurrentPRGeneratedCodeQLRefBindsExactPRAndSHA(t *testing.T) {
 	}
 }
 
+func TestCurrentPRPlanJSONPreservesOriginalGuestProtocol(t *testing.T) {
+	old := candidates[0]
+	original := codeQLPlan{RepoID: old.ID, PR: old.PR, Candidate: old.SHA, SHA: old.SHA, Tree: strings.Repeat("c", 40), RunID: 7, Attempt: 2, Kind: "secret", Role: "candidate-secret-workflow", ContextSHA: strings.Repeat("b", 40), Label: secretLabel(old.ID)}
+	b, read, path, bytes := currentPRFixture(t, "secret", nil)
+	current, e := planCurrentPRWithPolicy(context.Background(), b, read, path, bytes)
+	if e != nil {
+		t.Fatal(e)
+	}
+	current.Repo = "" // names travel in the private packet, not this JSON plan.
+	for _, p := range []codeQLPlan{original, current} {
+		data, e := json.Marshal(p)
+		if e != nil {
+			t.Fatal(e)
+		}
+		if strings.Contains(string(data), `"current_pr"`) != (p.Current != (currentPRBinding{})) {
+			t.Fatal("zero current binding changed original protocol")
+		}
+		var q codeQLPlan
+		if e = json.Unmarshal(data, &q); e != nil || q != p || !validGuestPlan(q) {
+			t.Fatalf("host/guest plan JSON roundtrip failed: %v", e)
+		}
+	}
+}
+
 func TestCurrentPRHookRejectsOtherAssignedJob(t *testing.T) {
 	b, read, path, bytes := currentPRFixture(t, "codeql", nil)
 	p, e := planCurrentPRWithPolicy(context.Background(), b, read, path, bytes)

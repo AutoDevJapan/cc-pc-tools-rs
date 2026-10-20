@@ -243,6 +243,9 @@ head branch must equal this PR's branch or its exact numeric
 `refs/pull/995/head`, whose Git ref SHA is independently checked. Other PR
 refs and unrelated branches are rejected. A new invocation can retain
 successful members of the same frozen matrix while serving its remaining jobs.
+If the source advances after an official job ends, the helper's final source
+recheck fails; the official job result remains separate evidence. Assignment
+visibility beyond the finite callback wait can likewise fail a hook.
 
 `secret-job <repo-id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF>`
 serves the first candidate's original PR secret gate. Its workflow path and

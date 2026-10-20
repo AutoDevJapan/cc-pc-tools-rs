@@ -65,3 +65,18 @@ read-onlyとnetwork=falseは維持し、approvalだけをon-request / auto_revie
 配備は実SHAを直前に再比較し、既存ロックと稼働中プロセスを確認して、旧版backup付きで原子置換する。
 specが読めない・原promptが変わった・期限切れ等では資格を落として起動を拒否し、
 失敗を保持する。資格が成立しないまま同じ調査を繰り返す通常readerへ戻さない。
+
+## 配備後のCodeQL受付と古いpush
+
+通常配備後、CodeQLのmain pushがrunner待ちの間に次のマージが入ると、
+既存bridgeは古いHEADをcheckout前に403で拒否する。実行39377282842では4件、
+39380094549ではRust成功後の3件でこの条件を観測した。
+最新mainだけを許可する保護は維持する。
+
+mainへの通常pushは同じworkflow内で同じconcurrency groupを使い、新しいpushが
+古い実行を取り消す。PRの初回は従来どおりPR番号ごとに取消可能とし、
+PR再実行と定期実行はrun IDごとの独立したgroupを保つ。
+workflowの権限、対象、checkout、runner、解析言語と必須検査は変えない。
+変更前の失敗は実CIで確認し、変更後はYAML解析とconcurrency以外の構造一致、
+別モデルレビュー、正式PR CI、マージ後の通常pushで確認する。
+取消とhook検査が競合する場合の拒否は保持し、過去の403を成功へ書き換えない。

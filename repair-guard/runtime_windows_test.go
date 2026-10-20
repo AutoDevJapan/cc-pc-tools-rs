@@ -139,6 +139,9 @@ func TestRuntimeExecutableOnlyQualifiesTheExistingExactFile(t *testing.T) {
 			if !runtimeExecutable(known, known, known) {
 				t.Fatal("existing exact executable rejected")
 			}
+			if !finiteRuntimeExecutable(known, known, known, 1792466736) || finiteRuntimeExecutable(known, known, known, 1792466735) || finiteRuntimeExecutable(known, known, known, 1792627200) {
+				t.Fatal("finite executable lifetime violated")
+			}
 			for _, candidate := range []string{root, known + ".bak", filepath.Join(root, "config.json"), filepath.Join(root, "other.exe")} {
 				if runtimeExecutable(candidate, candidate, known) {
 					t.Fatal("unrelated resource accepted")

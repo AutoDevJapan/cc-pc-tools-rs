@@ -67,9 +67,9 @@ impl Context {
         let research_policy = self.research_policy(job)?;
         let prompt = self.prompt_for_attempt(job)?;
         if research_policy.is_some() {
-            let mut text = std::fs::read_to_string(&prompt)?;
-            text.push_str(crate::finite_research::GUIDANCE);
-            std::fs::write(&prompt, text)?;
+            let mut bytes = std::fs::read(&prompt)?;
+            crate::finite_research::append_guidance(&mut bytes);
+            std::fs::write(&prompt, bytes)?;
         }
         let mut rendered = job.clone();
         if profile.fixed_review {

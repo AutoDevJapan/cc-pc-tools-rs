@@ -22,6 +22,10 @@ const schedulerRuntime = "D:/CC/Tools/scheduler/scheduler.exe"
 // queue configuration, history, credentials or sibling qualifies here.
 const jobsRuntime = "D:/CC/Tools/codex-jobs/codex_jobs.exe"
 
+func finiteRuntimeExecutable(absolute, target, known string, at int64) bool {
+	return at >= 1792466736 && at < 1792627200 && runtimeExecutable(absolute, target, known)
+}
+
 // The owner explicitly requested repair of this installed progress display
 // (ToDo3020/3021, restated 2026-10-20). Only the existing distribution leaves
 // qualify. Its directory, collector, credentials and unrelated tools do not.

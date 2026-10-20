@@ -1167,13 +1167,12 @@ impl Context {
         let state = FileLock::try_acquire(&self.job_dir(&jid).join("state.lock"))?;
         let dst = self.job_dir(&jid).join("prompt.md");
         let mut stored_prompt = bytes;
-        let guidance = if job["finite_research_approval"].is_object() {
-            crate::finite_research::GUIDANCE
-        } else if policy.sandbox == "read-only" || !job["fixed_review_requalification"].is_null() {
-            cc_job_policy::READ_GUIDANCE
-        } else {
-            cc_job_policy::WRITE_GUIDANCE
-        };
+        let guidance =
+            if policy.sandbox == "read-only" || !job["fixed_review_requalification"].is_null() {
+                cc_job_policy::READ_GUIDANCE
+            } else {
+                cc_job_policy::WRITE_GUIDANCE
+            };
         if retry_key.is_none()
             && !std::str::from_utf8(&stored_prompt)
                 .unwrap()
@@ -1182,6 +1181,7 @@ impl Context {
             stored_prompt.extend_from_slice(guidance.as_bytes());
         }
         if job["finite_research_approval"].is_object() {
+            crate::finite_research::append_guidance(&mut stored_prompt);
             job["finite_research_approval"]["prompt_sha256"] =
                 json!(cc_job_policy::product_retry::digest(&stored_prompt));
         }

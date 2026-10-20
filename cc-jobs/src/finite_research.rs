@@ -74,6 +74,24 @@ fn binding(job: &Value, row: &Value, hash: &str, at: u64) -> Option<Value> {
 
 pub(crate) const GUIDANCE: &str = "\n\n## 元ToDo2939の有限な審査提出\n2026-10-20の元ToDo3047の本人依頼に基づき、元2939の次の1試行だけ通常の自動審査へ提出できます。sandboxはread-only、networkはfalseのままです。これは操作の許可ではありません。原仕様の固定gh_gate GET、専用worktreeへの匿名モデル/照合票保存、原仕様の資源制約を守った所有Dockerでの工具版照合だけをrequire_escalatedで通常審査へ提出してください。拒否は守り、別API/ref/認証/経路で迂回せず、再拒否の反復をしないで原失敗を返してください。先行の一般的な閲覧guidanceの編集禁止に対する例外は、この原仕様の匿名出力の新規保存だけです。原source・設定・他担当のソース・他ToDo状態・秘密の保存や変更、配備、sandbox/network設定の変更は許可されません。審査が拒否した項目は具体的に未確認として返し、実行したと報告しないでください。\n";
 
+pub(crate) fn append_guidance(bytes: &mut Vec<u8>) {
+    for guidance in [cc_job_policy::READ_GUIDANCE, GUIDANCE] {
+        if !std::str::from_utf8(bytes)
+            .unwrap()
+            .contains(guidance.trim())
+        {
+            bytes.extend_from_slice(guidance.as_bytes());
+        }
+    }
+}
+
+fn receipt_matches(mut proof: Option<Value>, saved: &Value, original: &[u8]) -> bool {
+    if let Some(proof) = proof.as_mut() {
+        proof["prompt_sha256"] = json!(cc_job_policy::product_retry::digest(original));
+    }
+    proof.as_ref() == Some(saved)
+}
+
 impl Context {
     pub(crate) fn research_qualification(&self, job: &Value, db: &Value) -> Result<Option<Value>> {
         if job["todo_id"] != 2939 {
@@ -117,12 +135,13 @@ impl Context {
             return Ok(None);
         }
         let db = self.read_json(&self.todo_store())?;
-        let mut proof = self.research_qualification(job, &db)?;
-        if let Some(proof) = proof.as_mut() {
-            let original = std::fs::read(self.job_dir(s(job, "id")).join("prompt.md"))?;
-            proof["prompt_sha256"] = json!(cc_job_policy::product_retry::digest(&original));
-        }
-        if proof.as_ref() != Some(&job["finite_research_approval"]) {
+        let proof = self.research_qualification(job, &db)?;
+        let original = if proof.is_some() {
+            std::fs::read(self.job_dir(s(job, "id")).join("prompt.md"))?
+        } else {
+            Vec::new()
+        };
+        if !receipt_matches(proof, &job["finite_research_approval"], &original) {
             return Err(Error::new(
                 "finite research review submission qualification changed or expired",
             ));
@@ -138,6 +157,37 @@ impl Context {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn qualified_guidance_retains_reader_prohibitions_and_is_idempotent() {
+        let mut bytes = b"original task".to_vec();
+        append_guidance(&mut bytes);
+        let text = std::str::from_utf8(&bytes).unwrap();
+        assert!(text.contains(cc_job_policy::READ_GUIDANCE.trim()));
+        assert!(text.contains(GUIDANCE.trim()));
+        let original = bytes.clone();
+        append_guidance(&mut bytes);
+        assert_eq!(bytes, original);
+    }
+    #[test]
+    fn changed_prompt_bytes_or_metadata_cannot_reuse_the_original_qualification() {
+        let (job, row) = fixture();
+        let proof = binding(&job, &row, SPEC_HASH, START).unwrap();
+        let mut saved = proof.clone();
+        saved["prompt_sha256"] = json!(cc_job_policy::product_retry::digest(b"original prompt"));
+        assert!(receipt_matches(
+            Some(proof.clone()),
+            &saved,
+            b"original prompt"
+        ));
+        assert!(!receipt_matches(
+            Some(proof.clone()),
+            &saved,
+            b"changed prompt"
+        ));
+        assert!(!receipt_matches(None, &saved, b"original prompt"));
+        saved["launch_key"] = json!("b".repeat(32));
+        assert!(!receipt_matches(Some(proof), &saved, b"original prompt"));
+    }
     fn fixture() -> (Value, Value) {
         let relation = json!({"parent_todo_id":2757,"kind":"research",
             "owner":{"repository":"autodevjapan/cc-pc-tools-rs"}});

@@ -212,6 +212,11 @@ impl Context {
         if !self.defer_capacity_lock(&mut fresh) {
             fresh["capacity_exhausted"] = json!(true);
             fresh["finished_at"] = json!(self.rt.now());
+            fresh["capacity_wait_pending"] = json!(false);
+            fresh["capacity_retry_ended"] = json!("capacity_recheck_lock_wait_exhausted");
+            fresh["last_error"] =
+                json!("capacity recheck unavailable after the finite technical wait budget");
+            fresh["retry_not_before"] = Value::Null;
         }
         self.save(&fresh)
     }
@@ -233,6 +238,9 @@ impl Context {
         job["capacity_owner_recheck"] = json!(false);
         job["capacity_wait_pending"] = json!(false);
         job["capacity_retry_ended"] = json!("todo_owner_or_generation_changed");
+        job["last_error"] = json!(
+            "capacity retry ended because ToDo ownership, generation or execution conditions changed"
+        );
         job["retry_not_before"] = Value::Null;
         job["activity"] =
             json!("元のToDoの担当・停止・依存関係が変わったため、この実行の再試行を終了");
@@ -254,12 +262,6 @@ impl Context {
             if !explicit_sources && !id.is_empty() {
                 sources.push(id.into());
             }
-        }
-        if sources.is_empty()
-            && job["parent_origin"] != "inherited"
-            && !s(job, "parent_job_id").is_empty()
-        {
-            sources.push(s(job, "parent_job_id").to_owned());
         }
         sources.sort();
         sources.dedup();
@@ -297,11 +299,23 @@ impl Context {
             return Ok(());
         }
         let (sources, authors) = self.review_provenance(job)?;
-        let excluded = review_exclusions(job, &authors);
+        let mut excluded = review_exclusions(job, &authors);
+        // The launcher may also be a writer, but parenthood alone is not
+        // provenance. Use it only as a routing exclusion when no author is known.
+        if sources.is_empty()
+            && !s(job, "parent_job_id").is_empty()
+            && let Ok(parent) = self.load(s(job, "parent_job_id"))
+        {
+            let mut routing = job.clone();
+            routing["review_excluded_models"] = json!(excluded);
+            if !s(&parent, "model").is_empty() {
+                excluded = review_exclusions(&routing, &[s(&parent, "model").to_owned()]);
+            }
+        }
         let managed =
             job["todo_id"].as_u64().is_some_and(|id| id > 0) || !s(job, "launch_key").is_empty();
-        let owner_choice =
-            job["model_origin"] == "owner_request" || (!managed && job["model_explicit"] != false);
+        let owner_choice = job["model_origin"] == "owner_request"
+            || (!managed && s(job, "parent_job_id").is_empty() && job["model_explicit"] != false);
         let author_conflict = authors
             .iter()
             .any(|author| same_model(author, s(job, "model")));
@@ -323,6 +337,7 @@ impl Context {
                 .ok_or_else(|| Error::new("no independent review model is available"))?;
             job["model"] = json!(profile.model);
             job["requested_model"] = job["model"].clone();
+            job["model_origin"] = json!("policy");
         }
         job["review_author_models"] = json!(authors);
         job["review_excluded_models"] = json!(excluded);
@@ -584,6 +599,8 @@ impl Context {
         // Fallback effort is a policy decision, not the source model's default.
         // Explicit effort on the original model was retained by account retries.
         job["effort"] = json!("max");
+        job["model_origin"] = json!("policy");
+        job["effort_origin"] = json!("policy");
         job["capacity_account_selector"] = Value::Null;
         prepare_resume(job, &session, &now);
         job["last_failure_kind"] = Value::Null;

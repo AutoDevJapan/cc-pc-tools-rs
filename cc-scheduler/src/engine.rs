@@ -349,6 +349,11 @@ impl<B: Backend> Scheduler<B> {
                 &mut i["scheduler"],
                 json!({"job":j["id"],"phase":"running","started_s":start}),
             );
+            if i["scheduler"]["review_preparation_failure"].is_object() {
+                let previous = i["scheduler"]["review_preparation_failure"].clone();
+                push(&mut i["scheduler"]["review_preparation_history"], previous);
+                remove(&mut i["scheduler"], "review_preparation_failure");
+            }
         })?;
         Ok(())
     }
@@ -384,9 +389,15 @@ impl<B: Backend> Scheduler<B> {
                 "memory" => "空きメモリ不足で停止しました",
                 "failed" => "担当ジョブが失敗しました",
                 "resource_wait" => "指定モデルの利用枠を待っています",
+                "stale_review_spec" => "レビュー中に仕様が更新されたため、旧結果を保管して新しい仕様から再開します",
                 _ => "担当ジョブが停止しました",
             };
-            i["note"] = json!(format!("{message}。原因を引き継ぎ、資源の空きを確認して自動で再開します。"));
+            if reason == "stale_review_spec" {
+                i["note"] = json!(format!("{}\n{message}。", s(&i["note"])));
+                record_result(i, jid, "stale_review_spec");
+            } else {
+                i["note"] = json!(format!("{message}。原因を引き継ぎ、資源の空きを確認して自動で再開します。"));
+            }
             if reason == "resource_wait" { record_result(i, jid, "resource_wait"); }
             let until = n(&i["scheduler"]["not_before"]).max(n(&i["scheduler"]["resource_wait"]["until"])).max(now+delay);
             let m = &mut i["scheduler"];
@@ -967,6 +978,21 @@ impl<B: Backend> Scheduler<B> {
         } else if s(&j["status"]) == "succeeded" {
             let child_review = cc_job_policy::review_result::is_finite_review(j);
             if child_review
+                && !cc_job_policy::review_result::is_review_subwork(j)
+                && !cc_job_policy::review_result::matches_item(j, i)
+                && i["status"] == "doing"
+                && i["scheduler"]["job"] == j["id"]
+                && i["scheduler"]["key"] == j["finite_review"]["launch_key"]
+                && i["wait_ready"].is_null()
+                && i["owner_question_wait"].is_null()
+                && i["decision_wait"].is_null()
+                && i["owner_postponement_recorded"] != true
+                && !truth(&i["stop_kind"])
+                && !cancellation::owner_stopped(i, j)
+            {
+                return self.requeue_if(&i["id"], &j["id"], "stale_review_spec", Some(i));
+            }
+            if child_review
                 && (!cc_job_policy::review_result::matches_item(j, i)
                     || !i["wait_ready"].is_null()
                     || !i["owner_question_wait"].is_null()
@@ -1376,6 +1402,35 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }
         selection["model_origin"] =
             selection_origin("model", &item, accepted_options, source, &selection);
+        selection["effort_origin"] =
+            selection_origin("effort", &item, accepted_options, source, &selection);
+        let fixed_contract =
+            source.is_some_and(cc_ask::job_policy::launch_context::fixed_execution_contract);
+        if let Some(source) = source.filter(|_| fixed_contract) {
+            for field in ["model", "effort"] {
+                if !truth(&item[field]) && !truth(&accepted_options[field]) && truth(&source[field])
+                {
+                    selection[field] = source[field].clone();
+                }
+            }
+        }
+        let mut managed = selection.clone();
+        managed["todo_id"] = item["id"].clone();
+        if !fixed_contract {
+            cc_ask::job_policy::apply_managed_launch_policy(&mut managed);
+        }
+        for field in [
+            "model",
+            "model_origin",
+            "effort",
+            "effort_origin",
+            "legacy_model_hint",
+            "legacy_effort_hint",
+        ] {
+            if !managed[field].is_null() {
+                selection[field] = managed[field].clone();
+            }
+        }
         if cc_ask::job_policy::review_task("", s(&selection["task_type"]))
             || s(&item["subwork"]["kind"]) == "review"
         {
@@ -1390,7 +1445,8 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             excluded.dedup();
             let explicit = truth(&item["model"])
                 || truth(&accepted_options["model"])
-                || selection["model_explicit"] == true;
+                || selection["model_explicit"] == true
+                || selection["model_origin"] == "owner_request";
             let conflict = excluded
                 .iter()
                 .any(|author| cc_ask::job_policy::same_model(author, s(&selection["model"])));
@@ -1399,11 +1455,13 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 return Err(Error("ReviewModelConflict"));
             }
             let ai_writer_default = !owner_choice
-                && excluded.is_empty()
-                && cc_ask::job_policy::same_model(s(&selection["model"]), "gpt-6.1-sol");
+                && ["gpt-6.1-sol", "gpt-6-luna", "gpt-6-astra"]
+                    .iter()
+                    .any(|model| cc_ask::job_policy::same_model(s(&selection["model"]), model));
             if !explicit || conflict || ai_writer_default {
                 let profile=cc_ask::job_policy::review_profile(&excluded).ok_or(Error("ReviewModelUnavailable"))?;
                 selection["model"]=json!(profile.model);
+                selection["model_origin"] = json!("policy");
                 if !truth(&item["effort"]) && !truth(&accepted_options["effort"]) {selection["effort"]=json!(profile.effort);}
             }
             selection["review_source_jobs"] = json!(sources);
@@ -1417,6 +1475,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             if truth(&item["model"])
                 || truth(&accepted_options["model"])
                 || selection["model_explicit"] == true
+                || selection["model_origin"] == "owner_request"
             {
                 self.log(
                     "WARNING",
@@ -1435,6 +1494,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             )?;
             let picked = self.backend.pick(&task)?;
             selection["model"] = picked["model"].clone();
+            selection["model_origin"] = json!("policy");
             if !self.backend.model_exists(s(&selection["model"])) {
                 selection["model"] = json!("gpt-6.1-sol");
             }
@@ -1444,13 +1504,21 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }
         let mut managed = selection.clone();
         managed["todo_id"] = item["id"].clone();
-        managed["effort_origin"] =
-            selection_origin("effort", &item, accepted_options, source, &selection);
-        cc_ask::job_policy::apply_managed_launch_policy(&mut managed);
-        selection["model"] = managed["model"].clone();
-        selection["model_origin"] = managed["model_origin"].clone();
-        selection["effort"] = managed["effort"].clone();
-        selection["effort_origin"] = managed["effort_origin"].clone();
+        if !fixed_contract {
+            cc_ask::job_policy::apply_managed_launch_policy(&mut managed);
+        }
+        for field in [
+            "model",
+            "model_origin",
+            "effort",
+            "effort_origin",
+            "legacy_model_hint",
+            "legacy_effort_hint",
+        ] {
+            if !managed[field].is_null() {
+                selection[field] = managed[field].clone();
+            }
+        }
         if !self.backend.model_exists(s(&selection["model"])) {
             return Err(Error("ModelUnavailable"));
         }
@@ -1464,6 +1532,11 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         // when the selected settings agree, including partial explicit choices.
         if source.is_some_and(|source| {
             (selection["sandbox"] == "read-only" && source["sandbox"] != "read-only")
+                || (cc_ask::job_policy::review_result::is_finite_review(source)
+                    && source["finite_review"]["spec"]
+                        .as_str()
+                        .or(source["subwork_spec"].as_str())
+                        != item["spec"].as_str())
                 || ["model", "effort"].iter().any(|field| {
                     (truth(&item[*field]) || source[*field].is_string())
                         && source[*field] != selection[*field]

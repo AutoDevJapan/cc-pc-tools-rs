@@ -1179,6 +1179,15 @@ impl Context {
             }
             job["review_excluded_models"]=json!(models);
         }
+        if !s(&job, "parent_job_id").is_empty() {
+            // Plain flags supplied by an AI caller are saved hints. An owner
+            // override must be carried explicitly, with its original request.
+            for origin in ["model_origin", "effort_origin"] {
+                if job[origin].is_null() {
+                    job[origin] = json!("policy");
+                }
+            }
+        }
         self.validate_review_launch(&mut job)?;
         cc_job_policy::apply_managed_launch_policy(&mut job);
         if crate::capacity::review_job(&job)

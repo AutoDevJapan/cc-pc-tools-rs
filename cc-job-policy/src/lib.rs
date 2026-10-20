@@ -4,6 +4,7 @@ pub mod cancellation;
 pub mod cargo;
 pub mod finished_review;
 pub mod finished_work_handoff;
+pub mod launch_context;
 pub mod owner_wait_repair;
 pub mod priority;
 pub mod product_retry;
@@ -95,18 +96,14 @@ fn managed_job(job: &serde_json::Value) -> bool {
 
 pub fn effective_effort(job: &serde_json::Value) -> &str {
     let saved = job["effort"].as_str().unwrap_or("max");
+    if launch_context::fixed_execution_contract(job) {
+        return saved;
+    }
     let model = job["model"].as_str().unwrap_or("");
     let known = ["gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna"]
         .contains(&model.strip_prefix("openai/").unwrap_or(model))
-        || [
-            "claude-opus-5-5",
-            "claude-sonnet-5-5",
-            "claude-haiku-5-5",
-            "opus",
-            "sonnet",
-            "haiku",
-        ]
-        .contains(&model.strip_prefix("anthropic/").unwrap_or(model));
+        || ["claude-opus-5-5", "claude-sonnet-5-5", "opus", "sonnet"]
+            .contains(&model.strip_prefix("anthropic/").unwrap_or(model));
     if managed_job(job) && known && job["effort_origin"] != "owner_request" {
         "max"
     } else {
@@ -124,20 +121,17 @@ pub fn apply_effort_policy(job: &mut serde_json::Value) {
 }
 
 pub fn apply_managed_launch_policy(job: &mut serde_json::Value) {
+    if launch_context::fixed_execution_contract(job) {
+        return;
+    }
+    let source = launch_context::source_settings(job);
     let managed = managed_job(job);
     let automatic = job["model_explicit"] == false || job["model_origin"] == "policy";
     let reader = review_task(
         job["name"].as_str().unwrap_or(""),
         job["task_type"].as_str().unwrap_or(""),
     ) || job["subwork"]["kind"] == "review";
-    let capacity_attempt = job["capacity_wait_pending"] == true
-        || job["last_failure_kind"] == "capacity"
-        || job["capacity_same_model_retry_count"].as_u64().unwrap_or(0) > 0
-        || job["capacity_retry_count"].as_u64().unwrap_or(0) > 0
-        || (!job["capacity_history"].is_null()
-            && job["capacity_history"]
-                .as_array()
-                .is_none_or(|history| !history.is_empty()));
+    let capacity_attempt = launch_context::capacity_attempt(job);
     let previous = job["model"].as_str().unwrap_or("");
     if managed
         && automatic
@@ -153,6 +147,7 @@ pub fn apply_managed_launch_policy(job: &mut serde_json::Value) {
         job["model_origin"] = serde_json::json!("policy");
     }
     apply_effort_policy(job);
+    launch_context::reconcile_resume(job, &source);
 }
 
 pub fn author_models(source: &serde_json::Value) -> Vec<String> {

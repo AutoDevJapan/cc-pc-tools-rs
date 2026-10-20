@@ -9,7 +9,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-fn run() -> Result<Value> {
+fn run() -> Result<bool> {
     let root = PathBuf::from(
         std::env::args()
             .nth(1)
@@ -162,27 +162,23 @@ fn run() -> Result<Value> {
         &job,
         "Reply exactly ACCEPTANCE_SWITCH_3081. Do not use tools.",
     )?;
-    let ok = job["status"] == "succeeded"
+    Ok(job["status"] == "succeeded"
+        && job["model"] == "gpt-6.1-sol"
+        && job["resume_session"] == session
         && job["last_message"]
             .as_str()
-            .is_some_and(|m| m.contains("ACCEPTANCE_SWITCH_3081"));
-    Ok(
-        json!({"initial_model":"gpt-6.1-sol","retried_model":job["model"],"initial_selector":initial_selector,
-            "retry_selector":job["capacity_account_selector"],"same_session":job["resume_session"]==session,
-            "todo_id":job["todo_id"],"capacity_event":"injected canonical turn.failed and known account attribution","oauth_response_verified":ok,
-            "same_model_retry_count":job["capacity_same_model_retry_count"],"effort_request":"max","tier_request":"fast"}),
-    )
+            .is_some_and(|m| m.contains("ACCEPTANCE_SWITCH_3081")))
 }
 fn main() {
     match run() {
-        Ok(v) => {
-            println!("{v}");
-            if v["oauth_response_verified"] != true {
-                std::process::exit(1);
-            }
+        Ok(true) => {
+            // Account metadata and provider errors never become log values.
+            println!(
+                "OAuth acceptance verified: same model and conversation, max/fast requested; capacity event was synthetic"
+            );
         }
-        Err(e) => {
-            eprintln!("{}", e.message);
+        Ok(false) | Err(_) => {
+            eprintln!("OAuth acceptance did not complete; no account metadata is logged");
             std::process::exit(1);
         }
     }

@@ -64,3 +64,33 @@ fn haiku_does_not_acquire_an_unverified_max_requirement() {
     assert_eq!(job["model"], "anthropic/claude-haiku-5-5");
     assert_eq!(job["effort"], "high");
 }
+
+#[test]
+fn exact_source_contracts_are_not_rewritten_as_unqualified_launches() {
+    for field in [
+        "original_product_retry",
+        "fixed_read_only_review",
+        "fixed_review_requalification",
+    ] {
+        let mut job = json!({"todo_id":3081,"model":"gpt-6-luna","effort":"high",
+            "model_origin":"policy","effort_origin":"policy","resume_session":"bound-session"});
+        job[field] = json!({"source_job_id":"fixed-source"});
+        let original = job.clone();
+        apply_managed_launch_policy(&mut job);
+        assert_eq!(job, original);
+        assert_eq!(cc_job_policy::effective_effort(&job), "high");
+    }
+}
+
+#[test]
+fn a_previously_normalized_legacy_job_retires_its_context_only_once() {
+    let mut job = json!({"todo_id":3081,"model":"gpt-6.1-sol","effort":"max",
+        "model_origin":"policy","effort_origin":"policy","legacy_model_hint":"gpt-6-luna",
+        "legacy_effort_hint":"high","thread_id":"old-session","resume_session":"old-session"});
+    apply_managed_launch_policy(&mut job);
+    assert!(job["resume_session"].is_null());
+    job["thread_id"] = json!("fresh-session");
+    job["resume_session"] = json!("fresh-session");
+    apply_managed_launch_policy(&mut job);
+    assert_eq!(job["resume_session"], "fresh-session");
+}

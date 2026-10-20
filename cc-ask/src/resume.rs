@@ -496,6 +496,17 @@ fn continuation_selection(
         &question["selection"],
         question,
     ];
+    let execution_source = [
+        &source_job,
+        &question["continuation"]["job_info"],
+        &question["job_info"],
+    ]
+    .into_iter()
+    .find(|source| {
+        source["model"]
+            .as_str()
+            .is_some_and(|model| !model.is_empty())
+    });
     let kind = sources
         .iter()
         .find_map(|source| source["task_type"].as_str().filter(|v| !v.is_empty()));
@@ -517,13 +528,24 @@ fn continuation_selection(
         }
     }
     for field in ["model", "effort"] {
-        if let Some(source) = sources.iter().find(|source| {
+        let mut source = sources.iter().copied().find(|source| {
             source[field]
                 .as_str()
                 .is_some_and(|value| !value.is_empty())
-        }) {
+        });
+        let origin = format!("{field}_origin");
+        if source.is_none_or(|source| source[&origin] != "owner_request") {
+            if let Some(original) = execution_source.filter(|source| {
+                source[&origin] == "owner_request"
+                    && source[field]
+                        .as_str()
+                        .is_some_and(|value| !value.is_empty())
+            }) {
+                source = Some(original);
+            }
+        }
+        if let Some(source) = source {
             selection[field] = source[field].clone();
-            let origin = format!("{field}_origin");
             selection[&origin] = source[&origin].clone();
         }
     }
@@ -559,12 +581,11 @@ fn continuation_selection(
             selection[field] = json!("policy");
         }
     }
-    let previous_settings = (selection["model"].clone(), selection["effort"].clone());
     crate::job_policy::apply_managed_launch_policy(&mut selection);
-    if previous_settings != (selection["model"].clone(), selection["effort"].clone()) {
-        // A resumed native conversation may restore its old settings. The
-        // original cwd/scope/history still accompany this fresh continuation.
-        selection["resume_session"] = Value::Null;
+    // A cached launch may already contain Sol/Max while its session still
+    // belongs to the original High/Luna worker. Compare with that worker.
+    if let Some(original) = execution_source {
+        crate::job_policy::launch_context::reconcile_resume(&mut selection, original);
     }
     Ok(selection)
 }

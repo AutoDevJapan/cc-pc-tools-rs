@@ -457,12 +457,11 @@ pub fn add_item(db: &mut Value, args: &Command, paths: &Paths) -> Result<i64> {
     }
     let id = db["next_id"].as_i64().ok_or("invalid next_id")?;
     for (origin, value) in [(model_origin, model), (effort_origin, effort)] {
-        if let Some(origin) = origin {
-            if !["policy", "owner_request"].contains(&origin.as_str())
-                || value.as_ref().is_none_or(|value| value.is_empty())
-            {
-                return Err("add failed (ValueError)".into());
-            }
+        if let Some(origin) = origin
+            && (!["policy", "owner_request"].contains(&origin.as_str())
+                || value.as_ref().is_none_or(|value| value.is_empty()))
+        {
+            return Err("add failed (ValueError)".into());
         }
     }
     let display = |text: &str| {

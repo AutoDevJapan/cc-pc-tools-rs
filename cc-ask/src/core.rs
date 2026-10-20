@@ -1374,6 +1374,18 @@ pub fn launch_job_with_session(
     session: Option<&str>,
 ) -> Result<String> {
     use std::io::Write;
+    // All Discord restart/steering/resume paths share this final boundary.
+    let mut normalized = selection.clone();
+    normalized["launch_key"] = json!(key);
+    normalized["resume_session"] = session.map(|id| json!(id)).unwrap_or(Value::Null);
+    for origin in ["model_origin", "effort_origin"] {
+        if normalized[origin] != "owner_request" {
+            normalized[origin] = json!("policy");
+        }
+    }
+    cc_job_policy::apply_managed_launch_policy(&mut normalized);
+    let session = cc_job_policy::launch_context::usable_resume_session(&normalized);
+    let selection = &normalized;
     let root = ctx.jobs.join("jobs");
     std::fs::create_dir_all(&root).map_err(|e| e.to_string())?;
     // Also serializes separate cc-ask state directories. Reserve ownership before
@@ -1426,11 +1438,14 @@ pub fn launch_job_with_session(
         .suffix(".md")
         .tempfile()
         .map_err(|_| "OSError".to_string())?;
-    let prompt = if truth(&selection["verbatim_owner_messages"]) {
+    let mut prompt = if truth(&selection["verbatim_owner_messages"]) {
         prompt.to_owned()
     } else {
         safe_text(prompt)
     };
+    if session.is_none() && selection["policy_resume_reset"].is_object() {
+        prompt.push_str("\n最新のモデル・推論設定へ移行するため新しい会話で再開します。元の仕様、保存済み履歴と作業フォルダの途中成果を読み、完了した操作を繰り返さず続行してください。\n");
+    }
     let prompt = crate::prompt_context::prepare(
         ctx,
         thread,

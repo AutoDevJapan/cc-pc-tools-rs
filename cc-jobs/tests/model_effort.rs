@@ -69,3 +69,17 @@ fn unknown_claude_keeps_its_identity_and_disables_inherited_gpt_fast() {
     assert!(args.iter().any(|arg| arg == "service_tier=default"));
     assert!(args.iter().any(|arg| arg == "features.fast_mode=false"));
 }
+
+#[test]
+fn native_args_never_restore_a_context_retired_by_policy() {
+    let mut job = json!({"codex":"codex.cmd","model":"gpt-6.1-sol","effort":"max",
+        "sandbox":"read-only","resume_session":"retired-session",
+        "policy_resume_reset":{"session":"retired-session"}});
+    assert!(!codex_args(&job).iter().any(|arg| arg == "resume"));
+    job["resume_session"] = json!("current-session");
+    assert!(
+        codex_args(&job)
+            .windows(2)
+            .any(|args| args == ["resume", "current-session"])
+    );
+}

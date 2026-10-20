@@ -118,6 +118,7 @@ fn retry_publication_rechecks_worker_identity_todo_owner_and_generation() {
         json!({"review_excluded_models":["gpt-6.1-sol"]}),
         json!({"capacity_same_model_retry_count":2}),
         json!({"capacity_tried_labels":["p000002"]}),
+        json!({"policy_resume_reset":{"session":"retired-context"}}),
     ] {
         let mut fresh = original.clone();
         fresh

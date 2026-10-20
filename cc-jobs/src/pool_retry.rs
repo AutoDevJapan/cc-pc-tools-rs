@@ -133,6 +133,7 @@ pub fn same_attempt(source: &Value, fresh: &Value) -> bool {
             "model_origin",
             "effort",
             "effort_origin",
+            "policy_resume_reset",
             "cwd",
             "sandbox",
             "scope_source",

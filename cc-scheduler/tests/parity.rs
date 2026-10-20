@@ -59,6 +59,14 @@ fn review_preparation_failures_stop_after_three_and_recover_on_new_evidence() {
         }
         f.dispatch();
         assert_eq!(f.e.backend.launched.len(), 1, "{reason}");
+        assert!(f.get(1)["scheduler"]["review_preparation_failure"].is_null());
+        assert_eq!(
+            f.get(1)["scheduler"]["review_preparation_history"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
     }
 }
 
@@ -106,6 +114,31 @@ fn finite_review_completion_does_not_relaunch_while_its_parent_remains_unfinishe
     let mut writer = reader.clone();
     writer["sandbox"] = json!("workspace-write");
     assert_eq!(job_result_outcome(&writer, text), "todo");
+}
+
+#[test]
+fn a_finished_root_review_of_a_replaced_spec_requeues_only_its_own_generation() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "other", 0);
+    f.managed(2, 2, "other", 0);
+    let before = f.get(1);
+    let record = &mut f.e.backend.records[0];
+    record["status"] = json!("succeeded");
+    record["sandbox"] = json!("read-only");
+    record["task_type"] = json!("review");
+    record["launch_key"] = before["scheduler"]["key"].clone();
+    record["finite_review"] =
+        json!({"todo_id":1,"spec":before["spec"],"launch_key":record["launch_key"]});
+    record["last_message"] = json!("状態: 完了\n旧い固定仕様のレビュー結果です。");
+    f.e.edit(&json!(1), |row| row["spec"] = json!("new-fixed-head.md"))
+        .unwrap();
+    f.e.backend.ps.remove(&1);
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "todo");
+    assert_eq!(f.get(1)["scheduler"]["last_stop"], "stale_review_spec");
+    assert_eq!(f.get(1)["spec"], "new-fixed-head.md");
+    assert_eq!(f.get(2)["status"], "doing");
+    assert!(f.e.backend.launched.is_empty());
 }
 
 #[test]

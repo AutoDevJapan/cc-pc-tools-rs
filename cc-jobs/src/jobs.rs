@@ -1598,8 +1598,8 @@ pub(crate) fn codex_args_with_policy(j: &Value, policy: cc_job_policy::Policy) -
         for server in profile.disabled_servers(j) {
             args.extend(["-c".into(), format!("mcp_servers.{server}.enabled=false")]);
         }
-        if !s(j, "resume_session").is_empty() {
-            args.extend(["resume".into(), s(j, "resume_session").into()]);
+        if let Some(session) = cc_job_policy::launch_context::usable_resume_session(j) {
+            args.extend(["resume".into(), session.into()]);
         }
         args.push("-".into());
         return args;
@@ -1666,8 +1666,8 @@ pub(crate) fn codex_args_with_policy(j: &Value, policy: cc_job_policy::Policy) -
             }
         }
     }
-    if !s(j, "resume_session").is_empty() {
-        args.extend(["resume".into(), s(j, "resume_session").into()]);
+    if let Some(session) = cc_job_policy::launch_context::usable_resume_session(j) {
+        args.extend(["resume".into(), session.into()]);
     }
     args.push("-".into());
     args

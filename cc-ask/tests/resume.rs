@@ -723,6 +723,34 @@ fn every_discord_resume_launcher_applies_policy_before_passing_a_native_session(
         assert_eq!(a.last()["cwd"], cwd);
     }
 }
+
+#[test]
+fn answer_reselection_compares_with_the_original_worker_instead_of_the_cached_selection() {
+    for (origin, expected_effort, expected_session) in [
+        ("policy", "max", ""),
+        ("owner_request", "high", "original-session"),
+    ] {
+        let mut a = AnswerResume::new();
+        a.change(json!({"session_id":"original-session","job_info":{
+            "model":"gpt-6.1-sol","effort":"high","effort_origin":origin,
+            "thread_id":"original-session","sandbox":"read-only","scope_source":"launcher"}}));
+        a.answered();
+        a.fake.borrow_mut().post_error = true;
+        a.resume();
+        assert_eq!(a.count(), 0);
+        assert_eq!(
+            a.question()["continuation"]["launch"]["selection"]["effort"],
+            expected_effort
+        );
+        a.answer(0., "起動前の追加回答も同じ依頼へ反映する", "OWN");
+        a.advance(601.);
+        a.resume();
+        assert_eq!(a.count(), 1);
+        assert_eq!(a.last()["effort"], expected_effort);
+        assert_eq!(a.last()["resume_session"], expected_session);
+        assert_eq!(a.last()["sandbox"], "read-only");
+    }
+}
 #[test]
 fn test_doing_todo_updated_after_reply_without_live_worker_does_not_consume_answer() {
     for format in ["%+", "%Y-%m-%d %H:%M"] {

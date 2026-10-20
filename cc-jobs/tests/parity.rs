@@ -1393,11 +1393,15 @@ mod capacity_regressions {
     fn capacity_supervisor_resumes_same_session_on_next_model() {
         let (t, saved) = supervise(
             1,
-            json!({"sandbox":"read-only","effort":"high","todo_id":1793}),
+            json!({"sandbox":"read-only","effort":"high","todo_id":1793,
+                "model_origin":"owner_request","effort_origin":"owner_request"}),
         );
         assert_eq!(saved["status"], "succeeded");
         assert_eq!(saved["model"], "anthropic/claude-sonnet-5-5");
         assert_eq!(saved["capacity_retry_count"], 1);
+        assert_eq!(saved["model_origin"], "policy");
+        assert_eq!(saved["effort_origin"], "policy");
+        assert_eq!(saved["requested_model"], "gpt-6.1-sol");
         assert_eq!(saved["capacity_history"][0]["session"], SESSION_ID);
         assert_eq!(saved["capacity_history"][0]["from_model"], "gpt-6.1-sol");
         assert_eq!(
@@ -1950,6 +1954,78 @@ mod capacity_regressions {
         assert_eq!(review["model"],"anthropic/claude-opus-5-5");
         assert_eq!(review["review_source_verified"],false);
         assert_eq!(review["review_source_jobs"],json!([]));
+    }
+
+    #[test]
+    fn a_launcher_parent_is_only_a_routing_exclusion_not_source_provenance() {
+        let t = Test::new();
+        t.put(job(
+            json!({"id":"launcher","status":"succeeded","cwd":t.ctx.root,
+            "model":"gpt-6.1-sol","requested_model":"gpt-6.1-sol"}),
+        ));
+        t.run(
+            &[
+                "--name",
+                "rev-parent-only",
+                "--task-type",
+                "review",
+                "--auto-model",
+                "gpt-6.1-sol",
+                "--effort",
+                "max",
+                "--parent-job-id",
+                "launcher",
+            ],
+            b"Review the specified change",
+        )
+        .unwrap();
+        let reader = t
+            .ctx
+            .list_jobs(&HashSet::new())
+            .into_iter()
+            .find(|job| s(job, "name") == "rev-parent-only")
+            .unwrap();
+        assert_eq!(reader["review_source_verified"], false);
+        assert_eq!(reader["review_source_jobs"], json!([]));
+        assert_eq!(reader["review_author_models"], json!([]));
+        assert_ne!(reader["model"], "gpt-6.1-sol");
+    }
+
+    #[test]
+    fn parented_cli_model_flags_are_hints_unless_an_owner_origin_is_recorded() {
+        for (origin, model, effort) in [
+            ("policy", "gpt-6.1-sol", "max"),
+            ("owner_request", "gpt-6-luna", "high"),
+        ] {
+            let t = Test::new();
+            t.put(job(
+                json!({"id":"launcher","status":"succeeded","cwd":t.ctx.root}),
+            ));
+            t.run(
+                &[
+                    "--model",
+                    "gpt-6-luna",
+                    "--effort",
+                    "high",
+                    "--parent-job-id",
+                    "launcher",
+                    "--model-origin",
+                    origin,
+                    "--effort-origin",
+                    origin,
+                ],
+                b"Continue the same work",
+            )
+            .unwrap();
+            let saved = t
+                .ctx
+                .list_jobs(&HashSet::new())
+                .into_iter()
+                .find(|job| s(job, "name") == "x")
+                .unwrap();
+            assert_eq!(saved["model"], model);
+            assert_eq!(saved["effort"], effort);
+        }
     }
 
     #[test]

@@ -203,3 +203,48 @@ Console UI、モデルカタログの表示設定、Skillsの判断待ちは変�
 [Sonnetのthinking制約](https://platform.claude.com/docs/en/build-with-claude/thinking-troubleshooting)、
 [Opus](https://platform.claude.com/docs/en/models/opus-5-5/overview)。
 これは適合判断であり、同一実課題での比較ベンチマーク結果ではない。
+
+## 2026-10-21追加レビュー後の会話移行
+
+3162は固定660043fまでの読取を158操作で完了し、原応答SHA256は
+8F55D29CB0D78B812BFCE39D31B0E0F7F6A79D24F41419852D9952C8D4E20F8F。
+3179は660043f..08b038cの17ファイルを138操作で読了し、原応答SHA256は
+5B5AB7D3B98DB883C69958372A9414E3411306643D90DC2893070BC160A3EEF7。
+双方の実turn_contextがOpus5.5/maxであることを対応threadの型付き記録で確認した。
+3162のMust（完了ヘッダーの衝突）は解消済みだったが、3179のMust2件は未解消として受領した。
+
+08bの正式Build speed run39479243284も2331/2331 pass・6skip、8ライブラリのdoctest成功。
+Clippyはcc-todo/lib.rs:460で停止した。全ログのSHA256は
+89EB5858E1AB9E7EA19343243BCD23DDC2F7E303A8F2DA608CE131C94D220B4F。
+入れ子のifをRust2024に適合する条件へまとめた。これを最終CI成功と数えていない。
+
+会話移行を共通のlaunch_contextへ整理した。通常のCLI登録・再admission、Discordの共通起動入口、
+回答後の選択で元の実行記録と比較する。model/effortが変わる旧会話は外し、元の仕様・cwd・権限・
+履歴・途中成果と有限予算を保つ。退役したIDを保存し、requeueが旧thread IDを再設定しても
+起動引数へ戻さない。既に旧版で正規化されたjobもlegacy hintから一度だけ移行し、新しい互換な
+会話では継続できる。追加回答で移行済みcacheが再選択されても、元workerとの比較を失わない。
+
+| 追加指摘 | 対応 |
+| --- | --- |
+| 再開経路の抜け | 共通launch境界とCLI/admissionで同じ整合処理を使う。個別owner指定と同モデル混雑再試行の会話・予算は保つ。 |
+| 親を作者の証明にする誤り | 親は現在モデルの経路除外だけ。明示した作者・固定sourceの履歴と分ける。AI親のplain flagsはpolicy、個別ownerは元指示とoriginを必要とする。 |
+| Haikuの未確認Max | 保存値へ新たなMaxを強制しない。Sonnet/Opusと区別し、モデルの名前は保持する。 |
+| 厳格なsource資格との衝突 | original_product_retryと固定レビューの既存許可tupleを一般方針だけで変更しない。通常の再資格確認が必要。 |
+| 起動中に仕様を変更した根のレビュー | 完了を新仕様へ流用せず、同じ元job/key/世代・停止/待機をCASで確認して旧結果を記録し、通常の再開へ戻す。新仕様には新会話を使う。子作業の既存の保守的な境界は保つ。 |
+| モデル置換後のorigin | 自動の別モデル選択はpolicy。引き継いだowner指定は明示指定として扱い、提供確認より先にAIの旧GPTヒントを移行する。 |
+| 一時ロック待機の終了 | 共通の最大3回という技術待機上限は延長しない。使い切った終了理由を固定文で残し、active pendingを解除する。 |
+| 準備エラーの過去分合算 | 正常な起動受付後、過去の失敗は履歴へ移し、現在の連続失敗回数から外す。 |
+| 古い起動文書 | READMEとjob-launch-modelsを最新方針へ合わせた。Consoleの表示や取得対象は変えない。 |
+
+除外リストはaliasも含めて同一モデルとして扱う。作者履歴に残る複数の観察表記は、
+除外判定とは区別して保持する。本人個別指定を付けたConsoleの合成検査は出所の保存を検査し、
+実UIがowner_requestを発行すると主張しない。UI変更はこの修復の対象外である。
+
+追加Redは製品08bのまま既存公開APIのテストだけを加えた6d7358aで、Cargo付き3191に固定した。
+旧会話の残存、HaikuへのMax強制、Discord共通起動入口と個別指定/同モデル予算の対照を限定検査する。
+親自身はCargoを起動していない。実結果を受けるまではRed/Greenの件数を推測しない。
+
+CodeQL集約は、未完の3言語構成に加えてcapacity_oauth_acceptance.rs:179のログ警告を返した。
+検査用exampleの戻り値を純粋なboolにし、catalog由来の構造体やselector、詳細なErrorを出力せず、
+固定の成功・失敗文だけにした。関数名の変更や警告抑制ではない。正式解析で解消を確認する。
+example自体は本担当で実行せず、実モデルの追加確認は配布後の通常schedulerで行う。

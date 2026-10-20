@@ -33,7 +33,7 @@ func newLife(t *testing.T) (*LifeCtx, *lifeRecord, string) {
 	}
 	rec := &lifeRecord{logs: map[string][]byte{}}
 	lc := &LifeCtx{Key: "1/1/2", Plan: Plan{Version: 1, RepoID: RepoID, Head: headSHA, Tree: treeSHA, Event: "pull_request", Branch: branch, PR: 149, ContextSHA: mergeSHA, WorkflowSHA: mergeSHA, Workflow: ".github/workflows/native-driver.yml", RunID: 1, Attempt: 1, JobID: 2, Job: "native-driver", JobName: "native-driver"},
-		Instance: instance, Root: root, EntryDir: t.TempDir(), Token: fakeToken{},
+		Instance: instance, Root: root, EntryDir: t.TempDir(),
 		Fence:    func(r string) { rec.fences = append(rec.fences, r) },
 		Running:  func() { rec.running++ },
 		OnHelper: func(id ProcID) { rec.helper = append(rec.helper, id) },
@@ -43,15 +43,16 @@ func newLife(t *testing.T) (*LifeCtx, *lifeRecord, string) {
 }
 
 type winFake struct {
-	calls        []string
-	execErr      error
-	stdin        []byte
-	prepareOK    bool
-	executeOut   string
-	executeExit  int
-	collectOut   string
-	scripts      map[string]string
-	helperPinned []Pinned
+	treeUncertain bool
+	calls         []string
+	execErr       error
+	stdin         []byte
+	prepareOK     bool
+	executeOut    string
+	executeExit   int
+	collectOut    string
+	scripts       map[string]string
+	helperPinned  []Pinned
 }
 
 func newWinFake() *winFake {
@@ -89,7 +90,7 @@ func (w *winFake) exec(ctx context.Context, pin Pinned, args []string, stdin []b
 		if onStart != nil {
 			onStart(ProcID{PID: 901, Created: 3})
 		}
-		return StepResult{Exit: w.executeExit, Output: []byte(w.executeOut)}, w.execErr
+		return StepResult{Exit: w.executeExit, Output: []byte(w.executeOut), TreeGone: !w.treeUncertain}, w.execErr
 	}
 	return StepResult{}, nil
 }
@@ -98,7 +99,7 @@ func winHelper(t *testing.T) windowsHelper {
 	return windowsHelper{cfg: HelperConfig{Exe: writePinned(t, "civ6-ci-windows.exe", "helper-bytes"), RunnerArchive: writePinned(t, "runner.zip", "zip-bytes"), Seconds: 600, RunnerVersion: "2.338.0", RunnerDigest: strings.Repeat("a", 64), ControllerSID: "S-1-5-21-1-2-3-4"}}
 }
 
-func TestWindowsLifecycleUsesTheDocumentedStepsAndKeepsTokenInStdin(t *testing.T) {
+func TestWindowsLifecycleUsesDocumentedStepsWithoutPregateCredential(t *testing.T) {
 	h := winHelper(t)
 	lc, rec, root := newLife(t)
 	w := newWinFake()
@@ -110,8 +111,8 @@ func TestWindowsLifecycleUsesTheDocumentedStepsAndKeepsTokenInStdin(t *testing.T
 	if got := strings.Join(w.calls, ","); got != "admin:prepare,exec:execute,admin:collect" {
 		t.Fatalf("%s", got)
 	}
-	if string(w.stdin) != "REGISTRATION-TOKEN-SECRET-123456" {
-		t.Fatal("registration credential must reach the helper stdin only")
+	if len(w.stdin) != 0 {
+		t.Fatal("no credential may be obtained before Cargo admission")
 	}
 	if filepath.Base(w.helperPinned[0].Path) != "helper.exe" || filepath.Dir(w.helperPinned[0].Path) != root || w.helperPinned[0].SHA256 != h.cfg.Exe.SHA256 {
 		t.Fatalf("execute must use the pinned copy inside the root: %+v", w.helperPinned[0])
@@ -139,7 +140,7 @@ func TestWindowsLifecycleStopsOnceWhenTheServiceMayStillRun(t *testing.T) {
 	lc, _, root := newLife(t)
 	w := newWinFake()
 	w.executeExit = 1
-	w.executeOut = ""
+	w.executeOut = `{"event":"execute-begin"}`
 	lc.Exec, lc.Admin = w.exec, w.admin(root)
 	out := h.Lifecycle(context.Background(), lc)
 	if out.HelperOK || out.Exit != 1 || !out.Collected || !strings.Contains(strings.Join(w.calls, ","), "exec:execute,exec:stop,admin:collect") {
@@ -174,14 +175,16 @@ func TestWindowsLifecycleStopsOnceWhenTheServiceMayStillRun(t *testing.T) {
 	}
 }
 
-func TestWindowsLifecycleWithoutRegistrationCredentialCollectsUnstarted(t *testing.T) {
+func TestWindowsLifecycleCredentialFailureCollectsUnstarted(t *testing.T) {
 	h := winHelper(t)
 	lc, _, root := newLife(t)
-	lc.Token = fakeToken{err: errors.New("denied")}
+
 	w := newWinFake()
+	w.executeExit = 1
+	w.executeOut = `{"event":"execute-end","ok":false,"service_started":false}`
 	lc.Exec, lc.Admin = w.exec, w.admin(root)
 	out := h.Lifecycle(context.Background(), lc)
-	if out.Started || out.HelperOK || !out.Collected || strings.Join(w.calls, ",") != "admin:prepare,admin:collect-unstarted" {
+	if out.Started || out.HelperOK || !out.Collected || strings.Join(w.calls, ",") != "admin:prepare,exec:execute,admin:collect-unstarted" {
 		t.Fatalf("%+v %v", out, w.calls)
 	}
 	w2 := newWinFake()
@@ -204,6 +207,29 @@ func TestWindowsExpiredBeforeServiceStartUsesOnlyUnstartedCollection(t *testing.
 	out := h.Lifecycle(context.Background(), lc)
 	if out.Started || out.HelperOK || !out.Collected || strings.Join(w.calls, ",") != "admin:prepare,exec:execute,admin:collect-unstarted" {
 		t.Fatalf("%+v %v", out, w.calls)
+	}
+}
+
+func TestWindowsGateNeverAdmittedRequiresTreeProofBeforeUnstartedCollection(t *testing.T) {
+	for _, unknown := range []bool{false, true} {
+		h := winHelper(t)
+		lc, _, root := newLife(t)
+		w := newWinFake()
+		w.executeExit = 125
+		w.executeOut = ""
+		w.treeUncertain = unknown
+		lc.Exec, lc.Admin = w.exec, w.admin(root)
+		out := h.Lifecycle(context.Background(), lc)
+		if strings.Contains(strings.Join(w.calls, ","), "exec:stop") {
+			t.Fatal("never-admitted gate was stopped through SCM")
+		}
+		if unknown {
+			if out.Collected || out.Deferred || strings.Contains(strings.Join(w.calls, ","), "admin:collect") {
+				t.Fatal("unknown tree was collected")
+			}
+		} else if out.Started || !out.Collected || !out.Deferred || !strings.Contains(strings.Join(w.calls, ","), "admin:collect-unstarted") {
+			t.Fatalf("%+v %v", out, w.calls)
+		}
 	}
 }
 

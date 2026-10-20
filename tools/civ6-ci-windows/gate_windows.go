@@ -3,7 +3,6 @@
 package main
 
 import (
-	"bytes"
 	"errors"
 	"os"
 	"os/exec"
@@ -31,16 +30,8 @@ func (a admission) validate() error {
 	return nil
 }
 func executeThroughGate(p Plan) error {
-	// This branch is NOT used by credential-free fixtures. Parent must have an
-	// allocated cargo resource before invoking real execution.
-	token, e := []byte("credential-free-fixture"), error(nil)
-	if !p.RuntimeFixture {
-		token, e = boundedRead(os.Stdin, 1024)
-	}
-	if e != nil {
-		return e
-	}
-	defer clear(token)
+	// The supported queue owns this complete process tree and its deadline.
+	// Obtain no registration credential until the gate child is admitted.
 	exe, e := os.Executable()
 	if e != nil {
 		return e
@@ -52,7 +43,6 @@ func executeThroughGate(p Plan) error {
 		return errors.New("execute the prepared immutable helper")
 	}
 	c.Env = append(c.Env, "CODEX_JOBS_REAL_CARGO="+exe, "CIW_GATE_CHILD=1", "CIW_PLAN_ROOT="+p.Root, `CODEX_JOBS_CARGO_LOCK_DIR=D:/CC/Tools/codex-jobs`)
-	c.Stdin = bytes.NewReader(token)
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	return c.Run()

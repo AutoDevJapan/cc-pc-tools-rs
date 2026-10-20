@@ -26,6 +26,7 @@ type Outcome struct {
 	Runner    string // unique runner name for the contract's RequireSuccess
 	Collected bool   // services, registration, namespace and lock are confirmed gone
 	Residue   bool   // collection ended "residue only" (profile/hive left behind)
+	Deferred  bool   // only after strict unstarted collection proves no job ran
 	Failure   string
 }
 
@@ -38,8 +39,9 @@ type ExecFunc func(ctx context.Context, pin Pinned, args []string, stdin []byte,
 type AdminFunc func(ctx context.Context, scriptPath string, timeoutSec int) ([]byte, error)
 
 type StepResult struct {
-	Exit   int
-	Output []byte
+	Exit     int
+	Output   []byte
+	TreeGone bool // retained root/member handles signalled and Job active count zero
 }
 
 // LifeCtx gives a lifecycle everything it may touch: the owned root, the
@@ -53,7 +55,6 @@ type LifeCtx struct {
 	EntryDir string
 	Exec     ExecFunc
 	Admin    AdminFunc
-	Token    TokenSource
 	Fence    func(reason string)
 	Running  func()
 	OnHelper func(ProcID)
@@ -78,6 +79,9 @@ const maxStepOutput = 1 << 20
 func runPinned(ctx context.Context, pin Pinned, args []string, stdin []byte, onStart func(ProcID)) (StepResult, error) {
 	if e := pin.Verify(); e != nil {
 		return StepResult{}, e
+	}
+	if len(args) > 0 && args[0] == "execute" {
+		return runOwnedExe(ctx, pin.Path, args, stdin, onStart)
 	}
 	return runExe(ctx, pin.Path, args, stdin, onStart)
 }
@@ -220,12 +224,6 @@ func copyPinned(from Pinned, to string) error {
 	return Pinned{Path: to, SHA256: from.SHA256}.Verify()
 }
 
-func zero(b []byte) {
-	for i := range b {
-		b[i] = 0
-	}
-}
-
 func timeout(sec int) time.Duration { return time.Duration(sec) * time.Second }
 
 // ---------------------------------------------------------------- Windows
@@ -349,19 +347,12 @@ func (h windowsHelper) Lifecycle(ctx context.Context, lc *LifeCtx) (o Outcome) {
 		o.Collected, o.Residue = h.collect(ctx, lc, "collect-unstarted")
 		return o
 	}
-	tok, e := lc.Token.Registration(ctx)
-	if e != nil {
-		o.Failure = "registration credential unavailable"
-		o.Collected, o.Residue = h.collect(ctx, lc, "collect-unstarted")
-		return o
-	}
 	lc.Running()
 	helper := Pinned{Path: filepath.Join(lc.Root, "helper.exe"), SHA256: h.cfg.Exe.SHA256}
 	o.Started, o.Runner = true, windowsRunner(lc.Instance)
 	ectx, ecancel := context.WithDeadline(ctx, executeEnd.Add(120*time.Second))
-	res, e := lc.Exec(ectx, helper, []string{"execute", lc.Root}, tok, lc.OnHelper)
+	res, e := lc.Exec(ectx, helper, []string{"execute", lc.Root}, nil, lc.OnHelper)
 	ecancel()
-	zero(tok)
 	lc.Log("execute.log", res.Output)
 	end := lastEvent(res.Output, "execute-end")
 	o.Exit = res.Exit
@@ -372,7 +363,13 @@ func (h windowsHelper) Lifecycle(ctx context.Context, lc *LifeCtx) (o Outcome) {
 		o.Failure = fmt.Sprintf("execute exited %d", res.Exit)
 	}
 	o.HelperOK = e == nil && res.Exit == 0 && end != nil && boolField(end, "ok")
-	if end == nil {
+	noBegin := lastEvent(res.Output, "execute-begin") == nil
+	if !res.TreeGone {
+		o.Collected = false
+		o.Failure = "controller process tree completion not verified"
+		return o
+	}
+	if end == nil && !noBegin {
 		// The helper did not finish its own handling (it makes exactly one stop
 		// attempt itself when it does), so one stop is tried here. A reported
 		// fence is never stopped again: collect verifies it and fences on failure.
@@ -382,7 +379,8 @@ func (h windowsHelper) Lifecycle(ctx context.Context, lc *LifeCtx) (o Outcome) {
 		lc.Log("stop.log", sres.Output)
 	}
 	collectVerb := "collect"
-	if started, known := end["service_started"].(bool); known && !started {
+	started, known := end["service_started"].(bool)
+	if (known && !started) || (end == nil && noBegin) {
 		// A rejected/expired gate child did not start SCM or configure a runner.
 		// The strict unstarted collector verifies that proof and the queued job.
 		// Never try the normal collector first and then bypass its refusal.
@@ -390,6 +388,7 @@ func (h windowsHelper) Lifecycle(ctx context.Context, lc *LifeCtx) (o Outcome) {
 		collectVerb = "collect-unstarted"
 	}
 	o.Collected, o.Residue = h.collect(ctx, lc, collectVerb)
+	o.Deferred = collectVerb == "collect-unstarted" && o.Collected
 	return o
 }
 

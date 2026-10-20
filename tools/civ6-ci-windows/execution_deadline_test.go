@@ -21,3 +21,28 @@ func TestGateWaitCannotExtendTheServiceDeadline(t *testing.T) {
 		t.Fatal("expired gate wait gained runtime")
 	}
 }
+
+func TestPrestartRequiresMinimumBudgetAndBoundsReads(t *testing.T) {
+	now := time.Now()
+	for _, seconds := range []int{-1, 0, 59, 60, 61} {
+		p := Plan{ExecuteBefore: now.Add(time.Duration(seconds) * time.Second).UnixNano()}
+		if (prestartBudget(p, now) == nil) != (seconds >= 60) {
+			t.Fatalf("startup margin: %d seconds", seconds)
+		}
+	}
+	p := Plan{ExecuteBefore: now.Add(2 * time.Minute).UnixNano()}
+	ctx, cancel := prestartContext(p, 3*time.Minute)
+	defer cancel()
+	d, ok := ctx.Deadline()
+	if !ok || !d.Equal(time.Unix(0, p.ExecuteBefore)) {
+		t.Fatal("audit may exceed execution deadline")
+	}
+}
+
+func TestOfficialPlanRequiresAbsoluteDeadline(t *testing.T) {
+	p := fixturePlan()
+	p.ExecuteBefore = 0
+	if p.validate() == nil {
+		t.Fatal("official plan accepted an unbounded wait")
+	}
+}

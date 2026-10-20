@@ -98,6 +98,9 @@ func (p Plan) validate() error {
 	if p.RuntimeFixture {
 		return errors.New("runtime fixture cannot be official execution")
 	}
+	if p.ExecuteBefore == 0 {
+		return errors.New("official execution requires an absolute deadline")
+	}
 	if e := p.Plan.Validate(); e != nil {
 		return e
 	}

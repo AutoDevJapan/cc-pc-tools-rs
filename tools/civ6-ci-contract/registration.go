@@ -7,6 +7,8 @@ import (
 	"strings"
 )
 
+var ErrRegistrationQueueBusy = errors.New("another active job can consume this runner")
+
 func completePage(total, page, count int) bool {
 	if total < 0 || total > 1000 || page < 1 {
 		return false
@@ -39,7 +41,7 @@ func CheckRegistrationQueue(ctx context.Context, p Plan, offered []string, read 
 	}
 	seen := map[int64]bool{}
 	found := false
-	for _, status := range []string{"queued", "in_progress", "waiting", "pending", "requested"} {
+	for _, status := range []string{"requested", "pending", "waiting", "queued", "in_progress"} {
 		for page := 1; page <= 10; page++ {
 			var runs struct {
 				Total int                  `json:"total_count"`
@@ -88,7 +90,7 @@ func CheckRegistrationQueue(ctx context.Context, p Plan, offered []string, read 
 							continue
 						}
 						if j.ID != p.JobID || r.ID != p.RunID {
-							return errors.New("another active job can consume this runner")
+							return ErrRegistrationQueueBusy
 						}
 						if j.Status != "queued" {
 							return errors.New("planned job is not queued")

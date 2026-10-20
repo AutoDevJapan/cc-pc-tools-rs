@@ -3,6 +3,7 @@ package main
 import (
 	contract "cc/civ6-ci-contract"
 	"context"
+	"errors"
 )
 
 // bridge always links the parent's reviewed contract package.
@@ -20,7 +21,11 @@ func (bridge) Verify(ctx context.Context, p Plan, read ReadAPI) error {
 	if e := contract.Verify(ctx, cp(p), contract.ReadAPI(read)); e != nil {
 		return e
 	}
-	return contract.CheckRegistrationQueue(ctx, cp(p), contract.Labels(cp(p)), contract.ReadAPI(read))
+	e := contract.CheckRegistrationQueue(ctx, cp(p), contract.Labels(cp(p)), contract.ReadAPI(read))
+	if errors.Is(e, contract.ErrRegistrationQueueBusy) {
+		return errAdmissionDeferred
+	}
+	return e
 }
 func (bridge) RequireSuccess(ctx context.Context, p Plan, runner string, read ReadAPI) error {
 	return contract.RequireSuccess(ctx, cp(p), runner, contract.ReadAPI(read))

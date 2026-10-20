@@ -22,6 +22,16 @@ When queueの絶対実行期限を過ぎる。
 Then serviceは開始せず、未開始の証明を調べる専用collectorだけを呼ぶ。
 開始した場合は同じ絶対期限までのworkerと90秒の排出をgate内で待ち、その後に回収を行う。
 
+Given Cargo枠を取れないまま期限を越えた。
+When 親queueがexecute全体を終了する。
+Then 生成時に同一Job Objectへ所属させたhelper/gate/子孫を終了し、保持handleとActive=0で証明する。
+未確認ならfenceを維持。beginなし、またはservice_started:falseなら専用collectorが未起動の実状態を確認する。
+正式job未開始・専用回収成功・証拠保存・owned root回収後だけ同じ予約をbackoffして再供給する。
+予算キーは同じrun/attempt/jobの1件のままで、正式実行済みjobの自動再実行はしない。
+登録credentialはgate取得後、監査と他job包含検査の後に1回だけ既存OAuthから取得する。
+取得失敗の生stdout/stderrはログへ出さず、待機中にcredentialを保持しない。
+
+CodeQLの標準runnerへの変更はHTTP202と設定再読を確認済み。解析成功と製品正式受入はまだ未確認。
 以下のLinux供給・CodeQL専用ラベル・6+6件の記述は、この更新前の設計記録として保持する。
 
 この文書は実装契約であり、登録・実行・成功の証拠ではない。

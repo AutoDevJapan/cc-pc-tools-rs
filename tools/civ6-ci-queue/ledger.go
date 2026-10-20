@@ -44,7 +44,9 @@ func terminalState(s string) bool {
 // being queued, being started, the official success and the cleanup are four
 // different facts and none implies another.
 type QueuedRec struct {
-	At string `json:"at"`
+	At        string `json:"at"`
+	Deferrals int    `json:"prestart_deferrals,omitempty"`
+	RetryAt   string `json:"retry_at,omitempty"`
 }
 type StartRec struct {
 	IntentAt   string `json:"intent_at,omitempty"`
@@ -300,11 +302,17 @@ func (l *Ledger) activeFor(osName string) *Entry {
 	return nil
 }
 
-func (l *Ledger) nextReserved(osName string) *Entry {
+func (l *Ledger) nextReserved(osName string, now time.Time) *Entry {
 	var best *Entry
 	for _, e := range l.Entries {
 		if e.OS != osName || e.State != StateReserved || e.Started.Attempts != 0 {
 			continue
+		}
+		if e.Queued.RetryAt != "" {
+			next, err := time.Parse(time.RFC3339Nano, e.Queued.RetryAt)
+			if err != nil || now.Before(next) {
+				continue
+			}
 		}
 		if best == nil || e.Plan.RunID < best.Plan.RunID || (e.Plan.RunID == best.Plan.RunID && e.Plan.JobID < best.Plan.JobID) {
 			best = e

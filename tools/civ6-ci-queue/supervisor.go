@@ -20,6 +20,29 @@ func hardLimitFor(h Helper) time.Duration {
 
 func intp(n int) *int { return &n }
 
+var errAdmissionDeferred = errors.New("registration queue temporarily occupied")
+
+// No formal job ran: either no resource existed yet, or the strict unstarted
+// collector proved absence and the root was retired. Keep its one reservation.
+// This is not a retry/rerun of an assigned GitHub job.
+func (d *Deps) deferUnstarted(key, reason string, cleanup *CleanupRec) error {
+	return d.mutate(key, func(l *Ledger, e *Entry) {
+		e.Queued.Deferrals++
+		shift := e.Queued.Deferrals - 1
+		if shift > 3 {
+			shift = 3
+		}
+		e.Queued.RetryAt = stamp(d.Now().Add(5 * time.Minute * time.Duration(1<<shift)))
+		e.State, e.Started, e.Reason = StateReserved, StartRec{}, reason
+		if cleanup != nil {
+			e.Cleanup = *cleanup
+		}
+		if f, ok := l.Fences[e.OS]; ok && f.Key == key {
+			delete(l.Fences, e.OS)
+		}
+	})
+}
+
 // finalize writes the result file first, then the ledger; a crash between the
 // two is reconciled from the file by the next tick.
 func (d *Deps) finalize(key string, r Result) error {
@@ -106,6 +129,9 @@ func (d *Deps) Supervise(ctx context.Context, key string) error {
 	verr := d.C.Verify(vctx, plan, rd.API())
 	vcancel()
 	if verr != nil {
+		if transient(verr) {
+			return d.deferUnstarted(key, "prestart verify deferred: "+short(verr), nil)
+		}
 		return d.finalize(key, Result{State: StateRefused, Reason: "verify: " + short(verr), Cleanup: CleanupRec{State: "none"}})
 	}
 
@@ -135,10 +161,16 @@ func (d *Deps) Supervise(ctx context.Context, key string) error {
 	// 3. The OS lifecycle. It fences before any service, registration or
 	//    namespace can exist and reports whether collection was confirmed.
 	entryDir := d.home("entries", safeKey(key))
+	evidenceDir := d.home("evidence", safeKey(key))
+	if ent.Queued.Deferrals > 0 {
+		part := fmt.Sprintf("prestart-%d", ent.Queued.Deferrals)
+		entryDir = filepath.Join(entryDir, part)
+		evidenceDir = filepath.Join(evidenceDir, part)
+	}
 	if e := os.MkdirAll(entryDir, 0700); e != nil {
 		return d.finalize(key, Result{State: StateNeedsRecovery, Reason: "entry directory unavailable", Cleanup: cl})
 	}
-	lc := &LifeCtx{Key: key, Plan: plan, Instance: rec.ID, Root: rec.Path, EntryDir: entryDir, Exec: d.Exec, Admin: d.Admin, Token: d.Token,
+	lc := &LifeCtx{Key: key, Plan: plan, Instance: rec.ID, Root: rec.Path, EntryDir: entryDir, Exec: d.Exec, Admin: d.Admin,
 		Fence:   func(reason string) { _ = d.fence(key, reason) },
 		Running: func() { _ = d.mutate(key, func(l *Ledger, e *Entry) { e.State = StateRunning }) },
 		OnHelper: func(id ProcID) {
@@ -187,13 +219,13 @@ func (d *Deps) Supervise(ctx context.Context, key string) error {
 	}
 
 	// 5. Keep the original logs and hashes, then retire the owned root.
-	manifest, incomplete, e := preserveEvidence(rec.Path, entryDir, d.home("evidence", safeKey(key)))
+	manifest, incomplete, e := preserveEvidence(rec.Path, entryDir, evidenceDir)
 	if e != nil {
 		cl.State, cl.Detail = "failed", "evidence not preserved: "+short(e)
 		return d.finalize(key, Result{State: StateNeedsRecovery, Reason: "evidence not preserved", ExitCode: ec, Official: off, Cleanup: cl})
 	}
 	detail := cl.Detail
-	cl.State, cl.Evidence, cl.ManifestSHA = "evidence", d.home("evidence", safeKey(key)), manifest
+	cl.State, cl.Evidence, cl.ManifestSHA = "evidence", evidenceDir, manifest
 	if incomplete > 0 {
 		// Some original bytes could not be copied (for example files the
 		// non-admin controller may not read): keep the whole root by moving it
@@ -214,6 +246,9 @@ func (d *Deps) Supervise(ctx context.Context, key string) error {
 	}
 	if residueBlocked {
 		return d.finalize(key, Result{State: StateNeedsRecovery, Reason: "collection left residue that is not allowed", ExitCode: ec, Official: off, Cleanup: cl})
+	}
+	if out.Deferred && !out.Started {
+		return d.deferUnstarted(key, "confirmed unstarted resource retired; supply deferred", &cl)
 	}
 
 	state, reason := StateSucceeded, ""

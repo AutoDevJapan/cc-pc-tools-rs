@@ -139,6 +139,9 @@ func executeAdmitted(p Plan) (result error) {
 		// worker may still hold the namespace: it must not start another one.
 		emitEvent("execute-end", p, map[string]any{"ok": result == nil, "service_started": started, "service_stopped": !fence, "fence": fence})
 	}()
+	if e = prestartBudget(p, time.Now()); e != nil {
+		return e
+	}
 	if p.Fixture == "" || p.RuntimeFixture {
 		if e = verifyGateAllocation(); e != nil {
 			return e
@@ -153,22 +156,22 @@ func executeAdmitted(p Plan) (result error) {
 		}
 		secret = []byte("credential-free-fixture")
 		if !p.RuntimeFixture {
-			secret, e = boundedRead(os.Stdin, 1024)
+			secret, e = registrationCredential(p)
 		}
 		if e != nil {
 			return e
 		}
-		secret = []byte(strings.TrimSpace(string(secret)))
 		if len(secret) < 1 || strings.ContainsAny(string(secret), "\x00\r\n") {
-			return errors.New("registration stdin rejected")
+			clear(secret)
+			return errors.New("registration credential rejected")
 		}
 		defer clear(secret)
 	}
 	// SCM can start the service yet return an error (e.g. a startup timeout).
 	// The one-shot deferred stop queries actual state even after that error.
 	serviceStart = time.Now()
-	if !serviceStart.Before(executionDeadline(p, serviceStart)) {
-		return errors.New("execution deadline expired while waiting for Cargo")
+	if e = prestartBudget(p, serviceStart); e != nil {
+		return e
 	}
 	started = true
 	if e = startFinite(p); e != nil {

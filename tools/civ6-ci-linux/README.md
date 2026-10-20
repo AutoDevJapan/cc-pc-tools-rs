@@ -101,3 +101,5 @@ Docker socket・host bind・privileged・GPU は作成引数にも検査にも�
   公式 listener の起動確認・実子プロセスの PID drain・名前空間の削除を確認する。
 - 未実施（親の統合後に実行）: 実 source 取得、実 runner 登録、公式ジョブの hook 実イベント（`GITHUB_EVENT_PATH` が start hook 時点で読めるか）、
   製品 Cargo 全検査、CodeQL 2 言語、PR149 の正式 6 ジョブ。
+
+As of the owner's 2026-10-19 Windows-first policy, this module is retained source, not an enabled application runner. The current contract requires the Rust Windows-only matrix and rejects the former Ubuntu Rust plan. New Linux application acceptance is deferred; existing Linux production servers are outside this change.

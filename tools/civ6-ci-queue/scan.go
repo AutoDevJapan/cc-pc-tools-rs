@@ -88,7 +88,7 @@ type Scanner struct {
 }
 
 func transient(e error) bool {
-	return errors.Is(e, errCallBudget) || errors.Is(e, context.DeadlineExceeded) || errors.Is(e, context.Canceled) ||
+	return errors.Is(e, errAdmissionDeferred) || errors.Is(e, errCallBudget) || errors.Is(e, context.DeadlineExceeded) || errors.Is(e, context.Canceled) ||
 		(e != nil && (strings.Contains(e.Error(), "GitHub read unavailable") || strings.Contains(e.Error(), "timed out")))
 }
 

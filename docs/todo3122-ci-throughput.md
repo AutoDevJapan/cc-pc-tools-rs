@@ -8,6 +8,7 @@
 
 - 既存通常runnerを停止せず、既存PCの測定した余力内で追加枠を1台だけ提供する。
   通常と追加枠でcontainer、bridge接続先、runner名、hostのCargo targetを分離する。
+  生成先はprimaryが`.ci-work/target`、追加枠が`.ci-work/target-burst-3122`。
 - 同じrepoの現在headだけを受け付ける既存hook、OAuth、Cargoゲート、process-groupの
   排出、診断保持、UID1001/init/capdrop/no-new-privileges/tmpfsの制限を維持する。
   外部fork、他repo、古いhead、任意の追加枠は受け付けない。
@@ -45,6 +46,17 @@ CPU75%未満、C/D各30GiB以上を要求する。Docker VMは空き9GiB以上�
 追加8GiBと残り1GiBを確保する。不明/不足/API失敗時はその回を終了する。
 タスクのIgnoreNewとpool専用loopback portの保持で管理処理の重複を防ぐ。
 子hostも独立portを保持してから登録する。追加profileは`--replace`を使わない。
+
+追加runnerの4ラベルは同じ名前のcustomとして登録し、2分のidle期限で自分の
+登録だけを退かせられるようにする。実jobが割当済みなら元のtimeoutで完了を待つ。
+idleならラベルを外し、3回の新しいAPI観測でラベル0/未割当とWorker不在を確かめて
+登録解除する。公式Listenerの404処理でlocal configが除去され、既存の排出へ戻る。
+不明な状態で強制終了しない。元primary/finite2511にはこの処理を適用しない。
+
+container回収前にはsupervisor lock/静止/所有/終了印を確認するexport-diagnosticsで
+既存の最大8回/64MiBだけをgzipへ保全し、検証とhash記録後に消す。
+正常ephemeral後の`.runner`除去と、残留時の96停止/保全を実機で区別して確認する。
+現在の最高優先3059の共有窓は元担当と正規メモで調整し、必要な間は反復供給を止める。
 
 タスクの反復は5分ごとに同じ入口だけを起動する。待機がなければ登録せず終了する。
 PCのOS再起動/ログオン後の復帰は未検証のままとし、実検証なしに保証しない。

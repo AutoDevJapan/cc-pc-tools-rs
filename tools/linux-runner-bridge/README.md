@@ -14,8 +14,12 @@ The additional slot uses official ephemeral registration without `--replace`,
 the normal current-head hook and the same Cargo gate. Its supervisor runs one
 `--once` session, drains it and reclaims only its owned scratch, then both guest
 and host exit. A host exit is not proof that the GitHub job passed.
+Its four existing routing labels are explicitly custom (`--no-default-labels`)
+so only this slot's labels can be withdrawn on idle expiry. It accepts only its
+own name with ephemeral=true. Its Cargo target is `.ci-work/target-burst-3122`;
+the primary keeps `.ci-work/target` even if the operator uses the same worktree.
 
-`bridge.exe pool <this-worktree>/.ci-work/target` supplies at most one such host
+`bridge.exe pool <this-worktree>/.ci-work/target-burst-3122` supplies at most one such host
 at a time, at most 16 per invocation, with a two-hour admission window. Before
 each one it reads current same-repository queued jobs and fresh Windows/VM
 capacity. Windows must have at least 24 GiB free, commit below 85%, CPU below
@@ -29,6 +33,33 @@ admission deadline, and records its stage in `.ci-runtime/pool-status.private.js
 `bridge.exe queue` returns the observed eligible count and oldest UTC queue age.
 Keep this supporting worktree/runtime while the task uses it; remove only owned
 test resources after verification. Reboot recovery is not claimed.
+
+The additional host has a two-minute idle deadline. If the runner is busy then,
+it waits for the original job to finish with its original timeout. Otherwise it
+withdraws this owned ephemeral runner's custom labels, confirms zero labels and
+no assigned job/Worker over three fresh observations, and removes its idle
+registration. The official listener observes the missing registration, removes
+local configuration and exits through the existing group drain. Unknown API,
+identity, labels or process state retains the host and records an unverified
+drain; it never force-kills a potentially assigned job. Primary/2511 are excluded.
+See the pinned [official listener cleanup](https://github.com/actions/runner/blob/v2.338.0/src/Runner.Listener/Runner.cs).
+
+Before deleting/recreating this slot's container, stop further admission, wait
+for host completion and Worker/Listener absence, and save `bridge export-diagnostics`
+from inside the container as raw gzip bytes to the owned worktree. This command
+takes the supervisor lock, verifies quiescence, and exports only owned, ended
+`/work/bridge-diagnostics-todo3026` sessions (eight/64 MiB); it rejects links,
+special files and unfinished evidence. Verify gzip/tar and record hash/size before
+container removal. It never exports `/runner`, config or credentials. The pool
+itself reuses its container and does not delete it. A stale `.runner` after a
+failed session retains the container and fails registration with 96; do not
+delete that file to force reuse. Archive/verify idle first, then recreate only
+the owned container. Normal successful ephemeral local removal is verified by
+the finite acceptance; interrupted reuse is not silently accepted.
+
+Keep the repeating task disabled while the existing highest-priority finite
+operation (currently ToDo3059) needs its shared resource window. Coordinate that
+window through its original task/normal controls before enabling repeated supply.
 
 The bridge keeps ToDo2511's finite mode available and adds a resident mode for
 ordinary `AutoDevJapan/cc-pc-tools-rs` CI. The finite invocation still requires
@@ -113,9 +144,9 @@ do not report reboot recovery as verified without a separate test.
 
 ### Bounded resident scratch and diagnostics (ToDo3026)
 
-Normal mode uses the existing supervisor for successive `run.sh --once`
-sessions. Registration remains repository-scoped and reusable; it does not
-register an ephemeral runner for each job. The pinned official runner supports
+The primary normal mode uses the existing supervisor for successive `run.sh --once`
+sessions. Its registration remains repository-scoped and reusable. The additional
+profile above has a separate one-job ephemeral lifecycle. The pinned official runner supports
 `--once` ([upstream implementation](https://github.com/actions/runner/blob/v2.338.0/src/Runner.Listener/Runner.cs)); upstream warns this flag may be
 deprecated. Upgrading the official runner must recheck this lifecycle contract.
 The existing pre-job admission hook and Windows Cargo gate are unchanged.

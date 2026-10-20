@@ -287,6 +287,9 @@ type normalContainerInspection struct {
 		User  string `json:"User"`
 	} `json:"Config"`
 	HostConfig struct {
+		NanoCPUs       int64             `json:"NanoCpus"`
+		Memory         int64             `json:"Memory"`
+		PidsLimit      int64             `json:"PidsLimit"`
 		Init           bool              `json:"Init"`
 		Privileged     bool              `json:"Privileged"`
 		CapDrop        []string          `json:"CapDrop"`
@@ -323,6 +326,10 @@ func inspectNormalContainer(data string) (normalContainerInspection, error) {
 // Validate immutable Docker configuration before starting the container.
 // A stopped container cannot answer docker exec checks until after startup.
 func validateNormalContainerConfiguration(c normalContainerInspection) error {
+	return validateNormalContainerForProfile(c, compiledNormalProfile)
+}
+
+func validateNormalContainerForProfile(c normalContainerInspection, p normalProfile) error {
 	allCapabilitiesDropped := false
 	for _, cap := range c.HostConfig.CapDrop {
 		if cap == "ALL" {
@@ -335,8 +342,11 @@ func validateNormalContainerConfiguration(c normalContainerInspection) error {
 			noNewPrivileges = true
 		}
 	}
-	if c.Config.Image != normalImage || c.Config.User != "runner" || !c.HostConfig.Init || c.HostConfig.Privileged || !allCapabilitiesDropped || !noNewPrivileges || len(c.HostConfig.Devices) != 0 || len(c.HostConfig.DeviceRequests) != 0 || len(c.HostConfig.Binds) != 0 || c.HostConfig.Tmpfs["/tmp"] == "" || c.HostConfig.Tmpfs["/runner"] == "" {
+	if c.Config.Image != p.image || c.Config.User != "runner" || !c.HostConfig.Init || c.HostConfig.Privileged || !allCapabilitiesDropped || !noNewPrivileges || len(c.HostConfig.Devices) != 0 || len(c.HostConfig.DeviceRequests) != 0 || len(c.HostConfig.Binds) != 0 || c.HostConfig.Tmpfs["/tmp"] == "" || c.HostConfig.Tmpfs["/runner"] == "" {
 		return errors.New("normal runner container isolation rejected")
+	}
+	if p.ephemeral && (c.HostConfig.NanoCPUs <= 0 || c.HostConfig.NanoCPUs > 4_000_000_000 || c.HostConfig.Memory <= 0 || c.HostConfig.Memory > 8<<30 || c.HostConfig.PidsLimit <= 0 || c.HostConfig.PidsLimit > 1024) {
+		return errors.New("additional runner CPU/memory/PID bounds rejected")
 	}
 	runnerTmpfs := strings.Split(c.HostConfig.Tmpfs["/runner"], ",")
 	canExecuteRunner := false
@@ -658,11 +668,19 @@ func gatedChild(args []string) int {
 }
 
 func dockerExecuteArgs(mode, jobs, tests string, args []string) []string {
+	return dockerExecuteArgsForProfile(compiledNormalProfile, mode, jobs, tests, args)
+}
+
+func dockerExecuteArgsForProfile(p normalProfile, mode, jobs, tests string, args []string) []string {
 	a := []string{"exec", "-i"}
 	if mode == "normal" {
 		a = append(a, "-e", "CC_LINUX_RUNNER_MODE=normal")
 	}
-	a = append(a, "--workdir", "/work/cc-pc-tools-rs/cc-pc-tools-rs", normalContainerFor(mode), "/opt/bridge/bridge", "execute", jobs, tests)
+	runnerContainer := container
+	if mode == "normal" {
+		runnerContainer = p.container
+	}
+	a = append(a, "--workdir", "/work/cc-pc-tools-rs/cc-pc-tools-rs", runnerContainer, "/opt/bridge/bridge", "execute", jobs, tests)
 	return append(a, args...)
 }
 
@@ -755,9 +773,13 @@ func rpc(path string, q request) int {
 	}
 }
 func bridgeURL(mode, path string) string {
+	return bridgeURLForProfile(compiledNormalProfile, mode, path)
+}
+
+func bridgeURLForProfile(p normalProfile, mode, path string) string {
 	port := "17851"
 	if mode == "normal" {
-		port = strings.TrimPrefix(normalPort, "127.0.0.1:")
+		port = strings.TrimPrefix(p.listen, "127.0.0.1:")
 	}
 	return "http://host.docker.internal:" + port + path
 }
@@ -853,12 +875,12 @@ func hostMain(args []string) int {
 	mode := "finite"
 	var revision, branch, target, listen, runnerContainer, runnerName, labels string
 	ephemeral := true
-	if len(args) == 3 && revisionPattern.MatchString(args[0]) && branchPattern.MatchString(args[1]) {
+	if len(args) == 3 && !compiledNormalProfile.ephemeral && revisionPattern.MatchString(args[0]) && branchPattern.MatchString(args[1]) {
 		// Keep the original finite ToDo2511 invocation and its restrictions.
 		revision, branch, target = args[0], args[1], args[2]
 		listen, runnerContainer, runnerName, labels = "127.0.0.1:17851", container, "cc-pc-tools-linux-2511", "cc-pc-tools-linux"
 	} else if len(args) == 2 && args[0] == "normal" && args[1] != "" {
-		mode, target, listen, runnerContainer, runnerName, labels, ephemeral = "normal", args[1], normalPort, normalContainer, normalRunner, normalLabel, compiledNormalProfile.ephemeral
+		mode, target, listen, runnerContainer, runnerName, labels, ephemeral = "normal", args[1], normalPort, normalContainer, normalRunner, compiledNormalProfile.label, compiledNormalProfile.ephemeral
 	} else {
 		fmt.Fprintln(os.Stderr, "expected host REVISION scheduler/todo-251x-branch TARGET or host normal TARGET")
 		return 1
@@ -883,9 +905,9 @@ func hostMain(args []string) int {
 		reportStage("target-validation-started")
 		cwd, cwdErr := os.Getwd()
 		targetAbs, targetErr := filepath.Abs(target)
-		expected, expectedErr := filepath.Abs(filepath.Join(cwd, ".ci-work", "target"))
+		expected, expectedErr := filepath.Abs(filepath.Join(cwd, ".ci-work", compiledNormalProfile.targetDir))
 		if cwdErr != nil || targetErr != nil || expectedErr != nil || !strings.EqualFold(filepath.Clean(targetAbs), filepath.Clean(expected)) {
-			fmt.Fprintln(os.Stderr, "normal Cargo target must be this worktree's .ci-work/target")
+			fmt.Fprintln(os.Stderr, "normal Cargo target must match this compiled profile's worktree target")
 			return 1
 		}
 		workInfo, statErr := os.Lstat(filepath.Join(cwd, ".ci-work"))
@@ -948,9 +970,22 @@ func hostMain(args []string) int {
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
 		reportStage("runner-registration-started")
-		code := exitCode(c.Run())
+		code := 1
+		if ephemeral && mode == "normal" {
+			if err := c.Start(); err != nil {
+				return 1
+			}
+			done := make(chan int, 1)
+			go func() { done <- exitCode(c.Wait()) }()
+			code = awaitBurstProcess(done)
+		} else {
+			code = exitCode(c.Run())
+		}
 		token = ""
 		if ephemeral {
+			if mode == "normal" {
+				reportStage(fmt.Sprintf("burst-host-ended-%d", code))
+			}
 			_ = s.Shutdown(context.Background())
 			return code
 		}
@@ -1015,7 +1050,7 @@ func register() int {
 		return 15
 	}
 	ephemeral, e := reader.ReadString('\n')
-	if e != nil || (strings.TrimSpace(runnerName) != normalRunner && strings.TrimSpace(runnerName) != "cc-pc-tools-linux-2511") || strings.TrimSpace(labels) != normalLabel || (strings.TrimSpace(ephemeral) != "true" && strings.TrimSpace(ephemeral) != "false") {
+	if e != nil || !validRegistration(compiledNormalProfile, strings.TrimSpace(runnerName), strings.TrimSpace(labels), strings.TrimSpace(ephemeral)) {
 		return 16
 	}
 	keyPath := filepath.Join(os.TempDir(), "bridge-key")
@@ -1032,6 +1067,17 @@ func register() int {
 		return 96
 	}
 	cargs := []string{"--unattended", "--url", "https://github.com/" + repo, "--name", strings.TrimSpace(runnerName), "--labels", strings.TrimSpace(labels), "--work", "/work"}
+	if compiledNormalProfile.ephemeral {
+		// Keep all four existing routing labels, but make them withdrawable on
+		// idle expiry. The primary runner's default labels remain unchanged.
+		for i := range cargs {
+			if cargs[i] == "--labels" {
+				cargs[i+1] = "self-hosted,Linux,X64," + compiledNormalProfile.label
+				break
+			}
+		}
+		cargs = append(cargs, "--no-default-labels")
+	}
 	if strings.TrimSpace(ephemeral) == "true" {
 		cargs = append(cargs, "--ephemeral", "--disableupdate")
 	}
@@ -1089,6 +1135,10 @@ func main() {
 		os.Exit(1)
 	}
 	switch args[0] {
+	case "export-diagnostics":
+		os.Exit(exportBurstDiagnostics())
+	case "idle-state":
+		os.Exit(burstWorkerIdle())
 	case "queue":
 		snapshot, err := currentQueue(runnerAPI, time.Now().UTC())
 		if err != nil {

@@ -47,9 +47,16 @@ type queueSnapshot struct {
 }
 
 func runnerAPI(path string, out any) error {
+	return runnerRequest("GET", path, out)
+}
+
+func runnerRequest(method, path string, out any) error {
+	if !strings.HasPrefix(path, "repos/"+repo+"/") {
+		return errors.New("runner API repository rejected")
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	c := exec.CommandContext(ctx, gh, "api", path)
+	c := exec.CommandContext(ctx, gh, "api", "--method", method, path)
 	hidden(c)
 	c.WaitDelay = 3 * time.Second
 	data, err := c.Output()
@@ -60,7 +67,10 @@ func runnerAPI(path string, out any) error {
 		}
 		return fmt.Errorf("runner metadata request failed: %s", path)
 	}
-	if len(data) > 16<<20 || json.Unmarshal(data, out) != nil {
+	if out == nil && len(data) == 0 {
+		return nil
+	}
+	if len(data) > 16<<20 || (out != nil && json.Unmarshal(data, out) != nil) {
 		return errors.New("runner metadata response rejected")
 	}
 	return nil

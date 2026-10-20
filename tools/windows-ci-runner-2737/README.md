@@ -88,26 +88,29 @@ execution; its remaining acceptance failures are described below.
 The sibling runner registered as numeric runner37 and claimed official Windows
 job118741826539 in run39201344542 attempt6. Start/complete source proofs and
 runner exit/drain succeeded. The official job failed its first unit group:
-2,500 passed, 141 failed, two ignored. The original log is555,970bytes, SHA256
+2,500 passed, 141 failed, two ignored. The original log is 555,970 bytes, SHA256
 `46bde85819ca22094ee02cac4c03c02c463b455e87efc4ce0e56be749e8e815f`.
 The VM/registration were reclaimed. Only the unassigned CI Gate remained, so
 normal cancellation then one force cancellation ended attempt6; its own route
-was removed after exact lease/terminal checks. Successful verify was retained.
+was removed after exact lease/terminal checks. Successful verify was retained;
+the PR tree receipt was skipped. The original failure and selected evidence are
+retained in `D:/CC/Tools/product-ci/evidence/todo-2737-20261021/resume-042342/native-failure-files.private.json`.
 
 Original fixed-source inspection identified a common environment defect:
 `AnchoredDirectory` opens each ancestor with generic read, while temporary test
-projects were still beneath the SDK's traverse-only parent. Its policy adapter
+projects used the old worker temp under SDK `staging`, beneath the SDK's
+traverse-only parent. Its policy adapter
 maps that refusal to `PolicySchemaInvalid`, also observed in the original
 failure's fixed classification. This does not independently explain every one
-of the141 failures. Worker temp, profile/appdata and Cargo target now use fresh
-`_temp`, `_profile` and `_target` beneath the public runner root. The service's
-global proof temp/profile stay separate. Borrowed SDK tools and the three
+of the 141 failures. Worker temp, profile/appdata and Cargo target now use fresh
+`_temp`, `_profile` and `_target` beneath the worker-writable sibling runner
+root. The service's global proof temp/profile stay separate. Borrowed SDK tools and the three
 existing Cargo/Rustup/sccache caches retain their fixed locations; unused SDK
 staging/profile/target worker grants are removed. No SDK/private read grant or
 product security check is weakened.
 
 A distinct mandatory fixture requires a real file symlink and failed with
-Win32 error1314. Microsoft documents that
+Win32 error 1314. Microsoft documents that
 [unprivileged symbolic-link creation requires Developer Mode](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createsymboliclinkw);
 [Rust documents the same prerequisite](https://doc.rust-lang.org/std/os/windows/fs/fn.symlink_file.html).
 Only the fixed guest SYSTEM agent enables the known64-bit
@@ -115,13 +118,17 @@ Only the fixed guest SYSTEM agent enables the known64-bit
 `AllowDevelopmentWithoutDevLicense=1`, then requires typed DWORD readback.
 The fixed `reg.exe` command must exit0 with confirmed drain. There is no host
 setting, retained-SDK modification, new account, administrator runner, account
-privilege grant, or fixture skip. The actual mandatory fixture still has to
+privilege grant, or fixture skip. Developer Mode is enabled only in the
+disposable guest, whose clone is not merged into the retained SDK.
+The actual mandatory fixture still has to
 succeed in the next disposable guest; registry readback is not that acceptance.
 
-The prior worker-layout environment fails the new boundary regression; the new
-layout passes. Synthetic directory freshness, duplicate environment replacement,
+In synthetic host tests, the prior worker-layout environment fails the new
+boundary regression and the new layout passes. Synthetic directory freshness,
+duplicate environment replacement,
 private service proof isolation, guest-agent authorization, setup failure/drain
-and readback rejection are covered. Host tests do not write HKLM. Actual new
+and readback rejection are covered by host tests. Host tests do not write HKLM.
+Actual new
 guest setup, all141 failed checks, the remaining original13 commands and final
 CI Gate still require the reviewed new runtime and an official rerun.
 
@@ -158,8 +165,9 @@ This Go module connects the retained SDK to the **stock GitHub Actions runner**.
 It is a library plus a guest SCM/hook entry, not a host VM controller. It has no
 GitHub API client, arbitrary execution RPC, request-selected executable, path,
 URL, environment, shell, workflow replacement or host Cargo admission marker.
-No real product source, VM, SCM service, runner registration or Cargo was run
-while implementing it. See [HANDOFF.md](HANDOFF.md) for verification and limits.
+During implementation of the initial version, no real product source, VM, SCM
+service, runner registration or Cargo was run. Later guest attempts are recorded
+above. See [HANDOFF.md](HANDOFF.md) for verification and limits.
 
 ## Fixed inputs and library provenance
 
@@ -326,7 +334,7 @@ The existing root is `C:\ProgramData\AutoDevJapan\windows-ci-sdk-2737`:
 | sccache\…\sccache.exe | Exactly one received sccache0.18 executable; reject ambiguity/links |
 | cargo-home, rustup-home | Dedicated guest Cargo/Rustup caches |
 | sccache-cache | Dedicated guest cache, 30G |
-| service-profile, staging, target | Retained control directories; worker paths are below |
+| service-profile, staging, target | Retained control directories without worker grants; worker paths are below |
 | runner-hooks | Fixed start.ps1/complete.ps1 calling the compiled hook entry |
 | private\runner-listener.log | Private stdout prefix, hard8MiB maximum, SHA256 returned |
 

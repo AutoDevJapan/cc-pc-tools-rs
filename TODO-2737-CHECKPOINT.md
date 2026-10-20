@@ -923,3 +923,9 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 既存runGHがstderrを保持しないため初回コマンドの詳細原因は未確定。検証/許可/上限は緩めず、canonical gh_gateで同head tarballをread-only/RAM probeした。exit0/19221810bytes/gzip/SHA8a2da6aabb67a89d68ad8777a9d3472d99eb99e84754e56d5fb8afbf16c3c425（元成功時と同じ）/stderr0を確認し、前後の原repo/PR/ref/head/treeを再照合。初回をHTTP障害と断定しない。失敗とprobe/回収はresume-185041/archive-failure-files.private.jsonへ保存。
 - source変更なしの有限archive再試行を1回だけ設定し、新safe-delete root3f468824db69fbf6c94ea9e54792c70eを作成（最初のcontentラベル長超過INVALID_LABELは作成前拒否、短いラベルで1件だけ作成）。同592b493のhost/agent/Linux helperをcopy/hash照合して使用し、重複build/testなし。
 - 原run attempt4の同Windows queued job、同source/route、前回回収/intent不在を再照合してwindows-jobを1回開始。今回も正規Cargo gate/専用target。retry1-runtime-copy.private.jsonに上限1と来歴を保存。追加rerun0/verify再実行0。再開はroot3f.../windows-start/windows-exit/job-*/normalCI intent/実job/PID作成時刻を照合し、起動を再送しない。archive再失敗なら同試行を無限再送せず、閉じた診断と起動前の取得設計を見直す。実UTC/Windows13/終了hook/全CIは未完。
+### 実UTC補正、source proof、runner35による公式Windows job開始
+
+- retry1 root3f.../instance03cba013...ではarchive取得を通過。固定plan/mTLS sessionでclock receiptを保存した。HostUnixMillis1792491201283、Before1792548800616（57599333ms先）、After1792491201289（送信host時刻との差6ms）。実LocalSystem SetSystemTime/readback/instance/echo/RTT照合を経た値で、PC時計変更ではない。receiptはresume-185041/retry1へcopy/hash保持。
+- 同head0fda/tree0bc5/1904blobの物理source proofを受領。runner35をoffline/同一nonce/一意labelで保存してからlistenを許可し、原job118520452216が実runner35/in_progressへ進んだ。開始hookのsource proof/公式claimもwindows-event-start.private.jsonで確認。10:18:40 UTC時点で公式step1/2/3 success、step4 in_progress、failure0。登録や受付だけを全CI成功と扱わない。
+- 今回はUTC/PATHの同じレビュー済み修正で以前のsession失敗を通過した。時計だけを単独で変えた対照ではないため、server registration deletedの唯一の原因を断定しない。元失敗/原log/未確定な初回archiveエラーは保持。
+- 実Windows13工程/終了hook/回収/CI Gate/全公式CI/基盤配送は未完。現在のactive rootは3f...、host50000/StartUTC10:04:44.9793499Z、VMc536ed9f-f050-4e64-95a4-1011850100ec。受付済起動/rerun/成功verifyは再送しない。

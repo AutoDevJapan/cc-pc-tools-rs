@@ -129,26 +129,35 @@ impl Ledger {
                 if row["workState"] != "processing" {
                     continue;
                 }
-                let Some(job) = row["primaryJob"]
-                    .as_str()
+                for job in row["references"]["sessions"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter_map(Value::as_str)
                     .filter(|job| !job.is_empty() && job.len() <= 512)
-                else {
-                    continue;
-                };
-                let job = super::hash(job);
-                if jobs.contains_key(&job) {
-                    continue;
+                {
+                    let job = super::hash(job);
+                    if jobs.contains_key(&job) {
+                        continue;
+                    }
+                    jobs.insert(job.clone(), key.clone());
+                    let project = day.projects.entry(key.clone()).or_default();
+                    project.name = name.to_owned();
+                    project.jobs.insert(job);
                 }
-                jobs.insert(job.clone(), key.clone());
-                let project = day.projects.entry(key.clone()).or_default();
-                project.name = name.to_owned();
-                project.jobs.insert(job);
             }
         }
         if let Some(previous) = &self.previous {
             // Only adjacent, fresh observations certify a sampled interval. Never
             // bridge a stop, failed acquisition, restart, or a different product.
             if previous.at < at && at - previous.at <= 30_000 && previous.until >= at {
+                let names: BTreeMap<_, _> = self
+                    .days
+                    .get(&today)
+                    .into_iter()
+                    .flat_map(|day| &day.projects)
+                    .map(|(key, project)| (key.clone(), project.name.clone()))
+                    .collect();
                 for (date, start, end) in super::split_interval(previous.at, at) {
                     let day = self.days.entry(date).or_default();
                     if day.first_at == 0 {
@@ -160,11 +169,9 @@ impl Ledger {
                         if previous.jobs.get(job) != Some(key) {
                             continue;
                         }
-                        let Some(current) = self.days.get(&today).and_then(|d| d.projects.get(key))
-                        else {
+                        let Some(name) = names.get(key).cloned() else {
                             continue;
                         };
-                        let name = current.name.clone();
                         let day = self.days.get_mut(&super::day(start)).unwrap();
                         let project = day.projects.entry(key.clone()).or_default();
                         project.name = name;
@@ -256,7 +263,7 @@ mod tests {
         json!({"metadataOk":true,"workforce":{"processing":{"state":"complete","observedAt":at,"validUntil":at+30_000}},"departments":[{"products":[{"id":"fixed-product","name":"Product","workers":rows}]}]})
     }
     fn rows() -> Value {
-        json!([{"primaryJob":"one","workState":"processing","tokens":999999,"note":"private fixture"},{"primaryJob":"one","workState":"processing"},{"primaryJob":"waiting","workState":"resource_wait"}])
+        json!([{"primaryJob":"old","references":{"sessions":["one"]},"workState":"processing","tokens":999999,"note":"private fixture"},{"primaryJob":"old","references":{"sessions":["one"]},"workState":"processing"},{"primaryJob":"waiting","workState":"resource_wait"}])
     }
     #[test]
     fn counts_unique_processing_and_only_adjacent_observed_intervals() {

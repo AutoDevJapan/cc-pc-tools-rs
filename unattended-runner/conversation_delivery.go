@@ -102,16 +102,28 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	if err != nil {
 		return err
 	}
+	marker := "conversation-owner-reply:" + q.SenderID + ":" + reply.Message + ":" + canonicalHash([]string{req.Text, req.Edited})[:16]
+	if q.Wait && len(row.QuestionDeliveries) != 0 && hasNoteMarker(row.Note, marker) {
+		answer, b, _, err := r.prepareConversationAnswer(q, reply, req, receipt)
+		if err != nil {
+			return err
+		}
+		if conversationDeliveryRecorded(row, q, answer, b) {
+			req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
+			return r.save()
+		}
+	}
+	if q.Wait && conversationContinuedWait(row, q) {
+		return r.deliverContinuedConversationReply(ctx, row, q, reply, req, receipt, marker)
+	}
 	// Never append to an overwritten question hold or manufacture its missing
 	// marker. Only an intact canonical wait or its durable answer can proceed.
 	imported := q.Wait && row.Status == "block" && conversationWaitRecorded(row, q) && row.Note == "ジョブの結果に判断が必要です。"
 	if q.Wait && !conversationQuestionAnswered(row, q) && !conversationWaitUnchanged(row, q) && !imported {
 		return errors.New("conversation original question wait differs")
 	}
-	marker := "conversation-owner-reply:" + q.SenderID + ":" + reply.Message + ":" + canonicalHash([]string{req.Text, req.Edited})[:16]
 	if !hasNoteMarker(row.Note, marker) {
-		instructions := fmt.Sprintf("%s\n本人の回答と元の質問: %s\n元ToDo %d。取得元はDiscord正規API、本人IDと元質問・判断範囲を照合済みです。担当は原文と質問の範囲を読んで実作業へ反映し、受領と実反映を分けて記録してください。\n検証後の反映記録は %s へ保存します。必要項目: source=discord-api-v10, request_id=%s, origin_todo_id=%d, todo_id=%d, thread_id=%s, question_message_id=%s, message_id=%s, author_id=%s, job_id（実際の担当）, revision（40桁）, applied_at（RFC3339）, completion（反映した内容）, verification（execution/origin_saved/identityの各確認結果を文字列で）。追加費用など元質問を超える許可に拡大しないでください。\n", marker, path, q.Todo, filepath.Join(r.Config.Home, "applied", reply.Message+".json"), q.SenderID, q.Todo, q.Todo, q.Thread, q.Message, reply.Message, reply.Author)
-		instructions += fmt.Sprintf("返信版の照合: reply_sha256=%s, source_receipt_sha256=%s を反映記録へ含めてください。現在の私的原文を読み返してから記録し、編集前の証跡を新しい本文の反映証拠にしないでください。\n", canonicalHash(reply), bytesHash(receipt))
+		instructions := r.conversationReplyInstructions(q, reply, req, receipt, marker)
 		note := strings.TrimRight(row.Note, "\r\n") + "\n\n" + instructions
 		if len(note) > 1<<20 {
 			return errors.New("conversation delivery note limit exceeded")
@@ -179,6 +191,78 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	// command may release the exact new wait, under the shared ToDo lock.
 	req.Todo = q.Todo
 	req.Phase = "conversation_reply_delivered"
+	return r.save()
+}
+
+func (r *Runner) conversationReplyInstructions(q ConversationQuestion, reply conversationReply, req *Request, receipt []byte, marker string) string {
+	path := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".json")
+	instructions := fmt.Sprintf("%s\n本人の回答と元の質問: %s\n元ToDo %d。取得元はDiscord正規API、本人IDと元質問・判断範囲を照合済みです。担当は原文と質問の範囲を読んで実作業へ反映し、受領と実反映を分けて記録してください。\n検証後の反映記録は %s へ保存します。必要項目: source=discord-api-v10, request_id=%s, origin_todo_id=%d, todo_id=%d, thread_id=%s, question_message_id=%s, message_id=%s, author_id=%s, job_id（実際の担当）, revision（40桁）, applied_at（RFC3339）, completion（反映した内容）, verification（execution/origin_saved/identityの各確認結果を文字列で）。追加費用など元質問を超える許可に拡大しないでください。\n", marker, path, q.Todo, filepath.Join(r.Config.Home, "applied", reply.Message+".json"), q.SenderID, q.Todo, q.Todo, q.Thread, q.Message, reply.Message, reply.Author)
+	instructions += fmt.Sprintf("返信版の照合: reply_sha256=%s, source_receipt_sha256=%s を反映記録へ含めてください。現在の私的原文を読み返してから記録し、編集前の証跡を新しい本文の反映証拠にしないでください。\n", canonicalHash(reply), bytesHash(receipt))
+	instructions += fmt.Sprintf("元回答時刻=%s、編集時刻=%s、取得時刻=%s。現在の直接指示・停止・依存・元仕様と許可範囲を保持し、古い回答で新しい指示を上書きしないでください。\n", req.Created, req.Edited, req.Acquired)
+	return instructions
+}
+
+func conversationContinuedWait(row *TodoRow, q ConversationQuestion) bool {
+	var wait struct {
+		Origin struct {
+			Generation *uint64 `json:"resume_generation"`
+		} `json:"origin"`
+	}
+	return (row.Status == "doing" || row.Status == "todo") && conversationWaitRecorded(row, q) &&
+		json.Unmarshal(row.QuestionWait, &wait) == nil && wait.Origin.Generation != nil && row.ResumeGeneration != nil && *row.ResumeGeneration > *wait.Origin.Generation
+}
+
+func conversationDeliveryRecorded(row *TodoRow, q ConversationQuestion, answer conversationAnswerReceipt, b []byte) bool {
+	matched := 0
+	for _, raw := range row.QuestionDeliveries {
+		var record struct {
+			Domain string                    `json:"domain"`
+			SHA    string                    `json:"answer_file_sha256"`
+			Answer conversationAnswerReceipt `json:"answer"`
+			Wait   struct {
+				SHA      string `json:"question_receipt_sha256"`
+				Question struct {
+					Request string `json:"request_id"`
+				} `json:"question"`
+			} `json:"wait"`
+		}
+		if json.Unmarshal(raw, &record) == nil && record.Domain == "todo-owner-question-delivery-receipt-v1" && record.SHA == bytesHash(b) && record.Answer == answer && record.Wait.SHA == q.ReceiptSHA && record.Wait.Question.Request == q.SenderID {
+			matched++
+		}
+	}
+	return matched == 1
+}
+
+func (r *Runner) deliverContinuedConversationReply(ctx context.Context, row *TodoRow, q ConversationQuestion, reply conversationReply, req *Request, receipt []byte, marker string) error {
+	note := row.Note + "\n\n" + r.conversationReplyInstructions(q, reply, req, receipt, marker)
+	if len(note) > 1<<20 {
+		return errors.New("conversation delivery note limit exceeded")
+	}
+	dir := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies")
+	noteFile := filepath.Join(dir, reply.Message+".note.txt")
+	if err := writeText(noteFile, note); err != nil {
+		return err
+	}
+	expected, err := r.withdrawalRow(q.Todo)
+	if err != nil {
+		return err
+	}
+	expectedFile := filepath.Join(dir, reply.Message+".expected.json")
+	if err := writeText(expectedFile, string(expected)); err != nil {
+		return err
+	}
+	answer, b, answerFile, err := r.prepareConversationAnswer(q, reply, req, receipt)
+	if err != nil {
+		return err
+	}
+	if _, err := r.Run(ctx, conversationTodo, "question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile, "--delivery-only", "--delivery-note-file", noteFile, "--expected-state-file", expectedFile); err != nil {
+		return errors.New("conversation continued answer delivery deferred")
+	}
+	current, err := r.todo(q.Todo)
+	if err != nil || current.Project != q.Project || !hasNoteMarker(current.Note, marker) || !conversationDeliveryRecorded(current, q, answer, b) {
+		return errors.New("conversation continued answer readback deferred")
+	}
+	req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
 	return r.save()
 }
 

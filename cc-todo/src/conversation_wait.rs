@@ -6,6 +6,9 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{fs, io::Read, path::Path};
 
+mod continued;
+pub use continued::deliver;
+
 const MAX_BYTES: u64 = 1024 * 1024;
 const QUESTION: &str = "discord-conversation-question-v1";
 const ANSWER: &str = "discord-conversation-answer-v1";
@@ -963,6 +966,12 @@ pub fn answer(
     )?;
     if row["status"] != "block" {
         return fail("block_changed");
+    }
+    if wait
+        .get("origin")
+        .is_some_and(|origin| *origin != origin_identity(row))
+    {
+        return fail("owner_changed_or_active");
     }
     let note = if let Some((note_file, expected_file)) = delivery {
         let expected: Value = serde_json::from_slice(&bytes(expected_file)?)

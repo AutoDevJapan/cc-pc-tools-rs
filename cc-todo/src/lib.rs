@@ -203,6 +203,9 @@ pub enum Command {
         delivery_note_file: Option<PathBuf>,
         #[arg(long, requires = "delivery_note_file")]
         expected_state_file: Option<PathBuf>,
+        /// Deliver to a later active generation without releasing the old question wait.
+        #[arg(long, requires_all = ["delivery_note_file", "expected_state_file"])]
+        delivery_only: bool,
     },
     /// Withdraw an unnecessary exact question, without manufacturing an owner answer.
     QuestionWithdraw {
@@ -1222,16 +1225,32 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             answer_file,
             delivery_note_file,
             expected_state_file,
+            delivery_only,
         } => output.push(
-            conversation_wait::answer(
-                db,
-                paths,
-                *id,
-                answer_file,
-                delivery_note_file
-                    .as_deref()
-                    .zip(expected_state_file.as_deref()),
-            )?
+            (if *delivery_only {
+                conversation_wait::deliver(
+                    db,
+                    paths,
+                    *id,
+                    answer_file,
+                    delivery_note_file
+                        .as_deref()
+                        .ok_or("conversation_delivery_files_required")?,
+                    expected_state_file
+                        .as_deref()
+                        .ok_or("conversation_delivery_files_required")?,
+                )
+            } else {
+                conversation_wait::answer(
+                    db,
+                    paths,
+                    *id,
+                    answer_file,
+                    delivery_note_file
+                        .as_deref()
+                        .zip(expected_state_file.as_deref()),
+                )
+            })?
             .to_string(),
         ),
         Command::QuestionWithdraw {

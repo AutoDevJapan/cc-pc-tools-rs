@@ -11,6 +11,211 @@ use std::{
 
 const WAIT: &str = "owner_question_wait";
 const ANSWERS: &str = "owner_question_answer_receipts";
+const DELIVERIES: &str = "owner_question_delivery_receipts";
+
+fn continued(f: &Fixture) -> (std::path::PathBuf, Value) {
+    let (_, answer_file, answer) = f.park();
+    let mut db = f.read();
+    let row = &mut db["items"][0];
+    row["status"] = json!("doing");
+    row["resume_generation"] = json!(8);
+    row["worker_receipt"] = json!({"job":null,"generation":8});
+    row["scheduler"] = json!({"job":null,"worktree":"saved-worktree","branch":"saved-branch"});
+    row["note"] = json!("新しい直接指示を優先する\n元の依頼と途中成果を保持する");
+    f.write(&db);
+    (answer_file, answer)
+}
+
+fn deliver_only(f: &Fixture, answer: &Path, expected: &Value) -> Output {
+    let expected_file = f.file("delivery-expected.json", expected);
+    let note_file = f.temp.path().join("delivery-note.txt");
+    fs::write(
+        &note_file,
+        format!(
+            "{}\n\nprivate reply reference",
+            expected["note"].as_str().unwrap()
+        ),
+    )
+    .unwrap();
+    f.command(&[
+        "question-answer",
+        "1",
+        "--delivery-only",
+        "--answer-file",
+        answer.to_str().unwrap(),
+        "--delivery-note-file",
+        note_file.to_str().unwrap(),
+        "--expected-state-file",
+        expected_file.to_str().unwrap(),
+    ])
+    .output()
+    .unwrap()
+}
+
+#[test]
+fn continued_delivery_preserves_everything_except_its_note_time_and_receipt() {
+    let f = Fixture::new();
+    let (answer_file, a) = continued(&f);
+    let before = f.read();
+    let out = deliver_only(&f, &answer_file, &before["items"][0]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let meta: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(meta["delivered"], true);
+    assert_eq!(meta["resumed"], false);
+    assert_eq!(meta["answered"], false);
+    let mut after = f.read();
+    let record = &after["items"][0][DELIVERIES][0];
+    assert_eq!(record["answer"], a);
+    assert_eq!(record["wait"], before["items"][0][WAIT]);
+    assert_eq!(record["recipient"]["resume_generation"], 8);
+    assert_eq!(
+        record["recipient"]["worker_receipt"],
+        before["items"][0]["worker_receipt"]
+    );
+    assert_eq!(
+        record["note_sha256"],
+        sha(after["items"][0]["note"].as_str().unwrap().as_bytes())
+    );
+    for key in ["note", "updated", DELIVERIES] {
+        let row = after["items"][0].as_object_mut().unwrap();
+        match before["items"][0].get(key) {
+            Some(value) => {
+                row.insert(key.into(), value.clone());
+            }
+            None => {
+                row.remove(key);
+            }
+        }
+    }
+    assert_eq!(
+        after, before,
+        "delivery changed task/hold/owner/original work"
+    );
+}
+
+#[test]
+fn continued_delivery_retry_does_not_touch_a_later_stop_and_edits_need_a_new_delivery() {
+    let f = Fixture::new();
+    let (answer_file, _) = continued(&f);
+    let before = f.read();
+    assert!(
+        deliver_only(&f, &answer_file, &before["items"][0])
+            .status
+            .success()
+    );
+    let mut db = f.read();
+    db["items"][0]["status"] = json!("block");
+    db["items"][0]["owner_stopped"] = json!(true);
+    f.write(&db);
+    let raw = f.raw();
+    let out = deliver_only(&f, &answer_file, &before["items"][0]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let meta: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(meta["changed"], false);
+    assert_eq!(meta["resumed"], false);
+    assert_eq!(f.raw(), raw);
+    db["items"][0]["status"] = json!("doing");
+    db["items"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("owner_stopped");
+    f.write(&db);
+    let mut edited: Value = serde_json::from_slice(&fs::read(&answer_file).unwrap()).unwrap();
+    edited["reply_sha256"] = json!("d".repeat(64));
+    edited["receipt_file_sha256"] = json!("e".repeat(64));
+    let edit_file = f.file("edited-answer.json", &edited);
+    assert!(
+        deliver_only(&f, &edit_file, &db["items"][0])
+            .status
+            .success()
+    );
+    let after = f.read();
+    assert_eq!(after["items"][0][DELIVERIES].as_array().unwrap().len(), 2);
+    assert_eq!(after["items"][0][DELIVERIES][1]["answer"], edited);
+    assert!(after["items"][0].get(ANSWERS).is_none());
+}
+
+#[test]
+fn continued_delivery_rejects_changed_state_generation_identity_and_holds_without_writing() {
+    for case in [
+        "cas",
+        "missing-wait",
+        "question",
+        "owner",
+        "sha",
+        "missing-generation",
+        "same-generation",
+        "backward-generation",
+        "missing-origin",
+        "different-wait",
+        "block",
+        "done",
+        "unknown",
+        "stop",
+        "dependency",
+        "ready",
+    ] {
+        let f = Fixture::new();
+        let (answer_file, _) = continued(&f);
+        let mut db = f.read();
+        let mut expected = db["items"][0].clone();
+        let row = &mut db["items"][0];
+        match case {
+            "cas" => row["note"] = json!("途中で新しい指示"),
+            "missing-wait" => {
+                row.as_object_mut().unwrap().remove(WAIT);
+            }
+            "question" => row[WAIT]["question"]["question_fingerprint"] = json!("f".repeat(64)),
+            "owner" => row[WAIT]["question"]["owner_id"] = json!("999"),
+            "sha" => row[WAIT]["question_receipt_sha256"] = json!("f".repeat(64)),
+            "missing-generation" => {
+                row.as_object_mut().unwrap().remove("resume_generation");
+            }
+            "same-generation" => row["resume_generation"] = json!(7),
+            "backward-generation" => row["resume_generation"] = json!(6),
+            "missing-origin" => {
+                row[WAIT].as_object_mut().unwrap().remove("origin");
+            }
+            "different-wait" => row[WAIT]["question"]["request_id"] = json!("another-generation"),
+            "block" | "done" | "unknown" => row["status"] = json!(case),
+            "stop" => row["owner_stopped"] = json!(true),
+            "dependency" => row["wait_on"] = json!([2]),
+            "ready" => row["wait_ready"] = json!({"condition":"external"}),
+            _ => unreachable!(),
+        }
+        if case != "cas" {
+            expected = row.clone();
+        }
+        f.write(&db);
+        let raw = f.raw();
+        let out = deliver_only(&f, &answer_file, &expected);
+        assert!(!out.status.success(), "accepted {case}");
+        assert!(
+            String::from_utf8_lossy(&out.stderr).starts_with("conversation_"),
+            "{case}: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert_eq!(f.raw(), raw, "rejection changed {case}");
+    }
+}
+
+#[test]
+fn normal_answer_cannot_release_a_different_current_generation() {
+    let f = Fixture::new();
+    let (_, answer_file, _) = f.park();
+    let mut db = f.read();
+    db["items"][0]["resume_generation"] = json!(8);
+    f.write(&db);
+    f.reject("question-answer", "--answer-file", &answer_file);
+}
 
 struct Fixture {
     temp: tempfile::TempDir,

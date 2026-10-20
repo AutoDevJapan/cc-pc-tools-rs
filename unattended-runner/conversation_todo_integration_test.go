@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"os/exec"
@@ -10,6 +11,164 @@ import (
 	"testing"
 	"time"
 )
+
+func continuedNative(t *testing.T) *conversationFixture {
+	t.Helper()
+	f := conversationNativeTest(t)
+	f.mutateTodo(t, func(row map[string]any) { row["resume_generation"] = 1 })
+	f.ask(t)
+	f.mutateTodo(t, func(row map[string]any) {
+		row["status"] = "doing"
+		row["resume_generation"] = 2
+		row["worker_receipt"] = map[string]any{"job": nil, "generation": 2}
+		row["note"] = "新しい直接指示を優先。元の全依頼と途中成果を保持する。"
+	})
+	return f
+}
+
+func TestConversationActualCanonicalContinuedDeliveryPreservesOriginalTask(t *testing.T) {
+	f := continuedNative(t)
+	reply := f.reply(t, 8, "a")
+	before, err := os.ReadFile(f.r.TodoPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) != 0 {
+		t.Fatalf("continued owner reply not delivered: %v", health.Errors)
+	}
+	row, err := f.r.todo(42)
+	if err != nil || row.Status != "doing" || !strings.HasPrefix(row.Note, "新しい直接指示を優先。") || !strings.Contains(row.Note, "conversation-owner-reply:") || !conversationWaitRecorded(row, f.q) || len(row.QuestionAnswers) != 0 {
+		t.Fatal("continued delivery released a hold or lost the original instructions")
+	}
+	if req := f.r.State.Requests[reply.Message]; req == nil || req.Todo != 42 || req.Phase != "conversation_reply_delivered" {
+		t.Fatal("continued delivery not linked to the original task")
+	}
+	var original, after map[string]any
+	if json.Unmarshal(before, &original) != nil || readJSON(f.r.TodoPath, maxTodo, &after) != nil {
+		t.Fatal("readback unavailable")
+	}
+	afterRow := after["items"].([]any)[0].(map[string]any)
+	if len(afterRow["owner_question_delivery_receipts"].([]any)) != 1 {
+		t.Fatal("durable delivery receipt absent")
+	}
+	for _, key := range []string{"note", "updated", "owner_question_delivery_receipts"} {
+		delete(original["items"].([]any)[0].(map[string]any), key)
+		delete(afterRow, key)
+	}
+	if canonicalHash(original) != canonicalHash(after) {
+		t.Fatal("delivery changed original task/owner/holds/work")
+	}
+	if f.posts != 1 || f.close != 0 {
+		t.Fatal("delivery resent a question or invented implementation")
+	}
+}
+
+func TestConversationActualCanonicalContinuedDeliveryRejectsRacesAndOtherHolds(t *testing.T) {
+	for _, change := range []string{"cas-note", "cas-generation", "new-question", "missing-origin", "stop", "dependency", "guard"} {
+		t.Run(change, func(t *testing.T) {
+			f := continuedNative(t)
+			reply := f.reply(t, 8, "a")
+			if !strings.HasPrefix(change, "cas-") {
+				f.mutateTodo(t, func(row map[string]any) {
+					switch change {
+					case "new-question":
+						row["owner_question_wait"].(map[string]any)["question"].(map[string]any)["request_id"] = "another-question"
+					case "missing-origin":
+						delete(row["owner_question_wait"].(map[string]any), "origin")
+					case "stop":
+						row["owner_stopped"] = true
+					case "dependency":
+						row["wait_on"] = []any{99}
+					case "guard":
+						f.deny = true
+					}
+				})
+			}
+			var expected []byte
+			backend := f.r.Run
+			f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+				if path == conversationTodo && args[0] == "question-answer" && strings.HasPrefix(change, "cas-") {
+					f.mutateTodo(t, func(row map[string]any) {
+						if change == "cas-note" {
+							row["note"] = "後から届いた直接指示"
+						} else {
+							row["resume_generation"] = 3
+						}
+					})
+					expected, _ = os.ReadFile(f.r.TodoPath)
+				}
+				return backend(ctx, path, args...)
+			}
+			before, _ := os.ReadFile(f.r.TodoPath)
+			health := Health{}
+			f.r.processConversations(context.Background(), &health)
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if expected == nil {
+				expected = before
+			}
+			if len(health.Errors) == 0 || string(after) != string(expected) {
+				t.Fatal("rejected delivery changed task or lost the intervening instruction")
+			}
+			if req := f.r.State.Requests[reply.Message]; req == nil || req.Phase != "conversation_reply_saved" || req.Todo != 0 {
+				t.Fatal("rejection reported a delivery")
+			}
+			if f.posts != 1 || f.close != 0 {
+				t.Fatal("rejection resent a question or closed an unapplied answer")
+			}
+		})
+	}
+}
+
+func TestConversationActualCanonicalContinuedDeliveryRecoversLostResultAndSeparatesEdits(t *testing.T) {
+	f := continuedNative(t)
+	reply := f.reply(t, 8, "a")
+	backend := f.r.Run
+	deliveries := 0
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		out, err := backend(ctx, path, args...)
+		if path == conversationTodo && args[0] == "question-answer" && err == nil {
+			deliveries++
+			return "", errors.New("lost response after committed delivery")
+		}
+		return out, err
+	}
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) == 0 || f.r.State.Requests[reply.Message].Todo != 0 {
+		t.Fatal("lost response was acknowledged before readback")
+	}
+	f.mutateTodo(t, func(row map[string]any) { row["status"] = "block"; row["owner_stopped"] = true })
+	before, _ := os.ReadFile(f.r.TodoPath)
+	f.r.processConversations(context.Background(), &Health{})
+	after, _ := os.ReadFile(f.r.TodoPath)
+	if string(before) != string(after) || deliveries != 1 || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
+		t.Fatal("recovery changed a new stop or lost the committed delivery")
+	}
+	// A text-preserving edit changes the actual saved source bytes. It must
+	// never inherit the first delivery or implementation result.
+	f.edited = map[string]string{reply.Message: time.Now().Add(-time.Second).UTC().Format(time.RFC3339Nano)}
+	f.r.processConversations(context.Background(), &Health{})
+	if req := f.r.State.Requests[reply.Message]; req.Phase != "conversation_reply_saved" {
+		t.Fatal("edited answer inherited a stopped generation's delivery")
+	}
+	f.r.Run = backend
+	f.mutateTodo(t, func(row map[string]any) { row["status"] = "doing"; delete(row, "owner_stopped") })
+	health = Health{}
+	f.r.processConversations(context.Background(), &health)
+	var db struct {
+		Items []struct {
+			Records []json.RawMessage `json:"owner_question_delivery_receipts"`
+		} `json:"items"`
+	}
+	if readJSON(f.r.TodoPath, maxTodo, &db) != nil || len(health.Errors) != 0 || len(db.Items[0].Records) != 2 || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
+		t.Fatal("current edit did not receive its own durable delivery")
+	}
+	if f.close != 0 {
+		t.Fatal("delivery claimed an implementation")
+	}
+}
 
 // This optional acceptance check uses an actual freshly built canonical CLI
 // against a temporary database. It never selects the production ToDo store.

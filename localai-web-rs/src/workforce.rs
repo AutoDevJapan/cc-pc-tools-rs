@@ -78,6 +78,7 @@ fn evidence(active: Option<&Value>, now: u64, stopped: &BTreeSet<u64>) -> (Value
     let mut seen = BTreeSet::new();
     let mut ids = BTreeSet::new();
     let mut count = 0usize;
+    let mut sessions = Vec::new();
     let mut invalid = false;
     for job in input["jobs"].as_array().unwrap() {
         // Opaque collector keys only. Never return source paths, arbitrary labels or prose.
@@ -104,6 +105,8 @@ fn evidence(active: Option<&Value>, now: u64, stopped: &BTreeSet<u64>) -> (Value
             continue;
         }
         count += 1;
+        sessions.push(json!({"key":format!("job-{key}"),
+            "validUntil":at(&job["last_activity"]["at"]).unwrap().min(observed.unwrap()).saturating_add(30_000)}));
         ids.extend(
             job["todo_ids"]
                 .as_array()
@@ -126,12 +129,12 @@ fn evidence(active: Option<&Value>, now: u64, stopped: &BTreeSet<u64>) -> (Value
         .iter()
         .filter(|job| processing(job, now))
         .filter_map(|job| at(&job["last_activity"]["at"]))
-        .min()
+        .max()
         .unwrap_or(observed.unwrap());
     (
         json!({"state":if complete {"complete"} else {"partial"},"verifiedCount":count,
         "total":if complete {Some(count)} else {None},"observedAt":observed,
-        "startedAt":captured,"validUntil":expires.min(observed.unwrap()).saturating_add(30_000)}),
+        "startedAt":captured,"validUntil":expires.min(observed.unwrap()).saturating_add(30_000),"sessions":sessions}),
         ids,
     )
 }
@@ -402,6 +405,69 @@ pub fn expire(value: &mut Value, now: u64) {
     let expired = value["processing"]["validUntil"]
         .as_u64()
         .is_some_and(|until| now > until);
+    if let Some(sessions) = value["processing"]["sessions"].as_array().cloned() {
+        let retained: Vec<_> = sessions
+            .iter()
+            .filter(|session| {
+                session["validUntil"]
+                    .as_u64()
+                    .is_some_and(|until| now <= until)
+            })
+            .cloned()
+            .collect();
+        if retained.len() != sessions.len() || expired {
+            let keys: BTreeSet<_> = retained
+                .iter()
+                .filter_map(|session| session["key"].as_str())
+                .map(str::to_owned)
+                .collect();
+            value["processing"]["state"] = json!(if retained.is_empty() {
+                "stale"
+            } else {
+                "partial"
+            });
+            value["processing"]["verifiedCount"] = if retained.is_empty() {
+                Value::Null
+            } else {
+                json!(retained.len())
+            };
+            value["processing"]["total"] = Value::Null;
+            let mut moved = 0u64;
+            for task in value["tasks"].as_array_mut().into_iter().flatten() {
+                if task["state"] != "processing" {
+                    continue;
+                }
+                let sessions: Vec<_> = task["references"]["sessions"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter(|key| key.as_str().is_some_and(|key| keys.contains(key)))
+                    .cloned()
+                    .collect();
+                task["references"]["session"] = sessions.first().cloned().unwrap_or(Value::Null);
+                task["references"]["sessions"] = json!(sessions);
+                if sessions.is_empty() {
+                    task["state"] = json!("execution_unverified");
+                    task["availability"]["session"] = json!("stale");
+                    moved += 1;
+                }
+            }
+            if moved > 0 {
+                value["states"]["processing"] = json!(value["states"]["processing"]
+                    .as_u64()
+                    .unwrap_or(0)
+                    .saturating_sub(moved));
+                value["states"]["execution_unverified"] = json!(
+                    value["states"]["execution_unverified"]
+                        .as_u64()
+                        .unwrap_or(0)
+                        + moved
+                );
+            }
+            value["processing"]["sessions"] = json!(retained);
+        }
+        return;
+    }
     if expired {
         value["processing"]["state"] = json!("stale");
         value["processing"]["verifiedCount"] = Value::Null;

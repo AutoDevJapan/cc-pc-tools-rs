@@ -1,13 +1,13 @@
 use axum::{
-    Router,
-    body::{Body, to_bytes},
+    body::{to_bytes, Body},
     extract::{Path, Query, Request, State},
-    http::{HeaderMap, Method, StatusCode, header},
+    http::{header, HeaderMap, Method, StatusCode},
     middleware::{self, Next},
     response::{Html, IntoResponse, Json, Response},
     routing::{get, post},
+    Router,
 };
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{process::Command, time::Duration};
 use tower_http::services::ServeDir;
 mod agent;
@@ -170,10 +170,7 @@ async fn index_html() -> impl IntoResponse {
 }
 
 async fn progress_page() -> impl IntoResponse {
-    (
-        [(header::CACHE_CONTROL, "no-store")],
-        Html(localai_web_rs::console_page::index()),
-    )
+    index_html().await
 }
 
 async fn shared_progress_display(
@@ -580,11 +577,10 @@ mod tests {
             .insert("sec-fetch-site", "same-origin".parse().unwrap());
         let res = app.clone().oneshot(req).await.unwrap();
         assert_eq!(res.status(), StatusCode::OK);
-        assert!(
-            res.headers()
-                .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
-                .is_none()
-        );
+        assert!(res
+            .headers()
+            .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+            .is_none());
         for path in ["/api/private", "/api/shared-todo", "/api/chat"] {
             assert_eq!(
                 app.clone()
@@ -623,11 +619,9 @@ mod tests {
         let body = to_bytes(response.into_body(), RESPONSE_LIMIT)
             .await
             .unwrap();
-        assert!(
-            std::str::from_utf8(&body)
-                .unwrap()
-                .contains("作業状況を取得中")
-        );
+        assert!(std::str::from_utf8(&body)
+            .unwrap()
+            .contains("作業状況を取得中"));
         let envelope: Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(envelope["version"], 1);
         assert_eq!(envelope["ok"], false);
@@ -665,11 +659,10 @@ mod tests {
                     res.headers()[header::CONTENT_SECURITY_POLICY],
                     "frame-ancestors 'none'"
                 );
-                assert!(
-                    res.headers()
-                        .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
-                        .is_none()
-                );
+                assert!(res
+                    .headers()
+                    .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                    .is_none());
                 let body = to_bytes(res.into_body(), RESPONSE_LIMIT).await.unwrap();
                 // No operational records are read or interpolated into this document.
                 assert_eq!(
@@ -697,11 +690,10 @@ mod tests {
                     .await
                     .unwrap();
                 assert_eq!(res.status(), StatusCode::FORBIDDEN, "{method} {path}");
-                assert!(
-                    res.headers()
-                        .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
-                        .is_none()
-                );
+                assert!(res
+                    .headers()
+                    .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                    .is_none());
             }
         }
         for (name, value) in [
@@ -799,11 +791,10 @@ mod tests {
             }
             let res = app.clone().oneshot(req).await.unwrap();
             assert_eq!(res.status(), StatusCode::OK);
-            assert!(
-                res.headers()
-                    .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
-                    .is_none()
-            );
+            assert!(res
+                .headers()
+                .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                .is_none());
             let body = to_bytes(res.into_body(), RESPONSE_LIMIT).await.unwrap();
             let value: Value = serde_json::from_slice(&body).unwrap();
             assert!(value.is_object());

@@ -1,12 +1,12 @@
 //! Work accounting from the resident's privacy-restricted processing evidence.
 //! Never scans transcripts, credentials, repositories, or original protection records.
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::{Read, Write};
 use std::path::Path;
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 pub(super) struct Ledger {
     version: u32,
@@ -20,7 +20,7 @@ pub(super) struct Ledger {
     storage_error: bool,
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 struct Day {
     first_at: i64,
@@ -30,7 +30,7 @@ struct Day {
     projects: BTreeMap<String, Project>,
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Clone, Default, Serialize, Deserialize)]
 #[serde(default)]
 struct Project {
     name: String,
@@ -38,14 +38,25 @@ struct Project {
     intervals: Vec<(i64, i64)>,
 }
 
+#[derive(Clone)]
 struct Sample {
     at: i64,
     until: i64,
     complete: bool,
     jobs: BTreeMap<String, String>,
+    deadlines: BTreeMap<String, i64>,
 }
 
 impl Ledger {
+    pub(super) fn revision(&self) -> i64 {
+        self.updated_at
+    }
+    pub(super) fn storage_failed(&self) -> bool {
+        self.storage_error
+    }
+    pub(super) fn record_storage_failure(&mut self, failed: bool) {
+        self.storage_error = failed;
+    }
     pub(super) fn load(path: &Path) -> Self {
         let loaded = (|| {
             let meta = std::fs::symlink_metadata(path)?;
@@ -107,6 +118,7 @@ impl Ledger {
         }
         let today = super::day(at);
         let mut jobs = BTreeMap::new();
+        let mut deadlines = BTreeMap::new();
         let products = board["departments"]
             .as_array()
             .into_iter()
@@ -137,11 +149,23 @@ impl Ledger {
                     .filter_map(Value::as_str)
                     .filter(|job| !job.is_empty() && job.len() <= 512)
                 {
+                    let deadline = if let Some(sessions) = proof["sessions"].as_array() {
+                        sessions
+                            .iter()
+                            .find(|session| session["key"] == job)
+                            .and_then(|session| session["validUntil"].as_i64())
+                    } else {
+                        until
+                    };
+                    let Some(deadline) = deadline.filter(|deadline| *deadline >= now) else {
+                        continue;
+                    };
                     let job = super::hash(job);
                     if jobs.contains_key(&job) {
                         continue;
                     }
                     jobs.insert(job.clone(), key.clone());
+                    deadlines.insert(job.clone(), deadline);
                     let project = day.projects.entry(key.clone()).or_default();
                     project.name = name.to_owned();
                     project.jobs.insert(job);
@@ -171,7 +195,12 @@ impl Ledger {
                     day.duration_observed |= previous.complete && complete;
                     day.jobs_observed |= complete || !jobs.is_empty();
                     for (job, key) in &jobs {
-                        if previous.jobs.get(job) != Some(key) {
+                        if previous.jobs.get(job) != Some(key)
+                            || !previous
+                                .deadlines
+                                .get(job)
+                                .is_some_and(|until| *until >= at)
+                        {
                             continue;
                         }
                         let Some(name) = names.get(key).cloned() else {
@@ -197,6 +226,7 @@ impl Ledger {
             until: until.unwrap(),
             complete,
             jobs,
+            deadlines,
         });
     }
 
@@ -333,5 +363,68 @@ mod tests {
         next.observe(&board(at + 25_000, rows()), at + 25_000);
         assert_eq!(next.snapshot(&date, at + 25_000)["totals"]["active_ms"], 0);
         assert!(next.snapshot("2000-01-01", at)["totals"]["jobs"].is_null());
+    }
+
+    #[test]
+    fn missing_job_links_remain_unknown_and_parallel_products_split_at_midnight() {
+        let at = super::super::date_ms("2026-10-21").unwrap() - 15_000;
+        let mut ledger = Ledger::default();
+        let mut missing = board(at, json!([]));
+        missing["workforce"]["processing"]["verifiedCount"] = json!(1);
+        ledger.observe(&missing, at);
+        let unknown = ledger.snapshot("2026-10-20", at);
+        assert!(unknown["totals"]["jobs"].is_null());
+        assert!(unknown["totals"]["active_ms"].is_null());
+
+        let mut ledger = Ledger::default();
+        let mut input = board(at, rows());
+        input["departments"][0]["products"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({
+            "id":"other-product","name":"Other","workers":[{
+            "workState":"processing","references":{"sessions":["second"]}}]}));
+        input["workforce"]["processing"]["verifiedCount"] = json!(2);
+        ledger.observe(&input, at);
+        let next = at + 30_000;
+        input["workforce"]["processing"]["observedAt"] = json!(next);
+        input["workforce"]["processing"]["validUntil"] = json!(next + 30_000);
+        ledger.observe(&input, next);
+        for date in ["2026-10-20", "2026-10-21"] {
+            let value = ledger.snapshot(date, next);
+            assert_eq!(value["totals"]["jobs"], 2);
+            assert_eq!(value["totals"]["active_ms"], 30_000);
+        }
+    }
+
+    #[test]
+    fn an_expired_job_does_not_bridge_a_gap_or_hide_another_product() {
+        let at = 1_792_500_000_000;
+        let mut input = board(at, rows());
+        input["departments"][0]["products"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({
+            "id":"other-product","name":"Other","workers":[{
+            "workState":"processing","references":{"sessions":["second"]}}]}));
+        input["workforce"]["processing"]["verifiedCount"] = json!(2);
+        input["workforce"]["processing"]["sessions"] = json!([
+            {"key":"one","validUntil":at+1_000},{"key":"second","validUntil":at+30_000}]);
+        let mut ledger = Ledger::default();
+        ledger.observe(&input, at);
+        let next = at + 15_000;
+        input["workforce"]["processing"]["observedAt"] = json!(next);
+        input["workforce"]["processing"]["validUntil"] = json!(next + 30_000);
+        input["workforce"]["processing"]["sessions"] = json!([
+            {"key":"one","validUntil":next+30_000},{"key":"second","validUntil":next+30_000}]);
+        ledger.observe(&input, next);
+        let value = ledger.snapshot(&super::super::day(at), next);
+        let projects = value["projects"].as_array().unwrap();
+        assert!(projects.iter().find(|p| p["name"] == "Product").unwrap()["active_ms"].is_null());
+        assert_eq!(
+            projects.iter().find(|p| p["name"] == "Other").unwrap()["active_ms"],
+            15_000
+        );
+        assert_eq!(value["totals"]["active_ms"], 15_000);
     }
 }

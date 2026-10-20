@@ -1,0 +1,11 @@
+{
+  "exe": "D:/CC/Tools/safe-delete/safe-delete.exe",
+  "argv": [
+    "plan",
+    "--id",
+    "009d8e885cae5d48abf7391225902e2d"
+  ],
+  "exit": 0,
+  "stdout": "{\"action\":\"quarantine\",\"bytes\":1917684646,\"entries\":1905,\"id\":\"009d8e885cae5d48abf7391225902e2d\",\"path\":\"C:\\\\Users\\\\makhmeto\\\\AppData\\\\Local\\\\Temp\\\\codex-owned-009d8e885cae5d48abf7391225902e2d\",\"protected_attributes\":false,\"reason\":\"size\"}\n",
+  "stderr": ""
+}

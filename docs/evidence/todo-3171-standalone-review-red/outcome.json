@@ -1,0 +1,32 @@
+{
+  "todo": 3171,
+  "parent_todo": 3081,
+  "source_head": "5ba9a1c274d7a882387542d15c39fd2b2858f990",
+  "nextest_run_id": "f5732548-ffdc-4a74-bcf0-fd9ff1570101",
+  "attempts": 1,
+  "tests_run": 1,
+  "passed": 0,
+  "failed": 1,
+  "skipped": 390,
+  "exit_code": 100,
+  "test_name": "capacity_regressions::standalone_review_registers_without_guessing_authors_from_a_shared_cwd",
+  "classification": "expected-red-registration-refused-without-author-metadata",
+  "error": "review source model metadata unavailable",
+  "product_error_location": "cc-jobs/src/capacity.rs:253",
+  "stopped_at": "cc-jobs/tests/parity.rs:1947:36",
+  "reached": "t.run(...).unwrap() failed on registration error",
+  "unreached": [
+    "review lookup at parity.rs:1948-1949",
+    "model assert_eq! at parity.rs:1950",
+    "review_source_verified assert_eq! at parity.rs:1951",
+    "review_source_jobs assert_eq! at parity.rs:1952"
+  ],
+  "later_model_retargeting": "not observed; registration failed first",
+  "production_changes": 0,
+  "test_source_changes": 0,
+  "extra_test_runs": 0,
+  "stdout_bytes": 0,
+  "stderr_bytes": 58807,
+  "independent_finite_check_complete": true,
+  "parent_implementation_green_confirmed": false
+}

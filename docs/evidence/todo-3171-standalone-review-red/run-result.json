@@ -1,0 +1,42 @@
+{
+  "todo": 3171,
+  "parent_todo": 3081,
+  "job": "20261021-033543-todo-3171",
+  "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/277",
+  "head": "5ba9a1c274d7a882387542d15c39fd2b2858f990",
+  "branch": "scheduler/todo-3171-standalone-review-red",
+  "cwd": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3171-1-3081",
+  "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "arguments": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-jobs",
+    "--test",
+    "parity",
+    "-E",
+    "test(standalone_review_registers_without_guessing_authors_from_a_shared_cwd)",
+    "--no-fail-fast",
+    "--status-level",
+    "all"
+  ],
+  "environment": {
+    "CARGO_TARGET_DIR": "C:\\Users\\makhmeto\\AppData\\Local\\Temp\\codex-owned-009d8e885cae5d48abf7391225902e2d\\target",
+    "CARGO_BUILD_JOBS": "8",
+    "RUST_TEST_THREADS": "8",
+    "NEXTEST_TEST_THREADS": "8",
+    "RUSTC_WRAPPER": "D:/CC/Tools/sccache/sccache.exe",
+    "SCCACHE_DIR": "D:/CC/BuildCache/sccache",
+    "SCCACHE_CACHE_SIZE": "30G",
+    "SCCACHE_SERVER_PORT": "42259"
+  },
+  "target_ownership_id": "009d8e885cae5d48abf7391225902e2d",
+  "started_at": "2026-10-21T03:40:51.0560605+09:00",
+  "attempt": 1,
+  "state": "finished",
+  "create_no_window": true,
+  "process_id": 13804,
+  "exit_code": 100,
+  "finished_at": "2026-10-21T03:42:06.3920740+09:00"
+}

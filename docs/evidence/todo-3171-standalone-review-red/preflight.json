@@ -1,0 +1,48 @@
+{
+  "checked_at": "2026-10-21T03:40:50.8074145+09:00",
+  "guard": {
+    "exe": "D:/CC/Tools/client-records/scrub391.exe",
+    "argv": [
+      "--guard-path",
+      "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3171-1-3081"
+    ],
+    "exit": 0,
+    "stdout": "{\"classification_unverified\":false,\"client_resource\":false,\"ok\":true,\"original_registry_recovered\":false,\"scope\":\"verified repair source and explicitly supplied operational receipts only\"}\n",
+    "stderr": ""
+  },
+  "github": {
+    "exe": "C:\\Program Files\\GitHub CLI\\gh.exe",
+    "argv": [
+      "repo",
+      "view",
+      "AutoDevJapan/cc-pc-tools-rs",
+      "--json",
+      "nameWithOwner,owner,url"
+    ],
+    "exit": 0,
+    "stdout": "{\"nameWithOwner\":\"AutoDevJapan/cc-pc-tools-rs\",\"owner\":{\"id\":\"O_kgDODrZnJw\",\"login\":\"AutoDevJapan\"},\"url\":\"https://github.com/AutoDevJapan/cc-pc-tools-rs\"}\n",
+    "stderr": ""
+  },
+  "fixed_diff": {
+    "exe": "C:\\Program Files\\Git\\cmd\\git.exe",
+    "argv": [
+      "diff",
+      "5a82f08",
+      "5ba9a1c274d7a882387542d15c39fd2b2858f990"
+    ],
+    "exit": 0,
+    "stdout": "diff --git a/cc-jobs/tests/parity.rs b/cc-jobs/tests/parity.rs\nindex 04394d3..48bdff6 100644\n--- a/cc-jobs/tests/parity.rs\n+++ b/cc-jobs/tests/parity.rs\n@@ -6598,6 +6598,10 @@ impl Test {\n             \"--prompt-file\",\n             p.to_str().unwrap(),\n         ];\n+        if extra.contains(&\"--auto-model\") {\n+            let model = args.iter().position(|arg| *arg == \"--model\").unwrap();\n+            args.drain(model..model + 2);\n+        }\n         args.extend(extra);\n         self.cli(&args).0\n     }\n",
+    "stderr": ""
+  },
+  "source_locations": {
+    "exe": "C:\\Users\\makhmeto\\AppData\\Roaming\\npm\\node_modules\\@openai\\codex\\node_modules\\@openai\\codex-win32-x64\\vendor\\x86_64-pc-windows-msvc\\codex-path\\rg.exe",
+    "argv": [
+      "-n",
+      "^mod finite|fn standalone_review_registers_without_guessing_authors_from_a_shared_cwd|impl Runtime for Fake",
+      "cc-jobs/tests/parity.rs"
+    ],
+    "exit": 0,
+    "stdout": "8:mod finite_owner_wait_repair;\r\n1941:    fn standalone_review_registers_without_guessing_authors_from_a_shared_cwd() {\r\n6190:impl Runtime for Fake {\r\n6912:mod finite_research_execution {\r\n",
+    "stderr": ""
+  }
+}

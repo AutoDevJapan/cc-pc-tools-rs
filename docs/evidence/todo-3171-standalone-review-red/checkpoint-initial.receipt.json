@@ -1,0 +1,11 @@
+{
+  "exe": "D:/CC/Tools/scheduler/scheduler.exe",
+  "argv": [
+    "checkpoint-workspace",
+    "--request-file",
+    "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3171-1-3081\\docs\\evidence\\todo-3171-standalone-review-red\\checkpoint-initial.request.json"
+  ],
+  "exit": 0,
+  "stdout": "{\n  \"id\": 3171,\n  \"saved\": true,\n  \"launched\": 0,\n  \"source_files_changed\": false\n}\n",
+  "stderr": ""
+}

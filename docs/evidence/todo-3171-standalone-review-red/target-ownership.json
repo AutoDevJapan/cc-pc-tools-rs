@@ -1,0 +1,13 @@
+{
+  "exe": "D:/CC/Tools/safe-delete/safe-delete.exe",
+  "argv": [
+    "create",
+    "--project",
+    "todo-3171",
+    "--content",
+    "standalone-review-red-cargo-target"
+  ],
+  "exit": 0,
+  "stdout": "{\"version\":2,\"id\":\"009d8e885cae5d48abf7391225902e2d\",\"root\":\"C:\\\\Users\\\\makhmeto\\\\AppData\\\\Local\\\\Temp\",\"path\":\"C:\\\\Users\\\\makhmeto\\\\AppData\\\\Local\\\\Temp\\\\codex-owned-009d8e885cae5d48abf7391225902e2d\",\"volume\":2229119083,\"file_id\":33214047270248556,\"created_at\":\"2026-10-21T03:39:50.636573+09:00\",\"project\":\"todo-3171\",\"content\":\"standalone-review-red-cargo-target\",\"integrity\":\"2ee51dd19d7d2d849c688a8d60b9eae4c4fd43777c1308165d29a26b58b3d8fb\",\"state\":\"owned\"}\n",
+  "stderr": ""
+}

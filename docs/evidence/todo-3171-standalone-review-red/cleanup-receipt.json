@@ -1,0 +1,13 @@
+{
+  "exe": "D:/CC/Tools/safe-delete/safe-delete.exe",
+  "argv": [
+    "quarantine",
+    "--id",
+    "009d8e885cae5d48abf7391225902e2d",
+    "--reason",
+    "size"
+  ],
+  "exit": 0,
+  "stdout": "{\"bytes\":1917684646,\"destination\":\"C:\\\\Users\\\\makhmeto\\\\Downloads\\\\削除希望\\\\20261021-todo-3171-standalone-review-red-cargo-target-009d8e88\",\"entries\":1905,\"id\":\"009d8e885cae5d48abf7391225902e2d\",\"state\":\"quarantined\"}\n",
+  "stderr": ""
+}

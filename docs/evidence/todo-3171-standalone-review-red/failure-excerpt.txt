@@ -1,0 +1,27 @@
+        SKIP [         ] (───) cc-jobs::parity temporary_fixture_never_reuses_a_stale_pid_directory
+        SKIP [         ] (───) cc-jobs::parity token_accounting::test_missing_usage_fields_default_to_zero
+        SKIP [         ] (───) cc-jobs::parity token_accounting::test_total_is_input_plus_output_with_breakdown
+        SKIP [         ] (───) cc-jobs::parity token_accounting::test_usage_is_cumulative_last_wins
+        FAIL [   1.188s] (1/1) cc-jobs::parity capacity_regressions::standalone_review_registers_without_guessing_authors_from_a_shared_cwd
+  stdout ───
+
+    running 1 test
+    test capacity_regressions::standalone_review_registers_without_guessing_authors_from_a_shared_cwd ... FAILED
+
+    failures:
+
+    failures:
+        capacity_regressions::standalone_review_registers_without_guessing_authors_from_a_shared_cwd
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 390 filtered out; finished in 1.17s
+
+  stderr ───
+
+    thread 'capacity_regressions::standalone_review_registers_without_guessing_authors_from_a_shared_cwd' (56348) panicked at cc-jobs\tests\parity.rs:1947:36:
+    called `Result::unwrap()` on an `Err` value: Error { code: 1, message: "review source model metadata unavailable" }
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+────────────
+     Summary [   1.192s] 1 test run: 0 passed, 1 failed, 390 skipped
+        FAIL [   1.188s] (1/1) cc-jobs::parity capacity_regressions::standalone_review_registers_without_guessing_authors_from_a_shared_cwd
+error: test run failed

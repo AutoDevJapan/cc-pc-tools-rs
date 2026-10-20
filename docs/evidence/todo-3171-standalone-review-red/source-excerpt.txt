@@ -1,0 +1,14 @@
+1940:     #[test]
+1941:     fn standalone_review_registers_without_guessing_authors_from_a_shared_cwd() {
+1942:         let t = Test::new();
+1943:         t.put(job(json!({"id":"unrelated","status":"succeeded","cwd":t.ctx.root,
+1944:             "model":"anthropic/claude-opus-5-5","requested_model":"anthropic/claude-opus-5-5"})));
+1945:         t.run(&["--name","rev-unqualified","--task-type","code_review",
+1946:             "--auto-model","anthropic/claude-opus-5-5","--effort","max","--sandbox","read-only"],
+1947:             b"Review this change").unwrap();
+1948:         let review = t.ctx.list_jobs(&HashSet::new()).into_iter()
+1949:             .find(|job|s(job,"name")=="rev-unqualified").unwrap();
+1950:         assert_eq!(review["model"],"anthropic/claude-opus-5-5");
+1951:         assert_eq!(review["review_source_verified"],false);
+1952:         assert_eq!(review["review_source_jobs"],json!([]));
+1953:     }

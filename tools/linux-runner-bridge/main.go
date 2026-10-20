@@ -59,6 +59,9 @@ type host struct {
 	key, mode, revision, branch, target string
 	mu                                  sync.Mutex
 	getHead                             func(string) (string, error)
+	profile                             normalProfile
+	boundRunnerID                       int64
+	lookupRegistration                  func() (int64, error)
 }
 
 func command(name string, args ...string) *exec.Cmd {
@@ -541,6 +544,36 @@ func (h *host) serve(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", 400)
 		return
 	}
+	if r.URL.Path == "/registered" {
+		if h.mode != "normal" || !h.profile.ephemeral || q.Repository != repo {
+			http.Error(w, "registration rejected", 403)
+			return
+		}
+		h.mu.Lock()
+		defer h.mu.Unlock()
+		if h.boundRunnerID == 0 {
+			lookup := h.lookupRegistration
+			if lookup == nil {
+				lookup = func() (int64, error) { return configuredBurstRunnerID(h.profile) }
+			}
+			id, err := lookup()
+			if err != nil || id <= 0 {
+				http.Error(w, "registration not confirmed", 503)
+				return
+			}
+			h.boundRunnerID = id
+			if data, err := json.Marshal(struct {
+				ID   int64     `json:"runnerId"`
+				Name string    `json:"name"`
+				At   time.Time `json:"at"`
+			}{id, h.profile.runner, time.Now().UTC()}); err == nil {
+				_ = os.WriteFile(filepath.Join(".ci-runtime", "burst-registration.private.json"), data, 0600)
+			}
+			reportStage("burst-registration-bound")
+		}
+		w.WriteHeader(204)
+		return
+	}
 	if r.URL.Path == "/authorize" {
 		if e := h.authorize(q); e != nil {
 			http.Error(w, e.Error(), 403)
@@ -889,7 +922,7 @@ func hostMain(args []string) int {
 	if _, e := rand.Read(key); e != nil {
 		return 1
 	}
-	h := host{key: hex.EncodeToString(key), mode: mode, revision: revision, branch: branch, target: target}
+	h := host{key: hex.EncodeToString(key), mode: mode, revision: revision, branch: branch, target: target, profile: compiledNormalProfile}
 	if mode == "finite" && h.current() != nil {
 		return 1
 	}
@@ -977,7 +1010,7 @@ func hostMain(args []string) int {
 			}
 			done := make(chan int, 1)
 			go func() { done <- exitCode(c.Wait()) }()
-			code = awaitBurstProcess(done)
+			code = awaitBurstProcess(done, func() int64 { h.mu.Lock(); defer h.mu.Unlock(); return h.boundRunnerID })
 		} else {
 			code = exitCode(c.Run())
 		}
@@ -1099,6 +1132,9 @@ func register() int {
 	}
 	configOutput.Reset()
 	token = ""
+	if compiledNormalProfile.ephemeral && !notifyBurstRegistration() {
+		return 19
+	}
 	mode := "normal"
 	if strings.TrimSpace(ephemeral) == "true" && strings.TrimSpace(runnerName) == "cc-pc-tools-linux-2511" {
 		mode = "finite"
@@ -1135,6 +1171,10 @@ func main() {
 		os.Exit(1)
 	}
 	switch args[0] {
+	case "unconfigure-idle":
+		os.Exit(unconfigureBurstIdle())
+	case "stop-idle":
+		os.Exit(stopBurstIdleListener())
 	case "export-diagnostics":
 		os.Exit(exportBurstDiagnostics())
 	case "idle-state":

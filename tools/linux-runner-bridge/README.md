@@ -38,8 +38,12 @@ The additional host has a two-minute idle deadline. If the runner is busy then,
 it waits for the original job to finish with its original timeout. Otherwise it
 withdraws this owned ephemeral runner's custom labels, confirms zero labels and
 no assigned job/Worker over three fresh observations, and removes its idle
-registration. The official listener observes the missing registration, removes
-local configuration and exits through the existing group drain. Unknown API,
+registration. A synchronous notification after config.sh succeeds binds this
+host to the exact returned runner ID before run.sh starts; absent API fields do
+not substitute for that binding. After removal is confirmed as 404 and no Worker
+exists, only the owned idle run.sh group is signalled. The existing group drain
+must finish before the official SDK's remove command clears local configuration
+using a RAM-only removal token. No authentication file is manually deleted. Unknown API,
 identity, labels or process state retains the host and records an unverified
 drain; it never force-kills a potentially assigned job. Primary/2511 are excluded.
 See the pinned [official listener cleanup](https://github.com/actions/runner/blob/v2.338.0/src/Runner.Listener/Runner.cs).

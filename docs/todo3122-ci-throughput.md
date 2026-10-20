@@ -50,7 +50,9 @@ CPU75%未満、C/D各30GiB以上を要求する。Docker VMは空き9GiB以上�
 追加runnerの4ラベルは同じ名前のcustomとして登録し、2分のidle期限で自分の
 登録だけを退かせられるようにする。実jobが割当済みなら元のtimeoutで完了を待つ。
 idleならラベルを外し、3回の新しいAPI観測でラベル0/未割当とWorker不在を確かめて
-登録解除する。公式Listenerの404処理でlocal configが除去され、既存の排出へ戻る。
+登録解除する。config完了直後の同期通知で、この起動が登録したIDを先に結び付ける。
+解除の404とWorker不在を確認して追加枠のidle groupだけを止め、排出後に公式SDKの
+removeでlocal configを片付ける。tokenはRAMとstdinだけに渡し、認証fileを手動削除しない。
 不明な状態で強制終了しない。元primary/finite2511にはこの処理を適用しない。
 
 container回収前にはsupervisor lock/静止/所有/終了印を確認するexport-diagnosticsで

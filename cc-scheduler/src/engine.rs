@@ -1366,7 +1366,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             .get("model_origin")
             .or_else(|| item.get("model_origin"))
             .cloned()
-            .unwrap_or(Value::Null);
+            .unwrap_or(json!("policy"));
         if !valid_model(s(&selection["model"])) {
             return Err(Error("ValueError"));
         }
@@ -1406,9 +1406,14 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             .or_else(|| item.get("effort_origin"))
             .cloned()
             .unwrap_or(Value::Null);
-        cc_ask::job_policy::apply_effort_policy(&mut managed);
+        cc_ask::job_policy::apply_managed_launch_policy(&mut managed);
+        selection["model"] = managed["model"].clone();
+        selection["model_origin"] = managed["model_origin"].clone();
         selection["effort"] = managed["effort"].clone();
         selection["effort_origin"] = managed["effort_origin"].clone();
+        if !self.backend.model_exists(s(&selection["model"])) {
+            return Err(Error("ModelUnavailable"));
+        }
         if item["subwork"].is_object() {
             selection["task_type"] = item["subwork"]["kind"].clone();
         }

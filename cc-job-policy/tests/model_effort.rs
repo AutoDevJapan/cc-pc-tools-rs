@@ -14,6 +14,15 @@ fn review_aliases_are_author_identities_and_preview_is_not_review() {
 }
 
 #[test]
+fn unknown_provider_combinations_are_never_treated_as_automatic_gpt_defaults() {
+    let mut job = serde_json::json!({"todo_id":3081,"model":"anthropic/gpt-6-astra",
+        "model_origin":"policy","model_explicit":false,"effort":"high"});
+    cc_job_policy::apply_managed_launch_policy(&mut job);
+    assert_eq!(job["model"], "anthropic/gpt-6-astra");
+    assert_eq!(job["effort"], "high");
+}
+
+#[test]
 fn unattended_default_keeps_sol_max_for_implementation_and_readers() {
     for (name, kind) in [
         ("req-3081", "implementation"),

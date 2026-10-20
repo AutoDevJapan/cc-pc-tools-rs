@@ -2001,6 +2001,41 @@ mod capacity_regressions {
     }
 
     #[test]
+    fn automatic_legacy_gpt_defaults_change_only_at_safe_admission() {
+        for (origin, capacity, expected) in [
+            ("policy", false, "gpt-6.1-sol"),
+            ("owner_request", false, "gpt-6-luna"),
+            ("policy", true, "gpt-6-luna"),
+        ] {
+            let t = Test::new();
+            let mut record = job(json!({"id":"legacy-gpt","cwd":t.ctx.root,"todo_id":3081,
+                "status":"queued","model":"gpt-6-luna","requested_model":"gpt-6-luna",
+                "model_origin":origin,"model_explicit":false,"effort":"high"}));
+            if capacity {
+                record["capacity_history"] = json!([{"kind":"same_model_account_retry"}]);
+                record["capacity_same_model_retry_count"] = json!(1);
+            }
+            t.put(record);
+            fs::write(
+                t.ctx.root.join("todo.json"),
+                json!({"items":[{"id":3081,"status":"doing",
+                "jobs":["legacy-gpt"],"scheduler":{"job":"legacy-gpt"}}]})
+                .to_string(),
+            )
+            .unwrap();
+            let permit = t.ctx.admit("legacy-gpt").unwrap().unwrap();
+            let admitted = t.ctx.load("legacy-gpt").unwrap();
+            assert_eq!(admitted["model"], expected);
+            assert_eq!(admitted["effort"], "max");
+            if expected == "gpt-6.1-sol" {
+                assert_eq!(admitted["legacy_model_hint"], "gpt-6-luna");
+            }
+            assert!(t.rt.spawn_args.lock().unwrap().is_empty());
+            drop(permit);
+        }
+    }
+
+    #[test]
     fn an_explicit_source_is_not_contaminated_by_a_launcher_parent() {
         let t = Test::new();
         t.put(job(

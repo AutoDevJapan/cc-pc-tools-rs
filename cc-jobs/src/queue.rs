@@ -1205,7 +1205,7 @@ impl Context {
             }
             drop(temporary_lock);
         }
-        cc_job_policy::apply_effort_policy(&mut job);
+        cc_job_policy::apply_managed_launch_policy(&mut job);
         let mut jobs = self.admission_jobs()?;
         // Recheck only the exact remembered owner, never scan terminal history
         // under the admission gate. Missing/unreadable evidence remains waiting.

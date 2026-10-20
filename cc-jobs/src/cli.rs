@@ -1180,7 +1180,7 @@ impl Context {
             job["review_excluded_models"]=json!(models);
         }
         self.validate_review_launch(&mut job)?;
-        cc_job_policy::apply_effort_policy(&mut job);
+        cc_job_policy::apply_managed_launch_policy(&mut job);
         if crate::capacity::review_job(&job)
             && job["sandbox"] == "read-only"
             && job["todo_id"].as_u64().is_some_and(|id| id > 0)

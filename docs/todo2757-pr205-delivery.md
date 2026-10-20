@@ -1,6 +1,39 @@
 # ToDo2757: PR205 post-merge delivery boundary
+## Current state: 2026-10-20, original official release attempt2 is active
 
-## Latest observation: 2026-10-19 14:20 JST, installed PR238 preflight succeeded
+Resume the existing run38941324877/attempt2 on fixed41090. Do not dispatch a
+second release, rerun successful tests, return to task2829/2467, or rebuild the
+already accepted helper. Current head is on scheduler/todo-2757-release-acceptance.
+
+- Helper PR238 merge CI: seven success, one package-tools skip, all terminal.
+- Official direct full/backend runs39382032899/39382036786: success, logs saved.
+  Their log summaries include2239 passed/3 skipped and58 passed; the three
+  existing test-case skips are distinct from the original release's zero skipped
+  job steps. Do not report zero skipped tests or invent coverage for those cases.
+- Original release attempt2: real preconditions, backend and full jobs succeeded
+  with zero skipped steps. Promotion job118500019293 is executing the original
+  Railway deployment operation, with seven new service deployments successful
+  at the last observation and the scheduled-processing deployment building.
+- Existing API runtime is independently confirmed at41090 by HTTP200/ready.
+  Its old revision was f3d946cb before this rollout. Vercel production was still
+  f3d946cb at its last read and final smoke/release completion remain pending.
+- Preserve the original Rust official-log terminal-escape refusal; do not use an
+  override flag or another retrieval route. Old failed-service cause uncertainty
+  is not changed to an explanation by keyword counts or null diagnosis.
+
+Private resume/evidence files are in the existing ignored `.ci-work` area:
+`todo2757-official-release-latest.private.json`,
+`todo2757-railway-release-progress.private.json`,
+`todo2757-readiness-release-latest.private.json`,
+`todo2757-vercel-production-latest.private.json` and
+`todo2757-checkpoint-result-20261020.private.json`.
+Use the existing read-only `todo2757-read-official-release.ps1`,
+`todo2757-read-production-progress.ps1`, `todo2757-read-runtime-revision.ps1`
+and `todo2757-read-vercel-production.ps1` to follow the exact existing identities.
+The later dated sections below retain original results, failures and cleanup.
+No parent/other-product status or original protection record was changed.
+
+## Historical observation: 2026-10-19 14:20 JST, installed PR238 preflight succeeded
 
 The same installed PR238 executable completed the fixed-source preflight at
 `2026-10-19T05:19:37.4342888Z`: host exit0, guest exit0, 433.783 seconds.

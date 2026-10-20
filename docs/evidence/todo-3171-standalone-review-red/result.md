@@ -54,6 +54,7 @@ called `Result::unwrap()` on an `Err` value: Error { code: 1, message: "review s
 コンパイル記録と共に外側のstderrへ出力されている。
 読みやすい抜粋は`failure-excerpt.txt`、対象ソースは`source-excerpt.txt`に分けた。
 `SHA256SUMS.txt`で証跡の内容を照合できる。
+このフォルダだけの`.gitattributes`で改行変換を止め、Git内にも元のバイト列を保持する。
 
 約1.92GBの専用ビルド生成物は、所有付き削除ツールのplanが指定した
 `quarantine / size`の手順で削除希望フォルダへ移した。

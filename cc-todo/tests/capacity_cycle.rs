@@ -234,6 +234,94 @@ fn later_cycles_keep_bounded_history_and_do_not_require_archived_job_files() {
 }
 
 #[test]
+fn explicit_stop_flags_on_completed_row_or_job_survive_next_cycle() {
+    for field in ["stopped", "cancel_requested"] {
+        let mut f = Fixture::new();
+        f.ingest(AT);
+        f.db["items"][0]["status"] = json!("done");
+        f.db["items"][0][field] = json!(true);
+        f.write(AT + 10800);
+        assert_eq!(
+            f.ingest(AT + 10800)["action"],
+            "retained_unfinished_or_same_generation"
+        );
+        assert_eq!(f.db["items"][0]["status"], "done");
+        assert_eq!(f.db["items"][0][field], true);
+    }
+    for flag in [
+        json!({"stopped":true}),
+        json!({"cancel_requested":true}),
+        json!({"cancel_reason":"manual"}),
+    ] {
+        let mut f = Fixture::new();
+        f.ingest(AT);
+        let id = "20261020-200000-todo-1";
+        fs::create_dir_all(f.paths.jobs.join(id)).unwrap();
+        let mut job = json!({"status":"succeeded"});
+        for (key, value) in flag.as_object().unwrap() {
+            job[key] = value.clone();
+        }
+        fs::write(f.paths.jobs.join(id).join("job.json"), job.to_string()).unwrap();
+        f.db["items"][0]["jobs"] = json!([id]);
+        f.db["items"][0]["status"] = json!("done");
+        f.write(AT + 10800);
+        assert_eq!(
+            f.ingest(AT + 10800)["action"],
+            "retained_unfinished_or_same_generation"
+        );
+    }
+}
+
+#[test]
+fn anonymous_projection_keeps_actual_scan_counts_and_volume_changes() {
+    let input = json!({"schema":1,"time":chrono::DateTime::from_timestamp(AT as i64,0).unwrap().to_rfc3339(),"whole_drive_scan":false,"bytes_reclaimed":0,
+        "categories":[{"category":"windows","status":"partial","logical_bytes":12,"files":3,"directories":2,"errors":1,"scan_started":"2026-10-19T18:06:47Z","private_name":"MUST_NOT_ENTER_SPEC"}],
+        "free_bytes":{"C":123,"D":456,"E":null,"private_name":"MUST_NOT_ENTER_SPEC"},"volume_used_change_bytes":{"C":-8,"D":4},"known_root_file_bytes":{"pagefile":9,"private_name":"MUST_NOT_ENTER_SPEC"}});
+    let got = capacity_cycle::measurement(&input, AT).unwrap();
+    assert_eq!(got["categories"][0]["files"], 3);
+    assert_eq!(got["categories"][0]["scan_started"], "2026-10-19T18:06:47Z");
+    assert_eq!(got["free_bytes"]["C"], 123);
+    assert!(got["free_bytes"]["E"].is_null());
+    assert_eq!(got["volume_used_change_bytes"]["C"], -8);
+    assert!(!got.to_string().contains("MUST_NOT_ENTER_SPEC"));
+}
+
+#[test]
+fn reused_row_waits_for_scheduler_without_watchdog_resuming_old_conversation() {
+    let mut f = Fixture::new();
+    f.ingest(AT);
+    let id = "20261020-200000-todo-1";
+    fs::create_dir_all(f.paths.jobs.join(id)).unwrap();
+    let job = json!({"id":id,"todo_id":1,"project":"fixture","status":"succeeded","created_at":AT-100,"finished_at":AT,"thread_id":"old-conversation","cwd":"fixture"});
+    fs::write(f.paths.jobs.join(id).join("job.json"), job.to_string()).unwrap();
+    f.db["items"][0]["jobs"] = json!([id]);
+    f.db["items"][0]["status"] = json!("done");
+    f.write(AT + 10800);
+    f.ingest(AT + 10800);
+    let mut ordinary = f.db.clone();
+    ordinary["items"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("capacity_decision");
+    let ps = cc_scheduler::policy::Processes::new();
+    assert_eq!(
+        cc_todo::recovery::plan(&mut ordinary, &[job.clone()], &ps, (AT + 10860) as f64, "")
+            .unwrap(),
+        vec![1],
+        "positive control must exercise the ordinary direct-recovery route"
+    );
+    let selected =
+        cc_todo::recovery::plan(&mut f.db, &[job], &ps, (AT + 10860) as f64, "").unwrap();
+    assert!(
+        selected.is_empty(),
+        "watchdog reserved an old-conversation restart instead of waiting for the normal scheduler"
+    );
+    assert!(f.db["items"][0]["stall_recovery"]["pending"].is_null());
+    assert_eq!(f.db["items"][0]["status"], "todo");
+    assert_eq!(f.db["items"][0]["dispatchable"], true);
+}
+
+#[test]
 fn result_keeps_unknowns_and_rejects_false_full_scan_and_private_labels() {
     let mut f = Fixture::new();
     let receipt = f.ingest(AT);

@@ -6,6 +6,10 @@ use sha2::{Digest, Sha256};
 use std::{fs, io::Read, path::Path};
 
 const KEY: &str = "capacity-decision-v1";
+
+pub fn scheduler_only(row: &Value) -> bool {
+    row["capacity_decision"]["key"] == KEY
+}
 const CATEGORIES: &[&str] = &[
     "windows",
     "installed_apps",
@@ -100,14 +104,60 @@ pub fn measurement(value: &Value, at: u64) -> Result<Value> {
         {
             return Err("invalid measurement category".into());
         }
-        categories.push(
-            json!({"category":category,"status":status,"logical_bytes":row["logical_bytes"]}),
-        );
+        let mut observed =
+            json!({"category":category,"status":status,"logical_bytes":row["logical_bytes"]});
+        for field in ["files", "directories", "reparse_points_skipped", "errors"] {
+            if let Some(value) = row.get(field) {
+                if value.as_u64().is_none() {
+                    return Err("invalid measurement count".into());
+                }
+                observed[field] = value.clone();
+            }
+        }
+        for field in ["scan_started", "scan_completed"] {
+            if let Some(value) = row.get(field) {
+                let stamp = value
+                    .as_str()
+                    .and_then(|s| chrono::DateTime::parse_from_rfc3339(s).ok())
+                    .ok_or("invalid scan time")?;
+                observed[field] = json!(stamp.to_rfc3339_opts(chrono::SecondsFormat::Secs, true));
+            }
+        }
+        categories.push(observed);
     }
     categories.sort_by_key(|v| v["category"].as_str().unwrap().to_owned());
-    Ok(
-        json!({"schema":1,"time":chrono::DateTime::from_timestamp(epoch,0).ok_or("invalid timestamp")?.to_rfc3339_opts(chrono::SecondsFormat::Secs,true),"whole_drive_scan":false,"bytes_reclaimed":0,"categories":categories}),
-    )
+    let mut normalized = json!({"schema":1,"time":chrono::DateTime::from_timestamp(epoch,0).ok_or("invalid timestamp")?.to_rfc3339_opts(chrono::SecondsFormat::Secs,true),"whole_drive_scan":false,"bytes_reclaimed":0,"categories":categories});
+    for (field, keys, signed) in [
+        ("free_bytes", &["C", "D", "E"][..], false),
+        ("used_bytes", &["C", "D", "E"][..], false),
+        ("volume_used_change_bytes", &["C", "D", "E"][..], true),
+        (
+            "known_root_file_bytes",
+            &["pagefile", "hibernation", "swapfile", "docker_virtual_disk"][..],
+            false,
+        ),
+    ] {
+        if let Some(map) = value.get(field) {
+            let map = map.as_object().ok_or("invalid anonymous measurement map")?;
+            let mut projected = serde_json::Map::new();
+            for key in keys {
+                if let Some(value) = map.get(*key) {
+                    if !value.is_null()
+                        && (if signed {
+                            value.as_i64().is_none()
+                        } else {
+                            value.as_u64().is_none()
+                        })
+                    {
+                        return Err("invalid anonymous capacity value".into());
+                    }
+                    projected.insert((*key).into(), value.clone());
+                }
+            }
+            normalized[field] = json!(projected);
+        }
+    }
+    Ok(normalized)
 }
 
 fn generation(report: &Value) -> String {
@@ -174,6 +224,7 @@ fn jobs_finished(row: &Value, paths: &Paths) -> bool {
             .ok()
             .is_some_and(|job| {
                 matches!(job["status"].as_str(), Some("succeeded" | "finished"))
+                    && !cc_job_policy::cancellation::owner_stopped(row, &job)
                     && !cc_scheduler::policy::alive(&job, &processes, crate::time_s())
                     && cc_scheduler::policy::process_tree(&job, &processes).is_empty()
             })
@@ -181,19 +232,21 @@ fn jobs_finished(row: &Value, paths: &Paths) -> bool {
 }
 
 fn no_hold(row: &Value) -> bool {
-    [
-        "wait_on",
-        "wait_ready",
-        "conversation_wait",
-        "owner_question_wait",
-        "decision_wait",
-        "owner_postponement_recorded",
-        "stop_kind",
-    ]
-    .iter()
-    .all(|key| {
-        row[*key].is_null() || row[*key] == false || row[*key] == "" || row[*key] == json!([])
-    }) && row["scheduler"]["owner_stop_job"].is_null()
+    !cc_job_policy::cancellation::owner_stopped(row, &Value::Null)
+        && [
+            "wait_on",
+            "wait_ready",
+            "conversation_wait",
+            "owner_question_wait",
+            "decision_wait",
+            "owner_postponement_recorded",
+            "stop_kind",
+        ]
+        .iter()
+        .all(|key| {
+            row[*key].is_null() || row[*key] == false || row[*key] == "" || row[*key] == json!([])
+        })
+        && row["scheduler"]["owner_stop_job"].is_null()
         && row["scheduler"]["question_close_pending"] != true
 }
 

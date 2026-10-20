@@ -387,7 +387,7 @@ fn string_path(path: &Path) -> Result<String> {
 
 // Only receipt metadata is public. In particular, private snapshot/attachment
 // paths, title, raw child diagnostics, question/answer bodies and intents stay private.
-fn metadata(raw: &str, ask: bool) -> Result<Value> {
+fn metadata(raw: &str, ask: bool, check_only: bool) -> Result<Value> {
     if raw.len() > INPUT_LIMIT as usize {
         return Err(CHILD_FAILED.into());
     }
@@ -419,7 +419,13 @@ fn metadata(raw: &str, ask: bool) -> Result<Value> {
         ) {
             return Err(CHILD_FAILED.into());
         }
-    } else if result["domain"] != "discord-conversation-v1" || result["delivery"] != "verified" {
+    } else if result["domain"] != "discord-conversation-v1"
+        || if check_only {
+            result["delivery"] != "not_sent" || result["check_only"] != true
+        } else {
+            result["delivery"] != "verified"
+        }
+    {
         return Err(CHILD_FAILED.into());
     }
     let mut public = serde_json::Map::new();
@@ -448,11 +454,12 @@ fn metadata(raw: &str, ask: bool) -> Result<Value> {
                 .as_str()
                 .is_some_and(|v| chrono::DateTime::parse_from_rfc3339(v).is_ok()),
             "wait_requested" | "reused" => value.is_boolean(),
+            "check_only" | "original_intent_retained" => check_only && value == true,
             "phase" => matches!(
                 value.as_str(),
                 Some("posted" | "waiting" | "answered" | "applied" | "closed" | "duplicate")
             ),
-            "delivery" => value == "verified",
+            "delivery" => value == "verified" || (check_only && value == "not_sent"),
             "outcome" => value == "existing_question_images_differ",
             "domain" => value == "discord-conversation-v1",
             "url" => value.as_str().is_some_and(|url| {
@@ -472,7 +479,12 @@ fn metadata(raw: &str, ask: bool) -> Result<Value> {
     Ok(Value::Object(public))
 }
 
-fn execute(effects: &mut dyn Effects, args: &[String], ask: bool) -> Result<Option<Value>> {
+fn execute(
+    effects: &mut dyn Effects,
+    args: &[String],
+    ask: bool,
+    check_only: bool,
+) -> Result<Option<Value>> {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(90);
     loop {
         let remaining = deadline.saturating_duration_since(std::time::Instant::now());
@@ -491,7 +503,7 @@ fn execute(effects: &mut dyn Effects, args: &[String], ask: bool) -> Result<Opti
         if output.code != 0 {
             return Err(CHILD_FAILED.into());
         }
-        return Ok(Some(metadata(&output.stdout, ask)?));
+        return Ok(Some(metadata(&output.stdout, ask, check_only)?));
     }
 }
 
@@ -559,7 +571,7 @@ pub fn try_ask(home: &Path, effects: &mut dyn Effects, args: &AskArgs) -> Result
         "--wait".into(),
     ]);
     append_attachments(&root, &directory, snapshots, &mut argv)?;
-    execute(effects, &argv, true)
+    execute(effects, &argv, true, false)
 }
 
 pub fn try_log(
@@ -588,6 +600,7 @@ pub fn try_log(
         None,
         notify && canonical.is_none(),
         attach,
+        None,
     )
 }
 
@@ -613,9 +626,61 @@ pub fn try_post(
         Some(thread),
         notify,
         attach,
+        None,
     )
 }
 
+pub fn try_post_clarification(
+    home: &Path,
+    effects: &mut dyn Effects,
+    thread: &str,
+    body_file: &Path,
+    notify: bool,
+    attach: &[PathBuf],
+    manifest: &Path,
+) -> Result<Option<Value>> {
+    if !enabled(home)? || !numeric_id(thread) || notify || !attach.is_empty() {
+        return Err("説明補足には新方式の有効化、元質問、通知なし・添付なしが必要です".into());
+    }
+    send_log(
+        home,
+        effects,
+        "既存の作業への報告",
+        &body(body_file)?,
+        Some(thread),
+        false,
+        &[],
+        Some((manifest, false)),
+    )
+}
+
+pub fn try_check_clarification(
+    home: &Path,
+    effects: &mut dyn Effects,
+    thread: &str,
+    body_file: &Path,
+    notify: bool,
+    attach: &[PathBuf],
+    manifest: &Path,
+) -> Result<Option<Value>> {
+    if !enabled(home)? || !numeric_id(thread) || notify || !attach.is_empty() {
+        return Err("説明補足の確認には元質問と通知なし・添付なしが必要です".into());
+    }
+    send_log(
+        home,
+        effects,
+        "既存の作業への報告",
+        &body(body_file)?,
+        Some(thread),
+        false,
+        &[],
+        Some((manifest, true)),
+    )
+}
+
+// Association evidence is deliberately separate from the seven original inputs
+// that determine log identity; the retry key must not change during migration.
+#[allow(clippy::too_many_arguments)]
 fn send_log(
     home: &Path,
     effects: &mut dyn Effects,
@@ -624,6 +689,7 @@ fn send_log(
     thread: Option<&str>,
     notify: bool,
     attach: &[PathBuf],
+    clarification: Option<(&Path, bool)>,
 ) -> Result<Option<Value>> {
     if title.trim().is_empty()
         || text.len() as u64 > INPUT_LIMIT
@@ -632,7 +698,10 @@ fn send_log(
         return Err(INVALID_INPUT.into());
     }
     let root = home.join("conversation-bridge");
-    private_directory(&root)?;
+    let check_only = clarification.is_some_and(|(_, check)| check);
+    if !check_only {
+        private_directory(&root)?;
+    }
     let snapshots = attachments(&root, effects, attach, None)?;
     let files: Vec<_> = snapshots
         .iter()
@@ -648,9 +717,16 @@ fn send_log(
     ]);
     let request = format!("normal-log-{}", sha(identity.to_string().as_bytes()));
     let directory = root.join(&request);
-    private_directory(&directory)?;
     let body_path = directory.join("body.txt");
-    save_bytes(&root, &body_path, text.as_bytes())?;
+    if check_only {
+        // A check only inspects the pre-existing failed request's snapshot.
+        if read_bounded(&body_path, INPUT_LIMIT)? != text.as_bytes() {
+            return Err(SAVE_FAILED.into());
+        }
+    } else {
+        private_directory(&directory)?;
+        save_bytes(&root, &body_path, text.as_bytes())?;
+    }
     let mut argv = runner_args(home, "log")?;
     argv.extend([
         "--request-id".into(),
@@ -666,8 +742,22 @@ fn send_log(
     if notify {
         argv.push("--notify".into());
     }
+    if let Some((manifest, check_only)) = clarification {
+        let bytes = read_bounded(manifest, 16 * 1024)?;
+        let path = if check_only {
+            manifest.to_owned()
+        } else {
+            let path = directory.join(format!("clarification-{}.json", sha(&bytes)));
+            save_bytes(&root, &path, &bytes)?;
+            path
+        };
+        argv.extend(["--clarification-file".into(), string_path(&path)?]);
+        if check_only {
+            argv.push("--check-only".into());
+        }
+    }
     append_attachments(&root, &directory, snapshots, &mut argv)?;
-    execute(effects, &argv, false)
+    execute(effects, &argv, false, check_only)
 }
 
 fn append_attachments(

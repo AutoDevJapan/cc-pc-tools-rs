@@ -25,8 +25,23 @@ function Assert-Plain([string]$Path) {
 }
 function Hash([string]$Path) { (Get-FileHash -Algorithm SHA256 -LiteralPath $Path).Hash.ToLowerInvariant() }
 function Assert-Guard([string]$Path) {
-    $reply = & 'D:\CC\Tools\client-records\scrub391.exe' --guard-path $Path
-    if ($LASTEXITCODE -ne 0) { throw 'Classifier unavailable' }
+    if ($Path -match '["\r\n]') { throw 'Invalid classifier argument' }
+    $start = New-Object Diagnostics.ProcessStartInfo
+    $start.FileName = 'D:\CC\Tools\client-records\scrub391.exe'
+    $start.Arguments = '--guard-path "' + $Path + '"'
+    $start.UseShellExecute = $false
+    $start.CreateNoWindow = $true
+    $start.RedirectStandardOutput = $true
+    $start.RedirectStandardError = $true
+    $process = [Diagnostics.Process]::Start($start)
+    $stdout = $process.StandardOutput.ReadToEndAsync()
+    $stderr = $process.StandardError.ReadToEndAsync()
+    if (-not $process.WaitForExit(15000)) { $process.Kill(); $process.WaitForExit(); $process.Dispose(); throw 'Classifier timed out' }
+    $reply = $stdout.GetAwaiter().GetResult()
+    $errorBytes = $stderr.GetAwaiter().GetResult()
+    $code = $process.ExitCode
+    $process.Dispose()
+    if ($code -ne 0 -or $reply.Length -gt 4096 -or $errorBytes.Length -gt 0) { throw 'Classifier unavailable' }
     $parsed = $reply | ConvertFrom-Json
     if ($parsed.ok -ne $true -or $parsed.client_resource -ne $false -or $parsed.classification_unverified -ne $false) { throw 'Runtime is not qualified' }
 }
@@ -35,12 +50,11 @@ if ($taskBefore.State -eq 'Running' -or $taskBefore.Actions.Execute -ne 'D:\CC\T
 $cleanupBefore = Get-ScheduledTask -TaskName 'CC-CleanupDeletionRequests-8h'
 if ($cleanupBefore.Triggers[0].Repetition.Interval -ne 'PT1H' -or (Hash 'D:\CC\Tools\cleanup-8h\cleanup-8h.exe') -ne $manifest.cleanup_sha256) { throw 'Hourly cleaner changed' }
 $release = Join-Path $taskSource '.ci-work'
-$guardSource = Join-Path $release 'scrub391.exe'
-$guardTarget = 'D:\CC\Tools\client-records\scrub391.exe'
-$guardExpected = 'd017dd329903b65c9257a50c52a2acccd5fe9085de11909e3f7448fc1f232351'
-$guardNew = Get-Content -Raw -Encoding UTF8 -LiteralPath (Join-Path $release 'guard.sha256')
-$guardNew = $guardNew.Trim().ToLowerInvariant()
-if ($guardNew -notmatch '^[a-f0-9]{64}$' -or (Hash $guardSource) -ne $guardNew) { throw 'Guard artifact changed' }
+foreach ($sourceFile in $manifest.source_files.PSObject.Properties) {
+    $path = Join-Path $taskSource $sourceFile.Name
+    Assert-Plain $path
+    if ((Hash $path) -ne $sourceFile.Value) { throw 'Reviewed build source changed' }
+}
 $targets = @(
     [pscustomobject]@{Source=(Join-Path $taskSource 'target\release\todo.exe');Target='D:\CC\Tools\todo\todo.exe';Old=$manifest.todo.old_sha256;New=$manifest.todo.new_sha256},
     [pscustomobject]@{Source=(Join-Path $release 'capacity-audit-3h.exe');Target='D:\CC\Tools\capacity-audit-3h\capacity-audit-3h.exe';Old=$manifest.capacity.old_sha256;New=$manifest.capacity.new_sha256}
@@ -49,13 +63,11 @@ $targets = @(
 foreach ($target in $targets) {
     Assert-Plain $target.Source; Assert-Plain $target.Target
     if ((Hash $target.Source) -ne $target.New -or (Hash $target.Target) -ne $target.Old) { throw 'Runtime CAS changed; preserve concurrent release' }
+    Assert-Guard $target.Target
 }
-Assert-Plain $guardSource; Assert-Plain $guardTarget
-if ((Hash $guardTarget) -ne $guardExpected) { throw 'Classifier CAS changed; integrate current source first' }
-$items = @([pscustomobject]@{Source=$guardSource;Target=$guardTarget;Old=$guardExpected;New=$guardNew}) + $targets
-foreach ($item in $items) {
+foreach ($item in $targets) {
     if ((Hash $item.Target) -ne $item.Old) { throw 'Concurrent runtime update' }
-    if ($item.Target -ne $guardTarget) { Assert-Guard $item.Target }
+    Assert-Guard $item.Target
     $backup = Join-Path $release (([IO.Path]::GetFileName($item.Target)) + '.before-3085')
     if (Test-Path -LiteralPath $backup) { throw 'Prior backup exists; inspect previous deployment' }
     $stage = Join-Path ([IO.Path]::GetDirectoryName($item.Target)) (([IO.Path]::GetFileName($item.Target)) + '.3085-stage')
@@ -65,11 +77,11 @@ foreach ($item in $items) {
     if ((Hash $stage) -ne $item.New -or (Hash $item.Target) -ne $item.Old) { throw 'CAS changed during staging' }
     [IO.File]::Replace($stage,$item.Target,$backup,$false)
     if ((Hash $item.Target) -ne $item.New) { throw 'Installed artifact mismatch' }
-    if ($item.Target -ne $guardTarget) { Assert-Guard $item.Target }
+    Assert-Guard $item.Target
 }
 $after = Get-ScheduledTask -TaskName 'CC-CapacityAudit-3h'
 $cleanupAfter = Get-ScheduledTask -TaskName 'CC-CleanupDeletionRequests-8h'
 if ($after.Triggers[0].Repetition.Interval -ne 'PT3H' -or $cleanupAfter.Triggers[0].Repetition.Interval -ne 'PT1H' -or (Hash 'D:\CC\Tools\cleanup-8h\cleanup-8h.exe') -ne $manifest.cleanup_sha256) { throw 'Maintenance contract changed' }
-$receipt = [ordered]@{schema=1;todo_id=3085;source_commit=$ReviewedCommit;deployed_at_utc=[DateTime]::UtcNow.ToString('o');guard_sha256=$guardNew;capacity_sha256=$manifest.capacity.new_sha256;todo_sha256=$manifest.todo.new_sha256;cleanup_changed=$false;tasks_created=0;periods=@('PT3H','PT1H');original_registry_recovered=$false}
+$receipt = [ordered]@{schema=1;todo_id=3085;source_commit=$ReviewedCommit;deployed_at_utc=[DateTime]::UtcNow.ToString('o');guard_updated=$false;capacity_sha256=$manifest.capacity.new_sha256;todo_sha256=$manifest.todo.new_sha256;cleanup_changed=$false;tasks_created=0;periods=@('PT3H','PT1H');original_registry_recovered=$false}
 [IO.File]::WriteAllText((Join-Path $release '3085-deployed.private.json'),($receipt|ConvertTo-Json -Depth 5),[Text.UTF8Encoding]::new($false))
 $receipt | ConvertTo-Json -Depth 5 -Compress

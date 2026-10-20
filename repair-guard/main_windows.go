@@ -201,9 +201,6 @@ func allowed(path string) bool {
 	if consoleRuntimeAllowed(absolute) && sourceVerified(base) {
 		return true
 	}
-	if capacity3085RuntimeAllowed(absolute) && sourceVerified(base) {
-		return true
-	}
 	if civ6Runtime(absolute) {
 		return true
 	}

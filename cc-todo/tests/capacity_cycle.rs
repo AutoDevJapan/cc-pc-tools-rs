@@ -197,13 +197,59 @@ fn invalid_stale_conflicting_or_duplicate_input_never_changes_queue() {
 }
 
 #[test]
+fn later_cycles_keep_bounded_history_and_do_not_require_archived_job_files() {
+    let mut f = Fixture::new();
+    f.ingest(AT);
+    let id = "20261020-200000-todo-1";
+    fs::create_dir_all(f.paths.jobs.join(id)).unwrap();
+    fs::write(
+        f.paths.jobs.join(id).join("job.json"),
+        json!({"status":"succeeded"}).to_string(),
+    )
+    .unwrap();
+    f.db["items"][0]["jobs"] = json!([id]);
+    for cycle in 1..=18 {
+        f.db["items"][0]["status"] = json!("done");
+        f.write(AT + cycle * 10800);
+        assert_eq!(f.ingest(AT + cycle * 10800)["action"], "reused_completed");
+        if cycle == 1 {
+            fs::remove_file(f.paths.jobs.join(id).join("job.json")).unwrap();
+        }
+    }
+    assert_eq!(f.db["items"].as_array().unwrap().len(), 1);
+    assert_eq!(f.db["items"][0]["jobs"], json!([id]));
+    assert_eq!(
+        f.db["items"][0]["capacity_decision"]["history"]
+            .as_array()
+            .unwrap()
+            .len(),
+        16
+    );
+    assert_eq!(
+        fs::read_dir(f.paths.store.parent().unwrap().join("capacity-decisions"))
+            .unwrap()
+            .count(),
+        18
+    );
+}
+
+#[test]
 fn result_keeps_unknowns_and_rejects_false_full_scan_and_private_labels() {
     let mut f = Fixture::new();
     let receipt = f.ingest(AT);
+    assert!(capacity_cycle::validate_completion(&f.db["items"][0]).is_err());
+    let state = capacity_cycle::status(&f.db).unwrap();
+    assert_eq!(state["todo_id"], 1);
+    assert!(state["result"].is_null());
+    assert_eq!(
+        state["active_measurement"]["categories"][0]["status"],
+        "protected_unclassified"
+    );
     let path = f.paths.store.parent().unwrap().join("result.json");
     let mut result = json!({"schema":1,"generation":receipt["generation"],"uninvestigated_categories":2,"investigated_resources":0,"candidates":0,"retained":0,"reclaimed_bytes":0,"archive_verified":null,"questions_created":0,"questions_sent":0,"answers_applied":null,"retention_reasons":{"protected_unclassified":1}});
     fs::write(&path, result.to_string()).unwrap();
     capacity_cycle::record_result(&mut f.db, 1, &path).unwrap();
+    assert!(capacity_cycle::validate_completion(&f.db["items"][0]).is_ok());
     assert!(f.db["items"][0]["capacity_decision"]["result"]["archive_verified"].is_null());
     let before = f.db.clone();
     result["uninvestigated_categories"] = json!(0);

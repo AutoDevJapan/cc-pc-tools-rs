@@ -74,6 +74,8 @@ pub enum Command {
         #[arg(long)]
         result_file: PathBuf,
     },
+    /// Read only the new anonymous capacity decision record; never open old scan logs.
+    CapacityStatus,
     #[command(args_override_self = true, infer_long_args = true)]
     Project { name: String, path: String },
     /// Rename one project and its display text without changing paths or task state.
@@ -963,6 +965,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
     }
     let mut output = Vec::new();
     match cmd {
+        Command::CapacityStatus => output.push(capacity_cycle::status(db)?.to_string()),
         Command::CapacityCycle {
             report_file,
             spec,
@@ -1219,6 +1222,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         }
         Command::Done { id, note } => {
             let i = find(db, *id)?;
+            capacity_cycle::validate_completion(i)?;
             i["status"] = json!("done");
             set_progress(i, 100)?;
             if !note.is_empty() {
@@ -1422,6 +1426,7 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
     if matches!(
         cli.command,
         Command::List { .. }
+            | Command::CapacityStatus
             | Command::RenameProject { dry_run: true, .. }
             | Command::History { .. }
             | Command::ArchiveHistory { apply: false, .. }

@@ -24,6 +24,35 @@ const STATUSES: &[&str] = &[
     "missing_linked_or_unavailable",
 ];
 
+pub fn validate_completion(row: &Value) -> Result<()> {
+    if row["capacity_decision"]["key"] == KEY
+        && (row["capacity_decision"]["result"].is_null()
+            || row["capacity_decision"]["result"]["generation"]
+                != row["capacity_decision"]["active_generation"])
+    {
+        return Err("capacity decision needs a matching aggregate result before completion".into());
+    }
+    Ok(())
+}
+
+pub fn status(db: &Value) -> Result<Value> {
+    let rows: Vec<_> = db["items"]
+        .as_array()
+        .ok_or("invalid items")?
+        .iter()
+        .filter(|row| row["capacity_decision"]["key"] == KEY)
+        .collect();
+    if rows.len() > 1 {
+        return Err("duplicate capacity decision rows".into());
+    }
+    let Some(row) = rows.first() else {
+        return Ok(json!({"schema":1,"registered":false,"worker_launched":false}));
+    };
+    Ok(
+        json!({"schema":1,"registered":true,"todo_id":row["id"],"todo_status":row["status"],"model":row["model"],"effort":row["effort"],"jobs":row["jobs"],"active_generation":row["capacity_decision"]["active_generation"],"active_measurement":row["capacity_decision"]["active"],"latest_generation":row["capacity_decision"]["latest_generation"],"latest_measurement":row["capacity_decision"]["latest"],"result":row["capacity_decision"]["result"],"has_owner_wait":!row["owner_question_wait"].is_null()||!row["decision_wait"].is_null(),"has_dependency_wait":!row["wait_on"].is_null(),"worker_launched":false}),
+    )
+}
+
 fn read_json(path: &Path) -> Result<Value> {
     let mut bytes = Vec::new();
     fs::File::open(path)
@@ -133,7 +162,14 @@ fn jobs_finished(row: &Value, paths: &Paths) -> bool {
     let Ok(processes) = cc_scheduler::native::process_snapshot() else {
         return false;
     };
-    crate::job_refs::ids(&row["jobs"]).all(|id| {
+    let Some(offset) = row["capacity_decision"]["job_offset"]
+        .as_u64()
+        .and_then(|v| usize::try_from(v).ok())
+        .filter(|offset| *offset <= row["jobs"].as_array().map_or(0, Vec::len))
+    else {
+        return false;
+    };
+    crate::job_refs::ids(&row["jobs"]).skip(offset).all(|id| {
         crate::load_job(&paths.jobs.join(id).join("job.json"))
             .ok()
             .is_some_and(|job| {
@@ -281,6 +317,15 @@ pub fn ingest(
             history.insert("active_generation".into(), json!(gen_id));
             history.insert("active".into(), report.clone());
             history.remove("result");
+            history.insert(
+                "job_offset".into(),
+                json!(
+                    existing["jobs"]
+                        .as_array()
+                        .ok_or("invalid decision jobs")?
+                        .len()
+                ),
+            );
             // Use the existing dependency/readiness resumption path. It keeps
             // the workspace and result ledger and bypasses obsolete retry clocks.
             let fields = row.as_object_mut().unwrap();
@@ -300,7 +345,7 @@ pub fn ingest(
         }
     } else {
         let id = bind_spec(paths, &text, &report, None, &mut copy, project)?;
-        find(&mut copy, id)?["capacity_decision"] = json!({"key":KEY,"origin_todo_id":3085,"active_generation":gen_id,"active":report,"history":[]});
+        find(&mut copy, id)?["capacity_decision"] = json!({"key":KEY,"origin_todo_id":3085,"active_generation":gen_id,"active":report,"job_offset":0,"history":[]});
         (id, "queued")
     };
     let row = find(&mut copy, id)?;

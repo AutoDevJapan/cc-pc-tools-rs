@@ -42,6 +42,19 @@ func TestDecisionQueueCLI(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	status := call("capacity-status")
+	var aggregate struct {
+		Registered bool `json:"registered"`
+		TodoID     int  `json:"todo_id"`
+		Result     any  `json:"result"`
+	}
+	if json.Unmarshal(status, &aggregate) != nil || !aggregate.Registered || aggregate.TodoID != 1 || aggregate.Result != nil {
+		t.Fatal("anonymous readback did not distinguish unperformed decision")
+	}
+	afterStatus, err := os.ReadFile(filepath.Join(home, "todo.json"))
+	if err != nil || string(afterStatus) != string(stored) {
+		t.Fatal("status readback rewrote scheduling state")
+	}
 	var db struct {
 		Items []struct {
 			ID           int    `json:"id"`

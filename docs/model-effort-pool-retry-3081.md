@@ -3,7 +3,7 @@
 本人の2026-10-20指示（正本: D:/CC/Policies/owner-model-effort-and-pool-retry-20261020.md）を実装する。
 通常のGPT担当は gpt-6.1-sol / max / fast を明示する。本人の個別指定、単一ファイルのHaiku指定、
 別モデルレビュー、読み取り権限、停止、依存待ちを維持する。未知モデルを別名へ置換しない。
-Console UIとSkills導入方針の回答待ちは変更しない。
+Console UIの見た目とSkillsの導入方針は本作業では変更しない。
 
 ## 受入条件
 
@@ -83,6 +83,18 @@ Rust 2021で使えずコンパイル時に停止した。テスト失敗やGreen
 同じ条件を入れ子のifへ直し、schedulerとaskの変更部分を各クレートのRust 2021で構文解析した。
 次の固定ソースに対する正式CIで、関連テスト・doctest・Clippyの結果を確認する。
 
+修正後4d0822cのBuild speed（run 39477909091）は、選択した2331件がすべて合格し、
+6件は選択外だった。対象ライブラリのdoctestもすべて成功した（各0件）。
+Clippyはcc-jobs/src/capacity.rsの入れ子if 1件を指摘し、実行全体は失敗である。
+Rust 2024のcc-jobsでは指摘どおり条件をまとめ、Rust 2021のschedulerとは構文を分けた。
+全ログのSHA256は712f095ca4d0973a92b4ed517ce8348c2532681e835ce07c5665cb6a6bfa1bee。
+この形式修正後は正式CIの結果と、別モデルによる追加差分の確認を受ける。
+
+3171は比較用5ba9a1cの指定1件を1回だけ実行し、作者モデル情報がないため登録拒否となる
+実Redを確認した（exit100）。モデル等の後続assertには未到達である。
+完全証跡は比較検査の90c492f8de94caf18f81ca4376060bda048f93e2へ保存済み。
+この補助refをmainへ統合せず、修正後のGreenは上の正式CIの対象検査で確認する。
+
 モデルと推論の設定を変更した通常の再開は、旧設定を復元しないよう新しい会話で始める。
 cwd、権限、元履歴と途中成果は保持する。混雑時の同モデル・別枠の再試行の会話IDは引き続き保持する。
 実CLIのrefresh付きOpenAI metadataは1.165秒で返り、5行すべてcodex/health有り/Healthy/creditsAfterLimit=falseだった。
@@ -160,7 +172,8 @@ private IDとメールはCLI応答のメモリ内での照合にだけ使い、j
 古い子の終了後にscopeが変わった場合は新scopeを保持して終端を保存し、新workerは終わらせない。
 ToDo排他の取得失敗は有限待機へ保存する。公開namespaceとログlabelをCLIのmasked metadataで照合し、
 同じ枠の別名や名称変更を重複試行にしない。監査には公開labelとselectorだけを残す。
-未知GPT/Claudeはtierやmodelの自動変更の対象にせず、モデル修復の説明も実操作に一致させた。
+未知モデルの名前を自動変更しない。Claude系は未知の型でもGPT向けFastを継承せず、default tierを使う。
+モデル修復の説明も実操作に一致させた。
 終了直前の照合にはadd_dirs、network、MCP、審査設定、固定レビュー、再試行回数と枠履歴も含める。
 これらが変わった場合も新scopeを上書きせず、子の作成時刻が不明なら新workerの終端を推測しない。
 

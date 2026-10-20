@@ -425,14 +425,14 @@ impl Context {
         // A review must remain different from the model that wrote the source.
         // Read only its persisted model metadata, never copy the parent's prompt.
         let mut selection = job.clone();
-        if review_job(job) {
-            if let Ok((sources, authors)) = self.review_provenance(job) {
-                selection["review_source_jobs"] = json!(sources);
-                selection["review_source_verified"] = json!(!authors.is_empty());
-                let excluded = review_exclusions(&selection, &authors);
-                selection["review_excluded_models"] = json!(excluded);
-                selection["review_author_models"] = json!(authors);
-            }
+        if review_job(job)
+            && let Ok((sources, authors)) = self.review_provenance(job)
+        {
+            selection["review_source_jobs"] = json!(sources);
+            selection["review_source_verified"] = json!(!authors.is_empty());
+            let excluded = review_exclusions(&selection, &authors);
+            selection["review_excluded_models"] = json!(excluded);
+            selection["review_author_models"] = json!(authors);
         }
         // An older incorrectly routed reviewer cannot acquire a second attempt
         // on its author's model, including the provider-qualified spelling.

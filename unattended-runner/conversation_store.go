@@ -793,7 +793,7 @@ func (r *Runner) conversationStatus() (map[string]any, error) {
 		if req == nil || req.Author != r.State.Destination.Owner {
 			continue
 		}
-		intake = append(intake, map[string]any{"message_id": req.Message, "thread_id": req.Thread, "author_id": req.Author, "todo_id": req.Todo, "request_id": req.Conversation, "phase": req.Phase, "source": req.Source, "created_at": req.Created, "edited_at": req.Edited, "acquired_at": req.Acquired, "progress_thread_id": req.ProgressThread})
+		intake = append(intake, map[string]any{"message_id": req.Message, "thread_id": req.Thread, "author_id": req.Author, "todo_id": req.Todo, "request_id": req.Conversation, "phase": req.Phase, "source": req.Source, "created_at": req.Created, "edited_at": req.Edited, "acquired_at": req.Acquired, "content_sha256": bytesHash([]byte(req.Text)), "progress_thread_id": req.ProgressThread})
 		if req.Conversation == "" {
 			continue
 		}

@@ -640,16 +640,16 @@ async fn persist_or_close(dir: &Path, record: &Record) -> io::Result<PathBuf> {
     match persist(dir, record) {
         Ok(path) => Ok(path),
         Err(error) => {
-        // Keep a second journal if only chrome-tabs is inaccessible. This also survives
-        // cancellation while the rollback RPC is in flight.
-        let emergency = dir
-            .join("chrome-emergency-tabs")
-            .join(format!("{}.json", uuid::Uuid::new_v4()));
-        let recorded = lifecycle::atomic_json(&emergency, record).is_ok();
-        let closed = tokio::time::timeout(Duration::from_secs(3), close_record(record)).await;
-        if matches!(closed, Ok(Ok(_))) && recorded {
-            let _ = fs::remove_file(emergency);
-        }
+            // Keep a second journal if only chrome-tabs is inaccessible. This also survives
+            // cancellation while the rollback RPC is in flight.
+            let emergency = dir
+                .join("chrome-emergency-tabs")
+                .join(format!("{}.json", uuid::Uuid::new_v4()));
+            let recorded = lifecycle::atomic_json(&emergency, record).is_ok();
+            let closed = tokio::time::timeout(Duration::from_secs(3), close_record(record)).await;
+            if matches!(closed, Ok(Ok(_))) && recorded {
+                let _ = fs::remove_file(emergency);
+            }
             Err(io::Error::new(error.kind(), "tab record write failed"))
         }
     }
@@ -680,54 +680,55 @@ async fn open_inner(dir: &Path, job: &str, url: &str) -> io::Result<OpenReceipt>
     {
         return Err(io::Error::other("invalid job or URL"));
     }
-    {
-        lifecycle::activity(dir)?;
-        let (pipe, info) = discover().await?;
-        open_on(dir, job, url, pipe, info).await
-    }
+    lifecycle::activity(dir)?;
+    let (pipe, info) = discover().await?;
+    open_on(dir, job, url, pipe, info).await
 }
 
 async fn open_on(dir: &Path, job: &str, url: &str, pipe: String, info: Value) -> io::Result<OpenReceipt> {
-        let mut rpc = Rpc::connect(&pipe).await?;
-        let mut r = Record {
-            job: job.into(),
-            pipe,
-            instance: info["metadata"]["extensionInstanceId"]
-                .as_str()
-                .unwrap_or("")
-                .into(),
-            generation: info["browserTabMentions"]["generation"]
-                .as_str()
-                .unwrap_or("")
-                .into(),
-            session: format!("cc-chrome-{}", uuid::Uuid::new_v4()),
-            turn: "open".into(),
-            tab: 0,
-            created: epoch(),
-        };
-        let tab = rpc.call("createTab", r.params()).await?;
-        r.tab = tab["id"]
-            .as_u64()
-            .ok_or_else(|| io::Error::other("invalid createTab reply"))?;
-        let path = persist_or_close(dir, &r).await?;
-        let record_id = path.file_stem().and_then(|name| name.to_str())
-            .ok_or_else(|| io::Error::other("invalid persisted record filename"))?.to_owned();
-        let mut p = r.params();
-        p["tabId"] = json!(r.tab);
-        let attached = rpc.call("attach", p).await;
-        if let Err(e) = attached {
-            let _ = tokio::time::timeout(Duration::from_secs(3), close_record(&r)).await;
-            return Err(e);
-        }
-        let mut p = r.params();
-        p["target"] = json!({"tabId":r.tab});
-        p["method"] = json!("Page.navigate");
-        p["commandParams"] = json!({"url":url});
-        if let Err(e) = rpc.call("executeCdp", p).await {
-            let _ = tokio::time::timeout(Duration::from_secs(3), close_record(&r)).await;
-            return Err(e);
-        }
-        Ok(OpenReceipt { record: r, record_id })
+    let mut rpc = Rpc::connect(&pipe).await?;
+    let mut r = Record {
+        job: job.into(),
+        pipe,
+        instance: info["metadata"]["extensionInstanceId"]
+            .as_str()
+            .unwrap_or("")
+            .into(),
+        generation: info["browserTabMentions"]["generation"]
+            .as_str()
+            .unwrap_or("")
+            .into(),
+        session: format!("cc-chrome-{}", uuid::Uuid::new_v4()),
+        turn: "open".into(),
+        tab: 0,
+        created: epoch(),
+    };
+    let tab = rpc.call("createTab", r.params()).await?;
+    r.tab = tab["id"]
+        .as_u64()
+        .ok_or_else(|| io::Error::other("invalid createTab reply"))?;
+    let path = persist_or_close(dir, &r).await?;
+    let record_id = path
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| io::Error::other("invalid persisted record filename"))?
+        .to_owned();
+    let mut p = r.params();
+    p["tabId"] = json!(r.tab);
+    let attached = rpc.call("attach", p).await;
+    if let Err(e) = attached {
+        let _ = tokio::time::timeout(Duration::from_secs(3), close_record(&r)).await;
+        return Err(e);
+    }
+    let mut p = r.params();
+    p["target"] = json!({"tabId":r.tab});
+    p["method"] = json!("Page.navigate");
+    p["commandParams"] = json!({"url":url});
+    if let Err(e) = rpc.call("executeCdp", p).await {
+        let _ = tokio::time::timeout(Duration::from_secs(3), close_record(&r)).await;
+        return Err(e);
+    }
+    Ok(OpenReceipt { record: r, record_id })
 }
 
 fn remaining(deadline: std::time::Instant) -> io::Result<Duration> {
@@ -751,7 +752,8 @@ pub fn open_until(
             .map_err(|_| {
                 io::Error::new(io::ErrorKind::TimedOut, "opening owner Chrome timed out")
             })?
-    }).map(|receipt| receipt.record)
+    })
+    .map(|receipt| receipt.record)
 }
 
 /// Execute only page operations on a positively recorded tab in the same Chrome generation.
@@ -811,7 +813,7 @@ mod tests {
             let root = tempfile::tempdir().unwrap();
             let dir = root.path().join("receipt-job");
             fs::create_dir(&dir).unwrap();
-            lifecycle::atomic_json(&dir.join("job.json"), &json!({"status":"running"})).unwrap();
+            lifecycle::atomic_json(&dir.join("job.json"), &json!({"id":"receipt-job","status":"running"})).unwrap();
             let pipe = format!(r"\\.\pipe\cc-chrome-open-receipt-{}", uuid::Uuid::new_v4());
             let mut server = ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap();
             let info = json!({"metadata":{"extensionInstanceId":"fixture-instance"},"browserTabMentions":{"generation":"fixture-generation"}});

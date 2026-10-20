@@ -584,6 +584,7 @@ impl<B: Backend> Scheduler<B> {
         ps: &Processes,
         cfg: &Value,
     ) -> Result<()> {
+        crate::dispatch_receipt::recover_pending(self, jobs, ps)?;
         self.adopt_repair_dispatches(jobs)?;
         let db = self.todo()?;
         for item in arr(&db["items"]) {

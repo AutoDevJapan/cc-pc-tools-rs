@@ -13,5 +13,15 @@
 - 次: 対象1件の読取診断で起動世代/spec/資源/実promptを照合し、最小修正のRed/Green、
   別モデルmaxレビュー、CI、通常merge、source/hash照合、正規CLI実検証を進める。
   元3126の待機を保持して実履歴だけを回収し、終了済み担当をrunningへ偽造しない。
+- Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/327。
+- Red実行: 通常起動の回収検査が履歴への未連結で失敗。読取診断の検査は成功した。
+- 最初のGreen: 新規5検査が成功。実Git上のbranch照合、33種の不一致、同時メモ更新、
+  正規Start後の新担当によるcheckpointと旧担当拒否、原ファイルの保持を含む。
+  追加した停止/依存境界と関連処理はこれから検査する。Clippyは一度成功。
+- 元3126の読取診断: job20261021-042842-todo-3126と起動世代、正式guard、
+  実branch、spec全原文、資源、元の登録場所、保存promptがすべて一致した。
+  source state SHA=09d99e74b07d47fe0a7c58dac0d8b8b9bc072d17f3a90754cee7641223dbdf0b。
+  この段階では実台帳の回収は未実施。phase=prepared/status=waitを保持している。
+- 配布対象scheduler.exeの正式guardはclient_resource=false。原保護台帳とguardは変更しない。
 - 一時所有ID: 27075b23a6091a25d55408958e1de949。
   証拠はprivate記録として保持。元資料と他担当の成果は片付けない。

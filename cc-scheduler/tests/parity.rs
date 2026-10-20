@@ -4760,6 +4760,7 @@ fn help_uses_stdout_and_exit_zero_for_every_subcommand() {
         &["recover", "-h"],
         &["orphans", "-h"],
         &["checkpoint-workspace", "--help"],
+        &["dispatch-receipt", "--help"],
     ] {
         let mut c = invocation(&[env!("CARGO_BIN_EXE_scheduler")], Some(10));
         c.args = args.iter().map(|a| a.to_string()).collect();

@@ -1,11 +1,13 @@
 # 通常作業の起動応答喪失を照合して回収する
 
 元3126 / 修復3189。完了済み製品修復と3084・3110の未完了は変更しない。
+Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/327。
 
 ## 仕様
 
 - 対象は既存の確認済みPC修復3projectだけ。既存の正式guardをproject/worktreeへ適用する。
   原保護台帳の代替・復旧や、未知の作業の採用を行わない。
+  今回は既存Git作業場所だけを扱い、共通のGit管理領域と実branchも照合する。
 - `scheduler dispatch-receipt --id <番号>` は1件の資格と不一致理由だけを返す。
   raw行、起動鍵、prompt/spec本文、他の作業や秘密は出力しない。起動・取消・通知・保存をしない。
 - `--apply --expected-state-sha256 <検査が返したSHA>` は、同じ資格を再検査し、

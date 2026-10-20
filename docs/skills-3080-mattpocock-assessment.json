@@ -12,10 +12,9 @@
   "candidate_dispositions": {
     "candidate_reference_integration": 2,
     "covered_by_prior3048": 1,
-    "existing_integration_candidate": 13,
+    "existing_integration_candidate": 14,
     "new_adaptation_candidate": 14,
     "policy_rewrite_required": 4,
-    "rights_hold": 1,
     "wrapper_merge_candidate": 3
   },
   "entries": [
@@ -239,17 +238,18 @@
       "retrieved_at": "2026-10-20T08:40:54.4371888Z",
       "body_semantic_review_scope": "Full SKILL.md entrypoint read; cited support/scripts/assets not fully semantically reviewed",
       "source_notice": "skills-3080-upstream-MIT.txt",
-      "license_scope_assessment": "Third-party credited source needs separate license provenance; root MIT is insufficient.",
-      "candidate_disposition": "rights_hold",
+      "license_scope_assessment": "Matt MIT and individually inspected Humanlayer show-me source/notice at fixed commit; preserve both attributions. No blanket or historical unspecified-version grant is claimed. Independent acceptance pending.",
+      "candidate_disposition": "existing_integration_candidate",
       "proposed_targets": [
         "git-github-workflow"
       ],
-      "reason": "frontmatterにHumanlayer/Dex Horthy由来のshow-meクレジットがあり、Mattのroot MITだけでは由来素材の許諾範囲を断定しない。",
-      "required_changes": "第三者由来の対象pathと固定版の個別許諾を確認するまで本文やテンプレートを転載しない。権利未確認を除外としない。",
+      "reason": "本文の第三者クレジットを追い、Humanlayerの固定版show-me本文とMIT原文を確認した。説明・証拠・変更の影響を示す方法を既存PR手順へ統合する候補。",
+      "required_changes": "MattとHumanlayer双方の固定出典と著作権・許諾noticeを保持する。過去の未指定版の許諾まで断定せず、確認した表現の範囲だけを使う。HTML表示やUIの画像確認省略を必須にしない。",
       "independent_review_complete": false,
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
-      "excluded_by_todo3080": false
+      "excluded_by_todo3080": false,
+      "credit_source_evidence": "skills-3080-credit-evidence.json"
     },
     {
       "inventory_id": "github:8d338c3b5bf534bb741a000dc108a154bd45e793a7b790fddbf3e3a996003f76",

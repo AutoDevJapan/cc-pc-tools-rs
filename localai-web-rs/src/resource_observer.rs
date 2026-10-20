@@ -2,7 +2,10 @@
 use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, BTreeSet, VecDeque},
-    sync::{Mutex, RwLock},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex, RwLock,
+    },
 };
 #[path = "resource_sources.rs"]
 mod sources;
@@ -134,9 +137,10 @@ fn signed_delta(current: u64, old: u64) -> Option<i64> {
     i64::try_from(i128::from(current) - i128::from(old)).ok()
 }
 fn valid_jobs(jobs: &Value, now: u64) -> &[Value] {
-    if jobs["observedAt"]
-        .as_u64()
-        .is_some_and(|at| at <= now && now - at <= STALE_MS)
+    if jobs["truncated"] != true
+        && jobs["observedAt"]
+            .as_u64()
+            .is_some_and(|at| at <= now && now - at <= STALE_MS)
     {
         jobs["jobs"].as_array().map(Vec::as_slice).unwrap_or(&[])
     } else {
@@ -211,17 +215,20 @@ impl History {
         let dt = previous
             .map(|old| sample.tick_ms - old.tick_ms)
             .filter(|dt| (250..=STALE_MS).contains(dt));
-        let machine_cpu = previous.zip(dt).and_then(|(old, _)| {
-            let d: Vec<_> = sample
-                .system_times
-                .iter()
-                .zip(old.system_times)
-                .map(|(n, o)| n.checked_sub(o))
-                .collect();
-            let idle = d[0]?;
-            let total = d[1]?.checked_add(d[2]?)?;
-            (total > 0 && idle <= total).then(|| 100. * (total - idle) as f64 / total as f64)
-        });
+        let machine_cpu = previous
+            .zip(dt)
+            .filter(|_| (1..=64).contains(&sample.logical_cpus))
+            .and_then(|(old, _)| {
+                let d: Vec<_> = sample
+                    .system_times
+                    .iter()
+                    .zip(old.system_times)
+                    .map(|(n, o)| n.checked_sub(o))
+                    .collect();
+                let idle = d[0]?;
+                let total = d[1]?.checked_add(d[2]?)?;
+                (total > 0 && idle <= total).then(|| 100. * (total - idle) as f64 / total as f64)
+            });
         let mut rows = BTreeMap::new();
         for p in ps.values() {
             let old = previous.and_then(|old| same(p, old));
@@ -262,20 +269,19 @@ impl History {
         let current_jobs = valid_jobs(jobs, sample.at_ms);
         let mut builds = Vec::new();
         let mut build_roots = BTreeSet::new();
-        for p in ps.values().filter(|p| build(p)) {
-            if chain(p.pid, &ps)
-                .iter()
-                .skip(1)
-                .any(|pid| ps.get(pid).is_some_and(build))
+        let mut membership: BTreeMap<u32, BTreeSet<u32>> = BTreeMap::new();
+        for pid in ps.keys().copied() {
+            if let Some(root) = chain(pid, &ps)
+                .into_iter()
+                .rev()
+                .find(|id| ps.get(id).is_some_and(build))
             {
-                continue;
+                membership.entry(root).or_default().insert(pid);
             }
+        }
+        for (pid, members) in membership {
+            let p = &ps[&pid];
             build_roots.insert(p.pid);
-            let members: BTreeSet<_> = ps
-                .keys()
-                .copied()
-                .filter(|pid| chain(*pid, &ps).contains(&p.pid))
-                .collect();
             let job = job_for(p.pid, current_jobs, &ps);
             let markers: Vec<_> = job
                 .filter(|job| job["markerState"] == "ok")
@@ -314,9 +320,17 @@ impl History {
                 "job":job.map(|job|json!({"key":job["key"],"todoId":job["todoId"],"product":job["product"]}))}));
         }
         let observed_builds = builds.len();
+        let count = |state: &str| builds.iter().filter(|b| b["state"] == state).count();
+        let build_counts = json!({"observed":observed_builds,"processing":count("processing"),"executing":count("executing"),
+            "waiting":count("waiting"),"unverified":count("unverified"),"truncated":observed_builds>64});
         builds.truncate(64);
         let mut selected = build_roots;
-        for key in ["cpuPercent", "privateBytes", "privateDeltaBytes"] {
+        for key in [
+            "cpuPercent",
+            "privateBytes",
+            "privateDeltaBytes",
+            "growthBytes",
+        ] {
             let mut order: Vec<_> = rows.values().filter(|p| p[key].is_number()).collect();
             order.sort_by(|a, b| {
                 b[key]
@@ -355,13 +369,11 @@ impl History {
         while self.frames.len() > HISTORY_SAMPLES {
             self.frames.pop_front();
         }
-        let count = |state: &str| builds.iter().filter(|b| b["state"] == state).count();
         json!({"schemaVersion":1,"state":if truncated||!duplicate.is_empty(){"partial"}else if dt.is_none(){"collecting"}else{"ready"},
             "sampledAt":sample.at_ms,"ageMs":0,"sampleIntervalMs":dt,"currentAvailable":true,"host":host,
             "processCount":rows.len(),"metricsUnavailable":unavailable,"processesTruncated":truncated,
             "processes":selected.into_iter().take(128).filter_map(|pid|rows.remove(&pid)).collect::<Vec<_>>(),
-            "buildCounts":{"observed":observed_builds,"processing":count("processing"),"executing":count("executing"),
-                "waiting":count("waiting"),"unverified":count("unverified"),"truncated":observed_builds>64},"builds":builds,
+            "buildCounts":build_counts,"builds":builds,
             "history":self.frames.iter().map(|f|f.summary.clone()).collect::<Vec<_>>(),
             "historyLimit":HISTORY_SAMPLES,"growthState":if self.frames.len()<2{"collecting"}else{"observed_interval_only"},
             "jobMetadataState":if current_jobs.is_empty(){"unverified_or_empty"}else{"observed"},
@@ -398,31 +410,52 @@ pub fn expire(value: &mut Value, now: u64) {
         for build in value["builds"].as_array_mut().into_iter().flatten() {
             build["state"] = json!("unverified");
             build["job"] = Value::Null;
+            build["elapsedSeconds"] = Value::Null;
         }
-        value["buildCounts"] = json!({"observed":null,"processing":null,"executing":null,"waiting":null,"unverified":null});
+        value["jobMetadataState"] = json!("stale");
+        value["buildCounts"] = json!({"observed":null,"processing":null,"executing":null,"waiting":null,"unverified":null,"truncated":null});
     }
 }
 
 pub struct Resources {
+    enabled: bool,
     history: Mutex<History>,
     value: RwLock<Value>,
-    docker: Mutex<Value>,
+    docker: Arc<DockerCache>,
+}
+#[derive(Default)]
+struct DockerCache {
+    value: Mutex<Value>,
+    busy: AtomicBool,
 }
 impl Default for Resources {
     fn default() -> Self {
         Self {
+            enabled: false,
             history: Mutex::new(History::default()),
             value: RwLock::new(
                 json!({"schemaVersion":1,"state":"collecting","sampledAt":null,"host":{},"processes":[],"builds":[],"history":[]}),
             ),
-            docker: Mutex::new(Value::Null),
+            docker: Arc::new(DockerCache::default()),
         }
     }
 }
 impl Resources {
+    pub fn production() -> Self {
+        Self {
+            enabled: true,
+            ..Self::default()
+        }
+    }
+    pub fn enabled(&self) -> bool {
+        self.enabled
+    }
     pub fn refresh(&self, jobs: &Value) {
+        if !self.enabled {
+            return;
+        }
         let result = sources::native_sample();
-        let mut value = match result {
+        let value = match result {
             Ok(sample) => self
                 .history
                 .lock()
@@ -435,24 +468,99 @@ impl Resources {
                 old
             }
         };
-        let mut docker = self.docker.lock().unwrap_or_else(|e| e.into_inner());
-        let now = sources::now_ms();
-        if docker["attemptedAt"]
+        *self.value.write().unwrap_or_else(|e| e.into_inner()) = value;
+        self.refresh_docker();
+    }
+    fn refresh_docker(&self) {
+        self.refresh_docker_with(sources::now_ms(), sources::docker_stats);
+    }
+    fn refresh_docker_with(
+        &self,
+        now: u64,
+        acquire: impl FnOnce(&Value, u64) -> Value + Send + 'static,
+    ) -> Option<std::thread::JoinHandle<()>> {
+        let previous = self
+            .docker
+            .value
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
+        if previous["attemptedAt"]
             .as_u64()
             .is_none_or(|at| at > now || now - at >= 60_000)
+            && self
+                .docker
+                .busy
+                .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+                .is_ok()
         {
-            *docker = sources::docker_stats(&docker, now);
+            let cache = self.docker.clone();
+            // One bounded finite worker, never a new resident or an HTTP-triggered scan.
+            let worker = std::thread::Builder::new()
+                .name("resource-docker".into())
+                .spawn(move || {
+                    let next = acquire(&previous, now);
+                    *cache.value.lock().unwrap_or_else(|e| e.into_inner()) = next;
+                    cache.busy.store(false, Ordering::Release);
+                });
+            match worker {
+                Ok(worker) => return Some(worker),
+                Err(_) => {
+                    *self.docker.value.lock().unwrap_or_else(|e| e.into_inner()) = json!({"state":"unavailable","attemptedAt":now,
+                    "sampledAt":null,"currentAvailable":false,"failureCode":"worker_unavailable","containers":[]});
+                    self.docker.busy.store(false, Ordering::Release);
+                }
+            }
         }
-        value["docker"] = docker.clone();
-        *self.value.write().unwrap_or_else(|e| e.into_inner()) = value;
+        None
     }
     pub fn snapshot(&self) -> Value {
         self.snapshot_at(sources::now_ms())
     }
     pub fn snapshot_at(&self, now: u64) -> Value {
         let mut value = self.value.read().unwrap_or_else(|e| e.into_inner()).clone();
+        value["docker"] = self
+            .docker
+            .value
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone();
         expire(&mut value, now);
         sources::expire_docker(&mut value["docker"], now);
         value
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn docker_collection_is_single_flight_and_never_blocks_snapshot_readers() {
+        let resources = Resources::default();
+        let (started, begin) = std::sync::mpsc::channel();
+        let (release, blocked) = std::sync::mpsc::channel();
+        let worker=resources.refresh_docker_with(100,move |_,now| {
+            started.send(()).unwrap();blocked.recv().unwrap();
+            json!({"state":"ready","sampledAt":now,"attemptedAt":now,"currentAvailable":true,"containers":[]})
+        }).unwrap();
+        begin.recv().unwrap();
+        assert!(resources
+            .refresh_docker_with(100, |_, _| panic!("duplicate collector"))
+            .is_none());
+        assert!(resources.snapshot_at(100)["sampledAt"].is_null());
+        release.send(()).unwrap();
+        worker.join().unwrap();
+        assert_eq!(resources.snapshot_at(100)["docker"]["state"], "ready");
+        assert!(resources
+            .refresh_docker_with(101, |_, _| panic!("early refresh"))
+            .is_none());
+    }
+    #[test]
+    fn fixture_resources_do_not_collect_os_or_docker_data() {
+        let resources = Resources::default();
+        resources.refresh(&json!({}));
+        assert!(!resources.enabled());
+        assert!(resources.snapshot()["sampledAt"].is_null());
+        assert!(Resources::production().enabled());
     }
 }

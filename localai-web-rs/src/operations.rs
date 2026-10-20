@@ -43,7 +43,9 @@ pub struct Operations {
 }
 impl Operations {
     pub fn production() -> Self {
-        Self::new("D:/CC/Tools".into(), "D:/CC/Skills".into())
+        let mut board = Self::new("D:/CC/Tools".into(), "D:/CC/Skills".into());
+        board.resources = crate::resource_observer::Resources::production();
+        board
     }
     /// Use one record root for both the resident snapshot and its HTTP consumer.
     pub fn new(root: PathBuf, skills_root: PathBuf) -> Self {
@@ -116,7 +118,7 @@ impl Operations {
             .unwrap_or_else(|e| e.into_inner())
             .clone();
         let now = now_ms();
-        let mut value = collect_with_questions(&self.root, now, &live);
+        let mut value = collect_with_questions(&self.root, now, &live, self.resources.enabled());
         let resource_jobs = value.as_object_mut().and_then(|v|v.remove("_resourceJobs")).unwrap_or(Value::Null);
         self.resources.refresh(&resource_jobs);
         value["skillsInventory"] = self.skills.snapshot(now);
@@ -336,7 +338,7 @@ pub fn metadata_display(
     if !matches!(kind, "todo" | "jobs" | "handoff") {
         return Err("invalid display");
     }
-    let board = protected_metadata_at(root, todo_path, jobs_path, now_ms());
+    let board = protected_metadata_at(root, todo_path, jobs_path, now_ms(), false);
     metadata_display_snapshot(&board, kind)
 }
 
@@ -1007,6 +1009,7 @@ fn collect(root: &Path, now: u64) -> Value {
         root,
         now,
         &read_json(&root.join("discord-ask/operations-history.json")).unwrap_or(Value::Null),
+        false,
     )
 }
 // A missing name registry must not expose any free text or erase the available
@@ -1060,15 +1063,16 @@ fn protected_wait(item: &Value, current: Option<&Value>, queue: &Value, now: u64
     "unverified"
 }
 
-fn protected_metadata(root: &Path, now: u64) -> Value {
+fn protected_metadata(root: &Path, now: u64, collect_resources: bool) -> Value {
     protected_metadata_at(
         root,
         &root.join("todo/todo.json"),
         &root.join("codex-jobs/jobs"),
         now,
+        collect_resources,
     )
 }
-fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u64) -> Value {
+fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u64, collect_resources: bool) -> Value {
     let todo = cc_todo::read_store(todo_path)
         .ok()
         .filter(|db| db["items"].is_array() && db["projects"].is_object());
@@ -1408,10 +1412,10 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
             "巡回完了の記録から取得"
         )
     ]);
-    out["_resourceJobs"] = resource_jobs(js, todo.as_ref(), jobs_path, now);
+    if collect_resources { out["_resourceJobs"] = resource_jobs(js, todo.as_ref(), jobs_path, now); }
     out
 }
-fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
+fn collect_with_questions(root: &Path, now: u64, live: &Value, collect_resources: bool) -> Value {
     static QUESTION_URL: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
     let question_pattern = QUESTION_URL.get_or_init(|| {
         regex::Regex::new(r"https://discord\.com/channels/[0-9]+/[0-9]+(?:/[0-9]+)?")
@@ -1420,7 +1424,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
     let mut sources = Vec::new();
     let privacy = cc_ask::task_title::Names::load(&root.join("client-projects.txt"));
     if privacy.is_err() {
-        return protected_metadata(root, now);
+        return protected_metadata(root, now, collect_resources);
     }
     let names = privacy.unwrap();
     let policy = priority_policy(root);
@@ -1923,11 +1927,12 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
     } else {
         Value::Null
     };
-    json!({"metadataOk":todo.is_ok()&&jobs.is_ok(),"productBindingsConfigured":cc_scheduler::product_identity::bindings_configured(),"productBindingsOverridden":policy.as_object().map(|p|p.contains_key("product_identities")),"fetchedAt":now,"sourceOk":sources.iter().all(|s|s["ok"]==true || s["state"]=="unknown"),"sources":sources,
+    let mut result = json!({"metadataOk":todo.is_ok()&&jobs.is_ok(),"productBindingsConfigured":cc_scheduler::product_identity::bindings_configured(),"productBindingsOverridden":policy.as_object().map(|p|p.contains_key("product_identities")),"fetchedAt":now,"sourceOk":sources.iter().all(|s|s["ok"]==true || s["state"]=="unknown"),"sources":sources,
         "commander":commander,
         "metrics":metrics,"ownerQuestions":decisions["questions"],"decisionTasks":decisions["tasks"],"blockedDecisionTasks":decisions["blockedTasks"],
-        "unassignedProducts":unassigned_products(&tree),"departments":departments(tree),
-        "_resourceJobs":resource_jobs(js,db,&root.join("codex-jobs/jobs"),now)})
+        "unassignedProducts":unassigned_products(&tree),"departments":departments(tree)});
+    if collect_resources { result["_resourceJobs"] = resource_jobs(js,db,&root.join("codex-jobs/jobs"),now); }
+    result
 }
 fn infer_project(job: &Value, db: Option<&Value>) -> String {
     let cwd = text(job, "cwd").replace('\\', "/").to_lowercase();
@@ -2250,6 +2255,7 @@ mod tests {
             root,
             1_000_000,
             &json!({"question":"SecretClient hidden-value"}),
+            false,
         );
         assert_eq!(board["sourceOk"], false);
         assert_eq!(board["metadataOk"], true);

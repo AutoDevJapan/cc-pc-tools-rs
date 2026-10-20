@@ -181,3 +181,45 @@ fn excessive_processes_and_reset_counters_remain_explicitly_partial_or_unknown()
     assert_eq!(value["processCount"], MAX_PROCESSES);
     assert!(value["processes"].as_array().unwrap().len() <= 128);
 }
+
+#[test]
+fn build_totals_cover_all_observed_roots_when_the_detail_table_is_truncated() {
+    let mut h = History::default();
+    let ps = (1..=70)
+        .map(|pid| process(pid, 0, 1, 0., 100, "cargo.exe"))
+        .collect();
+    let value = h.observe(sample(1_000, ps), &json!({}));
+    assert_eq!(value["buildCounts"]["observed"], 70);
+    assert_eq!(value["buildCounts"]["unverified"], 70);
+    assert_eq!(value["buildCounts"]["truncated"], true);
+    assert_eq!(value["builds"].as_array().unwrap().len(), 64);
+}
+
+#[test]
+fn slow_memory_growth_is_selected_even_without_a_large_last_interval_delta() {
+    let mut h = History::default();
+    let ps = |ordinary: u64, slow: u64| {
+        let mut rows: Vec<_> = (1..=200)
+            .map(|pid| process(pid, 0, 1, 0., ordinary + u64::from(pid), "chrome.exe"))
+            .collect();
+        rows.push(process(999, 0, 1, 0., slow, "node.exe"));
+        rows
+    };
+    h.observe(sample(1_000, ps(10_000, 1)), &json!({}));
+    h.observe(sample(16_000, ps(10_000, 501)), &json!({}));
+    let value = h.observe(sample(31_000, ps(10_001, 501)), &json!({}));
+    assert_eq!(row(&value, 999)["privateDeltaBytes"], 0);
+    assert_eq!(row(&value, 999)["growthBytes"], 500);
+    assert_eq!(row(&value, 999)["growthWindowMs"], 30_000);
+}
+
+#[test]
+fn host_cpu_is_unknown_when_windows_system_timer_cannot_cover_all_processor_groups() {
+    let mut h = History::default();
+    let mut first = sample(1_000, vec![]);
+    first.logical_cpus = 128;
+    h.observe(first, &json!({}));
+    let mut second = sample(11_000, vec![]);
+    second.logical_cpus = 128;
+    assert!(h.observe(second, &json!({}))["host"]["cpuPercent"].is_null());
+}

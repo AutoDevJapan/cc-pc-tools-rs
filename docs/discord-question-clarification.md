@@ -5,6 +5,11 @@
 既存の通常CLI、Go conversation log、Rust recovery log の順に処理する。
 質問、判断範囲、ToDoの待機、旧台帳、共有設定は変更しない。
 
+最初は同じコマンドに `--check-only` を付け、正規GETによる照合だけを行える。
+結果は `check_only:true, delivery:not_sent`。送信・送信台帳・照合台帳の更新はしない。
+通常入口の既存本文コピーは照合するが、確認時には照合JSONを送信用に固定しない。
+実送信時は `--check-only` を外し、同じ本文・質問・照合JSONを使う。
+
 照合JSONの用途は `discord-question-clarification-v1`、purpose は
 `explain_original_question`。次を固定する。
 

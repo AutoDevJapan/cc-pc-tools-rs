@@ -24,6 +24,8 @@ enum Commands {
         args: cc_ask::recovery_messages::LogArgs,
         #[arg(long)]
         clarification_file: Option<PathBuf>,
+        #[arg(long, requires = "clarification_file")]
+        check_only: bool,
     },
     /// Create one new owner decision and its separate silent progress post.
     RecoveryAsk(cc_ask::recovery_messages::AskArgs),
@@ -147,6 +149,9 @@ enum Commands {
         /// Exact original question, owner explanation request and fixed log binding.
         #[arg(long)]
         clarification_file: Option<PathBuf>,
+        /// Check the exact association using GET; never send the explanation.
+        #[arg(long, requires = "clarification_file")]
+        check_only: bool,
     },
     Close {
         thread: String,
@@ -239,6 +244,23 @@ fn run(command: Commands) -> Result<()> {
             notify,
             attach,
             clarification_file: Some(manifest),
+            check_only: true,
+        } => cc_ask::conversation_bridge::try_check_clarification(
+            &home,
+            &mut RealEffects,
+            thread,
+            body_file,
+            *notify,
+            attach,
+            manifest,
+        )?,
+        Commands::Post {
+            thread,
+            body_file,
+            notify,
+            attach,
+            clarification_file: Some(manifest),
+            check_only: false,
         } => cc_ask::conversation_bridge::try_post_clarification(
             &home,
             &mut RealEffects,
@@ -254,6 +276,7 @@ fn run(command: Commands) -> Result<()> {
             notify,
             attach,
             clarification_file: None,
+            ..
         } => cc_ask::conversation_bridge::try_post(
             &home,
             &mut RealEffects,
@@ -367,8 +390,12 @@ fn run(command: Commands) -> Result<()> {
         Commands::RecoveryLog {
             args,
             clarification_file,
+            check_only,
         } => {
             let result = match clarification_file {
+                Some(path) if check_only => {
+                    cc_ask::recovery_messages::check_clarification(&mut ctx, &args, &path)?
+                }
                 Some(path) => cc_ask::recovery_messages::log_clarification(&mut ctx, &args, &path)?,
                 None => cc_ask::recovery_messages::log(&mut ctx, &args)?,
             };
@@ -503,6 +530,7 @@ fn run(command: Commands) -> Result<()> {
             attach,
             notify,
             clarification_file,
+            ..
         } => {
             if clarification_file.is_some() {
                 return Err("説明補足を旧送信へ切り替えることはできません".into());

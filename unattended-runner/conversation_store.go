@@ -649,17 +649,24 @@ func (r *Runner) conversationProof(ctx context.Context, q ConversationQuestion) 
 }
 
 func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile, thread string, notify bool, attachments []string) (map[string]any, error) {
-	return r.conversationLogInner(ctx, requestID, title, bodyFile, thread, notify, attachments, "")
+	return r.conversationLogInner(ctx, requestID, title, bodyFile, thread, notify, attachments, "", false)
 }
 
 func (r *Runner) conversationClarification(ctx context.Context, requestID, title, bodyFile, thread, manifest string) (map[string]any, error) {
 	if thread == "" || manifest == "" {
 		return nil, errors.New("clarification requires an exact original destination and binding")
 	}
-	return r.conversationLogInner(ctx, requestID, title, bodyFile, thread, false, nil, manifest)
+	return r.conversationLogInner(ctx, requestID, title, bodyFile, thread, false, nil, manifest, false)
 }
 
-func (r *Runner) conversationLogInner(ctx context.Context, requestID, title, bodyFile, thread string, notify bool, attachments []string, clarification string) (map[string]any, error) {
+func (r *Runner) conversationCheckClarification(ctx context.Context, requestID, title, bodyFile, thread, manifest string) (map[string]any, error) {
+	if thread == "" || manifest == "" {
+		return nil, errors.New("exact clarification input required")
+	}
+	return r.conversationLogInner(ctx, requestID, title, bodyFile, thread, false, nil, manifest, true)
+}
+
+func (r *Runner) conversationLogInner(ctx context.Context, requestID, title, bodyFile, thread string, notify bool, attachments []string, clarification string, checkOnly bool) (map[string]any, error) {
 	if !conversationID.MatchString(requestID) || strings.TrimSpace(title) == "" {
 		return nil, errors.New("conversation log identity invalid")
 	}
@@ -731,11 +738,17 @@ func (r *Runner) conversationLogInner(ctx context.Context, requestID, title, bod
 		if readErr != nil || len(binding) > 16<<10 {
 			return nil, errors.New("clarification binding unavailable")
 		}
-		path := filepath.Join(r.Config.Home, "conversation-clarifications", requestID+".json")
-		if err = writeConversationOnce(path, binding); err != nil {
-			return nil, err
+		path := clarification
+		if !checkOnly {
+			path = filepath.Join(r.Config.Home, "conversation-clarifications", requestID+".json")
+			if err = writeConversationOnce(path, binding); err != nil {
+				return nil, err
+			}
 		}
 		args = append(args, "--clarification-file", path)
+		if checkOnly {
+			args = append(args, "--check-only")
+		}
 	}
 	if record.Thread != "" {
 		if _, ok := number(record.Thread); !ok {
@@ -754,6 +767,12 @@ func (r *Runner) conversationLogInner(ctx context.Context, requestID, title, bod
 		return nil, errors.New("conversation log pending; retry the same request")
 	}
 	var report map[string]any
+	if checkOnly {
+		if json.Unmarshal([]byte(raw), &report) != nil || report["domain"] != "new-owner-recovery-messages" || report["check_only"] != true || report["delivery"] != "not_sent" || report["request_id"] != "conversation-log-"+bytesHash([]byte(requestID))[:32] {
+			return nil, errors.New("clarification verification pending")
+		}
+		return map[string]any{"domain": conversationDomain, "request_id": requestID, "delivery": "not_sent", "check_only": true, "original_intent_retained": true}, nil
+	}
 	if json.Unmarshal([]byte(raw), &report) != nil || report["domain"] != "new-owner-recovery-messages" || report["delivery"] != "verified" {
 		return nil, errors.New("conversation log verification pending")
 	}

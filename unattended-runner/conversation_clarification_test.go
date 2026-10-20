@@ -22,6 +22,9 @@ func TestClarificationCLIRequiresSilentExistingThread(t *testing.T) {
 	if _, err := parseConversationCLI(append(conversationLogArgs(), "--clarification-file=binding.json")); err == nil {
 		t.Fatal("implicit destination accepted")
 	}
+	if _, err := parseConversationCLI(append(conversationLogArgs(), "--check-only")); err == nil {
+		t.Fatal("unscoped check accepted")
+	}
 }
 
 func TestClarificationResumesExactLogWithoutChangingOriginalReservation(t *testing.T) {
@@ -49,8 +52,25 @@ func TestClarificationResumesExactLogWithoutChangingOriginalReservation(t *testi
 		if err != nil || string(proof) != `{"fixture":"binding"}` {
 			t.Error("fixed association evidence lost")
 		}
+		for _, arg := range args {
+			if arg == "--check-only" {
+				return `{"domain":"new-owner-recovery-messages","request_id":"conversation-log-` + bytesHash([]byte("original-log"))[:32] + `","check_only":true,"delivery":"not_sent"}`, nil
+			}
+		}
 		return `{"domain":"new-owner-recovery-messages","delivery":"verified","thread_id":"610","message_id":"620","reused":true}`, nil
 	}
+	indexBefore, _ := os.ReadFile(f.r.conversationPath())
+	if _, err := f.r.conversationCheckClarification(context.Background(), "original-log", "説明", body, "610", manifest); err != nil {
+		t.Fatal(err)
+	}
+	indexAfter, _ := os.ReadFile(f.r.conversationPath())
+	if string(indexBefore) != string(indexAfter) {
+		t.Fatal("check changed original reservation")
+	}
+	if _, err := os.Stat(filepath.Join(f.r.Config.Home, "conversation-clarifications", "original-log.json")); !os.IsNotExist(err) {
+		t.Fatal("check pinned send evidence")
+	}
+	calls = 0
 	for range 2 {
 		if _, err := f.r.conversationClarification(context.Background(), "original-log", "説明", body, "610", manifest); err != nil {
 			t.Fatal(err)

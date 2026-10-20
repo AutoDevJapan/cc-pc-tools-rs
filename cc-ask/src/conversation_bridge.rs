@@ -387,7 +387,7 @@ fn string_path(path: &Path) -> Result<String> {
 
 // Only receipt metadata is public. In particular, private snapshot/attachment
 // paths, title, raw child diagnostics, question/answer bodies and intents stay private.
-fn metadata(raw: &str, ask: bool) -> Result<Value> {
+fn metadata(raw: &str, ask: bool, check_only: bool) -> Result<Value> {
     if raw.len() > INPUT_LIMIT as usize {
         return Err(CHILD_FAILED.into());
     }
@@ -419,7 +419,13 @@ fn metadata(raw: &str, ask: bool) -> Result<Value> {
         ) {
             return Err(CHILD_FAILED.into());
         }
-    } else if result["domain"] != "discord-conversation-v1" || result["delivery"] != "verified" {
+    } else if result["domain"] != "discord-conversation-v1"
+        || if check_only {
+            result["delivery"] != "not_sent" || result["check_only"] != true
+        } else {
+            result["delivery"] != "verified"
+        }
+    {
         return Err(CHILD_FAILED.into());
     }
     let mut public = serde_json::Map::new();
@@ -448,11 +454,12 @@ fn metadata(raw: &str, ask: bool) -> Result<Value> {
                 .as_str()
                 .is_some_and(|v| chrono::DateTime::parse_from_rfc3339(v).is_ok()),
             "wait_requested" | "reused" => value.is_boolean(),
+            "check_only" | "original_intent_retained" => check_only && value == true,
             "phase" => matches!(
                 value.as_str(),
                 Some("posted" | "waiting" | "answered" | "applied" | "closed" | "duplicate")
             ),
-            "delivery" => value == "verified",
+            "delivery" => value == "verified" || (check_only && value == "not_sent"),
             "outcome" => value == "existing_question_images_differ",
             "domain" => value == "discord-conversation-v1",
             "url" => value.as_str().is_some_and(|url| {
@@ -491,7 +498,11 @@ fn execute(effects: &mut dyn Effects, args: &[String], ask: bool) -> Result<Opti
         if output.code != 0 {
             return Err(CHILD_FAILED.into());
         }
-        return Ok(Some(metadata(&output.stdout, ask)?));
+        return Ok(Some(metadata(
+            &output.stdout,
+            ask,
+            args.iter().any(|arg| arg == "--check-only"),
+        )?));
     }
 }
 
@@ -638,7 +649,31 @@ pub fn try_post_clarification(
         Some(thread),
         false,
         &[],
-        Some(manifest),
+        Some((manifest, false)),
+    )
+}
+
+pub fn try_check_clarification(
+    home: &Path,
+    effects: &mut dyn Effects,
+    thread: &str,
+    body_file: &Path,
+    notify: bool,
+    attach: &[PathBuf],
+    manifest: &Path,
+) -> Result<Option<Value>> {
+    if !enabled(home)? || !numeric_id(thread) || notify || !attach.is_empty() {
+        return Err("説明補足の確認には元質問と通知なし・添付なしが必要です".into());
+    }
+    send_log(
+        home,
+        effects,
+        "既存の作業への報告",
+        &body(body_file)?,
+        Some(thread),
+        false,
+        &[],
+        Some((manifest, true)),
     )
 }
 
@@ -653,7 +688,7 @@ fn send_log(
     thread: Option<&str>,
     notify: bool,
     attach: &[PathBuf],
-    clarification: Option<&Path>,
+    clarification: Option<(&Path, bool)>,
 ) -> Result<Option<Value>> {
     if title.trim().is_empty()
         || text.len() as u64 > INPUT_LIMIT
@@ -696,11 +731,19 @@ fn send_log(
     if notify {
         argv.push("--notify".into());
     }
-    if let Some(manifest) = clarification {
+    if let Some((manifest, check_only)) = clarification {
         let bytes = read_bounded(manifest, 16 * 1024)?;
-        let path = directory.join("clarification.json");
-        save_bytes(&root, &path, &bytes)?;
+        let path = if check_only {
+            manifest.to_owned()
+        } else {
+            let path = directory.join("clarification.json");
+            save_bytes(&root, &path, &bytes)?;
+            path
+        };
         argv.extend(["--clarification-file".into(), string_path(&path)?]);
+        if check_only {
+            argv.push("--check-only".into());
+        }
     }
     append_attachments(&root, &directory, snapshots, &mut argv)?;
     execute(effects, &argv, false)

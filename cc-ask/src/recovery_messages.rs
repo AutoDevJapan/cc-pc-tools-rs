@@ -2616,6 +2616,30 @@ pub fn log_clarification(ctx: &mut Context, args: &LogArgs, manifest: &Path) -> 
     execute_inner(ctx, Some(request), None, &images, Some(&binding))
 }
 
+/// The same association checks, but no journal update and no send operation.
+pub fn check_clarification(ctx: &mut Context, args: &LogArgs, manifest: &Path) -> Result<Value> {
+    if args.notify || !args.attach.is_empty() || args.thread.is_none() {
+        return Err("clarification check requires the exact silent text-only destination".into());
+    }
+    let binding = clarification::Binding::read(manifest)?;
+    let (request, _) = prepare_log(ctx, args)?;
+    binding.check_input(&request)?;
+    let home = ctx.here.clone();
+    let _lock = ByteLock::acquire(&home.join(LOCK), Duration::ZERO)?;
+    let mut ledger = Ledger::load(&home)?;
+    if ledger.request(&request.request_id) != Some(&request)
+        || ledger.bot(&request.request_id).is_none()
+    {
+        return Err("clarification check requires the unchanged saved intent and bot".into());
+    }
+    let mut api = RecoveryApi::bind(ctx, &mut ledger, &request)?;
+    clarification::authorize(&mut api, &ledger, &home, &request, &binding, false)?;
+    Ok(
+        json!({"domain":DOMAIN,"request_id":request.request_id,"delivery":"not_sent",
+        "check_only":true,"original_intent_retained":true}),
+    )
+}
+
 /// The original decision scope and question text are retained even when another
 /// title/request ID is a semantic duplicate. Question text stays in its thread.
 pub fn ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
@@ -2985,7 +3009,7 @@ fn execute_inner(
         Kind::Log { thread } => {
             if let Some(thread) = thread {
                 if let Some(binding) = clarification {
-                    clarification::authorize(&mut api, &ledger, &home, &request, binding)?;
+                    clarification::authorize(&mut api, &ledger, &home, &request, binding, true)?;
                 } else {
                     let is_progress =
                         RecoveryApi::known_progress(&ledger, &api.destination, &api.bot, thread)
@@ -4056,6 +4080,22 @@ mod tests {
         progress.thread = args.thread.clone();
         assert!(log(&mut ctx, &progress).is_err());
         assert_eq!(f.server.lock().unwrap().posts.len(), before + 1);
+        f.unchanged();
+    }
+
+    #[test]
+    fn clarification_check_uses_get_without_changing_intents_or_sending() {
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let (args, manifest, _) = clarification_fixture(&f, &mut ctx);
+        let before = fs::read(f.home.join(LEDGER)).unwrap();
+        let posts = f.server.lock().unwrap().posts.len();
+        let checked = check_clarification(&mut ctx, &args, &manifest).unwrap();
+        assert_eq!(checked["check_only"], true);
+        assert_eq!(checked["delivery"], "not_sent");
+        assert_eq!(fs::read(f.home.join(LEDGER)).unwrap(), before);
+        assert!(!f.home.join("recovery-clarifications.json").exists());
+        assert_eq!(f.server.lock().unwrap().posts.len(), posts);
         f.unchanged();
     }
 

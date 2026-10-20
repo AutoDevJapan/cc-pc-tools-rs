@@ -35,6 +35,7 @@ type conversationCLIOptions struct {
 	Notify            bool
 	Attachments       []string
 	ClarificationFile string
+	CheckOnly         bool
 }
 
 // Diagnostics from flag must never repeat an argument, body path or secret.
@@ -95,6 +96,7 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		conversationStringFlag(fs, "body-file", &opts.BodyFile)
 		conversationStringFlag(fs, "thread", &opts.Thread)
 		conversationStringFlag(fs, "clarification-file", &opts.ClarificationFile)
+		fs.Var(&conversationBoolFlag{value: &opts.CheckOnly}, "check-only", "")
 		fs.Var(&conversationBoolFlag{value: &opts.Notify}, "notify", "")
 		conversationAttachmentFlags(fs, &opts.Attachments)
 	case "replies":
@@ -127,6 +129,9 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 			return opts, errConversationArguments
 		}
 		if opts.ClarificationFile != "" && (opts.Thread == "" || opts.Notify || len(opts.Attachments) != 0) {
+			return opts, errConversationArguments
+		}
+		if opts.CheckOnly && opts.ClarificationFile == "" {
 			return opts, errConversationArguments
 		}
 		if opts.Thread != "" {
@@ -240,7 +245,16 @@ func conversationCLIWithLoader(args []string, out io.Writer, load func(string) (
 			question, err = runner.conversationAsk(ctx, ConversationAskInput{RequestID: opts.RequestID, Todo: opts.Todo, OriginThread: opts.OriginThread, BodyFile: opts.BodyFile, DecisionFile: opts.DecisionFile, Title: opts.Title, Wait: opts.Wait, Attachments: opts.Attachments})
 			result = conversationQuestionPublic(question)
 		case "log":
-			if opts.ClarificationFile == "" {
+			if opts.CheckOnly {
+				backend, ok := runner.(interface {
+					conversationCheckClarification(context.Context, string, string, string, string, string) (map[string]any, error)
+				})
+				if !ok {
+					err = errConversationArguments
+				} else {
+					result, err = backend.conversationCheckClarification(ctx, opts.RequestID, opts.Title, opts.BodyFile, opts.Thread, opts.ClarificationFile)
+				}
+			} else if opts.ClarificationFile == "" {
 				result, err = runner.conversationLog(ctx, opts.RequestID, opts.Title, opts.BodyFile, opts.Thread, opts.Notify, opts.Attachments)
 			} else if backend, ok := runner.(interface {
 				conversationClarification(context.Context, string, string, string, string, string) (map[string]any, error)

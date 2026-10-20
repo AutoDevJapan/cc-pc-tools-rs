@@ -175,6 +175,7 @@ pub(super) fn authorize(
     home: &Path,
     request: &Request,
     binding: &Binding,
+    persist: bool,
 ) -> Result<()> {
     binding.check_input(request)?;
     if ledger.request(&binding.request_id) != Some(request) || api.bot != binding.bot_id {
@@ -252,7 +253,7 @@ pub(super) fn authorize(
     {
         return Err(INVALID.into());
     }
-    if !bindings.records.contains_key(&request.request_id) {
+    if persist && !bindings.records.contains_key(&request.request_id) {
         bindings
             .records
             .insert(request.request_id.clone(), binding.clone());

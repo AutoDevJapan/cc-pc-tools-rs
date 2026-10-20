@@ -134,7 +134,7 @@ fn clarification_bridge_preserves_log_identity_and_fixed_evidence() {
         "600",
         &f.body,
         false,
-        &[f.body.clone()],
+        std::slice::from_ref(&f.body),
         &manifest
     )
     .is_err());
@@ -153,6 +153,55 @@ fn clarification_bridge_preserves_log_identity_and_fixed_evidence() {
     assert_eq!(fake.http_calls, 0);
     f.mode(r#"{"domain":"discord-conversation-mode-v1","enabled":false}"#);
     assert!(bridge::try_post_clarification(
+        f.root.path(),
+        &mut fake,
+        "600",
+        &f.body,
+        false,
+        &[],
+        &manifest
+    )
+    .is_err());
+    f.unchanged_legacy();
+}
+
+#[test]
+fn clarification_bridge_check_never_turns_check_into_delivery() {
+    let f = Fixture::new();
+    let mut fake = Fake::default();
+    let manifest = f.root.path().join("binding.json");
+    fs::write(&manifest, "{}").unwrap();
+    bridge::try_post(f.root.path(), &mut fake, "600", &f.body, false, &[]).unwrap();
+    let id = argument(&fake.calls[0].0, "--request-id").to_owned();
+    fake.output = Some(Output {
+        code: 0,
+        stdout: json!({"domain":"discord-conversation-v1","request_id":id,
+        "check_only":true,"delivery":"not_sent","original_intent_retained":true})
+        .to_string(),
+        stderr: String::new(),
+    });
+    let checked = bridge::try_check_clarification(
+        f.root.path(),
+        &mut fake,
+        "600",
+        &f.body,
+        false,
+        &[],
+        &manifest,
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(checked["delivery"], "not_sent");
+    assert!(fake.calls[1].0.contains(&"--check-only".into()));
+    assert!(!f
+        .root
+        .path()
+        .join("conversation-bridge")
+        .join(id)
+        .join("clarification.json")
+        .exists());
+    fake.output = None;
+    assert!(bridge::try_check_clarification(
         f.root.path(),
         &mut fake,
         "600",

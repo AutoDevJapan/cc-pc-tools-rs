@@ -295,13 +295,20 @@ func historyReadCLIWith(args []string, out io.Writer, load func(context.Context,
 	if err = writeHistoryReceipt(output, b); err != nil {
 		return fail()
 	}
-	ownerCount := 0
+	ownerRecords, ownerCount, ownerOther, ownerUnknown := 0, 0, 0, 0
 	for _, m := range page.Messages {
 		if m.Author.ID == scope.Owner {
-			ownerCount++
+			ownerRecords++
+			if m.Type == nil {
+				ownerUnknown++
+			} else if *m.Type == 0 || *m.Type == 19 {
+				ownerCount++
+			} else {
+				ownerOther++
+			}
 		}
 	}
-	result := map[string]any{"domain": page.Domain, "source": page.Source, "todo_id": page.Todo, "thread_id": page.Thread, "scanned_messages": page.Scanned, "owner_messages": ownerCount, "complete": page.Complete, "next": page.Next, "receipt_sha256": bytesHash(b), "delivery": "inspection_only", "application": "not_inferred"}
+	result := map[string]any{"domain": page.Domain, "source": page.Source, "todo_id": page.Todo, "thread_id": page.Thread, "scanned_messages": page.Scanned, "owner_records": ownerRecords, "owner_messages": ownerCount, "owner_other_types": ownerOther, "owner_unknown_types": ownerUnknown, "complete": page.Complete, "next": page.Next, "receipt_sha256": bytesHash(b), "delivery": "inspection_only", "application": "not_inferred"}
 	returnCode := 0
 	if json.NewEncoder(out).Encode(result) != nil {
 		returnCode = 1

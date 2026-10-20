@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -135,6 +136,48 @@ func TestHistoryReadCaseFoldedDuplicateKeysFailBeforeLoading(t *testing.T) {
 			var out bytes.Buffer
 			if historyReadCLIWith(args, &out, counted, func(context.Context, string) bool { return true }) == 0 || loads != 0 {
 				t.Fatal("case-fold duplicate reached loader")
+			}
+		})
+	}
+}
+
+func TestHistoryReadSummarySeparatesOwnerMessageKinds(t *testing.T) {
+	for _, kind := range []any{0, 19, 4, 6, 999, nil, "missing"} {
+		t.Run(fmt.Sprint(kind), func(t *testing.T) {
+			load, _ := historyFixture(t, func(path string, v any) any {
+				if path == "/channels/100/messages" {
+					owner := historyMessage("900", "20", "owner record")
+					if kind != "missing" {
+						owner["type"] = kind
+					}
+					bot := historyMessage("800", "30", "bot context")
+					bot["type"] = 0
+					return []any{owner, bot}
+				}
+				return v
+			})
+			args, _ := historyArgs(t)
+			var out bytes.Buffer
+			if historyReadCLIWith(args, &out, load, func(context.Context, string) bool { return true }) != 0 {
+				t.Fatal("valid kind fixture rejected")
+			}
+			var summary map[string]any
+			if err := json.Unmarshal(out.Bytes(), &summary); err != nil {
+				t.Fatal(err)
+			}
+			messages, other, unknown := 0, 0, 0
+			switch kind {
+			case 0, 19:
+				messages = 1
+			case nil, "missing":
+				unknown = 1
+			default:
+				other = 1
+			}
+			for key, expected := range map[string]int{"owner_records": 1, "owner_messages": messages, "owner_other_types": other, "owner_unknown_types": unknown} {
+				if summary[key] != float64(expected) {
+					t.Fatalf("%s = %v, want %d", key, summary[key], expected)
+				}
 			}
 		})
 	}

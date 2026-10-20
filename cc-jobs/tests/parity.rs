@@ -1,17 +1,17 @@
 use cc_jobs::notify::*;
 use cc_jobs::*;
+#[path = "../../cc-job-policy/tests/support/mod.rs"]
+mod subwork_support;
+#[path = "support/product_retry.rs"]
+mod original_product_retry;
+#[path = "support/owner_wait_repair.rs"]
+mod finite_owner_wait_repair;
 #[path = "support/finished_review.rs"]
 mod finished_review;
 #[path = "support/finished_work_handoff.rs"]
 mod finished_work_handoff;
-#[path = "support/owner_wait_repair.rs"]
-mod finite_owner_wait_repair;
 #[path = "support/no_action.rs"]
 mod no_action;
-#[path = "support/product_retry.rs"]
-mod original_product_retry;
-#[path = "../../cc-job-policy/tests/support/mod.rs"]
-mod subwork_support;
 
 mod independent_subwork {
     use super::*;
@@ -10338,9 +10338,7 @@ mod end_to_end {
         }
         fn cli(&self, args: &[&str], mode: &str) -> std::process::Output {
             let mut c = hidden_command(self.exe.to_str().unwrap());
-            if mode == "report-only" {
-                c.env("CC_TODO_HOME", self.tmp.0.join("todo"));
-            }
+            if mode == "report-only" { c.env("CC_TODO_HOME", self.tmp.0.join("todo")); }
             c.args(args)
                 .env(
                     "PATH",
@@ -10976,190 +10974,53 @@ mod end_to_end {
     #[test]
     fn no_action_real_fixture_cancels_exits_and_restarts_once_in_same_workspace() {
         use cc_job_policy::action_progress::{self, Progress};
-        let t = E2e::new();
-        let repo = t.tmp.0.join("repo");
+        let t=E2e::new();let repo=t.tmp.0.join("repo");
         fs::create_dir_all(repo.join(".git")).unwrap();
-        fs::write(
-            repo.join(".git/config"),
-            "[remote \"origin\"]\nurl = https://github.com/AutoDevJapan/cc-pc-tools-rs.git\n",
-        )
-        .unwrap();
-        fs::write(
-            repo.join(".git/HEAD"),
-            "ref: refs/heads/scheduler/todo-1-fixture\n",
-        )
-        .unwrap();
-        fs::write(repo.join("unfinished.txt"), "preserve this unfinished work").unwrap();
-        fs::copy(
-            env!("CARGO_BIN_EXE_cc_jobs_fixture"),
-            t.tmp.0.join("bin/codex.exe"),
-        )
-        .unwrap();
-        fs::write(
-            t.tmp.0.join("bin/codex.cmd"),
-            b"@echo off\r\n\"%~dp0codex.exe\" %*\r\n",
-        )
-        .unwrap();
-        let first_prompt = t.tmp.0.join("first.md");
-        fs::write(&first_prompt, "harmless report-only fixture").unwrap();
-        let launched = t.cli(
-            &[
-                "run",
-                "--name",
-                "fixture-first",
-                "--model",
-                "gpt-6.1-sol",
-                "--task-type",
-                "implementation",
-                "--sandbox",
-                "danger-full-access",
-                "--cwd",
-                repo.to_str().unwrap(),
-                "--prompt-file",
-                first_prompt.to_str().unwrap(),
-            ],
-            "report-only",
-        );
-        assert!(
-            launched.status.success(),
-            "{}",
-            String::from_utf8_lossy(&launched.stderr)
-        );
-        let first = String::from_utf8(launched.stdout)
-            .unwrap()
-            .trim()
-            .to_owned();
-        let events = t.tmp.0.join("tool/jobs").join(&first).join("events.jsonl");
-        t.until(|| fs::read_to_string(&events).is_ok_and(|s| s.lines().count() >= 4));
-        let source = t.job(&first);
-        let row = json!({"id":1,"project":"cc-pc-tools-rs","status":"doing","dispatchable":true,"spec":first_prompt,"jobs":[first],"resume_generation":1,
+        fs::write(repo.join(".git/config"),"[remote \"origin\"]\nurl = https://github.com/AutoDevJapan/cc-pc-tools-rs.git\n").unwrap();
+        fs::write(repo.join(".git/HEAD"),"ref: refs/heads/scheduler/todo-1-fixture\n").unwrap();
+        fs::write(repo.join("unfinished.txt"),"preserve this unfinished work").unwrap();
+        fs::copy(env!("CARGO_BIN_EXE_cc_jobs_fixture"),t.tmp.0.join("bin/codex.exe")).unwrap();
+        fs::write(t.tmp.0.join("bin/codex.cmd"),b"@echo off\r\n\"%~dp0codex.exe\" %*\r\n").unwrap();
+        let first_prompt=t.tmp.0.join("first.md");fs::write(&first_prompt,"harmless report-only fixture").unwrap();
+        let launched=t.cli(&["run","--name","fixture-first","--model","gpt-6.1-sol","--task-type","implementation","--sandbox","danger-full-access","--cwd",repo.to_str().unwrap(),"--prompt-file",first_prompt.to_str().unwrap()],"report-only");
+        assert!(launched.status.success(),"{}",String::from_utf8_lossy(&launched.stderr));
+        let first=String::from_utf8(launched.stdout).unwrap().trim().to_owned();
+        let events=t.tmp.0.join("tool/jobs").join(&first).join("events.jsonl");
+        t.until(|| fs::read_to_string(&events).is_ok_and(|s|s.lines().count()>=4));
+        let source=t.job(&first);
+        let row=json!({"id":1,"project":"cc-pc-tools-rs","status":"doing","dispatchable":true,"spec":first_prompt,"jobs":[first],"resume_generation":1,
             "worker_receipt":{"job":first,"generation":1},"scheduler":{"job":first,"worktree":repo,"branch":"scheduler/todo-1-fixture"}});
-        let mut db = json!({"projects":{"cc-pc-tools-rs":repo},"items":[row]});
-        let diagnostic = json!({"id_match":db["items"][0]["scheduler"]["job"]==source["id"],"owner_wait":source["waiting_for_work_owner"],"resource_wait":source["resource_wait"],"capacity_wait":source["capacity_wait_pending"],"sandbox":source["sandbox"],"pid_birth":source["pid_created"],"child_birth":source["codex_pid_created"],"started":source["started_at"],"stop":source["stopped"],"cancel":source["cancel_requested"],"work_on":source["work_wait_on"]});
-        assert!(
-            action_progress::eligible(&db, &db["items"][0], &source),
-            "fixture is not eligible: {diagnostic}"
-        );
-        assert_eq!(db["items"][0]["scheduler"]["worktree"], source["cwd"]);
-        let store = t.tmp.0.join("todo/todo.json");
-        fs::create_dir_all(store.parent().unwrap()).unwrap();
-        fs::write(&store, db.to_string()).unwrap();
+        let mut db=json!({"projects":{"cc-pc-tools-rs":repo},"items":[row]});
+        let diagnostic=json!({"id_match":db["items"][0]["scheduler"]["job"]==source["id"],"owner_wait":source["waiting_for_work_owner"],"resource_wait":source["resource_wait"],"capacity_wait":source["capacity_wait_pending"],"sandbox":source["sandbox"],"pid_birth":source["pid_created"],"child_birth":source["codex_pid_created"],"started":source["started_at"],"stop":source["stopped"],"cancel":source["cancel_requested"],"work_on":source["work_wait_on"]});
+        assert!(action_progress::eligible(&db,&db["items"][0],&source),"fixture is not eligible: {diagnostic}");
+        assert_eq!(db["items"][0]["scheduler"]["worktree"],source["cwd"]);
+        let store=t.tmp.0.join("todo/todo.json");fs::create_dir_all(store.parent().unwrap()).unwrap();fs::write(&store,db.to_string()).unwrap();
         // Virtualize only observation time, never production thresholds or OS identities.
-        let p = action_progress::scan(
-            &events,
-            &source,
-            &Progress::default(),
-            System::default().epoch() - (action_progress::QUIET_S + 1.),
-        )
-        .unwrap();
-        let proof = t.tmp.0.join("proof.json");
-        fs::write(
-            &proof,
-            json!({"ticket":action_progress::ticket(&db,&db["items"][0],&source),"progress":p})
-                .to_string(),
-        )
-        .unwrap();
-        let cancel = [
-            "cancel",
-            &first,
-            "--recovery",
-            "--if-todo-ready",
-            "--todo-id",
-            "1",
-            "--todo-file",
-            store.to_str().unwrap(),
-            "--cancel-key",
-            "no-action-fixture",
-            "--no-action-check",
-            proof.to_str().unwrap(),
-        ];
-        let held = FileLock::acquire(&store.with_file_name("todo.lock")).unwrap();
-        let deferred = t.cli(&cancel, "report-only");
-        assert!(deferred.status.success());
-        let deferred: Value = serde_json::from_slice(&deferred.stdout).unwrap();
-        assert_eq!(deferred["reason"], "todo_lock_busy");
-        let pause: Value = serde_json::from_slice(
-            &fs::read(events.parent().unwrap().join("yield-paused.json")).unwrap(),
-        )
-        .unwrap();
-        assert_eq!(pause["complete"], true);
-        let length = fs::metadata(&events).unwrap().len();
-        t.until(|| fs::metadata(&events).unwrap().len() > length);
+        let p=action_progress::scan(&events,&source,&Progress::default(),System::default().epoch()-(action_progress::QUIET_S+1.)).unwrap();
+        let proof=t.tmp.0.join("proof.json");fs::write(&proof,json!({"ticket":action_progress::ticket(&db,&db["items"][0],&source),"progress":p}).to_string()).unwrap();
+        let cancel=["cancel",&first,"--recovery","--if-todo-ready","--todo-id","1","--todo-file",store.to_str().unwrap(),"--cancel-key","no-action-fixture","--no-action-check",proof.to_str().unwrap()];
+        let held=FileLock::acquire(&store.with_file_name("todo.lock")).unwrap();
+        let deferred=t.cli(&cancel,"report-only");assert!(deferred.status.success());
+        let deferred:Value=serde_json::from_slice(&deferred.stdout).unwrap();assert_eq!(deferred["reason"],"todo_lock_busy");
+        let pause:Value=serde_json::from_slice(&fs::read(events.parent().unwrap().join("yield-paused.json")).unwrap()).unwrap();assert_eq!(pause["complete"],true);
+        let length=fs::metadata(&events).unwrap().len();t.until(||fs::metadata(&events).unwrap().len()>length);
         drop(held);
-        let out = t.cli(&cancel, "report-only");
-        assert!(
-            out.status.success(),
-            "{}",
-            String::from_utf8_lossy(&out.stderr)
-        );
-        assert_eq!(
-            serde_json::from_slice::<Value>(&out.stdout).unwrap()["outcome"],
-            "cancelled",
-            "{}",
-            String::from_utf8_lossy(&out.stdout)
-        );
-        t.until(|| {
-            proc_created(source["pid"].as_u64().unwrap() as u32) != source["pid_created"].as_u64()
-                && proc_created(source["codex_pid"].as_u64().unwrap() as u32)
-                    != source["codex_pid_created"].as_u64()
-        });
-        assert_eq!(t.job(&first)["status"], "cancelled");
-        let out = t.cli(&cancel, "report-only");
-        assert!(out.status.success());
-        assert_eq!(
-            serde_json::from_slice::<Value>(&out.stdout).unwrap()["outcome"],
-            "deferred"
-        );
-        db["items"][0]["status"] = json!("todo");
-        db["items"][0]["scheduler"]["job"] = Value::Null;
-        fs::write(&store, db.to_string()).unwrap();
-        let prompt = t.tmp.0.join("resume.md");
-        fs::write(&prompt, "same fixture continuation").unwrap();
-        let args = [
-            "run",
-            "--name",
-            "fixture-resume",
-            "--model",
-            "gpt-6.1-sol",
-            "--task-type",
-            "implementation",
-            "--sandbox",
-            "danger-full-access",
-            "--todo-id",
-            "1",
-            "--cwd",
-            repo.to_str().unwrap(),
-            "--prompt-file",
-            prompt.to_str().unwrap(),
-            "--launch-key",
-            "28272827282728272827282728272827",
-        ];
-        let a = t.cli(&args, "report-only");
-        let b = t.cli(&args, "report-only");
-        assert!(a.status.success());
-        assert!(b.status.success());
-        assert_eq!(a.stdout, b.stdout);
-        let next = String::from_utf8(a.stdout).unwrap().trim().to_owned();
-        assert_ne!(next, first);
-        t.until(|| {
-            t.job(&next)["status"] == "running" && t.job(&next)["codex_pid"].as_u64().is_some()
-        });
-        assert_eq!(t.job(&next)["cwd"], source["cwd"]);
-        assert_eq!(t.job(&next)["todo_id"], 1);
-        assert_eq!(
-            fs::read_to_string(repo.join("unfinished.txt")).unwrap(),
-            "preserve this unfinished work"
-        );
-        assert_eq!(
-            fs::read_dir(t.tmp.0.join("tool/jobs"))
-                .unwrap()
-                .flatten()
-                .filter(|e| e.path().join("job.json").is_file())
-                .count(),
-            2
-        );
-        let stop = t.cli(&["cancel", &next, "--recovery"], "report-only");
-        assert!(stop.status.success());
+        let out=t.cli(&cancel,"report-only");assert!(out.status.success(),"{}",String::from_utf8_lossy(&out.stderr));
+        assert_eq!(serde_json::from_slice::<Value>(&out.stdout).unwrap()["outcome"],"cancelled", "{}", String::from_utf8_lossy(&out.stdout));
+        t.until(||proc_created(source["pid"].as_u64().unwrap() as u32)!=source["pid_created"].as_u64()
+            && proc_created(source["codex_pid"].as_u64().unwrap() as u32)!=source["codex_pid_created"].as_u64());
+        assert_eq!(t.job(&first)["status"],"cancelled");
+        let out=t.cli(&cancel,"report-only");assert!(out.status.success());assert_eq!(serde_json::from_slice::<Value>(&out.stdout).unwrap()["outcome"],"deferred");
+        db["items"][0]["status"]=json!("todo");db["items"][0]["scheduler"]["job"]=Value::Null;fs::write(&store,db.to_string()).unwrap();
+        let prompt=t.tmp.0.join("resume.md");fs::write(&prompt,"same fixture continuation").unwrap();
+        let args=["run","--name","fixture-resume","--model","gpt-6.1-sol","--task-type","implementation","--sandbox","danger-full-access","--todo-id","1","--cwd",repo.to_str().unwrap(),"--prompt-file",prompt.to_str().unwrap(),"--launch-key","28272827282728272827282728272827"];
+        let a=t.cli(&args,"report-only");let b=t.cli(&args,"report-only");assert!(a.status.success());assert!(b.status.success());assert_eq!(a.stdout,b.stdout);
+        let next=String::from_utf8(a.stdout).unwrap().trim().to_owned();assert_ne!(next,first);
+        t.until(|| t.job(&next)["status"]=="running" && t.job(&next)["codex_pid"].as_u64().is_some());
+        assert_eq!(t.job(&next)["cwd"],source["cwd"]);assert_eq!(t.job(&next)["todo_id"],1);
+        assert_eq!(fs::read_to_string(repo.join("unfinished.txt")).unwrap(),"preserve this unfinished work");
+        assert_eq!(fs::read_dir(t.tmp.0.join("tool/jobs")).unwrap().flatten().filter(|e|e.path().join("job.json").is_file()).count(),2);
+        let stop=t.cli(&["cancel",&next,"--recovery"],"report-only");assert!(stop.status.success());
     }
     #[test]
     fn test_native_recovery_cancel_preserves_intent_after_process_tree_stops() {
@@ -11560,23 +11421,17 @@ mod additional_compatibility {
             assert_eq!(code, case["code"].as_i64().unwrap() as i32, "{args:?}");
             // Preserve the historical Python baseline, allowing only the new
             // explicitly documented finite retry option in run's help.
-            let legacy_out = if args.first() == Some(&"run")
-                && args.iter().any(|arg| ["-h", "--help"].contains(arg))
-            {
-                let usage = "                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n";
-                let option = "  --original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY\n                        reserved retry key for original ToDo 1626 only (32\n                        lowercase hex); requires the same --launch-key and\n                        waits for product-retry-bind before execution\n";
-                assert_eq!(out.matches(usage).count(), 1);
-                assert_eq!(out.matches(option).count(), 1);
-                out.replace(usage, "").replace(option, "")
-            } else {
-                out
-            };
+            let legacy_out = if args.first() == Some(&"run") && args.iter().any(|arg| ["-h","--help"].contains(arg)) {
+                let usage="                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n";
+                let option="  --original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY\n                        reserved retry key for original ToDo 1626 only (32\n                        lowercase hex); requires the same --launch-key and\n                        waits for product-retry-bind before execution\n";
+                assert_eq!(out.matches(usage).count(),1);
+                assert_eq!(out.matches(option).count(),1);
+                out.replace(usage,"").replace(option,"")
+            }else{out};
             assert_eq!(legacy_out, s(&case, "stdout"), "{args:?} stdout");
-            let legacy_err = if args.first() == Some(&"run") {
+            let legacy_err=if args.first()==Some(&"run"){
                 err.replace("                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n","")
-            } else {
-                err
-            };
+            }else{err};
             assert_eq!(legacy_err, s(&case, "stderr"), "{args:?} stderr");
         }
         assert!(t.rt.calls.lock().unwrap().is_empty());

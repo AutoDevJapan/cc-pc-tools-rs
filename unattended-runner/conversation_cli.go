@@ -162,6 +162,14 @@ type conversationCLIBackend interface {
 
 // This loader uses the independent runner state and lock, never the old ledger.
 func loadConversationCLIRunner(configPath string) (conversationCLIBackend, func(), error) {
+	return loadConversationRunner(configPath, false)
+}
+
+func loadConversationStatusRunner(configPath string) (conversationCLIBackend, func(), error) {
+	return loadConversationRunner(configPath, true)
+}
+
+func loadConversationRunner(configPath string, readOnlyStatus bool) (conversationCLIBackend, func(), error) {
 	var cfg Config
 	if readJSON(configPath, 1<<20, &cfg) != nil {
 		return nil, nil, errors.New("configuration unavailable")
@@ -170,12 +178,24 @@ func loadConversationCLIRunner(configPath string) (conversationCLIBackend, func(
 	if err != nil || since.Before(time.Date(2026, 10, 13, 0, 0, 0, 0, time.UTC)) || since.After(time.Now()) || !filepath.IsAbs(cfg.Home) || cfg.Project != "cc-pc-tools-rs" {
 		return nil, nil, errors.New("configuration scope invalid")
 	}
-	if os.MkdirAll(cfg.Home, 0700) != nil {
-		return nil, nil, errors.New("independent home unavailable")
-	}
-	unlock, err := acquire(filepath.Join(cfg.Home, "runner.lock"))
-	if err != nil {
-		return nil, nil, errConversationBusy
+	unlock := func() {}
+	if readOnlyStatus {
+		// These are atomically replaced saved files, not a live cross-file
+		// transaction. Status never creates a home, empty index, lock or receipt.
+		for _, name := range []string{"unattended-state.json", "conversation-questions.json"} {
+			info, err := os.Lstat(filepath.Join(cfg.Home, name))
+			if err != nil || !info.Mode().IsRegular() {
+				return nil, nil, errors.New("saved status unavailable")
+			}
+		}
+	} else {
+		if os.MkdirAll(cfg.Home, 0700) != nil {
+			return nil, nil, errors.New("independent home unavailable")
+		}
+		unlock, err = acquire(filepath.Join(cfg.Home, "runner.lock"))
+		if err != nil {
+			return nil, nil, errConversationBusy
+		}
 	}
 	loaded := false
 	defer func() {
@@ -196,9 +216,12 @@ func loadConversationCLIRunner(configPath string) (conversationCLIBackend, func(
 	if err != nil {
 		return nil, nil, err
 	}
-	token := discordToken()
-	if token == "" {
-		return nil, nil, errors.New("Discord credential unavailable")
+	token := ""
+	if !readOnlyStatus {
+		token = discordToken()
+		if token == "" {
+			return nil, nil, errors.New("Discord credential unavailable")
+		}
 	}
 	runner := &Runner{Config: cfg, State: state, Client: &http.Client{Timeout: 6 * time.Second}, Token: token, Base: "https://discord.com/api/v10", Run: runCommand, Now: time.Now, TodoPath: "D:/CC/Tools/todo/todo.json"}
 	loaded = true
@@ -206,6 +229,9 @@ func loadConversationCLIRunner(configPath string) (conversationCLIBackend, func(
 }
 
 func conversationCLI(args []string, out io.Writer) int {
+	if opts, err := parseConversationCLI(args); err == nil && opts.Command == "status" {
+		return conversationCLIWithLoader(args, out, loadConversationStatusRunner)
+	}
 	return conversationCLIWithLoader(args, out, loadConversationCLIRunner)
 }
 

@@ -59,3 +59,11 @@ Apache入口本体の改変表示、原文・許諾の保全、入れ子notice�
 [Docker配置証拠](skills-3080-docker-installation-evidence.json)と[追加8件manifest](skills-3080-installed-docker-manifest.json)を初回14件とは別に保持する。[採用台帳](skills-3080-adoptions.json)は元catalogの22occurrenceだけを導入済みとし、残り73,198を未判定・保留に保つ。本文が同じ別候補を自動で処理済みにしない。
 
 40ファイルの読戻しと実3048検査器はPASS。新しいCodex app-serverのmetadataは319件で、今回8件の配置先が一致、enabled8、解析エラー0。全本文を自動で読み込んだ証拠や、Docker/sbx/モデルの実行成功ではない。対応CLIやOAuthが未確認なら静的レビューで止める条件を本文に置いた。
+
+## Kepano6入口の評価と次の3候補
+
+[6入口の採否候補](skills-3080-kepano-assessment.json)は完全な固定treeの全SKILL.md本文を読んだ結果で、rootMITだけの確認を未知の参照素材へ広げていない。元3048の3既存入口は同じsource SHAであり、新しい導入/統合に数えない。現在の採用台帳22件も保持する。
+
+[batch04](skills-3080-batch04.json)のDefuddle・Knap・Obsidian CLIは3件15ファイルの新規候補。知識としての手順と実CLIの利用可否を分け、自動installや実保管庫の読書き、未承認のUI実装を指示しない。CLIが使えなければ静的案と不足条件を返す。まだ中央へ配置していない。
+
+3151の配置後受入はDocker8件の実ファイルと手順・境界・記録を確認してMust0。8正例/8負例は1turn内の静的確認で、Docker/sbx/モデルの接続成功と呼ばない。全25候補のうち導入済み22、追加3未配置。元16資料全体は未完了。

@@ -31,8 +31,15 @@
     "model_called": false
   },
   "runtime": "Installed workflow knowledge; Docker Agent OAuth execution and standalone sbx operation unverified. Stop at static review when prerequisites missing.",
-  "postinstall_turn_acceptance": "pending",
+  "postinstall_turn_acceptance": "3151: Must0; actual40file+16source policy+22ledger matched,8positive/8negative static cases,initial8metadata. Not CLI/model/daemon execution.",
   "integrated": 0,
   "excluded": 0,
-  "overall_complete": false
+  "overall_complete": false,
+  "correction_independently_checked": {
+    "todo": 3151,
+    "reviewed_head": "932a88728944009f74b7e2c5c5b579a65e6d35d2",
+    "must": 0,
+    "original_response_sha256": "326df53c09bd4b404b68a4b31840cb98252ab65e8d7785eaad718ce7d67d56c7",
+    "scope": "Actual generated8guides,40diskfiles,sourcepolicy16,ledger22,newtests;boundedstaticverification"
+  }
 }

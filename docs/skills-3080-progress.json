@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-20T16:23:44.3801446Z",
+  "observed_at": "2026-10-20T17:29:19.2152513Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "22new adaptations installed and discovered; latest8post-install turn check pending; broad scope continues",
+  "phase_b": "22installed and independently checked;3kepano candidates prepared; full16-source work continues",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -286,8 +286,8 @@
   "site_entries_with_body": 9862,
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
-  "candidate_designs": 22,
-  "independently_accepted": 14,
+  "candidate_designs": 25,
+  "independently_accepted": 22,
   "installed": 22,
   "integrated": 0,
   "excluded": 0,
@@ -333,7 +333,7 @@
     "integration_or_reference_candidates": 3,
     "policy_rewrite_required": 1,
     "authored_candidates": 8,
-    "independently_accepted": 0,
+    "independently_accepted": 8,
     "prepared_for_installation_review": 8,
     "design_review": {
       "todo": 3120,
@@ -345,14 +345,22 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "All22renderable plan targets are installed; latest8post-install turn acceptance pending",
+    "candidate_designs": "25renderable plan targets:22installed+3pending",
     "additional_authored_drafts_not_in_plans": 0,
-    "authored_total": 22,
+    "authored_total": 25,
     "installed": 22,
-    "pending_plan_targets": 0,
+    "pending_plan_targets": 3,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
-    "independently_accepted": "14 final adaptation entrypoints and installer reviewed by3104; not all source materials",
+    "independently_accepted": "22installed entrypoints checked in bounded scopes; not all upstream supporting resources",
     "not_semantically_disposed_occurrences": 73198
+  },
+  "kepano_entrypoint_assessment": {
+    "pinned_entrypoints": 6,
+    "full_entrypoint_text_read": 6,
+    "supporting_resources_semantic_complete": false,
+    "new_candidates": 3,
+    "prior3048_same_entrypoint_read": 3,
+    "newly_installed": 0
   }
 }

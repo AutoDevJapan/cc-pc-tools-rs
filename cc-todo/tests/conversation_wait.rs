@@ -69,6 +69,12 @@ fn continued_delivery_preserves_everything_except_its_note_time_and_receipt() {
     assert_eq!(meta["answered"], false);
     let mut after = f.read();
     let record = &after["items"][0][DELIVERIES][0];
+    assert!(
+        after["items"][0]["scheduler"]["owner_instruction"]
+            .as_str()
+            .is_some_and(|s| s.contains("private reply reference")),
+        "the next worker would lose the delivered reference"
+    );
     assert_eq!(record["answer"], a);
     assert_eq!(record["wait"], before["items"][0][WAIT]);
     assert_eq!(record["recipient"]["resume_generation"], 8);
@@ -80,6 +86,17 @@ fn continued_delivery_preserves_everything_except_its_note_time_and_receipt() {
         record["note_sha256"],
         sha(after["items"][0]["note"].as_str().unwrap().as_bytes())
     );
+    assert_eq!(
+        record["instruction_sha256"],
+        sha(after["items"][0]["scheduler"]["owner_instruction"]
+            .as_str()
+            .unwrap()
+            .as_bytes())
+    );
+    after["items"][0]["scheduler"]
+        .as_object_mut()
+        .unwrap()
+        .remove("owner_instruction");
     for key in ["note", "updated", DELIVERIES] {
         let row = after["items"][0].as_object_mut().unwrap();
         match before["items"][0].get(key) {
@@ -95,6 +112,46 @@ fn continued_delivery_preserves_everything_except_its_note_time_and_receipt() {
         after, before,
         "delivery changed task/hold/owner/original work"
     );
+}
+
+#[test]
+fn continued_delivery_keeps_prior_instructions_and_future_time_holds_for_the_next_worker() {
+    let f = Fixture::new();
+    let (answer_file, _) = continued(&f);
+    let mut db = f.read();
+    let row = &mut db["items"][0];
+    row["scheduler"]["owner_instruction"] = json!("最新の直接指示を優先する");
+    row["scheduler"]["not_before"] = json!(10_000_000_000_f64);
+    row["stall_recovery"]["next_at"] = json!(10_000_000_000_f64);
+    row["discord_restart_not_before"] = json!(10_000_000_000_f64);
+    f.write(&db);
+    let out = deliver_only(&f, &answer_file, &db["items"][0]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let mut after = f.read();
+    let row = &mut after["items"][0];
+    let instruction = row["scheduler"]["owner_instruction"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert!(instruction.starts_with("最新の直接指示を優先する\n\n"));
+    assert!(instruction.contains("private reply reference"));
+    assert_eq!(
+        row["scheduler"]["not_before"],
+        db["items"][0]["scheduler"]["not_before"]
+    );
+    assert_eq!(row["stall_recovery"], db["items"][0]["stall_recovery"]);
+    assert_eq!(
+        row["discord_restart_not_before"],
+        db["items"][0]["discord_restart_not_before"]
+    );
+    row["note"] = json!("通常の結果取込で更新されたメモ");
+    cc_scheduler::common::resume_without_worker(row);
+    assert_eq!(row["scheduler"]["owner_instruction"], instruction);
+    assert_eq!(row[WAIT], db["items"][0][WAIT]);
 }
 
 #[test]

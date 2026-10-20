@@ -34,6 +34,7 @@ fn validate_record(record: &Value, id: i64, at: DateTime<Utc>) -> Result<()> {
             "recipient",
             "expected_state_sha256",
             "note_sha256",
+            "instruction_sha256",
             "delivered_at",
         ],
     )?;
@@ -46,9 +47,14 @@ fn validate_record(record: &Value, id: i64, at: DateTime<Utc>) -> Result<()> {
     )?;
     generations(&record["wait"], &record["recipient"])?;
     if record["domain"] != DELIVERY
-        || ["answer_file_sha256", "expected_state_sha256", "note_sha256"]
-            .iter()
-            .any(|k| !hash(text(record, k)))
+        || [
+            "answer_file_sha256",
+            "expected_state_sha256",
+            "note_sha256",
+            "instruction_sha256",
+        ]
+        .iter()
+        .any(|k| !hash(text(record, k)))
         || timestamp(record, "delivered_at", at)? < timestamp(&record["answer"], "acquired_at", at)?
     {
         return fail("delivery_receipt_invalid");
@@ -122,7 +128,9 @@ pub fn deliver(
     }
     let recipient = origin_identity(row);
     generations(&wait, &recipient)?;
-    clear(db, row, at)?;
+    // Delivery never releases a clock-based backoff. Preserve it while making
+    // the answer reachable before the next worker starts.
+    holds_clear(db, row)?;
     owner_clear(paths, row)?;
     let previous = row["note"].as_str().ok_or("conversation_note_invalid")?;
     let data = bytes(note_file)?;
@@ -135,15 +143,24 @@ pub fn deliver(
     if suffix.contains("[discord-conversation-question-v1 ") {
         return fail("note_invalid");
     }
+    let instruction = match &row["scheduler"]["owner_instruction"] {
+        Value::Null => suffix.to_owned(),
+        Value::String(previous) => format!("{previous}\n\n{suffix}"),
+        _ => return fail("note_invalid"),
+    };
+    if instruction.len() as u64 > MAX_BYTES {
+        return fail("file_too_large");
+    }
     let delivered_at = at.to_rfc3339_opts(SecondsFormat::Micros, true);
     let record = json!({"domain":DELIVERY, "wait":wait, "answer":answer,
         "answer_file_sha256":sha, "recipient":recipient, "expected_state_sha256":digest(&expected_bytes),
-        "note_sha256":digest(&data), "delivered_at":delivered_at});
+        "note_sha256":digest(&data), "instruction_sha256":digest(instruction.as_bytes()), "delivered_at":delivered_at});
     let mut saved = records(row)?.to_vec();
     saved.push(record);
     let row = &mut db["items"][index];
     row[DELIVERIES] = json!(saved);
     row["note"] = json!(note);
+    row["scheduler"]["owner_instruction"] = json!(instruction);
     row["updated"] = json!(delivered_at);
     Ok(result(id, &wait, true))
 }

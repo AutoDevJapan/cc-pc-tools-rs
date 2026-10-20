@@ -57,11 +57,75 @@ func TestConversationActualCanonicalContinuedDeliveryPreservesOriginalTask(t *te
 		delete(original["items"].([]any)[0].(map[string]any), key)
 		delete(afterRow, key)
 	}
+	instruction, ok := afterRow["scheduler"].(map[string]any)["owner_instruction"].(string)
+	if !ok || !strings.Contains(instruction, "conversation-owner-reply:") {
+		t.Fatal("the next worker has no persistent answer reference")
+	}
+	delete(afterRow, "scheduler") // continuedNative starts without a scheduler object.
 	if canonicalHash(original) != canonicalHash(after) {
 		t.Fatal("delivery changed original task/owner/holds/work")
 	}
 	if f.posts != 1 || f.close != 0 {
 		t.Fatal("delivery resent a question or invented implementation")
+	}
+}
+
+func TestConversationActualCanonicalContinuedDeliverySurvivesNoteReplacementAndFutureDelay(t *testing.T) {
+	f := continuedNative(t)
+	f.mutateTodo(t, func(row map[string]any) {
+		row["scheduler"] = map[string]any{"owner_instruction": "現在の直接指示", "not_before": float64(10_000_000_000)}
+	})
+	f.reply(t, 8, "a")
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) != 0 {
+		t.Fatalf("time-only hold prevented delivery: %v", health.Errors)
+	}
+	f.mutateTodo(t, func(row map[string]any) { row["note"] = "通常の担当終了後のメモ" })
+	var db map[string]any
+	if readJSON(f.r.TodoPath, maxTodo, &db) != nil {
+		t.Fatal("missing readback")
+	}
+	row := db["items"].([]any)[0].(map[string]any)
+	scheduler := row["scheduler"].(map[string]any)
+	if !strings.HasPrefix(scheduler["owner_instruction"].(string), "現在の直接指示\n\n") || !strings.Contains(scheduler["owner_instruction"].(string), "conversation-owner-reply:") || scheduler["not_before"] != float64(10_000_000_000) {
+		t.Fatal("persistent instructions or original time hold changed")
+	}
+	before, _ := os.ReadFile(f.r.TodoPath)
+	f.r.processConversations(context.Background(), &Health{})
+	after, _ := os.ReadFile(f.r.TodoPath)
+	if string(before) != string(after) || f.close != 0 || f.posts != 1 {
+		t.Fatal("delivered answer was lost, duplicated or treated as implemented")
+	}
+}
+
+func TestConversationActualCanonicalDifferentGenerationBlockIsRejectedBeforeNoteEdit(t *testing.T) {
+	f := conversationNativeTest(t)
+	f.mutateTodo(t, func(row map[string]any) { row["resume_generation"] = 1 })
+	f.ask(t)
+	f.mutateTodo(t, func(row map[string]any) { row["resume_generation"] = 2 })
+	f.reply(t, 8, "a")
+	before, _ := os.ReadFile(f.r.TodoPath)
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	after, _ := os.ReadFile(f.r.TodoPath)
+	if len(health.Errors) == 0 || string(before) != string(after) {
+		t.Fatal("a later blocked generation was edited before canonical refusal")
+	}
+}
+
+func TestConversationUnrelatedGenerationShapeDoesNotBreakOriginalTaskRead(t *testing.T) {
+	f := conversationTest(t, false)
+	var db map[string]any
+	if readJSON(f.r.TodoPath, maxTodo, &db) != nil {
+		t.Fatal("missing fixture")
+	}
+	db["items"] = append(db["items"].([]any), map[string]any{"id": 99, "project": "cc-pc-tools-rs", "status": "doing", "resume_generation": "unverified"})
+	if err := publish(f.r.TodoPath, db); err != nil {
+		t.Fatal(err)
+	}
+	if row, err := f.r.todo(42); err != nil || row.ID != 42 {
+		t.Fatal("unrelated malformed generation prevented original task read")
 	}
 }
 

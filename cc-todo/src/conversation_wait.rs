@@ -355,7 +355,7 @@ fn dependencies_clear(db: &Value, row: &Value, key: &str) -> bool {
         })
     })
 }
-fn clear(db: &Value, row: &Value, at: DateTime<Utc>) -> Result<()> {
+fn holds_clear(db: &Value, row: &Value) -> Result<()> {
     if cc_job_policy::cancellation::owner_stopped(row, &Value::Null)
         || [
             "stopped",
@@ -394,6 +394,10 @@ fn clear(db: &Value, row: &Value, at: DateTime<Utc>) -> Result<()> {
     {
         return fail("other_hold");
     }
+    Ok(())
+}
+fn clear(db: &Value, row: &Value, at: DateTime<Utc>) -> Result<()> {
+    holds_clear(db, row)?;
     for value in [
         &row["scheduler"]["not_before"],
         &row["stall_recovery"]["next_at"],

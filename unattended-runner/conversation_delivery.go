@@ -103,7 +103,7 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 		return err
 	}
 	marker := "conversation-owner-reply:" + q.SenderID + ":" + reply.Message + ":" + canonicalHash([]string{req.Text, req.Edited})[:16]
-	if q.Wait && len(row.QuestionDeliveries) != 0 && hasNoteMarker(row.Note, marker) {
+	if q.Wait && len(row.QuestionDeliveries) != 0 && conversationHandoffContains(row, marker) {
 		answer, b, _, err := r.prepareConversationAnswer(q, reply, req, receipt)
 		if err != nil {
 			return err
@@ -115,6 +115,9 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	}
 	if q.Wait && conversationContinuedWait(row, q) {
 		return r.deliverContinuedConversationReply(ctx, row, q, reply, req, receipt, marker)
+	}
+	if q.Wait && !conversationQuestionAnswered(row, q) && !conversationWaitGenerationMatches(row) {
+		return errors.New("conversation original question generation differs")
 	}
 	// Never append to an overwritten question hold or manufacture its missing
 	// marker. Only an intact canonical wait or its durable answer can proceed.
@@ -172,7 +175,7 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	// Recheck after the edit; question-answer remains the final locked authority.
 	// A lost successful response is reconciled without releasing a later block.
 	if q.Wait && !conversationQuestionAnswered(row, q) {
-		if !conversationWaitUnchanged(row, q) {
+		if !conversationWaitUnchanged(row, q) || !conversationWaitGenerationMatches(row) {
 			return errors.New("conversation original question wait differs")
 		}
 		answer, b, answerFile, err := r.prepareConversationAnswer(q, reply, req, receipt)
@@ -208,8 +211,30 @@ func conversationContinuedWait(row *TodoRow, q ConversationQuestion) bool {
 			Generation *uint64 `json:"resume_generation"`
 		} `json:"origin"`
 	}
+	var current *uint64
 	return (row.Status == "doing" || row.Status == "todo") && conversationWaitRecorded(row, q) &&
-		json.Unmarshal(row.QuestionWait, &wait) == nil && wait.Origin.Generation != nil && row.ResumeGeneration != nil && *row.ResumeGeneration > *wait.Origin.Generation
+		json.Unmarshal(row.QuestionWait, &wait) == nil && wait.Origin.Generation != nil && json.Unmarshal(row.ResumeGeneration, &current) == nil && current != nil && *current > *wait.Origin.Generation
+}
+
+func conversationWaitGenerationMatches(row *TodoRow) bool {
+	var wait struct {
+		Origin json.RawMessage `json:"origin"`
+	}
+	if json.Unmarshal(row.QuestionWait, &wait) != nil {
+		return false
+	}
+	if len(wait.Origin) == 0 {
+		return true
+	} // Existing legacy waits keep their original contract.
+	var origin struct {
+		Generation json.RawMessage `json:"resume_generation"`
+	}
+	return json.Unmarshal(wait.Origin, &origin) == nil && canonicalHash(origin.Generation) == canonicalHash(row.ResumeGeneration)
+}
+
+func conversationHandoffContains(row *TodoRow, marker string) bool {
+	var instruction string
+	return json.Unmarshal(row.Scheduler.OwnerInstruction, &instruction) == nil && hasNoteMarker(instruction, marker)
 }
 
 func conversationDeliveryRecorded(row *TodoRow, q ConversationQuestion, answer conversationAnswerReceipt, b []byte) bool {
@@ -259,7 +284,7 @@ func (r *Runner) deliverContinuedConversationReply(ctx context.Context, row *Tod
 		return errors.New("conversation continued answer delivery deferred")
 	}
 	current, err := r.todo(q.Todo)
-	if err != nil || current.Project != q.Project || !hasNoteMarker(current.Note, marker) || !conversationDeliveryRecorded(current, q, answer, b) {
+	if err != nil || current.Project != q.Project || !conversationHandoffContains(current, marker) || !conversationDeliveryRecorded(current, q, answer, b) {
 		return errors.New("conversation continued answer readback deferred")
 	}
 	req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"

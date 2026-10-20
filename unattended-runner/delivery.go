@@ -170,7 +170,7 @@ type TodoRow struct {
 	QuestionWait       json.RawMessage   `json:"owner_question_wait,omitempty"`
 	QuestionAnswers    []json.RawMessage `json:"owner_question_answer_receipts,omitempty"`
 	QuestionDeliveries []json.RawMessage `json:"owner_question_delivery_receipts,omitempty"`
-	ResumeGeneration   *uint64           `json:"resume_generation,omitempty"`
+	ResumeGeneration   json.RawMessage   `json:"resume_generation,omitempty"`
 	Qualification      struct {
 		Receipt productRetryProof `json:"receipt"`
 	} `json:"product_resume_qualification"`
@@ -178,7 +178,8 @@ type TodoRow struct {
 		Job string `json:"job"`
 	} `json:"worker_receipt"`
 	Scheduler struct {
-		Job string `json:"job"`
+		Job              string          `json:"job"`
+		OwnerInstruction json.RawMessage `json:"owner_instruction"`
 	} `json:"scheduler"`
 }
 

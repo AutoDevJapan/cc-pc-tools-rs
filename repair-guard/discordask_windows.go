@@ -8,8 +8,8 @@ import (
 // The installed Discord unattended runner, as named by the verified repair
 // repository: unattended-runner/install-tick.ps1 (runtime and tick launcher)
 // and unattended-runner/conversation_cli.go (default configuration).
-// cc-ask/src/conversation_bridge.rs is the normal CLI entry point and names
-// this existing sender installation. Qualify that executable only; neither its
+// unattended-runner/conversation_store.go names this existing sender
+// installation. Qualify that executable only; neither its
 // message ledgers nor its credential/config siblings become readable.
 // This is not a reconstruction of the lost private registry and not a general
 // grant for the directory. Only these exact leaves qualify, by name and

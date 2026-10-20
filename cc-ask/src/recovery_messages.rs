@@ -3372,6 +3372,7 @@ pub fn replies(ctx: &mut Context, args: &RepliesArgs) -> Result<Value> {
         json!({"domain":DOMAIN,"read_only":true,"ledger_written":false,"legacy_state":"unchanged",
         "thread_id":thread,"request_id":request.request_id,"original_question":request.body,
         "source":"discord-api-v10","owner_id":request.destination.owner,
+        "question_fingerprint":request.fingerprint,
         "question_message_id":ledger.receipt(&request.request_id,"question:0").map(|r|&r.message_id),
         "question_timestamp":ledger.receipt(&request.request_id,"question:0").map(|r|&r.timestamp),
         "decision_identity":match &request.operation {Kind::Ask{decision_identity,..}=>Some(decision_identity),_=>None},

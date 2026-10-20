@@ -111,7 +111,7 @@ impl Binding {
             return Err(INVALID.into());
         }
         no_mentions(&request.body)?;
-        if regex::Regex::new(r"(?im)[?？]|^\s*(?:[abａｂ][.．、:：)）]|[ab]\s*/\s*[ab])|選んで(?:ください)?|選択してください|回答してください|教えてください|承認してください")
+        if regex::Regex::new(r"(?im)[?？]|^\s*(?:[abａｂ][.．、:：)）]|[ab]\s*/\s*[ab])|選んで|選択して|回答して|答えて|教えて|承認して|決めて")
             .unwrap().is_match(&request.body)
         { return Err("clarification cannot contain another question or repeated choices".into()); }
         Ok(())

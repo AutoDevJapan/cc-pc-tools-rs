@@ -893,12 +893,19 @@ mod tests {
 
     #[tokio::test]
     async fn health_merges_real_services_with_rust_identity() {
-        let (state, task) = test_backend(Router::new().route(
-            "/api/health",
-            get(|| async {
-                Json(json!({"port":10013,"godd":{"online":true},"opencodex":{"online":false}}))
-            }),
-        ))
+        let (state, task) = test_backend(
+            Router::new()
+                .route(
+                    "/_godd_ao/healthz",
+                    get(|| async {
+                        Json(json!({"service":"godd-ao-semantic-proxy","status":"ok"}))
+                    }),
+                )
+                .route(
+                    "/healthz",
+                    get(|| async { Json(json!({"service":"opencodex","status":"unhealthy"})) }),
+                ),
+        )
         .await;
         let response = app(state)
             .oneshot(request(Method::GET, "/api/health", Body::empty()))

@@ -43,7 +43,10 @@ fn task_records_are_not_workers_and_metric_scopes_are_not_added() {
 #[test]
 fn processing_requires_identity_recent_processing_and_no_wait() {
     let base = active();
-    assert_eq!(project(&board(), Some(&base), NOW)["processing"]["verifiedCount"], 1);
+    assert_eq!(
+        project(&board(), Some(&base), NOW)["processing"]["verifiedCount"],
+        1
+    );
     for (key, value) in [
         ("worker_presence", json!("alive_identity_unknown")),
         ("execution", json!("supervising")),
@@ -55,13 +58,23 @@ fn processing_requires_identity_recent_processing_and_no_wait() {
     ] {
         let mut input = base.clone();
         input["jobs"][0][key] = value;
-        assert_eq!(project(&board(), Some(&input), NOW)["processing"]["verifiedCount"], 0, "{key}");
+        assert_eq!(
+            project(&board(), Some(&input), NOW)["processing"]["verifiedCount"],
+            0,
+            "{key}"
+        );
     }
     let mut input = base.clone();
     input["jobs"][0]["last_activity"]["at"] = json!("1970-01-01T00:16:09Z");
-    assert_eq!(project(&board(), Some(&input), NOW)["processing"]["verifiedCount"], 0);
+    assert_eq!(
+        project(&board(), Some(&input), NOW)["processing"]["verifiedCount"],
+        0
+    );
     input["jobs"][0]["last_activity"]["at"] = json!("1970-01-01T00:16:41Z");
-    assert_eq!(project(&board(), Some(&input), NOW)["processing"]["verifiedCount"], 0);
+    assert_eq!(
+        project(&board(), Some(&input), NOW)["processing"]["verifiedCount"],
+        0
+    );
 }
 
 #[test]
@@ -83,7 +96,8 @@ fn incomplete_and_stale_evidence_never_certifies_a_total_or_current_zero() {
 #[test]
 fn unknown_progress_and_result_time_are_not_synthesized_from_updates() {
     let mut input = board();
-    input["departments"][0]["products"][0]["workers"][0]["updatedAt"] = json!("1970-01-01T00:16:40Z");
+    input["departments"][0]["products"][0]["workers"][0]["updatedAt"] =
+        json!("1970-01-01T00:16:40Z");
     let data = project(&input, None, NOW);
     assert_eq!(data["inventory"]["measuredProgressRecords"], 2);
     assert_eq!(data["inventory"]["resultTimeRecords"], 0);
@@ -96,7 +110,8 @@ fn unknown_progress_and_result_time_are_not_synthesized_from_updates() {
 fn protection_boundary_reprojects_only_fixed_vocabulary_and_numeric_references() {
     let mut input = board();
     input["departments"][0]["products"][0]["name"] = json!("fixture-private-name");
-    input["departments"][0]["products"][0]["workers"][2]["summary"] = json!("fixture-private-summary");
+    input["departments"][0]["products"][0]["workers"][2]["summary"] =
+        json!("fixture-private-summary");
     input["departments"][0]["products"][0]["workers"][2]["session"] = json!("fixture-private-path");
     let mut evidence = active();
     evidence["jobs"][0]["public_label"] = json!("fixture-private-name");
@@ -113,7 +128,8 @@ fn protection_boundary_reprojects_only_fixed_vocabulary_and_numeric_references()
 #[test]
 fn repeated_job_and_task_references_are_counted_once() {
     let mut input = board();
-    input["unassignedProducts"] = json!([{"workers":[input["departments"][0]["products"][0]["workers"][2].clone()]}]);
+    input["unassignedProducts"] =
+        json!([{"workers":[input["departments"][0]["products"][0]["workers"][2].clone()]}]);
     let mut evidence = active();
     let duplicate = evidence["jobs"][0].clone();
     evidence["jobs"].as_array_mut().unwrap().push(duplicate);
@@ -125,7 +141,11 @@ fn repeated_job_and_task_references_are_counted_once() {
 
 #[test]
 fn failed_metadata_retains_unknown_counts_rather_than_empty_success() {
-    let data = project(&json!({"metadataOk":false,"fetchedAt":NOW,"departments":[]}), None, NOW);
+    let data = project(
+        &json!({"metadataOk":false,"fetchedAt":NOW,"departments":[]}),
+        None,
+        NOW,
+    );
     assert_eq!(data["state"], "unavailable");
     assert!(data["inventory"]["taskRecords"].is_null());
     assert!(data["states"]["dependency_wait"].is_null());
@@ -153,4 +173,39 @@ fn missing_future_and_stale_board_times_do_not_certify_current_task_counts() {
     assert_eq!(data["state"], "stale");
     assert_eq!(data["observedAt"], NOW);
     assert_ne!(data["tasks"][2]["state"], "processing");
+}
+
+#[test]
+fn missing_or_malformed_collections_cannot_be_certified_as_complete_counts() {
+    let mut absent = board();
+    absent.as_object_mut().unwrap().remove("unassignedProducts");
+    let mut invalid_department = board();
+    invalid_department["departments"][0]["products"] = Value::Null;
+    let mut invalid_product = board();
+    invalid_product["departments"][0]["products"][0]["workers"] = Value::Null;
+    let mut invalid_unassigned = board();
+    invalid_unassigned["unassignedProducts"] = json!([{"workers":"not an array"}]);
+    for input in [
+        absent,
+        invalid_department,
+        invalid_product,
+        invalid_unassigned,
+    ] {
+        let data = project(&input, None, NOW);
+        assert_eq!(data["state"], "unavailable");
+        assert!(data["inventory"]["taskRecords"].is_null());
+        assert!(data["states"]["dependency_wait"].is_null());
+    }
+}
+
+#[test]
+fn unrecognized_records_are_unknown_instead_of_invented_jobs() {
+    let mut input = board();
+    input["unassignedProducts"] = json!([{"workers":[
+        {"id":"unknown"},{"id":"todo-0"},{"id":"job-0123456789abcdef"},
+        {"id":"job-0123456789abcdef"}
+    ]}]);
+    let data = project(&input, None, NOW);
+    assert_eq!(data["inventory"]["jobOnlyRecords"], 1);
+    assert_eq!(data["inventory"]["unknownRecords"], 2);
 }

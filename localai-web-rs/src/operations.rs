@@ -62,6 +62,9 @@ impl Operations {
         let now = now_ms();
         let mut value = collect_with_questions(&self.root, now, &live);
         value["skillsInventory"] = self.skills.snapshot(now);
+        // Share this protected generation across every panel. Processing
+        // remains unknown until its separate evidence source is connected.
+        value["workforce"] = crate::workforce::project(&value, None, now);
         *self.snapshot.write().unwrap_or_else(|e| e.into_inner()) = value;
     }
     pub fn worker_detail(&self, id: &str, offset: usize) -> Result<Value, u16> {
@@ -225,6 +228,7 @@ pub fn metadata_display_snapshot(board: &Value, kind: &str) -> Result<Value, &'s
     result["protectionMode"] = json!("masked_metadata");
     result["metadataOnly"] = json!(true);
     result["fetchedAt"] = board["fetchedAt"].clone();
+    result["workforce"] = board["workforce"].clone();
     Ok(result)
 }
 fn empty() -> Value {

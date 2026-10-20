@@ -198,6 +198,12 @@ func allowed(path string) bool {
 	if boundedSchedulerTree(absolute) {
 		return true
 	}
+	if consoleRuntimeAllowed(absolute) && sourceVerified(base) {
+		return true
+	}
+	if civ6Runtime(absolute) {
+		return true
+	}
 	// A not-yet-created leaf has no physical path, so this precedes physical().
 	if productCIRuntime(absolute, productCIDirectory, legacyMatch) && sourceVerified(base) {
 		return true
@@ -219,7 +225,7 @@ func allowed(path string) bool {
 	if legacyMatch(target) {
 		return false
 	}
-	if (runtimeExecutable(absolute, target, publicationGateRuntime) || progressTUIRuntime(absolute, target, progressTUIDirectory)) && sourceVerified(base) {
+	if (runtimeExecutable(absolute, target, publicationGateRuntime) || runtimeExecutable(absolute, target, schedulerRuntime) || finiteRuntimeExecutable(absolute, target, jobsRuntime, time.Now().Unix()) || progressTUIRuntime(absolute, target, progressTUIDirectory)) && sourceVerified(base) {
 		return true
 	}
 	for _, root := range roots {

@@ -1129,6 +1129,17 @@ impl Context {
                 }
                 cc_job_policy::subwork::mark_live(&mut jobs, |j| self.running_job(j));
                 cc_job_policy::subwork::refresh_job(&db, &jobs, &mut job).map_err(Error::new)?;
+                let research = self.research_qualification(&job, &db)?;
+                if job["todo_id"] == 2939 && research.is_none() {
+                    return Err(Error::new(
+                        "original finite research review submission is not qualified; no reader retry was registered",
+                    ));
+                }
+                if let Some(proof) = research {
+                    job["finite_research_approval"] = proof;
+                    job["approval_policy"] = json!("on-request");
+                    job["approvals_reviewer"] = json!("auto_review");
+                }
             }
         } else if a.value("subwork-of").is_some() {
             return Err(Error::new("subwork ToDo store is missing"));
@@ -1174,6 +1185,11 @@ impl Context {
                 .contains(guidance.trim())
         {
             stored_prompt.extend_from_slice(guidance.as_bytes());
+        }
+        if job["finite_research_approval"].is_object() {
+            crate::finite_research::append_guidance(&mut stored_prompt);
+            job["finite_research_approval"]["prompt_sha256"] =
+                json!(cc_job_policy::product_retry::digest(&stored_prompt));
         }
         fs::write(&dst, stored_prompt).map_err(|e| Error::file_io("write prompt", &dst, e))?;
         let mut stored = json!({"id":jid});

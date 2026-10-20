@@ -584,6 +584,7 @@ impl<B: Backend> Scheduler<B> {
         ps: &Processes,
         cfg: &Value,
     ) -> Result<()> {
+        self.adopt_repair_dispatches(jobs)?;
         let db = self.todo()?;
         for item in arr(&db["items"]) {
             let project = s(&item["project"]);
@@ -611,6 +612,69 @@ impl<B: Backend> Scheduler<B> {
             self.report["product_results_deferred"] = json!([cc_job_policy::product_retry::ID]);
         }
         self.release_repair_waits()
+    }
+    // Registration may finish after the launch CLI times out. The repair tick
+    // must consume that receipt as well as the general watchdog, otherwise it
+    // keeps launching the same saved work while the original result is lost.
+    fn adopt_repair_dispatches(&mut self, jobs: &[Value]) -> Result<()> {
+        let db = self.todo()?;
+        for item in arr(&db["items"]) {
+            let project = s(&item["project"]);
+            let scheduler = &item["scheduler"];
+            let key = s(&scheduler["key"]);
+            if !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&project)
+                || !matches!(s(&item["status"]), "todo" | "doing")
+                || item["dispatchable"] != true
+                || !item["subwork"].is_object()
+                || key.len() != 32 || !key.bytes().all(|c| c.is_ascii_hexdigit())
+                || truth(&scheduler["job"])
+                || truth(&scheduler["question"])
+                || truth(&scheduler["owner_stop_job"])
+                || item["stopped"] == true || item["owner_stopped"] == true
+                || s(&item["spec"]).is_empty() || s(&scheduler["worktree"]).is_empty()
+                || s(&scheduler["selection"]["model"]).is_empty()
+                || item["stall_recovery"]["pending"].is_object()
+                || todo_wait::waiting(&db, &item)
+            {
+                continue;
+            }
+            let matching = |job: &&Value| {
+                job["launch_key"] == scheduler["key"]
+                    && job["todo_id"] == item["id"]
+                    && job["subwork"] == item["subwork"]
+                    && job["subwork_spec"] == item["spec"]
+                    && job["assigned_needs"] == item["needs"]
+                    && !s(&job["cwd"]).is_empty()
+                    && norm(s(&job["cwd"])) == norm(s(&scheduler["worktree"]))
+                    && job["model"] == scheduler["selection"]["model"]
+                    && job["effort"] == scheduler["selection"]["effort"]
+            };
+            let live_matches = jobs.iter().filter(matching).filter(|job| live(job)).collect::<Vec<_>>();
+            if live_matches.len() > 1 {
+                continue;
+            }
+            let Some(job) = live_matches.first().copied().or_else(|| jobs.iter().rev().find(matching)) else { continue; };
+            if result_received(&item, &job["id"]) { continue; }
+            if !self.backend.repair_scope_allowed(s(&db["projects"][project]))
+                || !self.backend.repair_scope_allowed(s(&scheduler["worktree"]))
+            {
+                continue;
+            }
+            let saved = self.edit(&item["id"], |row| {
+                // A new instruction, dependency, owner stop or handoff wins.
+                if *row != item { return; }
+                row["status"] = json!("doing");
+                if !arr(&row["jobs"]).contains(&job["id"]) {
+                    push(&mut row["jobs"], job["id"].clone());
+                }
+                merge(&mut row["scheduler"], json!({"job":job["id"],"phase":"running",
+                    "started_s":epoch(&job["created_at"])}));
+            })?;
+            if saved["scheduler"]["job"] == job["id"] {
+                push(&mut self.report["repair_dispatches_adopted"], item["id"].clone());
+            }
+        }
+        Ok(())
     }
     /// The repair tick does not run the general watchdog (its private registry
     /// may be unavailable). Catch both newly completed and previously stranded
@@ -1230,10 +1294,16 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 selection[k] = item[k].clone();
             }
         }
-        // OpenCodex requires the provider qualifier for Claude subscriptions.
-        if s(&selection["model"]).starts_with("claude-") {
-            selection["model"] = json!(format!("anthropic/{}", s(&selection["model"])));
-        }
+        // Claude CLI aliases identify the same existing subscription model.
+        // Normalize them before checking the served catalog; unknown explicit
+        // model names still fail without silently selecting another model.
+        let model = s(&selection["model"]);
+        selection["model"] = json!(match model {
+            "sonnet" => "anthropic/claude-sonnet-5-5".to_owned(),
+            "haiku" => "anthropic/claude-haiku-5-5".to_owned(),
+            _ if model.starts_with("claude-") => format!("anthropic/{model}"),
+            _ => model.to_owned(),
+        });
         if !valid_model(s(&selection["model"])) {
             return Err(Error("ValueError"));
         }

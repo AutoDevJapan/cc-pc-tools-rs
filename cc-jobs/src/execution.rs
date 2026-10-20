@@ -64,7 +64,13 @@ impl Context {
     /// before spawning; no browser bridge is exposed to an isolated worker.
     pub fn execution_spawn(&self, job: &Value) -> Result<Spawn> {
         let profile = Profile::of(job);
+        let research_policy = self.research_policy(job)?;
         let prompt = self.prompt_for_attempt(job)?;
+        if research_policy.is_some() {
+            let mut bytes = std::fs::read(&prompt)?;
+            crate::finite_research::append_guidance(&mut bytes);
+            std::fs::write(&prompt, bytes)?;
+        }
         let mut rendered = job.clone();
         if profile.fixed_review {
             let servers = self
@@ -98,7 +104,10 @@ impl Context {
             });
         }
         Ok(Spawn {
-            argv: codex_args(&rendered),
+            argv: codex_args_with_policy(
+                &rendered,
+                research_policy.unwrap_or_else(|| profile.policy(job)),
+            ),
             prompt,
             cwd: PathBuf::from(s(job, "cwd")),
             env,

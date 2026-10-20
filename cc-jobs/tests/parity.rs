@@ -63,6 +63,23 @@ mod independent_subwork {
             .unwrap()
     }
     #[test]
+    fn unqualified_original_research_is_not_published_as_another_ordinary_reader() {
+        let (t,mut f)=setup(1);
+        f.db["items"][1]["id"]=json!(2939);
+        f.db["items"][1]["subwork"]["kind"]=json!("research");
+        f.db["items"][1]["scheduler"]["worktree"]=json!(subwork_support::tree(&f.repo,"todo-2939-research","scheduler/todo-2939-research"));
+        f.db["items"][1]["scheduler"]["branch"]=json!("scheduler/todo-2939-research");
+        f.db["items"][1]["scheduler"]["subwork_admission"]=cc_job_policy::subwork::admission(&f.db["items"][1]);
+        fs::write(f.dir.path().join("todo.json"),f.db.to_string()).unwrap();
+        let row=&f.db["items"][1];
+        let error=t.run(&["--todo-id","2939","--subwork-of","1","--parent-job-id","parent",
+            "--assigned-needs","","--launch-key",s(&row["scheduler"],"key"),
+            "--cwd",s(&row["scheduler"],"worktree"),"--sandbox","read-only"],b"finite original research")
+            .expect_err("unqualified original research must not be registered");
+        assert!(error.message.contains("no reader retry was registered"),"{error:?}");
+        assert!(!t.ctx.list_jobs(&HashSet::new()).iter().any(|j|j["todo_id"]==2939));
+    }
+    #[test]
     fn queued_subwork_admits_after_todo_start_releases_its_reservation() {
         let (t, f) = setup(1);
         register(&t, &f, &[]).unwrap();
@@ -6638,6 +6655,31 @@ mod saved_owner_launch_policy {
             assert!(t.ctx.prompt_for_attempt(&j).is_err());
         }
         assert_eq!(fs::read(selected).unwrap(), before);
+    }
+}
+mod finite_research_execution {
+    use super::*;
+    #[test]
+    fn a_saved_approval_claim_cannot_bypass_current_qualification_before_prompt_generation() {
+        let t = Test::new();
+        fs::write(t.ctx.root.join("todo.json"), json!({"items":[]}).to_string()).unwrap();
+        let j = t.put(job(json!({"id":"finite-research-forged","todo_id":2939,
+            "sandbox":"read-only","network":false,"approval_policy":"on-request",
+            "approvals_reviewer":"auto_review","finite_research_approval":{"forged":true}})));
+        let error = t.ctx.execution_spawn(&j).err().expect("current qualification must fail");
+        assert!(error.message.contains("qualification changed or expired"));
+        assert!(!t.ctx.job_dir("finite-research-forged").join("execution-prompt.md").exists());
+    }
+    #[test]
+    fn ordinary_reader_execution_keeps_never_despite_saved_approval_hints() {
+        let t = Test::new();
+        let j = t.put(job(json!({"id":"ordinary-reader","sandbox":"read-only",
+            "network":false,"approval_policy":"on-request","approvals_reviewer":"auto_review"})));
+        let spawn = t.ctx.execution_spawn(&j).unwrap();
+        assert!(spawn.argv.windows(2).any(|a| a == ["-s","read-only"]));
+        assert!(spawn.argv.contains(&"approval_policy=never".into()));
+        assert!(spawn.argv.contains(&"approvals_reviewer=user".into()));
+        assert!(!spawn.argv.iter().any(|a| a.contains("network_access=true")));
     }
 }
 mod token_accounting {

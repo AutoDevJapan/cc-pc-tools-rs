@@ -205,6 +205,48 @@ retain `all_required_checks_success=false`.
 
 ## Fixed native secret-scan workflow
 
+`current-pr-inspect <pin-json>` and `current-pr-job <pin-json> <new-owned-dir>
+<Linux-helper> [gitleaks-ELF]` add a separate route for repository 1285649124,
+PR995 only. The original four fixed candidates and release modes are unchanged.
+See [the acceptance specification](current-pr.md) (Issue267, ToDo3059).
+
+Each invocation freezes `repo_id`, `pr`, `head_sha`, `head_tree`, `base_sha`,
+`run_id`, `attempt`, sorted `job_ids` (up to eight; secret requires one),
+`kind` (`secret` or `codeql`), `context_sha` (merge context for secret; empty
+for CodeQL), `review_sha256`, and `acceptance_sha256`. A new correction needs
+a new fixed input and evidence, rather than a new compiled SHA constant.
+The input also names private `review_file` and `acceptance_file` handoff
+envelopes. Each envelope binds `origin_todo_id:3056`, `repo_id`, `pr`,
+`head_sha`, `head_tree`, its `kind` (`review` or `acceptance`), `success:true`,
+`must:0`, and the exact base64 `original` output plus `original_sha256`.
+The parent is responsible for confirming that original review and necessary
+acceptance really succeeded on this source. Evidence is read into RAM and
+fingerprinted; original content and paths are never included in host receipts.
+The two evidence roles are checked independently, even when paths coincide.
+These handoff statements authorize this finite inspection; they do not prove
+official CI success. Job arrays exceeding eight entries, empty arrays, zero,
+negative, duplicate and unordered IDs are rejected rather than truncated.
+
+Preflight verifies the evidence, current PR/branch/base/tree, original reviewed
+workflow, exact run attempt, official job IDs and dedicated queue before any
+Docker create or registration token. A CodeQL matrix may use only its frozen
+job set. At both hooks the host independently requires that this unique owned
+runner was actually assigned exactly one of those jobs. A different source,
+attempt, job or runner fails closed. Existing source/auth proofs, isolated
+namespace and teardown remain mandatory. Inspect or listener completion still
+requires separate successful official job/check and upload evidence.
+Execution additionally requires an unassigned queued frozen job. Live hooks
+still accept the already assigned job. Only an as-yet-unobserved assignment
+gets up to three API reads separated by 500 ms within the existing callback
+deadline; an invalid observed assignment is rejected immediately. CodeQL's
+head branch must equal this PR's branch or its exact numeric
+`refs/pull/995/head`, whose Git ref SHA is independently checked. Other PR
+refs and unrelated branches are rejected. A new invocation can retain
+successful members of the same frozen matrix while serving its remaining jobs.
+If the source advances after an official job ends, the helper's final source
+recheck fails; the official job result remains separate evidence. Assignment
+visibility beyond the finite callback wait can likewise fail a hook.
+
 `secret-job <repo-id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF>`
 serves the first candidate's original PR secret gate. Its workflow path and
 bytes are fixed by digest. It rejects another repo, fork, PR, source head,

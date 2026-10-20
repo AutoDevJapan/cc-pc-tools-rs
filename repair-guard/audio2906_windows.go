@@ -40,12 +40,20 @@ var audio2906Expected = audio2906Metadata{
 // Use one attribute/security-only handle for file identity, change time and
 // owner. Never request FILE_READ_DATA or inspect/decode/hash media to classify.
 func audio2906Identity(path string) (audio2906Metadata, error) {
+	return resourceIdentity(path, false)
+}
+
+func resourceIdentity(path string, directories bool) (audio2906Metadata, error) {
 	var out audio2906Metadata
 	p, err := syscall.UTF16PtrFromString(path)
 	if err != nil {
 		return out, err
 	}
-	h, err := syscall.CreateFile(p, 0x80|0x20000, 7, nil, syscall.OPEN_EXISTING, syscall.FILE_FLAG_OPEN_REPARSE_POINT, 0)
+	flags := uint32(syscall.FILE_FLAG_OPEN_REPARSE_POINT)
+	if directories {
+		flags |= syscall.FILE_FLAG_BACKUP_SEMANTICS
+	}
+	h, err := syscall.CreateFile(p, 0x80|0x20000, 7, nil, syscall.OPEN_EXISTING, flags, 0)
 	if err != nil {
 		return out, err
 	}

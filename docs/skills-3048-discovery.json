@@ -1,0 +1,100 @@
+{
+  "checked_at": "2026-10-20T04:00:52.3806322Z",
+  "method": "fresh app-server initialize + skills/list forceReload",
+  "model_called": false,
+  "target_count": 14,
+  "found_count": 14,
+  "missing": [],
+  "parse_error_count": 0,
+  "warning_notification_count": 0,
+  "budget_warning_observed": false,
+  "stderr_warning_count": 0,
+  "context_budget_limit": "skills/list is discovery, not model prompt assembly; absence of warning does not prove a turn fits",
+  "targets": [
+    {
+      "name": "agent-system-design",
+      "description": "エージェント基盤の層設計・検証ループ・ボット間通信・大規模移行を設計するときに使う。",
+      "path": "D:\\CC\\Skills\\agent-system-design\\SKILL.md",
+      "enabled": true
+    },
+    {
+      "name": "coding-agent-tools",
+      "description": "コーディング用の拡張・MCP・常用CLI・検査ツールを導入・設計するときに使う。",
+      "path": "D:\\CC\\Skills\\coding-agent-tools\\SKILL.md",
+      "enabled": true
+    },
+    {
+      "name": "docker-operations",
+      "description": "Dockerの構成・ビルド・検証コンテナの片付け・容量回収をするときに使う。",
+      "path": "D:\\CC\\Skills\\docker-operations\\SKILL.md",
+      "enabled": true
+    },
+    {
+      "name": "domain-modeling",
+      "description": "業務用語・概念の境界・用語集・設計判断の矛盾を整理するときに使う。",
+      "path": "D:\\CC\\Skills\\domain-modeling\\SKILL.md",
+      "enabled": true
+    },
+    {
+      "name": "json-canvas",
+      "description": "JSON Canvasの.canvasファイルでノード・接続・配置を編集するときに使う。",
+      "path": "D:\\CC\\Skills\\json-canvas\\SKILL.md",
+      "enabled": true
+    },
+    {
+      "name": "knowledge-to-skills",
+      "description": "記事・ブックマーク・教材を出典付きの知識やSkillへ整理・変換するときに使う。",
+      "path": "D:\\CC\\Skills\\knowledge-to-skills\\SKILL.md",
+      "enabled": true
+    },
+    {
+      "name": "obsidian-bases",
+      "description": "Obsidianの.baseファイルでビュー・フィルター・計算式を編集するときに使う。",
+      "path": "D:\\CC\\Skills\\obsidian-bases\\SKILL.md",
+      "enabled": true
+    },
+    {
+      "name": "obsidian-markdown",
+      "description": "Obsidianのノートで内部リンク・埋込・プロパティを編集するときに使う。",
+      "path": "D:\\CC\\Skills\\obsidian-markdown\\SKILL.md",
+      "enabled": true
+    },
+    {
+      "name": "security-review",
+      "description": "認可・認証・監査ログ・漏洩・注入の抜け道を実装やレビューで確かめるときに使う。",
+      "path": "D:\\CC\\Skills\\security-review\\SKILL.md",
+      "enabled": true
+    },
+    {
+      "name": "skill-maintenance",
+      "description": "Skillやプラグインを作る・導入する・Codexへ移す・知見をSkill化するときに使う。",
+      "path": "D:\\CC\\Skills\\skill-maintenance\\SKILL.md",
+      "enabled": true
+    },
+    {
+      "name": "spec-atdd-tdd-issue-workflow",
+      "description": "Issueと仕様から振る舞いの受入検査を先に作り、実装と文書の整合を確かめるときに使う。",
+      "path": "D:\\CC\\Skills\\spec-atdd-tdd-issue-workflow\\SKILL.md",
+      "enabled": true
+    },
+    {
+      "name": "ui-accessibility",
+      "description": "UIの可読性・アクセシビリティ・日本語組版・デザイン監査をするときに使う。",
+      "path": "D:\\CC\\Skills\\ui-accessibility\\SKILL.md",
+      "enabled": true
+    },
+    {
+      "name": "ui-design-styles",
+      "description": "画面の構造や配色・書体など、見た目のデザイン体系を設計・改善するときに使う。",
+      "path": "D:\\CC\\Skills\\ui-design-styles\\SKILL.md",
+      "enabled": true
+    },
+    {
+      "name": "web-design-process",
+      "description": "LP・サイトのデザイン方針作り、参照の扱い、素材選び、生成用プロンプトで使う。",
+      "path": "D:\\CC\\Skills\\web-design-process\\SKILL.md",
+      "enabled": true
+    }
+  ],
+  "retired_alias_found_count": 0
+}

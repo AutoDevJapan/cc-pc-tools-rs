@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-20T15:09:57.3914257Z",
+  "observed_at": "2026-10-20T16:23:44.3801446Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "First14 installed and discovered; broad adoption continues without count cap",
+  "phase_b": "22new adaptations installed and discovered; latest8post-install turn check pending; broad scope continues",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -288,7 +288,7 @@
   "execution_held_shapes": 647,
   "candidate_designs": 22,
   "independently_accepted": 14,
-  "installed": 14,
+  "installed": 22,
   "integrated": 0,
   "excluded": 0,
   "units": {
@@ -304,12 +304,12 @@
     "unread_additional_text_support_shape": 647
   },
   "limits": [
-    "Metadata statistics are not installed Skills or semantic/license approval.",
-    "The14 candidate designs are the first deployment batch; no total count cap.",
-    "New14 central directories were created by separately allowed exact apply; existing originals, junctions, protection code, UI and source scripts were unchanged.",
-    "14installed,14fresh Codex metadata matches,0parse errors; real-turn/context acceptance remains pending.",
-    "Archive warning59416 is not a per-record malicious verdict or blanket exclusion.",
-    "6mile truncated API tree completed by matching fixed git subtrees/ls-tree."
+    "Metadata statistics do not establish semantic or individual license approval.",
+    "22installed adaptations are two finite deployment batches, not a count cap.",
+    "Existing originals, junctions, guard, UI and source scripts were not changed.",
+    "First14had limited1turn acceptance; Docker8had freshmetadata discovery; Docker8post-install turn check pending.",
+    "Source archive warning59416 is not a per-record malicious verdict or blanket exclusion.",
+    "6mile APItruncation was repaired by matching fixedgit subtrees/ls-tree."
   ],
   "entrypoint_assessment": {
     "source": "mattpocock/skills",
@@ -339,19 +339,20 @@
       "todo": 3120,
       "must": 0,
       "all8upstream_entrypoints_read": true,
-      "new_installer_and_bundle_review": "pending",
-      "actual_installed": 0
-    }
+      "new_installer_and_bundle_review": "3138read8andinstaller;Must1correctedwith16source regression before apply",
+      "actual_installed": 8
+    },
+    "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "All renderable plan targets; 14 installed plus 8 pending review",
+    "candidate_designs": "All22renderable plan targets are installed; latest8post-install turn acceptance pending",
     "additional_authored_drafts_not_in_plans": 0,
     "authored_total": 22,
-    "installed": 14,
-    "pending_plan_targets": 8,
+    "installed": 22,
+    "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "14 final adaptation entrypoints and installer reviewed by3104; not all source materials",
-    "not_semantically_disposed_occurrences": 73206
+    "not_semantically_disposed_occurrences": 73198
   }
 }

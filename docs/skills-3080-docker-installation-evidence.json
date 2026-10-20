@@ -1,0 +1,38 @@
+{
+  "todo": 3080,
+  "scope": "Second batch:8Docker adaptations only; first14evidence preserved separately",
+  "installed_at": "2026-10-20T16:23:44.2720306Z",
+  "source_head": "876ef68ce935c0ac59ead9af0da7cbf6d189fa7b",
+  "installer_reviewed_head": "90e66e980e004fa2f4bff5b84bd813b257d6c510",
+  "installer_code_unchanged_since_review": true,
+  "bundle_sha256": "5fb94978bb2627ea0b219c0a989ad3b4578f0d093a539d6027e93aa108060ddc",
+  "review": {
+    "todo": 3138,
+    "original_must_count": 1,
+    "must_fixed": "docker-docs skill.yaml implicit true preserved;16source policy regressionRed/Green",
+    "response_sha256": "73c999722f9387135bf6cb672a3575574ba4bd1c976d4983368db20bc9e5e7ea",
+    "correction_re_reviewed": false,
+    "changes": "Only reviewer-prescribed metadata correction and static stop/wording additions; original andlicense bytes unchanged",
+    "source_scope": "8upstream entrypoints and generated8 fully read; companions not fully read"
+  },
+  "execution": "Separate normal exact8new-only execution review allowed, exit0",
+  "installed": 8,
+  "files_readback_verified": 40,
+  "manifest": "skills-3080-installed-docker-manifest.json",
+  "manifest_sha256": "1ded6a967748f3e652127bc3c1b43fab45738d1bf58fb66709d19a990653a509",
+  "journal_sha256": "673b069a3e2669780378f39c1bcb44f68fb37c5ddcb61a37339da5f660d75269",
+  "validator": "PASS; actualD:/CC/Skills files",
+  "discovery": {
+    "target_matches": 8,
+    "enabled_count": 8,
+    "parse_errors": 0,
+    "total_metadata": 319,
+    "method": "fresh official installed Codex app-server; initialize + skills/list forceReload",
+    "model_called": false
+  },
+  "runtime": "Installed workflow knowledge; Docker Agent OAuth execution and standalone sbx operation unverified. Stop at static review when prerequisites missing.",
+  "postinstall_turn_acceptance": "pending",
+  "integrated": 0,
+  "excluded": 0,
+  "overall_complete": false
+}

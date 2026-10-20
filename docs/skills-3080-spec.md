@@ -32,7 +32,7 @@ go -C tools/skills-3080-catalog run . -catalog <保存済みphase-a-catalog.json
 
 ## 継続と導入候補
 
-[最初の10候補](skills-3080-batch01.json)と[次の4候補](skills-3080-batch02.json)は作業単位で、全体の上限ではない。14件は中央へ新規配置し、70ファイルを読戻し検証した。[配置と発見の証拠](skills-3080-installation-evidence.json)と[実配置manifest](skills-3080-installed-manifest.json)を保持する。旧3048の新規4/改善10とは別の集合である。[Matt Pocockの38入口](skills-3080-mattpocock-assessment.json)と[Dockerの12入口](skills-3080-docker-assessment.json)は固定版の入口本文を全件読み、候補ごとの出典・理由・修正点を保持した。[Dockerの新規候補8件の本文案](skills-3080-docker-draft.json)を保存した。8件はbatch03と40ファイルの配置データへ生成済み。変更した配置ツールと実データの独立レビュー・中央配置は未完了で、配置は0件。参照先の全資料・script・assetの意味審査まで終えたとは主張しない。
+[最初の10候補](skills-3080-batch01.json)と[次の4候補](skills-3080-batch02.json)は作業単位で、全体の上限ではない。14件は中央へ新規配置し、70ファイルを読戻し検証した。[配置と発見の証拠](skills-3080-installation-evidence.json)と[実配置manifest](skills-3080-installed-manifest.json)を保持する。旧3048の新規4/改善10とは別の集合である。[Matt Pocockの38入口](skills-3080-mattpocock-assessment.json)と[Dockerの12入口](skills-3080-docker-assessment.json)は固定版の入口本文を全件読み、候補ごとの出典・理由・修正点を保持した。[Dockerの新規候補8件の本文案](skills-3080-docker-draft.json)を保存した。8件はbatch03の配置データへ生成し、レビュー3138の指摘を修正して中央へ新規配置した。40ファイルの読戻しと実構造検査、新Codexでの8件の発見に成功。追加8件の実ターン受入は別に確認する。参照先の全資料・script・assetの意味審査まで終えたとは主張しない。
 
 MattのPR用入口にある第三者クレジットは、[固定した補助出典の証拠](skills-3080-credit-evidence.json)でHumanlayerの対象本文とMIT原文を照合した。元16資料を置き換えたり、独立した新規Skillとして件数へ加えたりしない。未指定の過去版や全素材への包括的な許可とも扱わない。
 
@@ -51,3 +51,11 @@ MattのPR用入口にある第三者クレジットは、[固定した補助出�
 Apache入口本体の改変表示、原文・許諾の保全、入れ子noticeを未処理のまま採用しないことを生成器で確認する。新規配置は全対象を事前確認し、書込みは別途の固定版審査を通す。preflightは書かない。途中失敗はfailed記録とprefix成果を残し、自動の上書き再試行をしない。SKILL.mdは参照を書き同期した後、新規hardlinkで原子的に公開する。hardlink非対応なら失敗として保持し、非原子的な上書きへ切り替えない。
 
 初回14のbundleは079f9d9で固定されている。source_tree等を補った現在のplanを再renderして旧70ファイルと同じと主張しない。配布済み入口の改善には、既存版のSHAとバックアップを照合する別の限定更新が必要であり、新規専用applyで既存名を消して通さない。
+
+## Docker8件の実配置
+
+3138のMust1は、保存した16metadata原文とplanを照合する回帰検査で修正を確認した。実行コードはレビュー済み90e66e9と同一で、修正はレビューで求められたmetadataと停止条件の文言に限定した。別の配置コードの変更は含まない。新しい固定bundleと8新規名への書込みを通常の実行審査へ別途提示し、許可された同じコマンドで適用した。
+
+[Docker配置証拠](skills-3080-docker-installation-evidence.json)と[追加8件manifest](skills-3080-installed-docker-manifest.json)を初回14件とは別に保持する。[採用台帳](skills-3080-adoptions.json)は元catalogの22occurrenceだけを導入済みとし、残り73,198を未判定・保留に保つ。本文が同じ別候補を自動で処理済みにしない。
+
+40ファイルの読戻しと実3048検査器はPASS。新しいCodex app-serverのmetadataは319件で、今回8件の配置先が一致、enabled8、解析エラー0。全本文を自動で読み込んだ証拠や、Docker/sbx/モデルの実行成功ではない。対応CLIやOAuthが未確認なら静的レビューで止める条件を本文に置いた。

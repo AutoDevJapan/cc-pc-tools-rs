@@ -1,0 +1,26 @@
+{
+  "args": [
+    "-c",
+    "core.autocrlf=false",
+    "-c",
+    "core.eol=lf",
+    "-c",
+    "core.attributesFile=D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3214-3103\\codex-owned-b3789c1fc3d2ff203cfba57474e7bcda\\empty-attributes",
+    "archive",
+    "--format=tar",
+    "--output=D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3214-3103\\codex-owned-b3789c1fc3d2ff203cfba57474e7bcda\\initial.tar",
+    "684bfba418f1b293b5ed2672038654ede6323fd6"
+  ],
+  "differences": [
+    {
+      "actual_blob": "07b6b8222bd3e73d5bab24e0aeac98abf5022980",
+      "actual_bytes": 3222,
+      "crlf_to_lf_equals_blob": true,
+      "expected_blob": "c8a827cddf3ed3a002ac04480c735064a47a95d7",
+      "expected_bytes": 3146,
+      "path": "tools/codex-progress-tui/activation/codex.cmd"
+    }
+  ],
+  "files": 1184,
+  "utc": "2026-10-20T23:04:17.7126556Z"
+}

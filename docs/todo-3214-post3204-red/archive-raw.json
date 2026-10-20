@@ -1,0 +1,19 @@
+{
+  "archive_bytes": 13629440,
+  "archive_sha256": "dec12cb724aae0f21e673e5f47f0145a36e92eb23c07afca5c3fb2b13bc7ed08",
+  "args": [
+    "--git-dir=D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3214-3103\\codex-owned-b3789c1fc3d2ff203cfba57474e7bcda\\archive-git",
+    "-c",
+    "core.autocrlf=false",
+    "-c",
+    "core.eol=lf",
+    "-c",
+    "core.attributesFile=D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3214-3103\\codex-owned-b3789c1fc3d2ff203cfba57474e7bcda\\empty-attributes",
+    "archive",
+    "--format=tar",
+    "--output=D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3214-3103\\codex-owned-b3789c1fc3d2ff203cfba57474e7bcda\\raw.tar",
+    "684bfba418f1b293b5ed2672038654ede6323fd6"
+  ],
+  "isolated_info_attributes": "* -text -eol -crlf -filter -ident -working-tree-encoding -export-ignore -export-subst\n",
+  "original_config_modified": false
+}

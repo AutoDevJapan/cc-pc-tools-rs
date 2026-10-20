@@ -1,0 +1,5 @@
+{
+  "exit": 2,
+  "stdout": "",
+  "stderr": "panic: unsupported archive entry \"pax_global_header\"\n\ngoroutine 1 [running]:\nmain.extract({0x1c041f0b6480, 0x74}, {0x1c041f0b7b80, 0x77})\n\t./measure3214.go:111 +0x434\nmain.prepare()\n\t./measure3214.go:171 +0x386\nmain.main()\n\t./measure3214.go:283 +0x14a\n"
+}

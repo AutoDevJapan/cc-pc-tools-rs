@@ -114,6 +114,10 @@ pub fn music(html: &str) -> Option<String> {
         Regex::new(r"(?is)<style\b([^>]*)>(.*?)</style\s*>|<script\b[^>]*>.*?</script\s*>").unwrap()
     });
     let body = BODY.captures(html)?.get(1)?.as_str();
+    static DUPLICATE_NAV: LazyLock<Regex> = LazyLock::new(|| {
+        Regex::new(r#"(?is)<a\b[^>]*>\s*(?:Consoleに戻る|KaraokeMakerを開く)\s*</a>"#).unwrap()
+    });
+    let body = DUPLICATE_NAV.replace_all(body, "");
     let mut assets = String::new();
     if let Some(head) = HEAD.captures(html).and_then(|capture| capture.get(1)) {
         for asset in ASSETS.captures_iter(head.as_str()) {
@@ -129,7 +133,7 @@ pub fn music(html: &str) -> Option<String> {
         }
     }
     let section = format!(
-        "<section id=\"view-music\" class=\"view active\" data-music-loaded=\"true\" aria-label=\"音楽制作 · Suno\">{assets}<p class=\"console-music-note\">下書き・曲候補の選択を扱います。MVと投稿は未接続です。</p><div class=\"console-music-body\">{body}</div></section>"
+        "<section id=\"view-music\" class=\"view active\" data-music-loaded=\"true\" aria-label=\"音楽制作 · Suno\">{assets}<details class=\"console-music-note\"><summary>制作範囲</summary><p>下書き・曲候補の選択を扱います。MVと投稿は未接続です。</p></details><div class=\"console-music-body\">{body}</div></section>"
     );
     let html = INDEX
         .replace(

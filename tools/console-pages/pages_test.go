@@ -55,6 +55,34 @@ func TestCompiledPageScriptSyntax(t *testing.T) {
 	node(t, `for(const html of Object.values(input))for(const match of html.matchAll(/<script>([\s\S]*?)<\/script>/g))new vm.Script(match[1]);`)
 }
 
+func TestNavigationKeepsDistinctProgressAndMusicLinks(t *testing.T) {
+	node(t, `
+const make=(tag,cls,text)=>({tagName:tag.toUpperCase(),dataset:{},textContent:text,href:null,removeAttribute(){},getAttribute(key){return this[key]}});
+const original=['kanban','progress','workload','systems','music'].map(view=>{const node=make(['progress','music'].includes(view)?'a':'button','',view);node.dataset.view=view;node.href=view==='music'?'/music':view==='progress'?'/progress':null;return node});
+const nav={querySelectorAll:()=>original,replaceChildren(...nodes){this.children=nodes}};
+const ctx={make,nav};vm.createContext(ctx);vm.runInContext(line(input.shell,'const names=')+'\n'+between(input.shell,'const existing=','const toggle=')+'\n globalThis.links=links;',ctx);
+assert.deepEqual(Array.from(ctx.links,n=>n.dataset.view),['kanban','progress','workload','systems','music']);assert.equal(new Set(ctx.links).size,5);assert.equal(ctx.links[1].href,'/progress');assert.equal(ctx.links[4].href,'/music');
+`)
+}
+
+func TestWorkloadCancelsOldDateAndRejectsLateResponse(t *testing.T) {
+	node(t, `
+let visible=true,pending=[],rendered=[],messages=[];
+const ctx={document:{hidden:false},root:()=>({}),active:()=>visible,status:message=>messages.push(message),render:data=>rendered.push(data),AbortController,setTimeout,clearTimeout,API:'/api/agent/workload',fetch:(path,options)=>new Promise(resolve=>pending.push({path,options,resolve})),window:{}};
+vm.createContext(ctx);vm.runInContext("let timer=null,inFlight=false,lastData=null,selectedDate=null,controller=null,generation=0;\n"+between(input.workload,'function cancelWorkload(','window.refreshWorkload=')+"\nglobalThis.choose=value=>{selectedDate=value;cancelWorkload()};",ctx);
+(async()=>{const old=ctx.refreshWorkload();assert.equal(pending.length,1);ctx.choose('2026-10-19');assert(pending[0].options.signal.aborted);const fresh=ctx.refreshWorkload();assert.equal(pending[1].path,'/api/agent/workload?date=2026-10-19');pending[0].resolve({ok:true,json:async()=>({ok:true,version:1,data:{date:'old'}})});await old;assert.equal(rendered.length,0);pending[1].resolve({ok:true,json:async()=>({ok:true,version:1,data:{date:'new'}})});await fresh;assert.deepEqual(rendered,[{date:'new'}]);visible=false;await ctx.refreshWorkload();ctx.document.hidden=true;visible=true;await ctx.refreshWorkload();assert.equal(pending.length,2)})().catch(e=>{console.error(e);process.exitCode=1});
+`)
+}
+
+func TestSharedRequestsAbortAndDiscardLateProtectedContent(t *testing.T) {
+	node(t, `
+let reply,options,rendered=0;const updates=new Map();
+const ctx={document:{hidden:false},musicBusy:new Set(),sharedControllers:new Map(),AbortController,setTimeout,clearTimeout,receive:(key,patch)=>updates.set(key,{...updates.get(key),...patch}),sharedResponse:(_key,value)=>value,fetch:(_path,opts)=>{options=opts;return new Promise(resolve=>reply=resolve)}};
+vm.createContext(ctx);vm.runInContext(between(input.shell,'function stopShared(','function retrySource('),ctx);
+(async()=>{const request=ctx.request('todo','/api/agent/display/todo',()=>rendered++);assert.equal(updates.get('todo').loading,true);ctx.stopShared();assert(options.signal.aborted);assert.equal(updates.get('todo').loading,false);reply({ok:true,json:async()=>({privateFixture:'late'})});await request;assert.equal(rendered,0);assert.equal(updates.get('todo').data,undefined);assert.equal(ctx.sharedControllers.size,0);assert.equal(ctx.musicBusy.size,0)})().catch(e=>{console.error(e);process.exitCode=1});
+`)
+}
+
 func TestProgressNavigation(t *testing.T) {
 	node(t, `
 const nodes=new Map(['kanban','progress','systems','workload','music'].map(view=>[view,{id:'view-'+view,dataset:{view},attrs:{},active:false,classList:{toggle(_,on){this.node.active=on}},setAttribute(k,v){this.attrs[k]=v},removeAttribute(k){delete this.attrs[k]}}]));for(const n of nodes.values())n.classList.node=n;
@@ -71,7 +99,7 @@ ctx.switchView('minimax');assert(nodes.get('kanban').active);assert(!nodes.get('
 func TestProgressExcludesWaitsAndExpiredEvidence(t *testing.T) {
 	node(t, `
 const ctx={Date,opsList:x=>Array.isArray(x)?x:[],opsState:{}};vm.createContext(ctx);vm.runInContext(between(input.index,'function processingRows(','function renderProgress('),ctx);
-const row=(id,state)=>({id:'todo-'+id,primaryJob:'job-'+id,workState:state});
+const row=(id,state)=>({id:'todo-'+id,primaryJob:'old-'+id,references:{sessions:['job-'+id]},workState:state});
 const board={workforce:{processing:{state:'complete',validUntil:200}},departments:[{products:[{workers:[row(1,'processing'),row(2,'resource_wait'),row(3,'dependency_wait'),row(4,'decision_wait'),row(5,'execution_unverified'),row(6,'done'),row(1,'processing')]}]}]};
 assert.deepEqual(Array.from(ctx.processingRows(board,100),x=>x.worker.id),['todo-1']);assert.equal(ctx.processingRows(board,201).length,0);board.workforce.processing.state='unavailable';assert.equal(ctx.processingRows(board,100).length,0);
 `)

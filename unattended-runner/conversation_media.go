@@ -21,8 +21,8 @@ const conversationMediaSourceDomain = "discord-conversation-media-source-v1"
 const conversationMediaLimit int64 = 10 << 20
 
 var errConversationMedia = errors.New("conversation media verification unavailable")
-var conversationMediaSender = regexp.MustCompile(`^conversation-log-[a-f0-9]{32}$`)
-var conversationMediaNormal = regexp.MustCompile(`^normal-log-[a-f0-9]{64}$`)
+var conversationMediaSender = regexp.MustCompile(`^conversation-(log|v1)-[a-f0-9]{32}$`)
+var conversationMediaNormal = regexp.MustCompile(`^normal-(log|ask)-[a-f0-9]{64}$`)
 var conversationMediaAttachment = regexp.MustCompile(`^attachment-([0-9])\.(png|jpg|jpeg|gif|webp|bmp|tif|tiff)$`)
 
 type conversationMediaDependencies struct {
@@ -243,7 +243,14 @@ func verifyConversationMedia(ctx context.Context, path, request string, deps con
 	bridge := filepath.Join(home, "conversation-bridge")
 	if rel, inside := conversationMediaInside(bridge, path); inside {
 		parts := strings.Split(rel, string(filepath.Separator))
-		if len(parts) != 2 || !conversationMediaNormal.MatchString(parts[0]) || !conversationMediaAttachment.MatchString(parts[1]) || request != "conversation-log-"+bytesHash([]byte(parts[0]))[:32] {
+		if len(parts) != 2 || !conversationMediaNormal.MatchString(parts[0]) || !conversationMediaAttachment.MatchString(parts[1]) {
+			return result, errConversationMedia
+		}
+		prefix := "conversation-log-"
+		if strings.HasPrefix(parts[0], "normal-ask-") {
+			prefix = "conversation-v1-"
+		}
+		if request != prefix+bytesHash([]byte(parts[0]))[:32] {
 			return result, errConversationMedia
 		}
 		descriptor := strings.TrimSuffix(path, filepath.Ext(path)) + ".source.json"

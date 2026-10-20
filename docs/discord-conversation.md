@@ -5,7 +5,7 @@
 旧記録を書き換えたり、空の原本を作ったり、過去の質問を再送したりしない。
 
 ```text
-unattended-runner.exe conversation [--config <path>] ask --request-id <id> --todo-id <元ToDo番号> --origin-thread <元スレッドID> --body-file <本文ファイル> --decision-file <判断範囲JSON> [--title <題名>] [--wait]
+unattended-runner.exe conversation [--config <path>] ask --request-id <id> --todo-id <元ToDo番号> --origin-thread <元スレッドID> --body-file <本文ファイル> --decision-file <判断範囲JSON> [--title <題名>] [--wait] [--attach <元画像> ...]
 unattended-runner.exe conversation [--config <path>] log --request-id <id> --title <題名> --body-file <本文ファイル> [--thread <進捗スレッドID>] [--notify] [--attach <画像> ...]
 unattended-runner.exe conversation [--config <path>] replies --request-id <id>
 unattended-runner.exe conversation [--config <path>] status
@@ -88,7 +88,10 @@ CLIは設定の開始時刻・用途・絶対パス、投稿先のID、独立し
 元スレッドは `--thread`、JSONの `origin_thread_id`、または `scope.origin_thread_id`
 で指定し、複数ある指定は一致させる。通常の質問にはGo側へ `--wait` を渡す。
 既存の別の待機状態を質問待ちへ勝手に変更しない。
-質問そのものへの添付は新しい `ask` の契約に含まれないため明示的に拒否する。
+`ask --attach <元画像>` は画像を質問の開始メッセージへ直接添付する。
+長い質問の背景・選択肢も同じ質問スレッドへ通知なしで続ける。
+本人は質問側だけを開いて回答できる。AIの進捗は別の通知なし投稿へ記録する。
+既に送信予約した旧質問の本文と配置は変えず、同じ記録を読み返して回復する。
 
 本文・判断範囲・対応する画像はツールの私的な保存先へ固定して保存する。
 送信IDは本文・題名・通知指定・画像の内容などから決まり、同じ入力の再試行では
@@ -108,12 +111,13 @@ Go側の失敗時は旧APIへ切り替えず、同じ入力での再試行を案
 用途は `discord-conversation-media-source-v1` で、元の正規パス、コピーのパス、SHAとサイズだけを持つ。
 パスは私的なファイルにだけ置く。同じ内容での再試行では最初の証跡を保持する。
 
-新しい送信側は、用途が有効な設定と `conversation-log-<32桁のSHA>` の送信IDだけについて、
+新しい送信側は、用途が有効な設定と `conversation-log-<32桁のSHA>` または
+質問の `conversation-v1-<32桁のSHA>` の送信IDだけについて、
 固定したGo実行ファイルの `--verify-conversation-media --path <画像> --request-id <送信ID>` を呼ぶ。
 これは `runner.lock` を取らない読取専用の検証で、HTTP・モデル・旧台帳の読込や状態の書込を行わない。
 元ファイルを毎回 `scrub391` で調べ、保護対象ではなく、判定未確認でもないことを確認する。
 
-コピーはツール保存先の `conversation-bridge/<normal-log-ID>/attachment-N.<画像形式>` に限定する。
+コピーはツール保存先の `conversation-bridge/<normal-log-ID または normal-ask-ID>/attachment-N.<画像形式>` に限定する。
 送信ID、証跡の厳密な形式、両パス、サイズ、元の現在の内容とコピーのSHAを照合する。
 コピーの一般的なファイル名で元の保護範囲を隠さない。元ファイルが変更・移動・削除されていれば送らない。
 Go CLIへ元画像を直接渡す場合も、同じ現在の保護判定とサイズ・形式検査を通す。
@@ -122,6 +126,15 @@ Goは用途・確認済みの印・SHA・サイズ・MIME・画像形式だけ�
 Rust側は、送信に使うメモリ上のバイト列がその結果と一致することを確かめる。
 既存の秘密値検査、名簿がある場合の除外、送信サイズ制限、APIによる送信後の照合も維持する。
 Go側の検査に失敗した場合、旧方式への切り替えや名簿欠落の一律許可は行わない。
+
+質問の添付とSHAは送信予約へ保存し、自動再試行でも同じ入力を使う。
+送信側のAPI読み返しで確認された画像のSHAがすべて一致するまで、質問待ちを登録しない。
+同じ判断範囲が既に異なる画像へ結び付いている場合は既存質問を保持し、成功として返さない。
+画像の出所未確認・欠落・変更は送信未完了のまま残す。別の画像へのコピーでは解消しない。
+この配送はUIの実装承認ではなく、現在の本人確認待ちを解除しない。
+
+Discord公式仕様: [forum thread creation](https://docs.discord.com/developers/resources/channel#start-thread-in-forum-or-media-channel)、
+[uploading files](https://docs.discord.com/developers/reference#uploading-files)。
 
 ## 新しい会話のアーカイブ
 

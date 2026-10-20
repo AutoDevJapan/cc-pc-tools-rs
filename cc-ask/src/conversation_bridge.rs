@@ -5,7 +5,7 @@ use crate::{
     core::{Effects, Result},
 };
 use serde::Deserialize;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{
     fs,
@@ -489,11 +489,11 @@ pub fn try_ask(home: &Path, effects: &mut dyn Effects, args: &AskArgs) -> Result
         .filter(|id| *id != 0)
         .ok_or(DECISION_REQUIRED)?;
     let origin = origin(args, &decision)?;
-    if !args.attach.is_empty() {
-        return Err("新しい質問の添付は log または post で進捗投稿へ送ってください".into());
-    }
+    let root = home.join("conversation-bridge");
+    private_directory(&root)?;
+    let snapshots = attachments(&root, effects, &args.attach)?;
     let decision = canonical(&decision).to_string();
-    let identity = json!([
+    let mut identity = json!([
         "normal-ask-v1",
         sha(text.as_bytes()),
         sha(decision.as_bytes()),
@@ -501,8 +501,15 @@ pub fn try_ask(home: &Path, effects: &mut dyn Effects, args: &AskArgs) -> Result
         args.title,
         origin
     ]);
+    if !snapshots.is_empty() {
+        identity.as_array_mut().ok_or(INVALID_INPUT)?.push(json!(
+            snapshots
+                .iter()
+                .map(|file| json!([file.hash, file.extension]))
+                .collect::<Vec<_>>()
+        ));
+    }
     let request = format!("normal-ask-{}", sha(identity.to_string().as_bytes()));
-    let root = home.join("conversation-bridge");
     let directory = root.join(&request);
     private_directory(&directory)?;
     let body_path = directory.join("body.txt");
@@ -525,6 +532,7 @@ pub fn try_ask(home: &Path, effects: &mut dyn Effects, args: &AskArgs) -> Result
         args.title.clone(),
         "--wait".into(),
     ]);
+    append_attachments(&root, &directory, snapshots, &mut argv)?;
     execute(effects, &argv, true)
 }
 
@@ -632,11 +640,21 @@ fn send_log(
     if notify {
         argv.push("--notify".into());
     }
+    append_attachments(&root, &directory, snapshots, &mut argv)?;
+    execute(effects, &argv, false)
+}
+
+fn append_attachments(
+    root: &Path,
+    directory: &Path,
+    snapshots: Vec<Attachment>,
+    argv: &mut Vec<String>,
+) -> Result<()> {
     for (index, file) in snapshots.into_iter().enumerate() {
         let path = directory.join(format!("attachment-{index}.{}", file.extension));
         install(file.file, &path, &file.hash, file.size)?;
         save_media_source(
-            &root,
+            root,
             &directory.join(format!("attachment-{index}.source.json")),
             &file.source,
             &path,
@@ -645,5 +663,5 @@ fn send_log(
         )?;
         argv.extend(["--attach".into(), string_path(&path)?]);
     }
-    execute(effects, &argv, false)
+    Ok(())
 }

@@ -26,32 +26,35 @@ type ConversationAskInput struct {
 	RequestID, OriginThread, BodyFile, DecisionFile, Title string
 	Todo                                                   uint64
 	Wait                                                   bool
+	Attachments                                            []string
 }
 
 // All public fields are receipt metadata. Question and answer text stays in the
 // private sender/receipt files, never in command output or health reports.
 type ConversationQuestion struct {
-	RequestID    string `json:"request_id"`
-	SenderID     string `json:"sender_request_id"`
-	Todo         uint64 `json:"todo_id"`
-	Project      string `json:"project"`
-	OriginThread string `json:"origin_thread_id"`
-	InputSHA     string `json:"input_sha256"`
-	BodyFile     string `json:"body_file"`
-	DecisionFile string `json:"decision_file"`
-	Title        string `json:"title,omitempty"`
-	Wait         bool   `json:"wait_requested"`
-	Phase        string `json:"phase"`
-	Created      string `json:"created_at"`
-	Thread       string `json:"thread_id,omitempty"`
-	Message      string `json:"question_message_id,omitempty"`
-	Progress     string `json:"progress_thread_id,omitempty"`
-	Fingerprint  string `json:"question_fingerprint,omitempty"`
-	DecisionSHA  string `json:"decision_identity_sha256,omitempty"`
-	QuestionSHA  string `json:"question_body_sha256,omitempty"`
-	ReceiptFile  string `json:"question_receipt_file,omitempty"`
-	ReceiptSHA   string `json:"question_receipt_sha256,omitempty"`
-	ReplyCursor  string `json:"reply_cursor,omitempty"`
+	RequestID        string   `json:"request_id"`
+	SenderID         string   `json:"sender_request_id"`
+	Todo             uint64   `json:"todo_id"`
+	Project          string   `json:"project"`
+	OriginThread     string   `json:"origin_thread_id"`
+	InputSHA         string   `json:"input_sha256"`
+	BodyFile         string   `json:"body_file"`
+	DecisionFile     string   `json:"decision_file"`
+	Title            string   `json:"title,omitempty"`
+	Wait             bool     `json:"wait_requested"`
+	Phase            string   `json:"phase"`
+	Created          string   `json:"created_at"`
+	Thread           string   `json:"thread_id,omitempty"`
+	Message          string   `json:"question_message_id,omitempty"`
+	Progress         string   `json:"progress_thread_id,omitempty"`
+	Fingerprint      string   `json:"question_fingerprint,omitempty"`
+	DecisionSHA      string   `json:"decision_identity_sha256,omitempty"`
+	QuestionSHA      string   `json:"question_body_sha256,omitempty"`
+	ReceiptFile      string   `json:"question_receipt_file,omitempty"`
+	ReceiptSHA       string   `json:"question_receipt_sha256,omitempty"`
+	ReplyCursor      string   `json:"reply_cursor,omitempty"`
+	Attachments      []string `json:"attachments,omitempty"`
+	AttachmentHashes []string `json:"attachment_sha256,omitempty"`
 }
 
 type conversationIndex struct {
@@ -233,6 +236,9 @@ func (r *Runner) loadConversations() (*conversationIndex, error) {
 		if q.BodyFile != filepath.Join(dir, "question.txt") || q.DecisionFile != filepath.Join(dir, "decision.json") {
 			return nil, errors.New("conversation private paths differ")
 		}
+		if !conversationQuestionImageRecord(q) {
+			return nil, errors.New("conversation question images invalid")
+		}
 		if q.Phase != "reserved" {
 			if q.Thread != q.Message || !shaPattern.MatchString(q.Fingerprint) || !shaPattern.MatchString(q.DecisionSHA) || !shaPattern.MatchString(q.QuestionSHA) || !shaPattern.MatchString(q.ReceiptSHA) {
 				return nil, errors.New("conversation receipt invalid")
@@ -336,7 +342,15 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 	if safeText(string(body), r.Token) != string(body) || safeText(string(decision), r.Token) != string(decision) {
 		return zero, errors.New("conversation input contains credential material")
 	}
-	inputHash := canonicalHash([]any{input.Todo, input.OriginThread, bytesHash(body), canonicalHash(json.RawMessage(decision)), input.Title, input.Wait})
+	paths, hashes, err := conversationQuestionImages(input.Attachments)
+	if err != nil {
+		return zero, err
+	}
+	identity := []any{input.Todo, input.OriginThread, bytesHash(body), canonicalHash(json.RawMessage(decision)), input.Title, input.Wait}
+	if len(hashes) != 0 {
+		identity = append(identity, hashes)
+	}
+	inputHash := canonicalHash(identity)
 	index, err := r.loadConversations()
 	if err != nil {
 		return zero, err
@@ -379,6 +393,7 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		}
 		dir := filepath.Join(r.Config.Home, "conversations", input.RequestID)
 		q = ConversationQuestion{RequestID: input.RequestID, SenderID: "conversation-v1-" + bytesHash([]byte(input.RequestID))[:32], Todo: input.Todo, Project: row.Project, OriginThread: input.OriginThread, InputSHA: inputHash, BodyFile: filepath.Join(dir, "question.txt"), DecisionFile: filepath.Join(dir, "decision.json"), Title: input.Title, Wait: input.Wait, Phase: "reserved", Created: r.Now().UTC().Format(time.RFC3339Nano)}
+		q.Attachments, q.AttachmentHashes = paths, hashes
 		if err = writeConversationOnce(q.BodyFile, body); err != nil {
 			return zero, err
 		}
@@ -407,6 +422,13 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		if q.Title != "" {
 			args = append(args, "--title", q.Title)
 		}
+		_, currentHashes, mediaErr := conversationQuestionImages(q.Attachments)
+		if mediaErr != nil || canonicalHash(currentHashes) != canonicalHash(q.AttachmentHashes) {
+			return zero, errConversationMedia
+		}
+		for _, path := range q.Attachments {
+			args = append(args, "--attach", path)
+		}
 		raw, callErr := r.Run(ctx, conversationSender, args...)
 		if callErr != nil {
 			return zero, errors.New("conversation send pending; retry the same request")
@@ -420,9 +442,13 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 			Fingerprint      string          `json:"original_fingerprint"`
 			Body             string          `json:"original_question"`
 			Decision         json.RawMessage `json:"decision"`
+			Images           []string        `json:"image_sha256"`
 		}
 		if json.Unmarshal([]byte(raw), &report) != nil || report.Domain != "new-owner-recovery-messages" || report.Delivery != "verified" || report.Thread != report.Message || report.Request == "" || !shaPattern.MatchString(report.Fingerprint) {
 			return zero, errors.New("conversation send verification pending")
+		}
+		if len(report.Images) != len(q.AttachmentHashes) || (len(report.Images) != 0 && canonicalHash(report.Images) != canonicalHash(q.AttachmentHashes)) {
+			return zero, errors.New("conversation question image verification pending")
 		}
 		for _, id := range []string{report.Thread, report.Progress} {
 			if _, ok := number(id); !ok {

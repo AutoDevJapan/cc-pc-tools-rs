@@ -98,6 +98,24 @@ func TestConversationFixtureNormalizesShortWindowsTempBase(t *testing.T) {
 		t.Fatal("Windows short temporary path was not normalized for the fixture")
 	}
 }
+
+func TestConversationQuestionImagesPreserveQualifiedReplyAssociation(t *testing.T) {
+	f := newConversationFixture(t)
+	sha := strings.Repeat("d", 64)
+	f.q["attachments"] = []any{filepath.Join(f.root, "question.png")}
+	f.q["attachment_sha256"] = []any{sha}
+	intent := obj(obj(f.ledger["events"].([]any)[0])["request"])
+	intent["images"] = []any{object{"sha256": sha}}
+	f.publish()
+	if !conversationAllowed(f.replyPath, f.a) {
+		t.Fatal("image-bearing question lost its qualified reply")
+	}
+	f.q["attachment_sha256"] = []any{strings.Repeat("e", 64)}
+	f.publish()
+	if conversationAllowed(f.replyPath, f.a) {
+		t.Fatal("image-bearing question accepted mismatched sender provenance")
+	}
+}
 func (f *conversationFixture) put(path string, v any) {
 	f.t.Helper()
 	if os.MkdirAll(filepath.Dir(path), 0700) != nil {

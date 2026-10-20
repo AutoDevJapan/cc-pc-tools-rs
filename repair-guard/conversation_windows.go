@@ -264,7 +264,7 @@ func conversationAllowed(path string, a conversationAccess) bool {
 		return false
 	}
 	q := obj(obj(index["questions"])[parts[0]])
-	if !conversationKnown(q, "request_id sender_request_id todo_id project origin_thread_id input_sha256 body_file decision_file title wait_requested phase created_at thread_id question_message_id progress_thread_id question_fingerprint decision_identity_sha256 question_body_sha256 question_receipt_file question_receipt_sha256 reply_cursor") {
+	if !conversationKnown(q, "request_id sender_request_id todo_id project origin_thread_id input_sha256 body_file decision_file title wait_requested phase created_at thread_id question_message_id progress_thread_id question_fingerprint decision_identity_sha256 question_body_sha256 question_receipt_file question_receipt_sha256 reply_cursor attachments attachment_sha256") {
 		return false
 	}
 	if q["request_id"] != parts[0] || !conversationSenderID.MatchString(str(q["sender_request_id"])) || conversationNumber(q["todo_id"]) == 0 || str(q["project"]) == "" || strings.EqualFold(str(q["project"]), "owner") {
@@ -430,6 +430,9 @@ func conversationSender(ledger, q, cfg, question object) (object, bool) {
 	if intents != 1 || bots != 1 || questions != 1 || progress != 1 || intent["fingerprint"] != q["question_fingerprint"] || intent["notify"] != true {
 		return nil, false
 	}
+	if !conversationQuestionImages(q, intent) {
+		return nil, false
+	}
 	if body, ok := intent["body"].(string); !ok || body == "" {
 		return nil, false
 	}
@@ -438,6 +441,27 @@ func conversationSender(ledger, q, cfg, question object) (object, bool) {
 		return nil, false
 	}
 	return intent, true
+}
+
+// Paths here are private retry metadata, never a grant to read those images.
+// Successful sender receipts must bind every declared image hash in order.
+func conversationQuestionImages(q, intent object) bool {
+	paths, hasPaths := q["attachments"].([]any)
+	hashes, hasHashes := q["attachment_sha256"].([]any)
+	images, hasImages := intent["images"].([]any)
+	if q["attachments"] == nil && q["attachment_sha256"] == nil {
+		return !hasImages || len(images) == 0
+	}
+	if !hasPaths || !hasHashes || !hasImages || len(paths) == 0 || len(paths) > 10 || len(paths) != len(hashes) || len(images) != len(hashes) {
+		return false
+	}
+	for i, path := range paths {
+		text, ok := path.(string)
+		if !ok || !filepath.IsAbs(text) || !conversationSHA.MatchString(str(hashes[i])) || obj(images[i])["sha256"] != hashes[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func conversationReply(record, saved, q, cfg, question object, message string, at time.Time) bool {

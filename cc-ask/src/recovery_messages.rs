@@ -72,6 +72,9 @@ pub struct AskArgs {
     /// Required here or in decision-file.origin_thread_id.
     #[arg(long)]
     pub origin_thread: Option<String>,
+    /// Images shown directly in the question starter, verified before HTTP.
+    #[arg(long = "attach")]
+    pub attach: Vec<PathBuf>,
 }
 
 /// Rebind only a not-yet-sent ask to an exact previously verified progress post.
@@ -1541,6 +1544,7 @@ fn verify_generated_proposal(
 fn conversation_media_request(request: &str) -> bool {
     request
         .strip_prefix("conversation-log-")
+        .or_else(|| request.strip_prefix("conversation-v1-"))
         .is_some_and(|suffix| {
             suffix.len() == 32
                 && suffix
@@ -1841,6 +1845,9 @@ fn reserve(ledger: &mut Ledger, home: &Path, incoming: &Request) -> Result<Reque
             .flatten()
     });
     if let Some(request) = duplicate {
+        if request.images != incoming.images {
+            return Err("same decision is already bound to different question images; original question retained".into());
+        }
         ledger.append(
             home,
             Event::Alias {
@@ -2556,6 +2563,7 @@ fn report(ledger: &Ledger, request: &Request, reused: bool) -> Value {
         "progress_message_id":progress.map(|r| &r.message_id),
         "progress_url":progress.map(|r| request.destination.url(&r.thread_id)),
         "original_question":if matches!(request.operation, Kind::Ask { .. }) {Some(&request.body)} else {None},
+        "image_sha256":request.images.iter().map(|image| &image.sha256).collect::<Vec<_>>(),
         "decision":match &request.operation {Kind::Ask {decision_identity,..} => Some(decision_identity), _ => None},
         "reply_delivery":"not_dispatched","approval":"not_inferred",
         "saved_files":[LEDGER,LOCK],"http_scope":"configured task forum, verified new recovery threads, exact owner request"})
@@ -2569,10 +2577,13 @@ pub fn log(ctx: &mut Context, args: &LogArgs) -> Result<Value> {
 }
 
 /// The original decision scope and question text are retained even when another
-/// title/request ID is a semantic duplicate. Extra question text goes to progress.
+/// title/request ID is a semantic duplicate. Question text stays in its thread.
 pub fn ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
-    let incoming = prepare_ask(ctx, args)?;
-    execute(ctx, incoming, &[])
+    let mut incoming = prepare_ask(ctx, args)?;
+    let images = images(ctx, &args.request_id, &args.attach, &SecretCheck::new())?;
+    incoming.images = images.iter().map(|image| image.receipt.clone()).collect();
+    incoming.fingerprint = incoming.fingerprint()?;
+    execute(ctx, incoming, &images)
 }
 
 pub fn resume_ask(ctx: &mut Context, args: &ResumeAskArgs) -> Result<Value> {
@@ -2865,9 +2876,9 @@ fn execute_inner(
                     },
                     &first,
                     true,
-                    false,
+                    true,
                 )?,
-                &[],
+                images,
             )?;
             let bridge = format!(
                 "元の投稿: <{}>\n質問: <{}>\n以後の進捗と結果はこの投稿へ記録します。",
@@ -2898,46 +2909,62 @@ fn execute_inner(
             )?;
             for (index, body) in text.iter().enumerate().skip(1) {
                 let phase = format!("question-continuation:{index}");
+                // Never rewrite an already reserved legacy continuation. New
+                // questions keep all decision content inside the question.
+                let continuation = ledger
+                    .effect(&request.request_id, &phase)
+                    .cloned()
+                    .map(Ok)
+                    .unwrap_or_else(|| {
+                        effect(
+                            &request,
+                            &phase,
+                            Target::Thread {
+                                thread: question.thread_id.clone(),
+                            },
+                            body,
+                            false,
+                            false,
+                        )
+                    })?;
                 ensure(
                     &mut api,
                     &mut ledger,
                     &home,
                     &request,
                     &phase,
-                    effect(
-                        &request,
-                        &phase,
-                        Target::Thread {
-                            thread: progress.thread_id.clone(),
-                        },
-                        body,
-                        false,
-                        false,
-                    )?,
+                    continuation,
                     &[],
                 )?;
             }
             let question_links = format!(
-                "元の投稿: <{}>\n進捗と本文の続き: <{}>",
+                "元の投稿: <{}>\n進捗: <{}>",
                 request.destination.url(origin_thread),
                 request.destination.url(&progress.thread_id)
             );
+            let links = ledger
+                .effect(&request.request_id, "question-links")
+                .cloned()
+                .map(Ok)
+                .unwrap_or_else(|| {
+                    effect(
+                        &request,
+                        "question-links",
+                        Target::Thread {
+                            thread: question.thread_id.clone(),
+                        },
+                        &question_links,
+                        false,
+                        false,
+                    )
+                })?;
             ensure(
                 &mut api,
                 &mut ledger,
                 &home,
                 &request,
                 "question-links",
-                effect(
-                    &request,
-                    "question-links",
-                    Target::Thread {
-                        thread: question.thread_id.clone(),
-                    },
-                    &question_links,
-                    false,
-                    false,
-                )?,
+                links,
                 &[],
             )?;
             let origin_links = format!(
@@ -3668,6 +3695,7 @@ mod tests {
                 body_file,
                 title: Some("【情報システム部】指定外の登録の扱い".into()),
                 origin_thread: None,
+                attach: vec![],
             }
         }
         fn unchanged(&self) {
@@ -3787,6 +3815,45 @@ mod tests {
 
     fn media_proof(bytes: &[u8]) -> Value {
         json!({"domain":"discord-conversation-media-v1","verified":true,"sha256":format!("{:x}",Sha256::digest(bytes)),"size":bytes.len(),"mime":"image/png","extension":"png"})
+    }
+
+    #[test]
+    fn recovery_messages_question_image_and_choices_stay_inside_question() {
+        let fixture = Fixture::new();
+        let mut ctx = fixture.context();
+        fs::remove_file(&ctx.client_projects).unwrap();
+        let bytes = b"\x89PNG\r\n\x1a\nquestion-image";
+        let image = fixture.root.path().join("question.png");
+        fs::write(&image, bytes).unwrap();
+        let calls = media_mock(&fixture, &mut ctx, media_proof(bytes), 0);
+        let mut args = fixture.ask(
+            &format!("conversation-v1-{}", "b".repeat(32)),
+            &format!(
+                "画面案を選んでください。{}\na 上段に名前、下段に件数\nb 正常版を保ち別案",
+                "背景".repeat(1400)
+            ),
+        );
+        args.attach.push(image);
+        let result = ask(&mut ctx, &args).unwrap();
+        assert_eq!(result["delivery"], "verified");
+        let state = fixture.server.lock().unwrap();
+        let question = &state.messages[core::s(&result["thread_id"])];
+        assert_eq!(question[0]["attachments"].as_array().unwrap().len(), 1);
+        assert!(
+            question
+                .iter()
+                .any(|message| core::s(&message["content"]).contains("b 正常版"))
+        );
+        let progress = &state.messages[core::s(&result["progress_thread_id"])];
+        assert!(
+            progress
+                .iter()
+                .all(|message| !core::s(&message["content"]).contains("b 正常版"))
+        );
+        assert_eq!(state.multipart_uploads, 1);
+        drop(state);
+        assert_eq!(calls.lock().unwrap().len(), 1);
+        fixture.unchanged();
     }
 
     #[test]
@@ -4271,7 +4338,77 @@ mod tests {
     }
 
     #[test]
-    fn recovery_messages_long_owner_question_continues_only_in_silent_progress() {
+    fn recovery_messages_legacy_reserved_question_layout_is_retried_without_reposting() {
+        let fixture = Fixture::new();
+        let args = fixture.ask(
+            "legacy-question-layout",
+            &"長い質問の背景です。".repeat(400),
+        );
+        let mut ctx = fixture.context();
+        let first = ask(&mut ctx, &args).unwrap();
+        let question_id = core::s(&first["thread_id"]);
+        let progress_id = core::s(&first["progress_thread_id"]);
+        let mut ledger = Ledger::load(&fixture.home).unwrap();
+        for event in &mut ledger.events {
+            match event {
+                Event::Pending { phase, effect, .. }
+                    if phase.starts_with("question-continuation:") =>
+                {
+                    effect.target = Target::Thread {
+                        thread: progress_id.into(),
+                    };
+                }
+                Event::Pending { phase, effect, .. } if phase == "question-links" => {
+                    effect.content = effect.content.replace("進捗:", "進捗と本文の続き:");
+                }
+                Event::Posted {
+                    phase, thread_id, ..
+                } if phase.starts_with("question-continuation:") => *thread_id = progress_id.into(),
+                Event::Verified { phase, receipt, .. }
+                    if phase.starts_with("question-continuation:") =>
+                {
+                    receipt.thread_id = progress_id.into()
+                }
+                _ => {}
+            }
+        }
+        ledger.validate().unwrap();
+        fs::write(
+            fixture.home.join(LEDGER),
+            serde_json::to_vec_pretty(&ledger).unwrap(),
+        )
+        .unwrap();
+        {
+            let mut state = fixture.server.lock().unwrap();
+            let mut moved = vec![];
+            for message in state.messages.get_mut(question_id).unwrap().iter_mut() {
+                if core::s(&message["content"]).contains(":question-continuation:") {
+                    message["channel_id"] = json!(progress_id);
+                    moved.push(message.clone());
+                } else if core::s(&message["content"]).contains(":question-links") {
+                    message["content"] =
+                        json!(core::s(&message["content"]).replace("進捗:", "進捗と本文の続き:"));
+                }
+            }
+            state
+                .messages
+                .get_mut(question_id)
+                .unwrap()
+                .retain(|message| {
+                    !core::s(&message["content"]).contains(":question-continuation:")
+                });
+            state.messages.get_mut(progress_id).unwrap().extend(moved);
+        }
+        let posts = fixture.server.lock().unwrap().posts.len();
+        let retry = ask(&mut ctx, &args).unwrap();
+        assert_eq!(retry["thread_id"], first["thread_id"]);
+        assert_eq!(retry["delivery"], "verified");
+        assert_eq!(fixture.server.lock().unwrap().posts.len(), posts);
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn recovery_messages_long_owner_question_continues_in_question_without_extra_mentions() {
         let fixture = Fixture::new();
         let body = format!(
             "指定外の登録の扱いを決めてください。\na 保留して担当を残す\nb 終了した登録だけ整理する\n{}",
@@ -4283,8 +4420,8 @@ mod tests {
         let state = fixture.server.lock().unwrap();
         let question = &state.messages[core::s(&out["thread_id"])];
         let progress = &state.messages[core::s(&out["progress_thread_id"])];
-        assert_eq!(question.len(), 2); // starter and the silent link only
-        assert!(progress.len() > 2);
+        assert!(question.len() > 2);
+        assert_eq!(progress.len(), 1);
         let posted_mentions: usize = state
             .messages
             .values()
@@ -4307,7 +4444,9 @@ mod tests {
             assert!(core::s(&message["content"]).encode_utf16().count() <= MAX_CONTENT);
         }
         assert!(core::s(&progress[0]["content"]).contains(core::s(&out["url"])));
-        assert!(core::s(&question[1]["content"]).contains(core::s(&out["progress_url"])));
+        assert!(
+            core::s(&question.last().unwrap()["content"]).contains(core::s(&out["progress_url"]))
+        );
         assert!(core::s(&state.messages[ORIGIN][0]["content"]).contains(core::s(&out["url"])));
         drop(state);
         assert_eq!(out["original_question"], body);
@@ -5721,7 +5860,8 @@ mod tests {
     }
 
     #[test]
-    fn recovery_close_accepts_only_explicit_same_instant_timestamp_text_with_audit_and_unchanged_receipt() {
+    fn recovery_close_accepts_only_explicit_same_instant_timestamp_text_with_audit_and_unchanged_receipt()
+     {
         let fixture = Fixture::new();
         let mut ctx = fixture.context();
         let (args, binding, _) = close_fixture(&fixture, &mut ctx);
@@ -5828,7 +5968,10 @@ mod tests {
                 "accepted {scenario}"
             );
             assert_eq!(patch_count(&fixture), 0, "{scenario}");
-            assert!(!fixture.home.join(EQUIVALENCE_LEDGER).exists(), "{scenario}");
+            assert!(
+                !fixture.home.join(EQUIVALENCE_LEDGER).exists(),
+                "{scenario}"
+            );
             fixture.unchanged();
         }
     }
@@ -5853,12 +5996,24 @@ mod tests {
         close(&mut ctx, &with_legacy(&args, LEGACY_SAME_INSTANT)).unwrap();
         let before = fs::read(fixture.home.join(EQUIVALENCE_LEDGER)).unwrap();
         assert!(close(&mut ctx, &with_legacy(&args, "2026-10-12T00:00:01.000Z")).is_err());
-        assert_eq!(fs::read(fixture.home.join(EQUIVALENCE_LEDGER)).unwrap(), before);
+        assert_eq!(
+            fs::read(fixture.home.join(EQUIVALENCE_LEDGER)).unwrap(),
+            before
+        );
         // The retained-record guard itself: evidence that differs in any field is refused.
-        let mut other = EquivalenceLedger::load(&fixture.home).unwrap().records[&binding.thread_id].clone();
+        let mut other =
+            EquivalenceLedger::load(&fixture.home).unwrap().records[&binding.thread_id].clone();
         other.api_reply_sha256 = "0".repeat(64);
-        assert!(EquivalenceLedger::load(&fixture.home).unwrap().record(&fixture.home, &other).is_err());
-        assert_eq!(fs::read(fixture.home.join(EQUIVALENCE_LEDGER)).unwrap(), before);
+        assert!(
+            EquivalenceLedger::load(&fixture.home)
+                .unwrap()
+                .record(&fixture.home, &other)
+                .is_err()
+        );
+        assert_eq!(
+            fs::read(fixture.home.join(EQUIVALENCE_LEDGER)).unwrap(),
+            before
+        );
     }
 
     #[test]

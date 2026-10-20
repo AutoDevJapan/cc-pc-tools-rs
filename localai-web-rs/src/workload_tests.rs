@@ -582,7 +582,10 @@ fn codex_cumulative_usage_is_not_counted_twice() {
         );
     }
     assert_eq!(cursor.session_id, "fixture-session");
-    assert_eq!(cursor.days["2026-10-01"].tokens, 300);
+    // The first 250 cumulative tokens seed the baseline. Only the next 50
+    // belong to this observation, even when the 300-total record is repeated.
+    assert_eq!(cursor.cumulative_tokens, 300);
+    assert_eq!(cursor.days["2026-10-01"].tokens, 50);
     assert_eq!(cursor.days["2026-10-01"].tools, 1);
     assert_eq!(
         cursor.days["2026-10-01"]

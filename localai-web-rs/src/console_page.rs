@@ -349,7 +349,7 @@ function scenario(hasMusic,fromRoot=false) {
   const panels=views.map(node),links=views.map(node); [...panels,...links].forEach(n=>n.classList.owner=n);
   const title=node('title'),subtitle=node('subtitle'),listeners={},stack=[];
   let refreshes=0;
-  const ctx={URL,location:{href:hasMusic&&!fromRoot?'http://localhost:10012/music/project':'http://localhost:10012/'},
+  const ctx={URL,location:{href:hasMusic&&!fromRoot?'http://localhost:10012/music/project':'http://localhost:10012/',get pathname(){return new URL(this.href).pathname}},
     $:selector=>selector==='#page-title'?title:selector==='#page-subtitle'?subtitle:panels.find(n=>'#'+n.id===selector),
     $$:selector=>selector==='.view'?panels:links,
     refreshOperations(){refreshes++},refresh(){},cancelPageFetches(){},refreshCurrentPage(){if(panels.some(n=>n.active&&["kanban","progress"].includes(n.dataset.view)))refreshes++},CustomEvent:class {constructor(type,options){this.type=type;this.detail=options.detail}},

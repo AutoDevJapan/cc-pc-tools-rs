@@ -102,7 +102,7 @@ const unesc=x=>x.replaceAll('&quot;','"').replaceAll('&lt;','<').replaceAll('&am
 const opsKey=(...parts)=>JSON.stringify(parts),opsColor=()=> '#3B73C4';
 const opsRobot=()=>'',opsCount=rows=>String(rows.length),opsIsOpen=w=>w.status==='working';
 const opsPriority=()=>0,opsMatchesStatus=()=>true,opsDependencies=()=>'',opsShort=x=>x;
-const opsProgress=()=>'',opsStatus=x=>x,opsFacts=()=>'',opsNumber=x=>Number.isFinite(x)?x:null,opsDecimal=x=>String(x);
+const opsProgress=()=>'',opsStatus=x=>x,opsFacts=()=>'',opsPreview=()=>'',opsNumber=x=>Number.isFinite(x)?x:null,opsDecimal=x=>String(x);
 const opsRestoreBoardFocus=()=>{},openOpsDetail=()=>{};
 let productNodes=[];
 const $$=selector=>{

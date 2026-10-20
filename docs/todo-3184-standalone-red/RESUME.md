@@ -18,4 +18,6 @@
 
 旧実装の全1182ファイルが生blobのSHA256と一致し、テスト1ファイルだけを重ねた後も指定blobと一致した。実行前後の変更はない。改行変換の事前検出と修正経緯は `archive-preflight.json` に保持する。測定は再実行しない。
 
-残作業: 結果のコミットと保存の確認、一時領域のplan→別呼出しの削除→finish、通常checkpoint-workspace。共有ToDoの状態はschedulerが更新する。
+測定結果は `e0ecaff825acae98c811f342ed83bfd0d27b9673` でコミットして同じ作業ブランチへpush済み。一時領域はplanの容量基準により退避対象となり、Cへの退避はQUARANTINE_CROSS_DRIVEで止まったため、指定手順で同じDの削除希望へ退避した。識別番号・3031ファイル・容量の一致と元の場所の不在を確認した。原資料・測定証拠は保持している。削除とfinishは実施していない。詳しくは `cleanup-result.json`。
+
+有限検査の実作業は完了した。最後の片付け記録をこのブランチにコミットしてpushした後、通常の `scheduler.exe checkpoint-workspace` に自分のid/job/同じブランチ/実HEADを保存する。チェックポイント受付結果は通常のジョブ結果とscheduler側の保存記録で確認する。測定を再実行しない。親はこのブランチの `RESULT.md` とログを受領し、元の3103を続行する。共有ToDoの状態はschedulerが更新する。

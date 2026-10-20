@@ -1,0 +1,19 @@
+{
+  "completed_at": "2026-10-21T05:08:42.9229835+09:00",
+  "state": "manually_quarantined",
+  "source": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3184-3103-1\\codex-owned-8609944fc2b7cc7d9f899c69c1036804",
+  "destination": "D:\\削除希望\\20261021-todo-3184-standalone-red-8609944f\\files",
+  "reason": "size",
+  "helper_failure": "QUARANTINE_CROSS_DRIVE",
+  "same_drive": true,
+  "source_absent": true,
+  "root_identity_before": "File ID is 0x0000000000000000004d000000653a97",
+  "root_identity_after": "File ID is 0x0000000000000000004d000000653a97",
+  "files_before": 3031,
+  "files_after": 3031,
+  "bytes_before": 1324773480.0,
+  "bytes_after": 1324773480.0,
+  "deleted": false,
+  "ownership_record_manually_modified": false,
+  "finish_called": false
+}

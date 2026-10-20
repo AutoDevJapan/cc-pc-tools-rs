@@ -1,0 +1,5 @@
+{
+  "exit_code": 0,
+  "reply": "{\"delivery\":\"verified\",\"domain\":\"discord-conversation-v1\",\"message_id\":\"1562196101539561544\",\"request_id\":\"normal-log-a0f47ad2a944637a087da1b16f2298651d3aa7b7e6e6f234a40d080933335d52\",\"reused\":false,\"thread_id\":\"1561297764258807821\",\"url\":\"https://discord.com/channels/1552944707464597524/1561297764258807821\"}",
+  "notify_requested": false
+}

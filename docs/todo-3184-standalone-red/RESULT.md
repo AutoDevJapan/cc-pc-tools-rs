@@ -34,3 +34,5 @@ cargo nextest run --locked -p localai-web-rs --lib -E 'test(mcp_standalone_job_k
 初回の展開前検査では、tracked属性の `eol=crlf` による別ファイルの改行変換を検出した。Cargo起動前に止め、一時的な属性用作業場所から変換なしのarchiveを作り直した。最終的に全1182ファイルをGitの生blobと照合してから、テスト1ファイルだけを重ねた。事前検出の記録は `archive-preflight.json` と `archive-initial-sha256.json` に残した。原資料と親の作業ソースは保持している。
 
 この担当の対象は旧実装での1件の測定だけ。現在候補のGreen、自動検査、別モデルレビュー、マージ、配布は親3103が行う。
+
+片付けでは、safe-deleteのplanが1,324,773,480 byteを容量基準による退避対象と判定した。quarantineはCドライブへの移動を `QUARANTINE_CROSS_DRIVE` で止めたため、Skill `codex-safe-owned-temp-cleanup` の手順に従い、同じDドライブの `D:/削除希望/20261021-todo-3184-standalone-red-8609944f/files` へ手動で退避した。根のfile ID、3031ファイル、容量の一致と元の場所の不在を確認した。削除済みとは扱わず、所有記録を手動変更したりfinishを呼んだりしていない。詳しい実結果は `cleanup-*.json` に保持し、既存の後片付けスレッドへ通知なしで1件記録した。

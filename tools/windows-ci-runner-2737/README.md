@@ -306,6 +306,18 @@ EOF during configuration also cancels its tree. Protocol order rejects reentry,
 unexpected stages, wrong role/run/pin/inputs/runner, unknown/duplicate JSON keys,
 truncated frames and oversized allocations (control32KiB/source256MiB).
 
+Before registration acknowledgement, a failed configuration emits a bounded
+`failed` observation after the registration token bytes are cleared. Its code
+is one of `configuration-setup/create/identity/assign/resume/execute`, plus only
+an observed numeric Win32 error for creation/identity/assignment/resume failures.
+A measured exit is included only with confirmed drain and a valid output hash.
+No command line, exception text, token, or output body is transmitted. The host
+accepts this failure only while waiting for `configured`, with runner identity0;
+it persists the observation and returns failure without registering, claiming,
+or starting the listener. This observation does not authorize resource cleanup.
+The metadata distinguishes a native launch failure from a measured child exit;
+it does not by itself diagnose or fix the failed stock configuration.
+
 Stdout is a bounded private prefix, returned only as SHA256. Stock `_diag` logs
 remain private on the disposable disk, use1MiB pages, and cancel the tree at a
 sampled64MiB/1024-file threshold (100ms sampling may overshoot within an interval;

@@ -20,10 +20,42 @@ type hookCall struct {
 	reply   chan error
 }
 type processResult struct {
-	exit    uint32
-	drained bool
-	logHash string
-	err     error
+	exit        uint32
+	drained     bool
+	logHash     string
+	err         error
+	phase       string
+	nativeError uint32
+}
+
+// Configuration failures contain fixed phases/numeric results only. Never
+// serialize an error string, registration input, command line or raw output.
+type configurationError struct{ result processResult }
+
+func (*configurationError) Error() string { return "stock runner configuration failed" }
+
+func configurationFailure(instance string, e error) Event {
+	ev := Event{Instance: instance, Stage: Failed, FailureCode: "configuration-setup"}
+	var failure *configurationError
+	if !errors.As(e, &failure) {
+		return ev
+	}
+	r := failure.result
+	switch r.phase {
+	case "create", "identity", "assign", "resume", "execute":
+		ev.FailureCode = "configuration-" + r.phase
+	}
+	if r.phase == "create" || r.phase == "identity" || r.phase == "assign" || r.phase == "resume" {
+		ev.NativeError = r.nativeError
+	}
+	if validHex(r.logHash, 64) {
+		ev.LogSHA256 = r.logHash
+	}
+	if r.drained && ev.LogSHA256 != "" {
+		ev.Drained = true
+		ev.Exit = &r.exit
+	}
+	return ev
 }
 
 // Only the fixed Windows implementation can execute a real process. Tests use
@@ -165,6 +197,7 @@ func guestSession(ctx context.Context, c net.Conn, seed Seed, ops guestOps) (ret
 	e = ops.configure(ctx, m.Token)
 	clear(m.Token)
 	if e != nil {
+		_ = send(c, configurationFailure(p.Instance, e))
 		return errors.New("stock runner configuration failed")
 	}
 	if send(c, Event{Instance: p.Instance, Stage: Configured}) != nil {

@@ -101,7 +101,7 @@ func HostSession(ctx context.Context, c net.Conn, seed Seed, packet sourcepacket
 			}
 			return ev, errors.New("Windows runner failed or drain unconfirmed")
 		}
-		if ev.Instance != p.Instance || ev.Stage != stage || ev.FailureCode != "" {
+		if ev.Instance != p.Instance || ev.Stage != stage || ev.FailureCode != "" || ev.NativeError != 0 {
 			return ev, errors.New("Windows event order rejected")
 		}
 		if stage == SourceReady || stage == Start || stage == Complete {
@@ -160,10 +160,31 @@ func HostSession(ctx context.Context, c net.Conn, seed Seed, packet sourcepacket
 	return Event{}, errors.New("session incomplete")
 }
 
-// Failures are observations of this admitted listener, not cleanup permission.
-// A timeout/process result must include a confirmed drain and measured exit/hash.
+// Failures are observations of this admitted configuration/listener, not
+// cleanup permission. A listener timeout/process result must include a confirmed
+// drain and measured exit/hash. A pre-launch configuration failure has no exit.
 // An unconfirmed drain may lack an exit/hash but never masquerades as timeout.
 func validFailure(p Plan, expected Stage, runnerID int64, ev Event) bool {
+	// Registration has not been acknowledged here. This observation never
+	// supplies a runner identity or authorizes listening/cleanup on its own.
+	if expected == Configured && runnerID == 0 && ev.RunnerID == 0 && ev.Instance == p.Instance && ev.Stage == Failed {
+		switch ev.FailureCode {
+		case "configuration-create", "configuration-identity", "configuration-assign", "configuration-resume":
+		case "configuration-setup", "configuration-execute":
+			if ev.NativeError != 0 {
+				return false
+			}
+		default:
+			return false
+		}
+		if ev.Drained {
+			return ev.Exit != nil && validHex(ev.LogSHA256, 64)
+		}
+		return ev.Exit == nil && (ev.LogSHA256 == "" || validHex(ev.LogSHA256, 64))
+	}
+	if ev.NativeError != 0 {
+		return false
+	}
 	if runnerID < 1 || (expected != Start && expected != Complete && expected != RunnerExited) || ev.Instance != p.Instance || ev.Stage != Failed || ev.RunnerID != runnerID {
 		return false
 	}

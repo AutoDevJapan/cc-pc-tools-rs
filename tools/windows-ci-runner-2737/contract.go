@@ -105,6 +105,7 @@ type Event struct {
 	Drained     bool
 	LogSHA256   string
 	FailureCode string
+	NativeError uint32 `json:",omitempty"`
 }
 type ack struct {
 	Instance string

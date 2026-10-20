@@ -71,7 +71,7 @@ func runRunnerTree(ctx context.Context, exe, line, dir string, env []string, pri
 }
 
 func runTreeWithToken(ctx context.Context, exe, line, dir string, env []string, privateLog string, token syscall.Token) processResult {
-	result := processResult{}
+	result := processResult{phase: "setup"}
 	job, _, _ := createJob.Call(0, 0)
 	if job == 0 {
 		result.err = errors.New("process job unavailable")
@@ -170,6 +170,7 @@ func runTreeWithToken(ctx context.Context, exe, line, dir string, env []string, 
 	var pi syscall.ProcessInformation
 	// CREATE_NO_WINDOW | CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT
 	flags := uint32(0x08000000 | 4 | 0x400 | 0x80000)
+	result.phase = "create"
 	if token == 0 {
 		e = syscall.CreateProcess(app, command, nil, nil, true, flags, &block[0], cwd, &si.StartupInfo, &pi)
 	} else {
@@ -178,12 +179,16 @@ func runTreeWithToken(ctx context.Context, exe, line, dir string, env []string, 
 	runtime.KeepAlive(attrs)
 	runtime.KeepAlive(handles)
 	if e != nil {
+		if code, ok := e.(syscall.Errno); ok {
+			result.nativeError = uint32(code)
+		}
 		result.err = errors.New("fixed process creation failed")
 		return result
 	}
 	defer syscall.CloseHandle(pi.Process)
 	defer syscall.CloseHandle(pi.Thread)
 	if token != 0 {
+		result.phase = "identity"
 		var childToken syscall.Token
 		e := syscall.OpenProcessToken(pi.Process, syscall.TOKEN_QUERY, &childToken)
 		if e == nil {
@@ -191,26 +196,40 @@ func runTreeWithToken(ctx context.Context, exe, line, dir string, env []string, 
 			childToken.Close()
 		}
 		if e != nil {
+			if code, ok := e.(syscall.Errno); ok {
+				result.nativeError = uint32(code)
+			}
 			syscall.TerminateProcess(pi.Process, 125)
 			syscall.WaitForSingleObject(pi.Process, 10000)
 			result.err = errors.New("suspended runner identity rejected")
 			return result
 		}
 	}
-	if ok, _, _ := assignJob.Call(job, uintptr(pi.Process)); ok == 0 {
+	result.phase = "assign"
+	if ok, _, callErr := assignJob.Call(job, uintptr(pi.Process)); ok == 0 {
+		if code, ok := callErr.(syscall.Errno); ok {
+			result.nativeError = uint32(code)
+		}
 		syscall.TerminateProcess(pi.Process, 125)
 		syscall.WaitForSingleObject(pi.Process, 10000)
 		result.err = errors.New("suspended process assignment failed")
 		return result
 	}
-	count, _, _ := resumeThread.Call(uintptr(pi.Thread))
+	result.phase = "resume"
+	count, _, callErr := resumeThread.Call(uintptr(pi.Thread))
 	if count != 1 {
+		if count == 0xffffffff {
+			if code, ok := callErr.(syscall.Errno); ok {
+				result.nativeError = uint32(code)
+			}
+		}
 		terminateJob.Call(job, 125)
 		syscall.WaitForSingleObject(pi.Process, 10000)
 		result.err = errors.New("initial resume count rejected")
 		return result
 	}
 	w.Close()
+	result.phase = "execute"
 	// The reader always drains. On overflow it requests tree termination and
 	// retains only the bounded private prefix; its hash covers that prefix.
 	logDone := make(chan error, 1)

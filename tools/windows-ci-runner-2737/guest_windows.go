@@ -219,7 +219,7 @@ func (o *windowsOps) configure(ctx context.Context, token []byte) error {
 		env[i] = ""
 	}
 	if r.err != nil || r.exit != 0 || !r.drained {
-		return errors.New("stock configuration exit or drain failed")
+		return &configurationError{result: r}
 	}
 	return nil
 }

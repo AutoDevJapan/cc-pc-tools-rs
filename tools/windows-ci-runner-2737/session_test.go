@@ -66,6 +66,8 @@ type fakeOps struct {
 	configureEntered     chan struct{}
 	processError         error
 	clockError           error
+	configureError       error
+	configureToken       []byte
 	mu                   sync.Mutex
 }
 
@@ -86,6 +88,10 @@ func (o *fakeOps) configure(ctx context.Context, token []byte) error {
 	}
 	if string(token) != "synthetic-registration-token" {
 		return errors.New("wrong token")
+	}
+	o.configureToken = token
+	if o.configureError != nil {
+		return o.configureError
 	}
 	o.mu.Lock()
 	o.configured = true
@@ -143,6 +149,8 @@ type fakeHost struct {
 	reject        Stage
 	registered    bool
 	clockRejected bool
+	observations  []Event
+	claims        int
 }
 
 func (h *fakeHost) ClockObserved(context.Context, Plan, ClockReceipt) error {
@@ -166,6 +174,7 @@ func (h *fakeHost) Registered(context.Context, Plan) (int64, error) {
 	return 789, nil
 }
 func (h *fakeHost) Claim(_ context.Context, p Plan, id int64, ev Event) error {
+	h.claims++
 	if !h.registered || id != 789 || h.reject == ev.Stage {
 		return errors.New("official claim rejected")
 	}
@@ -173,6 +182,7 @@ func (h *fakeHost) Claim(_ context.Context, p Plan, id int64, ev Event) error {
 }
 func (h *fakeHost) Observe(_ context.Context, ev Event) error {
 	h.events = append(h.events, ev.Stage)
+	h.observations = append(h.observations, ev)
 	return nil
 }
 

@@ -15,6 +15,21 @@ import (
 )
 
 // Child fixture is this test binary, never a runner/service/SDK/Cargo process.
+func TestNativeCreationFailureHasMeasuredCodeWithoutInventedExit(t *testing.T) {
+	root := t.TempDir()
+	exe := filepath.Join(root, "absent-fixture.exe")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	r := runTree(ctx, exe, syscall.EscapeArg(exe), root, os.Environ(), "")
+	if r.err == nil || r.phase != "create" || r.nativeError != uint32(syscall.ERROR_FILE_NOT_FOUND) || r.drained || r.logHash != "" {
+		t.Fatalf("native failure incorrectly measured: %#v", r)
+	}
+	ev := configurationFailure(testSeed().Plan.Instance, &configurationError{result: r})
+	if ev.NativeError != uint32(syscall.ERROR_FILE_NOT_FOUND) || ev.Exit != nil || ev.Drained {
+		t.Fatal("creation failure lost native result or invented process exit")
+	}
+}
+
 func TestTreeFixture(t *testing.T) {
 	mode := os.Getenv("CC2828_TREE_FIXTURE")
 	if mode == "" {

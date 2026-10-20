@@ -87,3 +87,27 @@
 無関係な変更がないことを確認してcommit/pushします。実HEADで
 `scheduler checkpoint-workspace` を保存してから元3190に有限wait-retryを登録し、
 正常な一覧で待機を読み返します。未完了の実装はこの担当の元ToDoに残します。
+
+### 初回checkpointの照合失敗
+
+文書保存コミット `e6a1eaa0e3c3749b21d34d5de0b9545e0a0cf750` はoriginの
+`scheduler/todo-3190-3110` へpush済みで、正常な `git ls-remote` と一致しました。
+この実HEAD・実job・変更していない同一ブランチを指定した初回checkpointは、
+正常CLI内部の `workspace checkpoint failed InputRejected` で終了しました。
+自動承認レビューの拒否ではありません。同じ要求は再送していません。
+
+原因の照合には既存ソース `cc-scheduler/src/workspace_checkpoint.rs` と、
+正常な `cc-console todo list --id 3190` のmetadataだけを使いました。
+後者は `status=todo`、`schedulerPhase=prepared`、`jobs=[]`、`jobsTotal=0`、
+`activeJob=null`、`agent=null` を返しました。一方、正常jobs照会では自分のjobは
+runningです。少なくともcheckpoint必須条件の「実jobが元ToDoのjobsに所属すること」が
+まだ成立していません。入力JSONの型、job/ブランチの形式、実HEADはソースの条件に合います。
+保護されたstateやtodo原本はraw読取・編集していません。
+
+担当の所属を手動で作ったり、他のjobを借りたり、元項目をstartで書き換えたりせず、
+元3190の技術再確認理由にこの不一致も残します。再開時は正常CLIで実際の所属を確認し、
+同じjobまたは正規に割り当てられた後継jobと保存branchを照合してからcheckpointします。
+今回はブランチの変更はありません。未保存のcheckpointと実装未着手を成功扱いしません。
+自分のworktreeにある `todo3190-workspace-checkpoint.private.json` は失敗した要求、
+`todo3190-preflight-jobs.private.json` は選択した2件だけの通常status観測で、
+いずれもGit対象外として保持しています。

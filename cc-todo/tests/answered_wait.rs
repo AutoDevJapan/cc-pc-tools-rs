@@ -153,6 +153,12 @@ fn answered_wait_moves_only_verified_manual_hold_to_existing_dependency() {
             receipt["api_reply"]["owner_replies"][0]["body"],
             "synthetic owner answer"
         );
+        assert!(
+            after["items"][0]["scheduler"]["owner_instruction"]
+                .as_str()
+                .unwrap()
+                .contains("synthetic owner answer")
+        );
         let mut normalized = after.clone();
         normalized["items"][0]["status"] = original["items"][0]["status"].clone();
         normalized["items"][0]["updated"] = original["items"][0]["updated"].clone();
@@ -160,6 +166,10 @@ fn answered_wait_moves_only_verified_manual_hold_to_existing_dependency() {
             .as_object_mut()
             .unwrap()
             .remove("answered_dependency_wait_receipt");
+        normalized["items"][0]["scheduler"]
+            .as_object_mut()
+            .unwrap()
+            .remove("owner_instruction");
         assert_eq!(normalized, original);
         let raw = f.raw();
         assert_eq!(
@@ -241,6 +251,12 @@ fn answered_wait_rejects_other_identity_generation_missing_history_or_instructio
             }
         }
         f.reject(3050, plan["state_sha256"].as_str().unwrap());
+        let before = f.raw();
+        assert!(
+            !f.call(3050, &[]).status.success(),
+            "the proof itself must fail without relying on an obsolete CAS"
+        );
+        assert_eq!(before, f.raw());
     }
 }
 
@@ -312,6 +328,58 @@ fn answered_wait_does_not_replace_normal_wait_or_start_semantics() {
 }
 
 #[test]
+fn answered_wait_delivers_verified_answer_after_dependency_release() {
+    let f = Fixture::new(3050);
+    let mut d = f.db();
+    d["items"][0]["scheduler"]["owner_instruction"] = json!("original approved instructions");
+    f.put(&d);
+    let plan = f.ok(3050, &[]);
+    f.ok(
+        3050,
+        &[
+            "--apply",
+            "--expected-state-sha256",
+            plan["state_sha256"].as_str().unwrap(),
+        ],
+    );
+    let mut d = f.db();
+    let instruction = d["items"][0]["scheduler"]["owner_instruction"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert!(instruction.starts_with("original approved instructions\n"));
+    assert!(instruction.contains("synthetic owner answer"));
+    assert!(instruction.contains("1561951289468911707"));
+    assert!(instruction.contains("Synthetic current user task"));
+    assert!(instruction.contains(f.temp.path().join("reply.json").to_str().unwrap()));
+    let paths = cc_todo::Paths::at(f.temp.path(), &f.temp.path().join("jobs"));
+    cc_todo::execute(
+        &mut d,
+        &cc_todo::Command::Done {
+            id: 3084,
+            note: String::new(),
+        },
+        &paths,
+    )
+    .unwrap();
+    assert_eq!(d["items"][0]["status"], "todo");
+    assert_eq!(d["items"][0]["scheduler"]["owner_instruction"], instruction);
+    assert_eq!(d["items"][0]["spec"], "original-spec.md");
+}
+
+#[test]
+fn answered_wait_without_worker_rejects_reserved_launch_keys() {
+    let f = Fixture::new(3070);
+    let mut d = f.db();
+    d["items"][0]["scheduler"]["key"] = json!("reserved-next-launch");
+    d["items"][0]["scheduler"]["phase"] = json!("prepared");
+    f.put(&d);
+    let before = f.raw();
+    assert!(!f.call(3070, &[]).status.success());
+    assert_eq!(before, f.raw());
+}
+
+#[test]
 fn answered_wait_verifies_current_and_normally_retired_owner_without_rebinding() {
     for kind in ["scheduled", "retired", "manual-terminal-phase"] {
         let f = Fixture::new(3050);
@@ -352,12 +420,14 @@ fn answered_wait_verifies_current_and_normally_retired_owner_without_rebinding()
             .unwrap();
             f.reject(3050, token);
         }
-        for key in ["stopped", "live_pid", "unknown_pid"] {
+        for key in ["stopped", "live_pid", "unknown_pid", "missing_birth"] {
             let mut changed = job.clone();
             if key == "stopped" {
                 changed["stopped"] = json!(true);
             } else if key == "unknown_pid" {
                 changed["pid"] = json!(0);
+            } else if key == "missing_birth" {
+                changed["pid"] = json!(std::process::id());
             } else {
                 changed["pid"] = json!(std::process::id());
                 changed["pid_created"] =
@@ -370,6 +440,16 @@ fn answered_wait_verifies_current_and_normally_retired_owner_without_rebinding()
             .unwrap();
             f.reject(3050, token);
         }
+        let mut reused = job.clone();
+        reused["pid"] = json!(std::process::id());
+        reused["pid_created"] =
+            json!(cc_scheduler::native::process_birth(std::process::id()).unwrap() + 1);
+        fs::write(
+            f.temp.path().join("jobs/finished-original/job.json"),
+            serde_json::to_vec(&reused).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(f.ok(3050, &[])["changed"], false);
         fs::write(
             f.temp.path().join("jobs/finished-original/job.json"),
             serde_json::to_vec(&job).unwrap(),
@@ -380,7 +460,12 @@ fn answered_wait_verifies_current_and_normally_retired_owner_without_rebinding()
             f.db()["items"][0]["worker_receipt"],
             d["items"][0]["worker_receipt"]
         );
-        assert_eq!(f.db()["items"][0]["scheduler"], d["items"][0]["scheduler"]);
+        let mut scheduler = f.db()["items"][0]["scheduler"].clone();
+        scheduler
+            .as_object_mut()
+            .unwrap()
+            .remove("owner_instruction");
+        assert_eq!(scheduler, d["items"][0]["scheduler"]);
     }
 }
 

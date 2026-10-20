@@ -198,6 +198,35 @@ fn production(paths: &Paths) -> bool {
             .zip(std::fs::canonicalize(real).ok())
             .is_some_and(|(a, b)| a == b)
 }
+fn frozen(id: i64) -> Result<(&'static str, &'static str)> {
+    match id {
+        3050 => Ok((
+            "db25fd71aad05c4500b7d6f5c7cdf46ea653a534b3de18077da6c2eca76a817d",
+            "d47fde1b2329e0760396611dd55512094db115bbe46773ebd605bed221f56ce2",
+        )),
+        3070 => Ok((
+            "caeace0713a7e89981b577151edd50ba60e9d17233728ecff71e155fe64b274d",
+            "41aa9e437ebb335f130f7d0e06f74e62c0221ffe5432d53b31247dd63ca81c73",
+        )),
+        _ => fail("scope_mismatch"),
+    }
+}
+fn state_sha(row: &Value) -> Result<String> {
+    Ok(sha(
+        &serde_json::to_vec(row).map_err(|_| "answered_wait_state_invalid")?
+    ))
+}
+fn check_frozen_state(row: &Value, expected: &str) -> Result<()> {
+    let actual = if row[RECEIPT].is_null() {
+        state_sha(row)?
+    } else {
+        text(&row[RECEIPT], "state_sha256").to_owned()
+    };
+    if actual != expected {
+        return fail("production_state_changed");
+    }
+    Ok(())
+}
 fn production_scope(db: &Value, paths: &Paths, id: i64, e: &Value) -> Result<()> {
     if !production(paths) {
         return Ok(());
@@ -213,22 +242,22 @@ fn production_scope(db: &Value, paths: &Paths, id: i64, e: &Value) -> Result<()>
         || e["api_reply"]["sha256"]
             != "d161c2c79dbc52e145fb5d4829d5cdbf808bbf4e74e603e77ffbbc2c1f3c9834"
         || e["current_instruction"]["text"] != DIRECTIVE
+        || sha(text(e, "expected_note").as_bytes()) != frozen(id)?.0
         || crate::normalized(&paths.jobs.to_string_lossy())
             != crate::normalized(&Paths::production().jobs.to_string_lossy())
     {
         return fail("production_evidence_mismatch");
     }
-    let mut c = std::process::Command::new("D:/CC/Tools/client-records/scrub391.exe");
-    c.args(["--guard-path", text(&db["projects"], "cc-pc-tools-rs")]);
-    #[cfg(windows)]
-    {
-        use std::os::windows::process::CommandExt;
-        c.creation_flags(0x08000000);
-    }
-    let out = c.output().map_err(|_| "answered_wait_guard_unavailable")?;
-    let guard = parse(&out.stdout)?;
-    if !out.status.success()
-        || guard["ok"] != true
+    let guard = cc_ask::core::run_hidden_json(
+        &[
+            "D:/CC/Tools/client-records/scrub391.exe".into(),
+            "--guard-path".into(),
+            text(&db["projects"], "cc-pc-tools-rs").into(),
+        ],
+        10,
+    )
+    .map_err(|_| "answered_wait_guard_unavailable")?;
+    if guard["ok"] != true
         || guard["client_resource"] != false
         || guard["classification_unverified"] != false
     {
@@ -327,6 +356,11 @@ fn clear(r: &Value) -> Result<()> {
         ],
     )?;
     known(&r["worker_receipt"], &["job", "generation"])?;
+    if !r["scheduler"]["owner_instruction"].is_null()
+        && !r["scheduler"]["owner_instruction"].is_string()
+    {
+        return fail("other_hold");
+    }
     for t in [
         &r["scheduler"]["not_before"],
         &r["stall_recovery"]["next_at"],
@@ -411,7 +445,10 @@ fn process_birth(pid: u32) -> Result<Option<u64>> {
             return fail("owner_process_unavailable");
         }
         let ticks = |t: FILETIME| ((t.dwHighDateTime as u64) << 32) | u64::from(t.dwLowDateTime);
-        Ok((ticks(times[1]) == 0).then(|| ticks(times[0])))
+        // Exit time is undefined until exit. A matching creation time is a hold
+        // even if the original process exited but another handle retains it.
+        // https://learn.microsoft.com/windows/win32/api/processthreadsapi/nf-processthreadsapi-getprocesstimes
+        Ok(Some(ticks(times[0])))
     }
 }
 fn finished_owner(paths: &Paths, r: &Value) -> Result<()> {
@@ -423,7 +460,14 @@ fn finished_owner(paths: &Paths, r: &Value) -> Result<()> {
         return fail("owner_changed");
     }
     if scheduler_job.is_none() && r["jobs"].as_array().is_some_and(Vec::is_empty) {
-        if receipt_job.is_some() {
+        if receipt_job.is_some()
+            || !r["scheduler"]["key"].is_null()
+            || !r["scheduler"]["last_job"].is_null()
+            || !matches!(
+                text(&r["scheduler"], "phase"),
+                "" | "finished" | "waiting" | "resumed"
+            )
+        {
             return fail("owner_changed");
         }
         return Ok(());
@@ -521,6 +565,9 @@ pub fn transition(
     production_scope(db, paths, id, &e)?;
     let (api, old_note) = proof(&e, id)?;
     let r = row(db, id)?;
+    if production(paths) {
+        check_frozen_state(r, frozen(id)?.1)?;
+    }
     if !r[RECEIPT].is_null() {
         let saved = &r[RECEIPT];
         if saved["domain"] != DOMAIN
@@ -553,15 +600,34 @@ pub fn transition(
     {
         return fail("legacy_history_mismatch");
     }
-    let state_sha = sha(&serde_json::to_vec(r).map_err(|_| "answered_wait_state_invalid")?);
+    let state_sha = state_sha(r)?;
     if apply && expected.is_none_or(|s| !hash(s) || s != state_sha) {
         return fail("state_changed");
     }
     let result = json!({"id":id,"changed":apply,"state_sha256":state_sha,"status":if apply {"wait"} else {"block"},"wait_on":r["wait_on"]});
     if apply {
+        let previous_instruction = text(&r["scheduler"], "owner_instruction");
+        let delivered = format!(
+            "{previous_instruction}\n\n[answered-dependency-wait:3126 todo={id}]\n現在の指示（出所: {}）: {}\n正規Discord APIで照合した本人回答: {}\n元質問: thread/question={}、request={}、本人ID={}、reply={}。\n原質問・回答の資料: {}（SHA256={}）。旧本人待ちの資料: {}（SHA256={}）。\n3084完了後はその実装・配布の成果を元の受入条件と照合してください。同じ画像案を再質問せず、旧候補を配布しないでください。この記録は待機状態と指示配送の移行であり、機能修復・本番反映・配布完了を主張しません。",
+            text(&e["current_instruction"], "source"),
+            text(&e["current_instruction"], "text"),
+            text(&api["owner_replies"][0], "body"),
+            THREAD,
+            REQUEST,
+            OWNER,
+            MESSAGE,
+            text(&e["api_reply"], "path"),
+            text(&e["api_reply"], "sha256"),
+            text(&e["legacy_note"], "path"),
+            text(&e["legacy_note"], "sha256")
+        );
+        if delivered.len() > 1024 * 1024 {
+            return fail("instruction_too_large");
+        }
+        let at = chrono::Utc::now().to_rfc3339_opts(chrono::SecondsFormat::Micros, true);
         let receipt = json!({"domain":DOMAIN,"state_sha256":state_sha,"evidence_sha256":evidence_sha,"original_status":r["status"],
             "original_wait_on":r["wait_on"],"legacy_note":e["legacy_note"],"legacy_note_text":old_note,"api_reply_source":e["api_reply"],
-            "api_reply":api,"current_instruction":e["current_instruction"],"transitioned_at":crate::now()});
+            "api_reply":api,"current_instruction":e["current_instruction"],"delivered_instruction_sha256":sha(delivered.as_bytes()),"transitioned_at":at});
         let r = db["items"]
             .as_array_mut()
             .unwrap()
@@ -569,7 +635,8 @@ pub fn transition(
             .find(|r| r["id"] == id)
             .unwrap();
         r["status"] = json!("wait");
-        r["updated"] = json!(crate::now());
+        r["updated"] = json!(at);
+        r["scheduler"]["owner_instruction"] = json!(delivered);
         r[RECEIPT] = receipt;
     }
     Ok(result)
@@ -594,6 +661,44 @@ mod tests {
             )
             .is_err()
         );
+    }
+    #[test]
+    fn production_rejects_new_owner_note_before_running_the_guard() {
+        for (id, legacy) in [
+            (
+                3050,
+                "eb924dedb030f6b2eec446c908ffb62efeff7e21ee354112a8636ca920c21294",
+            ),
+            (
+                3070,
+                "71e2a86d67749c346560e8c3d4ae19e8746478347fe9d91abf775392d9628b49",
+            ),
+        ] {
+            let e = json!({"legacy_note":{"sha256":legacy},"api_reply":{"sha256":"d161c2c79dbc52e145fb5d4829d5cdbf808bbf4e74e603e77ffbbc2c1f3c9834"},
+                "current_instruction":{"text":DIRECTIVE},"expected_note":"a new unrelated owner stop"});
+            assert_eq!(
+                production_scope(&json!({}), &Paths::production(), id, &e).unwrap_err(),
+                "answered_wait_production_evidence_mismatch"
+            );
+        }
+    }
+    #[test]
+    fn refreshed_cas_never_requalifies_a_later_owner_block_or_changed_original_dependency() {
+        let original =
+            json!({"id":3050,"status":"block","note":"verified original note","wait_on":[3084]});
+        let pinned = state_sha(&original).unwrap();
+        assert!(check_frozen_state(&original, &pinned).is_ok());
+        for key in ["note", "wait_on", "resume_generation"] {
+            let mut later = original.clone();
+            later[key] = match key {
+                "note" => json!("a later owner stop"),
+                "wait_on" => json!([999]),
+                _ => json!(42),
+            };
+            let refreshed = state_sha(&later).unwrap();
+            assert_ne!(pinned, refreshed);
+            assert!(check_frozen_state(&later, &pinned).is_err());
+        }
     }
     #[test]
     fn query_confirms_this_process_without_assuming_an_unknown_pid_is_gone() {

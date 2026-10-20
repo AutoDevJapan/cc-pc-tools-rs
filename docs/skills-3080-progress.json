@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-20T22:40:34.1349837Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "26installed/boundedindependentlychecked;obra15entrypoint assessmentcomplete,support/currentintegrationworkpending;full16sourceworkcontinues",
+  "phase_b": "26installedbaselineaccepted3203;ownedTeamAI1supportclarificationapplied+locallyverified,delta reviewpending;obra15fullassessmentnotadoption;full16sourceworkcontinues",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -389,7 +389,7 @@
     },
     "limits": "79skill-named paths fully read across6sources,includingTencent guides/stub;not79independentlyadopted Skills.Supportresourcesincomplete."
   },
-  "independent_acceptance_scope": "3203 acceptedTeamAI/current26baselineat32db040;laterchanges requireownscope",
+  "independent_acceptance_scope": "3203 accepted26baseline at32db040;laterTeamAI3fileclarificationpendingseparatedelta review",
   "total_skill_named_body_read": 79,
   "obra_entrypoint_assessment": {
     "expected": 15,

@@ -98,3 +98,7 @@ TeamAI1件はv2固定データと元a・3193結果を対応させ、正規の新
 3203原応答を正規exact1file審査で受領しraw保存。固定32db040の実TeamAI5全文と全26/130hash、原文/notice、11docs差分、Tencent7本文を確認してMust0。初期SkillmetadataのTeamAIと実descriptionも一致。実CLIやモデルturn/context予算は未実施。必要全CI成功と同headを再確認し、PR329を正常merge（444b80162c142c6311175d01155496f6c8915dcb、2026-10-20T22:35:43Z）。元3080/Issue283は全体未完のまま。
 S1は仕様冒頭へ現在26/0/0/73194の正本台帳と履歴の区別を明記。S2/S3はcontribute-member.md、doc-template.md、phase0-init.mdを新たに全文/SHA確認し、学びcontribute直接pushと再利用Skill push/namespaceを区別、recall有効化の副作用、wikiのteamwiki出力とteamrepo未設定時--output条件を具体化した。補助25のうち3読了/22未読で全support完了とはしない。中央向けafter-v3と旧5hash/backup5/3限定置換の具体計画を作成し、まだ実反映前。新しい一般化を重ねず根拠範囲を設計から見直した。
 obraの残12入口をすべて全文/SHA確認して全15入口評価を完了。各canonicalID/固定URL/SHA/用途・重複候補・採らない条件と未読supportを保存。14統合/方針修正候補+1専用workflow候補で、まだ0導入/0統合/0除外。6sourceの入口本文79読了は全16資料の全意味/全許諾審査完了ではない。rootMITを未読templates/scripts/researchへ包括適用せず、公的資料の強制命令/コード削除/毎手順fullsuite/通常操作の再承認/直接子起動は実行していない。
+
+## TeamAI補助資料の根拠修正を反映
+3203のS2/S3を読了済み3supportで照合し、許諾・元source/descriptor・旧5hashを保って正規exact1write審査へ別提出した。許可後に既知teamai1の旧5を新規永続backupへ保全し、source.json/sources.md/SKILL.md最後の3だけ原子的置換、5読戻し成功。rawstub/MIT2不変、新規導入数追加0。memory1と実1、fresh metadata323中1found/enabled/説明一致/parse0/同名別path0、現行26/130file検査/candidate-count1成功。CLIやmodel/APIは起動していない。
+最新manifest/evidenceとliveadoption参照を更新し、旧install-teamai-manifest/current26-manifestは履歴として保持。current26-after-support-manifestは別ファイルで、過去hashを上書きしない。latestdeltaは別の限定確認へ回す。新たに全supportを読了したとはしない（Tencent25中3読了/22未読）。

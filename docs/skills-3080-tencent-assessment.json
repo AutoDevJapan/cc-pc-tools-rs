@@ -201,5 +201,11 @@
       "sha256": "533afc3e4dc6cd4ea57c615a8c84ea624537ab1042f4bd86759821a0a1845c0e",
       "bytes": 4643
     }
-  ]
+  ],
+  "superseded_by": {
+    "target": "teamai",
+    "current_manifest": "skills-3080-teamai-support-revision-manifest.json",
+    "live_dispositions": "skills-3080-adoptions.json",
+    "note": "Candidate table ispre-adoption snapshot;livecentral state isnotthese falseflags"
+  }
 }

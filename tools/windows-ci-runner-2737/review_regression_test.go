@@ -28,6 +28,12 @@ func TestFailureTelemetryIsBoundToAdmittedListenerBeforePersistence(t *testing.T
 					sent <- e
 					return
 				}
+				if e := guestClock(ctx, guest, p.Instance, func(_ context.Context, at time.Time) (int64, int64, error) {
+					return at.UnixMilli(), at.UnixMilli(), nil
+				}); e != nil {
+					sent <- e
+					return
+				}
 				raw, e := readFrame(guest, maxSource)
 				if e != nil {
 					sent <- e

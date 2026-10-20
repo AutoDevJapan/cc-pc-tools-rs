@@ -16,6 +16,7 @@ import (
 // Claim re-reads the official API claim, and Observe durably records metadata.
 // None of these callbacks should expose tokens or raw runner/checkout logs.
 type Controller interface {
+	ClockObserved(context.Context, Plan, ClockReceipt) error
 	Queued(context.Context, Plan) (normalci.Binding, error)
 	Token(context.Context, Plan) ([]byte, error)
 	Registered(context.Context, Plan) (int64, error)
@@ -47,7 +48,8 @@ func HostSession(ctx context.Context, c net.Conn, seed Seed, packet sourcepacket
 		case <-done:
 		}
 	}()
-	_ = c.SetDeadline(time.Now().Add(26 * time.Minute))
+	sessionDeadline := time.Now().Add(26 * time.Minute)
+	_ = c.SetDeadline(sessionDeadline)
 	p := seed.Plan
 	if b, e := host.Queued(ctx, p); e != nil || ValidateBinding(p, b) != nil {
 		return Event{}, errors.New("initial queued job rejected")
@@ -60,7 +62,19 @@ func HostSession(ctx context.Context, c net.Conn, seed Seed, packet sourcepacket
 	if packet.Pin != p.Source {
 		return Event{}, errors.New("source pin changed")
 	}
-	if send(c, p) != nil || writeFrame(c, raw) != nil {
+	_ = c.SetDeadline(time.Now().Add(10 * time.Second))
+	if send(c, p) != nil {
+		return Event{}, errors.New("initial transfer failed")
+	}
+	clock, e := hostClock(c, p.Instance)
+	if e != nil {
+		return Event{}, e
+	}
+	if e = host.ClockObserved(ctx, p, clock); e != nil {
+		return Event{}, errors.New("guest UTC persistence failed")
+	}
+	_ = c.SetDeadline(sessionDeadline)
+	if writeFrame(c, raw) != nil {
 		return Event{}, errors.New("initial transfer failed")
 	}
 	var runnerID int64

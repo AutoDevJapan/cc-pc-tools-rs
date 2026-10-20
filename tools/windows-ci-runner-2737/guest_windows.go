@@ -125,7 +125,7 @@ func fixedEnvironment(p Plan) ([]string, error) {
 		`SystemRoot=C:\Windows`, `WINDIR=C:\Windows`, `SystemDrive=C:`, `ComSpec=C:\Windows\System32\cmd.exe`,
 		`ProgramFiles=C:\Program Files`, `ProgramFiles(x86)=C:\Program Files (x86)`, `ProgramData=C:\ProgramData`,
 		`PATHEXT=.COM;.EXE;.BAT;.CMD;.PS1`,
-		`PATH=` + sdkRoot + `\rust-1.97.1\bin;` + filepath.Dir(sccache) + `;` + sdkRoot + `\git\cmd;` + sdkRoot + `\git\bin;` + sdkRoot + `\powershell\7;C:\Windows\System32;C:\Windows`,
+		`PATH=` + fixedServicePath(sccache),
 		`USERPROFILE=` + sdkRoot + `\service-profile`, `HOME=` + sdkRoot + `\service-profile`,
 		`APPDATA=` + sdkRoot + `\service-profile\AppData\Roaming`, `LOCALAPPDATA=` + sdkRoot + `\service-profile\AppData\Local`,
 		`TEMP=` + sdkRoot + `\staging`, `TMP=` + sdkRoot + `\staging`,
@@ -136,6 +136,12 @@ func fixedEnvironment(p Plan) ([]string, error) {
 		`RUNNER_LOGSIZE=1`, `WORKER_LOGSIZE=1`,
 	}
 	return env, nil
+}
+
+func fixedServicePath(sccache string) string {
+	// Stock config.cmd/run.cmd require Windows PowerShell, while workflow pwsh
+	// uses the separately pinned PowerShell 7. Keep both explicit guest paths.
+	return sdkRoot + `\rust-1.97.1\bin;` + filepath.Dir(sccache) + `;` + sdkRoot + `\git\cmd;` + sdkRoot + `\git\bin;` + sdkRoot + `\powershell\7;C:\Windows\System32\WindowsPowerShell\v1.0;C:\Windows\System32;C:\Windows`
 }
 func fixedSccache() (string, error) {
 	root := sdkRoot + `\sccache`

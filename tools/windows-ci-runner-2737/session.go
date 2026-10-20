@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"time"
 )
 
 var ErrHostEOF = errors.New("host channel EOF")
@@ -28,6 +29,7 @@ type processResult struct {
 // Only the fixed Windows implementation can execute a real process. Tests use
 // synthetic operations; that result is never evidence of VM acceptance.
 type guestOps interface {
+	syncClock(context.Context, time.Time) (int64, int64, error)
 	prepare(context.Context, sourcepacket.Packet) (sourcepacket.Receipt, error)
 	configure(context.Context, []byte) error
 	listen(context.Context, int64) <-chan processResult
@@ -73,6 +75,9 @@ func guestSession(ctx context.Context, c net.Conn, seed Seed, ops guestOps) (ret
 	var p Plan
 	if receive(c, &p) != nil || !samePlan(p, seed.Plan) {
 		return errors.New("seed plan mismatch")
+	}
+	if e := guestClock(ctx, c, p.Instance, ops.syncClock); e != nil {
+		return e
 	}
 	raw, e := readFrame(c, maxSource)
 	if e != nil {

@@ -1,5 +1,34 @@
 # Finite original PR3613 Windows guest backend (ToDo 2828)
 
+## Guest UTC before registration (2026-10-20)
+
+The first actual session reached physical source proof and offline runner
+registration, then failed to create a listening session. Its bounded console
+log (724 bytes, SHA256 `36bf6560fa51357be9fc033f33a73e29509e630d88cf3e1eec48340567452898`)
+reported deleted registration and missing Windows PowerShell. Recovered stock
+diagnostic timestamps were sixteen hours ahead of the host's UTC. The clock
+skew is observed; its causal relationship to the server error remains an
+inference pending corrected real execution. No Windows Cargo step started.
+
+The mutually pinned, single-use TLS channel now exchanges host UTC immediately
+after its fixed plan is checked, before source transfer or registration. Only
+the fixed LocalSystem guest implementation calls `SetSystemTime`; tests inject
+a setter and never change the PC clock. The host binds the acknowledgement to
+the instance and exact request, checks the readback and a maximum five-second
+round trip, and persists numeric before/after observations before authority is
+issued. A failed update, readback, transport, or persistence blocks registration.
+The original 26-minute session deadline, source proof, ordered hooks, listener
+drain, job ownership, and required Windows workflow remain in force.
+
+The fixed guest PATH includes both Windows PowerShell for the stock `.cmd`
+wrappers and the retained PowerShell 7 for workflow steps. These changes have
+synthetic Windows race/vet coverage; actual UTC correction, listening, thirteen
+Cargo steps, completion hook and official Windows CI still require acceptance
+from the reviewed, same-revision host and guest executables.
+
+Primary references: [SetSystemTime (UTC and scoped privilege)](https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-setsystemtime),
+[Hyper-V does not correct a guest clock more than five seconds ahead](https://learn.microsoft.com/en-us/troubleshoot/windows-server/virtualization/virtual-machine-time-not-synced).
+
 This Go module connects the retained SDK to the **stock GitHub Actions runner**.
 It is a library plus a guest SCM/hook entry, not a host VM controller. It has no
 GitHub API client, arbitrary execution RPC, request-selected executable, path,

@@ -36,6 +36,37 @@ func windowsFixture(t *testing.T) *windowsController {
 	}
 	return w
 }
+func TestWindowsClockMustBePersistedBeforeSourceAndToken(t *testing.T) {
+	w := windowsFixture(t)
+	p := w.seed.Plan
+	ctx := context.Background()
+	source := wr.Event{Instance: p.Instance, Stage: wr.SourceReady}
+	if e := w.Observe(ctx, source); e == nil || w.sourceReady {
+		t.Fatal("source admitted before UTC synchronization")
+	}
+	ms := time.Now().UnixMilli()
+	r := wr.ClockReceipt{Instance: p.Instance, HostUnixMillis: ms, BeforeUnixMillis: ms + 57600000, AfterUnixMillis: ms}
+	bad := r
+	bad.Instance = strings.Repeat("e", 32)
+	if e := w.ClockObserved(ctx, p, bad); e == nil || w.clockReady {
+		t.Fatal("another guest's UTC receipt admitted")
+	}
+	w.save = func(string, any) error { return errors.New("fixture receipt write failure") }
+	if e := w.ClockObserved(ctx, p, r); e == nil || w.clockReady {
+		t.Fatal("unpersisted UTC receipt admitted")
+	}
+	w.save = func(string, any) error { return nil }
+	if e := w.ClockObserved(ctx, p, r); e != nil {
+		t.Fatal(e)
+	}
+	if e := w.Observe(ctx, source); e != nil {
+		t.Fatal(e)
+	}
+	if token, e := w.Token(ctx, p); e != nil || len(token) == 0 {
+		t.Fatal("positive clock/source admission failed", e)
+	}
+}
+
 func TestWindowsHostUsesOriginalBindingAndPersistsBeforeListen(t *testing.T) {
 	w := windowsFixture(t)
 	p := w.seed.Plan
@@ -45,6 +76,9 @@ func TestWindowsHostUsesOriginalBindingAndPersistsBeforeListen(t *testing.T) {
 	}
 	if _, e := w.Token(ctx, p); e == nil {
 		t.Fatal("token before physical source ack")
+	}
+	if e := w.ClockObserved(ctx, p, wr.ClockReceipt{Instance: p.Instance, HostUnixMillis: time.Now().UnixMilli(), BeforeUnixMillis: time.Now().Add(16 * time.Hour).UnixMilli(), AfterUnixMillis: time.Now().UnixMilli()}); e != nil {
+		t.Fatal(e)
 	}
 	if e := w.Observe(ctx, wr.Event{Instance: p.Instance, Stage: wr.SourceReady}); e != nil {
 		t.Fatal(e)
@@ -89,6 +123,7 @@ func TestWindowsHostRefusesChangedQueueNonceAndRegistration(t *testing.T) {
 			w := windowsFixture(t)
 			p := w.seed.Plan
 			w.sourceReady = true
+			w.clockReady = true
 			calls := 0
 			w.api = func(context.Context, string, string, any, any) error {
 				calls++

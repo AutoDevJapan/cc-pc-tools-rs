@@ -114,6 +114,9 @@ func TestEOFDuringConfigurationCancelsWholeFlight(t *testing.T) {
 	done := make(chan error, 1)
 	go func() { defer guest.Close(); done <- guestSession(ctx, guest, seed, ops) }()
 	send(host, seed.Plan)
+	if _, e := hostClock(host, seed.Plan.Instance); e != nil {
+		t.Fatal(e)
+	}
 	raw, _ := sourcepacket.Encode(packet)
 	writeFrame(host, raw)
 	var ev Event

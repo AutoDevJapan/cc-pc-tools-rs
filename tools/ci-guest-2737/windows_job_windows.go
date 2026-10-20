@@ -30,6 +30,18 @@ type windowsController struct {
 	save                                      func(string, any) error
 	runnerID                                  int64
 	mayExist, sourceReady, started, completed bool
+	clockReady                                bool
+}
+
+func (w *windowsController) ClockObserved(ctx context.Context, p wr.Plan, receipt wr.ClockReceipt) error {
+	if ctx.Err() != nil || !w.valid(p) || w.clockReady || w.sourceReady || w.mayExist || receipt.Instance != p.Instance || receipt.AfterUnixMillis < receipt.HostUnixMillis-1000 || receipt.AfterUnixMillis > receipt.HostUnixMillis+6000 {
+		return errors.New("Windows UTC observation rejected")
+	}
+	if e := w.save("windows-clock-sync.private.json", receipt); e != nil {
+		return e
+	}
+	w.clockReady = true
+	return nil
 }
 
 func (w *windowsController) valid(p wr.Plan) bool {
@@ -46,7 +58,7 @@ func (w *windowsController) Queued(ctx context.Context, p wr.Plan) (jobBinding, 
 	return b, nil
 }
 func (w *windowsController) Token(ctx context.Context, p wr.Plan) ([]byte, error) {
-	if !w.sourceReady || w.mayExist || !w.valid(p) {
+	if !w.clockReady || !w.sourceReady || w.mayExist || !w.valid(p) {
 		return nil, errors.New("Windows token stage rejected")
 	}
 	if _, e := w.Queued(ctx, p); e != nil {
@@ -128,6 +140,9 @@ func (w *windowsController) Observe(ctx context.Context, event wr.Event) error {
 	}
 	if event.Instance != w.seed.Plan.Instance {
 		return errors.New("Windows observation instance rejected")
+	}
+	if event.Stage == wr.SourceReady && !w.clockReady {
+		return errors.New("Windows source before UTC confirmation")
 	}
 	if e := w.save("windows-event-"+string(event.Stage)+".private.json", event); e != nil {
 		return e

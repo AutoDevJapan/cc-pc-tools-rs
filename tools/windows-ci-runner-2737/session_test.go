@@ -65,6 +65,7 @@ type fakeOps struct {
 	stages               []Stage
 	configureEntered     chan struct{}
 	processError         error
+	clockError           error
 	mu                   sync.Mutex
 }
 
@@ -73,6 +74,9 @@ func fake(p Plan) *fakeOps {
 }
 func (o *fakeOps) prepare(context.Context, sourcepacket.Packet) (sourcepacket.Receipt, error) {
 	return receipt(o.p), nil
+}
+func (o *fakeOps) syncClock(_ context.Context, at time.Time) (int64, int64, error) {
+	return at.Add(16 * time.Hour).UnixMilli(), at.UnixMilli(), o.clockError
 }
 func (o *fakeOps) configure(ctx context.Context, token []byte) error {
 	if o.configureEntered != nil {
@@ -134,10 +138,18 @@ func (o *fakeOps) listen(ctx context.Context, id int64) <-chan processResult {
 }
 
 type fakeHost struct {
-	seed       Seed
-	events     []Stage
-	reject     Stage
-	registered bool
+	seed          Seed
+	events        []Stage
+	reject        Stage
+	registered    bool
+	clockRejected bool
+}
+
+func (h *fakeHost) ClockObserved(context.Context, Plan, ClockReceipt) error {
+	if h.clockRejected {
+		return errors.New("clock persistence refused")
+	}
+	return nil
 }
 
 func (h *fakeHost) Queued(_ context.Context, p Plan) (normalci.Binding, error) {
@@ -239,6 +251,9 @@ func TestGuestEOFAndCancelDrainDuringPendingHook(t *testing.T) {
 			done := make(chan error, 1)
 			go func() { defer guest.Close(); done <- guestSession(ctx, guest, seed, ops) }()
 			send(host, seed.Plan)
+			if _, e := hostClock(host, seed.Plan.Instance); e != nil {
+				t.Fatal(e)
+			}
 			raw, _ := sourcepacket.Encode(packet)
 			writeFrame(host, raw)
 			var ev Event

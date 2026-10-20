@@ -642,6 +642,9 @@ pub fn try_post_clarification(
     )
 }
 
+// Association evidence is deliberately separate from the seven original inputs
+// that determine log identity; the retry key must not change during migration.
+#[allow(clippy::too_many_arguments)]
 fn send_log(
     home: &Path,
     effects: &mut dyn Effects,

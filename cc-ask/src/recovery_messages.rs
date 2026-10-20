@@ -2607,6 +2607,9 @@ pub fn log(ctx: &mut Context, args: &LogArgs) -> Result<Value> {
 
 /// Resume an exact explanation through the same log delivery journal.
 pub fn log_clarification(ctx: &mut Context, args: &LogArgs, manifest: &Path) -> Result<Value> {
+    if args.notify || !args.attach.is_empty() || args.thread.is_none() {
+        return Err("clarification requires the exact silent text-only destination".into());
+    }
     let binding = clarification::Binding::read(manifest)?;
     let (request, images) = prepare_log(ctx, args)?;
     binding.check_input(&request)?;

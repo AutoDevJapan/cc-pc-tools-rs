@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
+	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -136,5 +139,16 @@ func awaitBurstProcess(done <-chan int) int {
 			remove: func(id int64) error { return runnerRequest("DELETE", path(id), nil) },
 			pause:  time.Sleep,
 		})
-	}, reportStage)
+	}, func(stage string) {
+		reportStage(stage)
+		data, err := json.Marshal(struct {
+			Stage       string    `json:"stage"`
+			At          time.Time `json:"at"`
+			Runner      string    `json:"runner"`
+			IdleSeconds int       `json:"idleSeconds"`
+		}{stage, time.Now().UTC(), compiledNormalProfile.runner, int(burstIdleLimit / time.Second)})
+		if err == nil {
+			_ = os.WriteFile(filepath.Join(".ci-runtime", "burst-idle-status.private.json"), data, 0600)
+		}
+	})
 }

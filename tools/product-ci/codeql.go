@@ -28,17 +28,18 @@ type codeQLSetup struct {
 }
 
 type codeQLPlan struct {
-	RepoID     int64  `json:"repo_id"`
-	PR         int    `json:"pr"`
-	Candidate  string `json:"candidate_sha"`
-	RunID      int64  `json:"run_id"`
-	Attempt    int    `json:"attempt"`
-	SHA        string `json:"source_sha"`
-	Tree       string `json:"source_tree"`
-	Role       string `json:"role"`
-	Label      string `json:"label"`
-	Kind       string `json:"kind,omitempty"`
-	ContextSHA string `json:"job_context_sha,omitempty"`
+	RepoID     int64            `json:"repo_id"`
+	PR         int              `json:"pr"`
+	Candidate  string           `json:"candidate_sha"`
+	RunID      int64            `json:"run_id"`
+	Attempt    int              `json:"attempt"`
+	SHA        string           `json:"source_sha"`
+	Tree       string           `json:"source_tree"`
+	Role       string           `json:"role"`
+	Label      string           `json:"label"`
+	Kind       string           `json:"kind,omitempty"`
+	ContextSHA string           `json:"job_context_sha,omitempty"`
+	Current    currentPRBinding `json:"current_pr,omitzero"`
 	// Repo is only transferred in memory to the guest's private tmpfs. It is
 	// intentionally excluded from every host receipt and diagnostic.
 	Repo string `json:"-"`
@@ -260,6 +261,11 @@ func executeProductJob(ctx context.Context, c candidate, runID int64, dir, guest
 	if e != nil {
 		return e
 	}
+	return executeProductPlan(ctx, c, p, dir, guestBinary, scannerFile)
+}
+
+func executeProductPlan(ctx context.Context, c candidate, p codeQLPlan, dir, guestBinary, scannerFile string) (ret error) {
+	kind := p.Kind
 	guest, e := os.ReadFile(guestBinary)
 	if e != nil || len(guest) < 64 || !bytes.Equal(guest[:4], []byte{127, 'E', 'L', 'F'}) {
 		return errors.New("Linux helper binary required")
@@ -392,14 +398,14 @@ func executeProductJob(ctx context.Context, c candidate, runID int64, dir, guest
 			return e
 		}
 	}
-	p2, e := productPlan(ctx, c, runID, kind, get)
+	p2, e := replanProductJob(ctx, c, p, get)
 	if e != nil || p2 != p {
 		return errors.New("CodeQL plan changed before registration")
 	}
 	if e = checkCodeQLQueue(ctx, p, get); e != nil {
 		return e
 	}
-	callback, key, closeAdmission, e := startCodeQLAdmission(ctx, p, c)
+	callback, key, closeAdmission, e := startCodeQLAdmissionForRunner(ctx, p, c, name)
 	if e != nil {
 		return e
 	}
@@ -571,6 +577,9 @@ func codeQLGuest(configureOnly bool) error {
 }
 
 func checkCodeQLHook(p codeQLPlan, repo, sha, runID, attempt string) error {
+	if p.Current != (currentPRBinding{}) && !currentPRGuestPlan(p) {
+		return errors.New("current PR hook plan rejected")
+	}
 	want := p.SHA
 	if p.Kind == "secret" && validGuestPlan(p) {
 		want = p.ContextSHA

@@ -152,6 +152,15 @@ func checkCodeQLQueue(ctx context.Context, p codeQLPlan, read api) error {
 							if r.ID != p.RunID || j.RunID != p.RunID {
 								return errors.New("other run occupies the dedicated CodeQL label")
 							}
+							if p.Current != (currentPRBinding{}) {
+								fixed := false
+								for _, id := range p.Current.JobIDs {
+									fixed = fixed || id > 0 && id == j.ID
+								}
+								if !fixed {
+									return errors.New("job outside current PR frozen matrix requests label")
+								}
+							}
 							targetJobs++
 						}
 					}

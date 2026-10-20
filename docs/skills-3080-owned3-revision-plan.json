@@ -5,7 +5,7 @@
   "must_resolution": "LF-only normalization matches all3 reviewer expected SHA256s; semantics unchanged",
   "payload_sha256": "f6da5ea9107511a254d14170cc0073d512cc52fc9e0dbd5fa9f4c26a519798ed",
   "after_bundle_sha256": "03aa3b498edd6a07378cf7220cede7473477a9203caa106c4f561cd8bb683077",
-  "one_off_writer_sha256": "9874b1b49b6e12f054bcf673db5bad939f72c28a9db93c54111e60b5a90d069c",
+  "one_off_writer_sha256": "779f164068a16c8b95a491b7e8733d4362c55057e10f50fa54a44555c95aa96b",
   "targets": [
     {
       "name": "migrate-to-shoehorn",
@@ -90,5 +90,12 @@
     "Atomic replacement with before/staged/after hashes, no deletion or new-only installer misuse, no retry or automatic rollback",
     "On failure record before/after/unknown for9; separate scoped recovery only",
     "Actual3048 validation and fresh discovery of single revised names; ensure .trash not discovered; no added adoption count"
-  ]
+  ],
+  "first_attempt": {
+    "changed": 0,
+    "verified_before_states": 9,
+    "backup_preserved": true,
+    "failure": "PowerShell null bound to empty third path in File.Replace",
+    "correction": "Pass NullString.Value; own-temp replacement and readback succeeded; a new unique backup required; separately reviewed execution"
+  }
 }

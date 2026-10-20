@@ -26,6 +26,99 @@ func continuedNative(t *testing.T) *conversationFixture {
 	return f
 }
 
+func importedNative(t *testing.T) *conversationFixture {
+	t.Helper()
+	w := withdrawalTest(t, true)
+	w.allowAnswer = true
+	w.f.mutateTodo(t, func(row map[string]any) {
+		delete(row["owner_question_wait"].(map[string]any), "origin")
+		row["worker_receipt"] = map[string]any{"job": nil, "generation": 7}
+		row["note"] = "ジョブの結果に判断が必要です。"
+		row["scheduler"].(map[string]any)["phase"] = "finished"
+		row["processed_results"] = map[string]any{"worker-42": map[string]any{"generation": 7, "reason": "block"}}
+	})
+	return w.f
+}
+
+func TestConversationActualCanonicalLargeHistoryDoesNotPreventDelivery(t *testing.T) {
+	for _, kind := range []string{"normal", "imported", "continued"} {
+		t.Run(kind, func(t *testing.T) {
+			var f *conversationFixture
+			switch kind {
+			case "normal":
+				f = conversationNativeTest(t)
+				f.ask(t)
+			case "imported":
+				f = importedNative(t)
+			case "continued":
+				f = continuedNative(t)
+			}
+			history := []any{map[string]any{"note": strings.Repeat("saved history ", 90_000)}}
+			f.mutateTodo(t, func(row map[string]any) { row["note_history"] = history })
+			row, err := f.r.conversationTask(context.Background(), 42)
+			if err != nil || len(row.conversationState) <= 1<<20 || len(row.conversationState) >= maxTodo {
+				t.Fatal("did not exercise a row larger than the former snapshot ceiling")
+			}
+			reply := f.reply(t, 8, "a")
+			health := Health{}
+			f.r.processConversations(context.Background(), &health)
+			if len(health.Errors) != 0 || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
+				t.Fatalf("large history prevented %s delivery: %v", kind, health.Errors)
+			}
+			var db map[string]any
+			if readJSON(f.r.TodoPath, maxTodo, &db) != nil {
+				t.Fatal("readback unavailable")
+			}
+			saved := db["items"].([]any)[0].(map[string]any)["note_history"].([]any)
+			if len(saved) < 1 || canonicalHash(saved[0]) != canonicalHash(history[0]) {
+				t.Fatal("delivery lost the original large history")
+			}
+		})
+	}
+}
+
+func TestConversationActualCanonicalAnswerReplayNeverRestoresReplacedNote(t *testing.T) {
+	for _, kind := range []string{"normal", "imported"} {
+		t.Run(kind, func(t *testing.T) {
+			var f *conversationFixture
+			if kind == "imported" {
+				f = importedNative(t)
+			} else {
+				f = conversationNativeTest(t)
+				f.ask(t)
+			}
+			reply := f.reply(t, 8, "a")
+			backend, answers := f.r.Run, 0
+			f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+				out, err := backend(ctx, path, args...)
+				if path == conversationTodo && args[0] == "question-answer" && err == nil {
+					answers++
+					return "", errors.New("answer committed but response lost")
+				}
+				return out, err
+			}
+			health := Health{}
+			f.r.processConversations(context.Background(), &health)
+			if answers != 1 || len(health.Errors) == 0 || f.r.State.Requests[reply.Message].Todo != 0 {
+				t.Fatal("did not exercise a committed answer with an uncertain response")
+			}
+			f.mutateTodo(t, func(row map[string]any) {
+				row["status"] = "block"
+				row["note"] = "ジョブの結果に判断が必要です。"
+				row["owner_stopped"] = true
+				row["owner_question_wait"] = map[string]any{"newer_question": true}
+			})
+			before, _ := os.ReadFile(f.r.TodoPath)
+			health = Health{}
+			f.r.processConversations(context.Background(), &health)
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if len(health.Errors) != 0 || string(before) != string(after) || answers != 1 || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
+				t.Fatalf("%s replay altered a later hold or restored an old reference: %v", kind, health.Errors)
+			}
+		})
+	}
+}
+
 func TestConversationActualCanonicalContinuedDeliveryPreservesOriginalTask(t *testing.T) {
 	f := continuedNative(t)
 	reply := f.reply(t, 8, "a")

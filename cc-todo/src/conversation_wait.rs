@@ -94,6 +94,17 @@ fn reparse(meta: &fs::Metadata) -> bool {
 
 /// Bound the read, reject reparse points/non-files, and hash and parse this one buffer.
 pub(crate) fn bytes(path: &Path) -> Result<Vec<u8>> {
+    bytes_with_limit(path, MAX_BYTES)
+}
+
+// A selected row can contain the original note, note history and prior receipts.
+// Its CAS snapshot must accept every row which fits the canonical store, while
+// question/answer envelopes and human input retain their smaller input ceiling.
+fn snapshot_bytes(path: &Path) -> Result<Vec<u8>> {
+    bytes_with_limit(path, cc_job_policy::todo_store::MAX_BYTES as u64)
+}
+
+fn bytes_with_limit(path: &Path, limit: u64) -> Result<Vec<u8>> {
     let absolute = std::path::absolute(path).map_err(|_| "conversation_file_unavailable")?;
     for ancestor in absolute.ancestors() {
         let meta = fs::symlink_metadata(ancestor).map_err(|_| "conversation_file_unavailable")?;
@@ -132,14 +143,14 @@ pub(crate) fn bytes(path: &Path) -> Result<Vec<u8>> {
     if !meta.is_file() || reparse(&meta) {
         return fail("file_not_regular");
     }
-    if meta.len() > MAX_BYTES {
+    if meta.len() > limit {
         return fail("file_too_large");
     }
     let mut data = Vec::new();
-    file.take(MAX_BYTES + 1)
+    file.take(limit + 1)
         .read_to_end(&mut data)
         .map_err(|_| "conversation_file_unavailable")?;
-    if data.len() as u64 > MAX_BYTES {
+    if data.len() as u64 > limit {
         return fail("file_too_large");
     }
     Ok(data)
@@ -360,7 +371,7 @@ pub fn check_scope(db: &Value, id: i64, path: &Path) -> Result<()> {
 
 pub fn check_snapshot(db: &Value, id: i64, path: &Path) -> Result<()> {
     let expected: Value =
-        serde_json::from_slice(&bytes(path)?).map_err(|_| "conversation_state_invalid")?;
+        serde_json::from_slice(&snapshot_bytes(path)?).map_err(|_| "conversation_state_invalid")?;
     if db["items"][row_index(db, id)?] != expected {
         return fail("state_changed");
     }
@@ -866,7 +877,7 @@ pub fn withdraw(
         return fail("reason_invalid");
     }
     let reason_sha = digest(&reason_bytes);
-    let expected_bytes = bytes(expected_file)?;
+    let expected_bytes = snapshot_bytes(expected_file)?;
     let expected: Value =
         serde_json::from_slice(&expected_bytes).map_err(|_| "conversation_state_invalid")?;
     let expected_sha = digest(&expected_bytes);
@@ -1008,7 +1019,7 @@ pub fn answer(
         return fail("owner_changed_or_active");
     }
     let note = if let Some((note_file, expected_file)) = delivery {
-        let expected: Value = serde_json::from_slice(&bytes(expected_file)?)
+        let expected: Value = serde_json::from_slice(&snapshot_bytes(expected_file)?)
             .map_err(|_| "conversation_state_invalid")?;
         if *row != expected {
             return fail("state_changed");

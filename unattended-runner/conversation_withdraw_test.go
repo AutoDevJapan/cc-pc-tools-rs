@@ -325,6 +325,23 @@ func TestConversationWithdrawOwnerReplyWinsBeforeReleaseAndRacesNeverReportSucce
 	}
 }
 
+func TestConversationWithdrawActualCanonicalCapturesSnapshotAfterFirstProof(t *testing.T) {
+	w := withdrawalTest(t, true)
+	w.onProof = func(n int) {
+		if n == 1 {
+			w.f.mutateTodo(t, func(row map[string]any) { row["ordinary_progress"] = "saved while checking Discord" })
+		}
+	}
+	result, err := w.run()
+	if err != nil || result["withdrawn"] != true || w.commands != 1 {
+		t.Fatal("an ordinary update during the first proof poisoned the immutable withdrawal intent")
+	}
+	var db map[string]any
+	if readJSON(w.f.r.TodoPath, maxTodo, &db) != nil || db["items"].([]any)[0].(map[string]any)["ordinary_progress"] != "saved while checking Discord" {
+		t.Fatal("withdrawal lost the ordinary update")
+	}
+}
+
 func TestConversationWithdrawAliasesScopeEditsAndTechnicalRejectionsStayPending(t *testing.T) {
 	for _, kind := range []string{"alias", "shadow", "scope", "question-edit", "deny", "pretend", "cas", "archive-response"} {
 		t.Run(kind, func(t *testing.T) {

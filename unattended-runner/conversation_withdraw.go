@@ -272,6 +272,17 @@ func (r *Runner) conversationWithdraw(ctx context.Context, requestID, reasonFile
 		return map[string]any{"request_id": requestID, "withdrawn": false, "owner_reply_pending": true}, nil
 	}
 	if missing {
+		// Do not freeze an obsolete row while the first Discord proof is in
+		// flight. Recheck the real guard and capture the immutable intent now;
+		// later changes still fail the canonical locked comparison.
+		row, err = worker.conversationTask(ctx, q.Todo)
+		if err != nil || row.Project != q.Project {
+			return nil, errConversationWithdraw
+		}
+		scopeFile, err = worker.conversationScopeFile(row, q)
+		if err != nil {
+			return nil, errConversationWithdraw
+		}
 		b, err := boundedRegular(q.ReceiptFile)
 		var receipt conversationQuestionReceipt
 		// Rust is the locked authority for note provenance, including the exact

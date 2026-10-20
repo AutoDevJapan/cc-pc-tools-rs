@@ -107,12 +107,12 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 		return err
 	}
 	marker := "conversation-owner-reply:" + q.SenderID + ":" + reply.Message + ":" + canonicalHash([]string{req.Text, req.Edited})[:16]
-	if q.Wait && len(row.QuestionDeliveries) != 0 {
+	if q.Wait && (len(row.QuestionDeliveries) != 0 || len(row.QuestionAnswers) != 0) {
 		answer, b, _, err := r.prepareConversationAnswer(q, reply, req, receipt)
 		if err != nil {
 			return err
 		}
-		if conversationDeliveryRecorded(row, q, answer, b) {
+		if conversationDeliveryRecorded(row, q, answer, b) || conversationAnswerRecorded(row, q, answer, b) {
 			req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
 			return r.save()
 		}

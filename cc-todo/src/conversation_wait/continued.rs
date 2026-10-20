@@ -106,7 +106,7 @@ pub fn deliver(
             return Ok(result(id, &record["wait"], false));
         }
     }
-    let expected_bytes = bytes(expected_file)?;
+    let expected_bytes = snapshot_bytes(expected_file)?;
     let expected: Value =
         serde_json::from_slice(&expected_bytes).map_err(|_| "conversation_state_invalid")?;
     if *row != expected {

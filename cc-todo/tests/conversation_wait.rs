@@ -108,6 +108,51 @@ fn scoped_edit_requires_the_exact_guarded_row_even_when_the_note_is_unchanged() 
     assert_eq!(f.raw(), before);
 }
 
+#[test]
+fn withdrawal_accepts_a_large_original_row_without_losing_history() {
+    let f = Fixture::new();
+    f.withdraw_ready();
+    let mut db = f.read();
+    let history = json!([{"note":"saved history ".repeat(90_000)}]);
+    db["items"][0]["note_history"] = history.clone();
+    f.write(&db);
+    f.snapshot();
+    assert!(
+        fs::metadata(f.temp.path().join("withdrawal-origin.json"))
+            .unwrap()
+            .len()
+            > 1024 * 1024
+    );
+    let out = f.withdraw();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(f.read()["items"][0]["note_history"], history);
+}
+
+#[test]
+fn snapshot_larger_than_the_store_limit_is_rejected_without_mutation() {
+    let f = Fixture::new();
+    f.withdraw_ready();
+    f.snapshot();
+    fs::OpenOptions::new()
+        .write(true)
+        .open(f.temp.path().join("withdrawal-origin.json"))
+        .unwrap()
+        .set_len(cc_job_policy::todo_store::MAX_BYTES as u64 + 1)
+        .unwrap();
+    let before = f.raw();
+    let out = f.withdraw();
+    assert!(!out.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&out.stderr).trim(),
+        "conversation_file_too_large"
+    );
+    assert_eq!(f.raw(), before);
+}
+
 fn continued(f: &Fixture) -> (std::path::PathBuf, Value) {
     let (_, answer_file, answer) = f.park();
     let mut db = f.read();

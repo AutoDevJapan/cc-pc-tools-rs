@@ -137,34 +137,54 @@ pub fn item_rank(item: &Value, policy: &Value) -> u32 {
         .and_then(|(_, value)| rank(value))
         .unwrap_or_else(|| project_rank(project))
 }
-/// Propagate only unresolved, recorded prerequisites, including transitive waits.
-pub fn todo_ranks(db: &Value, policy: &Value) -> BTreeMap<u64, u32> {
+#[derive(Debug, Default)]
+pub struct TodoPriorities {
+    pub ranks: BTreeMap<u64, u32>,
+    pub dependency_ranks: BTreeMap<u64, u32>,
+}
+
+/// Keep prerequisite requests separate from each record's own priority. Taking
+/// their min is useful for scheduling a ToDo but cannot identify the request.
+pub fn todo_priorities(db: &Value, policy: &Value) -> TodoPriorities {
     let items: Vec<_> = db["items"].as_array().into_iter().flatten().collect();
+    let unfinished: std::collections::BTreeSet<_> = items
+        .iter()
+        .filter(|item| item["status"] != "done")
+        .filter_map(|item| item["id"].as_u64())
+        .collect();
+    let edges: Vec<_> = items
+        .iter()
+        .filter_map(|item| {
+            if item["status"] == "done"
+                || item["status"] == "block"
+                || !item["wait_ready"].is_null()
+            {
+                return None;
+            }
+            let id = item["id"].as_u64()?;
+            let targets: Vec<_> = item["wait_on"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .chain(item["work_wait_on"].as_array().into_iter().flatten())
+                .filter_map(Value::as_u64)
+                .filter(|id| unfinished.contains(id))
+                .collect();
+            Some((id, targets))
+        })
+        .collect();
     let mut ranks: BTreeMap<_, _> = items
         .iter()
         .filter_map(|i| i["id"].as_u64().map(|id| (id, item_rank(i, policy))))
         .collect();
     loop {
         let mut changed = false;
-        for item in &items {
-            if item["status"] == "done"
-                || item["status"] == "block"
-                || !item["wait_ready"].is_null()
-            {
-                continue;
-            }
-            let Some(parent) = item["id"].as_u64().and_then(|id| ranks.get(&id).copied()) else {
+        for (id, targets) in &edges {
+            let Some(parent) = ranks.get(id).copied() else {
                 continue;
             };
-            for id in item["wait_on"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .chain(item["work_wait_on"].as_array().into_iter().flatten())
-                .filter_map(Value::as_u64)
-            {
-                if items.iter().any(|i| i["id"] == id && i["status"] != "done")
-                    && let Some(child) = ranks.get_mut(&id)
+            for target in targets {
+                if let Some(child) = ranks.get_mut(target)
                     && parent < *child
                 {
                     *child = parent;
@@ -173,9 +193,29 @@ pub fn todo_ranks(db: &Value, policy: &Value) -> BTreeMap<u64, u32> {
             }
         }
         if !changed {
-            return ranks;
+            break;
         }
     }
+    let mut dependency_ranks = BTreeMap::<u64, u32>::new();
+    for (id, targets) in edges {
+        if let Some(parent) = ranks.get(&id).copied() {
+            for target in targets {
+                dependency_ranks
+                    .entry(target)
+                    .and_modify(|rank| *rank = (*rank).min(parent))
+                    .or_insert(parent);
+            }
+        }
+    }
+    TodoPriorities {
+        ranks,
+        dependency_ranks,
+    }
+}
+
+/// Propagate only unresolved, recorded prerequisites, including transitive waits.
+pub fn todo_ranks(db: &Value, policy: &Value) -> BTreeMap<u64, u32> {
+    todo_priorities(db, policy).ranks
 }
 pub fn linked(item: &Value, job: &Value) -> bool {
     (item["id"].is_number()
@@ -190,7 +230,10 @@ pub fn linked(item: &Value, job: &Value) -> bool {
                 || item["scheduler"]["job"] == job["id"]))
 }
 pub fn job_ranks(jobs: &[Value], db: &Value, policy: &Value) -> BTreeMap<String, u32> {
-    let todos = todo_ranks(db, policy);
+    let TodoPriorities {
+        ranks: todos,
+        dependency_ranks,
+    } = todo_priorities(db, policy);
     let mut ranks: BTreeMap<_, _> = jobs
         .iter()
         .filter_map(|j| {
@@ -239,8 +282,7 @@ pub fn job_ranks(jobs: &[Value], db: &Value, policy: &Value) -> BTreeMap<String,
                     let inherited = primary.and_then(|row| {
                         row["id"]
                             .as_u64()
-                            .and_then(|id| todos.get(&id).copied())
-                            .filter(|rank| *rank < item_rank(row, policy))
+                            .and_then(|id| dependency_ranks.get(&id).copied())
                     });
                     return (
                         id.to_owned(),

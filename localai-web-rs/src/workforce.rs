@@ -362,7 +362,7 @@ pub fn project(board: &Value, active: Option<&Value>, now: u64) -> Value {
             "currentSession":null,"sessionReason":"個別の担当は作業ごとの観測で確認します。"}),
         );
     }
-    json!({"collectorBindingsConfigured":active.and_then(|input|input["product_bindings_configured"].as_bool()),"schemaVersion":1,"state":if stale {"stale"} else if ready {"available"} else {"unavailable"},"observedAt":fetched,
+    json!({"collectorBindingsConfigured":active.and_then(|input|input["product_bindings_configured"].as_bool()),"collectorBindingsOverridden":active.and_then(|input|input["product_bindings_overridden"].as_bool()),"schemaVersion":1,"state":if stale {"stale"} else if ready {"available"} else {"unavailable"},"observedAt":fetched,
         "inventory":{"taskRecords":if ready {Some(tasks.len())} else {None},
             "unfinishedTaskRecords":if ready {Some(tasks.len()-finished)} else {None},
             "jobOnlyRecords":if ready {Some(job_rows)} else {None},

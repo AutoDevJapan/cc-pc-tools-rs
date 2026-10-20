@@ -255,7 +255,7 @@ pub fn metadata_display_snapshot(board: &Value, kind: &str) -> Result<Value, &'s
 fn empty() -> Value {
     json!({"fetchedAt":null,"sourceOk":false,"sources":[],
         "commander":{"id":"commander","name":"司令塔","status":"unknown","detail":"共有データを取得中"},
-        "productBindingsConfigured":cc_scheduler::product_identity::bindings_configured(),"metrics":{},"departments":departments(BTreeMap::new())})
+        "productBindingsConfigured":cc_scheduler::product_identity::bindings_configured(),"productBindingsOverridden":null,"metrics":{},"departments":departments(BTreeMap::new())})
 }
 fn now_ms() -> u64 {
     SystemTime::now()
@@ -404,11 +404,12 @@ fn private_todo(
         .or_else(|| item["owner_project"].as_str())
         .unwrap_or(raw_project);
     private_product(item, policy)
+        || names.project(raw_project) == "クライアント案件"
         || project_name(names, display_project) == "クライアント案件"
         || names.project(text(item, "cwd")) == "クライアント案件"
         || names.project(text(item, "spec")) == "クライアント案件"
         || associations.raw(item["id"].as_u64().unwrap_or(0)).iter()
-            .any(|job| privacy.is_private_job(job) || associations.sensitive(job))
+            .any(|job| privacy.is_private_job(job) || associations.sensitive(job) || private_product(job, policy))
         || db.is_some_and(|db| {
             names.project(db["projects"][raw_project].as_str().unwrap_or("")) == "クライアント案件"
         })
@@ -809,7 +810,8 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
     let job_result = jobs_at(jobs_path);
     let js = job_result.as_ref().map(Vec::as_slice).unwrap_or(&[]);
     let policy = read_json(&root.join("scheduler/priorities.json")).unwrap_or(Value::Null);
-    let ranks = todo.as_ref().map(|db|cc_scheduler::priority::todo_ranks(db,&policy)).unwrap_or_default();
+    let priorities = todo.as_ref().map(|db|cc_scheduler::priority::todo_priorities(db,&policy)).unwrap_or_default();
+    let ranks = &priorities.ranks;
     let queue = read_json(&root.join("localai-web-rs/target/release/console-state.json")).unwrap_or(Value::Null);
     let mut tree = Tree::new();
     let mut used = BTreeSet::new();
@@ -979,7 +981,7 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
                 label,
                 json!({"id":format!("todo-{id}"),"name":format!("作業 #{id}"),"task":format!("#{id} {task}"), "status":status,
                     "productIdentity":identity.metadata(),"jobProductIdentity":current.map(|job|assignments.target(job).metadata()),"codeProduct":attribution::code_product(item),
-                    "priority":attribution::priority(item,identity,ranks.get(&id).copied(),&policy),
+                    "priority":attribution::priority(item,identity,ranks.get(&id).copied(),priorities.dependency_ranks.get(&id).copied(),&policy),
                     "recordedStatus":match text(item,"status") {"todo"|"doing"|"wait"|"block"|"done"|"recovery_unverified"=>item["status"].clone(),_=>json!("unknown")},
                     "processingJobKey":current.map(|job|cc_scheduler::product_identity::job_key(text(job,"id"))),"primaryJob":current.map(|job|safe_id("job",text(job,"id"))),"jobStatus":current.map(|job|text(job,"status")),
                     "summary":task,"currentStage":protected_stage(current),"lastActivityAt":protected_activity(current),
@@ -1027,6 +1029,7 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
     };
     let mut out = empty();
     out["fetchedAt"] = json!(now);
+    out["productBindingsOverridden"] = json!(policy.as_object().map(|p|p.contains_key("product_identities")));
     out["protectionMode"] = json!("masked_metadata");
     out["sourceOk"] = json!(false);
     out["metadataOk"] = json!(todo.is_some() && job_result.is_ok());
@@ -1240,7 +1243,8 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
     let mut privacy = crate::console_ui::PrivacyIndex::new(&names, db.unwrap_or(&empty_db));
     let assignments = attribution::assignments(
         db.and_then(|db|db["items"].as_array()).map(Vec::as_slice).unwrap_or(&[]), js, &policy);
-    let task_ranks=cc_scheduler::priority::todo_ranks(db.unwrap_or(&empty_db),&policy);
+    let task_priorities=cc_scheduler::priority::todo_priorities(db.unwrap_or(&empty_db),&policy);
+    let task_ranks=&task_priorities.ranks;
     if let Some(items) = db.and_then(|v| v["items"].as_array()) {
         for item in items {
             let is_done = text(item, "status") == "done";
@@ -1381,7 +1385,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
             let mut worker = json!({"id":format!("todo-{}",item["id"].as_u64().unwrap_or(0)),"name":if client {"担当".into()}else{task.chars().take(24).collect::<String>()},
                 "productIdentity":identity.metadata(),"jobProductIdentity":current.map(|job|assignments.target(job).metadata()),"codeProduct":attribution::code_product(item),
                 "recordedStatus":item["status"],"priority":attribution::priority(item,identity,
-                    if identity==cc_scheduler::product_identity::Resolution::Other {Some(cc_scheduler::priority::item_rank(item,&policy))}else{item["id"].as_u64().and_then(|id|task_ranks.get(&id).copied())},&policy),"waitingKind":wait_kind,
+                    if identity==cc_scheduler::product_identity::Resolution::Other {Some(cc_scheduler::priority::item_rank(item,&policy))}else{item["id"].as_u64().and_then(|id|task_ranks.get(&id).copied())},item["id"].as_u64().and_then(|id|task_priorities.dependency_ranks.get(&id).copied()),&policy),"waitingKind":wait_kind,
                 "processingJobKey":current.map(|job|cc_scheduler::product_identity::job_key(text(job,"id"))),"primaryJob":current.map(|job|safe_id("job",text(job,"id"))),"jobStatus":current.map(|job|text(job,"status")),
                 "task":task,"waitKind":wait_kind,"questionUrl":question_url,"status":status,"progress":progress,"updatedAt":todo_stamp(item).and_then(|n|chrono::DateTime::from_timestamp_millis(n as i64)).map(|t|t.to_rfc3339()),
                 "detail":detail,"historyFailures":history});
@@ -1606,7 +1610,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
     } else {
         Value::Null
     };
-    json!({"metadataOk":todo.is_ok()&&jobs.is_ok(),"productBindingsConfigured":cc_scheduler::product_identity::bindings_configured(),"fetchedAt":now,"sourceOk":sources.iter().all(|s|s["ok"]==true || s["state"]=="unknown"),"sources":sources,
+    json!({"metadataOk":todo.is_ok()&&jobs.is_ok(),"productBindingsConfigured":cc_scheduler::product_identity::bindings_configured(),"productBindingsOverridden":policy.as_object().map(|p|p.contains_key("product_identities")),"fetchedAt":now,"sourceOk":sources.iter().all(|s|s["ok"]==true || s["state"]=="unknown"),"sources":sources,
         "commander":commander,
         "metrics":metrics,"ownerQuestions":decisions["questions"],"decisionTasks":decisions["tasks"],"blockedDecisionTasks":decisions["blockedTasks"],
         "unassignedProducts":unassigned_products(&tree),"departments":departments(tree)})

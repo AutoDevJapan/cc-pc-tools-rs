@@ -71,6 +71,7 @@ pub(super) fn priority(
     row: &Value,
     identity: Resolution,
     inherited: Option<u32>,
+    dependency: Option<u32>,
     policy: &Value,
 ) -> Option<u32> {
     if let Some(product) = identity
@@ -78,8 +79,7 @@ pub(super) fn priority(
         .filter(|_| resolve(row, policy) == Resolution::Other)
     {
         return Some(
-            inherited
-                .filter(|rank| *rank < cc_scheduler::priority::item_rank(row, policy))
+            dependency
                 .map(|rank| rank.min(product.rank))
                 .unwrap_or(product.rank),
         );

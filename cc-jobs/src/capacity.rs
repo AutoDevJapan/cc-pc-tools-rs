@@ -331,7 +331,9 @@ impl Context {
         let routing_conflict = excluded_models
             .iter()
             .any(|model| same_model(model, s(job, "model")));
-        let default_writer = authors.is_empty() && same_model(s(job, "model"), "gpt-6.1-sol");
+        let default_writer = ["gpt-6.1-sol", "gpt-6-luna", "gpt-6-astra"]
+            .iter()
+            .any(|model| same_model(s(job, "model"), model));
         if !owner_choice && (author_conflict || routing_conflict || default_writer) {
             let profile = cc_job_policy::review_profile(&excluded_models)
                 .ok_or_else(|| Error::new("no independent review model is available"))?;

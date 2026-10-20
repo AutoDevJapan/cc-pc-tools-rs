@@ -248,3 +248,10 @@ CodeQL集約は、未完の3言語構成に加えてcapacity_oauth_acceptance.rs
 検査用exampleの戻り値を純粋なboolにし、catalog由来の構造体やselector、詳細なErrorを出力せず、
 固定の成功・失敗文だけにした。関数名の変更や警告抑制ではない。正式解析で解消を確認する。
 example自体は本担当で実行せず、実モデルの追加確認は配布後の通常schedulerで行う。
+
+fab9505のBookmark queue Windowsでは、resume 84件中83合格・1失敗だった。
+追加回答の検査は投稿失敗を注入する位置が早すぎ、選択を保存する前に停止していたため、
+これは再選択の製品Redではない。既存のcrash_before_launchを使って起動直前に中断し、
+保存済み選択を確認してから次の回答を渡す形へ修正した。完全ログSHA256は
+FAEF3925D497B1F2CE8825DFE922AFD1CDFBA390021D8C99C9E74DE763A64751。
+旧CLIのLuna/Astraレビューも、AIの選択であれば共通の別モデル選択へ移す。

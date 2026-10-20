@@ -735,8 +735,8 @@ fn answer_reselection_compares_with_the_original_worker_instead_of_the_cached_se
             "model":"gpt-6.1-sol","effort":"high","effort_origin":origin,
             "thread_id":"original-session","sandbox":"read-only","scope_source":"launcher"}}));
         a.answered();
-        a.fake.borrow_mut().post_error = true;
-        a.resume();
+        a.fake.borrow_mut().crash_before_launch = true;
+        assert!(catch_unwind(AssertUnwindSafe(|| a.resume())).is_err());
         assert_eq!(a.count(), 0);
         assert_eq!(
             a.question()["continuation"]["launch"]["selection"]["effort"],

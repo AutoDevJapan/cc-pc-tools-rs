@@ -803,7 +803,7 @@ func (r *Runner) conversationStatus() (map[string]any, error) {
 		}
 		replies = append(replies, map[string]any{"message_id": req.Message, "thread_id": req.Thread, "author_id": req.Author, "todo_id": req.Todo, "request_id": req.Conversation, "phase": req.Phase, "source": req.Source, "created_at": req.Created, "edited_at": req.Edited, "acquired_at": req.Acquired})
 	}
-	return map[string]any{"domain": conversationDomain, "questions": len(index.Questions), "phases": phases, "items": questions, "reply_stages": replies, "intake_stages": intake, "stage_evidence": "saved_state_only", "legacy_state": "unchanged", "original_registry_recovered": false}, nil
+	return map[string]any{"domain": conversationDomain, "questions": len(index.Questions), "phases": phases, "items": questions, "reply_stages": replies, "intake_stages": intake, "stage_evidence": "saved_state_only", "snapshot_consistency": "independent_saved_files", "legacy_state": "unchanged", "original_registry_recovered": false}, nil
 }
 
 func orderedConversationKeys(index *conversationIndex) []string {

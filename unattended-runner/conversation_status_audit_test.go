@@ -1,11 +1,43 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
+
+func TestConversationStatusReadsSavedFilesWhileResidentLockIsHeld(t *testing.T) {
+	f := conversationConfigFixture(t)
+	conversationWriteJSON(t, filepath.Join(f.config.Home, "conversation-questions.json"), conversationIndex{Domain: conversationDomain, Since: f.config.Since, Destination: f.destination, Questions: map[string]ConversationQuestion{}})
+	before := conversationFixtureSnapshot(t, f.root)
+	release, err := acquire(filepath.Join(f.config.Home, "runner.lock"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	released := false
+	defer func() {
+		if !released {
+			release()
+		}
+	}()
+	var out bytes.Buffer
+	if code := conversationCLI([]string{"--config", f.configPath, "status"}, &out); code != 0 {
+		t.Fatalf("read-only status blocked by resident: %d %s", code, out.String())
+	}
+	out.Reset()
+	if code := conversationCLI([]string{"--config", f.configPath, "replies", "--request-id", "fixture"}, &out); code != 2 {
+		t.Fatal("a non-status operation bypassed the resident lock")
+	}
+	release()
+	released = true
+	if !reflect.DeepEqual(before, conversationFixtureSnapshot(t, f.root)) {
+		t.Fatal("read-only status changed saved files")
+	}
+}
 
 func TestConversationStatusExposesStageIDsWithoutPrivateText(t *testing.T) {
 	f := conversationTest(t, true)

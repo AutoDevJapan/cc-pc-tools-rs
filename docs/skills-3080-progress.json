@@ -1,7 +1,7 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-20T13:31:41.0529645Z",
+  "observed_at": "2026-10-20T13:39:35.7752379Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
   "phase_b": "First14 installed and discovered; broad adoption continues without count cap",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
@@ -332,7 +332,17 @@
     "new_candidates_requiring_authoring": 8,
     "integration_or_reference_candidates": 3,
     "policy_rewrite_required": 1,
-    "authored_candidates": 0,
+    "authored_candidates": 8,
     "independently_accepted": 0
+  },
+  "candidate_count_definitions": {
+    "candidate_designs": "14 renderable MIT plan targets; already installed",
+    "additional_authored_drafts": 8,
+    "authored_total": 22,
+    "draft_file": "skills-3080-docker-draft.json",
+    "drafts_renderable": false,
+    "drafts_installed": 0,
+    "independently_accepted": "14 final generated adaptation entrypoints and installer reviewed by3104; not all upstream bodies fully reviewed",
+    "not_semantically_disposed_occurrences": 73206
   }
 }

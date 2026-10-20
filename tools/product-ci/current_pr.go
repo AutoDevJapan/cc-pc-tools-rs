@@ -10,6 +10,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"cc/product-ci/inputqual"
 )
 
 type currentPRJobIDs [8]int64
@@ -85,28 +87,41 @@ func (b currentPRBinding) valid() bool {
 }
 
 func readCurrentPRInput(file string) (currentPRBinding, error) {
-	var input currentPRInput
-	f, e := os.Open(file)
+	snapshot, e := inputqual.Qualify(file)
 	if e != nil {
-		return currentPRBinding{}, errors.New("current PR pin unavailable")
+		return currentPRBinding{}, e
 	}
-	defer f.Close()
-	d := json.NewDecoder(io.LimitReader(f, 64<<10))
+	return consumeCurrentPRSnapshot(snapshot)
+}
+
+func consumeCurrentPRSnapshot(snapshot inputqual.Snapshot) (currentPRBinding, error) {
+	var binding currentPRBinding
+	e := snapshot.Consume(func(pin, review, acceptance []byte) error {
+		var err error
+		binding, err = parseCurrentPRSnapshot(pin, review, acceptance)
+		return err
+	})
+	return binding, e
+}
+
+// Only the purpose-qualified reader provides production snapshots. The parser
+// consumes those exact bytes and never resolves or reopens their private paths.
+func parseCurrentPRSnapshot(pin, review, acceptance []byte) (currentPRBinding, error) {
+	var input currentPRInput
+	d := json.NewDecoder(bytes.NewReader(pin))
 	d.DisallowUnknownFields()
 	if d.Decode(&input) != nil || d.Decode(new(any)) != io.EOF || !input.currentPRBinding.valid() {
 		return currentPRBinding{}, errors.New("current PR pin rejected")
 	}
-	for _, proof := range []struct{ file, sha, kind string }{{input.ReviewFile, input.ReviewSHA256, "review"}, {input.AcceptanceFile, input.AcceptanceSHA256, "acceptance"}} {
-		f, e := os.Open(proof.file)
-		if e != nil {
-			return currentPRBinding{}, errors.New("original current PR evidence unavailable")
-		}
-		data, readErr := io.ReadAll(io.LimitReader(f, 8<<20+1))
-		closeErr := f.Close()
-		if readErr != nil || closeErr != nil || len(data) == 0 || len(data) > 8<<20 || digest(data) != proof.sha {
+	for _, proof := range []struct {
+		data      []byte
+		sha, kind string
+	}{{review, input.ReviewSHA256, "review"}, {acceptance, input.AcceptanceSHA256, "acceptance"}} {
+		data := proof.data
+		if len(data) == 0 || len(data) > 8<<20 || digest(data) != proof.sha {
 			return currentPRBinding{}, errors.New("original current PR evidence differs")
 		}
-		if e = verifyCurrentPREvidence(data, input.currentPRBinding, proof.kind); e != nil {
+		if e := verifyCurrentPREvidence(data, input.currentPRBinding, proof.kind); e != nil {
 			return currentPRBinding{}, e
 		}
 	}
@@ -362,10 +377,44 @@ func currentPRGuestPlan(p codeQLPlan) bool {
 }
 
 func currentPRCLI(ctx context.Context, args []string) error {
-	if !((len(args) == 2 && args[0] == "current-pr-inspect") || ((len(args) == 4 || len(args) == 5) && args[0] == "current-pr-job")) {
-		return errors.New("current-pr-inspect <pin-json> | current-pr-job <pin-json> <new-owned-dir> <Linux-helper> [gitleaks-ELF]")
+	if len(args) == 1 && args[0] == "current-pr-origin-qualify" {
+		snapshot, err := inputqual.Construct()
+		if err != nil {
+			return err
+		}
+		if _, err := consumeCurrentPRSnapshot(snapshot); err != nil {
+			return err
+		}
+		return json.NewEncoder(os.Stdout).Encode(snapshot.Report())
 	}
-	b, e := readCurrentPRInput(args[1])
+	if len(args) == 2 && args[0] == "current-pr-qualify" {
+		snapshot, err := inputqual.Qualify(args[1])
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(os.Stdout).Encode(snapshot.Report())
+	}
+	originInspect := len(args) == 1 && args[0] == "current-pr-origin-inspect"
+	originJob := (len(args) == 3 || len(args) == 4) && args[0] == "current-pr-origin-job"
+	if !(originInspect || originJob || (len(args) == 2 && args[0] == "current-pr-inspect") || ((len(args) == 4 || len(args) == 5) && args[0] == "current-pr-job")) {
+		return errors.New("current-pr-origin-qualify | current-pr-origin-inspect | current-pr-origin-job <new-owned-dir> <Linux-helper> <gitleaks-ELF>; caller-selected pin routes are unavailable")
+	}
+	var b currentPRBinding
+	var e error
+	if originInspect || originJob {
+		var snapshot inputqual.Snapshot
+		snapshot, e = inputqual.Construct()
+		if e == nil {
+			b, e = consumeCurrentPRSnapshot(snapshot)
+		}
+		if originInspect {
+			args = []string{"current-pr-inspect", "constructed-original-purpose"}
+		} else {
+			args = append([]string{"current-pr-job", "constructed-original-purpose"}, args[1:]...)
+		}
+	} else {
+		b, e = readCurrentPRInput(args[1])
+	}
 	if e != nil {
 		return e
 	}

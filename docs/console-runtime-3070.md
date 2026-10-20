@@ -30,3 +30,6 @@
 初回独立レビューは既存OAuthの実ジョブ`20261020-160454-todo3070-console-runtime-review`がSonnet5.5で完了し、貼付3ファイルとmain接続説明にMust0。main全体と既存helperは未読だったため、補足のsource-root一致検査と合わせて同担当へ追加確認する。依存証拠は原3020/3050の作業場所にあり、今回の有限配布とその後の現版分類で使う間は削除しない。固定受領記録の存在・バイト列と、手作業で確定した対応SHAをcompiled pinで別々に確認している。証拠JSONを権限設定として解析しない。分類は呼出時点の検証であり、配布直前にもguardとSHAのCASを再実行する。
 
 現用guardのSHA `8A625C3171B0D68044C480AA3887B1F099C82A03CBF442FCB9E6E7B1BC99FA93` は元3058の正式配布記録で確認し、配布sourceはmain `0edc26c`。PR264の限定資格も含む。3070はこのmainを基準としており、3047/3058の修復を古いguardで上書きしない。
+
+## 3076 UI修復版の追加pin (2026-10-20)
+Console候補 E943ACF9…FA5C / 13972992B を同じ正確な1leafのpinに追加。ソースは9d2e612、localai-web-rs tree ade257e…はmain c8d71fbと同一。証拠は docs/console-ui-3076-artifacts.json（SHA 7cc2b1df…3bf1）。0E40EF0F…は回帰版のため配布不可として別に保持し、新規配布の対象にしない。一般解除なし。

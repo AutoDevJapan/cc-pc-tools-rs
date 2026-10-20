@@ -3,3 +3,4 @@
 /tools/codex-progress-tui/activation/*.ps1 text eol=lf
 /tools/codex-progress-tui/activation/*.cmd text eol=crlf
 /repair-guard/civ6-ci-2962-contract.json text eol=lf
+/docs/console-ui-3076-artifacts.json text eol=lf

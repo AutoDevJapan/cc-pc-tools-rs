@@ -22,6 +22,7 @@ type consoleLeaf struct {
 
 const console3050Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3050-console"
 const console3020Receipts = "D:/CC/Work/unattended-operations-20261013-wt/todo-2903-qualified-release"
+const console3070Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3070-console-runtime"
 
 // The source and independent distribution receipts identify these two exact
 // leaves. Neither a directory nor an arbitrary new executable is admitted.
@@ -34,6 +35,9 @@ var consoleRuntimeLeaves = []consoleLeaf{
 		}},
 		{sha256: "0e40ef0ffa4bfc87c42ad682942f450f79e37299426c896f5c708720b38e8437", evidence: []consoleEvidence{
 			{console3050Source, console3050Source + "/docs/console-workforce-3050-artifacts.json", "9a8828787ab2652f2786f5391ff4b5810460d303b190f8005bca8bc34c3946cc"},
+		}},
+		{sha256: "e943acf989372b156353a003b8a968a8e4da6e4b6279c83505556125f011fa5c", evidence: []consoleEvidence{
+			{console3070Source, console3070Source + "/docs/console-ui-3076-artifacts.json", "7cc2b1df40fba1427bf5695a8d95b8ddf33092dd48efda1fae52ad7a90613bf1"},
 		}},
 	}},
 	{path: "D:/CC/Tools/agent-progress/agent-progress.exe", pins: []consolePin{

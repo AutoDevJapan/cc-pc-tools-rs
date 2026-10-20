@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -201,7 +202,7 @@ func (r *Runner) conversationWithdraw(ctx context.Context, requestID, reasonFile
 		original.Phase, current.Phase = "", ""
 		original.Wait, current.Wait = false, false
 		original.ReplyCursor, current.ReplyCursor = "", ""
-		if original != current {
+		if !reflect.DeepEqual(original, current) {
 			return nil, errConversationWithdraw
 		}
 		switch record.Phase {

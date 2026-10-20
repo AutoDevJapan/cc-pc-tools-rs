@@ -42,6 +42,9 @@ note、ready、報告、編集履歴、未知のファイル名は対象にし�
    ただ1件の元intentとbot記録、および検証済みの `question:0` / `progress` が一致する。
    元intentのToDo・元投稿・質問fingerprint・送信先を照合する。
    元の質問本文のSHAと判断identityのcanonical SHAもindexに一致する。
+   画像付き質問ではindexの添付パスとSHAの配列も厳密に読み、
+   元intentの画像SHAと順番・件数を照合する。このパスは再試行の記録であり、
+   添付元やコピー自体を読む資格には使わない。
    元投稿を別途修復した記録は、この小さな拡張では扱わない。
    Rustの送信側定義と、2026-10-18に親担当が取得した本番のkeys-onlyメタデータは、
    version=1およびdestinationの `guild / forum / owner / request_forum` で一致した。

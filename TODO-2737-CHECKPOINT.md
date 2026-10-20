@@ -953,3 +953,8 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 一次資料: https://github.com/actions/runner-images/blob/main/images/windows/scripts/build/Configure-BaseImage.ps1 は公式Windows runnerのLongPathsEnabled=1を設定。https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation は設定がprocess開始後cacheされ得る条件を説明。今回のstageはguest起動前に既存のclone SYSTEM hiveだけへDWORD1を書き、型/値を読み返す。サービスidentity検査、unload/detachのfinally、immutable SDK/hash/source proof/13工程/権限/timeout/gateは保持。原製品source変更0。
 - 受入検査は実生成PowerShellのregistry更新部分をpublic HKCU fixtureへ向けて実行。旧実装で7ケース中6ケースがRED（既にenabledだけ成功）。修正後はPowerShell5.1/7の両方でabsent/disabled/enabled/wrong-type成功、missing-parent/write-error/dropped-write拒否。最終ci-guest module race test成功15.299s、vet成功、生成全scriptの既存parse検査も成功。ホストのLongPathsEnabledを変更していない。
 - 証拠はD:/CC/Tools/product-ci/evidence/todo-2737-20261020/resume-201853/diagnosis-files.private.json。旧公式failure/log/hash/clone/原SDK/guard/manifest/未回収/他担当を保持。実Windows13/CI Gate/全公式CI/基盤配送は未完、製品merge/Prdは親2641。新規source差分は別モデルの有限レビュー後に実適用する。再開は新レビューの原応答/実model/固定head/未読を受領してから同clean sourceでruntimeを生成、同runのWindows jobだけrerun、verify成功は保持。原routeは削除済みで、復元前後の同lease/source/run照合が必要。
+### 固定head5962dfbのレビュー3099を登録
+
+- 固定4bb1aa6→5962dfb/treeはreview specに固定した3file差分。3099をgpt-6-luna/effort max、読取のみ・検査0・必要局所限定で通常add --specし、保存全文一致/dispatchableを確認。subwork-of2737 metadataはroot worker条件により受付前拒否されたため、他担当の親metadataや状態を変えず従来の通常addを使用。重複登録なし。
+- 3093の受領・offline DWORD0確認・修正/RED→GREEN・未実施の公式CI・3099待機を3093/2737/2641 noteへCAS更新。新差分の実適用/公式rerunは未実行。旧runの取消/route削除は再送しない。root073...のpublic junction3件と元失敗clone3f...を保持し、後でsafe-deleteの正規手順を使う。
+- 次は3099のMust0後に同clean sourceからruntimeを生成し、原source/同leaseを再照合、own routeの復元とWindows jobのみrerunへ進む。成功Linux verifyの再実行0。終了前に現job/実HEAD checkpointを保存・読戻しし、todo wait2737 --on3099を記録する。

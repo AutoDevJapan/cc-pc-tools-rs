@@ -26,8 +26,9 @@ type Target struct {
 	Sources   []string `json:"sources"`
 }
 type File struct {
-	Path string `json:"path"`
-	SHA  string `json:"sha256"`
+	Path    string  `json:"path"`
+	SHA     string  `json:"sha256"`
+	Content *string `json:"content,omitempty"`
 }
 type Manifest struct {
 	Targets []Target `json:"targets"`
@@ -86,6 +87,36 @@ func check(root string, m Manifest) []string {
 }
 
 func checkOptions(root string, m Manifest, requireHash bool) []string {
+	return checkWithRead(root, m, requireHash, os.ReadFile, func(p string) error { _, e := os.Stat(p); return e })
+}
+
+// Validate the exact same entrypoints, references and hashes before deployment,
+// without creating a second on-disk skill collection or reading central files.
+func checkBundle(m Manifest) []string {
+	root := "virtual-bundle"
+	files := map[string][]byte{}
+	for _, t := range m.Targets {
+		for _, f := range t.Files {
+			if f.Content == nil {
+				return []string{"bundle content missing"}
+			}
+			p, e := relative(filepath.Join(root, t.Name), f.Path)
+			if e != nil {
+				return []string{"invalid bundle path"}
+			}
+			files[filepath.Clean(p)] = []byte(*f.Content)
+		}
+	}
+	read := func(p string) ([]byte, error) {
+		if b, ok := files[filepath.Clean(p)]; ok {
+			return b, nil
+		}
+		return nil, os.ErrNotExist
+	}
+	return checkWithRead(root, m, true, read, func(p string) error { _, e := read(p); return e })
+}
+
+func checkWithRead(root string, m Manifest, requireHash bool, read func(string) ([]byte, error), exists func(string) error) []string {
 	var failures []string
 	if len(m.Targets) == 0 {
 		return []string{"empty target manifest"}
@@ -124,7 +155,7 @@ func checkOptions(root string, m Manifest, requireHash bool) []string {
 				failures = append(failures, t.Name+": invalid file path")
 				continue
 			}
-			b, err := os.ReadFile(p)
+			b, err := read(p)
 			if err != nil {
 				failures = append(failures, t.Name+"/"+f.Path+": missing/unreadable")
 				continue
@@ -158,7 +189,7 @@ func checkOptions(root string, m Manifest, requireHash bool) []string {
 					failures = append(failures, t.Name+": link path escape")
 					continue
 				}
-				if _, e = os.Stat(q); e != nil {
+				if e = exists(q); e != nil {
 					failures = append(failures, t.Name+": broken link "+u)
 				}
 			}
@@ -174,6 +205,7 @@ func main() {
 	root := flag.String("root", "D:/CC/Skills", "explicit installation root")
 	manifest := flag.String("manifest", "docs/skills-3048-manifest.json", "target manifest")
 	requireHash := flag.Bool("require-hash", true, "require finalized SHA-256 receipts (false for pre-install structural checks)")
+	bundle := flag.Bool("bundle", false, "check embedded bundle bytes in memory; never reads installation root")
 	flag.Parse()
 	b, err := os.ReadFile(*manifest)
 	if err != nil {
@@ -185,12 +217,21 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
-	failures := checkOptions(*root, m, *requireHash)
+	var failures []string
+	if *bundle {
+		failures = checkBundle(m)
+	} else {
+		failures = checkOptions(*root, m, *requireHash)
+	}
 	if len(failures) > 0 {
 		for _, f := range failures {
 			fmt.Fprintln(os.Stderr, f)
 		}
 		os.Exit(1)
 	}
-	fmt.Printf("PASS: %d explicit skills; structure, descriptions, references, hashes, scenario pairs\n", len(m.Targets))
+	mode := "installed files"
+	if *bundle {
+		mode = "in-memory bundle only; no deployment implied"
+	}
+	fmt.Printf("PASS: %d explicit skills; structure, descriptions, references, hashes, scenario pairs; %s\n", len(m.Targets), mode)
 }

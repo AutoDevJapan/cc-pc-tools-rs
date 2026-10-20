@@ -213,14 +213,15 @@ pub fn job_ranks(jobs: &[Value], db: &Value, policy: &Value) -> BTreeMap<String,
                     .filter(|i| linked(i, j))
                     .filter(|i| !mcp || primary.is_none() || i["id"] == j["todo_id"])
                     .collect();
-                let target = crate::product_identity::resolve(j, policy);
-                let conflicting_primary = primary.is_some_and(|i| {
-                    !crate::product_identity::compatible(
-                        crate::product_identity::resolve(i, policy),
-                        target,
-                    )
-                });
-                if target == crate::product_identity::Resolution::Unknown || conflicting_primary {
+                let target = crate::product_identity::job_target(
+                    j,
+                    primary,
+                    candidates
+                        .iter()
+                        .map(|i| crate::product_identity::resolve(i, policy)),
+                    policy,
+                );
+                if target == crate::product_identity::Resolution::Unknown {
                     return (
                         id.to_owned(),
                         primary
@@ -229,22 +230,20 @@ pub fn job_ranks(jobs: &[Value], db: &Value, policy: &Value) -> BTreeMap<String,
                             .unwrap_or(DEFAULT),
                     );
                 }
-                if primary.is_none()
-                    && (target == crate::product_identity::Resolution::Other
-                        && crate::product_identity::ambiguous(
-                            candidates
-                                .iter()
-                                .map(|i| crate::product_identity::resolve(i, policy)),
-                        ))
+                if let Some(product) = target.product()
+                    && primary.is_some_and(|row| {
+                        crate::product_identity::resolve(row, policy)
+                            == crate::product_identity::Resolution::Other
+                    })
                 {
-                    return (id.to_owned(), DEFAULT);
+                    return (id.to_owned(), product.rank);
                 }
                 let owned = candidates
                     .into_iter()
                     .filter(|i| {
                         crate::product_identity::compatible(
                             crate::product_identity::resolve(i, policy),
-                            crate::product_identity::resolve(j, policy),
+                            target,
                         )
                     })
                     .filter_map(|i| i["id"].as_u64().and_then(|id| todos.get(&id).copied()))

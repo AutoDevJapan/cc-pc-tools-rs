@@ -6,6 +6,10 @@ use cc_scheduler::{
 };
 use std::path::PathBuf;
 fn main() {
+    if cc_scheduler::product_identity::status_requested(std::env::args().skip(1)) {
+        println!("{}", cc_scheduler::product_identity::status());
+        return;
+    }
     let args: Vec<String> = std::env::args().skip(1).collect();
     let command = args.first().map(String::as_str);
     if command == Some("checkpoint-workspace") {

@@ -97,7 +97,8 @@ fn binding(product: &Product, policy: &Value) -> Option<(u64, u64)> {
             option_env!("CC_PRODUCT_MCP_ALPHA_OWNER_ID")?,
         )
     };
-    Some((repository.parse().ok()?, owner.parse().ok()?))
+    let pair: (u64, u64) = (repository.parse().ok()?, owner.parse().ok()?);
+    (pair.0 > 0 && pair.1 > 0).then_some(pair)
 }
 
 fn explicit(value: &Value, policy: &Value) -> Resolution {
@@ -159,10 +160,10 @@ pub fn resolve(row: &Value, policy: &Value) -> Resolution {
     let b = row
         .get("product_identity")
         .map(|value| explicit(value, policy));
-    if let (Some(a), Some(b)) = (a, b) {
-        if a != b {
-            return Resolution::Unknown;
-        }
+    if let (Some(a), Some(b)) = (a, b)
+        && a != b
+    {
+        return Resolution::Unknown;
     }
     if let Some(result) = a.or(b) {
         if declared(row).is_some_and(|declared| !compatible(declared, result)) {
@@ -210,17 +211,60 @@ pub fn compatible(a: Resolution, b: Resolution) -> bool {
 /// by task number. Scope this rule to these products; other rankings stay intact.
 pub fn ambiguous(resolutions: impl IntoIterator<Item = Resolution>) -> bool {
     let mut ids = std::collections::BTreeSet::new();
-    let mut mcp = false;
     for resolution in resolutions {
         if resolution == Resolution::Unknown {
             return true;
         }
         if let Some(product) = resolution.product() {
-            mcp = true;
             ids.insert(product.id);
-        } else {
-            ids.insert("");
         }
     }
-    mcp && ids.len() > 1
+    ids.len() > 1
+}
+
+/// Resolve the job's business target using its canonical primary task. History
+/// aliases are useful only in the absence of that primary, never in its place.
+pub fn job_target(
+    job: &Value,
+    primary: Option<&Value>,
+    legacy: impl IntoIterator<Item = Resolution>,
+    policy: &Value,
+) -> Resolution {
+    let own = resolve(job, policy);
+    if let Some(primary) = primary {
+        let target = resolve(primary, policy);
+        if !compatible(own, target) {
+            return Resolution::Unknown;
+        }
+        if own == Resolution::Other {
+            return target;
+        }
+        return own;
+    }
+    if own == Resolution::Other && ambiguous(legacy) {
+        Resolution::Unknown
+    } else {
+        own
+    }
+}
+
+/// Same opaque key as agent-progress; source job IDs never enter the response.
+pub fn job_key(id: &str) -> String {
+    use sha2::{Digest, Sha256};
+    format!("job-{:x}", Sha256::digest(id.as_bytes()))
+}
+
+pub fn bindings_configured() -> bool {
+    binding(&CONTRACT, &Value::Null)
+        .zip(binding(&ALPHA, &Value::Null))
+        .is_some_and(|(a, b)| a.0 != b.0)
+}
+
+/// A read-only deployment probe. It performs no installed-store access and
+/// returns neither the values nor a guessable digest of private identities.
+pub fn status_requested(mut args: impl Iterator<Item = String>) -> bool {
+    args.next().as_deref() == Some("--product-identity-status") && args.next().is_none()
+}
+pub fn status() -> Value {
+    json!({"schemaVersion":1,"configured":bindings_configured()})
 }

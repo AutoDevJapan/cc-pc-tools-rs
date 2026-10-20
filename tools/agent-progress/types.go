@@ -14,19 +14,22 @@ type todoStore struct {
 }
 
 type todoItem struct {
-	ID           int64           `json:"id"`
-	Project      string          `json:"project"`
-	OwnerProject json.RawMessage `json:"owner_project"`
-	Department   string          `json:"department"`
-	Status       string          `json:"status"`
-	Progress     json.RawMessage `json:"progress"`
-	TaskType     json.RawMessage `json:"task_type"`
-	Updated      json.RawMessage `json:"updated"`
-	Jobs         json.RawMessage `json:"jobs"`
-	WaitOn       []int64         `json:"wait_on"`
-	WorkWaitOn   []int64         `json:"work_wait_on"`
-	WaitReady    *readyWait      `json:"wait_ready"`
-	Scheduler    struct {
+	ProductIdentity   json.RawMessage `json:"product_identity"`
+	RepositoryID      json.RawMessage `json:"repository_id"`
+	RepositoryOwnerID json.RawMessage `json:"repository_owner_id"`
+	ID                int64           `json:"id"`
+	Project           string          `json:"project"`
+	OwnerProject      json.RawMessage `json:"owner_project"`
+	Department        string          `json:"department"`
+	Status            string          `json:"status"`
+	Progress          json.RawMessage `json:"progress"`
+	TaskType          json.RawMessage `json:"task_type"`
+	Updated           json.RawMessage `json:"updated"`
+	Jobs              json.RawMessage `json:"jobs"`
+	WaitOn            []int64         `json:"wait_on"`
+	WorkWaitOn        []int64         `json:"work_wait_on"`
+	WaitReady         *readyWait      `json:"wait_ready"`
+	Scheduler         struct {
 		Job string `json:"job"`
 	} `json:"scheduler"`
 	Subwork json.RawMessage `json:"subwork"`
@@ -38,31 +41,34 @@ type readyWait struct {
 }
 
 type jobMeta struct {
-	ID              string          `json:"id"`
-	Status          string          `json:"status"`
-	TaskType        json.RawMessage `json:"task_type"`
-	Project         string          `json:"project"`
-	OwnerProject    json.RawMessage `json:"owner_project"`
-	Department      string          `json:"department"`
-	TodoID          int64           `json:"todo_id"`
-	RelatedTodoIDs  []int64         `json:"related_todo_ids"`
-	WorkWaitOn      []int64         `json:"work_wait_on"`
-	CreatedAt       string          `json:"created_at"`
-	StartedAt       string          `json:"started_at"`
-	FinishedAt      string          `json:"finished_at"`
-	LastEventAt     string          `json:"last_event_at"`
-	Activity        string          `json:"activity"`
-	ContextPhase    string          `json:"context_phase"`
-	LastFailureKind string          `json:"last_failure_kind"`
-	RetryNotBefore  json.RawMessage `json:"retry_not_before"`
-	CancelRequested bool            `json:"cancel_requested"`
-	PID             uint32          `json:"pid"`
-	PIDCreated      *uint64         `json:"pid_created"`
-	CodexPID        uint32          `json:"codex_pid"`
-	CodexPIDCreated *uint64         `json:"codex_pid_created"`
-	ParentJobID     string          `json:"parent_job_id"`
-	Subwork         json.RawMessage `json:"subwork"`
-	QueueWaitReason *queueWait      `json:"queue_wait_reason"`
+	ProductIdentity   json.RawMessage `json:"product_identity"`
+	RepositoryID      json.RawMessage `json:"repository_id"`
+	RepositoryOwnerID json.RawMessage `json:"repository_owner_id"`
+	ID                string          `json:"id"`
+	Status            string          `json:"status"`
+	TaskType          json.RawMessage `json:"task_type"`
+	Project           string          `json:"project"`
+	OwnerProject      json.RawMessage `json:"owner_project"`
+	Department        string          `json:"department"`
+	TodoID            int64           `json:"todo_id"`
+	RelatedTodoIDs    []int64         `json:"related_todo_ids"`
+	WorkWaitOn        []int64         `json:"work_wait_on"`
+	CreatedAt         string          `json:"created_at"`
+	StartedAt         string          `json:"started_at"`
+	FinishedAt        string          `json:"finished_at"`
+	LastEventAt       string          `json:"last_event_at"`
+	Activity          string          `json:"activity"`
+	ContextPhase      string          `json:"context_phase"`
+	LastFailureKind   string          `json:"last_failure_kind"`
+	RetryNotBefore    json.RawMessage `json:"retry_not_before"`
+	CancelRequested   bool            `json:"cancel_requested"`
+	PID               uint32          `json:"pid"`
+	PIDCreated        *uint64         `json:"pid_created"`
+	CodexPID          uint32          `json:"codex_pid"`
+	CodexPIDCreated   *uint64         `json:"codex_pid_created"`
+	ParentJobID       string          `json:"parent_job_id"`
+	Subwork           json.RawMessage `json:"subwork"`
+	QueueWaitReason   *queueWait      `json:"queue_wait_reason"`
 }
 
 type queueWait struct {
@@ -98,6 +104,7 @@ type WaitReason struct {
 }
 
 type Job struct {
+	ProductIdentity *productIdentity `json:"product_identity,omitempty"`
 	// Only active-only observations certify the canonical predicate after all
 	// resource/cancellation/task-wait checks. Diagnostic observations omit it.
 	ProcessingVerified *bool        `json:"processing_verified,omitempty"`
@@ -126,25 +133,26 @@ type Job struct {
 }
 
 type Task struct {
-	ID             int64        `json:"task_id"`
-	DisplayName    string       `json:"display_name"`
-	PublicLabel    string       `json:"public_label"`
-	LabelKind      string       `json:"label_kind"`
-	Department     string       `json:"department"`
-	Priority       int          `json:"priority"`
-	RecordedStatus string       `json:"recorded_status"`
-	Percent        *int         `json:"percent"`
-	ProgressState  string       `json:"progress_state"`
-	Execution      string       `json:"execution"`
-	Phase          string       `json:"phase"`
-	TaskType       string       `json:"task_type"`
-	TaskTypeSource string       `json:"task_type_source"`
-	Detail         DetailRef    `json:"detail"`
-	JobKeys        []string     `json:"job_keys"`
-	WaitReasons    []WaitReason `json:"wait_reasons"`
-	RecordUpdated  Clock        `json:"record_updated"`
-	LastActivity   Clock        `json:"last_activity"`
-	ParentTodoID   *int64       `json:"parent_task_id"`
+	ProductIdentity *productIdentity `json:"product_identity,omitempty"`
+	ID              int64            `json:"task_id"`
+	DisplayName     string           `json:"display_name"`
+	PublicLabel     string           `json:"public_label"`
+	LabelKind       string           `json:"label_kind"`
+	Department      string           `json:"department"`
+	Priority        int              `json:"priority"`
+	RecordedStatus  string           `json:"recorded_status"`
+	Percent         *int             `json:"percent"`
+	ProgressState   string           `json:"progress_state"`
+	Execution       string           `json:"execution"`
+	Phase           string           `json:"phase"`
+	TaskType        string           `json:"task_type"`
+	TaskTypeSource  string           `json:"task_type_source"`
+	Detail          DetailRef        `json:"detail"`
+	JobKeys         []string         `json:"job_keys"`
+	WaitReasons     []WaitReason     `json:"wait_reasons"`
+	RecordUpdated   Clock            `json:"record_updated"`
+	LastActivity    Clock            `json:"last_activity"`
+	ParentTodoID    *int64           `json:"parent_task_id"`
 }
 
 // This is a numeric local detail route, not a source URL, path, or raw title.
@@ -154,19 +162,20 @@ type DetailRef struct {
 }
 
 type Snapshot struct {
-	ProcessingContract string            `json:"processing_contract,omitempty"`
-	SchemaVersion      int               `json:"schema_version"`
-	CapturedAt         string            `json:"captured_at"`
-	HeartbeatAt        string            `json:"heartbeat_at"`
-	Status             string            `json:"status"`
-	Consistency        string            `json:"consistency"`
-	Sources            map[string]Source `json:"sources"`
-	Tasks              []Task            `json:"tasks"`
-	Jobs               []Job             `json:"jobs"`
-	TaskTotal          int               `json:"task_total"`
-	JobTotal           int               `json:"job_total"`
-	Truncated          bool              `json:"truncated"`
-	Issues             []string          `json:"issues"`
+	ProductBindingsConfigured bool              `json:"product_bindings_configured"`
+	ProcessingContract        string            `json:"processing_contract,omitempty"`
+	SchemaVersion             int               `json:"schema_version"`
+	CapturedAt                string            `json:"captured_at"`
+	HeartbeatAt               string            `json:"heartbeat_at"`
+	Status                    string            `json:"status"`
+	Consistency               string            `json:"consistency"`
+	Sources                   map[string]Source `json:"sources"`
+	Tasks                     []Task            `json:"tasks"`
+	Jobs                      []Job             `json:"jobs"`
+	TaskTotal                 int               `json:"task_total"`
+	JobTotal                  int               `json:"job_total"`
+	Truncated                 bool              `json:"truncated"`
+	Issues                    []string          `json:"issues"`
 }
 
 type Options struct {

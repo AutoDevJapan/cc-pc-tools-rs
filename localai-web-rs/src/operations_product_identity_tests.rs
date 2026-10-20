@@ -334,3 +334,131 @@ fn mcp_detail_api_keeps_private_and_unknown_business_targets_closed() {
         Err(404)
     );
 }
+
+fn certificate(key: &str, ids: Value, now: u64) -> Value {
+    let at = chrono::DateTime::from_timestamp_millis(now as i64)
+        .unwrap()
+        .to_rfc3339();
+    let digest = ring::digest::digest(&ring::digest::SHA256, key.as_bytes());
+    let key = format!(
+        "job-{}",
+        digest
+            .as_ref()
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect::<String>()
+    );
+    json!({"schema_version":1,"processing_contract":"agent-progress-active-v1","captured_at":at,"heartbeat_at":at,
+        "status":"ok","truncated":false,"sources":{"todo":{"status":"ok","complete":true},"jobs":{"status":"ok","complete":true}},
+        "jobs":[{"job_key":key,"todo_ids":ids,"processing_verified":true,"recorded_status":"running","execution":"running",
+        "worker_presence":"verified_alive","source":{"status":"ok","complete":true},"wait_reasons":[],"last_activity":{"state":"fresh","at":at},"phase":"tool"}]})
+}
+
+// The public snapshot performs the same final workforce application as refresh.
+fn delivered(mut value: Value, active: Value, now: u64) -> Value {
+    value["fetchedAt"] = json!(now);
+    value["workforce"] = crate::workforce::generation(&value, Some(&active), None, now, now, None);
+    let temp = tempfile::tempdir().unwrap();
+    let operations = Operations::new(temp.path().into(), temp.path().join("Skills"));
+    *operations.snapshot.write().unwrap() = value;
+    operations.snapshot()
+}
+
+#[test]
+fn mcp_delivered_processing_cannot_be_resurrected_by_another_products_certificate() {
+    for masked in [true, false] {
+        let now = now_ms();
+        let value = board(
+            json!([
+                {"id":1,"project":"GoDD MCP","status":"doing","jobs":["alpha"]},
+                {"id":2641,"project":"cc-pc-tools-rs","status":"doing"}
+            ]),
+            vec![json!({"id":"alpha","todo_id":2641,"status":"running"})],
+            masked,
+        );
+        let value = delivered(value, certificate("alpha", json!([1, 2641]), now), now);
+        assert_ne!(row(&value, "todo-1")["status"], "working");
+        assert_eq!(row(&value, "todo-2641")["status"], "working");
+        assert_eq!(value["workforce"]["states"]["processing"], 1);
+    }
+}
+
+#[test]
+fn mcp_delivered_processing_requires_the_assigned_job_not_just_a_primary_field() {
+    let now = now_ms();
+    let value = board(
+        json!([{"id":2641,"project":"cc-pc-tools-rs","status":"doing"}]),
+        vec![json!({"id":"owner","todo_id":2641,"status":"running"})],
+        true,
+    );
+    assert!(row(&value, "todo-2641")["primaryJob"].is_string());
+    let wrong = delivered(value.clone(), certificate("other", json!([2641]), now), now);
+    assert_ne!(row(&wrong, "todo-2641")["status"], "working");
+    let correct = delivered(value, certificate("owner", json!([2641]), now), now);
+    assert_eq!(row(&correct, "todo-2641")["status"], "working");
+}
+
+#[test]
+fn mcp_nameless_failure_uses_the_primary_tasks_product_for_history() {
+    for masked in [true, false] {
+        let value = board(
+            json!([
+                {"id":1,"project":"GoDD MCP","status":"doing","jobs":["failed-alpha"]},
+                {"id":2641,"project":"cc-pc-tools-rs","status":"doing"}
+            ]),
+            vec![
+                json!({"id":"failed-alpha","todo_id":2641,"status":"failed","finished_at":"1970-01-01T00:16:40Z"}),
+            ],
+            masked,
+        );
+        assert_eq!(row(&value, "todo-1")["historyFailures"], 0);
+        assert_ne!(row(&value, "todo-1")["status"], "attention");
+        assert_eq!(row(&value, "todo-2641")["historyFailures"], 1);
+    }
+}
+
+#[test]
+fn mcp_standalone_job_keeps_all_private_links_when_its_primary_is_old_done() {
+    let value = board(
+        json!([
+            {"id":5,"project":"GoDD MCP","status":"doing","jobs":["standalone"]},
+            {"id":6,"project":"tools","status":"done","updated_at":"1970-01-01T00:00:00Z"}
+        ]),
+        vec![
+            json!({"id":"standalone","todo_id":6,"project":"tools","status":"running","task_title":"private-job-title-marker","last_message":"private-job-report-marker"}),
+        ],
+        false,
+    );
+    assert!(!value.to_string().contains("private-job-title-marker"));
+    assert!(!value.to_string().contains("private-job-report-marker"));
+}
+
+#[test]
+fn mcp_verified_primary_job_supplies_business_target_without_renaming_the_code_repository() {
+    for masked in [true, false] {
+        let value = board(
+            json!([{"id":3200,"project":"tools","status":"doing"}]),
+            vec![
+                json!({"id":"business","todo_id":3200,"project":"tools","status":"running","product_identity":identity(true)}),
+            ],
+            masked,
+        );
+        let alpha = product(&value, "GoDD MCP α");
+        assert_eq!(alpha["workers"][0]["id"], "todo-3200");
+        assert_eq!(alpha["workers"][0]["codeProduct"], "PCの道具");
+        assert_eq!(alpha["workers"][0]["priority"], 60);
+    }
+}
+
+#[test]
+fn mcp_unknown_ownership_is_not_promoted_by_a_processing_certificate() {
+    let now = now_ms();
+    let value = board(
+        json!([{"id":1,"project":"GoDD MCP α","product_identity":{},"status":"doing"}]),
+        vec![json!({"id":"unknown","todo_id":1,"status":"running"})],
+        true,
+    );
+    let value = delivered(value, certificate("unknown", json!([1]), now), now);
+    assert_ne!(row(&value, "todo-1")["status"], "working");
+    assert_eq!(row(&value, "todo-1")["productIdentity"]["state"], "unknown");
+}

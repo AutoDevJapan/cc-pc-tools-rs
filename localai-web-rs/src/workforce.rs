@@ -159,7 +159,18 @@ fn complete_collections(board: &Value) -> bool {
         .is_some_and(|products| products.iter().all(product))
 }
 
-fn state(worker: &Value, id: u64, processing: &BTreeSet<u64>) -> &'static str {
+fn strict_job_match(worker:&Value)->bool {
+    worker.get("processingJobKey").is_some()
+        || matches!(worker["productIdentity"]["productId"].as_str(),Some("godd-mcp-contract"|"godd-mcp-alpha"))
+        || worker["productIdentity"]["state"]=="unknown"
+}
+
+fn accepts_job(worker:&Value,job:&Value)->bool {
+    !strict_job_match(worker) || (worker["primaryJob"].is_string()
+        && worker["processingJobKey"].is_string() && worker["processingJobKey"]==job["job_key"])
+}
+
+fn state(worker: &Value, id: u64, processing: &BTreeSet<u64>, matched:bool) -> &'static str {
     // Canonical work waits take precedence over a collector captured before the wait.
     match worker["recordedStatus"].as_str() {
         Some("done") => "done",
@@ -181,7 +192,7 @@ fn state(worker: &Value, id: u64, processing: &BTreeSet<u64>) -> &'static str {
         _ if worker["waitingKind"] == "intake" => "intake_wait",
         _ if worker["waitingKind"] == "startup_error" => "startup_failure",
         _ if worker["jobStatus"] == "queued" => "job_queued",
-        _ if processing.contains(&id) => "processing",
+        _ if processing.contains(&id) && matched => "processing",
         Some("todo") => "not_started",
         _ => "execution_unverified",
     }
@@ -251,7 +262,10 @@ pub fn project(board: &Value, active: Option<&Value>, now: u64) -> Value {
             if !seen.insert(id) {
                 continue;
             }
-            let state = state(worker, id, &current_ids);
+            let matched=active.into_iter().flat_map(|input|input["jobs"].as_array().into_iter().flatten())
+                .any(|job|self::processing(job,now) && accepts_job(worker,job)
+                    && job["todo_ids"].as_array().is_some_and(|ids|ids.contains(&json!(id))));
+            let state = state(worker, id, &current_ids,matched);
             *counts.get_mut(state).unwrap() += 1;
             finished += usize::from(state == "done");
             let progress = worker["progress"]
@@ -269,6 +283,7 @@ pub fn project(board: &Value, active: Option<&Value>, now: u64) -> Value {
                 .filter(|job| {
                     state == "processing"
                         && self::processing(job, now)
+                        && accepts_job(worker,job)
                         && job["todo_ids"]
                             .as_array()
                             .is_some_and(|ids| ids.iter().any(|value| value.as_u64() == Some(id)))
@@ -347,7 +362,7 @@ pub fn project(board: &Value, active: Option<&Value>, now: u64) -> Value {
             "currentSession":null,"sessionReason":"個別の担当は作業ごとの観測で確認します。"}),
         );
     }
-    json!({"schemaVersion":1,"state":if stale {"stale"} else if ready {"available"} else {"unavailable"},"observedAt":fetched,
+    json!({"collectorBindingsConfigured":active.and_then(|input|input["product_bindings_configured"].as_bool()),"schemaVersion":1,"state":if stale {"stale"} else if ready {"available"} else {"unavailable"},"observedAt":fetched,
         "inventory":{"taskRecords":if ready {Some(tasks.len())} else {None},
             "unfinishedTaskRecords":if ready {Some(tasks.len()-finished)} else {None},
             "jobOnlyRecords":if ready {Some(job_rows)} else {None},
@@ -465,6 +480,11 @@ fn apply_product(product: &mut Value, tasks: &BTreeMap<u64, Value>, protected: b
         let state = task
             .and_then(|task| task["state"].as_str())
             .unwrap_or("execution_unverified");
+        let state=if state=="processing" && strict_job_match(worker)
+            && (!worker["primaryJob"].is_string() || !worker["processingJobKey"].is_string()
+                || !task.is_some_and(|task|task["references"]["sessions"].as_array().is_some_and(|keys|keys.contains(&worker["processingJobKey"])))) {
+            "execution_unverified"
+        } else {state};
         worker["workState"] = json!(state);
         worker["status"] = json!(match state {
             "processing" => "working",

@@ -202,6 +202,9 @@ func allowed(path string) bool {
 	if productCIRuntime(absolute, productCIDirectory, legacyMatch) && sourceVerified(base) {
 		return true
 	}
+	if discordAskRuntime(absolute, legacyMatch) && sourceVerified(base) {
+		return true
+	}
 	target, err := physical(absolute)
 	if err != nil {
 		// The one explicitly authorized new worktree may be created empty.

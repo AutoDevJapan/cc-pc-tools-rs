@@ -42,6 +42,21 @@ impl Fixture {
         )
         .unwrap()
     }
+    fn complete(&mut self) {
+        let path = self.paths.store.parent().unwrap().join("typed-result.json");
+        let result = json!({"schema":1,"generation":self.db["items"][0]["capacity_decision"]["active_generation"],"uninvestigated_categories":2,"investigated_resources":0,"candidates":0,"retained":0,"reclaimed_bytes":0,"archive_verified":null,"questions_created":0,"questions_sent":0,"answers_applied":null,"retention_reasons":{"protected_unclassified":1}});
+        fs::write(&path, result.to_string()).unwrap();
+        capacity_cycle::record_result(&mut self.db, 1, &path).unwrap();
+        cc_todo::execute(
+            &mut self.db,
+            &cc_todo::Command::Done {
+                id: 1,
+                note: String::new(),
+            },
+            &self.paths,
+        )
+        .unwrap();
+    }
 }
 
 #[test]
@@ -68,7 +83,7 @@ fn one_ordinary_row_retains_current_worker_and_advances_only_after_finished() {
         f.db["items"][0]["capacity_decision"]["active_generation"],
         next["generation"]
     );
-    f.db["items"][0]["status"] = json!("done");
+    f.complete();
     assert_eq!(f.ingest(AT + 10800)["action"], "reused_completed");
     assert_eq!(f.db["next_id"], 2);
     assert_eq!(f.db["items"].as_array().unwrap().len(), 1);
@@ -114,7 +129,7 @@ fn no_wait_or_running_job_is_released_by_new_measurement() {
     )
     .unwrap();
     f.db["items"][0]["jobs"] = json!([id]);
-    f.db["items"][0]["status"] = json!("done");
+    f.complete();
     f.write(AT + 10800);
     assert_eq!(
         f.ingest(AT + 10800)["action"],
@@ -209,7 +224,7 @@ fn later_cycles_keep_bounded_history_and_do_not_require_archived_job_files() {
     .unwrap();
     f.db["items"][0]["jobs"] = json!([id]);
     for cycle in 1..=18 {
-        f.db["items"][0]["status"] = json!("done");
+        f.complete();
         f.write(AT + cycle * 10800);
         assert_eq!(f.ingest(AT + cycle * 10800)["action"], "reused_completed");
         if cycle == 1 {
@@ -247,7 +262,7 @@ fn explicit_stop_flags_on_completed_row_or_job_survive_next_cycle() {
     for field in ["stopped", "cancel_requested", "owner_stopped"] {
         let mut f = Fixture::new();
         f.ingest(AT);
-        f.db["items"][0]["status"] = json!("done");
+        f.complete();
         f.db["items"][0][field] = json!(true);
         f.write(AT + 10800);
         assert_eq!(
@@ -273,7 +288,7 @@ fn explicit_stop_flags_on_completed_row_or_job_survive_next_cycle() {
         }
         fs::write(f.paths.jobs.join(id).join("job.json"), job.to_string()).unwrap();
         f.db["items"][0]["jobs"] = json!([id]);
-        f.db["items"][0]["status"] = json!("done");
+        f.complete();
         f.write(AT + 10800);
         assert_eq!(
             f.ingest(AT + 10800)["action"],
@@ -305,7 +320,7 @@ fn reused_row_waits_for_scheduler_without_watchdog_resuming_old_conversation() {
     let job = json!({"id":id,"todo_id":1,"project":"fixture","status":"succeeded","created_at":AT-100,"finished_at":AT,"thread_id":"old-conversation","cwd":"fixture"});
     fs::write(f.paths.jobs.join(id).join("job.json"), job.to_string()).unwrap();
     f.db["items"][0]["jobs"] = json!([id]);
-    f.db["items"][0]["status"] = json!("done");
+    f.complete();
     f.write(AT + 10800);
     f.ingest(AT + 10800);
     let mut ordinary = f.db.clone();
@@ -347,7 +362,7 @@ fn completed_generation_with_finished_failures_can_advance_without_carrying_disp
         let job = json!({"id":id,"todo_id":1,"status":status,"cwd":"fixture","thread_id":"01a0fa4b-2898-7553-889f-0e934f0d32f8","recovery_cancel":{"key":"automatic","committed_at":"2026-10-20T09:00:00Z"}});
         fs::write(f.paths.jobs.join(id).join("job.json"), job.to_string()).unwrap();
         f.db["items"][0]["jobs"] = json!([id]);
-        f.db["items"][0]["status"] = json!("done");
+        f.complete();
         f.db["items"][0]["scheduler"] = json!({"last_job":id,"resume":true,"continuation_count":3,"worktree":"fixture","branch":"scheduler/fixture","owner_instruction":"previous cycle instruction","workspace_receipt":{"job":id}});
         f.db["items"][0]["stall_recovery"] = json!({"history":[1,2],"next_at":99999999999_u64});
         f.write(AT + 10800);
@@ -377,6 +392,93 @@ fn completed_generation_with_finished_failures_can_advance_without_carrying_disp
             "previous cycle instruction"
         );
     }
+}
+
+#[test]
+fn scheduler_completion_without_result_requeues_same_unfinished_generation_once() {
+    let mut f = Fixture::new();
+    let first = f.ingest(AT);
+    // The scheduler's outcome path can set done without going through todo done.
+    f.db["items"][0]["status"] = json!("done");
+    f.write(AT + 10800);
+    assert_eq!(f.ingest(AT + 10800)["action"], "requeued_missing_result");
+    assert_eq!(
+        f.db["items"][0]["capacity_decision"]["active_generation"],
+        first["generation"]
+    );
+    let status = capacity_cycle::status(&f.db).unwrap();
+    assert_eq!(status["evaluation"]["missing_decision_result"], true);
+    assert_eq!(status["todo_status"], "todo");
+    assert!(status["result"].is_null());
+    f.db["items"][0]["status"] = json!("done");
+    assert_eq!(
+        f.ingest(AT + 10800)["action"],
+        "retained_unfinished_or_same_generation"
+    );
+    assert_eq!(f.db["items"].as_array().unwrap().len(), 1);
+}
+
+#[test]
+fn archive_commit_retry_keeps_the_first_published_receipt_despite_dispatch_changes() {
+    let mut f = Fixture::new();
+    let first = f.ingest(AT);
+    f.complete();
+    let persisted = f.db.clone();
+    f.write(AT + 10800);
+    f.ingest(AT + 10800);
+    let archive = f
+        .paths
+        .store
+        .parent()
+        .unwrap()
+        .join("capacity-decisions")
+        .join(format!("{}.json", first["generation"].as_str().unwrap()));
+    let bytes = fs::read(&archive).unwrap();
+    // Simulate a crash after receipt publication but before todo.json commits.
+    f.db = persisted;
+    f.db["items"][0]["scheduler"] = json!({"continuation_count":42});
+    assert_eq!(f.ingest(AT + 10800)["action"], "reused_completed");
+    assert_eq!(fs::read(archive).unwrap(), bytes);
+}
+
+#[test]
+fn disabled_and_unanswered_rows_retain_their_generation_with_observable_reasons() {
+    let mut f = Fixture::new();
+    let first = f.ingest(AT);
+    f.complete();
+    f.db["items"][0]["dispatchable"] = json!(false);
+    f.db["items"][0]["wait_on"] = json!([]);
+    f.write(AT + 10800);
+    f.ingest(AT + 10800);
+    f.ingest(AT + 10800);
+    let status = capacity_cycle::status(&f.db).unwrap();
+    assert_eq!(
+        status["evaluation"]["reason"],
+        "automatic_dispatch_disabled"
+    );
+    assert_eq!(status["evaluation"]["consecutive_retained"], 1);
+    assert_eq!(status["has_dependency_wait"], false);
+    f.write(AT + 21600);
+    f.ingest(AT + 21600);
+    assert_eq!(
+        capacity_cycle::status(&f.db).unwrap()["evaluation"]["consecutive_retained"],
+        2
+    );
+    assert_eq!(
+        f.db["items"][0]["capacity_decision"]["active_generation"],
+        first["generation"]
+    );
+    f.db["items"][0]["dispatchable"] = json!(true);
+    f.db["items"][0]["scheduler"] = json!({"question":{"id":"1"}});
+    f.write(AT + 32400);
+    assert_eq!(
+        f.ingest(AT + 32400)["action"],
+        "retained_unfinished_or_same_generation"
+    );
+    assert_eq!(
+        capacity_cycle::status(&f.db).unwrap()["evaluation"]["reason"],
+        "owner_question_unanswered"
+    );
 }
 
 #[test]

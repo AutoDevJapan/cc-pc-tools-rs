@@ -4,32 +4,44 @@
   "repository": "AutoDevJapan/cc-pc-tools-rs",
   "source_root": "D:/CC/Work/unattended-operations-20261013-wt/todo-3085-capacity-decision",
   "base_sha": "c8d71fbcc3864443977e060ec867d65e8a623c56",
-  "verified_at_utc": "2026-10-20T10:34:26.6253501Z",
+  "verified_at_utc": "2026-10-20T11:18:42.1511041Z",
   "source_files": {
     "capacity-audit-3h/main.go": "4d18e93c84a50b4f0054887ffc2e3e8ef0f0d5da761850f1be66d623244b4571",
-    "capacity-audit-3h/decision.go": "191ffb475e1217cfdd9654c694c4b28a4f985fbe11260ab03af86243ac2d62ab",
+    "capacity-audit-3h/decision.go": "43d59b6d9906a7b9d6acaf816bfc47922c6a33ff397b27c1772f6902e0dfd355",
     "capacity-audit-3h/decision-worker.md": "2087c1660ca389b572065c78877ad37be05dee1963350df0349e60cbb86a18e4",
-    "cc-todo/src/capacity_cycle.rs": "5189ddc579ac75f1685ec1c8e545b9254c89c232321d05f1e43faea463604f35",
+    "cc-todo/src/capacity_cycle.rs": "70e0b4ef8c0745902016c2eabe5972379f5a6264ce03fc564f57a6dcfb0ad470",
     "cc-todo/src/lib.rs": "5746f75cd3fb86ab5755e0e205e692794d37fc277052f6cc9b8cfff1c2b63d09",
     "cc-todo/src/recovery.rs": "da66e11d94e8206b4fd32feffd63c3415c804524b6168bd3db26027c2cfa1362"
   },
   "capacity": {
     "path": "D:/CC/Tools/capacity-audit-3h/capacity-audit-3h.exe",
     "old_sha256": "efc30235d69e53b7cbcd181db922dc354a1a268a221356ef856e916643790329",
-    "new_sha256": "5e12cd10b4b5d4c1596862e0a95bf69e9246e5671c3976920f1d6d4321b694de",
+    "new_sha256": "43d2e177ec55a1f3f0a281063105d5bd0ad2c6be89f1ab1f14a078773d724a3d",
     "ownership": "existing CC-CapacityAudit-3h action and tracked cleanup-8h/deploy-2491/deploy.ps1",
-    "interval": "PT3H"
+    "interval": "PT3H",
+    "candidate_relative_path": ".ci-work/capacity-audit-3h.exe"
   },
   "todo": {
     "path": "D:/CC/Tools/todo/todo.exe",
     "old_sha256": "ba1d65381bd31c38d05cf3798973427e2f0271dbc9d664afbfe91501a8de6811",
-    "new_sha256": "9cd6bf1070bba464ba392d0f5388d6cbf0efe34804c677611e2ec959014c4090",
-    "ownership": "canonical executable in cc-todo/src/lib.rs Paths::production and shared-todo SKILL"
+    "new_sha256": "9f4ecce7832d0e765b9cdec63dc78d6db76b67cc30f66e02772acfa8d3327ce3",
+    "ownership": "canonical executable in cc-todo/src/lib.rs Paths::production and shared-todo SKILL",
+    "candidate_relative_path": ".ci-work/todo-3085.exe"
   },
   "cleanup_sha256": "6975fc67257bb45012f96dc42091e26fab9bf19a065e00740ab0476e307b2f9b",
   "cleanup_interval": "PT1H",
   "original_registry_recovered": false,
   "old_raw_logs_read": false,
   "whole_directories_authorized": false,
-  "repository_id": 1406818713
+  "repository_id": 1406818713,
+  "source_git_blobs": {
+    "capacity-audit-3h/main.go": "f8fcb808598aec12961fa8e35f9638ce91a131fb",
+    "capacity-audit-3h/decision.go": "1d476165dcd2da218732deb08271e9b3bbeb1975",
+    "capacity-audit-3h/decision-worker.md": "b0150c41331fda523aeffb260921fef055476c6b",
+    "cc-todo/src/capacity_cycle.rs": "c10419b77f23444f7e5a62a7afe7a9cacd93acbe",
+    "cc-todo/src/lib.rs": "b29d7f38adf8366956c71b2438d85be0ad2b6e68",
+    "cc-todo/src/recovery.rs": "ee0728c8db9778d428c8d50ed13e9f0722a36078"
+  },
+  "source_fingerprint_scope": "source_files hashes compile-input working-copy bytes; source_git_blobs records normalized Git object IDs",
+  "packaging": "Cargo hardlinked output is copied into an independent one-link distribution file; bytes and guard physical identity remain checked"
 }

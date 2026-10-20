@@ -94,7 +94,7 @@ func queueDecisionWith(r report, home string, call func(context.Context, ...stri
 		return failure
 	}
 	switch got.Action {
-	case "queued", "reused_completed", "retained_unfinished_or_same_generation":
+	case "queued", "reused_completed", "requeued_missing_result", "retained_unfinished_or_same_generation":
 	default:
 		return failure
 	}

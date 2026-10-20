@@ -50,10 +50,10 @@ pub fn status(db: &Value) -> Result<Value> {
         return Err("duplicate capacity decision rows".into());
     }
     let Some(row) = rows.first() else {
-        return Ok(json!({"schema":1,"registered":false,"worker_launched":false}));
+        return Ok(json!({"schema":1,"registered":false,"launch_policy":"ordinary_scheduler"}));
     };
     Ok(
-        json!({"schema":1,"registered":true,"todo_id":row["id"],"todo_status":row["status"],"model":row["model"],"effort":row["effort"],"jobs":row["jobs"],"active_generation":row["capacity_decision"]["active_generation"],"active_measurement":row["capacity_decision"]["active"],"latest_generation":row["capacity_decision"]["latest_generation"],"latest_measurement":row["capacity_decision"]["latest"],"result":row["capacity_decision"]["result"],"has_owner_wait":!row["owner_question_wait"].is_null()||!row["decision_wait"].is_null(),"has_dependency_wait":!row["wait_on"].is_null(),"worker_launched":false}),
+        json!({"schema":1,"registered":true,"todo_id":row["id"],"todo_status":row["status"],"model":row["model"],"effort":row["effort"],"jobs":row["jobs"],"active_generation":row["capacity_decision"]["active_generation"],"active_measurement":row["capacity_decision"]["active"],"latest_generation":row["capacity_decision"]["latest_generation"],"latest_measurement":row["capacity_decision"]["latest"],"result":row["capacity_decision"]["result"],"evaluation":row["capacity_decision"]["last_evaluation"],"needs_result_repair":row["capacity_decision"]["missing_result_observed"]==true&&validate_completion(row).is_err(),"has_owner_wait":!row["owner_question_wait"].is_null()||!row["decision_wait"].is_null(),"has_dependency_wait":!row["wait_on"].is_null()&&!row["wait_on"].as_array().is_some_and(Vec::is_empty),"launch_policy":"ordinary_scheduler"}),
     )
 }
 
@@ -202,7 +202,21 @@ fn archive_cycle(paths: &Paths, old: &Value, row: &Value) -> Result<()> {
     let result = write.and_then(|_| match fs::hard_link(&stage, &path) {
         Ok(()) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => {
-            if fs::read(&path).map_err(crate::err)? == data.as_bytes() {
+            let mut bytes = Vec::new();
+            fs::File::open(&path)
+                .map_err(crate::err)?
+                .take((4 << 20) + 1)
+                .read_to_end(&mut bytes)
+                .map_err(crate::err)?;
+            let published: Value =
+                serde_json::from_slice(&bytes).map_err(|_| "capacity archive invalid")?;
+            // The first fully published cycle is authoritative after a lost DB
+            // commit; later mutable dispatch bookkeeping must not deadlock it.
+            if bytes.len() <= 4 << 20
+                && published["schema"] == 1
+                && published["generation"] == generation
+                && published["measurement"] == old["active"]
+            {
                 Ok(())
             } else {
                 Err("capacity archive conflict".into())
@@ -240,24 +254,45 @@ fn jobs_finished(row: &Value, paths: &Paths) -> bool {
     })
 }
 
-fn no_hold(row: &Value) -> bool {
-    !cc_job_policy::cancellation::owner_stopped(row, &Value::Null)
-        && row["owner_stopped"] != true
-        && [
-            "wait_on",
-            "wait_ready",
-            "conversation_wait",
-            "owner_question_wait",
-            "decision_wait",
-            "owner_postponement_recorded",
-            "stop_kind",
-        ]
-        .iter()
-        .all(|key| {
-            row[*key].is_null() || row[*key] == false || row[*key] == "" || row[*key] == json!([])
-        })
-        && row["scheduler"]["owner_stop_job"].is_null()
-        && row["scheduler"]["question_close_pending"] != true
+fn hold_reason(row: &Value) -> Option<&'static str> {
+    let present =
+        |value: &Value| !(value.is_null() || value == false || value == "" || value == &json!([]));
+    if row["dispatchable"] != true {
+        return Some("automatic_dispatch_disabled");
+    }
+    if cc_job_policy::cancellation::owner_stopped(row, &Value::Null)
+        || row["owner_stopped"] == true
+        || !row["scheduler"]["owner_stop_job"].is_null()
+    {
+        return Some("owner_stop");
+    }
+    if present(&row["wait_on"]) {
+        return Some("dependency_wait");
+    }
+    if cc_scheduler::common::truth(&row["scheduler"]["question"])
+        && !cc_scheduler::common::truth(&row["scheduler"]["answer"])
+    {
+        return Some("owner_question_unanswered");
+    }
+    if row["scheduler"]["question_close_pending"] == true {
+        return Some("question_close_pending");
+    }
+    if [
+        "conversation_wait",
+        "owner_question_wait",
+        "decision_wait",
+        "owner_postponement_recorded",
+        "stop_kind",
+    ]
+    .iter()
+    .any(|key| present(&row[*key]))
+    {
+        return Some("recorded_hold");
+    }
+    if present(&row["wait_ready"]) {
+        return Some("technical_wait");
+    }
+    None
 }
 
 fn bind_spec(
@@ -342,7 +377,7 @@ pub fn ingest(
     }
     let gen_id = generation(&report);
     let mut copy = db.clone();
-    let (id, action) = if let Some(existing) = matches.first() {
+    let (id, action, reason, missing) = if let Some(existing) = matches.first() {
         if existing["project"] != project {
             return Err("capacity project changed".into());
         }
@@ -354,10 +389,40 @@ pub fn ingest(
         if report["time"] == old["latest"]["time"] && gen_id != old["latest_generation"] {
             return Err("conflicting capacity generation".into());
         }
-        if existing["status"] == "done"
+        let missing = existing["status"] == "done" && validate_completion(existing).is_err();
+        let hold = hold_reason(existing);
+        let finished =
+            existing["status"] == "done" && hold.is_none() && jobs_finished(existing, paths);
+        if missing && finished && old["last_unrecorded_measurement"] != gen_id {
+            let instruction = format!(
+                "{text}\n技術的な再開: この元の計測世代の集計が保存されていません。元の世代をcapacity-resultへ記録するまで未完です。再開を促した最新の匿名計測（元の世代は末尾のまま保持）: {report}\n"
+            );
+            bind_spec(
+                paths,
+                &instruction,
+                &old["active"],
+                Some(id),
+                &mut copy,
+                project,
+            )?;
+            let row = find(&mut copy, id)?;
+            row["capacity_decision"]["last_unrecorded_measurement"] = json!(gen_id);
+            row["capacity_decision"]["missing_result_observed"] = json!(true);
+            row["status"] = json!("wait");
+            // This is still the SAME unfinished generation: keep its owner
+            // answers/jobs and use ordinary scheduler recovery, not a new cycle.
+            row.as_object_mut().unwrap().remove("work_owner_job");
+            cc_job_policy::todo_wait::release_item(row);
+            (
+                id,
+                "requeued_missing_result",
+                "decision_result_missing",
+                true,
+            )
+        } else if existing["status"] == "done"
+            && !missing
             && gen_id != old["active_generation"]
-            && jobs_finished(existing, paths)
-            && no_hold(existing)
+            && finished
         {
             archive_cycle(paths, old, existing)?;
             bind_spec(paths, &text, &report, Some(id), &mut copy, project)?;
@@ -380,6 +445,8 @@ pub fn ingest(
             history.insert("active_generation".into(), json!(gen_id));
             history.insert("active".into(), report.clone());
             history.remove("result");
+            history.remove("missing_result_observed");
+            history.remove("last_unrecorded_measurement");
             // A completed cycle is a fresh finite dispatch, never a retry of
             // its old conversation. Preserve the workspace and archived history.
             let mut workspace = json!({});
@@ -403,16 +470,46 @@ pub fn ingest(
             row["jobs"] = json!([]);
             row["scheduler"] = workspace;
             row["status"] = json!("todo");
-            (id, "reused_completed")
+            (id, "reused_completed", "new_measurement", false)
         } else {
-            (id, "retained_unfinished_or_same_generation")
+            let reason = hold.unwrap_or(if missing {
+                "decision_result_missing"
+            } else if existing["status"] == "done" && gen_id == old["active_generation"] {
+                "same_generation"
+            } else if existing["status"] == "done" && !finished {
+                "job_not_finished_or_unverified"
+            } else {
+                "unfinished"
+            });
+            (
+                id,
+                "retained_unfinished_or_same_generation",
+                reason,
+                missing,
+            )
         }
     } else {
         let id = bind_spec(paths, &text, &report, None, &mut copy, project)?;
         find(&mut copy, id)?["capacity_decision"] = json!({"key":KEY,"origin_todo_id":3085,"active_generation":gen_id,"active":report,"history":[]});
-        (id, "queued")
+        (id, "queued", "first_measurement", false)
     };
     let row = find(&mut copy, id)?;
+    let retained = action == "retained_unfinished_or_same_generation";
+    let previous = &row["capacity_decision"]["last_evaluation"];
+    let counter = if retained {
+        previous["consecutive_retained"]
+            .as_u64()
+            .unwrap_or(0)
+            .saturating_add(u64::from(
+                previous["generation"] != gen_id || previous["action"] != action,
+            ))
+    } else {
+        0
+    };
+    row["capacity_decision"]["last_evaluation"] = json!({"generation":gen_id,"action":action,"reason":reason,"missing_decision_result":missing,"consecutive_retained":counter,"recorded_at":now()});
+    if missing {
+        row["capacity_decision"]["missing_result_observed"] = json!(true);
+    }
     row["capacity_decision"]["latest_generation"] = json!(gen_id);
     row["capacity_decision"]["latest"] = report;
     row["updated"] = json!(now());
@@ -486,6 +583,10 @@ pub fn record_result(db: &mut Value, id: i64, path: &Path) -> Result<Value> {
         return Err("uninvestigated capacity falsely completed".into());
     }
     row["capacity_decision"]["result"] = result.clone();
+    row["capacity_decision"]
+        .as_object_mut()
+        .unwrap()
+        .remove("missing_result_observed");
     row["updated"] = json!(now());
     Ok(json!({"recorded":true,"todo_id":id,"result":result}))
 }

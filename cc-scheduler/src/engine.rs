@@ -632,6 +632,7 @@ impl<B: Backend> Scheduler<B> {
                 || truth(&scheduler["owner_stop_job"])
                 || item["stopped"] == true || item["owner_stopped"] == true
                 || s(&item["spec"]).is_empty() || s(&scheduler["worktree"]).is_empty()
+                || s(&scheduler["selection"]["model"]).is_empty()
                 || item["stall_recovery"]["pending"].is_object()
                 || todo_wait::waiting(&db, &item)
             {

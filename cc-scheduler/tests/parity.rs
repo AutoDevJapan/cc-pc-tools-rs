@@ -2863,7 +2863,7 @@ fn subscription_model_aliases_keep_the_requested_model_and_launch_canonical_id()
 
 #[test]
 fn repair_tick_adopts_an_exact_registered_subwork_after_lost_launch_ack() {
-    for changed in ["none", "spec", "model", "effort", "task", "cwd", "needs", "relation", "key", "scope", "owner", "stopped", "wait"] {
+    for changed in ["none", "spec", "model", "effort", "task", "cwd", "needs", "relation", "key", "scope", "owner", "stopped", "wait", "question", "owner_stop_job", "stall_pending", "processed", "missing_model"] {
         let mut f = completed_dependency_repair();
         let key = "a".repeat(32);
         f.e.edit(&json!(1), |row| {
@@ -2898,6 +2898,14 @@ fn repair_tick_adopts_an_exact_registered_subwork_after_lost_launch_ack() {
             "owner" => { f.e.edit(&json!(1), |r| r["status"] = json!("block")).unwrap(); },
             "stopped" => { f.e.edit(&json!(1), |r| r["owner_stopped"] = json!(true)).unwrap(); },
             "wait" => { wait_row(&mut f, 1, json!([99])); },
+            "question" => { f.e.edit(&json!(1), |r| r["scheduler"]["question"] = json!("question-1")).unwrap(); },
+            "owner_stop_job" => { f.e.edit(&json!(1), |r| r["scheduler"]["owner_stop_job"] = json!("owner-stop")).unwrap(); },
+            "stall_pending" => { f.e.edit(&json!(1), |r| r["stall_recovery"]["pending"] = json!({"job":"reservation"})).unwrap(); },
+            "processed" => { f.e.edit(&json!(1), |r| r["processed_results"]["registered"] = json!({"reason":"done"})).unwrap(); },
+            "missing_model" => {
+                registered["model"] = Value::Null;
+                f.e.edit(&json!(1), |r| r["scheduler"]["selection"]["model"] = Value::Null).unwrap();
+            },
             _ => unreachable!(),
         }
         let before = f.get(1);
@@ -2912,6 +2920,53 @@ fn repair_tick_adopts_an_exact_registered_subwork_after_lost_launch_ack() {
         } else {
             assert_eq!(f.get(1), before, "{changed}");
         }
+        assert!(f.e.backend.launched.is_empty());
+        assert!(f.e.backend.cancelled.is_empty());
+        assert!(f.e.backend.notices.is_empty());
+    }
+}
+#[test]
+fn repair_tick_prefers_one_live_receipt_and_leaves_ambiguous_live_receipts_untouched() {
+    for live_count in [1, 2] {
+        let mut f = completed_dependency_repair();
+        f.e.edit(&json!(1), |row| {
+            row["status"] = json!("todo");
+            remove(row, "wait_on");
+            row["subwork"] = json!({"parent_todo_id":2,"kind":"check"});
+            row["scheduler"]["key"] = json!("a".repeat(32));
+            row["scheduler"]["job"] = Value::Null;
+            row["scheduler"]["selection"] = json!({"model":"gpt-6-luna","effort":"high"});
+        }).unwrap();
+        let before = f.get(1);
+        let mut template = job("live-0", 0, "queued");
+        for (job_key, row_value) in [
+            ("todo_id", before["id"].clone()),
+            ("launch_key", before["scheduler"]["key"].clone()),
+            ("subwork", before["subwork"].clone()),
+            ("subwork_spec", before["spec"].clone()),
+            ("assigned_needs", before["needs"].clone()),
+            ("cwd", before["scheduler"]["worktree"].clone()),
+            ("model", before["scheduler"]["selection"]["model"].clone()),
+            ("effort", before["scheduler"]["selection"]["effort"].clone()),
+        ] { template[job_key] = row_value; }
+        let mut records = (0..live_count).map(|index| {
+            let mut record = template.clone();
+            record["id"] = json!(format!("live-{index}"));
+            record
+        }).collect::<Vec<_>>();
+        for index in 0..3 {
+            let mut terminal = template.clone();
+            terminal["id"] = json!(format!("terminal-{index}"));
+            terminal["status"] = json!("succeeded");
+            terminal["last_message"] = json!("状態: 完了\n検査が完了しました。");
+            records.push(terminal);
+        }
+        f.e.reconcile_repairs(&mut records, &Processes::new(), &f.cfg.clone()).unwrap();
+        if live_count == 1 {
+            assert_eq!(f.get(1)["scheduler"]["job"], "live-0");
+            assert_eq!(f.get(1)["status"], "doing");
+            assert_eq!(f.get(1)["jobs"].as_array().unwrap().last(), Some(&json!("live-0")));
+        } else { assert_eq!(f.get(1), before); }
         assert!(f.e.backend.launched.is_empty());
         assert!(f.e.backend.cancelled.is_empty());
         assert!(f.e.backend.notices.is_empty());

@@ -74,7 +74,7 @@ func withdrawalTest(t *testing.T, native bool) *withdrawalFixture {
 				return `{"withdrawn":true}`, nil
 			}
 			if !native {
-				if len(args) != 8 || args[2] != "--question-file" || args[4] != "--reason-file" || args[6] != "--expected-state-file" {
+				if len(args) != 10 || args[2] != "--question-file" || args[4] != "--reason-file" || args[6] != "--expected-state-file" || args[8] != "--scope-file" {
 					t.Fatal("canonical command contract differs")
 				}
 				origin, err := boundedRegular(args[7])

@@ -7,6 +7,12 @@ ToDo2823の新しい会話だけを既存の共有ToDoへ接続する。
 親Goが質問と回答の各呼出し前に元のプロジェクトの正確なrootをscrub391で確認し、
 `client_resource=false` かつ `classification_unverified=false` を要求する。
 この資源照合はGoの境界であり、Rustの対象拡張でguardや旧台帳の制約を緩めない。
+新しいGoはguardした登録projectとpathのSHAを`--scope-file`で渡す。
+edit/question-wait/question-answer/question-withdrawは、そのprojectと現在の登録pathを
+同じtodo.lock内で比較してから処理する。editは元行全体の`--expected-state-file`も比較する。
+scope fileは`discord-conversation-todo-scope-v1`、`todo_id`、`project`、
+`project_path_sha256`の厳密な文字列4項目。分類や本人性をこのSHAから推測しない。
+追加フラグのない既存CLI利用は従来どおり。GoとToDo CLIは同じ配布で更新する。
 
 ```text
 todo question-wait <id> --question-file <JSONファイル>

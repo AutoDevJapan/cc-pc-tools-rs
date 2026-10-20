@@ -129,6 +129,116 @@ func TestConversationUnrelatedGenerationShapeDoesNotBreakOriginalTaskRead(t *tes
 	}
 }
 
+func TestConversationActualCanonicalAllDeliveryPathsKeepGuardedProjectAndRoot(t *testing.T) {
+	for _, pathKind := range []string{"normal", "imported", "continued"} {
+		for _, change := range []string{"project", "root"} {
+			t.Run(pathKind+"/"+change, func(t *testing.T) {
+				var f *conversationFixture
+				if pathKind == "imported" {
+					w := withdrawalTest(t, true)
+					w.allowAnswer = true
+					f = w.f
+					f.mutateTodo(t, func(row map[string]any) {
+						row["note"] = "ジョブの結果に判断が必要です。"
+						row["scheduler"].(map[string]any)["phase"] = "finished"
+						row["processed_results"] = map[string]any{"worker-42": map[string]any{"generation": 7, "reason": "block"}}
+					})
+				} else if pathKind == "continued" {
+					f = continuedNative(t)
+				} else {
+					f = conversationNativeTest(t)
+					f.ask(t)
+				}
+				f.r.NoticeAttempted = true
+				f.reply(t, 8, "a")
+				backend := f.r.Run
+				var changed []byte
+				f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+					if path == conversationTodo && (args[0] == "edit" || args[0] == "question-answer") && changed == nil {
+						var db map[string]any
+						if readJSON(f.r.TodoPath, maxTodo, &db) != nil {
+							t.Fatal("missing store")
+						}
+						if change == "project" {
+							db["projects"].(map[string]any)["other-project"] = f.r.Config.Home
+							db["items"].([]any)[0].(map[string]any)["project"] = "other-project"
+						} else {
+							db["projects"].(map[string]any)["cc-pc-tools-rs"] = filepath.Join(f.r.Config.Home, "other-root")
+						}
+						if err := publish(f.r.TodoPath, db); err != nil {
+							t.Fatal(err)
+						}
+						changed, _ = os.ReadFile(f.r.TodoPath)
+					}
+					return backend(ctx, path, args...)
+				}
+				health := Health{}
+				f.r.processConversations(context.Background(), &health)
+				after, _ := os.ReadFile(f.r.TodoPath)
+				if changed == nil || len(health.Errors) == 0 || string(changed) != string(after) {
+					t.Fatal("guarded project/root change was mutated before refusal")
+				}
+			})
+		}
+	}
+}
+
+func TestConversationActualCanonicalWaitAndWithdrawalKeepGuardedRoot(t *testing.T) {
+	for _, kind := range []string{"wait", "withdraw"} {
+		t.Run(kind, func(t *testing.T) {
+			var f *conversationFixture
+			var w *withdrawalFixture
+			if kind == "wait" {
+				f = conversationNativeTest(t)
+			} else {
+				w = withdrawalTest(t, true)
+				f = w.f
+			}
+			backend := f.r.Run
+			var changed []byte
+			f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+				if path == conversationTodo && args[0] == "question-"+kind {
+					var db map[string]any
+					if readJSON(f.r.TodoPath, maxTodo, &db) != nil {
+						t.Fatal("missing fixture")
+					}
+					db["projects"].(map[string]any)["cc-pc-tools-rs"] = filepath.Join(f.r.Config.Home, "different-root")
+					if err := publish(f.r.TodoPath, db); err != nil {
+						t.Fatal(err)
+					}
+					changed, _ = os.ReadFile(f.r.TodoPath)
+				}
+				return backend(ctx, path, args...)
+			}
+			var err error
+			if kind == "wait" {
+				_, err = f.r.conversationAsk(context.Background(), f.input)
+			} else {
+				_, err = w.run()
+			}
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if changed == nil || err == nil || string(changed) != string(after) {
+				t.Fatal("scope change allowed wait or withdrawal mutation")
+			}
+		})
+	}
+}
+
+func TestConversationActualCanonicalSameGenerationNewOwnerIsNotEdited(t *testing.T) {
+	f := conversationNativeTest(t)
+	f.mutateTodo(t, func(row map[string]any) { row["resume_generation"] = 1 })
+	f.ask(t)
+	f.mutateTodo(t, func(row map[string]any) { row["worker_receipt"] = map[string]any{"job": "new-worker", "generation": 1} })
+	f.reply(t, 8, "a")
+	before, _ := os.ReadFile(f.r.TodoPath)
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	after, _ := os.ReadFile(f.r.TodoPath)
+	if len(health.Errors) == 0 || string(before) != string(after) {
+		t.Fatal("same-generation replacement owner was edited")
+	}
+}
+
 func TestConversationActualCanonicalGuardedProjectCannotChangeBeforeDeliverySnapshot(t *testing.T) {
 	f := continuedNative(t)
 	var db map[string]any
@@ -232,7 +342,12 @@ func TestConversationActualCanonicalContinuedDeliveryRecoversLostResultAndSepara
 	if len(health.Errors) == 0 || f.r.State.Requests[reply.Message].Todo != 0 {
 		t.Fatal("lost response was acknowledged before readback")
 	}
-	f.mutateTodo(t, func(row map[string]any) { row["status"] = "block"; row["owner_stopped"] = true })
+	f.mutateTodo(t, func(row map[string]any) {
+		row["status"] = "block"
+		row["owner_stopped"] = true
+		row["note"] = "新しい停止と直接指示"
+		row["scheduler"].(map[string]any)["owner_instruction"] = "新しい担当への直接指示"
+	})
 	before, _ := os.ReadFile(f.r.TodoPath)
 	f.r.processConversations(context.Background(), &Health{})
 	after, _ := os.ReadFile(f.r.TodoPath)

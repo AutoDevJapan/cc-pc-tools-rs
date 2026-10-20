@@ -242,6 +242,10 @@ func (r *Runner) conversationWithdraw(ctx context.Context, requestID, reasonFile
 	if err != nil || row.Project != q.Project {
 		return nil, errConversationWithdraw
 	}
+	scopeFile, err := worker.conversationScopeFile(row, q)
+	if err != nil {
+		return nil, errConversationWithdraw
+	}
 	proofSHA, replied, err := worker.withdrawalProof(ctx, q)
 	if err != nil {
 		return nil, err
@@ -275,10 +279,7 @@ func (r *Runner) conversationWithdraw(ctx context.Context, requestID, reasonFile
 		if err != nil || bytesHash(b) != q.ReceiptSHA || json.Unmarshal(b, &receipt) != nil || receipt.Domain != "discord-conversation-question-v1" || receipt.RequestID != q.SenderID || receipt.Todo != fmt.Sprint(q.Todo) || receipt.Guild != r.State.Destination.Guild || receipt.Owner != r.State.Destination.Owner || receipt.Bot != r.State.Destination.Bot || receipt.Thread != q.Thread || receipt.Message != q.Message || receipt.Progress != q.Progress || receipt.Fingerprint != q.Fingerprint || row.Status != "block" || !conversationWaitRecorded(row, q) {
 			return nil, errConversationWithdraw
 		}
-		origin, err := r.withdrawalRow(q.Todo)
-		if err != nil {
-			return nil, err
-		}
+		origin := row.conversationState
 		if writeConversationOnce(originPath, origin) != nil || writeConversationOnce(savedReason, reason) != nil {
 			return nil, errConversationWithdraw
 		}
@@ -317,7 +318,7 @@ func (r *Runner) conversationWithdraw(ctx context.Context, requestID, reasonFile
 		if record.Phase != "prepared" {
 			return nil, errConversationWithdraw
 		}
-		if _, err = r.Run(ctx, conversationTodo, "question-withdraw", fmt.Sprint(q.Todo), "--question-file", q.ReceiptFile, "--reason-file", savedReason, "--expected-state-file", originPath); err != nil {
+		if _, err = r.Run(ctx, conversationTodo, "question-withdraw", fmt.Sprint(q.Todo), "--question-file", q.ReceiptFile, "--reason-file", savedReason, "--expected-state-file", originPath, "--scope-file", scopeFile); err != nil {
 			return nil, errConversationWithdraw
 		}
 		saved, err = r.withdrawalRecorded(q, record)

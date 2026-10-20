@@ -337,6 +337,36 @@ fn row_index(db: &Value, id: i64) -> Result<usize> {
     Ok(index)
 }
 
+/// A caller's guard result is not a Rust identity proof. Bind the exact project
+/// and registered path which that caller checked, under the canonical store lock.
+pub fn check_scope(db: &Value, id: i64, path: &Path) -> Result<()> {
+    let (scope, _) = read(
+        path,
+        &["domain", "todo_id", "project", "project_path_sha256"],
+    )?;
+    let index = row_index(db, id)?;
+    let project = text(&db["items"][index], "project");
+    if scope["domain"] != "discord-conversation-todo-scope-v1"
+        || text(&scope, "todo_id") != id.to_string()
+        || text(&scope, "project") != project
+        || !hash(text(&scope, "project_path_sha256"))
+        || text(&scope, "project_path_sha256")
+            != digest(db["projects"][project].as_str().unwrap().as_bytes())
+    {
+        return fail("scope_changed");
+    }
+    Ok(())
+}
+
+pub fn check_snapshot(db: &Value, id: i64, path: &Path) -> Result<()> {
+    let expected: Value =
+        serde_json::from_slice(&bytes(path)?).map_err(|_| "conversation_state_invalid")?;
+    if db["items"][row_index(db, id)?] != expected {
+        return fail("state_changed");
+    }
+    Ok(())
+}
+
 fn dependencies_clear(db: &Value, row: &Value, key: &str) -> bool {
     if row[key].is_null() {
         return true;

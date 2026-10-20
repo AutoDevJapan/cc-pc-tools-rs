@@ -158,6 +158,8 @@ func (r *Runner) questionContext(ctx context.Context, request *Request) error {
 }
 
 type TodoRow struct {
+	conversationState  json.RawMessage
+	conversationScope  conversationTodoScope
 	ID                 uint64            `json:"id"`
 	Project            string            `json:"project"`
 	Status             string            `json:"status"`
@@ -178,8 +180,7 @@ type TodoRow struct {
 		Job string `json:"job"`
 	} `json:"worker_receipt"`
 	Scheduler struct {
-		Job              string          `json:"job"`
-		OwnerInstruction json.RawMessage `json:"owner_instruction"`
+		Job string `json:"job"`
 	} `json:"scheduler"`
 }
 

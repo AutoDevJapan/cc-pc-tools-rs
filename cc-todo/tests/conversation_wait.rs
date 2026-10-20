@@ -13,6 +13,101 @@ const WAIT: &str = "owner_question_wait";
 const ANSWERS: &str = "owner_question_answer_receipts";
 const DELIVERIES: &str = "owner_question_delivery_receipts";
 
+#[test]
+fn conversation_scope_rejects_project_or_root_changes_before_any_mutation() {
+    for command in [
+        "edit",
+        "question-wait",
+        "question-answer",
+        "question-withdraw",
+    ] {
+        for change in ["project", "root"] {
+            let f = Fixture::new();
+            let (_, answer_file, _) = f.park();
+            let mut db = f.read();
+            let scope_file = f.file("scope.json", &json!({"domain":"discord-conversation-todo-scope-v1",
+                "todo_id":"1", "project":"cc-pc-tools-rs", "project_path_sha256":sha(f.temp.path().to_str().unwrap().as_bytes())}));
+            let expected = f.file("expected.json", &db["items"][0]);
+            let note = f.temp.path().join("scope-note.txt");
+            fs::write(&note, "guarded delivery reference").unwrap();
+            if change == "project" {
+                db["projects"]["other-project"] = db["projects"]["cc-pc-tools-rs"].clone();
+                db["items"][0]["project"] = json!("other-project");
+            } else {
+                db["projects"]["cc-pc-tools-rs"] =
+                    json!(f.temp.path().join("another-root").to_str().unwrap());
+            }
+            f.write(&db);
+            let before = f.raw();
+            let q = f.temp.path().join("question.json");
+            let mut args = vec![command, "1", "--scope-file", scope_file.to_str().unwrap()];
+            match command {
+                "edit" => args.extend([
+                    "--note-file",
+                    note.to_str().unwrap(),
+                    "--expected-state-file",
+                    expected.to_str().unwrap(),
+                ]),
+                "question-wait" => args.extend(["--question-file", q.to_str().unwrap()]),
+                "question-answer" => args.extend(["--answer-file", answer_file.to_str().unwrap()]),
+                "question-withdraw" => args.extend([
+                    "--question-file",
+                    q.to_str().unwrap(),
+                    "--reason-file",
+                    note.to_str().unwrap(),
+                    "--expected-state-file",
+                    expected.to_str().unwrap(),
+                ]),
+                _ => unreachable!(),
+            }
+            let out = f.command(&args).output().unwrap();
+            assert!(
+                !out.status.success(),
+                "accepted changed {change} for {command}"
+            );
+            assert_eq!(
+                String::from_utf8_lossy(&out.stderr).trim(),
+                "conversation_scope_changed",
+                "wrong failure for {command}"
+            );
+            assert_eq!(f.raw(), before, "scope failure changed {command}");
+        }
+    }
+}
+
+#[test]
+fn scoped_edit_requires_the_exact_guarded_row_even_when_the_note_is_unchanged() {
+    let f = Fixture::new();
+    let mut db = f.read();
+    let scope_file = f.file("scope.json", &json!({"domain":"discord-conversation-todo-scope-v1", "todo_id":"1",
+        "project":"cc-pc-tools-rs", "project_path_sha256":sha(f.temp.path().to_str().unwrap().as_bytes())}));
+    let expected = f.file("expected.json", &db["items"][0]);
+    let note = f.temp.path().join("scope-note.txt");
+    fs::write(&note, "guarded delivery reference").unwrap();
+    db["items"][0]["resume_generation"] = json!(8);
+    f.write(&db);
+    let before = f.raw();
+    let out = f
+        .command(&[
+            "edit",
+            "1",
+            "--scope-file",
+            scope_file.to_str().unwrap(),
+            "--expected-state-file",
+            expected.to_str().unwrap(),
+            "--note-file",
+            note.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(!out.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&out.stderr).trim(),
+        "conversation_state_changed"
+    );
+    assert_eq!(f.raw(), before);
+}
+
 fn continued(f: &Fixture) -> (std::path::PathBuf, Value) {
     let (_, answer_file, answer) = f.park();
     let mut db = f.read();

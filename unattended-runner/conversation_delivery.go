@@ -97,13 +97,17 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	if row.Project != q.Project {
 		return errors.New("conversation original task project differs")
 	}
+	scopeFile, err := r.conversationScopeFile(row, q)
+	if err != nil {
+		return err
+	}
 	path := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".json")
 	receipt, err := boundedRegular(path)
 	if err != nil {
 		return err
 	}
 	marker := "conversation-owner-reply:" + q.SenderID + ":" + reply.Message + ":" + canonicalHash([]string{req.Text, req.Edited})[:16]
-	if q.Wait && len(row.QuestionDeliveries) != 0 && conversationHandoffContains(row, marker) {
+	if q.Wait && len(row.QuestionDeliveries) != 0 {
 		answer, b, _, err := r.prepareConversationAnswer(q, reply, req, receipt)
 		if err != nil {
 			return err
@@ -116,7 +120,7 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	if q.Wait && conversationContinuedWait(row, q) {
 		return r.deliverContinuedConversationReply(ctx, row, q, reply, req, receipt, marker)
 	}
-	if q.Wait && !conversationQuestionAnswered(row, q) && !conversationWaitGenerationMatches(row) {
+	if q.Wait && !conversationQuestionAnswered(row, q) && !conversationWaitOwnerUnchanged(row) {
 		return errors.New("conversation original question generation differs")
 	}
 	// Never append to an overwritten question hold or manufacture its missing
@@ -139,19 +143,15 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 			// Rust checks the exact row, original owner/result generation and all
 			// holds under one lock. Never reconstruct a missing question marker
 			// with edit, or expose a runnable task before its reply is durable.
-			origin, err := r.withdrawalRow(q.Todo)
+			expectedFile, err := r.conversationSnapshotFile(row, q, reply.Message)
 			if err != nil {
-				return err
-			}
-			expectedFile := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".expected.json")
-			if err = writeText(expectedFile, string(origin)); err != nil {
 				return err
 			}
 			answer, b, answerFile, err := r.prepareConversationAnswer(q, reply, req, receipt)
 			if err != nil {
 				return err
 			}
-			if _, err = r.Run(ctx, conversationTodo, "question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile, "--delivery-note-file", noteFile, "--expected-state-file", expectedFile); err != nil {
+			if _, err = r.Run(ctx, conversationTodo, "question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile, "--delivery-note-file", noteFile, "--expected-state-file", expectedFile, "--scope-file", scopeFile); err != nil {
 				return errors.New("conversation imported answer delivery deferred")
 			}
 			row, err = r.todo(q.Todo)
@@ -163,10 +163,14 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 		}
 		// Compare under the canonical ToDo lock: a concurrent ordinary block
 		// must not be overwritten with this snapshot's question-wait marker.
-		if _, err = r.Run(ctx, conversationTodo, "edit", fmt.Sprint(q.Todo), "--note-file", noteFile, "--expected-note-sha256", bytesHash([]byte(row.Note))); err != nil {
+		expectedFile, err := r.conversationSnapshotFile(row, q, reply.Message)
+		if err != nil {
+			return err
+		}
+		if _, err = r.Run(ctx, conversationTodo, "edit", fmt.Sprint(q.Todo), "--note-file", noteFile, "--expected-note-sha256", bytesHash([]byte(row.Note)), "--scope-file", scopeFile, "--expected-state-file", expectedFile); err != nil {
 			return errors.New("conversation normal task delivery deferred")
 		}
-		row, err = r.todo(q.Todo)
+		row, err = r.conversationTask(ctx, q.Todo)
 		if err != nil || row.Project != q.Project || !hasNoteMarker(row.Note, marker) {
 			return errors.New("conversation task delivery readback deferred")
 		}
@@ -175,14 +179,14 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	// Recheck after the edit; question-answer remains the final locked authority.
 	// A lost successful response is reconciled without releasing a later block.
 	if q.Wait && !conversationQuestionAnswered(row, q) {
-		if !conversationWaitUnchanged(row, q) || !conversationWaitGenerationMatches(row) {
+		if !conversationWaitUnchanged(row, q) || !conversationWaitOwnerUnchanged(row) {
 			return errors.New("conversation original question wait differs")
 		}
 		answer, b, answerFile, err := r.prepareConversationAnswer(q, reply, req, receipt)
 		if err != nil {
 			return err
 		}
-		if _, err = r.Run(ctx, conversationTodo, "question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile); err != nil {
+		if _, err = r.Run(ctx, conversationTodo, "question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile, "--scope-file", scopeFile); err != nil {
 			return errors.New("conversation exact question wait release deferred")
 		}
 		row, err = r.todo(q.Todo)
@@ -216,7 +220,7 @@ func conversationContinuedWait(row *TodoRow, q ConversationQuestion) bool {
 		json.Unmarshal(row.QuestionWait, &wait) == nil && wait.Origin.Generation != nil && json.Unmarshal(row.ResumeGeneration, &current) == nil && current != nil && *current > *wait.Origin.Generation
 }
 
-func conversationWaitGenerationMatches(row *TodoRow) bool {
+func conversationWaitOwnerUnchanged(row *TodoRow) bool {
 	var wait struct {
 		Origin json.RawMessage `json:"origin"`
 	}
@@ -226,15 +230,18 @@ func conversationWaitGenerationMatches(row *TodoRow) bool {
 	if len(wait.Origin) == 0 {
 		return true
 	} // Existing legacy waits keep their original contract.
-	var origin struct {
+	var current struct {
 		Generation json.RawMessage `json:"resume_generation"`
+		Worker     json.RawMessage `json:"worker_receipt"`
+		Scheduler  struct {
+			Job json.RawMessage `json:"job"`
+			Key json.RawMessage `json:"key"`
+		} `json:"scheduler"`
 	}
-	return json.Unmarshal(wait.Origin, &origin) == nil && canonicalHash(origin.Generation) == canonicalHash(row.ResumeGeneration)
-}
-
-func conversationHandoffContains(row *TodoRow, marker string) bool {
-	var instruction string
-	return json.Unmarshal(row.Scheduler.OwnerInstruction, &instruction) == nil && hasNoteMarker(instruction, marker)
+	if json.Unmarshal(row.conversationState, &current) != nil {
+		return false
+	}
+	return canonicalHash(wait.Origin) == canonicalHash(map[string]json.RawMessage{"resume_generation": current.Generation, "worker_receipt": current.Worker, "job": current.Scheduler.Job, "key": current.Scheduler.Key})
 }
 
 func conversationDeliveryRecorded(row *TodoRow, q ConversationQuestion, answer conversationAnswerReceipt, b []byte) bool {
@@ -268,27 +275,23 @@ func (r *Runner) deliverContinuedConversationReply(ctx context.Context, row *Tod
 	if err := writeText(noteFile, note); err != nil {
 		return err
 	}
-	expected, err := r.withdrawalRow(q.Todo)
+	scopeFile, err := r.conversationScopeFile(row, q)
 	if err != nil {
 		return err
 	}
-	var snapshot TodoRow
-	if json.Unmarshal(expected, &snapshot) != nil || canonicalHash(&snapshot) != canonicalHash(row) {
-		return errors.New("conversation guarded task snapshot changed")
-	}
-	expectedFile := filepath.Join(dir, reply.Message+".expected.json")
-	if err := writeText(expectedFile, string(expected)); err != nil {
+	expectedFile, err := r.conversationSnapshotFile(row, q, reply.Message)
+	if err != nil {
 		return err
 	}
 	answer, b, answerFile, err := r.prepareConversationAnswer(q, reply, req, receipt)
 	if err != nil {
 		return err
 	}
-	if _, err := r.Run(ctx, conversationTodo, "question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile, "--delivery-only", "--delivery-note-file", noteFile, "--expected-state-file", expectedFile); err != nil {
+	if _, err := r.Run(ctx, conversationTodo, "question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile, "--delivery-only", "--delivery-note-file", noteFile, "--expected-state-file", expectedFile, "--scope-file", scopeFile); err != nil {
 		return errors.New("conversation continued answer delivery deferred")
 	}
 	current, err := r.todo(q.Todo)
-	if err != nil || current.Project != q.Project || !conversationHandoffContains(current, marker) || !conversationDeliveryRecorded(current, q, answer, b) {
+	if err != nil || current.Project != q.Project || !conversationDeliveryRecorded(current, q, answer, b) {
 		return errors.New("conversation continued answer readback deferred")
 	}
 	req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"

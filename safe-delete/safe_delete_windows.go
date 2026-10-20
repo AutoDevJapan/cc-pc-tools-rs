@@ -486,6 +486,9 @@ func (c config) quarantinePreserved(id, reason string, scope *geminiScope, ci *c
 	if !ok {
 		return nil, fail("INVALID_REASON")
 	}
+	if ci != nil {
+		text = "Go補助の測定がreparseを検出し、削除計画と旧quarantineを拒否した。固定資格でreparse 13件を含む全体を保持する。リンク先は未読。Windowsや実行前ポリシーの拒否とは区別する。"
+	}
 	r, err := c.load(id, true)
 	if err != nil {
 		return nil, err
@@ -564,7 +567,10 @@ func (c config) quarantinePreserved(id, reason string, scope *geminiScope, ci *c
 	reasonWritten = true
 	if ci != nil {
 		phase = "preservation_record"
-		original, readErr := ci3174ProofBytes(ci3174Proofs[0])
+		if ci.originalReceipt == nil {
+			return nil, fail("CI_PROOF_INVALID")
+		}
+		original, readErr := ci.originalReceipt()
 		if readErr != nil {
 			return nil, readErr
 		}
@@ -610,13 +616,13 @@ func (c config) quarantinePreserved(id, reason string, scope *geminiScope, ci *c
 			return nil, err
 		}
 	}
-	moveConfirmed = true
 	if ci != nil {
 		phase = "verify_preservation"
 		if err = ci.verify(filepath.Join(dest, "files"), ciBefore, r); err != nil {
 			return nil, err
 		}
 	}
+	moveConfirmed = true
 	phase = "record"
 	r.State = "quarantined"
 	r.Destination = dest
@@ -645,7 +651,7 @@ func appendReason(path, text string) error {
 }
 func main() {
 	if len(os.Args) < 2 || os.Args[1] == "--help" {
-		fmt.Println("safe-delete create --project NAME [--content NAME] [--root PATH]\nsafe-delete plan|finish --id ID\nsafe-delete quarantine --id ID --reason policy|windows|locked|attributes|size|hardlink\nhardlink is restricted to ToDo2307's fixed receipt and media.\nDeletion plans must be submitted separately to the caller's ordinary exec tool.")
+		fmt.Println("safe-delete create --project NAME [--content NAME] [--root PATH]\nsafe-delete plan|finish --id ID\nsafe-delete quarantine --id ID --reason policy|windows|locked|attributes|size|hardlink\nhardlink is restricted to ToDo2307's fixed receipt and media.\nToDo3174's fixed collected CI receipt uses windows quarantine only, with root client guard and opaque preservation.\nDeletion plans must be submitted separately to the caller's ordinary exec tool.")
 		return
 	}
 	c := defaultConfig()

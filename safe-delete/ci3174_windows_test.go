@@ -3,15 +3,22 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 )
 
+const ci3174Opaque = "runtime/sdk/bootstrap/bin/cargo-clippy.exe"
+
 func ci3174Fixture(t *testing.T) (*ci3174Scope, string) {
 	t.Helper()
-	root := t.TempDir()
+	return ci3174FixtureAt(t, t.TempDir())
+}
+func ci3174FixtureAt(t *testing.T, root string) (*ci3174Scope, string) {
+	t.Helper()
 	opaque := filepath.Join(root, filepath.FromSlash(ci3174Opaque))
 	if e := os.MkdirAll(filepath.Dir(opaque), 0700); e != nil {
 		t.Fatal(e)
@@ -21,22 +28,17 @@ func ci3174Fixture(t *testing.T) (*ci3174Scope, string) {
 	if e := os.Symlink(outside, opaque); e != nil {
 		t.Fatal(e)
 	}
-	s := &ci3174Scope{root: root, maxEntries: 100, settled: func() error { return nil }}
+	rootMeta, e := ci3174Identity(root)
+	if e != nil {
+		t.Fatal(e)
+	}
+	s := &ci3174Scope{volume: rootMeta.Volume, rootID: rootMeta.ID, rootBirth: ci3174Birth(rootMeta), maxEntries: 100, settled: func() error { return nil }}
 	s.identity = func(p string) (ci3174Entry, error) {
 		i, e := ci3174Identity(p)
 		if e != nil {
 			return i, e
 		}
-		i.Volume = 2229119083
 		i.Owner = "S-1-5-32-544"
-		if same(p, root) {
-			i.ID = 45317471266384470
-			i.Created = syscall.Filetime{LowDateTime: uint32(134369735429421378 & 0xffffffff), HighDateTime: uint32(134369735429421378 >> 32)}
-		}
-		if same(p, opaque) {
-			i.ID = 5629499550387750
-			i.Attributes = 1056
-		}
 		return i, nil
 	}
 	i, e := s.identity(opaque)
@@ -61,7 +63,7 @@ func TestCI3174OpaqueSnapshotAndPreservation(t *testing.T) {
 			t.Fatal("followed reparse")
 		}
 	}
-	r := receipt{identityRecord: identityRecord{Volume: 2229119083, FileID: 45317471266384470}}
+	r := receipt{identityRecord: identityRecord{Volume: s.volume, FileID: s.rootID}}
 	if e = s.verify(root, before, r); e != nil {
 		t.Fatal(e)
 	}
@@ -164,5 +166,81 @@ func TestCI3174OpaqueIdentityIsItsOwnObject(t *testing.T) {
 	}
 	if i.ID == target.ID || i.Attributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT == 0 {
 		t.Fatal("link target identity used")
+	}
+}
+
+func TestCI3174QuarantinePreservationAndReceipt(t *testing.T) {
+	for _, fault := range []string{"none", "preservation", "record"} {
+		t.Run(fault, func(t *testing.T) {
+			c, root := fixture(t)
+			r := owned(t, c, root)
+			s, _ := ci3174FixtureAt(t, r.Path)
+			before, _, e := s.snapshot(r.Path)
+			if e != nil {
+				t.Fatal(e)
+			}
+			s.baseline = before
+			raw, _ := json.Marshal(r)
+			s.originalReceipt = func() ([]byte, error) { return raw, nil }
+			original := s.identity
+			injected := false
+			s.identity = func(p string) (ci3174Entry, error) {
+				i, e := original(p)
+				if !strings.HasPrefix(strings.ToLower(p), strings.ToLower(r.Path)) && i.ID == r.FileID {
+					if fault == "preservation" {
+						i.ID++
+					}
+					if fault == "record" && !injected {
+						injected = true
+						recordPath, _ := c.recordPath(r.ID)
+						if e := os.Mkdir(recordPath+".writing", 0700); e != nil {
+							t.Fatal(e)
+						}
+					}
+				}
+				return i, e
+			}
+			result, e := c.quarantinePreserved(r.ID, "windows", nil, s)
+			if fault != "none" {
+				expected := "CI_INVENTORY_CHANGED"
+				if fault == "record" {
+					expected = "RECEIPT_WRITE_FAILED"
+				}
+				failure := code(t, e, expected)
+				if exists(r.Path) {
+					t.Fatal("ordinary move did not happen")
+				}
+				if _, e := c.load(r.ID, false); e != nil {
+					t.Fatal("failed operation closed original receipt", e)
+				}
+				why, _ := os.ReadFile(filepath.Join(failure.Details["destination"].(string), "理由.txt"))
+				if fault == "preservation" && strings.Contains(string(why), "データの移動は確認済み") {
+					t.Fatal("preservation failure reported as verified move")
+				}
+				return
+			}
+			if e != nil {
+				t.Fatal(e)
+			}
+			dest := result["destination"].(string)
+			if exists(r.Path) {
+				t.Fatal("source remains")
+			}
+			if e := s.verify(filepath.Join(dest, "files"), before, r); e != nil {
+				t.Fatal(e)
+			}
+			record, _ := os.ReadFile(filepath.Join(c.Store, r.ID+".json"))
+			var closed receipt
+			if json.Unmarshal(record, &closed) != nil || closed.State != "quarantined" || closed.Integrity != r.Integrity || closed.Destination != dest {
+				t.Fatal("original receipt not closed correctly")
+			}
+			preserved, _ := os.ReadFile(filepath.Join(dest, "original-receipt.json"))
+			if string(preserved) != string(raw) {
+				t.Fatal("original bytes not preserved")
+			}
+			if _, e := os.Stat(filepath.Join(dest, "preservation.json")); e != nil {
+				t.Fatal(e)
+			}
+		})
 	}
 }

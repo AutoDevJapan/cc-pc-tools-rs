@@ -55,7 +55,7 @@ type owned3107Access struct {
 }
 
 func owned3107PathAllowed(path string) bool {
-	return owned3107Allowed(path, owned3107Access{
+	a := owned3107Access{
 		root: owned3107Root, at: time.Now(), now: time.Now, proofs: owned3107Proofs, protected: legacyMatch, plain: conversationPhysical,
 		expected:  civ6Object{Volume: 2229119083, ID: 45317471266384470, Created: 134369735429421378, Owner: civ6Owner},
 		parent:    civ6Object{Volume: 2229119083, ID: 562949953422078, Created: 134072793159133344, Owner: civ6Owner},
@@ -63,7 +63,15 @@ func owned3107PathAllowed(path string) bool {
 		read:      func(p string, n int64) ([]byte, bool) { return conversationBytes(p, n, legacyMatch) },
 		qualified: func() bool { head, ok := civ6SourceHead(); return ok && civ6Ancestor(owned3107SourceFloor, head) },
 		runtime:   owned3107RuntimeMatches, official: owned3107Official,
-	})
+	}
+	if owned3107Allowed(path, a) {
+		return true
+	}
+	if !same(path, a.root) {
+		return false
+	}
+	a.expected.Owner = "S-1-5-32-544"
+	return collected3174Allowed(path, a, collected3174Proofs, collected3174Marker)
 }
 
 func owned3107RuntimeMatches(r civ6Deployment) bool {
@@ -101,6 +109,9 @@ func owned3107ReadProofs(a owned3107Access) ([]object, bool) {
 	if len(a.proofs) != 6 {
 		return nil, false
 	}
+	return owned3107ReadProofFiles(a)
+}
+func owned3107ReadProofFiles(a owned3107Access) ([]object, bool) {
 	out := make([]object, 0, 6)
 	for _, p := range a.proofs {
 		if within(a.root, p.path) || !owned3107NoDeny(p.path, a) || !a.plain(p.path) {

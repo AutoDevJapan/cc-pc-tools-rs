@@ -19,6 +19,13 @@ collectorが正常に変更した所有者を古い3107資格のまま扱わな�
 新規の所有登録、CLI grant、汎用allowlist、guardの緩和を作らない。
 資格は2026-10-22 00:00 UTCまでで、閉じたreceiptは再利用しない。
 
+レビュー3182はOpus5.5/maxで固定4a950を全4file読了し、Mustを1件指摘した。
+回収後のowner変化で通常のclient guardが未確認へ戻るため、退避直前にも
+`clientGuard(root)`を要求する。repair-guardには回収済みの同rootだけの資格を加える。
+元6証拠、固定した回収結果と回収後属性一覧、同じ作成source/配備実体/公開API、
+保護された回収marker、実root/親のID/owner/birthと現在root属性を再照合する。
+子やreparse、その配下へ新しい分類を与えず、現在のdenyは維持する。
+
 ## 回収後の属性観測
 
 2026-10-21の属性専用handleによる非追跡観測では3,626項目（根を含む）を確認した。
@@ -56,6 +63,8 @@ plan/finishは従来どおりで、planはreparseを拒否する。
 Go race/vetはsafe-delete module（既存Gemini回帰を含む）に絞る。
 架空のreparseで非追跡・属性自身の読取・別リンク拒否・hardlink/owner変更拒否・
 固定一覧変更拒否・通常plan/quarantineの拒否継続を確認する。
+実Move-Itemを通る成功・保持照合失敗・receipt更新失敗も架空の資源で検査する。
+保持照合失敗で移動確認済みと表示せず、元receiptをownedのまま残す。
 実対象は固定資格と属性走査のみを確認済みで、候補の実移動は未実施。
 別モデルmaxのMust解消、同HEADの正式Windows safe-deleteとGo解析成功後に通常mergeし、
 最新mainの並行変更を確認して通常配布する。現用の正規quarantine結果とclosed receiptを

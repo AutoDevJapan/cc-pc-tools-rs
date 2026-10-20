@@ -22,7 +22,6 @@ const ci3174ID = "4378ff571926b0ddbec4ed99368a6405"
 const ci3174Root = `C:\Users\makhmeto\AppData\Local\Temp\codex-owned-` + ci3174ID
 const ci3174Evidence = "D:/CC/Work/unattended-operations-20261013-wt/todo-3107-ci/codex-owned-9cb79093b11a8c0baf702c37733deac6"
 const ci3174Service = "CC-CIW-civ6-banseiki"
-const ci3174Opaque = "runtime/sdk/bootstrap/bin/cargo-clippy.exe"
 const ci3174ReceiptSHA = "659c0ff190429951230e86cf7ad3572a50b3e89fec65d6ea02c9b96ed2750f65"
 const ci3174PostInventory = "D:/CC/Work/unattended-operations-20261013-wt/todo-3174-windows-1/codex-owned-2096045d483cb0e410e780998589af10/postcollection-inventory.private.json"
 
@@ -47,15 +46,17 @@ type ci3174Entry struct {
 	Owner string
 }
 type ci3174Scope struct {
-	root       string
-	maxEntries int
-	identity   func(string) (ci3174Entry, error)
-	settled    func() error
-	baseline   map[string]ci3174Entry
-	opaque     map[string]ci3174Entry
+	maxEntries        int
+	identity          func(string) (ci3174Entry, error)
+	settled           func() error
+	baseline          map[string]ci3174Entry
+	opaque            map[string]ci3174Entry
+	volume            uint32
+	rootID, rootBirth uint64
+	originalReceipt   func() ([]byte, error)
 }
 
-// OPEN_REPARSE_POINT is mandatory even for the single opaque entry. No
+// OPEN_REPARSE_POINT is mandatory for every opaque entry. No
 // FSCTL_GET_REPARSE_POINT, Readlink, content hash or target-name query is used.
 func ci3174Identity(path string) (ci3174Entry, error) {
 	var out ci3174Entry
@@ -147,6 +148,9 @@ func (c config) ci3174Recovery(id string) (*ci3174Scope, func(), error) {
 	if !ci3174ReceiptMatches(r) {
 		return nil, nil, fail("CI_SCOPE_MISMATCH")
 	}
+	if e = clientGuard(r.Path); e != nil {
+		return nil, nil, e
+	}
 	if e = ci3174Official(); e != nil {
 		return nil, nil, e
 	}
@@ -183,11 +187,14 @@ func (c config) ci3174Recovery(id string) (*ci3174Scope, func(), error) {
 		unlock()
 		return nil, nil, e
 	}
-	s := &ci3174Scope{root: r.Path, maxEntries: c.MaxEntries, identity: ci3174Identity, baseline: baseline, opaque: opaque, settled: func() error {
+	s := &ci3174Scope{volume: r.Volume, rootID: r.FileID, rootBirth: 134369735429421378, originalReceipt: func() ([]byte, error) { return ci3174ProofBytes(ci3174Proofs[0]) }, maxEntries: c.MaxEntries, identity: ci3174Identity, baseline: baseline, opaque: opaque, settled: func() error {
 		for _, p := range ci3174Proofs {
 			if e := ci3174ReadProof(p); e != nil {
 				return e
 			}
+		}
+		if e := clientGuard(r.Path); e != nil {
+			return e
 		}
 		return ci3174Settled()
 	}}
@@ -393,10 +400,10 @@ func (s *ci3174Scope) snapshot(root string) (map[string]ci3174Entry, measured, e
 		if recorded && want != i {
 			return nil, m, fail("CI_INVENTORY_CHANGED")
 		}
-		if i.Owner != "S-1-5-32-544" || i.Volume != 2229119083 || i.Links != 1 {
+		if i.Owner != "S-1-5-32-544" || i.Volume != s.volume || i.Links != 1 {
 			return nil, m, fail("CI_OBJECT_CHANGED")
 		}
-		if rel == "." && (i.ID != 45317471266384470 || i.Created != (syscall.Filetime{LowDateTime: uint32(134369735429421378 & 0xffffffff), HighDateTime: uint32(134369735429421378 >> 32)}) || i.Attributes&syscall.FILE_ATTRIBUTE_DIRECTORY == 0) {
+		if rel == "." && (i.ID != s.rootID || ci3174Birth(i) != s.rootBirth || i.Attributes&syscall.FILE_ATTRIBUTE_DIRECTORY == 0) {
 			return nil, m, fail("CI_ROOT_CHANGED")
 		}
 		result[filepath.ToSlash(rel)] = i

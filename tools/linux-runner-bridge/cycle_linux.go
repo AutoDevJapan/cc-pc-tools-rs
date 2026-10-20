@@ -78,7 +78,7 @@ func cycleQuiescentAt(procRoot string, self int) error {
 			continue
 		}
 		data, err := os.ReadFile(filepath.Join(procRoot, entry.Name(), "cmdline"))
-		if os.IsNotExist(err) {
+		if os.IsNotExist(err) || errors.Is(err, syscall.ESRCH) {
 			continue
 		}
 		if err != nil {
@@ -91,6 +91,102 @@ func cycleQuiescentAt(procRoot string, self int) error {
 			continue
 		}
 		return errors.New("other process remains; retaining cycle data")
+	}
+	return nil
+}
+
+// A host health probe or a reaper can briefly overlap this boundary. Never
+// classify it as idle: retry the complete observation, with a finite deadline.
+func awaitCycleQuiescent(probe func() error, pause func(time.Duration), now func() time.Time, limit time.Duration) error {
+	deadline := now().Add(limit)
+	for {
+		err := probe()
+		if err == nil {
+			return nil
+		}
+		remaining := deadline.Sub(now())
+		if remaining <= 0 {
+			return fmt.Errorf("cycle did not become idle: %w", err)
+		}
+		pause(min(250*time.Millisecond, remaining))
+	}
+}
+
+// Only directories owned by this UID, on the scratch filesystem, can have
+// owner permissions restored. Links and regular-file permissions are untouched.
+func removeOwnedScratch(path string) error {
+	if err := ownedDirectory(path); err != nil {
+		return err
+	}
+	info, err := os.Lstat(path)
+	if err != nil {
+		return err
+	}
+	device := info.Sys().(*syscall.Stat_t).Dev
+	if err := filepath.WalkDir(path, func(p string, d os.DirEntry, e error) error {
+		if e != nil {
+			return e
+		}
+		if !d.IsDir() {
+			return nil
+		}
+		info, err := os.Lstat(p)
+		if err != nil {
+			return err
+		}
+		st, ok := info.Sys().(*syscall.Stat_t)
+		if !ok || st.Uid != uint32(os.Getuid()) || st.Dev != device || !info.IsDir() {
+			return errors.New("scratch ownership or mount boundary rejected")
+		}
+		if info.Mode().Perm()&0700 != 0700 {
+			return os.Chmod(p, info.Mode().Perm()|0700)
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	return os.RemoveAll(path)
+}
+
+// Called only after holding the single supervisor lock and observing idle.
+// An interrupted session is closed as interrupted, never as a successful job.
+// Unknown ownership or live processes still retain all data and stop admission.
+func recoverInterruptedCycles(root, tmpRoot string) error {
+	if err := ownedDirectory(root); err != nil {
+		return err
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return err
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() || !strings.HasPrefix(entry.Name(), "cycle-") {
+			return errors.New("unknown interrupted cycle retained")
+		}
+		cycle := filepath.Join(root, entry.Name())
+		if err := ownedDirectory(cycle); err != nil {
+			return err
+		}
+		ended, err := diagnosticEnded(cycle)
+		if err != nil {
+			return err
+		}
+		if ended {
+			continue
+		}
+		scratch := filepath.Join(tmpRoot, "bridge-"+entry.Name())
+		if _, err := os.Lstat(scratch); err == nil {
+			if err := removeOwnedScratch(scratch); err != nil {
+				return err
+			}
+		} else if !os.IsNotExist(err) {
+			return err
+		}
+		// Retention may now expire these stopped diagnostics under the same
+		// finite policy, without rewriting any GitHub result or complete marker.
+		if err := os.WriteFile(filepath.Join(cycle, "interrupted"), []byte(cycleOwner), 0600); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -157,15 +253,11 @@ func activeCycleScratch(root, tmpRoot, runnerRoot string) (string, error) {
 	if err := ownedDirectory(target); err != nil {
 		return "", err
 	}
-	info, err := os.Lstat(filepath.Join(target, "owner"))
-	if err != nil || !info.Mode().IsRegular() {
-		return "", errors.New("active cycle owner rejected")
+	ended, err := diagnosticEnded(target)
+	if err != nil {
+		return "", err
 	}
-	owner, err := os.ReadFile(filepath.Join(target, "owner"))
-	if err != nil || string(owner) != cycleOwner {
-		return "", errors.New("active cycle owner mismatch")
-	}
-	if _, err := os.Lstat(filepath.Join(target, "complete")); !os.IsNotExist(err) {
+	if ended {
 		return "", errors.New("cycle is not active")
 	}
 	scratch := filepath.Join(tmpRoot, "bridge-"+filepath.Base(target))
@@ -197,7 +289,7 @@ func completeCycle(cycle, scratch string) error {
 	if err != nil || string(marker) != cycleOwner {
 		return errors.New("cycle owner rejected")
 	}
-	if err := os.RemoveAll(scratch); err != nil {
+	if err := removeOwnedScratch(scratch); err != nil {
 		return err
 	}
 	return os.WriteFile(filepath.Join(cycle, "complete"), []byte(cycleOwner), 0600)
@@ -205,6 +297,9 @@ func completeCycle(cycle, scratch string) error {
 
 func runNormalCycle(root, tmpRoot, runnerRoot string, quiescent func() error) (int, error) {
 	if err := quiescent(); err != nil {
+		return 1, err
+	}
+	if err := recoverInterruptedCycles(root, tmpRoot); err != nil {
 		return 1, err
 	}
 	if err := retainDiagnostics(root, diagnosticBudget, diagnosticCount); err != nil {
@@ -243,7 +338,7 @@ func superviseNormal() int {
 		return 1
 	}
 	// Single nonblocking kernel lock, including between two one-job sessions.
-	fd, err := syscall.Open("/tmp/bridge-supervisor.lock", syscall.O_CREAT|syscall.O_RDWR|syscall.O_NOFOLLOW, 0600)
+	fd, err := syscall.Open("/tmp/bridge-supervisor.lock", syscall.O_CREAT|syscall.O_RDWR|syscall.O_NOFOLLOW|syscall.O_CLOEXEC, 0600)
 	if err != nil {
 		return 1
 	}
@@ -259,7 +354,9 @@ func superviseNormal() int {
 		return 1
 	}
 	for {
-		code, err := runNormalCycle(diagnosticRoot, "/tmp", "/runner", func() error { return cycleQuiescent("/proc") })
+		code, err := runNormalCycle(diagnosticRoot, "/tmp", "/runner", func() error {
+			return awaitCycleQuiescent(func() error { return cycleQuiescent("/proc") }, time.Sleep, time.Now, 30*time.Second)
+		})
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			return 1

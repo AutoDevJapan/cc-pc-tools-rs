@@ -94,7 +94,10 @@ Each session owns a unique scratch directory below the existing noexec `/tmp`.
 `TMPDIR`, `TMP`, and `TEMP` point to that directory. It is reclaimed only after
 the listener exits, the kernel confirms its process group is gone, and no other
 worker or unknown process remains in the container. An escaped or unreaped
-process prevents cleanup and the next session. The single supervisor holds a
+process prevents cleanup and the next session. Each idle observation retries
+for at most 30 seconds, so the existing short-lived host probes and init's
+reaping window do not strand scratch. Zombies remain protected until reaped;
+an ESRCH while reading `/proc` means that process has disappeared. The single supervisor holds a
 nonblocking kernel lock across sessions; the host's existing recovery path
 recognizes it between listeners. No new polling task is introduced.
 
@@ -106,12 +109,19 @@ path or host environment is forwarded. Finite mode keeps its original behavior.
 
 `/runner/_diag` points to a session-owned directory below the existing persistent
 `/work/bridge-diagnostics-todo3026`. Only directories bearing the bridge owner
-record and a completion marker written after drain are retention candidates.
-After each session, retain at most eight completed sessions and 64 MiB of their
-uncompressed files, removing oldest completed sessions first. This is an idle
+record and an end marker written after drain are retention candidates.
+After each session, retain at most eight ended sessions and 64 MiB of their
+uncompressed files, removing oldest ended sessions first. This is an idle
 retention bound, not permission to truncate active diagnostics. Unfinished
 evidence is kept; more than eight unfinished sessions or 64 MiB of unfinished
-data prevents further sessions pending finite recovery. Links, special files,
+data prevents further sessions pending finite recovery. At the next locked,
+verified-idle start, owned interrupted scratch is reclaimed and a distinct
+`interrupted` marker closes only those diagnostics. It never writes `complete`
+or alters any job result. Their original bytes remain until normal retention
+expires them. Unknown ownership stays unfinished and is never reclaimed.
+Owner access may be restored on same-filesystem scratch directories only;
+files and symlink targets keep their permissions. The supervisor lock is
+close-on-exec. Links, special files,
 unknown entries, and unreadable ownership records fail closed.
 
 Existing configuration diagnostics are renamed intact within `/runner`, outside

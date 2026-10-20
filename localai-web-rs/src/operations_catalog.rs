@@ -154,6 +154,11 @@ pub const PRODUCTS: &[Product] = &[
         department: 4,
         aliases: &[],
     },
+    Product {
+        name: "GoDD MCP",
+        department: 4,
+        aliases: &["GoDD-MCP"],
+    },
 ];
 
 fn key(name: &str) -> String {
@@ -166,6 +171,9 @@ fn key(name: &str) -> String {
 }
 
 pub fn find(name: &str) -> Option<&'static Product> {
+    if let Some(product) = cc_scheduler::product_identity::by_name(name) {
+        return PRODUCTS.iter().find(|p| p.name == product.name);
+    }
     let key = key(name);
     PRODUCTS
         .iter()
@@ -203,7 +211,7 @@ mod tests {
 
     #[test]
     fn owner_catalogue_is_exact_and_aliases_share_membership() {
-        assert_eq!(PRODUCTS.len(), 29);
+        assert_eq!(PRODUCTS.len(), 30);
         assert_eq!(find("GoDD-MCP-Alpha").unwrap().name, "GoDD MCP α");
         assert_eq!(find("godd-mcp-α").unwrap().name, "GoDD MCP α");
         assert_eq!(find("GoDD-Rosseta").unwrap().name, "GoDD Rosetta");

@@ -20,6 +20,10 @@
 |100|自社サービス、未登録|
 
 `cc-job-policy::priority`をスケジューラー、実行待ち列、Consoleで共有する。
+GoDD MCPは受託部の10、GoDD MCP αは既存の60とし、別名で統合しない。
+2製品の事業上の対象は`product_identity`のrepository/owner IDを先に照合する。
+明示した識別が矛盾する場合は100とunknownを保持する。
+詳細は[製品識別の仕様](distinct-godd-mcp-products-3103.md)に従う。
 `scheduler/priorities.json`の既存のプロジェクトと数値の対応は維持する。
 混在した依頼は`items`にToDo番号をキーとして設定できる。
 例：`{"items":{"2353":{"project":"localai-web-rs"}}}`。

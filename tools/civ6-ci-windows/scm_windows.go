@@ -405,6 +405,8 @@ func platform(mode string, p Plan, args []string) error {
 		return stopFinite(p)
 	case "collect":
 		return collect(p)
+	case "verify-collected":
+		return verifyCollected(p)
 	case "collect-unstarted":
 		return collectUnstarted(p)
 	case "hook-start", "hook-completed", "verify-source":

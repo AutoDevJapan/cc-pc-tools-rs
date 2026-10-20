@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -14,20 +15,22 @@ import (
 // Deps holds every effect the controller can perform. Production wires the
 // pinned fixed executables; tests substitute fakes without changing the logic.
 type Deps struct {
-	Cfg     Config
-	CfgPath string
-	Store   *Store
-	Now     func() time.Time
-	Reader  func() *Reader
-	C       Contract
-	Helpers map[string]Helper
-	Exec    ExecFunc
-	Admin   AdminFunc
-	SD      SafeDelete
-	Alive   func(ProcID) bool
-	Spawn   func(key string) (ProcID, bool, error)
-	Self    func() ProcID
-	LockOS  func(osName string) (func(), error)
+	Cfg           Config
+	CfgPath       string
+	Store         *Store
+	Now           func() time.Time
+	Reader        func() *Reader
+	C             Contract
+	Helpers       map[string]Helper
+	Exec          ExecFunc
+	Admin         AdminFunc
+	SD            SafeDelete
+	Alive         func(ProcID) bool
+	Spawn         func(key string) (ProcID, bool, error)
+	Self          func() ProcID
+	LockOS        func(osName string) (func(), error)
+	Retired       func(CleanupRec, string) (CleanupRec, error)
+	VerifyRetired func(context.Context, *Entry, string) error
 }
 
 func (d *Deps) home(parts ...string) string {
@@ -62,6 +65,8 @@ func NewDeps(cfgPath string) (*Deps, error) {
 		return &Reader{GH: cfg.GH, Run: realRun, CacheDir: filepath.Join(cfg.Home, "cache"), MaxCalls: 40}
 	}
 	d.SD = fixedSafeDelete{Exe: cfg.SafeDelete, Run: realRun}
+	d.Retired = func(cl CleanupRec, key string) (CleanupRec, error) { return retiredReceipt(cfg.SafeDelete, cl, key) }
+	d.VerifyRetired = d.verifyRetiredWindows
 	d.Helpers = map[string]Helper{}
 	for name, h := range cfg.Helpers {
 		if name == "Windows" {

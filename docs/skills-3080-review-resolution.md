@@ -72,3 +72,8 @@ Kepano新3を固定v2で配置し15file読戻し成功。所有3件の9file更�
 導入25/統合0/除外0/残73195=本文有72120+未取得428+拒否保持647。元3048新規4/改善10は別集合。残る候補に上限を設けず継続する。
 Tencentの7つのskill.md名ファイルも全本文/SHAを確認。内訳は4workflow/1stub/2guideで、7独立Skillと呼ばない。現行方針との具体的な衝突と有用な部分を採否前の表へ記録し、25supportは未読。実配置/統合/除外0。全5repoの本文読取64パスは全16資料73220記録の全意味監査を示さない。
 今回の親job metadataはgpt-6.1-sol/highを再確認した。本人指定max/Fastとの一致は確認できず、実測と指定を区別する。グローバル設定をこの資料作業から変更していない。
+
+## 2026-10-21: 3180の限定受入
+原応答は元依頼のexact1file審査で受領し保全。SHA799005d5526efb4834418425163ea784cdb1c313f6c3db4b061723cf302e1c9a。固定c328d7a、実新3/改訂3の30file、原文6、MIT、backup2/journal/one-off writerとTencent7本文/noticeを読了。Must0、台帳25と残73195の保存を独立再計算した。起動時metadataの6名と説明、同名trash非発見も確認。3正例6負例と改訂3の用途を1turn内で静的確認したがCLI/app/context予算の実測ではない。
+Suggestion1-4とNit1-2を、初回失敗backup情報、仕様の旧22/未配置表示、Tencentの根拠未提示と目標/信頼ラベルの違い、MIT宣言元と全文保持、wiki簡体字/deep-enrich/追加agent未読範囲として修正。S5-6はgrillingの出所/許可範囲とKnapの存在しないflag断定を直す具体案を作成。pre-commitのJS/TSと任意hookツールも同じ既存対象で補う。計画はskills-3080-refinement3180-plan.json、まだ反映前。原文/noticeは変えず、導入数も増えない。
+旧local_revisionの英語空白欠けは履歴として残し、今回触る3名は対象ごとのreasonを新しく記録する。migrate-to-shoehornの過去reasonだけを直す追加書込みは、動作に影響しないため行わない。既存3のguide本文を全面改稿せず具体指摘の範囲に限る。

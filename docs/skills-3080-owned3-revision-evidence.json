@@ -31,6 +31,14 @@
     "model_called": false
   },
   "context_budget": "No model turn; metadata RPC does not evaluate context warnings",
-  "postinstall_acceptance": "pending",
-  "no_security_boundary_against_same_user_adversarial_races": true
+  "postinstall_acceptance": "3180 Must0;actual6guides/30files and backup/protocol verified;static application boundaries;noCLI/model/context proof",
+  "no_security_boundary_against_same_user_adversarial_races": true,
+  "first_attempt_backup": {
+    "path": "D:/CC/Skills/.trash/todo3080-owned3-20261021-20261021-035349-todo-3080-80d25007",
+    "journal_sha256": "0a7d9917dbdf1f4ef886f75202244a194f8b334890f733cdf3bedbdb6400107e",
+    "retained_staged_file": "staged-migrate-to-shoehorn-references-source.json",
+    "retained_staged_bytes": 3516,
+    "changes": 0,
+    "keep_as_historical_evidence": true
+  }
 }

@@ -1,7 +1,7 @@
 {
   "todo": 3080,
   "scope": "Third batch:3 Kepano adaptations; prior22 historical evidence preserved",
-  "installed_at": "2026-10-20T19:01:36.6563331Z",
+  "installed_at": "2026-10-20T18:59:46.8482058Z",
   "source_head": "c3d70c6161b5186f8a6e0fcf24f5a79e664c5006",
   "bundle_sha256": "1c9d347e347a315d9c315c1bec8142743c4cbf5624512ab161789bf2aaf7b516",
   "review": {
@@ -30,8 +30,16 @@
     "model_called": false
   },
   "runtime": "Workflow knowledge installed; CLI availability/version and actual vault/CLI operations not proven. No app/CLI/plugin installed or run.",
-  "postinstall_acceptance": "Pending separate bounded check of final deployed6guides including owned3revision",
+  "postinstall_acceptance": "3180 Must0;actual3/15files verified,initialSkillmetadata3,3positive6negative static cases,CLI/context not measured",
   "integrated": 0,
   "excluded": 0,
-  "overall_complete": false
+  "overall_complete": false,
+  "recorded_at": "2026-10-20T19:01:36.6563331Z",
+  "correction_independently_checked": {
+    "todo": 3180,
+    "reviewed_head": "c328d7a7a6aa40d81c703b7301b103192c1a1f19",
+    "must": 0,
+    "original_response_sha256": "799005d5526efb4834418425163ea784cdb1c313f6c3db4b061723cf302e1c9a",
+    "scope": "Final3generated guides,3originals,MIT,actual15files and metadata; support of existing3 outside scope"
+  }
 }

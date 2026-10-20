@@ -382,6 +382,9 @@ func currentPRCLI(ctx context.Context, args []string) error {
 		if err != nil {
 			return err
 		}
+		if _, err := consumeCurrentPRSnapshot(snapshot); err != nil {
+			return err
+		}
 		return json.NewEncoder(os.Stdout).Encode(snapshot.Report())
 	}
 	if len(args) == 2 && args[0] == "current-pr-qualify" {
@@ -394,7 +397,7 @@ func currentPRCLI(ctx context.Context, args []string) error {
 	originInspect := len(args) == 1 && args[0] == "current-pr-origin-inspect"
 	originJob := (len(args) == 3 || len(args) == 4) && args[0] == "current-pr-origin-job"
 	if !(originInspect || originJob || (len(args) == 2 && args[0] == "current-pr-inspect") || ((len(args) == 4 || len(args) == 5) && args[0] == "current-pr-job")) {
-		return errors.New("current-pr-inspect <pin-json> | current-pr-job <pin-json> <new-owned-dir> <Linux-helper> [gitleaks-ELF]")
+		return errors.New("current-pr-origin-qualify | current-pr-origin-inspect | current-pr-origin-job <new-owned-dir> <Linux-helper> <gitleaks-ELF>; caller-selected pin routes are unavailable")
 	}
 	var b currentPRBinding
 	var e error

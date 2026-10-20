@@ -21,6 +21,8 @@ import (
 const Purpose = "original-3059-current-pr-ci"
 const fixedHead = "cbd688871651e46d4821a4535d57eaa408105ff2"
 const fixedTree = "73a5d39e6694be7e6e604003dcb4e7bdc087c1c5"
+const fixedBase = "41090d19329b81dd1bd076f3336d723823be4b82"
+const fixedContext = "6e7ca682c861024b6f08f31382851dab4bceff35"
 const originalReviewSHA = "b15cb5b560e3ad65799fe19101c8c986092dd04548661072d32b07f1f2de57b2"
 
 // Report deliberately contains no original text or private paths. A qualified
@@ -51,6 +53,10 @@ type Report struct {
 	OfficialCISuccess                 bool   `json:"official_ci_success"`
 	InputConstruction                 string `json:"input_construction"`
 	OriginalInputFilesRead            bool   `json:"original_input_files_read"`
+	ConstructedInputCreator           string `json:"constructed_input_creator,omitempty"`
+	ReviewRepresentation              string `json:"review_representation,omitempty"`
+	BaseAuthority                     string `json:"base_authority,omitempty"`
+	ContextAuthority                  string `json:"context_authority,omitempty"`
 }
 
 type Snapshot struct {
@@ -87,11 +93,10 @@ type policy struct {
 // The source-bound scope is intentionally finite. New tasks or source revisions
 // cannot mint qualification by editing their own input/evidence JSON.
 func Qualify(path string) (Snapshot, error) {
-	p, err := productionPolicy()
-	if err != nil {
-		return Snapshot{}, err
-	}
-	return qualify(path, p)
+	// The retained operator wrappers cannot establish independent payload
+	// identity. Retire this public reader before opening ANY caller path or
+	// locator. Only the independently sourced constructor is executable.
+	return Snapshot{}, rejected("legacy_input_route_unavailable")
 }
 func rejected(stage string) error {
 	return fmt.Errorf("current CI purpose qualification rejected: %s", stage)
@@ -280,7 +285,9 @@ func taskScope(p policy) bool {
 	var db struct {
 		Rows []json.RawMessage `json:"items"`
 	}
-	if decode(data, &db, false) != nil {
+	// Historical unselected rows can have case aliases and legacy field types.
+	// Enforce case-folded uniqueness when decoding the four selected rows.
+	if decodeKeys(data, &db, false, false) != nil {
 		return false
 	}
 	seen := map[int]bool{}
@@ -302,6 +309,9 @@ func taskScope(p policy) bool {
 			WaitOn       []int  `json:"wait_on"`
 		}
 		if decode(raw, &r, false) != nil {
+			return false
+		}
+		if explicitStop(raw) {
 			return false
 		}
 		if seen[r.ID] {
@@ -379,6 +389,10 @@ func plainPath(path string) bool {
 }
 
 func decode(data []byte, out any, strict bool) error {
+	return decodeKeys(data, out, strict, true)
+}
+
+func decodeKeys(data []byte, out any, strict, foldKeys bool) error {
 	// Reject duplicates before encoding/json can silently replace an authority.
 	d := json.NewDecoder(bytes.NewReader(data))
 	d.UseNumber()
@@ -403,6 +417,13 @@ func decode(data []byte, out any, strict bool) error {
 				name, ok := key.(string)
 				if err != nil || !ok || seen[name] {
 					return errors.New("JSON key")
+				}
+				if foldKeys {
+					for prior := range seen {
+						if strings.EqualFold(name, prior) {
+							return errors.New("JSON key alias")
+						}
+					}
 				}
 				seen[name] = true
 				if err := walk(depth + 1); err != nil {
@@ -435,6 +456,7 @@ func decode(data []byte, out any, strict bool) error {
 		return errors.New("JSON trailing")
 	}
 	d = json.NewDecoder(bytes.NewReader(data))
+	d.UseNumber()
 	if strict {
 		d.DisallowUnknownFields()
 	}

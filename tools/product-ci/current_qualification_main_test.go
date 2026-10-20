@@ -11,17 +11,24 @@ import (
 // of general path protection to repair-guard's shared registration point.
 func TestCurrentCIInputMainDispatch(t *testing.T) {
 	const marker = "CC_TEST_3089_CI_MAIN"
-	if os.Getenv(marker) == "1" {
-		os.Args = []string{"product-ci", "current-pr-qualify", "synthetic-unknown-private-input"}
+	if mode := os.Getenv(marker); mode != "" {
+		os.Args = []string{"product-ci", mode, "synthetic-unknown-private-input"}
+		if mode == "current-pr-job" {
+			os.Args = append(os.Args, "synthetic-owned", "synthetic-linux", "synthetic-scanner")
+		}
 		main()
 		return
 	}
-	cmd := exec.Command(os.Args[0], "-test.run=^TestCurrentCIInputMainDispatch$")
-	cmd.Env = append(os.Environ(), marker+"=1")
-	hideCurrentTestCommand(cmd)
-	output, err := cmd.CombinedOutput()
-	exit, ok := err.(*exec.ExitError)
-	if !ok || exit.ExitCode() != 1 || !strings.Contains(string(output), "current CI purpose qualification rejected:") || strings.Contains(string(output), "synthetic-unknown-private-input") {
-		t.Fatal("official CLI did not privately reject unknown current input")
+	for _, mode := range []string{"current-pr-qualify", "current-pr-inspect", "current-pr-job"} {
+		t.Run(mode, func(t *testing.T) {
+			cmd := exec.Command(os.Args[0], "-test.run=^TestCurrentCIInputMainDispatch$")
+			cmd.Env = append(os.Environ(), marker+"="+mode)
+			hideCurrentTestCommand(cmd)
+			output, err := cmd.CombinedOutput()
+			exit, ok := err.(*exec.ExitError)
+			if !ok || exit.ExitCode() != 1 || !strings.Contains(string(output), "legacy_input_route_unavailable") || strings.Contains(string(output), "synthetic-unknown-private-input") {
+				t.Fatal("official CLI did not privately reject unknown current input")
+			}
+		})
 	}
 }

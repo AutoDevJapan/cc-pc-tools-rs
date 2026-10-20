@@ -791,7 +791,7 @@ func main() {
 			}
 		}
 	} else {
-		e = errors.New("usage: product-ci inspect | current-pr-inspect <pin-json> | current-pr-job <pin-json> <new-owned-dir> <Linux-helper> [gitleaks-ELF] | release-build-preflight <new-owned-dir> | release-build-recover <same-owned-dir> | codeql-bootstrap/codeql-revalidate <id> <new-owned-dir> <Linux-helper> | codeql-recover/codeql-finalize/codeql-restore <id> <owned-dir> | codeql-job/advanced-job <id> <run-id> <new-owned-dir> <Linux-helper> | secret-job <id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF> | node-contracts <id> <new-owned-dir> <image> | node-retry <id> <new-owned-dir> <image> <previous-log> | lifecycle-smoke <owned-dir> <image>")
+		e = errors.New("usage: product-ci inspect | current-pr-origin-qualify | current-pr-origin-inspect | current-pr-origin-job <new-owned-dir> <Linux-helper> <gitleaks-ELF> | release-build-preflight <new-owned-dir> | release-build-recover <same-owned-dir> | codeql-bootstrap/codeql-revalidate <id> <new-owned-dir> <Linux-helper> | codeql-recover/codeql-finalize/codeql-restore <id> <owned-dir> | codeql-job/advanced-job <id> <run-id> <new-owned-dir> <Linux-helper> | secret-job <id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF> | node-contracts <id> <new-owned-dir> <image> | node-retry <id> <new-owned-dir> <image> <previous-log> | lifecycle-smoke <owned-dir> <image>")
 	}
 	if e != nil {
 		fmt.Fprintln(os.Stderr, e)

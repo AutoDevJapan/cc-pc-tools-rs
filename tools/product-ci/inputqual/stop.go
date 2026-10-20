@@ -26,6 +26,7 @@ func verifyStop(checked map[string][]byte, p policy, pinSHA, ownedID string) err
 			PR      int    `json:"pr"`
 			Head    string `json:"head"`
 			Tree    string `json:"tree"`
+			Base    string `json:"base"`
 			Source  string `json:"source_evidence_sha256"`
 			Pin     string `json:"current_secret_pin"`
 			PinSHA  string `json:"current_secret_pin_sha256"`
@@ -34,7 +35,7 @@ func verifyStop(checked map[string][]byte, p policy, pinSHA, ownedID string) err
 			Attempt int    `json:"secret_attempt"`
 		} `json:"current_product_candidate"`
 	}
-	if decode(checked["final"], &final, false) != nil || final.Task != 3059 || final.Candidate.Repo != 1285649124 || final.Candidate.PR != 995 || final.Candidate.Head != fixedHead || final.Candidate.Tree != fixedTree || final.Candidate.Source != p.original.sha || !same(final.Candidate.Pin, p.pin) || final.Candidate.PinSHA != pinSHA || final.Candidate.Run != 39384472279 || final.Candidate.Job != 118500893552 || final.Candidate.Attempt != 1 {
+	if decode(checked["final"], &final, false) != nil || final.Task != 3059 || final.Candidate.Repo != 1285649124 || final.Candidate.PR != 995 || final.Candidate.Head != fixedHead || final.Candidate.Tree != fixedTree || final.Candidate.Base != fixedBase || final.Candidate.Source != p.original.sha || !same(final.Candidate.Pin, p.pin) || final.Candidate.PinSHA != pinSHA || final.Candidate.Run != 39384472279 || final.Candidate.Job != 118500893552 || final.Candidate.Attempt != 1 {
 		return rejected("final_candidate_binding")
 	}
 	var stop struct {

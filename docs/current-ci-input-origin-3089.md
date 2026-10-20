@@ -20,7 +20,7 @@ Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/281
 
 ## 受入条件
 
-1. 同じ元依頼、独立証拠、固定source/run/job、元の3入力だけが資格を得る。
+1. 同じ元依頼、独立証拠、固定source/run/jobからhelperが構成した入力だけが資格を得る。
 2. 別task/head/tree/run/job、変更済み入力、未知file、リンク差替えを拒否する。
 3. 元証拠の欠落・差替え、許可flagの自己申告、別の場所への包み直しを拒否する。
 4. 検査と消費は同じbytesを使い、出力へ入力本文やpathを含めない。
@@ -31,7 +31,8 @@ Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/281
 元outcomeとそこが指定する最終receiptのSHA一致を確認。
 独立した元3068のreceiptのSHAと、元3056、固定head/treeの結び付きを確認。
 原入力3件は正式guardで保護/未分類のまま、本文未読・未コピー。
-元の保存仕様の固定hash、36成果とreview/acceptanceとの対応は追加照合中。
+元の保存仕様の固定hashと元receiptの36成果の検証済み記録を保持する。
+今回36成果の原資料を再読・再検査したとは主張しない。
 
 共有登録点には着手せず、画像の出所修復3082へ変更範囲を事前配送した。
 通常schedulerへの統合後は正式consumer内で照合する設計を選んだ。
@@ -63,7 +64,7 @@ plan、review、acceptance、元仕様、元receiptのハードリンクをそ�
 原パスはGitの配布sourceへ含めない。実行物の隣の
 `current-input-3089.json`は参照だけを運び、コンパイルした各原パスのhashと
 独立証拠の期待hashを変更できない。承認flagや新しいhashを書くだけでは資格を作れない。
-元入力は原位置から一度だけbounded readerで読み、検証した同じbytesをparserへ渡す。
+実行用の新入力はRAM内で構成し、検証した同じbytesをparserへ渡す。
 別位置へのコピーや原入力を包み直す操作は行わない。
 
 他ToDoの古いフィールド形式は今回の4件の照合から除く。
@@ -71,7 +72,8 @@ plan、review、acceptance、元仕様、元receiptのハードリンクをそ�
 原レビューの対象headと出力hash、acceptanceの独立receiptとの対応も確認する。
 個々のJSONをhelperが生成したという出所や、作成コマンド・厳密時刻の確認は主張しない。
 
-元の実入力の照合は`review_independent_payload`で拒否した。
+元の実入力の照合は`review_independent_payload`で拒否した。その後の公開CLIは
+`legacy_input_route_unavailable`で原入力とlocatorを開く前に止める。
 元レビューenvelopeのpayloadと独立最終レビューの対応は未立証であり、
 形式や自己申告hashが合うだけで、その3入力を許可しない。
 
@@ -86,6 +88,9 @@ plan、review、acceptance、元仕様、元receiptのハードリンクをそ�
 `current-pr-origin-inspect`と`current-pr-origin-job`は同じ構成器を使い、
 既存の実API・queue・runner・隔離・回収の全条件を通す。
 資格の成功は原995の正式CI成功ではない。元939の再取消は行わない。
+元3059の通常修正headとCodeQLの入力資格はこの有限修復では未対応であり、
+本人の元の依頼を取り消さず、元3059の残条件へ明記する。
+停止の意思はstatus以外の欄も確認し、元作業が止められていれば資格を拒否する。
 
 独立Redで確認したhardlink5件と別headレビューはGreenになった。
 公式consumerのmainから未知入力を拒否する検査もGreen。

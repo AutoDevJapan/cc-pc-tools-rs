@@ -74,7 +74,8 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 	}
 	s.Sources["priority"] = ps
 	if bindingsOverrideKnown {
-		s.ProductBindingsOverridden = &policy.ProductBindingsPresent
+		overridden := policy.ProductBindingsPresent
+		s.ProductBindingsOverridden = &overridden
 	}
 	loaded, js := loadJobs(ctx, opts, now, taskReferences(items, true))
 	s.Sources["jobs"] = js
@@ -86,10 +87,11 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 	for id, item := range items {
 		labels[id] = itemLabel(item, policy)
 	}
-	ranks, dependencyRanks := todoPriorityMaps(items, labels)
 	// Link only canonical numeric relations or saved job references, never text,
 	// worktree names, paths, prompts, parent titles, or matching project names.
 	references := taskReferences(items, false)
+	currentTargets := mcpCurrentTargets(items, loaded, policy, references)
+	ranks, dependencyRanks := todoPriorityMaps(items, labels, currentTargets)
 	allJobs := map[string]*Job{}
 	resourceUnverified := false
 	for _, loaded := range loaded {
@@ -155,10 +157,20 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 				if primary, ok := ranks[j.TodoID]; ok {
 					rank = primary
 				}
-			} else if primary, ok := items[j.TodoID]; ok && !mcpResolve(primary, policy, fmt.Sprint(primary.ID)).scoped {
+			} else if business.id != "" {
 				rank = business.rank
-				if inherited, ok := dependencyRanks[j.TodoID]; ok {
-					rank = min(rank, inherited)
+				primaryID := j.TodoID
+				if primaryID == 0 && len(ids) == 1 && (liveStatus(j.Status) || j.Status == "pending") {
+					primaryID = ids[0]
+				}
+				if primary, ok := items[primaryID]; ok {
+					if !mcpResolve(primary, policy, fmt.Sprint(primary.ID)).scoped {
+						if inherited, ok := dependencyRanks[primaryID]; ok {
+							rank = min(rank, inherited)
+						}
+					} else if inherited, ok := ranks[primaryID]; ok {
+						rank = min(rank, inherited)
+					}
 				}
 			}
 		}
@@ -234,6 +246,10 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 		}
 		l := labels[id]
 		taskIdentity := mcpResolve(item, policy, fmt.Sprint(id))
+		if current, ok := currentTargets[id]; ok {
+			taskIdentity = current
+			l = current.label()
+		}
 		department := rankDepartment(ranks[id])
 		if taskIdentity.id != "" {
 			department = taskIdentity.label().department
@@ -283,18 +299,6 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 			selectedJobs[j.rawID] = true
 			t.JobKeys = append(t.JobKeys, j.Key)
 			if n == 0 {
-				if t.ProductIdentity == nil && liveStatus(j.RecordedStatus) && j.ProductIdentity != nil &&
-					(j.ProductIdentity.State == "verified" || j.ProductIdentity.State == "owner_declared") {
-					business := mcpProduct(j.ProductIdentity.ProductID, j.ProductIdentity.State)
-					l = business.label()
-					t.ProductIdentity = business.projection()
-					t.Priority = business.rank
-					if inherited, ok := dependencyRanks[id]; ok {
-						t.Priority = min(t.Priority, inherited)
-					}
-					t.PublicLabel, t.LabelKind, t.Department = l.name, l.kind, l.department
-					t.DisplayName = fmt.Sprintf("%s / ToDo %d", l.name, id)
-				}
 				t.Execution, t.Phase = j.Execution, j.Phase
 				t.LastActivity = j.LastActivity
 				if t.TaskType == "unknown" && j.TaskType != "unknown" {

@@ -108,6 +108,62 @@ func TestMCPHistoryOnlyProductJobKeepsItsProductPriority(t *testing.T) {
 	}
 }
 
+func TestMCPLiveRequesterDependencyExclusionControls(t *testing.T) {
+	for _, control := range []string{"parent_done", "parent_block", "wait_ready", "child_done", "no_product_job", "terminal_requester"} {
+		t.Run(control, func(t *testing.T) {
+			parent := map[string]any{"id": 1, "project": "tools", "status": "doing", "wait_on": []int{7}}
+			child := map[string]any{"id": 7, "project": "tools", "status": "doing"}
+			switch control {
+			case "parent_done":
+				parent["status"] = "done"
+			case "parent_block":
+				parent["status"] = "block"
+			case "wait_ready":
+				parent["wait_ready"] = map[string]any{"condition": "synthetic"}
+			case "child_done":
+				child["status"] = "done"
+			}
+			db, _ := json.Marshal(map[string]any{"items": []any{parent, child}})
+			f := fixtureFor(t, string(db))
+			f.opts.PriorityFile = filepath.Join(filepath.Dir(f.opts.TodoFile), "priority.json")
+			writeFixture(t, f.opts.PriorityFile, []byte(`{"product_identities":{"godd-mcp-contract":{"repository_id":61001,"owner_id":71001},"godd-mcp-alpha":{"repository_id":61002,"owner_id":71002}}}`))
+			requester := `{"id":"requester","todo_id":1,"status":"queued","product_identity":{"repository_id":61001,"owner_id":71001}}`
+			want := 60
+			if control == "no_product_job" {
+				requester = `{"id":"requester","todo_id":1,"status":"queued"}`
+				want = 30
+			}
+			if control == "terminal_requester" {
+				requester = `{"id":"requester","todo_id":1,"status":"failed","product_identity":{"repository_id":61001,"owner_id":71001}}`
+				want = 30
+			}
+			f.job(t, "requester", requester)
+			f.job(t, "prerequisite", `{"id":"prerequisite","todo_id":7,"status":"running","product_identity":{"repository_id":61002,"owner_id":71002}}`)
+			found := false
+			for _, job := range snap(f).Jobs {
+				if job.rawID == "prerequisite" {
+					found = true
+					if job.Priority != want {
+						t.Fatalf("priority=%d want=%d", job.Priority, want)
+					}
+				}
+			}
+			if !found {
+				t.Fatal("prerequisite absent")
+			}
+		})
+	}
+}
+
+func TestMCPMissingPolicyReportsNoBindingOverride(t *testing.T) {
+	f := fixtureFor(t, `{"items":[]}`)
+	f.opts.PriorityFile = filepath.Join(filepath.Dir(f.opts.TodoFile), "missing-policy.json")
+	value := snap(f).ProductBindingsOverridden
+	if value == nil || *value {
+		t.Fatal("missing policy must report no override")
+	}
+}
+
 func TestMCPProductsHaveDistinctDepartmentsAndPriority(t *testing.T) {
 	for _, tc := range []struct {
 		project    string

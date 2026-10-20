@@ -245,6 +245,9 @@ func mcpRelations(j jobMeta, ids []int64, items map[int64]todoItem, p priorityPo
 			}
 			if len(eligible) > 0 {
 				candidates = eligible
+			} else if own.id != "" {
+				// An inactive legacy reference is history, not a current primary.
+				candidates = nil
 			}
 		}
 	}

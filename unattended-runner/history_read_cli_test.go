@@ -123,7 +123,10 @@ func historyMessage(id, author, content string) map[string]any {
 
 func historyArgs(t *testing.T) ([]string, string) {
 	t.Helper()
-	dir := t.TempDir()
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	scope := historyReadScope{Domain: "discord-history-read-scope-v1", Todo: 3110, Guild: "10", Owner: "20", Since: "2026-10-17T00:00:00Z", Until: "2026-10-19T00:00:00Z", Threads: []string{"100"}}
 	b, _ := json.Marshal(scope)
 	input := filepath.Join(dir, "scope.private.json")

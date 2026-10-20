@@ -1,0 +1,9 @@
+独立実行ToDo。ToDo3021の未完了な実配備受入に必要なWindows版Codex 0.163.0 patched binaryを用意する。
+
+固定対象はToDo3023で完成・レビュー済み・PR255通常merge済みのsource commit 7c1fe857547eb7e6850361752a26d9dfe868528e（PR255後にsource.json tested_binary_sha256=bcebff4cf935c2bd728bbed130c3c21a329ac58727677326d6a1556124b46969）。元のビルド済みartifactは指定worktree/配備先で発見できないことを確認した。再開時に既存成果を所有付きtask-specific場所で照合し、無ければこの固定source/tag rust-v0.163.0から必要な配布binaryをcargo gate・専用target・sccacheで再生成する。追加nextest/Clippy/CI/reviewを重複させず、既存成功記録を参照する。
+
+依頼: 新規Cargo資源を使う前に既存同一source artifactの可用性を確認。無ければ配備可能なcodex.exeと公式tag対応code-mode-host.exeを作る/照合し、SHAがsource.json/npm metadataと一致するか記録。別版バイナリでtested hashを偽装しない。成果の場所と所有情報を3021へ報告し、以後削除せず保持。
+
+禁止: D:/CC/Toolsの変更、launcher/manifest/activation変更、現TUIや全job停止、API key/GPU、新しい対話session、Cargo検査の重複。親3021が実配備と起動受入を担当。
+
+完了条件: 固定sourceからの既存実行物を取得または必要なbuildを完了し、Windows実行物・code-mode-hostのhashとsource由来を照合、worktree内に再開可能な証拠を残す。失敗/不一致時は原因を記録する。

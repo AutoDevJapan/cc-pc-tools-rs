@@ -1,0 +1,58 @@
+親ToDo3021向け、Codex 0.163.0配布記録の差分を読み取り専用でレビューしてください。前回の実行はGitHub connectorの権限不足で、成果確認できないまま停止しました。対象を間違えないよう、今回は親担当が正規GitHub連携で取得した下記スナップショットを直接レビューしてください。外部アクセスやコマンド実行は不要です。
+
+## 対象版
+
+Repository: AutoDevJapan/cc-pc-tools-rs
+Branch snapshot source: scheduler/todo-2903-qualified-release
+PR255 merge/base source: 842e513191c2ced4364f8382b3a8f9654d01f9d3
+
+GitHub fetch_file returned these immutable blob SHAs from the named branch after commit 0e1c420:
+- tools/codex-progress-tui/source.json: eddd393e1a5ab82c398fc76624b12f583287302d
+- tools/codex-progress-tui/todo-3021-artifact-evidence.md: c40d5f6fdb808a0194cbfe59f4178fee10a30c22
+
+Later commits only added review/checkpoint documentation; the two target blobs are unchanged. Treat these blob SHAs and the embedded contents below as the exact review target. Do not require the branch HEAD to equal an older commit. The prior wrong-branch review of 0.162.1 source is outside scope.
+
+## source.jsonの実体
+
+```json
+{
+  "upstream_repository": "https://github.com/openai/codex",
+  "tag": "rust-v0.163.0",
+  "commit": "83086188ae0614bd882818ff1aa23f3194962012",
+  "patched_commit": "e5578209650641348c778829c8a0b83eb6753dc1",
+  "toolchain": "1.95.0",
+  "collector_commit": "3ca00d294cdf2096e03c0a9b347250d2b07a5d66",
+  "collector_sha256": "581c813d3321c47580d21f07dd7ef7a3b654bd5d4d761cdbf7bb275cd8e7f8d1",
+  "patch_sha256": "21dd906d4ceace003835e8b0a59517e9a35187df7c702ddda75e4a9c1b3f96b7",
+  "build_profile": {"lto": false, "strip": "symbols", "codegen_units": 16, "debug": "0"},
+  "tested_binary_sha256": "618bf6dcd243463d9058f0ce68b9e43ba2a2b2ac75c715f87ad40d06e453433f",
+  "tested_binary_source_commit": "e5578209650641348c778829c8a0b83eb6753dc1",
+  "collector_tree": "2ab65dea47a83f99ad71f7d7cda4b4612819d0bc",
+  "npm_package": "@openai/codex@0.163.0-win32-x64",
+  "npm_integrity": "sha512-QQGQ/q9dCJ5C5jqhgFrwycpWG3szIyFNThMiKl6hYtu6N/eM3Qd7StesgnCFAfzVED8IkE3N3oH71szzcludqw==",
+  "npm_codex_sha256": "2692c8c7bb2cf8b0aefe638741fc90236f4b824c59578ce84994f9de58200993",
+  "npm_code_mode_host_sha256": "07f3869f0849cd54b31cec1f86ec796f004501bd3a215135c1facc883a2b9988",
+  "tag_object": "129b8ec7ee6f4511557a4856279f529025c25af4",
+  "npm_tarball_sha512": "410190feaf5d089e42e63aa1805af0c9ca561b7b3323214d4e13222a5ea162dbba37f78cdd077b4ad7ac82708501fcd5103f08904dcdde81fbd6ccf3725b9dab"
+}
+```
+
+## 証拠ファイルの要点
+
+- ToDo3029が固定source commit 7c1fe857547eb7e6850361752a26d9dfe868528eから生成した候補は SHA256 `618bf6dcd243463d9058f0ce68b9e43ba2a2b2ac75c715f87ad40d06e453433f`、`codex-cli 0.163.0`。
+- 元source.jsonに記録されていた旧tested SHA `bcebff4cf935c2bd728bbed130c3c21a329ac58727677326d6a1556124b46969` とは一致しない。PE timestamp/build stamp差の存在は保存したが、全byte差の原因は未確定であり、証明したと主張しない。
+- ToDo3030は上記候補の同一実物を隠しConPTYで起動。attempt5で常設進捗欄、`/progress`、部分取得警告、resize、`/quit` exit 0を確認。成功前のattempt1〜4は根拠に含めない。
+- source commit 7c1fe857で関連nextest5件、release Clippy、doctest、codex buildが成功した記録を再利用。全件suiteには既知の1件失敗と公式baselineの同じ失敗がある。ToDo3030は新規Cargo検査なし。
+- 候補の公式同梱host SHA `07f3869f...` とnpm Codex SHA `2692c8c7...` は公式package実物と一致。
+- source.jsonの既存npm tarball SHA512は127 hex桁で、tarball実hashと一致しない。ToDo3030の保持tarball実測128桁値はnpm integrityとも一致するため完全値へ直した。
+- metadataレビューの後も、別途launcher/manifest/実配備/起動受入が必要であり、source.jsonだけでは配備完了にならない。
+
+## レビューしてほしい点
+
+1. tested_binary_sha256を、同一のsource lineageで実機受入した候補の実測SHAへ更新する根拠と説明が妥当か。旧hashが不一致な事実・原因未確定を保持し、hash偽装にしていないか。
+2. 127桁のtarball SHA512を実物/integrityに一致する128桁へ訂正することが妥当か。
+3. 公式npm Codex、公式host、patched candidateの役割とhashを混同していないか。
+4. 配備の未実施と追加受入条件を明確に保っているか。
+
+操作はこのスナップショットに対する読み取り専用の推論だけにしてください。ファイル変更やコマンド実行、owner向け質問をしないでください。Must/Should/Nitを、具体的なファイル/JSON keyまたは上記証拠項目と根拠付きで返してください。各重大度がなければ「なし」と書いてください。対象blob SHAとHEADを回答冒頭に繰り返してください。
+

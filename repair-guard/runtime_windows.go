@@ -13,6 +13,23 @@ import (
 // original private registry, or any other executable.
 const publicationGateRuntime = "D:/CC/Tools/codex-jobs/gh_gate.exe"
 
+// The owner explicitly requested repair of this installed progress display
+// (ToDo3020/3021, restated 2026-10-20). Only the existing distribution leaves
+// qualify. Its directory, collector, credentials and unrelated tools do not.
+const progressTUIDirectory = "D:/CC/Tools/codex-progress-tui"
+
+func progressTUIRuntime(absolute, target, directory string) bool {
+	if !same(filepath.Dir(absolute), directory) {
+		return false
+	}
+	for _, name := range []string{"codex.exe", "codex-code-mode-host.exe", "manifest.json"} {
+		if runtimeExecutable(absolute, target, filepath.Join(directory, name)) {
+			return true
+		}
+	}
+	return false
+}
+
 // The installed product-ci tool and the files its normal update writes. Only
 // these exact leaf names directly under the physical directory qualify.
 const productCIDirectory = "D:/CC/Tools/product-ci"
@@ -45,6 +62,16 @@ func productCIRuntime(absolute, directory string, protected func(string) bool) b
 	if !productCILeaf.MatchString(name) || !same(filepath.Dir(absolute), directory) || protected(absolute) {
 		return false
 	}
+	return runtimeLeaf(absolute, directory, protected, false)
+}
+
+// runtimeLeaf is the shared physical check for one already name-matched leaf
+// directly under a real directory. mustExist refuses a not-yet-created name.
+func runtimeLeaf(absolute, directory string, protected func(string) bool, mustExist bool) bool {
+	name := filepath.Base(absolute)
+	if !same(filepath.Dir(absolute), directory) || protected(absolute) {
+		return false
+	}
 	parent, err := physical(directory)
 	if err != nil || !same(parent, directory) || protected(parent) {
 		return false
@@ -54,7 +81,7 @@ func productCIRuntime(absolute, directory string, protected func(string) bool) b
 	}
 	info, err := os.Lstat(absolute)
 	if os.IsNotExist(err) {
-		return true
+		return !mustExist
 	}
 	if err != nil || !info.Mode().IsRegular() || !plainEntry(info) {
 		return false

@@ -1,5 +1,27 @@
 # Codex TUIの並列担当の進捗表示
 
+## 常設の進捗表示（ToDo3044）
+
+2026-10-20に公式0.163.0に対応する更新版を配備しました。通常の`codex`起動・会話の再開から、入力欄の上に進捗一覧が自動で表示され、2秒ごとに更新します。進捗を見るためのコマンド入力は不要です。記録済みの進捗率と未計測を区別し、取得できなかった記録を停止や完了とは判定しません。
+
+配備済みlauncherから新しい隠しConPTYを起動し、進捗コマンドを一度も入力せず、常設欄と約11秒間での取得世代の自動更新を確認しました。幅120→60→148の変更、未送信の文字、終了0も確認しています。配備した実行物は`source.json`の検証済みSHAと一致します。既に起動している公式TUIにコードを後から読み込む仕組みはないため、その画面だけは次の正常な起動・再開で反映します。現在の本人会話を強制終了していません。
+
+## 診断と単発の取得（ToDo3021）
+
+共有ToDoの一覧を出す `/progress` と常設の一覧は、このrepositoryの独自patchです。公式CLIの `/status` はその会話の状態、`/ps` はその会話の背景端末を表示します。公式の機能で共有ToDo全体が表示されるとは扱いません。公式の説明: https://learn.chatgpt.com/docs/developer-commands?surface=cli 。
+
+起動済みの公式TUIでは、入力欄へ `!codex progress` を入力すると、モデルを呼ばずに共有進捗を一度だけ表示します。番号を指定する場合は `!codex progress --task 3020` です。PowerShell/CMDでは先頭の `!` を外します。取得処理の実行は最大6秒、取得側の期限は4秒です。新しい常駐・更新ループを追加しません。exit1でも確認できたデータを表示し、部分取得の警告を残します。実行を確認した担当と、起動待ち・見張り・稼働未確認を分けます。元の指示・名称・パス・認証情報は出力しません。
+
+`codex progress --check` はTUIの起動判定とcollectorのハッシュ一致を示します。公式版がmanifestの版と違う場合、従来どおり公式TUIを使います。無効な組合せを受け入れるためのmanifest変更や版の偽装はしません。`codex progress` は独立してcollectorのハッシュを検証するため、公式TUIの版が進んでも利用できます。exec・管理コマンドは公式経路を使います。
+
+2026-10-20の当初の調査では、公式npmは0.163.0、配備済みの進捗TUIは0.162.1でした。npm側のPowerShell/CMD shimが進捗launcherを呼ぶ変更も失われていました。2904のTUI（SHA256 `6f21e83ac9fac5ed64e5b06667a408f671da65ac9d1094e3f84b156841cdc6a1`）とcollector（SHA256 `581c813d3321c47580d21f07dd7ef7a3b654bd5d4d761cdbf7bb275cd8e7f8d1`）は実物とmanifestが一致しました。2904のproducer-first修正を未配備とは扱いません。その後、3023の移植・3029/3030の実行物受入を経て、3044で0.163.0を実配備しました。
+
+入口の復旧は `activation/install.ps1 -Launcher <このsourceからbuildしたexe>` で行います。既知の旧shim、または既に同じshimであることをハッシュ照合してから、元のlauncher/PS/CMDを `D:/CC/Tools/codex-progress-tui/backup-3021-<日時>` に退避し、同じファイルシステム上の一時ファイルから置換します。未知のshimは上書きしません。manifest、Codex本体、collector、hostは変更しません。公式npm/OpenCodexの更新後に `codex progress --check` が使えなければ、shimのハッシュを確認してこの有限導入を再実行します。未知の変更があれば内容を確認して既知ハッシュを更新し、監視や自動上書きを追加しません。
+
+既に起動したlauncherがファイルを保持している場合、置換は失敗することがあります。その場合は配備を止めて原版を保ち、現在の会話を終了させません。`progress` はコマンドの先頭に置きます。PowerShell関数が加える `--no-daemon` だけは前にあっても認識します。`-c` の値や既存execの入力を新コマンドとして捕捉しません。
+
+3021ではGo test/vet/build、PowerShell構文、実際のPowerShell関数とCMD経由の個別取得、公式version/exec helpを確認しました。別モデルの初回と差分確認はMust0です。隠れた新規PTYで公式0.163.0を起動し、`!codex progress --task 3020` と `!codex progress` の会話内実表示を確認しました。部分取得の警告、計測済み15%と未計測の区別、実行確認2件と待ち・見張り9件と未確認123件の区別、`/quit`の終了0を確認しました。検査用の会話だけを終了し、本人の現在の会話は操作していません。当時未完了だった常設欄の配備は3044で確認済みです。
+
 承認された画像の方向に合わせ、会話と入力欄の間に進捗一覧を常設します。共有ToDoの確認済みの進捗だけを使い、未計測は0%と表示しません。「テスト中」「実装中」「元の作業記録を確認中」など自然な日本語で、自分の会話の担当と別セッションの担当を表示します。
 
 幅と高さに合わせて一覧が縮み、入力欄・カーソル・承認画面を優先します。`/progress` は表示時点で処理中と確認できた担当の一覧を開く読み取り専用コマンドです。待機・終了・状態不明・報告だけの担当を除外し、取得が完了して0件なら「作業中なし」と表示します。取得失敗や12秒を超えたsnapshotの行を、現在の稼働として表示しません。部分取得なら確認できた新しい処理だけを表示し、取得不備も示します。0件でも取得が不完全なら「稼働の確認待ち」と表示します。
@@ -10,13 +32,13 @@ cacheの `snapshot-active-v1.json` と `acquisition-active.lock` は旧版と分
 
 ## 構成
 
-`../agent-progress` はGoの単発の取得処理です。元データは変更しません。`patches/codex-0.162.1-progress.patch` は公式CodexのRust TUIへの変更です。`launcher` はGoの起動処理です。公式の版と更新TUI・取得処理・公式code-mode-hostのSHAが一致した場合だけ対話TUIを更新版へ回し、exec・app-server・ログイン・更新・管理コマンドは公式版を使います。既存OpenCodexのOAuth・proxy起動・引数・作業場所を保ち、新しい支払いを発生させません。
+`../agent-progress` はGoの単発の取得処理です。元データは変更しません。`patches/codex-0.163.0-progress.patch` は公式CodexのRust TUIへの変更です。`launcher` はGoの起動処理です。公式の版と更新TUI・取得処理・公式code-mode-hostのSHAが一致した場合だけ対話TUIを更新版へ回し、exec・app-server・ログイン・更新・管理コマンドは公式版を使います。既存OpenCodexのOAuth・proxy起動・引数・作業場所を保ち、新しい支払いを発生させません。
 
 ## 再現
 
-`source.json` のGit commit・patch SHA・toolchainを照合します。公式tagのCargo.lockが内部workspaceの版を0.0.0で保持していたため、0.162.1へ合わせた161項目だけを含めます。外部の依存版とchecksumは変更しません。
+`source.json` のGit commit・patch SHA・toolchainを照合します。公式tagのCargo.lockが内部workspaceの版を0.0.0で保持していたため、0.163.0へ合わせた内部package版だけを含めます。外部の依存版とchecksumは変更しません。公式 `@openai/codex@0.163.0-win32-x64` npm packageのintegrityと、同梱Codexおよびcode-mode-hostのSHAも記録します。両バイナリは公式tagと同じ版の配布物から取得し、code-mode-hostはlauncher manifestでカスタムCodexと一緒に照合します。
 
-公式 https://github.com/openai/codex の `rust-v0.162.1`（commit `092d3acd6bec3e3a14bdc7e7a2810ab628ab759d`）を新しい自分用ディレクトリへ取得し、HEADを照合した後に `git apply --check` と `git apply` を使います。無関係の作業ツリーをreset・cleanしません。
+公式 https://github.com/openai/codex の `rust-v0.163.0`（commit `83086188ae0614bd882818ff1aa23f3194962012`）を新しい自分用ディレクトリへ取得し、HEADを照合した後に `git apply --check` と `git apply` を使います。無関係の作業ツリーをreset・cleanしません。
 
 その `codex-rs` で順に実行します。
 
@@ -62,3 +84,4 @@ cacheは `D:/CC/Work/parallel-agent-progress-runtime`、実行版は `D:/CC/Tool
 全件の検査では一時フォルダーをホームの`.git`の外に置き、プロセスだけの`NO_COLOR`・`TERM`・`CODEX_*`を外しました。ownerの`.git`や設定は読み書きしません。Windowsでパイプの閉じ待ち344件が検出され、1件は内蔵app-serverが起動したgitの子であることを観測しました。ほかの内訳は未確認ですが、検査終了後にこのcloneの担当プロセスが0件であることを確認しました。
 
 旧TUIと同じ引数で取得元の世代が実際に変化し、処理中以外の行が0件であることも確認しました。モデルを呼ぶネイティブ担当の状態遷移の実測は、このConPTY検査に含めません。待機・報告・終了・取得失敗・空一覧の表示境界は関連単体検査で確認しています。旧TUIの外部一覧はGoの通常更新から変わります。ネイティブ担当の絞り込みと空一覧の表示変更は、新しいRust版の通常起動から適用します。
+

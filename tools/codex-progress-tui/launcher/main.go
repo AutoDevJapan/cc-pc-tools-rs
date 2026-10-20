@@ -137,10 +137,16 @@ func choose(args []string, root, pkg string, disabled bool) (string, bool) {
 
 func main() {
 	pkg := officialPackage(os.Getenv("APPDATA"))
+	if args, ok := progressArgs(os.Args[1:]); ok {
+		os.Exit(runProgress(args, installRoot, pkg, os.Stdout, os.Stderr))
+	}
 	path, enabled := choose(os.Args[1:], installRoot, pkg, os.Getenv("CC_AGENT_PROGRESS_DISABLED") == "1")
 	if path == "" {
 		_, _ = io.WriteString(os.Stderr, "Codexの実行ファイルが見つかりません。\n")
 		os.Exit(2)
+	}
+	if interactive(os.Args[1:]) && !enabled && os.Getenv("CC_AGENT_PROGRESS_DISABLED") != "1" {
+		_, _ = io.WriteString(os.Stderr, "進捗TUIの版・ハッシュ照合が不一致のため公式Codexを使います。進捗は codex progress、起動の診断は codex progress --check で確認できます。\n")
 	}
 	cmd := exec.Command(path, os.Args[1:]...)
 	cmd.Stdin = os.Stdin

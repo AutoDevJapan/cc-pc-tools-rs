@@ -1,10 +1,10 @@
 use cc_ask::{
-    ask_gate::{BLOCKED_MESSAGE, OwnerOnly},
+    ask_gate::{OwnerOnly, BLOCKED_MESSAGE},
     commands::AskArgs,
     conversation_bridge as bridge,
     core::{Effects, Output, Result},
 };
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     fs,
     path::{Path, PathBuf},
@@ -73,6 +73,10 @@ struct Fake {
     http_calls: usize,
     guard_calls: Vec<String>,
     deny_images: bool,
+    unverified_images: bool,
+    qualify_images: bool,
+    qualification_calls: usize,
+    mismatched_qualification: bool,
     busy_once: bool,
 }
 
@@ -98,8 +102,22 @@ impl Effects for Fake {
             return Ok(Output {
                 code: 0,
                 stdout:
-                    json!({"client_resource":self.deny_images,"classification_unverified":false})
+                    json!({"client_resource":self.deny_images,"classification_unverified":self.unverified_images})
                         .to_string(),
+                stderr: String::new(),
+            });
+        }
+        if args
+            .get(1)
+            .is_some_and(|value| value == "--qualify-generated-question-media")
+        {
+            self.qualification_calls += 1;
+            let bytes = fs::read(argument(args, "--path")).unwrap();
+            use sha2::{Digest, Sha256};
+            let proof = json!({"domain":"owner-generated-question-image-v1","qualified":self.qualify_images,"scope":{"todo_id":if self.mismatched_qualification{3085}else{argument(args,"--question-todo-id").parse::<u64>().unwrap()},"question_sha256":argument(args,"--question-sha256"),"decision_sha256":argument(args,"--decision-sha256"),"owner_id":argument(args,"--question-owner"),"guild_id":argument(args,"--question-guild"),"forum_id":argument(args,"--question-forum")},"sha256":format!("{:x}",Sha256::digest(&bytes)),"size":bytes.len(),"mime":"image/png","extension":"png"});
+            return Ok(Output {
+                code: 0,
+                stdout: proof.to_string(),
                 stderr: String::new(),
             });
         }
@@ -204,11 +222,9 @@ fn conversation_bridge_disabled_and_dry_run_never_start_children_or_snapshot_inp
     );
     let mut args = f.ask();
     args.body_file = f.root.path().join("missing-body");
-    assert!(
-        bridge::try_ask(f.root.path(), &mut fake, &args)
-            .unwrap()
-            .is_none()
-    );
+    assert!(bridge::try_ask(f.root.path(), &mut fake, &args)
+        .unwrap()
+        .is_none());
     fs::remove_file(f.root.path().join("conversation-mode.json")).unwrap();
     assert!(
         bridge::try_post(f.root.path(), &mut fake, "500", &args.body_file, false, &[])
@@ -217,11 +233,9 @@ fn conversation_bridge_disabled_and_dry_run_never_start_children_or_snapshot_inp
     );
     f.mode("malformed-mode");
     args.dry_run = true;
-    assert!(
-        bridge::try_ask(f.root.path(), &mut fake, &args)
-            .unwrap()
-            .is_none()
-    );
+    assert!(bridge::try_ask(f.root.path(), &mut fake, &args)
+        .unwrap()
+        .is_none());
     assert!(fake.calls.is_empty());
     assert_eq!(fake.http_calls, 0);
     assert!(!f.root.path().join("conversation-bridge").exists());
@@ -379,26 +393,22 @@ fn conversation_bridge_images_use_same_hashed_snapshot_and_videos_audio_are_reje
         snapshot
     );
     assert_eq!(receipt["size"], bytes.len());
-    assert!(
-        receipt["sha256"]
-            .as_str()
-            .is_some_and(|hash| hash.len() == 64)
-    );
+    assert!(receipt["sha256"]
+        .as_str()
+        .is_some_and(|hash| hash.len() == 64));
     for extension in ["mp4", "mp3", "zip", "exe", "md"] {
         let path = f.root.path().join(format!("unsupported.{extension}"));
         fs::write(&path, "fixture").unwrap();
-        assert!(
-            bridge::try_log(
-                f.root.path(),
-                &mut fake,
-                "進捗",
-                "本文",
-                None,
-                false,
-                &[path]
-            )
-            .is_err()
-        );
+        assert!(bridge::try_log(
+            f.root.path(),
+            &mut fake,
+            "進捗",
+            "本文",
+            None,
+            false,
+            &[path]
+        )
+        .is_err());
     }
     assert_eq!(fake.calls.len(), 1);
     assert_eq!(fake.guard_calls.len(), 1);
@@ -423,18 +433,16 @@ fn conversation_bridge_media_size_limits_precede_any_copy_or_guard() {
             paths.push(path);
         }
         let mut fake = Fake::default();
-        assert!(
-            bridge::try_log(
-                f.root.path(),
-                &mut fake,
-                "進捗",
-                "本文",
-                None,
-                false,
-                &paths
-            )
-            .is_err()
-        );
+        assert!(bridge::try_log(
+            f.root.path(),
+            &mut fake,
+            "進捗",
+            "本文",
+            None,
+            false,
+            &paths
+        )
+        .is_err());
         assert!(fake.calls.is_empty());
         assert!(fake.guard_calls.is_empty());
         assert_eq!(
@@ -482,18 +490,16 @@ fn conversation_bridge_media_provenance_is_immutable_across_same_byte_aliases() 
     );
     assert_eq!(fs::read(&receipt).unwrap(), original);
     fs::write(&receipt, b"{}").unwrap();
-    assert!(
-        bridge::try_log(
-            f.root.path(),
-            &mut fake,
-            "進捗",
-            "本文",
-            None,
-            false,
-            &[first]
-        )
-        .is_err()
-    );
+    assert!(bridge::try_log(
+        f.root.path(),
+        &mut fake,
+        "進捗",
+        "本文",
+        None,
+        false,
+        &[first]
+    )
+    .is_err());
     assert_eq!(fake.calls.len(), 2);
     assert_eq!(fs::read(&receipt).unwrap(), b"{}");
 }
@@ -506,18 +512,16 @@ fn conversation_bridge_media_cannot_hide_sensitive_original_components() {
     let source = directory.join("image.png");
     fs::write(&source, b"\x89PNG\r\n\x1a\nfixture").unwrap();
     let mut fake = Fake::default();
-    assert!(
-        bridge::try_log(
-            f.root.path(),
-            &mut fake,
-            "進捗",
-            "本文",
-            None,
-            false,
-            &[source]
-        )
-        .is_err()
-    );
+    assert!(bridge::try_log(
+        f.root.path(),
+        &mut fake,
+        "進捗",
+        "本文",
+        None,
+        false,
+        &[source]
+    )
+    .is_err());
     assert!(fake.calls.is_empty());
     assert!(fake.guard_calls.is_empty());
 }
@@ -531,18 +535,16 @@ fn conversation_bridge_protected_source_never_reaches_the_go_sender() {
         deny_images: true,
         ..Default::default()
     };
-    assert!(
-        bridge::try_log(
-            f.root.path(),
-            &mut fake,
-            "進捗",
-            "本文",
-            None,
-            false,
-            &[image]
-        )
-        .is_err()
-    );
+    assert!(bridge::try_log(
+        f.root.path(),
+        &mut fake,
+        "進捗",
+        "本文",
+        None,
+        false,
+        &[image]
+    )
+    .is_err());
     assert_eq!(fake.guard_calls.len(), 1);
     assert!(fake.calls.is_empty());
     assert_eq!(fake.http_calls, 0);
@@ -628,6 +630,66 @@ fn conversation_bridge_ask_identity_is_stable_across_json_key_order_and_body_pat
 }
 
 #[test]
+fn conversation_bridge_duplicate_returns_original_question_url_without_claiming_a_new_wait() {
+    let f = Fixture::new();
+    let mut fake=Fake{output:Some(Output{code:0,stdout:json!({"request_id":"original-question","todo_id":2823,"phase":"duplicate","wait_requested":false,"outcome":"existing_question_images_differ","thread_id":"600","url":"https://discord.com/channels/100/600"}).to_string(),stderr:String::new()}),..Default::default()};
+    let result = bridge::try_ask(f.root.path(), &mut fake, &f.ask())
+        .unwrap()
+        .unwrap();
+    assert_eq!(result["phase"], "duplicate");
+    assert_eq!(result["url"], "https://discord.com/channels/100/600");
+    assert_eq!(result["wait_requested"], false);
+    f.unchanged_legacy();
+}
+
+#[test]
+fn conversation_bridge_question_qualification_is_scoped_and_never_reclassifies_the_source() {
+    let f = Fixture::new();
+    let image = f.root.path().join("generated.png");
+    let bytes = b"\x89PNG\r\n\x1a\nnew-design";
+    fs::write(&image, bytes).unwrap();
+    let mut decision: Value = serde_json::from_slice(&fs::read(&f.decision).unwrap()).unwrap();
+    decision["owner"] = json!("100");
+    decision["guild"] = json!("101");
+    decision["parent"] = json!("102");
+    fs::write(&f.decision, decision.to_string()).unwrap();
+    let mut args = f.ask();
+    args.attach.push(image);
+    let mut fake = Fake {
+        deny_images: true,
+        unverified_images: true,
+        qualify_images: true,
+        ..Default::default()
+    };
+    bridge::try_ask(f.root.path(), &mut fake, &args).unwrap();
+    assert_eq!(fake.qualification_calls, 1);
+    assert_eq!(fake.attachments, vec![bytes.to_vec()]);
+    assert!(fake.deny_images && fake.unverified_images);
+    fake.mismatched_qualification = true;
+    let sent = fake.calls.len();
+    assert!(bridge::try_ask(f.root.path(), &mut fake, &args).is_err());
+    assert_eq!(fake.calls.len(), sent);
+    let mut log = Fake {
+        deny_images: true,
+        unverified_images: true,
+        qualify_images: true,
+        ..Default::default()
+    };
+    assert!(bridge::try_log(
+        f.root.path(),
+        &mut log,
+        "進捗",
+        "本文",
+        None,
+        false,
+        &args.attach
+    )
+    .is_err());
+    assert_eq!(log.qualification_calls, 0);
+    f.unchanged_legacy();
+}
+
+#[test]
 fn conversation_bridge_ask_carries_guarded_images_with_stable_provenance() {
     let f = Fixture::new();
     let image = f.root.path().join("question.png");
@@ -656,16 +718,14 @@ fn conversation_bridge_ask_carries_guarded_images_with_stable_provenance() {
 }
 
 #[test]
-fn conversation_bridge_ask_rejects_missing_decision_mismatched_origins_and_attachments() {
+fn conversation_bridge_ask_rejects_missing_decision_mismatched_origins_and_missing_images() {
     let f = Fixture::new();
     let mut fake = Fake::default();
     let mut args = f.ask();
     args.decision_file = None;
-    assert!(
-        bridge::try_ask(f.root.path(), &mut fake, &args)
-            .unwrap_err()
-            .contains("--decision-file")
-    );
+    assert!(bridge::try_ask(f.root.path(), &mut fake, &args)
+        .unwrap_err()
+        .contains("--decision-file"));
     args.decision_file = Some(f.decision.clone());
     args.thread = Some("501".into());
     assert!(bridge::try_ask(f.root.path(), &mut fake, &args).is_err());

@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -32,6 +33,7 @@ type ConversationAskInput struct {
 // All public fields are receipt metadata. Question and answer text stays in the
 // private sender/receipt files, never in command output or health reports.
 type ConversationQuestion struct {
+	ExistingURL      string   `json:"-"`
 	RequestID        string   `json:"request_id"`
 	SenderID         string   `json:"sender_request_id"`
 	Todo             uint64   `json:"todo_id"`
@@ -77,9 +79,11 @@ type conversationLogRecord struct {
 }
 
 type conversationAlias struct {
-	Target   string                `json:"target_request_id"`
-	InputSHA string                `json:"input_sha256"`
-	Intent   *ConversationQuestion `json:"original_intent,omitempty"`
+	Target      string                `json:"target_request_id"`
+	InputSHA    string                `json:"input_sha256"`
+	Intent      *ConversationQuestion `json:"original_intent,omitempty"`
+	ImagePaths  []string              `json:"image_paths,omitempty"`
+	ImageHashes []string              `json:"image_sha256,omitempty"`
 }
 
 type conversationQuestionReceipt struct {
@@ -342,7 +346,11 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 	if safeText(string(body), r.Token) != string(body) || safeText(string(decision), r.Token) != string(decision) {
 		return zero, errors.New("conversation input contains credential material")
 	}
-	paths, hashes, err := conversationQuestionImages(input.Attachments)
+	index, err := r.loadConversations()
+	if err != nil {
+		return zero, err
+	}
+	paths, hashes, err := conversationQuestionRetryImages(index, input)
 	if err != nil {
 		return zero, err
 	}
@@ -351,10 +359,6 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		identity = append(identity, hashes)
 	}
 	inputHash := canonicalHash(identity)
-	index, err := r.loadConversations()
-	if err != nil {
-		return zero, err
-	}
 	q, exists := index.Questions[input.RequestID]
 	if alias, exists := index.Aliases[input.RequestID]; exists {
 		if alias.InputSHA != inputHash {
@@ -374,11 +378,31 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 	}
 	if !exists {
 		for _, old := range index.Questions {
+			if old.Project != row.Project || old.Todo != input.Todo || old.Phase == "reserved" || old.Phase == "withdrawn" || slices.Equal(old.AttachmentHashes, hashes) {
+				continue
+			}
+			original, readErr := boundedRegular(old.DecisionFile)
+			if readErr != nil {
+				return zero, readErr
+			}
+			if canonicalHash(json.RawMessage(original)) != canonicalHash(json.RawMessage(decision)) {
+				continue
+			}
+			if _, proofErr := r.conversationProof(ctx, old); proofErr != nil {
+				return zero, proofErr
+			}
+			old.Phase, old.Wait = "duplicate", false
+			old.ExistingURL = "https://discord.com/channels/" + r.State.Destination.Guild + "/" + old.Thread
+			return old, nil
+		}
+	}
+	if !exists {
+		for _, old := range index.Questions {
 			if old.InputSHA == inputHash {
 				q = old
 				exists = true
 				if old.RequestID != input.RequestID {
-					index.Aliases[input.RequestID] = conversationAlias{Target: old.RequestID, InputSHA: inputHash}
+					index.Aliases[input.RequestID] = conversationAlias{Target: old.RequestID, InputSHA: inputHash, ImagePaths: paths, ImageHashes: hashes}
 					if err = publish(r.conversationPath(), index); err != nil {
 						return zero, err
 					}
@@ -422,12 +446,11 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		if q.Title != "" {
 			args = append(args, "--title", q.Title)
 		}
-		_, currentHashes, mediaErr := conversationQuestionImages(q.Attachments)
-		if mediaErr != nil || canonicalHash(currentHashes) != canonicalHash(q.AttachmentHashes) {
-			return zero, errConversationMedia
-		}
 		for _, path := range q.Attachments {
 			args = append(args, "--attach", path)
+		}
+		for _, sha := range q.AttachmentHashes {
+			args = append(args, "--expected-image-sha256", sha)
 		}
 		raw, callErr := r.Run(ctx, conversationSender, args...)
 		if callErr != nil {
@@ -467,11 +490,11 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 				continue
 			}
 			if canonical.SenderID == q.SenderID || canonical.Thread == q.Thread {
-				if canonical.SenderID != q.SenderID || canonical.Thread != q.Thread || canonical.Todo != q.Todo || canonical.Project != q.Project || canonical.Fingerprint != q.Fingerprint || canonical.QuestionSHA != q.QuestionSHA || canonical.DecisionSHA != q.DecisionSHA {
+				if canonical.SenderID != q.SenderID || canonical.Thread != q.Thread || canonical.Todo != q.Todo || canonical.Project != q.Project || canonical.Fingerprint != q.Fingerprint || canonical.QuestionSHA != q.QuestionSHA || canonical.DecisionSHA != q.DecisionSHA || !slices.Equal(canonical.AttachmentHashes, report.Images) {
 					return zero, errors.New("conversation canonical question differs")
 				}
 				intent := index.Questions[q.RequestID]
-				index.Aliases[q.RequestID] = conversationAlias{Target: canonical.RequestID, InputSHA: q.InputSHA, Intent: &intent}
+				index.Aliases[q.RequestID] = conversationAlias{Target: canonical.RequestID, InputSHA: q.InputSHA, Intent: &intent, ImagePaths: q.Attachments, ImageHashes: q.AttachmentHashes}
 				delete(index.Questions, q.RequestID)
 				if err = publish(r.conversationPath(), index); err != nil {
 					return zero, err

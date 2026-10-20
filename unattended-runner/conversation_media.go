@@ -26,8 +26,10 @@ var conversationMediaNormal = regexp.MustCompile(`^normal-(log|ask)-[a-f0-9]{64}
 var conversationMediaAttachment = regexp.MustCompile(`^attachment-([0-9])\.(png|jpg|jpeg|gif|webp|bmp|tif|tiff)$`)
 
 type conversationMediaDependencies struct {
-	Home  string
-	Guard func(context.Context, string) (bool, error)
+	Home     string
+	Guard    func(context.Context, string) (bool, error)
+	Question *generatedQuestionScope
+	Qualify  func(context.Context, string, generatedQuestionScope) (*generatedImageQualification, error)
 }
 
 type conversationMediaSource struct {
@@ -39,12 +41,13 @@ type conversationMediaSource struct {
 }
 
 type conversationMediaVerification struct {
-	Domain    string `json:"domain"`
-	Verified  bool   `json:"verified"`
-	SHA256    string `json:"sha256"`
-	Size      int64  `json:"size"`
-	MIME      string `json:"mime"`
-	Extension string `json:"extension"`
+	Domain                string                       `json:"domain"`
+	Verified              bool                         `json:"verified"`
+	SHA256                string                       `json:"sha256"`
+	Size                  int64                        `json:"size"`
+	MIME                  string                       `json:"mime"`
+	Extension             string                       `json:"extension"`
+	QuestionQualification *generatedImageQualification `json:"question_qualification,omitempty"`
 }
 
 func conversationMediaObject(data []byte, fields ...string) error {
@@ -276,8 +279,18 @@ func verifyConversationMedia(ctx context.Context, path, request string, deps con
 		}
 	}
 	allowed, err := deps.Guard(ctx, sourcePath)
-	if err != nil || !allowed || ctx.Err() != nil {
+	if err != nil || ctx.Err() != nil {
 		return result, errConversationMedia
+	}
+	var qualification *generatedImageQualification
+	if !allowed {
+		if deps.Question == nil || deps.Qualify == nil || !strings.HasPrefix(request, "conversation-v1-") {
+			return result, errConversationMedia
+		}
+		qualification, err = deps.Qualify(ctx, sourcePath, *deps.Question)
+		if err != nil || qualification == nil || qualification.Domain != generatedQuestionDomain || !qualification.Qualified || qualification.Scope != *deps.Question {
+			return result, errConversationMedia
+		}
 	}
 	b, snapshotInfo, err := conversationMediaRead(path, conversationMediaLimit)
 	if err != nil {
@@ -293,7 +306,10 @@ func verifyConversationMedia(ctx context.Context, path, request string, deps con
 	if err != nil || ctx.Err() != nil {
 		return result, errConversationMedia
 	}
-	return conversationMediaVerification{Domain: conversationMediaDomain, Verified: true, SHA256: bytesHash(b), Size: int64(len(b)), MIME: mime, Extension: extension}, nil
+	if qualification != nil && (qualification.SHA256 != bytesHash(b) || qualification.Size != int64(len(b)) || qualification.MIME != mime || qualification.Extension != extension) {
+		return result, errConversationMedia
+	}
+	return conversationMediaVerification{Domain: conversationMediaDomain, Verified: true, SHA256: bytesHash(b), Size: int64(len(b)), MIME: mime, Extension: extension, QuestionQualification: qualification}, nil
 }
 
 func conversationMediaLiveGuard(ctx context.Context, path string) (bool, error) {
@@ -315,7 +331,9 @@ func conversationMediaCLI(args []string, out io.Writer) int {
 	if !exists {
 		home = "D:/CC/Tools/discord-ask"
 	}
-	return conversationMediaCLIWithDependencies(args, out, conversationMediaDependencies{Home: home, Guard: conversationMediaLiveGuard})
+	return conversationMediaCLIWithDependencies(args, out, conversationMediaDependencies{Home: home, Guard: conversationMediaLiveGuard, Qualify: func(ctx context.Context, path string, scope generatedQuestionScope) (*generatedImageQualification, error) {
+		return qualifyGeneratedQuestionImage(ctx, path, scope, generatedQuestionProduction())
+	}})
 }
 
 func conversationMediaCLIWithDependencies(args []string, out io.Writer, deps conversationMediaDependencies) int {
@@ -324,12 +342,19 @@ func conversationMediaCLIWithDependencies(args []string, out io.Writer, deps con
 	var path, request string
 	conversationStringFlag(fs, "path", &path)
 	conversationStringFlag(fs, "request-id", &request)
+	getScope := generatedQuestionScopeFlags(fs)
 	if fs.Parse(args) != nil || fs.NArg() != 0 || path == "" || request == "" {
 		_, _ = io.WriteString(out, "invalid conversation media arguments\n")
 		return 1
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
+	scope, valid := getScope()
+	if !valid {
+		_, _ = io.WriteString(out, "invalid conversation media arguments\n")
+		return 1
+	}
+	deps.Question = scope
 	verified, err := verifyConversationMedia(ctx, path, request, deps)
 	if err != nil {
 		_, _ = io.WriteString(out, "conversation media verification unavailable\n")

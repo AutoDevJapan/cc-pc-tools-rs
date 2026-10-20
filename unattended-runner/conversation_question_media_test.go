@@ -31,7 +31,7 @@ func TestConversationCLIAskAttachments(t *testing.T) {
 
 func TestConversationQuestionAttachmentPersistsAcrossLostResult(t *testing.T) {
 	f := conversationTest(t, true)
-	image := filepath.Join(f.r.Config.Home, "question.png")
+	image := conversationQuestionImagePath(t, f)
 	data := []byte("\x89PNG\r\n\x1a\nquestion-image")
 	if err := os.WriteFile(image, data, 0600); err != nil {
 		t.Fatal(err)
@@ -73,8 +73,8 @@ func TestConversationQuestionAttachmentPersistsAcrossLostResult(t *testing.T) {
 		t.Fatal(err)
 	}
 	sent = nil
-	if _, err = f.r.conversationAsk(context.Background(), f.input); err == nil || len(sent) != 0 {
-		t.Fatal("changed retry image reached the sender")
+	if _, err = f.r.conversationAsk(context.Background(), f.input); err == nil || !reflect.DeepEqual(sent, []string{image}) {
+		t.Fatal("saved upload inspection did not reach the sender")
 	}
 }
 
@@ -82,7 +82,7 @@ func TestConversationQuestionImageReadbackMustMatchBeforeWait(t *testing.T) {
 	for _, verified := range []bool{false, true} {
 		t.Run(map[bool]string{false: "missing_image", true: "verified_image"}[verified], func(t *testing.T) {
 			f := conversationTest(t, true)
-			image := filepath.Join(f.r.Config.Home, "question.png")
+			image := conversationQuestionImagePath(t, f)
 			data := []byte("\x89PNG\r\n\x1a\nquestion-image")
 			if err := os.WriteFile(image, data, 0600); err != nil {
 				t.Fatal(err)
@@ -115,5 +115,124 @@ func TestConversationQuestionImageReadbackMustMatchBeforeWait(t *testing.T) {
 				t.Fatal("missing image was reported as a delivered owner question")
 			}
 		})
+	}
+}
+
+func conversationQuestionImagePath(t *testing.T, f *conversationFixture) string {
+	t.Helper()
+	// Windows service TEMP may contain 8.3 aliases. Synthetic input must obey
+	// the same physical spelling as real bridge output; keep production strict.
+	home, err := filepath.EvalSymlinks(f.r.Config.Home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return filepath.Join(home, "question.png")
+}
+
+func TestConversationLostImageResultRetriesWithoutOriginalSource(t *testing.T) {
+	f := conversationTest(t, false)
+	image := conversationQuestionImagePath(t, f)
+	data := []byte("\x89PNG\r\n\x1a\noriginal-image")
+	if err := os.WriteFile(image, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	f.input.Attachments = []string{image}
+	base := f.r.Run
+	calls := 0
+	var expected []string
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		if len(args) > 0 && args[0] == "recovery-ask" {
+			calls++
+			for i := 0; i+1 < len(args); i++ {
+				if args[i] == "--expected-image-sha256" {
+					expected = append(expected, args[i+1])
+				}
+			}
+			return "", errors.New("result lost")
+		}
+		return base(ctx, path, args...)
+	}
+	_, _ = f.r.conversationAsk(context.Background(), f.input)
+	if err := os.Remove(image); err != nil {
+		t.Fatal(err)
+	}
+	_, _ = f.r.conversationAsk(context.Background(), f.input)
+	if calls != 2 || !reflect.DeepEqual(expected, []string{bytesHash(data), bytesHash(data)}) {
+		t.Fatal("saved upload could not be inspected without the original source")
+	}
+}
+
+func TestConversationPostedQuestionRecordsWaitWithoutOriginalSource(t *testing.T) {
+	f := conversationTest(t, true)
+	image := conversationQuestionImagePath(t, f)
+	data := []byte("\x89PNG\r\n\x1a\noriginal-image")
+	if err := os.WriteFile(image, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	f.input.Attachments = []string{image}
+	f.waitFailure = true
+	base := f.r.Run
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		raw, err := base(ctx, path, args...)
+		if err == nil && len(args) > 0 && args[0] == "recovery-ask" {
+			var value map[string]any
+			_ = json.Unmarshal([]byte(raw), &value)
+			value["image_sha256"] = []string{bytesHash(data)}
+			b, _ := json.Marshal(value)
+			return string(b), nil
+		}
+		return raw, err
+	}
+	if _, err := f.r.conversationAsk(context.Background(), f.input); err == nil {
+		t.Fatal("expected wait recording failure")
+	}
+	if err := os.Remove(image); err != nil {
+		t.Fatal(err)
+	}
+	q, err := f.r.conversationAsk(context.Background(), f.input)
+	if err != nil || q.Phase != "waiting" || f.posts != 1 {
+		t.Fatalf("posted question could not recover its wait: %v", err)
+	}
+}
+
+func TestConversationChangedQuestionImagesReturnExistingQuestionWithoutNewWait(t *testing.T) {
+	f := conversationTest(t, true)
+	image := conversationQuestionImagePath(t, f)
+	data := []byte("\x89PNG\r\n\x1a\nfirst-image")
+	if err := os.WriteFile(image, data, 0600); err != nil {
+		t.Fatal(err)
+	}
+	f.input.Attachments = []string{image}
+	base := f.r.Run
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		raw, err := base(ctx, path, args...)
+		if err == nil && len(args) > 0 && args[0] == "recovery-ask" {
+			var value map[string]any
+			_ = json.Unmarshal([]byte(raw), &value)
+			value["image_sha256"] = []string{bytesHash(data)}
+			b, _ := json.Marshal(value)
+			return string(b), nil
+		}
+		return raw, err
+	}
+	original := f.ask(t)
+	next := f.input
+	next.RequestID = "different-images"
+	second := filepath.Join(filepath.Dir(image), "second.png")
+	if err := os.WriteFile(second, []byte("\x89PNG\r\n\x1a\nsecond-image"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	next.Attachments = []string{second}
+	q, err := f.r.conversationAsk(context.Background(), next)
+	if err != nil || q.Phase != "duplicate" || q.Thread != original.Thread || q.Wait || q.ExistingURL == "" || f.posts != 1 {
+		t.Fatalf("did not return the existing image question: %v %+v", err, q)
+	}
+	index, err := f.r.loadConversations()
+	if err != nil || len(index.Questions) != 1 {
+		t.Fatal("duplicate created a permanent retry")
+	}
+	row, err := f.r.todo(42)
+	if err != nil || row.Status != "block" || !conversationWaitRecorded(row, original) {
+		t.Fatal("original UI wait changed")
 	}
 }

@@ -824,6 +824,9 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "--qualify-generated-question-media" {
+		os.Exit(generatedQuestionCLIWithSpec(os.Args[2:], os.Stdout, generatedQuestionProduction()))
+	}
 	if len(os.Args) > 1 && os.Args[1] == "--verify-conversation-media" {
 		os.Exit(conversationMediaCLI(os.Args[2:], os.Stdout))
 	}

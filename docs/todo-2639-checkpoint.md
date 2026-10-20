@@ -101,3 +101,13 @@ merge41090のCodeQL run **38941323954** / workflow331939928は最初のGETでque
 終了済み所有temp d84c967c6eb3b9abf993ad85a20fb9b9は、証拠5ファイルの保存先との全SHA一致と製品4ファイルのcommit/mergeを確認後、safe-delete plan→別呼出し通常削除→finish source_absentで回収した。5,437,830bytes/27entries。元CのTempパスを今後の原資料の参照先にしない。`.ci-work/todo2639-evidence-20261017/` と元2744の恒久保管先を使う。後片付けのDiscord logは1回送信を試み、exit1の原応答をcleanup-discord-receipt.private.jsonへ保存。再送ループや新しい質問は作っていない。送信済みとは報告しない。
 
 次回は2752の実結果を読み、現在の固定source/必要検査/Prdのrevisionとprobe/回収を照合する。登録だけでPrd成功・元2639完了としない。2752の完了を待つだけなので、親は正式な `todo.exe wait 2639 --on 2752` を記録して枠を譲る。本人の判断・PC操作は不要。原1636/2016/2274と他製品は未完了のまま保持する。
+
+## 2026-10-20：この独立した修正工程の完了
+
+元2752からマージ後CI・Prd反映の独立確認を受領した。原応答と実確認JSONの指紋を照合し、親でも正式CodeQL4言語と配備4ジョブの実success、更新対象8サービスのsuccess、APIのHTTP200/ready/対象revision一致を読み戻した。新たな配備や成功検査の再実行は0。この修正工程の受入は [完了記録](todo-2639-completion.md) のとおり揃っている。
+
+今回更新されなかった旧サービスも調べた。build/deployの原ログを別々に取得し、起動前検査のRuntimeErrorを確認。workerとAPIそれぞれの必要設定について、管理CLIから値を出さない専用プログラムでキーの有無だけを確認した。公式API連携設定は両方とも未登録で、固定sourceでは未登録なら空の設定となり、API pollingのvalidatorが起動を拒否する。稼働中配備も0件である。過去の例外文字列全体や全原因を復元したとは主張しない。新しい店舗設定・資格情報を推測で追加せず、旧失敗履歴と元の全体タスクを維持する。
+
+本番詳細は公開sourceへ増やさず、このworktreeのGit管理外 `.ci-work/todo2639-evidence-20261017/` に保存した。final-parent-verification-20261020.private.json、completion-manifest-20261020.private.json、独立確認原JSON、設定の有無だけの記録、旧ログ、確認プログラムsourceを保持する。元の全体タスク・他製品・保護記録を完了としない。
+
+一時データは所有記録のplan→別呼出し通常削除→finish source_absentで回収した。今回のGo確認プログラムと実行物2件で4,073,400bytes。新規container/runner/Chrome/GPU/Cargo/Prd変更は0。通常の完了通知・メンションは送らない。共有ToDoの完了状態はschedulerへ返す最終結果で更新させる。

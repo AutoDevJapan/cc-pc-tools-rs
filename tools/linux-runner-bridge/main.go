@@ -1013,6 +1013,10 @@ func hostMain(args []string) int {
 			reportStage("use-pool-for-owned-pending-recovery")
 			return burstUnverifiedExit
 		}
+		if err := j.capacity(); err != nil {
+			reportStage("owned-recovery-capacity-unavailable")
+			return burstUnverifiedExit
+		}
 		journal = &j
 		h.containerID = j.containerID
 		h.persistRegistration = func(id int64) error { return j.save(&burstDrainState{ID: id}) }

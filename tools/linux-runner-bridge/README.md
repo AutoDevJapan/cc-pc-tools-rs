@@ -105,6 +105,12 @@ existing records must match and are never overwritten. Incomplete temporary
 records are not authority. Completed history is bounded to eight sessions;
 retirement is committed before reclaiming old stages so interrupted retention
 cannot make a completed session appear pending.
+Deletion I/O failures for already validated completed history are warnings in
+`.ci-runtime/burst-retention-warning.private.json`, not CI job failures or an
+admission prerequisite. The history can temporarily exceed eight while a file
+is locked, but a hard 64-entry bound is checked before publishing another
+binding. Retention resumes once the lock clears. Unknown evidence and failures
+to publish a binding or an unfinished stage still fail closed.
 
 The normal `pool` entry resumes an unfinished binding before requesting another
 registration. Container ID and the successfully read GitHub inventory must
@@ -118,6 +124,17 @@ again. Direct `host normal` does not bypass pending recovery; use `pool`.
 Unbound configuration failures still require investigation rather than adopting
 a registration by its display name. Status 76 means configuration is present
 and quiescent; 71/73/74/75 keep the setup/Worker/unverified/idle meanings above.
+
+The operator creates this worktree's real `.ci-runtime` directory before
+starting the host. For unbound SDK configuration, stop further task admission,
+wait for accepted work and verify kernel quiescence (configuration probe 0 or
+76). Verify the owned container and a successful repository inventory with no
+same-name agent before using the official SDK removal with a RAM-only token.
+Do not read, copy or manually delete opaque authentication files. Keep unknown
+journal evidence for investigation. For a different container ID, first prove
+the old bound agent is absent and archive its ended diagnostics and journal;
+then qualify the replacement through the original CI task. Never edit IDs or
+manufacture an empty binding to make admission pass.
 
 Keep the repeating task disabled while the existing highest-priority finite
 operation (currently ToDo3059) needs its shared resource window. Coordinate that

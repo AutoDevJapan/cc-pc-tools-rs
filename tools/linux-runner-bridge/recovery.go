@@ -28,7 +28,13 @@ func recoverStoredBurst(j burstJournal, d burstRecoveryOps, p burstRetryPolicy) 
 		if !absent {
 			return false, errors.New("configured slot has no unfinished bound recovery receipt")
 		}
-		return true, j.prune()
+		if err := j.maintain(); err != nil {
+			return false, err
+		}
+		if err := j.capacity(); err != nil {
+			return false, err
+		}
+		return true, nil
 	}
 	id, err := d.inventory()
 	if err != nil && !errors.Is(err, errOwnedRunnerAbsent) {

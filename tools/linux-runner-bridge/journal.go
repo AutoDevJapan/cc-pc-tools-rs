@@ -12,11 +12,64 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type burstJournal struct {
 	root, containerID string
 	profile           normalProfile
+	unlink            func(string) error
+	warn              func(error)
+}
+
+type completedHistoryIOError struct{ cause error }
+
+func (e *completedHistoryIOError) Error() string {
+	return "completed cleanup history retention: " + e.cause.Error()
+}
+func (e *completedHistoryIOError) Unwrap() error { return e.cause }
+
+func (j burstJournal) removeCompleted(path string) error {
+	remove := j.unlink
+	if remove == nil {
+		remove = os.Remove
+	}
+	if err := remove(path); err != nil {
+		return &completedHistoryIOError{err}
+	}
+	return nil
+}
+
+func (j burstJournal) maintain() error {
+	err := j.prune()
+	var retention *completedHistoryIOError
+	if !errors.As(err, &retention) {
+		return err
+	}
+	if j.warn != nil {
+		j.warn(err)
+	} else {
+		data, _ := json.Marshal(struct {
+			At    time.Time
+			Error string
+		}{time.Now().UTC(), err.Error()})
+		_ = os.WriteFile(filepath.Join(".ci-runtime", "burst-retention-warning.private.json"), data, 0600)
+	}
+	return nil
+}
+
+func (j burstJournal) capacity() error {
+	entries, err := os.ReadDir(j.root)
+	if os.IsNotExist(err) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if len(entries) >= 64 {
+		return errors.New("bounded cleanup metadata capacity unavailable")
+	}
+	return nil
 }
 
 type burstBinding struct {
@@ -304,6 +357,11 @@ func (j burstJournal) save(state *burstDrainState) error {
 		}
 	}
 	dir := filepath.Join(j.root, "runner-"+strconv.FormatInt(s.ID, 10))
+	if _, err := os.Lstat(dir); os.IsNotExist(err) {
+		if err := j.capacity(); err != nil {
+			return err
+		}
+	}
 	if err := os.Mkdir(dir, 0700); err != nil && !os.IsExist(err) {
 		return err
 	}
@@ -316,7 +374,7 @@ func (j burstJournal) save(state *burstDrainState) error {
 	if err := publishJournal(filepath.Join(dir, fmt.Sprintf("stage-%02x.json", cleanupMask(s))), s); err != nil {
 		return err
 	}
-	return j.prune()
+	return j.maintain()
 }
 
 func (j burstJournal) prune() error {
@@ -354,14 +412,14 @@ func (j burstJournal) prune() error {
 			if !file.Type().IsRegular() || (name != "binding.json" && !journalStageName(name) && !strings.HasPrefix(name, ".pending-")) {
 				return errors.New("retention encountered unknown evidence")
 			}
-			if err := os.Remove(filepath.Join(e.dir, name)); err != nil {
+			if err := j.removeCompleted(filepath.Join(e.dir, name)); err != nil {
 				return err
 			}
 		}
-		if err := os.Remove(filepath.Join(e.dir, "retired.json")); err != nil {
+		if err := j.removeCompleted(filepath.Join(e.dir, "retired.json")); err != nil {
 			return err
 		}
-		if err := os.Remove(e.dir); err != nil {
+		if err := j.removeCompleted(e.dir); err != nil {
 			return err
 		}
 		completed--

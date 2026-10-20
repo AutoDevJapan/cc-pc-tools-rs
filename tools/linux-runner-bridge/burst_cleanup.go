@@ -63,7 +63,7 @@ func retryBurstCleanup(s *burstDrainState, d burstCleanupOps, p burstRetryPolicy
 		ok, err := resumeBurstCleanup(s, d)
 		if p.save != nil {
 			if saveErr := p.save(s); saveErr != nil {
-				ok, err = false, saveErr
+				ok, err = false, errors.Join(err, saveErr)
 			}
 		}
 		if ok || err == nil {

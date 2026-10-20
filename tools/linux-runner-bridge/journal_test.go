@@ -128,3 +128,54 @@ func TestJournalRejectsUnknownFilesAndKeepsTheirContents(t *testing.T) {
 		t.Fatal("unknown evidence was reclaimed")
 	}
 }
+
+func TestCompletedRetentionDeleteFailureDoesNotBlockTheNextAdmission(t *testing.T) {
+	p, _ := normalProfileFor("burst-3122")
+	warnings := 0
+	j := burstJournal{root: t.TempDir(), profile: p, containerID: strings.Repeat("a", 64), unlink: func(string) error { return os.ErrPermission }, warn: func(error) { warnings++ }}
+	for id := int64(1); id <= 9; id++ {
+		s := burstDrainState{ID: id, LabelsWithdrawn: true, RegistrationRemoved: true, ListenerStopped: true, ProcessDrained: true, ConfigCleared: true}
+		if err := j.save(&s); err != nil {
+			t.Fatal("completed retention changed the job outcome", err)
+		}
+	}
+	if warnings == 0 {
+		t.Fatal("retention I/O failure was not recorded")
+	}
+	ready, err := recoverStoredBurst(j, burstRecoveryOps{configuration: func() (bool, error) { return true, nil }}, burstRetryPolicy{})
+	if err != nil || !ready {
+		t.Fatal("validated completed history blocked new work", err)
+	}
+	j.unlink = nil
+	if err := j.maintain(); err != nil {
+		t.Fatal("retention did not resume after I/O recovery", err)
+	}
+	entries, err := os.ReadDir(j.root)
+	if err != nil || len(entries) > 8 {
+		t.Fatal("retention became unbounded", err)
+	}
+}
+
+func TestLockedCompletedHistoryStillHasAHardRecordBound(t *testing.T) {
+	p, _ := normalProfileFor("burst-3122")
+	j := burstJournal{root: t.TempDir(), profile: p, containerID: strings.Repeat("a", 64), unlink: func(string) error { return os.ErrPermission }, warn: func(error) {}}
+	for id := int64(1); id <= 64; id++ {
+		s := burstDrainState{ID: id, LabelsWithdrawn: true, RegistrationRemoved: true, ListenerStopped: true, ProcessDrained: true, ConfigCleared: true}
+		if err := j.save(&s); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := j.save(&burstDrainState{ID: 65}); err == nil {
+		t.Fatal("metadata quota was bypassed")
+	}
+	if _, err := os.Stat(filepath.Join(j.root, "runner-65")); !os.IsNotExist(err) {
+		t.Fatal("new binding was created beyond quota")
+	}
+	j.unlink = nil
+	if err := j.maintain(); err != nil {
+		t.Fatal(err)
+	}
+	if err := j.capacity(); err != nil {
+		t.Fatal("released retention lock left a permanent admission failure", err)
+	}
+}

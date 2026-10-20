@@ -247,6 +247,34 @@ func TestSetupDeadlineRetiresThenCleansOnlyProvenConfiguration(t *testing.T) {
 	}
 }
 
+func TestSnapshotRetryDoesNotRepeatCompletedSDKRemoval(t *testing.T) {
+	now := time.Now()
+	clears, saves := 0, 0
+	s := burstDrainState{ID: 55, LabelsWithdrawn: true, RegistrationRemoved: true, ListenerStopped: true, ProcessDrained: true}
+	p := burstRetryPolicy{now: func() time.Time { return now }, pause: func(d time.Duration) { now = now.Add(d) }, record: func(string) {}, save: func(*burstDrainState) error {
+		saves++
+		if saves == 1 {
+			return errors.New("transient snapshot publication")
+		}
+		return nil
+	}}
+	ok, err := retryBurstCleanup(&s, burstCleanupOps{clear: func() error { clears++; return nil }}, p, now.Add(time.Minute))
+	if !ok || err != nil || clears != 1 || saves != 2 {
+		t.Fatal("snapshot retry repeated committed SDK work", err)
+	}
+}
+
+func TestSnapshotFailureRetainsTheUnderlyingCleanupError(t *testing.T) {
+	cleanupErr, saveErr := errors.New("SDK unavailable"), errors.New("state unavailable")
+	now := time.Now()
+	s := burstDrainState{ID: 55, LabelsWithdrawn: true, RegistrationRemoved: true, ListenerStopped: true, ProcessDrained: true}
+	p := burstRetryPolicy{now: func() time.Time { return now }, save: func(*burstDrainState) error { return saveErr }}
+	_, err := retryBurstCleanup(&s, burstCleanupOps{clear: func() error { return cleanupErr }}, p, now)
+	if !errors.Is(err, cleanupErr) || !errors.Is(err, saveErr) {
+		t.Fatal("one independent failure hid the other", err)
+	}
+}
+
 func TestSDKFailureConsumesTheOriginalCleanupWindow(t *testing.T) {
 	state := burstDrainState{ID: 49, ListenerStopped: true, ProcessDrained: true}
 	attempts := 0

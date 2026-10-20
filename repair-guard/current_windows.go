@@ -463,13 +463,31 @@ func currentQualification(db object, project string, task int, root, spec, expec
 }
 
 func currentGit(root string, args ...string) (string, bool) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", root}, args...)...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
-	cmd.WaitDelay = time.Second
-	b, err := cmd.Output()
-	return strings.TrimSpace(string(b)), err == nil
+	return retryCurrentGitProbe(func() (string, error, bool) {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, "git", append([]string{"-C", root}, args...)...)
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+		cmd.WaitDelay = time.Second
+		b, err := cmd.Output()
+		return string(b), err, ctx.Err() == context.DeadlineExceeded
+	})
+}
+
+// Retry one local transport timeout, never a Git/identity error. Each attempt
+// retains the existing 5s command deadline and 1s pipe-drain bound. This does not
+// alter any business/recovery deadline, stop condition or physical path check.
+func retryCurrentGitProbe(probe func() (string, error, bool)) (string, bool) {
+	for attempt := 0; attempt < 2; attempt++ {
+		output, err, timedOut := probe()
+		if err == nil {
+			return strings.TrimSpace(output), true
+		}
+		if !timedOut {
+			return "", false
+		}
+	}
+	return "", false
 }
 
 func currentPlain(path string, directory bool) bool {

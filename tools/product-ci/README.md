@@ -205,6 +205,33 @@ retain `all_required_checks_success=false`.
 
 ## Fixed native secret-scan workflow
 
+`current-pr-inspect <pin-json>` and `current-pr-job <pin-json> <new-owned-dir>
+<Linux-helper> [gitleaks-ELF]` add a separate route for repository 1285649124,
+PR995 only. The original four fixed candidates and release modes are unchanged.
+See [the acceptance specification](current-pr.md) (Issue267, ToDo3059).
+
+Each invocation freezes `repo_id`, `pr`, `head_sha`, `head_tree`, `base_sha`,
+`run_id`, `attempt`, sorted `job_ids` (up to eight; secret requires one),
+`kind` (`secret` or `codeql`), `context_sha` (merge context for secret; empty
+for CodeQL), `review_sha256`, and `acceptance_sha256`. A new correction needs
+a new fixed input and evidence, rather than a new compiled SHA constant.
+The input also names private `review_file` and `acceptance_file` handoff
+envelopes. Each envelope binds `origin_todo_id:3056`, `repo_id`, `pr`,
+`head_sha`, `head_tree`, its `kind` (`review` or `acceptance`), `success:true`,
+`must:0`, and the exact base64 `original` output plus `original_sha256`.
+The parent is responsible for confirming that original review and necessary
+acceptance really succeeded on this source. Evidence is read into RAM and
+fingerprinted; original content and paths are never included in host receipts.
+
+Preflight verifies the evidence, current PR/branch/base/tree, original reviewed
+workflow, exact run attempt, official job IDs and dedicated queue before any
+Docker create or registration token. A CodeQL matrix may use only its frozen
+job set. At both hooks the host independently requires that this unique owned
+runner was actually assigned exactly one of those jobs. A different source,
+attempt, job or runner fails closed. Existing source/auth proofs, isolated
+namespace and teardown remain mandatory. Inspect or listener completion still
+requires separate successful official job/check and upload evidence.
+
 `secret-job <repo-id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF>`
 serves the first candidate's original PR secret gate. Its workflow path and
 bytes are fixed by digest. It rejects another repo, fork, PR, source head,

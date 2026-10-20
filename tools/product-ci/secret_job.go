@@ -84,6 +84,9 @@ func verifyWorkflowBytes(ctx context.Context, repo, path, ref, expected string, 
 }
 
 func validGuestPlan(p codeQLPlan) bool {
+	if p.Current != (currentPRBinding{}) {
+		return currentPRGuestPlan(p)
+	}
 	if p.Kind == "merged-codeql" {
 		return validMergedPlan(p)
 	}

@@ -719,7 +719,9 @@ func main() {
 		}
 		return
 	}
-	if len(os.Args) == 2 && os.Args[1] == "inspect" {
+	if len(os.Args) >= 2 && (os.Args[1] == "current-pr-inspect" || os.Args[1] == "current-pr-job") {
+		e = currentPRCLI(ctx, os.Args[1:])
+	} else if len(os.Args) == 2 && os.Args[1] == "inspect" {
 		for _, c := range candidates {
 			_, err := verify(ctx, c, get)
 			stage := "fixed-head-verified"

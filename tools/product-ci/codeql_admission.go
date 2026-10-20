@@ -48,6 +48,10 @@ func codeQLAdmissionHandler(p codeQLPlan, key string, recheck func(context.Conte
 }
 
 func startCodeQLAdmission(ctx context.Context, p codeQLPlan, c candidate) (endpoint, key string, closeServer func() error, err error) {
+	return startCodeQLAdmissionForRunner(ctx, p, c, "")
+}
+
+func startCodeQLAdmissionForRunner(ctx context.Context, p codeQLPlan, c candidate, runnerName string) (endpoint, key string, closeServer func() error, err error) {
 	l, e := net.Listen("tcp", "127.0.0.1:0")
 	if e != nil {
 		return "", "", nil, errors.New("admission listener unavailable")
@@ -61,12 +65,15 @@ func startCodeQLAdmission(ctx context.Context, p codeQLPlan, c candidate) (endpo
 	childCtx, cancel := context.WithCancel(ctx)
 	server := &http.Server{ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 40 * time.Second, BaseContext: func(net.Listener) context.Context { return childCtx }}
 	server.Handler = codeQLAdmissionHandler(p, key, func(callCtx context.Context) error {
-		now, e := productPlan(callCtx, c, p.RunID, p.Kind, get)
+		now, e := replanProductJob(callCtx, c, p, get)
 		if e != nil {
 			return e
 		}
 		if now != p {
 			return errors.New("live plan changed")
+		}
+		if p.Current != (currentPRBinding{}) {
+			return checkCurrentPRRunner(callCtx, p, runnerName, get)
 		}
 		return nil
 	})

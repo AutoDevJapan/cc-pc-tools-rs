@@ -24,7 +24,10 @@ import (
 
 const sdkRoot = `C:\ProgramData\AutoDevJapan\windows-ci-sdk-2737`
 const agentRoot = `C:\Windows\System32\WindowsCISDK2737`
-const runnerRoot = sdkRoot + `\runner`
+
+// Stock IOUtil.ValidateExecutePermission enumerates every ancestor. Keep its
+// mutable tree outside the SDK root, whose private boundary grants only X.
+const runnerRoot = `C:\ProgramData\AutoDevJapan\windows-ci-runner-2737`
 const sourceRoot = runnerRoot + `\_work\GoDD-MCP-Alpha\GoDD-MCP-Alpha`
 const hookRoot = sdkRoot + `\runner-hooks`
 const planPath = agentRoot + `\runner-seed.json`

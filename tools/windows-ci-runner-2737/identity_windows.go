@@ -75,11 +75,11 @@ func validateRunnerToken(token syscall.Token) error {
 // sdkRoot: private logs, downloads and service bootstrap state stay SYSTEM-only.
 func runnerAccessCommands() [][]string {
 	// X is an advanced icacls right and requires parentheses even on its own.
-	commands := [][]string{{sdkRoot, "/grant:r", "*" + runnerUserSID + ":(X)"}, {helperPath, "/grant:r", "*" + runnerUserSID + ":RX"}, {hookRoot, "/grant:r", "*" + runnerUserSID + ":(OI)(CI)RX"}}
+	commands := [][]string{{sdkRoot, "/grant:r", "*" + runnerUserSID + ":(X)"}, {runnerRoot, "/grant:r", "*" + runnerUserSID + ":(OI)(CI)M"}, {helperPath, "/grant:r", "*" + runnerUserSID + ":RX"}, {hookRoot, "/grant:r", "*" + runnerUserSID + ":(OI)(CI)RX"}}
 	for _, name := range []string{"rust-1.97.1", "git", "powershell", "sccache", "vs-build-tools"} {
 		commands = append(commands, []string{sdkRoot + `\` + name, "/grant:r", "*" + runnerUserSID + ":(OI)(CI)RX"})
 	}
-	for _, name := range []string{"runner", "staging", "cargo-home", "rustup-home", "target", "sccache-cache", "service-profile"} {
+	for _, name := range []string{"staging", "cargo-home", "rustup-home", "target", "sccache-cache", "service-profile"} {
 		commands = append(commands, []string{sdkRoot + `\` + name, "/grant:r", "*" + runnerUserSID + ":(OI)(CI)M"})
 	}
 	// Git rejects a worktree/.git owned by another account. Give the freshly

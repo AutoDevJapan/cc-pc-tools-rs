@@ -122,3 +122,39 @@ func TestRunnerTokenClosesOnceAfterSession(t *testing.T) {
 		t.Fatal("closed token retained")
 	}
 }
+
+// Mirrors the stock runner's IOUtil.ValidateExecutePermission ancestor walk,
+// using only synthetic directories. The private SDK ancestor deliberately
+// refuses enumeration, as the live fixed Traverse-only ACL does. This fixture
+// does not impersonate LocalService or prove real guest acceptance.
+func TestStockRunnerAncestorWalkKeepsSDKPrivateBoundary(t *testing.T) {
+	fixture := t.TempDir()
+	mapPath := func(p string) string {
+		return filepath.Join(fixture, strings.TrimPrefix(p, filepath.VolumeName(p)+`\`))
+	}
+	legacy := sdkRoot + `\runner`
+	for _, p := range []string{legacy, runnerRoot} {
+		if err := os.MkdirAll(mapPath(p), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	walk := func(start string) error {
+		for p := start; ; p = filepath.Dir(p) {
+			if strings.EqualFold(p, sdkRoot) {
+				return os.ErrPermission
+			}
+			if _, err := os.ReadDir(mapPath(p)); err != nil {
+				return err
+			}
+			if filepath.Dir(p) == p {
+				return nil
+			}
+		}
+	}
+	if err := walk(legacy); !os.IsPermission(err) {
+		t.Fatal("negative control did not reject the private ancestor")
+	}
+	if err := walk(runnerRoot); err != nil {
+		t.Fatal("stock ancestor enumeration still crosses the private SDK boundary", err)
+	}
+}

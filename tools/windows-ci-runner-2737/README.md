@@ -58,6 +58,30 @@ verified after separate-model review. No new official CI result is claimed.
 
 Primary reference: [LogonUser's LocalService example](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-logonuserw).
 
+## Stock runner ancestor enumeration (2026-10-21)
+
+The diagnostic runtime reached physical source proof, then configuration
+executed and exited1 with confirmed drain. The bounded console hash
+`3308b9329027b71c3828f241c60bae77f26fb5c3c3cf36f68035c1521f0e0d3f`
+exactly matches the stock ancestor-enumeration error for the SDK root, including
+the terminal prefix and CRLF. The stock runner's
+[Program permission check](https://github.com/actions/runner/blob/v2.338.0/src/Runner.Listener/Program.cs)
+calls [IOUtil.ValidateExecutePermission](https://github.com/actions/runner/blob/v2.338.0/src/Runner.Sdk/Util/IOUtil.cs),
+which enumerates every ancestor. Traverse-only SDK access cannot satisfy it.
+The recovered diagnostic file contained largely zero-filled regions, so its
+missing error lines are not evidence that no error occurred.
+
+Keep the SDK root's traverse-only grant and all private/bootstrap boundaries.
+The stock runner now uses the separate compiled sibling directory
+`C:\ProgramData\AutoDevJapan\windows-ci-runner-2737`; its existing modify grant
+moves with its mutable tree. Its checkout remains beneath that runner root.
+Unpacking still rejects an existing root, source proof stays in SYSTEM-only
+temporary storage, and account/path choices are not request inputs. No SDK
+listing grant, permission-check bypass, workflow change or new host runner is
+introduced. A synthetic ancestor-walk fixture fails with the old nested layout
+and passes with the sibling; its negative control still refuses SDK listing.
+Actual new-layout LocalService/registration/workflow acceptance is pending.
+
 ## Guest UTC before registration (2026-10-20)
 
 The first actual session reached physical source proof and offline runner
@@ -260,10 +284,13 @@ The existing root is `C:\ProgramData\AutoDevJapan\windows-ci-sdk-2737`:
 | cargo-home, rustup-home, target | Dedicated guest Cargo/Rustup/output directories |
 | sccache-cache | Dedicated guest cache, 30G |
 | service-profile, staging | Dedicated profile/temp, no owner environment |
-| runner | Hash-verified stock runner plus private registration files |
-| runner\_work\GoDD-MCP-Alpha\GoDD-MCP-Alpha | sourcepacket.Materialize destination and actual stock GITHUB_WORKSPACE |
 | runner-hooks | Fixed start.ps1/complete.ps1 calling the compiled hook entry |
 | private\runner-listener.log | Private stdout prefix, hard8MiB maximum, SHA256 returned |
+
+The stock runner and its registration files are under the separate fixed
+`C:\ProgramData\AutoDevJapan\windows-ci-runner-2737` root. Its
+`_work\GoDD-MCP-Alpha\GoDD-MCP-Alpha` child is the materialized source and the
+actual stock `GITHUB_WORKSPACE`; it is not beneath the SDK's private ancestor.
 
 The child environment is an allowlist; Jobs/Threads from seed become
 CARGO_BUILD_JOBS/RUST_TEST_THREADS. Explicit original workflow serial flags

@@ -751,6 +751,28 @@ fn answer_reselection_compares_with_the_original_worker_instead_of_the_cached_se
         assert_eq!(a.last()["sandbox"], "read-only");
     }
 }
+
+#[test]
+fn completed_capacity_history_does_not_exempt_an_ordinary_discord_resume() {
+    let mut a = AnswerResume::new();
+    let cwd = a.cwd.to_string_lossy().into_owned();
+    let source = json!({"id":"old-worker","status":"succeeded","model":"gpt-6-luna",
+        "effort":"high","model_origin":"policy","effort_origin":"policy",
+        "task_type":"implementation","sandbox":"read-only","scope_source":"launcher",
+        "cwd":cwd,"thread_id":"original-session","capacity_wait_pending":false,
+        "capacity_retry_count":1,"capacity_same_model_retry_count":2,
+        "capacity_history":[{"kind":"same_model_account_retry","attempt":2}]});
+    let saved = source.clone();
+    launch_job_with_session(&mut a.ctx, &json!({"id":"200","name":"通常の再開検査"}),
+        "元の仕様と途中成果から通常の作業を再開する。", &source,
+        "0123456789abcdef0123456789abcdef", false, Some(&cwd), Some("resume"),
+        Some("original-session")).unwrap();
+    assert_eq!(a.count(), 1);
+    assert_eq!(a.last()["model"], "gpt-6.1-sol");
+    assert_eq!(a.last()["effort"], "max");
+    assert_eq!(a.last()["resume_session"], "");
+    assert_eq!(source, saved, "original retry budget and evidence must remain intact");
+}
 #[test]
 fn test_doing_todo_updated_after_reply_without_live_worker_does_not_consume_answer() {
     for format in ["%+", "%Y-%m-%d %H:%M"] {

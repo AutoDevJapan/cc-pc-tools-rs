@@ -3683,6 +3683,49 @@ fn preparation2164_reuses_owned_terminal_session_only_without_other_worker() {
 }
 
 #[test]
+fn retired_native_conversation_cannot_cross_a_cancelled_prestart_handoff() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "other", 0);
+    let original = f.get(1);
+    let cwd = s(&original["scheduler"]["worktree"]).to_owned();
+    fs::create_dir_all(&cwd).unwrap();
+    let work = Path::new(&cwd).join("saved-work.txt");
+    fs::write(&work, "uncommitted work").unwrap();
+    let source = &mut f.e.backend.records[0];
+    source["todo_id"] = json!(1);
+    source["status"] = json!("cancelled");
+    source["recovery_cancel"] = json!({"key":"old-launch","committed_at":"saved"});
+    source["cwd"] = json!(cwd);
+    source["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
+    source["model"] = json!("gpt-6.1-sol");
+    source["effort"] = json!("max");
+    source["policy_resume_reset"] = json!({"session":source["thread_id"],
+        "from_model":"gpt-6-luna","from_effort":"high"});
+    let saved = source.clone();
+    f.e.backend.ps.clear();
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "todo");
+    f.e.backend.clock += 301.;
+    let prepared = f.e.prepare(&f.get(1), &f.repo.to_string_lossy()).unwrap().unwrap();
+    assert!(prepared["scheduler"]["resume_session"].is_null(),
+        "retired native ID was reintroduced from last_job.thread_id");
+    assert_eq!(prepared["scheduler"]["selection"]["model"], "gpt-6.1-sol");
+    assert_eq!(prepared["scheduler"]["selection"]["effort"], "max");
+    assert_eq!(prepared["spec"], original["spec"]);
+    assert_eq!(f.e.backend.records[0], saved);
+    assert_eq!(fs::read_to_string(work).unwrap(), "uncommitted work");
+}
+
+#[test]
+fn retired_native_conversation_is_not_a_successful_continuation_either() {
+    let mut source = json!({"status":"succeeded","last_message":"状態: 継続中",
+        "cwd":"D:/fixture/work","thread_id":"12345678-1234-4321-9234-123456789abc"});
+    assert!(continuation_session(&source, "D:/fixture/work", &[]).is_some());
+    source["policy_resume_reset"] = json!({"session":source["thread_id"]});
+    assert!(continuation_session(&source, "D:/fixture/work", &[]).is_none());
+}
+
+#[test]
 fn preparation2164_bare_claude_routes_to_subscription_provider_with_original_scope() {
     let mut f = Fixture::new();
     let mut row = item(1, "other", "todo", &[]);

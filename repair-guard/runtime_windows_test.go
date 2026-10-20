@@ -157,3 +157,68 @@ func TestRuntimeExecutableOnlyQualifiesTheExistingExactFile(t *testing.T) {
 		t.Fatal("directory accepted as executable")
 	}
 }
+
+func TestProgressTUIRuntimeOnlyQualifiesInstalledDistribution(t *testing.T) {
+	root, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(root, "progress")
+	if err := os.Mkdir(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"codex.exe", "codex-code-mode-host.exe", "manifest.json"} {
+		leaf := filepath.Join(dir, name)
+		if progressTUIRuntime(leaf, leaf, dir) {
+			t.Fatal("missing distribution leaf qualified")
+		}
+		if err := os.WriteFile(leaf, []byte("owned fixture"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if !progressTUIRuntime(leaf, leaf, dir) {
+			t.Fatalf("installed %s rejected", name)
+		}
+		if progressTUIRuntime(leaf, filepath.Join(root, name), dir) {
+			t.Fatal("redirected leaf qualified")
+		}
+	}
+	for _, name := range []string{"codex-launch.exe", "agent-progress.exe", "auth.json", "config.toml", "manifest.json:stream", "codex.exe.bak", "other.exe"} {
+		leaf := filepath.Join(dir, name)
+		if name != "manifest.json:stream" {
+			if err := os.WriteFile(leaf, []byte("unrelated"), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		if progressTUIRuntime(leaf, leaf, dir) {
+			t.Fatalf("unrelated leaf %s qualified", name)
+		}
+	}
+	if progressTUIRuntime(dir, dir, dir) {
+		t.Fatal("distribution directory qualified")
+	}
+	sibling := filepath.Join(root, "codex.exe")
+	if err := os.WriteFile(sibling, []byte("unrelated"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if progressTUIRuntime(sibling, sibling, dir) {
+		t.Fatal("sibling executable qualified")
+	}
+	nested := filepath.Join(dir, "nested")
+	if err := os.Mkdir(nested, 0700); err != nil {
+		t.Fatal(err)
+	}
+	nestedLeaf := filepath.Join(nested, "codex.exe")
+	if err := os.WriteFile(nestedLeaf, []byte("unrelated"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if progressTUIRuntime(nestedLeaf, nestedLeaf, dir) {
+		t.Fatal("nested executable qualified")
+	}
+	directoryLeaf := filepath.Join(root, "directory-distribution")
+	if err := os.MkdirAll(filepath.Join(directoryLeaf, "codex.exe"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if progressTUIRuntime(filepath.Join(directoryLeaf, "codex.exe"), filepath.Join(directoryLeaf, "codex.exe"), directoryLeaf) {
+		t.Fatal("directory in place of executable qualified")
+	}
+}

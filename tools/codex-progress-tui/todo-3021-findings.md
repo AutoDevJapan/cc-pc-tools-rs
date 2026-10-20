@@ -13,7 +13,7 @@
 - 配備code-mode-host SHA256 `9F865A748C984492CA9B69AAC75680E4954F31311C43EC33DDBDAE0ED77BD4BD`。manifest記録と一致。
 - 配備collector SHA256 `581C813D3321C47580D21F07DD7EF7A3B654BD5D4D761CDBF7BB275CD8E7F8D1`。manifest記録と一致。collector本体は読取のみ。
 - 公式npm package.jsonは0.163.0。launcher要件の0.162.1と異なる。
-- npm経由の現起動はOpenCodex codex.cmd/ps1 shimを経由し、`codex-launch.exe`を呼ぶ。これは既存Go launcherで、その選択処理はpackage版不一致時に公式npm Codexへfallbackする。
+- 調査開始時のnpm `codex.cmd` / `codex.ps1` shimは、記録済みの既知hashに一致し、`codex-launch.exe`を経由せず公式Codexへ進んでいた。これが起動入口消失の原因だった。その後3021の有限取得入口を配備し、shimとGo launcherを既知hashで導入。配備後は`codex-launch.exe`経由が実証済み。
 - 読取済み保存用snapshotはschema_version 1、status=degraded、tasks279/jobs292、jobs partial、failed_reads=123、complete=false。exit code 1は部分取得を示す。空配列や全停止ではない。
 - 既存launcherのGo検査 `go test ./...` 成功。現在のworktreeで並行作成されたprogress subcommand実装を含む。`go vet ./...` と `go build -o NUL .` は終了0。
 
@@ -23,7 +23,9 @@ TUI patchはrust-v0.162.1専用。公式0.163.0への追従にはCargo資源が�
 
 調査中、同worktreeのGo launcher、activation、Rust/API画面に未コミット変更が見えた。これらを独自に編集・stage・commitしていない。現変更はToDo3020側の実装に見えるため保持する。
 
-親3020へcollector差分: schema1/degradedとjobs.partial/failed_reads123のとき、確認済みデータを維持し「部分取得」と表示する。exit1を失敗による空一覧または全停止に変換しない。親のGo launcherで追加中の`codex progress`経路は、既起動TUIの一覧確認に使える候補。現時点ではこのコマンドのhidden受入は未実施。
+親3020へcollector差分: schema1/degradedとjobs.partial/failed_reads123のとき、確認済みデータを維持し「部分取得」と表示する。exit1を失敗による空一覧または全停止に変換しない。親のGo launcherによる`codex progress`と現セッション用`!codex progress`は、ToDo3020と全体一覧を隠しConPTYで実測済み。
+
+2026-10-20 再開時点: Cargo付きToDo3023と別モデルreview3028、PR255の必要CI・mergeは完了。source.jsonの最終tested binary SHA256は`bcebff4cf935c2bd728bbed130c3c21a329ac58727677326d6a1556124b46969`。ただしその実行物は稼働配備と作業worktree双方で見つかっておらず、D:/CC/Toolsの現状は旧0.162.1実行物のまま。0.163.0の実行物/配置を完了する必要がある。
 
 ## 未完了
 

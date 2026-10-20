@@ -1,0 +1,11 @@
+親ToDo 3021の独立したartifact revalidation作業。tools/codex-progress-tui のCodex 0.163.0 patch候補が配備可能か判定する。必要資源は --needs cargo。
+
+対象はToDo3023で統合・検査・レビュー済みのsource commit 7c1fe857547eb7e6850361752a26d9dfe868528eと、ToDo3029が保持した同じ固定source由来の候補だけ。広いディスク走査、未知の顧客内容、認証情報の読取は禁止。GPU・API keyは禁止。既存の実行中job/sessionは停止しない。D:/CC/Toolsの配備変更、launcher/manifestの書換え、現sessionの操作は行わない。
+
+ToDo3029候補は `codex-cli 0.163.0` で、候補SHA256 `618bf6dcd243463d9058f0ce68b9e43ba2a2b2ac75c715f87ad40d06e453433f`。source.jsonのtested binary SHA256 `bcebff4cf935c2bd728bbed130c3c21a329ac58727677326d6a1556124b46969` と不一致。公式npm Codex/hostのhashとsource commitを実物で照合する。Build receiptが示す非再現性の証拠を引き継ぎ、期待hashを合わせるためだけのmanifest/source.json変更は禁止。
+
+共有Cargo gateと専用target/sccacheを使用。まず既存テスト記録と固定sourceを照合し、必要な最小の関連nextest・Clippy・doctestを選ぶ。同じ検査の有効な成功記録を重複実行しない。候補実行物の出所・SHAとtested binary hashの関係を明示し、候補に対するWindowsの実起動と `/progress` 受入を完了する。違いが説明できなければ、sourceを変更せずに原因と必要な次の検査を報告する。
+
+変更を行った場合はCodex TUIのpatch/実行物hash契約に限定し、別モデルレビューでMustを解消する。配備は親ToDo3021に引き継ぐ。新しい費用・OAuth認証範囲を作らない。
+
+完了時は、source commit、候補SHA、source.json SHA、公式npm packageのCodex/host hashes、検査コマンドと実結果、ConPTY受入、変更ファイル、未解決事項をToDo3021へ返す。実配備や現在の本人会話への適用を完了と誤記しない。

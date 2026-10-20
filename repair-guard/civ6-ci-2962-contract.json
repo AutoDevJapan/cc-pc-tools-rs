@@ -1,0 +1,16 @@
+{
+  "domain": "civ6-ci-2962-deployment-v1",
+  "repository": "AutoDevJapan/cc-pc-tools-rs",
+  "repository_id": 1406818713,
+  "source": "D:/CC/Work/unattended-operations-20261013-wt/todo-2962-ci-pc-actions",
+  "source_floor": "ab45cb5d221077fa65484c706b3353cdc4867c07",
+  "root": "D:/CC/Tools/civ6-ci-2962",
+  "receipt": "docs/civ6-ci-2962-deployment.private.json",
+  "leaves": ["civ6-ci-queue.exe", "civ6-ci-windows.exe", "civ6-ci-route.exe", "civ6-ci-queue.json", "actions-runner-win-x64-2.338.0.zip", "deployment-receipt.json"],
+  "archive_sha256": "f48e0750a21812bca5f82de5f7f5aeae71abee647fab5a582f1742d07eba455f",
+  "archive_bytes": 104063355,
+  "product_repository_id": 1392152644,
+  "initial_continuation": false,
+  "initial_budget": {"Windows": 3, "total": 6},
+  "policy": "Parent deploys only after its fixed source review and official CI succeed. Create root exclusively, never adopt an existing unknown root. Record root and parent NTFS identity/owner in the external source receipt immediately after mkdir. Record every created object before qualifying it as existing. State is private queue output, never executable authority. No unknown existing object may be overwritten. Recheck guard and identity at use; classification is read-only, not deployment permission. Keep helper/gate/safe-delete/adminbroker byte pins and official archive digest in the reviewed secret-free queue configuration."
+}

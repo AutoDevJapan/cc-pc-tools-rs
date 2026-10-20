@@ -165,30 +165,3 @@ func (r *Reader) Read(ctx context.Context, ep string, out any) error {
 }
 
 func (r *Reader) API() ReadAPI { return r.Read }
-
-// TokenSource obtains a one-shot runner registration credential. The value
-// lives only in RAM and is handed to the helper's stdin; it is never written to
-// the ledger, a log or an argument.
-type TokenSource interface {
-	Registration(ctx context.Context) ([]byte, error)
-}
-
-type ghToken struct {
-	GH  Pinned
-	Run RunFunc
-}
-
-func (g ghToken) Registration(ctx context.Context) ([]byte, error) {
-	if e := g.GH.Verify(); e != nil {
-		return nil, e
-	}
-	out, e := g.Run(ctx, g.GH.Path, nil, 64<<10, "api", "--method", "POST", "repos/"+Repository+"/actions/runners/registration-token", "--jq", ".token")
-	if e != nil {
-		return nil, errors.New("registration credential unavailable")
-	}
-	t := bytes.TrimSpace(out)
-	if len(t) < 16 || len(t) > 512 || bytes.ContainsAny(t, " \r\n\t\x00") {
-		return nil, errors.New("registration credential shape rejected")
-	}
-	return t, nil
-}

@@ -257,7 +257,7 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 			return
 		}
 		if q.Phase == "reserved" || (q.Phase == "posted" && q.Wait) {
-			_, err := r.conversationAsk(ctx, ConversationAskInput{RequestID: q.RequestID, Todo: q.Todo, OriginThread: q.OriginThread, BodyFile: q.BodyFile, DecisionFile: q.DecisionFile, Title: q.Title, Wait: q.Wait})
+			_, err := r.conversationAsk(ctx, ConversationAskInput{RequestID: q.RequestID, Todo: q.Todo, OriginThread: q.OriginThread, BodyFile: q.BodyFile, DecisionFile: q.DecisionFile, Title: q.Title, Wait: q.Wait, Attachments: q.Attachments})
 			if err != nil {
 				health.Errors = append(health.Errors, "conversation_send_pending")
 			}

@@ -43,6 +43,16 @@ func TestUnstartedCollectionRequiresExactQueuedJob(t *testing.T) {
 	if err := checkUnstartedJob(p, j, 0); err != nil {
 		t.Fatal(err)
 	}
+	cancelled := j
+	cancelled.Status = "completed"
+	cancelled.Conclusion = "cancelled"
+	if e := checkUnstartedJob(p, cancelled, 0); e != nil {
+		t.Fatal(e)
+	}
+	cancelled.Runner = p.name()
+	if checkUnstartedJob(p, cancelled, 0) == nil {
+		t.Fatal("assigned cancelled job treated as unstarted")
+	}
 	for _, tc := range []string{"id", "run", "attempt", "runner", "running", "completed", "steps"} {
 		q, steps := j, 0
 		switch tc {

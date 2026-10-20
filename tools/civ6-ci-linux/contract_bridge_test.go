@@ -15,7 +15,7 @@ func TestBridgeSharesThePlanInterface(t *testing.T) {
 	if e := c.Validate(codeQLPlan("Analyze (rust)")); e != nil {
 		t.Fatal(e)
 	}
-	if got := c.Labels(rustPlan()); !reflect.DeepEqual(got, []string{"self-hosted", "Linux", "X64", linuxLabel}) {
+	if got := c.Labels(rustPlan()); !reflect.DeepEqual(got, []string{"self-hosted", "Linux", "X64", linuxLabel, jobLabel(rustPlan())}) {
 		t.Fatalf("labels %v", got)
 	}
 	if got := c.Labels(codeQLPlan("Analyze (actions)")); !reflect.DeepEqual(got, []string{codeQLLabel}) {

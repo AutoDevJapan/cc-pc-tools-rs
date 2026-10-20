@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -26,32 +27,36 @@ type ConversationAskInput struct {
 	RequestID, OriginThread, BodyFile, DecisionFile, Title string
 	Todo                                                   uint64
 	Wait                                                   bool
+	Attachments                                            []string
 }
 
 // All public fields are receipt metadata. Question and answer text stays in the
 // private sender/receipt files, never in command output or health reports.
 type ConversationQuestion struct {
-	RequestID    string `json:"request_id"`
-	SenderID     string `json:"sender_request_id"`
-	Todo         uint64 `json:"todo_id"`
-	Project      string `json:"project"`
-	OriginThread string `json:"origin_thread_id"`
-	InputSHA     string `json:"input_sha256"`
-	BodyFile     string `json:"body_file"`
-	DecisionFile string `json:"decision_file"`
-	Title        string `json:"title,omitempty"`
-	Wait         bool   `json:"wait_requested"`
-	Phase        string `json:"phase"`
-	Created      string `json:"created_at"`
-	Thread       string `json:"thread_id,omitempty"`
-	Message      string `json:"question_message_id,omitempty"`
-	Progress     string `json:"progress_thread_id,omitempty"`
-	Fingerprint  string `json:"question_fingerprint,omitempty"`
-	DecisionSHA  string `json:"decision_identity_sha256,omitempty"`
-	QuestionSHA  string `json:"question_body_sha256,omitempty"`
-	ReceiptFile  string `json:"question_receipt_file,omitempty"`
-	ReceiptSHA   string `json:"question_receipt_sha256,omitempty"`
-	ReplyCursor  string `json:"reply_cursor,omitempty"`
+	ExistingURL      string   `json:"-"`
+	RequestID        string   `json:"request_id"`
+	SenderID         string   `json:"sender_request_id"`
+	Todo             uint64   `json:"todo_id"`
+	Project          string   `json:"project"`
+	OriginThread     string   `json:"origin_thread_id"`
+	InputSHA         string   `json:"input_sha256"`
+	BodyFile         string   `json:"body_file"`
+	DecisionFile     string   `json:"decision_file"`
+	Title            string   `json:"title,omitempty"`
+	Wait             bool     `json:"wait_requested"`
+	Phase            string   `json:"phase"`
+	Created          string   `json:"created_at"`
+	Thread           string   `json:"thread_id,omitempty"`
+	Message          string   `json:"question_message_id,omitempty"`
+	Progress         string   `json:"progress_thread_id,omitempty"`
+	Fingerprint      string   `json:"question_fingerprint,omitempty"`
+	DecisionSHA      string   `json:"decision_identity_sha256,omitempty"`
+	QuestionSHA      string   `json:"question_body_sha256,omitempty"`
+	ReceiptFile      string   `json:"question_receipt_file,omitempty"`
+	ReceiptSHA       string   `json:"question_receipt_sha256,omitempty"`
+	ReplyCursor      string   `json:"reply_cursor,omitempty"`
+	Attachments      []string `json:"attachments,omitempty"`
+	AttachmentHashes []string `json:"attachment_sha256,omitempty"`
 }
 
 type conversationIndex struct {
@@ -74,9 +79,11 @@ type conversationLogRecord struct {
 }
 
 type conversationAlias struct {
-	Target   string                `json:"target_request_id"`
-	InputSHA string                `json:"input_sha256"`
-	Intent   *ConversationQuestion `json:"original_intent,omitempty"`
+	Target      string                `json:"target_request_id"`
+	InputSHA    string                `json:"input_sha256"`
+	Intent      *ConversationQuestion `json:"original_intent,omitempty"`
+	ImagePaths  []string              `json:"image_paths,omitempty"`
+	ImageHashes []string              `json:"image_sha256,omitempty"`
 }
 
 type conversationQuestionReceipt struct {
@@ -233,6 +240,9 @@ func (r *Runner) loadConversations() (*conversationIndex, error) {
 		if q.BodyFile != filepath.Join(dir, "question.txt") || q.DecisionFile != filepath.Join(dir, "decision.json") {
 			return nil, errors.New("conversation private paths differ")
 		}
+		if !conversationQuestionImageRecord(q) {
+			return nil, errors.New("conversation question images invalid")
+		}
 		if q.Phase != "reserved" {
 			if q.Thread != q.Message || !shaPattern.MatchString(q.Fingerprint) || !shaPattern.MatchString(q.DecisionSHA) || !shaPattern.MatchString(q.QuestionSHA) || !shaPattern.MatchString(q.ReceiptSHA) {
 				return nil, errors.New("conversation receipt invalid")
@@ -336,11 +346,19 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 	if safeText(string(body), r.Token) != string(body) || safeText(string(decision), r.Token) != string(decision) {
 		return zero, errors.New("conversation input contains credential material")
 	}
-	inputHash := canonicalHash([]any{input.Todo, input.OriginThread, bytesHash(body), canonicalHash(json.RawMessage(decision)), input.Title, input.Wait})
 	index, err := r.loadConversations()
 	if err != nil {
 		return zero, err
 	}
+	paths, hashes, err := conversationQuestionRetryImages(index, input)
+	if err != nil {
+		return zero, err
+	}
+	identity := []any{input.Todo, input.OriginThread, bytesHash(body), canonicalHash(json.RawMessage(decision)), input.Title, input.Wait}
+	if len(hashes) != 0 {
+		identity = append(identity, hashes)
+	}
+	inputHash := canonicalHash(identity)
 	q, exists := index.Questions[input.RequestID]
 	if alias, exists := index.Aliases[input.RequestID]; exists {
 		if alias.InputSHA != inputHash {
@@ -360,11 +378,31 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 	}
 	if !exists {
 		for _, old := range index.Questions {
+			if old.Project != row.Project || old.Todo != input.Todo || old.Phase == "reserved" || old.Phase == "withdrawn" || slices.Equal(old.AttachmentHashes, hashes) {
+				continue
+			}
+			original, readErr := boundedRegular(old.DecisionFile)
+			if readErr != nil {
+				return zero, readErr
+			}
+			if canonicalHash(json.RawMessage(original)) != canonicalHash(json.RawMessage(decision)) {
+				continue
+			}
+			if _, proofErr := r.conversationProof(ctx, old); proofErr != nil {
+				return zero, proofErr
+			}
+			old.Phase, old.Wait = "duplicate", false
+			old.ExistingURL = "https://discord.com/channels/" + r.State.Destination.Guild + "/" + old.Thread
+			return old, nil
+		}
+	}
+	if !exists {
+		for _, old := range index.Questions {
 			if old.InputSHA == inputHash {
 				q = old
 				exists = true
 				if old.RequestID != input.RequestID {
-					index.Aliases[input.RequestID] = conversationAlias{Target: old.RequestID, InputSHA: inputHash}
+					index.Aliases[input.RequestID] = conversationAlias{Target: old.RequestID, InputSHA: inputHash, ImagePaths: paths, ImageHashes: hashes}
 					if err = publish(r.conversationPath(), index); err != nil {
 						return zero, err
 					}
@@ -379,6 +417,7 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		}
 		dir := filepath.Join(r.Config.Home, "conversations", input.RequestID)
 		q = ConversationQuestion{RequestID: input.RequestID, SenderID: "conversation-v1-" + bytesHash([]byte(input.RequestID))[:32], Todo: input.Todo, Project: row.Project, OriginThread: input.OriginThread, InputSHA: inputHash, BodyFile: filepath.Join(dir, "question.txt"), DecisionFile: filepath.Join(dir, "decision.json"), Title: input.Title, Wait: input.Wait, Phase: "reserved", Created: r.Now().UTC().Format(time.RFC3339Nano)}
+		q.Attachments, q.AttachmentHashes = paths, hashes
 		if err = writeConversationOnce(q.BodyFile, body); err != nil {
 			return zero, err
 		}
@@ -407,12 +446,23 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		if q.Title != "" {
 			args = append(args, "--title", q.Title)
 		}
+		for _, path := range q.Attachments {
+			args = append(args, "--attach", path)
+		}
+		for _, sha := range q.AttachmentHashes {
+			args = append(args, "--expected-image-sha256", sha)
+		}
 		raw, callErr := r.Run(ctx, conversationSender, args...)
 		if callErr != nil {
 			return zero, errors.New("conversation send pending; retry the same request")
 		}
 		var report struct {
 			Domain, Delivery string
+			Outcome          string          `json:"outcome"`
+			ExistingRequest  string          `json:"existing_request_id"`
+			URL              string          `json:"url"`
+			ExistingVerified bool            `json:"existing_metadata_verified"`
+			Todo             uint64          `json:"todo_id"`
 			Request          string          `json:"request_id"`
 			Thread           string          `json:"thread_id"`
 			Message          string          `json:"message_id"`
@@ -420,9 +470,41 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 			Fingerprint      string          `json:"original_fingerprint"`
 			Body             string          `json:"original_question"`
 			Decision         json.RawMessage `json:"decision"`
+			Images           []string        `json:"image_sha256"`
 		}
-		if json.Unmarshal([]byte(raw), &report) != nil || report.Domain != "new-owner-recovery-messages" || report.Delivery != "verified" || report.Thread != report.Message || report.Request == "" || !shaPattern.MatchString(report.Fingerprint) {
+		decodeErr := json.Unmarshal([]byte(raw), &report)
+		if decodeErr == nil && report.Domain == "new-owner-recovery-messages" && report.Outcome == "existing_question_images_differ" && report.Delivery == "not_sent" && report.Request == q.SenderID && report.Todo == q.Todo && report.ExistingRequest != q.SenderID && conversationID.MatchString(report.ExistingRequest) {
+			if report.Thread != "" {
+				if _, ok := number(report.Thread); !ok || !report.ExistingVerified || report.URL != "https://discord.com/channels/"+r.State.Destination.Guild+"/"+report.Thread {
+					return zero, errors.New("conversation duplicate proof invalid")
+				}
+			} else if report.URL != "" || report.ExistingVerified {
+				return zero, errors.New("conversation duplicate proof invalid")
+			}
+			delete(index.Questions, q.RequestID)
+			for id, alias := range index.Aliases {
+				if alias.Target == q.RequestID {
+					delete(index.Aliases, id)
+				}
+			}
+			if err = publish(r.conversationPath(), index); err != nil {
+				return zero, err
+			}
+			result := q
+			for _, old := range index.Questions {
+				if old.SenderID == report.ExistingRequest {
+					result = old
+					break
+				}
+			}
+			result.Phase, result.Wait, result.ExistingURL = "duplicate", false, report.URL
+			return result, nil
+		}
+		if decodeErr != nil || report.Domain != "new-owner-recovery-messages" || report.Delivery != "verified" || report.Thread != report.Message || report.Request == "" || !shaPattern.MatchString(report.Fingerprint) {
 			return zero, errors.New("conversation send verification pending")
+		}
+		if len(report.Images) != len(q.AttachmentHashes) || (len(report.Images) != 0 && canonicalHash(report.Images) != canonicalHash(q.AttachmentHashes)) {
+			return zero, errors.New("conversation question image verification pending")
 		}
 		for _, id := range []string{report.Thread, report.Progress} {
 			if _, ok := number(id); !ok {
@@ -441,11 +523,11 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 				continue
 			}
 			if canonical.SenderID == q.SenderID || canonical.Thread == q.Thread {
-				if canonical.SenderID != q.SenderID || canonical.Thread != q.Thread || canonical.Todo != q.Todo || canonical.Project != q.Project || canonical.Fingerprint != q.Fingerprint || canonical.QuestionSHA != q.QuestionSHA || canonical.DecisionSHA != q.DecisionSHA {
+				if canonical.SenderID != q.SenderID || canonical.Thread != q.Thread || canonical.Todo != q.Todo || canonical.Project != q.Project || canonical.Fingerprint != q.Fingerprint || canonical.QuestionSHA != q.QuestionSHA || canonical.DecisionSHA != q.DecisionSHA || !slices.Equal(canonical.AttachmentHashes, report.Images) {
 					return zero, errors.New("conversation canonical question differs")
 				}
 				intent := index.Questions[q.RequestID]
-				index.Aliases[q.RequestID] = conversationAlias{Target: canonical.RequestID, InputSHA: q.InputSHA, Intent: &intent}
+				index.Aliases[q.RequestID] = conversationAlias{Target: canonical.RequestID, InputSHA: q.InputSHA, Intent: &intent, ImagePaths: q.Attachments, ImageHashes: q.AttachmentHashes}
 				delete(index.Questions, q.RequestID)
 				if err = publish(r.conversationPath(), index); err != nil {
 					return zero, err

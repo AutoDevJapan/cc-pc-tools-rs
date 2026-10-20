@@ -87,21 +87,14 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		conversationStringFlag(fs, "decision-file", &opts.DecisionFile)
 		conversationStringFlag(fs, "title", &opts.Title)
 		fs.Var(&conversationBoolFlag{value: &opts.Wait}, "wait", "")
+		conversationAttachmentFlags(fs, &opts.Attachments)
 	case "log":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "title", &opts.Title)
 		conversationStringFlag(fs, "body-file", &opts.BodyFile)
 		conversationStringFlag(fs, "thread", &opts.Thread)
 		fs.Var(&conversationBoolFlag{value: &opts.Notify}, "notify", "")
-		seen := make(map[string]bool)
-		fs.Func("attach", "", func(raw string) error {
-			if strings.TrimSpace(raw) == "" || seen[raw] {
-				return errConversationArguments
-			}
-			seen[raw] = true
-			opts.Attachments = append(opts.Attachments, raw)
-			return nil
-		})
+		conversationAttachmentFlags(fs, &opts.Attachments)
 	case "replies":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 	case "withdraw":
@@ -146,6 +139,18 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		}
 	}
 	return opts, nil
+}
+
+func conversationAttachmentFlags(fs *flag.FlagSet, attachments *[]string) {
+	seen := make(map[string]bool)
+	fs.Func("attach", "", func(raw string) error {
+		if strings.TrimSpace(raw) == "" || seen[raw] || len(*attachments) >= 10 {
+			return errConversationArguments
+		}
+		seen[raw] = true
+		*attachments = append(*attachments, raw)
+		return nil
+	})
 }
 
 type conversationCLIBackend interface {
@@ -227,7 +232,7 @@ func conversationCLIWithLoader(args []string, out io.Writer, load func(string) (
 		switch opts.Command {
 		case "ask":
 			var question ConversationQuestion
-			question, err = runner.conversationAsk(ctx, ConversationAskInput{RequestID: opts.RequestID, Todo: opts.Todo, OriginThread: opts.OriginThread, BodyFile: opts.BodyFile, DecisionFile: opts.DecisionFile, Title: opts.Title, Wait: opts.Wait})
+			question, err = runner.conversationAsk(ctx, ConversationAskInput{RequestID: opts.RequestID, Todo: opts.Todo, OriginThread: opts.OriginThread, BodyFile: opts.BodyFile, DecisionFile: opts.DecisionFile, Title: opts.Title, Wait: opts.Wait, Attachments: opts.Attachments})
 			result = conversationQuestionPublic(question)
 		case "log":
 			result, err = runner.conversationLog(ctx, opts.RequestID, opts.Title, opts.BodyFile, opts.Thread, opts.Notify, opts.Attachments)
@@ -265,6 +270,12 @@ func conversationCLIWithLoader(args []string, out io.Writer, load func(string) (
 
 func conversationQuestionPublic(q ConversationQuestion) map[string]any {
 	result := map[string]any{"domain": conversationDomain, "request_id": q.RequestID, "todo_id": q.Todo, "phase": q.Phase, "wait_requested": q.Wait}
+	if q.Phase == "duplicate" {
+		result["outcome"] = "existing_question_images_differ"
+		if q.ExistingURL != "" {
+			result["url"] = q.ExistingURL
+		}
+	}
 	for key, value := range map[string]string{"origin_thread_id": q.OriginThread, "thread_id": q.Thread, "question_message_id": q.Message, "progress_thread_id": q.Progress, "question_fingerprint": q.Fingerprint, "question_receipt_sha256": q.ReceiptSHA, "created_at": q.Created} {
 		if value != "" {
 			result[key] = value

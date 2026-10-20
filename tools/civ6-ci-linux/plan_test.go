@@ -56,22 +56,34 @@ func mustPlan(t *testing.T, b []byte) Plan {
 }
 
 func TestRegistrationLabels(t *testing.T) {
-	c, d, e := registrationLabels(KindRust, []string{"self-hosted", "Linux", "X64", linuxLabel})
-	if e != nil || c != linuxLabel || !d {
+	c, d, e := registrationLabels(rustPlan(), []string{"self-hosted", "Linux", "X64", linuxLabel, jobLabel(rustPlan())})
+	if e != nil || c != linuxLabel+","+jobLabel(rustPlan()) || !d {
 		t.Fatalf("%v %v %v", c, d, e)
 	}
-	c, d, e = registrationLabels(KindCodeQL, []string{codeQLLabel})
+	c, d, e = registrationLabels(codeQLPlan("Analyze (rust)"), []string{codeQLLabel})
 	if e != nil || c != codeQLLabel || d {
 		t.Fatalf("%v %v %v", c, d, e)
 	}
 	for _, bad := range [][]string{nil, {"self-hosted", "Linux", "X64"}, {"self-hosted", "Windows", "X64", "civ6-ci-windows"}, {"self-hosted", "Linux", "X64", linuxLabel, "extra"}, {linuxLabel}} {
-		if _, _, e = registrationLabels(KindRust, bad); e == nil {
+		if _, _, e = registrationLabels(rustPlan(), bad); e == nil {
 			t.Fatalf("accepted Rust labels %v", bad)
 		}
 	}
 	for _, bad := range [][]string{nil, {linuxLabel}, {codeQLLabel, "extra"}, {"self-hosted", "Linux", "X64", codeQLLabel}} {
-		if _, _, e = registrationLabels(KindCodeQL, bad); e == nil {
+		if _, _, e = registrationLabels(codeQLPlan("Analyze (rust)"), bad); e == nil {
 			t.Fatalf("accepted CodeQL labels %v", bad)
+		}
+	}
+}
+
+func TestRegistrationRejectsAnotherRunOrAttemptLabel(t *testing.T) {
+	p := rustPlan()
+	for _, change := range []func(*Plan){func(q *Plan) { q.RunID++ }, func(q *Plan) { q.Attempt++ }} {
+		other := p
+		change(&other)
+		labels := []string{"self-hosted", "Linux", "X64", linuxLabel, jobLabel(other)}
+		if _, _, e := registrationLabels(p, labels); e == nil {
+			t.Fatal("another queued run/attempt could be registered")
 		}
 	}
 }

@@ -143,6 +143,27 @@ func TestCurrentPRPlansRejectChangedOriginalEvidence(t *testing.T) {
 	}
 }
 
+// The decoder's synthetic fixture is separate from production purpose authority.
+func parseCurrentPRFixtureFiles(file string) (currentPRBinding, error) {
+	pin, err := os.ReadFile(file)
+	if err != nil {
+		return currentPRBinding{}, err
+	}
+	var input currentPRInput
+	if err := json.Unmarshal(pin, &input); err != nil {
+		return currentPRBinding{}, err
+	}
+	review, err := os.ReadFile(input.ReviewFile)
+	if err != nil {
+		return currentPRBinding{}, err
+	}
+	acceptance, err := os.ReadFile(input.AcceptanceFile)
+	if err != nil {
+		return currentPRBinding{}, err
+	}
+	return parseCurrentPRSnapshot(pin, review, acceptance)
+}
+
 func TestCurrentPRInputReadsExactOriginalProofBytes(t *testing.T) {
 	b, _, _, _ := currentPRFixture(t, "secret", nil)
 	dir := t.TempDir()
@@ -177,7 +198,7 @@ func TestCurrentPRInputReadsExactOriginalProofBytes(t *testing.T) {
 	if e := os.WriteFile(file, data, 0600); e != nil {
 		t.Fatal(e)
 	}
-	if got, e := readCurrentPRInput(file); e != nil || got != input.currentPRBinding {
+	if got, e := parseCurrentPRFixtureFiles(file); e != nil || got != input.currentPRBinding {
 		t.Fatalf("valid proof rejected: %v", e)
 	}
 	same := input
@@ -187,7 +208,7 @@ func TestCurrentPRInputReadsExactOriginalProofBytes(t *testing.T) {
 	if e := os.WriteFile(file, sameData, 0600); e != nil {
 		t.Fatal(e)
 	}
-	if _, e := readCurrentPRInput(file); e == nil {
+	if _, e := parseCurrentPRFixtureFiles(file); e == nil {
 		t.Fatal("acceptance used for both evidence kinds")
 	}
 	if e := os.WriteFile(file, data, 0600); e != nil {
@@ -196,13 +217,13 @@ func TestCurrentPRInputReadsExactOriginalProofBytes(t *testing.T) {
 	if e := os.WriteFile(input.ReviewFile, []byte("changed original receipt"), 0600); e != nil {
 		t.Fatal(e)
 	}
-	if _, e := readCurrentPRInput(file); e == nil {
+	if _, e := parseCurrentPRFixtureFiles(file); e == nil {
 		t.Fatal("changed proof accepted")
 	}
 	if e := os.Remove(input.ReviewFile); e != nil {
 		t.Fatal(e)
 	}
-	if _, e := readCurrentPRInput(file); e == nil {
+	if _, e := parseCurrentPRFixtureFiles(file); e == nil {
 		t.Fatal("missing proof accepted")
 	}
 }

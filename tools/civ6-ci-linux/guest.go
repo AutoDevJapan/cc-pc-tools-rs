@@ -201,7 +201,10 @@ func validateRegistration(p guestPacket) error {
 	k, e := p.Plan.kind()
 	wantLabel, wantDefaults := codeQLLabel, false
 	if k == KindRust {
-		wantLabel, wantDefaults = linuxLabel, true
+		if jobLabel(p.Plan) == "" {
+			return errors.New("selecting job label unavailable")
+		}
+		wantLabel, wantDefaults = linuxLabel+","+jobLabel(p.Plan), true
 	}
 	if e != nil || k != p.Kind || p.Custom != wantLabel || p.Defaults != wantDefaults || !strings.HasPrefix(p.Name, "civ6-ci-linux-"+string(k)+"-") || filepath.Base(p.Name) != p.Name {
 		return errors.New("Linux registration identity rejected")

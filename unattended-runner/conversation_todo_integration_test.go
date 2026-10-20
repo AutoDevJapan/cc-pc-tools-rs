@@ -129,6 +129,35 @@ func TestConversationUnrelatedGenerationShapeDoesNotBreakOriginalTaskRead(t *tes
 	}
 }
 
+func TestConversationActualCanonicalGuardedProjectCannotChangeBeforeDeliverySnapshot(t *testing.T) {
+	f := continuedNative(t)
+	var db map[string]any
+	if readJSON(f.r.TodoPath, maxTodo, &db) != nil {
+		t.Fatal("missing fixture")
+	}
+	db["projects"].(map[string]any)["other-project"] = f.r.Config.Home
+	if err := publish(f.r.TodoPath, db); err != nil {
+		t.Fatal(err)
+	}
+	f.reply(t, 8, "a")
+	backend := f.r.Run
+	var afterProjectChange []byte
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		out, err := backend(ctx, path, args...)
+		if strings.Contains(path, "scrub391") && err == nil {
+			f.mutateTodo(t, func(row map[string]any) { row["project"] = "other-project" })
+			afterProjectChange, _ = os.ReadFile(f.r.TodoPath)
+		}
+		return out, err
+	}
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	after, _ := os.ReadFile(f.r.TodoPath)
+	if afterProjectChange == nil || len(health.Errors) == 0 || string(afterProjectChange) != string(after) {
+		t.Fatal("delivery mutated a different project after the original project guard")
+	}
+}
+
 func TestConversationActualCanonicalContinuedDeliveryRejectsRacesAndOtherHolds(t *testing.T) {
 	for _, change := range []string{"cas-note", "cas-generation", "new-question", "missing-origin", "stop", "dependency", "guard"} {
 		t.Run(change, func(t *testing.T) {

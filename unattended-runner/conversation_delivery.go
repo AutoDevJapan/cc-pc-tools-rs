@@ -272,6 +272,10 @@ func (r *Runner) deliverContinuedConversationReply(ctx context.Context, row *Tod
 	if err != nil {
 		return err
 	}
+	var snapshot TodoRow
+	if json.Unmarshal(expected, &snapshot) != nil || canonicalHash(&snapshot) != canonicalHash(row) {
+		return errors.New("conversation guarded task snapshot changed")
+	}
 	expectedFile := filepath.Join(dir, reply.Message+".expected.json")
 	if err := writeText(expectedFile, string(expected)); err != nil {
 		return err

@@ -1,0 +1,36 @@
+{
+  "todo": 3080,
+  "scope": "TeamAI discovery workflow adaptation1 only;other4workflow bodies andsupport not installed",
+  "source_head": "2f48a0154c395a750d4d461e632d3d8b4e7b909f",
+  "installed_at": "2026-10-20T21:31:01.5860982Z",
+  "recorded_at": "2026-10-20T21:31:36.8184475Z",
+  "bundle_sha256": "abad5d1526673310d0249f76208a2ed7cc9dd51dcf7b7041769e6b8c76a27991",
+  "review": {
+    "todo": 3193,
+    "head": "4b253db26f74bfb1a779cf8a68d3b22feb9f211f",
+    "must": 0,
+    "original_response_sha256": "793ad1958140bb245a64ac9722c10fe6c58f3d63c8a5f0b0ca07bf89582adfd3",
+    "changes_after_review": "RequestedS1-S3 tightened trigger/negative/junction/write destinations/source-policy boundaries before deployment;original andnotice unchanged",
+    "changes_re_reviewed": false
+  },
+  "execution": "Separate normal exact1new-target write review allowed,exit0;no existingoverwrite",
+  "installed": 1,
+  "files_readback_verified": 5,
+  "manifest": "skills-3080-installed-teamai-manifest.json",
+  "manifest_sha256": "5f02b7a3576c261dec1edddb0adf60e2f7aa007d76c677fc370afd9879b2b6d5",
+  "journal_sha256": "2c85f9902617101e2c34ece0087d86894d3301850d653666fa2cc122b8123b0f",
+  "validator": "PASS actual installed1/5",
+  "discovery": {
+    "target_matches": 1,
+    "enabled_count": 1,
+    "parse_errors": 0,
+    "same_names_other_paths": 0,
+    "description_matches": true,
+    "metadata_total": 323,
+    "model_called": false,
+    "method": "fresh official installed Codex app-server; initialize + skills/list forceReload"
+  },
+  "runtime": "Workflow knowledge installed;TeamAI CLI/hook/MCP/env/AI model not installed or run",
+  "postinstall_acceptance": "pending",
+  "overall_complete": false
+}

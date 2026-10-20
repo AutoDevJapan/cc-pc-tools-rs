@@ -19,6 +19,8 @@ import (
 const burstPoolLimit = 16
 const burstPoolWindow = 2 * time.Hour
 
+var errRunnerMetadataNotFound = errors.New("runner metadata not found")
+
 type queueRun struct {
 	ID             int64  `json:"id"`
 	HeadSHA        string `json:"head_sha"`
@@ -52,7 +54,11 @@ func runnerAPI(path string, out any) error {
 	c.WaitDelay = 3 * time.Second
 	data, err := c.Output()
 	if err != nil {
-		return errors.New("runner metadata request failed")
+		var failed *exec.ExitError
+		if errors.As(err, &failed) && strings.Contains(string(failed.Stderr), "HTTP 404") {
+			return fmt.Errorf("%w: %s", errRunnerMetadataNotFound, path)
+		}
+		return fmt.Errorf("runner metadata request failed: %s", path)
 	}
 	if len(data) > 16<<20 || json.Unmarshal(data, out) != nil {
 		return errors.New("runner metadata response rejected")
@@ -96,6 +102,12 @@ func currentQueue(api func(string, any) error, now time.Time) (queueSnapshot, er
 				Object struct{ SHA string } `json:"object"`
 			}
 			if err := api("repos/"+repo+"/git/ref/heads/"+url.PathEscape(run.HeadBranch), &ref); err != nil {
+				if errors.Is(err, errRunnerMetadataNotFound) {
+					// A deleted branch cannot be a current source. Keep unrelated
+					// queued jobs eligible; do not hide network/auth/API failures.
+					heads[run.HeadBranch] = ""
+					continue
+				}
 				return snapshot, err
 			}
 			head = ref.Object.SHA

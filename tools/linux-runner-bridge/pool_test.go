@@ -61,6 +61,37 @@ func TestBurstPoolResuppliesAfterEachRealHostExit(t *testing.T) {
 	}
 }
 
+func TestQueueDeletedBranchDoesNotStrandUnrelatedWork(t *testing.T) {
+	for _, missing := range []bool{true, false} {
+		api := func(path string, out any) error {
+			var body string
+			switch {
+			case strings.Contains(path, "/actions/runs?status="):
+				body = fmt.Sprintf(`{"total_count":2,"workflow_runs":[{"id":1,"head_sha":%q,"head_branch":"deleted","event":"pull_request","head_repository":{"full_name":%q}},{"id":2,"head_sha":%q,"head_branch":"current","event":"pull_request","head_repository":{"full_name":%q}}]}`, strings.Repeat("a", 40), repo, strings.Repeat("a", 40), repo)
+			case strings.Contains(path, "/git/ref/heads/deleted"):
+				if missing {
+					return errRunnerMetadataNotFound
+				}
+				return errors.New("network unavailable")
+			case strings.Contains(path, "/git/ref/heads/current"):
+				body = fmt.Sprintf(`{"object":{"sha":%q}}`, strings.Repeat("a", 40))
+			case strings.Contains(path, "/actions/runs/2/jobs?"):
+				body = `{"total_count":1,"jobs":[{"id":20,"status":"queued","runner_id":0,"labels":["self-hosted","Linux","X64","cc-pc-tools-linux"]}]}`
+			default:
+				t.Fatalf("deleted branch caused an unexpected job request: %s", path)
+			}
+			return json.Unmarshal([]byte(body), out)
+		}
+		q, err := currentQueue(api, time.Now())
+		if missing && (err != nil || q.Queued != 1) {
+			t.Fatalf("deleted branch stranded unrelated current work: %+v %v", q, err)
+		}
+		if !missing && err == nil {
+			t.Fatal("network failure was treated as a deleted source")
+		}
+	}
+}
+
 func TestBurstPoolDoesNotStartWithoutFreshCapacityOrAfterDeadline(t *testing.T) {
 	for _, test := range []string{"resource", "deadline", "metadata", "host-error", "limit"} {
 		t.Run(test, func(t *testing.T) {

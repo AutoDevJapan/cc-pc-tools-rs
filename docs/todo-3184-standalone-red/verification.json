@@ -1,0 +1,8 @@
+{
+  "verified_at": "2026-10-21T05:05:48.7347729+09:00",
+  "file_count": 1182,
+  "all_files_match_git_blobs": true,
+  "source_unchanged_during_run": true,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "f8679689fea5d6e20b992307f24f3ac3c8d09f3808a5f43e1222516e4295a32a"
+}

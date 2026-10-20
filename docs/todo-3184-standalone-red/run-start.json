@@ -1,0 +1,29 @@
+{
+  "started_at": "2026-10-21T05:04:42.1265158+09:00",
+  "command": "cargo nextest run --locked -p localai-web-rs --lib -E 'test(mcp_standalone_job_keeps_all_private_links_when_its_primary_is_old_done)' --no-fail-fast",
+  "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "arguments": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "localai-web-rs",
+    "--lib",
+    "-E",
+    "test(mcp_standalone_job_keeps_all_private_links_when_its_primary_is_old_done)",
+    "--no-fail-fast"
+  ],
+  "cwd": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3184-3103-1\\codex-owned-8609944fc2b7cc7d9f899c69c1036804\\source",
+  "explicit_environment": {
+    "CARGO_TARGET_DIR": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3184-3103-1\\codex-owned-8609944fc2b7cc7d9f899c69c1036804\\target",
+    "CARGO_BUILD_JOBS": "10",
+    "RUST_TEST_THREADS": "10",
+    "CARGO_INCREMENTAL": "0",
+    "RUSTC_WRAPPER": "D:/CC/Tools/sccache/sccache.exe",
+    "SCCACHE_DIR": "D:/CC/BuildCache/sccache",
+    "SCCACHE_CACHE_SIZE": "30G",
+    "SCCACHE_SERVER_PORT": "42259"
+  },
+  "attempt": 1,
+  "create_no_window": true
+}

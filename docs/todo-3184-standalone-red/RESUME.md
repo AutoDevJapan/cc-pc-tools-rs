@@ -14,6 +14,8 @@
 
 `run-start.json` が存在するときは再実行しない。`process.json` のPIDと開始時刻、ログ、`run-exit.json`を照合し、既存の実行結果を回収する。構文エラー・コンパイル失敗・別の先行assert失敗を期待するRedと扱わない。
 
-展開照合は完了した。旧実装の全1182ファイルが生blobのSHA256と一致し、テスト1ファイルだけを重ねた後も指定blobと一致した。改行変換の事前検出と修正経緯は `archive-preflight.json` に保持する。Cargoはまだ起動していない。
+展開照合、指定1件の測定1回、失敗理由の確認、実行後照合は完了した。コンパイル成功、1件選択、0成功/1失敗、exit100。453行目のタイトル用マーカー非表示assertで失敗し、それ以前の単独job存在・todo-6不在のassertは通過した。レポート用マーカーの次のassertには未到達。詳細は `RESULT.md` と実ログに保持する。
 
-残作業: 測定1回、失敗理由の確認、実行後照合、結果のコミット、一時領域のplan→別呼出しの削除→finish、通常checkpoint-workspace。共有ToDoの状態はschedulerが更新する。
+旧実装の全1182ファイルが生blobのSHA256と一致し、テスト1ファイルだけを重ねた後も指定blobと一致した。実行前後の変更はない。改行変換の事前検出と修正経緯は `archive-preflight.json` に保持する。測定は再実行しない。
+
+残作業: 結果のコミットと保存の確認、一時領域のplan→別呼出しの削除→finish、通常checkpoint-workspace。共有ToDoの状態はschedulerが更新する。

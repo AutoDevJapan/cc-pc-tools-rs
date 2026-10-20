@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-20T17:29:19.2152513Z",
+  "observed_at": "2026-10-20T19:01:36.6906847Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "22installed and independently checked;3kepano candidates prepared; full16-source work continues",
+  "phase_b": "25 installed;3 previously installed revised;final deployed6 bounded check pending;full16-source work continues",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -288,7 +288,7 @@
   "execution_held_shapes": 647,
   "candidate_designs": 25,
   "independently_accepted": 22,
-  "installed": 22,
+  "installed": 25,
   "integrated": 0,
   "excluded": 0,
   "units": {
@@ -305,11 +305,12 @@
   },
   "limits": [
     "Metadata statistics do not establish semantic or individual license approval.",
-    "22installed adaptations are two finite deployment batches, not a count cap.",
-    "Existing originals, junctions, guard, UI and source scripts were not changed.",
-    "First14had limited1turn acceptance; Docker8had freshmetadata discovery; Docker8post-install turn check pending.",
+    "25 installed adaptations are finite batches, not a count cap.",
+    "Previously created3 targets revised with15file old-version backup and9limited replacements; other originals/junction/guard/UI unchanged.",
+    "First14 and Docker8 bounded checks accepted; latest3+revised3 final check pending.",
     "Source archive warning59416 is not a per-record malicious verdict or blanket exclusion.",
-    "6mile APItruncation was repaired by matching fixedgit subtrees/ls-tree."
+    "6mile APItruncation repaired by matching fixedgit subtrees/ls-tree.",
+    "Metadata discovery322 is not a model-turn context usage measurement."
   ],
   "entrypoint_assessment": {
     "source": "mattpocock/skills",
@@ -345,15 +346,15 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "25renderable plan targets:22installed+3pending",
+    "candidate_designs": "25 renderable plan targets all installed; no count cap",
     "additional_authored_drafts_not_in_plans": 0,
     "authored_total": 25,
-    "installed": 22,
-    "pending_plan_targets": 3,
+    "installed": 25,
+    "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
-    "independently_accepted": "22installed entrypoints checked in bounded scopes; not all upstream supporting resources",
-    "not_semantically_disposed_occurrences": 73198
+    "independently_accepted": "22 previous installed entrypoints checked; latest3 and revised3 postinstall check pending, revisions do not add new count",
+    "not_semantically_disposed_occurrences": 73195
   },
   "kepano_entrypoint_assessment": {
     "pinned_entrypoints": 6,
@@ -361,6 +362,6 @@
     "supporting_resources_semantic_complete": false,
     "new_candidates": 3,
     "prior3048_same_entrypoint_read": 3,
-    "newly_installed": 0
+    "newly_installed": 3
   }
 }

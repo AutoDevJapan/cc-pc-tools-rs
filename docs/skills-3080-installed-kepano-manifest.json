@@ -1,0 +1,100 @@
+{
+  "targets": [
+    {
+      "name": "defuddle",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "指定された公開記事を、ナビゲーションを除いた本文と出典情報へ整理する。",
+      "negative": "ログインした管理画面でボタンを操作し、画面の動作を検証する。",
+      "sources": [
+        "kepano/obsidian-skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "8669cdcc9f7b4679a49753d2d7f8ee4d90c3119305d866d6c439aa1cbacb83f3"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "64c64d48361edfe8610016441bf593256ea9b67f133b00f47c55aa29ee878567"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "6d1b8ceb281b0a7ff04d6325966fc6e6648eee3026528da4d4b897efbd805cc0"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "5cdecf64a3678a6f0fadcaa6f7b5ae20b8aa24a615b2b3445ae2839d98deced7"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "05ca80ba44639dec61dfe2078e8ef5ccce41f74c17d8ad8e6657578ed7bd747c"
+        }
+      ]
+    },
+    {
+      "name": "knap",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "指定のJSONデータと既存テンプレートから、出力先を確認してノート案を生成する。",
+      "negative": "テンプレートを使わず、Obsidianの.baseファイルのfilterだけを修正する。",
+      "sources": [
+        "kepano/obsidian-skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "ef5666573358cd7d18e04195f3e7c473b88d3e3140c41ab59bbee01c81e9989f"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "64c64d48361edfe8610016441bf593256ea9b67f133b00f47c55aa29ee878567"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "006e3b662b25ccf6305fbc5920e2d9918e8373f298935d1010b2d6be31e89e47"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "d95b402b627259fcdb90881114f3296de4afceb9b7681d241abf4877ce8f63fb"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "6b3e7e822ca30303d22341253d33049c253a48a9b6c61f1004cb110f6211dd04"
+        }
+      ]
+    },
+    {
+      "name": "obsidian-cli",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "本人が指定した保管庫の指定ノートへ、確認した内容を追記して読み返す。",
+      "negative": "アプリへ接続せず、Markdownファイルのwikilink構文だけを整える。",
+      "sources": [
+        "kepano/obsidian-skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "b54257cdc0e5d04488b35b0c797bfe427b24359f0848d3c73924dcacf8da6358"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "64c64d48361edfe8610016441bf593256ea9b67f133b00f47c55aa29ee878567"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "5e0dc0e8ba0457ecbae79dc1054990b54d48984f70fea69df6d7882d1170ca35"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "e61a65baab9478f96d2d54e8b7b40e21894e09dfdf03000dfd67ee509877980d"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "bb7bc54a1fc5c39feab316aba786a29c70530249b8c1697ab08fcd6b0bbb77cd"
+        }
+      ]
+    }
+  ]
+}

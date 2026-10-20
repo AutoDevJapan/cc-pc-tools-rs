@@ -1035,7 +1035,7 @@ func register() int {
 	if strings.TrimSpace(ephemeral) == "true" {
 		cargs = append(cargs, "--ephemeral", "--disableupdate")
 	}
-	if !compiledNormalProfile.ephemeral {
+	if !compiledNormalProfile.ephemeral || strings.TrimSpace(runnerName) == "cc-pc-tools-linux-2511" {
 		cargs = append(cargs, "--replace")
 	}
 	_ = os.Remove(filepath.Join(os.TempDir(), "runner-config-summary.json"))
@@ -1054,7 +1054,7 @@ func register() int {
 	configOutput.Reset()
 	token = ""
 	mode := "normal"
-	if strings.TrimSpace(ephemeral) == "true" && !compiledNormalProfile.ephemeral {
+	if strings.TrimSpace(ephemeral) == "true" && strings.TrimSpace(runnerName) == "cc-pc-tools-linux-2511" {
 		mode = "finite"
 	}
 	if mode == "normal" {

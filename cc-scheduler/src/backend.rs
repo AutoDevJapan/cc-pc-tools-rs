@@ -855,10 +855,10 @@ pub fn result_outcome(result: &str) -> &'static str {
 }
 pub fn job_result_outcome(job: &Value, result: &str) -> &'static str {
     if cc_job_policy::review_result::completed(job, result) {
-        // This exact header closes the bound finite reader. Statements about
-        // its parent's unfinished implementation do not extend that assignment.
-        // Unbound root work still uses the strict general parser below.
-        "done"
+        let body = result.split_once('\n').map(|(_, body)| body).unwrap_or("");
+        // Parent work can remain unfinished in prose. Conflicting standalone
+        // status headers remain ambiguous even for a bound finite reader.
+        result_outcome(&format!("状態: 完了\n{body}"))
     } else {
         result_outcome(result)
     }

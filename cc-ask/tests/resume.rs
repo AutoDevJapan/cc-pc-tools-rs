@@ -624,7 +624,7 @@ fn test_dispatch_uses_recorded_cwd_jev_and_resume_instructions() {
     assert_eq!(launch["cwd"], a.cwd.to_string_lossy().as_ref());
     assert_eq!(
         (&launch["name"], &launch["model"], &launch["effort"]),
-        (&json!("resume-200"), &json!("gpt-6.1-sol"), &json!("high"))
+        (&json!("resume-200"), &json!("gpt-6.1-sol"), &json!("max"))
     );
     assert_eq!(a.question()["seen_reply"], newest);
     assert!(a.text().contains("受け取りました。今の作業に反映します。"));
@@ -652,6 +652,28 @@ fn test_dispatch_uses_recorded_cwd_jev_and_resume_instructions() {
     assert!(!Path::new(s(&launch["prompt_path"])).exists());
     a.resume();
     assert_eq!((a.count(), a.posts()), (1, 1));
+}
+
+#[test]
+fn managed_answer_resume_migrates_high_hints_but_preserves_individual_owner_effort() {
+    for (origin, effort, session) in [
+        ("policy", "max", ""),
+        ("owner_request", "high", "original-session"),
+    ] {
+        let mut a = AnswerResume::new();
+        a.change(
+            json!({"session_id":"original-session","job_info":{"model":"gpt-6.1-sol",
+            "effort":"high","effort_origin":origin,"thread_id":"original-session",
+            "sandbox":"read-only","scope_source":"launcher"}}),
+        );
+        a.answered();
+        a.resume();
+        assert_eq!(a.count(), 1);
+        assert_eq!(a.last()["effort"], effort);
+        assert_eq!(a.last()["resume_session"], session);
+        assert_eq!(a.last()["sandbox"], "read-only");
+        assert_eq!(a.last()["cwd"], a.cwd.to_string_lossy().as_ref());
+    }
 }
 #[test]
 fn test_full_thread_is_paginated_and_included() {

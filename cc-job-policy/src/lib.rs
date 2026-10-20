@@ -84,12 +84,17 @@ pub fn same_model(left: &str, right: &str) -> bool {
 
 /// A saved AI hint is not evidence of an owner's individual effort override.
 /// Standalone explicit CLI requests and unknown models retain their settings.
-pub fn effective_effort(job: &serde_json::Value) -> &str {
-    let saved = job["effort"].as_str().unwrap_or("max");
-    let managed = job["todo_id"].as_u64().is_some_and(|id| id > 0)
+fn managed_job(job: &serde_json::Value) -> bool {
+    job["todo_id"].as_u64().is_some_and(|id| id > 0)
         || job["launch_key"]
             .as_str()
-            .is_some_and(|key| !key.is_empty());
+            .is_some_and(|key| !key.is_empty())
+        || job["model_origin"] == "policy"
+        || job["effort_origin"] == "policy"
+}
+
+pub fn effective_effort(job: &serde_json::Value) -> &str {
+    let saved = job["effort"].as_str().unwrap_or("max");
     let model = job["model"].as_str().unwrap_or("");
     let known = ["gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna"]
         .contains(&model.strip_prefix("openai/").unwrap_or(model))
@@ -102,7 +107,7 @@ pub fn effective_effort(job: &serde_json::Value) -> &str {
             "haiku",
         ]
         .contains(&model.strip_prefix("anthropic/").unwrap_or(model));
-    if managed && known && job["effort_origin"] != "owner_request" {
+    if managed_job(job) && known && job["effort_origin"] != "owner_request" {
         "max"
     } else {
         saved
@@ -119,10 +124,7 @@ pub fn apply_effort_policy(job: &mut serde_json::Value) {
 }
 
 pub fn apply_managed_launch_policy(job: &mut serde_json::Value) {
-    let managed = job["todo_id"].as_u64().is_some_and(|id| id > 0)
-        || job["launch_key"]
-            .as_str()
-            .is_some_and(|key| !key.is_empty());
+    let managed = managed_job(job);
     let automatic = job["model_explicit"] == false || job["model_origin"] == "policy";
     let reader = review_task(
         job["name"].as_str().unwrap_or(""),

@@ -144,6 +144,22 @@ fn same_model(left: &str, right: &str) -> bool {
     cc_job_policy::same_model(left, right)
 }
 
+fn review_exclusions(job: &Value, authors: &[String]) -> Vec<Value> {
+    let mut merged: Vec<Value> = Vec::new();
+    for model in job["review_excluded_models"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .chain(authors.iter().map(String::as_str))
+    {
+        if !merged.iter().any(|old| same_model(s_value(old), model)) {
+            merged.push(json!(model));
+        }
+    }
+    merged
+}
+
 pub fn is_capacity(message: &str) -> bool {
     message
         .to_ascii_lowercase()
@@ -281,11 +297,7 @@ impl Context {
             return Ok(());
         }
         let (sources, authors) = self.review_provenance(job)?;
-        let mut excluded = job["review_excluded_models"]
-            .as_array()
-            .cloned()
-            .unwrap_or_default();
-        excluded.extend(authors.iter().map(|model| json!(model)));
+        let excluded = review_exclusions(job, &authors);
         let managed =
             job["todo_id"].as_u64().is_some_and(|id| id > 0) || !s(job, "launch_key").is_empty();
         let owner_choice =
@@ -417,11 +429,7 @@ impl Context {
             if let Ok((sources, authors)) = self.review_provenance(job) {
                 selection["review_source_jobs"] = json!(sources);
                 selection["review_source_verified"] = json!(!authors.is_empty());
-                let mut excluded = selection["review_excluded_models"]
-                    .as_array()
-                    .cloned()
-                    .unwrap_or_default();
-                excluded.extend(authors.iter().map(|model| json!(model)));
+                let excluded = review_exclusions(&selection, &authors);
                 selection["review_excluded_models"] = json!(excluded);
                 selection["review_author_models"] = json!(authors);
             }

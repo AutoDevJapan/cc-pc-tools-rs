@@ -6766,6 +6766,10 @@ impl Test {
             "--prompt-file",
             p.to_str().unwrap(),
         ];
+        if extra.contains(&"--auto-model") {
+            let model = args.iter().position(|arg| *arg == "--model").unwrap();
+            args.drain(model..model + 2);
+        }
         args.extend(extra);
         self.cli(&args).0
     }

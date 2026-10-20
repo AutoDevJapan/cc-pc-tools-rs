@@ -516,24 +516,15 @@ fn continuation_selection(
             selection[field]=json!(saved);
         }
     }
-    if let Some(origin) = sources
-        .iter()
-        .find_map(|source| source["effort_origin"].as_str())
-    {
-        selection["effort_origin"] = json!(origin);
-    }
-    if let Some(origin) = sources
-        .iter()
-        .find_map(|source| source["model_origin"].as_str())
-    {
-        selection["model_origin"] = json!(origin);
-    }
     for field in ["model", "effort"] {
-        if let Some(saved) = sources
-            .iter()
-            .find_map(|source| source[field].as_str().filter(|value| !value.is_empty()))
-        {
-            selection[field] = json!(saved);
+        if let Some(source) = sources.iter().find(|source| {
+            source[field]
+                .as_str()
+                .is_some_and(|value| !value.is_empty())
+        }) {
+            selection[field] = source[field].clone();
+            let origin = format!("{field}_origin");
+            selection[&origin] = source[&origin].clone();
         }
     }
     let source = sources
@@ -561,6 +552,18 @@ fn continuation_selection(
         .map(|id| json!(id))
         .unwrap_or(Value::Null);
     if crate::restart::session_busy(ctx, s(&selection["resume_session"]), "")? {
+        selection["resume_session"] = Value::Null;
+    }
+    for field in ["model_origin", "effort_origin"] {
+        if selection[field] != "owner_request" {
+            selection[field] = json!("policy");
+        }
+    }
+    let previous_settings = (selection["model"].clone(), selection["effort"].clone());
+    crate::job_policy::apply_managed_launch_policy(&mut selection);
+    if previous_settings != (selection["model"].clone(), selection["effort"].clone()) {
+        // A resumed native conversation may restore its old settings. The
+        // original cwd/scope/history still accompany this fresh continuation.
         selection["resume_session"] = Value::Null;
     }
     Ok(selection)

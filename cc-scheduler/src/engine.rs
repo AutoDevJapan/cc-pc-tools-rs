@@ -37,6 +37,39 @@ fn review_request_inputs(item: &Value) -> Value {
         "options":item["scheduler"]["console_request"]["options"],
         "subwork":item["subwork"],"review_source_jobs":item["review_source_jobs"],"task_type":item["task_type"],"role":item["role"]})
 }
+
+fn selection_origin(
+    field: &str,
+    item: &Value,
+    options: &Value,
+    source: Option<&Value>,
+    selected: &Value,
+) -> Value {
+    let origin = format!("{field}_origin");
+    let matches = |candidate: &Value| {
+        if field == "model" {
+            cc_ask::job_policy::same_model(s(&candidate[field]), s(&selected[field]))
+        } else {
+            candidate[field] == selected[field]
+        }
+    };
+    for candidate in [item, options] {
+        if matches(candidate) && candidate[&origin] == "owner_request" {
+            return json!("owner_request");
+        }
+    }
+    if [item, options]
+        .iter()
+        .any(|candidate| matches(candidate) && candidate.get(&origin).is_some())
+    {
+        return json!("policy");
+    }
+    if source.is_some_and(|source| matches(source) && source[&origin] == "owner_request") {
+        json!("owner_request")
+    } else {
+        json!("policy")
+    }
+}
 /// A running (`doing`) ToDo that was told to wait while its job was finishing must stay waiting: the
 /// job's result must not mark it done/block/todo. Callers only reach this for `doing` rows, so owner
 /// `block`/`todo` rows are never converted. The existing note is kept (the wait is reported via
@@ -1292,6 +1325,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             if source["no_action_recovery"].is_object() {
                 selection["model_explicit"] = source["model_explicit"].clone();
                 if source["model_explicit"] == false
+                    && source["model_origin"] != "owner_request"
                     && !truth(&item["model"])
                     && !truth(&accepted_options["model"])
                 {
@@ -1307,6 +1341,19 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             }
             if truth(&item[k]) {
                 selection[k] = item[k].clone();
+            }
+            let origin = format!("{k}_origin");
+            if accepted_options[&origin] == "owner_request"
+                && item[&origin] != "owner_request"
+                && truth(&accepted_options[k])
+            {
+                selection[k] = accepted_options[k].clone();
+            }
+            if !truth(&item[k])
+                && !truth(&accepted_options[k])
+                && let Some(source) = source.filter(|source| source[&origin] == "owner_request")
+            {
+                selection[k] = source[k].clone();
             }
         }
         // Claude CLI aliases identify the same existing subscription model.
@@ -1328,10 +1375,13 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         } else if ["review-only", "review_only"].contains(&s(&item["role"])) {
             selection["task_type"] = json!("review");
         }
-        if cc_ask::job_policy::review_task("",s(&selection["task_type"]))
-            || s(&item["subwork"]["kind"])=="review" {
-            let sources=cc_ask::job_policy::review_source_jobs(&item,&self.todo()?);
-            let mut excluded=Vec::<String>::new();
+        selection["model_origin"] =
+            selection_origin("model", &item, accepted_options, source, &selection);
+        if cc_ask::job_policy::review_task("", s(&selection["task_type"]))
+            || s(&item["subwork"]["kind"]) == "review"
+        {
+            let sources = cc_ask::job_policy::review_source_jobs(&item, &self.todo()?);
+            let mut excluded = Vec::<String>::new();
             for id in &sources {
                 let author=jobs.iter().find(|job|s(&job["id"])==id)
                     .ok_or(Error("ReviewSourceUnavailable"))?;
@@ -1345,8 +1395,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             let conflict = excluded
                 .iter()
                 .any(|author| cc_ask::job_policy::same_model(author, s(&selection["model"])));
-            let owner_choice = item["model_origin"] == "owner_request"
-                || accepted_options["model_origin"] == "owner_request";
+            let owner_choice = selection["model_origin"] == "owner_request";
             if explicit && owner_choice && conflict {
                 return Err(Error("ReviewModelConflict"));
             }
@@ -1362,11 +1411,6 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             selection["review_excluded_models"] = json!(excluded);
             selection["task_type"] = json!("review");
         }
-        selection["model_origin"] = accepted_options
-            .get("model_origin")
-            .or_else(|| item.get("model_origin"))
-            .cloned()
-            .unwrap_or(json!("policy"));
         if !valid_model(s(&selection["model"])) {
             return Err(Error("ValueError"));
         }
@@ -1401,11 +1445,8 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }
         let mut managed = selection.clone();
         managed["todo_id"] = item["id"].clone();
-        managed["effort_origin"] = accepted_options
-            .get("effort_origin")
-            .or_else(|| item.get("effort_origin"))
-            .cloned()
-            .unwrap_or(Value::Null);
+        managed["effort_origin"] =
+            selection_origin("effort", &item, accepted_options, source, &selection);
         cc_ask::job_policy::apply_managed_launch_policy(&mut managed);
         selection["model"] = managed["model"].clone();
         selection["model_origin"] = managed["model_origin"].clone();

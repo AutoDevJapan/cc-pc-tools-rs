@@ -34,7 +34,8 @@ fn review_preparation_failures_stop_after_three_and_recover_on_new_evidence() {
             f.e.backend.records.push(author.clone());
         }
         for _ in 0..3 {
-            f.dispatch();
+            let error = f.e.dispatch(&f.cfg, &f.pri).unwrap_err();
+            assert!(["ReviewModelConflict", "ReviewSourceUnavailable"].contains(&error.0));
             f.e.backend.clock += 301.;
         }
         let stopped = f.get(1);
@@ -76,7 +77,7 @@ fn bound_finite_review_is_received_once_without_completing_its_parent() {
     record["finite_review"] =
         json!({"todo_id":1,"spec":reader["spec"],"launch_key":record["launch_key"]});
     record["last_message"] =
-        json!("状態: 完了（レビュー作業のみ）\nMust3件。親の実装・配布は未完です。\n状態: 継続中");
+        json!("状態: 完了（レビュー作業のみ）\nMust3件。親の実装・配布は未完です。");
     record["finished_at"] = json!("2026-10-20T12:00:00Z");
     f.e.backend.ps.remove(&1);
     f.reconcile();
@@ -95,8 +96,12 @@ fn bound_finite_review_is_received_once_without_completing_its_parent() {
 fn finite_review_completion_does_not_relaunch_while_its_parent_remains_unfinished() {
     let reader = json!({"id":"reader","todo_id":3067,"task_type":"review","sandbox":"read-only",
         "launch_key":"fixed","finite_review":{"todo_id":3067,"spec":"fixed-head.md","launch_key":"fixed"}});
-    let text = "状態: 完了（レビュー作業のみ）\nMust3件。親の実装と配布は未完です。\n状態: 継続中";
+    let text = "状態: 完了（レビュー作業のみ）\nMust3件。親の実装と配布は未完です。";
     assert_eq!(job_result_outcome(&reader, text), "done");
+    assert_eq!(
+        job_result_outcome(&reader, &format!("{text}\n状態: 継続中")),
+        "todo"
+    );
     assert_eq!(result_outcome(text), "todo");
     let mut writer = reader.clone();
     writer["sandbox"] = json!("workspace-write");
@@ -118,6 +123,24 @@ fn managed_saved_high_is_a_hint_unless_the_owner_override_is_recorded() {
                 .unwrap()
                 .unwrap();
         assert_eq!(prepared["scheduler"]["selection"]["effort"], expected);
+    }
+}
+
+#[test]
+fn scheduler_legacy_gpt_hints_migrate_consistently_with_native_intake() {
+    for origin in [serde_json::Value::Null, json!("policy")] {
+        let mut f = Fixture::new();
+        let mut task = item(1, "other", "todo", &[]);
+        task["model"] = json!("gpt-6-luna");
+        task["effort"] = json!("high");
+        task["model_origin"] = origin;
+        f.put(task);
+        f.dispatch();
+        assert_eq!(f.e.backend.launched.len(), 1);
+        let selected = &f.e.backend.launched[0]["item"]["scheduler"]["selection"];
+        assert_eq!(selected["model"], "gpt-6.1-sol");
+        assert_eq!(selected["effort"], "max");
+        assert_eq!(f.get(1)["model"], "gpt-6-luna");
     }
 }
 
@@ -460,13 +483,15 @@ fn console_subwork_preserves_read_only_and_model_preferences_without_widening_to
         if explicit_todo {
             sub.db["items"][1]["model"] = json!("gpt-6.1-sol");
             sub.db["items"][1]["effort"] = json!("high");
+            sub.db["items"][1]["model_origin"] = json!("owner_request");
+            sub.db["items"][1]["effort_origin"] = json!("owner_request");
         }
         let mut f = Fixture::new();
         f.e.backend.records = sub.jobs.clone();
         write_json(&f.e.todo_path, &sub.db, 1).unwrap();
         let request = json!({"key":"manual:restricted","launch_key":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
             "prompt":"Read only the fixed change.","read_only":true,
-            "options":{"model":"gpt-6-luna","effort":"medium","sandbox":"read-only"}});
+            "options":{"model":"gpt-6-luna","effort":"medium","model_origin":"owner_request","effort_origin":"owner_request","sandbox":"read-only"}});
         f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
             .unwrap()
             .unwrap();
@@ -2934,7 +2959,9 @@ fn test_todo_add_copies_spec_and_does_not_dispatch_plain_item() {
         note: "".into(),
         spec: Some(original.clone()),
         model: Some("mock-model".into()),
+        model_origin: None,
         effort: Some("high".into()),
+        effort_origin: None,
         needs: vec!["civ6".into(), "cargo".into()],
         progress: None,
     };
@@ -2950,7 +2977,9 @@ fn test_todo_add_copies_spec_and_does_not_dispatch_plain_item() {
         note: "".into(),
         spec: None,
         model: None,
+        model_origin: None,
         effort: None,
+        effort_origin: None,
         needs: vec![],
         progress: None,
     };
@@ -3106,6 +3135,8 @@ fn todo1842_explicit_model_overrides_saved_selection() {
     let mut row = item(1, "civ6", "todo", &[]);
     row["model"] = json!("gpt-6-astra");
     row["effort"] = json!("high");
+    row["model_origin"] = json!("owner_request");
+    row["effort_origin"] = json!("owner_request");
     row["scheduler"] = json!({"selection":{"model":"gpt-6.1-sol","effort":"max"}});
     f.put(row);
     f.dispatch();
@@ -3119,58 +3150,72 @@ fn todo1842_explicit_model_overrides_saved_selection() {
 #[test]
 fn durable_automatic_cancel_reconciles_and_prepares_original_work_without_pending() {
     for status in ["cancelled", "canceled"] {
-        let mut f = Fixture::new();
-        f.managed(1, 1, "civ6", 0);
-        let original = f.get(1);
-        let cwd = s(&original["scheduler"]["worktree"]).to_owned();
-        fs::create_dir_all(&cwd).unwrap();
-        let uncommitted = Path::new(&cwd).join("uncommitted.txt");
-        fs::write(&uncommitted, "saved work").unwrap();
-        let source = &mut f.e.backend.records[0];
-        source["status"] = json!(status);
-        source["recovery_cancel"] =
-            json!({"key":"original-intent","committed_at":"2026-10-11T02:01:36+09:00"});
-        source["cwd"] = json!(cwd);
-        source["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
-        source["model"] = json!("gpt-6.1-sol");
-        source["effort"] = json!("high");
-        source["sandbox"] = json!("read-only");
-        let saved_source = source.clone();
-        f.e.backend.ps.clear();
-        // The same job is eligible in the watchdog after item-side intent vanished.
-        let mut copy = f.e.todo().unwrap();
-        cc_todo::recovery::plan(
-            &mut copy,
-            std::slice::from_ref(&saved_source),
-            &Processes::new(),
-            T + 2000.,
-            "",
-        )
-        .unwrap();
-        assert!(copy["items"][0]["stall_recovery"]["pending"].is_object());
-        f.reconcile();
-        let row = f.get(1);
-        assert_eq!(row["status"], "todo");
-        assert_eq!(row["scheduler"]["last_job"], "j1");
-        assert_eq!(
-            row["scheduler"]["worktree"],
-            original["scheduler"]["worktree"]
-        );
-        assert_eq!(row["spec"], original["spec"]);
-        assert_eq!(f.e.backend.records[0], saved_source);
-        f.e.backend.clock += 301.;
-        let prepared =
-            f.e.prepare(&f.get(1), &f.repo.to_string_lossy())
-                .unwrap()
-                .unwrap();
-        assert_eq!(
-            prepared["scheduler"]["resume_session"],
-            saved_source["thread_id"]
-        );
-        assert_eq!(prepared["scheduler"]["selection"]["model"], "gpt-6.1-sol");
-        assert_eq!(prepared["scheduler"]["selection"]["effort"], "high");
-        assert_eq!(prepared["scheduler"]["selection"]["sandbox"], "read-only");
-        assert_eq!(fs::read_to_string(&uncommitted).unwrap(), "saved work");
+        for origin in ["policy", "owner_request"] {
+            let mut f = Fixture::new();
+            f.managed(1, 1, "civ6", 0);
+            let original = f.get(1);
+            let cwd = s(&original["scheduler"]["worktree"]).to_owned();
+            fs::create_dir_all(&cwd).unwrap();
+            let uncommitted = Path::new(&cwd).join("uncommitted.txt");
+            fs::write(&uncommitted, "saved work").unwrap();
+            let source = &mut f.e.backend.records[0];
+            source["status"] = json!(status);
+            source["recovery_cancel"] =
+                json!({"key":"original-intent","committed_at":"2026-10-11T02:01:36+09:00"});
+            source["cwd"] = json!(cwd);
+            source["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
+            source["model"] = json!("gpt-6.1-sol");
+            source["effort"] = json!("high");
+            source["effort_origin"] = json!(origin);
+            source["sandbox"] = json!("read-only");
+            let saved_source = source.clone();
+            f.e.backend.ps.clear();
+            // The same job is eligible in the watchdog after item-side intent vanished.
+            let mut copy = f.e.todo().unwrap();
+            cc_todo::recovery::plan(
+                &mut copy,
+                std::slice::from_ref(&saved_source),
+                &Processes::new(),
+                T + 2000.,
+                "",
+            )
+            .unwrap();
+            assert!(copy["items"][0]["stall_recovery"]["pending"].is_object());
+            f.reconcile();
+            let row = f.get(1);
+            assert_eq!(row["status"], "todo");
+            assert_eq!(row["scheduler"]["last_job"], "j1");
+            assert_eq!(
+                row["scheduler"]["worktree"],
+                original["scheduler"]["worktree"]
+            );
+            assert_eq!(row["spec"], original["spec"]);
+            assert_eq!(f.e.backend.records[0], saved_source);
+            f.e.backend.clock += 301.;
+            let prepared =
+                f.e.prepare(&f.get(1), &f.repo.to_string_lossy())
+                    .unwrap()
+                    .unwrap();
+            assert_eq!(
+                prepared["scheduler"]["resume_session"],
+                if origin == "owner_request" {
+                    saved_source["thread_id"].clone()
+                } else {
+                    Value::Null
+                }
+            );
+            assert_eq!(prepared["scheduler"]["selection"]["model"], "gpt-6.1-sol");
+            assert_eq!(
+                prepared["scheduler"]["selection"]["effort"],
+                if origin == "owner_request" {
+                    "high"
+                } else {
+                    "max"
+                }
+            );
+            assert_eq!(prepared["scheduler"]["selection"]["sandbox"], "read-only");
+            assert_eq!(fs::read_to_string(&uncommitted).unwrap(), "saved work");
+        }
     }
 }
 
@@ -3309,6 +3354,8 @@ fn todo1842_changed_model_does_not_resume_previous_conversation() {
         f.e.edit(&json!(1), |row| {
             row["model"] = json!(requested);
             row["effort"] = json!("high");
+            row["model_origin"] = json!("owner_request");
+            row["effort_origin"] = json!("owner_request");
         })
         .unwrap();
         let prepared =
@@ -3340,6 +3387,8 @@ fn todo1842_setting_change_during_last_sample_defers_and_reprepares() {
         f.e.edit(&json!(1), |row| {
             row["model"] = json!("gpt-6.1-sol");
             row["effort"] = json!("high");
+            row["model_origin"] = json!("owner_request");
+            row["effort_origin"] = json!("owner_request");
         })
         .unwrap();
         f.e.backend.measure_count = 0;

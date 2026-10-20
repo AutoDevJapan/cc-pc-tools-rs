@@ -198,6 +198,9 @@ func allowed(path string) bool {
 	if boundedSchedulerTree(absolute) {
 		return true
 	}
+	if civ6Runtime(absolute) {
+		return true
+	}
 	// A not-yet-created leaf has no physical path, so this precedes physical().
 	if productCIRuntime(absolute, productCIDirectory, legacyMatch) && sourceVerified(base) {
 		return true

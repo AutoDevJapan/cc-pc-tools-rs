@@ -108,10 +108,7 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	}
 	marker := "conversation-owner-reply:" + q.SenderID + ":" + reply.Message + ":" + canonicalHash([]string{req.Text, req.Edited})[:16]
 	if q.Wait && (len(row.QuestionDeliveries) != 0 || len(row.QuestionAnswers) != 0) {
-		answer, b, _, err := r.prepareConversationAnswer(q, reply, req, receipt)
-		if err != nil {
-			return err
-		}
+		answer, b := conversationAnswerBytes(q, reply, req, receipt)
 		if conversationDeliveryRecorded(row, q, answer, b) || conversationAnswerRecorded(row, q, answer, b) {
 			req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
 			return r.save()
@@ -298,9 +295,16 @@ func (r *Runner) deliverContinuedConversationReply(ctx context.Context, row *Tod
 	return r.save()
 }
 
-func (r *Runner) prepareConversationAnswer(q ConversationQuestion, reply conversationReply, req *Request, receipt []byte) (conversationAnswerReceipt, []byte, string, error) {
+// Recovery compares the current acquisition without publishing an immutable
+// command input. Only an actual question-answer operation prepares that file.
+func conversationAnswerBytes(q ConversationQuestion, reply conversationReply, req *Request, receipt []byte) (conversationAnswerReceipt, []byte) {
 	answer := conversationAnswerReceipt{Domain: "discord-conversation-answer-v1", RequestID: q.SenderID, Todo: fmt.Sprint(q.Todo), Thread: q.Thread, Question: q.Message, Fingerprint: q.Fingerprint, QuestionSHA: q.ReceiptSHA, Message: reply.Message, Author: reply.Author, Source: "discord-api-v10", ReplySHA: canonicalHash(reply), Acquired: req.Acquired, ReceiptSHA: bytesHash(receipt)}
 	b, _ := json.MarshalIndent(answer, "", "  ")
+	return answer, b
+}
+
+func (r *Runner) prepareConversationAnswer(q ConversationQuestion, reply conversationReply, req *Request, receipt []byte) (conversationAnswerReceipt, []byte, string, error) {
+	answer, b := conversationAnswerBytes(q, reply, req, receipt)
 	path := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+"-"+canonicalHash([]string{req.Text, req.Edited})[:16]+".ready.json")
 	return answer, b, path, writeConversationOnce(path, b)
 }

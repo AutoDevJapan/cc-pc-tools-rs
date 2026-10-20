@@ -119,6 +119,29 @@ func TestConversationActualCanonicalAnswerReplayNeverRestoresReplacedNote(t *tes
 	}
 }
 
+func TestConversationActualCanonicalRecaptureDoesNotWriteARecoveryProbe(t *testing.T) {
+	f := conversationNativeTest(t)
+	f.ask(t)
+	reply := f.reply(t, 8, "a")
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) != 0 || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
+		t.Fatal("initial canonical delivery unavailable")
+	}
+	before, _ := os.ReadFile(f.r.TodoPath)
+	// Simulate a lost intake index entry, while its canonical receipt and the
+	// immutable ready file survived. A new acquisition has different bytes.
+	delete(f.r.State.Requests, reply.Message)
+	now := time.Now().Add(time.Second)
+	f.r.Now = func() time.Time { return now }
+	health = Health{}
+	f.r.processConversations(context.Background(), &health)
+	after, _ := os.ReadFile(f.r.TodoPath)
+	if len(health.Errors) != 0 || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" || string(before) != string(after) {
+		t.Fatalf("read-only recovery probe conflicted with an earlier acquisition: %v", health.Errors)
+	}
+}
+
 func TestConversationActualCanonicalContinuedDeliveryPreservesOriginalTask(t *testing.T) {
 	f := continuedNative(t)
 	reply := f.reply(t, 8, "a")

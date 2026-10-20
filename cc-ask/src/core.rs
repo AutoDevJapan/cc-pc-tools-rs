@@ -1391,6 +1391,14 @@ pub fn launch_job_with_session(
     if normalized["last_failure_kind"] == "capacity" {
         normalized["last_failure_kind"] = Value::Null;
     }
+    // Only repaired_job's current transition carries this routing hint. A
+    // later ordinary restart of the resulting job re-evaluates the default.
+    if normalized["model_repair_pending"] != true {
+        normalized
+            .as_object_mut()
+            .unwrap()
+            .remove("model_recovery_from");
+    }
     normalized["launch_key"] = json!(key);
     normalized["resume_session"] = session.map(|id| json!(id)).unwrap_or(Value::Null);
     for origin in ["model_origin", "effort_origin"] {
@@ -1554,6 +1562,9 @@ pub fn launch_job_with_session(
             "policy".into()
         },
     ]);
+    if let Some(model) = selection["model_recovery_from"].as_str() {
+        args.extend(["--model-recovery-from".into(), model.into()]);
+    }
     if cc_job_policy::review_task("", s(&selection["task_type"])) {
         if let Some(ids) = selection["review_source_jobs"]
             .as_array()

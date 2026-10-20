@@ -170,7 +170,7 @@ pub fn repaired_job(job: &Value, failure: Failure) -> Value {
         if alternate == model {
             return job;
         }
-        let mut excluded = job["review_excluded_models"]
+        let excluded = job["review_excluded_models"]
             .as_array()
             .cloned()
             .unwrap_or_default();
@@ -179,15 +179,11 @@ pub fn repaired_job(job: &Value, failure: Failure) -> Value {
             .filter_map(Value::as_str)
             .any(|excluded| crate::job_policy::same_model(excluded, alternate))
         {
-            if !excluded
-                .iter()
-                .filter_map(Value::as_str)
-                .any(|excluded| crate::job_policy::same_model(excluded, &model))
-            {
-                excluded.push(Value::String(model.clone()));
-            }
-            job["review_excluded_models"] = Value::Array(excluded);
             job["model"] = alternate.into();
+            // A failed model is not a source author. This one-launch hint must
+            // not accumulate in the permanent independent-review exclusions.
+            job["model_recovery_from"] = model.into();
+            job["model_repair_pending"] = true.into();
         }
         if job["effort"].as_str().is_none_or(str::is_empty) {
             job["effort"] = "max".into();

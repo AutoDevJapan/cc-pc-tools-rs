@@ -169,6 +169,7 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "effort",
                     "effort-origin",
                     "model-origin",
+                    "model-recovery-from",
                     "sandbox",
                     "scope-source",
                     "cwd",
@@ -889,6 +890,15 @@ impl Context {
             }
             job["model_origin"] = json!(origin);
         }
+        if let Some(model) = a.value("model-recovery-from") {
+            if !["gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna"]
+                .iter()
+                .any(|known| cc_job_policy::same_model(model, known))
+            {
+                return Err(Error::new("invalid model recovery hint"));
+            }
+            job["model_recovery_from"] = json!(model);
+        }
         let scope_source = a.value("scope-source").unwrap_or("launcher");
         if !["launcher", "owner_marker", "owner_request"].contains(&scope_source) {
             return Err(Error::new("invalid --scope-source"));
@@ -1185,6 +1195,41 @@ impl Context {
             for origin in ["model_origin", "effort_origin"] {
                 if job[origin].is_null() {
                     job[origin] = json!("policy");
+                }
+            }
+        }
+        // AI children may propagate an existing individual choice, but cannot
+        // turn their own flags into a new owner request. A ToDo's saved request
+        // or the calling parent's matching choice is the accepted provenance.
+        if let Some(caller) = a
+            .value("parent-job-id")
+            .or_else(|| env.get("CC_JOB_ID").map(String::as_str))
+            .filter(|id| valid_job_id(id))
+        {
+            let parent = self.try_load(caller);
+            let todo = if job["todo_id"].as_u64().is_some() && self.todo_store().exists() {
+                let db = self.read_json(&self.todo_store())?;
+                db["items"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .find(|row| row["id"] == job["todo_id"])
+                    .cloned()
+            } else {
+                None
+            };
+            for field in ["model", "effort"] {
+                let origin = format!("{field}_origin");
+                let recorded = parent.iter().chain(todo.iter()).any(|source| {
+                    source[&origin] == "owner_request"
+                        && if field == "model" {
+                            cc_job_policy::same_model(s(source, field), s(&job, field))
+                        } else {
+                            source[field] == job[field]
+                        }
+                });
+                if job[&origin] == "owner_request" && !recorded {
+                    job[&origin] = json!("policy");
                 }
             }
         }

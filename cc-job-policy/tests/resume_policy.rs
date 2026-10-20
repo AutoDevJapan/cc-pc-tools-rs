@@ -138,3 +138,16 @@ fn retired_context_filters_both_saved_ids_but_preserves_the_next_compatible_thre
     assert_eq!(usable_thread_session(&source), Some("new-thread"));
     assert_eq!(usable_resume_session(&source), Some("new-thread"));
 }
+
+#[test]
+fn one_launch_model_recovery_hint_does_not_change_author_exclusions_or_freeze_the_default() {
+    let mut job = json!({"model":"gpt-6-astra","effort":"high","model_explicit":false,
+        "model_origin":"policy","model_recovery_from":"gpt-6.1-sol"});
+    apply_managed_launch_policy(&mut job);
+    assert_eq!(job["model"], "gpt-6-astra");
+    assert_eq!(job["effort"], "max");
+    assert!(job["review_excluded_models"].is_null());
+    job.as_object_mut().unwrap().remove("model_recovery_from");
+    apply_managed_launch_policy(&mut job);
+    assert_eq!(job["model"], "gpt-6.1-sol");
+}

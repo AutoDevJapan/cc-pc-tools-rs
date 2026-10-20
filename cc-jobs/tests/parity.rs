@@ -1997,13 +1997,17 @@ mod capacity_regressions {
 
     #[test]
     fn parented_cli_model_flags_are_hints_unless_an_owner_origin_is_recorded() {
-        for (origin, model, effort) in [
-            ("policy", "gpt-6.1-sol", "max"),
-            ("owner_request", "gpt-6-luna", "high"),
+        for (origin, recorded, model, effort) in [
+            ("policy", false, "gpt-6.1-sol", "max"),
+            ("owner_request", false, "gpt-6.1-sol", "max"),
+            ("owner_request", true, "gpt-6-luna", "high"),
         ] {
             let t = Test::new();
             t.put(job(
-                json!({"id":"launcher","status":"running","pid":std::process::id(),"pid_created":123,"cwd":t.ctx.root}),
+                json!({"id":"launcher","status":"running","pid":std::process::id(),"pid_created":123,
+                    "cwd":t.ctx.root,"model":"gpt-6-luna","effort":"high",
+                    "model_origin":if recorded { "owner_request" } else { "policy" },
+                    "effort_origin":if recorded { "owner_request" } else { "policy" }}),
             ));
             t.run(
                 &[
@@ -2030,6 +2034,40 @@ mod capacity_regressions {
             assert_eq!(saved["model"], model);
             assert_eq!(saved["effort"], effort);
         }
+    }
+
+    #[test]
+    fn model_recovery_hint_survives_registration_without_becoming_author_proof() {
+        let t = Test::new();
+        t.run(
+            &[
+                "--auto-model",
+                "gpt-6-astra",
+                "--model-origin",
+                "policy",
+                "--model-recovery-from",
+                "gpt-6.1-sol",
+                "--effort",
+                "max",
+            ],
+            b"Recover once",
+        )
+        .unwrap();
+        let saved = t
+            .ctx
+            .list_jobs(&HashSet::new())
+            .into_iter()
+            .find(|job| s(job, "name") == "x")
+            .unwrap();
+        assert_eq!(saved["model"], "gpt-6-astra");
+        assert_eq!(saved["model_recovery_from"], "gpt-6.1-sol");
+        assert!(saved["model_repair_pending"].is_null());
+        assert!(saved["review_excluded_models"].is_null());
+        assert_ne!(saved["model_origin"], "owner_request");
+        assert!(
+            t.run(&["--model-recovery-from", "unknown-model"], b"Invalid hint")
+                .is_err()
+        );
     }
 
     #[test]
@@ -12116,10 +12154,12 @@ mod additional_compatibility {
                 for addition in [
                     "                         [--review-source-jobs IDS]\n",
                     "                         [--review-excluded-models MODELS]\n",
+                    "                         [--model-recovery-from MODEL]\n",
                     "                         [--effort-origin {policy,owner_request}]\n",
                     "                         [--model-origin {policy,owner_request}]\n",
                     "  --review-source-jobs IDS\n                        comma-separated durable source jobs, including exited writers\n",
                     "  --review-excluded-models MODELS\n                        comma-separated routing exclusions; not proof of authorship\n",
+                    "  --model-recovery-from MODEL\n                        one-launch routing hint after a managed model failure\n",
                     "  --effort-origin {policy,owner_request}\n                        policy hint or recorded individual owner effort override\n",
                     "  --model-origin {policy,owner_request}\n                        policy hint or recorded individual owner model override\n",
                 ] {

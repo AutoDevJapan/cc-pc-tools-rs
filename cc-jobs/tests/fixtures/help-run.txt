@@ -9,6 +9,7 @@ usage: codex_jobs.py run [-h] --name NAME [--model MODEL] [--effort EFFORT]
                          [--parent-job-id PARENT_JOB_ID]
                          [--review-source-jobs IDS]
                          [--review-excluded-models MODELS]
+                         [--model-recovery-from MODEL]
                          [--effort-origin {policy,owner_request}]
                          [--model-origin {policy,owner_request}]
 
@@ -44,6 +45,8 @@ options:
                         comma-separated durable source jobs, including exited writers
   --review-excluded-models MODELS
                         comma-separated routing exclusions; not proof of authorship
+  --model-recovery-from MODEL
+                        one-launch routing hint after a managed model failure
   --effort-origin {policy,owner_request}
                         policy hint or recorded individual owner effort override
   --model-origin {policy,owner_request}

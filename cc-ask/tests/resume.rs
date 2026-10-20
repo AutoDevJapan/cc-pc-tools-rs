@@ -773,6 +773,33 @@ fn completed_capacity_history_does_not_exempt_an_ordinary_discord_resume() {
     assert_eq!(a.last()["resume_session"], "");
     assert_eq!(source, saved, "original retry budget and evidence must remain intact");
 }
+
+#[test]
+fn an_ordinary_restart_does_not_inherit_a_previous_model_recovery_exclusion() {
+    let mut a = AnswerResume::new();
+    let cwd = a.cwd.to_string_lossy().into_owned();
+    let source = json!({"id":"recovered-worker","status":"succeeded",
+        "model":"gpt-6-astra","effort":"max","model_origin":"policy",
+        "model_recovery_from":"gpt-6.1-sol","task_type":"implementation",
+        "sandbox":"read-only","scope_source":"launcher","cwd":cwd,
+        "thread_id":"recovered-session"});
+    launch_job_with_session(
+        &mut a.ctx,
+        &json!({"id":"200","name":"通常の再開検査"}),
+        "保存成果から通常の作業を続ける。",
+        &source,
+        "0123456789abcdef0123456789abcdef",
+        false,
+        Some(&cwd),
+        Some("resume"),
+        Some("recovered-session"),
+    )
+    .unwrap();
+    assert_eq!(a.count(), 1);
+    assert_eq!(a.last()["model"], "gpt-6.1-sol");
+    assert_eq!(a.last()["resume_session"], "");
+    assert_eq!(a.last()["effort"], "max");
+}
 #[test]
 fn test_doing_todo_updated_after_reply_without_live_worker_does_not_consume_answer() {
     for format in ["%+", "%Y-%m-%d %H:%M"] {

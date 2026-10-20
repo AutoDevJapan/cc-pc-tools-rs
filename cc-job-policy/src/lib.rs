@@ -139,6 +139,9 @@ pub fn apply_managed_launch_policy(job: &mut serde_json::Value) {
         && job["model_origin"] != "owner_request"
         && !reader
         && !capacity_attempt
+        && !job["model_recovery_from"]
+            .as_str()
+            .is_some_and(|model| same_model(model, "gpt-6.1-sol"))
         && !job["review_excluded_models"]
             .as_array()
             .into_iter()

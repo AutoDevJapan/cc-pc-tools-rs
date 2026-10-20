@@ -990,3 +990,8 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 初回compileは新fileの書込先cwd重複で生成前失敗、修正後にGo syscallにGetTokenGroupsメソッドが無いことを確認し、固定TokenGroups/amd64 layout/長さとcount上限を検査するGetTokenInformationへ修正。最終関連検査はWindows runner race4.730s/vet、利用側ci-guest race16.064s/vetすべて成功。新拒否検査は、旧inherited起動へ戻すmutationで実childが受理されRED、復元後GREEN。pristine旧sourceの同新API検査を実行したとはしない。
 - 原source/owner/id/private/admin/nonfork/PR3613/同ref/head0fda/tree0bc5/workflow ba2bcc...とCC1406818713/public/admin/nonforkをcanonical APIで再照合。原AGENTS/CLAUDEはRAM取得/既読同hash。証拠用safe-delete root1d6c71611687185dd5195df9b7a5e8dfへ受領/固定分類/検査logを保持。管理者窓口自身の自己分類はis_system=false/is_administrator=trueで、ホスト上でLocalSystemの実動作を再現したとはしない。
 - 新LocalService logon/実child実行/ACL/終了proof/回収/公式Windows13は専用guestで未実施。別モデルに固定差分をレビューし、Must0後に同clean sourceでruntimeを再生成して実受入へ進む。旧attempt5 failure/原logF121.../回収と取消/route不在、旧clone/原SDK/guard/manifest/未回収/他担当を保持。製品source編集/原PRmerge/Prdは当checkでは行わない。
+### 固定差分3cc609cのレビュー3123を登録
+
+- 固定e568636→3cc609c/tree d096524f、6file+指定局所だけの読取レビュー3123をgpt-6-luna/effort maxで通常add --spec。保存全文一致/dispatchable/未起動todoを確認、登録をMust0にしない。3112受領と修正/関連検査/未読/未実施のguest受入/3123待機を3112/2737/2641 noteへ配送。
+- 証拠D:/CC/Tools/product-ci/evidence/todo-2737-20261020/resume-225749/source-fix-files.private.jsonへ原結果/実model/固定hash分類/RED→GREEN/race-vet/review specをcopy/hash保存。root1d6...は継続用の操作定義/原結果/検査logを保持。今回新たなVM/Cargo/official rerun/route復元/取消/削除は未実行。
+- 次は3123の原応答/実job/対応turn_context/固定head/未読を受領してMustを修正。Must0後に同clean sourceからruntimeを生成し、固定sourceと前回回収を再照合して専用guestの実LocalService/ACL/公式Windowsを確認する。終了前に現job/実HEADのcheckpoint保存と読戻し、todo wait2737 --on3123を記録する。

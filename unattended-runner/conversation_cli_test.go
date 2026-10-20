@@ -478,17 +478,18 @@ func TestConversationCLILoadInitializesOnlyMissingStateInMemory(t *testing.T) {
 	}
 }
 
-func TestConversationCLIUsesExistingRunnerLockAndStatusDoesNotExposeBody(t *testing.T) {
+func TestConversationCLINonStatusUsesExistingLockAndStatusDoesNotExposeBody(t *testing.T) {
 	f := conversationConfigFixture(t)
 	f.state.Requests["500"] = &Request{Text: "private-question-body fixture-token"}
 	conversationWriteJSON(t, f.statePath, f.state)
+	conversationWriteJSON(t, filepath.Join(f.config.Home, "conversation-questions.json"), conversationIndex{Domain: conversationDomain, Since: f.config.Since, Destination: f.destination, Questions: map[string]ConversationQuestion{}})
 	before := conversationFixtureSnapshot(t, f.root)
 	unlock, err := acquire(filepath.Join(f.config.Home, "runner.lock"))
 	if err != nil {
 		t.Fatal("could not hold synthetic runner lock")
 	}
 	var out bytes.Buffer
-	code := conversationCLI([]string{"--config", f.configPath, "status"}, &out)
+	code := conversationCLI([]string{"--config", f.configPath, "replies", "--request-id", "fixture"}, &out)
 	unlock()
 	if code != 2 || out.String() != "busy\n" {
 		t.Fatal("CLI did not reject a concurrent tick with exit 2")

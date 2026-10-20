@@ -827,10 +827,35 @@ func (r *Runner) conversationStatus() (map[string]any, error) {
 		return nil, err
 	}
 	phases := map[string]int{}
-	for _, q := range index.Questions {
+	questions := []map[string]any{}
+	for _, key := range orderedConversationKeys(index) {
+		q := index.Questions[key]
 		phases[q.Phase]++
+		questions = append(questions, conversationQuestionPublic(q))
 	}
-	return map[string]any{"domain": conversationDomain, "questions": len(index.Questions), "phases": phases, "legacy_state": "unchanged", "original_registry_recovered": false}, nil
+	replies := []map[string]any{}
+	intake := []map[string]any{}
+	ids := make([]string, 0, len(r.State.Requests))
+	for id := range r.State.Requests {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		req := r.State.Requests[id]
+		if req == nil || req.Author != r.State.Destination.Owner {
+			continue
+		}
+		intake = append(intake, map[string]any{"message_id": req.Message, "thread_id": req.Thread, "author_id": req.Author, "todo_id": req.Todo, "request_id": req.Conversation, "phase": req.Phase, "source": req.Source, "created_at": req.Created, "edited_at": req.Edited, "acquired_at": req.Acquired, "content_sha256": bytesHash([]byte(req.Text)), "progress_thread_id": req.ProgressThread})
+		if req.Conversation == "" {
+			continue
+		}
+		q, ok := index.Questions[req.Conversation]
+		if !ok || req.Thread != q.Thread || req.Todo != q.Todo {
+			continue
+		}
+		replies = append(replies, map[string]any{"message_id": req.Message, "thread_id": req.Thread, "author_id": req.Author, "todo_id": req.Todo, "request_id": req.Conversation, "phase": req.Phase, "source": req.Source, "created_at": req.Created, "edited_at": req.Edited, "acquired_at": req.Acquired})
+	}
+	return map[string]any{"domain": conversationDomain, "questions": len(index.Questions), "phases": phases, "items": questions, "reply_stages": replies, "intake_stages": intake, "stage_evidence": "saved_state_only", "snapshot_consistency": "independent_saved_files", "legacy_state": "unchanged", "original_registry_recovered": false}, nil
 }
 
 func orderedConversationKeys(index *conversationIndex) []string {

@@ -48,6 +48,9 @@ func TestActiveOnlyUsesWorkerEvidenceAndPreservesDiagnosticView(t *testing.T) {
 	s = collect(context.Background(), f.opts, testNow, probe)
 	keys := []string{}
 	for _, j := range s.Jobs {
+		if j.ProcessingVerified == nil || !*j.ProcessingVerified {
+			t.Fatal("active-only publication must certify the canonical processing predicate including resource and cancellation checks")
+		}
 		keys = append(keys, j.Key)
 	}
 	want := map[string]bool{jobKey("active"): true, jobKey("standalone"): true}

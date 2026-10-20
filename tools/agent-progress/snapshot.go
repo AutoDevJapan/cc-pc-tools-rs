@@ -15,6 +15,9 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 		Tasks: []Task{}, Jobs: []Job{}, Issues: []string{},
 	}
 	var store todoStore
+	if opts.ActiveOnly {
+		s.ProcessingContract = "agent-progress-active-v1"
+	}
 	ts := readProjection(opts.TodoFile, opts.TodoBytes, &store, now, opts.StaleAfter)
 	items := map[int64]todoItem{}
 	if ts.Status == "ok" {
@@ -275,6 +278,10 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 			}
 		}
 		if selectedJobs[id] {
+			if opts.ActiveOnly {
+				verified := processingJob(j, now)
+				j.ProcessingVerified = &verified
+			}
 			s.Jobs = append(s.Jobs, *j)
 		}
 	}

@@ -98,6 +98,9 @@ type WaitReason struct {
 }
 
 type Job struct {
+	// Only active-only observations certify the canonical predicate after all
+	// resource/cancellation/task-wait checks. Diagnostic observations omit it.
+	ProcessingVerified *bool        `json:"processing_verified,omitempty"`
 	Key                string       `json:"job_key"`
 	TodoIDs            []int64      `json:"todo_ids"`
 	PublicLabel        string       `json:"public_label"`
@@ -151,18 +154,19 @@ type DetailRef struct {
 }
 
 type Snapshot struct {
-	SchemaVersion int               `json:"schema_version"`
-	CapturedAt    string            `json:"captured_at"`
-	HeartbeatAt   string            `json:"heartbeat_at"`
-	Status        string            `json:"status"`
-	Consistency   string            `json:"consistency"`
-	Sources       map[string]Source `json:"sources"`
-	Tasks         []Task            `json:"tasks"`
-	Jobs          []Job             `json:"jobs"`
-	TaskTotal     int               `json:"task_total"`
-	JobTotal      int               `json:"job_total"`
-	Truncated     bool              `json:"truncated"`
-	Issues        []string          `json:"issues"`
+	ProcessingContract string            `json:"processing_contract,omitempty"`
+	SchemaVersion      int               `json:"schema_version"`
+	CapturedAt         string            `json:"captured_at"`
+	HeartbeatAt        string            `json:"heartbeat_at"`
+	Status             string            `json:"status"`
+	Consistency        string            `json:"consistency"`
+	Sources            map[string]Source `json:"sources"`
+	Tasks              []Task            `json:"tasks"`
+	Jobs               []Job             `json:"jobs"`
+	TaskTotal          int               `json:"task_total"`
+	JobTotal           int               `json:"job_total"`
+	Truncated          bool              `json:"truncated"`
+	Issues             []string          `json:"issues"`
 }
 
 type Options struct {

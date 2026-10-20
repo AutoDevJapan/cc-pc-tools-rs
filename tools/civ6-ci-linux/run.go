@@ -104,7 +104,7 @@ func runJob(ctx context.Context, planFile, dir, guestFile, pwshFile string) (ret
 	if e = activeContract.Validate(p); e != nil {
 		return e
 	}
-	custom, defaults, e := registrationLabels(k, activeContract.Labels(p))
+	custom, defaults, e := registrationLabels(p, activeContract.Labels(p))
 	if e != nil {
 		return e
 	}
@@ -219,7 +219,11 @@ func runJob(ctx context.Context, planFile, dir, guestFile, pwshFile string) (ret
 	if e = activeContract.Verify(ctx, p, githubRead); e != nil {
 		return e
 	}
-	if e = checkQueue(ctx, p, custom, githubRead); e != nil {
+	queueLabel := custom
+	if k == KindRust {
+		queueLabel = jobLabel(p)
+	}
+	if e = checkQueue(ctx, p, queueLabel, githubRead); e != nil {
 		return e
 	}
 	rs, e := repoRunners(ctx)
@@ -228,7 +232,7 @@ func runJob(ctx context.Context, planFile, dir, guestFile, pwshFile string) (ret
 	}
 	for _, r := range rs {
 		for _, l := range r.Labels {
-			if l.Name == custom {
+			if l.Name == queueLabel {
 				return errors.New("dedicated runner label already has a runner")
 			}
 		}

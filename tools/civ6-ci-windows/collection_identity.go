@@ -16,16 +16,16 @@ func checkCollectionRemote(p Plan, read readAPI) error {
 		return errors.New("real collection identity required")
 	}
 	var repo struct {
-		ID            int64
-		FullName      string `json:"full_name"`
-		Private, Fork bool
-		Owner         struct{ Login string }
-		Permissions   struct{ Admin bool }
+		ID          int64
+		FullName    string `json:"full_name"`
+		Fork        bool
+		Owner       struct{ Login string }
+		Permissions struct{ Admin bool }
 	}
 	if e := read("repos/"+repository, &repo); e != nil {
 		return e
 	}
-	if repo.ID != repositoryID || repo.FullName != repository || repo.Owner.Login != "AutoDevJapan" || !repo.Private || repo.Fork || !repo.Permissions.Admin {
+	if repo.ID != repositoryID || repo.FullName != repository || repo.Owner.Login != "AutoDevJapan" || repo.Fork || !repo.Permissions.Admin {
 		return errors.New("collection repository identity rejected")
 	}
 	var run struct {

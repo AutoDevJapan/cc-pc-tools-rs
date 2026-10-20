@@ -18,7 +18,8 @@ fn main() {
     }
     if args.iter().any(|a| a == "account") {
         let at = chrono::Local::now().timestamp() as f64;
-        if args.iter().any(|a| a == "openai") {
+        if args.iter().any(|a| a == "openai") && std::env::var("CC_JOBS_FIXTURE_MODE")
+            .is_ok_and(|mode|mode.starts_with("capacity-")) {
             println!(
                 "{}",
                 json!({"accounts":(1..=4).map(|n| json!({

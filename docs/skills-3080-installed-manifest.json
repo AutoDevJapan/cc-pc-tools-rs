@@ -1,0 +1,452 @@
+{
+  "targets": [
+    {
+      "name": "codebase-design",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "同じ不変条件を5つの呼出し元が別々に守る設計を、公開面から作り直す。",
+      "negative": "業務上の顧客と利用者の違いを用語集へ整理するだけの依頼。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "2c20617f87ec8af6a434859f381b2f061a69b530444e74eb39e78bb016a6d1e2"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "d8cfdd4851716ff9da3afda0c2a257a7989be375b2c37c4f8353fd2de7b34fd8"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "712192fe2a3f1678eec5fdafee99604cd42f243d87274c70f8b74201574fc60d"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "8fb5ff073d8246e6af795ceecc59f3eb2c21b7a94355f3e486a19ef8c849b65f"
+        }
+      ]
+    },
+    {
+      "name": "diagnosing-bugs",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "同じ入力でも時々古い保存内容が戻る障害を再現し、修正の有効性を確かめる。",
+      "negative": "仕様の決まった新規ボタンのラベルだけを変更する。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "849198df88cdb65fd0d97236604c1fca7ff2f22d2f705f9724a800d0266b118d"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "4d0db72acc351ed25e2b49d373dcfd51d1ee77441a4d643e7deacf8887daf8bf"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "fb602ef7496047e0d306a3a5773316d5eef430bfc258771e2a0e907964cd31ff"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "4f05d718b9a8b5ba0edf7cdddc5bd9a3989251c6976598a85c7abda6e611cd4f"
+        }
+      ]
+    },
+    {
+      "name": "writing-fragments",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "記事にする前に、開発中に気付いた出来事を短い文章の断片として集めたい。",
+      "negative": "既にある記事の見出しと段落順だけを整える。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "298b0edd23df229183630de592ed8aa4289233560f2040691f6eb77caeaad4ea"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "e0bfcff1b3882cdc91be14a13b6aa0ef7659aae3fee89b25a1fa200cfd48b28d"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "2f65fca80818b1f59ea2877a82e4994244a6883d222f883f1b976acd2476ef8c"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "9f5354c051d06cb4323378f9f94a19e69477ba3b6793f8712363de8ce83edf0e"
+        }
+      ]
+    },
+    {
+      "name": "writing-shape",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "経験のメモから、初めて読む人に伝わる記事の導入と段落順を作る。",
+      "negative": "材料がまだなく、本人の経験を聞き出すところから始める。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "f5e6c57bdd85178ace4a260c92f46da6b64ddee18215b461d875739c68976f72"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "7fdc677cee2cb09937ec95ca9da7a6b4002cb4a8e5e17225c25f945c742891d7"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "aab8373a2c78d4425a19dd3aa83713fce672b246df4650835f26f4b0ddf3105f"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "786d78a35dd02d944b1f96183858a1259874210f847d1d1c6958d674b515178e"
+        }
+      ]
+    },
+    {
+      "name": "migrate-to-shoehorn",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "既存のTypeScriptテストでRequestへの二重キャストを、部分入力と故意の不正入力に分ける。",
+      "negative": "Goで新しい検査用ツールを作る。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "de4da4c11d924fac79c924b2ee3d2db4a5cb98386eb490a599119463d036ae72"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "5e4f26af1be35c7ddbe539843fa27f3683be8a3463179e4f1acdd5cfbad0cc29"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "f5d29001bc780bdd9c14a1b68123065a1358a9b8303987c2f9aa896d0e39a8f5"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "d65f5b0ec9cd3c6c87f164d00a935a87b08948a700e0f8646f6a54a7c538bca6"
+        }
+      ]
+    },
+    {
+      "name": "scaffold-exercises",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "既存の演習教材に、説明・問題・解答を分けた第5章を追加する。",
+      "negative": "本番アプリのディレクトリを分割する。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "75f5c9d771606fb9762f16522efc954df11c324f87148d8ff069bce166257de9"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "e83c06ff6b02cde64f1bf2a1a1e2b280efaf46b0510d7901170cb9db49c43790"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "4180f1a5e107537445ab75dbf2dcc49f36a0d1026a5b56f6f5608e28b05d5a80"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "87311132354f2a8ed9e9d4ac2804322d5854e89b42b823224e2e0017d9c0fe18"
+        }
+      ]
+    },
+    {
+      "name": "teach",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "仕事でSQLを読む必要があるので、毎回短い問題で理解を確かめながら教えてほしい。",
+      "negative": "SQL構文を1つだけ調べて答える。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "550482c2d674b085c9043b87bfdc14a8f2ec453c736119e7fcbb1e9332bffeba"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "6f65f4e8838c620f0cfd9ce963488fd3f704f68b0d9d735009cb987ee48dbff2"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "f60c9f9d1392b54a96669f4b6173ae6036701cd8e9d690c0ad07615ba64e9653"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "4de7e45d00c801140caa395f1c8b61d17f72eb9eff1883bcd24672f6b12ad442"
+        }
+      ]
+    },
+    {
+      "name": "to-questionnaire",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "運用担当へ、初期負荷と障害時の制約をまとめて確認する質問票を作る。",
+      "negative": "この製品の料金をa/bで本人に決めてもらう正式なDiscord質問を送る。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "b5eb929842ee0e93d867c5e906d183d350f2f2d149eaeaa86967d94d8eda1d3b"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "d2ee13745d3cb262bdf61206fb4c1eba59a59dc435cbac3e35fff65defdcf41c"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "caafc296af65fdea36eb9a9e9c544d4a35272ed412af39e8c558b1f7ce45bd5b"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "d3789587ced4e153c85c7cef7b50f9661414ec6bafb0a38b457ccee8db07a046"
+        }
+      ]
+    },
+    {
+      "name": "setup-ts-deep-modules",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "TypeScriptのパッケージ内部へ別パッケージのテストが直接importしているのをCIで検出する。",
+      "negative": "Rustのpub設定を見直す。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "29acca66ac99d4532e2a6f0370d8125d7cba1e87c9ac66573203c75189d3e6c7"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "c614cfe26204922ac744e4f2a4bff3b41077d0e088b8c049bc1ad9bbc607fa0f"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "bc982d119deff4e3fc71247e3c1677f454008354d5e42d8db28d231d23b2a005"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "f82a47b4f7304098f4937da9a9294cfc8f45ad354d7fe310e4460e6fb5164540"
+        }
+      ]
+    },
+    {
+      "name": "setup-pre-commit",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "既存Node案件に、変更したファイルの整形と関連検査をコミット前に実行する設定を追加する。",
+      "negative": "Go案件の全件検査をコミットのたびに義務化する。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "c9819d7f1e3b198064edc1faa3154224ed67395e9f07f5d3cea4b67cf0a11a98"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "866496d7da1d226cc85361622786e9a17449c581035f55d7657cbcf155a9b218"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "0ec0336cffae65ee5ff6c32a223543cca92bf214675fc77557cd05893daddda3"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "5f9248989a3752d5dbef8acbdea8d068b4d7bd500c584579fa31e4ed02f3a8e5"
+        }
+      ]
+    },
+    {
+      "name": "triage",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "外部の不具合報告について、既存実装と重複するか再現できるかを確認し、実装用の依頼にまとめる。",
+      "negative": "仕様と受入条件が決まっている自分の実装タスクを毎回選別し直す。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "917b0baf74be583e74f110857ed45df2766617f75c00baf61fd136d7af515edf"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "c240fda1521f0e1a9889472123822f7f900dd611cf8beab25c6d6e1d8dd01fdf"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "95793f929efbff2a4ee4c5ae88b73250e9d4ba8d4259cd2fbec7dbb1f2f29655"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "a2514c73970dd26a33d1d6918495b7f03a5fe6b932c8117651b1c0f07f80a828"
+        }
+      ]
+    },
+    {
+      "name": "wayfinder",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "要件がまだ固まっていない大きな移行について、先に解くべき設計判断と調査を整理する。",
+      "negative": "既に委譲された有限な実装を、計画だけ作って他の担当へ渡し直す。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "9be7b478c389605a24517d27752f278933588da97a1b5921b165f455edf4c5b7"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "fcf25843ee1af232b84f08b874af92fa3a1cb9fd95bc21d1d89f2157e2d04e61"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "6b576f3927c440b3ab111dcd62fffb757ed39ab6656f613a97fa4cebdf3b9f86"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "628a969cfd49f65a379a2dee67d1d43f5c9d568e3fcc822c0b3c2554a2f5780f"
+        }
+      ]
+    },
+    {
+      "name": "grilling",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "この計画の弱い前提を順に質問して、必要な要件が抜けていないか確かめてほしい。",
+      "negative": "実装方法を担当が決められる修正で、毎回本人へ承認を求める。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "befdff1e27a1dfe2a294d5871169ac1afe16d983911daa4f32627514a48c1e15"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "030c760fe0dfe81986a46013de38ca2cb61f7d44d083713a465fd4e2dd24ae92"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "ae5d231469dceaae3e4e823b3be1b70c29c63ff0d616c728b9fda8f877ca95c6"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "11e30c4bba0956bd257b5f550816d498a6bd95a1d5659c51b6f725098afaa092"
+        }
+      ]
+    },
+    {
+      "name": "loop-me",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "毎週届く依頼の整理を自動化したいので、何で起動し、何を作り、どこだけ本人が決めるか仕様にしたい。",
+      "negative": "このPCの既存ジョブが止まったので、スケジューラから再開する。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "e44d1cc3e760fb86ac42964c2a5f1fcac511715db50fb375f3f7be814de1eaa7"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "511603381568e56cb7a0e2cc2814cc80d9156b0706ec74235e3e58a5efd724a5"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "9ea61da7478953c776a9d1e542e6b7227a0a388693aecdf2479e0eebf24aa007"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "4bfdcb8c6061af038615b8b5f61a54bb136135568eb0c63b4c2a48e8914745d0"
+        }
+      ]
+    }
+  ]
+}

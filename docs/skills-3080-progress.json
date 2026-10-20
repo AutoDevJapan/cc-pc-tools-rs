@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-20T12:13:06.8946573Z",
+  "observed_at": "2026-10-20T13:31:41.0529645Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "owner chose broad adoption; candidate authoring ongoing; central write held by unverified protection classification",
+  "phase_b": "First14 installed and discovered; broad adoption continues without count cap",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -287,8 +287,8 @@
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
   "candidate_designs": 14,
-  "independently_accepted": 0,
-  "installed": 0,
+  "independently_accepted": 14,
+  "installed": 14,
   "integrated": 0,
   "excluded": 0,
   "units": {
@@ -305,11 +305,11 @@
   },
   "limits": [
     "Metadata statistics are not installed Skills or semantic/license approval.",
-    "The ten candidate designs are one batch; no total count cap.",
-    "No central original, existing junction, protection code, UI, model/GPU, or external source script was changed.",
-    "Installed remains zero; structure/discovery/application acceptance await verified original placement.",
-    "Archive source-readme warning flag occurs in 59416 records; this is not a per-record malicious verdict or a blanket exclusion.",
-    "6mile truncated API tree was completed by all fixed-commit git subtrees/ls-tree with matching root tree SHA."
+    "The14 candidate designs are the first deployment batch; no total count cap.",
+    "New14 central directories were created by separately allowed exact apply; existing originals, junctions, protection code, UI and source scripts were unchanged.",
+    "14installed,14fresh Codex metadata matches,0parse errors; real-turn/context acceptance remains pending.",
+    "Archive warning59416 is not a per-record malicious verdict or blanket exclusion.",
+    "6mile truncated API tree completed by matching fixed git subtrees/ls-tree."
   ],
   "entrypoint_assessment": {
     "source": "mattpocock/skills",
@@ -321,8 +321,8 @@
     "covered_by_prior3048": 1,
     "policy_rewrite_required": 4,
     "rights_hold": 0,
-    "independently_accepted": 0,
-    "note": "Candidate dispositions are proposals. None counts as a new central change."
+    "independently_accepted": 14,
+    "note": "14new adaptations installed;19integration proposals and4policy rewrites remain unapplied. Source assessments retain proposal-time state."
   },
   "docker_entrypoint_assessment": {
     "source": "docker/skills",

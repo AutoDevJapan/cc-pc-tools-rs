@@ -1,0 +1,38 @@
+{
+  "todo": 3080,
+  "installed_at": "2026-10-20T13:31:41.0345478Z",
+  "source_head": "079f9d9aa04251e912806fd82cb9aad6716cd2f8",
+  "bundle_sha256": "dcf36e99dfb3cec2d2372d4f9e3f6dc542e07e23b3cb49411edaff80b295dd62",
+  "review": {
+    "todo": 3104,
+    "must": 0,
+    "response_sha256": "fd43c9b2482446f8d6d755e8e8df09a76e0b25fba923bb01062332085f960fb0",
+    "read_scope": "14 generated entrypoints full; five upstream bodies full, other nine partial",
+    "scope": "Fixed14-target payload and new-only installer; not all source corpus"
+  },
+  "execution": "Separate normal execution review allowed exact new-only apply command, exit0; guard classification unchanged",
+  "journal_sha256": "8246ab7ff3a1be52a07b0376febedee8c629f69af6128b828505a3eb669f54ea",
+  "installed": 14,
+  "files_readback_verified": 70,
+  "integrated": 0,
+  "excluded": 0,
+  "installed_validator": "PASS; actual D:/CC/Skills files",
+  "manifest": "skills-3080-installed-manifest.json",
+  "discovery": {
+    "method": "fresh official installed Codex app-server; initialize + skills/list forceReload",
+    "before_metadata": 297,
+    "after_metadata": 311,
+    "target_matches": 14,
+    "parse_errors": 0,
+    "enabled_count": 14,
+    "model_called": false
+  },
+  "junctions_preserved": 3,
+  "prior3048": "Separate previous new4/improved10; retained unchanged",
+  "real_turn_acceptance": "pending",
+  "pending_improvements": "3104 Suggestions/Nits retained; Must0 permits current fixed payload; no new bundle silently substituted",
+  "overall_complete": false,
+  "remaining_records": 73206,
+  "remaining_definition": "73220 source occurrences minus14 specific installed upstream entrypoints; duplicates are not implicitly accepted",
+  "catalog_total": 73220
+}

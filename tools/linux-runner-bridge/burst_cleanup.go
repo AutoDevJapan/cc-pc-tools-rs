@@ -17,6 +17,7 @@ type burstRetryPolicy struct {
 	now    func() time.Time
 	pause  func(time.Duration)
 	record func(string)
+	save   func(*burstDrainState) error
 }
 
 // One retained transaction covers discovery, remote withdrawal, kernel drain,
@@ -27,7 +28,7 @@ func resumeBurstCleanup(s *burstDrainState, d burstCleanupOps) (bool, error) {
 	}
 	if s.ID == 0 && !s.RegistrationRemoved {
 		id, err := d.lookup()
-		if errors.Is(err, errRunnerMetadataNotFound) {
+		if errors.Is(err, errOwnedRunnerAbsent) {
 			s.RegistrationRemoved, s.LabelsWithdrawn = true, true
 		} else if err != nil {
 			return false, err
@@ -60,6 +61,11 @@ func resumeBurstCleanup(s *burstDrainState, d burstCleanupOps) (bool, error) {
 func retryBurstCleanup(s *burstDrainState, d burstCleanupOps, p burstRetryPolicy, deadline time.Time) (bool, error) {
 	for {
 		ok, err := resumeBurstCleanup(s, d)
+		if p.save != nil {
+			if saveErr := p.save(s); saveErr != nil {
+				ok, err = false, saveErr
+			}
+		}
 		if ok || err == nil {
 			return ok, err // A confirmed assignment is handled by the caller.
 		}

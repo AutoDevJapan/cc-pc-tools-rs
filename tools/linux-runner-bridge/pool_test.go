@@ -102,6 +102,22 @@ func TestQueueDeletedBranchDoesNotStrandUnrelatedWork(t *testing.T) {
 	}
 }
 
+func TestMissingMainRefIsNotReportedAsADrainedQueue(t *testing.T) {
+	api := func(path string, out any) error {
+		if strings.Contains(path, "/actions/runs?status=") {
+			return json.Unmarshal([]byte(fmt.Sprintf(`{"total_count":1,"workflow_runs":[{"id":1,"head_sha":%q,"head_branch":%q,"event":"push","head_repository":{"full_name":%q}}]}`, strings.Repeat("a", 40), normalBranch, repo)), out)
+		}
+		if strings.Contains(path, "/git/ref/heads/"+normalBranch) {
+			return errRunnerMetadataNotFound
+		}
+		t.Fatal("unknown main was admitted to jobs")
+		return nil
+	}
+	if _, err := currentQueue(api, time.Now()); err == nil {
+		t.Fatal("missing main became successful empty queue")
+	}
+}
+
 func TestBurstPoolDoesNotStartWithoutFreshCapacityOrAfterDeadline(t *testing.T) {
 	for _, test := range []string{"resource", "deadline", "metadata", "host-error", "limit"} {
 		t.Run(test, func(t *testing.T) {

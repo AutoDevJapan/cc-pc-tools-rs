@@ -73,7 +73,7 @@ container removal. It never exports `/runner`, config or credentials. The pool
 itself reuses its container and does not delete it. A stale `.runner` after a
 failed session retains the container and fails registration with 96; do not
 delete that file to force reuse. Archive/verify idle first, then recreate only
-the owned container. Normal successful ephemeral local removal is verified by
+the owned container when there is no valid recovery binding. Normal successful ephemeral local removal is verified by
 the finite acceptance; interrupted reuse is not silently accepted.
 
 SDK cleanup probes file existence/type only and succeeds idempotently when
@@ -86,6 +86,38 @@ adopting/deleting a same-name registration. An ACK-bound pre-job failure gets
 the same cleanup, and completed jobs keep their original result after cleanup.
 Worker presence uses exit 73, unknown probes remain errors, and unverified
 configuration setup uses 71, distinct from SDK failure class 39.
+
+The ten-minute value is the retry window, not a hard wall-clock deadline for a
+whole cleanup: one already-started attempt has bounded API, three-minute group
+wait and SDK timeouts, giving a conservative overall bound of about 22 minutes.
+The task uses ExecutionTimeLimit=PT0S so neither this cleanup nor an accepted CI
+job is terminated by the scheduler. Idle success 75 accepts child results
+0/130/143/255 only after verified withdrawal, group drain and SDK removal. Other
+results (including 137, which can indicate a forced/OOM exit) retain failure.
+
+## Recovery after an interrupted additional session
+
+Before acknowledging registration, the host publishes a private binding of
+the exact GitHub runner ID, fixed runner/container names and immutable Docker
+container ID under `.ci-runtime/burst-cleanup`. No token/key/config contents
+are stored. Stage snapshots are synced and atomically linked into new names;
+existing records must match and are never overwritten. Incomplete temporary
+records are not authority. Completed history is bounded to eight sessions;
+retirement is committed before reclaiming old stages so interrupted retention
+cannot make a completed session appear pending.
+
+The normal `pool` entry resumes an unfinished binding before requesting another
+registration. Container ID and the successfully read GitHub inventory must
+agree with that binding (or confirm its ID/name is absent). A different
+same-name ID, another container, unknown/ambiguous metadata or unbound SDK files
+fail closed. A live old RPC host or assigned Worker is left to finish. A saved
+process-exit flag never replaces a fresh kernel/supervisor-lock observation.
+Known remote stages and idempotent SDK removal resume through the same finite
+cleanup transaction, then the ordinary resource/current-head admission runs
+again. Direct `host normal` does not bypass pending recovery; use `pool`.
+Unbound configuration failures still require investigation rather than adopting
+a registration by its display name. Status 76 means configuration is present
+and quiescent; 71/73/74/75 keep the setup/Worker/unverified/idle meanings above.
 
 Keep the repeating task disabled while the existing highest-priority finite
 operation (currently ToDo3059) needs its shared resource window. Coordinate that

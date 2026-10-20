@@ -20,6 +20,7 @@ const burstPoolLimit = 16
 const burstPoolWindow = 2 * time.Hour
 
 var errRunnerMetadataNotFound = errors.New("runner metadata not found")
+var errOwnedRunnerAbsent = errors.New("owned runner absent from successful inventory")
 
 type queueRun struct {
 	ID             int64  `json:"id"`
@@ -276,6 +277,15 @@ func burstPoolMain(args []string) int {
 		return 1
 	}
 	defer lock.Close()
+	ready, err := prepareBurstRecovery()
+	if err != nil {
+		recordBurstPool("owned-recovery-unverified", 0, queueSnapshot{ObservedAt: time.Now().UTC(), AdmissionError: err.Error()})
+		return burstUnverifiedExit
+	}
+	if !ready {
+		recordBurstPool("owned-recovery-wait", 0, queueSnapshot{ObservedAt: time.Now().UTC()})
+		return 0
+	}
 	return supplyBurstPool(burstPoolDeps{
 		maxHosts: limit,
 		now:      time.Now,
@@ -312,18 +322,20 @@ func burstPoolMain(args []string) int {
 			c.Stdout, c.Stderr = os.Stdout, os.Stderr
 			return exitCode(c.Run())
 		},
-		record: func(stage string, ended int, q queueSnapshot) {
-			record := struct {
-				Stage      string        `json:"stage"`
-				ObservedAt time.Time     `json:"observedAt"`
-				HostsEnded int           `json:"hostsEnded"`
-				Queue      queueSnapshot `json:"queue"`
-			}{stage, time.Now().UTC(), ended, q}
-			b, err := json.MarshalIndent(record, "", "  ")
-			if err == nil {
-				_ = os.WriteFile(filepath.Join(".ci-runtime", "pool-status.private.json"), b, 0600)
-			}
-			fmt.Printf("linux-burst-pool stage=%s hosts-ended=%d queued=%d\n", stage, ended, q.Queued)
-		},
+		record: recordBurstPool,
 	})
+}
+
+func recordBurstPool(stage string, ended int, q queueSnapshot) {
+	record := struct {
+		Stage      string        `json:"stage"`
+		ObservedAt time.Time     `json:"observedAt"`
+		HostsEnded int           `json:"hostsEnded"`
+		Queue      queueSnapshot `json:"queue"`
+	}{stage, time.Now().UTC(), ended, q}
+	b, err := json.MarshalIndent(record, "", "  ")
+	if err == nil {
+		_ = os.WriteFile(filepath.Join(".ci-runtime", "pool-status.private.json"), b, 0600)
+	}
+	fmt.Printf("linux-burst-pool stage=%s hosts-ended=%d queued=%d\n", stage, ended, q.Queued)
 }

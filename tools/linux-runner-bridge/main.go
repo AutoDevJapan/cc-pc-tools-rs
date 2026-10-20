@@ -66,6 +66,8 @@ type host struct {
 	jobAdmission                        atomic.Int32
 	registered                          chan struct{}
 	lookupRegistration                  func() (int64, error)
+	persistRegistration                 func(int64) error
+	containerID                         string
 }
 
 func command(name string, args ...string) *exec.Cmd {
@@ -402,6 +404,9 @@ func validateNormalContainerRuntime(name string, run dockerOutput, pause func(ti
 
 func verifyNormalContainer() error {
 	return verifyNormalContainerWith(normalContainer, func(args ...string) (string, error) {
+		if compiledNormalProfile.ephemeral {
+			return burstOutput(20*time.Second, docker, args...)
+		}
 		return output(command(docker, args...))
 	})
 }
@@ -568,6 +573,12 @@ func (h *host) serve(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, "registration not confirmed", 503)
 				return
 			}
+			if h.persistRegistration != nil {
+				if err := h.persistRegistration(id); err != nil {
+					http.Error(w, "registration recovery receipt unavailable", 503)
+					return
+				}
+			}
 			h.boundRunnerID.Store(id)
 			if h.registered != nil {
 				select {
@@ -576,10 +587,11 @@ func (h *host) serve(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			if data, err := json.Marshal(struct {
-				ID   int64     `json:"runnerId"`
-				Name string    `json:"name"`
-				At   time.Time `json:"at"`
-			}{id, h.profile.runner, time.Now().UTC()}); err == nil {
+				ID          int64     `json:"runnerId"`
+				Name        string    `json:"name"`
+				At          time.Time `json:"at"`
+				ContainerID string    `json:"containerId,omitempty"`
+			}{id, h.profile.runner, time.Now().UTC(), h.containerID}); err == nil {
 				_ = os.WriteFile(filepath.Join(".ci-runtime", "burst-registration.private.json"), data, 0600)
 			}
 			reportStage("burst-registration-bound")
@@ -940,6 +952,12 @@ func hostMain(args []string) int {
 		return 1
 	}
 	h := host{key: hex.EncodeToString(key), mode: mode, revision: revision, branch: branch, target: target, profile: compiledNormalProfile, registered: make(chan struct{}, 1)}
+	callOutput := func(name string, args ...string) (string, error) {
+		if mode == "normal" && h.profile.ephemeral {
+			return burstOutput(30*time.Second, name, args...)
+		}
+		return output(command(name, args...))
+	}
 	if mode == "finite" && h.current() != nil {
 		return 1
 	}
@@ -970,7 +988,7 @@ func hostMain(args []string) int {
 		}
 		reportStage("target-validated")
 	}
-	permission, e := output(command(gh, "repo", "view", repo, "--json", "viewerPermission", "--jq", ".viewerPermission"))
+	permission, e := callOutput(gh, "repo", "view", repo, "--json", "viewerPermission", "--jq", ".viewerPermission")
 	if e != nil || permission != "ADMIN" {
 		reportStage("oauth-repository-permission-failed")
 		return 1
@@ -984,6 +1002,21 @@ func hostMain(args []string) int {
 		}
 		reportStage("normal-container-verified")
 	}
+	var journal *burstJournal
+	if mode == "normal" && h.profile.ephemeral {
+		j, err := runtimeBurstJournal()
+		if err != nil {
+			reportStage("owned-recovery-identity-unavailable")
+			return burstUnverifiedExit
+		}
+		if _, pending, err := j.pending(); err != nil || pending {
+			reportStage("use-pool-for-owned-pending-recovery")
+			return burstUnverifiedExit
+		}
+		journal = &j
+		h.containerID = j.containerID
+		h.persistRegistration = func(id int64) error { return j.save(&burstDrainState{ID: id}) }
+	}
 	l, e := net.Listen("tcp", listen)
 	if e != nil {
 		reportStage("bridge-listen-failed")
@@ -995,7 +1028,7 @@ func hostMain(args []string) int {
 	// The random bridge key and runner token stay in RAM and the official config
 	// process. Neither appears in command arguments, Docker config or host files.
 	for {
-		configured, checkErr := output(command(docker, "exec", runnerContainer, "/bin/sh", "-c", "test -f /runner/.runner && printf configured || printf unconfigured"))
+		configured, checkErr := callOutput(docker, "exec", runnerContainer, "/bin/sh", "-c", "test -f /runner/.runner && printf configured || printf unconfigured")
 		if checkErr != nil {
 			reportStage("runner-container-check-failed")
 			_ = s.Close()
@@ -1005,7 +1038,7 @@ func hostMain(args []string) int {
 		if configured != "configured" {
 			reportStage("runner-token-request")
 			var tokenErr error
-			token, tokenErr = output(command(gh, "api", "--method", "POST", "repos/"+repo+"/actions/runners/registration-token", "--jq", ".token"))
+			token, tokenErr = callOutput(gh, "api", "--method", "POST", "repos/"+repo+"/actions/runners/registration-token", "--jq", ".token")
 			if tokenErr != nil || token == "" {
 				reportStage("runner-token-request-failed")
 				_ = s.Close()
@@ -1027,7 +1060,7 @@ func hostMain(args []string) int {
 			}
 			done := make(chan int, 1)
 			go func() { done <- exitCode(c.Wait()) }()
-			code = awaitBurstProcess(done, h.registered, h.boundRunnerID.Load, func() bool { return h.jobAdmission.Load() == 1 }, func() bool { return h.jobAdmission.CompareAndSwap(0, 2) || h.jobAdmission.Load() == 2 })
+			code = awaitBurstProcess(done, h.registered, h.boundRunnerID.Load, func() bool { return h.jobAdmission.Load() == 1 }, func() bool { return h.jobAdmission.CompareAndSwap(0, 2) || h.jobAdmission.Load() == 2 }, journal)
 		} else {
 			code = exitCode(c.Run())
 		}

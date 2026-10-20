@@ -173,6 +173,7 @@ func TestIdleDrainResumesItsCommittedStage(t *testing.T) {
 	withdraws, removals, stops, reads := 0, 0, 0, 0
 	missing := false
 	r := burstRunner{ID: 43, Name: p.runner}
+	r.Labels = append(r.Labels, struct{ Name, Type string }{normalLabel, "custom"})
 	d := burstDrainOps{
 		find:     func() (burstRunner, error) { return r, nil },
 		withdraw: func(int64) error { withdraws++; return nil },
@@ -184,7 +185,11 @@ func TestIdleDrainResumesItsCommittedStage(t *testing.T) {
 			if missing {
 				return burstRunner{}, errRunnerMetadataNotFound
 			}
-			return r, nil
+			current := r
+			if withdraws > 0 {
+				current.Labels = nil
+			}
+			return current, nil
 		},
 		workerIdle: func() (bool, error) { return true, nil },
 		remove:     func(int64) error { removals++; missing = true; return nil },

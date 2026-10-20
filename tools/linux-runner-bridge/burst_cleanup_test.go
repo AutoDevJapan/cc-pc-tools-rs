@@ -266,7 +266,7 @@ func TestMissingRegistrationStillWaitsForDrainAndIdempotentSDKCleanup(t *testing
 	state := burstDrainState{}
 	stopped, cleared := false, false
 	ops := burstCleanupOps{
-		lookup: func() (int64, error) { return 0, errRunnerMetadataNotFound },
+		lookup: func() (int64, error) { return 0, errOwnedRunnerAbsent },
 		drain: func(s *burstDrainState) (bool, error) {
 			if !s.RegistrationRemoved {
 				t.Fatal("missing inventory was not retained")

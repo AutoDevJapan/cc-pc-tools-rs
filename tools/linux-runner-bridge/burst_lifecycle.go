@@ -82,8 +82,10 @@ func resumeIdleBurst(p normalProfile, state *burstDrainState, d burstDrainOps) (
 						return false, errors.New("idle drain cannot withdraw default labels")
 					}
 				}
-				if err := d.withdraw(boundID); err != nil {
-					return false, err
+				if len(r.Labels) != 0 {
+					if err := d.withdraw(boundID); err != nil {
+						return false, err
+					}
 				}
 				state.LabelsWithdrawn = true
 			}
@@ -158,6 +160,7 @@ type burstLifecycleOps struct {
 	record         func(string)
 	cleanup        func(*burstDrainState) burstCleanupOps
 	stopUnadmitted func()
+	save           func(*burstDrainState) error
 }
 
 func recordBurstLifecycle(stage string) {
@@ -172,9 +175,14 @@ func recordBurstLifecycle(stage string) {
 	}
 }
 
-func awaitBurstProcess(done <-chan int, registered <-chan struct{}, bound func() int64, active func() bool, retire func() bool) int {
+func awaitBurstProcess(done <-chan int, registered <-chan struct{}, bound func() int64, active func() bool, retire func() bool, journal *burstJournal) int {
+	var save func(*burstDrainState) error
+	if journal != nil {
+		save = journal.save
+	}
 	return awaitBurstProcessWith(done, registered, bound, active, retire, burstLifecycleOps{
 		now: time.Now, after: time.After, pause: time.Sleep, record: recordBurstLifecycle,
+		save: save,
 		stopUnadmitted: func() {
 			_, _ = burstOutput(20*time.Second, docker, "exec", normalContainer, "/opt/bridge/bridge", "stop-idle")
 		},
@@ -182,14 +190,7 @@ func awaitBurstProcess(done <-chan int, registered <-chan struct{}, bound func()
 			return burstCleanupOps{
 				lookup: func() (int64, error) { return configuredBurstRunnerID(compiledNormalProfile) },
 				drain: func(s *burstDrainState) (bool, error) {
-					d := burstDrainBackend(s.ID)
-					d.retire = func() bool { return s.ProcessDrained || retire() }
-					ok, err := resumeIdleBurst(compiledNormalProfile, s, d)
-					if !ok && err == nil && s.ProcessDrained {
-						s.Assigned = false
-						return false, errors.New("completed runner metadata has not settled")
-					}
-					return ok, err
+					return drainOwnedBurst(compiledNormalProfile, s, burstDrainBackend(s.ID), retire)
 				},
 				clear: clearBurstConfiguration,
 			}
@@ -254,7 +255,7 @@ func awaitBurstProcessWith(done <-chan int, registered <-chan struct{}, bound fu
 	}
 	ops := d.cleanup(&state)
 	ops.waitStopped = waitStopped
-	policy := burstRetryPolicy{now: d.now, pause: d.pause, record: d.record}
+	policy := burstRetryPolicy{now: d.now, pause: d.pause, record: d.record, save: d.save}
 	for {
 		ok, err := retryBurstCleanup(&state, ops, policy, d.now().Add(10*time.Minute))
 		if err != nil {
@@ -286,6 +287,16 @@ func awaitBurstProcessWith(done <-chan int, registered <-chan struct{}, bound fu
 		return burstIdleExit
 	}
 	return code
+}
+
+func drainOwnedBurst(p normalProfile, s *burstDrainState, backend burstDrainOps, retire func() bool) (bool, error) {
+	backend.retire = func() bool { return s.ProcessDrained || retire() }
+	ok, err := resumeIdleBurst(p, s, backend)
+	if !ok && err == nil && s.ProcessDrained {
+		s.Assigned = false
+		return false, errors.New("completed runner metadata has not settled")
+	}
+	return ok, err
 }
 
 func burstDrainBackend(id int64) burstDrainOps {
@@ -417,7 +428,7 @@ func configuredBurstRunnerIDWith(p normalProfile, api func(string, any) error) (
 		}
 	}
 	if id == 0 {
-		return 0, errRunnerMetadataNotFound
+		return 0, errOwnedRunnerAbsent
 	}
 	return id, nil
 }

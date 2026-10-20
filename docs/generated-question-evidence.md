@@ -20,7 +20,9 @@ discord_ask.exe ask ... --body-file <body> --decision-file <decision> --attach <
 - `scope`: todo_id、question_sha256、decision_sha256、owner_id、guild_id、forum_id。
   本文は正規CLIが使う改行を正規化した全文、decisionは同CLIの正規JSONのSHA256。
 - `session`、`rollout_path`、`session_record_sha256`、`assignment_event`。
-  当該ToDo専用の原Codex sessionの先頭メタデータと、`ToDo<番号>`で始まる最初の実ユーザー依頼の行番号・SHAを指定する。
+  当該ToDo専用の原Codex sessionの先頭メタデータと、最初の実ユーザー依頼の行番号・SHAを指定する。
+  依頼は`ToDo<番号>`または`ToDo番号<番号>`（任意の接頭語`担当`）で始める。
+  本文の別の行・引用・コードから番号を探したり、自然文の導入を読み飛ばしたりしない。
   元ToDoは生成記録のtodoと実ユーザー依頼の両方で一致させる。
   後の別件に触れた文や引用へ付け替えない。AGENTSと環境情報の導入文は作業依頼と区別する。
 - `proof_path`、`proof_sha256`: 正規の生成証拠をまとめた原JSON。
@@ -33,7 +35,8 @@ discord_ask.exe ask ... --body-file <body> --decision-file <decision> --attach <
   execの文字列にimagegenがあるだけでは許可しない。許可した構文を解析し、実tool戻り値だけが
   generatedImageへ渡ることを確認する。画像の差替・別load結果・組み込み関数の差替は拒否する。
   元rolloutは最大256MiB、1行36MiBまで読む。上限を超えた場合も分類を緩和しない。
-- `created_at`は実生成callの時刻、`expires_at`はそこから7日以内。
+- `created_at`は実生成callの時刻とタイムゾーン・小数秒を含めて一致させる。
+  表示用に時差を足したり、小数秒を切り落とした値は拒否する。`expires_at`はそこから7日以内。
 - `content_review`: new_generation、fictional_data、no_customer_or_secret_contentをtrueとし、
   内容を確認した根拠をreferenceに記録する。これは作成担当の内容確認記録であり、
   検証器が画像の意味を自動判定したことにはしない。

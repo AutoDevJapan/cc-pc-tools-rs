@@ -26,6 +26,12 @@ collectorが正常に変更した所有者を古い3107資格のまま扱わな�
 保護された回収marker、実root/親のID/owner/birthと現在root属性を再照合する。
 子やreparse、その配下へ新しい分類を与えず、現在のdenyは維持する。
 
+レビュー3195では、根の照合だけでは退避対象全体の保護判定が不足する点を修正した。
+guard自身が、固定SHAで保存した全3,626項目の相対名を現在の保護設定と照合する。
+1件でも一致すれば根の資格も拒否する。ファイル列挙・本文・リンク先の読取は加えない。
+保護設定は1回の全名前比較につき1回だけguardのメモリへ読み、外部照合後に読み直す。
+設定本文や一致した名前を出力・保存・再構成しない。子の資格は引き続き付与しない。
+
 ## 回収後の属性観測
 
 2026-10-21の属性専用handleによる非追跡観測では3,626項目（根を含む）を確認した。
@@ -60,13 +66,16 @@ plan/finishは従来どおりで、planはreparseを拒否する。
 
 ## 検査と配布
 
-Go race/vetはsafe-delete module（既存Gemini回帰を含む）に絞る。
+Go race/vetはsafe-delete module（既存Gemini回帰を含む）とrepair-guardに絞る。
 架空のreparseで非追跡・属性自身の読取・別リンク拒否・hardlink/owner変更拒否・
 固定一覧変更拒否・通常plan/quarantineの拒否継続を確認する。
 実Move-Itemを通る成功・保持照合失敗・receipt更新失敗も架空の資源で検査する。
+移動直前の保護判定失敗では元rootとowned receiptが残り、files/が作られないことを確認する。
+名前の一括拒否、外部照合中の保護設定変更、根の更新時刻・親ID・時刻下限も検査する。
 保持照合失敗で移動確認済みと表示せず、元receiptをownedのまま残す。
 実対象は固定資格と属性走査のみを確認済みで、候補の実移動は未実施。
-別モデルmaxのMust解消、同HEADの正式Windows safe-deleteとGo解析成功後に通常mergeし、
-最新mainの並行変更を確認して通常配布する。現用の正規quarantine結果とclosed receiptを
+別モデルmaxのMust解消、同HEADの正式Windows safe-delete/repair-guardとGo解析成功後に通常mergeし、
+最新mainの並行変更を確認する。guardを先に通常配布し、現用で根falseと範囲外拒否を確認する。
+次にsafe-deleteを通常配布して正規quarantineを実行する。その結果とclosed receiptを
 確認するまで完了にしない。GPU/Civ6/Cargo、製品job再実行、新費用、owner質問は行わない。
 source/PR/merge/配布hash/実操作結果/未実施を親2962へCASで配送する。

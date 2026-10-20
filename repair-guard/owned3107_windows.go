@@ -48,6 +48,7 @@ type owned3107Access struct {
 	at                  time.Time
 	now                 func() time.Time
 	protected, plain    func(string) bool
+	denySnapshot        func() func(string) bool
 	identity            func(string) (audio2906Metadata, error)
 	read                func(string, int64) ([]byte, bool)
 	qualified, official func() bool
@@ -71,6 +72,7 @@ func owned3107PathAllowed(path string) bool {
 		return false
 	}
 	a.expected.Owner = "S-1-5-32-544"
+	a.denySnapshot = collected3174DenySnapshot
 	return collected3174Allowed(path, a, collected3174Proofs, collected3174Marker)
 }
 

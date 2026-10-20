@@ -106,9 +106,11 @@ func TestCI3174RejectsHardlinksAndChangedOwner(t *testing.T) {
 				return i, e
 			}
 			_, _, e := s.snapshot(root)
-			if e == nil {
-				t.Fatal("changed identity accepted")
+			want := "CI_OBJECT_CHANGED"
+			if change == "root" {
+				want = "CI_ROOT_CHANGED"
 			}
+			code(t, e, want)
 		})
 	}
 }
@@ -147,6 +149,15 @@ func TestCI3174FrozenInventoryRejectsNewAndMissingNames(t *testing.T) {
 	write(t, filepath.Join(root, "new-file"), "new")
 	_, _, e = s.snapshot(root)
 	code(t, e, "CI_INVENTORY_CHANGED")
+	s, root = ci3174Fixture(t)
+	before, _, e = s.snapshot(root)
+	if e != nil {
+		t.Fatal(e)
+	}
+	before["missing-file"] = before["."]
+	s.baseline = before
+	_, _, e = s.snapshot(root)
+	code(t, e, "CI_INVENTORY_CHANGED")
 }
 
 func TestCI3174OpaqueIdentityIsItsOwnObject(t *testing.T) {
@@ -170,7 +181,7 @@ func TestCI3174OpaqueIdentityIsItsOwnObject(t *testing.T) {
 }
 
 func TestCI3174QuarantinePreservationAndReceipt(t *testing.T) {
-	for _, fault := range []string{"none", "preservation", "record"} {
+	for _, fault := range []string{"none", "settled", "preservation", "record"} {
 		t.Run(fault, func(t *testing.T) {
 			c, root := fixture(t)
 			r := owned(t, c, root)
@@ -182,6 +193,9 @@ func TestCI3174QuarantinePreservationAndReceipt(t *testing.T) {
 			s.baseline = before
 			raw, _ := json.Marshal(r)
 			s.originalReceipt = func() ([]byte, error) { return raw, nil }
+			if fault == "settled" {
+				s.settled = func() error { return fail("CLIENT_RESOURCE_OR_GUARD_FAILED") }
+			}
 			original := s.identity
 			injected := false
 			s.identity = func(p string) (ci3174Entry, error) {
@@ -202,6 +216,19 @@ func TestCI3174QuarantinePreservationAndReceipt(t *testing.T) {
 			}
 			result, e := c.quarantinePreserved(r.ID, "windows", nil, s)
 			if fault != "none" {
+				if fault == "settled" {
+					failure := code(t, e, "CLIENT_RESOURCE_OR_GUARD_FAILED")
+					if !exists(r.Path) {
+						t.Fatal("guard rejection moved source")
+					}
+					if _, e := c.load(r.ID, true); e != nil {
+						t.Fatal("guard rejection changed owned receipt", e)
+					}
+					if exists(filepath.Join(failure.Details["destination"].(string), "files")) {
+						t.Fatal("guard rejection created moved files")
+					}
+					return
+				}
 				expected := "CI_INVENTORY_CHANGED"
 				if fault == "record" {
 					expected = "RECEIPT_WRITE_FAILED"

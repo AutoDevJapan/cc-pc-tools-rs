@@ -4,9 +4,13 @@ package main
 // No child (including opaque SDK reparses) gains a new classification here.
 import (
 	"encoding/json"
+	"io"
+	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
+	"unicode/utf8"
 	"unsafe"
 )
 
@@ -44,6 +48,25 @@ func collected3174Allowed(path string, a owned3107Access, extra []owned3107Proof
 	if !ok {
 		return false
 	}
+	// A root-only classification cannot hide a protected recorded child. Match
+	// the fixed names without walking any child or resolving an opaque target.
+	noProtectedChild := func() bool {
+		deny := a.protected
+		if a.denySnapshot != nil {
+			deny = a.denySnapshot()
+		}
+		for name := range proof[1] {
+			rel := filepath.FromSlash(name)
+			p := filepath.Join(a.root, rel)
+			if filepath.IsAbs(rel) || filepath.VolumeName(rel) != "" || !within(a.root, p) || deny(p) {
+				return false
+			}
+		}
+		return true
+	}
+	if !noProtectedChild() {
+		return false
+	}
 	// Decode the exact hashed bytes' parsed root metadata; never enumerate root.
 	b, e := json.Marshal(proof[1]["."])
 	var observed struct {
@@ -76,7 +99,41 @@ func collected3174Allowed(path string, a owned3107Access, extra []owned3107Proof
 	if a.now != nil {
 		now = a.now()
 	}
-	return collected3174At(now) && physical() && postRoot() && marker()
+	return collected3174At(now) && physical() && postRoot() && marker() && noProtectedChild()
+}
+
+// Same deny semantics as legacyMatch, but one memory-only policy snapshot per
+// complete inventory comparison. Re-read after external checks; no names or
+// policy bytes leave this guard, and no missing original registry is recreated.
+func collected3174DenySnapshot() func(string) bool {
+	f, e := os.Open("D:/CC/Tools/client-projects.txt")
+	if e != nil {
+		return func(string) bool { return !os.IsNotExist(e) }
+	}
+	defer f.Close()
+	b, e := io.ReadAll(io.LimitReader(f, 1<<20+1))
+	if e != nil || len(b) > 1<<20 || !utf8.Valid(b) || strings.TrimSpace(string(b)) == "" {
+		return func(string) bool { return true }
+	}
+	return collected3174DenyMatcher(b)
+}
+func collected3174DenyMatcher(b []byte) func(string) bool {
+	var entries []string
+	for _, line := range strings.Split(strings.TrimPrefix(string(b), "\ufeff"), "\n") {
+		v := strings.ToLower(strings.TrimSpace(line))
+		if v != "" && !strings.HasPrefix(v, "#") {
+			entries = append(entries, strings.ReplaceAll(v, "\\", "/"))
+		}
+	}
+	return func(p string) bool {
+		normalized := strings.ToLower(strings.ReplaceAll(p, "\\", "/"))
+		for _, entry := range entries {
+			if strings.Contains(normalized, entry) {
+				return true
+			}
+		}
+		return false
+	}
 }
 
 func collected3174Marker() bool {

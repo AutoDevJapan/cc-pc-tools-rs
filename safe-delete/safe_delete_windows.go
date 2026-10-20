@@ -591,10 +591,10 @@ func (c config) quarantinePreserved(id, reason string, scope *geminiScope, ci *c
 	}
 	phase = "move"
 	if ci != nil {
-		if err = ci.verify(r.Path, ciBefore, r); err != nil {
+		if err = ci.settled(); err != nil {
 			return nil, err
 		}
-		if err = ci.settled(); err != nil {
+		if err = ci.verify(r.Path, ciBefore, r); err != nil {
 			return nil, err
 		}
 	}

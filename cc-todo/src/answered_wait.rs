@@ -608,10 +608,12 @@ pub fn transition(
     if apply {
         let previous_instruction = text(&r["scheduler"], "owner_instruction");
         let delivered = format!(
-            "{previous_instruction}\n\n[answered-dependency-wait:3126 todo={id}]\n現在の指示（出所: {}）: {}\n正規Discord APIで照合した本人回答: {}\n元質問: thread/question={}、request={}、本人ID={}、reply={}。\n原質問・回答の資料: {}（SHA256={}）。旧本人待ちの資料: {}（SHA256={}）。\n3084完了後はその実装・配布の成果を元の受入条件と照合してください。同じ画像案を再質問せず、旧候補を配布しないでください。この記録は待機状態と指示配送の移行であり、機能修復・本番反映・配布完了を主張しません。",
+            "{previous_instruction}\n\n[answered-dependency-wait:3126 todo={id}]\n現在の指示（出所: {}）: {}\n正規Discord APIで照合した本人回答: {}\n元質問本文（過去の質問であり新しい承認ではありません）:\n{}\n元の判断対象: {}\n回答は3050の質問へのものです。3070への引継ぎは今回の固定範囲に限り、別の判断への承認に流用しません。\n元質問: thread/question={}、request={}、本人ID={}、reply={}。\n原質問・回答の資料: {}（SHA256={}）。旧本人待ちの資料: {}（SHA256={}）。\n3084完了後はその実装・配布の成果を元の受入条件と照合してください。同じ画像案を再質問せず、旧候補を配布しないでください。この記録は待機状態と指示配送の移行であり、機能修復・本番反映・配布完了を主張しません。",
             text(&e["current_instruction"], "source"),
             text(&e["current_instruction"], "text"),
             text(&api["owner_replies"][0], "body"),
+            text(&api, "original_question"),
+            api["decision_identity"],
             THREAD,
             REQUEST,
             OWNER,
@@ -635,7 +637,7 @@ pub fn transition(
             .find(|r| r["id"] == id)
             .unwrap();
         r["status"] = json!("wait");
-        r["updated"] = json!(at);
+        r["updated"] = json!(crate::now());
         r["scheduler"]["owner_instruction"] = json!(delivered);
         r[RECEIPT] = receipt;
     }

@@ -29,7 +29,14 @@
   最新の実物3050/3070の無変更検査は、固定した以前と同じ状態SHAで両方成功。
 - 修正後: cc-todo全226件成功。cc-schedulerの実prompt作成までを含む関連4件成功。
   対象2クレートのClippy成功、doctest正常終了。guard呼出しも実物で各約1.3〜1.5秒、無変更検査成功。
-- 残り: 変更後の関連検査、追加差分を別モデルmaxで再確認、
+- 追加レビュー3157: 実ジョブ20261021-023950-todo-3157、対応session
+  01a15a68-330e-7eb3-b8ee-ff5ffe93f692、anthropic/claude-opus-5-5/max、exit0。
+  basec00289a/head639d9b3でMust0を確認。原応答review-3157-received-original.md、
+  UTF-8本文SHA77779a1390c93727521b323cb84fb0b3311d9795e2e9e6e659355af4a31ea304。
+- 3157の改善提案も反映: 原質問本文と判断対象、3050から3070への限定引継ぎを指示に明記。
+  updatedは既存書式を保持し、領収時刻だけRFC3339。key/phase/last_jobの拒否を各々検査。
+  変更後の機能13件成功。既存の226件・利用側の有効結果は影響がない範囲を再利用。
+- 残り: 最終ソースの必要CI、
   Must修正・CI・通常merge、並行配布確認・ソース/hash照合、実3050/3070の正規移行とreadback。
 - 画像sender/履歴readのPR296は編集しない。raw台帳編集・guard緩和・applied/jobの捏造はしない。
 - 一時所有ID: 7a11b876847b64f5e8444bfa0f54070e。

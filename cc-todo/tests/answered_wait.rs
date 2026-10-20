@@ -349,9 +349,29 @@ fn answered_wait_delivers_verified_answer_after_dependency_release() {
         .to_owned();
     assert!(instruction.starts_with("original approved instructions\n"));
     assert!(instruction.contains("synthetic owner answer"));
+    assert!(instruction.contains("synthetic question"));
+    assert!(instruction.contains("\"todo_id\":3050"));
+    assert!(instruction.contains("\"decision\":\"direction\""));
+    assert!(instruction.contains("console-first-view"));
+    assert!(instruction.contains("別の判断への承認に流用しません"));
     assert!(instruction.contains("1561951289468911707"));
     assert!(instruction.contains("Synthetic current user task"));
     assert!(instruction.contains(f.temp.path().join("reply.json").to_str().unwrap()));
+    assert!(
+        chrono::NaiveDateTime::parse_from_str(
+            d["items"][0]["updated"].as_str().unwrap(),
+            "%Y-%m-%d %H:%M"
+        )
+        .is_ok()
+    );
+    assert!(
+        chrono::DateTime::parse_from_rfc3339(
+            d["items"][0]["answered_dependency_wait_receipt"]["transitioned_at"]
+                .as_str()
+                .unwrap()
+        )
+        .is_ok()
+    );
     let paths = cc_todo::Paths::at(f.temp.path(), &f.temp.path().join("jobs"));
     cc_todo::execute(
         &mut d,
@@ -369,14 +389,19 @@ fn answered_wait_delivers_verified_answer_after_dependency_release() {
 
 #[test]
 fn answered_wait_without_worker_rejects_reserved_launch_keys() {
-    let f = Fixture::new(3070);
-    let mut d = f.db();
-    d["items"][0]["scheduler"]["key"] = json!("reserved-next-launch");
-    d["items"][0]["scheduler"]["phase"] = json!("prepared");
-    f.put(&d);
-    let before = f.raw();
-    assert!(!f.call(3070, &[]).status.success());
-    assert_eq!(before, f.raw());
+    for (key, value) in [
+        ("key", "reserved-next-launch"),
+        ("phase", "prepared"),
+        ("last_job", "previous-worker"),
+    ] {
+        let f = Fixture::new(3070);
+        let mut d = f.db();
+        d["items"][0]["scheduler"][key] = json!(value);
+        f.put(&d);
+        let before = f.raw();
+        assert!(!f.call(3070, &[]).status.success(), "{key}");
+        assert_eq!(before, f.raw());
+    }
 }
 
 #[test]

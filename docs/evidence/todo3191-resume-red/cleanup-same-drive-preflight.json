@@ -1,0 +1,13 @@
+{
+  "source": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3191-3081\\codex-owned-4de1d82e49b36c6b3d11d270681f82b6",
+  "destination": "D:/削除希望/20261021-todo3191-finite-resume-red-4de1d82e",
+  "bytes": 1340910132.0,
+  "entries": 1711,
+  "checked_at": "2026-10-21T05:45:49.5183384+09:00",
+  "contains_reparse_points": false,
+  "active_owned_build_writers": 0,
+  "source_contained_in_own_worktree": true,
+  "phase": "ready for same-drive move",
+  "original_helper_failure": "QUARANTINE_CROSS_DRIVE",
+  "original_helper_state": "owned"
+}

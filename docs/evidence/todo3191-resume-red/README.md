@@ -35,4 +35,8 @@
 
 この追加checkの検査は完了。再実行しない。元ToDo3081が実装修正・Green・別モデルレビュー・正式CI・マージ・配布を扱う。今回の3失敗は修正しておらず、未到達部分の成功も主張しない。既存2331件と過去Redは繰り返していない。独立したPRは作成せず、mainへマージしない。
 
-証拠のcommit/push確認後に所有生成物を片付け、その結果を保存して実HEADをschedulerへcheckpointする。共有ToDoの状態はschedulerが更新する。途中で再開した場合は保存済み結果と整理・push・checkpointの記録を読み、完了済み検査を起動し直さない。
+検査証拠commit `ab0ee4abb881e90881185f482bb16d43b929bd84` をpushし、remoteのSHAと完全ログ4ファイルのGit blob/元バイト一致を確認した。
+
+生成物1,340,910,132バイト・1711項目は、safe-deleteの容量上限により退避対象となった。補助CLIの退避はC/Dの違いを検出して移動前に停止したため、Skillの同一ドライブ退避手順に従い `D:/削除希望/20261021-todo3191-finite-resume-red-4de1d82e/files` へ通常のMove-Itemで移動した。元パス不在、退避先存在、全項目の相対名・種別・容量・更新時刻一致を確認し、理由.txtに完了を追記した。日時の自動型変換を除いた照合で差分0。削除や容量回収は主張しない。補助CLIの所有台帳はownedのまま変更せず、削除したと偽るfinishも行っていない。失敗、移動前確認、移動後確認の各記録をこのフォルダへ保存した。原ソース・原証拠・共有sccache・他担当の生成物は整理対象に含めていない。
+
+この整理記録もcommit/pushして実HEADをschedulerへcheckpointする。最終要求と応答はworktreeルートの `todo3191-checkpoint.private.json` / `todo3191-checkpoint-result.private.json` に保存する。共有ToDoの状態はschedulerが更新する。途中で再開した場合は保存済み結果と整理・push・checkpointの記録を読み、完了済み検査を起動し直さない。

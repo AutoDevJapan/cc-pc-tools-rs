@@ -1,0 +1,17 @@
+{
+  "checked_at": "2026-10-21T05:46:27.5604007+09:00",
+  "id": "4de1d82e49b36c6b3d11d270681f82b6",
+  "state": "manual_same_drive_quarantine_verified",
+  "original_absent": true,
+  "destination_present": true,
+  "destination": "D:\\削除希望\\20261021-todo3191-finite-resume-red-4de1d82e",
+  "bytes": 1340910132,
+  "entries": 1711,
+  "tree_metadata_equal": true,
+  "metadata_check_correction": "ConvertFrom-Json -DateKind String preserved timestamp representation; zero differences after type-correct comparison",
+  "native_helper_registry_state": "owned",
+  "native_registry_not_modified": true,
+  "finish_deleted_not_called": true,
+  "space_reclaimed_not_claimed": true,
+  "basis": "Same-drive Move-Item after helper QUARANTINE_CROSS_DRIVE, per codex-safe-owned-temp-cleanup"
+}

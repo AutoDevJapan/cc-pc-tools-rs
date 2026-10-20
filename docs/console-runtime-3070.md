@@ -24,3 +24,9 @@
 ## 検証と到達点
 
 受入のRed/Green、レビュー、CI、merge、正式分類、配布と稼働確認を実測後に追記する。原3020のreceiptは旧版の証拠であり現在の実物一致とはまだ主張しない。PR266のマージ前固定候補のCI成功と、マージ後の受付失敗を区別する。
+
+新規4回帰は拒否stubで4件Red、実装後4件Green。Go全件86.859秒とvetが成功。第2固定pinと証拠なしpinの境界も追加して成功。PR273の正式repair-guard CIも成功した。PR266のマージ前固定候補は全CI成功、マージ後のWindows/collectorは検査前の`obsolete branch revision rejected`、CodeQLはbridge403で失敗しており、検査を実行した成功と混同しない。現在headのみ受付のmain競合修復は既存3047/PR271が担当する。
+
+初回独立レビューは既存OAuthの実ジョブ`20261020-160454-todo3070-console-runtime-review`がSonnet5.5で完了し、貼付3ファイルとmain接続説明にMust0。main全体と既存helperは未読だったため、補足のsource-root一致検査と合わせて同担当へ追加確認する。依存証拠は原3020/3050の作業場所にあり、今回の有限配布とその後の現版分類で使う間は削除しない。固定受領記録の存在・バイト列と、手作業で確定した対応SHAをcompiled pinで別々に確認している。証拠JSONを権限設定として解析しない。分類は呼出時点の検証であり、配布直前にもguardとSHAのCASを再実行する。
+
+現用guardのSHA `8A625C3171B0D68044C480AA3887B1F099C82A03CBF442FCB9E6E7B1BC99FA93` は元3058の正式配布記録で確認し、配布sourceはmain `0edc26c`。PR264の限定資格も含む。3070はこのmainを基準としており、3047/3058の修復を古いguardで上書きしない。

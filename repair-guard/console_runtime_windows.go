@@ -47,7 +47,18 @@ var consoleRuntimeLeaves = []consoleLeaf{
 }
 
 func consoleRuntimeAllowed(path string) bool {
-	return consoleRuntimeWith(path, consoleRuntimeLeaves, legacyMatch, sourceVerified)
+	return consoleRuntimeWith(path, consoleRuntimeLeaves, legacyMatch, consoleSourceVerified)
+}
+
+func consoleSourceVerified(root string) bool {
+	// Reuse the existing bounded, hidden Git invocation with GIT_* overrides
+	// removed. An inherited parent repository is not the declared source.
+	if !civ6GitRoot(root) {
+		return false
+	}
+	value, err := civ6GitAt(root, "remote", "get-url", "origin")
+	origin := strings.ToLower(strings.TrimSpace(string(value)))
+	return err == nil && (origin == "https://github.com/autodevjapan/cc-pc-tools-rs.git" || origin == "https://github.com/autodevjapan/cc-pc-tools-rs" || origin == "git@github.com:autodevjapan/cc-pc-tools-rs.git")
 }
 
 func consoleRuntimeWith(path string, leaves []consoleLeaf, protected func(string) bool, source func(string) bool) bool {

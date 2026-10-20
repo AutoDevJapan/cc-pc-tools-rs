@@ -172,3 +172,42 @@ func TestConsoleRuntimeRefusesMissingAndLinkedEvidence(t *testing.T) {
 		t.Fatal("linked evidence accepted")
 	}
 }
+
+func TestConsoleSourceRejectsInheritedAndRedirectedRepository(t *testing.T) {
+	root, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	git := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-C", root}, args...)...)
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+		cmd.Env = civ6GitEnvironment(os.Environ())
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("fixture git: %v %s", err, out)
+		}
+	}
+	git("init", "-q")
+	git("remote", "add", "origin", "https://github.com/AutoDevJapan/cc-pc-tools-rs.git")
+	if !consoleSourceVerified(root) {
+		t.Fatal("exact source repository rejected")
+	}
+	child := filepath.Join(root, "not-a-worktree")
+	if err := os.Mkdir(child, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if consoleSourceVerified(child) {
+		t.Fatal("inherited parent origin accepted")
+	}
+	t.Setenv("GIT_DIR", filepath.Join(root, "absent-git-dir"))
+	if !consoleSourceVerified(root) {
+		t.Fatal("environment override changed source identity")
+	}
+	if consoleSourceVerified(child) {
+		t.Fatal("environment override admitted inherited source")
+	}
+	git("remote", "set-url", "origin", "https://github.com/AutoDevJapan/unrelated.git")
+	if consoleSourceVerified(root) {
+		t.Fatal("different repository accepted")
+	}
+}

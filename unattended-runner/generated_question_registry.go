@@ -270,6 +270,12 @@ func (r generatedQuestionRegistry) register(ctx context.Context, evidence string
 
 func (r generatedQuestionRegistry) load(ctx context.Context, path string, scope generatedQuestionScope) (generatedQuestionSpec, error) {
 	empty := generatedQuestionSpec{}
+	// Rust canonicalize uses the Windows verbatim spelling. Normalize only its
+	// syntax before the local receipt lookup; never stat an unknown caller path.
+	path, pathErr := conversationMediaPath(path)
+	if pathErr != nil {
+		return empty, errConversationMedia
+	}
 	root, _, err := conversationMediaPhysical(filepath.FromSlash(r.Home))
 	if err != nil || !conversationMediaSamePath(root, filepath.FromSlash(r.Home)) {
 		return empty, errConversationMedia

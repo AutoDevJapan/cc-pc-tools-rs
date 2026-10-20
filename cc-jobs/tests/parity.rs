@@ -63,6 +63,23 @@ mod independent_subwork {
             .unwrap()
     }
     #[test]
+    fn unqualified_original_research_is_not_published_as_another_ordinary_reader() {
+        let (t,mut f)=setup(1);
+        f.db["items"][1]["id"]=json!(2939);
+        f.db["items"][1]["subwork"]["kind"]=json!("research");
+        f.db["items"][1]["scheduler"]["worktree"]=json!(subwork_support::tree(&f.repo,"todo-2939-research","scheduler/todo-2939-research"));
+        f.db["items"][1]["scheduler"]["branch"]=json!("scheduler/todo-2939-research");
+        f.db["items"][1]["scheduler"]["subwork_admission"]=cc_job_policy::subwork::admission(&f.db["items"][1]);
+        fs::write(f.dir.path().join("todo.json"),f.db.to_string()).unwrap();
+        let row=&f.db["items"][1];
+        let error=t.run(&["--todo-id","2939","--subwork-of","1","--parent-job-id","parent",
+            "--assigned-needs","","--launch-key",s(&row["scheduler"],"key"),
+            "--cwd",s(&row["scheduler"],"worktree"),"--sandbox","read-only"],b"finite original research")
+            .err().expect("unqualified original research must not be registered");
+        assert!(error.message.contains("no reader retry was registered"),"{error:?}");
+        assert!(!t.ctx.list_jobs(&HashSet::new()).iter().any(|j|j["todo_id"]==2939));
+    }
+    #[test]
     fn queued_subwork_admits_after_todo_start_releases_its_reservation() {
         let (t, f) = setup(1);
         register(&t, &f, &[]).unwrap();

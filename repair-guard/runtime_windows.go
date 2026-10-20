@@ -13,6 +13,23 @@ import (
 // original private registry, or any other executable.
 const publicationGateRuntime = "D:/CC/Tools/codex-jobs/gh_gate.exe"
 
+// The owner explicitly requested repair of this installed progress display
+// (ToDo3020/3021, restated 2026-10-20). Only the existing distribution leaves
+// qualify. Its directory, collector, credentials and unrelated tools do not.
+const progressTUIDirectory = "D:/CC/Tools/codex-progress-tui"
+
+func progressTUIRuntime(absolute, target, directory string) bool {
+	if !same(filepath.Dir(absolute), directory) {
+		return false
+	}
+	for _, name := range []string{"codex.exe", "codex-code-mode-host.exe", "manifest.json"} {
+		if runtimeExecutable(absolute, target, filepath.Join(directory, name)) {
+			return true
+		}
+	}
+	return false
+}
+
 // The installed product-ci tool and the files its normal update writes. Only
 // these exact leaf names directly under the physical directory qualify.
 const productCIDirectory = "D:/CC/Tools/product-ci"

@@ -19,6 +19,7 @@
 - Codex SHA256 `2692c8c7bb2cf8b0aefe638741fc90236f4b824c59578ce84994f9de58200993` と公式host SHA256 `07f3869f0849cd54b31cec1f86ec796f004501bd3a215135c1facc883a2b9988` はsource.jsonと一致。
 - 実tarball SHA512: `410190feaf5d089e42e63aa1805af0c9ca561b7b3323214d4e13222a5ea162dbba37f78cdd077b4ad7ac82708501fcd5103f08904dcdde81fbd6ccf3725b9dab`。
 - 既存source.jsonのhexは127桁で、上記完全値と一致しない。integrityとの整合を維持して完全な値に修正する。
+- 2026-10-20 00:48:10 UTCに、記録済みnpm integrityのBase64を.NETのFromBase64String/ToHexStringで128桁へ変換し、この実測値と完全一致することも確認した。旧127桁値は有効なSHA512ではなく、旧バイナリとの差の原因や旧受入の成否は未確定のまま保持する。
 
 ## 変更範囲と未実施事項
 

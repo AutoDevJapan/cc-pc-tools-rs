@@ -274,7 +274,51 @@ func TestHistoryReadScopeCursorGuardAndCollision(t *testing.T) {
 	if historyReadCLIWith(args, &out, load, guard) == 0 || len(*paths) != calls {
 		t.Fatal("changed scope reused cursor")
 	}
+	after, _ = os.ReadFile(output)
 	if !reflect.DeepEqual(before, after) {
 		t.Fatal("existing receipt mutated")
+	}
+}
+
+func TestHistoryReadCorruptContinuationFailsBeforeLoading(t *testing.T) {
+	for _, field := range []string{"before", "thread", "index", "scanned"} {
+		t.Run(field, func(t *testing.T) {
+			load, _ := historyFixture(t, nil)
+			args, prior := historyArgs(t)
+			guard := func(context.Context, string) bool { return true }
+			var out bytes.Buffer
+			if historyReadCLIWith(args, &out, load, guard) != 0 {
+				t.Fatal("positive cursor acquisition failed")
+			}
+			b, _ := os.ReadFile(prior)
+			var page map[string]any
+			_ = json.Unmarshal(b, &page)
+			switch field {
+			case "before":
+				page["next"].(map[string]any)["before"] = "101"
+			case "thread":
+				page["thread_id"] = "101"
+			case "index":
+				page["cursor"].(map[string]any)["thread_index"] = 1
+			case "scanned":
+				page["scanned_messages"] = 0
+			}
+			b, _ = json.Marshal(page)
+			if err := os.WriteFile(prior, b, 0600); err != nil {
+				t.Fatal(err)
+			}
+			output := filepath.Join(filepath.Dir(prior), "next.private.json")
+			loads := 0
+			counted := func(ctx context.Context, s historyReadScope) (*Runner, error) {
+				loads++
+				return load(ctx, s)
+			}
+			if historyReadCLIWith([]string{"--scope", args[1], "--output", output, "--cursor", prior}, &out, counted, guard) == 0 || loads != 0 {
+				t.Fatal("corrupt continuation reached credential loader or succeeded")
+			}
+			if _, err := os.Stat(output); !os.IsNotExist(err) {
+				t.Fatal("corrupt continuation wrote a success receipt")
+			}
+		})
 	}
 }

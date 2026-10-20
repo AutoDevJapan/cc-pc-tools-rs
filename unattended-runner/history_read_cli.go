@@ -45,6 +45,8 @@ type historyReadPage struct {
 	Thread   string             `json:"thread_id"`
 	Starter  Message            `json:"starter"`
 	Scanned  int                `json:"scanned_messages"`
+	LastID   string             `json:"last_scanned_id,omitempty"`
+	LastTime string             `json:"last_scanned_timestamp,omitempty"`
 	Messages []Message          `json:"messages"`
 	Complete bool               `json:"complete"`
 	Next     *historyReadCursor `json:"next"`
@@ -94,9 +96,16 @@ func historyPlainParent(path string) bool {
 	if !filepath.IsAbs(path) {
 		return false
 	}
-	parent := filepath.Dir(filepath.Clean(path))
-	resolved, err := filepath.EvalSymlinks(parent)
-	return err == nil && strings.EqualFold(filepath.Clean(resolved), parent)
+	for parent := filepath.Dir(filepath.Clean(path)); ; parent = filepath.Dir(parent) {
+		info, err := os.Lstat(parent)
+		// Go 1.23+ reports Windows mount points as irregular, not symlinks.
+		if err != nil || !info.IsDir() || info.Mode()&(os.ModeSymlink|os.ModeIrregular) != 0 {
+			return false
+		}
+		if filepath.Dir(parent) == parent {
+			return true
+		}
+	}
 }
 
 func historyPrivateInput(ctx context.Context, path string, guard func(context.Context, string) bool) ([]byte, error) {
@@ -234,7 +243,7 @@ func historyReadCLIWith(args []string, out io.Writer, load func(context.Context,
 			return fail()
 		}
 		var prior historyReadPage
-		if historyStrictJSON(priorRaw, &prior) != nil || prior.Domain != "discord-history-read-page-v1" || prior.Source != "discord-api-v10" || prior.ScopeSHA != hash || prior.Next == nil || prior.Complete || prior.Todo != scope.Todo || prior.Guild != scope.Guild || prior.Owner != scope.Owner || prior.Since != scope.Since || prior.Until != scope.Until {
+		if historyStrictJSON(priorRaw, &prior) != nil || !historyContinuationValid(prior, scope, hash) {
 			return fail()
 		}
 		cursor = *prior.Next
@@ -271,6 +280,41 @@ func historyReadCLIWith(args []string, out io.Writer, load func(context.Context,
 		returnCode = 1
 	}
 	return returnCode
+}
+
+// Check the continuation against the actual last scanned ID, including pages
+// containing only third-party messages. Those bodies are deliberately absent.
+func historyContinuationValid(prior historyReadPage, scope historyReadScope, hash string) bool {
+	if prior.Domain != "discord-history-read-page-v1" || prior.Source != "discord-api-v10" || prior.ScopeSHA != hash || prior.Next == nil || prior.Complete || prior.Todo != scope.Todo || prior.Guild != scope.Guild || prior.Owner != scope.Owner || prior.Since != scope.Since || prior.Until != scope.Until || prior.Cursor.ScopeSHA != hash || prior.Cursor.ThreadIndex < 0 || prior.Cursor.ThreadIndex >= len(scope.Threads) || prior.Thread != scope.Threads[prior.Cursor.ThreadIndex] || prior.Scanned < 0 || prior.Scanned > 100 || len(prior.Messages) > prior.Scanned {
+		return false
+	}
+	before, ok := number(prior.Cursor.Before)
+	high, _ := number(historyHighBefore(mustHistoryTime(scope.Until)))
+	thread, _ := number(prior.Thread)
+	if !ok || before > high || before < thread {
+		return false
+	}
+	next := prior.Cursor
+	if prior.Scanned == 0 {
+		if prior.LastID != "" || prior.LastTime != "" {
+			return false
+		}
+		next.ThreadIndex++
+		next.Before = historyHighBefore(mustHistoryTime(scope.Until))
+	} else {
+		last, ok := number(prior.LastID)
+		stamp, err := time.Parse(time.RFC3339Nano, prior.LastTime)
+		if !ok || last >= before || last < thread || err != nil || stamp.After(mustHistoryTime(scope.Until).Add(time.Millisecond)) {
+			return false
+		}
+		if stamp.Before(mustHistoryTime(scope.Since)) {
+			next.ThreadIndex++
+			next.Before = historyHighBefore(mustHistoryTime(scope.Until))
+		} else {
+			next.Before = prior.LastID
+		}
+	}
+	return next.ThreadIndex < len(scope.Threads) && *prior.Next == next
 }
 
 func mustHistoryTime(value string) time.Time { t, _ := time.Parse(time.RFC3339Nano, value); return t }
@@ -329,6 +373,10 @@ func readHistoryPage(ctx context.Context, r *Runner, scope historyReadScope, cur
 		}
 	}
 	page.Scanned = len(messages)
+	if len(messages) > 0 {
+		page.LastID = messages[len(messages)-1].ID
+		page.LastTime = messages[len(messages)-1].Timestamp
+	}
 	next := cursor
 	if len(messages) == 0 || below {
 		next.ThreadIndex++
@@ -368,17 +416,12 @@ func historyMessageValid(message Message, thread string, r *Runner) bool {
 }
 
 func writeHistoryReceipt(path string, b []byte) error {
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	f, err := os.CreateTemp(filepath.Dir(path), ".history-*.tmp")
 	if err != nil {
 		return err
 	}
-	ok := false
-	defer func() {
-		_ = f.Close()
-		if !ok {
-			_ = os.Remove(path)
-		}
-	}()
+	defer f.Close()
+	defer os.Remove(f.Name())
 	if _, err = f.Write(b); err != nil {
 		return err
 	}
@@ -388,6 +431,6 @@ func writeHistoryReceipt(path string, b []byte) error {
 	if err = f.Close(); err != nil {
 		return err
 	}
-	ok = true
-	return nil
+	// Link the flushed complete bytes without replacing a concurrent receipt.
+	return os.Link(f.Name(), path)
 }

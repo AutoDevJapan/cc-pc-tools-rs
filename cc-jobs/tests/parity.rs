@@ -1797,6 +1797,77 @@ mod capacity_regressions {
         assert_eq!(j["resume_session"], "");
         assert!(!codex_args(&j).iter().any(|a| a == "resume"));
     }
+
+    fn pool_ready(t: &Test) -> Value {
+        json!({"at":t.rt.epoch(),"openai":true,"anthropic":true,"pool":{
+            "at":t.rt.epoch(),"verified":true,"failed":["p000001"],
+            "eligible":["p000001","p000002","p000003","p000004"]
+        }})
+    }
+
+    #[test]
+    fn pool_capacity_retries_three_distinct_accounts_before_claude() {
+        let t = Test::new();
+        let mut j = failed();
+        j["task_type"] = json!("implementation");
+        j["effort"] = json!("max");
+        j["capacity_inventory"] = pool_ready(&t);
+        let original = j.clone();
+        for (attempt, selector) in ["p000002", "p000003", "p000004"].into_iter().enumerate() {
+            assert!(t.ctx.retry_capacity(&mut j));
+            assert_eq!(j["model"], "gpt-6.1-sol");
+            assert_eq!(j["capacity_account_selector"], selector);
+            assert_eq!(j["capacity_same_model_retry_count"], attempt + 1);
+            assert!(j["retry_not_before"].as_f64().unwrap() > t.rt.epoch());
+            for field in ["id", "cwd", "sandbox", "todo_id", "effort"] {
+                assert_eq!(j[field], original[field], "{field}");
+            }
+            let argv = codex_args(&j);
+            assert!(argv.windows(2).any(|w| w == ["-m", &format!("{selector}/gpt-6.1-sol")]));
+            j["status"] = json!("failed");
+            j["last_failure_kind"] = json!("capacity");
+            j["last_error"] = json!("Selected model is at capacity");
+        }
+        assert!(t.ctx.retry_capacity(&mut j));
+        assert_eq!(j["model"], "anthropic/claude-opus-5-5");
+        assert_eq!(j["effort"], "max");
+        assert!(j["capacity_account_selector"].is_null());
+        assert_eq!(j["capacity_same_model_retry_count"], 3);
+    }
+
+    #[test]
+    fn pool_retry_budget_and_account_exclusions_survive_restart() {
+        let t = Test::new();
+        let mut j = failed();
+        j["capacity_inventory"] = pool_ready(&t);
+        assert!(t.ctx.retry_capacity(&mut j));
+        let deadline = j["retry_not_before"].clone();
+        t.put(j.clone());
+        let mut restarted = t.ctx.load(s(&j, "id")).unwrap();
+        assert_eq!(restarted["retry_not_before"], deadline);
+        assert!(!t.ctx.recheck_capacity_wait(&mut restarted));
+        restarted["status"] = json!("failed");
+        restarted["last_failure_kind"] = json!("capacity");
+        restarted["last_error"] = json!("Selected model is at capacity");
+        assert!(t.ctx.retry_capacity(&mut restarted));
+        assert_eq!(restarted["capacity_account_selector"], "p000003");
+        assert_eq!(restarted["capacity_same_model_retry_count"], 2);
+    }
+
+    #[test]
+    fn unverified_failed_account_waits_instead_of_immediately_changing_provider() {
+        let t = Test::new();
+        let mut j = failed();
+        let mut inventory = pool_ready(&t);
+        inventory["pool"]["verified"] = json!(false);
+        inventory["pool"]["failed"] = json!([]);
+        j["capacity_inventory"] = inventory;
+        assert!(t.ctx.retry_capacity(&mut j));
+        assert_eq!(j["model"], "gpt-6.1-sol");
+        assert_eq!(j["capacity_wait_pending"], true);
+        assert!(j["capacity_retry_count"].is_null());
+        assert!(t.rt.spawn_args.lock().unwrap().is_empty());
+    }
 }
 mod queue_regressions {
     use super::*;

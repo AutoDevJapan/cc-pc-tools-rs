@@ -271,3 +271,35 @@ they never retry a rejected detach/unload. The original staging error remains
 separate from the observation/cleanup result. Synthetic regression tests exercise
 the real intent-removal/fence path and the exact read-only PowerShell script
 with stubbed Hyper-V/registry reads, not a real detach failure.
+
+## Windows offline seed replacement (2026-10-20)
+
+Official verify job 118499494675 in run 39201344542 attempt 3 succeeded,
+including its completion source proof. The first Windows attempt stopped before
+VM creation or registration: copying the replacement public `seed.json` failed.
+A read-only mount of that owned failed clone confirmed the existing 149-byte
+SDK seed had ReadOnly and Archive attributes (33). The original SDK was neither
+mounted nor modified. The failed clone was detached and admission released.
+
+The offline staging script now treats only that existing, fixed seed as a
+replacement. It rejects a directory or reparse point, saves its attributes,
+temporarily clears the ReadOnly bit if present, copies the new public seed and
+restores the original attributes in `finally`, including on copy failure. It
+does not grant permissions, take ownership, modify ACLs or add a general force
+copy. The three new files retain their existing refusal of occupied names.
+The source SDK digest check, same-revision helper identity, offline hive and
+disk release checks remain unchanged.
+
+Windows tests execute the exact replacement fragment against public synthetic
+files, without mounting a disk or invoking the broker. The old code failed the
+read-only and directory cases. The fix passes writable/read-only replacements,
+missing-source failure with attribute restoration, and directory refusal;
+contents, attributes and ACLs are checked. The complete Windows host module's
+race tests and vet passed. Actual clone staging and the original 13 Windows
+Cargo steps still require acceptance after the additional delta review.
+
+Successful same-source verify evidence is retained. After review, re-run the
+Windows job and its dependents rather than repeating the successful verify;
+[GitHub's job rerun endpoint](https://docs.github.com/en/rest/actions/workflow-runs#re-run-a-job-from-a-workflow-run)
+provides that scope. Recheck the actual run attempt and queued job before
+starting a fresh owned guest. A request receipt alone is not CI success.

@@ -231,7 +231,8 @@ try {
  if(-not (Test-Path -LiteralPath $helper -PathType Container)){throw 'CLONE_HELPER_ABSENT'}
  foreach($name in @('runner','runner-hooks','private\runner-listener.log')){if(Test-Path -LiteralPath (Join-Path $state $name)){throw 'CLONE_RUNNER_STATE_ALREADY_EXISTS'}}
  foreach($name in @('windows-ci-runner-agent.exe','runner-seed.json','actions-runner-win-x64-2.338.0.zip')){if(Test-Path -LiteralPath (Join-Path $helper $name)){throw 'CLONE_STAGED_FILE_ALREADY_EXISTS'}}
- foreach($name in @('windows-ci-runner-agent.exe','runner-seed.json','actions-runner-win-x64-2.338.0.zip','seed.json')){Copy-Item -LiteralPath (Join-Path $root $name) -Destination (Join-Path $helper $name) -ErrorAction Stop}
+	foreach($name in @('windows-ci-runner-agent.exe','runner-seed.json','actions-runner-win-x64-2.338.0.zip')){Copy-Item -LiteralPath (Join-Path $root $name) -Destination (Join-Path $helper $name) -ErrorAction Stop}
+` + windowsOfflineSeedReplacementScript() + `
  $hive='CC2737_'+[IO.Path]::GetFileName($root).Replace('-','_')
  & "$env:SystemRoot\System32\reg.exe" load "HKLM\$hive" (Join-Path $volume 'Windows\System32\config\SYSTEM') | Out-Null
  if($LASTEXITCODE -ne 0){throw 'CLONE_HIVE_LOAD_FAILED'}
@@ -247,7 +248,20 @@ try {
  try {if($hiveLoaded){[GC]::Collect();[GC]::WaitForPendingFinalizers(); & "$env:SystemRoot\System32\reg.exe" unload "HKLM\$hive" | Out-Null; if($LASTEXITCODE -ne 0){throw 'CLONE_HIVE_UNLOAD_FAILED'}}}
  finally {if($null -ne $mounted){Dismount-VHD -Path $disk -ErrorAction Stop}}
 }
+
 if((Get-VHD -Path $disk -ErrorAction Stop).Attached){throw 'CLONE_DETACH_UNCONFIRMED'}
+`
+}
+func windowsOfflineSeedReplacementScript() string {
+	return `
+$seedPath=Join-Path $helper 'seed.json'
+$seedItem=Get-Item -LiteralPath $seedPath -ErrorAction Stop
+if($seedItem.PSIsContainer -or (($seedItem.Attributes -band [IO.FileAttributes]::ReparsePoint)-ne0)){throw 'CLONE_SEED_NOT_REGULAR'}
+$seedAttributes=$seedItem.Attributes
+try {
+ if($seedItem.IsReadOnly){$seedItem.IsReadOnly=$false}
+ Copy-Item -LiteralPath (Join-Path $root 'seed.json') -Destination $seedPath -ErrorAction Stop
+} finally {[IO.File]::SetAttributes($seedPath,$seedAttributes)}
 `
 }
 func windowsBootstrap(ctx context.Context, root, instance string) (sdk.BootstrapResult, error) {

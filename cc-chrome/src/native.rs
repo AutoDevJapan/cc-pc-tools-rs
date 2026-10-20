@@ -668,6 +668,11 @@ async fn open_inner(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
     {
         lifecycle::activity(dir)?;
         let (pipe, info) = discover().await?;
+        open_on(dir, job, url, pipe, info).await
+    }
+}
+
+async fn open_on(dir: &Path, job: &str, url: &str, pipe: String, info: Value) -> io::Result<Record> {
         let mut rpc = Rpc::connect(&pipe).await?;
         let mut r = Record {
             job: job.into(),
@@ -706,7 +711,6 @@ async fn open_inner(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
             return Err(e);
         }
         Ok(r)
-    }
 }
 
 fn remaining(deadline: std::time::Instant) -> io::Result<Duration> {
@@ -784,6 +788,71 @@ pub fn close_page(record: &Record) -> io::Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn open_receipt_selects_exact_owned_record_for_phase_completion() {
+        runtime().unwrap().block_on(async {
+            let root = tempfile::tempdir().unwrap();
+            let dir = root.path().join("receipt-job");
+            fs::create_dir(&dir).unwrap();
+            lifecycle::atomic_json(&dir.join("job.json"), &json!({"status":"running"})).unwrap();
+            let pipe = format!(r"\\.\pipe\cc-chrome-open-receipt-{}", uuid::Uuid::new_v4());
+            let mut server = ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap();
+            let info = json!({"metadata":{"extensionInstanceId":"fixture-instance"},"browserTabMentions":{"generation":"fixture-generation"}});
+            let backend = async {
+                server.connect().await.unwrap();
+                for (method, result) in [("createTab", json!({"id":42})), ("attach", json!({})), ("executeCdp", json!({}))] {
+                    let request = read_frame(&mut server).await.unwrap();
+                    assert_eq!(request["method"], method);
+                    if method != "createTab" {
+                        assert_eq!(fs::read_dir(dir.join("chrome-tabs")).unwrap().count(), 1,
+                            "ownership must be durable before attach/navigation");
+                    }
+                    if method == "executeCdp" {
+                        assert_eq!(request["params"]["method"], "Page.navigate");
+                        assert_eq!(request["params"]["target"]["tabId"], 42);
+                        assert_eq!(request["params"]["commandParams"]["url"], "about:blank");
+                    }
+                    write_frame(&mut server, &json!({"id":request["id"],"result":result})).await.unwrap();
+                }
+            };
+            let (opened, ()) = tokio::join!(open_on(&dir, "receipt-job", "about:blank", pipe, info), backend);
+            let response = serde_json::to_value(opened.unwrap()).unwrap();
+            let id = response["record_id"].as_str().expect("open response must return the persisted record UUID");
+            assert!(uuid::Uuid::parse_str(id).is_ok());
+            let path = dir.join("chrome-tabs").join(format!("{id}.json"));
+            let record: Record = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+            let mut identity = response.clone();
+            identity.as_object_mut().unwrap().remove("record_id");
+            assert_eq!(identity, serde_json::to_value(&record).unwrap());
+            assert_eq!(record.job, "receipt-job");
+            assert_eq!(record.tab, 42);
+            assert_eq!(record.instance, "fixture-instance");
+            assert_eq!(record.generation, "fixture-generation");
+
+            let mut other = record.clone();
+            other.tab = 99;
+            let other_path = persist(&dir, &other).unwrap();
+            lifecycle::atomic_json(&dir.join("chrome-tab-requests").join(format!("{id}.json")),
+                &json!({"record":record,"close":true,"reason":"fixture phase finished"})).unwrap();
+            struct Selected(Vec<u64>);
+            impl Closer for Selected {
+                fn close(&mut self, record: &Record) -> io::Result<bool> {
+                    self.0.push(record.tab);
+                    Ok(true)
+                }
+            }
+            let mut closer = Selected(vec![]);
+            let result = sweep_selected(root.path(), Some("receipt-job"), Some(id), epoch(), false, &mut closer).unwrap();
+            assert_eq!((result.closed, result.failed), (1, 0));
+            assert_eq!(closer.0, [42]);
+            assert!(!path.exists());
+            assert!(other_path.exists(), "a different live tab must remain owned and open");
+            let history: Value = serde_json::from_slice(&fs::read(dir.join("chrome-tab-history").join(format!("{id}.json"))).unwrap()).unwrap();
+            assert_eq!(history["record"], serde_json::to_value(record).unwrap());
+            assert_eq!(history["completion_reason"], "fixture phase finished");
+        });
+    }
+
     #[test]
     fn malformed_inventory_cannot_prove_a_recorded_tab_absent() {
         for tabs in [

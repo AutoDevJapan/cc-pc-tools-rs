@@ -48,10 +48,15 @@ impl Operations {
         }
     }
     pub fn snapshot(&self) -> Value {
-        self.snapshot
+        let mut value = self.snapshot
             .read()
             .unwrap_or_else(|e| e.into_inner())
-            .clone()
+            .clone();
+        if let Some(workforce) = value.get_mut("workforce") {
+            crate::workforce::expire(workforce, now_ms());
+        }
+        if value["workforce"].is_object() {crate::workforce::apply_to_board(&mut value);}
+        value
     }
     pub fn refresh(&self) {
         let live = self
@@ -62,6 +67,23 @@ impl Operations {
         let now = now_ms();
         let mut value = collect_with_questions(&self.root, now, &live);
         value["skillsInventory"] = self.skills.snapshot(now);
+        let active = crate::workforce_observation::acquire(&self.root);
+        let completed = now_ms();
+        let previous = self.snapshot();
+        value["workforce"] = crate::workforce::generation(
+            &value, active.as_ref().ok(), previous.get("workforce"), now, completed,
+            active.as_ref().err().copied(),
+        );
+        if value["workforce"]["state"]=="unavailable"
+            && value["protectionMode"]=="masked_metadata" && previous["protectionMode"]=="masked_metadata"
+            && previous["departments"].is_array() {
+            // Retain only the already masked display, with its original data time.
+            // The failed acquisition and unknown current counts remain explicit.
+            value["departments"]=previous["departments"].clone();
+            value["unassignedProducts"]=previous["unassignedProducts"].clone();
+            value["previousDataAt"]=previous.get("previousDataAt").unwrap_or(&previous["fetchedAt"]).clone();
+        }
+        crate::workforce::apply_to_board(&mut value);
         *self.snapshot.write().unwrap_or_else(|e| e.into_inner()) = value;
     }
     pub fn worker_detail(&self, id: &str, offset: usize) -> Result<Value, u16> {
@@ -225,6 +247,7 @@ pub fn metadata_display_snapshot(board: &Value, kind: &str) -> Result<Value, &'s
     result["protectionMode"] = json!("masked_metadata");
     result["metadataOnly"] = json!(true);
     result["fetchedAt"] = board["fetchedAt"].clone();
+    result["workforce"] = board["workforce"].clone();
     Ok(result)
 }
 fn empty() -> Value {
@@ -712,6 +735,27 @@ fn collect(root: &Path, now: u64) -> Value {
 }
 // A missing name registry must not expose any free text or erase the available
 // activity metadata. This projection does not create or substitute a registry.
+fn protected_wait(item: &Value, current: Option<&Value>, queue: &Value, now: u64) -> &'static str {
+    if item["status"]=="wait" {return "dependency"}
+    if item["status"]=="recovery_unverified" {return "technical"}
+    let wait=&item["owner_question_wait"];
+    let question=&wait["question"];
+    if item["status"]=="block" && wait["domain"]=="todo-owner-question-wait-v1"
+        && question["domain"]=="discord-conversation-question-v1"
+        && question["todo_id"].as_str().and_then(|id|id.parse::<u64>().ok())==item["id"].as_u64()
+        && wait["block_note"].is_string() && wait["block_note"]==item["note"]
+        && stamp(&wait["blocked_at"]).is_some_and(|at|at<=now)
+        && wait["question_receipt_sha256"].as_str().is_some_and(|key|key.len()==64&&key.bytes().all(|b|b.is_ascii_hexdigit())) {
+        return "decision";
+    }
+    if item["status"]=="block" {return "unverified"}
+    if current.is_some_and(|job|job["status"]=="queued") {return "job_queue"}
+    if queue["queue"].as_array().is_some_and(|entries|entries.iter().any(|entry|
+        entry["todo_id"]==item["id"] && queue["preparation_failures"][text(entry,"key")].is_array())) {return "startup_error"}
+    if current.is_none() && queue["queue"].as_array().is_some_and(|entries|entries.iter().any(|entry|entry["todo_id"]==item["id"])) {return "intake"}
+    "unverified"
+}
+
 fn protected_metadata(root: &Path, now: u64) -> Value {
     protected_metadata_at(
         root,
@@ -726,6 +770,9 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
         .filter(|db| db["items"].is_array() && db["projects"].is_object());
     let job_result = jobs_at(jobs_path);
     let js = job_result.as_ref().map(Vec::as_slice).unwrap_or(&[]);
+    let policy = read_json(&root.join("scheduler/priorities.json")).unwrap_or(Value::Null);
+    let ranks = todo.as_ref().map(|db|cc_scheduler::priority::todo_ranks(db,&policy)).unwrap_or_default();
+    let queue = read_json(&root.join("localai-web-rs/target/release/console-state.json")).unwrap_or(Value::Null);
     let mut tree = Tree::new();
     let mut used = BTreeSet::new();
     let public_product = |raw: &str| {
@@ -887,6 +934,7 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
                 public_product(raw_project).map_or(usize::MAX, |p| p.department),
                 project_label(raw_project),
                 json!({"id":format!("todo-{id}"),"name":format!("作業 #{id}"),"task":format!("#{id} {task}"), "status":status,
+                    "priority":ranks.get(&id),
                     "recordedStatus":match text(item,"status") {"todo"|"doing"|"wait"|"block"|"done"|"recovery_unverified"=>item["status"].clone(),_=>json!("unknown")},
                     "primaryJob":current.map(|job|safe_id("job",text(job,"id"))),"jobStatus":current.map(|job|text(job,"status")),
                     "summary":task,"currentStage":protected_stage(current),"lastActivityAt":protected_activity(current),
@@ -896,7 +944,7 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
                     "progress":item["progress"].as_u64().filter(|n|*n<=100),
                     "updatedAt":todo_stamp(item).and_then(|at|chrono::DateTime::from_timestamp_millis(at as i64)).map(|at|at.to_rfc3339()),
                     "detail":detail,"detailAvailable":false,"historyFailures":job_result.as_ref().ok().map(|_|associated.iter().filter(|job|failed(job)).count()),
-                    "waitingKind":if text(item,"status")=="wait" {"dependency"} else if text(item,"status")=="recovery_unverified" {"technical"} else {"unverified"}}),
+                    "waitingKind":protected_wait(item,current,&queue,now)}),
             );
         }
     }
@@ -998,8 +1046,8 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
             "jobs",
             "ジョブ",
             job_result.is_ok(),
-            Some(now),
-            "記録された実行状態だけを取得"
+            None,
+            "記録された実行状態だけを取得。元の更新時刻は記録ごとに異なります。"
         ),
         source(
             "scheduler",
@@ -1061,7 +1109,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
         "jobs",
         "ジョブ",
         jobs.is_ok(),
-        Some(now),
+        None,
         if jobs.is_ok() {
             "保存されたジョブから取得"
         } else {
@@ -1285,6 +1333,8 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
                 _ => "未着手です。",
             };
             let mut worker = json!({"id":format!("todo-{}",item["id"].as_u64().unwrap_or(0)),"name":if client {"担当".into()}else{task.chars().take(24).collect::<String>()},
+                "recordedStatus":item["status"],"priority":cc_scheduler::priority::item_rank(item,&policy),"waitingKind":wait_kind,
+                "primaryJob":current.map(|job|safe_id("job",text(job,"id"))),"jobStatus":current.map(|job|text(job,"status")),
                 "task":task,"waitKind":wait_kind,"questionUrl":question_url,"status":status,"progress":progress,"updatedAt":todo_stamp(item).and_then(|n|chrono::DateTime::from_timestamp_millis(n as i64)).map(|t|t.to_rfc3339()),
                 "detail":detail,"historyFailures":history});
             if !client {

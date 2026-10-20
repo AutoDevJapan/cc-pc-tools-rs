@@ -49,7 +49,7 @@
       <section id="view-kanban" class="view active operations" aria-label="組織の作業状況">
         <div class="ops-toolbar">
           <div class="ops-update" id="ops-update" role="status">作業状況を読み込み中…</div>
-          <div class="ops-filters"><label class="ops-search"><span class="ops-sr-only">製品・作業・担当・要約・工程・停止理由・次の行動・依存先を検索</span><input id="ops-search" type="search" placeholder="作業・要約・工程・停止・次・依存を検索" autocomplete="off"></label><label class="ops-sr-only" for="ops-status">作業の状態</label><select id="ops-status"><option value="">すべて</option><option value="working">● 稼働中</option><option value="waiting">● 待機</option><option value="attention">● 要対応</option><option value="idle">休止</option><option value="done">完了</option></select><button id="ops-refresh" class="ghost" type="button">更新</button></div>
+          <div class="ops-filters"><label class="ops-search"><span class="ops-sr-only">製品・作業・担当・要約・工程・停止理由・次の行動・依存先を検索</span><input id="ops-search" type="search" placeholder="作業・要約・工程・停止・次・依存を検索" autocomplete="off"></label><label class="ops-sr-only" for="ops-status">作業の状態</label><select id="ops-status"><option value="">すべて</option><option value="working">● 実作業を確認</option><option value="unknown">実行未確認</option><option value="dependency_wait">依存待ち</option><option value="resource_wait">資源待ち</option><option value="decision_wait">本人回答待ち</option><option value="job_queued">ジョブ起動待ち</option><option value="intake_wait">受付待ち</option><option value="startup_failure">準備失敗</option><option value="recovery_unverified">復旧未確認</option><option value="waiting">● 待機</option><option value="attention">● 要対応</option><option value="idle">休止</option><option value="done">完了</option></select><button id="ops-refresh" class="ghost" type="button">更新</button></div>
         </div>
         <p id="ops-error" class="ops-error" role="status" hidden></p>
         <div id="ops-metrics" class="ops-metrics" aria-label="稼働状況とPCの使用量"></div>
@@ -186,18 +186,26 @@
     function opsIsOpen(worker){return ['working','attention','waiting'].includes(worker.status)}
     // Never infer an owner decision from the general waiting state or free text.
     function opsWaitKind(worker){const reason=worker.waitKind||worker.waitingReason||worker.waitReason;return ['decision','owner','owner_decision'].includes(reason)?'decision':['resource','capacity','build'].includes(reason)?'resource':worker.todoStatus==='wait'||['dependency','todo'].includes(reason)?'dependency':''}
-    function opsMatchesStatus(worker,status){return !status||(['decision','resource','dependency'].includes(status)?worker.status==='waiting'&&opsWaitKind(worker)===status:worker.status===status)}
+    function opsMatchesStatus(worker,status){return !status||(['decision','resource','dependency'].includes(status)?worker.status==='waiting'&&opsWaitKind(worker)===status:worker.workState===status||worker.status===status)}
     function opsShort(value){const text=String(value||'').trim().replace(/\s+/g,' ');return text.length>180?text.slice(0,180)+'…':text}
     function opsDependencies(worker){return worker.dependencySummary||opsList(worker.dependencies).map(id=>'ToDo #'+id).join('、')||'未記録'}
     function opsFacts(worker,full=false){
-      const rows=[['作業要約',worker.summary||'未記録'],['最終成果の時刻',opsTime(worker.lastResultAt)],['成果内容',worker.lastResult||'未記録'],['現在の工程',worker.currentStage||'未記録'],['停止理由',worker.stopReason||'未記録'],['次の行動',worker.nextAction||'未記録'],['依存先',opsDependencies(worker)]];
+      const refs=worker.references||{};
+      const rows=[['作業要約',worker.summary||'未記録'],['最終成果の時刻',opsTime(worker.lastResultAt)],['成果内容',worker.lastResult||'未記録'],['現在の工程',worker.currentStage||'未記録'],['停止理由',worker.stopReason||'未記録'],['次の行動',worker.nextAction||'未記録'],['依存先',opsDependencies(worker)],['優先順位',Number.isSafeInteger(worker.priority)?String(worker.priority):'未取得'],['担当セッション',opsList(refs.sessions).join('、')||'未観測・最近の処理を確認できません'],['Issue・PR・検査・配布',refs.issue||refs.pr||refs.test||refs.deployment?'個別の参照を確認':'未記録、または本文を保護中のため取得できません']];
       if(worker.factsSource)rows.push(['記録元',worker.factsSource]);
       return rows.map(([label,value])=>full?`<dt>${label}</dt><dd>${esc(value)}</dd>`:`<span><b>${label}</b>: ${esc(opsShort(value))}</span>`).join('');
     }
     function opsHistory(worker){return opsList(worker.history).map(entry=>{if(typeof entry==='string')return `<li>${esc(entry)}</li>`;if(!entry||typeof entry!=='object')return '<li>内容未記録</li>';return `<li>${esc(opsTime(entry.at||entry.updated_at||entry.timestamp||entry.updated))} · ${esc(entry.note||entry.message||entry.summary||entry.status||'内容未記録')}</li>`}).join('')}
     function opsQuestionUrl(value){try{const url=new URL(value);return url.protocol==='https:'&&['discord.com','www.discord.com'].includes(url.hostname)&&/^\/channels\/\d+\/\d+(?:\/\d+)?\/?$/.test(url.pathname)&&!url.username&&!url.password?url.href:null}catch{return null}}
     function opsPriority(worker){return ({attention:0,working:1,waiting:2,idle:3,done:4})[worker.status]??5}
-    function opsCount(workers){return `稼働 ${workers.filter(w=>w.status==='working').length} / ${workers.length}`}
+    function opsCount(workers){return `実作業 ${workers.filter(w=>w.workState==='processing').length}件 / 作業記録 ${workers.length}件`}
+    function expireOpsEvidence(data,now=Date.now()){
+      const workforce=data&&data.workforce,proof=workforce&&workforce.processing;
+      if(!proof||typeof proof.validUntil!=='number'||now<=proof.validUntil)return;
+      proof.state='stale';proof.verifiedCount=null;proof.total=null;
+      const products=opsList(data.departments).flatMap(d=>opsList(d.products)).concat(opsList(data.unassignedProducts));
+      for(const row of products.flatMap(p=>opsList(p.workers)))if(row.workState==='processing'){row.workState='execution_unverified';row.status='unknown';row.currentStage='最近の処理は未確認（前回の観測が古くなりました）'}
+    }
     function opsKey(...parts){return JSON.stringify(parts)}
     function opsRestoreBoardFocus(key){const node=$$('[data-op-focus]').find(el=>el.dataset.opFocus===key);if(node)node.focus()}
     function opsSkillsSummary(inventory){
@@ -209,6 +217,7 @@
       return {value:label,caption:`確認 ${checked}`};
     }
     function renderOperations(){
+      expireOpsEvidence(opsState.snapshot);
       const focused=document.activeElement&&document.activeElement.dataset.opFocus;
       const data=opsState.snapshot, departments=opsList(data&&data.departments), all=departments.flatMap(opsWorkers).concat(opsList(data&&data.unassignedProducts).flatMap(p=>opsList(p.workers)));
       const metric=data&&data.metrics||{};
@@ -219,13 +228,13 @@
           metricCard('送信を確認した未回答質問',opsValue(metric.confirmedUnansweredQuestions),'waiting'),
           metricCard('質問を待つ作業',opsValue(metric.ownerDecisionTasks),'waiting'),
           metricCard('未送信の質問',opsValue(metric.unsentQuestions),'attention')]),
-        metricCard('稼働 / 登録ワーカー',data?`${all.filter(w=>w.status==='working').length} <small>/ ${all.length}</small>`:'—'),
-        metricCard('待機ワーカー',data?all.filter(w=>w.status==='waiting'&&w.recordedStatus!=='recovery_unverified').length:'—','waiting'),
+        metricCard('処理を確認した担当（CC jobs）',opsValue(data&&data.workforce&&data.workforce.processing&&data.workforce.processing.verifiedCount),'',data&&data.workforce&&data.workforce.processing&&data.workforce.processing.state==='partial'?'一部取得・総数は未確認':'Native Codex・Claudeは未観測'),
+        metricCard('表示中の未完了作業',opsValue(data&&data.workforce&&data.workforce.inventory&&data.workforce.inventory.unfinishedTaskRecords),'waiting'),
         ...(data&&data.protectionMode==='masked_metadata'?[metricCard('元記録の復旧確認待ち',opsValue(metric.recoveryUnverified),'waiting')]:[]),
-        metricCard('要対応ワーカー',data?all.filter(w=>w.status==='attention').length:'—','attention'),
+        metricCard('停止理由が未確認の作業',opsValue(data&&data.workforce&&data.workforce.states&&data.workforce.states.blocked_unknown),'attention'),
         metricCard('CPU',opsValue(metric.cpuPercent,'%')),
         metricCard('メモリ',`${opsValue(metric.memoryUsedGb)} <small>/ ${opsValue(metric.memoryTotalGb)} GB</small>`),
-        `<div class="ops-metric-pair">${metricCard('実行ジョブ / 起動枠',`${opsValue(metric.activeJobs)} <small>/ ${opsValue(metric.jobLimit)}</small>`)}${metricCard('Skills',skills.value,'',skills.caption)}</div>`
+        `<div class="ops-metric-pair">${metricCard('記録上の実行ジョブ / 起動枠',`${opsValue(metric.activeJobs)} <small>/ ${opsValue(metric.jobLimit)}</small>`)}${metricCard('Skills',skills.value,'',skills.caption)}</div>`
       ].join('');
       renderOpsQuestions(data);
       const sources=opsList(data&&data.sources), good=data&&data.sourceOk===true&&sources.every(s=>s.ok===true||s.state==='unknown')&&!opsState.error;
@@ -236,6 +245,8 @@
       const metadataReady=protectedView&&data.metadataOk===true&&!opsState.error;
       $('#ops-update').innerHTML=`<span class="ops-status ${good||metadataReady?'working':data?'waiting':'unknown'}">${data?`取得 ${esc(opsTime(data.fetchedAt))} · 受信 ${esc(opsTime(opsState.receivedAt))} · ${metadataReady?'状態取得済み・本文は復旧中':good?'接続中':'接続を確認'}`:'未取得'}</span>`;
       $('#ops-source-summary').textContent=data?`${sources.filter(s=>s.ok===true).length} / ${sources.length} 接続 · ToDo完了待ち ${opsValue(metric.todoDependencyWaits)} · 未着手 ${opsValue(metric.todoPendingStarts)} · 停止 ${opsValue(metric.todoBlocked)} · ジョブ起動待ち ${opsValue(metric.jobQueued)} · 受付待ち ${opsValue(metric.consoleQueued)}（準備失敗 ${opsValue(metric.consolePreparationFailures)}） · 容量確認後の起動待ち ${opsValue(metric.waitingJobs)}`:'未取得';
+      if(data&&data.workforce){const w=data.workforce,p=w.processing||{},a=w.acquisition||{};$('#ops-source-summary').textContent+=` · 実作業の観測: CC jobs ${p.state==='complete'?'取得済み':p.state==='partial'?'一部取得':p.state==='stale'?'前回の観測は古い':'未取得'} / Native Codex・Claude 未観測 · 取得開始 ${opsTime(a.startedAt)} / 取得完了 ${opsTime(a.completedAt)} / 担当観測 ${opsTime(p.observedAt)} · 製品ごとに責任役 ${opsValue(w.responsibility&&w.responsibility.productRoles)}件（常駐数とは別）${a.error?' · 今回の取得に失敗':''}`}
+      if(data&&data.previousDataAt)$('#ops-source-summary').textContent+=` · 作業一覧は前回 ${opsTime(data.previousDataAt)} の記録です。現在の件数・実行は未確認です。`;
       $('#ops-sources').innerHTML=sources.map(s=>`<div class="ops-source"><strong>${esc(s.label||s.key)}</strong><span class="ops-status ${s.state==='unknown'?'unknown':s.ok===true?'working':'attention'}">${s.state==='unknown'?'状態未取得':s.ok===true?'接続中':'取得できません'}</span><span>更新 ${esc(opsTime(s.updatedAt))}</span>${s.message?`<span class="ops-source-message">${esc(s.message)}</span>`:''}</div>`).join('')||'<p class="ops-empty">接続元の記録はありません。</p>';
       const commander=data&&data.commander;
       // The commander's face and status use only its own record, never child incidents.
@@ -295,13 +306,13 @@
             return `<button type="button" class="ops-worker" data-op-key="${esc(key)}" data-op-focus="${esc(key)}" ${opsState.selected===key?'aria-current="true"':''}>${opsRobot(color,false,worker.status)}<span class="ops-worker-text"><strong>${esc(opsShort(worker.task||worker.name)||'作業未記録')}</strong><small>${esc(worker.name)}</small></span><span class="ops-worker-meta">${opsStatus(worker.status)}${opsProgress(worker.progress)}</span><span class="ops-worker-facts">${opsFacts(worker)}<span>${worker.detailAvailable?'クリックして全文と履歴を見る':'クリックして状態と停止理由を見る'}</span></span></button>`;
           }).join('');
           const remaining=visible.length-rendered.length,remainingOpen=visible.slice(rendered.length).filter(({worker})=>opsIsOpen(worker)).length;
-          return `<details class="ops-product" data-op-product="${esc(productKey)}" ${productOpen?'open':''}><summary class="ops-product-heading" data-op-focus="${esc('product:'+productKey)}">${opsRobot(color)}<h4>${esc(product.name)}</h4><span class="ops-count">${opsCount(members)}</span></summary>${rows||(productOpen?'<p class="ops-empty">登録ワーカーなし</p>':'')}${productOpen&&remaining>0?`<button class="ops-more" type="button" data-op-more="${esc(productKey)}" data-op-focus="${esc('more:'+productKey)}">さらに表示 · 残り ${remaining}件（稼働・要対応・待機 ${remainingOpen}件）</button>`:''}</details>`;
+          return `<details class="ops-product" data-op-product="${esc(productKey)}" ${productOpen?'open':''}><summary class="ops-product-heading" data-op-focus="${esc('product:'+productKey)}">${opsRobot(color)}<h4>${esc(product.name)}</h4><span class="ops-count">${opsCount(members)}</span></summary>${rows||(productOpen?'<p class="ops-empty">作業記録なし</p>':'')}${productOpen&&remaining>0?`<button class="ops-more" type="button" data-op-more="${esc(productKey)}" data-op-focus="${esc('more:'+productKey)}">さらに表示 · 残り ${remaining}件（稼働・要対応・待機 ${remainingOpen}件）</button>`:''}</details>`;
         }).join('');
         if(filtering&&!products)return '';
         const open=departmentChoices.has(deptKey)?departmentChoices.get(deptKey):filtering||!narrow;
         return `<details class="ops-department" style="--dept-color:${color}" data-op-dept="${esc(deptKey)}" ${open?'open':''}><summary data-op-focus="${esc('dept:'+deptKey)}">${opsRobot(color)}<span class="ops-dept-title"><strong>${esc(dept.name)}</strong><small>${opsCount(workers)}</small></span></summary><div class="ops-products">${products||'<p class="ops-empty">登録製品なし</p>'}</div></details>`;
       }).join('')||`<p class="ops-empty">${opsState.snapshot?(filtering?'検索条件に一致する作業はありません。':'部署の登録はありません。'):'作業状況は未取得です。更新で再取得できます。'}</p>`;
-      $('#ops-results').textContent=opsState.snapshot?`${filtering?`条件に一致 ${shown} / ${total} ワーカー · `:`登録 ${total} ワーカー · `}実行待ちジョブ ${opsNumber(opsState.snapshot.metrics&&opsState.snapshot.metrics.waitingJobs)===null?'—':opsDecimal(opsState.snapshot.metrics.waitingJobs)}件`:'';
+      $('#ops-results').textContent=opsState.snapshot?`${filtering?`条件に一致 ${shown} / ${total} 作業記録 · `:`表示 ${total} 作業記録 · `}同時実行人数とは異なります`:'';
       $$('[data-op-dept]').forEach(el=>el.querySelector('summary').addEventListener('click',()=>departmentChoices.set(el.dataset.opDept,!el.open)));
       $$('[data-op-product]').forEach(el=>el.querySelector('summary').addEventListener('click',e=>{e.preventDefault();productChoices.set(el.dataset.opProduct,!el.open);renderOpsDepartments();opsRestoreBoardFocus('product:'+el.dataset.opProduct)}));
       $$('[data-op-more]').forEach(el=>el.onclick=()=>{const key=el.dataset.opMore;opsState.limits.set(key,(opsState.limits.get(key)||6)+24);renderOpsDepartments();const next=$$('[data-op-more]').find(button=>button.dataset.opMore===key);if(next)next.focus();else opsRestoreBoardFocus('product:'+key)});

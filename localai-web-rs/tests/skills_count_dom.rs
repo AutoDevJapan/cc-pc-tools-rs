@@ -31,7 +31,7 @@ function renderSummary(protectionMode){{
 }}
 for(const mode of ['normal','masked_metadata']){{
   const result=renderSummary(mode);
-  assert.match(result,/<div class="ops-metric-pair"><div class="ops-metric "><span>実行ジョブ \/ 起動枠<\/span>/);
+  assert.match(result,/<div class="ops-metric-pair"><div class="ops-metric "><span>記録上の実行ジョブ \/ 起動枠<\/span>/);
   assert.match(result,/<\/strong><\/div><div class="ops-metric "><span>Skills<\/span><strong>1,234 <small>件<\/small><\/strong>/);
   assert.match(result,/確認 1970-01-01T00:00:01.000Z/);
 }}

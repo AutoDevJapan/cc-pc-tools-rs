@@ -8,3 +8,5 @@ mod owner_followup;
 mod skills_inventory;
 pub mod todo_listing;
 pub mod work_facts;
+pub mod workforce;
+mod workforce_observation;

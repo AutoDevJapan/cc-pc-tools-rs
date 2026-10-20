@@ -64,7 +64,7 @@ func TestRunnerTempFixture(t *testing.T) {
 
 func TestRunnerTempEnvironmentDoesNotChangeServiceProofTemp(t *testing.T) {
 	root := t.TempDir()
-	for _, path := range []string{filepath.Join(root, "staging"), filepath.Join(root, "private", "source-proof")} {
+	for _, path := range []string{filepath.Join(root, "worker", "_temp"), filepath.Join(root, "private", "source-proof")} {
 		if e := os.MkdirAll(path, 0700); e != nil {
 			t.Fatal(e)
 		}
@@ -85,18 +85,18 @@ func TestRunnerTempEnvironmentDoesNotChangeServiceProofTemp(t *testing.T) {
 				continue
 			}
 			counts[upper]++
-			want := sdkRoot + `\staging`
+			want, base, mappedRoot := workerTempRoot, runnerRoot, filepath.Join(root, "worker")
 			if parent {
-				want = proofTempRoot
+				want, base, mappedRoot = proofTempRoot, sdkRoot, root
 			}
 			if value != want {
 				t.Fatal("wrong process temp boundary")
 			}
-			rel, e := filepath.Rel(sdkRoot, value)
+			rel, e := filepath.Rel(base, value)
 			if e != nil {
 				t.Fatal(e)
 			}
-			mapped := filepath.Join(root, rel)
+			mapped := filepath.Join(mappedRoot, rel)
 			out[i] = key + "=" + mapped
 			if parent {
 				t.Setenv(key, mapped)
@@ -122,8 +122,8 @@ func TestRunnerTempEnvironmentDoesNotChangeServiceProofTemp(t *testing.T) {
 		t.Fatalf("public temp child failed: %v", r.err)
 	}
 	got, e := os.ReadFile(result)
-	if e != nil || string(got) != filepath.Join(root, "staging") {
-		t.Fatal("child did not create its temp under worker staging")
+	if e != nil || string(got) != filepath.Join(root, "worker", "_temp") {
+		t.Fatal("child did not create its temp under the public worker tree")
 	}
 	if filepath.Clean(os.TempDir()) != filepath.Join(root, "private", "source-proof") {
 		t.Fatal("child altered parent proof temp")

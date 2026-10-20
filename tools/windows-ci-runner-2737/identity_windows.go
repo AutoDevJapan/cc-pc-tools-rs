@@ -79,7 +79,7 @@ func runnerAccessCommands() [][]string {
 	for _, name := range []string{"rust-1.97.1", "git", "powershell", "sccache", "vs-build-tools"} {
 		commands = append(commands, []string{sdkRoot + `\` + name, "/grant:r", "*" + runnerUserSID + ":(OI)(CI)RX"})
 	}
-	for _, name := range []string{"staging", "cargo-home", "rustup-home", "target", "sccache-cache", "service-profile"} {
+	for _, name := range []string{"cargo-home", "rustup-home", "sccache-cache"} {
 		commands = append(commands, []string{sdkRoot + `\` + name, "/grant:r", "*" + runnerUserSID + ":(OI)(CI)M"})
 	}
 	// Git rejects a worktree/.git owned by another account. Give the freshly

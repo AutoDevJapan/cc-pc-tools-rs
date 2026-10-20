@@ -89,6 +89,14 @@ func TestRunnerAccessHasNoInheritedSDKRootOrPrivateGrant(t *testing.T) {
 		if args[0] == sdkRoot && (args[1] != "/grant:r" || args[2] != "*S-1-5-19:(X)" || len(args) != 3) {
 			t.Fatal("SDK root grant inherited")
 		}
+		if args[0] == runnerRoot && (len(args) != 3 || args[1] != "/grant:r" || args[2] != "*S-1-5-19:(OI)(CI)M") {
+			t.Fatal("worker tree grant changed")
+		}
+		for _, retired := range []string{"runner", "staging", "service-profile", "target"} {
+			if args[0] == sdkRoot+`\`+retired {
+				t.Fatal("unused SDK worker grant retained")
+			}
+		}
 		if args[0] == sdkRoot+`\private` || args[0] == sdkRoot+`\downloads` || args[0] == agentRoot {
 			t.Fatal("service private/bootstrap exposed")
 		}
@@ -96,7 +104,7 @@ func TestRunnerAccessHasNoInheritedSDKRootOrPrivateGrant(t *testing.T) {
 			t.Fatal("checkout owner not its executor")
 		}
 	}
-	for _, path := range []string{sdkRoot, helperPath, hookRoot, runnerRoot, sourceRoot, sdkRoot + `\rust-1.97.1`, sdkRoot + `\vs-build-tools`, sdkRoot + `\staging`, sdkRoot + `\target`} {
+	for _, path := range []string{sdkRoot, helperPath, hookRoot, runnerRoot, sourceRoot, sdkRoot + `\rust-1.97.1`, sdkRoot + `\vs-build-tools`, sdkRoot + `\cargo-home`, sdkRoot + `\sccache-cache`} {
 		if !seen[path] {
 			t.Fatal("required fixed runtime path absent")
 		}

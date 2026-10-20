@@ -28,6 +28,9 @@ const agentRoot = `C:\Windows\System32\WindowsCISDK2737`
 // Stock IOUtil.ValidateExecutePermission enumerates every ancestor. Keep its
 // mutable tree outside the SDK root, whose private boundary grants only X.
 const runnerRoot = `C:\ProgramData\AutoDevJapan\windows-ci-runner-2737`
+const workerTempRoot = runnerRoot + `\_temp`
+const workerProfileRoot = runnerRoot + `\_profile`
+const workerTargetRoot = runnerRoot + `\_target`
 const sourceRoot = runnerRoot + `\_work\GoDD-MCP-Alpha\GoDD-MCP-Alpha`
 const hookRoot = sdkRoot + `\runner-hooks`
 const planPath = agentRoot + `\runner-seed.json`
@@ -114,6 +117,12 @@ func (o *windowsOps) prepare(ctx context.Context, p sourcepacket.Packet) (source
 	if e != nil {
 		return sourcepacket.Receipt{}, e
 	}
+	if e = prepareWorkerDirectories(runnerRoot); e != nil {
+		return sourcepacket.Receipt{}, e
+	}
+	if e = enableGuestSymlinkSupport(ctx, o.env); e != nil {
+		return sourcepacket.Receipt{}, e
+	}
 	o.entries = append([]sourcepacket.TreeEntry(nil), p.TreeEntries...)
 	proof, e := sourcepacket.Materialize(ctx, p, o.plan.Source, sourceRoot)
 	if e != nil {
@@ -162,17 +171,21 @@ func fixedEnvironmentValues(p Plan, sccache string) []string {
 
 // Service-global TEMP/TMP (including Windows GetTempPath2's SYSTEM override)
 // stay private throughout the session. Only the unprivileged child gets the
-// writable staging directory; never install this environment in the service.
+// writable public worker tree; never install this environment in the service.
 func runnerEnvironment(service []string) []string {
 	env := make([]string, 0, len(service))
 	for _, entry := range service {
 		key, _, _ := strings.Cut(entry, "=")
-		if strings.EqualFold(key, "TEMP") || strings.EqualFold(key, "TMP") || strings.EqualFold(key, "SystemTemp") {
+		switch strings.ToUpper(key) {
+		case "TEMP", "TMP", "SYSTEMTEMP", "USERPROFILE", "HOME", "APPDATA", "LOCALAPPDATA", "CARGO_TARGET_DIR":
 			continue
 		}
 		env = append(env, entry)
 	}
-	return append(env, `TEMP=`+sdkRoot+`\staging`, `TMP=`+sdkRoot+`\staging`)
+	return append(env, `TEMP=`+workerTempRoot, `TMP=`+workerTempRoot,
+		`USERPROFILE=`+workerProfileRoot, `HOME=`+workerProfileRoot,
+		`APPDATA=`+workerProfileRoot+`\AppData\Roaming`, `LOCALAPPDATA=`+workerProfileRoot+`\AppData\Local`,
+		`CARGO_TARGET_DIR=`+workerTargetRoot)
 }
 
 func fixedServicePath(sccache string) string {

@@ -30,8 +30,8 @@ could place those snapshots in a worker-writable directory. The service now
 creates a fresh `private\source-proof` directory under the retained SYSTEM-only
 private parent before any source preparation. Its process-global `TMP`, `TEMP`
 and `SystemTemp` remain there for the whole session. Configuration/listening
-receive a separate copied environment with staging-based `TMP`/`TEMP` and no
-`SystemTemp`; clearing child inputs cannot mutate the service environment.
+receive a separate copied environment with runner-root `_temp` for `TMP`/`TEMP`
+and no `SystemTemp`; clearing child inputs cannot mutate the service environment.
 An existing proof-temp entry is rejected. No runner grant includes that path or
 its private parent. Real synthetic materialization and repeated Git proof pass
 even with an unusable worker temp, and a child-process fixture confirms that
@@ -44,17 +44,17 @@ The generated root grant used bare `:X`, which real `icacls` rejects with exit
 executes that exact generated command against a public temporary directory and
 reads back the ACL, requiring traverse only (plus optional synchronize) with no
 inheritance or propagation. The earlier declaration-only check did not catch
-this CLI grammar error. Corrected guest startup and workflow acceptance remain
-pending; the pre-registration failure is preserved separately.
+this CLI grammar error. Actual guest preparation subsequently accepted the
+corrected grant; full workflow acceptance remains pending.
 
 The SYSTEM-specific variable follows [GetTempPath2's documented SystemTemp
 override and ACL requirement](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettemppath2w).
 
 Related Windows race tests and vet pass for this module and its controller.
 Returning the launcher to inherited identity makes the new denial regression
-fail; it is a mutation check of that former behavior. Actual LocalService
-logon, child execution and ACL acceptance in the dedicated guest remain to be
-verified after separate-model review. No new official CI result is claimed.
+fail; it is a mutation check of that former behavior. Actual LocalService logon,
+child execution and stock registration subsequently succeeded. The first
+non-administrator unit run failed as described below; it is not CI success.
 
 Primary reference: [LogonUser's LocalService example](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-logonuserw).
 
@@ -80,7 +80,50 @@ temporary storage, and account/path choices are not request inputs. No SDK
 listing grant, permission-check bypass, workflow change or new host runner is
 introduced. A synthetic ancestor-walk fixture fails with the old nested layout
 and passes with the sibling; its negative control still refuses SDK listing.
-Actual new-layout LocalService/registration/workflow acceptance is pending.
+The initial sibling layout subsequently registered and reached official
+execution; its remaining acceptance failures are described below.
+
+## Worker data ancestors and mandatory link fixtures (2026-10-21)
+
+The sibling runner registered as numeric runner37 and claimed official Windows
+job118741826539 in run39201344542 attempt6. Start/complete source proofs and
+runner exit/drain succeeded. The official job failed its first unit group:
+2,500 passed, 141 failed, two ignored. The original log is555,970bytes, SHA256
+`46bde85819ca22094ee02cac4c03c02c463b455e87efc4ce0e56be749e8e815f`.
+The VM/registration were reclaimed. Only the unassigned CI Gate remained, so
+normal cancellation then one force cancellation ended attempt6; its own route
+was removed after exact lease/terminal checks. Successful verify was retained.
+
+Original fixed-source inspection identified a common environment defect:
+`AnchoredDirectory` opens each ancestor with generic read, while temporary test
+projects were still beneath the SDK's traverse-only parent. Its policy adapter
+maps that refusal to `PolicySchemaInvalid`, also observed in the original
+failure's fixed classification. This does not independently explain every one
+of the141 failures. Worker temp, profile/appdata and Cargo target now use fresh
+`_temp`, `_profile` and `_target` beneath the public runner root. The service's
+global proof temp/profile stay separate. Borrowed SDK tools and the three
+existing Cargo/Rustup/sccache caches retain their fixed locations; unused SDK
+staging/profile/target worker grants are removed. No SDK/private read grant or
+product security check is weakened.
+
+A distinct mandatory fixture requires a real file symlink and failed with
+Win32 error1314. Microsoft documents that
+[unprivileged symbolic-link creation requires Developer Mode](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createsymboliclinkw);
+[Rust documents the same prerequisite](https://doc.rust-lang.org/std/os/windows/fs/fn.symlink_file.html).
+Only the fixed guest SYSTEM agent enables the known64-bit
+`HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock` DWORD
+`AllowDevelopmentWithoutDevLicense=1`, then requires typed DWORD readback.
+The fixed `reg.exe` command must exit0 with confirmed drain. There is no host
+setting, retained-SDK modification, new account, administrator runner, account
+privilege grant, or fixture skip. The actual mandatory fixture still has to
+succeed in the next disposable guest; registry readback is not that acceptance.
+
+The prior worker-layout environment fails the new boundary regression; the new
+layout passes. Synthetic directory freshness, duplicate environment replacement,
+private service proof isolation, guest-agent authorization, setup failure/drain
+and readback rejection are covered. Host tests do not write HKLM. Actual new
+guest setup, all141 failed checks, the remaining original13 commands and final
+CI Gate still require the reviewed new runtime and an official rerun.
 
 ## Guest UTC before registration (2026-10-20)
 
@@ -281,9 +324,9 @@ The existing root is `C:\ProgramData\AutoDevJapan\windows-ci-sdk-2737`:
 | rust-1.97.1\bin | Received rustc/Cargo1.97.1, fmt/Clippy |
 | vs-build-tools\Common7\Tools\VsDevCmd.bat | Fixed arch x64, host x64, vcvars14.50, winsdk10.0.26100.0 |
 | sccache\…\sccache.exe | Exactly one received sccache0.18 executable; reject ambiguity/links |
-| cargo-home, rustup-home, target | Dedicated guest Cargo/Rustup/output directories |
+| cargo-home, rustup-home | Dedicated guest Cargo/Rustup caches |
 | sccache-cache | Dedicated guest cache, 30G |
-| service-profile, staging | Dedicated profile/temp, no owner environment |
+| service-profile, staging, target | Retained control directories; worker paths are below |
 | runner-hooks | Fixed start.ps1/complete.ps1 calling the compiled hook entry |
 | private\runner-listener.log | Private stdout prefix, hard8MiB maximum, SHA256 returned |
 
@@ -291,6 +334,8 @@ The stock runner and its registration files are under the separate fixed
 `C:\ProgramData\AutoDevJapan\windows-ci-runner-2737` root. Its
 `_work\GoDD-MCP-Alpha\GoDD-MCP-Alpha` child is the materialized source and the
 actual stock `GITHUB_WORKSPACE`; it is not beneath the SDK's private ancestor.
+Its `_temp`, `_profile` (including appdata) and `_target` children are the worker's
+temporary, home/profile and Cargo-output directories, with no owner environment.
 
 The child environment is an allowlist; Jobs/Threads from seed become
 CARGO_BUILD_JOBS/RUST_TEST_THREADS. Explicit original workflow serial flags

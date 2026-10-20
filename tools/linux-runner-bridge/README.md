@@ -19,14 +19,17 @@ so only this slot's labels can be withdrawn on idle expiry. It accepts only its
 own name with ephemeral=true. Its Cargo target is `.ci-work/target-burst-3122`;
 the primary keeps `.ci-work/target` even if the operator uses the same worktree.
 
-`bridge.exe pool <this-worktree>/.ci-work/target-burst-3122` supplies at most one such host
-at a time, at most 16 per invocation, with a two-hour admission window. Before
+`bridge.exe pool <this-worktree>/.ci-work/target-burst-3122` supplies one such host
+per invocation by default, with a two-hour admission window. An explicit second
+argument may request 1..16 hosts for a finite batch. Normal deployment uses one
+host per Task Scheduler invocation with a one-minute recurrence: disabling that
+task lets its current admission finish and prevents the next one. Before
 each one it reads current same-repository queued jobs and fresh Windows/VM
 capacity. Windows must have at least 24 GiB free, commit below 85%, CPU below
 75%, and 30 GiB free on each of C/D; the Docker VM must have 9 GiB available.
 The additional container is separately capped at 4 CPUs, 8 GiB and 1024 PIDs.
 Use the existing hidden S4U/Limited Task Scheduler management pattern, IgnoreNew,
-and a five-minute recurrence to recheck remaining work. The pool holds loopback
+and the one-minute recurrence to recheck remaining work. The pool holds loopback
 port 17863 to reject duplicate managers before registration. It stops when the
 queue drains or admission fails, never interrupts an active job to meet its
 admission deadline, and records its stage in `.ci-runtime/pool-status.private.json`.

@@ -38,7 +38,8 @@ func TestBurstPoolResuppliesAfterEachRealHostExit(t *testing.T) {
 	remaining, active, started, admitted := 3, 0, 0, 0
 	var stages []string
 	code := supplyBurstPool(burstPoolDeps{
-		now: func() time.Time { return now },
+		maxHosts: burstPoolLimit,
+		now:      func() time.Time { return now },
 		queue: func() (queueSnapshot, error) {
 			if active != 0 {
 				t.Fatal("queried next supply before the prior host drained")
@@ -98,7 +99,8 @@ func TestBurstPoolDoesNotStartWithoutFreshCapacityOrAfterDeadline(t *testing.T) 
 			now := time.Now()
 			started := 0
 			d := burstPoolDeps{
-				now: func() time.Time { return now },
+				maxHosts: burstPoolLimit,
+				now:      func() time.Time { return now },
 				queue: func() (queueSnapshot, error) {
 					if test == "metadata" {
 						return queueSnapshot{}, errors.New("unavailable")
@@ -136,6 +138,31 @@ func TestBurstPoolDoesNotStartWithoutFreshCapacityOrAfterDeadline(t *testing.T) 
 				t.Fatal("runner started without admission")
 			}
 		})
+	}
+}
+
+func TestDefaultInvocationYieldsAfterOneHostAndCanBeResupplied(t *testing.T) {
+	remaining, starts := 2, 0
+	last := queueSnapshot{}
+	d := burstPoolDeps{
+		now:      time.Now,
+		queue:    func() (queueSnapshot, error) { return queueSnapshot{ObservedAt: time.Now(), Queued: remaining}, nil },
+		capacity: func() error { return nil },
+		run:      func() int { starts++; remaining--; return 0 },
+		record:   func(_ string, _ int, q queueSnapshot) { last = q },
+	}
+	if supplyBurstPool(d) != 0 || starts != 1 || remaining != 1 {
+		t.Fatal("task invocation did not yield at one host boundary")
+	}
+	if last.Queued != 2 {
+		t.Fatal("end marker invented a drained queue instead of preserving the observed snapshot")
+	}
+	if supplyBurstPool(d) != 0 || starts != 2 || remaining != 0 {
+		t.Fatal("next normal task invocation did not resupply the same slot")
+	}
+	d.maxHosts = burstPoolLimit + 1
+	if supplyBurstPool(d) == 0 || starts != 2 {
+		t.Fatal("unbounded pool admission accepted")
 	}
 }
 

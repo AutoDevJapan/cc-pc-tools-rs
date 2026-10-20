@@ -154,6 +154,7 @@ func currentQueue(api func(string, any) error, now time.Time) (queueSnapshot, er
 }
 
 type burstPoolDeps struct {
+	maxHosts int
 	now      func() time.Time
 	queue    func() (queueSnapshot, error)
 	capacity func() error
@@ -162,10 +163,19 @@ type burstPoolDeps struct {
 }
 
 func supplyBurstPool(d burstPoolDeps) int {
+	limit := d.maxHosts
+	if limit == 0 {
+		limit = 1
+	}
+	if limit < 1 || limit > burstPoolLimit {
+		return 1
+	}
 	deadline := d.now().Add(burstPoolWindow)
 	ended := 0
-	for ; ended < burstPoolLimit && d.now().Before(deadline); ended++ {
+	lastQueue := queueSnapshot{}
+	for ; ended < limit && d.now().Before(deadline); ended++ {
 		q, err := d.queue()
+		lastQueue = q
 		if err != nil {
 			d.record("metadata-unavailable", ended, q)
 			return 1
@@ -190,7 +200,7 @@ func supplyBurstPool(d burstPoolDeps) int {
 		}
 		d.record("one-job-host-ended", ended+1, q)
 	}
-	d.record("finite-pool-ended", ended, queueSnapshot{ObservedAt: d.now()})
+	d.record("finite-pool-ended", ended, lastQueue)
 	return 0
 }
 
@@ -208,8 +218,16 @@ func burstVMCapacity(data string) error {
 }
 
 func burstPoolMain(args []string) int {
-	if len(args) != 1 || !compiledNormalProfile.ephemeral {
+	if (len(args) != 1 && len(args) != 2) || !compiledNormalProfile.ephemeral {
 		return 1
+	}
+	limit := 1
+	if len(args) == 2 {
+		var err error
+		limit, err = strconv.Atoi(args[1])
+		if err != nil || limit < 1 || limit > burstPoolLimit {
+			return 1
+		}
 	}
 	// Task Scheduler also uses IgnoreNew; this protects other simultaneous
 	// invocations before they can request any registration token.
@@ -219,7 +237,8 @@ func burstPoolMain(args []string) int {
 	}
 	defer lock.Close()
 	return supplyBurstPool(burstPoolDeps{
-		now: time.Now,
+		maxHosts: limit,
+		now:      time.Now,
 		queue: func() (queueSnapshot, error) {
 			return currentQueue(runnerAPI, time.Now().UTC())
 		},

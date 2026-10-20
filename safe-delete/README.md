@@ -5,6 +5,16 @@ PCで配備済みのGo版safe-deleteのソースと既存検査を、このリ�
 所有照合、Git保護、外部ハードリンク拒否、reparse拒否、項目数上限は維持する。
 実行ファイルの隣のreceipts-goを使い、既存フォルダーの所有登録は追加しない。
 
+## ToDo3174の終了済みWindows検査資源
+
+固定ID4378ff571926b0ddbec4ed99368a6405の`quarantine --reason windows`だけに、
+正規collect後の原記録・source・公開API・全属性一覧・停止SCM・回収marker・
+client guardを確認する資格を設ける。既存claim lockを保持し、SDKのopaque reparse
+13件のリンク先を読まず、通常Move-Itemの前後で全3,626項目の実体保持を確認する。
+原receipt bytesと属性一覧を退避先へ保存し、保持確認後だけ原receiptを閉じる。
+planと他のrootの境界は従来どおり。詳しい受入条件は
+[有限な退避の仕様](../docs/todo3174-ci-quarantine.md)に記録する。
+
 ## ToDo2307のGemini試写の一時データ
 
 `quarantine --id daab67bf8e2c4e2e7d805c3cf9a06a6d --reason hardlink`

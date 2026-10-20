@@ -461,6 +461,14 @@ func driveSpace() []map[string]any {
 	return result
 }
 func (c config) quarantine(id, reason string) (result map[string]any, err error) {
+	if id == ci3174ID && reason == "windows" {
+		scope, unlock, e := c.ci3174Recovery(id)
+		if e != nil {
+			return nil, e
+		}
+		defer unlock()
+		return c.quarantinePreserved(id, reason, nil, scope)
+	}
 	var scope *geminiScope
 	if reason == "hardlink" {
 		scope, err = c.geminiRecovery(id)
@@ -471,15 +479,27 @@ func (c config) quarantine(id, reason string) (result map[string]any, err error)
 	return c.quarantineScoped(id, reason, scope)
 }
 func (c config) quarantineScoped(id, reason string, scope *geminiScope) (result map[string]any, err error) {
+	return c.quarantinePreserved(id, reason, scope, nil)
+}
+func (c config) quarantinePreserved(id, reason string, scope *geminiScope, ci *ci3174Scope) (result map[string]any, err error) {
 	text, ok := reasons[reason]
 	if !ok {
 		return nil, fail("INVALID_REASON")
+	}
+	if ci != nil {
+		text = "Go補助の測定がreparseを検出し、削除計画と旧quarantineを拒否した。固定資格でreparse 13件を含む全体を保持する。リンク先は未読。Windowsや実行前ポリシーの拒否とは区別する。"
 	}
 	r, err := c.load(id, true)
 	if err != nil {
 		return nil, err
 	}
-	m, err := c.measureWithShared(r.Path, scope)
+	var ciBefore map[string]ci3174Entry
+	var m measured
+	if ci != nil {
+		ciBefore, m, err = ci.snapshot(r.Path)
+	} else {
+		m, err = c.measureWithShared(r.Path, scope)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -545,6 +565,23 @@ func (c config) quarantineScoped(id, reason string, scope *geminiScope) (result 
 		return nil, fail("QUARANTINE_REASON_WRITE_FAILED")
 	}
 	reasonWritten = true
+	if ci != nil {
+		phase = "preservation_record"
+		if ci.originalReceipt == nil {
+			return nil, fail("CI_PROOF_INVALID")
+		}
+		original, readErr := ci.originalReceipt()
+		if readErr != nil {
+			return nil, readErr
+		}
+		if os.WriteFile(filepath.Join(dest, "original-receipt.json"), original, 0600) != nil {
+			return nil, fail("PRESERVATION_RECORD_WRITE_FAILED")
+		}
+		b, encodeErr := json.MarshalIndent(ciBefore, "", "  ")
+		if encodeErr != nil || os.WriteFile(filepath.Join(dest, "preservation.json"), b, 0600) != nil {
+			return nil, fail("PRESERVATION_RECORD_WRITE_FAILED")
+		}
+	}
 	if scope != nil {
 		phase = "preservation_record"
 		b, encodeErr := json.MarshalIndent(before, "", "  ")
@@ -553,6 +590,14 @@ func (c config) quarantineScoped(id, reason string, scope *geminiScope) (result 
 		}
 	}
 	phase = "move"
+	if ci != nil {
+		if err = ci.settled(); err != nil {
+			return nil, err
+		}
+		if err = ci.verify(r.Path, ciBefore, r); err != nil {
+			return nil, err
+		}
+	}
 	if scope != nil {
 		if err = scope.verify(r.Path, before, r); err != nil {
 			return nil, err
@@ -568,6 +613,12 @@ func (c config) quarantineScoped(id, reason string, scope *geminiScope) (result 
 	if scope != nil {
 		phase = "verify_preservation"
 		if err = scope.verify(filepath.Join(dest, "files"), before, r); err != nil {
+			return nil, err
+		}
+	}
+	if ci != nil {
+		phase = "verify_preservation"
+		if err = ci.verify(filepath.Join(dest, "files"), ciBefore, r); err != nil {
 			return nil, err
 		}
 	}
@@ -600,7 +651,7 @@ func appendReason(path, text string) error {
 }
 func main() {
 	if len(os.Args) < 2 || os.Args[1] == "--help" {
-		fmt.Println("safe-delete create --project NAME [--content NAME] [--root PATH]\nsafe-delete plan|finish --id ID\nsafe-delete quarantine --id ID --reason policy|windows|locked|attributes|size|hardlink\nhardlink is restricted to ToDo2307's fixed receipt and media.\nDeletion plans must be submitted separately to the caller's ordinary exec tool.")
+		fmt.Println("safe-delete create --project NAME [--content NAME] [--root PATH]\nsafe-delete plan|finish --id ID\nsafe-delete quarantine --id ID --reason policy|windows|locked|attributes|size|hardlink\nhardlink is restricted to ToDo2307's fixed receipt and media.\nToDo3174's fixed collected CI receipt uses windows quarantine only, with root client guard and opaque preservation.\nDeletion plans must be submitted separately to the caller's ordinary exec tool.")
 		return
 	}
 	c := defaultConfig()

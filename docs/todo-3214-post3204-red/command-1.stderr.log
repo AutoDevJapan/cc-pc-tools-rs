@@ -1,0 +1,85 @@
+   Compiling version_check v0.9.5
+   Compiling proc-macro2 v1.0.107
+   Compiling typenum v1.20.1
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+   Compiling serde_core v1.0.229
+   Compiling autocfg v1.5.1
+   Compiling cfg-if v1.0.5
+   Compiling generic-array v0.14.7
+   Compiling zmij v1.0.23
+   Compiling hashbrown v0.17.1
+   Compiling windows-link v0.2.1
+   Compiling num-traits v0.2.19
+   Compiling getrandom v0.4.3
+   Compiling serde_json v1.0.151
+   Compiling serde v1.0.229
+   Compiling equivalent v1.0.2
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling indexmap v2.14.2
+   Compiling windows-sys v0.61.2
+   Compiling digest v0.10.7
+   Compiling cpufeatures v0.2.17
+   Compiling memchr v2.8.3
+   Compiling itoa v1.0.18
+   Compiling sha2 v0.10.9
+   Compiling once_cell v1.21.4
+   Compiling fastrand v2.5.0
+   Compiling syn v3.0.6
+   Compiling tempfile v3.27.0
+   Compiling chrono v0.4.45
+   Compiling serde_derive v1.0.229
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3214-3103\codex-owned-b3789c1fc3d2ff203cfba57474e7bcda\source\cc-job-policy)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.00s
+────────────
+ Nextest run ID b48059f6-9cda-4afe-b811-427f237f1b5d with nextest profile: default
+    Starting 3 tests across 1 binary (10 tests skipped)
+        FAIL [   0.011s] (1/3) cc-job-policy::product_identity mcp_history_only_product_job_does_not_borrow_code_priority
+  stdout ───
+
+    running 1 test
+    test mcp_history_only_product_job_does_not_borrow_code_priority ... FAILED
+
+    failures:
+
+    failures:
+        mcp_history_only_product_job_does_not_borrow_code_priority
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 12 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'mcp_history_only_product_job_does_not_borrow_code_priority' (75000) panicked at cc-job-policy\tests\product_identity.rs:245:5:
+    assertion `left == right` failed
+      left: 30
+     right: 60
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.085s] (2/3) cc-job-policy::product_identity mcp_live_requester_identity_drives_formal_dependency_priority
+  stdout ───
+
+    running 1 test
+    test mcp_live_requester_identity_drives_formal_dependency_priority ... FAILED
+
+    failures:
+
+    failures:
+        mcp_live_requester_identity_drives_formal_dependency_priority
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 12 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'mcp_live_requester_identity_drives_formal_dependency_priority' (3256) panicked at cc-job-policy\tests\product_identity.rs:189:17:
+    assertion `left == right` failed: alpha=false/edge=wait_on/chain=false
+      left: 30
+     right: 10
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.087s] (3/3) cc-job-policy::product_identity mcp_live_requester_dependency_exclusion_controls
+────────────
+     Summary [   0.088s] 3 tests run: 1 passed, 2 failed, 10 skipped
+        FAIL [   0.011s] (1/3) cc-job-policy::product_identity mcp_history_only_product_job_does_not_borrow_code_priority
+        FAIL [   0.085s] (2/3) cc-job-policy::product_identity mcp_live_requester_identity_drives_formal_dependency_priority
+error: test run failed

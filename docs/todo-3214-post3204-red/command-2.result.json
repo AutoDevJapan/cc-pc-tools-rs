@@ -1,0 +1,42 @@
+{
+  "args": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "localai-web-rs",
+    "--lib",
+    "-E",
+    "test(mcp_live_requesters_supply_product_priority_before_dependency_propagation) | test(mcp_duplicate_task_ids_preserve_every_private_job_edge) | test(mcp_missing_policy_has_no_runtime_binding_override) | test(mcp_related_private_ids_mask_both_display_lists)",
+    "--no-fail-fast"
+  ],
+  "at_most_once": true,
+  "commit": "684bfba418f1b293b5ed2672038654ede6323fd6",
+  "cwd": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3214-3103\\codex-owned-b3789c1fc3d2ff203cfba57474e7bcda\\source",
+  "elapsed_seconds": 34.0287005,
+  "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "exit": 100,
+  "finished_utc": "2026-10-20T23:05:57.6239343Z",
+  "job": "20261021-075844-todo-3214",
+  "logical_executable": "cargo",
+  "pid": 75092,
+  "selected_expected": 4,
+  "settings": {
+    "CARGO_BUILD_JOBS": "10",
+    "CARGO_TARGET_DIR": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3214-3103\\codex-owned-b3789c1fc3d2ff203cfba57474e7bcda\\target",
+    "CARGO_TERM_COLOR": "never",
+    "NEXTEST_TEST_THREADS": "10",
+    "RUSTC_WRAPPER": "D:/CC/Tools/sccache/sccache.exe",
+    "SCCACHE_CACHE_SIZE": "30G",
+    "SCCACHE_DIR": "D:/CC/BuildCache/sccache",
+    "SCCACHE_SERVER_PORT": "42259"
+  },
+  "started_utc": "2026-10-20T23:05:23.5952338Z",
+  "stderr": "command-2.stderr.log",
+  "stderr_bytes": 10860,
+  "stderr_sha256": "e0357e22f10d698742a815c11b278066aecdd2cca65b3df1bf32b44a1283246d",
+  "stdout": "command-2.stdout.log",
+  "stdout_bytes": 0,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "wait_error": "exit status 100"
+}

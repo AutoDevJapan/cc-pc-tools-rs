@@ -1,0 +1,77 @@
+{
+  "todo": 3214,
+  "fixed_commit": "684bfba418f1b293b5ed2672038654ede6323fd6",
+  "commands_run": 2,
+  "selected": 7,
+  "executed": 7,
+  "passed": 2,
+  "failed_at_intended_assert": 5,
+  "filtered_out": 106,
+  "command_exits": [100, 100],
+  "tests": [
+    {
+      "command": 1,
+      "name": "mcp_live_requester_identity_drives_formal_dependency_priority",
+      "result": "failed",
+      "location": "cc-job-policy/tests/product_identity.rs:189",
+      "reached": "alpha=false/edge=wait_on/chain=false; requester rank assertion passed (10)",
+      "expected": 10,
+      "actual": 30,
+      "not_reached": "remaining 7 combinations: alpha=true, work_wait_on, transitive chain cases are not measured"
+    },
+    {
+      "command": 1,
+      "name": "mcp_live_requester_dependency_exclusion_controls",
+      "result": "passed",
+      "reached": ["parent_done", "parent_block", "wait_ready", "child_done", "no_product_job"],
+      "not_reached": []
+    },
+    {
+      "command": 1,
+      "name": "mcp_history_only_product_job_does_not_borrow_code_priority",
+      "result": "failed",
+      "location": "cc-job-policy/tests/product_identity.rs:245",
+      "reached": "single rank assertion for a history-only related alpha job",
+      "expected": 60,
+      "actual": 30,
+      "not_reached": []
+    },
+    {
+      "command": 2,
+      "name": "mcp_live_requesters_supply_product_priority_before_dependency_propagation",
+      "result": "failed",
+      "location": "localai-web-rs/src/operations_product_identity_tests.rs:656",
+      "reached": "masked=false/alpha=false/edge=wait_on/chain=false; requester row rank assertion passed (10)",
+      "expected": 10,
+      "actual": 30,
+      "not_reached": "productId assertion in first combination and remaining 15 combinations"
+    },
+    {
+      "command": 2,
+      "name": "mcp_duplicate_task_ids_preserve_every_private_job_edge",
+      "result": "failed",
+      "location": "localai-web-rs/src/operations_product_identity_tests.rs:688",
+      "reached": "task detail and job detail called; collect called; combined assertion fails at task detail comparison",
+      "expected": "task=Err(404), job=Err(404), markers absent",
+      "actual": "task=Ok with note duplicate-private-note-marker; job=Err(404)",
+      "not_reached": "remaining short-circuited AND comparisons; collect marker absence was not evaluated"
+    },
+    {
+      "command": 2,
+      "name": "mcp_missing_policy_has_no_runtime_binding_override",
+      "result": "failed",
+      "location": "localai-web-rs/src/operations_product_identity_tests.rs:703",
+      "reached": "masked=false; absent scheduler/priorities.json",
+      "expected": false,
+      "actual": null,
+      "not_reached": "masked=true"
+    },
+    {
+      "command": 2,
+      "name": "mcp_related_private_ids_mask_both_display_lists",
+      "result": "passed",
+      "reached": "actual display_todos/display_jobs; all 5 assertions: job count, empty note/report, both synthetic markers absent",
+      "not_reached": []
+    }
+  ]
+}

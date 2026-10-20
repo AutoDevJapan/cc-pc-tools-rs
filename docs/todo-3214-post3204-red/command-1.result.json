@@ -1,0 +1,43 @@
+{
+  "args": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-job-policy",
+    "--test",
+    "product_identity",
+    "-E",
+    "test(mcp_live_requester_identity_drives_formal_dependency_priority) | test(mcp_live_requester_dependency_exclusion_controls) | test(mcp_history_only_product_job_does_not_borrow_code_priority)",
+    "--no-fail-fast"
+  ],
+  "at_most_once": true,
+  "commit": "684bfba418f1b293b5ed2672038654ede6323fd6",
+  "cwd": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3214-3103\\codex-owned-b3789c1fc3d2ff203cfba57474e7bcda\\source",
+  "elapsed_seconds": 9.1478418,
+  "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "exit": 100,
+  "finished_utc": "2026-10-20T23:05:01.2163051Z",
+  "job": "20261021-075844-todo-3214",
+  "logical_executable": "cargo",
+  "pid": 56076,
+  "selected_expected": 3,
+  "settings": {
+    "CARGO_BUILD_JOBS": "10",
+    "CARGO_TARGET_DIR": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3214-3103\\codex-owned-b3789c1fc3d2ff203cfba57474e7bcda\\target",
+    "CARGO_TERM_COLOR": "never",
+    "NEXTEST_TEST_THREADS": "10",
+    "RUSTC_WRAPPER": "D:/CC/Tools/sccache/sccache.exe",
+    "SCCACHE_CACHE_SIZE": "30G",
+    "SCCACHE_DIR": "D:/CC/BuildCache/sccache",
+    "SCCACHE_SERVER_PORT": "42259"
+  },
+  "started_utc": "2026-10-20T23:04:52.0684633Z",
+  "stderr": "command-1.stderr.log",
+  "stderr_bytes": 3425,
+  "stderr_sha256": "3206748852590fa792f75cb174688aa21d46a586852a59af7d3f235b2c6f2fda",
+  "stdout": "command-1.stdout.log",
+  "stdout_bytes": 0,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "wait_error": "exit status 100"
+}

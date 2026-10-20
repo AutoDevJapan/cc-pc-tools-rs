@@ -1600,7 +1600,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
     } else {
         Value::Null
     };
-    json!({"productBindingsConfigured":cc_scheduler::product_identity::bindings_configured(),"fetchedAt":now,"sourceOk":sources.iter().all(|s|s["ok"]==true || s["state"]=="unknown"),"sources":sources,
+    json!({"metadataOk":todo.is_ok()&&jobs.is_ok(),"productBindingsConfigured":cc_scheduler::product_identity::bindings_configured(),"fetchedAt":now,"sourceOk":sources.iter().all(|s|s["ok"]==true || s["state"]=="unknown"),"sources":sources,
         "commander":commander,
         "metrics":metrics,"ownerQuestions":decisions["questions"],"decisionTasks":decisions["tasks"],"blockedDecisionTasks":decisions["blockedTasks"],
         "unassignedProducts":unassigned_products(&tree),"departments":departments(tree)})

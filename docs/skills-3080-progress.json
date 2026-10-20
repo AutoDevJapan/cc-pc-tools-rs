@@ -1,0 +1,392 @@
+{
+  "todo": 3080,
+  "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
+  "observed_at": "2026-10-20T20:12:10.9074030Z",
+  "phase_a": "partial; 647 additional text shapes held by execution review",
+  "phase_b": "25installed;3guidance refinements applied and validated;1TeamAI candidate prepared;final delta review pending;full16-source work continues",
+  "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+  "source_count": 16,
+  "fixed_public_repos": [
+    {
+      "requested": "6mile/skills",
+      "full_name": "6mile/skills",
+      "owner": "6mile",
+      "public": true,
+      "default_branch": "main",
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "tree_sha": "5782ae7deffe5024e15b6e090327385c10f76273",
+      "tree_complete": true,
+      "skill_files": 55623,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
+    },
+    {
+      "requested": "cloudflare/security-audit-skill",
+      "full_name": "cloudflare/security-audit-skill",
+      "owner": "cloudflare",
+      "public": true,
+      "default_branch": "main",
+      "commit": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+      "tree_sha": "8cd03bb3941496e441d6248aaae2429a35b93cc3",
+      "tree_complete": true,
+      "skill_files": 1,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
+    },
+    {
+      "requested": "docker/skills",
+      "full_name": "docker/skills",
+      "owner": "docker",
+      "public": true,
+      "default_branch": "main",
+      "commit": "38df58b09720d38eb78c2c674675ddf9fa74d441",
+      "tree_sha": "6d81ab4763f7def8a038dc2941f229488822fe71",
+      "tree_complete": true,
+      "skill_files": 12,
+      "license_evidence": {
+        "identifier": "Apache-2.0",
+        "path": "LICENSE",
+        "sha256": "3bb33f65872155f0801efc9f6732e2868eb338c5ed6a81eec5c775c1382761cb",
+        "scope": "12 declared entrypoints and root notice; support/scripts/assets not individually accepted",
+        "checked_at": "2026-10-20T12:36:13.0042423Z"
+      }
+    },
+    {
+      "requested": "hirokaji/jp-ui-contracts",
+      "full_name": "hirokaji/jp-ui-contracts",
+      "owner": "hirokaji",
+      "public": true,
+      "default_branch": "main",
+      "commit": "4bc933689ba8391c27f558fa7b8d6905a0a2af90",
+      "tree_sha": "53f8ed5939eb1e62a0c8089b0fb07e121e13aeae",
+      "tree_complete": true,
+      "skill_files": 1,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
+    },
+    {
+      "requested": "kepano/obsidian-skills",
+      "full_name": "kepano/obsidian-skills",
+      "owner": "kepano",
+      "public": true,
+      "default_branch": "main",
+      "commit": "3ccff5338ea700537839b21900aa5358a0402c98",
+      "tree_sha": "c9a52b408a89bd5a42b0ea6ab65c39221c1d64f2",
+      "tree_complete": true,
+      "skill_files": 6,
+      "license_evidence": {
+        "identifier": "MIT",
+        "path": "LICENSE",
+        "sha256": "64c64d48361edfe8610016441bf593256ea9b67f133b00f47c55aa29ee878567",
+        "scope": "Selected 3 entrypoints and complete-tree nested-notice check; no blanket supporting-resource permission",
+        "checked_at": "2026-10-20T18:58:25.7084004Z"
+      }
+    },
+    {
+      "requested": "mattpocock/skills",
+      "full_name": "mattpocock/skills",
+      "owner": "mattpocock",
+      "public": true,
+      "default_branch": "main",
+      "commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
+      "tree_sha": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+      "tree_complete": true,
+      "skill_files": 38,
+      "license_evidence": {
+        "identifier": "MIT",
+        "path": "LICENSE",
+        "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+        "scope": "14 selected authored entrypoints and complete-tree nested-notice check; no blanket asset/support permission",
+        "checked_at": "2026-10-20T12:36:13.0070909Z"
+      }
+    },
+    {
+      "requested": "MengTo/Skills",
+      "full_name": "MengTo/Skills",
+      "owner": "MengTo",
+      "public": true,
+      "default_branch": "main",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "tree_sha": "8afedc8719f37d2026b55aef282ac27d8d873d76",
+      "tree_complete": true,
+      "skill_files": 177,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
+    },
+    {
+      "requested": "mizchi/skills",
+      "full_name": "mizchi/skills",
+      "owner": "mizchi",
+      "public": true,
+      "default_branch": "main",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "tree_sha": "afbd6cabdc055717936a1c454627ccc62050705b",
+      "tree_complete": true,
+      "skill_files": 76,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
+    },
+    {
+      "requested": "nateherkai/ais-os",
+      "full_name": "nateherkai/AIS-OS",
+      "owner": "nateherkai",
+      "public": true,
+      "default_branch": "main",
+      "commit": "ce9cb93a1145da5daba84ea37208ec35fd03606e",
+      "tree_sha": "6c5a2d3ea0d15bd7cf9e528c2d32f095c760dabd",
+      "tree_complete": true,
+      "skill_files": 12,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
+    },
+    {
+      "requested": "Nutlope/hallmark",
+      "full_name": "Nutlope/hallmark",
+      "owner": "Nutlope",
+      "public": true,
+      "default_branch": "main",
+      "commit": "13ac0ec7e148655948100b6396439e481361d690",
+      "tree_sha": "02ebcc67f58295654c073cfb74a20a9a86db1f8f",
+      "tree_complete": true,
+      "skill_files": 1,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
+    },
+    {
+      "requested": "obra/superpowers",
+      "full_name": "obra/superpowers",
+      "owner": "obra",
+      "public": true,
+      "default_branch": "main",
+      "commit": "bb92a77741419a4ab5f06e711a283343f1ada0c3",
+      "tree_sha": "4ac675daa3415bc836f707c7e60237ac7b66c7d5",
+      "tree_complete": true,
+      "skill_files": 15,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
+    },
+    {
+      "requested": "openai/skills",
+      "full_name": "openai/skills",
+      "owner": "openai",
+      "public": true,
+      "default_branch": "main",
+      "commit": "49f948faa9258a0c61caceaf225e179651397431",
+      "tree_sha": "224b363928698e143876aef008232ed73d8e6f81",
+      "tree_complete": true,
+      "skill_files": 44,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
+    },
+    {
+      "requested": "tencent/teamai-cli",
+      "full_name": "Tencent/teamai-cli",
+      "owner": "Tencent",
+      "public": true,
+      "default_branch": "main",
+      "commit": "8787405e59353a8da33f7eaf6b9781b0b3188cd2",
+      "tree_sha": "79bddaf611bc2c94c8ae7892e51392b8936eda90",
+      "tree_complete": true,
+      "skill_files": 7,
+      "license_evidence": {
+        "identifier": "MIT",
+        "path": "LICENSE",
+        "sha256": "31154d9c1a8bd8d37b449bdbb8a04f9b4618e5d330b52b0fdb7c452414d75a41",
+        "scope": "Exact root notice and7selected skill-named bodies assessed;complete tree root notice only;support25unread,notblanketpermission",
+        "checked_at": "2026-10-20T19:05:55.3884829Z"
+      }
+    },
+    {
+      "requested": "VoltAgent/awesome-design-md",
+      "full_name": "VoltAgent/awesome-design-md",
+      "owner": "VoltAgent",
+      "public": true,
+      "default_branch": "main",
+      "commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "tree_sha": "0f1e83e1619f72ebd7b72f2f39188dee9cdb161e",
+      "tree_complete": true,
+      "skill_files": 0,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
+    },
+    {
+      "requested": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "full_name": "x1xhlol/system-prompts-and-models-of-ai-tools",
+      "owner": "x1xhlol",
+      "public": true,
+      "default_branch": "main",
+      "commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "tree_sha": "e8d86c0a025a7a07d4bb8723ae758cf98d63cbf5",
+      "tree_complete": true,
+      "skill_files": 0,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
+    }
+  ],
+  "catalog_records": 73220,
+  "available_body_occurrences": 72145,
+  "unique_body_sha256": 66740,
+  "redundant_body_occurrences": 5405,
+  "site_index_entries": 10290,
+  "site_entries_with_body": 9862,
+  "site_entries_without_body": 428,
+  "execution_held_shapes": 647,
+  "candidate_designs": 26,
+  "independently_accepted": 25,
+  "installed": 25,
+  "integrated": 0,
+  "excluded": 0,
+  "units": {
+    "github_agent_procedure": 483,
+    "github_design_example": 199,
+    "github_prompt_material": 166,
+    "github_prompt_or_model_information": 94,
+    "github_skill_entry": 56013,
+    "github_skill_variant": 702,
+    "github_structured_procedure": 2487,
+    "site_index_entry": 10290,
+    "supplemental_non_md_procedure_or_configuration": 2139,
+    "unread_additional_text_support_shape": 647
+  },
+  "limits": [
+    "Metadata statistics do not establish semantic or individual license approval.",
+    "25 installed adaptations are finite batches, not a count cap.",
+    "Previously created3 targets revised with15file old-version backup and9limited replacements; other originals/junction/guard/UI unchanged.",
+    "First14, Docker8 and latest3+revised3 bounded checks accepted;CLI/context beyond metadata not proven.",
+    "Source archive warning59416 is not a per-record malicious verdict or blanket exclusion.",
+    "6mile APItruncation repaired by matching fixedgit subtrees/ls-tree.",
+    "Metadata discovery322 is not a model-turn context usage measurement."
+  ],
+  "entrypoint_assessment": {
+    "source": "mattpocock/skills",
+    "pinned_entrypoints": 38,
+    "full_entrypoint_text_read": 38,
+    "supporting_resources_semantic_complete": false,
+    "new_adaptation_candidates": 14,
+    "integration_or_wrapper_candidates": 19,
+    "covered_by_prior3048": 1,
+    "policy_rewrite_required": 4,
+    "rights_hold": 0,
+    "independently_accepted": 14,
+    "note": "14new adaptations installed;19integration proposals and4policy rewrites remain unapplied. Source assessments retain proposal-time state."
+  },
+  "docker_entrypoint_assessment": {
+    "source": "docker/skills",
+    "pinned_entrypoints": 12,
+    "full_entrypoint_text_read": 12,
+    "supporting_resources_semantic_complete": false,
+    "new_candidates_requiring_authoring": 8,
+    "integration_or_reference_candidates": 3,
+    "policy_rewrite_required": 1,
+    "authored_candidates": 8,
+    "independently_accepted": 8,
+    "prepared_for_installation_review": 8,
+    "design_review": {
+      "todo": 3120,
+      "must": 0,
+      "all8upstream_entrypoints_read": true,
+      "new_installer_and_bundle_review": "3138read8andinstaller;Must1correctedwith16source regression before apply",
+      "actual_installed": 8
+    },
+    "actual_installed": 8
+  },
+  "candidate_count_definitions": {
+    "candidate_designs": "26 renderable targets:25installed+1TeamAI pending;no count cap",
+    "additional_authored_drafts_not_in_plans": 0,
+    "authored_total": 26,
+    "installed": 25,
+    "pending_plan_targets": 1,
+    "archived_draft_targets": 8,
+    "archived_draft_is_subset_of_batch03": true,
+    "independently_accepted": "25 installed guides checked in bounded scopes;not all upstream support",
+    "not_semantically_disposed_occurrences": 73195
+  },
+  "kepano_entrypoint_assessment": {
+    "pinned_entrypoints": 6,
+    "full_entrypoint_text_read": 6,
+    "supporting_resources_semantic_complete": false,
+    "new_candidates": 3,
+    "prior3048_same_entrypoint_read": 3,
+    "newly_installed": 3
+  },
+  "tencent_entrypoint_assessment": {
+    "pinned_case_insensitive_skill_paths": 7,
+    "full_text_read": 7,
+    "actual_workflow_entrypoints": 4,
+    "discovery_stubs": 1,
+    "usage_guides": 2,
+    "support_files_unread": 25,
+    "policy_rewrite_candidates": 4,
+    "installed": 0,
+    "not_blanket_excluded": true,
+    "authored_routing_entrypoints": 1
+  },
+  "full_source_body_read_coverage": {
+    "repos": 5,
+    "case_insensitive_skill_named_paths": 64,
+    "by_repo": {
+      "mattpocock": 38,
+      "docker": 12,
+      "cloudflare": 1,
+      "kepano": 6,
+      "tencent": 7
+    },
+    "limits": "Tencent7 includes2usage guides+1discovery stub+4workflows;not64standalone approved Skills; supporting resources incomplete"
+  },
+  "independent_acceptance_scope": "3180 accepted25baseline atc328d7a;3laterrequested refinements are applied+locallyverified withdelta review pending;1TeamAI candidate notinstalled"
+}

@@ -1,0 +1,45 @@
+{
+  "todo": 3080,
+  "scope": "Third batch:3 Kepano adaptations; prior22 historical evidence preserved",
+  "installed_at": "2026-10-20T18:59:46.8482058Z",
+  "source_head": "c3d70c6161b5186f8a6e0fcf24f5a79e664c5006",
+  "bundle_sha256": "1c9d347e347a315d9c315c1bec8142743c4cbf5624512ab161789bf2aaf7b516",
+  "review": {
+    "todo": 3165,
+    "original_must_count": 0,
+    "original_response_sha256": "7f05b5b0b3e3e23608b6a58a08c6c8fdc5e4b489e25ed3419c4e31e5c39a4d5a",
+    "suggestions_addressed": "1-6 and relevant provenance/notice clarifications, fixed original/MIT unchanged",
+    "correction_re_reviewed": false,
+    "scope": "3 generated guides + source originals + MIT + complete tree; one-turn3positive6negative static cases"
+  },
+  "execution": "Separate normal exact3 new-only execution review allowed, exit0",
+  "installed": 3,
+  "files_readback_verified": 15,
+  "manifest": "skills-3080-installed-kepano-manifest.json",
+  "manifest_sha256": "2968408d971da25f0113511765ede799309bb02a5957a6d30ae7d79ac1c3d6da",
+  "journal_sha256": "25fbe5c3455b269f2908245fd287526f6b652c3230f61dce8fc2f635ed8eb0b0",
+  "validator": "PASS actual installed files,3048 structure/refs/hash/scenario pairs",
+  "discovery": {
+    "target_matches": 3,
+    "enabled_count": 3,
+    "parse_errors": 0,
+    "total_metadata": 322,
+    "same_names_other_paths": 0,
+    "descriptions_match": true,
+    "method": "fresh official installed Codex app-server; initialize + skills/list forceReload",
+    "model_called": false
+  },
+  "runtime": "Workflow knowledge installed; CLI availability/version and actual vault/CLI operations not proven. No app/CLI/plugin installed or run.",
+  "postinstall_acceptance": "3180 Must0;actual3/15files verified,initialSkillmetadata3,3positive6negative static cases,CLI/context not measured",
+  "integrated": 0,
+  "excluded": 0,
+  "overall_complete": false,
+  "recorded_at": "2026-10-20T19:01:36.6563331Z",
+  "correction_independently_checked": {
+    "todo": 3180,
+    "reviewed_head": "c328d7a7a6aa40d81c703b7301b103192c1a1f19",
+    "must": 0,
+    "original_response_sha256": "799005d5526efb4834418425163ea784cdb1c313f6c3db4b061723cf302e1c9a",
+    "scope": "Final3generated guides,3originals,MIT,actual15files and metadata; support of existing3 outside scope"
+  }
+}

@@ -451,3 +451,61 @@ Private evidence: todo2757-official-dispatch-inspection.private.json,
 todo2757-official-workflow-ids.private.json,
 todo2757-official-dispatches-20261020.private.json and
 todo2757-official-test-runs.private.json in the existing ignored evidence area.
+
+## 2026-10-20: both official verification runs succeeded; original release resumed
+
+Official fixed41090 verification run39382032899/job118493090193 and backend
+run39382036786/job118493102572 completed success at attempt1. Their official
+CLI logs were saved without displaying raw text: respectively449453 bytes,
+SHA256 A26BF7B5F9AE857D697ADAE688048A120A6E3BD9DC5CC3BBC63B464A118FEEFE,
+and276227 bytes, SHA256
+8E2FCCFAA888406AF53B9877B42B0C8CFE46D2C69BF07A6D8AF6BA829D632F40.
+No source/trust/label/test step was changed. Both are new results for41090.
+
+Read-only production metadata was restricted to the original project,
+environment and eleven saved service IDs. Effective source configuration must
+include resolved file configuration: the initial startCommand-only view missed
+three running workers whose commands come from those files. The corrected
+projection matches their effective commands to fixed Git blobs. They were not
+mistaken for stopped workers or modified. Failed/latest and active/stopped
+metadata remain separate; two old failed/crashed deployments remain recorded.
+The finite120-line log classifications did not establish their root causes.
+
+A fresh nonredirecting GET /ready on the same provider-bound API domain returned
+HTTP200/status ready, and actual revision f3d946cb0f7e33b8cb5cbc0858091e583ca61350.
+Body328 bytes, SHA256
+5E8F188E3CFD9A8E4C6B472CC88C5273D02D166E21489DAB374A8258CE5ACACD.
+No body or domain text was persisted. This is direct evidence of the old running
+revision, not successful41090 delivery or canonical-alias verification.
+
+The exact scheduled-processing service f6042512-6571-40a8-8137-03566ffb6ea5
+matched one fixed source command. Its only active-deployment entry is actually
+stopped, status CRASHED, deployment a984a147-8250-4f7f-823a-2a9fad64e8b6;
+next scheduled start is2026-10-21T00:00:00Z. This establishes zero running
+instances across the bounded release window. No graceful shutdown was witnessed
+or claimed, no crash was changed to success, and no manual drained flag was
+set. The source's rolling-deployment guidance explicitly excludes scaling that
+service to zero as a substitute for a proper rollout.
+
+After fresh exact PR/merge/tree/parents/main, original workflow bytes,
+DEPLOY_ENABLED=true and original production environment17559171313/rules0
+checks, the same official gate accepted one normal rerun-failed-jobs for original
+promotion run38941324877, HTTP201. It is now attempt2 on push41090. Attempt1's
+budget/steps0 failure is retained. The real preconditions job118497524273 has
+completed success; both same-attempt reusable verification jobs have started.
+Their repetition is required by the original DAG's needs, which cannot accept
+the independent dispatches as substitutes. No gate, dependency or test was
+removed to reuse those separate results. Promotion/deployment outcome is still
+pending, so no41090 Prd delivery is claimed.
+
+Two incorrectly guessed environment URL spellings returned404, without a
+mutation. The fixed source name digest resolves to the existing production
+name; the correct request returned the same ID and zero rules. These404s were
+request-name errors, not evidence that environment policy changed.
+
+The small owned inspection directory a646b1596fa7f0fe50af956f21bb41f4 was
+planned, normally deleted in a separate tool call and finished source_absent.
+No new local container, GPU process, runner registration or production setting
+was created. The original Rust official-log terminal-escape refusal remains;
+its stored error was classified by fixed public words only, without another
+request, an override flag or an alternative retrieval route.

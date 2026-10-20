@@ -1034,3 +1034,10 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 固定b4db37e→32d8431の4file+必要局所だけを3152へgpt-6-luna/max/通常add --spec登録、保存全文一致/dispatchable/未起動todo確認。登録をMust0にしない。今回の未実行公式Windows/初回失敗と回収/観測の訂正/CLI構文RED→GREENを2737/2641 noteへ配送した。
 - 証拠resume-011056/preflight-failure-files.private.jsonへ原error hash/回収/source pin/公開metadata/新test logs/specをcopy/hash保存。観測child5f9...は通常削除/finish済み、元失敗clonef8...は保持。新実行物はレビュー後の同clean headから生成する。旧77b runtimeには構文修正がないので再利用しない。
 - 公式run39201344542 attempt6/Windows118741826539はqueued/runner0のまま、同leaseのown routeを保持。normalCI intent不在、VM/runner/host/executor回収済み。3152の原結果/実model/固定head/未読を受領したら、状態を再照合して同jobで再開（追加rerun不要）。現job/実HEAD checkpointを保存・読戻し、wait2737 --on3152を登録する。原Windows13/CI Gate/全CI/基盤配送は未完、owner入力不要。
+
+## 2026-10-21 job015754: 3152のMust0受領、同attempt6 Windows job再開
+
+- 3152/job20261021-015214/succeeded/exit0、対応turn_context gpt-6-luna/max/thread01a15a3b-83b1-7062-9307-81649ef389d7を照合。同rollout最終assistant responseと原last_messageが改行正規化後一致。原hashは新root review3152-received.private.jsonに保存。固定b4db37e→32d8431/tree c4b6b77の4file+局所を読了、Must0/他0/指定範囲未読0/検査0。実guest受入は未確認。
+- clean94f6f25からWindows host/agent/Linux helperを各1回生成、実VCS/clean/OS一致。host inspect-executor source_clean/admission_linked、SHA5DF7E0D7C65B4F1A798124C5401AA8CC677F371E5CA7CF8A17B5F3FFEE683B2E。旧77b runtimeを再利用せず、有効な関連検査を重複しない。
+- 原source/owner/id/private/admin/nonfork/同PR/ref/head0fda/tree0bc5/workflow ba2bcc...、CC1406818713/public/admin/nonforkをcanonical APIで照合。原AGENTS/CLAUDEもRAM取得/既読同hash。原run39201344542 attempt6/Windows118741826539は同queued/runner0、同leaseのown route/normalCI intent不在を確認して新ownedrootd72d0ff9a6fe888e23dc070b11904eb5でwindows-jobをcanonical Cargo gate経由で1回開始。追加rerun/route復元/取消/削除/成功verify再実行0。
+- 新guest LocalService/ACL/private proof temp/Windows13/終了proof/回収/CI Gateは未確認。再開は同rootのwrapper/windows-start/windows-exit/job-*と実source/run/route/intent/PID作成時刻を照合し、起動を再送しない。原SDK/旧失敗clone/原log/guard/manifest/073...拒否/未回収/他担当は保持。製品source/merge/Prdは親2641。owner操作/新費用/APIキーAI/GPU/Discord通知なし。

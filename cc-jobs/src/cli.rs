@@ -1129,6 +1129,11 @@ impl Context {
                 }
                 cc_job_policy::subwork::mark_live(&mut jobs, |j| self.running_job(j));
                 cc_job_policy::subwork::refresh_job(&db, &jobs, &mut job).map_err(Error::new)?;
+                if let Some(proof) = self.research_qualification(&job, &db)? {
+                    job["finite_research_approval"] = proof;
+                    job["approval_policy"] = json!("on-request");
+                    job["approvals_reviewer"] = json!("auto_review");
+                }
             }
         } else if a.value("subwork-of").is_some() {
             return Err(Error::new("subwork ToDo store is missing"));
@@ -1162,12 +1167,13 @@ impl Context {
         let state = FileLock::try_acquire(&self.job_dir(&jid).join("state.lock"))?;
         let dst = self.job_dir(&jid).join("prompt.md");
         let mut stored_prompt = bytes;
-        let guidance =
-            if policy.sandbox == "read-only" || !job["fixed_review_requalification"].is_null() {
-                cc_job_policy::READ_GUIDANCE
-            } else {
-                cc_job_policy::WRITE_GUIDANCE
-            };
+        let guidance = if job["finite_research_approval"].is_object() {
+            crate::finite_research::GUIDANCE
+        } else if policy.sandbox == "read-only" || !job["fixed_review_requalification"].is_null() {
+            cc_job_policy::READ_GUIDANCE
+        } else {
+            cc_job_policy::WRITE_GUIDANCE
+        };
         if retry_key.is_none()
             && !std::str::from_utf8(&stored_prompt)
                 .unwrap()

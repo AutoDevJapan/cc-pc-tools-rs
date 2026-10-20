@@ -126,7 +126,7 @@ func TestProductCIRuntimeKeepsProtectionAndRefusesRedirection(t *testing.T) {
 }
 
 func TestRuntimeExecutableOnlyQualifiesTheExistingExactFile(t *testing.T) {
-	for _, name := range []string{"gh_gate.exe", filepath.Base(schedulerRuntime)} {
+	for _, name := range []string{"gh_gate.exe", filepath.Base(schedulerRuntime), filepath.Base(jobsRuntime)} {
 		t.Run(name, func(t *testing.T) {
 			root, err := physical(t.TempDir())
 			if err != nil {

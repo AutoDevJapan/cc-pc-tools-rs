@@ -17,6 +17,11 @@ const publicationGateRuntime = "D:/CC/Tools/codex-jobs/gh_gate.exe"
 // worker-resumption repair (ToDo3047). Configuration and history stay excluded.
 const schedulerRuntime = "D:/CC/Tools/scheduler/scheduler.exe"
 
+// ToDo3047 also repairs the normal review-submission path of original research
+// 2939. The existing launcher alone needs the qualified policy; no directory,
+// queue configuration, history, credentials or sibling qualifies here.
+const jobsRuntime = "D:/CC/Tools/codex-jobs/codex_jobs.exe"
+
 // The owner explicitly requested repair of this installed progress display
 // (ToDo3020/3021, restated 2026-10-20). Only the existing distribution leaves
 // qualify. Its directory, collector, credentials and unrelated tools do not.

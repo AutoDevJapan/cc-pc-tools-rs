@@ -6,6 +6,7 @@
   "required": ["schema_version", "captured_at", "heartbeat_at", "status", "consistency", "sources", "tasks", "jobs", "task_total", "job_total", "truncated", "issues"],
   "properties": {
     "product_bindings_configured": {"type": "boolean"},
+    "product_bindings_overridden": {"type": ["boolean", "null"]},
     "processing_contract": {"const": "agent-progress-active-v1"},
     "schema_version": {"const": 1},
     "captured_at": {"type": "string", "format": "date-time"},

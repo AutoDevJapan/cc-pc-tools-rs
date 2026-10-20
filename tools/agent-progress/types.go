@@ -163,6 +163,7 @@ type DetailRef struct {
 
 type Snapshot struct {
 	ProductBindingsConfigured bool              `json:"product_bindings_configured"`
+	ProductBindingsOverridden *bool             `json:"product_bindings_overridden"`
 	ProcessingContract        string            `json:"processing_contract,omitempty"`
 	SchemaVersion             int               `json:"schema_version"`
 	CapturedAt                string            `json:"captured_at"`

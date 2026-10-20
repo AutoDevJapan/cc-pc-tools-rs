@@ -47,6 +47,7 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 	s.Sources["todo"] = ts
 
 	policy := priorityPolicy{}
+	bindingsOverrideKnown := opts.PriorityFile == ""
 	ps := newSource(now)
 	if opts.PriorityFile == "" {
 		ps.Status, ps.Complete = "not_configured", true
@@ -55,7 +56,9 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 		ps = readProjection(opts.PriorityFile, 1<<20, &raw, now, opts.StaleAfter)
 		if ps.Status == "missing" {
 			ps.Status, ps.Complete = "not_configured", true
+			bindingsOverrideKnown = true
 		} else if ps.Status == "ok" {
+			bindingsOverrideKnown = true
 			policy.legacy = raw
 			_, policy.ProductBindingsPresent = raw["product_identities"]
 			if (raw["items"] != nil && json.Unmarshal(raw["items"], &policy.Items) != nil) ||
@@ -70,6 +73,9 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 		}
 	}
 	s.Sources["priority"] = ps
+	if bindingsOverrideKnown {
+		s.ProductBindingsOverridden = &policy.ProductBindingsPresent
+	}
 	loaded, js := loadJobs(ctx, opts, now, taskReferences(items, true))
 	s.Sources["jobs"] = js
 	if !js.Complete {
@@ -77,25 +83,10 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 	}
 
 	labels := map[int64]label{}
-	ranks := map[int64]int{}
 	for id, item := range items {
 		labels[id] = itemLabel(item, policy)
-		ranks[id] = labels[id].rank
 	}
-	// Mirror explicit unresolved prerequisite promotion from cc-job-policy.
-	for changed := true; changed; {
-		changed = false
-		for id, item := range items {
-			if item.Status == "done" || item.Status == "block" || item.WaitReady != nil {
-				continue
-			}
-			for _, dependency := range pending(append(append([]int64{}, item.WaitOn...), item.WorkWaitOn...), items) {
-				if rank, exists := ranks[dependency]; exists && ranks[id] < rank {
-					ranks[dependency], changed = ranks[id], true
-				}
-			}
-		}
-	}
+	ranks, dependencyRanks := todoPriorityMaps(items, labels)
 	// Link only canonical numeric relations or saved job references, never text,
 	// worktree names, paths, prompts, parent titles, or matching project names.
 	references := taskReferences(items, false)
@@ -166,7 +157,7 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 				}
 			} else if primary, ok := items[j.TodoID]; ok && !mcpResolve(primary, policy, fmt.Sprint(primary.ID)).scoped {
 				rank = business.rank
-				if inherited, ok := ranks[j.TodoID]; ok && inherited < labels[j.TodoID].rank {
+				if inherited, ok := dependencyRanks[j.TodoID]; ok {
 					rank = min(rank, inherited)
 				}
 			}
@@ -298,8 +289,8 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 					l = business.label()
 					t.ProductIdentity = business.projection()
 					t.Priority = business.rank
-					if ranks[id] < labels[id].rank {
-						t.Priority = min(t.Priority, ranks[id])
+					if inherited, ok := dependencyRanks[id]; ok {
+						t.Priority = min(t.Priority, inherited)
 					}
 					t.PublicLabel, t.LabelKind, t.Department = l.name, l.kind, l.department
 					t.DisplayName = fmt.Sprintf("%s / ToDo %d", l.name, id)

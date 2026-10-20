@@ -41,9 +41,10 @@ type queuedJob struct {
 }
 
 type queueSnapshot struct {
-	ObservedAt time.Time `json:"observedAt"`
-	Queued     int       `json:"queued"`
-	OldestSecs float64   `json:"oldestSeconds"`
+	ObservedAt     time.Time `json:"observedAt"`
+	Queued         int       `json:"queued"`
+	OldestSecs     float64   `json:"oldestSeconds"`
+	AdmissionError string    `json:"admissionError,omitempty"`
 }
 
 func runnerAPI(path string, out any) error {
@@ -207,6 +208,7 @@ func supplyBurstPool(d burstPoolDeps) int {
 		q, err := d.queue()
 		lastQueue = q
 		if err != nil {
+			q.AdmissionError = err.Error()
 			d.record("metadata-unavailable", ended, q)
 			return 1
 		}
@@ -218,7 +220,8 @@ func supplyBurstPool(d burstPoolDeps) int {
 			d.record("queue-settling", ended, q)
 			return 0
 		}
-		if d.capacity() != nil {
+		if err := d.capacity(); err != nil {
+			q.AdmissionError = err.Error()
 			d.record("resource-wait", ended, q)
 			return 0
 		}

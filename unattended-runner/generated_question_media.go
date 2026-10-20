@@ -14,6 +14,8 @@ import (
 )
 
 const generatedQuestionDomain = "owner-generated-question-image-v1"
+const generatedNativeScanLimit int64 = 256 << 20
+const generatedNativeLineLimit = 36 << 20
 
 type generatedQuestionScope struct {
 	Todo     uint64 `json:"todo_id"`
@@ -76,8 +78,8 @@ func generatedQuestionProduction() generatedQuestionSpec {
 }
 
 // Preserve any available original exclusion in memory; never export its rows.
-// A missing registry is tolerated only after the separate exact artifact and
-// question anchors below qualify, and is never represented as recovered.
+// Missing legacy classification is never represented as recovered. Independent
+// native-generation and exact question evidence must still qualify below.
 func generatedQuestionSourceClear(path string) bool {
 	b, err := os.ReadFile("D:/CC/Tools/client-projects.txt")
 	if os.IsNotExist(err) {
@@ -120,8 +122,8 @@ func generatedQuestionRecords(path string, expected []generatedEventBound) ([]js
 	if err != nil || !os.SameFile(before, opened) {
 		return nil, errConversationMedia
 	}
-	scanner := bufio.NewScanner(io.LimitReader(f, 64<<20))
-	scanner.Buffer(make([]byte, 65536), 24<<20)
+	scanner := bufio.NewScanner(io.LimitReader(f, generatedNativeScanLimit))
+	scanner.Buffer(make([]byte, 65536), generatedNativeLineLimit)
 	var result []json.RawMessage
 	line, next := 0, 0
 	for scanner.Scan() {
@@ -234,13 +236,22 @@ func qualifyGeneratedQuestionImage(ctx context.Context, path string, scope gener
 					Hint string `json:"output_hint"`
 				}
 			}
-			if json.Unmarshal(b, &g) != nil || g.Todo != scope.Todo || g.Option != image.Option || g.Revision != image.Revision || g.Mode != "new_generation" || g.Tool != "image_gen__imagegen" || g.Orchestrator != "functions.exec" || g.ExecCellID != s.Cell || g.InvocationOrder != image.Order || g.InputImages == nil || len(g.InputImages) != 0 || g.SessionArtifactDirectoryFromTool != s.Session || !conversationMediaSamePath(filepath.FromSlash(g.OriginalPath), physical) || len(g.Request) != 2 {
+			if json.Unmarshal(b, &g) != nil || g.Todo != scope.Todo || g.Option != image.Option || g.Revision != image.Revision || g.Mode != "new_generation" || g.Tool != "image_gen__imagegen" || g.Orchestrator != "functions.exec" || g.ExecCellID != s.Cell || g.InvocationOrder != image.Order || g.InputImages == nil || len(g.InputImages) != 0 || g.SessionArtifactDirectoryFromTool != s.Session || !conversationMediaSamePath(filepath.FromSlash(g.OriginalPath), physical) || len(g.Request) < 1 || len(g.Request) > 2 {
 				return nil, errConversationMedia
 			}
 			var prompt string
 			var transparent bool
-			if json.Unmarshal(g.Request["prompt"], &prompt) != nil || bytesHash([]byte(prompt)) != image.PromptSHA || json.Unmarshal(g.Request["transparent_background"], &transparent) != nil || transparent || !strings.Contains(g.Response.Hint, filepath.Base(physical)) {
+			if json.Unmarshal(g.Request["prompt"], &prompt) != nil || strings.TrimSpace(prompt) == "" || bytesHash([]byte(prompt)) != image.PromptSHA || !strings.Contains(g.Response.Hint, filepath.Base(physical)) {
 				return nil, errConversationMedia
+			}
+			for key, raw := range g.Request {
+				if key == "transparent_background" {
+					if json.Unmarshal(raw, &transparent) != nil {
+						return nil, errConversationMedia
+					}
+				} else if key != "prompt" {
+					return nil, errConversationMedia
+				}
 			}
 		}
 	}

@@ -159,3 +159,140 @@ func TestGeneratedQuestionRegistryRejectsForgedScopeSourcesAndReceipts(t *testin
 		})
 	}
 }
+
+func TestGeneratedQuestionRejectsImagegenMentionWithUnrelatedImageOutput(t *testing.T) {
+	s, _ := generatedFixture(t)
+	r := generatedRegistryFixture(t, s)
+	b := generatedBundle(s)
+	data, _ := os.ReadFile(s.Rollout)
+	lines := bytes.Split(data, []byte{'\n'})
+	line := b.Events[0].Line - 1
+	var record map[string]any
+	_ = json.Unmarshal(lines[line], &record)
+	payload := record["payload"].(map[string]any)
+	payload["input"] = `const p=tools.image_gen__imagegen({prompt:load("prompt"),transparent_background:false});generatedImage(load("copied-image-result"));`
+	lines[line], _ = json.Marshal(record)
+	b.Events[0].SHA = bytesHash(lines[line])
+	_ = os.WriteFile(s.Rollout, bytes.Join(lines, []byte{'\n'}), 0600)
+	manifest := filepath.Join(filepath.Dir(s.Proof), "forged-emitter.json")
+	writeGeneratedBundle(t, manifest, b)
+	if _, err := r.register(context.Background(), manifest); err == nil {
+		t.Fatal("mentioning imagegen qualified an unrelated copied result")
+	}
+}
+
+func TestGeneratedQuestionSynchronousNativeResultUsesSameRegistry(t *testing.T) {
+	s, image := generatedFixture(t)
+	r := generatedRegistryFixture(t, s)
+	b := generatedBundle(s)
+	data, _ := os.ReadFile(s.Rollout)
+	lines := bytes.Split(data, []byte{'\n'})
+	var result map[string]any
+	_ = json.Unmarshal(lines[b.Events[3].Line-1], &result)
+	payload := result["payload"].(map[string]any)
+	payload["type"] = "custom_tool_call_output"
+	payload["call_id"] = b.Events[0].Call
+	final, _ := json.Marshal(result)
+	newLines := [][]byte{lines[0], lines[1], lines[b.Events[0].Line-1], final}
+	_ = os.WriteFile(s.Rollout, bytes.Join(newLines, []byte{'\n'}), 0600)
+	b.Events = []generatedEventBound{b.Events[0], {Line: 4, SHA: bytesHash(final), Kind: "custom_tool_call_output", Call: b.Events[0].Call}}
+	manifest := filepath.Join(filepath.Dir(s.Proof), "synchronous-evidence.json")
+	writeGeneratedBundle(t, manifest, b)
+	if _, err := r.register(context.Background(), manifest); err != nil {
+		t.Fatal("synchronous native result rejected", err)
+	}
+	if _, err := qualifyGeneratedQuestionImage(context.Background(), image, s.Scope, generatedQuestionSpec{Load: r.load}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestGeneratedQuestionLaterTaskMentionCannotRelabelOriginalSession(t *testing.T) {
+	s, image := generatedFixture(t)
+	r := generatedRegistryFixture(t, s)
+	b := generatedBundle(s)
+	data, _ := os.ReadFile(s.Rollout)
+	lines := bytes.Split(data, []byte{'\n'})
+	var assignment map[string]any
+	_ = json.Unmarshal(lines[1], &assignment)
+	payload := assignment["payload"].(map[string]any)
+	payload["content"] = []any{map[string]any{"type": "input_text", "text": "ToDo3099の別件について確認してください。"}}
+	later, _ := json.Marshal(assignment)
+	newLines := append([][]byte{lines[0], lines[1], later}, lines[2:]...)
+	_ = os.WriteFile(s.Rollout, bytes.Join(newLines, []byte{'\n'}), 0600)
+	b.Scope.Todo = 3099
+	b.Assignment.Line = 3
+	b.Assignment.SHA = bytesHash(later)
+	for i := range b.Events {
+		b.Events[i].Line++
+	}
+	gdata, _ := os.ReadFile(b.Images[0].Record)
+	var g map[string]any
+	_ = json.Unmarshal(gdata, &g)
+	g["todo"] = 3099
+	gdata, _ = json.Marshal(g)
+	_ = os.WriteFile(b.Images[0].Record, gdata, 0600)
+	b.Images[0].RecordSHA = bytesHash(gdata)
+	manifest := filepath.Join(filepath.Dir(s.Proof), "later-mention.json")
+	writeGeneratedBundle(t, manifest, b)
+	if _, err := r.register(context.Background(), manifest); err == nil {
+		t.Fatal("later task mention relabeled an original image", image)
+	}
+}
+
+func TestGeneratedQuestionAssignmentAcceptsCommonJapaneseTaskSuffix(t *testing.T) {
+	s, _ := generatedFixture(t)
+	r := generatedRegistryFixture(t, s)
+	b := generatedBundle(s)
+	data, _ := os.ReadFile(s.Rollout)
+	lines := bytes.Split(data, []byte{'\n'})
+	line := b.Assignment.Line - 1
+	var record map[string]any
+	_ = json.Unmarshal(lines[line], &record)
+	record["payload"].(map[string]any)["content"] = []any{map[string]any{"type": "input_text", "text": "ToDo3084の画像を新規生成してください。"}}
+	lines[line], _ = json.Marshal(record)
+	b.Assignment.SHA = bytesHash(lines[line])
+	_ = os.WriteFile(s.Rollout, bytes.Join(lines, []byte{'\n'}), 0600)
+	manifest := filepath.Join(filepath.Dir(s.Proof), "japanese-assignment.json")
+	writeGeneratedBundle(t, manifest, b)
+	if _, err := r.register(context.Background(), manifest); err != nil {
+		t.Fatal("common Japanese task assignment rejected", err)
+	}
+}
+
+func TestGeneratedQuestionSelectedRecordsBeyondLegacy64MiB(t *testing.T) {
+	s, image := generatedFixture(t)
+	r := generatedRegistryFixture(t, s)
+	b := generatedBundle(s)
+	data, _ := os.ReadFile(s.Rollout)
+	lines := bytes.Split(data, []byte{'\n'})
+	f, err := os.Create(s.Rollout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, line := range lines[:2] {
+		_, _ = f.Write(append(line, '\n'))
+	}
+	padding := append([]byte(`{"type":"unrelated","padding":"`), bytes.Repeat([]byte{'x'}, 1<<20)...)
+	padding = append(padding, []byte("\"}\n")...)
+	for range 65 {
+		if _, err = f.Write(padding); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_, err = f.Write(bytes.Join(lines[2:], []byte{'\n'}))
+	closeErr := f.Close()
+	if err != nil || closeErr != nil {
+		t.Fatal("padded native fixture write failed")
+	}
+	for i := range b.Events {
+		b.Events[i].Line += 65
+	}
+	manifest := filepath.Join(filepath.Dir(s.Proof), "long-native-session.json")
+	writeGeneratedBundle(t, manifest, b)
+	if _, err = r.register(context.Background(), manifest); err != nil {
+		t.Fatal("valid later native records rejected", err)
+	}
+	if _, err = qualifyGeneratedQuestionImage(context.Background(), image, s.Scope, generatedQuestionSpec{Load: r.load}); err != nil {
+		t.Fatal(err)
+	}
+}

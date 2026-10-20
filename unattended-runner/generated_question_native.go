@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bufio"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -32,7 +35,7 @@ func validateGeneratedAssignment(s generatedQuestionSpec) error {
 	if json.Unmarshal(records[0], &meta) != nil || meta.Type != "session_meta" || meta.Payload.ID != s.Session || json.Unmarshal(records[1], &assignment) != nil || assignment.Type != "response_item" || assignment.Payload.Type != "message" || assignment.Payload.Role != "user" {
 		return errConversationMedia
 	}
-	pattern := regexp.MustCompile(`^(?:担当)?ToDo([0-9]+)(?:は|[。\s])`)
+	pattern := regexp.MustCompile(`^(?:担当)?ToDo([0-9]+)(?:[^0-9]|$)`)
 	matched := 0
 	for _, content := range assignment.Payload.Content {
 		if content.Type != "input_text" {
@@ -49,6 +52,62 @@ func validateGeneratedAssignment(s generatedQuestionSpec) error {
 		matched++
 	}
 	if matched != 1 {
+		return errConversationMedia
+	}
+	return generatedFirstAssignment(s)
+}
+
+// A later user message that happens to mention another task is not a new
+// origin for images from this dedicated generation session. Only its first
+// substantive user assignment can supply the source ToDo.
+func generatedFirstAssignment(s generatedQuestionSpec) error {
+	physical, before, err := conversationMediaPhysical(filepath.FromSlash(s.Rollout))
+	if err != nil {
+		return errConversationMedia
+	}
+	f, err := os.Open(physical)
+	if err != nil {
+		return errConversationMedia
+	}
+	defer f.Close()
+	opened, err := f.Stat()
+	if err != nil || !os.SameFile(before, opened) {
+		return errConversationMedia
+	}
+	scanner := bufio.NewScanner(io.LimitReader(f, generatedNativeScanLimit))
+	scanner.Buffer(make([]byte, 65536), generatedNativeLineLimit)
+	line, found := 0, false
+	for scanner.Scan() {
+		line++
+		if line > s.Assignment.Line {
+			break
+		}
+		var message struct {
+			Type    string
+			Payload struct {
+				Type, Role string
+				Content    []struct{ Type, Text string }
+			}
+		}
+		if json.Unmarshal(scanner.Bytes(), &message) != nil {
+			return errConversationMedia
+		}
+		if message.Type != "response_item" || message.Payload.Type != "message" || message.Payload.Role != "user" {
+			continue
+		}
+		for _, content := range message.Payload.Content {
+			text := strings.TrimSpace(content.Text)
+			if content.Type != "input_text" || text == "" || strings.HasPrefix(text, "# AGENTS.md instructions for ") || strings.HasPrefix(text, "<environment_context>") {
+				continue
+			}
+			if line != s.Assignment.Line || bytesHash(scanner.Bytes()) != s.Assignment.SHA || found {
+				return errConversationMedia
+			}
+			found = true
+		}
+	}
+	_, named, pathErr := conversationMediaPhysical(physical)
+	if scanner.Err() != nil || !found || line < s.Assignment.Line || pathErr != nil || !os.SameFile(opened, named) {
 		return errConversationMedia
 	}
 	return nil
@@ -80,14 +139,8 @@ func validateGeneratedQuestionNative(records []json.RawMessage, s generatedQuest
 		return errConversationMedia
 	}
 	code := r[0].Payload.Input
-	if !strings.Contains(code, "tools.image_gen__imagegen(") || !strings.Contains(code, "generatedImage(") {
+	if validateGeneratedScript(code, len(s.Images)) != nil {
 		return errConversationMedia
-	}
-	// The generation call cannot carry input images or manufacture image output.
-	for _, forbidden := range []string{"referenced_image_paths", "num_last_images_to_include", "image_url", "output_hint", "input_image", "data:image", "tools.exec_command", "image("} {
-		if strings.Contains(code, forbidden) {
-			return errConversationMedia
-		}
 	}
 	if len(records) == 4 {
 		var pending string

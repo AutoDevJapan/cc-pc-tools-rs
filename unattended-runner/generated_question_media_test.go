@@ -71,7 +71,7 @@ func generatedFixtureAt(t *testing.T, root string, todo uint64, session string) 
 	for i, kind := range kinds {
 		payload := map[string]any{"type": kind, "name": names[i], "call_id": calls[i]}
 		if i == 0 {
-			payload["input"] = "const result=await tools.image_gen__imagegen({prompt:promptA,transparent_background:false});generatedImage(result)"
+			payload["input"] = `const result=await tools.image_gen__imagegen({prompt:"fictional owner UI mockup",transparent_background:false});generatedImage(result)`
 		}
 		if i == 1 {
 			payload["output"] = "Script running with cell ID 25\nWall time 0.0 seconds\nOutput:\n"

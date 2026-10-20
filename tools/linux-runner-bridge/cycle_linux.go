@@ -34,6 +34,13 @@ func cycleQuiescent(procRoot string) error {
 }
 
 func cycleQuiescentAt(procRoot string, self int) error {
+	return cycleQuiescentWith(procRoot, self, nil, os.ReadFile)
+}
+
+// The optional baseline and reader are test seams. The production entry above
+// always uses no baseline and real proc reads; no environment can enable one.
+func cycleQuiescentWith(procRoot string, self int, baseline func(int) bool, readFile func(string) ([]byte, error)) error {
+	known := func(pid int) bool { return baseline != nil && baseline(pid) }
 	allowed := map[int]bool{1: true, self: true}
 	pid := self
 	visited := map[int]bool{}
@@ -42,7 +49,7 @@ func cycleQuiescentAt(procRoot string, self int) error {
 			return errors.New("process ancestry cycle rejected")
 		}
 		visited[pid] = true
-		data, err := os.ReadFile(filepath.Join(procRoot, strconv.Itoa(pid), "stat"))
+		data, err := readFile(filepath.Join(procRoot, strconv.Itoa(pid), "stat"))
 		if err != nil {
 			return err
 		}
@@ -55,7 +62,7 @@ func cycleQuiescentAt(procRoot string, self int) error {
 			return errors.New("process name rejected")
 		}
 		name := string(data[start+1 : end])
-		if name == "Runner.Worker" || name == "Runner.Listener" {
+		if (name == "Runner.Worker" || name == "Runner.Listener") && !known(pid) {
 			return errors.New("runner ancestor is active; retaining data")
 		}
 		fields := strings.Fields(string(data[end+1:]))
@@ -74,10 +81,10 @@ func cycleQuiescentAt(procRoot string, self int) error {
 	}
 	for _, entry := range entries {
 		pid, err := strconv.Atoi(entry.Name())
-		if err != nil || allowed[pid] {
+		if err != nil || allowed[pid] || known(pid) {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(procRoot, entry.Name(), "cmdline"))
+		data, err := readFile(filepath.Join(procRoot, entry.Name(), "cmdline"))
 		if os.IsNotExist(err) || errors.Is(err, syscall.ESRCH) {
 			continue
 		}
@@ -167,6 +174,13 @@ func recoverInterruptedCycles(root, tmpRoot string) error {
 		if err := ownedDirectory(cycle); err != nil {
 			return err
 		}
+		gone, err := recoverCycleOwner(cycle)
+		if err != nil {
+			return err
+		}
+		if gone {
+			continue
+		}
 		ended, err := diagnosticEnded(cycle)
 		if err != nil {
 			return err
@@ -191,6 +205,74 @@ func recoverInterruptedCycles(root, tmpRoot string) error {
 	return nil
 }
 
+func writeCycleOwner(cycle string) error {
+	pending := filepath.Join(cycle, "owner.pending")
+	f, err := os.OpenFile(pending, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if err == nil {
+		_, err = f.WriteString(cycleOwner)
+		if err == nil {
+			err = f.Sync()
+		}
+		closeErr := f.Close()
+		if err == nil {
+			err = closeErr
+		}
+		if err == nil {
+			err = os.Rename(pending, filepath.Join(cycle, "owner"))
+		}
+		if err != nil {
+			_ = os.Remove(pending)
+		}
+	}
+	if err != nil {
+		_ = os.Remove(cycle)
+	} // Only an empty directory can be removed.
+	return err
+}
+
+// Recover only empty allocation shells, or a fully written original marker.
+// Nonempty data without a valid ownership record remains protected.
+func recoverCycleOwner(cycle string) (bool, error) {
+	if _, err := os.Lstat(filepath.Join(cycle, "owner")); err == nil {
+		return false, nil
+	} else if !os.IsNotExist(err) {
+		return false, err
+	}
+	entries, err := os.ReadDir(cycle)
+	if err != nil {
+		return false, err
+	}
+	if len(entries) == 0 {
+		return true, os.Remove(cycle)
+	}
+	if len(entries) != 1 || entries[0].Name() != "owner.pending" {
+		return false, errors.New("unowned diagnostic data retained")
+	}
+	pending := filepath.Join(cycle, "owner.pending")
+	info, err := os.Lstat(pending)
+	if err != nil {
+		return false, err
+	}
+	st, ok := info.Sys().(*syscall.Stat_t)
+	if !ok || !info.Mode().IsRegular() || st.Uid != uint32(os.Getuid()) {
+		return false, errors.New("pending owner marker rejected")
+	}
+	if info.Size() == 0 {
+		if err := os.Remove(pending); err != nil {
+			return false, err
+		}
+		return true, os.Remove(cycle)
+	}
+	if info.Size() != int64(len(cycleOwner)) {
+		return false, errors.New("incomplete owner marker retained")
+	}
+	data, err := os.ReadFile(pending)
+	if err != nil || string(data) != cycleOwner {
+		return false, errors.New("incomplete owner marker retained")
+	}
+	return false, os.Rename(pending, filepath.Join(cycle, "owner"))
+}
+
 func prepareCycle(root, tmpRoot, runnerRoot string) (string, string, error) {
 	for _, parent := range []string{root, runnerRoot} {
 		if err := ownedDirectory(parent); err != nil {
@@ -205,7 +287,7 @@ func prepareCycle(root, tmpRoot, runnerRoot string) (string, string, error) {
 	if err != nil {
 		return "", "", err
 	}
-	if err := os.WriteFile(filepath.Join(cycle, "owner"), []byte(cycleOwner), 0600); err != nil {
+	if err := writeCycleOwner(cycle); err != nil {
 		return "", "", err
 	}
 	scratch := filepath.Join(tmpRoot, "bridge-"+filepath.Base(cycle))

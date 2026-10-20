@@ -119,6 +119,9 @@ verified-idle start, owned interrupted scratch is reclaimed and a distinct
 `interrupted` marker closes only those diagnostics. It never writes `complete`
 or alters any job result. Their original bytes remain until normal retention
 expires them. Unknown ownership stays unfinished and is never reclaimed.
+Owner records are written to a pending file, synced, and renamed into place.
+An idle restart can remove an empty owned allocation shell or finish publishing
+an intact pending owner record. Nonempty data without a valid record is kept.
 Owner access may be restored on same-filesystem scratch directories only;
 files and symlink targets keep their permissions. The supervisor lock is
 close-on-exec. Links, special files,
@@ -131,3 +134,9 @@ root and remains preserved. Deployment must use the original scheduled task
 while idle, preserve the existing `/work` data, and verify matching host/image/
 container artifacts before a normal GitHub job is accepted. Merely restarting
 the old task does not install this change.
+
+The live-proc test runs inside the CI Worker. Its explicit test baseline uses
+PID plus kernel start time to distinguish existing test-framework processes
+from newly created probe processes. Production always uses a nil baseline and
+real `/proc` reads, and still rejects any Worker or Listener ancestor. No
+environment variable or runner argument enables the test baseline.

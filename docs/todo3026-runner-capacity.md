@@ -90,3 +90,25 @@ Suggestionのlock継承はO_CLOEXECで修正。読み取り専用の生成ディ
 
 head3031f8cの正式CIはCodeQL4言語、Build speed、Windows/Linuxの通常Go検査が成功。
 追加修正後は影響範囲の再検査と別モデル再確認、固定head正式CIが必要。
+
+## レビュー3051への対応
+
+固定3031f8c..4be463fの読取レビューで、CI自身のWorkerを実プロセス検査が拒否するMust1を受領した。
+原応答コピーはGit対象外 `docs/runner-todo3026-review3051.private.md`。
+SHA256 `2fc7663938e9a3ff66faeb663ab690deee747e1fcf658958b2512c046cff9b27`。
+
+本番のWorker祖先拒否は維持する。検査専用の明示的な開始時スナップショットを追加し、
+PIDとkernel開始時刻が一致する既存プロセスだけを検査の背景として扱う。
+新しく作った実shの終了待ちとscratch回収は同じ本番用プローブを通す。
+本番入口は常にbaselineなしで、環境変数・CLIからこの検査条件は有効にできない。
+
+4be463fのテスト実行物をRunner.Workerという名前で実行し、祖先拒否によるexit1を再現した。
+原ログはGit対象外 `docs/runner-todo3026-review3051-red.log`。
+修正版は実際に同じ名前のhelperを起動して成功し、Linux全関連race/vetも成功（2.781秒）。
+Windows関連test/vetも成功。zombieの空cmdlineを保持し、ESRCHへ移ったときだけ静止を認める回帰を追加した。
+完了済みの検査は再開後に重複実行しない。
+
+所有印の作成直後に中断するSuggestionも対応した。所有印はpendingへ書いてsyncしてからrenameする。
+静止とUIDを確認した空の割当てディレクトリは回収し、完全な元pending印だけを確定できる。
+所有印がなく内容があるディレクトリは保持する。認証・元3024資料・ソースは対象外。
+追加差分の別モデル再確認と、修正版の正式Linux CIが完了するまではmerge・配備しない。

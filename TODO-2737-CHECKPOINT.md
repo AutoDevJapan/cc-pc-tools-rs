@@ -958,3 +958,11 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 固定4bb1aa6→5962dfb/treeはreview specに固定した3file差分。3099をgpt-6-luna/effort max、読取のみ・検査0・必要局所限定で通常add --specし、保存全文一致/dispatchableを確認。subwork-of2737 metadataはroot worker条件により受付前拒否されたため、他担当の親metadataや状態を変えず従来の通常addを使用。重複登録なし。
 - 3093の受領・offline DWORD0確認・修正/RED→GREEN・未実施の公式CI・3099待機を3093/2737/2641 noteへCAS更新。新差分の実適用/公式rerunは未実行。旧runの取消/route削除は再送しない。root073...のpublic junction3件と元失敗clone3f...を保持し、後でsafe-deleteの正規手順を使う。
 - 次は3099のMust0後に同clean sourceからruntimeを生成し、原source/同leaseを再照合、own routeの復元とWindows jobのみrerunへ進む。成功Linux verifyの再実行0。終了前に現job/実HEAD checkpointを保存・読戻しし、todo wait2737 --on3099を記録する。
+
+## 2026-10-20 job212543: レビュー3099のMust0を受領しWindows jobをattempt5で再開
+
+- 3099/job20261020-210745/succeeded/exit0、対応turn_context gpt-6-luna/effort max/thread01a1593f-610d-7b91-9e74-ab5523171dfbを照合。原last_message SHA50F3B689E60170657D645E9BB28618E77F150D357BE13CA7F731C478F8974016は同rolloutの最終assistant response_itemと改行正規化後一致。event_msg形式agent_messageは無し。固定4bb1aa6→5962dfb/tree16eda680、3file+必要局所の未読0/Must0/Suggestion0/Nit0/検査0。読取完了をWindows13/公式CI成功へ読み替えない。
+- clean afd597aからhost/agent/Linux helperを各1回生成、実VCS/clean/OS一致、inspect-executor source_clean/admission_linkedを確認。host SHACDD08A9194A1B638185B741972B57BA5E1FAA3690BA6C74CCC10383C2FDF090C。前回の有効race/vet/RED→GREENは再実行しない。今回のソース変更はこの文書だけ。
+- 原source/ref/head0fda/tree0bc5/workflow ba2bcc.../owner/id/private/admin/nonfork/PR同repo、CC1406818713/public/admin/nonforkをcanonical APIで再照合。原AGENTS/CLAUDE RAM取得は既読同hash235DCF.../70C7DE...。原SDK/保護設定/manifestは変更なし。
+- 元attempt4終端/Windows failure/verify success/route/intent不在を確認。初回precheckはverify表示名の略称誤りでmutation前に拒否、実名+固定IDで照合し直した。own route復元POST1回/同lease readback、Windows job rerun POST1回。直後GETが旧attempt4/queuedでも再送せず次readでattempt5確認。Windows job118627468742 queued/未割当、verify118627470689はrunner33既済success引継ぎ、PR receipt skipped。verify再実行0。
+- 新safe-delete root1a241f49d0c656d5f29086c7c9adc242で同afd597a runtimeとattempt5リクエストを使いwindows-jobをcanonical Cargo gate経由で1回開始。実LongPaths設定/Windows13工程/終了hook/回収/CI Gateは未確認。再開は同rootのwrapper/windows-start/windows-exit/job-*、実run/job、同source/route/normalCI intentとPID作成時刻から確認し、起動やrerunを再送しない。旧failure/log/hash/clone3f.../原SDK/guard/manifest/未回収/他担当を保持。製品merge/Prdは親2641。

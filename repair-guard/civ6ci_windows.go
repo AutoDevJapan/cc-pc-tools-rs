@@ -104,7 +104,7 @@ type civ6Access struct {
 }
 
 func civ6SourceHead() (string, bool) {
-	if !sourceVerified(base) || !conversationPhysical(civ6Source) || legacyMatch(civ6Source) || !sourceVerified(civ6Source) {
+	if legacyMatch(base) || !conversationPhysical(base) || !sourceVerified(base) || !conversationPhysical(civ6Source) || legacyMatch(civ6Source) || !sourceVerified(civ6Source) {
 		return "", false
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)

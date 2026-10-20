@@ -1,10 +1,10 @@
 name: Skill documentation acceptance
 on:
   pull_request:
-    paths: ['docs/skills-3048-*', 'tools/skills-3048-check/**', '.github/workflows/skills-3048.yml']
+    paths: ['docs/skills-3048-*', 'docs/skills-3080-*', 'tools/skills-3048-check/**', 'tools/skills-3080-catalog/**', '.github/workflows/skills-3048.yml']
   push:
     branches: [main]
-    paths: ['docs/skills-3048-*', 'tools/skills-3048-check/**', '.github/workflows/skills-3048.yml']
+    paths: ['docs/skills-3048-*', 'docs/skills-3080-*', 'tools/skills-3048-check/**', 'tools/skills-3080-catalog/**', '.github/workflows/skills-3048.yml']
 permissions:
   contents: read
 concurrency:
@@ -26,3 +26,7 @@ jobs:
         run: go -C tools/skills-3048-check test ./...
       - name: Vet the standalone documentation check
         run: go -C tools/skills-3048-check vet ./...
+      - name: Check full catalog accounting and adoption candidate metadata
+        run: go -C tools/skills-3080-catalog test ./...
+      - name: Vet the metadata-only catalog triage
+        run: go -C tools/skills-3080-catalog vet ./...

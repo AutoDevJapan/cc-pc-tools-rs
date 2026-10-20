@@ -1,0 +1,65 @@
+{
+  "todo": 3080,
+  "status": "prepared3203requestedclarification_not_applied",
+  "review": 3203,
+  "fixed_review_head": "32db040c342acced273a30b463ad4df41faad012",
+  "payload_sha256": "5e244502941a99840d7c36a3e797afbb6faa6a6c5cb03d4bcfcbab4459099aa9",
+  "after_bundle_sha256": "ed60982a2de623099177666c061b4a2d80970e3945162431be6e929865f2814b",
+  "writer_sha256": "a5c330f97fba22799705c6f31e43a6d17d41c1d6ce11040507956c98fea9d9ad",
+  "backup_path": "D:/CC/Skills/.trash/todo3080-teamai-support-20261021-20261021-073253-todo-3080-991c1ae3",
+  "target": "teamai",
+  "before_files": [
+    {
+      "path": "references/upstream-original.txt",
+      "sha256": "82a22b1c37531834ab5784f93f950f0a8840ac4e4aa422f1ef2dc03437f9ad66"
+    },
+    {
+      "path": "references/LICENSE.txt",
+      "sha256": "31154d9c1a8bd8d37b449bdbb8a04f9b4618e5d330b52b0fdb7c452414d75a41"
+    },
+    {
+      "path": "references/source.json",
+      "sha256": "c0b975fb8caaeed7a4bd168c75c8b91e9c35f46ec32d76e4cdfb6c772bbbebf5"
+    },
+    {
+      "path": "references/sources.md",
+      "sha256": "1068a8f430231f24dc6c36f2fcb4d553c91fdbca223e742bc3d9ffb074c31000"
+    },
+    {
+      "path": "SKILL.md",
+      "sha256": "393c15ccdc7a5613cd036b3792d2a5a6b4b63eebf37de48c999b69ed6933a440"
+    }
+  ],
+  "after_files": [
+    {
+      "path": "references/upstream-original.txt",
+      "sha256": "82a22b1c37531834ab5784f93f950f0a8840ac4e4aa422f1ef2dc03437f9ad66"
+    },
+    {
+      "path": "references/LICENSE.txt",
+      "sha256": "31154d9c1a8bd8d37b449bdbb8a04f9b4618e5d330b52b0fdb7c452414d75a41"
+    },
+    {
+      "path": "references/source.json",
+      "sha256": "73dcc724dc5f2eaa50dac457a6e6c5defae5def7d99fe0c745075fbd93f60f44"
+    },
+    {
+      "path": "references/sources.md",
+      "sha256": "1b5b605a80f901c3c385d26dd47e3f48726553ec249a5d4e87261bc47da37bbe"
+    },
+    {
+      "path": "SKILL.md",
+      "sha256": "1695769ac6a10ef91e81f632e55ab72f1e8d35e7bdf9532ba3db7ebde942a884"
+    }
+  ],
+  "changed": 3,
+  "upstream_notice_unchanged": 2,
+  "new_installs": 0,
+  "constraints": [
+    "Exact owned1/5before hashes and physical ancestors/reference directory;noextra metadata/managed files",
+    "Newpersistentbackup5+bothpayloads+syncedjournal,verify all5before first replacement",
+    "Onlysource.json/sources.md/SKILL.md last,atomic File.Replace NullString.Value;no retry/delete/automaticrollback",
+    "Separate exact normal executionreview;oldnew-onlyapply notused",
+    "New revisionmanifest/liveadoption pointer;originalmanifest preserved;actualvalidator/freshdiscovery andscope review"
+  ]
+}

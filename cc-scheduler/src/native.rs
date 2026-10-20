@@ -22,7 +22,7 @@ use windows_sys::Win32::{
             SYSTEM_LOGICAL_PROCESSOR_INFORMATION,
         },
         Threading::{
-            GetProcessTimes, GetSystemTimes, OpenProcess, TerminateProcess,
+            GetActiveProcessorCount, GetProcessTimes, GetSystemTimes, OpenProcess, TerminateProcess,
             PROCESS_QUERY_LIMITED_INFORMATION, PROCESS_TERMINATE,
         },
     },
@@ -112,13 +112,15 @@ pub fn resource_totals() -> Result<Value> {
     unsafe {
         let mut info: PERFORMANCE_INFORMATION = zeroed();
         info.cb = size_of::<PERFORMANCE_INFORMATION>() as u32;
-        if GetPerformanceInfo(&mut info, info.cb) == 0 {
+        let logical_cpus = GetActiveProcessorCount(u16::MAX); // ALL_PROCESSOR_GROUPS
+        if GetPerformanceInfo(&mut info, info.cb) == 0 || logical_cpus == 0
+            || info.PageSize == 0 || info.PhysicalAvailable > info.PhysicalTotal {
             return Err(Error("OSError"));
         }
         Ok(json!({"system_times":system_times()?,"tick_ms":GetTickCount64(),
             "total_bytes":info.PhysicalTotal.saturating_mul(info.PageSize),
             "available_bytes":info.PhysicalAvailable.saturating_mul(info.PageSize),
-            "logical_cpus":std::thread::available_parallelism().map_or(1, |n|n.get())}))
+            "logical_cpus":logical_cpus}))
     }
 }
 pub fn measure(state: &mut Value) -> Result<(Value, Processes)> {

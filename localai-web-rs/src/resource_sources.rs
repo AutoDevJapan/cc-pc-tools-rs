@@ -134,7 +134,7 @@ fn markers(jobs_path: &Path, id: &str, budget: &mut usize, now: u64) -> (Vec<Val
         let Some(since) = chrono::DateTime::parse_from_rfc3339(&marker.since)
             .ok()
             .and_then(|t| u64::try_from(t.timestamp_millis()).ok())
-            .filter(|at| *at <= now)
+            .filter(|at| *at <= now.saturating_add(5_000))
         else {
             return (out, "invalid");
         };
@@ -189,16 +189,11 @@ pub fn job_metadata(
     json!({"observedAt":now,"jobs":out,"truncated":truncated})
 }
 
-fn capture_docker() -> Result<String, &'static str> {
+fn capture(program: &Path, args: &[&str], timeout: Duration) -> Result<String, &'static str> {
     let mut output = tempfile::tempfile().map_err(|_| "capture_failed")?;
-    let mut command = Command::new("docker");
+    let mut command = Command::new(program);
     command
-        .args([
-            "stats",
-            "--no-stream",
-            "--format",
-            "{{.ID}}\t{{.CPUPerc}}\t{{.MemUsage}}",
-        ])
+        .args(args)
         .stdin(Stdio::null())
         .stderr(Stdio::null())
         .stdout(output.try_clone().map_err(|_| "capture_failed")?);
@@ -217,7 +212,7 @@ fn capture_docker() -> Result<String, &'static str> {
                     Err("collector_failed")
                 }
             }
-            Ok(None) if started.elapsed() < Duration::from_secs(4) => {
+            Ok(None) if started.elapsed() < timeout => {
                 std::thread::sleep(Duration::from_millis(20))
             }
             _ => break Err("collector_timeout"),
@@ -285,7 +280,18 @@ pub(super) fn parse_docker(raw: &str, now: u64) -> Result<Value, &'static str> {
     )
 }
 pub(super) fn docker_stats(previous: &Value, now: u64) -> Value {
-    match capture_docker().and_then(|raw| parse_docker(&raw, now_ms())) {
+    match capture(
+        Path::new("docker"),
+        &[
+            "stats",
+            "--no-stream",
+            "--format",
+            "{{.ID}}\t{{.CPUPerc}}\t{{.MemUsage}}",
+        ],
+        Duration::from_secs(4),
+    )
+    .and_then(|raw| parse_docker(&raw, now_ms()))
+    {
         Ok(v) => v,
         Err(code) => {
             let mut v = if previous.is_object() {
@@ -321,6 +327,122 @@ pub(super) fn expire_docker(value: &mut Value, now: u64) {
 mod tests {
     use super::*;
     #[test]
+    #[ignore = "child fixture"]
+    fn fixture_capture_large_stdout() {
+        use std::io::Write;
+        std::io::stdout().write_all(&[b'x'; 131_072]).unwrap();
+        std::io::stdout().flush().unwrap();
+        std::thread::sleep(Duration::from_secs(30));
+    }
+    #[test]
+    #[ignore = "child fixture"]
+    fn fixture_capture_timeout() {
+        std::thread::sleep(Duration::from_secs(30));
+    }
+    #[test]
+    fn bounded_capture_stops_timeout_and_large_output_and_recovers_after_failure() {
+        let exe = std::env::current_exe().unwrap();
+        let fixture = |name: &str| format!("resource_observer::sources::tests::{name}");
+        assert_eq!(
+            capture(
+                &exe,
+                &[
+                    "--exact",
+                    &fixture("fixture_capture_timeout"),
+                    "--ignored",
+                    "--nocapture"
+                ],
+                Duration::from_millis(200)
+            ),
+            Err("collector_timeout")
+        );
+        assert_eq!(
+            capture(
+                &exe,
+                &[
+                    "--exact",
+                    &fixture("fixture_capture_large_stdout"),
+                    "--ignored",
+                    "--nocapture"
+                ],
+                Duration::from_secs(4)
+            ),
+            Err("output_limit")
+        );
+        assert_eq!(
+            capture(
+                Path::new("cmd.exe"),
+                &["/c", "exit 7"],
+                Duration::from_secs(2)
+            ),
+            Err("collector_failed")
+        );
+        assert!(capture(
+            Path::new("cmd.exe"),
+            &["/c", "echo captured"],
+            Duration::from_secs(2)
+        )
+        .unwrap()
+        .contains("captured"));
+    }
+    #[test]
+    fn marker_budgets_and_malformed_receipts_preserve_incomplete_observation() {
+        let temp = tempfile::tempdir().unwrap();
+        let now = 1_792_454_400_000u64;
+        let mut jobs = Vec::new();
+        for n in 0..5 {
+            let id = format!("job{n}");
+            let dir = temp.path().join(&id).join("resource-waits");
+            fs::create_dir_all(&dir).unwrap();
+            jobs.push(json!({"id":id,"status":"running","pid":1,"pid_created":1}));
+            for pid in 1..=64 {
+                fs::write(dir.join(format!("cargo-{pid}.json")),json!({"job_id":id,"kind":"cargo","pid":pid,"pid_created":2,"since":"2026-10-20T00:00:00Z"}).to_string()).unwrap();
+            }
+        }
+        let value = job_metadata(&jobs, temp.path(), now, |_| None);
+        assert_eq!(value["jobs"][3]["markers"].as_array().unwrap().len(), 64);
+        assert_eq!(value["jobs"][4]["markerState"], "truncated");
+        let dir = temp.path().join("job0/resource-waits");
+        fs::write(dir.join("cargo-65.json"), "{}").unwrap();
+        let value = job_metadata(&jobs[..1], temp.path(), now, |_| None);
+        assert_ne!(value["jobs"][0]["markerState"], "ok");
+        fs::remove_file(dir.join("cargo-65.json")).unwrap();
+        fs::write(dir.join("cargo-1.json"), "{").unwrap();
+        assert_eq!(
+            job_metadata(&jobs[..1], temp.path(), now, |_| None)["jobs"][0]["markerState"],
+            "invalid"
+        );
+    }
+    #[test]
+    fn marker_reparse_points_are_rejected_without_following_the_target() {
+        let temp = tempfile::tempdir().unwrap();
+        let parent = temp.path().join("job1");
+        fs::create_dir(&parent).unwrap();
+        let actual = temp.path().join("actual");
+        fs::create_dir(&actual).unwrap();
+        fs::write(actual.join("cargo-1.json"), "must not be read").unwrap();
+        let mut command = Command::new("cmd.exe");
+        command
+            .args(["/c", "mklink", "/J"])
+            .arg(parent.join("resource-waits"))
+            .arg(&actual)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        let (mut child, group) = cc_ask::ProcessGroup::spawn(&mut command).unwrap();
+        let result = child.wait().unwrap();
+        group.completed().unwrap();
+        assert!(result.success());
+        let value = job_metadata(
+            &[json!({"id":"job1","status":"running"})],
+            temp.path(),
+            u64::MAX,
+            |_| None,
+        );
+        let removed = fs::remove_dir(parent.join("resource-waits"));
+        assert_eq!(value["jobs"][0]["markerState"], "unavailable");
+        assert!(removed.is_ok());
+    }
+    #[test]
     fn docker_units_stay_in_their_layer_and_malformed_output_is_not_empty_success() {
         let v = parse_docker("abcdef012345\t125.00%\t1.5GiB / 12GiB\n", 10).unwrap();
         assert_eq!(v["containers"][0]["memoryBytes"], 1610612736u64);
@@ -350,6 +472,14 @@ mod tests {
         let v = job_metadata(input.as_array().unwrap(), jobs, u64::MAX, |_| None);
         assert_eq!(v["jobs"][0]["markers"][0]["created"], "20");
         assert_eq!(v["jobs"][0]["markerState"], "ok");
+        let started = chrono::DateTime::parse_from_rfc3339("2026-10-20T00:00:00Z")
+            .unwrap()
+            .timestamp_millis() as u64;
+        assert_eq!(
+            job_metadata(input.as_array().unwrap(), jobs, started - 1000, |_| None)["jobs"][0]
+                ["markerState"],
+            "ok"
+        );
     }
     #[test]
     fn real_native_sample_has_the_current_process_without_command_or_environment_fields() {

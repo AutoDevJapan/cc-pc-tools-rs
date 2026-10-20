@@ -1904,8 +1904,8 @@ impl Console {
                 source.is_some_and(|j| {
                     !cc_ask::job_policy::launch_context::retired_session(j, session)
                         && ["thread_id", "resume_session"]
-                        .iter()
-                        .any(|field| j[*field] == *session)
+                            .iter()
+                            .any(|field| j[*field] == *session)
                         && strv(j, "cwd")
                             .replace('\\', "/")
                             .eq_ignore_ascii_case(&launch_cwd.replace('\\', "/"))
@@ -2095,6 +2095,38 @@ impl Console {
             }
             if let Some(task_type) = t.options["task_type"].as_str() {
                 args.extend(["--task-type".into(), task_type.into()]);
+            }
+            for (field, flag) in [
+                ("model_origin", "--model-origin"),
+                ("effort_origin", "--effort-origin"),
+            ] {
+                if let Some(origin) = t.options[field]
+                    .as_str()
+                    .filter(|origin| ["policy", "owner_request"].contains(origin))
+                {
+                    args.extend([flag.into(), origin.into()]);
+                }
+            }
+            if let Some(model) = t.options["model_recovery_from"].as_str() {
+                args.extend(["--model-recovery-from".into(), model.into()]);
+            }
+            for (field, flag) in [
+                ("review_source_jobs", "--review-source-jobs"),
+                ("review_excluded_models", "--review-excluded-models"),
+            ] {
+                if let Some(values) = t.options[field]
+                    .as_array()
+                    .filter(|values| !values.is_empty())
+                {
+                    args.extend([
+                        flag.into(),
+                        values
+                            .iter()
+                            .filter_map(Value::as_str)
+                            .collect::<Vec<_>>()
+                            .join(","),
+                    ]);
+                }
             }
             if let Some(session) = resume_session {
                 args.extend(["--resume-session".into(), session.into()]);
@@ -3454,7 +3486,61 @@ fn trigger_launch_options(
     if automatic_recovery(&t.key) {
         requested.as_object_mut().unwrap().remove("_todo_defaults");
     }
-    launch_options(item, &requested, source, inherited)
+    let mut options = launch_options(item, &requested, source, inherited)?;
+    if automatic_recovery(&t.key) {
+        for field in ["model", "effort"] {
+            let origin = format!("{field}_origin");
+            let owner = item
+                .into_iter()
+                .chain(source.filter(|_| inherited))
+                .any(|candidate| {
+                    candidate[&origin] == "owner_request"
+                        && if field == "model" {
+                            cc_ask::job_policy::same_model(
+                                strv(candidate, field),
+                                strv(&options, field),
+                            )
+                        } else {
+                            candidate[field] == options[field]
+                        }
+                });
+            options[origin] = json!(if owner { "owner_request" } else { "policy" });
+        }
+    }
+    // Recovery routing comes from the same saved watchdog generation, never
+    // an arbitrary delegate option or a previous completed recovery launch.
+    for field in [
+        "model_recovery_from",
+        "review_source_jobs",
+        "review_excluded_models",
+    ] {
+        options.as_object_mut().unwrap().remove(field);
+    }
+    if let (true, Some(item), Some(source)) = (inherited, item, source) {
+        let pending = &item["stall_recovery"]["pending"];
+        if t.key.strip_prefix("manual:") == pending["request"].as_str()
+            && pending["job"]["id"] == source["id"]
+            && pending["job"]["model_repair_pending"] == true
+            && cc_ask::job_policy::same_model(
+                strv(&pending["job"], "model_recovery_from"),
+                strv(source, "model"),
+            )
+            && cc_ask::job_policy::same_model(
+                strv(&pending["job"], "model"),
+                strv(&options, "model"),
+            )
+        {
+            options["model_recovery_from"] = pending["job"]["model_recovery_from"].clone();
+        }
+        if cc_ask::job_policy::review_task("", strv(&options, "task_type")) {
+            for field in ["review_source_jobs", "review_excluded_models"] {
+                if source[field].is_array() {
+                    options[field] = source[field].clone();
+                }
+            }
+        }
+    }
+    Ok(options)
 }
 fn trigger_read_only(t: &Trigger) -> bool {
     if cc_ask::job_policy::explicit_read_only(&t.prompt) {
@@ -4594,6 +4680,7 @@ mod tests {
     include!("delegation_model_tests.rs");
     include!("todo1842_tests.rs");
     include!("resume_recovery_tests.rs");
+    include!("model_resume_tests.rs");
     include!("todo_capacity_tests.rs");
     include!("todo2341_receipt_tests.rs");
     use super::*;

@@ -84,11 +84,11 @@ pub fn reconcile_resume(job: &mut Value, source: &Value) {
     };
     // A requeue/reboot can reconstruct the old ID from thread_id after the
     // first normalization. Remember that ID without discarding its history.
-    if job["policy_resume_reset"]["session"] == session {
+    if retired_session(job, &session) {
         job["resume_session"] = Value::Null;
         return;
     }
-    if source["policy_resume_reset"]["session"] == session {
+    if retired_session(source, &session) {
         job["policy_resume_reset"] = source["policy_resume_reset"].clone();
         job["resume_session"] = Value::Null;
         return;

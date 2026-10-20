@@ -133,6 +133,12 @@ fn retired_context_filters_both_saved_ids_but_preserves_the_next_compatible_thre
         "policy_resume_reset":{"session":retired}});
     assert!(usable_thread_session(&source).is_none());
     assert!(usable_resume_session(&source).is_none());
+    let mut next = json!({"model":"gpt-6.1-sol","effort":"max",
+        "resume_session":retired.to_uppercase(),"sandbox":"read-only"});
+    cc_job_policy::launch_context::reconcile_resume(&mut next, &source);
+    assert!(next["resume_session"].is_null());
+    assert_eq!(next["policy_resume_reset"], source["policy_resume_reset"]);
+    assert_eq!(next["sandbox"], "read-only");
     source["thread_id"] = json!("new-thread");
     source["resume_session"] = json!("new-thread");
     assert_eq!(usable_thread_session(&source), Some("new-thread"));

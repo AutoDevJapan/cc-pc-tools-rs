@@ -324,10 +324,20 @@ impl Context {
                 "independent review requires a model different from the source author",
             ));
         }
-        let excluded_models: Vec<String> = excluded
+        let mut excluded_models: Vec<String> = excluded
             .iter()
             .filter_map(|value| value.as_str().map(str::to_owned))
             .collect();
+        // A model that just failed is unavailable for this transition, not a
+        // source author. Use the hint only for selection, without persisting
+        // it in either durable review exclusion or authorship metadata.
+        if let Some(failed) = job["model_recovery_from"].as_str()
+            && !excluded_models
+                .iter()
+                .any(|model| same_model(model, failed))
+        {
+            excluded_models.push(failed.to_owned());
+        }
         let routing_conflict = excluded_models
             .iter()
             .any(|model| same_model(model, s(job, "model")));

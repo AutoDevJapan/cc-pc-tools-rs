@@ -1205,8 +1205,21 @@ impl Context {
             .value("parent-job-id")
             .or_else(|| env.get("CC_JOB_ID").map(String::as_str))
             .filter(|id| valid_job_id(id))
+            .and_then(|id| self.try_load(id))
+            .filter(|parent| self.running_job(parent))
         {
-            let parent = self.try_load(caller);
+            let same_todo = job["todo_id"].as_u64().is_some_and(|id| id > 0)
+                && caller["todo_id"] == job["todo_id"];
+            let validated_subwork = job["subwork_validated"] == true
+                && job["parent_job_id"] == caller["id"]
+                && job["subwork"]["parent_todo_id"] == caller["todo_id"];
+            let unnumbered_scope = job["todo_id"].is_null()
+                && caller["todo_id"].is_null()
+                && s(&caller, "cwd")
+                    .replace('\\', "/")
+                    .trim_end_matches('/')
+                    .eq_ignore_ascii_case(s(&job, "cwd").replace('\\', "/").trim_end_matches('/'));
+            let parent = (same_todo || validated_subwork || unnumbered_scope).then_some(caller);
             let todo = if job["todo_id"].as_u64().is_some() && self.todo_store().exists() {
                 let db = self.read_json(&self.todo_store())?;
                 db["items"]
@@ -1220,14 +1233,26 @@ impl Context {
             };
             for field in ["model", "effort"] {
                 let origin = format!("{field}_origin");
-                let recorded = parent.iter().chain(todo.iter()).any(|source| {
-                    source[&origin] == "owner_request"
-                        && if field == "model" {
-                            cc_job_policy::same_model(s(source, field), s(&job, field))
-                        } else {
-                            source[field] == job[field]
-                        }
-                });
+                let prepared = todo
+                    .as_ref()
+                    .filter(|row| {
+                        !s(&job, "launch_key").is_empty()
+                            && row["scheduler"]["key"] == job["launch_key"]
+                            && row["scheduler"]["phase"] == "prepared"
+                    })
+                    .map(|row| &row["scheduler"]["selection"]);
+                let recorded = parent
+                    .iter()
+                    .chain(todo.iter())
+                    .chain(prepared)
+                    .any(|source| {
+                        source[&origin] == "owner_request"
+                            && if field == "model" {
+                                cc_job_policy::same_model(s(source, field), s(&job, field))
+                            } else {
+                                source[field] == job[field]
+                            }
+                    });
                 if job[&origin] == "owner_request" && !recorded {
                     job[&origin] = json!("policy");
                 }

@@ -2092,6 +2092,90 @@ mod capacity_regressions {
     }
 
     #[test]
+    fn inherited_owner_choices_are_bound_to_the_current_target_and_generation() {
+        for (case, expected_model, expected_effort) in [
+            ("different_values", "gpt-6.1-sol", "max"),
+            ("different_todo", "gpt-6.1-sol", "max"),
+            ("todo_request", "gpt-6-luna", "high"),
+            ("live_environment_parent", "gpt-6-luna", "high"),
+            ("stale_environment_parent", "gpt-6-luna", "high"),
+            ("prepared_request", "gpt-6-luna", "high"),
+            ("stale_prepared_generation", "gpt-6.1-sol", "max"),
+        ] {
+            let t = Test::new();
+            let mut parent = job(json!({"id":"launcher","status":"running",
+                "pid":std::process::id(),"pid_created":123,"cwd":t.ctx.root,
+                "todo_id":if ["different_values","live_environment_parent","stale_environment_parent"].contains(&case) {2} else {1},
+                "model":"gpt-6-luna","effort":"high",
+                "model_origin":"owner_request","effort_origin":"owner_request"}));
+            if case == "different_values" {
+                parent["model"] = json!("anthropic/claude-opus-5-5");
+                parent["effort"] = json!("medium");
+            }
+            if case == "stale_environment_parent" {
+                parent["status"] = json!("succeeded");
+            }
+            t.put(parent);
+            let key = "11111111111111111111111111111111";
+            let mut row = json!({"id":2,"project":"p","status":"todo","jobs":[],"needs":[]});
+            if case == "todo_request" {
+                row["model"] = json!("gpt-6-luna");
+                row["effort"] = json!("high");
+                row["model_origin"] = json!("owner_request");
+                row["effort_origin"] = json!("owner_request");
+            }
+            if ["prepared_request", "stale_prepared_generation"].contains(&case) {
+                row["scheduler"] = json!({"key":if case == "prepared_request" {key} else {"22222222222222222222222222222222"},
+                    "phase":"prepared","selection":{"model":"gpt-6-luna","effort":"high",
+                    "model_origin":"owner_request","effort_origin":"owner_request"}});
+            }
+            fs::write(
+                t.ctx.root.join("todo.json"),
+                json!({"projects":{"p":t.ctx.root},
+                "next_id":3,"items":[row]})
+                .to_string(),
+            )
+            .unwrap();
+            let mut args = vec![
+                "--model",
+                "gpt-6-luna",
+                "--effort",
+                "high",
+                "--todo-id",
+                "2",
+                "--model-origin",
+                "owner_request",
+                "--effort-origin",
+                "owner_request",
+                "--launch-key",
+                key,
+            ];
+            if case.contains("environment_parent") {
+                t.rt.env
+                    .lock()
+                    .unwrap()
+                    .insert("CC_JOB_ID".into(), "launcher".into());
+            } else {
+                args.extend(["--parent-job-id", "launcher"]);
+            }
+            t.run(&args, b"Continue the exact saved request").unwrap();
+            let saved = t
+                .ctx
+                .list_jobs(&HashSet::new())
+                .into_iter()
+                .find(|job| s(job, "name") == "x")
+                .unwrap();
+            assert_eq!(saved["model"], expected_model, "{case}");
+            assert_eq!(saved["effort"], expected_effort, "{case}");
+            assert_eq!(
+                saved["model_origin"] == "owner_request",
+                expected_model == "gpt-6-luna",
+                "{case}"
+            );
+        }
+    }
+
+    #[test]
     fn routing_exclusions_are_honored_without_becoming_author_proof() {
         let t = Test::new();
         t.run(

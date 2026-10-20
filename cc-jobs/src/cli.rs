@@ -1129,7 +1129,13 @@ impl Context {
                 }
                 cc_job_policy::subwork::mark_live(&mut jobs, |j| self.running_job(j));
                 cc_job_policy::subwork::refresh_job(&db, &jobs, &mut job).map_err(Error::new)?;
-                if let Some(proof) = self.research_qualification(&job, &db)? {
+                let research = self.research_qualification(&job, &db)?;
+                if job["todo_id"] == 2939 && research.is_none() {
+                    return Err(Error::new(
+                        "original finite research review submission is not qualified; no reader retry was registered",
+                    ));
+                }
+                if let Some(proof) = research {
                     job["finite_research_approval"] = proof;
                     job["approval_policy"] = json!("on-request");
                     job["approvals_reviewer"] = json!("auto_review");

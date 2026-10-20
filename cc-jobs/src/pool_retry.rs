@@ -23,9 +23,15 @@ pub fn native_model(model: &str) -> Option<&str> {
 }
 
 pub fn requested_tier(model: &str) -> Option<&'static str> {
+    let lower = model.to_ascii_lowercase();
     if native_model(model).is_some() {
         Some("fast")
-    } else if crate::capacity::provider(model) == Some("anthropic") {
+    } else if lower
+        .strip_prefix("anthropic/")
+        .unwrap_or(&lower)
+        .starts_with("claude-")
+        || ["opus", "sonnet", "haiku"].contains(&lower.as_str())
+    {
         Some("default")
     } else {
         None
@@ -124,7 +130,9 @@ pub fn same_attempt(source: &Value, fresh: &Value) -> bool {
             "model",
             "requested_model",
             "model_explicit",
+            "model_origin",
             "effort",
+            "effort_origin",
             "cwd",
             "sandbox",
             "scope_source",
@@ -137,6 +145,8 @@ pub fn same_attempt(source: &Value, fresh: &Value) -> bool {
             "fixed_review_requalification",
             "review_source_jobs",
             "review_excluded_models",
+            "review_author_models",
+            "review_source_verified",
             "prompt",
             "prompt_source",
             "task_type",
@@ -145,10 +155,23 @@ pub fn same_attempt(source: &Value, fresh: &Value) -> bool {
             "capacity_retry_count",
             "capacity_tried_accounts",
             "capacity_tried_labels",
+            "capacity_wait_count",
+            "capacity_wait_pending",
+            "retry_not_before",
+            "finite_review",
             "todo_dependency_generation",
         ]
         .iter()
         .all(|field| source[field] == fresh[field])
+}
+
+pub fn same_queued_attempt(source: &Value, fresh: &Value) -> bool {
+    if s(fresh, "status") != "queued" {
+        return false;
+    }
+    let mut running = fresh.clone();
+    running["status"] = json!("running");
+    same_attempt(source, &running)
 }
 
 /// Called with queue -> state -> ToDo locks held. A saved job cannot resurrect

@@ -15,7 +15,9 @@ codex_jobs.exe recover-reboot          # 対象の確認のみ
 codex_jobs.exe recover-reboot --apply  # 現在の起動で中断した担当を再開
 ```
 
-自動調整が Claude を優先するとき、モデルを省略した新しいジョブと `--auto-model` を使う自動起動は、起動枠を確保する直前に `anthropic/claude-sonnet-5-5` へ切り替わります。読み取り専用で `--task-type single_file_review`・`single_file_summary`・`single_file_check` と指定した単一ファイルの作業は `anthropic/claude-haiku-5-5` を使います。複数ファイルの調査・レビュー・実装・判断は Sonnet を使います。重い設計には `--model anthropic/claude-opus-5-5` を明示できます。`--model`、モデル指定の由来を記録していない旧ジョブ、開始済みのセッションの再試行・再開はモデルを保ちます。切替先は既存の OpenCodex 経由で、APIキーを追加しません。
+通常の自動起動はSol/max/Fast、レビューは作者と違うモデル（通常Opus/max）を選びます。利用ペースだけを理由にClaudeへ置き換えません。正規の混雑エラーでは、同じGPTモデルの異なる適格な既存OAuth枠で最大3回追加再試行し、その後に仕事と健全性からSonnet/Opusのmaxを選びます。Haikuの明示指定と単一ファイルの制約、読み取り権限、停止・依存関係を保持します。未知モデルは別のモデルへ変更しません。
+
+保存された古いAIのHigh指定は、管理された起動・再開時に最新のMax方針へ合わせます。本人の個別指定を保持する場合は、モデルとeffortの値だけでなく、正規に取得した本人の指示を引き継いで`--model-origin owner_request`・`--effort-origin owner_request`を渡します。AIの通常の選択には`policy`を渡します。単独CLIの明示effortは保持します。実行中の要求をこの設定変更だけで強制終了せず、次の起動・再開で適用します。起動要求・native turn_context・上流の実効値は別々に記録します。
 
 Codex と Claude はそれぞれ家族単位で実行枠を数えます。Codex の週の利用ペースは Codex の上限だけに適用します。Claude の上限は自身の利用枠と429、共通の CPU・メモリ・プロキシの測定から調整します。両方を足した実行数にも、大きい方の上限を共通の上限として適用し、CPU85%・空きメモリ16GiB・応答不良で増枠しません。異なる会社の子が同じ家族にいる場合は両社の枠に数えます。測定が古い・壊れた場合は最小の上限へ戻り、Claudeへの自動切替を止めます。固定の上限は両社合計に適用し、自動切替を止めます。状態のJSONには各社の実行枠と上限を表示します。
 

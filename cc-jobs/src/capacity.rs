@@ -151,6 +151,55 @@ pub fn is_capacity(message: &str) -> bool {
 }
 
 impl Context {
+    pub(crate) fn recheck_queued_capacity(
+        &self,
+        jid: &str,
+        expected: &Value,
+        inventory: Value,
+    ) -> Result<()> {
+        let _gate = self.queue_lock()?;
+        let _state = self.job_lock(jid, "state.lock")?;
+        let mut fresh = self.load(jid)?;
+        if !crate::pool_retry::same_queued_attempt(expected, &fresh)
+            || fresh["capacity_wait_pending"] != true
+        {
+            return Ok(());
+        }
+        let _todo = if fresh["todo_id"].is_number() {
+            Some(FileLock::acquire(
+                &self.todo_store().with_file_name("todo.lock"),
+            )?)
+        } else {
+            None
+        };
+        if _todo.is_some()
+            && !crate::pool_retry::todo_owns_attempt(&self.read_json(&self.todo_store())?, &fresh)
+        {
+            self.end_capacity_owner(&mut fresh);
+        } else {
+            fresh["capacity_inventory"] = inventory;
+            self.recheck_capacity_wait(&mut fresh);
+        }
+        self.save(&fresh)
+    }
+
+    pub(crate) fn defer_capacity_recheck_error(&self, jid: &str, expected: &Value) -> Result<()> {
+        // No queue/ToDo lock is held after the failed transaction. Only publish
+        // a private technical cooldown if this is still the same queued attempt.
+        let _state = self.job_lock(jid, "state.lock")?;
+        let mut fresh = self.load(jid)?;
+        if !crate::pool_retry::same_queued_attempt(expected, &fresh) {
+            return Ok(());
+        }
+        fresh["status"] = json!("failed");
+        fresh["last_error"] = fresh["capacity_wait_error"].clone();
+        if !self.defer_capacity_lock(&mut fresh) {
+            fresh["capacity_exhausted"] = json!(true);
+            fresh["finished_at"] = json!(self.rt.now());
+        }
+        self.save(&fresh)
+    }
+
     pub(crate) fn defer_capacity_lock(&self, job: &mut Value) -> bool {
         if job["capacity_wait_count"].as_u64().unwrap_or(0) >= MAX_WAITS {
             return false;
@@ -160,49 +209,57 @@ impl Context {
             .unwrap_or_default();
         self.wait_capacity(job, &session, self.rt.epoch())
     }
-    pub(crate) fn defer_capacity_owner(&self, job: &mut Value) -> bool {
-        if s(job, "status") != "failed" || job["cancel_requested"] == true {
-            return false;
-        }
-        let session = normalize_uuid(s(job, "thread_id"))
-            .or_else(|| normalize_uuid(s(job, "resume_session")))
-            .unwrap_or_default();
-        job["capacity_wait_error"] = job["last_error"].clone();
-        job["capacity_failed_started_at"] = job["started_at"].clone();
-        prepare_resume(job, &session, &self.rt.now());
+    pub(crate) fn end_capacity_owner(&self, job: &mut Value) {
+        // The authoritative ToDo keeps its stop/dependencies and worktree.
+        // A drained, superseded worker must release its active registration.
+        job["status"] = json!("failed");
+        job["finished_at"] = json!(self.rt.now());
+        job["capacity_owner_recheck"] = json!(false);
         job["capacity_wait_pending"] = json!(false);
-        job["capacity_owner_recheck"] = json!(true);
+        job["capacity_retry_ended"] = json!("todo_owner_or_generation_changed");
         job["retry_not_before"] = Value::Null;
-        job["activity"] = json!("元のToDoの担当・停止・依存関係を再確認するため待機");
-        true
+        job["activity"] =
+            json!("元のToDoの担当・停止・依存関係が変わったため、この実行の再試行を終了");
     }
     fn review_provenance(&self, job: &Value) -> Result<(Vec<String>, Vec<String>)> {
-        let mut authors: Vec<String> = job["review_excluded_models"]
-            .as_array()
-            .into_iter()
-            .flatten()
-            .filter_map(|v| v.as_str().map(str::to_owned))
-            .collect();
+        let mut authors = Vec::new();
         let mut sources: Vec<String> = job["review_source_jobs"]
             .as_array()
             .into_iter()
             .flatten()
             .filter_map(|v| v.as_str().map(str::to_owned))
             .collect();
+        let explicit_sources = !sources.is_empty();
         for id in [
-            s(job, "parent_job_id"),
             s(&job["subwork"], "origin_job_id"),
             s(&job["fixed_read_only_review"], "parent_job_id"),
             s(&job["fixed_review_requalification"], "parent_job_id"),
         ] {
-            if !id.is_empty() {
+            if !explicit_sources && !id.is_empty() {
                 sources.push(id.into());
             }
         }
+        if sources.is_empty()
+            && job["parent_origin"] != "inherited"
+            && !s(job, "parent_job_id").is_empty()
+        {
+            sources.push(s(job, "parent_job_id").to_owned());
+        }
         sources.sort();
         sources.dedup();
-        if job["review_source_verified"] == true && !authors.is_empty() {
-            return Ok((sources, authors));
+        if job["review_source_verified"] == true && !sources.is_empty() {
+            let saved = job
+                .get("review_author_models")
+                .unwrap_or(&job["review_excluded_models"]);
+            authors = saved
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|value| value.as_str().map(str::to_owned))
+                .collect();
+            if !authors.is_empty() {
+                return Ok((sources, authors));
+            }
         }
         for id in &sources {
             if !crate::queue::valid_job_id(id) {
@@ -219,44 +276,30 @@ impl Context {
         Ok((sources, authors))
     }
     /// Durable source metadata survives the end of the live parent relationship.
-    pub(crate) fn validate_review_launch(
-        &self,
-        job: &mut Value,
-        known_jobs: &[Value],
-    ) -> Result<()> {
+    pub(crate) fn validate_review_launch(&self, job: &mut Value) -> Result<()> {
         if !review_job(job) {
             return Ok(());
         }
-        let (mut sources, mut authors) = self.review_provenance(job)?;
-        if authors.is_empty() && sources.is_empty() {
-            for source in known_jobs.iter().filter(|source| !review_job(source)) {
-                let cwd = s(job, "cwd");
-                let author_cwd = s(source, "cwd");
-                let same_tree = !cwd.is_empty()
-                    && !author_cwd.is_empty()
-                    && cc_job_policy::work_owner::norm(std::path::Path::new(cwd))
-                        == cc_job_policy::work_owner::norm(std::path::Path::new(author_cwd));
-                let same_pr = !s(&job["work_owner"], "repository").is_empty()
-                    && job["work_owner"]["repository"] == source["work_owner"]["repository"]
-                    && job["work_owner"]["pr"].as_u64().is_some_and(|pr| pr > 0)
-                    && job["work_owner"]["pr"] == source["work_owner"]["pr"];
-                if (same_tree || same_pr) && crate::queue::valid_job_id(s(source, "id")) {
-                    let models = cc_job_policy::author_models(source);
-                    if !models.is_empty() {
-                        sources.push(s(source, "id").into());
-                        authors.extend(models);
-                    }
-                }
-            }
-        }
-        if authors.is_empty() {
-            return Err(Error::new("review source model metadata unavailable"));
+        let (sources, authors) = self.review_provenance(job)?;
+        let mut excluded = job["review_excluded_models"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        excluded.extend(authors.iter().map(|model| json!(model)));
+        let managed =
+            job["todo_id"].as_u64().is_some_and(|id| id > 0) || !s(job, "launch_key").is_empty();
+        let owner_choice =
+            job["model_origin"] == "owner_request" || (!managed && job["model_explicit"] != false);
+        if authors.is_empty() && !owner_choice && same_model(s(job, "model"), "gpt-6.1-sol") {
+            let profile = cc_job_policy::review_profile(&[]).unwrap();
+            job["model"] = json!(profile.model);
+            job["requested_model"] = job["model"].clone();
         }
         if authors
             .iter()
             .any(|author| same_model(author, s(job, "model")))
         {
-            if job["model_explicit"] != false || !s(job, "launch_key").is_empty() {
+            if owner_choice {
                 return Err(Error::new(
                     "independent review requires a model different from the source author",
                 ));
@@ -266,9 +309,10 @@ impl Context {
             job["model"] = json!(profile.model);
             job["requested_model"] = job["model"].clone();
         }
-        job["review_excluded_models"] = json!(authors);
+        job["review_author_models"] = json!(authors);
+        job["review_excluded_models"] = json!(excluded);
         job["review_source_jobs"] = json!(sources);
-        job["review_source_verified"] = json!(true);
+        job["review_source_verified"] = json!(!authors.is_empty());
         Ok(())
     }
     /// Query before taking queue/state locks. Persist only safe provider metadata.
@@ -370,13 +414,19 @@ impl Context {
             if let Ok((sources, authors)) = self.review_provenance(job) {
                 selection["review_source_jobs"] = json!(sources);
                 selection["review_source_verified"] = json!(!authors.is_empty());
-                selection["review_excluded_models"] = json!(authors);
+                let mut excluded = selection["review_excluded_models"]
+                    .as_array()
+                    .cloned()
+                    .unwrap_or_default();
+                excluded.extend(authors.iter().map(|model| json!(model)));
+                selection["review_excluded_models"] = json!(excluded);
+                selection["review_author_models"] = json!(authors);
             }
         }
         // An older incorrectly routed reviewer cannot acquire a second attempt
         // on its author's model, including the provider-qualified spelling.
         if review_job(job)
-            && selection["review_excluded_models"]
+            && selection["review_author_models"]
                 .as_array()
                 .into_iter()
                 .flatten()
@@ -415,7 +465,7 @@ impl Context {
                     let deadline = at + crate::pool_retry::RETRY_DELAYS[same_count as usize];
                     let entry = json!({"kind":"same_model_account_retry","attempt":same_count+1,
                         "at":self.rt.now(),"session":session,"from_model":job["model"],"to_model":job["model"],
-                        "account_selector":selector,"failure_kind":"capacity","requested_effort":job["effort"],
+                        "account_selector":selector,"failure_kind":"capacity","requested_effort":cc_job_policy::effective_effort(job),
                         "requested_tier":crate::pool_retry::requested_tier(s(job,"model")),"observation":pool["observation"],"retry_not_before":deadline});
                     if job["capacity_history"].is_null() {
                         job["capacity_history"] = json!([]);
@@ -439,6 +489,7 @@ impl Context {
                         job["review_excluded_models"] = selection["review_excluded_models"].clone();
                         job["review_source_jobs"] = selection["review_source_jobs"].clone();
                         job["review_source_verified"] = selection["review_source_verified"].clone();
+                        job["review_author_models"] = selection["review_author_models"].clone();
                     }
                     job["capacity_wait_error"] = job["last_error"].clone();
                     prepare_resume(job, &session, &self.rt.now());
@@ -462,11 +513,7 @@ impl Context {
                 _ => (), // Verified alternatives exhausted, or finite metadata waits spent.
             }
         }
-        if review_job(job)
-            && !selection["review_excluded_models"]
-                .as_array()
-                .is_some_and(|v| !v.is_empty())
-        {
+        if review_job(job) && selection["review_source_verified"] != true {
             job["capacity_exhausted"] = json!(true);
             return stop("モデルの切替に必要なレビューの実装担当を確認できません");
         }
@@ -517,6 +564,7 @@ impl Context {
             job["review_excluded_models"] = selection["review_excluded_models"].clone();
             job["review_source_jobs"] = selection["review_source_jobs"].clone();
             job["review_source_verified"] = selection["review_source_verified"].clone();
+            job["review_author_models"] = selection["review_author_models"].clone();
         }
         if s(job, "requested_model").is_empty() {
             job["requested_model"] = job["model"].clone();

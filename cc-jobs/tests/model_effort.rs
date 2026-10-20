@@ -30,7 +30,7 @@ fn explicit_model_and_effort_survive_launch() {
             args.iter()
                 .any(|v| v == &format!("model_reasoning_effort={effort}"))
         );
-        if model.contains("owner-") {
+        if model.contains("owner-") && !model.starts_with("anthropic/") {
             assert!(!args.iter().any(|v| v.starts_with("service_tier=")));
             assert!(!args.iter().any(|v| v.starts_with("features.fast_mode=")));
         }

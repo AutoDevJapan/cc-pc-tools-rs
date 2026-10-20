@@ -32,7 +32,7 @@ impl Failure {
     pub fn remedy(self) -> &'static str {
         match self {
             Self::Console | Self::Proxy => "定期タスクからコンソールを再起動",
-            Self::Model => "モデルの指定と利用可否を確認し、指定と許可を保って再開",
+            Self::Model => "既知モデルだけ既存の代替候補を試し、未知のモデルは指定を保持して再開",
             Self::Context => "文脈を縮めて、新しいセッションで再開",
             Self::Writer => "稼働中の担当を確認し、衝突したセッションを使わず再開",
             Self::Task => "前回の結果と原因を担当へ渡して再開",

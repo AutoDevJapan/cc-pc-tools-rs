@@ -1029,48 +1029,9 @@ impl Context {
             }
             if job["capacity_wait_pending"] == true {
                 let inventory = self.capacity_inventory(&job);
-                let _gate = self.queue_lock()?;
-                let _state = self.job_lock(jid, "state.lock")?;
-                let mut fresh = self.load(jid)?;
-                let _todo = if fresh["todo_id"].is_number() {
-                    Some(FileLock::acquire(
-                        &self.todo_store().with_file_name("todo.lock"),
-                    )?)
-                } else {
-                    None
-                };
-                if s(&fresh, "status") == "queued"
-                    && fresh["capacity_wait_pending"] == true
-                    && fresh["cancel_requested"] != true
-                    && [
-                        "id",
-                        "launch_key",
-                        "todo_dependency_generation",
-                        "capacity_wait_count",
-                        "capacity_same_model_retry_count",
-                        "retry_not_before",
-                        "model",
-                        "effort",
-                    ]
-                    .iter()
-                    .all(|field| fresh[field] == job[field])
-                {
-                    if _todo.is_some()
-                        && !self
-                            .read_json(&self.todo_store())
-                            .is_ok_and(|db| crate::pool_retry::todo_owns_attempt(&db, &fresh))
-                    {
-                        // Ordinary admission rechecks the owner/dependencies and
-                        // records their current generation before any new child.
-                        fresh["capacity_wait_pending"] = json!(false);
-                        fresh["retry_not_before"] = Value::Null;
-                        fresh["capacity_owner_recheck"] = json!(true);
-                        self.save(&fresh)?;
-                        continue;
-                    }
-                    fresh["capacity_inventory"] = inventory;
-                    self.recheck_capacity_wait(&mut fresh);
-                    self.save(&fresh)?;
+                if let Err(error) = self.recheck_queued_capacity(jid, &job, inventory) {
+                    self.yield_diagnostic(&error);
+                    self.defer_capacity_recheck_error(jid, &job)?;
                 }
                 continue;
             }
@@ -1473,7 +1434,8 @@ impl Context {
                 else if owner_current {
                     self.retry_capacity(&mut job)
                 } else {
-                    self.defer_capacity_owner(&mut job)
+                    self.end_capacity_owner(&mut job);
+                    false
                 }
             } else if ["cancel", "auth", "request_failed"].contains(&s(&job, "last_failure_kind")) {
                 false
@@ -1594,7 +1556,10 @@ pub(crate) fn codex_args_with_policy(j: &Value, policy: cc_job_policy::Policy) -
         "-m".into(),
         crate::pool_retry::launch_model(j),
         "-c".into(),
-        format!("model_reasoning_effort={}", getstr(j, "effort")),
+        format!(
+            "model_reasoning_effort={}",
+            cc_job_policy::effective_effort(j)
+        ),
         "-s".into(),
         policy.sandbox.into(),
     ];

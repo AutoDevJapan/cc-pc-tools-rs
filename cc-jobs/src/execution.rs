@@ -75,10 +75,15 @@ impl Context {
             .join("capacity-model-catalog.json");
         std::fs::create_dir_all(path.parent().unwrap())?;
         self.write_snapshot(&path, pretty(&catalog).as_bytes())?;
-        args.extend([
-            "-c".into(),
-            format!("model_catalog_json={}", path.to_string_lossy()),
-        ]);
+        // Root config overrides precede `resume <id> -`, including on the
+        // native CLI. Never depend on a fixture accepting options anywhere.
+        args.splice(
+            2..2,
+            [
+                "-c".into(),
+                format!("model_catalog_json={}", path.to_string_lossy()),
+            ],
+        );
         Ok(())
     }
     /// The exact builder used by supervise_attempt. Inventory failure returns

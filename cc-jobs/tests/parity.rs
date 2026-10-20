@@ -1971,6 +1971,110 @@ mod capacity_regressions {
     }
 
     #[test]
+    fn an_explicit_source_is_not_contaminated_by_a_launcher_parent() {
+        let t = Test::new();
+        t.put(job(
+            json!({"id":"source-writer","status":"succeeded","model":"anthropic/claude-opus-5-5"}),
+        ));
+        t.put(job(
+            json!({"id":"launcher","status":"running","pid":std::process::id(),
+            "pid_created":123,"model":"gpt-6.1-sol","requested_model":"gpt-6.1-sol"}),
+        ));
+        t.run(
+            &[
+                "--name",
+                "rev-source",
+                "--model",
+                "gpt-6.1-sol",
+                "--effort",
+                "max",
+                "--task-type",
+                "code_review",
+                "--parent-job-id",
+                "launcher",
+                "--review-source-jobs",
+                "source-writer",
+            ],
+            b"Review fixed source",
+        )
+        .unwrap();
+    }
+
+    #[test]
+    fn an_opus_alias_cannot_review_its_known_opus_author() {
+        let t = Test::new();
+        t.put(job(
+            json!({"id":"source-opus","status":"succeeded","model":"anthropic/claude-opus-5-5"}),
+        ));
+        let error = t
+            .run(
+                &[
+                    "--name",
+                    "rev-opus",
+                    "--model",
+                    "opus",
+                    "--effort",
+                    "max",
+                    "--task-type",
+                    "review",
+                    "--review-source-jobs",
+                    "source-opus",
+                ],
+                b"Review fixed source",
+            )
+            .unwrap_err();
+        assert!(error.message.contains("different from the source author"));
+    }
+
+    #[test]
+    fn a_finite_root_review_is_bound_to_its_real_scheduler_request() {
+        let t = Test::new();
+        let key = "0123456789abcdef0123456789abcdef";
+        fs::write(
+            t.ctx.root.join("todo.json"),
+            json!({"items":[{"id":3067,"status":"todo",
+            "spec":"fixed-spec.md","scheduler":{"key":key}}]})
+            .to_string(),
+        )
+        .unwrap();
+        t.run(
+            &[
+                "--name",
+                "rev-bound",
+                "--task-type",
+                "review",
+                "--auto-model",
+                "anthropic/claude-opus-5-5",
+                "--effort",
+                "max",
+                "--sandbox",
+                "read-only",
+                "--todo-id",
+                "3067",
+                "--launch-key",
+                key,
+            ],
+            b"Read fixed source",
+        )
+        .unwrap();
+        let review = t
+            .ctx
+            .list_jobs(&HashSet::new())
+            .into_iter()
+            .find(|job| s(job, "name") == "rev-bound")
+            .unwrap();
+        assert_eq!(review["finite_review"]["spec"], "fixed-spec.md");
+        assert_eq!(review["finite_review"]["launch_key"], key);
+        assert!(
+            review["review_author_models"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(review["review_source_verified"], false);
+    }
+
+    #[test]
     fn unknown_review_author_does_not_block_same_model_account_retries() {
         let t=Test::new();let mut j=failed();j["task_type"]=json!("review");
         j["capacity_inventory"]=pool_ready(&t);
@@ -2016,7 +2120,7 @@ mod capacity_regressions {
     }
 
     #[test]
-    fn owner_wait_release_rechecks_generation_before_resuming_capacity_selection() {
+    fn changed_owner_generation_never_resurrects_a_queued_capacity_attempt() {
         let t=Test::new();
         let j=t.put(job(json!({"id":"owner-capacity","cwd":t.ctx.root,"status":"queued",
             "model":"gpt-6.1-sol","effort":"max","todo_id":3081,"todo_dependency_generation":0,
@@ -2027,17 +2131,16 @@ mod capacity_regressions {
         fs::write(t.ctx.root.join("todo.json"),db.to_string()).unwrap();
         assert!(t.ctx.admit(s(&j,"id")).unwrap().is_none());
         assert!(t.rt.spawn_args.lock().unwrap().is_empty());
-        db["items"][0]["status"]=json!("doing");
-        db["items"][0]["dependency_generation"]=json!(1);
-        fs::write(t.ctx.root.join("todo.json"),db.to_string()).unwrap();
-        assert!(t.ctx.admit(s(&j,"id")).unwrap().is_none());
-        let mut ready=t.ctx.load(s(&j,"id")).unwrap();
-        assert_eq!(ready["todo_dependency_generation"],1);
-        assert_eq!(ready["capacity_wait_pending"],true);
+        db["items"][0]["status"] = json!("doing");
+        db["items"][0]["dependency_generation"] = json!(1);
+        fs::write(t.ctx.root.join("todo.json"), db.to_string()).unwrap();
+        assert!(t.ctx.admit(s(&j, "id")).unwrap().is_none());
+        let ready = t.ctx.load(s(&j, "id")).unwrap();
+        assert_eq!(ready["todo_dependency_generation"], 0);
+        assert_eq!(ready["capacity_wait_pending"], false);
         assert!(ready["capacity_retry_count"].is_null());
-        assert!(t.ctx.recheck_capacity_wait(&mut ready));
-        assert_eq!(ready["effort"],"max");
-        assert_eq!(ready["status"],"queued");
+        assert_eq!(ready["effort"], "max");
+        assert_eq!(ready["status"], "failed");
         assert!(t.rt.spawn_args.lock().unwrap().is_empty());
     }
 }
@@ -11864,18 +11967,40 @@ mod additional_compatibility {
                 }
             };
             assert_eq!(code, case["code"].as_i64().unwrap() as i32, "{args:?}");
-            // Preserve the historical Python baseline, allowing only the new
-            // explicitly documented finite retry option in run's help.
-            let legacy_out = if args.first() == Some(&"run") && args.iter().any(|arg| ["-h","--help"].contains(arg)) {
-                let usage="                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n";
-                let option="  --original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY\n                        reserved retry key for original ToDo 1626 only (32\n                        lowercase hex); requires the same --launch-key and\n                        waits for product-retry-bind before execution\n";
-                assert_eq!(out.matches(usage).count(),1);
-                assert_eq!(out.matches(option).count(),1);
-                out.replace(usage,"").replace(option,"")
-            }else{out};
+            // Keep the old Python oracle. Only exact documented additions and
+            // the owner's intentional model/effort default change may differ.
+            let strip_run_additions = |text: &str| {
+                let mut text = text.to_owned();
+                for addition in [
+                    "                         [--review-source-jobs IDS]\n",
+                    "                         [--review-excluded-models MODELS]\n",
+                    "                         [--effort-origin {policy,owner_request}]\n",
+                    "                         [--model-origin {policy,owner_request}]\n",
+                    "  --review-source-jobs IDS\n                        comma-separated durable source jobs, including exited writers\n",
+                    "  --review-excluded-models MODELS\n                        comma-separated routing exclusions; not proof of authorship\n",
+                    "  --effort-origin {policy,owner_request}\n                        policy hint or recorded individual owner effort override\n",
+                    "  --model-origin {policy,owner_request}\n                        policy hint or recorded individual owner model override\n",
+                ] {
+                    text = text.replace(addition, "");
+                }
+                text.replace("default: Opus for review, Sol for other tasks;\n                        explicit model choices win",
+                    "default: gpt-6-luna for review/check/research/cleanup,\n                        gpt-6.1-sol for implementation; explicit values win")
+                    .replace("default: max; managed AI hints follow owner policy", "default: high; max requires an explicit value")
+            };
+            let legacy_out = if args.first() == Some(&"run")
+                && args.iter().any(|arg| ["-h", "--help"].contains(arg))
+            {
+                let usage = "                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n";
+                let option = "  --original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY\n                        reserved retry key for original ToDo 1626 only (32\n                        lowercase hex); requires the same --launch-key and\n                        waits for product-retry-bind before execution\n";
+                assert_eq!(out.matches(usage).count(), 1);
+                assert_eq!(out.matches(option).count(), 1);
+                strip_run_additions(&out.replace(usage, "").replace(option, ""))
+            } else {
+                out
+            };
             assert_eq!(legacy_out, s(&case, "stdout"), "{args:?} stdout");
             let legacy_err=if args.first()==Some(&"run"){
-                err.replace("                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n","")
+                strip_run_additions(&err.replace("                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n",""))
             }else{err};
             assert_eq!(legacy_err, s(&case, "stderr"), "{args:?} stderr");
         }

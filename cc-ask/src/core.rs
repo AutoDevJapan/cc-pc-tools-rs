@@ -1498,9 +1498,34 @@ pub fn launch_job_with_session(
         &prompt,
     );
     args.extend(["--mcp-profile".into(), profile.into()]);
-    if cc_job_policy::review_task("",s(&selection["task_type"])) {
-        if let Some(ids)=selection["review_source_jobs"].as_array().filter(|v|!v.is_empty()) {
-            args.extend(["--review-source-jobs".into(),ids.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(",")]);
+    args.extend([
+        "--effort-origin".into(),
+        if selection["effort_origin"] == "owner_request" {
+            "owner_request".into()
+        } else {
+            "policy".into()
+        },
+    ]);
+    args.extend([
+        "--model-origin".into(),
+        if selection["model_origin"] == "owner_request" {
+            "owner_request".into()
+        } else {
+            "policy".into()
+        },
+    ]);
+    if cc_job_policy::review_task("", s(&selection["task_type"])) {
+        if let Some(ids) = selection["review_source_jobs"]
+            .as_array()
+            .filter(|v| !v.is_empty())
+        {
+            args.extend([
+                "--review-source-jobs".into(),
+                ids.iter()
+                    .filter_map(Value::as_str)
+                    .collect::<Vec<_>>()
+                    .join(","),
+            ]);
         }
         if let Some(models)=selection["review_excluded_models"].as_array().filter(|v|!v.is_empty()) {
             args.extend(["--review-excluded-models".into(),models.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(",")]);

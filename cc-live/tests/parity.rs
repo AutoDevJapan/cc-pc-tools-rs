@@ -3316,11 +3316,24 @@ fn review_uses_another_model_after_an_opus_author_exits() {
 }
 
 #[test]
-fn review_without_source_metadata_does_not_launch_an_unqualified_reader() {
-    let f=Fixture::new();let facts=f.root.join("facts.txt");fs::write(&facts,"verified").unwrap();
-    let mut r=Fake::success();
-    let error=review::cli(&mut r,&f.p,&["name".into(),"123".into(),path(facts)]).unwrap_err();
-    assert!(error.contains("source model metadata unavailable"));assert!(r.calls.is_empty());
+fn review_without_source_metadata_uses_the_distinct_default_without_claiming_authorship() {
+    let f = Fixture::new();
+    let facts = f.root.join("facts.txt");
+    fs::write(&facts, "verified").unwrap();
+    let mut r = Fake::outputs(&[("job-id\n", "", 0)]);
+    review::cli(&mut r, &f.p, &["name".into(), "123".into(), path(facts)]).unwrap();
+    assert!(
+        r.calls[0]
+            .args
+            .windows(2)
+            .any(|args| args == ["--model", "anthropic/claude-opus-5-5"])
+    );
+    assert!(
+        !r.calls[0]
+            .args
+            .iter()
+            .any(|arg| arg == "--review-source-jobs")
+    );
 }
 #[test]
 fn merge_pr_posts_marks_ready_and_squashes_in_order() {

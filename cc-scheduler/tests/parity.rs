@@ -13,6 +13,115 @@ mod subwork_support;
 mod no_action_tests;
 
 #[test]
+fn review_preparation_failures_stop_after_three_and_recover_on_new_evidence() {
+    for reason in ["conflict", "missing_source"] {
+        let mut f = Fixture::new();
+        let mut task = item(1, "other", "todo", &[]);
+        task["task_type"] = json!("review");
+        task["sandbox"] = json!("read-only");
+        task["model"] = json!(if reason == "conflict" {
+            "gpt-6.1-sol"
+        } else {
+            "anthropic/claude-opus-5-5"
+        });
+        task["model_origin"] = json!("owner_request");
+        task["effort"] = json!("max");
+        task["review_source_jobs"] = json!(["source-writer"]);
+        f.put(task);
+        let mut author = job("source-writer", 99, "succeeded");
+        author["model"] = json!("gpt-6.1-sol");
+        if reason == "conflict" {
+            f.e.backend.records.push(author.clone());
+        }
+        for _ in 0..3 {
+            f.dispatch();
+            f.e.backend.clock += 301.;
+        }
+        let stopped = f.get(1);
+        assert_eq!(
+            stopped["scheduler"]["review_preparation_failure"]["count"],
+            3
+        );
+        assert_eq!(
+            stopped["scheduler"]["review_preparation_failure"]["exhausted"],
+            true
+        );
+        f.dispatch();
+        assert!(f.e.backend.launched.is_empty());
+        if reason == "conflict" {
+            f.e.edit(&json!(1), |row| {
+                row["model"] = json!("anthropic/claude-opus-5-5")
+            })
+            .unwrap();
+        } else {
+            f.e.backend.records.push(author);
+        }
+        f.dispatch();
+        assert_eq!(f.e.backend.launched.len(), 1, "{reason}");
+    }
+}
+
+#[test]
+fn bound_finite_review_is_received_once_without_completing_its_parent() {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "other", 0);
+    f.managed(2, 2, "other", 0);
+    let reader = f.get(1);
+    let record = &mut f.e.backend.records[0];
+    record["todo_id"] = json!(1);
+    record["status"] = json!("succeeded");
+    record["sandbox"] = json!("read-only");
+    record["task_type"] = json!("review");
+    record["launch_key"] = reader["scheduler"]["key"].clone();
+    record["finite_review"] =
+        json!({"todo_id":1,"spec":reader["spec"],"launch_key":record["launch_key"]});
+    record["last_message"] =
+        json!("状態: 完了（レビュー作業のみ）\nMust3件。親の実装・配布は未完です。\n状態: 継続中");
+    record["finished_at"] = json!("2026-10-20T12:00:00Z");
+    f.e.backend.ps.remove(&1);
+    f.reconcile();
+    assert_eq!(f.get(1)["status"], "done");
+    assert_eq!(f.get(2)["status"], "doing");
+    let receipt = f.get(1)["scheduler"]["review_result_receipt"].clone();
+    assert_eq!(receipt["source_finished_at"], "2026-10-20T12:00:00Z");
+    assert_eq!(receipt["native_observation_available"], false);
+    let observations = f.e.backend.outcome_count;
+    f.reconcile();
+    assert_eq!(f.e.backend.outcome_count, observations);
+    assert!(f.e.backend.launched.is_empty());
+}
+
+#[test]
+fn finite_review_completion_does_not_relaunch_while_its_parent_remains_unfinished() {
+    let reader = json!({"id":"reader","todo_id":3067,"task_type":"review","sandbox":"read-only",
+        "launch_key":"fixed","finite_review":{"todo_id":3067,"spec":"fixed-head.md","launch_key":"fixed"}});
+    let text = "状態: 完了（レビュー作業のみ）\nMust3件。親の実装と配布は未完です。\n状態: 継続中";
+    assert_eq!(job_result_outcome(&reader, text), "done");
+    assert_eq!(result_outcome(text), "todo");
+    let mut writer = reader.clone();
+    writer["sandbox"] = json!("workspace-write");
+    assert_eq!(job_result_outcome(&writer, text), "todo");
+}
+
+#[test]
+fn managed_saved_high_is_a_hint_unless_the_owner_override_is_recorded() {
+    for (origin, expected) in [("policy", "max"), ("owner_request", "high")] {
+        let mut sub = subwork_support::Fixture::new();
+        sub.db["items"][1]["model"] = json!("gpt-6.1-sol");
+        sub.db["items"][1]["effort"] = json!("high");
+        sub.db["items"][1]["effort_origin"] = json!(origin);
+        let mut f = Fixture::new();
+        f.e.backend.records = sub.jobs.clone();
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let prepared =
+            f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap())
+                .unwrap()
+                .unwrap();
+        assert_eq!(prepared["scheduler"]["selection"]["effort"], expected);
+    }
+}
+
+#[test]
 fn review_preparation_uses_exited_writer_history_and_passes_durable_sources() {
     let mut sub=subwork_support::Fixture::new();
     sub.jobs[0]["model"]=json!("anthropic/claude-opus-5-5");
@@ -1724,7 +1833,7 @@ impl Backend for Fake {
         }
         Ok(j["last_message"]
             .as_str()
-            .map(cc_scheduler::backend::result_outcome)
+            .map(|text| cc_scheduler::backend::job_result_outcome(j, text))
             .unwrap_or("done")
             .into())
     }

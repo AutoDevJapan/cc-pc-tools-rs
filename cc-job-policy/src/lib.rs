@@ -47,7 +47,9 @@ pub fn model_profile(job_name: &str, task_type: &str) -> ModelProfile {
 
 pub fn review_task(name: &str, kind: &str) -> bool {
     let name = name.to_ascii_lowercase();
-    kind.to_ascii_lowercase().contains("review")
+    kind.to_ascii_lowercase()
+        .split(['_', '-'])
+        .any(|part| part == "review")
         || name.starts_with("rev-")
         || name.ends_with("-review")
 }
@@ -69,7 +71,49 @@ pub fn same_model(left: &str, right: &str) -> bool {
             model
         }
     }
-    bare(left) == bare(right)
+    fn alias(model: &str) -> &str {
+        match model {
+            "opus" => "claude-opus-5-5",
+            "sonnet" => "claude-sonnet-5-5",
+            "haiku" => "claude-haiku-5-5",
+            other => other,
+        }
+    }
+    alias(bare(&left.to_ascii_lowercase())) == alias(bare(&right.to_ascii_lowercase()))
+}
+
+/// A saved AI hint is not evidence of an owner's individual effort override.
+/// Standalone explicit CLI requests and unknown models retain their settings.
+pub fn effective_effort(job: &serde_json::Value) -> &str {
+    let saved = job["effort"].as_str().unwrap_or("max");
+    let managed = job["todo_id"].as_u64().is_some_and(|id| id > 0)
+        || job["launch_key"]
+            .as_str()
+            .is_some_and(|key| !key.is_empty());
+    let known = [
+        "gpt-6.1-sol",
+        "gpt-6-astra",
+        "gpt-6-luna",
+        "claude-opus-5-5",
+        "claude-sonnet-5-5",
+        "claude-haiku-5-5",
+    ]
+    .iter()
+    .any(|model| same_model(model, job["model"].as_str().unwrap_or("")));
+    if managed && known && job["effort_origin"] != "owner_request" {
+        "max"
+    } else {
+        saved
+    }
+}
+
+pub fn apply_effort_policy(job: &mut serde_json::Value) {
+    let effort = effective_effort(job).to_owned();
+    if job["effort"] != effort {
+        job["legacy_effort_hint"] = job["effort"].clone();
+        job["effort"] = serde_json::json!(effort);
+        job["effort_origin"] = serde_json::json!("owner_policy_20261020");
+    }
 }
 
 pub fn author_models(source: &serde_json::Value) -> Vec<String> {
@@ -126,12 +170,10 @@ pub fn review_source_jobs(item: &serde_json::Value, db: &serde_json::Value) -> V
     {
         ids.push(origin.into());
     }
-    if let Some(parent) = db["items"]
-        .as_array()
-        .into_iter()
-        .flatten()
-        .find(|row| row["id"] == item["subwork"]["parent_todo_id"])
-    {
+    if let Some(parent) = db["items"].as_array().into_iter().flatten().find(|row| {
+        item["subwork"]["parent_todo_id"].as_u64().is_some()
+            && row["id"] == item["subwork"]["parent_todo_id"]
+    }) {
         ids.extend(
             parent["jobs"]
                 .as_array()

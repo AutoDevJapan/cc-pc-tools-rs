@@ -7,13 +7,17 @@ usage: codex_jobs.py run [-h] --name NAME [--model MODEL] [--effort EFFORT]
                          [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]
                          [--resume-session RESUME_SESSION]
                          [--parent-job-id PARENT_JOB_ID]
+                         [--review-source-jobs IDS]
+                         [--review-excluded-models MODELS]
+                         [--effort-origin {policy,owner_request}]
+                         [--model-origin {policy,owner_request}]
 
 options:
   -h, --help            show this help message and exit
   --name NAME
-  --model MODEL         default: gpt-6-luna for review/check/research/cleanup,
-                        gpt-6.1-sol for implementation; explicit values win
-  --effort EFFORT       default: high; max requires an explicit value
+  --model MODEL         default: Opus for review, Sol for other tasks;
+                        explicit model choices win
+  --effort EFFORT       default: max; managed AI hints follow owner policy
   --sandbox {read-only,workspace-write,danger-full-access}
   --cwd CWD
   --add-dir ADD_DIR
@@ -39,4 +43,8 @@ options:
   --review-source-jobs IDS
                         comma-separated durable source jobs, including exited writers
   --review-excluded-models MODELS
-                        comma-separated author models supplied by a review caller
+                        comma-separated routing exclusions; not proof of authorship
+  --effort-origin {policy,owner_request}
+                        policy hint or recorded individual owner effort override
+  --model-origin {policy,owner_request}
+                        policy hint or recorded individual owner model override

@@ -21,13 +21,21 @@ use std::{
 fn launch_inputs(item: &Value) -> Value {
     json!({"spec":item["spec"],"needs":item["needs"],"subwork":item["subwork"],
         "title":item["title"],"project":item["project"],"dispatchable":item["dispatchable"],
-        "model":item["model"],"effort":item["effort"],"wait_on":item["wait_on"],"review_source_jobs":item["review_source_jobs"],
+        "model":item["model"],"effort":item["effort"],"model_origin":item["model_origin"],"effort_origin":item["effort_origin"],
+        "wait_on":item["wait_on"],"review_source_jobs":item["review_source_jobs"],"task_type":item["task_type"],"role":item["role"],
         "worktree":item["scheduler"]["worktree"],"branch":item["scheduler"]["branch"],
         "not_before":item["scheduler"]["not_before"],"resource_wait":item["scheduler"]["resource_wait"],
         "workspace_receipt":item["scheduler"]["workspace_receipt"],"jobs":item["jobs"],
         "resume_generation":item["resume_generation"],"worker_receipt":item["worker_receipt"],
         "console_request":item["scheduler"]["console_request"],
         "console_fresh_request":item["scheduler"]["console_fresh_request"]})
+}
+
+fn review_request_inputs(item: &Value) -> Value {
+    json!({"spec":item["spec"],"model":item["model"],"effort":item["effort"],
+        "model_origin":item["model_origin"],"effort_origin":item["effort_origin"],
+        "options":item["scheduler"]["console_request"]["options"],
+        "subwork":item["subwork"],"review_source_jobs":item["review_source_jobs"],"task_type":item["task_type"],"role":item["role"]})
 }
 /// A running (`doing`) ToDo that was told to wait while its job was finishing must stay waiting: the
 /// job's result must not mark it done/block/todo. Callers only reach this for `doing` rows, so owner
@@ -924,7 +932,7 @@ impl<B: Backend> Scheduler<B> {
                 },
             )?;
         } else if s(&j["status"]) == "succeeded" {
-            let child_review = cc_job_policy::review_result::is_review_subwork(j);
+            let child_review = cc_job_policy::review_result::is_finite_review(j);
             if child_review
                 && (!cc_job_policy::review_result::matches_item(j, i)
                     || !i["wait_ready"].is_null()
@@ -976,6 +984,13 @@ impl<B: Backend> Scheduler<B> {
                     && !result_received(row, &j["id"])
                 {
                     record_result(row, &j["id"], &outcome);
+                    if child_review && outcome == "done" {
+                        row["scheduler"]["review_result_receipt"] = json!({"source_job":j["id"],
+                            "spec":row["spec"],"source_finished_at":j["finished_at"],
+                            "received_at":next_at-60.,"requested_model":j["model"],"requested_effort":j["effort"],
+                            "native_observation_available":j["execution_observed"]["source"]=="native_turn_context",
+                            "recorded_message_sha256":cc_ask::job_policy::product_retry::digest(s(&j["last_message"]).as_bytes())});
+                    }
                     if park_waiting(row, Some(&j["id"])) {
                         return;
                     }
@@ -1305,6 +1320,14 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             _ if model.starts_with("claude-") => format!("anthropic/{model}"),
             _ => model.to_owned(),
         });
+        if let Some(kind) = accepted_options["task_type"]
+            .as_str()
+            .or(item["task_type"].as_str())
+        {
+            selection["task_type"] = json!(kind);
+        } else if ["review-only", "review_only"].contains(&s(&item["role"])) {
+            selection["task_type"] = json!("review");
+        }
         if cc_ask::job_policy::review_task("",s(&selection["task_type"]))
             || s(&item["subwork"]["kind"])=="review" {
             let sources=cc_ask::job_policy::review_source_jobs(&item,&self.todo()?);
@@ -1314,20 +1337,36 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     .ok_or(Error("ReviewSourceUnavailable"))?;
                 excluded.extend(cc_ask::job_policy::author_models(author));
             }
-            excluded.sort();excluded.dedup();
-            let explicit=truth(&item["model"]) || truth(&accepted_options["model"]) || selection["model_explicit"]==true;
-            if explicit && excluded.iter().any(|author|cc_ask::job_policy::same_model(author,s(&selection["model"]))) {
+            excluded.sort();
+            excluded.dedup();
+            let explicit = truth(&item["model"])
+                || truth(&accepted_options["model"])
+                || selection["model_explicit"] == true;
+            let conflict = excluded
+                .iter()
+                .any(|author| cc_ask::job_policy::same_model(author, s(&selection["model"])));
+            let owner_choice = item["model_origin"] == "owner_request"
+                || accepted_options["model_origin"] == "owner_request";
+            if explicit && owner_choice && conflict {
                 return Err(Error("ReviewModelConflict"));
             }
-            if !explicit {
+            let ai_writer_default = !owner_choice
+                && excluded.is_empty()
+                && cc_ask::job_policy::same_model(s(&selection["model"]), "gpt-6.1-sol");
+            if !explicit || conflict || ai_writer_default {
                 let profile=cc_ask::job_policy::review_profile(&excluded).ok_or(Error("ReviewModelUnavailable"))?;
                 selection["model"]=json!(profile.model);
                 if !truth(&item["effort"]) && !truth(&accepted_options["effort"]) {selection["effort"]=json!(profile.effort);}
             }
-            selection["review_source_jobs"]=json!(sources);
-            selection["review_excluded_models"]=json!(excluded);
-            selection["task_type"]=json!("review");
+            selection["review_source_jobs"] = json!(sources);
+            selection["review_excluded_models"] = json!(excluded);
+            selection["task_type"] = json!("review");
         }
+        selection["model_origin"] = accepted_options
+            .get("model_origin")
+            .or_else(|| item.get("model_origin"))
+            .cloned()
+            .unwrap_or(Value::Null);
         if !valid_model(s(&selection["model"])) {
             return Err(Error("ValueError"));
         }
@@ -1360,6 +1399,16 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         if !valid_effort(s(&selection["effort"])) {
             return Err(Error("ValueError"));
         }
+        let mut managed = selection.clone();
+        managed["todo_id"] = item["id"].clone();
+        managed["effort_origin"] = accepted_options
+            .get("effort_origin")
+            .or_else(|| item.get("effort_origin"))
+            .cloned()
+            .unwrap_or(Value::Null);
+        cc_ask::job_policy::apply_effort_policy(&mut managed);
+        selection["effort"] = managed["effort"].clone();
+        selection["effort_origin"] = managed["effort_origin"].clone();
         if item["subwork"].is_object() {
             selection["task_type"] = item["subwork"]["kind"].clone();
         }
@@ -1562,6 +1611,20 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     || todo_wait::waiting(&db, i)
                 {
                     return false;
+                }
+                let review_failure = &i["scheduler"]["review_preparation_failure"];
+                if review_failure["exhausted"] == true
+                    && review_failure["inputs"] == review_request_inputs(i)
+                {
+                    let sources = cc_ask::job_policy::review_source_jobs(i, &db);
+                    let recovered = review_failure["reason"] == "ReviewSourceUnavailable"
+                        && !sources.is_empty()
+                        && sources
+                            .iter()
+                            .all(|id| jobs.iter().any(|job| job["id"] == *id));
+                    if !recovered {
+                        return false;
+                    }
                 }
                 let excluded = match &exclusions {
                     Ok(names) => names
@@ -1781,6 +1844,17 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                             let (reason, message) = failure_reason(e);
                             if e.0 == "ResourceWait" { row["scheduler"]["resource_wait"] = json!({"reason":"http_429","until":until}); }
                             row["scheduler"]["preparation_failure"] = json!({"reason":reason,"at":failed_at,"retry_at":until});
+                            if ["ReviewModelConflict","ReviewModelUnavailable","ReviewSourceUnavailable"].contains(&e.0) {
+                                let inputs = review_request_inputs(row);
+                                let previous = &row["scheduler"]["review_preparation_failure"];
+                                let count = if previous["inputs"] == inputs {n(&previous["count"]) as u64 + 1} else {1};
+                                row["scheduler"]["review_preparation_failure"] = json!({"reason":e.0,
+                                    "inputs":inputs,"count":count,"exhausted":count>=3});
+                                if count>=3 {
+                                    row["note"]=json!("レビューのモデルと作者の照合を3回で終了しました。記録または指定の変更後に再確認します。");
+                                    return;
+                                }
+                            }
                             row["note"] = json!(format!(
                                 "起動の準備: {message}。保存済みの作業を保ち、待機期限後に再確認します。"
                             ));

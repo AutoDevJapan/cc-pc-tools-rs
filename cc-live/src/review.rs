@@ -65,7 +65,7 @@ fn source_models(
         ids.push(id);
         models.extend(found);
     }
-    if ids.is_empty() {
+    if ids.is_empty() && explicit.is_some() {
         return Err("review source model metadata unavailable for this worktree".into());
     }
     Ok((ids, models))
@@ -92,30 +92,28 @@ pub fn cli(r: &mut impl Runner, p: &Paths, a: &[String]) -> Result<i32, String> 
         .parent()
         .ok_or("jobs parent missing")?
         .join("codex_jobs.exe");
-    let out = checked(
-        r,
-        Call::new(args(&[
-            &path(cj),
-            "run",
-            "--name",
-            &format!("rev-{name}"),
-            "--model",
-            profile.model,
-            "--effort",
-            profile.effort,
-            "--review-source-jobs",
-            &sources.join(","),
-            "--sandbox",
-            "read-only",
-            "--cwd",
-            &path(p.wt.join(name)),
-            "--prompt-file",
-            &path(prompt),
-            "--task-type",
-            "review",
-        ])),
-        "review launch",
-    )?;
+    let mut argv = args(&[
+        &path(cj),
+        "run",
+        "--name",
+        &format!("rev-{name}"),
+        "--model",
+        profile.model,
+        "--effort",
+        profile.effort,
+        "--sandbox",
+        "read-only",
+        "--cwd",
+        &path(p.wt.join(name)),
+        "--prompt-file",
+        &path(prompt),
+        "--task-type",
+        "review",
+    ]);
+    if !sources.is_empty() {
+        argv.extend(args(&["--review-source-jobs", &sources.join(",")]));
+    }
+    let out = checked(r, Call::new(argv), "review launch")?;
     let job = out
         .stdout
         .trim()

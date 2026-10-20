@@ -167,6 +167,8 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "model",
                     "auto-model",
                     "effort",
+                    "effort-origin",
+                    "model-origin",
                     "sandbox",
                     "scope-source",
                     "cwd",
@@ -875,6 +877,18 @@ impl Context {
         }
         job["model_explicit"] = json!(a.model_explicit);
         job["requested_model"] = job["model"].clone();
+        if let Some(origin) = a.value("effort-origin") {
+            if !["owner_request", "policy"].contains(&origin) {
+                return Err(Error::new("invalid effort origin"));
+            }
+            job["effort_origin"] = json!(origin);
+        }
+        if let Some(origin) = a.value("model-origin") {
+            if !["owner_request", "policy"].contains(&origin) {
+                return Err(Error::new("invalid model origin"));
+            }
+            job["model_origin"] = json!(origin);
+        }
         let scope_source = a.value("scope-source").unwrap_or("launcher");
         if !["launcher", "owner_marker", "owner_request"].contains(&scope_source) {
             return Err(Error::new("invalid --scope-source"));
@@ -1038,6 +1052,11 @@ impl Context {
             )));
         }
         job["parent_job_id"] = json!(parent);
+        job["parent_origin"] = json!(if a.value("parent-job-id").is_some() {
+            "explicit"
+        } else {
+            "inherited"
+        });
         job["task_title"] = json!(a.value("task-title"));
         job["project"] = json!(
             a.value("project")
@@ -1160,7 +1179,26 @@ impl Context {
             }
             job["review_excluded_models"]=json!(models);
         }
-        self.validate_review_launch(&mut job,&registrations)?;
+        self.validate_review_launch(&mut job)?;
+        cc_job_policy::apply_effort_policy(&mut job);
+        if crate::capacity::review_job(&job)
+            && job["sandbox"] == "read-only"
+            && job["todo_id"].as_u64().is_some_and(|id| id > 0)
+            && !s(&job, "launch_key").is_empty()
+        {
+            let db = self.read_json(&self.todo_store())?;
+            if let Some(row) = db["items"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .find(|row| {
+                    row["id"] == job["todo_id"] && row["scheduler"]["key"] == job["launch_key"]
+                })
+                .filter(|row| row["spec"].as_str().is_some_and(|spec| !spec.is_empty()))
+            {
+                job["finite_review"] = json!({"todo_id":job["todo_id"],"spec":row["spec"],"launch_key":job["launch_key"]});
+            }
+        }
         let bad = codex_args(&job)
             .into_iter()
             .filter(|s| s.chars().any(|c| "&|<>^%!\"".contains(c)))

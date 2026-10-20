@@ -516,6 +516,18 @@ fn continuation_selection(
             selection[field]=json!(saved);
         }
     }
+    if let Some(origin) = sources
+        .iter()
+        .find_map(|source| source["effort_origin"].as_str())
+    {
+        selection["effort_origin"] = json!(origin);
+    }
+    if let Some(origin) = sources
+        .iter()
+        .find_map(|source| source["model_origin"].as_str())
+    {
+        selection["model_origin"] = json!(origin);
+    }
     for field in ["model", "effort"] {
         if let Some(saved) = sources
             .iter()

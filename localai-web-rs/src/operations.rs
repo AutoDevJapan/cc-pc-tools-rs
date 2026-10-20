@@ -1046,8 +1046,8 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
             "jobs",
             "ジョブ",
             job_result.is_ok(),
-            Some(now),
-            "記録された実行状態だけを取得"
+            None,
+            "記録された実行状態だけを取得。元の更新時刻は記録ごとに異なります。"
         ),
         source(
             "scheduler",
@@ -1109,7 +1109,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
         "jobs",
         "ジョブ",
         jobs.is_ok(),
-        Some(now),
+        None,
         if jobs.is_ok() {
             "保存されたジョブから取得"
         } else {

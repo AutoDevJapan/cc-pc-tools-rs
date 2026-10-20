@@ -17,7 +17,9 @@
 - 公開先の実所有者AutoDevJapan、repo ID1392152644、PR149、HEAD2bd3a366、
   run39423559387/attempt1/job118630300541、rust workflowの固定digestを照合する。
   公式APIではrunとjobの固定identityを確認し、queuedやfailureを成功へ読み替えない。
-  runはattempt1の専用APIを使い、固定branchとPR149への対応も確認する。
+  runはattempt1の専用APIを使い、固定branchも確認する。
+  PR149への対応は固定SHAの元ledger・作成記録で照合する。
+  現在のPR一覧は所有根拠にせず、その増減や欠落を資格条件にしない。
   workflowパスは素の形と同じパスの`@refs/pull/149/merge`付きだけを認める。
 - root/親のvolume・file ID・作成時刻・所有者は観測と一致必須。
   作成記録の時刻とNTFS作成時刻は異なる値として照合する。

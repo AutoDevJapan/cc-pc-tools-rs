@@ -194,6 +194,7 @@ func TestOwned3107ProofBindings(t *testing.T) {
 		{0, owned3107ID, strings.Repeat("f", 32)}, {0, "civ6-ci-queue", "unrelated"},
 		{1, owned3107SourceFloor, strings.Repeat("f", 40)}, {2, owned3107Head, strings.Repeat("f", 40)},
 		{3, `"repo_id":1392152644`, `"repo_id":1`}, {3, `"attempt":1`, `"attempt":2`},
+		{3, `"pr":149`, `"pr":150`},
 		{3, `"instance":"` + owned3107ID + `"`, `"instance":"other"`},
 	} {
 		a, _ := owned3107Fixture(t)
@@ -248,12 +249,15 @@ func TestOwned3107RechecksAfterExternalVerification(t *testing.T) {
 			if owned3107Allowed(target, a) {
 				t.Fatal("change during verification accepted")
 			}
+			if !changed {
+				t.Fatal("fixture did not reach external verification")
+			}
 		})
 	}
 }
 
 func TestOwned3107OfficialImmutableIdentity(t *testing.T) {
-	run := object{"id": uint64(39423559387), "run_attempt": 1, "head_sha": owned3107Head, "path": ".github/workflows/rust.yml", "event": "pull_request", "head_branch": "scheduler/actions-cost-pr-concurrency-20261019", "prs": []any{149}, "repository_id": uint64(1392152644), "head_repository_id": uint64(1392152644)}
+	run := object{"id": uint64(39423559387), "run_attempt": 1, "head_sha": owned3107Head, "path": ".github/workflows/rust.yml", "event": "pull_request", "head_branch": "scheduler/actions-cost-pr-concurrency-20261019", "repository_id": uint64(1392152644), "head_repository_id": uint64(1392152644)}
 	job := object{"id": uint64(118630300541), "run_id": uint64(39423559387), "run_attempt": 1, "head_sha": owned3107Head, "name": "test (windows-latest)", "labels": []any{"self-hosted", "Windows", "X64", "civ6-ci-windows", "civ6-ci-run-39423559387-1-test-Windows"}}
 	// The real API path uses the strict JSON reader's json.Number values.
 	for _, v := range []*object{&run, &job} {
@@ -291,14 +295,15 @@ func TestOwned3107OfficialImmutableIdentity(t *testing.T) {
 		}
 		run[k] = original
 	}
-	for _, prs := range [][]any{nil, {json.Number("150")}, {json.Number("149"), json.Number("150")}} {
-		original := run["prs"]
+	// A present-day PR association is not the historical creation authority.
+	// Its absence or change must neither revoke nor grant this fixed run.
+	for _, prs := range [][]any{nil, {json.Number("149")}, {json.Number("150")}, {json.Number("149"), json.Number("150")}} {
 		run["prs"] = prs
-		if owned3107OfficialRunMatches(run) {
-			t.Fatal("different PR association accepted")
+		if !owned3107OfficialRunMatches(run) {
+			t.Fatal("current PR association revoked the fixed historical run")
 		}
-		run["prs"] = original
 	}
+	delete(run, "prs")
 	for k := range job {
 		original := job[k]
 		job[k] = "other"
@@ -429,5 +434,9 @@ func TestOwned3107NestedAncestryAndRealJunction(t *testing.T) {
 	defer os.Remove(nested)
 	if owned3107Allowed(target, a) || owned3107Allowed(nested, a) {
 		t.Fatal("junction ancestry accepted")
+	}
+	a.plain = func(string) bool { return true }
+	if owned3107Allowed(target, a) {
+		t.Fatal("attribute ancestry check accepted a junction")
 	}
 }

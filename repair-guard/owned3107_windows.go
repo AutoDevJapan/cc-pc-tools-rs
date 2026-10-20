@@ -254,7 +254,7 @@ func owned3107API(endpoint string) (object, bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, currentGitHubCLI, "api", "--hostname", "github.com", endpoint, "--jq",
-		"{id,run_id,run_attempt,head_sha,path,event,head_branch,prs:[.pull_requests[]?.number],name,labels,repository_id:.repository.id,head_repository_id:.head_repository.id}")
+		"{id,run_id,run_attempt,head_sha,path,event,head_branch,name,labels,repository_id:.repository.id,head_repository_id:.head_repository.id}")
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 	cmd.WaitDelay = time.Second
 	cmd.Env = currentGitHubCLIEnvironment(os.Environ())
@@ -279,10 +279,11 @@ func owned3107Official() bool {
 
 func owned3107OfficialRunMatches(run object) bool {
 	path := str(run["path"])
-	prs, _ := run["prs"].([]any)
+	// PR149 provenance is pinned in the original ledger/creation evidence.
+	// A current pull_requests association is not historical ownership evidence.
 	return conversationNumber(run["id"]) == 39423559387 && conversationNumber(run["run_attempt"]) == 1 && run["head_sha"] == owned3107Head &&
 		(path == ".github/workflows/rust.yml" || path == ".github/workflows/rust.yml@refs/pull/149/merge") &&
-		run["head_branch"] == "scheduler/actions-cost-pr-concurrency-20261019" && len(prs) == 1 && conversationNumber(prs[0]) == 149 &&
+		run["head_branch"] == "scheduler/actions-cost-pr-concurrency-20261019" &&
 		run["event"] == "pull_request" && conversationNumber(run["repository_id"]) == 1392152644 && conversationNumber(run["head_repository_id"]) == 1392152644
 }
 

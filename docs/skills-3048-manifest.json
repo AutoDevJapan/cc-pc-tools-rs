@@ -1,0 +1,499 @@
+{
+  "todo": 3048,
+  "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/258",
+  "before": {
+    "direct": 266,
+    "system": 5,
+    "checked_at": "2026-10-20T03:37:00.1496032Z"
+  },
+  "after": {
+    "direct": 271,
+    "system": 5,
+    "checked_at": "2026-10-20T03:37:00.5921194Z"
+  },
+  "new_names_absent_at_creation": true,
+  "managed_registry_matches": 0,
+  "targets": [
+    {
+      "name": "obsidian-markdown",
+      "new": true,
+      "before_sha256": "absent",
+      "before_bytes": 0,
+      "after_bytes": 918,
+      "description": "Obsidianのノートで内部リンク・埋込・プロパティを編集するときに使う。",
+      "positive": "Obsidianノートのブロック参照と埋込画像を直す。",
+      "negative": "GitHub READMEの見出しだけを直す。",
+      "sources": [
+        "kepano/obsidian-skills"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "6ad1fdd738b02b4e5a3510a2d4de3f2fa6b6f37b72e3d06081ce78e15af892a8"
+        },
+        {
+          "path": "references/kepano-obsidian-skills-LICENSE.txt",
+          "sha256": "64c64d48361edfe8610016441bf593256ea9b67f133b00f47c55aa29ee878567"
+        },
+        {
+          "path": "references/usage.md",
+          "sha256": "8ab452e7852b3b83fa8e4b76d697b9f65dcd100a33dc7b474979434d28bf17fe"
+        },
+        {
+          "path": "references/sources-3048.md",
+          "sha256": "1236d2354848209d7926a083d677a906a6ee34ee87dbb25d92620e83829e5892"
+        }
+      ]
+    },
+    {
+      "name": "obsidian-bases",
+      "new": true,
+      "before_sha256": "absent",
+      "before_bytes": 0,
+      "after_bytes": 985,
+      "description": "Obsidianの.baseファイルでビュー・フィルター・計算式を編集するときに使う。",
+      "positive": "Obsidianの.baseに未完了タスクの一覧と期限までの日数を作る。",
+      "negative": "Excelの表を集計する。",
+      "sources": [
+        "kepano/obsidian-skills"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "2c52016756ff76b5c67061bfe7d46f5781696648b66256098d788be84e8b8536"
+        },
+        {
+          "path": "references/kepano-obsidian-skills-LICENSE.txt",
+          "sha256": "64c64d48361edfe8610016441bf593256ea9b67f133b00f47c55aa29ee878567"
+        },
+        {
+          "path": "references/usage.md",
+          "sha256": "06d7950edbdcb2405c0b7f2040f7fded00b0093e03dd68f8f258f8579e7dc6fb"
+        },
+        {
+          "path": "references/sources-3048.md",
+          "sha256": "1236d2354848209d7926a083d677a906a6ee34ee87dbb25d92620e83829e5892"
+        }
+      ]
+    },
+    {
+      "name": "json-canvas",
+      "new": true,
+      "before_sha256": "absent",
+      "before_bytes": 0,
+      "after_bytes": 913,
+      "description": "JSON Canvasの.canvasファイルでノード・接続・配置を編集するときに使う。",
+      "positive": "Obsidianの.canvasで2つのノートを矢印で結ぶ。",
+      "negative": "HTML canvasでゲームを描画する。",
+      "sources": [
+        "kepano/obsidian-skills"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "b891aec4cdcb1da725d44335c8d4e2b9e93f89fcf7b815326a017ff7aaab1353"
+        },
+        {
+          "path": "references/kepano-obsidian-skills-LICENSE.txt",
+          "sha256": "64c64d48361edfe8610016441bf593256ea9b67f133b00f47c55aa29ee878567"
+        },
+        {
+          "path": "references/usage.md",
+          "sha256": "72eb8f0e7ca95fb29bc054e4f6f244792bdc26b956723fde6d0a0d70ee662900"
+        },
+        {
+          "path": "references/sources-3048.md",
+          "sha256": "c7ec5d1239de1aae2c75040edbab3213a402b32230ebdd1a894787e3eb052785"
+        }
+      ]
+    },
+    {
+      "name": "cli-interface-design",
+      "new": true,
+      "before_sha256": "absent",
+      "before_bytes": 0,
+      "after_bytes": 1286,
+      "description": "継続利用するCLIのコマンド・JSON出力・認証・配布方法を設計するときに使う。",
+      "positive": "API操作を繰り返せるCLIにし、別の作業ディレクトリから使えるようにする。",
+      "negative": "今回だけCSVの行数を調べる。",
+      "sources": [
+        "openai/skills"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "44f431552d34ec9b924ec46806950a6b95fc96e8e755633d7eacfe300f5da9fa"
+        },
+        {
+          "path": "references/openai-skills-LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+        },
+        {
+          "path": "references/usage.md",
+          "sha256": "ce639483a3f0ba2a14306e853099760cdc5daaffb5e8a1abf91b08d00650394c"
+        },
+        {
+          "path": "references/sources-3048.md",
+          "sha256": "5defa4cac89f2bde502f603727dfd664e6d0c4445e877219e9c081f0e2c9d9db"
+        }
+      ]
+    },
+    {
+      "name": "domain-modeling",
+      "new": true,
+      "before_sha256": "absent",
+      "before_bytes": 0,
+      "after_bytes": 1108,
+      "description": "業務用語・概念の境界・用語集・設計判断の矛盾を整理するときに使う。",
+      "positive": "注文の取消と返金を同じ状態として扱ってよいか、用語とコードを整理する。",
+      "negative": "既存用語集を読むだけで関数の誤字を直す。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "8cddab1045cb54ce0e4c219833ca3bdc4e2a7dfaf3d76c7e077a290615a65301"
+        },
+        {
+          "path": "references/mattpocock-skills-LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/usage.md",
+          "sha256": "78466980002c97dbafbc943a65bc43221721801ed5222732c7c4660a6125edf3"
+        },
+        {
+          "path": "references/sources-3048.md",
+          "sha256": "20de4c171fcc28180cab6f8470391ba77c1c76e16d9d3a86ce78c53019fd504b"
+        }
+      ]
+    },
+    {
+      "name": "ui-design-styles",
+      "new": false,
+      "before_sha256": "d4d72a2ea167b1b2f54e8f86cc62ce61cebc54eb52e3257b7e5bcf6030035225",
+      "before_bytes": 8881,
+      "after_bytes": 987,
+      "description": "ダーク・ガラス・編集的など特定の見た目のデザインシステムを作るときに使う。",
+      "positive": "既存ブランドのまま、2つのLPが同じカード構成に見える問題を直す。",
+      "negative": "請求APIの認可を調べる。",
+      "sources": [
+        "Nutlope/hallmark"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "870daace31f6187eef88bb7adbbf7998e6d27f2d5d62eab0da85ccc904ea3b7e"
+        },
+        {
+          "path": "references/previous-guide.md",
+          "sha256": "1baf87f4728753b5628a5bae24e82977f4b50af747849daa3d6718c77eb78f5d"
+        },
+        {
+          "path": "references/Nutlope-hallmark-LICENSE.txt",
+          "sha256": "06088a8b94598626f27612dea42300154bf7be967c85d9d3eee4490cb056af7d"
+        },
+        {
+          "path": "references/public-20261020.md",
+          "sha256": "5ca3f09ae08ff53e2cc9f5199133ce7cb0f762466d65951c28705b7dde4ce144"
+        },
+        {
+          "path": "references/sources-3048.md",
+          "sha256": "36715bd4d1633ce30f5b4b84568271d8f73b0da503aba4e0f4d47cb8acc8bc42"
+        }
+      ]
+    },
+    {
+      "name": "ui-accessibility",
+      "new": false,
+      "before_sha256": "26cf04793eb2b61e3f7f4c9ebb071eb99854479cd18e8152323eaee3ed0f3ba9",
+      "before_bytes": 2764,
+      "after_bytes": 1083,
+      "description": "UIの可読性・アクセシビリティ・日本語組版・デザイン監査をするときに使う。",
+      "positive": "DESIGN.mdの日本語の表とフォームを、長文と狭い幅で検査する。",
+      "negative": "1つのボタンの色指定だけを理由にサイト全体を作り直す。",
+      "sources": [
+        "hirokaji/jp-ui-contracts"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "b8d9c9596370934b7f36bc8e5be1422c55a82b4441f3b88e612509cfb992b143"
+        },
+        {
+          "path": "references/previous-guide.md",
+          "sha256": "eb362488274dfe71870cd5e2d8c97aa21ff772f4ac4d0a140da79a12b4a9db6d"
+        },
+        {
+          "path": "references/hirokaji-jp-ui-contracts-LICENSE.txt",
+          "sha256": "da0bd6d51cdbb65d241fdd9307ccc157b442fcc7691c52d485afc3e2c0fb2814"
+        },
+        {
+          "path": "references/public-20261020.md",
+          "sha256": "b1f913a01be5a929829a43b21df7b619c4ad317316a6279fbd525ecc90370b50"
+        },
+        {
+          "path": "references/sources-3048.md",
+          "sha256": "1f4861d73310883ea1806827fc87eb09bec963112254fd6345aa3b23c97a4f7c"
+        }
+      ]
+    },
+    {
+      "name": "web-design-process",
+      "new": false,
+      "before_sha256": "c5fe0d7224a658afd0df34c64674bbc57e7c6c1b0b96878a8393c5a6f72fe876",
+      "before_bytes": 5851,
+      "after_bytes": 1047,
+      "description": "LP・サイトのデザイン方針作り、参照の扱い、素材選び、生成用プロンプトで使う。",
+      "positive": "提供されたWeb参照から構造を学び、独自のページ案を画像で作る。",
+      "negative": "既存APIの内部ロジックだけを変更する。",
+      "sources": [
+        "MengTo/Skills",
+        "VoltAgent/awesome-design-md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "a7aee2d747514e5f3187991236397d2be6fc524bd1dc682c28975a891b6582af"
+        },
+        {
+          "path": "references/previous-guide.md",
+          "sha256": "7fa8eebbb97b4e2e92193f10e1d9d070059241e4a0213082a32cf8de14b2e39e"
+        },
+        {
+          "path": "references/MengTo-Skills-LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/VoltAgent-awesome-design-md-LICENSE.txt",
+          "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44"
+        },
+        {
+          "path": "references/public-20261020.md",
+          "sha256": "21ce0370d7c949729bf8fc7bbe80b811ec854e23c24cc6e8bec0c4500155efd9"
+        },
+        {
+          "path": "references/sources-3048.md",
+          "sha256": "c4926cbf09482af5c16c94ebfd9855047fb9693fc27acec1d2248eb9711ee2ce"
+        }
+      ]
+    },
+    {
+      "name": "security-review",
+      "new": false,
+      "before_sha256": "6e39d111f7096d7c1d114b6be65b100cf1505a96e3d7e18196d1d4d18d0cc6bc",
+      "before_bytes": 13670,
+      "after_bytes": 1102,
+      "description": "認可・認証・監査ログ・漏洩・注入の抜け道を実装やレビューで確かめるときに使う。",
+      "positive": "二利用者の請求書APIで、認可候補を再現して指摘を整理する。",
+      "negative": "公開資料を読んだだけで未依頼の本番へ攻撃通信を送る。",
+      "sources": [
+        "cloudflare/security-audit-skill"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "0c2908cc663dbed98df4b117c30b8d0a540f3c7a66b207f4c3c1968a4b4c75d6"
+        },
+        {
+          "path": "references/previous-guide.md",
+          "sha256": "87d5316a6340c677721014f1adac13f28091fd70c64c77bb6af9f8b3e4e7a025"
+        },
+        {
+          "path": "references/cloudflare-security-audit-skill-LICENSE.txt",
+          "sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391"
+        },
+        {
+          "path": "references/public-20261020.md",
+          "sha256": "5004e7ac997e73852e106fd8ec7199b24b4357e4d179dad57b25285114eee43b"
+        },
+        {
+          "path": "references/sources-3048.md",
+          "sha256": "3cba0778dc76f19066b53946d429099ea75922ba557689ecdcfbefa9712e64c3"
+        }
+      ]
+    },
+    {
+      "name": "docker-operations",
+      "new": false,
+      "before_sha256": "b1a7caf5711c4f9926e423be89d8073e89be40bcdd6c739b9e590b796efe5c99",
+      "before_bytes": 2199,
+      "after_bytes": 1118,
+      "description": "Dockerの構成・ビルド・検証コンテナの片付け・容量回収をするときに使う。",
+      "positive": "Dockerfileのcacheを改善し、ComposeのDB起動依存を検査する。",
+      "negative": "他担当の未使用らしいvolumeを全削除する。",
+      "sources": [
+        "docker/skills"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "4ef5aae9ed053c8495b0bc1ba329e9f90e42976a7989196da6f8eab2a674f341"
+        },
+        {
+          "path": "references/previous-guide.md",
+          "sha256": "e6d371d3d3d9023f26d804c7f899f619ead4ea549a940aae19a3254f29a9e78e"
+        },
+        {
+          "path": "references/docker-skills-LICENSE.txt",
+          "sha256": "3bb33f65872155f0801efc9f6732e2868eb338c5ed6a81eec5c775c1382761cb"
+        },
+        {
+          "path": "references/public-20261020.md",
+          "sha256": "8ee698df0d7f298c685d3ed9f8bba28cef5be747215ec6a02ccd75b35048ff22"
+        },
+        {
+          "path": "references/sources-3048.md",
+          "sha256": "a089c3c24f3db0e726e74c837afc4fcda00c8f9cd30a22fc382e317746bfb4e2"
+        }
+      ]
+    },
+    {
+      "name": "knowledge-to-skills",
+      "new": false,
+      "before_sha256": "d194561e279141bcc74a5c427583f74b9d6f0b83abfa036e392669a3593960e0",
+      "before_bytes": 4897,
+      "after_bytes": 1041,
+      "description": "記事・ブックマーク・教材を出典付きの知識やSkillへ整理・変換するときに使う。",
+      "positive": "Skillカタログから候補を探し、原本とライセンスを確認して既存へ統合する。",
+      "negative": "カタログの件数だけを根拠に全Skillを一括導入する。",
+      "sources": [
+        "6mile/skills"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "2ffb64a3f5d0d688b988782a6009a5723e25bb4bd2ecf149adc5aba0adc434ce"
+        },
+        {
+          "path": "references/previous-guide.md",
+          "sha256": "5c20fc90bd153d752395d9c351c058bab4098a3d0a5ffeee7afc02c00ba8e6f5"
+        },
+        {
+          "path": "references/6mile-skills-LICENSE.txt",
+          "sha256": "bbad531d4d937825bc35c9363e3cba1283084bb8b2f3158e17f382ba4fb7b2d4"
+        },
+        {
+          "path": "references/public-20261020.md",
+          "sha256": "3b7cde4a99aec08e301024ec45176e4d2f14544a222aa34b46b6bd125da26eb9"
+        },
+        {
+          "path": "references/sources-3048.md",
+          "sha256": "a55f96b760a371fa6f209640e386fc8ce07deea21d38e71baa235262bf928e81"
+        }
+      ]
+    },
+    {
+      "name": "agent-system-design",
+      "new": false,
+      "before_sha256": "41dfb7ddb84d9b8fbe7168c0fd11329a95c81f012fb420cf17f15a3822f948da",
+      "before_bytes": 4420,
+      "after_bytes": 1028,
+      "description": "エージェント基盤の層設計・検証ループ・ボット間通信・大規模移行を設計するときに使う。",
+      "positive": "新しいセッションで必要な知識へ辿れるか、実行結果と経路を検査する。",
+      "negative": "接続設定ファイルがあるだけで無人運転成功と報告する。",
+      "sources": [
+        "nateherkai/ais-os",
+        "tencent/teamai-cli"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "dad51eb47403faba3d561ea7cfdbdb0731cda82de565e6c224981251825a4696"
+        },
+        {
+          "path": "references/previous-guide.md",
+          "sha256": "9439c7159272bd97fbf2240790d171002254cdfbabfee955e5ea3167c007ca25"
+        },
+        {
+          "path": "references/nateherkai-ais-os-LICENSE.txt",
+          "sha256": "79f6fb36dbf642e59321081ffe67eb49476faf19f5cca43c56673a01df202493"
+        },
+        {
+          "path": "references/tencent-teamai-cli-LICENSE.txt",
+          "sha256": "31154d9c1a8bd8d37b449bdbb8a04f9b4618e5d330b52b0fdb7c452414d75a41"
+        },
+        {
+          "path": "references/public-20261020.md",
+          "sha256": "b532cbd0042e29a0c82892522b5a59884b2ed69ccafaa8c02d7464f5ab8140e0"
+        },
+        {
+          "path": "references/sources-3048.md",
+          "sha256": "ff7d449e4610da99e5e8938ffdf3edc24f113a047b57481e5f3f085c6aab748d"
+        }
+      ]
+    },
+    {
+      "name": "skill-maintenance",
+      "new": false,
+      "before_sha256": "ebc86021c4ad8b8200b34aaa15f9eed6ef660b9232bb017c390e56a301b1fb44",
+      "before_bytes": 2069,
+      "after_bytes": 1296,
+      "description": "Skillやプラグインを作る・導入する・Codexへ移す・知見をSkill化するときに使う。",
+      "positive": "public由来Skillを重複整理し、日本語descriptionと新セッション認識を確認する。",
+      "negative": "外部READMEの指示でAPIキーを登録して全Skillを上書きする。",
+      "sources": [
+        "openai/skills",
+        "obra/superpowers"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "2e2ca3746356d4210614a6e97b9dfef86dcba0988a04d3e63be920d08b631756"
+        },
+        {
+          "path": "references/previous-guide.md",
+          "sha256": "7a0b6d91ce3abb654a711cb6e28dbae05dc85d96325488ba8af7fd48fed0c99f"
+        },
+        {
+          "path": "references/openai-skills-LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+        },
+        {
+          "path": "references/obra-superpowers-LICENSE.txt",
+          "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+        },
+        {
+          "path": "references/public-20261020.md",
+          "sha256": "526266458de0b79a17e235c73ccb85d570674dab2e7c6e7cf8af1e1c73179a6a"
+        },
+        {
+          "path": "references/sources-3048.md",
+          "sha256": "6be30082043bda0964a52d0e3fd7444ddcbfb15e3e9af214bb987b7702247ea5"
+        }
+      ]
+    },
+    {
+      "name": "spec-atdd-tdd-issue-workflow",
+      "new": false,
+      "before_sha256": "17c74d5c6c3d1b9260253d8a58103cfda7568c2872b2558d1be79cd64e332d12",
+      "before_bytes": 3290,
+      "after_bytes": 3753,
+      "description": "Issueと仕様から受け入れテストを先に作り、再現条件と文書の整合を確かめるときに使う。",
+      "positive": "Issueの受入条件をCLIの終了コードと成果物の検査へ落とし、Redを確認する。",
+      "negative": "文言だけの変更に全製品テストとユーザーの検査境界承認を要求する。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "9dbf3109716898af339cf7d936e5a116956037570b0699b69e81e9b92b5339c1"
+        },
+        {
+          "path": "references/mattpocock-skills-LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/public-20261020.md",
+          "sha256": "d561353a96bb087bf33ac7d24cb005b32d11f2fb8b484b5d056c679ef9080202"
+        },
+        {
+          "path": "references/sources-3048.md",
+          "sha256": "da740d7f5167de64fd832ffbb05bf75b4b2a9fc83e060331eebe3de7a35489ec"
+        }
+      ]
+    }
+  ]
+}

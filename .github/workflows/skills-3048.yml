@@ -1,0 +1,28 @@
+name: Skill documentation acceptance
+on:
+  pull_request:
+    paths: ['docs/skills-3048-*', 'tools/skills-3048-check/**', '.github/workflows/skills-3048.yml']
+  push:
+    branches: [main]
+    paths: ['docs/skills-3048-*', 'tools/skills-3048-check/**', '.github/workflows/skills-3048.yml']
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name == 'pull_request' && github.run_attempt == 1 && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
+jobs:
+  documentation:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: tools/skills-3048-check/go.mod
+          cache: false
+      - name: Check the validator and the finite source receipts
+        run: go -C tools/skills-3048-check test ./...
+      - name: Vet the standalone documentation check
+        run: go -C tools/skills-3048-check vet ./...

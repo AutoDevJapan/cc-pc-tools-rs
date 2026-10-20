@@ -1,0 +1,464 @@
+{
+  "todo": 3048,
+  "source_count": 16,
+  "sources": [
+    {
+      "url": "https://github.com/Nutlope/hallmark",
+      "commit": "13ac0ec7e148655948100b6396439e481361d690",
+      "retrieved": "2026-10-20T03:31:46.746594Z",
+      "license": "MIT",
+      "researched": true,
+      "decision": "既存統合",
+      "targets": [
+        "ui-design-styles"
+      ],
+      "reason": "ページ構造と部品の範囲を統合。固定テーマ・嗜好スコア・強制全状態は採らない。",
+      "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
+      "read_artifacts": [
+        {
+          "path": "LICENSE",
+          "sha256": "06088a8b94598626f27612dea42300154bf7be967c85d9d3eee4490cb056af7d"
+        },
+        {
+          "path": "README.md",
+          "sha256": "878aa11aab1785f7a9d6c2eec889220b53cda4ddc22bf38cf575af98f99bfe72"
+        },
+        {
+          "path": "skills/hallmark/references/verbs/audit.md",
+          "sha256": "0a5b484453f1697a8675a7020df9159d0b4ce22f059b873501bfd82c26d6a31a"
+        },
+        {
+          "path": "skills/hallmark/SKILL.md",
+          "sha256": "59469635bbbd21acddbc664d95e8d97147f454b2d8f4a0a89c7d2c5afbe67577"
+        }
+      ],
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+    },
+    {
+      "url": "https://github.com/MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "retrieved": "2026-10-20T03:31:47.4848226Z",
+      "license": "MIT",
+      "researched": true,
+      "decision": "既存統合",
+      "targets": [
+        "web-design-process"
+      ],
+      "reason": "独自性を双方の証拠で比較する方法を統合。既存と重なるため別名Skillを作らない。",
+      "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
+      "read_artifacts": [
+        {
+          "path": "agent-skills/codex/audit-reference-originality/SKILL.md",
+          "sha256": "8b8b5e6c6174ff790f08541e444fe64b48f8d078b1f5783b36c3204a690616b6"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "README.md",
+          "sha256": "48379bf7fa5b8f04ee81e09088526564fbdfc7d0361e78616ac3778d45aced33"
+        }
+      ],
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+    },
+    {
+      "url": "https://github.com/x1xhlol/system-prompts-and-models-of-ai-tools",
+      "commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
+      "retrieved": "2026-10-20T03:31:46.8819653Z",
+      "license": "GPL-3.0",
+      "researched": true,
+      "decision": "参考のみ",
+      "targets": [],
+      "reason": "README、root GPL-3.0、構成を確認。収録promptの真正性・個別権利・技能形式を保証できず、本文を運用へ採らない。",
+      "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
+      "read_artifacts": [
+        {
+          "path": "LICENSE.md",
+          "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+        },
+        {
+          "path": "README.md",
+          "sha256": "13bd1e88a01de77b6681c55f1d8cd71d9facb0c4906c92e254c7db98f7f31dfe"
+        }
+      ],
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+    },
+    {
+      "url": "https://github.com/hirokaji/jp-ui-contracts",
+      "commit": "4bc933689ba8391c27f558fa7b8d6905a0a2af90",
+      "retrieved": "2026-10-20T03:31:46.999668Z",
+      "license": "MIT",
+      "researched": true,
+      "decision": "既存統合",
+      "targets": [
+        "ui-accessibility"
+      ],
+      "reason": "設計条件→fixture→表示計測→原因層の修正を統合。Python validatorやブラウザ依存を導入しない。",
+      "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
+      "read_artifacts": [
+        {
+          "path": "LICENSE",
+          "sha256": "da0bd6d51cdbb65d241fdd9307ccc157b442fcc7691c52d485afc3e2c0fb2814"
+        },
+        {
+          "path": "README.md",
+          "sha256": "66e567af13497a389b9cb4ce31de4037ad388efd6033b6b7771ddade2986f82d"
+        },
+        {
+          "path": "skills/japanese-ui-contract-review/SKILL.md",
+          "sha256": "1129052be467c02c2113ec52d2a39701793e066a2bbc7b5db7d2264e5b76dcab"
+        }
+      ],
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+    },
+    {
+      "url": "https://github.com/openai/skills",
+      "commit": "49f948faa9258a0c61caceaf225e179651397431",
+      "retrieved": "2026-10-20T03:31:47.2998553Z",
+      "license": "per-skill; cli-creator Apache-2.0",
+      "researched": true,
+      "decision": "採用・既存統合",
+      "targets": [
+        "cli-interface-design",
+        "skill-maintenance"
+      ],
+      "reason": "cli-creator個別Apache-2.0を確認。Go既定・OAuth・Windowsに合わせて再構成。READMEのdeprecated注記を記録。",
+      "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
+      "read_artifacts": [
+        {
+          "path": "README.md",
+          "sha256": "0f6a07580f3c627253e15a58dd0439e135049ec38eb16cf3587f7e50abc6f590"
+        },
+        {
+          "path": "skills/.curated/cli-creator/LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+        },
+        {
+          "path": "skills/.curated/cli-creator/SKILL.md",
+          "sha256": "24058eabf0aafce6def3fb937ac93cbe3fa341c653c658dc589edb77f73d6152"
+        }
+      ],
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+    },
+    {
+      "url": "https://github.com/mattpocock/skills",
+      "commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
+      "retrieved": "2026-10-20T03:31:47.0630185Z",
+      "license": "MIT",
+      "researched": true,
+      "decision": "採用・既存統合",
+      "targets": [
+        "domain-modeling",
+        "spec-atdd-tdd-issue-workflow"
+      ],
+      "reason": "概念と用語集の境界を追加し、振る舞いのTDDを既存へ統合。毎回の検査境界承認は採らない。",
+      "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
+      "read_artifacts": [
+        {
+          "path": "LICENSE",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "README.md",
+          "sha256": "345041d56cf1411b6b3ca1cc54014d26c563890f817f4cb9e2cb193dcd771a3e"
+        },
+        {
+          "path": "skills/engineering/domain-modeling/SKILL.md",
+          "sha256": "7b925d7b1e341a2eeae33ad68a8a8c0ab889a38ddd22a7598e4c240e5a7556a3"
+        },
+        {
+          "path": "skills/engineering/tdd/SKILL.md",
+          "sha256": "5505d25bbaa8fc14a79e4d20163936958992a2995b7f1dd1d6197edc9ed722e0"
+        }
+      ],
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+    },
+    {
+      "url": "https://github.com/VoltAgent/awesome-design-md",
+      "commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "retrieved": "2026-10-20T03:31:47.1918474Z",
+      "license": "MIT",
+      "researched": true,
+      "decision": "参考・既存統合",
+      "targets": [
+        "web-design-process"
+      ],
+      "reason": "Airbnb例の欠測と第三者分析の位置づけを統合。ブランド固有tokensや素材は転載しない。",
+      "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
+      "read_artifacts": [
+        {
+          "path": "design-md/airbnb/DESIGN.md",
+          "sha256": "add34130d67209ad105346d60fe2b290728b9711683969db4b7760e29477a5fe"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44"
+        },
+        {
+          "path": "README.md",
+          "sha256": "3847536c93a8262b779ee04692fe0efb4bfa644ffcfb8c43565576f00a4a32e0"
+        }
+      ],
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+    },
+    {
+      "url": "https://github.com/obra/superpowers",
+      "commit": "bb92a77741419a4ab5f06e711a283343f1ada0c3",
+      "retrieved": "2026-10-20T03:31:47.3384051Z",
+      "license": "MIT",
+      "researched": true,
+      "decision": "既存統合",
+      "targets": [
+        "skill-maintenance"
+      ],
+      "reason": "適用正例/負例と観測を使う。毎ターン全件再検査、無条件の全体工程、他Skill必読は導入しない。",
+      "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
+      "read_artifacts": [
+        {
+          "path": "LICENSE",
+          "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+        },
+        {
+          "path": "README.md",
+          "sha256": "9b7be460027bf53c29f628eee72dceeebb83e52dd5e94a1b6f9828a64c579198"
+        },
+        {
+          "path": "skills/verification-before-completion/SKILL.md",
+          "sha256": "2befe7fc55bcadaa3d97dd9e8efeb633d2561c0ebe74c5a8b17c4d9e7e4520b3"
+        },
+        {
+          "path": "skills/writing-skills/SKILL.md",
+          "sha256": "bbdfe742f853562e643a3d40d64476359d47881e39cef80a189283fa26d11ab9"
+        }
+      ],
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+    },
+    {
+      "url": "https://github.com/kepano/obsidian-skills",
+      "commit": "3ccff5338ea700537839b21900aa5358a0402c98",
+      "retrieved": "2026-10-20T03:31:47.350003Z",
+      "license": "MIT",
+      "researched": true,
+      "decision": "採用",
+      "targets": [
+        "obsidian-markdown",
+        "obsidian-bases",
+        "json-canvas"
+      ],
+      "reason": "異なる3ファイル形式を個別の狭い引き金で追加。CLI・プラグインは導入せず、MITを保持。",
+      "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
+      "read_artifacts": [
+        {
+          "path": "LICENSE",
+          "sha256": "64c64d48361edfe8610016441bf593256ea9b67f133b00f47c55aa29ee878567"
+        },
+        {
+          "path": "README.md",
+          "sha256": "a395f944ddce5efa92f52f5c947cec9d015e5c7448ae7f31eb41a0652c968c57"
+        },
+        {
+          "path": "skills/json-canvas/SKILL.md",
+          "sha256": "97d1ae0728955c4203922753d5656890e5e4dd371b8306ea11884f9b510f1b85"
+        },
+        {
+          "path": "skills/obsidian-bases/SKILL.md",
+          "sha256": "c0037f20926c7d8591cdd040365e4c0e4c0c4146386a506f28f241faee9a27d9"
+        },
+        {
+          "path": "skills/obsidian-markdown/SKILL.md",
+          "sha256": "7ad72e1f0a9081ed325e76b6402ad5de50a00e63e2341fd403a92f147234a007"
+        }
+      ],
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+    },
+    {
+      "url": "https://github.com/6mile/skills",
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "retrieved": "2026-10-20T03:31:53.4682689Z",
+      "license": "MIT",
+      "researched": true,
+      "decision": "参考のみ",
+      "targets": [
+        "knowledge-to-skills"
+      ],
+      "reason": "歴史的バックアップで悪意ある収録物への注意あり。代表OWASP候補は既存と重なり、個別出所の保証もないため転用しない。",
+      "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
+      "read_artifacts": [
+        {
+          "path": "LICENSE",
+          "sha256": "bbad531d4d937825bc35c9363e3cba1283084bb8b2f3158e17f382ba4fb7b2d4"
+        },
+        {
+          "path": "README.md",
+          "sha256": "2512e6c3524c2a06034544010cf2dafce52f1338ebd477b5722aa1c478398ccc"
+        },
+        {
+          "path": "skills/0x-professor/cyber-owasp-review/SKILL.md",
+          "sha256": "45dd79ac50892f9b731070c3765cd51875cf8cebd7640037c603640bdb75ee53"
+        }
+      ],
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+    },
+    {
+      "url": "https://github.com/cloudflare/security-audit-skill",
+      "commit": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
+      "retrieved": "2026-10-20T03:31:47.2697424Z",
+      "license": "MIT",
+      "researched": true,
+      "decision": "既存統合",
+      "targets": [
+        "security-review"
+      ],
+      "reason": "候補/実証/追加検証/反証と独立確認を統合。全段階の一律義務化と未依頼の本番通信は採らない。",
+      "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
+      "read_artifacts": [
+        {
+          "path": "LICENSE",
+          "sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391"
+        },
+        {
+          "path": "README.md",
+          "sha256": "55e793bbea3563f8246735997c07aaee360e043eeb626f0b56ea6161c8618ae7"
+        },
+        {
+          "path": "skills/security-audit/SKILL.md",
+          "sha256": "5e3e96a1e438d8f35fef0a1e38f02d4f00e2bdf910401b7dfe00e6779c6dac85"
+        },
+        {
+          "path": "skills/security-audit/VALIDATION-AND-REPORTING.md",
+          "sha256": "b892470cb89bb31f33403e050d4bdfbe2cdaef940ade1496fa65e32b2e129449"
+        }
+      ],
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+    },
+    {
+      "url": "https://github.com/mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "retrieved": "2026-10-20T03:31:47.4992404Z",
+      "license": "not established for dep-lib-review",
+      "researched": true,
+      "decision": "参考のみ",
+      "targets": [],
+      "reason": "dep-lib-reviewを実読。候補の適用ライセンスが無く、dev依存の脆弱性をignoreする表等も一律採用に適さないため転用なし。",
+      "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
+      "read_artifacts": [
+        {
+          "path": "dep-lib-review/SKILL.md",
+          "sha256": "b8e6a9cfbc7918ac6d0c14b85a89dd0e340c44e87aa4ead50a8072fb11bdf01b"
+        },
+        {
+          "path": "README.md",
+          "sha256": "f6cf85dee46f1e10efb5efedf06cbfb46261f4927a41427c8b78c05980cafedb"
+        }
+      ],
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+    },
+    {
+      "url": "https://github.com/docker/skills",
+      "commit": "38df58b09720d38eb78c2c674675ddf9fa74d441",
+      "retrieved": "2026-10-20T03:31:47.7750414Z",
+      "license": "Apache-2.0",
+      "researched": true,
+      "decision": "既存統合",
+      "targets": [
+        "docker-operations"
+      ],
+      "reason": "BuildKitの秘密、cache境界、Compose準備、config --quietを統合。MCP/agent/sandbox配布は導入しない。",
+      "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
+      "read_artifacts": [
+        {
+          "path": "LICENSE",
+          "sha256": "3bb33f65872155f0801efc9f6732e2868eb338c5ed6a81eec5c775c1382761cb"
+        },
+        {
+          "path": "README.md",
+          "sha256": "93426cf3a523f131a87d89d13d99d7d204a5bab312aab5b4378778cacac544d9"
+        },
+        {
+          "path": "skills/docker-build-strategies/SKILL.md",
+          "sha256": "7ff24758ebacdf2b3010f75ec3fe4b6692661ca6202e813520b37d3975392b1c"
+        },
+        {
+          "path": "skills/docker-compose-patterns/SKILL.md",
+          "sha256": "b43f4d71a18159de5868e0f1a352f0dd091bb81fe3ad29b24d79cffce6adfc4c"
+        }
+      ],
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+    },
+    {
+      "url": "https://github.com/Tencent/teamai-cli",
+      "commit": "8dc60b082f60ed19a735fde6839ffddb59ec5b4b",
+      "retrieved": "2026-10-20T03:31:48.2605376Z",
+      "license": "MIT (LICENSE text; API NOASSERTION)",
+      "researched": true,
+      "decision": "参考・既存統合",
+      "targets": [
+        "agent-system-design"
+      ],
+      "reason": "LICENSE本文のMITを確認。既存GTOを別同期で置換せず、正本・所有・実出力の確認へ反映。CLI未導入。",
+      "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
+      "read_artifacts": [
+        {
+          "path": "LICENSE",
+          "sha256": "31154d9c1a8bd8d37b449bdbb8a04f9b4618e5d330b52b0fdb7c452414d75a41"
+        },
+        {
+          "path": "README.md",
+          "sha256": "9fd62d0ec865eee7568fe0c4dc8a98bc72c8c5c7be387f444adfb7627df35b31"
+        },
+        {
+          "path": "skills/teamai/SKILL.md",
+          "sha256": "82a22b1c37531834ab5784f93f950f0a8840ac4e4aa422f1ef2dc03437f9ad66"
+        }
+      ],
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+    },
+    {
+      "url": "https://github.com/nateherkai/AIS-OS",
+      "commit": "ce9cb93a1145da5daba84ea37208ec35fd03606e",
+      "retrieved": "2026-10-20T03:31:47.2040261Z",
+      "license": "MIT (LICENSE text; API NOASSERTION)",
+      "researched": true,
+      "decision": "既存統合",
+      "targets": [
+        "agent-system-design"
+      ],
+      "reason": "LICENSE本文のMITと商標留保を確認。新セッションの経路・鮮度・稼働証拠を採り、100点評価や定期実行を追加しない。",
+      "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
+      "read_artifacts": [
+        {
+          "path": ".agents/skills/audit/SKILL.md",
+          "sha256": "2cda180ee8a5e071e7b4f0f337ace1bc36df0494f109562f4620146d8d302a8c"
+        },
+        {
+          "path": "LICENSE",
+          "sha256": "79f6fb36dbf642e59321081ffe67eb49476faf19f5cca43c56673a01df202493"
+        },
+        {
+          "path": "README.md",
+          "sha256": "517ff2ae35888ca9da1f1c32c51c79756f068e8e034903867f141cd0474c069f"
+        }
+      ],
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+    },
+    {
+      "url": "https://agent-skills.jp/category",
+      "commit": null,
+      "retrieved": "2026-10-20T03:38:32.3515146Z",
+      "license": "not asserted; no text redistribution",
+      "researched": true,
+      "decision": "参考・既存統合",
+      "targets": [
+        "knowledge-to-skills"
+      ],
+      "reason": "分類は探索の入口。各候補の原本と個別ライセンスを確認する経路へ統合。自動分類や件数を品質としない",
+      "read_artifacts": [
+        {
+          "path": "category.html",
+          "sha256": "5de1046412131a80fc5f7d2277c2b650190b6deda3bfb142f7de648a16053a99"
+        }
+      ]
+    }
+  ]
+}

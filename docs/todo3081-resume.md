@@ -17,6 +17,26 @@ Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/277 。まだ完了
 
 ## 実行済みと未実行
 
+### 次の自動再開で最初に確認すること
+
+- 固定した実装sourceは170bf90635ddb1b7648531387c1e19d5816b3b69。
+  この後の再開記録だけのコミットはRust実装を変更していない。
+- 検査3096は比較用Red 8b70dd71c400ef449d0216d0075aff6bc253c527と上のGreenを対象にする。
+  独立Cargo割当で関連検査を行う。親担当には資源割当がない。
+- 別モデルレビュー3097は871e184..170bf90の追加差分、Opus5.5/max、読み取り専用。
+  両specを更新し、保存済みspecに新headがあることとdispatchable=trueを確認した。
+  最後の観測は両方todoで、まだ起動や実検査を確認したという意味ではない。
+- 戻ったら両ToDoと実jobの結果を先に確認し、完了した操作を繰り返さない。
+  最終headのGreen、実モデル、Must解消を確認後にPRと正式CIへ進む。
+  正式CIで逆依存・doctest・Clippyを確認し、独立した全件検査を追加で重ねない。
+- jobs/schedulerの既知leafはguard=false。discord_ask.exeは未分類の保護扱いだった。
+  配布前に既存の限定した資格確認が必要。guardの無効化や未知原本の閲覧は行わない。
+  並行する3082の共有実行物更新と混同せず、実配備の旧hash・sourceを照合して有限CASする。
+- PR、正式CI、merge、release、配布は未実施。自然な混雑やnative aliasでの会話再開は未実測。
+  actual effortとFastの上流tierは未確認のまま。限定HTTPの成功と区別する。
+- 所有一時データ951cd46c49333fa6208f0816b1e45b09は再開に必要なので保持する。
+  自分のChromeタブ・Docker・GPU・Civ6は作っていない。補助Red refは証拠用でmainへmergeしない。
+
 ### 再開後の追記
 
 item_258はpool_retry.rsの読み取りでexit0だった。再実行が必要な未完了コマンドはなかった。

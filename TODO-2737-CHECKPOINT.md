@@ -1029,3 +1029,8 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 新regressionは実runnerAccessCommandsの最初の引数列をpublic tempへ向け、同runTreeで実icaclsを実行。旧sourceではexit87でRED。修正後は成功し、実GetAccessRules(SID型)でLocalServiceへの権限がTraverse(+必要ならSynchronize)のみ、Inheritance/Propagationなしを確認。従来の宣言文字列検査だけではCLI構文を検出できなかった点を補った。最終runner全module race7.120s/vet、利用側ci-guest race14.117s/vet成功。
 - 追加観測child68157440bytes/全68166530bytesはpublic metadata/scriptをevidenceへcopy後、unmount/parent detachedを確認しsafe-delete plan→別呼出しの通常削除→finish(source_absent)で回収。親/原SDK/private ACL変更なし。実空き容量の前後差は測定していないため回収容量の実測とはしない。元失敗clone/他の旧未回収は保持。
 - 一次資料 https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/icacls と https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-vhdx/83f6b700-6216-40f0-aa99-9fcb421206e2 。新source差分を同headの別モデルレビューへ渡す。実guestの修正後受付/LocalService起動/Windows13/CI Gate/全CI/基盤配送は未完。再開は同attempt6/同Windows queued job/同source/route/intent/前回回収を照合し、新clean headからruntimeを生成する。原製品source/merge/Prdは親2641。
+### 固定32d8431のレビュー3152と待機準備
+
+- 固定b4db37e→32d8431の4file+必要局所だけを3152へgpt-6-luna/max/通常add --spec登録、保存全文一致/dispatchable/未起動todo確認。登録をMust0にしない。今回の未実行公式Windows/初回失敗と回収/観測の訂正/CLI構文RED→GREENを2737/2641 noteへ配送した。
+- 証拠resume-011056/preflight-failure-files.private.jsonへ原error hash/回収/source pin/公開metadata/新test logs/specをcopy/hash保存。観測child5f9...は通常削除/finish済み、元失敗clonef8...は保持。新実行物はレビュー後の同clean headから生成する。旧77b runtimeには構文修正がないので再利用しない。
+- 公式run39201344542 attempt6/Windows118741826539はqueued/runner0のまま、同leaseのown routeを保持。normalCI intent不在、VM/runner/host/executor回収済み。3152の原結果/実model/固定head/未読を受領したら、状態を再照合して同jobで再開（追加rerun不要）。現job/実HEAD checkpointを保存・読戻し、wait2737 --on3152を登録する。原Windows13/CI Gate/全CI/基盤配送は未完、owner入力不要。

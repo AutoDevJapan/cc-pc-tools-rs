@@ -782,6 +782,7 @@ func (r *Runner) conversationStatus() (map[string]any, error) {
 		questions = append(questions, conversationQuestionPublic(q))
 	}
 	replies := []map[string]any{}
+	intake := []map[string]any{}
 	ids := make([]string, 0, len(r.State.Requests))
 	for id := range r.State.Requests {
 		ids = append(ids, id)
@@ -789,7 +790,11 @@ func (r *Runner) conversationStatus() (map[string]any, error) {
 	sort.Strings(ids)
 	for _, id := range ids {
 		req := r.State.Requests[id]
-		if req == nil || req.Conversation == "" || req.Author != r.State.Destination.Owner {
+		if req == nil || req.Author != r.State.Destination.Owner {
+			continue
+		}
+		intake = append(intake, map[string]any{"message_id": req.Message, "thread_id": req.Thread, "author_id": req.Author, "todo_id": req.Todo, "request_id": req.Conversation, "phase": req.Phase, "source": req.Source, "created_at": req.Created, "edited_at": req.Edited, "acquired_at": req.Acquired, "progress_thread_id": req.ProgressThread})
+		if req.Conversation == "" {
 			continue
 		}
 		q, ok := index.Questions[req.Conversation]
@@ -798,7 +803,7 @@ func (r *Runner) conversationStatus() (map[string]any, error) {
 		}
 		replies = append(replies, map[string]any{"message_id": req.Message, "thread_id": req.Thread, "author_id": req.Author, "todo_id": req.Todo, "request_id": req.Conversation, "phase": req.Phase, "source": req.Source, "created_at": req.Created, "edited_at": req.Edited, "acquired_at": req.Acquired})
 	}
-	return map[string]any{"domain": conversationDomain, "questions": len(index.Questions), "phases": phases, "items": questions, "reply_stages": replies, "stage_evidence": "saved_state_only", "legacy_state": "unchanged", "original_registry_recovered": false}, nil
+	return map[string]any{"domain": conversationDomain, "questions": len(index.Questions), "phases": phases, "items": questions, "reply_stages": replies, "intake_stages": intake, "stage_evidence": "saved_state_only", "legacy_state": "unchanged", "original_registry_recovered": false}, nil
 }
 
 func orderedConversationKeys(index *conversationIndex) []string {

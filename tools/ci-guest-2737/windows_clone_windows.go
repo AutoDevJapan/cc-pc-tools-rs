@@ -239,10 +239,19 @@ try {
  $hiveLoaded=$true
  $current=(Get-ItemProperty -LiteralPath "Registry::HKEY_LOCAL_MACHINE\$hive\Select" -Name Current -ErrorAction Stop).Current
  if($current -lt 1 -or $current -gt 9){throw 'CLONE_CONTROLSET_REJECTED'}
- $service="Registry::HKEY_LOCAL_MACHINE\$hive\ControlSet$($current.ToString('000'))\Services\WindowsCISDK2737"
+ $controlSet="Registry::HKEY_LOCAL_MACHINE\$hive\ControlSet$($current.ToString('000'))"
+ $service=$controlSet+'\Services\WindowsCISDK2737'
  $value=Get-ItemProperty -LiteralPath $service -ErrorAction Stop
  if($value.Start -ne 2 -or $value.Type -ne 16 -or $value.ObjectName -ne 'LocalSystem'){throw 'CLONE_SERVICE_IDENTITY_REJECTED'}
  Set-ItemProperty -LiteralPath $service -Name ImagePath -Value '"C:\Windows\System32\WindowsCISDK2737\windows-ci-runner-agent.exe"' -ErrorAction Stop
+ # Match the official Windows runner image before any guest process starts.
+ # This path belongs to the loaded clone hive, never host CurrentControlSet.
+ $fileSystem=$controlSet+'\Control\FileSystem'
+ New-ItemProperty -LiteralPath $fileSystem -Name LongPathsEnabled -PropertyType DWord -Value 1 -Force -ErrorAction Stop | Out-Null
+ $fileSystemKey=Get-Item -LiteralPath $fileSystem -ErrorAction Stop
+ try {
+  if($fileSystemKey.GetValueKind('LongPathsEnabled') -ne [Microsoft.Win32.RegistryValueKind]::DWord -or $fileSystemKey.GetValue('LongPathsEnabled') -ne 1){throw 'CLONE_LONG_PATHS_UNCONFIRMED'}
+ } finally {$fileSystemKey.Close()}
  $value=$null
 }finally {
  try {if($hiveLoaded){[GC]::Collect();[GC]::WaitForPendingFinalizers(); & "$env:SystemRoot\System32\reg.exe" unload "HKLM\$hive" | Out-Null; if($LASTEXITCODE -ne 0){throw 'CLONE_HIVE_UNLOAD_FAILED'}}}

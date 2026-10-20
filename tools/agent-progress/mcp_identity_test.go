@@ -127,7 +127,7 @@ func TestMCPDependencyUrgencyDoesNotChangeProductDepartment(t *testing.T) {
 func TestMCPBusinessJobInheritsOnlyRealDependencyUrgency(t *testing.T) {
 	for _, explicit := range []bool{false, true} {
 		for _, dependency := range []string{"wait_on", "work_wait_on", "none"} {
-			for _, parentRank := range []int{10, 70} {
+			for _, parentRank := range []int{10, 20, 30, 40, 50, 61, 100} {
 				parent := map[string]any{"id": 1, "project": "tools", "status": "wait", "jobs": []string{"alpha"}}
 				if dependency != "none" {
 					parent[dependency] = []int{7}
@@ -157,6 +157,42 @@ func TestMCPBusinessJobInheritsOnlyRealDependencyUrgency(t *testing.T) {
 					}
 				}
 			}
+		}
+	}
+}
+
+func TestMCPContractRankBeatsItsLessUrgentPrerequisiteRequester(t *testing.T) {
+	f := fixtureFor(t, `{"items":[{"id":1,"project":"tools","status":"wait","wait_on":[7]},{"id":7,"project":"tools","status":"doing"}]}`)
+	f.opts.PriorityFile = filepath.Join(filepath.Dir(f.opts.TodoFile), "priority.json")
+	writeFixture(t, f.opts.PriorityFile, []byte(`{"items":{"1":20},"product_identities":{"godd-mcp-contract":{"repository_id":61001,"owner_id":71001}}}`))
+	f.job(t, "contract", `{"id":"contract","todo_id":7,"status":"queued","product_identity":{"repository_id":61001,"owner_id":71001}}`)
+	s := snap(f)
+	if len(s.Jobs) != 1 || s.Jobs[0].Priority != 10 || s.Jobs[0].Department != "受託部" {
+		t.Fatal("less urgent dependency requester downgraded the contract job")
+	}
+	for _, task := range s.Tasks {
+		if task.ID == 7 && (task.Priority != 10 || task.Department != "受託部") {
+			t.Fatal("less urgent dependency requester downgraded the contract task")
+		}
+	}
+}
+
+func TestMCPRuntimeBindingOverridePresenceIsReportedWithoutValues(t *testing.T) {
+	for _, policy := range []string{`{}`, `{"product_identities":{}}`, `{"product_identities":null}`} {
+		f := fixtureFor(t, `{"items":[]}`)
+		f.opts.PriorityFile = filepath.Join(filepath.Dir(f.opts.TodoFile), "priority.json")
+		writeFixture(t, f.opts.PriorityFile, []byte(policy))
+		data, err := json.Marshal(snap(f))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var value map[string]any
+		if err := json.Unmarshal(data, &value); err != nil {
+			t.Fatal(err)
+		}
+		overridden, known := value["product_bindings_overridden"].(bool)
+		if !known || overridden != (policy != `{}`) {
+			t.Fatalf("runtime override presence was not reported: %s", data)
 		}
 	}
 }

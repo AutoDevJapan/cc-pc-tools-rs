@@ -22,6 +22,11 @@ fn board(items: Value, jobs: Vec<Value>, masked: bool) -> Value {
 }
 
 fn board_with_policy(items: Value, jobs: Vec<Value>, masked: bool, policy: Value) -> Value {
+    let temp = test_root(items, jobs, masked, policy);
+    collect(temp.path(), 1_000_000)
+}
+
+fn test_root(items: Value, jobs: Vec<Value>, masked: bool, policy: Value) -> tempfile::TempDir {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();
     fs::create_dir_all(root.join("todo")).unwrap();
@@ -40,7 +45,7 @@ fn board_with_policy(items: Value, jobs: Vec<Value>, masked: bool, policy: Value
         fs::create_dir_all(&path).unwrap();
         fs::write(path.join("job.json"), job.to_string()).unwrap();
     }
-    collect(root, 1_000_000)
+    temp
 }
 
 fn product<'a>(board: &'a Value, name: &str) -> &'a Value {
@@ -507,28 +512,120 @@ fn mcp_related_ids_without_a_primary_keep_conflicting_products_unknown() {
 #[test]
 fn mcp_job_business_identity_keeps_the_more_urgent_product_or_dependency_rank() {
     for masked in [false, true] {
-        for parent_rank in [10u32, 70] {
-            let policy = json!({"items":{"1":parent_rank},"product_identities":{
-                "godd-mcp-alpha":{"repository_id":61002,"owner_id":71002}
-            }});
-            let value = board_with_policy(
-                json!([
-                    {"id":1,"project":"tools","status":"wait","wait_on":[7]},
-                    {"id":7,"project":"tools","status":"doing"}
-                ]),
-                vec![
-                    json!({"id":"business","todo_id":7,"project":"tools","status":"running","product_identity":identity(true)}),
-                ],
-                masked,
-                policy,
-            );
-            let row = row(&value, "todo-7");
-            assert_eq!(row["productIdentity"]["productId"], "godd-mcp-alpha");
-            assert_eq!(
-                row["priority"],
-                parent_rank.min(60),
-                "masked={masked}/parent={parent_rank}"
-            );
+        for alpha in [false, true] {
+            for parent_rank in [10u32, 20, 30, 40, 50, 61, 100] {
+                let policy = json!({"items":{"1":parent_rank},"product_identities":{
+                    "godd-mcp-contract":{"repository_id":61001,"owner_id":71001},
+                    "godd-mcp-alpha":{"repository_id":61002,"owner_id":71002}
+                }});
+                let value = board_with_policy(
+                    json!([
+                        {"id":1,"project":"tools","status":"wait","wait_on":[7]},
+                        {"id":7,"project":"tools","status":"doing"}
+                    ]),
+                    vec![
+                        json!({"id":"business","todo_id":7,"project":"tools","status":"running","product_identity":identity(alpha)}),
+                    ],
+                    masked,
+                    policy,
+                );
+                let row = row(&value, "todo-7");
+                let product_id = if alpha {
+                    "godd-mcp-alpha"
+                } else {
+                    "godd-mcp-contract"
+                };
+                let product_rank = if alpha { 60 } else { 10 };
+                assert_eq!(row["productIdentity"]["productId"], product_id);
+                assert_eq!(
+                    row["priority"],
+                    parent_rank.min(product_rank),
+                    "masked={masked}/parent={parent_rank}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn mcp_raw_private_project_cannot_be_unmasked_by_a_display_override() {
+    for from_policy in [false, true] {
+        let mut item = json!({"id":6,"project":"SyntheticPrivate","status":"doing","note":"raw-private-marker"});
+        let policy = if from_policy {
+            json!({"items":{"6":{"project":"tools"}}})
+        } else {
+            item["owner_project"] = json!("tools");
+            json!({})
+        };
+        let temp = test_root(json!([item]), vec![], false, policy);
+        let root = temp.path();
+        let operations = Operations::new(root.into(), root.join("Skills"));
+        assert_eq!(operations.worker_detail("todo-6", 0), Err(404));
+        assert!(
+            !collect(root, 1_000_000)
+                .to_string()
+                .contains("raw-private-marker")
+        );
+    }
+}
+
+#[test]
+fn mcp_private_job_priority_keeps_its_linked_task_details_closed() {
+    let temp = test_root(
+        json!([{"id":6,"project":"tools","status":"doing","note":"legacy-private-marker"}]),
+        vec![
+            json!({"id":"legacy","todo_id":6,"project":"synthetic-contract-source","status":"running"}),
+        ],
+        false,
+        json!({"projects":{"synthetic-contract-source":10}}),
+    );
+    let root = temp.path();
+    let operations = Operations::new(root.into(), root.join("Skills"));
+    assert_eq!(operations.worker_detail("todo-6", 0), Err(404));
+    assert!(
+        !collect(root, 1_000_000)
+            .to_string()
+            .contains("legacy-private-marker")
+    );
+}
+
+#[test]
+fn mcp_private_names_in_related_ids_hide_both_task_and_job_details() {
+    let temp = test_root(
+        json!([
+            {"id":5,"project":"SyntheticPrivate","status":"doing"},
+            {"id":6,"project":"tools","status":"doing","note":"related-private-note-marker"}
+        ]),
+        vec![
+            json!({"id":"related-private","todo_id":6,"related_todo_ids":[5],"project":"tools","status":"running","last_message":"related-private-report-marker"}),
+        ],
+        false,
+        json!({}),
+    );
+    let root = temp.path();
+    let operations = Operations::new(root.into(), root.join("Skills"));
+    let task = operations.worker_detail("todo-6", 0);
+    let job = operations.worker_detail(&safe_id("job", "related-private"), 0);
+    assert!(
+        task == Err(404) && job == Err(404),
+        "task={task:?}, job={job:?}"
+    );
+    let value = collect(root, 1_000_000).to_string();
+    assert!(!value.contains("related-private-note-marker"));
+    assert!(!value.contains("related-private-report-marker"));
+}
+
+#[test]
+fn mcp_api_reports_the_presence_of_runtime_binding_overrides() {
+    for masked in [false, true] {
+        for policy in [
+            json!({}),
+            json!({"product_identities":{}}),
+            json!({"product_identities":null}),
+        ] {
+            let expected = policy.get("product_identities").is_some();
+            let value = board_with_policy(json!([]), vec![], masked, policy);
+            assert_eq!(value["productBindingsOverridden"], expected);
         }
     }
 }

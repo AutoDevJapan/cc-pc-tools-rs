@@ -124,7 +124,7 @@ fn unknown_product_jobs_inherit_a_recorded_dependency_priority_without_claiming_
 fn mcp_business_jobs_preserve_dependency_urgency_without_borrowing_history_priority() {
     for declared in [false, true] {
         for dependency in ["wait_on", "work_wait_on", "none"] {
-            for parent_rank in [10u32, 70] {
+            for parent_rank in [10u32, 20, 30, 40, 50, 61, 100] {
                 let mut parent =
                     json!({"id":1,"project":"tools","status":"wait","jobs":["prerequisite"]});
                 if dependency != "none" {

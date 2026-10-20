@@ -376,15 +376,11 @@ impl Context {
         FileLock::try_acquire(&path)
             .map_err(|e| Error::file_io("acquire exclusive lock byte range [0, 1)", &path, e))
     }
-    /// Active jobs for a yield decision. Reads the index without the gate; only
-    /// a missing index takes a brief gate to build one.
+    /// Advisory candidates only: a running worker must never initiate history
+    /// reconciliation at a tool boundary. Missing/partial history postpones the
+    /// yield; execution admission prepares and rechecks it independently.
     pub(crate) fn yield_snapshot(&self) -> Result<Vec<Value>> {
-        self.prepare_admission_index()?;
-        if let Some(jobs) = self.admission_snapshot() {
-            return Ok(jobs);
-        }
-        let _gate = self.queue_lock_for("yield_snapshot", Duration::from_secs(60))?;
-        self.admission_jobs()
+        Ok(self.admission_snapshot().unwrap_or_default())
     }
     pub(crate) fn yield_backoff_active(&self, job: &Value) -> bool {
         self.read_json(&self.job_dir(s(job, "id")).join("yield-retry.json"))

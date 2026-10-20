@@ -10,6 +10,10 @@ use std::{
 #[path = "../tests/support/queue_owner_snapshot.rs"]
 mod owner_snapshot_tests;
 
+#[cfg(test)]
+#[path = "../tests/support/queue_history_liveness.rs"]
+mod history_liveness_tests;
+
 fn terminal_result(job: &Value) -> bool {
     cc_job_policy::review_result::completed(job, s(job, "last_message"))
         || s(job, "last_message")
@@ -1114,8 +1118,9 @@ impl Context {
         // The separate minute task samples; admission only reads durable state.
         let mut cfg = cfg.clone();
         // Slow yield work happens before the gate, from a lock-free snapshot.
-        // First admission must also inspect completed boundaries. Build a
-        // missing index under a brief gate, then release it before yield work.
+        // Admission owns history preparation. The advisory boundary snapshot
+        // deliberately never scans, even when its index is missing or old.
+        self.prepare_admission_index()?;
         let snapshot = self.yield_snapshot()?;
         self.maintain_tool_yields(&snapshot);
         let _gate = self.queue_lock_for("admit_configured", std::time::Duration::from_secs(60))?;

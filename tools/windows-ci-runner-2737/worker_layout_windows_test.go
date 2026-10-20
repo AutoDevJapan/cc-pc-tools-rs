@@ -55,6 +55,40 @@ func TestWorkerDirectoriesAreFreshAndContainProfilePaths(t *testing.T) {
 	}
 }
 
+func TestWorkerGitLookupAvoidsPrivateSDKAncestors(t *testing.T) {
+	service := fixedEnvironmentValues(testSeed().Plan, `C:\public\sccache.exe`)
+	before := strings.Join(service, "\n")
+	worker := runnerEnvironment(service)
+	var paths []string
+	for _, entry := range worker {
+		key, value, _ := strings.Cut(entry, "=")
+		if strings.EqualFold(key, "PATH") {
+			paths = strings.Split(value, ";")
+		}
+	}
+	want := `C:\ProgramData\AutoDevJapan\windows-ci-git-2737`
+	if len(paths) < 2 || paths[0] != want+`\cmd` || paths[1] != want+`\bin` {
+		t.Fatal("anchored Git lookup still crosses the private SDK ancestor")
+	}
+	for _, path := range paths {
+		if strings.EqualFold(path, sdkRoot+`\git\cmd`) || strings.EqualFold(path, sdkRoot+`\git\bin`) {
+			t.Fatal("unreadable SDK Git lookup retained")
+		}
+	}
+	if strings.Join(service, "\n") != before {
+		t.Fatal("worker Git selection changed SYSTEM source-proof environment")
+	}
+	for _, grant := range runnerAccessCommands() {
+		if grant[0] == want {
+			if len(grant) != 3 || grant[2] != "*S-1-5-19:(OI)(CI)RX" {
+				t.Fatal("worker Git must be read/execute only")
+			}
+			return
+		}
+	}
+	t.Fatal("worker Git read/execute grant missing")
+}
+
 func TestGuestSymlinkAuthorizationRejectsHostAndWorkerIdentities(t *testing.T) {
 	exe, err := os.Executable()
 	if err != nil {

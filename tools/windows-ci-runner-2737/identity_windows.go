@@ -76,6 +76,7 @@ func validateRunnerToken(token syscall.Token) error {
 func runnerAccessCommands() [][]string {
 	// X is an advanced icacls right and requires parentheses even on its own.
 	commands := [][]string{{sdkRoot, "/grant:r", "*" + runnerUserSID + ":(X)"}, {runnerRoot, "/grant:r", "*" + runnerUserSID + ":(OI)(CI)M"}, {helperPath, "/grant:r", "*" + runnerUserSID + ":RX"}, {hookRoot, "/grant:r", "*" + runnerUserSID + ":(OI)(CI)RX"}}
+	commands = append(commands, []string{workerGitRoot, "/grant:r", "*" + runnerUserSID + ":(OI)(CI)RX"})
 	for _, name := range []string{"rust-1.97.1", "git", "powershell", "sccache", "vs-build-tools"} {
 		commands = append(commands, []string{sdkRoot + `\` + name, "/grant:r", "*" + runnerUserSID + ":(OI)(CI)RX"})
 	}

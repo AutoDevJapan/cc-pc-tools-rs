@@ -31,6 +31,7 @@ const runnerRoot = `C:\ProgramData\AutoDevJapan\windows-ci-runner-2737`
 const workerTempRoot = runnerRoot + `\_temp`
 const workerProfileRoot = runnerRoot + `\_profile`
 const workerTargetRoot = runnerRoot + `\_target`
+const workerGitRoot = `C:\ProgramData\AutoDevJapan\windows-ci-git-2737`
 const sourceRoot = runnerRoot + `\_work\GoDD-MCP-Alpha\GoDD-MCP-Alpha`
 const hookRoot = sdkRoot + `\runner-hooks`
 const planPath = agentRoot + `\runner-seed.json`
@@ -120,6 +121,9 @@ func (o *windowsOps) prepare(ctx context.Context, p sourcepacket.Packet) (source
 	if e = prepareWorkerDirectories(runnerRoot); e != nil {
 		return sourcepacket.Receipt{}, e
 	}
+	if e = prepareWorkerGit(ctx, o.env); e != nil {
+		return sourcepacket.Receipt{}, e
+	}
 	if e = enableGuestSymlinkSupport(ctx, o.env); e != nil {
 		return sourcepacket.Receipt{}, e
 	}
@@ -174,9 +178,16 @@ func fixedEnvironmentValues(p Plan, sccache string) []string {
 // writable public worker tree; never install this environment in the service.
 func runnerEnvironment(service []string) []string {
 	env := make([]string, 0, len(service))
+	pathAdded := false
 	for _, entry := range service {
-		key, _, _ := strings.Cut(entry, "=")
+		key, value, _ := strings.Cut(entry, "=")
 		switch strings.ToUpper(key) {
+		case "PATH":
+			if !pathAdded {
+				env = append(env, "PATH="+workerGitPath(value))
+				pathAdded = true
+			}
+			continue
 		case "TEMP", "TMP", "SYSTEMTEMP", "USERPROFILE", "HOME", "APPDATA", "LOCALAPPDATA", "CARGO_TARGET_DIR":
 			continue
 		}

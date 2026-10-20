@@ -132,6 +132,54 @@ Actual new
 guest setup, all141 failed checks, the remaining original13 commands and final
 CI Gate still require the reviewed new runtime and an official rerun.
 
+## Read-only worker Git outside private SDK ancestors (2026-10-21)
+
+Official attempt 7, Windows job 118898480549 / runner 38, passed the previously
+failing first unit group: 2,641 passed, zero failed, two ignored. The later
+group failed with 983 passed, ten failed and one ignored. The original log is
+610,198 bytes, SHA256
+`7399bc9fbe2cf38925f838ffe349e38b34c91caf95cd89cac75ce995e133b744`.
+There were no error1314 or `PolicySchemaInvalid` occurrences. This is a new
+official failure, not completion of all thirteen commands or the final gate.
+
+All ten failures map unambiguously to one original source blob and share its
+Git-based gate-check helper. Eight compare child exit1 with exit0, one compares
+exit1 with exit2, and one reports `GATE_GIT_EXECUTABLE_UNAVAILABLE` instead of
+the expected reason. The last comparison's exact hash matches the original
+reason definition. The original Git resolver anchors every installation-path
+ancestor with generic read. Worker PATH still pointed at SDK Git, beneath its
+traverse-only private parent. Plain Git fixture commands succeeded, whereas
+the secure executable resolver cannot admit that location. The new layout's
+resolution of all ten failures remains a guest acceptance requirement.
+
+Only the fixed guest SYSTEM agent now stages the received SDK Git tree into
+the fresh sibling `C:\ProgramData\AutoDevJapan\windows-ci-git-2737` before
+starting any worker. It is outside the worker-writable runner root. Before
+copying bytes, its inherited ACL is removed and replaced with SYSTEM and
+Administrators full control and LocalService read/execute only; children
+inherit those rules. SDK/private permissions are unchanged. The service keeps
+its original SDK Git for SYSTEM-only source proof, and only the copied worker
+environment uses the new Git cmd/bin paths. No product security check is
+relaxed, no request chooses the copy paths, and no host Git installation or
+retained SDK is modified.
+
+The private copy helper pins physical ancestors from volume to leaf and holds
+directory/file handles without write/delete sharing, rejecting reparse points.
+It creates destination files exclusively under pinned directories, with bounded
+depth, entries, bytes and deadline. Git's intentional source hardlinks are read
+through byte-pinning handles and become independent destination files. Native
+Win32 opens use extended drive paths, including beyond MAX_PATH.
+
+Host tests reproduce the former PATH boundary failure and accept the new one.
+They cover fresh copies, sealing before writing, failed sealing/cancellation,
+independent hardlink copies, refused parent replacement, real parent/child
+junctions with identical external bytes, long paths, and host invocation denial.
+The exact native ACL command also succeeds on a public fixture while its
+directory is pinned; SID-based readback verifies protected inheritance and no
+worker write rights, then restores only that fixture owner's access for cleanup.
+The reviewed new runtime must still pass actual guest copying, Git discovery,
+all ten original assertions and the remaining original workflow commands.
+
 ## Guest UTC before registration (2026-10-20)
 
 The first actual session reached physical source proof and offline runner
@@ -344,6 +392,8 @@ The stock runner and its registration files are under the separate fixed
 actual stock `GITHUB_WORKSPACE`; it is not beneath the SDK's private ancestor.
 Its `_temp`, `_profile` (including appdata) and `_target` children are the worker's
 temporary, home/profile and Cargo-output directories, with no owner environment.
+The worker's Git cmd/bin paths instead use the separate read-only
+`C:\ProgramData\AutoDevJapan\windows-ci-git-2737` installation described above.
 
 The child environment is an allowlist; Jobs/Threads from seed become
 CARGO_BUILD_JOBS/RUST_TEST_THREADS. Explicit original workflow serial flags

@@ -509,3 +509,45 @@ No new local container, GPU process, runner registration or production setting
 was created. The original Rust official-log terminal-escape refusal remains;
 its stored error was classified by fixed public words only, without another
 request, an override flag or an alternative retrieval route.
+
+## 2026-10-20: original release gates passed and API runtime41090 is live
+
+Original promotion run38941324877/attempt2 has now completed preconditions
+job118497524273, backend job118497552775 and full verification job118497552790
+success. Their actual step lists contain zero skips. Promotion job118500019293
+has started the original Railway operation. No source, trust digest, label,
+permission or deployment setting was changed to obtain these results.
+
+The same existing API service's new deployment is
+d68f58e6-7c30-4551-a78a-5d7ecf2f37b2, statusSUCCESS. An independent provider-bound
+GET /ready at2026-10-20T07:07:55.7750228Z returnedHTTP200/status ready and actual
+revision41090d19329b81dd1bd076f3336d723823be4b82. Body328 bytes, SHA256
+22C48491DDB48CBCBE92C0BA7CF46C1A244E0120CC21C03B08DFEEB89B07F9C3;
+raw body and domain text were not saved. This is actual API runtime revision
+proof. It does not establish completion of other services, Vercel/canonical
+alias, final release smoke or the original promotion workflow as a whole.
+
+After API success the original operation began rolling the other existing
+services. The current identities/statuses are in the ignored
+`todo2757-railway-release-progress.private.json`; do not start another release
+while this attempt is active. Keep its original28-minute gate/rollback policy
+and distinguish migration-may-have-run from a safe automatic rollback.
+
+Two attempts to collect completed-job logs while this workflow was running
+returned an81-byte native CLI error. Its exact public error fingerprint is
+90B277154D195BF2764329A5A35023A595942AE5256B782048B8A0AFF00EDC17 and matches
+normal log unavailability until run completion. It is not an approval refusal.
+Fetch the same official logs after the run ends, without another route.
+
+The old failed-service build-log request needed the explicit original service
+selector. The bounded same-service request succeeded and its fingerprint was
+saved, without raw text. The provider's diagnosis field for that old failed
+deployment is null; neither this nor keyword counts establish its root cause.
+The old status/cause uncertainty remains separate from the current rollout.
+No original error/refusal/history was erased.
+
+Scheduler checkpointing was then invoked through CreateNoWindow with redirected
+streams and an explicit wait. The actual exit0 report confirms saved=true,
+launched0 and source_files_changed=false for headaa23ad3. Future checkpoints
+must likewise wait for the GUI-subsystem executable rather than assume that a
+silent direct PowerShell invocation has already finished.

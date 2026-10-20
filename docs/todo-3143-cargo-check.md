@@ -62,22 +62,30 @@ Greenのreleaseビルドは1回だけ実施。生成物をコピーし、元と�
 - SHA256: `2409C01E2BAE582EE87C8615B767C97F4B53F1443AC6EF545593709C0A425AB1`
 - サイズ: 1,406,464 byte
 - 保持先の所有ID: `e76938c1c757a795dde35c3a5744ba22`。親が利用する検査成果物なので削除対象外。
-- 元の生成先: 一時資源内の `target/release/owner_chrome.exe`。不要な依存生成物とともに回収する。
+- 元の生成先: 一時資源内の `target/release/owner_chrome.exe`。不要な依存生成物とともに下記へ退避済み。
 
 機械可読のコマンド・時刻・終了コード・ソースSHA・生成物情報は
 `todo-3143-cargo-results.json`、各工程の完全なstdout/stderrは
 `todo-3143-cargo-{red,green,existing,release}.txt` に保存した。
 
-## 復帰と残りの保存手順
+## 復帰と後片付け
 
 `git switch scheduler/todo-3143-chrome-uuid` で開始branchへ復帰済み。
 開始HEADに対して製品ソース・Cargo.toml・Cargo.lockの差分なしを確認した。
-検査記録だけをこのブランチへcommitし、作業場所がcleanなことを確認する。
-自分のid=3143 / job / expected_branch=開始branch / branch=復帰branch / 実HEADで
-`scheduler checkpoint-workspace` を実行し、保存成功を確認する。
-成果物と必要なログは保持済み。不要な一時資源はsafe-deleteのplan→別呼び出しで削除→finishで片付ける。
+検査記録は `1cecc16` でこのブランチへcommitした。
+最終記録の保存後、id=3143 / job / expected_branch=開始branch / branch=復帰branch / 実HEADで
+`scheduler checkpoint-workspace` を実行する。request/resultはこのworktreeの
+`docs/todo3143-checkpoint{,-result}.private.json` に保持する。
+
+safe-deleteのplanは `action=quarantine / reason=size`（547,024,925 byte、1,409項目）を返した。
+指定どおり `quarantine --id 75259ac2510ddf81bcba5cf5ec8be57a --reason size` を実行し、
+`state=quarantined` を確認した。通常削除は指示されておらず、削除の再試行はしていない。
+退避先は `C:/Users/makhmeto/Downloads/削除希望/20261021-todo-3143-chrome-uuid-cargo-red-green-build-75259ac2`。
+元のTempパスは不在、保持した生成物のハッシュは退避後にも一致を確認する。
+他担当の資源は操作していない。
 
 ## 状態
 
-指定された検査とビルドは達成した。検査記録のcommit、不要物回収、checkpoint保存を残す。
+指定された検査とビルド、開始branchへの復帰、一時資源の退避は達成した。
+最終のcommit/push・clean確認・checkpointの実結果は担当の最終返信と上記resultに残す。
 これは検査だけの達成であり、親3129の実機整理・別モデルレビュー・CI成功・マージ・配布を完了扱いしない。

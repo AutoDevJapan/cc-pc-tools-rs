@@ -108,5 +108,18 @@
   "chrome_used": false,
   "gpu_used": false,
   "api_key_used": false,
-  "source_changed": false
+  "source_changed": false,
+  "return_branch": "scheduler/todo-3143-chrome-uuid",
+  "cleanup": {
+    "owner_id": "75259ac2510ddf81bcba5cf5ec8be57a",
+    "plan_action": "quarantine",
+    "reason": "size",
+    "bytes": 547024925,
+    "entries": 1409,
+    "state": "quarantined",
+    "destination": "C:/Users/makhmeto/Downloads/削除希望/20261021-todo-3143-chrome-uuid-cargo-red-green-build-75259ac2",
+    "retained_artifact_owner_id": "e76938c1c757a795dde35c3a5744ba22"
+  },
+  "checkpoint_receipt": "docs/todo3143-checkpoint-result.private.json",
+  "completion_scope": "Finite Cargo check only; no parent-source edit, live Chrome, deployment, PR or merge."
 }

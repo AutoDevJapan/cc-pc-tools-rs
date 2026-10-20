@@ -1083,3 +1083,9 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 新ownedroota0a7a6c54f33c83abdc79e88994a8dd9でclean397ca63b6d7f075caaf4c872b3b3a4c2158606ecからWindows host/agent/Linux helperを各1回生成。同VCS/modified=false/OSとhost inspect-executor source_clean/admission_linkedを確認。397ca63はレビュー固定22227e7からTODO文書のみで、実source差分はない。
 - 初回wrapperは開始前GETの通信エラーでexit1。private error107bytes/SHA612AA22A8DE903B7239B454DDEDAF2B3178FDDD2E81936F20F32528723912DBFはnetwork分類、401/403/404/5xx/rate/policy分類0。windows-start-intent/windows-start/job-*不在を確認して未起動と判断し、canonical readを1回再照合後、同実行物/同requestで正規wrapperを1回起動。再compile/公式rerun/route変更/成功verify再実行0。
 - 04:28:09 JST/host23028/startUTC2026-10-20T19:28:09.0520825Zから同queued Windows jobをcanonical Cargo gate経由で実行。attempt folder job-50ad8e2de0b5a8e88853d62cb24aaa6f、wrapper-retry1が唯一の実受付。新rootのretry1-start/exit/windows-start/exit/job-*と実source/run/route/intent/PID作成時刻を照合して再開し、起動を重ねない。新配置の実登録/13工程/終了proof/回収/CI Gateはまだ未確認。元SDK/旧clone/073...拒否/guard/manifest/未回収/他担当を保持し、製品source/merge/Prdは親2641。owner入力/追加費用/APIキーAI/GPU/本人PC操作/Discord通知なし。
+
+### 新配置の実登録成功、公式Windows job開始（04:42 JST）
+
+- 新runtime397ca63のSDK copy/hash/stage/VM/COM/mTLS/clock/source-ready(04:40:44)/registration-intent(04:41:05)を経てconfiguredを04:41:24に保存。前回のSDKroot祖先列挙エラーを新sibling配置で通過した。固定LocalService token/実child同SID・非Admin検査とSYSTEM-only private proof tempのまま、元SDK/private ACLを変更していない。
+- owned runner37をnumeric receiptに保存し、19:42:10UTCの公式APIで同job118741826539がin_progress/runner_id37に一致。全28step中completed2/failure0/current3を確認。これは公式実行の開始で、原13Cargo工程完走/同SHA公式successではない。
+- 原run39201344542 attempt6/同source/ref/leaseを保持。host/VM/runnerはこの作業の正規処理で稼働中で、終了proof/公式job結果/回収/CI Gateは未確認。既存のlive sessionを待ち、受付/取消/追加rerun/成功verifyを重ねない。再開は新rootのevent/start/exit/cleanupと公式job/runner37の対応から続ける。

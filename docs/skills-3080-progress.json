@@ -1,7 +1,7 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-20T13:39:35.7752379Z",
+  "observed_at": "2026-10-20T15:09:57.3914257Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
   "phase_b": "First14 installed and discovered; broad adoption continues without count cap",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
@@ -286,7 +286,7 @@
   "site_entries_with_body": 9862,
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
-  "candidate_designs": 14,
+  "candidate_designs": 22,
   "independently_accepted": 14,
   "installed": 14,
   "integrated": 0,
@@ -333,16 +333,25 @@
     "integration_or_reference_candidates": 3,
     "policy_rewrite_required": 1,
     "authored_candidates": 8,
-    "independently_accepted": 0
+    "independently_accepted": 0,
+    "prepared_for_installation_review": 8,
+    "design_review": {
+      "todo": 3120,
+      "must": 0,
+      "all8upstream_entrypoints_read": true,
+      "new_installer_and_bundle_review": "pending",
+      "actual_installed": 0
+    }
   },
   "candidate_count_definitions": {
-    "candidate_designs": "14 renderable MIT plan targets; already installed",
-    "additional_authored_drafts": 8,
+    "candidate_designs": "All renderable plan targets; 14 installed plus 8 pending review",
+    "additional_authored_drafts_not_in_plans": 0,
     "authored_total": 22,
-    "draft_file": "skills-3080-docker-draft.json",
-    "drafts_renderable": false,
-    "drafts_installed": 0,
-    "independently_accepted": "14 final generated adaptation entrypoints and installer reviewed by3104; not all upstream bodies fully reviewed",
+    "installed": 14,
+    "pending_plan_targets": 8,
+    "archived_draft_targets": 8,
+    "archived_draft_is_subset_of_batch03": true,
+    "independently_accepted": "14 final adaptation entrypoints and installer reviewed by3104; not all source materials",
     "not_semantically_disposed_occurrences": 73206
   }
 }

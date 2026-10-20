@@ -29,10 +29,12 @@
   },
   "junctions_preserved": 3,
   "prior3048": "Separate previous new4/improved10; retained unchanged",
-  "real_turn_acceptance": "pending",
+  "real_turn_acceptance": "3116 verified14initial metadata matches,5explicitly opened guides,16negative and5positive cases in one turn; no full usage measurement or end-to-end execution",
   "pending_improvements": "3104 Suggestions/Nits retained; Must0 permits current fixed payload; no new bundle silently substituted",
   "overall_complete": false,
   "remaining_records": 73206,
   "remaining_definition": "73220 source occurrences minus14 specific installed upstream entrypoints; duplicates are not implicitly accepted",
-  "catalog_total": 73220
+  "catalog_total": 73220,
+  "manifest_sha256": "3309329f5c2338144800b295a568082cb8378ba9fc3f65d7084ee483456851f0",
+  "junction_scope": "The3Codex/Agents/Claude links were checked; other2were independently observed by3120, not included in original3count."
 }

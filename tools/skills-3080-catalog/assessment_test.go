@@ -97,7 +97,7 @@ func checkSourceAssessment(t *testing.T, file string) {
 			planned[c.Name] = true
 		}
 	}
-	if len(planned) != counts["new_adaptation_candidate"] {
+	if len(planned) != counts["new_adaptation_candidate"]+counts["new_candidate_requires_authoring"] {
 		t.Fatal("authored plans and new-candidate assessment differ")
 	}
 }

@@ -19,3 +19,22 @@ ToDo3100は、既存CLIに汎用の保護分類確定機能がないことを確
 配置データは原本へ書く前に、既存3048検査器の同じ構造・参照・ハッシュ検査をメモリ内で実行する。これが通っても、原本配置・Codex発見・実ターン評価の成功とは扱わない。配置処理は新規のみを扱い、既存targetは全件事前確認で拒否する。参照資料を作って照合した後、SKILL.mdを最後に作る。中断時は同期した記録と部分成果を残し、上書きで修復しない。
 
 上流の`.agents/invocation.md`、`SCOPE.md`、凍結miscの説明、betaの説明を固定版で読み、各候補へ上流状態と採用理由を追記した。完全な固定treeでLICENSE/NOTICE/COPYINGに該当するpathはrootのLICENSEだけだった。この確認は、上流の全参照資料や素材を包括的に採用する判断ではない。
+
+## 3116の実ターン受入と3120のDocker案レビュー
+
+3116は冒頭metadataの14名・正しい配置先を確認し、5本文を意図的に開いて5正例へ適用した。近い16負例では対象への過剰選択は無かった。1ターン内の境界評価で、独立16モデル試験や実製品の実行確認ではない。使用量全体は未観測。見える会話にcontext警告を観測しなかったことだけを記録する。
+
+3120は固定4cc10d5のDocker8原文を全文読み、Git blob・tree・原文・許諾・初回14件の実ファイルを独立照合した。Must0。ただしApache再配布に必要なS1と、plan/起動metadataのS4は配置前の条件なので今回反映する。
+
+| 指摘 | 今回の対応 |
+| --- | --- |
+| 3120 S1 | 選択入口自身のApache宣言、既知のDocker許諾原文SHA、個別scope/完全tree/入れ子notice無しを確認。SKILL.md本体へ出典・固定版・日本語への改変・公式版でない旨を表示し、動的なlicense名で参照を生成する。原文とApache原文は個別Skill内へ保持する固定データを作る。 |
+| S2・S3・S6・S7 | 未確認OAuthでは静的レビューまでと明記。evalのAPIキー自動転送、restricted、旧sandboxラッパー、host command、volumeサイズ、global範囲、近い負例を補足。MCP・APIキー・GPUを勝手に追加しない。 |
+| S4 | 8つのskill.yamlは既取得supplementから読み、8つのagents/openai.yamlは固定commitの公開YAMLだけを取得。全16の本文SHAと、追加8の固定Git blob SHAを確認した。MDX/text/templateの既拒否647には該当せず、再取得していない。8つともallow_implicit_invocationはtrue。付属MCP依存は資料として保持し、中央へ登録しない。batch03へsource_path/起動方針/上流状態/個別許諾を記録。 |
+| S5 | Apacheを含むnotice/metadata/plan/tree、初回実配置manifest・発見数・件数の関係をCIで確認。Dockerの候補区分もbatchと照合し、元の8草案を別の8件として足さない。 |
+| 3104の配置処理 | 個別許諾を型付きで検査。書込み無しpreflight、全target確認、receiptの中央外への限定、開始時bundleSHA/rootと失敗行を追加。2番目の既存targetで最初も作らない反例、途中失敗でprefix成果/journalを保持する反例、Windows祖先junction拒否を確認。SKILL.mdは同期済みpartialから新規hardlinkで原子的に公開し、既存名を置換しない。 |
+| 3104の旧14入口 | shoehornの説明とgrillingの壁打ち先の改善提案は、配布済みv2と旧版を保った更新手順が必要。新規専用applyで上書きして直したとは扱わない。次の限定更新として保持する。 |
+
+Apacheの正例が旧MIT限定で失敗するRedを確認し、生成後の改変表示/原文保持と不完全な許諾根拠の拒否をGreenで確認した。installer/catalogの対象test/vet、Windowsjunction反例、同じ3048検査器による8件40ファイルのメモリ内検査は成功。まだ中央への追加8件の配置は0。旧14件は固定079f9d9のbundleのままで、再renderや上書きはしていない。
+
+CIの残るGo CodeQLは、Linux専用のcc-pc-tools-linux runnerを待っていた。GitHub上のrunnerはonline/busyで、実行中の他ジョブを止めていない。共有runner待ちの既存担当3122があり、新しい同じ修復担当は作らない。最新の検査成功と新しい配置データの別モデル確認後に通常マージする。

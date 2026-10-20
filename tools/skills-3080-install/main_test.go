@@ -116,10 +116,10 @@ func TestRenderPinsSourceNoticeAndInvocation(t *testing.T) {
 	records, _ := json.Marshal([]SourceRecord{r})
 	os.WriteFile(filepath.Join(d, "records.json"), records, 0600)
 	explicit := true
-	target := Target{Name: "sample", Description: "指定された例を確認するときに使う。", Positive: "test", Negative: "production", Path: r.Path, SHA: r.SHA, URL: "https://github.com/public/source/blob/" + r.Commit + "/" + r.Path, Guidance: []string{"必要な例だけを確認する。"}, Status: "fixed", UpstreamExplicit: &explicit, LicenseReview: json.RawMessage(`{"scope":"entrypoint only"}`)}
+	target := Target{Name: "sample", Description: "指定された例を確認するときに使う。", Positive: "test", Negative: "production", Path: r.Path, SHA: r.SHA, URL: "https://github.com/public/source/blob/" + r.Commit + "/" + r.Path, Guidance: []string{"必要な例だけを確認する。"}, Status: "fixed", Changes: "Adapted for this workflow.", AdoptionReason: "Maintain this fixed entrypoint.", UpstreamExplicit: &explicit, LicenseReview: LicenseReview{Tree: strings.Repeat("b", 40), Complete: true, Paths: []string{"LICENSE"}, Nested: []string{}, Scope: "entrypoint only", Checked: "2026-10-20T00:00:00Z"}}
 	target.Invocation.Mode = "implicit_with_narrow_trigger"
 	target.Invocation.Reason = "fixture narrow workflow"
-	p := Plan{Repo: r.Repo, Commit: r.Commit, Targets: []Target{target}}
+	p := Plan{Repo: r.Repo, Commit: r.Commit, Tree: strings.Repeat("b", 40), Targets: []Target{target}}
 	p.License.Path = "notice.txt"
 	p.License.SHA = digest(notice)
 	p.License.ID = "MIT"

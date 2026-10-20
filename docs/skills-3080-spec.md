@@ -32,7 +32,7 @@ go -C tools/skills-3080-catalog run . -catalog <保存済みphase-a-catalog.json
 
 ## 継続と導入候補
 
-[最初の10候補](skills-3080-batch01.json)と[次の4候補](skills-3080-batch02.json)は作業単位で、全体の上限ではない。14件は中央へ新規配置し、70ファイルを読戻し検証した。[配置と発見の証拠](skills-3080-installation-evidence.json)と[実配置manifest](skills-3080-installed-manifest.json)を保持する。旧3048の新規4/改善10とは別の集合である。[Matt Pocockの38入口](skills-3080-mattpocock-assessment.json)と[Dockerの12入口](skills-3080-docker-assessment.json)は固定版の入口本文を全件読み、候補ごとの出典・理由・修正点を保持した。[Dockerの新規候補8件の本文案](skills-3080-docker-draft.json)を保存した。Apache許諾への生成対応と独立レビューが未完了で、配置は0件。参照先の全資料・script・assetの意味審査まで終えたとは主張しない。
+[最初の10候補](skills-3080-batch01.json)と[次の4候補](skills-3080-batch02.json)は作業単位で、全体の上限ではない。14件は中央へ新規配置し、70ファイルを読戻し検証した。[配置と発見の証拠](skills-3080-installation-evidence.json)と[実配置manifest](skills-3080-installed-manifest.json)を保持する。旧3048の新規4/改善10とは別の集合である。[Matt Pocockの38入口](skills-3080-mattpocock-assessment.json)と[Dockerの12入口](skills-3080-docker-assessment.json)は固定版の入口本文を全件読み、候補ごとの出典・理由・修正点を保持した。[Dockerの新規候補8件の本文案](skills-3080-docker-draft.json)を保存した。8件はbatch03と40ファイルの配置データへ生成済み。変更した配置ツールと実データの独立レビュー・中央配置は未完了で、配置は0件。参照先の全資料・script・assetの意味審査まで終えたとは主張しない。
 
 MattのPR用入口にある第三者クレジットは、[固定した補助出典の証拠](skills-3080-credit-evidence.json)でHumanlayerの対象本文とMIT原文を照合した。元16資料を置き換えたり、独立した新規Skillとして件数へ加えたりしない。未指定の過去版や全素材への包括的な許可とも扱わない。
 
@@ -43,3 +43,11 @@ MattのPR用入口にある第三者クレジットは、[固定した補助出�
 固定HEAD079f9d9と固定bundleに対する3104の別モデルレビューはMust0。通常の自動実行審査へ新規14名への書込みを別途提示し、許可された同じコマンドで配置した。既存原本とjunctionは変更していない。実行記録は作業場に同期保存し、最終complete行のtargetsを単独JSONへ取り出した。file contentを除いたmanifestを既存3048検査器の通常モードへ渡し、実ファイルの構造・参照・SHAを検査してPASSした。JSONL全体はmanifestとして読ませない。
 
 新規Codex app-serverのskills/listはmetadata297から311へ増え、今回14名の正しい配置先を全件発見、解析エラー0。これはモデルの実ターンでの選択・過剰選択・文脈警告の証拠ではない。独立した実ターン検査を別工程で行う。73,220記録の残りを処理済みにせず、候補の小さな配置単位を継続する。
+
+## 次のDocker8件
+
+[batch03](skills-3080-batch03.json)は元の8草案を配置可能な計画へしたもので、別の8件を増やしたのではない。上流の[起動metadata原文](skills-3080-docker-invocation.json)は根拠資料で、MCPやtool依存を自動登録する指示にはしない。Docker AgentのOAuth互換実行とstandalone sbxの稼働は未検証であり、静的レビューが使えることとCLIが実行できることを区別する。
+
+Apache入口本体の改変表示、原文・許諾の保全、入れ子noticeを未処理のまま採用しないことを生成器で確認する。新規配置は全対象を事前確認し、書込みは別途の固定版審査を通す。preflightは書かない。途中失敗はfailed記録とprefix成果を残し、自動の上書き再試行をしない。SKILL.mdは参照を書き同期した後、新規hardlinkで原子的に公開する。hardlink非対応なら失敗として保持し、非原子的な上書きへ切り替えない。
+
+初回14のbundleは079f9d9で固定されている。source_tree等を補った現在のplanを再renderして旧70ファイルと同じと主張しない。配布済み入口の改善には、既存版のSHAとバックアップを照合する別の限定更新が必要であり、新規専用applyで既存名を消して通さない。

@@ -137,30 +137,11 @@ func Fetch(ctx context.Context, pin Pin) (result Packet, retErr error) {
 		return Packet{}, fixedErr()
 	}
 	verify := func() (repo, error) {
-
-		var r repo
-
-		if api(ctx, fmt.Sprintf("repositories/%d", RepoID), &r) != nil || r.ID != RepoID || r.Owner.Login != "AutoDevJapan" || r.FullName != "AutoDevJapan/GoDD-MCP-Alpha" || !r.Private || r.Fork || !r.Permissions.Admin {
-			return repo{}, fixedErr()
+		r, detail, err := verifySourceIdentity(ctx, pin, api)
+		if err != nil {
+			stage += "_" + detail
 		}
-
-		var p pull
-
-		if api(ctx, fmt.Sprintf("repos/%s/pulls/%d", r.FullName, PR), &p) != nil || p.State != "open" || p.Head.SHA != pin.HeadSHA || p.Head.Ref != HeadRef || p.Head.Repo.ID != RepoID || p.Base.Repo.ID != RepoID || p.Head.Repo.FullName != r.FullName || p.Base.Repo.FullName != r.FullName || p.Head.Repo.Fork {
-			return repo{}, fixedErr()
-		}
-
-		var ref struct {
-			Object struct {
-				SHA string `json:"sha"`
-			} `json:"object"`
-		}
-
-		if api(ctx, "repos/"+r.FullName+"/git/ref/heads/"+url.PathEscape(HeadRef), &ref) != nil || ref.Object.SHA != pin.HeadSHA {
-			return repo{}, fixedErr()
-		}
-
-		return r, nil
+		return r, err
 	}
 	stage = "identity"
 	r, err := verify()
@@ -229,6 +210,39 @@ func Fetch(ctx context.Context, pin Pin) (result Packet, retErr error) {
 	return p, nil
 }
 
+// Return only a fixed diagnostic vocabulary. API errors and identity values
+// never become error text, and a rejection still prevents all later reads.
+func verifySourceIdentity(ctx context.Context, pin Pin, call func(context.Context, string, any) error) (repo, string, error) {
+	var r repo
+	if err := call(ctx, fmt.Sprintf("repositories/%d", RepoID), &r); err != nil {
+		return repo{}, "repository_api_" + sourceAPICode(err), fixedErr()
+	}
+	if r.ID != RepoID || r.Owner.Login != "AutoDevJapan" || r.FullName != "AutoDevJapan/GoDD-MCP-Alpha" || !r.Private || r.Fork || !r.Permissions.Admin {
+		return repo{}, "repository_identity", fixedErr()
+	}
+	var p pull
+	if err := call(ctx, fmt.Sprintf("repos/%s/pulls/%d", r.FullName, PR), &p); err != nil {
+		return repo{}, "pull_api_" + sourceAPICode(err), fixedErr()
+	}
+	if p.State != "open" || p.Head.SHA != pin.HeadSHA || p.Head.Ref != HeadRef || p.Head.Repo.ID != RepoID || p.Base.Repo.ID != RepoID || p.Head.Repo.FullName != r.FullName || p.Base.Repo.FullName != r.FullName || p.Head.Repo.Fork {
+		return repo{}, "pull_identity", fixedErr()
+	}
+	var ref identityRef
+	if err := call(ctx, "repos/"+r.FullName+"/git/ref/heads/"+url.PathEscape(HeadRef), &ref); err != nil {
+		return repo{}, "ref_api_" + sourceAPICode(err), fixedErr()
+	}
+	if ref.Object.SHA != pin.HeadSHA {
+		return repo{}, "ref_identity", fixedErr()
+	}
+	return r, "", nil
+}
+
+type identityRef struct {
+	Object struct {
+		SHA string `json:"sha"`
+	} `json:"object"`
+}
+
 // GitHub returns null verification.payload for unsigned commits. Reconstruct
 // only candidates whose real Git object ID equals the explicitly pinned SHA.
 // No substitute commit or synthetic HEAD can pass this check.
@@ -276,16 +290,33 @@ func runGH(ctx context.Context, args ...string) ([]byte, error) {
 	var out bounded
 	out.limit = maxArchive
 	c.Stdout = &out
-	c.Stderr = io.Discard
-	if err := c.Run(); err != nil {
-		return nil, fixedErr()
+	var diagnostic bounded
+	diagnostic.limit = 64 << 10
+	c.Stderr = &diagnostic
+	err := c.Run()
+	if out.overflow || diagnostic.overflow {
+		return nil, &sourceAPIError{"capture"}
+	}
+	if err != nil {
+		code := "start"
+		var exit *exec.ExitError
+		switch {
+		case ctx.Err() != nil:
+			code = "context"
+		case errors.Is(err, exec.ErrWaitDelay):
+			code = "drain"
+		case errors.As(err, &exit):
+			code = sourceExitCode(string(diagnostic.Bytes()))
+		}
+		return nil, &sourceAPIError{code}
 	}
 	return out.Bytes(), nil
 }
 
 type bounded struct {
-	data  bytes.Buffer
-	limit int
+	data     bytes.Buffer
+	limit    int
+	overflow bool
 }
 
 func (b *bounded) Len() int      { return b.data.Len() }
@@ -293,6 +324,7 @@ func (b *bounded) Bytes() []byte { return b.data.Bytes() }
 
 func (b *bounded) Write(p []byte) (int, error) {
 	if len(p) > b.limit-b.Len() {
+		b.overflow = true
 		return 0, errors.New("limit")
 	}
 	return b.data.Write(p)
@@ -303,9 +335,41 @@ func api(ctx context.Context, endpoint string, v any) error {
 		return e
 	}
 	if json.Unmarshal(b, v) != nil {
-		return fixedErr()
+		return &sourceAPIError{"json"}
 	}
 	return nil
+}
+
+type sourceAPIError struct{ code string }
+
+func (*sourceAPIError) Error() string { return "source API rejected" }
+
+func sourceAPICode(err error) string {
+	var e *sourceAPIError
+	if errors.As(err, &e) && e != nil {
+		switch e.code {
+		case "start", "context", "drain", "exit", "json", "capture", "denied", "transport":
+			return e.code
+		}
+	}
+	return "operation"
+}
+
+// Only complete stderr from a nonzero exit is inspected in RAM. Never return
+// an arbitrary substring, status body, endpoint, or authentication value.
+func sourceExitCode(stderr string) string {
+	s := strings.ToLower(stderr)
+	for _, marker := range []string{"denied", "rejected", "forbidden", "policy", "http 401", "http 403", "authentication", "gh auth login"} {
+		if strings.Contains(s, marker) {
+			return "denied"
+		}
+	}
+	for _, marker := range []string{"tls handshake timeout", "i/o timeout", "connection reset by peer", "temporary failure in name resolution", "no such host", "unexpected eof", "http 502", "http 503", "http 504"} {
+		if strings.Contains(s, marker) {
+			return "transport"
+		}
+	}
+	return "exit"
 }
 func readAPI(ctx context.Context, endpoint string) ([]byte, error) {
 	b, e := runGH(ctx, endpoint)

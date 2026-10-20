@@ -12,6 +12,13 @@ CI source. It is a module, not a product checkout command or an executor.
   repository/permissions, same-repository open PR, branch ref, commit/tree,
   workflow bytes, complete recursive tree, and repository/ref again after the
   reads. It is deliberately not tested against the real GitHub source here.
+  A rejection reports a fixed stage only. Identity-stage diagnostics distinguish
+  the repository, pull request, and branch ref, and distinguish an identity
+  mismatch from API start/context/drain/exit/JSON/capture/denied/transport/other
+  failure. Complete nonzero-exit stderr is bounded to 64 KiB and classified in
+  RAM; truncated capture is rejected without classifying its prefix. They do not
+  contain response bodies, endpoints, identity values, or underlying error text.
+  These diagnostics add no retry and do not relax any identity check.
 - `Encode(packet)` and `Decode(raw, expectedPin)` use a 256 MiB bounded strict
   JSON envelope. Decode rejects unknown/duplicate fields, multiple documents,
   invalid object hashes, and any packet whose Pin differs from the caller's

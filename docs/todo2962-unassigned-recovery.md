@@ -49,3 +49,15 @@ collectorの不具合を直しても、queueが`needs_recovery`から復旧で�
 `LINK_OR_REPARSE_POINT`で停止した。別の削除・移動経路は試さず原物を保持し、
 独立工程3174がsafe-deleteだけの限定した正規修正と退避を担当する。
 この復旧CLIの実操作、PR149の正式受入・merge・次の通常供給・hash・回収は未完了である。
+
+## 次回以降のSDK資源も通常回収する
+
+初回1件だけの特別退避を継続運用の回収手順にしない。新しい隔離workerには
+`RUSTUP_HARDLINK_PROXIES=1`と新しい綴りの`RUSTUP_FORCE_HARDLINK_PROXIES=1`を明示し、
+rustupのproxyを同じowned root内の実体へのhardlinkにする。外部hardlinkやreparseを
+受理するようsafe-deleteを緩めず、既存rootやリンク先を編集しない。
+公式rustup-initでtoolchainなし・PATH変更なしの隔離試験を行い、14実行名がreparse無しで
+作られ、通常safe-deleteのplan→通常削除→finishが成功することを確認した。
+この試験は製品のRust検査、登録、仮想service accountでの正式受入とは区別する。
+根拠: [rustup 1.29のproxy作成](https://github.com/rust-lang/rustup/blob/1.29.0/src/cli/self_update.rs)、
+[新しい設定名](https://github.com/rust-lang/rustup/blob/main/src/cli/self_update.rs)。

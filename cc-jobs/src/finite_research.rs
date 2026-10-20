@@ -47,6 +47,11 @@ fn binding(job: &Value, row: &Value, hash: &str, at: u64) -> Option<Value> {
         || s(job, "model").is_empty()
         || job["model"] != scheduler["selection"]["model"]
         || job["effort"] != scheduler["selection"]["effort"]
+        || s(job, "prompt_source").is_empty()
+        || !same(
+            &job["prompt_source"],
+            &s(scheduler, "prompt").replace('\\', "/"),
+        )
         || job["sandbox"] != "read-only"
         || job["network"] != false
         || row["stopped"] == true
@@ -62,7 +67,7 @@ fn binding(job: &Value, row: &Value, hash: &str, at: u64) -> Option<Value> {
     Some(
         json!({"version":1,"todo_id":2939,"parent_todo_id":2757,"attempt":175,
         "spec_sha256":SPEC_HASH,"source_job":SOURCE,"expires":END,"launch_key":key,
-        "subwork":job["subwork"],"cwd":TREE,"model":job["model"],"effort":job["effort"],
+        "subwork":job["subwork"],"cwd":TREE,"model":job["model"],"effort":job["effort"],"prompt_source":job["prompt_source"],
         "sandbox":"read-only","network":false,"approval_policy":"on-request","approvals_reviewer":"auto_review"}),
     )
 }
@@ -112,7 +117,11 @@ impl Context {
             return Ok(None);
         }
         let db = self.read_json(&self.todo_store())?;
-        let proof = self.research_qualification(job, &db)?;
+        let mut proof = self.research_qualification(job, &db)?;
+        if let Some(proof) = proof.as_mut() {
+            let original = std::fs::read(self.job_dir(s(job, "id")).join("prompt.md"))?;
+            proof["prompt_sha256"] = json!(cc_job_policy::product_retry::digest(&original));
+        }
         if proof.as_ref() != Some(&job["finite_research_approval"]) {
             return Err(Error::new(
                 "finite research review submission qualification changed or expired",
@@ -135,10 +144,10 @@ mod tests {
         let key = "a".repeat(32);
         let row = json!({"id":2939,"project":"cc-pc-tools-rs","status":"todo","dispatchable":true,
             "spec":SPEC,"subwork":relation,"needs":[],"scheduler":{"key":key,"attempt":175,
-            "worktree":TREE,"selection":{"model":"anthropic/claude-sonnet-5-5","effort":"high"}}});
+            "worktree":TREE,"prompt":"D:/CC/Tools/scheduler/prompts/2939-fixture.md","selection":{"model":"anthropic/claude-sonnet-5-5","effort":"high"}}});
         let job = json!({"id":"next","todo_id":2939,"sandbox":"read-only","network":false,
             "subwork_validated":true,"subwork":relation,"subwork_spec":SPEC,"assigned_needs":[],
-            "launch_key":key,"cwd":TREE,"model":"anthropic/claude-sonnet-5-5","effort":"high"});
+            "launch_key":key,"cwd":TREE,"prompt_source":"D:/CC/Tools/scheduler/prompts/2939-fixture.md","model":"anthropic/claude-sonnet-5-5","effort":"high"});
         (job, row)
     }
     #[test]
@@ -172,6 +181,7 @@ mod tests {
             "hash",
             "expired",
             "early",
+            "prompt",
         ] {
             let (mut job, mut row) = fixture();
             let mut hash = SPEC_HASH;
@@ -204,6 +214,7 @@ mod tests {
                 "hash" => hash = "changed",
                 "expired" => at = END,
                 "early" => at = START - 1,
+                "prompt" => job["prompt_source"] = json!("unrelated.md"),
                 _ => unreachable!(),
             }
             assert!(binding(&job, &row, hash, at).is_none(), "{changed}");

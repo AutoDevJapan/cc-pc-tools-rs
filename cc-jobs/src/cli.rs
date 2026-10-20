@@ -1181,6 +1181,10 @@ impl Context {
         {
             stored_prompt.extend_from_slice(guidance.as_bytes());
         }
+        if job["finite_research_approval"].is_object() {
+            job["finite_research_approval"]["prompt_sha256"] =
+                json!(cc_job_policy::product_retry::digest(&stored_prompt));
+        }
         fs::write(&dst, stored_prompt).map_err(|e| Error::file_io("write prompt", &dst, e))?;
         let mut stored = json!({"id":jid});
         stored

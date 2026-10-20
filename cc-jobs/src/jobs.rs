@@ -1426,16 +1426,34 @@ impl Context {
             && !crate::pool_retry::same_attempt(&job, &fresh)
         {
             self.rt
-                .diagnostic("モデル混雑の再開を保存せず終了: 元の実行世代が更新されています");
+                .diagnostic("モデル混雑の終端を保存し再試行を停止: 元の実行世代が更新されています");
+            let completed = crate::pool_retry::stale_completion(&job, &fresh, &self.rt.now());
+            self.save(&completed)?;
+            // Only the drained generation's tabs may be closed. A replacement
+            // worker keeps its own current browser work.
+            let drained_generation = s(&fresh, "status") == "running"
+                && s(&completed, "status") == "failed";
+            drop(state);
+            drop(gate);
+            #[cfg(windows)]
+            drop(chrome_proxy);
+            if drained_generation {
+                self.close_chrome_tabs(jid);
+            }
+            if let Some(n) = &mut notifier {
+                n.close();
+            }
             return Ok(false);
         }
+        let mut todo_unavailable=false;
         let todo_guard = if gate.is_some()
             && s(&job, "last_failure_kind") == "capacity"
             && job["todo_id"].is_number()
         {
-            Some(FileLock::acquire(
-                &self.todo_store().with_file_name("todo.lock"),
-            )?)
+            match FileLock::acquire(&self.todo_store().with_file_name("todo.lock")) {
+                Ok(lock)=>Some(lock),
+                Err(_)=>{todo_unavailable=true;self.rt.diagnostic("モデル混雑の再開を延期: ToDoの排他を取得できません");None}
+            }
         } else {
             None
         };
@@ -1447,11 +1465,12 @@ impl Context {
         };
         // Capacity switches have their own bound. A combined capacity/429
         // message must not escape that bound through the same-model retry.
-        let retry = gate.is_some()
-            && !cleanup_failed
+        let retry = !cleanup_failed
             && !setup_failed
             && if s(&job, "last_failure_kind") == "capacity" {
-                if owner_current {
+                if gate.is_none(){false}
+                else if todo_unavailable {self.defer_capacity_lock(&mut job)}
+                else if owner_current {
                     self.retry_capacity(&mut job)
                 } else {
                     self.defer_capacity_owner(&mut job)
@@ -1579,11 +1598,7 @@ pub(crate) fn codex_args_with_policy(j: &Value, policy: cc_job_policy::Policy) -
         "-s".into(),
         policy.sandbox.into(),
     ];
-    if s(j, "model")
-        .strip_prefix("openai/")
-        .unwrap_or(s(j, "model"))
-        .starts_with("gpt-")
-    {
+    if crate::pool_retry::requested_tier(s(j,"model"))==Some("fast") {
         // A user's reasoning level is independent from processing speed. Keep
         // explicit effort above, but do not inherit a slower global tier.
         args.extend([
@@ -1592,11 +1607,7 @@ pub(crate) fn codex_args_with_policy(j: &Value, policy: cc_job_policy::Policy) -
             "-c".into(),
             "features.fast_mode=true".into(),
         ]);
-    } else if s(j, "model")
-        .strip_prefix("anthropic/")
-        .unwrap_or(s(j, "model"))
-        .starts_with("claude-")
-    {
+    } else if crate::pool_retry::requested_tier(s(j,"model"))==Some("default") {
         // GPT Fast is not authorization to request Anthropic's separate Fast tier.
         args.extend([
             "-c".into(),

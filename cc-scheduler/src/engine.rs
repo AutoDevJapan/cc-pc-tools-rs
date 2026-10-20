@@ -21,7 +21,7 @@ use std::{
 fn launch_inputs(item: &Value) -> Value {
     json!({"spec":item["spec"],"needs":item["needs"],"subwork":item["subwork"],
         "title":item["title"],"project":item["project"],"dispatchable":item["dispatchable"],
-        "model":item["model"],"effort":item["effort"],"wait_on":item["wait_on"],
+        "model":item["model"],"effort":item["effort"],"wait_on":item["wait_on"],"review_source_jobs":item["review_source_jobs"],
         "worktree":item["scheduler"]["worktree"],"branch":item["scheduler"]["branch"],
         "not_before":item["scheduler"]["not_before"],"resource_wait":item["scheduler"]["resource_wait"],
         "workspace_receipt":item["scheduler"]["workspace_receipt"],"jobs":item["jobs"],
@@ -1305,6 +1305,29 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             _ if model.starts_with("claude-") => format!("anthropic/{model}"),
             _ => model.to_owned(),
         });
+        if cc_ask::job_policy::review_task("",s(&selection["task_type"]))
+            || s(&item["subwork"]["kind"])=="review" {
+            let sources=cc_ask::job_policy::review_source_jobs(&item,&self.todo()?);
+            let mut excluded=Vec::<String>::new();
+            for id in &sources {
+                let author=jobs.iter().find(|job|s(&job["id"])==id)
+                    .ok_or(Error("ReviewSourceUnavailable"))?;
+                excluded.extend(cc_ask::job_policy::author_models(author));
+            }
+            excluded.sort();excluded.dedup();
+            let explicit=truth(&item["model"]) || truth(&accepted_options["model"]) || selection["model_explicit"]==true;
+            if explicit && excluded.iter().any(|author|cc_ask::job_policy::same_model(author,s(&selection["model"]))) {
+                return Err(Error("ReviewModelConflict"));
+            }
+            if !explicit {
+                let profile=cc_ask::job_policy::review_profile(&excluded).ok_or(Error("ReviewModelUnavailable"))?;
+                selection["model"]=json!(profile.model);
+                if !truth(&item["effort"]) && !truth(&accepted_options["effort"]) {selection["effort"]=json!(profile.effort);}
+            }
+            selection["review_source_jobs"]=json!(sources);
+            selection["review_excluded_models"]=json!(excluded);
+            selection["task_type"]=json!("review");
+        }
         if !valid_model(s(&selection["model"])) {
             return Err(Error("ValueError"));
         }

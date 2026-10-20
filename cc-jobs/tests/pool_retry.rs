@@ -1,7 +1,7 @@
 use cc_jobs::{Value, json, pool_retry::*};
 
 fn accounts() -> Value {
-    json!({"accounts":[
+    json!({"_account_labels":{"private-a":"p000001","private-b":"p000002"},"accounts":[
         {"id":"private-a","type":"codex","health":"Healthy","creditsAfterLimit":false,"quota":{"weeklyPercent":20.,"weeklyResetAt":2000.}},
         {"id":"private-b","type":"codex","health":"Healthy","creditsAfterLimit":false,"quota":{"weeklyPercent":2.,"weeklyResetAt":2000.}}
     ]})
@@ -177,4 +177,77 @@ fn per_job_account_catalog_preserves_native_capabilities_and_explicit_effort() {
     assert_eq!(source["models"][0]["slug"], "gpt-6.1-sol");
     request["model"] = json!("owner-special-model");
     assert!(account_catalog(&source, &request).is_none());
+}
+
+#[test]
+fn stale_terminal_record_keeps_new_scope_and_never_finishes_a_new_worker() {
+    let source = json!({"id":"worker","status":"failed","pid":1,"pid_created":2,"codex_pid":3,
+        "codex_pid_created":4,"started_at":"old","exit_code":1,"duration_ms":10});
+    let mut changed = source.clone();
+    changed["status"] = json!("running");
+    changed["prompt"] = json!("new-scope");
+    let saved = stale_completion(&source, &changed, "now");
+    assert_eq!(saved["status"], "failed");
+    assert_eq!(saved["prompt"], "new-scope");
+    assert_eq!(
+        saved["stale_capacity_completion"]["failure_kind"],
+        "capacity"
+    );
+    changed["codex_pid_created"] = json!(5);
+    assert_eq!(
+        stale_completion(&source, &changed, "now")["status"],
+        "running"
+    );
+}
+
+#[test]
+fn failed_log_label_is_resolved_to_every_alias_of_the_account() {
+    let mut records = accounts();
+    records["_account_labels"]["private-a"] = json!("pabcdef");
+    let mut log = logs();
+    log["logs"][0]["accountLogLabel"] = json!("pabcdef");
+    let mut mapping = namespaces();
+    mapping["p000003"] = json!("private-a");
+    let pool = snapshot(&records, &mapping, &log, &job(), 1000.);
+    assert_eq!(pool["failed"], json!(["p000001", "p000003"]));
+    assert_eq!(
+        next_selector(&job(), &pool, 1000.),
+        Some(Some("p000002".into()))
+    );
+    records["_account_labels"] = Value::Null;
+    assert_eq!(
+        snapshot(&records, &mapping, &log, &job(), 1000.)["verified"],
+        false
+    );
+}
+
+#[test]
+fn persisted_log_labels_exclude_a_previously_failed_account_after_alias_renaming() {
+    let mut request = job();
+    request["capacity_tried_accounts"] = json!(["p000001"]);
+    request["capacity_tried_labels"] = json!(["p000001"]);
+    let mut mapping = namespaces();
+    mapping.as_object_mut().unwrap().remove("p000001");
+    mapping["p000003"] = json!("private-a");
+    let mut log = logs();
+    log["logs"][0]["accountLogLabel"] = json!("p000002");
+    let pool = snapshot(&accounts(), &mapping, &log, &request, 1000.);
+    assert_eq!(pool["verified"], true);
+    assert_eq!(next_selector(&request, &pool, 1000.), Some(None));
+    assert!(
+        pool["failed"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("p000003"))
+    );
+}
+
+#[test]
+fn a_saved_selector_cannot_turn_a_successful_request_into_failure_attribution() {
+    let mut request = job();
+    request["capacity_account_selector"] = json!("p000001");
+    let mut log = logs();
+    log["logs"][0]["status"] = json!(200);
+    let pool = snapshot(&accounts(), &namespaces(), &log, &request, 1000.);
+    assert_eq!(next_selector(&request, &pool, 1000.), None);
 }

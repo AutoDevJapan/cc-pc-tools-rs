@@ -12,7 +12,9 @@ const MAX_SWITCHES: u64 = 3;
 const MAX_WAITS: u64 = 3;
 
 pub fn provider(model: &str) -> Option<&'static str> {
-    if model.starts_with("anthropic/claude-") || model.starts_with("claude-") {
+    if ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5"]
+        .contains(&model.strip_prefix("anthropic/").unwrap_or(model))
+    {
         Some("anthropic")
     } else if crate::pool_retry::native_model(model).is_some() {
         Some("openai")
@@ -59,11 +61,8 @@ pub fn failure_kind(event: &Value) -> Option<&'static str> {
 }
 
 pub fn review_job(job: &Value) -> bool {
-    let task = s(job, "task_type");
-    task.contains("review")
+    cc_job_policy::review_task(s(job, "name"), s(job, "task_type"))
         || s(&job["subwork"], "kind") == "review"
-        || s(job, "name").ends_with("-review")
-        || s(job, "name").starts_with("rev-")
 }
 
 /// Preserve explicit lightweight and independent review constraints.
@@ -142,13 +141,7 @@ fn s_value(value: &Value) -> &str {
 }
 
 fn same_model(left: &str, right: &str) -> bool {
-    fn bare(model: &str) -> &str {
-        model
-            .strip_prefix("openai/")
-            .or_else(|| model.strip_prefix("anthropic/"))
-            .unwrap_or(model)
-    }
-    bare(left) == bare(right)
+    cc_job_policy::same_model(left, right)
 }
 
 pub fn is_capacity(message: &str) -> bool {
@@ -158,6 +151,15 @@ pub fn is_capacity(message: &str) -> bool {
 }
 
 impl Context {
+    pub(crate) fn defer_capacity_lock(&self, job: &mut Value) -> bool {
+        if job["capacity_wait_count"].as_u64().unwrap_or(0) >= MAX_WAITS {
+            return false;
+        }
+        let session = normalize_uuid(s(job, "thread_id"))
+            .or_else(|| normalize_uuid(s(job, "resume_session")))
+            .unwrap_or_default();
+        self.wait_capacity(job, &session, self.rt.epoch())
+    }
     pub(crate) fn defer_capacity_owner(&self, job: &mut Value) -> bool {
         if s(job, "status") != "failed" || job["cancel_requested"] == true {
             return false;
@@ -174,42 +176,99 @@ impl Context {
         job["activity"] = json!("元のToDoの担当・停止・依存関係を再確認するため待機");
         true
     }
-    /// Registration must never publish a known same-model review. Selection
-    /// callers can choose another model; this boundary must not guess an author.
-    pub(crate) fn validate_review_launch(&self, job: &mut Value) -> Result<()> {
+    fn review_provenance(&self, job: &Value) -> Result<(Vec<String>, Vec<String>)> {
+        let mut authors: Vec<String> = job["review_excluded_models"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|v| v.as_str().map(str::to_owned))
+            .collect();
+        let mut sources: Vec<String> = job["review_source_jobs"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(|v| v.as_str().map(str::to_owned))
+            .collect();
+        for id in [
+            s(job, "parent_job_id"),
+            s(&job["subwork"], "origin_job_id"),
+            s(&job["fixed_read_only_review"], "parent_job_id"),
+            s(&job["fixed_review_requalification"], "parent_job_id"),
+        ] {
+            if !id.is_empty() {
+                sources.push(id.into());
+            }
+        }
+        sources.sort();
+        sources.dedup();
+        if job["review_source_verified"] == true && !authors.is_empty() {
+            return Ok((sources, authors));
+        }
+        for id in &sources {
+            if !crate::queue::valid_job_id(id) {
+                return Err(Error::new("invalid review source job identity"));
+            }
+            let source = self.load(id)?;
+            if s(&source, "id") != id {
+                return Err(Error::new("review source job identity changed"));
+            }
+            authors.extend(cc_job_policy::author_models(&source));
+        }
+        authors.sort();
+        authors.dedup();
+        Ok((sources, authors))
+    }
+    /// Durable source metadata survives the end of the live parent relationship.
+    pub(crate) fn validate_review_launch(
+        &self,
+        job: &mut Value,
+        known_jobs: &[Value],
+    ) -> Result<()> {
         if !review_job(job) {
             return Ok(());
         }
-        let mut excluded = job["review_excluded_models"]
-            .as_array()
-            .cloned()
-            .unwrap_or_default();
-        if !s(job, "parent_job_id").is_empty() {
-            let parent = self.load(s(job, "parent_job_id"))?;
-            for field in ["model", "requested_model"] {
-                if parent[field].is_string() {
-                    excluded.push(parent[field].clone());
-                }
-            }
-            for entry in parent["capacity_history"].as_array().into_iter().flatten() {
-                for field in ["from_model", "to_model"] {
-                    if entry[field].is_string() {
-                        excluded.push(entry[field].clone());
+        let (mut sources, mut authors) = self.review_provenance(job)?;
+        if authors.is_empty() && sources.is_empty() {
+            for source in known_jobs.iter().filter(|source| !review_job(source)) {
+                let cwd = s(job, "cwd");
+                let author_cwd = s(source, "cwd");
+                let same_tree = !cwd.is_empty()
+                    && !author_cwd.is_empty()
+                    && cc_job_policy::work_owner::norm(std::path::Path::new(cwd))
+                        == cc_job_policy::work_owner::norm(std::path::Path::new(author_cwd));
+                let same_pr = !s(&job["work_owner"], "repository").is_empty()
+                    && job["work_owner"]["repository"] == source["work_owner"]["repository"]
+                    && job["work_owner"]["pr"].as_u64().is_some_and(|pr| pr > 0)
+                    && job["work_owner"]["pr"] == source["work_owner"]["pr"];
+                if (same_tree || same_pr) && crate::queue::valid_job_id(s(source, "id")) {
+                    let models = cc_job_policy::author_models(source);
+                    if !models.is_empty() {
+                        sources.push(s(source, "id").into());
+                        authors.extend(models);
                     }
                 }
             }
         }
-        if excluded
+        if authors.is_empty() {
+            return Err(Error::new("review source model metadata unavailable"));
+        }
+        if authors
             .iter()
-            .any(|v| same_model(s_value(v), s(job, "model")))
+            .any(|author| same_model(author, s(job, "model")))
         {
-            return Err(Error::new(
-                "independent review requires a model different from the source author",
-            ));
+            if job["model_explicit"] != false || !s(job, "launch_key").is_empty() {
+                return Err(Error::new(
+                    "independent review requires a model different from the source author",
+                ));
+            }
+            let profile = cc_job_policy::review_profile(&authors)
+                .ok_or_else(|| Error::new("no independent review model is available"))?;
+            job["model"] = json!(profile.model);
+            job["requested_model"] = job["model"].clone();
         }
-        if !excluded.is_empty() {
-            job["review_excluded_models"] = json!(excluded);
-        }
+        job["review_excluded_models"] = json!(authors);
+        job["review_source_jobs"] = json!(sources);
+        job["review_source_verified"] = json!(true);
         Ok(())
     }
     /// Query before taking queue/state locks. Persist only safe provider metadata.
@@ -307,40 +366,12 @@ impl Context {
         // A review must remain different from the model that wrote the source.
         // Read only its persisted model metadata, never copy the parent's prompt.
         let mut selection = job.clone();
-        if review_job(job)
-            && s(job, "parent_job_id").is_empty()
-            && !job["review_excluded_models"]
-                .as_array()
-                .is_some_and(|v| !v.is_empty())
-        {
-            job["capacity_exhausted"] = json!(true);
-            return stop("別モデルレビューの実装担当を確認できません");
-        }
-        if review_job(job) && !s(job, "parent_job_id").is_empty() {
-            let parent = match self.load(s(job, "parent_job_id")) {
-                Ok(parent) => parent,
-                Err(_) => {
-                    job["capacity_exhausted"] = json!(true);
-                    return stop("実装担当のモデル情報を確認できません");
-                }
-            };
-            let mut excluded = selection["review_excluded_models"]
-                .as_array()
-                .cloned()
-                .unwrap_or_default();
-            for field in ["model", "requested_model"] {
-                if !s(&parent, field).is_empty() {
-                    excluded.push(parent[field].clone());
-                }
+        if review_job(job) {
+            if let Ok((sources, authors)) = self.review_provenance(job) {
+                selection["review_source_jobs"] = json!(sources);
+                selection["review_source_verified"] = json!(!authors.is_empty());
+                selection["review_excluded_models"] = json!(authors);
             }
-            for entry in parent["capacity_history"].as_array().into_iter().flatten() {
-                for field in ["from_model", "to_model"] {
-                    if entry[field].is_string() {
-                        excluded.push(entry[field].clone());
-                    }
-                }
-            }
-            selection["review_excluded_models"] = json!(excluded);
         }
         // An older incorrectly routed reviewer cannot acquire a second attempt
         // on its author's model, including the provider-qualified spelling.
@@ -385,14 +416,30 @@ impl Context {
                     let entry = json!({"kind":"same_model_account_retry","attempt":same_count+1,
                         "at":self.rt.now(),"session":session,"from_model":job["model"],"to_model":job["model"],
                         "account_selector":selector,"failure_kind":"capacity","requested_effort":job["effort"],
-                        "requested_tier":"fast","observation":pool["observation"],"retry_not_before":deadline});
+                        "requested_tier":crate::pool_retry::requested_tier(s(job,"model")),"observation":pool["observation"],"retry_not_before":deadline});
                     if job["capacity_history"].is_null() {
                         job["capacity_history"] = json!([]);
                     }
                     job["capacity_history"].as_array_mut().unwrap().push(entry);
                     job["capacity_same_model_retry_count"] = json!(same_count + 1);
                     job["capacity_tried_accounts"] = json!(tried);
+                    let mut labels: Vec<_> = pool["failed_labels"]
+                        .as_array()
+                        .cloned()
+                        .unwrap_or_default();
+                    if let Some(label) = pool["public_labels"][&selector]
+                        .as_str()
+                        .filter(|label| crate::pool_retry::public_selector(label))
+                    {
+                        labels.push(json!(label));
+                    }
+                    job["capacity_tried_labels"] = json!(labels);
                     job["capacity_account_selector"] = json!(selector);
+                    if selection["review_excluded_models"].is_array() {
+                        job["review_excluded_models"] = selection["review_excluded_models"].clone();
+                        job["review_source_jobs"] = selection["review_source_jobs"].clone();
+                        job["review_source_verified"] = selection["review_source_verified"].clone();
+                    }
                     job["capacity_wait_error"] = job["last_error"].clone();
                     prepare_resume(job, &session, &self.rt.now());
                     job["capacity_wait_pending"] = json!(false);
@@ -414,6 +461,14 @@ impl Context {
                 }
                 _ => (), // Verified alternatives exhausted, or finite metadata waits spent.
             }
+        }
+        if review_job(job)
+            && !selection["review_excluded_models"]
+                .as_array()
+                .is_some_and(|v| !v.is_empty())
+        {
+            job["capacity_exhausted"] = json!(true);
+            return stop("モデルの切替に必要なレビューの実装担当を確認できません");
         }
         let mut snapshots = std::collections::HashMap::new();
         let next = if count < MAX_SWITCHES {
@@ -460,6 +515,8 @@ impl Context {
         job["capacity_retry_count"] = json!(count + 1);
         if selection["review_excluded_models"].is_array() {
             job["review_excluded_models"] = selection["review_excluded_models"].clone();
+            job["review_source_jobs"] = selection["review_source_jobs"].clone();
+            job["review_source_verified"] = selection["review_source_verified"].clone();
         }
         if s(job, "requested_model").is_empty() {
             job["requested_model"] = job["model"].clone();

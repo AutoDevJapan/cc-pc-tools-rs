@@ -32,14 +32,117 @@ pub struct ModelProfile {
 /// Shared classifier for launchers that know a job name and/or a router task
 /// type. Prompt text is deliberately not inspected: implementation requests
 /// often mention reviews while still requiring full implementation capability.
-pub fn model_profile(_job_name: &str, _task_type: &str) -> ModelProfile {
+pub fn model_profile(job_name: &str, task_type: &str) -> ModelProfile {
     // Owner policy 2026-10-20: task labels must not silently lower effort or
     // select Luna. Explicit model/effort and independent-review exclusions are
-    // resolved by callers; this function supplies only ordinary defaults.
+    // resolved by callers. Reviews default to Opus, distinct from Sol writers.
+    if review_task(job_name, task_type) {
+        return review_profile(&[]).unwrap();
+    }
     ModelProfile {
         model: "gpt-6.1-sol",
         effort: "max",
     }
+}
+
+pub fn review_task(name: &str, kind: &str) -> bool {
+    let name = name.to_ascii_lowercase();
+    kind.to_ascii_lowercase().contains("review")
+        || name.starts_with("rev-")
+        || name.ends_with("-review")
+}
+
+pub fn same_model(left: &str, right: &str) -> bool {
+    fn bare(model: &str) -> &str {
+        let Some((provider, model_id)) = model.split_once('/') else {
+            return model;
+        };
+        if ["openai", "anthropic", "main"].contains(&provider)
+            || (provider.len() == 7
+                && provider.starts_with('p')
+                && provider[1..]
+                    .bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
+        {
+            model_id
+        } else {
+            model
+        }
+    }
+    bare(left) == bare(right)
+}
+
+pub fn author_models(source: &serde_json::Value) -> Vec<String> {
+    let mut models = Vec::<String>::new();
+    for value in [
+        &source["model"],
+        &source["requested_model"],
+        &source["execution_observed"]["model"],
+    ]
+    .into_iter()
+    .chain(
+        source["capacity_history"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .flat_map(|entry| [&entry["from_model"], &entry["to_model"]]),
+    ) {
+        if let Some(model) = value.as_str().filter(|model| !model.is_empty())
+            && !models.iter().any(|old| same_model(old, model))
+        {
+            models.push(model.to_owned());
+        }
+    }
+    models
+}
+
+pub fn review_profile(excluded: &[String]) -> Option<ModelProfile> {
+    [
+        "anthropic/claude-opus-5-5",
+        "gpt-6.1-sol",
+        "anthropic/claude-sonnet-5-5",
+        "gpt-6-astra",
+        "gpt-6-luna",
+    ]
+    .into_iter()
+    .find(|model| !excluded.iter().any(|author| same_model(author, model)))
+    .map(|model| ModelProfile {
+        model,
+        effort: "max",
+    })
+}
+
+/// A subwork origin remains valid provenance after its live parent exits.
+pub fn review_source_jobs(item: &serde_json::Value, db: &serde_json::Value) -> Vec<String> {
+    let mut ids: Vec<String> = item["review_source_jobs"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|v| v.as_str().map(str::to_owned))
+        .collect();
+    if let Some(origin) = item["subwork"]["origin_job_id"]
+        .as_str()
+        .filter(|id| !id.is_empty())
+    {
+        ids.push(origin.into());
+    }
+    if let Some(parent) = db["items"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .find(|row| row["id"] == item["subwork"]["parent_todo_id"])
+    {
+        ids.extend(
+            parent["jobs"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|v| v.as_str().map(str::to_owned)),
+        );
+    }
+    ids.sort();
+    ids.dedup();
+    ids
 }
 
 /// Model routing labels are not permission boundaries: a review may include fixes.
@@ -192,7 +295,15 @@ mod tests {
             "clean-123",
             "research-123",
         ] {
-            assert_eq!(model_profile(name, "implementation"), full, "{name}");
+            assert_eq!(
+                model_profile(name, "implementation"),
+                if review_task(name, "implementation") {
+                    review_profile(&[]).unwrap()
+                } else {
+                    full
+                },
+                "{name}"
+            );
         }
         for kind in [
             "review",
@@ -204,7 +315,15 @@ mod tests {
             "cleanup",
             "confirmation",
         ] {
-            assert_eq!(model_profile("req-123", kind), full, "{kind}");
+            assert_eq!(
+                model_profile("req-123", kind),
+                if review_task("req-123", kind) {
+                    review_profile(&[]).unwrap()
+                } else {
+                    full
+                },
+                "{kind}"
+            );
         }
         assert_eq!(model_profile("shep-123", "pr_shepherd"), full);
         assert_eq!(model_profile("req-123", "implementation"), full);

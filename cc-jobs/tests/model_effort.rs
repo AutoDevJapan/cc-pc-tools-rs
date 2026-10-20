@@ -18,12 +18,21 @@ fn explicit_model_and_effort_survive_launch() {
         ("anthropic/claude-opus-5-5", "max"),
         ("gpt-6-luna", "high"),
         ("owner-special-model", "medium"),
+        ("gpt-owner-future", "high"),
+        ("anthropic/claude-owner-future", "max"),
     ] {
         let args = codex_args(&json!({
             "codex":"codex.cmd", "model":model, "effort":effort,
             "sandbox":"read-only"
         }));
         assert!(args.windows(2).any(|v| v == ["-m", model]));
-        assert!(args.iter().any(|v| v == &format!("model_reasoning_effort={effort}")));
+        assert!(
+            args.iter()
+                .any(|v| v == &format!("model_reasoning_effort={effort}"))
+        );
+        if model.contains("owner-") {
+            assert!(!args.iter().any(|v| v.starts_with("service_tier=")));
+            assert!(!args.iter().any(|v| v.starts_with("features.fast_mode=")));
+        }
     }
 }

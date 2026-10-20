@@ -36,3 +36,7 @@ options:
                         waits for product-retry-bind before execution
   --parent-job-id PARENT_JOB_ID
                         running parent job (otherwise inherited from CC_JOB_ID)
+  --review-source-jobs IDS
+                        comma-separated durable source jobs, including exited writers
+  --review-excluded-models MODELS
+                        comma-separated author models supplied by a review caller

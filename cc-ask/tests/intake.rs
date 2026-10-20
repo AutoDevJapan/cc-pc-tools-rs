@@ -863,7 +863,7 @@ fn test_fallback_when_pick_is_down_and_fallback_is_logged() {
     assert_eq!(h.fake.borrow().picks.len(), 1);
 }
 #[test]
-fn unqualified_review_uses_the_ordinary_sol_max_default() {
+fn automatic_review_uses_opus_max_instead_of_the_default_writer() {
     let mut h = Harness::new();
     {
         let mut f = h.fake.borrow_mut();
@@ -871,7 +871,7 @@ fn unqualified_review_uses_the_ordinary_sol_max_default() {
         f.messages.get_mut("100").unwrap()[0]["content"] = json!("変更をレビューして");
     }
     h.tick();
-    assert_eq!(h.fake.borrow().launches[0]["model"], "gpt-6.1-sol");
+    assert_eq!(h.fake.borrow().launches[0]["model"], "anthropic/claude-opus-5-5");
     assert_eq!(h.fake.borrow().launches[0]["effort"], "max");
 }
 

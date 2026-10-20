@@ -22,6 +22,47 @@ pub fn native_model(model: &str) -> Option<&str> {
         .then_some(model)
 }
 
+pub fn requested_tier(model: &str) -> Option<&'static str> {
+    if native_model(model).is_some() {
+        Some("fast")
+    } else if crate::capacity::provider(model) == Some("anthropic") {
+        Some("default")
+    } else {
+        None
+    }
+}
+
+/// Preserve a drained failure without overwriting a newer worker or scope.
+pub fn stale_completion(source: &Value, fresh: &Value, now: &str) -> Value {
+    let mut result = fresh.clone();
+    result["stale_capacity_completion"] = json!({"at":now,"failure_kind":"capacity",
+        "started_at":source["started_at"],"child_birth":source["codex_pid_created"]});
+    if s(fresh, "status") == "running"
+        && fresh["cancel_requested"] != true
+        && [
+            "pid",
+            "pid_created",
+            "codex_pid",
+            "codex_pid_created",
+            "started_at",
+            "attempt_events_offset",
+        ]
+        .iter()
+        .all(|field| source[field] == fresh[field])
+    {
+        finish(
+            &mut result,
+            source["exit_code"].as_i64(),
+            source["duration_ms"].as_i64().unwrap_or(0),
+            now,
+        );
+        result["last_failure_kind"] = json!("capacity");
+        result["last_error"] =
+            json!("Selected model is at capacity; completed attempt scope changed");
+    }
+    result
+}
+
 pub fn launch_model(job: &Value) -> String {
     match (
         native_model(s(job, "model")),
@@ -200,6 +241,7 @@ pub fn snapshot(accounts: &Value, namespaces: &Value, logs: &Value, job: &Value,
     result["eligible"] = json!(eligible);
 
     let mut failed = labels(&job["capacity_tried_accounts"]);
+    let mut log_labels = Vec::<String>::new();
     if public_selector(s(job, "capacity_account_selector")) {
         failed.push(s(job, "capacity_account_selector").into());
     }
@@ -230,11 +272,11 @@ pub fn snapshot(accounts: &Value, namespaces: &Value, logs: &Value, job: &Value,
         });
     if let Some(last) = last {
         if public_selector(s(last, "accountLogLabel")) {
-            failed.push(s(last, "accountLogLabel").into());
+            log_labels.push(s(last, "accountLogLabel").into());
         }
         for attempt in last["attempts"].as_array().into_iter().flatten() {
             if public_selector(s(attempt, "accountLogLabel")) {
-                failed.push(s(attempt, "accountLogLabel").into());
+                log_labels.push(s(attempt, "accountLogLabel").into());
             }
         }
         let mut observation = json!({});
@@ -264,6 +306,33 @@ pub fn snapshot(accounts: &Value, namespaces: &Value, logs: &Value, job: &Value,
         }
         result["observation"] = observation;
     }
+    let mut failed_labels = labels(&job["capacity_tried_labels"]);
+    failed_labels.extend(log_labels.iter().cloned());
+    failed_labels.sort();
+    failed_labels.dedup();
+    let mut public_labels = json!({});
+    let mut current_attributed = false;
+    for (selector, target) in map {
+        if !public_selector(selector) {
+            continue;
+        }
+        let Some(id) = target.as_str() else {
+            continue;
+        };
+        let id = if id == "@main" { "__main__" } else { id };
+        if let Some(label) = accounts["_account_labels"][id]
+            .as_str()
+            .filter(|label| public_selector(label))
+        {
+            public_labels[selector] = json!(label);
+            if failed_labels.iter().any(|observed| observed == label) {
+                failed.push(selector.clone());
+            }
+            if log_labels.iter().any(|observed| observed == label) {
+                current_attributed = true;
+            }
+        }
+    }
     failed.sort();
     failed.dedup();
     // Multiple public aliases of one private account are still a single slot.
@@ -279,7 +348,9 @@ pub fn snapshot(accounts: &Value, namespaces: &Value, logs: &Value, job: &Value,
             .is_some_and(|id| !failed_targets.contains(&id) && seen_targets.insert(id))
     });
     result["eligible"] = json!(eligible);
-    result["verified"] = json!(!failed.is_empty());
+    result["verified"] = json!(current_attributed);
+    result["public_labels"] = public_labels;
+    result["failed_labels"] = json!(failed_labels);
     result["failed"] = json!(failed);
     result
 }
@@ -336,7 +407,7 @@ pub fn model_catalog(rt: &(impl Runtime + ?Sized), job: &Value) -> Option<Value>
 
 pub fn sample(rt: &(impl Runtime + ?Sized), job: &Value, at: f64) -> Value {
     let unknown = || json!({"at":at,"verified":false,"eligible":[],"failed":[]});
-    let Some(accounts) = query(
+    let Some(mut accounts) = query(
         rt,
         &[
             "account",
@@ -352,6 +423,25 @@ pub fn sample(rt: &(impl Runtime + ?Sized), job: &Value, at: f64) -> Value {
     let Some(namespaces) = query(rt, &["config", "get", "codexAccountNamespaces", "--json"]) else {
         return unknown();
     };
+    let mut routing_labels = json!({"__main__":"main"});
+    if let Some(records) = query(rt, &["config", "get", "codexAccounts", "--json"]) {
+        for record in records.as_array().into_iter().flatten() {
+            let id = s(record, "id");
+            if id.is_empty() {
+                continue;
+            }
+            let label = if public_selector(s(record, "logLabel")) {
+                s(record, "logLabel").to_owned()
+            } else {
+                format!(
+                    "p{}",
+                    &cc_job_policy::product_retry::digest(id.as_bytes())[..6]
+                )
+            };
+            routing_labels[id] = json!(label);
+        }
+    }
+    accounts["_account_labels"] = routing_labels;
     let session =
         normalize_uuid(s(job, "thread_id")).or_else(|| normalize_uuid(s(job, "resume_session")));
     let logs = if let Some(session) = session {

@@ -13,6 +13,25 @@ mod subwork_support;
 mod no_action_tests;
 
 #[test]
+fn review_preparation_uses_exited_writer_history_and_passes_durable_sources() {
+    let mut sub=subwork_support::Fixture::new();
+    sub.jobs[0]["model"]=json!("anthropic/claude-opus-5-5");
+    sub.jobs[0]["requested_model"]=json!("gpt-6.1-sol");
+    sub.db["items"][1]["subwork"]=cc_job_policy::subwork::register(&sub.db,&sub.db["items"][1],1,"parent","review",&sub.jobs,false).unwrap();
+    sub.jobs[0]["status"]=json!("succeeded");sub.jobs[0]["subwork_live"]=json!(false);
+    let mut f=Fixture::new();f.e.backend.records=sub.jobs.clone();
+    write_json(&f.e.todo_path,&sub.db,1).unwrap();
+    let prepared=f.e.prepare(&sub.db["items"][1],sub.repo.to_str().unwrap()).unwrap().unwrap();
+    let selection=&prepared["scheduler"]["selection"];
+    assert_eq!(selection["model"],"anthropic/claude-sonnet-5-5");
+    assert_eq!(selection["effort"],"max");
+    assert_eq!(selection["review_source_jobs"],json!(["parent"]));
+    let backend=RealBackend::new(f.e.root.clone());
+    let invocation=backend.launch_command(&prepared,Path::new("review.md"),selection);
+    assert!(invocation.args.windows(2).any(|a|a==["--review-source-jobs","parent"]));
+}
+
+#[test]
 fn console_subwork_recovers_only_proven_idle_doing_retry_through_normal_gates() {
     for gate in [
         "open",
@@ -4815,13 +4834,13 @@ fn rust_byte_lock_interoperates_with_other_process_and_releases() {
     assert!(ByteLock::acquire(&path, Duration::ZERO).unwrap().is_some());
 }
 #[test]
-fn router_failure_preserves_review_fallback_model() {
+fn router_failure_keeps_reviews_on_a_distinct_max_default() {
     let mut http = HttpFake {
         responses: vec![Err(Error("OSError"))],
         calls: 0,
     };
     let picked = pick_model(&mut http, "レビューしてください").unwrap();
-    assert_eq!(picked["model"], "gpt-6.1-sol");
+    assert_eq!(picked["model"], "anthropic/claude-opus-5-5");
     assert_eq!(picked["task_type"], "review");
     assert_eq!(picked["effort"], "max");
     assert_eq!(http.calls, 1);

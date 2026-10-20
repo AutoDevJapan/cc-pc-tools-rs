@@ -180,6 +180,8 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "original-product-retry-key",
                     "resume-session",
                     "parent-job-id",
+                    "review-source-jobs",
+                    "review-excluded-models",
                     "subwork-of",
                     "assigned-needs",
                     "pr-url",
@@ -1148,7 +1150,17 @@ impl Context {
         } else if a.value("subwork-of").is_some() {
             return Err(Error::new("subwork ToDo store is missing"));
         }
-        self.validate_review_launch(&mut job)?;
+        if let Some(ids)=a.value("review-source-jobs") {
+            job["review_source_jobs"]=json!(ids.split(',').filter(|id|!id.is_empty()).collect::<Vec<_>>());
+        }
+        if let Some(models)=a.value("review-excluded-models") {
+            let models:Vec<_>=models.split(',').collect();
+            if models.iter().any(|m|m.is_empty()||m.len()>80||!m.bytes().all(|b|b.is_ascii_alphanumeric()||b"_.-/".contains(&b))) {
+                return Err(Error::new("invalid review model exclusion"));
+            }
+            job["review_excluded_models"]=json!(models);
+        }
+        self.validate_review_launch(&mut job,&registrations)?;
         let bad = codex_args(&job)
             .into_iter()
             .filter(|s| s.chars().any(|c| "&|<>^%!\"".contains(c)))

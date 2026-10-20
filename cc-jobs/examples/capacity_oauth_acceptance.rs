@@ -1,5 +1,6 @@
 //! Explicit opt-in acceptance with the already installed OAuth Codex shim.
-//! It injects one protocol capacity event; both model responses are real.
+//! It injects one protocol capacity event and its account attribution.
+//! Both model responses are real; this is not evidence of natural capacity.
 use cc_jobs::*;
 use std::{
     io::Read,
@@ -129,6 +130,15 @@ fn run() -> Result<Value> {
         &json!({"type":"turn.failed","error":{"message":"Selected model is at capacity"}}),
     );
     job["status"] = json!("failed");
+    // The first real request succeeded, so production failed-request attribution
+    // correctly refuses to treat it as a failure. Inject only the harness's
+    // known selector alongside the fresh public OAuth eligibility snapshot.
+    let at = ctx.rt.epoch();
+    let mut injected_pool = ctx.rt.capacity_pool_sample(&job, at);
+    injected_pool["verified"] = json!(true);
+    injected_pool["failed"] = json!([initial_selector]);
+    injected_pool["at"] = json!(at);
+    job["capacity_inventory"] = json!({"at":at,"pool":injected_pool});
     if !ctx.retry_capacity(&mut job) {
         return Err(Error::new("capacity transition unavailable"));
     }
@@ -159,7 +169,7 @@ fn run() -> Result<Value> {
     Ok(
         json!({"initial_model":"gpt-6.1-sol","retried_model":job["model"],"initial_selector":initial_selector,
             "retry_selector":job["capacity_account_selector"],"same_session":job["resume_session"]==session,
-            "todo_id":job["todo_id"],"capacity_event":"injected canonical turn.failed","oauth_response_verified":ok,
+            "todo_id":job["todo_id"],"capacity_event":"injected canonical turn.failed and known account attribution","oauth_response_verified":ok,
             "same_model_retry_count":job["capacity_same_model_retry_count"],"effort_request":"max","tier_request":"fast"}),
     )
 }

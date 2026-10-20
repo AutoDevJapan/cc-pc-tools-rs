@@ -511,6 +511,11 @@ fn continuation_selection(
     );
     let mut selection = pick_model(ctx, &task, &[], kind)?;
     selection["source_job_id"] = source_job["id"].clone();
+    for field in ["review_source_jobs","review_excluded_models"] {
+        if let Some(saved)=sources.iter().find_map(|source|source[field].as_array().filter(|v|!v.is_empty())) {
+            selection[field]=json!(saved);
+        }
+    }
     for field in ["model", "effort"] {
         if let Some(saved) = sources
             .iter()

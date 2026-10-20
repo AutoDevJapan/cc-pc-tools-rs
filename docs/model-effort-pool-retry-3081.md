@@ -56,7 +56,7 @@ private IDとメールはCLI応答のメモリ内での照合にだけ使い、j
 - 本担当の要求ログはrequested/served Sol、requested effort max、要求tier priority。
   response tierはdefaultでauthoritative=false、Fastのconfirmationはassumed。
   実upstream Fastとactual effortは未確認。
-- 正式CI、マージ、配布は未実施。別モデルレビューは3088で実行中、結果未受領。
+- 正式CI、マージ、配布は未実施。別モデルレビュー3088を受領し、下の対応を進めた。
 
 ### 既存OAuthによる限定した実要求
 
@@ -72,7 +72,36 @@ private IDとメールはCLI応答のメモリ内での照合にだけ使い、j
 - 追加のspec/検査対応: 関連検査3087、別モデル読取3088。両方の固定候補は871e184。
   その後の待機中の世代照合と観察時刻、文書・exampleの修正は追加差分として検査・レビューする。
 - account selectorが非表示でも元モデルの能力と文脈長を保つため、job専用catalogへnative metadataを渡す。
-  global catalogとpickerは変えない。追加検査3091が比較用Red 0e48665とGreen 6b6e7d9を確認する。
+  global catalogとpickerは変えない。追加検査3091ではRed/Greenともfixtureの構文エラーで
+  コンパイルが止まった。テスト開始0件であり、metadataのRed/Greenは未確認。
+  原因はjson!の配列値直後の.mapで、Rust式として括弧で囲む修正を行った。
+  exampleのコンパイルだけは成功した。4crate全体とdoctestは未実行だった。
+
+### 別モデルレビュー3088への対応
+
+比較はc8d71fb..871e184、実turn_contextはanthropic/claude-opus-5-5 / max。
+旧候補の読取完了は、現在の候補のMust解消やCI成功を意味しない。
+
+| 指摘 | 対応と確認範囲 |
+| --- | --- |
+| Must: 自動レビューがSolの作者と同じモデルになる | 通常レビューをOpus/maxにし、元ToDoのjobs、subworkのorigin、固定レビューの元jobから作者履歴を取得する。終了した作者も除外する。scheduler、ask、直接CLI、cc-liveのreview呼出しへ引き継ぐ。本人の明示model/effortは保持し、同モデルなら起動を拒否する。実検査は未受領。 |
+| Must: Claudeのservice_tier=defaultがnative CLIで拒否される可能性 | 実Codex CLI 0.163.0のmcp list --jsonで設定を解析させ、default単独とOpus指定/fast_mode=false併用が双方exit0・stderrなしだった。出力本文は表示・保存していない。モデル推論を起動した検査ではない。バイナリ文字列からの推測だけでは拒否を再現できなかったため設定は維持する。 |
+| Must: 作者不明のレビューが同モデルの別枠再試行まで止まる | 作者不明の拒否をモデル変更段階へ移し、同じGPTの別枠は最大3回試せるようにした。既知の作者と同じモデルである場合の拒否は維持する。実検査は未受領。 |
+
+追加指摘も対応した。Claude同士の候補を残し、通常429の再試行を混雑用queue gateで止めない。
+古い子の終了後にscopeが変わった場合は新scopeを保持して終端を保存し、新workerは終わらせない。
+ToDo排他の取得失敗は有限待機へ保存する。公開namespaceとログlabelをCLIのmasked metadataで照合し、
+同じ枠の別名や名称変更を重複試行にしない。監査には公開labelとselectorだけを残す。
+未知GPT/Claudeはtierやmodelの自動変更の対象にせず、モデル修復の説明も実操作に一致させた。
+
+固定レビューは起動時の作者履歴を保存する。その後に親が別の仕事でモデルを変更しても、
+固定済みの旧ソースの作者として追加しない。新しいソースのレビューは新しい履歴で資格を確認する。
+元jobの取得失敗、停止、未完依存、世代不一致は自動で権限を広げる根拠にしない。
+
+直接CLIの--todo-idは、元ToDoへ担当として正規に結び付けられている場合だけ再開できる。
+番号だけを渡した未所属jobへ再試行の権限を与えない。通常schedulerの所有確認後に再評価する。
+OAuth acceptance exampleはprotocol混雑と枠帰属を注入する限定harnessで、自然な混雑の実測ではない。
+今回は子Codexを直接起動しない指示に従いexampleを実行していない。
 
 要求本文、応答本文、秘密情報を受入記録へ残さず、モデル・公開selector・HTTP終端・effort/tier要求だけを保持した。
 公開adapterの根拠: [Anthropic adapter](https://github.com/lidge-jun/opencodex/blob/v2.83.0/src/adapters/anthropic.ts)。

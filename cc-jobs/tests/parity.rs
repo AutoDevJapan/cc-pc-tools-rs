@@ -1921,6 +1921,68 @@ mod capacity_regressions {
     }
 
     #[test]
+    fn review_after_writer_exit_uses_durable_model_history() {
+        let t=Test::new();
+        t.put(job(json!({"id":"finished-author","status":"succeeded","cwd":t.ctx.root,
+            "model":"anthropic/claude-opus-5-5","requested_model":"gpt-6.1-sol"})));
+        let prompt=t.ctx.root.join("review.md");fs::write(&prompt,"Review fixed source").unwrap();
+        let (result,out,_)=t.cli(&["run","--name","rev-late","--auto-model","anthropic/claude-opus-5-5",
+            "--effort","max","--review-source-jobs","finished-author","--task-type","review",
+            "--cwd",t.ctx.root.to_str().unwrap(),"--prompt-file",prompt.to_str().unwrap()]);
+        result.unwrap();
+        let saved=t.ctx.load(out.trim()).unwrap();
+        assert_eq!(saved["model"],"anthropic/claude-sonnet-5-5");
+        assert!(saved["parent_job_id"].is_null());
+        assert_eq!(saved["review_source_verified"],true);
+        assert_eq!(saved["review_source_jobs"],json!(["finished-author"]));
+    }
+
+    #[test]
+    fn unknown_review_author_does_not_block_same_model_account_retries() {
+        let t=Test::new();let mut j=failed();j["task_type"]=json!("review");
+        j["capacity_inventory"]=pool_ready(&t);
+        for attempt in 1..=3 {
+            assert!(t.ctx.retry_capacity(&mut j));
+            assert_eq!(j["model"],"gpt-6.1-sol");
+            assert_eq!(j["capacity_same_model_retry_count"],attempt);
+            j["status"]=json!("failed");j["last_failure_kind"]=json!("capacity");
+            j["last_error"]=json!("Selected model is at capacity");
+        }
+        assert!(!t.ctx.retry_capacity(&mut j));
+        assert!(j["capacity_retry_count"].is_null());
+    }
+
+    #[test]
+    fn a_verified_fixed_review_keeps_the_original_author_snapshot_after_parent_changes_model() {
+        let t = Test::new();
+        t.put(job(json!({"id":"author","model":"gpt-6.1-sol"})));
+        let mut j = failed();
+        j["task_type"] = json!("review");
+        j["review_source_jobs"] = json!(["author"]);
+        j["review_excluded_models"] = json!(["gpt-6.1-sol"]);
+        j["review_source_verified"] = json!(true);
+        j["model"] = json!("anthropic/claude-opus-5-5");
+        j["requested_model"] = json!("anthropic/claude-opus-5-5");
+        // The parent is doing later work; it did not author this fixed snapshot.
+        t.put(job(json!({"id":"author","model":"anthropic/claude-opus-5-5"})));
+        assert!(t.ctx.retry_capacity(&mut j));
+        assert_eq!(j["model"], "anthropic/claude-sonnet-5-5");
+        assert_eq!(j["review_excluded_models"], json!(["gpt-6.1-sol"]));
+    }
+
+    #[test]
+    fn unknown_provider_qualified_models_are_never_retargeted() {
+        let t = Test::new();
+        for model in ["openai/gpt-owner-future", "anthropic/claude-owner-future"] {
+            let mut j = failed();
+            j["model"] = json!(model);
+            assert!(!t.ctx.retry_capacity(&mut j));
+            assert_eq!(j["model"], model);
+            assert!(j["capacity_retry_count"].is_null());
+        }
+    }
+
+    #[test]
     fn owner_wait_release_rechecks_generation_before_resuming_capacity_selection() {
         let t=Test::new();
         let j=t.put(job(json!({"id":"owner-capacity","cwd":t.ctx.root,"status":"queued",
@@ -5793,8 +5855,8 @@ fn new_job() -> Value {
 #[test]
 fn job_cli_defaults_preserve_each_explicit_model_and_effort_independently() {
     for (name, kind, expected) in [
-        ("rev-19", "review", "gpt-6.1-sol"),
-        ("task-review", "", "gpt-6.1-sol"),
+        ("rev-19", "review", "anthropic/claude-opus-5-5"),
+        ("task-review", "", "anthropic/claude-opus-5-5"),
         ("req-19", "implementation", "gpt-6.1-sol"),
         ("req-19", "research", "gpt-6.1-sol"),
     ] {

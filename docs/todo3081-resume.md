@@ -17,6 +17,24 @@ Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/277 。まだ完了
 
 ## 実行済みと未実行
 
+### 再開後の追記
+
+item_258はpool_retry.rsの読み取りでexit0だった。再実行が必要な未完了コマンドはなかった。
+3088と3091の完了を確認した。3091はRed/Greenともfixtureのコンパイルエラーで検査開始0件。
+array.mapをjson!内のRust式として括弧で囲み修正した。example compileだけが成功している。
+
+3088のMust3件への対応は受入仕様の表に記録した。自動レビューをOpus/maxにし、
+終了後の作者履歴と別モデル資格をscheduler/ask/jobs/liveへ引き継いだ。
+作者不明の混雑レビューも同GPTの別枠再試行は可能で、モデル変更前に資格を確認する。
+default tier設定の拒否予測は実CLIの設定解析で再現せず、exit0のため維持した。
+公開枠の別名・名称変更、古い子の終端保存、通常429への影響、未知model保持も対応した。
+
+この追記時点の修正後Cargoと別モデルの追加差分レビューは未実行。
+修正前の成功結果を修正後へ代用しない。正式CI、PR、merge、release、配布は未実施。
+この担当には引き続きCargo/GPU割当がなく、重いCargoは独立checkへ--needs cargoで登録する。
+
+以下はe230b2c保存時点の旧候補の履歴で、上の追記と受入仕様を優先する。
+
 1. 検査3083は固定c4eea9aの実Redを完了。
    policyはhigh/期待maxで失敗。jobsはFast引数なしで失敗。明示model/effort保持は合格。
 2. 検査3087は完了。bb7cb6bのpool Redは実Sonnet/期待Solでexit100。

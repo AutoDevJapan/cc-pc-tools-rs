@@ -450,6 +450,9 @@ impl RealBackend {
                     .extend(["--parent-job-id".into(), parent.into()]);
             }
         }
+        if let Some(sources)=selection["review_source_jobs"].as_array().filter(|ids|!ids.is_empty()) {
+            invocation.args.extend(["--review-source-jobs".into(),sources.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(",")]);
+        }
         if let Some(value) = selection["mcp_profile"].as_str() {
             invocation
                 .args

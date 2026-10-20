@@ -1060,40 +1060,40 @@ pub fn fallback_type(task: &str) -> &'static str {
     }
     "implementation"
 }
-pub fn pick_model(
-    ctx: &mut Context,
-    task: &str,
-    exclude: &[String],
-    task_type: Option<&str>,
-) -> Result<Value> {
-    let mut excluded = Vec::new();
-    for x in exclude {
-        if !excluded.contains(x) {
-            excluded.push(x.clone())
-        }
-    }
-    let picked=ctx.effects.http("POST","http://127.0.0.1:11500/api/pick",Some(&json!({"task":safe_text(task),"exclude":excluded})),false).and_then(|p|{for key in ["model","effort","task_type","reason"]{if s(&p[key]).trim().is_empty(){return Err("ValueError".into())}}if !regex::Regex::new(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$").unwrap().is_match(s(&p["model"]))||excluded.iter().any(|x|x==s(&p["model"]))||!["none","minimal","low","medium","high","xhigh","max"].contains(&s(&p["effort"]))||!regex::Regex::new(r"^[a-z][a-z0-9_-]{0,63}$").unwrap().is_match(s(&p["task_type"])){return Err("ValueError".into())}let reason=safe_text(s(&p["reason"])).split_whitespace().collect::<Vec<_>>().join(" ").chars().take(400).collect::<String>();let kind=task_type.unwrap_or(s(&p["task_type"]));let profile=crate::job_policy::model_profile("",kind);let model=if excluded.is_empty(){profile.model}else{s(&p["model"])};let selected=json!({"model":model,"effort":profile.effort,"task_type":kind,"reason":reason,"source":p.get("source").cloned().unwrap_or(json!("jev"))});if s(&selected["source"])=="fallback"{println!("pick fallback (router) {} {}",s(&selected["model"]),s(&selected["task_type"]));}Ok(selected)});
+pub fn pick_model(ctx: &mut Context, task: &str, exclude: &[String], task_type: Option<&str>) -> Result<Value> {
+    let mut excluded=Vec::new();
+    for model in exclude {if !excluded.contains(model){excluded.push(model.clone());}}
+    let picked=ctx.effects.http("POST","http://127.0.0.1:11500/api/pick",Some(&json!({"task":safe_text(task),"exclude":excluded})),false)
+        .and_then(|p| {
+            for key in ["model","effort","task_type","reason"] {if s(&p[key]).trim().is_empty(){return Err("ValueError".into());}}
+            let routed=s(&p["model"]);
+            let bare=routed.strip_prefix("anthropic/").or_else(||routed.strip_prefix("openai/")).unwrap_or(routed);
+            if !regex::Regex::new(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$").unwrap().is_match(bare)
+                || excluded.iter().any(|author|crate::job_policy::same_model(author,routed))
+                || !["none","minimal","low","medium","high","xhigh","max"].contains(&s(&p["effort"]))
+                || !regex::Regex::new(r"^[a-z][a-z0-9_-]{0,63}$").unwrap().is_match(s(&p["task_type"])) {return Err("ValueError".into());}
+            let kind=task_type.unwrap_or(s(&p["task_type"]));
+            let profile=crate::job_policy::model_profile("",kind);
+            let model=if crate::job_policy::review_task("",kind) {
+                crate::job_policy::review_profile(&excluded).ok_or("no independent review model")?.model
+            }else if excluded.is_empty(){profile.model}else{routed};
+            let reason=safe_text(s(&p["reason"])).split_whitespace().collect::<Vec<_>>().join(" ").chars().take(400).collect::<String>();
+            Ok(json!({"model":model,"effort":profile.effort,"task_type":kind,"reason":reason,
+                "source":p.get("source").cloned().unwrap_or(json!("jev")),"review_excluded_models":excluded}))
+        });
     match picked {
-        Ok(v) => Ok(v),
-        Err(error) => {
-            let kind = task_type.unwrap_or_else(|| fallback_type(task));
-            let models = if ["documentation", "research", "live_debug"].contains(&kind) {
-                ["gpt-6-luna", "gpt-6.1-sol", "gpt-6-sol"]
-            } else {
-                ["gpt-6.1-sol", "gpt-6-sol", "gpt-6-luna"]
-            };
-            let model = models
-                .iter()
-                .find(|x| !excluded.iter().any(|v| v == **x))
-                .ok_or("no unexcluded fallback model")?;
-            eprintln!(
-                "pick fallback (local) {} {model} {kind}",
-                error_detail(&error)
-            );
-            let profile = crate::job_policy::model_profile("", kind);
-            Ok(
-                json!({"model":if excluded.iter().any(|v| v == profile.model) { model } else { profile.model },"effort":profile.effort,"task_type":kind,"source":"fallback","reason":"Jev のモデル選択が準備中のため、作業の種類ごとの既定の割り当てで選びました。"}),
-            )
+        Ok(value)=>Ok(value),
+        Err(error)=>{
+            let kind=task_type.unwrap_or_else(||fallback_type(task));
+            let profile=crate::job_policy::model_profile("",kind);
+            let fallbacks=if ["documentation","research","live_debug"].contains(&kind){["gpt-6-luna","gpt-6.1-sol","gpt-6-sol"]}else{["gpt-6.1-sol","gpt-6-sol","gpt-6-luna"]};
+            let model=if crate::job_policy::review_task("",kind){
+                crate::job_policy::review_profile(&excluded).ok_or("no independent review model")?.model
+            }else if !excluded.iter().any(|author|crate::job_policy::same_model(author,profile.model)){profile.model}
+            else{*fallbacks.iter().find(|model|!excluded.iter().any(|author|crate::job_policy::same_model(author,model))).ok_or("no unexcluded fallback model")?};
+            eprintln!("pick fallback (local) {} {model} {kind}",error_detail(&error));
+            Ok(json!({"model":model,"effort":profile.effort,"task_type":kind,"source":"fallback",
+                "reason":"Jev のモデル選択が準備中のため、作業の種類ごとの既定の割り当てで選びました。","review_excluded_models":excluded}))
         }
     }
 }
@@ -1498,6 +1498,14 @@ pub fn launch_job_with_session(
         &prompt,
     );
     args.extend(["--mcp-profile".into(), profile.into()]);
+    if cc_job_policy::review_task("",s(&selection["task_type"])) {
+        if let Some(ids)=selection["review_source_jobs"].as_array().filter(|v|!v.is_empty()) {
+            args.extend(["--review-source-jobs".into(),ids.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(",")]);
+        }
+        if let Some(models)=selection["review_excluded_models"].as_array().filter(|v|!v.is_empty()) {
+            args.extend(["--review-excluded-models".into(),models.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(",")]);
+        }
+    }
     if let Some(id) = selection["todo_id"].as_i64().filter(|id| *id > 0) {
         args.extend(["--todo-id".into(), id.to_string()]);
     }

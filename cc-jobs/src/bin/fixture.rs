@@ -18,8 +18,9 @@ fn main() {
     }
     if args.iter().any(|a| a == "account") {
         let at = chrono::Local::now().timestamp() as f64;
-        if args.iter().any(|a| a == "openai") && std::env::var("CC_JOBS_FIXTURE_MODE")
-            .is_ok_and(|mode|mode.starts_with("capacity-")) {
+        if args.iter().any(|a| a == "openai")
+            && std::env::var("CC_JOBS_FIXTURE_MODE").is_ok_and(|mode| mode.starts_with("capacity-"))
+        {
             println!(
                 "{}",
                 json!({"accounts":(1..=4).map(|n| json!({
@@ -45,7 +46,39 @@ fn main() {
         );
         return;
     }
+    if args.windows(2).any(|a| a == ["get", "codexAccounts"]) {
+        println!(
+            "{}",
+            json!(
+                (1..=4)
+                    .map(|n| json!({"id":format!("fixture-{n}"),"logLabel":format!("p{n:06}")}))
+                    .collect::<Vec<_>>()
+            )
+        );
+        return;
+    }
     if args.iter().any(|a| a == "logs") {
+        let previous = std::env::var("CC_JOBS_FIXTURE_DIR")
+            .ok()
+            .and_then(|dir| {
+                fs::read_to_string(std::path::Path::new(&dir).join("capacity-calls.jsonl")).ok()
+            })
+            .and_then(|text| {
+                text.lines()
+                    .last()
+                    .and_then(|line| serde_json::from_str::<Value>(line).ok())
+            });
+        let label = previous
+            .as_ref()
+            .and_then(|call| call["argv"].as_array())
+            .and_then(|args| {
+                args.windows(2)
+                    .find(|w| w[0] == "-m")
+                    .and_then(|w| w[1].as_str())
+                    .and_then(|model| model.split_once('/').map(|v| v.0))
+            })
+            .filter(|label| pool_retry::public_selector(label))
+            .unwrap_or("p000001");
         let model = args
             .windows(2)
             .find(|w| w[0] == "--model")
@@ -53,7 +86,7 @@ fn main() {
             .unwrap_or("gpt-6-luna");
         println!(
             "{}",
-            json!({"logs":[{"model":model,"accountLogLabel":"p000001","status":503,
+            json!({"logs":[{"model":model,"accountLogLabel":label,"status":503,
             "timestamp":chrono::Local::now().timestamp_millis()}]})
         );
         return;
@@ -61,10 +94,10 @@ fn main() {
     if args.iter().any(|a| a == "catalog") {
         println!(
             "{}",
-            json!({"models":["gpt-6.1-sol","gpt-6-luna"].map(|slug|json!({
+            json!({"models":(["gpt-6.1-sol","gpt-6-luna"].map(|slug|json!({
                 "slug":slug,"context_window":1000000,"supports_reasoning_summaries":true,
                 "supported_reasoning_levels":[{"effort":"max"}],"base_instructions":"fixture"
-            }))})
+            })))})
         );
         return;
     }

@@ -111,3 +111,17 @@ runningです。少なくともcheckpoint必須条件の「実jobが元ToDoのjo
 自分のworktreeにある `todo3190-workspace-checkpoint.private.json` は失敗した要求、
 `todo3190-preflight-jobs.private.json` は選択した2件だけの通常status観測で、
 いずれもGit対象外として保持しています。
+
+### 待機登録後の正常readback
+
+`todo wait-retry 3190 --after 3600` は成功し、通常の一覧と
+`cc-console todo list --id 3190` の両方で `status=wait`、
+`waitReady.condition=retry-time`、`notBefore=1792532070`
+（2026-10-21 06:34:30 JST）を確認しました。本人判断待ちではありません。
+同じmetadata照会でもjob履歴は空で、checkpointの所属不一致は解消していません。
+
+最後のPR315照会ではstateはOPENのまま、headが
+`4081d1ff1c9b4e49b23b669a92977a7d563e1a9f` へ更新されていました。
+上記の3181レビューと成功CIは旧head `577b17b…` に限る証拠です。
+新headのMust解消・レビュー・CI・マージは今回未確認で、旧結果を流用しません。
+次回は新しい実headの状態を確認します。同じ条件を巡回する処理は新設していません。

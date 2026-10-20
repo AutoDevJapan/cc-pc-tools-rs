@@ -10,7 +10,9 @@
     "path": "LICENSE",
     "scope": "The ten authored SKILL.md files below, reviewed individually. No bundled executable, template, or separately authored quoted work is copied by this plan.",
     "attribution": "Copyright (c) 2026 Matt Pocock",
-    "preservation": "Preserve fixed original entrypoint bytes and fixed LICENSE notice with each eventual derivative. This does not grant blanket rights over all files in any source repo."
+    "preservation": "Preserve fixed original entrypoint bytes and fixed LICENSE notice with each eventual derivative. This does not grant blanket rights over all files in any source repo.",
+    "preserved_notice": "skills-3080-upstream-MIT.txt",
+    "source_sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
   },
   "publication_and_runtime": "No external install, hook, MCP registration, model/API call, or deployment is performed by this design document.",
   "targets": [

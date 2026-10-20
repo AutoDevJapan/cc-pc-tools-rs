@@ -36,3 +36,36 @@ fn explicit_model_and_effort_survive_launch() {
         }
     }
 }
+
+#[test]
+fn managed_legacy_hints_use_max_while_a_recorded_owner_override_survives() {
+    for model in ["gpt-6.1-sol", "anthropic/claude-sonnet-5-5"] {
+        let mut job = json!({"codex":"codex.cmd","model":model,"effort":"high",
+            "sandbox":"read-only","todo_id":2962,"launch_key":"0123456789abcdef0123456789abcdef"});
+        assert!(
+            codex_args(&job)
+                .iter()
+                .any(|arg| arg == "model_reasoning_effort=max")
+        );
+        job["effort_origin"] = json!("owner_request");
+        assert!(
+            codex_args(&job)
+                .iter()
+                .any(|arg| arg == "model_reasoning_effort=high")
+        );
+    }
+}
+
+#[test]
+fn unknown_claude_keeps_its_identity_and_disables_inherited_gpt_fast() {
+    let args = codex_args(
+        &json!({"codex":"codex.cmd","model":"anthropic/claude-owner-future",
+        "effort":"high","sandbox":"read-only"}),
+    );
+    assert!(
+        args.windows(2)
+            .any(|w| w == ["-m", "anthropic/claude-owner-future"])
+    );
+    assert!(args.iter().any(|arg| arg == "service_tier=default"));
+    assert!(args.iter().any(|arg| arg == "features.fast_mode=false"));
+}

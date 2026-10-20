@@ -1938,6 +1938,39 @@ mod capacity_regressions {
     }
 
     #[test]
+    fn standalone_review_registers_without_guessing_authors_from_a_shared_cwd() {
+        let t = Test::new();
+        t.put(job(json!({"id":"unrelated","status":"succeeded","cwd":t.ctx.root,
+            "model":"anthropic/claude-opus-5-5","requested_model":"anthropic/claude-opus-5-5"})));
+        t.run(&["--name","rev-unqualified","--task-type","code_review",
+            "--auto-model","anthropic/claude-opus-5-5","--effort","max","--sandbox","read-only"],
+            b"Review this change").unwrap();
+        let review = t.ctx.list_jobs(&HashSet::new()).into_iter()
+            .find(|job|s(job,"name")=="rev-unqualified").unwrap();
+        assert_eq!(review["model"],"anthropic/claude-opus-5-5");
+        assert_eq!(review["review_source_verified"],false);
+        assert_eq!(review["review_source_jobs"],json!([]));
+    }
+
+    #[test]
+    fn queued_capacity_jobs_cannot_hold_replaced_missing_or_unlinked_todos_forever() {
+        for change in ["replaced","missing","unlinked"] {
+            let t = Test::new();
+            let j = t.put(job(json!({"id":"old-owner","cwd":t.ctx.root,"status":"queued",
+                "model":"gpt-6.1-sol","effort":"max","todo_id":3081,
+                "capacity_owner_recheck":true,"capacity_history":[]})));
+            let mut row=json!({"id":3081,"status":"doing","jobs":[j["id"]],"scheduler":{"job":j["id"]}});
+            if change=="replaced" {row["scheduler"]["job"]=json!("replacement");}
+            if change=="unlinked" {row["jobs"]=json!([]);row["scheduler"]["job"]=Value::Null;}
+            let db=if change=="missing"{json!({"items":[]})}else{json!({"items":[row]})};
+            fs::write(t.ctx.root.join("todo.json"),db.to_string()).unwrap();
+            assert!(t.ctx.admit(s(&j,"id")).unwrap().is_none());
+            assert_eq!(t.ctx.load(s(&j,"id")).unwrap()["status"],"failed","{change}");
+            assert!(t.rt.spawn_args.lock().unwrap().is_empty());
+        }
+    }
+
+    #[test]
     fn unknown_review_author_does_not_block_same_model_account_retries() {
         let t=Test::new();let mut j=failed();j["task_type"]=json!("review");
         j["capacity_inventory"]=pool_ready(&t);

@@ -1,6 +1,19 @@
 use cc_job_policy::model_profile;
 
 #[test]
+fn review_aliases_are_author_identities_and_preview_is_not_review() {
+    assert!(cc_job_policy::same_model(
+        "opus",
+        "anthropic/claude-opus-5-5"
+    ));
+    assert!(cc_job_policy::same_model(
+        "Anthropic/Claude-Sonnet-5-5",
+        "sonnet"
+    ));
+    assert!(!cc_job_policy::review_task("preview-3081", "preview"));
+}
+
+#[test]
 fn unattended_default_keeps_sol_max_for_implementation_and_readers() {
     for (name, kind) in [
         ("req-3081", "implementation"),

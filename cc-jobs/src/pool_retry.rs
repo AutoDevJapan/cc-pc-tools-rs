@@ -105,6 +105,8 @@ pub fn todo_owns_attempt(db: &Value, job: &Value) -> bool {
     };
     if !["todo", "doing"].contains(&s(row, "status"))
         || cc_job_policy::cancellation::owner_stopped(row, job)
+        || row["owner_stopped"] == true
+        || !s(&row["scheduler"], "owner_stop_job").is_empty()
         || row["dependency_generation"].as_u64().unwrap_or(0)
             != job["todo_dependency_generation"].as_u64().unwrap_or(0)
     {
@@ -169,6 +171,12 @@ pub fn snapshot(accounts: &Value, namespaces: &Value, logs: &Value, job: &Value,
         }) else {
             continue;
         };
+        let healthy = s(row, "health").eq_ignore_ascii_case("healthy")
+            || s(row, "health").eq_ignore_ascii_case("ok")
+            || s(&row["health"], "status").eq_ignore_ascii_case("healthy");
+        if !healthy || row["hasCredential"] == false {
+            continue;
+        }
         if row["quota"]["updatedAt"].as_f64().is_some_and(|checked| {
             let checked = if checked > 1e12 {
                 checked / 1000.
@@ -197,7 +205,9 @@ pub fn snapshot(accounts: &Value, namespaces: &Value, logs: &Value, job: &Value,
     }
     // The CLI conversation filter is authoritative; do not scan other threads.
     // A failed row must also match this model and the current attempt's lifetime.
-    let started = parse_iso(s(job, "started_at")).unwrap_or(at - 60.);
+    let started = parse_iso(s(job, "started_at"))
+        .or_else(|| parse_iso(s(job, "capacity_failed_started_at")))
+        .unwrap_or(at - 60.);
     let last = logs["logs"]
         .as_array()
         .into_iter()
@@ -274,54 +284,91 @@ pub fn snapshot(accounts: &Value, namespaces: &Value, logs: &Value, job: &Value,
     result
 }
 
+fn query(rt: &(impl Runtime + ?Sized), args: &[&str]) -> Option<Value> {
+    let env = rt.env();
+    let appdata = env.get("APPDATA")?;
+    let package = std::path::Path::new(appdata).join("npm/node_modules/@bitkyc08/opencodex");
+    let mut argv = vec![
+        package
+            .join("node_modules/bun/bin/bun.exe")
+            .to_string_lossy()
+            .into_owned(),
+        package.join("bin/ocx.mjs").to_string_lossy().into_owned(),
+    ];
+    argv.extend(args.iter().map(|s| s.to_string()));
+    let reply = rt.call(Call::new(argv, vec![], 15.)).ok()?;
+    (reply.code == 0 && reply.stdout.len() <= 2_000_000)
+        .then(|| serde_json::from_slice(&reply.stdout).ok())
+        .flatten()
+}
+
+/// Preserve native client capabilities when the public account selector is
+/// hidden from the operator's picker. No global catalog or UI setting changes.
+pub fn account_catalog(catalog: &Value, job: &Value) -> Option<Value> {
+    let native = native_model(s(job, "model"))?;
+    let alias = launch_model(job);
+    if alias == s(job, "model") {
+        return None;
+    }
+    let mut rows = catalog["models"]
+        .as_array()?
+        .iter()
+        .filter(|row| s(row, "slug") == native);
+    let mut model = rows.next()?.clone();
+    if rows.next().is_some()
+        || model["context_window"].as_u64().is_none_or(|n| n == 0)
+        || !model["supported_reasoning_levels"]
+            .as_array()?
+            .iter()
+            .any(|v| s(v, "effort") == s(job, "effort") || v.as_str() == Some(s(job, "effort")))
+    {
+        return None;
+    }
+    model["slug"] = json!(alias);
+    model["default_reasoning_level"] = job["effort"].clone();
+    model["opencodex_catalog_kind"] = json!("account-selector-v1");
+    Some(json!({"models":[model]}))
+}
+
+pub fn model_catalog(rt: &(impl Runtime + ?Sized), job: &Value) -> Option<Value> {
+    account_catalog(&query(rt, &["inspect", "catalog", "--json"])?, job)
+}
+
 pub fn sample(rt: &(impl Runtime + ?Sized), job: &Value, at: f64) -> Value {
     let unknown = || json!({"at":at,"verified":false,"eligible":[],"failed":[]});
-    let env = rt.env();
-    let Some(appdata) = env.get("APPDATA") else {
+    let Some(accounts) = query(
+        rt,
+        &[
+            "account",
+            "list",
+            "openai",
+            "--quota",
+            "--refresh",
+            "--json",
+        ],
+    ) else {
         return unknown();
     };
-    let package = std::path::Path::new(appdata).join("npm/node_modules/@bitkyc08/opencodex");
-    let query = |args: &[&str]| -> Option<Value> {
-        let mut argv = vec![
-            package
-                .join("node_modules/bun/bin/bun.exe")
-                .to_string_lossy()
-                .into_owned(),
-            package.join("bin/ocx.mjs").to_string_lossy().into_owned(),
-        ];
-        argv.extend(args.iter().map(|s| s.to_string()));
-        let reply = rt.call(Call::new(argv, vec![], 15.)).ok()?;
-        (reply.code == 0 && reply.stdout.len() <= 2_000_000)
-            .then(|| serde_json::from_slice(&reply.stdout).ok())
-            .flatten()
-    };
-    let Some(accounts) = query(&[
-        "account",
-        "list",
-        "openai",
-        "--quota",
-        "--refresh",
-        "--json",
-    ]) else {
-        return unknown();
-    };
-    let Some(namespaces) = query(&["config", "get", "codexAccountNamespaces", "--json"]) else {
+    let Some(namespaces) = query(rt, &["config", "get", "codexAccountNamespaces", "--json"]) else {
         return unknown();
     };
     let session =
         normalize_uuid(s(job, "thread_id")).or_else(|| normalize_uuid(s(job, "resume_session")));
     let logs = if let Some(session) = session {
-        query(&[
-            "observe",
-            "logs",
-            "--conversation",
-            &session,
-            "--model",
-            s(job, "model"),
-            "--limit",
-            "20",
-            "--json",
-        ])
+        query(
+            rt,
+            &[
+                "observe",
+                "logs",
+                "--conversation",
+                &session,
+                "--model",
+                s(job, "model"),
+                "--limit",
+                "20",
+                "--json",
+            ],
+        )
         .unwrap_or(Value::Null)
     } else {
         Value::Null

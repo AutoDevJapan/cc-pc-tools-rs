@@ -1284,6 +1284,44 @@ impl Context {
                 self.save_admission_wait(&mut job, &reason)?;
                 return Ok(None);
             }
+            if job["todo_id"].is_number()
+                && (job["capacity_history"].is_array() || job["capacity_owner_recheck"] == true)
+            {
+                if let Some(row) = db["items"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .find(|row| row["id"] == job["todo_id"])
+                {
+                    let mut current = job.clone();
+                    current["todo_dependency_generation"] =
+                        json!(row["dependency_generation"].as_u64().unwrap_or(0));
+                    if !crate::pool_retry::todo_owns_attempt(&db, &current) {
+                        self.save_admission_wait(
+                            &mut job,
+                            &json!({"code":"capacity_todo_owner",
+                            "message":"元のToDoの担当・停止・依存関係を再確認しています"}),
+                        )?;
+                        return Ok(None);
+                    }
+                    job["todo_dependency_generation"] =
+                        current["todo_dependency_generation"].clone();
+                    if job["capacity_owner_recheck"] == true {
+                        job["capacity_owner_recheck"] = json!(false);
+                        job["capacity_wait_pending"] = json!(true);
+                        job["retry_not_before"] = json!(self.rt.epoch());
+                        self.save(&job)?;
+                        return Ok(None);
+                    }
+                } else {
+                    self.save_admission_wait(
+                        &mut job,
+                        &json!({"code":"capacity_todo_missing",
+                        "message":"元のToDoの記録を確認しています"}),
+                    )?;
+                    return Ok(None);
+                }
+            }
         }
         if job["subwork"].is_object() {
             cc_job_policy::subwork::mark_live(&mut jobs, |j| self.running_job(j));
@@ -1975,6 +2013,7 @@ pub fn prepare_resume(job: &mut Value, session: &str, now: &str) {
         "chrome_pipe",
         "gto",
         "gto_auto_attempt_at",
+        "execution_observed",
     ] {
         job[field] = Value::Null;
     }

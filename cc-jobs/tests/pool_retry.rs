@@ -43,6 +43,8 @@ fn public_metadata_selects_a_distinct_oauth_account_without_retaining_private_va
 #[test]
 fn paused_exhausted_paid_keys_and_missing_permission_cannot_supply_an_alternate() {
     for (field, value) in [
+        ("health", Value::Null),
+        ("hasCredential", json!(false)),
         ("paused", json!(true)),
         ("needsReauth", json!(true)),
         ("type", json!("api_key")),
@@ -131,4 +133,48 @@ fn retry_publication_rechecks_worker_identity_todo_owner_and_generation() {
             .extend(patch.as_object().unwrap().clone());
         assert!(!todo_owns_attempt(&changed, &original), "{patch}");
     }
+}
+
+#[test]
+fn observed_native_effort_is_separate_from_requested_effort_and_upstream_tier() {
+    let mut requested = job();
+    observe_turn_context(
+        &mut requested,
+        &json!({"model":"gpt-6.1-sol","effort":"high","token":"private"}),
+    );
+    assert_eq!(requested["effort"], "max");
+    assert_eq!(requested["execution_observed"]["effort"], "high");
+    assert!(requested["execution_observed"]["service_tier"].is_null());
+    assert!(
+        !requested["execution_observed"]
+            .to_string()
+            .contains("private")
+    );
+    cc_jobs::queue::prepare_resume(&mut requested, "", "1970-01-01T00:20:00Z");
+    assert!(requested["execution_observed"].is_null());
+}
+
+#[test]
+fn per_job_account_catalog_preserves_native_capabilities_and_explicit_effort() {
+    let source = json!({"models":[{"slug":"gpt-6.1-sol","context_window":872000,
+        "supports_reasoning_summaries":true,"default_reasoning_level":"low",
+        "supported_reasoning_levels":[{"effort":"high"},{"effort":"max"}],
+        "base_instructions":"native instructions"}]});
+    let mut request = job();
+    request["capacity_account_selector"] = json!("p000002");
+    for effort in ["max", "high"] {
+        request["effort"] = json!(effort);
+        let alias = account_catalog(&source, &request).unwrap();
+        assert_eq!(alias["models"][0]["slug"], "p000002/gpt-6.1-sol");
+        assert_eq!(alias["models"][0]["context_window"], 872000);
+        assert_eq!(alias["models"][0]["supports_reasoning_summaries"], true);
+        assert_eq!(
+            alias["models"][0]["base_instructions"],
+            "native instructions"
+        );
+        assert_eq!(alias["models"][0]["default_reasoning_level"], effort);
+    }
+    assert_eq!(source["models"][0]["slug"], "gpt-6.1-sol");
+    request["model"] = json!("owner-special-model");
+    assert!(account_catalog(&source, &request).is_none());
 }

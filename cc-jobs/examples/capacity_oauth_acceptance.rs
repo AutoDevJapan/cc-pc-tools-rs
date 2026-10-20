@@ -28,9 +28,22 @@ fn run() -> Result<Value> {
         executable: std::env::current_exe()?,
         rt,
     };
-    let mut job = json!({"id":"acceptance-2528","name":"capacity-oauth-acceptance","model":"gpt-6.1-sol","requested_model":"gpt-6.1-sol","model_explicit":true,"sandbox":"read-only","effort":"low","mcp_profile":"minimal","codex":codex,"cwd":cwd,"status":"running","todo_id":2528});
+    let mut job = json!({"id":"acceptance-3081","name":"capacity-oauth-acceptance","model":"gpt-6.1-sol","requested_model":"gpt-6.1-sol","model_explicit":true,"sandbox":"read-only","effort":"max","mcp_profile":"minimal","codex":codex,"cwd":cwd,"status":"running","todo_id":3081});
+    // Fix only these opt-in verification requests to known public selectors.
+    // Never select the operator's global active credential for an experiment.
+    let pool = ctx.rt.capacity_pool_sample(&job, ctx.rt.epoch());
+    let initial_selector = pool["eligible"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_str)
+        .find(|selector| pool_retry::public_selector(selector))
+        .ok_or_else(|| Error::new("verified OAuth account selector unavailable"))?
+        .to_owned();
+    job["capacity_account_selector"] = json!(initial_selector);
     let call = |j: &Value, prompt: &str| -> Result<Value> {
         let mut args = codex_args(j);
+        ctx.capacity_catalog_args(j, &mut args)?;
         // This tiny acceptance must not start configured plugin/MCP helpers.
         args.splice(
             2..2,
@@ -51,6 +64,7 @@ fn run() -> Result<Value> {
             env: ctx.job_environment(),
             flags: NO_WINDOW,
         })?;
+        let child_birth = ctx.rt.proc_created_checked(child.pid())?;
         let (tx, rx) = mpsc::channel();
         for (stdout, stream) in [(true, child.stdout()), (false, child.stderr())] {
             let tx = tx.clone();
@@ -72,7 +86,9 @@ fn run() -> Result<Value> {
         let mut code = None;
         while code.is_none() || drained < 2 {
             if Instant::now() >= end {
-                let _ = ctx.rt.kill_tree(child.pid());
+                if let Some(created) = child_birth {
+                    let _ = ctx.rt.kill_owned_tree(child.pid(), created);
+                }
                 let _ = child.kill();
                 return Err(Error::new(
                     "OAuth acceptance timed out; owned process tree stopped",
@@ -102,7 +118,7 @@ fn run() -> Result<Value> {
     };
     job = call(
         &job,
-        "Reply exactly ACCEPTANCE_INITIAL_2528. Do not use tools.",
+        "Reply exactly ACCEPTANCE_INITIAL_3081. Do not use tools.",
     )?;
     if job["status"] != "succeeded" {
         return Err(Error::new("initial OAuth response failed"));
@@ -116,18 +132,35 @@ fn run() -> Result<Value> {
     if !ctx.retry_capacity(&mut job) {
         return Err(Error::new("capacity transition unavailable"));
     }
+    if job["model"] != "gpt-6.1-sol"
+        || job["capacity_account_selector"] == initial_selector
+        || job["capacity_same_model_retry_count"] != 1
+    {
+        return Err(Error::new(
+            "same-model alternate account transition unavailable",
+        ));
+    }
+    while job["retry_not_before"]
+        .as_f64()
+        .is_some_and(|at| at > ctx.rt.epoch())
+    {
+        ctx.rt.sleep(0.1);
+    }
     std::fs::create_dir_all(ctx.job_dir(s(&job, "id")))?;
     ctx.save(&job)?;
     job = call(
         &job,
-        "Reply exactly ACCEPTANCE_SWITCH_2528. Do not use tools.",
+        "Reply exactly ACCEPTANCE_SWITCH_3081. Do not use tools.",
     )?;
     let ok = job["status"] == "succeeded"
         && job["last_message"]
             .as_str()
-            .is_some_and(|m| m.contains("ACCEPTANCE_SWITCH_2528"));
+            .is_some_and(|m| m.contains("ACCEPTANCE_SWITCH_3081"));
     Ok(
-        json!({"initial_model":"gpt-6.1-sol","switched_model":job["model"],"same_session":job["resume_session"]==session,"todo_id":job["todo_id"],"capacity_event":"injected canonical turn.failed","oauth_response_verified":ok,"switch_count":job["capacity_retry_count"]}),
+        json!({"initial_model":"gpt-6.1-sol","retried_model":job["model"],"initial_selector":initial_selector,
+            "retry_selector":job["capacity_account_selector"],"same_session":job["resume_session"]==session,
+            "todo_id":job["todo_id"],"capacity_event":"injected canonical turn.failed","oauth_response_verified":ok,
+            "same_model_retry_count":job["capacity_same_model_retry_count"],"effort_request":"max","tier_request":"fast"}),
     )
 }
 fn main() {

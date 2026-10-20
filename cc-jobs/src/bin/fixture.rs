@@ -57,6 +57,16 @@ fn main() {
         );
         return;
     }
+    if args.iter().any(|a| a == "catalog") {
+        println!(
+            "{}",
+            json!({"models":["gpt-6.1-sol","gpt-6-luna"].map(|slug|json!({
+                "slug":slug,"context_window":1000000,"supports_reasoning_summaries":true,
+                "supported_reasoning_levels":[{"effort":"max"}],"base_instructions":"fixture"
+            }))})
+        );
+        return;
+    }
     if args.first().is_some_and(|s| s == "--healthy-cargo-gate") {
         let dir = std::path::PathBuf::from(
             std::env::var("CC_JOBS_FIXTURE_DIR").expect("fixture directory required"),
@@ -372,7 +382,15 @@ fn main() {
             .append(true)
             .open(calls)
             .unwrap();
-        writeln!(log, "{}", json!({"argv":args,"cwd":std::env::current_dir().unwrap().to_string_lossy(),"prompt":String::from_utf8_lossy(&fs::read(root.join("stdin.bin")).unwrap())})).unwrap();
+        let catalog = args
+            .iter()
+            .find_map(|a| a.strip_prefix("model_catalog_json="))
+            .and_then(|path| fs::read(path).ok())
+            .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+            .unwrap_or(Value::Null);
+        writeln!(log, "{}", json!({"argv":args,"cwd":std::env::current_dir().unwrap().to_string_lossy(),
+            "prompt":String::from_utf8_lossy(&fs::read(root.join("stdin.bin")).unwrap()),
+            "catalog_model":catalog["models"][0]["slug"],"catalog_context":catalog["models"][0]["context_window"]})).unwrap();
         let selected = args
             .windows(2)
             .find(|w| w[0] == "-m")

@@ -166,7 +166,9 @@ pub fn repaired_job(job: &Value, failure: Failure) -> Value {
             return job;
         }
         job["model"] = alternate.into();
-        job["effort"] = "max".into();
+        if job["effort"].as_str().is_none_or(str::is_empty) {
+            job["effort"] = "max".into();
+        }
     }
     if matches!(failure, Failure::Context | Failure::Model | Failure::Writer) {
         job["thread_id"] = Value::Null;

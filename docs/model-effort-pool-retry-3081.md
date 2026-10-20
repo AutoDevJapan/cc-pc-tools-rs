@@ -56,6 +56,23 @@ private IDとメールはCLI応答のメモリ内での照合にだけ使い、j
   実upstream Fastとactual effortは未確認。
 - 正式CI、別モデルレビュー、マージ、配布は未実施。
 
+### 既存OAuthによる限定した実要求
+
+- 要求ごとの別selectorを指定したSol/max/priorityの要求がHTTP 200で完了した。
+  ログのaccountLogLabelは指定した公開selectorと一致し、served modelはgpt-6.1-solだった。
+  全体のactive accountやpickerを変更する操作は発行していない。
+- Sonnet5.5とOpus5.5も、それぞれmax・standardの短い要求がHTTP 200で完了した。
+  Sonnetのwire modelはclaude-sonnet-5-5で、Fastはnot-requested。
+  同版の公開adapterはmaxをadaptive thinkingとoutput_config.effortへ写像する。
+  between_toolsをmaxと組み合わせる400は今回の要求で発生していない。
+- これは既存OAuth経路の限定接続確認で、自然な混雑・Codexの会話再開・同一実課題の品質比較の実測ではない。
+  providerメタデータにactual effortは無い。SolのFastはconfirmation=assumedのまま未確認。
+- 追加のspec/検査対応: 関連検査3087、別モデル読取3088。両方の固定候補は871e184。
+  その後の待機中の世代照合と観察時刻、文書・exampleの修正は追加差分として検査・レビューする。
+
+要求本文、応答本文、秘密情報を受入記録へ残さず、モデル・公開selector・HTTP終端・effort/tier要求だけを保持した。
+公開adapterの根拠: [Anthropic adapter](https://github.com/lidge-jun/opencodex/blob/v2.83.0/src/adapters/anthropic.ts)。
+
 実装の中間記録をコミットし、Cargoを割り当てた独立検査へ固定HEADを渡す。
 通常の起動直前にproviderのペース配分だけでClaudeへ置換する旧経路も除く。
 Console UI、モデルカタログの表示設定、Skillsの判断待ちは変更しない。

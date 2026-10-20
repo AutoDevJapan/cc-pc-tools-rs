@@ -68,6 +68,14 @@ pub fn review_job(job: &Value) -> bool {
 
 /// Preserve explicit lightweight and independent review constraints.
 pub fn candidates(job: &Value) -> Vec<&'static str> {
+    if review_job(job)
+        && s(job, "parent_job_id").is_empty()
+        && !job["review_excluded_models"]
+            .as_array()
+            .is_some_and(|v| !v.is_empty())
+    {
+        return Vec::new();
+    }
     let requested = if s(job, "requested_model").is_empty() {
         s(job, "model")
     } else {
@@ -90,7 +98,6 @@ pub fn candidates(job: &Value) -> Vec<&'static str> {
                     || lightweight
                     || crate::pool_retry::native_model(requested).unwrap_or("gpt-6.1-sol")
                         == *model)
-                && (!review_job(job) || provider(model) != provider(requested))
                 && !job["review_excluded_models"]
                     .as_array()
                     .into_iter()
@@ -100,7 +107,10 @@ pub fn candidates(job: &Value) -> Vec<&'static str> {
                     .as_array()
                     .into_iter()
                     .flatten()
-                    .any(|entry| s(entry, "from_model") == *model || s(entry, "to_model") == *model)
+                    .any(|entry| {
+                        same_model(s(entry, "from_model"), model)
+                            || same_model(s(entry, "to_model"), model)
+                    })
         })
         .collect();
     let preferred_claude = if [
@@ -148,6 +158,22 @@ pub fn is_capacity(message: &str) -> bool {
 }
 
 impl Context {
+    pub(crate) fn defer_capacity_owner(&self, job: &mut Value) -> bool {
+        if s(job, "status") != "failed" || job["cancel_requested"] == true {
+            return false;
+        }
+        let session = normalize_uuid(s(job, "thread_id"))
+            .or_else(|| normalize_uuid(s(job, "resume_session")))
+            .unwrap_or_default();
+        job["capacity_wait_error"] = job["last_error"].clone();
+        job["capacity_failed_started_at"] = job["started_at"].clone();
+        prepare_resume(job, &session, &self.rt.now());
+        job["capacity_wait_pending"] = json!(false);
+        job["capacity_owner_recheck"] = json!(true);
+        job["retry_not_before"] = Value::Null;
+        job["activity"] = json!("元のToDoの担当・停止・依存関係を再確認するため待機");
+        true
+    }
     /// Registration must never publish a known same-model review. Selection
     /// callers can choose another model; this boundary must not guess an author.
     pub(crate) fn validate_review_launch(&self, job: &mut Value) -> Result<()> {
@@ -197,10 +223,12 @@ impl Context {
                     .iter()
                     .any(|a| a.reset_at > at && a.used_percent < 100. && !a.short_exhausted)
             );
+            inventory[format!("{provider}_at")] = json!(self.rt.epoch());
         }
         if crate::pool_retry::native_model(s(job, "model")).is_some() {
-            inventory["pool"] = self.rt.capacity_pool_sample(job, at);
+            inventory["pool"] = self.rt.capacity_pool_sample(job, self.rt.epoch());
         }
+        inventory["at"] = json!(self.rt.epoch());
         inventory
     }
 
@@ -281,7 +309,9 @@ impl Context {
         let mut selection = job.clone();
         if review_job(job)
             && s(job, "parent_job_id").is_empty()
-            && !job["review_excluded_models"].is_array()
+            && !job["review_excluded_models"]
+                .as_array()
+                .is_some_and(|v| !v.is_empty())
         {
             job["capacity_exhausted"] = json!(true);
             return stop("別モデルレビューの実装担当を確認できません");
@@ -389,11 +419,12 @@ impl Context {
         let next = if count < MAX_SWITCHES {
             candidates(&selection).into_iter().find(|model| {
                 let provider = provider(model).unwrap();
-                if job["capacity_inventory"]["at"]
-                    .as_f64()
-                    .is_some_and(|checked| at >= checked && at - checked <= 60.)
-                {
-                    return job["capacity_inventory"][provider] == true;
+                if job["capacity_inventory"].is_object() {
+                    let checked = job["capacity_inventory"][format!("{provider}_at")]
+                        .as_f64()
+                        .or_else(|| job["capacity_inventory"]["at"].as_f64());
+                    return checked.is_some_and(|checked| at >= checked && at - checked <= 60.)
+                        && job["capacity_inventory"][provider] == true;
                 }
                 let q = snapshots
                     .entry(provider)
@@ -455,6 +486,9 @@ impl Context {
 
     fn wait_capacity(&self, job: &mut Value, session: &str, at: f64) -> bool {
         let waits = job["capacity_wait_count"].as_u64().unwrap_or(0);
+        if !s(job, "started_at").is_empty() {
+            job["capacity_failed_started_at"] = job["started_at"].clone();
+        }
         job["capacity_wait_error"] = job["last_error"].clone();
         prepare_resume(job, session, &self.rt.now());
         job["capacity_wait_pending"] = json!(true);

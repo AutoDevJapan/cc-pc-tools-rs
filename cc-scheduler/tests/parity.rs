@@ -1,16 +1,16 @@
 //! Offline scheduler checks; no real job launch, cancellation, Discord or credentials.
 use cc_scheduler::{backend::*, common::*, engine::*, policy::*};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     fs,
     path::{Path, PathBuf},
     time::Duration,
 };
 const T: f64 = 100000.;
-#[path = "support/no_action.rs"]
-mod no_action_tests;
 #[path = "../../cc-job-policy/tests/support/mod.rs"]
 mod subwork_support;
+#[path = "support/no_action.rs"]
+mod no_action_tests;
 
 #[test]
 fn console_subwork_recovers_only_proven_idle_doing_retry_through_normal_gates() {
@@ -73,12 +73,10 @@ fn console_subwork_recovers_only_proven_idle_doing_retry_through_normal_gates() 
         if let Some(job) = result {
             assert_eq!(f.get(2)["scheduler"]["console_request"], request);
             assert_eq!(f.get(2)["subwork"], sub.db["items"][1]["subwork"]);
-            assert!(
-                f.e.backend.launched[0]["text"]
-                    .as_str()
-                    .unwrap()
-                    .contains("最新保存仕様を優先")
-            );
+            assert!(f.e.backend.launched[0]["text"]
+                .as_str()
+                .unwrap()
+                .contains("最新保存仕様を優先"));
             assert_eq!(
                 f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
                     .unwrap(),
@@ -189,29 +187,23 @@ fn console_subwork_uses_normal_admission_and_recovers_lost_response() {
         // This is the admission validator used by cc-jobs, not merely an argv assertion.
         cc_job_policy::subwork::refresh_job(&f.e.todo().unwrap(), &sub.jobs, &mut candidate)
             .unwrap();
-        assert!(
-            f.e.backend.launched[0]["text"]
-                .as_str()
-                .unwrap()
-                .contains(request["prompt"].as_str().unwrap())
-        );
-        assert!(
-            f.e.backend.launched[0]["text"]
-                .as_str()
-                .unwrap()
-                .contains("Inspect the fixed change")
-        );
+        assert!(f.e.backend.launched[0]["text"]
+            .as_str()
+            .unwrap()
+            .contains(request["prompt"].as_str().unwrap()));
+        assert!(f.e.backend.launched[0]["text"]
+            .as_str()
+            .unwrap()
+            .contains("Inspect the fixed change"));
         let invocation = RealBackend::new(f.e.root.clone()).launch_command(
             &row,
             Path::new(row["scheduler"]["prompt"].as_str().unwrap()),
             &row["scheduler"]["selection"],
         );
-        assert!(
-            invocation
-                .args
-                .windows(2)
-                .any(|w| w == ["--assigned-needs", "cargo"])
-        );
+        assert!(invocation
+            .args
+            .windows(2)
+            .any(|w| w == ["--assigned-needs", "cargo"]));
         let again =
             f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &request)
                 .unwrap();
@@ -219,10 +211,10 @@ fn console_subwork_uses_normal_admission_and_recovers_lost_response() {
         assert_eq!(f.e.backend.launched.len(), 1);
         let mut changed = request.clone();
         changed["prompt"] = json!("Different accepted body");
-        assert!(
-            f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &changed)
-                .is_err()
-        );
+        assert!(f
+            .e
+            .dispatch_console_subwork(&f.cfg, &f.pri, 2, &changed)
+            .is_err());
     }
 }
 
@@ -254,10 +246,10 @@ fn console_subwork_keeps_distinct_bodies_and_recovers_after_launcher_crash() {
     f.e.backend.m = measurement();
     f.e.backend.clock += n(&f.cfg["cpu_window_s"]) + 1.;
     f.e.backend.crash_after_launch = true;
-    assert!(
-        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &first)
-            .is_err()
-    );
+    assert!(f
+        .e
+        .dispatch_console_subwork(&f.cfg, &f.pri, 2, &first)
+        .is_err());
     assert_eq!(f.e.backend.launched.len(), 1);
     let recovered =
         f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &first)
@@ -294,28 +286,24 @@ fn console_subwork_keeps_distinct_bodies_and_recovers_after_launcher_crash() {
     previous["last_message"] = json!("状態: 継続中\nFirst body");
     f.e.requeue(&json!(2), &json!(recovered), "failed").unwrap();
     f.e.backend.clock += 3600.;
-    assert!(
-        f.e.dispatch_console_subwork(&f.cfg, &f.pri, 2, &second)
-            .unwrap()
-            .is_some()
-    );
+    assert!(f
+        .e
+        .dispatch_console_subwork(&f.cfg, &f.pri, 2, &second)
+        .unwrap()
+        .is_some());
     assert_eq!(f.e.backend.launched.len(), 2);
     assert_eq!(
         f.e.backend.launched[1]["item"]["scheduler"]["selection"]["model"],
         "mock-model"
     );
-    assert!(
-        f.e.backend.launched[1]["text"]
-            .as_str()
-            .unwrap()
-            .contains("Second body")
-    );
-    assert!(
-        !f.e.backend.launched[1]["text"]
-            .as_str()
-            .unwrap()
-            .contains("First body")
-    );
+    assert!(f.e.backend.launched[1]["text"]
+        .as_str()
+        .unwrap()
+        .contains("Second body"));
+    assert!(!f.e.backend.launched[1]["text"]
+        .as_str()
+        .unwrap()
+        .contains("First body"));
     assert!(f.e.backend.launched[1]["item"]["scheduler"]["resume_session"].is_null());
     // Replaying the first receipt still identifies its own job after later work.
     assert_eq!(
@@ -373,18 +361,14 @@ fn console_subwork_preserves_read_only_and_model_preferences_without_widening_to
             Path::new(prepared["scheduler"]["prompt"].as_str().unwrap()),
             selection,
         );
-        assert!(
-            invocation
-                .args
-                .windows(2)
-                .any(|w| w == ["--sandbox", "read-only"])
-        );
-        assert!(
-            invocation
-                .args
-                .windows(2)
-                .any(|w| w == ["--model", selection["model"].as_str().unwrap()])
-        );
+        assert!(invocation
+            .args
+            .windows(2)
+            .any(|w| w == ["--sandbox", "read-only"]));
+        assert!(invocation
+            .args
+            .windows(2)
+            .any(|w| w == ["--model", selection["model"].as_str().unwrap()]));
         assert!(!invocation.args.iter().any(|arg| arg == "--auto-model"));
         assert_eq!(prepared["spec"], sub.db["items"][1]["spec"]);
     }
@@ -539,14 +523,12 @@ fn cargo_gate_admission_uses_build_slots_not_worker_lifetime() {
     assert!(busy.contains("civ6"));
     // Admission probes release every lock; the real gate can immediately acquire them.
     for slot in 0..3 {
-        assert!(
-            ByteLock::acquire(
-                &gate.join(format!("cargo-build.lock.{slot}")),
-                Duration::ZERO
-            )
-            .unwrap()
-            .is_some()
-        );
+        assert!(ByteLock::acquire(
+            &gate.join(format!("cargo-build.lock.{slot}")),
+            Duration::ZERO
+        )
+        .unwrap()
+        .is_some());
     }
 }
 
@@ -572,11 +554,9 @@ fn cargo_gate_admission_allows_three_targets_and_waits_when_full() {
         assert_eq!(busy.contains("cargo"), slot == 2);
     }
     held.pop();
-    assert!(
-        !resources_busy_with_lock(&[], &[], &processes, T, &home)
-            .unwrap()
-            .contains("cargo")
-    );
+    assert!(!resources_busy_with_lock(&[], &[], &processes, T, &home)
+        .unwrap()
+        .contains("cargo"));
 }
 
 #[test]
@@ -588,11 +568,9 @@ fn cargo_gate_admission_recognizes_the_outer_cargo_relay() {
         proc(11, 10, "cargo.exe"),
         proc(12, 11, "rustc.exe"),
     ]);
-    assert!(
-        !resources_busy_with_lock(&[], &[], &processes, T, &home)
-            .unwrap()
-            .contains("cargo")
-    );
+    assert!(!resources_busy_with_lock(&[], &[], &processes, T, &home)
+        .unwrap()
+        .contains("cargo"));
     let held: Vec<_> = (0..3)
         .map(|slot| {
             ByteLock::acquire(
@@ -603,11 +581,9 @@ fn cargo_gate_admission_recognizes_the_outer_cargo_relay() {
             .unwrap()
         })
         .collect();
-    assert!(
-        resources_busy_with_lock(&[], &[], &processes, T, &home)
-            .unwrap()
-            .contains("cargo")
-    );
+    assert!(resources_busy_with_lock(&[], &[], &processes, T, &home)
+        .unwrap()
+        .contains("cargo"));
     drop(held);
 }
 
@@ -1573,38 +1549,18 @@ impl Default for Fake {
 }
 impl Backend for Fake {
     fn current_product_allowed(&mut self, item: &Value, root: &str) -> bool {
-        self.current_product
-            .as_ref()
-            .is_some_and(|(verified, registered)| {
-                registered == root
-                    && ["id", "project", "spec"]
-                        .iter()
-                        .all(|k| verified[*k] == item[*k])
-            })
+        self.current_product.as_ref().is_some_and(|(verified, registered)|
+            registered == root && ["id", "project", "spec"].iter().all(|k| verified[*k] == item[*k]))
     }
-    fn action_progress(
-        &mut self,
-        job: &Value,
-        previous: &cc_job_policy::action_progress::Progress,
-    ) -> Result<Option<cc_job_policy::action_progress::Progress>> {
-        Ok(self.action_path.as_ref().and_then(|path| {
-            cc_job_policy::action_progress::scan(path, job, previous, self.clock).ok()
-        }))
+    fn action_progress(&mut self, job: &Value, previous: &cc_job_policy::action_progress::Progress) -> Result<Option<cc_job_policy::action_progress::Progress>> {
+        Ok(self.action_path.as_ref().and_then(|path| cc_job_policy::action_progress::scan(path, job, previous, self.clock).ok()))
     }
     fn no_action_scope(&mut self, repo: &str, _: &Value, _: &Value) -> Result<bool> {
         Ok(self.repair_scope_allowed(repo))
     }
-    fn cancel_no_action(
-        &mut self,
-        _: &Value,
-        job: &mut Value,
-        _: &Value,
-        _: &Path,
-    ) -> Result<bool> {
+    fn cancel_no_action(&mut self, _: &Value, job: &mut Value, _: &Value, _: &Path) -> Result<bool> {
         let stopped = self.cancel_for_recovery(job)?;
-        if let Some((path, db)) = self.cancel_edit.take() {
-            write_json(&path, &db, 1)?;
-        }
+        if let Some((path,db))=self.cancel_edit.take() { write_json(&path,&db,1)?; }
         Ok(stopped)
     }
     fn repair_scope_allowed(&mut self, repo: &str) -> bool {
@@ -1754,9 +1710,7 @@ impl Backend for Fake {
             .into())
     }
     fn worktree(&mut self, _: &str, i: &Value) -> Result<()> {
-        if let Some(path) = self.prepare_registry.take() {
-            fs::write(path, "GoDD-AO")?;
-        }
+        if let Some(path) = self.prepare_registry.take() { fs::write(path, "GoDD-AO")?; }
         if i["id"].as_u64() == self.worktree_failure && self.worktree_failure.is_some() {
             return Err(Error("OriginMissing"));
         }
@@ -1812,98 +1766,45 @@ fn current_succession_fixture() -> Fixture {
 
 #[test]
 fn current_succession_dispatch_keeps_receipt_stop_dependency_resource_and_owner_gates() {
-    for gate in [
-        "pass",
-        "unsupported",
-        "id",
-        "project",
-        "spec",
-        "root",
-        "legacy",
-        "stop",
-        "wait",
-        "dependency",
-        "resource",
-        "owner",
-        "deny",
-        "unreadable",
-        "prepare_stop",
-        "prepare_root",
-        "prepare_deny",
-    ] {
+    for gate in ["pass", "unsupported", "id", "project", "spec", "root", "legacy",
+        "stop", "wait", "dependency", "resource", "owner", "deny", "unreadable",
+        "prepare_stop", "prepare_root", "prepare_deny"] {
         let mut f = current_succession_fixture();
         match gate {
-            "pass" => {}
+            "pass" => {},
             "unsupported" => f.e.backend.current_product = None,
-            "id" | "legacy" => {
-                f.e.edit(&json!(2839), |r| r["id"] = json!(1161)).unwrap();
-            }
-            "project" => {
-                f.e.edit(&json!(2839), |r| r["project"] = json!("other"))
-                    .unwrap();
-            }
-            "spec" => {
-                f.e.edit(&json!(2839), |r| r["spec"] = json!("different.md"))
-                    .unwrap();
-            }
-            "stop" => {
-                f.e.edit(&json!(2839), |r| r["status"] = json!("block"))
-                    .unwrap();
-            }
-            "wait" => {
-                f.e.edit(&json!(2839), |r| r["status"] = json!("wait"))
-                    .unwrap();
-            }
-            "dependency" => {
-                f.e.edit(&json!(2839), |r| r["wait_on"] = json!([999]))
-                    .unwrap();
-            }
+            "id" | "legacy" => { f.e.edit(&json!(2839), |r| r["id"] = json!(1161)).unwrap(); },
+            "project" => { f.e.edit(&json!(2839), |r| r["project"] = json!("other")).unwrap(); },
+            "spec" => { f.e.edit(&json!(2839), |r| r["spec"] = json!("different.md")).unwrap(); },
+            "stop" => { f.e.edit(&json!(2839), |r| r["status"] = json!("block")).unwrap(); },
+            "wait" => { f.e.edit(&json!(2839), |r| r["status"] = json!("wait")).unwrap(); },
+            "dependency" => { f.e.edit(&json!(2839), |r| r["wait_on"] = json!([999])).unwrap(); },
             "resource" => {
-                f.e.edit(&json!(2839), |r| r["needs"] = json!(["cargo"]))
-                    .unwrap();
+                f.e.edit(&json!(2839), |r| r["needs"] = json!(["cargo"])).unwrap();
                 f.managed(9000, 1, "other", 0);
-                f.e.edit(&json!(9000), |r| r["needs"] = json!(["cargo"]))
-                    .unwrap();
-            }
+                f.e.edit(&json!(9000), |r| r["needs"] = json!(["cargo"])).unwrap();
+            },
             "owner" => {
-                let mut j = job("existing", 1, "running");
-                j["related_todo_ids"] = json!([2839]);
+                let mut j = job("existing", 1, "running"); j["related_todo_ids"] = json!([2839]);
                 f.e.backend.records.push(j);
-            }
-            "deny" => fs::write(
-                f.e.root.parent().unwrap().join("client-projects.txt"),
-                "GoDD-AO",
-            )
-            .unwrap(),
-            "unreadable" => {
-                fs::create_dir(f.e.root.parent().unwrap().join("client-projects.txt")).unwrap()
-            }
+            },
+            "deny" => fs::write(f.e.root.parent().unwrap().join("client-projects.txt"), "GoDD-AO").unwrap(),
+            "unreadable" => fs::create_dir(f.e.root.parent().unwrap().join("client-projects.txt")).unwrap(),
             "root" => {
-                let mut db = f.e.todo().unwrap();
-                db["projects"]["GoDD-AO"] = json!(f.temp.path());
+                let mut db = f.e.todo().unwrap(); db["projects"]["GoDD-AO"] = json!(f.temp.path());
                 write_json(&f.e.todo_path, &db, 1).unwrap();
-            }
+            },
             "prepare_stop" | "prepare_root" => {
                 let mut db = f.e.todo().unwrap();
-                if gate == "prepare_stop" {
-                    db["items"][0]["status"] = json!("block");
-                } else {
-                    db["projects"]["GoDD-AO"] = json!(f.temp.path());
-                }
+                if gate == "prepare_stop" { db["items"][0]["status"] = json!("block"); }
+                else { db["projects"]["GoDD-AO"] = json!(f.temp.path()); }
                 f.e.backend.prepare_edit = Some((f.e.todo_path.clone(), db));
-            }
-            "prepare_deny" => {
-                f.e.backend.prepare_registry =
-                    Some(f.e.root.parent().unwrap().join("client-projects.txt"))
-            }
+            },
+            "prepare_deny" => f.e.backend.prepare_registry = Some(f.e.root.parent().unwrap().join("client-projects.txt")),
             _ => unreachable!(),
         }
         f.dispatch();
-        assert_eq!(
-            f.e.backend.launched.len(),
-            usize::from(gate == "pass"),
-            "{gate}"
-        );
+        assert_eq!(f.e.backend.launched.len(), usize::from(gate == "pass"), "{gate}");
         assert!(f.e.backend.notices.is_empty());
     }
 }
@@ -1938,15 +1839,10 @@ fn current_succession_dependency_release_still_requires_current_qualification() 
         let mut f = current_succession_fixture();
         f.put(item(999, "other", "done", &[]));
         wait_row(&mut f, 2839, json!([999]));
-        if !allowed {
-            f.e.backend.current_product = None;
-        }
+        if !allowed { f.e.backend.current_product = None; }
         f.e.run("repair-step", false).unwrap();
         assert_eq!(f.e.backend.launched.len(), usize::from(allowed));
-        assert_eq!(
-            f.get(2839)["status"],
-            if allowed { "doing" } else { "wait" }
-        );
+        assert_eq!(f.get(2839)["status"], if allowed { "doing" } else { "wait" });
     }
 }
 #[test]
@@ -1958,19 +1854,9 @@ fn current_succession_reconciliation_keeps_registry_and_worktree_denials() {
         f.e.backend.records[0]["status"] = json!("succeeded");
         f.e.backend.ps.clear();
         match gate {
-            "deny" => fs::write(
-                f.e.root.parent().unwrap().join("client-projects.txt"),
-                "GoDD-AO",
-            )
-            .unwrap(),
-            "unreadable" => {
-                fs::create_dir(f.e.root.parent().unwrap().join("client-projects.txt")).unwrap()
-            }
-            "worktree" => {
-                f.e.backend.repair_denied = f.get(2840)["scheduler"]["worktree"]
-                    .as_str()
-                    .map(str::to_string)
-            }
+            "deny" => fs::write(f.e.root.parent().unwrap().join("client-projects.txt"), "GoDD-AO").unwrap(),
+            "unreadable" => fs::create_dir(f.e.root.parent().unwrap().join("client-projects.txt")).unwrap(),
+            "worktree" => f.e.backend.repair_denied = f.get(2840)["scheduler"]["worktree"].as_str().map(str::to_string),
             _ => unreachable!(),
         }
         let before = f.get(2840);
@@ -1983,34 +1869,20 @@ fn current_succession_reconciliation_keeps_registry_and_worktree_denials() {
 
 #[test]
 fn current_succession_direct_subwork_uses_own_receipt_and_normal_admission() {
-    for gate in [
-        "pass",
-        "unqualified",
-        "relation",
-        "stop",
-        "dependency",
-        "cargo",
-        "cpu",
-    ] {
+    for gate in ["pass", "unqualified", "relation", "stop", "dependency", "cargo", "cpu"] {
         let mut sub = subwork_support::Fixture::new();
         sub.db["projects"]["GoDD-AO"] = json!(sub.repo);
         sub.db["items"][0]["project"] = json!("GoDD-AO");
         sub.db["items"][1]["project"] = json!("GoDD-AO");
         sub.register();
         sub.db["items"][1]["needs"] = json!(["cargo"]);
-        sub.db["items"][1]["scheduler"]
-            .as_object_mut()
-            .unwrap()
-            .remove("subwork_admission");
+        sub.db["items"][1]["scheduler"].as_object_mut().unwrap().remove("subwork_admission");
         sub.jobs[0]["pid"] = json!(1);
         sub.jobs[0]["created_at"] = json!(T - 1200.);
         sub.jobs[0]["pid_created"] = proc(1, 0, "codex.exe")["created"].clone();
         let mut f = Fixture::new();
         fs::remove_file(f.e.root.parent().unwrap().join("client-projects.txt")).unwrap();
-        f.e.backend.current_product = Some((
-            sub.db["items"][1].clone(),
-            sub.repo.to_str().unwrap().into(),
-        ));
+        f.e.backend.current_product = Some((sub.db["items"][1].clone(), sub.repo.to_str().unwrap().into()));
         f.e.backend.repair_allowed = true;
         f.e.backend.records = sub.jobs.clone();
         match gate {
@@ -2018,25 +1890,15 @@ fn current_succession_direct_subwork_uses_own_receipt_and_normal_admission() {
             "relation" => sub.db["items"][1]["subwork"]["kind"] = json!("implementation"),
             "stop" => sub.db["items"][1]["status"] = json!("block"),
             "dependency" => sub.db["items"][1]["wait_on"] = json!([1]),
-            "cargo" => {
-                f.e.backend.ps.insert(2, proc(2, 0, "cargo.exe"));
-            }
+            "cargo" => { f.e.backend.ps.insert(2, proc(2, 0, "cargo.exe")); },
             "cpu" => f.e.backend.m["cpu_percent"] = json!(99),
-            _ => {}
+            _ => {},
         }
         write_json(&f.e.todo_path, &sub.db, 1).unwrap();
         let result = f.e.dispatch(&f.cfg, &f.pri);
-        if gate == "relation" {
-            assert_eq!(result.unwrap_err().0, "InvalidSubwork");
-        } else {
-            result.unwrap();
-        }
-        assert_eq!(
-            f.e.backend.launched.len(),
-            usize::from(gate == "pass"),
-            "{gate}: {:?}",
-            f.e.report
-        );
+        if gate == "relation" { assert_eq!(result.unwrap_err().0, "InvalidSubwork"); }
+        else { result.unwrap(); }
+        assert_eq!(f.e.backend.launched.len(), usize::from(gate == "pass"), "{gate}: {:?}", f.e.report);
         if gate == "pass" {
             let launched = &f.e.backend.launched[0]["item"];
             assert_eq!(launched["id"], 2);
@@ -2420,12 +2282,10 @@ fn preparation_retains_previous_result_session_and_redesigns_repeated_continuati
         Path::new("prompt.md"),
         &json!({"model":"gpt-6.1-sol","effort":"high"}),
     );
-    assert!(
-        command
-            .args
-            .windows(2)
-            .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"])
-    );
+    assert!(command
+        .args
+        .windows(2)
+        .any(|p| p == ["--resume-session", "12345678-1234-4321-9234-123456789abc"]));
 }
 #[test]
 fn legacy_retry_question_is_retired_even_if_an_agent_already_changed_block_to_doing() {
@@ -2463,12 +2323,10 @@ fn scheduler_implementation_and_readonly_launches_have_distinct_permissions() {
             Path::new("prompt.md"),
             &json!({"model":"gpt-6.1-sol","effort":"high","task_type":task,"sandbox":sandbox}),
         );
-        assert!(
-            command
-                .args
-                .windows(2)
-                .any(|pair| pair == ["--sandbox", expected])
-        );
+        assert!(command
+            .args
+            .windows(2)
+            .any(|pair| pair == ["--sandbox", expected]));
     }
 }
 #[test]
@@ -2563,11 +2421,9 @@ fn revoked_civ6_lock_frees_resource_even_if_old_job_and_game_are_alive() {
     assert!(!busy.contains("civ6"));
     assert!(busy.contains("cargo"));
     write_json(&home.join("civ6.lock"), &json!({"job":"new-holder"}), 0).unwrap();
-    assert!(
-        resources_busy_with_lock(&[], &[old], &processes, T, home)
-            .unwrap()
-            .contains("civ6")
-    );
+    assert!(resources_busy_with_lock(&[], &[old], &processes, T, home)
+        .unwrap()
+        .contains("civ6"));
 }
 
 #[test]
@@ -3001,35 +2857,13 @@ fn subscription_model_aliases_keep_the_requested_model_and_launch_canonical_id()
         assert_eq!(f.e.backend.launched.len(), 1);
         assert_eq!(f.get(1)["model"], requested);
         assert_eq!(f.get(1)["scheduler"]["selection_input"]["model"], requested);
-        assert_eq!(
-            f.e.backend.launched[0]["item"]["scheduler"]["selection"]["model"],
-            expected
-        );
+        assert_eq!(f.e.backend.launched[0]["item"]["scheduler"]["selection"]["model"], expected);
     }
 }
 
 #[test]
 fn repair_tick_adopts_an_exact_registered_subwork_after_lost_launch_ack() {
-    for changed in [
-        "none",
-        "spec",
-        "model",
-        "effort",
-        "task",
-        "cwd",
-        "needs",
-        "relation",
-        "key",
-        "scope",
-        "owner",
-        "stopped",
-        "wait",
-        "question",
-        "owner_stop_job",
-        "stall_pending",
-        "processed",
-        "missing_model",
-    ] {
+    for changed in ["none", "spec", "model", "effort", "task", "cwd", "needs", "relation", "key", "scope", "owner", "stopped", "wait", "question", "owner_stop_job", "stall_pending", "processed", "missing_model"] {
         let mut f = completed_dependency_repair();
         let key = "a".repeat(32);
         f.e.edit(&json!(1), |row| {
@@ -3039,8 +2873,7 @@ fn repair_tick_adopts_an_exact_registered_subwork_after_lost_launch_ack() {
             row["scheduler"]["key"] = json!(key);
             row["scheduler"]["job"] = Value::Null;
             row["scheduler"]["selection"] = json!({"model":"gpt-6-luna"});
-        })
-        .unwrap();
+        }).unwrap();
         let child = f.get(1);
         let mut registered = job("registered", 0, "succeeded");
         registered["todo_id"] = json!(1);
@@ -3052,7 +2885,7 @@ fn repair_tick_adopts_an_exact_registered_subwork_after_lost_launch_ack() {
         registered["model"] = json!("gpt-6-luna");
         registered["last_message"] = json!("状態: 完了\n指定された検査が完了しました。");
         match changed {
-            "none" => {}
+            "none" => {},
             "spec" => registered["subwork_spec"] = json!("old-spec.md"),
             "model" => registered["model"] = json!("another-model"),
             "effort" => registered["effort"] = json!("different-effort"),
@@ -3062,60 +2895,27 @@ fn repair_tick_adopts_an_exact_registered_subwork_after_lost_launch_ack() {
             "relation" => registered["subwork"]["parent_todo_id"] = json!(9),
             "key" => registered["launch_key"] = json!("b".repeat(32)),
             "scope" => f.e.backend.repair_allowed = false,
-            "owner" => {
-                f.e.edit(&json!(1), |r| r["status"] = json!("block"))
-                    .unwrap();
-            }
-            "stopped" => {
-                f.e.edit(&json!(1), |r| r["owner_stopped"] = json!(true))
-                    .unwrap();
-            }
-            "wait" => {
-                wait_row(&mut f, 1, json!([99]));
-            }
-            "question" => {
-                f.e.edit(&json!(1), |r| {
-                    r["scheduler"]["question"] = json!("question-1")
-                })
-                .unwrap();
-            }
-            "owner_stop_job" => {
-                f.e.edit(&json!(1), |r| {
-                    r["scheduler"]["owner_stop_job"] = json!("owner-stop")
-                })
-                .unwrap();
-            }
-            "stall_pending" => {
-                f.e.edit(&json!(1), |r| {
-                    r["stall_recovery"]["pending"] = json!({"job":"reservation"})
-                })
-                .unwrap();
-            }
-            "processed" => {
-                f.e.edit(&json!(1), |r| {
-                    r["processed_results"]["registered"] = json!({"reason":"done"})
-                })
-                .unwrap();
-            }
+            "owner" => { f.e.edit(&json!(1), |r| r["status"] = json!("block")).unwrap(); },
+            "stopped" => { f.e.edit(&json!(1), |r| r["owner_stopped"] = json!(true)).unwrap(); },
+            "wait" => { wait_row(&mut f, 1, json!([99])); },
+            "question" => { f.e.edit(&json!(1), |r| r["scheduler"]["question"] = json!("question-1")).unwrap(); },
+            "owner_stop_job" => { f.e.edit(&json!(1), |r| r["scheduler"]["owner_stop_job"] = json!("owner-stop")).unwrap(); },
+            "stall_pending" => { f.e.edit(&json!(1), |r| r["stall_recovery"]["pending"] = json!({"job":"reservation"})).unwrap(); },
+            "processed" => { f.e.edit(&json!(1), |r| r["processed_results"]["registered"] = json!({"reason":"done"})).unwrap(); },
             "missing_model" => {
                 registered["model"] = Value::Null;
-                f.e.edit(&json!(1), |r| {
-                    r["scheduler"]["selection"]["model"] = Value::Null
-                })
-                .unwrap();
-            }
+                f.e.edit(&json!(1), |r| r["scheduler"]["selection"]["model"] = Value::Null).unwrap();
+            },
             _ => unreachable!(),
         }
         let before = f.get(1);
         let mut records = vec![registered];
-        f.e.reconcile_repairs(&mut records, &Processes::new(), &f.cfg.clone())
-            .unwrap();
+        f.e.reconcile_repairs(&mut records, &Processes::new(), &f.cfg.clone()).unwrap();
         if changed == "none" {
             assert_eq!(f.get(1)["status"], "done");
             assert!(arr(&f.get(1)["jobs"]).contains(&json!("registered")));
             assert_eq!(f.e.report["repair_dispatches_adopted"], json!([1]));
-            f.e.reconcile_repairs(&mut records, &Processes::new(), &f.cfg.clone())
-                .unwrap();
+            f.e.reconcile_repairs(&mut records, &Processes::new(), &f.cfg.clone()).unwrap();
             assert_eq!(f.get(1)["status"], "done");
         } else {
             assert_eq!(f.get(1), before, "{changed}");
@@ -3136,8 +2936,7 @@ fn repair_tick_prefers_one_live_receipt_and_leaves_ambiguous_live_receipts_untou
             row["scheduler"]["key"] = json!("a".repeat(32));
             row["scheduler"]["job"] = Value::Null;
             row["scheduler"]["selection"] = json!({"model":"gpt-6-luna","effort":"high"});
-        })
-        .unwrap();
+        }).unwrap();
         let before = f.get(1);
         let mut template = job("live-0", 0, "queued");
         for (job_key, row_value) in [
@@ -3149,16 +2948,12 @@ fn repair_tick_prefers_one_live_receipt_and_leaves_ambiguous_live_receipts_untou
             ("cwd", before["scheduler"]["worktree"].clone()),
             ("model", before["scheduler"]["selection"]["model"].clone()),
             ("effort", before["scheduler"]["selection"]["effort"].clone()),
-        ] {
-            template[job_key] = row_value;
-        }
-        let mut records = (0..live_count)
-            .map(|index| {
-                let mut record = template.clone();
-                record["id"] = json!(format!("live-{index}"));
-                record
-            })
-            .collect::<Vec<_>>();
+        ] { template[job_key] = row_value; }
+        let mut records = (0..live_count).map(|index| {
+            let mut record = template.clone();
+            record["id"] = json!(format!("live-{index}"));
+            record
+        }).collect::<Vec<_>>();
         for index in 0..3 {
             let mut terminal = template.clone();
             terminal["id"] = json!(format!("terminal-{index}"));
@@ -3166,18 +2961,12 @@ fn repair_tick_prefers_one_live_receipt_and_leaves_ambiguous_live_receipts_untou
             terminal["last_message"] = json!("状態: 完了\n検査が完了しました。");
             records.push(terminal);
         }
-        f.e.reconcile_repairs(&mut records, &Processes::new(), &f.cfg.clone())
-            .unwrap();
+        f.e.reconcile_repairs(&mut records, &Processes::new(), &f.cfg.clone()).unwrap();
         if live_count == 1 {
             assert_eq!(f.get(1)["scheduler"]["job"], "live-0");
             assert_eq!(f.get(1)["status"], "doing");
-            assert_eq!(
-                f.get(1)["jobs"].as_array().unwrap().last(),
-                Some(&json!("live-0"))
-            );
-        } else {
-            assert_eq!(f.get(1), before);
-        }
+            assert_eq!(f.get(1)["jobs"].as_array().unwrap().last(), Some(&json!("live-0")));
+        } else { assert_eq!(f.get(1), before); }
         assert!(f.e.backend.launched.is_empty());
         assert!(f.e.backend.cancelled.is_empty());
         assert!(f.e.backend.notices.is_empty());
@@ -3546,11 +3335,11 @@ fn preparation2164_owner_answer_keeps_known_resource_wait_deadline() {
     f.e.answers().unwrap();
     assert_eq!(f.get(1)["status"], "todo");
     assert_eq!(f.get(1)["scheduler"]["not_before"], T + 86400.);
-    assert!(
-        f.e.prepare(&f.get(1), f.repo.to_str().unwrap())
-            .unwrap()
-            .is_none()
-    );
+    assert!(f
+        .e
+        .prepare(&f.get(1), f.repo.to_str().unwrap())
+        .unwrap()
+        .is_none());
 }
 
 #[test]
@@ -3560,11 +3349,11 @@ fn preparation2164_prepare_respects_wait_even_after_selection_change() {
     row["model"] = json!("anthropic/claude-haiku-5-5");
     row["scheduler"] = json!({"not_before":T+3600.,"selection_input":{"model":"claude-haiku-5-5"}});
     f.put(row);
-    assert!(
-        f.e.prepare(&f.get(1), f.repo.to_str().unwrap())
-            .unwrap()
-            .is_none()
-    );
+    assert!(f
+        .e
+        .prepare(&f.get(1), f.repo.to_str().unwrap())
+        .unwrap()
+        .is_none());
     assert_eq!(f.get(1)["scheduler"]["not_before"], T + 3600.);
     assert_eq!(f.e.backend.pick_count, 0);
 }
@@ -3694,12 +3483,10 @@ fn preparation2164_bare_claude_routes_to_subscription_provider_with_original_sco
         f.e.backend.launched[0]["item"]["scheduler"]["selection"]["model"],
         "anthropic/claude-haiku-5-5"
     );
-    assert!(
-        f.e.backend.launched[0]["text"]
-            .as_str()
-            .unwrap()
-            .contains(f.repo.to_str().unwrap())
-    );
+    assert!(f.e.backend.launched[0]["text"]
+        .as_str()
+        .unwrap()
+        .contains(f.repo.to_str().unwrap()));
     assert_eq!(f.get(1)["model"], "claude-haiku-5-5");
 }
 
@@ -3922,15 +3709,13 @@ fn workspace_checkpoint_restores_resume_without_changing_work_or_waits() {
         fs::read_to_string(target.join("unfinished.txt")).unwrap(),
         "keep this pending work"
     );
-    assert!(
-        !run_git(
-            &mut runner,
-            &target,
-            &["rev-parse", "refs/heads/scheduler/todo-1-reserved"]
-        )
-        .unwrap()
-        .is_empty()
-    );
+    assert!(!run_git(
+        &mut runner,
+        &target,
+        &["rev-parse", "refs/heads/scheduler/todo-1-reserved"]
+    )
+    .unwrap()
+    .is_empty());
     after["scheduler"]["branch"] = before["scheduler"]["branch"].clone();
     remove(&mut after["scheduler"], "workspace_checkpoint");
     remove(&mut after, "updated");
@@ -4050,10 +3835,12 @@ fn workspace_checkpoint_preserves_intervening_owner_stop() {
             changed["items"][0]["stopped"] = json!(true);
         }
         f.e.backend.repair_edit = Some((f.e.todo_path.clone(), changed.clone()));
-        assert!(
-            cc_scheduler::workspace_checkpoint::checkpoint(&mut f.e, &mut SystemRunner, &request)
-                .is_err()
-        );
+        assert!(cc_scheduler::workspace_checkpoint::checkpoint(
+            &mut f.e,
+            &mut SystemRunner,
+            &request
+        )
+        .is_err());
         assert_eq!(f.e.todo().unwrap(), changed);
         assert!(f.e.backend.launched.is_empty());
     }
@@ -4169,15 +3956,13 @@ fn preparation2164_reserved_branch_in_another_checkout_keeps_its_dirty_files() {
     )
     .unwrap();
     fs::write(original.join("pending.txt"), "uncommitted work").unwrap();
-    assert!(
-        cc_scheduler::preparation::ensure_workspace(
-            &mut runner,
-            f.repo.to_str().unwrap(),
-            &row,
-            &[]
-        )
-        .is_err()
-    );
+    assert!(cc_scheduler::preparation::ensure_workspace(
+        &mut runner,
+        f.repo.to_str().unwrap(),
+        &row,
+        &[]
+    )
+    .is_err());
     assert!(!Path::new(s(&row["scheduler"]["worktree"])).exists());
     assert_eq!(
         fs::read_to_string(original.join("pending.txt")).unwrap(),
@@ -4250,11 +4035,10 @@ fn test_worktree_creation_fetches_origin_main_and_reuses_branch() {
     git.calls.clear();
     ensure_worktree(&mut git, f.repo.to_str().unwrap(), &row).unwrap();
     assert_eq!(git.calls.len(), 5);
-    assert!(
-        git.calls
-            .iter()
-            .all(|c| !c.args.iter().any(|a| a == "fetch" || a == "worktree"))
-    );
+    assert!(git
+        .calls
+        .iter()
+        .all(|c| !c.args.iter().any(|a| a == "fetch" || a == "worktree")));
 }
 #[test]
 fn test_step_entrypoint_never_raises() {
@@ -4353,17 +4137,13 @@ fn test_todo_live_lock_is_not_stolen_by_old_timestamp() {
     let lock = ByteLock::acquire(&lockpath, Duration::ZERO)
         .unwrap()
         .unwrap();
-    assert!(
-        ByteLock::acquire(&lockpath, Duration::ZERO)
-            .unwrap()
-            .is_none()
-    );
+    assert!(ByteLock::acquire(&lockpath, Duration::ZERO)
+        .unwrap()
+        .is_none());
     drop(lock);
-    assert!(
-        ByteLock::acquire(&lockpath, Duration::ZERO)
-            .unwrap()
-            .is_some()
-    );
+    assert!(ByteLock::acquire(&lockpath, Duration::ZERO)
+        .unwrap()
+        .is_some());
     assert!(lockpath.exists());
 }
 #[test]
@@ -4415,11 +4195,9 @@ fn test_question_close_failure_retries_close_without_reprocessing_reply() {
     let count = f.e.backend.reply_count;
     f.e.answers().unwrap();
     assert_eq!(f.e.backend.reply_count, count);
-    assert!(
-        f.get(1)["scheduler"]
-            .get("question_close_pending")
-            .is_none()
-    );
+    assert!(f.get(1)["scheduler"]
+        .get("question_close_pending")
+        .is_none());
 }
 #[test]
 fn test_new_hang_does_not_create_another_owner_question() {
@@ -4571,13 +4349,11 @@ fn test_discord_generic_continuation_does_not_launch_scheduler_questions() {
         .unwrap();
     cc_ask::resume::cmd_resume(&mut ctx, &mut false).unwrap();
     // Answer receipts now inspect scheduler questions too; the generic path still must never launch.
-    assert!(
-        !calls
-            .lock()
-            .unwrap()
-            .iter()
-            .any(|call| call["argv"].is_array())
-    );
+    assert!(!calls
+        .lock()
+        .unwrap()
+        .iter()
+        .any(|call| call["argv"].is_array()));
 }
 #[test]
 fn test_discord_tick_calls_scheduler_before_intake_even_if_intake_fails() {
@@ -4654,11 +4430,9 @@ fn real_backend_automatic_cancel_passes_the_recovery_flag_to_jobs_cli() {
     assert!(backend.cancel_for_recovery(&mut observed).unwrap());
     let calls = calls.lock().unwrap();
     assert_eq!(calls.len(), 1);
-    assert!(
-        calls[0]
-            .args
-            .ends_with(&["cancel".into(), "source".into(), "--recovery".into()])
-    );
+    assert!(calls[0]
+        .args
+        .ends_with(&["cancel".into(), "source".into(), "--recovery".into()]));
     assert_eq!(
         observed, source,
         "backend re-reads the CLI's durable job receipt"
@@ -4945,11 +4719,10 @@ fn junction_repo_resolves_to_original_worktree_container() {
     };
     fs::create_dir(f.repo.join(".git")).unwrap();
     ensure_worktree(&mut git, alias.to_str().unwrap(), &row).unwrap();
-    assert!(
-        git.calls
-            .iter()
-            .all(|c| !c.args.iter().any(|a| a == "worktree" || a == "fetch"))
-    );
+    assert!(git
+        .calls
+        .iter()
+        .all(|c| !c.args.iter().any(|a| a == "worktree" || a == "fetch")));
 }
 #[test]
 fn attempts_and_retries_remain_json_integers() {
@@ -5089,17 +4862,13 @@ fn retry_deadline_wait_does_not_dispatch_until_watchdog_releases_it() {
     write_json(&f.e.todo_path, &db, 2).unwrap();
     f.dispatch();
     assert!(f.e.backend.launched.is_empty());
-    assert!(
-        f.e.report["waiting"][0]["message"]
-            .as_str()
-            .unwrap()
-            .contains("次の再確認")
-    );
-    assert!(
-        cc_todo::ready::release_retries(&mut db, 3699)
-            .unwrap()
-            .is_empty()
-    );
+    assert!(f.e.report["waiting"][0]["message"]
+        .as_str()
+        .unwrap()
+        .contains("次の再確認"));
+    assert!(cc_todo::ready::release_retries(&mut db, 3699)
+        .unwrap()
+        .is_empty());
     assert_eq!(
         cc_todo::ready::release_retries(&mut db, 3700).unwrap(),
         vec![1]
@@ -5132,12 +4901,12 @@ fn readiness_wait_parks_only_its_task_and_fresh_check_releases_same_task() {
     // Normal admission still honours the launch interval after another task started.
     f.e.backend.clock += n(&f.cfg["launch_interval_s"]);
     f.dispatch();
-    assert!(
-        f.e.backend
-            .launched
-            .iter()
-            .any(|launch| launch["item"]["id"] == 1)
-    );
+    assert!(f
+        .e
+        .backend
+        .launched
+        .iter()
+        .any(|launch| launch["item"]["id"] == 1));
 }
 #[test]
 fn waiting_item_is_never_dispatched_and_launches_after_target_done() {

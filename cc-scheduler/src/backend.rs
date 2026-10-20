@@ -7,10 +7,10 @@ use std::{
     time::Duration,
 };
 
-#[path = "current_succession.rs"]
-mod current_succession;
 #[path = "process_birth_fallback.rs"]
 mod process_birth_fallback;
+#[path = "current_succession.rs"]
+mod current_succession;
 pub(crate) const BIRTH_FALLBACK_MARGIN: u64 = 10_000_000;
 pub(crate) const BIRTH_FALLBACK_MAX_SPAN: u64 = BIRTH_FALLBACK_MARGIN * 2;
 

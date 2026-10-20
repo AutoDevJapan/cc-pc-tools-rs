@@ -71,6 +71,16 @@ fn remedies_preserve_work_and_permissions_but_replace_full_or_bad_model_sessions
     assert_eq!(repaired_job(&job, Failure::Task), job);
     assert_eq!(repaired_job(&job, Failure::Console), job);
 }
+
+#[test]
+fn model_repair_preserves_explicit_effort_and_unknown_identity() {
+    let explicit = json!({"model":"gpt-6.1-sol","effort":"high","thread_id":"old"});
+    assert_eq!(repaired_job(&explicit, Failure::Model)["effort"], "high");
+    let unknown = json!({"model":"owner-special-model","effort":"medium","thread_id":"original"});
+    assert_eq!(repaired_job(&unknown, Failure::Model), unknown);
+    let omitted = json!({"model":"gpt-6.1-sol"});
+    assert_eq!(repaired_job(&omitted, Failure::Model)["effort"], "max");
+}
 #[test]
 fn two_quick_retries_become_hourly_and_console_cooldown_survives_process_restart() {
     assert_eq!(retry_at(&[], 10000.), 0.);

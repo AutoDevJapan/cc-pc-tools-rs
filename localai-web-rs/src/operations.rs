@@ -7,6 +7,9 @@ mod catalog;
 mod commander_health;
 #[path = "waiting_state.rs"]
 mod waiting_state;
+#[cfg(test)]
+#[path = "operations_product_identity_tests.rs"]
+mod product_identity_tests;
 use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, BTreeSet},

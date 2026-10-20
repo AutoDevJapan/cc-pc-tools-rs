@@ -376,7 +376,7 @@ impl History {
             "buildCounts":build_counts,"builds":builds,
             "history":self.frames.iter().map(|f|f.summary.clone()).collect::<Vec<_>>(),
             "historyLimit":HISTORY_SAMPLES,"growthState":if self.frames.len()<2{"collecting"}else{"observed_interval_only"},
-            "jobMetadataState":if current_jobs.is_empty(){"unverified_or_empty"}else{"observed"},
+            "jobMetadataState":if jobs["truncated"]==true{"truncated"}else if current_jobs.is_empty(){"unverified_or_empty"}else{"observed"},
             "notes":["working setは共有ページを含むため合算しません。私有メモリはcommit量です。",
                 "VMとコンテナは別の層です。ホストへ足しません。増加は観測区間の差で、原因の断定ではありません。"]})
     }
@@ -423,10 +423,26 @@ pub struct Resources {
     value: RwLock<Value>,
     docker: Arc<DockerCache>,
 }
-#[derive(Default)]
 struct DockerCache {
     value: Mutex<Value>,
     busy: AtomicBool,
+}
+impl Default for DockerCache {
+    fn default() -> Self {
+        Self {
+            value: Mutex::new(
+                json!({"state":"collecting","sampledAt":null,"attemptedAt":null,
+            "currentAvailable":false,"containers":[],"layer":"inside-vm","addToHost":false}),
+            ),
+            busy: AtomicBool::new(false),
+        }
+    }
+}
+struct DockerFlight(Arc<DockerCache>);
+impl Drop for DockerFlight {
+    fn drop(&mut self) {
+        self.0.busy.store(false, Ordering::Release);
+    }
 }
 impl Default for Resources {
     fn default() -> Self {
@@ -495,13 +511,14 @@ impl Resources {
                 .is_ok()
         {
             let cache = self.docker.clone();
+            let flight = DockerFlight(cache.clone());
             // One bounded finite worker, never a new resident or an HTTP-triggered scan.
             let worker = std::thread::Builder::new()
                 .name("resource-docker".into())
                 .spawn(move || {
+                    let _flight = flight;
                     let next = acquire(&previous, now);
                     *cache.value.lock().unwrap_or_else(|e| e.into_inner()) = next;
-                    cache.busy.store(false, Ordering::Release);
                 });
             match worker {
                 Ok(worker) => return Some(worker),
@@ -562,5 +579,42 @@ mod tests {
         assert!(!resources.enabled());
         assert!(resources.snapshot()["sampledAt"].is_null());
         assert!(Resources::production().enabled());
+        assert_eq!(resources.snapshot()["docker"]["state"], "collecting");
+        assert_eq!(resources.snapshot()["docker"]["containers"], json!([]));
+    }
+    #[test]
+    fn collector_panic_releases_the_flight_and_allows_the_next_collection() {
+        let resources = Resources::default();
+        let first = resources
+            .refresh_docker_with(100, |_, _| panic!("synthetic collector failure"))
+            .unwrap();
+        assert!(first.join().is_err());
+        assert!(!resources.docker.busy.load(Ordering::Acquire));
+        let next = resources
+            .refresh_docker_with(101, |_, now| {
+                json!({"state":"ready","sampledAt":now,"attemptedAt":now,
+            "currentAvailable":true,"containers":[]})
+            })
+            .expect("collector must be restartable");
+        next.join().unwrap();
+        assert_eq!(resources.snapshot_at(101)["docker"]["state"], "ready");
+    }
+    #[test]
+    fn truncated_job_metadata_is_distinct_from_an_empty_observation() {
+        let mut history = History::default();
+        let sample = Sample {
+            at_ms: 100,
+            tick_ms: 100,
+            logical_cpus: 32,
+            system_times: [0, 0, 0],
+            total_bytes: 100,
+            available_bytes: 50,
+            processes: vec![],
+        };
+        let value = history.observe(
+            sample,
+            &json!({"observedAt":100,"jobs":[],"truncated":true}),
+        );
+        assert_eq!(value["jobMetadataState"], "truncated");
     }
 }

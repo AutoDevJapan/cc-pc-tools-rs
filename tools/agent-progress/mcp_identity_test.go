@@ -124,6 +124,43 @@ func TestMCPDependencyUrgencyDoesNotChangeProductDepartment(t *testing.T) {
 	}
 }
 
+func TestMCPBusinessJobInheritsOnlyRealDependencyUrgency(t *testing.T) {
+	for _, explicit := range []bool{false, true} {
+		for _, dependency := range []string{"wait_on", "work_wait_on", "none"} {
+			for _, parentRank := range []int{10, 70} {
+				parent := map[string]any{"id": 1, "project": "tools", "status": "wait", "jobs": []string{"alpha"}}
+				if dependency != "none" {
+					parent[dependency] = []int{7}
+				}
+				db, _ := json.Marshal(map[string]any{"items": []any{parent, map[string]any{"id": 7, "project": "tools", "status": "doing"}}})
+				f := fixtureFor(t, string(db))
+				f.opts.PriorityFile = filepath.Join(filepath.Dir(f.opts.TodoFile), "priority.json")
+				policy, _ := json.Marshal(map[string]any{"items": map[string]int{"1": parentRank}, "product_identities": map[string]any{"godd-mcp-alpha": map[string]int{"repository_id": 61002, "owner_id": 71002}}})
+				writeFixture(t, f.opts.PriorityFile, policy)
+				job := map[string]any{"id": "alpha", "todo_id": 7, "project": "GoDD MCP α", "status": "queued"}
+				if explicit {
+					job["product_identity"] = map[string]int{"repository_id": 61002, "owner_id": 71002}
+				}
+				data, _ := json.Marshal(job)
+				f.job(t, "alpha", string(data))
+				got := snap(f)
+				expected := 60
+				if dependency != "none" {
+					expected = min(expected, parentRank)
+				}
+				if len(got.Jobs) != 1 || got.Jobs[0].Priority != expected || got.Jobs[0].Department != "GoDD事業部" {
+					t.Fatalf("explicit=%t dependency=%s parent=%d: jobs=%+v, expected priority=%d and GoDD department", explicit, dependency, parentRank, got.Jobs, expected)
+				}
+				for _, task := range got.Tasks {
+					if explicit && task.ID == 7 && task.Priority != expected {
+						t.Fatalf("task and job urgency differ: task=%d job=%d", task.Priority, expected)
+					}
+				}
+			}
+		}
+	}
+}
+
 func TestMCPNoPrimaryPrefersAnUnblockedCurrentTaskOverWaitingHistory(t *testing.T) {
 	f := fixtureFor(t, `{"items":[{"id":1,"project":"GoDD-MCP-Alpha","status":"wait","jobs":["worker"]},{"id":2,"project":"GoDD-MCP-Alpha","status":"doing","jobs":["worker"]}]}`)
 	f.opts.ActiveOnly = true

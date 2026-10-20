@@ -121,6 +121,37 @@ fn unknown_product_jobs_inherit_a_recorded_dependency_priority_without_claiming_
 }
 
 #[test]
+fn mcp_business_jobs_preserve_dependency_urgency_without_borrowing_history_priority() {
+    for declared in [false, true] {
+        for dependency in ["wait_on", "work_wait_on", "none"] {
+            for parent_rank in [10u32, 70] {
+                let mut parent =
+                    json!({"id":1,"project":"tools","status":"wait","jobs":["prerequisite"]});
+                if dependency != "none" {
+                    parent[dependency] = json!([7]);
+                }
+                let db = json!({"items":[parent,{"id":7,"project":"tools","status":"doing"}]});
+                let mut job = json!({"id":"prerequisite","todo_id":7,"project":"GoDD MCP α"});
+                if declared {
+                    job["product_identity"] = json!({"repository_id":61002,"owner_id":71002});
+                }
+                let policy = with_bindings(json!({"items":{"1":parent_rank}}));
+                let ranks = cc_job_policy::priority::job_ranks(&[job], &db, &policy);
+                let expected = if dependency == "none" {
+                    60
+                } else {
+                    parent_rank.min(60)
+                };
+                assert_eq!(
+                    ranks["prerequisite"], expected,
+                    "{declared}/{dependency}/{parent_rank}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
 fn bindings_are_required_and_never_returned_by_metadata() {
     let row = json!({"product_identity":{"repository_id":61001,"owner_id":71001}});
     assert_eq!(

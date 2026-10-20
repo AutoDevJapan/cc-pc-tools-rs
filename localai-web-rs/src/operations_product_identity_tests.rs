@@ -10,20 +10,24 @@ fn identity(alpha: bool) -> Value {
 }
 
 fn board(items: Value, jobs: Vec<Value>, masked: bool) -> Value {
+    board_with_policy(
+        items,
+        jobs,
+        masked,
+        json!({"product_identities":{
+            "godd-mcp-contract":{"repository_id":61001,"owner_id":71001},
+            "godd-mcp-alpha":{"repository_id":61002,"owner_id":71002}
+        }}),
+    )
+}
+
+fn board_with_policy(items: Value, jobs: Vec<Value>, masked: bool, policy: Value) -> Value {
     let temp = tempfile::tempdir().unwrap();
     let root = temp.path();
     fs::create_dir_all(root.join("todo")).unwrap();
     fs::create_dir_all(root.join("codex-jobs/jobs")).unwrap();
     fs::create_dir_all(root.join("scheduler")).unwrap();
-    fs::write(
-        root.join("scheduler/priorities.json"),
-        json!({"product_identities":{
-            "godd-mcp-contract":{"repository_id":61001,"owner_id":71001},
-            "godd-mcp-alpha":{"repository_id":61002,"owner_id":71002}
-        }})
-        .to_string(),
-    )
-    .unwrap();
+    fs::write(root.join("scheduler/priorities.json"), policy.to_string()).unwrap();
     if !masked {
         fs::write(root.join("client-projects.txt"), "SyntheticPrivate\n").unwrap();
     }
@@ -153,10 +157,12 @@ fn mcp_unverified_owner_does_not_fall_back_to_a_name() {
                 vec![],
                 masked,
             );
-            assert!(product(&value, "GoDD MCP α")["workers"]
-                .as_array()
-                .unwrap()
-                .is_empty());
+            assert!(
+                product(&value, "GoDD MCP α")["workers"]
+                    .as_array()
+                    .unwrap()
+                    .is_empty()
+            );
             let unknown = &value["unassignedProducts"][0]["workers"][0];
             assert_eq!(unknown["productIdentity"]["state"], "unknown");
             assert_eq!(unknown["priority"], 100);
@@ -192,10 +198,12 @@ fn mcp_owner_declared_ci_todos_remain_alpha_in_the_maintenance_repository() {
                 .len(),
             3
         );
-        assert!(product(&value, "GoDD MCP")["workers"]
-            .as_array()
-            .unwrap()
-            .is_empty());
+        assert!(
+            product(&value, "GoDD MCP")["workers"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
         for row in product(&value, "GoDD MCP α")["workers"].as_array().unwrap() {
             assert_eq!(row["productIdentity"]["state"], "owner_declared");
             assert_eq!(row["codeProduct"], "PCの道具");
@@ -303,10 +311,12 @@ fn mcp_job_name_cannot_override_a_conflicting_owner_declared_primary_todo() {
             masked,
         );
         assert!(row(&value, "todo-2641")["primaryJob"].is_null());
-        assert!(product(&value, "GoDD MCP")["workers"]
-            .as_array()
-            .unwrap()
-            .is_empty());
+        assert!(
+            product(&value, "GoDD MCP")["workers"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
         assert_eq!(
             value["unassignedProducts"][0]["workers"][0]["productIdentity"]["state"],
             "unknown"
@@ -422,15 +432,105 @@ fn mcp_standalone_job_keeps_all_private_links_when_its_primary_is_old_done() {
     let value = board(
         json!([
             {"id":5,"project":"GoDD MCP","status":"doing","jobs":["standalone"]},
-            {"id":6,"project":"tools","status":"done","updated_at":"1970-01-01T00:00:00Z"}
+            {"id":6,"project":"tools","status":"done"}
         ]),
         vec![
             json!({"id":"standalone","todo_id":6,"project":"tools","status":"running","task_title":"private-job-title-marker","last_message":"private-job-report-marker"}),
         ],
         false,
     );
+    let standalone = safe_id("job", "standalone");
+    assert_eq!(row(&value, &standalone)["id"], standalone);
+    assert!(
+        !value["departments"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|d| d["products"].as_array().unwrap())
+            .flat_map(|p| p["workers"].as_array().unwrap())
+            .any(|w| w["id"] == "todo-6")
+    );
     assert!(!value.to_string().contains("private-job-title-marker"));
     assert!(!value.to_string().contains("private-job-report-marker"));
+}
+
+#[test]
+fn mcp_detail_api_matches_all_linked_product_privacy() {
+    for related_ids in [false, true] {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        fs::create_dir_all(root.join("todo")).unwrap();
+        fs::create_dir_all(root.join("codex-jobs/jobs/a")).unwrap();
+        fs::write(root.join("client-projects.txt"), "SyntheticPrivate\n").unwrap();
+        let mut private = json!({"id":5,"project":"GoDD MCP","status":"doing"});
+        let mut job = json!({"id":"shared","todo_id":6,"project":"tools","status":"running"});
+        if related_ids {
+            job["related_todo_ids"] = json!([5]);
+        } else {
+            private["jobs"] = json!(["shared"]);
+        }
+        fs::write(root.join("todo/todo.json"),json!({"projects":{"GoDD MCP":"D:/synthetic/contract","tools":"D:/synthetic/tools"},"items":[
+            private,{"id":6,"project":"tools","status":"doing","note":"private-detail-marker"}
+        ]}).to_string()).unwrap();
+        fs::write(root.join("codex-jobs/jobs/a/job.json"), job.to_string()).unwrap();
+        let board = collect(root, 1_000_000);
+        assert!(!board.to_string().contains("private-detail-marker"));
+        let operations = Operations::new(root.into(), root.join("Skills"));
+        assert_eq!(
+            operations.worker_detail("todo-6", 0),
+            Err(404),
+            "related_ids={related_ids}"
+        );
+    }
+}
+
+#[test]
+fn mcp_related_ids_without_a_primary_keep_conflicting_products_unknown() {
+    for masked in [false, true] {
+        let value = board(
+            json!([
+                {"id":5,"project":"GoDD MCP","status":"doing"},
+                {"id":6,"project":"GoDD MCP α","status":"doing"}
+            ]),
+            vec![
+                json!({"id":"related","related_todo_ids":[5,6],"project":"tools","status":"running"}),
+            ],
+            masked,
+        );
+        let job = row(&value, &safe_id("job", "related"));
+        assert_eq!(job["productIdentity"]["state"], "unknown");
+        assert!(row(&value, "todo-5")["primaryJob"].is_null());
+        assert!(row(&value, "todo-6")["primaryJob"].is_null());
+    }
+}
+
+#[test]
+fn mcp_job_business_identity_keeps_the_more_urgent_product_or_dependency_rank() {
+    for masked in [false, true] {
+        for parent_rank in [10u32, 70] {
+            let policy = json!({"items":{"1":parent_rank},"product_identities":{
+                "godd-mcp-alpha":{"repository_id":61002,"owner_id":71002}
+            }});
+            let value = board_with_policy(
+                json!([
+                    {"id":1,"project":"tools","status":"wait","wait_on":[7]},
+                    {"id":7,"project":"tools","status":"doing"}
+                ]),
+                vec![
+                    json!({"id":"business","todo_id":7,"project":"tools","status":"running","product_identity":identity(true)}),
+                ],
+                masked,
+                policy,
+            );
+            let row = row(&value, "todo-7");
+            assert_eq!(row["productIdentity"]["productId"], "godd-mcp-alpha");
+            assert_eq!(
+                row["priority"],
+                parent_rank.min(60),
+                "masked={masked}/parent={parent_rank}"
+            );
+        }
+    }
 }
 
 #[test]

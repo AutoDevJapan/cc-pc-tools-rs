@@ -1,9 +1,11 @@
 package main
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"syscall"
+	"time"
 	"unsafe"
 )
 
@@ -33,6 +35,21 @@ func processReceiptAlive(pid uint32, created uint64) bool {
 	return ok != 0 && code == 259
 }
 func replace(from, to string) error {
+	return retryReplace(func() error { return replaceOnce(from, to) }, time.Sleep)
+}
+
+func retryReplace(move func() error, wait func(time.Duration)) error {
+	delays := [...]time.Duration{10 * time.Millisecond, 20 * time.Millisecond, 40 * time.Millisecond}
+	for attempt := 0; ; attempt++ {
+		err := move()
+		if err == nil || (!errors.Is(err, syscall.Errno(5)) && !errors.Is(err, syscall.Errno(32))) || attempt == len(delays) {
+			return err
+		}
+		wait(delays[attempt])
+	}
+}
+
+func replaceOnce(from, to string) error {
 	a, e := syscall.UTF16PtrFromString(from)
 	if e != nil {
 		return e

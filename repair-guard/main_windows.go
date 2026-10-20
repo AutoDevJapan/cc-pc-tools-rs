@@ -180,6 +180,9 @@ func allowed(path string) bool {
 	if owned2736PathAllowed(absolute) {
 		return true
 	}
+	if owned3107PathAllowed(absolute) {
+		return true
+	}
 	if conversationPathAllowed(absolute) {
 		return true
 	}

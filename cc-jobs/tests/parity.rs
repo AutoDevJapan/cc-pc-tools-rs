@@ -64,50 +64,20 @@ mod independent_subwork {
     }
     #[test]
     fn unqualified_original_research_is_not_published_as_another_ordinary_reader() {
-        let (t, mut f) = setup(1);
-        f.db["items"][1]["id"] = json!(2939);
-        f.db["items"][1]["subwork"]["kind"] = json!("research");
-        f.db["items"][1]["scheduler"]["worktree"] = json!(subwork_support::tree(
-            &f.repo,
-            "todo-2939-research",
-            "scheduler/todo-2939-research"
-        ));
-        f.db["items"][1]["scheduler"]["branch"] = json!("scheduler/todo-2939-research");
-        f.db["items"][1]["scheduler"]["subwork_admission"] =
-            cc_job_policy::subwork::admission(&f.db["items"][1]);
-        fs::write(f.dir.path().join("todo.json"), f.db.to_string()).unwrap();
-        let row = &f.db["items"][1];
-        let error = t
-            .run(
-                &[
-                    "--todo-id",
-                    "2939",
-                    "--subwork-of",
-                    "1",
-                    "--parent-job-id",
-                    "parent",
-                    "--assigned-needs",
-                    "",
-                    "--launch-key",
-                    s(&row["scheduler"], "key"),
-                    "--cwd",
-                    s(&row["scheduler"], "worktree"),
-                    "--sandbox",
-                    "read-only",
-                ],
-                b"finite original research",
-            )
+        let (t,mut f)=setup(1);
+        f.db["items"][1]["id"]=json!(2939);
+        f.db["items"][1]["subwork"]["kind"]=json!("research");
+        f.db["items"][1]["scheduler"]["worktree"]=json!(subwork_support::tree(&f.repo,"todo-2939-research","scheduler/todo-2939-research"));
+        f.db["items"][1]["scheduler"]["branch"]=json!("scheduler/todo-2939-research");
+        f.db["items"][1]["scheduler"]["subwork_admission"]=cc_job_policy::subwork::admission(&f.db["items"][1]);
+        fs::write(f.dir.path().join("todo.json"),f.db.to_string()).unwrap();
+        let row=&f.db["items"][1];
+        let error=t.run(&["--todo-id","2939","--subwork-of","1","--parent-job-id","parent",
+            "--assigned-needs","","--launch-key",s(&row["scheduler"],"key"),
+            "--cwd",s(&row["scheduler"],"worktree"),"--sandbox","read-only"],b"finite original research")
             .expect_err("unqualified original research must not be registered");
-        assert!(
-            error.message.contains("no reader retry was registered"),
-            "{error:?}"
-        );
-        assert!(
-            !t.ctx
-                .list_jobs(&HashSet::new())
-                .iter()
-                .any(|j| j["todo_id"] == 2939)
-        );
+        assert!(error.message.contains("no reader retry was registered"),"{error:?}");
+        assert!(!t.ctx.list_jobs(&HashSet::new()).iter().any(|j|j["todo_id"]==2939));
     }
     #[test]
     fn queued_subwork_admits_after_todo_start_releases_its_reservation() {
@@ -1753,7 +1723,7 @@ mod capacity_regressions {
     }
 
     #[test]
-    fn explicit_review_never_returns_to_the_source_authors_model() {
+    fn explicit_review_uses_another_claude_model_without_returning_to_the_source_author() {
         let t = Test::new();
         t.put(job(
             json!({"id":"author","model":"gpt-6-luna","requested_model":"gpt-6.1-sol"}),
@@ -1762,9 +1732,14 @@ mod capacity_regressions {
             failed(),
             json!({"model":"anthropic/claude-sonnet-5-5","requested_model":"anthropic/claude-sonnet-5-5","model_explicit":true,"parent_job_id":"author","task_type":"code_review"}),
         );
+        assert!(t.ctx.retry_capacity(&mut review));
+        assert_eq!(review["model"], "anthropic/claude-opus-5-5");
+        assert_eq!(review["effort"], "max");
+        review["status"]=json!("failed");
+        review["last_failure_kind"]=json!("capacity");
+        review["last_error"]=json!("Selected model is at capacity");
         assert!(!t.ctx.retry_capacity(&mut review));
-        assert_eq!(review["model"], "anthropic/claude-sonnet-5-5");
-        assert_eq!(review["capacity_exhausted"], true);
+        assert_eq!(review["capacity_exhausted"],true);
     }
 
     #[test]
@@ -1943,6 +1918,32 @@ mod capacity_regressions {
                     .all(|j| s(j, "id") == "author")
             );
         }
+    }
+
+    #[test]
+    fn owner_wait_release_rechecks_generation_before_resuming_capacity_selection() {
+        let t=Test::new();
+        let j=t.put(job(json!({"id":"owner-capacity","cwd":t.ctx.root,"status":"queued",
+            "model":"gpt-6.1-sol","effort":"max","todo_id":3081,"todo_dependency_generation":0,
+            "capacity_owner_recheck":true,"capacity_history":[],
+            "capacity_wait_error":"Selected model is at capacity"})));
+        let mut db=json!({"items":[{"id":3081,"status":"block","dependency_generation":0,
+            "jobs":[j["id"]],"scheduler":{"job":j["id"]}}]});
+        fs::write(t.ctx.root.join("todo.json"),db.to_string()).unwrap();
+        assert!(t.ctx.admit(s(&j,"id")).unwrap().is_none());
+        assert!(t.rt.spawn_args.lock().unwrap().is_empty());
+        db["items"][0]["status"]=json!("doing");
+        db["items"][0]["dependency_generation"]=json!(1);
+        fs::write(t.ctx.root.join("todo.json"),db.to_string()).unwrap();
+        assert!(t.ctx.admit(s(&j,"id")).unwrap().is_none());
+        let mut ready=t.ctx.load(s(&j,"id")).unwrap();
+        assert_eq!(ready["todo_dependency_generation"],1);
+        assert_eq!(ready["capacity_wait_pending"],true);
+        assert!(ready["capacity_retry_count"].is_null());
+        assert!(t.ctx.recheck_capacity_wait(&mut ready));
+        assert_eq!(ready["effort"],"max");
+        assert_eq!(ready["status"],"queued");
+        assert!(t.rt.spawn_args.lock().unwrap().is_empty());
     }
 }
 mod queue_regressions {
@@ -6814,26 +6815,13 @@ mod finite_research_execution {
     #[test]
     fn a_saved_approval_claim_cannot_bypass_current_qualification_before_prompt_generation() {
         let t = Test::new();
-        fs::write(
-            t.ctx.root.join("todo.json"),
-            json!({"items":[]}).to_string(),
-        )
-        .unwrap();
+        fs::write(t.ctx.root.join("todo.json"), json!({"items":[]}).to_string()).unwrap();
         let j = t.put(job(json!({"id":"finite-research-forged","todo_id":2939,
             "sandbox":"read-only","network":false,"approval_policy":"on-request",
             "approvals_reviewer":"auto_review","finite_research_approval":{"forged":true}})));
-        let error = t
-            .ctx
-            .execution_spawn(&j)
-            .err()
-            .expect("current qualification must fail");
+        let error = t.ctx.execution_spawn(&j).err().expect("current qualification must fail");
         assert!(error.message.contains("qualification changed or expired"));
-        assert!(
-            !t.ctx
-                .job_dir("finite-research-forged")
-                .join("execution-prompt.md")
-                .exists()
-        );
+        assert!(!t.ctx.job_dir("finite-research-forged").join("execution-prompt.md").exists());
     }
     #[test]
     fn ordinary_reader_execution_keeps_never_despite_saved_approval_hints() {
@@ -6841,7 +6829,7 @@ mod finite_research_execution {
         let j = t.put(job(json!({"id":"ordinary-reader","sandbox":"read-only",
             "network":false,"approval_policy":"on-request","approvals_reviewer":"auto_review"})));
         let spawn = t.ctx.execution_spawn(&j).unwrap();
-        assert!(spawn.argv.windows(2).any(|a| a == ["-s", "read-only"]));
+        assert!(spawn.argv.windows(2).any(|a| a == ["-s","read-only"]));
         assert!(spawn.argv.contains(&"approval_policy=never".into()));
         assert!(spawn.argv.contains(&"approvals_reviewer=user".into()));
         assert!(!spawn.argv.iter().any(|a| a.contains("network_access=true")));
@@ -10202,6 +10190,11 @@ mod end_to_end {
                         ][index]
                     ]));
                 if index > 0 {
+                    if index <= count as usize {
+                        let actual=args[args.iter().position(|a|*a=="-m").unwrap()+1];
+                        assert_eq!(call["catalog_model"],actual);
+                        assert_eq!(call["catalog_context"],1000000);
+                    }
                     assert!(
                         args.windows(2)
                             .any(|w| w == ["resume", "01a0e883-7628-7121-9540-6780fd4cd6f4"])
@@ -10550,9 +10543,7 @@ mod end_to_end {
         }
         fn cli(&self, args: &[&str], mode: &str) -> std::process::Output {
             let mut c = hidden_command(self.exe.to_str().unwrap());
-            if mode == "report-only" {
-                c.env("CC_TODO_HOME", self.tmp.0.join("todo"));
-            }
+            if mode == "report-only" { c.env("CC_TODO_HOME", self.tmp.0.join("todo")); }
             c.args(args)
                 .env(
                     "PATH",
@@ -11780,23 +11771,17 @@ mod additional_compatibility {
             assert_eq!(code, case["code"].as_i64().unwrap() as i32, "{args:?}");
             // Preserve the historical Python baseline, allowing only the new
             // explicitly documented finite retry option in run's help.
-            let legacy_out = if args.first() == Some(&"run")
-                && args.iter().any(|arg| ["-h", "--help"].contains(arg))
-            {
-                let usage = "                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n";
-                let option = "  --original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY\n                        reserved retry key for original ToDo 1626 only (32\n                        lowercase hex); requires the same --launch-key and\n                        waits for product-retry-bind before execution\n";
-                assert_eq!(out.matches(usage).count(), 1);
-                assert_eq!(out.matches(option).count(), 1);
-                out.replace(usage, "").replace(option, "")
-            } else {
-                out
-            };
+            let legacy_out = if args.first() == Some(&"run") && args.iter().any(|arg| ["-h","--help"].contains(arg)) {
+                let usage="                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n";
+                let option="  --original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY\n                        reserved retry key for original ToDo 1626 only (32\n                        lowercase hex); requires the same --launch-key and\n                        waits for product-retry-bind before execution\n";
+                assert_eq!(out.matches(usage).count(),1);
+                assert_eq!(out.matches(option).count(),1);
+                out.replace(usage,"").replace(option,"")
+            }else{out};
             assert_eq!(legacy_out, s(&case, "stdout"), "{args:?} stdout");
-            let legacy_err = if args.first() == Some(&"run") {
+            let legacy_err=if args.first()==Some(&"run"){
                 err.replace("                         [--original-product-retry-key ORIGINAL_PRODUCT_RETRY_KEY]\n","")
-            } else {
-                err
-            };
+            }else{err};
             assert_eq!(legacy_err, s(&case, "stderr"), "{args:?} stderr");
         }
         assert!(t.rt.calls.lock().unwrap().is_empty());

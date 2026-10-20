@@ -18,7 +18,8 @@ fn main() {
     }
     if args.iter().any(|a| a == "account") {
         let at = chrono::Local::now().timestamp() as f64;
-        if args.iter().any(|a| a == "openai") {
+        if args.iter().any(|a| a == "openai") && std::env::var("CC_JOBS_FIXTURE_MODE")
+            .is_ok_and(|mode|mode.starts_with("capacity-")) {
             println!(
                 "{}",
                 json!({"accounts":(1..=4).map(|n| json!({
@@ -54,6 +55,16 @@ fn main() {
             "{}",
             json!({"logs":[{"model":model,"accountLogLabel":"p000001","status":503,
             "timestamp":chrono::Local::now().timestamp_millis()}]})
+        );
+        return;
+    }
+    if args.iter().any(|a| a == "catalog") {
+        println!(
+            "{}",
+            json!({"models":["gpt-6.1-sol","gpt-6-luna"].map(|slug|json!({
+                "slug":slug,"context_window":1000000,"supports_reasoning_summaries":true,
+                "supported_reasoning_levels":[{"effort":"max"}],"base_instructions":"fixture"
+            }))})
         );
         return;
     }
@@ -372,7 +383,15 @@ fn main() {
             .append(true)
             .open(calls)
             .unwrap();
-        writeln!(log, "{}", json!({"argv":args,"cwd":std::env::current_dir().unwrap().to_string_lossy(),"prompt":String::from_utf8_lossy(&fs::read(root.join("stdin.bin")).unwrap())})).unwrap();
+        let catalog = args
+            .iter()
+            .find_map(|a| a.strip_prefix("model_catalog_json="))
+            .and_then(|path| fs::read(path).ok())
+            .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+            .unwrap_or(Value::Null);
+        writeln!(log, "{}", json!({"argv":args,"cwd":std::env::current_dir().unwrap().to_string_lossy(),
+            "prompt":String::from_utf8_lossy(&fs::read(root.join("stdin.bin")).unwrap()),
+            "catalog_model":catalog["models"][0]["slug"],"catalog_context":catalog["models"][0]["context_window"]})).unwrap();
         let selected = args
             .windows(2)
             .find(|w| w[0] == "-m")

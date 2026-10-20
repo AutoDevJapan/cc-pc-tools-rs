@@ -11,6 +11,8 @@ const T: f64 = 100000.;
 mod subwork_support;
 #[path = "support/no_action.rs"]
 mod no_action_tests;
+#[path = "support/dispatch_receipt.rs"]
+mod dispatch_receipt_tests;
 
 #[test]
 fn console_subwork_recovers_only_proven_idle_doing_retry_through_normal_gates() {

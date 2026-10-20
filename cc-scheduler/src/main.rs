@@ -8,6 +8,22 @@ use std::path::PathBuf;
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let command = args.first().map(String::as_str);
+    if command == Some("dispatch-receipt") {
+        let result = (|| -> Result<serde_json::Value> {
+            if args.len() != 3 || args[1] != "--id" {
+                return Err(Error("InputRejected"));
+            }
+            let id = args[2].parse().map_err(|_| Error("InputRejected"))?;
+            let root = PathBuf::from("D:/CC/Tools/scheduler");
+            let mut engine = Scheduler::new(root.clone(), PathBuf::from("D:/CC/Tools/todo/todo.json"), RealBackend::new(root))?;
+            cc_scheduler::dispatch_receipt::inspect(&mut engine, id)
+        })();
+        match result {
+            Ok(report) => println!("{}", encode(&report, 2)),
+            Err(error) => { eprintln!("dispatch receipt failed {}", error.0); std::process::exit(1); }
+        }
+        return;
+    }
     if command == Some("checkpoint-workspace") {
         if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
             println!("usage: scheduler checkpoint-workspace --request-file <JSON>\n\nExplicitly save one owned task's current branch and HEAD receipt. Never launches or changes source files.\nJSON: id, job, expected_branch, branch, head\n\noptions:\n  -h, --help  show this help message and exit");

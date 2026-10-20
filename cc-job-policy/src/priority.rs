@@ -206,12 +206,26 @@ pub fn job_ranks(jobs: &[Value], db: &Value, policy: &Value) -> BTreeMap<String,
                         crate::product_identity::resolve(i, policy)
                             != crate::product_identity::Resolution::Other
                     });
-                let owned = db["items"]
+                let candidates: Vec<_> = db["items"]
                     .as_array()
                     .into_iter()
                     .flatten()
                     .filter(|i| linked(i, j))
                     .filter(|i| !mcp || primary.is_none() || i["id"] == j["todo_id"])
+                    .collect();
+                let target = crate::product_identity::resolve(j, policy);
+                if target == crate::product_identity::Resolution::Unknown
+                    || (target == crate::product_identity::Resolution::Other
+                        && crate::product_identity::ambiguous(
+                            candidates
+                                .iter()
+                                .map(|i| crate::product_identity::resolve(i, policy)),
+                        ))
+                {
+                    return (id.to_owned(), DEFAULT);
+                }
+                let owned = candidates
+                    .into_iter()
                     .filter(|i| {
                         crate::product_identity::compatible(
                             crate::product_identity::resolve(i, policy),

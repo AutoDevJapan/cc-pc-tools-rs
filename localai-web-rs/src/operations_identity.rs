@@ -7,7 +7,11 @@ pub(super) fn resolve(row: &Value, policy: &Value) -> Resolution {
 }
 
 pub(super) fn target(row: &Value, policy: &Value, fallback: String) -> String {
-    match resolve(row, policy) {
+    target_for(resolve(row, policy), row, fallback)
+}
+
+pub(super) fn target_for(resolution: Resolution, row: &Value, fallback: String) -> String {
+    match resolution {
         Resolution::Unknown => format!(
             "製品未確認（登録 {}）",
             safe_id("record", &row["id"].to_string())
@@ -16,6 +20,37 @@ pub(super) fn target(row: &Value, policy: &Value, fallback: String) -> String {
             .product()
             .map(|p| p.name.to_owned())
             .unwrap_or(fallback),
+    }
+}
+
+fn candidates<'a>(row: &Value, items: &'a [Value]) -> Vec<&'a Value> {
+    let direct = row["todo_id"].as_u64();
+    let mut candidates: Vec<_> = items
+        .iter()
+        .filter(|item| linked(item, row))
+        .filter(|item| direct.is_none_or(|id| item["id"].as_u64() == Some(id)))
+        .collect();
+    if candidates
+        .iter()
+        .any(|item| item["scheduler"]["job"] == row["id"])
+    {
+        candidates.retain(|item| item["scheduler"]["job"] == row["id"]);
+    }
+    candidates
+}
+
+pub(super) fn standalone(row: &Value, items: &[Value], policy: &Value) -> Resolution {
+    let resolution = resolve(row, policy);
+    if resolution == Resolution::Other
+        && identity::ambiguous(
+            candidates(row, items)
+                .iter()
+                .map(|item| resolve(item, policy)),
+        )
+    {
+        Resolution::Unknown
+    } else {
+        resolution
     }
 }
 
@@ -33,19 +68,17 @@ pub(super) fn assignments(
     jobs.iter()
         .filter_map(|job| {
             let id = job["id"].as_str().filter(|id| !id.is_empty())?;
-            let direct = job["todo_id"].as_u64();
             let target = resolve(job, policy);
-            let item = items
-                .iter()
-                .filter(|item| linked(item, job))
-                .filter(|item| direct.is_none_or(|id| item["id"].as_u64() == Some(id)))
+            let candidates = candidates(job, items);
+            if target == Resolution::Other
+                && identity::ambiguous(candidates.iter().map(|item| resolve(item, policy)))
+            {
+                return None;
+            }
+            let item = candidates
+                .into_iter()
                 .filter(|item| identity::compatible(resolve(item, policy), target))
-                .min_by_key(|item| {
-                    (
-                        item["scheduler"]["job"] != job["id"],
-                        item["id"].as_u64().unwrap_or(u64::MAX),
-                    )
-                })?;
+                .min_by_key(|item| item["id"].as_u64().unwrap_or(u64::MAX))?;
             Some((id.to_owned(), item["id"].as_u64()?))
         })
         .collect()

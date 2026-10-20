@@ -20,6 +20,10 @@ Red固定HEAD: 21e4ae9ea92f468b45dd975da93bdf08f519f4ea
 ## 未完了
 
 PRの正式CIでGreenと利用側のnextest/doctest/Clippyを確認する。親から重いCargoは起動しない。同じ最終ソースで成功したCIを重複実行しない。
+PR297: https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/297 。CIは実行順待ち。
+別モデルの有限レビューはToDo3119へOpus5.5/maxを指定して登録済み。CLIのモデル引数はスラッシュを受け付けず、claude-opus-5-5という正規aliasで登録した。schedulerは既存anthropic/claude-opus-5-5へ正規化することをsourceで確認した。実行したモデルは実ジョブの対応メタデータで後から照合する。
+追加の確認で、直接の主担当がない競合旧リンクを作業番号で選ぶ問題を補強した。製品はunknown、jobは未確認対象に1件保持する。新候補の検査/レビュー結果はまだ受領していない。
+稼働APIの変更前読取り: masked_metadata/metadataOk=true。GoDD MCPは未掲載、αの作業記録は5行。新しい固定識別フィールドは未配布でnull。これは人数や現在の製品進捗ではない。
 Opus5.5/max（または範囲を絞ったSonnet5.5/max）の固定候補レビューを共有ToDoへ--specで登録する。直接子Codexジョブは起動しない。
 Must修正、必要な再検査、CI成功、PR/merge、既存経路の配布、実API読戻し、3084とowner-distinct-godd-mcp-products-20261020.mdへの結果配送が残る。
 配布時は現行ソースと並行変更、正式guard、既存UIの保持を再照合し、未承認の別UI候補を一緒に配布しない。

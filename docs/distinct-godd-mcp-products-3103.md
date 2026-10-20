@@ -41,6 +41,9 @@ APIは作業の`productIdentity`と`codeProduct`を別々に返す。
 他方のCI結果から製品全体の進捗を合成しない。
 `activityState=recorded_active`はCCジョブ記録の観測、`unobserved`は担当の未確認を表す。
 実プロセスや最近の処理の確認は既存workforceの取得範囲に従う。
+主担当ToDoがなく、両製品の旧関連だけが競合するジョブは、
+小さい作業番号や高い優先順位で製品を選ばない。主帰属は付けず、
+ジョブ自体は未確認の対象として1件保持する。
 
 ## 受入条件
 

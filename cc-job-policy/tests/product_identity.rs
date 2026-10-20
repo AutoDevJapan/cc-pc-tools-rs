@@ -63,3 +63,17 @@ fn alpha_job_rank_does_not_inherit_a_conflicting_contract_history_link() {
     );
     assert_eq!(ranks["alpha"], 60);
 }
+
+#[test]
+fn ambiguous_legacy_edges_do_not_choose_a_business_target_by_rank() {
+    let db = json!({"items":[
+        {"id":1,"project":"GoDD MCP","jobs":["ambiguous"]},
+        {"id":2,"project":"GoDD MCP α","jobs":["ambiguous"]}
+    ]});
+    let ranks = cc_job_policy::priority::job_ranks(
+        &[json!({"id":"ambiguous","project":"tools"})],
+        &db,
+        &json!({}),
+    );
+    assert_eq!(ranks["ambiguous"], 100);
+}

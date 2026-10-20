@@ -180,3 +180,22 @@ pub fn compatible(a: Resolution, b: Resolution) -> bool {
         _ => true,
     }
 }
+
+/// Conflicting legacy edges are evidence of uncertainty, never a tie to break
+/// by task number. Scope this rule to these products; other rankings stay intact.
+pub fn ambiguous(resolutions: impl IntoIterator<Item = Resolution>) -> bool {
+    let mut ids = std::collections::BTreeSet::new();
+    let mut mcp = false;
+    for resolution in resolutions {
+        if resolution == Resolution::Unknown {
+            return true;
+        }
+        if let Some(product) = resolution.product() {
+            mcp = true;
+            ids.insert(product.id);
+        } else {
+            ids.insert("");
+        }
+    }
+    mcp && ids.len() > 1
+}

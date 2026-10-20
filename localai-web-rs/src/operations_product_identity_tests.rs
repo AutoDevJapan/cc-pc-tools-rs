@@ -213,3 +213,24 @@ fn mcp_metadata_panel_uses_task_identity_and_one_job_without_borrowing_progress(
     assert_eq!(panel["jobs"][0]["codeProduct"], "PCの道具");
     assert!(product(&value, "GoDD MCP")["progress"].is_null());
 }
+
+#[test]
+fn mcp_conflicting_legacy_links_without_a_primary_todo_remain_unattributed() {
+    for masked in [true, false] {
+        let value = board(
+            json!([
+                {"id":1,"project":"GoDD-MCP","status":"doing","jobs":["uncertain"]},
+                {"id":2,"project":"GoDD-MCP-Alpha","status":"doing","jobs":["uncertain"]}
+            ]),
+            vec![json!({"id":"uncertain","project":"tools","status":"running"})],
+            masked,
+        );
+        for name in ["GoDD MCP", "GoDD MCP α"] {
+            assert!(product(&value, name)["workers"][0]["primaryJob"].is_null());
+            assert_eq!(product(&value, name)["activityState"], "unobserved");
+        }
+        let unknown = &value["unassignedProducts"][0]["workers"][0];
+        assert_eq!(unknown["productIdentity"]["state"], "unknown");
+        assert!(unknown["primaryJob"].is_string());
+    }
+}

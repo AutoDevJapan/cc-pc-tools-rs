@@ -971,13 +971,15 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
         if raw_project.eq_ignore_ascii_case("owner") {
             continue;
         }
-        let label = attribution::target(job, &policy, project_label(&raw_project));
+        let identity = attribution::standalone(job,
+            todo.as_ref().and_then(|db|db["items"].as_array()).map(Vec::as_slice).unwrap_or(&[]), &policy);
+        let label = attribution::target_for(identity, job, project_label(&raw_project));
         add(
             &mut tree,
             catalog::find(&label).map_or(usize::MAX, |p| p.department),
             label,
             json!({"id":safe_id("job",text(job,"id")),"name":"名称を確認中の担当","task":"作業内容の表示を保留中",
-                "productIdentity":attribution::resolve(job,&policy).metadata(),"codeProduct":attribution::code_product(job),
+                "productIdentity":identity.metadata(),"codeProduct":attribution::code_product(job),
                 "primaryJob":safe_id("job",text(job,"id")),"jobStatus":text(job,"status"),
                 "status":if failed(job) {"attention"} else if text(job,"status")=="queued" {"waiting"} else {"working"},"progress":null,
                 "updatedAt":stamp(&job["finished_at"]).or_else(||stamp(&job["started_at"])).and_then(|at|chrono::DateTime::from_timestamp_millis(at as i64)).map(|at|at.to_rfc3339()),
@@ -1397,7 +1399,9 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
         }
         let inferred = infer_project(j, db);
         let project = project_name(&names, &inferred);
-        let client = attribution::resolve(j,&policy) == cc_scheduler::product_identity::Resolution::Unknown
+        let identity = attribution::standalone(j,
+            db.and_then(|db|db["items"].as_array()).map(Vec::as_slice).unwrap_or(&[]), &policy);
+        let client = identity == cc_scheduler::product_identity::Resolution::Unknown
             || project == "クライアント案件"
             || names.project(text(j, "cwd")) == "クライアント案件"
             || cc_scheduler::priority::item_rank(j, &policy) == 10
@@ -1409,7 +1413,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
         } else {
             project
         };
-        let project = attribution::target(j, &policy, project);
+        let project = attribution::target_for(identity, j, project);
         let raw_title = if text(j, "task_title").is_empty() {
             text(j, "name")
         } else {
@@ -1428,7 +1432,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
             "idle"
         };
         let mut worker = json!({"id":safe_id("job",text(j,"id")),"name":if client {"担当".into()}else{task.chars().take(24).collect::<String>()},
-                "productIdentity":attribution::resolve(j,&policy).metadata(),"codeProduct":attribution::code_product(j),
+                "productIdentity":identity.metadata(),"codeProduct":attribution::code_product(j),
                 "primaryJob":safe_id("job",text(j,"id")),"jobStatus":j["status"],
                 "task":task,"status":status,"progress":null,"updatedAt":j["finished_at"].as_str().or(j["started_at"].as_str()),
                 "detail":if active(j){"共有ジョブの担当です。"}else{"過去の失敗記録です。現在の障害を示すものではありません。"},"historyFailures":usize::from(failed(j))});

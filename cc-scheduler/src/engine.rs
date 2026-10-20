@@ -1579,7 +1579,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             })
             .collect();
         let mut queue = priority_queue(&eligible, pri, self.backend.clock());
-        let ranks = cc_job_policy::priority::todo_ranks(&db, pri);
+        let ranks = cc_job_policy::priority::todo_priorities_for_jobs(&db, &jobs, pri).ranks;
         // Rotation is only a tie breaker within the owner's priority class.
         queue.sort_by(|a, b| {
             ranks

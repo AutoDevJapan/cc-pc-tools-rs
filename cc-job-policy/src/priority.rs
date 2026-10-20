@@ -146,6 +146,28 @@ pub struct TodoPriorities {
 /// Keep prerequisite requests separate from each record's own priority. Taking
 /// their min is useful for scheduling a ToDo but cannot identify the request.
 pub fn todo_priorities(db: &Value, policy: &Value) -> TodoPriorities {
+    calculate_priorities(db, policy, None)
+}
+pub fn todo_priorities_for_jobs(db: &Value, jobs: &[Value], policy: &Value) -> TodoPriorities {
+    let assignments = crate::product_identity::assignments(
+        db["items"].as_array().map(Vec::as_slice).unwrap_or(&[]),
+        jobs,
+        policy,
+    );
+    todo_priorities_with_assignments(db, policy, &assignments)
+}
+pub fn todo_priorities_with_assignments(
+    db: &Value,
+    policy: &Value,
+    assignments: &crate::product_identity::Associations<'_>,
+) -> TodoPriorities {
+    calculate_priorities(db, policy, Some(assignments))
+}
+fn calculate_priorities(
+    db: &Value,
+    policy: &Value,
+    assignments: Option<&crate::product_identity::Associations<'_>>,
+) -> TodoPriorities {
     let items: Vec<_> = db["items"].as_array().into_iter().flatten().collect();
     let unfinished: std::collections::BTreeSet<_> = items
         .iter()
@@ -175,7 +197,19 @@ pub fn todo_priorities(db: &Value, policy: &Value) -> TodoPriorities {
         .collect();
     let mut ranks: BTreeMap<_, _> = items
         .iter()
-        .filter_map(|i| i["id"].as_u64().map(|id| (id, item_rank(i, policy))))
+        .filter_map(|row| {
+            let id = row["id"].as_u64()?;
+            let rank = assignments
+                .and_then(|index| {
+                    let identity = index.record(row, policy);
+                    (crate::product_identity::resolve(row, policy)
+                        == crate::product_identity::Resolution::Other)
+                        .then(|| identity.product().map(|product| product.rank))
+                        .flatten()
+                })
+                .unwrap_or_else(|| item_rank(row, policy));
+            Some((id, rank))
+        })
         .collect();
     loop {
         let mut changed = false;
@@ -230,10 +264,15 @@ pub fn linked(item: &Value, job: &Value) -> bool {
                 || item["scheduler"]["job"] == job["id"]))
 }
 pub fn job_ranks(jobs: &[Value], db: &Value, policy: &Value) -> BTreeMap<String, u32> {
+    let assignments = crate::product_identity::assignments(
+        db["items"].as_array().map(Vec::as_slice).unwrap_or(&[]),
+        jobs,
+        policy,
+    );
     let TodoPriorities {
         ranks: todos,
         dependency_ranks,
-    } = todo_priorities(db, policy);
+    } = todo_priorities_with_assignments(db, policy, &assignments);
     let mut ranks: BTreeMap<_, _> = jobs
         .iter()
         .filter_map(|j| {
@@ -256,14 +295,7 @@ pub fn job_ranks(jobs: &[Value], db: &Value, policy: &Value) -> BTreeMap<String,
                     .filter(|i| linked(i, j))
                     .filter(|i| !mcp || primary.is_none() || i["id"] == j["todo_id"])
                     .collect();
-                let target = crate::product_identity::job_target(
-                    j,
-                    primary,
-                    candidates
-                        .iter()
-                        .map(|i| crate::product_identity::resolve(i, policy)),
-                    policy,
-                );
+                let target = assignments.target(j);
                 if target == crate::product_identity::Resolution::Unknown {
                     return (
                         id.to_owned(),
@@ -273,16 +305,23 @@ pub fn job_ranks(jobs: &[Value], db: &Value, policy: &Value) -> BTreeMap<String,
                             .unwrap_or(DEFAULT),
                     );
                 }
-                if let Some(product) = target.product()
-                    && primary.is_some_and(|row| {
-                        crate::product_identity::resolve(row, policy)
+                if let Some(product) = target.product() {
+                    let current = assignments.primary(j).and_then(|todo| {
+                        db["items"]
+                            .as_array()
+                            .into_iter()
+                            .flatten()
+                            .find(|row| row["id"].as_u64() == Some(todo))
+                    });
+                    let inherited = current.and_then(|row| {
+                        let id = row["id"].as_u64()?;
+                        if crate::product_identity::resolve(row, policy)
                             == crate::product_identity::Resolution::Other
-                    })
-                {
-                    let inherited = primary.and_then(|row| {
-                        row["id"]
-                            .as_u64()
-                            .and_then(|id| dependency_ranks.get(&id).copied())
+                        {
+                            dependency_ranks.get(&id).copied()
+                        } else {
+                            todos.get(&id).copied()
+                        }
                     });
                     return (
                         id.to_owned(),

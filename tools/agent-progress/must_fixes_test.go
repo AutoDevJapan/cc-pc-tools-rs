@@ -138,7 +138,7 @@ func TestOfficialPolicySourceAndProjectRankParity(t *testing.T) {
 	// are bound to the canonical LF bytes, not checkout newline conversion.
 	data = bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n"))
 	sum := sha256.Sum256(data)
-	if hex.EncodeToString(sum[:]) != "4dcd09e8bf50c84c31d3eec4a25e2c26d40e6e07dc8b69b4bb59998e382a57e2" {
+	if hex.EncodeToString(sum[:]) != "6ca1c0ac725ef1ed4b529c1d0e047a70ea4aa2e24a9c3b5e5037764c490fcb0a" {
 		t.Fatal("canonical ranking source changed; review the port against its new fixed revision")
 	}
 	// Check every exact canonical rule in memory, including coded aliases.
@@ -194,7 +194,7 @@ func TestMCPIdentityPortMatchesReviewedCanonicalSource(t *testing.T) {
 		t.Fatal("canonical identity source unavailable")
 	}
 	sum := sha256.Sum256(bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n")))
-	if hex.EncodeToString(sum[:]) != "68107542d221212b0342b74a86c2c2ac8564b694a3399bfd4c857b884df8c9ff" {
+	if hex.EncodeToString(sum[:]) != "01c4826712c3bfcfbca60b431d339ec6176ed4b4abd13cb042e5f8207001ff82" {
 		t.Fatal("canonical identity source changed; review the port and synthetic fixtures")
 	}
 }

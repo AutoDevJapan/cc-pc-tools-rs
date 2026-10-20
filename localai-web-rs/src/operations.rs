@@ -103,7 +103,7 @@ impl Operations {
             return Err(503);
         }
         let jobs = jobs(&self.root).map_err(|_| 503u16)?;
-        let policy=read_json(&self.root.join("scheduler/priorities.json")).unwrap_or(Value::Null);
+        let policy=priority_policy(&self.root);
         let associations=attribution::assignments(items,&jobs,&policy);
         let mut privacy = crate::console_ui::PrivacyIndex::new(&names, &db);
         if id.starts_with("job-") {
@@ -302,6 +302,13 @@ fn read_json(path: &Path) -> Result<Value, ()> {
     }
     let bytes = bytes.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(&bytes);
     serde_json::from_slice(bytes).map_err(|_| ())
+}
+fn priority_policy(root: &Path) -> Value {
+    let path = root.join("scheduler/priorities.json");
+    match fs::metadata(&path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => json!({}),
+        _ => read_json(&path).unwrap_or(Value::Null),
+    }
 }
 fn text<'a>(v: &'a Value, key: &str) -> &'a str {
     v[key].as_str().unwrap_or("")
@@ -809,14 +816,15 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
         .filter(|db| db["items"].is_array() && db["projects"].is_object());
     let job_result = jobs_at(jobs_path);
     let js = job_result.as_ref().map(Vec::as_slice).unwrap_or(&[]);
-    let policy = read_json(&root.join("scheduler/priorities.json")).unwrap_or(Value::Null);
-    let priorities = todo.as_ref().map(|db|cc_scheduler::priority::todo_priorities(db,&policy)).unwrap_or_default();
-    let ranks = &priorities.ranks;
+    let policy = priority_policy(root);
+
     let queue = read_json(&root.join("localai-web-rs/target/release/console-state.json")).unwrap_or(Value::Null);
     let mut tree = Tree::new();
     let mut used = BTreeSet::new();
     let assignments = attribution::assignments(
         todo.as_ref().and_then(|db|db["items"].as_array()).map(Vec::as_slice).unwrap_or(&[]), js, &policy);
+    let priorities = todo.as_ref().map(|db|cc_scheduler::priority::todo_priorities_with_assignments(db,&policy,&assignments)).unwrap_or_default();
+    let ranks = &priorities.ranks;
     let public_product = |raw: &str| {
         catalog::find(raw).or_else(|| {
             todo.as_ref().and_then(|db| {
@@ -918,7 +926,7 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
             for job in associated {
                 used.insert(text(job, "id").to_owned());
             }
-            let current = associated.iter().copied().find(|job| active(job));
+            let current = assignments.current(id);
             let status = if done {
                 "done"
             } else if current.is_some_and(|job| text(job, "status") != "queued") {
@@ -944,7 +952,7 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
                 continue;
             }
             let display_project = cc_scheduler::product_identity::display_project(item, &policy);
-            let identity=assignments.record(item,current,&policy);
+            let identity=assignments.record(item,&policy);
             let label = attribution::target_for(identity,item,project_label(display_project));
             let kinds = registered_work_kinds(&[item]);
             let task = if kinds.is_empty() {
@@ -981,7 +989,7 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
                 label,
                 json!({"id":format!("todo-{id}"),"name":format!("作業 #{id}"),"task":format!("#{id} {task}"), "status":status,
                     "productIdentity":identity.metadata(),"jobProductIdentity":current.map(|job|assignments.target(job).metadata()),"codeProduct":attribution::code_product(item),
-                    "priority":attribution::priority(item,identity,ranks.get(&id).copied(),priorities.dependency_ranks.get(&id).copied(),&policy),
+                    "priority":ranks.get(&id).copied(),
                     "recordedStatus":match text(item,"status") {"todo"|"doing"|"wait"|"block"|"done"|"recovery_unverified"=>item["status"].clone(),_=>json!("unknown")},
                     "processingJobKey":current.map(|job|cc_scheduler::product_identity::job_key(text(job,"id"))),"primaryJob":current.map(|job|safe_id("job",text(job,"id"))),"jobStatus":current.map(|job|text(job,"status")),
                     "summary":task,"currentStage":protected_stage(current),"lastActivityAt":protected_activity(current),
@@ -1133,7 +1141,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
         return protected_metadata(root, now);
     }
     let names = privacy.unwrap();
-    let policy = read_json(&root.join("scheduler/priorities.json")).unwrap_or(Value::Null);
+    let policy = priority_policy(root);
     let todo_path = root.join("todo/todo.json");
     let todo = cc_todo::read_store(&todo_path)
         .map_err(|_| ())
@@ -1243,7 +1251,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
     let mut privacy = crate::console_ui::PrivacyIndex::new(&names, db.unwrap_or(&empty_db));
     let assignments = attribution::assignments(
         db.and_then(|db|db["items"].as_array()).map(Vec::as_slice).unwrap_or(&[]), js, &policy);
-    let task_priorities=cc_scheduler::priority::todo_priorities(db.unwrap_or(&empty_db),&policy);
+    let task_priorities=cc_scheduler::priority::todo_priorities_with_assignments(db.unwrap_or(&empty_db),&policy,&assignments);
     let task_ranks=&task_priorities.ranks;
     if let Some(items) = db.and_then(|v| v["items"].as_array()) {
         for item in items {
@@ -1256,8 +1264,8 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
             for j in associated {
                 used.insert(text(j, "id").to_owned());
             }
-            let current = associated.iter().copied().find(|job| active(job));
-            let identity=assignments.record(item,current,&policy);
+            let current = assignments.current(item["id"].as_u64().unwrap_or(0));
+            let identity=assignments.record(item,&policy);
             let raw_project = text(item, "project");
             let owned = &policy["items"][item["id"].as_u64().unwrap_or(0).to_string()];
             let display_project = owned["project"]
@@ -1384,8 +1392,8 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
             };
             let mut worker = json!({"id":format!("todo-{}",item["id"].as_u64().unwrap_or(0)),"name":if client {"担当".into()}else{task.chars().take(24).collect::<String>()},
                 "productIdentity":identity.metadata(),"jobProductIdentity":current.map(|job|assignments.target(job).metadata()),"codeProduct":attribution::code_product(item),
-                "recordedStatus":item["status"],"priority":attribution::priority(item,identity,
-                    if identity==cc_scheduler::product_identity::Resolution::Other {Some(cc_scheduler::priority::item_rank(item,&policy))}else{item["id"].as_u64().and_then(|id|task_ranks.get(&id).copied())},item["id"].as_u64().and_then(|id|task_priorities.dependency_ranks.get(&id).copied()),&policy),"waitingKind":wait_kind,
+                "recordedStatus":item["status"],"priority":
+                    if identity==cc_scheduler::product_identity::Resolution::Other {Some(cc_scheduler::priority::item_rank(item,&policy))}else{item["id"].as_u64().and_then(|id|task_ranks.get(&id).copied())},"waitingKind":wait_kind,
                 "processingJobKey":current.map(|job|cc_scheduler::product_identity::job_key(text(job,"id"))),"primaryJob":current.map(|job|safe_id("job",text(job,"id"))),"jobStatus":current.map(|job|text(job,"status")),
                 "task":task,"waitKind":wait_kind,"questionUrl":question_url,"status":status,"progress":progress,"updatedAt":todo_stamp(item).and_then(|n|chrono::DateTime::from_timestamp_millis(n as i64)).map(|t|t.to_rfc3339()),
                 "detail":detail,"historyFailures":history});

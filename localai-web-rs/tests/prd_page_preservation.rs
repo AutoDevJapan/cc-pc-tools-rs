@@ -7,7 +7,13 @@ fn product_identity_delivery_keeps_the_existing_prd_page() {
         .replace("\r\n", "\n")
         .replace('\r', "\n");
     let hash = ring::digest::digest(&ring::digest::SHA256, html.as_bytes());
-    let actual: String = hash.as_ref().iter().map(|byte| format!("{byte:02x}")).collect();
-    assert_eq!(actual, "335ad98840c97d0767b8e78bf8166f48c6044a1f2d1a8a25c3bdea831320abf9",
-        "the backend identification repair must retain the existing Prd page");
+    let actual: String = hash
+        .as_ref()
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect();
+    assert_eq!(
+        actual, "335ad98840c97d0767b8e78bf8166f48c6044a1f2d1a8a25c3bdea831320abf9",
+        "the backend identification repair must retain the existing Prd page"
+    );
 }

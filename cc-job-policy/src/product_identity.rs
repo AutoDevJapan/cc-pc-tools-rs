@@ -1,6 +1,7 @@
 //! Owner-declared business targets. These pins confer no repository permissions.
 //! Never infer a business target from task prose or a GoDD/MCP substring.
 use serde_json::{Value, json};
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Product {
@@ -267,4 +268,197 @@ pub fn status_requested(mut args: impl Iterator<Item = String>) -> bool {
 }
 pub fn status() -> Value {
     json!({"schemaVersion":1,"configured":bindings_configured()})
+}
+
+// One observation supplies current execution, compatible history and the full
+// privacy union. No file, path, prompt or task prose is read by this index.
+fn record_text<'a>(row: &'a Value, key: &str) -> &'a str {
+    row[key].as_str().unwrap_or("")
+}
+pub struct Associations<'a> {
+    assigned: BTreeMap<u64, Vec<&'a Value>>,
+    raw: BTreeMap<u64, Vec<&'a Value>>,
+    history: BTreeMap<u64, Vec<&'a Value>>,
+    targets: BTreeMap<String, Resolution>,
+    sensitive: BTreeSet<String>,
+    primary: BTreeMap<String, u64>,
+}
+impl<'a> Associations<'a> {
+    pub fn record(&self, row: &Value, policy: &Value) -> Resolution {
+        let current = self.current(row["id"].as_u64().unwrap_or(0));
+        let base = resolve(row, policy);
+        if let Some(target) = current.map(|job| self.target(job)).filter(|target| {
+            base == Resolution::Other
+                && matches!(
+                    target,
+                    Resolution::Verified(_) | Resolution::OwnerDeclared(_)
+                )
+        }) {
+            return target;
+        }
+        base
+    }
+    /// Current identity selection is shared with dependency propagation.
+    pub fn current(&self, id: u64) -> Option<&'a Value> {
+        self.assigned(id).iter().copied().find(|job| {
+            matches!(
+                record_text(job, "status"),
+                "queued" | "pending" | "starting" | "running"
+            )
+        })
+    }
+    pub fn primary(&self, job: &Value) -> Option<u64> {
+        self.primary.get(record_text(job, "id")).copied()
+    }
+    pub fn assigned(&self, id: u64) -> &[&'a Value] {
+        self.assigned.get(&id).map(Vec::as_slice).unwrap_or(&[])
+    }
+    pub fn raw(&self, id: u64) -> &[&'a Value] {
+        self.raw.get(&id).map(Vec::as_slice).unwrap_or(&[])
+    }
+    pub fn history(&self, id: u64) -> &[&'a Value] {
+        self.history.get(&id).map(Vec::as_slice).unwrap_or(&[])
+    }
+    pub fn target(&self, job: &Value) -> Resolution {
+        self.targets
+            .get(record_text(job, "id"))
+            .copied()
+            .unwrap_or(Resolution::Unknown)
+    }
+    pub fn sensitive(&self, job: &Value) -> bool {
+        self.sensitive.contains(record_text(job, "id"))
+    }
+}
+
+/// Index recorded IDs once, preserving all privacy edges while selecting only
+/// one primary execution edge. Never walk paths, prompts or task prose.
+pub fn assignments<'a>(items: &'a [Value], jobs: &'a [Value], policy: &Value) -> Associations<'a> {
+    let by_id: BTreeMap<_, _> = items
+        .iter()
+        .filter_map(|row| Some((row["id"].as_u64()?, row)))
+        .collect();
+    let identities: BTreeMap<_, _> = by_id
+        .iter()
+        .map(|(id, row)| (*id, resolve(row, policy)))
+        .collect();
+    let mut refs = BTreeMap::<String, BTreeSet<u64>>::new();
+    // Privacy is a union over every physical record, including duplicate IDs.
+    let private_ids: BTreeSet<_> = items
+        .iter()
+        .filter(|row| {
+            resolve(row, policy) == Resolution::Unknown
+                || crate::priority::item_rank(row, policy) == 10
+        })
+        .filter_map(|row| row["id"].as_u64())
+        .collect();
+    for item in items {
+        let Some(id) = item["id"].as_u64() else {
+            continue;
+        };
+        for key in item["jobs"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .chain([&item["job"], &item["scheduler"]["job"]])
+        {
+            if let Some(key) = key.as_str().filter(|key| !key.is_empty()) {
+                refs.entry(key.to_owned()).or_default().insert(id);
+            }
+        }
+    }
+    let mut out = Associations {
+        assigned: BTreeMap::new(),
+        raw: BTreeMap::new(),
+        history: BTreeMap::new(),
+        targets: BTreeMap::new(),
+        sensitive: BTreeSet::new(),
+        primary: BTreeMap::new(),
+    };
+    for job in jobs {
+        let id = record_text(job, "id");
+        let mut linked = BTreeSet::new();
+        for key in ["id", "thread_id", "resume_session"] {
+            if let Some(ids) = refs.get(record_text(job, key)) {
+                linked.extend(ids);
+            }
+        }
+        let direct = job["todo_id"].as_u64();
+        if let Some(id) = direct.filter(|id| by_id.contains_key(id)) {
+            linked.insert(id);
+        }
+        linked.extend(
+            job["related_todo_ids"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_u64)
+                .filter(|id| by_id.contains_key(id)),
+        );
+        let mut candidates: Vec<_> = linked
+            .iter()
+            .copied()
+            .filter(|id| direct.is_none_or(|direct| direct == *id))
+            .collect();
+        if candidates
+            .iter()
+            .any(|id| by_id[id]["scheduler"]["job"] == job["id"])
+        {
+            candidates.retain(|id| by_id[id]["scheduler"]["job"] == job["id"]);
+        }
+        let target = job_target(
+            job,
+            direct.and_then(|id| by_id.get(&id).copied()),
+            candidates.iter().map(|id| identities[id]),
+            policy,
+        );
+        if direct.is_none()
+            && !candidates
+                .iter()
+                .any(|id| by_id[id]["scheduler"]["job"] == job["id"])
+        {
+            let eligible: Vec<_> = candidates
+                .iter()
+                .copied()
+                .filter(|id| matches!(record_text(by_id[id], "status"), "doing" | "todo"))
+                .collect();
+            if !eligible.is_empty() {
+                candidates = eligible;
+            } else if target.product().is_some() {
+                // Inactive aliases are history, not a current execution.
+                candidates.clear();
+            }
+        }
+        out.targets.insert(id.to_owned(), target);
+        if target == Resolution::Unknown
+            || target.product().is_some_and(|p| p.rank == 10)
+            || linked.iter().any(|id| private_ids.contains(id))
+        {
+            out.sensitive.insert(id.to_owned());
+        }
+        for todo in linked {
+            out.raw.entry(todo).or_default().push(job);
+            if compatible(identities[&todo], target)
+                && !(direct.is_some()
+                    && identities[&todo].product().is_some()
+                    && target.product().is_none())
+            {
+                out.history.entry(todo).or_default().push(job);
+            }
+        }
+        if let Some(todo) = candidates
+            .into_iter()
+            .find(|id| compatible(identities[id], target))
+        {
+            out.primary.insert(id.to_owned(), todo);
+            out.assigned.entry(todo).or_default().push(job);
+        }
+    }
+    for jobs in out.assigned.values_mut() {
+        jobs.sort_by(|a, b| {
+            record_text(b, "created_at")
+                .cmp(record_text(a, "created_at"))
+                .then_with(|| record_text(a, "id").cmp(record_text(b, "id")))
+        });
+    }
+    out
 }

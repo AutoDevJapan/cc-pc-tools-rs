@@ -91,7 +91,7 @@ Rustのpriority/product_identityの両ソースの固定指紋と合成検査を
 Rustの4入力と同じ組を、Goの非公開ビルドへ`-ldflags -X`で渡す。
 対象はmain.mcpContractRepository/main.mcpContractOwner、main.mcpAlphaRepository/main.mcpAlphaOwner。
 入力付き実行物を公開CIの成果物へアップロードしない。
-ジョブ管理、scheduler、todoは`--product-identity-status`で設定済みかだけを返す。
+ジョブ管理とschedulerは`--product-identity-status`で設定済みかだけを返す。
 この読取りは設置済みの記録へアクセスせず、入力値や推測できる指紋を返さない。
 ConsoleのproductBindingsConfiguredと、workforce.collectorBindingsConfiguredも確認する。
 配布担当は同じ非公開入力とソース版で全利用側をビルドし、実hashと設定済みの実応答を残す。
@@ -167,3 +167,42 @@ APIのproductBindingsOverriddenと収集結果のproduct_bindings_overriddenは�
 別の目的であり、後の記録で前の記録のprivate job参照を消さない。詳細APIと盤面で検査する。
 設定ファイルの不在は上書きなし、読取失敗・破損は不明として観測し、値は公開しない。
 これらの追加受入条件のRed/Greenは、この節を追加した時点では未測定である。
+
+固定684bfbaを担当3214が実測し、7件中5件がコンパイル後の意図したassertで失敗、対照2件が
+成功した。依頼元の順位10は通過し、必要工程が期待10・実際30で失敗した。αのlive依頼元、
+work_wait_on、連鎖の後続caseは未到達であり、別の履歴関連の期待60・実際30と混同しない。
+duplicate記録は詳細APIから合成noteが返ることを確認した。関連表示の直接検査は成功した。
+結果は担当3214のdocs/todo-3214-post3204-red、保存commit25465446にある。
+
+この再現後、実行の主帰属・互換な履歴・全非表示辺の索引をproduct_identityの共有処理へ移した。
+同じ観測から現在の製品を解決して伝播の基準を決め、job待ち列、通常と保護中のAPI、
+scheduler、Consoleの受付で共用する。Goも同じ現在帰属を作ってから伝播する。
+非表示の参照は全記録から集め、同番号の後続記録で前の辺を失わない。実行中ではない
+古い関連だけでは現在の主担当を作らない。固定d18c4dfとの比較用test補助は元のままに戻し、
+related_todo_idsの拡張は実際のdisplay_todos/display_jobsを直接通す別検査で確認する。
+
+Goは追加した2件の比較失敗を先に測定し、修正後は追加の境界条件を含む選択検査が成功した。
+共通Rustソースの指紋を更新した後のGo全件は148.295秒で成功した。これは速度改善の測定ではない。
+今回の新しいRust実装のGreen、別モデルの再確認、CI、実配布の完了とは区別する。
+
+todo.exeでは今回の製品解決・順位計算を呼ばないことを、cc-todoと共有モジュールの呼出しで
+確認した。todo_waitから使うpriority::linkedの本体は元のままである。追加していた確認専用の
+未配布probeを外し、実際の利用側であるジョブ管理・scheduler・Console・Go収集器の4実行物へ
+同じ非公開入力を渡して配布する。ToDoの記録操作は既存のCLIを継続する。
+
+## 配布する画面を現在のPrdへ固定する
+
+現在のConsole実行物c63a5e80…は元3020/3022の配布記録と一致した。PrdのHTTP200/html応答を
+取得し、記録source9a907d39c2f8d0ba810436f78464a4e6f7fa7ebcのrendererと3資源で再現すると、
+改行だけをLFへ正規化したSHA256が実応答と一致した。現在mainの候補資源では一致しなかった。
+これは配布入力の事前検査のRedであり、Rustの新しいページ検査を実行した結果とはしない。
+
+現在のPrdのindexと同じGit blob6563c00cf5bfb6a9238282063cf7e101ef82fa2dをindex_prd.htmlへ
+そのまま保持し、既存rendererがこの資源を選ぶ。新しい構造やCSSは作らない。index.htmlの
+別担当の未配布候補は原資料として保持し、候補のlayout検査もassertを弱めず残す。
+その検査がPrdの見た目の証明ではないことを明記する。
+
+公開index()の出力をPrd実応答の独立した基準335ad98840c97d0767b8e78bf8166f48c6044a1f2d1a8a25c3bdea831320abf9と
+比べる受入検査を追加した。固定b978286の修正前測定を担当3219へ登録した。
+新実行物の配布後にも同じHTTP応答と製品識別APIを読み返す。ソース資源の一致だけで
+実配布・実反映を完了とはしない。新画面の判断と実装は引き続き3084が保持する。

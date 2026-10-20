@@ -40,9 +40,27 @@
 
 今回の保存対象はこの再開記録だけです。コード変更、Red/Green、Rust/Go検査、別モデルの
 新規レビュー依頼、merge、配布、本人回答の原API再取得は行っていません。
-推測の達成率は付けず、元3190に今回の確認内容を通常メモで保存します。
-文書をcommit/pushし、現在の実job・実HEADでcheckpointを1回実行して結果を残します。
-その後 `wait-retry 3190 --after 3600` を1回登録し、次回時刻を正常readbackします。
+推測の達成率は付けず、元3190に今回の確認内容を通常メモで保存し、通常一覧で読み返しました。
+文書コミット `e239a87670ee1d9f72b5e1f4410335b759834b8c` をpushしてorigin一致を確認し、
+今回の実job・同HEADでcheckpointしました。最初の呼出しは終了0でしたが応答本文が空のため、
+同じ要求を `CreateNoWindow=true` のプロセスで有限の冪等照合に使いました。
+正常応答は終了0、`saved=false`、`launched=0`、`source_files_changed=false`、stderr空でした。
+同一要求が既に保存済みであることを、正常CLI自身の比較で確認しました。
+要求・初回の観測・冪等照合の結果は、それぞれworktree直下の
+`todo3190-workspace-checkpoint-20261021-065950.private.json`、
+`todo3190-checkpoint-result-20261021-065950.private.json`、
+`todo3190-checkpoint-readback-20261021-065950.private.json` に保持しています。
+
+`wait-retry 3190 --after 3600` は1回だけ登録し、終了0でした。
+正常な `cc-console todo list --id 3190` でstatus=wait、condition=retry-time、
+notBefore=1792537671（2026-10-21 08:07:51 JST）、jobsTotal=1、wait_on空を読み返しました。
+元3190の未完了・担当履歴・作業場所を保持し、本人判断blockや3153全体のdone待ちに
+変えていません。登録結果と正常readbackは同じ場所の
+`todo3190-wait-registration-20261021-065950.private.json` と
+`todo3190-wait-readback-20261021-065950.private.json` に保持しています。
+この結果追記もcommit/pushし、その最新の実HEADで正常checkpointを保存して終了します。
+最終要求と結果は同じ場所の `todo3190-checkpoint-final-20261021-065950.private.json` と
+`todo3190-checkpoint-final-result-20261021-065950.private.json` を確認してください。
 同じ条件を短時間に巡回する処理、子job、新しい本人質問・メンション・完了通知は作りません。
 
 次回は元3190でPR315の実head・通常マージを1回照会します。未マージなら、3153の正常な

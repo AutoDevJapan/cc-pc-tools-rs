@@ -1,0 +1,95 @@
+{
+  "measured_at": "2026-10-19 JST ~20:09",
+  "design": "one fixed fixture service identity CC-CIW-civ6-fixture; the previous job root must be deleted before the identity moves on",
+  "jobs": [
+    {
+      "job": "A",
+      "kind": "normal",
+      "instance": "b07525c001a2923e8c65d3b716e3f4f1",
+      "observed": {
+        "execute_end": {
+          "fence": false,
+          "ok": true,
+          "service_started": true,
+          "service_stopped": true
+        },
+        "execute_exit": 0,
+        "collect_end": {
+          "complete": true,
+          "shared_profile_retained": true
+        },
+        "collection": {
+          "service_idle_confirmed": true,
+          "owner_reset": true,
+          "additional_ace_count": 0,
+          "ciw_profile_leaf_count_total": 4,
+          "shared_profile_entries_for_this_identity": 1
+        },
+        "launcher": {
+          "service_pid": 74560,
+          "worker_exit": 0,
+          "job_drained": true,
+          "cancelled": false
+        }
+      },
+      "note": "A's root was deleted with safe-delete afterwards (the deletion succeeded because collect returns the root to the controller); values above were read from the console output, not from saved files"
+    },
+    {
+      "job": "B-negative",
+      "kind": "cancel",
+      "instance": "5e8cb4aa2c51a9602c77e4674b0210f1",
+      "observed": {
+        "prepare": "refused: previous job root still exists; delete it (safe-delete) before the shared service identity moves on",
+        "prepared_json_written": false
+      },
+      "note": "prepare while A's root (already collected) still existed"
+    },
+    {
+      "job": "B",
+      "kind": "cancel",
+      "instance": "fb1d430f6d14e311e63f4f5fcd32f3ec",
+      "observed": {
+        "execute_end": {
+          "fence": false,
+          "ok": true,
+          "service_started": true,
+          "service_stopped": true
+        },
+        "controller_exit": 0
+      },
+      "saved": {
+        "launcher": {
+          "service_pid": 67724,
+          "worker_exit": 125,
+          "job_drained": true,
+          "cancelled": true,
+          "retained_member_pid_count": 4,
+          "token_au_deny_only_verified": true
+        },
+        "collection": {
+          "ace_scope": "administrator-installed root and runtime inheritable grants only",
+          "additional_ace_count": 0,
+          "ciw_profile_leaf_count_total": 4,
+          "credential_runtime": "C:\\Users\\makhmeto\\AppData\\Local\\Temp\\codex-owned-fb1d430f6d14e311e63f4f5fcd32f3ec\\runtime\\runner",
+          "official_ci_claimed": false,
+          "owner_reset": true,
+          "process_census_scope": "queryable processes; owned Job Object independently drained",
+          "profile_scope": "the single continuing profile of this module's fixed identity; legacy per-job CC-CIW-<instance> profiles are counted in the total",
+          "queryable_account_process_count": 0,
+          "service": "CC-CIW-civ6-fixture",
+          "service_idle_confirmed": true,
+          "service_retained": true,
+          "shared_classes_hive_loaded": true,
+          "shared_hive_loaded": true,
+          "shared_profile_entries_for_this_identity": 1,
+          "shared_profile_retained": true,
+          "unreadable_process_count": 1,
+          "unstarted_worker": false
+        },
+        "helper_sha256": "1e9d3d127cfe9305b4d0f9431a98fcedcfe6ee826048e42fd05d6b3704080c84"
+      }
+    }
+  ],
+  "ciw_profile_leaf_count_total_constant_at": 4,
+  "note": "4 = 3 legacy per-job profiles + 1 shared fixture identity; unchanged across A and B"
+}

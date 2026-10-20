@@ -340,6 +340,17 @@ impl Context {
         let Some((_, baseline)) = self.tool_boundary(snapshot)? else {
             return Ok(false);
         };
+        // A plausible, completed boundary may actually stop a worker. Reconcile
+        // legacy descendants before inventory or any process is paused; the
+        // advisory lookup alone is never authority for this transition.
+        self.prepare_admission_index()?;
+        let Some(current) = self.yield_snapshot()? else {
+            return Ok(false);
+        };
+        if !(self.context_rotation_due(snapshot, &current) || self.should_yield(snapshot, &current))
+        {
+            return Ok(false);
+        }
         let result = self
             .prefetch_context_inventory(snapshot)
             .and_then(|()| self.attempt_tool_yield(snapshot, baseline));
@@ -376,15 +387,18 @@ impl Context {
         FileLock::try_acquire(&path)
             .map_err(|e| Error::file_io("acquire exclusive lock byte range [0, 1)", &path, e))
     }
-    /// Active jobs for a yield decision. Reads the index without the gate; only
-    /// a missing index takes a brief gate to build one.
-    pub(crate) fn yield_snapshot(&self) -> Result<Vec<Value>> {
-        self.prepare_admission_index()?;
-        if let Some(jobs) = self.admission_snapshot() {
-            return Ok(jobs);
-        }
-        let _gate = self.queue_lock_for("yield_snapshot", Duration::from_secs(60))?;
-        self.admission_jobs()
+    /// Advisory candidates only: looking up a boundary never initiates history
+    /// reconciliation. Missing/partial history postpones the
+    /// yield. Admission and an actual completed-boundary transition prepare
+    /// history independently. Unknown descendants are not an empty queue.
+    pub(crate) fn yield_snapshot(&self) -> Result<Option<Vec<Value>>> {
+        Ok(self.admission_snapshot())
+    }
+    pub(crate) fn yield_running_tool_boundary(&self, job: &Value) -> Result<bool> {
+        let Some(jobs) = self.yield_snapshot()? else {
+            return Ok(false);
+        };
+        self.yield_tool_boundary(job, &jobs)
     }
     pub(crate) fn yield_backoff_active(&self, job: &Value) -> bool {
         self.read_json(&self.job_dir(s(job, "id")).join("yield-retry.json"))
@@ -454,7 +468,7 @@ impl Context {
         let gate = self.queue_lock_for(&format!("yield_commit:{}", s(snapshot, "id")), wait)?;
         let state = self.try_yield_state(s(snapshot, "id"))?;
         let job = self.load(s(snapshot, "id"))?;
-        let fresh_jobs = self.admission_jobs()?;
+        let fresh_jobs = self.fresh_admission_jobs()?;
         if job["started_at"] != snapshot["started_at"]
             || job["codex_pid_created"] != snapshot["codex_pid_created"]
             || job["cancel_requested"] == true
@@ -530,7 +544,7 @@ impl Context {
         job["queue_sequence"] = json!(self.next_queue_sequence()?);
         job["retry_not_before"] = Value::Null;
         job["activity"] = json!("順番待ち: ツール完了後に枠を譲りました");
-        if self.context_rotation_due(&self.load(s(job, "id"))?, &self.admission_jobs()?) {
+        if self.context_rotation_due(&self.load(s(job, "id"))?, &self.fresh_admission_jobs()?) {
             self.prepare_context_summary(job, &session)?;
         }
         Ok(())

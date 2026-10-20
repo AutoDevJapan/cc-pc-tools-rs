@@ -1236,7 +1236,7 @@ impl Context {
                             if !self.yield_may_be_due(&job) {
                                 return Ok(false);
                             }
-                            self.yield_tool_boundary(&job, &self.yield_snapshot()?)
+                            self.yield_running_tool_boundary(&job)
                         })();
                         match attempt {
                             Ok(true) => {
@@ -1273,7 +1273,7 @@ impl Context {
                             self.recover_tool_yield(&self.load(jid)?)?;
                             return Ok(s(&self.load(jid)?, "status") == "queued");
                         }
-                        self.yield_tool_boundary(&job, &self.yield_snapshot()?)
+                        self.yield_running_tool_boundary(&job)
                     })();
                     match attempt {
                         Ok(true) => {

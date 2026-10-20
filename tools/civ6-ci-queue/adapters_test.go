@@ -55,7 +55,7 @@ type winFake struct {
 }
 
 func newWinFake() *winFake {
-	return &winFake{prepareOK: true, executeOut: `{"event":"execute-end","ok":true,"service_started":true,"service_stopped":true,"fence":false}`, collectOut: `{"event":"collect-end","complete":true,"residue_only":false}`, scripts: map[string]string{}}
+	return &winFake{prepareOK: true, executeOut: `{"event":"execute-end","ok":true,"service_started":true,"service_stopped":true,"fence":false}`, collectOut: `{"event":"collect-end","complete":true,"shared_profile_retained":true}`, scripts: map[string]string{}}
 }
 
 func (w *winFake) admin(root string) AdminFunc {
@@ -201,9 +201,11 @@ func TestWindowsCollectionOutcomeComesFromTheHelperEventNotTheBrokerExit(t *test
 		collected, residue bool
 	}{
 		{`{"event":"collect-end","complete":false,"residue_only":false}`, false, false},
-		{`{"event":"collect-end","complete":false,"residue_only":true}`, true, true},
+		{`{"event":"collect-end","complete":false,"residue_only":true}`, false, false},
 		{"exit=0", false, false},
 		{`{"event":"collect-end","complete":true,"residue_only":false}`, true, false},
+		{`{"event":"collect-end","complete":true,"shared_profile_retained":true}`, true, false},
+		{`{"event":"collect-end","complete":false,"shared_profile_retained":true}`, false, false},
 	} {
 		lc, _, root := newLife(t)
 		w := newWinFake()

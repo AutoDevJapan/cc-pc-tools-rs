@@ -1,0 +1,136 @@
+{
+  "measured_at": "2026-10-19 JST ~20:37-20:38",
+  "code": "working tree on top of e744bde (collect: lock + whole-tree ACL reset + recursive verification + durable marker; file-based claim lock)",
+  "design": "fixed fixture identity CC-CIW-civ6-fixture. A legacy marker was set once by an administrator script for the earlier root that had been collected and deleted before markers existed.",
+  "observed_in_console": [
+    {
+      "step": "A normal",
+      "execute_end": {
+        "fence": false,
+        "ok": true
+      },
+      "execute_exit": 0,
+      "collect_end": {
+        "complete": true,
+        "shared_profile_retained": true
+      },
+      "tree_entries_verified_without_service_grant": 30,
+      "ciw_profile_leaf_count_total": 4,
+      "launcher": {
+        "service_pid": 71296,
+        "worker_exit": 0,
+        "job_drained": true
+      },
+      "marker_after": "A's root"
+    },
+    {
+      "step": "B cancel, prepared while A's collected root still existed",
+      "result": "prepare allowed",
+      "execute_end": {
+        "fence": false,
+        "ok": true
+      },
+      "collect_end": {
+        "complete": true
+      },
+      "tree_entries_verified_without_service_grant": 30,
+      "ciw_profile_leaf_count_total": 4,
+      "launcher": {
+        "service_pid": 18800,
+        "worker_exit": 125,
+        "job_drained": true,
+        "cancelled": true
+      }
+    },
+    {
+      "step": "stale stop of A's helper while the service was bound to B",
+      "result": "the shared service now belongs to another job; no action taken",
+      "exit": 1,
+      "status_still_reports_stopped": true
+    },
+    {
+      "step": "C prepared only, then D prepared",
+      "c_result": "prepared",
+      "d_result": "refused: previous job was not collected (no durable collection marker for its root); the shared service identity is not reused"
+    },
+    {
+      "step": "C then executed normally and collected",
+      "execute_end": {
+        "fence": false,
+        "ok": true
+      },
+      "tree_entries_verified_without_service_grant": 30,
+      "ciw_profile_leaf_count_total": 4,
+      "launcher": {
+        "service_pid": 71316,
+        "worker_exit": 0,
+        "job_drained": true
+      }
+    }
+  ],
+  "saved_files": {
+    "C": {
+      "launcher": {
+        "service_pid": 71316,
+        "worker_exit": 0,
+        "job_drained": true,
+        "cancelled": false,
+        "token_au_deny_only_verified": true
+      },
+      "collection": {
+        "ace_scope": "administrator-installed root and runtime inheritable grants only",
+        "additional_ace_count": 0,
+        "ciw_profile_leaf_count_total": 4,
+        "credential_runtime": "C:\\Users\\makhmeto\\AppData\\Local\\Temp\\codex-owned-8b6b03b7b1126113e2b1375d4121c80b\\runtime\\runner",
+        "official_ci_claimed": false,
+        "owner_reset": true,
+        "process_census_scope": "queryable processes; owned Job Object independently drained",
+        "profile_scope": "the single continuing profile of this module's fixed identity; legacy per-job CC-CIW-<instance> profiles are counted in the total",
+        "queryable_account_process_count": 0,
+        "service": "CC-CIW-civ6-fixture",
+        "service_idle_confirmed": true,
+        "service_retained": true,
+        "shared_classes_hive_loaded": true,
+        "shared_hive_loaded": true,
+        "shared_profile_entries_for_this_identity": 1,
+        "shared_profile_retained": true,
+        "tree_acl_reset": true,
+        "tree_entries_verified_without_service_grant": 30,
+        "unreadable_process_count": 1,
+        "unstarted_worker": false
+      }
+    },
+    "B": {
+      "launcher": {
+        "service_pid": 18800,
+        "worker_exit": 125,
+        "job_drained": true,
+        "cancelled": true,
+        "token_au_deny_only_verified": true
+      },
+      "collection": {
+        "ace_scope": "administrator-installed root and runtime inheritable grants only",
+        "additional_ace_count": 0,
+        "ciw_profile_leaf_count_total": 4,
+        "credential_runtime": "C:\\Users\\makhmeto\\AppData\\Local\\Temp\\codex-owned-b375bf98887f4dbb21dcf00e304563d6\\runtime\\runner",
+        "official_ci_claimed": false,
+        "owner_reset": true,
+        "process_census_scope": "queryable processes; owned Job Object independently drained",
+        "profile_scope": "the single continuing profile of this module's fixed identity; legacy per-job CC-CIW-<instance> profiles are counted in the total",
+        "queryable_account_process_count": 0,
+        "service": "CC-CIW-civ6-fixture",
+        "service_idle_confirmed": true,
+        "service_retained": true,
+        "shared_classes_hive_loaded": true,
+        "shared_hive_loaded": true,
+        "shared_profile_entries_for_this_identity": 1,
+        "shared_profile_retained": true,
+        "tree_acl_reset": true,
+        "tree_entries_verified_without_service_grant": 30,
+        "unreadable_process_count": 1,
+        "unstarted_worker": false
+      }
+    }
+  },
+  "note": "the CC-CIW profile count stayed 4 (3 legacy per-job + 1 shared fixture identity) across A, B, C. Console values were read from the run output; saved_files for B and C were read from the roots before deletion."
+}

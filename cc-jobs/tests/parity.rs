@@ -2958,6 +2958,47 @@ mod queue_regressions {
         }
     }
     #[test]
+    fn history_expiring_after_pause_defers_the_real_stop_and_resumes_the_owner() {
+        for expire in [true, false] {
+            let t = Test::new();
+            config(&t, json!({"max_running":1,"context_limit_percent":50}));
+            let mut parent = live_tool_parent(&t);
+            parent["started_at"] = json!("2026-10-01T11:59:00+09:00");
+            parent["context_pct"] = json!(99);
+            t.ctx.save(&parent).unwrap();
+            tool_events(
+                &t,
+                &[("item.started", "command"), ("item.completed", "command")],
+            );
+            t.rt.advance_epoch.store(true, Ordering::Relaxed);
+            if expire {
+                let clock = Arc::downgrade(&t.rt);
+                *t.rt.pause_hook.lock().unwrap() = Some(Box::new(move || {
+                    clock.upgrade().unwrap().tick(31.);
+                }));
+            }
+            assert_eq!(t.ctx.admit("other").unwrap().is_some(), !expire);
+            assert!(
+                t.rt.pause_calls.load(Ordering::Relaxed) > 0,
+                "the completed boundary must reach the real pause/commit pipeline"
+            );
+            let saved = t.ctx.load("long").unwrap();
+            if expire {
+                assert_eq!(saved["status"], "running");
+                assert!(t.rt.kills.lock().unwrap().is_empty());
+                assert_eq!(t.rt.procs.lock().unwrap().get(&444), Some(&44));
+                assert!(saved["context_phase"].is_null());
+            } else {
+                assert_eq!(saved["status"], "queued");
+                assert_eq!(saved["context_phase"], "summarize");
+                assert!(
+                    !t.rt.kills.lock().unwrap().is_empty(),
+                    "positive control: fresh history permits the same owner to stop"
+                );
+            }
+        }
+    }
+    #[test]
     fn resumed_supervisor_refreshes_usage_before_its_first_completed_command() {
         struct CompletingCommand {
             first: bool,

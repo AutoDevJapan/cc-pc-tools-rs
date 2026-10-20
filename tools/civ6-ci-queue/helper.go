@@ -291,11 +291,10 @@ func (h windowsHelper) collect(ctx context.Context, lc *LifeCtx, verb string) (d
 	if e != nil || end == nil {
 		return false, false
 	}
-	// The helper's residue-only ending reports complete:false, residue_only:true
-	// after the service, ACLs and processes are verified clean: collected, with a
-	// residue that is counted and judged separately.
-	residue = boolField(end, "residue_only")
-	return boolField(end, "complete") || residue, residue
+	// The fixed repository service/profile is a bounded continuing resource,
+	// not per-job residue. Only the current helper's complete collection proof
+	// permits another prepare. An old residue-only event never releases a job.
+	return boolField(end, "complete"), false
 }
 
 func (h windowsHelper) Lifecycle(ctx context.Context, lc *LifeCtx) (o Outcome) {

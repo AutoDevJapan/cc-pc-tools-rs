@@ -10,6 +10,10 @@ use std::{
 #[path = "../tests/support/queue_owner_snapshot.rs"]
 mod owner_snapshot_tests;
 
+#[cfg(test)]
+#[path = "../tests/support/queue_history_liveness.rs"]
+mod history_liveness_tests;
+
 fn terminal_result(job: &Value) -> bool {
     cc_job_policy::review_result::completed(job, s(job, "last_message"))
         || s(job, "last_message")
@@ -770,10 +774,18 @@ impl Context {
     }
     /// Called under the gate after preparation. Never reads terminal history.
     pub(crate) fn admission_jobs(&self) -> Result<Vec<Value>> {
+        self.indexed_admission_jobs(false)
+    }
+    /// A destructive boundary transition must still have recent legacy coverage
+    /// after its slow inventory and bounded process-pause work.
+    pub(crate) fn fresh_admission_jobs(&self) -> Result<Vec<Value>> {
+        self.indexed_admission_jobs(true)
+    }
+    fn indexed_admission_jobs(&self, require_fresh: bool) -> Result<Vec<Value>> {
         let index = self.read_json(&self.jobs.join(".queue-index.json"))?;
         // Preparation and gate acquisition are separate. A writer can repair
         // a damaged cache to a partial index between them; never admit from it.
-        if !self.index_complete(&index) {
+        if !self.index_complete(&index) || (require_fresh && !self.index_fresh(&index)) {
             return Err(Error {
                 code: 75,
                 message: "queue index reconciliation required; retry outside queue gate".into(),
@@ -873,12 +885,12 @@ impl Context {
             .get(jid)
             .is_some_and(|reason| *reason == job["queue_wait_reason"])
     }
-    /// Lock-free pre-check for a running job's yield attempt. Without an index
-    /// the gated path decides.
+    /// Lock-free pre-check for a running job's yield attempt. Unknown history
+    /// defers a new attempt; an already journaled handoff still needs recovery.
     pub(crate) fn yield_may_be_due(&self, job: &Value) -> bool {
         self.tool_handoff_pending(job)
             || (!self.yield_backoff_active(job)
-                && self.admission_snapshot().is_none_or(|jobs| {
+                && self.admission_snapshot().is_some_and(|jobs| {
                     self.context_rotation_due(job, &jobs) || self.should_yield(job, &jobs)
                 }))
     }
@@ -1114,9 +1126,13 @@ impl Context {
         // The separate minute task samples; admission only reads durable state.
         let mut cfg = cfg.clone();
         // Slow yield work happens before the gate, from a lock-free snapshot.
-        // First admission must also inspect completed boundaries. Build a
-        // missing index under a brief gate, then release it before yield work.
-        let snapshot = self.yield_snapshot()?;
+        // Admission owns history preparation. The advisory boundary snapshot
+        // deliberately never scans, even when its index is missing or old.
+        self.prepare_admission_index()?;
+        let snapshot = self.yield_snapshot()?.ok_or_else(|| Error {
+            code: 75,
+            message: "queue history changed after admission preparation; retry".into(),
+        })?;
         self.maintain_tool_yields(&snapshot);
         let _gate = self.queue_lock_for("admit_configured", std::time::Duration::from_secs(60))?;
         cfg.max_running = self.effective_limit(&cfg)?;

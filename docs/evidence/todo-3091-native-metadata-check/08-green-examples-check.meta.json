@@ -1,0 +1,39 @@
+{
+  "todo": 3091,
+  "job": "20261020-193448-todo-3091",
+  "label": "08-green-examples-check",
+  "head": "6b6e7d941063cd3a6b1cdea50fe6f59d0b03aebd",
+  "branch": "scheduler/todo-3091-native-metadata-green",
+  "cwd": "D:/CC/Work/unattended-operations-20261013-wt/todo-3091-3081",
+  "command": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "args": [
+    "check",
+    "--locked",
+    "-p",
+    "cc-jobs",
+    "--examples"
+  ],
+  "environment": {
+    "CARGO_TARGET_DIR": "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-3ba88d318eb9a9a65a76d2929e5c63c6/target",
+    "RUSTC_WRAPPER": "D:/CC/Tools/sccache/sccache.exe",
+    "SCCACHE_DIR": "D:/CC/BuildCache/sccache",
+    "SCCACHE_CACHE_SIZE": "30G",
+    "SCCACHE_SERVER_PORT": "42259",
+    "CARGO_BUILD_JOBS": "8",
+    "RUST_TEST_THREADS": "8",
+    "NEXTEST_TEST_THREADS": "8",
+    "CARGO_TERM_COLOR": "never",
+    "NO_COLOR": "1"
+  },
+  "create_no_window": true,
+  "start": "2026-10-20T19:44:27.4011644+09:00",
+  "end": "2026-10-20T19:45:01.0246168+09:00",
+  "exit_code": 0,
+  "pid": 54960,
+  "process_exit_observed": true,
+  "streams_drained": true,
+  "head_after": "6b6e7d941063cd3a6b1cdea50fe6f59d0b03aebd",
+  "tracked_changes_after": "",
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "7221918fe99b98140f28dc9c46d1fddf41efeb22c983a8df193de09e9a94093a"
+}

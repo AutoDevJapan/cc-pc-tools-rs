@@ -1,0 +1,13 @@
+   Compiling cc-jobs v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3091-3081\cc-jobs)
+   Compiling cc-ask v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3091-3081\cc-ask)
+error: no rules expected `.`
+  --> cc-jobs\src\bin\fixture.rs:64:57
+   |
+64 |             json!({"models":["gpt-6.1-sol","gpt-6-luna"].map(|slug|json!({
+   |                                                         ^ no rules expected this token in macro call
+   |
+   = note: while trying to match end of macro
+
+error: could not compile `cc-jobs` (bin "cc_jobs_fixture") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: command `'C:\Users\makhmeto\.rustup\toolchains\1.95.0-x86_64-pc-windows-msvc\bin\cargo.exe' '--color=never' test --no-run --message-format json-render-diagnostics --package cc-jobs --test model_effort --test pool_retry --target-dir 'C:\Users\makhmeto\AppData\Local\Temp\codex-owned-3ba88d318eb9a9a65a76d2929e5c63c6\target' --locked` exited with code 101

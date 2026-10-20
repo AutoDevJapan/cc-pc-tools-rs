@@ -1,0 +1,166 @@
+{
+  "todo": 3091,
+  "parent_todo": 3081,
+  "issue": 277,
+  "repository": "AutoDevJapan/cc-pc-tools-rs",
+  "scope": "fixed-source finite check only; implementation owned by parent",
+  "status": "finite_check_complete_with_compile_blockers",
+  "expected_red": "test starts, then catalog_model is null because native metadata was not supplied for the account-scoped model",
+  "actual_red": "compiler error at cc-jobs/src/bin/fixture.rs:64:57; no rules expected dot; no test started",
+  "red_expectation_confirmed": false,
+  "green": false,
+  "runs": [
+    {
+      "label": "03-red-native-e2e",
+      "head": "0e48665f2aabb5c6d28c7cc13fbd4f9ad80a56d0",
+      "argv": [
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "cc-jobs",
+        "--test",
+        "parity",
+        "-E",
+        "test(real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit)",
+        "--status-level",
+        "all",
+        "--final-status-level",
+        "all"
+      ],
+      "exit_code": 101,
+      "start": "2026-10-20T19:41:22.3295343+09:00",
+      "end": "2026-10-20T19:42:00.6057654+09:00",
+      "tests_started": 0,
+      "outcomes": [],
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "6cd2a3721118561830f524c3b0ec9c395aee5831b9e256b32e6f242e958314df"
+    },
+    {
+      "label": "06-green-model-pool",
+      "head": "6b6e7d941063cd3a6b1cdea50fe6f59d0b03aebd",
+      "argv": [
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "cc-jobs",
+        "--test",
+        "model_effort",
+        "--test",
+        "pool_retry",
+        "--status-level",
+        "all",
+        "--final-status-level",
+        "all"
+      ],
+      "exit_code": 101,
+      "start": "2026-10-20T19:43:30.7517549+09:00",
+      "end": "2026-10-20T19:43:44.5015538+09:00",
+      "tests_started": 0,
+      "outcomes": [],
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "4eba3dc6d33b008332c178dee97de611242357ceda052034c6076eaa945f546c"
+    },
+    {
+      "label": "07-green-parity-selected",
+      "head": "6b6e7d941063cd3a6b1cdea50fe6f59d0b03aebd",
+      "argv": [
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "cc-jobs",
+        "--test",
+        "parity",
+        "-E",
+        "test(capacity_regressions::) | test(claude_routing::) | test(job_cli_defaults::) | test(real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit)",
+        "--status-level",
+        "all",
+        "--final-status-level",
+        "all"
+      ],
+      "exit_code": 101,
+      "start": "2026-10-20T19:44:10.4083296+09:00",
+      "end": "2026-10-20T19:44:15.3208171+09:00",
+      "tests_started": 0,
+      "outcomes": [],
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "6d22cbc40b9870d2d3a13e52e52a0059e1a7b6e5b176fa2aa7dde545f7047697"
+    },
+    {
+      "label": "08-green-examples-check",
+      "head": "6b6e7d941063cd3a6b1cdea50fe6f59d0b03aebd",
+      "argv": [
+        "check",
+        "--locked",
+        "-p",
+        "cc-jobs",
+        "--examples"
+      ],
+      "exit_code": 0,
+      "start": "2026-10-20T19:44:27.4011644+09:00",
+      "end": "2026-10-20T19:45:01.0246168+09:00",
+      "tests_started": 0,
+      "outcomes": [],
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "7221918fe99b98140f28dc9c46d1fddf41efeb22c983a8df193de09e9a94093a"
+    }
+  ],
+  "root_cause": {
+    "kind": "compile_error",
+    "target": "cc-jobs (bin cc_jobs_fixture)",
+    "file": "cc-jobs/src/bin/fixture.rs",
+    "line": 64,
+    "column": 57,
+    "message": "no rules expected dot in json! macro array value followed by .map",
+    "same_fixture_blob_in_red_and_green": true
+  },
+  "unexecuted": [
+    {
+      "scope": "cc-jobs model_effort and pool_retry",
+      "reason": "Green compilation failed before any test started"
+    },
+    {
+      "scope": "cc-jobs parity capacity_regressions / claude_routing / job_cli_defaults and real capacity process E2E",
+      "reason": "Green compilation failed before any test started; 120-second test deadline and 5/15/30-second retries never exercised"
+    },
+    {
+      "scope": "cc-job-policy, cc-jobs, cc-ask, cc-scheduler full package nextest",
+      "reason": "selected-test-success precondition not met"
+    },
+    {
+      "scope": "same four packages doctest",
+      "reason": "selected-test-success precondition not met"
+    }
+  ],
+  "examples": {
+    "command": "cargo check --locked -p cc-jobs --examples",
+    "exit_code": 0,
+    "executed": false,
+    "compile_success": true
+  },
+  "controls": {
+    "gpu_used": false,
+    "api_keys_used": false,
+    "authentication_files_read": false,
+    "new_cost": false,
+    "real_ai_jobs_started": false,
+    "source_edits": false,
+    "parent_workspace_edited": false,
+    "parent_todo_changed": false,
+    "pull_request_created": false,
+    "merge": false,
+    "deployment": false,
+    "owner_messages_sent": false,
+    "workspace_tests": false,
+    "release_build": false,
+    "cargo_gate": "shared installed gate",
+    "parallel_limits_requested": 8,
+    "per_worktree_owned_target": true,
+    "sccache": true,
+    "create_no_window": true
+  },
+  "prior_results": "3083 and 3087 are earlier source results only and were not relabeled as this candidate passing",
+  "independent_model_review": false
+}

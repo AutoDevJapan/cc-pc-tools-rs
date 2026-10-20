@@ -1,0 +1,8 @@
+{
+  "source_absent": true,
+  "destination_exists": true,
+  "bytes": 1860692626,
+  "entries": 3074,
+  "state": "quarantined",
+  "disk_bytes_reclaimed": false
+}

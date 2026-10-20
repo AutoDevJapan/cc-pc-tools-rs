@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "{\"action\":\"quarantine\",\"bytes\":1860692626,\"entries\":3074,\"id\":\"3ba88d318eb9a9a65a76d2929e5c63c6\",\"path\":\"C:\\\\Users\\\\makhmeto\\\\AppData\\\\Local\\\\Temp\\\\codex-owned-3ba88d318eb9a9a65a76d2929e5c63c6\",\"protected_attributes\":false,\"reason\":\"size\"}\n",
+  "stderr": ""
+}

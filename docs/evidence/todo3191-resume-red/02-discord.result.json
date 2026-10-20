@@ -1,0 +1,8 @@
+{
+  "id": "02-discord",
+  "ended_at": "2026-10-21T05:42:53.6627922+09:00",
+  "exit_code": 100,
+  "exit_code_source": "Exited cargo_gate.exe; gate returns the real Cargo status code",
+  "streams_drained": true,
+  "source_head_after": "d2001637ff137cdece47fa714d6011cd9885fa79"
+}

@@ -1,0 +1,40 @@
+{
+  "fixed_source": "6d7358a3b9334ad92ae3fc822e2c81b23af9f831",
+  "parsed_from": "Unabridged nextest stderr; repeated final failure summaries deduplicated by test name",
+  "tests": [
+    {
+      "command": "01-policy",
+      "status": "FAIL",
+      "binary": "cc-job-policy::resume_policy",
+      "test": "haiku_does_not_acquire_an_unverified_max_requirement"
+    },
+    {
+      "command": "01-policy",
+      "status": "FAIL",
+      "binary": "cc-job-policy::resume_policy",
+      "test": "policy_migration_starts_fresh_and_a_later_requeue_cannot_restore_the_old_context"
+    },
+    {
+      "command": "01-policy",
+      "status": "PASS",
+      "binary": "cc-job-policy::resume_policy",
+      "test": "individual_owner_selection_keeps_the_model_effort_and_compatible_context"
+    },
+    {
+      "command": "01-policy",
+      "status": "PASS",
+      "binary": "cc-job-policy::resume_policy",
+      "test": "an_eligible_same_model_capacity_attempt_keeps_its_context_and_durable_budget"
+    },
+    {
+      "command": "02-discord",
+      "status": "FAIL",
+      "binary": "cc-ask::resume",
+      "test": "every_discord_resume_launcher_applies_policy_before_passing_a_native_session"
+    }
+  ],
+  "compile_failures": 0,
+  "commands_executed": 2,
+  "commands_unexecuted": 0,
+  "cc_ask_tests_excluded_by_requested_filter": 82
+}

@@ -1,0 +1,234 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling stable_deref_trait v1.2.1
+   Compiling memchr v2.8.3
+   Compiling windows-sys v0.61.2
+   Compiling litemap v0.8.3
+   Compiling writeable v0.6.4
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.14
+   Compiling icu_normalizer_data v2.3.0
+   Compiling utf8_iter v1.0.4
+   Compiling icu_properties_data v2.3.0
+   Compiling cc v1.6.0
+   Compiling smallvec v1.16.2
+   Compiling crc32fast v1.5.2
+   Compiling zeroize v1.9.1
+   Compiling log v0.4.34
+   Compiling rustls-pki-types v1.15.1
+   Compiling simd-adler32 v0.3.10
+   Compiling ring v0.17.14
+   Compiling serde_json v1.0.151
+   Compiling windows-result v0.4.1
+   Compiling windows-strings v0.5.1
+   Compiling getrandom v0.2.17
+   Compiling percent-encoding v2.3.2
+   Compiling pin-project-lite v0.2.17
+   Compiling adler2 v2.0.1
+   Compiling untrusted v0.9.0
+   Compiling once_cell v1.21.4
+   Compiling form_urlencoded v1.2.2
+   Compiling futures-sink v0.3.34
+   Compiling miniz_oxide v0.9.1
+   Compiling futures-core v0.3.34
+   Compiling windows_x86_64_msvc v0.52.6
+   Compiling rustls v0.23.45
+   Compiling webpki-roots v1.0.9
+   Compiling futures-channel v0.3.34
+   Compiling flate2 v1.1.10
+   Compiling aho-corasick v1.1.5
+   Compiling syn v3.0.6
+   Compiling syn v2.0.119
+   Compiling anstyle v1.0.14
+   Compiling once_cell_polyfill v1.70.2
+   Compiling thiserror v2.0.21
+   Compiling slab v0.4.12
+   Compiling utf8parse v0.2.2
+   Compiling subtle v2.6.1
+   Compiling regex-syntax v0.8.11
+   Compiling futures-io v0.3.34
+   Compiling futures-task v0.3.34
+   Compiling anstyle-parse v1.0.0
+   Compiling windows-implement v0.60.2
+   Compiling windows-interface v0.59.3
+   Compiling synstructure v0.14.0
+   Compiling displaydoc v0.2.7
+   Compiling zerovec-derive v0.11.6
+   Compiling serde_derive v1.0.229
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling futures-macro v0.3.34
+   Compiling windows-core v0.62.2
+   Compiling regex-automata v0.4.18
+   Compiling thiserror-impl v2.0.21
+   Compiling anstyle-wincon v3.0.11
+   Compiling zerofrom v0.1.8
+   Compiling webpki-roots v0.26.11
+   Compiling futures-util v0.3.34
+   Compiling yoke v0.8.3
+   Compiling chrono v0.4.45
+   Compiling anstyle-query v1.1.5
+   Compiling windows-threading v0.2.1
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling colorchoice v1.0.5
+   Compiling base64 v0.22.1
+   Compiling anstream v1.0.0
+   Compiling windows-future v0.3.2
+   Compiling zerovec v0.11.8
+   Compiling zerotrie v0.2.5
+   Compiling windows-targets v0.52.6
+   Compiling windows-collections v0.3.2
+   Compiling windows-numerics v0.3.1
+   Compiling regex v1.13.1
+   Compiling tokio-macros v2.7.2
+   Compiling mio v1.2.4
+   Compiling socket2 v0.6.5
+   Compiling strsim v0.11.1
+   Compiling tinystr v0.8.4
+   Compiling potential_utf v0.1.6
+   Compiling zip v2.4.2
+   Compiling bumpalo v3.20.3
+   Compiling icu_collections v2.3.0
+   Compiling serde v1.0.229
+   Compiling icu_locale_core v2.3.0
+   Compiling heck v0.5.0
+   Compiling clap_lex v1.1.1
+   Compiling bytes v1.12.1
+   Compiling clap_derive v4.6.7
+   Compiling clap_builder v4.6.7
+   Compiling tokio v1.53.2
+   Compiling tempfile v3.27.0
+   Compiling rustls-webpki v0.103.15
+   Compiling zopfli v0.8.3
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3191-3081\cc-job-policy)
+   Compiling windows v0.62.2
+   Compiling windows-sys v0.59.0
+   Compiling icu_provider v2.3.1
+   Compiling uuid v1.27.0
+   Compiling clap v4.6.7
+   Compiling winreg v0.55.0
+   Compiling icu_properties v2.3.0
+   Compiling icu_normalizer v2.3.0
+   Compiling futures-executor v0.3.34
+   Compiling futures v0.3.34
+   Compiling wmi v0.18.4
+   Compiling cc-live v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3191-3081\cc-live)
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling url v2.5.8
+   Compiling ureq v2.12.1
+   Compiling cc-local-llm v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3191-3081\cc-local-llm)
+   Compiling cc-task-title v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3191-3081\cc-task-title)
+   Compiling cc-chrome v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3191-3081\cc-chrome)
+   Compiling cc-ask v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3191-3081\cc-ask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 33.51s
+────────────
+ Nextest run ID bec8174e-2477-425b-a901-908f017ed6e0 with nextest profile: default
+    Starting 1 test across 1 binary (82 tests skipped)
+        SKIP [         ] (───) cc-ask::resume answer_after_expired_retry_and_manual_read_is_delivered_with_a_new_reservation
+        SKIP [         ] (───) cc-ask::resume centralized_worktrees_match_their_repository_only
+        SKIP [         ] (───) cc-ask::resume continuation_progress_and_missing_question_do_not_ping_or_remind_owner
+        SKIP [         ] (───) cc-ask::resume duplicate_or_superseded_writer_keeps_a_failed_jobs_answer_dispatchable
+        SKIP [         ] (───) cc-ask::resume exhausted_answer_retry_does_not_close_or_launch_after_absolute_deadline
+        SKIP [         ] (───) cc-ask::resume explicit_retry_restores_transport_closed_question_but_not_completed_or_stopped_questions
+        SKIP [         ] (───) cc-ask::resume failed_request_cursor_is_restored_only_for_its_own_dispatch
+        SKIP [         ] (───) cc-ask::resume failed_writer_conflict_waits_without_consuming_answer_then_recovers_fresh
+        SKIP [         ] (───) cc-ask::resume late_dispatched_work_after_a_large_record_is_never_replayed
+        SKIP [         ] (───) cc-ask::resume legacy_queued_receipt_is_reserved_and_unreadable_job_cannot_release_it
+        SKIP [         ] (───) cc-ask::resume local_start_events_do_not_prove_input_but_dispatched_work_does
+        SKIP [         ] (───) cc-ask::resume managed_answer_resume_migrates_high_hints_but_preserves_individual_owner_effort
+        SKIP [         ] (───) cc-ask::resume meaningful_event_before_split_utf8_boundary_keeps_legacy_delivery_confirmed
+        SKIP [         ] (───) cc-ask::resume mixed_answer_and_postponement_keeps_answer_and_releases_it_at_deadline
+        SKIP [         ] (───) cc-ask::resume no_origin_repository_creates_and_reuses_worktree_from_committed_head
+        SKIP [         ] (───) cc-ask::resume occupied_unrelated_session_uses_fresh_answer_worker_once
+        SKIP [         ] (───) cc-ask::resume one_incomplete_stream_does_not_block_an_independent_failed_reply
+        SKIP [         ] (───) cc-ask::resume owner_reply_changes_owner_scope_but_cannot_promote_a_launcher_reader
+        SKIP [         ] (───) cc-ask::resume posted_and_request_answer_without_a_source_remains_in_inbox_without_new_worker
+        SKIP [         ] (───) cc-ask::resume postponed_failed_worker_does_not_restart_or_post_until_release
+        SKIP [         ] (───) cc-ask::resume postponement_after_completion_holds_result_then_reports_exactly_once
+        SKIP [         ] (───) cc-ask::resume postponement_only_is_silent_and_reminds_at_deadline_without_a_worker
+        SKIP [         ] (───) cc-ask::resume prestart_failure_releases_legacy_receipt_but_explicit_delivery_is_monotonic
+        SKIP [         ] (───) cc-ask::resume queued_answer_is_reserved_until_start_then_unblocks_existing_todo
+        SKIP [         ] (───) cc-ask::resume real_reply_shapes_after_reask_in_central_worktree
+        SKIP [         ] (───) cc-ask::resume receipt_is_immediate_silent_redacted_unicode_and_once_across_commands
+        SKIP [         ] (───) cc-ask::resume receipt_recovers_lost_checkpoint_even_after_nonce_window
+        SKIP [         ] (───) cc-ask::resume replies_alone_posts_receipt_once_and_records_success_before_seen
+        SKIP [         ] (───) cc-ask::resume reply_arriving_during_manual_writer_is_followed_up_after_success
+        SKIP [         ] (───) cc-ask::resume resume_inherits_permissions_and_routing_from_source_without_preamble_classification
+        SKIP [         ] (───) cc-ask::resume same_task_writer_success_without_answer_input_does_not_consume_it
+        SKIP [         ] (───) cc-ask::resume snooze_defers_result_but_new_answer_is_received_and_delivered_immediately
+        SKIP [         ] (───) cc-ask::resume successful_manual_writer_is_not_restarted_or_reported_twice
+        SKIP [         ] (───) cc-ask::resume test_ack_delivery_failure_does_not_relaunch
+        SKIP [         ] (───) cc-ask::resume test_archive_failure_retries_without_reposting_result
+        SKIP [         ] (───) cc-ask::resume test_ask_records_cwd_and_agent
+        SKIP [         ] (───) cc-ask::resume test_blocked_todo_does_not_suppress_launch
+        SKIP [         ] (───) cc-ask::resume test_completed_job_posts_final_with_mention_and_closes_question
+        SKIP [         ] (───) cc-ask::resume test_consumed_reply_cancels_a_reserved_launch_that_has_not_started
+        SKIP [         ] (───) cc-ask::resume test_continuation_backoff_and_intentional_duplicate_cancel_are_silent
+        SKIP [         ] (───) cc-ask::resume test_crash_after_launch_adopts_existing_job_without_duplicate
+        SKIP [         ] (───) cc-ask::resume test_dispatch_uses_recorded_cwd_jev_and_resume_instructions
+        SKIP [         ] (───) cc-ask::resume test_doing_todo_updated_after_reply_without_live_worker_does_not_consume_answer
+        SKIP [         ] (───) cc-ask::resume test_empty_replies_preserve_existing_acknowledgement
+        SKIP [         ] (───) cc-ask::resume test_existing_worktree_is_reused
+        SKIP [         ] (───) cc-ask::resume test_failed_job_resumes_automatically_without_owner_mention
+        SKIP [         ] (───) cc-ask::resume test_finished_related_job_does_not_suppress
+        SKIP [         ] (───) cc-ask::resume test_followup_does_not_restart_wait_for_first_unseen_answer
+        SKIP [         ] (───) cc-ask::resume test_full_thread_is_paginated_and_included
+        SKIP [         ] (───) cc-ask::resume test_git_worktree_setup_and_recovery_with_real_local_repository
+        SKIP [         ] (───) cc-ask::resume test_initial_continuation_launch_failure_enters_bounded_recovery
+        SKIP [         ] (───) cc-ask::resume test_issue_in_other_context_does_not_match_question_with_a_specific_issue
+        SKIP [         ] (───) cc-ask::resume test_launch_failure_preserves_attempt_key_and_does_not_mark_seen
+        SKIP [         ] (───) cc-ask::resume test_legacy_question_without_cwd_infers_the_project_without_asking_owner
+        SKIP [         ] (───) cc-ask::resume test_main_repository_creates_isolated_worktree_from_origin_main
+        SKIP [         ] (───) cc-ask::resume test_manually_closed_question_cancels_reserved_launch
+        SKIP [         ] (───) cc-ask::resume test_needs_decision_stays_open_and_next_answer_can_resume
+        SKIP [         ] (───) cc-ask::resume test_new_owner_reply_during_job_prevents_close_and_is_not_lost
+        SKIP [         ] (───) cc-ask::resume test_new_owner_reply_is_preserved_when_job_needs_decision
+        SKIP [         ] (───) cc-ask::resume test_non_owner_reply_does_not_trigger_continuation
+        SKIP [         ] (───) cc-ask::resume test_own_recovery_todo_does_not_block_retry_and_close_disables_watchdog_item
+        SKIP [         ] (───) cc-ask::resume test_question_registration_retries_after_state_save_failure_without_reposting
+        SKIP [         ] (───) cc-ask::resume test_related_todo_in_other_repository_does_not_suppress_launch
+        SKIP [         ] (───) cc-ask::resume test_replies_acknowledges_only_returned_owner_messages_and_thread
+        SKIP [         ] (───) cc-ask::resume test_replies_without_thread_acknowledges_all_returned_questions
+        SKIP [         ] (───) cc-ask::resume test_request_window_questions_are_left_to_existing_intake
+        SKIP [         ] (───) cc-ask::resume test_reserved_launch_includes_followup_without_resetting_wait
+        SKIP [         ] (───) cc-ask::resume test_reserved_launch_rechecks_if_another_session_has_started
+        SKIP [         ] (───) cc-ask::resume test_result_delivery_failure_retries_and_keeps_question_open
+        SKIP [         ] (───) cc-ask::resume test_running_job_in_same_repository_suppresses_launch
+        SKIP [         ] (───) cc-ask::resume test_running_unrelated_job_or_finished_related_job_does_not_suppress
+        SKIP [         ] (───) cc-ask::resume test_secrets_in_context_and_replies_are_redacted
+        SKIP [         ] (───) cc-ask::resume test_stale_doing_todo_does_not_suppress_launch
+        SKIP [         ] (───) cc-ask::resume test_strip_verbatim_preserves_unc_and_dos_paths
+        SKIP [         ] (───) cc-ask::resume test_tick_shares_one_launch_budget_with_intake
+        SKIP [         ] (───) cc-ask::resume test_unrelated_todo_or_other_project_does_not_suppress_launch
+        SKIP [         ] (───) cc-ask::resume test_waits_ten_minutes_and_dispatches_at_boundary
+        SKIP [         ] (───) cc-ask::resume test_worktree_failure_consumes_tick_launch_budget_and_preserves_reply
+        SKIP [         ] (───) cc-ask::resume transient_answer_launch_retries_same_reservation_and_stays_open_until_delivery
+        SKIP [         ] (───) cc-ask::resume unreadable_start_evidence_does_not_release_a_delivery_or_its_cursors
+        SKIP [         ] (───) cc-ask::resume zero_step_429_releases_false_confirmation_without_reposting_or_changing_waits
+        SKIP [         ] (───) cc-ask::resume zero_step_writer_failure_does_not_consume_answer_or_wait_for_unrelated_writer
+        FAIL [   0.158s] (1/1) cc-ask::resume every_discord_resume_launcher_applies_policy_before_passing_a_native_session
+  stdout ───
+
+    running 1 test
+    test every_discord_resume_launcher_applies_policy_before_passing_a_native_session ... FAILED
+
+    failures:
+
+    failures:
+        every_discord_resume_launcher_applies_policy_before_passing_a_native_session
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 82 filtered out; finished in 0.09s
+
+  stderr ───
+
+    thread 'every_discord_resume_launcher_applies_policy_before_passing_a_native_session' (74664) panicked at cc-ask\tests\resume.rs:719:9:
+    assertion `left == right` failed
+      left: String("gpt-6-luna")
+     right: "gpt-6.1-sol"
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+────────────
+     Summary [   0.169s] 1 test run: 0 passed, 1 failed, 82 skipped
+        FAIL [   0.158s] (1/1) cc-ask::resume every_discord_resume_launcher_applies_policy_before_passing_a_native_session
+error: test run failed

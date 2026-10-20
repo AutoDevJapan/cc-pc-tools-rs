@@ -1,0 +1,22 @@
+[
+  {
+    "file": "01-policy.stderr.log",
+    "bytes": 3514,
+    "sha256": "1DEDD5DE1C9A455A124BB89AE9543C341D4155E9EDF0CC224507CB7A6D8D6496"
+  },
+  {
+    "file": "01-policy.stdout.log",
+    "bytes": 0,
+    "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+  },
+  {
+    "file": "02-discord.stderr.log",
+    "bytes": 15127,
+    "sha256": "9962C1AFFC0B765F8FEBED36A65F35B16BE8649EF2EB67D8440B912381A74CFC"
+  },
+  {
+    "file": "02-discord.stdout.log",
+    "bytes": 0,
+    "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+  }
+]

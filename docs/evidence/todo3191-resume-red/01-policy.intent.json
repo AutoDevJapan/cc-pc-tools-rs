@@ -1,0 +1,37 @@
+{
+  "id": "01-policy",
+  "fixed_source": "6d7358a3b9334ad92ae3fc822e2c81b23af9f831",
+  "execution_head": "d2001637ff137cdece47fa714d6011cd9885fa79",
+  "job": "20261021-053655-todo-3191",
+  "started_at": "2026-10-21T05:42:11.3535927+09:00",
+  "program": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "arguments": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-job-policy",
+    "--test",
+    "resume_policy",
+    "--no-fail-fast",
+    "--status-level",
+    "all"
+  ],
+  "target": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3191-3081\\codex-owned-4de1d82e49b36c6b3d11d270681f82b6\\target",
+  "owned_temp_id": "4de1d82e49b36c6b3d11d270681f82b6",
+  "gate_sha256": "A7D47FAF071772D0C6CA1349B3C0A4ECAA256F0BBD9686FC81C937AC1B26C9BD",
+  "max_requested_build_jobs": 10,
+  "max_requested_test_threads": 10,
+  "cargo_gate_config": {
+    "jobs_per_build": 8
+  },
+  "sccache": "D:/CC/Tools/sccache/sccache.exe",
+  "sccache_dir": "D:/CC/BuildCache/sccache",
+  "sccache_port": "42259",
+  "sccache_cache_size": "30G",
+  "stdout": "01-policy.stdout.log",
+  "stderr": "01-policy.stderr.log",
+  "capture": "Raw redirected streams; process exit code read independently of output copying",
+  "gate_pid": 62384,
+  "gate_process_started_at": "2026-10-20T20:42:11.3807778Z"
+}

@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "{\"action\":\"quarantine\",\"bytes\":1468343785,\"entries\":5013,\"id\":\"b3789c1fc3d2ff203cfba57474e7bcda\",\"path\":\"D:\\\\CC\\\\Work\\\\unattended-operations-20261013-wt\\\\todo-3214-3103\\\\codex-owned-b3789c1fc3d2ff203cfba57474e7bcda\",\"protected_attributes\":false,\"reason\":\"size\"}\n",
+  "stderr": ""
+}

@@ -1,0 +1,217 @@
+{
+  "verified_at": "2026-10-21T08:10:07.8098215+09:00",
+  "head": "029db23684fe730850a8153660c62d90d7720205",
+  "all_git_blobs_equal_raw_files": true,
+  "files": [
+    {
+      "path": "docs/todo-3214-post3204-red/.gitattributes",
+      "blob": "95ccb59624b4d281edbd2516e5f20ae2958c5df7",
+      "bytes": 61,
+      "sha256": "22106984a6c1274ead5c283789ca11d75b303658949aaa627698747e7b2d6160"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/Invoke-Hidden.ps1",
+      "blob": "7e0b15f6dfb4c5ee8e339aec2d4aa316b0cf0e90",
+      "bytes": 756,
+      "sha256": "4b81f0578684cdbf7d3a79985f8b176bf42b86af573194fd9356405788f93534"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/README.md",
+      "blob": "75c0aa25d8534413ff0805088094b8bac441b0b7",
+      "bytes": 9403,
+      "sha256": "f22c8c6885c78cc69c0596ee020f74433e4fa13b30501749c5c790a1b5b7f02c"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/RESTART.md",
+      "blob": "7fa3db3efea195ea54f2faf0abacf3197af3dbe9",
+      "bytes": 1529,
+      "sha256": "13e4d539d4e53b3feda7acba3344c60d52818dcb441279f5ff7ddf9a823bfd1b"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/archive-initial.json",
+      "blob": "a3733c71362422e1eefe6bdde450493a4a1f23c4",
+      "bytes": 856,
+      "sha256": "7ab724952525a03698e25e61eb75e27da3092c7fd51dd44d0c42fc69ee5394a5"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/archive-raw.json",
+      "blob": "4dae082b14b3897d4a7b9454022f7ecdeabcceaa",
+      "bytes": 883,
+      "sha256": "02f254ff27ec59fa7026c2d90f21d8abfe1f007ae341ac42bdd11e46a54bf7b6"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/command-1.harness.json",
+      "blob": "12318db8b7d4c2730bb8d9f4018b2bd6e9079e90",
+      "bytes": 129,
+      "sha256": "cae114d9b66aa1cd96256314783f3ffaf4354dfa27b52d4f1578c20b40b5276b"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/command-1.result.json",
+      "blob": "de25eb9e9565b79aa4daab8b517ea76f7648c3eb",
+      "bytes": 1647,
+      "sha256": "594127da7d56b86c135ab05ce4a1746afebdda572fb0ec898743b1786f97cdf6"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/command-1.source-after.json",
+      "blob": "6f36b023e6936a7398894bd38edf952725311b6e",
+      "bytes": 301549,
+      "sha256": "49a9aa4f2cd3d0ab9604c683ca57363c057c2b54366047c144aac1f7fb588f4e"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/command-1.source-before.json",
+      "blob": "9d8d7b61f93cbbcabf901193a617ed1b86a5d794",
+      "bytes": 301549,
+      "sha256": "2a0a24e4724be007660a87a659c0b42ae5fa2619ade84ba4d40e98082bc95b00"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/command-1.started.json",
+      "blob": "32005d7061975c16db0a0416ee84cb5f7edcc8cc",
+      "bytes": 1296,
+      "sha256": "2e8888ec00c31318fa7dae13517bf5683aac5fe7072d2e8ddbb95ac0127d76f7"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/command-1.stderr.log",
+      "blob": "803633a942febb2c69f302b63ef35f39b91ddc23",
+      "bytes": 3425,
+      "sha256": "3206748852590fa792f75cb174688aa21d46a586852a59af7d3f235b2c6f2fda"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/command-1.stdout.log",
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/command-2.harness.json",
+      "blob": "e6c8b0b689fc7f5f451512730c7384ddc28fdabb",
+      "bytes": 129,
+      "sha256": "19750fd8517da1674648045d9d4af54e0679a625a1c3a60a0bd52445f7032178"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/command-2.result.json",
+      "blob": "a5fce8ef731863d9ae8e5c21ba59eaf31281f8df",
+      "bytes": 1691,
+      "sha256": "f1e4a7389037aedd65efd9c48207bd0bda3e47dcd66126a10c17ca52bc8c9651"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/command-2.source-after.json",
+      "blob": "f45733ff12df432d130dc574a71807523c0eb176",
+      "bytes": 301549,
+      "sha256": "ca8f072155d085c128cff187279139046788b205f977e45f540f3f9ad1698d5f"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/command-2.source-before.json",
+      "blob": "42deaed164a9205c148ea0dd89e24de970f386f3",
+      "bytes": 301549,
+      "sha256": "77bcc1187c6a552356485cb4c2e80a37337317af5b0da809aaae5479f90e4d7e"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/command-2.started.json",
+      "blob": "062b9b393a884f361d3883dd3915206ee13b4914",
+      "bytes": 1338,
+      "sha256": "45640a6d187c332acce22f9f6516f4886557416a6d2d6ee4a99eb7ce3168a417"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/command-2.stderr.log",
+      "blob": "331cc5ab277f2a3ecfa371323dddf02420ae50bc",
+      "bytes": 10860,
+      "sha256": "e0357e22f10d698742a815c11b278066aecdd2cca65b3df1bf32b44a1283246d"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/command-2.stdout.log",
+      "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/guard-temp.json",
+      "blob": "1342227978ad23d2a8751782512aeb9f2cf10dad",
+      "bytes": 255,
+      "sha256": "cf24ff7b283af2b9af6c03626d0ba2470ddfca71bd1d8102a039daecd395bf61"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/harness-build.json",
+      "blob": "330e731e80549fcc011e3ea377dd078896ef08cd",
+      "bytes": 53,
+      "sha256": "99a91859b3e2694f866f77d123619f672ed8da52cad5a8f09786dc39e1ea5ba1"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/integrity-verification.json",
+      "blob": "597fba9e30a753df778bb80dfe5108c9f11dea1e",
+      "bytes": 1913,
+      "sha256": "a65362793c6bee6217842eb18db1a28db6db829633db9da2e6f57ec3d2fae404"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/measure3214.go",
+      "blob": "4e357c63662d03ec2f41d3a04c8f0dc9a568f323",
+      "bytes": 11023,
+      "sha256": "4351ec71e4924d0eb3c066fd7f6e64d3b49850f30e05309e4e7d6c93168ea8b2"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/ownership.json",
+      "blob": "2f3d9d445d3dee4a6c2d967bbd932f74454f0207",
+      "bytes": 477,
+      "sha256": "0c269a20ad4daaea01a0437b7bdc99ba6333d41dff1c69e9a0a2344cacb3f2f3"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/prepare-pax-header-error.json",
+      "blob": "c0d49723993a145b594c20318e3a3b6b4793a936",
+      "bytes": 319,
+      "sha256": "2b4a503b290b8c23e817af42b39622721761a2924613fd87ec47c5699a078f2e"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/prepare-result.json",
+      "blob": "a55f1e2322af156930135a167b50ff486b6bb99d",
+      "bytes": 100,
+      "sha256": "6db48306946078b4ba2296712ea5b9f796f5ab2f6dee3e6443a2a811110b2a87"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/provenance.json",
+      "blob": "43d4814500dab9ece09130d75d67656f2715ebb8",
+      "bytes": 1362,
+      "sha256": "26e35dd82e610ac9d0384d7ea831969602edb34aba149d4c5b462a7a49fa23f2"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/results.json",
+      "blob": "e75e261d38c944d4d37b73148c3990543152920e",
+      "bytes": 3005,
+      "sha256": "fc939b7d4d82119617243f7b3f8e8576948df80266a4e93ccfe8532de79fd282"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/source-before.json",
+      "blob": "adbda2f1a6f86cb698ef82126ce673c4d2b33505",
+      "bytes": 301549,
+      "sha256": "e00e7973739cbd11da9d7c8f2c04b99f54d5a54161337647fa851c4d52167d74"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/source-final.json",
+      "blob": "7fac72f2c8d20d0d09476743b01654f8523153dc",
+      "bytes": 301549,
+      "sha256": "e15985958814c462fd22aa6f84fb70e14f7c705c7e94fc2885cb7094d5285340"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/unused-temp-finish.json",
+      "blob": "4a34e27849e2c4c649fa15e8fb1c3f5525c25423",
+      "bytes": 128,
+      "sha256": "965118b7db59b6457630951d38212e79d6767b1b9c1d68747ad8a0cb9dd102bb"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/unused-temp-guard.json",
+      "blob": "ef06e0dde35f0e8d70856eab079993542b62304c",
+      "bytes": 253,
+      "sha256": "a0ae7ef9ad57226a87ee1b5ce465123d37d1a69a3b12ae9f2205846e6b806e76"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/unused-temp-ownership.json",
+      "blob": "7cc6ca1966cbb581da46c656f303a6078ef08def",
+      "bytes": 500,
+      "sha256": "d05e22edb78c61e91e43de638e6adc187418eaa32ab060f356227d23da682e08"
+    },
+    {
+      "path": "docs/todo-3214-post3204-red/verify-final.json",
+      "blob": "330e731e80549fcc011e3ea377dd078896ef08cd",
+      "bytes": 53,
+      "sha256": "99a91859b3e2694f866f77d123619f672ed8da52cad5a8f09786dc39e1ea5ba1"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "started_at": "2026-10-21T08:11:51.6071674+09:00",
+  "source": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3214-3103\\codex-owned-b3789c1fc3d2ff203cfba57474e7bcda",
+  "destination": "D:\\削除希望\\20261021-todo3214-post3204-red-b3789c1f\\owned",
+  "bytes": 1468343785,
+  "all_source_links_internal": true,
+  "source_processes": [],
+  "state": "complete-verified-same-drive-quarantine",
+  "original_measurement_commit": "029db23",
+  "no_original_material_moved": true,
+  "source_absent": true,
+  "destination_present": true,
+  "verified_at": "2026-10-21T08:12:05.1083030+09:00"
+}

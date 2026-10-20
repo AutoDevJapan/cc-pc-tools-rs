@@ -1,0 +1,5 @@
+{
+  "exit": 2,
+  "stdout": "{\"code\":\"QUARANTINE_CROSS_DRIVE\",\"details\":{\"bytes\":1468343785,\"destination\":\"C:\\\\Users\\\\makhmeto\\\\Downloads\\\\削除希望\\\\20261021-todo-3214-post3204-fixed684bfba-red-b3789c1f\",\"drive_space\":[{\"available\":true,\"drive\":\"C:\\\\\",\"free_bytes\":171525660672,\"total_bytes\":3999776370688},{\"available\":true,\"drive\":\"D:\\\\\",\"free_bytes\":2579431464960,\"total_bytes\":4000768323584},{\"available\":true,\"drive\":\"E:\\\\\",\"free_bytes\":858052489216,\"total_bytes\":2000395272192}],\"phase\":\"preflight\",\"source\":\"D:\\\\CC\\\\Work\\\\unattended-operations-20261013-wt\\\\todo-3214-3103\\\\codex-owned-b3789c1fc3d2ff203cfba57474e7bcda\"},\"ok\":false}\n",
+  "stderr": ""
+}

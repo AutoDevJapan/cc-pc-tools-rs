@@ -12,8 +12,12 @@
 
 固定ソースの全1,184 blobは初期・各コマンドの前後・最終の6回すべて一致した。
 結果解釈はREADME.mdとresults.jsonを参照する。
-残る工程は結果のcommit/push、所有付き一時領域の plan → 別呼出しで通常削除 → finish、
-後片付け記録のcommit/pushと実HEADでの正規checkpoint。
+測定結果は029db23までcommit/push済み。所有領域はplanのsize指定に従って同じDドライブへ退避した。
+全5,014項目の移動前後の同一性と元パス不在を確認し、finishのsource_absentを取得した。
+退避先と照合結果はcleanup-move.jsonとcleanup-preservation-*.jsonにある。削除済みとは扱わない。
+照合補助フォルダもplan→別呼出しの通常削除→finishで終了した。
+後片付け記録を含む最終commitをpushし、実HEADで正規checkpointを保存して終了する。
+正規checkpointのrequest/結果はこのworktreeの.ci-work/todo3214-checkpoint-*.private.jsonに残す。
 削除拒否は再試行せず同じ所有IDをquarantineする。原資料と他担当の領域には触れない。
 親の状態・PR・配布は変更しない。独立PR、追加ビルド、子Codex、Discord通知は行わない。
 このToDoの状態はスケジューラーが更新する。

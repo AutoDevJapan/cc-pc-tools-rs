@@ -93,7 +93,24 @@ Rustコマンドの再実行ではない。
 - `source-before.json` / `command-N.source-{before,after}.json` / `source-final.json`: 全blob照合。
 - `archive-initial.json` / `archive-raw.json`: 改行差分の特定と専用属性、raw archiveのSHA256。
 - `provenance.json`: 実所有者・repo ID・OAuthの本人名・固定commit・gate/sccache実行物のSHA256。
-- `cleanup-*.json`: 所有領域の停止確認・plan・削除・finishの記録（後片付け後に追加）。
+- `cleanup-*.json`: 所有領域の停止確認・plan・退避・補助フォルダ削除・finishの記録。
 - `RESTART.md`: 再開時の確認手順。完了済みコマンドを重複実行しない。
+
+## 後片付け
+
+測定用の所有領域は1,468,343,785 bytes・5,013項目（根を除く）だった。
+safe-deleteのplanが容量を理由に退避を指定し、quarantineはCドライブを退避先に選んだため
+QUARANTINE_CROSS_DRIVEをpreflightで返した。削除の再試行はしていない。
+
+事前指示に従い、同じDドライブの新しい削除希望フォルダへMove-Itemで退避した。
+所有記録のvolume/file ID、作業場所の境界、祖先と配下のreparse不在、書き込みプロセスの終了を確認した。
+全通常ファイルのリンク数を領域内の同一file IDの個数と比較し、外部ハードリンクがないことも確認した。
+根を含めた全5,014項目について、移動前後のvolume/file ID・サイズ・属性・作成/更新日時・リンク数と
+全通常ファイルのSHA256が一致した。元パス不在を確認した後、finishがsource_absentを返した。
+
+退避先は `cleanup-move.json` に記録した。内容は削除されておらず、同じDドライブに保持している。
+この処理による回収容量を計上しない。原資料と他担当のsourceには触れていない。
+照合補助用に別途createした4,451,328 bytesのフォルダは、plan→別呼出し通常削除→finishで片付けた。
+Discordには投稿していない。
 
 親のToDo状態、PR、配布先を変更せず、Discord投稿や受領用機能の追加は行っていない。

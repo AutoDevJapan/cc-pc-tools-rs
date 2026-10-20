@@ -1,0 +1,5 @@
+{
+  "exit": 0,
+  "stdout": "{\"action\":\"submit_to_exec_tool\",\"bytes\":4451328,\"entries\":1,\"id\":\"e5048e6f14ef864d7a704d64190611dc\",\"path\":\"D:\\\\CC\\\\Work\\\\unattended-operations-20261013-wt\\\\todo-3214-3103\\\\codex-owned-e5048e6f14ef864d7a704d64190611dc\",\"powershell_command\":\"Remove-Item -LiteralPath 'D:\\\\CC\\\\Work\\\\unattended-operations-20261013-wt\\\\todo-3214-3103\\\\codex-owned-e5048e6f14ef864d7a704d64190611dc' -Recurse -ErrorAction Stop\",\"protected_attributes\":false}\n",
+  "stderr": ""
+}

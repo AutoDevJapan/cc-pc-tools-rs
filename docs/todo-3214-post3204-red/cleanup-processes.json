@@ -1,0 +1,14 @@
+{
+  "checked_at": "2026-10-21T08:10:08.0946914+09:00",
+  "current_launcher_excluded": 73864,
+  "matching_processes": [],
+  "measurement_gate_exit_codes": [
+    100,
+    100
+  ],
+  "harness_exit_codes": [
+    0,
+    0
+  ],
+  "no_source_or_target_writers": true
+}

@@ -32,11 +32,13 @@ const gateDir = `D:\CC\Tools\codex-jobs`
 const gh = `D:\CC\Tools\codex-jobs\gh_gate.exe`
 const docker = `C:\Program Files\Docker\Docker\resources\bin\docker.exe`
 const container = "todo2511-cc-pc-tools-linux"
-const normalContainer = "todo2510-normal-linux"
-const normalImage = "todo2510-normal-linux:local"
-const normalPort = "127.0.0.1:17852"
-const normalRunner = "cc-pc-tools-linux"
+const normalLabel = "cc-pc-tools-linux"
 const normalBranch = "main"
+
+var normalContainer = compiledNormalProfile.container
+var normalImage = compiledNormalProfile.image
+var normalPort = compiledNormalProfile.listen
+var normalRunner = compiledNormalProfile.runner
 
 var revisionPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 var branchPattern = regexp.MustCompile(`^scheduler/todo-251[01]-[a-z0-9-]+$`)
@@ -755,7 +757,7 @@ func rpc(path string, q request) int {
 func bridgeURL(mode, path string) string {
 	port := "17851"
 	if mode == "normal" {
-		port = "17852"
+		port = strings.TrimPrefix(normalPort, "127.0.0.1:")
 	}
 	return "http://host.docker.internal:" + port + path
 }
@@ -856,7 +858,7 @@ func hostMain(args []string) int {
 		revision, branch, target = args[0], args[1], args[2]
 		listen, runnerContainer, runnerName, labels = "127.0.0.1:17851", container, "cc-pc-tools-linux-2511", "cc-pc-tools-linux"
 	} else if len(args) == 2 && args[0] == "normal" && args[1] != "" {
-		mode, target, listen, runnerContainer, runnerName, labels, ephemeral = "normal", args[1], normalPort, normalContainer, normalRunner, normalRunner, false
+		mode, target, listen, runnerContainer, runnerName, labels, ephemeral = "normal", args[1], normalPort, normalContainer, normalRunner, normalLabel, compiledNormalProfile.ephemeral
 	} else {
 		fmt.Fprintln(os.Stderr, "expected host REVISION scheduler/todo-251x-branch TARGET or host normal TARGET")
 		return 1
@@ -1013,7 +1015,7 @@ func register() int {
 		return 15
 	}
 	ephemeral, e := reader.ReadString('\n')
-	if e != nil || (strings.TrimSpace(runnerName) != normalRunner && strings.TrimSpace(runnerName) != "cc-pc-tools-linux-2511") || strings.TrimSpace(labels) != normalRunner || (strings.TrimSpace(ephemeral) != "true" && strings.TrimSpace(ephemeral) != "false") {
+	if e != nil || (strings.TrimSpace(runnerName) != normalRunner && strings.TrimSpace(runnerName) != "cc-pc-tools-linux-2511") || strings.TrimSpace(labels) != normalLabel || (strings.TrimSpace(ephemeral) != "true" && strings.TrimSpace(ephemeral) != "false") {
 		return 16
 	}
 	keyPath := filepath.Join(os.TempDir(), "bridge-key")
@@ -1050,7 +1052,7 @@ func register() int {
 	configOutput.Reset()
 	token = ""
 	mode := "normal"
-	if strings.TrimSpace(ephemeral) == "true" {
+	if strings.TrimSpace(ephemeral) == "true" && !compiledNormalProfile.ephemeral {
 		mode = "finite"
 	}
 	if mode == "normal" {

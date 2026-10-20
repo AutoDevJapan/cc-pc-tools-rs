@@ -455,6 +455,7 @@ async fn production_sources_smoke_check() {
     cache = aggregate(&sources, cache, now);
     save(&sources, &cache).unwrap();
     let workload = Workload {
+        observed: RwLock::new(observation::Ledger::default()),
         sources: sources.clone(),
         cache: RwLock::new(cache.clone()),
         phase: RwLock::new(String::new()),
@@ -645,10 +646,12 @@ fn old_summary_is_removed_when_inputs_change_or_disappear() {
     c.days.get_mut("2026-10-01").unwrap()[0].results.clear();
     apply_summaries(&mut c);
     assert_eq!(c.days["2026-10-01"][0].summary_source, "titles");
-    assert!(!c.days["2026-10-01"][0]
-        .summary
-        .iter()
-        .any(|l| l.text == "画面を追加しました。"));
+    assert!(
+        !c.days["2026-10-01"][0]
+            .summary
+            .iter()
+            .any(|l| l.text == "画面を追加しました。")
+    );
 }
 #[test]
 fn excluded_registration_protects_unrelated_directory_names() {
@@ -996,9 +999,11 @@ fn end_to_end_excluded_job_never_enters_cache_or_summary() {
         at("2026-10-02T00:05:00+09:00"),
     );
     assert!(c.days.is_empty());
-    assert!(!serde_json::to_string(&c)
-        .unwrap()
-        .contains("imaginary-client-product"));
+    assert!(
+        !serde_json::to_string(&c)
+            .unwrap()
+            .contains("imaginary-client-product")
+    );
 }
 #[tokio::test]
 async fn workload_route_returns_versioned_json_and_rejects_invalid_date() {
@@ -1012,6 +1017,7 @@ async fn workload_route_returns_versioned_json_and_rejects_invalid_date() {
         ..Cache::default()
     };
     state.workload = Arc::new(Workload {
+        observed: RwLock::new(observation::Ledger::default()),
         sources: f.sources.clone(),
         cache: RwLock::new(cache),
         phase: RwLock::new(String::new()),
@@ -1070,17 +1076,41 @@ fn todo_capacity_exclusion_failure_stops_aggregation_and_never_certifies_a_new_h
     assert_eq!(stopped.exclusion_hash, "old-hash");
     assert!(stopped.warnings.iter().any(|w| w.contains("64MiB")));
     let workload = Workload {
+        observed: RwLock::new(observation::Ledger::default()),
         sources: f.sources.clone(),
         cache: RwLock::new(stopped),
         phase: RwLock::new(String::new()),
     };
-    assert!(workload.snapshot("2026-10-12")["collecting"]
-        .as_bool()
-        .unwrap());
-    assert!(workload.snapshot("2026-10-12")["projects"]
-        .as_array()
-        .unwrap()
-        .is_empty());
+    assert!(
+        workload.snapshot("2026-10-12")["collecting"]
+            .as_bool()
+            .unwrap()
+    );
+    assert!(
+        workload.snapshot("2026-10-12")["projects"]
+            .as_array()
+            .unwrap()
+            .is_empty()
+    );
     fs::write(&f.sources.todo, "{broken").unwrap();
     assert!(load_exclusions(&f.sources).is_err());
+}
+
+#[test]
+fn first_cumulative_token_total_is_only_a_baseline() {
+    let now = 1_792_500_000_000;
+    let mut cursor = Cursor::default();
+    let record = |total, last| {
+        json!({"timestamp":Utc.timestamp_millis_opt(now).unwrap().to_rfc3339(),
+        "type":"event_msg","payload":{"type":"token_count","info":{
+        "total_token_usage":{"total_tokens":total},"last_token_usage":{"total_tokens":last}}}})
+    };
+    session_record(&mut cursor, &record(900_000, 0), now - 1000, now);
+    assert_eq!(cursor.days[&day(now)].tokens, 0);
+    session_record(&mut cursor, &record(900_025, 25), now - 1000, now);
+    session_record(&mut cursor, &record(900_025, 25), now - 1000, now);
+    assert_eq!(cursor.days[&day(now)].tokens, 25);
+    let mut first = Cursor::default();
+    session_record(&mut first, &record(900_007, 7), now - 1000, now);
+    assert_eq!(first.days[&day(now)].tokens, 7);
 }

@@ -1,13 +1,13 @@
 use axum::{
-    body::{to_bytes, Body},
-    extract::{Path, Query, Request, State},
-    http::{header, HeaderMap, Method, StatusCode},
-    middleware::{self, Next},
-    response::{Html, IntoResponse, Json, Redirect, Response},
-    routing::{get, post},
     Router,
+    body::{Body, to_bytes},
+    extract::{Path, Query, Request, State},
+    http::{HeaderMap, Method, StatusCode, header},
+    middleware::{self, Next},
+    response::{Html, IntoResponse, Json, Response},
+    routing::{get, post},
 };
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{process::Command, time::Duration};
 use tower_http::services::ServeDir;
 mod agent;
@@ -119,7 +119,7 @@ async fn main() {
     println!("Rust Web Server listening on http://127.0.0.1:{port}");
     if std::env::var("LOCALAI_WEB_PREVIEW").as_deref() != Ok("1") {
         tokio::spawn(agent::resident(console));
-        tokio::spawn(workload::resident(workload));
+        tokio::spawn(workload::resident(workload, operations.clone()));
         tokio::spawn(operations::resident(operations));
     }
     axum::serve(listener, app).await.unwrap();
@@ -172,7 +172,7 @@ async fn index_html() -> impl IntoResponse {
 async fn progress_page() -> impl IntoResponse {
     (
         [(header::CACHE_CONTROL, "no-store")],
-        Redirect::temporary("/?view=kanban&opsStatus=working&opsPanel=jobs"),
+        Html(localai_web_rs::console_page::index()),
     )
 }
 
@@ -189,8 +189,10 @@ async fn shared_progress_display(
         return agent::cached_display_response(Err("作業状況を取得中です。まもなく再試行します。"));
     }
     if snapshot["protectionMode"] == "masked_metadata" {
-        return agent::cached_display_response(operations::metadata_display_snapshot(&snapshot, &kind)
-            .map_err(|_| "進捗の元記録を確認できません。前回の表示を保持します。"));
+        return agent::cached_display_response(
+            operations::metadata_display_snapshot(&snapshot, &kind)
+                .map_err(|_| "進捗の元記録を確認できません。前回の表示を保持します。"),
+        );
     }
     agent::handle(State(state), request).await
 }
@@ -578,10 +580,11 @@ mod tests {
             .insert("sec-fetch-site", "same-origin".parse().unwrap());
         let res = app.clone().oneshot(req).await.unwrap();
         assert_eq!(res.status(), StatusCode::OK);
-        assert!(res
-            .headers()
-            .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
-            .is_none());
+        assert!(
+            res.headers()
+                .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                .is_none()
+        );
         for path in ["/api/private", "/api/shared-todo", "/api/chat"] {
             assert_eq!(
                 app.clone()
@@ -609,11 +612,22 @@ mod tests {
     #[tokio::test]
     async fn shared_progress_waits_for_snapshot_without_scanning_the_live_store() {
         let mut request = navigation(Method::GET, "/api/agent/display/jobs", "same-origin");
-        request.headers_mut().insert(header::HOST, "localhost:10012".parse().unwrap());
-        let response = app(AppState::new(10012, 10013)).oneshot(request).await.unwrap();
+        request
+            .headers_mut()
+            .insert(header::HOST, "localhost:10012".parse().unwrap());
+        let response = app(AppState::new(10012, 10013))
+            .oneshot(request)
+            .await
+            .unwrap();
         assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
-        let body = to_bytes(response.into_body(), RESPONSE_LIMIT).await.unwrap();
-        assert!(std::str::from_utf8(&body).unwrap().contains("作業状況を取得中"));
+        let body = to_bytes(response.into_body(), RESPONSE_LIMIT)
+            .await
+            .unwrap();
+        assert!(
+            std::str::from_utf8(&body)
+                .unwrap()
+                .contains("作業状況を取得中")
+        );
         let envelope: Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(envelope["version"], 1);
         assert_eq!(envelope["ok"], false);
@@ -621,7 +635,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn progress_navigation_opens_the_existing_live_jobs_panel() {
+    async fn progress_navigation_serves_the_dedicated_processing_page() {
         let mut request = navigation(Method::GET, "/progress", "none");
         request
             .headers_mut()
@@ -630,11 +644,8 @@ mod tests {
             .oneshot(request)
             .await
             .unwrap();
-        assert_eq!(response.status(), StatusCode::TEMPORARY_REDIRECT);
-        assert_eq!(
-            response.headers()[header::LOCATION],
-            "/?view=kanban&opsStatus=working&opsPanel=jobs"
-        );
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(response.headers().get(header::LOCATION).is_none());
         assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
     }
 
@@ -654,10 +665,11 @@ mod tests {
                     res.headers()[header::CONTENT_SECURITY_POLICY],
                     "frame-ancestors 'none'"
                 );
-                assert!(res
-                    .headers()
-                    .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
-                    .is_none());
+                assert!(
+                    res.headers()
+                        .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                        .is_none()
+                );
                 let body = to_bytes(res.into_body(), RESPONSE_LIMIT).await.unwrap();
                 // No operational records are read or interpolated into this document.
                 assert_eq!(
@@ -685,10 +697,11 @@ mod tests {
                     .await
                     .unwrap();
                 assert_eq!(res.status(), StatusCode::FORBIDDEN, "{method} {path}");
-                assert!(res
-                    .headers()
-                    .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
-                    .is_none());
+                assert!(
+                    res.headers()
+                        .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                        .is_none()
+                );
             }
         }
         for (name, value) in [
@@ -786,10 +799,11 @@ mod tests {
             }
             let res = app.clone().oneshot(req).await.unwrap();
             assert_eq!(res.status(), StatusCode::OK);
-            assert!(res
-                .headers()
-                .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
-                .is_none());
+            assert!(
+                res.headers()
+                    .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+                    .is_none()
+            );
             let body = to_bytes(res.into_body(), RESPONSE_LIMIT).await.unwrap();
             let value: Value = serde_json::from_slice(&body).unwrap();
             assert!(value.is_object());
@@ -957,12 +971,11 @@ mod tests {
         assert_eq!(value["port"], 10012);
         assert_eq!(value["backend"], "Rust/Axum");
         assert_eq!(value["partial"], true);
-        assert_eq!(value["legacyBackend"]["httpStatus"], 500);
+        assert!(value.get("legacyBackend").is_none());
         assert_eq!(value["godd"]["online"], true);
         assert_eq!(value["opencodex"]["online"], true);
-        assert_eq!(value["ollama"]["online"], true);
-        assert_eq!(value["ollama"]["modelCount"], 0);
-        assert!(value["deepseek"]["online"].is_null());
+        assert!(value.get("ollama").is_none());
+        assert!(value.get("deepseek").is_none());
         assert!(value["docker"]["online"].is_null());
         assert!(value["error"].is_null());
         task.abort();

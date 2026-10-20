@@ -1,0 +1,16 @@
+{
+  "todo": 3076,
+  "purpose": "Console product-name heading layout fix; replaces the regressing 0E40EF0F candidate",
+  "pr": 274,
+  "source_head": "9d2e612c10b74fb8da689359b8dffe9af87d0604",
+  "main_merge": "c8d71fbcc3864443977e060ec867d65e8a623c56",
+  "localai_web_rs_tree": "ade257e67923d5a51dd536db1f3b9e8355df69e7",
+  "note": "git tree of localai-web-rs is identical at 9d2e612 and c8d71fb",
+  "build": "cargo build --release --locked -p localai-web-rs",
+  "artifact": {
+    "path": "target/release/localai-web-rs.exe",
+    "bytes": 13972992,
+    "sha256": "E943ACF989372B156353A003B8A968A8E4DA6E4B6279C83505556125F011FA5C"
+  },
+  "build_receipt": "todo-3076-console-product-layout/.ci-work/todo3076-receipt.md"
+}

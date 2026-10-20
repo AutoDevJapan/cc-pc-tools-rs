@@ -1,0 +1,410 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.26
+   Compiling windows-link v0.2.1
+   Compiling memchr v2.8.3
+   Compiling stable_deref_trait v1.2.1
+   Compiling cfg-if v1.0.5
+   Compiling itoa v1.0.18
+   Compiling windows-sys v0.61.2
+   Compiling pin-project-lite v0.2.17
+   Compiling smallvec v1.16.2
+   Compiling writeable v0.6.4
+   Compiling serde_core v1.0.229
+   Compiling litemap v0.8.3
+   Compiling futures-core v0.3.34
+   Compiling icu_properties_data v2.3.0
+   Compiling bytes v1.12.1
+   Compiling utf8_iter v1.0.4
+   Compiling icu_normalizer_data v2.3.0
+   Compiling percent-encoding v2.3.2
+   Compiling serde v1.0.229
+   Compiling once_cell v1.21.4
+   Compiling hashbrown v0.17.1
+   Compiling shlex v2.0.1
+   Compiling version_check v0.9.5
+   Compiling zmij v1.0.23
+   Compiling equivalent v1.0.2
+   Compiling find-msvc-tools v0.1.14
+   Compiling futures-sink v0.3.34
+   Compiling generic-array v0.14.7
+   Compiling indexmap v2.14.2
+   Compiling cc v1.6.0
+   Compiling futures-channel v0.3.34
+   Compiling syn v3.0.6
+   Compiling futures-task v0.3.34
+   Compiling futures-io v0.3.34
+   Compiling zeroize v1.9.1
+   Compiling serde_json v1.0.151
+   Compiling slab v0.4.12
+   Compiling ring v0.17.14
+   Compiling rustls-pki-types v1.15.1
+   Compiling mio v1.2.4
+   Compiling socket2 v0.6.5
+   Compiling syn v2.0.119
+   Compiling form_urlencoded v1.2.2
+   Compiling typenum v1.20.1
+   Compiling log v0.4.34
+   Compiling crc32fast v1.5.2
+   Compiling autocfg v1.5.1
+   Compiling simd-adler32 v0.3.10
+   Compiling num-traits v0.2.19
+   Compiling synstructure v0.14.0
+   Compiling zerovec-derive v0.11.6
+   Compiling displaydoc v0.2.7
+   Compiling serde_derive v1.0.229
+   Compiling futures-macro v0.3.34
+   Compiling tokio-macros v2.7.2
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling futures-util v0.3.34
+   Compiling tokio v1.53.2
+   Compiling zerofrom v0.1.8
+   Compiling windows-interface v0.59.3
+   Compiling windows-implement v0.60.2
+   Compiling http v1.5.0
+   Compiling getrandom v0.2.17
+   Compiling yoke v0.8.3
+   Compiling windows-result v0.4.1
+   Compiling windows-strings v0.5.1
+   Compiling adler2 v2.0.1
+   Compiling untrusted v0.9.0
+   Compiling zerovec v0.11.8
+   Compiling zerotrie v0.2.5
+   Compiling windows-core v0.62.2
+   Compiling miniz_oxide v0.9.1
+   Compiling http-body v1.1.0
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling rustls v0.23.45
+   Compiling windows_x86_64_msvc v0.52.6
+   Compiling tinystr v0.8.4
+   Compiling potential_utf v0.1.6
+   Compiling httparse v1.10.1
+   Compiling icu_collections v2.3.0
+   Compiling getrandom v0.4.3
+   Compiling icu_locale_core v2.3.0
+   Compiling digest v0.10.7
+   Compiling flate2 v1.1.10
+   Compiling webpki-roots v1.0.9
+   Compiling aho-corasick v1.1.5
+   Compiling subtle v2.6.1
+   Compiling anstyle v1.0.14
+   Compiling utf8parse v0.2.2
+   Compiling regex-syntax v0.8.11
+   Compiling native-tls v0.2.18
+   Compiling tower-service v0.3.3
+   Compiling base64 v0.22.1
+   Compiling libc v0.2.190
+   Compiling cpufeatures v0.2.17
+   Compiling once_cell_polyfill v1.70.2
+   Compiling thiserror v2.0.21
+   Compiling try-lock v0.2.5
+   Compiling rustls-webpki v0.103.15
+   Compiling regex-automata v0.4.18
+   Compiling want v0.3.2
+   Compiling anstyle-wincon v3.0.11
+   Compiling icu_provider v2.3.1
+   Compiling sha2 v0.10.9
+   Compiling anstyle-parse v1.0.0
+   Compiling webpki-roots v0.26.11
+   Compiling chrono v0.4.45
+   Compiling thiserror-impl v2.0.21
+   Compiling anstyle-query v1.1.5
+   Compiling schannel v0.1.29
+   Compiling tracing-core v0.1.36
+   Compiling windows-threading v0.2.1
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling icu_normalizer v2.3.0
+   Compiling icu_properties v2.3.0
+   Compiling atomic-waker v1.1.2
+   Compiling colorchoice v1.0.5
+   Compiling tracing v0.1.44
+   Compiling windows-future v0.3.2
+   Compiling anstream v1.0.0
+   Compiling regex v1.13.1
+   Compiling windows-targets v0.52.6
+   Compiling futures-executor v0.3.34
+   Compiling windows-collections v0.3.2
+   Compiling windows-numerics v0.3.1
+   Compiling sync_wrapper v1.0.2
+   Compiling tower-layer v0.3.3
+   Compiling base64 v0.23.1
+   Compiling fastrand v2.5.0
+   Compiling strsim v0.11.1
+   Compiling heck v0.5.0
+   Compiling zip v2.4.2
+   Compiling ipnet v2.12.2
+   Compiling clap_lex v1.1.1
+   Compiling bumpalo v3.20.3
+   Compiling clap_derive v4.6.7
+   Compiling zopfli v0.8.3
+   Compiling clap_builder v4.6.7
+   Compiling tempfile v3.27.0
+   Compiling windows v0.62.2
+   Compiling futures v0.3.34
+   Compiling windows-sys v0.59.0
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3209-work\cc-job-policy)
+   Compiling uuid v1.27.0
+   Compiling hyper v1.12.0
+   Compiling tower v0.5.3
+   Compiling tokio-native-tls v0.3.1
+   Compiling http-body-util v0.1.5
+   Compiling hyper-util v0.1.21
+   Compiling ryu v1.0.23
+   Compiling bitflags v2.13.2
+   Compiling serde_urlencoded v0.7.1
+   Compiling winreg v0.55.0
+   Compiling idna_adapter v1.2.2
+   Compiling hyper-tls v0.6.0
+   Compiling idna v1.1.0
+   Compiling url v2.5.8
+   Compiling clap v4.6.7
+   Compiling ureq v2.12.1
+   Compiling tower-http v0.6.11
+   Compiling cc-chrome v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3209-work\cc-chrome)
+   Compiling reqwest v0.12.28
+   Compiling wmi v0.18.4
+   Compiling cc-live v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3209-work\cc-live)
+   Compiling cc-task-title v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3209-work\cc-task-title)
+   Compiling cc-local-llm v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3209-work\cc-local-llm)
+   Compiling cc-ask v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3209-work\cc-ask)
+   Compiling cc-scheduler v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3209-work\cc-scheduler)
+   Compiling cc-todo v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3209-work\cc-todo)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 31.20s
+────────────
+ Nextest run ID e46c8d56-7e4a-4ffa-94a9-a55f6c52f7f2 with nextest profile: default
+    Starting 3 tests across 1 binary (187 tests skipped)
+        SKIP [         ] (───) cc-scheduler::parity a_finished_root_review_of_a_replaced_spec_requeues_only_its_own_generation
+        SKIP [         ] (───) cc-scheduler::parity attempts_and_retries_remain_json_integers
+        SKIP [         ] (───) cc-scheduler::parity automatic_cancel_keeps_dependency_and_explicit_launch_deadline
+        SKIP [         ] (───) cc-scheduler::parity automatic_cancel_never_overrides_explicit_stop_unknown_cancel_or_question
+        SKIP [         ] (───) cc-scheduler::parity bound_finite_review_is_received_once_without_completing_its_parent
+        SKIP [         ] (───) cc-scheduler::parity capacity_cooldown_preserves_the_existing_job_and_terminal_budget_is_not_reset
+        SKIP [         ] (───) cc-scheduler::parity cargo_gate_admission_allows_three_targets_and_waits_when_full
+        SKIP [         ] (───) cc-scheduler::parity cargo_gate_admission_keeps_unmanaged_builds_and_probe_errors_closed
+        SKIP [         ] (───) cc-scheduler::parity cargo_gate_admission_probe_failure_still_dispatches_unrelated_work
+        SKIP [         ] (───) cc-scheduler::parity cargo_gate_admission_recognizes_the_outer_cargo_relay
+        SKIP [         ] (───) cc-scheduler::parity cargo_gate_admission_uses_build_slots_not_worker_lifetime
+        SKIP [         ] (───) cc-scheduler::parity cargo_gate_probe_rereads_dynamic_ceiling_and_keeps_legacy_installations
+        SKIP [         ] (───) cc-scheduler::parity cargo_gate_relay_requires_a_current_direct_child_and_keeps_ungated_compilers_closed
+        SKIP [         ] (───) cc-scheduler::parity console_subwork_admission_survives_registered_worker_releasing_reservation
+        SKIP [         ] (───) cc-scheduler::parity console_subwork_keeps_distinct_bodies_and_recovers_after_launcher_crash
+        SKIP [         ] (───) cc-scheduler::parity console_subwork_preserves_read_only_and_model_preferences_without_widening_todo_scope
+        SKIP [         ] (───) cc-scheduler::parity console_subwork_recovers_only_proven_idle_doing_retry_through_normal_gates
+        SKIP [         ] (───) cc-scheduler::parity console_subwork_uses_normal_admission_and_recovers_lost_response
+        SKIP [         ] (───) cc-scheduler::parity continuation_reuses_only_unfinished_successful_conversations_in_the_same_folder
+        SKIP [         ] (───) cc-scheduler::parity corrupted_state_is_never_replaced
+        SKIP [         ] (───) cc-scheduler::parity current_succession_dependency_release_still_requires_current_qualification
+        SKIP [         ] (───) cc-scheduler::parity current_succession_direct_subwork_uses_own_receipt_and_normal_admission
+        SKIP [         ] (───) cc-scheduler::parity current_succession_dispatch_keeps_receipt_stop_dependency_resource_and_owner_gates
+        SKIP [         ] (───) cc-scheduler::parity current_succession_reconciliation_keeps_registry_and_worktree_denials
+        SKIP [         ] (───) cc-scheduler::parity current_succession_repair_tick_reconciles_and_continues_without_unknown_replay
+        SKIP [         ] (───) cc-scheduler::parity dependency_release_delivers_owner_answer_to_the_prepared_worker_prompt
+        SKIP [         ] (───) cc-scheduler::parity dispatch_starts_ready_civ6_item_after_revocation_and_reserves_next_job
+        SKIP [         ] (───) cc-scheduler::parity durable_automatic_cancel_reconciles_and_prepares_original_work_without_pending
+        SKIP [         ] (───) cc-scheduler::parity executable_preferred_and_python_fallback
+        SKIP [         ] (───) cc-scheduler::parity explicit_resume_invalidates_old_reconcile_and_cancel_snapshot
+        SKIP [         ] (───) cc-scheduler::parity explicit_resume_retires_a_reconciled_cancelled_worker
+        SKIP [         ] (───) cc-scheduler::parity explicit_resume_supersedes_cancelled_and_old_owner_result
+        SKIP [         ] (───) cc-scheduler::parity explicit_resume_without_job_preserves_scheduler_and_manual_block_is_untouched
+        SKIP [         ] (───) cc-scheduler::parity explicitly_selected_todo_model_is_not_marked_automatic
+        SKIP [         ] (───) cc-scheduler::parity finite_review_completion_does_not_relaunch_while_its_parent_remains_unfinished
+        SKIP [         ] (───) cc-scheduler::parity help_uses_stdout_and_exit_zero_for_every_subcommand
+        SKIP [         ] (───) cc-scheduler::parity instantaneous_cpu_spike_stops_admission_even_with_a_low_rolling_average
+        SKIP [         ] (───) cc-scheduler::parity invalid_settings_shape_returns_error_and_never_rewrites_state
+        SKIP [         ] (───) cc-scheduler::parity junction_repo_resolves_to_original_worktree_container
+        SKIP [         ] (───) cc-scheduler::parity legacy_retry_question_is_retired_even_if_an_agent_already_changed_block_to_doing
+        SKIP [         ] (───) cc-scheduler::parity managed_saved_high_is_a_hint_unless_the_owner_override_is_recorded
+        SKIP [         ] (───) cc-scheduler::parity missing_private_registry_only_dispatches_verified_explicit_pc_repair
+        SKIP [         ] (───) cc-scheduler::parity models_cache_bare_provider_auto_expiry_and_unavailable
+        SKIP [         ] (───) cc-scheduler::parity no_action_tests::automatic_successor_is_recovered_again_without_requiring_a_new_agent_start_command
+        SKIP [         ] (───) cc-scheduler::parity no_action_tests::failed_cancellation_is_bounded_before_hourly_technical_retry
+        SKIP [         ] (───) cc-scheduler::parity no_action_tests::new_arrivals_cannot_starve_the_next_scan_of_an_existing_worker
+        SKIP [         ] (───) cc-scheduler::parity no_action_tests::no_action_rechecks_stop_dependency_generation_and_worker_after_scope_check
+        SKIP [         ] (───) cc-scheduler::parity no_action_tests::no_action_resume_keeps_explicit_model_and_capabilities_and_routes_auto_to_implementation
+        SKIP [         ] (───) cc-scheduler::parity no_action_tests::recovery_reservation_registered_during_cancel_is_preserved_and_not_requeued
+        SKIP [         ] (───) cc-scheduler::parity no_action_tests::repeated_no_action_failure_uses_technical_backoff_without_owner_question
+        SKIP [         ] (───) cc-scheduler::parity no_action_tests::report_only_recovery_requeues_once_with_preserved_workspace_and_backoff
+        SKIP [         ] (───) cc-scheduler::parity no_action_tests::review_children_unknown_scope_and_unread_events_never_cancel
+        SKIP [         ] (───) cc-scheduler::parity no_action_tests::separate_live_child_job_protects_parent_until_the_child_really_finishes
+        SKIP [         ] (───) cc-scheduler::parity no_action_tests::unavailable_explicit_source_model_is_retained_without_automatic_rerouting
+        SKIP [         ] (───) cc-scheduler::parity no_action_tests::workers_outside_the_existing_resume_boundary_are_never_cancelled
+        SKIP [         ] (───) cc-scheduler::parity numeric_owner_id_accepts_latest_owner_reply_without_acknowledging
+        SKIP [         ] (───) cc-scheduler::parity old_retry_limit_hold_migrates_but_owner_stop_and_client_hold_do_not
+        SKIP [         ] (───) cc-scheduler::parity owner_stop_does_not_cancel_a_worker_claimed_only_by_another_items_scheduler
+        SKIP [         ] (───) cc-scheduler::parity preparation2164_bare_claude_routes_to_subscription_provider_with_original_scope
+        SKIP [         ] (───) cc-scheduler::parity preparation2164_exact_ownership_excludes_prompt_and_pid_matches
+        SKIP [         ] (───) cc-scheduler::parity preparation2164_explicit_resume_retains_resource_deadline
+        SKIP [         ] (───) cc-scheduler::parity preparation2164_failure_does_not_stop_independent_dispatch
+        SKIP [         ] (───) cc-scheduler::parity preparation2164_http429_parks_worker_despite_supervisor_cpu_and_replays_once
+        SKIP [         ] (───) cc-scheduler::parity preparation2164_missing_worker_receipt_never_reconstructs_only_committed_bytes
+        SKIP [         ] (───) cc-scheduler::parity preparation2164_non_git_documents_keep_source_and_dedicated_workspace
+        SKIP [         ] (───) cc-scheduler::parity preparation2164_owner_answer_keeps_known_resource_wait_deadline
+        SKIP [         ] (───) cc-scheduler::parity preparation2164_prepare_respects_wait_even_after_selection_change
+        SKIP [         ] (───) cc-scheduler::parity preparation2164_preserves_dirty_original_git_workspace_and_intermediate_commit
+        SKIP [         ] (───) cc-scheduler::parity preparation2164_quota_evidence_waits_until_reset_without_model_substitution
+        SKIP [         ] (───) cc-scheduler::parity preparation2164_reserved_branch_in_another_checkout_keeps_its_dirty_files
+        SKIP [         ] (───) cc-scheduler::parity preparation2164_reserved_ref_lookup_failure_is_not_a_new_branch
+        SKIP [         ] (───) cc-scheduler::parity preparation2164_restores_reserved_branch_without_replacing_its_commit
+        SKIP [         ] (───) cc-scheduler::parity preparation_retains_previous_result_session_and_redesigns_repeated_continuations
+        SKIP [         ] (───) cc-scheduler::parity readiness_wait_parks_only_its_task_and_fresh_check_releases_same_task
+        SKIP [         ] (───) cc-scheduler::parity real_backend_automatic_cancel_passes_the_recovery_flag_to_jobs_cli
+        SKIP [         ] (───) cc-scheduler::parity real_child_process_has_no_console_window
+        SKIP [         ] (───) cc-scheduler::parity reboot_deployment_preserves_installed_subscription_model_validation
+        SKIP [         ] (───) cc-scheduler::parity reboot_launch_reservation_is_not_marked_lost_between_spawn_retries
+        SKIP [         ] (───) cc-scheduler::parity recorded_prerequisite_inherits_rank_and_resource_exclusion_still_applies
+        SKIP [         ] (───) cc-scheduler::parity recovery_requeue_keeps_wait_and_owner_block_is_not_converted
+        SKIP [         ] (───) cc-scheduler::parity repair_dependency_release_admits_unstarted_waits_and_caches_paths_per_tick
+        SKIP [         ] (───) cc-scheduler::parity repair_dependency_release_keeps_normal_capacity_gate
+        SKIP [         ] (───) cc-scheduler::parity repair_dependency_release_preserves_prerequisites_scope_and_ownership
+        SKIP [         ] (───) cc-scheduler::parity repair_dependency_release_rechecks_concurrent_stop_dependency_and_project_changes
+        SKIP [         ] (───) cc-scheduler::parity repair_step_never_replays_legacy_questions_or_unknown_work
+        SKIP [         ] (───) cc-scheduler::parity repair_step_releases_scheduler_completion_and_catches_up_without_duplicate_launch
+        SKIP [         ] (───) cc-scheduler::parity repair_tick_adopts_an_exact_registered_subwork_after_lost_launch_ack
+        SKIP [         ] (───) cc-scheduler::parity repair_tick_prefers_one_live_receipt_and_leaves_ambiguous_live_receipts_untouched
+        SKIP [         ] (───) cc-scheduler::parity resource_limit_can_exceed_twelve_without_spending_the_memory_reserve
+        SKIP [         ] (───) cc-scheduler::parity resume2172_each_shared_job_result_is_received_per_item_and_repeated_tick_is_noop
+        SKIP [         ] (───) cc-scheduler::parity resume2172_finished_result_is_durable_and_never_replayed_by_same_worker_start
+        SKIP [         ] (───) cc-scheduler::parity resume2172_legacy_finished_result_can_resume_without_job_or_same_job
+        SKIP [         ] (───) cc-scheduler::parity resume2172_outcome_read_race_preserves_start_block_wait_and_aba_resume
+        SKIP [         ] (───) cc-scheduler::parity resume2172_start_creates_explicit_receipt_without_prior_scheduler
+        SKIP [         ] (───) cc-scheduler::parity retiring_legacy_question_preserves_live_worker_and_consumes_its_completion
+        SKIP [         ] (───) cc-scheduler::parity retry_deadline_wait_does_not_dispatch_until_watchdog_releases_it
+        SKIP [         ] (───) cc-scheduler::parity review_preparation_failures_stop_after_three_and_recover_on_new_evidence
+        SKIP [         ] (───) cc-scheduler::parity review_preparation_uses_exited_writer_history_and_passes_durable_sources
+        SKIP [         ] (───) cc-scheduler::parity review_word_in_implementation_prompt_does_not_select_light_profile
+        SKIP [         ] (───) cc-scheduler::parity revoked_civ6_lock_frees_resource_even_if_old_job_and_game_are_alive
+        SKIP [         ] (───) cc-scheduler::parity revoked_current_allocation_is_not_kept_by_its_historical_job_list
+        SKIP [         ] (───) cc-scheduler::parity rotation_never_overtakes_higher_priority_products
+        SKIP [         ] (───) cc-scheduler::parity router_failure_keeps_reviews_on_a_distinct_max_default
+        SKIP [         ] (───) cc-scheduler::parity rust_byte_lock_interoperates_with_other_process_and_releases
+        SKIP [         ] (───) cc-scheduler::parity scheduler_automatic_stop_uses_recovery_cancellation_and_persists_its_intent
+        SKIP [         ] (───) cc-scheduler::parity scheduler_implementation_and_readonly_launches_have_distinct_permissions
+        SKIP [         ] (───) cc-scheduler::parity scheduler_legacy_gpt_hints_migrate_consistently_with_native_intake
+        SKIP [         ] (───) cc-scheduler::parity scheduler_lock_child
+        SKIP [         ] (───) cc-scheduler::parity scheduler_postponement_is_saved_and_not_treated_as_a_restart_answer
+        SKIP [         ] (───) cc-scheduler::parity shared_worker_result_does_not_finish_parent_or_copy_child_question
+        SKIP [         ] (───) cc-scheduler::parity subscription_model_aliases_keep_the_requested_model_and_launch_canonical_id
+        SKIP [         ] (───) cc-scheduler::parity subwork_dispatch_keeps_cargo_cpu_memory_and_interval_gates
+        SKIP [         ] (───) cc-scheduler::parity subwork_launch_arguments_carry_relation_and_resource_allocation
+        SKIP [         ] (───) cc-scheduler::parity subwork_prepare_does_not_launch_stale_spec_needs_relation_or_owner_stop
+        SKIP [         ] (───) cc-scheduler::parity targeted_recovery_cannot_overtake_a_ready_higher_department
+        SKIP [         ] (───) cc-scheduler::parity test_access_denied_pid_is_counted_conservatively
+        SKIP [         ] (───) cc-scheduler::parity test_admission_ram_and_core_cap
+        SKIP [         ] (───) cc-scheduler::parity test_bad_config_does_not_default_to_killing_or_dispatching
+        SKIP [         ] (───) cc-scheduler::parity test_cancel_disabled_is_only_a_report
+        SKIP [         ] (───) cc-scheduler::parity test_civ6_and_cargo_exclusivity_includes_manual_links
+        SKIP [         ] (───) cc-scheduler::parity test_civ6_busy_skips_to_independent_project
+        SKIP [         ] (───) cc-scheduler::parity test_commit_cpu_disk_thresholds
+        SKIP [         ] (───) cc-scheduler::parity test_completion_and_manual_done_are_not_overwritten
+        SKIP [         ] (───) cc-scheduler::parity test_configurable_cap_and_pid_reuse
+        SKIP [         ] (───) cc-scheduler::parity test_cpu_event_tree_change_each_reset_hang_timer
+        SKIP [         ] (───) cc-scheduler::parity test_cpu_increases_during_prepare_blocks_launch
+        SKIP [         ] (───) cc-scheduler::parity test_cpu_rolls_over_recent_minutes
+        SKIP [         ] (───) cc-scheduler::parity test_crash_after_launch_is_adopted_without_second_launch
+        SKIP [         ] (───) cc-scheduler::parity test_crash_before_launch_reuses_saved_key_and_selection
+        SKIP [         ] (───) cc-scheduler::parity test_detached_worker_delays_relaunch_even_with_dead_roots
+        SKIP [         ] (───) cc-scheduler::parity test_discord_generic_continuation_does_not_launch_scheduler_questions
+        SKIP [         ] (───) cc-scheduler::parity test_discord_tick_calls_scheduler_before_intake_even_if_intake_fails
+        SKIP [         ] (───) cc-scheduler::parity test_dispatch_uses_priority_and_marks_doing
+        SKIP [         ] (───) cc-scheduler::parity test_durable_memory_cancel_intent_survives_before_requeue
+        SKIP [         ] (───) cc-scheduler::parity test_exact_ram_reserve_is_not_admitted
+        SKIP [         ] (───) cc-scheduler::parity test_expected_footprint_sums_entire_tree
+        SKIP [         ] (───) cc-scheduler::parity test_explicit_model_effort_skip_picker
+        SKIP [         ] (───) cc-scheduler::parity test_external_cargo_build_reserves_cargo
+        SKIP [         ] (───) cc-scheduler::parity test_failed_recovery_step_logs_and_prevents_admission
+        SKIP [         ] (───) cc-scheduler::parity test_global_launch_spacing_includes_non_scheduler_jobs
+        SKIP [         ] (───) cc-scheduler::parity test_hang_requires_full_observation_period
+        SKIP [         ] (───) cc-scheduler::parity test_hang_twice_retries_slowly_without_owner_notification
+        SKIP [         ] (───) cc-scheduler::parity test_hidden_wrapper_runs_rust_tick_with_window_style_zero
+        SKIP [         ] (───) cc-scheduler::parity test_incomplete_cancel_never_requeues_or_duplicates
+        SKIP [         ] (───) cc-scheduler::parity test_live_game_blocks_live_test_admission
+        SKIP [         ] (───) cc-scheduler::parity test_lost_after_reboot_requeues_and_resumes_same_worktree
+        SKIP [         ] (───) cc-scheduler::parity test_manual_lost_item_without_spec_requeues_for_its_agent
+        SKIP [         ] (───) cc-scheduler::parity test_memory_pressure_cancel_low_priority_latest_and_no_hang_budget
+        SKIP [         ] (───) cc-scheduler::parity test_memory_pressure_stops_launching
+        SKIP [         ] (───) cc-scheduler::parity test_memory_victim_lowest_priority_then_latest
+        SKIP [         ] (───) cc-scheduler::parity test_new_hang_does_not_create_another_owner_question
+        SKIP [         ] (───) cc-scheduler::parity test_operator_cancel_is_not_automatically_undone
+        SKIP [         ] (───) cc-scheduler::parity test_orphan_apply_rechecks_pid_reuse_and_never_kills_replacement
+        SKIP [         ] (───) cc-scheduler::parity test_orphan_dry_run_does_not_kill_and_reports_counts
+        SKIP [         ] (───) cc-scheduler::parity test_orphan_minimum_age_and_missing_job
+        SKIP [         ] (───) cc-scheduler::parity test_orphan_selector_excludes_interactive_and_protected_trees
+        SKIP [         ] (───) cc-scheduler::parity test_owner_question_records_original_worktree_for_continuation
+        SKIP [         ] (───) cc-scheduler::parity test_owner_reply_requeues_through_capacity_and_preserves_resource_claim
+        SKIP [         ] (───) cc-scheduler::parity test_owner_stop_reply_keeps_item_blocked
+        SKIP [         ] (───) cc-scheduler::parity test_p90_nearest_rank_and_expired_samples
+        SKIP [         ] (───) cc-scheduler::parity test_priority_fifo_and_spec_required
+        SKIP [         ] (───) cc-scheduler::parity test_question_close_failure_retries_close_without_reprocessing_reply
+        SKIP [         ] (───) cc-scheduler::parity test_recover_mode_requeues_dead_job_without_launch_or_cancel
+        SKIP [         ] (───) cc-scheduler::parity test_saved_lineage_survives_dead_parent_but_not_pid_reuse
+        SKIP [         ] (───) cc-scheduler::parity test_second_lost_uses_same_retry_budget_as_hang
+        SKIP [         ] (───) cc-scheduler::parity test_step_entrypoint_never_raises
+        SKIP [         ] (───) cc-scheduler::parity test_todo_add_copies_spec_and_does_not_dispatch_plain_item
+        SKIP [         ] (───) cc-scheduler::parity test_todo_live_lock_is_not_stolen_by_old_timestamp
+        SKIP [         ] (───) cc-scheduler::parity test_unknown_dead_numeric_parent_does_not_prove_ownership
+        SKIP [         ] (───) cc-scheduler::parity test_unknown_explicit_model_is_not_launched
+        SKIP [         ] (───) cc-scheduler::parity test_unmanaged_missing_job_is_marked_lost_without_dispatch
+        SKIP [         ] (───) cc-scheduler::parity test_worker_launch_uses_windowless_existing_launcher
+        SKIP [         ] (───) cc-scheduler::parity test_worktree_creation_fetches_origin_main_and_reuses_branch
+        SKIP [         ] (───) cc-scheduler::parity todo1842_changed_model_does_not_resume_previous_conversation
+        SKIP [         ] (───) cc-scheduler::parity todo1842_explicit_model_overrides_saved_selection
+        SKIP [         ] (───) cc-scheduler::parity todo1842_setting_change_during_last_sample_defers_and_reprepares
+        SKIP [         ] (───) cc-scheduler::parity todo1842_unavailable_explicit_model_is_retained_without_launch
+        SKIP [         ] (───) cc-scheduler::parity todo_edits_preserve_unknown_fields
+        SKIP [         ] (───) cc-scheduler::parity unfinished_results_requeue_but_real_owner_questions_block
+        SKIP [         ] (───) cc-scheduler::parity unread_owner_stop_is_saved_before_retiring_legacy_question_and_stops_its_worker
+        SKIP [         ] (───) cc-scheduler::parity unrelated_current_civ6_reservation_survives_another_owners_revocation
+        SKIP [         ] (───) cc-scheduler::parity wait_recorded_while_job_completes_is_not_overwritten
+        SKIP [         ] (───) cc-scheduler::parity waiting_item_is_never_dispatched_and_launches_after_target_done
+        SKIP [         ] (───) cc-scheduler::parity workspace_checkpoint_accepts_only_the_current_live_source
+        SKIP [         ] (───) cc-scheduler::parity workspace_checkpoint_preserves_intervening_owner_stop
+        SKIP [         ] (───) cc-scheduler::parity workspace_checkpoint_rejects_unverified_identity_scope_or_git_state
+        SKIP [         ] (───) cc-scheduler::parity workspace_checkpoint_restores_resume_without_changing_work_or_waits
+        PASS [   0.010s] (1/3) cc-scheduler::parity preparation2164_reuses_owned_terminal_session_only_without_other_worker
+        FAIL [   0.012s] (2/3) cc-scheduler::parity retired_native_conversation_is_not_a_successful_continuation_either
+  stdout ───
+
+    running 1 test
+    test retired_native_conversation_is_not_a_successful_continuation_either ... FAILED
+
+    failures:
+
+    failures:
+        retired_native_conversation_is_not_a_successful_continuation_either
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 189 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'retired_native_conversation_is_not_a_successful_continuation_either' (63972) panicked at cc-scheduler\tests\parity.rs:3725:5:
+    assertion failed: continuation_session(&source, "D:/fixture/work", &[]).is_none()
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.021s] (3/3) cc-scheduler::parity retired_native_conversation_cannot_cross_a_cancelled_prestart_handoff
+  stdout ───
+
+    running 1 test
+    test retired_native_conversation_cannot_cross_a_cancelled_prestart_handoff ... FAILED
+
+    failures:
+
+    failures:
+        retired_native_conversation_cannot_cross_a_cancelled_prestart_handoff
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 189 filtered out; finished in 0.01s
+
+  stderr ───
+
+    thread 'retired_native_conversation_cannot_cross_a_cancelled_prestart_handoff' (60108) panicked at cc-scheduler\tests\parity.rs:3707:5:
+    assertion `left == right` failed
+      left: String("block")
+     right: "todo"
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+────────────
+     Summary [   0.023s] 3 tests run: 1 passed, 2 failed, 187 skipped
+        FAIL [   0.012s] (2/3) cc-scheduler::parity retired_native_conversation_is_not_a_successful_continuation_either
+        FAIL [   0.021s] (3/3) cc-scheduler::parity retired_native_conversation_cannot_cross_a_cancelled_prestart_handoff
+error: test run failed

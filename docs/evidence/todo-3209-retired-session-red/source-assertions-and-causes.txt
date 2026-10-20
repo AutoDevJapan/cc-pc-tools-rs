@@ -1,0 +1,320 @@
+cc-scheduler/tests/parity.rs
+3669: fn preparation2164_reuses_owned_terminal_session_only_without_other_worker() {
+3670:     use cc_scheduler::preparation::*;
+3671:     let row = json!({"id":1,"scheduler":{"resume":true}});
+3672:     let job = json!({"id":"original","todo_id":1,"status":"lost","cwd":"D:/fixture-original","thread_id":"12345678-1234-4321-9234-123456789abc"});
+3673:     assert_eq!(
+3674:         recovery_session(&row, &job, "D:/fixture-original", &[]),
+3675:         job["thread_id"].as_str()
+3676:     );
+3677:     let mut wrong = job.clone();
+3678:     wrong["todo_id"] = json!(2);
+3679:     assert!(recovery_session(&row, &wrong, "D:/fixture-original", &[]).is_none());
+3680:     assert!(recovery_session(&row, &job, "D:/elsewhere", &[]).is_none());
+3681:     let concurrent = json!({"status":"running","resume_session":job["thread_id"]});
+3682:     assert!(recovery_session(&row, &job, "D:/fixture-original", &[concurrent]).is_none());
+3683: }
+3684: 
+3685: #[test]
+3686: fn retired_native_conversation_cannot_cross_a_cancelled_prestart_handoff() {
+3687:     let mut f = Fixture::new();
+3688:     f.managed(1, 1, "other", 0);
+3689:     let original = f.get(1);
+3690:     let cwd = s(&original["scheduler"]["worktree"]).to_owned();
+3691:     fs::create_dir_all(&cwd).unwrap();
+3692:     let work = Path::new(&cwd).join("saved-work.txt");
+3693:     fs::write(&work, "uncommitted work").unwrap();
+3694:     let source = &mut f.e.backend.records[0];
+3695:     source["todo_id"] = json!(1);
+3696:     source["status"] = json!("cancelled");
+3697:     source["recovery_cancel"] = json!({"key":"old-launch","committed_at":"saved"});
+3698:     source["cwd"] = json!(cwd);
+3699:     source["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
+3700:     source["model"] = json!("gpt-6.1-sol");
+3701:     source["effort"] = json!("max");
+3702:     source["policy_resume_reset"] = json!({"session":source["thread_id"],
+3703:         "from_model":"gpt-6-luna","from_effort":"high"});
+3704:     let saved = source.clone();
+3705:     f.e.backend.ps.clear();
+3706:     f.reconcile();
+3707:     assert_eq!(f.get(1)["status"], "todo");
+3708:     f.e.backend.clock += 301.;
+3709:     let prepared = f.e.prepare(&f.get(1), &f.repo.to_string_lossy()).unwrap().unwrap();
+3710:     assert!(prepared["scheduler"]["resume_session"].is_null(),
+3711:         "retired native ID was reintroduced from last_job.thread_id");
+3712:     assert_eq!(prepared["scheduler"]["selection"]["model"], "gpt-6.1-sol");
+3713:     assert_eq!(prepared["scheduler"]["selection"]["effort"], "max");
+3714:     assert_eq!(prepared["spec"], original["spec"]);
+3715:     assert_eq!(f.e.backend.records[0], saved);
+3716:     assert_eq!(fs::read_to_string(work).unwrap(), "uncommitted work");
+3717: }
+3718: 
+3719: #[test]
+3720: fn retired_native_conversation_is_not_a_successful_continuation_either() {
+3721:     let mut source = json!({"status":"succeeded","last_message":"状態: 継続中",
+3722:         "cwd":"D:/fixture/work","thread_id":"12345678-1234-4321-9234-123456789abc"});
+3723:     assert!(continuation_session(&source, "D:/fixture/work", &[]).is_some());
+3724:     source["policy_resume_reset"] = json!({"session":source["thread_id"]});
+3725:     assert!(continuation_session(&source, "D:/fixture/work", &[]).is_none());
+
+cc-ask/tests/resume.rs
+704: fn every_discord_resume_launcher_applies_policy_before_passing_a_native_session() {
+705:     for (origin, expected_model, expected_effort, expected_session) in [
+706:         ("policy", "gpt-6.1-sol", "max", ""),
+707:         ("owner_request", "gpt-6-luna", "high", "original-session"),
+708:     ] {
+709:         let mut a = AnswerResume::new();
+710:         let cwd = a.cwd.to_string_lossy().into_owned();
+711:         let source = json!({"model":"gpt-6-luna","effort":"high","model_origin":origin,
+712:             "effort_origin":origin,"task_type":"implementation","sandbox":"read-only",
+713:             "scope_source":"launcher","cwd":cwd,"thread_id":"original-session"});
+714:         launch_job_with_session(&mut a.ctx, &json!({"id":"200","name":"再開検査"}),
+715:             "元の仕様と途中成果から続行する。", &source,
+716:             "0123456789abcdef0123456789abcdef", false, Some(&cwd), Some("resume"),
+717:             Some("original-session")).unwrap();
+718:         assert_eq!(a.count(), 1);
+719:         assert_eq!(a.last()["model"], expected_model);
+720:         assert_eq!(a.last()["effort"], expected_effort);
+721:         assert_eq!(a.last()["resume_session"], expected_session);
+722:         assert_eq!(a.last()["sandbox"], "read-only");
+723:         assert_eq!(a.last()["cwd"], cwd);
+724:     }
+725: }
+726: 
+727: #[test]
+728: fn answer_reselection_compares_with_the_original_worker_instead_of_the_cached_selection() {
+729:     for (origin, expected_effort, expected_session) in [
+730:         ("policy", "max", ""),
+731:         ("owner_request", "high", "original-session"),
+732:     ] {
+733:         let mut a = AnswerResume::new();
+734:         a.change(json!({"session_id":"original-session","job_info":{
+735:             "model":"gpt-6.1-sol","effort":"high","effort_origin":origin,
+736:             "thread_id":"original-session","sandbox":"read-only","scope_source":"launcher"}}));
+737:         a.answered();
+738:         a.fake.borrow_mut().crash_before_launch = true;
+739:         assert!(catch_unwind(AssertUnwindSafe(|| a.resume())).is_err());
+740:         assert_eq!(a.count(), 0);
+741:         assert_eq!(
+742:             a.question()["continuation"]["launch"]["selection"]["effort"],
+743:             expected_effort
+744:         );
+745:         a.answer(0., "起動前の追加回答も同じ依頼へ反映する", "OWN");
+746:         a.advance(601.);
+747:         a.resume();
+748:         assert_eq!(a.count(), 1);
+749:         assert_eq!(a.last()["effort"], expected_effort);
+750:         assert_eq!(a.last()["resume_session"], expected_session);
+751:         assert_eq!(a.last()["sandbox"], "read-only");
+752:     }
+753: }
+754: 
+755: #[test]
+756: fn completed_capacity_history_does_not_exempt_an_ordinary_discord_resume() {
+757:     let mut a = AnswerResume::new();
+758:     let cwd = a.cwd.to_string_lossy().into_owned();
+759:     let source = json!({"id":"old-worker","status":"succeeded","model":"gpt-6-luna",
+760:         "effort":"high","model_origin":"policy","effort_origin":"policy",
+761:         "task_type":"implementation","sandbox":"read-only","scope_source":"launcher",
+762:         "cwd":cwd,"thread_id":"original-session","capacity_wait_pending":false,
+763:         "capacity_retry_count":1,"capacity_same_model_retry_count":2,
+764:         "capacity_history":[{"kind":"same_model_account_retry","attempt":2}]});
+765:     let saved = source.clone();
+766:     launch_job_with_session(&mut a.ctx, &json!({"id":"200","name":"通常の再開検査"}),
+767:         "元の仕様と途中成果から通常の作業を再開する。", &source,
+768:         "0123456789abcdef0123456789abcdef", false, Some(&cwd), Some("resume"),
+769:         Some("original-session")).unwrap();
+770:     assert_eq!(a.count(), 1);
+771:     assert_eq!(a.last()["model"], "gpt-6.1-sol");
+772:     assert_eq!(a.last()["effort"], "max");
+773:     assert_eq!(a.last()["resume_session"], "");
+774:     assert_eq!(source, saved, "original retry budget and evidence must remain intact");
+
+cc-job-policy/tests/resume_policy.rs
+38: fn individual_owner_selection_keeps_the_model_effort_and_compatible_context() {
+39:     let mut job = json!({"todo_id":3081,"model":"gpt-6-luna","effort":"high",
+40:         "model_origin":"owner_request","effort_origin":"owner_request",
+41:         "resume_session":"owner-session","thread_id":"owner-session"});
+42:     let original = job.clone();
+43:     apply_managed_launch_policy(&mut job);
+44:     assert_eq!(job, original);
+45: }
+46: 
+47: #[test]
+48: fn an_eligible_same_model_capacity_attempt_keeps_its_context_and_durable_budget() {
+49:     let mut job = json!({"todo_id":3081,"model":"gpt-6.1-sol","effort":"max",
+50:         "model_origin":"policy","effort_origin":"policy","resume_session":"same-session",
+51:         "capacity_wait_pending":true,"capacity_same_model_retry_count":2,
+52:         "capacity_retry_count":0,"retry_not_before":12345,"cwd":"D:/fixture/work",
+53:         "sandbox":"read-only","capacity_history":[{"attempt":2,"model":"gpt-6.1-sol"}]});
+54:     let original = job.clone();
+55:     apply_managed_launch_policy(&mut job);
+56:     assert_eq!(job, original);
+
+cc-job-policy/src/cancellation.rs
+23: pub fn recovery_cancel(item: &Value, job: &Value) -> bool {
+24:     let id = text(&job["id"]);
+25:     if id.is_empty() || owner_stopped(item, job) {
+26:         return false;
+27:     }
+28:     let durable = !text(&job["recovery_cancel"]["key"]).is_empty()
+29:         && chrono::DateTime::parse_from_rfc3339(text(&job["recovery_cancel"]["committed_at"]))
+30:             .is_ok();
+31:     let watchdog = text(&item["stall_recovery"]["pending"]["recovery_cancel"]) == id;
+32:     let scheduler = text(&item["scheduler"]["job"]) == id
+33:         && matches!(
+34:             text(&item["scheduler"]["pending_cancel"]),
+35:             "hung" | "lost" | "memory" | "resource_wait"
+36:         );
+37:     durable || watchdog || scheduler
+38: }
+39: 
+40: /// Unknown cancellations are holds, not permission to launch another worker.
+41: pub fn blocks_recovery(item: &Value, job: &Value) -> bool {
+42:     owner_stopped(item, job) || (cancelled(job) && !recovery_cancel(item, job))
+43: }
+44: 
+45: #[cfg(test)]
+46: mod tests {
+47:     use super::*;
+
+cc-job-policy/src/launch_context.rs
+1: //! Keep the native conversation's configuration aligned with its next launch.
+2: use serde_json::{Value, json};
+3: pub const VERSION: &str = "max-resume-v1";
+4: 
+5: pub fn capacity_attempt(job: &Value) -> bool {
+6:     job["capacity_wait_pending"] == true
+7:         || job["last_failure_kind"] == "capacity"
+8:         || job["capacity_same_model_retry_count"].as_u64().unwrap_or(0) > 0
+9:         || job["capacity_retry_count"].as_u64().unwrap_or(0) > 0
+10:         || (!job["capacity_history"].is_null()
+11:             && job["capacity_history"]
+12:                 .as_array()
+13:                 .is_none_or(|history| !history.is_empty()))
+14: }
+
+cc-job-policy/src/lib.rs
+124: pub fn apply_managed_launch_policy(job: &mut serde_json::Value) {
+125:     if launch_context::fixed_execution_contract(job) {
+126:         return;
+127:     }
+128:     let source = launch_context::source_settings(job);
+129:     let managed = managed_job(job);
+130:     let automatic = job["model_explicit"] == false || job["model_origin"] == "policy";
+131:     let reader = review_task(
+132:         job["name"].as_str().unwrap_or(""),
+133:         job["task_type"].as_str().unwrap_or(""),
+134:     ) || job["subwork"]["kind"] == "review";
+135:     let capacity_attempt = launch_context::capacity_attempt(job);
+136:     let previous = job["model"].as_str().unwrap_or("");
+137:     if managed
+138:         && automatic
+139:         && job["model_origin"] != "owner_request"
+140:         && !reader
+141:         && !capacity_attempt
+142:         && !job["review_excluded_models"]
+143:             .as_array()
+144:             .into_iter()
+145:             .flatten()
+146:             .filter_map(serde_json::Value::as_str)
+147:             .any(|model| same_model(model, "gpt-6.1-sol"))
+148:         && ["gpt-6-astra", "gpt-6-luna"]
+149:             .contains(&previous.strip_prefix("openai/").unwrap_or(previous))
+150:     {
+151:         job["legacy_model_hint"] = job["model"].clone();
+152:         job["model"] = serde_json::json!("gpt-6.1-sol");
+153:         job["requested_model"] = job["model"].clone();
+154:         job["model_origin"] = serde_json::json!("policy");
+155:     }
+156:     apply_effort_policy(job);
+157:     if !capacity_attempt && (source["model"] != job["model"] || source["effort"] != job["effort"]) {
+158:         job["launch_policy_version"] = serde_json::json!(launch_context::VERSION);
+159:     }
+160:     launch_context::reconcile_resume(job, &source);
+161: }
+162: 
+163: pub fn author_models(source: &serde_json::Value) -> Vec<String> {
+
+cc-scheduler/src/preparation.rs
+35: pub fn recovery_session<'a>(
+36:     item: &Value,
+37:     job: &'a Value,
+38:     cwd: &str,
+39:     jobs: &[Value],
+40: ) -> Option<&'a str> {
+41:     if !owns_workspace(item, job) {
+42:         return None;
+43:     }
+44:     crate::policy::continuation_session(job, cwd, jobs).or_else(|| {
+45:         let session = s(&job["thread_id"]);
+46:         (truth(&item["scheduler"]["resume"])
+47:             && owns_workspace(item, job)
+48:             && matches!(
+49:                 s(&job["status"]),
+50:                 "failed" | "lost" | "cancelled" | "canceled"
+51:             )
+52:             && crate::policy::valid_session(session)
+53:             && norm(s(&job["cwd"])) == norm(cwd)
+54:             && !jobs.iter().any(|j| {
+55:                 crate::policy::live(j)
+56:                     && (s(&j["thread_id"]) == session || s(&j["resume_session"]) == session)
+57:             }))
+58:         .then_some(session)
+59:     })
+60: }
+61: 
+
+cc-scheduler/src/policy.rs
+599: pub fn continuation_session<'a>(job: &'a Value, cwd: &str, jobs: &[Value]) -> Option<&'a str> {
+600:     let session = s(&job["thread_id"]);
+601:     let norm = |p: &str| p.replace('\\', "/").trim_end_matches('/').to_lowercase();
+602:     (s(&job["status"]) == "succeeded"
+603:         && cc_ask::core::result_state(s(&job["last_message"])) == "状態: 継続中"
+604:         && uuid::Uuid::parse_str(session).is_ok()
+605:         && norm(s(&job["cwd"])) == norm(cwd)
+606:         && !jobs.iter().any(|j| {
+607:             live(j) && (s(&j["thread_id"]) == session || s(&j["resume_session"]) == session)
+608:         }))
+609:     .then_some(session)
+610: }
+611: pub fn valid_session(session: &str) -> bool {
+612:     session.len() == 36 && uuid::Uuid::parse_str(session).is_ok()
+613: }
+
+cc-scheduler/src/engine.rs
+862:         if !live(j) && result_received(i, &j["id"]) {
+863:             return Ok(());
+864:         }
+865:         if matches!(
+866:             s(&j["status"]),
+867:             "lost" | "failed" | "cancelled" | "canceled"
+868:         ) && (cancellation::blocks_recovery(i, j)
+869:             || (truth(&m["question"]) && !truth(&m["answer"]))
+870:             || (truth(&m["answer"])
+871:                 && ["停止したまま", "再開しない", "止めておく"]
+872:                     .iter()
+873:                     .any(|text| s(&i["note"]).contains(text)))
+874:             || crate::backend::result_outcome(s(&j["last_message"])) == "block")
+875:         {
+876:             self.edit(&i["id"], |row| {
+877:                 if row["status"] != i["status"]
+878:                     || row["scheduler"] != i["scheduler"]
+879:                     || row["resume_generation"] != i["resume_generation"]
+880:                 {
+881:                     return;
+882:                 }
+883:                 if park_waiting(row, Some(&j["id"])) {
+884:                     return;
+885:                 }
+886:                 row["status"] = json!("block");
+887:                 if !truth(&m["question"]) {
+888:                     row["note"] = json!(
+889:                         "担当ジョブが取り消されました。再開する場合は担当者が確認してください。"
+890:                     );
+891:                 }
+892:                 row["scheduler"]["phase"] = json!("cancelled");
+893:             })?;
+894:             return Ok(());
+895:         }
+

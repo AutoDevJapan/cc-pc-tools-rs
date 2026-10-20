@@ -1,0 +1,20 @@
+{
+  "id": 3209,
+  "job": "20261021-072955-todo-3209",
+  "time": "2026-10-21T07:34:05.5489499+09:00",
+  "initial_branch": "scheduler/todo-3209-work",
+  "initial_head": "14975d64ba62c63c2cf9e43792f0613b6431759d",
+  "branch": "scheduler/todo-3209-retired-session-check",
+  "source": "565ec9bf6d0145721884978eb73a05b03cf3b623",
+  "source_tree": "5b5916dd3decb88b12255c19cd983f744ccd1621",
+  "owner": "AutoDevJapan/cc-pc-tools-rs",
+  "resources": [
+    "cargo"
+  ],
+  "allocation_source": "scheduler task instruction",
+  "temporary_owner_id": "fd907bbfcd9076980359c0a5467c51cb",
+  "temporary_path": "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-fd907bbfcd9076980359c0a5467c51cb",
+  "tracked_source_changes": [],
+  "gpu": false,
+  "civ6": false
+}

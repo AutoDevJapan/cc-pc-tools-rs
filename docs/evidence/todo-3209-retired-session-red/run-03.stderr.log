@@ -1,0 +1,27 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling windows-sys v0.61.2
+   Compiling memchr v2.8.3
+   Compiling chrono v0.4.45
+   Compiling once_cell v1.21.4
+   Compiling serde_json v1.0.151
+   Compiling tempfile v3.27.0
+   Compiling syn v3.0.6
+   Compiling serde_derive v1.0.229
+   Compiling serde v1.0.229
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3209-work\cc-job-policy)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.22s
+────────────
+ Nextest run ID 9da6da00-70d8-469d-ab75-8c7c149ae582 with nextest profile: default
+    Starting 2 tests across 1 binary (7 tests skipped)
+        SKIP [         ] (───) cc-job-policy::resume_policy a_freshly_migrated_launch_keeps_its_first_compatible_resume
+        SKIP [         ] (───) cc-job-policy::resume_policy a_previously_normalized_legacy_job_retires_its_context_only_once
+        SKIP [         ] (───) cc-job-policy::resume_policy automatic_cli_hints_also_use_the_managed_policy_without_a_todo
+        SKIP [         ] (───) cc-job-policy::resume_policy exact_source_contracts_are_not_rewritten_as_unqualified_launches
+        SKIP [         ] (───) cc-job-policy::resume_policy haiku_does_not_acquire_an_unverified_max_requirement
+        SKIP [         ] (───) cc-job-policy::resume_policy model_repair_exclusions_cannot_route_back_to_the_known_failed_default
+        SKIP [         ] (───) cc-job-policy::resume_policy policy_migration_starts_fresh_and_a_later_requeue_cannot_restore_the_old_context
+        PASS [   0.008s] (1/2) cc-job-policy::resume_policy an_eligible_same_model_capacity_attempt_keeps_its_context_and_durable_budget
+        PASS [   0.008s] (2/2) cc-job-policy::resume_policy individual_owner_selection_keeps_the_model_effort_and_compatible_context
+────────────
+     Summary [   0.009s] 2 tests run: 2 passed, 7 skipped

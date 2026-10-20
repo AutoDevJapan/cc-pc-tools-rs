@@ -1,0 +1,32 @@
+[
+  {
+    "file": "run-01.stderr.log",
+    "bytes": 31024,
+    "sha256": "497dd4e986bfb884abf3b97708bafde7034dcadb85cdae784c5a0edaffaa60df"
+  },
+  {
+    "file": "run-01.stdout.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "run-02.stderr.log",
+    "bytes": 12381,
+    "sha256": "c23ad94d794be48a805f13f6ceeec54fe0961701ebf8d96f41e772c591abb99b"
+  },
+  {
+    "file": "run-02.stdout.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "file": "run-03.stderr.log",
+    "bytes": 1972,
+    "sha256": "ecdae79586a7e199ed81da06b49a58b26ae36e493876ca84ec318d2b105f35e6"
+  },
+  {
+    "file": "run-03.stdout.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  }
+]

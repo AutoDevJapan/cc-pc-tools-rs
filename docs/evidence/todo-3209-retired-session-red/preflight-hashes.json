@@ -1,0 +1,22 @@
+[
+  {
+    "Path": "D:\\CC\\Tools\\codex-jobs\\cargo_gate.exe",
+    "Hash": "A7D47FAF071772D0C6CA1349B3C0A4ECAA256F0BBD9686FC81C937AC1B26C9BD"
+  },
+  {
+    "Path": "D:\\CC\\Tools\\sccache\\sccache.exe",
+    "Hash": "B85863F6C0579C57A74071B8904F9850A8EF03DAC26BFC94DC30225155BD7449"
+  },
+  {
+    "Path": "D:\\CC\\AGENTS.md",
+    "Hash": "51E2B9725F2360D55602D9545152673185AC978CBF66F222440E93576214051A"
+  },
+  {
+    "Path": "D:\\CC\\Policies\\owner-model-effort-and-pool-retry-20261020.md",
+    "Hash": "E05AAABFF983CC8BF89A9A8A25C2467B807EEB2A5501F5EE2F97348946B6B03B"
+  },
+  {
+    "Path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3209-work\\AGENTS.md",
+    "Hash": "87722027BAB10A57CBD5BDF3C6D888955D48D7C09CC7E8113B61A7ED6399EE02"
+  }
+]

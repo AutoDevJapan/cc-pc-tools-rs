@@ -1,0 +1,17 @@
+{
+  "native_exit_code": null,
+  "shell_last_exitcode_observed": 0,
+  "verified_at": "2026-10-21T07:37:21.4679631+09:00",
+  "durable_receipt": {
+    "request": {
+      "id": 3209,
+      "job": "20261021-072955-todo-3209",
+      "expected_branch": "scheduler/todo-3209-work",
+      "branch": "scheduler/todo-3209-retired-session-check",
+      "head": "565ec9bf6d0145721884978eb73a05b03cf3b623"
+    },
+    "at": 1792535575.141347,
+    "launched": 0
+  },
+  "note": "PowerShell returned before GUI-subsystem scheduler completed; initial stdout/stderr are empty and native exit was not captured. Completion is verified from the exact persisted checkpoint receipt, not the shell status."
+}

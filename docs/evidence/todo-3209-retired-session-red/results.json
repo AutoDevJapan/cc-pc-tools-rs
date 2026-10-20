@@ -1,0 +1,100 @@
+{
+  "todo": 3209,
+  "parent_todo": 3081,
+  "issue": 277,
+  "source": "565ec9bf6d0145721884978eb73a05b03cf3b623",
+  "product_base": "04e02ba04e3e6e635e1954295f88ce24e170c3b9",
+  "commands_executed_once": 3,
+  "test_cases_executed": 7,
+  "product_red": 2,
+  "positive_controls_passed": 4,
+  "fixture_failures": 1,
+  "compile_failures": 0,
+  "selection_skipped": 277,
+  "exit_codes": [100, 100, 0],
+  "product_and_fixture_changes": 0,
+  "product_complete": false,
+  "tests": [
+    {
+      "run": 1,
+      "name": "retired_native_conversation_cannot_cross_a_cancelled_prestart_handoff",
+      "classification": "fixture_failure",
+      "file": "cc-scheduler/tests/parity.rs",
+      "assertions": [
+        {"line": 3707, "result": "failed", "actual": "block", "expected": "todo"},
+        {"line": 3710, "result": "not_reached"},
+        {"line": 3712, "result": "not_reached"},
+        {"line": 3713, "result": "not_reached"},
+        {"line": 3714, "result": "not_reached"},
+        {"line": 3715, "result": "not_reached"},
+        {"line": 3716, "result": "not_reached"}
+      ],
+      "prepare_line_3709": "not_reached",
+      "cause": "committed_at=saved is not RFC3339; no alternative cancellation intent; unknown cancellation is held"
+    },
+    {
+      "run": 1,
+      "name": "retired_native_conversation_is_not_a_successful_continuation_either",
+      "classification": "product_red",
+      "file": "cc-scheduler/tests/parity.rs",
+      "assertions": [
+        {"line": 3723, "result": "passed"},
+        {"line": 3725, "result": "failed", "actual_is_none": false, "expected_is_none": true}
+      ]
+    },
+    {
+      "run": 1,
+      "name": "preparation2164_reuses_owned_terminal_session_only_without_other_worker",
+      "classification": "positive_control_passed",
+      "file": "cc-scheduler/tests/parity.rs",
+      "assertions": [
+        {"line": 3673, "result": "passed"},
+        {"line": 3679, "result": "passed"},
+        {"line": 3680, "result": "passed"},
+        {"line": 3682, "result": "passed"}
+      ]
+    },
+    {
+      "run": 2,
+      "name": "completed_capacity_history_does_not_exempt_an_ordinary_discord_resume",
+      "classification": "product_red",
+      "file": "cc-ask/tests/resume.rs",
+      "assertions": [
+        {"line": 770, "result": "passed"},
+        {"line": 771, "result": "failed", "actual": "gpt-6-luna", "expected": "gpt-6.1-sol"},
+        {"line": 772, "result": "not_reached"},
+        {"line": 773, "result": "not_reached"},
+        {"line": 774, "result": "not_reached"}
+      ]
+    },
+    {
+      "run": 2,
+      "name": "every_discord_resume_launcher_applies_policy_before_passing_a_native_session",
+      "classification": "positive_control_passed",
+      "file": "cc-ask/tests/resume.rs",
+      "loop_iterations_completed": ["policy", "owner_request"],
+      "assertions": [
+        {"line": 718, "result": "passed_in_both_iterations"},
+        {"line": 719, "result": "passed_in_both_iterations"},
+        {"line": 720, "result": "passed_in_both_iterations"},
+        {"line": 721, "result": "passed_in_both_iterations"},
+        {"line": 722, "result": "passed_in_both_iterations"},
+        {"line": 723, "result": "passed_in_both_iterations"}
+      ]
+    },
+    {
+      "run": 3,
+      "name": "an_eligible_same_model_capacity_attempt_keeps_its_context_and_durable_budget",
+      "classification": "positive_control_passed",
+      "file": "cc-job-policy/tests/resume_policy.rs",
+      "assertions": [{"line": 56, "result": "passed"}]
+    },
+    {
+      "run": 3,
+      "name": "individual_owner_selection_keeps_the_model_effort_and_compatible_context",
+      "classification": "positive_control_passed",
+      "file": "cc-job-policy/tests/resume_policy.rs",
+      "assertions": [{"line": 44, "result": "passed"}]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "at": "2026-10-21T06:19:36.0579658+09:00",
+  "fixed_head": "f85630d54888e0030692d6a7823cb8d6d99154fe",
+  "archive_sha256": "f4111015e6f20cee5fdb2f93a25d5f8a90fc4733025cd4262c040cc1b3cbc6f0",
+  "archive_bytes": 13619200,
+  "source": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3197-3103-source\\codex-owned-8daae585cac606ae8a496ca2af6b9169\\source-raw",
+  "target": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3197-3103-source\\codex-owned-8daae585cac606ae8a496ca2af6b9169\\target",
+  "ownership_id": "8daae585cac606ae8a496ca2af6b9169",
+  "files": 1183,
+  "checkout_core_autocrlf": "true",
+  "raw_export": "isolated bare Git directory, read-only object alternates; info/attributes disables text/filter/ident/encoding transforms; git archive followed by tar",
+  "blob_method": "git ls-tree -r -z; git cat-file --batch raw payload bytes; SHA256 for every blob",
+  "selected_file_line_endings": [
+    {
+      "path": "cc-job-policy/tests/product_identity.rs",
+      "crlf_count": 0,
+      "lf_count": 170,
+      "archive_matches_raw_blob": true
+    },
+    {
+      "path": "localai-web-rs/src/operations_product_identity_tests.rs",
+      "crlf_count": 0,
+      "lf_count": 661,
+      "archive_matches_raw_blob": true
+    }
+  ],
+  "initial_check": {
+    "label": "initial-raw",
+    "at": "2026-10-21T06:19:36.0428876+09:00",
+    "fixed_head": "f85630d54888e0030692d6a7823cb8d6d99154fe",
+    "expected_files": 1183,
+    "actual_files": 1183,
+    "reparse_points": 0,
+    "mismatches": [],
+    "all_git_blob_bytes_match": true
+  }
+}

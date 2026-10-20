@@ -1,0 +1,16 @@
+# ToDo3197の再開記録
+
+対象はToDo3103の独立した有限測定。親の実装・現在ソース・PR・状態・配布は変更しない。
+固定測定source: f85630d54888e0030692d6a7823cb8d6d99154fe。
+作業branch: scheduler/todo-3197-3103-source。
+job: 20261021-061341-todo-3197。
+所有一時ID: 8daae585cac606ae8a496ca2af6b9169。
+所有一時path: D:/CC/Work/unattended-operations-20261013-wt/todo-3197-3103-source/codex-owned-8daae585cac606ae8a496ca2af6b9169。
+
+完了: 最新指示・Skill確認、作業範囲guard、固定commit存在、remoteとGitHub owner/repo ID、OAuthの本人loginを照合。
+未実施: archive展開と全blob SHA256照合、指定のnextestを各1回、実行後不変性確認、結果保存commit/push、一時領域のplan/別呼出し削除/finish、正規checkpoint。
+再開時はrun-01/02のmetadataと生存プロセスを確認し、起動済みのコマンドを重複実行しない。
+共有ToDoの状態はスケジューラーが更新する。Discord通知・独立PR作成・mergeは行わない。
+
+2026-10-21 06:19 JST: 通常のgit archiveで1,164/1,183ファイルに改行差を検出し、Cargo起動前に停止。失敗照合をsource-initial.*へ保持。専用bare Gitのinfo/attributesでtext/filter/ident/encoding変換を止め、read-only alternatesから同じ固定SHAを再archive。source-rawの1,183/1,183ファイルが全生blob SHA256と一致、reparse 0を確認した。元ソース・実装・共有設定は未変更。
+残作業: run-01/02を1回ずつ、結果/不変性/プロセス終了の保存、commit/push、所有一時領域の片付け、checkpoint。

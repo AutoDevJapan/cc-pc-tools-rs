@@ -303,3 +303,18 @@ Windows job and its dependents rather than repeating the successful verify;
 [GitHub's job rerun endpoint](https://docs.github.com/en/rest/actions/workflow-runs#re-run-a-job-from-a-workflow-run)
 provides that scope. Recheck the actual run attempt and queued job before
 starting a fresh owned guest. A request receipt alone is not CI success.
+## Windows prepared-clone VM constructor (2026-10-20)
+
+After offline staging passed in run 39201344542 attempt 4, the Windows job stopped
+before any VM existed: the constructor template rewrite did not match its own text
+(an extra blank line before the resize command) and returned
+`prepared Windows VM template changed`. The VM intent had no ID; the read-only fence
+observed no VM with that nonce name and a detached clone, and no runner registration
+had been requested. The same-source failure is preserved as RED.
+
+`vmCreateBody` now selects the disk and seed lines up front. A Windows guest only
+asserts that its retained clone exists and is detached, and gets no seed DVD, no
+`Convert-VHD`/`Resize-VHD`; Linux output is byte-for-byte the previous script.
+The generated Windows and Linux scripts parse without PowerShell errors (not run).
+These are constructor-script checks only. A real VM start, the original 13 Windows
+Cargo steps, hooks and cleanup are still unaccepted.

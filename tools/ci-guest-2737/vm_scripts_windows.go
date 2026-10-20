@@ -82,12 +82,42 @@ func createVMPlatform(ctx context.Context, root, instance, image, fault string, 
 			return s, e
 		}
 	}
+	body, e := vmCreateBody(s, image, fault, cpus, memoryGiB, windows)
+	if e != nil {
+		return s, e
+	}
+	adminErr := admin(ctx, root, "vm-create", body)
+	// Never skip identity recovery because the constructor returned failure.
+	// Prefer the rollback proof when creation receipt itself could not be saved.
+	for _, name := range []string{"vm-constructor-rollback.private.json", "vm-created.private.json", "vm-recovery.private.json"} {
+		b, e := os.ReadFile(filepath.Join(root, name))
+		if e != nil {
+			continue
+		}
+		var actual vmState
+		if json.Unmarshal(bytes.TrimPrefix(b, []byte{239, 187, 191}), &actual) == nil && validVMID(actual.ID) && actual.Instance == instance && actual.Name == s.Name && actual.Root == root && actual.Pipe == s.Pipe && ((name != "vm-constructor-rollback.private.json" && actual.Stage == "created") || (name == "vm-constructor-rollback.private.json" && actual.Stage == "removed")) {
+			return actual, adminErr
+		}
+	}
+	return s, errors.Join(adminErr, errors.New("VM identity unavailable; retain intent for reconciliation"))
+}
+
+// vmCreateBody renders the one Hyper-V constructor flight. It is separate so
+// its Windows-prepared-clone variant can be checked without a broker.
+func vmCreateBody(s vmState, image, fault string, cpus, memoryGiB int, windows bool) (string, error) {
+	// Public Linux images are converted into a fresh owned disk and receive a
+	// seed ISO. A Windows guest's clone is already hash-verified and offline
+	// staged by the host: never convert, resize, mount or mutate it here.
+	diskPrep := "if(Test-Path -LiteralPath $disk){throw 'OWNED_DISK_ALREADY_EXISTS'}\nConvert-VHD -Path " + psQuote(image) + " -DestinationPath $disk -VHDType Dynamic\n\nResize-VHD -Path $disk -SizeBytes 64GB"
+	seedAttach := "  $dvd=Get-VMDvdDrive -VM $vm\n  if($dvd){$dvd|Set-VMDvdDrive -Path (Join-Path $root 'seed.iso')}else{Add-VMDvdDrive -VM $vm -Path (Join-Path $root 'seed.iso')}\n"
+	if windows {
+		diskPrep = "if(-not (Test-Path -LiteralPath $disk)){throw 'PREPARED_CLONE_ABSENT'}\nif((Get-VHD -Path $disk -ErrorAction Stop).Attached){throw 'PREPARED_CLONE_ATTACHED'}"
+		seedAttach = ""
+	}
 	body := vmPrelude(s) + `
 if(@(Get-VM -ErrorAction Stop|Where-Object {$_.Name -ceq $name}).Count -ne 0){throw 'OWNED_NAME_ALREADY_EXISTS'}
 $disk=Join-Path $root 'guest.vhdx'
-if(Test-Path -LiteralPath $disk){throw 'OWNED_DISK_ALREADY_EXISTS'}
-` + "Convert-VHD -Path " + psQuote(image) + " -DestinationPath $disk -VHDType Dynamic\n" + `
-Resize-VHD -Path $disk -SizeBytes 64GB
+` + diskPrep + `
 $vm=$null
 # Reserve an exclusive, fixed-size journal BEFORE New-VM can have effects.
 # Updating it needs no new file allocation if the ordinary receipt fails.
@@ -112,9 +142,7 @@ try {
   Set-VMProcessor -VM $vm -Count 2
   Set-VMMemory -VM $vm -DynamicMemoryEnabled $false -StartupBytes 2GB
   Set-VMComPort -VM $vm -Number 1 -Path $pipe
-  $dvd=Get-VMDvdDrive -VM $vm
-  if($dvd){$dvd|Set-VMDvdDrive -Path (Join-Path $root 'seed.iso')}else{Add-VMDvdDrive -VM $vm -Path (Join-Path $root 'seed.iso')}
-  Start-VM -VM $vm
+` + seedAttach + `  Start-VM -VM $vm
 }catch {
   $original=$_
   if($null -ne $vm){
@@ -133,38 +161,7 @@ try {
 `
 	body = strings.Replace(body, "Set-VMProcessor -VM $vm -Count 2", "Set-VMProcessor -VM $vm -Count "+strconv.Itoa(cpus), 1)
 	body = strings.Replace(body, "-StartupBytes 2GB", "-StartupBytes "+strconv.Itoa(memoryGiB)+"GB", 1)
-	if windows {
-		// The clone is already hash-verified and offline-staged. Never mount or
-		// mutate the retained SDK; all VM identity journalling stays unchanged.
-		var e error
-		body, e = windowsPreparedVMBody(body, image)
-		if e != nil {
-			return s, e
-		}
-	}
-	adminErr := admin(ctx, root, "vm-create", body)
-	// Never skip identity recovery because the constructor returned failure.
-	// Prefer the rollback proof when creation receipt itself could not be saved.
-	for _, name := range []string{"vm-constructor-rollback.private.json", "vm-created.private.json", "vm-recovery.private.json"} {
-		b, e := os.ReadFile(filepath.Join(root, name))
-		if e != nil {
-			continue
-		}
-		var actual vmState
-		if json.Unmarshal(bytes.TrimPrefix(b, []byte{239, 187, 191}), &actual) == nil && validVMID(actual.ID) && actual.Instance == instance && actual.Name == s.Name && actual.Root == root && actual.Pipe == s.Pipe && ((name != "vm-constructor-rollback.private.json" && actual.Stage == "created") || (name == "vm-constructor-rollback.private.json" && actual.Stage == "removed")) {
-			return actual, adminErr
-		}
-	}
-	return s, errors.Join(adminErr, errors.New("VM identity unavailable; retain intent for reconciliation"))
-}
-func windowsPreparedVMBody(body, image string) (string, error) {
-	from := "if(Test-Path -LiteralPath $disk){throw 'OWNED_DISK_ALREADY_EXISTS'}\nConvert-VHD -Path " + psQuote(image) + " -DestinationPath $disk -VHDType Dynamic\nResize-VHD -Path $disk -SizeBytes 64GB"
-	dvd := "  $dvd=Get-VMDvdDrive -VM $vm\n  if($dvd){$dvd|Set-VMDvdDrive -Path (Join-Path $root 'seed.iso')}else{Add-VMDvdDrive -VM $vm -Path (Join-Path $root 'seed.iso')}\n"
-	if strings.Count(body, from) != 1 || strings.Count(body, dvd) != 1 {
-		return "", errors.New("prepared Windows VM template changed")
-	}
-	body = strings.Replace(body, from, "if(-not (Test-Path -LiteralPath $disk)){throw 'PREPARED_CLONE_ABSENT'}\nif((Get-VHD -Path $disk -ErrorAction Stop).Attached){throw 'PREPARED_CLONE_ATTACHED'}", 1)
-	return strings.Replace(body, dvd, "", 1), nil
+	return body, nil
 }
 func cleanupVM(ctx context.Context, s vmState) error {
 	if !validInstance(s.Instance) || !validVMID(s.ID) || s.Name != "cc-ci-2737-"+s.Instance || !validVMPipe(s) {

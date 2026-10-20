@@ -17,12 +17,13 @@ import (
 )
 
 type Target struct {
-	Name      string `json:"name"`
-	New       bool   `json:"new"`
-	BeforeSHA string `json:"before_sha256"`
-	Positive  string `json:"positive"`
-	Negative  string `json:"negative"`
-	Files     []File `json:"files"`
+	Name      string   `json:"name"`
+	New       bool     `json:"new"`
+	BeforeSHA string   `json:"before_sha256"`
+	Positive  string   `json:"positive"`
+	Negative  string   `json:"negative"`
+	Files     []File   `json:"files"`
+	Sources   []string `json:"sources"`
 }
 type File struct {
 	Path string `json:"path"`
@@ -81,6 +82,10 @@ func checkEntry(name string, content []byte) error {
 }
 
 func check(root string, m Manifest) []string {
+	return checkOptions(root, m, false)
+}
+
+func checkOptions(root string, m Manifest, requireHash bool) []string {
 	var failures []string
 	if len(m.Targets) == 0 {
 		return []string{"empty target manifest"}
@@ -111,6 +116,9 @@ func check(root string, m Manifest) []string {
 				continue
 			}
 			fileSeen[f.Path] = true
+			if requireHash && !regexp.MustCompile(`^[a-fA-F0-9]{64}$`).MatchString(f.SHA) {
+				failures = append(failures, t.Name+"/"+f.Path+": sha256 missing or invalid")
+			}
 			p, err := relative(base, f.Path)
 			if err != nil {
 				failures = append(failures, t.Name+": invalid file path")
@@ -131,9 +139,7 @@ func check(root string, m Manifest) []string {
 					failures = append(failures, t.Name+": "+err.Error())
 				}
 			}
-			// Historical guides predate this change. Their old external/absolute links
-			// are not reinterpreted as new routing contracts.
-			if !strings.HasSuffix(f.Path, ".md") || strings.HasSuffix(f.Path, "previous-guide.md") {
+			if !strings.HasSuffix(f.Path, ".md") {
 				continue
 			}
 			for _, match := range linkRE.FindAllStringSubmatch(string(b), -1) {
@@ -142,7 +148,12 @@ func check(root string, m Manifest) []string {
 					continue
 				}
 				u, _, _ = strings.Cut(u, "#")
-				q, e := relative(filepath.Dir(p), u)
+				linkRel, e := filepath.Rel(base, filepath.Join(filepath.Dir(p), filepath.FromSlash(u)))
+				if e != nil {
+					failures = append(failures, t.Name+": link path escape")
+					continue
+				}
+				q, e := relative(base, linkRel)
 				if e != nil {
 					failures = append(failures, t.Name+": link path escape")
 					continue
@@ -162,6 +173,7 @@ func check(root string, m Manifest) []string {
 func main() {
 	root := flag.String("root", "D:/CC/Skills", "explicit installation root")
 	manifest := flag.String("manifest", "docs/skills-3048-manifest.json", "target manifest")
+	requireHash := flag.Bool("require-hash", true, "require finalized SHA-256 receipts (false for pre-install structural checks)")
 	flag.Parse()
 	b, err := os.ReadFile(*manifest)
 	if err != nil {
@@ -173,7 +185,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(2)
 	}
-	failures := check(*root, m)
+	failures := checkOptions(*root, m, *requireHash)
 	if len(failures) > 0 {
 		for _, f := range failures {
 			fmt.Fprintln(os.Stderr, f)

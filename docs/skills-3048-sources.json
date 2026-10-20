@@ -32,7 +32,8 @@
           "sha256": "59469635bbbd21acddbc664d95e8d97147f454b2d8f4a0a89c7d2c5afbe67577"
         }
       ],
-      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection",
+      "tree_truncated": false
     },
     {
       "url": "https://github.com/MengTo/Skills",
@@ -60,7 +61,8 @@
           "sha256": "48379bf7fa5b8f04ee81e09088526564fbdfc7d0361e78616ac3778d45aced33"
         }
       ],
-      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection",
+      "tree_truncated": false
     },
     {
       "url": "https://github.com/x1xhlol/system-prompts-and-models-of-ai-tools",
@@ -82,7 +84,8 @@
           "sha256": "13bd1e88a01de77b6681c55f1d8cd71d9facb0c4906c92e254c7db98f7f31dfe"
         }
       ],
-      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection",
+      "tree_truncated": false
     },
     {
       "url": "https://github.com/hirokaji/jp-ui-contracts",
@@ -110,7 +113,8 @@
           "sha256": "1129052be467c02c2113ec52d2a39701793e066a2bbc7b5db7d2264e5b76dcab"
         }
       ],
-      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection",
+      "tree_truncated": false
     },
     {
       "url": "https://github.com/openai/skills",
@@ -120,10 +124,10 @@
       "researched": true,
       "decision": "採用・既存統合",
       "targets": [
-        "cli-interface-design",
+        "coding-agent-tools",
         "skill-maintenance"
       ],
-      "reason": "cli-creator個別Apache-2.0を確認。Go既定・OAuth・Windowsに合わせて再構成。READMEのdeprecated注記を記録。",
+      "reason": "既存coding-agent-toolsのcli-creator資料と同用途のため統合。Go既定・OAuth・Windowsに合わせ、旧資料の言語・APIキー方針も修正。個別Apache-2.0を保持",
       "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
       "read_artifacts": [
         {
@@ -139,7 +143,8 @@
           "sha256": "24058eabf0aafce6def3fb937ac93cbe3fa341c653c658dc589edb77f73d6152"
         }
       ],
-      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection",
+      "tree_truncated": false
     },
     {
       "url": "https://github.com/mattpocock/skills",
@@ -172,7 +177,8 @@
           "sha256": "5505d25bbaa8fc14a79e4d20163936958992a2995b7f1dd1d6197edc9ed722e0"
         }
       ],
-      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection",
+      "tree_truncated": false
     },
     {
       "url": "https://github.com/VoltAgent/awesome-design-md",
@@ -200,7 +206,8 @@
           "sha256": "3847536c93a8262b779ee04692fe0efb4bfa644ffcfb8c43565576f00a4a32e0"
         }
       ],
-      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection",
+      "tree_truncated": false
     },
     {
       "url": "https://github.com/obra/superpowers",
@@ -232,7 +239,8 @@
           "sha256": "bbdfe742f853562e643a3d40d64476359d47881e39cef80a189283fa26d11ab9"
         }
       ],
-      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection",
+      "tree_truncated": false
     },
     {
       "url": "https://github.com/kepano/obsidian-skills",
@@ -270,7 +278,8 @@
           "sha256": "7ad72e1f0a9081ed325e76b6402ad5de50a00e63e2341fd403a92f147234a007"
         }
       ],
-      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection",
+      "tree_truncated": false
     },
     {
       "url": "https://github.com/6mile/skills",
@@ -298,7 +307,8 @@
           "sha256": "45dd79ac50892f9b731070c3765cd51875cf8cebd7640037c603640bdb75ee53"
         }
       ],
-      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection",
+      "tree_truncated": true
     },
     {
       "url": "https://github.com/cloudflare/security-audit-skill",
@@ -330,17 +340,18 @@
           "sha256": "b892470cb89bb31f33403e050d4bdfbe2cdaef940ade1496fa65e32b2e129449"
         }
       ],
-      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection",
+      "tree_truncated": false
     },
     {
       "url": "https://github.com/mizchi/skills",
       "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
       "retrieved": "2026-10-20T03:31:47.4992404Z",
-      "license": "not established for dep-lib-review",
+      "license": "README declares default MIT at repository owner discretion; no per-skill LICENSE.txt for dep-lib-review; reference only",
       "researched": true,
       "decision": "参考のみ",
       "targets": [],
-      "reason": "dep-lib-reviewを実読。候補の適用ライセンスが無く、dev依存の脆弱性をignoreする表等も一律採用に適さないため転用なし。",
+      "reason": "READMEの未記載時MITという説明と個別許諾優先を確認。候補は既存と重複し、dev依存の脆弱性をignoreする表等も一律採用に適さないため転用しない",
       "scope": "README, license when present, tree inventory and named representative files only; no whole repository audit",
       "read_artifacts": [
         {
@@ -352,7 +363,8 @@
           "sha256": "f6cf85dee46f1e10efb5efedf06cbfb46261f4927a41427c8b78c05980cafedb"
         }
       ],
-      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection",
+      "tree_truncated": false
     },
     {
       "url": "https://github.com/docker/skills",
@@ -384,7 +396,8 @@
           "sha256": "b43f4d71a18159de5868e0f1a352f0dd091bb81fe3ad29b24d79cffce6adfc4c"
         }
       ],
-      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection",
+      "tree_truncated": false
     },
     {
       "url": "https://github.com/Tencent/teamai-cli",
@@ -412,7 +425,8 @@
           "sha256": "82a22b1c37531834ab5784f93f950f0a8840ac4e4aa422f1ef2dc03437f9ad66"
         }
       ],
-      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection",
+      "tree_truncated": false
     },
     {
       "url": "https://github.com/nateherkai/AIS-OS",
@@ -440,7 +454,8 @@
           "sha256": "517ff2ae35888ca9da1f1c32c51c79756f068e8e034903867f141cd0474c069f"
         }
       ],
-      "coverage_note": "Representative contents and relevant sections; not every file in the collection"
+      "coverage_note": "Representative contents and relevant sections; not every file in the collection",
+      "tree_truncated": false
     },
     {
       "url": "https://agent-skills.jp/category",
@@ -458,6 +473,34 @@
           "path": "category.html",
           "sha256": "5de1046412131a80fc5f7d2277c2b650190b6deda3bfb142f7de648a16053a99"
         }
+      ],
+      "scope": "Category page only; first read via web before installation, HTML re-fetched afterward for hashing",
+      "coverage_note": "Post-installation retrieval is a re-fetch, not the first consultation. Initial exact timestamp was not separately recorded."
+    }
+  ],
+  "supplementary_sources": [
+    {
+      "targets": [
+        "json-canvas"
+      ],
+      "retrieved_at": null,
+      "recorded_at": "2026-10-20T03:59:44.8924552Z",
+      "retrieval_note": "Retrieved before initial installation. Exact fetch timestamp was not separately recorded.",
+      "version": "1.0",
+      "sha256": "41d75005394f3ed43a53031ff9d07c5d49c47e897971e7afb2972cc8af67469a",
+      "license": "reference only; no substantial text copy",
+      "purpose": "ID string requirement and edge-end defaults",
+      "retrieval_url": "https://raw.githubusercontent.com/obsidianmd/jsoncanvas/main/spec/1.0.md",
+      "url": "https://jsoncanvas.org/spec/1.0/"
+    },
+    {
+      "url": "https://obsidian.md/help/links",
+      "sha256": "11c08538743eccfe3878e0296acafe28cb6a72db007bf9d61bdb638061774d85",
+      "license": "reference only; constraint paraphrased, not a documentation copy",
+      "purpose": "Official block identifier character constraints, checked in primary web content",
+      "retrieved_at": "2026-10-20T03:59:44.9198703Z",
+      "targets": [
+        "obsidian-markdown"
       ]
     }
   ]

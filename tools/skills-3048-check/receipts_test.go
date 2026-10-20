@@ -18,7 +18,7 @@ func TestPublishedReceipts(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(m.Targets) != 14 {
-		t.Fatalf("expected 5 new and 9 existing skills, got %d", len(m.Targets))
+		t.Fatalf("expected 4 new and 10 existing skills, got %d", len(m.Targets))
 	}
 	shaRE := regexp.MustCompile(`^[a-f0-9]{64}$`)
 	newCount := 0
@@ -50,7 +50,7 @@ func TestPublishedReceipts(t *testing.T) {
 			t.Fatal("unmanifested entrypoint/provenance")
 		}
 	}
-	if newCount != 5 {
+	if newCount != 4 {
 		t.Fatalf("new skills: %d", newCount)
 	}
 	data, err = os.ReadFile("../../docs/skills-3048-sources.json")
@@ -60,12 +60,13 @@ func TestPublishedReceipts(t *testing.T) {
 	var sourceDoc struct {
 		SourceCount int `json:"source_count"`
 		Sources     []struct {
-			URL        string `json:"url"`
-			Commit     string `json:"commit"`
-			License    string `json:"license"`
-			Decision   string `json:"decision"`
-			Researched bool   `json:"researched"`
-			Artifacts  []File `json:"read_artifacts"`
+			URL        string   `json:"url"`
+			Commit     string   `json:"commit"`
+			License    string   `json:"license"`
+			Decision   string   `json:"decision"`
+			Researched bool     `json:"researched"`
+			Artifacts  []File   `json:"read_artifacts"`
+			Targets    []string `json:"targets"`
 		} `json:"sources"`
 	}
 	if err = json.Unmarshal(data, &sourceDoc); err != nil {
@@ -81,6 +82,22 @@ func TestPublishedReceipts(t *testing.T) {
 			t.Fatal("duplicate source")
 		}
 		urls[strings.ToLower(s.URL)] = true
+		for _, targetName := range s.Targets {
+			matched := false
+			for _, target := range m.Targets {
+				if target.Name != targetName {
+					continue
+				}
+				for _, source := range target.Sources {
+					if strings.EqualFold(strings.TrimPrefix(source, "https://github.com/"), strings.TrimPrefix(s.URL, "https://github.com/")) {
+						matched = true
+					}
+				}
+			}
+			if !matched {
+				t.Fatalf("unmatched source/target: %s -> %s", s.URL, targetName)
+			}
+		}
 		if !s.Researched || s.License == "" || s.Decision == "" || len(s.Artifacts) == 0 {
 			t.Fatal("incomplete source receipt")
 		}

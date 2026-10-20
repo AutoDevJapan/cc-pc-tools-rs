@@ -6,7 +6,7 @@
 
 調査元一覧の正本は元仕様3048-372030eaaf114c6aaaac9a69ba9a8400.md。親測定は2026-10-20 03:21:19 UTC、現役直下266件、.system直下5件。synced・ドット配下・退避・複製は現役増加に含めない。
 
-既存の読取・変更候補は提供済みcatalogのskill-maintenance、ui-design-styles、ui-accessibility、web-design-process、spec-atdd-tdd-issue-workflow、security-review、docker-operations、knowledge-to-skills、agent-system-design、test-qualityに限定する。運用に必要な明示Skillの読取は別途行う。新規は作成前の不在と用途差を記録してから追加する。サーバー管理・同期の所有が不明な既存Skillは変更しない。
+既存の読取・変更候補は提供済みcatalogのskill-maintenance、ui-design-styles、ui-accessibility、web-design-process、spec-atdd-tdd-issue-workflow、security-review、docker-operations、knowledge-to-skills、agent-system-design、coding-agent-tools、test-qualityに限定する。運用に必要な明示Skillの読取は別途行う。新規は作成前の不在と用途差を記録してから追加する。サーバー管理・同期の所有が不明な既存Skillは変更しない。
 
 ## 受入条件（先に定義）
 

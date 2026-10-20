@@ -1,5 +1,5 @@
 {
-  "checked_at": "2026-10-20T03:37:53.3578830Z",
+  "checked_at": "2026-10-20T04:00:52.3806322Z",
   "method": "fresh app-server initialize + skills/list forceReload",
   "model_called": false,
   "target_count": 14,
@@ -18,9 +18,9 @@
       "enabled": true
     },
     {
-      "name": "cli-interface-design",
-      "description": "継続利用するCLIのコマンド・JSON出力・認証・配布方法を設計するときに使う。",
-      "path": "D:\\CC\\Skills\\cli-interface-design\\SKILL.md",
+      "name": "coding-agent-tools",
+      "description": "コーディング用の拡張・MCP・常用CLI・検査ツールを導入・設計するときに使う。",
+      "path": "D:\\CC\\Skills\\coding-agent-tools\\SKILL.md",
       "enabled": true
     },
     {
@@ -73,7 +73,7 @@
     },
     {
       "name": "spec-atdd-tdd-issue-workflow",
-      "description": "Issueと仕様から受け入れテストを先に作り、再現条件と文書の整合を確かめるときに使う。",
+      "description": "Issueと仕様から振る舞いの受入検査を先に作り、実装と文書の整合を確かめるときに使う。",
       "path": "D:\\CC\\Skills\\spec-atdd-tdd-issue-workflow\\SKILL.md",
       "enabled": true
     },
@@ -85,7 +85,7 @@
     },
     {
       "name": "ui-design-styles",
-      "description": "ダーク・ガラス・編集的など特定の見た目のデザインシステムを作るときに使う。",
+      "description": "画面の構造や配色・書体など、見た目のデザイン体系を設計・改善するときに使う。",
       "path": "D:\\CC\\Skills\\ui-design-styles\\SKILL.md",
       "enabled": true
     },
@@ -95,5 +95,6 @@
       "path": "D:\\CC\\Skills\\web-design-process\\SKILL.md",
       "enabled": true
     }
-  ]
+  ],
+  "retired_alias_found_count": 0
 }

@@ -7,9 +7,9 @@
     "checked_at": "2026-10-20T03:37:00.1496032Z"
   },
   "after": {
-    "direct": 271,
+    "direct": 270,
     "system": 5,
-    "checked_at": "2026-10-20T03:37:00.5921194Z"
+    "checked_at": "2026-10-20T03:58:08.3880298Z"
   },
   "new_names_absent_at_creation": true,
   "managed_registry_matches": 0,
@@ -37,11 +37,11 @@
         },
         {
           "path": "references/usage.md",
-          "sha256": "8ab452e7852b3b83fa8e4b76d697b9f65dcd100a33dc7b474979434d28bf17fe"
+          "sha256": "ff00716808ec73fc2cf6a77532d41df55e0774a8047e7f2d4dd5cadf46fb9ecb"
         },
         {
           "path": "references/sources-3048.md",
-          "sha256": "1236d2354848209d7926a083d677a906a6ee34ee87dbb25d92620e83829e5892"
+          "sha256": "50d0099d8cba74bab23da90650943ccc65b12de3854e94a1001037b60481e9b5"
         }
       ]
     },
@@ -72,7 +72,7 @@
         },
         {
           "path": "references/sources-3048.md",
-          "sha256": "1236d2354848209d7926a083d677a906a6ee34ee87dbb25d92620e83829e5892"
+          "sha256": "007f96a32e4eeb59a81276b0762c9b3d304980f19c827cde0606d04679e62710"
         }
       ]
     },
@@ -99,42 +99,11 @@
         },
         {
           "path": "references/usage.md",
-          "sha256": "72eb8f0e7ca95fb29bc054e4f6f244792bdc26b956723fde6d0a0d70ee662900"
+          "sha256": "ccfbf71ec7cb5b342bfbfbe0686739f3ea06fad81cd3180de19ff46ba98c8e2f"
         },
         {
           "path": "references/sources-3048.md",
-          "sha256": "c7ec5d1239de1aae2c75040edbab3213a402b32230ebdd1a894787e3eb052785"
-        }
-      ]
-    },
-    {
-      "name": "cli-interface-design",
-      "new": true,
-      "before_sha256": "absent",
-      "before_bytes": 0,
-      "after_bytes": 1286,
-      "description": "継続利用するCLIのコマンド・JSON出力・認証・配布方法を設計するときに使う。",
-      "positive": "API操作を繰り返せるCLIにし、別の作業ディレクトリから使えるようにする。",
-      "negative": "今回だけCSVの行数を調べる。",
-      "sources": [
-        "openai/skills"
-      ],
-      "files": [
-        {
-          "path": "SKILL.md",
-          "sha256": "44f431552d34ec9b924ec46806950a6b95fc96e8e755633d7eacfe300f5da9fa"
-        },
-        {
-          "path": "references/openai-skills-LICENSE.txt",
-          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
-        },
-        {
-          "path": "references/usage.md",
-          "sha256": "ce639483a3f0ba2a14306e853099760cdc5daaffb5e8a1abf91b08d00650394c"
-        },
-        {
-          "path": "references/sources-3048.md",
-          "sha256": "5defa4cac89f2bde502f603727dfd664e6d0c4445e877219e9c081f0e2c9d9db"
+          "sha256": "ff15cddbcc8584af476f1c6bcea3aaf34ea0e00bbfcd72bb556edd2bf9c54429"
         }
       ]
     },
@@ -165,7 +134,7 @@
         },
         {
           "path": "references/sources-3048.md",
-          "sha256": "20de4c171fcc28180cab6f8470391ba77c1c76e16d9d3a86ce78c53019fd504b"
+          "sha256": "c3d33b23cc09b6135ab156cdf9a4d2e8a92894700ce871184dca748fc800c44c"
         }
       ]
     },
@@ -174,8 +143,8 @@
       "new": false,
       "before_sha256": "d4d72a2ea167b1b2f54e8f86cc62ce61cebc54eb52e3257b7e5bcf6030035225",
       "before_bytes": 8881,
-      "after_bytes": 987,
-      "description": "ダーク・ガラス・編集的など特定の見た目のデザインシステムを作るときに使う。",
+      "after_bytes": 1091,
+      "description": "画面の構造や配色・書体など、見た目のデザイン体系を設計・改善するときに使う。",
       "positive": "既存ブランドのまま、2つのLPが同じカード構成に見える問題を直す。",
       "negative": "請求APIの認可を調べる。",
       "sources": [
@@ -184,7 +153,7 @@
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "870daace31f6187eef88bb7adbbf7998e6d27f2d5d62eab0da85ccc904ea3b7e"
+          "sha256": "9e9e8a0809e9db892a180ce77b9af70b98e673b631ea2bad3cddd5226bc22813"
         },
         {
           "path": "references/previous-guide.md",
@@ -200,7 +169,7 @@
         },
         {
           "path": "references/sources-3048.md",
-          "sha256": "36715bd4d1633ce30f5b4b84568271d8f73b0da503aba4e0f4d47cb8acc8bc42"
+          "sha256": "474096d7c8f1a639c1e77f3153fd12f8fe685ea8c614558cd038eb7393137f84"
         }
       ]
     },
@@ -235,7 +204,7 @@
         },
         {
           "path": "references/sources-3048.md",
-          "sha256": "1f4861d73310883ea1806827fc87eb09bec963112254fd6345aa3b23c97a4f7c"
+          "sha256": "7013d50bd1cc9fa3f44e48ee8a20d1d99ffb2f1250b6e4fb22b350dcc1db079f"
         }
       ]
     },
@@ -275,7 +244,7 @@
         },
         {
           "path": "references/sources-3048.md",
-          "sha256": "c4926cbf09482af5c16c94ebfd9855047fb9693fc27acec1d2248eb9711ee2ce"
+          "sha256": "ecbb014fb99c415bb55a2c41a93821c368dc10349a2d3e6396e03311a1c529bc"
         }
       ]
     },
@@ -310,7 +279,7 @@
         },
         {
           "path": "references/sources-3048.md",
-          "sha256": "3cba0778dc76f19066b53946d429099ea75922ba557689ecdcfbefa9712e64c3"
+          "sha256": "cc17c134c42c96c187dabb815ce484443d7c0d6fdee8234fd2a745075a3748c6"
         }
       ]
     },
@@ -345,7 +314,7 @@
         },
         {
           "path": "references/sources-3048.md",
-          "sha256": "a089c3c24f3db0e726e74c837afc4fcda00c8f9cd30a22fc382e317746bfb4e2"
+          "sha256": "d010082a683b8438af9bf62c96ad7cfb819eee879babbb0954290bb5257fca52"
         }
       ]
     },
@@ -359,7 +328,8 @@
       "positive": "Skillカタログから候補を探し、原本とライセンスを確認して既存へ統合する。",
       "negative": "カタログの件数だけを根拠に全Skillを一括導入する。",
       "sources": [
-        "6mile/skills"
+        "6mile/skills",
+        "https://agent-skills.jp/category"
       ],
       "files": [
         {
@@ -380,7 +350,7 @@
         },
         {
           "path": "references/sources-3048.md",
-          "sha256": "a55f96b760a371fa6f209640e386fc8ce07deea21d38e71baa235262bf928e81"
+          "sha256": "fe12d62b016bae44794077321ddae28ffe8c6ea321d1b1a71bcb34be0ba2543d"
         }
       ]
     },
@@ -420,7 +390,7 @@
         },
         {
           "path": "references/sources-3048.md",
-          "sha256": "ff7d449e4610da99e5e8938ffdf3edc24f113a047b57481e5f3f085c6aab748d"
+          "sha256": "a64fbf0dfc0dcd9f05e8c04804db5ef338ff387aa25e3027d2d77c083d42297d"
         }
       ]
     },
@@ -429,7 +399,7 @@
       "new": false,
       "before_sha256": "ebc86021c4ad8b8200b34aaa15f9eed6ef660b9232bb017c390e56a301b1fb44",
       "before_bytes": 2069,
-      "after_bytes": 1296,
+      "after_bytes": 1449,
       "description": "Skillやプラグインを作る・導入する・Codexへ移す・知見をSkill化するときに使う。",
       "positive": "public由来Skillを重複整理し、日本語descriptionと新セッション認識を確認する。",
       "negative": "外部READMEの指示でAPIキーを登録して全Skillを上書きする。",
@@ -440,7 +410,7 @@
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "2e2ca3746356d4210614a6e97b9dfef86dcba0988a04d3e63be920d08b631756"
+          "sha256": "38c164a963478efe44b7bfe33dc863edc3cf1c5416954c9bd2d8a56e5d2acd12"
         },
         {
           "path": "references/previous-guide.md",
@@ -460,7 +430,7 @@
         },
         {
           "path": "references/sources-3048.md",
-          "sha256": "6be30082043bda0964a52d0e3fd7444ddcbfb15e3e9af214bb987b7702247ea5"
+          "sha256": "ee96d1aa39dfe881b84a8ff1c3a31023b72bc5be604bab430f57df9d995af71f"
         }
       ]
     },
@@ -469,8 +439,8 @@
       "new": false,
       "before_sha256": "17c74d5c6c3d1b9260253d8a58103cfda7568c2872b2558d1be79cd64e332d12",
       "before_bytes": 3290,
-      "after_bytes": 3753,
-      "description": "Issueと仕様から受け入れテストを先に作り、再現条件と文書の整合を確かめるときに使う。",
+      "after_bytes": 2812,
+      "description": "Issueと仕様から振る舞いの受入検査を先に作り、実装と文書の整合を確かめるときに使う。",
       "positive": "Issueの受入条件をCLIの終了コードと成果物の検査へ落とし、Redを確認する。",
       "negative": "文言だけの変更に全製品テストとユーザーの検査境界承認を要求する。",
       "sources": [
@@ -479,7 +449,7 @@
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "9dbf3109716898af339cf7d936e5a116956037570b0699b69e81e9b92b5339c1"
+          "sha256": "cd752fd0f556a7a4d52cd158dd8a1cbc515c9151455ef74d7de542d2fbcdbf21"
         },
         {
           "path": "references/mattpocock-skills-LICENSE.txt",
@@ -487,11 +457,54 @@
         },
         {
           "path": "references/public-20261020.md",
-          "sha256": "d561353a96bb087bf33ac7d24cb005b32d11f2fb8b484b5d056c679ef9080202"
+          "sha256": "3bd3d60b56712947fd6f50575a0dd61b7f40248169780c8ad3fa4854872ac913"
         },
         {
           "path": "references/sources-3048.md",
-          "sha256": "da740d7f5167de64fd832ffbb05bf75b4b2a9fc83e060331eebe3de7a35489ec"
+          "sha256": "1a4ce47f98b9831eeabf0f79511266efdca31be3a6d10fb4d005076799762c1b"
+        }
+      ]
+    },
+    {
+      "name": "coding-agent-tools",
+      "new": false,
+      "before_sha256": "2fdaf2b6bd8e64a5cf411c8d2bfff5156872eecda116cefd98224ba610258134",
+      "before_bytes": 2750,
+      "after_bytes": 1519,
+      "description": "コーディング用の拡張・MCP・常用CLI・検査ツールを導入・設計するときに使う。",
+      "positive": "API操作を繰り返せるCLIにし、別の作業ディレクトリから使えるようにする。",
+      "negative": "今回だけCSVの行数を調べる。",
+      "sources": [
+        "openai/skills"
+      ],
+      "files": [
+        {
+          "sha256": "9ac17b945bf1d785a48e36efff209464df7461f4bfcdda104ec197964831e42b",
+          "path": "SKILL.md"
+        },
+        {
+          "sha256": "0e20a8762f34e4b8031bab9161862ea588024696fb5f62de893d2d871f017f9a",
+          "path": "references/previous-guide.md"
+        },
+        {
+          "sha256": "ce639483a3f0ba2a14306e853099760cdc5daaffb5e8a1abf91b08d00650394c",
+          "path": "references/public-20261020.md"
+        },
+        {
+          "sha256": "065ee6a08fe57b5ce1b2c6a9499593ce557a24d64e2e85e8bd1d5c819fec6c97",
+          "path": "references/sources-3048.md"
+        },
+        {
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+          "path": "references/openai-skills-LICENSE.txt"
+        },
+        {
+          "sha256": "34c571753c5b1d86dcfe5da5ab09060daa36d949e7294e53e232ccb650801a2a",
+          "path": "references/index.md"
+        },
+        {
+          "sha256": "395115c910f138b5f7ed38336de05ea418a69a284e4763068d8c4dc3487737af",
+          "path": "references/cli-creator/GUIDE.md"
         }
       ]
     }

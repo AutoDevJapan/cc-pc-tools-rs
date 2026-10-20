@@ -2,6 +2,45 @@
 
 関連Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/325
 
+## 2026-10-21 08:24 JSTの再開照合
+
+PR315は今回の正常照会でもOPENで、通常マージは未実施でした。headは
+`635b7e505e41f4b74cde1760674cae02d0b7ae78` へ進み、baseはmain、mergeCommitと
+mergedAtはnullでした。同headの自動検査はSUCCESS15件、SKIPPED1件、NEUTRAL1件で
+全件終了していましたが、これを別モデル合格・マージ・配布とは扱いません。
+
+- 元3153の正常な現在noteでは、3205のOpus5.5/maxレビューは8file読了・Must0でした。
+  その後、再取得probeの書込に関する指摘を実CLIのRedから修正し、2fileの追加確認を
+  3216へ登録したとの記録があります。元3153の実待ち先は3216で、3216の正常metadataは
+  todo、jobsTotal=0でした。3216の着手・読了・合格を確認した記録ではありません。
+- 自分の今回の実jobは `20261021-082145-todo-3190`。再開時HEADは
+  `f45197be04c81376d1d822fcf32cf834a2729429`、未コミット差分なしでoriginとも一致しました。
+  正常jobs statusは `gpt-6.1-sol` / effort `max` / running / todo_id 3190で、cwdも一致。
+  今回も実turn_contextは独立照合していません。自分の正常metadataのjobsTotalは2でした。
+- 起動入口の保存済みオーナー指示、worktreeのAGENTS.md、前回の再開記録を読み直しました。
+  実GitHub所有者は正常repo照会でAutoDevJapan、自分のworktreeのguardはok=true、
+  client_resource=false、classification_unverified=falseでした。原保護一覧の復旧は未確認です。
+- 今回追加した読取は正常repo/PR照会、3153の正常現在note、3190/3153/3216の正常metadata、
+  自分の正常jobs status、Git状態です。本人回答の私的原資料、元仕様、applied、旧台帳、
+  保護名簿、稼働実物/hashは開いていません。3181の既確認レビューを最新headへ流用しません。
+
+元3190で `wait-retry --after 3600` を1回だけ登録し、終了0でした。正常readbackはstatus=wait、
+condition=retry-time、notBefore=1792542288（2026-10-21 09:24:48 JST）、jobsTotal=2、wait_on空。
+最新head・レビュー待ち・今回の検査結果を元ToDoの待機理由へ保存しました。既存noteと履歴を
+保持し、3153全体や3216だけのdone待ち、本人判断blockへ置き換えていません。
+実装・受入検査・新規レビュー依頼・マージ・配布・方向の実追記・質問closeは未実施です。
+元3050/3084と他の停止・依存、元3153の未資格scope、未完コード/Prdは変更していません。
+
+登録とreadbackの原票はworktree直下の
+`todo3190-wait-registration-20261021-082145.private.json` と
+`todo3190-wait-readback-20261021-082145.private.json` です。この文書だけをcommit/pushし、
+同じ正式jobと最新HEADのcheckpointを保存して終了します。その要求・結果は同じ場所の
+`todo3190-checkpoint-final-20261021-082145.private.json` と
+`todo3190-checkpoint-final-result-20261021-082145.private.json` に残します。
+次回もPR315の通常マージを1回照合し、未マージなら元番号の有限待機、マージ済みなら
+実merge commitの確認と最新mainの統合から続けます。今回、新しい本人質問・メンション・
+通常完了通知、子job、GPU、ビルド、新常駐、配備方針変更はありません。
+
 ## 2026-10-21 07:04 JSTの再開照合
 
 方向記録の実装は引き続き未着手です。PR315が未マージのため、元3190の技術再確認待ちを

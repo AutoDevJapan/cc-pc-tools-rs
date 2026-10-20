@@ -1,7 +1,7 @@
 package main
 
-// Qualification for the two exact new 3084 design outputs. This never changes
-// scrub391 classification, restores a registry, or grants a directory access.
+// Qualification is scoped to one question and independently recorded native
+// generation evidence. It never changes the general source classification.
 import (
 	"bufio"
 	"context"
@@ -14,10 +14,6 @@ import (
 )
 
 const generatedQuestionDomain = "owner-generated-question-image-v1"
-const generatedQuestionSession = "01a1589a-24ef-7742-9d87-efee972aa027"
-const generatedQuestionProofRoot = "D:/CC/Work/unattended-operations-20261013-wt/todo-3084-console-redesign/.ci-work/console-redesign-3084"
-const generatedQuestionArtifactRoot = "C:/Users/makhmeto/.codex/generated_images/" + generatedQuestionSession
-const generatedQuestionRollout = "C:/Users/makhmeto/.codex/sessions/2026/10/20/rollout-2026-10-20T18-17-39-" + generatedQuestionSession + ".jsonl"
 
 type generatedQuestionScope struct {
 	Todo     uint64 `json:"todo_id"`
@@ -27,11 +23,6 @@ type generatedQuestionScope struct {
 	Guild    string `json:"guild_id"`
 	Forum    string `json:"forum_id"`
 }
-
-var generatedQuestion3084 = generatedQuestionScope{3084,
-	"c2d113c65e2e2dae5be18da2c55de68f777f9287f450eab014ba985ed509e425",
-	"b3e571917027bbaec5862f1797fd5b10d82c22346c713700e1ba350699b3b092",
-	"730822776147148835", "1552944707464597524", "1554276307997692004"}
 
 type generatedImageQualification struct {
 	Domain    string                 `json:"domain"`
@@ -44,19 +35,33 @@ type generatedImageQualification struct {
 }
 
 type generatedImageBound struct {
-	Path, SHA256, Record, RecordSHA, PromptSHA, Option string
-	Size                                               int64
-	Revision, Order                                    int
+	Path      string `json:"path"`
+	SHA256    string `json:"sha256"`
+	Record    string `json:"record_path"`
+	RecordSHA string `json:"record_sha256"`
+	PromptSHA string `json:"prompt_sha256"`
+	Option    string `json:"option"`
+	Size      int64  `json:"size"`
+	Revision  int    `json:"revision"`
+	Order     int    `json:"order"`
 }
 type generatedEventBound struct {
-	Line                  int
-	SHA, Kind, Name, Call string
+	Line int    `json:"line"`
+	SHA  string `json:"sha256"`
+	Kind string `json:"kind"`
+	Name string `json:"name"`
+	Call string `json:"call_id"`
 }
 type generatedQuestionSpec struct {
 	Scope                             generatedQuestionScope
 	Session, Proof, ProofSHA, Rollout string
 	Images                            []generatedImageBound
 	Events                            []generatedEventBound
+	SessionSHA                        string
+	Assignment                        generatedEventBound
+	Cell                              string
+	Created, Expires                  time.Time
+	Load                              func(context.Context, string, generatedQuestionScope) (generatedQuestionSpec, error)
 	Read                              func(string, int64) ([]byte, error)
 	Guard                             func(context.Context, string) (bool, error)
 	Records                           func(string, []generatedEventBound) ([]json.RawMessage, error)
@@ -66,17 +71,8 @@ type generatedQuestionSpec struct {
 }
 
 func generatedQuestionProduction() generatedQuestionSpec {
-	return generatedQuestionSpec{Scope: generatedQuestion3084, Session: generatedQuestionSession,
-		Proof: generatedQuestionProofRoot + "/tool-event-proof.private.json", ProofSHA: "9baffc15bd6bafa7ef88103468a9773b470d3baf7e2ff0ddde0cd6e6cd11cb30", Rollout: generatedQuestionRollout,
-		Images: []generatedImageBound{
-			{Path: generatedQuestionArtifactRoot + "/exec-80fffc6b-f839-4be7-8a0c-eb2b46fa56d3.png", SHA256: "90427e42bcb95129b5b618824c7a224dd1773187bcad32b3d4d94a160b34fa9a", Size: 1534375, Record: generatedQuestionProofRoot + "/generation-a-v3.private.json", RecordSHA: "f56cf86ca2c936a92fb2be684f6c2c18fa506ebf5249fe50dcfbe927a906356e", PromptSHA: "d2ce929a571cf8c7f7df2bf34299b94150baaf26910fc6ac37900992b781bfe8", Option: "a", Revision: 3, Order: 1},
-			{Path: generatedQuestionArtifactRoot + "/exec-673f1fed-5c39-4c28-9bfe-dc897cdaf4ba.png", SHA256: "69ab52afa23e1701e2e477e36ef5fb9d0017ff5d63c76e631352ab288beea195", Size: 1611163, Record: generatedQuestionProofRoot + "/generation-b-v2.private.json", RecordSHA: "23b03f4a5dd171184301ef73870b74723d35cb35bb19e4524cdcf7a93fa7d77a", PromptSHA: "d88a2c5332f7d7513eb4f9ef7d55226d1a7290755ef5a6f41b0d6491705f2f99", Option: "b", Revision: 2, Order: 2},
-		}, Events: []generatedEventBound{
-			{237, "7e7d57a366922fa5240fc4ca971b40555355ee47a82797a1becb0d5b002035ee", "custom_tool_call", "exec", "call_35bd13ad20dc4c6dbf6a53f3789c1635"},
-			{239, "b20aeb7b7d75512f8c55dc741d0316916b0a94246dc2f1173b9c738a0898a363", "custom_tool_call_output", "", "call_35bd13ad20dc4c6dbf6a53f3789c1635"},
-			{259, "37d79800ccd3d8d0b4d07ef502e017dd5565e1229fc58d7408e3cae72e6c02c0", "function_call", "wait", "call_64edcf6e28004a99b9ca7b202d34763d"},
-			{261, "d731d4256abc58bb9be1d69496e07f54f8970ef654fb95051d38a131e0cf5e8a", "function_call_output", "", "call_64edcf6e28004a99b9ca7b202d34763d"},
-		}, Read: generatedQuestionRead, Guard: conversationMediaLiveGuard, Records: generatedQuestionRecords, Task: generatedQuestionTask, SourceClear: generatedQuestionSourceClear, Now: time.Now}
+	r := generatedQuestionRegistryProduction()
+	return generatedQuestionSpec{Load: r.load}
 }
 
 // Preserve any available original exclusion in memory; never export its rows.
@@ -153,7 +149,7 @@ func generatedQuestionRecords(path string, expected []generatedEventBound) ([]js
 	return result, nil
 }
 
-func generatedQuestionTask() bool {
+func generatedQuestionTask(todo uint64) bool {
 	var db struct {
 		Items []struct {
 			ID              uint64 `json:"id"`
@@ -167,8 +163,8 @@ func generatedQuestionTask() bool {
 	}
 	found := 0
 	for _, row := range db.Items {
-		if row.ID == 3084 {
-			if row.Project != "cc-pc-tools-rs" || row.Stopped || row.OwnerStopped {
+		if row.ID == todo {
+			if row.Project == "" || row.Stopped || row.OwnerStopped {
 				return false
 			}
 			switch row.Status {
@@ -183,11 +179,18 @@ func generatedQuestionTask() bool {
 }
 
 func qualifyGeneratedQuestionImage(ctx context.Context, path string, scope generatedQuestionScope, s generatedQuestionSpec) (*generatedImageQualification, error) {
+	if s.Load != nil {
+		loaded, err := s.Load(ctx, path, scope)
+		if err != nil {
+			return nil, errConversationMedia
+		}
+		s = loaded
+	}
 	if scope != s.Scope || s.Read == nil || s.Guard == nil || s.Records == nil || s.Task == nil || s.SourceClear == nil || s.Now == nil || ctx.Err() != nil {
 		return nil, errConversationMedia
 	}
 	now := s.Now()
-	if now.Before(time.Date(2026, 10, 20, 9, 39, 19, 0, time.UTC)) || !now.Before(time.Date(2026, 10, 27, 0, 0, 0, 0, time.UTC)) || !s.Task() {
+	if s.Created.IsZero() || s.Expires.IsZero() || now.Before(s.Created) || !now.Before(s.Expires) || s.Expires.After(s.Created.Add(7*24*time.Hour)) || !s.Task() {
 		return nil, errConversationMedia
 	}
 	physical, _, err := conversationMediaPhysical(path)
@@ -201,6 +204,9 @@ func qualifyGeneratedQuestionImage(ctx context.Context, path string, scope gener
 		}
 	}
 	if image == nil {
+		return nil, errConversationMedia
+	}
+	if validateGeneratedAssignment(s) != nil {
 		return nil, errConversationMedia
 	}
 	if !s.SourceClear(physical) {
@@ -228,7 +234,7 @@ func qualifyGeneratedQuestionImage(ctx context.Context, path string, scope gener
 					Hint string `json:"output_hint"`
 				}
 			}
-			if json.Unmarshal(b, &g) != nil || g.Todo != scope.Todo || g.Option != image.Option || g.Revision != image.Revision || g.Mode != "new_generation" || g.Tool != "image_gen__imagegen" || g.Orchestrator != "functions.exec" || g.ExecCellID != "25" || g.InvocationOrder != image.Order || len(g.InputImages) != 0 || g.SessionArtifactDirectoryFromTool != s.Session || !conversationMediaSamePath(filepath.FromSlash(g.OriginalPath), physical) || len(g.Request) != 2 {
+			if json.Unmarshal(b, &g) != nil || g.Todo != scope.Todo || g.Option != image.Option || g.Revision != image.Revision || g.Mode != "new_generation" || g.Tool != "image_gen__imagegen" || g.Orchestrator != "functions.exec" || g.ExecCellID != s.Cell || g.InvocationOrder != image.Order || g.InputImages == nil || len(g.InputImages) != 0 || g.SessionArtifactDirectoryFromTool != s.Session || !conversationMediaSamePath(filepath.FromSlash(g.OriginalPath), physical) || len(g.Request) != 2 {
 				return nil, errConversationMedia
 			}
 			var prompt string
@@ -240,6 +246,9 @@ func qualifyGeneratedQuestionImage(ctx context.Context, path string, scope gener
 	}
 	records, err := s.Records(s.Rollout, s.Events)
 	if err != nil || len(records) != len(s.Events) {
+		return nil, errConversationMedia
+	}
+	if validateGeneratedQuestionNative(records, s) != nil {
 		return nil, errConversationMedia
 	}
 	for i, raw := range records {

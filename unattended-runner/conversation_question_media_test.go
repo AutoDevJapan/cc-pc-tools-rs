@@ -5,11 +5,88 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"testing"
 )
+
+func TestConversationSemanticImageConflictDoesNotRemainReserved(t *testing.T) {
+	for _, posted := range []bool{false, true} {
+		t.Run(fmt.Sprint(posted), func(t *testing.T) {
+			f := conversationTest(t, true)
+			f.input.Wait = false
+			first := conversationQuestionImagePath(t, f)
+			data := []byte("\x89PNG\r\n\x1a\nfirst")
+			if err := os.WriteFile(first, data, 0600); err != nil {
+				t.Fatal(err)
+			}
+			f.input.Attachments = []string{first}
+			base := f.r.Run
+			f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+				if len(args) > 0 && args[0] == "recovery-ask" {
+					if !posted {
+						return "", errors.New("original send response pending")
+					}
+					raw, err := base(ctx, path, args...)
+					var value map[string]any
+					_ = json.Unmarshal([]byte(raw), &value)
+					value["image_sha256"] = []string{bytesHash(data)}
+					b, _ := json.Marshal(value)
+					return string(b), err
+				}
+				return base(ctx, path, args...)
+			}
+			_, _ = f.r.conversationAsk(context.Background(), f.input)
+			index, err := f.r.loadConversations()
+			if err != nil {
+				t.Fatal(err)
+			}
+			old := index.Questions[f.input.RequestID]
+			calls := 0
+			f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+				if len(args) == 0 || args[0] != "recovery-ask" {
+					return base(ctx, path, args...)
+				}
+				calls++
+				report := map[string]any{"domain": "new-owner-recovery-messages", "request_id": args[2], "outcome": "existing_question_images_differ", "delivery": "not_sent", "todo_id": old.Todo, "existing_request_id": old.SenderID, "thread_id": "", "url": "", "existing_metadata_verified": false}
+				if posted {
+					report["thread_id"] = old.Thread
+					report["url"] = "https://discord.com/channels/" + f.r.State.Destination.Guild + "/" + old.Thread
+					report["existing_metadata_verified"] = true
+				}
+				b, _ := json.Marshal(report)
+				return string(b), nil
+			}
+			next := f.input
+			next.RequestID = "semantic-image-conflict"
+			second := filepath.Join(filepath.Dir(first), "second.png")
+			_ = os.WriteFile(second, []byte("\x89PNG\r\n\x1a\nsecond"), 0600)
+			next.Attachments = []string{second}
+			d, err := os.ReadFile(next.DecisionFile)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var value map[string]any
+			_ = json.Unmarshal(d, &value)
+			value["presentation_note"] = "ignored by sender identity"
+			d, _ = json.Marshal(value)
+			_ = os.WriteFile(next.DecisionFile, d, 0600)
+			q, err := f.r.conversationAsk(context.Background(), next)
+			if err != nil || q.Phase != "duplicate" || q.Wait || calls != 1 {
+				t.Fatalf("duplicate did not terminate: %v %+v", err, q)
+			}
+			index, err = f.r.loadConversations()
+			if err != nil || len(index.Questions) != 1 || index.Questions[old.RequestID].Phase != old.Phase {
+				t.Fatal("duplicate changed original or retained a retry", err)
+			}
+			if posted != (q.ExistingURL != "") {
+				t.Fatal("unverified or missing duplicate URL")
+			}
+		})
+	}
+}
 
 func TestConversationCLIAskAttachments(t *testing.T) {
 	args := append(conversationAskArgs(), "--attach=first.png", "--attach", "second.png")

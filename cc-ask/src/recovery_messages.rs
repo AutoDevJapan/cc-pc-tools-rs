@@ -2937,6 +2937,9 @@ fn execute_inner(
         }
         _ => return Err("exact recovery ask input is required".into()),
     };
+    if let Some(report) = different_question_images(ctx, &mut ledger, &incoming)? {
+        return Ok(report);
+    }
     correct_unposted_origin(ctx, &mut ledger, &incoming)?;
     let reused = ledger.request(&incoming.request_id).is_some()
         || ledger.events.iter().any(|event| {
@@ -3139,6 +3142,71 @@ fn execute_inner(
         )?;
     }
     Ok(report(&ledger, &request, reused))
+}
+
+// A semantic image conflict is terminal for this new input, including when the
+// original question is still reserved. Never reserve it or prompt endless POST
+// retries. Any returned URL is independently rechecked with GET.
+fn different_question_images(
+    ctx: &mut Context,
+    ledger: &mut Ledger,
+    incoming: &Request,
+) -> Result<Option<Value>> {
+    if ledger.request(&incoming.request_id).is_some() {
+        return Ok(None);
+    }
+    let Some(original) = ledger.events.iter().find_map(|event| {
+        let Event::Intent { request } = event else {
+            return None;
+        };
+        match (&request.operation, &incoming.operation) {
+            (
+                Kind::Ask {
+                    decision_identity: a,
+                    ..
+                },
+                Kind::Ask {
+                    decision_identity: b,
+                    ..
+                },
+            ) if request.destination == incoming.destination
+                && a == b
+                && request.images != incoming.images =>
+            {
+                Some(request.as_ref().clone())
+            }
+            _ => None,
+        }
+    }) else {
+        return Ok(None);
+    };
+    let mut thread = String::new();
+    let mut url = String::new();
+    if let Some(receipt) = ledger.receipt(&original.request_id, "question:0").cloned() {
+        let effect = ledger
+            .effect(&original.request_id, "question:0")
+            .cloned()
+            .ok_or("saved original question effect unavailable")?;
+        let mut api = RecoveryApi::bind(ctx, ledger, &original)?;
+        api.verify(
+            ledger,
+            &original,
+            &effect,
+            &receipt.thread_id,
+            &receipt.message_id,
+        )?;
+        thread = receipt.thread_id;
+        url = original.destination.url(&thread);
+    }
+    let todo = match original.operation {
+        Kind::Ask { todo_id, .. } => todo_id,
+        _ => unreachable!(),
+    };
+    Ok(Some(
+        json!({"domain":DOMAIN,"request_id":incoming.request_id,"outcome":"existing_question_images_differ",
+        "delivery":"not_sent","todo_id":todo,"existing_request_id":original.request_id,
+        "thread_id":thread,"url":url,"existing_metadata_verified":!url.is_empty(),"wait_requested":false}),
+    ))
 }
 
 fn owner_replies(
@@ -4075,6 +4143,71 @@ mod tests {
             };
             fixture.unchanged();
         }
+    }
+
+    #[test]
+    fn different_question_images_are_terminal_even_for_reserved_or_semantic_duplicates() {
+        for posted in [false, true] {
+            let fixture = Fixture::new();
+            let mut ctx = fixture.context();
+            let original = fixture.ask(
+                &format!("conversation-v1-{}", "a".repeat(32)),
+                "a または b を選んでください。",
+            );
+            if posted {
+                ask(&mut ctx, &original).unwrap();
+            } else {
+                ensure_storage(&fixture.home).unwrap();
+                let incoming = prepare_ask(&ctx, &original).unwrap();
+                reserve(
+                    &mut Ledger::load(&fixture.home).unwrap(),
+                    &fixture.home,
+                    &incoming,
+                )
+                .unwrap();
+            }
+            let original_posts = fixture.server.lock().unwrap().posts.len();
+            let before = Ledger::load(&fixture.home).unwrap().events.len();
+            let mut next = fixture.ask(
+                &format!("conversation-v1-{}", "b".repeat(32)),
+                "同じ判断で別画像です。",
+            );
+            let mut decision: Value =
+                serde_json::from_str(&fs::read_to_string(&next.decision_file).unwrap()).unwrap();
+            decision["presentation_note"] = json!("ignored by normalized decision identity");
+            fs::write(&next.decision_file, decision.to_string()).unwrap();
+            fs::remove_file(&ctx.client_projects).unwrap();
+            let bytes = b"\x89PNG\r\n\x1a\nnew-image";
+            let image = fixture.root.path().join("new-image.png");
+            fs::write(&image, bytes).unwrap();
+            media_mock(&fixture, &mut ctx, media_proof(bytes), 0);
+            next.attach.push(image);
+            let result = ask(&mut ctx, &next).unwrap();
+            assert_eq!(result["outcome"], "existing_question_images_differ");
+            assert_eq!(result["delivery"], "not_sent");
+            assert_eq!(result["existing_request_id"], original.request_id);
+            assert_eq!(result["url"].as_str().unwrap().is_empty(), !posted);
+            let ledger = Ledger::load(&fixture.home).unwrap();
+            assert!(ledger.request(&next.request_id).is_none());
+            assert_eq!(ledger.events.len(), before);
+            assert_eq!(fixture.server.lock().unwrap().posts.len(), original_posts);
+            fixture.unchanged();
+        }
+    }
+
+    #[test]
+    fn reserved_question_rejects_different_expected_sha_before_http() {
+        let fixture = Fixture::new();
+        let mut ctx = fixture.context();
+        let mut args = fixture.ask("expected-sha-conflict", "a または b を選んでください。");
+        ask(&mut ctx, &args).unwrap();
+        let before = fixture.server.lock().unwrap().calls.len();
+        args.expected_image_sha256 = vec!["a".repeat(64)];
+        assert!(ask(&mut ctx, &args)
+            .unwrap_err()
+            .contains("saved question image SHA differs"));
+        assert_eq!(fixture.server.lock().unwrap().calls.len(), before);
+        fixture.unchanged();
     }
 
     #[test]

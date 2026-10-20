@@ -272,7 +272,9 @@ func conversationQuestionPublic(q ConversationQuestion) map[string]any {
 	result := map[string]any{"domain": conversationDomain, "request_id": q.RequestID, "todo_id": q.Todo, "phase": q.Phase, "wait_requested": q.Wait}
 	if q.Phase == "duplicate" {
 		result["outcome"] = "existing_question_images_differ"
-		result["url"] = q.ExistingURL
+		if q.ExistingURL != "" {
+			result["url"] = q.ExistingURL
+		}
 	}
 	for key, value := range map[string]string{"origin_thread_id": q.OriginThread, "thread_id": q.Thread, "question_message_id": q.Message, "progress_thread_id": q.Progress, "question_fingerprint": q.Fingerprint, "question_receipt_sha256": q.ReceiptSHA, "created_at": q.Created} {
 		if value != "" {

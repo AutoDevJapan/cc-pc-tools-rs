@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -12,18 +13,35 @@ import (
 	"time"
 )
 
+var generatedQuestion3084 = generatedQuestionScope{3084, strings.Repeat("a", 64), strings.Repeat("b", 64), "730822776147148835", "1552944707464597524", "1554276307997692004"}
+
 func generatedFixture(t *testing.T) (generatedQuestionSpec, string) {
 	t.Helper()
 	root, err := filepath.EvalSymlinks(t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
-	image := filepath.Join(root, "original.png")
+	return generatedFixtureAt(t, root, 3084, "01234567-0123-0123-0123-012345678901")
+}
+
+func generatedFixtureAt(t *testing.T, root string, todo uint64, session string) (generatedQuestionSpec, string) {
+	t.Helper()
+	var err error
+	image := filepath.Join(root, "generated_images", session, "exec-01234567-0123-0123-0123-012345678902.png")
+	if err = os.MkdirAll(filepath.Dir(image), 0700); err != nil {
+		t.Fatal(err)
+	}
 	data := []byte("\x89PNG\r\n\x1a\nnew-generated-image")
 	if err = os.WriteFile(image, data, 0600); err != nil {
 		t.Fatal(err)
 	}
-	s := generatedQuestionSpec{Scope: generatedQuestion3084, Session: "fixture-session", Proof: filepath.Join(root, "proof.json"), Rollout: filepath.Join(root, "rollout.jsonl"), Read: generatedQuestionRead, Guard: func(context.Context, string) (bool, error) { return true, nil }, Records: generatedQuestionRecords, Task: func() bool { return true }, Now: func() time.Time { return time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC) }}
+	created := time.Date(2026, 10, 20, 0, 0, 0, 0, time.UTC)
+	s := generatedQuestionSpec{Scope: generatedQuestion3084, Session: session, Proof: filepath.Join(root, "proof.json"), Rollout: filepath.Join(root, "sessions", "rollout-2026-10-20T09-00-00-"+session+".jsonl"), Cell: "25", Created: created, Expires: created.Add(7 * 24 * time.Hour), Read: generatedQuestionRead, Guard: func(context.Context, string) (bool, error) { return true, nil }, Records: generatedQuestionRecords, Task: func() bool { return true }, Now: func() time.Time { return time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC) }}
+	if err = os.MkdirAll(filepath.Dir(s.Rollout), 0700); err != nil {
+		t.Fatal(err)
+	}
+	s.Scope.Todo = todo
+	s.Proof = filepath.Join(root, session+"-proof.json")
 	s.SourceClear = func(string) bool { return true }
 	proof := []byte(`{"source":"independently pinned tool proof"}`)
 	if err = os.WriteFile(s.Proof, proof, 0600); err != nil {
@@ -31,8 +49,9 @@ func generatedFixture(t *testing.T) (generatedQuestionSpec, string) {
 	}
 	s.ProofSHA = bytesHash(proof)
 	g := map[string]any{"todo": 3084, "option": "a", "revision": 3, "mode": "new_generation", "tool": "image_gen__imagegen", "orchestrator": "functions.exec", "execCellId": "25", "invocationOrder": 1, "inputImages": []any{}, "originalPath": image, "sessionArtifactDirectoryFromTool": s.Session, "request": map[string]any{"prompt": "fictional owner UI mockup", "transparent_background": false}, "response": map[string]any{"output_hint": "Generated images are saved as " + image}}
+	g["todo"] = todo
 	b, _ := json.Marshal(g)
-	record := filepath.Join(root, "generation.json")
+	record := filepath.Join(root, session+"-generation.json")
 	if err = os.WriteFile(record, b, 0600); err != nil {
 		t.Fatal(err)
 	}
@@ -41,16 +60,30 @@ func generatedFixture(t *testing.T) (generatedQuestionSpec, string) {
 	names := []string{"exec", "", "wait", ""}
 	calls := []string{"creation", "creation", "wait", "wait"}
 	var records bytes.Buffer
+	meta, _ := json.Marshal(map[string]any{"type": "session_meta", "payload": map[string]any{"id": session}})
+	assignment, _ := json.Marshal(map[string]any{"type": "response_item", "payload": map[string]any{"type": "message", "role": "user", "content": []any{map[string]any{"type": "input_text", "text": fmt.Sprintf("ToDo%dは主がstart済み。今回の架空UI画像を新規生成する。", todo)}}}})
+	s.SessionSHA = bytesHash(meta)
+	s.Assignment = generatedEventBound{Line: 2, SHA: bytesHash(assignment)}
+	records.Write(meta)
+	records.WriteByte('\n')
+	records.Write(assignment)
+	records.WriteByte('\n')
 	for i, kind := range kinds {
 		payload := map[string]any{"type": kind, "name": names[i], "call_id": calls[i]}
 		if i == 0 {
-			payload["input"] = "tools.image_gen__imagegen({prompt:promptA,transparent_background:false})"
+			payload["input"] = "const result=await tools.image_gen__imagegen({prompt:promptA,transparent_background:false});generatedImage(result)"
+		}
+		if i == 1 {
+			payload["output"] = "Script running with cell ID 25\nWall time 0.0 seconds\nOutput:\n"
+		}
+		if i == 2 {
+			payload["arguments"] = `{"cell_id":"25"}`
 		}
 		if i == 3 {
-			payload["output"] = []any{map[string]any{"text": "Generated as " + image}}
+			payload["output"] = []any{map[string]any{"type": "input_image", "image_url": "data:image/png;base64," + base64.StdEncoding.EncodeToString(data)}, map[string]any{"type": "input_text", "text": "Generated images are saved to " + filepath.Dir(image) + " as " + image + " by default.\n"}}
 		}
-		raw, _ := json.Marshal(map[string]any{"type": "response_item", "payload": payload})
-		s.Events = append(s.Events, generatedEventBound{i + 1, bytesHash(raw), kind, names[i], calls[i]})
+		raw, _ := json.Marshal(map[string]any{"type": "response_item", "timestamp": created.Add(time.Duration(i) * time.Second), "payload": payload})
+		s.Events = append(s.Events, generatedEventBound{i + 3, bytesHash(raw), kind, names[i], calls[i]})
 		records.Write(raw)
 		records.WriteByte('\n')
 	}

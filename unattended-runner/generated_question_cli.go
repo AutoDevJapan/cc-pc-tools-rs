@@ -65,3 +65,36 @@ func generatedQuestionCLIWithSpec(args []string, out io.Writer, spec generatedQu
 	}
 	return 0
 }
+
+func generatedQuestionRegisterCLI(args []string, out io.Writer, registry generatedQuestionRegistry) int {
+	return generatedQuestionEvidenceCLI(args, out, registry, false)
+}
+
+func generatedQuestionEvidenceCLI(args []string, out io.Writer, registry generatedQuestionRegistry, checkOnly bool) int {
+	fs := flag.NewFlagSet("register-generated-question-media", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	var evidence string
+	conversationStringFlag(fs, "evidence", &evidence)
+	fail := func() int { _, _ = io.WriteString(out, "generated question evidence not registered\n"); return 1 }
+	if fs.Parse(args) != nil || fs.NArg() != 0 || evidence == "" {
+		return fail()
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	var count int
+	var err error
+	if checkOnly {
+		var b generatedQuestionBundle
+		b, err = registry.check(ctx, evidence)
+		count = len(b.Images)
+	} else {
+		count, err = registry.register(ctx, evidence)
+	}
+	if err != nil {
+		return fail()
+	}
+	if json.NewEncoder(out).Encode(map[string]any{"domain": generatedEvidenceDomain, "images": count, "registered": !checkOnly, "validated": true}) != nil {
+		return 1
+	}
+	return 0
+}

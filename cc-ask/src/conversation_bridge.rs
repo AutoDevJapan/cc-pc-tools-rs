@@ -409,7 +409,7 @@ fn metadata(raw: &str, ask: bool) -> Result<Value> {
         if result["phase"] == "duplicate"
             && (result["outcome"] != "existing_question_images_differ"
                 || result["wait_requested"] != false
-                || !result["url"].is_string())
+                || result.get("url").is_some_and(|url| !url.is_string()))
         {
             return Err(CHILD_FAILED.into());
         }

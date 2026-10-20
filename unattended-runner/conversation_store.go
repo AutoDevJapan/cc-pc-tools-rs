@@ -458,6 +458,11 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		}
 		var report struct {
 			Domain, Delivery string
+			Outcome          string          `json:"outcome"`
+			ExistingRequest  string          `json:"existing_request_id"`
+			URL              string          `json:"url"`
+			ExistingVerified bool            `json:"existing_metadata_verified"`
+			Todo             uint64          `json:"todo_id"`
 			Request          string          `json:"request_id"`
 			Thread           string          `json:"thread_id"`
 			Message          string          `json:"message_id"`
@@ -467,7 +472,35 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 			Decision         json.RawMessage `json:"decision"`
 			Images           []string        `json:"image_sha256"`
 		}
-		if json.Unmarshal([]byte(raw), &report) != nil || report.Domain != "new-owner-recovery-messages" || report.Delivery != "verified" || report.Thread != report.Message || report.Request == "" || !shaPattern.MatchString(report.Fingerprint) {
+		decodeErr := json.Unmarshal([]byte(raw), &report)
+		if decodeErr == nil && report.Domain == "new-owner-recovery-messages" && report.Outcome == "existing_question_images_differ" && report.Delivery == "not_sent" && report.Request == q.SenderID && report.Todo == q.Todo && report.ExistingRequest != q.SenderID && conversationID.MatchString(report.ExistingRequest) {
+			if report.Thread != "" {
+				if _, ok := number(report.Thread); !ok || !report.ExistingVerified || report.URL != "https://discord.com/channels/"+r.State.Destination.Guild+"/"+report.Thread {
+					return zero, errors.New("conversation duplicate proof invalid")
+				}
+			} else if report.URL != "" || report.ExistingVerified {
+				return zero, errors.New("conversation duplicate proof invalid")
+			}
+			delete(index.Questions, q.RequestID)
+			for id, alias := range index.Aliases {
+				if alias.Target == q.RequestID {
+					delete(index.Aliases, id)
+				}
+			}
+			if err = publish(r.conversationPath(), index); err != nil {
+				return zero, err
+			}
+			result := q
+			for _, old := range index.Questions {
+				if old.SenderID == report.ExistingRequest {
+					result = old
+					break
+				}
+			}
+			result.Phase, result.Wait, result.ExistingURL = "duplicate", false, report.URL
+			return result, nil
+		}
+		if decodeErr != nil || report.Domain != "new-owner-recovery-messages" || report.Delivery != "verified" || report.Thread != report.Message || report.Request == "" || !shaPattern.MatchString(report.Fingerprint) {
 			return zero, errors.New("conversation send verification pending")
 		}
 		if len(report.Images) != len(q.AttachmentHashes) || (len(report.Images) != 0 && canonicalHash(report.Images) != canonicalHash(q.AttachmentHashes)) {

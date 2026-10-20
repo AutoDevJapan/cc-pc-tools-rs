@@ -141,21 +141,28 @@ Go側の検査に失敗した場合、旧方式への切り替えや名簿欠落
 その予約は新しいPOSTを許可しない。未投稿のアップロードでは必ず画像を再検証し、
 Goから渡された期待SHAと異なればHTTP送信前に拒否する。
 
-### 今回生成した確認画像の送信資格
+### 新しく生成した確認画像の送信資格
 
 一般の `scrub391 --guard-path` の未分類結果は変更しない。
-ToDo3084のA-v3/B-v2だけを、元のimagegen session・4つの実ツールイベントのSHA・
-元出力パス・生成記録と入力promptのSHA・画像SHA/サイズで照合する。
+通常の[用途別証拠登録](generated-question-evidence.md)で、元imagegen session・実ツールイベントのSHA・
+元出力パス・生成記録と入力promptのSHA・画像SHA/サイズを質問ごとに照合する。
 原セッションの選択した記録だけを読み、他のメッセージは出力しない。
 さらに質問本文とdecisionのSHA、元ToDo、本人・guild・質問forumを固定照合する。
-検証は既存Go実行物の読取専用モードで行い、HTTP・モデル・状態更新は行わない。
+原sessionのユーザー依頼で元ToDoを、原tool応答のPNG全バイトで元画像を照合する。
+事前確認と送信時の検証は既存Go実行物の読取専用モードで行い、HTTP・モデル・状態更新は行わない。
+登録だけは固定の用途別保存先へ署名付きデータを新規保存する。画像別のコード追加や再配布は不要。
 
 結果は `owner-generated-question-image-v1` の用途付き `qualified` であり、
 一般のclient判定をfalseにしない。未知・コピー先・偽造記録・別質問/別送信先・
 変更済み画像・既存の除外に合う画像は拒否する。原一覧の復旧とは扱わない。
 通常askからの事前検証後も元パスをsource receiptに保持し、送信直前の検証を繰り返す。
 下位Rust送信側も実際の質問内容と用途付き資格を照合し、logへ流用できない。
-最終2枚の対象を旧v1へ読み替えない。資格は2026-10-27 UTCまでに限る。
+今回の実検査はToDo3084のA-v3/B-v2。旧v1の資格は流用しない。資格は実生成callから最大7日までとする。
+
+`outcome=existing_question_images_differ`は、新しい画像を送っていない終了結果である。
+元の質問が投稿済みならGET確認したURLを返す。まだ予約中ならURLは返さない。
+新しい予約を再試行対象に残さず、元の質問・回答・待機を保持する。
+画像案を更新して新しい判断が必要な場合は、画像の版/SHAを含む判断範囲も分ける。
 
 Discord公式仕様: [forum thread creation](https://docs.discord.com/developers/resources/channel#start-thread-in-forum-or-media-channel)、
 [uploading files](https://docs.discord.com/developers/reference#uploading-files)。

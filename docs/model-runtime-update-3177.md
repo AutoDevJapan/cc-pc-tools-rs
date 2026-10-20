@@ -22,6 +22,7 @@ receiptの一致後だけ、同じ限定handleで実行物を照合する。書�
 handleを最後の再照合まで保持し、リンク数、handleの実path/identity/size/write time、
 元保護とGit root/originを再確認する。欠落・改変receipt、誤origin、元保護、
 symlink/junction/hardlink、照合中の変更は拒否する。原実行物を変更しない。
+receipt自身を実行物とした証拠、旧receiptを新候補のbuild証拠に流用する形も拒否する。
 
 新候補はまだ生成されていない。新SHAを空のまま保持し、旧版が一致しても
 `qualified:false, baseline_verified:true, reason:"candidate_unbound"` とexit 1を返す。
@@ -57,3 +58,51 @@ todoの並行配布が旧SHAを変えた場合は一致したと推測せず拒�
 指定2903の直下の配布記録を有限に確認したが、review.exeの旧配布証拠は発見していない。
 通常入口がcc-liveのPaths.here/Cargo.toml/src/bin/review.rsにあることだけでは
 実行物の来歴を証明できない。旧SHAは埋めない。
+
+## 正規readerでの現在一致（2026-10-21 04:22 JST）
+
+自sourceからGoで検査用readerだけを生成し、窓を出さない通常の子処理で各leafを照合した。
+旧実行物を別の方法でhash/コピー/逆解析していない。本番のguard/targetは変更していない。
+
+| leaf | 旧証拠との現在一致 | 更新資格 |
+| --- | --- | --- |
+| todo.exe | 指定PR232の`ba1d…6811`と一致 | 新候補未結合のためfalse、exit 1 |
+| discord_ask.exe | 指定PR279の`eb14…9295`と一致 | 新候補未結合のためfalse、exit 1 |
+| scrub391.exe | 正規readerが拒否。保存`78d9…5069`との現在一致は未確認 | false、exit 1 |
+| cc-live review.exe | 独立した旧配布証拠なし。profileへ未登録 | false、exit 1 |
+
+guardの拒否を「現在SHAが保存値と違う」と断定しない。旧証拠は読了・pin済みだが、
+物理path・元保護・共有handle・hash等の全条件を通った現在一致が得られていない。
+unknown hashを表示せず、未確認の現在SHAを新しいbaselineへ昇格させない。
+この観測はその時点だけの結果であり、3085等の後続配布の成功を保証しない。
+
+## 親3081が残す正確な操作
+
+1. このbranchの実装を親の統合sourceへ取り込む。mainの差分はhelpの2行と
+   runGuardCLI先頭の3行だけ。3085/PR282のcapacityUpdate用struct/flag/routeは残す。
+   2つのpurposeが混在する要求はどちらのverifierも呼ばず拒否する。新規PRはこの担当では作らない。
+2. Cargo資源を持つ正規の工程で、最終Rust sourceから新しいtodo/Discord候補を生成する。
+   sourceのGit root/origin/実HEAD、targetと候補の対応、候補SHA、独立したbuild receiptを確定する。
+   `model3081UpdateLeaves`の各`candidate`へroot/path/head/sha256/evidenceをcompiled値で結ぶ。
+   candidateのrootはそのheadに固定された正規Git worktreeとし、後からheadが動いたら拒否する。
+   callerからmanifest/hashを受け付ける入口は追加しない。
+3. 旧baselineはそのまま現在一致と推測しない。3085などがtodoを先に更新した場合は、
+   その特定softwareの独立した正規receiptを別pinとしてreviewして結ぶ。
+   guardの現在一致を証明する独立記録がなければ、guard自体の更新は行わない。
+   review.exeも独立旧記録が見つかるまで未実装・未配布として親の未完了に残す。
+4. Goの`TestModelUpdate`と既存CLIの関連検査/vetを行い、親の別モデルレビューと正式CIを通す。
+   sourceにある「本担当ではproduction候補が空」のテスト期待は、実候補を結ぶ際に
+   その固定build receiptとSHAの受入検査へ置き換える。空hashを推測値で埋めない。
+5. 必要なguard候補Aを先に生成する場合、A自身のSHAをAへ埋める循環を作らない。
+   Aは候補未結合のまま固定sourceから生成し、そのhashと独立build receiptを
+   別の検査専用reader Bへcompiled pinとして結ぶ。BでAの更新を検証し、配布するのはA。
+   BをAと同一実行物として報告しない。guardの旧版資格が不足すればこの工程は実行しない。
+6. 成功receiptのdomain=`model-runtime-update-3081-v1`、todo_id=3081、target_kind、
+   `qualified:true`、実current/new SHA、source_headと`data_access_granted:false`を照合する。
+   baseline_verifiedだけでは配布しない。readerの返却時にhandleは閉じるので、receiptは
+   将来の置換を予約するtokenではない。配布直前に通常の停止・元保護・物理path/リンク・
+   source/targetの並行変更を同じ更新工程で再照合し、有限CASで期待currentを比較する。
+   資格を他ToDoの完了・解除やデータアクセスへ使わない。
+
+本担当は別モデルレビュー、正式CI、merge、本番guard配布、通常分類変更、原target更新を
+実施していない。モデルの実effortとFastの上流適用もこのGo検査では確認していない。

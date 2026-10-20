@@ -302,6 +302,8 @@ func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "    \tverify original ToDo 1626, 2407 or 2475; no launch or mutation")
 	fmt.Fprintln(output, "  -verify-current-succession int")
 	fmt.Fprintln(output, "    \tverify one declared current product successor; no launch or mutation")
+	fmt.Fprintln(output, "  -verify-model-runtime-update string")
+	fmt.Fprintln(output, "    \tqualify one exact ToDo3081 software update; grants no data access")
 }
 
 func verifyCurrentSuccession(taskID int) object {
@@ -320,6 +322,9 @@ func verifyCurrentSuccession(taskID int) object {
 }
 
 func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(int) object) int {
+	if model3081FlagPresent(args) {
+		return runModel3081CLI(args, stdout, model3081RuntimeReceipt)
+	}
 	parsed, err := parseGuardArgs(args)
 	if err != nil {
 		if currentSuccessionFlagPresent(args) {

@@ -13,6 +13,10 @@ import (
 // original private registry, or any other executable.
 const publicationGateRuntime = "D:/CC/Tools/codex-jobs/gh_gate.exe"
 
+// The existing dispatcher is the explicit target of the owner's 2026-10-20
+// worker-resumption repair (ToDo3047). Configuration and history stay excluded.
+const schedulerRuntime = "D:/CC/Tools/scheduler/scheduler.exe"
+
 // The owner explicitly requested repair of this installed progress display
 // (ToDo3020/3021, restated 2026-10-20). Only the existing distribution leaves
 // qualify. Its directory, collector, credentials and unrelated tools do not.

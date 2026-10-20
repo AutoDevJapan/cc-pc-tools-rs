@@ -2841,6 +2841,83 @@ fn test_explicit_model_effort_skip_picker() {
     assert_eq!(f.e.backend.launched.len(), 1);
 }
 #[test]
+fn subscription_model_aliases_keep_the_requested_model_and_launch_canonical_id() {
+    for (requested, expected) in [
+        ("sonnet", "anthropic/claude-sonnet-5-5"),
+        ("haiku", "anthropic/claude-haiku-5-5"),
+        ("claude-sonnet-5-5", "anthropic/claude-sonnet-5-5"),
+    ] {
+        let mut f = Fixture::new();
+        let mut row = item(1, "civ6", "todo", &[]);
+        row["model"] = json!(requested);
+        row["effort"] = json!("high");
+        f.put(row);
+        f.dispatch();
+        assert_eq!(f.e.backend.pick_count, 0);
+        assert_eq!(f.e.backend.launched.len(), 1);
+        assert_eq!(f.get(1)["model"], requested);
+        assert_eq!(f.get(1)["scheduler"]["selection_input"]["model"], requested);
+        assert_eq!(f.e.backend.launched[0]["item"]["scheduler"]["selection"]["model"], expected);
+    }
+}
+
+#[test]
+fn repair_tick_adopts_an_exact_registered_subwork_after_lost_launch_ack() {
+    for changed in ["none", "spec", "model", "effort", "task", "cwd", "needs", "relation", "key", "scope", "owner", "stopped", "wait"] {
+        let mut f = completed_dependency_repair();
+        let key = "a".repeat(32);
+        f.e.edit(&json!(1), |row| {
+            row["status"] = json!("todo");
+            remove(row, "wait_on");
+            row["subwork"] = json!({"parent_todo_id":2,"kind":"check"});
+            row["scheduler"]["key"] = json!(key);
+            row["scheduler"]["job"] = Value::Null;
+            row["scheduler"]["selection"] = json!({"model":"gpt-6-luna"});
+        }).unwrap();
+        let child = f.get(1);
+        let mut registered = job("registered", 0, "succeeded");
+        registered["todo_id"] = json!(1);
+        registered["launch_key"] = json!(key);
+        registered["subwork"] = child["subwork"].clone();
+        registered["subwork_spec"] = child["spec"].clone();
+        registered["assigned_needs"] = child["needs"].clone();
+        registered["cwd"] = child["scheduler"]["worktree"].clone();
+        registered["model"] = json!("gpt-6-luna");
+        registered["last_message"] = json!("状態: 完了\n指定された検査が完了しました。");
+        match changed {
+            "none" => {},
+            "spec" => registered["subwork_spec"] = json!("old-spec.md"),
+            "model" => registered["model"] = json!("another-model"),
+            "effort" => registered["effort"] = json!("different-effort"),
+            "task" => registered["todo_id"] = json!(9),
+            "cwd" => registered["cwd"] = json!("D:/unrelated"),
+            "needs" => registered["assigned_needs"] = json!(["cargo"]),
+            "relation" => registered["subwork"]["parent_todo_id"] = json!(9),
+            "key" => registered["launch_key"] = json!("b".repeat(32)),
+            "scope" => f.e.backend.repair_allowed = false,
+            "owner" => { f.e.edit(&json!(1), |r| r["status"] = json!("block")).unwrap(); },
+            "stopped" => { f.e.edit(&json!(1), |r| r["owner_stopped"] = json!(true)).unwrap(); },
+            "wait" => { wait_row(&mut f, 1, json!([99])); },
+            _ => unreachable!(),
+        }
+        let before = f.get(1);
+        let mut records = vec![registered];
+        f.e.reconcile_repairs(&mut records, &Processes::new(), &f.cfg.clone()).unwrap();
+        if changed == "none" {
+            assert_eq!(f.get(1)["status"], "done");
+            assert!(arr(&f.get(1)["jobs"]).contains(&json!("registered")));
+            assert_eq!(f.e.report["repair_dispatches_adopted"], json!([1]));
+            f.e.reconcile_repairs(&mut records, &Processes::new(), &f.cfg.clone()).unwrap();
+            assert_eq!(f.get(1)["status"], "done");
+        } else {
+            assert_eq!(f.get(1), before, "{changed}");
+        }
+        assert!(f.e.backend.launched.is_empty());
+        assert!(f.e.backend.cancelled.is_empty());
+        assert!(f.e.backend.notices.is_empty());
+    }
+}
+#[test]
 fn todo1842_explicit_model_overrides_saved_selection() {
     let mut f = Fixture::new();
     let mut row = item(1, "civ6", "todo", &[]);

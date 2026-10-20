@@ -124,3 +124,17 @@ fn model_repair_exclusions_cannot_route_back_to_the_known_failed_default() {
     assert_eq!(job["model"], "gpt-6-astra");
     assert_eq!(job["effort"], "max");
 }
+
+#[test]
+fn retired_context_filters_both_saved_ids_but_preserves_the_next_compatible_thread() {
+    use cc_job_policy::launch_context::{usable_resume_session, usable_thread_session};
+    let retired = "12345678-abcd-4321-9234-123456789abc";
+    let mut source = json!({"thread_id":retired.to_uppercase(),"resume_session":retired,
+        "policy_resume_reset":{"session":retired}});
+    assert!(usable_thread_session(&source).is_none());
+    assert!(usable_resume_session(&source).is_none());
+    source["thread_id"] = json!("new-thread");
+    source["resume_session"] = json!("new-thread");
+    assert_eq!(usable_thread_session(&source), Some("new-thread"));
+    assert_eq!(usable_resume_session(&source), Some("new-thread"));
+}

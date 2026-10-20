@@ -121,6 +121,8 @@ fn a_finished_root_review_of_a_replaced_spec_requeues_only_its_own_generation() 
     let mut f = Fixture::new();
     f.managed(1, 1, "other", 0);
     f.managed(2, 2, "other", 0);
+    f.e.edit(&json!(1), |row| row["scheduler"]["retry_count"] = json!(2))
+        .unwrap();
     let before = f.get(1);
     let record = &mut f.e.backend.records[0];
     record["todo_id"] = json!(1);
@@ -140,6 +142,8 @@ fn a_finished_root_review_of_a_replaced_spec_requeues_only_its_own_generation() 
     assert_eq!(f.get(1)["spec"], "new-fixed-head.md");
     assert_eq!(f.get(2)["status"], "doing");
     assert!(f.e.backend.launched.is_empty());
+    assert_eq!(f.get(1)["scheduler"]["retry_count"], 2);
+    assert!(n(&f.get(1)["scheduler"]["not_before"]) <= f.e.backend.clock);
 }
 
 #[test]

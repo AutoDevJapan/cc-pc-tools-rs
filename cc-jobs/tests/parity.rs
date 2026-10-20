@@ -6173,14 +6173,7 @@ fn job_cli_defaults_preserve_each_explicit_model_and_effort_independently() {
                     expected
                 }
             );
-            assert_eq!(
-                parsed.required("effort").unwrap(),
-                if explicit.contains(&"--effort") {
-                    "max"
-                } else {
-                    "max"
-                }
-            );
+            assert_eq!(parsed.required("effort").unwrap(), "max");
         }
     }
 }

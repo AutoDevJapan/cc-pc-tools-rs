@@ -378,7 +378,7 @@ impl<B: Backend> Scheduler<B> {
                 return;
             }
             let budget = i["scheduler"]["retry_count"].clone();
-            let delay = if reason == "resource_wait" { 3600. } else if reason == "memory" { 180. } else if n(&budget) >= 1. {
+            let delay = if reason == "stale_review_spec" { 0. } else if reason == "resource_wait" { 3600. } else if reason == "memory" { 180. } else if n(&budget) >= 1. {
                 crate::recovery_failure::SLOW_RETRY_S
             } else { crate::recovery_failure::FAST_RETRY_S };
             i["status"] = json!("todo");
@@ -404,7 +404,7 @@ impl<B: Backend> Scheduler<B> {
             merge(m, json!({"last_job":jid,"last_stop":reason,"job":null,"key":null,"phase":"retry","resume":true,"not_before":until}));
             remove(m, "pending_cancel");
             remove(m, "notice_pending");
-            if reason != "memory" && reason != "resource_wait" {
+            if reason != "memory" && reason != "resource_wait" && reason != "stale_review_spec" {
                 m["retry_count"] = add_count(&budget, 1);
             }
             applied = true;
@@ -1462,7 +1462,10 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 let profile=cc_ask::job_policy::review_profile(&excluded).ok_or(Error("ReviewModelUnavailable"))?;
                 selection["model"]=json!(profile.model);
                 selection["model_origin"] = json!("policy");
-                if !truth(&item["effort"]) && !truth(&accepted_options["effort"]) {selection["effort"]=json!(profile.effort);}
+                if !truth(&item["effort"]) && !truth(&accepted_options["effort"]) {
+                    selection["effort"] = json!(profile.effort);
+                    selection["effort_origin"] = json!("policy");
+                }
             }
             selection["review_source_jobs"] = json!(sources);
             selection["review_excluded_models"] = json!(excluded);

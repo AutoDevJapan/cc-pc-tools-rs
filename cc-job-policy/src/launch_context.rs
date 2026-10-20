@@ -25,10 +25,26 @@ pub fn fixed_execution_contract(job: &Value) -> bool {
     .any(|field| job[*field].is_object())
 }
 
-pub fn usable_resume_session(job: &Value) -> Option<&str> {
-    job["resume_session"]
+pub fn retired_session(job: &Value, session: &str) -> bool {
+    job["policy_resume_reset"]["session"]
         .as_str()
-        .filter(|session| !session.is_empty() && job["policy_resume_reset"]["session"] != *session)
+        .is_some_and(|retired| retired.eq_ignore_ascii_case(session))
+}
+
+fn usable_session<'a>(job: &'a Value, field: &str) -> Option<&'a str> {
+    job[field]
+        .as_str()
+        .filter(|session| !session.is_empty() && !retired_session(job, session))
+}
+
+pub fn usable_resume_session(job: &Value) -> Option<&str> {
+    usable_session(job, "resume_session")
+}
+
+/// A migrated queued job can retain its historical thread ID before the first
+/// fresh thread starts. Every launcher must exclude that retired ID as well.
+pub fn usable_thread_session(job: &Value) -> Option<&str> {
+    usable_session(job, "thread_id")
 }
 
 pub(crate) fn source_settings(source: &Value) -> Value {

@@ -1381,6 +1381,16 @@ pub fn launch_job_with_session(
     });
     // All Discord restart/steering/resume paths share this final boundary.
     let mut normalized = selection.clone();
+    // This registers a new logical launch. A past job's capacity history is
+    // evidence, not an active retry exemption. Leave its original record and
+    // durable budget intact; same-job capacity retries stay in cc-jobs.
+    normalized
+        .as_object_mut()
+        .ok_or("invalid launch selection")?
+        .retain(|field, _| !field.starts_with("capacity_"));
+    if normalized["last_failure_kind"] == "capacity" {
+        normalized["last_failure_kind"] = Value::Null;
+    }
     normalized["launch_key"] = json!(key);
     normalized["resume_session"] = session.map(|id| json!(id)).unwrap_or(Value::Null);
     for origin in ["model_origin", "effort_origin"] {

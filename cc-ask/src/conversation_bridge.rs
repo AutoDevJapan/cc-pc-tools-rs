@@ -479,7 +479,12 @@ fn metadata(raw: &str, ask: bool, check_only: bool) -> Result<Value> {
     Ok(Value::Object(public))
 }
 
-fn execute(effects: &mut dyn Effects, args: &[String], ask: bool) -> Result<Option<Value>> {
+fn execute(
+    effects: &mut dyn Effects,
+    args: &[String],
+    ask: bool,
+    check_only: bool,
+) -> Result<Option<Value>> {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(90);
     loop {
         let remaining = deadline.saturating_duration_since(std::time::Instant::now());
@@ -498,11 +503,7 @@ fn execute(effects: &mut dyn Effects, args: &[String], ask: bool) -> Result<Opti
         if output.code != 0 {
             return Err(CHILD_FAILED.into());
         }
-        return Ok(Some(metadata(
-            &output.stdout,
-            ask,
-            args.iter().any(|arg| arg == "--check-only"),
-        )?));
+        return Ok(Some(metadata(&output.stdout, ask, check_only)?));
     }
 }
 
@@ -570,7 +571,7 @@ pub fn try_ask(home: &Path, effects: &mut dyn Effects, args: &AskArgs) -> Result
         "--wait".into(),
     ]);
     append_attachments(&root, &directory, snapshots, &mut argv)?;
-    execute(effects, &argv, true)
+    execute(effects, &argv, true, false)
 }
 
 pub fn try_log(
@@ -697,7 +698,10 @@ fn send_log(
         return Err(INVALID_INPUT.into());
     }
     let root = home.join("conversation-bridge");
-    private_directory(&root)?;
+    let check_only = clarification.is_some_and(|(_, check)| check);
+    if !check_only {
+        private_directory(&root)?;
+    }
     let snapshots = attachments(&root, effects, attach, None)?;
     let files: Vec<_> = snapshots
         .iter()
@@ -713,9 +717,16 @@ fn send_log(
     ]);
     let request = format!("normal-log-{}", sha(identity.to_string().as_bytes()));
     let directory = root.join(&request);
-    private_directory(&directory)?;
     let body_path = directory.join("body.txt");
-    save_bytes(&root, &body_path, text.as_bytes())?;
+    if check_only {
+        // A check only inspects the pre-existing failed request's snapshot.
+        if read_bounded(&body_path, INPUT_LIMIT)? != text.as_bytes() {
+            return Err(SAVE_FAILED.into());
+        }
+    } else {
+        private_directory(&directory)?;
+        save_bytes(&root, &body_path, text.as_bytes())?;
+    }
     let mut argv = runner_args(home, "log")?;
     argv.extend([
         "--request-id".into(),
@@ -736,7 +747,7 @@ fn send_log(
         let path = if check_only {
             manifest.to_owned()
         } else {
-            let path = directory.join("clarification.json");
+            let path = directory.join(format!("clarification-{}.json", sha(&bytes)));
             save_bytes(&root, &path, &bytes)?;
             path
         };
@@ -746,7 +757,7 @@ fn send_log(
         }
     }
     append_attachments(&root, &directory, snapshots, &mut argv)?;
-    execute(effects, &argv, false)
+    execute(effects, &argv, false, check_only)
 }
 
 fn append_attachments(

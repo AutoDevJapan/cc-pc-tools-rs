@@ -111,7 +111,7 @@ impl Binding {
             return Err(INVALID.into());
         }
         no_mentions(&request.body)?;
-        if regex::Regex::new(r"(?im)[?？]|^\s*(?:[abａｂ][.．、:：)）]|[ab]\s*/\s*[ab])|選んで|選択して|回答して|答えて|教えて|承認して|決めて")
+        if regex::Regex::new(r"(?im)[?？]|^\s*(?:[abａｂ0-9０-９][.．、:：)）]|[（(][abａｂ0-9０-９][)）]|[ab]\s*/\s*[ab])|選んで|選択して|回答して|答えて|教えて|承認して|決めて|ください|お願い|どちら(?:に|が|を)|いかが|(?:です|ます)か(?:[。！!\s]|$)")
             .unwrap().is_match(&request.body)
         { return Err("clarification cannot contain another question or repeated choices".into()); }
         Ok(())
@@ -228,6 +228,18 @@ pub(super) fn authorize(
         &receipt.thread_id,
         &receipt.message_id,
     )?;
+    // Each existing Pending phase can only execute GET recovery in ensure().
+    // Keep an already authorized delivery recoverable after an owner edit,
+    // without permitting any newly reserved POST phase from stale evidence.
+    if bindings.records.get(&request.request_id) == Some(binding)
+        && parts(&request.body).iter().enumerate().all(|(index, _)| {
+            ledger
+                .effect(&request.request_id, &format!("log:{index}"))
+                .is_some()
+        })
+    {
+        return Ok(());
+    }
     let reply = api.get(&format!(
         "/channels/{}/messages/{}",
         binding.thread_id, binding.reply_message_id

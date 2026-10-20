@@ -139,17 +139,25 @@ fn clarification_bridge_preserves_log_identity_and_fixed_evidence() {
     )
     .is_err());
     fs::write(&manifest, "changed").unwrap();
-    assert!(bridge::try_post_clarification(
+    bridge::try_post_clarification(
         f.root.path(),
         &mut fake,
         "600",
         &f.body,
         false,
         &[],
-        &manifest
+        &manifest,
     )
-    .is_err());
-    assert_eq!(fake.calls.len(), 2);
+    .unwrap();
+    assert_eq!(fake.calls.len(), 3);
+    assert_eq!(
+        argument(&original, "--request-id"),
+        argument(&fake.calls[2].0, "--request-id")
+    );
+    assert_ne!(
+        argument(&fake.calls[1].0, "--clarification-file"),
+        argument(&fake.calls[2].0, "--clarification-file")
+    );
     assert_eq!(fake.http_calls, 0);
     f.mode(r#"{"domain":"discord-conversation-mode-v1","enabled":false}"#);
     assert!(bridge::try_post_clarification(
@@ -212,6 +220,44 @@ fn clarification_bridge_check_never_turns_check_into_delivery() {
     )
     .is_err());
     f.unchanged_legacy();
+}
+
+#[test]
+fn clarification_check_does_not_create_missing_original_snapshot() {
+    let f = Fixture::new();
+    let mut fake = Fake::default();
+    let manifest = f.root.path().join("binding.json");
+    fs::write(&manifest, "{}").unwrap();
+    assert!(bridge::try_check_clarification(
+        f.root.path(),
+        &mut fake,
+        "600",
+        &f.body,
+        false,
+        &[],
+        &manifest
+    )
+    .is_err());
+    assert!(!f.root.path().join("conversation-bridge").exists());
+    assert!(fake.calls.is_empty());
+}
+
+#[test]
+fn normal_log_title_cannot_enable_check_mode() {
+    let f = Fixture::new();
+    let mut fake = Fake::default();
+    let result = bridge::try_log(
+        f.root.path(),
+        &mut fake,
+        "--check-only",
+        "進捗です。",
+        None,
+        false,
+        &[],
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(result["delivery"], "verified");
 }
 
 impl Effects for Fake {

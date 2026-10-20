@@ -3395,6 +3395,28 @@ pub fn replies(ctx: &mut Context, args: &RepliesArgs) -> Result<Value> {
         bot: bot.into(),
     };
     let evidence = owner_replies(&mut api, &ledger, request)?;
+    // Extra version evidence is outside the existing reply hashes/close inputs.
+    let mut reply_versions = BTreeMap::new();
+    for reply in &evidence {
+        let raw = api.get(&format!(
+            "/channels/{}/messages/{}",
+            thread, reply.message_id
+        ))?;
+        if !exact_owner_reply(&raw, &thread, &reply.message_id, &request.destination.owner)
+            || raw["content"] != reply.body
+            || raw["timestamp"] != reply.timestamp
+        {
+            return Err("owner reply changed while reading version evidence; retry GET".into());
+        }
+        let edited = &raw["edited_timestamp"];
+        if !edited.is_null() {
+            chrono::DateTime::parse_from_rfc3339(
+                edited.as_str().ok_or("invalid reply edit timestamp")?,
+            )
+            .map_err(|_| "invalid reply edit timestamp")?;
+        }
+        reply_versions.insert(reply.message_id.clone(), json!({"edited_timestamp":edited}));
+    }
     Ok(
         json!({"domain":DOMAIN,"read_only":true,"ledger_written":false,"legacy_state":"unchanged",
         "thread_id":thread,"request_id":request.request_id,"original_question":request.body,
@@ -3405,7 +3427,7 @@ pub fn replies(ctx: &mut Context, args: &RepliesArgs) -> Result<Value> {
         "decision_identity":match &request.operation {Kind::Ask{decision_identity,..}=>Some(decision_identity),_=>None},
         "progress_thread_id":ledger.receipt(&request.request_id,"progress").map(|r|&r.thread_id),
         "original_decision":match &request.operation {Kind::Ask {decision_original,..}=>Some(decision_original),_=>None},
-        "owner_replies":evidence,"delivery":"inspection_only","approval":"not_inferred"}),
+        "owner_replies":evidence,"reply_versions":reply_versions,"delivery":"inspection_only","approval":"not_inferred"}),
     )
 }
 
@@ -4025,15 +4047,19 @@ mod tests {
     }
 
     fn clarification_fixture(f: &Fixture, ctx: &mut Context) -> (LogArgs, PathBuf, Value) {
+        clarification_fixture_body(f, ctx, "これは元の質問の背景を補う説明です。")
+    }
+
+    fn clarification_fixture_body(
+        f: &Fixture,
+        ctx: &mut Context,
+        body: &str,
+    ) -> (LogArgs, PathBuf, Value) {
         let question = f.ask("clarification-question", "元の仕様を選んでください。");
         let sent = ask(ctx, &question).unwrap();
         let thread = core::s(&sent["thread_id"]);
         let reply = f.add_reply(thread, OWNER, "何のための質問か説明してください。", false);
-        let mut args = f.log(
-            "clarification-log",
-            "これは元の質問の背景を補う説明です。",
-            false,
-        );
+        let mut args = f.log("clarification-log", body, false);
         args.thread = Some(thread.into());
         // The ordinary request already failed before reserving any POST.
         assert!(log(ctx, &args).unwrap_err().contains("explicit log thread"));
@@ -4048,7 +4074,7 @@ mod tests {
             "bot_id":BOT,"owner_id":OWNER,"reply_message_id":reply,
             "reply_body_sha256":hash("何のための質問か説明してください。"),
             "reply_timestamp":"2026-10-12T00:00:01+00:00","reply_edited_timestamp":null,
-            "body_sha256":hash("これは元の質問の背景を補う説明です。")});
+            "body_sha256":hash(body)});
         let manifest = f.root.path().join("clarification.json");
         fs::write(&manifest, serde_json::to_vec(&binding).unwrap()).unwrap();
         (args, manifest, binding)
@@ -4173,21 +4199,34 @@ mod tests {
             "この機能を継続しますか？",
             "a. 停止\nb. 継続",
             "どちらかを選んでください。",
-            "<@100> 説明です。",
+            "ご回答ください。",
+            "どちらにしますか。",
+            "(a) 停止\n(b) 継続",
+            "1. 停止\n2. 継続",
+            "選択をお願いします。",
         ] {
             let f = Fixture::new();
             let mut ctx = f.context();
-            let (args, manifest, mut binding) = clarification_fixture(&f, &mut ctx);
-            fs::write(&args.body_file, body).unwrap();
-            binding["body_sha256"] = json!(format!("{:x}", Sha256::digest(body.as_bytes())));
-            fs::write(&manifest, serde_json::to_vec(&binding).unwrap()).unwrap();
+            // Bind the original intent to this very body, so a fingerprint
+            // mismatch cannot accidentally make the rejection test pass.
+            let (args, manifest, _) = clarification_fixture_body(&f, &mut ctx, body);
             let before = f.server.lock().unwrap().calls.len();
-            assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
+            assert!(
+                log_clarification(&mut ctx, &args, &manifest)
+                    .unwrap_err()
+                    .contains("cannot contain another question"),
+                "{body}"
+            );
             assert_eq!(f.server.lock().unwrap().calls.len(), before);
         }
         let f = Fixture::new();
         let mut ctx = f.context();
         let (mut args, manifest, _) = clarification_fixture(&f, &mut ctx);
+        fs::write(&args.body_file, "<@100> 説明です。").unwrap();
+        assert!(log_clarification(&mut ctx, &args, &manifest)
+            .unwrap_err()
+            .contains("mentions"));
+        fs::write(&args.body_file, "これは元の質問の背景を補う説明です。").unwrap();
         args.notify = true;
         let before = f.server.lock().unwrap().calls.len();
         assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
@@ -4212,11 +4251,74 @@ mod tests {
         assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
         assert_eq!(f.server.lock().unwrap().posts.len(), before + 1);
         f.server.lock().unwrap().blocked = false;
+        // The authorized POST is already durable. An owner edit cannot turn
+        // its GET-only recovery into a new send or permanently hide its receipt.
+        f.server
+            .lock()
+            .unwrap()
+            .messages
+            .get_mut(args.thread.as_ref().unwrap())
+            .unwrap()
+            .iter_mut()
+            .find(|row| row["author"]["id"] == OWNER)
+            .unwrap()["content"] = json!("後から編集した返信です。");
         assert_eq!(
             log_clarification(&mut ctx, &args, &manifest).unwrap()["delivery"],
             "verified"
         );
         assert_eq!(f.server.lock().unwrap().posts.len(), before + 1);
+        f.unchanged();
+    }
+
+    #[test]
+    fn clarification_invalid_binding_can_be_corrected_before_authorization() {
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let (args, manifest, valid) = clarification_fixture(&f, &mut ctx);
+        let mut invalid = valid.clone();
+        invalid["reply_timestamp"] = json!("2026-10-12T09:00:01+09:00");
+        fs::write(&manifest, serde_json::to_vec(&invalid).unwrap()).unwrap();
+        assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
+        assert!(!f.home.join("recovery-clarifications.json").exists());
+        let before = f.server.lock().unwrap().posts.len();
+        fs::write(&manifest, serde_json::to_vec(&valid).unwrap()).unwrap();
+        log_clarification(&mut ctx, &args, &manifest).unwrap();
+        assert_eq!(f.server.lock().unwrap().posts.len(), before + 1);
+        f.unchanged();
+    }
+
+    #[test]
+    fn clarification_reader_exposes_edit_version_without_changing_reply_hash_shape() {
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let (_, _, binding) = clarification_fixture(&f, &mut ctx);
+        let thread = binding["thread_id"].as_str().unwrap();
+        let reply = binding["reply_message_id"].as_str().unwrap();
+        f.server
+            .lock()
+            .unwrap()
+            .messages
+            .get_mut(thread)
+            .unwrap()
+            .iter_mut()
+            .find(|row| row["id"] == reply)
+            .unwrap()["edited_timestamp"] = json!("2026-10-12T00:00:02Z");
+        let result = replies(
+            &mut ctx,
+            &RepliesArgs {
+                thread: thread.into(),
+                message: Some(thread.into()),
+                request_id: Some("clarification-question".into()),
+                todo_id: Some(2472),
+                read_only: true,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            result["reply_versions"][reply]["edited_timestamp"],
+            "2026-10-12T00:00:02Z"
+        );
+        assert!(result["owner_replies"][0].get("edited_timestamp").is_none());
         f.unchanged();
     }
 

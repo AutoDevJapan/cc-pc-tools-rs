@@ -740,7 +740,9 @@ func (r *Runner) conversationLogInner(ctx context.Context, requestID, title, bod
 		}
 		path := clarification
 		if !checkOnly {
-			path = filepath.Join(r.Config.Home, "conversation-clarifications", requestID+".json")
+			// Invalid association evidence must not permanently poison the fixed
+			// request. Only the sender's verified binding commits authority.
+			path = filepath.Join(r.Config.Home, "conversation-clarifications", requestID+"-"+bytesHash(binding)+".json")
 			if err = writeConversationOnce(path, binding); err != nil {
 				return nil, err
 			}

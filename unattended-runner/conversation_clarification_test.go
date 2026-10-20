@@ -91,7 +91,17 @@ func TestClarificationResumesExactLogWithoutChangingOriginalReservation(t *testi
 	if os.WriteFile(manifest, []byte(`{"fixture":"changed"}`), 0600) != nil {
 		t.Fatal("fixture mutation")
 	}
-	if _, err := f.r.conversationClarification(context.Background(), "original-log", "説明", body, "610", manifest); err == nil || calls != 2 {
-		t.Fatal("changed evidence reached sender")
+	// A failed candidate can be corrected on the same original request. The
+	// sender's verified binding remains the sole authority to reject rebinding.
+	var correctedPath string
+	f.r.Run = func(_ context.Context, _ string, args ...string) (string, error) {
+		correctedPath = argValue(args, "--clarification-file")
+		return "", errors.New("sender rejects a different verified binding")
+	}
+	if _, err := f.r.conversationClarification(context.Background(), "original-log", "説明", body, "610", manifest); err == nil || correctedPath == "" {
+		t.Fatal("new proof did not reach authoritative sender validation")
+	}
+	if filepath.Base(correctedPath) != "original-log-"+bytesHash([]byte(`{"fixture":"changed"}`))+".json" {
+		t.Fatal("association snapshot is not content-addressed")
 	}
 }

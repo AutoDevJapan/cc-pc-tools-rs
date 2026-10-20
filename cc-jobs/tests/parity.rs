@@ -1953,6 +1953,36 @@ mod capacity_regressions {
     }
 
     #[test]
+    fn routing_exclusions_are_honored_without_becoming_author_proof() {
+        let t = Test::new();
+        t.run(
+            &[
+                "--name",
+                "rev-routing",
+                "--task-type",
+                "code_review",
+                "--auto-model",
+                "gpt-6.1-sol",
+                "--effort",
+                "max",
+                "--review-excluded-models",
+                "anthropic/claude-opus-5-5",
+            ],
+            b"Review this change",
+        )
+        .unwrap();
+        let review = t
+            .ctx
+            .list_jobs(&HashSet::new())
+            .into_iter()
+            .find(|job| s(job, "name") == "rev-routing")
+            .unwrap();
+        assert_eq!(review["model"], "gpt-6.1-sol");
+        assert_eq!(review["review_source_verified"], false);
+        assert_eq!(review["review_author_models"], json!([]));
+    }
+
+    #[test]
     fn queued_capacity_jobs_cannot_hold_replaced_missing_or_unlinked_todos_forever() {
         for change in ["replaced","missing","unlinked"] {
             let t = Test::new();

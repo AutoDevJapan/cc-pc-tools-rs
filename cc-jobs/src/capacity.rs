@@ -290,21 +290,24 @@ impl Context {
             job["todo_id"].as_u64().is_some_and(|id| id > 0) || !s(job, "launch_key").is_empty();
         let owner_choice =
             job["model_origin"] == "owner_request" || (!managed && job["model_explicit"] != false);
-        if authors.is_empty() && !owner_choice && same_model(s(job, "model"), "gpt-6.1-sol") {
-            let profile = cc_job_policy::review_profile(&[]).unwrap();
-            job["model"] = json!(profile.model);
-            job["requested_model"] = job["model"].clone();
-        }
-        if authors
+        let author_conflict = authors
             .iter()
-            .any(|author| same_model(author, s(job, "model")))
-        {
-            if owner_choice {
-                return Err(Error::new(
-                    "independent review requires a model different from the source author",
-                ));
-            }
-            let profile = cc_job_policy::review_profile(&authors)
+            .any(|author| same_model(author, s(job, "model")));
+        if author_conflict && owner_choice {
+            return Err(Error::new(
+                "independent review requires a model different from the source author",
+            ));
+        }
+        let excluded_models: Vec<String> = excluded
+            .iter()
+            .filter_map(|value| value.as_str().map(str::to_owned))
+            .collect();
+        let routing_conflict = excluded_models
+            .iter()
+            .any(|model| same_model(model, s(job, "model")));
+        let default_writer = authors.is_empty() && same_model(s(job, "model"), "gpt-6.1-sol");
+        if !owner_choice && (author_conflict || routing_conflict || default_writer) {
+            let profile = cc_job_policy::review_profile(&excluded_models)
                 .ok_or_else(|| Error::new("no independent review model is available"))?;
             job["model"] = json!(profile.model);
             job["requested_model"] = job["model"].clone();

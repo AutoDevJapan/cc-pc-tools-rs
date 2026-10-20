@@ -3,8 +3,10 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -215,7 +217,7 @@ func TestOwned3107ProofBindings(t *testing.T) {
 }
 
 func TestOwned3107RechecksAfterExternalVerification(t *testing.T) {
-	for _, which := range []string{"root", "deny", "proof"} {
+	for _, which := range []string{"root", "deny", "proof", "expiry"} {
 		t.Run(which, func(t *testing.T) {
 			a, target := owned3107Fixture(t)
 			changed := false
@@ -228,6 +230,12 @@ func TestOwned3107RechecksAfterExternalVerification(t *testing.T) {
 				return m, e
 			}
 			a.protected = func(p string) bool { return changed && which == "deny" && same(p, target) }
+			a.now = func() time.Time {
+				if changed && which == "expiry" {
+					return time.Date(2026, 10, 22, 0, 0, 0, 0, time.UTC)
+				}
+				return a.at
+			}
 			a.official = func() bool {
 				changed = true
 				if which == "proof" {
@@ -245,7 +253,7 @@ func TestOwned3107RechecksAfterExternalVerification(t *testing.T) {
 }
 
 func TestOwned3107OfficialImmutableIdentity(t *testing.T) {
-	run := object{"id": uint64(39423559387), "run_attempt": 1, "head_sha": owned3107Head, "path": ".github/workflows/rust.yml", "event": "pull_request", "repository_id": uint64(1392152644), "head_repository_id": uint64(1392152644)}
+	run := object{"id": uint64(39423559387), "run_attempt": 1, "head_sha": owned3107Head, "path": ".github/workflows/rust.yml", "event": "pull_request", "head_branch": "scheduler/actions-cost-pr-concurrency-20261019", "prs": []any{149}, "repository_id": uint64(1392152644), "head_repository_id": uint64(1392152644)}
 	job := object{"id": uint64(118630300541), "run_id": uint64(39423559387), "run_attempt": 1, "head_sha": owned3107Head, "name": "test (windows-latest)", "labels": []any{"self-hosted", "Windows", "X64", "civ6-ci-windows", "civ6-ci-run-39423559387-1-test-Windows"}}
 	// The real API path uses the strict JSON reader's json.Number values.
 	for _, v := range []*object{&run, &job} {
@@ -262,6 +270,19 @@ func TestOwned3107OfficialImmutableIdentity(t *testing.T) {
 	if !owned3107OfficialRunMatches(run) || !owned3107OfficialJobMatches(job) {
 		t.Fatal("original run/job rejected")
 	}
+	for _, path := range []string{".github/workflows/rust.yml", ".github/workflows/rust.yml@refs/pull/149/merge"} {
+		run["path"] = path
+		if !owned3107OfficialRunMatches(run) {
+			t.Fatal("original workflow representation rejected")
+		}
+	}
+	for _, path := range []string{".github/workflows/rust.yml@refs/pull/150/merge", ".github/workflows/rust.yml@refs/heads/main", ".github/workflows/rust.yml@@refs/pull/149/merge", ".github/workflows/other.yml"} {
+		run["path"] = path
+		if owned3107OfficialRunMatches(run) {
+			t.Fatal("unrelated workflow or ref accepted")
+		}
+	}
+	run["path"] = ".github/workflows/rust.yml"
 	for k := range run {
 		original := run[k]
 		run[k] = "other"
@@ -270,6 +291,14 @@ func TestOwned3107OfficialImmutableIdentity(t *testing.T) {
 		}
 		run[k] = original
 	}
+	for _, prs := range [][]any{nil, {json.Number("150")}, {json.Number("149"), json.Number("150")}} {
+		original := run["prs"]
+		run["prs"] = prs
+		if owned3107OfficialRunMatches(run) {
+			t.Fatal("different PR association accepted")
+		}
+		run["prs"] = original
+	}
 	for k := range job {
 		original := job[k]
 		job[k] = "other"
@@ -277,5 +306,128 @@ func TestOwned3107OfficialImmutableIdentity(t *testing.T) {
 			t.Fatal("unbound job accepted")
 		}
 		job[k] = original
+	}
+	labels := job["labels"].([]any)
+	for i := range labels {
+		original := labels[i]
+		labels[i] = "other"
+		if owned3107OfficialJobMatches(job) {
+			t.Fatal("changed individual label accepted")
+		}
+		labels[i] = original
+	}
+}
+
+func owned3107ChangeProof(t *testing.T, a *owned3107Access, i int, change func(object)) {
+	t.Helper()
+	p := a.proofs[i].path
+	b, e := os.ReadFile(p)
+	if e != nil {
+		t.Fatal(e)
+	}
+	m, ok := conversationJSON(b)
+	if !ok {
+		t.Fatal("fixture JSON invalid")
+	}
+	change(m)
+	b, e = json.Marshal(m)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if e = os.WriteFile(p, b, 0600); e != nil {
+		t.Fatal(e)
+	}
+	a.proofs[i].sha = hashBytes(b)
+}
+
+func TestOwned3107RejectsUnboundObservationAndCreation(t *testing.T) {
+	for _, which := range []string{"inventory-data", "inventory-incomplete", "deployment-domain", "deployment-sha", "volume", "early-create", "late-create", "old-child", "recorded-reparse"} {
+		t.Run(which, func(t *testing.T) {
+			a, target := owned3107Fixture(t)
+			if !owned3107Allowed(target, a) {
+				t.Fatal("positive fixture rejected")
+			}
+			i := 0
+			if strings.HasPrefix(which, "inventory") || which == "old-child" || which == "recorded-reparse" {
+				i = 4
+			}
+			if strings.HasPrefix(which, "deployment") {
+				i = 5
+			}
+			owned3107ChangeProof(t, &a, i, func(m object) {
+				switch which {
+				case "inventory-data":
+					m["data_read"] = true
+				case "inventory-incomplete":
+					m["attribute_walk_complete"] = false
+				case "deployment-domain":
+					m["Domain"] = "other"
+				case "deployment-sha":
+					m["ContractSHA256"] = strings.Repeat("0", 64)
+				case "volume":
+					m["volume"] = 1
+				case "early-create", "late-create":
+					delta := int64(-1)
+					if which == "late-create" {
+						delta = 10000001
+					}
+					m["created_at"] = time.Unix(0, (a.expected.Created+delta-116444736000000000)*100).UTC().Format(time.RFC3339Nano)
+				case "old-child":
+					obj(obj(m["objects"])["known.log"])["Created"] = a.expected.Created - 1
+				case "recorded-reparse":
+					obj(obj(m["objects"])["known.log"])["Attributes"] = syscall.FILE_ATTRIBUTE_REPARSE_POINT
+				}
+			})
+			if which == "old-child" {
+				original := a.identity
+				a.identity = func(p string) (audio2906Metadata, error) {
+					m, e := original(p)
+					if same(p, target) {
+						m.Created = a.expected.Created - 1
+					}
+					return m, e
+				}
+			}
+			if owned3107Allowed(target, a) {
+				t.Fatal("unbound or ineligible observation accepted")
+			}
+		})
+	}
+}
+
+func TestOwned3107NestedAncestryAndRealJunction(t *testing.T) {
+	a, _ := owned3107Fixture(t)
+	nested := filepath.Join(a.root, "nested")
+	if e := os.Mkdir(nested, 0700); e != nil {
+		t.Fatal(e)
+	}
+	target := filepath.Join(nested, "known.log")
+	if e := os.WriteFile(target, []byte("fixture only"), 0600); e != nil {
+		t.Fatal(e)
+	}
+	dirMeta, e := a.identity(nested)
+	if e != nil {
+		t.Fatal(e)
+	}
+	fileMeta, e := a.identity(target)
+	if e != nil {
+		t.Fatal(e)
+	}
+	owned3107ChangeProof(t, &a, 4, func(m object) { v := obj(m["objects"]); v["nested"] = dirMeta; v["nested/known.log"] = fileMeta })
+	if !owned3107Allowed(target, a) {
+		t.Fatal("recorded nested target rejected")
+	}
+	moved := nested + "-old"
+	if e := os.Rename(nested, moved); e != nil {
+		t.Fatal(e)
+	}
+	cmd := exec.Command("cmd", "/c", "mklink", "/J", nested, moved)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	if out, e := cmd.CombinedOutput(); e != nil {
+		t.Fatalf("junction fixture unavailable: %v %s", e, out)
+	}
+	defer os.Remove(nested)
+	if owned3107Allowed(target, a) || owned3107Allowed(nested, a) {
+		t.Fatal("junction ancestry accepted")
 	}
 }

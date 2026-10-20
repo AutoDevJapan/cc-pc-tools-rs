@@ -10,17 +10,22 @@
 - 原safe-delete記録1件、元stageの固定source/実行物pin、公開結果、外部NTFS配備証拠、
   正規ledgerの保存バイト、属性だけの独立観測を、レビュー済みコードのSHA256で結ぶ。
   原記録は再生成しない。保存コピーと観測は専用worktreeの所有済み保管先に保持する。
+  元stageの2証跡も同じ保管先の保存済みコピーを使い、元Tempの整理に依存しない。
+  資源回収と資格失効までこのworktreeと所有済み保管先を保持する。
 - 固定sourceは37d5359af2dcbbd047dea1f25dad75aa3d0a8f3a以降。
   sourceの実origin/物理パス/実GitHub所有者とID、既存runtimeの資格も要求する。
 - 公開先の実所有者AutoDevJapan、repo ID1392152644、PR149、HEAD2bd3a366、
   run39423559387/attempt1/job118630300541、rust workflowの固定digestを照合する。
   公式APIではrunとjobの固定identityを確認し、queuedやfailureを成功へ読み替えない。
+  runはattempt1の専用APIを使い、固定branchとPR149への対応も確認する。
+  workflowパスは素の形と同じパスの`@refs/pull/149/merge`付きだけを認める。
 - root/親のvolume・file ID・作成時刻・所有者は観測と一致必須。
   作成記録の時刻とNTFS作成時刻は異なる値として照合する。
 - 正確なrootと、属性観測に実在した子だけを分類する。各対象とその祖先は
   実ID・作成時刻・所有者が一致し、通常fileはsize/write/change/link数1も一致必須。
   未作成・新しい子・交換・reparse・hardlink・現行denyは拒否する。
-  資格の期限は2026-10-22 00:00 UTC。期限後は元ToDoから必要範囲を再評価する。
+  観測側のreparseとrootより古い子も拒否する。資格の期限は2026-10-22 00:00 UTC。
+  外部照合の後にも現在時刻を確認する。期限後は元ToDoから必要範囲を再評価する。
 
 ## 失敗と境界
 

@@ -16,7 +16,14 @@
       "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
       "tree_sha": "5782ae7deffe5024e15b6e090327385c10f76273",
       "tree_complete": true,
-      "skill_files": 55623
+      "skill_files": 55623,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
     },
     {
       "requested": "cloudflare/security-audit-skill",
@@ -27,7 +34,14 @@
       "commit": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8",
       "tree_sha": "8cd03bb3941496e441d6248aaae2429a35b93cc3",
       "tree_complete": true,
-      "skill_files": 1
+      "skill_files": 1,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
     },
     {
       "requested": "docker/skills",
@@ -38,7 +52,14 @@
       "commit": "38df58b09720d38eb78c2c674675ddf9fa74d441",
       "tree_sha": "6d81ab4763f7def8a038dc2941f229488822fe71",
       "tree_complete": true,
-      "skill_files": 12
+      "skill_files": 12,
+      "license_evidence": {
+        "identifier": "Apache-2.0",
+        "path": "LICENSE",
+        "sha256": "3bb33f65872155f0801efc9f6732e2868eb338c5ed6a81eec5c775c1382761cb",
+        "scope": "12 declared entrypoints and root notice; support/scripts/assets not individually accepted",
+        "checked_at": "2026-10-20T12:36:13.0042423Z"
+      }
     },
     {
       "requested": "hirokaji/jp-ui-contracts",
@@ -49,7 +70,14 @@
       "commit": "4bc933689ba8391c27f558fa7b8d6905a0a2af90",
       "tree_sha": "53f8ed5939eb1e62a0c8089b0fb07e121e13aeae",
       "tree_complete": true,
-      "skill_files": 1
+      "skill_files": 1,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
     },
     {
       "requested": "kepano/obsidian-skills",
@@ -60,7 +88,14 @@
       "commit": "3ccff5338ea700537839b21900aa5358a0402c98",
       "tree_sha": "c9a52b408a89bd5a42b0ea6ab65c39221c1d64f2",
       "tree_complete": true,
-      "skill_files": 6
+      "skill_files": 6,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
     },
     {
       "requested": "mattpocock/skills",
@@ -71,7 +106,14 @@
       "commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
       "tree_sha": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
       "tree_complete": true,
-      "skill_files": 38
+      "skill_files": 38,
+      "license_evidence": {
+        "identifier": "MIT",
+        "path": "LICENSE",
+        "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+        "scope": "14 selected authored entrypoints and complete-tree nested-notice check; no blanket asset/support permission",
+        "checked_at": "2026-10-20T12:36:13.0070909Z"
+      }
     },
     {
       "requested": "MengTo/Skills",
@@ -82,7 +124,14 @@
       "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
       "tree_sha": "8afedc8719f37d2026b55aef282ac27d8d873d76",
       "tree_complete": true,
-      "skill_files": 177
+      "skill_files": 177,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
     },
     {
       "requested": "mizchi/skills",
@@ -93,7 +142,14 @@
       "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
       "tree_sha": "afbd6cabdc055717936a1c454627ccc62050705b",
       "tree_complete": true,
-      "skill_files": 76
+      "skill_files": 76,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
     },
     {
       "requested": "nateherkai/ais-os",
@@ -104,7 +160,14 @@
       "commit": "ce9cb93a1145da5daba84ea37208ec35fd03606e",
       "tree_sha": "6c5a2d3ea0d15bd7cf9e528c2d32f095c760dabd",
       "tree_complete": true,
-      "skill_files": 12
+      "skill_files": 12,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
     },
     {
       "requested": "Nutlope/hallmark",
@@ -115,7 +178,14 @@
       "commit": "13ac0ec7e148655948100b6396439e481361d690",
       "tree_sha": "02ebcc67f58295654c073cfb74a20a9a86db1f8f",
       "tree_complete": true,
-      "skill_files": 1
+      "skill_files": 1,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
     },
     {
       "requested": "obra/superpowers",
@@ -126,7 +196,14 @@
       "commit": "bb92a77741419a4ab5f06e711a283343f1ada0c3",
       "tree_sha": "4ac675daa3415bc836f707c7e60237ac7b66c7d5",
       "tree_complete": true,
-      "skill_files": 15
+      "skill_files": 15,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
     },
     {
       "requested": "openai/skills",
@@ -137,7 +214,14 @@
       "commit": "49f948faa9258a0c61caceaf225e179651397431",
       "tree_sha": "224b363928698e143876aef008232ed73d8e6f81",
       "tree_complete": true,
-      "skill_files": 44
+      "skill_files": 44,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
     },
     {
       "requested": "tencent/teamai-cli",
@@ -148,7 +232,14 @@
       "commit": "8787405e59353a8da33f7eaf6b9781b0b3188cd2",
       "tree_sha": "79bddaf611bc2c94c8ae7892e51392b8936eda90",
       "tree_complete": true,
-      "skill_files": 7
+      "skill_files": 7,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
     },
     {
       "requested": "VoltAgent/awesome-design-md",
@@ -159,7 +250,14 @@
       "commit": "3b605329240ce735b510037cca322f1831fdd7f8",
       "tree_sha": "0f1e83e1619f72ebd7b72f2f39188dee9cdb161e",
       "tree_complete": true,
-      "skill_files": 0
+      "skill_files": 0,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
     },
     {
       "requested": "x1xhlol/system-prompts-and-models-of-ai-tools",
@@ -170,7 +268,14 @@
       "commit": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
       "tree_sha": "e8d86c0a025a7a07d4bb8723ae758cf98d63cbf5",
       "tree_complete": true,
-      "skill_files": 0
+      "skill_files": 0,
+      "license_evidence": {
+        "identifier": null,
+        "path": null,
+        "sha256": null,
+        "scope": "individual rights review incomplete",
+        "checked_at": null
+      }
     }
   ],
   "catalog_records": 73220,
@@ -202,7 +307,9 @@
     "Metadata statistics are not installed Skills or semantic/license approval.",
     "The ten candidate designs are one batch; no total count cap.",
     "No central original, existing junction, protection code, UI, model/GPU, or external source script was changed.",
-    "Installed remains zero; structure/discovery/application acceptance await verified original placement."
+    "Installed remains zero; structure/discovery/application acceptance await verified original placement.",
+    "Archive source-readme warning flag occurs in 59416 records; this is not a per-record malicious verdict or a blanket exclusion.",
+    "6mile truncated API tree was completed by all fixed-commit git subtrees/ls-tree with matching root tree SHA."
   ],
   "entrypoint_assessment": {
     "source": "mattpocock/skills",

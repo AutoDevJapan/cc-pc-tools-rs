@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 )
 
 type Record struct {
@@ -45,6 +46,9 @@ type QueueRow struct {
 }
 
 type Summary struct {
+	QueueSHA        string         `json:"queue_sha256"`
+	QueueRows       int            `json:"queue_rows"`
+	WithoutURL      int            `json:"records_without_url"`
 	CatalogSHA      string         `json:"catalog_sha256"`
 	Records         int            `json:"records"`
 	Available       int            `json:"body_available_occurrences"`
@@ -91,6 +95,10 @@ func scan(input io.Reader, output io.Writer) (Summary, error) {
 			if err != nil || len(b) != sha256.Size {
 				return s, fmt.Errorf("available body lacks SHA256 at row %d", s.Records+1)
 			}
+			r.SHA = strings.ToLower(r.SHA)
+		}
+		if r.Unit == "unread_additional_text_support_shape" && r.BodyRead {
+			return s, fmt.Errorf("held shape claims an available body at row %d", s.Records+1)
 		}
 		q := QueueRow{Record: r, State: "pending_semantic_and_individual_license_review", Reason: "Neither metadata nor absence of risk matches approves adoption."}
 		if r.Unit == "unread_additional_text_support_shape" {
@@ -116,6 +124,8 @@ func scan(input io.Reader, output io.Writer) (Summary, error) {
 			} else {
 				urls[r.URL] = r.ID
 			}
+		} else {
+			s.WithoutURL++
 		}
 		s.Records++
 		s.Units[r.Unit]++
@@ -152,22 +162,29 @@ func run() error {
 	if *catalog == "" || *out == "" {
 		return fmt.Errorf("-catalog and -out are required")
 	}
-	in, err := os.Open(*catalog)
+	return writeCatalog(*catalog, *out)
+}
+
+func writeCatalog(catalog, out string) error {
+	in, err := os.Open(catalog)
 	if err != nil {
 		return err
 	}
 	defer in.Close()
 	// Refuse to overwrite an earlier checkpoint or source directory.
-	if err = os.Mkdir(*out, 0700); err != nil {
+	if err = os.Mkdir(out, 0700); err != nil {
 		return err
 	}
-	f, err := os.OpenFile(filepath.Join(*out, "review-queue.jsonl"), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	partial := filepath.Join(out, "review-queue.jsonl.partial")
+	f, err := os.OpenFile(partial, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
 	}
-	w := bufio.NewWriter(f)
+	queueHash := sha256.New()
+	w := bufio.NewWriter(io.MultiWriter(f, queueHash))
 	s, scanErr := scan(in, w)
 	flushErr := w.Flush()
+	syncErr := f.Sync()
 	closeErr := f.Close()
 	if scanErr != nil {
 		return scanErr
@@ -178,11 +195,34 @@ func run() error {
 	if closeErr != nil {
 		return closeErr
 	}
+	if syncErr != nil {
+		return syncErr
+	}
+	if err = os.Rename(partial, filepath.Join(out, "review-queue.jsonl")); err != nil {
+		return err
+	}
+	s.QueueSHA = hex.EncodeToString(queueHash.Sum(nil))
+	s.QueueRows = s.Records
 	b, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
 		return err
 	}
-	if err = os.WriteFile(filepath.Join(*out, "summary.json"), b, 0600); err != nil {
+	if err = os.WriteFile(filepath.Join(out, "summary.json.partial"), b, 0600); err != nil {
+		return err
+	}
+	sf, err := os.OpenFile(filepath.Join(out, "summary.json.partial"), os.O_RDWR, 0600)
+	if err != nil {
+		return err
+	}
+	se := sf.Sync()
+	ce := sf.Close()
+	if se != nil {
+		return se
+	}
+	if ce != nil {
+		return ce
+	}
+	if err = os.Rename(filepath.Join(out, "summary.json.partial"), filepath.Join(out, "summary.json")); err != nil {
 		return err
 	}
 	keys := make([]string, 0, len(s.Units))

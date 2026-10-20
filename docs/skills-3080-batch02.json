@@ -1,7 +1,7 @@
 {
   "todo": 3080,
   "phase": "B",
-  "status": "authored_candidates_not_installed_guard_classification_unverified",
+  "status": "authored_candidates_pending_review_and_scoped_install",
   "batch_is_not_total_scope_or_count_cap": true,
   "source_repo": "mattpocock/skills",
   "source_commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
@@ -11,7 +11,7 @@
     "preserved_notice": "skills-3080-upstream-MIT.txt",
     "source_sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
     "attribution": "Copyright (c) 2026 Matt Pocock",
-    "scope": "Four individually read authored entrypoints below; no scripts, third-party credited material, or bundled assets copied. Supporting-resource semantic review remains incomplete."
+    "scope": "Fixed upstream entrypoints identified by each target path/SHA; individually reviewed author-owned text, no bundled executable or separately credited assets copied."
   },
   "targets": [
     {
@@ -32,7 +32,24 @@
       "adaptations": "Removes mandatory maintainer permission at each state transition, automatic AI disclaimer, fixed label creation, and human-merge state. Preserves scope, untrusted-code review, existing answers, and evidence before closing duplicates.",
       "source_sha256": "917b0baf74be583e74f110857ed45df2766617f75c00baf61fd136d7af515edf",
       "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/engineering/triage/SKILL.md",
-      "retrieved_at": "2026-10-20T08:40:54.4473045Z"
+      "retrieved_at": "2026-10-20T08:40:54.4473045Z",
+      "upstream_disable_model_invocation": true,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "promoted",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.4077444Z"
+      }
     },
     {
       "name": "wayfinder",
@@ -52,7 +69,24 @@
       "adaptations": "No compulsory planning-only role, one-ticket-per-session cap, new labels, tracker proliferation, background jobs, wiki, or owner PC checklist. Existing canonical task and scheduler dependency recording remain authoritative.",
       "source_sha256": "9be7b478c389605a24517d27752f278933588da97a1b5921b165f455edf4c5b7",
       "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/engineering/wayfinder/SKILL.md",
-      "retrieved_at": "2026-10-20T08:40:54.4478194Z"
+      "retrieved_at": "2026-10-20T08:40:54.4478194Z",
+      "upstream_disable_model_invocation": true,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "promoted",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.4134039Z"
+      }
     },
     {
       "name": "grilling",
@@ -71,7 +105,24 @@
       "adaptations": "No relentless questioning of routine technical choices, blanket final reapproval, parallel owner questions in one post, automatic agent creation, or invented approval. The two upstream wrapper entrypoints are merge candidates, not additional standalone skills.",
       "source_sha256": "befdff1e27a1dfe2a294d5871169ac1afe16d983911daa4f32627514a48c1e15",
       "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/productivity/grilling/SKILL.md",
-      "retrieved_at": "2026-10-20T08:40:54.4556984Z"
+      "retrieved_at": "2026-10-20T08:40:54.4556984Z",
+      "upstream_disable_model_invocation": false,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "promoted",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.4184882Z"
+      }
     },
     {
       "name": "loop-me",
@@ -91,7 +142,24 @@
       "adaptations": "No forced workspace interview, file creation/deletion, unrequested automation search, schedules, AI, or new product names. A finished specification is not a verified running workflow.",
       "source_sha256": "e44d1cc3e760fb86ac42964c2a5f1fcac511715db50fb375f3f7be814de1eaa7",
       "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/in-progress/loop-me/SKILL.md",
-      "retrieved_at": "2026-10-20T08:40:54.4504366Z"
+      "retrieved_at": "2026-10-20T08:40:54.4504366Z",
+      "upstream_disable_model_invocation": true,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "beta_public_not_in_plugin",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.4246454Z"
+      }
     }
   ]
 }

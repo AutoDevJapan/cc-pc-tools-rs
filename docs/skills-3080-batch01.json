@@ -1,14 +1,14 @@
 {
   "todo": 3080,
   "phase": "B",
-  "status": "authored_candidates_not_installed_guard_classification_unverified",
+  "status": "authored_candidates_pending_review_and_scoped_install",
   "batch_is_not_total_scope_or_count_cap": true,
   "source_repo": "mattpocock/skills",
   "source_commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
   "license": {
     "identifier": "MIT",
     "path": "LICENSE",
-    "scope": "The ten authored SKILL.md files below, reviewed individually. No bundled executable, template, or separately authored quoted work is copied by this plan.",
+    "scope": "Fixed upstream entrypoints identified by each target path/SHA; individually reviewed author-owned text, no bundled executable or separately credited assets copied.",
     "attribution": "Copyright (c) 2026 Matt Pocock",
     "preservation": "Preserve fixed original entrypoint bytes and fixed LICENSE notice with each eventual derivative. This does not grant blanket rights over all files in any source repo.",
     "preserved_notice": "skills-3080-upstream-MIT.txt",
@@ -22,7 +22,7 @@
       "source_sha256": "2c20617f87ec8af6a434859f381b2f061a69b530444e74eb39e78bb016a6d1e2",
       "description": "呼び出し側の複雑さを減らすモジュールの公開面と依存の差替え位置を設計するときに使う。",
       "positive": "同じ不変条件を5つの呼出し元が別々に守る設計を、公開面から作り直す。",
-      "negative": "既存関数の誤字を1か所直す。",
+      "negative": "業務上の顧客と利用者の違いを用語集へ整理するだけの依頼。",
       "distinct_from_existing": "agent-system-designのエージェント基盤設計やdomain-modelingの業務用語整理と異なり、モジュールの公開面と呼出し側の知識量を扱う。既存本文全体の比較は未実施。",
       "guidance": [
         "公開面には型だけでなく、不変条件、呼出し順、失敗、設定、性能の前提を含める。呼出し側が暗記する前提と、内部に隠せる前提を分ける。",
@@ -33,7 +33,24 @@
       ],
       "adaptations": "Mandatory upstream vocabulary and parallel agent creation become contextual choices. New tool code remains Go by default; GoDD remains Rust. No upstream examples or helper implementations are copied.",
       "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/engineering/codebase-design/SKILL.md",
-      "retrieved_at": "2026-10-20T08:40:54.4298384Z"
+      "retrieved_at": "2026-10-20T08:40:54.4298384Z",
+      "upstream_disable_model_invocation": false,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "promoted",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.3103848Z"
+      }
     },
     {
       "name": "diagnosing-bugs",
@@ -49,11 +66,31 @@
         "要素を1つずつ外して症状が消えるか調べる。最小化で元の症状を別の通信障害などに置き換えていないか確認する。",
         "候補原因ごとに『これが原因なら、この1変更で何が変わるか』を先に書く。予測を区別する境界だけを計測し、認証値を含む全ログの保存は避ける。",
         "不具合を起こす実際の呼出しの連鎖を通る検査を先に失敗させ、修正後に元の再現経路と関連検査を確認する。浅いmockだけの成功で実障害を直したとしない。",
-        "計測を識別できる印で追加し、終了時に取り除く。使い捨て資源は所有記録に従って片付け、原因と検査の証拠をコミットへ残す。再現できない場合は不足する証拠と次の取得手段を記録して独立調査を続ける。"
+        "計測を識別できる印で追加し、終了時に取り除く。使い捨て資源は所有記録に従って片付け、原因と検査の証拠をコミットへ残す。再現できない場合は不足する証拠と次の取得手段を記録して独立調査を続ける。",
+        "取得前に秘密欄を対象から外し、必要な証拠だけを収集する。引用・表示には秘密や無関係な個人情報を含めない。",
+        "決済・通知等の再現はテストモードと検査資源を優先し、実課金・実送信・顧客データ変更を新たに発生させない。",
+        "性能低下では先に同条件の基準値を測り、変更ごとに比較する。原因候補は複数の反証可能な仮説に分け、1つずつ予測を試す。"
       ],
-      "adaptations": "No obligatory human PC operation, headless owner login, logging secrets then redacting, arbitrary 100/1000 stress loops, or every-phase stop. Resource allocation and finite retries remain required.",
+      "adaptations": "Preserves secret-safe evidence and performance baselines. No obligatory human PC operation, owner login in a disposable browser, arbitrary stress count, or every-phase stop. Resource allocation and finite retries remain required.",
       "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/engineering/diagnosing-bugs/SKILL.md",
-      "retrieved_at": "2026-10-20T08:40:54.4308362Z"
+      "retrieved_at": "2026-10-20T08:40:54.4308362Z",
+      "upstream_disable_model_invocation": false,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "promoted",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.3216086Z"
+      }
     },
     {
       "name": "writing-fragments",
@@ -72,7 +109,24 @@
       ],
       "adaptations": "Removes mandatory Markdown files, relentless interviewing, and automatic coinage. No source helpers are required.",
       "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/in-progress/writing-fragments/SKILL.md",
-      "retrieved_at": "2026-10-20T08:40:54.4525438Z"
+      "retrieved_at": "2026-10-20T08:40:54.4525438Z",
+      "upstream_disable_model_invocation": true,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "beta_public_not_in_plugin",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.3299315Z"
+      }
     },
     {
       "name": "writing-shape",
@@ -90,9 +144,26 @@
         "素材にない数値や具体例が必要になったら不足を明示する。調べられることは一次資料で調べ、本人の体験だけは創作しない。",
         "文章は会話本文へ返す。明示されたファイルを編集する場合は直前の版を読み返して本人の編集を保つ。公開や別媒体への投稿は依頼範囲に従う。"
       ],
-      "adaptations": "No mandatory file or paragraph-by-paragraph forced questions. Upstream raw material stays unchanged. Additional writing-beats source must be manifested before counting an integration.",
+      "adaptations": "No mandatory file or paragraph-by-paragraph forced questions. The user-provided input material stays unchanged. Additional writing-beats source must be manifested before counting an integration.",
       "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/in-progress/writing-shape/SKILL.md",
-      "retrieved_at": "2026-10-20T08:40:54.4530704Z"
+      "retrieved_at": "2026-10-20T08:40:54.4530704Z",
+      "upstream_disable_model_invocation": true,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "beta_public_not_in_plugin",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.3354999Z"
+      }
     },
     {
       "name": "migrate-to-shoehorn",
@@ -103,15 +174,34 @@
       "negative": "Goで新しい検査用ツールを作る。",
       "distinct_from_existing": "既存frontend-node-engineeringの一般実装ではなく、テストfixtureの型アサーション移行に限定。",
       "guidance": [
+        "shoehornは既存TypeScriptのテストコード専用とし、本番コードへimportしない。",
         "既存TypeScript案件でshoehornを使う依頼、または型アサーションの問題が実証された移行に適用する。新しい製品や補助ツールの言語をTypeScriptへ変更する理由にしない。",
         "既存のpackage manager、依存の有無、テストの型検査を確認する。導入済みなら追加インストールせず、依頼された移行に必要な変更だけ行う。",
         "正しい型の一部だけを与えるfixtureはfromPartial、型が誤った入力を検査するfixtureはfromAnyへ分ける。完全な入力を要求する場面でfromExactを検討する。",
         "fromAnyへ一括置換して型エラーを隠さない。本番処理の入力検証と、意図的な不正fixtureを混同しない。",
-        "移行したテストと型検査を実行し、故意の不正入力を本番コードが拒否する検査が保たれることを確かめる。"
+        "移行したテストと型検査を実行し、故意の不正入力を本番コードが拒否する検査が保たれることを確かめる。",
+        "変更後、非テストファイルからshoehornがimportされていないことを確認する。"
       ],
       "adaptations": "No automatic npm install, blanket cast replacement, or new TypeScript development. Current package API must be checked in the installed version before use.",
       "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/misc/migrate-to-shoehorn/SKILL.md",
-      "retrieved_at": "2026-10-20T08:40:54.4541346Z"
+      "retrieved_at": "2026-10-20T08:40:54.4541346Z",
+      "upstream_disable_model_invocation": false,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "frozen_unmaintained",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.3411475Z"
+      }
     },
     {
       "name": "scaffold-exercises",
@@ -123,14 +213,31 @@
       "distinct_from_existing": "学習法の相談ではなく、演習教材のファイル構造と参照整合性を扱う。",
       "guidance": [
         "既存教材の番号・命名・検査コマンドを先に確認する。上流のai-hero-cliがこの教材にもあるとは決めつけない。",
-        "章番号XXと演習番号XX.YYを対応させ、problem、solution、explainerを教材計画に合わせて選ぶ。説明だけの項目を架空の問題で埋めない。",
+        "既存教材が上流と同じ規則なら、章番号XXと演習番号XX.YYを対応させ、problem、solution、explainerを計画に合わせて選ぶ。別の規則があるならそれを保つ。説明だけの項目を架空の問題で埋めない。",
         "主となる各フォルダへ、学ぶ内容が分かる空でない説明を置く。実装を含むなら教材の言語と入口を確認し、新しい補助コードは本人の言語方針に従う。",
         "移動や番号変更は履歴と既存リンクを保持する。問題が参照する素材、解答が対応する問題、説明の入口を照合する。",
         "教材の実際のlintまたは参照検査を通す。フォルダの存在だけを、問題の正しさや教材完成の証明にしない。"
       ],
       "adaptations": "No automatic TypeScript stubs or assumed proprietary course linter. No empty title-only scaffold is reported as completed learning content.",
       "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/misc/scaffold-exercises/SKILL.md",
-      "retrieved_at": "2026-10-20T08:40:54.4541346Z"
+      "retrieved_at": "2026-10-20T08:40:54.4541346Z",
+      "upstream_disable_model_invocation": false,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "frozen_unmaintained",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.3481719Z"
+      }
     },
     {
       "name": "teach",
@@ -139,18 +246,35 @@
       "description": "本人の目的と理解の記録に沿って、小さな練習と確認を繰り返して教えるときに使う。",
       "positive": "仕事でSQLを読む必要があるので、毎回短い問題で理解を確かめながら教えてほしい。",
       "negative": "SQL構文を1つだけ調べて答える。",
-      "distinct_from_existing": "work-motivation-learningの習慣や学習計画とは異なり、複数回の具体的な授業と理解確認を扱う。",
+      "distinct_from_existing": "work-motivation-learningの習慣や学習計画とは異なり、複数回の具体的な授業と理解確認を扱う。 想起・間隔・混合の一般原則はwork-motivation-learningと重なるため、独立した新知見として数えず、授業の設計と理解確認をこの候補の用途とする。",
       "guidance": [
         "なぜ学ぶか、最終的に何ができればよいかを既存の依頼から確かめる。目的が決まっているのに毎回聞き直さない。",
         "前回できたことと、まだ助けが必要なことを分け、少し挑戦すれば達成できる1項目を今回の授業にする。必要な知識だけを信頼できる資料で確認する。",
         "説明の直後に本人が使う短い練習を置き、答えに応じて具体的にフィードバックする。選択肢の長さや並びだけで正解が分からないようにする。",
-        "その場で滑らかに答えられることと、後日思い出せることを分ける。思い出す練習、間隔、関連する課題の混合を目的に合わせて使う。",
-        "次回再開できるよう、理解できた点・誤解・次の課題を会話で短く残す。ファイルやHTML授業は本人が依頼した場合だけ作り、見た目を実装するなら画像確認の手順に従う。",
+        "想起・間隔・混合や定着の一般原則は、必要なとき既存work-motivation-learningを参照する。ここでは今回の理解確認と、次回の授業へ何を引き継ぐかに集中する。",
+        "最初に既存の記録先を確認し、なければこの会話に理解できた点・誤解・次の課題を短く残す。本人が指定した記録先があるときだけそれを使う。新しいセッションで前回の記録を取得できなければ、理解済みと推測せず未確認として扱う。HTML等の見た目を実装する場合は画像確認に従う。",
         "外部コミュニティ参加や有料教材を必須にしない。本人の望む学び方を保ち、医学など高い正確さを要する内容は最新の一次資料を確認する。"
       ],
       "adaptations": "Removes automatic HTML workspace, browser opening, compulsory community referral, and new expense. No learning dossier is created without a request.",
       "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/productivity/teach/SKILL.md",
-      "retrieved_at": "2026-10-20T08:40:54.4588858Z"
+      "retrieved_at": "2026-10-20T08:40:54.4588858Z",
+      "upstream_disable_model_invocation": true,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "promoted",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.3536653Z"
+      }
     },
     {
       "name": "to-questionnaire",
@@ -158,7 +282,7 @@
       "source_sha256": "b5eb929842ee0e93d867c5e906d183d350f2f2d149eaeaa86967d94d8eda1d3b",
       "description": "必要な事実を持つ相手へ、判断に使える回答をもらう質問票を作るときに使う。",
       "positive": "運用担当へ、初期負荷と障害時の制約をまとめて確認する質問票を作る。",
-      "negative": "本人へ技術作業を実行してよいか毎回確認する。",
+      "negative": "この製品の料金をa/bで本人に決めてもらう正式なDiscord質問を送る。",
       "distinct_from_existing": "discord-owner-askは本人判断の正式配送であり、このSkillは相手の知識と必要な成果の差を埋める質問票の設計。",
       "guidance": [
         "受取人の役割・既知の情報・本人との関係と、回答後に決めたいことを分ける。依頼にある情報を使い、既に分かる事項を質問しない。",
@@ -169,7 +293,24 @@
       ],
       "adaptations": "No automatic file creation or message sending. Does not authorize new customer commitments or duplicate owner questions.",
       "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/productivity/to-questionnaire/SKILL.md",
-      "retrieved_at": "2026-10-20T08:40:54.4599258Z"
+      "retrieved_at": "2026-10-20T08:40:54.4599258Z",
+      "upstream_disable_model_invocation": true,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "promoted",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.3588110Z"
+      }
     },
     {
       "name": "setup-ts-deep-modules",
@@ -189,7 +330,24 @@
       ],
       "adaptations": "No new TS product/tool implementation, assumed package layout, automatic dependencies, or imposed ban on legitimate internal tests. No upstream executable config is copied.",
       "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/in-progress/setup-ts-deep-modules/SKILL.md",
-      "retrieved_at": "2026-10-20T08:40:54.4504366Z"
+      "retrieved_at": "2026-10-20T08:40:54.4504366Z",
+      "upstream_disable_model_invocation": true,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "beta_public_not_in_plugin",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.3645609Z"
+      }
     },
     {
       "name": "setup-pre-commit",
@@ -198,17 +356,34 @@
       "description": "既存JavaScript案件のコミット前検査を、差分と既存CIに合わせて設定するときに使う。",
       "positive": "既存Node案件に、変更したファイルの整形と関連検査をコミット前に実行する設定を追加する。",
       "negative": "Go案件の全件検査をコミットのたびに義務化する。",
-      "distinct_from_existing": "frontend-node-engineeringの一般実装ではなく、Husky/lint-staged等の既存チェックへの接続に限定。",
+      "distinct_from_existing": "frontend-node-engineeringの一般実装ではなく、Husky/lint-staged等の既存チェックへの接続に限定。 差分検査の一般原則はtest-qualityのoptimize-test-executionと重なる。ここでは既存hook/prepareと実チェックの接続を扱い、必要なとき既存知見を参照する。",
       "guidance": [
         "依頼された既存JavaScript案件のpackage manager、既存hook、prepare、整形設定、型検査とテストの入口を先に確認する。",
         "既存の仕組みが同じ目的を満たすなら再導入しない。必要な無料の開発依存だけを追加し、既存prepareやhookを丸ごと置換しない。",
         "整形はstageされた対象だけに行い、無関係な作業中の変更をstageしない。hookが修正した差分を利用者の変更と区別して確認する。",
-        "型検査とテストは変更の影響範囲に合わせる。存在しないscriptを成功扱いで飛ばしたり、毎コミット全件を強制したりしない。必須のCI条件は保持する。",
+        "通常の第一案はcommit前を変更ファイルの整形に絞り、型検査とテストをpre-pushやCIへ接続する。本人が型検査をcommit条件に明示したら維持する。tsc等で必要な全体型検査を無理に差分へ削らず、重さと代替を具体的に説明する。影響する必須検査は保持する。",
         "適切な変更で成功し、検出すべき不整形や型違反で該当検査が失敗することを確かめる。実際のコミットは依頼の範囲と作業中の変更を確認して行う。"
       ],
       "adaptations": "No automatic npx init, arbitrary formatting convention, stage-all commit, or unconditional full tests. Exact Husky behavior is verified against the installed version.",
       "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/misc/setup-pre-commit/SKILL.md",
-      "retrieved_at": "2026-10-20T08:40:54.45466Z"
+      "retrieved_at": "2026-10-20T08:40:54.45466Z",
+      "upstream_disable_model_invocation": false,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "frozen_unmaintained",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.3711157Z"
+      }
     }
   ]
 }

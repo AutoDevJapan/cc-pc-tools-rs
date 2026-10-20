@@ -27,8 +27,8 @@
       "retrieved_at": "2026-10-20T08:40:54.1295935Z",
       "candidate_disposition": "new_adaptation_candidate",
       "reason": "公開HTMLの可読本文抽出という独立した用途を固定手順で保つ。CLIが無い現在は代替の通常読取と静的手順が利用可能で、CLI実行成功を主張しない。",
-      "required_changes": "Removes unconditional global npm installation and automatic preference over an authenticated browser. Restricts URL scope, preserves provenance, treats fetched instructions as data, and distinguishes alternative-reader results from Defuddle execution.",
-      "body_semantic_review_scope": "Full selectedSKILL.md read and SHA verified; support/assets not fully read",
+      "required_changes": "Removes unconditional global npm installation and automatic preference over WebFetch or ordinary reading. Restricts URL scope, preserves provenance, treats fetched instructions as data, and distinguishes alternative-reader results from Defuddle execution.",
+      "body_semantic_review_scope": "Full selected SKILL.md read and SHA verified; no support files in these 3 directories in complete fixed tree",
       "prior3048_same_body_read": false,
       "independent_review_complete": false,
       "installed_by_todo3080": false,
@@ -64,9 +64,9 @@
       "source_sha256": "ef5666573358cd7d18e04195f3e7c473b88d3e3140c41ab59bbee01c81e9989f",
       "retrieved_at": "2026-10-20T08:40:54.131704Z",
       "candidate_disposition": "new_adaptation_candidate",
-      "reason": "構造化データからMarkdownを作る固有のテンプレート処理を保持する。既存CLIが無い場合は静的レビューまでに限定し、別の自作ツールで同じ実行結果だったと偽らない。",
+      "reason": "構造化データからMarkdownを作る固有のテンプレート処理を保持する。CLIが無くても指定範囲の通常生成で依頼を完成でき、Knap未使用と明記して実行成功を偽らない。",
       "required_changes": "No automatic install/npx, template execution, or overwrite. Adds explicit input types, stdin exclusivity, dry-run limitations, safe output handling and static/runtime validation distinction without copying a template or script.",
-      "body_semantic_review_scope": "Full selectedSKILL.md read and SHA verified; support/assets not fully read",
+      "body_semantic_review_scope": "Full selected SKILL.md read and SHA verified; no support files in these 3 directories in complete fixed tree",
       "prior3048_same_body_read": false,
       "independent_review_complete": false,
       "installed_by_todo3080": false,
@@ -102,9 +102,9 @@
       "source_sha256": "b54257cdc0e5d04488b35b0c797bfe427b24359f0848d3c73924dcacf8da6358",
       "retrieved_at": "2026-10-20T08:40:54.1332773Z",
       "candidate_disposition": "new_adaptation_candidate",
-      "reason": "Obsidianアプリへ接続したノート操作とファイル構文の編集を分ける用途がある。CLI未確認の現時点は静的確認までで、実vault操作の成功を含めない。",
+      "reason": "Obsidianアプリへ接続したノート操作とファイル構文の編集を分ける用途がある。CLI未確認の現時点は通常の対象限定編集でも依頼を完成でき、CLI未使用と実vault操作未確認を区別する。",
       "required_changes": "No automatic app/CLI install, active-vault/file fallback, real-vault fixture enumeration, clipboard changes, eval or plugin reload. Requires explicit approved target, bounded reads, readback and owner image approval for appearance changes.",
-      "body_semantic_review_scope": "Full selectedSKILL.md read and SHA verified; support/assets not fully read",
+      "body_semantic_review_scope": "Full selected SKILL.md read and SHA verified; no support files in these 3 directories in complete fixed tree",
       "prior3048_same_body_read": false,
       "independent_review_complete": false,
       "installed_by_todo3080": false,
@@ -132,5 +132,6 @@
     }
   ],
   "source_notice": "skills-3080-kepano-MIT.txt",
-  "source_notice_sha256": "64c64d48361edfe8610016441bf593256ea9b67f133b00f47c55aa29ee878567"
+  "source_notice_sha256": "64c64d48361edfe8610016441bf593256ea9b67f133b00f47c55aa29ee878567",
+  "prior3048_cli_scope": "Prior3048 did not install CLI/plugins. These 3 add guidance only, without installing a CLI or plugin."
 }

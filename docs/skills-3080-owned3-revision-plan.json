@@ -1,0 +1,94 @@
+{
+  "todo": 3080,
+  "status": "reviewed_data_prepared_not_yet_applied",
+  "review": 3168,
+  "must_resolution": "LF-only normalization matches all3 reviewer expected SHA256s; semantics unchanged",
+  "payload_sha256": "f6da5ea9107511a254d14170cc0073d512cc52fc9e0dbd5fa9f4c26a519798ed",
+  "after_bundle_sha256": "03aa3b498edd6a07378cf7220cede7473477a9203caa106c4f561cd8bb683077",
+  "one_off_writer_sha256": "9874b1b49b6e12f054bcf673db5bad939f72c28a9db93c54111e60b5a90d069c",
+  "targets": [
+    {
+      "name": "migrate-to-shoehorn",
+      "after_files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "de4da4c11d924fac79c924b2ee3d2db4a5cb98386eb490a599119463d036ae72"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "5b26c8c685e7bda972250598cb580953a666a68cfaddd141e1b0addb281eeeaf"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "50d799a024dc00bf038136a0e08c1da45da1c573b6d464586ed02041b1644dd2"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "60c30e9728eeccce663f432b69da7d83cb3eacd91e47ba6694fbf881b5da1b03"
+        }
+      ]
+    },
+    {
+      "name": "setup-pre-commit",
+      "after_files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "c9819d7f1e3b198064edc1faa3154224ed67395e9f07f5d3cea4b67cf0a11a98"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "41778aef6b6624e05e49310cfac6d0d99b1df02b10afa100207ead6eb0bbadff"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "1661af7f36e2ca9eb6f2535ffeed45c3ae9ceb2e932aa09f0be35e6861be06b5"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "6b2946c354c1051a456344d526ad55b530b4aaa6f08465210af0a2dd4f30431a"
+        }
+      ]
+    },
+    {
+      "name": "grilling",
+      "after_files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "befdff1e27a1dfe2a294d5871169ac1afe16d983911daa4f32627514a48c1e15"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "71d989f4c61ee04b1c82753df07f28d5b7da7b68f56bd68256bee8651b262f49"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "347e3125d00ceb18232c1b350e0f8df780e5a728cb26275db441a80516cf8360"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "c402634b0de4bcdad9a3d7d71fe5c6385a623262626647888c73d109816d9d60"
+        }
+      ]
+    }
+  ],
+  "constraints": [
+    "Known first14/v2 originals only;15 before hashes and physical ancestors and exact5 files verified before writes",
+    "Unique new persistent backup,15 original files verified before first replacement; both payloads and synced journal retained",
+    "Only9 changed files; source.json then sources.md then SKILL.md last;6 upstream/license files unchanged",
+    "Atomic replacement with before/staged/after hashes, no deletion or new-only installer misuse, no retry or automatic rollback",
+    "On failure record before/after/unknown for9; separate scoped recovery only",
+    "Actual3048 validation and fresh discovery of single revised names; ensure .trash not discovered; no added adoption count"
+  ]
+}

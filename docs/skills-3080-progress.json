@@ -90,11 +90,11 @@
       "tree_complete": true,
       "skill_files": 6,
       "license_evidence": {
-        "identifier": null,
-        "path": null,
-        "sha256": null,
-        "scope": "individual rights review incomplete",
-        "checked_at": null
+        "identifier": "MIT",
+        "path": "LICENSE",
+        "sha256": "64c64d48361edfe8610016441bf593256ea9b67f133b00f47c55aa29ee878567",
+        "scope": "Selected 3 entrypoints and complete-tree nested-notice check; no blanket supporting-resource permission",
+        "checked_at": "2026-10-20T18:58:25.7084004Z"
       }
     },
     {

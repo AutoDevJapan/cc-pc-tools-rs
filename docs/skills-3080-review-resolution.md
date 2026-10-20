@@ -60,3 +60,8 @@ Kepanoの固定commit3ccff5338ea700537839b21900aa5358a0402c98/tree c9a52b408a89b
 CLI有無のGet-CommandではPATH上に3名が見つからなかった。未導入と断定せず未確認として扱い、CLI/app/vault・モデル・GPUは起動していない。未知の既存Skill本文を一括で読んでいない。
 
 Kepano候補は3件15ファイル、最大入口2616bytes、bundle SHAbe842b7d3bbcc7b00a6b78a81f20310d1a2dbcf8dd5adcbaf75c83b6e662de54。公開原文とMITを個別に保持する。既存3048検査器のメモリ内検査、catalogの対象test-count1/vet、書込み無しpreflightは成功。Kepanoの実配置は0。新しい候補で25件となるが、導入済みは22件のまま。次の独立レビュー後に通常の個別実行審査と限定配置・発見へ進む。件数上限は置かない。
+
+## 2026-10-21: 3165/3168受領と配置前修正
+3165はb570/旧Kepano bundle全文と固定原文、MIT、treeを確認しMust0。具体Suggestion1〜6を反映し、CLI引数/対象不足/上書き/stdin/batch/代替通常手段と出典の適用範囲を補った。v2 bundle SHA 1c9d347e347a315d9c315c1bec8142743c4cbf5624512ab161789bf2aaf7b516。原文3/MIT3は不変。実CLI・vaultは起動していない。
+3168は初回所有3名の実15 before SHAと提案15 after SHAを照合。Must1（source.jsonのCRLF）をLFへ修正し、指摘の期待SHA3/3に一致。意味内容はレビュー版と同一。反復指摘の説明2件とgrilling経路を更新する。独立レビューのSuggestion1〜5を実更新手順へ採用し、固定SHAと旧版保全を限定計画に記録。新規専用installerで既存を上書きしない。両方まだ実反映前の記録。
+3165のモデル指示はClaude Sonnet5.5/max、静的3正例6負例1turn。3168もSonnet5.5/max、実モデルtrace/OAuth経路はレビュー内部で未確認。新しい説明の実選択やcontext予算の測定ではない。残る全候補の完了ではない。

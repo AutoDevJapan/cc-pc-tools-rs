@@ -129,6 +129,40 @@ assert.deepEqual(Array.from(ctx.processingRows(board,100),x=>x.worker.id),['todo
 `)
 }
 
+func TestUnlinkedProcessingIsNeverReportedAsNoWork(t *testing.T) {
+	node(t, `
+const host={innerHTML:'',contains:()=>false,querySelectorAll:()=>[],insertAdjacentHTML(_where,text){this.innerHTML+=text}},status={};
+const worker={id:'todo-1',task:'verified work',workState:'processing',references:{sessions:['verified']}},board={workforce:{processing:{state:'complete',observedAt:99,validUntil:200,verifiedCount:2}},departments:[{products:[{name:'Product',workers:[worker]}]}]};
+const ctx={Date:{now:()=>100},opsList:x=>Array.isArray(x)?x:[],opsState:{snapshot:board,items:new Map()},opsTime:String,opsNumber:x=>typeof x==='number'?x:null,esc:String,opsProgress:()=>'',document:{activeElement:{}},$:s=>s==='#progress-jobs'?host:status};
+vm.createContext(ctx);vm.runInContext(between(input.index,'function processingRows(','function switchView('),ctx);ctx.renderProgress();assert.match(status.textContent,/実作業 2件/);assert.match(host.innerHTML,/verified work/);assert.match(host.innerHTML,/ほかに 1件/);
+worker.references.sessions=[];ctx.renderProgress();assert.match(host.innerHTML,/実作業は観測されています/);assert(!host.innerHTML.includes('実作業を確認したジョブはありません'));
+board.workforce.processing.verifiedCount=0;worker.workState='resource_wait';ctx.renderProgress();assert.match(host.innerHTML,/現在、実作業を確認したジョブはありません/);
+`)
+}
+
+func TestSessionExpiryLeavesOtherProcessingJobsVisible(t *testing.T) {
+	node(t, `
+const first={workState:'processing',status:'working',references:{sessions:['first']}},second={workState:'processing',status:'working',references:{sessions:['second']}};
+const board={workforce:{processing:{state:'complete',verifiedCount:2,total:2,validUntil:200,sessions:[{key:'first',validUntil:110},{key:'second',validUntil:200}]}},departments:[{products:[{workers:[first,second]}]}]};
+const ctx={opsList:x=>Array.isArray(x)?x:[]};vm.createContext(ctx);vm.runInContext(between(input.index,'function expireOpsEvidence(','function opsKey('),ctx);ctx.expireOpsEvidence(board,120);assert.equal(first.workState,'execution_unverified');assert.equal(second.workState,'processing');assert.equal(board.workforce.processing.verifiedCount,1);assert.equal(board.workforce.processing.state,'partial');ctx.expireOpsEvidence(board,201);assert.equal(second.workState,'execution_unverified');assert.equal(board.workforce.processing.verifiedCount,null);
+`)
+}
+
+func TestMusicLoadingResumesWhenThePageBecomesVisible(t *testing.T) {
+	node(t, `
+let resumed=0;const ctx={document:{hidden:false},$:selector=>({classList:{contains:()=>selector==='#view-music'}}),window:{loadConsoleMusic(){resumed++}}};vm.createContext(ctx);vm.runInContext(line(input.index,'function refreshCurrentPage('),ctx);ctx.refreshCurrentPage();assert.equal(resumed,1);ctx.document.hidden=true;ctx.refreshCurrentPage();assert.equal(resumed,1);
+`)
+}
+
+func TestProgressDetailKeepsItsCanonicalRecordAfterRefresh(t *testing.T) {
+	node(t, `
+const body={innerHTML:''},title={},worker={id:'todo-1',name:'Worker',task:'Current work',status:'working',workState:'processing',references:{sessions:['job']}};
+const board={workforce:{processing:{state:'complete',observedAt:99,validUntil:200,verifiedCount:1}},departments:[{id:'info',name:'Information',products:[{id:'product',name:'Product',workers:[worker]}]}]};
+const host={innerHTML:'',contains:()=>false,querySelectorAll:()=>[]};const ctx={Date:{now:()=>100},opsList:x=>Array.isArray(x)?x:[],opsState:{snapshot:board,items:new Map(),details:new Map()},opsTime:String,opsNumber:x=>typeof x==='number'?x:null,opsDecimal:String,esc:String,opsProgress:()=>'',opsRobot:()=>'',opsStatus:x=>x,opsFacts:()=>'',opsValue:String,opsQuestionUrl:()=>null,opsColor:()=>'',document:{activeElement:{}},$:s=>s==='#progress-jobs'?host:s==='#progress-update'?{}:s==='#ops-dialog-body'?body:s==='#ops-dialog-title'?title:null};
+vm.createContext(ctx);vm.runInContext(between(input.index,'function processingRows(','function switchView(')+'\n'+between(input.index,'function renderOpsDetail(','async function loadOpsDetail('),ctx);ctx.renderProgress();ctx.opsState.selected=[...ctx.opsState.items.keys()][0];assert.deepEqual(JSON.parse(ctx.opsState.selected),['info','Information','product','Product','todo-1']);ctx.opsState.items.clear();worker.task='Updated work';ctx.renderOpsDetail();assert.equal(title.textContent,'Updated work');assert(body.innerHTML.includes('Information'));assert(!body.innerHTML.includes('この作業は現在の記録にありません'));
+`)
+}
+
 func TestFetchesBelongToTheVisiblePage(t *testing.T) {
 	node(t, `
 let view='systems',calls=[];

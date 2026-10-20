@@ -1,13 +1,13 @@
 //! Incremental, local-only work accounting. Never reads credential files or tool arguments.
 use axum::{
-    Json,
     extract::{Query, State},
     http::StatusCode,
     response::{IntoResponse, Response},
+    Json,
 };
 use chrono::{DateTime, FixedOffset, NaiveDate, NaiveDateTime, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs::{self, File},
@@ -604,12 +604,6 @@ pub async fn handle(
     if date_ms(&date).is_none() {
         return (StatusCode::BAD_REQUEST,Json(json!({"ok":false,"version":1,"error":{"code":"invalid_date","message":"日付はYYYY-MM-DDで指定してください。"}}))).into_response();
     }
-    state
-        .workload
-        .observed
-        .write()
-        .unwrap_or_else(|e| e.into_inner())
-        .observe(&state.operations.snapshot(), Utc::now().timestamp_millis());
     Json(json!({"ok":true,"version":1,"data":state.workload.snapshot(&date)})).into_response()
 }
 
@@ -689,10 +683,10 @@ fn session_record(cursor: &mut Cursor, v: &Value, earliest: i64, now: i64) {
     }
     if ms < earliest {
         if kind == "event_msg" && string(p, "type") == "token_count" {
-            cursor.cumulative_seen = true;
-            cursor.cumulative_tokens = cursor
-                .cumulative_tokens
-                .max(number(&p["info"]["total_token_usage"], "total_tokens"));
+            if let Some(total) = p["info"]["total_token_usage"]["total_tokens"].as_u64() {
+                cursor.cumulative_seen = true;
+                cursor.cumulative_tokens = cursor.cumulative_tokens.max(total);
+            }
         }
         return;
     }
@@ -722,7 +716,9 @@ fn session_record(cursor: &mut Cursor, v: &Value, earliest: i64, now: i64) {
         }
     } else if kind == "event_msg" && string(p, "type") == "token_count" {
         let info = &p["info"];
-        let total = number(&info["total_token_usage"], "total_tokens");
+        let Some(total) = info["total_token_usage"]["total_tokens"].as_u64() else {
+            return;
+        };
         let delta = if cursor.cumulative_seen || cursor.cumulative_tokens > 0 {
             total.saturating_sub(cursor.cumulative_tokens)
         } else {
@@ -1394,20 +1390,18 @@ fn aggregate_progress(
     let todo = match cc_todo::read_store(&sources.todo) {
         Ok(todo) => todo,
         Err(error) => {
-            cache.warnings = vec![
-                match error {
-                    cc_todo::StoreError::TooLarge => {
-                        "共有ToDoが上限64MiBを超えています。集計を更新できません。"
-                    }
-                    cc_todo::StoreError::InvalidJson(_) => {
-                        "共有ToDoのJSONが不正です。集計を更新できません。"
-                    }
-                    cc_todo::StoreError::Io(_) => {
-                        "共有ToDoを取得できませんでした。集計を更新できません。"
-                    }
+            cache.warnings = vec![match error {
+                cc_todo::StoreError::TooLarge => {
+                    "共有ToDoが上限64MiBを超えています。集計を更新できません。"
                 }
-                .into(),
-            ];
+                cc_todo::StoreError::InvalidJson(_) => {
+                    "共有ToDoのJSONが不正です。集計を更新できません。"
+                }
+                cc_todo::StoreError::Io(_) => {
+                    "共有ToDoを取得できませんでした。集計を更新できません。"
+                }
+            }
+            .into()];
             return cache;
         }
     };
@@ -2348,14 +2342,25 @@ async fn observation_worker(
         let board = operations.snapshot();
         let workload = workload.clone();
         let _ = tokio::task::spawn_blocking(move || {
-            let mut ledger = workload.observed.write().unwrap_or_else(|e| e.into_inner());
-            ledger.observe(&board, Utc::now().timestamp_millis());
-            ledger.save(
-                &workload
-                    .sources
-                    .cache
-                    .with_file_name("workload-observations.json"),
-            );
+            let pending = {
+                let mut ledger = workload.observed.write().unwrap_or_else(|e| e.into_inner());
+                let previous = ledger.revision();
+                ledger.observe(&board, Utc::now().timestamp_millis());
+                (ledger.revision() != previous || ledger.storage_failed()).then(|| ledger.clone())
+            };
+            if let Some(mut ledger) = pending {
+                ledger.save(
+                    &workload
+                        .sources
+                        .cache
+                        .with_file_name("workload-observations.json"),
+                );
+                workload
+                    .observed
+                    .write()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .record_storage_failure(ledger.storage_failed());
+            }
         })
         .await;
     }

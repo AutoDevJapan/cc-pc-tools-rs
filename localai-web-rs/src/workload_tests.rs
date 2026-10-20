@@ -649,12 +649,10 @@ fn old_summary_is_removed_when_inputs_change_or_disappear() {
     c.days.get_mut("2026-10-01").unwrap()[0].results.clear();
     apply_summaries(&mut c);
     assert_eq!(c.days["2026-10-01"][0].summary_source, "titles");
-    assert!(
-        !c.days["2026-10-01"][0]
-            .summary
-            .iter()
-            .any(|l| l.text == "画面を追加しました。")
-    );
+    assert!(!c.days["2026-10-01"][0]
+        .summary
+        .iter()
+        .any(|l| l.text == "画面を追加しました。"));
 }
 #[test]
 fn excluded_registration_protects_unrelated_directory_names() {
@@ -1002,11 +1000,9 @@ fn end_to_end_excluded_job_never_enters_cache_or_summary() {
         at("2026-10-02T00:05:00+09:00"),
     );
     assert!(c.days.is_empty());
-    assert!(
-        !serde_json::to_string(&c)
-            .unwrap()
-            .contains("imaginary-client-product")
-    );
+    assert!(!serde_json::to_string(&c)
+        .unwrap()
+        .contains("imaginary-client-product"));
 }
 #[tokio::test]
 async fn workload_route_returns_versioned_json_and_rejects_invalid_date() {
@@ -1084,17 +1080,13 @@ fn todo_capacity_exclusion_failure_stops_aggregation_and_never_certifies_a_new_h
         cache: RwLock::new(stopped),
         phase: RwLock::new(String::new()),
     };
-    assert!(
-        workload.snapshot("2026-10-12")["collecting"]
-            .as_bool()
-            .unwrap()
-    );
-    assert!(
-        workload.snapshot("2026-10-12")["projects"]
-            .as_array()
-            .unwrap()
-            .is_empty()
-    );
+    assert!(workload.snapshot("2026-10-12")["collecting"]
+        .as_bool()
+        .unwrap());
+    assert!(workload.snapshot("2026-10-12")["projects"]
+        .as_array()
+        .unwrap()
+        .is_empty());
     fs::write(&f.sources.todo, "{broken").unwrap();
     assert!(load_exclusions(&f.sources).is_err());
 }
@@ -1116,4 +1108,17 @@ fn first_cumulative_token_total_is_only_a_baseline() {
     let mut first = Cursor::default();
     session_record(&mut first, &record(900_007, 7), now - 1000, now);
     assert_eq!(first.days[&day(now)].tokens, 7);
+}
+
+#[test]
+fn missing_token_usage_never_seeds_a_cumulative_baseline() {
+    let now = at("2026-10-20T23:00:00+09:00");
+    let mut cursor = Cursor::default();
+    let invalid = json!({"timestamp":"2026-10-20T23:00:00+09:00","type":"event_msg","payload":{"type":"token_count","info":null}});
+    session_record(&mut cursor, &invalid, now - 1000, now);
+    assert!(!cursor.cumulative_seen);
+    let first = json!({"timestamp":"2026-10-20T23:00:00+09:00","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"total_tokens":900_000}}}});
+    session_record(&mut cursor, &first, now - 1000, now);
+    assert_eq!(cursor.cumulative_tokens, 900_000);
+    assert_eq!(cursor.days[&day(now)].tokens, 0);
 }

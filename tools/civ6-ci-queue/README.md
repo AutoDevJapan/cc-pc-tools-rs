@@ -44,8 +44,8 @@ go vet ./...
 go build ./...
 ```
 
-親のcontractをリンクするには `-tags civ6contract` と、go.modへの `require/replace cc/civ6-ci-contract => ../civ6-ci-contract` が必要（親の統合で追加）。
-タグ無しのビルドは `unwiredContract` で何も受け付けない（fail-closed）。
+共通contractはgo.modのrequire/replaceで通常ビルドへ接続する。追加のbuild tagは不要。
+未接続なら受け付けない。
 
 ## OS別adapter（各helperの実CLIに合わせた固定手順）
 
@@ -55,8 +55,10 @@ go build ./...
 - Windows（tools/civ6-ci-windows）: pin済みexeを root/bootstrap.exe へ複製し、plan.json（共有Plan＋instance/root/runner pin/controller SID/seconds）を root に保存。
   `prepare <root> <runner.zip>` と `collect|collect-unstarted <root>` はCC-AdminBroker（固定形のps1を生成）経由、
   `execute <root>`（登録tokenはstdinのみ）と `stop` は root/helper.exe（同じSHA-256のpin）を管理者なしで実行。
-  `execute-end` の `fence` または未終了なら stop を1回だけ試み、collectは必ず行う。成否はbrokerの終了コードではなく `collect-end{complete,residue_only}` で判定。
-  residue_only（profile/hive残留）は既定でOS fenceにする。親が許可すると `allow_residue_only` で件数を数えて継続する。
+  `execute-end` が無い場合だけ stop を1回試みる。終端eventがある場合はhelper自身の停止処理を重ねない。
+  collectは必ず行い、brokerの終了コードではなく `collect-end{complete:true}` だけで回収を認める。
+  固定serviceとその1件のprofileは継続用資源。`shared_profile_retained` はjobごとの残留ではない。
+  旧helperの `complete:false,residue_only:true` は回収成功として受け付けない。回収不明時は次のWindows workerを止める。
 - Linux（tools/civ6-ci-linux）: one-shot `civ6-ci-linux.exe run <plan-json> <新しい空のowned root> <guest ELF> <pwsh tar>`。
   plan-jsonはroot外（entry directory）。登録tokenはhelperが自分で取得するので、queueは供給しない。
   helperが残す `result.private.json` から Namespace.Removed・RegistrationGone・LockReleased を回収確認とし、Namespace.Name を固有runner名にする。
@@ -64,9 +66,9 @@ go build ./...
 
 ## 未確定のまま残す点
 
-- Linux helperのstatus/collect復旧mode（childに依頼済み）。それまで不明なfenceは自動解除しない。
+- Linux helperにはstatus/collect復旧modeがある。queueの不明なfenceは自動解除しない。
 - 親の実イベント（GITHUB_EVENT_NAME/ref）は最初の正式job後に記録する。
-- 継続運用（`continuation.enabled`）と residue許可は、親がreview済みsourceで配備するまで無効。
+- 継続運用（`continuation.enabled`）は、親がreview済みsourceで配備するまで無効。
 
 ## 設定例（配備は親）
 

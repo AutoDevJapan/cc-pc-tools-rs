@@ -29,6 +29,7 @@ pub use cc_job_policy::todo_store::{
     Error as StoreError, MAX_BYTES as STORE_MAX_BYTES, read as read_store,
 };
 pub use cc_job_policy::todo_wait::pending_on;
+pub mod answered_wait;
 pub mod conversation_wait;
 pub mod product_resume;
 pub mod product_retry;
@@ -184,6 +185,17 @@ pub enum Command {
         on: Vec<i64>,
         #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
         progress: Option<u8>,
+    },
+    /// Move only the verified legacy Console hold to its existing dependency wait.
+    AnsweredWait {
+        #[arg(value_parser=clap::value_parser!(i64).range(3050..=3070))]
+        id: i64,
+        #[arg(long)]
+        evidence_file: PathBuf,
+        #[arg(long, requires = "expected_state_sha256")]
+        apply: bool,
+        #[arg(long, requires = "apply")]
+        expected_state_sha256: Option<String>,
     },
     /// Park one verified new Discord question; never reads the lost question ledger.
     QuestionWait {
@@ -1217,6 +1229,22 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         Command::QuestionWait { id, question_file } => {
             output.push(conversation_wait::register(db, paths, *id, question_file)?.to_string())
         }
+        Command::AnsweredWait {
+            id,
+            evidence_file,
+            apply,
+            expected_state_sha256,
+        } => output.push(
+            answered_wait::transition(
+                db,
+                paths,
+                *id,
+                evidence_file,
+                *apply,
+                expected_state_sha256.as_deref(),
+            )?
+            .to_string(),
+        ),
         Command::QuestionAnswer {
             id,
             answer_file,
@@ -1387,6 +1415,7 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
         Command::QuestionWait { .. }
             | Command::QuestionAnswer { .. }
             | Command::QuestionWithdraw { .. }
+            | Command::AnsweredWait { .. }
     ) && output
         .first()
         .and_then(|line| serde_json::from_str::<Value>(line).ok())

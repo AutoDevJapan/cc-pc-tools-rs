@@ -19,8 +19,8 @@ impl Fixture {
         let temp = tempfile::tempdir().unwrap();
         let root = temp.path();
         fs::create_dir(root.join("jobs")).unwrap();
-        let legacy = "本人の画像付きUI確認への回答待ち。synthetic original hold";
-        let old = format!("{id} block cc-pc-tools-rs synthetic — {legacy}\n");
+        let legacy = "本人の画像付きUI確認への回答待ち。synthetic original hold\nretained previous instructions";
+        let old = format!("{id} block cc-pc-tools-rs synthetic — {legacy}\n").replace('\n', "\r\n");
         let old_path = root.join("original.txt");
         fs::write(&old_path, old.as_bytes()).unwrap();
         let identity = json!({"todo_id":3050,"decision":"direction",
@@ -309,4 +309,109 @@ fn answered_wait_does_not_replace_normal_wait_or_start_semantics() {
     .unwrap();
     assert_eq!(d["items"][0]["status"], "todo");
     assert_eq!(d["items"][2]["status"], "block");
+}
+
+#[test]
+fn answered_wait_verifies_current_and_normally_retired_owner_without_rebinding() {
+    for kind in ["scheduled", "retired", "manual-terminal-phase"] {
+        let f = Fixture::new(3050);
+        let mut d = f.db();
+        fs::create_dir(f.temp.path().join("jobs/finished-original")).unwrap();
+        let job = json!({"id":"finished-original","todo_id":3050,"status":"succeeded","launch_key":"original-key"});
+        fs::write(
+            f.temp.path().join("jobs/finished-original/job.json"),
+            serde_json::to_vec(&job).unwrap(),
+        )
+        .unwrap();
+        d["items"][0]["jobs"] = json!(["finished-original"]);
+        if kind == "retired" {
+            d["items"][0]["scheduler"]["job"] = Value::Null;
+            d["items"][0]["scheduler"]["last_job"] = json!("finished-original");
+            d["items"][0]["scheduler"]["phase"] = json!("resumed");
+            d["items"][0]["processed_results"] =
+                json!({"finished-original":{"generation":2,"reason":"conversation_answer"}});
+        } else {
+            d["items"][0]["scheduler"]["job"] = json!("finished-original");
+            d["items"][0]["scheduler"]["key"] = json!("original-key");
+            d["items"][0]["worker_receipt"]["job"] = json!("finished-original");
+            if kind == "manual-terminal-phase" {
+                d["items"][0]["scheduler"]["key"] = Value::Null;
+                d["items"][0]["scheduler"]["phase"] = json!("running");
+            }
+        }
+        f.put(&d);
+        let plan = f.ok(3050, &[]);
+        let token = plan["state_sha256"].as_str().unwrap();
+        for status in ["running", "cancelled", "queued"] {
+            let mut changed = job.clone();
+            changed["status"] = json!(status);
+            fs::write(
+                f.temp.path().join("jobs/finished-original/job.json"),
+                serde_json::to_vec(&changed).unwrap(),
+            )
+            .unwrap();
+            f.reject(3050, token);
+        }
+        for key in ["stopped", "live_pid", "unknown_pid"] {
+            let mut changed = job.clone();
+            if key == "stopped" {
+                changed["stopped"] = json!(true);
+            } else if key == "unknown_pid" {
+                changed["pid"] = json!(0);
+            } else {
+                changed["pid"] = json!(std::process::id());
+                changed["pid_created"] =
+                    json!(cc_scheduler::native::process_birth(std::process::id()).unwrap());
+            }
+            fs::write(
+                f.temp.path().join("jobs/finished-original/job.json"),
+                serde_json::to_vec(&changed).unwrap(),
+            )
+            .unwrap();
+            f.reject(3050, token);
+        }
+        fs::write(
+            f.temp.path().join("jobs/finished-original/job.json"),
+            serde_json::to_vec(&job).unwrap(),
+        )
+        .unwrap();
+        f.ok(3050, &["--apply", "--expected-state-sha256", token]);
+        assert_eq!(
+            f.db()["items"][0]["worker_receipt"],
+            d["items"][0]["worker_receipt"]
+        );
+        assert_eq!(f.db()["items"][0]["scheduler"], d["items"][0]["scheduler"]);
+    }
+}
+
+#[test]
+fn answered_wait_rejects_duplicate_keys_invalid_dependencies_and_nonscoped_ids() {
+    for case in ["duplicate", "missing", "cycle", "duplicate-row", "other-id"] {
+        let f = Fixture::new(3050);
+        let plan = f.ok(3050, &[]);
+        let token = plan["state_sha256"].as_str().unwrap();
+        let mut d = f.db();
+        match case {
+            "duplicate" => {
+                let mut b = fs::read(&f.evidence).unwrap();
+                b.splice(1..1, b"\"todo_id\":3050,".iter().copied());
+                fs::write(&f.evidence, b).unwrap();
+            }
+            "missing" => {
+                d["items"].as_array_mut().unwrap().remove(1);
+                f.put(&d);
+            }
+            "cycle" => {
+                d["items"][1]["wait_on"] = json!([3050]);
+                f.put(&d);
+            }
+            "duplicate-row" => {
+                let row = d["items"][1].clone();
+                d["items"].as_array_mut().unwrap().push(row);
+                f.put(&d);
+            }
+            _ => {}
+        }
+        f.reject(if case == "other-id" { 3051 } else { 3050 }, token);
+    }
 }

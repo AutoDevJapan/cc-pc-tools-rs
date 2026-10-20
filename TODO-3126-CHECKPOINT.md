@@ -10,7 +10,16 @@
   1件が `unrecognized subcommand 'answered-wait'` で失敗した。既存コードは未変更。
 - 2026-10-21 00:20台の観測: 3050/3070はblockとwait_on3084を保持。
   3084は3103/3121の技術依存待ち。本人待ちへ戻さず、他担当の状態を変更しない。
-- 残り: 実装、Greenと利用側/doctest、別モデルmaxレビューを共有ToDo --specで依頼、
+- 実装: `answered-wait` を追加。実台帳は提示済み原資料SHAと今回依頼原文を固定し、
+  3050/3070だけを、保存済み依存を変更せずblockからwaitへ移す。通常Wait/Startは不変。
+  全行SHAの比較と正規ロック、原質問世代・原回答・元履歴・正式guard・実担当終了を照合する。
+  正常Startの起動鍵なし割当と、終わった担当の古いrunning phaseを、実担当記録から検証して保持する。
+- Green: cc-todo nextest 222件成功。新規は9件（CLI6、内部3）で、CRLF原資料、
+  状態競合・未知保護・質問世代・二重キー・依存循環・担当停止/稼働/退役・再実行を含む。
+  Clippyの等価な論理式整理1件を修正し再確認する。
+- 実物の無変更検査: 3050/3070の両方が成功し、status=block / wait_on=[3084]を読戻した。
+  `--apply` は未実施。API原文の受領を機能の実反映と記録していない。
+- 残り: 利用側/doctest/Clippy、別モデルmaxレビューを共有ToDo --specで依頼、
   Must修正・CI・通常merge、並行配布確認・ソース/hash照合、実3050/3070の正規移行とreadback。
 - 画像sender/履歴readのPR296は編集しない。raw台帳編集・guard緩和・applied/jobの捏造はしない。
 - 一時所有ID: 7a11b876847b64f5e8444bfa0f54070e。

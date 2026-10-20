@@ -41,5 +41,11 @@
     "must": 0,
     "original_response_sha256": "799005d5526efb4834418425163ea784cdb1c313f6c3db4b061723cf302e1c9a",
     "scope": "Final3generated guides,3originals,MIT,actual15files and metadata; support of existing3 outside scope"
+  },
+  "superseded_by": {
+    "targets": "knap",
+    "manifest": "skills-3080-refinement3180-manifest.json",
+    "evidence": "skills-3080-refinement3180-evidence.json",
+    "note": "Historical evidence remains valid atitsoriginalhead;currentadoption pointers are authoritative"
   }
 }

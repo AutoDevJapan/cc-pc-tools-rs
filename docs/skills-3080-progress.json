@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-20T20:07:29.4326821Z",
+  "observed_at": "2026-10-20T20:12:10.9074030Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "25 installed and bounded independently checked;further quality suggestions under implementation;full16-source work continues",
+  "phase_b": "25installed;3guidance refinements applied and validated;1TeamAI candidate prepared;final delta review pending;full16-source work continues",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -286,7 +286,7 @@
   "site_entries_with_body": 9862,
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
-  "candidate_designs": 25,
+  "candidate_designs": 26,
   "independently_accepted": 25,
   "installed": 25,
   "integrated": 0,
@@ -346,11 +346,11 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "25 renderable plan targets all installed; no count cap",
+    "candidate_designs": "26 renderable targets:25installed+1TeamAI pending;no count cap",
     "additional_authored_drafts_not_in_plans": 0,
-    "authored_total": 25,
+    "authored_total": 26,
     "installed": 25,
-    "pending_plan_targets": 0,
+    "pending_plan_targets": 1,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "25 installed guides checked in bounded scopes;not all upstream support",
@@ -373,7 +373,8 @@
     "support_files_unread": 25,
     "policy_rewrite_candidates": 4,
     "installed": 0,
-    "not_blanket_excluded": true
+    "not_blanket_excluded": true,
+    "authored_routing_entrypoints": 1
   },
   "full_source_body_read_coverage": {
     "repos": 5,
@@ -386,5 +387,6 @@
       "tencent": 7
     },
     "limits": "Tencent7 includes2usage guides+1discovery stub+4workflows;not64standalone approved Skills; supporting resources incomplete"
-  }
+  },
+  "independent_acceptance_scope": "3180 accepted25baseline atc328d7a;3laterrequested refinements are applied+locallyverified withdelta review pending;1TeamAI candidate notinstalled"
 }

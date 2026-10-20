@@ -22,7 +22,7 @@
   "excluded": 0,
   "candidate_dispositions": {
     "usage_guide_reference": 2,
-    "discovery_stub_integration_candidate": 1,
+    "new_adaptation_candidate": 1,
     "policy_rewrite_required": 4
   },
   "entries": [
@@ -143,9 +143,9 @@
       "source_url": "https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skills/teamai/SKILL.md",
       "source_sha256": "82a22b1c37531834ab5784f93f950f0a8840ac4e4aa422f1ef2dc03437f9ad66",
       "retrieved_at": "2026-10-20T08:41:13.032212Z",
-      "candidate_disposition": "discovery_stub_integration_candidate",
-      "reason": "core/setup/wiki/shareをCLIから読む発見用stub。5番目の独立workflowではない。既存skill-maintenance等のmetadataと用途が重なり、必要ならTeamAI固有の入口へ統合する。",
-      "required_changes": "自動npm更新/npx・allowed-toolsの恒久許可・friction通知から自動shareは採らない。手順の取得と実行権限、CLI導入とSkill保有を分離。",
+      "candidate_disposition": "new_adaptation_candidate",
+      "reason": "4workflowを安全に選び分ける1つのTeamAI固有入口として使う。CLIやsupportを導入/実行せず、別source occurrenceを自動で処理済みにしない。",
+      "required_changes": "Adapt the discovery stub into one narrowly triggered TeamAI entrypoint, not a fifth workflow or7independent skills. No automatic npm/npx, friction-triggered publication, hook/MCP/env/model profile changes, unknown-copy deletion, private session recall or secret access. Owner language and OAuth-only policy prevail. Four workflow bodies were read; their25support files and agent recall remain unreviewed, so CLI help/version and separate task scope are required before execution. Secondary fixed sources: [skill-data/core/SKILL.md](https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skill-data/core/SKILL.md) SHA256 3b05ebbc18bc31164d834eb44d96f8d4c9506bacabfb99a25b003e42829eddb8; [skill-data/setup/SKILL.md](https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skill-data/setup/SKILL.md) SHA256 f6cf5aaf4f0ce9a1a5cb6f7e8ca9fbdbb57a42981c38dffc4cca7573b14c3b06; [skill-data/share/SKILL.md](https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skill-data/share/SKILL.md) SHA256 46776fae2c5c7d94506b1405e972d6b1cd0fd957cd6f3037e7b5f13726c9dd0c; [skill-data/wiki/SKILL.md](https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skill-data/wiki/SKILL.md) SHA256 66aabfe64f574ab1ddfb10019660e4efdffde599b3d30b1fd72ab80bd9b3493b;",
       "body_semantic_review_scope": "Full selected public body read and SHA verified; links are references, not separately read support",
       "independent_review_complete": false,
       "installed_by_todo3080": false,
@@ -176,5 +176,6 @@
     "read": "7bodies+LICENSE+tree aggregates",
     "must": 0,
     "note": "Assessment is pre-adoption snapshot, not installed7"
-  }
+  },
+  "routing_candidate_note": "One new adapted entrypoint serves the discovered4workflows;not5workflows or7independent Skills. Other source occurrences remain pending."
 }

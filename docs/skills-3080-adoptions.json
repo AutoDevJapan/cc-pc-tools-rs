@@ -145,8 +145,8 @@
       "source_sha256": "c9819d7f1e3b198064edc1faa3154224ed67395e9f07f5d3cea4b67cf0a11a98",
       "target": "setup-pre-commit",
       "disposition": "installed_new_adaptation",
-      "manifest": "skills-3080-owned3-revision-manifest.json",
-      "entrypoint_sha256": "6b2946c354c1051a456344d526ad55b530b4aaa6f08465210af0a2dd4f30431a",
+      "manifest": "skills-3080-refinement3180-manifest.json",
+      "entrypoint_sha256": "f4196e0988b83f941d4a835888ef38f457a60b3cc8b75f541b8ea4109cc720fe",
       "reason": "既存JS案件のcommit前検査を差分と既存CIへ接続する用途。batch01に候補本文がある。",
       "upstream_original_preserved": true,
       "source_notice_preserved": true
@@ -187,8 +187,8 @@
       "source_sha256": "befdff1e27a1dfe2a294d5871169ac1afe16d983911daa4f32627514a48c1e15",
       "target": "grilling",
       "disposition": "installed_new_adaptation",
-      "manifest": "skills-3080-owned3-revision-manifest.json",
-      "entrypoint_sha256": "c402634b0de4bcdad9a3d7d71fe5c6385a623262626647888c73d109816d9d60",
+      "manifest": "skills-3080-refinement3180-manifest.json",
+      "entrypoint_sha256": "030e1e97e851964191dc37a46521483115d91b9f3fddcc42666f669538c806da",
       "reason": "本人が求めた計画への聞取りを、前提と質問の依存から進める用途。batch02に本文を作成した。",
       "upstream_original_preserved": true,
       "source_notice_preserved": true
@@ -341,8 +341,8 @@
       "source_sha256": "ef5666573358cd7d18e04195f3e7c473b88d3e3140c41ab59bbee01c81e9989f",
       "target": "knap",
       "disposition": "installed_new_adaptation",
-      "manifest": "skills-3080-installed-kepano-manifest.json",
-      "entrypoint_sha256": "6b3e7e822ca30303d22341253d33049c253a48a9b6c61f1004cb110f6211dd04",
+      "manifest": "skills-3080-refinement3180-manifest.json",
+      "entrypoint_sha256": "96ee1d93206adafc296fc01b015261e4f4194667624881eb649878b01a1f0698",
       "reason": "構造化データからMarkdownを作る固有のテンプレート処理を保持する。CLIが無くても指定範囲の通常生成で依頼を完成でき、Knap未使用と明記して実行成功を偽らない。",
       "upstream_original_preserved": true,
       "source_notice_preserved": true

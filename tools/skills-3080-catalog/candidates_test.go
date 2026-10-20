@@ -93,8 +93,9 @@ func checkCandidatePlan(t *testing.T, file string) {
 	}
 	var progress struct {
 		Repos []struct {
-			Repo string `json:"requested"`
-			Tree string `json:"tree_sha"`
+			Repo     string `json:"requested"`
+			FullName string `json:"full_name"`
+			Tree     string `json:"tree_sha"`
 		} `json:"fixed_public_repos"`
 	}
 	raw, err := os.ReadFile("../../docs/skills-3080-progress.json")
@@ -106,7 +107,9 @@ func checkCandidatePlan(t *testing.T, file string) {
 	}
 	matched := false
 	for _, r := range progress.Repos {
-		if r.Repo == p.Repo && r.Tree == p.Tree {
+		// The API's fixed canonical owner spelling may differ from the requested URL.
+		// Accept either recorded identity, still requiring the same exact tree.
+		if (r.Repo == p.Repo || r.FullName == p.Repo) && r.Tree == p.Tree {
 			matched = true
 		}
 	}

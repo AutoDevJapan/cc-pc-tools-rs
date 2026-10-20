@@ -67,3 +67,8 @@ Apache入口本体の改変表示、原文・許諾の保全、入れ子notice�
 [batch04](skills-3080-batch04.json)のDefuddle・Knap・Obsidian CLIは3件15ファイルの新規候補。知識としての手順と実CLIの利用可否を分け、自動installや実保管庫の読書き、未承認のUI実装を指示しない。CLIが使えなければ静的案と不足条件を返す。この3件は中央へ配置済みで15ファイルの読戻し・実検査に成功した。
 
 3151の配置後受入はDocker8件の実ファイルと手順・境界・記録を確認してMust0。8正例/8負例は1turn内の静的確認で、Docker/sbx/モデルの接続成功と呼ばない。現在は全25候補を配置済みで、3180の限定確認もMust0。元16資料全体は未完了。
+
+## 3180後の限定補正とTeamAI候補
+Knap・setup-pre-commit・grillingの9ファイルを3180の具体指摘に沿って補正し、旧15ファイルを新しい永続backupへ保存した。[補正manifest](skills-3080-refinement3180-manifest.json)と[実検査](skills-3080-refinement3180-evidence.json)を台帳から参照し、過去manifestは履歴として保つ。現行25件/125ファイルの実検査、fresh Codexの対象3件と説明の一致・解析0を確認。3180は変更前25件の限定受入で、最新3件の差分は別に確認する。
+
+[TeamAIの1候補](skills-3080-batch05.json)は4workflowを選び分ける1つの入口。CLIやMCP・hook・envの導入ではなく、25supportとrecall agentを読了した主張でもない。実配置はまだ0。全26設計候補=導入25+未配置1で、元16資料の件数上限ではない。MIT本文の明示宣言と完全treeのnotice範囲を根拠とし、原文をそのまま保存する。GitHubの実full_name Tencentと指定URLのtencentの違いは、保存済み両identityと同じ固定treeを照合して扱う。

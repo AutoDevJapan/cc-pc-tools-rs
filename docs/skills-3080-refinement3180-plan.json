@@ -1,6 +1,6 @@
 {
   "todo": 3080,
-  "status": "review3180_requested_changes_prepared_not_applied",
+  "status": "Applied3known:9changed15readbackverified;actual validator/discovery PASS;final delta review pending",
   "review": 3180,
   "original_response_sha256": "799005d5526efb4834418425163ea784cdb1c313f6c3db4b061723cf302e1c9a",
   "targets": [

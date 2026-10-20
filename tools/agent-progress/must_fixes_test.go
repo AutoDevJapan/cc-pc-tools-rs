@@ -138,7 +138,7 @@ func TestOfficialPolicySourceAndProjectRankParity(t *testing.T) {
 	// are bound to the canonical LF bytes, not checkout newline conversion.
 	data = bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n"))
 	sum := sha256.Sum256(data)
-	if hex.EncodeToString(sum[:]) != "fd4fd0a71c1438d77f67c7a0c5405495fc856bba34c4171c81cda6f6035472ac" {
+	if hex.EncodeToString(sum[:]) != "dca304d69b0380692055963339ef7e33bda5fe3d8b7344f8c090001966d5ef11" {
 		t.Fatal("canonical ranking source changed; review the port against its new fixed revision")
 	}
 	// Check every exact canonical rule in memory, including coded aliases.

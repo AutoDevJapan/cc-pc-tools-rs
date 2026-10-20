@@ -130,18 +130,7 @@ impl Operations {
             .iter()
             .find(|item| item["id"].as_u64() == Some(todo_id))
             .ok_or(404u16)?;
-        let client = private_product(item,&policy) || [
-            text(item, "project"),
-            text(item, "cwd"),
-            text(item, "spec"),
-            db["projects"][text(item, "project")].as_str().unwrap_or(""),
-        ]
-        .iter()
-        .any(|value| names.project(value) == "クライアント案件")
-            || jobs
-                .iter()
-                .filter(|job| linked(item, job))
-                .any(|job| privacy.is_private_job(job) || private_product(job,&policy));
+        let client = private_todo(item,Some(&db),&policy,&names,&mut privacy,&associations);
         if client {
             return Err(404);
         }
@@ -381,6 +370,8 @@ fn linked(item: &Value, job: &Value) -> bool {
     job["todo_id"]
         .as_u64()
         .is_some_and(|id| item["id"].as_u64() == Some(id))
+        || (item["id"].is_u64()
+            && job["related_todo_ids"].as_array().is_some_and(|ids| ids.contains(&item["id"])))
         || ["id", "thread_id", "resume_session"].iter().any(|key| {
             job[*key]
                 .as_str()
@@ -397,6 +388,30 @@ fn linked(item: &Value, job: &Value) -> bool {
 fn private_product(row:&Value,policy:&Value)->bool {
     attribution::resolve(row,policy)==cc_scheduler::product_identity::Resolution::Unknown
         || cc_scheduler::priority::item_rank(row,policy)==10
+}
+
+fn private_todo(
+    item: &Value,
+    db: Option<&Value>,
+    policy: &Value,
+    names: &cc_ask::task_title::Names,
+    privacy: &mut crate::console_ui::PrivacyIndex<'_>,
+    associations: &attribution::Associations<'_>,
+) -> bool {
+    let raw_project = text(item, "project");
+    let display_project = policy["items"][item["id"].as_u64().unwrap_or(0).to_string()]["project"]
+        .as_str()
+        .or_else(|| item["owner_project"].as_str())
+        .unwrap_or(raw_project);
+    private_product(item, policy)
+        || project_name(names, display_project) == "クライアント案件"
+        || names.project(text(item, "cwd")) == "クライアント案件"
+        || names.project(text(item, "spec")) == "クライアント案件"
+        || associations.raw(item["id"].as_u64().unwrap_or(0)).iter()
+            .any(|job| privacy.is_private_job(job) || associations.sensitive(job))
+        || db.is_some_and(|db| {
+            names.project(db["projects"][raw_project].as_str().unwrap_or("")) == "クライアント案件"
+        })
 }
 
 fn safe_id(prefix: &str, value: &str) -> String {
@@ -1246,16 +1261,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
                 .or_else(|| item["owner_project"].as_str())
                 .unwrap_or(raw_project);
             let project = project_name(&names, display_project);
-            let client = attribution::resolve(item,&policy) == cc_scheduler::product_identity::Resolution::Unknown
-                || project == "クライアント案件"
-                || cc_scheduler::priority::item_rank(item, &policy) == 10
-                || names.project(text(item, "cwd")) == "クライアント案件"
-                || names.project(text(item, "spec")) == "クライアント案件"
-                || assignments.raw(item["id"].as_u64().unwrap_or(0)).iter().any(|job| privacy.is_private_job(job) || assignments.sensitive(job))
-                || db.is_some_and(|db| {
-                    names.project(db["projects"][raw_project].as_str().unwrap_or(""))
-                        == "クライアント案件"
-                });
+            let client = private_todo(item,db,&policy,&names,&mut privacy,&assignments);
             let project = if client {
                 catalog::find(display_project)
                     .map(|p| p.name.to_owned())

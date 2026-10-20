@@ -80,6 +80,7 @@ pub(super) fn priority(
         return Some(
             inherited
                 .filter(|rank| *rank < cc_scheduler::priority::item_rank(row, policy))
+                .map(|rank| rank.min(product.rank))
                 .unwrap_or(product.rank),
         );
     }
@@ -133,6 +134,14 @@ pub(super) fn assignments<'a>(
         if let Some(id) = direct.filter(|id| by_id.contains_key(id)) {
             linked.insert(id);
         }
+        linked.extend(
+            job["related_todo_ids"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(Value::as_u64)
+                .filter(|id| by_id.contains_key(id)),
+        );
         let mut candidates: Vec<_> = linked
             .iter()
             .copied()

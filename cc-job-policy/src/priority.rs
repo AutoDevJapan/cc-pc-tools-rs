@@ -236,7 +236,16 @@ pub fn job_ranks(jobs: &[Value], db: &Value, policy: &Value) -> BTreeMap<String,
                             == crate::product_identity::Resolution::Other
                     })
                 {
-                    return (id.to_owned(), product.rank);
+                    let inherited = primary.and_then(|row| {
+                        row["id"]
+                            .as_u64()
+                            .and_then(|id| todos.get(&id).copied())
+                            .filter(|rank| *rank < item_rank(row, policy))
+                    });
+                    return (
+                        id.to_owned(),
+                        inherited.map_or(product.rank, |rank| rank.min(product.rank)),
+                    );
                 }
                 let owned = candidates
                     .into_iter()

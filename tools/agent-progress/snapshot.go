@@ -166,6 +166,9 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 				}
 			} else if primary, ok := items[j.TodoID]; ok && !mcpResolve(primary, policy, fmt.Sprint(primary.ID)).scoped {
 				rank = business.rank
+				if inherited, ok := ranks[j.TodoID]; ok && inherited < labels[j.TodoID].rank {
+					rank = min(rank, inherited)
+				}
 			}
 		}
 		if rank == 10 && business.id != "godd-mcp-alpha" {
@@ -296,7 +299,7 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 					t.ProductIdentity = business.projection()
 					t.Priority = business.rank
 					if ranks[id] < labels[id].rank {
-						t.Priority = ranks[id]
+						t.Priority = min(t.Priority, ranks[id])
 					}
 					t.PublicLabel, t.LabelKind, t.Department = l.name, l.kind, l.department
 					t.DisplayName = fmt.Sprintf("%s / ToDo %d", l.name, id)

@@ -69,15 +69,17 @@ func RunGuestAgent() error {
 }
 
 type windowsOps struct {
-	plan       Plan
-	entries    []sourcepacket.TreeEntry
-	env        []string
-	hookCalls  chan hookCall
-	listener   net.Listener
-	capability string
-	closed     chan struct{}
-	wg         sync.WaitGroup
-	closeOnce  sync.Once
+	plan        Plan
+	entries     []sourcepacket.TreeEntry
+	env         []string
+	hookCalls   chan hookCall
+	listener    net.Listener
+	capability  string
+	closed      chan struct{}
+	wg          sync.WaitGroup
+	closeOnce   sync.Once
+	runnerToken syscall.Token
+	closeErr    error
 }
 
 func (o *windowsOps) prepare(ctx context.Context, p sourcepacket.Packet) (sourcepacket.Receipt, error) {
@@ -109,6 +111,13 @@ func (o *windowsOps) prepare(ctx context.Context, p sourcepacket.Packet) (source
 		return proof, e
 	}
 	if e = o.startHooks(); e != nil {
+		return sourcepacket.Receipt{}, e
+	}
+	o.runnerToken, e = newRunnerToken()
+	if e != nil {
+		return sourcepacket.Receipt{}, e
+	}
+	if e = prepareRunnerAccess(ctx, o.env); e != nil {
 		return sourcepacket.Receipt{}, e
 	}
 	return proof, nil
@@ -179,7 +188,7 @@ func (o *windowsOps) configure(ctx context.Context, token []byte) error {
 	env := append(append([]string(nil), o.env...), "ACTIONS_RUNNER_INPUT_TOKEN="+string(token))
 	line := `"C:\Windows\System32\cmd.exe" /d /s /c ""` + runnerRoot + `\config.cmd" --unattended --ephemeral --no-default-labels --disableupdate --url https://github.com/` + Repository + ` --name ` + o.plan.Name + ` --labels ` + o.plan.Label + ` --work _work"`
 	r := withDiagnosticBound(ctx, func(ctx context.Context) processResult {
-		return runTree(ctx, `C:\Windows\System32\cmd.exe`, line, runnerRoot, env, "")
+		return runRunnerTree(ctx, `C:\Windows\System32\cmd.exe`, line, runnerRoot, env, "", o.runnerToken)
 	})
 	for i := range env {
 		env[i] = ""
@@ -200,7 +209,7 @@ func (o *windowsOps) listen(ctx context.Context, id int64) <-chan processResult 
 		// execute in the stock runner. This is SDK setup, never a workflow rewrite.
 		line := `"C:\Windows\System32\cmd.exe" /d /s /c "call "` + sdkRoot + `\vs-build-tools\Common7\Tools\VsDevCmd.bat" -arch=x64 -host_arch=x64 -vcvars_ver=14.50 -winsdk=10.0.26100.0 && call "` + runnerRoot + `\run.cmd""`
 		done <- withDiagnosticBound(ctx, func(ctx context.Context) processResult {
-			return runTree(ctx, `C:\Windows\System32\cmd.exe`, line, runnerRoot, env, sdkRoot+`\private\runner-listener.log`)
+			return runRunnerTree(ctx, `C:\Windows\System32\cmd.exe`, line, runnerRoot, env, sdkRoot+`\private\runner-listener.log`, o.runnerToken)
 		})
 	}()
 	return done
@@ -215,9 +224,13 @@ func (o *windowsOps) close() error {
 		if o.listener != nil {
 			o.listener.Close()
 		}
+		o.wg.Wait()
+		if o.runnerToken != 0 {
+			o.closeErr = o.runnerToken.Close()
+			o.runnerToken = 0
+		}
 	})
-	o.wg.Wait()
-	return nil
+	return o.closeErr
 }
 
 type localHook struct {

@@ -58,6 +58,19 @@ type jobAccounting struct {
 // runTree is private. All production callers construct a fixed program/command
 // from compiled paths and validated scalar plan values, never from the wire.
 func runTree(ctx context.Context, exe, line, dir string, env []string, privateLog string) processResult {
+	return runTreeWithToken(ctx, exe, line, dir, env, privateLog, 0)
+}
+
+// Only the stock runner uses this path. Its account is compiled in, never a
+// request field. Validate both the supplied token and the suspended child.
+func runRunnerTree(ctx context.Context, exe, line, dir string, env []string, privateLog string, token syscall.Token) processResult {
+	if e := validateRunnerToken(token); e != nil {
+		return processResult{err: e}
+	}
+	return runTreeWithToken(ctx, exe, line, dir, env, privateLog, token)
+}
+
+func runTreeWithToken(ctx context.Context, exe, line, dir string, env []string, privateLog string, token syscall.Token) processResult {
 	result := processResult{}
 	job, _, _ := createJob.Call(0, 0)
 	if job == 0 {
@@ -156,7 +169,12 @@ func runTree(ctx context.Context, exe, line, dir string, env []string, privateLo
 	si := startupInfoEx{StartupInfo: syscall.StartupInfo{Cb: uint32(unsafe.Sizeof(startupInfoEx{})), Flags: 0x100, StdInput: handles[0], StdOutput: handles[1], StdErr: handles[1]}, Attributes: uintptr(unsafe.Pointer(&attrs[0]))}
 	var pi syscall.ProcessInformation
 	// CREATE_NO_WINDOW | CREATE_SUSPENDED | CREATE_UNICODE_ENVIRONMENT
-	e = syscall.CreateProcess(app, command, nil, nil, true, 0x08000000|4|0x400|0x80000, &block[0], cwd, &si.StartupInfo, &pi)
+	flags := uint32(0x08000000 | 4 | 0x400 | 0x80000)
+	if token == 0 {
+		e = syscall.CreateProcess(app, command, nil, nil, true, flags, &block[0], cwd, &si.StartupInfo, &pi)
+	} else {
+		e = syscall.CreateProcessAsUser(token, app, command, nil, nil, true, flags, &block[0], cwd, &si.StartupInfo, &pi)
+	}
 	runtime.KeepAlive(attrs)
 	runtime.KeepAlive(handles)
 	if e != nil {
@@ -165,6 +183,20 @@ func runTree(ctx context.Context, exe, line, dir string, env []string, privateLo
 	}
 	defer syscall.CloseHandle(pi.Process)
 	defer syscall.CloseHandle(pi.Thread)
+	if token != 0 {
+		var childToken syscall.Token
+		e := syscall.OpenProcessToken(pi.Process, syscall.TOKEN_QUERY, &childToken)
+		if e == nil {
+			e = validateRunnerToken(childToken)
+			childToken.Close()
+		}
+		if e != nil {
+			syscall.TerminateProcess(pi.Process, 125)
+			syscall.WaitForSingleObject(pi.Process, 10000)
+			result.err = errors.New("suspended runner identity rejected")
+			return result
+		}
+	}
 	if ok, _, _ := assignJob.Call(job, uintptr(pi.Process)); ok == 0 {
 		syscall.TerminateProcess(pi.Process, 125)
 		syscall.WaitForSingleObject(pi.Process, 10000)

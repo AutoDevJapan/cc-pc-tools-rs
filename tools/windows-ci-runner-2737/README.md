@@ -1,5 +1,38 @@
 # Finite original PR3613 Windows guest backend (ToDo 2828)
 
+## Non-administrator stock runner (2026-10-20)
+
+Official Windows attempt 5 passed the previous unit group (2,641 passed,
+zero failed), then failed two later integration assertions. Diagnosis 3112
+matched both comparison hashes to `Ok(System)` versus `Ok(User)` in the same
+ownership helper. Its caller tests and most unrelated code were unread; this
+was a static diagnosis, not a new test execution. The existing SCM agent was
+LocalSystem and used `CreateProcess`, inheriting that identity into the runner.
+
+The SCM agent remains LocalSystem for clock, source proof and control. Stock
+configuration and listening now use a compiled LocalService (`S-1-5-19`)
+primary token, obtained through the documented passwordless service logon.
+Both its supplied token and the actual suspended child's token must have that
+SID and no Administrators group before execution. There is no fallback to
+inherited SYSTEM, request-selected account, new user, password or host service.
+The same suspended/assign/resume, handle allowlist and bounded tree drain apply.
+Session teardown closes the token after the runner tree and hook handlers drain.
+
+Only fixed guest tools receive read/execute access; fixed runner, profile,
+temporary and cache directories receive modify access. The SDK root grants
+traverse only, without inheritance. Private logs, downloads and bootstrap state
+receive no runner grant. The verified checkout is owned by its actual executor,
+without adding `safe.directory`; the SYSTEM source auditor still reads anchored
+bytes and runs Git only against its own private metadata snapshot.
+
+Related Windows race tests and vet pass for this module and its controller.
+Returning the launcher to inherited identity makes the new denial regression
+fail; it is a mutation check of that former behavior. Actual LocalService
+logon, child execution and ACL acceptance in the dedicated guest remain to be
+verified after separate-model review. No new official CI result is claimed.
+
+Primary reference: [LogonUser's LocalService example](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-logonuserw).
+
 ## Guest UTC before registration (2026-10-20)
 
 The first actual session reached physical source proof and offline runner

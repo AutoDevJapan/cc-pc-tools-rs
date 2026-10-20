@@ -435,17 +435,18 @@ func superviseNormal() int {
 	if err := ownedDirectory(diagnosticRoot); err != nil {
 		return 1
 	}
-	for {
+	code, err := superviseCycles(compiledNormalProfile.maxCycles, func() (int, error) {
 		code, err := runNormalCycle(diagnosticRoot, "/tmp", "/runner", func() error {
 			return awaitCycleQuiescent(func() error { return cycleQuiescent("/proc") }, time.Sleep, time.Now, 30*time.Second)
 		})
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			return 1
-		}
-		if code != 0 {
+		if err == nil && code != 0 && compiledNormalProfile.maxCycles == 0 {
 			fmt.Fprintf(os.Stderr, "linux-runner-cycle code=%d; retrying after 30 seconds\n", code)
-			time.Sleep(30 * time.Second)
 		}
+		return code, err
+	}, time.Sleep)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
 	}
+	return code
 }

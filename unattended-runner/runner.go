@@ -167,10 +167,13 @@ func readJSON(path string, ceiling int64, value any) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 	data, err := io.ReadAll(io.LimitReader(f, ceiling+1))
+	closeErr := f.Close()
 	if err != nil {
 		return err
+	}
+	if closeErr != nil {
+		return closeErr
 	}
 	if int64(len(data)) > ceiling {
 		return errors.New("record limit exceeded")
@@ -823,6 +826,12 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "history-inventory" {
+		os.Exit(historyInventoryCLI(os.Args[2:], os.Stdout))
+	}
+	if len(os.Args) > 1 && os.Args[1] == "history-read" {
+		os.Exit(historyReadCLI(os.Args[2:], os.Stdout))
+	}
 	if len(os.Args) > 1 && os.Args[1] == "--check-generated-question-evidence" {
 		os.Exit(generatedQuestionEvidenceCLI(os.Args[2:], os.Stdout, generatedQuestionRegistryProduction(), true))
 	}

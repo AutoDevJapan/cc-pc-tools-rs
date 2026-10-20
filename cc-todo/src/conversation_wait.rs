@@ -90,7 +90,7 @@ fn reparse(meta: &fs::Metadata) -> bool {
 }
 
 /// Bound the read, reject reparse points/non-files, and hash and parse this one buffer.
-fn bytes(path: &Path) -> Result<Vec<u8>> {
+pub(crate) fn bytes(path: &Path) -> Result<Vec<u8>> {
     let absolute = std::path::absolute(path).map_err(|_| "conversation_file_unavailable")?;
     for ancestor in absolute.ancestors() {
         let meta = fs::symlink_metadata(ancestor).map_err(|_| "conversation_file_unavailable")?;

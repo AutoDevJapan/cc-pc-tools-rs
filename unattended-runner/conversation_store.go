@@ -649,6 +649,24 @@ func (r *Runner) conversationProof(ctx context.Context, q ConversationQuestion) 
 }
 
 func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile, thread string, notify bool, attachments []string) (map[string]any, error) {
+	return r.conversationLogInner(ctx, requestID, title, bodyFile, thread, notify, attachments, "", false)
+}
+
+func (r *Runner) conversationClarification(ctx context.Context, requestID, title, bodyFile, thread, manifest string) (map[string]any, error) {
+	if thread == "" || manifest == "" {
+		return nil, errors.New("clarification requires an exact original destination and binding")
+	}
+	return r.conversationLogInner(ctx, requestID, title, bodyFile, thread, false, nil, manifest, false)
+}
+
+func (r *Runner) conversationCheckClarification(ctx context.Context, requestID, title, bodyFile, thread, manifest string) (map[string]any, error) {
+	if thread == "" || manifest == "" {
+		return nil, errors.New("exact clarification input required")
+	}
+	return r.conversationLogInner(ctx, requestID, title, bodyFile, thread, false, nil, manifest, true)
+}
+
+func (r *Runner) conversationLogInner(ctx context.Context, requestID, title, bodyFile, thread string, notify bool, attachments []string, clarification string, checkOnly bool) (map[string]any, error) {
 	if !conversationID.MatchString(requestID) || strings.TrimSpace(title) == "" {
 		return nil, errors.New("conversation log identity invalid")
 	}
@@ -691,6 +709,11 @@ func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile
 	if exists && record.InputSHA != inputHash {
 		return nil, errors.New("conversation log retry input differs")
 	}
+	// A clarification only resumes the original failed request; its immutable
+	// input hash and sender ID do not include this new association evidence.
+	if clarification != "" && (!exists || record.Thread != thread) {
+		return nil, errors.New("clarification requires the existing exact log reservation")
+	}
 	if !exists {
 		destination := thread
 		if destination == "" {
@@ -706,6 +729,29 @@ func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile
 		}
 	}
 	args := []string{"recovery-log", "--request-id", "conversation-log-" + bytesHash([]byte(requestID))[:32], "--title", title, "--body-file", record.BodyFile}
+	if clarification != "" {
+		saved, readErr := boundedRegular(record.BodyFile)
+		if readErr != nil || bytesHash(saved) != bytesHash(body) {
+			return nil, errors.New("saved clarification body differs")
+		}
+		binding, readErr := boundedRegular(clarification)
+		if readErr != nil || len(binding) > 16<<10 {
+			return nil, errors.New("clarification binding unavailable")
+		}
+		path := clarification
+		if !checkOnly {
+			// Invalid association evidence must not permanently poison the fixed
+			// request. Only the sender's verified binding commits authority.
+			path = filepath.Join(r.Config.Home, "conversation-clarifications", requestID+"-"+bytesHash(binding)+".json")
+			if err = writeConversationOnce(path, binding); err != nil {
+				return nil, err
+			}
+		}
+		args = append(args, "--clarification-file", path)
+		if checkOnly {
+			args = append(args, "--check-only")
+		}
+	}
 	if record.Thread != "" {
 		if _, ok := number(record.Thread); !ok {
 			return nil, errors.New("conversation log destination invalid")
@@ -723,6 +769,12 @@ func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile
 		return nil, errors.New("conversation log pending; retry the same request")
 	}
 	var report map[string]any
+	if checkOnly {
+		if json.Unmarshal([]byte(raw), &report) != nil || report["domain"] != "new-owner-recovery-messages" || report["check_only"] != true || report["delivery"] != "not_sent" || report["request_id"] != "conversation-log-"+bytesHash([]byte(requestID))[:32] {
+			return nil, errors.New("clarification verification pending")
+		}
+		return map[string]any{"domain": conversationDomain, "request_id": requestID, "delivery": "not_sent", "check_only": true, "original_intent_retained": true}, nil
+	}
 	if json.Unmarshal([]byte(raw), &report) != nil || report["domain"] != "new-owner-recovery-messages" || report["delivery"] != "verified" {
 		return nil, errors.New("conversation log verification pending")
 	}
@@ -775,10 +827,35 @@ func (r *Runner) conversationStatus() (map[string]any, error) {
 		return nil, err
 	}
 	phases := map[string]int{}
-	for _, q := range index.Questions {
+	questions := []map[string]any{}
+	for _, key := range orderedConversationKeys(index) {
+		q := index.Questions[key]
 		phases[q.Phase]++
+		questions = append(questions, conversationQuestionPublic(q))
 	}
-	return map[string]any{"domain": conversationDomain, "questions": len(index.Questions), "phases": phases, "legacy_state": "unchanged", "original_registry_recovered": false}, nil
+	replies := []map[string]any{}
+	intake := []map[string]any{}
+	ids := make([]string, 0, len(r.State.Requests))
+	for id := range r.State.Requests {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		req := r.State.Requests[id]
+		if req == nil || req.Author != r.State.Destination.Owner {
+			continue
+		}
+		intake = append(intake, map[string]any{"message_id": req.Message, "thread_id": req.Thread, "author_id": req.Author, "todo_id": req.Todo, "request_id": req.Conversation, "phase": req.Phase, "source": req.Source, "created_at": req.Created, "edited_at": req.Edited, "acquired_at": req.Acquired, "content_sha256": bytesHash([]byte(req.Text)), "progress_thread_id": req.ProgressThread})
+		if req.Conversation == "" {
+			continue
+		}
+		q, ok := index.Questions[req.Conversation]
+		if !ok || req.Thread != q.Thread || req.Todo != q.Todo {
+			continue
+		}
+		replies = append(replies, map[string]any{"message_id": req.Message, "thread_id": req.Thread, "author_id": req.Author, "todo_id": req.Todo, "request_id": req.Conversation, "phase": req.Phase, "source": req.Source, "created_at": req.Created, "edited_at": req.Edited, "acquired_at": req.Acquired})
+	}
+	return map[string]any{"domain": conversationDomain, "questions": len(index.Questions), "phases": phases, "items": questions, "reply_stages": replies, "intake_stages": intake, "stage_evidence": "saved_state_only", "snapshot_consistency": "independent_saved_files", "legacy_state": "unchanged", "original_registry_recovered": false}, nil
 }
 
 func orderedConversationKeys(index *conversationIndex) []string {

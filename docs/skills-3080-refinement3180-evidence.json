@@ -1,0 +1,44 @@
+{
+  "todo": 3080,
+  "source_head": "356b8c09d3695f756763848e17299f3a05674619",
+  "review": 3180,
+  "payload_sha256": "15d16a12ea723e7b06087dffb5114088b176c5d960d913a318abb7aac6580731",
+  "after_bundle_sha256": "458f49a75126b35d73d821136a031fb33b88688da7935dc757ea882d8b1ec78b",
+  "writer_sha256": "bb8d413aa9c02f9e1be7887f27d4c1f3570c62b446162926c7fb4e54cef9f546",
+  "backup_path": "D:/CC/Skills/.trash/todo3080-refine3180-20261021-20261021-050449-todo-3080-209b1d8c",
+  "backup_journal_sha256": "0d7fe1a833dad37744051bdb1b67caed1a8f29cb2e919436730269720ed528c0",
+  "backed_up_files": 15,
+  "verified_after_files": 15,
+  "changed_files": 9,
+  "unchanged_original_notice": 6,
+  "new_installs": 0,
+  "manifest": "skills-3080-refinement3180-manifest.json",
+  "manifest_sha256": "8dc959ca06692225d30867ecc04fe8b95b113ed35a6ca85427922c9e0729ff80",
+  "validator": "PASS actual3",
+  "discovery": {
+    "found": 3,
+    "enabled": 3,
+    "parse_errors": 0,
+    "same_names_other_paths": 0,
+    "descriptions_match": true,
+    "metadata_total": 322,
+    "model_called": false
+  },
+  "postinstall_delta_review": "3193 Must0;actual3/15 withbefore backup15/protocol verified;initial metadata3 descriptions matched",
+  "recorded_at": "2026-10-20T20:09:55.9260969Z",
+  "limits": [
+    "No CLI or private vault operation",
+    "No model turn or context-budget measurement",
+    "Limited data changes requested by3180,originals and notices unchanged",
+    "Historical manifests/backup paths preserved;live adoption pointers select current files"
+  ],
+  "current25_validation": {
+    "manifest": ".ci-work/todo3080/current25-manifest.json",
+    "manifest_sha256": "4e006899fbb690020de421a35083468ce47db959cdfa21b1cf251d349698d541",
+    "targets": 25,
+    "files": 125,
+    "result": "PASS actual installedfiles,not just bundle",
+    "head": "4b253db26f74bfb1a779cf8a68d3b22feb9f211f",
+    "limit": "3193 independently rechecked currentmanifest hashes;disk reads limited to3changed targets"
+  }
+}

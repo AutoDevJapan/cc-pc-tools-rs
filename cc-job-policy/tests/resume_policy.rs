@@ -94,3 +94,24 @@ fn a_previously_normalized_legacy_job_retires_its_context_only_once() {
     apply_managed_launch_policy(&mut job);
     assert_eq!(job["resume_session"], "fresh-session");
 }
+
+#[test]
+fn a_freshly_migrated_launch_keeps_its_first_compatible_resume() {
+    let mut job = json!({"todo_id":3081,"model":"gpt-6-luna","effort":"high",
+        "model_origin":"policy","effort_origin":"policy"});
+    apply_managed_launch_policy(&mut job);
+    assert_eq!(job["model"], "gpt-6.1-sol");
+    assert_eq!(job["effort"], "max");
+    job["thread_id"] = json!("first-native-session");
+    job["resume_session"] = json!("first-native-session");
+    apply_managed_launch_policy(&mut job);
+    assert_eq!(job["resume_session"], "first-native-session");
+}
+
+#[test]
+fn automatic_cli_hints_also_use_the_managed_policy_without_a_todo() {
+    let mut job = json!({"model":"gpt-6-luna","effort":"high","model_explicit":false});
+    apply_managed_launch_policy(&mut job);
+    assert_eq!(job["model"], "gpt-6.1-sol");
+    assert_eq!(job["effort"], "max");
+}

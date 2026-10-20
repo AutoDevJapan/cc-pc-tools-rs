@@ -134,6 +134,7 @@ pub fn same_attempt(source: &Value, fresh: &Value) -> bool {
             "effort",
             "effort_origin",
             "policy_resume_reset",
+            "launch_policy_version",
             "cwd",
             "sandbox",
             "scope_source",

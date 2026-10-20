@@ -92,6 +92,7 @@ fn managed_job(job: &serde_json::Value) -> bool {
             .is_some_and(|key| !key.is_empty())
         || job["model_origin"] == "policy"
         || job["effort_origin"] == "policy"
+        || job["model_explicit"] == false
 }
 
 pub fn effective_effort(job: &serde_json::Value) -> &str {
@@ -147,6 +148,9 @@ pub fn apply_managed_launch_policy(job: &mut serde_json::Value) {
         job["model_origin"] = serde_json::json!("policy");
     }
     apply_effort_policy(job);
+    if !capacity_attempt && (source["model"] != job["model"] || source["effort"] != job["effort"]) {
+        job["launch_policy_version"] = serde_json::json!(launch_context::VERSION);
+    }
     launch_context::reconcile_resume(job, &source);
 }
 

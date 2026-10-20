@@ -1,5 +1,6 @@
 //! Keep the native conversation's configuration aligned with its next launch.
 use serde_json::{Value, json};
+pub const VERSION: &str = "max-resume-v1";
 
 pub fn capacity_attempt(job: &Value) -> bool {
     job["capacity_wait_pending"] == true
@@ -35,7 +36,8 @@ pub(crate) fn source_settings(source: &Value) -> Value {
     // Older executables already saved the normalized settings but left the
     // pre-policy conversation attached. Retire that context once; an existing
     // reset receipt identifies the later, compatible native conversation.
-    if !source["policy_resume_reset"].is_object()
+    if source["launch_policy_version"] != VERSION
+        && !source["policy_resume_reset"].is_object()
         && !capacity_attempt(source)
         && !fixed_execution_contract(source)
     {

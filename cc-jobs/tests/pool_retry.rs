@@ -119,6 +119,7 @@ fn retry_publication_rechecks_worker_identity_todo_owner_and_generation() {
         json!({"capacity_same_model_retry_count":2}),
         json!({"capacity_tried_labels":["p000002"]}),
         json!({"policy_resume_reset":{"session":"retired-context"}}),
+        json!({"launch_policy_version":"new-policy"}),
     ] {
         let mut fresh = original.clone();
         fresh

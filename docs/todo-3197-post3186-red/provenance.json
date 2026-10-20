@@ -1,0 +1,34 @@
+{
+  "requested_test_threads": 8,
+  "repository": "AutoDevJapan/cc-pc-tools-rs",
+  "rustc_wrapper": "D:/CC/Tools/sccache/sccache.exe",
+  "oauth_login": "mashfromband",
+  "remote": "https://github.com/AutoDevJapan/cc-pc-tools-rs.git",
+  "job": "20261021-061341-todo-3197",
+  "oauth_user_id": 88025750,
+  "guard_client_resource": false,
+  "at": "2026-10-21T06:21:00.9295524+09:00",
+  "gate_config": {
+    "jobs_per_build": 8
+  },
+  "guard_classification_unverified": false,
+  "sccache_dir": "D:/CC/BuildCache/sccache",
+  "cargo_gate": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "cache_size": "30G",
+  "tools": [
+    {
+      "Path": "D:\\CC\\Tools\\codex-jobs\\cargo_gate.exe",
+      "Hash": "A7D47FAF071772D0C6CA1349B3C0A4ECAA256F0BBD9686FC81C937AC1B26C9BD"
+    },
+    {
+      "Path": "D:\\CC\\Tools\\sccache\\sccache.exe",
+      "Hash": "B85863F6C0579C57A74071B8904F9850A8EF03DAC26BFC94DC30225155BD7449"
+    },
+    {
+      "Path": "D:\\CC\\Tools\\safe-delete\\safe-delete.exe",
+      "Hash": "EEB08516B88D4C8C8749286E84B92F5EA970030534FBCE7DDDE3F29862463E63"
+    }
+  ],
+  "repo_id": 1406818713,
+  "requested_build_jobs": 10
+}

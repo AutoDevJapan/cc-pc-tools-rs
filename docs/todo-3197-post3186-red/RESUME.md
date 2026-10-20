@@ -14,3 +14,6 @@ job: 20261021-061341-todo-3197。
 
 2026-10-21 06:19 JST: 通常のgit archiveで1,164/1,183ファイルに改行差を検出し、Cargo起動前に停止。失敗照合をsource-initial.*へ保持。専用bare Gitのinfo/attributesでtext/filter/ident/encoding変換を止め、read-only alternatesから同じ固定SHAを再archive。source-rawの1,183/1,183ファイルが全生blob SHA256と一致、reparse 0を確認した。元ソース・実装・共有設定は未変更。
 残作業: run-01/02を1回ずつ、結果/不変性/プロセス終了の保存、commit/push、所有一時領域の片付け、checkpoint。
+
+2026-10-21 06:22 JST: 指定の2コマンドを各1回実測済み。run01は選択1/失敗1/除外9、run02は選択5/失敗5/除外91。両方コンパイル成功後のassert失敗でexit100。各前後1,183ファイル全件一致。ゲートの元PIDは両方不在、出力も排出済み。6件の個別結果と到達/未到達条件はREADME.md/results.json、全文ログはrun-01/02.stdout/stderr.log。
+残作業: 証拠のcommit/push、所有一時領域をplan→別呼出し通常削除→finish（拒否時quarantine）で片付け、記録commit/push、実HEADのcheckpoint保存。追加のCargo実行は禁止。

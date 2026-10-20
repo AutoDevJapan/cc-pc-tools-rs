@@ -1,0 +1,53 @@
+{
+  "id": 3197,
+  "job": "20261021-061341-todo-3197",
+  "run": "01",
+  "fixed_head": "f85630d54888e0030692d6a7823cb8d6d99154fe",
+  "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "arguments": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-job-policy",
+    "--test",
+    "product_identity",
+    "-E",
+    "test(mcp_business_jobs_preserve_dependency_urgency_without_borrowing_history_priority)",
+    "--no-fail-fast"
+  ],
+  "working_directory": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3197-3103-source\\codex-owned-8daae585cac606ae8a496ca2af6b9169\\source-raw",
+  "target": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3197-3103-source\\codex-owned-8daae585cac606ae8a496ca2af6b9169\\target",
+  "create_no_window": true,
+  "started_at": "2026-10-21T06:19:58.1463221+09:00",
+  "state": "exited-and-output-drained",
+  "source_before": {
+    "label": "before-01",
+    "at": "2026-10-21T06:19:58.1189618+09:00",
+    "fixed_head": "f85630d54888e0030692d6a7823cb8d6d99154fe",
+    "expected_files": 1183,
+    "actual_files": 1183,
+    "reparse_points": 0,
+    "mismatches": [],
+    "all_git_blob_bytes_match": true
+  },
+  "stdout_file": "run-01.stdout.log",
+  "stderr_file": "run-01.stderr.log",
+  "pid": 58540,
+  "process_started_at": "2026-10-20T21:19:58.1919127Z",
+  "ended_at": "2026-10-21T06:20:08.1244934+09:00",
+  "exit_code": 100,
+  "has_exited": true,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "537106f9247687664ccb20867607205510283aa10d2c8a07922fe7d18c5ca093",
+  "source_after": {
+    "label": "after-01",
+    "at": "2026-10-21T06:20:08.5899464+09:00",
+    "fixed_head": "f85630d54888e0030692d6a7823cb8d6d99154fe",
+    "expected_files": 1183,
+    "actual_files": 1183,
+    "reparse_points": 0,
+    "mismatches": [],
+    "all_git_blob_bytes_match": true
+  }
+}

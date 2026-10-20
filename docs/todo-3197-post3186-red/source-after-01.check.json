@@ -1,0 +1,10 @@
+{
+  "label": "after-01",
+  "at": "2026-10-21T06:20:08.5899464+09:00",
+  "fixed_head": "f85630d54888e0030692d6a7823cb8d6d99154fe",
+  "expected_files": 1183,
+  "actual_files": 1183,
+  "reparse_points": 0,
+  "mismatches": [],
+  "all_git_blob_bytes_match": true
+}

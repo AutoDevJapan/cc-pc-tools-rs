@@ -1,0 +1,115 @@
+{
+  "todo": 3197,
+  "parent_todo": 3103,
+  "issue": 289,
+  "parent_pr": 302,
+  "fixed_head": "f85630d54888e0030692d6a7823cb8d6d99154fe",
+  "executions": 2,
+  "reruns": 0,
+  "environment": "Windows x86_64; normal cargo_gate; dedicated target; sccache; no GPU/Civ6",
+  "result": "6/6 selected tests compiled then failed assertions; both exits100",
+  "runs": [
+    {
+      "run": "01",
+      "command": "cargo nextest run --locked -p cc-job-policy --test product_identity -E 'test(mcp_business_jobs_preserve_dependency_urgency_without_borrowing_history_priority)' --no-fail-fast",
+      "started_at": "2026-10-21T06:19:58.1463221+09:00",
+      "ended_at": "2026-10-21T06:20:08.1244934+09:00",
+      "selected": 1,
+      "skipped": 9,
+      "passed": 0,
+      "failed": 1,
+      "compile_seconds": 6.57,
+      "exit_code": 100,
+      "state": "exited-and-output-drained",
+      "has_exited": true,
+      "process_pid": 58540,
+      "nextest_run_id": "e05e8360-1761-4d7e-b8e1-3ea9c8ec0743",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "537106f9247687664ccb20867607205510283aa10d2c8a07922fe7d18c5ca093",
+      "source_unchanged": true
+    },
+    {
+      "run": "02",
+      "command": "cargo nextest run --locked -p localai-web-rs --lib -E 'test(mcp_job_business_identity_keeps_the_more_urgent_product_or_dependency_rank) | test(mcp_raw_private_project_cannot_be_unmasked_by_a_display_override) | test(mcp_private_job_priority_keeps_its_linked_task_details_closed) | test(mcp_private_names_in_related_ids_hide_both_task_and_job_details) | test(mcp_api_reports_the_presence_of_runtime_binding_overrides)' --no-fail-fast",
+      "started_at": "2026-10-21T06:20:24.6981884+09:00",
+      "ended_at": "2026-10-21T06:20:57.2248029+09:00",
+      "selected": 5,
+      "skipped": 91,
+      "passed": 0,
+      "failed": 5,
+      "compile_seconds": 31.5,
+      "exit_code": 100,
+      "state": "exited-and-output-drained",
+      "has_exited": true,
+      "process_pid": 11692,
+      "nextest_run_id": "b5983e04-e70d-477e-8b64-6b6b706579e4",
+      "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "stderr_sha256": "0bf54ae34b5fa12770f163567eef4f607bf31169ae6e9ecd00c93a1e24fa640b",
+      "source_unchanged": true
+    }
+  ],
+  "cases": [
+    {
+      "run": "01",
+      "test": "mcp_business_jobs_preserve_dependency_urgency_without_borrowing_history_priority",
+      "source": "cc-job-policy/tests/product_identity.rs:145",
+      "outcome": "assertion_failed",
+      "expected": 30,
+      "actual": 60,
+      "reached": "declared=false / wait_on / parent=10,20 pass; parent=30 fails",
+      "unreached": "wait_on ranks40/50/61/100; work_wait_on; none; declared=true"
+    },
+    {
+      "run": "02",
+      "test": "mcp_job_business_identity_keeps_the_more_urgent_product_or_dependency_rank",
+      "source": "localai-web-rs/src/operations_product_identity_tests.rs:540",
+      "outcome": "assertion_failed",
+      "expected": 30,
+      "actual": 60,
+      "reached": "masked=false / contract / all seven ranks pass; alpha / ranks10,20 pass; alpha / parent=30 fails",
+      "unreached": "alpha ranks40/50/61/100; masked=true"
+    },
+    {
+      "run": "02",
+      "test": "mcp_raw_private_project_cannot_be_unmasked_by_a_display_override",
+      "source": "localai-web-rs/src/operations_product_identity_tests.rs:563",
+      "outcome": "assertion_failed",
+      "expected": "Err(404)",
+      "actual": "Ok(note=raw-private-marker)",
+      "reached": "from_policy=false: owner_project override detail request",
+      "unreached": "collect/board assertion; from_policy=true"
+    },
+    {
+      "run": "02",
+      "test": "mcp_private_job_priority_keeps_its_linked_task_details_closed",
+      "source": "localai-web-rs/src/operations_product_identity_tests.rs:584",
+      "outcome": "assertion_failed",
+      "expected": "Err(404)",
+      "actual": "Ok(note=legacy-private-marker)",
+      "reached": "linked task detail request",
+      "unreached": "collect/board assertion"
+    },
+    {
+      "run": "02",
+      "test": "mcp_private_names_in_related_ids_hide_both_task_and_job_details",
+      "source": "localai-web-rs/src/operations_product_identity_tests.rs:609",
+      "outcome": "assertion_failed",
+      "expected": "task=Err(404), job=Err(404)",
+      "actual": "task=Ok(note=related-private-note-marker), job=Ok(report=related-private-report-marker)",
+      "reached": "both task and job detail requests evaluated before combined assertion",
+      "unreached": "collect/board assertions"
+    },
+    {
+      "run": "02",
+      "test": "mcp_api_reports_the_presence_of_runtime_binding_overrides",
+      "source": "localai-web-rs/src/operations_product_identity_tests.rs:628",
+      "outcome": "assertion_failed",
+      "expected": false,
+      "actual": null,
+      "reached": "masked=false, policy={}",
+      "unreached": "product_identities={} or null; masked=true"
+    }
+  ],
+  "privacy_fixtures": "synthetic only; no original private registry or customer source opened",
+  "limits": "Only fixed-source Red measurement. No current Green, full-workspace, release, Clippy, implementation fix, parent status mutation, review approval, merge or deployment."
+}

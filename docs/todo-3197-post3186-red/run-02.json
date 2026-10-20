@@ -1,0 +1,52 @@
+{
+  "id": 3197,
+  "job": "20261021-061341-todo-3197",
+  "run": "02",
+  "fixed_head": "f85630d54888e0030692d6a7823cb8d6d99154fe",
+  "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "arguments": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "localai-web-rs",
+    "--lib",
+    "-E",
+    "test(mcp_job_business_identity_keeps_the_more_urgent_product_or_dependency_rank) | test(mcp_raw_private_project_cannot_be_unmasked_by_a_display_override) | test(mcp_private_job_priority_keeps_its_linked_task_details_closed) | test(mcp_private_names_in_related_ids_hide_both_task_and_job_details) | test(mcp_api_reports_the_presence_of_runtime_binding_overrides)",
+    "--no-fail-fast"
+  ],
+  "working_directory": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3197-3103-source\\codex-owned-8daae585cac606ae8a496ca2af6b9169\\source-raw",
+  "target": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3197-3103-source\\codex-owned-8daae585cac606ae8a496ca2af6b9169\\target",
+  "create_no_window": true,
+  "started_at": "2026-10-21T06:20:24.6981884+09:00",
+  "state": "exited-and-output-drained",
+  "source_before": {
+    "label": "before-02",
+    "at": "2026-10-21T06:20:24.6596855+09:00",
+    "fixed_head": "f85630d54888e0030692d6a7823cb8d6d99154fe",
+    "expected_files": 1183,
+    "actual_files": 1183,
+    "reparse_points": 0,
+    "mismatches": [],
+    "all_git_blob_bytes_match": true
+  },
+  "stdout_file": "run-02.stdout.log",
+  "stderr_file": "run-02.stderr.log",
+  "pid": 11692,
+  "process_started_at": "2026-10-20T21:20:24.7069644Z",
+  "ended_at": "2026-10-21T06:20:57.2248029+09:00",
+  "exit_code": 100,
+  "has_exited": true,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "0bf54ae34b5fa12770f163567eef4f607bf31169ae6e9ecd00c93a1e24fa640b",
+  "source_after": {
+    "label": "after-02",
+    "at": "2026-10-21T06:20:57.7149103+09:00",
+    "fixed_head": "f85630d54888e0030692d6a7823cb8d6d99154fe",
+    "expected_files": 1183,
+    "actual_files": 1183,
+    "reparse_points": 0,
+    "mismatches": [],
+    "all_git_blob_bytes_match": true
+  }
+}

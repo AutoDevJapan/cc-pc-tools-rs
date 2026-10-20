@@ -1,0 +1,38 @@
+{
+  "todo_id": 3154,
+  "parent_todo_id": 3081,
+  "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/277",
+  "owner": "AutoDevJapan",
+  "repository_id": 1406818713,
+  "remote_host": "github.com",
+  "remote_path": "/AutoDevJapan/cc-pc-tools-rs.git",
+  "guard_own": {
+    "ok": true,
+    "client_resource": false,
+    "classification_unverified": false,
+    "original_registry_recovered": false
+  },
+  "guard_original": {
+    "ok": true,
+    "client_resource": false,
+    "classification_unverified": false,
+    "original_registry_recovered": false
+  },
+  "initial_branch": "scheduler/todo-3154-3081",
+  "initial_head": "b995d2e119f31dca3af8aeed77598c8713ea421f",
+  "expected_branch": "scheduler/todo-3154-3081",
+  "evidence_branch": "scheduler/todo-3154-3081-red-evidence",
+  "job": "20261021-023539-todo-3154",
+  "original_scope": "D:/CC/Work/unattended-operations-20261013",
+  "worktree": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3154-3081",
+  "owned_id": "b4e5f2d379be26397ee60a13f2b53458",
+  "owned_path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3154-3081\\codex-owned-b4e5f2d379be26397ee60a13f2b53458",
+  "root_instructions_sha256": "51e2b9725f2360d55602d9545152673185ac978cbf66f222440e93576214051a",
+  "original_agents_sha256": "17c7b945a4dc13866c7908ee0421b74ece6daaf16965fb7f9d99b7c438afb763",
+  "worktree_agents_sha256": "87722027bab10a57cbd5bdf3c6d888955d48d7c09cc7e8113b61a7ed6399ee02",
+  "test_scope_sha256": "91a97b5653c1695af709f72077dffca04106fbcf9882f11acc77b3f9a3095f08",
+  "claude_file_present": false,
+  "source_edits": 0,
+  "requested_cargo_build_jobs": 8,
+  "requested_test_threads": 8
+}

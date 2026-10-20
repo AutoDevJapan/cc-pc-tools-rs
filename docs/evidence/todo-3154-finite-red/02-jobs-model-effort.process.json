@@ -1,0 +1,31 @@
+{
+  "status": "exited",
+  "result": {
+    "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+    "arguments": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-jobs",
+      "--test",
+      "model_effort",
+      "-E",
+      "test(managed_legacy_hints_use_max_while_a_recorded_owner_override_survives) | test(unknown_claude_keeps_its_identity_and_disables_inherited_gpt_fast)",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ],
+    "working_directory": "D:/CC/Work/unattended-operations-20261013-wt/todo-3154-3081",
+    "started_at": "2026-10-21T02:41:09.4878115+09:00",
+    "finished_at": "2026-10-21T02:41:47.6517270+09:00",
+    "pid": 72420,
+    "process_created_utc": "2026-10-20T17:41:09.4898394Z",
+    "exit_code": 100,
+    "create_no_window": true,
+    "concurrent_stdout_stderr": true,
+    "waited_for_exit": true,
+    "stdout": null,
+    "stderr": null
+  }
+}

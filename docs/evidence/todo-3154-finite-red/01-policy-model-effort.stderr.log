@@ -1,0 +1,62 @@
+   Compiling version_check v0.9.5
+   Compiling proc-macro2 v1.0.107
+   Compiling typenum v1.20.1
+   Compiling unicode-ident v1.0.26
+   Compiling quote v1.0.47
+   Compiling serde_core v1.0.229
+   Compiling autocfg v1.5.1
+   Compiling zmij v1.0.23
+   Compiling generic-array v0.14.7
+   Compiling cfg-if v1.0.5
+   Compiling num-traits v0.2.19
+   Compiling getrandom v0.4.3
+   Compiling hashbrown v0.17.1
+   Compiling serde_json v1.0.151
+   Compiling serde v1.0.229
+   Compiling windows-link v0.2.1
+   Compiling equivalent v1.0.2
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling indexmap v2.14.2
+   Compiling windows-sys v0.61.2
+   Compiling cpufeatures v0.2.17
+   Compiling itoa v1.0.18
+   Compiling digest v0.10.7
+   Compiling memchr v2.8.3
+   Compiling chrono v0.4.45
+   Compiling fastrand v2.5.0
+   Compiling sha2 v0.10.9
+   Compiling once_cell v1.21.4
+   Compiling syn v3.0.6
+   Compiling tempfile v3.27.0
+   Compiling serde_derive v1.0.229
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3154-3081\cc-job-policy)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.15s
+────────────
+ Nextest run ID ae68e017-ca6f-46fb-80df-0d94143b6f41 with nextest profile: default
+    Starting 1 test across 1 binary (2 tests skipped)
+        SKIP [         ] (───) cc-job-policy::model_effort review_default_and_source_history_never_choose_an_authors_model
+        SKIP [         ] (───) cc-job-policy::model_effort unattended_default_keeps_sol_max_for_implementation_and_readers
+        FAIL [   0.009s] (1/1) cc-job-policy::model_effort review_aliases_are_author_identities_and_preview_is_not_review
+  stdout ───
+
+    running 1 test
+    test review_aliases_are_author_identities_and_preview_is_not_review ... FAILED
+
+    failures:
+
+    failures:
+        review_aliases_are_author_identities_and_preview_is_not_review
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'review_aliases_are_author_identities_and_preview_is_not_review' (23416) panicked at cc-job-policy\tests\model_effort.rs:5:5:
+    assertion failed: cc_job_policy::same_model("opus", "anthropic/claude-opus-5-5")
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+────────────
+     Summary [   0.011s] 1 test run: 0 passed, 1 failed, 2 skipped
+        FAIL [   0.009s] (1/1) cc-job-policy::model_effort review_aliases_are_author_identities_and_preview_is_not_review
+error: test run failed

@@ -1,0 +1,203 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling memchr v2.8.3
+   Compiling stable_deref_trait v1.2.1
+   Compiling windows-sys v0.61.2
+   Compiling pin-project-lite v0.2.17
+   Compiling smallvec v1.16.2
+   Compiling writeable v0.6.4
+   Compiling litemap v0.8.3
+   Compiling bytes v1.12.1
+   Compiling utf8_iter v1.0.4
+   Compiling icu_properties_data v2.3.0
+   Compiling icu_normalizer_data v2.3.0
+   Compiling percent-encoding v2.3.2
+   Compiling once_cell v1.21.4
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.14
+   Compiling zeroize v1.9.1
+   Compiling serde_json v1.0.151
+   Compiling form_urlencoded v1.2.2
+   Compiling cc v1.6.0
+   Compiling rustls-pki-types v1.15.1
+   Compiling crc32fast v1.5.2
+   Compiling log v0.4.34
+   Compiling simd-adler32 v0.3.10
+   Compiling futures-core v0.3.34
+   Compiling ring v0.17.14
+   Compiling getrandom v0.2.17
+   Compiling adler2 v2.0.1
+   Compiling untrusted v0.9.0
+   Compiling aho-corasick v1.1.5
+   Compiling miniz_oxide v0.9.1
+   Compiling windows_x86_64_msvc v0.52.6
+   Compiling regex-syntax v0.8.11
+   Compiling syn v3.0.6
+   Compiling rustls v0.23.45
+   Compiling flate2 v1.1.10
+   Compiling webpki-roots v1.0.9
+   Compiling futures-sink v0.3.34
+   Compiling base64 v0.22.1
+   Compiling subtle v2.6.1
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.4
+   Compiling regex-automata v0.4.18
+   Compiling futures-channel v0.3.34
+   Compiling webpki-roots v0.26.11
+   Compiling chrono v0.4.45
+   Compiling futures-io v0.3.34
+   Compiling synstructure v0.14.0
+   Compiling zerovec-derive v0.11.6
+   Compiling displaydoc v0.2.7
+   Compiling serde_derive v1.0.229
+   Compiling tokio-macros v2.7.2
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling regex v1.13.1
+   Compiling futures-macro v0.3.34
+   Compiling slab v0.4.12
+   Compiling futures-task v0.3.34
+   Compiling windows-targets v0.52.6
+   Compiling tokio v1.53.2
+   Compiling syn v2.0.119
+   Compiling tempfile v3.27.0
+   Compiling zerofrom v0.1.8
+   Compiling windows-sys v0.59.0
+   Compiling uuid v1.27.0
+   Compiling yoke v0.8.3
+   Compiling http v1.5.0
+   Compiling futures-util v0.3.34
+   Compiling windows-interface v0.59.3
+   Compiling zerovec v0.11.8
+   Compiling zerotrie v0.2.5
+   Compiling winreg v0.55.0
+   Compiling windows-implement v0.60.2
+   Compiling windows-result v0.4.1
+   Compiling serde v1.0.229
+   Compiling windows-strings v0.5.1
+   Compiling http-body v1.1.0
+   Compiling httparse v1.10.1
+   Compiling libc v0.2.190
+   Compiling tinystr v0.8.4
+   Compiling potential_utf v0.1.6
+   Compiling windows-core v0.62.2
+   Compiling icu_collections v2.3.0
+   Compiling once_cell_polyfill v1.70.2
+   Compiling icu_locale_core v2.3.0
+   Compiling anstyle v1.0.14
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3154-3081\cc-job-policy)
+   Compiling utf8parse v0.2.2
+   Compiling try-lock v0.2.5
+   Compiling thiserror v2.0.21
+   Compiling native-tls v0.2.18
+   Compiling tower-service v0.3.3
+   Compiling want v0.3.2
+   Compiling anstyle-parse v1.0.0
+   Compiling anstyle-wincon v3.0.11
+   Compiling cc-redact v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3154-3081\cc-redact)
+   Compiling thiserror-impl v2.0.21
+   Compiling rustls-webpki v0.103.15
+   Compiling anstyle-query v1.1.5
+   Compiling icu_provider v2.3.1
+   Compiling schannel v0.1.29
+   Compiling tracing-core v0.1.36
+   Compiling windows-threading v0.2.1
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling atomic-waker v1.1.2
+   Compiling icu_properties v2.3.0
+   Compiling icu_normalizer v2.3.0
+   Compiling colorchoice v1.0.5
+   Compiling anstream v1.0.0
+   Compiling tracing v0.1.44
+   Compiling windows-future v0.3.2
+   Compiling windows-numerics v0.3.1
+   Compiling windows-collections v0.3.2
+   Compiling sync_wrapper v1.0.2
+   Compiling strsim v0.11.1
+   Compiling clap_lex v1.1.1
+   Compiling base64 v0.23.1
+   Compiling futures-executor v0.3.34
+   Compiling ipnet v2.12.2
+   Compiling heck v0.5.0
+   Compiling bumpalo v3.20.3
+   Compiling tower-layer v0.3.3
+   Compiling zip v2.4.2
+   Compiling futures v0.3.34
+   Compiling clap_derive v4.6.7
+   Compiling windows v0.62.2
+   Compiling zopfli v0.8.3
+   Compiling clap_builder v4.6.7
+   Compiling http-body-util v0.1.5
+   Compiling bitflags v2.13.2
+   Compiling ryu v1.0.23
+   Compiling serde_urlencoded v0.7.1
+   Compiling cc-live v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3154-3081\cc-live)
+   Compiling idna_adapter v1.2.2
+   Compiling clap v4.6.7
+   Compiling idna v1.1.0
+   Compiling url v2.5.8
+   Compiling wmi v0.18.4
+   Compiling ureq v2.12.1
+   Compiling cc-chrome v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3154-3081\cc-chrome)
+   Compiling hyper v1.12.0
+   Compiling tower v0.5.3
+   Compiling tokio-native-tls v0.3.1
+   Compiling tower-http v0.6.11
+   Compiling hyper-util v0.1.21
+   Compiling hyper-tls v0.6.0
+   Compiling reqwest v0.12.28
+   Compiling cc-task-title v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3154-3081\cc-task-title)
+   Compiling cc-local-llm v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3154-3081\cc-local-llm)
+   Compiling cc-jobs v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3154-3081\cc-jobs)
+   Compiling cc-ask v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3154-3081\cc-ask)
+   Compiling cc-scheduler v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3154-3081\cc-scheduler)
+   Compiling cc-todo v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3154-3081\cc-todo)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 37.25s
+────────────
+ Nextest run ID 3964a999-77f9-4ee0-ba93-e453070462c1 with nextest profile: default
+    Starting 2 tests across 1 binary (2 tests skipped)
+        SKIP [         ] (───) cc-jobs::model_effort explicit_model_and_effort_survive_launch
+        SKIP [         ] (───) cc-jobs::model_effort gpt_launch_explicitly_requests_fast_and_keeps_owner_effort
+        FAIL [   0.025s] (1/2) cc-jobs::model_effort managed_legacy_hints_use_max_while_a_recorded_owner_override_survives
+  stdout ───
+
+    running 1 test
+    test managed_legacy_hints_use_max_while_a_recorded_owner_override_survives ... FAILED
+
+    failures:
+
+    failures:
+        managed_legacy_hints_use_max_while_a_recorded_owner_override_survives
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'managed_legacy_hints_use_max_while_a_recorded_owner_override_survives' (62052) panicked at cc-jobs\tests\model_effort.rs:45:9:
+    assertion failed: codex_args(&job).iter().any(|arg| arg == "model_reasoning_effort=max")
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        FAIL [   0.029s] (2/2) cc-jobs::model_effort unknown_claude_keeps_its_identity_and_disables_inherited_gpt_fast
+  stdout ───
+
+    running 1 test
+    test unknown_claude_keeps_its_identity_and_disables_inherited_gpt_fast ... FAILED
+
+    failures:
+
+    failures:
+        unknown_claude_keeps_its_identity_and_disables_inherited_gpt_fast
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
+  stderr ───
+
+    thread 'unknown_claude_keeps_its_identity_and_disables_inherited_gpt_fast' (39968) panicked at cc-jobs\tests\model_effort.rs:69:5:
+    assertion failed: args.iter().any(|arg| arg == "service_tier=default")
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+────────────
+     Summary [   0.030s] 2 tests run: 0 passed, 2 failed, 2 skipped
+        FAIL [   0.025s] (1/2) cc-jobs::model_effort managed_legacy_hints_use_max_while_a_recorded_owner_override_survives
+        FAIL [   0.029s] (2/2) cc-jobs::model_effort unknown_claude_keeps_its_identity_and_disables_inherited_gpt_fast
+error: test run failed

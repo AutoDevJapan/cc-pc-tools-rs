@@ -75,7 +75,7 @@ mod independent_subwork {
         let error=t.run(&["--todo-id","2939","--subwork-of","1","--parent-job-id","parent",
             "--assigned-needs","","--launch-key",s(&row["scheduler"],"key"),
             "--cwd",s(&row["scheduler"],"worktree"),"--sandbox","read-only"],b"finite original research")
-            .err().expect("unqualified original research must not be registered");
+            .expect_err("unqualified original research must not be registered");
         assert!(error.message.contains("no reader retry was registered"),"{error:?}");
         assert!(!t.ctx.list_jobs(&HashSet::new()).iter().any(|j|j["todo_id"]==2939));
     }

@@ -636,8 +636,10 @@ async fn forward_streams(
         r=&mut down=>r,
     }
 }
-async fn persist_or_close(dir: &Path, record: &Record) -> io::Result<()> {
-    if let Err(error) = persist(dir, record) {
+async fn persist_or_close(dir: &Path, record: &Record) -> io::Result<PathBuf> {
+    match persist(dir, record) {
+        Ok(path) => Ok(path),
+        Err(error) => {
         // Keep a second journal if only chrome-tabs is inaccessible. This also survives
         // cancellation while the rollback RPC is in flight.
         let emergency = dir
@@ -648,15 +650,28 @@ async fn persist_or_close(dir: &Path, record: &Record) -> io::Result<()> {
         if matches!(closed, Ok(Ok(_))) && recorded {
             let _ = fs::remove_file(emergency);
         }
-        return Err(io::Error::new(error.kind(), "tab record write failed"));
+            Err(io::Error::new(error.kind(), "tab record write failed"))
+        }
     }
-    Ok(())
 }
+
+/// The actual persisted UUID lets CLI callers complete a phase without listing job files.
+#[derive(Debug, Serialize)]
+pub struct OpenReceipt {
+    #[serde(flatten)]
+    pub record: Record,
+    pub record_id: String,
+}
+
 pub fn open(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
+    open_with_receipt(dir, job, url).map(|receipt| receipt.record)
+}
+
+pub fn open_with_receipt(dir: &Path, job: &str, url: &str) -> io::Result<OpenReceipt> {
     runtime()?.block_on(open_inner(dir, job, url))
 }
 
-async fn open_inner(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
+async fn open_inner(dir: &Path, job: &str, url: &str) -> io::Result<OpenReceipt> {
     if registrar::restricted_url(url) {
         return Err(io::Error::new(io::ErrorKind::PermissionDenied, registrar::REASON));
     }
@@ -672,7 +687,7 @@ async fn open_inner(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
     }
 }
 
-async fn open_on(dir: &Path, job: &str, url: &str, pipe: String, info: Value) -> io::Result<Record> {
+async fn open_on(dir: &Path, job: &str, url: &str, pipe: String, info: Value) -> io::Result<OpenReceipt> {
         let mut rpc = Rpc::connect(&pipe).await?;
         let mut r = Record {
             job: job.into(),
@@ -694,7 +709,9 @@ async fn open_on(dir: &Path, job: &str, url: &str, pipe: String, info: Value) ->
         r.tab = tab["id"]
             .as_u64()
             .ok_or_else(|| io::Error::other("invalid createTab reply"))?;
-        persist_or_close(dir, &r).await?;
+        let path = persist_or_close(dir, &r).await?;
+        let record_id = path.file_stem().and_then(|name| name.to_str())
+            .ok_or_else(|| io::Error::other("invalid persisted record filename"))?.to_owned();
         let mut p = r.params();
         p["tabId"] = json!(r.tab);
         let attached = rpc.call("attach", p).await;
@@ -710,7 +727,7 @@ async fn open_on(dir: &Path, job: &str, url: &str, pipe: String, info: Value) ->
             let _ = tokio::time::timeout(Duration::from_secs(3), close_record(&r)).await;
             return Err(e);
         }
-        Ok(r)
+        Ok(OpenReceipt { record: r, record_id })
 }
 
 fn remaining(deadline: std::time::Instant) -> io::Result<Duration> {
@@ -734,7 +751,7 @@ pub fn open_until(
             .map_err(|_| {
                 io::Error::new(io::ErrorKind::TimedOut, "opening owner Chrome timed out")
             })?
-    })
+    }).map(|receipt| receipt.record)
 }
 
 /// Execute only page operations on a positively recorded tab in the same Chrome generation.

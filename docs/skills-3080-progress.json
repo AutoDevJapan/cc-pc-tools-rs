@@ -363,5 +363,16 @@
     "new_candidates": 3,
     "prior3048_same_entrypoint_read": 3,
     "newly_installed": 3
+  },
+  "tencent_entrypoint_assessment": {
+    "pinned_case_insensitive_skill_paths": 7,
+    "full_text_read": 7,
+    "actual_workflow_entrypoints": 4,
+    "discovery_stubs": 1,
+    "usage_guides": 2,
+    "support_files_unread": 25,
+    "policy_rewrite_candidates": 4,
+    "installed": 0,
+    "not_blanket_excluded": true
   }
 }

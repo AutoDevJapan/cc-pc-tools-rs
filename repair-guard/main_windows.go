@@ -198,6 +198,9 @@ func allowed(path string) bool {
 	if boundedSchedulerTree(absolute) {
 		return true
 	}
+	if consoleRuntimeAllowed(absolute) && sourceVerified(base) {
+		return true
+	}
 	if civ6Runtime(absolute) {
 		return true
 	}

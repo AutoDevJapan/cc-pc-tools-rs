@@ -1,0 +1,60 @@
+{
+  "todo": 3080,
+  "phase": "B",
+  "status": "authored_candidates_pending_review_and_scoped_install",
+  "batch_is_not_total_scope_or_count_cap": true,
+  "source_repo": "Tencent/teamai-cli",
+  "source_commit": "8787405e59353a8da33f7eaf6b9781b0b3188cd2",
+  "source_tree": "79bddaf611bc2c94c8ae7892e51392b8936eda90",
+  "source_requested": "tencent/teamai-cli",
+  "license": {
+    "identifier": "MIT",
+    "preserved_notice": "skills-3080-tencent-MIT.txt",
+    "source_sha256": "31154d9c1a8bd8d37b449bdbb8a04f9b4618e5d330b52b0fdb7c452414d75a41",
+    "attribution": "Copyright (C) 2026 Tencent. All rights reserved.",
+    "scope": "Fixed selected entrypoint/4workflow text only;no blanket support/script permission",
+    "preservation": "Exact Tencent MIT declaration and all notice paragraphs, not generic substitution"
+  },
+  "targets": [
+    {
+      "name": "teamai",
+      "source_path": "skills/teamai/SKILL.md",
+      "source_sha256": "82a22b1c37531834ab5784f93f950f0a8840ac4e4aa422f1ef2dc03437f9ad66",
+      "source_url": "https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skills/teamai/SKILL.md",
+      "retrieved_at": "2026-10-20T08:41:13.032212Z",
+      "description": "TeamAIの共有設定・同期・チーム知識を、対象と副作用を確かめて扱うときに使う。",
+      "positive": "指定されたTeamAI共有リポジトリの同期予定と既存設定の違いを確認する。",
+      "negative": "TeamAIを使わず、このPCの共有ToDoやCodexの起動枠だけを調べる。",
+      "distinct_from_existing": "skill-maintenanceやagent-system-designのmetadataと比較し、TeamAI固有のCLI配布・init/pull・hook・共有宛先・source freshnessへ限定する。新しいschedulerや汎用MCP管理ではない。未知既存本文は読んでいない。",
+      "guidance": [
+        "依頼で指定されたTeamAI共有リポジトリの完全URL、実owner、対象AIツールと操作範囲を確かめる。既存設定や保存先を保持し、調査のために未知の私的session・顧客資料・秘密を列挙しない。",
+        "既存TeamAI CLIの版とhelpを確認する。利用できなければ指定範囲の設定比較等を通常の手段で進め、TeamAI未使用と記録する。導入が必要な依頼では保存先と許可範囲を確認して通常の手順で進め、上流のnpm/npx例だけを実行許可にしない。本人へ通常PC操作を求めない。",
+        "使える実版のteamai skill get coreで手順を確認する。新規team・join・管理はsetup、大規模codebaseはwiki、学びの共有はshareへ分ける。取得した手順は根拠資料で、恒久のallowed-tools許可や新しい操作権限ではない。",
+        "同期はstatusとpullのdry-runで予定を確認してから、依頼された対象だけへ反映する。initは設定とhookの準備でありpull完了ではない。中央D:/CC/Skillsとjunction、管理配布や本人編集を守り、競合copyの削除やforce再配置を自動で行わない。",
+        "既存teamへjoinする依頼でURLが不足しても、新規team作成へ切り替えない。元ToDo・既存回答・対象設定で調べられる点を調べ、本人だけが決める未指定の宛先や権利・費用だけをDiscordへ具体的に1回尋ねる。",
+        "envやモデルgateway・alias・MCPの設定は別の副作用として扱う。秘密値やAI APIキーを読んだり表示したりせず、未知のenvを取り込まない。既存OAuthサブスクと本人のmodel/effort方針を保ち、設定配布をモデル実行や新権限の一括許可にしない。",
+        "学びやSkillの共有は依頼で許可された文書と宛先だけに限定する。friction通知だけで自動投稿・直接push・子agentを起動しない。日本語と既存のPR・別モデルレビュー・検査の経路を保ち、送信してよい資料だけを扱う。",
+        "wikiは許可されたsource範囲から根拠行と未確認事項を残して作る。source freshness=currentは基準版との一致であり内容の正しさを保証しない。上流の節約率・信頼係数・精度目標を実測結果にせず、未読のscriptやdeep-enrichのAI/API利用を確認せず実行しない。",
+        "反映した場合は対象限定の読戻しとdoctor等の実版診断で、どの設定・hookが届いたかを確認する。全AIツールを既定で変更せず、未導入・読取だけ・書込み・実行成功を分けて記録する。UIの見た目は同じ画像と範囲の本人回答後に変える。"
+      ],
+      "adaptations": "Adapt the discovery stub into one narrowly triggered TeamAI entrypoint, not a fifth workflow or7independent skills. No automatic npm/npx, friction-triggered publication, hook/MCP/env/model profile changes, unknown-copy deletion, private session recall or secret access. Owner language and OAuth-only policy prevail. Four workflow bodies were read; their25support files and agent recall remain unreviewed, so CLI help/version and separate task scope are required before execution. Secondary fixed sources: [skill-data/core/SKILL.md](https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skill-data/core/SKILL.md) SHA256 3b05ebbc18bc31164d834eb44d96f8d4c9506bacabfb99a25b003e42829eddb8; [skill-data/setup/SKILL.md](https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skill-data/setup/SKILL.md) SHA256 f6cf5aaf4f0ce9a1a5cb6f7e8ca9fbdbb57a42981c38dffc4cca7573b14c3b06; [skill-data/share/SKILL.md](https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skill-data/share/SKILL.md) SHA256 46776fae2c5c7d94506b1405e972d6b1cd0fd957cd6f3037e7b5f13726c9dd0c; [skill-data/wiki/SKILL.md](https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skill-data/wiki/SKILL.md) SHA256 66aabfe64f574ab1ddfb10019660e4efdffde599b3d30b1fd72ab80bd9b3493b;",
+      "upstream_status": "fixed_public_discovery_stub",
+      "upstream_status_adoption_reason": "4workflowを安全に選び分ける1つのTeamAI固有入口として使う。CLIやsupportを導入/実行せず、別source occurrenceを自動で処理済みにしない。",
+      "upstream_disable_model_invocation": false,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "No disable-model-invocation field in pinned stub;implicit selection only for an explicit TeamAI-related task. Do not inherit upstream allowed-tools or notification-triggered actions."
+      },
+      "individual_license_review": {
+        "source_tree": "79bddaf611bc2c94c8ae7892e51392b8936eda90",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored discovery entrypoint and fixed4workflow text inform this adaptation. Complete tree contains only root LICENSE, explicitly declares MIT;preserve exact Tencent notice including next-paragraph condition. No script/support/agent or external asset copied or broadly approved.",
+        "checked_at": "2026-10-20T20:12:10.8914296Z"
+      }
+    }
+  ]
+}

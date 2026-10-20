@@ -281,7 +281,7 @@ func Verify(ctx context.Context, p Plan, read ReadAPI) error {
 		if p.Workflow == CodeQLWorkflow && j.Name == "Adjust Configuration" {
 			continue
 		}
-		if p.Job == "test" && j.Name != "test (ubuntu-latest)" && j.Name != "test (windows-latest)" {
+		if p.Job == "test" && j.Name != "test (windows-latest)" {
 			return errors.New("original OS matrix differs")
 		}
 		if p.Workflow == CodeQLWorkflow && j.Name != "Analyze (actions)" && j.Name != "Analyze (rust)" {
@@ -297,7 +297,7 @@ func Verify(ctx context.Context, p Plan, read ReadAPI) error {
 			found = true
 		}
 	}
-	if !found || (p.Job == "test" && (jobs.Total != 2 || !names["test (ubuntu-latest)"] || !names["test (windows-latest)"])) || (p.Workflow == CodeQLWorkflow && (!names["Analyze (actions)"] || !names["Analyze (rust)"])) || (p.Job != "test" && p.Workflow != CodeQLWorkflow && (jobs.Total != 1 || !names[p.Job])) {
+	if !found || (p.Job == "test" && (jobs.Total != 1 || !names["test (windows-latest)"])) || (p.Workflow == CodeQLWorkflow && (!names["Analyze (actions)"] || !names["Analyze (rust)"])) || (p.Job != "test" && p.Workflow != CodeQLWorkflow && (jobs.Total != 1 || !names[p.Job])) {
 		return errors.New("full original job coverage required")
 	}
 	return nil

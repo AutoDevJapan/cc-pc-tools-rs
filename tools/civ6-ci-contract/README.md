@@ -4,6 +4,13 @@
 runner登録、source展開、status作成、Cargo実行、予算変更を行わない。
 受入条件と分担は [実装契約](../../docs/todo2962-ci-contract.md) を参照。
 
+最新の候補はWindowsのRust matrixだけを残し、元のWindows受入を維持する。
+`CheckRegistrationQueue` は供給する全ラベルの集合に含まれる実jobを全件確認する。
+古いbaseラベルだけの要求も候補になるため、固有ラベルだけで絞らない。
+labelはGitHubと同じく大文字小文字を区別しない。読取失敗・不完全な最終page・別の候補は拒否する。
+これは予約ではないので、開始hookの実割当確認も必要。
+CodeQLの旧labeled契約は履歴・拒否検査用に残すが、現queueはCodeQLをPCへ供給しない。
+
 `Plan.Validate` は固定source/run/attempt/jobとイベントの形を確かめる。
 `Verify` は呼び出し元が渡す `ReadAPI` によって実repo・current source・全workflow・
 元検査のOS matrix・CodeQL languages/settingsを照合する。初回PR149では

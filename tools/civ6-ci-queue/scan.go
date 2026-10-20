@@ -53,9 +53,9 @@ var nativeJobs = map[string]string{
 func admittedJobName(workflow, name string) bool {
 	switch workflow {
 	case CodeQLWorkflow:
-		return name == "Analyze (actions)" || name == "Analyze (rust)"
+		return false // Standard hosted CodeQL is observed separately, never sent to this PC.
 	case ".github/workflows/rust.yml":
-		return name == "test (ubuntu-latest)" || name == "test (windows-latest)"
+		return name == "test (windows-latest)"
 	case ".github/workflows/native-driver.yml":
 		return name == "native-driver"
 	case ".github/workflows/live-chain.yml":
@@ -88,7 +88,7 @@ type Scanner struct {
 }
 
 func transient(e error) bool {
-	return errors.Is(e, errCallBudget) || errors.Is(e, context.DeadlineExceeded) || errors.Is(e, context.Canceled) ||
+	return errors.Is(e, errAdmissionDeferred) || errors.Is(e, errCallBudget) || errors.Is(e, context.DeadlineExceeded) || errors.Is(e, context.Canceled) ||
 		(e != nil && (strings.Contains(e.Error(), "GitHub read unavailable") || strings.Contains(e.Error(), "timed out")))
 }
 
@@ -132,7 +132,7 @@ func (s *Scanner) Observe(ctx context.Context, l *Ledger) ([]Candidate, ScanRepo
 		if run.Path != CodeQLWorkflow && nativeJobs[run.Path] == "" {
 			continue
 		}
-		if run.Event != "pull_request" && run.Event != "push" && run.Event != "dynamic" {
+		if run.Event != "pull_request" && run.Event != "push" && run.Event != "workflow_dispatch" && run.Event != "dynamic" {
 			continue
 		}
 		if ctx.Err() != nil || handled >= s.MaxRuns {
@@ -283,7 +283,10 @@ func (s *Scanner) basePlan(ctx context.Context, run apiRun, attempt int) (Plan, 
 		}
 		p.Branch, p.ContextSHA, p.WorkflowSHA = pr.Head.Ref, pr.MergeSHA, pr.MergeSHA
 		p.WorkflowRef = Repository + "/" + run.Path + "@refs/pull/" + strconv.Itoa(p.PR) + "/merge"
-	case "push":
+	case "push", "workflow_dispatch":
+		if run.Event == "workflow_dispatch" && run.HeadBranch != "main" {
+			return p, errors.New("manual execution requires current main")
+		}
 		p.ContextSHA, p.WorkflowSHA = run.HeadSHA, run.HeadSHA
 		p.WorkflowRef = Repository + "/" + run.Path + "@refs/heads/" + run.HeadBranch
 	case "dynamic":

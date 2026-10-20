@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func fixturePlan() Plan {
@@ -17,7 +18,7 @@ func fixturePlan() Plan {
 	return Plan{
 		Plan: contract.Plan{Version: 1, RepoID: repositoryID, Head: head, Tree: strings.Repeat("e", 40), Event: "pull_request", Branch: "feature/windows-ci", PR: 150, ContextSHA: ctx, WorkflowSHA: ctx,
 			WorkflowRef: repository + "/.github/workflows/rust.yml@refs/pull/150/merge", Workflow: ".github/workflows/rust.yml", WorkflowDigest: strings.Repeat("c", 64), RunID: 12, Attempt: 2, JobID: 13, Job: "test", JobName: "test (windows-latest)"},
-		Instance: id, Root: filepath.Join(os.TempDir(), "codex-owned-"+id), RunnerVersion: "2.330.0", RunnerDigest: strings.Repeat("d", 64), ControllerSID: "S-1-5-21-1-2-3-1001", Seconds: 60}
+		Instance: id, Root: filepath.Join(os.TempDir(), "codex-owned-"+id), RunnerVersion: "2.330.0", RunnerDigest: strings.Repeat("d", 64), ControllerSID: "S-1-5-21-1-2-3-1001", Seconds: 60, ExecuteBefore: time.Now().Add(24 * time.Hour).UnixNano()}
 }
 
 // pushPlan is the normal-continuation shape: a main push with its own workflow.
@@ -144,11 +145,11 @@ func TestContractAndFixedScope(t *testing.T) {
 
 func TestRunnerConfigurationCannotExpand(t *testing.T) {
 	p := fixturePlan()
-	want := []string{"configure", "--unattended", "--url", "https://github.com/" + repository, "--name", p.name(), "--labels", contract.WindowsLabel, "--ephemeral", "--disableupdate", "--work", "_work"}
+	want := []string{"configure", "--unattended", "--url", "https://github.com/" + repository, "--name", p.name(), "--labels", contract.WindowsLabel + "," + contract.JobLabel(p.Plan), "--ephemeral", "--disableupdate", "--work", "_work"}
 	if a := configureArgs(p); !reflect.DeepEqual(a, want) {
 		t.Fatalf("unexpected registration contract %v", a)
 	}
-	if !reflect.DeepEqual(p.requiredLabels(), []string{"self-hosted", "Windows", "X64", contract.WindowsLabel}) {
+	if !reflect.DeepEqual(p.requiredLabels(), []string{"self-hosted", "Windows", "X64", contract.WindowsLabel, contract.JobLabel(p.Plan)}) {
 		t.Fatalf("labels %v", p.requiredLabels())
 	}
 }

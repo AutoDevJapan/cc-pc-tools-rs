@@ -1,6 +1,7 @@
 package main
 
 import (
+	contract "cc/civ6-ci-contract"
 	"context"
 	"errors"
 	"fmt"
@@ -19,6 +20,13 @@ type queuedJob struct {
 // the label (the CodeQL language matrix shares one label). The hook re-checks
 // the actual assignment on this unique runner and fails closed.
 func checkQueue(ctx context.Context, p Plan, label string, read ReadAPI) error {
+	if p.Workflow != codeQLWorkflow {
+		c, e := convert(p)
+		if e != nil {
+			return e
+		}
+		return contract.CheckRegistrationQueue(ctx, c, contract.Labels(c), contract.ReadAPI(read))
+	}
 	seen := map[int64]bool{}
 	var matched []queuedJob
 	for _, status := range []string{"queued", "in_progress", "waiting", "pending", "requested"} {

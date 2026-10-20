@@ -77,7 +77,7 @@ func (d *Deps) launchPending(ctx context.Context, rep *TickReport) {
 			if _, fenced := l.Fences[osName]; fenced || d.Helpers[osName] == nil || l.activeFor(osName) != nil {
 				return errNoWrite
 			}
-			e := l.nextReserved(osName)
+			e := l.nextReserved(osName, d.Now())
 			if e == nil {
 				return errNoWrite
 			}

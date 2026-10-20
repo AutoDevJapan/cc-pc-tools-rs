@@ -19,8 +19,6 @@ jobs:
         include:
           - os: Windows
             labels: [self-hosted, Windows, X64, cc-pc-tools-windows]
-          - os: Linux
-            labels: [self-hosted, Linux, X64, cc-pc-tools-linux]
     runs-on: ${{ matrix.labels }}
     timeout-minutes: 15
     steps:
@@ -36,30 +34,12 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
-      - name: Use job-owned Linux Go scratch
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          set -eu
-          mkdir -p "$RUNNER_TEMP/go-tmp" "$RUNNER_TEMP/go-cache"
-          printf 'TMPDIR=%s/go-tmp\nGOTMPDIR=%s/go-tmp\nGOCACHE=%s/go-cache\n' "$RUNNER_TEMP" "$RUNNER_TEMP" "$RUNNER_TEMP" >> "$GITHUB_ENV"
       - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756
         if: runner.os == 'Windows'
       - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c
         with:
           go-version: '1.27.x'
           cache: false
-      - name: Verify Go helpers on Linux
-        if: runner.os == 'Linux'
-        shell: bash
-        run: |
-          set -eu
-          for module in tools/civ6-ci-*; do
-            test -f "$module/go.mod" || continue
-            go -C "$module" test -race -timeout 180s ./...
-            go -C "$module" vet ./...
-            go -C "$module" build ./...
-          done
       - name: Verify Go helpers on Windows
         if: runner.os == 'Windows'
         shell: pwsh
@@ -74,9 +54,3 @@ jobs:
             & go -C $module.FullName build ./...
             if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           }
-      - name: Vet the Linux guest build
-        env:
-          GOOS: linux
-          GOARCH: amd64
-          CGO_ENABLED: '0'
-        run: go -C tools/civ6-ci-linux vet ./...

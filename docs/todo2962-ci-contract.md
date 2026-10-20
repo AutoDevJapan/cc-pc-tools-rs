@@ -1,5 +1,41 @@
 # 万世紀の追加料金なしCI（ToDo2962）
 
+## 2026-10-20の適用契約（下の旧OS計画を更新）
+
+本人のWindows完成優先指示に従い、Rust matrixはWindowsだけとする。
+元のWindows workspace/all-targets/doctest/release/シナリオ、nativeとliveのfmt/test/Clippyを保持する。
+Linux helperのソースは保つが、Linux利用者向けの供給・移植検査・配布を今回の完了条件にしない。
+CodeQLは公開repoの標準GitHub-hostedを使い、actions/rust・default query suite・remoteを保持する。
+これはWindowsのアプリbuild/testと異なる静的解析で、PC側のCodeQL供給は行わない。
+
+受入上限12件の内訳は、最初とmerge後にWindows 3件＋CodeQL 2件ずつ、移行検証用に最大2解析を予約する。
+queueのPC受付上限は最初3件・merge後3件。CodeQLの実run/jobは別の受入記録で数える。
+設定変更や登録を検証成功と扱わず、同じ最終HEADの実job・成果物hash・登録不在・回収を確認する。
+
+Given 固定した同repo/現在HEADのqueued jobがある。
+When 新しいrunnerを供給する。
+Then 固有run/attempt/job/OSラベルに加え、古いbaseラベルだけのjobを含む全候補を集合包含で調べる。
+他の未終端jobも引き受けられる場合は、予算を予約する前と登録直前に拒否する。実SDKの割当も別に照合する。
+
+Given prepareやCargo待ちで時間を使った。
+When queueの絶対実行期限を過ぎる。
+Then serviceは開始せず、未開始の証明を調べる専用collectorだけを呼ぶ。
+開始した場合は同じ絶対期限までのworkerと90秒の排出をgate内で待ち、その後に回収を行う。
+
+Given Cargo枠を取れないまま期限を越えた。
+When 親queueがexecute全体を終了する。
+Then 生成時に同一Job Objectへ所属させたhelper/gate/子孫を終了し、保持handleとActive=0で証明する。
+未確認ならfenceを維持。beginなし、またはservice_started:falseなら専用collectorが未起動の実状態を確認する。
+正式job未開始・専用回収成功・証拠保存・owned root回収後だけ同じ予約をbackoffして再供給する。
+予算キーは同じrun/attempt/jobの1件のままで、正式実行済みjobの自動再実行はしない。
+再供給は期限・包含競合・明示的な読取通信障害に限り、credential拒否・監査不一致・生成失敗は再供給しない。
+未開始延期が6回に達するか予約から24時間が経過したら、次のprepareを始めずneeds_recoveryとOS fenceを保存する。各回の理由と回収証拠を台帳に保持する。
+登録credentialはgate取得後、監査と他job包含検査の後に1回だけ既存OAuthから取得する。
+取得失敗の生stdout/stderrはログへ出さず、待機中にcredentialを保持しない。
+
+CodeQLの標準runnerへの変更はHTTP202と設定再読を確認済み。解析成功と製品正式受入はまだ未確認。
+以下のLinux供給・CodeQL専用ラベル・6+6件の記述は、この更新前の設計記録として保持する。
+
 この文書は実装契約であり、登録・実行・成功の証拠ではない。
 対象は実APIで確認した AutoDevJapan/civ6-banseiki（1392152644）だけ。
 2026-10-19の本人追加指示により、同repoはpublicへ変更済み。
@@ -47,7 +83,7 @@ job:<GITHUB_JOB>, job_name:<official display name>
 `Verify(context.Context,Plan,ReadAPI) error`、
 `CheckEvent(Plan,map[string]string,[]byte) error` を提供する。
 `ReadAPI` は `func(context.Context,string,any) error`。
-`Verify` はrepo所有/private/nonfork/admin、現在のbranch/PR、元run/attempt/job/labels、
+`Verify` はrepo所有/ID/nonfork/admin、現在のbranch/PR、元run/attempt/job/labels、
 source/treeと三workflowのレビュー済みbytes、CodeQLの元languages/settingsを正規APIで照合する。
 helperは登録前・hook開始/終了時・終了後に同じ固定planを再確認する。
 終端jobの成功判定は別で必須。listenerのexitだけでは成功としない。
@@ -70,9 +106,12 @@ workflow変更を含む将来イベントはレビュー済みtemplateと一致�
 を独立stepとして追加する。既存commandの置換や省略はしない。
 Linuxは `[self-hosted, Linux, X64, civ6-ci-linux]`、
 Windowsは `[self-hosted, Windows, X64, civ6-ci-windows]`。
+両方に `civ6-ci-run-<run_id>-<attempt>-<job>-<OS>` を必須ラベルとして追加する。
+workflowのformat式と登録側の共通JobLabelが一致し、別run・試行・job・matrix OSを取り違えない。
 matrix.osのubuntu-latest/windows-latestはjob表示とOS選択に残し、hosted labelとして登録しない。
 checkout refは `${{ github.event.pull_request.head.sha || github.sha }}`、認証永続化false。
-CodeQLは既に存在する `cc-product-2648-1392152644-codeql` を維持する。
+旧CodeQLは `cc-product-2648-1392152644-codeql` を使うが、PR148との共有競合が残る。
+この競合の解消前には登録しない。公開後の標準runner等への移行は読取確認3009の対象で、未実施。
 default setupはactions/rust、configured/default suiteのまま。契約・予算・保護は変えない。
 
 ## 実行と資源

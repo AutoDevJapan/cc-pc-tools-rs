@@ -18,8 +18,10 @@ const CodeQLWorkflow = "dynamic/github-code-scanning/codeql"
 
 // Fixed acceptance budget (ToDo2962): PR149 official jobs, then the normal
 // push jobs after its merge. Further admission needs the audited continuation.
-const InitialBudget = 6
-const NormalBudget = 6
+// Windows: Rust + native + live per phase. Four hosted CodeQL analyses and
+// at most two setup-validation analyses leave the total acceptance <=12.
+const InitialBudget = 3
+const NormalBudget = 3
 
 // Plan is the parent's shared, secret-free job identity (same JSON tags as
 // cc/civ6-ci-contract.Plan). It is only ever built from observed official data

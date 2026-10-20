@@ -3,6 +3,8 @@
 package main
 
 import (
+	contract "cc/civ6-ci-contract"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -128,7 +130,7 @@ func executeAdmitted(p Plan) (result error) {
 			if !sawStopped {
 				result = errors.Join(result, stopFinite(p))
 			}
-			hold := holdUntilDrained(realHoldOps(p), holdDeadline(serviceStart, p.Seconds), 250*time.Millisecond)
+			hold := holdUntilDrained(realHoldOps(p), executionDeadline(p, serviceStart).Add(90*time.Second), 250*time.Millisecond)
 			fence = !(hold.Stopped && hold.Drained)
 			result = errors.Join(result, hold.Err)
 			if fence && result == nil {
@@ -137,8 +139,11 @@ func executeAdmitted(p Plan) (result error) {
 		}
 		// A begin without a clean end, or fence=true, tells the queue that the
 		// worker may still hold the namespace: it must not start another one.
-		emitEvent("execute-end", p, map[string]any{"ok": result == nil, "service_started": started, "service_stopped": !fence, "fence": fence})
+		emitEvent("execute-end", p, map[string]any{"ok": result == nil, "service_started": started, "service_stopped": !fence, "fence": fence, "retryable_prestart": !started && retryablePrestart(result)})
 	}()
+	if e = prestartBudget(p, time.Now()); e != nil {
+		return e
+	}
 	if p.Fixture == "" || p.RuntimeFixture {
 		if e = verifyGateAllocation(); e != nil {
 			return e
@@ -147,24 +152,30 @@ func executeAdmitted(p Plan) (result error) {
 			if e = audit(p); e != nil {
 				return e
 			}
+			if e = checkRegistrationQueue(p); e != nil {
+				return e
+			}
 		}
 		secret = []byte("credential-free-fixture")
 		if !p.RuntimeFixture {
-			secret, e = boundedRead(os.Stdin, 1024)
+			secret, e = registrationCredential(p)
 		}
 		if e != nil {
 			return e
 		}
-		secret = []byte(strings.TrimSpace(string(secret)))
 		if len(secret) < 1 || strings.ContainsAny(string(secret), "\x00\r\n") {
-			return errors.New("registration stdin rejected")
+			clear(secret)
+			return errors.New("registration credential rejected")
 		}
 		defer clear(secret)
 	}
 	// SCM can start the service yet return an error (e.g. a startup timeout).
 	// The one-shot deferred stop queries actual state even after that error.
-	started = true
 	serviceStart = time.Now()
+	if e = prestartBudget(p, serviceStart); e != nil {
+		return e
+	}
+	started = true
 	if e = startFinite(p); e != nil {
 		return e
 	}
@@ -178,7 +189,7 @@ func executeAdmitted(p Plan) (result error) {
 					f.Close()
 					break
 				}
-				payload, _ := json.Marshal(admission{Token: string(secret), Held: os.Getenv("CODEX_JOBS_CARGO_LOCK_HELD"), SenderPID: uint32(os.Getpid()), Jobs: os.Getenv("CARGO_BUILD_JOBS"), Threads: os.Getenv("RUST_TEST_THREADS"), Deadline: runDeadline(serviceStart, p.Seconds).UnixNano()})
+				payload, _ := json.Marshal(admission{Token: string(secret), Held: os.Getenv("CODEX_JOBS_CARGO_LOCK_HELD"), SenderPID: uint32(os.Getpid()), Jobs: os.Getenv("CARGO_BUILD_JOBS"), Threads: os.Getenv("RUST_TEST_THREADS"), Deadline: executionDeadline(p, serviceStart).UnixNano()})
 				if len(payload) >= 4096 {
 					e = errors.New("registration frame exceeds pipe bound")
 				} else {
@@ -243,6 +254,10 @@ func executeAdmitted(p Plan) (result error) {
 		time.Sleep(50 * time.Millisecond)
 	}
 	return errors.New("finite execution deadline")
+}
+
+func retryablePrestart(err error) bool {
+	return errors.Is(err, errPrestartBudget) || errors.Is(err, context.DeadlineExceeded) || errors.Is(err, contract.ErrRegistrationQueueBusy) || errors.Is(err, errGitHubReadTransport)
 }
 
 func runOwnedWorker(p Plan) error {

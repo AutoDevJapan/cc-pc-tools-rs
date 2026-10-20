@@ -252,15 +252,6 @@ func (s *fakeSD) Quarantine(ctx context.Context, id, reason string) error {
 	return nil
 }
 
-type fakeToken struct{ err error }
-
-func (f fakeToken) Registration(ctx context.Context) ([]byte, error) {
-	if f.err != nil {
-		return nil, f.err
-	}
-	return []byte("REGISTRATION-TOKEN-SECRET-123456"), nil
-}
-
 type harness struct {
 	t       *testing.T
 	d       *Deps
@@ -277,7 +268,7 @@ type harness struct {
 func newHarness(t *testing.T) *harness {
 	home := t.TempDir()
 	h := &harness{t: t, gh: newGH(), c: &fakeContract{}, lin: newFakeHelper("Linux"), win: newFakeHelper("Windows"), sd: &fakeSD{base: t.TempDir()}, live: true, now: time.Date(2026, 10, 19, 12, 0, 0, 0, time.UTC)}
-	d := &Deps{Cfg: Config{Version: 1, Home: home}, Now: func() time.Time { return h.now }, C: h.c, SD: h.sd, Token: fakeToken{}}
+	d := &Deps{Cfg: Config{Version: 1, Home: home}, Now: func() time.Time { return h.now }, C: h.c, SD: h.sd}
 	d.Store = &Store{Path: filepath.Join(home, "ledger.json")}
 	d.Reader = func() *Reader { return &Reader{Run: h.gh.run, pinned: true, MaxCalls: 200} }
 	d.Alive = func(id ProcID) bool { return h.live && id.PID >= 5000 && id.PID < 6000 }

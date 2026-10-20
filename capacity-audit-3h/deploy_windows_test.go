@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -18,6 +19,7 @@ func TestWindowsPinnedSoftwareReplaceRetriesAndRestoresPartialFailure(t *testing
 	script := filepath.Join(root, "acceptance.ps1")
 	body := `param([string]$ProductionScript,[string]$OwnedRoot)
 $ErrorActionPreference='Stop'
+$OwnedRoot=[IO.Path]::GetFullPath($OwnedRoot)
 $tokens=$null;$errors=$null
 $ast=[Management.Automation.Language.Parser]::ParseFile($ProductionScript,[ref]$tokens,[ref]$errors)
 if($errors.Count){throw 'source syntax error'}
@@ -75,7 +77,18 @@ Check ($caught -and (Hash $unknown.Target)-eq$unknown.Old -and [IO.File]::ReadAl
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script, "-ProductionScript", source, "-OwnedRoot", root)
+	// Service-account temporary paths may contain DOS short-name components.
+	// Exercise a real alias when this owned temp volume supports short names.
+	ownedArgument := root
+	longName, err := syscall.UTF16PtrFromString(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	shortName := make([]uint16, 32768)
+	if n, err := syscall.GetShortPathName(longName, &shortName[0], uint32(len(shortName))); err == nil && n > 0 && n < uint32(len(shortName)) {
+		ownedArgument = syscall.UTF16ToString(shortName[:n])
+	}
+	cmd := exec.CommandContext(ctx, "powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script, "-ProductionScript", source, "-OwnedRoot", ownedArgument)
 	hide(cmd)
 	cmd.WaitDelay = 2 * time.Second
 	out, err := cmd.CombinedOutput()

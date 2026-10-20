@@ -57,6 +57,8 @@ ToDo3055の再確認はbase `a7eeeb075cb931dbe8b500cab5bc5948583e00fb` → head 
 - 送信ID: `normal-ask-d2da460371626c2e6e4186e11c727bf4cee014f3169a52e77f0cb5cf3f3f54e2`。元ToDo3050、元進捗1561944985161703454、判断access・範囲console-runtime-classification-repair。送信結果はwaiting、question receipt SHA256 `8550b99660c317504bad69d614daa05f3a4426dce1b6c2e6ac4d1269dc3b8130`。
 - aなら対象2ファイルだけの正規修復を別担当へ登録し、正式判定成功後に本番反映を続行。bなら範囲を増やさず現在の本番版を保つ。どちらもPC操作や新費用を求めない。
 
+質問送信後のcheckpoint-workspaceは `InputRejected` で失敗した。要求は自分のToDo3050・現在job `20261020-140452-todo-3050`・同じ作業ブランチ・実HEAD `b183fb5dc43f710011320a162b4875e44b0f0067`。現行実装のworkspace_checkpoint.rsはstatusをtodo/doing/waitに限定しており、正規の質問待ちでblockへ変わった状態を受け付けないことを確認した。ブランチ名は変更しておらず、成果はpush済み。保存のために質問待ちを解除したり、共有状態や検査を変更したり、同じ失敗を再試行していない。保存済みcheckpointは旧cde61d4のままなので、回答後の通常再開で実際のブランチとHEADを読み、最新の担当jobで改めて保存する。実ファイルと途中成果を旧版へ戻さない。
+
 ## 司令塔の限定的な担当記録
 
 元ToDoの追加指示で示された記録は、正式guardで非保護を確認して固定の状態・数値ToDo・時刻だけを照合した。6行の限定記録で、4行はsucceededまたはclosed、2行は記録上running。未完ToDoや人数をこの6行から推定しない。

@@ -865,3 +865,11 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 ## 2026-10-20 job155845: Windows offline clone失敗の原因修正とレビュー3074
 
 - attempt3のLinux verifyは成功。Windows jobはclone内のReadOnly seed.json置換で停止（VM/登録/hook前）。修正31bea09をpush、base6623246→同headの3fileをレビュー3074へ登録。cancel/route削除/回収済み。次は3074のMust0後に同ソースからWindows host/agentを再生成し、成功済みverifyを繰り返さずWindows jobだけ再開。実Windows13/全CIは未完。
+## 2026-10-20 job165145: 3074のMust0を受領しWindows jobだけをattempt4で再開
+
+- 3074/job20261020-164052/succeeded/exit0/gpt-6-luna。固定6623246→31bea09の3fileをMust0（Suggestion1: reparse point拒否の回帰ケース追加。動作影響なし）。差分以降のHEAD aead7a0は文書だけ。
+- 新ownedroot fa743e083f9d6633e4f236d91c6510cc（safe-delete）。clean HEAD aead7a04で Windows host/agent/Linux helper を各1回生成（vcs.modified=false確認、host inspect-executor source_clean/admission_linked）。host SHA8503E52C…、agent SHAA07F15E7…。
+- 原candidate0fda/PR3613/ref/tree0bc5/workflow ba2bcc…を再照合。run39201344542 attempt3 completed/cancelled、own route/normalCI intent不在を確認後、同leaseのroute復元1回、POST job rerun(118505748523)を1回→attempt4。verify成功は保持（再実行0）、Windows job118520452216が唯一のqueued/未割当。
+- windows-jobを同じ正規Cargo gate経由で開始。hostPID35896/StartUTC2026-10-20T08:03:41Z。初回の隠しwrapper起動は受領前に終了したため（receipt/起動なし）、同じrun-windows.ps1をセッション内で実行し直した。二重起動なし。
+- 旧失敗clone（root6be343…/job-1a0…、guest.vhdx約21GB）はdetach済み・証拠保持中。Windows job終了後に所有確認して整理する。
+- 未確認: Windows13工程/終了hook/回収/CI Gate。成功とは扱わない。

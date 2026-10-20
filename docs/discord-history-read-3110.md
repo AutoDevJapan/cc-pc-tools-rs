@@ -32,6 +32,8 @@ The original audit requires a candidate inventory beyond the six known Console t
 
 Only IDs and structural thread metadata are captured. Names and message bodies are discarded by the decoding type. Only configured bot/owner threads in the selected forum enter the candidate list. The command does not read the conversation/legacy indexes, resident state or a protection registry, and never writes those stores. Metadata completeness is not message coverage, owner reply acquisition, delivery or application. Archive pagination deliberately reaches older metadata so that earlier unfinished candidates remain visible; the caller chooses explicit message scopes next.
 
+The existing normal `conversation status` also returns sorted question IDs and saved reply stage IDs, without bodies, names or private paths. `stage_evidence=saved_state_only` distinguishes these existing records from fresh API reads or actual application. This is the ordinary index/state loader under its existing lock, not an alternate raw-ledger reader. Status never launches, delivers, acknowledges or closes anything.
+
 Primary contract: [Discord thread lists](https://github.com/discord/discord-api-docs/blob/main/developers/resources/channel.mdx#list-public-archived-threads) (public archives, archive timestamp cursor, `has_more`) and [active threads](https://github.com/discord/discord-api-docs/blob/main/developers/resources/guild.mdx#list-active-guild-threads).
 
 The first real API checks found two Console owner replies with exact question/owner identity; the original ToDo history contains their delivery markers. Standard application receipts are absent. This is missing application proof, not proof that no implementation occurred. Raw operational evidence remains outside Git.

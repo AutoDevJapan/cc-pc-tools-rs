@@ -13,7 +13,7 @@ run_windows.goは割当cargoで指定3コマンドを直列に各1回だけ実�
 *.started.jsonがあるrunは再実行しない。*.result.jsonで終了を確認し、不在なら対応PIDの生死・ログ・正規jobを照合してから次を決める。
 失敗したassert以降を実行済みと数えない。compile/fixture失敗は製品Redに数えない。
 
-所有付き生成物: fd907bbfcd9076980359c0a5467c51cb。
+所有付き生成物: fd907bbfcd9076980359c0a5467c51cb（終了後に退避済み）。
 絶対パスはC:/Users/makhmeto/AppData/Local/Temp/codex-owned-fd907bbfcd9076980359c0a5467c51cb。
 生成物は使用プロセスの終了後にsafe-delete plan、返された通常削除を別呼び出し、成功後finishで片付ける。
 拒否時は同じ削除を繰り返さず規定のquarantineを使う。証拠ログは作業場所へ保持する。
@@ -22,6 +22,11 @@ run_windows.goは割当cargoで指定3コマンドを直列に各1回だけ実�
 取消ケースのcommitted_at="saved"は不正な時刻で、旧会話不使用のassertまで未到達。直さず、再実行しない。
 詳細はresult.md/results.jsonと完全stdout/stderrを読む。3回とも比較sourceから製品/fixtureを変えていない。
 
-残り: 原ログ/証拠記録のcommit/push、所有生成物の後片付け、共有ToDoへの証拠の反映、最終branch/headのscheduler checkpoint。
+原ログ/証拠記録はca3ff204eac546f98d48ee3e47728ff85eebb2dfへcommit/push済み。
+所有生成物2,266,158,891バイト/2,262項目はplanのサイズ指定でquarantine済み。元パス不在・退避先存在を確認した。通常削除による容量回収とはしない。
+最終の証拠commitは現在のgit HEADとoriginの同ブランチから確認できる。製品差分は追加テスト65行を含む比較sourceのまま。
+
+終了直前の記録: 共有ToDo3081/3209へ証拠を追記し、状態・所有は変更せず、有限checkの実測進捗を100とする。
 最終checkpointはcommit後の実HEADを使うため、final-checkpoint-*（このフォルダだけgitignore）とスケジューラの永続receiptへ保存する。
+再開時はそのresult/receiptと実branch/headを照合する。未保存なら正規checkpointを実行する。3つのCargoコマンドは再実行しない。
 比較検査の完了は製品全体の完了を意味しない。Discord通知/本人PC操作は行わない。

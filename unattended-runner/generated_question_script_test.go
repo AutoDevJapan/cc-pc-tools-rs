@@ -2,6 +2,15 @@ package main
 
 import "testing"
 
+func TestGeneratedQuestionScriptCannotHideCodeAfterJSLineTerminators(t *testing.T) {
+	for _, newline := range []string{"\r", "\u2028", "\u2029"} {
+		code := "// comment" + newline + `const tools={image_gen__imagegen:async()=>load("copied-image")};` + "\n" + `const result=await tools.image_gen__imagegen({prompt:"fictional UI",transparent_background:false});generatedImage(result);`
+		if err := validateGeneratedScript(code, 1); err == nil {
+			t.Fatal("line-comment terminator hid executable code")
+		}
+	}
+}
+
 func TestGeneratedQuestionScriptOnlyEmitsActualGenerationResults(t *testing.T) {
 	for _, code := range []string{
 		`const result=await tools.image_gen__imagegen({prompt:"fictional UI",transparent_background:false});generatedImage(result);`,

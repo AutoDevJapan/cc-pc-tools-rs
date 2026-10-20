@@ -26,11 +26,12 @@ func generatedJSTokens(code string) ([]generatedJSToken, error) {
 			continue
 		}
 		if strings.HasPrefix(code[i:], "//") {
-			n := strings.IndexByte(code[i:], '\n')
+			n := strings.IndexFunc(code[i:], func(r rune) bool { return r == '\n' || r == '\r' || r == '\u2028' || r == '\u2029' })
 			if n < 0 {
 				break
 			}
-			i += n + 1
+			_, width := utf8.DecodeRuneInString(code[i+n:])
+			i += n + width
 			continue
 		}
 		if strings.HasPrefix(code[i:], "/*") {

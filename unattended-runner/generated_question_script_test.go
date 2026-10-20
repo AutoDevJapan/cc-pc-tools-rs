@@ -16,6 +16,7 @@ func TestGeneratedQuestionScriptOnlyEmitsActualGenerationResults(t *testing.T) {
 		`const result=await tools.image_gen__imagegen({prompt:"fictional UI",transparent_background:false});generatedImage(result);`,
 		`const prompt=load("prompt").replace("old","new").concat(" fictional");store("saved",prompt);const result=await tools.image_gen__imagegen({prompt});store("image",result);generatedImage(result);`,
 		`const result=await tools.image_gen__imagegen({"transparent_background":true,"prompt":"fictional UI"});generatedImage(result);`,
+		`const result=await tools.image_gen__imagegen({prompt:"\uffff\xff",transparent_background:false});generatedImage(result);`,
 	} {
 		if err := validateGeneratedScript(code, 1); err != nil {
 			t.Fatal("normal generation protocol rejected", err)

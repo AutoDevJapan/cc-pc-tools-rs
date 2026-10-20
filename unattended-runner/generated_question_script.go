@@ -87,7 +87,7 @@ func generatedJSTokens(code string) ([]generatedJSToken, error) {
 					if i+n > len(code) {
 						return nil, errConversationMedia
 					}
-					v, e := strconv.ParseUint(code[i:i+n], 16, 32)
+					v, e := strconv.ParseUint(code[i:i+n], 16, 16)
 					if e != nil || (v >= 0xd800 && v <= 0xdfff) {
 						return nil, errConversationMedia
 					}

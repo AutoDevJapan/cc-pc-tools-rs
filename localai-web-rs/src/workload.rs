@@ -26,6 +26,7 @@ const JST: i64 = 9 * 3_600_000;
 const KEEP_DAYS: i64 = 7;
 const READ_BUDGET: u64 = 8 * 1024 * 1024;
 const REFRESH_READ_BUDGET: u64 = 64 * 1024 * 1024;
+const CACHE_VERSION: u32 = 2;
 const CACHE_LIMIT: u64 = 128 * 1024 * 1024;
 
 fn string<'a>(v: &'a Value, k: &str) -> &'a str {
@@ -477,7 +478,7 @@ impl Workload {
     pub fn production() -> Self {
         let sources = Sources::production();
         let cache = load_cache(&sources.cache)
-            .filter(|c| c.version == 1)
+            .filter(|c| c.version == CACHE_VERSION)
             .unwrap_or_default();
         // Recheck exclusions before exposing persisted data after a restart.
         let cache = match load_exclusions(&sources) {
@@ -1384,7 +1385,7 @@ fn aggregate_progress(
                 return cache;
             }
             return Cache {
-                version: 1,
+                version: CACHE_VERSION,
                 warnings: vec!["除外設定を読み取れないため、仕事量の集計を停止しています。".into()],
                 ..Cache::default()
             };
@@ -1411,10 +1412,10 @@ fn aggregate_progress(
         }
     };
     let exclusion_hash = hash(&exclusions.0.join("\n"));
-    if cache.exclusion_hash != exclusion_hash {
+    if cache.version != CACHE_VERSION || cache.exclusion_hash != exclusion_hash {
         cache = Cache::default();
     }
-    cache.version = 1;
+    cache.version = CACHE_VERSION;
     cache.exclusion_hash = exclusion_hash;
     cache.warnings.clear();
     let earliest = midnight(now) - (KEEP_DAYS - 1) * DAY;
@@ -1961,7 +1962,7 @@ fn save(sources: &Sources, cache: &Cache) -> std::io::Result<()> {
     file.flush()?;
     file.get_ref().sync_all()?;
     drop(file);
-    if cache.version == 1 && !exclusion_matches(sources, cache) {
+    if cache.version == CACHE_VERSION && !exclusion_matches(sources, cache) {
         let _ = fs::remove_file(&temp);
         return Err(std::io::Error::other("exclusion settings changed"));
     }

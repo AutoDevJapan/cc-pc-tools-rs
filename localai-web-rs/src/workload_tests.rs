@@ -180,7 +180,7 @@ fn title_fallback_has_only_recorded_work_and_short_links() {
 fn large_cache_restores_offsets_without_generic_json_copy() {
     let f = Fixture::new();
     let mut cache = Cache {
-        version: 1,
+        version: CACHE_VERSION,
         ..Cache::default()
     };
     cache.cursors.insert(
@@ -220,7 +220,7 @@ fn copies_and_nested_tools_share_counts_without_duplicate_git_results() {
     )
     .unwrap();
     let mut cache = Cache {
-        version: 1,
+        version: CACHE_VERSION,
         exclusion_hash: hash(&load_exclusions(&f.sources).unwrap().0.join("\n")),
         ..Cache::default()
     };
@@ -957,7 +957,7 @@ fn huge_unterminated_record_obeys_budget_and_resumes_discarding() {
 fn changed_exclusions_prevent_cache_publication() {
     let f = Fixture::new();
     let c = Cache {
-        version: 1,
+        version: CACHE_VERSION,
         exclusion_hash: hash(&load_exclusions(&f.sources).unwrap().0.join("\n")),
         ..Cache::default()
     };
@@ -1011,7 +1011,7 @@ async fn workload_route_returns_versioned_json_and_rejects_invalid_date() {
     let f = Fixture::new();
     let mut state = crate::AppState::new(10012, 10013);
     let cache = Cache {
-        version: 1,
+        version: CACHE_VERSION,
         exclusion_hash: hash(&exclusions().0.join("\n")),
         updated_at: at("2026-10-01T12:00:00+09:00"),
         ..Cache::default()

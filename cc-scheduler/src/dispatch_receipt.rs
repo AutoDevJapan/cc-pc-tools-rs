@@ -7,18 +7,18 @@ use std::{fs::File, io::Read, path::Path, time::Duration};
 
 fn existing_workspace(repo: &str, item: &Value) -> bool {
     let verify = || -> Result<()> {
-        let target = Path::new(s(&item["scheduler"]["worktree"]));
-        let base = Path::new(repo);
+        let target = resolve(Path::new(s(&item["scheduler"]["worktree"])))?;
+        let base = resolve(Path::new(repo))?;
         let mut runner = SystemRunner;
         if !s(&item["scheduler"]["branch"]).starts_with(&format!("scheduler/todo-{}-", item["id"]))
-            || crate::preparation::git_root(&mut runner, base)?.is_none()
-            || crate::preparation::git_root(&mut runner, target)?.is_none()
-            || crate::backend::run_git(&mut runner, target, &["branch", "--show-current"])?
+            || crate::preparation::git_root(&mut runner, &base)?.is_none()
+            || crate::preparation::git_root(&mut runner, &target)?.is_none()
+            || crate::backend::run_git(&mut runner, &target, &["branch", "--show-current"])?
                 != s(&item["scheduler"]["branch"])
         {
             return Err(Error("BranchMismatch"));
         }
-        crate::preparation::same_common(&mut runner, base, target)
+        crate::preparation::same_common(&mut runner, &base, &target)
     };
     verify().is_ok()
 }
@@ -190,6 +190,9 @@ pub(crate) fn inspect_item<B: Backend>(
                     .backend
                     .repair_scope_allowed(s(&scheduler["worktree"]))
         );
+        if !candidate {
+            checks["scope"] = Value::Null;
+        }
         // Read only after the registered scope and exact operational paths agree.
         if checks["scope"] == true && checks["prompt_paths"] == true {
             check!("workspace", existing_workspace(repo, item));
@@ -247,18 +250,24 @@ pub(crate) fn inspect_item<B: Backend>(
                 check!("prompt_read", false);
             }
         } else {
-            check!("prompt_read", false);
+            checks["prompt_read"] = Value::Null;
         }
     }
     let failed: Vec<_> = checks
         .as_object()
         .unwrap()
         .iter()
-        .filter(|(_, value)| *value != &json!(true))
+        .filter(|(_, value)| *value == &json!(false))
         .map(|(name, _)| name.clone())
         .collect();
+    let eligible = checks
+        .as_object()
+        .unwrap()
+        .values()
+        .all(|value| value == &json!(true));
     json!({"id":item["id"],"job":selected,"status":item["status"],"phase":scheduler["phase"],
-        "eligible":failed.is_empty(),"checks":checks,"failed":failed,"saved":false,"launched":0,
+        "eligible":eligible,"checks":checks,"failed":failed,"saved":false,"launched":0,
+        "dependency_ready":item["dependency_ready"] == true,
         "state_sha256":cc_job_policy::product_retry::digest(&serde_json::to_vec(item).unwrap())})
 }
 
@@ -319,8 +328,9 @@ pub(crate) fn recover_pending<B: Backend>(
     engine: &mut Scheduler<B>,
     jobs: &[Value],
     ps: &Processes,
-) -> Result<()> {
+) -> Result<Vec<Value>> {
     let db = engine.todo()?;
+    let mut deferred = Vec::new();
     for item in arr(&db["items"]) {
         if !["cc-pc-tools-rs", "pc-capacity-audit", "localai-web-rs"].contains(&s(&item["project"]))
             || !item["subwork"].is_null()
@@ -334,17 +344,19 @@ pub(crate) fn recover_pending<B: Backend>(
             continue;
         }
         let report = inspect_item(engine, &db, &item, jobs, ps);
-        if engine.guard(&format!("adopt ordinary item {}", item["id"]), |engine| {
+        let recovered = engine.guard(&format!("adopt ordinary item {}", item["id"]), |engine| {
             recover_item(engine, &db, &item, &report)
-        }) == Some(true)
-        {
+        });
+        if recovered == Some(true) {
             push(
                 &mut engine.report["repair_dispatches_adopted"],
                 item["id"].clone(),
             );
+        } else if report["eligible"] == true {
+            deferred.push(item["id"].clone());
         }
     }
-    Ok(())
+    Ok(deferred)
 }
 
 pub fn run<B: Backend>(
@@ -397,7 +409,7 @@ pub fn run<B: Backend>(
                 return Err(Error("ReceiptMismatch"));
             }
         } else {
-            return Err(Error("InputRejected"));
+            return Err(Error("ReceiptIneligible"));
         }
     }
     Ok(report)

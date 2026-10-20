@@ -378,6 +378,7 @@ fn ordinary_dispatch_recovery_allows_only_the_next_normal_owner_to_checkpoint() 
     .unwrap();
     f.e.backend.records[0]["cwd"] = json!(target);
     let report = cc_scheduler::dispatch_receipt::inspect(&mut f.e, 1).unwrap();
+    assert_eq!(report["eligible"], true, "{report}");
     let saved = cc_scheduler::dispatch_receipt::run(
         &mut f.e,
         1,
@@ -392,6 +393,11 @@ fn ordinary_dispatch_recovery_allows_only_the_next_normal_owner_to_checkpoint() 
         cc_scheduler::dispatch_receipt::run(&mut f.e, 1, Some(s(&report["state_sha256"]))).unwrap()
             ["saved"],
         false
+    );
+    assert_eq!(
+        cc_scheduler::dispatch_receipt::run(&mut f.e, 1, Some(s(&report["state_sha256"]))).unwrap()
+            ["already_recorded"],
+        true
     );
     f.e.edit(&json!(2), |r| r["status"] = json!("done"))
         .unwrap();
@@ -493,7 +499,7 @@ fn ordinary_receipt_apply_reports_ineligible_scope_as_failure() {
         cc_scheduler::dispatch_receipt::run(&mut f.e, 1, Some(&"0".repeat(64)))
             .unwrap_err()
             .0,
-        "InputRejected"
+        "ReceiptIneligible"
     );
     assert_eq!(before, fs::read(&f.e.todo_path).unwrap());
 }
@@ -540,5 +546,64 @@ fn ordinary_terminal_receipt_uses_real_start_time_and_normal_result_processing()
         .unwrap();
     assert_eq!(f.get(1)["status"], "todo");
     assert!(result_received(&f.get(1), &json!("registered")));
+    assert!(f.e.backend.launched.is_empty());
+}
+
+#[test]
+fn ordinary_receipt_resolves_a_junction_before_comparing_git_identity() {
+    let mut f = ordinary_dispatch(true);
+    let alias = f.temp.path().join("workspace-alias");
+    let result = SystemRunner
+        .run(&invocation(
+            &[
+                "cmd",
+                "/c",
+                "mklink",
+                "/J",
+                alias.to_str().unwrap(),
+                f.repo.to_str().unwrap(),
+            ],
+            Some(10),
+        ))
+        .unwrap();
+    assert_eq!(result.code, 0, "{}", result.stderr);
+    f.e.edit(&json!(1), |row| row["scheduler"]["worktree"] = json!(alias))
+        .unwrap();
+    f.e.backend.records[0]["cwd"] = json!(alias);
+    let bytes = fs::read(&f.e.todo_path).unwrap();
+    let report = cc_scheduler::dispatch_receipt::inspect(&mut f.e, 1).unwrap();
+    assert_eq!(report["eligible"], true, "{report}");
+    assert_eq!(bytes, fs::read(&f.e.todo_path).unwrap());
+}
+
+#[test]
+fn ordinary_receipt_commit_lock_failure_keeps_its_key_but_releases_other_ready_waits() {
+    let mut f = ordinary_dispatch(true);
+    f.put(item(3, "cc-pc-tools-rs", "wait", &[]));
+    f.e.edit(&json!(3), |row| row["wait_on"] = json!([2]))
+        .unwrap();
+    f.e.edit(&json!(2), |row| row["status"] = json!("done"))
+        .unwrap();
+    let before = f.get(1);
+    // The final guard holds the real store lock during the recovery commit.
+    // The next ownership refresh releases it before normal dependency release.
+    f.e.backend.repair_lock_on_call = Some((4, f.e.todo_path.with_file_name("todo.lock")));
+    f.e.backend.release_repair_lock_on_jobs = true;
+    let mut records = f.e.backend.records.clone();
+    f.e.reconcile_repairs(&mut records, &Processes::new(), &f.cfg.clone())
+        .unwrap();
+    assert!(f.e.failures.contains(&"adopt ordinary item 1".to_owned()));
+    assert_eq!(
+        f.get(1),
+        before,
+        "the failed receipt must remain available for the next tick"
+    );
+    assert_eq!(f.get(3)["status"], "todo");
+    assert!(f.get(3)["wait_on"].is_null());
+    f.e.reconcile_repairs(&mut records, &Processes::new(), &f.cfg.clone())
+        .unwrap();
+    assert!(arr(&f.get(1)["jobs"]).contains(&json!("registered")));
+    assert!(result_received(&f.get(1), &json!("registered")));
+    assert_eq!(f.get(1)["status"], "todo");
     assert!(f.e.backend.launched.is_empty());
 }

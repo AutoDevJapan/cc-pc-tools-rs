@@ -28,3 +28,20 @@ anthropic/claude-opus-5-5 / maxを確認した。原応答とUTF-8 SHAはprivate
 自分3189の今回の実担当は同じ不具合で未連結だったため、全検査が成功したe846181生成物
 （初回Must 0の固定版）による対象1件の正規CASで連結した。新しい差分の適用や共有配布ではない。
 原応答と実操作の記録を保持し、前担当や別担当へ偽装していない。
+
+## 3208の追加確認とCI
+
+実ジョブ20261021-072844-todo-3208と対応turn_contextでOpus5.5/maxを確認した。
+base e846181 / head a14fe15の追加レビューはMust0。原文はprivate記録へ保持する。
+
+- S1: 回収のロック待ちだけが失敗し、その後の依存解除ではロックが取れた場合に、
+  未連結のままkeyが消えることを実ロックでRed再現した。失敗IDを返し、その回の解除から除外する。
+  他の完了した依存は解除し、次の巡回で残した起動receiptを回収できることを確認した。
+- S2: 3126を回収してsaved/already_recordedを読むまで3189を完了しない。
+  phase/question_close_pendingを含む最終CLIで、実際の状態を再検査する。
+- N1/N2/N3: 未評価の守衛はnull、理由を確定した不一致はfalseとし、no-opの印も検査する。
+  不適格なapplyは入力形式の誤りと異なるReceiptIneligibleを返す。
+- Build speed39505456362は1304検査中1303成功、linked worktreeの受入1件がInputRejectedで失敗した。
+  同じ実体をjunctionから参照するとworkspaceだけが不一致になることをRed再現した。
+  checkpointと同じ既存resolveをGit比較の前に使い、実体とbranchの照合を維持する。
+  この修正でCIの実失敗が解消したかは、新しい固定HEADのCIで確認する。

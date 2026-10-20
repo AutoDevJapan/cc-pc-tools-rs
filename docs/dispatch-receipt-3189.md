@@ -23,7 +23,15 @@ Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/327。
   終了済みjobを現在のrunning担当として保存しない。未完依存を解除しない。
   phaseはwaiting、resumeはtrueにし、last_jobと世代ごとの結果受領を記録する。
   keyは正規の依存解除で退役し、次のprepareが新しいkeyを作る。
-- 自動回収で1件が失敗しても、そのIDの失敗を記録して後続の巡回を続ける。
+- 自動回収で1件が失敗しても、そのIDの失敗を記録して他の項目の巡回を続ける。
+  その回で回収に失敗・競合したIDは依存解除から除外し、次の巡回で実回収できるまでkeyを保つ。
+  他の完了済み依存は解除する。正規CLIのDone/Start/Waitは従来の契約を保つため、
+  元3126の回収は3189をdoneにする前に実施し、savedまたはalready_recordedを確認する。
+- Gitの比較は既存のresolveでjunction等を実体へ解決してから行う。元のguardと
+  同じGit共通管理領域・実branchという条件は保ち、作業場所やbranchを書き換えない。
+- scope/prompt_readがnullなら前段の条件で止まり未評価である。failedは確認した不一致だけを示す。
+  不適格なapplyはReceiptIneligible、入力形式の誤りはInputRejectedと区別する。
+  dependency_readyは読取結果の真偽値だけを返す。
 - 特別なレビュー再資格化や有限調査で別指示を追加したpromptは、今回の通常作業の範囲に広げない。
 - 修復巡回も同じ照合を使い、次の正規担当が通常checkpointへ進めるようにする。
   checkpoint自体の本人・担当・worktree・branch・HEADの条件は緩和しない。

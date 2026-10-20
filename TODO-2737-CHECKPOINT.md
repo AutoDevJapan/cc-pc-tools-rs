@@ -873,3 +873,8 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - windows-jobを同じ正規Cargo gate経由で開始。hostPID35896/StartUTC2026-10-20T08:03:41Z。初回の隠しwrapper起動は受領前に終了したため（receipt/起動なし）、同じrun-windows.ps1をセッション内で実行し直した。二重起動なし。
 - 旧失敗clone（root6be343…/job-1a0…、guest.vhdx約21GB）はdetach済み・証拠保持中。Windows job終了後に所有確認して整理する。
 - 未確認: Windows13工程/終了hook/回収/CI Gate。成功とは扱わない。
+### attempt4: clone staging成功と次のVM構築欠陥（job165145）
+
+- 31bea09の修正後、公式run39201344542 attempt4のWindows jobはoffline clone staging（exit0）を通過。次のVM構築で旧windowsPreparedVMBodyの置換元が実テンプレートと不一致（Convert-VHD後の空行）となり、New-VM前に「prepared Windows VM template changed」。host exit1、official_windows_success=false。VM intentのID空、read-only fenceはnonce名VM不在/clone detached、runner登録要求0。normalCI intentはこの証拠をattempt4-intent-recovery.private.jsonへ保存後に明示recoveryで削除、host/ci2737プロセス0。
+- RED: 新テストが旧実装で同エラーを再現。修正17f59d0: vmCreateBodyが最初にdiskPrep/seedAttachを選ぶ方式（置換廃止）。Windowsは保持clone存在/detachedの確認だけ、Convert/Resize/seed DVDなし。Linux出力は旧とbyte一致。生成スクリプトはParser構文エラー0（未実行）。module全体race/vet成功。
+- 差分レビューをToDo3079（gpt-6-luna、固定31bea09→17f59d0/tree0036c80、3file）へ通常add --specで登録。Must0確認後に同clean HEADからhost/agentを再生成し、queued中のattempt4 Windows job118520452216（own route lease0b24…維持）へwindows-jobを再開する。成功済みverifyの再実行・追加rerunは不要。Windows13/CI Gate/全公式CI/基盤配送は未完。

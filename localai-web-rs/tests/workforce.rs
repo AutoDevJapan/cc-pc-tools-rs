@@ -3,6 +3,37 @@ use serde_json::{json, Value};
 
 const NOW: u64 = 1_000_000;
 
+#[test]
+fn empty_department_does_not_discard_unassigned_work_or_certify_global_zero() {
+    let mut input = board();
+    input["departments"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({"products":[]}));
+    input["unassignedProducts"] = json!([{"workers":[
+        {"id":"todo-88","priority":40,"recordedStatus":"wait","dependencies":[9]}
+    ]}]);
+    let mut evidence = active();
+    evidence["status"] = json!("degraded");
+    evidence["sources"]["jobs"]["complete"] = json!(false);
+    let data = project(&input, Some(&evidence), NOW);
+    assert_eq!(data["inventory"]["taskRecords"], 7);
+    let task = data["tasks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|t| t["todoId"] == 88)
+        .unwrap();
+    assert_eq!(task["priority"], 40);
+    assert_eq!(task["state"], "dependency_wait");
+    assert_eq!(data["recorded"]["jobQueued"], 8);
+    assert_eq!(data["processing"]["verifiedCount"], 1);
+    assert!(data["processing"]["total"].is_null());
+    assert_eq!(data["coverage"][1]["state"], "unobserved");
+    assert_eq!(data["coverage"][2]["state"], "unobserved");
+    assert_eq!(input["departments"][1]["products"], json!([]));
+}
+
 fn board() -> Value {
     json!({"fetchedAt":NOW,"sourceOk":false,"metadataOk":true,"protectionMode":"masked_metadata",
         "metrics":{"activeJobs":4,"jobQueued":8,"consoleQueued":268,"consolePreparationFailures":21,"recoveryUnverified":192,"todoDependencyWaits":69},

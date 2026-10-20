@@ -37,3 +37,13 @@ The existing normal `conversation status` also returns sorted question IDs and s
 Primary contract: [Discord thread lists](https://github.com/discord/discord-api-docs/blob/main/developers/resources/channel.mdx#list-public-archived-threads) (public archives, archive timestamp cursor, `has_more`) and [active threads](https://github.com/discord/discord-api-docs/blob/main/developers/resources/guild.mdx#list-active-guild-threads).
 
 The first real API checks found two Console owner replies with exact question/owner identity; the original ToDo history contains their delivery markers. Standard application receipts are absent. This is missing application proof, not proof that no implementation occurred. Raw operational evidence remains outside Git.
+
+## Review corrections and limits
+
+Threads whose IDs exceed the exclusive time-window cursor are rejected before credential loading; they cannot produce an empty page that later refuses continuation. JSON field names that collide under the same Unicode case folding as the decoder are rejected. History records preserve an API message `type` when supplied; absent types remain unknown. An owner-authored system event is not automatically an instruction. Existing global message parsing and the sender are unchanged.
+
+Only retained owner/bot bodies and the retained starter are checked for credential text. Discarded third-party and out-of-window bodies cannot block an otherwise valid audit. Their structural metadata still must pass the source/order checks. Selected credential-bearing bodies are never persisted or printed.
+
+Status does not load a Discord credential. Shared JSON reads close the handle before decoding. On Windows, atomic replacement retries only access-denied/sharing errors, at most four attempts and 70ms total delay; permanent failures retain the normal error behavior. This avoids holding a status read handle through decoding while a resident writer publishes state. It does not make the independently saved state and index transactional.
+
+`content_sha256` checks equality, not confidentiality: short replies such as a/b can be guessed from an unkeyed hash. Receipts and status remain private. Public archive pagination follows the API's exclusive timestamp cursor; equal timestamps at a page boundary can leave ambiguous coverage. `complete` means this API walk reached its end, not proof of every historical thread or every unfinished question.

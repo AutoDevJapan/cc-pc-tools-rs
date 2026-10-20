@@ -39,6 +39,19 @@ func TestConversationStatusReadsSavedFilesWhileResidentLockIsHeld(t *testing.T) 
 	}
 }
 
+func TestConversationStatusDoesNotLoadUnusedCredential(t *testing.T) {
+	f := conversationConfigFixture(t)
+	conversationWriteJSON(t, filepath.Join(f.config.Home, "conversation-questions.json"), conversationIndex{Domain: conversationDomain, Since: f.config.Since, Destination: f.destination, Questions: map[string]ConversationQuestion{}})
+	backend, release, err := loadConversationStatusRunner(f.configPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer release()
+	if backend.(*Runner).Token != "" {
+		t.Fatal("status unnecessarily loaded a credential")
+	}
+}
+
 func TestConversationStatusExposesStageIDsWithoutPrivateText(t *testing.T) {
 	f := conversationTest(t, true)
 	q := f.ask(t)

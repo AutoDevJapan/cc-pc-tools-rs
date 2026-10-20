@@ -8,7 +8,10 @@ import (
 )
 
 func TestHistoryReadRejectsJunctionAncestor(t *testing.T) {
-	dir := t.TempDir()
+	dir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	target := filepath.Join(dir, "target")
 	if err := os.MkdirAll(filepath.Join(target, "nested"), 0700); err != nil {
 		t.Fatal(err)

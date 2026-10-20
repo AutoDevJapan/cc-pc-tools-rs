@@ -216,9 +216,12 @@ func loadConversationRunner(configPath string, readOnlyStatus bool) (conversatio
 	if err != nil {
 		return nil, nil, err
 	}
-	token := discordToken()
-	if token == "" {
-		return nil, nil, errors.New("Discord credential unavailable")
+	token := ""
+	if !readOnlyStatus {
+		token = discordToken()
+		if token == "" {
+			return nil, nil, errors.New("Discord credential unavailable")
+		}
 	}
 	runner := &Runner{Config: cfg, State: state, Client: &http.Client{Timeout: 6 * time.Second}, Token: token, Base: "https://discord.com/api/v10", Run: runCommand, Now: time.Now, TodoPath: "D:/CC/Tools/todo/todo.json"}
 	loaded = true

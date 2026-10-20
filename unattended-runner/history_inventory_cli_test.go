@@ -131,3 +131,43 @@ func TestHistoryInventoryFailureDoesNotCreateSuccessReceipt(t *testing.T) {
 		})
 	}
 }
+
+func TestHistoryInventoryCorruptCursorCannotAdvanceOrReachAPI(t *testing.T) {
+	for _, field := range []string{"next", "before", "forum", "bot", "scope"} {
+		t.Run(field, func(t *testing.T) {
+			load, calls := inventoryFixture(t, "")
+			args, prior := inventoryArgs(t, "archived")
+			guard := func(context.Context, string) bool { return true }
+			var out bytes.Buffer
+			if historyInventoryCLIWith(args, &out, load, guard) != 0 || *calls != 3 {
+				t.Fatal("real fixture positive control failed")
+			}
+			b, _ := os.ReadFile(prior)
+			var page map[string]any
+			_ = json.Unmarshal(b, &page)
+			switch field {
+			case "next":
+				page["next"] = "2026-10-17T00:00:00Z"
+			case "before":
+				page["before"] = page["next"]
+			case "forum":
+				page["forum_id"] = "41"
+			case "bot":
+				page["bot_id"] = "31"
+			case "scope":
+				page["scope_sha256"] = strings.Repeat("a", 64)
+			}
+			b, _ = json.Marshal(page)
+			if err := os.WriteFile(prior, b, 0600); err != nil {
+				t.Fatal(err)
+			}
+			next := filepath.Join(filepath.Dir(prior), "corrupt-next.private.json")
+			if historyInventoryCLIWith([]string{"--scope", args[1], "--output", next, "--cursor", prior}, &out, load, guard) == 0 || *calls != 3 {
+				t.Fatal("corrupt cursor reached API")
+			}
+			if _, err := os.Stat(next); !os.IsNotExist(err) {
+				t.Fatal("corrupt cursor wrote success")
+			}
+		})
+	}
+}

@@ -12,7 +12,13 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+	"unicode"
 )
+
+type historyReadMessage struct {
+	Message
+	Type *int `json:"type,omitempty"`
+}
 
 type historyReadScope struct {
 	Domain  string   `json:"domain"`
@@ -31,25 +37,25 @@ type historyReadCursor struct {
 }
 
 type historyReadPage struct {
-	Domain   string             `json:"domain"`
-	Source   string             `json:"source"`
-	Todo     uint64             `json:"todo_id"`
-	Guild    string             `json:"guild_id"`
-	Owner    string             `json:"owner_id"`
-	Bot      string             `json:"bot_id"`
-	ScopeSHA string             `json:"scope_sha256"`
-	Since    string             `json:"since"`
-	Until    string             `json:"until"`
-	Acquired string             `json:"acquired_at"`
-	Cursor   historyReadCursor  `json:"cursor"`
-	Thread   string             `json:"thread_id"`
-	Starter  Message            `json:"starter"`
-	Scanned  int                `json:"scanned_messages"`
-	LastID   string             `json:"last_scanned_id,omitempty"`
-	LastTime string             `json:"last_scanned_timestamp,omitempty"`
-	Messages []Message          `json:"messages"`
-	Complete bool               `json:"complete"`
-	Next     *historyReadCursor `json:"next"`
+	Domain   string               `json:"domain"`
+	Source   string               `json:"source"`
+	Todo     uint64               `json:"todo_id"`
+	Guild    string               `json:"guild_id"`
+	Owner    string               `json:"owner_id"`
+	Bot      string               `json:"bot_id"`
+	ScopeSHA string               `json:"scope_sha256"`
+	Since    string               `json:"since"`
+	Until    string               `json:"until"`
+	Acquired string               `json:"acquired_at"`
+	Cursor   historyReadCursor    `json:"cursor"`
+	Thread   string               `json:"thread_id"`
+	Starter  historyReadMessage   `json:"starter"`
+	Scanned  int                  `json:"scanned_messages"`
+	LastID   string               `json:"last_scanned_id,omitempty"`
+	LastTime string               `json:"last_scanned_timestamp,omitempty"`
+	Messages []historyReadMessage `json:"messages"`
+	Complete bool                 `json:"complete"`
+	Next     *historyReadCursor   `json:"next"`
 }
 
 // This command uses the ordinary credential loader, but never opens live intake,
@@ -166,10 +172,11 @@ func historyJSONValue(d *json.Decoder, depth int) error {
 				return err
 			}
 			s, ok := key.(string)
-			if !ok || seen[s] {
+			folded := historyFoldJSONKey(s)
+			if !ok || seen[folded] {
 				return errors.New("duplicate key")
 			}
-			seen[s] = true
+			seen[folded] = true
 			if err = historyJSONValue(d, depth+1); err != nil {
 				return err
 			}
@@ -187,6 +194,22 @@ func historyJSONValue(d *json.Decoder, depth int) error {
 	return err
 }
 
+// encoding/json matches struct fields with Unicode simple case folding.
+func historyFoldJSONKey(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		for {
+			next := unicode.SimpleFold(r)
+			if next <= r {
+				b.WriteRune(next)
+				break
+			}
+			r = next
+		}
+	}
+	return b.String()
+}
+
 func historyScopeValid(scope historyReadScope, now time.Time) bool {
 	if scope.Domain != "discord-history-read-scope-v1" || scope.Todo == 0 || len(scope.Threads) == 0 || len(scope.Threads) > 10 {
 		return false
@@ -196,16 +219,20 @@ func historyScopeValid(scope historyReadScope, now time.Time) bool {
 			return false
 		}
 	}
+	since, e1 := time.Parse(time.RFC3339Nano, scope.Since)
+	until, e2 := time.Parse(time.RFC3339Nano, scope.Until)
+	if e1 != nil || e2 != nil || since.Before(time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)) || !since.Before(until) || until.After(now) || until.Sub(since) > 31*24*time.Hour {
+		return false
+	}
+	high, _ := number(historyHighBefore(until))
 	seen := map[string]bool{}
 	for _, id := range scope.Threads {
-		if _, ok := number(id); !ok || seen[id] {
+		if n, ok := number(id); !ok || seen[id] || n > high {
 			return false
 		}
 		seen[id] = true
 	}
-	since, e1 := time.Parse(time.RFC3339Nano, scope.Since)
-	until, e2 := time.Parse(time.RFC3339Nano, scope.Until)
-	return e1 == nil && e2 == nil && !since.Before(time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)) && since.Before(until) && !until.After(now) && until.Sub(since) <= 31*24*time.Hour
+	return true
 }
 
 func historyReadCLIWith(args []string, out io.Writer, load func(context.Context, historyReadScope) (*Runner, error), guard func(context.Context, string) bool) int {
@@ -324,7 +351,7 @@ func historyHighBefore(until time.Time) string {
 }
 
 func readHistoryPage(ctx context.Context, r *Runner, scope historyReadScope, cursor historyReadCursor) (historyReadPage, error) {
-	page := historyReadPage{Domain: "discord-history-read-page-v1", Source: "discord-api-v10", Todo: scope.Todo, Guild: scope.Guild, Owner: scope.Owner, Bot: r.State.Destination.Bot, ScopeSHA: cursor.ScopeSHA, Since: scope.Since, Until: scope.Until, Cursor: cursor, Thread: scope.Threads[cursor.ThreadIndex], Messages: []Message{}}
+	page := historyReadPage{Domain: "discord-history-read-page-v1", Source: "discord-api-v10", Todo: scope.Todo, Guild: scope.Guild, Owner: scope.Owner, Bot: r.State.Destination.Bot, ScopeSHA: cursor.ScopeSHA, Since: scope.Since, Until: scope.Until, Cursor: cursor, Thread: scope.Threads[cursor.ThreadIndex], Messages: []historyReadMessage{}}
 	bad := errors.New("history source differs or unavailable")
 	var bot struct {
 		ID  string `json:"id"`
@@ -338,10 +365,10 @@ func readHistoryPage(ctx context.Context, r *Runner, scope historyReadScope, cur
 		return page, bad
 	}
 	// Unlike a 200 [] history response, this proves READ_MESSAGE_HISTORY access.
-	if r.get(ctx, "/channels/"+page.Thread+"/messages/"+page.Thread, &page.Starter) != nil || !historyMessageValid(page.Starter, page.Thread, r) || page.Starter.ID != page.Thread || (page.Starter.Author.ID != scope.Owner && page.Starter.Author.ID != page.Bot) {
+	if r.get(ctx, "/channels/"+page.Thread+"/messages/"+page.Thread, &page.Starter) != nil || !historyMessageValid(page.Starter.Message, page.Thread, r) || page.Starter.ID != page.Thread || (page.Starter.Author.ID != scope.Owner && page.Starter.Author.ID != page.Bot) {
 		return page, bad
 	}
-	var messages []Message
+	var messages []historyReadMessage
 	if r.get(ctx, "/channels/"+page.Thread+"/messages?limit=100&before="+cursor.Before, &messages) != nil || messages == nil || len(messages) > 100 {
 		return page, bad
 	}
@@ -352,7 +379,7 @@ func readHistoryPage(ctx context.Context, r *Runner, scope historyReadScope, cur
 	previousTime := until.Add(time.Millisecond)
 	for _, message := range messages {
 		id, ok := number(message.ID)
-		if !ok || id >= previous || id < threadID || !historyMessageValid(message, page.Thread, r) {
+		if !ok || id >= previous || id < threadID || !historyMessageMetadataValid(message.Message, page.Thread, r) {
 			return page, bad
 		}
 		previous = id
@@ -369,6 +396,9 @@ func readHistoryPage(ctx context.Context, r *Runner, scope historyReadScope, cur
 			continue
 		}
 		if message.Author.ID == scope.Owner || message.Author.ID == page.Bot {
+			if safeText(message.Content, r.Token) != message.Content {
+				return page, bad
+			}
 			page.Messages = append(page.Messages, message)
 		}
 	}
@@ -393,6 +423,10 @@ func readHistoryPage(ctx context.Context, r *Runner, scope historyReadScope, cur
 }
 
 func historyMessageValid(message Message, thread string, r *Runner) bool {
+	return historyMessageMetadataValid(message, thread, r) && safeText(message.Content, r.Token) == message.Content
+}
+
+func historyMessageMetadataValid(message Message, thread string, r *Runner) bool {
 	if _, ok := number(message.ID); !ok {
 		return false
 	}
@@ -412,7 +446,7 @@ func historyMessageValid(message Message, thread string, r *Runner) bool {
 			return false
 		}
 	}
-	return safeText(message.Content, r.Token) == message.Content
+	return true
 }
 
 func writeHistoryReceipt(path string, b []byte) error {

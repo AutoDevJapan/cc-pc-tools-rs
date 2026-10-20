@@ -1891,7 +1891,8 @@ mod capacity_regressions {
             let t = Test::new();
             t.put(job(
                 json!({"id":"author","status":"running","pid":std::process::id(),
-                "pid_created":123,"model":"gpt-6.1-sol","requested_model":"gpt-6.1-sol"}),
+                "pid_created":123,"cwd":t.ctx.root,"model":"gpt-6.1-sol","requested_model":"gpt-6.1-sol",
+                "model_origin":"owner_request"}),
             ));
             let error = t
                 .run(
@@ -2068,6 +2069,26 @@ mod capacity_regressions {
             t.run(&["--model-recovery-from", "unknown-model"], b"Invalid hint")
                 .is_err()
         );
+    }
+
+    #[test]
+    fn review_model_recovery_excludes_the_failed_model_only_for_current_routing() {
+        let t = Test::new();
+        t.put(job(json!({"id":"opus-author","status":"succeeded",
+            "model":"anthropic/claude-opus-5-5"})));
+        t.run(&["--name", "rev-model-recovery", "--task-type", "review",
+            "--auto-model", "gpt-6-astra", "--effort", "max", "--model-origin", "policy",
+            "--review-source-jobs", "opus-author", "--model-recovery-from", "gpt-6.1-sol"],
+            b"Resume this independent review after the model became unavailable").unwrap();
+        let saved = t.ctx.list_jobs(&HashSet::new()).into_iter()
+            .find(|job| s(job, "name") == "rev-model-recovery").unwrap();
+        assert!(!cc_job_policy::same_model(s(&saved, "model"), "gpt-6.1-sol"),
+            "review registration routed straight back to the model that just failed");
+        assert!(!cc_job_policy::same_model(s(&saved, "model"), "anthropic/claude-opus-5-5"));
+        assert_eq!(saved["effort"], "max");
+        assert_eq!(saved["review_author_models"], json!(["anthropic/claude-opus-5-5"]));
+        assert_eq!(saved["review_excluded_models"], json!(["anthropic/claude-opus-5-5"]));
+        assert_eq!(saved["model_recovery_from"], "gpt-6.1-sol");
     }
 
     #[test]

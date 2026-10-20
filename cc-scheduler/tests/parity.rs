@@ -3698,7 +3698,7 @@ fn retired_native_conversation_cannot_cross_a_cancelled_prestart_handoff() {
     let source = &mut f.e.backend.records[0];
     source["todo_id"] = json!(1);
     source["status"] = json!("cancelled");
-    source["recovery_cancel"] = json!({"key":"old-launch","committed_at":"saved"});
+    source["recovery_cancel"] = json!({"key":"old-launch","committed_at":"2026-10-20T12:00:00Z"});
     source["cwd"] = json!(cwd);
     source["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
     source["model"] = json!("gpt-6.1-sol");

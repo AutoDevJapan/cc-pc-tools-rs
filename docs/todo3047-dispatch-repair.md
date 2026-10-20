@@ -73,9 +73,11 @@ specが読めない・原promptが変わった・期限切れ等では資格を�
 39380094549ではRust成功後の3件でこの条件を観測した。
 最新mainだけを許可する保護は維持する。
 
-mainへの通常pushは同じworkflow内で同じconcurrency groupを使い、新しいpushが
+mainへの初回の通常pushは同じworkflow内で同じconcurrency groupを使い、新しいpushが
 古い実行を取り消す。PRの初回は従来どおりPR番号ごとに取消可能とし、
-PR再実行と定期実行はrun IDごとの独立したgroupを保つ。
+push・PRの再実行と定期実行はrun IDごとの独立したgroupを保つ。
+古いpushの再実行から、最新mainの通常実行を取り消せないようにする。
+定期実行中にmainが更新された場合の403は、この取消の対象外として残る。
 workflowの権限、対象、checkout、runner、解析言語と必須検査は変えない。
 変更前の失敗は実CIで確認し、変更後はYAML解析とconcurrency以外の構造一致、
 別モデルレビュー、正式PR CI、マージ後の通常pushで確認する。

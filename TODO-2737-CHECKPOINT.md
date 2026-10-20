@@ -1006,3 +1006,8 @@ README/checkpointは、この補助の実測を原製品source・公式runner登
 - 最終検査: Windows runner全module race5.497s/vet、利用側ci-guest全module race13.765s/vetが成功。source library自体のcode差分なしで、その実Materialize/VerifyCheckoutをnew regressionから実行した。実LocalService logon/child token/guest ACL/公式Windows13/終了proof/回収は未実施。旧3123のMust0へ読み替えず、新head差分を別モデルでレビューする。
 - 一次資料 https://learn.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-gettemppath2w はSYSTEM時のSystemTemp overrideとSYSTEM/adminだけがアクセスできるACL条件を説明。TMP/TEMPとSystemTempの両選択を固定privateへ向け、workerへSystemTempを渡さない。ホストtemp/registry/ACL/サービスは変更なし。
 - 証拠用safe-delete rootb6f94f8db15b323935bb3d7a9bb2490eに原結果/実model/hash/RED-GREEN/race-vetを保持。旧attempt5 failure/原logF121.../clone1a.../runner36回収/取消/route不在、原SDK/guard/manifest/public fixture073...の拒否/未回収/他担当は保持。今回新規VM/Cargo/公式rerun/route/取消/削除は実行なし。製品source編集/merge/Prdは当checkでは行わない。
+### 固定head6dafcfeのレビュー3139を登録
+
+- 固定c3f0c5a→6dafcfeの4file+必要局所だけをレビュー3139へgpt-6-luna/effort max/通常add --spec登録。保存全文一致/dispatchable/未起動todoを確認し、登録をMust0にしない。3123受領/新設計/RED→GREEN/関連検査/未実施guest受入を3123/2737/2641 noteへ配送。
+- 証拠D:/CC/Tools/product-ci/evidence/todo-2737-20261021/resume-001945/private-proof-fix-files.private.jsonへ原結果/実model/hash/RED-GREEN/race-vet/review specをcopy/hash保持。次は3139の原応答/実job/対応turn_context/固定head/未読を受領、Mustを直して同clean sourceのguest実受入へ進む。旧official操作を再送しない。
+- 現job/実HEAD checkpointを保存・読戻しし、todo wait2737 --on3139で待機する。Windows13/CI Gate/全CI/基盤配送は未完、原製品merge/Prdは親2641。owner入力/追加費用/APIキーAI/GPU/Discord通知不要。

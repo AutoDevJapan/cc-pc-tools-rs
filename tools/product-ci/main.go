@@ -719,7 +719,7 @@ func main() {
 		}
 		return
 	}
-	if len(os.Args) >= 2 && (os.Args[1] == "current-pr-inspect" || os.Args[1] == "current-pr-job") {
+	if len(os.Args) >= 2 && (os.Args[1] == "current-pr-inspect" || os.Args[1] == "current-pr-job" || os.Args[1] == "current-pr-qualify" || os.Args[1] == "current-pr-origin-qualify" || os.Args[1] == "current-pr-origin-inspect" || os.Args[1] == "current-pr-origin-job") {
 		e = currentPRCLI(ctx, os.Args[1:])
 	} else if len(os.Args) == 2 && os.Args[1] == "inspect" {
 		for _, c := range candidates {

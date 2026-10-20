@@ -44,3 +44,23 @@ API/queue plan. `current-pr-job <pin-json> <new-owned-dir> <Linux-helper>
 [gitleaks-ELF]` uses exactly the same verified input and existing ephemeral
 executor. Only secret and default CodeQL kinds are accepted; this route cannot
 bootstrap, reconfigure, release, merge or deploy a product.
+
+The finite ToDo3089 origin repair adds a purpose qualification gate before this
+reader. `current-pr-qualify <pin-json>` checks only the independently retained
+original task specifications, outcome, receipts and exact original inputs; it
+does not contact Actions or certify CI success. Its executable-side locator file
+contains private original references, never new authority. Both original
+locations and independent evidence digests are pinned in the reviewed source.
+Unknown/copy locations, changed source or evidence, missing scope and links fail
+closed. The general protection classification is unchanged. See
+[the finite origin specification](../../docs/current-ci-input-origin-3089.md).
+
+When those operator-created wrappers cannot prove their independent payload
+identity, they remain rejected. `current-pr-origin-qualify` constructs typed
+in-memory inputs from the independently verified original receipt's final review
+record and exact acceptance receipt. It does not read or copy the rejected three
+files, or claim to have read the raw review response. The returned input hashes
+are deterministic and bound to the same task/source/run/job; they are not new
+owner permission. `current-pr-origin-inspect` and `current-pr-origin-job
+<new-owned-dir> <Linux-helper> [gitleaks-ELF]` consume this same constructor's
+verified bytes with all existing live API/queue/execution conditions intact.

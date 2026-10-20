@@ -1,0 +1,106 @@
+   Compiling windows-sys v0.61.2
+   Compiling smallvec v1.16.2
+   Compiling percent-encoding v2.3.2
+   Compiling futures-core v0.3.34
+   Compiling futures-channel v0.3.34
+   Compiling form_urlencoded v1.2.2
+   Compiling icu_normalizer v2.3.0
+   Compiling futures-util v0.3.34
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling url v2.5.8
+   Compiling ureq v2.12.1
+   Compiling futures-executor v0.3.34
+   Compiling anstyle-wincon v3.0.11
+   Compiling anstyle-query v1.1.5
+   Compiling mio v1.2.4
+   Compiling socket2 v0.6.5
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-job-policy)
+   Compiling tempfile v3.27.0
+   Compiling cc-task-title v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-task-title)
+   Compiling futures v0.3.34
+   Compiling cc-local-llm v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-local-llm)
+   Compiling anstream v1.0.0
+   Compiling wmi v0.18.4
+   Compiling clap_builder v4.6.7
+   Compiling tokio v1.53.2
+   Compiling cc-live v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-live)
+   Compiling clap v4.6.7
+   Compiling cc-chrome v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-chrome)
+   Compiling cc-ask v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-ask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 21.38s
+────────────
+ Nextest run ID de6693f7-94cf-4ab9-ad02-6dd364669168 with nextest profile: default
+    Starting 2 tests across 1 binary (68 tests skipped)
+        SKIP [         ] (───) cc-ask::intake a_pending_recovery_does_not_overlap_a_running_inferred_owner
+        SKIP [         ] (───) cc-ask::intake a_question_continuation_and_intake_share_one_delivery_for_the_same_forum_replies
+        SKIP [         ] (───) cc-ask::intake a_real_multi_owner_conflict_records_the_jobs_and_retries_after_resolution
+        SKIP [         ] (───) cc-ask::intake already_adopted_legacy_worker_repairs_its_multi_thread_associations_before_handoff
+        SKIP [         ] (───) cc-ask::intake another_running_worker_gets_same_session_delivery_without_a_request_launch
+        SKIP [         ] (───) cc-ask::intake another_worker_already_acknowledged_replies_are_not_delivered_again
+        SKIP [         ] (───) cc-ask::intake automatic_router_choices_use_sol_and_max
+        SKIP [         ] (───) cc-ask::intake bot_created_request_starts_only_on_owner_post_and_keeps_opening_context
+        SKIP [         ] (───) cc-ask::intake context_and_model_failures_launch_fresh_with_original_work_instructions
+        SKIP [         ] (───) cc-ask::intake declared_owner_takes_priority_over_a_labeled_prompt_even_after_legacy_metadata_was_saved
+        SKIP [         ] (───) cc-ask::intake explicit_multi_thread_owner_wins_over_a_job_only_quoting_the_bug_report
+        SKIP [         ] (───) cc-ask::intake external_acknowledged_messages_after_a_gap_are_not_replayed
+        SKIP [         ] (───) cc-ask::intake external_delivery_blocked_after_receipt_is_retried_without_consuming_reply
+        SKIP [         ] (───) cc-ask::intake external_delivery_launch_failure_reuses_its_reservation
+        SKIP [         ] (───) cc-ask::intake fresh_session_and_handoff_survive_a_later_console_launcher_failure
+        SKIP [         ] (───) cc-ask::intake handoff_preserves_inferred_assignment_priority_when_another_thread_has_a_declared_owner
+        SKIP [         ] (───) cc-ask::intake initial_launcher_error_and_restart_launcher_error_select_a_different_model
+        SKIP [         ] (───) cc-ask::intake interrupted_recovery_adopts_its_own_child_and_keeps_result_delivery_and_retry
+        SKIP [         ] (───) cc-ask::intake legacy_multi_thread_assignments_survive_a_handoff_to_the_other_thread
+        SKIP [         ] (───) cc-ask::intake legacy_owner_registration_merges_request_fields_and_keeps_question_routes
+        SKIP [         ] (───) cc-ask::intake malformed_request_association_cannot_be_hidden_by_valid_question_fields
+        SKIP [         ] (───) cc-ask::intake manually_handled_request_is_not_restarted_by_resume_or_intake
+        SKIP [         ] (───) cc-ask::intake new_request_in_registered_question_is_not_suppressed_by_a_stopped_previous_job
+        SKIP [         ] (───) cc-ask::intake progress_and_mislabelled_decision_are_silent_and_remain_dispatchable
+        SKIP [         ] (───) cc-ask::intake quoted_bug_report_does_not_claim_or_suppress_a_request
+        SKIP [         ] (───) cc-ask::intake request_and_resume_use_implementation_permissions_but_reviews_stay_readonly
+        SKIP [         ] (───) cc-ask::intake request_launch_registration_keeps_questions_created_before_its_checkpoint
+        SKIP [         ] (───) cc-ask::intake scheduled_console_start_does_not_require_the_exit_api_to_be_ready
+        SKIP [         ] (───) cc-ask::intake slow_destination_discovery_leaves_time_to_deliver_a_known_owner_reply
+        SKIP [         ] (───) cc-ask::intake stale_job_adopts_the_existing_worker_and_receipt_does_not_consume_undelivered_reply
+        SKIP [         ] (───) cc-ask::intake startup_access_denied_runs_scheduled_remedy_then_resumes_without_an_owner_question
+        SKIP [         ] (───) cc-ask::intake status_contract_requires_a_real_question_and_keeps_completion
+        SKIP [         ] (───) cc-ask::intake test_ack_failure_does_not_launch_twice
+        SKIP [         ] (───) cc-ask::intake test_archive_failure_retries_without_reposting_result
+        SKIP [         ] (───) cc-ask::intake test_auto_model_is_preserved_on_restart
+        SKIP [         ] (───) cc-ask::intake test_cancelled_lost_missing_and_empty_final_all_recover
+        SKIP [         ] (───) cc-ask::intake test_complete_archives_and_owner_reply_reopens_and_launches
+        SKIP [         ] (───) cc-ask::intake test_crash_after_request_launch_is_adopted_without_another_launch
+        SKIP [         ] (───) cc-ask::intake test_crash_after_restart_launch_is_adopted_without_another_launch
+        SKIP [         ] (───) cc-ask::intake test_crash_before_launcher_reuses_the_durable_attempt_key
+        SKIP [         ] (───) cc-ask::intake test_delayed_reservation_consumes_current_window_attempt
+        SKIP [         ] (───) cc-ask::intake test_explicit_cancel_is_silent_even_without_another_live_job
+        SKIP [         ] (───) cc-ask::intake test_failure_recovers_even_when_discord_post_is_unavailable
+        SKIP [         ] (───) cc-ask::intake test_failure_resumes_same_session_model_effort_cwd_without_mention
+        SKIP [         ] (───) cc-ask::intake test_fallback_when_pick_is_down_and_fallback_is_logged
+        SKIP [         ] (───) cc-ask::intake test_generated_recovery_todo_is_finished_when_request_completes
+        SKIP [         ] (───) cc-ask::intake test_initial_launch_failure_retries_without_owner_question
+        SKIP [         ] (───) cc-ask::intake test_invalid_pick_and_excluded_pick_use_fallback
+        SKIP [         ] (───) cc-ask::intake test_launcher_unavailable_keeps_key_and_caps_actual_calls
+        SKIP [         ] (───) cc-ask::intake test_lost_job_is_retired_before_resume_and_same_task_owner_is_detected
+        SKIP [         ] (───) cc-ask::intake test_lost_restart_response_and_crash_before_launcher_keep_one_reservation
+        SKIP [         ] (───) cc-ask::intake test_model_effort_and_type_from_pick_are_shown_and_used
+        SKIP [         ] (───) cc-ask::intake test_needs_decision_is_registered_and_closed_on_owner_reply
+        SKIP [         ] (───) cc-ask::intake test_new_owner_answer_does_not_reset_restart_limit
+        SKIP [         ] (───) cc-ask::intake test_one_hour_reminder_uses_registered_request_question
+        SKIP [         ] (───) cc-ask::intake test_one_launch_per_tick_across_threads
+        SKIP [         ] (───) cc-ask::intake test_other_job_owns_same_thread_or_todo_so_no_restart_or_post
+        SKIP [         ] (───) cc-ask::intake test_owner_reply_during_running_job_is_not_lost_or_archived
+        SKIP [         ] (───) cc-ask::intake test_preamble_requires_status_and_honours_project_review_rule
+        SKIP [         ] (───) cc-ask::intake test_recently_archived_reply_is_also_seen
+        SKIP [         ] (───) cc-ask::intake test_recovered_job_deliberately_cancelled_closes_generated_recovery_todo
+        SKIP [         ] (───) cc-ask::intake test_restart_prompt_redacts_owner_secrets
+        SKIP [         ] (───) cc-ask::intake test_retry_cap_notice_delivery_error_does_not_exceed_cap
+        SKIP [         ] (───) cc-ask::intake test_retry_cap_posts_one_silent_line_and_keeps_todo_then_expires
+        SKIP [         ] (───) cc-ask::intake test_second_restart_waits_for_backoff
+        SKIP [         ] (───) cc-ask::intake test_todo_add_interruption_restores_generated_item_ownership
+        SKIP [         ] (───) cc-ask::intake valid_question_only_association_does_not_block_unrelated_intake_or_claim_request_ownership
+        SKIP [         ] (───) cc-ask::intake website_login_and_screen_check_enable_owner_chrome
+        PASS [   0.218s] (1/2) cc-ask::intake review_word_inside_implementation_request_keeps_implementation_profile
+        PASS [   0.219s] (2/2) cc-ask::intake automatic_review_uses_opus_max_instead_of_the_default_writer
+────────────
+     Summary [   0.221s] 2 tests run: 2 passed, 68 skipped

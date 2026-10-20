@@ -1,0 +1,14 @@
+{
+  "owner_id": "d9b4cd0278e9c17d3ecd99906b2a88a4",
+  "source": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3096-3081\\codex-owned-d9b4cd0278e9c17d3ecd99906b2a88a4",
+  "destination": "D:\\削除希望\\20261020-cc-pc-tools-rs-todo-3096-cargo-d9b4cd02\\data",
+  "source_absent": true,
+  "entries_after": 3855,
+  "bytes_after": 4260664824,
+  "listing_sha256_after": "9ab1790f4d0833d1ba9ae0471c71a6a092a13b38c2c0dd50ba8130a40e152149",
+  "metadata_listing_matches": true,
+  "moved_and_verified": true,
+  "safe_delete_record_not_manually_modified": true,
+  "disk_space_reclaimed": 0,
+  "verified_at": "2026-10-20T21:14:16.6283715+09:00"
+}

@@ -1,0 +1,137 @@
+   Compiling aho-corasick v1.1.5
+   Compiling windows-sys v0.61.2
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-job-policy)
+   Compiling regex-automata v0.4.18
+   Compiling regex v1.13.1
+   Compiling cc-live v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-live)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.37s
+────────────
+ Nextest run ID e632e9b1-c8cc-4af3-b5ea-35a1ae4a1f3d with nextest profile: default
+    Starting 5 tests across 1 binary (120 tests skipped)
+        SKIP [         ] (───) cc-live::parity acquisition_protects_dead_owner_until_it_has_written_its_own_lock
+        SKIP [         ] (───) cc-live::parity acquisition_reclaims_game_lock_and_finished_job_even_with_live_pid
+        SKIP [         ] (───) cc-live::parity acquisition_reclaims_stale_lock_and_retains_format
+        SKIP [         ] (───) cc-live::parity acquisition_retries_a_protected_claim_and_respects_the_deadline
+        SKIP [         ] (───) cc-live::parity already_ready_pr_skips_conversion_and_pending_merge_is_not_success
+        SKIP [         ] (───) cc-live::parity answering_game_is_still_closed_before_relaunch
+        SKIP [         ] (───) cc-live::parity branches_without_rust_driver_stop_without_starting_python
+        SKIP [         ] (───) cc-live::parity broken_stdout_stops_before_scenario_and_still_cleans
+        SKIP [         ] (───) cc-live::parity build_in_another_target_directory_rejects_stale_driver_files
+        SKIP [         ] (───) cc-live::parity cancelled_build_waits_for_real_grandchildren_to_exit
+        SKIP [         ] (───) cc-live::parity chain_closes_game_after_each_run_and_on_exit
+        SKIP [         ] (───) cc-live::parity chain_passes_legacy_flags_and_artifact_paths_to_rust_driver
+        SKIP [         ] (───) cc-live::parity chain_stop_on_failure_retains_exit_code_and_cleans
+        SKIP [         ] (───) cc-live::parity chain_stops_before_a_second_scenario_if_its_lock_was_replaced
+        SKIP [         ] (───) cc-live::parity child_specific_environment_is_applied_without_changing_the_parent
+        SKIP [         ] (───) cc-live::parity cleanup_failure_still_releases_lock
+        SKIP [         ] (───) cc-live::parity completed_build_waits_for_descendants_after_root_exit
+        SKIP [         ] (───) cc-live::parity contention_lease_keeps_uncontended_and_not_yet_expired_holder
+        SKIP [         ] (───) cc-live::parity default_chain_retains_failure_even_after_a_later_success
+        SKIP [         ] (───) cc-live::parity delete_pending_access_denied_is_bounded_and_preserves_the_reader
+        SKIP [         ] (───) cc-live::parity delete_pending_compatible_reader_allows_immediate_future_acquire
+        SKIP [         ] (───) cc-live::parity departed_waiter_cancels_the_competition_deadline_during_a_running_child
+        SKIP [         ] (───) cc-live::parity dirty_tracked_source_stops_before_the_driver_build_and_keeps_input
+        SKIP [         ] (───) cc-live::parity driver_and_cleanup_errors_are_both_reported
+        SKIP [         ] (───) cc-live::parity driver_is_bounded_by_the_remaining_scenario_window
+        SKIP [         ] (───) cc-live::parity driver_timeout_keeps_failure_log_and_releases_lock
+        SKIP [         ] (───) cc-live::parity dropped_build_guard_drains_pinned_root_and_grandchildren
+        SKIP [         ] (───) cc-live::parity dynamic_lease_deadline_is_shared_with_civ6_cleanup_and_lock_release
+        SKIP [         ] (───) cc-live::parity failed_checkout_does_not_prepare_scenario
+        SKIP [         ] (───) cc-live::parity failed_pr_api_is_an_error_even_if_it_prints_a_url
+        SKIP [         ] (───) cc-live::parity finished_owner_job_overrides_another_active_job_and_a_live_pid
+        SKIP [         ] (───) cc-live::parity help_and_all_invalid_arguments_ignore_a_live_foreign_lock
+        SKIP [         ] (───) cc-live::parity holder_alive_invalid_pid_is_dead_without_a_process_query
+        SKIP [         ] (───) cc-live::parity holder_alive_reads_existing_job_layout
+        SKIP [         ] (───) cc-live::parity holder_alive_requires_exact_pid_and_excludes_game_reporter_and_steam
+        SKIP [         ] (───) cc-live::parity holder_inspection_failure_is_not_treated_as_a_dead_owner
+        SKIP [         ] (───) cc-live::parity invalid_input_returns_before_lock_or_external_calls
+        SKIP [         ] (───) cc-live::parity last_message_uses_latest_run_and_strips_absolute_links
+        SKIP [         ] (───) cc-live::parity lease_monitor_authoritative_owner_change_is_fatal_after_a_timeout
+        SKIP [         ] (───) cc-live::parity lease_monitor_can_read_the_lock_while_startup_recovery_pins_it
+        SKIP [         ] (───) cc-live::parity lease_monitor_missing_lock_uses_the_same_absolute_outage_deadline
+        SKIP [         ] (───) cc-live::parity lease_monitor_non_timeout_query_failure_remains_fatal
+        SKIP [         ] (───) cc-live::parity lease_monitor_persistent_timeout_is_bounded_and_not_driver_timeout
+        SKIP [         ] (───) cc-live::parity lease_monitor_startup_outage_deadline_survives_clone_into_the_child
+        SKIP [         ] (───) cc-live::parity lease_monitor_timeout_is_unknown_and_recovers_without_extending_contention
+        SKIP [         ] (───) cc-live::parity lease_monitor_timeout_never_extends_a_known_competition_deadline
+        SKIP [         ] (───) cc-live::parity lease_monitor_yields_when_the_known_deadline_expires_inside_the_query
+        SKIP [         ] (───) cc-live::parity lease_probe_keeps_quiet_work_unbounded_and_ignores_dead_waiters
+        SKIP [         ] (───) cc-live::parity lease_requeues_after_delete_pending_reader_closes
+        SKIP [         ] (───) cc-live::parity lease_yield_does_not_release_another_token_with_the_same_pid
+        SKIP [         ] (───) cc-live::parity live_chain_finishes_scenario_then_requeues_fifo_before_next
+        SKIP [         ] (───) cc-live::parity live_chain_waiter_rejects_a_reused_pid_owned_by_another_program
+        SKIP [         ] (───) cc-live::parity live_chain_waiter_rejects_mismatched_process_creation_time
+        SKIP [         ] (───) cc-live::parity lock_timeout_keeps_live_holder_and_removes_own_waiter
+        SKIP [         ] (───) cc-live::parity long_run_boundaries
+        SKIP [         ] (───) cc-live::parity long_waiter_precedes_short_arriving_after_one_lease
+        SKIP [         ] (───) cc-live::parity main_branch_skips_merge_and_no_restart_keeps_first_action
+        SKIP [         ] (───) cc-live::parity maintenance_stops_other_jobs_before_prepare_but_allows_the_repairing_job
+        SKIP [         ] (───) cc-live::parity managed_merged_timeout_retains_partial_output
+        SKIP [         ] (───) cc-live::parity merge_and_abort_failures_both_stop_preparation_and_keep_their_diagnostics
+        SKIP [         ] (───) cc-live::parity merge_commit_time_changes_do_not_mix_or_reject_identical_source_trees
+        SKIP [         ] (───) cc-live::parity merge_conflict_is_aborted_and_stops_preparation
+        SKIP [         ] (───) cc-live::parity merge_pr_posts_marks_ready_and_squashes_in_order
+        SKIP [         ] (───) cc-live::parity merge_stops_at_each_failed_external_stage
+        SKIP [         ] (───) cc-live::parity merge_stops_at_each_failed_stage_and_keeps_the_original_error
+        SKIP [         ] (───) cc-live::parity missing_startup_helper_source_refuses_existing_stale_binary_before_build
+        SKIP [         ] (───) cc-live::parity native_build_tree::platform::tests::zero_active_count_does_not_replace_retained_handle_wait
+        SKIP [         ] (───) cc-live::parity native_output_capture::tests::successful_empty_read_keeps_later_native_output_until_real_closure
+        SKIP [         ] (───) cc-live::parity nonzero_preparation_with_two_paths_never_launches_a_driver
+        SKIP [         ] (───) cc-live::parity output_capture_keeps_complete_large_split_and_merged_output
+        SKIP [         ] (───) cc-live::parity output_capture_with_held_writer_uses_original_deadline_and_is_not_success
+        SKIP [         ] (───) cc-live::parity panic_still_closes_game_and_releases_lock
+        SKIP [         ] (───) cc-live::parity pr_uses_utf8_draft_payload_and_prints_api_url
+        SKIP [         ] (───) cc-live::parity preparation_execution_error_is_propagated_without_retry
+        SKIP [         ] (───) cc-live::parity preparation_failure_is_not_retried_and_keeps_the_original_error
+        SKIP [         ] (───) cc-live::parity preparation_timeout_uses_the_budget_left_after_preparation_shutdown
+        SKIP [         ] (───) cc-live::parity queue_timeout_yields_to_short_run
+        SKIP [         ] (───) cc-live::parity quiet_running_child_is_not_cut_off_at_the_contention_lease
+        SKIP [         ] (───) cc-live::parity quiet_slot_keeps_a_long_scenarios_own_deadline
+        SKIP [         ] (───) cc-live::parity ready_scheduler_item_counts_as_competitor_and_blocks_requeued_chain
+        SKIP [         ] (───) cc-live::parity real_child_output_pipe_is_merged_in_order_without_game_or_network
+        SKIP [         ] (───) cc-live::parity recovered_startup_failure_does_not_launch_another_outer_retry
+        SKIP [         ] (───) cc-live::parity release_reader_child
+        SKIP [         ] (───) cc-live::parity release_reports_persistent_sharing_violation_and_keeps_the_lock
+        SKIP [         ] (───) cc-live::parity release_skips_replaced_owner_after_a_sharing_violation
+        SKIP [         ] (───) cc-live::parity release_waits_for_real_reader_then_deletes_only_its_own_lock
+        SKIP [         ] (───) cc-live::parity reliability_counts_ten_consecutive_successes_with_distinct_artifacts_and_lock_yield
+        SKIP [         ] (───) cc-live::parity reliability_does_not_count_a_run_whose_cleanup_failed
+        SKIP [         ] (───) cc-live::parity reliability_stops_at_first_failure_without_counting_later_successes
+        SKIP [         ] (───) cc-live::parity reliability_stops_before_driver_when_prepared_revision_changes
+        SKIP [         ] (───) cc-live::parity reporter_failure_aborts
+        SKIP [         ] (───) cc-live::parity responsive_game_probe_uses_branch_rust_tuner
+        SKIP [         ] (───) cc-live::parity running_child_yields_to_a_waiter_arriving_after_it_started
+        SKIP [         ] (───) cc-live::parity rust_driver_build_failure_keeps_legacy_driver_unused_even_with_stale_binary
+        SKIP [         ] (───) cc-live::parity rust_driver_is_rebuilt_from_checked_out_branch_and_never_uses_python
+        SKIP [         ] (───) cc-live::parity rust_driver_missing_binary_is_an_error_instead_of_a_legacy_fallback
+        SKIP [         ] (───) cc-live::parity same_priority_is_first_come_first_served
+        SKIP [         ] (───) cc-live::parity scenario_budget_uses_step_defaults_and_one_internal_recovery
+        SKIP [         ] (───) cc-live::parity scenario_error_still_closes_and_releases
+        SKIP [         ] (───) cc-live::parity scoped_reporter_cleanup_keeps_exact_path_and_checks_parent
+        SKIP [         ] (───) cc-live::parity shared_slot_yield_is_incomplete_and_never_counted_as_a_product_failure_or_success
+        SKIP [         ] (───) cc-live::parity ship_builds_checked_out_rust_driver_before_publishing_scenario_and_artifacts
+        SKIP [         ] (───) cc-live::parity ship_merges_main_and_suffixes_save_names_without_changing_source
+        SKIP [         ] (───) cc-live::parity ship_rejects_invalid_requests_before_git_or_network
+        SKIP [         ] (───) cc-live::parity short_aged_long_and_fifo_requeue_have_one_shared_order
+        SKIP [         ] (───) cc-live::parity short_waiter_precedes_older_long_waiter
+        SKIP [         ] (───) cc-live::parity slow_waiter_investigation_does_not_extend_the_absolute_lease
+        SKIP [         ] (───) cc-live::parity stale_pid_cleanup_keeps_a_new_registration_with_its_own_name
+        SKIP [         ] (───) cc-live::parity stale_waiter_removed_and_broken_waiter_ignored
+        SKIP [         ] (───) cc-live::parity startup_diagnostic_worker_is_built_and_its_provenance_is_required
+        SKIP [         ] (───) cc-live::parity startup_failure_is_never_replayed_and_preserves_first_artifacts
+        SKIP [         ] (───) cc-live::parity stop_error_with_live_pipe_writers_returns_without_restore_or_extra_drop_budget
+        SKIP [         ] (───) cc-live::parity test_absent_game_avoids_tuner_and_kill
+        SKIP [         ] (───) cc-live::parity test_cleanup_kills_both_renderers_before_scoped_reporter_cleanup
+        SKIP [         ] (───) cc-live::parity test_detection_accepts_either_renderer_and_not_similar_names
+        SKIP [         ] (───) cc-live::parity test_enumeration_failure_is_not_reported_as_absent
+        SKIP [         ] (───) cc-live::parity test_failed_termination_stops_before_reporter_cleanup
+        SKIP [         ] (───) cc-live::parity test_termination_waits_for_a_process_to_disappear
+        SKIP [         ] (───) cc-live::parity unresponsive_game_retries_tuner_three_times
+        SKIP [         ] (───) cc-live::parity windows_fault_code_is_unsigned_in_result
+        PASS [   0.032s] (1/5) cc-live::parity review_launch_failure_or_missing_job_id_never_returns_success
+        PASS [   0.036s] (2/5) cc-live::parity review_without_source_metadata_does_not_launch_an_unqualified_reader
+        PASS [   0.044s] (3/5) cc-live::parity failed_review_launch_never_reports_success
+        PASS [   0.052s] (4/5) cc-live::parity review_preserves_facts_and_uses_jobs_executable
+        PASS [   0.057s] (5/5) cc-live::parity review_uses_another_model_after_an_opus_author_exits
+────────────
+     Summary [   0.060s] 5 tests run: 5 passed, 120 skipped

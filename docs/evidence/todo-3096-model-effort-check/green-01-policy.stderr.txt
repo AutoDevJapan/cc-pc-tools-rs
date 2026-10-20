@@ -1,0 +1,9 @@
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-job-policy)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.59s
+────────────
+ Nextest run ID 33233abb-1572-4555-8dfc-9e29860a21c9 with nextest profile: default
+    Starting 2 tests across 1 binary
+        PASS [   0.057s] (1/2) cc-job-policy::model_effort review_default_and_source_history_never_choose_an_authors_model
+        PASS [   0.060s] (2/2) cc-job-policy::model_effort unattended_default_keeps_sol_max_for_implementation_and_readers
+────────────
+     Summary [   0.061s] 2 tests run: 2 passed, 0 skipped

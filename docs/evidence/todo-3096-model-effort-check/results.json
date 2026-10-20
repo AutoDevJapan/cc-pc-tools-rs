@@ -1,0 +1,678 @@
+[
+  {
+    "id": "red-01-review",
+    "executed": true,
+    "head": "8b70dd71c400ef449d0216d0075aff6bc253c527",
+    "expected_head": "8b70dd71c400ef449d0216d0075aff6bc253c527",
+    "head_match": true,
+    "source_unchanged": true,
+    "args": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-job-policy",
+      "--test",
+      "review_qualification_red",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ],
+    "exit": 100,
+    "classification": "test_assertion_failure",
+    "started_at": "2026-10-20T21:04:24.4913704+09:00",
+    "ended_at": "2026-10-20T21:04:38.1636029+09:00",
+    "tests_run": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped_by_selection": 0,
+    "summary": "Summary [   0.011s] 1 test run: 0 passed, 1 failed, 0 skipped",
+    "failure_names": [
+      "automatic_review_default_differs_from_the_normal_sol_writer"
+    ],
+    "tests": [
+      {
+        "status": "FAIL",
+        "duration": "0.010s",
+        "binary": "cc-job-policy::review_qualification_red",
+        "name": "automatic_review_default_differs_from_the_normal_sol_writer"
+      }
+    ],
+    "stdout_file": "red-01-review.stdout.txt",
+    "stderr_file": "red-01-review.stderr.txt"
+  },
+  {
+    "id": "red-02-capacity-metadata",
+    "executed": true,
+    "head": "8b70dd71c400ef449d0216d0075aff6bc253c527",
+    "expected_head": "8b70dd71c400ef449d0216d0075aff6bc253c527",
+    "head_match": true,
+    "source_unchanged": true,
+    "args": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-jobs",
+      "--test",
+      "parity",
+      "-E",
+      "test(real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit)",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ],
+    "exit": 100,
+    "classification": "test_assertion_failure",
+    "started_at": "2026-10-20T21:05:01.5297889+09:00",
+    "ended_at": "2026-10-20T21:05:54.8823559+09:00",
+    "tests_run": 1,
+    "passed": 0,
+    "failed": 1,
+    "skipped_by_selection": 384,
+    "summary": "Summary [   9.423s] 1 test run: 0 passed, 1 failed, 384 skipped",
+    "failure_names": [
+      "end_to_end::real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit"
+    ],
+    "tests": [
+      {
+        "status": "FAIL",
+        "duration": "9.419s",
+        "binary": "cc-jobs::parity",
+        "name": "end_to_end::real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit"
+      }
+    ],
+    "stdout_file": "red-02-capacity-metadata.stdout.txt",
+    "stderr_file": "red-02-capacity-metadata.stderr.txt"
+  },
+  {
+    "id": "green-01-policy",
+    "executed": true,
+    "head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "expected_head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "head_match": true,
+    "source_unchanged": true,
+    "args": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-job-policy",
+      "--test",
+      "model_effort",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ],
+    "exit": 0,
+    "classification": "test_pass",
+    "started_at": "2026-10-20T21:07:54.5182001+09:00",
+    "ended_at": "2026-10-20T21:07:58.2926805+09:00",
+    "tests_run": 2,
+    "passed": 2,
+    "failed": 0,
+    "skipped_by_selection": 0,
+    "summary": "Summary [   0.061s] 2 tests run: 2 passed, 0 skipped",
+    "failure_names": [],
+    "tests": [
+      {
+        "status": "PASS",
+        "duration": "0.057s",
+        "binary": "cc-job-policy::model_effort",
+        "name": "review_default_and_source_history_never_choose_an_authors_model"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.060s",
+        "binary": "cc-job-policy::model_effort",
+        "name": "unattended_default_keeps_sol_max_for_implementation_and_readers"
+      }
+    ],
+    "stdout_file": "green-01-policy.stdout.txt",
+    "stderr_file": "green-01-policy.stderr.txt"
+  },
+  {
+    "id": "green-02-jobs-model-pool",
+    "executed": true,
+    "head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "expected_head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "head_match": true,
+    "source_unchanged": true,
+    "args": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-jobs",
+      "--test",
+      "model_effort",
+      "--test",
+      "pool_retry",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ],
+    "exit": 0,
+    "classification": "test_pass",
+    "started_at": "2026-10-20T21:08:07.9893719+09:00",
+    "ended_at": "2026-10-20T21:08:27.3705089+09:00",
+    "tests_run": 13,
+    "passed": 13,
+    "failed": 0,
+    "skipped_by_selection": 0,
+    "summary": "Summary [   0.107s] 13 tests run: 13 passed, 0 skipped",
+    "failure_names": [],
+    "tests": [
+      {
+        "status": "PASS",
+        "duration": "0.011s",
+        "binary": "cc-jobs::pool_retry",
+        "name": "paused_exhausted_paid_keys_and_missing_permission_cannot_supply_an_alternate"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.014s",
+        "binary": "cc-jobs::pool_retry",
+        "name": "per_job_account_catalog_preserves_native_capabilities_and_explicit_effort"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.018s",
+        "binary": "cc-jobs::pool_retry",
+        "name": "failed_log_label_is_resolved_to_every_alias_of_the_account"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.021s",
+        "binary": "cc-jobs::model_effort",
+        "name": "explicit_model_and_effort_survive_launch"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.026s",
+        "binary": "cc-jobs::pool_retry",
+        "name": "opaque_route_keeps_native_identity_and_never_rewrites_unknown_models"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.029s",
+        "binary": "cc-jobs::pool_retry",
+        "name": "a_saved_selector_cannot_turn_a_successful_request_into_failure_attribution"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.034s",
+        "binary": "cc-jobs::pool_retry",
+        "name": "observed_native_effort_is_separate_from_requested_effort_and_upstream_tier"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.038s",
+        "binary": "cc-jobs::model_effort",
+        "name": "gpt_launch_explicitly_requests_fast_and_keeps_owner_effort"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.081s",
+        "binary": "cc-jobs::pool_retry",
+        "name": "persisted_log_labels_exclude_a_previously_failed_account_after_alias_renaming"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.082s",
+        "binary": "cc-jobs::pool_retry",
+        "name": "public_metadata_selects_a_distinct_oauth_account_without_retaining_private_values"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.082s",
+        "binary": "cc-jobs::pool_retry",
+        "name": "retry_publication_rechecks_worker_identity_todo_owner_and_generation"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.081s",
+        "binary": "cc-jobs::pool_retry",
+        "name": "stale_terminal_record_keeps_new_scope_and_never_finishes_a_new_worker"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.081s",
+        "binary": "cc-jobs::pool_retry",
+        "name": "tool_text_stale_other_model_and_success_logs_never_establish_failed_account"
+      }
+    ],
+    "stdout_file": "green-02-jobs-model-pool.stdout.txt",
+    "stderr_file": "green-02-jobs-model-pool.stderr.txt"
+  },
+  {
+    "id": "green-03-jobs-parity",
+    "executed": true,
+    "head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "expected_head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "head_match": true,
+    "source_unchanged": true,
+    "args": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-jobs",
+      "--test",
+      "parity",
+      "-E",
+      "test(capacity_regressions::) | test(claude_routing::) | test(job_cli_defaults) | test(real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit)",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ],
+    "exit": 0,
+    "classification": "test_pass",
+    "started_at": "2026-10-20T21:08:44.5673469+09:00",
+    "ended_at": "2026-10-20T21:10:00.6181086+09:00",
+    "tests_run": 34,
+    "passed": 34,
+    "failed": 0,
+    "skipped_by_selection": 355,
+    "summary": "Summary [  67.446s] 34 tests run: 34 passed (1 slow), 355 skipped",
+    "failure_names": [],
+    "tests": [
+      {
+        "status": "PASS",
+        "duration": "0.025s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::capacity_is_case_insensitive_and_is_infrastructure_failure"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.029s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::capacity_falls_back_to_existing_resume_id_and_masks_history"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.040s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::capacity_before_session_creation_preserves_job_and_original_prompt_scope"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.042s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::a_verified_fixed_review_keeps_the_original_author_snapshot_after_parent_changes_model"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.044s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::capacity_does_not_restart_cancelled_completed_invalid_or_other_models"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.049s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::capacity_access_denied_or_live_worker_never_restarts"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.055s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::capacity_preserves_scope_wait_and_review_constraints"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.073s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::capacity_cooldown_is_finite_and_does_not_create_owner_block"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.056s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::depleted_claude_switches_to_verified_codex_oauth_and_single_file_summary_stays_light"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.070s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::capacity_switch_order_starts_from_each_selected_model"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.037s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::generic_terminal_failure_preserves_protocol_capacity_but_auth_and_cancel_win"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.032s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::pool_capacity_retries_three_distinct_accounts_before_claude"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.118s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::explicit_review_uses_another_claude_model_without_returning_to_the_source_author"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.016s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::quoted_capacity_text_never_establishes_failure_evidence"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.173s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::owner_wait_release_rechecks_generation_before_resuming_capacity_selection"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.241s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::capacity_with_429_does_not_escape_the_switch_limit"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.097s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::registration_rejects_known_same_model_review_with_provider_spelling"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.021s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::unknown_provider_qualified_models_are_never_retargeted"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.018s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::unknown_review_author_does_not_block_same_model_account_retries"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.021s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::unverified_failed_account_waits_instead_of_immediately_changing_provider"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.298s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::due_capacity_wait_rechecks_quota_and_preserves_the_same_job_after_restart"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.388s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::capacity_supervisor_stops_after_finite_eligible_models"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.400s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::capacity_supervisor_resumes_same_session_on_next_model"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.398s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::capacity_switch_budget_survives_supervisor_restart"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.139s",
+        "binary": "cc-jobs::parity",
+        "name": "claude_routing::mixed_provider_child_keeps_parent_slot_and_unknown_provider_reserves_both_lanes"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.411s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::pool_retry_budget_and_account_exclusions_survive_restart"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.310s",
+        "binary": "cc-jobs::parity",
+        "name": "capacity_regressions::review_after_writer_exit_uses_durable_model_history"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.277s",
+        "binary": "cc-jobs::parity",
+        "name": "claude_routing::minute_update_uses_one_snapshot_for_both_lanes_at_admission"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.020s",
+        "binary": "cc-jobs::parity",
+        "name": "job_cli_defaults_preserve_each_explicit_model_and_effort_independently"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.449s",
+        "binary": "cc-jobs::parity",
+        "name": "claude_routing::codex_full_lane_does_not_block_claude_but_shared_hardware_still_caps_total"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.343s",
+        "binary": "cc-jobs::parity",
+        "name": "claude_routing::stale_future_and_fixed_measurements_do_not_route"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.363s",
+        "binary": "cc-jobs::parity",
+        "name": "claude_routing::run_records_model_provenance_before_applying_defaults"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.541s",
+        "binary": "cc-jobs::parity",
+        "name": "claude_routing::provider_pacing_cannot_bypass_same_model_capacity_policy"
+      },
+      {
+        "status": "PASS",
+        "duration": "66.952s",
+        "binary": "cc-jobs::parity",
+        "name": "end_to_end::real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit"
+      }
+    ],
+    "stdout_file": "green-03-jobs-parity.stdout.txt",
+    "stderr_file": "green-03-jobs-parity.stderr.txt"
+  },
+  {
+    "id": "green-04-scheduler",
+    "executed": true,
+    "head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "expected_head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "head_match": true,
+    "source_unchanged": true,
+    "args": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-scheduler",
+      "--test",
+      "parity",
+      "-E",
+      "test(review_preparation_uses_exited_writer_history_and_passes_durable_sources) | test(router_failure_keeps_reviews_on_a_distinct_max_default)",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ],
+    "exit": 0,
+    "classification": "test_pass",
+    "started_at": "2026-10-20T21:10:19.8947608+09:00",
+    "ended_at": "2026-10-20T21:10:49.1870342+09:00",
+    "tests_run": 2,
+    "passed": 2,
+    "failed": 0,
+    "skipped_by_selection": 179,
+    "summary": "Summary [   0.060s] 2 tests run: 2 passed, 179 skipped",
+    "failure_names": [],
+    "tests": [
+      {
+        "status": "PASS",
+        "duration": "0.023s",
+        "binary": "cc-scheduler::parity",
+        "name": "router_failure_keeps_reviews_on_a_distinct_max_default"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.057s",
+        "binary": "cc-scheduler::parity",
+        "name": "review_preparation_uses_exited_writer_history_and_passes_durable_sources"
+      }
+    ],
+    "stdout_file": "green-04-scheduler.stdout.txt",
+    "stderr_file": "green-04-scheduler.stderr.txt"
+  },
+  {
+    "id": "green-05-ask",
+    "executed": true,
+    "head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "expected_head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "head_match": true,
+    "source_unchanged": true,
+    "args": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-ask",
+      "--test",
+      "intake",
+      "-E",
+      "test(automatic_review_uses_opus_max_instead_of_the_default_writer) | test(review_word_inside_implementation_request_keeps_implementation_profile)",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ],
+    "exit": 0,
+    "classification": "test_pass",
+    "started_at": "2026-10-20T21:10:58.6406937+09:00",
+    "ended_at": "2026-10-20T21:11:21.278422+09:00",
+    "tests_run": 2,
+    "passed": 2,
+    "failed": 0,
+    "skipped_by_selection": 68,
+    "summary": "Summary [   0.221s] 2 tests run: 2 passed, 68 skipped",
+    "failure_names": [],
+    "tests": [
+      {
+        "status": "PASS",
+        "duration": "0.218s",
+        "binary": "cc-ask::intake",
+        "name": "review_word_inside_implementation_request_keeps_implementation_profile"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.219s",
+        "binary": "cc-ask::intake",
+        "name": "automatic_review_uses_opus_max_instead_of_the_default_writer"
+      }
+    ],
+    "stdout_file": "green-05-ask.stdout.txt",
+    "stderr_file": "green-05-ask.stderr.txt"
+  },
+  {
+    "id": "green-06-live",
+    "executed": true,
+    "head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "expected_head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "head_match": true,
+    "source_unchanged": true,
+    "args": [
+      "nextest",
+      "run",
+      "--locked",
+      "-p",
+      "cc-live",
+      "--test",
+      "parity",
+      "-E",
+      "test(review_) | test(failed_review_launch_never_reports_success)",
+      "--no-fail-fast",
+      "--status-level",
+      "all"
+    ],
+    "exit": 0,
+    "classification": "test_pass",
+    "started_at": "2026-10-20T21:11:33.2615748+09:00",
+    "ended_at": "2026-10-20T21:11:42.6203977+09:00",
+    "tests_run": 5,
+    "passed": 5,
+    "failed": 0,
+    "skipped_by_selection": 120,
+    "summary": "Summary [   0.060s] 5 tests run: 5 passed, 120 skipped",
+    "failure_names": [],
+    "tests": [
+      {
+        "status": "PASS",
+        "duration": "0.032s",
+        "binary": "cc-live::parity",
+        "name": "review_launch_failure_or_missing_job_id_never_returns_success"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.036s",
+        "binary": "cc-live::parity",
+        "name": "review_without_source_metadata_does_not_launch_an_unqualified_reader"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.044s",
+        "binary": "cc-live::parity",
+        "name": "failed_review_launch_never_reports_success"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.052s",
+        "binary": "cc-live::parity",
+        "name": "review_preserves_facts_and_uses_jobs_executable"
+      },
+      {
+        "status": "PASS",
+        "duration": "0.057s",
+        "binary": "cc-live::parity",
+        "name": "review_uses_another_model_after_an_opus_author_exits"
+      }
+    ],
+    "stdout_file": "green-06-live.stdout.txt",
+    "stderr_file": "green-06-live.stderr.txt"
+  },
+  {
+    "id": "green-07-examples",
+    "executed": true,
+    "head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "expected_head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+    "head_match": true,
+    "source_unchanged": true,
+    "args": [
+      "check",
+      "--locked",
+      "-p",
+      "cc-jobs",
+      "--examples"
+    ],
+    "exit": 0,
+    "classification": "compile_pass",
+    "started_at": "2026-10-20T21:11:52.3734378+09:00",
+    "ended_at": "2026-10-20T21:12:04.2986695+09:00",
+    "tests_run": null,
+    "passed": null,
+    "failed": null,
+    "skipped_by_selection": null,
+    "summary": null,
+    "failure_names": [],
+    "tests": [],
+    "stdout_file": "green-07-examples.stdout.txt",
+    "stderr_file": "green-07-examples.stderr.txt"
+  }
+]

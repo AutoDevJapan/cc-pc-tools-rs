@@ -1,0 +1,25 @@
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-job-policy)
+   Compiling cc-jobs v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-jobs)
+   Compiling cc-live v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-live)
+   Compiling cc-ask v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-ask)
+   Compiling cc-scheduler v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-scheduler)
+   Compiling cc-todo v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-todo)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 18.35s
+────────────
+ Nextest run ID d7676733-6bf6-4f8c-b9ce-8e40159b6aa1 with nextest profile: default
+    Starting 13 tests across 2 binaries
+        PASS [   0.011s] ( 1/13) cc-jobs::pool_retry paused_exhausted_paid_keys_and_missing_permission_cannot_supply_an_alternate
+        PASS [   0.014s] ( 2/13) cc-jobs::pool_retry per_job_account_catalog_preserves_native_capabilities_and_explicit_effort
+        PASS [   0.018s] ( 3/13) cc-jobs::pool_retry failed_log_label_is_resolved_to_every_alias_of_the_account
+        PASS [   0.021s] ( 4/13) cc-jobs::model_effort explicit_model_and_effort_survive_launch
+        PASS [   0.026s] ( 5/13) cc-jobs::pool_retry opaque_route_keeps_native_identity_and_never_rewrites_unknown_models
+        PASS [   0.029s] ( 6/13) cc-jobs::pool_retry a_saved_selector_cannot_turn_a_successful_request_into_failure_attribution
+        PASS [   0.034s] ( 7/13) cc-jobs::pool_retry observed_native_effort_is_separate_from_requested_effort_and_upstream_tier
+        PASS [   0.038s] ( 8/13) cc-jobs::model_effort gpt_launch_explicitly_requests_fast_and_keeps_owner_effort
+        PASS [   0.081s] ( 9/13) cc-jobs::pool_retry persisted_log_labels_exclude_a_previously_failed_account_after_alias_renaming
+        PASS [   0.082s] (10/13) cc-jobs::pool_retry public_metadata_selects_a_distinct_oauth_account_without_retaining_private_values
+        PASS [   0.082s] (11/13) cc-jobs::pool_retry retry_publication_rechecks_worker_identity_todo_owner_and_generation
+        PASS [   0.081s] (12/13) cc-jobs::pool_retry stale_terminal_record_keeps_new_scope_and_never_finishes_a_new_worker
+        PASS [   0.081s] (13/13) cc-jobs::pool_retry tool_text_stale_other_model_and_success_logs_never_establish_failed_account
+────────────
+     Summary [   0.107s] 13 tests run: 13 passed, 0 skipped

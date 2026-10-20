@@ -1,0 +1,44 @@
+[
+  {
+    "file": "D:/CC/AGENTS.md",
+    "before": "d967c613f384a664782fc056de594a8bbd0e6997816f858e6ce9874a678c7a2b",
+    "green_sha256": "d967c613f384a664782fc056de594a8bbd0e6997816f858e6ce9874a678c7a2b",
+    "same": true
+  },
+  {
+    "file": "D:/CC/Policies/owner-model-effort-and-pool-retry-20261020.md",
+    "before": "e05aaabff983cc8bf89a9a8a25c2467b807eeb2a5501f5ee2f97348946b6b03b",
+    "green_sha256": "e05aaabff983cc8bf89a9a8a25c2467b807eeb2a5501f5ee2f97348946b6b03b",
+    "same": true
+  },
+  {
+    "file": "AGENTS.md",
+    "before": "87722027bab10a57cbd5bdf3c6d888955d48d7c09cc7e8113b61a7ed6399ee02",
+    "green_sha256": "87722027bab10a57cbd5bdf3c6d888955d48d7c09cc7e8113b61a7ed6399ee02",
+    "same": true
+  },
+  {
+    "file": "docs/test-build-scope.md",
+    "before": "91a97b5653c1695af709f72077dffca04106fbcf9882f11acc77b3f9a3095f08",
+    "green_sha256": "91a97b5653c1695af709f72077dffca04106fbcf9882f11acc77b3f9a3095f08",
+    "same": true
+  },
+  {
+    "file": "docs/build-speed.md",
+    "before": "a281d641d6208e599940a48181650c4e1115293b5deae74e05759a629f99b49a",
+    "green_sha256": "a281d641d6208e599940a48181650c4e1115293b5deae74e05759a629f99b49a",
+    "same": true
+  },
+  {
+    "file": "docs/cargo-gate.md",
+    "before": "a4e6b651d9bcf17a1c2da3e16da129ad91942416f7fe9891b26e0f57b8d68a8c",
+    "green_sha256": "a4e6b651d9bcf17a1c2da3e16da129ad91942416f7fe9891b26e0f57b8d68a8c",
+    "same": true
+  },
+  {
+    "file": ".config/nextest.toml",
+    "before": "278009fb6163666757e5e2d1dbdd75eb47526a8e5168da6ff368371171b2e162",
+    "green_sha256": "278009fb6163666757e5e2d1dbdd75eb47526a8e5168da6ff368371171b2e162",
+    "same": true
+  }
+]

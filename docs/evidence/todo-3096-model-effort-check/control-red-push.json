@@ -1,0 +1,23 @@
+{
+  "file": "C:/Program Files/Git/cmd/git.exe",
+  "args": [
+    "push",
+    "--set-upstream",
+    "origin",
+    "scheduler/todo-3096-3081-red"
+  ],
+  "cwd": "D:/CC/Work/unattended-operations-20261013-wt/todo-3096-3081",
+  "actual_head": "ce9af5a93b15ef9c4736eaf37b2cab1cae9ec0b8",
+  "branch": "scheduler/todo-3096-3081-red",
+  "tracked_changes_before": "",
+  "started_at": "2026-10-20T21:06:56.8960106+09:00",
+  "create_no_window": true,
+  "status": "exited",
+  "pid": 38900,
+  "exit": 0,
+  "ended_at": "2026-10-20T21:06:59.0794455+09:00",
+  "stdout_file": "red-push.stdout.txt",
+  "stderr_file": "red-push.stderr.txt",
+  "head_after": "ce9af5a93b15ef9c4736eaf37b2cab1cae9ec0b8",
+  "tracked_changes_after": ""
+}

@@ -1,0 +1,22 @@
+{
+  "file": "C:/Program Files/Git/cmd/git.exe",
+  "args": [
+    "commit",
+    "-m",
+    "test: record fixed-head qualification and metadata Red evidence (ToDo3096)"
+  ],
+  "cwd": "D:/CC/Work/unattended-operations-20261013-wt/todo-3096-3081",
+  "actual_head": "8b70dd71c400ef449d0216d0075aff6bc253c527",
+  "branch": "scheduler/todo-3096-3081-red",
+  "tracked_changes_before": "A  docs/evidence/todo-3096-model-effort-check/.gitattributes\nA  docs/evidence/todo-3096-model-effort-check/checkpoint-red-request.json\nA  docs/evidence/todo-3096-model-effort-check/checkpoint-red.json\nA  docs/evidence/todo-3096-model-effort-check/checkpoint-red.stderr.txt\nA  docs/evidence/todo-3096-model-effort-check/checkpoint-red.stdout.txt\nA  docs/evidence/todo-3096-model-effort-check/plan.json\nA  docs/evidence/todo-3096-model-effort-check/preflight.json\nA  docs/evidence/todo-3096-model-effort-check/red-01-review.json\nA  docs/evidence/todo-3096-model-effort-check/red-01-review.stderr.txt\nA  docs/evidence/todo-3096-model-effort-check/red-01-review.stdout.txt\nA  docs/evidence/todo-3096-model-effort-check/red-02-capacity-metadata.json\nA  docs/evidence/todo-3096-model-effort-check/red-02-capacity-metadata.stderr.txt\nA  docs/evidence/todo-3096-model-effort-check/red-02-capacity-metadata.stdout.txt\nA  docs/evidence/todo-3096-model-effort-check/red-result.md\nA  docs/evidence/todo-3096-model-effort-check/red-results.json\nA  docs/evidence/todo-3096-model-effort-check/resume.md\nA  docs/evidence/todo-3096-model-effort-check/setup-switch-red.json\nA  docs/evidence/todo-3096-model-effort-check/setup-switch-red.stderr.txt\nA  docs/evidence/todo-3096-model-effort-check/setup-switch-red.stdout.txt",
+  "started_at": "2026-10-20T21:06:56.1675258+09:00",
+  "create_no_window": true,
+  "status": "exited",
+  "pid": 38120,
+  "exit": 0,
+  "ended_at": "2026-10-20T21:06:56.5054188+09:00",
+  "stdout_file": "red-commit.stdout.txt",
+  "stderr_file": "red-commit.stderr.txt",
+  "head_after": "ce9af5a93b15ef9c4736eaf37b2cab1cae9ec0b8",
+  "tracked_changes_after": ""
+}

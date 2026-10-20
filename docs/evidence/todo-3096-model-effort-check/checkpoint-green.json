@@ -1,0 +1,22 @@
+{
+  "file": "D:/CC/Tools/scheduler/scheduler.exe",
+  "args": [
+    "checkpoint-workspace",
+    "--request-file",
+    "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3096-3081\\docs\\evidence\\todo-3096-model-effort-check\\checkpoint-green-request.json"
+  ],
+  "cwd": "D:/CC/Work/unattended-operations-20261013-wt/todo-3096-3081",
+  "actual_head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+  "branch": "scheduler/todo-3096-3081-green",
+  "tracked_changes_before": "",
+  "started_at": "2026-10-20T21:07:24.3441087+09:00",
+  "create_no_window": true,
+  "status": "exited",
+  "pid": 33088,
+  "exit": 0,
+  "ended_at": "2026-10-20T21:07:53.8065782+09:00",
+  "stdout_file": "checkpoint-green.stdout.txt",
+  "stderr_file": "checkpoint-green.stderr.txt",
+  "head_after": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+  "tracked_changes_after": ""
+}

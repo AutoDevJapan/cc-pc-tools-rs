@@ -1,0 +1,21 @@
+[scheduler/todo-3096-3081-red ce9af5a] test: record fixed-head qualification and metadata Red evidence (ToDo3096)
+ 19 files changed, 1051 insertions(+)
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/.gitattributes
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/checkpoint-red-request.json
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/checkpoint-red.json
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/checkpoint-red.stderr.txt
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/checkpoint-red.stdout.txt
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/plan.json
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/preflight.json
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/red-01-review.json
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/red-01-review.stderr.txt
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/red-01-review.stdout.txt
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/red-02-capacity-metadata.json
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/red-02-capacity-metadata.stderr.txt
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/red-02-capacity-metadata.stdout.txt
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/red-result.md
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/red-results.json
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/resume.md
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/setup-switch-red.json
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/setup-switch-red.stderr.txt
+ create mode 100644 docs/evidence/todo-3096-model-effort-check/setup-switch-red.stdout.txt

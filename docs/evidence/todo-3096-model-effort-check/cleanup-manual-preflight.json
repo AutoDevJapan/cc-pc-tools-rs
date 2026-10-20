@@ -1,0 +1,46 @@
+{
+  "owner_id": "d9b4cd0278e9c17d3ecd99906b2a88a4",
+  "source": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3096-3081\\codex-owned-d9b4cd0278e9c17d3ecd99906b2a88a4",
+  "destination_parent": "D:/削除希望/20261020-cc-pc-tools-rs-todo-3096-cargo-d9b4cd02",
+  "destination_data": "D:\\削除希望\\20261020-cc-pc-tools-rs-todo-3096-cargo-d9b4cd02\\data",
+  "reason": "safe-delete plan requested size quarantine; quarantine tool stopped during preflight with QUARANTINE_CROSS_DRIVE; manual same-drive move follows skill",
+  "entries": 3855,
+  "files": 3295,
+  "bytes": 4260664824,
+  "listing_sha256": "9ab1790f4d0833d1ba9ae0471c71a6a092a13b38c2c0dd50ba8130a40e152149",
+  "ancestors": [
+    {
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3096-3081\\codex-owned-d9b4cd0278e9c17d3ecd99906b2a88a4",
+      "reparse": false
+    },
+    {
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3096-3081",
+      "reparse": false
+    },
+    {
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt",
+      "reparse": false
+    },
+    {
+      "path": "D:\\CC\\Work",
+      "reparse": false
+    },
+    {
+      "path": "D:\\CC",
+      "reparse": false
+    },
+    {
+      "path": "D:\\",
+      "reparse": false
+    },
+    {
+      "path": "D:\\削除希望",
+      "reparse": false
+    }
+  ],
+  "source_inside_own_worktree": true,
+  "no_reparse_or_git_metadata": true,
+  "active_owned_processes_observed": 0,
+  "status": "preflight_verified",
+  "verified_at": "2026-10-20T21:13:43.8982512+09:00"
+}

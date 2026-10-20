@@ -1,0 +1,567 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling memchr v2.8.3
+   Compiling stable_deref_trait v1.2.1
+   Compiling pin-project-lite v0.2.17
+   Compiling windows-sys v0.61.2
+   Compiling writeable v0.6.4
+   Compiling litemap v0.8.3
+   Compiling smallvec v1.16.2
+   Compiling bytes v1.12.1
+   Compiling utf8_iter v1.0.4
+   Compiling icu_normalizer_data v2.3.0
+   Compiling icu_properties_data v2.3.0
+   Compiling percent-encoding v2.3.2
+   Compiling once_cell v1.21.4
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.14
+   Compiling zeroize v1.9.1
+   Compiling serde_json v1.0.151
+   Compiling form_urlencoded v1.2.2
+   Compiling cc v1.6.0
+   Compiling rustls-pki-types v1.15.1
+   Compiling log v0.4.34
+   Compiling crc32fast v1.5.2
+   Compiling simd-adler32 v0.3.10
+   Compiling ring v0.17.14
+   Compiling futures-core v0.3.34
+   Compiling getrandom v0.2.17
+   Compiling untrusted v0.9.0
+   Compiling adler2 v2.0.1
+   Compiling aho-corasick v1.1.5
+   Compiling windows_x86_64_msvc v0.52.6
+   Compiling miniz_oxide v0.9.1
+   Compiling regex-syntax v0.8.11
+   Compiling syn v3.0.6
+   Compiling rustls v0.23.45
+   Compiling mio v1.2.4
+   Compiling socket2 v0.6.5
+   Compiling flate2 v1.1.10
+   Compiling regex-automata v0.4.18
+   Compiling webpki-roots v1.0.9
+   Compiling subtle v2.6.1
+   Compiling base64 v0.22.1
+   Compiling futures-sink v0.3.34
+   Compiling webpki-roots v0.26.11
+   Compiling chrono v0.4.45
+   Compiling futures-channel v0.3.34
+   Compiling futures-task v0.3.34
+   Compiling slab v0.4.12
+   Compiling futures-io v0.3.34
+   Compiling synstructure v0.14.0
+   Compiling zerovec-derive v0.11.6
+   Compiling displaydoc v0.2.7
+   Compiling serde_derive v1.0.229
+   Compiling tokio-macros v2.7.2
+   Compiling regex v1.13.1
+   Compiling futures-macro v0.3.34
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling windows-targets v0.52.6
+   Compiling tokio v1.53.2
+   Compiling syn v2.0.119
+   Compiling futures-util v0.3.34
+   Compiling tempfile v3.27.0
+   Compiling windows-sys v0.59.0
+   Compiling zerofrom v0.1.8
+   Compiling uuid v1.27.0
+   Compiling windows-implement v0.60.2
+   Compiling windows-interface v0.59.3
+   Compiling yoke v0.8.3
+   Compiling zerovec v0.11.8
+   Compiling zerotrie v0.2.5
+   Compiling winreg v0.55.0
+   Compiling http v1.5.0
+   Compiling windows-result v0.4.1
+   Compiling windows-strings v0.5.1
+   Compiling http-body v1.1.0
+   Compiling httparse v1.10.1
+   Compiling windows-core v0.62.2
+   Compiling thiserror v2.0.21
+   Compiling tinystr v0.8.4
+   Compiling potential_utf v0.1.6
+   Compiling serde v1.0.229
+   Compiling icu_collections v2.3.0
+   Compiling icu_locale_core v2.3.0
+   Compiling try-lock v0.2.5
+   Compiling tower-service v0.3.3
+   Compiling native-tls v0.2.18
+   Compiling libc v0.2.190
+   Compiling anstyle v1.0.14
+   Compiling once_cell_polyfill v1.70.2
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-job-policy)
+   Compiling utf8parse v0.2.2
+   Compiling anstyle-wincon v3.0.11
+   Compiling anstyle-parse v1.0.0
+   Compiling want v0.3.2
+   Compiling cc-redact v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-redact)
+   Compiling rustls-webpki v0.103.15
+   Compiling thiserror-impl v2.0.21
+   Compiling anstyle-query v1.1.5
+   Compiling schannel v0.1.29
+   Compiling icu_provider v2.3.1
+   Compiling tracing-core v0.1.36
+   Compiling windows-threading v0.2.1
+   Compiling atomic-waker v1.1.2
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling colorchoice v1.0.5
+   Compiling tracing v0.1.44
+   Compiling windows-future v0.3.2
+   Compiling anstream v1.0.0
+   Compiling icu_normalizer v2.3.0
+   Compiling icu_properties v2.3.0
+   Compiling futures-executor v0.3.34
+   Compiling windows-collections v0.3.2
+   Compiling windows-numerics v0.3.1
+   Compiling sync_wrapper v1.0.2
+   Compiling heck v0.5.0
+   Compiling strsim v0.11.1
+   Compiling ipnet v2.12.2
+   Compiling clap_lex v1.1.1
+   Compiling bumpalo v3.20.3
+   Compiling hyper v1.12.0
+   Compiling base64 v0.23.1
+   Compiling zip v2.4.2
+   Compiling tower-layer v0.3.3
+   Compiling clap_derive v4.6.7
+   Compiling zopfli v0.8.3
+   Compiling clap_builder v4.6.7
+   Compiling tower v0.5.3
+   Compiling tokio-native-tls v0.3.1
+   Compiling hyper-util v0.1.21
+   Compiling windows v0.62.2
+   Compiling futures v0.3.34
+   Compiling http-body-util v0.1.5
+   Compiling bitflags v2.13.2
+   Compiling ryu v1.0.23
+   Compiling cc-live v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-live)
+   Compiling hyper-tls v0.6.0
+   Compiling idna_adapter v1.2.2
+   Compiling serde_urlencoded v0.7.1
+   Compiling idna v1.1.0
+   Compiling url v2.5.8
+   Compiling ureq v2.12.1
+   Compiling cc-chrome v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-chrome)
+   Compiling tower-http v0.6.11
+   Compiling clap v4.6.7
+   Compiling reqwest v0.12.28
+   Compiling wmi v0.18.4
+   Compiling cc-task-title v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-task-title)
+   Compiling cc-local-llm v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-local-llm)
+   Compiling cc-jobs v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-jobs)
+   Compiling cc-ask v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-ask)
+   Compiling cc-scheduler v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-scheduler)
+   Compiling cc-todo v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3096-3081\cc-todo)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 41.81s
+────────────
+ Nextest run ID af8d3692-efcc-4ac6-8e39-b3bda9c835c5 with nextest profile: default
+    Starting 1 test across 1 binary (384 tests skipped)
+        SKIP [         ] (───) cc-jobs::parity adaptive_config_updates::explicit_clear_requires_measured_healthy_samples_and_logs_once
+        SKIP [         ] (───) cc-jobs::parity adaptive_config_updates::fixed_mode_keeps_admission_fixed_while_sampling_shadow_automatic_limit
+        SKIP [         ] (───) cc-jobs::parity adaptive_config_updates::partial_update_and_deployment_defaults_preserve_owner_fixed_limit
+        SKIP [         ] (───) cc-jobs::parity adaptive_config_updates::provider_only_waits_do_not_grow_the_hardware_ceiling
+        SKIP [         ] (───) cc-jobs::parity adaptive_config_updates::removing_fixed_override_uses_shadow_provider_brakes_immediately
+        SKIP [         ] (───) cc-jobs::parity adaptive_config_updates::simultaneous_policy_change_cannot_clear_using_old_measurements
+        SKIP [         ] (───) cc-jobs::parity additional_compatibility::cargo_path_wrapper_runs_the_rust_gate_and_preserves_streaming
+        SKIP [         ] (───) cc-jobs::parity additional_compatibility::cargo_unlocked_commands_and_nested_gate_do_not_consume_a_slot
+        SKIP [         ] (───) cc-jobs::parity additional_compatibility::external_failure_stderr_never_leaks_credentials
+        SKIP [         ] (───) cc-jobs::parity additional_compatibility::help_and_parser_errors_match_original_python_bytes_and_codes
+        SKIP [         ] (───) cc-jobs::parity additional_compatibility::msvcrt_byte_lock_and_rust_lock_exclude_each_other_without_changing_file
+        SKIP [         ] (───) cc-jobs::parity additional_compatibility::queued_supervisor_setup_failure_is_recorded_as_failed
+        SKIP [         ] (───) cc-jobs::parity additional_compatibility::real_live_process_with_reused_pid_is_never_killed
+        SKIP [         ] (───) cc-jobs::parity additional_compatibility::resume_uuid_and_stdin_global_options_preserve_original_contract
+        SKIP [         ] (───) cc-jobs::parity additional_compatibility::secret_keys_are_case_insensitive_and_pumps_cache_redaction_patterns
+        SKIP [         ] (───) cc-jobs::parity additional_compatibility::state_json_uses_python_indentation_order_crlf_and_unicode
+        SKIP [         ] (───) cc-jobs::parity additional_compatibility::supervisor_drains_events_arriving_during_the_final_process_poll
+        SKIP [         ] (───) cc-jobs::parity additional_compatibility::unc_paths_keep_their_network_root_when_normalized
+        SKIP [         ] (───) cc-jobs::parity additional_compatibility::win32_sharing_and_lock_violations_retry_reads_and_replacement_fifty_times
+        SKIP [         ] (───) cc-jobs::parity additional_compatibility::windows_fault_exit_is_unsigned_in_process_result_and_job_json
+        SKIP [         ] (───) cc-jobs::parity atomic_updates::test_broken_or_vanished_job_json_is_skipped
+        SKIP [         ] (───) cc-jobs::parity atomic_updates::test_file_lock_waits_for_another_process_without_reading_its_locked_byte
+        SKIP [         ] (───) cc-jobs::parity atomic_updates::test_retries_when_target_is_locked
+        SKIP [         ] (───) cc-jobs::parity atomic_updates::test_roundtrip_leaves_no_temp_files
+        SKIP [         ] (───) cc-jobs::parity auto_gto_rating::test_auto_lookup_is_used_for_the_finished_job_session
+        SKIP [         ] (───) cc-jobs::parity auto_gto_rating::test_auto_payload_and_once_only_checkpoint
+        SKIP [         ] (───) cc-jobs::parity auto_gto_rating::test_automatic_ingest_failure_remains_pending_and_retries_later
+        SKIP [         ] (───) cc-jobs::parity auto_gto_rating::test_backfill_filters_days_rated_and_live_jobs_and_reports_actual_sent_count
+        SKIP [         ] (───) cc-jobs::parity auto_gto_rating::test_backfill_ingest_failure_is_reported_and_can_be_retried
+        SKIP [         ] (───) cc-jobs::parity auto_gto_rating::test_cancel_lost_job_sends_outside_state_lock
+        SKIP [         ] (───) cc-jobs::parity auto_gto_rating::test_evaluation_query_failure_uses_no_evaluation_and_never_echoes_stderr
+        SKIP [         ] (───) cc-jobs::parity auto_gto_rating::test_infra_failures_are_one_and_override_completion_evidence
+        SKIP [         ] (───) cc-jobs::parity auto_gto_rating::test_invalid_session_id_cannot_enter_sql
+        SKIP [         ] (───) cc-jobs::parity auto_gto_rating::test_jev_lookup_matches_session_filename_and_reads_no_excerpts
+        SKIP [         ] (───) cc-jobs::parity auto_gto_rating::test_live_or_manually_rated_jobs_are_not_automatically_sent
+        SKIP [         ] (───) cc-jobs::parity auto_gto_rating::test_manual_rate_can_override_auto_and_force_still_controls_repeat_manual_rate
+        SKIP [         ] (───) cc-jobs::parity auto_gto_rating::test_quality_mapping_for_both_verdict_languages
+        SKIP [         ] (───) cc-jobs::parity auto_gto_rating::test_terminal_hook_on_cancel
+        SKIP [         ] (───) cc-jobs::parity auto_gto_rating::test_terminal_hook_on_lost_refresh
+        SKIP [         ] (───) cc-jobs::parity auto_gto_rating::test_terminal_refresh_covers_a_supervisor_that_exited_before_sending
+        SKIP [         ] (───) cc-jobs::parity auto_gto_rating::test_unknown_failed_or_manual_cancelled_cause_is_not_labelled_infra
+        SKIP [         ] (───) cc-jobs::parity cancel::cancellation_cannot_certify_exit_when_post_stop_inspection_fails
+        SKIP [         ] (───) cc-jobs::parity cancel::guarded_cancel_commits_before_later_wait_and_releases_locks_before_killing
+        SKIP [         ] (───) cc-jobs::parity cancel::guarded_commit_is_attempt_specific_and_owner_stop_always_wins
+        SKIP [         ] (───) cc-jobs::parity cancel::guarded_missing_todo_store_never_commits_cancellation
+        SKIP [         ] (───) cc-jobs::parity cancel::guarded_retry_wait_defers_cancellation_without_changing_source
+        SKIP [         ] (───) cc-jobs::parity cancel::guarded_terminal_scope_validation_and_missing_dependency_remain_explicit
+        SKIP [         ] (───) cc-jobs::parity cancel::guarded_wait_registration_wins_before_cancellation_and_refresh
+        SKIP [         ] (───) cc-jobs::parity cancel::inaccessible_identity_never_certifies_cancellation_or_releases_ownership
+        SKIP [         ] (───) cc-jobs::parity cancel::managed_job_completion_does_not_reopen_recorded_pids
+        SKIP [         ] (───) cc-jobs::parity cancel::missing_supervisor_creation_time_preserves_reservation_and_skips_cleanup
+        SKIP [         ] (───) cc-jobs::parity cancel::native_guarded_cancellation_defers_without_refreshing_or_rewriting_source
+        SKIP [         ] (───) cc-jobs::parity cancel::plain_recovery_preserves_guarded_intent_and_never_overrides_explicit_stops
+        SKIP [         ] (───) cc-jobs::parity cancel::recovery_cleanup_does_not_record_a_deliberate_cancel
+        SKIP [         ] (───) cc-jobs::parity cancel::stale_managed_tree_marker_with_no_recorded_process_uses_empty_legacy_targets
+        SKIP [         ] (───) cc-jobs::parity cancel::test_cancel_queued_before_supervisor_starts_never_launches_codex
+        SKIP [         ] (───) cc-jobs::parity cancel::test_never_kills_a_process_that_reused_the_pid
+        SKIP [         ] (───) cc-jobs::parity cancel::test_refuses_finished_job
+        SKIP [         ] (───) cc-jobs::parity cancel::test_reports_failure_and_keeps_state_when_kill_does_not_work
+        SKIP [         ] (───) cc-jobs::parity cancel::test_spawned_child_is_stopped_if_supervisor_setup_fails
+        SKIP [         ] (───) cc-jobs::parity cancel::test_supervisor_reloads_state_under_lock
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::capacity_access_denied_or_live_worker_never_restarts
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::capacity_before_session_creation_preserves_job_and_original_prompt_scope
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::capacity_cooldown_is_finite_and_does_not_create_owner_block
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::capacity_does_not_restart_cancelled_completed_invalid_or_other_models
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::capacity_falls_back_to_existing_resume_id_and_masks_history
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::capacity_is_case_insensitive_and_is_infrastructure_failure
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::capacity_preserves_scope_wait_and_review_constraints
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::capacity_supervisor_resumes_same_session_on_next_model
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::capacity_supervisor_stops_after_finite_eligible_models
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::capacity_switch_budget_survives_supervisor_restart
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::capacity_switch_order_starts_from_each_selected_model
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::capacity_with_429_does_not_escape_the_switch_limit
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::depleted_claude_switches_to_verified_codex_oauth_and_single_file_summary_stays_light
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::due_capacity_wait_rechecks_quota_and_preserves_the_same_job_after_restart
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::explicit_review_uses_another_claude_model_without_returning_to_the_source_author
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::generic_terminal_failure_preserves_protocol_capacity_but_auth_and_cancel_win
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::owner_wait_release_rechecks_generation_before_resuming_capacity_selection
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::pool_capacity_retries_three_distinct_accounts_before_claude
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::pool_retry_budget_and_account_exclusions_survive_restart
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::quoted_capacity_text_never_establishes_failure_evidence
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::registration_rejects_known_same_model_review_with_provider_spelling
+        SKIP [         ] (───) cc-jobs::parity capacity_regressions::unverified_failed_account_waits_instead_of_immediately_changing_provider
+        SKIP [         ] (───) cc-jobs::parity cargo_cmd_preserves_a_failing_child_exit_code
+        SKIP [         ] (───) cc-jobs::parity cargo_gate_tests::build_waiting_for_its_target_does_not_hold_a_slot
+        SKIP [         ] (───) cc-jobs::parity cargo_gate_tests::cpu_budget_is_split_across_slots_and_explicit_jobs_are_clamped
+        SKIP [         ] (───) cc-jobs::parity cargo_gate_tests::explicit_targets_are_kept_and_legacy_or_injected_targets_migrate
+        SKIP [         ] (───) cc-jobs::parity cargo_gate_tests::live_policy_can_admit_more_than_three_distinct_targets
+        SKIP [         ] (───) cc-jobs::parity cargo_gate_tests::nested_gate_reuses_outer_slot_and_target_but_locks_an_independent_target
+        SKIP [         ] (───) cc-jobs::parity cargo_gate_tests::resolved_target_is_passed_to_cargo_without_poisoning_the_rust_cache
+        SKIP [         ] (───) cc-jobs::parity cargo_gate_tests::same_target_builds_never_overlap_even_with_free_slots
+        SKIP [         ] (───) cc-jobs::parity cargo_gate_tests::test_one_slot_serializes_build_like_commands
+        SKIP [         ] (───) cc-jobs::parity cargo_gate_tests::test_slots_limit_concurrent_build_like_commands
+        SKIP [         ] (───) cc-jobs::parity cargo_gate_windows_sys_exit_matches_python_long_conversion
+        SKIP [         ] (───) cc-jobs::parity claude_routing::codex_full_lane_does_not_block_claude_but_shared_hardware_still_caps_total
+        SKIP [         ] (───) cc-jobs::parity claude_routing::minute_update_uses_one_snapshot_for_both_lanes_at_admission
+        SKIP [         ] (───) cc-jobs::parity claude_routing::mixed_provider_child_keeps_parent_slot_and_unknown_provider_reserves_both_lanes
+        SKIP [         ] (───) cc-jobs::parity claude_routing::provider_pacing_cannot_bypass_same_model_capacity_policy
+        SKIP [         ] (───) cc-jobs::parity claude_routing::run_records_model_provenance_before_applying_defaults
+        SKIP [         ] (───) cc-jobs::parity claude_routing::stale_future_and_fixed_measurements_do_not_route
+        SKIP [         ] (───) cc-jobs::parity corrupt_display_rule_never_hides_a_running_job_or_blocks_state_saving
+        SKIP [         ] (───) cc-jobs::parity display_project_rename_keeps_execution_data_and_survives_stale_supervisor_snapshots
+        SKIP [         ] (───) cc-jobs::parity display_project_rename_reads_the_latest_snapshot_after_state_lock
+        SKIP [         ] (───) cc-jobs::parity display_project_rename_rejects_wrong_project_without_writing
+        SKIP [         ] (───) cc-jobs::parity end_to_end::cancelled_kernel_lock_wait_is_drained_and_reports_path_and_exit_75
+        SKIP [         ] (───) cc-jobs::parity end_to_end::cargo_slot_wait_marker_is_visible_then_cleared_before_execution
+        SKIP [         ] (───) cc-jobs::parity end_to_end::dependency_fixture_does_not_read_its_callers_plugin_configuration
+        SKIP [         ] (───) cc-jobs::parity end_to_end::fixture_marker_must_match_its_saved_process_creation_time
+        SKIP [         ] (───) cc-jobs::parity end_to_end::fixture_process_handle_rejects_a_mismatched_creation_time
+        SKIP [         ] (───) cc-jobs::parity end_to_end::no_action_real_fixture_cancels_exits_and_restarts_once_in_same_workspace
+        SKIP [         ] (───) cc-jobs::parity end_to_end::queue_config_read_retries_real_byte_lock_and_cli_reports_exhaustion
+        SKIP [         ] (───) cc-jobs::parity end_to_end::real_supervisors_start_a_dependency_while_the_root_limit_is_full
+        SKIP [         ] (───) cc-jobs::parity end_to_end::records_are_masked_while_codex_runs_and_after_it_is_killed
+        SKIP [         ] (───) cc-jobs::parity end_to_end::state_lock_does_not_block_snapshot_readers
+        SKIP [         ] (───) cc-jobs::parity end_to_end::supervisor_persists_masked_records_but_feeds_the_prompt_unchanged
+        SKIP [         ] (───) cc-jobs::parity end_to_end::terminal_supervisor_cleanup_preserves_its_independent_descendant
+        SKIP [         ] (───) cc-jobs::parity end_to_end::test_cancel_kills_the_whole_tree
+        SKIP [         ] (───) cc-jobs::parity end_to_end::test_cancel_of_a_lost_job_kills_the_leftover_codex
+        SKIP [         ] (───) cc-jobs::parity end_to_end::test_finishes_even_if_a_grandchild_holds_stdout_open
+        SKIP [         ] (───) cc-jobs::parity end_to_end::test_native_recovery_cancel_preserves_intent_after_process_tree_stops
+        SKIP [         ] (───) cc-jobs::parity end_to_end::test_run_survives_its_caller_and_passes_prompt_and_cwd_verbatim
+        SKIP [         ] (───) cc-jobs::parity end_to_end::thirty_parallel_run_processes_are_durable_while_history_scan_is_held
+        SKIP [         ] (───) cc-jobs::parity end_to_end::thirty_parallel_run_processes_share_the_real_queue_files
+        SKIP [         ] (───) cc-jobs::parity event_parsing::test_activity_follows_commands
+        SKIP [         ] (───) cc-jobs::parity event_parsing::test_clean_cmd_undoes_posix_quoting
+        SKIP [         ] (───) cc-jobs::parity event_parsing::test_completed_tool_clears_detail_for_every_tool_kind
+        SKIP [         ] (───) cc-jobs::parity event_parsing::test_describe_lines
+        SKIP [         ] (───) cc-jobs::parity event_parsing::test_describe_other_item_kinds
+        SKIP [         ] (───) cc-jobs::parity event_parsing::test_event_lines_show_arrival_time
+        SKIP [         ] (───) cc-jobs::parity event_parsing::test_exit_zero_without_turn_completed_is_failure
+        SKIP [         ] (───) cc-jobs::parity event_parsing::test_failed_run
+        SKIP [         ] (───) cc-jobs::parity event_parsing::test_odd_event_shapes_do_not_break_tracking
+        SKIP [         ] (───) cc-jobs::parity event_parsing::test_success_run
+        SKIP [         ] (───) cc-jobs::parity finished_review::execution_checks_the_consumed_prompt_even_if_the_original_path_is_replaced
+        SKIP [         ] (───) cc-jobs::parity finished_review::fixed_review_spawn_disables_every_external_tool_for_browser_full_and_legacy_pipe
+        SKIP [         ] (───) cc-jobs::parity finished_review::missing_fixed_review_tool_inventory_never_falls_back_to_the_saved_browser_profile
+        SKIP [         ] (───) cc-jobs::parity finished_review::normal_continuations_cannot_regain_launcher_capabilities_before_fresh_qualification
+        SKIP [         ] (───) cc-jobs::parity finished_review::ordinary_browser_and_full_launches_keep_their_existing_capabilities
+        SKIP [         ] (───) cc-jobs::parity finished_review::original_reader_admits_and_receives_fixed_read_only_source_while_cleanup_stays_unfinished
+        SKIP [         ] (───) cc-jobs::parity finished_review::qualifying_refuses_old_or_reused_controller_live_writer_protected_source_and_git_changes
+        SKIP [         ] (───) cc-jobs::parity finished_review::supervisor_does_not_install_a_browser_bridge_when_fixed_inventory_is_unavailable
+        SKIP [         ] (───) cc-jobs::parity finished_work_handoff::finished_work_handoff_preserves_original_todo_and_returns_to_normal_admission
+        SKIP [         ] (───) cc-jobs::parity finite_owner_wait_repair::finite_repair_cli_previews_then_removes_only_job_edge_and_normal_admission_checks_capacity
+        SKIP [         ] (───) cc-jobs::parity finite_owner_wait_repair::finite_repair_rejects_live_parent_pid_reuse_probe_failure_and_lock_contention
+        SKIP [         ] (───) cc-jobs::parity finite_research_execution::a_saved_approval_claim_cannot_bypass_current_qualification_before_prompt_generation
+        SKIP [         ] (───) cc-jobs::parity finite_research_execution::ordinary_reader_execution_keeps_never_despite_saved_approval_hints
+        SKIP [         ] (───) cc-jobs::parity gto_rating::test_payload
+        SKIP [         ] (───) cc-jobs::parity gto_rating::test_rate_refuses_partial_jobs_without_force
+        SKIP [         ] (───) cc-jobs::parity gto_rating::test_rate_refuses_running_job
+        SKIP [         ] (───) cc-jobs::parity gto_rating::test_rate_sends_payload_once
+        SKIP [         ] (───) cc-jobs::parity gto_rating::test_rate_skips_without_gto
+        SKIP [         ] (───) cc-jobs::parity gto_rating::test_rate_survives_gto_timeout
+        SKIP [         ] (───) cc-jobs::parity independent_subwork::invalid_queued_subwork_does_not_block_a_normal_root_but_running_subwork_does
+        SKIP [         ] (───) cc-jobs::parity independent_subwork::queued_job_revalidates_parent_exit_and_changed_todo
+        SKIP [         ] (───) cc-jobs::parity independent_subwork::queued_subwork_admits_after_todo_start_releases_its_reservation
+        SKIP [         ] (───) cc-jobs::parity independent_subwork::registration_keeps_cross_todo_parent_but_does_not_exempt_hardware_capacity
+        SKIP [         ] (───) cc-jobs::parity independent_subwork::registration_validates_allocation_parent_and_queued_duplicates
+        SKIP [         ] (───) cc-jobs::parity independent_subwork::unqualified_original_research_is_not_published_as_another_ordinary_reader
+        SKIP [         ] (───) cc-jobs::parity job_cli_defaults_preserve_each_explicit_model_and_effort_independently
+        SKIP [         ] (───) cc-jobs::parity live_session_tokens::test_no_thread_or_no_log_yet
+        SKIP [         ] (───) cc-jobs::parity live_session_tokens::test_tokens_context_and_rate_limit_come_from_the_session_log
+        SKIP [         ] (───) cc-jobs::parity lost_detection::exited_process_with_still_active_exit_code_is_not_live
+        SKIP [         ] (───) cc-jobs::parity lost_detection::known_absence_and_reused_pid_still_mark_the_job_lost
+        SKIP [         ] (───) cc-jobs::parity lost_detection::test_alive_supervisor_stays_running
+        SKIP [         ] (───) cc-jobs::parity lost_detection::test_dead_supervisor_marks_lost_and_persists
+        SKIP [         ] (───) cc-jobs::parity lost_detection::test_final_state_written_just_before_exit_wins
+        SKIP [         ] (───) cc-jobs::parity lost_detection::test_queued_without_pid_gets_grace_period
+        SKIP [         ] (───) cc-jobs::parity lost_detection::test_real_proc_created
+        SKIP [         ] (───) cc-jobs::parity lost_detection::test_reused_pid_is_not_our_supervisor
+        SKIP [         ] (───) cc-jobs::parity lost_detection::test_slow_start_after_grace_is_not_marked_lost
+        SKIP [         ] (───) cc-jobs::parity lost_detection::test_watch_reports_changes_once_and_skips_finished_jobs
+        SKIP [         ] (───) cc-jobs::parity lost_detection::unavailable_supervisor_identity_keeps_execution_and_does_not_close_tabs
+        SKIP [         ] (───) cc-jobs::parity new_jobs_normalize_explicit_and_path_inferred_product_display_metadata
+        SKIP [         ] (───) cc-jobs::parity no_action::live_child_is_rechecked_under_queue_lock_before_any_pause
+        SKIP [         ] (───) cc-jobs::parity no_action::no_action_guard_cancels_once_and_retains_safe_proof
+        SKIP [         ] (───) cc-jobs::parity no_action::no_action_guard_refreshes_generation_owner_wait_worker_and_tools_at_commit
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::bound_jobs_recheck_owner_stop_new_wait_dependency_expiry_and_identity
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::completed_dependency_reuses_the_bound_queue_entry_and_marks_it_doing
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::concurrent_replays_create_only_one_queued_job_and_one_supervisor
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::intake_preserves_wait_and_exact_prompt_until_canonical_bind
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::markerless_jobs_keep_the_ordinary_wait_and_admission_behavior
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::owner_stop_after_a_ready_status_snapshot_wins_final_admission
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::parser_rejects_other_todos_invalid_keys_and_relation_spoofing
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::registration_rejects_changed_source_session_cwd_key_prompt_and_scope
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::registration_rejects_owner_stop_new_wait_dependency_and_expiry
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::replay_recovers_intake_even_if_the_first_supervisor_spawn_failed
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::replay_recovers_the_existing_unbound_job_after_a_lost_receipt
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::reserve_receipt_arguments_pass_the_real_jobs_parser
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::retry_never_inherits_a_parent_or_widens_workspace_write
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::retry_preserves_network_metadata_saved_by_an_unrestricted_source
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::running_publication_holds_the_same_todo_lock_as_bind_and_wait_writers
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::running_retry_and_unrelated_job_are_never_finalized_or_killed_by_invalidation
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::running_retry_preserves_other_todo_values_and_canonical_snapshot_bytes
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::running_retry_save_failure_keeps_canonical_todo_and_does_not_publish_running
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::same_key_replay_rejects_body_and_scope_changes_without_another_supervisor
+        SKIP [         ] (───) cc-jobs::parity original_product_retry::supervisor_waits_for_bind_then_launches_exactly_one_model
+        SKIP [         ] (───) cc-jobs::parity process_boundary_tests::a_dead_pausing_supervisor_is_recovered_without_abandoning_the_agent
+        SKIP [         ] (───) cc-jobs::parity process_boundary_tests::idle_startup_mcp_is_paused_but_its_later_worker_must_finish_first
+        SKIP [         ] (───) cc-jobs::parity process_boundary_tests::real_workers_finish_and_return_cargo_and_civ6_before_controllers_can_stop
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::active_index_includes_new_registrations_and_reconciles_legacy_jobs
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::automatic_limit_is_shared_once_per_minute_and_fixed_override_is_immediate
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::blocked_normal_children_block_loops_but_running_loop_dependencies_can_finish
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::broken_parent_records_and_cycles_do_not_block_unrelated_families
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::broken_settings_after_spawn_do_not_erase_final_result
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::cancelling_during_retry_cooldown_closes_existing_card
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::cargo_waiting_job_frees_its_slot_until_cargo_is_admitted
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::cargo_waiting_root_keeps_its_slot_while_a_descendant_runs
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::children_win_priority_and_concurrent_siblings_are_limited_to_two
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::cleanup_only_stops_terminal_identity_without_live_child_or_handoff
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::concurrent_same_pr_admission_reserves_one_root
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::configuration_is_loaded_again_and_invalid_limits_are_refused
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::configured_legacy_lowest_cannot_demote_contract_below_own_products
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::context_handoff_resumes_for_summary_then_starts_fresh_with_the_same_todo_and_scope
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::context_limit_rotates_a_short_job_only_at_the_existing_idle_boundary
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::context_rotation_waits_for_descendants_and_does_not_resurrect_terminal_work
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::context_uses_unrounded_usage_and_disables_discovered_tools_for_the_summary
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::damaged_index_rebuilds_and_unreadable_active_record_blocks_admission
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::department_order_wins_over_request_prefix_and_children
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::descendants_keep_one_root_slot_after_ancestors_exit
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::different_sessions_cannot_duplicate_todo_owner
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::duplicate_wait_is_durable_across_owner_worker_exit_until_todo_done
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::failed_inventory_keeps_agent_running_and_backs_off_before_retrying
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::failed_spawn_after_stop_retries_the_same_durable_session_without_double_yield
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::failed_supervisor_reload_does_not_prevent_other_waiters_upgrading
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::failed_supervisor_upgrade_survives_refresh_and_is_retried_next_minute
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::failed_yield_backoff_applies_to_its_attempt_but_not_mid_item
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::fairness_io_failures_preserve_completed_turn_results
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::fairness_uses_the_new_tier_in_both_directions
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::forty_concurrent_admissions_never_exceed_six
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::git_metadata_recognizes_subdirectories_and_linked_worktrees_without_shells
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::history_bootstrap_and_refresh_do_not_hold_the_queue_gate
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::history_expiring_after_pause_defers_the_real_stop_and_resumes_the_owner
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::incomplete_summary_is_not_retried_as_a_shortening
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::inherited_parent_is_saved_and_invalid_or_dead_parents_are_rejected
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::initial_todo_creation_cannot_race_running_publication
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::invalid_or_unwritable_context_summary_retains_the_session_and_never_reports_success
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::invalid_queue_config_keeps_status_available_with_explicit_error
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::journal_io_error_does_not_publish_new_state_or_discard_history
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::later_normal_priority_does_not_deadlock_earlier_low_priority_owner
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::legacy_home_git_wait_is_reevaluated_and_archived_without_rewaiting
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::legacy_running_turn_stops_only_at_tool_completion_and_gives_waiter_the_slot
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::legacy_stop_failure_retains_the_family_until_all_recorded_controllers_are_dead
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::legacy_supervisor_is_not_stopped_and_finished_turn_is_requeued_once
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::long_turn_yields_then_supervisor_resumes_same_session_after_another_job
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::loops_wait_for_normal_work_even_with_spare_capacity_and_cooldown
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::lowering_limit_preserves_live_jobs_and_blocks_new_admission
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::lowest_tier_remains_fifo_and_ignores_dead_or_cancelled_waiters
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::manual_db_wait_survives_disproved_automatic_queue_wait
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::minute_controller_upgrades_only_legacy_queued_supervisors_and_rechecks_later_requeues
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::minute_schedule_jitter_does_not_skip_next_bucket_or_reset_state
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::missing_prerequisite_and_linked_legacy_jobs_remain_waiting
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::native_subagents_block_yield_until_wait_or_close_reports_terminal_state
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::new_item_racing_the_pause_prevents_stop_and_background_workers_delay_yield
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::new_supervisor_stops_a_live_turn_and_resumes_after_another_job
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::one_broken_yield_reservation_never_stops_unrelated_admission
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::only_configured_ids_set_the_lowest_tier_and_config_changes_apply
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::only_global_slot_waiters_justify_growth_not_cooldown_or_dependency_waits
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::orphan_child_consumes_slot_and_reused_pid_does_not
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::oversized_summary_is_shortened_in_the_same_read_only_session_then_rotates
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::owner_requests_precede_fifo_and_cooldown_does_not_block_ready_jobs
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::owner_then_shepherd_then_other_jobs_use_fifo_within_each_class
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::parent_waiting_for_children_or_grandchildren_never_yields
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::partial_index_replaced_after_preparation_cannot_admit_a_job
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::queue_summary_matches_real_admission_and_fills_eight_slots
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::queued_supervisor_refreshes_activity_even_during_cooldown
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::readiness_wait_added_after_registration_blocks_admission_until_released
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::recovered_supervisor_identity_survives_recovery_command_exit
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::recovery_excludes_completed_todos_successors_and_non_final_429
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::recovery_requeues_only_latest_unowned_failure_and_is_idempotent
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::recovery_requeues_watchdog_cancelled_recovery_but_never_owner_cancelled
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::recovery_requires_launch_evidence_and_is_idempotent
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::refresh_commits_pending_handoff_and_returns_the_new_queued_state
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::registration_owns_state_before_publishing_a_queued_job
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::reload_does_not_wait_for_a_busy_registration_or_hold_the_queue_between_jobs
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::reload_queue_only_restarts_waiters_and_preserves_session
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::reply_metadata_rechecks_dependencies_added_after_registration
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::resumed_old_session_rotates_after_completed_command_and_keeps_todo
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::resumed_supervisor_refreshes_usage_before_its_first_completed_command
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::retry_preserves_session_clears_completion_and_stops_at_limit
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::running_loop_yields_to_normal_waiter_before_two_hours
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::running_own_product_yields_to_a_ready_higher_department_at_tool_boundary
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::same_pr_different_todos_wait_at_admission_but_child_review_can_run
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::same_todo_children_share_family_but_a_shared_session_still_waits
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::scan_commit_merges_a_registration_published_after_history_was_read
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::scan_commit_read_failure_preserves_concurrent_registration
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::shared_pr_worker_tracks_every_related_todo_at_registration_and_admission
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::shared_prompt_guidance_keeps_req_first_and_loops_last
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::short_normal_job_does_not_yield_before_two_hours
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::six_waiting_parents_can_all_start_dependencies_and_finish
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::stale_or_corrupt_controller_recovers_at_floor_and_does_not_break_status
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::stale_reservations_never_revive_finished_or_superseded_work
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::starting_and_unreadable_reservations_cannot_be_hidden_by_status
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::subagent_rollout_requires_its_own_completed_turn_and_never_reuses_an_old_output_after_send_input
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::summary_still_oversized_after_two_shortenings_fails_and_keeps_the_session
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::supervisor_exhausts_bounded_retries_without_creating_fresh_session
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::supervisor_keeps_monitoring_after_stop_failure_and_recovers_after_save_failure
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::supervisor_refresh_is_not_execution_admission_during_history_reconciliation
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::supervisor_retries_same_session_then_succeeds
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::targeted_supervisor_refresh_preserves_other_workers_and_rejects_unusable_targets
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::temporarily_invalid_settings_keep_waiting_job_then_admit_it
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::timed_retry_rejects_new_supervisor_registration_without_writing_a_job
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::todo_completion_wait_reserves_no_capacity_and_releases_on_done
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::transient_waiting_record_read_failure_does_not_fail_the_job
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::unreadable_indexed_session_keeps_its_identity_with_spare_capacity
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::unreadable_owner_record_keeps_cached_pr_claim_without_blocking_other_prs
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::unreadable_todo_store_defers_legacy_admission_until_next_check
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::unreconciled_legacy_identity_is_checked_before_execution_and_on_pid_reuse
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::wait_reasons_cover_low_priority_cooldown_children_and_yielded_jobs
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::wait_registration_cannot_race_running_publication_after_queue_snapshot
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::waiting_supervisor_skips_global_gate_while_its_wait_reason_is_unchanged
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::waiting_todo_registration_does_not_spawn_a_supervisor
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::yield_requires_two_hours_a_waiter_a_session_and_unfinished_success
+        SKIP [         ] (───) cc-jobs::parity queue_regressions::yield_reservation_is_withdrawn_when_a_child_starts_or_waiters_disappear
+        SKIP [         ] (───) cc-jobs::parity reboot_recovery::completed_boot_receipt_skips_history_and_missing_boot_cannot_recover
+        SKIP [         ] (───) cc-jobs::parity reboot_recovery::concurrent_recoveries_launch_and_report_only_once
+        SKIP [         ] (───) cc-jobs::parity reboot_recovery::deliberate_cancel_of_pending_claim_is_never_restarted
+        SKIP [         ] (───) cc-jobs::parity reboot_recovery::guard_failure_defers_only_its_job_and_retry_reports_one_batch
+        SKIP [         ] (───) cc-jobs::parity reboot_recovery::log_failure_retries_log_without_relaunching
+        SKIP [         ] (───) cc-jobs::parity reboot_recovery::missing_unreserved_prompt_is_a_permanent_boot_skip_not_a_dispatch_blocker
+        SKIP [         ] (───) cc-jobs::parity reboot_recovery::only_current_boot_interruption_is_eligible_even_with_502
+        SKIP [         ] (───) cc-jobs::parity reboot_recovery::pending_reservation_is_released_after_todo_finishes
+        SKIP [         ] (───) cc-jobs::parity reboot_recovery::preview_preserves_state_then_resume_preserves_identity_and_logs_one_batch
+        SKIP [         ] (───) cc-jobs::parity reboot_recovery::protected_skip_is_cached_while_another_job_is_deferred
+        SKIP [         ] (───) cc-jobs::parity reboot_recovery::protected_work_is_never_mutated_or_reported
+        SKIP [         ] (───) cc-jobs::parity reboot_recovery::queued_retry_does_not_mistake_previous_failure_for_this_attempt
+        SKIP [         ] (───) cc-jobs::parity reboot_recovery::running_job_without_session_uses_original_prompt
+        SKIP [         ] (───) cc-jobs::parity reboot_recovery::running_resume_ignores_prior_attempt_terminal_event
+        SKIP [         ] (───) cc-jobs::parity reboot_recovery::spawn_failure_keeps_pending_claim_and_retry_never_requeues_again
+        SKIP [         ] (───) cc-jobs::parity reboot_recovery::successor_and_finished_todo_prevent_recovery
+        SKIP [         ] (───) cc-jobs::parity reboot_recovery::unreadable_inventory_is_not_recorded_as_an_empty_completed_boot
+        SKIP [         ] (───) cc-jobs::parity registrar_launch_policy::a_quoted_rule_in_the_middle_cannot_suppress_the_final_restriction
+        SKIP [         ] (───) cc-jobs::parity registrar_launch_policy::even_a_rule_quoted_at_the_end_receives_a_separate_execution_rule
+        SKIP [         ] (───) cc-jobs::parity registrar_launch_policy::missing_or_invalid_input_cannot_be_replaced_with_a_policy_only_launch
+        SKIP [         ] (───) cc-jobs::parity registrar_launch_policy::old_saved_and_continuation_inputs_receive_current_rule_without_changing_originals_or_scope
+        SKIP [         ] (───) cc-jobs::parity run_validation::concurrent_resume_launches_register_only_one_writer
+        SKIP [         ] (───) cc-jobs::parity run_validation::concurrent_same_launch_key_returns_one_receipt_and_one_supervisor
+        SKIP [         ] (───) cc-jobs::parity run_validation::legacy_launch_lock_without_receipt_adopts_completed_job
+        SKIP [         ] (───) cc-jobs::parity run_validation::new_launch_key_and_terminal_receipt_never_read_terminal_history
+        SKIP [         ] (───) cc-jobs::parity run_validation::resume_refuses_a_lost_writer_when_its_identity_is_inaccessible_or_missing
+        SKIP [         ] (───) cc-jobs::parity run_validation::resume_refuses_an_active_writer_even_with_different_or_missing_launch_keys
+        SKIP [         ] (───) cc-jobs::parity run_validation::resume_waits_for_queued_predecessor_and_same_key_adopts_without_relaunching
+        SKIP [         ] (───) cc-jobs::parity run_validation::test_args_have_no_cwd_flag
+        SKIP [         ] (───) cc-jobs::parity run_validation::test_cargo_limit_is_scoped_to_job_environment
+        SKIP [         ] (───) cc-jobs::parity run_validation::test_invalid_launch_key_is_rejected
+        SKIP [         ] (───) cc-jobs::parity run_validation::test_launch_key_returns_existing_job_instead_of_spawning_again
+        SKIP [         ] (───) cc-jobs::parity run_validation::test_launch_key_stays_idempotent_after_the_original_job_finishes
+        SKIP [         ] (───) cc-jobs::parity run_validation::test_mcp_profiles
+        SKIP [         ] (───) cc-jobs::parity run_validation::test_rejects_cmd_metacharacters
+        SKIP [         ] (───) cc-jobs::parity run_validation::test_rejects_network_outside_workspace_write
+        SKIP [         ] (───) cc-jobs::parity run_validation::test_rejects_non_utf8_prompt
+        SKIP [         ] (───) cc-jobs::parity run_validation::unattended_implementation_accepts_approval_and_readonly_cannot_escalate
+        SKIP [         ] (───) cc-jobs::parity run_validation::write_jobs_store_permissions_and_owned_cleanup_instructions
+        SKIP [         ] (───) cc-jobs::parity saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_win
+        SKIP [         ] (───) cc-jobs::parity saved_owner_launch_policy::every_attempt_loads_latest_policy_and_keeps_source_and_read_only_scope
+        SKIP [         ] (───) cc-jobs::parity saved_owner_launch_policy::missing_invalid_or_empty_policy_refuses_attempt_without_overwriting_previous_input
+        SKIP [         ] (───) cc-jobs::parity status_formatting::test_helpers
+        SKIP [         ] (───) cc-jobs::parity status_formatting::test_idle_is_time_since_last_event_of_a_running_job
+        SKIP [         ] (───) cc-jobs::parity status_formatting::test_status_command_filters_old_jobs
+        SKIP [         ] (───) cc-jobs::parity status_formatting::test_table
+        SKIP [         ] (───) cc-jobs::parity status_formatting::test_table_aligns_wide_characters
+        SKIP [         ] (───) cc-jobs::parity tail_and_wait::test_n0_shows_only_the_summary_and_unterminated_last_line_is_shown
+        SKIP [         ] (───) cc-jobs::parity tail_and_wait::test_reads_only_the_end_of_a_big_file
+        SKIP [         ] (───) cc-jobs::parity tail_and_wait::test_wait_timeout_zero_returns_at_once
+        SKIP [         ] (───) cc-jobs::parity task_notifier::real_notifier_receipt_syncs_the_job_card_with_remaining_deadline
+        SKIP [         ] (───) cc-jobs::parity task_notifier::test_ao_cli_is_only_notifier_and_updates_are_throttled
+        SKIP [         ] (───) cc-jobs::parity task_notifier::test_ao_failure_does_not_fail_job
+        SKIP [         ] (───) cc-jobs::parity task_notifier::test_cancel_uses_the_same_start_gate
+        SKIP [         ] (───) cc-jobs::parity task_notifier::test_cancelled_finish_uses_japanese_fallback_without_stale_message
+        SKIP [         ] (───) cc-jobs::parity task_notifier::test_close_waits_for_final_notification_and_has_hard_cap
+        SKIP [         ] (───) cc-jobs::parity task_notifier::test_credentials_are_redacted_and_not_inherited_by_codex
+        SKIP [         ] (───) cc-jobs::parity task_notifier::test_exhausted_start_never_sends_finish_without_thread
+        SKIP [         ] (───) cc-jobs::parity task_notifier::test_free_text_flags_preserve_leading_hyphens_and_original_timeout
+        SKIP [         ] (───) cc-jobs::parity task_notifier::test_lost_finish_response_retries_the_same_cli_operation
+        SKIP [         ] (───) cc-jobs::parity task_notifier::test_lost_start_response_retries_the_same_cli_task_id
+        SKIP [         ] (───) cc-jobs::parity task_notifier::test_non_http_uri_and_scp_addresses_pass_through_state_and_logs
+        SKIP [         ] (───) cc-jobs::parity task_notifier::test_one_35_second_deadline_covers_slow_llm_discord_failures_and_backoff
+        SKIP [         ] (───) cc-jobs::parity task_notifier::test_paths_urls_and_boundary_spanning_secret_reach_only_rust_sanitizer
+        SKIP [         ] (───) cc-jobs::parity task_notifier::test_slow_429_keeps_supervisor_waiting_and_finish_queued
+        SKIP [         ] (───) cc-jobs::parity task_notifier::test_source_detail_is_bounded_for_start_update_and_finish
+        SKIP [         ] (───) cc-jobs::parity task_notifier::test_start_failures_back_off_and_hold_queued_updates_and_finish
+        SKIP [         ] (───) cc-jobs::parity temporary_fixture_never_reuses_a_stale_pid_directory
+        SKIP [         ] (───) cc-jobs::parity token_accounting::test_missing_usage_fields_default_to_zero
+        SKIP [         ] (───) cc-jobs::parity token_accounting::test_total_is_input_plus_output_with_breakdown
+        SKIP [         ] (───) cc-jobs::parity token_accounting::test_usage_is_cumulative_last_wins
+        FAIL [   9.419s] (1/1) cc-jobs::parity end_to_end::real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit
+  stdout ───
+
+    running 1 test
+    test end_to_end::real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit ... FAILED
+
+    failures:
+
+    failures:
+        end_to_end::real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 384 filtered out; finished in 9.40s
+
+  stderr ───
+
+    thread 'end_to_end::real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit' (75636) panicked at cc-jobs\tests\parity.rs:10195:25:
+    assertion `left == right` failed
+      left: Null
+     right: "p000002/gpt-6-luna"
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+────────────
+     Summary [   9.423s] 1 test run: 0 passed, 1 failed, 384 skipped
+        FAIL [   9.419s] (1/1) cc-jobs::parity end_to_end::real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit
+error: test run failed

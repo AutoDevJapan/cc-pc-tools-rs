@@ -1,0 +1,22 @@
+{
+  "file": "D:/CC/Tools/safe-delete/safe-delete.exe",
+  "args": [
+    "plan",
+    "--id",
+    "d9b4cd0278e9c17d3ecd99906b2a88a4"
+  ],
+  "cwd": "D:/CC/Work/unattended-operations-20261013-wt/todo-3096-3081",
+  "actual_head": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+  "branch": "scheduler/todo-3096-3081-green",
+  "tracked_changes_before": "",
+  "started_at": "2026-10-20T21:12:37.8885865+09:00",
+  "create_no_window": true,
+  "status": "exited",
+  "pid": 66976,
+  "exit": 0,
+  "ended_at": "2026-10-20T21:12:38.2155565+09:00",
+  "stdout_file": "cleanup-plan.stdout.txt",
+  "stderr_file": "cleanup-plan.stderr.txt",
+  "head_after": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+  "tracked_changes_after": ""
+}

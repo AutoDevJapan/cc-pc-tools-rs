@@ -1,0 +1,6 @@
+remote: 
+remote: Create a pull request for 'scheduler/todo-3096-3081-red' on GitHub by visiting:        
+remote:      https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/new/scheduler/todo-3096-3081-red        
+remote: 
+To https://github.com/AutoDevJapan/cc-pc-tools-rs.git
+ * [new branch]      scheduler/todo-3096-3081-red -> scheduler/todo-3096-3081-red

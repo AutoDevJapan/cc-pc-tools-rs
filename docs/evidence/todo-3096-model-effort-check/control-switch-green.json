@@ -1,0 +1,23 @@
+{
+  "file": "C:/Program Files/Git/cmd/git.exe",
+  "args": [
+    "switch",
+    "-c",
+    "scheduler/todo-3096-3081-green",
+    "170bf90635ddb1b7648531387c1e19d5816b3b69"
+  ],
+  "cwd": "D:/CC/Work/unattended-operations-20261013-wt/todo-3096-3081",
+  "actual_head": "ce9af5a93b15ef9c4736eaf37b2cab1cae9ec0b8",
+  "branch": "scheduler/todo-3096-3081-red",
+  "tracked_changes_before": "",
+  "started_at": "2026-10-20T21:07:00.3485696+09:00",
+  "create_no_window": true,
+  "status": "exited",
+  "pid": 57116,
+  "exit": 0,
+  "ended_at": "2026-10-20T21:07:00.4393225+09:00",
+  "stdout_file": "switch-green.stdout.txt",
+  "stderr_file": "switch-green.stderr.txt",
+  "head_after": "170bf90635ddb1b7648531387c1e19d5816b3b69",
+  "tracked_changes_after": ""
+}

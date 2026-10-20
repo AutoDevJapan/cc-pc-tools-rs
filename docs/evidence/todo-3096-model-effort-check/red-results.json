@@ -1,0 +1,36 @@
+{
+  "head": "8b70dd71c400ef449d0216d0075aff6bc253c527",
+  "runs": [
+    {
+      "exit": 100,
+      "id": "red-01-review",
+      "assertion": "cc-job-policy/tests/review_qualification_red.rs:6:5",
+      "passed": 0,
+      "skipped": 0,
+      "actual": "gpt-6.1-sol",
+      "tests_run": 1,
+      "expected_red": true,
+      "failed": 1,
+      "expected": "anthropic/claude-opus-5-5",
+      "failure": "automatic_review_default_differs_from_the_normal_sol_writer"
+    },
+    {
+      "exit": 100,
+      "id": "red-02-capacity-metadata",
+      "assertion": "cc-jobs/tests/parity.rs:10195:25",
+      "passed": 0,
+      "skipped": 384,
+      "actual": null,
+      "tests_run": 1,
+      "expected_red": true,
+      "failed": 1,
+      "limit": "first capacity-once case failed; subsequent capacity-always case not reached",
+      "expected": "p000002/gpt-6-luna",
+      "failure": "end_to_end::real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit"
+    }
+  ],
+  "tests_run": 2,
+  "expected_red_failures": 2,
+  "compile_errors": 0,
+  "source_edits": 0
+}

@@ -59,7 +59,7 @@ todoの並行配布が旧SHAを変えた場合は一致したと推測せず拒�
 通常入口がcc-liveのPaths.here/Cargo.toml/src/bin/review.rsにあることだけでは
 実行物の来歴を証明できない。旧SHAは埋めない。
 
-## 正規readerでの現在一致（2026-10-21 04:22 JST）
+## 正規readerでの現在一致（最終確認2026-10-21 04:26 JST）
 
 自sourceからGoで検査用readerだけを生成し、窓を出さない通常の子処理で各leafを照合した。
 旧実行物を別の方法でhash/コピー/逆解析していない。本番のguard/targetは変更していない。
@@ -75,6 +75,33 @@ guardの拒否を「現在SHAが保存値と違う」と断定しない。旧証
 物理path・元保護・共有handle・hash等の全条件を通った現在一致が得られていない。
 unknown hashを表示せず、未確認の現在SHAを新しいbaselineへ昇格させない。
 この観測はその時点だけの結果であり、3085等の後続配布の成功を保証しない。
+4leafとも通常の`--guard-path`は`classification_unverified:true/client_resource:true`のままで、
+目的の資格が通常分類に流れ込んでいない。検査用readerでもhelpはstderr/exit 0、
+未知flagはstderr/exit 2、stdoutは空という既存の契約を確認した。
+
+## 実Red/GreenとGo検査
+
+Red source: `81f1da3`（起点mainに仕様と受入テストだけを追加したcommit）。
+`go test -p 1 -count=1 -run '^TestModelUpdate(CLIHasPurposeSpecificFailure|HelpAddsPurposeWithoutChangingHelpContract)$' .`
+はexit 1、2件失敗。前者はflag未定義でCLIがexit 2/usageを返し、後者はhelpの入口欠落で失敗した。
+コンパイル失敗をRedとして数えていない。
+
+実装source: `a1ca84d35b699c5153545c7cf2ff1fb5f7ace291`。
+最終の関連検査は次のコマンドでexit 0、トップレベル29件、subtest込み76件合格、
+失敗0・skip 0。合成の旧版/新候補/既配布一致、各拒否、実Git root/origin/head、
+書込handleの競合、全ファイルの同時pin、最終再照合と既存CLIを含む。
+
+```text
+go test -p 1 -count=1 -json -run '^(TestModelUpdate|TestConsole|TestCurrentSuccessionCLI|TestProductCIRuntime|TestRuntimeExecutableOnly|TestSchedulerRuntimeRefuses|TestUnknownResource|TestPortable|TestContainment)' .
+go vet -p 1 .
+go build -p 1 -o <所有temp>/scrub391-3177.exe .
+```
+
+vet/buildもexit 0。`GOMAXPROCS=2`で有限に実行し、生成した最終sourceのreaderで上表を観測した。
+途中のGreen版に対してはrepair-guardパッケージ全体も`go test -p 1 -count=1 -json .`で確認し、
+トップレベル110件、subtest込み319件が合格、失敗0・skip 0。その後の新readerの独立証拠条件と
+追加テストを最終の関連76件で再確認した。319件を最終source全件の結果とは表現しない。
+Rust workspaceや他Go製品の全体検査、Cargo buildは実行していない。
 
 ## 親3081が残す正確な操作
 

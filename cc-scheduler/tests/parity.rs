@@ -4909,6 +4909,26 @@ fn readiness_wait_parks_only_its_task_and_fresh_check_releases_same_task() {
         .any(|launch| launch["item"]["id"] == 1));
 }
 #[test]
+fn dependency_release_delivers_owner_answer_to_the_prepared_worker_prompt() {
+    let mut f = Fixture::new();
+    let instruction = "original instructions\nverified owner answer: retain Operations; never repeat the question or ship the old candidate";
+    let mut waiting = item(1, "other", "wait", &[]);
+    waiting["wait_on"] = json!([2]);
+    waiting["scheduler"] = json!({"owner_instruction":instruction});
+    f.put(waiting);
+    f.put(item(2, "other", "done", &[]));
+    let mut db = f.e.todo().unwrap();
+    assert_eq!(cc_job_policy::todo_wait::release_ready(&mut db), vec![1]);
+    write_json(&f.e.todo_path, &db, 1).unwrap();
+    let prepared = f.e.prepare(&f.get(1), f.repo.to_str().unwrap()).unwrap().unwrap();
+    let prompt = fs::read_to_string(s(&prepared["scheduler"]["prompt"])).unwrap();
+    assert!(prompt.contains(instruction));
+    assert!(prompt.contains("指定された機能を実装してください。"));
+    assert_eq!(prepared["scheduler"]["owner_instruction"], instruction);
+    assert!(f.e.backend.launched.is_empty());
+}
+
+#[test]
 fn waiting_item_is_never_dispatched_and_launches_after_target_done() {
     let mut f = Fixture::new();
     f.put(item(1, "civ6", "todo", &[]));

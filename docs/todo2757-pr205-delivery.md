@@ -411,3 +411,43 @@ and the new installed product preflight are still required.
 Research2878 is running. Its eventual semantic readback and the remaining
 finite official CI/release/drain/Prd work are not represented by this diagnostic
 change. Do not raise the artifact cap based on an unmeasured guess.
+
+## Latest observation: 2026-10-20, official fixed-source tests actually started
+
+PR238 merge291fc8a now has eight terminal checks: seven success and one
+package-tools skip, no failure/cancellation/pending. This resolves its old merge
+check wait; historical PR205/229 failures remain unchanged. Repair repository
+ID1406818713 is now public with the same allowed owner/admin/nonfork identity.
+The separately saved owner instruction for task2988 explains that visibility
+change. The fixed product remains private and its main still equals41090.
+No visibility, budget, admission or source setting was changed in this task.
+
+Research2939's actual Sonnet response was received from completed job
+20261020-145549-todo-2939, with original bytes/hash preserved privately. It
+confirms five fixed blobs, pre/post identity and tool versions. Its remaining
+opaque condition/approval/customer meanings remain unresolved. Its version
+container was removed/absent, but its PID0 and limit readback failed; do not
+upgrade that receipt to fully verified cleanup evidence.
+
+Both original verification workflows have workflow_dispatch with no inputs.
+Their exact blobs and SHA256 match the frozen source. Official workflow IDs
+325305202 and312434359 were matched to the fixed tree paths in RAM. Neither
+had an existing run on41090. Fixed PR/head/merge/tree/ordered parents/main were
+rechecked before dispatch through the same distributed GitHub gate.
+
+Normal dispatch returned204 for both workflows. Actual run39382032899
+(full verification), job118493090193, and run39382036786 (backend integration),
+job118493102572, both attempt1, workflow_dispatch, head41090, have started
+steps on the original ubuntu-latest official runners. Thus the previous
+budget/steps0 condition does not currently prevent these two test workflows.
+This task did not increase the budget or register any substitute runner.
+Do not dispatch duplicates; read these exact run/job IDs through to completion.
+
+This is actual test execution, not success. It is separate from promotion
+run38941324877 and does not satisfy its needs results or prove actual drain.
+Promotion/preconditions/release/Prd revision/readiness/smoke remain unfinished.
+No product source, trust digest, label, deployment or original refusal changed.
+Private evidence: todo2757-official-dispatch-inspection.private.json,
+todo2757-official-workflow-ids.private.json,
+todo2757-official-dispatches-20261020.private.json and
+todo2757-official-test-runs.private.json in the existing ignored evidence area.

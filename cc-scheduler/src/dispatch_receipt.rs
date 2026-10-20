@@ -65,11 +65,13 @@ pub(crate) fn inspect_item<B: Backend>(
         key.len() == 32 && key.bytes().all(|c| c.is_ascii_hexdigit())
     );
     check!("unlinked", !truth(&scheduler["job"]));
+    check!("phase", scheduler["phase"] == "prepared");
     check!(
         "no_stop",
         !truth(&scheduler["question"])
             && !truth(&scheduler["owner_stop_job"])
             && !truth(&scheduler["pending_cancel"])
+            && !truth(&scheduler["question_close_pending"])
             && item["stopped"] != true
             && item["owner_stopped"] != true
             && !cc_job_policy::cancellation::owner_stopped(item, &Value::Null)
@@ -89,17 +91,6 @@ pub(crate) fn inspect_item<B: Backend>(
                 .iter()
                 .all(|field| item[*field] == scheduler["selection_input"][*field])
     );
-    check!(
-        "scope",
-        checks["repair_project"] == true
-            && !repo.is_empty()
-            && !s(&scheduler["worktree"]).is_empty()
-            && engine.backend.repair_scope_allowed(repo)
-            && engine
-                .backend
-                .repair_scope_allowed(s(&scheduler["worktree"]))
-    );
-
     let matching: Vec<_> = jobs
         .iter()
         .filter(|job| !key.is_empty() && job["launch_key"] == scheduler["key"])
@@ -181,6 +172,23 @@ pub(crate) fn inspect_item<B: Backend>(
                 && norm(s(&scheduler["prompt"])) == norm(&source.to_string_lossy())
                 && norm(s(&job["prompt_source"])) == norm(&source.to_string_lossy())
                 && norm(s(&job["prompt"])) == norm(&stored.to_string_lossy())
+        );
+        // A prepared reservation is not a registered launch. Check its cheap
+        // identity and generation before calling any external guard.
+        let candidate = checks
+            .as_object()
+            .unwrap()
+            .values()
+            .all(|value| value == &json!(true));
+        check!(
+            "scope",
+            candidate
+                && !repo.is_empty()
+                && !s(&scheduler["worktree"]).is_empty()
+                && engine.backend.repair_scope_allowed(repo)
+                && engine
+                    .backend
+                    .repair_scope_allowed(s(&scheduler["worktree"]))
         );
         // Read only after the registered scope and exact operational paths agree.
         if checks["scope"] == true && checks["prompt_paths"] == true {
@@ -293,9 +301,11 @@ fn recover_item<B: Backend>(
             record_result(row, &job["id"], "dependency_wait");
         } else {
             row["status"] = json!("doing");
+            remove(row, "dependency_ready");
+            let start = epoch(if truth(&job["started_at"]) { &job["started_at"] } else { &job["created_at"] });
             merge(&mut row["scheduler"], json!({"job":job["id"],
                 "phase":if policy::live(job) { "running" } else { "result_pending" },
-                "started_s":epoch(&job["created_at"])}));
+                "started_s":if start != 0. { start } else { at }}));
         }
         row["scheduler"]["dispatch_receipt"] = json!({"job":job["id"],"source_state_sha256":report["state_sha256"],
             "generation":row["resume_generation"],"at":at});
@@ -324,7 +334,10 @@ pub(crate) fn recover_pending<B: Backend>(
             continue;
         }
         let report = inspect_item(engine, &db, &item, jobs, ps);
-        if recover_item(engine, &db, &item, &report)? {
+        if engine.guard(&format!("adopt ordinary item {}", item["id"]), |engine| {
+            recover_item(engine, &db, &item, &report)
+        }) == Some(true)
+        {
             push(
                 &mut engine.report["repair_dispatches_adopted"],
                 item["id"].clone(),
@@ -361,14 +374,30 @@ pub fn run<B: Backend>(
     let ps = engine.backend.snapshot()?;
     let mut report = inspect_item(engine, &db, &item, &jobs, &ps);
     if let Some(expected) = expected {
+        let receipt = &item["scheduler"]["dispatch_receipt"];
+        let already_recorded = receipt["job"] == report["job"]
+            && !s(&receipt["job"]).is_empty()
+            && s(&receipt["source_state_sha256"]).eq_ignore_ascii_case(expected)
+            && receipt["generation"] == item["resume_generation"]
+            && arr(&item["jobs"]).contains(&receipt["job"])
+            && report["checks"]["status"] == true
+            && report["checks"]["no_stop"] == true
+            && (item["scheduler"]["job"] == receipt["job"]
+                || (item["status"] == "wait" && result_received(&item, &receipt["job"])));
+        if already_recorded {
+            report["already_recorded"] = json!(true);
+            return Ok(report);
+        }
         if report["eligible"] == true {
-            if report["state_sha256"] != expected {
+            if !s(&report["state_sha256"]).eq_ignore_ascii_case(expected) {
                 return Err(Error("ReceiptMismatch"));
             }
             report["saved"] = json!(recover_item(engine, &db, &item, &report)?);
             if report["saved"] != true {
                 return Err(Error("ReceiptMismatch"));
             }
+        } else {
+            return Err(Error("InputRejected"));
         }
     }
     Ok(report)

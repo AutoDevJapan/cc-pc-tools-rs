@@ -162,6 +162,10 @@ fn ordinary_dispatch_receipt_rejects_mismatches_stops_and_conflicting_owners_wit
         "postponement",
         "stop_kind",
         "todo_dependency",
+        "selection",
+        "dispatchable",
+        "pending_cancel",
+        "registered_root",
     ] {
         let mut f = ordinary_dispatch(true);
         match changed {
@@ -255,11 +259,49 @@ fn ordinary_dispatch_receipt_rejects_mismatches_stops_and_conflicting_owners_wit
                 f.e.edit(&json!(1), |r| r["status"] = json!("todo"))
                     .unwrap();
             }
+            "selection" => {
+                f.e.edit(&json!(1), |r| r["model"] = json!("new-model"))
+                    .unwrap();
+            }
+            "dispatchable" => {
+                f.e.edit(&json!(1), |r| r["dispatchable"] = json!(false))
+                    .unwrap();
+            }
+            "pending_cancel" => {
+                f.e.edit(&json!(1), |r| {
+                    r["scheduler"]["pending_cancel"] = json!("stop")
+                })
+                .unwrap();
+            }
+            "registered_root" => {
+                for field in ["prompt_source", "prompt"] {
+                    let path = s(&f.e.backend.records[0][field]);
+                    let text = fs::read_to_string(path).unwrap().replace(
+                        &format!("\n元の登録作業場所: {}\n", f.repo.display()),
+                        "\n元の登録作業場所: another-root\n",
+                    );
+                    fs::write(path, text).unwrap();
+                }
+            }
             _ => unreachable!(),
         }
         let bytes = fs::read(&f.e.todo_path).unwrap();
         let report = cc_scheduler::dispatch_receipt::inspect(&mut f.e, 1).unwrap();
         assert_eq!(report["eligible"], false, "{changed}: {report}");
+        let reason = match changed {
+            "selection" | "dispatchable" | "registered_root" => Some(changed),
+            "pending_cancel" => Some("no_stop"),
+            "spec" | "shorter_spec" => Some("spec_bytes"),
+            "resources" => Some("resources"),
+            "branch" => Some("workspace"),
+            _ => None,
+        };
+        if let Some(reason) = reason {
+            assert!(
+                arr(&report["failed"]).contains(&json!(reason)),
+                "{changed}: {report}"
+            );
+        }
         let mut records = f.e.backend.records.clone();
         f.e.reconcile_repairs(&mut records, &f.e.backend.ps.clone(), &f.cfg.clone())
             .unwrap();
@@ -271,34 +313,77 @@ fn ordinary_dispatch_receipt_rejects_mismatches_stops_and_conflicting_owners_wit
 
 #[test]
 fn ordinary_dispatch_receipt_apply_requires_exact_state_and_preserves_concurrent_edit() {
-    let mut f = ordinary_dispatch(true);
-    let report = cc_scheduler::dispatch_receipt::inspect(&mut f.e, 1).unwrap();
-    let bytes = fs::read(&f.e.todo_path).unwrap();
-    assert_eq!(
-        cc_scheduler::dispatch_receipt::run(&mut f.e, 1, Some(&"0".repeat(64)))
-            .unwrap_err()
-            .0,
-        "ReceiptMismatch"
-    );
-    assert_eq!(bytes, fs::read(&f.e.todo_path).unwrap());
-    let mut changed = f.e.todo().unwrap();
-    changed["items"][0]["note"] = json!("newer note");
-    f.e.backend.repair_edit = Some((f.e.todo_path.clone(), changed.clone()));
-    assert_eq!(
-        cc_scheduler::dispatch_receipt::run(&mut f.e, 1, Some(s(&report["state_sha256"])))
-            .unwrap_err()
-            .0,
-        "ReceiptMismatch"
-    );
-    assert_eq!(f.e.todo().unwrap(), changed);
+    for edit_after in [0, 3] {
+        let mut f = ordinary_dispatch(true);
+        let report = cc_scheduler::dispatch_receipt::inspect(&mut f.e, 1).unwrap();
+        let bytes = fs::read(&f.e.todo_path).unwrap();
+        assert_eq!(
+            cc_scheduler::dispatch_receipt::run(&mut f.e, 1, Some(&"0".repeat(64)))
+                .unwrap_err()
+                .0,
+            "ReceiptMismatch"
+        );
+        assert_eq!(bytes, fs::read(&f.e.todo_path).unwrap());
+        let mut changed = f.e.todo().unwrap();
+        changed["items"][0]["note"] = json!("newer note");
+        f.e.backend.repair_calls.clear();
+        f.e.backend.repair_edit_after = edit_after;
+        f.e.backend.repair_edit = Some((f.e.todo_path.clone(), changed.clone()));
+        assert_eq!(
+            cc_scheduler::dispatch_receipt::run(&mut f.e, 1, Some(s(&report["state_sha256"])))
+                .unwrap_err()
+                .0,
+            "ReceiptMismatch"
+        );
+        assert_eq!(f.e.todo().unwrap(), changed);
+    }
 }
 
 #[test]
 fn ordinary_dispatch_recovery_allows_only_the_next_normal_owner_to_checkpoint() {
     let mut f = ordinary_dispatch(true);
+    let mut runner = SystemRunner;
+    run_git(
+        &mut runner,
+        &f.repo,
+        &[
+            "-c",
+            "user.name=fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "--allow-empty",
+            "-m",
+            "saved work",
+        ],
+    )
+    .unwrap();
+    let target = f.temp.path().join("linked-worktree");
+    run_git(
+        &mut runner,
+        &f.repo,
+        &[
+            "worktree",
+            "add",
+            "-b",
+            "scheduler/todo-1-linked",
+            target.to_str().unwrap(),
+        ],
+    )
+    .unwrap();
+    f.e.edit(&json!(1), |row| {
+        row["scheduler"]["worktree"] = json!(target);
+        row["scheduler"]["branch"] = json!("scheduler/todo-1-linked");
+    })
+    .unwrap();
+    f.e.backend.records[0]["cwd"] = json!(target);
     let report = cc_scheduler::dispatch_receipt::inspect(&mut f.e, 1).unwrap();
-    let saved =
-        cc_scheduler::dispatch_receipt::run(&mut f.e, 1, Some(s(&report["state_sha256"]))).unwrap();
+    let saved = cc_scheduler::dispatch_receipt::run(
+        &mut f.e,
+        1,
+        Some(&s(&report["state_sha256"]).to_ascii_uppercase()),
+    )
+    .unwrap();
     assert_eq!(saved["saved"], true);
     let row = f.get(1);
     assert_eq!(row["status"], "wait");
@@ -313,10 +398,19 @@ fn ordinary_dispatch_recovery_allows_only_the_next_normal_owner_to_checkpoint() 
     f.e.release_repair_waits().unwrap();
     assert_eq!(f.get(1)["status"], "todo");
     assert!(f.get(1)["wait_on"].is_null());
+    assert!(f.get(1)["scheduler"]["key"].is_null());
+    let resumed = f.get(1);
+    let prepared =
+        f.e.prepare(&resumed, f.repo.to_str().unwrap())
+            .unwrap()
+            .unwrap();
+    assert_ne!(prepared["scheduler"]["key"], row["scheduler"]["key"]);
+    assert_eq!(s(&prepared["scheduler"]["key"]).len(), 32);
     let mut next = f.e.backend.records[0].clone();
     next["id"] = json!("next-owner");
     next["status"] = json!("running");
     next["created_at"] = json!(T);
+    next["launch_key"] = prepared["scheduler"]["key"].clone();
     f.e.backend.records.push(next);
     let mut db = f.e.todo().unwrap();
     let paths = cc_todo::Paths::at(
@@ -334,29 +428,13 @@ fn ordinary_dispatch_recovery_allows_only_the_next_normal_owner_to_checkpoint() 
     )
     .unwrap();
     write_json(&f.e.todo_path, &db, 1).unwrap();
-    let mut runner = SystemRunner;
-    run_git(
-        &mut runner,
-        &f.repo,
-        &[
-            "-c",
-            "user.name=fixture",
-            "-c",
-            "user.email=fixture@example.invalid",
-            "commit",
-            "--allow-empty",
-            "-m",
-            "saved work",
-        ],
-    )
-    .unwrap();
-    fs::write(f.repo.join("unfinished.txt"), "keep pending changes").unwrap();
+    fs::write(target.join("unfinished.txt"), "keep pending changes").unwrap();
     let mut request = cc_scheduler::workspace_checkpoint::Request {
         id: 1,
         job: "next-owner".into(),
-        expected_branch: "scheduler/todo-1-test".into(),
-        branch: "scheduler/todo-1-test".into(),
-        head: run_git(&mut runner, &f.repo, &["rev-parse", "HEAD"]).unwrap(),
+        expected_branch: "scheduler/todo-1-linked".into(),
+        branch: "scheduler/todo-1-linked".into(),
+        head: run_git(&mut runner, &target, &["rev-parse", "HEAD"]).unwrap(),
     };
     assert_eq!(
         cc_scheduler::workspace_checkpoint::checkpoint(&mut f.e, &mut runner, &request).unwrap()
@@ -373,7 +451,94 @@ fn ordinary_dispatch_recovery_allows_only_the_next_normal_owner_to_checkpoint() 
     );
     assert_eq!(bytes, fs::read(&f.e.todo_path).unwrap());
     assert_eq!(
-        fs::read_to_string(f.repo.join("unfinished.txt")).unwrap(),
+        fs::read_to_string(target.join("unfinished.txt")).unwrap(),
         "keep pending changes"
     );
+}
+
+#[test]
+fn ordinary_receipt_does_not_guard_without_an_unconsumed_prepared_launch() {
+    for reason in ["phase", "no_job"] {
+        let mut f = ordinary_dispatch(true);
+        if reason == "phase" {
+            f.e.edit(&json!(1), |row| row["scheduler"]["phase"] = json!("retry"))
+                .unwrap();
+        } else {
+            f.e.backend.records.clear();
+        }
+        let before = fs::read(&f.e.todo_path).unwrap();
+        let report = cc_scheduler::dispatch_receipt::inspect(&mut f.e, 1).unwrap();
+        assert_eq!(report["eligible"], false, "{reason}");
+        assert!(
+            f.e.backend.repair_calls.is_empty(),
+            "{reason}: unnecessary external guard calls"
+        );
+        assert!(
+            arr(&report["failed"]).contains(&json!(if reason == "phase" {
+                "phase"
+            } else {
+                "unique_key"
+            }))
+        );
+        assert_eq!(before, fs::read(&f.e.todo_path).unwrap());
+    }
+}
+
+#[test]
+fn ordinary_receipt_apply_reports_ineligible_scope_as_failure() {
+    let mut f = ordinary_dispatch(true);
+    f.e.backend.repair_allowed = false;
+    let before = fs::read(&f.e.todo_path).unwrap();
+    assert_eq!(
+        cc_scheduler::dispatch_receipt::run(&mut f.e, 1, Some(&"0".repeat(64)))
+            .unwrap_err()
+            .0,
+        "InputRejected"
+    );
+    assert_eq!(before, fs::read(&f.e.todo_path).unwrap());
+}
+
+#[test]
+fn ordinary_receipt_lock_error_defers_only_its_candidate() {
+    let mut f = ordinary_dispatch(false);
+    let before = fs::read(&f.e.todo_path).unwrap();
+    let lock = ByteLock::acquire(&f.e.todo_path.with_file_name("todo.lock"), Duration::ZERO)
+        .unwrap()
+        .unwrap();
+    let mut records = f.e.backend.records.clone();
+    f.e.reconcile_repairs(&mut records, &Processes::new(), &f.cfg.clone())
+        .unwrap();
+    drop(lock);
+    assert!(f.e.failures.contains(&"adopt ordinary item 1".to_owned()));
+    assert_eq!(before, fs::read(&f.e.todo_path).unwrap());
+    assert!(f.e.backend.launched.is_empty());
+    assert!(f.e.backend.cancelled.is_empty());
+}
+
+#[test]
+fn ordinary_terminal_receipt_uses_real_start_time_and_normal_result_processing() {
+    let mut f = ordinary_dispatch(false);
+    let record = &mut f.e.backend.records[0];
+    record["status"] = json!("succeeded");
+    record["started_at"] = json!(T - 10.);
+    record["finished_at"] = json!(T);
+    record["exit_code"] = json!(0);
+    f.e.edit(&json!(1), |row| row["dependency_ready"] = json!(true))
+        .unwrap();
+    let before = cc_scheduler::dispatch_receipt::inspect(&mut f.e, 1).unwrap();
+    assert_eq!(before["eligible"], true, "{before}");
+    assert_eq!(
+        cc_scheduler::dispatch_receipt::run(&mut f.e, 1, Some(s(&before["state_sha256"]))).unwrap()
+            ["saved"],
+        true
+    );
+    assert_eq!(f.get(1)["scheduler"]["phase"], "result_pending");
+    assert_eq!(f.get(1)["scheduler"]["started_s"], T - 10.);
+    assert!(f.get(1)["dependency_ready"].is_null());
+    let mut records = f.e.backend.records.clone();
+    f.e.reconcile_repairs(&mut records, &Processes::new(), &f.cfg.clone())
+        .unwrap();
+    assert_eq!(f.get(1)["status"], "todo");
+    assert!(result_received(&f.get(1), &json!("registered")));
+    assert!(f.e.backend.launched.is_empty());
 }

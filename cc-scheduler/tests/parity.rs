@@ -1476,6 +1476,7 @@ struct Fake {
     repair_denied: Option<String>,
     repair_calls: Vec<String>,
     repair_edit: Option<(PathBuf, Value)>,
+    repair_edit_after: usize,
     launch_start: Option<PathBuf>,
     prepare_edit: Option<(PathBuf, Value)>,
     outcome_edit: Option<(PathBuf, cc_todo::Command)>,
@@ -1517,6 +1518,7 @@ impl Default for Fake {
             repair_denied: None,
             repair_calls: vec![],
             repair_edit: None,
+            repair_edit_after: 0,
             launch_start: None,
             prepare_edit: None,
             outcome_edit: None,
@@ -1567,7 +1569,8 @@ impl Backend for Fake {
     }
     fn repair_scope_allowed(&mut self, repo: &str) -> bool {
         self.repair_calls.push(repo.into());
-        if let Some((path, db)) = self.repair_edit.take() {
+        let edit = if self.repair_calls.len() >= self.repair_edit_after { self.repair_edit.take() } else { None };
+        if let Some((path, db)) = edit {
             write_json(&path, &db, 1).unwrap();
         }
         self.repair_allowed && self.repair_denied.as_deref() != Some(repo)

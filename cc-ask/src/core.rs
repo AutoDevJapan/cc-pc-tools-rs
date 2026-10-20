@@ -1374,8 +1374,11 @@ pub fn launch_job_with_session(
     session: Option<&str>,
 ) -> Result<String> {
     use std::io::Write;
-    let requested_session =
-        session.or_else(|| selection["policy_resume_reset"]["session"].as_str());
+    let requested_session = session.filter(|id| !id.is_empty()).or_else(|| {
+        selection["policy_resume_reset"]["session"]
+            .as_str()
+            .filter(|id| !id.is_empty())
+    });
     // All Discord restart/steering/resume paths share this final boundary.
     let mut normalized = selection.clone();
     normalized["launch_key"] = json!(key);

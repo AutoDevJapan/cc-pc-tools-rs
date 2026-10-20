@@ -160,12 +160,35 @@ pub fn alternate_model(model: &str) -> &str {
 pub fn repaired_job(job: &Value, failure: Failure) -> Value {
     let mut job = job.clone();
     if failure == Failure::Model {
-        let model = job["model"].as_str().unwrap_or("");
-        let alternate = alternate_model(model);
+        if job["model_origin"] == "owner_request"
+            || crate::job_policy::launch_context::fixed_execution_contract(&job)
+        {
+            return job;
+        }
+        let model = job["model"].as_str().unwrap_or("").to_owned();
+        let alternate = alternate_model(&model);
         if alternate == model {
             return job;
         }
-        job["model"] = alternate.into();
+        let mut excluded = job["review_excluded_models"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        if !excluded
+            .iter()
+            .filter_map(Value::as_str)
+            .any(|excluded| crate::job_policy::same_model(excluded, alternate))
+        {
+            if !excluded
+                .iter()
+                .filter_map(Value::as_str)
+                .any(|excluded| crate::job_policy::same_model(excluded, &model))
+            {
+                excluded.push(Value::String(model.clone()));
+            }
+            job["review_excluded_models"] = Value::Array(excluded);
+            job["model"] = alternate.into();
+        }
         if job["effort"].as_str().is_none_or(str::is_empty) {
             job["effort"] = "max".into();
         }

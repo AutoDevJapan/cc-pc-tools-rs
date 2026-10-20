@@ -64,6 +64,7 @@ fn remedies_preserve_work_and_permissions_but_replace_full_or_bad_model_sessions
         if class == Failure::Model {
             assert_eq!(repaired["model"], "gpt-6-astra");
             assert_eq!(repaired["effort"], "max");
+            assert_eq!(repaired["review_excluded_models"], json!(["gpt-6.1-sol"]));
         } else {
             assert_eq!(repaired["model"], job["model"]);
         }
@@ -80,6 +81,21 @@ fn model_repair_preserves_explicit_effort_and_unknown_identity() {
     assert_eq!(repaired_job(&unknown, Failure::Model), unknown);
     let omitted = json!({"model":"gpt-6.1-sol"});
     assert_eq!(repaired_job(&omitted, Failure::Model)["effort"], "max");
+}
+
+#[test]
+fn model_repair_keeps_owner_choices_and_existing_routing_exclusions() {
+    let owner = json!({"model":"gpt-6.1-sol","effort":"high","model_origin":"owner_request"});
+    assert_eq!(repaired_job(&owner, Failure::Model), owner);
+    let constrained = json!({"model":"gpt-6.1-sol","effort":"max",
+        "review_excluded_models":["gpt-6-astra"],"thread_id":"old"});
+    let repaired = repaired_job(&constrained, Failure::Model);
+    assert_eq!(repaired["model"], "gpt-6.1-sol");
+    assert_eq!(
+        repaired["review_excluded_models"],
+        constrained["review_excluded_models"]
+    );
+    assert!(repaired["thread_id"].is_null());
 }
 #[test]
 fn two_quick_retries_become_hourly_and_console_cooldown_survives_process_restart() {

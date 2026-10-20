@@ -65,17 +65,7 @@ func startCodeQLAdmissionForRunner(ctx context.Context, p codeQLPlan, c candidat
 	childCtx, cancel := context.WithCancel(ctx)
 	server := &http.Server{ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 40 * time.Second, BaseContext: func(net.Listener) context.Context { return childCtx }}
 	server.Handler = codeQLAdmissionHandler(p, key, func(callCtx context.Context) error {
-		now, e := replanProductJob(callCtx, c, p, get)
-		if e != nil {
-			return e
-		}
-		if now != p {
-			return errors.New("live plan changed")
-		}
-		if p.Current != (currentPRBinding{}) {
-			return checkCurrentPRRunner(callCtx, p, runnerName, get)
-		}
-		return nil
+		return verifyCodeQLAdmissionPlan(callCtx, c, p, runnerName, get)
 	})
 	done := make(chan struct{})
 	go func() { _ = server.Serve(l); close(done) }()
@@ -91,6 +81,20 @@ func startCodeQLAdmissionForRunner(ctx context.Context, p codeQLPlan, c candidat
 		return e
 	}
 	return "http://host.docker.internal:" + strconv.Itoa(l.Addr().(*net.TCPAddr).Port) + "/admit", key, closeServer, nil
+}
+
+func verifyCodeQLAdmissionPlan(ctx context.Context, c candidate, p codeQLPlan, runnerName string, read api) error {
+	now, e := replanProductJob(ctx, c, p, read)
+	if e != nil {
+		return e
+	}
+	if now != p {
+		return errors.New("live plan changed")
+	}
+	if p.Current != (currentPRBinding{}) {
+		return awaitCurrentPRRunner(ctx, p, runnerName, read, currentPRAssignmentPause)
+	}
+	return nil
 }
 
 func requestCodeQLAdmission(ctx context.Context, p codeQLPlan, endpoint, key string) error {

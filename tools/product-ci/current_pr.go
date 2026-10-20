@@ -9,23 +9,51 @@ import (
 	"io"
 	"os"
 	"strings"
+	"time"
 )
+
+type currentPRJobIDs [8]int64
+
+func (ids *currentPRJobIDs) UnmarshalJSON(data []byte) error {
+	var values []int64
+	if json.Unmarshal(data, &values) != nil || len(values) == 0 || len(values) > len(ids) {
+		return errors.New("current PR job set size rejected")
+	}
+	previous := int64(0)
+	for _, id := range values {
+		if id <= previous {
+			return errors.New("current PR job order rejected")
+		}
+		previous = id
+	}
+	*ids = currentPRJobIDs{}
+	copy(ids[:], values)
+	return nil
+}
+
+func (ids currentPRJobIDs) MarshalJSON() ([]byte, error) {
+	n := 0
+	for n < len(ids) && ids[n] != 0 {
+		n++
+	}
+	return json.Marshal(ids[:n])
+}
 
 // This is an additional finite route, not a replacement for the four original
 // candidates or a latest-head policy. Every invocation supplies one frozen pin.
 type currentPRBinding struct {
-	RepoID           int64    `json:"repo_id"`
-	PR               int      `json:"pr"`
-	Head             string   `json:"head_sha"`
-	Tree             string   `json:"head_tree"`
-	Base             string   `json:"base_sha"`
-	RunID            int64    `json:"run_id"`
-	Attempt          int      `json:"attempt"`
-	JobIDs           [8]int64 `json:"job_ids"`
-	Kind             string   `json:"kind"`
-	Context          string   `json:"context_sha"`
-	ReviewSHA256     string   `json:"review_sha256"`
-	AcceptanceSHA256 string   `json:"acceptance_sha256"`
+	RepoID           int64           `json:"repo_id"`
+	PR               int             `json:"pr"`
+	Head             string          `json:"head_sha"`
+	Tree             string          `json:"head_tree"`
+	Base             string          `json:"base_sha"`
+	RunID            int64           `json:"run_id"`
+	Attempt          int             `json:"attempt"`
+	JobIDs           currentPRJobIDs `json:"job_ids"`
+	Kind             string          `json:"kind"`
+	Context          string          `json:"context_sha"`
+	ReviewSHA256     string          `json:"review_sha256"`
+	AcceptanceSHA256 string          `json:"acceptance_sha256"`
 }
 
 type currentPRInput struct {
@@ -68,7 +96,7 @@ func readCurrentPRInput(file string) (currentPRBinding, error) {
 	if d.Decode(&input) != nil || d.Decode(new(any)) != io.EOF || !input.currentPRBinding.valid() {
 		return currentPRBinding{}, errors.New("current PR pin rejected")
 	}
-	for _, proof := range []struct{ file, sha string }{{input.ReviewFile, input.ReviewSHA256}, {input.AcceptanceFile, input.AcceptanceSHA256}} {
+	for _, proof := range []struct{ file, sha, kind string }{{input.ReviewFile, input.ReviewSHA256, "review"}, {input.AcceptanceFile, input.AcceptanceSHA256, "acceptance"}} {
 		f, e := os.Open(proof.file)
 		if e != nil {
 			return currentPRBinding{}, errors.New("original current PR evidence unavailable")
@@ -78,11 +106,7 @@ func readCurrentPRInput(file string) (currentPRBinding, error) {
 		if readErr != nil || closeErr != nil || len(data) == 0 || len(data) > 8<<20 || digest(data) != proof.sha {
 			return currentPRBinding{}, errors.New("original current PR evidence differs")
 		}
-		kind := "review"
-		if proof.file == input.AcceptanceFile {
-			kind = "acceptance"
-		}
-		if e = verifyCurrentPREvidence(data, input.currentPRBinding, kind); e != nil {
+		if e = verifyCurrentPREvidence(data, input.currentPRBinding, proof.kind); e != nil {
 			return currentPRBinding{}, e
 		}
 	}
@@ -145,12 +169,22 @@ func planCurrentPRWithPolicy(ctx context.Context, b currentPRBinding, read api, 
 	var pr struct {
 		Draft bool
 		Base  struct{ SHA string }
+		Head  struct{ Ref string }
 	}
 	if e = read(ctx, fmt.Sprintf("repos/%s/pulls/%d", p.Repo, b.PR), &pr); e != nil {
 		return codeQLPlan{}, e
 	}
 	if pr.Draft || pr.Base.SHA != b.Base {
 		return codeQLPlan{}, errors.New("current PR base or review state differs")
+	}
+	if b.Kind == "codeql" {
+		var run codeQLRun
+		if e = read(ctx, fmt.Sprintf("repos/%s/actions/runs/%d", p.Repo, b.RunID), &run); e != nil {
+			return codeQLPlan{}, e
+		}
+		if pr.Head.Ref == "" || run.HeadBranch != pr.Head.Ref {
+			return codeQLPlan{}, errors.New("current PR CodeQL branch differs")
+		}
 	}
 	type officialJob struct {
 		ID         int64
@@ -239,9 +273,61 @@ func checkCurrentPRRunner(ctx context.Context, p codeQLPlan, name string, read a
 		}
 	}
 	if matched != 1 {
-		return errors.New("current PR runner did not receive one frozen job")
+		if matched == 0 {
+			return errCurrentPRAssignmentPending
+		}
+		return errors.New("current PR runner received multiple frozen jobs")
 	}
 	return nil
+}
+
+var errCurrentPRAssignmentPending = errors.New("current PR runner assignment not yet observed")
+
+func awaitCurrentPRRunner(ctx context.Context, p codeQLPlan, name string, read api, pause func(context.Context) error) error {
+	for attempt := 0; attempt < 3; attempt++ {
+		e := checkCurrentPRRunner(ctx, p, name, read)
+		if !errors.Is(e, errCurrentPRAssignmentPending) || attempt == 2 {
+			return e
+		}
+		if e = pause(ctx); e != nil {
+			return e
+		}
+	}
+	return errCurrentPRAssignmentPending
+}
+
+func currentPRAssignmentPause(ctx context.Context) error {
+	t := time.NewTimer(500 * time.Millisecond)
+	defer t.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-t.C:
+		return nil
+	}
+}
+
+func checkCurrentPRReady(ctx context.Context, p codeQLPlan, read api) error {
+	for _, id := range p.Current.JobIDs {
+		if id == 0 {
+			break
+		}
+		var job struct {
+			ID       int64
+			RunID    int64  `json:"run_id"`
+			Attempt  int    `json:"run_attempt"`
+			Head     string `json:"head_sha"`
+			Status   string
+			RunnerID int64 `json:"runner_id"`
+		}
+		if e := read(ctx, fmt.Sprintf("repos/%s/actions/jobs/%d", p.Repo, id), &job); e != nil {
+			return e
+		}
+		if job.ID == id && job.RunID == p.RunID && job.Attempt == p.Attempt && job.Head == p.SHA && job.Status == "queued" && job.RunnerID == 0 {
+			return nil
+		}
+	}
+	return errors.New("no unassigned frozen current PR job is queued")
 }
 
 func replanProductJob(ctx context.Context, c candidate, p codeQLPlan, read api) (codeQLPlan, error) {
@@ -280,6 +366,9 @@ func currentPRCLI(ctx context.Context, args []string) error {
 	}
 	if args[0] != "current-pr-job" || (b.Kind == "secret" && len(args) != 5) || (b.Kind == "codeql" && len(args) != 4) {
 		return errors.New("current PR execution arguments rejected")
+	}
+	if e = checkCurrentPRReady(ctx, p, get); e != nil {
+		return e
 	}
 	scanner := ""
 	if len(args) == 5 {

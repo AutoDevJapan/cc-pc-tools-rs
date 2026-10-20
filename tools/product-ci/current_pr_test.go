@@ -180,6 +180,19 @@ func TestCurrentPRInputReadsExactOriginalProofBytes(t *testing.T) {
 	if got, e := readCurrentPRInput(file); e != nil || got != input.currentPRBinding {
 		t.Fatalf("valid proof rejected: %v", e)
 	}
+	same := input
+	same.ReviewFile = input.AcceptanceFile
+	same.ReviewSHA256 = input.AcceptanceSHA256
+	sameData, _ := json.Marshal(same)
+	if e := os.WriteFile(file, sameData, 0600); e != nil {
+		t.Fatal(e)
+	}
+	if _, e := readCurrentPRInput(file); e == nil {
+		t.Fatal("acceptance used for both evidence kinds")
+	}
+	if e := os.WriteFile(file, data, 0600); e != nil {
+		t.Fatal(e)
+	}
 	if e := os.WriteFile(input.ReviewFile, []byte("changed original receipt"), 0600); e != nil {
 		t.Fatal(e)
 	}
@@ -191,6 +204,120 @@ func TestCurrentPRInputReadsExactOriginalProofBytes(t *testing.T) {
 	}
 	if _, e := readCurrentPRInput(file); e == nil {
 		t.Fatal("missing proof accepted")
+	}
+}
+
+func TestCurrentPRJobSetInputBounds(t *testing.T) {
+	for _, input := range []string{`[11]`, `[11,12]`, `[]`, `[11,12,13,14,15,16,17,18,19]`, `[11,11]`, `[0]`, `[-1]`, `[12,11]`} {
+		var ids currentPRJobIDs
+		e := json.Unmarshal([]byte(input), &ids)
+		want := input == `[11]` || input == `[11,12]`
+		if (e == nil) != want {
+			t.Fatalf("job set %s admitted=%v", input, e == nil)
+		}
+	}
+	b, _, _, _ := currentPRFixture(t, "secret", nil)
+	b.JobIDs[1] = 12
+	if b.valid() {
+		t.Fatal("secret accepted multiple jobs")
+	}
+}
+
+func TestCurrentPRAdmissionUsesLiveSourceAndRunner(t *testing.T) {
+	b, read, path, bytes := currentPRFixture(t, "codeql", nil)
+	p, e := planCurrentPRWithPolicy(context.Background(), b, read, path, bytes)
+	if e != nil {
+		t.Fatal(e)
+	}
+	c := candidate{b.RepoID, b.PR, b.Head}
+	assigned := func(ctx context.Context, endpoint string, out any) error {
+		if e := read(ctx, endpoint, out); e != nil {
+			return e
+		}
+		if strings.Contains(endpoint, "/actions/jobs/") {
+			data, _ := json.Marshal(out)
+			var job map[string]any
+			_ = json.Unmarshal(data, &job)
+			job["runner_name"] = "owned-runner"
+			job["runner_id"] = 44
+			job["status"] = "in_progress"
+			data, _ = json.Marshal(job)
+			return json.Unmarshal(data, out)
+		}
+		return nil
+	}
+	if e := verifyCodeQLAdmissionPlan(context.Background(), c, p, "owned-runner", assigned); e != nil {
+		t.Fatal(e)
+	}
+	stale := func(ctx context.Context, endpoint string, out any) error {
+		if strings.Contains(endpoint, "/pulls/995") {
+			return errors.New("source changed")
+		}
+		return assigned(ctx, endpoint, out)
+	}
+	if verifyCodeQLAdmissionPlan(context.Background(), c, p, "owned-runner", stale) == nil {
+		t.Fatal("live changed source accepted")
+	}
+	reads, pauses := 0, 0
+	delayed := func(ctx context.Context, endpoint string, out any) error {
+		reads++
+		if reads == 1 {
+			return read(ctx, endpoint, out)
+		}
+		return assigned(ctx, endpoint, out)
+	}
+	if e := awaitCurrentPRRunner(context.Background(), p, "owned-runner", delayed, func(context.Context) error { pauses++; return nil }); e != nil || pauses != 1 {
+		t.Fatalf("bounded delayed assignment: %v, pauses=%d", e, pauses)
+	}
+	reads, pauses = 0, 0
+	if e := awaitCurrentPRRunner(context.Background(), p, "owned-runner", read, func(context.Context) error { pauses++; return nil }); e == nil || pauses != 2 {
+		t.Fatal("unassigned runner did not stop after three reads")
+	}
+	if e := checkCurrentPRReady(context.Background(), p, read); e != nil {
+		t.Fatal(e)
+	}
+	if checkCurrentPRReady(context.Background(), p, assigned) == nil {
+		t.Fatal("already assigned matrix reached registration")
+	}
+}
+
+func TestCurrentPRMatrixCompletionAndFreshInvocation(t *testing.T) {
+	root := "repos/AutoDevJapan/opaque-fixture"
+	for _, status := range []string{"queued", "success", "failure"} {
+		b, read, path, bytes := currentPRFixture(t, "codeql", func(d map[string]any) {
+			d[root+"/actions/runs/7/attempts/2/jobs?per_page=100"] = map[string]any{"total_count": 2, "jobs": []map[string]int{{"id": 11}, {"id": 12}}}
+			job := d[root+"/actions/jobs/11"].(map[string]any)
+			second := map[string]any{}
+			for k, v := range job {
+				second[k] = v
+			}
+			second["id"] = 12
+			d[root+"/actions/jobs/12"] = second
+			if status != "queued" {
+				job["status"] = "completed"
+				job["conclusion"] = status
+			}
+		})
+		b.JobIDs[1] = 12
+		if _, e := planCurrentPRWithPolicy(context.Background(), b, read, path, bytes); (e == nil) != (status != "failure") {
+			t.Fatalf("partial matrix %s: %v", status, e)
+		}
+	}
+	newHead := strings.Repeat("e", 40)
+	b, read, path, bytes := currentPRFixture(t, "codeql", func(d map[string]any) {
+		oldHead := strings.Repeat("a", 40)
+		d[root+"/pulls/995"].(map[string]any)["head"].(map[string]any)["sha"] = newHead
+		d[root+"/git/ref/heads/candidate"] = map[string]any{"object": map[string]string{"sha": newHead}}
+		d[root+"/git/commits/"+newHead] = d[root+"/git/commits/"+oldHead]
+		d[root+"/actions/runs/7"].(map[string]any)["head_sha"] = newHead
+		d[root+"/actions/jobs/11"].(map[string]any)["head_sha"] = newHead
+	})
+	if _, e := planCurrentPRWithPolicy(context.Background(), b, read, path, bytes); e == nil {
+		t.Fatal("old invocation followed advancing source")
+	}
+	b.Head = newHead
+	if p, e := planCurrentPRWithPolicy(context.Background(), b, read, path, bytes); e != nil || p.SHA != newHead {
+		t.Fatalf("fresh fixed invocation requires no compiled SHA: %v", e)
 	}
 }
 

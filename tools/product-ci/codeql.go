@@ -39,7 +39,7 @@ type codeQLPlan struct {
 	Label      string           `json:"label"`
 	Kind       string           `json:"kind,omitempty"`
 	ContextSHA string           `json:"job_context_sha,omitempty"`
-	Current    currentPRBinding `json:"current_pr,omitempty"`
+	Current    currentPRBinding `json:"current_pr,omitzero"`
 	// Repo is only transferred in memory to the guest's private tmpfs. It is
 	// intentionally excluded from every host receipt and diagnostic.
 	Repo string `json:"-"`

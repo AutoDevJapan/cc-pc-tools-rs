@@ -23,6 +23,9 @@ Acceptance:
    fails before Docker creation, token acquisition or runner registration.
 3. Existing source/auth hooks, live API callbacks, queue exclusion, namespace
    isolation, CPU/RAM limits and complete owned-resource teardown remain active.
+   Evidence roles cannot substitute for one another. Execution needs a queued,
+   unassigned frozen job; hooks require the actual assigned runner. Missing API
+   assignment visibility has only three bounded reads, never a source fallback.
 4. Inspect/registration/listener completion and fixture passes do not certify
    official CI. Record actual job/check results, original log hashes and CodeQL
    uploads against the frozen source separately, after normal helper CI/review,

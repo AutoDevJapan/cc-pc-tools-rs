@@ -222,6 +222,10 @@ envelopes. Each envelope binds `origin_todo_id:3056`, `repo_id`, `pr`,
 The parent is responsible for confirming that original review and necessary
 acceptance really succeeded on this source. Evidence is read into RAM and
 fingerprinted; original content and paths are never included in host receipts.
+The two evidence roles are checked independently, even when paths coincide.
+These handoff statements authorize this finite inspection; they do not prove
+official CI success. Job arrays exceeding eight entries, empty arrays, zero,
+negative, duplicate and unordered IDs are rejected rather than truncated.
 
 Preflight verifies the evidence, current PR/branch/base/tree, original reviewed
 workflow, exact run attempt, official job IDs and dedicated queue before any
@@ -231,6 +235,12 @@ runner was actually assigned exactly one of those jobs. A different source,
 attempt, job or runner fails closed. Existing source/auth proofs, isolated
 namespace and teardown remain mandatory. Inspect or listener completion still
 requires separate successful official job/check and upload evidence.
+Execution additionally requires an unassigned queued frozen job. Live hooks
+still accept the already assigned job. Only an as-yet-unobserved assignment
+gets up to three API reads separated by 500 ms within the existing callback
+deadline; an invalid observed assignment is rejected immediately. CodeQL's
+head branch must also equal this PR's branch. A new invocation can retain
+successful members of the same frozen matrix while serving its remaining jobs.
 
 `secret-job <repo-id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF>`
 serves the first candidate's original PR secret gate. Its workflow path and

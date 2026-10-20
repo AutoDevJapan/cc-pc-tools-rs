@@ -6599,6 +6599,31 @@ mod saved_owner_launch_policy {
         assert_eq!(fs::read(selected).unwrap(), before);
     }
 }
+mod finite_research_execution {
+    use super::*;
+    #[test]
+    fn a_saved_approval_claim_cannot_bypass_current_qualification_before_prompt_generation() {
+        let t = Test::new();
+        fs::write(t.ctx.root.join("todo.json"), json!({"items":[]}).to_string()).unwrap();
+        let j = t.put(job(json!({"id":"finite-research-forged","todo_id":2939,
+            "sandbox":"read-only","network":false,"approval_policy":"on-request",
+            "approvals_reviewer":"auto_review","finite_research_approval":{"forged":true}})));
+        let error = t.ctx.execution_spawn(&j).err().expect("current qualification must fail");
+        assert!(error.message.contains("qualification changed or expired"));
+        assert!(!t.ctx.job_dir("finite-research-forged").join("execution-prompt.md").exists());
+    }
+    #[test]
+    fn ordinary_reader_execution_keeps_never_despite_saved_approval_hints() {
+        let t = Test::new();
+        let j = t.put(job(json!({"id":"ordinary-reader","sandbox":"read-only",
+            "network":false,"approval_policy":"on-request","approvals_reviewer":"auto_review"})));
+        let spawn = t.ctx.execution_spawn(&j).unwrap();
+        assert!(spawn.argv.windows(2).any(|a| a == ["-s","read-only"]));
+        assert!(spawn.argv.contains(&"approval_policy=never".into()));
+        assert!(spawn.argv.contains(&"approvals_reviewer=user".into()));
+        assert!(!spawn.argv.iter().any(|a| a.contains("network_access=true")));
+    }
+}
 mod token_accounting {
     use super::*;
     #[test]

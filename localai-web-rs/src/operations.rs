@@ -39,6 +39,7 @@ pub struct Operations {
     questions: RwLock<Value>,
     skills: crate::skills_inventory::Inventory,
     native: crate::native_activity::Registry,
+    resources: crate::resource_observer::Resources,
 }
 impl Operations {
     pub fn production() -> Self {
@@ -53,6 +54,7 @@ impl Operations {
             questions: RwLock::new(Value::Null),
             skills: crate::skills_inventory::Inventory::new(skills_root),
             native,
+            resources: crate::resource_observer::Resources::default(),
         }
     }
     pub fn snapshot(&self) -> Value {
@@ -115,6 +117,8 @@ impl Operations {
             .clone();
         let now = now_ms();
         let mut value = collect_with_questions(&self.root, now, &live);
+        let resource_jobs = value.as_object_mut().and_then(|v|v.remove("_resourceJobs")).unwrap_or(Value::Null);
+        self.resources.refresh(&resource_jobs);
         value["skillsInventory"] = self.skills.snapshot(now);
         let active = crate::workforce_observation::acquire(&self.root);
         let completed = now_ms();
@@ -154,6 +158,8 @@ impl Operations {
         crate::workforce::apply_to_board(&mut value);
         *self.snapshot.write().unwrap_or_else(|e| e.into_inner()) = value;
     }
+    /// HTTP reads a bounded cached generation; collection belongs to `refresh`.
+    pub fn resource_snapshot(&self) -> Value { self.resources.snapshot() }
     pub fn worker_detail(&self, id: &str, offset: usize) -> Result<Value, u16> {
         let names = cc_ask::task_title::Names::load(&self.root.join("client-projects.txt"))
             .map_err(|_| 503u16)?;
@@ -985,6 +991,16 @@ fn jobs_at(path: &Path) -> Result<Vec<Value>, ()> {
     out.sort_by(|a, b| text(b, "created_at").cmp(text(a, "created_at")));
     Ok(out)
 }
+fn resource_jobs(js: &[Value], db: Option<&Value>, jobs_path: &Path, now: u64) -> Value {
+    crate::resource_observer::job_metadata(js, jobs_path, now, |job| {
+        let project = job["project"].as_str().filter(|p|!p.is_empty()).or_else(|| {
+            db.and_then(|db|db["items"].as_array()).and_then(|items|items.iter().find(|item|item["id"]==job["todo_id"]))
+                .and_then(|item|item["project"].as_str())
+        })?;
+        catalog::find(project).or_else(||db.and_then(|db|db["projects"][project].as_str()).and_then(catalog::registered_root))
+            .map(|product|product.name.to_owned())
+    })
+}
 #[cfg(test)]
 fn collect(root: &Path, now: u64) -> Value {
     collect_with_questions(
@@ -1392,6 +1408,7 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
             "巡回完了の記録から取得"
         )
     ]);
+    out["_resourceJobs"] = resource_jobs(js, todo.as_ref(), jobs_path, now);
     out
 }
 fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
@@ -1909,7 +1926,8 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
     json!({"metadataOk":todo.is_ok()&&jobs.is_ok(),"productBindingsConfigured":cc_scheduler::product_identity::bindings_configured(),"productBindingsOverridden":policy.as_object().map(|p|p.contains_key("product_identities")),"fetchedAt":now,"sourceOk":sources.iter().all(|s|s["ok"]==true || s["state"]=="unknown"),"sources":sources,
         "commander":commander,
         "metrics":metrics,"ownerQuestions":decisions["questions"],"decisionTasks":decisions["tasks"],"blockedDecisionTasks":decisions["blockedTasks"],
-        "unassignedProducts":unassigned_products(&tree),"departments":departments(tree)})
+        "unassignedProducts":unassigned_products(&tree),"departments":departments(tree),
+        "_resourceJobs":resource_jobs(js,db,&root.join("codex-jobs/jobs"),now)})
 }
 fn infer_project(job: &Value, db: Option<&Value>) -> String {
     let cwd = text(job, "cwd").replace('\\', "/").to_lowercase();

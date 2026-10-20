@@ -77,7 +77,7 @@ pub fn process_snapshot() -> Result<Processes> {
             let pid = row.th32ProcessID;
             let end = row.szExeFile.iter().position(|c| *c == 0).unwrap_or(260);
             let name = String::from_utf16_lossy(&row.szExeFile[..end]);
-            let mut p = json!({"pid":pid,"ppid":row.th32ParentProcessID,"name":name,"created":null,"rss":0,"cpu":null,"metrics_ok":false});
+            let mut p = json!({"pid":pid,"ppid":row.th32ParentProcessID,"name":name,"created":null,"rss":0,"private_bytes":null,"cpu":null,"metrics_ok":false});
             let h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, 0, pid);
             if !h.is_null() {
                 if let Some((birth, cpu)) = times(h) {
@@ -93,6 +93,7 @@ pub fn process_snapshot() -> Result<Processes> {
                 ) != 0
                 {
                     p["rss"] = json!(mem.WorkingSetSize);
+                    p["private_bytes"] = json!(mem.PrivateUsage);
                     p["metrics_ok"] = json!(!p["cpu"].is_null());
                 }
                 CloseHandle(h);
@@ -104,6 +105,20 @@ pub fn process_snapshot() -> Result<Processes> {
         let after = system_births::snapshot();
         system_births::supplement(&mut ps, before.as_ref(), after.as_ref());
         Ok(ps)
+    }
+}
+/// Read-only counters for the console observer; no sleep, disk or process scan.
+pub fn resource_totals() -> Result<Value> {
+    unsafe {
+        let mut info: PERFORMANCE_INFORMATION = zeroed();
+        info.cb = size_of::<PERFORMANCE_INFORMATION>() as u32;
+        if GetPerformanceInfo(&mut info, info.cb) == 0 {
+            return Err(Error("OSError"));
+        }
+        Ok(json!({"system_times":system_times()?,"tick_ms":GetTickCount64(),
+            "total_bytes":info.PhysicalTotal.saturating_mul(info.PageSize),
+            "available_bytes":info.PhysicalAvailable.saturating_mul(info.PageSize),
+            "logical_cpus":std::thread::available_parallelism().map_or(1, |n|n.get())}))
     }
 }
 pub fn measure(state: &mut Value) -> Result<(Value, Processes)> {

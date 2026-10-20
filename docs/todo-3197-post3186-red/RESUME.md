@@ -17,3 +17,6 @@ job: 20261021-061341-todo-3197。
 
 2026-10-21 06:22 JST: 指定の2コマンドを各1回実測済み。run01は選択1/失敗1/除外9、run02は選択5/失敗5/除外91。両方コンパイル成功後のassert失敗でexit100。各前後1,183ファイル全件一致。ゲートの元PIDは両方不在、出力も排出済み。6件の個別結果と到達/未到達条件はREADME.md/results.json、全文ログはrun-01/02.stdout/stderr.log。
 残作業: 証拠のcommit/push、所有一時領域をplan→別呼出し通常削除→finish（拒否時quarantine）で片付け、記録commit/push、実HEADのcheckpoint保存。追加のCargo実行は禁止。
+
+2026-10-21 06:26 JST: 測定証拠は9766c8c1b2b83d918e215e8dbee7b551329994ccとしてpushし、4本のstdout/stderrが実測SHA256とコミット済み生blobに一致することを確認済み。planはsizeでquarantineを指定。通常quarantineはQUARANTINE_CROSS_DRIVEで移動前に終了した。本人指定の同一Dドライブに新規退避先を作り、停止/絶対境界/所有/リンクなし/全IDとメタデータを照合してMove-Itemした。全5,026項目（根を含む）が一致し、元パスは不在。正規finishはstate=source_absentを返した。退避データはD:/削除希望/20261021-todo-3197-post3186-red-8daae585/dataに保持し、理由.txtも保存した。原資料や他担当のデータは保持。これは削除や容量解放の完了を意味しない。
+残作業: 後片付け記録と全証拠のSHA256一覧をcommit/pushし、実HEAD/元3197/現CC_JOB_IDで正規checkpointを保存・実応答確認。親のToDo状態を手で変更せず、通常の終了応答で結果を返す。Discord通知不要。追加検査・PR・merge・配布は行わない。

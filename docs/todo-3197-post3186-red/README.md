@@ -80,4 +80,37 @@ alternatesを設定した。専用の `info/attributes` の `* -text -filter -id
 - [measurement.ps1](measurement.ps1): この有限測定に使った一度限りのPowerShell手順。各runの起動記録が既存なら重複起動を拒む。
 
 ログとJSONを含むこのディレクトリは `-text` 属性で保存し、コミット時も改行変換を止める。
-後片付けと最終の再開情報保存は、実施後に [RESUME.md](RESUME.md) とその記録へ追記する。
+証拠に含まれるCRLFを末尾空白と誤判定しないよう、このディレクトリだけに
+`whitespace=cr-at-eol` 属性を付けた。保存したログのバイト列は変えていない。
+
+## 一時データの退避
+
+safe-deleteの所有IDは `8daae585cac606ae8a496ca2af6b9169`。
+planは1,460,365,649 byte／5,025項目について、sizeを理由にquarantineを指定した。
+通常削除のコマンドは返されなかったため、削除は提出していない。
+通常のquarantineは `QUARANTINE_CROSS_DRIVE` でpreflight中に止まり、元データを保持した。
+これは実行審査の拒否ではない。削除の再試行や別手段での削除は行っていない。
+
+本人指定の同一ドライブ退避として、新規の
+`D:/削除希望/20261021-todo-3197-post3186-red-8daae585/data` へ通常のMove-Itemで移動した。
+移動前に、元の所有記録、絶対パスと境界、両方の測定プロセスの終了、
+他の実行プロセスによる参照がないこと、祖先と配下のreparse不在を照合した。
+通常ファイル4,383件は、NTFSのリンク数と領域内の同じIDの名前数も一致した。
+他のデータへのハードリンクはない。
+
+根を含む全5,026項目のvolume/file ID、属性、リンク数、サイズ、作成・更新時刻は、
+移動直前と移動後で一致した。移動先は新規で、既存の削除希望データは読取り・変更していない。
+元パスの不在を確認後、正規の `finish --id` は **state=source_absent** を返した。
+退避先には `理由.txt` も保存した。データは退避先に残っており、Dドライブの空きが増えたとは主張しない。
+定期清掃側が扱うための退避を終えたのであり、元のGitオブジェクトや原資料は保持している。
+
+- [cleanup-create-receipt.json](cleanup-create-receipt.json)、[cleanup-plan.json](cleanup-plan.json)、[cleanup-quarantine.json](cleanup-quarantine.json): 正規CLIの所有・計画・停止応答。
+- [cleanup-stopped-check.json](cleanup-stopped-check.json)、[cleanup-inventory-before.json](cleanup-inventory-before.json)、[cleanup-pre-move-verification.json](cleanup-pre-move-verification.json): 停止確認と移動前の全ID。
+- [cleanup-inventory-after.json](cleanup-inventory-after.json)、[cleanup-move-verification.json](cleanup-move-verification.json)、[cleanup-finish.json](cleanup-finish.json): 全ID一致、元パス不在、所有記録の終了。
+- [cleanup-inventory.go](cleanup-inventory.go): この移動のメタデータ照合にだけ使ったGo手順。
+- [committed-log-verification.json](committed-log-verification.json): 全ログのSHA256と、コミット済みGit生blobとの一致。
+
+最終の実HEADを使うcheckpoint requestと実応答は、同じ作業場所の
+`.ci-work/todo3197-checkpoint-final.*` に保存する。コミット自身のHEADをそのコミットの
+本文へ埋めることはできないため、これはGit外の実行記録として保持する。
+各証拠ファイルの一覧とSHA256は `CHECKSUMS.sha256` に保存する。

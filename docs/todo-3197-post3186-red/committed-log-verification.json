@@ -1,0 +1,38 @@
+[
+  {
+    "run": "01",
+    "stream": "stdout",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "expected_sha256_matches": true,
+    "committed_raw_blob_matches": true,
+    "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+  },
+  {
+    "run": "01",
+    "stream": "stderr",
+    "bytes": 2522,
+    "sha256": "537106f9247687664ccb20867607205510283aa10d2c8a07922fe7d18c5ca093",
+    "expected_sha256_matches": true,
+    "committed_raw_blob_matches": true,
+    "blob": "f28519c0a5bb8b804e408afaf286cce6901a3171"
+  },
+  {
+    "run": "02",
+    "stream": "stdout",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "expected_sha256_matches": true,
+    "committed_raw_blob_matches": true,
+    "blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+  },
+  {
+    "run": "02",
+    "stream": "stderr",
+    "bytes": 13759,
+    "sha256": "0bf54ae34b5fa12770f163567eef4f607bf31169ae6e9ecd00c93a1e24fa640b",
+    "expected_sha256_matches": true,
+    "committed_raw_blob_matches": true,
+    "blob": "296407ae1ae802f69bab5766e3e7345da47e62c1"
+  }
+]

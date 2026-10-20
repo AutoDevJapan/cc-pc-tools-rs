@@ -1,0 +1,21 @@
+{
+  "at": "2026-10-21T06:24:24.6914548+09:00",
+  "measurement_processes": [
+    {
+      "has_exited_receipt": true,
+      "run": "01",
+      "original_process_terminated": true,
+      "state": "exited-and-output-drained",
+      "pid": 58540
+    },
+    {
+      "has_exited_receipt": true,
+      "run": "02",
+      "original_process_terminated": true,
+      "state": "exited-and-output-drained",
+      "pid": 11692
+    }
+  ],
+  "other_processes_referencing_owned_path": [],
+  "count": 0
+}

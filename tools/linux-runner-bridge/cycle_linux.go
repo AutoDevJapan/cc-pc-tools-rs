@@ -436,9 +436,13 @@ func superviseNormal() int {
 		return 1
 	}
 	code, err := superviseCycles(compiledNormalProfile.maxCycles, func() (int, error) {
-		return runNormalCycle(diagnosticRoot, "/tmp", "/runner", func() error {
+		code, err := runNormalCycle(diagnosticRoot, "/tmp", "/runner", func() error {
 			return awaitCycleQuiescent(func() error { return cycleQuiescent("/proc") }, time.Sleep, time.Now, 30*time.Second)
 		})
+		if err == nil && code != 0 && compiledNormalProfile.maxCycles == 0 {
+			fmt.Fprintf(os.Stderr, "linux-runner-cycle code=%d; retrying after 30 seconds\n", code)
+		}
+		return code, err
 	}, time.Sleep)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

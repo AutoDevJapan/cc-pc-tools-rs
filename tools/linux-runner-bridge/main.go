@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -60,7 +61,10 @@ type host struct {
 	mu                                  sync.Mutex
 	getHead                             func(string) (string, error)
 	profile                             normalProfile
-	boundRunnerID                       int64
+	registrationMu                      sync.Mutex
+	boundRunnerID                       atomic.Int64
+	jobAdmission                        atomic.Int32
+	registered                          chan struct{}
 	lookupRegistration                  func() (int64, error)
 }
 
@@ -215,6 +219,9 @@ func (h *host) remoteHead(branch string) (string, error) {
 		return "", errors.New("branch rejected")
 	}
 	ref := "repos/" + repo + "/git/ref/heads/" + url.PathEscape(branch)
+	if h.profile.ephemeral {
+		return burstOutput(30*time.Second, gh, "api", ref, "--jq", ".object.sha")
+	}
 	return output(command(gh, "api", ref, "--jq", ".object.sha"))
 }
 func (h *host) current() error {
@@ -545,23 +552,29 @@ func (h *host) serve(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.URL.Path == "/registered" {
-		if h.mode != "normal" || !h.profile.ephemeral || q.Repository != repo {
+		if h.mode != "normal" || !h.profile.ephemeral || q.Repository != repo || h.jobAdmission.Load() == 2 {
 			http.Error(w, "registration rejected", 403)
 			return
 		}
-		h.mu.Lock()
-		defer h.mu.Unlock()
-		if h.boundRunnerID == 0 {
+		h.registrationMu.Lock()
+		defer h.registrationMu.Unlock()
+		if h.boundRunnerID.Load() == 0 {
 			lookup := h.lookupRegistration
 			if lookup == nil {
 				lookup = func() (int64, error) { return configuredBurstRunnerID(h.profile) }
 			}
 			id, err := lookup()
-			if err != nil || id <= 0 {
+			if err != nil || id <= 0 || h.jobAdmission.Load() == 2 {
 				http.Error(w, "registration not confirmed", 503)
 				return
 			}
-			h.boundRunnerID = id
+			h.boundRunnerID.Store(id)
+			if h.registered != nil {
+				select {
+				case h.registered <- struct{}{}:
+				default:
+				}
+			}
 			if data, err := json.Marshal(struct {
 				ID   int64     `json:"runnerId"`
 				Name string    `json:"name"`
@@ -577,6 +590,10 @@ func (h *host) serve(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/authorize" {
 		if e := h.authorize(q); e != nil {
 			http.Error(w, e.Error(), 403)
+			return
+		}
+		if h.profile.ephemeral && !h.jobAdmission.CompareAndSwap(0, 1) && h.jobAdmission.Load() != 1 {
+			http.Error(w, "admission retired", 503)
 			return
 		}
 		w.WriteHeader(204)
@@ -922,7 +939,7 @@ func hostMain(args []string) int {
 	if _, e := rand.Read(key); e != nil {
 		return 1
 	}
-	h := host{key: hex.EncodeToString(key), mode: mode, revision: revision, branch: branch, target: target, profile: compiledNormalProfile}
+	h := host{key: hex.EncodeToString(key), mode: mode, revision: revision, branch: branch, target: target, profile: compiledNormalProfile, registered: make(chan struct{}, 1)}
 	if mode == "finite" && h.current() != nil {
 		return 1
 	}
@@ -1010,7 +1027,7 @@ func hostMain(args []string) int {
 			}
 			done := make(chan int, 1)
 			go func() { done <- exitCode(c.Wait()) }()
-			code = awaitBurstProcess(done, func() int64 { h.mu.Lock(); defer h.mu.Unlock(); return h.boundRunnerID })
+			code = awaitBurstProcess(done, h.registered, h.boundRunnerID.Load, func() bool { return h.jobAdmission.Load() == 1 }, func() bool { return h.jobAdmission.CompareAndSwap(0, 2) || h.jobAdmission.Load() == 2 })
 		} else {
 			code = exitCode(c.Run())
 		}
@@ -1019,7 +1036,11 @@ func hostMain(args []string) int {
 			if mode == "normal" {
 				reportStage(fmt.Sprintf("burst-host-ended-%d", code))
 			}
-			_ = s.Shutdown(context.Background())
+			if code == burstUnverifiedExit {
+				_ = s.Close()
+			} else {
+				_ = s.Shutdown(context.Background())
+			}
 			return code
 		}
 		if code == 96 {
@@ -1124,7 +1145,10 @@ func register() int {
 	var configOutput bytes.Buffer
 	c.Stdout = &configOutput
 	c.Stderr = &configOutput
-	if configErr := c.Run(); configErr != nil {
+	if configErr := runRunnerConfiguration(c, compiledNormalProfile.ephemeral); configErr != nil {
+		if errors.Is(configErr, errConfigurationUnverified) {
+			return 39
+		}
 		failureClass := runnerConfigFailureClass(configOutput.Bytes())
 		reportRunnerConfigSummary(configOutput.Bytes())
 		configOutput.Reset()

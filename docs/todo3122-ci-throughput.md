@@ -55,6 +55,9 @@ idleならラベルを外し、3回の新しいAPI観測でラベル0/未割当�
 解除の404とWorker不在を確認して追加枠のidle groupだけを止め、排出後に公式SDKの
 removeでlocal configを片付ける。tokenはRAMとstdinだけに渡し、認証fileを手動削除しない。
 不明な状態で強制終了しない。元primary/finite2511にはこの処理を適用しない。
+解除段階を保持し、30秒間隔で最大10分の再試行を行う。解除済みIDの404は次段階へ進める。
+計時は登録結合後から開始する。受理済みjobはRPC hostを保持し、未受理のまま上限に
+達した場合は新たな受理を閉じて終了74と未検証記録を残す。idle完了は終了75で区別する。
 
 container回収前にはsupervisor lock/静止/所有/終了印を確認するexport-diagnosticsで
 既存の最大8回/64MiBだけをgzipへ保全し、検証とhash記録後に消す。

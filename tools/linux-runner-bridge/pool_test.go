@@ -33,6 +33,15 @@ func TestQueueCountsOnlyUnassignedCurrentSameRepoLinuxJobs(t *testing.T) {
 	}
 }
 
+func TestBurstRoutingUsesAllRequestedLabelsWithoutCaseSensitivity(t *testing.T) {
+	if !burstJobLabelsMatch([]string{"SELF-HOSTED", "linux", "x64", "CC-PC-TOOLS-LINUX"}) {
+		t.Fatal("compatible differently cased labels rejected")
+	}
+	if burstJobLabelsMatch([]string{"self-hosted", "Linux", "X64", normalLabel, "gpu"}) || burstJobLabelsMatch(nil) {
+		t.Fatal("incompatible/unknown routing was admitted")
+	}
+}
+
 func TestBurstPoolResuppliesAfterEachRealHostExit(t *testing.T) {
 	now := time.Now()
 	remaining, active, started, admitted := 3, 0, 0, 0
@@ -44,7 +53,7 @@ func TestBurstPoolResuppliesAfterEachRealHostExit(t *testing.T) {
 			if active != 0 {
 				t.Fatal("queried next supply before the prior host drained")
 			}
-			return queueSnapshot{Queued: remaining}, nil
+			return queueSnapshot{Queued: remaining, OldestSecs: 90}, nil
 		},
 		capacity: func() error { admitted++; return nil },
 		run: func() int {
@@ -105,7 +114,7 @@ func TestBurstPoolDoesNotStartWithoutFreshCapacityOrAfterDeadline(t *testing.T) 
 					if test == "metadata" {
 						return queueSnapshot{}, errors.New("unavailable")
 					}
-					return queueSnapshot{Queued: 100}, nil
+					return queueSnapshot{Queued: 100, OldestSecs: 90}, nil
 				},
 				capacity: func() error {
 					if test == "resource" {
@@ -145,8 +154,10 @@ func TestDefaultInvocationYieldsAfterOneHostAndCanBeResupplied(t *testing.T) {
 	remaining, starts := 2, 0
 	last := queueSnapshot{}
 	d := burstPoolDeps{
-		now:      time.Now,
-		queue:    func() (queueSnapshot, error) { return queueSnapshot{ObservedAt: time.Now(), Queued: remaining}, nil },
+		now: time.Now,
+		queue: func() (queueSnapshot, error) {
+			return queueSnapshot{ObservedAt: time.Now(), Queued: remaining, OldestSecs: 90}, nil
+		},
 		capacity: func() error { return nil },
 		run:      func() int { starts++; remaining--; return 0 },
 		record:   func(_ string, _ int, q queueSnapshot) { last = q },

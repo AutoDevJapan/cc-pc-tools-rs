@@ -3,10 +3,12 @@ package main
 import (
 	"errors"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 )
 
 func burstWorkerIdle() int {
@@ -29,10 +31,43 @@ func burstWorkerIdle() int {
 			return 1
 		}
 		if strings.TrimSpace(string(name)) == "Runner.Worker" {
-			return 1
+			return 2
 		}
 	}
 	return 0
+}
+
+func runRunnerConfiguration(c *exec.Cmd, bounded bool) error {
+	if !bounded {
+		return c.Run()
+	}
+	group(c)
+	if err := c.Start(); err != nil {
+		return err
+	}
+	done := make(chan error, 1)
+	go func() { done <- c.Wait() }()
+	timer := time.NewTimer(2 * time.Minute)
+	defer timer.Stop()
+	select {
+	case err := <-done:
+		return err
+	case <-timer.C:
+		// No run.sh/job exists until configuration and the synchronous binding
+		// finish. Only this setup group is terminated on its own deadline.
+		_ = syscall.Kill(-c.Process.Pid, syscall.SIGTERM)
+		select {
+		case <-done:
+		case <-time.After(3 * time.Second):
+			_ = syscall.Kill(-c.Process.Pid, syscall.SIGKILL)
+			select {
+			case <-done:
+			case <-time.After(15 * time.Second):
+				return errConfigurationUnverified
+			}
+		}
+		return errors.New("runner configuration deadline exceeded")
+	}
 }
 
 // Called by the host only after its bound registration was withdrawn/removed.

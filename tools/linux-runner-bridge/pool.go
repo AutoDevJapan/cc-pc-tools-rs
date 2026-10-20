@@ -80,19 +80,24 @@ func currentQueue(api func(string, any) error, now time.Time) (queueSnapshot, er
 	snapshot := queueSnapshot{ObservedAt: now}
 	byID := map[int64]queueRun{}
 	for _, status := range []string{"queued", "in_progress"} {
-		var response struct {
-			Total int        `json:"total_count"`
-			Runs  []queueRun `json:"workflow_runs"`
-		}
-		if err := api("repos/"+repo+"/actions/runs?status="+status+"&per_page=100", &response); err != nil {
-			return snapshot, err
-		}
-		if response.Total > 100 {
-			return snapshot, errors.New("runner queue exceeds finite metadata scan")
-		}
-		for _, run := range response.Runs {
-			if run.HeadRepository.FullName == repo && (run.Event == "pull_request" || run.Event == "push" || run.Event == "schedule") {
-				byID[run.ID] = run
+		for page := 1; page <= 5; page++ {
+			var response struct {
+				Total int        `json:"total_count"`
+				Runs  []queueRun `json:"workflow_runs"`
+			}
+			if err := api("repos/"+repo+"/actions/runs?status="+status+"&per_page=100&page="+strconv.Itoa(page), &response); err != nil {
+				return snapshot, err
+			}
+			if response.Total > 500 {
+				return snapshot, errors.New("runner queue exceeds finite metadata scan")
+			}
+			for _, run := range response.Runs {
+				if run.HeadRepository.FullName == repo && (run.Event == "pull_request" || run.Event == "push" || run.Event == "schedule") {
+					byID[run.ID] = run
+				}
+			}
+			if page*100 >= response.Total {
+				break
 			}
 		}
 	}
@@ -102,6 +107,7 @@ func currentQueue(api func(string, any) error, now time.Time) (queueSnapshot, er
 	}
 	sort.Slice(runs, func(i, j int) bool { return runs[i].ID < runs[j].ID })
 	heads := map[string]string{}
+	seenJobs := map[int64]bool{}
 	for _, run := range runs {
 		if !revisionPattern.MatchString(run.HeadSHA) || run.HeadBranch == "" || strings.HasPrefix(run.HeadBranch, "-") || strings.ContainsAny(run.HeadBranch, "\x00\r\n") {
 			continue
@@ -126,31 +132,55 @@ func currentQueue(api func(string, any) error, now time.Time) (queueSnapshot, er
 		if head != run.HeadSHA || (run.Event != "pull_request" && run.HeadBranch != normalBranch) {
 			continue
 		}
-		var jobs struct {
-			Total int         `json:"total_count"`
-			Jobs  []queuedJob `json:"jobs"`
-		}
-		if err := api("repos/"+repo+"/actions/runs/"+strconv.FormatInt(run.ID, 10)+"/jobs?per_page=100", &jobs); err != nil {
-			return snapshot, err
-		}
-		if jobs.Total > 100 {
-			return snapshot, errors.New("runner job list exceeds finite metadata scan")
-		}
-		for _, job := range jobs.Jobs {
-			labels := map[string]bool{}
-			for _, label := range job.Labels {
-				labels[label] = true
+		for page := 1; page <= 5; page++ {
+			var jobs struct {
+				Total int         `json:"total_count"`
+				Jobs  []queuedJob `json:"jobs"`
 			}
-			if job.Status != "queued" || job.RunnerID != 0 || !labels["self-hosted"] || !labels["Linux"] || !labels["X64"] || !labels[normalLabel] {
-				continue
+			if err := api("repos/"+repo+"/actions/runs/"+strconv.FormatInt(run.ID, 10)+"/jobs?per_page=100&page="+strconv.Itoa(page), &jobs); err != nil {
+				return snapshot, err
 			}
-			snapshot.Queued++
-			if !job.CreatedAt.IsZero() && job.CreatedAt.Before(now) {
-				snapshot.OldestSecs = max(snapshot.OldestSecs, now.Sub(job.CreatedAt).Seconds())
+			if jobs.Total > 500 {
+				return snapshot, errors.New("runner job list exceeds finite metadata scan")
+			}
+			for _, job := range jobs.Jobs {
+				if seenJobs[job.ID] {
+					continue
+				}
+				seenJobs[job.ID] = true
+				if job.Status != "queued" || job.RunnerID != 0 || !burstJobLabelsMatch(job.Labels) {
+					continue
+				}
+				snapshot.Queued++
+				if !job.CreatedAt.IsZero() && job.CreatedAt.Before(now) {
+					snapshot.OldestSecs = max(snapshot.OldestSecs, now.Sub(job.CreatedAt).Seconds())
+				}
+			}
+			if page*100 >= jobs.Total {
+				break
 			}
 		}
 	}
 	return snapshot, nil
+}
+
+func burstJobLabelsMatch(labels []string) bool {
+	if len(labels) == 0 {
+		return false
+	}
+	for _, label := range labels {
+		found := false
+		for _, available := range []string{"self-hosted", "Linux", "X64", normalLabel} {
+			if strings.EqualFold(label, available) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
 }
 
 type burstPoolDeps struct {
@@ -184,6 +214,10 @@ func supplyBurstPool(d burstPoolDeps) int {
 			d.record("queue-drained", ended, q)
 			return 0
 		}
+		if q.OldestSecs < 60 {
+			d.record("queue-settling", ended, q)
+			return 0
+		}
 		if d.capacity() != nil {
 			d.record("resource-wait", ended, q)
 			return 0
@@ -194,7 +228,10 @@ func supplyBurstPool(d burstPoolDeps) int {
 			return 0
 		}
 		d.record("one-job-running", ended, q)
-		if code := d.run(); code != 0 {
+		if code := d.run(); code == burstIdleExit {
+			d.record("idle-session-ended", ended+1, q)
+			return 0
+		} else if code != 0 {
 			d.record("one-job-host-failed", ended, q)
 			return code
 		}
@@ -246,7 +283,18 @@ func burstPoolMain(args []string) int {
 			if err := burstHostCapacity(); err != nil {
 				return err
 			}
-			data, err := output(command(docker, "exec", normalContainer, "cat", "/proc/meminfo"))
+			if err := verifyNormalContainer(); err != nil {
+				return err
+			}
+			size, err := burstOutput(20*time.Second, docker, "container", "inspect", "--size", "--format", "{{.SizeRw}}", normalContainer)
+			if err != nil {
+				return err
+			}
+			bytes, err := strconv.ParseInt(size, 10, 64)
+			if err != nil || bytes < 0 || bytes > 16<<30 {
+				return errors.New("owned CI writable-layer allowance exceeded")
+			}
+			data, err := burstOutput(15*time.Second, docker, "exec", normalContainer, "cat", "/proc/meminfo")
 			if err != nil {
 				return err
 			}

@@ -28,6 +28,10 @@ each one it reads current same-repository queued jobs and fresh Windows/VM
 capacity. Windows must have at least 24 GiB free, commit below 85%, CPU below
 75%, and 30 GiB free on each of C/D; the Docker VM must have 9 GiB available.
 The additional container is separately capped at 4 CPUs, 8 GiB and 1024 PIDs.
+Only jobs whose requested labels all match without case sensitivity are counted;
+at least one must have waited 60 seconds. Verified stopped containers are started
+before probing VM capacity. Writable-layer admission is bounded at 16 GiB;
+unknown or exceeded usage retains the container for maintenance.
 Use the existing hidden S4U/Limited Task Scheduler management pattern, IgnoreNew,
 and the one-minute recurrence to recheck remaining work. The pool holds loopback
 port 17863 to reject duplicate managers before registration. It stops when the
@@ -37,7 +41,9 @@ admission deadline, and records its stage in `.ci-runtime/pool-status.private.js
 Keep this supporting worktree/runtime while the task uses it; remove only owned
 test resources after verification. Reboot recovery is not claimed.
 
-The additional host has a two-minute idle deadline. If the runner is busy then,
+The additional host starts its two-minute idle deadline after registration
+binding succeeds. Guest setup is bounded separately and binding notification has
+three 45-second attempts. If the runner is busy then,
 it waits for the original job to finish with its original timeout. Otherwise it
 withdraws this owned ephemeral runner's custom labels, confirms zero labels and
 no assigned job/Worker over three fresh observations, and removes its idle
@@ -46,9 +52,14 @@ host to the exact returned runner ID before run.sh starts; absent API fields do
 not substitute for that binding. After removal is confirmed as 404 and no Worker
 exists, only the owned idle run.sh group is signalled. The existing group drain
 must finish before the official SDK's remove command clears local configuration
-using a RAM-only removal token. No authentication file is manually deleted. Unknown API,
-identity, labels or process state retains the host and records an unverified
-drain; it never force-kills a potentially assigned job. Primary/2511 are excluded.
+using a RAM-only removal token. No authentication file is manually deleted.
+Withdrawal/removal/stop stages survive transient failures and retry every 30
+seconds for up to ten minutes. A removed ID resumes at listener stop, including
+expected NotFound responses. Accepted work retains its RPC host. Otherwise an
+atomic admission retirement prevents new source from starting, exits 74 for an
+unverified attempt and retains diagnostic state. Idle completion uses exit 75,
+distinct from a GitHub job success; the pool ends that invocation without an
+immediate refill. Primary/2511 are excluded.
 See the pinned [official listener cleanup](https://github.com/actions/runner/blob/v2.338.0/src/Runner.Listener/Runner.cs).
 
 Before deleting/recreating this slot's container, stop further admission, wait

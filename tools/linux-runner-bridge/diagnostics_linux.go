@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -59,7 +60,10 @@ func unconfigureBurstIdle() int {
 	var private bytes.Buffer
 	c.Stdout = &private
 	c.Stderr = &private
-	err = c.Run()
+	err = runRunnerConfiguration(c, true)
+	if errors.Is(err, errConfigurationUnverified) {
+		return 1
+	}
 	private.Reset()
 	if err != nil {
 		return 1

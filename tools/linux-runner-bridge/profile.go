@@ -1,9 +1,12 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"time"
 )
+
+var errConfigurationUnverified = errors.New("runner setup remains unverified")
 
 // The operator chooses one of two fixed identities at build time. Jobs cannot
 // select a host/container/port through their environment or Cargo arguments.

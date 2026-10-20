@@ -109,11 +109,6 @@ fn linked(item: &Value, job: &Value) -> bool {
     item["id"]
         .as_u64()
         .is_some_and(|id| job["todo_id"].as_u64() == Some(id))
-        || item["id"].as_u64().is_some_and(|id| {
-            rows(job, "related_todo_ids")
-                .iter()
-                .any(|related| related.as_u64() == Some(id))
-        })
         || ["id", "thread_id", "resume_session"].iter().any(|key| {
             job[*key].as_str().is_some_and(|id| {
                 !id.is_empty()

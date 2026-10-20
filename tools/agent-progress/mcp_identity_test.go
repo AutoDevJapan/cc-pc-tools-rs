@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"testing"
 )
@@ -42,6 +43,68 @@ func TestMCPVerifiedJobReclassifiesCodeOnlyTask(t *testing.T) {
 	s := snap(f)
 	if len(s.Tasks) != 1 || s.Tasks[0].Priority != 60 || s.Tasks[0].Department != "GoDD事業部" || s.Tasks[0].ProductIdentity == nil || s.Tasks[0].ProductIdentity.ProductID != "godd-mcp-alpha" || s.Jobs[0].Priority != 60 {
 		t.Fatal("verified business target was absorbed into the code repository")
+	}
+}
+
+func TestMCPLiveRequesterProductPriorityFlowsThroughDependencies(t *testing.T) {
+	for _, alpha := range []bool{false, true} {
+		for _, edge := range []string{"wait_on", "work_wait_on"} {
+			for _, chain := range []bool{false, true} {
+				parent := map[string]any{"id": 1, "project": "tools", "status": "doing"}
+				target := 7
+				if chain {
+					target = 5
+				}
+				parent[edge] = []int{target}
+				db, _ := json.Marshal(map[string]any{"items": []any{parent,
+					map[string]any{"id": 5, "project": "tools", "status": "doing", "work_wait_on": []int{7}},
+					map[string]any{"id": 7, "project": "tools", "status": "doing"}}})
+				f := fixtureFor(t, string(db))
+				f.opts.PriorityFile = filepath.Join(filepath.Dir(f.opts.TodoFile), "priority.json")
+				writeFixture(t, f.opts.PriorityFile, []byte(`{"product_identities":{"godd-mcp-contract":{"repository_id":61001,"owner_id":71001},"godd-mcp-alpha":{"repository_id":61002,"owner_id":71002}}}`))
+				repository, owner, want := 61001, 71001, 10
+				if alpha {
+					repository, owner, want = 61002, 71002, 60
+				}
+				f.job(t, "requester", fmt.Sprintf(`{"id":"requester","todo_id":1,"status":"queued","product_identity":{"repository_id":%d,"owner_id":%d}}`, repository, owner))
+				f.job(t, "middle", `{"id":"middle","todo_id":5,"status":"running","product_identity":{"repository_id":61002,"owner_id":71002}}`)
+				f.job(t, "prerequisite", `{"id":"prerequisite","todo_id":7,"status":"running","product_identity":{"repository_id":61002,"owner_id":71002}}`)
+				s := snap(f)
+				foundTask := false
+				for _, task := range s.Tasks {
+					if task.ID == 7 {
+						foundTask = true
+						if task.Priority != want || task.Department != "GoDD事業部" {
+							t.Fatalf("alpha=%v/edge=%s/chain=%v: task priority=%d want=%d", alpha, edge, chain, task.Priority, want)
+						}
+					}
+				}
+				if !foundTask {
+					t.Fatal("prerequisite task absent")
+				}
+				found := false
+				for _, job := range s.Jobs {
+					if job.rawID == "prerequisite" {
+						found = true
+						if job.Priority != want {
+							t.Fatalf("job priority=%d want=%d", job.Priority, want)
+						}
+					}
+				}
+				if !found {
+					t.Fatal("prerequisite job absent")
+				}
+			}
+		}
+	}
+}
+
+func TestMCPHistoryOnlyProductJobKeepsItsProductPriority(t *testing.T) {
+	f := fixtureFor(t, `{"items":[{"id":7,"project":"tools","status":"wait","jobs":["alpha"]}]}`)
+	f.job(t, "alpha", `{"id":"alpha","related_todo_ids":[7],"status":"running","project":"GoDD MCP α"}`)
+	s := snap(f)
+	if len(s.Jobs) != 1 || s.Jobs[0].Priority != 60 {
+		t.Fatalf("history-only priority differs: %+v", s.Jobs)
 	}
 }
 

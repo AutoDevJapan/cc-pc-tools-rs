@@ -631,6 +631,112 @@ fn mcp_api_reports_the_presence_of_runtime_binding_overrides() {
 }
 
 #[test]
+fn mcp_live_requesters_supply_product_priority_before_dependency_propagation() {
+    for masked in [false, true] {
+        for alpha in [false, true] {
+            for edge in ["wait_on", "work_wait_on"] {
+                for chain in [false, true] {
+                    let mut parent = json!({"id":1,"project":"tools","status":"doing"});
+                    parent[edge] = json!([if chain { 5 } else { 7 }]);
+                    let value = board(
+                        json!([parent,
+                        {"id":5,"project":"tools","status":"doing","work_wait_on":[7]},
+                        {"id":7,"project":"tools","status":"doing"}]),
+                        vec![
+                            json!({"id":"requester","todo_id":1,"status":"queued","product_identity":identity(alpha)}),
+                            json!({"id":"middle","todo_id":5,"status":"running","product_identity":identity(true)}),
+                            json!({"id":"prerequisite","todo_id":7,"status":"running","product_identity":identity(true)}),
+                        ],
+                        masked,
+                    );
+                    assert_eq!(
+                        row(&value, "todo-1")["priority"],
+                        if alpha { 60 } else { 10 }
+                    );
+                    assert_eq!(
+                        row(&value, "todo-7")["priority"],
+                        if alpha { 60 } else { 10 },
+                        "masked={masked}/alpha={alpha}/edge={edge}/chain={chain}"
+                    );
+                    assert_eq!(
+                        row(&value, "todo-7")["productIdentity"]["productId"],
+                        "godd-mcp-alpha"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn mcp_duplicate_task_ids_preserve_every_private_job_edge() {
+    let temp = test_root(
+        json!([
+        {"id":6,"project":"tools","status":"doing","title":"duplicate-private-title-marker","note":"duplicate-private-note-marker","jobs":["p"]},
+        {"id":6,"project":"tools","status":"doing"}]),
+        vec![
+            json!({"id":"p","project":"SyntheticPrivate","status":"running","last_message":"duplicate-private-report-marker"}),
+        ],
+        false,
+        json!({}),
+    );
+    let root = temp.path();
+    let operations = Operations::new(root.into(), root.join("Skills"));
+    let task = operations.worker_detail("todo-6", 0);
+    let job = operations.worker_detail(&safe_id("job", "p"), 0);
+    let value = collect(root, 1_000_000).to_string();
+    assert!(
+        task == Err(404)
+            && job == Err(404)
+            && !value.contains("duplicate-private-title-marker")
+            && !value.contains("duplicate-private-note-marker")
+            && !value.contains("duplicate-private-report-marker"),
+        "task={task:?}/job={job:?}"
+    );
+}
+
+#[test]
+fn mcp_missing_policy_has_no_runtime_binding_override() {
+    for masked in [false, true] {
+        let temp = test_root(json!([]), vec![], masked, json!({}));
+        fs::remove_file(temp.path().join("scheduler/priorities.json")).unwrap();
+        assert_eq!(
+            collect(temp.path(), 1_000_000)["productBindingsOverridden"],
+            false,
+            "masked={masked}"
+        );
+    }
+}
+
+#[test]
+fn mcp_related_private_ids_mask_both_display_lists() {
+    let names = cc_ask::task_title::Names::parse("SyntheticPrivate\n");
+    let db = json!({"items":[
+        {"id":5,"project":"SyntheticPrivate","status":"doing"},
+        {"id":6,"project":"tools","status":"doing","note":"display-private-note-marker"}]});
+    let jobs = [
+        json!({"id":"related","todo_id":6,"related_todo_ids":[5],"project":"tools","status":"running","last_message":"display-private-report-marker"}),
+    ];
+    let tasks = crate::console_ui::display_todos(&names, &db, &jobs);
+    let task = tasks["items"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|row| row["id"] == 6)
+        .unwrap();
+    let displayed = crate::console_ui::display_jobs(&names, &db, &jobs);
+    assert_eq!(displayed["jobs"].as_array().unwrap().len(), 1);
+    assert_eq!(task["note"], "");
+    assert_eq!(displayed["jobs"][0]["report"], "");
+    assert!(!tasks.to_string().contains("display-private-note-marker"));
+    assert!(
+        !displayed
+            .to_string()
+            .contains("display-private-report-marker")
+    );
+}
+
+#[test]
 fn mcp_verified_primary_job_supplies_business_target_without_renaming_the_code_repository() {
     for masked in [true, false] {
         let value = board(

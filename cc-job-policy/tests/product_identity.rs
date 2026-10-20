@@ -168,3 +168,82 @@ fn explicit_identity_does_not_override_an_opposing_owner_declaration() {
     let row = json!({"id":2641,"project":"cc-pc-tools-rs","product_identity":{"repository_id":61001,"owner_id":71001}});
     assert_eq!(resolve(&row, &bindings()), Resolution::Unknown);
 }
+
+#[test]
+fn mcp_live_requester_identity_drives_formal_dependency_priority() {
+    for alpha in [false, true] {
+        for edge in ["wait_on", "work_wait_on"] {
+            for chain in [false, true] {
+                let mut parent = json!({"id":1,"project":"tools","status":"doing"});
+                parent[edge] = json!([if chain { 5 } else { 7 }]);
+                let db = json!({"items":[parent,
+                    {"id":5,"project":"tools","status":"doing","work_wait_on":[7]},
+                    {"id":7,"project":"tools","status":"doing"}]});
+                let jobs = vec![
+                    json!({"id":"requester","todo_id":1,"status":"queued","product_identity":{"repository_id":if alpha {61002} else {61001},"owner_id":if alpha {71002} else {71001}}}),
+                    json!({"id":"middle","todo_id":5,"status":"running","product_identity":{"repository_id":61002,"owner_id":71002}}),
+                    json!({"id":"prerequisite","todo_id":7,"status":"running","product_identity":{"repository_id":61002,"owner_id":71002}}),
+                ];
+                let ranks = cc_job_policy::priority::job_ranks(&jobs, &db, &bindings());
+                assert_eq!(ranks["requester"], if alpha { 60 } else { 10 });
+                assert_eq!(
+                    ranks["prerequisite"],
+                    if alpha { 60 } else { 10 },
+                    "alpha={alpha}/edge={edge}/chain={chain}"
+                );
+            }
+        }
+    }
+}
+
+#[test]
+fn mcp_live_requester_dependency_exclusion_controls() {
+    for control in [
+        "parent_done",
+        "parent_block",
+        "wait_ready",
+        "child_done",
+        "no_product_job",
+    ] {
+        let mut parent = json!({"id":1,"project":"tools","status":"doing","wait_on":[7]});
+        let mut child = json!({"id":7,"project":"tools","status":"doing"});
+        match control {
+            "parent_done" => parent["status"] = json!("done"),
+            "parent_block" => parent["status"] = json!("block"),
+            "wait_ready" => parent["wait_ready"] = json!({"condition":"synthetic"}),
+            "child_done" => child["status"] = json!("done"),
+            _ => {}
+        }
+        let mut requester = json!({"id":"requester","todo_id":1,"status":"queued","product_identity":{"repository_id":61001,"owner_id":71001}});
+        if control == "no_product_job" {
+            requester
+                .as_object_mut()
+                .unwrap()
+                .remove("product_identity");
+        }
+        let jobs = [
+            requester,
+            json!({"id":"prerequisite","todo_id":7,"status":"running","product_identity":{"repository_id":61002,"owner_id":71002}}),
+        ];
+        let ranks = cc_job_policy::priority::job_ranks(
+            &jobs,
+            &json!({"items":[parent,child]}),
+            &bindings(),
+        );
+        assert_eq!(
+            ranks["prerequisite"],
+            if control == "no_product_job" { 30 } else { 60 },
+            "{control}"
+        );
+    }
+}
+
+#[test]
+fn mcp_history_only_product_job_does_not_borrow_code_priority() {
+    let db = json!({"items":[{"id":7,"project":"tools","status":"wait","jobs":["alpha"]}]});
+    let job = json!({"id":"alpha","related_todo_ids":[7],"status":"running","product_identity":{"repository_id":61002,"owner_id":71002}});
+    assert_eq!(
+        cc_job_policy::priority::job_ranks(&[job], &db, &bindings())["alpha"],
+        60
+    );
+}

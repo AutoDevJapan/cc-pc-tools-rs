@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -12,7 +13,18 @@ import (
 // CI checks the published design, not the protected central skill directory or
 // private original bodies. Their SHA correspondence is checked on this PC.
 func TestCandidateReceiptsAndUsageBoundaries(t *testing.T) {
-	b, err := os.ReadFile("../../docs/skills-3080-batch01.json")
+	files, err := filepath.Glob("../../docs/skills-3080-batch*.json")
+	if err != nil || len(files) == 0 {
+		t.Fatal("no adoption candidate batches")
+	}
+	for _, file := range files {
+		t.Run(filepath.Base(file), func(t *testing.T) { checkCandidatePlan(t, file) })
+	}
+}
+
+func checkCandidatePlan(t *testing.T, file string) {
+	t.Helper()
+	b, err := os.ReadFile(file)
 	if err != nil {
 		t.Fatal(err)
 	}

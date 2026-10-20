@@ -123,6 +123,7 @@ fn a_finished_root_review_of_a_replaced_spec_requeues_only_its_own_generation() 
     f.managed(2, 2, "other", 0);
     let before = f.get(1);
     let record = &mut f.e.backend.records[0];
+    record["todo_id"] = json!(1);
     record["status"] = json!("succeeded");
     record["sandbox"] = json!("read-only");
     record["task_type"] = json!("review");

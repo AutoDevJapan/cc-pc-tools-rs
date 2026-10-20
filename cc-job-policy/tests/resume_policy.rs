@@ -115,3 +115,12 @@ fn automatic_cli_hints_also_use_the_managed_policy_without_a_todo() {
     assert_eq!(job["model"], "gpt-6.1-sol");
     assert_eq!(job["effort"], "max");
 }
+
+#[test]
+fn model_repair_exclusions_cannot_route_back_to_the_known_failed_default() {
+    let mut job = json!({"model":"gpt-6-astra","effort":"high","model_explicit":false,
+        "review_excluded_models":["openai/gpt-6.1-sol"]});
+    apply_managed_launch_policy(&mut job);
+    assert_eq!(job["model"], "gpt-6-astra");
+    assert_eq!(job["effort"], "max");
+}

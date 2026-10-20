@@ -139,6 +139,12 @@ pub fn apply_managed_launch_policy(job: &mut serde_json::Value) {
         && job["model_origin"] != "owner_request"
         && !reader
         && !capacity_attempt
+        && !job["review_excluded_models"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(serde_json::Value::as_str)
+            .any(|model| same_model(model, "gpt-6.1-sol"))
         && ["gpt-6-astra", "gpt-6-luna"]
             .contains(&previous.strip_prefix("openai/").unwrap_or(previous))
     {

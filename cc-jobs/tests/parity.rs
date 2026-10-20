@@ -1646,7 +1646,7 @@ mod capacity_regressions {
         ));
         let mut haiku = patch(
             failed(),
-            json!({"requested_model":"anthropic/claude-haiku-5-5","model":"anthropic/claude-haiku-5-5","task_type":"single_file_review","parent_job_id":"single-file-author"}),
+            json!({"requested_model":"anthropic/claude-haiku-5-5","model":"anthropic/claude-haiku-5-5","task_type":"single_file_review","parent_job_id":"single-file-author","review_source_jobs":["single-file-author"]}),
         );
         assert!(t.ctx.retry_capacity(&mut haiku));
         assert_eq!(haiku["model"], "gpt-6-luna");
@@ -1734,7 +1734,7 @@ mod capacity_regressions {
         ));
         let mut review = patch(
             failed(),
-            json!({"model":"anthropic/claude-sonnet-5-5","requested_model":"anthropic/claude-sonnet-5-5","model_explicit":true,"parent_job_id":"author","task_type":"code_review"}),
+            json!({"model":"anthropic/claude-sonnet-5-5","requested_model":"anthropic/claude-sonnet-5-5","model_explicit":true,"parent_job_id":"author","task_type":"code_review","review_source_jobs":["author"]}),
         );
         assert!(t.ctx.retry_capacity(&mut review));
         assert_eq!(review["model"], "anthropic/claude-opus-5-5");
@@ -1906,6 +1906,10 @@ mod capacity_regressions {
                         "code_review",
                         "--parent-job-id",
                         "author",
+                        "--review-source-jobs",
+                        "author",
+                        "--model-origin",
+                        "owner_request",
                     ],
                     b"Review fixed source",
                 )
@@ -1960,7 +1964,7 @@ mod capacity_regressions {
     fn a_launcher_parent_is_only_a_routing_exclusion_not_source_provenance() {
         let t = Test::new();
         t.put(job(
-            json!({"id":"launcher","status":"succeeded","cwd":t.ctx.root,
+            json!({"id":"launcher","status":"running","pid":std::process::id(),"pid_created":123,"cwd":t.ctx.root,
             "model":"gpt-6.1-sol","requested_model":"gpt-6.1-sol"}),
         ));
         t.run(
@@ -1999,7 +2003,7 @@ mod capacity_regressions {
         ] {
             let t = Test::new();
             t.put(job(
-                json!({"id":"launcher","status":"succeeded","cwd":t.ctx.root}),
+                json!({"id":"launcher","status":"running","pid":std::process::id(),"pid_created":123,"cwd":t.ctx.root}),
             ));
             t.run(
                 &[

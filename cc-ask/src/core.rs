@@ -1374,6 +1374,8 @@ pub fn launch_job_with_session(
     session: Option<&str>,
 ) -> Result<String> {
     use std::io::Write;
+    let requested_session =
+        session.or_else(|| selection["policy_resume_reset"]["session"].as_str());
     // All Discord restart/steering/resume paths share this final boundary.
     let mut normalized = selection.clone();
     normalized["launch_key"] = json!(key);
@@ -1408,11 +1410,20 @@ pub fn launch_job_with_session(
         let reservation =
             read_json(&root.join(format!(".discord-launch-{}.json", s(&job["launch_key"]))))
                 .unwrap_or(Value::Null);
-        let same_session = session.filter(|id| !id.is_empty()).is_some_and(|id| {
-            ["thread_id", "resume_session"]
+        let same_session = [requested_session, session]
+            .into_iter()
+            .flatten()
+            .filter(|id| !id.is_empty())
+            .any(|id| {
+                [
+                    s(&info["thread_id"]),
+                    s(&info["resume_session"]),
+                    s(&reservation["session"]),
+                    s(&reservation["requested_session"]),
+                ]
                 .iter()
-                .any(|field| s(&info[*field]).eq_ignore_ascii_case(id))
-        });
+                .any(|field| field.eq_ignore_ascii_case(id))
+            });
         let existing_prompt = root.join(jid).join("prompt.md");
         let owns_thread = !diagnosis
             && (s(&reservation["thread_id"]) == tid
@@ -1431,7 +1442,8 @@ pub fn launch_job_with_session(
     }
     atomic_json(
         &root.join(format!(".discord-launch-{key}.json")),
-        &json!({"thread_id":if diagnosis { "" } else { tid },"session":session,"key":key}),
+        &json!({"thread_id":if diagnosis { "" } else { tid },"session":session,
+            "requested_session":requested_session,"key":key}),
         2,
     )?;
     let mut file = tempfile::Builder::new()
@@ -1542,9 +1554,19 @@ pub fn launch_job_with_session(
                     .join(","),
             ]);
         }
-        if let Some(models)=selection["review_excluded_models"].as_array().filter(|v|!v.is_empty()) {
-            args.extend(["--review-excluded-models".into(),models.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(",")]);
-        }
+    }
+    if let Some(models) = selection["review_excluded_models"]
+        .as_array()
+        .filter(|v| !v.is_empty())
+    {
+        args.extend([
+            "--review-excluded-models".into(),
+            models
+                .iter()
+                .filter_map(Value::as_str)
+                .collect::<Vec<_>>()
+                .join(","),
+        ]);
     }
     if let Some(id) = selection["todo_id"].as_i64().filter(|id| *id > 0) {
         args.extend(["--todo-id".into(), id.to_string()]);

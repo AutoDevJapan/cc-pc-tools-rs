@@ -372,7 +372,7 @@ fn handoff_preserves_inferred_assignment_priority_when_another_thread_has_a_decl
     atomic_json(
         &dir.join("job.json"),
         &json!({"id":"declared-200","status":"running",
-        "discord_thread_id":"200","model":"gpt-6.1-sol","effort":"high","task_type":"research",
+        "discord_thread_id":"200","model":"gpt-6.1-sol","effort":"max","task_type":"research",
         "cwd":h.root.path(),"thread_id":"declared-session"}),
         2,
     )
@@ -494,7 +494,7 @@ fn external_worker(h: &Harness, explicit: bool) {
     atomic_json(
         &dir.join("job.json"),
         &json!({"id":"idea-brainstorm","status":"running",
-        "model":"gpt-6.1-sol","effort":"high","task_type":"research",
+        "model":"gpt-6.1-sol","effort":"max","task_type":"research",
         "cwd":h.root.path(),"thread_id":"external-session",
         "discord_thread_id":if explicit { "100" } else { "" }}),
         2,
@@ -537,7 +537,7 @@ fn another_running_worker_gets_same_session_delivery_without_a_request_launch() 
         assert_eq!(f.launches.len(), 1);
         assert_eq!(f.launches[0]["resume_session"], "external-session");
         assert_eq!(f.launches[0]["model"], "gpt-6.1-sol");
-        assert_eq!(f.launches[0]["effort"], "high");
+        assert_eq!(f.launches[0]["effort"], "max");
         assert!(s(&f.launches[0]["prompt"]).contains("200|別のアイデア"));
         assert!(s(&f.launches[0]["prompt"]).contains("UXをCiv6と7に寄せたい。"));
         assert!(s(&f.launches[0]["prompt"])

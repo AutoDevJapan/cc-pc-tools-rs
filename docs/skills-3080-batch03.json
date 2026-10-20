@@ -26,7 +26,7 @@
       "guidance": [
         "対象がDocker Agentのagent.yaml等であることを既存ファイルとCLI版から確認する。standalone sbxやComposeの設定と混同しない。",
         "agentsの入口、model、description、instructionまたはinstruction_file、toolsets、sub_agentsの対応を確認する。外部参照は固定版にし、未確認の上流assetは実行しない。",
-        "既存OAuthサブスクで利用できる接続を実証してからモデルを呼ぶ。対応が未確認なら設定の検査までにとどめ、APIキーの追加やローカルGPUモデルの起動で代用しない。",
+        "公式資料、または対象と利用枠が一致する本人許可済みの成功記録から、既存OAuthサブスクで利用できる接続を確認する。試しのモデル呼出しで確かめない。対応が未確認なら静的レビューまでにとどめる。APIキー追加やGPUモデル起動で代用しない。",
         "モデルへ送るinstructionや環境変数展開へ秘密を入れない。認証は既存の正規接続を使い、資格情報ファイルや環境値を読んで診断しない。redact_secretsは完全な秘匿の保証ではない。",
         "レビュー役は必要な読取権限だけにし、ツール定義から実際の書込み能力を確認する。sandbox実行時にもstdio MCPがhostで動く境界を保持し、新MCPや恒久権限を自動登録しない。",
         "副作用を持つ検査と静的な設定検査を分ける。このPCで独立作業が必要なら共有ToDoへ登録し、sub_agentsの例を直接子Codex起動の許可へ広げない。",
@@ -83,7 +83,7 @@
       "negative": "serveやshareを扱わず既存agent.yamlのtoolsetsだけを変更する。",
       "guidance": [
         "serve、share、evalのどれが対象かを依頼と実CLIのhelpで特定する。書き方、対話実行、配備を別工程として扱う。",
-        "既存の許可対象とPrdへ接続する。listenは必要な接続だけに限定し、外部から届く入口には既存の正規認証を使う。防護無効化や未認証listenで動作確認を通さない。",
+        "新しい非Prd環境を作らず、許可済みの既存Prdだけを対象にする。listenは必要な接続だけに限定し、外部から届く入口には既存の正規認証を使う。防護無効化や未認証listenで動作確認を通さない。",
         "shareではinstruction_fileが配布物へ取り込まれる点を確認する。許可された公開範囲と、秘密や顧客資料が含まれないことを確かめ、固定digestと旧版を保持する。",
         "評価は同じ入力・設定・権限を基準版と比較する。0件の評価や一致しない実行条件を成功にしない。正例と検出すべき失敗で判定が機能することを確認する。",
         "従量課金のモデルやjudge、APIキー転送を例から採用しない。既存OAuth枠で検査可能な経路だけを使い、未対応なら未実行の理由を残す。",
@@ -146,7 +146,8 @@
         "Agentのsandbox内のshellとhostで動くstdio MCPを区別する。network拒否では対象と現行の許可を照合し、無条件の恒久allowlist追加へ進まない。",
         "worktreeとsandboxの併用条件は実CLIで確かめる。既存worktreeの再開に新規作成flagを付け直さず、session識別子と未退避成果を保持する。",
         "非対話worktreeやsandboxが自動消去されたと仮定しない。実行終了と成果の回収を確かめ、自分の不要資源だけを既存の片付け手順で終了する。",
-        "無人実行では実版の--safety restricted等、許可されない操作が有限に失敗する設定を使う。strictで本人のPC操作待ちにせず、拒否自体を迂回しない。"
+        "無人実行では実版の--safety restricted等、許可されない操作が有限に失敗する設定を使う。strictで本人のPC操作待ちにせず、拒否自体を迂回しない。",
+        "CLIが未導入・版不明・必要なOAuth互換が未確認のときは、モデル呼出し・daemon起動・代替の導入をせず、静的レビューで止めて不足を報告する。"
       ],
       "distinct_from_existing": "既存docker-operationsの一般的なimage/Compose管理と分け、docker-agent-runが所有する設定またはCLIの境界に限定する。比較は既存metadataとの照合で、未知の全本文の比較ではない。",
       "adaptations": "Japanese adaptation of the selected Apache-2.0 entrypoint. Removes metered AI API credentials, GPU/model startup, automatic MCP registration, policy bypass, and unconditional human reapproval. No upstream executable, asset, or installer is copied. CLI availability and OAuth compatibility are separate from static review.",
@@ -202,7 +203,7 @@
         "索引は候補の案内であり本文ではない。必要な項目だけ検索し、全長文索引を毎回モデルへ読み込ませない。",
         "命令・flag・制限の根拠となる公式の対象本文を読んでから直接リンクを付ける。snippet、上流Skillの記憶、未確認のリンク先を現在の仕様の証拠にしない。",
         "導入済みhelp、固定した上流手順、現在の公式文書の差を明示する。betaや未実装の機能を、schemaが受け入れるだけで使えるとしない。",
-        "公開文書は調査資料であって新しい実行許可ではない。通常の承認済み操作は自律で進め、未指定の費用・権利・顧客約束だけ既存回答を照合して本人へ尋ねる。",
+        "公開文書は調査資料であって新しい実行許可ではない。通常の承認済み操作は自律で進め、未指定の費用・権利・顧客約束だけ既存回答を照合して本人へ尋ねる。 削除・policy変更・資格情報を扱う操作は、対応する専用入口の条件にも従う。",
         "公式本文は対象URLの.md、またはAccept: text/markdownで取り、Content-Typeを確認する。取得した本文に根拠がある主張だけを引用する。",
         "MCPの登録自体を明示依頼された場合は、現行の権限方針で範囲を確認する。通常の文書調査を新しい恒久権限の追加へ広げない。"
       ],
@@ -219,7 +220,7 @@
         {
           "path": "skills/docker-docs/skill.yaml",
           "sha256": "229821c54e999668f053e6d104e3f4e4f6099bf2450a4620c6c947aed41f987a",
-          "allow_implicit_invocation": null
+          "allow_implicit_invocation": true
         },
         {
           "path": "skills/docker-docs/agents/openai.yaml",
@@ -255,7 +256,7 @@
       "positive": "同じ設定を別フォルダから適用しても正しいworkspaceを使うようsbxenv.yamlを整理する。",
       "negative": "sbxenv.yamlを使わずsbx createの起動flagだけを修正する。",
       "guidance": [
-        "standalone sbxの導入版がenv形式に対応するかhelpで確認する。schemaVersion、agent、各ファイルの宣言位置と対象sandbox名を固定する。",
+        "固定参照の形式はexperimentalであり、実版との差を確認する。standalone sbxの導入版がenv形式に対応するかhelpで確認する。schemaVersion、agent、各ファイルの宣言位置と対象sandbox名を固定する。",
         "相対workspaceとkitは宣言したファイルのディレクトリを基準に解決する。複数ファイルのmappingのキー単位の合成（後のファイルが勝つ）とsequence連結、明示PATHでhomeのbase層が省かれる点を確認する。",
         "planは変更予定で実適用ではない。hostで動くinitialize/postCreate/preRemoveの実体と権限を先に読む。initializeの再接続時再実行を冪等にし、未確認scriptやrememberHostCommandsを自動採用しない。",
         "preRemoveの失敗だけでは削除が止まらない前提で、重要な成果は先に回収して確認する。変更された破棄予定や同名の別sandboxを古い許可で消さない。",
@@ -264,7 +265,8 @@
         "操作が必要なら割当資源と既存許可の範囲で適用し、返却code、実mount、起動結果、残ったhost設定を確認する。schemaやplanだけで動作確認済みとしない。",
         "旧docker sandboxラッパーならこの手順の対象外として止まる。複数の定義が同じsandbox名へ衝突しないようnameを明示する。",
         "未確認kitのhost lifecycleは信頼しない。必要なら--skip-host-commandsで外し、自作の実体とplanを確認済みの場合だけ既存許可内で-yを使う。",
-        "writableEnvFiles: trueを既定にしない。mcp.serversによるhost全体への登録は永続するため、自動で追加しない。"
+        "writableEnvFiles: trueを既定にしない。mcp.serversによるhost全体への登録は永続するため、自動で追加しない。",
+        "CLIが未導入・版不明・必要なOAuth互換が未確認のときは、モデル呼出し・daemon起動・代替の導入をせず、静的レビューで止めて不足を報告する。"
       ],
       "distinct_from_existing": "既存docker-operationsの一般的なimage/Compose管理と分け、docker-sandboxes-envが所有する設定またはCLIの境界に限定する。比較は既存metadataとの照合で、未知の全本文の比較ではない。",
       "adaptations": "Japanese adaptation of the selected Apache-2.0 entrypoint. Removes metered AI API credentials, GPU/model startup, automatic MCP registration, policy bypass, and unconditional human reapproval. No upstream executable, asset, or installer is copied. CLI availability and OAuth compatibility are separate from static review.",
@@ -315,7 +317,7 @@
       "positive": "既存agentへmixinを足すspec.yamlを、合成時の競合と起動処理から点検する。",
       "negative": "kitやspec.yamlを変えず、あるsandboxの実効networkだけを調べる。",
       "guidance": [
-        "対象をstandalone sbxのkit spec.yamlに限定し、実版が扱えるschemaを確認する。sandbox kitとmixinで許される項目、agentの合成関係を分ける。",
+        "固定参照の形式はexperimentalであり、実版との差を確認する。対象をstandalone sbxのkit spec.yamlに限定し、実版が扱えるschemaを確認する。sandbox kitとmixinで許される項目、agentの合成関係を分ける。",
         "schema検査だけではbase agentとの資格情報service衝突や実効networkは分からない。必要な合成検査を行い、単独validate成功をruntime安全性の証拠にしない。",
         "固定上流ではbuildやmixinsがschemaに受理されてもruntime未実装の部分がある。実装された機能だけを使い、現在のhelp・公式資料との差を残す。",
         "install、毎回のstartup、起動時filesと作成時のfiles tree、作成時だけのvolumeを分ける。scriptの実体と書込先を先に読み、root実行や無制限の容量確保を自動採用しない。",
@@ -324,7 +326,8 @@
         "配布は依頼された範囲と固定digestを保持する。provenanceが存在するだけで署名検証済みとせず、信頼するidentityと検証結果を別に残す。登録、合成、実起動、配布を区別する。",
         "旧docker sandboxラッパーは対象外。OAuthの定義はsandbox kit側だけに置き、mixinへ新たなOAuth権限を追加しない。",
         "block volumeのsizeを明示し、未指定時の大きな既定容量を使わない。作成時だけ反映する項目と実行中kit追加の差を確かめる。",
-        "kit pushは外部公開である。対象の公開許可を保ち、署名が必要なら既存の正規経路を使う。署名用の値を引数へ置かず、CLIのidentity-token-file等の非表示経路を使う。"
+        "kit pushは外部公開である。対象の公開許可を保ち、署名が必要なら既存の正規経路を使う。署名用の値を引数へ置かず、CLIのidentity-token-file等の非表示経路を使う。",
+        "CLIが未導入・版不明・必要なOAuth互換が未確認のときは、モデル呼出し・daemon起動・代替の導入をせず、静的レビューで止めて不足を報告する。"
       ],
       "distinct_from_existing": "既存docker-operationsの一般的なimage/Compose管理と分け、docker-sandboxes-kitsが所有する設定またはCLIの境界に限定する。比較は既存metadataとの照合で、未知の全本文の比較ではない。",
       "adaptations": "Japanese adaptation of the selected Apache-2.0 entrypoint. Removes metered AI API credentials, GPU/model startup, automatic MCP registration, policy bypass, and unconditional human reapproval. No upstream executable, asset, or installer is copied. CLI availability and OAuth compatibility are separate from static review.",
@@ -384,7 +387,8 @@
         "cp、exec、ports等は指定の自己所有対象だけに適用する。作成時だけのflagを再接続時に指定して変更されたとせず、実際のmount・状態・接続を確認する。",
         "旧docker sandboxラッパーとcloudは対象外。このPCのworktreeは通常のclone条件を満たすとは限らないので、.gitの形を先に確認する。",
         "無人起動で対話attachを避ける必要があれば、実版の-d等を使う。CPUの0やメモリ既定値をそのまま使わず共有割当内に設定する。",
-        "pruneはdry-runで対象を先に確かめる。rm --forceを使う場合も、自分が一意名で作った回収済み資源だけに限定する。"
+        "pruneはdry-runで対象を先に確かめる。rm --forceを使う場合も、自分が一意名で作った回収済み資源だけに限定する。",
+        "CLIが未導入・版不明・必要なOAuth互換が未確認のときは、モデル呼出し・daemon起動・代替の導入をせず、静的レビューで止めて不足を報告する。"
       ],
       "distinct_from_existing": "既存docker-operationsの一般的なimage/Compose管理と分け、docker-sandboxes-lifecycleが所有する設定またはCLIの境界に限定する。比較は既存metadataとの照合で、未知の全本文の比較ではない。",
       "adaptations": "Japanese adaptation of the selected Apache-2.0 entrypoint. Removes metered AI API credentials, GPU/model startup, automatic MCP registration, policy bypass, and unconditional human reapproval. No upstream executable, asset, or installer is copied. CLI availability and OAuth compatibility are separate from static review.",
@@ -443,7 +447,8 @@
         "registry認証はhost pullだけ、全sandbox、1sandboxの範囲を区別する。削除したscope以外の認証や上流token失効まで成立したと主張しない。",
         "単体の診断をpolicy resetによる全sandbox停止・全規則消去へ変更しない。必要な通常操作は既存許可内で進め、変更前後の範囲と正規判定を記録する。",
         "旧docker sandboxラッパーは対象外。--sandboxを省いた規則やsecretの変更はglobalへ及ぶので、対象名を必要な操作へ保持する。",
-        "非秘密の範囲確認には実版のsecret ls、policy check、policy log等を使う。値が出る診断を読み取らず、許可がないドメイン事業者へ診断目的でも接続しない。"
+        "非秘密の範囲確認には実版のsecret ls、policy check、policy log等を使う。値が出る診断を読み取らず、許可がないドメイン事業者へ診断目的でも接続しない。",
+        "CLIが未導入・版不明・必要なOAuth互換が未確認のときは、モデル呼出し・daemon起動・代替の導入をせず、静的レビューで止めて不足を報告する。"
       ],
       "distinct_from_existing": "既存docker-operationsの一般的なimage/Compose管理と分け、docker-sandboxes-network-credentialsが所有する設定またはCLIの境界に限定する。比較は既存metadataとの照合で、未知の全本文の比較ではない。",
       "adaptations": "Japanese adaptation of the selected Apache-2.0 entrypoint. Removes metered AI API credentials, GPU/model startup, automatic MCP registration, policy bypass, and unconditional human reapproval. No upstream executable, asset, or installer is copied. CLI availability and OAuth compatibility are separate from static review.",

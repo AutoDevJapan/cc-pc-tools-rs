@@ -1,6 +1,6 @@
 {
   "todo": 3080,
-  "state": "authored_draft_not_installed_or_independently_accepted",
+  "state": "archived_pre_review_draft_superseded_by_batch03",
   "count_is_not_cap": true,
   "source_repo": "docker/skills",
   "source_commit": "38df58b09720d38eb78c2c674675ddf9fa74d441",
@@ -272,9 +272,7 @@
   "integration": 0,
   "excluded": 0,
   "pending": [
-    "Apache-specific rendering, preservation and modified-file notices; current installer intentionally accepts MIT only",
-    "Independent review; fixed bundle and new-only apply",
-    "Actual installed validation, Codex discovery and application boundary check"
+    "Historical draft retained; use skills-3080-batch03.json and current deployment receipts. Do not count this draft as8additional candidates or treat old pending statements as current installer state."
   ],
   "source_review": "8 selected entrypoints read; source gzip SHA verified. Complete fixed tree contains only root LICENSE; support resources remain unreviewed."
 }

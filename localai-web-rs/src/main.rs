@@ -135,6 +135,7 @@ fn app(state: AppState) -> Router {
         .route("/api/resident/restart", post(restart_resident))
         .route("/api/omb-board", get(omb_board))
         .route("/api/operations", get(operations_snapshot))
+        .route("/api/resources", get(resources_snapshot))
         .route("/api/operations/workers/:id", get(operations_worker_detail))
         .route("/api/tasks", get(get_tasks))
         .route("/api/agent/workload", get(workload::handle))
@@ -197,6 +198,9 @@ async fn shared_progress_display(
 
 async fn operations_snapshot(State(state): State<AppState>) -> Json<Value> {
     Json(state.operations.snapshot())
+}
+async fn resources_snapshot(State(state): State<AppState>) -> impl IntoResponse {
+    ([(header::CACHE_CONTROL,"no-store")], Json(state.operations.resource_snapshot()))
 }
 
 #[derive(serde::Deserialize)]
@@ -618,6 +622,24 @@ mod tests {
         assert_eq!(envelope["version"], 1);
         assert_eq!(envelope["ok"], false);
         assert_eq!(envelope["error"]["code"], "progress_snapshot_unavailable");
+    }
+
+    #[tokio::test]
+    async fn resources_endpoint_reads_cache_and_keeps_the_existing_loopback_boundary() {
+        let app=app(AppState::new(10012,10013));
+        for _ in 0..2 {
+            let response=app.clone().oneshot(request(Method::GET,"/api/resources",Body::empty())).await.unwrap();
+            assert_eq!(response.status(),StatusCode::OK);
+            assert_eq!(response.headers()[header::CACHE_CONTROL],"no-store");
+            let value:Value=serde_json::from_slice(&to_bytes(response.into_body(),RESPONSE_LIMIT).await.unwrap()).unwrap();
+            assert_eq!(value["schemaVersion"],1);
+            assert_eq!(value["state"],"collecting");
+            assert!(value["sampledAt"].is_null());
+            assert_eq!(value["processes"],json!([]));
+        }
+        let mut external=request(Method::GET,"/api/resources",Body::empty());
+        external.headers_mut().insert(header::HOST,"outside.example".parse().unwrap());
+        assert_eq!(app.oneshot(external).await.unwrap().status(),StatusCode::FORBIDDEN);
     }
 
     #[tokio::test]

@@ -1,0 +1,20 @@
+{
+  "todo_id": 3154,
+  "owned_id": "b4e5f2d379be26397ee60a13f2b53458",
+  "action": "manual_same_drive_quarantine",
+  "reason": "size",
+  "helper_result": "QUARANTINE_CROSS_DRIVE",
+  "source": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3154-3081\\codex-owned-b4e5f2d379be26397ee60a13f2b53458",
+  "destination": "D:\\削除希望\\20261021-cc-pc-tools-rs-todo-3154-finite-red-b4e5f2d3\\data",
+  "entries": 2084,
+  "bytes": 2067230410.0,
+  "inventory_sha256_before": "df893e6658a890bf20934ddb09524f716b8e8610b3e6467efdb3376c289db1ab",
+  "inventory_sha256_after": "df893e6658a890bf20934ddb09524f716b8e8610b3e6467efdb3376c289db1ab",
+  "original_logs_sha256_verified": 8,
+  "source_absent": true,
+  "destination_present": true,
+  "owner_receipt_manually_changed": false,
+  "deletion_executed": false,
+  "disk_space_reclaimed_claimed": false,
+  "completed_at": "2026-10-21T02:47:28.0931821+09:00"
+}

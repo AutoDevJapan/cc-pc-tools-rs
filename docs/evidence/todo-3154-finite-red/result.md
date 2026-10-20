@@ -50,3 +50,8 @@ GPU・Civ6・APIキー・追加AI・本物のCodex子ジョブは起動してい
 製品ソース/テスト、元worktree、元ToDoの状態を編集せず、質問・Discord通知も行っていない。
 全workspace、Green、Clippy、doctest、release、PR、merge、配布は実施していない。
 この証跡は現在の修正後実装のGreenや元ToDo全体の完了を意味しない。mainへマージしない。
+
+所有付き生成物2,067,230,410 byteは、planのsize指定に従って同じDドライブの
+削除希望へ移動した。正規quarantineが異なるドライブへの事前検査でexit2となったため、
+Skillの同一ドライブ手順を利用した。2,084項目と原ログ8件の一致、元の不在を確認済み。
+通常削除や空き容量の回収とは数えない。詳細はcleanup-result.jsonとresume.md。

@@ -1,30 +1,38 @@
-# ToDo3154: Issue277の有限なRed検査
+# ToDo3154: Issue277の有限なRed検査の再開情報
 
-元ToDo3081から独立した検査。製品ソース・テストは修正しない。
+依頼の4コマンドは全て各1回実行済み。再実行・修正・追加検査は不要。
+元ToDo3081の実装全体はこのcheckの範囲外であり、完了を前提にしない。
 
 - 開始時branch: scheduler/todo-3154-3081
 - 開始時HEAD: b995d2e119f31dca3af8aeed77598c8713ea421f
-- 証跡branch: scheduler/todo-3154-3081-red-evidence
+- 現在の証跡branch: scheduler/todo-3154-3081-red-evidence
 - job: 20261021-023539-todo-3154
-- 実行場所: この専用worktreeだけ。
-- 所有付き一時フォルダー: codex-owned-b4e5f2d379be26397ee60a13f2b53458
+- 実行場所: D:/CC/Work/unattended-operations-20261013-wt/todo-3154-3081
+- 検査中の専用target: 同worktreeのcodex-owned-b4e5f2d379be26397ee60a13f2b53458/target
 - 所有ID: b4e5f2d379be26397ee60a13f2b53458
 
-01〜03の実HEADは52bc2dd900b68bfee86e3f5acf9d7378d0c760db。
-指定のmodel_effort 2コマンドとparity 1コマンドは実行済み。
-全てコンパイル成功後に実exit100。選択6件は0合格・6失敗。原ログと実行metadataを保存済み。
-standalone reviewは引数の相互排他エラーでunwrapが失敗し、作者判定のassertへ未到達。
-その後、5a82f08a57d0774c4e01fb0e8760a57a750a13c2へ固定し、finite_reviewを実行済み。
-最初のcompleted assertがfalseで実exit100、0合格・1失敗。原ログをコピーした。
-証跡branchへ戻した。3a518b411eb03bf2a29a67fe321fcb2f993279baまでpush済み。
-全コマンドで完全stdout/stderr・実HEAD・実exit・実失敗assertを保存する。
-ループ後続の未到達assertは確認済みと数えない。
-APIキー・追加AI・GPU・Civ6・本物のCodex子ジョブを使わない。
+01〜03は実HEAD 52bc2dd900b68bfee86e3f5acf9d7378d0c760dbで0合格・6失敗。
+04は実HEAD 5a82f08a57d0774c4e01fb0e8760a57a750a13c2で0合格・1失敗。
+4回ともコンパイル成功後の実exit100。単独reviewはテスト補助の引数競合で、
+作者判定に未到達。全結果・原ログ・到達/未到達assertはresult.md/results.jsonと各実行jsonにある。
+1a9c78cまで4回分の原ログをpush済み。その後の整理記録も最終commitへ含める。
+生ログ8件は実行時SHA256とコピー後で一致し、Gitの格納バイトも確認した。
 
-実行中に再開した場合は、一時フォルダーの各jsonとpid/作成時刻、ログを照合し、
-同じ検査を二重起動しない。製品の修正、全workspace、Green、Clippy、doctest、release、
-PR、merge、配布は対象外。元ToDoと自分の状態はスケジューラが管理する。
+所有付き生成物2,067,230,410 byteはplanがsize退避を指定した。
+正規quarantineの事前検査はQUARANTINE_CROSS_DRIVE（exit2）だった。
+Skillどおり同じDドライブの削除希望へ移動し、2,084項目の名前/属性/サイズと
+原ログ8件のSHA256一致を確認済み。元の場所は無い。cleanup-result.jsonに退避先がある。
+通常削除・所有記録の手編集・空き容量回収の主張はしていない。原gate4件の同一PID/作成時刻は終了確認済み。
 
-残作業: 証跡の整合確認、最終commit/push、
-生成物の所有確認付き片付け、最終HEADのcheckpoint-workspace（saved=true）確認。
-オーナーへの質問・通知は行わず、元担当へ最終返信で返す。
+残る最終手順は、この記録をcommit/pushし、実HEADでcheckpoint-workspaceを保存することだけ。
+requestはid=3154、job=CC_JOB_ID、expected_branch=scheduler/todo-3154-3081、
+branch=scheduler/todo-3154-3081-red-evidence、head=実HEAD。
+このフォルダーのGit対象外checkpoint-final.request.json / checkpoint-final.run.jsonへ保存する。
+checkpoint-final.run.jsonのexit_code=0とstdout内saved=trueが現在のbranch/headに一致し、
+GitHub上のbranchも同じheadなら残作業0。保存が未完なら同じ検査を繰り返さず、保存の失敗だけ調べる。
+Git対象外のcheckpoint記録を後からcommitしてheadを変えない。
+
+製品ソース・テスト、元worktree、元ToDoの状態は編集していない。
+APIキー・追加AI・GPU・Civ6・本物のCodex子ジョブを使っていない。
+全workspace、Green、Clippy、doctest、release、PR、merge、配布は対象外。
+自分の状態もスケジューラ管理を維持し、質問・Discord通知は行わず元担当へ最終返信で返す。

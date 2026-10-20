@@ -1,0 +1,21 @@
+{
+  "executable": "D:/CC/Tools/safe-delete/safe-delete.exe",
+  "arguments": [
+    "quarantine",
+    "--id",
+    "b4e5f2d379be26397ee60a13f2b53458",
+    "--reason",
+    "size"
+  ],
+  "working_directory": "D:/CC/Work/unattended-operations-20261013-wt/todo-3154-3081",
+  "started_at": "2026-10-21T02:46:29.4488190+09:00",
+  "finished_at": "2026-10-21T02:46:29.7605048+09:00",
+  "pid": 20416,
+  "process_created_utc": "2026-10-20T17:46:29.4573127Z",
+  "exit_code": 2,
+  "create_no_window": true,
+  "concurrent_stdout_stderr": true,
+  "waited_for_exit": true,
+  "stdout": "{\"code\":\"QUARANTINE_CROSS_DRIVE\",\"details\":{\"bytes\":2067230410,\"destination\":\"C:\\\\Users\\\\makhmeto\\\\Downloads\\\\削除希望\\\\20261021-cc-pc-tools-rs-todo-3154-finite-red-b4e5f2d3\",\"drive_space\":[{\"available\":true,\"drive\":\"C:\\\\\",\"free_bytes\":247709339648,\"total_bytes\":3999776370688},{\"available\":true,\"drive\":\"D:\\\\\",\"free_bytes\":2588428447744,\"total_bytes\":4000768323584},{\"available\":true,\"drive\":\"E:\\\\\",\"free_bytes\":858052489216,\"total_bytes\":2000395272192}],\"phase\":\"preflight\",\"source\":\"D:\\\\CC\\\\Work\\\\unattended-operations-20261013-wt\\\\todo-3154-3081\\\\codex-owned-b4e5f2d379be26397ee60a13f2b53458\"},\"ok\":false}\n",
+  "stderr": ""
+}

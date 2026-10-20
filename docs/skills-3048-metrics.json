@@ -1,0 +1,10 @@
+{
+  "existing_before_bytes": 50791.0,
+  "existing_after_bytes": 13290.0,
+  "new_entrypoint_bytes": 3924.0,
+  "max_entrypoint_bytes": 2812.0,
+  "metadata_before_bytes": 1858,
+  "metadata_after_bytes": 2493,
+  "new_four_metadata_bytes": 650,
+  "metadata_format": "UTF-8 bytes of - name: description (file: D:/CC/Skills/name/SKILL.md), without newline; not tokens or total prompt budget"
+}

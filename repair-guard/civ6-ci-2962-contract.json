@@ -5,6 +5,8 @@
   "source": "D:/CC/Work/unattended-operations-20261013-wt/todo-2962-ci-pc-actions",
   "source_floor": "ab45cb5d221077fa65484c706b3353cdc4867c07",
   "root": "D:/CC/Tools/civ6-ci-2962",
+  "root_created_not_before": "2026-10-20T05:50:00Z",
+  "owner_sid": "S-1-5-21-3727265621-1182195423-444854664-1001",
   "receipt": "docs/civ6-ci-2962-deployment.private.json",
   "leaves": ["civ6-ci-queue.exe", "civ6-ci-windows.exe", "civ6-ci-route.exe", "civ6-ci-queue.json", "actions-runner-win-x64-2.338.0.zip", "deployment-receipt.json"],
   "archive_sha256": "f48e0750a21812bca5f82de5f7f5aeae71abee647fab5a582f1742d07eba455f",

@@ -699,6 +699,30 @@ fn test_full_thread_is_paginated_and_included() {
     assert_eq!(prompt.matches("古い補足0\n").count(), 1);
     assert_eq!(a.question()["seen_reply"], newest);
 }
+
+#[test]
+fn every_discord_resume_launcher_applies_policy_before_passing_a_native_session() {
+    for (origin, expected_model, expected_effort, expected_session) in [
+        ("policy", "gpt-6.1-sol", "max", ""),
+        ("owner_request", "gpt-6-luna", "high", "original-session"),
+    ] {
+        let mut a = AnswerResume::new();
+        let cwd = a.cwd.to_string_lossy().into_owned();
+        let source = json!({"model":"gpt-6-luna","effort":"high","model_origin":origin,
+            "effort_origin":origin,"task_type":"implementation","sandbox":"read-only",
+            "scope_source":"launcher","cwd":cwd,"thread_id":"original-session"});
+        launch_job_with_session(&mut a.ctx, &json!({"id":"200","name":"再開検査"}),
+            "元の仕様と途中成果から続行する。", &source,
+            "0123456789abcdef0123456789abcdef", false, Some(&cwd), Some("resume"),
+            Some("original-session")).unwrap();
+        assert_eq!(a.count(), 1);
+        assert_eq!(a.last()["model"], expected_model);
+        assert_eq!(a.last()["effort"], expected_effort);
+        assert_eq!(a.last()["resume_session"], expected_session);
+        assert_eq!(a.last()["sandbox"], "read-only");
+        assert_eq!(a.last()["cwd"], cwd);
+    }
+}
 #[test]
 fn test_doing_todo_updated_after_reply_without_live_worker_does_not_consume_answer() {
     for format in ["%+", "%Y-%m-%d %H:%M"] {

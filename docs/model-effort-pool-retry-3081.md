@@ -77,6 +77,12 @@ ToDo登録にもmodel-origin / effort-originを追加した。値と元仕様を
 本人指定を残すために共有JSONを手で書き換える必要はない。localai-web-rsの変更は、
 新しいoptional引数をNoneで渡す構築コードの互換修正だけで、UI描画とConsole配布は変更しない。
 
+5f214deの正式CIではBookmark queueのWindows検査が成功した。一方、Build speed
+（run 39476108879）とChannel reportsのWindows検査は、schedulerに追加したlet chainが
+Rust 2021で使えずコンパイル時に停止した。テスト失敗やGreenとして数えない。
+同じ条件を入れ子のifへ直し、schedulerとaskの変更部分を各クレートのRust 2021で構文解析した。
+次の固定ソースに対する正式CIで、関連テスト・doctest・Clippyの結果を確認する。
+
 モデルと推論の設定を変更した通常の再開は、旧設定を復元しないよう新しい会話で始める。
 cwd、権限、元履歴と途中成果は保持する。混雑時の同モデル・別枠の再試行の会話IDは引き続き保持する。
 実CLIのrefresh付きOpenAI metadataは1.165秒で返り、5行すべてcodex/health有り/Healthy/creditsAfterLimit=falseだった。

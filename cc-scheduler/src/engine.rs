@@ -1349,11 +1349,10 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             {
                 selection[k] = accepted_options[k].clone();
             }
-            if !truth(&item[k])
-                && !truth(&accepted_options[k])
-                && let Some(source) = source.filter(|source| source[&origin] == "owner_request")
-            {
-                selection[k] = source[k].clone();
+            if !truth(&item[k]) && !truth(&accepted_options[k]) {
+                if let Some(source) = source.filter(|source| source[&origin] == "owner_request") {
+                    selection[k] = source[k].clone();
+                }
             }
         }
         // Claude CLI aliases identify the same existing subscription model.

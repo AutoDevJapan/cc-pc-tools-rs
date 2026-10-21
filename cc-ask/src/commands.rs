@@ -628,9 +628,16 @@ pub fn cmd_log_attached(
         Some(path) => read_text(path)?.trim().to_owned(),
         None => text.to_owned(),
     };
-    let (_, decision) = crate::decision_identity::extract(&body)?;
-    let action = notify && crate::recovery_messages::log_requires_owner_action(&body)?;
-    let notify = notify && action;
+    let (clean_body, decision, extracted) = match crate::decision_identity::extract(&body) {
+        Ok((clean, decision)) => (clean, decision, true),
+        Err(_) => (body.clone(), None, false), // A quoted example remains a quiet report.
+    };
+    let action =
+        extracted && notify && crate::recovery_messages::log_requires_owner_action(&clean_body)?;
+    let decision_question = decision.is_some()
+        && !crate::recovery_messages::report_declares_no_action(&clean_body)
+        && (crate::questions::is_question(&clean_body)
+            || crate::recovery_messages::log_requires_owner_action(&clean_body).unwrap_or(false));
     let prepared = crate::attachments::prepare(ctx, attach)?;
     if body.is_empty() && prepared.is_none() {
         return Err("本文または添付ファイルを指定してください".into());
@@ -681,21 +688,16 @@ pub fn cmd_log_attached(
             atomic_json(&path, &known, 1)?;
         }
     }
-    if decision.is_some() || action {
-        return post_text(ctx, &thread_id, &body, attach, notify, None);
+    if action || decision_question {
+        return post_text(ctx, &thread_id, &body, attach, true, None);
     }
-    let question = if notify && crate::questions::is_question(&body) {
-        Some(ctx.call("GET", &format!("/channels/{thread_id}"), None)?)
-    } else {
-        None
-    };
     let message_ids = crate::attachments::post_tracked(
         ctx,
         &thread_id,
-        &body,
+        &clean_body,
         prepared.as_ref(),
-        notify,
-        question.as_ref(),
+        false,
+        None,
     )?;
     let value = json!({"thread_id":thread_id,"url":format!("https://discord.com/channels/{}/{}",s(&ctx.cfg["guild_id"]),thread_id),"message_id":message_ids.last(),"message_ids":message_ids});
     print_json(&value, None)?;

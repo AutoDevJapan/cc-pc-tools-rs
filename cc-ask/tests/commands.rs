@@ -741,6 +741,27 @@ fn legacy_log_routes_decision_questions_without_publishing_internal_metadata() {
 }
 
 #[test]
+fn legacy_log_accepts_report_examples_and_cleaned_decision_bodies() {
+    let identity = json!({"todo_id":1,"resources":[{"kind":"service","id":"fixture-product"}],"decision":"publish","scope":{"specification":"fixture publication scope"}});
+    for (body,visible,question) in [
+        ("説明の例です。\n<!-- cc-decision {同じ形式のJSON} -->".to_string(),"説明の例です。",false),
+        (format!("対応不要。AI側で続けます。\n<!-- cc-decision {identity} -->"),"対応不要。AI側で続けます。",false),
+        (format!("<!-- cc-decision {identity} -->\n回答が必要：公開範囲\na: 対象を公開する\nb: 非公開を保つ"),"回答が必要：公開範囲",true),
+    ] {
+        for notify in [false,true] {
+            let mut h=Harness::new();
+            cmd_log(&mut h.ctx,"受入確認",&body,None,notify).unwrap();
+            let fake=h.fake.borrow();
+            let owner_count=fake.messages.values().flatten().filter(|m|m["allowed_mentions"]["users"]==json!(["OWN"])).count();
+            assert_eq!(owner_count,usize::from(question));
+            assert!(fake.messages.values().flatten().any(|m|s(&m["content"]).contains(visible)));
+            if !question {assert!(fake.posts.iter().all(|(_,m)|m["flags"]==SILENT));}
+            if body.contains("fixture-product") {assert!(fake.http_calls.iter().filter(|c|c["method"]=="POST").all(|c|!c["body"].to_string().contains("cc-decision")));}
+        }
+    }
+}
+
+#[test]
 fn failed_log_delivery_reuses_saved_topic_without_new_starter() {
     let mut h = Harness::new();
     h.fake.borrow_mut().post_error = true;

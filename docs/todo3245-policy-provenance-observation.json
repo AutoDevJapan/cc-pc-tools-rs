@@ -1,0 +1,116 @@
+{
+  "observed_utc": "2026-10-21T02:01:36.8221782Z",
+  "todo_id": 3245,
+  "parent_todo": 3103,
+  "source_head": "3e1a211ddeaa9d4d27bdabce12ffc3754863a232",
+  "branch": "scheduler/todo-3245-3103",
+  "repository": {
+    "owner": "AutoDevJapan",
+    "name": "cc-pc-tools-rs",
+    "id": 1406818713
+  },
+  "guard_exit": 0,
+  "guard": {
+    "classification_unverified": true,
+    "client_resource": true,
+    "ok": true,
+    "original_registry_recovered": false,
+    "scope": "verified repair source and explicitly supplied operational receipts only"
+  },
+  "target_metadata": {
+    "path": "D:/CC/Policies/owner-distinct-godd-mcp-products-20261020.md",
+    "length": 1215,
+    "created_utc": "2026-10-20T12:38:34.093918Z",
+    "modified_utc": "2026-10-20T12:38:34.0944917Z",
+    "file_id_output": "File ID is 0x0000000000000000004400000063272e",
+    "file_id_exit": 0,
+    "ancestors": [
+      {
+        "path": "D:/",
+        "reparse": false
+      },
+      {
+        "path": "D:/CC",
+        "reparse": false
+      },
+      {
+        "path": "D:/CC/Policies",
+        "reparse": false
+      },
+      {
+        "path": "D:/CC/Policies/owner-distinct-godd-mcp-products-20261020.md",
+        "reparse": false
+      }
+    ],
+    "contents_read": false,
+    "contents_hashed": false
+  },
+  "operational_sources": [
+    {
+      "name": "distinct-godd-mcp-products-20261020.private.md",
+      "sha256": "4191b08e5a0dd495eba90ddf0ea4418bdd6ac0d8bcd0bbeac2f594e55e60c1df",
+      "guard": {
+        "classification_unverified": false,
+        "client_resource": false,
+        "ok": true,
+        "original_registry_recovered": false,
+        "scope": "verified repair source and explicitly supplied operational receipts only"
+      }
+    },
+    {
+      "name": "3084-distinct-mcp-owner-correction.private.txt",
+      "sha256": "afe6b58afb1588673d5d9fb31033753a835887e12215282b2f817d56c3176587",
+      "guard": {
+        "classification_unverified": false,
+        "client_resource": false,
+        "ok": true,
+        "original_registry_recovered": false,
+        "scope": "verified repair source and explicitly supplied operational receipts only"
+      }
+    },
+    {
+      "name": "godd-mcp-current-supervisor-evidence-20261020.private.json",
+      "sha256": "c9ca5a40442b41c677f62e268681c2979fe3bbe2ea28bfe220f2b5ead2628f55",
+      "guard": {
+        "classification_unverified": false,
+        "client_resource": false,
+        "ok": true,
+        "original_registry_recovered": false,
+        "scope": "verified repair source and explicitly supplied operational receipts only"
+      }
+    },
+    {
+      "name": "discord-mcp-product-correction.private.txt",
+      "sha256": "aa1f448e7fd9911e45c3a741071b606ea406d72f5beabee7cc251e2b1dbc7564",
+      "guard": {
+        "classification_unverified": false,
+        "client_resource": false,
+        "ok": true,
+        "original_registry_recovered": false,
+        "scope": "verified repair source and explicitly supplied operational receipts only"
+      }
+    },
+    {
+      "name": "todo3103-policy-delivery-qualification.private.md",
+      "sha256": "249f8ba7e8fd65b32074079cfef49a243600e90e3d21b5cb0d76f3f2394ba775",
+      "guard": {
+        "classification_unverified": false,
+        "client_resource": false,
+        "ok": true,
+        "original_registry_recovered": false,
+        "scope": "verified repair source and explicitly supplied operational receipts only"
+      }
+    }
+  ],
+  "unverified": {
+    "original_creator_event": true,
+    "independent_expected_target_sha256": true,
+    "generator_to_target_binding": true
+  },
+  "mutation": {
+    "policy": false,
+    "guard_source": false,
+    "installed_guard": false,
+    "registry": false
+  }
+}

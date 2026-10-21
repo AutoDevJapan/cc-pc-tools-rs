@@ -1,0 +1,18 @@
+{
+  "source_tree": "ab1156e44079487c9a1512fa3202cca697f57470",
+  "files": [
+    {
+      "bytes": 13969920,
+      "path": "target/release/localai-web-rs.exe",
+      "sha256": "0E40EF0FFA4BFC87C42AD682942F450F79E37299426C896F5C708720B38E8437"
+    },
+    {
+      "bytes": 4774912,
+      "path": "target/agent-progress-3050.exe",
+      "sha256": "EC3D2C15E0A3E9D3F0A615B1DC40CBCF4E74C8373AEE36D5DCC8926E2C187D46"
+    }
+  ],
+  "build_kind": "owned-windows-release",
+  "production_updated": false,
+  "source_revision": "fe715e4eb9212698e5b1b4f0d15cda1f2c5e2ed2"
+}

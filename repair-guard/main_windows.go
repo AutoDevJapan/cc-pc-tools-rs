@@ -16,7 +16,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"unicode/utf8"
 )
 
 const base = "D:/CC/Work/runtime-recovery-20261012"
@@ -144,26 +143,16 @@ func boundedSchedulerTree(path string) bool {
 	return false
 }
 func legacyMatch(path string) bool {
-	// Never emit, copy, or return any line from the private registry.
-	file, err := os.Open("D:/CC/Tools/client-projects.txt")
-	if err != nil {
-		return !os.IsNotExist(err)
-	}
-	defer file.Close()
-	data, err := io.ReadAll(io.LimitReader(file, 1024*1024+1))
-	if err != nil || len(data) > 1024*1024 || !utf8.Valid(data) || len(strings.TrimSpace(string(data))) == 0 {
-		return true
-	}
-	normalized := strings.ToLower(strings.ReplaceAll(path, "\\", "/"))
-	for _, line := range strings.Split(strings.TrimPrefix(string(data), "\ufeff"), "\n") {
-		entry := strings.ToLower(strings.TrimSpace(line))
-		if entry != "" && !strings.HasPrefix(entry, "#") && strings.Contains(normalized, strings.ReplaceAll(entry, "\\", "/")) {
-			return true
-		}
-	}
-	return false
+	state := ownerLegacyProtection(path)
+	return state == ownerLegacyClient || state == ownerLegacyUnavailable
 }
 func allowed(path string) bool {
+	return classifyOwnerPath(path).AccessAllowed
+}
+
+// Existing, purpose-checked operational receipts remain supported. They do not
+// define the owner's protection categories or replace normal source identity.
+func repairPathAllowed(path string) bool {
 	path, e := portable(path)
 	if e != nil {
 		return false
@@ -315,6 +304,10 @@ func verifyCurrentSuccession(taskID int) object {
 }
 
 func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(int) object) int {
+	return runGuardCLIWithPath(args, stdout, stderr, currentVerifier, classifyOwnerPath)
+}
+
+func runGuardCLIWithPath(args []string, stdout, stderr io.Writer, currentVerifier func(int) object, pathVerifier func(string) ownerPathVerdict) int {
 	parsed, err := parseGuardArgs(args)
 	if err != nil {
 		if currentSuccessionFlagPresent(args) {
@@ -366,8 +359,11 @@ func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(i
 		return 0
 	}
 	ok := parsed.path != "" && filepath.IsAbs(parsed.path)
-	verified := ok && allowed(parsed.path)
-	result := map[string]any{"ok": ok, "client_resource": !verified, "classification_unverified": !verified, "original_registry_recovered": false, "scope": "verified repair source and explicitly supplied operational receipts only"}
+	verdict := ownerUnverified()
+	if ok {
+		verdict = pathVerifier(parsed.path)
+	}
+	result := map[string]any{"ok": ok, "client_resource": !verdict.AccessAllowed, "classification_unverified": verdict.Status == "unverified", "original_registry_recovered": false, "scope": "owner protection policy: client projects and owner card information; verified sources and purpose-checked receipts", "access_allowed": verdict.AccessAllowed, "protection_status": verdict.Status, "protection_categories": verdict.Categories}
 	_ = json.NewEncoder(stdout).Encode(result)
 	if !ok {
 		return 2

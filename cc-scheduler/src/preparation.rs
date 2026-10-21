@@ -82,8 +82,8 @@ fn recorded_parent_review_source(item: &Value, job: &Value) -> bool {
         || parent <= 0
         || ["repository", "git_common"]
             .iter()
-            .any(|key| s(owner, key).is_empty() || recorded[*key] != owner[*key])
-        || !s(recorded, "branch").starts_with(&format!("scheduler/todo-{parent}-"))
+            .any(|key| s(&owner[*key]).is_empty() || recorded[*key] != owner[*key])
+        || !s(&recorded["branch"]).starts_with(&format!("scheduler/todo-{parent}-"))
         || (owner["pr"].is_u64() && recorded["pr"] != owner["pr"])
     {
         return false;
@@ -92,9 +92,9 @@ fn recorded_parent_review_source(item: &Value, job: &Value) -> bool {
     ["repository", "git_common"]
         .iter()
         .all(|key| actual[*key] == owner[*key])
-        && !s(&actual, "worktree").is_empty()
+        && !s(&actual["worktree"]).is_empty()
         && actual["worktree"] == recorded["worktree"]
-        && s(&actual, "worktree") == cc_job_policy::work_owner::norm(Path::new(s(&job["cwd"])))
+        && s(&actual["worktree"]) == cc_job_policy::work_owner::norm(Path::new(s(&job["cwd"])))
         && actual["branch"] == recorded["branch"]
 }
 

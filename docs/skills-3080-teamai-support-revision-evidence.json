@@ -112,5 +112,7 @@
     "must": 0,
     "response_sha256": "9ed7ef3dc2dc84fa9ba94ed9090e986359c02aa6596a3e54c00f9a29f2e3fb6c",
     "limit": "単一レビュー内の静的用途確認、metadata一致、実ファイル/hash照合。選択精度や実CLI性能を測定していない。"
-  }
+  },
+  "amended_at": "2026-10-21T01:24:33.7943036Z",
+  "postinstall_delta_review_initial": "pending at recorded_at;3215 later received and appended"
 }

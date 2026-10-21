@@ -2492,6 +2492,9 @@ fn prepare_log(ctx: &mut Context, args: &LogArgs) -> Result<(Request, Vec<Image>
     let secrets = SecretCheck::new();
     let body = text_input(&args.body_file, &secrets)?;
     no_mentions(&body)?;
+    if args.notify {
+        log_requires_owner_action(&body)?;
+    }
     let images = images(ctx, &args.request_id, &args.attach, &secrets, None)?;
     let mut request = Request {
         request_id: args.request_id.clone(),
@@ -2586,6 +2589,8 @@ fn report(ledger: &Ledger, request: &Request, reused: bool) -> Value {
         "delivery":if ledger.complete(&request.request_id) {"verified"} else {"pending"},
         "new_pending_effects":pending,"legacy_pending":"unknown","legacy_state":"unchanged",
         "reused":reused,"original_fingerprint":original_fingerprint,
+        "requested_notify":request.notify,
+        "effective_notify":ledger.effect(&request.request_id, start_phase).map(|effect| effect.notify),
         "thread_id":start.map(|r| &r.thread_id),"message_id":start.map(|r| &r.message_id),
         "url":start.map(|r| request.destination.url(&r.thread_id)),
         "progress_thread_id":progress.map(|r| &r.thread_id),
@@ -2927,6 +2932,65 @@ fn execute(ctx: &mut Context, incoming: Request, images: &[Image]) -> Result<Val
     execute_inner(ctx, Some(incoming), None, images, None)
 }
 
+// --notify requests attention, but a report alone never requires owner action.
+// Real decisions normally use Ask. A log may point to its concrete existing
+// question; a heading alone is insufficient. No-action wording always wins.
+pub(crate) fn report_declares_no_action(body: &str) -> bool {
+    let first = body
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .unwrap_or("");
+    [
+        "対応不要",
+        "対応は不要",
+        "対応は必要ありません",
+        "報告のみ",
+        "本人対応不要",
+    ]
+    .iter()
+    .any(|marker| first.starts_with(marker))
+}
+
+pub(crate) fn log_requires_owner_action(body: &str) -> Result<bool> {
+    let mut lines = body.lines().map(str::trim).filter(|line| !line.is_empty());
+    let first = lines.next().unwrap_or("");
+    if report_declares_no_action(body) {
+        return Ok(false);
+    }
+    let Some(question) = first
+        .strip_prefix("回答が必要：")
+        .or_else(|| first.strip_prefix("回答が必要:"))
+    else {
+        if first.starts_with("回答が必要") {
+            return Err(
+                "owner action heading requires a concrete question and distinct a/b choices".into(),
+            );
+        }
+        // Reports may quote questions or contain a diagnostic question mark.
+        // Only an explicit owner-action heading grants report notification;
+        // real questions without that report heading use Ask/decision instead.
+        return Ok(false);
+    };
+    if question.trim().is_empty() {
+        return Err("owner action heading requires a concrete question".into());
+    }
+    let choices: Vec<_> = lines.collect();
+    let choice = |prefix| {
+        choices.iter().find_map(|line| {
+            line.strip_prefix(prefix)
+                .or_else(|| line.strip_prefix(if prefix == "a:" { "a：" } else { "b：" }))
+                .map(str::trim)
+                .filter(|choice| !choice.is_empty())
+        })
+    };
+    if choice("a:").zip(choice("b:")).is_some_and(|(a, b)| a != b) {
+        Ok(true)
+    } else {
+        Err("owner action heading requires distinct nonempty a/b choices".into())
+    }
+}
+
 fn execute_saved(
     ctx: &mut Context,
     request_id: &str,
@@ -3007,6 +3071,15 @@ fn execute_inner(
     let text = parts(&request.body);
     match &request.operation {
         Kind::Log { thread } => {
+            // The immutable input can retain an old or mistaken --notify.
+            // Only a concrete owner action may create a new notifying effect.
+            // A saved effect may already have reached Discord: recover it by
+            // GET without changing/reposting that historical reservation.
+            let notify = if let Some(effect) = ledger.effect(&request.request_id, "log:0") {
+                effect.notify
+            } else {
+                request.notify && log_requires_owner_action(&request.body)?
+            };
             if let Some(thread) = thread {
                 if let Some(binding) = clarification {
                     clarification::authorize(&mut api, &ledger, &home, &request, binding, true)?;
@@ -3016,7 +3089,7 @@ fn execute_inner(
                             .ok_or(
                                 "explicit log thread has no verified independent recovery receipt",
                             )?;
-                    if is_progress && request.notify {
+                    if is_progress && notify {
                         return Err("recovery progress posts must stay silent".into());
                     }
                 }
@@ -3033,20 +3106,21 @@ fn execute_inner(
                         title: request.title.clone(),
                     },
                 };
+                let delivery = effect(
+                    &request,
+                    &phase,
+                    target,
+                    body,
+                    index == 0 && notify,
+                    index == 0,
+                )?;
                 let receipt = ensure(
                     &mut api,
                     &mut ledger,
                     &home,
                     &request,
                     &phase,
-                    effect(
-                        &request,
-                        &phase,
-                        target,
-                        body,
-                        index == 0 && request.notify,
-                        index == 0,
-                    )?,
+                    delivery,
                     if index == 0 { images } else { &[] },
                 )?;
                 destination = Some(receipt.thread_id);
@@ -4755,7 +4829,7 @@ mod tests {
         let fixture = Fixture::new();
         let args = fixture.log(
             "status-2472",
-            "【速報】作業完了のお知らせ\n指定された一覧の修正が終わりました。",
+            "回答が必要：公開範囲をどちらにしますか？\na: この範囲を公開する\nb: 保持する",
             true,
         );
         let mut ctx = fixture.context();
@@ -4765,7 +4839,7 @@ mod tests {
         assert_eq!(out["legacy_pending"], "unknown");
         let state = fixture.server.lock().unwrap();
         let messages = &state.messages[core::s(&out["thread_id"])];
-        assert!(core::s(&messages[0]["content"]).starts_with("【速報】作業完了のお知らせ"));
+        assert!(core::s(&messages[0]["content"]).starts_with("回答が必要：公開範囲"));
         assert_eq!(
             core::s(&messages[0]["content"])
                 .matches(&format!("<@{OWNER}>"))
@@ -4798,6 +4872,214 @@ mod tests {
             )
             .is_err());
         assert_eq!(fixture.server.lock().unwrap().calls.len(), calls);
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn recovery_messages_reports_ignore_notify_without_losing_delivery() {
+        for body in [
+            "対応不要です。AI側で再開します。",
+            "報告のみです。修正を終えました。",
+            "本人対応不要。先行作業を待っています。",
+            "通常の進捗を記録しました。",
+            "調査の経過です。\n原因は何でしょう？AI側で修正を続けます。",
+        ] {
+            for post in [false, true] {
+                let fixture = Fixture::new();
+                let mut ctx = fixture.context();
+                let thread = if post {
+                    let first =
+                        log(&mut ctx, &fixture.log("seed", "開始しました。", false)).unwrap();
+                    Some(core::s(&first["thread_id"]).to_string())
+                } else {
+                    None
+                };
+                let mut args = fixture.log("quiet-notify", body, true);
+                args.thread = thread.clone();
+                let out = log(&mut ctx, &args).unwrap();
+                assert_eq!(out["delivery"], "verified");
+                assert_eq!(out["requested_notify"], true);
+                assert_eq!(out["effective_notify"], false);
+                let state = fixture.server.lock().unwrap();
+                let (_, posted) = state.posts.last().unwrap();
+                let payload = if post { posted } else { &posted["message"] };
+                assert_eq!(
+                    payload["allowed_mentions"],
+                    json!({"parse":[],"users":[],"roles":[],"replied_user":false})
+                );
+                assert_eq!(
+                    core::n(&payload["flags"]) & (SILENT | EMBEDS),
+                    SILENT | EMBEDS
+                );
+                assert!(!core::s(&payload["content"]).contains("<@"));
+                let message = state.messages[core::s(&out["thread_id"])].last().unwrap();
+                assert_eq!(message["mentions"], json!([]));
+                assert_eq!(message["channel_id"], out["thread_id"]);
+                if let Some(thread) = thread {
+                    assert_eq!(out["thread_id"], thread);
+                }
+                let count = state.posts.len();
+                drop(state);
+                assert_eq!(
+                    log(&mut ctx, &args).unwrap()["message_id"],
+                    out["message_id"]
+                );
+                assert_eq!(fixture.server.lock().unwrap().posts.len(), count);
+                fixture.unchanged();
+            }
+        }
+    }
+
+    #[test]
+    fn recovery_messages_go_question_format_keeps_no_action_words_inside_choices() {
+        for (heading, a, b) in [
+            ("回答が必要：", " a:", " b:"),
+            ("回答が必要:", " a：", " b："),
+        ] {
+            let fixture = Fixture::new();
+            let body=format!("{heading}この対象の扱いを選んでください。\n{a} 調査を続ける\n{b} 対応不要として保持する\n回答先: <https://discord.com/channels/102/200/201>\nこの対象だけ回答を待ち、AI側はほかの作業を続けます。\n\n状態: 継続中\n本人の判断: 必要");
+            let args = fixture.log("go-owner-question", &body, true);
+            let mut ctx = fixture.context();
+            let out = log(&mut ctx, &args).unwrap();
+            assert_eq!(out["effective_notify"], true);
+            let state = fixture.server.lock().unwrap();
+            let payload = &state.posts[0].1["message"];
+            assert_eq!(payload["allowed_mentions"]["users"], json!([OWNER]));
+            assert_eq!(payload["allowed_mentions"]["replied_user"], false);
+            assert_eq!(core::n(&payload["flags"]) & SILENT, 0);
+            drop(state);
+            fixture.unchanged();
+        }
+    }
+
+    #[test]
+    fn recovery_messages_malformed_owner_action_is_rejected_before_post() {
+        for body in [
+            "回答が必要：\na: \nb: ",
+            "回答が必要：選んでください。\na: 続行\nb: 続行",
+            "回答が必要 選んでください。\na: 続行\nb: 保持",
+        ] {
+            let fixture = Fixture::new();
+            let args = fixture.log("malformed-owner-action", body, true);
+            let mut ctx = fixture.context();
+            assert!(log(&mut ctx, &args)
+                .unwrap_err()
+                .contains("owner action heading"));
+            assert!(fixture.server.lock().unwrap().calls.is_empty());
+            fixture.unchanged();
+        }
+    }
+
+    #[test]
+    fn recovery_messages_old_unsent_intent_is_delivered_quietly_without_rewriting_input() {
+        let fixture = Fixture::new();
+        let args = fixture.log("old-unsent", "対応不要。依存先の完了後に再開します。", true);
+        let mut ctx = fixture.context();
+        let (incoming, _) = prepare_log(&mut ctx, &args).unwrap();
+        let mut ledger = Ledger::load(&fixture.home).unwrap();
+        reserve(&mut ledger, &fixture.home, &incoming).unwrap();
+        let old = serde_json::to_value(&ledger.events).unwrap();
+        let out = log(&mut ctx, &args).unwrap();
+        assert_eq!(out["delivery"], "verified");
+        assert_eq!(out["requested_notify"], true);
+        assert_eq!(out["effective_notify"], false);
+        let saved = Ledger::load(&fixture.home).unwrap();
+        assert_eq!(saved.request(&args.request_id), Some(&incoming));
+        assert_eq!(
+            serde_json::to_value(&saved.events[..old.as_array().unwrap().len()]).unwrap(),
+            old
+        );
+        let state = fixture.server.lock().unwrap();
+        let payload = &state.posts[0].1["message"];
+        assert_eq!(payload["allowed_mentions"]["users"], json!([]));
+        assert_eq!(payload["allowed_mentions"]["replied_user"], false);
+        assert_eq!(core::n(&payload["flags"]) & SILENT, SILENT);
+        drop(state);
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn recovery_messages_old_sent_effect_is_only_read_back_and_never_reposted() {
+        let fixture = Fixture::new();
+        let args = fixture.log("old-sent", "対応不要。以前の結果を保持します。", true);
+        let mut ctx = fixture.context();
+        let (incoming, _) = prepare_log(&mut ctx, &args).unwrap();
+        let mut ledger = Ledger::load(&fixture.home).unwrap();
+        let request = reserve(&mut ledger, &fixture.home, &incoming).unwrap();
+        let mut api = RecoveryApi::bind(&mut ctx, &mut ledger, &request).unwrap();
+        let delivery = effect(
+            &request,
+            "log:0",
+            Target::Forum {
+                title: request.title.clone(),
+            },
+            &request.body,
+            true,
+            true,
+        )
+        .unwrap();
+        ledger
+            .append(
+                &fixture.home,
+                Event::Pending {
+                    request_id: request.request_id.clone(),
+                    phase: "log:0".into(),
+                    effect: delivery.clone(),
+                },
+            )
+            .unwrap();
+        // Historical fixture: transport an actual pre-correction payload,
+        // without passing it through the new submission policy.
+        let posted = api
+            .effects
+            .http(
+                "POST",
+                &format!("{API}/channels/{FORUM}/threads"),
+                Some(&json!({"name":request.title,"message":delivery.payload(OWNER)})),
+                true,
+            )
+            .unwrap();
+        let thread = core::s(&posted["id"]);
+        let message = core::s(&posted["message"]["id"]);
+        ledger
+            .append(
+                &fixture.home,
+                Event::Posted {
+                    request_id: request.request_id.clone(),
+                    phase: "log:0".into(),
+                    thread_id: thread.into(),
+                    message_id: message.into(),
+                },
+            )
+            .unwrap();
+        let receipt = api
+            .verify(&ledger, &request, &delivery, thread, message)
+            .unwrap();
+        ledger
+            .append(
+                &fixture.home,
+                Event::Verified {
+                    request_id: request.request_id.clone(),
+                    phase: "log:0".into(),
+                    receipt,
+                },
+            )
+            .unwrap();
+        ledger
+            .append(
+                &fixture.home,
+                Event::DeliveryVerified {
+                    request_id: request.request_id.clone(),
+                },
+            )
+            .unwrap();
+        let before = fs::read(fixture.home.join(LEDGER)).unwrap();
+        let posts = fixture.server.lock().unwrap().posts.len();
+        let out = log(&mut ctx, &args).unwrap();
+        assert_eq!(out["delivery"], "verified");
+        assert_eq!(out["effective_notify"], true); // Historical fact, no new POST.
+        assert_eq!(fs::read(fixture.home.join(LEDGER)).unwrap(), before);
+        assert_eq!(fixture.server.lock().unwrap().posts.len(), posts);
         fixture.unchanged();
     }
 
@@ -5269,7 +5551,11 @@ mod tests {
         let before = fixture.server.lock().unwrap().posts.len();
         let notify = LogArgs {
             thread: Some(core::s(&out["progress_thread_id"]).into()),
-            ..fixture.log("forbidden-progress-notify", "通知", true)
+            ..fixture.log(
+                "forbidden-progress-notify",
+                "回答が必要：公開範囲を選んでください。\na: 公開する\nb: 保持する",
+                true,
+            )
         };
         assert!(log(&mut ctx, &notify).is_err());
         let legacy = LogArgs {

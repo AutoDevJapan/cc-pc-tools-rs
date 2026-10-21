@@ -71,11 +71,12 @@ type conversationIndex struct {
 }
 
 type conversationLogRecord struct {
-	InputSHA       string `json:"input_sha256"`
-	BodyFile       string `json:"body_file"`
-	Thread         string `json:"destination_thread_id,omitempty"`
-	Message        string `json:"message_id,omitempty"`
-	VerifiedThread string `json:"verified_thread_id,omitempty"`
+	InputSHA        string `json:"input_sha256"`
+	BodyFile        string `json:"body_file"`
+	Thread          string `json:"destination_thread_id,omitempty"`
+	Message         string `json:"message_id,omitempty"`
+	VerifiedThread  string `json:"verified_thread_id,omitempty"`
+	EffectiveNotify *bool  `json:"effective_notify,omitempty"`
 }
 
 type conversationAlias struct {
@@ -791,6 +792,13 @@ func (r *Runner) conversationLogInner(ctx context.Context, requestID, title, bod
 	}
 	record.VerifiedThread = verifiedThread
 	record.Message = message
+	if effective, present := report["effective_notify"]; present {
+		value, ok := effective.(bool)
+		if !ok {
+			return nil, errors.New("conversation log notification receipt invalid")
+		}
+		record.EffectiveNotify = &value
+	}
 	index.Logs[requestID] = record
 	if thread == "" {
 		index.Topics[title] = verifiedThread
@@ -798,7 +806,11 @@ func (r *Runner) conversationLogInner(ctx context.Context, requestID, title, bod
 	if err = publish(r.conversationPath(), index); err != nil {
 		return nil, err
 	}
-	return map[string]any{"domain": conversationDomain, "delivery": "verified", "request_id": requestID, "thread_id": report["thread_id"], "message_id": report["message_id"], "url": report["url"], "reused": report["reused"]}, nil
+	result := map[string]any{"domain": conversationDomain, "delivery": "verified", "request_id": requestID, "thread_id": report["thread_id"], "message_id": report["message_id"], "url": report["url"], "reused": report["reused"]}
+	if record.EffectiveNotify != nil {
+		result["effective_notify"] = *record.EffectiveNotify
+	}
+	return result, nil
 }
 
 func (r *Runner) conversationReplies(ctx context.Context, requestID string) (map[string]any, error) {

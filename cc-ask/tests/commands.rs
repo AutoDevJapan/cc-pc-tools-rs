@@ -624,7 +624,7 @@ fn log_creates_silent_starter_reuses_topic_and_notify_never_mentions() {
     let fake = h.fake.borrow();
     assert_eq!(fake.posts.len(), 2);
     assert_eq!(fake.posts[0].1["flags"], SILENT);
-    assert_eq!(fake.posts[1].1["flags"], 0);
+    assert_eq!(fake.posts[1].1["flags"], SILENT);
     assert_eq!(fake.posts[1].1["content"], "次の記録");
     for (_, post) in &fake.posts {
         assert_eq!(post["allowed_mentions"], json!({"parse":[]}));
@@ -644,6 +644,121 @@ fn log_creates_silent_starter_reuses_topic_and_notify_never_mentions() {
         creations[0]["body"]["message"]["allowed_mentions"],
         json!({"parse":[]})
     );
+}
+
+#[test]
+fn legacy_log_and_post_keep_no_action_reports_silent_despite_notify() {
+    for body in [
+        "対応不要。AI側で再開します。",
+        "報告のみです。",
+        "本人対応不要。待機します。",
+        "通常の進捗を記録しました。",
+        "調査の経過です。\n原因は何でしょう？AI側で修正を続けます。",
+    ] {
+        let mut h = Harness::new();
+        let first = cmd_log(&mut h.ctx, "通知条件の確認", body, None, true).unwrap();
+        let file = h.root.path().join("report.txt");
+        std::fs::write(&file, body).unwrap();
+        cmd_post(&mut h.ctx, s(&first["thread_id"]), &file, &[], true).unwrap();
+        let fake = h.fake.borrow();
+        assert_eq!(fake.posts.len(), 2);
+        for (thread, payload) in &fake.posts {
+            assert_eq!(thread, s(&first["thread_id"]));
+            assert_eq!(payload["flags"], SILENT);
+            assert_eq!(payload["allowed_mentions"]["parse"], json!([]));
+            assert!(payload["message_reference"].is_null());
+            assert!(!s(&payload["content"]).contains("<@"));
+        }
+    }
+}
+
+#[test]
+fn legacy_silent_report_does_not_validate_an_unused_action_heading() {
+    let mut h = Harness::new();
+    let body = "回答が必要な質問はありません。";
+    let out = cmd_log(&mut h.ctx, "進捗", body, None, false).unwrap();
+    let file = h.root.path().join("silent.txt");
+    std::fs::write(&file, body).unwrap();
+    cmd_post(&mut h.ctx, s(&out["thread_id"]), &file, &[], false).unwrap();
+    assert!(h
+        .fake
+        .borrow()
+        .posts
+        .iter()
+        .all(|(_, payload)| payload["flags"] == SILENT));
+}
+
+#[test]
+fn legacy_explicit_owner_question_keeps_its_owner_mention() {
+    for body in [
+        "回答が必要：表示の方向を選んでください。\na: 一覧を中心にする\nb: 対応不要として保持する",
+        "回答が必要：公開範囲\na: 対象を公開する\nb: 非公開を保つ",
+    ] {
+        for post in [false, true] {
+            let mut h = Harness::new();
+            if post {
+                let file = h.root.path().join("question.txt");
+                std::fs::write(&file, body).unwrap();
+                cmd_post(&mut h.ctx, "100", &file, &[], true).unwrap();
+            } else {
+                cmd_log(&mut h.ctx, "画面の方向", body, None, true).unwrap();
+            }
+            let fake = h.fake.borrow();
+            let owner_messages = fake
+                .messages
+                .values()
+                .flatten()
+                .filter(|m| m["allowed_mentions"]["users"] == json!(["OWN"]))
+                .collect::<Vec<_>>();
+            assert_eq!(owner_messages.len(), 1);
+            assert!(s(&owner_messages[0]["content"]).contains("<@OWN>"));
+            assert_eq!(owner_messages[0]["allowed_mentions"]["replied_user"], false);
+        }
+    }
+}
+
+#[test]
+fn legacy_log_routes_decision_questions_without_publishing_internal_metadata() {
+    let mut h = Harness::new();
+    let identity = json!({"todo_id":1,"resources":[{"kind":"service","id":"fixture-product"}],"decision":"publish","scope":{"specification":"fixture publication scope"}});
+    let body =
+        format!("公開してよいですか？\na 公開する\nb 保持する\n<!-- cc-decision {identity} -->");
+    cmd_log(&mut h.ctx, "公開方針", &body, None, true).unwrap();
+    let fake = h.fake.borrow();
+    assert!(fake
+        .http_calls
+        .iter()
+        .filter(|call| call["method"] == "POST")
+        .all(|call| !call["body"].to_string().contains("cc-decision")));
+    assert_eq!(
+        fake.messages
+            .values()
+            .flatten()
+            .filter(|m| m["allowed_mentions"]["users"] == json!(["OWN"]))
+            .count(),
+        1
+    );
+}
+
+#[test]
+fn legacy_log_accepts_report_examples_and_cleaned_decision_bodies() {
+    let identity = json!({"todo_id":1,"resources":[{"kind":"service","id":"fixture-product"}],"decision":"publish","scope":{"specification":"fixture publication scope"}});
+    for (body,visible,question) in [
+        ("説明の例です。\n<!-- cc-decision {同じ形式のJSON} -->".to_string(),"説明の例です。",false),
+        (format!("対応不要。AI側で続けます。\n<!-- cc-decision {identity} -->"),"対応不要。AI側で続けます。",false),
+        (format!("<!-- cc-decision {identity} -->\n回答が必要：公開範囲\na: 対象を公開する\nb: 非公開を保つ"),"回答が必要：公開範囲",true),
+    ] {
+        for notify in [false,true] {
+            let mut h=Harness::new();
+            cmd_log(&mut h.ctx,"受入確認",&body,None,notify).unwrap();
+            let fake=h.fake.borrow();
+            let owner_count=fake.messages.values().flatten().filter(|m|m["allowed_mentions"]["users"]==json!(["OWN"])).count();
+            assert_eq!(owner_count,usize::from(question));
+            assert!(fake.messages.values().flatten().any(|m|s(&m["content"]).contains(visible)));
+            if !question {assert!(fake.posts.iter().all(|(_,m)|m["flags"]==SILENT));}
+            if body.contains("fixture-product") {assert!(fake.http_calls.iter().filter(|c|c["method"]=="POST").all(|c|!c["body"].to_string().contains("cc-decision")));}
+        }
+    }
 }
 
 #[test]

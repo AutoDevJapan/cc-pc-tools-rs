@@ -17,7 +17,15 @@ import (
 
 type historyReadMessage struct {
 	Message
-	Type *int `json:"type,omitempty"`
+	Type        *int                     `json:"type,omitempty"`
+	Attachments *[]historyReadAttachment `json:"attachments"`
+}
+
+// A nil observation is unknown; a non-nil empty slice is the API's empty array.
+// Deliberately do not decode filenames, descriptions or signed media URLs.
+type historyReadAttachment struct {
+	ID   string `json:"id"`
+	Size *int64 `json:"size"`
 }
 
 type historyReadScope struct {
@@ -372,7 +380,7 @@ func readHistoryPage(ctx context.Context, r *Runner, scope historyReadScope, cur
 		return page, bad
 	}
 	// Unlike a 200 [] history response, this proves READ_MESSAGE_HISTORY access.
-	if r.get(ctx, "/channels/"+page.Thread+"/messages/"+page.Thread, &page.Starter) != nil || !historyMessageValid(page.Starter.Message, page.Thread, r) || page.Starter.ID != page.Thread || (page.Starter.Author.ID != scope.Owner && page.Starter.Author.ID != page.Bot) {
+	if r.get(ctx, "/channels/"+page.Thread+"/messages/"+page.Thread, &page.Starter) != nil || !historyMessageValid(page.Starter.Message, page.Thread, r) || !historyAttachmentsValid(page.Starter) || page.Starter.ID != page.Thread || (page.Starter.Author.ID != scope.Owner && page.Starter.Author.ID != page.Bot) {
 		return page, bad
 	}
 	var messages []historyReadMessage
@@ -403,7 +411,7 @@ func readHistoryPage(ctx context.Context, r *Runner, scope historyReadScope, cur
 			continue
 		}
 		if message.Author.ID == scope.Owner || message.Author.ID == page.Bot {
-			if safeText(message.Content, r.Token) != message.Content {
+			if safeText(message.Content, r.Token) != message.Content || !historyAttachmentsValid(message) {
 				return page, bad
 			}
 			page.Messages = append(page.Messages, message)
@@ -427,6 +435,18 @@ func readHistoryPage(ctx context.Context, r *Runner, scope historyReadScope, cur
 	}
 	page.Acquired = r.Now().UTC().Format(time.RFC3339Nano)
 	return page, nil
+}
+
+func historyAttachmentsValid(message historyReadMessage) bool {
+	if message.Attachments == nil {
+		return true
+	}
+	for _, attachment := range *message.Attachments {
+		if _, ok := number(attachment.ID); !ok || attachment.Size == nil || *attachment.Size < 0 {
+			return false
+		}
+	}
+	return true
 }
 
 func historyMessageValid(message Message, thread string, r *Runner) bool {

@@ -46,6 +46,54 @@ func TestMCPVerifiedJobReclassifiesCodeOnlyTask(t *testing.T) {
 	}
 }
 
+func TestMCPRelatedReviewCannotReplaceTheCurrentPrimary(t *testing.T) {
+	for _, reference := range []string{"related_todo_ids", "jobs"} {
+		for _, check := range []string{"task", "dependency"} {
+			t.Run(reference+"/"+check, func(t *testing.T) {
+				parent := map[string]any{"id": 1, "project": "tools", "status": "doing", "wait_on": []int{7}}
+				if reference == "jobs" {
+					parent["jobs"] = []string{"review"}
+				}
+				db, _ := json.Marshal(map[string]any{"items": []any{parent,
+					map[string]any{"id": 7, "project": "tools", "status": "doing"},
+					map[string]any{"id": 9, "project": "tools", "status": "doing"}}})
+				f := fixtureFor(t, string(db))
+				f.opts.PriorityFile = filepath.Join(filepath.Dir(f.opts.TodoFile), "priority.json")
+				writeFixture(t, f.opts.PriorityFile, []byte(`{"product_identities":{"godd-mcp-contract":{"repository_id":61001,"owner_id":71001},"godd-mcp-alpha":{"repository_id":61002,"owner_id":71002}}}`))
+				f.job(t, "requester", `{"id":"requester","todo_id":1,"status":"running","created_at":"2026-10-20T00:00:00Z","product_identity":{"repository_id":61001,"owner_id":71001}}`)
+				review := map[string]any{"id": "review", "todo_id": 9, "status": "queued", "created_at": "2026-10-20T01:00:00Z"}
+				if reference == "related_todo_ids" {
+					review["related_todo_ids"] = []int{1}
+				}
+				encoded, _ := json.Marshal(review)
+				f.job(t, "review", string(encoded))
+				f.job(t, "prerequisite", `{"id":"prerequisite","todo_id":7,"status":"running","product_identity":{"repository_id":61002,"owner_id":71002}}`)
+				got := snap(f)
+				if check == "task" {
+					for _, task := range got.Tasks {
+						if task.ID == 1 {
+							if task.Priority != 10 || task.Department != "受託部" || task.ProductIdentity == nil || task.ProductIdentity.ProductID != "godd-mcp-contract" {
+								t.Fatalf("current primary was replaced: %+v", task)
+							}
+							return
+						}
+					}
+				} else {
+					for _, job := range got.Jobs {
+						if job.rawID == "prerequisite" {
+							if job.Priority != 10 {
+								t.Fatalf("prerequisite priority=%d want=10", job.Priority)
+							}
+							return
+						}
+					}
+				}
+				t.Fatal("required row absent")
+			})
+		}
+	}
+}
+
 func TestMCPLiveRequesterProductPriorityFlowsThroughDependencies(t *testing.T) {
 	for _, alpha := range []bool{false, true} {
 		for _, edge := range []string{"wait_on", "work_wait_on"} {

@@ -204,6 +204,7 @@ fn mcp_live_requester_dependency_exclusion_controls() {
         "wait_ready",
         "child_done",
         "no_product_job",
+        "terminal_requester",
     ] {
         let mut parent = json!({"id":1,"project":"tools","status":"doing","wait_on":[7]});
         let mut child = json!({"id":7,"project":"tools","status":"doing"});
@@ -221,6 +222,9 @@ fn mcp_live_requester_dependency_exclusion_controls() {
                 .unwrap()
                 .remove("product_identity");
         }
+        if control == "terminal_requester" {
+            requester["status"] = json!("failed");
+        }
         let jobs = [
             requester,
             json!({"id":"prerequisite","todo_id":7,"status":"running","product_identity":{"repository_id":61002,"owner_id":71002}}),
@@ -232,10 +236,61 @@ fn mcp_live_requester_dependency_exclusion_controls() {
         );
         assert_eq!(
             ranks["prerequisite"],
-            if control == "no_product_job" { 30 } else { 60 },
+            if matches!(control, "no_product_job" | "terminal_requester") {
+                30
+            } else {
+                60
+            },
             "{control}"
         );
     }
+}
+
+#[test]
+fn mcp_related_review_preserves_current_primary_and_dependency_priority() {
+    let policy = bindings();
+    let items = vec![
+        json!({"id":1,"project":"tools","status":"doing","wait_on":[7],"jobs":["review"]}),
+        json!({"id":7,"project":"tools","status":"doing"}),
+        json!({"id":9,"project":"tools","status":"doing"}),
+    ];
+    let jobs = vec![
+        json!({"id":"requester","todo_id":1,"status":"running","created_at":"2026-10-20T00:00:00Z","product_identity":{"repository_id":61001,"owner_id":71001}}),
+        json!({"id":"review","todo_id":9,"related_todo_ids":[1],"status":"queued","created_at":"2026-10-20T01:00:00Z"}),
+        json!({"id":"prerequisite","todo_id":7,"status":"running","product_identity":{"repository_id":61002,"owner_id":71002}}),
+    ];
+    let associations = cc_job_policy::product_identity::assignments(&items, &jobs, &policy);
+    assert_eq!(associations.primary(&jobs[1]), Some(9));
+    assert_eq!(
+        associations.record(&items[0], &policy),
+        Resolution::Verified(&CONTRACT)
+    );
+    assert_eq!(
+        cc_job_policy::priority::job_ranks(&jobs, &json!({"items":items}), &policy)["prerequisite"],
+        10
+    );
+}
+
+#[test]
+fn mcp_effective_private_task_masks_every_raw_job_edge() {
+    let policy = bindings();
+    let items = vec![
+        json!({"id":1,"project":"tools","status":"doing","jobs":["review"]}),
+        json!({"id":9,"project":"tools","status":"doing"}),
+    ];
+    let jobs = vec![
+        json!({"id":"requester","todo_id":1,"status":"running","product_identity":{"repository_id":61001,"owner_id":71001}}),
+        json!({"id":"review","todo_id":9,"related_todo_ids":[1],"status":"queued"}),
+    ];
+    let associations = cc_job_policy::product_identity::assignments(&items, &jobs, &policy);
+    assert_eq!(
+        associations.record(&items[0], &policy),
+        Resolution::Verified(&CONTRACT)
+    );
+    assert!(
+        associations.sensitive(&jobs[1]),
+        "a business-private task's related report must remain private"
+    );
 }
 
 #[test]

@@ -709,6 +709,43 @@ fn mcp_missing_policy_has_no_runtime_binding_override() {
 }
 
 #[test]
+fn mcp_effective_contract_identity_masks_related_job_details() {
+    for reference in ["related_todo_ids", "jobs"] {
+        let mut parent = json!({"id":1,"project":"tools","status":"doing"});
+        let mut review = json!({"id":"review","todo_id":9,"status":"queued","created_at":"2026-10-20T01:00:00Z","last_message":"business-private-report-marker"});
+        if reference == "jobs" {
+            parent["jobs"] = json!(["review"]);
+        } else {
+            review["related_todo_ids"] = json!([1]);
+        }
+        let temp = test_root(
+            json!([parent,{"id":9,"project":"tools","status":"doing"}]),
+            vec![
+                json!({"id":"requester","todo_id":1,"status":"running","created_at":"2026-10-20T00:00:00Z","product_identity":identity(false)}),
+                review,
+            ],
+            false,
+            json!({"product_identities":{
+                "godd-mcp-contract":{"repository_id":61001,"owner_id":71001},
+                "godd-mcp-alpha":{"repository_id":61002,"owner_id":71002}
+            }}),
+        );
+        let operations = Operations::new(temp.path().into(), temp.path().join("Skills"));
+        assert_eq!(operations.worker_detail("todo-1", 0), Err(404));
+        assert_eq!(
+            operations.worker_detail(&safe_id("job", "review"), 0),
+            Err(404),
+            "{reference}"
+        );
+        assert!(
+            !collect(temp.path(), 1_000_000)
+                .to_string()
+                .contains("business-private-report-marker")
+        );
+    }
+}
+
+#[test]
 fn mcp_related_private_ids_mask_both_display_lists() {
     let names = cc_ask::task_title::Names::parse("SyntheticPrivate\n");
     let db = json!({"items":[

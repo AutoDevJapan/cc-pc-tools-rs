@@ -11,6 +11,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode/utf8"
 )
 
 func ownerRepositoryCandidate(path string) bool {
@@ -133,7 +134,7 @@ func ownerProjectProjection(ctx context.Context, input io.Reader) (object, bool)
 		for d.More() {
 			key, err := d.Token()
 			name, ok := key.(string)
-			if err != nil || !ok || len(name) > 4096 || len(projects) >= 4096 {
+			if err != nil || !ok || len(name) > 4096 || strings.ContainsRune(name, utf8.RuneError) || len(projects) >= 4096 {
 				return nil, false
 			}
 			if _, duplicate := projects[name]; duplicate {
@@ -141,7 +142,7 @@ func ownerProjectProjection(ctx context.Context, input io.Reader) (object, bool)
 			}
 			value, err := d.Token()
 			path, ok := value.(string)
-			if err != nil || !ok || len(path) > 32768 {
+			if err != nil || !ok || len(path) > 32768 || strings.ContainsRune(path, utf8.RuneError) {
 				return nil, false
 			}
 			projects[name] = path

@@ -59,6 +59,8 @@ func TestOwnerProjectProjectionIgnoresItemUpdatesAndRejectsMalformedProjects(t *
 		`{"projects":{"fixture":"C:/fixture","fixture":"D:/other"}}`,
 		`{"projects":{},"projects":{"fixture":"C:/fixture"}}`,
 		`{"projects":{"fixture":false}}`,
+		`{"projects":{"fixtur\ufffd":"C:/fixture"}}`,
+		`{"projects":{"fixture":"C:/fixtur\ufffd"}}`,
 		`{"projects":{},"items":[`,
 		`{"projects":{}} {}`,
 	} {

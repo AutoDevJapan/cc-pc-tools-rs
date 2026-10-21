@@ -23,8 +23,12 @@ ports, userinfo, fragments or redirects. The CDN request has no Discord Authoriz
 header or cookies. URL signatures, filenames, descriptions and response error bodies
 are never printed or saved. No extra authentication or API key is introduced.
 
-The selected file must be a PNG/JPEG/WebP/GIF, at most 20 MiB, with exact declared byte
-size and a matching detected media type/output extension. With `.private.image`,
+The selected file must be a PNG/JPEG/WebP/GIF, at most 20 MiB, with a matching detected
+media type/output extension. The retrieved body must match its HTTP response length
+when supplied. Keep the original API metadata size bound to the selected attachment,
+and record that `source_size` separately from the downloaded `size`. The image SHA
+describes the exact retrieved CDN representation, not a verified hash of the original
+upload. Do not infer why a CDN representation's size differs. With `.private.image`,
 detect the supported image type without requiring the caller to guess a format
 that the metadata-only history receipt deliberately omits. Recheck the exact API reply
 version and attachment identity after download. Publish the unmodified bytes with

@@ -91,7 +91,11 @@ func attachmentFixture(t *testing.T, mode string) (func(context.Context, history
 			case "userinfo":
 				url = "https://user@cdn.discordapp.com/attachments/100/51/private-label.png"
 			}
-			attachment := map[string]any{"id": "51", "size": len(image), "content_type": mediaType, "filename": "private-label.png", "url": url}
+			sourceSize := len(image)
+			if mode == "cdn_representation" {
+				sourceSize -= 7
+			}
+			attachment := map[string]any{"id": "51", "size": sourceSize, "content_type": mediaType, "filename": "private-label.png", "url": url}
 			if mode == "wrong_attachment" {
 				attachment["id"] = "52"
 			}
@@ -138,7 +142,11 @@ func attachmentFixture(t *testing.T, mode string) (func(context.Context, history
 			case "changed_after_download":
 				calls.changed = true
 			}
-			return &http.Response{StatusCode: status, Header: header, Body: io.NopCloser(bytes.NewReader(body)), ContentLength: int64(len(body)), Request: req}, nil
+			responseLength := len(body)
+			if mode == "short" || mode == "oversize" {
+				responseLength = len(image)
+			}
+			return &http.Response{StatusCode: status, Header: header, Body: io.NopCloser(bytes.NewReader(body)), ContentLength: int64(responseLength), Request: req}, nil
 		})
 		return &Runner{State: &State{Destination: Destination{Guild: "10", Owner: "20", Bot: "30", Forum: "40"}}, Client: client, Base: server.URL, Token: "fixture-token", Now: func() time.Time { return time.Date(2026, 10, 20, 0, 0, 0, 0, time.UTC) }}, nil
 	}, calls, image
@@ -208,6 +216,20 @@ func TestHistoryAttachmentAutoImageDoesNotRequireGuessingOwnerFormat(t *testing.
 	var receipt map[string]any
 	if err != nil || !bytes.Equal(actual, expected) || json.Unmarshal(stdout.Bytes(), &receipt) != nil || receipt["media_type"] != "image/jpeg" || receipt["image_sha256"] != bytesHash(actual) || calls.badAuth || calls.media != 1 {
 		t.Fatal("automatic image type lost exact bytes, provenance or request isolation")
+	}
+}
+
+func TestHistoryAttachmentPreservesCDNRepresentationAndSourceSizeSeparately(t *testing.T) {
+	load, calls, expected := attachmentFixture(t, "cdn_representation")
+	args, output := attachmentArgs(t, len(expected)-7)
+	var stdout bytes.Buffer
+	if historyAttachmentCLIWith(args, &stdout, load, func(context.Context, string) bool { return true }) != 0 {
+		t.Fatal("valid CDN representation rejected solely because original metadata size differs")
+	}
+	actual, err := os.ReadFile(output)
+	var receipt map[string]any
+	if err != nil || !bytes.Equal(actual, expected) || json.Unmarshal(stdout.Bytes(), &receipt) != nil || receipt["size"] != float64(len(expected)) || receipt["source_size"] != float64(len(expected)-7) || receipt["image_sha256"] != bytesHash(actual) || receipt["representation"] != "cdn_response_bytes" || calls.api != 5 || calls.media != 1 {
+		t.Fatal("original attachment size and exact retrieved representation were conflated")
 	}
 }
 

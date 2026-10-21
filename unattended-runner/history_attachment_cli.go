@@ -47,8 +47,9 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 	stage := "arguments"
 	httpStatus := 0
 	responseLength := int64(-1)
+	responseType := "unknown"
 	fail := func() int {
-		_ = json.NewEncoder(out).Encode(map[string]any{"error": "attachment read unavailable", "stage": stage, "http_status": httpStatus, "response_length": responseLength})
+		_ = json.NewEncoder(out).Encode(map[string]any{"error": "attachment read unavailable", "stage": stage, "http_status": httpStatus, "response_length": responseLength, "response_media_type": responseType})
 		return 1
 	}
 	var scopePath, output string
@@ -134,13 +135,16 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 	stage = "cdn_response"
 	httpStatus = response.StatusCode
 	responseLength = response.ContentLength
-	if response.StatusCode != http.StatusOK || (response.ContentLength >= 0 && response.ContentLength != scope.Size) {
+	if declared, _, err := mime.ParseMediaType(response.Header.Get("Content-Type")); err == nil && historySupportedImageType(declared) {
+		responseType = declared
+	}
+	if response.StatusCode != http.StatusOK || response.ContentLength > 20<<20 {
 		return fail()
 	}
 	stage = "image_bytes"
-	data, err := io.ReadAll(io.LimitReader(response.Body, scope.Size+1))
+	data, err := io.ReadAll(io.LimitReader(response.Body, 20<<20+1))
 	detectedType := http.DetectContentType(data)
-	if err != nil || int64(len(data)) != scope.Size || !historySupportedImageType(detectedType) || (mediaType != "image/*" && detectedType != mediaType) {
+	if err != nil || len(data) > 20<<20 || (response.ContentLength >= 0 && int64(len(data)) != response.ContentLength) || !historySupportedImageType(detectedType) || (mediaType != "image/*" && detectedType != mediaType) {
 		return fail()
 	}
 	mediaType = detectedType
@@ -156,7 +160,7 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 	if writeHistoryReceipt(output, data) != nil {
 		return fail()
 	}
-	result := map[string]any{"domain": "discord-owner-image-read-receipt-v1", "source": "discord-api-v10", "todo_id": scope.Todo, "guild_id": scope.Guild, "owner_id": scope.Owner, "thread_id": threadID, "message_id": scope.Message, "attachment_id": scope.Attachment, "content_sha256": scope.ContentSHA, "created_at": scope.Created, "edited_timestamp": scope.Edited, "size": len(data), "media_type": mediaType, "image_sha256": bytesHash(data), "scope_sha256": bytesHash(raw), "acquired_at": runner.Now().UTC().Format(time.RFC3339Nano), "delivery": "inspection_only", "application": "not_inferred"}
+	result := map[string]any{"domain": "discord-owner-image-read-receipt-v1", "source": "discord-api-v10", "todo_id": scope.Todo, "guild_id": scope.Guild, "owner_id": scope.Owner, "thread_id": threadID, "message_id": scope.Message, "attachment_id": scope.Attachment, "content_sha256": scope.ContentSHA, "created_at": scope.Created, "edited_timestamp": scope.Edited, "source_size": scope.Size, "size": len(data), "representation": "cdn_response_bytes", "media_type": mediaType, "image_sha256": bytesHash(data), "scope_sha256": bytesHash(raw), "acquired_at": runner.Now().UTC().Format(time.RFC3339Nano), "delivery": "inspection_only", "application": "not_inferred"}
 	if json.NewEncoder(out).Encode(result) != nil {
 		return 1
 	}

@@ -2,6 +2,53 @@
 
 ## 最新の固定版：92096faの型整合修正を先行確認
 
+### 検査結果：成功、候補2件は未配布
+
+固定HEAD `92096fa2736062cf460bf272ca692c2d94c98025` の有限検査を完了した。
+実ジョブ `20261021-154450-todo-3238`、`gpt-6.1-sol` / `max`、
+割当資源 `cargo`。実行は2026-10-21 15:48:57〜15:52:12 JST。
+先行する容量周期1件で、自動指定のmodel/effortの出所をpolicyとして保存する
+assertを含めて成功した。残りからその1件を除き、実テスト476件はすべて成功。
+PASS行を別途数え、同じテストの重複実行が0件であることも確認した。
+
+| 検査 | 実件数 | 終了コード |
+| --- | ---: | ---: |
+| cc-todo capacity_cycleの出所保存 | 1 | 0 |
+| scheduler parityのreview_workspace_ | 4 | 0 |
+| 同じparityの残り | 201 | 0 |
+| todoの指定結合検査（先行1件を除く） | 24 | 0 |
+| job-policyの指定lib・結合検査 | 63 | 0 |
+| askの指定起動・再開検査 | 183 | 0 |
+| 4ライブラリのdoctest | 各0件 | 0 |
+| 4クレートのClippy（all-targets、警告をエラーとして扱う） | 実行1回 | 0 |
+| todo / schedulerのreleaseビルド | 実行1回 | 0 |
+| 新scheduler候補のhelp / dispatch-subwork help | 各1回 | 各0 |
+
+新候補はこの作業場所の `.ci-work` に独立コピーとして保存した。
+両方とも生成元とSHA・bytesが一致し、現在のリンク数は1。
+release本体のハードリンクは配布候補にしていない。
+
+- `todo-3085-main8a-origin-fixed.exe`: 7,903,232 bytes、SHA256 `f7312b269b8fb1b29b679c5b23ab26b0b5fafcb60c4c325059932aec1b4b8792`
+- `scheduler-3085-main8a-origin-fixed.exe`: 6,479,360 bytes、SHA256 `b2ebcb634a9261a77db3be5c6c209931cd7ba9287e2356541927199a1c927096`
+
+全stdout/stderr・argv・実終了・件数・全ログSHA・実割当・候補生成元は
+`D:/CC/Work/unattended-operations-20261013-wt/todo-3238-todo/.ci-work/3085-cargo-main8a-origin-fixed.private.json`
+に保存した。receiptのSHA256は
+`52880e603f320b8d916593881bd1c14fd9a544828b8e2cc49f413e652e29dc87`。
+別途、`3238-main8a-origin-fixed-final-verification.private.json` に
+全22出力・25回のソース照合・追跡入力197ファイル・候補2件の照合結果を保存した。
+この照合記録のSHA256は `4f7e9a2f9c9f53d5bd9e113a34c934e19d9091c9f0db8271f487cdb50b926ba2`。
+
+親のHEAD・ブランチ・変更なしと、追跡されたRust入力・Cargo設定のSHAは保持された。
+旧receiptは元のSHAのまま。旧rawログや原保護stateをハッシュのために読んでいない。
+実行担当とtarget内の実行ファイルは終了済みで、出力も全て回収済み。
+親の受領に必要なtarget・候補・証拠は保持する。
+
+この結果は3238の指定有限検査の完了だけを表す。親3085のcompile入力・guard追加module・
+両受領の更新、新しい固定HEADでの3090レビュー、実dispatch、マージ、配布は親の未完工程。
+親ソース・共有scheduler・本番ファイルを変更していない。親へ結果を返し、
+既存製品topicへの永続記録・通知なしの配送と読み返し確認は親が行う。
+
 親の訂正により、現在の固定HEADは `92096fa2736062cf460bf272ca692c2d94c98025`。
 実ジョブは `20261021-154450-todo-3238`。既存の3238/target/担当範囲を保持する。
 下の206b8cf計画は取消し前の履歴であり、実検査・Green・候補生成の証明ではない。

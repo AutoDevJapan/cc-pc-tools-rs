@@ -1,0 +1,54 @@
+diff --git a/cc-jobs/tests/parity.rs b/cc-jobs/tests/parity.rs
+index 87703da..e433b3f 100644
+--- a/cc-jobs/tests/parity.rs
++++ b/cc-jobs/tests/parity.rs
+@@ -1891,7 +1891,8 @@ mod capacity_regressions {
+             let t = Test::new();
+             t.put(job(
+                 json!({"id":"author","status":"running","pid":std::process::id(),
+-                "pid_created":123,"model":"gpt-6.1-sol","requested_model":"gpt-6.1-sol"}),
++                "pid_created":123,"cwd":t.ctx.root,"model":"gpt-6.1-sol","requested_model":"gpt-6.1-sol",
++                "model_origin":"owner_request"}),
+             ));
+             let error = t
+                 .run(
+@@ -2070,6 +2071,26 @@ mod capacity_regressions {
+         );
+     }
+ 
++    #[test]
++    fn review_model_recovery_excludes_the_failed_model_only_for_current_routing() {
++        let t = Test::new();
++        t.put(job(json!({"id":"opus-author","status":"succeeded",
++            "model":"anthropic/claude-opus-5-5"})));
++        t.run(&["--name", "rev-model-recovery", "--task-type", "review",
++            "--auto-model", "gpt-6-astra", "--effort", "max", "--model-origin", "policy",
++            "--review-source-jobs", "opus-author", "--model-recovery-from", "gpt-6.1-sol"],
++            b"Resume this independent review after the model became unavailable").unwrap();
++        let saved = t.ctx.list_jobs(&HashSet::new()).into_iter()
++            .find(|job| s(job, "name") == "rev-model-recovery").unwrap();
++        assert!(!cc_job_policy::same_model(s(&saved, "model"), "gpt-6.1-sol"),
++            "review registration routed straight back to the model that just failed");
++        assert!(!cc_job_policy::same_model(s(&saved, "model"), "anthropic/claude-opus-5-5"));
++        assert_eq!(saved["effort"], "max");
++        assert_eq!(saved["review_author_models"], json!(["anthropic/claude-opus-5-5"]));
++        assert_eq!(saved["review_excluded_models"], json!(["anthropic/claude-opus-5-5"]));
++        assert_eq!(saved["model_recovery_from"], "gpt-6.1-sol");
++    }
++
+     #[test]
+     fn routing_exclusions_are_honored_without_becoming_author_proof() {
+         let t = Test::new();
+diff --git a/cc-scheduler/tests/parity.rs b/cc-scheduler/tests/parity.rs
+index 43bb52e..7723df1 100644
+--- a/cc-scheduler/tests/parity.rs
++++ b/cc-scheduler/tests/parity.rs
+@@ -3698,7 +3698,7 @@ fn retired_native_conversation_cannot_cross_a_cancelled_prestart_handoff() {
+     let source = &mut f.e.backend.records[0];
+     source["todo_id"] = json!(1);
+     source["status"] = json!("cancelled");
+-    source["recovery_cancel"] = json!({"key":"old-launch","committed_at":"saved"});
++    source["recovery_cancel"] = json!({"key":"old-launch","committed_at":"2026-10-20T12:00:00Z"});
+     source["cwd"] = json!(cwd);
+     source["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
+     source["model"] = json!("gpt-6.1-sol");

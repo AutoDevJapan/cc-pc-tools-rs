@@ -1,0 +1,36 @@
+1932:     #[test]
+1933:     fn review_after_writer_exit_uses_durable_model_history() {
+1934:         let t=Test::new();
+1935:         t.put(job(json!({"id":"finished-author","status":"succeeded","cwd":t.ctx.root,
+1936:             "model":"anthropic/claude-opus-5-5","requested_model":"gpt-6.1-sol"})));
+1937:         let prompt=t.ctx.root.join("review.md");fs::write(&prompt,"Review fixed source").unwrap();
+1938:         let (result,out,_)=t.cli(&["run","--name","rev-late","--auto-model","anthropic/claude-opus-5-5",
+1939:             "--effort","max","--review-source-jobs","finished-author","--task-type","review",
+1940:             "--cwd",t.ctx.root.to_str().unwrap(),"--prompt-file",prompt.to_str().unwrap()]);
+1941:         result.unwrap();
+1942:         let saved=t.ctx.load(out.trim()).unwrap();
+1943:         assert_eq!(saved["model"],"anthropic/claude-sonnet-5-5");
+1944:         assert!(saved["parent_job_id"].is_null());
+1945:         assert_eq!(saved["review_source_verified"],true);
+1946:         assert_eq!(saved["review_source_jobs"],json!(["finished-author"]));
+1947:     }
+1948:
+2074:     #[test]
+2075:     fn review_model_recovery_excludes_the_failed_model_only_for_current_routing() {
+2076:         let t = Test::new();
+2077:         t.put(job(json!({"id":"opus-author","status":"succeeded",
+2078:             "model":"anthropic/claude-opus-5-5"})));
+2079:         t.run(&["--name", "rev-model-recovery", "--task-type", "review",
+2080:             "--auto-model", "gpt-6-astra", "--effort", "max", "--model-origin", "policy",
+2081:             "--review-source-jobs", "opus-author", "--model-recovery-from", "gpt-6.1-sol"],
+2082:             b"Resume this independent review after the model became unavailable").unwrap();
+2083:         let saved = t.ctx.list_jobs(&HashSet::new()).into_iter()
+2084:             .find(|job| s(job, "name") == "rev-model-recovery").unwrap();
+2085:         assert!(!cc_job_policy::same_model(s(&saved, "model"), "gpt-6.1-sol"),
+2086:             "review registration routed straight back to the model that just failed");
+2087:         assert!(!cc_job_policy::same_model(s(&saved, "model"), "anthropic/claude-opus-5-5"));
+2088:         assert_eq!(saved["effort"], "max");
+2089:         assert_eq!(saved["review_author_models"], json!(["anthropic/claude-opus-5-5"]));
+2090:         assert_eq!(saved["review_excluded_models"], json!(["anthropic/claude-opus-5-5"]));
+2091:         assert_eq!(saved["model_recovery_from"], "gpt-6.1-sol");
+2092:     }

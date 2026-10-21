@@ -1,0 +1,84 @@
+{
+  "todo_id": 3227,
+  "parent_todo_id": 3081,
+  "issue": 277,
+  "scope": "One fixed-source command, one attempt, no product/fixture repair",
+  "source_commit": "4b2cf1da5321600fe5443c272191de9e7372edea",
+  "product_base": "027b7ecce88cff154bcd617aa0e7f24be6ac1d3f",
+  "actual_exit_code": 100,
+  "exit_observed_from": "cargo_gate.exe Process.ExitCode; outer PowerShell capture completed with exit 0",
+  "compile": "passed",
+  "compile_failures": 0,
+  "fixture_failures": 0,
+  "command_attempts": 1,
+  "tests_run": 2,
+  "passed": 1,
+  "failed": 1,
+  "skipped": 398,
+  "real_product_red": 1,
+  "started_at": "2026-10-21T09:46:43.4563222+09:00",
+  "completed_at": "2026-10-21T09:47:22.2308886+09:00",
+  "duration_seconds": 39.0,
+  "red": {
+    "name": "capacity_regressions::review_model_recovery_excludes_the_failed_model_only_for_current_routing",
+    "status": "failed_at_intended_assert",
+    "cli_registration": "returned Ok and job found, inferred from execution reaching line 2085",
+    "reached_assert": "cc-jobs/tests/parity.rs:2085:9",
+    "message": "review registration routed straight back to the model that just failed",
+    "selected_model_evidence": "same_model(saved.model, gpt-6.1-sol) was true at the failing assert; exact saved string is not printed",
+    "unreached_assert_lines": [
+      2087,
+      2088,
+      2089,
+      2090,
+      2091
+    ]
+  },
+  "positive_control": {
+    "name": "capacity_regressions::review_after_writer_exit_uses_durable_model_history",
+    "status": "passed",
+    "all_assertions_reached": true
+  },
+  "resource": {
+    "assigned": [
+      "cargo"
+    ],
+    "gate": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+    "owned_target": "C:\\Users\\makhmeto\\AppData\\Local\\Temp\\codex-owned-0611463fdafba59587d653031ed6fedb\\target",
+    "requested_build_max": 10,
+    "requested_test_max": 10,
+    "shared_gate_jobs_per_build": 8,
+    "actual_parallelism_directly_observed": false,
+    "explanation": "Direct-child snapshot was taken after the gate exited; no live parallelism measurement claimed",
+    "sccache": "D:/CC/Tools/sccache/sccache.exe"
+  },
+  "log_hashes": [
+    {
+      "file": "stdout.txt",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "stderr.txt",
+      "bytes": 59988,
+      "sha256": "bb59ce2f62ae455200cd65dcc64fdee3cc8c6a0e0ca580ce825401fae8ce95d0"
+    }
+  ],
+  "cleanup_plan": {
+    "id": "0611463fdafba59587d653031ed6fedb",
+    "action": "quarantine",
+    "reason": "size",
+    "bytes": 1923350442,
+    "entries": 1906,
+    "execution": "pending"
+  },
+  "exclusions": [
+    "No product/fixture changes",
+    "No extra tests or reruns",
+    "No PR/merge/deploy",
+    "No real AI request",
+    "No GPU/Civ6",
+    "No Discord notification",
+    "No parent state/owner/dependency change"
+  ]
+}

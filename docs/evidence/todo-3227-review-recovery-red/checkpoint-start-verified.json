@@ -1,0 +1,17 @@
+{
+  "verified_at": "2026-10-21T09:48:22.0025515+09:00",
+  "id": 3227,
+  "checkpoint": {
+    "request": {
+      "id": 3227,
+      "job": "20261021-094050-todo-3227",
+      "expected_branch": "scheduler/todo-3227-work",
+      "branch": "scheduler/todo-3227-review-recovery-check",
+      "head": "4b2cf1da5321600fe5443c272191de9e7372edea"
+    },
+    "at": 1792543509.6702158,
+    "launched": 0
+  },
+  "branch": "scheduler/todo-3227-review-recovery-check",
+  "job": "20261021-094050-todo-3227"
+}

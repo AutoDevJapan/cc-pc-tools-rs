@@ -1,0 +1,15 @@
+{
+  "recorded_at": "2026-10-21T09:46:34.2801427+09:00",
+  "repository": "AutoDevJapan/cc-pc-tools-rs",
+  "owner_login": "AutoDevJapan",
+  "owner_id": "O_kgDODrZnJw",
+  "verified_using": "gh repo view --json owner,name,url before the test",
+  "source_ref": "scheduler/todo-3081-review-recovery-red",
+  "remote_ref_head": "4b2cf1da5321600fe5443c272191de9e7372edea",
+  "initial_branch": "scheduler/todo-3227-work",
+  "initial_head": "3e1a211ddeaa9d4d27bdabce12ffc3754863a232",
+  "guard_client_resource": false,
+  "fixture_runtime": "Fake, isolated temporary Context; no real AI call",
+  "owner_policy": "D:/CC/Policies/owner-model-effort-and-pool-retry-20261020.md",
+  "checkpoint_start": "Verified saved request by reading only ToDo3227 scheduler fields"
+}

@@ -1,0 +1,21 @@
+{
+  "todo_id": 3227,
+  "job": "20261021-094050-todo-3227",
+  "intent_at": "2026-10-21T09:46:43.4014216+09:00",
+  "source_commit": "4b2cf1da5321600fe5443c272191de9e7372edea",
+  "attempt": 1,
+  "argv": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-jobs",
+    "--test",
+    "parity",
+    "-E",
+    "test(review_model_recovery_excludes_the_failed_model_only_for_current_routing) | test(review_after_writer_exit_uses_durable_model_history)",
+    "--no-fail-fast",
+    "--status-level",
+    "all"
+  ]
+}

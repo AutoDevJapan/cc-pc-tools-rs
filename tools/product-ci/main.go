@@ -5,6 +5,7 @@ package main
 import (
 	"archive/tar"
 	"bytes"
+	"cc/product-ci/normalci"
 	"compress/gzip"
 	"context"
 	"crypto/sha256"
@@ -16,7 +17,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -31,11 +31,7 @@ import (
 const gh = `D:\CC\Tools\codex-jobs\gh_gate.exe`
 const docker = `C:\Program Files\Docker\Docker\resources\bin\docker.exe`
 
-type candidate struct {
-	ID  int64
-	PR  int
-	SHA string
-}
+type candidate = normalci.Candidate
 
 var candidates = []candidate{
 	{1285649124, 1002, "20c441df545a88f4a839d7e906b5aeb4f1708ae3"},
@@ -44,22 +40,9 @@ var candidates = []candidate{
 	{1386702183, 175, "b2b6d47b7f9e17617d16a9079a70de272bc3c04c"},
 }
 
-type repository struct {
-	ID            int64  `json:"id"`
-	FullName      string `json:"full_name"`
-	Private, Fork bool
-	Owner         struct{ Login string }
-	Permissions   struct{ Admin bool }
-}
-type pull struct {
-	State string
-	Head  struct {
-		SHA, Ref string
-		Repo     repository
-	}
-	Base struct{ Repo repository }
-}
-type api func(context.Context, string, any) error
+type repository = normalci.Repository
+type pull = normalci.Pull
+type api = normalci.API
 
 func cmd(ctx context.Context, name string, args ...string) *exec.Cmd {
 	if name == docker {
@@ -117,32 +100,7 @@ func get(ctx context.Context, endpoint string, value any) error {
 	return nil
 }
 func verify(ctx context.Context, c candidate, read api) (repository, error) {
-	var r repository
-	if e := read(ctx, fmt.Sprintf("repositories/%d", c.ID), &r); e != nil {
-		return r, e
-	}
-	if r.ID != c.ID || !r.Private || r.Fork || !r.Permissions.Admin ||
-		(r.Owner.Login != "AutoDevJapan" && r.Owner.Login != "BM1314" && r.Owner.Login != "mashfromband") ||
-		!strings.HasPrefix(r.FullName, r.Owner.Login+"/") || strings.Count(r.FullName, "/") != 1 {
-		return repository{}, errors.New("repository identity rejected")
-	}
-	var p pull
-	if e := read(ctx, fmt.Sprintf("repos/%s/pulls/%d", r.FullName, c.PR), &p); e != nil {
-		return repository{}, e
-	}
-	if p.State != "open" || p.Head.SHA != c.SHA || p.Head.Repo.ID != c.ID || p.Base.Repo.ID != c.ID ||
-		p.Head.Repo.FullName != r.FullName || p.Base.Repo.FullName != r.FullName || p.Head.Repo.Fork {
-		return repository{}, errors.New("fixed same-repository PR head rejected")
-	}
-	var ref struct{ Object struct{ SHA string } }
-	// The PR API and branch API must agree; the fixed revision never follows a ref.
-	if e := read(ctx, "repos/"+r.FullName+"/git/ref/heads/"+url.PathEscape(p.Head.Ref), &ref); e != nil {
-		return repository{}, e
-	}
-	if ref.Object.SHA != c.SHA {
-		return repository{}, errors.New("branch head changed")
-	}
-	return r, nil
+	return normalci.Verify(ctx, c, read)
 }
 
 type receipt struct {
@@ -676,7 +634,21 @@ func main() {
 		}
 		return
 	}
-	if len(os.Args) == 2 && os.Args[1] == "inspect" {
+	if len(os.Args) == 2 && os.Args[1] == "normal-ci-outline" {
+		e = outlineNormalCI(ctx)
+	} else if len(os.Args) == 3 && os.Args[1] == "normal-ci-route-apply" {
+		var result normalRouteCommit
+		result, e = applyNormalRoute(ctx, os.Args[2], get, mutateJSON)
+		if e == nil {
+			e = json.NewEncoder(os.Stdout).Encode(result)
+		}
+	} else if len(os.Args) == 3 && os.Args[1] == "normal-ci-route-release" {
+		e = releaseNormalRoute(ctx, os.Args[2], get, mutateJSON)
+	} else if len(os.Args) == 3 && os.Args[1] == "normal-ci-job-plan" {
+		e = normalCIJobCLI(ctx, os.Args[2])
+	} else if len(os.Args) == 3 && os.Args[1] == "normal-ci-plan" {
+		e = saveNormalCIProposal(ctx, os.Args[2])
+	} else if len(os.Args) == 2 && os.Args[1] == "inspect" {
 		for _, c := range candidates {
 			_, err := verify(ctx, c, get)
 			stage := "fixed-head-verified"
@@ -746,7 +718,7 @@ func main() {
 			}
 		}
 	} else {
-		e = errors.New("usage: product-ci inspect | codeql-bootstrap/codeql-revalidate <id> <new-owned-dir> <Linux-helper> | codeql-recover/codeql-finalize/codeql-restore <id> <owned-dir> | codeql-job/advanced-job <id> <run-id> <new-owned-dir> <Linux-helper> | secret-job <id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF> | node-contracts <id> <new-owned-dir> <image> | node-retry <id> <new-owned-dir> <image> <previous-log> | lifecycle-smoke <owned-dir> <image>")
+		e = errors.New("usage: product-ci inspect | normal-ci-plan <new-owned-dir> | codeql-bootstrap/codeql-revalidate <id> <new-owned-dir> <Linux-helper> | codeql-recover/codeql-finalize/codeql-restore <id> <owned-dir> | codeql-job/advanced-job <id> <run-id> <new-owned-dir> <Linux-helper> | secret-job <id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF> | node-contracts <id> <new-owned-dir> <image> | node-retry <id> <new-owned-dir> <image> <previous-log> | lifecycle-smoke <owned-dir> <image>")
 	}
 	if e != nil {
 		fmt.Fprintln(os.Stderr, e)

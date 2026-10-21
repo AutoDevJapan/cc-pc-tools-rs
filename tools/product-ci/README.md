@@ -207,6 +207,7 @@ Official API and runner contracts:
 https://docs.github.com/en/rest/code-scanning/code-scanning#update-a-code-scanning-default-setup-configuration
 https://docs.github.com/en/actions/reference/runners/self-hosted-runners
 
+<<<<<<< HEAD
 ## One audited post-merge CodeQL run (ToDo2757)
 
 `merged-inspect` performs read-only checks for repository 1285649124, PR1002,
@@ -225,3 +226,114 @@ accept an arbitrary job, run, revision or label. The other four original
 open-PR candidate entries and their commands are unchanged. Runner exit is
 still not official analysis success. Promotion, full verification, integration
 and production revision/smoke are separate outstanding acceptance conditions.
+=======
+## Fixed normal CI route proposal (ToDo2737)
+
+`normal-ci-plan <new-owned-dir>` is a read-only preparation step for the fixed
+repo1154066087/PR3613/head `b194d66524ef86330bb73ca3f22f9e5dd6ae0a07`.
+It rechecks repository/PR/ref identity before and after reading, the exact source
+tree, the original CI workflow digest, and the original run38893656960 attempt1.
+All four original jobs must still be unstarted (zero steps and no runner);
+both failed checks must contain the original Actions-budget refusal.
+Only numeric IDs, JSON-value hashes and public route metadata enter the new
+receipt. Workflow bytes stay in RAM and are never written on the host.
+
+The YAML parser rejects aliases, duplicate keys and extra documents/jobs.
+The proposal substitutes exactly four plain `runs-on` tokens, leaving every
+other byte intact, including Docker parity, Windows's thirteen Cargo commands,
+profile writer, serial arguments, permissions, conditions and timeouts.
+The original and proposed workflow SHA256 values are recorded separately.
+
+This command does **not** update the source branch, create a PR, dispatch CI,
+register a runner, borrow resident CC runners, or produce a success status.
+The existing CodeQL guest excludes Cargo and has no Docker daemon, and cannot
+execute the full normal workflow. Before any route update, separate disposable
+Linux and Windows execution must provide shared Cargo admission, isolated
+targets/cache, physical source proof, no checkout credentials, and verified
+normal/cancel cleanup of processes, registration and locks. Linux also needs
+isolated Docker parity without exposing the host Docker socket. Windows source
+must stay in RAM or a dedicated guest; the earlier host-source native acceptance
+is neither a reusable execution resource nor same-SHA official CI evidence.
+
+The independent check delivers the proposal and limitations to parent2641.
+Only a reviewed CI runner-route change may update that same product branch,
+with its expected old SHA and force=false, as specifically authorized by the
+task. Product feature source, PR merge and Prd reflection remain with parent2641;
+the proposal never certifies those steps or the product's completion.
+
+`normal_ci_admission.go` adds read-only binding resolution for a controller's
+explicit source/tree/workflow/run/attempt/job role. It accepts only this repo
+and PR, the fixed head ref, full workflow_dispatch, the four prepared routes,
+original timeouts and thirteen Windows Cargo commands. The exact workflow
+digest is mandatory. A fresh queued job must be unclaimed; a live hook must
+match the official assigned runner ID and unique task nonce name. It rechecks
+the PR/ref after inspection. Source/run/event/job/label/runner substitutions
+are covered by synthetic API tests. This read-only resolver is now shared by
+the CLI and the controller. That connection has not accepted an official job
+or established an official CI result; real runtime acceptance remains pending.
+
+The current runner-route proposal uses a conditional scalar instead of a bare
+ephemeral label. Only workflow_dispatch on the fixed task branch, with the
+task-specific repository variable CC_PRODUCT_2737_CI set to enabled, selects
+the dedicated label. All other cases fall back to the exact original OS label.
+Removing that variable therefore restores ordinary routing after cleanup and
+on main; no dangling task label is imposed on future PRs/schedules/pushes.
+Only the four runs-on scalar bytes change, with a parsed-expression recheck.
+This read-only proposal is retained for comparison. The explicit publication
+implementation below owns a fresh nonce and adds run/job-specific labels; its
+delta review and live acceptance remain separate from this proposal.
+`normal-ci-outline` only reports setup/checkout semantics from the fixed RAM
+workflow; it does not expose source commands, logs, secrets or mutate GitHub.
+
+Review2795's executable-selection Must is addressed by linking the existing
+read-only resolver in `cc/product-ci/normalci` into both this CLI and the guest
+controller. Identity/types and YAML policy are shared as well; they are moved,
+not parallel implementations. The `normal-ci-job-plan` CLI still calls that
+same policy. The controller no longer accepts a ProductCI path or runs a second
+admission program. The unchanged finite API fixtures cover the shared policy,
+including wrong source/run/attempt/runner and branch advancement. This refactor
+does not dispatch a workflow, register a runner or alter an original ref.
+
+## Owned route publication for the finite normal CI
+
+`normal-ci-route-apply <new-owned-dir>` is the explicit publication command,
+not a dry run. Use it only after the required backend acceptance and delta
+review. It accepts no repository/ref/head/force override: PR3613 on the fixed
+b194 base/tree/workflow is revalidated. Only the four original runs-on scalar
+tokens change; all other bytes, file mode and the Windows 13 commands remain.
+The Git commit has one parent, the expected old SHA. The final ref PATCH uses
+force=false, so a concurrent branch advance cannot be overwritten. The new
+commit/tree/workflow hash/lease are saved and printed as metadata. Workflow
+bytes and Git API payloads stay in RAM; no workflow or product checkout is
+written to the host. This command does not dispatch a run or create a PR.
+
+The actual switch is a fresh non-sensitive nonce value in CC_PRODUCT_2737_CI,
+not the historical enabled value used by the read-only proposal fixtures.
+An already-existing flag is refused. An exclusive, flushed local intent
+precedes creation; a lost reply is reconciled only by its exact nonce value.
+The scalar expression requires that value, workflow_dispatch and the fixed
+task ref. Its format expression includes github.run_id AND the job role.
+Resolved labels are `<old-dedicated-label>-<role>-<run-id>`, so another run or
+job cannot claim the same ephemeral registration. All other refs/events, and
+an absent switch, retain the original OS label. The host binding request must
+include the 32-hex RouteLease; legacy fixture plans do not authorize live jobs.
+
+Each API mutation has private start/end receipts, including a failed initial
+reply. Failure removes only the nonce-owned switch and never resets a branch.
+Unverified cleanup leaves the original intent for recovery. After the finite
+run is complete or cancelled AND its processes/VMs/registrations have drained,
+`normal-ci-route-release <same-owned-dir>` removes that switch and proves
+absence. A changed foreign value is never overwritten or deleted. Repeated
+release is idempotent for the remote flag and does not change product source.
+The controller owns this reserved variable namespace; GitHub variable deletion
+has no atomic value-CAS, so an out-of-band writer is outside that exclusivity
+contract and observed ownership changes fail closed.
+
+Repository variable inventory uses the documented maximum page size 30 and a
+finite 1,000-variable bound. Missing/null schema, partial inventory and duplicate
+case-insensitive names fail closed, rather than being treated as absence.
+These paths currently have synthetic API acceptance only, not a live mutation.
+References: [repository variables](https://docs.github.com/en/rest/actions/variables),
+[ref updates](https://docs.github.com/en/rest/git/refs#update-a-reference),
+[runs-on contexts](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability).
+>>>>>>> 7b8dbb6

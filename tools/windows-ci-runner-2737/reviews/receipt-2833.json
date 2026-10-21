@@ -1,0 +1,27 @@
+{
+  "todo": 2833,
+  "job": "20261019-010741-todo-2833",
+  "base": "93c0c42377a47f1e3e01d8162dcebbc1f730b4aa",
+  "head": "b60e85e7f66abb3329264bfc74895a3d3c2be10f",
+  "tree": "e192d0a34d9c546e146575681d3d9365c6185ee0",
+  "scope_files": [
+    "host.go",
+    "logbound_windows.go",
+    "review_regression_test.go",
+    "logbound_windows_test.go",
+    "README.md",
+    "HANDOFF.md"
+  ],
+  "all_scope_read": true,
+  "must": 0,
+  "suggestions": 1,
+  "nit": 0,
+  "tests_by_reviewer": 0,
+  "implementation_model": "gpt-6.1-sol",
+  "review_model": "gpt-6-luna",
+  "review_thread": "01a14fc5-796c-7730-b1f5-477e47d0f779",
+  "model_evidence": "job.json and exact-thread rollout turn_context.model",
+  "response_file": "20261019-010741-todo-2833.md",
+  "response_sha256": "acf57e0d5390d610376549126ff11044ebcfbfa75ab124d22b5565124f4f9c42",
+  "suggestion_disposition": "No runtime defect; retain pre-cancel test, record mid-scan cancellation as static verification only; no test-only injection API added."
+}

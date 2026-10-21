@@ -22,12 +22,21 @@ type consoleLeaf struct {
 
 const console3050Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3050-console"
 const console3020Receipts = "D:/CC/Work/unattended-operations-20261013-wt/todo-2903-qualified-release"
+const console3103Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3103-godd-mcp-godd-mcp"
 
 // The source and independent distribution receipts identify these two exact
 // leaves. Neither a directory nor an arbitrary new executable is admitted.
 // All pins are compiled in; no caller-supplied manifest grants access.
 var consoleRuntimeLeaves = []consoleLeaf{
 	{path: "D:/CC/Tools/localai-web-rs/target/release/localai-web-rs.exe", pins: []consolePin{
+		// The media-only Console at fixed source 264a13f. Build provenance,
+		// successful CI and the independently received model review are frozen
+		// outside the installed executable; no caller manifest is trusted.
+		{sha256: "b69ec9003f62668150584689e7e34304f4469e070d6f413752dba91b0d5a8ef3", evidence: []consoleEvidence{
+			{console3103Source, console3103Source + "/.ci-work/media-first-build-provenance.private.json", "e79b319e2f49a38a4b1968fe64fbd09bf2d29e44a18be5083ce9c7274f1787b4"},
+			{console3103Source, console3103Source + "/.ci-work/media-first-ci-receipt.private.json", "651ef43ef4119c95228276710a65746fd6cc57d554a649611de98ce9859ba564"},
+			{console3103Source, console3103Source + "/.ci-work/media-first-review-receipt.private.json", "9eca876f2bf8e62ddfe254439c55c4e1b2da7631becbb31234943b7bf06d7759"},
+		}},
 		{sha256: "c63a5e8028e90ee720d3d5cc0350c48361cefa8336233a466a909cb833c30b61", evidence: []consoleEvidence{
 			{console3020Receipts, console3020Receipts + "/.ci-work/progress3020-cache-deployed.private.json", "1251a100281b7f2a69ed9004cf20e4c224a7a80f6734eaeb8a3f791252761b91"},
 			{console3020Receipts, console3020Receipts + "/.ci-work/deploy-console-progress3020-cache.ps1", "2deb577bf786332c38f075f1aaa1366ac302849bb3524e51f5dcd1286cadf606"},

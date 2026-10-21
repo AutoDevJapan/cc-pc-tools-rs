@@ -381,6 +381,46 @@ fn linked(item: &Value, job: &Value) -> bool {
                 })
         })
 }
+// The media placement repair must not turn a shared history/reference into
+// another current worker. Keep the full associated list for privacy/history;
+// narrow only the current observation of the explicitly assigned product.
+fn media_current<'a>(
+    item: &Value,
+    associated: &[&'a Value],
+    db: Option<&Value>,
+    media: bool,
+) -> Option<&'a Value> {
+    associated.iter().copied().find(|job| {
+        if !active(job) {
+            return false;
+        }
+        if !media {
+            return true;
+        }
+        let items = db
+            .and_then(|db| db["items"].as_array())
+            .map(Vec::as_slice)
+            .unwrap_or(&[]);
+        let direct = job["todo_id"].as_u64().filter(|id| {
+            *id > 0 && items.iter().any(|row| row["id"].as_u64() == Some(*id))
+        });
+        let primary = direct.or_else(|| {
+            items.iter().filter(|row| linked(row, job)).min_by_key(|row| (
+                if row["scheduler"]["job"].as_str() == job["id"].as_str() { 0 }
+                else if matches!(text(row, "status"), "doing" | "todo") { 1 } else { 2 },
+                row["id"].as_u64().unwrap_or(u64::MAX)
+            )).and_then(|row| row["id"].as_u64())
+        });
+        primary.is_some() && primary == item["id"].as_u64()
+    })
+}
+fn media_processing_key(job: Option<&Value>) -> Value {
+    job.map(|job| {
+        let hash = ring::digest::digest(&ring::digest::SHA256, text(job, "id").as_bytes());
+        json!(format!("job-{}", hash.as_ref().iter()
+            .map(|b| format!("{b:02x}")).collect::<String>()))
+    }).unwrap_or(Value::Null)
+}
 fn safe_id(prefix: &str, value: &str) -> String {
     let mut hash = std::collections::hash_map::DefaultHasher::new();
     value.hash(&mut hash);
@@ -477,6 +517,9 @@ fn department(project: &str) -> usize {
     }
 }
 type Tree = BTreeMap<(usize, String), Vec<Value>>;
+#[cfg(test)]
+#[path = "operations_media_tests.rs"]
+mod media_tests;
 fn rank_department(rank: u32) -> usize {
     match rank {
         10 => 4,
@@ -875,7 +918,8 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
             for job in &associated {
                 used.insert(text(job, "id").to_owned());
             }
-            let current = associated.iter().copied().find(|job| active(job));
+            let media = public_product(text(item, "project")).is_some_and(|p| p.name == "youtube-daily");
+            let current = media_current(item, &associated, todo.as_ref(), media);
             let status = if done {
                 "done"
             } else if current.is_some_and(|job| text(job, "status") != "queued") {
@@ -933,7 +977,7 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
                 &mut tree,
                 public_product(raw_project).map_or(usize::MAX, |p| p.department),
                 project_label(raw_project),
-                json!({"id":format!("todo-{id}"),"name":format!("作業 #{id}"),"task":format!("#{id} {task}"), "status":status,
+                { let mut worker = json!({"id":format!("todo-{id}"),"name":format!("作業 #{id}"),"task":format!("#{id} {task}"), "status":status,
                     "priority":ranks.get(&id),
                     "recordedStatus":match text(item,"status") {"todo"|"doing"|"wait"|"block"|"done"|"recovery_unverified"=>item["status"].clone(),_=>json!("unknown")},
                     "primaryJob":current.map(|job|safe_id("job",text(job,"id"))),"jobStatus":current.map(|job|text(job,"status")),
@@ -944,7 +988,9 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
                     "progress":item["progress"].as_u64().filter(|n|*n<=100),
                     "updatedAt":todo_stamp(item).and_then(|at|chrono::DateTime::from_timestamp_millis(at as i64)).map(|at|at.to_rfc3339()),
                     "detail":detail,"detailAvailable":false,"historyFailures":job_result.as_ref().ok().map(|_|associated.iter().filter(|job|failed(job)).count()),
-                    "waitingKind":protected_wait(item,current,&queue,now)}),
+                    "waitingKind":protected_wait(item,current,&queue,now)});
+                    if media { worker["processingJobKey"] = media_processing_key(current); }
+                    worker },
             );
         }
     }
@@ -1223,7 +1269,8 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
             } else {
                 project
             };
-            let current = associated.iter().find(|j| active(j));
+            let media = project == "youtube-daily";
+            let current = media_current(item, &associated, db, media);
             let status = if is_done {
                 "done"
             } else if matches!(text(item, "status"), "block" | "wait") {
@@ -1274,7 +1321,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
                 "wait" => "dependency",
                 _ if status == "waiting" => waiting_state::kind(
                     item,
-                    current.copied(),
+                    current,
                     &queue,
                     scheduler_ok
                         && scheduler["reasons"]
@@ -1337,6 +1384,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
                 "primaryJob":current.map(|job|safe_id("job",text(job,"id"))),"jobStatus":current.map(|job|text(job,"status")),
                 "task":task,"waitKind":wait_kind,"questionUrl":question_url,"status":status,"progress":progress,"updatedAt":todo_stamp(item).and_then(|n|chrono::DateTime::from_timestamp_millis(n as i64)).map(|t|t.to_rfc3339()),
                 "detail":detail,"historyFailures":history});
+            if media { worker["processingJobKey"] = media_processing_key(current); }
             if !client {
                 worker["factsSource"] =
                     json!(format!("共有ToDo #{}", item["id"].as_u64().unwrap_or(0)));

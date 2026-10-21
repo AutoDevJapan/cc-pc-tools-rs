@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -22,9 +23,42 @@ type codeQLAdmission struct {
 	SHA     string `json:"sha"`
 }
 
+// Keep the independently API-admitted member on the host, separately from the
+// guest's checkout proof. A second callback cannot select another batch member.
+type codeQLSelection struct {
+	mu       sync.Mutex
+	selected codeQLPlan
+	seen     bool
+}
+
+func (s *codeQLSelection) observe(p codeQLPlan) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.seen && s.selected != p {
+		return errors.New("admitted runner member changed")
+	}
+	s.selected, s.seen = p, true
+	return nil
+}
+
+func (s *codeQLSelection) matches(p codeQLPlan) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.seen && s.selected == p
+}
+
 // Separate read-only admission: no resident bridge, credentials, request-selected
 // commands or Cargo access are exposed to the guest.
 func codeQLAdmissionHandler(p codeQLPlan, key string, recheck func(context.Context) error) http.Handler {
+	return codeQLAdmissionHandlerForPlan(p, key, func(ctx context.Context, selected codeQLPlan) error {
+		if selected != p {
+			return errors.New("single-plan admission differs")
+		}
+		return recheck(ctx)
+	})
+}
+
+func codeQLAdmissionHandlerForPlan(p codeQLPlan, key string, recheck func(context.Context, codeQLPlan) error) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" || r.URL.Path != "/admit" || subtle.ConstantTimeCompare([]byte(r.Header.Get("X-Product-Admission")), []byte(key)) != 1 {
 			http.Error(w, "rejected", 403)
@@ -33,13 +67,25 @@ func codeQLAdmissionHandler(p codeQLPlan, key string, recheck func(context.Conte
 		var q codeQLAdmission
 		decoder := json.NewDecoder(http.MaxBytesReader(w, r.Body, 4096))
 		decoder.DisallowUnknownFields()
-		if decoder.Decode(&q) != nil || decoder.Decode(new(any)) != io.EOF || q.RunID != p.RunID || q.Attempt != p.Attempt || q.SHA != p.SHA {
+		if decoder.Decode(&q) != nil || decoder.Decode(new(any)) != io.EOF {
+			http.Error(w, "rejected", 403)
+			return
+		}
+		selected := p
+		if p.Batch != ([2]currentPRBinding{}) {
+			var err error
+			selected, err = selectFiniteBatchAdmission(p, q)
+			if err != nil {
+				http.Error(w, "rejected", 403)
+				return
+			}
+		} else if q.RunID != p.RunID || q.Attempt != p.Attempt || q.SHA != p.SHA {
 			http.Error(w, "rejected", 403)
 			return
 		}
 		ctx, stop := context.WithTimeout(r.Context(), 35*time.Second)
 		defer stop()
-		if recheck(ctx) != nil {
+		if recheck(ctx, selected) != nil {
 			http.Error(w, "current source unverified", 403)
 			return
 		}
@@ -51,7 +97,10 @@ func startCodeQLAdmission(ctx context.Context, p codeQLPlan, c candidate) (endpo
 	return startCodeQLAdmissionForRunner(ctx, p, c, "")
 }
 
-func startCodeQLAdmissionForRunner(ctx context.Context, p codeQLPlan, c candidate, runnerName string) (endpoint, key string, closeServer func() error, err error) {
+func startCodeQLAdmissionForRunner(ctx context.Context, p codeQLPlan, c candidate, runnerName string, capture ...func(codeQLPlan) error) (endpoint, key string, closeServer func() error, err error) {
+	if len(capture) > 1 {
+		return "", "", nil, errors.New("admission observer rejected")
+	}
 	l, e := net.Listen("tcp", "127.0.0.1:0")
 	if e != nil {
 		return "", "", nil, errors.New("admission listener unavailable")
@@ -64,8 +113,18 @@ func startCodeQLAdmissionForRunner(ctx context.Context, p codeQLPlan, c candidat
 	key = hex.EncodeToString(secret)
 	childCtx, cancel := context.WithCancel(ctx)
 	server := &http.Server{ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 10 * time.Second, WriteTimeout: 40 * time.Second, BaseContext: func(net.Listener) context.Context { return childCtx }}
-	server.Handler = codeQLAdmissionHandler(p, key, func(callCtx context.Context) error {
-		return verifyCodeQLAdmissionPlan(callCtx, c, p, runnerName, get)
+	server.Handler = codeQLAdmissionHandlerForPlan(p, key, func(callCtx context.Context, selected codeQLPlan) error {
+		candidate := c
+		if p.Batch != ([2]currentPRBinding{}) {
+			candidate = structCandidate(selected)
+		}
+		if err := verifyCodeQLAdmissionPlan(callCtx, candidate, selected, runnerName, get); err != nil {
+			return err
+		}
+		if len(capture) == 1 {
+			return capture[0](selected)
+		}
+		return nil
 	})
 	done := make(chan struct{})
 	go func() { _ = server.Serve(l); close(done) }()

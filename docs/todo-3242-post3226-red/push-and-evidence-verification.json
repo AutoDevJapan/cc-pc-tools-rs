@@ -1,0 +1,10 @@
+{
+  "checked_at": "2026-10-21T10:51:56.6565645+09:00",
+  "head": "e0bb149f5d3abd09f9f9d4700abdcb467f3b2381",
+  "remote_head": "e0bb149f5d3abd09f9f9d4700abdcb467f3b2381",
+  "remote_branch": "scheduler/todo-3242-3103",
+  "pushed": true,
+  "artifact_count": 21,
+  "all_artifact_sha256_match": true,
+  "all_committed_raw_blobs_match": true
+}

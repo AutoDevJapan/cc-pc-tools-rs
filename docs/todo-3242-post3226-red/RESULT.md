@@ -28,4 +28,12 @@ API検査は最初の`related_todo_ids`条件のjob詳細で停止した。そ�
 
 全sourceの前後manifest SHA256はいずれも `9308027f93c7ab25f322bfb495b4847f1ba8af4ee8c9f6ef51f1a5c3588e24d3`。[source-invariance.json](source-invariance.json)、[source-before.jsonl](source-before.jsonl)、[source-after.jsonl](source-after.jsonl) が証拠になる。各証拠ファイルは改行変換せずGitへ保存する。
 
-現時点では証拠のcommit/push、所有付き一時データの通常削除、schedulerの再開情報保存が残っている。親のコード・PR・共有ToDo状態は変更しない。最終応答を通常CLIのwait経由で親が受領し、受領用helper・子Codex・Discord通知は使わない。
+測定証拠は自分のブランチへcommit/pushし、GitHubのHEADと一致を確認済み。21個の固定証拠ファイルについて、SHA256とGitへ保存した生blobの一致も確認した（push-and-evidence-verification.json）。親のコード・PR・共有ToDo状態は変更していない。最終応答を通常CLIのwait経由で親が受領し、受領用helper・子Codex・Discord通知は使わない。
+
+## 後片付けで残っていること
+
+測定自体は完了したが、後片付けは未完了。所有付き一時データ3,298,968,579 byteを元の場所に保持している。通常のplanは所有・境界・全reparse/hardlinkを確認したうえで、512MiBの容量上限を超えるため`quarantine(size)`を指定した。通常削除コマンドは返されなかったため、削除は実行していない。
+
+指定どおりquarantineを1回呼んだが、補助ツールの退避先がCドライブに固定されており、移動前に`QUARANTINE_CROSS_DRIVE`で終了した。これは補助ツール自身の制限であり、自動承認レビューの拒否ではない。同Dドライブの予定退避先を通常guardで確認すると、`classification_unverified=true / client_resource=true`だった。その先は作成・参照・移動していない。原保護・caller許可を変更せず、データを小分けに消すなどの回避もしない。
+
+Cargoと把握した子プロセスは終了し、全文ストリームも排出済み。所有ルートのfile ID不変を確認した。元の場所が存在するためfinishは呼んでいない。証拠はcleanup-plan.json、cleanup-quarantine-attempt.json、cleanup-status.json、process-completion.json。通常の整理経路でこの所有物を同Dへ退避できることが確認されるまで保持する。Cargoの再実行や、判明済みの同じ失敗の再試行はしない。

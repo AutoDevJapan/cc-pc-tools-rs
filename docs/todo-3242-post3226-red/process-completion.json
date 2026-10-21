@@ -1,0 +1,8 @@
+{
+  "checked_at": "2026-10-21T10:51:54.4184125+09:00",
+  "gate_pid": 67660,
+  "gate_exit": 100,
+  "captured_streams_drained": true,
+  "known_gate_tree_remaining": [],
+  "shared_sccache_preserved": true
+}

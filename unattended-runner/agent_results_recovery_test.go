@@ -142,8 +142,8 @@ func TestAgentResultOrdinarySenderKeepsOnePostWhenResponseIsLost(t *testing.T) {
 	r.Run = func(_ context.Context, _ string, args ...string) (string, error) {
 		attempts++
 		key := argValue(args, "--request-id")
-		if key == "" || argValue(args, "--thread") != "" {
-			t.Fatal("normal stable delivery ID or ordinary topic route lost")
+		if key == "" || argValue(args, "--thread") != p.Event.Thread {
+			t.Fatal("normal stable delivery ID or silent source route lost")
 		}
 		posts[key] = "721"
 		if first {
@@ -154,7 +154,7 @@ func TestAgentResultOrdinarySenderKeepsOnePostWhenResponseIsLost(t *testing.T) {
 		return string(b), nil
 	}
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {
-		m := resultReadback(r, p, true)
+		m := resultReadback(r, p, false)
 		m["id"] = "721"
 		respond(w, m)
 	})

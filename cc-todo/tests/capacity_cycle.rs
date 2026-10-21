@@ -69,7 +69,9 @@ fn one_ordinary_row_retains_current_worker_and_advances_only_after_finished() {
     assert!(spec.contains("protected_unclassified"));
     assert!(!spec.contains("MUST_NOT_ENTER_SPEC"));
     assert_eq!(f.db["items"][0]["model"], "gpt-6.1-sol");
+    assert_eq!(f.db["items"][0]["model_origin"], "policy");
     assert_eq!(f.db["items"][0]["effort"], "max");
+    assert_eq!(f.db["items"][0]["effort_origin"], "policy");
     f.ingest(AT);
     f.db["items"][0]["status"] = json!("doing");
     f.db["items"][0]["work_owner_job"] = json!("owner-job");

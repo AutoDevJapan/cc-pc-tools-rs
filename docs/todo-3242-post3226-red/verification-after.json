@@ -1,0 +1,12 @@
+{
+  "phase": "after",
+  "checked_at": "2026-10-21T10:49:52.6709735+09:00",
+  "source_commit": "a1aafe73c9e0564a79dc11d67de4fea362ca6020",
+  "source": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3242-3103\\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f\\source",
+  "tree_sha256": "23cf0928eb6648cf29e85d7f5d0259dc57978a9df6cd76e3e79d35998c5f7c9a",
+  "files": 1186,
+  "bytes": 12765248,
+  "all_raw_blobs_match": true,
+  "manifest_sha256": "9308027f93c7ab25f322bfb495b4847f1ba8af4ee8c9f6ef51f1a5c3588e24d3",
+  "line_endings": "Every raw blob matched Git bytes, with CRLF/lone LF/lone CR counts recorded per file; core.autocrlf=true was never applied"
+}

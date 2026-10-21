@@ -1,0 +1,36 @@
+{
+  "todo": 3242,
+  "job": "20261021-104245-todo-3242",
+  "source_commit": "a1aafe73c9e0564a79dc11d67de4fea362ca6020",
+  "started_at": "2026-10-21T10:48:52.0847345+09:00",
+  "logical_command": "cargo nextest run --locked -p cc-job-policy -p localai-web-rs -E 'test(mcp_effective_) | test(mcp_related_review_) | test(mcp_live_requester_dependency_exclusion_controls)' --no-fail-fast",
+  "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "arguments": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-job-policy",
+    "-p",
+    "localai-web-rs",
+    "-E",
+    "test(mcp_effective_) | test(mcp_related_review_) | test(mcp_live_requester_dependency_exclusion_controls)",
+    "--no-fail-fast"
+  ],
+  "cwd": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3242-3103\\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f\\source",
+  "environment": {
+    "CARGO_TARGET_DIR": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3242-3103\\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f\\target",
+    "CARGO_BUILD_JOBS": "10",
+    "NEXTEST_TEST_THREADS": "10",
+    "RUST_TEST_THREADS": "10",
+    "RUSTC_WRAPPER": "D:/CC/Tools/sccache/sccache.exe",
+    "SCCACHE_DIR": "D:/CC/BuildCache/sccache",
+    "SCCACHE_CACHE_SIZE": "30G",
+    "SCCACHE_SERVER_PORT": "42259"
+  },
+  "create_no_window": true,
+  "use_shell_execute": false,
+  "invocation_count": 1,
+  "pid": 67660,
+  "status": "running"
+}

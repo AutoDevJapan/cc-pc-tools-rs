@@ -1,17 +1,7 @@
-# ToDo3242: 固定ソースの追加非表示検査
+# ToDo3242の再開メモ
 
-ToDo3103 / Issue289 / PR302 の追加4件を、修正前の固定ソース a1aafe73c9e0564a79dc11d67de4fea362ca6020 で一度だけ測定する。
+固定ソースa1aafe73c9e0564a79dc11d67de4fea362ca6020の測定を1回完了した。2 FAIL / 2 PASS、exit100。全sourceの前後不変も確認済み。**Cargoを再実行しない。** 詳細はRESULT.mdとresult.json、全文ログにある。
 
-## 再開時に最初に確認すること
+残作業: 証拠を自分のブランチへcommit/pushし、safe-delete planの通常削除を別呼出しで実行してfinishする。拒否は再試行せずquarantine。最後に自分のToDo3242・現在のCC_JOB_ID・実HEADでcheckpoint-workspaceを保存する。親の実装・PR・ToDo状態は変更せず、独立PR・別検査・受領用helperを追加しない。
 
-- `run.json` / `run-start.json` / `stdout.log` / `stderr.log` の有無を確認する。開始済みならCargoを再実行しない。
-- 生のGit archiveを所有付きの一時フォルダーに展開する。親の作業中ソースは使わない。
-- 全ファイルのGit blobとSHA256、改行数を実行前後で照合し、同じソースだった証拠を残す。
-- 指定コマンドだけを通常のCargo共有ゲートとsccacheで実行する。GPU、Civ6、全件検査、Clippy、release、本番操作は禁止。
-- 実結果・終了コード・全文stdout/stderrを保存して、この作業ブランチへcommit/pushする。
-- 所有付き一時データをplan → 別呼出しの通常削除 → finishで片付ける。拒否なら再試行せずquarantineする。
-- 実HEADとCC_JOB_IDでscheduler checkpoint-workspaceを保存する。親のコード・PR・ToDo状態は変更しない。
-
-現時点: 保護判定、GitHub所有者/OAuth、固定コミットを確認済み。最初のgit archiveで1,167ファイルの改行変換を検出したため、Git blobから生のtarを作り直した。1,186ファイル（12,765,248 byte）の全バイトがGitと一致。指定検査は未実行。結果保存・push・後片付けは未完了。
-
-検査の測定だけを担当する。修正・配布の完了とは扱わない。通常CLIの最終応答で親へ返し、受領用helperや子Codex、Discord通知は起動しない。
+所有ID: bcd13dfcd2f6a3494a968c067cd0c48f。所有パスはpreflight.json。ソースとtargetは不要な測定用コピー。全原資料はGitの固定コミットにあり、測定結果はこのフォルダーに保持する。

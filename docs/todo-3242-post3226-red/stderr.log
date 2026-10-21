@@ -1,0 +1,250 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.26
+   Compiling windows-link v0.2.1
+   Compiling cfg-if v1.0.5
+   Compiling memchr v2.8.3
+   Compiling itoa v1.0.18
+   Compiling once_cell v1.21.4
+   Compiling windows-sys v0.61.2
+   Compiling serde_core v1.0.229
+   Compiling smallvec v1.16.2
+   Compiling zmij v1.0.23
+   Compiling equivalent v1.0.2
+   Compiling serde v1.0.229
+   Compiling hashbrown v0.17.1
+   Compiling serde_json v1.0.151
+   Compiling pin-project-lite v0.2.17
+   Compiling version_check v0.9.5
+   Compiling indexmap v2.14.2
+   Compiling stable_deref_trait v1.2.1
+   Compiling log v0.4.34
+   Compiling generic-array v0.14.7
+   Compiling futures-core v0.3.34
+   Compiling typenum v1.20.1
+   Compiling bytes v1.12.1
+   Compiling autocfg v1.5.1
+   Compiling parking_lot_core v0.9.12
+   Compiling scopeguard v1.2.0
+   Compiling getrandom v0.4.3
+   Compiling num-traits v0.2.19
+   Compiling futures-sink v0.3.34
+   Compiling lock_api v0.4.14
+   Compiling writeable v0.6.4
+   Compiling crypto-common v0.1.7
+   Compiling block-buffer v0.10.4
+   Compiling cpufeatures v0.2.17
+   Compiling syn v3.0.6
+   Compiling syn v2.0.119
+   Compiling percent-encoding v2.3.2
+   Compiling litemap v0.8.3
+   Compiling digest v0.10.7
+   Compiling parking_lot v0.12.5
+   Compiling futures-channel v0.3.34
+   Compiling socket2 v0.6.5
+   Compiling sha2 v0.10.9
+   Compiling mio v1.2.4
+   Compiling utf8_iter v1.0.4
+   Compiling slab v0.4.12
+   Compiling futures-io v0.3.34
+   Compiling icu_properties_data v2.3.0
+   Compiling chrono v0.4.45
+   Compiling futures-task v0.3.34
+   Compiling icu_normalizer_data v2.3.0
+   Compiling fastrand v2.5.0
+   Compiling tracing-core v0.1.36
+   Compiling shlex v2.0.1
+   Compiling synstructure v0.14.0
+   Compiling serde_derive v1.0.229
+   Compiling displaydoc v0.2.7
+   Compiling zerovec-derive v0.11.6
+   Compiling tokio-macros v2.7.2
+   Compiling futures-macro v0.3.34
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling tokio v1.53.2
+   Compiling tempfile v3.27.0
+   Compiling futures-util v0.3.34
+   Compiling find-msvc-tools v0.1.14
+   Compiling form_urlencoded v1.2.2
+   Compiling http v1.5.0
+   Compiling cc v1.6.0
+   Compiling zerofrom v0.1.8
+   Compiling zeroize v1.9.1
+   Compiling rustls-pki-types v1.15.1
+   Compiling ring v0.17.14
+   Compiling http-body v1.1.0
+   Compiling yoke v0.8.3
+   Compiling tracing-attributes v0.1.31
+   Compiling crc32fast v1.5.2
+   Compiling zerovec v0.11.8
+   Compiling zerotrie v0.2.5
+   Compiling simd-adler32 v0.3.10
+   Compiling tower-service v0.3.3
+   Compiling tracing v0.1.44
+   Compiling windows-implement v0.60.2
+   Compiling tinystr v0.8.4
+   Compiling potential_utf v0.1.6
+   Compiling icu_collections v2.3.0
+   Compiling windows-interface v0.59.3
+   Compiling icu_locale_core v2.3.0
+   Compiling getrandom v0.2.17
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3242-3103\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f\source\cc-job-policy)
+   Compiling windows-strings v0.5.1
+   Compiling windows-result v0.4.1
+   Compiling httparse v1.10.1
+   Compiling adler2 v2.0.1
+   Compiling untrusted v0.9.0
+   Compiling miniz_oxide v0.9.1
+   Compiling windows-core v0.62.2
+   Compiling aho-corasick v1.1.5
+   Compiling regex-syntax v0.8.11
+   Compiling libc v0.2.190
+   Compiling icu_provider v2.3.1
+   Compiling windows_x86_64_msvc v0.52.6
+   Compiling tower-layer v0.3.3
+   Compiling try-lock v0.2.5
+   Compiling httpdate v1.0.3
+   Compiling rustls v0.23.45
+   Compiling want v0.3.2
+   Compiling icu_normalizer v2.3.0
+   Compiling icu_properties v2.3.0
+   Compiling regex-automata v0.4.18
+   Compiling flate2 v1.1.10
+   Compiling http-body-util v0.1.5
+   Compiling webpki-roots v1.0.9
+   Compiling sync_wrapper v1.0.2
+   Compiling utf8parse v0.2.2
+   Compiling base64 v0.22.1
+   Compiling atomic-waker v1.1.2
+   Compiling once_cell_polyfill v1.70.2
+   Compiling native-tls v0.2.18
+   Compiling subtle v2.6.1
+   Compiling anstyle v1.0.14
+   Compiling thiserror v2.0.21
+   Compiling regex v1.13.1
+   Compiling anstyle-wincon v3.0.11
+   Compiling rustls-webpki v0.103.15
+   Compiling anstyle-parse v1.0.0
+   Compiling webpki-roots v0.26.11
+   Compiling thiserror-impl v2.0.21
+   Compiling anstyle-query v1.1.5
+   Compiling schannel v0.1.29
+   Compiling windows-threading v0.2.1
+   Compiling base64 v0.23.1
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling colorchoice v1.0.5
+   Compiling ipnet v2.12.2
+   Compiling windows-future v0.3.2
+   Compiling anstream v1.0.0
+   Compiling windows-targets v0.52.6
+   Compiling windows-collections v0.3.2
+   Compiling windows-numerics v0.3.1
+   Compiling hyper v1.12.0
+   Compiling tower v0.5.3
+   Compiling futures-executor v0.3.34
+   Compiling bumpalo v3.20.3
+   Compiling idna_adapter v1.2.2
+   Compiling ryu v1.0.23
+   Compiling heck v0.5.0
+   Compiling idna v1.1.0
+   Compiling zip v2.4.2
+   Compiling strsim v0.11.1
+   Compiling clap_lex v1.1.1
+   Compiling hyper-util v0.1.21
+   Compiling bitflags v2.13.2
+   Compiling clap_derive v4.6.7
+   Compiling serde_urlencoded v0.7.1
+   Compiling url v2.5.8
+   Compiling zopfli v0.8.3
+   Compiling clap_builder v4.6.7
+   Compiling futures v0.3.34
+   Compiling windows v0.62.2
+   Compiling ureq v2.12.1
+   Compiling windows-sys v0.59.0
+   Compiling tokio-native-tls v0.3.1
+   Compiling uuid v1.27.0
+   Compiling mime v0.3.17
+   Compiling rustversion v1.0.23
+   Compiling unicase v2.10.0
+   Compiling hyper-tls v0.6.0
+   Compiling cc-chrome v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3242-3103\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f\source\cc-chrome)
+   Compiling mime_guess v2.0.5
+   Compiling winreg v0.55.0
+   Compiling tower-http v0.6.11
+   Compiling cc-live v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3242-3103\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f\source\cc-live)
+   Compiling clap v4.6.7
+   Compiling reqwest v0.12.28
+   Compiling async-trait v0.1.92
+   Compiling cc-task-title v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3242-3103\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f\source\cc-task-title)
+   Compiling cc-local-llm v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3242-3103\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f\source\cc-local-llm)
+   Compiling wmi v0.18.4
+   Compiling lazy_static v1.5.1
+   Compiling sharded-slab v0.1.7
+   Compiling axum-core v0.4.5
+   Compiling tokio-util v0.7.19
+   Compiling serde_path_to_error v0.1.20
+   Compiling tracing-log v0.2.0
+   Compiling nu-ansi-term v0.50.3
+   Compiling thread_local v1.1.10
+   Compiling matchit v0.7.3
+   Compiling http-range-header v0.4.2
+   Compiling tracing-subscriber v0.3.23
+   Compiling cc-redact v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3242-3103\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f\source\cc-redact)
+   Compiling tower-http v0.5.2
+   Compiling cc-ask v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3242-3103\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f\source\cc-ask)
+   Compiling axum v0.7.9
+   Compiling cc-scheduler v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3242-3103\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f\source\cc-scheduler)
+   Compiling cc-todo v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3242-3103\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f\source\cc-todo)
+   Compiling localai-web-rs v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3242-3103\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f\source\localai-web-rs)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 45.12s
+────────────
+ Nextest run ID 56774bb9-b9d5-4976-a883-86a458962b43 with nextest profile: default
+    Starting 4 tests across 20 binaries (481 tests skipped)
+        FAIL [   0.018s] (1/4) cc-job-policy::product_identity mcp_effective_private_task_masks_every_raw_job_edge
+  stdout ───
+
+    running 1 test
+    test mcp_effective_private_task_masks_every_raw_job_edge ... FAILED
+
+    failures:
+
+    failures:
+        mcp_effective_private_task_masks_every_raw_job_edge
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.01s
+
+  stderr ───
+
+    thread 'mcp_effective_private_task_masks_every_raw_job_edge' (26968) panicked at cc-job-policy\tests\product_identity.rs:290:5:
+    a business-private task's related report must remain private
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.019s] (2/4) cc-job-policy::product_identity mcp_related_review_preserves_current_primary_and_dependency_priority
+        PASS [   0.021s] (3/4) cc-job-policy::product_identity mcp_live_requester_dependency_exclusion_controls
+        FAIL [   0.063s] (4/4) localai-web-rs operations::product_identity_tests::mcp_effective_contract_identity_masks_related_job_details
+  stdout ───
+
+    running 1 test
+    test operations::product_identity_tests::mcp_effective_contract_identity_masks_related_job_details ... FAILED
+
+    failures:
+
+    failures:
+        operations::product_identity_tests::mcp_effective_contract_identity_masks_related_job_details
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 100 filtered out; finished in 0.05s
+
+  stderr ───
+
+    thread 'operations::product_identity_tests::mcp_effective_contract_identity_masks_related_job_details' (11520) panicked at localai-web-rs\src\operations_product_identity_tests.rs:735:9:
+    assertion `left == right` failed: related_todo_ids
+      left: Ok(Object {"ok": Bool(true), "id": String("job-a07c58c050b362e7"), "updatedAt": Null, "detailVersion": String("bd308d0176cbd668"), "report": String("business-private-report-marker"), "note": String(""), "history": Array [], "offset": Number(0), "total": Number(0), "nextOffset": Null})
+     right: Err(404)
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+────────────
+     Summary [   0.067s] 4 tests run: 2 passed, 2 failed, 481 skipped
+        FAIL [   0.018s] (1/4) cc-job-policy::product_identity mcp_effective_private_task_masks_every_raw_job_edge
+        FAIL [   0.063s] (4/4) localai-web-rs operations::product_identity_tests::mcp_effective_contract_identity_masks_related_job_details
+error: test run failed

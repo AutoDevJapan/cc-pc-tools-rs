@@ -1,0 +1,12 @@
+{
+  "base": "d4e1379d1302eb9277f373766fb3d51d418fbe40",
+  "head": "a1aafe73c9e0564a79dc11d67de4fea362ca6020",
+  "changed_paths": [
+    "M\tcc-job-policy/tests/product_identity.rs",
+    "M\tdocs/distinct-godd-mcp-products-3103.md",
+    "M\tlocalai-web-rs/src/operations_product_identity_tests.rs",
+    "M\ttools/agent-progress/mcp_identity_test.go"
+  ],
+  "classification": "Only cc-job-policy integration tests, localai-web-rs test module, agent-progress Go tests, and the existing specification document differ",
+  "production_implementation_unchanged": true
+}

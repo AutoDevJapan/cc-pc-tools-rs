@@ -1,0 +1,72 @@
+{
+  "todo": 3242,
+  "parent_todo": 3103,
+  "source_commit": "a1aafe73c9e0564a79dc11d67de4fea362ca6020",
+  "implementation_base": "d4e1379d1302eb9277f373766fb3d51d418fbe40",
+  "git_tree": "aa4f413b8d02e3cc515f744f6bc9b8af5d50d556",
+  "invocations": 1,
+  "compilation_succeeded": true,
+  "compilation_seconds": 45.12,
+  "selected_tests": 4,
+  "executed_tests": 4,
+  "passed": 2,
+  "failed": 2,
+  "skipped": 481,
+  "test_binaries": 20,
+  "nextest_run_id": "56774bb9-b9d5-4976-a883-86a458962b43",
+  "nextest_summary_seconds": 0.067,
+  "exit_code": 100,
+  "started_at": "2026-10-21T10:48:52.0847345+09:00",
+  "finished_at": "2026-10-21T10:49:38.822311+09:00",
+  "elapsed_seconds": 46.7375765,
+  "assertion_failure_is_red": true,
+  "tests": [
+    {
+      "package": "cc-job-policy",
+      "name": "mcp_effective_private_task_masks_every_raw_job_edge",
+      "result": "FAIL",
+      "seconds": 0.018,
+      "location": "cc-job-policy/tests/product_identity.rs:290:5",
+      "observed": "Effective contract resolution passed; sensitive(review) was false and the privacy assertion failed"
+    },
+    {
+      "package": "localai-web-rs",
+      "name": "operations::product_identity_tests::mcp_effective_contract_identity_masks_related_job_details",
+      "result": "FAIL",
+      "seconds": 0.063,
+      "location": "localai-web-rs/src/operations_product_identity_tests.rs:735:9",
+      "observed": "related_todo_ids iteration: todo detail Err(404) assertion passed; related job detail returned Ok with report business-private-report-marker instead of Err(404)",
+      "not_reached": [
+        "collect assertion in related_todo_ids iteration",
+        "entire jobs iteration including its todo detail, related job detail and collect assertions"
+      ]
+    },
+    {
+      "package": "cc-job-policy",
+      "name": "mcp_related_review_preserves_current_primary_and_dependency_priority",
+      "result": "PASS",
+      "seconds": 0.019,
+      "observed": "review primary remained 9; current requester resolved as contract; prerequisite rank was 10"
+    },
+    {
+      "package": "cc-job-policy",
+      "name": "mcp_live_requester_dependency_exclusion_controls",
+      "result": "PASS",
+      "seconds": 0.021,
+      "completed_controls": [
+        "parent_done",
+        "parent_block",
+        "wait_ready",
+        "child_done",
+        "no_product_job",
+        "terminal_requester"
+      ]
+    }
+  ],
+  "unreached_assertions_counted_as_pass_or_fail": false,
+  "source_unchanged": true,
+  "production_operations": 0,
+  "parent_code_pr_todo_changes": 0,
+  "go_tests_repeated": 0,
+  "scope_completed": "Only this fixed-source measurement; not parent implementation, review, merge, deployment or product completion"
+}

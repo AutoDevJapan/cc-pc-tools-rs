@@ -1,0 +1,17 @@
+[
+  {
+    "name": "localai_web_rs-a0b1982981ce78ca.exe",
+    "bytes": 25938944,
+    "sha256": "7675f5e114a374be9db3c5d25ebd57f1a603f85f6886b127c74332b19270d618"
+  },
+  {
+    "name": "localai_web_rs-df6197290e1b2fc2.exe",
+    "bytes": 11247616,
+    "sha256": "09d7775923b9d0225c91119e7ff2b6205a3012500f1445c7a368bb8be80e4bee"
+  },
+  {
+    "name": "product_identity-7d38c09a9fa45cba.exe",
+    "bytes": 1907712,
+    "sha256": "688ae97f691b2e58085c39b0f4023e0660b9eebefdc178fec00c42585af285f1"
+  }
+]

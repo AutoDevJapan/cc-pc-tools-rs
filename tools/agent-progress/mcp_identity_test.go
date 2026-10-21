@@ -153,6 +153,55 @@ func TestMCPLiveRequesterProductPriorityFlowsThroughDependencies(t *testing.T) {
 	}
 }
 
+func TestMCPImplicitReviewPrimaryCannotOccupyAnotherProduct(t *testing.T) {
+	for _, choice := range []string{"scheduler", "eligible", "fallback"} {
+		t.Run(choice, func(t *testing.T) {
+			requestID := int64(1)
+			parentStatus := "wait"
+			reviewStatus := "doing"
+			if choice == "scheduler" {
+				parentStatus = "doing"
+			}
+			if choice == "fallback" {
+				requestID, reviewStatus = 11, "wait"
+			}
+			parent := map[string]any{"id": requestID, "project": "tools", "status": parentStatus, "wait_on": []int{7}}
+			reviewTask := map[string]any{"id": 9, "project": "tools", "status": reviewStatus}
+			if choice == "scheduler" {
+				reviewTask["scheduler"] = map[string]any{"job": "review"}
+			}
+			db, _ := json.Marshal(map[string]any{"items": []any{parent, reviewTask,
+				map[string]any{"id": 7, "project": "tools", "status": "doing"}}})
+			f := fixtureFor(t, string(db))
+			f.opts.PriorityFile = filepath.Join(filepath.Dir(f.opts.TodoFile), "priority.json")
+			writeFixture(t, f.opts.PriorityFile, []byte(`{"product_identities":{"godd-mcp-contract":{"repository_id":61001,"owner_id":71001},"godd-mcp-alpha":{"repository_id":61002,"owner_id":71002}}}`))
+			f.job(t, "requester", fmt.Sprintf(`{"id":"requester","todo_id":%d,"status":"running","created_at":"2026-10-20T00:00:00Z","product_identity":{"repository_id":61001,"owner_id":71001}}`, requestID))
+			f.job(t, "review", fmt.Sprintf(`{"id":"review","related_todo_ids":[%d,9],"status":"queued","created_at":"2026-10-20T01:00:00Z"}`, requestID))
+			f.job(t, "prerequisite", `{"id":"prerequisite","todo_id":7,"status":"running","product_identity":{"repository_id":61002,"owner_id":71002}}`)
+			got, foundTask, foundJob := snap(f), false, false
+			for _, task := range got.Tasks {
+				if task.ID == requestID {
+					foundTask = true
+					if task.Priority != 10 || task.ProductIdentity == nil || task.ProductIdentity.ProductID != "godd-mcp-contract" || len(task.JobKeys) != 1 || task.JobKeys[0] != jobKey("requester") {
+						t.Fatalf("other primary replaced the requester: %+v", task)
+					}
+				}
+			}
+			for _, job := range got.Jobs {
+				if job.rawID == "prerequisite" {
+					foundJob = true
+					if job.Priority != 10 {
+						t.Fatalf("prerequisite priority=%d want=10", job.Priority)
+					}
+				}
+			}
+			if !foundTask || !foundJob {
+				t.Fatal("required task or job absent")
+			}
+		})
+	}
+}
+
 func TestMCPHistoryOnlyProductJobKeepsItsProductPriority(t *testing.T) {
 	f := fixtureFor(t, `{"items":[{"id":7,"project":"tools","status":"wait","jobs":["alpha"]}]}`)
 	f.job(t, "alpha", `{"id":"alpha","related_todo_ids":[7],"status":"running","project":"GoDD MCP α"}`)

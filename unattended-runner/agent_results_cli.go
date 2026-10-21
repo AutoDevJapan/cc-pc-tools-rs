@@ -102,7 +102,10 @@ func agentResultCLI(args []string, out io.Writer) int {
 		result = map[string]any{"errors": h.Errors, "delivery": "inspect_receipt"}
 	}
 	if err != nil {
-		if errors.Is(err,errAgentReceiverBusy){_,_=io.WriteString(out,"busy_retry_same_input\n");return 75}
+		if errors.Is(err, errAgentReceiverBusy) {
+			_, _ = io.WriteString(out, "busy_retry_same_input\n")
+			return 75
+		}
 		_, _ = io.WriteString(out, "agent result operation deferred\n")
 		return 1
 	}

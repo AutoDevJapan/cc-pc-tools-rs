@@ -252,3 +252,36 @@ fn review_workspace_dispatch_keeps_normal_capacity_model_and_admission_checks() 
         }
     }
 }
+
+#[test]
+fn review_workspace_dispatch_preserves_saved_state_and_launch_interval() {
+    for malformed in [false, true] {
+        let mut f = legacy_review();
+        let path = f.e.root.join("state.json");
+        let saved = if malformed {
+            json!(["invalid state; do not replace it"])
+        } else {
+            json!({"last_launch":T,"project_last_launch":{"retained-project":T-60.},
+                "retained_observation":{"count":7}})
+        };
+        write_json(&path, &saved, 2).unwrap();
+        let db_before = fs::read(&f.e.todo_path).unwrap();
+        let state_before = fs::read(&path).unwrap();
+        let result = f.e.dispatch_existing_subwork(2);
+        assert!(f.e.backend.launched.is_empty());
+        assert_eq!(fs::read(&f.e.todo_path).unwrap(), db_before);
+        if malformed {
+            assert_eq!(result.unwrap_err().0, "AttributeError");
+            assert_eq!(fs::read(&path).unwrap(), state_before);
+        } else {
+            let report = result.unwrap();
+            assert!(report["launched"].is_null());
+            assert_eq!(report["allowance_now"], 0);
+            let after = read_json(&path, Value::Null).unwrap();
+            assert_eq!(after["retained_observation"], saved["retained_observation"]);
+            assert_eq!(after["project_last_launch"], saved["project_last_launch"]);
+            assert_eq!(after["last_launch"], T);
+        }
+        assert!(!PathBuf::from(format!("{}-wt/todo-2-review", f.repo.display())).exists());
+    }
+}

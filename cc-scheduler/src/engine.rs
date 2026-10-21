@@ -1428,6 +1428,10 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         remove(&mut self.report, "launched");
         let _lock = ByteLock::acquire(&self.root.join("scheduler.lock"), Duration::from_secs(30))?
             .ok_or(Error("TimeoutError"))?;
+        self.state = read_json(&self.root.join("state.json"), json!({}))?;
+        if !self.state.is_object() {
+            return Err(Error("AttributeError"));
+        }
         let db = self.todo()?;
         let item = arr(&db["items"])
             .into_iter()
@@ -1457,7 +1461,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         Ok(
             json!({"id":id,"status":current["status"],"phase":current["scheduler"]["phase"],
             "active":active,"launched":self.report["launched"],"priority_wait":self.report["priority_wait"],
-            "allowance_now":self.report["allowance_now"],"busy_resources":self.report["busy_resources"]}),
+            "allowance_now":self.report["allowance_now"],"busy_resources":self.report["busy_resources"],
+            "not_before":current["scheduler"]["not_before"],
+            "preparation_reason":current["scheduler"]["preparation_failure"]["reason"]}),
         )
     }
     /// Caller holds scheduler.lock. The accepted body is durable before any launch.

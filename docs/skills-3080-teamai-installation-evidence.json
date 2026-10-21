@@ -40,5 +40,11 @@
     "must": 0,
     "response_sha256": "676b288e204b567fcc2f8c0dfea50431bfcfac3630f6ae34dae05eed81ccc370",
     "scope": "ActualTeamAI5+bundle5+upstream7+notice;other25hashonly;supportunread"
+  },
+  "superseded_by": {
+    "target": "teamai",
+    "manifest": "skills-3080-teamai-support-revision-manifest.json",
+    "evidence": "skills-3080-teamai-support-revision-evidence.json",
+    "note": "このファイルは初回配置時点の履歴。最新は採用台帳を参照。"
   }
 }

@@ -48,15 +48,54 @@ func TestRunnerSignalsConcurrent(t *testing.T) {
 	}
 }
 
+func TestRunnerSignalsOfficialHttpFailure(t *testing.T) {
+	// Credential-free output observed from official runner v2.338.0 configure
+	// using a deliberately invalid dummy registration token.
+	observed := "Response status code does not indicate success: 404 (Not Found).\r\n"
+	for split := 0; split <= len(observed); split++ {
+		var out runnerSignals
+		_, _ = out.Write([]byte(observed[:split]))
+		_, _ = out.Write([]byte(observed[split:]))
+		if got := strings.Join(out.snapshot(), ","); got != "http_404" {
+			t.Fatalf("split %d: %s", split, got)
+		}
+	}
+	var out runnerSignals
+	_, _ = out.Write([]byte("HttpRequestException: Response status code does not indicate success: 401 (Unauthorized)."))
+	if got := strings.Join(out.snapshot(), ","); got != "http_exception,http_401" {
+		t.Fatalf("HTTP response misclassified: %s", got)
+	}
+}
+
+func assertRunnerReceiptNoSecret(t *testing.T, root string) {
+	t.Helper()
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			t.Fatal("unexpected receipt directory")
+		}
+		b, err := os.ReadFile(filepath.Join(root, entry.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(b), fakeRunnerSecret) {
+			t.Fatalf("secret persisted in %s", entry.Name())
+		}
+	}
+}
+
 func TestRunnerReceiptRealChild(t *testing.T) {
 	for _, mode := range []string{"success", "exit", "start"} {
 		t.Run(mode, func(t *testing.T) {
 			root := t.TempDir()
-			c := exec.Command(os.Args[0], "-test.run=^TestRunnerReceiptChild$", "--", mode)
-			c.Env = append(os.Environ(), "CIW_RECEIPT_TEST_CHILD=1")
+			c := exec.Command(os.Args[0], "-test.run=^TestRunnerReceiptChild$", fakeRunnerSecret, "--", mode)
 			if mode == "start" {
 				c = exec.Command(filepath.Join(root, "missing-child"))
 			}
+			c.Env = append(os.Environ(), "CIW_RECEIPT_TEST_CHILD=1", "ACTIONS_RUNNER_INPUT_TOKEN="+fakeRunnerSecret)
 			hideRunnerTestCommand(c)
 			err := runRunnerCommand(root, "configure", c)
 			if (err == nil) != (mode == "success") {
@@ -88,6 +127,7 @@ func TestRunnerReceiptRealChild(t *testing.T) {
 			if c.Env != nil {
 				t.Fatal("credential environment retained on command")
 			}
+			assertRunnerReceiptNoSecret(t, root)
 		})
 	}
 }
@@ -127,6 +167,7 @@ func TestRunnerReceiptResultWriteFailure(t *testing.T) {
 	if err != nil || string(b) != "original" {
 		t.Fatal("old receipt overwritten")
 	}
+	assertRunnerReceiptNoSecret(t, root)
 }
 
 func TestRunnerReceiptChild(t *testing.T) {

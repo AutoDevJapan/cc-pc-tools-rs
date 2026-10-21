@@ -19,12 +19,16 @@ var runnerPatterns = []struct{ label, phrase string }{
 	{"crypto", "cryptographicexception"},
 	{"access", "unauthorizedaccessexception"},
 	{"network", "no such host is known"},
-	{"network", "httprequestexception"},
+	{"http_exception", "httprequestexception"},
 	{"tls", "ssl connection could not be established"},
 	{"http_401", "(401)"}, {"http_401", "status code: 401"},
 	{"http_403", "(403)"}, {"http_403", "status code: 403"},
 	{"http_404", "(404)"}, {"http_404", "status code: 404"},
 	{"http_429", "(429)"}, {"http_429", "status code: 429"},
+	// EnsureSuccessStatusCode in the pinned official listener emits this form;
+	// confirmed with a dummy token, without any real registration credential.
+	{"http_401", "success: 401 ("}, {"http_403", "success: 403 ("},
+	{"http_404", "success: 404 ("}, {"http_429", "success: 429 ("},
 }
 
 type runnerSignals struct {

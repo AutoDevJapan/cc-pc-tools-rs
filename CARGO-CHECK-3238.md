@@ -118,3 +118,48 @@ release出力だけを専用生成先の `release/todo.exe` に保持してい�
 各検査の前後と最後に、親のHEAD・ブランチ・変更なしを再確認する。
 親ソース・親PR・現在の配布物は変更しない。親全体の最終レビューや完成を代行しない。
 この担当のブランチ名は変更しない。
+
+## 新しい固定版の検査結果
+
+新しい固定HEAD `743613b95c9137d11b0b0c6562cfc569061976ce` に対する
+指定の再検査と候補の生成が完了した。結果は成功。検査担当3238の完了であり、
+親3085の実装全体・最終レビュー・配布の完了を意味しない。
+
+| 検査 | 終了コード | 結果 |
+| --- | ---: | --- |
+| cc-todoのproduct_review結合検査 | 0 | 3件すべて成功、失敗0、skip 0 |
+| cc-todoのClippy（all-targets、警告をエラーとして扱う） | 0 | 成功 |
+| 新しい固定ソースのtodoのreleaseビルド | 0 | 成功、未配布 |
+
+3件には、前回失敗した再入の検査と、期限後の再入拒否・DB不変の検査を含む。
+次の3件の実行結果を全ログに保持した。
+
+- `only_original_review_changes_and_history_is_complete`
+- `changed_scope_stops_dependencies_workers_and_preparation_never_write`
+- `prepared_binding_cannot_be_reused_with_other_inputs`
+
+前回447件中446成功のうち、今回の3件に含まれる成功2件を除いた444件は
+影響範囲外の既存証拠として保持した。合算して449件成功とは数えていない。
+対象0件のdoctestと以前のGo検査は繰り返していない。
+
+検査の前後・候補の作成前・最後に親のHEAD、ブランチ、変更なしを照合した。
+Cargo.toml、Cargo.lock、nextest設定のハッシュは前回と一致した。
+最後の正規の保護判定も成功した。親のソース・PR・配布済みの実行ファイルを変更していない。
+
+候補は `.ci-work/todo-3085-integrated.exe`。新しいrelease出力とSHA256・サイズが一致し、
+候補のリンク数は1、サイズは7,632,896 bytes。release本体はリンク数2のまま保持した。
+
+- 候補SHA256: `45449d6fa5a6553013814c71d7988921ca6843b224ebe30633b215a5ee82dbcb`
+- 正式な検査記録: `.ci-work/3085-cargo-receipt-fixed.private.json`
+- 検査記録SHA256: `7fb5c67e86d0b2aad339ecc68efe925e2afadae108979acc063dbd5631be508c`
+- 新しい全出力・終了結果・ソース照合: `.ci-work/3238-fixed-*`
+- 再開情報: `.ci-work/3238-fixed-resume.private.json`
+
+旧receiptのSHA256は `535aeab44a2dd11be892272e70d068483799e52fc776643f29252c6fec164178` のまま。
+旧ログ全件のハッシュも一致した。旧releaseはビルド前に
+`.ci-work/todo-3085-previous-3a9910d.exe` へ独立してコピーし、
+旧SHA256 `8231fe28624328ac90fdd9792129ce8783bdc154cc8e3a729ebfe147718d4466` と
+サイズ7,632,384 bytes、リンク数1を確認した。旧記録は上書きしていない。
+
+親3085はこの正式な検査記録と候補を読み返して取得する。
+両方と既存生成先はそのために保持する。この担当は新しいPRや監視担当を作成せず、配布もしない。

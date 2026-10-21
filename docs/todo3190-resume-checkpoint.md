@@ -2,6 +2,38 @@
 
 関連Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/325
 
+## 2026-10-21 10:40 JSTの再開照合
+
+PR315はhead `117dabf751adcbe6a64129bcd38ab3c87a092a05` のままOPEN、base=main、
+mergeCommit/mergedAt=nullでした。今回の正常照会では全17検査が終了し、SUCCESS15件、
+SKIPPED1件、NEUTRAL1件です。ただし3233の正常metadataはdoneでも、元3153の現在noteへ
+届いた親3110のレビュー受領票はOpus5.5/max・Must2/Suggestion2でした。指摘は、メモだけ
+成功して回答適用前に止まった際の受領回復と、投稿直後の時刻差で配送が進まなくなる問題です。
+これは親が保存したレビュー結果の受領で、今回その原応答や実turn_contextは開いていません。
+元3153は正常metadataでdoingへ戻っており、修正・合格・通常merge・配布は未確認です。
+
+自分の実jobは `20261021-103840-todo-3190`。正常jobs statusはgpt-6.1-sol/max、running、
+todo_id=3190、cwd一致。実turn_contextは独立照合していません。再開時HEADは
+`3fe56268b8d259103f479b5b5aa4791f5ee0ac97`、差分なし、同じ作業ブランチです。
+起動/プロジェクト指示と前回記録を読み直し、実GitHub所有者をAutoDevJapanと正常照会。
+自分のguardはok=true/client_resource=false/classification_unverified=falseでした。
+追加読取は正常repo/PR、3153の正常noteの末尾、3190/3153/3233の正常metadata、自分のstatus。
+本人原資料・元仕様・applied・旧台帳・保護名簿・稼働実物/hashは開いていません。
+
+元3190のwait-retryを1回登録して終了0、正常readbackはwait/retry-time、
+notBefore=1792550429（2026-10-21 11:40:29 JST）、jobsTotal=4、wait_on空でした。
+最新の検査・レビュー状況と元3153の修正継続を待機理由へ保存しました。3153全体のdone待ちや
+本人判断blockへ変えていません。登録とreadbackの原票はworktree直下の
+`todo3190-wait-{registration,readback}-20261021-103840.private.json` に保持します。
+この文書だけをcommit/pushし、実job・実HEADのcheckpoint要求/結果は同じ場所の
+`todo3190-checkpoint-final-20261021-103840.private.json` と
+`todo3190-checkpoint-final-result-20261021-103840.private.json` に保存して終了します。
+
+今回も共有コード/元仕様/停止/依存/質問/稼働版の変更、検査・レビュー追加はありません。
+次回はPR315の通常mergeを1回照合し、確認後に最新mainを統合して実装を始めます。
+方向の実記録と読戻し・質問終了GET、元3050/3084/他依存と未完コード/Prdの保持が残ります。
+本人の操作・判断は不要で、新しい質問/メンション/完了通知、並行実装は行っていません。
+
 ## 2026-10-21 09:37 JSTの再開照合
 
 PR315はhead `117dabf751adcbe6a64129bcd38ab3c87a092a05` でOPEN、baseはmain、

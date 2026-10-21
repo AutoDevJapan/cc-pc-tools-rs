@@ -70,7 +70,7 @@
     "reason": "size",
     "bytes": 1923350442,
     "entries": 1906,
-    "execution": "pending"
+    "execution": "quarantined"
   },
   "exclusions": [
     "No product/fixture changes",
@@ -80,5 +80,20 @@
     "No GPU/Civ6",
     "No Discord notification",
     "No parent state/owner/dependency change"
-  ]
+  ],
+  "cleanup_receipt": {
+    "bytes": 1923350442,
+    "destination": "C:\\Users\\makhmeto\\Downloads\\削除希望\\20261021-todo3227-finite-comparison-target-0611463f",
+    "entries": 1906,
+    "id": "0611463fdafba59587d653031ed6fedb",
+    "state": "quarantined"
+  },
+  "cleanup_verified": {
+    "verified_at": "2026-10-21T09:50:19.5088701+09:00",
+    "source_absent": true,
+    "destination_present": true,
+    "deleted": false,
+    "space_reclaimed_claimed": false,
+    "finish_not_called": "quarantine records its own completed state; finish is for successful ordinary deletion"
+  }
 }

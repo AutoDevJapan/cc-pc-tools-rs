@@ -1,18 +1,21 @@
 # ToDo3227 再開記録
 
-固定比較ソース4b2cf1da5321600fe5443c272191de9e7372edeaで、指定されたcc-jobs/parityの2件を1コマンド・1回だけ実行する。
-製品ベースは027b7ecce88cff154bcd617aa0e7f24be6ac1d3f。製品とfixtureは変更しない。
-自分のbranchはscheduler/todo-3227-review-recovery-check、jobは20261021-094050-todo-3227。
-作業開始時のscheduler checkpointは実HEAD4b2cf1dで保存済み（共有状態を読み返して照合）。
+限定比較検査は完了。指定コマンドを1回実行済みなので、再実行しない。
+固定比較HEADは4b2cf1da5321600fe5443c272191de9e7372edea、製品ベースは027b7ecce88cff154bcd617aa0e7f24be6ac1d3f。
+実結果は終了コード100、実Red1件、陽性対照1件合格、コンパイル/fixture失敗0件、398件は選択外。
+最初のassert2085行に到達して失敗し、2087〜2091行の5つのassertは未到達。
+製品とfixtureは変更せず、他の検査、実AI要求、PR作成、マージ、配布は行っていない。
 
-実行前。capture-once.ps1はrun-intent.jsonを排他的に作り、同じ実行を重ねない。
-中断した場合、run-intent.json、run-metadata.json、stdout.txt/stderr.txt、PID/作成時刻を先に確認する。
-意図記録があれば、結果が不明でも検査を再実行しない。原ログを保持して原因を調べる。
+完全stdout/stderr、実時刻/source/資源、SHA256と到達表はこのフォルダに保存した。
+最初の証拠commit efa8a64888de60229ce8602db66b3b4dd4fe3f78はpush済みで、ls-remoteの一致を確認した。
+このbranchはscheduler/todo-3227-review-recovery-check、jobは20261021-094050-todo-3227。
 
-所有一時フォルダのIDは0611463fdafba59587d653031ed6fedb。
-ビルド生成先と試験中の一時データだけをこの所有フォルダに置く。原ログはこの証拠フォルダへ残す。
-検査終了後、到達assert/未到達、陽性対照、コンパイル/fixture失敗を区別してresult.mdへ書く。
-完全stdout/stderr、実exit、source/時刻/資源、SHA256を保存し、このbranchだけcommit/pushする。
-生成物はsafe-deleteのplanが返す手順で片付ける。比較refをmainへ統合せず、PRも作らない。
-最後に自分のjob・実branch/headでscheduler checkpointを保存する。
-自分と親のToDoの状態・担当・依存は変更せず、完了判定はスケジューラに任せる。
+所有一時フォルダ0611463fdafba59587d653031ed6fedbの生成物1,923,350,442 byte・1,906項目は、planのsize指定でquarantine済み。
+元フォルダ不在と退避先存在を照合した。これは通常削除や空き容量回収ではない。quarantine自体が完了状態を記録するためfinishは呼ばない。
+新たな一時フォルダや継続中の自分の検査プロセスはない。完全ログは退避先ではなく、このGit証拠フォルダに保持している。
+
+残る終了解除手順は、片付け結果を含むこのbranchの最終commit/push、Git保存byteの照合、実HEADでのscheduler checkpoint。
+終了前にcheckpoint-final.private.jsonとcheckpoint-final-response.private.jsonをこのフォルダへ保存し、ToDo3227の保存requestを読み返す。
+これらはHEADの自己参照を避けるためGitの対象外で保持する。再開した場合は最初にこれらと実HEAD/remoteを照合し、済んだ操作は繰り返さない。
+自分の状態・担当・依存はスケジューラが管理する。元ToDo3081の状態・担当・依存は変更しない。
+元3081の実装全体、修正後のGreen、正式CI、別モデルレビュー、配布の完了を示す結果ではない。

@@ -27,6 +27,6 @@ Redの記録は`review registration routed straight back to the model that just 
 SHA256はstdoutが`e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`、stderrが`bb59ce2f62ae455200cd65dcc64fdee3cc8c6a0e0ca580ce825401fae8ce95d0`。
 このフォルダの.gitattributesで改行変換を無効にし、原ログのバイト列を保つ。
 
-所有生成物のplanは1,923,350,442 byte・1,906項目に対し、sizeを理由にquarantineを指定した。通常削除は指示されていない。退避結果はcleanup-receipt.jsonに記録する。
+所有生成物1,923,350,442 byte・1,906項目は、planが指定したsize理由のquarantineで削除希望フォルダへ退避済み。元の場所の不在と退避先の存在を確認した。削除や空き容量回収とは扱わない。完了記録はcleanup-receipt.jsonに保存した。
 この結果は元ToDo3081/Issue277の限定比較検査であり、製品全体の完成、修正後のGreen、別モデルレビュー、配布の完了を示さない。
 主担当のフォルダや状態・担当・依存は変更しない。比較refをmainへ統合せず、PR作成、マージ、追加検査、実AI要求、Discord通知は行わない。

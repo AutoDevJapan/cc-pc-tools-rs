@@ -69,6 +69,9 @@ func TestOwnerPolicyCategoriesAndNonSourceBoundaries(t *testing.T) {
 		{"auth.json", "unverified", "", ownerLegacyClear, false},
 		{filepath.Join(".git", "config"), "unverified", "", ownerLegacyClear, false},
 		{"CREDIT_CARDS.JSON", "protected", "owner_card_information", ownerLegacyAbsent, false},
+		{"credit-cards.json.", "protected", "owner_card_information", ownerLegacyAbsent, false},
+		{"credit-cards.csv.bak", "protected", "owner_card_information", ownerLegacyAbsent, false},
+		{"main.go:unknown", "unverified", "", ownerLegacyClear, false},
 		{filepath.Join("クレジットカード情報", "scan.png"), "protected", "owner_card_information", ownerLegacyClear, false},
 		{"my-credit-card.txt", "protected", "owner_card_information", ownerLegacyClear, false},
 		{"credit_card_handler.go", "clear", "", ownerLegacyClear, true},
@@ -189,12 +192,12 @@ func TestOwnerRegisteredSourceRejectsUnverifiedAndClientIdentity(t *testing.T) {
 			}
 		})
 	}
-	for _, name := range []string{"untracked.txt", ".env", "credentials.json"} {
+	for _, name := range []string{"untracked.txt", "[m]ain.go", ".env", "credentials.json"} {
 		path := filepath.Join(root, name)
 		if os.WriteFile(path, []byte("synthetic fixture, no credentials\n"), 0600) != nil {
 			t.Fatal("fixture leaf")
 		}
-		if name != "untracked.txt" {
+		if name != "untracked.txt" && name != "[m]ain.go" {
 			currentFixtureGit(t, root, "add", "-f", "--", name)
 		}
 		if ownerRegisteredSourceWith(path, db, original).AccessAllowed {

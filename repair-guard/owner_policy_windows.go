@@ -73,7 +73,18 @@ func ownerLegacyBytes(path string, data []byte) ownerLegacyState {
 
 func ownerCardPath(path string) bool {
 	for _, component := range strings.Split(strings.ReplaceAll(path, `\`, "/"), "/") {
+		component, _, _ = strings.Cut(component, ":")
+		component = strings.TrimRight(component, " .")
 		name := strings.TrimSuffix(strings.ToLower(component), strings.ToLower(filepath.Ext(component)))
+		for {
+			switch ext := filepath.Ext(name); ext {
+			case ".json", ".csv", ".tsv", ".txt", ".private", ".bak", ".backup":
+				name = strings.TrimSuffix(name, ext)
+			default:
+				goto normalized
+			}
+		}
+	normalized:
 		name = strings.NewReplacer("-", "", "_", "", " ", "").Replace(name)
 		switch name {
 		case "creditcard", "creditcards", "creditcardinfo", "creditcardinformation", "ownercreditcard", "ownercreditcards", "mycreditcard", "mycreditcards", "クレジットカード", "クレジットカード情報", "カード情報", "本人カード情報", "俺のクレジットカード":
@@ -132,7 +143,7 @@ func ownerPolicyClassify(path string, access ownerPolicyAccess) ownerPathVerdict
 		}
 	}
 	for _, candidate := range paths {
-		if ownerNonSourcePath(candidate) || access.legacy(candidate) == ownerLegacyUnavailable {
+		if ownerWindowsAlias(candidate) || ownerNonSourcePath(candidate) || access.legacy(candidate) == ownerLegacyUnavailable {
 			return ownerUnverified()
 		}
 	}
@@ -140,6 +151,18 @@ func ownerPolicyClassify(path string, access ownerPolicyAccess) ownerPathVerdict
 		return ownerPathVerdict{AccessAllowed: true, Status: "clear", Categories: []string{}}
 	}
 	return access.source(path)
+}
+
+func ownerWindowsAlias(path string) bool {
+	// ADS and Win32 trailing-dot/space aliases do not identify an ordinary
+	// tracked source path. The card check above still recognizes card aliases.
+	relative := strings.TrimPrefix(path, filepath.VolumeName(path))
+	for _, part := range strings.Split(strings.ReplaceAll(relative, `\`, "/"), "/") {
+		if strings.Contains(part, ":") || strings.TrimRight(part, " .") != part {
+			return true
+		}
+	}
+	return false
 }
 
 type ownerSourceAccess struct {
@@ -261,7 +284,7 @@ func ownerRegisteredSourceWith(path string, db object, access ownerSourceAccess)
 		}
 		if !same(path, top) {
 			rel, err := filepath.Rel(top, path)
-			tracked, ok := access.git(top, "ls-files", "--error-unmatch", "--", filepath.ToSlash(rel))
+			tracked, ok := access.git(top, "--literal-pathspecs", "ls-files", "--error-unmatch", "--", filepath.ToSlash(rel))
 			if err != nil || !ok || tracked == "" {
 				continue
 			}

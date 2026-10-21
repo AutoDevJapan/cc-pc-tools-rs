@@ -19,10 +19,10 @@ const capacity3085Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-30
 var capacity3085UpdateProfile = capacityUpdateProfile{
 	root:        capacity3085Source,
 	evidence:    capacity3085Source + "/docs/evidence/capacity-3085-runtime.json",
-	evidenceSHA: "59bacbc106804a70626d7e8fdc60188d12349cb9b666aaf80a46caf4f9057454",
+	evidenceSHA: "148ea7bff1cbdd135b741da48b0b515dcb79eece60e336caa53ebac7b74804d6",
 	leaves: []capacityUpdateLeaf{
 		{"capacity", "D:/CC/Tools/capacity-audit-3h/capacity-audit-3h.exe", capacity3085Source + "/.ci-work/capacity-audit-3h.exe", "efc30235d69e53b7cbcd181db922dc354a1a268a221356ef856e916643790329", "43d2e177ec55a1f3f0a281063105d5bd0ad2c6be89f1ab1f14a078773d724a3d"},
-		{"todo", "D:/CC/Tools/todo/todo.exe", capacity3085Source + "/.ci-work/todo-3085.exe", "ba1d65381bd31c38d05cf3798973427e2f0271dbc9d664afbfe91501a8de6811", "9f4ecce7832d0e765b9cdec63dc78d6db76b67cc30f66e02772acfa8d3327ce3"},
+		{"todo", "D:/CC/Tools/todo/todo.exe", capacity3085Source + "/.ci-work/todo-3085.exe", "ba1d65381bd31c38d05cf3798973427e2f0271dbc9d664afbfe91501a8de6811", "45449d6fa5a6553013814c71d7988921ca6843b224ebe30633b215a5ee82dbcb"},
 	},
 }
 

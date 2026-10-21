@@ -1,5 +1,54 @@
 # ToDo3238: 親3085の固定版を検査する
 
+## 最新の固定版：92096faの型整合修正を先行確認
+
+親の訂正により、現在の固定HEADは `92096fa2736062cf460bf272ca692c2d94c98025`。
+実ジョブは `20261021-154450-todo-3238`。既存の3238/target/担当範囲を保持する。
+下の206b8cf計画は取消し前の履歴であり、実検査・Green・候補生成の証明ではない。
+旧ジョブの取消しは親による技術復旧で、本人の停止や判断待ちへ変更しない。
+
+最初にcc-todo capacity_cycleの
+`one_ordinary_row_retains_current_worker_and_advances_only_after_finished` 1件で、
+自動Sol/maxの両originがpolicyとして保存されることを確認する。
+後続todo検査からはこの1件だけを除き、残りは下記の指定範囲を順番に確認する。
+検査失敗時は後続を止め、親ソースを編集せず原因と完全出力を返す。
+
+今回のreceiptは `.ci-work/3085-cargo-main8a-origin-fixed.private.json`。
+実行・再開・全ログは `.ci-work/3238-main8a-origin-fixed-*`。
+新候補名は `todo-3085-main8a-origin-fixed.exe` と
+`scheduler-3085-main8a-origin-fixed.exe`。旧receipt・候補・出力は上書きしない。
+再開時はこのprefixのstatus/receiptとPIDの作成時刻を照合し、重複実行を避ける。
+
+## 2026-10-21 main統合後の有限検査（開始）
+
+実ジョブ `20261021-153244-todo-3238` で同じ3238を再開する。
+対象は親3085の `scheduler/todo-3085-capacity-decision`、
+固定HEAD `206b8cffe3f15210297411f75550c99c14548dcd`。
+開始時の親ソースは変更なし。この担当のブランチは変更しない。
+既存targetと所有ID `0c7d583da6c03192db12646d4a0493d3` を再利用する。
+
+指定された順番は、scheduler parityのreview_workspace_ 4件、
+同じparityの残り、todoのsubwork/capacity_cycle/verified_resume/selection_origin、
+job-policyのlib/subwork/model_effort/resume_policy/finite_review、
+askのresume/prompt_context/recovery_failure/reply_recovery/intake、
+4クレートのdoctestとClippy、todo/schedulerのreleaseビルド1回、
+新しいscheduler候補の両helpである。全workspaceやGoの検査は実行しない。
+各段階で失敗したら後続を止め、親ソースを修正せず原因と完全出力を返す。
+
+今回の記録は `.ci-work/3085-cargo-main8a-integration.private.json`、
+実行・再開の記録は `.ci-work/3238-main8a-integration-*` に保存する。
+全stdout/stderr、実argv/exit/件数、各出力SHA、実モデル/effort/割当、
+固定ソースの段階前後照合、追跡されたRust入力とCargo設定のSHAを残す。
+旧receiptのSHA `33661a3809c109c4cec98a84dde9f28b13f44a10205edb9590fa7b726ff79506`
+を確認した。旧rawログや原保護stateをハッシュのために読み直さない。
+
+成功後の新候補名は `todo-3085-main8a-integration.exe` と
+`scheduler-3085-main8a-integration.exe`。同じbytesの独立コピーでlink1を確認し、
+既存候補を上書きしない。配布・実3090 dispatch・PR・マージはこの担当の範囲外。
+親3085・レビュー3090・製品全体の完了は宣言しない。
+再開時は今回のstatus/receiptとPID作成時刻を確認し、実行中または成功済みの
+段階を重ねない。有限検査の終了結果は親へ返し、通知なしの記録は親が行う。
+
 この担当は検査と未配布の実行ファイル候補の生成だけを行う。
 親ソース、親ブランチ、配布済みの実行ファイルは変更しない。
 

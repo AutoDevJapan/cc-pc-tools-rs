@@ -51,6 +51,7 @@ func TestAgentResultNewRepliesStopsAndItemsNotifyOwner(t *testing.T) {
 		t.Run(state, func(t *testing.T) {
 			r, _ := fixture(t)
 			e := resultEvent()
+			e.Thread = "620" // A question's progress thread, distinct from the result topic.
 			e.State = state
 			if state == "completed" {
 				e.Reason, e.Remaining, e.Next = "completed", "none", "none"
@@ -78,17 +79,22 @@ func TestAgentResultNewRepliesStopsAndItemsNotifyOwner(t *testing.T) {
 				if !slices.Contains(args, "--notify") {
 					t.Error("new result did not use the normal notifying sender")
 				}
+				if slices.Contains(args, "--thread") {
+					t.Error("notifying result targeted a possibly silent question-progress thread")
+				}
 				return `{"domain":"new-owner-recovery-messages","delivery":"verified","thread_id":"610","message_id":"735"}`, nil
 			}
 			server(t, r, func(w http.ResponseWriter, req *http.Request) {
 				if req.Method != "GET" || req.URL.Path != "/channels/610/messages/735" {
 					t.Errorf("unexpected readback %s %s", req.Method, req.URL.Path)
 				}
-				respond(w, resultReadback(r, p, true))
+				m := resultReadback(r, p, true)
+				m["channel_id"] = "610"
+				respond(w, m)
 			})
 			r.agentResultPhase(context.Background(), &Health{})
 			saved := r.mustAgentResult(t, p.ID)
-			if saved.Verified == "" || saved.Message != "735" {
+			if saved.Verified == "" || saved.Message != "735" || saved.Event.Thread != "620" || !strings.Contains(saved.URL, "/610/735") {
 				t.Fatal("owner mention was not GET-verified")
 			}
 			again, err := r.recordAgentResult(e)
@@ -104,7 +110,7 @@ func TestAgentResultNewRepliesStopsAndItemsNotifyOwner(t *testing.T) {
 }
 
 func TestAgentResultNotifyRequiresExactOwnerReadback(t *testing.T) {
-	for _, mismatch := range []string{"silent", "missing", "foreign", "extra", "duplicate_body", "role", "everyone"} {
+	for _, mismatch := range []string{"silent", "missing", "foreign", "extra", "duplicate_body", "role", "roles_missing", "everyone"} {
 		t.Run(mismatch, func(t *testing.T) {
 			r, _ := fixture(t)
 			p, _ := r.recordAgentResult(resultEvent())
@@ -126,6 +132,8 @@ func TestAgentResultNotifyRequiresExactOwnerReadback(t *testing.T) {
 					m["content"] = strings.Replace(m["content"].(string), "<@300>", "<@300>\n<@300>", 1)
 				case "role":
 					m["mention_roles"] = []string{"999"}
+				case "roles_missing":
+					delete(m, "mention_roles")
 				case "everyone":
 					m["mention_everyone"] = true
 				}
@@ -165,5 +173,33 @@ func TestAgentResultLegacyReceiptsDoNotAcquireNewMentions(t *testing.T) {
 	r.agentResultPhase(context.Background(), &Health{})
 	if calls != 1 {
 		t.Fatal("old verified receipt was notified again")
+	}
+}
+
+func TestAgentResultTellsOwnerWhetherActionIsNeeded(t *testing.T) {
+	r, _ := fixture(t)
+	e := resultEvent()
+	p, err := r.recordAgentResult(e)
+	if err != nil || !strings.HasPrefix(agentResultBody(p), "対応不要です。AI側で保存した結果を確認して作業を続けます。") {
+		t.Fatal("no-action notice did not lead with the concrete AI action", err)
+	}
+	e.Transition = "question-required"
+	e.OwnerRequired, e.Next = true, "owner_decision"
+	if _, err := r.recordAgentResult(e); err == nil {
+		t.Fatal("action-required notice accepted without a concrete question")
+	}
+	e.OwnerQuestion = AgentOwnerQuestion{Question: "この対象の処置を選んでください。", ChoiceA: "保持して調査を続ける", ChoiceB: "確認済みの不要物だけ回収する", URL: "https://discord.com/channels/100/620/621"}
+	p, err = r.recordAgentResult(e)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := agentResultBody(p)
+	if !strings.HasPrefix(body, "ご回答をお願いします。"+e.OwnerQuestion.Question) || !strings.Contains(body, "a: "+e.OwnerQuestion.ChoiceA) || !strings.Contains(body, "b: "+e.OwnerQuestion.ChoiceB) || !strings.Contains(body, e.OwnerQuestion.URL) || !strings.Contains(body, "この対象だけ回答を待ち") {
+		t.Fatal("question, choices or limited waiting scope missing")
+	}
+	e.OwnerRequired, e.Next = false, "review_result"
+	e.Transition = "unexpected-question"
+	if _, err := r.recordAgentResult(e); err == nil {
+		t.Fatal("no-action notice accepted an owner question")
 	}
 }

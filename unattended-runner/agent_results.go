@@ -16,28 +16,38 @@ const agentResultDomain = "parent-agent-result-v1"
 const agentResultAttempts = 4
 const agentResultBudget = 20 * time.Second
 
+// Public, non-secret text from the parent's existing owner question.
+// This result post points back to that question; it does not create another ask.
+type AgentOwnerQuestion struct {
+	Question string `json:"question"`
+	ChoiceA  string `json:"choice_a"`
+	ChoiceB  string `json:"choice_b"`
+	URL      string `json:"url"`
+}
+
 // Public explanations are a closed vocabulary. Private source material is
 // referenced, never opened or copied into Discord or command diagnostics.
 type AgentResultEvent struct {
-	RequestID     string `json:"request_id"`
-	Todo          uint64 `json:"todo_id"`
-	Project       string `json:"project"`
-	Thread        string `json:"thread_id"`
-	Source        string `json:"source"`
-	Parent        string `json:"parent_id,omitempty"`
-	Child         string `json:"child_id,omitempty"`
-	Attempt       string `json:"attempt_id"`
-	Transition    string `json:"transition_id"`
-	State         string `json:"state"`
-	Reason        string `json:"reason"`
-	Remaining     string `json:"remaining"`
-	Next          string `json:"next_action"`
-	OwnerRequired bool   `json:"owner_required"`
-	PrivateRef    string `json:"private_ref,omitempty"`
-	ItemID        string `json:"item_id,omitempty"`
-	ItemKind      string `json:"item_kind,omitempty"`
-	CapacityBytes uint64 `json:"capacity_bytes,omitempty"`
-	CapacityScope string `json:"capacity_scope,omitempty"`
+	RequestID     string             `json:"request_id"`
+	Todo          uint64             `json:"todo_id"`
+	Project       string             `json:"project"`
+	Thread        string             `json:"thread_id"`
+	Source        string             `json:"source"`
+	Parent        string             `json:"parent_id,omitempty"`
+	Child         string             `json:"child_id,omitempty"`
+	Attempt       string             `json:"attempt_id"`
+	Transition    string             `json:"transition_id"`
+	State         string             `json:"state"`
+	Reason        string             `json:"reason"`
+	Remaining     string             `json:"remaining"`
+	Next          string             `json:"next_action"`
+	OwnerRequired bool               `json:"owner_required"`
+	OwnerQuestion AgentOwnerQuestion `json:"owner_question,omitzero"`
+	PrivateRef    string             `json:"private_ref,omitempty"`
+	ItemID        string             `json:"item_id,omitempty"`
+	ItemKind      string             `json:"item_kind,omitempty"`
+	CapacityBytes uint64             `json:"capacity_bytes,omitempty"`
+	CapacityScope string             `json:"capacity_scope,omitempty"`
 }
 type AgentResultRecord struct {
 	Domain         string           `json:"domain"`
@@ -97,15 +107,16 @@ var agentItemKinds = map[string]string{"build_output": "終了済みの検証生
 // Paths and raw error text stay private. No category-level counts are expanded
 // into invented item results.
 type AgentDeferredItem struct {
-	ID            string `json:"item_id"`
-	Kind          string `json:"item_kind"`
-	Transition    string `json:"transition_id"`
-	Reason        string `json:"reason"`
-	Bytes         uint64 `json:"capacity_bytes"`
-	Scope         string `json:"capacity_scope"`
-	Next          string `json:"next_action"`
-	OwnerRequired bool   `json:"owner_required"`
-	PrivateRef    string `json:"private_ref,omitempty"`
+	ID            string             `json:"item_id"`
+	Kind          string             `json:"item_kind"`
+	Transition    string             `json:"transition_id"`
+	Reason        string             `json:"reason"`
+	Bytes         uint64             `json:"capacity_bytes"`
+	Scope         string             `json:"capacity_scope"`
+	Next          string             `json:"next_action"`
+	OwnerRequired bool               `json:"owner_required"`
+	OwnerQuestion AgentOwnerQuestion `json:"owner_question,omitzero"`
+	PrivateRef    string             `json:"private_ref,omitempty"`
 }
 
 func agentDeferredEvent(base AgentResultEvent, item AgentDeferredItem) AgentResultEvent {
@@ -116,6 +127,7 @@ func agentDeferredEvent(base AgentResultEvent, item AgentDeferredItem) AgentResu
 	e.Remaining = "verification"
 	e.Next = item.Next
 	e.OwnerRequired = item.OwnerRequired
+	e.OwnerQuestion = item.OwnerQuestion
 	e.ItemID = item.ID
 	e.ItemKind = item.Kind
 	e.CapacityBytes = item.Bytes
@@ -144,6 +156,25 @@ func validateAgentEvent(e AgentResultEvent) error {
 	}
 	if e.State == "completed" && (e.Reason != "completed" || e.Remaining != "none" || e.Next != "none" || e.OwnerRequired) || e.State != "completed" && (e.Reason == "completed" || e.Remaining == "none" || e.Next == "none") || e.OwnerRequired != (e.Next == "owner_decision") {
 		return errors.New("agent result outcome inconsistent")
+	}
+	if e.OwnerRequired && e.OwnerQuestion != (AgentOwnerQuestion{}) {
+		q := e.OwnerQuestion
+		for _, text := range []string{q.Question, q.ChoiceA, q.ChoiceB} {
+			if strings.TrimSpace(text) == "" || len(text) > 300 || strings.ContainsAny(text, "\r\n") {
+				return errors.New("concrete owner question and choices required")
+			}
+		}
+		parts := strings.Split(strings.TrimPrefix(q.URL, "https://discord.com/channels/"), "/")
+		if !strings.HasPrefix(q.URL, "https://discord.com/channels/") || len(parts) != 3 || q.ChoiceA == q.ChoiceB {
+			return errors.New("separate owner question destination required")
+		}
+		for _, id := range parts {
+			if _, ok := number(id); !ok {
+				return errors.New("owner question destination invalid")
+			}
+		}
+	} else if !e.OwnerRequired && e.OwnerQuestion != (AgentOwnerQuestion{}) {
+		return errors.New("unneeded owner question is not permitted")
 	}
 	if e.PrivateRef != "" && (!filepath.IsAbs(e.PrivateRef) || len(e.PrivateRef) > 4096) {
 		return errors.New("agent result private reference invalid")
@@ -212,6 +243,11 @@ func (r *Runner) recordAgentResultWithin(ctx context.Context, e AgentResultEvent
 		return p, errors.New("agent result receipt unavailable")
 	}
 	// This file is the parent's durable inbox and the supervisor's outbox.
+	// Old receipts can lack question details; never invalidate their history.
+	// New action-required input must supply the concrete, public question.
+	if e.OwnerRequired && e.OwnerQuestion == (AgentOwnerQuestion{}) {
+		return p, errors.New("concrete owner question and choices required")
+	}
 	if err := publish(path, p); err != nil {
 		return p, err
 	}
@@ -230,6 +266,13 @@ func agentResultBody(p AgentResultRecord) string {
 		decision = "必要（元の質問で扱います）"
 	}
 	body := fmt.Sprintf("状態: %s\n【PCの道具】担当の結果を親へ返しました（元ToDo %d）。\n結果: %s\n理由: %s\n残作業: %s\n次の処置: %s\n本人の判断: %s", state, p.Event.Todo, agentStateLabels[p.Event.State], agentReasonLabels[p.Event.Reason], agentRemainingLabels[p.Event.Remaining], agentNextLabels[p.Event.Next], decision)
+	if p.Event.OwnerRequired {
+		q := p.Event.OwnerQuestion
+		body = fmt.Sprintf("ご回答をお願いします。%s\n a: %s\n b: %s\n回答先: <%s>\nこの対象だけ回答を待ち、AI側はほかの作業を続けます。\n\n%s", q.Question, q.ChoiceA, q.ChoiceB, q.URL, body)
+	} else {
+		next := map[string]string{"none": "結果の記録を終えました。", "review_result": "保存した結果を確認して作業を続けます。", "retry": "同じ依頼の再開を進めます。", "wait_dependency": "先行作業が終わり次第、作業を再開します。"}[p.Event.Next]
+		body = "対応不要です。AI側で" + next + "返信やPC操作は要りません。\n\n" + body
+	}
 	if p.Event.State == "item_deferred" {
 		capacity := "未計測"
 		if p.Event.CapacityScope == "complete" {
@@ -285,19 +328,28 @@ func (r *Runner) agentResultCursor(kind, id string) error {
 }
 
 func (r *Runner) deliverAgentResult(ctx context.Context, p *AgentResultRecord) error {
+	if p.Event.OwnerRequired && p.NotifyOwner && !strings.HasPrefix(p.Event.OwnerQuestion.URL, "https://discord.com/channels/"+r.State.Destination.Guild+"/") {
+		return errors.New("owner_question_scope_invalid")
+	}
 	body := agentResultBody(*p)
 	path := filepath.Join(r.Config.Home, "agent-results", "bodies", p.ID+".txt")
 	if err := writeText(path, body); err != nil {
 		return err
 	}
 	// The ordinary sender owns durable reservations, nonces and lost-response recovery.
-	response, err := r.conversationLog(ctx, "agent-result-"+p.ID[:40], "【PCの道具】担当の結果", path, p.Event.Thread, p.NotifyOwner, nil)
+	// Notifying results use an ordinary product topic. The original thread may
+	// be a question's silent progress thread; never relax that sender restriction.
+	destination := p.Event.Thread
+	if p.NotifyOwner {
+		destination = ""
+	}
+	response, err := r.conversationLog(ctx, "agent-result-"+p.ID[:40], "【PCの道具】担当の結果", path, destination, p.NotifyOwner, nil)
 	if err != nil || response["delivery"] != "verified" {
 		return errors.New("delivery_unverified")
 	}
 	thread, _ := response["thread_id"].(string)
 	message, _ := response["message_id"].(string)
-	if thread != p.Event.Thread {
+	if _, ok := number(thread); !ok || destination != "" && thread != destination {
 		return errors.New("delivery_unverified")
 	}
 	if _, ok := number(message); !ok {
@@ -305,7 +357,7 @@ func (r *Runner) deliverAgentResult(ctx context.Context, p *AgentResultRecord) e
 	}
 	var live struct {
 		Message
-		MentionRoles []string `json:"mention_roles"`
+		MentionRoles *[]string `json:"mention_roles"`
 	}
 	if r.get(ctx, "/channels/"+thread+"/messages/"+message, &live) != nil {
 		return errors.New("delivery_unverified")
@@ -317,7 +369,13 @@ func (r *Runner) deliverAgentResult(ctx context.Context, p *AgentResultRecord) e
 		expectedFlags = 4
 		mentionsOK = len(live.Mentions) == 1 && live.Mentions[0].ID == r.State.Destination.Owner
 	}
-	if live.ID != message || live.Channel != thread || live.Author.ID != r.State.Destination.Bot || !live.Author.Bot || !agentDeliveredBody(live.Content, expectedBody) || live.Flags&(4096|4) != expectedFlags || live.MentionEveryone || len(live.MentionRoles) != 0 || !mentionsOK {
+	rolesOK := live.MentionRoles != nil && len(*live.MentionRoles) == 0
+	// Old silent receipts predate this extra readback field. Their immutable
+	// request stays valid; new owner notifications require the explicit field.
+	if !p.NotifyOwner && live.MentionRoles == nil {
+		rolesOK = true
+	}
+	if live.ID != message || live.Channel != thread || live.Author.ID != r.State.Destination.Bot || !live.Author.Bot || !agentDeliveredBody(live.Content, expectedBody) || live.Flags&(4096|4) != expectedFlags || live.MentionEveryone || !rolesOK || !mentionsOK {
 		return errors.New("delivery_unverified")
 	}
 	p.Message = message
@@ -626,6 +684,7 @@ func (r *Runner) observeAgentResults(ctx context.Context, h *Health) {
 			e.Remaining = "unverified"
 			e.Next = "review_result"
 			e.OwnerRequired = false
+			e.OwnerQuestion = AgentOwnerQuestion{}
 			if state == "completed" {
 				e.Remaining = "none"
 				e.Next = "none"

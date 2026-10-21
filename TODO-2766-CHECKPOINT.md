@@ -19,6 +19,9 @@
 - 原log/実exit/API metadata/原reviewを47recordの全byte/base64・bytes/SHAでevidence-2766-deadlines-144040.private.jsonへ保存、全読戻し一致。bundle46,393bytes/SHA9362A928C43C4421D3FA4ABECE82175F33C038E8529743E2B2765195D1B5B6DA。旧host overlayのexit1は期待RED。最初のLinux helper compileはtimer最終修正前、最終Linux test compile/実行は最終source。どのdirty binaryもlive runnerへ使用していない。
 - temp0c87b9451bed11d3e68926659183b624は全記録保存後にsafe-delete plan指定の通常削除を別呼出しで実行しfinish(source_absent)。20,933,941bytes/48entries。空き容量の前後差は未測定。旧2710/2648/2730の拒否root、2737/2783のSDK/保留物、他担当は変更/削除しない。
 
+### 共有ToDoの容量上限と保存の修復
+
+review3272と親2642への結果CAS保存は成功/各marker1件を読戻し確認。その後、自分2766へのcheckpoint全文のCAS保存だけが `todo_store_too_large: shared ToDo exceeds 67108864 bytes (64 MiB)` でexit1となった。直後の原台帳は67,080,256bytesで、更新後の本文・履歴が上限を超える条件だった。自動承認の拒否ではない。全原資料と本文は作業branchへcommit/push済みのまま保持し、2766のnoteを記録参照と次の手の短い日本語にして正規CLIで1回保存し直すとexit0/全文一致。その後の正規wait2766 --on3299も成功し、原台帳のstatus=wait/wait_on=[3299]、親2642のwait_on=[2765,2766]を読戻し確認。台帳の直接書換え、上限変更、他担当や既存履歴の削除、同じ失敗の反復はしていない。原stderrと各note配送receiptはこのworktreeのignored `note-*-144040.*.private.json` / `notes-144040-readback.private.json` に保持する。本文・原履歴を失わず、自分の参照だけを短くした。
 ### 再レビュー3299と次の一手
 
 修正の固定f1c→7d6/tree7b0を、元3272のMust修正・付随差分だけの有限読取3299へ通常add --spec（claude-sonnet-5-5/max）で登録。TODO-2766-DEADLINE-REVIEW-SPEC.mdと保存specの全文一致/dispatchableを確認。受付時はjobs空で、再レビュー成功ではない。子Codexを直接起動していない。

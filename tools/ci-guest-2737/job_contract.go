@@ -2,7 +2,6 @@ package main
 
 import (
 	sourcepacket "cc/ci-source-2737"
-	"cc/product-ci/normalci"
 	"errors"
 	"strconv"
 	"strings"
@@ -21,10 +20,12 @@ type linuxJobPlan struct {
 }
 
 func validSourcePin(p sourcepacket.Pin) bool {
-	return len(p.HeadSHA) == 40 && strings.Trim(p.HeadSHA, "0123456789abcdef") == "" && len(p.TreeSHA) == 40 && strings.Trim(p.TreeSHA, "0123456789abcdef") == "" && validHash(p.WorkflowSHA256)
+	_, ok := p.Profile()
+	return ok && len(p.HeadSHA) == 40 && strings.Trim(p.HeadSHA, "0123456789abcdef") == "" && len(p.TreeSHA) == 40 && strings.Trim(p.TreeSHA, "0123456789abcdef") == "" && validHash(p.WorkflowSHA256)
 }
 func validLinuxJob(p linuxJobPlan, expected sourcepacket.Pin, instance string) bool {
-	if !validSourcePin(expected) || p.Source != expected || p.RunID < 1 || p.JobID < 1 || p.RunnerID != 0 || p.Attempt < 1 || p.Jobs < 1 || p.Jobs > 10 || p.Threads < 1 || p.Threads > 10 || p.Name != "todo2737-"+instance || p.Label != normalci.RuntimeLabel(p.Role, p.RunID) || (p.Role != "verify" && p.Role != "ci-gate") || len(p.Inputs) != 0 {
+	policy, ok := jobPolicy(p.Source, p.Role)
+	if !ok || policy.OS != "Linux" || !validSourcePin(expected) || p.Source != expected || p.RunID < 1 || p.JobID < 1 || p.RunnerID != 0 || p.Attempt < 1 || p.Jobs < 1 || p.Jobs > 10 || p.Threads < 1 || p.Threads > 10 || p.Name != "todo2737-"+instance || p.Label != jobLabel(p.Source, p.Role, p.RunID, p.Attempt) || len(p.Inputs) != 0 {
 		return false
 	}
 	// The pinned original workflow declares no workflow_dispatch inputs. Its
@@ -61,19 +62,25 @@ func validateJobContext(p linuxJobPlan, c jobHookContext) error {
 }
 
 func jobContextFailure(p linuxJobPlan, c jobHookContext) string {
+	profile, ok := p.Source.Profile()
+	policy, roleOK := jobPolicy(p.Source, p.Role)
+	if !ok || !roleOK {
+		return "context_repository"
+	}
+	event, ref := jobEventRef(p.Source)
 	for _, check := range []struct {
 		code  string
 		valid bool
 	}{
 		{"diagnostic_only", c.Diagnostic == nil},
-		{"context_repository", c.Repository == "AutoDevJapan/GoDD-MCP-Alpha"},
+		{"context_repository", c.Repository == profile.Repository},
 		{"context_sha", c.SHA == p.Source.HeadSHA},
 		{"context_workflow_sha", c.WorkflowSHA == p.Source.HeadSHA},
-		{"context_ref", c.Ref == "refs/heads/"+sourcepacket.HeadRef},
-		{"context_event", c.Event == "workflow_dispatch"},
+		{"context_ref", c.Ref == ref},
+		{"context_event", c.Event == event},
 		{"context_run", c.RunID == strconv.FormatInt(p.RunID, 10)},
 		{"context_attempt", c.Attempt == strconv.Itoa(p.Attempt)},
-		{"context_job", c.Job == p.Role},
+		{"context_job", c.Job == policy.ID},
 		{"context_runner", c.Name == p.Name},
 	} {
 		if !check.valid {

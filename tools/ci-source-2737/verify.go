@@ -86,6 +86,13 @@ func VerifyCheckout(ctx context.Context, pin Pin, entries []TreeEntry, root stri
 			return Receipt{}, fixedErr()
 		}
 	}
+	// Inspect the anchored commit payload and its parent order explicitly.
+	// A PR candidate and its two-parent execution merge are distinct identities.
+	stage = "commit-object"
+	payload, e := git(nil, "cat-file", "commit", pin.HeadSHA)
+	if e != nil || gitID("commit", payload) != pin.HeadSHA || commitTreeID(payload) != pin.TreeSHA || !mergeParentsMatch(pin, payload) {
+		return Receipt{}, fixedErr()
+	}
 	stage = "index"
 	index, e := git(nil, "write-tree")
 	if e != nil || strings.TrimSpace(string(index)) != pin.TreeSHA {

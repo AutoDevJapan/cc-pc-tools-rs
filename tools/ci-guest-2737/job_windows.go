@@ -3,6 +3,7 @@ package main
 import (
 	sourcepacket "cc/ci-source-2737"
 	"cc/product-ci/normalci"
+	"cc/product-ci/pressci"
 	"context"
 	"encoding/json"
 	"errors"
@@ -34,8 +35,11 @@ func readJobRequest(path string) (q linuxJobRequest, e error) {
 	defer f.Close()
 	d := json.NewDecoder(io.LimitReader(f, 32769))
 	d.DisallowUnknownFields()
-	if d.Decode(&q) != nil || d.Decode(new(any)) != io.EOF || !validSourcePin(q.Source) || q.RunID < 1 || q.Attempt < 1 || (q.Role != "verify" && q.Role != "ci-gate" && q.Role != "windows-native-check") || !normalci.ValidLease(q.RouteLease) || len(q.Inputs) != 0 {
+	if d.Decode(&q) != nil || d.Decode(new(any)) != io.EOF || !validSourcePin(q.Source) || q.RunID < 1 || q.Attempt < 1 || !normalci.ValidLease(q.RouteLease) || len(q.Inputs) != 0 {
 		return q, errors.New("live request rejected")
+	}
+	if _, ok := jobPolicy(q.Source, q.Role); !ok {
+		return q, errors.New("live request role rejected")
 	}
 	return q, nil
 }
@@ -54,8 +58,12 @@ func bindOfficialJob(ctx context.Context, root string, q linuxJobRequest, runner
 		RunnerID          int64
 		RunnerName        string
 	}{}
-	pin.Source.ID = 1154066087
-	pin.Source.PR = 3613
+	profile, ok := q.Source.Profile()
+	if !ok {
+		return b, errors.New("source profile rejected")
+	}
+	pin.Source.ID = profile.RepoID
+	pin.Source.PR = profile.PR
 	pin.Source.SHA = q.Source.HeadSHA
 	pin.Tree = q.Source.TreeSHA
 	pin.WorkflowSHA = q.Source.WorkflowSHA256
@@ -71,9 +79,14 @@ func bindOfficialJob(ctx context.Context, root string, q linuxJobRequest, runner
 	// Both the CLI and this controller link the SAME existing read-only policy.
 	// There is no second executable, request-selected path or process environment.
 	p := normalci.Pin{Source: normalci.Candidate{ID: pin.Source.ID, PR: pin.Source.PR, SHA: pin.Source.SHA}, Tree: pin.Tree, WorkflowSHA: pin.WorkflowSHA, RunID: q.RunID, Attempt: q.Attempt, Role: q.Role, RunnerID: runnerID, RunnerName: name, RouteLease: q.RouteLease}
-	b, e = normalci.Plan(ctx, p, func(ctx context.Context, endpoint string, out any) error {
+	read := func(ctx context.Context, endpoint string, out any) error {
 		return runnerAPI(ctx, "GET", endpoint, nil, out)
-	})
+	}
+	if q.Source.Product == sourcepacket.PressProduct {
+		b, e = pressci.Plan(ctx, pressci.Pin{Source: q.Source, RunID: q.RunID, Attempt: q.Attempt, Role: q.Role, RouteLease: q.RouteLease, RunnerID: runnerID, RunnerName: name}, read)
+	} else {
+		b, e = normalci.Plan(ctx, p, read)
+	}
 	if e != nil {
 		return b, fmt.Errorf("official job admission failed: %w", e)
 	}
@@ -83,16 +96,9 @@ func bindOfficialJob(ctx context.Context, root string, q linuxJobRequest, runner
 	return b, nil
 }
 func validOfficialBinding(q linuxJobRequest, b jobBinding) bool {
-	timeout := 30
-	osName := "Linux"
-	if q.Role == "ci-gate" {
-		timeout = 5
-	} else if q.Role == "windows-native-check" {
-		timeout, osName = 20, "Windows"
-	} else if q.Role != "verify" {
-		return false
-	}
-	return b.RepoID == 1154066087 && b.PR == 3613 && b.RunID == q.RunID && b.Attempt == q.Attempt && b.JobID > 0 && b.SHA == q.Source.HeadSHA && b.Tree == q.Source.TreeSHA && b.WorkflowSHA == q.Source.WorkflowSHA256 && b.Role == q.Role && b.OS == osName && b.Label == normalci.RuntimeLabel(q.Role, q.RunID) && b.TimeoutMinutes == timeout && b.JobName != ""
+	profile, ok := q.Source.Profile()
+	policy, roleOK := jobPolicy(q.Source, q.Role)
+	return ok && roleOK && b.RepoID == profile.RepoID && b.PR == profile.PR && b.RunID == q.RunID && b.Attempt == q.Attempt && b.JobID > 0 && b.SHA == q.Source.HeadSHA && b.Tree == q.Source.TreeSHA && b.WorkflowSHA == q.Source.WorkflowSHA256 && b.Role == q.Role && b.OS == policy.OS && b.Label == jobLabel(q.Source, q.Role, q.RunID, q.Attempt) && b.TimeoutMinutes == policy.TimeoutMinutes && b.JobName != ""
 }
 func sendLiveFrame(c net.Conn, v any) error {
 	b, e := json.Marshal(v)
@@ -108,10 +114,18 @@ func sendLiveFrame(c net.Conn, v any) error {
 	return writeBlob(c, b)
 }
 func checkPhysicalProof(p sourcepacket.Receipt, q linuxJobRequest) bool {
-	return p.RepoID == 1154066087 && p.PR == 3613 && p.HeadSHA == q.Source.HeadSHA && p.TreeSHA == q.Source.TreeSHA && p.PhysicalBlobsVerified && p.BlobCount > 0
+	profile, ok := q.Source.Profile()
+	return ok && p.RepoID == profile.RepoID && p.PR == profile.PR && p.HeadSHA == q.Source.HeadSHA && p.TreeSHA == q.Source.TreeSHA && p.PhysicalBlobsVerified && p.BlobCount > 0
 }
 func clearOwnedRegistration(ctx context.Context, name, label string, id int64) error {
-	list, e := originalRunners(ctx)
+	return clearOwnedRegistrationFor(ctx, sourcepacket.Pin{}, name, label, id)
+}
+func clearOwnedRegistrationFor(ctx context.Context, pin sourcepacket.Pin, name, label string, id int64) error {
+	profile, ok := pin.Profile()
+	if !ok {
+		return errors.New("registration profile rejected")
+	}
+	list, e := originalRunnersFor(ctx, pin)
 	if e != nil {
 		return e
 	}
@@ -120,12 +134,12 @@ func clearOwnedRegistration(ctx context.Context, name, label string, id int64) e
 			if (id > 0 && r.ID != id) || len(r.Labels) != 1 || r.Labels[0].Name != label {
 				return errors.New("live registration ownership changed")
 			}
-			if e = runnerAPI(ctx, "DELETE", fmt.Sprintf("repos/%s/actions/runners/%d", originalRepo, r.ID), nil, nil); e != nil {
+			if e = runnerAPI(ctx, "DELETE", fmt.Sprintf("repos/%s/actions/runners/%d", profile.Repository, r.ID), nil, nil); e != nil {
 				return e
 			}
 		}
 	}
-	list, e = originalRunners(ctx)
+	list, e = originalRunnersFor(ctx, pin)
 	if e != nil {
 		return e
 	}
@@ -142,9 +156,11 @@ func executeLinuxJob(ctx context.Context, root, sdkRoot, helper, requestFile str
 	if e != nil {
 		return e
 	}
-	if q.Role == "windows-native-check" {
+	policy, ok := jobPolicy(q.Source, q.Role)
+	if !ok || policy.OS != "Linux" {
 		return errors.New("Windows job requires Windows guest backend")
 	}
+	profile, _ := q.Source.Profile()
 	executor, e := linkedExecutorIdentity()
 	if e != nil {
 		return e
@@ -183,7 +199,7 @@ func executeLinuxJob(ctx context.Context, root, sdkRoot, helper, requestFile str
 	var conn net.Conn
 	var runnerID int64
 	name := "todo2737-" + instance
-	label := normalci.RuntimeLabel(q.Role, q.RunID)
+	label := jobLabel(q.Source, q.Role, q.RunID, q.Attempt)
 	defer func() {
 		if conn != nil {
 			_ = conn.Close()
@@ -196,7 +212,7 @@ func executeLinuxJob(ctx context.Context, root, sdkRoot, helper, requestFile str
 			vmGone = ce == nil
 		}
 		if mayExist && vmGone {
-			ce := clearOwnedRegistration(clean, name, label, runnerID)
+			ce := clearOwnedRegistrationFor(clean, q.Source, name, label, runnerID)
 			ret = errors.Join(ret, ce)
 			registrationGone = ce == nil
 		}
@@ -270,7 +286,7 @@ func executeLinuxJob(ctx context.Context, root, sdkRoot, helper, requestFile str
 	if e != nil || again != binding {
 		return errors.New("queued job changed before registration")
 	}
-	list, e := originalRunners(ctx)
+	list, e := originalRunnersFor(ctx, q.Source)
 	if e != nil {
 		return e
 	}
@@ -279,11 +295,11 @@ func executeLinuxJob(ctx context.Context, root, sdkRoot, helper, requestFile str
 			return errors.New("live runner nonce already exists")
 		}
 	}
-	if e = record(attempt, "registration-intent.private.json", map[string]any{"repo_id": 1154066087, "name": name, "label": label, "job_id": binding.JobID}); e != nil {
+	if e = record(attempt, "registration-intent.private.json", map[string]any{"repo_id": profile.RepoID, "name": name, "label": label, "job_id": binding.JobID}); e != nil {
 		return e
 	}
 	var token struct{ Token string }
-	if e = runnerAPI(ctx, "POST", "repos/"+originalRepo+"/actions/runners/registration-token", struct{}{}, &token); e != nil {
+	if e = runnerAPI(ctx, "POST", "repos/"+profile.Repository+"/actions/runners/registration-token", struct{}{}, &token); e != nil {
 		return e
 	}
 	if token.Token == "" {
@@ -300,7 +316,7 @@ func executeLinuxJob(ctx context.Context, root, sdkRoot, helper, requestFile str
 	if decoder.Decode(&event) != nil || event.ID != instance || event.Stage != "configured" || !event.Configured {
 		return errors.New("live configuration failed")
 	}
-	list, e = originalRunners(ctx)
+	list, e = originalRunnersFor(ctx, q.Source)
 	if e != nil {
 		return e
 	}
@@ -432,17 +448,21 @@ func awaitOfficialCompletion(ctx context.Context, root string, q linuxJobRequest
 				Status, Conclusion string
 			}
 		}
-		if runnerAPI(ctx, "GET", fmt.Sprintf("repos/%s/actions/jobs/%d", originalRepo, b.JobID), nil, &j) != nil {
+		profile, ok := q.Source.Profile()
+		if !ok {
+			return errors.New("official completion profile rejected")
+		}
+		if runnerAPI(ctx, "GET", fmt.Sprintf("repos/%s/actions/jobs/%d", profile.Repository, b.JobID), nil, &j) != nil {
 			return errors.New("official completion unavailable")
 		}
-		if j.ID != b.JobID || j.RunID != q.RunID || j.RunnerID != id || j.RunnerName != name || j.Name != b.JobName || j.HeadSHA != q.Source.HeadSHA {
+		if j.ID != b.JobID || j.RunID != q.RunID || j.RunnerID != id || j.RunnerName != name || j.Name != b.JobName || j.HeadSHA != q.Source.CandidateSHA() {
 			return errors.New("official completion identity rejected")
 		}
 		if j.Status == "completed" {
 			if e := record(root, "official-job.private.json", j); e != nil {
 				return e
 			}
-			if e := preserveOfficialJobLog(ctx, root, b.JobID); e != nil {
+			if e := preserveOfficialJobLogFor(ctx, q.Source, root, b.JobID); e != nil {
 				return e
 			}
 			if j.Conclusion != "success" {
@@ -468,6 +488,13 @@ func (w *boundedLogFile) Write(b []byte) (int, error) {
 	return n, e
 }
 func preserveOfficialJobLog(ctx context.Context, root string, id int64) error {
+	return preserveOfficialJobLogFor(ctx, sourcepacket.Pin{}, root, id)
+}
+func preserveOfficialJobLogFor(ctx context.Context, pin sourcepacket.Pin, root string, id int64) error {
+	profile, ok := pin.Profile()
+	if !ok {
+		return errors.New("official log profile rejected")
+	}
 	// The CLI follows GitHub's signed redirect internally. Neither URL nor log
 	// body reaches stdout/model. Partial bytes and the initial failure are kept.
 	file := filepath.Join(root, "official-job-log.private.bin")
@@ -475,7 +502,7 @@ func preserveOfficialJobLog(ctx context.Context, root string, id int64) error {
 	if e != nil {
 		return e
 	}
-	c := command(ctx, `D:\CC\Tools\codex-jobs\gh_gate.exe`, "api", "--allow-escape-sequences", fmt.Sprintf("repos/%s/actions/jobs/%d/logs", originalRepo, id))
+	c := command(ctx, `D:\CC\Tools\codex-jobs\gh_gate.exe`, "api", "--allow-escape-sequences", fmt.Sprintf("repos/%s/actions/jobs/%d/logs", profile.Repository, id))
 	c.Stderr = io.Discard
 	c.Stdout = &boundedLogFile{f: f, remaining: 512 << 20}
 	runErr := c.Run()

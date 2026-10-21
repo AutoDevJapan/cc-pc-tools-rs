@@ -45,7 +45,7 @@ func (w *windowsController) ClockObserved(ctx context.Context, p wr.Plan, receip
 }
 
 func (w *windowsController) valid(p wr.Plan) bool {
-	return p.Validate() == nil && p.Source == w.seed.Plan.Source && p.Instance == w.seed.Plan.Instance && p.RunID == w.seed.Plan.RunID && p.JobID == w.seed.Plan.JobID && p.Attempt == w.seed.Plan.Attempt && p.Jobs == w.seed.Plan.Jobs && p.Threads == w.seed.Plan.Threads
+	return p.Validate() == nil && p.Source == w.seed.Plan.Source && p.Instance == w.seed.Plan.Instance && p.RunID == w.seed.Plan.RunID && p.JobID == w.seed.Plan.JobID && p.Attempt == w.seed.Plan.Attempt && p.Jobs == w.seed.Plan.Jobs && p.Threads == w.seed.Plan.Threads && p.Role == w.seed.Plan.Role && p.Label == w.seed.Plan.Label && p.Name == w.seed.Plan.Name
 }
 func (w *windowsController) Queued(ctx context.Context, p wr.Plan) (jobBinding, error) {
 	if !w.valid(p) {
@@ -73,13 +73,17 @@ func (w *windowsController) Token(ctx context.Context, p wr.Plan) ([]byte, error
 			return nil, errors.New("Windows runner nonce exists")
 		}
 	}
-	if e = w.save("registration-intent.private.json", map[string]any{"repo_id": 1154066087, "name": p.Name, "label": p.Label, "job_id": p.JobID}); e != nil {
+	profile, ok := p.Source.Profile()
+	if !ok {
+		return nil, errors.New("registration profile rejected")
+	}
+	if e = w.save("registration-intent.private.json", map[string]any{"repo_id": profile.RepoID, "name": p.Name, "label": p.Label, "job_id": p.JobID}); e != nil {
 		return nil, e
 	}
 	// Any lost configuration reply must leave a recoverable nonce intent.
 	w.mayExist = true
 	var token struct{ Token string }
-	if e = w.api(ctx, "POST", "repos/"+originalRepo+"/actions/runners/registration-token", struct{}{}, &token); e != nil {
+	if e = w.api(ctx, "POST", "repos/"+profile.Repository+"/actions/runners/registration-token", struct{}{}, &token); e != nil {
 		return nil, e
 	}
 	if len(token.Token) == 0 || len(token.Token) > 4096 {
@@ -158,7 +162,8 @@ func executeWindowsJob(ctx context.Context, root, helper, file string, jobs, thr
 	if e != nil {
 		return e
 	}
-	if q.Role != wr.Role {
+	policy, ok := jobPolicy(q.Source, q.Role)
+	if !ok || policy.OS != "Windows" {
 		return errors.New("Windows role rejected")
 	}
 	executor, e := linkedExecutorIdentity()
@@ -194,7 +199,7 @@ func executeWindowsJob(ctx context.Context, root, helper, file string, jobs, thr
 	w := &windowsController{root: attempt, q: q}
 	w.save = func(name string, v any) error { return record(attempt, name, v) }
 	w.api = runnerAPI
-	w.list = originalRunners
+	w.list = func(c context.Context) ([]originalRunner, error) { return originalRunnersFor(c, q.Source) }
 	w.bind = func(c context.Context, id int64, name string) (jobBinding, error) {
 		return bindOfficialJob(c, attempt, q, id, name)
 	}
@@ -269,7 +274,7 @@ func finishWindowsCleanup(ctx context.Context, ret error, attempt, intentPath, i
 	}
 	registrationGone := !w.mayExist
 	if w.mayExist && vmGone {
-		ce := clearOwnedRegistration(ctx, "todo2737-"+instance, normalWindowsLabel(w.q.RunID), w.runnerID)
+		ce := clearOwnedRegistrationFor(ctx, w.q.Source, "todo2737-"+instance, jobLabel(w.q.Source, w.q.Role, w.q.RunID, w.q.Attempt), w.runnerID)
 		ret = errors.Join(ret, ce)
 		registrationGone = ce == nil
 	}

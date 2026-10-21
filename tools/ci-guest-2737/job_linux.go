@@ -124,7 +124,7 @@ func (o *localJobOwner) handle(c net.Conn) {
 	}
 	ctx, cancel := context.WithTimeout(o.wire.ctx, 40*time.Second)
 	defer cancel()
-	proof, e := sourcepacket.VerifyCheckout(ctx, o.plan.Source, o.entries, liveWorkspace)
+	proof, e := sourcepacket.VerifyCheckout(ctx, o.plan.Source, o.entries, liveWorkspaceFor(o.plan.Source))
 	if e != nil {
 		d := &hookDiagnostic{Version: 1, Stage: q.Stage, Code: sourceFailureCode(e), Metadata: sourcepacket.MetadataFailure(e)}
 		if o.diagnostic == nil && validHookDiagnostic(d) {
@@ -166,9 +166,9 @@ func serveLiveJob(conn net.Conn, input io.Reader, id string, expected sourcepack
 		fail("job_source_packet_rejected")
 		return
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 40*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), jobGuestTimeout(plan.Source, plan.Role))
 	defer cancel()
-	proof, e := sourcepacket.Materialize(ctx, p, expected, liveWorkspace)
+	proof, e := sourcepacket.Materialize(ctx, p, expected, liveWorkspaceFor(expected))
 	if e != nil {
 		fail("job_source_materialization_failed")
 		return
@@ -307,9 +307,13 @@ func serveLiveJob(conn net.Conn, input io.Reader, id string, expected sourcepack
 	_ = writeLiveEvent(conn, out, liveJobEvent{ID: id, Stage: "runner-exited", Exit: &code, RustProbe: terminalProbe})
 }
 func configureLiveRunner(ctx context.Context, p linuxJobPlan, token string) error {
+	profile, ok := p.Source.Profile()
+	if !ok {
+		return errors.New("runner source profile rejected")
+	}
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 	defer cancel()
-	c := exec.CommandContext(ctx, "/opt/ci2737-runner/config.sh", "--unattended", "--url", "https://github.com/AutoDevJapan/GoDD-MCP-Alpha", "--name", p.Name, "--labels", p.Label, "--no-default-labels", "--work", "/home/ci2737/work", "--ephemeral", "--disableupdate")
+	c := exec.CommandContext(ctx, "/opt/ci2737-runner/config.sh", "--unattended", "--url", "https://github.com/"+profile.Repository, "--name", p.Name, "--labels", p.Label, "--no-default-labels", "--work", "/home/ci2737/work", "--ephemeral", "--disableupdate")
 	c.Dir = "/opt/ci2737-runner"
 	c.SysProcAttr = &syscall.SysProcAttr{Setpgid: true, Credential: &syscall.Credential{Uid: 1001, Gid: 1001}}
 	c.Env = []string{"HOME=/home/ci2737", "LANG=C.UTF-8", "PATH=/usr/local/bin:/usr/bin:/bin", "ACTIONS_RUNNER_INPUT_TOKEN=" + token}

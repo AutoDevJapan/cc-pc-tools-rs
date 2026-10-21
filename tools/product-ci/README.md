@@ -8,7 +8,8 @@ repository1386702183 / Draft PR175 / fixed b2b6d47 head, dac2116 tree,
 workflows in RAM. It verifies each complete original Git blob and reports
 only control metadata and SHA256: local-checks ten jobs (including all four
 integration shards), HTTPS both OS jobs, and the Windows junction job.
-The original events, matrix axes and values, OS routes and timeouts are kept.
+The outline reports original event keys and dispatch availability, matrix axes
+and values, OS routes and timeouts without changing the source bytes.
 `local-gates` has no explicit timeout, so its original default is 360 minutes.
 
 This command has no API mutation, runner admission, source execution, route
@@ -25,6 +26,34 @@ and the [original timeout default](https://docs.github.com/en/actions/reference/
 The existing sourcepacket/guest/runner implementation is reused, not copied
 into another VM or SDK tool. Normal CodeQL and the separate alert check remain
 outside this read-only preparation.
+
+The finite `pressci.Plan` now distinguishes the original candidate from the
+actual PR execution merge. It verifies the live two-parent source identity,
+nonce-owned route switch, original immutable workflow blobs, and candidate
+tree equality outside the three route blobs. All three candidate workflows
+must be exactly the original bytes with only their runs-on scalar tokens
+replaced. The selected execution workflow must match those same bytes. Its
+official run, event, role, matrix instance, runner, SHA and attempt are bound
+before registration and at both hooks. Linux/Windows controllers and the
+existing Windows backend share those policies, canonical Cargo admission,
+fixed source paths, private proof, cancellation and cleanup. Labels include
+the role, official run and attempt; MCP α defaults keep their original labels.
+
+The route expressions retain the original event declarations: local-checks
+selects the finite branch's dispatch; the other two select only Draft PR175.
+There is no new event, checkout override or changed permission/step/gate.
+`PrepareRoutes` only returns bytes in RAM; no publication or dispatch command
+has been added by this delta. Current main has changed local-checks separately;
+do not replace that workflow with the candidate's old ten-job workflow or
+assume that changing all routes will merge without conflicts. Publication and
+actual guest acceptance remain pending the fixed delta review and source
+reconciliation. These implementations and synthetic tests are not official CI.
+
+`press-ci-source-inspect <pin.json>` verifies the actual source packet in RAM
+and emits only numeric/hash/count expectations, with physical-checkout,
+runner-admission and official-success flags false. It cannot materialize source
+on the host. This was exercised against the pinned Press PR merge and proves
+archive Git identities only. Peer review and real guest/job proof are separate.
 
 This Go module is independent of `pc-ci` and `linux-runner-bridge`. It neither
 changes their admission policy nor registers old product directories. Four

@@ -66,6 +66,13 @@ func (b *limitedCapture) Write(p []byte) (int, error) {
 	return b.data.Write(p)
 }
 func verifyRunnerRepository(ctx context.Context) error {
+	return verifyRunnerRepositoryFor(ctx, sourcepacket.Pin{})
+}
+func verifyRunnerRepositoryFor(ctx context.Context, pin sourcepacket.Pin) error {
+	profile, ok := pin.Profile()
+	if !ok {
+		return errors.New("runner repository profile rejected")
+	}
 	var r struct {
 		ID            int64
 		FullName      string `json:"full_name"`
@@ -73,10 +80,10 @@ func verifyRunnerRepository(ctx context.Context) error {
 		Owner         struct{ Login string }
 		Permissions   struct{ Admin bool }
 	}
-	if e := runnerAPI(ctx, "GET", "repositories/1154066087", nil, &r); e != nil {
+	if e := runnerAPI(ctx, "GET", fmt.Sprintf("repositories/%d", profile.RepoID), nil, &r); e != nil {
 		return fmt.Errorf("runner repository lookup failed: %w", e)
 	}
-	if r.ID != 1154066087 || r.FullName != originalRepo || r.Owner.Login != "AutoDevJapan" || !r.Private || r.Fork || !r.Permissions.Admin {
+	if r.ID != profile.RepoID || r.FullName != profile.Repository || r.Owner.Login != "AutoDevJapan" || !r.Private || r.Fork || !r.Permissions.Admin {
 		return errors.New("runner repository identity rejected")
 	}
 	return nil
@@ -90,7 +97,14 @@ type originalRunner struct {
 }
 
 func originalRunners(ctx context.Context) ([]originalRunner, error) {
-	if e := verifyRunnerRepository(ctx); e != nil {
+	return originalRunnersFor(ctx, sourcepacket.Pin{})
+}
+func originalRunnersFor(ctx context.Context, pin sourcepacket.Pin) ([]originalRunner, error) {
+	profile, ok := pin.Profile()
+	if !ok {
+		return nil, errors.New("runner inventory profile rejected")
+	}
+	if e := verifyRunnerRepositoryFor(ctx, pin); e != nil {
 		return nil, e
 	}
 	var all []originalRunner
@@ -99,7 +113,7 @@ func originalRunners(ctx context.Context) ([]originalRunner, error) {
 			Total   int `json:"total_count"`
 			Runners []originalRunner
 		}
-		if e := runnerAPI(ctx, "GET", fmt.Sprintf("repos/%s/actions/runners?per_page=100&page=%d", originalRepo, page), nil, &b); e != nil {
+		if e := runnerAPI(ctx, "GET", fmt.Sprintf("repos/%s/actions/runners?per_page=100&page=%d", profile.Repository, page), nil, &b); e != nil {
 			return nil, e
 		}
 		if b.Total > 1000 {

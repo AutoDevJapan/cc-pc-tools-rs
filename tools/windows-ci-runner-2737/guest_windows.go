@@ -33,6 +33,14 @@ const workerProfileRoot = runnerRoot + `\_profile`
 const workerTargetRoot = runnerRoot + `\_target`
 const workerGitRoot = `C:\ProgramData\AutoDevJapan\windows-ci-git-2737`
 const sourceRoot = runnerRoot + `\_work\GoDD-MCP-Alpha\GoDD-MCP-Alpha`
+
+func sourceRootFor(pin sourcepacket.Pin) string {
+	if pin.Product == sourcepacket.PressProduct {
+		return runnerRoot + `\_work\GoDD-Press\GoDD-Press`
+	}
+	return sourceRoot
+}
+
 const hookRoot = sdkRoot + `\runner-hooks`
 const planPath = agentRoot + `\runner-seed.json`
 const helperPath = agentRoot + `\windows-ci-runner-agent.exe`
@@ -128,7 +136,7 @@ func (o *windowsOps) prepare(ctx context.Context, p sourcepacket.Packet) (source
 		return sourcepacket.Receipt{}, e
 	}
 	o.entries = append([]sourcepacket.TreeEntry(nil), p.TreeEntries...)
-	proof, e := sourcepacket.Materialize(ctx, p, o.plan.Source, sourceRoot)
+	proof, e := sourcepacket.Materialize(ctx, p, o.plan.Source, sourceRootFor(o.plan.Source))
 	if e != nil {
 		return proof, e
 	}
@@ -139,7 +147,7 @@ func (o *windowsOps) prepare(ctx context.Context, p sourcepacket.Packet) (source
 	if e != nil {
 		return sourcepacket.Receipt{}, e
 	}
-	if e = prepareRunnerAccess(ctx, o.env); e != nil {
+	if e = prepareRunnerAccessFor(ctx, o.env, o.plan.Source); e != nil {
 		return sourcepacket.Receipt{}, e
 	}
 	return proof, nil
@@ -238,7 +246,11 @@ func (o *windowsOps) configure(ctx context.Context, token []byte) error {
 	// Stock CommandSettings consumes and removes this secret environment input.
 	// Neither the process command line nor our log files contain the token.
 	env := append(runnerEnvironment(o.env), "ACTIONS_RUNNER_INPUT_TOKEN="+string(token))
-	line := `"C:\Windows\System32\cmd.exe" /d /s /c ""` + runnerRoot + `\config.cmd" --unattended --ephemeral --no-default-labels --disableupdate --url https://github.com/` + Repository + ` --name ` + o.plan.Name + ` --labels ` + o.plan.Label + ` --work _work"`
+	profile, ok := o.plan.Source.Profile()
+	if !ok {
+		return errors.New("runner repository profile rejected")
+	}
+	line := `"C:\Windows\System32\cmd.exe" /d /s /c ""` + runnerRoot + `\config.cmd" --unattended --ephemeral --no-default-labels --disableupdate --url https://github.com/` + profile.Repository + ` --name ` + o.plan.Name + ` --labels ` + o.plan.Label + ` --work _work"`
 	r := withDiagnosticBound(ctx, func(ctx context.Context) processResult {
 		return runRunnerTree(ctx, `C:\Windows\System32\cmd.exe`, line, runnerRoot, env, "", o.runnerToken)
 	})
@@ -253,7 +265,7 @@ func (o *windowsOps) configure(ctx context.Context, token []byte) error {
 func (o *windowsOps) listen(ctx context.Context, id int64) <-chan processResult {
 	done := make(chan processResult, 1)
 	go func() {
-		ctx, cancel := context.WithTimeout(ctx, 23*time.Minute)
+		ctx, cancel := context.WithTimeout(ctx, time.Duration(o.plan.timeoutMinutes()+3)*time.Minute)
 		defer cancel()
 		env := append(runnerEnvironment(o.env), "CC2737_HOOK_ENDPOINT="+o.listener.Addr().String(), "CC2737_HOOK_CAPABILITY="+o.capability,
 			"ACTIONS_RUNNER_HOOK_JOB_STARTED="+hookRoot+`\start.ps1`, "ACTIONS_RUNNER_HOOK_JOB_COMPLETED="+hookRoot+`\complete.ps1`)
@@ -267,7 +279,7 @@ func (o *windowsOps) listen(ctx context.Context, id int64) <-chan processResult 
 	return done
 }
 func (o *windowsOps) proof(ctx context.Context) (sourcepacket.Receipt, error) {
-	return sourcepacket.VerifyCheckout(ctx, o.plan.Source, o.entries, sourceRoot)
+	return sourcepacket.VerifyCheckout(ctx, o.plan.Source, o.entries, sourceRootFor(o.plan.Source))
 }
 func (o *windowsOps) hooks() <-chan hookCall { return o.hookCalls }
 func (o *windowsOps) close() error {

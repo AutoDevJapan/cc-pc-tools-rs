@@ -46,8 +46,13 @@ var hex64 = regexp.MustCompile(`^[0-9a-f]{64}$`)
 // Pin is the caller-selected revision identity. Repository, PR and ref identity
 // are fixed by this package; head/tree/workflow digest are explicitly pinned.
 type Pin struct {
-	Product        string `json:"product,omitempty"`
-	Workflow       string `json:"workflow,omitempty"`
+	Product  string `json:"product,omitempty"`
+	Workflow string `json:"workflow,omitempty"`
+	// Only the finite Press PR event may select its actual two-parent merge
+	// commit. HeadSHA remains the physical execution commit, never an alias for
+	// the PR head; these two extra pins bind the original candidate and main ref.
+	PullHeadSHA    string `json:"pull_head_sha,omitempty"`
+	MergeBaseSHA   string `json:"merge_base_sha,omitempty"`
 	HeadSHA        string `json:"head_sha"`
 	TreeSHA        string `json:"tree_sha"`
 	WorkflowSHA256 string `json:"workflow_sha256"`
@@ -82,9 +87,10 @@ type repo struct {
 	} `json:"permissions"`
 }
 type pull struct {
-	State string `json:"state"`
-	Draft bool   `json:"draft"`
-	Head  struct {
+	State          string `json:"state"`
+	Draft          bool   `json:"draft"`
+	MergeCommitSHA string `json:"merge_commit_sha"`
+	Head           struct {
 		SHA  string `json:"sha"`
 		Ref  string `json:"ref"`
 		Repo repo   `json:"repo"`
@@ -157,11 +163,17 @@ func Fetch(ctx context.Context, pin Pin) (result Packet, retErr error) {
 
 	var c commitResponse
 	stage = "commit"
-	if api(ctx, "repos/"+r.FullName+"/git/commits/"+pin.HeadSHA, &c) != nil || c.SHA != pin.HeadSHA || c.Tree.SHA != pin.TreeSHA {
+	if err:=api(ctx,"repos/"+r.FullName+"/git/commits/"+pin.HeadSHA,&c);err!=nil{
+		stage="commit_api_"+sourceAPICode(err)
+		return Packet{},fixedErr()
+	}
+	if c.SHA != pin.HeadSHA || c.Tree.SHA != pin.TreeSHA {
+		stage="commit_identity"
 		return Packet{}, fixedErr()
 	}
 	payload, err := originalPayload(c, pin.HeadSHA)
 	if err != nil {
+		stage="commit_payload"
 		return Packet{}, fixedErr()
 	}
 
@@ -234,15 +246,29 @@ func verifySourceIdentity(ctx context.Context, pin Pin, call func(context.Contex
 	if err := call(ctx, fmt.Sprintf("repos/%s/pulls/%d", r.FullName, profile.PR), &p); err != nil {
 		return repo{}, "pull_api_" + sourceAPICode(err), fixedErr()
 	}
-	if p.State != "open" || p.Head.SHA != pin.HeadSHA || p.Head.Ref != profile.HeadRef || p.Head.Repo.ID != profile.RepoID || p.Base.Repo.ID != profile.RepoID || p.Head.Repo.FullName != r.FullName || p.Base.Repo.FullName != r.FullName || p.Head.Repo.Fork || (profile.BaseSHA != "" && (!p.Draft || p.Base.SHA != profile.BaseSHA)) {
+	if p.State != "open" || p.Head.SHA != pin.CandidateSHA() || p.Head.Ref != profile.HeadRef || p.Head.Repo.ID != profile.RepoID || p.Base.Repo.ID != profile.RepoID || p.Head.Repo.FullName != r.FullName || p.Base.Repo.FullName != r.FullName || p.Head.Repo.Fork || (profile.BaseSHA != "" && (!p.Draft || p.Base.SHA != profile.BaseSHA || p.Base.Repo.Fork)) || (pin.PullHeadSHA != "" && p.MergeCommitSHA != pin.HeadSHA) {
 		return repo{}, "pull_identity", fixedErr()
 	}
 	var ref identityRef
 	if err := call(ctx, "repos/"+r.FullName+"/git/ref/heads/"+url.PathEscape(profile.HeadRef), &ref); err != nil {
 		return repo{}, "ref_api_" + sourceAPICode(err), fixedErr()
 	}
-	if ref.Object.SHA != pin.HeadSHA {
+	if ref.Object.SHA != pin.CandidateSHA() {
 		return repo{}, "ref_identity", fixedErr()
+	}
+	if pin.PullHeadSHA != "" {
+		for _, check := range []struct{ ref, sha, stage string }{
+			{"heads/main", pin.MergeBaseSHA, "merge_base"},
+			{"pull/175/merge", pin.HeadSHA, "merge_ref"},
+		} {
+			var actual identityRef
+			if err := call(ctx, "repos/"+r.FullName+"/git/ref/"+check.ref, &actual); err != nil {
+				return repo{}, check.stage + "_api_" + sourceAPICode(err), fixedErr()
+			}
+			if actual.Object.SHA != check.sha {
+				return repo{}, check.stage + "_identity", fixedErr()
+			}
+		}
 	}
 	return r, "", nil
 }
@@ -259,6 +285,22 @@ type identityRef struct {
 func originalPayload(c commitResponse, expected string) ([]byte, error) {
 	if c.Verification.Signature == "" && gitID("commit", []byte(c.Verification.Payload)) == expected {
 		return []byte(c.Verification.Payload), nil
+	}
+	// Signed API payloads preserve the original timezone and exact message
+	// bytes. Reinsert only their detached signature, accepting a candidate only
+	// if its real Git object ID equals the explicitly pinned execution commit.
+	// REST's normalized author dates cannot reconstruct arbitrary original zones.
+	if c.Verification.Signature != "" && len(c.Verification.Payload) > 0 {
+		header, body, ok := strings.Cut(c.Verification.Payload, "\n\n")
+		if ok {
+			for _, signature := range []string{c.Verification.Signature, strings.TrimSuffix(c.Verification.Signature, "\n"), strings.TrimRight(c.Verification.Signature, "\n")} {
+				gpg := "gpgsig " + strings.ReplaceAll(signature, "\n", "\n ")
+				candidate := []byte(header + "\n" + gpg + "\n\n" + body)
+				if gitID("commit", candidate) == expected {
+					return candidate, nil
+				}
+			}
+		}
 	}
 	a, e := time.Parse(time.RFC3339, c.Author.Date)
 	if e != nil {
@@ -422,7 +464,7 @@ func Decode(raw []byte, expectedPin Pin) (Packet, error) {
 	return p, nil
 }
 func validatePacket(p Packet) error {
-	if !validPin(p.Pin) || len(p.Archive) == 0 || len(p.Archive) > maxArchive || digest(p.Archive) != p.ArchiveSHA256 || len(p.CommitPayload) == 0 || gitID("commit", p.CommitPayload) != p.Pin.HeadSHA || commitTreeID(p.CommitPayload) != p.Pin.TreeSHA || len(p.TreeEntries) > maxFiles {
+	if !validPin(p.Pin) || len(p.Archive) == 0 || len(p.Archive) > maxArchive || digest(p.Archive) != p.ArchiveSHA256 || len(p.CommitPayload) == 0 || gitID("commit", p.CommitPayload) != p.Pin.HeadSHA || commitTreeID(p.CommitPayload) != p.Pin.TreeSHA || !mergeParentsMatch(p.Pin, p.CommitPayload) || len(p.TreeEntries) > maxFiles {
 		return fixedErr()
 	}
 	profile, _ := p.Pin.Profile()

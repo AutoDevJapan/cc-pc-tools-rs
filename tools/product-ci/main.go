@@ -5,6 +5,7 @@ package main
 import (
 	"archive/tar"
 	"bytes"
+	sourcepacket "cc/ci-source-2737"
 	"cc/product-ci/normalci"
 	"cc/product-ci/pressci"
 	"compress/gzip"
@@ -613,6 +614,36 @@ func main() {
 	ctx, cancel := context.WithTimeout(stopCtx, 30*time.Minute)
 	defer cancel()
 	var e error
+	if len(os.Args) == 3 && os.Args[1] == "press-ci-source-inspect" {
+		f, err := os.Open(os.Args[2])
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Press source request unavailable")
+			os.Exit(1)
+		}
+		d := json.NewDecoder(io.LimitReader(f, 8193))
+		d.DisallowUnknownFields()
+		var pin sourcepacket.Pin
+		err = d.Decode(&pin)
+		if err != nil {
+			err = errors.New("Press source request rejected")
+		}
+		if err == nil && d.Decode(new(any)) != io.EOF {
+			err = errors.New("Press source request rejected")
+		}
+		_ = f.Close()
+		var result pressci.SourceOutline
+		if err == nil {
+			result, err = pressci.InspectSource(ctx, pin)
+		}
+		if err == nil {
+			err = json.NewEncoder(os.Stdout).Encode(result)
+		}
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		return
+	}
 	if len(os.Args) == 2 && os.Args[1] == "press-ci-outline" {
 		var outline pressci.Outline
 		outline, e = pressci.InspectOriginal(ctx, get)
@@ -731,7 +762,7 @@ func main() {
 			}
 		}
 	} else {
-		e = errors.New("usage: product-ci inspect | normal-ci-plan <new-owned-dir> | codeql-bootstrap/codeql-revalidate <id> <new-owned-dir> <Linux-helper> | codeql-recover/codeql-finalize/codeql-restore <id> <owned-dir> | codeql-job/advanced-job <id> <run-id> <new-owned-dir> <Linux-helper> | secret-job <id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF> | node-contracts <id> <new-owned-dir> <image> | node-retry <id> <new-owned-dir> <image> <previous-log> | lifecycle-smoke <owned-dir> <image>")
+		e = errors.New("usage: product-ci inspect | press-ci-outline | press-ci-source-inspect <pin.json> | normal-ci-plan <new-owned-dir> | codeql-bootstrap/codeql-revalidate <id> <new-owned-dir> <Linux-helper> | codeql-recover/codeql-finalize/codeql-restore <id> <owned-dir> | codeql-job/advanced-job <id> <run-id> <new-owned-dir> <Linux-helper> | secret-job <id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF> | node-contracts <id> <new-owned-dir> <image> | node-retry <id> <new-owned-dir> <image> <previous-log> | lifecycle-smoke <owned-dir> <image>")
 	}
 	if e != nil {
 		fmt.Fprintln(os.Stderr, e)

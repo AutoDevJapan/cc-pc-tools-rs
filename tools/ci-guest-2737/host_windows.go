@@ -479,7 +479,7 @@ func main() {
 		}
 		return
 	}
-	ctx, stop := context.WithTimeout(context.Background(), 55*time.Minute)
+	ctx, stop := context.WithTimeout(context.Background(), hostJobTimeout(os.Args))
 	defer stop()
 	var e error
 	if len(os.Args) == 4 && os.Args[1] == "windows-serial" {

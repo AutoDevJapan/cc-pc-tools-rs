@@ -5,6 +5,7 @@ package windowsrunner
 import (
 	sourcepacket "cc/ci-source-2737"
 	"cc/product-ci/normalci"
+	"cc/product-ci/pressci"
 	"errors"
 	"strconv"
 	"strings"
@@ -36,8 +37,30 @@ type Seed struct {
 
 func validHex(s string, n int) bool { return len(s) == n && strings.Trim(s, "0123456789abcdef") == "" }
 func Label(runID int64) string      { return labelPrefix + strconv.FormatInt(runID, 10) }
+func (p Plan) policy() (sourcepacket.Profile, pressci.Job, string, bool) {
+	profile, ok := p.Source.Profile()
+	if !ok {
+		return profile, pressci.Job{}, "", false
+	}
+	if p.Source.Product == sourcepacket.PressProduct {
+		j, ok := pressci.RoleJob(p.Source.Workflow, p.Role)
+		if !ok || j.OS != "Windows" || p.Source.PullHeadSHA == "" {
+			return profile, j, "", false
+		}
+		return profile, j, pressci.RuntimeLabel(p.Source.Workflow, p.Role, p.RunID, p.Attempt), true
+	}
+	return profile, pressci.Job{ID: Role, OS: "Windows", TimeoutMinutes: 20}, Label(p.RunID), p.Role == Role
+}
+func (p Plan) timeoutMinutes() int {
+	_, j, _, ok := p.policy()
+	if !ok {
+		return 0
+	}
+	return j.TimeoutMinutes
+}
 func (p Plan) Validate() error {
-	if !validHex(p.Instance, 32) || !validHex(p.Source.HeadSHA, 40) || !validHex(p.Source.TreeSHA, 40) || !validHex(p.Source.WorkflowSHA256, 64) || p.RunID < 1 || p.JobID < 1 || p.RunnerID != 0 || p.Attempt < 1 || p.Jobs < 1 || p.Jobs > 10 || p.Threads < 1 || p.Threads > 10 || p.Role != Role || p.Name != "todo2737-"+p.Instance || p.Label != Label(p.RunID) || len(p.Inputs) != 0 {
+	_, _, label, ok := p.policy()
+	if !ok || !validHex(p.Instance, 32) || !validHex(p.Source.HeadSHA, 40) || !validHex(p.Source.TreeSHA, 40) || !validHex(p.Source.WorkflowSHA256, 64) || p.RunID < 1 || p.JobID < 1 || p.RunnerID != 0 || p.Attempt < 1 || p.Jobs < 1 || p.Jobs > 10 || p.Threads < 1 || p.Threads > 10 || p.Name != "todo2737-"+p.Instance || p.Label != label || len(p.Inputs) != 0 {
 		return errors.New("Windows plan rejected")
 	}
 	return nil
@@ -60,7 +83,8 @@ func NewSeed(pin sourcepacket.Pin, b normalci.Binding, instance, clientHash stri
 	return s, nil
 }
 func ValidateBinding(p Plan, b normalci.Binding) error {
-	if p.Validate() != nil || b.RepoID != sourcepacket.RepoID || b.PR != 3613 || b.SHA != p.Source.HeadSHA || b.Tree != p.Source.TreeSHA || b.WorkflowSHA != p.Source.WorkflowSHA256 || b.RunID != p.RunID || b.JobID != p.JobID || b.Attempt != p.Attempt || b.Role != Role || b.Label != p.Label || b.OS != "Windows" || b.TimeoutMinutes != 20 || b.JobName == "" {
+	profile, j, _, ok := p.policy()
+	if !ok || p.Validate() != nil || b.RepoID != profile.RepoID || b.PR != profile.PR || b.SHA != p.Source.HeadSHA || b.Tree != p.Source.TreeSHA || b.WorkflowSHA != p.Source.WorkflowSHA256 || b.RunID != p.RunID || b.JobID != p.JobID || b.Attempt != p.Attempt || b.Role != p.Role || b.Label != p.Label || b.OS != "Windows" || b.TimeoutMinutes != j.TimeoutMinutes || b.JobName == "" {
 		return errors.New("official Windows binding changed")
 	}
 	return nil
@@ -74,13 +98,19 @@ type HookContext struct {
 }
 
 func (c HookContext) Validate(p Plan) error {
-	if c.Repository != Repository || c.SHA != p.Source.HeadSHA || c.WorkflowSHA != p.Source.HeadSHA || c.Ref != "refs/heads/"+sourcepacket.HeadRef || c.Event != "workflow_dispatch" || c.Role != Role || c.Name != p.Name || c.RunID != p.RunID || c.Attempt != p.Attempt || len(c.Inputs) != 0 {
+	profile, j, _, ok := p.policy()
+	event, ref := "workflow_dispatch", "refs/heads/"+profile.HeadRef
+	if p.Source.PullHeadSHA != "" {
+		event, ref = "pull_request", "refs/pull/175/merge"
+	}
+	if !ok || c.Repository != profile.Repository || c.SHA != p.Source.HeadSHA || c.WorkflowSHA != p.Source.HeadSHA || c.Ref != ref || c.Event != event || c.Role != j.ID || c.Name != p.Name || c.RunID != p.RunID || c.Attempt != p.Attempt || len(c.Inputs) != 0 {
 		return errors.New("official hook context rejected")
 	}
 	return nil
 }
 func validProof(p Plan, r sourcepacket.Receipt) bool {
-	return r.RepoID == sourcepacket.RepoID && r.PR == 3613 && r.HeadSHA == p.Source.HeadSHA && r.TreeSHA == p.Source.TreeSHA && r.BlobCount > 0 && r.PhysicalBlobsVerified
+	profile, _, _, ok := p.policy()
+	return ok && r.RepoID == profile.RepoID && r.PR == profile.PR && r.HeadSHA == p.Source.HeadSHA && r.TreeSHA == p.Source.TreeSHA && r.BlobCount > 0 && r.PhysicalBlobsVerified
 }
 
 type Stage string

@@ -3,6 +3,7 @@
 package windowsrunner
 
 import (
+	sourcepacket "cc/ci-source-2737"
 	"context"
 	"errors"
 	"runtime"
@@ -90,13 +91,20 @@ func runnerAccessCommands() [][]string {
 }
 
 func prepareRunnerAccess(ctx context.Context, env []string) error {
+	return prepareRunnerAccessFor(ctx, env, sourcepacket.Pin{})
+}
+func prepareRunnerAccessFor(ctx context.Context, env []string, pin sourcepacket.Pin) error {
+	commands, e := runnerAccessCommandsFor(pin)
+	if e != nil {
+		return e
+	}
 	if !IsLocalSystem() {
 		return errors.New("runner ACL setup requires guest SYSTEM service")
 	}
 	ctx, cancel := context.WithTimeout(ctx, time.Minute)
 	defer cancel()
 	const exe = `C:\Windows\System32\icacls.exe`
-	for _, args := range runnerAccessCommands() {
+	for _, args := range commands {
 		words := []string{syscall.EscapeArg(exe)}
 		for _, a := range args {
 			words = append(words, syscall.EscapeArg(a))
@@ -107,4 +115,17 @@ func prepareRunnerAccess(ctx context.Context, env []string) error {
 		}
 	}
 	return nil
+}
+
+func runnerAccessCommandsFor(pin sourcepacket.Pin) ([][]string, error) {
+	if _, ok := pin.Profile(); !ok {
+		return nil, errors.New("runner ACL profile rejected")
+	}
+	commands := runnerAccessCommands()
+	for _, args := range commands {
+		if args[0] == sourceRoot {
+			args[0] = sourceRootFor(pin)
+		}
+	}
+	return commands, nil
 }

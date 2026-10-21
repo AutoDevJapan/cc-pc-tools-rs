@@ -43,10 +43,11 @@ type Job struct {
 type Workflow struct {
 	Path, Blob, SHA256 string
 	Dispatch           bool
+	Events             []string
 	Jobs               []Job
 }
 type Outline struct {
-	Repository                         string
+	Repository                         string `json:"-"`
 	RepoID                             int64
 	PR                                 int
 	Head, Tree, Base                   string
@@ -132,6 +133,7 @@ func outlineWorkflow(data []byte, name string) (Workflow, error) {
 		return Workflow{}, errors.New("Press workflow events rejected")
 	}
 	for i := 0; i < len(events.Content); i += 2 {
+		out.Events = append(out.Events, events.Content[i].Value)
 		if events.Content[i].Value == "workflow_dispatch" {
 			out.Dispatch = true
 		}

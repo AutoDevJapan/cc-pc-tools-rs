@@ -10,21 +10,35 @@ and base4dc5c332d54d19325f122df1f0e4a52e9dd3a629. `workflow` must be exactly
 The head, tree and selected workflow digest remain explicit immutable pins.
 The empty product/workflow pair retains the original MCP α contract. Unknown
 products, paths, partial profile selection and CodeQL are refused before API
-reads. This profile adds no runner admission, host materialization command,
-workflow mutation, dispatch or source-execution path. The existing guest
-controllers still reject Press bindings until their separate finite admission
-is implemented and reviewed. Physical materialization tests use public
-synthetic Git repositories, not original product source on the host.
+reads. This module adds no host materialization command, workflow mutation or
+dispatch. The separately linked finite `pressci` resolver now connects the
+guest controller to the two Windows roles and original Linux roles; that delta
+still needs peer review and actual guest acceptance before live use. Physical
+materialization tests use public synthetic Git repositories, not original
+product source on the host.
+
+PR execution additionally pins `pull_head_sha` and `merge_base_sha`. `head_sha`
+then denotes the actual execution merge, never the candidate. Both live refs
+and the PR merge SHA must agree before and after Fetch, and the actual commit
+payload must have those exact two ordered parents. `VerifyCheckout` inspects
+that payload from its anchored snapshot. The empty profile cannot select merge
+fields. Signed commits are reconstructed from the exact API unsigned payload
+and detached signature (including its possible final continuation); every
+accepted reconstruction must reproduce the real pinned Git object ID. No
+normalized timestamp, missing newline or substitute commit is trusted.
 
 ## API
 
 - `Pin` requires lowercase 40-character commit and tree SHA-1 values and a
-  lowercase 64-character SHA-256 digest of `.github/workflows/ci.yml`.
+  lowercase 64-character SHA-256 digest of the selected compiled workflow path
+  (`.github/workflows/ci.yml` for the empty MCP α profile).
 - `Fetch(ctx, pin)` uses only the configured OAuth `gh_gate.exe` CLI. The
   repository, owner, PR, and head ref are package constants. It verifies the
   repository/permissions, same-repository open PR, branch ref, commit/tree,
   workflow bytes, complete recursive tree, and repository/ref again after the
-  reads. It is deliberately not tested against the real GitHub source here.
+  reads. Unit tests use public synthetic source. ToDo2766 also exercised the
+  real fixed Press merge packet in RAM: 49,306,964 archive bytes, 2,812 tree
+  entries, 2,315 blobs; no host checkout or guest success was claimed.
   A rejection reports a fixed stage only. Identity-stage diagnostics distinguish
   the repository, pull request, and branch ref, and distinguish an identity
   mismatch from API start/context/drain/exit/JSON/capture/denied/transport/other

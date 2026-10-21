@@ -1,5 +1,7 @@
 package sourcepacket
 
+import "bytes"
+
 // Profile selects a compiled finite identity, never an arbitrary repository,
 // branch, host path, or command. The zero profile preserves the original MCP α
 // protocol. Press is the separately authorized PR175 check owned by ToDo2766.
@@ -13,10 +15,13 @@ const PressProduct = "press-2766"
 const PressBase = "4dc5c332d54d19325f122df1f0e4a52e9dd3a629"
 
 func (p Pin) Profile() (Profile, bool) {
-	if p.Product == "" && p.Workflow == "" {
+	if p.Product == "" && p.Workflow == "" && p.PullHeadSHA == "" && p.MergeBaseSHA == "" {
 		return Profile{RepoID, PR, "AutoDevJapan/GoDD-MCP-Alpha", HeadRef, workflowPath, ""}, true
 	}
 	if p.Product != PressProduct {
+		return Profile{}, false
+	}
+	if (p.PullHeadSHA == "") != (p.MergeBaseSHA == "") || (p.PullHeadSHA != "" && (!hex40.MatchString(p.PullHeadSHA) || !hex40.MatchString(p.MergeBaseSHA) || p.PullHeadSHA == p.HeadSHA || p.MergeBaseSHA == p.PullHeadSHA)) {
 		return Profile{}, false
 	}
 	switch p.Workflow {
@@ -24,4 +29,28 @@ func (p Pin) Profile() (Profile, bool) {
 		return Profile{1386702183, 175, "AutoDevJapan/GoDD-Press", "fix/todo2642-schedule-predecessor-overflow", ".github/workflows/" + p.Workflow, PressBase}, true
 	}
 	return Profile{}, false
+}
+
+func (p Pin) CandidateSHA() string {
+	if p.PullHeadSHA != "" {
+		return p.PullHeadSHA
+	}
+	return p.HeadSHA
+}
+
+func mergeParentsMatch(p Pin, payload []byte) bool {
+	if p.PullHeadSHA == "" {
+		return true
+	}
+	header, _, ok := bytes.Cut(payload, []byte("\n\n"))
+	if !ok {
+		return false
+	}
+	var parents []string
+	for _, line := range bytes.Split(header, []byte{'\n'}) {
+		if bytes.HasPrefix(line, []byte("parent ")) {
+			parents = append(parents, string(line[7:]))
+		}
+	}
+	return len(parents) == 2 && parents[0] == p.MergeBaseSHA && parents[1] == p.PullHeadSHA
 }

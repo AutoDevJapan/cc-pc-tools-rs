@@ -65,6 +65,7 @@ func TestPressSourceIdentityAndEarlyRejection(t *testing.T) {
 	}{
 		{"accepted", 3, func(*Pin, *repo, *pull, *identityRef) {}},
 		{"unknown-product", 0, func(p *Pin, _ *repo, _ *pull, _ *identityRef) { p.Product = "arbitrary" }},
+		{"empty-press-workflow", 0, func(p *Pin, _ *repo, _ *pull, _ *identityRef) { p.Workflow = "" }},
 		{"unknown-workflow", 0, func(p *Pin, _ *repo, _ *pull, _ *identityRef) { p.Workflow = "codeql.yml" }},
 		{"path-traversal", 0, func(p *Pin, _ *repo, _ *pull, _ *identityRef) { p.Workflow = "../local-checks.yml" }},
 		{"workflow-without-product", 0, func(p *Pin, _ *repo, _ *pull, _ *identityRef) { p.Product = "" }},
@@ -79,6 +80,10 @@ func TestPressSourceIdentityAndEarlyRejection(t *testing.T) {
 		{"closed", 2, func(_ *Pin, _ *repo, p *pull, _ *identityRef) { p.State = "closed" }},
 		{"head-advanced", 2, func(_ *Pin, _ *repo, p *pull, _ *identityRef) { p.Head.SHA = strings.Repeat("d", 40) }},
 		{"head-fork", 2, func(_ *Pin, _ *repo, p *pull, _ *identityRef) { p.Head.Repo.Fork = true }},
+		{"head-ref", 2, func(_ *Pin, _ *repo, p *pull, _ *identityRef) { p.Head.Ref = "other" }},
+		{"head-repo", 2, func(_ *Pin, _ *repo, p *pull, _ *identityRef) { p.Head.Repo.ID++ }},
+		{"head-full-name", 2, func(_ *Pin, _ *repo, p *pull, _ *identityRef) { p.Head.Repo.FullName += "other" }},
+		{"base-full-name", 2, func(_ *Pin, _ *repo, p *pull, _ *identityRef) { p.Base.Repo.FullName += "other" }},
 		{"base-repo", 2, func(_ *Pin, _ *repo, p *pull, _ *identityRef) { p.Base.Repo.ID++ }},
 		{"ref-advanced", 3, func(_ *Pin, _ *repo, _ *pull, r *identityRef) { r.Object.SHA = strings.Repeat("d", 40) }},
 	} {

@@ -207,7 +207,6 @@ Official API and runner contracts:
 https://docs.github.com/en/rest/code-scanning/code-scanning#update-a-code-scanning-default-setup-configuration
 https://docs.github.com/en/actions/reference/runners/self-hosted-runners
 
-<<<<<<< HEAD
 ## One audited post-merge CodeQL run (ToDo2757)
 
 `merged-inspect` performs read-only checks for repository 1285649124, PR1002,
@@ -226,7 +225,6 @@ accept an arbitrary job, run, revision or label. The other four original
 open-PR candidate entries and their commands are unchanged. Runner exit is
 still not official analysis success. Promotion, full verification, integration
 and production revision/smoke are separate outstanding acceptance conditions.
-=======
 ## Fixed normal CI route proposal (ToDo2737)
 
 `normal-ci-plan <new-owned-dir>` is a read-only preparation step for the fixed
@@ -336,4 +334,3 @@ These paths currently have synthetic API acceptance only, not a live mutation.
 References: [repository variables](https://docs.github.com/en/rest/actions/variables),
 [ref updates](https://docs.github.com/en/rest/git/refs#update-a-reference),
 [runs-on contexts](https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability).
->>>>>>> 7b8dbb6

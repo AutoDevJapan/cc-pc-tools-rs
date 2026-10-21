@@ -25,6 +25,7 @@ fn launch_inputs(item: &Value) -> Value {
         "worktree":item["scheduler"]["worktree"],"branch":item["scheduler"]["branch"],
         "not_before":item["scheduler"]["not_before"],"resource_wait":item["scheduler"]["resource_wait"],
         "workspace_receipt":item["scheduler"]["workspace_receipt"],"jobs":item["jobs"],
+        "subwork_workspace_migration":item["scheduler"]["subwork_workspace_migration"],
         "resume_generation":item["resume_generation"],"worker_receipt":item["worker_receipt"],
         "console_request":item["scheduler"]["console_request"],
         "console_fresh_request":item["scheduler"]["console_fresh_request"]})
@@ -1149,6 +1150,35 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
         }
         let base = resolve(Path::new(repo))?;
         let jobs = self.backend.jobs()?;
+        if i["subwork"].is_object() {
+            let mut proposed = i.clone();
+            if crate::preparation::inherited_review_workspace(i, &jobs) {
+                let source =
+                    crate::preparation::workspace_source(i, &jobs).ok_or(Error("InputRejected"))?;
+                let ps = self.backend.snapshot()?;
+                let at = self.backend.clock();
+                if !arr(&i["jobs"]).contains(&source["id"])
+                    || !matches!(
+                        s(&source["status"]),
+                        "succeeded" | "failed" | "lost" | "cancelled" | "canceled"
+                    )
+                    || jobs.iter().any(|job| {
+                        (job["todo_id"] == i["id"]
+                            || arr(&job["related_todo_ids"]).contains(&i["id"])
+                            || arr(&i["jobs"]).contains(&job["id"]))
+                            && (live(job) || alive(job, &ps, at))
+                    })
+                {
+                    return Err(Error("InputRejected"));
+                }
+                // Validate provenance as an unallocated checkout. The stored
+                // relation, old receipt and writer's source remain untouched.
+                proposed["scheduler"]["worktree"] = Value::Null;
+                proposed["scheduler"]["branch"] = Value::Null;
+            }
+            cc_job_policy::subwork::resolve(&self.todo()?, &proposed, &[], false)
+                .map_err(|_| Error("InvalidSubwork"))?;
+        }
         let recovered = self.backend.workspace_recovery(repo, i, &jobs)?;
         let expected_inputs = launch_inputs(i);
         let now = self.backend.clock();
@@ -1389,6 +1419,45 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
     }
     pub fn dispatch(&mut self, cfg: &Value, pri: &Value) -> Result<()> {
         self.dispatch_for(cfg, pri, None)
+    }
+    /// Try one existing finite subwork using ordinary admission, without registration.
+    pub fn dispatch_existing_subwork(&mut self, id: i64) -> Result<Value> {
+        if id <= 0 {
+            return Err(Error("InputRejected"));
+        }
+        let _lock = ByteLock::acquire(&self.root.join("scheduler.lock"), Duration::from_secs(30))?
+            .ok_or(Error("TimeoutError"))?;
+        let db = self.todo()?;
+        let item = arr(&db["items"])
+            .into_iter()
+            .find(|row| row["id"] == id)
+            .ok_or(Error("InputRejected"))?;
+        if !item["subwork"].is_object() || item["project"] == "owner" {
+            return Err(Error("InputRejected"));
+        }
+        let jobs = self.backend.jobs()?;
+        let ps = self.backend.snapshot()?;
+        let at = self.backend.clock();
+        let active = jobs.iter().any(|job| {
+            (job["todo_id"] == id
+                || arr(&item["jobs"]).contains(&job["id"])
+                || arr(&job["related_todo_ids"]).contains(&json!(id)))
+                && (live(job) || alive(job, &ps, at))
+        });
+        if !active {
+            let (cfg, pri) = self.settings()?;
+            self.dispatch_for(&cfg, &pri, Some(id))?;
+            self.persist()?;
+        }
+        let current = arr(&self.todo()?["items"])
+            .into_iter()
+            .find(|row| row["id"] == id)
+            .ok_or(Error("InputRejected"))?;
+        Ok(
+            json!({"id":id,"status":current["status"],"phase":current["scheduler"]["phase"],
+            "active":active,"launched":self.report["launched"],"priority_wait":self.report["priority_wait"],
+            "allowance_now":self.report["allowance_now"],"busy_resources":self.report["busy_resources"]}),
+        )
     }
     /// Caller holds scheduler.lock. The accepted body is durable before any launch.
     /// Preparation and admission remain the same as ordinary finite work.

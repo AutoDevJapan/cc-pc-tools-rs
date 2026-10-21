@@ -59,6 +59,15 @@ pub fn recovery_session<'a>(
     })
 }
 
+/// A historical manual review's read source is not its independent execution checkout.
+pub fn inherited_review_workspace(item: &Value, jobs: &[Value]) -> bool {
+    item["subwork"]["kind"] == "review"
+        && !s(&item["subwork"]["owner"]["worktree"]).is_empty()
+        && workspace_source(item, jobs).is_some_and(|job| {
+            norm(s(&job["cwd"])) == norm(s(&item["subwork"]["owner"]["worktree"]))
+        })
+}
+
 pub(crate) fn git_root(runner: &mut dyn Runner, path: &Path) -> Result<Option<String>> {
     if !path.is_dir() {
         return Err(Error("CwdMissing"));
@@ -126,9 +135,38 @@ pub fn recover_workspace(
     {
         return Err(Error("BranchMismatch"));
     }
-    Ok(Some(
-        json!({"worktree":target,"branch":branch,"workspace_receipt":{"job":job["id"],"todo_id":item["id"],"cwd":job["cwd"]}}),
-    ))
+    if inherited_review_workspace(item, jobs) {
+        let container = std::path::PathBuf::from(format!("{}-wt", base.display()));
+        let saved = s(&item["scheduler"]["worktree"]);
+        if !saved.is_empty() && resolve(Path::new(saved))? != target {
+            // Preserve an already separated reservation. ensure_workspace() and
+            // subwork::resolve() verify the actual checkout before launch.
+            let reserved = resolve(Path::new(saved))?;
+            if reserved.parent() == Some(container.as_path())
+                && s(&item["scheduler"]["branch"])
+                    .starts_with(&format!("scheduler/todo-{}-", item["id"]))
+            {
+                return Ok(None);
+            }
+            return Err(Error("InputRejected"));
+        }
+        let name = format!("todo-{}-review", item["id"]);
+        let previous = json!({"worktree":item["scheduler"]["worktree"],
+            "branch":item["scheduler"]["branch"],"workspace_receipt":item["scheduler"]["workspace_receipt"]});
+        let migration = json!({"source_job":job["id"],"source_worktree":job["cwd"],
+            "source_branch":branch,"previous":previous});
+        if item["scheduler"]["subwork_workspace_migration"].is_object()
+            && item["scheduler"]["subwork_workspace_migration"] != migration
+        {
+            return Err(Error("InputRejected"));
+        }
+        return Ok(Some(
+            json!({"worktree":container.join(&name),"branch":format!("scheduler/{name}"),
+            "subwork_workspace_migration":migration}),
+        ));
+    }
+    Ok(Some(json!({"worktree":target,"branch":branch,
+        "workspace_receipt":{"job":job["id"],"todo_id":item["id"],"cwd":job["cwd"]}})))
 }
 
 pub fn ensure_workspace(

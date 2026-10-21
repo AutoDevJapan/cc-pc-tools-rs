@@ -8,6 +8,33 @@ use std::path::PathBuf;
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let command = args.first().map(String::as_str);
+    if command == Some("dispatch-subwork") {
+        if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
+            println!("usage: scheduler dispatch-subwork --id <ID>\n\nTry one existing finite subwork through normal priority, capacity, resource and ownership gates. Preserve source, history and waits; no new registration.\n\noptions:\n  -h, --help  show this help message and exit");
+            return;
+        }
+        let result = (|| -> Result<serde_json::Value> {
+            if args.len() != 3 || args[1] != "--id" {
+                return Err(Error("InputRejected"));
+            }
+            let id = args[2].parse().map_err(|_| Error("InputRejected"))?;
+            let root = PathBuf::from("D:/CC/Tools/scheduler");
+            let mut engine = Scheduler::new(
+                root.clone(),
+                PathBuf::from("D:/CC/Tools/todo/todo.json"),
+                RealBackend::new(root),
+            )?;
+            engine.dispatch_existing_subwork(id)
+        })();
+        match result {
+            Ok(report) => println!("{}", encode(&report, 2)),
+            Err(error) => {
+                eprintln!("subwork dispatch failed {}", error.0);
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
     if command == Some("dispatch-receipt") {
         if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
             println!("usage: scheduler dispatch-receipt --id <ID> [--apply --expected-state-sha256 <SHA256>]\n\nInspect one ordinary repair launch without exposing source text. Apply only an exact verified receipt; never launch, cancel, release waits or change source files.\n\noptions:\n  -h, --help  show this help message and exit");

@@ -100,6 +100,136 @@ func TestHistoryReadEmptyPageRequiresReadableStarter(t *testing.T) {
 	}
 }
 
+func TestHistoryReadAttachmentObservations(t *testing.T) {
+	for _, mode := range []string{"missing", "null", "empty", "attached"} {
+		t.Run(mode, func(t *testing.T) {
+			load, paths := historyFixture(t, func(path string, value any) any {
+				decorate := func(message map[string]any) map[string]any {
+					switch mode {
+					case "null":
+						message["attachments"] = nil
+					case "empty":
+						message["attachments"] = []any{}
+					case "attached":
+						message["attachments"] = []any{
+							map[string]any{"id": "51", "size": 123, "filename": "private-label", "description": "private-description", "content_type": "private-type", "url": "https://cdn.invalid/?token=fixture-token", "proxy_url": "https://proxy.invalid/fixture-token"},
+							map[string]any{"id": "52", "size": 0},
+						}
+					}
+					return message
+				}
+				switch path {
+				case "/channels/100/messages/100":
+					return decorate(value.(map[string]any))
+				case "/channels/100/messages":
+					return []any{decorate(historyMessage("900", "20", "<@30>"))}
+				}
+				return value
+			})
+			args, output := historyArgs(t)
+			var stdout bytes.Buffer
+			if code := historyReadCLIWith(args, &stdout, load, func(context.Context, string) bool { return true }); code != 0 {
+				t.Fatalf("attachment observation failed: %d %s", code, stdout.String())
+			}
+			raw, err := os.ReadFile(output)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var page map[string]any
+			if err := json.Unmarshal(raw, &page); err != nil {
+				t.Fatal(err)
+			}
+			messages := page["messages"].([]any)
+			if len(messages) != 1 || messages[0].(map[string]any)["content"] != "<@30>" {
+				t.Fatal("mention-only owner reply was lost")
+			}
+			for _, message := range []map[string]any{page["starter"].(map[string]any), messages[0].(map[string]any)} {
+				observed, present := message["attachments"]
+				if !present {
+					t.Fatal("attachment observation missing from receipt")
+				}
+				if mode == "missing" || mode == "null" {
+					if observed != nil {
+						t.Fatal("unknown attachments were reported as an array")
+					}
+					continue
+				}
+				attachments, ok := observed.([]any)
+				if !ok {
+					t.Fatal("known attachment array was lost")
+				}
+				if mode == "empty" {
+					if len(attachments) != 0 {
+						t.Fatal("empty API array changed")
+					}
+					continue
+				}
+				if len(attachments) != 2 {
+					t.Fatal("attachment count changed")
+				}
+				for i, expected := range []struct {
+					id   string
+					size float64
+				}{{"51", 123}, {"52", 0}} {
+					attachment := attachments[i].(map[string]any)
+					if len(attachment) != 2 || attachment["id"] != expected.id || attachment["size"] != expected.size {
+						t.Fatal("attachment ID/size changed or unnecessary fields retained")
+					}
+				}
+			}
+			for _, forbidden := range []string{"private-label", "private-description", "private-type", "cdn.invalid", "proxy.invalid", "fixture-token"} {
+				if strings.Contains(string(raw), forbidden) || strings.Contains(stdout.String(), forbidden) {
+					t.Fatal("attachment labels or URLs were exposed")
+				}
+			}
+			if len(*paths) != 4 {
+				t.Fatalf("history unexpectedly performed extra requests: %v", *paths)
+			}
+		})
+	}
+}
+
+func TestHistoryReadRejectsInvalidRetainedAttachments(t *testing.T) {
+	for _, target := range []string{"starter", "reply"} {
+		for _, mode := range []string{"missing_id", "invalid_id", "missing_size", "negative_size"} {
+			t.Run(target+"/"+mode, func(t *testing.T) {
+				load, _ := historyFixture(t, func(path string, value any) any {
+					attachment := map[string]any{"id": "51", "size": 123}
+					switch mode {
+					case "missing_id":
+						delete(attachment, "id")
+					case "invalid_id":
+						attachment["id"] = "not-an-id"
+					case "missing_size":
+						delete(attachment, "size")
+					case "negative_size":
+						attachment["size"] = -1
+					}
+					if target == "starter" && path == "/channels/100/messages/100" {
+						value.(map[string]any)["attachments"] = []any{attachment}
+					}
+					if path == "/channels/100/messages" {
+						message := historyMessage("900", "20", "<@30>")
+						if target == "reply" {
+							message["attachments"] = []any{attachment}
+						}
+						return []any{message}
+					}
+					return value
+				})
+				args, output := historyArgs(t)
+				var stdout bytes.Buffer
+				if historyReadCLIWith(args, &stdout, load, func(context.Context, string) bool { return true }) == 0 {
+					t.Fatal("invalid retained attachment accepted")
+				}
+				if _, err := os.Stat(output); !os.IsNotExist(err) {
+					t.Fatal("invalid metadata published a success receipt")
+				}
+			})
+		}
+	}
+}
+
 func TestHistoryReadDuplicateScopeKeysRejectedBeforeLoading(t *testing.T) {
 	load, paths := historyFixture(t, nil)
 	args, _ := historyArgs(t)

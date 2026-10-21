@@ -13,6 +13,8 @@ mod subwork_support;
 mod no_action_tests;
 #[path = "support/dispatch_receipt.rs"]
 mod dispatch_receipt_tests;
+#[path = "support/targeted_dispatch.rs"]
+mod targeted_dispatch_tests;
 
 #[test]
 fn review_preparation_failures_stop_after_three_and_recover_on_new_evidence() {

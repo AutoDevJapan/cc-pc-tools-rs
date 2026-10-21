@@ -20,6 +20,7 @@ pub mod notify;
 mod owner_wait_repair;
 mod pause;
 pub mod platform;
+pub mod pool_retry;
 pub mod queue;
 pub mod queue_status;
 pub mod reboot;

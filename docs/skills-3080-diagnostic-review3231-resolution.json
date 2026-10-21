@@ -6,17 +6,17 @@
   "review_raw_sha256": "5aba318683a0606bea698f9d07a3643d20d155e27ab12013924118ed8181c3d3",
   "review_must": 0,
   "review_requested": "Claude Sonnet5.5/max/OAuth",
-  "review_observed": "review system claude-sonnet-5-5,effort max input;effective effort/auth route not independently observable",
+  "review_observed": "実行指示は claude-sonnet-5-5、effort max の入力を観測。実効強度と認証経路は内部から独立確認できていない。",
   "candidate_v1_sha256": "d23d2f69c62aa03b9b580c66542c2115fd049bc886a5817f99adb9a40055f203",
   "candidate_v2_sha256": "cfe2c97b0f03d386be21f97dff0ab2d62dc5f3bafc00d9e437e2376c47c5588e",
   "suggestions_applied": [
-    "S1:3concrete diagnostic procedures and quality/plan description",
-    "S2:record absence is not noninvocation",
-    "S3:provenance rewritten as clearJapanese before installation;no global characterheuristic",
-    "S4:onlyownerrequirements question once;authorized nonsecret limitedread",
-    "S5:nearnegative boundaries/callcorrelation companion",
-    "S6:static cases preserved",
-    "N1-N5:historyamendment/currentdelta definition/deferredtargetsandSHA/upstreamvspermission/terms"
+    "S1:反復・発動・品質の具体手順と説明文を追加。",
+    "S2:発動記録の欠測を未発動と断定しない。",
+    "S3:出典の説明を配置前に日本語へ整理。一般の文字パターン禁止は追加しない。",
+    "S4:本人要件だけ1回質問し、許可された非秘密情報を限定して読む。",
+    "S5:近い負例と呼出し対応の既存Skillを併記。",
+    "S6:静的正負例を保存。",
+    "N1-N5:追記時点・未受入差分・持越し対象とSHA・上流と許可の主語・用語を補正。"
   ],
   "source_and_notice_unchanged": true,
   "private_session_read": false,
@@ -35,7 +35,7 @@
       "real_CLI_executed": false
     },
     {
-      "expected": "品質を選び、主張ごと同turnを遡る。対応結果無しは裏付け未確認。",
+      "expected": "品質を選び主張ごと同turnを遡る。結果が無ければ裏付け未確認。食い違えば不一致として併記する案は現本文未記載で、次の必要更新へ保存。",
       "input": "テスト成功主張と実tool結果が一致しない",
       "kind": "positive",
       "real_CLI_executed": false
@@ -78,11 +78,11 @@
     }
   ],
   "checks": [
-    "Memory1/5 PASS",
-    "catalog test-count1 PASS",
-    "exactsource/notice unchanged PASS",
-    "boundedreviewfix markers/provenance check PASS"
+    "メモリ内1件5ファイルの検査に成功。",
+    "catalog test -count=1 成功。",
+    "原文と許諾の不変を確認。",
+    "指摘への限定修正と既知の不良出典表記の消失を確認。"
   ],
-  "limits": "3231 reviewedv1;v2 follows its concrete suggestions. Actualv2/postinstallation delta will receive one finite independent review;not claim it already reviewed.",
+  "limits": "3231はv1を確認。指摘に沿ったv2と実配置は3249が限定確認しMust0。実モデルターン/実セッション/CLI検証とは分ける。",
   "observed_at": "2026-10-21T01:25:19.2946022Z"
 }

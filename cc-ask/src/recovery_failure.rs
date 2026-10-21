@@ -32,7 +32,7 @@ impl Failure {
     pub fn remedy(self) -> &'static str {
         match self {
             Self::Console | Self::Proxy => "定期タスクからコンソールを再起動",
-            Self::Model => "別のサブスク対象モデルへ切り替え、新しいセッションで再開",
+            Self::Model => "既知モデルだけ既存の代替候補を試し、未知のモデルは指定を保持して再開",
             Self::Context => "文脈を縮めて、新しいセッションで再開",
             Self::Writer => "稼働中の担当を確認し、衝突したセッションを使わず再開",
             Self::Task => "前回の結果と原因を担当へ渡して再開",
@@ -150,18 +150,44 @@ pub fn retry_at(history: &[Value], now: f64) -> f64 {
         }
     }
 }
-pub fn alternate_model(model: &str) -> &'static str {
-    if model == "gpt-6.1-sol" {
-        "gpt-6-astra"
-    } else {
-        "gpt-6.1-sol"
+pub fn alternate_model(model: &str) -> &str {
+    match model {
+        "gpt-6.1-sol" => "gpt-6-astra",
+        "gpt-6-astra" | "gpt-6-luna" => "gpt-6.1-sol",
+        _ => model,
     }
 }
 pub fn repaired_job(job: &Value, failure: Failure) -> Value {
     let mut job = job.clone();
     if failure == Failure::Model {
-        job["model"] = alternate_model(job["model"].as_str().unwrap_or("")).into();
-        job["effort"] = "high".into();
+        if job["model_origin"] == "owner_request"
+            || crate::job_policy::launch_context::fixed_execution_contract(&job)
+        {
+            return job;
+        }
+        let model = job["model"].as_str().unwrap_or("").to_owned();
+        let alternate = alternate_model(&model);
+        if alternate == model {
+            return job;
+        }
+        let excluded = job["review_excluded_models"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        if !excluded
+            .iter()
+            .filter_map(Value::as_str)
+            .any(|excluded| crate::job_policy::same_model(excluded, alternate))
+        {
+            job["model"] = alternate.into();
+            // A failed model is not a source author. This one-launch hint must
+            // not accumulate in the permanent independent-review exclusions.
+            job["model_recovery_from"] = model.into();
+            job["model_repair_pending"] = true.into();
+        }
+        if job["effort"].as_str().is_none_or(str::is_empty) {
+            job["effort"] = "max".into();
+        }
     }
     if matches!(failure, Failure::Context | Failure::Model | Failure::Writer) {
         job["thread_id"] = Value::Null;

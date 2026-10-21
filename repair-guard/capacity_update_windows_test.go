@@ -101,3 +101,21 @@ func TestCapacityUpdateBindsCurrentTargetNewArtifactAndIndependentSource(t *test
 		t.Fatal("changed evidence accepted")
 	}
 }
+
+func TestCapacityUpdateRejectsMixedModelPurposeAtPublicCLI(t *testing.T) {
+	target := "D:/CC/Tools/todo/todo.exe"
+	for _, args := range [][]string{
+		{"--verify-capacity-runtime-update", target, "--verify-model-runtime-update", target},
+		{"--verify-model-runtime-update", target, "--verify-capacity-runtime-update", target},
+	} {
+		var out, err bytes.Buffer
+		code := runGuardCLI(args, &out, &err, func(int) object {
+			t.Fatal("mixed purposes reached an unrelated verifier")
+			return nil
+		})
+		var got object
+		if code != 1 || json.Unmarshal(out.Bytes(), &got) != nil || len(got) != 1 || got["qualified"] != false {
+			t.Fatalf("mixed purposes did not return a bounded rejection: code=%d output=%q", code, out.String())
+		}
+	}
+}

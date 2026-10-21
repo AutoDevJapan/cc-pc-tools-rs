@@ -125,7 +125,7 @@ func agentResultPublic(p AgentResultRecord) map[string]any {
 	} else if p.Attempts >= agentResultAttempts {
 		delivery = "retry_exhausted"
 	}
-	return map[string]any{"domain": p.Domain, "record_id": p.ID, "todo_id": p.Event.Todo, "parent_received_at": p.ParentReceived, "work_completed": p.Event.State == "completed", "delivery": delivery, "attempts": p.Attempts, "message_id": p.Message, "url": p.URL, "verified_at": p.Verified}
+	return map[string]any{"domain": p.Domain, "record_id": p.ID, "todo_id": p.Event.Todo, "parent_received_at": p.ParentReceived, "work_completed": p.Event.State == "completed", "notify_owner": p.NotifyOwner, "delivery": delivery, "attempts": p.Attempts, "message_id": p.Message, "url": p.URL, "verified_at": p.Verified}
 }
 
 // Keep the command independent of environment-specific output paths; the saved

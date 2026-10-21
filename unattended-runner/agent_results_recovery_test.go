@@ -154,10 +154,8 @@ func TestAgentResultOrdinarySenderKeepsOnePostWhenResponseIsLost(t *testing.T) {
 		return string(b), nil
 	}
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {
-		m := msg(r.Now(), "610", "400", agentResultBody(p)+"\n\n-# recovery:aaaaaaaaaaaaaaaaaaaaaaaa:log:0")
-		m.ID = "721"
-		m.Author.Bot = true
-		m.Flags = 4100
+		m := resultReadback(r, p, true)
+		m["id"] = "721"
 		respond(w, m)
 	})
 	now := r.Now()

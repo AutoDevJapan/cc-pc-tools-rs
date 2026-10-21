@@ -51,6 +51,7 @@ type AgentResultRecord struct {
 	URL            string           `json:"url,omitempty"`
 	Verified       string           `json:"verified_at,omitempty"`
 	Body           string           `json:"body"`
+	NotifyOwner    bool             `json:"notify_owner,omitempty"`
 }
 type agentResultWatch struct {
 	Domain              string           `json:"domain"`
@@ -188,7 +189,7 @@ func (r *Runner) recordAgentResultWithin(ctx context.Context, e AgentResultEvent
 	}
 	defer unlock()
 	id := agentResultID(e)
-	p := AgentResultRecord{Domain: agentResultDomain, ID: id, Event: e, ParentReceived: r.Now().UTC().Format(time.RFC3339Nano)}
+	p := AgentResultRecord{Domain: agentResultDomain, ID: id, Event: e, ParentReceived: r.Now().UTC().Format(time.RFC3339Nano), NotifyOwner: true}
 	p.Body = agentResultBody(p)
 	path := r.agentResultPath(id)
 	var old AgentResultRecord
@@ -290,7 +291,7 @@ func (r *Runner) deliverAgentResult(ctx context.Context, p *AgentResultRecord) e
 		return err
 	}
 	// The ordinary sender owns durable reservations, nonces and lost-response recovery.
-	response, err := r.conversationLog(ctx, "agent-result-"+p.ID[:40], "【PCの道具】担当の結果", path, p.Event.Thread, false, nil)
+	response, err := r.conversationLog(ctx, "agent-result-"+p.ID[:40], "【PCの道具】担当の結果", path, p.Event.Thread, p.NotifyOwner, nil)
 	if err != nil || response["delivery"] != "verified" {
 		return errors.New("delivery_unverified")
 	}
@@ -302,8 +303,21 @@ func (r *Runner) deliverAgentResult(ctx context.Context, p *AgentResultRecord) e
 	if _, ok := number(message); !ok {
 		return errors.New("delivery_unverified")
 	}
-	var live Message
-	if r.get(ctx, "/channels/"+thread+"/messages/"+message, &live) != nil || live.ID != message || live.Channel != thread || live.Author.ID != r.State.Destination.Bot || !live.Author.Bot || !agentDeliveredBody(live.Content, body) || live.Flags&(4096|4) != 4096|4 || live.MentionEveryone || len(live.Mentions) != 0 {
+	var live struct {
+		Message
+		MentionRoles []string `json:"mention_roles"`
+	}
+	if r.get(ctx, "/channels/"+thread+"/messages/"+message, &live) != nil {
+		return errors.New("delivery_unverified")
+	}
+	expectedBody, expectedFlags := body, uint64(4096|4)
+	mentionsOK := len(live.Mentions) == 0
+	if p.NotifyOwner {
+		expectedBody += "\n<@" + r.State.Destination.Owner + ">"
+		expectedFlags = 4
+		mentionsOK = len(live.Mentions) == 1 && live.Mentions[0].ID == r.State.Destination.Owner
+	}
+	if live.ID != message || live.Channel != thread || live.Author.ID != r.State.Destination.Bot || !live.Author.Bot || !agentDeliveredBody(live.Content, expectedBody) || live.Flags&(4096|4) != expectedFlags || live.MentionEveryone || len(live.MentionRoles) != 0 || !mentionsOK {
 		return errors.New("delivery_unverified")
 	}
 	p.Message = message

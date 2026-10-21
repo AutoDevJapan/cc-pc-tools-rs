@@ -124,6 +124,8 @@ func agentResultPublic(p AgentResultRecord) map[string]any {
 		delivery = "verified"
 	} else if p.LastError == "owner_question_scope_invalid" {
 		delivery = "invalid_input"
+	} else if p.LastError == "owner_action_notification_missing" {
+		delivery = "invalid_notification"
 	} else if p.Attempts >= agentResultAttempts {
 		delivery = "retry_exhausted"
 	}

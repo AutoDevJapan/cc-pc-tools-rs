@@ -66,6 +66,10 @@ func TestAgentResultConcreteOwnerQuestionCannotBeVerifiedAsSilent(t *testing.T) 
 	if saved.LastError != "owner_action_notification_missing" || saved.NextAttempt != "" || saved.Verified != "" {
 		t.Fatal("missing owner notification not retained as a specific technical result")
 	}
+	public := agentResultPublic(saved)
+	if public["delivery"] != "invalid_notification" || public["error_code"] != "owner_action_notification_missing" {
+		t.Fatal("terminal notification mismatch appears automatically pending")
+	}
 	before := sends
 	r.agentResultPhase(context.Background(), &Health{})
 	if sends != before {

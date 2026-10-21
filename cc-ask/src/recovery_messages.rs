@@ -1269,7 +1269,6 @@ impl Ledger {
                         .get(&key)
                         .ok_or("notification suppression has no reservation")?;
                     if !matches!(request.operation, Kind::Log { .. })
-                        || log_requires_owner_action(&request.body)?
                         || !original.notify
                         || effect.notify
                         || posted.contains_key(&key)
@@ -3010,10 +3009,13 @@ fn execute(ctx: &mut Context, incoming: Request, images: &[Image]) -> Result<Val
 // --notify requests attention, but a report alone never requires owner action.
 // Real decisions normally use Ask. A log may point to its concrete existing
 // question; a heading alone is insufficient. No-action wording always wins.
-pub(crate) fn log_requires_owner_action(body: &str) -> Result<bool> {
-    let mut lines = body.lines().map(str::trim).filter(|line| !line.is_empty());
-    let first = lines.next().unwrap_or("");
-    if [
+pub(crate) fn report_declares_no_action(body: &str) -> bool {
+    let first = body
+        .lines()
+        .map(str::trim)
+        .find(|line| !line.is_empty())
+        .unwrap_or("");
+    [
         "対応不要",
         "対応は不要",
         "対応は必要ありません",
@@ -3022,7 +3024,12 @@ pub(crate) fn log_requires_owner_action(body: &str) -> Result<bool> {
     ]
     .iter()
     .any(|marker| first.starts_with(marker))
-    {
+}
+
+pub(crate) fn log_requires_owner_action(body: &str) -> Result<bool> {
+    let mut lines = body.lines().map(str::trim).filter(|line| !line.is_empty());
+    let first = lines.next().unwrap_or("");
+    if report_declares_no_action(body) {
         return Ok(false);
     }
     let Some(question) = first
@@ -3034,7 +3041,10 @@ pub(crate) fn log_requires_owner_action(body: &str) -> Result<bool> {
                 "owner action heading requires a concrete question and distinct a/b choices".into(),
             );
         }
-        return Ok(crate::questions::is_question(body));
+        // Reports may quote questions or contain a diagnostic question mark.
+        // Only an explicit owner-action heading grants report notification;
+        // real questions without that report heading use Ask/decision instead.
+        return Ok(false);
     };
     if question.trim().is_empty() {
         return Err("owner action heading requires a concrete question".into());
@@ -3170,14 +3180,10 @@ fn execute_inner(
                         title: request.title.clone(),
                     },
                 };
-                let delivery = effect(
-                    &request,
-                    &phase,
-                    target,
-                    body,
-                    index == 0 && notify,
-                    index == 0,
-                )?;
+                let reserved_notify = ledger
+                    .effect(&request.request_id, &phase)
+                    .map_or(index == 0 && request.notify, |saved| saved.notify);
+                let delivery = effect(&request, &phase, target, body, reserved_notify, index == 0)?;
                 let receipt = ensure(
                     &mut api,
                     &mut ledger,
@@ -4952,6 +4958,7 @@ mod tests {
             "報告のみです。修正を終えました。",
             "本人対応不要。先行作業を待っています。",
             "通常の進捗を記録しました。",
+            "調査の経過です。\n原因は何でしょう？AI側で修正を続けます。",
         ] {
             for post in [false, true] {
                 let fixture = Fixture::new();
@@ -4969,6 +4976,8 @@ mod tests {
                 assert_eq!(out["delivery"], "verified");
                 assert_eq!(out["requested_notify"], true);
                 assert_eq!(out["effective_notify"], false);
+                let ledger = Ledger::load(&fixture.home).unwrap();
+                assert!(ledger.events.iter().any(|event|matches!(event,Event::NotificationSuppressed {request_id,..} if request_id==&args.request_id)));
                 let state = fixture.server.lock().unwrap();
                 let (_, posted) = state.posts.last().unwrap();
                 let payload = if post { posted } else { &posted["message"] };

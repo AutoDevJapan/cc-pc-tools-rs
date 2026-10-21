@@ -628,7 +628,7 @@ pub fn cmd_log_attached(
         Some(path) => read_text(path)?.trim().to_owned(),
         None => text.to_owned(),
     };
-    let action = crate::recovery_messages::log_requires_owner_action(&body)?;
+    let action = notify && crate::recovery_messages::log_requires_owner_action(&body)?;
     let notify = notify && action;
     let prepared = crate::attachments::prepare(ctx, attach)?;
     if body.is_empty() && prepared.is_none() {
@@ -721,7 +721,10 @@ fn post_text(
 ) -> Result<Value> {
     let (clean_body, decision) = crate::decision_identity::extract(body)?;
     let body = clean_body.as_str();
-    let action = crate::recovery_messages::log_requires_owner_action(body)?;
+    let action = (notify && crate::recovery_messages::log_requires_owner_action(body)?)
+        || decision.is_some()
+            && !crate::recovery_messages::report_declares_no_action(body)
+            && crate::questions::is_question(body);
     if decision.is_some() && (!action || !crate::questions::is_question(body)) {
         return Err("判断の記録には具体的な質問本文が必要です".into());
     }

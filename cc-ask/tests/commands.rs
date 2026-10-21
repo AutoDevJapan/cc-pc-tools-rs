@@ -653,6 +653,7 @@ fn legacy_log_and_post_keep_no_action_reports_silent_despite_notify() {
         "報告のみです。",
         "本人対応不要。待機します。",
         "通常の進捗を記録しました。",
+        "調査の経過です。\n原因は何でしょう？AI側で修正を続けます。",
     ] {
         let mut h = Harness::new();
         let first = cmd_log(&mut h.ctx, "通知条件の確認", body, None, true).unwrap();
@@ -668,6 +669,47 @@ fn legacy_log_and_post_keep_no_action_reports_silent_despite_notify() {
             assert!(payload["message_reference"].is_null());
             assert!(!s(&payload["content"]).contains("<@"));
         }
+    }
+}
+
+#[test]
+fn legacy_silent_report_does_not_validate_an_unused_action_heading() {
+    let mut h = Harness::new();
+    let body = "回答が必要な質問はありません。";
+    let out = cmd_log(&mut h.ctx, "進捗", body, None, false).unwrap();
+    let file = h.root.path().join("silent.txt");
+    std::fs::write(&file, body).unwrap();
+    cmd_post(&mut h.ctx, s(&out["thread_id"]), &file, &[], false).unwrap();
+    assert!(h
+        .fake
+        .borrow()
+        .posts
+        .iter()
+        .all(|(_, payload)| payload["flags"] == SILENT));
+}
+
+#[test]
+fn legacy_explicit_owner_question_keeps_its_owner_mention() {
+    for post in [false, true] {
+        let mut h = Harness::new();
+        let body="回答が必要：表示の方向を選んでください。\na: 一覧を中心にする\nb: 対応不要として保持する";
+        if post {
+            let file = h.root.path().join("question.txt");
+            std::fs::write(&file, body).unwrap();
+            cmd_post(&mut h.ctx, "200", &file, &[], true).unwrap();
+        } else {
+            cmd_log(&mut h.ctx, "画面の方向", body, None, true).unwrap();
+        }
+        let fake = h.fake.borrow();
+        let owner_messages = fake
+            .messages
+            .values()
+            .flatten()
+            .filter(|m| m["allowed_mentions"]["users"] == json!(["OWN"]))
+            .collect::<Vec<_>>();
+        assert_eq!(owner_messages.len(), 1);
+        assert!(s(&owner_messages[0]["content"]).contains("<@OWN>"));
+        assert_eq!(owner_messages[0]["allowed_mentions"]["replied_user"], false);
     }
 }
 

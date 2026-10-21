@@ -45,8 +45,10 @@ func historyAttachmentCLI(args []string, out io.Writer) int {
 
 func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Context, historyReadScope) (*Runner, error), guard func(context.Context, string) bool) int {
 	stage := "arguments"
+	httpStatus := 0
+	responseLength := int64(-1)
 	fail := func() int {
-		_ = json.NewEncoder(out).Encode(map[string]string{"error": "attachment read unavailable", "stage": stage})
+		_ = json.NewEncoder(out).Encode(map[string]any{"error": "attachment read unavailable", "stage": stage, "http_status": httpStatus, "response_length": responseLength})
 		return 1
 	}
 	var scopePath, output string
@@ -130,6 +132,8 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 	}
 	defer response.Body.Close()
 	stage = "cdn_response"
+	httpStatus = response.StatusCode
+	responseLength = response.ContentLength
 	if response.StatusCode != http.StatusOK || (response.ContentLength >= 0 && response.ContentLength != scope.Size) {
 		return fail()
 	}

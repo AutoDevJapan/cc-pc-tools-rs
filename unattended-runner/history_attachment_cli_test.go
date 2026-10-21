@@ -229,6 +229,12 @@ func TestHistoryAttachmentRejectsChangedOrUnqualifiedSource(t *testing.T) {
 			if mode == "redirect" && calls.media != 1 {
 				t.Fatalf("redirect scenario issued %d CDN requests, want one without following", calls.media)
 			}
+			if mode == "redirect" {
+				var diagnostic map[string]any
+				if json.Unmarshal(stdout.Bytes(), &diagnostic) != nil || diagnostic["stage"] != "cdn_response" || diagnostic["http_status"] != float64(http.StatusFound) {
+					t.Fatal("response rejection did not distinguish its HTTP status without a URL")
+				}
+			}
 		})
 	}
 }

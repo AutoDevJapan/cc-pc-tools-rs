@@ -13,8 +13,9 @@
 
 ## 入出力
 
-record入力はrequest_id、todo_id、project、thread_id、source、parent_id（任意）、child_id（任意）、attempt_id、transition_id、state、reason、remaining、next_action、owner_required、private_ref（任意）。
-公開本文は固定の日本語説明と元ToDoから生成し、入力の文章、エラーログ、私的参照、認証値を転記しない。
+record入力はrequest_id、todo_id、project、thread_id（元投稿）、source、parent_id（任意）、child_id（任意）、attempt_id、transition_id、state、reason、remaining、next_action、owner_required、private_ref（任意）。
+公開本文は固定の日本語説明と元ToDoから生成し、原エラー、私的参照、認証値を転記しない。本人の対応要否を先頭に書く。owner_required=falseなら「対応不要です。AI側で…」と具体的な次の処置を示し、返信やPC操作を求めない。
+owner_required=trueではowner_questionにquestion、choice_a、choice_b、urlを指定する。親が既に通常経路で用意した本人質問の公開用・秘密なしの文と選択肢、回答先のDiscordメッセージURLだけを使う。各文は空でない1行・UTF-8で300bytes以内、a/bは異なる内容、URLは設定済みサーバー内の既存質問を指す。質問か選択肢がない入力は受領エラーとして親へ返し、曖昧な依頼を配送しない。false時の質問指定も拒否する。本文先頭に質問・a/b・回答先と「この対象だけ回答を待ち、AI側はほかの作業を続ける」を示す。新しい質問を結果投稿から登録する入口ではない。公開用の質問も通常senderの秘密/mention検査を通す。
 state/reason/remaining/next_actionは列挙値。blocked by policy等の自由文の引用で拒否を推定しない。
 清掃の個別保留はstate=item_deferredとして、item_id、item_kind、capacity_bytes、capacity_scope（complete/partial/unknown）も記録する。具体対象の種類と識別子を公開本文へ示し、対象の場所・元指示はprivate_refへ分離する。partialを対象全体の容量とせず、unknownで容量を推測しない。
 同じ依頼・試行・遷移は同じ親の記録へ対応し、内容の違う再送は拒否する。
@@ -34,6 +35,7 @@ recordの受付は長い巡回のrunner.lockやDiscord認証・状態に依存�
 親の同一入力の再試行は200ms間隔で2回までとし、なお未受領なら入力と具体的な失敗を元作業に保持して既存の再開手順へ返す。Windowsではロック競合33だけを混雑として扱い、開けない・権限不足・共有違反を混雑としない（[Microsoftのエラー定義](https://learn.microsoft.com/en-us/windows/win32/debug/system-error-codes--0-499-)）。受付待ちは親の期限にも従う。
 配送処理は20秒、通常処理は従来の50秒、既存CI巡回は15秒を確保する。全体は終了待ちを含め90秒で、既存タスクの2分以内に収める。
 配送は製品別の通常conversation logを使う。2026-10-21本人の「投稿してくれるのはいいんだけど、俺にメンションしてなくね？」を受け、新しく受領する返答・終了・停止・待機・個別保留はnotify_owner=trueを親の受領時に固定し、通常senderへ--notifyを渡す。通常進捗・後片付けへの一律メンションには広げず、添付は付けない。
+新規の本人通知は通常の「【PCの道具】担当の結果」話題へまとめる。thread_idは元投稿として記録に保持し、質問の進捗スレッドへ通知を強制しない。通常senderの話題の対応と配送IDを使い、実際の配送先はstatusのurlで親が確認する。旧保存記録は元の明示配送先も維持する。
 notify_ownerのない旧保存記録は従来の通知なし指定を維持する。既存verifiedの再投稿や過去全件のメンションはしない。CLI statusにもnotify_ownerを返す。
 送信後の通常配送結果とDiscord GETで本文・投稿者・宛先・通知指定を照合してからverifiedを保存する。新規通知では本文の本人mentionが1回、mentionsが設定済み本人1名のみ、everyone/roleなし、通知抑制4096なし、埋め込み抑制4ありを必須とする。旧記録は本文mentionなし・通知抑制ありを確認する。
 通常送信側が本文末尾へ付けるrecovery識別行も形式を照合する。本文は親の受領時点で固定し、将来の文言変更で未配送の入力を変えない。

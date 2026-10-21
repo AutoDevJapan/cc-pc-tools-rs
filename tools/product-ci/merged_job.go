@@ -15,7 +15,7 @@ const mergedBase = "f3d946cb0f7e33b8cb5cbc0858091e583ca61350"
 const mergedCodeQLRun int64 = 38941323954
 const mergedCodeQLWorkflow int64 = 331939928
 
-func mergedCandidate() candidate { return candidate{1285649124, 1002, mergedSHA} }
+func mergedCandidate() candidate { return candidate{ID: 1285649124, PR: 1002, SHA: mergedSHA} }
 
 // Only execution code calls this. Existing open-PR, bootstrap and route modes
 // retain verify and can never use a merged receipt to mutate their scope.

@@ -197,10 +197,10 @@ func TestVerifyFixedIdentity(t *testing.T) {
 
 func TestFixedCandidatePins(t *testing.T) {
 	want := []candidate{
-		{1285649124, 1002, "20c441df545a88f4a839d7e906b5aeb4f1708ae3"},
-		{1392152644, 148, "75a4051305b6f47c70ddb59a8d2bf9015666f12c"},
-		{1154066087, 3613, "b194d66524ef86330bb73ca3f22f9e5dd6ae0a07"},
-		{1386702183, 175, "b2b6d47b7f9e17617d16a9079a70de272bc3c04c"},
+		{ID: 1285649124, PR: 1002, SHA: "20c441df545a88f4a839d7e906b5aeb4f1708ae3"},
+		{ID: 1392152644, PR: 148, SHA: "75a4051305b6f47c70ddb59a8d2bf9015666f12c"},
+		{ID: 1154066087, PR: 3613, SHA: "b194d66524ef86330bb73ca3f22f9e5dd6ae0a07"},
+		{ID: 1386702183, PR: 175, SHA: "b2b6d47b7f9e17617d16a9079a70de272bc3c04c"},
 	}
 	if len(candidates) != len(want) {
 		t.Fatalf("candidate count = %d, want %d", len(candidates), len(want))

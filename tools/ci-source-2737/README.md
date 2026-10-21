@@ -3,6 +3,19 @@
 This package is a RAM-only source packet boundary for the fixed GoDD MCP Alpha
 CI source. It is a module, not a product checkout command or an executor.
 
+ToDo2766 adds one explicit `product: press-2766` profile. It accepts only
+private AutoDevJapan repository1386702183, Draft PR175, its fixed task branch,
+and base4dc5c332d54d19325f122df1f0e4a52e9dd3a629. `workflow` must be exactly
+`local-checks.yml`, `rust-v2-https.yml`, or `windows-hidden-fixtures.yml`.
+The head, tree and selected workflow digest remain explicit immutable pins.
+The empty product/workflow pair retains the original MCP α contract. Unknown
+products, paths, partial profile selection and CodeQL are refused before API
+reads. This profile adds no runner admission, host materialization command,
+workflow mutation, dispatch or source-execution path. The existing guest
+controllers still reject Press bindings until their separate finite admission
+is implemented and reviewed. Physical materialization tests use public
+synthetic Git repositories, not original product source on the host.
+
 ## API
 
 - `Pin` requires lowercase 40-character commit and tree SHA-1 values and a

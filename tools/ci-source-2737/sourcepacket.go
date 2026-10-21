@@ -46,6 +46,8 @@ var hex64 = regexp.MustCompile(`^[0-9a-f]{64}$`)
 // Pin is the caller-selected revision identity. Repository, PR and ref identity
 // are fixed by this package; head/tree/workflow digest are explicitly pinned.
 type Pin struct {
+	Product        string `json:"product,omitempty"`
+	Workflow       string `json:"workflow,omitempty"`
 	HeadSHA        string `json:"head_sha"`
 	TreeSHA        string `json:"tree_sha"`
 	WorkflowSHA256 string `json:"workflow_sha256"`
@@ -81,13 +83,15 @@ type repo struct {
 }
 type pull struct {
 	State string `json:"state"`
+	Draft bool   `json:"draft"`
 	Head  struct {
 		SHA  string `json:"sha"`
 		Ref  string `json:"ref"`
 		Repo repo   `json:"repo"`
 	} `json:"head"`
 	Base struct {
-		Repo repo `json:"repo"`
+		SHA  string `json:"sha"`
+		Repo repo   `json:"repo"`
 	} `json:"base"`
 }
 type commitResponse struct {
@@ -107,7 +111,8 @@ type commitResponse struct {
 }
 
 func validPin(p Pin) bool {
-	return hex40.MatchString(p.HeadSHA) && hex40.MatchString(p.TreeSHA) && hex64.MatchString(p.WorkflowSHA256)
+	_, ok := p.Profile()
+	return ok && hex40.MatchString(p.HeadSHA) && hex40.MatchString(p.TreeSHA) && hex64.MatchString(p.WorkflowSHA256)
 }
 func gitID(kind string, b []byte) string {
 	h := sha1.New()
@@ -136,6 +141,7 @@ func Fetch(ctx context.Context, pin Pin) (result Packet, retErr error) {
 	if !validPin(pin) {
 		return Packet{}, fixedErr()
 	}
+	profile, _ := pin.Profile()
 	verify := func() (repo, error) {
 		r, detail, err := verifySourceIdentity(ctx, pin, api)
 		if err != nil {
@@ -168,7 +174,7 @@ func Fetch(ctx context.Context, pin Pin) (result Packet, retErr error) {
 		return Packet{}, fixedErr()
 	}
 	stage = "workflow"
-	workflow, err := readAPI(ctx, "repos/"+r.FullName+"/contents/"+workflowPath+"?ref="+pin.HeadSHA)
+	workflow, err := readAPI(ctx, "repos/"+r.FullName+"/contents/"+profile.Workflow+"?ref="+pin.HeadSHA)
 	if err != nil {
 		return Packet{}, fixedErr()
 	}
@@ -186,7 +192,7 @@ func Fetch(ctx context.Context, pin Pin) (result Packet, retErr error) {
 	}
 	workflowFound := false
 	for _, entry := range t.Tree {
-		if entry.Path == workflowPath && entry.Type == "blob" && (entry.Mode == "100644" || entry.Mode == "100755") && gitID("blob", wf) == entry.SHA {
+		if entry.Path == profile.Workflow && entry.Type == "blob" && (entry.Mode == "100644" || entry.Mode == "100755") && gitID("blob", wf) == entry.SHA {
 			workflowFound = true
 		}
 	}
@@ -213,22 +219,26 @@ func Fetch(ctx context.Context, pin Pin) (result Packet, retErr error) {
 // Return only a fixed diagnostic vocabulary. API errors and identity values
 // never become error text, and a rejection still prevents all later reads.
 func verifySourceIdentity(ctx context.Context, pin Pin, call func(context.Context, string, any) error) (repo, string, error) {
+	profile, ok := pin.Profile()
+	if !ok {
+		return repo{}, "profile", fixedErr()
+	}
 	var r repo
-	if err := call(ctx, fmt.Sprintf("repositories/%d", RepoID), &r); err != nil {
+	if err := call(ctx, fmt.Sprintf("repositories/%d", profile.RepoID), &r); err != nil {
 		return repo{}, "repository_api_" + sourceAPICode(err), fixedErr()
 	}
-	if r.ID != RepoID || r.Owner.Login != "AutoDevJapan" || r.FullName != "AutoDevJapan/GoDD-MCP-Alpha" || !r.Private || r.Fork || !r.Permissions.Admin {
+	if r.ID != profile.RepoID || r.Owner.Login != "AutoDevJapan" || r.FullName != profile.Repository || !r.Private || r.Fork || !r.Permissions.Admin {
 		return repo{}, "repository_identity", fixedErr()
 	}
 	var p pull
-	if err := call(ctx, fmt.Sprintf("repos/%s/pulls/%d", r.FullName, PR), &p); err != nil {
+	if err := call(ctx, fmt.Sprintf("repos/%s/pulls/%d", r.FullName, profile.PR), &p); err != nil {
 		return repo{}, "pull_api_" + sourceAPICode(err), fixedErr()
 	}
-	if p.State != "open" || p.Head.SHA != pin.HeadSHA || p.Head.Ref != HeadRef || p.Head.Repo.ID != RepoID || p.Base.Repo.ID != RepoID || p.Head.Repo.FullName != r.FullName || p.Base.Repo.FullName != r.FullName || p.Head.Repo.Fork {
+	if p.State != "open" || p.Head.SHA != pin.HeadSHA || p.Head.Ref != profile.HeadRef || p.Head.Repo.ID != profile.RepoID || p.Base.Repo.ID != profile.RepoID || p.Head.Repo.FullName != r.FullName || p.Base.Repo.FullName != r.FullName || p.Head.Repo.Fork || (profile.BaseSHA != "" && (!p.Draft || p.Base.SHA != profile.BaseSHA)) {
 		return repo{}, "pull_identity", fixedErr()
 	}
 	var ref identityRef
-	if err := call(ctx, "repos/"+r.FullName+"/git/ref/heads/"+url.PathEscape(HeadRef), &ref); err != nil {
+	if err := call(ctx, "repos/"+r.FullName+"/git/ref/heads/"+url.PathEscape(profile.HeadRef), &ref); err != nil {
 		return repo{}, "ref_api_" + sourceAPICode(err), fixedErr()
 	}
 	if ref.Object.SHA != pin.HeadSHA {
@@ -415,6 +425,7 @@ func validatePacket(p Packet) error {
 	if !validPin(p.Pin) || len(p.Archive) == 0 || len(p.Archive) > maxArchive || digest(p.Archive) != p.ArchiveSHA256 || len(p.CommitPayload) == 0 || gitID("commit", p.CommitPayload) != p.Pin.HeadSHA || commitTreeID(p.CommitPayload) != p.Pin.TreeSHA || len(p.TreeEntries) > maxFiles {
 		return fixedErr()
 	}
+	profile, _ := p.Pin.Profile()
 	if err := validateEntries(p.TreeEntries); err != nil {
 		return err
 	}
@@ -422,7 +433,7 @@ func validatePacket(p Packet) error {
 	if err != nil {
 		return err
 	}
-	workflow, ok := files.data[workflowPath]
+	workflow, ok := files.data[profile.Workflow]
 	if !ok || digest(workflow) != p.Pin.WorkflowSHA256 {
 		return fixedErr()
 	}
@@ -432,7 +443,7 @@ func validatePacket(p Packet) error {
 		if entry.Type == "blob" {
 			regular[entry.Path] = entry.SHA
 		}
-		if entry.Path == workflowPath {
+		if entry.Path == profile.Workflow {
 			workflowFound = entry.Type == "blob" && gitID("blob", workflow) == entry.SHA
 		}
 	}

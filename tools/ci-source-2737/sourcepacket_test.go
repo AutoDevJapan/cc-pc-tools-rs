@@ -54,6 +54,10 @@ func run(t *testing.T, dir string, input []byte, args ...string) []byte {
 }
 
 func fixture(t *testing.T) (Packet, string) {
+	return fixtureForWorkflow(t, workflowPath)
+}
+
+func fixtureForWorkflow(t *testing.T, workflow string) (Packet, string) {
 	t.Helper()
 	root := t.TempDir()
 	src := filepath.Join(root, "repo")
@@ -63,7 +67,7 @@ func fixture(t *testing.T) (Packet, string) {
 	run(t, src, nil, "init", "--quiet", "--template=")
 	run(t, src, nil, "config", "user.name", "Fixture")
 	run(t, src, nil, "config", "user.email", "fixture@example.invalid")
-	files := map[string]string{".gitignore": "tracked.dat\n", ".gitattributes": "*.dat filter=mutate\n", "tracked.dat": "tracked raw bytes\n", workflowPath: "name: fixture\n"}
+	files := map[string]string{".gitignore": "tracked.dat\n", ".gitattributes": "*.dat filter=mutate\n", "tracked.dat": "tracked raw bytes\n", workflow: "name: fixture\n"}
 	for name, body := range files {
 		target := filepath.Join(src, filepath.FromSlash(name))
 		if err := os.MkdirAll(filepath.Dir(target), 0700); err != nil {

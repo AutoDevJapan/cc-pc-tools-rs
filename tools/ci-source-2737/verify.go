@@ -30,6 +30,7 @@ func VerifyCheckout(ctx context.Context, pin Pin, entries []TreeEntry, root stri
 	if !validPin(pin) || !filepath.IsAbs(root) || validateEntries(entries) != nil {
 		return Receipt{}, fixedErr()
 	}
+	profile, _ := pin.Profile()
 	stage = "root"
 	fs, e := secureRoot(root)
 	if e != nil {
@@ -109,7 +110,7 @@ func VerifyCheckout(ctx context.Context, pin Pin, entries []TreeEntry, root stri
 		if gitID("blob", b) != entry.SHA {
 			return Receipt{}, fixedErr()
 		}
-		if entry.Path == workflowPath && digest(b) != pin.WorkflowSHA256 {
+		if entry.Path == profile.Workflow && digest(b) != pin.WorkflowSHA256 {
 			return Receipt{}, fixedErr()
 		}
 		count++
@@ -118,7 +119,7 @@ func VerifyCheckout(ctx context.Context, pin Pin, entries []TreeEntry, root stri
 	if e = fs.revalidate(); e != nil {
 		return Receipt{}, e
 	}
-	return Receipt{RepoID: RepoID, PR: PR, HeadSHA: pin.HeadSHA, TreeSHA: pin.TreeSHA, BlobCount: count, PhysicalBlobsVerified: true}, nil
+	return Receipt{RepoID: profile.RepoID, PR: profile.PR, HeadSHA: pin.HeadSHA, TreeSHA: pin.TreeSHA, BlobCount: count, PhysicalBlobsVerified: true}, nil
 }
 
 func copyGitProofMetadata(ctx context.Context, fs *secureFiles, snapshot string, checkedConfig []byte) error {

@@ -1,5 +1,31 @@
 # Fixed candidate product CI
 
+## Press preparation (ToDo2766)
+
+`press-ci-outline` is read-only. It revalidates private AutoDevJapan
+repository1386702183 / Draft PR175 / fixed b2b6d47 head, dac2116 tree,
+4dc5c33 base and original task ref, before and after reading three original
+workflows in RAM. It verifies each complete original Git blob and reports
+only control metadata and SHA256: local-checks ten jobs (including all four
+integration shards), HTTPS both OS jobs, and the Windows junction job.
+The original events, matrix axes and values, OS routes and timeouts are kept.
+`local-gates` has no explicit timeout, so its original default is 360 minutes.
+
+This command has no API mutation, runner admission, source execution, route
+publication or official success path. The two original PR-only workflows
+have no workflow_dispatch event; the outline explicitly retains that fact.
+They cannot be sent through the existing dispatch-only MCP α executor by
+changing labels alone. A later finite admission must bind the actual event
+and execution source while preserving the original workflow contract. No
+Press workflow/head has been changed by this preparation, and no old CI result
+is promoted to a new source revision.
+
+GitHub documents the [PR merge ref used by checkout](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#pull_request)
+and the [original timeout default](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax#jobsjob_idtimeout-minutes).
+The existing sourcepacket/guest/runner implementation is reused, not copied
+into another VM or SDK tool. Normal CodeQL and the separate alert check remain
+outside this read-only preparation.
+
 This Go module is independent of `pc-ci` and `linux-runner-bridge`. It neither
 changes their admission policy nor registers old product directories. Four
 numeric repository IDs, PR numbers and source revisions are explicit. Before

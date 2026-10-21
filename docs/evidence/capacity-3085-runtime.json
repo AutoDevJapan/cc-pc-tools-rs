@@ -3,8 +3,8 @@
   "origin_todo_id": 3085,
   "repository": "AutoDevJapan/cc-pc-tools-rs",
   "source_root": "D:/CC/Work/unattended-operations-20261013-wt/todo-3085-capacity-decision",
-  "base_sha": "6db487f3979e8b823cbf8f07d2878444761c0026",
-  "verified_at_utc": "2026-10-21T02:05:05.4639296Z",
+  "base_sha": "df54f94071280c66aa36b741458c60028cf9b55a",
+  "verified_at_utc": "2026-10-21T05:12:13.0490897Z",
   "source_files": {
     "capacity-audit-3h/decision-worker.md": "2087c1660ca389b572065c78877ad37be05dee1963350df0349e60cbb86a18e4",
     "capacity-audit-3h/decision.go": "43d59b6d9906a7b9d6acaf816bfc47922c6a33ff397b27c1772f6902e0dfd355",
@@ -16,15 +16,16 @@
     "cc-ask/src/recovery_messages.rs": "ea4c8552fbd8f7a1cea5580497efccebe6a870fdb3cefcf8c4b39138ee9013db",
     "cc-ask/src/recovery_messages/clarification.rs": "186629a39bfa0447332018d4b39685ee05046b17e567a14e8d81d0f814ca83c5",
     "cc-scheduler/src/dispatch_receipt.rs": "f5227b884ee22cfceda56d7a45168940dc11d2f303633081847789b66aca3855",
-    "cc-scheduler/src/engine.rs": "e472944ef664c61b341c5a8049dd83d730a83d589523dcc0d8e3173dbe75b9ac",
+    "cc-scheduler/src/engine.rs": "1337e29079d99125910ab58da6db23aba19baee8c32ba5c420f7de6a4671d9c4",
     "cc-scheduler/src/lib.rs": "be81427d7fac5c00cc7e020fefbec45f906526526ca876b7153f6f6fbdd594cc",
-    "cc-scheduler/src/main.rs": "d62a245d9c1509177aac05015eaffe0cc67fa795cef32203d9d8d27161158aca",
+    "cc-scheduler/src/main.rs": "4fab7ed3a32604a8f572fd71ecc2511e4d35dc597c40ce66aa6504f6d05aa561",
     "cc-todo/src/answered_wait.rs": "adfce3487896ab116a6516f2d3ff8cfcadbf44dd34aee2d803fca36ace654cac",
     "cc-todo/src/capacity_cycle.rs": "70e0b4ef8c0745902016c2eabe5972379f5a6264ce03fc564f57a6dcfb0ad470",
     "cc-todo/src/conversation_wait.rs": "9ad9478179ee95c6b0167310426abe82149577e20dfdccac27d7aadf98606f27",
     "cc-todo/src/lib.rs": "13b0ff71d7a0c570596e2248b3c24b5542485f7197f84fa2396a1afe2960a1d1",
     "cc-todo/src/product_resume.rs": "40e946a643881337fd399e70e4db309577768e576d521461de9c14b747b4ac9a",
-    "cc-todo/src/recovery.rs": "da66e11d94e8206b4fd32feffd63c3415c804524b6168bd3db26027c2cfa1362"
+    "cc-todo/src/recovery.rs": "da66e11d94e8206b4fd32feffd63c3415c804524b6168bd3db26027c2cfa1362",
+    "cc-scheduler/src/preparation.rs": "e3af77f3673c024fbf164c0ca27b59d0f39a3ea7a27b62ec19e0066be6933d67"
   },
   "capacity": {
     "path": "D:/CC/Tools/capacity-audit-3h/capacity-audit-3h.exe",
@@ -37,7 +38,7 @@
   "todo": {
     "path": "D:/CC/Tools/todo/todo.exe",
     "old_sha256": "ba1d65381bd31c38d05cf3798973427e2f0271dbc9d664afbfe91501a8de6811",
-    "new_sha256": "45449d6fa5a6553013814c71d7988921ca6843b224ebe30633b215a5ee82dbcb",
+    "new_sha256": "3ec3ffb1de995d1f900398386004b69a4aed109fb9f0c91319ac1b32ba467b44",
     "ownership": "canonical executable in cc-todo/src/lib.rs Paths::production and shared-todo SKILL",
     "candidate_relative_path": ".ci-work/todo-3085.exe"
   },
@@ -58,20 +59,22 @@
     "cc-ask/src/recovery_messages.rs": "435b2408f2a244a9c3a722014bbb9b5b4c6b34ca",
     "cc-ask/src/recovery_messages/clarification.rs": "208e31220f441d06bb655546952808c26d068759",
     "cc-scheduler/src/dispatch_receipt.rs": "7067c384c7a5a73403b096d6647f3e4e3c64ab5c",
-    "cc-scheduler/src/engine.rs": "d2fecc2026c584ee1f3b37dbe071e2fa15cde2f5",
+    "cc-scheduler/src/engine.rs": "d027d5d66aa4edd0faccc2ba116f3646c566c570",
     "cc-scheduler/src/lib.rs": "070721f25b048235c106b40c33531fcccd347f5e",
-    "cc-scheduler/src/main.rs": "d38daafb8dd24638701ac1b215587d555aa481d8",
+    "cc-scheduler/src/main.rs": "24ac7dc9ff0e3343081fe5ceaea106c9984efa6d",
     "cc-todo/src/answered_wait.rs": "e890e901cc3850b7556a6883989771185a88454b",
     "cc-todo/src/capacity_cycle.rs": "c10419b77f23444f7e5a62a7afe7a9cacd93acbe",
     "cc-todo/src/conversation_wait.rs": "2f77d8e08eb1572c780468d8608aec94d62535dc",
     "cc-todo/src/lib.rs": "325b91367d4f6e2133408bbc120f23d134eef685",
     "cc-todo/src/product_resume.rs": "13ab6a9c1b5e366782347b2f867230c40b33f2c8",
-    "cc-todo/src/recovery.rs": "ee0728c8db9778d428c8d50ed13e9f0722a36078"
+    "cc-todo/src/recovery.rs": "ee0728c8db9778d428c8d50ed13e9f0722a36078",
+    "cc-scheduler/src/preparation.rs": "33295739e4206a84ad961325747d7837857d1a9a"
   },
   "source_fingerprint_scope": "source_files hashes compile-input working-copy bytes; source_git_blobs records normalized Git object IDs",
   "packaging": "Cargo hardlinked output is copied into an independent one-link distribution file; bytes and guard physical identity remain checked",
-  "todo_build_commit": "743613b95c9137d11b0b0c6562cfc569061976ce",
-  "todo_build_receipt_sha256": "7fb5c67e86d0b2aad339ecc68efe925e2afadae108979acc063dbd5631be508c",
+  "todo_build_commit": "b392804d00307c171bbfdbba370c7c91fc460bb2",
+  "todo_build_receipt_sha256": "db66f8e29f0ae824a7120d4bead1e5138fdfd339017721711040a5e325199501",
   "todo_build_check_todo": 3238,
-  "rust_compile_inputs_unchanged_after_build": true
+  "rust_compile_inputs_unchanged_after_build": true,
+  "todo_build_job": "20261021-135545-todo-3238"
 }

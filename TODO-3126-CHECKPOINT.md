@@ -1,5 +1,18 @@
 # ToDo3126 再開記録
 
+- 最終結果: この限定修復は完了。PR307のマージ、正規release CLIでの実移行と
+  読戻し、原記録の保存・一時フォルダーの整理を完了した。3050/3070は3084の完了待ち。
+- 2026-10-21 10:30以降の再開: 独立修復3189の実結果を元3126の正規メモで確認した。
+  3189はPR328/334を通常マージし、必要CIと別モデルmaxレビュー、担当記録の実回収、
+  scheduler配布と無変更読戻しを完了した。終了済み担当をrunningへ戻していない。
+  3189の完了後、通常の依存解除で今回の実担当20261021-103042-todo-3126が連結された。
+  自分の真のCC_JOB_IDと元branch、実HEAD94ed755によるcheckpoint-workspaceは
+  saved=true / launched=0 / source_files_changed=falseを返した。
+  同じ移行・質問・成功済み検査・ビルドを再実行せず、現在のwait_on=[3084]を正規APIで確認した。
+  この文書の最終コミット後の実HEADも同じ正規手順で保存し、原応答を私的な最終記録へ保持する。
+- 元Consoleの機能修復・UI・配布と質問監査の残作業は3084/3110が保持する。
+  本項目からそれらを完了扱いにせず、追加の本人判断やPC操作は求めない。
+
 - 作業: 回答済みのConsole旧本人待ち3050/3070を、正規CLIで既存3084依存待ちへ移す。
 - Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/305
 - 作業ブランチ: scheduler/todo-3126-console。基準main: 6d5c46e62100a212dbf223e29dc8b0f979bdf7aa。
@@ -53,7 +66,7 @@
 - この修復の実移行は完了。Consoleの機能・画面の実反映と配布は引き続き3084側の受入で追う。
   元の質問の監査・正規配送・closeは親3110が保持する。同じ移行や質問を再実行しない。
 - 画像sender/履歴readのPR296は編集しない。raw台帳編集・guard緩和・applied/jobの捏造はしない。
-- 一時所有ID: 7a11b876847b64f5e8444bfa0f54070e。
-  C:/Users/makhmeto/AppData/Local/Temp/codex-owned-7a11b876847b64f5e8444bfa0f54070e。
-  必要な原検査と実操作の記録を保持してから、safe-deleteのplan/通常削除/finishで整理する。
+- 一時所有ID7a11b876847b64f5e8444bfa0f54070eのフォルダーは、
+  必要な原検査と実操作の記録67件を保存・バイト照合した後、safe-deleteのplan/通常削除/finishで整理済み。
+  原記録の私的archive/manifest、ソースと今回実使用した正常release CLIを保持する。
 - 自分の共有ToDo状態はschedulerが更新する。レビュー等の別ToDoだけ待つときは正規wait --onを保存する。

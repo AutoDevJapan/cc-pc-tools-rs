@@ -162,6 +162,7 @@ fn no_action_resume_keeps_explicit_model_and_capabilities_and_routes_auto_to_imp
         let source = &mut f.e.backend.records[0];
         source["no_action_recovery"] = json!({"ticket":"fixture"});
         source["model_explicit"] = json!(explicit);
+        source["model_origin"] = json!(if explicit { "owner_request" } else { "policy" });
         source["model"] = json!("gpt-6-luna");
         source["effort"] = json!("max");
         source["sandbox"] = json!("danger-full-access");

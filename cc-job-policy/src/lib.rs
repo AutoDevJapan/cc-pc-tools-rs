@@ -4,6 +4,7 @@ pub mod cancellation;
 pub mod cargo;
 pub mod finished_review;
 pub mod finished_work_handoff;
+pub mod launch_context;
 pub mod owner_wait_repair;
 pub mod priority;
 pub mod product_identity;
@@ -34,48 +35,205 @@ pub struct ModelProfile {
 /// type. Prompt text is deliberately not inspected: implementation requests
 /// often mention reviews while still requiring full implementation capability.
 pub fn model_profile(job_name: &str, task_type: &str) -> ModelProfile {
-    let name = job_name.to_ascii_lowercase();
-    let kind = task_type.to_ascii_lowercase();
-    let light_name = name.starts_with("rev-")
+    // Owner policy 2026-10-20: task labels must not silently lower effort or
+    // select Luna. Explicit model/effort and independent-review exclusions are
+    // resolved by callers. Reviews default to Opus, distinct from Sol writers.
+    if review_task(job_name, task_type) {
+        return review_profile(&[]).unwrap();
+    }
+    ModelProfile {
+        model: "gpt-6.1-sol",
+        effort: "max",
+    }
+}
+
+pub fn review_task(name: &str, kind: &str) -> bool {
+    let name = name.to_ascii_lowercase();
+    kind.to_ascii_lowercase()
+        .split(['_', '-'])
+        .any(|part| part == "review")
+        || name.starts_with("rev-")
         || name.ends_with("-review")
-        || [
-            "diag-",
-            "audit-",
-            "inspect-",
-            "check-",
-            "verify-",
-            "research-",
-            "cleanup-",
-            "clean-",
-        ]
-        .iter()
-        .any(|prefix| name.starts_with(prefix));
-    let light_kind = [
-        "review",
-        "code_review",
-        "documentation",
-        "research",
-        "live_debug",
-        "verification",
-        "check",
-        "confirmation",
-        "audit",
-        "inspection",
-        "cleanup",
-        "housekeeping",
-    ]
-    .contains(&kind.as_str());
-    if light_name || light_kind {
-        ModelProfile {
-            model: "gpt-6-luna",
-            effort: "high",
-        }
-    } else {
-        ModelProfile {
-            model: "gpt-6.1-sol",
-            effort: "high",
+}
+
+pub fn same_model(left: &str, right: &str) -> bool {
+    fn bare(model: &str) -> &str {
+        let Some((provider, model_id)) = model.split_once('/') else {
+            return model;
+        };
+        if ["openai", "anthropic", "main"].contains(&provider)
+            || (provider.len() == 7
+                && provider.starts_with('p')
+                && provider[1..]
+                    .bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
+        {
+            model_id
+        } else {
+            model
         }
     }
+    fn alias(model: &str) -> &str {
+        match model {
+            "opus" => "claude-opus-5-5",
+            "sonnet" => "claude-sonnet-5-5",
+            "haiku" => "claude-haiku-5-5",
+            other => other,
+        }
+    }
+    alias(bare(&left.to_ascii_lowercase())) == alias(bare(&right.to_ascii_lowercase()))
+}
+
+/// A saved AI hint is not evidence of an owner's individual effort override.
+/// Standalone explicit CLI requests and unknown models retain their settings.
+fn managed_job(job: &serde_json::Value) -> bool {
+    job["todo_id"].as_u64().is_some_and(|id| id > 0)
+        || job["launch_key"]
+            .as_str()
+            .is_some_and(|key| !key.is_empty())
+        || job["model_origin"] == "policy"
+        || job["effort_origin"] == "policy"
+        || job["model_explicit"] == false
+}
+
+pub fn effective_effort(job: &serde_json::Value) -> &str {
+    let saved = job["effort"].as_str().unwrap_or("max");
+    if launch_context::fixed_execution_contract(job) {
+        return saved;
+    }
+    let model = job["model"].as_str().unwrap_or("");
+    let known = ["gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna"]
+        .contains(&model.strip_prefix("openai/").unwrap_or(model))
+        || ["claude-opus-5-5", "claude-sonnet-5-5", "opus", "sonnet"]
+            .contains(&model.strip_prefix("anthropic/").unwrap_or(model));
+    if managed_job(job) && known && job["effort_origin"] != "owner_request" {
+        "max"
+    } else {
+        saved
+    }
+}
+
+pub fn apply_effort_policy(job: &mut serde_json::Value) {
+    let effort = effective_effort(job).to_owned();
+    if job["effort"] != effort {
+        job["legacy_effort_hint"] = job["effort"].clone();
+        job["effort"] = serde_json::json!(effort);
+        job["effort_origin"] = serde_json::json!("owner_policy_20261020");
+    }
+}
+
+pub fn apply_managed_launch_policy(job: &mut serde_json::Value) {
+    if launch_context::fixed_execution_contract(job) {
+        return;
+    }
+    let source = launch_context::source_settings(job);
+    let managed = managed_job(job);
+    let automatic = job["model_explicit"] == false || job["model_origin"] == "policy";
+    let reader = review_task(
+        job["name"].as_str().unwrap_or(""),
+        job["task_type"].as_str().unwrap_or(""),
+    ) || job["subwork"]["kind"] == "review";
+    let capacity_attempt = launch_context::capacity_attempt(job);
+    let previous = job["model"].as_str().unwrap_or("");
+    if managed
+        && automatic
+        && job["model_origin"] != "owner_request"
+        && !reader
+        && !capacity_attempt
+        && !job["model_recovery_from"]
+            .as_str()
+            .is_some_and(|model| same_model(model, "gpt-6.1-sol"))
+        && !job["review_excluded_models"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(serde_json::Value::as_str)
+            .any(|model| same_model(model, "gpt-6.1-sol"))
+        && ["gpt-6-astra", "gpt-6-luna"]
+            .contains(&previous.strip_prefix("openai/").unwrap_or(previous))
+    {
+        job["legacy_model_hint"] = job["model"].clone();
+        job["model"] = serde_json::json!("gpt-6.1-sol");
+        job["requested_model"] = job["model"].clone();
+        job["model_origin"] = serde_json::json!("policy");
+    }
+    apply_effort_policy(job);
+    if !capacity_attempt && (source["model"] != job["model"] || source["effort"] != job["effort"]) {
+        job["launch_policy_version"] = serde_json::json!(launch_context::VERSION);
+    }
+    launch_context::reconcile_resume(job, &source);
+}
+
+pub fn author_models(source: &serde_json::Value) -> Vec<String> {
+    let mut models = Vec::<String>::new();
+    for value in [
+        &source["model"],
+        &source["requested_model"],
+        &source["legacy_model_hint"],
+        &source["execution_observed"]["model"],
+    ]
+    .into_iter()
+    .chain(
+        source["capacity_history"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .flat_map(|entry| [&entry["from_model"], &entry["to_model"]]),
+    ) {
+        if let Some(model) = value.as_str().filter(|model| !model.is_empty())
+            && !models.iter().any(|old| same_model(old, model))
+        {
+            models.push(model.to_owned());
+        }
+    }
+    models
+}
+
+pub fn review_profile(excluded: &[String]) -> Option<ModelProfile> {
+    [
+        "anthropic/claude-opus-5-5",
+        "gpt-6.1-sol",
+        "anthropic/claude-sonnet-5-5",
+        "gpt-6-astra",
+        "gpt-6-luna",
+    ]
+    .into_iter()
+    .find(|model| !excluded.iter().any(|author| same_model(author, model)))
+    .map(|model| ModelProfile {
+        model,
+        effort: "max",
+    })
+}
+
+/// A subwork origin remains valid provenance after its live parent exits.
+pub fn review_source_jobs(item: &serde_json::Value, db: &serde_json::Value) -> Vec<String> {
+    let mut ids: Vec<String> = item["review_source_jobs"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(|v| v.as_str().map(str::to_owned))
+        .collect();
+    if let Some(origin) = item["subwork"]["origin_job_id"]
+        .as_str()
+        .filter(|id| !id.is_empty())
+    {
+        ids.push(origin.into());
+    }
+    if let Some(parent) = db["items"].as_array().into_iter().flatten().find(|row| {
+        item["subwork"]["parent_todo_id"].as_u64().is_some()
+            && row["id"] == item["subwork"]["parent_todo_id"]
+    }) {
+        ids.extend(
+            parent["jobs"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .filter_map(|v| v.as_str().map(str::to_owned)),
+        );
+    }
+    ids.sort();
+    ids.dedup();
+    ids
 }
 
 /// Model routing labels are not permission boundaries: a review may include fixes.
@@ -212,13 +370,9 @@ mod tests {
 
     #[test]
     fn model_profiles_classify_job_names_and_task_types_without_reading_prompts() {
-        let light = ModelProfile {
-            model: "gpt-6-luna",
-            effort: "high",
-        };
         let full = ModelProfile {
             model: "gpt-6.1-sol",
-            effort: "high",
+            effort: "max",
         };
         for name in [
             "rev-123",
@@ -232,7 +386,15 @@ mod tests {
             "clean-123",
             "research-123",
         ] {
-            assert_eq!(model_profile(name, "implementation"), light, "{name}");
+            assert_eq!(
+                model_profile(name, "implementation"),
+                if review_task(name, "implementation") {
+                    review_profile(&[]).unwrap()
+                } else {
+                    full
+                },
+                "{name}"
+            );
         }
         for kind in [
             "review",
@@ -244,7 +406,15 @@ mod tests {
             "cleanup",
             "confirmation",
         ] {
-            assert_eq!(model_profile("req-123", kind), light, "{kind}");
+            assert_eq!(
+                model_profile("req-123", kind),
+                if review_task("req-123", kind) {
+                    review_profile(&[]).unwrap()
+                } else {
+                    full
+                },
+                "{kind}"
+            );
         }
         assert_eq!(model_profile("shep-123", "pr_shepherd"), full);
         assert_eq!(model_profile("req-123", "implementation"), full);

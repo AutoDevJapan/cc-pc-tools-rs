@@ -25,18 +25,38 @@ pub fn is_review_subwork(job: &Value) -> bool {
 }
 
 pub fn completed(job: &Value, result: &str) -> bool {
-    is_review_subwork(job)
+    is_finite_review(job)
         && result
             .lines()
             .next()
-            .is_some_and(|line| line.trim() == COMPLETE)
+            .is_some_and(|line| [COMPLETE, "状態: 完了"].contains(&line.trim()))
+}
+
+pub fn is_finite_review(job: &Value) -> bool {
+    is_review_subwork(job)
+        || (job["sandbox"] == "read-only"
+            && crate::review_task(
+                job["name"].as_str().unwrap_or(""),
+                job["task_type"].as_str().unwrap_or(""),
+            )
+            && job["todo_id"].as_u64().is_some_and(|id| id > 0)
+            && job["finite_review"]["todo_id"] == job["todo_id"]
+            && job["finite_review"]["spec"]
+                .as_str()
+                .is_some_and(|spec| !spec.is_empty())
+            && job["launch_key"]
+                .as_str()
+                .is_some_and(|key| !key.is_empty())
+            && job["finite_review"]["launch_key"] == job["launch_key"])
 }
 
 pub fn matches_item(job: &Value, item: &Value) -> bool {
-    is_review_subwork(job)
-        && job["todo_id"] == item["id"]
-        && job["subwork"] == item["subwork"]
-        && job["subwork_spec"] == item["spec"]
+    job["todo_id"] == item["id"]
+        && if is_review_subwork(job) {
+            job["subwork"] == item["subwork"] && job["subwork_spec"] == item["spec"]
+        } else {
+            is_finite_review(job) && job["finite_review"]["spec"] == item["spec"]
+        }
 }
 
 #[cfg(test)]

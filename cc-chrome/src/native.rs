@@ -636,27 +636,42 @@ async fn forward_streams(
         r=&mut down=>r,
     }
 }
-async fn persist_or_close(dir: &Path, record: &Record) -> io::Result<()> {
-    if let Err(error) = persist(dir, record) {
-        // Keep a second journal if only chrome-tabs is inaccessible. This also survives
-        // cancellation while the rollback RPC is in flight.
-        let emergency = dir
-            .join("chrome-emergency-tabs")
-            .join(format!("{}.json", uuid::Uuid::new_v4()));
-        let recorded = lifecycle::atomic_json(&emergency, record).is_ok();
-        let closed = tokio::time::timeout(Duration::from_secs(3), close_record(record)).await;
-        if matches!(closed, Ok(Ok(_))) && recorded {
-            let _ = fs::remove_file(emergency);
+async fn persist_or_close(dir: &Path, record: &Record) -> io::Result<PathBuf> {
+    match persist(dir, record) {
+        Ok(path) => Ok(path),
+        Err(error) => {
+            // Keep a second journal if only chrome-tabs is inaccessible. This also survives
+            // cancellation while the rollback RPC is in flight.
+            let emergency = dir
+                .join("chrome-emergency-tabs")
+                .join(format!("{}.json", uuid::Uuid::new_v4()));
+            let recorded = lifecycle::atomic_json(&emergency, record).is_ok();
+            let closed = tokio::time::timeout(Duration::from_secs(3), close_record(record)).await;
+            if matches!(closed, Ok(Ok(_))) && recorded {
+                let _ = fs::remove_file(emergency);
+            }
+            Err(io::Error::new(error.kind(), "tab record write failed"))
         }
-        return Err(io::Error::new(error.kind(), "tab record write failed"));
     }
-    Ok(())
 }
+
+/// The actual persisted UUID lets CLI callers complete a phase without listing job files.
+#[derive(Debug, Serialize)]
+pub struct OpenReceipt {
+    #[serde(flatten)]
+    pub record: Record,
+    pub record_id: String,
+}
+
 pub fn open(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
+    open_with_receipt(dir, job, url).map(|receipt| receipt.record)
+}
+
+pub fn open_with_receipt(dir: &Path, job: &str, url: &str) -> io::Result<OpenReceipt> {
     runtime()?.block_on(open_inner(dir, job, url))
 }
 
-async fn open_inner(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
+async fn open_inner(dir: &Path, job: &str, url: &str) -> io::Result<OpenReceipt> {
     if registrar::restricted_url(url) {
         return Err(io::Error::new(io::ErrorKind::PermissionDenied, registrar::REASON));
     }
@@ -665,48 +680,55 @@ async fn open_inner(dir: &Path, job: &str, url: &str) -> io::Result<Record> {
     {
         return Err(io::Error::other("invalid job or URL"));
     }
-    {
-        lifecycle::activity(dir)?;
-        let (pipe, info) = discover().await?;
-        let mut rpc = Rpc::connect(&pipe).await?;
-        let mut r = Record {
-            job: job.into(),
-            pipe,
-            instance: info["metadata"]["extensionInstanceId"]
-                .as_str()
-                .unwrap_or("")
-                .into(),
-            generation: info["browserTabMentions"]["generation"]
-                .as_str()
-                .unwrap_or("")
-                .into(),
-            session: format!("cc-chrome-{}", uuid::Uuid::new_v4()),
-            turn: "open".into(),
-            tab: 0,
-            created: epoch(),
-        };
-        let tab = rpc.call("createTab", r.params()).await?;
-        r.tab = tab["id"]
-            .as_u64()
-            .ok_or_else(|| io::Error::other("invalid createTab reply"))?;
-        persist_or_close(dir, &r).await?;
-        let mut p = r.params();
-        p["tabId"] = json!(r.tab);
-        let attached = rpc.call("attach", p).await;
-        if let Err(e) = attached {
-            let _ = tokio::time::timeout(Duration::from_secs(3), close_record(&r)).await;
-            return Err(e);
-        }
-        let mut p = r.params();
-        p["target"] = json!({"tabId":r.tab});
-        p["method"] = json!("Page.navigate");
-        p["commandParams"] = json!({"url":url});
-        if let Err(e) = rpc.call("executeCdp", p).await {
-            let _ = tokio::time::timeout(Duration::from_secs(3), close_record(&r)).await;
-            return Err(e);
-        }
-        Ok(r)
+    lifecycle::activity(dir)?;
+    let (pipe, info) = discover().await?;
+    open_on(dir, job, url, pipe, info).await
+}
+
+async fn open_on(dir: &Path, job: &str, url: &str, pipe: String, info: Value) -> io::Result<OpenReceipt> {
+    let mut rpc = Rpc::connect(&pipe).await?;
+    let mut r = Record {
+        job: job.into(),
+        pipe,
+        instance: info["metadata"]["extensionInstanceId"]
+            .as_str()
+            .unwrap_or("")
+            .into(),
+        generation: info["browserTabMentions"]["generation"]
+            .as_str()
+            .unwrap_or("")
+            .into(),
+        session: format!("cc-chrome-{}", uuid::Uuid::new_v4()),
+        turn: "open".into(),
+        tab: 0,
+        created: epoch(),
+    };
+    let tab = rpc.call("createTab", r.params()).await?;
+    r.tab = tab["id"]
+        .as_u64()
+        .ok_or_else(|| io::Error::other("invalid createTab reply"))?;
+    let path = persist_or_close(dir, &r).await?;
+    let record_id = path
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| io::Error::other("invalid persisted record filename"))?
+        .to_owned();
+    let mut p = r.params();
+    p["tabId"] = json!(r.tab);
+    let attached = rpc.call("attach", p).await;
+    if let Err(e) = attached {
+        let _ = tokio::time::timeout(Duration::from_secs(3), close_record(&r)).await;
+        return Err(e);
     }
+    let mut p = r.params();
+    p["target"] = json!({"tabId":r.tab});
+    p["method"] = json!("Page.navigate");
+    p["commandParams"] = json!({"url":url});
+    if let Err(e) = rpc.call("executeCdp", p).await {
+        let _ = tokio::time::timeout(Duration::from_secs(3), close_record(&r)).await;
+        return Err(e);
+    }
+    Ok(OpenReceipt { record: r, record_id })
 }
 
 fn remaining(deadline: std::time::Instant) -> io::Result<Duration> {
@@ -731,6 +753,7 @@ pub fn open_until(
                 io::Error::new(io::ErrorKind::TimedOut, "opening owner Chrome timed out")
             })?
     })
+    .map(|receipt| receipt.record)
 }
 
 /// Execute only page operations on a positively recorded tab in the same Chrome generation.
@@ -784,6 +807,71 @@ pub fn close_page(record: &Record) -> io::Result<bool> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn open_receipt_selects_exact_owned_record_for_phase_completion() {
+        runtime().unwrap().block_on(async {
+            let root = tempfile::tempdir().unwrap();
+            let dir = root.path().join("receipt-job");
+            fs::create_dir(&dir).unwrap();
+            lifecycle::atomic_json(&dir.join("job.json"), &json!({"id":"receipt-job","status":"running"})).unwrap();
+            let pipe = format!(r"\\.\pipe\cc-chrome-open-receipt-{}", uuid::Uuid::new_v4());
+            let mut server = ServerOptions::new().first_pipe_instance(true).create(&pipe).unwrap();
+            let info = json!({"metadata":{"extensionInstanceId":"fixture-instance"},"browserTabMentions":{"generation":"fixture-generation"}});
+            let backend = async {
+                server.connect().await.unwrap();
+                for (method, result) in [("createTab", json!({"id":42})), ("attach", json!({})), ("executeCdp", json!({}))] {
+                    let request = read_frame(&mut server).await.unwrap();
+                    assert_eq!(request["method"], method);
+                    if method != "createTab" {
+                        assert_eq!(fs::read_dir(dir.join("chrome-tabs")).unwrap().count(), 1,
+                            "ownership must be durable before attach/navigation");
+                    }
+                    if method == "executeCdp" {
+                        assert_eq!(request["params"]["method"], "Page.navigate");
+                        assert_eq!(request["params"]["target"]["tabId"], 42);
+                        assert_eq!(request["params"]["commandParams"]["url"], "about:blank");
+                    }
+                    write_frame(&mut server, &json!({"id":request["id"],"result":result})).await.unwrap();
+                }
+            };
+            let (opened, ()) = tokio::join!(open_on(&dir, "receipt-job", "about:blank", pipe, info), backend);
+            let response = serde_json::to_value(opened.unwrap()).unwrap();
+            let id = response["record_id"].as_str().expect("open response must return the persisted record UUID");
+            assert!(uuid::Uuid::parse_str(id).is_ok());
+            let path = dir.join("chrome-tabs").join(format!("{id}.json"));
+            let record: Record = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+            let mut identity = response.clone();
+            identity.as_object_mut().unwrap().remove("record_id");
+            assert_eq!(identity, serde_json::to_value(&record).unwrap());
+            assert_eq!(record.job, "receipt-job");
+            assert_eq!(record.tab, 42);
+            assert_eq!(record.instance, "fixture-instance");
+            assert_eq!(record.generation, "fixture-generation");
+
+            let mut other = record.clone();
+            other.tab = 99;
+            let other_path = persist(&dir, &other).unwrap();
+            lifecycle::atomic_json(&dir.join("chrome-tab-requests").join(format!("{id}.json")),
+                &json!({"record":record,"close":true,"reason":"fixture phase finished"})).unwrap();
+            struct Selected(Vec<u64>);
+            impl Closer for Selected {
+                fn close(&mut self, record: &Record) -> io::Result<bool> {
+                    self.0.push(record.tab);
+                    Ok(true)
+                }
+            }
+            let mut closer = Selected(vec![]);
+            let result = sweep_selected(root.path(), Some("receipt-job"), Some(id), epoch(), false, &mut closer).unwrap();
+            assert_eq!((result.closed, result.failed), (1, 0));
+            assert_eq!(closer.0, [42]);
+            assert!(!path.exists());
+            assert!(other_path.exists(), "a different live tab must remain owned and open");
+            let history: Value = serde_json::from_slice(&fs::read(dir.join("chrome-tab-history").join(format!("{id}.json"))).unwrap()).unwrap();
+            assert_eq!(history["record"], serde_json::to_value(record).unwrap());
+            assert_eq!(history["completion_reason"], "fixture phase finished");
+        });
+    }
+
     #[test]
     fn malformed_inventory_cannot_prove_a_recorded_tab_absent() {
         for tabs in [

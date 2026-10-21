@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-20T22:40:34.1349837Z",
+  "observed_at": "2026-10-21T00:11:00.2573664Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "26installedbaselineaccepted3203;ownedTeamAI1supportclarificationapplied+locallyverified,delta reviewpending;obra15fullassessmentnotadoption;full16sourceworkcontinues",
+  "phase_b": "26installedbaseline;1specializeddiagnostic authored notinstalled;TeamAIcosmetics/minorproposal deferred,no livechange;full16sourceworkcontinues",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -286,7 +286,7 @@
   "site_entries_with_body": 9862,
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
-  "candidate_designs": 26,
+  "candidate_designs": 27,
   "independently_accepted": 26,
   "installed": 26,
   "integrated": 0,
@@ -346,11 +346,11 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "26 renderable targets all installed;no count cap",
+    "candidate_designs": "27renderable targets:26installed+1diagnostic pending;no countcap",
     "additional_authored_drafts_not_in_plans": 0,
-    "authored_total": 26,
+    "authored_total": 27,
     "installed": 26,
-    "pending_plan_targets": 0,
+    "pending_plan_targets": 1,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "26installed guides checked in boundedscopes;support/CLI/contextunmeasured",
@@ -370,7 +370,7 @@
     "actual_workflow_entrypoints": 4,
     "discovery_stubs": 1,
     "usage_guides": 2,
-    "support_files_unread": 25,
+    "support_files_unread": 22,
     "policy_rewrite_candidates": 4,
     "installed": 1,
     "not_blanket_excluded": true,
@@ -389,7 +389,7 @@
     },
     "limits": "79skill-named paths fully read across6sources,includingTencent guides/stub;not79independentlyadopted Skills.Supportresourcesincomplete."
   },
-  "independent_acceptance_scope": "3203 accepted26baseline at32db040;laterTeamAI3fileclarificationpendingseparatedelta review",
+  "independent_acceptance_scope": "3215が現行26件の基準版8867412とTeamAI補正を限定確認。新規diagnostic候補は未配置。",
   "total_skill_named_body_read": 79,
   "obra_entrypoint_assessment": {
     "expected": 15,
@@ -399,6 +399,9 @@
     "support_complete": false,
     "installed": 0,
     "integrated": 0,
-    "excluded": 0
-  }
+    "excluded": 0,
+    "diagnostic_support_read": 19,
+    "diagnostic_workflow_blob_count": 20
+  },
+  "current_guidance_delta_pending": 0
 }

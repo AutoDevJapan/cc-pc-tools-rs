@@ -157,8 +157,8 @@ pub fn bind_review(db: &mut Value, receipt: &Value, owner: &Value) -> Result<boo
     bind_review_at(db, receipt, owner, crate::time_s())
 }
 
-/// Deterministic clock seam; the production entry point always uses time_s().
-#[doc(hidden)]
+/// Evaluate a binding at one supplied observation time. The production entry
+/// always supplies its real clock; tests can exercise both sides of the deadline.
 pub fn bind_review_at(db: &mut Value, receipt: &Value, owner: &Value, at: f64) -> Result<bool> {
     use cc_scheduler::product_review as scope;
     let row = db["items"]

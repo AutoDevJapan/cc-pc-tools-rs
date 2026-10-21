@@ -42,5 +42,23 @@
   他の完了した待機は解除され、次の回に元の実receiptが回収されることを確認した。
 - 最終差分の影響範囲18検査はすべて成功（16件とエラー名の検証2件の結果を合わせる）。
   対象Clippy/doctestも成功。共有実行物と3126への実反映はまだ行わず、最終差分だけを再確認する。
+- 09:12の再開後: 最終レビュー3218も実Opus5.5/maxでMust0。
+  d22e1b1のBuild speed39512030892は1306検査すべて成功、必要CodeQLも成功した。
+  PR328を通常mergeし、main58ddc7d57d501fb7b0d753d0c44df696b9063af9へ取り込んだ。
+- 実3126の全条件一致と元行SHAを再確認し、正常CLIで実終了済みjob042842を履歴へ回収した。
+  saved=true、同じ根拠の再実行はsaved=false/already_recorded=true。通常list/APIでも
+  statuswait/wait_on3189/phasewaiting/activeJobnull、jobs4件を確認した。
+  元branch/HEAD94ed755を保持。メモ・原資料・他担当を変更していない。
+- 共有scheduler.exeは正式guard、元SHAb9bd54a0、元ソースの並行変更なし、既存scheduler.lockを照合し、
+  同じ実行物SHA5cae04f7へ原子的に置換した。旧版backupをこの作業場所に保持した。
+  配布先CLIでも回収済み受領のno-opを確認。原応答・source/hashはACCEPTANCE/DEPLOYMENT.private.json。
+- 元3126へ通常noteのCASで結果と次の実担当のcheckpoint手順を追記し、正確な本文を読戻した。
+  3189の担当が3126を名乗るcheckpointは実行しない。依存解除後の本人担当が保存する。
+- 残件: merge後CI39520384110が1306中1件、期限付き割当の実時計依存で失敗した。
+  今日09:00 JSTの固定期限到達を原因として確定し、同じ失敗をRedで再現した。
+  scheduler配布と3126回収は成功済みで再実行しない。cc-todoの時刻注入を検査だけに分け、
+  product_review4件、対象Clippy/doctestはGreen。仕様はdocs/product-review-test-clock-3189.md。
+  本番の期限や通常CLIは変更せず、このCI修正だけを別PRでレビュー/必要CI/通常mergeする。
+  現branchはscheduler/todo-3189-ci-expiry。保存済みbranchからの変更を正規checkpointで保存する。
 - 一時所有ID: 27075b23a6091a25d55408958e1de949。
   証拠はprivate記録として保持。元資料と他担当の成果は片付けない。

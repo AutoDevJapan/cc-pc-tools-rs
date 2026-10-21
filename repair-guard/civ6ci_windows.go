@@ -41,6 +41,9 @@ var civ6Commit = regexp.MustCompile(`^[0-9a-f]{40}$`)
 // Existing state still requires an independently saved identity entry below.
 func civ6Name(rel string) (directory, valid bool) {
 	p := strings.Split(filepath.ToSlash(rel), "/")
+	if d, ok := civ6RetryDiagnosticName(p); ok {
+		return d, true
+	}
 	if rel == "." {
 		return true, true
 	}
@@ -82,6 +85,61 @@ func civ6Name(rel string) (directory, valid bool) {
 		// Evidence can contain original diagnostic names. Only its manifest
 		// qualifies here; deeper copies stay protected unless separately reviewed.
 		return false, len(p) == 4 && p[3] == "manifest.json"
+	}
+	return false, false
+}
+
+// The first resupply's already-created diagnostics, under the independently
+// bound queue runtime. This is not a grant to a Temp root, runner credentials,
+// arbitrary log copies, later retries, or another job. Every existing ancestor
+// and file still needs its independently observed NTFS entry in civ6Allowed.
+func civ6RetryDiagnosticName(p []string) (bool, bool) {
+	if len(p) < 4 || p[0] != "state" || p[2] != "39423559387-1-118630300541" || p[3] != "prestart-1" {
+		return false, false
+	}
+	if p[1] == "entries" {
+		if len(p) == 4 {
+			return true, true
+		}
+		if len(p) == 5 {
+			switch p[4] {
+			case "plan.json", "prepare.log", "execute.log", "collect.log", "collect-unstarted.log", "stop.log":
+				return false, true
+			}
+		}
+	}
+	if p[1] == "evidence" {
+		if len(p) == 4 {
+			return true, true
+		}
+		if len(p) == 5 {
+			switch p[4] {
+			case "manifest.json":
+				return false, true
+			case "root", "entry":
+				return true, true
+			}
+		}
+		if len(p) == 6 && p[4] == "entry" {
+			switch p[5] {
+			case "plan.json", "prepare.log", "execute.log", "collect.log", "collect-unstarted.log", "stop.log":
+				return false, true
+			}
+		}
+		if len(p) == 6 && p[4] == "root" {
+			switch p[5] {
+			case "runtime":
+				return true, true
+			case "launcher-result.json", "prepared.json":
+				return false, true
+			}
+		}
+		if len(p) == 7 && p[4] == "root" && p[5] == "runtime" {
+			switch p[6] {
+			case "service.json", "drain.json", "sdk-ready.json", "sdk-sccache-server.json", "sdk-sccache-server.log":
+				return false, true
+			}
+		}
 	}
 	return false, false
 }

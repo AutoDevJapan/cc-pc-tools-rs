@@ -12,6 +12,26 @@ fn todo_store_error(error: cc_job_policy::todo_store::Error) -> Error {
         cc_job_policy::todo_store::Error::Io(e) => e.into(),
     }
 }
+fn invalid_subwork(error: &str, stage: &'static str) -> Error {
+    // Emit only fixed classifications. Never print a store value or an
+    // unrecognized error, and preserve the caller's existing failure code.
+    let reason = match error {
+        "subwork ToDo is missing" => "parent_missing",
+        "invalid subwork relation" => "relation_invalid",
+        "invalid or cyclic subwork parent" => "parent_invalid",
+        "subwork and parent must belong to the same repository and Git common directory" => {
+            "repository_mismatch"
+        }
+        "subwork names a different PR" => "pr_mismatch",
+        "independent subwork cannot depend on its parent completion" => "dependency_cycle",
+        "subwork requires its own scheduler-owned worktree" => "checkout_not_independent",
+        "subwork checkout is missing" => "checkout_missing",
+        "parent has more than one active root worker" => "multiple_live_parents",
+        _ => "validation_failed",
+    };
+    eprintln!("subwork validation failed stage={stage} reason={reason}");
+    Error("InvalidSubwork")
+}
 use serde_json::{Value, json};
 use std::{
     fs,
@@ -1251,7 +1271,7 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
                 proposed["scheduler"]["branch"] = Value::Null;
             }
             cc_job_policy::subwork::resolve(&self.todo()?, &proposed, &[], false)
-                .map_err(|_| Error("InvalidSubwork"))?;
+                .map_err(|error| invalid_subwork(&error, "before_workspace"))?;
         }
         let recovered = self.backend.workspace_recovery(repo, i, &jobs)?;
         let expected_inputs = launch_inputs(i);
@@ -1274,7 +1294,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         self.backend.worktree(repo, &item)?;
         if item["subwork"].is_object() {
             cc_job_policy::subwork::resolve(&self.todo()?, &item, &[], true)
-                .map_err(|_| Error("InvalidSubwork"))?;
+                .map_err(|error| invalid_subwork(&error, "after_workspace"))?;
         }
         let spec = Path::new(s(&item["spec"]));
         if spec.metadata().map_err(|_| Error("InputRejected"))?.len() > 1024 * 1024 {

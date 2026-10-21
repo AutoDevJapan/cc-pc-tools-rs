@@ -1988,9 +1988,11 @@ fn queue_time(j: &Value) -> &str {
         s(j, "queued_at")
     }
 }
+/// Owner requests and owner replies (`resume-`: Discord answers, new owner
+/// instructions and restarts reflected into an existing session) come first.
 fn queue_priority(job: &Value) -> u8 {
     let name = s(job, "name");
-    if name.starts_with("req-") {
+    if name.starts_with("req-") || name.starts_with("resume-") {
         0
     } else if name.starts_with("shep-") {
         1

@@ -163,8 +163,10 @@ fn review_workspace_refuses_unverified_provenance_and_running_or_queued_review()
                     .push(json!({"id":"new","todo_id":2,"status":"queued"}))
             }
             "still_alive" => {
+                let process = proc(7, 0, "codex.exe");
                 f.e.backend.records[1]["pid"] = json!(7);
-                f.e.backend.ps.insert(7, proc(7, 0, "codex.exe"));
+                f.e.backend.records[1]["pid_created"] = process["created"].clone();
+                f.e.backend.ps.insert(7, process);
             }
             "unknown" => f.e.backend.records[1]["status"] = Value::Null,
             "allocation" => row["scheduler"]["worktree"] = json!(f.temp.path().join("unrelated")),

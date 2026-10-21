@@ -1,4 +1,36 @@
 # GoDD Press 通常CIの再開記録（ToDo2766）
+## 2026-10-21 job144040：期限の必須指摘を修正し、Linuxの受付も実行した
+
+この節が最新。通常CIは未成功、元2766は未完了。親2642の製品PRのmerge/配布/全製品doneは担当しない。本人判断は不要。
+
+- 実job20261021-144040-todo-2766。同branchでf1c3c265/cleanから再開し、D:/CC/AGENTS.md、最新owner-agent-conduct、元2642の最新note/spec、作業AGENTSと関連Skillを読んだ。原仕様のDiscord直接送信禁止を保ち、全終了結果は親へ返してDiscordへの配送・読み返しを依頼する。配送未確認を成功と書かない。
+- review3272（job20261021-140954-todo-3272）はsucceeded/exit0、対応する実turn_context anthropic/claude-sonnet-5-5/max、最終task_completeと原last_message一致。原応答SHA3EA40E578EE9D3AF38BA622C2E95F7DCDC11F66AB906EB2941B284BE77D0A9FFをREVIEW-2766-ADMISSION-3272.mdへ保存。原bytesはprivate evidenceにも保存し、Gitの改行正規化と区別する。元68ac605の指定32fileレビューでMust1/Suggestion3/Nit2。未読secure_files*/source_materialization/normal_ci_admission本体などは未読のまま。
+- MustはLinux socket40分/listener45分、Windows host/channel26分が元90/360分jobを切る不具合。7d6f73337e32a9d0d7e9f0e0b43dff374039461c/tree7b0d93f8afeaf5433b9ab5d2f745165e0c9d82b8で修正し、push/remote一致。Linuxは受理済みplanのrole+10分でsocket設定、boot時には該当workflowの閉じたrole最大+15分のlistener寿命、Press受理時にrole+15分へtimer更新。Windowsはseed.Planからrole+6分でhost context/socket/service channelを設定。元αの40/45/26分は維持。元workflowのtimeout自体は変更0。
+- Suggestion1は実PR175の元3runを読取GET。全てevent=pull_request、素のworkflow path、head_sha=b2候補。全13jobもhead_sha候補/runner0。二次要約と違って現policyの期待形に一致するため、run API headをmergeへ変更しない。hook/物理Gitのmerge pinは別に保持。新runは実操作時に再照合する。
+- Suggestion2はPressの返却JobNameをcompiled policy.Nameへも固定。全13roleとWindows両roleで名前改変の拒否を追加。αは元の非空ルールを保持。Suggestion3は全正負admission fixtureを13role全部へ展開し、4shardの別labelを実際に交換した拒否を追加。旧attempt違いの拒否も保持。
+- Nitはsource2fileをgofmt、Linuxの観測用probeをPressのworkspace/Rust1.95.0へ選択。αは1.97.1。probeはcompiler全体のprovenanceでも受入成功でもない。
+
+### 今回の実検査・回収
+
+- 元host.goだけのGo overlay＋新テストは、Windows両roleの実HostSessionで「26分、必要96分」を検出してexit1。新sourceの全Windows runner race11.035s/exit0。mTLS実通信のservice channelもαとPress両roleのcontext deadlineを検査した。
+- guest全module Windows race18.888s/exit0、最終13roleの期限/JobName focused race1.274s/exit0。product-ci pressci全race4.603s/exit0。3module vet exit0、guest最終vetもexit0。gofmtとgit diff --check成功。
+- 最終sourceからGOOS linux/amd64のtest binaryを生成し、既存source-free SDK image89988fa...の新しい自分の隔離containerで実行。CPU1/RAM512MiB/network none/read-only/cap-drop ALL/no-new-privileges、GPU/host bind/socketなし。新11 Linux roleをserveLiveJobの実frame受理へ通し、不正な公開source fixtureで物理source処理前に止める。全11roleの実socket期限が元timeout+10分でPASS/exit0。製品のsource物理照合、VM、runner登録、元Rust、公式CIとは別の単体検査。
+- container27c7a3885c2dcffe6fdd6a1c9b33137242ce68fe134d8bc9a115cb55430c3a86は所有name/labels/image、停止/PID0/exit0を照合してrm -vし、全IDの不在を確認。新image作成0、既存SDK imageは保持。新VM/runner/Chrome/Cargo/GPU/Civ6/AI APIキー/新費用/本人PC操作/Discord送信は0。
+- 原log/実exit/API metadata/原reviewを47recordの全byte/base64・bytes/SHAでevidence-2766-deadlines-144040.private.jsonへ保存、全読戻し一致。bundle46,393bytes/SHA9362A928C43C4421D3FA4ABECE82175F33C038E8529743E2B2765195D1B5B6DA。旧host overlayのexit1は期待RED。最初のLinux helper compileはtimer最終修正前、最終Linux test compile/実行は最終source。どのdirty binaryもlive runnerへ使用していない。
+- temp0c87b9451bed11d3e68926659183b624は全記録保存後にsafe-delete plan指定の通常削除を別呼出しで実行しfinish(source_absent)。20,933,941bytes/48entries。空き容量の前後差は未測定。旧2710/2648/2730の拒否root、2737/2783のSDK/保留物、他担当は変更/削除しない。
+
+### 再レビュー3299と次の一手
+
+修正の固定f1c→7d6/tree7b0を、元3272のMust修正・付随差分だけの有限読取3299へ通常add --spec（claude-sonnet-5-5/max）で登録。TODO-2766-DEADLINE-REVIEW-SPEC.mdと保存specの全文一致/dispatchableを確認。受付時はjobs空で、再レビュー成功ではない。子Codexを直接起動していない。
+
+1. 正規wait2766 --on3299だけを記録する。親2642や既済2737/3272を依存に入れない。再開時は3299の実job/対応turn_context/原応答/読了と未読/Mustを照合する。
+2. 元product repo1386702183/owner/private/admin/nonfork/PR175 open/Draft/同repo/ref/head b2/base4dc/実merge f3aは今回もpostflight不変。製品へのmutation0、CodeQL再実行0、元3通常runの起動前budget failureを保持。b2 CodeQL成功を新headに読み替えない。
+3. retained Windows SDKは公式Server2025（SDK source/保持receiptで確認）とRust1.97.1。元workflowはWindows2022、全Rust指定は1.95.0、Node24.15.0を含む。この差を確認せず同等の準備済みとはしない。実guestでOS意味とtool選択を検証し、不足を新しい使い捨てguestだけに補う。既存SDK/golden/hostの変更、別のVM基盤・Windows helper/sourcepacket実装の複製はしない。Linuxにはrustup proxyと1.97.1があるが1.95.0の実導入/選択は未確認。Windowsはportable1.97.1の直PATHと空rustup-homeの構成なのでRUSTUP_TOOLCHAIN=1.95.0だけでは選択の証拠にならない。
+4. 元main側local-checksは既に別変更済み。元b2のruns-onだけの変更がPRの実mergeに競合せず成立するかは未確認。元event/4shard/全step/ゲート/timeout/provider-live-write禁止を保って公開方法を詰める。新headが生じれば必要な公式native/CodeQL結果を実取得する。手動successや元b2 CodeQLの根拠ない再実行、予算/契約増加はしない。
+5. レビュー済みclean同sourceから必要なhost/Windows/Linux helperを生成し、既存共通cargo_gate/専用target/sccache/直列条件で元13roleと発火した必要jobを実検査する。完全原logのbytes/SHA、全blob/tree/commit物理Git、元head/実candidate/公式run-job-check、失敗原因と修正後再検査、取消し/PID0/登録・VM・容器不在/lock解放を親へ返す。親PRはDraftのまま、Must/9件/最終mergeは親の工程。
+
+最終記録とspecをこのbranchへcommit/pushし、実job/branch/実HEADのscheduler checkpointをHidden/Wait/PassThruで保存し原台帳と照合する。親2642へこの区切りの結果・残作業・次の手・本人判断不要を1回CAS記録し、最新方針による親経由の既存Pressスレッドへの結果配送/読み返しを依頼する。Discordへの直接送信は禁止のまま。
+
 
 ## 2026-10-21 job113146: 受付を接続し、実RAM source照合と追加レビューへ進んだ
 

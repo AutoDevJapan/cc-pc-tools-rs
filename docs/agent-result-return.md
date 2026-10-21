@@ -3,6 +3,13 @@
 子の終了結果は、仕事の完了と未完了での停止を区別して親へ保存する。
 送信予約やCLIの終了コード0を、仕事の成功や報告済みの証拠にしない。
 
+### 2026-10-21の本人による通知条件の訂正
+
+新しい結果ではowner_requiredだけでメンション要否を決める。owner_reply、正常完了、技術停止、保留、依存待ちだけではメンションしない。
+通常log/postに誤って--notifyが付いても、Rust senderが「対応不要」「報告のみ」「本人対応不要」の本文を無通知で配送する。通常の報告も無通知とし、logで通知する場合は具体的な「回答が必要：質問」と空でないa/bを必要とする。単なる見出しだけでは通知しない。本当に本人が決める質問は正規ask/decisionで用意し、ラベルだけで新しい判断待ちを作らない。
+旧未送信のIntentも、元入力・ID・fingerprintを保持し、新しいPending.effectだけを最新条件で決める。送信結果不明のPendingはGETで回復し、再POSTしない。既配送本文や既存の送信予約は書き換えない。
+Rustの受領票はrequested_notifyとeffective_notifyを分けて返す。実payloadは無通知時にusers/roles/parse空、replied_user=false、flags=4100となり、GETで本人mentionsが空であることを検査する。Goはeffective_notifyに従って独立のGETも照合し、旧notify_ownerを保持したまま実結果を追記する。GETがallowed_mentions自体を返すとは扱わない。
+
 ## 対象と境界
 
 - 既存unattended-runnerのagent-result入口とCC-DiscordAskTickを使う。

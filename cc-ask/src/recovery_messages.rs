@@ -2933,21 +2933,35 @@ fn execute(ctx: &mut Context, incoming: Request, images: &[Image]) -> Result<Val
 // Real decisions normally use Ask. A log may point to its concrete existing
 // question; a heading alone is insufficient. No-action wording always wins.
 fn log_requires_owner_action(body: &str) -> bool {
-    if ["対応不要", "対応は不要", "対応は必要ありません", "報告のみ", "本人対応不要"]
-        .iter().any(|marker| body.contains(marker))
+    if [
+        "対応不要",
+        "対応は不要",
+        "対応は必要ありません",
+        "報告のみ",
+        "本人対応不要",
+    ]
+    .iter()
+    .any(|marker| body.contains(marker))
     {
         return false;
     }
     let mut lines = body.lines().map(str::trim).filter(|line| !line.is_empty());
-    let Some(question) = lines.next().and_then(|line| line.strip_prefix("回答が必要：")) else {
+    let Some(question) = lines
+        .next()
+        .and_then(|line| line.strip_prefix("回答が必要："))
+    else {
         return false;
     };
     if question.trim().is_empty() {
         return false;
     }
     let choices: Vec<_> = lines.collect();
-    ["a:", "b:"].iter().all(|prefix| choices.iter().any(|line|
-        line.strip_prefix(prefix).is_some_and(|choice| !choice.trim().is_empty())))
+    ["a:", "b:"].iter().all(|prefix| {
+        choices.iter().any(|line| {
+            line.strip_prefix(prefix)
+                .is_some_and(|choice| !choice.trim().is_empty())
+        })
+    })
 }
 
 fn execute_saved(
@@ -3034,8 +3048,10 @@ fn execute_inner(
             // Only a concrete owner action may create a new notifying effect.
             // A saved effect may already have reached Discord: recover it by
             // GET without changing/reposting that historical reservation.
-            let notify = ledger.effect(&request.request_id, "log:0")
-                .map_or_else(|| request.notify && log_requires_owner_action(&request.body), |effect| effect.notify);
+            let notify = ledger.effect(&request.request_id, "log:0").map_or_else(
+                || request.notify && log_requires_owner_action(&request.body),
+                |effect| effect.notify,
+            );
             if let Some(thread) = thread {
                 if let Some(binding) = clarification {
                     clarification::authorize(&mut api, &ledger, &home, &request, binding, true)?;
@@ -3062,9 +3078,13 @@ fn execute_inner(
                         title: request.title.clone(),
                     },
                 };
-                let delivery = ledger.effect(&request.request_id, &phase).cloned().map_or_else(
-                    || effect(&request, &phase, target, body, index == 0 && notify, index == 0),
-                    Ok,
+                let delivery = effect(
+                    &request,
+                    &phase,
+                    target,
+                    body,
+                    index == 0 && notify,
+                    index == 0,
                 )?;
                 let receipt = ensure(
                     &mut api,
@@ -4841,9 +4861,12 @@ mod tests {
                 let fixture = Fixture::new();
                 let mut ctx = fixture.context();
                 let thread = if post {
-                    let first = log(&mut ctx, &fixture.log("seed", "開始しました。", false)).unwrap();
+                    let first =
+                        log(&mut ctx, &fixture.log("seed", "開始しました。", false)).unwrap();
                     Some(core::s(&first["thread_id"]).to_string())
-                } else { None };
+                } else {
+                    None
+                };
                 let mut args = fixture.log("quiet-notify", body, true);
                 args.thread = thread.clone();
                 let out = log(&mut ctx, &args).unwrap();
@@ -4853,16 +4876,27 @@ mod tests {
                 let state = fixture.server.lock().unwrap();
                 let (_, posted) = state.posts.last().unwrap();
                 let payload = if post { posted } else { &posted["message"] };
-                assert_eq!(payload["allowed_mentions"], json!({"parse":[],"users":[],"roles":[],"replied_user":false}));
-                assert_eq!(core::n(&payload["flags"]) & (SILENT | EMBEDS), SILENT | EMBEDS);
+                assert_eq!(
+                    payload["allowed_mentions"],
+                    json!({"parse":[],"users":[],"roles":[],"replied_user":false})
+                );
+                assert_eq!(
+                    core::n(&payload["flags"]) & (SILENT | EMBEDS),
+                    SILENT | EMBEDS
+                );
                 assert!(!core::s(&payload["content"]).contains("<@"));
                 let message = state.messages[core::s(&out["thread_id"])].last().unwrap();
                 assert_eq!(message["mentions"], json!([]));
                 assert_eq!(message["channel_id"], out["thread_id"]);
-                if let Some(thread) = thread { assert_eq!(out["thread_id"], thread); }
+                if let Some(thread) = thread {
+                    assert_eq!(out["thread_id"], thread);
+                }
                 let count = state.posts.len();
                 drop(state);
-                assert_eq!(log(&mut ctx, &args).unwrap()["message_id"], out["message_id"]);
+                assert_eq!(
+                    log(&mut ctx, &args).unwrap()["message_id"],
+                    out["message_id"]
+                );
                 assert_eq!(fixture.server.lock().unwrap().posts.len(), count);
                 fixture.unchanged();
             }
@@ -4884,7 +4918,10 @@ mod tests {
         assert_eq!(out["effective_notify"], false);
         let saved = Ledger::load(&fixture.home).unwrap();
         assert_eq!(saved.request(&args.request_id), Some(&incoming));
-        assert_eq!(serde_json::to_value(&saved.events[..old.as_array().unwrap().len()]).unwrap(), old);
+        assert_eq!(
+            serde_json::to_value(&saved.events[..old.as_array().unwrap().len()]).unwrap(),
+            old
+        );
         let state = fixture.server.lock().unwrap();
         let payload = &state.posts[0].1["message"];
         assert_eq!(payload["allowed_mentions"]["users"], json!([]));
@@ -4903,9 +4940,35 @@ mod tests {
         let mut ledger = Ledger::load(&fixture.home).unwrap();
         let request = reserve(&mut ledger, &fixture.home, &incoming).unwrap();
         let mut api = RecoveryApi::bind(&mut ctx, &mut ledger, &request).unwrap();
-        let delivery = effect(&request, "log:0", Target::Forum {title:request.title.clone()}, &request.body, true, true).unwrap();
-        ensure(&mut api, &mut ledger, &fixture.home, &request, "log:0", delivery, &[]).unwrap();
-        ledger.append(&fixture.home, Event::DeliveryVerified { request_id:request.request_id.clone() }).unwrap();
+        let delivery = effect(
+            &request,
+            "log:0",
+            Target::Forum {
+                title: request.title.clone(),
+            },
+            &request.body,
+            true,
+            true,
+        )
+        .unwrap();
+        ensure(
+            &mut api,
+            &mut ledger,
+            &fixture.home,
+            &request,
+            "log:0",
+            delivery,
+            &[],
+        )
+        .unwrap();
+        ledger
+            .append(
+                &fixture.home,
+                Event::DeliveryVerified {
+                    request_id: request.request_id.clone(),
+                },
+            )
+            .unwrap();
         let before = fs::read(fixture.home.join(LEDGER)).unwrap();
         let posts = fixture.server.lock().unwrap().posts.len();
         let out = log(&mut ctx, &args).unwrap();
@@ -5384,7 +5447,11 @@ mod tests {
         let before = fixture.server.lock().unwrap().posts.len();
         let notify = LogArgs {
             thread: Some(core::s(&out["progress_thread_id"]).into()),
-            ..fixture.log("forbidden-progress-notify", "回答が必要：公開範囲を選んでください。\na: 公開する\nb: 保持する", true)
+            ..fixture.log(
+                "forbidden-progress-notify",
+                "回答が必要：公開範囲を選んでください。\na: 公開する\nb: 保持する",
+                true,
+            )
         };
         assert!(log(&mut ctx, &notify).is_err());
         let legacy = LogArgs {

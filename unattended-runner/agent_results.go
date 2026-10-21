@@ -54,18 +54,19 @@ type AgentResultEvent struct {
 	CapacityScope string             `json:"capacity_scope,omitempty"`
 }
 type AgentResultRecord struct {
-	Domain         string           `json:"domain"`
-	ID             string           `json:"id"`
-	Event          AgentResultEvent `json:"event"`
-	ParentReceived string           `json:"parent_received_at"`
-	Attempts       int              `json:"attempts"`
-	NextAttempt    string           `json:"next_attempt_at,omitempty"`
-	LastError      string           `json:"last_error,omitempty"`
-	Message        string           `json:"message_id,omitempty"`
-	URL            string           `json:"url,omitempty"`
-	Verified       string           `json:"verified_at,omitempty"`
-	Body           string           `json:"body"`
-	NotifyOwner    bool             `json:"notify_owner,omitempty"`
+	Domain          string           `json:"domain"`
+	ID              string           `json:"id"`
+	Event           AgentResultEvent `json:"event"`
+	ParentReceived  string           `json:"parent_received_at"`
+	Attempts        int              `json:"attempts"`
+	NextAttempt     string           `json:"next_attempt_at,omitempty"`
+	LastError       string           `json:"last_error,omitempty"`
+	Message         string           `json:"message_id,omitempty"`
+	URL             string           `json:"url,omitempty"`
+	Verified        string           `json:"verified_at,omitempty"`
+	Body            string           `json:"body"`
+	NotifyOwner     bool             `json:"notify_owner,omitempty"`
+	EffectiveNotify *bool            `json:"effective_notify,omitempty"`
 }
 type agentResultWatch struct {
 	Domain              string           `json:"domain"`
@@ -364,6 +365,14 @@ func (r *Runner) deliverAgentResult(ctx context.Context, p *AgentResultRecord) e
 	if err != nil || response["delivery"] != "verified" {
 		return errors.New("delivery_unverified")
 	}
+	notify := p.NotifyOwner
+	if effective, present := response["effective_notify"]; present {
+		var ok bool
+		notify, ok = effective.(bool)
+		if !ok {
+			return errors.New("delivery_unverified")
+		}
+	}
 	thread, _ := response["thread_id"].(string)
 	message, _ := response["message_id"].(string)
 	if _, ok := number(thread); !ok || destination != "" && thread != destination {
@@ -381,7 +390,7 @@ func (r *Runner) deliverAgentResult(ctx context.Context, p *AgentResultRecord) e
 	}
 	expectedBody, expectedFlags := body, uint64(4096|4)
 	mentionsOK := len(live.Mentions) == 0
-	if p.NotifyOwner {
+	if notify {
 		expectedBody += "\n<@" + r.State.Destination.Owner + ">"
 		expectedFlags = 4
 		mentionsOK = len(live.Mentions) == 1 && live.Mentions[0].ID == r.State.Destination.Owner
@@ -389,7 +398,7 @@ func (r *Runner) deliverAgentResult(ctx context.Context, p *AgentResultRecord) e
 	rolesOK := live.MentionRoles != nil && len(*live.MentionRoles) == 0
 	// Old silent receipts predate this extra readback field. Their immutable
 	// request stays valid; new owner notifications require the explicit field.
-	if !p.NotifyOwner && live.MentionRoles == nil {
+	if !notify && live.MentionRoles == nil {
 		rolesOK = true
 	}
 	if live.ID != message || live.Channel != thread || live.Author.ID != r.State.Destination.Bot || !live.Author.Bot || !agentDeliveredBody(live.Content, expectedBody) || live.Flags&(4096|4) != expectedFlags || live.MentionEveryone || !rolesOK || !mentionsOK {
@@ -398,6 +407,7 @@ func (r *Runner) deliverAgentResult(ctx context.Context, p *AgentResultRecord) e
 	p.Message = message
 	p.URL = "https://discord.com/channels/" + r.State.Destination.Guild + "/" + thread + "/" + message
 	p.Verified = r.Now().UTC().Format(time.RFC3339Nano)
+	p.EffectiveNotify = &notify
 	p.LastError = ""
 	p.NextAttempt = ""
 	return nil

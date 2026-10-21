@@ -1,0 +1,13 @@
+{
+  "todo": 3080,
+  "status": "次のTeamAI限定更新へまとめる提案、未適用",
+  "source_review": 3215,
+  "changes": [
+    "学びはteamai-learningsブランチのlearnings/。repo名と誤読しない表現へ。",
+    "shareがrecall無効で拒否した場合は、有効化せず読了済みcontribute-memberの手動Step Aへ。",
+    "許可済みは元依頼か本人回答に宛先と対象が明記された共有。",
+    "support25件すべて未読という古い英語文とlocal_revision.reasonの空白を同じ更新で整える。"
+  ],
+  "reason": "Must0で現在版は受入済み。軽微な提案ごとの中央原本更新と再レビューを繰返さず、具体計画を保持して次の必要更新へまとめる。",
+  "current_live_changed": false
+}

@@ -21,7 +21,7 @@ state/reason/remaining/next_actionは列挙値。blocked by policy等の自由�
 recordの成功は親への永続受領だけを意味する。Discordのdelivery=verifiedとは別である。
 
 watchは稼働中の外部担当を登録し、以後の終了・依存待ち・利用枠待ちをrecordと同じ保存先へ渡す。
-結果を確認できないまま1時間を超えた場合は、成否未確認の結果を親へ返して観測を終える。担当の実行状態は変更しない。必要な継続観測は親が新しい試行IDで明示登録する。
+結果を確認できないまま1時間を超えた場合は、成否未確認の結果を親へ一度返す。担当の実行状態は変更せず、その後の終了や新しい個別保留の観測も続ける。再登録の間に保留を失う隙間を作らない。
 外部担当のstatus=succeededでも、最終回答の先頭が状態: 完了でなければ未完了とする。
 終了理由は構造化状態だけから決め、本文中の語句検索は行わない。
 登録済みの外部担当がjob.jsonのitem_deferred配列へ新しい個別保留を保存した場合は、status=runningのままでも親へ返す。各項目はitem_id、item_kind、transition_id、reason、capacity_bytes、capacity_scope、next_action、owner_required、private_ref（任意）を持つ。1回の保存は最大32項目。同じ対象・遷移の再観測は同じ結果記録へ戻す。登録時点の既存保留は送らない。
@@ -30,12 +30,16 @@ watchは稼働中の外部担当を登録し、以後の終了・依存待ち・
 ## 配送と回復
 
 親の受領記録を先に保存する。親や送信処理が終了しても既存1分巡回が未配送を引き継ぐ。
+recordの受付は長い巡回のrunner.lockやDiscord認証・状態に依存しない。受付同士の短い排他だけを最長2秒で待つ。混雑時は終了75とbusy_retry_same_inputを返し、親は同じ入力を保持して再試行する。設定・ディスク等の失敗を受領済みとはしない。
 配送処理は20秒、通常処理は従来の50秒、既存CI巡回は15秒を確保する。全体は終了待ちを含め90秒で、既存タスクの2分以内に収める。
 配送は製品別の通常conversation logを使い、通知・メンション・添付は付けない。
 送信後の通常配送結果とDiscord GETで本文・投稿者・宛先・無通知フラグを照合してからverifiedを保存する。
+通常送信側が本文末尾へ付けるrecovery識別行も形式を照合する。本文は親の受領時点で固定し、将来の文言変更で未配送の入力を変えない。
 送信応答や最後の保存を失った場合も同じ配送IDを使い、通常送信側の予約と重複防止を再利用する。
 1巡回に送信は1件、1件の再試行は最大4回。失敗と次回時刻を保存し、上限後も未配送を保持する。resumeで同じ遷移の有限な再試行を再開できる。
 巡回は件数と時間を制限し、順番を保存する。新しい常駐や監視ループは作らない。
+確認済み記録と終端済み監視は履歴用の別フォルダへ移し、未配送・稼働中の処理枠を消費させない。statusと同じ入力の再試行から履歴を引き続き参照する。既存の通常進捗とは別の枠なので、同じ巡回で通常進捗1件と結果配送1件の計2件になる場合がある。
+不正なitem_deferredはその項目だけを除いてhealthへ記録する。正しい項目と担当の終了結果は失わない。状態を観測できないだけのときは、担当の停止・失敗と断定しない。
 
 ## 受入条件
 
@@ -53,5 +57,13 @@ watchは稼働中の外部担当を登録し、以後の終了・依存待ち・
 `agent-result status --id <record_id>` のdelivery=verified、message_id、urlで配送確認を照合する。
 `agent-result watch --input <外部担当を指定したJSON>` は登録済みの1担当だけを観測する。通常の1分巡回が観測と配送を引き継ぐ。
 `agent-result drain` は同じ既存経路を20秒以内で1回処理する。上限後の同じ記録は `agent-result resume --id <record_id>` で有限に再試行する。
+
+record入力の例（IDと宛先は実際の受領に合わせる）:
+
+```json
+{"request_id":"todo3257-result","todo_id":3257,"project":"cc-pc-tools-rs","thread_id":"1562283280416379024","source":"launcher","attempt_id":"attempt-1","transition_id":"initialization-1","state":"start_failed","reason":"initialization_rejected","remaining":"work","next_action":"retry","owner_required":false}
+```
+
+watch入力は同じ書式でsourceをcodex_jobs、child_idを実担当IDへ設定する。state/reason/remaining/next_actionは観測時に上書きするテンプレートで、stopped/work_incomplete/unverified/review_resultを指定できる。登録自体は終了や配送を意味しない。
 
 正本・AGENTS・agent-job-managementの変更は別の文書担当が扱う。

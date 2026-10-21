@@ -14,12 +14,19 @@ import (
 func TestAgentResultDelayedResponseIsPendingAndBoundedByParentDeadline(t *testing.T) {
 	r, _ := fixture(t)
 	p, _ := r.recordAgentResult(resultEvent())
-	r.Run = func(ctx context.Context, _ string, _ ...string) (string, error) { <-ctx.Done(); return "", ctx.Err() }
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Millisecond)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
+	r.Run = func(child context.Context, _ string, _ ...string) (string, error) {
+		if _, ok := child.Deadline(); !ok {
+			t.Fatal("delivery has no parent deadline")
+		}
+		cancel()
+		<-child.Done()
+		return "", child.Err()
+	}
 	started := time.Now()
 	r.agentResultPhase(ctx, &Health{})
-	if time.Since(started) > time.Second {
+	if time.Since(started) > 2*time.Second {
 		t.Fatal("parent waited beyond its finite deadline")
 	}
 	saved := r.mustAgentResult(t, p.ID)
@@ -147,7 +154,7 @@ func TestAgentResultOrdinarySenderKeepsOnePostWhenResponseIsLost(t *testing.T) {
 		return string(b), nil
 	}
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {
-		m := msg(r.Now(), "610", "400", agentResultBody(p))
+		m := msg(r.Now(), "610", "400", agentResultBody(p)+"\n\n-# recovery:aaaaaaaaaaaaaaaaaaaaaaaa:log:0")
 		m.ID = "721"
 		m.Author.Bot = true
 		m.Flags = 4100

@@ -8,7 +8,9 @@ import (
 	"flag"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 )
 
 // record never needs Discord credentials or a running parent process. The
@@ -34,8 +36,19 @@ func agentResultCLI(args []string, out io.Writer) int {
 		_, _ = io.WriteString(out, "invalid agent result arguments\n")
 		return 2
 	}
-	backend, unlock, err := loadConversationRunner(*config, conversationLoadOptions{Credentials: command == "drain"})
+	var backend conversationCLIBackend
+	var unlock func()
+	var err error
+	if command == "record" {
+		backend, unlock, err = loadAgentResultReceiver(*config)
+	} else {
+		backend, unlock, err = loadConversationRunner(*config, conversationLoadOptions{Credentials: command == "drain"})
+	}
 	if err != nil {
+		if errors.Is(err, errAgentReceiverBusy) {
+			_, _ = io.WriteString(out, "busy_retry_same_input\n")
+			return 75
+		}
 		_, _ = io.WriteString(out, "agent result storage unavailable\n")
 		return 1
 	}
@@ -89,6 +102,7 @@ func agentResultCLI(args []string, out io.Writer) int {
 		result = map[string]any{"errors": h.Errors, "delivery": "inspect_receipt"}
 	}
 	if err != nil {
+		if errors.Is(err,errAgentReceiverBusy){_,_=io.WriteString(out,"busy_retry_same_input\n");return 75}
 		_, _ = io.WriteString(out, "agent result operation deferred\n")
 		return 1
 	}
@@ -108,4 +122,35 @@ func agentResultPublic(p AgentResultRecord) map[string]any {
 
 // Keep the command independent of environment-specific output paths; the saved
 // private source reference is deliberately absent from public JSON.
-var _ = os.ErrNotExist
+// Receipt ingestion is independent of the long-running periodic lock and of
+// Discord credentials/state. Different processes still serialize inbox writes.
+var errAgentReceiverBusy = errors.New("agent result receiver temporarily busy")
+
+func loadAgentResultReceiver(configPath string) (conversationCLIBackend, func(), error) {
+	var cfg Config
+	if readJSON(configPath, 1<<20, &cfg) != nil {
+		return nil, nil, errors.New("configuration unavailable")
+	}
+	since, err := time.Parse(time.RFC3339Nano, cfg.Since)
+	if err != nil || since.Before(time.Date(2026, 10, 13, 0, 0, 0, 0, time.UTC)) || since.After(time.Now()) || !filepath.IsAbs(cfg.Home) || cfg.Project != "cc-pc-tools-rs" {
+		return nil, nil, errors.New("configuration scope invalid")
+	}
+	return &Runner{Config: cfg, Now: time.Now}, func() {}, nil
+}
+func (r *Runner) agentReceiveLock() (func(), error) {
+	home := filepath.Join(r.Config.Home, "agent-results")
+	if err := os.MkdirAll(home, 0700); err != nil {
+		return nil, err
+	}
+	until := time.Now().Add(2 * time.Second)
+	for {
+		unlock, lockErr := acquire(filepath.Join(home, "receive.lock"))
+		if lockErr == nil {
+			return unlock, nil
+		}
+		if !time.Now().Before(until) {
+			return nil, errAgentReceiverBusy
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}

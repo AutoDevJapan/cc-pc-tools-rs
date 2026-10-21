@@ -103,7 +103,7 @@ func TestAgentResultDeliverySurvivesParentAndRequiresReadback(t *testing.T) {
 		if q.URL.Path != "/channels/610/messages/"+message {
 			t.Errorf("wrong readback %s", q.URL.Path)
 		}
-		m := msg(r.Now(), "610", "400", agentResultBody(p))
+		m := msg(r.Now(), "610", "400", agentResultBody(p)+"\n\n-# recovery:"+strings.Repeat("a", 24)+":log:0")
 		m.ID = message
 		m.Author.Bot = true
 		m.Flags = 4096 | 4

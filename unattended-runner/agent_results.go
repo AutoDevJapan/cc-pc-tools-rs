@@ -50,6 +50,7 @@ type AgentResultRecord struct {
 	Message        string           `json:"message_id,omitempty"`
 	URL            string           `json:"url,omitempty"`
 	Verified       string           `json:"verified_at,omitempty"`
+	Body           string           `json:"body"`
 }
 type agentResultWatch struct {
 	Domain        string           `json:"domain"`
@@ -59,13 +60,14 @@ type agentResultWatch struct {
 	Generation    uint64           `json:"generation"`
 	Deadline      string           `json:"result_deadline"`
 	BaselineItems []string         `json:"baseline_item_transitions,omitempty"`
+	WaitReported  bool             `json:"wait_limit_reported,omitempty"`
 }
 
 var agentStateLabels = map[string]string{
 	"completed": "完了", "stopped": "未完了で停止", "rejected": "実行を拒否", "start_failed": "起動できず停止",
 	"failed": "異常終了", "timeout": "時間切れ", "capacity_wait": "利用枠の回復待ち", "dependency_wait": "依存する作業の完了待ち",
 	"cancelled": "取り消し", "lost": "結果がないまま終了", "parent_stopped": "親担当が未完了で停止",
-	"unverified":    "担当の状態を確認できず停止",
+	"unverified":    "担当の状態は未確認",
 	"item_deferred": "対象1件の清掃を保留（担当全体の終了とは別）",
 }
 var agentReasonLabels = map[string]string{
@@ -157,18 +159,47 @@ func agentResultID(e AgentResultEvent) string {
 	return canonicalHash([]any{agentResultDomain, e.RequestID, e.Todo, e.Source, e.Parent, e.Child, e.Attempt, e.Transition, e.ItemID})
 }
 func (r *Runner) agentResultPath(id string) string {
+	archived := filepath.Join(r.Config.Home, "agent-results", "verified", id+".json")
+	if _, err := os.Stat(archived); err == nil {
+		return archived
+	}
 	return filepath.Join(r.Config.Home, "agent-results", "records", id+".json")
+}
+func (r *Runner) archiveAgentFile(kind, archive, id string) error {
+	to := filepath.Join(r.Config.Home, "agent-results", archive, id+".json")
+	if err := os.MkdirAll(filepath.Dir(to), 0700); err != nil {
+		return err
+	}
+	return os.Rename(filepath.Join(r.Config.Home, "agent-results", kind, id+".json"), to)
 }
 func (r *Runner) recordAgentResult(e AgentResultEvent) (AgentResultRecord, error) {
 	if err := validateAgentEvent(e); err != nil {
 		return AgentResultRecord{}, err
 	}
+	// All producers, including the periodic observer, share this short lock.
+	// The long-running runner lock is never needed for parent receipt ingestion.
+	unlock, err := r.agentReceiveLock()
+	if err != nil {
+		return AgentResultRecord{}, err
+	}
+	defer unlock()
 	id := agentResultID(e)
 	p := AgentResultRecord{Domain: agentResultDomain, ID: id, Event: e, ParentReceived: r.Now().UTC().Format(time.RFC3339Nano)}
+	p.Body = agentResultBody(p)
 	path := r.agentResultPath(id)
 	var old AgentResultRecord
 	if err := readJSON(path, 1<<20, &old); err == nil {
 		if old.Domain != agentResultDomain || old.ID != id || old.Event != e || old.ParentReceived == "" {
+			return p, errors.New("agent result retry differs")
+		}
+		return old, nil
+	} else if !os.IsNotExist(err) {
+		return p, errors.New("agent result receipt unavailable")
+	}
+	// The periodic sender may have atomically archived this very receipt after
+	// the first path lookup. A retry never replaces its verified result.
+	if err := readJSON(filepath.Join(r.Config.Home, "agent-results", "verified", id+".json"), 1<<20, &old); err == nil {
+		if old.Domain != agentResultDomain || old.ID != id || old.Event != e {
 			return p, errors.New("agent result retry differs")
 		}
 		return old, nil
@@ -182,6 +213,9 @@ func (r *Runner) recordAgentResult(e AgentResultEvent) (AgentResultRecord, error
 	return p, nil
 }
 func agentResultBody(p AgentResultRecord) string {
+	if p.Body != "" {
+		return p.Body
+	}
 	state := "継続中"
 	if p.Event.State == "completed" {
 		state = "完了"
@@ -265,7 +299,7 @@ func (r *Runner) deliverAgentResult(ctx context.Context, p *AgentResultRecord) e
 		return errors.New("delivery_unverified")
 	}
 	var live Message
-	if r.get(ctx, "/channels/"+thread+"/messages/"+message, &live) != nil || live.ID != message || live.Channel != thread || live.Author.ID != r.State.Destination.Bot || !live.Author.Bot || live.Content != body || live.Flags&(4096|4) != 4096|4 || live.MentionEveryone || len(live.Mentions) != 0 {
+	if r.get(ctx, "/channels/"+thread+"/messages/"+message, &live) != nil || live.ID != message || live.Channel != thread || live.Author.ID != r.State.Destination.Bot || !live.Author.Bot || !agentDeliveredBody(live.Content, body) || live.Flags&(4096|4) != 4096|4 || live.MentionEveryone || len(live.Mentions) != 0 {
 		return errors.New("delivery_unverified")
 	}
 	p.Message = message
@@ -274,6 +308,10 @@ func (r *Runner) deliverAgentResult(ctx context.Context, p *AgentResultRecord) e
 	p.LastError = ""
 	p.NextAttempt = ""
 	return nil
+}
+func agentDeliveredBody(content, body string) bool {
+	marker, ok := strings.CutPrefix(content, body+"\n\n-# recovery:")
+	return ok && len(marker) == 30 && strings.Trim(marker[:24], "0123456789abcdef") == "" && marker[24:] == ":log:0"
 }
 func (r *Runner) agentResultPhase(ctx context.Context, h *Health) {
 	work, cancel := context.WithTimeout(ctx, agentResultBudget)
@@ -297,7 +335,13 @@ func (r *Runner) agentResultPhase(ctx context.Context, h *Health) {
 			h.Errors = append(h.Errors, "agent_result_cursor_deferred")
 			return
 		}
-		if p.Verified != "" || p.Attempts >= agentResultAttempts {
+		if p.Verified != "" {
+			if r.archiveAgentFile("records", "verified", id) != nil {
+				h.Errors = append(h.Errors, "agent_result_archive_deferred")
+			}
+			continue
+		}
+		if p.Attempts >= agentResultAttempts {
 			continue
 		}
 		if p.NextAttempt != "" {
@@ -320,6 +364,10 @@ func (r *Runner) agentResultPhase(ctx context.Context, h *Health) {
 		}
 		if publish(r.agentResultPath(id), p) != nil {
 			h.Errors = append(h.Errors, "agent_result_commit_deferred")
+		} else if p.Verified != "" {
+			if r.archiveAgentFile("records", "verified", id) != nil {
+				h.Errors = append(h.Errors, "agent_result_archive_deferred")
+			}
 		}
 		return // At most one ordinary delivery attempt per periodic tick.
 	}
@@ -379,7 +427,7 @@ func agentJobOutcome(job map[string]json.RawMessage) (string, string) {
 	}
 	return "", ""
 }
-func (r *Runner) agentWatchSnapshot(parent context.Context, e AgentResultEvent) (string, string, string, []AgentDeferredItem, error) {
+func (r *Runner) agentWatchSnapshot(parent context.Context, e AgentResultEvent) (string, string, string, []AgentDeferredItem, bool, error) {
 	root := r.JobsPath
 	if root == "" {
 		root = "D:/CC/Tools/codex-jobs/jobs"
@@ -392,36 +440,53 @@ func (r *Runner) agentWatchSnapshot(parent context.Context, e AgentResultEvent) 
 	ctx, cancel := context.WithTimeout(parent, 2*time.Second)
 	defer cancel()
 	if !guard(ctx, path) {
-		return "", "", "", nil, errors.New("agent result source protected")
+		return "", "", "", nil, false, errors.New("agent result source protected")
 	}
 	var job map[string]json.RawMessage
 	if readJSON(path, 1<<20, &job) != nil {
-		return "", "", "", nil, errors.New("agent result source unavailable")
+		return "", "", "", nil, false, errors.New("agent result source unavailable")
 	}
 	var id string
 	_ = json.Unmarshal(job["id"], &id)
 	if id != e.Child {
-		return "", "", "", nil, errors.New("agent result source differs")
+		return "", "", "", nil, false, errors.New("agent result source differs")
 	}
 	var items []AgentDeferredItem
+	badItems := false
 	if raw, ok := job["item_deferred"]; ok {
-		if json.Unmarshal(raw, &items) != nil || len(items) > 32 {
-			return "", "", "", nil, errors.New("structured item progress unavailable")
-		}
-		for _, item := range items {
-			if !conversationID.MatchString(item.Transition) || validateAgentEvent(agentDeferredEvent(e, item)) != nil {
-				return "", "", "", nil, errors.New("structured item progress invalid")
+		var rows []json.RawMessage
+		if json.Unmarshal(raw, &rows) != nil {
+			badItems = true
+		} else {
+			if len(rows) > 32 {
+				badItems = true
+				rows = rows[:32]
+			}
+			for _, row := range rows {
+				var item AgentDeferredItem
+				if json.Unmarshal(row, &item) != nil || !conversationID.MatchString(item.Transition) || validateAgentEvent(agentDeferredEvent(e, item)) != nil {
+					badItems = true
+					continue
+				}
+				items = append(items, item)
 			}
 		}
 	}
 	state, reason := agentJobOutcome(job)
 	if state == "" {
-		return "", state, reason, items, nil
+		return "", state, reason, items, badItems, nil
 	}
 	// Only explicit state fields determine the transition. Body text is neither
 	// rejection evidence nor public report material.
 	signature := canonicalHash([]any{state, reason, job["status"], job["finished_at"], job["attempt"], job["attempts"], job["work_wait_on"], job["capacity_retry_at"]})
-	return signature, state, reason, items, nil
+	return signature, state, reason, items, badItems, nil
+}
+func (r *Runner) agentWatchPath(id string) string {
+	closed := filepath.Join(r.Config.Home, "agent-results", "closed-watches", id+".json")
+	if _, err := os.Stat(closed); err == nil {
+		return closed
+	}
+	return filepath.Join(r.Config.Home, "agent-results", "watches", id+".json")
 }
 func agentWatchID(e AgentResultEvent) string {
 	return canonicalHash([]any{e.RequestID, e.Todo, e.Parent, e.Child, e.Attempt})
@@ -433,7 +498,7 @@ func (r *Runner) watchAgentResult(e AgentResultEvent) error {
 	if e.Source != "codex_jobs" || !validJob(e.Child) {
 		return errors.New("external watch identity invalid")
 	}
-	path := filepath.Join(r.Config.Home, "agent-results", "watches", agentWatchID(e)+".json")
+	path := r.agentWatchPath(agentWatchID(e))
 	var prior agentResultWatch
 	if err := readJSON(path, 1<<20, &prior); err == nil {
 		if prior.Domain != agentResultDomain || prior.Event != e {
@@ -443,7 +508,7 @@ func (r *Runner) watchAgentResult(e AgentResultEvent) error {
 	} else if !os.IsNotExist(err) {
 		return errors.New("agent watch unavailable")
 	}
-	sig, state, _, items, err := r.agentWatchSnapshot(context.Background(), e)
+	sig, state, _, items, _, err := r.agentWatchSnapshot(context.Background(), e)
 	if err != nil {
 		return err
 	}
@@ -476,6 +541,9 @@ func (r *Runner) observeAgentResults(ctx context.Context, h *Health) {
 			return
 		}
 		if w.Closed {
+			if r.archiveAgentFile("watches", "closed-watches", id) != nil {
+				h.Errors = append(h.Errors, "agent_watch_archive_deferred")
+			}
 			continue
 		}
 		deadline, deadlineErr := time.Parse(time.RFC3339Nano, w.Deadline)
@@ -483,7 +551,10 @@ func (r *Runner) observeAgentResults(ctx context.Context, h *Health) {
 			h.Errors = append(h.Errors, "agent_watch_deadline_deferred")
 			continue
 		}
-		sig, state, reason, items, err := r.agentWatchSnapshot(ctx, w.Event)
+		sig, state, reason, items, badItems, err := r.agentWatchSnapshot(ctx, w.Event)
+		if badItems {
+			h.Errors = append(h.Errors, "agent_item_progress_invalid")
+		}
 		if err != nil {
 			h.Errors = append(h.Errors, "agent_watch_source_deferred")
 			if ctx.Err() != nil {
@@ -493,6 +564,9 @@ func (r *Runner) observeAgentResults(ctx context.Context, h *Health) {
 			sig, state, reason = canonicalHash("observation_unavailable"), "unverified", "observation_unavailable"
 		}
 		for _, item := range items {
+			if ctx.Err() != nil {
+				return
+			}
 			e := agentDeferredEvent(w.Event, item)
 			baseline := false
 			for _, prior := range w.BaselineItems {
@@ -508,7 +582,7 @@ func (r *Runner) observeAgentResults(ctx context.Context, h *Health) {
 				h.Errors = append(h.Errors, "agent_item_return_deferred")
 			}
 		}
-		expired := !r.Now().Before(deadline) && (state == "" || state == "unverified" || state == "dependency_wait" || state == "capacity_wait")
+		expired := !w.WaitReported && !r.Now().Before(deadline) && (state == "" || state == "unverified" || state == "dependency_wait" || state == "capacity_wait")
 		if expired {
 			sig, state, reason = canonicalHash("result_wait_limit"), "unverified", "result_wait_limit"
 		}
@@ -538,11 +612,18 @@ func (r *Runner) observeAgentResults(ctx context.Context, h *Health) {
 				h.Errors = append(h.Errors, "agent_watch_return_deferred")
 				continue
 			}
-			w.Closed = expired || state != "dependency_wait" && state != "capacity_wait" && state != "unverified"
+			if expired {
+				w.WaitReported = true
+			}
+			w.Closed = state != "dependency_wait" && state != "capacity_wait" && state != "unverified"
 		}
 		w.Signature = sig
 		if publish(path, w) != nil {
 			h.Errors = append(h.Errors, "agent_watch_commit_deferred")
+		} else if w.Closed {
+			if r.archiveAgentFile("watches", "closed-watches", id) != nil {
+				h.Errors = append(h.Errors, "agent_watch_archive_deferred")
+			}
 		}
 	}
 }

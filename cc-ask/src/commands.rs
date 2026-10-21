@@ -689,16 +689,7 @@ pub fn cmd_log_attached(
         }
     }
     if action || decision_question {
-        return post_text(
-            ctx,
-            &thread_id,
-            &body,
-            attach,
-            action
-                || crate::recovery_messages::log_requires_owner_action(&clean_body)
-                    .unwrap_or(false),
-            None,
-        );
+        return post_text(ctx, &thread_id, &body, attach, true, None);
     }
     let message_ids = crate::attachments::post_tracked(
         ctx,

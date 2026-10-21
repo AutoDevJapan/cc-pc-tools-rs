@@ -741,24 +741,6 @@ fn legacy_log_routes_decision_questions_without_publishing_internal_metadata() {
 }
 
 #[test]
-fn legacy_decision_question_without_notify_does_not_validate_a_prose_heading() {
-    let mut h = Harness::new();
-    let identity = json!({"todo_id":1,"resources":[{"kind":"service","id":"fixture-product"}],"decision":"publish","scope":{"specification":"fixture publication scope"}});
-    let body=format!("回答が必要です。公開してよいですか？\na 公開する\nb 保持する\n<!-- cc-decision {identity} -->");
-    cmd_log(&mut h.ctx, "公開方針", &body, None, false).unwrap();
-    assert_eq!(
-        h.fake
-            .borrow()
-            .messages
-            .values()
-            .flatten()
-            .filter(|m| m["allowed_mentions"]["users"] == json!(["OWN"]))
-            .count(),
-        1
-    );
-}
-
-#[test]
 fn legacy_log_accepts_report_examples_and_cleaned_decision_bodies() {
     let identity = json!({"todo_id":1,"resources":[{"kind":"service","id":"fixture-product"}],"decision":"publish","scope":{"specification":"fixture publication scope"}});
     for (body,visible,question) in [

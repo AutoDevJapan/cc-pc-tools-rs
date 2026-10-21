@@ -10,11 +10,14 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"unicode"
 )
 
 const agentResultDomain = "parent-agent-result-v1"
 const agentResultAttempts = 4
 const agentResultBudget = 20 * time.Second
+
+var errAgentOwnerQuestionScope = errors.New("owner_question_scope_invalid")
 
 // Public, non-secret text from the parent's existing owner question.
 // This result post points back to that question; it does not create another ask.
@@ -42,6 +45,7 @@ type AgentResultEvent struct {
 	Remaining     string             `json:"remaining"`
 	Next          string             `json:"next_action"`
 	OwnerRequired bool               `json:"owner_required"`
+	OwnerReply    bool               `json:"owner_reply,omitempty"`
 	OwnerQuestion AgentOwnerQuestion `json:"owner_question,omitzero"`
 	PrivateRef    string             `json:"private_ref,omitempty"`
 	ItemID        string             `json:"item_id,omitempty"`
@@ -73,6 +77,7 @@ type agentResultWatch struct {
 	BaselineItems       []string         `json:"baseline_item_transitions,omitempty"`
 	WaitReported        bool             `json:"wait_limit_reported,omitempty"`
 	ObservationReported bool             `json:"observation_reported,omitempty"`
+	StableWaitSignature bool             `json:"stable_wait_signature,omitempty"`
 }
 
 var agentStateLabels = map[string]string{
@@ -98,6 +103,7 @@ var agentReasonLabels = map[string]string{
 	"cleanup_measurement_unavailable": "対象の容量を計測できず、清掃を保留しました。",
 	"cleanup_budget":                  "今回の作業時間内に対象の清掃を終えられず、保留しました。",
 	"cleanup_protected":               "実行環境の確認で対象を清掃できず、保留しました。",
+	"item_progress_invalid":           "清掃保留の記録に不足または不正な情報があり、親担当が内容を確認します。",
 }
 var agentRemainingLabels = map[string]string{"none": "なし", "verification": "元の依頼に必要な検証と配送結果の確認が残っています。", "work": "元の依頼の実作業が残っています。", "unverified": "元の依頼の残作業はまだ確認できていません。"}
 var agentNextLabels = map[string]string{"none": "追加作業なし", "review_result": "親担当が保存済みの結果を確認して続行します。", "retry": "親担当が同じ依頼の通常の再開手順を進めます。", "wait_dependency": "既存の担当管理で待ち先の完了後に再開します。", "owner_decision": "保存済みの質問と本人の回答を確認して進めます。"}
@@ -127,6 +133,7 @@ func agentDeferredEvent(base AgentResultEvent, item AgentDeferredItem) AgentResu
 	e.Remaining = "verification"
 	e.Next = item.Next
 	e.OwnerRequired = item.OwnerRequired
+	e.OwnerReply = false
 	e.OwnerQuestion = item.OwnerQuestion
 	e.ItemID = item.ID
 	e.ItemKind = item.Kind
@@ -160,7 +167,7 @@ func validateAgentEvent(e AgentResultEvent) error {
 	if e.OwnerRequired && e.OwnerQuestion != (AgentOwnerQuestion{}) {
 		q := e.OwnerQuestion
 		for _, text := range []string{q.Question, q.ChoiceA, q.ChoiceB} {
-			if strings.TrimSpace(text) == "" || len(text) > 300 || strings.ContainsAny(text, "\r\n") {
+			if strings.TrimSpace(text) == "" || len(text) > 300 || strings.Contains(text, "<@") || strings.Contains(text, "@everyone") || strings.Contains(text, "@here") || strings.IndexFunc(text, func(r rune) bool { return unicode.IsControl(r) || r == '\u2028' || r == '\u2029' }) >= 0 {
 				return errors.New("concrete owner question and choices required")
 			}
 		}
@@ -208,6 +215,11 @@ func (r *Runner) archiveAgentFile(kind, archive, id string) error {
 func (r *Runner) recordAgentResult(e AgentResultEvent) (AgentResultRecord, error) {
 	return r.recordAgentResultWithin(context.Background(), e)
 }
+func agentResultNotifies(e AgentResultEvent) bool {
+	// A normal internal completion or periodic observation is progress.
+	// The parent explicitly marks its actual reply to the owner.
+	return e.OwnerReply || e.OwnerRequired || e.State != "completed" && e.State != "unverified"
+}
 func (r *Runner) recordAgentResultWithin(ctx context.Context, e AgentResultEvent) (AgentResultRecord, error) {
 	if err := validateAgentEvent(e); err != nil {
 		return AgentResultRecord{}, err
@@ -220,7 +232,7 @@ func (r *Runner) recordAgentResultWithin(ctx context.Context, e AgentResultEvent
 	}
 	defer unlock()
 	id := agentResultID(e)
-	p := AgentResultRecord{Domain: agentResultDomain, ID: id, Event: e, ParentReceived: r.Now().UTC().Format(time.RFC3339Nano), NotifyOwner: true}
+	p := AgentResultRecord{Domain: agentResultDomain, ID: id, Event: e, ParentReceived: r.Now().UTC().Format(time.RFC3339Nano), NotifyOwner: agentResultNotifies(e)}
 	p.Body = agentResultBody(p)
 	path := r.agentResultPath(id)
 	var old AgentResultRecord
@@ -268,7 +280,7 @@ func agentResultBody(p AgentResultRecord) string {
 	body := fmt.Sprintf("状態: %s\n【PCの道具】担当の結果を親へ返しました（元ToDo %d）。\n結果: %s\n理由: %s\n残作業: %s\n次の処置: %s\n本人の判断: %s", state, p.Event.Todo, agentStateLabels[p.Event.State], agentReasonLabels[p.Event.Reason], agentRemainingLabels[p.Event.Remaining], agentNextLabels[p.Event.Next], decision)
 	if p.Event.OwnerRequired {
 		q := p.Event.OwnerQuestion
-		body = fmt.Sprintf("ご回答をお願いします。%s\n a: %s\n b: %s\n回答先: <%s>\nこの対象だけ回答を待ち、AI側はほかの作業を続けます。\n\n%s", q.Question, q.ChoiceA, q.ChoiceB, q.URL, body)
+		body = fmt.Sprintf("回答が必要：%s\n a: %s\n b: %s\n回答先: <%s>\nこの対象だけ回答を待ち、AI側はほかの作業を続けます。\n\n%s", q.Question, q.ChoiceA, q.ChoiceB, q.URL, body)
 	} else {
 		next := map[string]string{"none": "結果の記録を終えました。", "review_result": "保存した結果を確認して作業を続けます。", "retry": "同じ依頼の再開を進めます。", "wait_dependency": "先行作業が終わり次第、作業を再開します。"}[p.Event.Next]
 		body = "対応不要です。AI側で" + next + "返信やPC操作は要りません。\n\n" + body
@@ -329,7 +341,7 @@ func (r *Runner) agentResultCursor(kind, id string) error {
 
 func (r *Runner) deliverAgentResult(ctx context.Context, p *AgentResultRecord) error {
 	if p.Event.OwnerRequired && p.NotifyOwner && !strings.HasPrefix(p.Event.OwnerQuestion.URL, "https://discord.com/channels/"+r.State.Destination.Guild+"/") {
-		return errors.New("owner_question_scope_invalid")
+		return errAgentOwnerQuestionScope
 	}
 	body := agentResultBody(*p)
 	path := filepath.Join(r.Config.Home, "agent-results", "bodies", p.ID+".txt")
@@ -417,7 +429,7 @@ func (r *Runner) agentResultPhase(ctx context.Context, h *Health) {
 			}
 			continue
 		}
-		if p.Attempts >= agentResultAttempts {
+		if p.Attempts >= agentResultAttempts || p.LastError == "owner_question_scope_invalid" {
 			continue
 		}
 		if p.NextAttempt != "" {
@@ -437,6 +449,9 @@ func (r *Runner) agentResultPhase(ctx context.Context, h *Health) {
 		}
 		if err := r.deliverAgentResult(work, &p); err != nil {
 			h.Errors = append(h.Errors, "agent_result_delivery_deferred")
+			if errors.Is(err, errAgentOwnerQuestionScope) {
+				p.LastError, p.NextAttempt = "owner_question_scope_invalid", ""
+			}
 		}
 		if publish(r.agentResultPath(id), p) != nil {
 			h.Errors = append(h.Errors, "agent_result_commit_deferred")
@@ -461,6 +476,7 @@ func (r *Runner) resumeAgentResult(id string) error {
 	}
 	p.Attempts = 0
 	p.NextAttempt = ""
+	p.LastError = ""
 	return publish(r.agentResultPath(id), p)
 }
 
@@ -540,7 +556,7 @@ func (r *Runner) agentWatchSnapshot(parent context.Context, e AgentResultEvent) 
 			}
 			for _, row := range rows {
 				var item AgentDeferredItem
-				if json.Unmarshal(row, &item) != nil || !conversationID.MatchString(item.Transition) || validateAgentEvent(agentDeferredEvent(e, item)) != nil {
+				if json.Unmarshal(row, &item) != nil || !conversationID.MatchString(item.Transition) || validateAgentEvent(agentDeferredEvent(e, item)) != nil || item.OwnerRequired && item.OwnerQuestion == (AgentOwnerQuestion{}) {
 					badItems = true
 					continue
 				}
@@ -554,6 +570,10 @@ func (r *Runner) agentWatchSnapshot(parent context.Context, e AgentResultEvent) 
 	}
 	// Only explicit state fields determine the transition. Body text is neither
 	// rejection evidence nor public report material.
+	if state == "capacity_wait" || state == "dependency_wait" {
+		// Scheduler retry clocks/counters do not end one continuous wait.
+		return canonicalHash([]string{state, reason}), state, reason, items, badItems, nil
+	}
 	signature := canonicalHash([]any{state, reason, job["status"], job["finished_at"], job["attempt"], job["attempts"], job["work_wait_on"], job["capacity_retry_at"]})
 	return signature, state, reason, items, badItems, nil
 }
@@ -591,7 +611,7 @@ func (r *Runner) watchAgentResult(e AgentResultEvent) error {
 	if state != "" {
 		return errors.New("register an active external job before its next transition")
 	}
-	w := agentResultWatch{Domain: agentResultDomain, Event: e, Signature: sig, Deadline: r.Now().Add(time.Hour).UTC().Format(time.RFC3339Nano)}
+	w := agentResultWatch{Domain: agentResultDomain, Event: e, Signature: sig, Deadline: r.Now().Add(time.Hour).UTC().Format(time.RFC3339Nano), StableWaitSignature: true}
 	for _, item := range items {
 		w.BaselineItems = append(w.BaselineItems, agentDeferredEvent(e, item).Transition)
 	}
@@ -630,6 +650,13 @@ func (r *Runner) observeAgentResults(ctx context.Context, h *Health) {
 		sig, state, reason, items, badItems, err := r.agentWatchSnapshot(ctx, w.Event)
 		if badItems {
 			h.Errors = append(h.Errors, "agent_item_progress_invalid")
+			notice := w.Event
+			notice.Transition, notice.State, notice.Reason = "invalid-item-progress", "unverified", "item_progress_invalid"
+			notice.Remaining, notice.Next = "unverified", "review_result"
+			notice.OwnerRequired, notice.OwnerReply, notice.OwnerQuestion = false, false, AgentOwnerQuestion{}
+			if _, noticeErr := r.recordAgentResultWithin(ctx, notice); noticeErr != nil {
+				h.Errors = append(h.Errors, "agent_item_diagnostic_deferred")
+			}
 		}
 		unreadable := err != nil
 		if unreadable {
@@ -639,6 +666,17 @@ func (r *Runner) observeAgentResults(ctx context.Context, h *Health) {
 			}
 			// A refusal to observe is not evidence that the child failed.
 			sig, state, reason = canonicalHash("observation_unavailable"), "unverified", "observation_unavailable"
+		}
+		if !unreadable && !w.StableWaitSignature {
+			// The signature scheme changing is not evidence of a new stop.
+			if w.Signature != "" && (state == "capacity_wait" || state == "dependency_wait") {
+				w.Signature = sig
+			}
+			w.StableWaitSignature = true
+			if publish(path, w) != nil {
+				h.Errors = append(h.Errors, "agent_watch_baseline_deferred")
+				continue
+			}
 		}
 		for _, item := range items {
 			if ctx.Err() != nil {
@@ -684,6 +722,7 @@ func (r *Runner) observeAgentResults(ctx context.Context, h *Health) {
 			e.Remaining = "unverified"
 			e.Next = "review_result"
 			e.OwnerRequired = false
+			e.OwnerReply = false
 			e.OwnerQuestion = AgentOwnerQuestion{}
 			if state == "completed" {
 				e.Remaining = "none"

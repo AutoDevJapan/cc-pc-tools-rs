@@ -30,6 +30,16 @@ queueを確認する。`current-pr-runtime-job <new-owned-dir> <Linux-helper>
 secretは1jobとcontextが必須、CodeQLは確定matrixと空contextを要求する。
 新しいheadのためにhelperの定数や配布版を変更しない。
 
+実行には元3059/3056がtodo/doing/waitで、3059が自動実行対象であり、元の保存済み
+仕様の場所とhashが一致する必要がある。done、本人の明示停止、仕様の変更では
+拒否する。原出力の上限はそれぞれ4MiB。secret workflowのdigestは従来の固定値を
+保つため、そのworkflow自体が変わる場合はhelperの別レビューと更新が必要。
+
+PR995はすでにmerge済みであり、既存のlive verifierはopen以外のPRを拒否する。
+このため現PR995でruntime-inspect/jobは実行できず、新経路の実機使用と成功は
+未実証である。入力構成とfixtureの成功だけで元の広い要件を完了扱いしない。
+別PRへの拡張や成功済みjobの再実行は、この実装の受入のために行わない。
+
 受入: 同じPRの異なる確定head/runを同じbinaryで受理し、secretとCodeQLを
 公式parser/plannerへ接続する。別repo/PR/未知kind、旧headの原証拠、停止、
 変更済み原出力、読取不可の新原記録をtoken/Docker/runner登録前に拒否する。

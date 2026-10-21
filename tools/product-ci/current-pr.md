@@ -5,8 +5,10 @@ admission currently accepts only repository 1285649124, PR995, fixed head
 cbd688871651e46d4821a4535d57eaa408105ff2 and its original secret job. New heads
 and CodeQL input admission are not implemented by this finite repair. The
 original ToDo3059 requirement for ordinary same-PR corrections without repeated
-recompilation is handled separately by the canonical product-parent runtime
-handoff described in [the runtime specification](../../docs/product-ci-runtime-3059.md).
+recompilation remains operationally unverified. The separate canonical
+product-parent runtime handoff is implemented as described in
+[the runtime specification](../../docs/product-ci-runtime-3059.md), but has not
+executed a real job through this new route.
 The finite constructor itself continues to reject new heads and CodeQL.
 The generic planner remains source-bound and never follows an advancing branch.
 
@@ -96,7 +98,10 @@ is changed. These finite routes do not implement future-head admission.
 
 `current-pr-runtime-qualify/inspect/job` use the original product parent's
 canonical handoff with newly verified original review and acceptance outputs.
-This separate route supports frozen secret and CodeQL inputs for subsequent
-PR995 corrections without changing compiled SHA constants. It has no caller
+Fixture checks accept frozen secret and CodeQL inputs for different PR995
+heads without changing compiled SHA constants. PR995 has since merged; the
+existing live verifier rejects merged PRs, so runtime-inspect/job cannot execute
+that merged PR. Operational use and success through this route remain unverified.
+It has no caller
 path argument and does not reuse the formerly rejected three inputs. Its input
 qualification and fixture checks are not a claim of new official job success.

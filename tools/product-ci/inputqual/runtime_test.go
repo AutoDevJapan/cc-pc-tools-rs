@@ -81,7 +81,7 @@ func TestRuntimeRejectsBeforeUnapprovedRead(t *testing.T) {
 }
 
 func TestRuntimeRejectsInvalidScopeAndEvidence(t *testing.T) {
-	for _, change := range []string{"repo", "pr", "kind", "head", "review", "output", "role", "same-output", "old-input", "duplicate", "stop", "must", "missing-must", "not-success"} {
+	for _, change := range []string{"repo", "pr", "kind", "head", "review", "output", "role", "same-output", "old-input", "old-review-output", "old-acceptance-output", "duplicate", "stop", "must", "missing-must", "not-success"} {
 		t.Run(change, func(t *testing.T) {
 			f, h := runtimeFixture(t, "secret", strings.Repeat("c", 40))
 			switch change {
@@ -111,6 +111,21 @@ func TestRuntimeRejectsInvalidScopeAndEvidence(t *testing.T) {
 				h.Acceptance.SHA = a.sha
 			case "old-input":
 				h.Review.File = f.p.review
+			case "old-review-output", "old-acceptance-output":
+				var r runtimeResult
+				data, _ := os.ReadFile(h.Review.File)
+				json.Unmarshal(data, &r)
+				var output []byte
+				if change == "old-review-output" {
+					output = []byte("private synthetic independently retained original review output")
+				} else {
+					output, _ = os.ReadFile(f.p.original.path)
+				}
+				if err := os.WriteFile(r.OutputFile, output, 0600); err != nil {
+					t.Fatal(err)
+				}
+				r.OutputSHA = hash(output)
+				h.Review.SHA = f.put(h.Review.File, r).sha
 			case "must", "missing-must", "not-success":
 				var r runtimeResult
 				data, _ := os.ReadFile(h.Review.File)
@@ -128,7 +143,21 @@ func TestRuntimeRejectsInvalidScopeAndEvidence(t *testing.T) {
 				a := f.put(h.Review.File, r)
 				h.Review.SHA = a.sha
 			case "stop":
-				f.put(f.p.db, map[string]any{"items": []any{map[string]any{"id": 3059, "status": "doing", "owner_stopped": true, "spec": f.p.parentSpec.path}}})
+				data, err := os.ReadFile(f.p.db)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var db map[string]any
+				if err := json.Unmarshal(data, &db); err != nil {
+					t.Fatal(err)
+				}
+				for _, value := range db["items"].([]any) {
+					row := value.(map[string]any)
+					if row["id"] == float64(3059) {
+						row["owner_stopped"] = true
+					}
+				}
+				f.put(f.p.db, db)
 			}
 			path := filepath.Join(f.p.root, ".ci-work", runtimeLeaf)
 			f.put(path, h)
@@ -149,7 +178,12 @@ func TestRuntimeSnapshotDoesNotReopenChangedOutputs(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	if os.Remove(h.Review.File) != nil {
+	var r runtimeResult
+	data, err := os.ReadFile(h.Review.File)
+	if err != nil || json.Unmarshal(data, &r) != nil {
+		t.Fatal("fixture")
+	}
+	if os.WriteFile(r.OutputFile, []byte("replaced after qualification"), 0600) != nil {
 		t.Fatal("fixture")
 	}
 	if e = s.Consume(func(pin, review, acceptance []byte) error {

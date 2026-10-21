@@ -3,7 +3,6 @@ package inputqual
 import (
 	"context"
 	"encoding/json"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -58,13 +57,9 @@ func ConstructRuntime() (Snapshot, error) {
 }
 
 func runtimeReadable(path string) bool {
-	exe, e := os.Executable()
-	if e != nil {
-		return false
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, filepath.Join(filepath.Dir(filepath.Dir(exe)), "client-records", "scrub391.exe"), "--guard-path", path)
+	cmd := exec.CommandContext(ctx, "D:/CC/Tools/client-records/scrub391.exe", "--guard-path", path)
 	prepareCommand(cmd)
 	data, e := cmd.Output()
 	if e != nil || len(data) > 16384 {
@@ -199,7 +194,7 @@ func constructRuntime(p policy, readable func(string) bool) (Snapshot, error) {
 		if err != nil {
 			return Snapshot{}, err
 		}
-		if hash(output) != r.OutputSHA || used[locationDigest(r.OutputFile)] || used[r.OutputSHA] {
+		if hash(output) != r.OutputSHA || r.OutputSHA == p.reviewSHA || r.OutputSHA == p.original.sha || used[locationDigest(r.OutputFile)] || used[r.OutputSHA] {
 			return Snapshot{}, rejected("runtime_original_output")
 		}
 		used[locationDigest(r.OutputFile)], used[r.OutputSHA] = true, true

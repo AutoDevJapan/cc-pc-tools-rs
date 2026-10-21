@@ -469,6 +469,14 @@ func (c config) quarantine(id, reason string) (result map[string]any, err error)
 		defer unlock()
 		return c.quarantinePreserved(id, reason, nil, scope)
 	}
+	if reason == "windows" && c.ci3250Candidate(id) {
+		scope, unlock, e := c.ci3250Recovery(id)
+		if e != nil {
+			return nil, e
+		}
+		defer unlock()
+		return c.quarantinePreserved(id, reason, nil, scope)
+	}
 	var scope *geminiScope
 	if reason == "hardlink" {
 		scope, err = c.geminiRecovery(id)
@@ -487,7 +495,7 @@ func (c config) quarantinePreserved(id, reason string, scope *geminiScope, ci *c
 		return nil, fail("INVALID_REASON")
 	}
 	if ci != nil {
-		text = "Go補助の測定がreparseを検出し、削除計画と旧quarantineを拒否した。固定資格でreparse 13件を含む全体を保持する。リンク先は未読。Windowsや実行前ポリシーの拒否とは区別する。"
+		text = "通常の削除計画が保護対象を拒否した。終了と所有を確認した検査資源を、全項目の属性を照合して原物のまま退避する。本文とリンク先は未読。Windowsや実行前ポリシーの拒否とは区別する。"
 	}
 	r, err := c.load(id, true)
 	if err != nil {

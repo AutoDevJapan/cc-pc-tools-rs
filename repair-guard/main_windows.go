@@ -178,6 +178,9 @@ func allowed(path string) bool {
 	if owned3107PathAllowed(absolute) {
 		return true
 	}
+	if retirement3250PathAllowed(absolute) {
+		return true
+	}
 	if conversationPathAllowed(absolute) {
 		return true
 	}

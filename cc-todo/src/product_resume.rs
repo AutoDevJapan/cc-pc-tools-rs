@@ -154,6 +154,12 @@ pub fn run(paths: &Paths, id: i64, apply: bool) -> Result<Value> {
 
 /// Authorize one original receipt, then let the scheduler prepare and admit it.
 pub fn bind_review(db: &mut Value, receipt: &Value, owner: &Value) -> Result<bool> {
+    bind_review_at(db, receipt, owner, crate::time_s())
+}
+
+/// Deterministic clock seam; the production entry point always uses time_s().
+#[doc(hidden)]
+pub fn bind_review_at(db: &mut Value, receipt: &Value, owner: &Value, at: f64) -> Result<bool> {
     use cc_scheduler::product_review as scope;
     let row = db["items"]
         .as_array()
@@ -199,7 +205,7 @@ pub fn bind_review(db: &mut Value, receipt: &Value, owner: &Value) -> Result<boo
         return Err("元の資格・停止・依存・割当の照合に失敗しました".into());
     }
     if row["product_review_allocation"].is_object() {
-        if scope::eligible(row, crate::time_s()) {
+        if scope::eligible(row, at) {
             return Ok(false);
         }
         return Err("保存済みの割当が変わっています".into());

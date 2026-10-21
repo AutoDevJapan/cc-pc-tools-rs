@@ -1,6 +1,10 @@
 use cc_scheduler::product_review as scope;
-use cc_todo::product_resume::{bind_review, snapshot};
+use cc_todo::product_resume::{bind_review_at, snapshot};
 use serde_json::{Value, json};
+const AT: f64 = 1791849601.;
+fn bind_review(db: &mut Value, receipt: &Value, owner: &Value) -> cc_todo::Result<bool> {
+    bind_review_at(db, receipt, owner, AT)
+}
 fn fixture() -> (Value, Value, Value) {
     let owner = json!({"repository":"autodevjapan/phosgaea-vol1","git_common":"recovered-common",
         "worktree":"original-tree","branch":"original-branch"});
@@ -39,6 +43,9 @@ fn only_original_review_changes_and_history_is_complete() {
     r["snapshot"] = snapshot(&db, &db["items"][1]);
     let after = db.clone();
     assert!(!bind_review(&mut db, &r, &owner).unwrap());
+    assert_eq!(db, after);
+    // Expiry still refuses an old allocation without rewriting its evidence.
+    assert!(bind_review_at(&mut db, &r, &owner, 1792540800.).is_err());
     assert_eq!(db, after);
 }
 #[test]

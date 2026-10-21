@@ -670,7 +670,19 @@ func (r *Runner) observeAgentResults(ctx context.Context, h *Health) {
 		if !unreadable && !w.StableWaitSignature {
 			// The signature scheme changing is not evidence of a new stop.
 			if w.Signature != "" && (state == "capacity_wait" || state == "dependency_wait") {
-				w.Signature = sig
+				sameOrUnknown := true
+				if len(w.Signature) >= 32 {
+					prior := w.Event
+					prior.Transition = fmt.Sprintf("observed-%d-%s", w.Generation, w.Signature[:32])
+					priorID := agentResultID(prior)
+					var saved AgentResultRecord
+					if readJSON(r.agentResultPath(priorID), 1<<20, &saved) == nil && saved.ID == priorID && saved.Domain == agentResultDomain && agentResultID(saved.Event) == priorID {
+						sameOrUnknown = saved.Event.State == state && saved.Event.Reason == reason
+					}
+				}
+				if sameOrUnknown {
+					w.Signature = sig
+				}
 			}
 			w.StableWaitSignature = true
 			if publish(path, w) != nil {

@@ -20,6 +20,12 @@ context、実runner ID/name、source HEAD/treeと認証削除を照合する。
 製品のmerge/Prd反映、新費用は行わない。検査起動と正式successは別に記録する。
 既存の4候補、995単独経路、CodeQL4件の成功は維持し再実行しない。
 
+939のreviewは、元担当が固定head/tree、全読範囲、Must0と実モデルを照合して
+受領した実応答の生bytesを固定する。helperは任意の入力から成功を推測せず、
+この独立した応答・資料のlocation/content hashだけを受理する。新しいsourceや
+未読の応答へ流用しない。これはsource読取受入であり機能・正式CIの成功ではない。
+実行後のguest証拠は、ホストが独立API照合後に保持した割当先とも一致させる。
+
 参考: [GitHubの割当](https://docs.github.com/en/actions/reference/runners/self-hosted-runners)、
 [開始・終了hook](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/run-scripts)、
 [実jobのREST API](https://docs.github.com/en/rest/actions/workflow-jobs#get-a-job-for-a-workflow-run)。

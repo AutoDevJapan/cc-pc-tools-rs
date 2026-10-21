@@ -406,7 +406,8 @@ func executeProductPlan(ctx context.Context, c candidate, p codeQLPlan, dir, gue
 	if e = checkCodeQLQueue(ctx, p, get); e != nil {
 		return e
 	}
-	callback, key, closeAdmission, e := startCodeQLAdmissionForRunner(ctx, p, c, name)
+	selection := &codeQLSelection{}
+	callback, key, closeAdmission, e := startCodeQLAdmissionForRunner(ctx, p, c, name, selection.observe)
 	if e != nil {
 		return e
 	}
@@ -514,6 +515,9 @@ func executeProductPlan(ctx context.Context, c candidate, p codeQLPlan, dir, gue
 		actual, e = selectFiniteBatchAdmission(p, codeQLAdmission{proof.RunID, proof.Attempt, proof.SHA})
 		if e != nil {
 			return e
+		}
+		if !selection.matches(actual) {
+			return errors.New("guest proof differs from independently admitted runner member")
 		}
 	}
 	if proof.SHA != actual.SHA || proof.Tree != actual.Tree || proof.RunID != actual.RunID || proof.Attempt != actual.Attempt {

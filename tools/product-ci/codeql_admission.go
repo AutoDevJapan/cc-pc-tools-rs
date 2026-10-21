@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -20,6 +21,30 @@ type codeQLAdmission struct {
 	RunID   int64  `json:"run_id"`
 	Attempt int    `json:"attempt"`
 	SHA     string `json:"sha"`
+}
+
+// Keep the independently API-admitted member on the host, separately from the
+// guest's checkout proof. A second callback cannot select another batch member.
+type codeQLSelection struct {
+	mu       sync.Mutex
+	selected codeQLPlan
+	seen     bool
+}
+
+func (s *codeQLSelection) observe(p codeQLPlan) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.seen && s.selected != p {
+		return errors.New("admitted runner member changed")
+	}
+	s.selected, s.seen = p, true
+	return nil
+}
+
+func (s *codeQLSelection) matches(p codeQLPlan) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.seen && s.selected == p
 }
 
 // Separate read-only admission: no resident bridge, credentials, request-selected
@@ -72,7 +97,10 @@ func startCodeQLAdmission(ctx context.Context, p codeQLPlan, c candidate) (endpo
 	return startCodeQLAdmissionForRunner(ctx, p, c, "")
 }
 
-func startCodeQLAdmissionForRunner(ctx context.Context, p codeQLPlan, c candidate, runnerName string) (endpoint, key string, closeServer func() error, err error) {
+func startCodeQLAdmissionForRunner(ctx context.Context, p codeQLPlan, c candidate, runnerName string, capture ...func(codeQLPlan) error) (endpoint, key string, closeServer func() error, err error) {
+	if len(capture) > 1 {
+		return "", "", nil, errors.New("admission observer rejected")
+	}
 	l, e := net.Listen("tcp", "127.0.0.1:0")
 	if e != nil {
 		return "", "", nil, errors.New("admission listener unavailable")
@@ -90,7 +118,13 @@ func startCodeQLAdmissionForRunner(ctx context.Context, p codeQLPlan, c candidat
 		if p.Batch != ([2]currentPRBinding{}) {
 			candidate = structCandidate(selected)
 		}
-		return verifyCodeQLAdmissionPlan(callCtx, candidate, selected, runnerName, get)
+		if err := verifyCodeQLAdmissionPlan(callCtx, candidate, selected, runnerName, get); err != nil {
+			return err
+		}
+		if len(capture) == 1 {
+			return capture[0](selected)
+		}
+		return nil
 	})
 	done := make(chan struct{})
 	go func() { _ = server.Serve(l); close(done) }()

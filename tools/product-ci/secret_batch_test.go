@@ -32,7 +32,7 @@ func TestFiniteBatchOfficialMainDispatch(t *testing.T) {
 }
 
 func TestFiniteSecretBatchPlansPreserveBothSourcesAcrossCompletion(t *testing.T) {
-	for _, completed939 := range []bool{false, true} {
+	for _, completedPR := range []int{0, 939, 995} {
 		p := batchFixture()
 		root := "repos/" + p.Repo
 		repo := map[string]any{"id": p.RepoID, "full_name": p.Repo, "private": true, "fork": false, "owner": map[string]string{"login": "AutoDevJapan"}, "permissions": map[string]bool{"admin": true}}
@@ -41,7 +41,7 @@ func TestFiniteSecretBatchPlansPreserveBothSourcesAcrossCompletion(t *testing.T)
 		for _, b := range p.Batch {
 			branch := fmt.Sprintf("candidate-%d", b.PR)
 			status, conclusion := "queued", ""
-			if completed939 && b.PR == 939 {
+			if b.PR == completedPR {
 				status, conclusion = "completed", "success"
 			}
 			data[fmt.Sprintf("%s/pulls/%d", root, b.PR)] = map[string]any{"state": "open", "draft": false, "head": map[string]any{"sha": b.Head, "ref": branch, "repo": repo}, "base": map[string]any{"sha": b.Base, "repo": repo}, "merge_commit_sha": b.Context}
@@ -65,19 +65,72 @@ func TestFiniteSecretBatchPlansPreserveBothSourcesAcrossCompletion(t *testing.T)
 			return json.Unmarshal(bytes, out)
 		}
 		selected, err := readyFiniteBatchMember(context.Background(), p.Batch, read)
-		if err != nil || selected.PR != 995 {
+		want := p
+		if completedPR == 995 {
+			want = finiteBatchMember(p, p.Batch[1])
+		}
+		if err != nil || selected.PR != want.PR {
 			t.Fatalf("remaining repair not selected: %v", err)
 		}
-		got, err := planFiniteSecretBatchWithPolicy(context.Background(), p.Batch, 995, read, digest([]byte(path)), digest(workflow))
-		if err != nil || got != p {
+		got, err := planFiniteSecretBatchWithPolicy(context.Background(), p.Batch, want.PR, read, digest([]byte(path)), digest(workflow))
+		if err != nil || got != want {
 			t.Fatalf("two-source plan rejected: %v", err)
 		}
 		// A stale or changed peer cannot hide behind the selected repair's proof.
 		peer := p.Batch[1]
+		if want.PR == 939 {
+			peer = p.Batch[0]
+		}
 		data[root+"/git/commits/"+peer.Head] = map[string]any{"tree": map[string]string{"sha": strings.Repeat("f", 40)}}
-		if _, err := planFiniteSecretBatchWithPolicy(context.Background(), p.Batch, 995, read, digest([]byte(path)), digest(workflow)); err == nil {
+		if _, err := planFiniteSecretBatchWithPolicy(context.Background(), p.Batch, want.PR, read, digest([]byte(path)), digest(workflow)); err == nil {
 			t.Fatal("changed peer source accepted")
 		}
+	}
+}
+
+func TestFiniteBatchActualRunnerChecksBothMembers(t *testing.T) {
+	p := batchFixture()
+	for _, b := range p.Batch {
+		selected := finiteBatchMember(p, b)
+		for _, wrongRunner := range []bool{false, true} {
+			reads, pauses := 0, 0
+			read := func(_ context.Context, endpoint string, out any) error {
+				reads++
+				if endpoint != fmt.Sprintf("repos/%s/actions/jobs/%d", p.Repo, b.JobIDs[0]) {
+					return fmt.Errorf("unexpected fixture endpoint")
+				}
+				name := "owned-runner"
+				if wrongRunner {
+					name = "other-runner"
+				}
+				v := map[string]any{"id": b.JobIDs[0], "run_id": b.RunID, "run_attempt": b.Attempt, "head_sha": b.Head, "status": "in_progress", "runner_id": 41, "runner_name": name}
+				data, _ := json.Marshal(v)
+				return json.Unmarshal(data, out)
+			}
+			err := awaitCurrentPRRunner(context.Background(), selected, "owned-runner", read, func(context.Context) error { pauses++; return nil })
+			if !wrongRunner && (err != nil || reads != 1 || pauses != 0) {
+				t.Fatalf("actual member%d assignment rejected: %v", b.PR, err)
+			}
+			if wrongRunner && (err == nil || reads != 3 || pauses != 2) {
+				t.Fatalf("unowned member%d assignment admitted or not bounded: %v reads%d", b.PR, err, reads)
+			}
+		}
+	}
+}
+
+func TestFiniteBatchHostSelectionCannotFollowChangedGuestProof(t *testing.T) {
+	p := batchFixture()
+	selection := &codeQLSelection{}
+	actual := finiteBatchMember(p, p.Batch[1])
+	other := finiteBatchMember(p, p.Batch[0])
+	if selection.matches(actual) {
+		t.Fatal("unadmitted member accepted")
+	}
+	if selection.observe(actual) != nil || selection.observe(actual) != nil || !selection.matches(actual) {
+		t.Fatal("same start/complete member rejected")
+	}
+	if selection.matches(other) || selection.observe(other) == nil || !selection.matches(actual) {
+		t.Fatal("guest or second callback changed host selection")
 	}
 }
 

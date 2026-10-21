@@ -288,7 +288,7 @@ func planCurrentPRSnapshot(ctx context.Context, b currentPRBinding, read api, pa
 // job set may be assigned to the unique owned runner; the hook checks the real
 // API assignment rather than trusting GITHUB_JOB or a guest-supplied job ID.
 func checkCurrentPRRunner(ctx context.Context, p codeQLPlan, name string, read api) error {
-	if !currentPRGuestPlan(p) || name == "" {
+	if !validGuestPlan(p) || name == "" {
 		return errors.New("current PR runner binding missing")
 	}
 	matched := 0

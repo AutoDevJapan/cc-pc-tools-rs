@@ -38,7 +38,7 @@ jobs:
           cache: false
       - name: Verify hidden wrapper exit codes with real WSH
         working-directory: chatgpt-web/wrapper-tests
-        run: go test -timeout 60s ./...
+        run: go test -count=1 -timeout 60s ./...
       - name: Require real Chrome for the fixtures
         shell: pwsh
         run: |

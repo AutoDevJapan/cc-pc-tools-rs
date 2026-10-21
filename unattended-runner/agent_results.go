@@ -295,6 +295,11 @@ func agentResultBody(p AgentResultRecord) string {
 		}
 		body += fmt.Sprintf("\n保留対象: %s（対象 %s）\n確認できた容量: %s\n対象の場所と元の指示は親の私的記録に保持しています。", agentItemKinds[p.Event.ItemKind], p.Event.ItemID, capacity)
 	}
+	if len(p.ID) >= 40 {
+		// Ordinary logs deduplicate presentation, not retry IDs. The real
+		// parent receipt distinguishes separate events with the same prose.
+		body += "\n\n-# 結果記録: " + p.ID[:40]
+	}
 	return body
 }
 func agentResultFiles(home, kind string) ([]string, error) {

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"path/filepath"
 	"slices"
@@ -391,5 +392,59 @@ func TestAgentResultOldWaitMigrationStillReportsChangedWaitKind(t *testing.T) {
 	saved := r.mustAgentResult(t, files[0])
 	if saved.Event.State != "capacity_wait" || !saved.NotifyOwner {
 		t.Fatal("new capacity wait was not a notifying result")
+	}
+}
+
+func TestAgentResultDistinctStopsDoNotAliasAtTheOrdinarySender(t *testing.T) {
+	r, _ := fixture(t)
+	index, err := r.loadConversations()
+	if err != nil {
+		t.Fatal(err)
+	}
+	index.Topics = map[string]string{"【PCの道具】担当の結果": "610"}
+	if publish(r.conversationPath(), index) != nil {
+		t.Fatal("existing ordinary result topic")
+	}
+	receipts := []AgentResultRecord{}
+	for _, transition := range []string{"stop-1", "stop-2"} {
+		e := resultEvent()
+		e.Transition = transition
+		p, err := r.recordAgentResult(e)
+		if err != nil {
+			t.Fatal(err)
+		}
+		receipts = append(receipts, p)
+	}
+	// The real sender deduplicates log presentation fingerprints, NOT request IDs
+	// (cc-ask/recovery_messages.rs Request::fingerprint and reserve).
+	byBody, byID := map[string]string{}, map[string]string{}
+	r.Run = func(_ context.Context, _ string, args ...string) (string, error) {
+		body, err := boundedRegular(argValue(args, "--body-file"))
+		if err != nil {
+			return "", err
+		}
+		if argValue(args, "--thread") != "610" {
+			t.Error("existing ordinary topic binding lost")
+		}
+		key := bytesHash(body)
+		id := byBody[key]
+		if id == "" {
+			id = fmt.Sprintf("%d", 740+len(byBody))
+			byBody[key], byID[id] = id, string(body)
+		}
+		return fmt.Sprintf(`{"domain":"new-owner-recovery-messages","delivery":"verified","thread_id":"610","message_id":"%s"}`, id), nil
+	}
+	server(t, r, func(w http.ResponseWriter, req *http.Request) {
+		id := strings.TrimPrefix(req.URL.Path, "/channels/610/messages/")
+		m := resultReadback(r, AgentResultRecord{Event: resultEvent(), Body: byID[id]}, true)
+		m["id"] = id
+		respond(w, m)
+	})
+	for range 4 {
+		r.agentResultPhase(context.Background(), &Health{})
+	}
+	a, b := r.mustAgentResult(t, receipts[0].ID), r.mustAgentResult(t, receipts[1].ID)
+	if len(byBody) != 2 || a.Verified == "" || b.Verified == "" || a.Message == b.Message {
+		t.Fatal("distinct actual stops were aliased into one owner notification")
 	}
 }

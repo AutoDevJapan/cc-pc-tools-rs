@@ -139,7 +139,7 @@
     "registered": true,
     "recipient": "original supervisor main that prepared the operational specification",
     "source_workspace": "D:/CC/Work/unattended-operations-20261013-wt/todo-2903-qualified-release",
-    "target_event_search_hint_utc": "2026-10-20T12:38:34.0939180Z",
+    "target_event_search_hint_utc": "2026-10-20T12:38:34.093918Z",
     "timestamp_is_provenance_proof": false,
     "original_writer_session_id_verified": false,
     "original_writer_tool_call_id_verified": false,
@@ -149,5 +149,14 @@
       "original acquisition/source identity"
     ],
     "receipt_received": false
+  },
+  "parent_delivery": {
+    "parent_todo": 3103,
+    "normal_cli": "todo edit",
+    "cas_used": true,
+    "readback_matched": true,
+    "parent_discord_report_confirmed": false,
+    "original_note_preserved": true,
+    "task_state_changed": false
   }
 }

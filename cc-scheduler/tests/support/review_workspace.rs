@@ -137,6 +137,119 @@ fn review_workspace_separates_execution_without_replacing_source_or_history() {
 }
 
 #[test]
+fn review_workspace_migrates_recorded_parent_source_from_another_checkout() {
+    for change in [
+        "valid",
+        "unrecorded",
+        "repository",
+        "common",
+        "tree",
+        "branch",
+        "pr",
+        "other_parent",
+    ] {
+        let mut f = legacy_review();
+        let writer = f.get(1);
+        let parent = PathBuf::from(s(&writer["scheduler"]["worktree"]));
+        let source = parent.parent().unwrap().join("todo-1-source");
+        let branch = if change == "other_parent" {
+            "scheduler/todo-9-source"
+        } else {
+            "scheduler/todo-1-source"
+        };
+        run_git(
+            &mut SystemRunner,
+            &f.repo,
+            &["worktree", "add", "-b", branch, source.to_str().unwrap()],
+        )
+        .unwrap();
+        fs::write(
+            source.join("unfinished-source.txt"),
+            "keep review read source",
+        )
+        .unwrap();
+        let source_head = run_git(&mut SystemRunner, &source, &["rev-parse", "HEAD"]).unwrap();
+        let source_status =
+            run_git(&mut SystemRunner, &source, &["status", "--porcelain"]).unwrap();
+        let parent_status =
+            run_git(&mut SystemRunner, &parent, &["status", "--porcelain"]).unwrap();
+        let mut recorded = cc_job_policy::work_owner::checkout(source.to_str().unwrap());
+        recorded["pr"] = json!(282);
+        match change {
+            "unrecorded" => recorded = Value::Null,
+            "repository" => recorded["repository"] = json!("unknown/repository"),
+            "common" => recorded["git_common"] = json!("unknown"),
+            "tree" => recorded["worktree"] = writer["scheduler"]["worktree"].clone(),
+            "branch" => recorded["branch"] = json!("scheduler/todo-1-other"),
+            "pr" => recorded["pr"] = json!(283),
+            _ => (),
+        }
+        f.e.backend.records[1]["cwd"] = json!(source);
+        f.e.backend.records[1]["work_owner"] = recorded;
+        let jobs_before = f.e.backend.records.clone();
+        let mut row = f.get(2);
+        row["scheduler"]["worktree"] = json!(source);
+        row["scheduler"]["branch"] = json!(branch);
+        row["scheduler"]["workspace_receipt"]["cwd"] = json!(source);
+        f.put(row.clone());
+        let bytes = fs::read(&f.e.todo_path).unwrap();
+        let result = f.e.prepare(&row, f.repo.to_str().unwrap());
+        if change == "valid" {
+            let prepared = result.unwrap().unwrap();
+            assert_eq!(prepared["scheduler"]["branch"], "scheduler/todo-2-review");
+            assert_ne!(prepared["scheduler"]["worktree"], json!(source));
+            assert_eq!(prepared["subwork"], row["subwork"]);
+            assert_eq!(prepared["jobs"], row["jobs"]);
+            assert_eq!(
+                prepared["scheduler"]["workspace_receipt"],
+                row["scheduler"]["workspace_receipt"]
+            );
+            let migration = &prepared["scheduler"]["subwork_workspace_migration"];
+            assert_eq!(migration["source_job"], "legacy");
+            assert_eq!(migration["source_worktree"], json!(source));
+            assert_eq!(migration["source_branch"], branch);
+            assert_eq!(migration["previous"]["worktree"], json!(source));
+            cc_job_policy::subwork::resolve(&f.e.todo().unwrap(), &prepared, &[], true).unwrap();
+            let repeated =
+                f.e.prepare(&prepared, f.repo.to_str().unwrap())
+                    .unwrap()
+                    .unwrap();
+            assert_eq!(
+                repeated["scheduler"]["worktree"],
+                prepared["scheduler"]["worktree"]
+            );
+            assert_eq!(
+                repeated["scheduler"]["subwork_workspace_migration"],
+                *migration
+            );
+        } else {
+            assert!(result.is_err(), "{change}");
+            assert_eq!(fs::read(&f.e.todo_path).unwrap(), bytes, "{change}");
+            assert!(!PathBuf::from(format!("{}-wt/todo-2-review", f.repo.display())).exists());
+        }
+        assert_eq!(
+            run_git(&mut SystemRunner, &source, &["rev-parse", "HEAD"]).unwrap(),
+            source_head
+        );
+        assert_eq!(
+            run_git(&mut SystemRunner, &source, &["status", "--porcelain"]).unwrap(),
+            source_status
+        );
+        assert_eq!(
+            run_git(&mut SystemRunner, &parent, &["status", "--porcelain"]).unwrap(),
+            parent_status
+        );
+        assert_eq!(
+            fs::read_to_string(source.join("unfinished-source.txt")).unwrap(),
+            "keep review read source"
+        );
+        assert_eq!(f.get(1), writer);
+        assert_eq!(f.e.backend.records, jobs_before);
+        assert!(f.e.backend.launched.is_empty());
+    }
+}
+
+#[test]
 fn review_workspace_refuses_unverified_provenance_and_running_or_queued_review() {
     for change in [
         "parent",

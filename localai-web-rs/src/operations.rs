@@ -237,6 +237,11 @@ impl Operations {
 fn native_business_scopes(board: &mut Value, native: &Value) {
     let mut declared: BTreeMap<u64, BTreeSet<String>> = BTreeMap::new();
     for binding in native["bindings"].as_array().into_iter().flatten() {
+        if binding["state"] == "closed"
+            || !matches!(binding["role"].as_str(), Some("work" | "review"))
+        {
+            continue;
+        }
         if let (Some(id), Some(project)) = (
             binding["todoId"].as_u64(),
             binding["businessProject"].as_str(),
@@ -292,6 +297,14 @@ fn add_native_scoped_worker(
         .filter(|targets| targets.len() == 1)
         .and_then(|targets| targets.first())
         .and_then(|name| catalog::find(name));
+    let target = target.filter(|_| {
+        worker["recordedStatus"] == "doing"
+            && !matches!(
+                worker["productIdentity"]["state"].as_str(),
+                Some("unknown" | "verified" | "owner_declared" | "name_only")
+            )
+            && worker["productIdentity"]["productId"].is_null()
+    });
     let mut worker = worker.clone();
     if let Some(product) = target {
         // A declared business target changes placement, never privacy or code identity.
@@ -299,6 +312,58 @@ fn add_native_scoped_worker(
         add(tree, product.department, product.name.to_owned(), worker);
     } else {
         add(tree, department, name.to_owned(), worker)
+    }
+}
+
+#[cfg(test)]
+mod native_scope_regressions {
+    use super::*;
+    fn fixture(identity: Value) -> Value {
+        json!({"departments":[{"id":"department-5","name":"情報システム部","products":[{"name":"PCの道具","workers":[
+            {"id":"todo-1","recordedStatus":"doing","status":"unknown","productIdentity":identity}]}]}],"unassignedProducts":[]})
+    }
+    fn target(board: &Value) -> String {
+        board["departments"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|d| d["products"].as_array().unwrap())
+            .find(|p| {
+                p["workers"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|w| w["id"] == "todo-1")
+            })
+            .unwrap()["name"]
+            .as_str()
+            .unwrap()
+            .to_owned()
+    }
+    #[test]
+    fn native_scope_uses_only_open_work_bindings_and_never_rescues_mcp_or_unknown() {
+        let binding = |role: &str, state: &str| json!({"bindings":[{"todoId":1,"businessProject":"youtube-daily","role":role,"state":state}]});
+        let mut board = fixture(json!({"state":"not_applicable","productId":null}));
+        native_business_scopes(&mut board, &binding("work", "observed"));
+        assert_eq!(target(&board), "youtube-daily");
+        for (role, state) in [
+            ("work", "closed"),
+            ("audit", "observed"),
+            ("supervision", "observed"),
+        ] {
+            let mut board = fixture(Value::Null);
+            native_business_scopes(&mut board, &binding(role, state));
+            assert_eq!(target(&board), "PCの道具");
+        }
+        for identity in [
+            json!({"state":"unknown","productId":null}),
+            json!({"state":"verified","productId":"godd-mcp-alpha"}),
+            json!({"state":"owner_declared","productId":"godd-mcp-contract"}),
+        ] {
+            let mut board = fixture(identity);
+            native_business_scopes(&mut board, &binding("work", "observed"));
+            assert_eq!(target(&board), "PCの道具");
+        }
     }
 }
 pub async fn resident(board: Arc<Operations>) {

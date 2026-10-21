@@ -342,6 +342,97 @@ mod tests {
             15_000
         );
     }
+
+    #[test]
+    fn real_operations_native_receipt_reaches_row_progress_and_observed_workload() {
+        use crate::operations::Operations;
+        use localai_web_rs::native_activity::{Activity, Close, Register};
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path();
+        std::fs::create_dir_all(root.join("todo")).unwrap();
+        std::fs::create_dir_all(root.join("codex-jobs/jobs")).unwrap();
+        std::fs::write(
+            root.join("todo/todo.json"),
+            json!({"projects":{"tools":"D:/fixture"},"items":[
+                {"id":1,"project":"tools","status":"doing"},
+                {"id":2,"project":"tools","status":"wait","wait_on":[1]}
+            ]})
+            .to_string(),
+        )
+        .unwrap();
+        let board = Operations::new(root.into(), root.join("skills"));
+        board.refresh();
+        let id = "00000000-0000-7000-8000-000000000031";
+        let registration = board
+            .register_native(Register {
+                session_id: id.into(),
+                todo_id: 1,
+                role: "work".into(),
+                business_project: None,
+            })
+            .unwrap();
+        let now = || {
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as u64
+        };
+        let actual = now();
+        let generation = registration["generation"].as_u64().unwrap();
+        board
+            .record_native(Activity {
+                session_id: id.into(),
+                generation,
+                actual_at_ms: actual,
+                event_id: "actual-tool-result".into(),
+                tool: "exec_command".into(),
+                kind: "test".into(),
+                executed: true,
+                exit_code: Some(0),
+            })
+            .unwrap();
+        let snapshot = board.snapshot();
+        let rows: Vec<_> = snapshot["departments"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|d| d["products"].as_array().unwrap())
+            .flat_map(|p| p["workers"].as_array().unwrap())
+            .collect();
+        let worker = rows.iter().find(|row| row["id"] == "todo-1").unwrap();
+        assert!(
+            worker.get("processingJobKey").is_some(),
+            "exercise the production strict-key shape, including null"
+        );
+        assert_eq!(worker["workState"], "processing");
+        assert_eq!(worker["status"], "working");
+        assert!(worker["primaryJob"].is_null());
+        assert_eq!(worker["stopReason"], "");
+        assert_eq!(
+            rows.iter().find(|row| row["id"] == "todo-2").unwrap()["workState"],
+            "dependency_wait"
+        );
+        let mut ledger = Ledger::default();
+        let at = now() as i64;
+        ledger.observe(&snapshot, at);
+        assert_eq!(
+            ledger.snapshot(&super::super::day(at), at)["totals"]["jobs"],
+            1
+        );
+        board
+            .close_native(Close {
+                session_id: id.into(),
+                generation,
+                ended_at_ms: now(),
+                outcome: "success".into(),
+            })
+            .unwrap();
+        let closed = board.snapshot();
+        assert!(closed["workforce"]["processing"]["sessions"]
+            .as_array()
+            .unwrap()
+            .is_empty());
+    }
     #[test]
     fn empty_observations_differ_from_unavailable_and_restart_does_not_bridge() {
         let mut ledger = Ledger::default();

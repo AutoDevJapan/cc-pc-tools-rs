@@ -42,4 +42,14 @@ fn approved_page_repair_retains_the_original_asset_and_operations_structure() {
             "retired page must not load: {retired}"
         );
     }
+    let links = regex::Regex::new(r#"<a\b[^>]*href="([^"]+)"[^>]*data-view="([^"]+)""#).unwrap();
+    let found: Vec<_> = links
+        .captures_iter(&html)
+        .map(|c| (c[2].to_owned(), c[1].to_owned()))
+        .collect();
+    assert!(found.contains(&("progress".into(), "/progress".into())));
+    assert!(found.contains(&("music".into(), "/music".into())));
+    for view in ["kanban", "workload", "systems"] {
+        assert!(html.contains(&format!("<button data-view=\"{view}\"")));
+    }
 }

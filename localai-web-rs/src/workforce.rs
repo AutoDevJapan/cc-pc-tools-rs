@@ -572,7 +572,12 @@ pub fn apply_to_board(board: &mut Value) {
 
 /// Join instrumented native receipts, without turning native UUIDs into CC jobs.
 pub fn merge_native(board: &mut Value, native: &Value, now: u64) {
-    board["nativeActivity"] = native.clone();
+    board["nativeActivity"] = json!({"source":"native","state":native["state"],"complete":false,
+        "knownSources":native["knownSources"],"scope":native["scope"]});
+    let eligible: BTreeSet<u64> = records(board)
+        .filter(|row| row["recordedStatus"] == "doing")
+        .filter_map(|row| row["id"].as_str()?.strip_prefix("todo-")?.parse().ok())
+        .collect();
     let Some(workforce) = board.get_mut("workforce").filter(|value| value.is_object()) else {
         return;
     };
@@ -594,7 +599,11 @@ pub fn merge_native(board: &mut Value, native: &Value, now: u64) {
         ) else {
             continue;
         };
-        if until < now || !key.starts_with("native-") || added.contains(key) {
+        if until < now
+            || !key.starts_with("native-")
+            || added.contains(key)
+            || !eligible.contains(&id)
+        {
             continue;
         }
         let Some(task) = workforce["tasks"]
@@ -614,7 +623,9 @@ pub fn merge_native(board: &mut Value, native: &Value, now: u64) {
         {
             continue;
         }
-        task["recordedWorkState"] = task["state"].clone();
+        if task.get("recordedWorkState").is_none() {
+            task["recordedWorkState"] = task["state"].clone();
+        }
         task["state"] = json!("processing");
         let mut refs = task["references"]["sessions"]
             .as_array()
@@ -626,7 +637,19 @@ pub fn merge_native(board: &mut Value, native: &Value, now: u64) {
         task["references"]["session"] = refs.first().cloned().unwrap_or(Value::Null);
         task["references"]["sessions"] = json!(refs);
         task["availability"]["session"] = json!("native_tool_receipt");
-        task["nativeExecution"] = session.clone();
+        if task["nativeExecution"]["actualAt"].as_u64().unwrap_or(0)
+            <= session["actualAt"].as_u64().unwrap_or(0)
+        {
+            task["nativeExecution"] = session.clone();
+        }
+        if !task["nativeExecutions"].is_array() {
+            task["nativeExecutions"] = json!([]);
+        }
+        task["nativeExecutions"]
+            .as_array_mut()
+            .unwrap()
+            .push(session.clone());
+        task["references"]["session"] = task["nativeExecution"]["key"].clone();
         added.insert(key.to_owned());
         proofs.push(session.clone());
     }
@@ -637,7 +660,12 @@ pub fn merge_native(board: &mut Value, native: &Value, now: u64) {
         Value::Null
     };
     workforce["processing"]["total"] = Value::Null;
-    if workforce["processing"]["state"] != "unavailable" || !added.is_empty() {
+    if !added.is_empty()
+        || matches!(
+            workforce["processing"]["state"].as_str(),
+            Some("complete" | "partial")
+        )
+    {
         workforce["processing"]["state"] = json!("partial")
     }
     if !added.is_empty() {
@@ -691,7 +719,19 @@ fn apply_product(product: &mut Value, tasks: &BTreeMap<u64, Value>, protected: b
         let state = task
             .and_then(|task| task["state"].as_str())
             .unwrap_or("execution_unverified");
+        let native_processing = task.is_some_and(|task| {
+            let native = &task["nativeExecution"];
+            native["source"] == "native"
+                && native["verification"] == "runtime_tool_receipt"
+                && native["key"]
+                    .as_str()
+                    .is_some_and(|key| key.starts_with("native-"))
+                && task["references"]["sessions"]
+                    .as_array()
+                    .is_some_and(|keys| keys.contains(&native["key"]))
+        });
         let state = if state == "processing"
+            && !native_processing
             && strict_job_match(worker)
             && (!worker["primaryJob"].is_string()
                 || !worker["processingJobKey"].is_string()
@@ -733,6 +773,7 @@ fn apply_product(product: &mut Value, tasks: &BTreeMap<u64, Value>, protected: b
         if let Some(native) = task.and_then(|task| task.get("nativeExecution")) {
             worker["executionSource"] = native.clone();
             worker["nativeExecutionKey"] = native["key"].clone();
+            worker["nativeExecutions"] = task.unwrap()["nativeExecutions"].clone();
             worker["primaryJob"] = Value::Null;
             worker["jobStatus"] = Value::Null;
             worker["processingJobKey"] = Value::Null;
@@ -744,6 +785,8 @@ fn apply_product(product: &mut Value, tasks: &BTreeMap<u64, Value>, protected: b
                 .unwrap_or(Value::Null);
             worker["factsSource"] =
                 json!("元ToDoへ結び付いたnative実行の操作結果。CCjobと別のsourceです。");
+            worker["stopReason"] = json!("");
+            worker["nextAction"] = json!("確認できた実作業を続け、結果を元のToDoへ記録します。");
         }
         if protected {
             worker["lastResultAt"] = Value::Null;

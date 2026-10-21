@@ -239,19 +239,34 @@ async fn native_activity_register(
     State(state): State<AppState>,
     Json(request): Json<localai_web_rs::native_activity::Register>,
 ) -> Response {
-    native_activity_response(state.operations.register_native(request))
+    let operations = state.operations.clone();
+    native_activity_response(
+        tokio::task::spawn_blocking(move || operations.register_native(request))
+            .await
+            .unwrap_or(Err("native_store_unavailable")),
+    )
 }
 async fn native_activity_record(
     State(state): State<AppState>,
     Json(request): Json<localai_web_rs::native_activity::Activity>,
 ) -> Response {
-    native_activity_response(state.operations.record_native(request))
+    let operations = state.operations.clone();
+    native_activity_response(
+        tokio::task::spawn_blocking(move || operations.record_native(request))
+            .await
+            .unwrap_or(Err("native_store_unavailable")),
+    )
 }
 async fn native_activity_close(
     State(state): State<AppState>,
     Json(request): Json<localai_web_rs::native_activity::Close>,
 ) -> Response {
-    native_activity_response(state.operations.close_native(request))
+    let operations = state.operations.clone();
+    native_activity_response(
+        tokio::task::spawn_blocking(move || operations.close_native(request))
+            .await
+            .unwrap_or(Err("native_store_unavailable")),
+    )
 }
 
 #[derive(serde::Deserialize)]

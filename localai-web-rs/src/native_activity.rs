@@ -93,6 +93,7 @@ pub struct Close {
 pub struct Registry {
     path: PathBuf,
     ledger: Mutex<Result<Ledger, &'static str>>,
+    writes: Mutex<()>,
 }
 
 fn session_id(value: &str) -> Result<String, &'static str> {
@@ -167,6 +168,7 @@ impl Registry {
         Self {
             path,
             ledger: Mutex::new(ledger),
+            writes: Mutex::new(()),
         }
     }
 
@@ -174,8 +176,14 @@ impl Registry {
         &self,
         change: impl FnOnce(&mut Ledger) -> Result<(Value, bool), &'static str>,
     ) -> Result<Value, &'static str> {
-        let mut guard = self.ledger.lock().unwrap_or_else(|e| e.into_inner());
-        let mut next = guard.as_ref().map_err(|error| *error)?.clone();
+        let _writer = self.writes.lock().unwrap_or_else(|e| e.into_inner());
+        let mut next = self
+            .ledger
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .as_ref()
+            .map_err(|error| *error)?
+            .clone();
         let (result, changed) = change(&mut next)?;
         if !changed {
             return Ok(result);
@@ -205,8 +213,57 @@ impl Registry {
             let _ = fs::remove_file(&temporary);
             return Err("native_store_unavailable");
         }
-        *guard = Ok(next);
+        *self.ledger.lock().unwrap_or_else(|e| e.into_inner()) = Ok(next);
         Ok(result)
+    }
+
+    fn archive_closed(&self, entries: BTreeMap<String, Entry>) -> Result<(), &'static str> {
+        if entries.is_empty() {
+            return Ok(());
+        }
+        let bytes = serde_json::to_vec(&Ledger {
+            version: 1,
+            entries,
+        })
+        .map_err(|_| "native_store_unavailable")?;
+        let directory = self.path.with_file_name("native-activity-closed");
+        match fs::symlink_metadata(&directory) {
+            Ok(meta) if !meta.is_dir() || meta.file_type().is_symlink() => {
+                return Err("native_store_unavailable")
+            }
+            Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
+                return Err("native_store_unavailable")
+            }
+            _ => (),
+        }
+        fs::create_dir_all(&directory).map_err(|_| "native_store_unavailable")?;
+        let hash = ring::digest::digest(&ring::digest::SHA256, &bytes)
+            .as_ref()
+            .iter()
+            .map(|b| format!("{b:02x}"))
+            .collect::<String>();
+        let path = directory.join(format!("{hash}.json"));
+        let mut temporary =
+            tempfile::NamedTempFile::new_in(&directory).map_err(|_| "native_store_unavailable")?;
+        temporary
+            .write_all(&bytes)
+            .and_then(|_| temporary.as_file().sync_all())
+            .map_err(|_| "native_store_unavailable")?;
+        match temporary.persist_noclobber(&path) {
+            Ok(_) => (),
+            Err(error) if error.error.kind() == std::io::ErrorKind::AlreadyExists => {
+                let meta = fs::symlink_metadata(&path).map_err(|_| "native_store_unavailable")?;
+                if !meta.is_file()
+                    || meta.file_type().is_symlink()
+                    || meta.len() != bytes.len() as u64
+                    || fs::read(&path).map_err(|_| "native_store_unavailable")? != bytes
+                {
+                    return Err("native_store_unavailable");
+                }
+            }
+            Err(_) => return Err("native_store_unavailable"),
+        }
+        Ok(())
     }
 
     pub fn register(&self, request: Register, now: u64) -> Result<Value, &'static str> {
@@ -230,9 +287,29 @@ impl Registry {
                 }
             }
             if ledger.entries.len() >= 2048 && !ledger.entries.contains_key(&id) {
-                return Err("native_store_full");
+                let mut closed: Vec<_> = ledger
+                    .entries
+                    .iter()
+                    .filter_map(|(id, entry)| entry.closed_at_ms.map(|at| (at, id.clone())))
+                    .collect();
+                closed.sort();
+                let archived: BTreeMap<_, _> = closed
+                    .into_iter()
+                    .take(128)
+                    .map(|(_, id)| (id.clone(), ledger.entries[&id].clone()))
+                    .collect();
+                if archived.is_empty() {
+                    return Err("native_store_full");
+                }
+                self.archive_closed(archived.clone())?;
+                for id in archived.keys() {
+                    ledger.entries.remove(id);
+                }
             }
             let previous = ledger.entries.get(&id);
+            if let Some(old) = previous.filter(|entry| entry.closed_at_ms.is_some()) {
+                self.archive_closed(BTreeMap::from([(id.clone(), old.clone())]))?;
+            }
             let generation = match previous {
                 Some(old) => old
                     .generation
@@ -365,7 +442,7 @@ impl Registry {
             }
             if let Some(receipt) = &entry.receipt {
                 if receipt.actual_at_ms <= now && now - receipt.actual_at_ms <= FRESH_MS {
-                    sessions.push(json!({"key":key,"source":"native","todoId":entry.todo_id,"actualAt":receipt.actual_at_ms,
+                    sessions.push(json!({"key":key,"source":"native","role":entry.role,"todoId":entry.todo_id,"actualAt":receipt.actual_at_ms,
                         "validUntil":receipt.actual_at_ms.saturating_add(FRESH_MS),"tool":receipt.tool,"kind":receipt.kind,
                         "verification":"runtime_tool_receipt","generation":entry.generation}));
                 }
@@ -601,5 +678,112 @@ mod tests {
         crate::workforce::merge_native(&mut board, &registry.view(100), 100);
         assert!(board["workforce"]["states"]["processing"].is_null());
         assert!(board["workforce"]["processing"]["verifiedCount"].is_null());
+    }
+
+    #[test]
+    fn two_native_sessions_keep_the_original_state_and_distinct_execution_proofs() {
+        let temp = tempfile::tempdir().unwrap();
+        let registry = Registry::new(temp.path());
+        register(&registry, 100);
+        registry.activity(result(1, 100), 100).unwrap();
+        let second = "00000000-0000-7000-8000-000000000002";
+        registry
+            .register(
+                Register {
+                    session_id: second.into(),
+                    todo_id: 1,
+                    role: "review".into(),
+                    business_project: None,
+                },
+                100,
+            )
+            .unwrap();
+        let mut receipt = result(1, 101);
+        receipt.session_id = second.into();
+        registry.activity(receipt, 101).unwrap();
+        let mut board = projected_board();
+        crate::workforce::merge_native(&mut board, &registry.view(101), 101);
+        crate::workforce::apply_to_board(&mut board);
+        let task = &board["workforce"]["tasks"][0];
+        assert_eq!(task["recordedWorkState"], "execution_unverified");
+        assert_eq!(task["nativeExecutions"].as_array().unwrap().len(), 2);
+        assert_eq!(board["workforce"]["processing"]["verifiedCount"], 2);
+        assert!(
+            board["nativeActivity"].get("bindings").is_none(),
+            "the ordinary board must not expose all native history"
+        );
+    }
+
+    #[test]
+    fn native_does_not_resume_recorded_waits_or_make_a_stale_cc_observation_fresh() {
+        let temp = tempfile::tempdir().unwrap();
+        let registry = Registry::new(temp.path());
+        register(&registry, 100);
+        registry.activity(result(1, 100), 100).unwrap();
+        for status in ["wait", "block", "recovery_unverified", "done"] {
+            let mut board = projected_board();
+            board["departments"][0]["products"][0]["workers"][0]["recordedStatus"] = json!(status);
+            crate::workforce::merge_native(&mut board, &registry.view(100), 100);
+            assert_eq!(
+                board["workforce"]["processing"]["bySource"]["nativeToolReceipts"],
+                0
+            );
+        }
+        let mut board = projected_board();
+        board["workforce"]["processing"]["state"] = json!("stale");
+        crate::workforce::merge_native(&mut board, &registry.view(40_000), 40_000);
+        assert_eq!(board["workforce"]["processing"]["state"], "stale");
+    }
+
+    #[test]
+    fn closed_sources_are_preserved_in_immutable_segments_before_reclaiming_live_capacity() {
+        let temp = tempfile::tempdir().unwrap();
+        let registry = Registry::new(temp.path());
+        registry
+            .update(|ledger| {
+                for n in 0..2048 {
+                    ledger.entries.insert(
+                        format!("00000000-0000-7000-8000-{n:012x}"),
+                        Entry {
+                            generation: 1,
+                            todo_id: 1,
+                            role: "work".into(),
+                            business_project: None,
+                            bound_at_ms: 1,
+                            min_activity_at_ms: 0,
+                            receipt: None,
+                            closed_at_ms: Some(20),
+                            outcome: Some("success".into()),
+                        },
+                    );
+                }
+                Ok((Value::Null, true))
+            })
+            .unwrap();
+        let next = "00000000-0000-7000-8000-000000010000";
+        registry
+            .register(
+                Register {
+                    session_id: next.into(),
+                    todo_id: 2,
+                    role: "work".into(),
+                    business_project: None,
+                },
+                30,
+            )
+            .unwrap();
+        assert_eq!(registry.view(30)["knownSources"], 1921);
+        let path = registry.path.with_file_name("native-activity-closed");
+        let files = fs::read_dir(path)
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        assert_eq!(files.len(), 1);
+        let archived: Ledger = serde_json::from_slice(&fs::read(files[0].path()).unwrap()).unwrap();
+        assert_eq!(archived.entries.len(), 128);
+        assert!(archived
+            .entries
+            .values()
+            .all(|entry| entry.outcome.as_deref() == Some("success")));
     }
 }

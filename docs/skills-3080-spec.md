@@ -1,3 +1,5 @@
+最新件数と配置先の正本は [採用台帳](skills-3080-adoptions.json) と [進行記録](skills-3080-progress.json)（2026-10-21時点: 導入26・統合0・除外0・残73194）。以下の過去の配置数・未配置表示は各作業時点の履歴で、再配置の指示ではない。
+
 # 指定16資料からのSkills拡張（元3048、継続3080）
 
 ## 要求と現在の許可
@@ -71,4 +73,4 @@ Apache入口本体の改変表示、原文・許諾の保全、入れ子notice�
 ## 3180後の限定補正とTeamAI候補
 Knap・setup-pre-commit・grillingの9ファイルを3180の具体指摘に沿って補正し、旧15ファイルを新しい永続backupへ保存した。[補正manifest](skills-3080-refinement3180-manifest.json)と[実検査](skills-3080-refinement3180-evidence.json)を台帳から参照し、過去manifestは履歴として保つ。現行25件/125ファイルの実検査、fresh Codexの対象3件と説明の一致・解析0を確認。3180は変更前25件の限定受入で、最新3件の差分は別に確認する。
 
-[TeamAIの1候補](skills-3080-batch05.json)は4workflowを選び分ける1つの入口。CLIやMCP・hook・envの導入ではなく、25supportとrecall agentを読了した主張でもない。実配置はまだ0。全26設計候補=導入25+未配置1で、元16資料の件数上限ではない。MIT本文の明示宣言と完全treeのnotice範囲を根拠とし、原文をそのまま保存する。GitHubの実full_name Tencentと指定URLのtencentの違いは、保存済み両identityと同じ固定treeを照合して扱う。
+[TeamAIの1候補](skills-3080-batch05.json)は4workflowを選び分ける1つの入口。CLIやMCP・hook・envの導入ではなく、25supportとrecall agentを読了した主張でもない。候補作成時点では実配置0、全26設計候補=導入25+未配置1だった。現在は台帳26配置済みで、元16資料の件数上限ではない。MIT本文の明示宣言と完全treeのnotice範囲を根拠とし、原文をそのまま保存する。GitHubの実full_name Tencentと指定URLのtencentの違いは、保存済み両identityと同じ固定treeを照合して扱う。

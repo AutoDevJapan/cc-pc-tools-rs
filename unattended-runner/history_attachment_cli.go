@@ -44,7 +44,11 @@ func historyAttachmentCLI(args []string, out io.Writer) int {
 }
 
 func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Context, historyReadScope) (*Runner, error), guard func(context.Context, string) bool) int {
-	fail := func() int { _, _ = io.WriteString(out, "attachment read unavailable\n"); return 1 }
+	stage := "arguments"
+	fail := func() int {
+		_ = json.NewEncoder(out).Encode(map[string]string{"error": "attachment read unavailable", "stage": stage})
+		return 1
+	}
 	var scopePath, output string
 	flags := flag.NewFlagSet("history-attachment", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
@@ -55,6 +59,7 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
+	stage = "private_output"
 	mediaType := historyImageOutputType(output)
 	if mediaType == "" || !historyPlainParent(output) || !guard(ctx, filepath.Dir(output)) {
 		return fail()
@@ -62,6 +67,7 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 	if _, err := os.Lstat(output); !os.IsNotExist(err) {
 		return fail()
 	}
+	stage = "scope"
 	raw, err := historyPrivateInput(ctx, scopePath, guard)
 	if err != nil {
 		return fail()
@@ -70,10 +76,12 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 	if historyStrictJSON(raw, &scope) != nil || !historyAttachmentScopeValid(scope, time.Now()) {
 		return fail()
 	}
+	stage = "configuration"
 	runner, err := load(ctx, scope.historyReadScope)
 	if err != nil || runner == nil || runner.State == nil || runner.Client == nil || runner.State.Destination.Guild != scope.Guild || runner.State.Destination.Owner != scope.Owner {
 		return fail()
 	}
+	stage = "bot_identity"
 	var bot struct {
 		ID  string `json:"id"`
 		Bot bool   `json:"bot"`
@@ -81,28 +89,34 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 	if runner.get(ctx, "/users/@me", &bot) != nil || !bot.Bot || bot.ID != runner.State.Destination.Bot {
 		return fail()
 	}
+	stage = "thread_identity"
 	threadID := scope.Threads[0]
 	var thread Thread
 	if runner.get(ctx, "/channels/"+threadID, &thread) != nil || thread.ID != threadID || thread.Guild != scope.Guild || thread.Type != 11 || (thread.Parent != runner.State.Destination.Forum && thread.Parent != requestForum) || (thread.Owner != bot.ID && thread.Owner != scope.Owner) {
 		return fail()
 	}
+	stage = "starter"
 	var starter Message
 	if runner.get(ctx, "/channels/"+threadID+"/messages/"+threadID, &starter) != nil || !historyMessageValid(starter, threadID, runner) || starter.ID != threadID || (starter.Author.ID != scope.Owner && starter.Author.ID != bot.ID) {
 		return fail()
 	}
+	stage = "owner_message"
 	messagePath := "/channels/" + threadID + "/messages/" + scope.Message
 	var message historyOwnerImageMessage
 	if runner.get(ctx, messagePath, &message) != nil {
 		return fail()
 	}
+	stage = "owner_version_attachment_or_type"
 	attachment, ok := historySelectedOwnerImage(scope, message, runner, mediaType)
 	if !ok {
 		return fail()
 	}
+	stage = "cdn_url"
 	imageURL, ok := historyAttachmentURL(attachment.URL, threadID, scope.Attachment)
 	if !ok {
 		return fail()
 	}
+	stage = "cdn_request"
 	request, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
 	if err != nil {
 		return fail()
@@ -114,13 +128,16 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 		return fail()
 	}
 	defer response.Body.Close()
+	stage = "cdn_response"
 	if response.StatusCode != http.StatusOK || (response.ContentLength >= 0 && response.ContentLength != scope.Size) {
 		return fail()
 	}
+	stage = "image_bytes"
 	data, err := io.ReadAll(io.LimitReader(response.Body, scope.Size+1))
 	if err != nil || int64(len(data)) != scope.Size || http.DetectContentType(data) != mediaType {
 		return fail()
 	}
+	stage = "owner_version_recheck"
 	var current historyOwnerImageMessage
 	if runner.get(ctx, messagePath, &current) != nil {
 		return fail()
@@ -128,6 +145,7 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 	if _, ok := historySelectedOwnerImage(scope, current, runner, mediaType); !ok || ctx.Err() != nil {
 		return fail()
 	}
+	stage = "private_publication"
 	if writeHistoryReceipt(output, data) != nil {
 		return fail()
 	}

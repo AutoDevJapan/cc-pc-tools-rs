@@ -37,8 +37,15 @@ Red: `go test -count=1 -v -timeout 45s -run '^TestServiceProcess(ReturnsAfterMai
 本体の保持handleで実終了を確認した後も、子孫の出力待ちが1秒の検査期限を超えた。
 本体稼働の保持と起動失敗の分類は成功。子孫の協調停止後には起動係も回収できた。
 
-実装前の再現、修正後のGo検査・race・vet、固定ソースの別モデルレビューとCI、
-通常マージ、既存Prdの配布と通常再起動の確認は、それぞれ実測後に追記する。
+Green: stdout/stderrをnilにしてnull deviceへ直接つなぐ。同じ2条件は本体終了後に戻り、
+正常終了は成功、異常終了は失敗となった。その時点で子孫は同じ保持handleで存続を確認。
+`WaitDelay` の期限超過を失敗へ分類する経路自体を作らない。稼働中の本体は停止指示まで
+待ち、起動失敗も一般化された失敗となる。
+
+対象Goモジュールの `go test -count=1 -v -timeout 120s ./...` は成功（1.895秒）。
+`go test -race -count=1 -timeout 120s ./...` も成功（7.982秒）、`go vet ./...` も成功。
+実タスクの読取検査は明示した環境変数を使う別の検査であり、この結果には含めない。
+固定ソースの別モデルレビューとCI、通常マージ、既存Prd配布と通常再起動は未完了。
 
 一次資料: [Go os/exec.Cmd](https://pkg.go.dev/os/exec#Cmd)。出力がnilの場合は
 null deviceへ接続し、非ファイルのWriterを設定した場合は回収用goroutineの終了も待つ。

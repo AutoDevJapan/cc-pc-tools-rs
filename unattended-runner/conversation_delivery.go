@@ -56,7 +56,7 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 		}
 	}
 	old := r.State.Requests[reply.Message]
-	if old == nil {
+	if old == nil || (old.Conversation == q.RequestID && old.Todo == 0 && old.Phase == "conversation_capture_pending") {
 		path := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".json")
 		if _, statErr := os.Lstat(path); !os.IsNotExist(statErr) {
 			b, readErr := boundedRegular(path)
@@ -68,7 +68,16 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 			// Restore the original private source without overwriting its bytes or
 			// trusting an intake phase as canonical delivery/application evidence.
 			saved.Phase, saved.Reported = "conversation_reply_saved", ""
-			saved.ConversationSourceRecovered = true
+			// All supported delivery paths write this file before mutating a
+			// ToDo. Its presence means a prior attempt needs delivery evidence;
+			// an acquisition saved before the first attempt can proceed normally.
+			notePath := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".note.txt")
+			if _, err := os.Lstat(notePath); !os.IsNotExist(err) {
+				if _, err = boundedRegular(notePath); err != nil {
+					return nil, errors.New("conversation prior delivery evidence unavailable")
+				}
+				saved.ConversationSourceRecovered = true
+			}
 			old = &saved
 			r.State.Requests[reply.Message] = old
 		}
@@ -94,6 +103,7 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 		old.Context = string(contextBytes)
 		old.Phase = "conversation_reply_saved"
 		old.ConversationSourceRecovered = false
+		old.ConversationRecoveryNote = ""
 		old.Reported = ""
 		if err := publish(filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".json"), old); err != nil {
 			return nil, err
@@ -164,6 +174,10 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 			if err != nil || current.Project != q.Project || !conversationAnswerRecorded(current, q, answer, b) {
 				return errors.New("conversation reacquired answer readback deferred")
 			}
+			// Delivery is distinct from application/closing. A legacy overwritten
+			// source cannot inherit the old source SHA's application proof. Keep a
+			// durable reason instead of editing a newer ToDo just to change a SHA.
+			req.ConversationRecoveryNote = "旧版の再取得で受領元が置換済み。メモの旧受領SHAを現在版の反映証拠にしない。実反映と質問の締めは未確認。現在のsource_receipt_sha256=" + bytesHash(receipt)
 			req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
 			return r.save()
 		}

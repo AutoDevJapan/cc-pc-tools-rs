@@ -102,7 +102,8 @@ type Request struct {
 	Origin         *ProgressOrigin `json:"origin,omitempty"`
 	Conversation   string          `json:"conversation_request_id,omitempty"`
 	// An intake-index recovery never proves a delivery, including after restart.
-	ConversationSourceRecovered bool `json:"conversation_source_recovered,omitempty"`
+	ConversationSourceRecovered bool   `json:"conversation_source_recovered,omitempty"`
+	ConversationRecoveryNote    string `json:"conversation_recovery_note,omitempty"`
 }
 type State struct {
 	Domain                   string                         `json:"domain"`

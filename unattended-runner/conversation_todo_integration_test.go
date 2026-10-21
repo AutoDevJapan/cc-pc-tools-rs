@@ -236,18 +236,28 @@ func TestConversationActualCanonicalRecapturedSecondReplyWithoutProofStaysPendin
 
 func TestConversationActualCanonicalFutureEditDoesNotReplaceTheOriginalSource(t *testing.T) {
 	f := conversationNativeTest(t)
+	base := time.Now()
+	now := base.Add(-5 * time.Second)
+	f.r.Now = func() time.Time { return now }
 	f.ask(t)
 	reply := f.reply(t, 8, "a")
 	f.r.processConversations(context.Background(), &Health{})
 	path := filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", reply.Message+".json")
 	before, _ := os.ReadFile(path)
-	now := time.Now()
-	f.r.Now = func() time.Time { return now }
-	f.edited = map[string]string{reply.Message: now.Add(time.Second).UTC().Format(time.RFC3339Nano)}
+	now = base.Add(-3 * time.Second)
+	edited := base.Add(-2 * time.Second)
+	f.edited = map[string]string{reply.Message: edited.UTC().Format(time.RFC3339Nano)}
 	f.r.processConversations(context.Background(), &Health{})
 	after, _ := os.ReadFile(path)
 	if string(before) != string(after) {
 		t.Fatal("an edit ahead of the local clock overwrote the original acquisition")
+	}
+	now = base.Add(-time.Second)
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	var saved Request
+	if readJSON(path, 1<<20, &saved) != nil || len(health.Errors) != 0 || saved.Edited != edited.UTC().Format(time.RFC3339Nano) || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
+		t.Fatal("clock catch-up never admitted the current edit")
 	}
 }
 
@@ -333,8 +343,11 @@ func TestConversationActualCanonicalRecaptureCompletesOnlyTheOriginalPartialAnsw
 				if len(health.Errors) == 0 || string(before) != string(after) || f.r.State.Requests[reply.Message].Phase != "conversation_reply_saved" {
 					t.Fatal("partial note acknowledged delivery or released a newer stop")
 				}
-			} else if len(health.Errors) != 0 || len(row.QuestionAnswers) != 1 || row.Status != "todo" || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
-				t.Fatal("intact original partial answer did not complete its canonical release")
+			} else {
+				source, _ := os.ReadFile(path)
+				if len(health.Errors) != 0 || len(row.QuestionAnswers) != 1 || row.Status != "todo" || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" || !strings.Contains(f.r.State.Requests[reply.Message].ConversationRecoveryNote, "source_receipt_sha256="+bytesHash(source)) {
+					t.Fatal("intact original partial answer lacks its release or unresolved-source record")
+				}
 			}
 		})
 	}
@@ -380,6 +393,60 @@ func TestConversationActualCanonicalRecapturePreservesTheOriginalSourceBytes(t *
 	after, _ := os.ReadFile(path)
 	if string(before) != string(after) {
 		t.Fatal("intake index loss overwrote the original per-reply application source")
+	}
+}
+
+func TestConversationActualCanonicalScanPendingRecoveryKeepsSourceAndNewerTask(t *testing.T) {
+	for _, kind := range []string{"normal", "imported", "continued"} {
+		t.Run(kind, func(t *testing.T) {
+			var f *conversationFixture
+			switch kind {
+			case "normal":
+				f = conversationNativeTest(t)
+				f.ask(t)
+			case "imported":
+				f = importedNative(t)
+			case "continued":
+				f = continuedNative(t)
+			}
+			reply := f.reply(t, 8, "a")
+			f.r.processConversations(context.Background(), &Health{})
+			path := filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", reply.Message+".json")
+			source, _ := os.ReadFile(path)
+			f.r.State.Requests[reply.Message] = &Request{Thread: reply.Thread, Author: reply.Author, Message: reply.Message, Conversation: f.q.RequestID, Phase: "conversation_capture_pending"}
+			f.mutateTodo(t, func(row map[string]any) {
+				row["status"] = "block"
+				row["owner_stopped"] = true
+				row["note"] = "新しい直接停止"
+			})
+			before, _ := os.ReadFile(f.r.TodoPath)
+			health := Health{}
+			f.r.processConversations(context.Background(), &health)
+			after, _ := os.ReadFile(f.r.TodoPath)
+			currentSource, _ := os.ReadFile(path)
+			if len(health.Errors) != 0 || string(source) != string(currentSource) || string(before) != string(after) || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
+				t.Fatalf("scan-pending %s bypassed original-source recovery: %v", kind, health.Errors)
+			}
+		})
+	}
+}
+
+func TestConversationUnattemptedRecoveredSourceCanStillBeDelivered(t *testing.T) {
+	f := conversationTest(t, false)
+	f.ask(t)
+	reply := f.reply(t, 8, "a")
+	proof, err := f.r.conversationProof(context.Background(), f.q)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = f.r.captureConversationReply(context.Background(), f.q, proof, reply); err != nil {
+		t.Fatal(err)
+	}
+	delete(f.r.State.Requests, reply.Message)
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) != 0 || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
+		t.Fatal("source saved before the first delivery was permanently held")
 	}
 }
 

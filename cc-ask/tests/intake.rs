@@ -3,7 +3,7 @@ use cc_ask::core::*;
 use common::*;
 use serde_json::json;
 use std::{
-    panic::{catch_unwind, AssertUnwindSafe},
+    panic::{AssertUnwindSafe, catch_unwind},
     path::Path,
 };
 const COMPLETE: &str = "状態: 完了\n直しました https://example.test/pr/1";
@@ -372,7 +372,7 @@ fn handoff_preserves_inferred_assignment_priority_when_another_thread_has_a_decl
     atomic_json(
         &dir.join("job.json"),
         &json!({"id":"declared-200","status":"running",
-        "discord_thread_id":"200","model":"gpt-6.1-sol","effort":"high","task_type":"research",
+        "discord_thread_id":"200","model":"gpt-6.1-sol","effort":"max","task_type":"research",
         "cwd":h.root.path(),"thread_id":"declared-session"}),
         2,
     )
@@ -494,7 +494,7 @@ fn external_worker(h: &Harness, explicit: bool) {
     atomic_json(
         &dir.join("job.json"),
         &json!({"id":"idea-brainstorm","status":"running",
-        "model":"gpt-6.1-sol","effort":"high","task_type":"research",
+        "model":"gpt-6.1-sol","effort":"max","task_type":"research",
         "cwd":h.root.path(),"thread_id":"external-session",
         "discord_thread_id":if explicit { "100" } else { "" }}),
         2,
@@ -537,7 +537,7 @@ fn another_running_worker_gets_same_session_delivery_without_a_request_launch() 
         assert_eq!(f.launches.len(), 1);
         assert_eq!(f.launches[0]["resume_session"], "external-session");
         assert_eq!(f.launches[0]["model"], "gpt-6.1-sol");
-        assert_eq!(f.launches[0]["effort"], "high");
+        assert_eq!(f.launches[0]["effort"], "max");
         assert!(s(&f.launches[0]["prompt"]).contains("200|別のアイデア"));
         assert!(s(&f.launches[0]["prompt"]).contains("UXをCiv6と7に寄せたい。"));
         assert!(s(&f.launches[0]["prompt"])
@@ -832,7 +832,7 @@ fn test_model_effort_and_type_from_pick_are_shown_and_used() {
 }
 
 #[test]
-fn automatic_router_choices_use_the_implementation_default_and_high() {
+fn automatic_router_choices_use_sol_and_max() {
     let mut h = Harness::new();
     h.fake.borrow_mut().pick_replies.push_back(json!({
         "model":"gpt-6-astra",
@@ -844,7 +844,7 @@ fn automatic_router_choices_use_the_implementation_default_and_high() {
     h.tick();
     let f = h.fake.borrow();
     assert_eq!(f.launches[0]["model"], "gpt-6.1-sol");
-    assert_eq!(f.launches[0]["effort"], "high");
+    assert_eq!(f.launches[0]["effort"], "max");
 }
 #[test]
 fn test_fallback_when_pick_is_down_and_fallback_is_logged() {
@@ -863,7 +863,7 @@ fn test_fallback_when_pick_is_down_and_fallback_is_logged() {
     assert_eq!(h.fake.borrow().picks.len(), 1);
 }
 #[test]
-fn test_review_fallback_uses_luna() {
+fn automatic_review_uses_opus_max_instead_of_the_default_writer() {
     let mut h = Harness::new();
     {
         let mut f = h.fake.borrow_mut();
@@ -871,8 +871,8 @@ fn test_review_fallback_uses_luna() {
         f.messages.get_mut("100").unwrap()[0]["content"] = json!("変更をレビューして");
     }
     h.tick();
-    assert_eq!(h.fake.borrow().launches[0]["model"], "gpt-6-luna");
-    assert_eq!(h.fake.borrow().launches[0]["effort"], "high");
+    assert_eq!(h.fake.borrow().launches[0]["model"], "anthropic/claude-opus-5-5");
+    assert_eq!(h.fake.borrow().launches[0]["effort"], "max");
 }
 
 #[test]
@@ -887,7 +887,7 @@ fn review_word_inside_implementation_request_keeps_implementation_profile() {
     h.tick();
     let f = h.fake.borrow();
     assert_eq!(f.launches[0]["model"], "gpt-6.1-sol");
-    assert_eq!(f.launches[0]["effort"], "high");
+    assert_eq!(f.launches[0]["effort"], "max");
     assert_eq!(f.launches[0]["task_type"], "implementation");
 }
 #[test]
@@ -1443,7 +1443,7 @@ fn test_invalid_pick_and_excluded_pick_use_fallback() {
     h.tick();
     assert_eq!(
         h.fake.borrow().launches.last().unwrap()["model"],
-        "gpt-6-luna"
+        "gpt-6.1-sol"
     );
     h.fake.borrow_mut().pick_replies.push_back(
         json!({"model":"gpt-6.1-sol","effort":"max","task_type":"implementation","reason":"選択"}),

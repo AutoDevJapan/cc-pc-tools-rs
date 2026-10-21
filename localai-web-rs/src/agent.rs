@@ -584,7 +584,12 @@ impl Console {
                 "todo_id",
                 "related_todo_ids",
                 "model",
+                "model_origin",
                 "effort",
+                "effort_origin",
+                "policy_resume_reset",
+                "review_source_jobs",
+                "review_excluded_models",
                 "sandbox",
                 "task_type",
             ] {
@@ -1344,7 +1349,7 @@ impl Console {
             .ok()
             .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
             .unwrap_or(Value::Null);
-        let ranks = cc_scheduler::priority::todo_ranks(&db, &priorities);
+        let ranks = cc_scheduler::priority::todo_priorities_for_jobs(&db, jobs, &priorities).ranks;
         let job_ranks = cc_scheduler::priority::job_ranks(jobs, &db, &priorities);
         let prefer_todo = s.patrol_turn.is_multiple_of(2);
         s.queue.sort_by_cached_key(|trigger| {
@@ -1902,9 +1907,10 @@ impl Console {
             let context = delegation_context(db, fresh_jobs, &t);
             let requested_session = t.options["resume_session"].as_str().filter(|session| {
                 source.is_some_and(|j| {
-                    ["thread_id", "resume_session"]
-                        .iter()
-                        .any(|field| j[*field] == *session)
+                    !cc_ask::job_policy::launch_context::retired_session(j, session)
+                        && ["thread_id", "resume_session"]
+                            .iter()
+                            .any(|field| j[*field] == *session)
                         && strv(j, "cwd")
                             .replace('\\', "/")
                             .eq_ignore_ascii_case(&launch_cwd.replace('\\', "/"))
@@ -2094,6 +2100,38 @@ impl Console {
             }
             if let Some(task_type) = t.options["task_type"].as_str() {
                 args.extend(["--task-type".into(), task_type.into()]);
+            }
+            for (field, flag) in [
+                ("model_origin", "--model-origin"),
+                ("effort_origin", "--effort-origin"),
+            ] {
+                if let Some(origin) = t.options[field]
+                    .as_str()
+                    .filter(|origin| ["policy", "owner_request"].contains(origin))
+                {
+                    args.extend([flag.into(), origin.into()]);
+                }
+            }
+            if let Some(model) = t.options["model_recovery_from"].as_str() {
+                args.extend(["--model-recovery-from".into(), model.into()]);
+            }
+            for (field, flag) in [
+                ("review_source_jobs", "--review-source-jobs"),
+                ("review_excluded_models", "--review-excluded-models"),
+            ] {
+                if let Some(values) = t.options[field]
+                    .as_array()
+                    .filter(|values| !values.is_empty())
+                {
+                    args.extend([
+                        flag.into(),
+                        values
+                            .iter()
+                            .filter_map(Value::as_str)
+                            .collect::<Vec<_>>()
+                            .join(","),
+                    ]);
+                }
             }
             if let Some(session) = resume_session {
                 args.extend(["--resume-session".into(), session.into()]);
@@ -3453,7 +3491,97 @@ fn trigger_launch_options(
     if automatic_recovery(&t.key) {
         requested.as_object_mut().unwrap().remove("_todo_defaults");
     }
-    launch_options(item, &requested, source, inherited)
+    let repair = item
+        .zip(source)
+        .filter(|_| inherited)
+        .and_then(|(item, source)| {
+            let pending = &item["stall_recovery"]["pending"];
+            (t.key.strip_prefix("manual:") == pending["request"].as_str()
+                && pending["job"]["id"] == source["id"]
+                && pending["job"]["model_repair_pending"] == true
+                && !cc_ask::job_policy::launch_context::fixed_execution_contract(&pending["job"])
+                && cc_ask::job_policy::same_model(
+                    strv(&pending["job"], "model_recovery_from"),
+                    strv(source, "model"),
+                )
+                && (requested["model"].is_null()
+                    || cc_ask::job_policy::same_model(
+                        strv(&pending["job"], "model"),
+                        strv(&requested, "model"),
+                    )
+                    || (item["model_origin"] != "owner_request"
+                        && cc_ask::job_policy::same_model(
+                            strv(&requested, "model"),
+                            strv(source, "model"),
+                        )
+                        && cc_ask::job_policy::same_model(
+                            strv(item, "model"),
+                            strv(source, "model"),
+                        ))))
+            .then_some(&pending["job"])
+        });
+    // A saved policy default must not undo the current failed-model repair.
+    // A new owner choice or a different later ToDo model still takes priority.
+    let mut selected_item = item.cloned();
+    match (repair, source, selected_item.as_mut()) {
+        (Some(repair), Some(source), Some(row))
+            if row["model_origin"] != "owner_request"
+                && (row["model"].is_null()
+                    || cc_ask::job_policy::same_model(
+                        strv(row, "model"),
+                        strv(source, "model"),
+                    )) =>
+        {
+            requested["model"] = repair["model"].clone();
+            row["model"] = Value::Null;
+        }
+        _ => (),
+    }
+    let mut options = launch_options(selected_item.as_ref(), &requested, source, inherited)?;
+    if automatic_recovery(&t.key) {
+        for field in ["model", "effort"] {
+            let origin = format!("{field}_origin");
+            let owner = item
+                .into_iter()
+                .chain(source.filter(|_| inherited))
+                .any(|candidate| {
+                    candidate[&origin] == "owner_request"
+                        && if field == "model" {
+                            cc_ask::job_policy::same_model(
+                                strv(candidate, field),
+                                strv(&options, field),
+                            )
+                        } else {
+                            candidate[field] == options[field]
+                        }
+                });
+            options[origin] = json!(if owner { "owner_request" } else { "policy" });
+        }
+    }
+    // Recovery routing comes from the same saved watchdog generation, never
+    // an arbitrary delegate option or a previous completed recovery launch.
+    for field in [
+        "model_recovery_from",
+        "review_source_jobs",
+        "review_excluded_models",
+    ] {
+        options.as_object_mut().unwrap().remove(field);
+    }
+    if let (true, Some(source)) = (inherited, source) {
+        if let Some(repair) = repair.filter(|repair| {
+            cc_ask::job_policy::same_model(strv(repair, "model"), strv(&options, "model"))
+        }) {
+            options["model_recovery_from"] = repair["model_recovery_from"].clone();
+        }
+        if cc_ask::job_policy::review_task("", strv(&options, "task_type")) {
+            for field in ["review_source_jobs", "review_excluded_models"] {
+                if source[field].is_array() {
+                    options[field] = source[field].clone();
+                }
+            }
+        }
+    }
+    Ok(options)
 }
 fn trigger_read_only(t: &Trigger) -> bool {
     if cc_ask::job_policy::explicit_read_only(&t.prompt) {
@@ -4094,6 +4222,15 @@ fn public_job(j: &Value) -> Value {
         obj.remove("source_prompt");
         obj.remove("console_retired");
         obj.remove("console_baseline");
+        for field in [
+            "policy_resume_reset",
+            "model_origin",
+            "effort_origin",
+            "review_source_jobs",
+            "review_excluded_models",
+        ] {
+            obj.remove(field);
+        }
         if let Some(Value::String(last)) = obj.remove("last_message") {
             let summary: String = last.chars().take(4096).collect();
             obj.insert(
@@ -4593,6 +4730,7 @@ mod tests {
     include!("delegation_model_tests.rs");
     include!("todo1842_tests.rs");
     include!("resume_recovery_tests.rs");
+    include!("model_resume_tests.rs");
     include!("todo_capacity_tests.rs");
     include!("todo2341_receipt_tests.rs");
     use super::*;

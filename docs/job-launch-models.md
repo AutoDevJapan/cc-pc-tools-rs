@@ -1,35 +1,62 @@
-# ジョブの起動箇所とモデル（2026-10-07）
+# ジョブの起動箇所とモデル（2026-10-20方針）
 
-Rustの実際の起動箇所を調べた表です。自動で選ぶ場合の強さはすべてhighです。個別に指定したモデルと強さは、それぞれ独立して優先します。保存済みの再開ジョブのモデルやmaxも保ちます。
+通常のGPT担当は `gpt-6.1-sol / max / Fast` を使う。レビューは通常 `Opus5.5 / max` とし、
+確認したソース作者と同じモデルを除く。仕事に応じたClaude候補はSonnet5.5かOpus5.5で、
+双方Maxを明示する。実課題の品質比較やAPI単価によるOAuth実支出の推測は行っていない。
 
-| 起動箇所 | ジョブ名 | 用途 | 自動で使うモデル | 指定の優先 |
-|---|---|---|---|---|
-| cc-jobs/src/cli.rs | runで渡された名前 | 共通受付。下記の軽い名前と作業種別を判定 | 軽い作業はgpt-6-luna、実装はgpt-6.1-sol | --modelと--effortがそれぞれ優先。未指定はhigh |
-| cc-jobs/src/jobs.rs | 登録済みの同じ名前 | Codexの新規起動・再試行・枠を譲った後の再開 | 登録済みの値 | 保存値を保つ。文脈更新の引き継ぎも同じモデル |
-| cc-ask/src/intake.rs → core.rs | req-{スレッド末尾6桁} | 依頼を受け付ける | 実装はgpt-6.1-sol、軽い作業はgpt-6-luna | 保存済み選択を優先 |
-| cc-ask/src/intake.rs → core.rs | diag-{スレッド末尾6桁} | 停止した担当の原因を調べる | gpt-6-luna | 保存済み選択を優先 |
-| cc-ask/src/resume.rs → core.rs | resume-{スレッド末尾6桁} | 質問への回答を受けて続きを進める | 作業の種別で選ぶ | 保存済み選択を優先 |
-| cc-ask/src/steering.rs → core.rs | resume-{スレッド末尾6桁} | 新しいオーナー指示を同じ担当へ反映 | 元のモデル、なければ作業の種別で選ぶ | 元の選択と明示された設定を保つ |
-| cc-ask/src/restart.rs → core.rs | resume-{スレッド末尾6桁} | 元のセッションから停止作業を再開 | 元のモデル | 保存済み選択を保つ |
-| cc-ask/src/routing.rs → core.rs | followup-{スレッド末尾6桁} | 終了した質問・依頼への追加投稿を受け付ける | 実装はgpt-6.1-sol、軽い作業はgpt-6-luna | 保存済み選択を優先 |
-| cc-ask/src/patrol.rs → core.rs | patrol-{セッション末尾6桁} | 旧セッションを引き継ぐ互換処理 | 元のモデル | 保存済み選択を保つ。通常の巡回は廃止済み |
-| cc-scheduler/src/backend.rs | todo-{番号} | 共有ToDoの作業を起動する | 実装はgpt-6.1-sol、軽い作業はgpt-6-luna | ToDoのmodelとeffortがそれぞれ優先 |
-| cc-shepherd/src/lib.rs | shep-{PR番号} | PRの修正・テスト・仕上げを行う | gpt-6.1-sol | 実装を含むためhighを保つ |
-| cc-todo/src/recovery.rs | stall-todo-{番号} | 停止したToDoを再開する | 元のモデル、なければ実装はgpt-6.1-sol | 元のmodelとeffortを保つ |
-| cc-live/src/review.rs | rev-{名前} | PRの差分を読むレビュー | gpt-6-luna | 閲覧専用のレビューとしてhighを指定 |
+| 入口 | 適用と個別指定の扱い |
+| --- | --- |
+| cc-jobsのCLI登録・queue admission | 保存したAIの旧モデル/Highは最新方針へ。通常の直接CLI指定と、元指示を保持するowner_requestは個別指定として扱う。AIの親がいる起動のplain flagsはpolicy扱い。未知モデルの名前は変えない。 |
+| cc-askのintake、restart、steering、回答後のresume、互換patrol | 共通launch_job_with_sessionで起動直前に同じ方針を適用。元の会話の実行記録と比べ、設定を変えた場合は新しい会話から保存成果を引き継ぐ。起動前の追加回答でも移行済みcacheだけを比較基準にしない。 |
+| cc-scheduler | ToDo/受付済みoptions/元jobの値と出所を組で引き継ぐ。モデルの提供確認より先に古いAIヒントを移行する。引き継いだ本人指定を、別モデルのpolicy選択へ付け替えない。 |
+| cc-liveのreview | 作者情報がある場合は別モデルを選ぶ。起動元の親と作者を区別し、明示source IDsを優先する。作者不明の通常レビューはOpus/maxを候補にし、未確認であることを残す。 |
+| cc-shepherd等の共通CLI利用側 | 共通profileと登録・起動直前の方針に従う。古い起動側のHighだけを本人の個別指定と解釈しない。 |
 
-## 名前と作業種別の判定
+## 値と出所
 
-| 名前または作業種別 | モデル | 強さ |
-|---|---|---|
-| rev-で始まる、または-reviewで終わる名前 | gpt-6-luna | high |
-| diag-、audit-、inspect-、check-、verify-、research-で始まる名前 | gpt-6-luna | high |
-| cleanup-、clean-で始まる名前 | gpt-6-luna | high |
-| review、code_review、documentation、research、live_debug | gpt-6-luna | high |
-| verification、check、confirmation、audit、inspection | gpt-6-luna | high |
-| cleanup、housekeeping | gpt-6-luna | high |
-| implementation、pr_shepherd、その他 | gpt-6.1-sol | high |
+本人の同じ対象への個別指定は、正規に受領した元指示とともに
+`model_origin` / `effort_origin` を `owner_request` で保持する。通常AIの選択は `policy`。
+保存値、旧 `model_explicit`、単なる親IDだけを本人の指定の証拠へ昇格させない。
+共有ToDoのAddでも値・出所・元仕様を同じ登録に保存できる。
+AIの親がいるCLI起動では、同じ値のowner_requestが親か対応ToDoに保存されている場合だけ
+その指定を引き継ぐ。CLI・ToDoの出所フラグ自体は本人IDを認証する機能ではなく、登録側が
+正規に取得した元指示を仕様とともに保持する。値と出所の整合だけで本人性を確認済みとはしない。
+親は実稼働を確認した同じToDoまたは検証済みsubworkの関係に限り、番号のない作業では同じcwdを要求する。
+同じlaunch key・prepared段階のscheduler選択も保持し、終了済みの環境親はroot指定を格下げする理由にしない。
 
-共通の名前・作業種別の判定はcc-job-policyのmodel_profileです。大文字小文字を区別しません。名前にreviewという文字が含まれるだけでは分類を変えません。モデル選択の自動応答がmaxを返してもhighを使います。モデルを除外して再選択する場合は除外を守ります。
+モデル利用不能の復旧では、失敗したモデルを作者の除外一覧へ追加しない。直後の1起動だけ
+`model_recovery_from`で経路を保持し、後の通常再開には引き継がない。次のモデルも利用不能なら
+既存の有限な復旧と待機へ戻し、候補を永久にすべて除外した状態を作らない。本人指定と作者の除外は保持する。
+たとえばOpus作者のレビューでSolが利用不能なら、暫定のAstra候補を作者Opus・失敗Solの除外で選び直し、
+現在の順序ではSonnet/Maxへ進む。Console停止復旧でも、同じ保存済みrequest/source/modelの今回の修復に限り、
+古いpolicy由来のToDoモデルが修復を打ち消さない。後の別モデル指定と本人指定は優先する。
 
-調査範囲はD:/CC/Tools/rsのRustソースと、このリポジトリのRustソースです。cc-channel-watchは投稿を受け付ける別ツールの起動だけで、Codexのモデルを指定しません。cc-chromeとcc-task-titleもCodexを起動しません。cc-liveのdriverとmerge_prは元のship/review呼び出しを経由し、独自のCodex起動はありません。
+起動元の親は作者の証明ではない。作者が不明な場合、親の現在モデルは経路の除外候補だけに使う。
+作者が確認できる場合はその固定sourceの履歴を使い、後の別作業で変わった親のモデルを足さない。
+
+## 会話を再開する境界
+
+通常の設定移行では、元のmodel/effortと次の選択を比べる。差があれば旧resume IDを記録して外し、
+元ToDo、仕様、cwd、権限、履歴、途中成果と再試行予算は保つ。旧IDがrequeueや再起動で再設定されても
+使わず、新しいworkerが発行した互換な会話IDは再利用できる。既に正規化済みの旧jobも、保存した
+legacy hintから旧会話を一度だけ退役させる。実行中の要求をこの設定変更だけで終了しない。
+
+正規protocol混雑の同モデル・別OAuth枠の再試行は例外として会話と保存予算を保つ。
+最大3回、5/15/30秒の待機・排他・PID作成時刻・世代・停止と依存を維持する。
+別モデルへ移った場合のmodel/effortの出所はpolicyとし、本人の元指定はrequested_model等の履歴へ残す。
+有限な混雑再試行の後にClaudeへ移った工程は、その後の通常の継続でもClaude/Maxを保つ。
+新しい通常GPT担当のSol/Max方針と区別し、明示された新しい本人指定があればそちらを優先する。
+
+会話IDの退役は、元の実行記録を参照する通常のscheduler・Discord・Console経路で照合する。
+直接CLIへ出所のないUUIDを渡す場合は、呼出し側が互換な会話かを確認する契約であり、
+CLIがすべての過去jobを走査して退役印を一括照合する機能は追加していない。
+
+既存のoriginal_product_retryと固定レビューの資格は、source/model/effortを含む厳格な許可tupleである。
+その元sourceの通常の再資格確認を経ず、一般方針だけで値を変更して資格を無効化しない。
+これは古いAIヒントを本人指定とする処理ではない。
+
+単一ファイル作業のHaiku指定は保持する。HaikuのMax対応は未確認であり、保存されたHigh等へ
+新たなMaxを強制しない。Sonnet/OpusのMaxはadaptive thinkingとの適合を確認する。
+
+設定、起動引数、実turn_context、上流で実際に使われたmodel/effort/tierは別々に記録する。
+Fastを要求したことだけで、上流Fastが実適用されたとは扱わない。

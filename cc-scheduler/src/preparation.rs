@@ -42,7 +42,7 @@ pub fn recovery_session<'a>(
         return None;
     }
     crate::policy::continuation_session(job, cwd, jobs).or_else(|| {
-        let session = s(&job["thread_id"]);
+        let session = cc_ask::job_policy::launch_context::usable_thread_session(job)?;
         (truth(&item["scheduler"]["resume"])
             && owns_workspace(item, job)
             && matches!(

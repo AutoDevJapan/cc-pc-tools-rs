@@ -1,13 +1,18 @@
 //! A session-independent, read-only projection of the shared operational records.
 //! Never read job prompts, credentials, client workspaces or session transcripts.
 use chrono::DateTime;
+#[path = "operations_identity.rs"]
+mod attribution;
 #[path = "operations_catalog.rs"]
 mod catalog;
 #[path = "commander_health.rs"]
 mod commander_health;
+#[cfg(test)]
+#[path = "operations_product_identity_tests.rs"]
+mod product_identity_tests;
 #[path = "waiting_state.rs"]
 mod waiting_state;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
@@ -48,14 +53,17 @@ impl Operations {
         }
     }
     pub fn snapshot(&self) -> Value {
-        let mut value = self.snapshot
+        let mut value = self
+            .snapshot
             .read()
             .unwrap_or_else(|e| e.into_inner())
             .clone();
         if let Some(workforce) = value.get_mut("workforce") {
             crate::workforce::expire(workforce, now_ms());
         }
-        if value["workforce"].is_object() {crate::workforce::apply_to_board(&mut value);}
+        if value["workforce"].is_object() {
+            crate::workforce::apply_to_board(&mut value);
+        }
         value
     }
     pub fn refresh(&self) {
@@ -69,19 +77,37 @@ impl Operations {
         value["skillsInventory"] = self.skills.snapshot(now);
         let active = crate::workforce_observation::acquire(&self.root);
         let completed = now_ms();
+        self.publish(value, active, now, completed);
+    }
+    fn publish(
+        &self,
+        mut value: Value,
+        active: Result<Value, &'static str>,
+        now: u64,
+        completed: u64,
+    ) {
         let previous = self.snapshot();
         value["workforce"] = crate::workforce::generation(
-            &value, active.as_ref().ok(), previous.get("workforce"), now, completed,
+            &value,
+            active.as_ref().ok(),
+            previous.get("workforce"),
+            now,
+            completed,
             active.as_ref().err().copied(),
         );
-        if value["workforce"]["state"]=="unavailable"
-            && value["protectionMode"]=="masked_metadata" && previous["protectionMode"]=="masked_metadata"
-            && previous["departments"].is_array() {
+        if value["workforce"]["state"] == "unavailable"
+            && value["protectionMode"] == "masked_metadata"
+            && previous["protectionMode"] == "masked_metadata"
+            && previous["departments"].is_array()
+        {
             // Retain only the already masked display, with its original data time.
             // The failed acquisition and unknown current counts remain explicit.
-            value["departments"]=previous["departments"].clone();
-            value["unassignedProducts"]=previous["unassignedProducts"].clone();
-            value["previousDataAt"]=previous.get("previousDataAt").unwrap_or(&previous["fetchedAt"]).clone();
+            value["departments"] = previous["departments"].clone();
+            value["unassignedProducts"] = previous["unassignedProducts"].clone();
+            value["previousDataAt"] = previous
+                .get("previousDataAt")
+                .unwrap_or(&previous["fetchedAt"])
+                .clone();
         }
         crate::workforce::apply_to_board(&mut value);
         *self.snapshot.write().unwrap_or_else(|e| e.into_inner()) = value;
@@ -95,13 +121,22 @@ impl Operations {
             return Err(503);
         }
         let jobs = jobs(&self.root).map_err(|_| 503u16)?;
+        let policy = priority_policy(&self.root);
+        let associations = attribution::assignments(items, &jobs, &policy);
         let mut privacy = crate::console_ui::PrivacyIndex::new(&names, &db);
         if id.starts_with("job-") {
             let job = jobs
                 .iter()
                 .find(|job| safe_id("job", text(job, "id")) == id)
                 .ok_or(404u16)?;
-            if privacy.is_private_job(job) {
+            if privacy.is_private_job(job)
+                || associations.sensitive(job)
+                || private_product(job, &policy)
+                || items
+                    .iter()
+                    .filter(|item| linked(item, job))
+                    .any(|item| private_product(item, &policy))
+            {
                 return Err(404);
             }
             return Ok(
@@ -117,18 +152,14 @@ impl Operations {
             .iter()
             .find(|item| item["id"].as_u64() == Some(todo_id))
             .ok_or(404u16)?;
-        let client = [
-            text(item, "project"),
-            text(item, "cwd"),
-            text(item, "spec"),
-            db["projects"][text(item, "project")].as_str().unwrap_or(""),
-        ]
-        .iter()
-        .any(|value| names.project(value) == "クライアント案件")
-            || jobs
-                .iter()
-                .filter(|job| linked(item, job))
-                .any(|job| privacy.is_private_job(job));
+        let client = private_todo(
+            item,
+            Some(&db),
+            &policy,
+            &names,
+            &mut privacy,
+            &associations,
+        );
         if client {
             return Err(404);
         }
@@ -221,7 +252,7 @@ pub fn metadata_display_snapshot(board: &Value, kind: &str) -> Result<Value, &'s
     }
     let items:Vec<_>=rows.iter().filter_map(|(product,worker)| {
         let id=worker["id"].as_str()?.strip_prefix("todo-")?.parse::<u64>().ok()?;
-        Some(json!({"id":id,"project":product["name"],"title":worker["task"],"status":worker["recordedStatus"],
+        Some(json!({"id":id,"project":product["name"],"productIdentity":worker["productIdentity"],"codeProduct":worker["codeProduct"],"title":worker["task"],"status":worker["recordedStatus"],
             "progress":worker["progress"],"updated_at":worker["updatedAt"],"note":"作業本文は保護設定の復旧まで非表示です。",
             "summary":worker["summary"],"currentStage":worker["currentStage"],
             "lastActivityAt":worker["lastActivityAt"],"stopReason":worker["stopReason"],"nextAction":worker["nextAction"],
@@ -231,7 +262,7 @@ pub fn metadata_display_snapshot(board: &Value, kind: &str) -> Result<Value, &'s
     let jobs:Vec<_>=rows.iter().filter_map(|(product,worker)| {
         let id=worker["primaryJob"].as_str()?;
         if !used.insert(id.to_owned()) { return None; }
-        Some(json!({"id":id,"project":product["name"],"task_title":format!("{} · {}",text(product,"name"),text(worker,"task")),"status":worker["jobStatus"],
+        Some(json!({"id":id,"project":product["name"],"productIdentity":worker["productIdentity"],"codeProduct":worker["codeProduct"],"task_title":format!("{} · {}",text(product,"name"),text(worker,"task")),"status":worker["jobStatus"],
             "summary":worker["summary"],"currentStage":worker["currentStage"],"progress":worker["progress"],
             "lastActivityAt":worker["lastActivityAt"],"stopReason":worker["stopReason"],"nextAction":worker["nextAction"],
             "updated_at":worker["updatedAt"],"started_at":null,"actionsAvailable":false,"contentAvailable":false}))
@@ -253,7 +284,7 @@ pub fn metadata_display_snapshot(board: &Value, kind: &str) -> Result<Value, &'s
 fn empty() -> Value {
     json!({"fetchedAt":null,"sourceOk":false,"sources":[],
         "commander":{"id":"commander","name":"司令塔","status":"unknown","detail":"共有データを取得中"},
-        "metrics":{},"departments":departments(BTreeMap::new())})
+        "productBindingsConfigured":cc_scheduler::product_identity::bindings_configured(),"productBindingsOverridden":null,"metrics":{},"departments":departments(BTreeMap::new())})
 }
 fn now_ms() -> u64 {
     SystemTime::now()
@@ -301,6 +332,13 @@ fn read_json(path: &Path) -> Result<Value, ()> {
     let bytes = bytes.strip_prefix(&[0xef, 0xbb, 0xbf]).unwrap_or(&bytes);
     serde_json::from_slice(bytes).map_err(|_| ())
 }
+fn priority_policy(root: &Path) -> Value {
+    let path = root.join("scheduler/priorities.json");
+    match fs::metadata(&path) {
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => json!({}),
+        _ => read_json(&path).unwrap_or(Value::Null),
+    }
+}
 fn text<'a>(v: &'a Value, key: &str) -> &'a str {
     v[key].as_str().unwrap_or("")
 }
@@ -319,7 +357,7 @@ fn protected_stage(job: Option<&Value>) -> &'static str {
     match text(job, "status") {
         "queued" | "pending" => return "起動待ち",
         "starting" => return "担当を起動中",
-        "running" => {},
+        "running" => {}
         _ => return "工程は未記録",
     }
     let activity = job["activity"]
@@ -327,7 +365,10 @@ fn protected_stage(job: Option<&Value>) -> &'static str {
         .or_else(|| job["activity"]["type"].as_str())
         .or_else(|| job["activity"]["kind"].as_str())
         .unwrap_or("");
-    let kind = activity.split_once(':').map_or(activity, |(kind, _)| kind).trim();
+    let kind = activity
+        .split_once(':')
+        .map_or(activity, |(kind, _)| kind)
+        .trim();
     match kind {
         "command" | "command_execution" | "exec_command" | "running" => "コマンドを実行中",
         "mcp" => "連携ツールを実行中",
@@ -348,7 +389,9 @@ fn protected_stage(job: Option<&Value>) -> &'static str {
 }
 fn protected_activity(job: Option<&Value>) -> Option<String> {
     let job = job?;
-    if text(job, "status") != "running" { return None; }
+    if text(job, "status") != "running" {
+        return None;
+    }
     ["last_event_at", "last_heartbeat_at", "heartbeat_at"]
         .iter()
         .filter_map(|key| stamp(&job[*key]))
@@ -368,6 +411,10 @@ fn linked(item: &Value, job: &Value) -> bool {
     job["todo_id"]
         .as_u64()
         .is_some_and(|id| item["id"].as_u64() == Some(id))
+        || (item["id"].is_u64()
+            && job["related_todo_ids"]
+                .as_array()
+                .is_some_and(|ids| ids.contains(&item["id"])))
         || ["id", "thread_id", "resume_session"].iter().any(|key| {
             job[*key]
                 .as_str()
@@ -401,15 +448,26 @@ fn media_current<'a>(
             .and_then(|db| db["items"].as_array())
             .map(Vec::as_slice)
             .unwrap_or(&[]);
-        let direct = job["todo_id"].as_u64().filter(|id| {
-            *id > 0 && items.iter().any(|row| row["id"].as_u64() == Some(*id))
-        });
+        let direct = job["todo_id"]
+            .as_u64()
+            .filter(|id| *id > 0 && items.iter().any(|row| row["id"].as_u64() == Some(*id)));
         let primary = direct.or_else(|| {
-            items.iter().filter(|row| linked(row, job)).min_by_key(|row| (
-                if row["scheduler"]["job"].as_str() == job["id"].as_str() { 0 }
-                else if matches!(text(row, "status"), "doing" | "todo") { 1 } else { 2 },
-                row["id"].as_u64().unwrap_or(u64::MAX)
-            )).and_then(|row| row["id"].as_u64())
+            items
+                .iter()
+                .filter(|row| linked(row, job))
+                .min_by_key(|row| {
+                    (
+                        if row["scheduler"]["job"].as_str() == job["id"].as_str() {
+                            0
+                        } else if matches!(text(row, "status"), "doing" | "todo") {
+                            1
+                        } else {
+                            2
+                        },
+                        row["id"].as_u64().unwrap_or(u64::MAX),
+                    )
+                })
+                .and_then(|row| row["id"].as_u64())
         });
         primary.is_some() && primary == item["id"].as_u64()
     })
@@ -417,10 +475,52 @@ fn media_current<'a>(
 fn media_processing_key(job: Option<&Value>) -> Value {
     job.map(|job| {
         let hash = ring::digest::digest(&ring::digest::SHA256, text(job, "id").as_bytes());
-        json!(format!("job-{}", hash.as_ref().iter()
-            .map(|b| format!("{b:02x}")).collect::<String>()))
-    }).unwrap_or(Value::Null)
+        json!(format!(
+            "job-{}",
+            hash.as_ref()
+                .iter()
+                .map(|b| format!("{b:02x}"))
+                .collect::<String>()
+        ))
+    })
+    .unwrap_or(Value::Null)
 }
+fn private_product(row: &Value, policy: &Value) -> bool {
+    attribution::resolve(row, policy) == cc_scheduler::product_identity::Resolution::Unknown
+        || cc_scheduler::priority::item_rank(row, policy) == 10
+}
+
+fn private_todo(
+    item: &Value,
+    db: Option<&Value>,
+    policy: &Value,
+    names: &cc_ask::task_title::Names,
+    privacy: &mut crate::console_ui::PrivacyIndex<'_>,
+    associations: &attribution::Associations<'_>,
+) -> bool {
+    let raw_project = text(item, "project");
+    let display_project = policy["items"][item["id"].as_u64().unwrap_or(0).to_string()]["project"]
+        .as_str()
+        .or_else(|| item["owner_project"].as_str())
+        .unwrap_or(raw_project);
+    private_product(item, policy)
+        || names.project(raw_project) == "クライアント案件"
+        || project_name(names, display_project) == "クライアント案件"
+        || names.project(text(item, "cwd")) == "クライアント案件"
+        || names.project(text(item, "spec")) == "クライアント案件"
+        || associations
+            .raw(item["id"].as_u64().unwrap_or(0))
+            .iter()
+            .any(|job| {
+                privacy.is_private_job(job)
+                    || associations.sensitive(job)
+                    || private_product(job, policy)
+            })
+        || db.is_some_and(|db| {
+            names.project(db["projects"][raw_project].as_str().unwrap_or("")) == "クライアント案件"
+        })
+}
+
 fn safe_id(prefix: &str, value: &str) -> String {
     let mut hash = std::collections::hash_map::DefaultHasher::new();
     value.hash(&mut hash);
@@ -477,6 +577,9 @@ fn project_name(names: &cc_ask::task_title::Names, project: &str) -> String {
 }
 #[cfg(test)]
 fn department(project: &str) -> usize {
+    if let Some(product) = cc_scheduler::product_identity::by_name(project) {
+        return product.department;
+    }
     let p = project.to_lowercase();
     if project == "クライアント案件"
         || matches!(p.as_str(), "arps" | "socialpilot" | "social pilot")
@@ -539,6 +642,8 @@ fn owner_department_order_and_explicit_projects_match_admission() {
         ("SocialPilot", 4),
         ("localai-web-rs", 5),
         ("Skills", 5),
+        ("GoDD-MCP", 4),
+        ("GoDD MCP α", 1),
     ] {
         assert_eq!(department(p), d);
         assert_eq!(rank_department(cc_scheduler::priority::project_rank(p)), d);
@@ -583,8 +688,11 @@ fn departments(tree: Tree) -> Vec<Value> {
                 .iter()
                 .filter(|p| p.department == i)
                 .map(|p| {
-                    json!({"id":safe_id("product",p.name),"name":p.name,
-                    "workers":tree.get(&(i,p.name.to_owned())).cloned().unwrap_or_default()})
+                    attribution::catalogue(
+                        p,
+                        json!({"id":safe_id("product",p.name),"name":p.name,
+                    "workers":tree.get(&(i,p.name.to_owned())).cloned().unwrap_or_default()}),
+                    )
                 })
                 .collect();
             json!({"id":format!("department-{i}"),"name":name,"color":color,"products":products})
@@ -779,23 +887,51 @@ fn collect(root: &Path, now: u64) -> Value {
 // A missing name registry must not expose any free text or erase the available
 // activity metadata. This projection does not create or substitute a registry.
 fn protected_wait(item: &Value, current: Option<&Value>, queue: &Value, now: u64) -> &'static str {
-    if item["status"]=="wait" {return "dependency"}
-    if item["status"]=="recovery_unverified" {return "technical"}
-    let wait=&item["owner_question_wait"];
-    let question=&wait["question"];
-    if item["status"]=="block" && wait["domain"]=="todo-owner-question-wait-v1"
-        && question["domain"]=="discord-conversation-question-v1"
-        && question["todo_id"].as_str().and_then(|id|id.parse::<u64>().ok())==item["id"].as_u64()
-        && wait["block_note"].is_string() && wait["block_note"]==item["note"]
-        && stamp(&wait["blocked_at"]).is_some_and(|at|at<=now)
-        && wait["question_receipt_sha256"].as_str().is_some_and(|key|key.len()==64&&key.bytes().all(|b|b.is_ascii_hexdigit())) {
+    if item["status"] == "wait" {
+        return "dependency";
+    }
+    if item["status"] == "recovery_unverified" {
+        return "technical";
+    }
+    let wait = &item["owner_question_wait"];
+    let question = &wait["question"];
+    if item["status"] == "block"
+        && wait["domain"] == "todo-owner-question-wait-v1"
+        && question["domain"] == "discord-conversation-question-v1"
+        && question["todo_id"]
+            .as_str()
+            .and_then(|id| id.parse::<u64>().ok())
+            == item["id"].as_u64()
+        && wait["block_note"].is_string()
+        && wait["block_note"] == item["note"]
+        && stamp(&wait["blocked_at"]).is_some_and(|at| at <= now)
+        && wait["question_receipt_sha256"]
+            .as_str()
+            .is_some_and(|key| key.len() == 64 && key.bytes().all(|b| b.is_ascii_hexdigit()))
+    {
         return "decision";
     }
-    if item["status"]=="block" {return "unverified"}
-    if current.is_some_and(|job|job["status"]=="queued") {return "job_queue"}
-    if queue["queue"].as_array().is_some_and(|entries|entries.iter().any(|entry|
-        entry["todo_id"]==item["id"] && queue["preparation_failures"][text(entry,"key")].is_array())) {return "startup_error"}
-    if current.is_none() && queue["queue"].as_array().is_some_and(|entries|entries.iter().any(|entry|entry["todo_id"]==item["id"])) {return "intake"}
+    if item["status"] == "block" {
+        return "unverified";
+    }
+    if current.is_some_and(|job| job["status"] == "queued") {
+        return "job_queue";
+    }
+    if queue["queue"].as_array().is_some_and(|entries| {
+        entries.iter().any(|entry| {
+            entry["todo_id"] == item["id"]
+                && queue["preparation_failures"][text(entry, "key")].is_array()
+        })
+    }) {
+        return "startup_error";
+    }
+    if current.is_none()
+        && queue["queue"]
+            .as_array()
+            .is_some_and(|entries| entries.iter().any(|entry| entry["todo_id"] == item["id"]))
+    {
+        return "intake";
+    }
     "unverified"
 }
 
@@ -813,11 +949,27 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
         .filter(|db| db["items"].is_array() && db["projects"].is_object());
     let job_result = jobs_at(jobs_path);
     let js = job_result.as_ref().map(Vec::as_slice).unwrap_or(&[]);
-    let policy = read_json(&root.join("scheduler/priorities.json")).unwrap_or(Value::Null);
-    let ranks = todo.as_ref().map(|db|cc_scheduler::priority::todo_ranks(db,&policy)).unwrap_or_default();
-    let queue = read_json(&root.join("localai-web-rs/target/release/console-state.json")).unwrap_or(Value::Null);
+    let policy = priority_policy(root);
+
+    let queue = read_json(&root.join("localai-web-rs/target/release/console-state.json"))
+        .unwrap_or(Value::Null);
     let mut tree = Tree::new();
     let mut used = BTreeSet::new();
+    let assignments = attribution::assignments(
+        todo.as_ref()
+            .and_then(|db| db["items"].as_array())
+            .map(Vec::as_slice)
+            .unwrap_or(&[]),
+        js,
+        &policy,
+    );
+    let priorities = todo
+        .as_ref()
+        .map(|db| {
+            cc_scheduler::priority::todo_priorities_with_assignments(db, &policy, &assignments)
+        })
+        .unwrap_or_default();
+    let ranks = &priorities.ranks;
     let public_product = |raw: &str| {
         catalog::find(raw).or_else(|| {
             todo.as_ref().and_then(|db| {
@@ -914,19 +1066,25 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
             if done && !fresh(todo_stamp(item), now, RECENT_MS) {
                 continue;
             }
-            let associated: Vec<_> = js.iter().filter(|job| linked(item, job)).collect();
-            for job in &associated {
+            let associated = assignments.assigned(id);
+            let history_jobs = assignments.history(item["id"].as_u64().unwrap_or(0));
+            for job in associated {
                 used.insert(text(job, "id").to_owned());
             }
-            let media = public_product(text(item, "project")).is_some_and(|p| p.name == "youtube-daily");
-            let current = media_current(item, &associated, todo.as_ref(), media);
+            let media =
+                public_product(text(item, "project")).is_some_and(|p| p.name == "youtube-daily");
+            let current = if media {
+                media_current(item, associated, todo.as_ref(), true)
+            } else {
+                assignments.current(id)
+            };
             let status = if done {
                 "done"
             } else if current.is_some_and(|job| text(job, "status") != "queued") {
                 "working"
             } else if text(item, "status") == "doing"
                 && job_result.is_ok()
-                && associated.first().is_some_and(|job| {
+                && history_jobs.first().is_some_and(|job| {
                     failed(job) && fresh(stamp(&job["finished_at"]), now, RECENT_MS)
                 })
             {
@@ -944,6 +1102,9 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
             if raw_project.eq_ignore_ascii_case("owner") {
                 continue;
             }
+            let display_project = cc_scheduler::product_identity::display_project(item, &policy);
+            let identity = assignments.record(item, &policy);
+            let label = attribution::target_for(identity, item, project_label(display_project));
             let kinds = registered_work_kinds(&[item]);
             let task = if kinds.is_empty() {
                 "作業の種類を確認中".to_owned()
@@ -975,22 +1136,21 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
             };
             add(
                 &mut tree,
-                public_product(raw_project).map_or(usize::MAX, |p| p.department),
-                project_label(raw_project),
-                { let mut worker = json!({"id":format!("todo-{id}"),"name":format!("作業 #{id}"),"task":format!("#{id} {task}"), "status":status,
-                    "priority":ranks.get(&id),
+                catalog::find(&label).map_or(usize::MAX, |p| p.department),
+                label,
+                json!({"id":format!("todo-{id}"),"name":format!("作業 #{id}"),"task":format!("#{id} {task}"), "status":status,
+                    "productIdentity":identity.metadata(),"jobProductIdentity":current.map(|job|assignments.target(job).metadata()),"codeProduct":attribution::code_product(item),
+                    "priority":ranks.get(&id).copied(),
                     "recordedStatus":match text(item,"status") {"todo"|"doing"|"wait"|"block"|"done"|"recovery_unverified"=>item["status"].clone(),_=>json!("unknown")},
-                    "primaryJob":current.map(|job|safe_id("job",text(job,"id"))),"jobStatus":current.map(|job|text(job,"status")),
+                    "processingJobKey":current.map(|job|cc_scheduler::product_identity::job_key(text(job,"id"))),"primaryJob":current.map(|job|safe_id("job",text(job,"id"))),"jobStatus":current.map(|job|text(job,"status")),
                     "summary":task,"currentStage":protected_stage(current),"lastActivityAt":protected_activity(current),
                     "stopReason":stop_reason,"dependencies":dependencies,
                     "nextAction":if status=="waiting"||status=="attention" {"元の依頼・成果・担当の状態を照合して続行します。"} else {""},
                     "factsSource":format!("共有ToDo #{id} の状態と作業種別（本文は非表示）"),
                     "progress":item["progress"].as_u64().filter(|n|*n<=100),
                     "updatedAt":todo_stamp(item).and_then(|at|chrono::DateTime::from_timestamp_millis(at as i64)).map(|at|at.to_rfc3339()),
-                    "detail":detail,"detailAvailable":false,"historyFailures":job_result.as_ref().ok().map(|_|associated.iter().filter(|job|failed(job)).count()),
-                    "waitingKind":protected_wait(item,current,&queue,now)});
-                    if media { worker["processingJobKey"] = media_processing_key(current); }
-                    worker },
+                    "detail":detail,"detailAvailable":false,"historyFailures":job_result.as_ref().ok().map(|_|history_jobs.iter().filter(|job|failed(job)).count()),
+                    "waitingKind":protected_wait(item,current,&queue,now)}),
             );
         }
     }
@@ -1002,12 +1162,15 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
         if raw_project.eq_ignore_ascii_case("owner") {
             continue;
         }
+        let identity = assignments.target(job);
+        let label = attribution::target_for(identity, job, project_label(&raw_project));
         add(
             &mut tree,
-            public_product(&raw_project).map_or(usize::MAX, |p| p.department),
-            project_label(&raw_project),
+            catalog::find(&label).map_or(usize::MAX, |p| p.department),
+            label,
             json!({"id":safe_id("job",text(job,"id")),"name":"名称を確認中の担当","task":"作業内容の表示を保留中",
-                "primaryJob":safe_id("job",text(job,"id")),"jobStatus":text(job,"status"),
+                "productIdentity":identity.metadata(),"codeProduct":attribution::code_product(job),
+                "processingJobKey":cc_scheduler::product_identity::job_key(text(job,"id")),"primaryJob":safe_id("job",text(job,"id")),"jobStatus":text(job,"status"),
                 "status":if failed(job) {"attention"} else if text(job,"status")=="queued" {"waiting"} else {"working"},"progress":null,
                 "updatedAt":stamp(&job["finished_at"]).or_else(||stamp(&job["started_at"])).and_then(|at|chrono::DateTime::from_timestamp_millis(at as i64)).map(|at|at.to_rfc3339()),
                 "detail":"作業本文の保護設定を復旧中です。指定外の登録は所属の判断待ちに表示しています。","detailAvailable":false,"historyFailures":if failed(job){Some(1u64)}else{None},"waitingKind":"unverified"}),
@@ -1025,6 +1188,11 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
     };
     let mut out = empty();
     out["fetchedAt"] = json!(now);
+    out["productBindingsOverridden"] = json!(
+        policy
+            .as_object()
+            .map(|p| p.contains_key("product_identities"))
+    );
     out["protectionMode"] = json!("masked_metadata");
     out["sourceOk"] = json!(false);
     out["metadataOk"] = json!(todo.is_some() && job_result.is_ok());
@@ -1043,10 +1211,12 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
         ("cpuPercent", scheduler["cpu_percent"].clone()),
         (
             "memoryUsedGb",
-            json!(scheduler["ram_total_gb"]
-                .as_f64()
-                .zip(scheduler["available_gb"].as_f64())
-                .map(|(total, free)| total - free)),
+            json!(
+                scheduler["ram_total_gb"]
+                    .as_f64()
+                    .zip(scheduler["available_gb"].as_f64())
+                    .map(|(total, free)| total - free)
+            ),
         ),
         ("memoryTotalGb", scheduler["ram_total_gb"].clone()),
         ("jobLimit", scheduler["hard_cap"].clone()),
@@ -1128,7 +1298,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
         return protected_metadata(root, now);
     }
     let names = privacy.unwrap();
-    let policy = read_json(&root.join("scheduler/priorities.json")).unwrap_or(Value::Null);
+    let policy = priority_policy(root);
     let todo_path = root.join("todo/todo.json");
     let todo = cc_todo::read_store(&todo_path)
         .map_err(|_| ())
@@ -1236,16 +1406,32 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
         },
     ));
     let mut privacy = crate::console_ui::PrivacyIndex::new(&names, db.unwrap_or(&empty_db));
+    let assignments = attribution::assignments(
+        db.and_then(|db| db["items"].as_array())
+            .map(Vec::as_slice)
+            .unwrap_or(&[]),
+        js,
+        &policy,
+    );
+    let task_priorities = cc_scheduler::priority::todo_priorities_with_assignments(
+        db.unwrap_or(&empty_db),
+        &policy,
+        &assignments,
+    );
+    let task_ranks = &task_priorities.ranks;
     if let Some(items) = db.and_then(|v| v["items"].as_array()) {
         for item in items {
             let is_done = text(item, "status") == "done";
             if is_done && !fresh(todo_stamp(item), now, RECENT_MS) {
                 continue;
             }
-            let associated: Vec<_> = js.iter().filter(|j| linked(item, j)).collect();
-            for j in &associated {
+            let associated = assignments.assigned(item["id"].as_u64().unwrap_or(0));
+            let history_jobs = assignments.history(item["id"].as_u64().unwrap_or(0));
+            for j in associated {
                 used.insert(text(j, "id").to_owned());
             }
+            let current = assignments.current(item["id"].as_u64().unwrap_or(0));
+            let identity = assignments.record(item, &policy);
             let raw_project = text(item, "project");
             let owned = &policy["items"][item["id"].as_u64().unwrap_or(0).to_string()];
             let display_project = owned["project"]
@@ -1253,15 +1439,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
                 .or_else(|| item["owner_project"].as_str())
                 .unwrap_or(raw_project);
             let project = project_name(&names, display_project);
-            let client = project == "クライアント案件"
-                || cc_scheduler::priority::item_rank(item, &policy) == 10
-                || names.project(text(item, "cwd")) == "クライアント案件"
-                || names.project(text(item, "spec")) == "クライアント案件"
-                || associated.iter().any(|job| privacy.is_private_job(job))
-                || db.is_some_and(|db| {
-                    names.project(db["projects"][raw_project].as_str().unwrap_or(""))
-                        == "クライアント案件"
-                });
+            let client = private_todo(item, db, &policy, &names, &mut privacy, &assignments);
             let project = if client {
                 catalog::find(display_project)
                     .map(|p| p.name.to_owned())
@@ -1269,8 +1447,13 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
             } else {
                 project
             };
+            let project = attribution::target_for(identity, item, project);
             let media = project == "youtube-daily";
-            let current = media_current(item, &associated, db, media);
+            let current = if media {
+                media_current(item, associated, db, true)
+            } else {
+                current
+            };
             let status = if is_done {
                 "done"
             } else if matches!(text(item, "status"), "block" | "wait") {
@@ -1283,7 +1466,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
                 }
             } else if text(item, "status") == "doing" {
                 if jobs.is_ok()
-                    && associated.first().is_some_and(|j| {
+                    && history_jobs.first().is_some_and(|j| {
                         failed(j) && fresh(stamp(&j["finished_at"]), now, RECENT_MS)
                     })
                 {
@@ -1350,7 +1533,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
                             .map(|value| value.as_str().to_owned())
                     })
             };
-            let history = associated.iter().filter(|j| failed(j)).count();
+            let history = history_jobs.iter().filter(|j| failed(j)).count();
             let detail = match status {
                 "working" => "共有ToDoに紐づく担当が稼働中です。",
                 "waiting" if wait_kind == "owner" => "送信済みの質問への回答を待っています。",
@@ -1380,18 +1563,24 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
                 _ => "未着手です。",
             };
             let mut worker = json!({"id":format!("todo-{}",item["id"].as_u64().unwrap_or(0)),"name":if client {"担当".into()}else{task.chars().take(24).collect::<String>()},
-                "recordedStatus":item["status"],"priority":cc_scheduler::priority::item_rank(item,&policy),"waitingKind":wait_kind,
-                "primaryJob":current.map(|job|safe_id("job",text(job,"id"))),"jobStatus":current.map(|job|text(job,"status")),
+                "productIdentity":identity.metadata(),"jobProductIdentity":current.map(|job|assignments.target(job).metadata()),"codeProduct":attribution::code_product(item),
+                "recordedStatus":item["status"],"priority":
+                    if identity==cc_scheduler::product_identity::Resolution::Other {Some(cc_scheduler::priority::item_rank(item,&policy))}else{item["id"].as_u64().and_then(|id|task_ranks.get(&id).copied())},"waitingKind":wait_kind,
+                "processingJobKey":current.map(|job|cc_scheduler::product_identity::job_key(text(job,"id"))),"primaryJob":current.map(|job|safe_id("job",text(job,"id"))),"jobStatus":current.map(|job|text(job,"status")),
                 "task":task,"waitKind":wait_kind,"questionUrl":question_url,"status":status,"progress":progress,"updatedAt":todo_stamp(item).and_then(|n|chrono::DateTime::from_timestamp_millis(n as i64)).map(|t|t.to_rfc3339()),
                 "detail":detail,"historyFailures":history});
-            if media { worker["processingJobKey"] = media_processing_key(current); }
+            if media {
+                worker["processingJobKey"] = media_processing_key(current);
+            }
             if !client {
                 worker["factsSource"] =
                     json!(format!("共有ToDo #{}", item["id"].as_u64().unwrap_or(0)));
-                worker["note"] = json!(crate::console_ui::clean(&names, text(item, "note"))
-                    .chars()
-                    .take(360)
-                    .collect::<String>());
+                worker["note"] = json!(
+                    crate::console_ui::clean(&names, text(item, "note"))
+                        .chars()
+                        .take(360)
+                        .collect::<String>()
+                );
                 worker["historyCount"] = json!(crate::console_ui::history_count(item));
                 worker["detailAvailable"] = json!(true);
                 worker["detailVersion"] = json!(detail_version(item));
@@ -1423,8 +1612,13 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
         }
         let inferred = infer_project(j, db);
         let project = project_name(&names, &inferred);
-        let client = project == "クライアント案件"
+        let identity = assignments.target(j);
+        let client = assignments.sensitive(j)
+            || privacy.is_private_job(j)
+            || identity == cc_scheduler::product_identity::Resolution::Unknown
+            || project == "クライアント案件"
             || names.project(text(j, "cwd")) == "クライアント案件"
+            || cc_scheduler::priority::item_rank(j, &policy) == 10
             || cc_scheduler::priority::item_rank(&json!({"project":inferred}), &policy) == 10;
         let project = if client {
             catalog::find(&inferred)
@@ -1433,6 +1627,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
         } else {
             project
         };
+        let project = attribution::target_for(identity, j, project);
         let raw_title = if text(j, "task_title").is_empty() {
             text(j, "name")
         } else {
@@ -1451,13 +1646,17 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
             "idle"
         };
         let mut worker = json!({"id":safe_id("job",text(j,"id")),"name":if client {"担当".into()}else{task.chars().take(24).collect::<String>()},
+                "productIdentity":identity.metadata(),"codeProduct":attribution::code_product(j),
+                "processingJobKey":cc_scheduler::product_identity::job_key(text(j,"id")),"primaryJob":safe_id("job",text(j,"id")),"jobStatus":j["status"],
                 "task":task,"status":status,"progress":null,"updatedAt":j["finished_at"].as_str().or(j["started_at"].as_str()),
                 "detail":if active(j){"共有ジョブの担当です。"}else{"過去の失敗記録です。現在の障害を示すものではありません。"},"historyFailures":usize::from(failed(j))});
         if !client {
-            worker["report"] = json!(crate::console_ui::clean(&names, text(j, "last_message"))
-                .chars()
-                .take(360)
-                .collect::<String>());
+            worker["report"] = json!(
+                crate::console_ui::clean(&names, text(j, "last_message"))
+                    .chars()
+                    .take(360)
+                    .collect::<String>()
+            );
             worker["detailAvailable"] = json!(true);
             worker["detailVersion"] = json!(detail_version(j));
         }
@@ -1599,7 +1798,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
     } else {
         Value::Null
     };
-    json!({"fetchedAt":now,"sourceOk":sources.iter().all(|s|s["ok"]==true || s["state"]=="unknown"),"sources":sources,
+    json!({"metadataOk":todo.is_ok()&&jobs.is_ok(),"productBindingsConfigured":cc_scheduler::product_identity::bindings_configured(),"productBindingsOverridden":policy.as_object().map(|p|p.contains_key("product_identities")),"fetchedAt":now,"sourceOk":sources.iter().all(|s|s["ok"]==true || s["state"]=="unknown"),"sources":sources,
         "commander":commander,
         "metrics":metrics,"ownerQuestions":decisions["questions"],"decisionTasks":decisions["tasks"],"blockedDecisionTasks":decisions["blockedTasks"],
         "unassignedProducts":unassigned_products(&tree),"departments":departments(tree)})
@@ -1647,8 +1846,18 @@ mod tests {
         assert!(protected_activity(Some(&unknown)).is_none());
         let queued = json!({"status":"queued","last_event_at":"2026-10-19T15:00:00Z"});
         assert!(protected_activity(Some(&queued)).is_none());
-        assert_eq!(protected_stage(Some(&json!({"status":"queued","activity":"running: private command"}))), "起動待ち");
-        assert_eq!(protected_stage(Some(&json!({"status":"running","activity":"mcp: private.connector"}))), "連携ツールを実行中");
+        assert_eq!(
+            protected_stage(Some(
+                &json!({"status":"queued","activity":"running: private command"})
+            )),
+            "起動待ち"
+        );
+        assert_eq!(
+            protected_stage(Some(
+                &json!({"status":"running","activity":"mcp: private.connector"})
+            )),
+            "連携ツールを実行中"
+        );
         assert_eq!(protected_stage(None), "担当の起動待ち");
         assert!(protected_activity(None).is_none());
     }
@@ -1814,14 +2023,18 @@ mod tests {
         assert_eq!(find("todo-5")["summary"], "");
         assert!(find("todo-5")["questionUrl"].is_null());
         assert_eq!(output["metrics"]["ownerDecisions"], 1);
-        assert!(find("todo-2")["summary"]
-            .as_str()
-            .unwrap()
-            .contains("画像案への回答を待っています"));
-        assert!(!find("todo-2")["summary"]
-            .as_str()
-            .unwrap()
-            .contains("hidden-value"));
+        assert!(
+            find("todo-2")["summary"]
+                .as_str()
+                .unwrap()
+                .contains("画像案への回答を待っています")
+        );
+        assert!(
+            !find("todo-2")["summary"]
+                .as_str()
+                .unwrap()
+                .contains("hidden-value")
+        );
         assert_eq!(
             find("todo-2")["questionUrl"],
             "https://discord.com/channels/100/200/200"
@@ -1836,11 +2049,13 @@ mod tests {
         assert_ne!(output["commander"]["status"], "attention");
         assert_eq!(output["commander"]["status"], "working");
         assert_eq!(output["sourceOk"], true);
-        assert!(output["sources"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .any(|s| s["state"] == "unknown"));
+        assert!(
+            output["sources"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|s| s["state"] == "unknown")
+        );
         assert_eq!(output["metrics"]["memoryUsedGb"], 56.0);
         assert!(find("todo-1")["updatedAt"].is_string());
         let serialized = output.to_string();
@@ -1947,14 +2162,16 @@ mod tests {
         assert_eq!(skills["workers"][0]["status"], "working");
         assert_eq!(skills["workers"][0]["detailAvailable"], false);
         assert_eq!(skills["workers"][0]["historyFailures"], 0);
-        assert!(board["departments"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .flat_map(|d| d["products"].as_array().unwrap())
-            .chain(board["unassignedProducts"].as_array().unwrap())
-            .flat_map(|p| p["workers"].as_array().unwrap())
-            .any(|w| w["status"] == "attention"));
+        assert!(
+            board["departments"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .flat_map(|d| d["products"].as_array().unwrap())
+                .chain(board["unassignedProducts"].as_array().unwrap())
+                .flat_map(|p| p["workers"].as_array().unwrap())
+                .any(|w| w["status"] == "attention")
+        );
         let encoded = board.to_string();
         for protected in [
             "SecretClient",
@@ -1978,12 +2195,14 @@ mod tests {
         assert!(board["metrics"]["activeJobs"].is_null());
         assert!(board["metrics"]["todoDependencyWaits"].is_null());
         assert_eq!(board["departments"].as_array().unwrap().len(), 6);
-        assert!(board["departments"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .flat_map(|d| d["products"].as_array().unwrap())
-            .all(|p| p["workers"].as_array().unwrap().is_empty()));
+        assert!(
+            board["departments"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .flat_map(|d| d["products"].as_array().unwrap())
+                .all(|p| p["workers"].as_array().unwrap().is_empty())
+        );
         assert!(!temp.path().join("client-projects.txt").exists());
     }
     #[test]
@@ -2072,7 +2291,7 @@ mod tests {
                 .iter()
                 .map(|p| p["name"].as_str().unwrap())
                 .collect::<Vec<_>>(),
-            ["YCC-HP", "ARPS"]
+            ["YCC-HP", "ARPS", "GoDD MCP"]
         );
         let rosetta = list("GoDD事業部")
             .into_iter()
@@ -2080,17 +2299,21 @@ mod tests {
             .unwrap();
         assert_eq!(rosetta["workers"].as_array().unwrap().len(), 2);
         assert_eq!(rosetta["workers"][0]["progress"], 35);
-        assert!(list("自社サービス部")
-            .iter()
-            .all(|p| p["name"] != "Social Pilot"));
+        assert!(
+            list("自社サービス部")
+                .iter()
+                .all(|p| p["name"] != "Social Pilot")
+        );
         let extras = snapshot["unlistedRegistrations"].as_array().unwrap();
         assert_eq!(extras.len(), 3);
         assert!(extras.iter().any(
             |p| p["name"] == "Skills" && p["previouslyAssignedDepartment"] == "情報システム部"
         ));
-        assert!(extras
-            .iter()
-            .any(|p| p["name"] == "Social Pilot" && p["unfinishedTasks"] == 1));
+        assert!(
+            extras
+                .iter()
+                .any(|p| p["name"] == "Social Pilot" && p["unfinishedTasks"] == 1)
+        );
         assert!(extras.iter().any(|p| p["registeredTasks"] == 1
             && p["unfinishedTasks"] == 0
             && p["taskIds"] == json!([5])));

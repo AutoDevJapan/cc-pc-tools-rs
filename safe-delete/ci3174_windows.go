@@ -47,6 +47,9 @@ type ci3174Entry struct {
 }
 type ci3174Scope struct {
 	maxEntries        int
+	maxBytes          int64
+	captureCollected  bool
+	internalLinks     bool
 	identity          func(string) (ci3174Entry, error)
 	settled           func() error
 	baseline          map[string]ci3174Entry
@@ -60,7 +63,7 @@ type ci3174Scope struct {
 // FSCTL_GET_REPARSE_POINT, Readlink, content hash or target-name query is used.
 func ci3174Identity(path string) (ci3174Entry, error) {
 	var out ci3174Entry
-	p, e := syscall.UTF16PtrFromString(path)
+	p, e := syscall.UTF16PtrFromString(ci3250WinPath(path))
 	if e != nil {
 		return out, fail("CI_METADATA_FAILED")
 	}
@@ -271,7 +274,7 @@ func ci3174Lock() (func(), error) {
 	if _, e := checked(path); e != nil {
 		return nil, e
 	}
-	p, _ := syscall.UTF16PtrFromString(path)
+	p, _ := syscall.UTF16PtrFromString(ci3250WinPath(path))
 	h, e := syscall.CreateFile(p, syscall.GENERIC_READ|syscall.GENERIC_WRITE, 7, nil, syscall.OPEN_EXISTING, syscall.FILE_FLAG_OPEN_REPARSE_POINT, 0)
 	if e != nil {
 		return nil, fail("CI_COLLECTION_LOCK_FAILED")
@@ -372,6 +375,7 @@ func ci3174Settled() error {
 func (s *ci3174Scope) snapshot(root string) (map[string]ci3174Entry, measured, error) {
 	result := map[string]ci3174Entry{}
 	m := measured{}
+	links := map[fileIdentityKey]hardLinkCount{}
 	if _, e := checked(root); e != nil {
 		return nil, m, e
 	}
@@ -387,7 +391,7 @@ func (s *ci3174Scope) snapshot(root string) (map[string]ci3174Entry, measured, e
 		// This completed CI root contains its original Git administrative file.
 		// Its pinned metadata is preserved without opening its body. No other
 		// protected name, new entry or caller-supplied Git tree is admitted.
-		if protected(filepath.Base(p)) && !(strings.EqualFold(filepath.Base(p), ".git") && recorded) {
+		if protected(filepath.Base(p)) && !(strings.EqualFold(filepath.Base(p), ".git") && (recorded || (s.captureCollected && filepath.ToSlash(rel) == ci3250Git))) {
 			return nil, m, fail("PROTECTED_PATH")
 		}
 		if s.baseline != nil && !recorded {
@@ -400,7 +404,7 @@ func (s *ci3174Scope) snapshot(root string) (map[string]ci3174Entry, measured, e
 		if recorded && want != i {
 			return nil, m, fail("CI_INVENTORY_CHANGED")
 		}
-		if i.Owner != "S-1-5-32-544" || i.Volume != s.volume || i.Links != 1 {
+		if i.Owner != "S-1-5-32-544" || i.Volume != s.volume || i.Links < 1 || (!s.internalLinks && i.Links != 1) || i.Links > uint32(s.maxEntries+1) || (i.Attributes&(syscall.FILE_ATTRIBUTE_DIRECTORY|syscall.FILE_ATTRIBUTE_REPARSE_POINT) != 0 && i.Links != 1) {
 			return nil, m, fail("CI_OBJECT_CHANGED")
 		}
 		if rel == "." && (i.ID != s.rootID || ci3174Birth(i) != s.rootBirth || i.Attributes&syscall.FILE_ATTRIBUTE_DIRECTORY == 0) {
@@ -409,13 +413,24 @@ func (s *ci3174Scope) snapshot(root string) (map[string]ci3174Entry, measured, e
 		result[filepath.ToSlash(rel)] = i
 		m.Attributes = m.Attributes || i.Attributes&3 != 0
 		if i.Attributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT != 0 {
-			if want, ok := s.opaque[filepath.ToSlash(rel)]; !ok || want != i {
+			if want, ok := s.opaque[filepath.ToSlash(rel)]; !s.captureCollected && (!ok || want != i) {
 				return nil, m, fail("LINK_OR_REPARSE_POINT")
 			}
 			continue // opaque object: never open, enumerate or resolve its target
 		}
 		if i.Attributes&syscall.FILE_ATTRIBUTE_DIRECTORY == 0 {
+			k := fileIdentityKey{volume: i.Volume, fileID: i.ID}
+			g := links[k]
+			if g.total != 0 && g.total != i.Links {
+				return nil, m, fail("CI_HARDLINK_CHANGED")
+			}
+			g.inside++
+			g.total = i.Links
+			links[k] = g
 			m.Bytes += int64(uint64(i.SizeHigh)<<32 | uint64(i.SizeLow))
+			if m.Bytes < 0 || (s.maxBytes > 0 && m.Bytes > s.maxBytes) {
+				return nil, m, fail("CI_SIZE_LIMIT_EXCEEDED")
+			}
 			continue
 		}
 		dir, e := os.Open(p)
@@ -439,6 +454,11 @@ func (s *ci3174Scope) snapshot(root string) (map[string]ci3174Entry, measured, e
 				}
 				break
 			}
+		}
+	}
+	for _, g := range links {
+		if g.inside != g.total {
+			return nil, m, fail("CI_EXTERNAL_HARDLINK")
 		}
 	}
 	for name := range s.opaque {

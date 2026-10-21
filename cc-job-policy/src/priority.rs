@@ -4,6 +4,12 @@ use std::collections::BTreeMap;
 
 pub const DEFAULT: u32 = 100;
 pub fn project_rank(project: &str) -> u32 {
+    if let Some(product) = crate::product_identity::by_name(project) {
+        return product.rank;
+    }
+    if crate::product_identity::mcp_family(project) {
+        return DEFAULT;
+    }
     let p = project.to_lowercase();
     let normalized: String = p
         .replace('α', "alpha")
@@ -88,6 +94,13 @@ fn rank(value: &Value) -> Option<u32> {
         .filter(|n| matches!(*n, 10 | 20 | 30 | 40 | 50 | 60..=67 | 100))
 }
 pub fn item_rank(item: &Value, policy: &Value) -> u32 {
+    let identity = crate::product_identity::resolve(item, policy);
+    if let Some(product) = identity.product() {
+        return product.rank;
+    }
+    if identity == crate::product_identity::Resolution::Unknown {
+        return DEFAULT;
+    }
     let id = item["id"]
         .as_u64()
         .map(|n| n.to_string())
@@ -124,34 +137,88 @@ pub fn item_rank(item: &Value, policy: &Value) -> u32 {
         .and_then(|(_, value)| rank(value))
         .unwrap_or_else(|| project_rank(project))
 }
-/// Propagate only unresolved, recorded prerequisites, including transitive waits.
-pub fn todo_ranks(db: &Value, policy: &Value) -> BTreeMap<u64, u32> {
+#[derive(Debug, Default)]
+pub struct TodoPriorities {
+    pub ranks: BTreeMap<u64, u32>,
+    pub dependency_ranks: BTreeMap<u64, u32>,
+}
+
+/// Keep prerequisite requests separate from each record's own priority. Taking
+/// their min is useful for scheduling a ToDo but cannot identify the request.
+pub fn todo_priorities(db: &Value, policy: &Value) -> TodoPriorities {
+    calculate_priorities(db, policy, None)
+}
+pub fn todo_priorities_for_jobs(db: &Value, jobs: &[Value], policy: &Value) -> TodoPriorities {
+    let assignments = crate::product_identity::assignments(
+        db["items"].as_array().map(Vec::as_slice).unwrap_or(&[]),
+        jobs,
+        policy,
+    );
+    todo_priorities_with_assignments(db, policy, &assignments)
+}
+pub fn todo_priorities_with_assignments(
+    db: &Value,
+    policy: &Value,
+    assignments: &crate::product_identity::Associations<'_>,
+) -> TodoPriorities {
+    calculate_priorities(db, policy, Some(assignments))
+}
+fn calculate_priorities(
+    db: &Value,
+    policy: &Value,
+    assignments: Option<&crate::product_identity::Associations<'_>>,
+) -> TodoPriorities {
     let items: Vec<_> = db["items"].as_array().into_iter().flatten().collect();
-    let mut ranks: BTreeMap<_, _> = items
+    let unfinished: std::collections::BTreeSet<_> = items
         .iter()
-        .filter_map(|i| i["id"].as_u64().map(|id| (id, item_rank(i, policy))))
+        .filter(|item| item["status"] != "done")
+        .filter_map(|item| item["id"].as_u64())
         .collect();
-    loop {
-        let mut changed = false;
-        for item in &items {
+    let edges: Vec<_> = items
+        .iter()
+        .filter_map(|item| {
             if item["status"] == "done"
                 || item["status"] == "block"
                 || !item["wait_ready"].is_null()
             {
-                continue;
+                return None;
             }
-            let Some(parent) = item["id"].as_u64().and_then(|id| ranks.get(&id).copied()) else {
-                continue;
-            };
-            for id in item["wait_on"]
+            let id = item["id"].as_u64()?;
+            let targets: Vec<_> = item["wait_on"]
                 .as_array()
                 .into_iter()
                 .flatten()
                 .chain(item["work_wait_on"].as_array().into_iter().flatten())
                 .filter_map(Value::as_u64)
-            {
-                if items.iter().any(|i| i["id"] == id && i["status"] != "done")
-                    && let Some(child) = ranks.get_mut(&id)
+                .filter(|id| unfinished.contains(id))
+                .collect();
+            Some((id, targets))
+        })
+        .collect();
+    let mut ranks: BTreeMap<_, _> = items
+        .iter()
+        .filter_map(|row| {
+            let id = row["id"].as_u64()?;
+            let rank = assignments
+                .and_then(|index| {
+                    let identity = index.record(row, policy);
+                    (crate::product_identity::resolve(row, policy)
+                        == crate::product_identity::Resolution::Other)
+                        .then(|| identity.product().map(|product| product.rank))
+                        .flatten()
+                })
+                .unwrap_or_else(|| item_rank(row, policy));
+            Some((id, rank))
+        })
+        .collect();
+    loop {
+        let mut changed = false;
+        for (id, targets) in &edges {
+            let Some(parent) = ranks.get(id).copied() else {
+                continue;
+            };
+            for target in targets {
+                if let Some(child) = ranks.get_mut(target)
                     && parent < *child
                 {
                     *child = parent;
@@ -160,9 +227,29 @@ pub fn todo_ranks(db: &Value, policy: &Value) -> BTreeMap<u64, u32> {
             }
         }
         if !changed {
-            return ranks;
+            break;
         }
     }
+    let mut dependency_ranks = BTreeMap::<u64, u32>::new();
+    for (id, targets) in edges {
+        if let Some(parent) = ranks.get(&id).copied() {
+            for target in targets {
+                dependency_ranks
+                    .entry(target)
+                    .and_modify(|rank| *rank = (*rank).min(parent))
+                    .or_insert(parent);
+            }
+        }
+    }
+    TodoPriorities {
+        ranks,
+        dependency_ranks,
+    }
+}
+
+/// Propagate only unresolved, recorded prerequisites, including transitive waits.
+pub fn todo_ranks(db: &Value, policy: &Value) -> BTreeMap<u64, u32> {
+    todo_priorities(db, policy).ranks
 }
 pub fn linked(item: &Value, job: &Value) -> bool {
     (item["id"].is_number()
@@ -177,16 +264,78 @@ pub fn linked(item: &Value, job: &Value) -> bool {
                 || item["scheduler"]["job"] == job["id"]))
 }
 pub fn job_ranks(jobs: &[Value], db: &Value, policy: &Value) -> BTreeMap<String, u32> {
-    let todos = todo_ranks(db, policy);
+    let assignments = crate::product_identity::assignments(
+        db["items"].as_array().map(Vec::as_slice).unwrap_or(&[]),
+        jobs,
+        policy,
+    );
+    let TodoPriorities {
+        ranks: todos,
+        dependency_ranks,
+    } = todo_priorities_with_assignments(db, policy, &assignments);
     let mut ranks: BTreeMap<_, _> = jobs
         .iter()
         .filter_map(|j| {
             j["id"].as_str().map(|id| {
-                let owned = db["items"]
+                let primary = db["items"].as_array().into_iter().flatten().find(|i| {
+                    j["todo_id"]
+                        .as_u64()
+                        .is_some_and(|id| i["id"].as_u64() == Some(id))
+                });
+                let mcp = crate::product_identity::resolve(j, policy)
+                    != crate::product_identity::Resolution::Other
+                    || primary.is_some_and(|i| {
+                        crate::product_identity::resolve(i, policy)
+                            != crate::product_identity::Resolution::Other
+                    });
+                let candidates: Vec<_> = db["items"]
                     .as_array()
                     .into_iter()
                     .flatten()
                     .filter(|i| linked(i, j))
+                    .filter(|i| !mcp || primary.is_none() || i["id"] == j["todo_id"])
+                    .collect();
+                let target = assignments.target(j);
+                if target == crate::product_identity::Resolution::Unknown {
+                    return (
+                        id.to_owned(),
+                        primary
+                            .and_then(|i| i["id"].as_u64())
+                            .and_then(|id| todos.get(&id).copied())
+                            .unwrap_or(DEFAULT),
+                    );
+                }
+                if let Some(product) = target.product() {
+                    let current = assignments.primary(j).and_then(|todo| {
+                        db["items"]
+                            .as_array()
+                            .into_iter()
+                            .flatten()
+                            .find(|row| row["id"].as_u64() == Some(todo))
+                    });
+                    let inherited = current.and_then(|row| {
+                        let id = row["id"].as_u64()?;
+                        if crate::product_identity::resolve(row, policy)
+                            == crate::product_identity::Resolution::Other
+                        {
+                            dependency_ranks.get(&id).copied()
+                        } else {
+                            todos.get(&id).copied()
+                        }
+                    });
+                    return (
+                        id.to_owned(),
+                        inherited.map_or(product.rank, |rank| rank.min(product.rank)),
+                    );
+                }
+                let owned = candidates
+                    .into_iter()
+                    .filter(|i| {
+                        crate::product_identity::compatible(
+                            crate::product_identity::resolve(i, policy),
+                            target,
+                        )
+                    })
                     .filter_map(|i| i["id"].as_u64().and_then(|id| todos.get(&id).copied()))
                     .min();
                 (id.to_owned(), owned.unwrap_or_else(|| item_rank(j, policy)))

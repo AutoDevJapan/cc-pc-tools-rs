@@ -5,6 +5,7 @@
 //! Activity reads only event type/id/status; no payloads, commands or credentials are retained.
 pub mod backend;
 pub mod common;
+pub mod dispatch_receipt;
 pub mod engine;
 pub mod native;
 pub mod no_action;

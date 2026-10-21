@@ -13,7 +13,7 @@
     "workflow_entrypoints": 4
   },
   "support_resource_review_complete": false,
-  "unread_support_files_under4workflows": 25,
+  "unread_support_files_under4workflows": 22,
   "classification_is_not_installation": true,
   "assessment_snapshot_before_adoption": true,
   "live_dispositions": "skills-3080-adoptions.json",
@@ -74,7 +74,7 @@
       "candidate_disposition": "policy_rewrite_required",
       "reason": "sync/status/doctorとモデルaliasの解決順には独立の手順価値がある。一方、無条件CLI実行・secret env使用・通常loginを本人端末へ求める規則・自動hook配布はこのPC方針と衝突する。",
       "required_changes": "依頼対象のrepo/owner/scopeと変更予定を先に確認し、dry-run/旧版保持/限定読戻しを組み込む。秘密/AI APIキーは参照せずOAuth枠を維持。モデル切替/alias変更を勝手に行わず既存scheduler指示を優先。未知copy削除やforce再pullを自動化しない。commands/troubleshooting等は未読のまま全対応を主張しない。",
-      "body_semantic_review_scope": "Full selected public body read and SHA verified; own workflow supporting 3 files not semantically read",
+      "body_semantic_review_scope": "Fullentrypoint and selectedsupport read; remaining workflow support 2 unreviewed. No CLI execution or global permission.",
       "independent_review_complete": false,
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -110,7 +110,7 @@
       "candidate_disposition": "policy_rewrite_required",
       "reason": "sessionの学びを簡潔な検索可能文書へ整理する用途はある。friction通知だけでsubagentと直接pushを起動する指示、PRなし共有branchへ送る既定、簡体字固定は採用できない。",
       "required_changes": "依頼で許可された共有対象と宛先だけを扱い、秘密/顧客/未知sessionを送らない。本人向けは日本語。再委譲や自動外部送信をせず既存PR/別モデル/CI経路を保つ。doc-templateとpublishの正確な副作用は未読で、既存knowledge-to-skillsとのmetadata比較を深めてから統合又は専用入口を判断。",
-      "body_semantic_review_scope": "Full selected public body read and SHA verified; own workflow supporting 1 files not semantically read",
+      "body_semantic_review_scope": "Fullentrypoint and selectedsupport read; remaining workflow support 0 unreviewed. No CLI execution or global permission.",
       "independent_review_complete": false,
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -128,7 +128,7 @@
       "candidate_disposition": "policy_rewrite_required",
       "reason": "大規模codebaseの根拠行・未確定関係・coverage・増分checkpointの設計が有用。1/50tokenの成果主張は本文に実測根拠の記載がなく、上流の別実測は未確認。80%は目標値、信頼ラベル範囲は本文の2箇所で異なる。",
       "required_changes": "限定scope/guard/一次sourceを使いsource freshnessと主張正しさを分ける。新Python自作は禁止、配布済Python実行許可と混同しない。専任親を司令塔へ変更せず再委譲のみを強制しない。通常の技術検査を一律本人確認待ちにせず、UI画像/本当のowner判断は保持する。mainworkflowだけ読了で25supportやCLI/AST/GraphRAG実行は未確認。 知識ベースの簡体字固定は本人の日本語方針へ合わせる。commands.md未読のためcodebase --deep-enrichのAI/API利用有無は未確認であり、この機能を自動実行しない。",
-      "body_semantic_review_scope": "Full selected public body read and SHA verified; own workflow supporting 16 files not semantically read",
+      "body_semantic_review_scope": "Fullentrypoint and selectedsupport read; remaining workflow support 15 unreviewed. No CLI execution or global permission.",
       "independent_review_complete": false,
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -184,5 +184,28 @@
     "must": 0,
     "response_sha256": "793ad1958140bb245a64ac9722c10fe6c58f3d63c8a5f0b0ca07bf89582adfd3",
     "suggestions": "S1-S3 tightened in generated entry before adoption;no upstream/notice change"
+  },
+  "support_documents_read": [
+    {
+      "path": "skill-data/core/references/contribute-member.md",
+      "sha256": "83775b2c59aa6ac65c70529aff7bd14e6bf0f4dd6c05235b64b580afbc75ead2",
+      "bytes": 7748
+    },
+    {
+      "path": "skill-data/share/references/doc-template.md",
+      "sha256": "c2c54f3771ab49e6e40171e269821254b49f08051cb6382e9839d12ebfafa94f",
+      "bytes": 1161
+    },
+    {
+      "path": "skill-data/wiki/references/phases/phase0-init.md",
+      "sha256": "533afc3e4dc6cd4ea57c615a8c84ea624537ab1042f4bd86759821a0a1845c0e",
+      "bytes": 4643
+    }
+  ],
+  "superseded_by": {
+    "target": "teamai",
+    "current_manifest": "skills-3080-teamai-support-revision-manifest.json",
+    "live_dispositions": "skills-3080-adoptions.json",
+    "note": "Candidate table ispre-adoption snapshot;livecentral state isnotthese falseflags"
   }
 }

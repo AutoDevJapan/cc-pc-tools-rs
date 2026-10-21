@@ -9,22 +9,23 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"syscall"
 	"time"
 	"unsafe"
 )
 
 func cachePort(p Plan) int {
-	n, _ := strconv.ParseUint(p.Instance[:4], 16, 32)
-	return 50000 + int(n%10000)
+	return p.cacheListenerPort
 }
 
 // The existing owner-account cache server would execute compilers outside
 // this Job Object. Use the same installed binary with a new finite foreground
 // process. No shared server, cache configuration or ACL is changed.
-func startOwnedCache(p Plan) (func(), error) {
-	env, err := runtimeSDKEnv(p, workerEnv(p))
+func startOwnedCache(p *Plan) (func(), error) {
+	// Port zero makes the owning process bind an OS-selected available port.
+	// No probe-close-rebind race, excluded-port guess, or shared server lookup.
+	p.cacheListenerPort = 0
+	env, err := runtimeSDKEnv(*p, workerEnv(*p))
 	if err != nil {
 		return nil, err
 	}
@@ -75,16 +76,17 @@ func startOwnedCache(p Plan) (func(), error) {
 			return nil, errors.New("owned foreground cache exited before binding")
 		default:
 		}
-		ok, e := ownedTCPListener(uint32(c.Process.Pid), cachePort(p))
+		port, e := ownedCacheListener(uint32(c.Process.Pid))
 		if e != nil {
 			stop()
 			return nil, e
 		}
-		if ok {
-			if e = saveNew(filepath.Join(p.runtime(), "sdk-sccache-server.json"), map[string]any{"pid": c.Process.Pid, "port": cachePort(p), "kernel_listener_pid_verified": true, "foreground": true, "inherited_job_object": true, "cache": filepath.Join(p.runtime(), "sccache"), "shared_cache_modified": false}); e != nil {
+		if port != 0 {
+			if e = saveNew(filepath.Join(p.runtime(), "sdk-sccache-server.json"), map[string]any{"pid": c.Process.Pid, "port": port, "kernel_listener_pid_verified": true, "foreground": true, "inherited_job_object": true, "cache": filepath.Join(p.runtime(), "sccache"), "shared_cache_modified": false}); e != nil {
 				stop()
 				return nil, e
 			}
+			p.cacheListenerPort = port
 			return stop, nil
 		}
 		time.Sleep(50 * time.Millisecond)
@@ -93,17 +95,17 @@ func startOwnedCache(p Plan) (func(), error) {
 	return nil, errors.New("owned foreground cache listener deadline")
 }
 
-func ownedTCPListener(pid uint32, port int) (bool, error) {
+func ownedCacheListener(pid uint32) (int, error) {
 	proc := syscall.NewLazyDLL("iphlpapi.dll").NewProc("GetExtendedTcpTable")
 	var n uint32
 	r, _, _ := proc.Call(0, uintptr(unsafe.Pointer(&n)), 0, 2, 3, 0)
 	if r != 122 || n < 4 || n > 16<<20 {
-		return false, errors.New("kernel listener table size unavailable")
+		return 0, errors.New("kernel listener table size unavailable")
 	}
 	var b []byte
 	for attempt := 0; attempt < 3; attempt++ {
 		if n < 4 || n > 16<<20 {
-			return false, errors.New("kernel listener table size bound")
+			return 0, errors.New("kernel listener table size bound")
 		}
 		b = make([]byte, n)
 		r, _, _ = proc.Call(uintptr(unsafe.Pointer(&b[0])), uintptr(unsafe.Pointer(&n)), 0, 2, 3, 0)
@@ -112,17 +114,35 @@ func ownedTCPListener(pid uint32, port int) (bool, error) {
 		}
 	}
 	if r != 0 {
-		return false, fmt.Errorf("kernel listener table error %d", r)
+		return 0, fmt.Errorf("kernel listener table error %d", r)
+	}
+	if n > uint32(len(b)) {
+		return 0, errors.New("kernel listener table grew")
+	}
+	return cacheListenerFromTable(b[:n], pid)
+}
+
+func cacheListenerFromTable(b []byte, pid uint32) (int, error) {
+	if len(b) < 4 {
+		return 0, errors.New("kernel listener table header truncated")
 	}
 	count := binary.LittleEndian.Uint32(b[:4])
-	if uint64(count)*24+4 > uint64(n) {
-		return false, errors.New("kernel listener table truncated")
+	if uint64(count)*24+4 > uint64(len(b)) {
+		return 0, errors.New("kernel listener table truncated")
 	}
+	port := 0
 	for i := uint32(0); i < count; i++ {
 		row := b[4+i*24 : 4+(i+1)*24]
-		if binary.BigEndian.Uint16(row[8:10]) == uint16(port) && binary.LittleEndian.Uint32(row[20:24]) == pid {
-			return true, nil
+		// MIB_TCP_STATE_LISTEN, IPv4 127.0.0.1, and this exact child PID.
+		if binary.LittleEndian.Uint32(row[:4]) == 2 && binary.LittleEndian.Uint32(row[4:8]) == 0x0100007f && binary.LittleEndian.Uint32(row[20:24]) == pid {
+			if port != 0 {
+				return 0, errors.New("multiple owned cache listeners")
+			}
+			port = int(binary.BigEndian.Uint16(row[8:10]))
+			if port == 0 {
+				return 0, errors.New("owned cache listener has zero port")
+			}
 		}
 	}
-	return false, nil
+	return port, nil
 }

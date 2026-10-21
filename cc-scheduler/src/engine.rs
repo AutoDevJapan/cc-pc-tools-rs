@@ -584,6 +584,7 @@ impl<B: Backend> Scheduler<B> {
         ps: &Processes,
         cfg: &Value,
     ) -> Result<()> {
+        let deferred = crate::dispatch_receipt::recover_pending(self, jobs, ps)?;
         self.adopt_repair_dispatches(jobs)?;
         let db = self.todo()?;
         for item in arr(&db["items"]) {
@@ -611,7 +612,7 @@ impl<B: Backend> Scheduler<B> {
         if self.reconcile_product_results(jobs, ps).is_err() {
             self.report["product_results_deferred"] = json!([cc_job_policy::product_retry::ID]);
         }
-        self.release_repair_waits()
+        self.release_repair_waits_excluding(&deferred)
     }
     // Registration may finish after the launch CLI times out. The repair tick
     // must consume that receipt as well as the general watchdog, otherwise it
@@ -680,11 +681,15 @@ impl<B: Backend> Scheduler<B> {
     /// may be unavailable). Catch both newly completed and previously stranded
     /// edges here, without admitting unknown records or replaying old questions.
     pub fn release_repair_waits(&mut self) -> Result<()> {
+        self.release_repair_waits_excluding(&[])
+    }
+    fn release_repair_waits_excluding(&mut self, deferred: &[Value]) -> Result<()> {
         let snapshot = self.todo()?;
         let mut candidates = Vec::new();
         for item in arr(&snapshot["items"]) {
             let project = s(&item["project"]);
-            if item["status"] != "wait"
+            if deferred.contains(&item["id"])
+                || item["status"] != "wait"
                 || item["dispatchable"] != true
                 || !truth(&item["spec"])
                 || !item["wait_ready"].is_null()

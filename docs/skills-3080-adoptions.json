@@ -369,8 +369,8 @@
       "source_sha256": "82a22b1c37531834ab5784f93f950f0a8840ac4e4aa422f1ef2dc03437f9ad66",
       "target": "teamai",
       "disposition": "installed_new_adaptation",
-      "manifest": "skills-3080-installed-teamai-manifest.json",
-      "entrypoint_sha256": "393c15ccdc7a5613cd036b3792d2a5a6b4b63eebf37de48c999b69ed6933a440",
+      "manifest": "skills-3080-teamai-support-revision-manifest.json",
+      "entrypoint_sha256": "1695769ac6a10ef91e81f632e55ab72f1e8d35e7bdf9532ba3db7ebde942a884",
       "reason": "4workflowを安全に選び分ける1つのTeamAI固有入口として使う。CLIやsupportを導入/実行せず、別source occurrenceを自動で処理済みにしない。",
       "upstream_original_preserved": true,
       "source_notice_preserved": true

@@ -1,0 +1,48 @@
+{
+  "todo": 3080,
+  "source_head": "58d3c672f6f3966a8952caa5c1e3851e650b9877",
+  "review": 3203,
+  "payload_sha256": "5e244502941a99840d7c36a3e797afbb6faa6a6c5cb03d4bcfcbab4459099aa9",
+  "after_bundle_sha256": "ed60982a2de623099177666c061b4a2d80970e3945162431be6e929865f2814b",
+  "writer_sha256": "a5c330f97fba22799705c6f31e43a6d17d41c1d6ce11040507956c98fea9d9ad",
+  "backup_path": "D:/CC/Skills/.trash/todo3080-teamai-support-20261021-20261021-073253-todo-3080-991c1ae3",
+  "backup_journal_sha256": "aa4ab71e6c97ba95b306aae73ff1c356a7b1d756e3047e8ad7bc1399f88ec48d",
+  "before_backup_files": 5,
+  "changed_files": 3,
+  "after_files_verified": 5,
+  "upstream_notice_unchanged": 2,
+  "new_installs": 0,
+  "manifest": "skills-3080-teamai-support-revision-manifest.json",
+  "manifest_sha256": "8bb1eb5c4f4bc38c5f056674a5dc2eeb7110942c645e35461da311fcac6a06ce",
+  "validator": "PASS actual1/5",
+  "discovery": {
+    "found": 1,
+    "enabled": 1,
+    "description_match": true,
+    "parse_errors": 0,
+    "same_names_other_paths": 0,
+    "metadata_total": 323,
+    "model_called": false
+  },
+  "support_read": [
+    {
+      "path": "skill-data/core/references/contribute-member.md",
+      "sha256": "83775b2c59aa6ac65c70529aff7bd14e6bf0f4dd6c05235b64b580afbc75ead2",
+      "bytes": 7748
+    },
+    {
+      "path": "skill-data/share/references/doc-template.md",
+      "sha256": "c2c54f3771ab49e6e40171e269821254b49f08051cb6382e9839d12ebfafa94f",
+      "bytes": 1161
+    },
+    {
+      "path": "skill-data/wiki/references/phases/phase0-init.md",
+      "sha256": "533afc3e4dc6cd4ea57c615a8c84ea624537ab1042f4bd86759821a0a1845c0e",
+      "bytes": 4643
+    }
+  ],
+  "support_unread": 22,
+  "CLI_or_model_executed": false,
+  "postinstall_delta_review": "pending",
+  "recorded_at": "2026-10-20T22:43:12.4172553Z"
+}

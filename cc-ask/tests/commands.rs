@@ -696,7 +696,7 @@ fn legacy_explicit_owner_question_keeps_its_owner_mention() {
         if post {
             let file = h.root.path().join("question.txt");
             std::fs::write(&file, body).unwrap();
-            cmd_post(&mut h.ctx, "200", &file, &[], true).unwrap();
+            cmd_post(&mut h.ctx, "100", &file, &[], true).unwrap();
         } else {
             cmd_log(&mut h.ctx, "画面の方向", body, None, true).unwrap();
         }

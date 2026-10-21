@@ -23,6 +23,15 @@ type serviceFixtureIdentity struct {
 
 func serviceFixtureFile(root, name string) string { return filepath.Join(root, name) }
 
+func sameServiceFixtureExecutable(path, expected string) bool {
+	got, err := os.Stat(path)
+	if err != nil {
+		return false
+	}
+	want, err := os.Stat(expected)
+	return err == nil && os.SameFile(got, want)
+}
+
 func writeServiceFixture(root, name string, value any) {
 	body, err := json.Marshal(value)
 	if err != nil || os.WriteFile(serviceFixtureFile(root, name), body, 0600) != nil {
@@ -143,7 +152,7 @@ func retainServiceFixture(t *testing.T, root, mode string) syscall.Handle {
 	length := uint32(len(buffer))
 	ok, _, _ := kernel32.NewProc("QueryFullProcessImageNameW").Call(uintptr(handle), 0, uintptr(unsafe.Pointer(&buffer[0])), uintptr(unsafe.Pointer(&length)))
 	executable, exeErr := os.Executable()
-	if ok == 0 || exeErr != nil || syscall.UTF16ToString(buffer[:length]) != executable || identity.Executable != executable {
+	if ok == 0 || exeErr != nil || !sameServiceFixtureExecutable(syscall.UTF16ToString(buffer[:length]), executable) || !sameServiceFixtureExecutable(identity.Executable, executable) {
 		syscall.CloseHandle(handle)
 		t.Fatal("fixture executable mismatch")
 	}
@@ -169,6 +178,29 @@ func retainServiceFixture(t *testing.T, root, mode string) syscall.Handle {
 		}
 	})
 	return handle
+}
+
+func TestServiceFixtureExecutableUsesFileIdentity(t *testing.T) {
+	root := t.TempDir()
+	executable := filepath.Join(root, "fixture.exe")
+	alias := filepath.Join(root, "alias.exe")
+	other := filepath.Join(root, "other.exe")
+	for _, path := range []string{executable, other} {
+		if err := os.WriteFile(path, []byte("fixture"), 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Link(executable, alias); err != nil {
+		t.Fatal("owned executable alias unavailable", err)
+	}
+	if !sameServiceFixtureExecutable(alias, executable) {
+		t.Fatal("same file with another path was rejected")
+	}
+	for _, path := range []string{other, filepath.Join(root, "absent.exe")} {
+		if sameServiceFixtureExecutable(path, executable) {
+			t.Fatal("different or absent executable was accepted")
+		}
+	}
 }
 
 func TestServiceProcessReturnsAfterMainExitWithInheritedOutput(t *testing.T) {

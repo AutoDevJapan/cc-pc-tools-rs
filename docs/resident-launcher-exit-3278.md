@@ -47,5 +47,14 @@ Green: stdout/stderrをnilにしてnull deviceへ直接つなぐ。同じ2条件
 実タスクの読取検査は明示した環境変数を使う別の検査であり、この結果には含めない。
 固定ソースの別モデルレビューとCI、通常マージ、既存Prd配布と通常再起動は未完了。
 
+Opus5.5/maxの固定候補レビュー3293は、base `df54f940` → head `2fc1af70` の指定範囲を
+読了しMust0。Windows CI run `39549553614` では、検査専用実行物のパス完全一致が
+`fixture executable mismatch` となった。レビューのNit1として挙がった懸念が実際に
+発生したため、PID・作成時刻・保持handleの照合を維持し、実行物の比較だけを
+`os.Stat` と `os.SameFile` に変更した。同じファイルへの別名を受け付け、同じ内容の
+別ファイルと存在しないファイルを拒否する回帰を追加。旧比較でRedを確認した。
+修正後の対象Go全件は1.798秒、raceは7.949秒で成功し、vetも成功した。
+通常の起動処理は `2fc1af70` から変更していない。新しい固定差分レビューとCIは未完了。
+
 一次資料: [Go os/exec.Cmd](https://pkg.go.dev/os/exec#Cmd)。出力がnilの場合は
 null deviceへ接続し、非ファイルのWriterを設定した場合は回収用goroutineの終了も待つ。

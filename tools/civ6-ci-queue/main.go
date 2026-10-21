@@ -12,7 +12,7 @@ import (
 var keyPattern = regexp.MustCompile(`^[0-9]{1,18}/[0-9]{1,4}/[0-9]{1,18}$`)
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: civ6-ci-queue <tick|worker|status> --config <path> [--entry <run/attempt/job>]")
+	fmt.Fprintln(os.Stderr, "usage: civ6-ci-queue <tick|worker|status|resume-unassigned> --config <path> [--entry <run/attempt/job>]")
 	os.Exit(2)
 }
 
@@ -78,6 +78,17 @@ func main() {
 		}
 		b, _ := json.MarshalIndent(l, "", "  ")
 		fmt.Println(string(b))
+	case "resume-unassigned":
+		if !keyPattern.MatchString(entry) {
+			usage()
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+		defer cancel()
+		if err := d.ResumeUnassigned(ctx, entry); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Println(`{"status":"reserved","official_success":false}`)
 	default:
 		usage()
 	}

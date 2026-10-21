@@ -1,0 +1,35 @@
+{
+  "todo": 3080,
+  "review3215": {
+    "head": "8867412bf7d7164443d1026b3cf524221eb2dd2b",
+    "base": "32db040c342acced273a30b463ad4df41faad012",
+    "must": 0,
+    "raw_result_sha256": "9ed7ef3dc2dc84fa9ba94ed9090e986359c02aa6596a3e54c00f9a29f2e3fb6c",
+    "read_scope": "All15obra primary+MIT;TeamAIactual5/backup5/payloads/journal and changed source references;26/130hashes. Static review,not CLI/model acceptance."
+  },
+  "candidate": {
+    "name": "diagnosing-superpowers",
+    "bundle_sha256": "d23d2f69c62aa03b9b580c66542c2115fd049bc886a5817f99adb9a40055f203",
+    "primary_count": 1,
+    "support_read": 19,
+    "workflow_tree_blobs": 20,
+    "new_files": 5,
+    "installed": 0,
+    "independent_review": "pending",
+    "memory_structure_reference_hash_check": "PASS",
+    "read_only_preflight": "PASS;targets1;no writes",
+    "catalog_test_count1": "PASS",
+    "catalog_vet": "PASS",
+    "real_private_session_read": false,
+    "source_commands_executed": false,
+    "limits": "No semantic execution/model-turn/context-budget measurement.14obra integration proposals still unapplied;otherworkflow support incomplete."
+  },
+  "counts": {
+    "designs": 27,
+    "installed": 26,
+    "integrated": 0,
+    "excluded": 0,
+    "undecided_or_held": 73194
+  },
+  "observed_at": "2026-10-21T00:13:54.8345327Z"
+}

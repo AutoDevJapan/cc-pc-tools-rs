@@ -1,7 +1,7 @@
 //! Counts jobs, task records and verified processing separately.
 //! Inputs must already be privacy-restricted projections; no source prose is read here.
 use chrono::DateTime;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 
 const STATES: [&str; 12] = [
@@ -50,7 +50,29 @@ fn processing(job: &Value, now: u64) -> bool {
         )
 }
 
-fn evidence(active: Option<&Value>, now: u64, stopped: &BTreeSet<u64>) -> (Value, BTreeSet<u64>) {
+// Only rows carrying an explicit current-job binding opt in. Other products
+// keep their existing observation contract. Null explicitly means no current job.
+fn observed_ids(job: &Value, bindings: &BTreeMap<u64, Value>) -> Vec<u64> {
+    job["todo_ids"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_u64)
+        .filter(|id| {
+            *id > 0
+                && bindings
+                    .get(id)
+                    .is_none_or(|key| key.is_string() && key == &job["job_key"])
+        })
+        .collect()
+}
+
+fn evidence(
+    active: Option<&Value>,
+    now: u64,
+    stopped: &BTreeSet<u64>,
+    bindings: &BTreeMap<u64, Value>,
+) -> (Value, BTreeSet<u64>) {
     let Some(input) = active else {
         return (
             json!({"state":"unavailable","verifiedCount":null,"total":null,"observedAt":null}),
@@ -94,12 +116,9 @@ fn evidence(active: Option<&Value>, now: u64, stopped: &BTreeSet<u64>) -> (Value
             invalid = true;
         }
         if !processing(job, now)
-            || job["todo_ids"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .filter_map(Value::as_u64)
-                .any(|id| stopped.contains(&id))
+            || observed_ids(job, bindings)
+                .iter()
+                .any(|id| stopped.contains(id))
             || !seen.insert(key)
         {
             continue;
@@ -107,14 +126,7 @@ fn evidence(active: Option<&Value>, now: u64, stopped: &BTreeSet<u64>) -> (Value
         count += 1;
         sessions.push(json!({"key":format!("job-{key}"),
             "validUntil":at(&job["last_activity"]["at"]).unwrap().min(observed.unwrap()).saturating_add(30_000)}));
-        ids.extend(
-            job["todo_ids"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .filter_map(Value::as_u64)
-                .filter(|id| *id > 0),
-        );
+        ids.extend(observed_ids(job, bindings));
     }
     let complete = !invalid
         && input["status"] == "ok"
@@ -162,7 +174,23 @@ fn complete_collections(board: &Value) -> bool {
         .is_some_and(|products| products.iter().all(product))
 }
 
-fn state(worker: &Value, id: u64, processing: &BTreeSet<u64>) -> &'static str {
+fn strict_job_match(worker: &Value) -> bool {
+    worker.get("processingJobKey").is_some()
+        || matches!(
+            worker["productIdentity"]["productId"].as_str(),
+            Some("godd-mcp-contract" | "godd-mcp-alpha")
+        )
+        || worker["productIdentity"]["state"] == "unknown"
+}
+
+fn accepts_job(worker: &Value, job: &Value) -> bool {
+    !strict_job_match(worker)
+        || (worker["primaryJob"].is_string()
+            && worker["processingJobKey"].is_string()
+            && worker["processingJobKey"] == job["job_key"])
+}
+
+fn state(worker: &Value, id: u64, processing: &BTreeSet<u64>, matched: bool) -> &'static str {
     // Canonical work waits take precedence over a collector captured before the wait.
     match worker["recordedStatus"].as_str() {
         Some("done") => "done",
@@ -184,7 +212,7 @@ fn state(worker: &Value, id: u64, processing: &BTreeSet<u64>) -> &'static str {
         _ if worker["waitingKind"] == "intake" => "intake_wait",
         _ if worker["waitingKind"] == "startup_error" => "startup_failure",
         _ if worker["jobStatus"] == "queued" => "job_queued",
-        _ if processing.contains(&id) => "processing",
+        _ if processing.contains(&id) && matched => "processing",
         Some("todo") => "not_started",
         _ => "execution_unverified",
     }
@@ -218,7 +246,19 @@ pub fn project(board: &Value, active: Option<&Value>, now: u64) -> Value {
     } else {
         BTreeSet::new()
     };
-    let (processing, processing_ids) = evidence(active, now, &stopped);
+    let bindings = records(board)
+        .filter_map(|row| {
+            Some((
+                row["id"]
+                    .as_str()?
+                    .strip_prefix("todo-")?
+                    .parse::<u64>()
+                    .ok()?,
+                row.get("processingJobKey")?.clone(),
+            ))
+        })
+        .collect();
+    let (processing, processing_ids) = evidence(active, now, &stopped, &bindings);
     let current_ids = if stale {
         BTreeSet::new()
     } else {
@@ -254,7 +294,17 @@ pub fn project(board: &Value, active: Option<&Value>, now: u64) -> Value {
             if !seen.insert(id) {
                 continue;
             }
-            let state = state(worker, id, &current_ids);
+            let matched = active
+                .into_iter()
+                .flat_map(|input| input["jobs"].as_array().into_iter().flatten())
+                .any(|job| {
+                    self::processing(job, now)
+                        && accepts_job(worker, job)
+                        && job["todo_ids"]
+                            .as_array()
+                            .is_some_and(|ids| ids.contains(&json!(id)))
+                });
+            let state = state(worker, id, &current_ids, matched);
             *counts.get_mut(state).unwrap() += 1;
             finished += usize::from(state == "done");
             let progress = worker["progress"]
@@ -272,9 +322,8 @@ pub fn project(board: &Value, active: Option<&Value>, now: u64) -> Value {
                 .filter(|job| {
                     state == "processing"
                         && self::processing(job, now)
-                        && job["todo_ids"]
-                            .as_array()
-                            .is_some_and(|ids| ids.iter().any(|value| value.as_u64() == Some(id)))
+                        && accepts_job(worker, job)
+                        && observed_ids(job, &bindings).contains(&id)
                 })
                 .filter_map(|job| job["job_key"].as_str())
                 .filter(|key| {
@@ -350,7 +399,7 @@ pub fn project(board: &Value, active: Option<&Value>, now: u64) -> Value {
             "currentSession":null,"sessionReason":"個別の担当は作業ごとの観測で確認します。"}),
         );
     }
-    json!({"schemaVersion":1,"state":if stale {"stale"} else if ready {"available"} else {"unavailable"},"observedAt":fetched,
+    json!({"collectorBindingsConfigured":active.and_then(|input|input["product_bindings_configured"].as_bool()),"collectorBindingsOverridden":active.and_then(|input|input["product_bindings_overridden"].as_bool()),"schemaVersion":1,"state":if stale {"stale"} else if ready {"available"} else {"unavailable"},"observedAt":fetched,
         "inventory":{"taskRecords":if ready {Some(tasks.len())} else {None},
             "unfinishedTaskRecords":if ready {Some(tasks.len()-finished)} else {None},
             "jobOnlyRecords":if ready {Some(job_rows)} else {None},
@@ -642,6 +691,19 @@ fn apply_product(product: &mut Value, tasks: &BTreeMap<u64, Value>, protected: b
         let state = task
             .and_then(|task| task["state"].as_str())
             .unwrap_or("execution_unverified");
+        let state = if state == "processing"
+            && strict_job_match(worker)
+            && (!worker["primaryJob"].is_string()
+                || !worker["processingJobKey"].is_string()
+                || !task.is_some_and(|task| {
+                    task["references"]["sessions"]
+                        .as_array()
+                        .is_some_and(|keys| keys.contains(&worker["processingJobKey"]))
+                })) {
+            "execution_unverified"
+        } else {
+            state
+        };
         worker["workState"] = json!(state);
         worker["status"] = json!(match state {
             "processing" => "working",

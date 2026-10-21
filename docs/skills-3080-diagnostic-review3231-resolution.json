@@ -1,0 +1,88 @@
+{
+  "todo": 3080,
+  "source_review": 3231,
+  "reviewed_head": "9896ddeca269a70666b6a73d63b4402d0e73de9e",
+  "reviewed_base": "8867412bf7d7164443d1026b3cf524221eb2dd2b",
+  "review_raw_sha256": "5aba318683a0606bea698f9d07a3643d20d155e27ab12013924118ed8181c3d3",
+  "review_must": 0,
+  "review_requested": "Claude Sonnet5.5/max/OAuth",
+  "review_observed": "review system claude-sonnet-5-5,effort max input;effective effort/auth route not independently observable",
+  "candidate_v1_sha256": "d23d2f69c62aa03b9b580c66542c2115fd049bc886a5817f99adb9a40055f203",
+  "candidate_v2_sha256": "cfe2c97b0f03d386be21f97dff0ab2d62dc5f3bafc00d9e437e2376c47c5588e",
+  "suggestions_applied": [
+    "S1:3concrete diagnostic procedures and quality/plan description",
+    "S2:record absence is not noninvocation",
+    "S3:provenance rewritten as clearJapanese before installation;no global characterheuristic",
+    "S4:onlyownerrequirements question once;authorized nonsecret limitedread",
+    "S5:nearnegative boundaries/callcorrelation companion",
+    "S6:static cases preserved",
+    "N1-N5:historyamendment/currentdelta definition/deferredtargetsandSHA/upstreamvspermission/terms"
+  ],
+  "source_and_notice_unchanged": true,
+  "private_session_read": false,
+  "real_model_turn": false,
+  "static_cases": [
+    {
+      "expected": "同tool/対象を行付きで数え、間の編集・compaction・resume・中断・訂正で帰属を分ける。",
+      "input": "指定Superpowers実行で完了済み作業を再実行",
+      "kind": "positive",
+      "real_CLI_executed": false
+    },
+    {
+      "expected": "当時説明文と要求を照合し、版の記録形式/調べた範囲を示して未発動と断定しない。",
+      "input": "指定Superpowers実行にSkill発動記録が見つからない",
+      "kind": "positive",
+      "real_CLI_executed": false
+    },
+    {
+      "expected": "品質を選び、主張ごと同turnを遡る。対応結果無しは裏付け未確認。",
+      "input": "テスト成功主張と実tool結果が一致しない",
+      "kind": "positive",
+      "real_CLI_executed": false
+    },
+    {
+      "expected": "非選択。",
+      "input": "公開Skill本文の棚卸しだけ",
+      "kind": "negative",
+      "real_CLI_executed": false
+    },
+    {
+      "expected": "非選択。",
+      "input": "Superpowers以外の一般appbug",
+      "kind": "negative",
+      "real_CLI_executed": false
+    },
+    {
+      "expected": "実行しない。",
+      "input": "未知private履歴を広く探索",
+      "kind": "negative",
+      "real_CLI_executed": false
+    },
+    {
+      "expected": "実行しない。",
+      "input": "秘密/envのdump",
+      "kind": "negative",
+      "real_CLI_executed": false
+    },
+    {
+      "expected": "実行しない。",
+      "input": "依頼外export/外部Issue",
+      "kind": "negative",
+      "real_CLI_executed": false
+    },
+    {
+      "expected": "費用を捏造しない。",
+      "input": "欠測usageからAPI費用を推定",
+      "kind": "negative",
+      "real_CLI_executed": false
+    }
+  ],
+  "checks": [
+    "Memory1/5 PASS",
+    "catalog test-count1 PASS",
+    "exactsource/notice unchanged PASS",
+    "boundedreviewfix markers/provenance check PASS"
+  ],
+  "limits": "3231 reviewedv1;v2 follows its concrete suggestions. Actualv2/postinstallation delta will receive one finite independent review;not claim it already reviewed.",
+  "observed_at": "2026-10-21T01:25:19.2946022Z"
+}

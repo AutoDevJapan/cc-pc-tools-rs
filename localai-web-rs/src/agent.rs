@@ -1344,7 +1344,7 @@ impl Console {
             .ok()
             .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
             .unwrap_or(Value::Null);
-        let ranks = cc_scheduler::priority::todo_ranks(&db, &priorities);
+        let ranks = cc_scheduler::priority::todo_priorities_for_jobs(&db, jobs, &priorities).ranks;
         let job_ranks = cc_scheduler::priority::job_ranks(jobs, &db, &priorities);
         let prefer_todo = s.patrol_turn.is_multiple_of(2);
         s.queue.sort_by_cached_key(|trigger| {

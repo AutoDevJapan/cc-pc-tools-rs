@@ -158,12 +158,7 @@ pub fn bind_review(db: &mut Value, receipt: &Value, owner: &Value) -> Result<boo
 }
 
 /// Check an existing allocation against the supplied observation time.
-pub fn bind_review_at(
-    db: &mut Value,
-    receipt: &Value,
-    owner: &Value,
-    at: f64,
-) -> Result<bool> {
+pub fn bind_review_at(db: &mut Value, receipt: &Value, owner: &Value, at: f64) -> Result<bool> {
     use cc_scheduler::product_review as scope;
     let row = db["items"]
         .as_array()

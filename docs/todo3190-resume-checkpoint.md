@@ -2,6 +2,38 @@
 
 関連Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/325
 
+## 2026-10-21 13:55 JSTの定期再確認
+
+PR315は前回と同じhead `b1559fcd17a38cff52ab8d9a93afd31432776e5e`、OPEN、
+mergeCommit/mergedAt=nullです。同headの検査は全件終了しSUCCESS15/SKIPPED1/NEUTRAL1。
+3275は正常metadataでtodo/jobsTotal=0、3153はwait --on3275のままで、通常mergeは未実施です。
+前回と同じ待機条件のため新しいDiscord結果を登録・再送せず、配送済みrecord
+`b947029118957813e52435e05ce81a94d2e1aeb53c2f06d973f9d9f6a3079644` を保持します。
+今回の実担当結果は元3190の通常待機理由と下記の新しい私的引継ぎに保存しました。
+
+実jobは `20261021-135256-todo-3190`、正常jobs statusはgpt-6.1-sol/max、todo_id/cwd一致。
+実turn_contextは独立照合していません。再開時HEADはa2d9fe4、差分なし、同じbranchでした。
+実所有者を正常repo照会でAutoDevJapanと確認し、guardはok/非client/分類確認済みです。
+原保護一覧の復旧とは扱いません。起動/プロジェクト指示・AgentConduct正本・元再開記録と、
+正常repo/PR・選択ToDoの現在note/metadata・自分のstatusだけを確認しました。
+本人原資料/元仕様/applied/旧台帳/保護名簿/稼働実物は未読、実装・コード検査・配布は未実施です。
+3153のnormal noteに親3110のdf54f94/d60d7484…配布票が届いていましたが、自分の実測ではありません。
+
+正本の最新本人訂正は「対応が必要な時だけメンション」です。12:34の旧メンション要件は
+履歴として保持し、対応不要の今回には本文mention/reply ping/--notifyを付けません。
+旧要件を根拠に未通知補充・再送・質問をせず、親への結果記録と重複抑止を維持します。
+これは通知条件の更新で、元の方向回答・UI承認・禁止3件の範囲を変えるものではありません。
+
+wait-retryを1回登録し、正常readbackはwait/retry-time、notBefore=1792562145
+（2026-10-21 14:55:45 JST）、jobsTotal=6、wait_on空でした。本人判断待ちではありません。
+原票は `todo3190-wait-{registration,readback}-20261021-135256.private.json`、
+今回の達成内容/未実施/残条件/親の観測範囲は `todo3190-parent-handoff-20261021-135256.private.json`。
+この文書だけをcommit/pushし、最新実HEADのcheckpoint要求/結果は
+`todo3190-checkpoint-final-20261021-135256.private.json` と
+`todo3190-checkpoint-final-result-20261021-135256.private.json` に保存します。
+次回もPR315の通常mergeを1回確認し、確認後だけ最新mainへ統合して方向記録の実装を始めます。
+元3050/3084/他依存と未完コード/Prdは保持しています。
+
 ## 2026-10-21 12:34 JSTの再開照合と親への返却
 
 PR315はhead `b1559fcd17a38cff52ab8d9a93afd31432776e5e`、OPEN、base=main、

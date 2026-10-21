@@ -68,15 +68,16 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 			// Restore the original private source without overwriting its bytes or
 			// trusting an intake phase as canonical delivery/application evidence.
 			saved.Phase, saved.Reported = "conversation_reply_saved", ""
-			// All supported delivery paths write this file before mutating a
-			// ToDo. Its presence means a prior attempt needs delivery evidence;
-			// an acquisition saved before the first attempt can proceed normally.
+			// Every delivery writes this version's marker before mutating the
+			// ToDo. A prior version's input is not an attempt for a captured edit.
+			saved.ConversationSourceRecovered = false
 			notePath := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".note.txt")
 			if _, err := os.Lstat(notePath); !os.IsNotExist(err) {
-				if _, err = boundedRegular(notePath); err != nil {
+				priorNote, err := boundedRegular(notePath)
+				if err != nil {
 					return nil, errors.New("conversation prior delivery evidence unavailable")
 				}
-				saved.ConversationSourceRecovered = true
+				saved.ConversationSourceRecovered = hasNoteMarker(string(priorNote), conversationReplyMarker(q, &saved))
 			}
 			old = &saved
 			r.State.Requests[reply.Message] = old
@@ -149,13 +150,19 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	if err != nil {
 		return err
 	}
-	marker := "conversation-owner-reply:" + q.SenderID + ":" + reply.Message + ":" + canonicalHash([]string{req.Text, req.Edited})[:16]
+	marker := conversationReplyMarker(q, req)
 	if q.Wait {
 		// Every waiting reply, including a second reply, gets an immutable input
 		// before any edit. Reacquisition must not silently replace that version.
 		answer, b, answerFile, reacquired, err := r.conversationAnswerInput(q, reply, req, receipt)
 		if err != nil {
 			return err
+		}
+		if reacquired {
+			// This survives both a lost successful answer response and another
+			// intake loss. Delivery proof cannot prove application of a different
+			// source SHA, even if a canonical answer was already committed.
+			req.ConversationRecoveryNote = "再取得で受領元が置換済み。メモの旧受領SHAを現在版の反映証拠にしない。実反映と質問の締めは未確認。現在のsource_receipt_sha256=" + bytesHash(receipt)
 		}
 		if conversationDeliveryRecorded(row, q, answer, b) || conversationAnswerRecorded(row, q, answer, b) || (reacquired && conversationQuestionAnswered(row, q) && hasNoteMarker(row.Note, marker)) {
 			req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
@@ -174,10 +181,6 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 			if err != nil || current.Project != q.Project || !conversationAnswerRecorded(current, q, answer, b) {
 				return errors.New("conversation reacquired answer readback deferred")
 			}
-			// Delivery is distinct from application/closing. A legacy overwritten
-			// source cannot inherit the old source SHA's application proof. Keep a
-			// durable reason instead of editing a newer ToDo just to change a SHA.
-			req.ConversationRecoveryNote = "旧版の再取得で受領元が置換済み。メモの旧受領SHAを現在版の反映証拠にしない。実反映と質問の締めは未確認。現在のsource_receipt_sha256=" + bytesHash(receipt)
 			req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
 			return r.save()
 		}
@@ -267,6 +270,10 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	req.Todo = q.Todo
 	req.Phase = "conversation_reply_delivered"
 	return r.save()
+}
+
+func conversationReplyMarker(q ConversationQuestion, req *Request) string {
+	return "conversation-owner-reply:" + q.SenderID + ":" + req.Message + ":" + canonicalHash([]string{req.Text, req.Edited})[:16]
 }
 
 func (r *Runner) conversationReplyInstructions(q ConversationQuestion, reply conversationReply, req *Request, receipt []byte, marker string) string {

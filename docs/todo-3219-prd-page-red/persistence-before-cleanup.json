@@ -1,0 +1,24 @@
+{
+  "checked_at": "2026-10-21T09:04:15.1211074+09:00",
+  "branch": "scheduler/todo-3219-3103",
+  "local_head": "6a0a6cda199ceae7ae945edebb0f3d976b0f4088",
+  "remote_head": "6a0a6cda199ceae7ae945edebb0f3d976b0f4088",
+  "remote_matches": true,
+  "only_measurement_evidence_committed": true,
+  "logs": [
+    {
+      "path": "stdout.txt",
+      "committed_git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "raw_file_git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "raw_bytes_preserved": true
+    },
+    {
+      "path": "stderr.txt",
+      "committed_git_blob": "44d5b3cf26dcfb8d82f81c0b82d60331de0a0cd4",
+      "raw_file_git_blob": "44d5b3cf26dcfb8d82f81c0b82d60331de0a0cd4",
+      "sha256": "3593e92e5dffe6040b6cf61df8af486021c860cb2346874593002b336193ee53",
+      "raw_bytes_preserved": true
+    }
+  ]
+}

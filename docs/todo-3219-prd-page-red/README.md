@@ -82,10 +82,34 @@ testの固定bytes、renderer、画面asset、`Cargo.lock` を変更していな
 テスト本体のstdout/stderrは、nextestが外側のstderrへまとめた内容も含めてそのまま保存した。
 `.gitattributes` の `-text` で、ログがcommit時に改行変換されないようにしている。
 
-## 残る保存と後片付け
+## 保存と後片付け
 
 測定用gate PID61992は終了後に不在と確認した。一時領域の通常planは
 6,172項目 / 2,303,864,602 byteのため `quarantine` / reason `size` を指定した。
-測定記録をcommit/pushしてGitHub側のHEADを照合してから、この所有領域だけを退避し、
-finishの `source_absent` とschedulerの再開情報保存を確認する。
+測定記録をcommit/pushしてGitHub側のHEAD `6a0a6cda199ceae7ae945edebb0f3d976b0f4088` の一致と、
+生ログがcommit後も同じバイト列であることを照合した。
+通常のquarantineは別ドライブへの移動を選び、`QUARANTINE_CROSS_DRIVE` で移動前に終了した。
+これは削除命令や自動承認レビューによる拒否ではない。
+
+このため、今回の明示指示に従い同じDドライブの新規の削除希望フォルダーへ手作業で退避した。
+`D:/削除希望/20261021-todo-3219-prd-page-red-530173a8/data` に内容を保持している。
+退避先は作成前に存在しないことを確認し、既存のデータや他担当の成果を開いていない。
+この新規退避先のguardは未分類だったため、許可の根拠は今回の同一ドライブ退避の明示指示と
+所有領域の照合とし、既存の保護対象へのアクセス許可へ広げていない。
+
+rootを含む6,173項目について、移動前・直前・移動後のfile ID、属性、記録した時刻、
+サイズ、SHA256、全hardlinkのtree内名数とOS link数を照合した。
+全祖先と全項目のreparse不在、測定プロセスと子孫の終了、rootのvolume/file IDも確認した。
+前後の全項目の集約値は `e0712125e30e062f9e4f868ecf9733888258a959281556f10c12599d17e6ed69` で一致。
+元の所有領域の不在を確かめてfinishし、`source_absent` を受領した。削除したという意味ではない。
+退避先の `理由.txt` とpreservation manifestにも完了を記録している。
+
+照合に使った小さなGo製の一時検査道具も、別のsafe-delete所有領域で作成した。
+こちらはplanが返した通常削除を別呼出しで実行し、finishの `source_absent` を確認した。
+追加のRustビルド・GPU・モデル起動は行っていない。
+
+最終保存では、この後片付けの記録も同じ担当branchへcommit/pushする。
+scheduler用の実HEAD付きrequest/応答と終了時の再開メモは、担当worktreeの
+`.ci-work/todo3219-checkpoint-{request,response}.private.json` /
+`.ci-work/todo3219-resume.private.md` に保存し、正規checkpointの成功を確認してから終了する。
 親が受領する原応答は通常のCLI経由とし、通知・メンション・受領helper・子Codexは追加しない。

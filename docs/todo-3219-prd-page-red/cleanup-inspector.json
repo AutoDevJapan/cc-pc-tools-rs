@@ -1,0 +1,14 @@
+{
+  "ordinary_remove_submitted_separately": true,
+  "finish_state": "source_absent",
+  "executable_sha256": "52cb638db0be5f60bf76daecd53a070f2a648d94d43df1592ea35e8add1f5c80",
+  "executed_with_create_no_window": true,
+  "ordinary_remove_exit": 0,
+  "inspector_owner_id": "d3148725d8f4c6133db1a0227a45f4f0",
+  "ordinary_plan_entries": 2,
+  "ordinary_plan_action": "submit_to_exec_tool",
+  "purpose": "one-off read-only file ID, attribute, SHA256 and all hardlink ownership inspection before/immediately-before/after the manual same-drive quarantine",
+  "source_preserved_in": "own .ci-work/todo3219-cleanup-inspect.private.go",
+  "source_sha256": "d3add904abfa0cef6eae1962793d74ded1d68edfefc676f9bfd7d680876845da",
+  "ordinary_plan_bytes": 4471641
+}

@@ -2095,6 +2095,7 @@ mod capacity_regressions {
     #[test]
     fn inherited_owner_choices_are_bound_to_the_current_target_and_generation() {
         for (case, expected_model, expected_effort) in [
+            ("matching_values", "gpt-6-luna", "high"),
             ("different_values", "gpt-6.1-sol", "max"),
             (
                 "live_environment_parent_different_values",
@@ -2111,7 +2112,7 @@ mod capacity_regressions {
             let t = Test::new();
             let mut parent = job(json!({"id":"launcher","status":"running",
                 "pid":std::process::id(),"pid_created":123,"cwd":t.ctx.root,
-                "todo_id":if case == "different_values" || case.starts_with("live_environment_parent") {Value::Null} else {json!(1)},
+                "todo_id":if ["matching_values", "different_values"].contains(&case) || case.starts_with("live_environment_parent") {Value::Null} else {json!(1)},
                 "model":"gpt-6-luna","effort":"high",
                 "model_origin":"owner_request","effort_origin":"owner_request"}));
             if case.contains("different_values") || case == "stale_environment_parent" {
@@ -2154,7 +2155,9 @@ mod capacity_regressions {
                 "--launch-key",
                 key,
             ];
-            if case != "different_values" && !case.starts_with("live_environment_parent") {
+            if !["matching_values", "different_values"].contains(&case)
+                && !case.starts_with("live_environment_parent")
+            {
                 args.extend(["--todo-id", "2"]);
             }
             if case.contains("environment_parent") {

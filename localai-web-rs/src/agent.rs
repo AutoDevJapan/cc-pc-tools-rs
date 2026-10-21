@@ -3508,7 +3508,16 @@ fn trigger_launch_options(
                     || cc_ask::job_policy::same_model(
                         strv(&pending["job"], "model"),
                         strv(&requested, "model"),
-                    )))
+                    )
+                    || (item["model_origin"] != "owner_request"
+                        && cc_ask::job_policy::same_model(
+                            strv(&requested, "model"),
+                            strv(source, "model"),
+                        )
+                        && cc_ask::job_policy::same_model(
+                            strv(item, "model"),
+                            strv(source, "model"),
+                        ))))
             .then_some(&pending["job"])
         });
     // A saved policy default must not undo the current failed-model repair.
@@ -4213,6 +4222,15 @@ fn public_job(j: &Value) -> Value {
         obj.remove("source_prompt");
         obj.remove("console_retired");
         obj.remove("console_baseline");
+        for field in [
+            "policy_resume_reset",
+            "model_origin",
+            "effort_origin",
+            "review_source_jobs",
+            "review_excluded_models",
+        ] {
+            obj.remove(field);
+        }
         if let Some(Value::String(last)) = obj.remove("last_message") {
             let summary: String = last.chars().take(4096).collect();
             obj.insert(

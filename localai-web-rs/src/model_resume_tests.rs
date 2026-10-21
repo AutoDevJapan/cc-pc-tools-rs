@@ -116,7 +116,8 @@ fn watchdog_review_model_recovery_requires_the_current_saved_transition() {
         assert_eq!(next["model_recovery_from"].is_string(), hint);
         let mut frozen_default = trigger.options.clone();
         frozen_default["model"] = json!("gpt-6.1-sol");
-        let next = trigger_launch_options(&trigger, Some(&edited), &frozen_default, Some(&source)).unwrap();
+        let next = trigger_launch_options(&trigger, Some(&edited), &frozen_default, Some(&source))
+            .unwrap();
         assert_eq!(next["model"], expected);
         assert_eq!(next["model_recovery_from"].is_string(), hint);
     }
@@ -158,7 +159,10 @@ fn watchdog_review_recovery_passes_scoped_routing_and_provenance_through_tick() 
         db["items"][0]["stall_recovery"] = json!({"pending":pending});
         fs::write(f.console.paths.todo.join("todo.json"), db.to_string()).unwrap();
         let request = watchdog_request(&db["items"][0], &pending);
-        assert_eq!(request["model"], "gpt-6.1-sol", "use the production frozen request");
+        assert_eq!(
+            request["model"], "gpt-6.1-sol",
+            "use the production frozen request"
+        );
         f.console.api(&Method::POST, "delegate", request).unwrap();
         f.console.tick().unwrap();
         assert_eq!(f.launches(), 1, "current={current}");
@@ -193,6 +197,9 @@ fn watchdog_review_recovery_passes_scoped_routing_and_provenance_through_tick() 
         );
         assert_eq!(model_arg(&call, "--effort").as_deref(), Some("max"));
         assert_eq!(model_arg(&call, "--sandbox").as_deref(), Some("read-only"));
-        assert_eq!(f.console.todos().unwrap()["items"][0]["model"], "gpt-6.1-sol");
+        assert_eq!(
+            f.console.todos().unwrap()["items"][0]["model"],
+            "gpt-6.1-sol"
+        );
     }
 }

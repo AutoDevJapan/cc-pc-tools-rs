@@ -163,3 +163,38 @@ Cargo.toml、Cargo.lock、nextest設定のハッシュは前回と一致した�
 
 親3085はこの正式な検査記録と候補を読み返して取得する。
 両方と既存生成先はそのために保持する。この担当は新しいPRや監視担当を作成せず、配布もしない。
+
+## レビュー作業場所の修正に対する有限な検査（2026-10-21）
+
+元3238をジョブ `20261021-132803-todo-3238`、割り当て資源cargoで再開した。
+親3085の固定HEADは `428adc60e998f55c93aa79baab200f3d267fbca2`。
+親の場所・ブランチは従来どおりで、開始時に変更なしとpush済みを確認した。
+親・この作業場所・既存生成先は正規の保護判定に通過した。
+この担当は親のソースを編集せず、新しい担当やレビュー、PR、配布を実行しない。
+
+所有ID `0c7d583da6c03192db12646d4a0493d3` の既存生成先を再利用し、
+通常のCargoゲート、sccache、親のnextest設定を使い、次を1本の順序で実行する。
+
+1. cc-schedulerのparityで `test(review_workspace_)` の新しい3件を確認する。
+2. 成功後、同じparityで `not test(review_workspace_)` の既存検査を確認する。
+3. cc-todoのsubwork・capacity_cycle・verified_resume結合検査を確認する。
+4. 両クレートのdoctest、両クレートのall-targets Clippyを順に確認する。
+5. すべて成功後、両クレートのbinsをreleaseで1回生成する。
+6. todoとschedulerを独立したリンク数1の候補へコピーし、内容を照合する。
+   schedulerは全体のhelpとdispatch-subworkのhelpだけを起動する。
+
+最初の3件が失敗したら同じ失敗を反復せず、全出力と原因を親へ返す。
+後続の失敗も親のソースを修正せず返し、失敗したまま成功候補を作らない。
+全workspaceや今回の変更に影響しないproduct_reviewは実行しない。
+旧receipt・旧候補・旧全出力を保持し、旧成功と今回の成功を混同しない。
+
+全出力・途中結果・再開情報は `.ci-work/3238-review-workspace-*` に残す。
+正式な検査記録は `.ci-work/3085-cargo-review-workspace.private.json`。
+新候補は `.ci-work/todo-3085-review-workspace.exe` と
+`.ci-work/scheduler-3085-review-workspace.exe`。旧候補を上書きしない。
+親のHEAD・ブランチ・変更なしを各コマンドの前後と最後に再確認する。
+
+再開時は正式な記録、途中結果、実行中プロセスを照合し、成功済みの検査を重ねない。
+作業ブランチ名は `scheduler/todo-3238-todo` のまま変更しない。
+検査結果は親3085が受領し、3255への永続記録と既存Discord話題への配送を担う。
+この担当の完了は検査だけであり、親3085・3090全体の完了とは区別する。

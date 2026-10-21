@@ -2,6 +2,36 @@
 
 関連Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/325
 
+## 2026-10-21 16:15 JSTの定期再確認
+
+PR315は最新head `b4fc59a984079ecafcde8de4038808fc7d18921b`、OPEN、base=main、
+mergeCommit/mergedAt=null。検査は全件終了しSUCCESS15/SKIPPED1/NEUTRAL1でした。
+3153の正常noteには、3275の指摘へ対応した修正と関連Go race/実CLI/vet成功の記録があります。
+3153はwait --on3300で、3300は正常metadataでtodo/jobsTotal=0です。最新版のレビュー合格や
+通常mergeを確認したものではなく、旧レビュー・旧headのCIを最新版の合格へ流用しません。
+
+実jobは `20261021-161244-todo-3190`、正常statusはgpt-6.1-sol/max、todo_id/cwd一致。
+実turn_contextは独立照合していません。再開時HEADは0778d8d7、差分なし、同じbranchです。
+実所有者を正常repo照会でAutoDevJapanと確認し、guardはok=true/client_resource=false/
+classification_unverified=falseでした。原保護一覧の復旧は未確認です。
+起動/プロジェクト方針・正本の最新メンション訂正・前回記録と、正常repo/PR・3153/3300/3190の
+正常note/metadata・自分のstatusを確認しました。本人原資料/元仕様/applied/旧台帳/保護名簿は未読。
+3153に届いた親の最新正式runtime票は10b5bb3/927077f3…ですが、自分の現物/source/hash実測では
+ありません。未merge候補や旧実行物で上書きせず、配布前に正式最新を改めて照合します。
+
+元3190のwait-retryを1回登録し、正常readbackはwait/retry-time、notBefore=1792570539
+（2026-10-21 17:15:39 JST）、jobsTotal=8、wait_on空です。3153全体のdone待ちや本人判断blockへ
+変えていません。今回の結果を通常待機理由と `todo3190-parent-handoff-20261021-161244.private.json`
+へ保存し、同じPR取り込み待ちのDiscord報告は重ねていません。既存の配送票を保持します。
+登録/readback原票は `todo3190-wait-{registration,readback}-20261021-161244.private.json`。
+実装・Red/Green・新規レビュー・merge・配布・方向の実記録/読戻し・質問closeは未実施で、
+共有コード/元仕様/質問/回答/停止/依存/稼働版に変更はありません。
+この文書だけをcommit/pushし、最新HEADのcheckpoint要求/結果は
+`todo3190-checkpoint-final-20261021-161244.private.json` と
+`todo3190-checkpoint-final-result-20261021-161244.private.json` へ保存します。
+次回もPR315の通常mergeを1回確認し、確認後だけ最新mainを統合して実装を始めます。
+元3050/3084/他依存/未完コードPrdを保持し、本人の操作・回答は不要です。
+
 ## 2026-10-21 15:00 JSTの再開照合
 
 PR315はhead `b1559fcd17a38cff52ab8d9a93afd31432776e5e` でOPEN、base=main、

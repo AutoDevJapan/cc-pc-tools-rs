@@ -22,6 +22,10 @@
 同ソースの現用反映後、3250の回収修復と合わせ、同じ有限予約の通常経路で
 実原因を確かめる。正式製品jobの新規作成、上限解除、認証ファイル閲覧は行わない。
 新しいcopied receiptを読む資格は、独立した所有記録と既存guardの正規条件で別に確認する。
+既に作成・固定された同じ正式Rust jobの次の有限再試行prestart-2だけを、
+既存prestart-1と同じ限定診断名と、新しいrunner開始/結果JSON4件のroleに追加する。
+各ancestor/fileの独立NTFS記録、元manifestとcopyhash、source/owner/変更拒否は維持する。
+Temp root自体、credential、runner原診断、他job、prestart-3以降へは広げない。
 
 | 記録 | 分かることと限界 |
 |---|---|
@@ -50,3 +54,8 @@ HTTP例外の観測名をhttp_exceptionへ修正し、401/403/404/429の上記�
 stdout/stderr統合と記録の限界を文書化し、架空tokenを引数/環境にも混ぜて全生成fileの非漏洩を確認する。
 追加差分の関連race6.859秒/vet成功。追加差分のRedは未実行。
 元0b666の正式CIは全成功、追加差分の同HEAD正式CIと別モデル確認は未完了。
+
+次の同一予約のcopied診断を読むため、guardの有限名に同key/prestart-2と
+runner開始/終了JSON4件だけを追加した。未記録のfile/ancestor、変更されたfile、
+credential、元runner診断、未知名、他key、prestart-3は拒否する検査を維持する。
+このrole追加は現物のNTFS確認の代わりではなく、作成前の診断を読取済みとしない。

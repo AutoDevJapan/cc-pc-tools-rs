@@ -1269,7 +1269,7 @@ impl Ledger {
                         .get(&key)
                         .ok_or("notification suppression has no reservation")?;
                     if !matches!(request.operation, Kind::Log { .. })
-                        || log_requires_owner_action(&request.body)
+                        || log_requires_owner_action(&request.body)?
                         || !original.notify
                         || effect.notify
                         || posted.contains_key(&key)
@@ -2310,7 +2310,7 @@ impl<'a> RecoveryApi<'a> {
         // Preserve the old Intent and Pending and append the effective payload.
         let effective = if matches!(request.operation, Kind::Log { .. })
             && effect.notify
-            && !log_requires_owner_action(&request.body)
+            && !log_requires_owner_action(&request.body)?
         {
             let quiet = effect.quiet_copy(request, phase)?;
             ledger.append(
@@ -2567,6 +2567,9 @@ fn prepare_log(ctx: &mut Context, args: &LogArgs) -> Result<(Request, Vec<Image>
     let secrets = SecretCheck::new();
     let body = text_input(&args.body_file, &secrets)?;
     no_mentions(&body)?;
+    if args.notify {
+        log_requires_owner_action(&body)?;
+    }
     let images = images(ctx, &args.request_id, &args.attach, &secrets, None)?;
     let mut request = Request {
         request_id: args.request_id.clone(),
@@ -3007,7 +3010,9 @@ fn execute(ctx: &mut Context, incoming: Request, images: &[Image]) -> Result<Val
 // --notify requests attention, but a report alone never requires owner action.
 // Real decisions normally use Ask. A log may point to its concrete existing
 // question; a heading alone is insufficient. No-action wording always wins.
-fn log_requires_owner_action(body: &str) -> bool {
+pub(crate) fn log_requires_owner_action(body: &str) -> Result<bool> {
+    let mut lines = body.lines().map(str::trim).filter(|line| !line.is_empty());
+    let first = lines.next().unwrap_or("");
     if [
         "対応不要",
         "対応は不要",
@@ -3016,29 +3021,38 @@ fn log_requires_owner_action(body: &str) -> bool {
         "本人対応不要",
     ]
     .iter()
-    .any(|marker| body.contains(marker))
+    .any(|marker| first.starts_with(marker))
     {
-        return false;
+        return Ok(false);
     }
-    let mut lines = body.lines().map(str::trim).filter(|line| !line.is_empty());
-    let Some(question) = lines
-        .next()
-        .and_then(|line| line.strip_prefix("回答が必要："))
+    let Some(question) = first
+        .strip_prefix("回答が必要：")
+        .or_else(|| first.strip_prefix("回答が必要:"))
     else {
-        return false;
+        if first.starts_with("回答が必要") {
+            return Err(
+                "owner action heading requires a concrete question and distinct a/b choices".into(),
+            );
+        }
+        return Ok(crate::questions::is_question(body));
     };
     if question.trim().is_empty() {
-        return false;
+        return Err("owner action heading requires a concrete question".into());
     }
     let choices: Vec<_> = lines.collect();
     let choice = |prefix| {
         choices.iter().find_map(|line| {
             line.strip_prefix(prefix)
+                .or_else(|| line.strip_prefix(if prefix == "a:" { "a：" } else { "b：" }))
                 .map(str::trim)
                 .filter(|choice| !choice.is_empty())
         })
     };
-    choice("a:").zip(choice("b:")).is_some_and(|(a, b)| a != b)
+    if choice("a:").zip(choice("b:")).is_some_and(|(a, b)| a != b) {
+        Ok(true)
+    } else {
+        Err("owner action heading requires distinct nonempty a/b choices".into())
+    }
 }
 
 fn execute_saved(
@@ -3125,10 +3139,11 @@ fn execute_inner(
             // Only a concrete owner action may create a new notifying effect.
             // A saved effect may already have reached Discord: recover it by
             // GET without changing/reposting that historical reservation.
-            let notify = ledger.effect(&request.request_id, "log:0").map_or_else(
-                || request.notify && log_requires_owner_action(&request.body),
-                |effect| effect.notify,
-            );
+            let notify = if let Some(effect) = ledger.effect(&request.request_id, "log:0") {
+                effect.notify
+            } else {
+                request.notify && log_requires_owner_action(&request.body)?
+            };
             if let Some(thread) = thread {
                 if let Some(binding) = clarification {
                     clarification::authorize(&mut api, &ledger, &home, &request, binding, true)?;
@@ -4937,9 +4952,6 @@ mod tests {
             "報告のみです。修正を終えました。",
             "本人対応不要。先行作業を待っています。",
             "通常の進捗を記録しました。",
-            "回答が必要：\na: \nb: ",
-            "回答が必要：結果を報告します。\na: 続行\nb: 続行",
-            "回答が必要：対応不要の報告です。\na: 続行\nb: 続行",
         ] {
             for post in [false, true] {
                 let fixture = Fixture::new();
@@ -4984,6 +4996,46 @@ mod tests {
                 assert_eq!(fixture.server.lock().unwrap().posts.len(), count);
                 fixture.unchanged();
             }
+        }
+    }
+
+    #[test]
+    fn recovery_messages_go_question_format_keeps_no_action_words_inside_choices() {
+        for (heading, a, b) in [
+            ("回答が必要：", " a:", " b:"),
+            ("回答が必要:", " a：", " b："),
+        ] {
+            let fixture = Fixture::new();
+            let body=format!("{heading}この対象の扱いを選んでください。\n{a} 調査を続ける\n{b} 対応不要として保持する\n回答先: <https://discord.com/channels/102/200/201>\nこの対象だけ回答を待ち、AI側はほかの作業を続けます。\n\n状態: 継続中\n本人の判断: 必要");
+            let args = fixture.log("go-owner-question", &body, true);
+            let mut ctx = fixture.context();
+            let out = log(&mut ctx, &args).unwrap();
+            assert_eq!(out["effective_notify"], true);
+            let state = fixture.server.lock().unwrap();
+            let payload = &state.posts[0].1["message"];
+            assert_eq!(payload["allowed_mentions"]["users"], json!([OWNER]));
+            assert_eq!(payload["allowed_mentions"]["replied_user"], false);
+            assert_eq!(core::n(&payload["flags"]) & SILENT, 0);
+            drop(state);
+            fixture.unchanged();
+        }
+    }
+
+    #[test]
+    fn recovery_messages_malformed_owner_action_is_rejected_before_post() {
+        for body in [
+            "回答が必要：\na: \nb: ",
+            "回答が必要：選んでください。\na: 続行\nb: 続行",
+            "回答が必要 選んでください。\na: 続行\nb: 保持",
+        ] {
+            let fixture = Fixture::new();
+            let args = fixture.log("malformed-owner-action", body, true);
+            let mut ctx = fixture.context();
+            assert!(log(&mut ctx, &args)
+                .unwrap_err()
+                .contains("owner action heading"));
+            assert!(fixture.server.lock().unwrap().calls.is_empty());
+            fixture.unchanged();
         }
     }
 

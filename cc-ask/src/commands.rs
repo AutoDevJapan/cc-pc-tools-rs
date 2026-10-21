@@ -628,6 +628,8 @@ pub fn cmd_log_attached(
         Some(path) => read_text(path)?.trim().to_owned(),
         None => text.to_owned(),
     };
+    let action = crate::recovery_messages::log_requires_owner_action(&body)?;
+    let notify = notify && action;
     let prepared = crate::attachments::prepare(ctx, attach)?;
     if body.is_empty() && prepared.is_none() {
         return Err("本文または添付ファイルを指定してください".into());
@@ -719,13 +721,14 @@ fn post_text(
 ) -> Result<Value> {
     let (clean_body, decision) = crate::decision_identity::extract(body)?;
     let body = clean_body.as_str();
-    if decision.is_some() && !crate::questions::is_question(body) {
+    let action = crate::recovery_messages::log_requires_owner_action(body)?;
+    if decision.is_some() && (!action || !crate::questions::is_question(body)) {
         return Err("判断の記録には具体的な質問本文が必要です".into());
     }
     if thread.is_empty() || !thread.chars().all(|c| c.is_ascii_digit()) {
         return Err("threadにはDiscordの数値IDを指定してください".into());
     }
-    if crate::questions::is_question(body) {
+    if action && crate::questions::is_question(body) {
         crate::ask_gate::enforce("", body, None)?;
         let mut metadata = context.cloned().unwrap_or_else(|| json!({}));
         crate::decision_identity::bind(ctx, &mut metadata, decision.as_ref())?;
@@ -798,7 +801,7 @@ fn post_text(
     } else {
         body
     };
-    let notify = notify && !separated;
+    let notify = notify && !separated && action;
     let prepared = crate::attachments::prepare(ctx, attach)?;
     let channel = ctx.call("GET", &format!("/channels/{thread}"), None)?;
     if ![10, 11, 12].contains(&n(&channel["type"]))
@@ -806,7 +809,7 @@ fn post_text(
     {
         return Err("指定されたIDは設定されたサーバーのスレッドではありません".into());
     }
-    let is_question = crate::questions::is_question(body);
+    let is_question = action && crate::questions::is_question(body);
     let _guard = if is_question {
         Some(crate::attachments::question_lock(ctx, thread)?)
     } else {

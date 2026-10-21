@@ -624,7 +624,7 @@ fn log_creates_silent_starter_reuses_topic_and_notify_never_mentions() {
     let fake = h.fake.borrow();
     assert_eq!(fake.posts.len(), 2);
     assert_eq!(fake.posts[0].1["flags"], SILENT);
-    assert_eq!(fake.posts[1].1["flags"], 0);
+    assert_eq!(fake.posts[1].1["flags"], SILENT);
     assert_eq!(fake.posts[1].1["content"], "次の記録");
     for (_, post) in &fake.posts {
         assert_eq!(post["allowed_mentions"], json!({"parse":[]}));
@@ -644,6 +644,31 @@ fn log_creates_silent_starter_reuses_topic_and_notify_never_mentions() {
         creations[0]["body"]["message"]["allowed_mentions"],
         json!({"parse":[]})
     );
+}
+
+#[test]
+fn legacy_log_and_post_keep_no_action_reports_silent_despite_notify() {
+    for body in [
+        "対応不要。AI側で再開します。",
+        "報告のみです。",
+        "本人対応不要。待機します。",
+        "通常の進捗を記録しました。",
+    ] {
+        let mut h = Harness::new();
+        let first = cmd_log(&mut h.ctx, "通知条件の確認", body, None, true).unwrap();
+        let file = h.root.path().join("report.txt");
+        std::fs::write(&file, body).unwrap();
+        cmd_post(&mut h.ctx, s(&first["thread_id"]), &file, &[], true).unwrap();
+        let fake = h.fake.borrow();
+        assert_eq!(fake.posts.len(), 2);
+        for (thread, payload) in &fake.posts {
+            assert_eq!(thread, s(&first["thread_id"]));
+            assert_eq!(payload["flags"], SILENT);
+            assert_eq!(payload["allowed_mentions"]["parse"], json!([]));
+            assert!(payload["message_reference"].is_null());
+            assert!(!s(&payload["content"]).contains("<@"));
+        }
+    }
 }
 
 #[test]

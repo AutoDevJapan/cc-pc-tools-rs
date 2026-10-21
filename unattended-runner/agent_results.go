@@ -18,6 +18,7 @@ const agentResultAttempts = 4
 const agentResultBudget = 20 * time.Second
 
 var errAgentOwnerQuestionScope = errors.New("owner_question_scope_invalid")
+var errAgentOwnerNotificationMissing = errors.New("owner_action_notification_missing")
 
 // Public, non-secret text from the parent's existing owner question.
 // This result post points back to that question; it does not create another ask.
@@ -69,16 +70,17 @@ type AgentResultRecord struct {
 	EffectiveNotify *bool            `json:"effective_notify,omitempty"`
 }
 type agentResultWatch struct {
-	Domain              string           `json:"domain"`
-	Event               AgentResultEvent `json:"event"`
-	Signature           string           `json:"signature"`
-	Closed              bool             `json:"closed"`
-	Generation          uint64           `json:"generation"`
-	Deadline            string           `json:"result_deadline"`
-	BaselineItems       []string         `json:"baseline_item_transitions,omitempty"`
-	WaitReported        bool             `json:"wait_limit_reported,omitempty"`
-	ObservationReported bool             `json:"observation_reported,omitempty"`
-	StableWaitSignature bool             `json:"stable_wait_signature,omitempty"`
+	Domain                  string           `json:"domain"`
+	Event                   AgentResultEvent `json:"event"`
+	Signature               string           `json:"signature"`
+	Closed                  bool             `json:"closed"`
+	Generation              uint64           `json:"generation"`
+	Deadline                string           `json:"result_deadline"`
+	BaselineItems           []string         `json:"baseline_item_transitions,omitempty"`
+	WaitReported            bool             `json:"wait_limit_reported,omitempty"`
+	ObservationReported     bool             `json:"observation_reported,omitempty"`
+	StableWaitSignature     bool             `json:"stable_wait_signature,omitempty"`
+	DependencyWaitSignature bool             `json:"dependency_wait_signature,omitempty"`
 }
 
 var agentStateLabels = map[string]string{
@@ -173,7 +175,7 @@ func validateAgentEvent(e AgentResultEvent) error {
 			}
 		}
 		parts := strings.Split(strings.TrimPrefix(q.URL, "https://discord.com/channels/"), "/")
-		if !strings.HasPrefix(q.URL, "https://discord.com/channels/") || len(parts) != 3 || q.ChoiceA == q.ChoiceB {
+		if !strings.HasPrefix(q.URL, "https://discord.com/channels/") || len(parts) != 3 || strings.TrimSpace(q.ChoiceA) == strings.TrimSpace(q.ChoiceB) {
 			return errors.New("separate owner question destination required")
 		}
 		for _, id := range parts {
@@ -372,9 +374,10 @@ func (r *Runner) deliverAgentResult(ctx context.Context, p *AgentResultRecord) e
 		if !ok {
 			return errors.New("delivery_unverified")
 		}
+		p.EffectiveNotify = &notify
 	}
 	if p.Event.OwnerRequired && p.NotifyOwner && !notify {
-		return errors.New("delivery_unverified")
+		return errAgentOwnerNotificationMissing
 	}
 	thread, _ := response["thread_id"].(string)
 	message, _ := response["message_id"].(string)
@@ -447,7 +450,7 @@ func (r *Runner) agentResultPhase(ctx context.Context, h *Health) {
 			}
 			continue
 		}
-		if p.Attempts >= agentResultAttempts || p.LastError == "owner_question_scope_invalid" {
+		if p.Attempts >= agentResultAttempts || p.LastError == "owner_question_scope_invalid" || p.LastError == "owner_action_notification_missing" {
 			continue
 		}
 		if p.NextAttempt != "" {
@@ -469,6 +472,9 @@ func (r *Runner) agentResultPhase(ctx context.Context, h *Health) {
 			h.Errors = append(h.Errors, "agent_result_delivery_deferred")
 			if errors.Is(err, errAgentOwnerQuestionScope) {
 				p.LastError, p.NextAttempt = "owner_question_scope_invalid", ""
+			}
+			if errors.Is(err, errAgentOwnerNotificationMissing) {
+				p.LastError, p.NextAttempt = "owner_action_notification_missing", ""
 			}
 		}
 		if publish(r.agentResultPath(id), p) != nil {
@@ -590,6 +596,14 @@ func (r *Runner) agentWatchSnapshot(parent context.Context, e AgentResultEvent) 
 	// rejection evidence nor public report material.
 	if state == "capacity_wait" || state == "dependency_wait" {
 		// Scheduler retry clocks/counters do not end one continuous wait.
+		if state == "dependency_wait" {
+			var dependencies []uint64
+			if json.Unmarshal(job["work_wait_on"], &dependencies) != nil {
+				return "", "", "", items, badItems, errors.New("dependency wait source invalid")
+			}
+			sort.Slice(dependencies, func(i, j int) bool { return dependencies[i] < dependencies[j] })
+			return canonicalHash([]any{state, reason, dependencies}), state, reason, items, badItems, nil
+		}
 		return canonicalHash([]string{state, reason}), state, reason, items, badItems, nil
 	}
 	signature := canonicalHash([]any{state, reason, job["status"], job["finished_at"], job["attempt"], job["attempts"], job["work_wait_on"], job["capacity_retry_at"]})
@@ -629,7 +643,7 @@ func (r *Runner) watchAgentResult(e AgentResultEvent) error {
 	if state != "" {
 		return errors.New("register an active external job before its next transition")
 	}
-	w := agentResultWatch{Domain: agentResultDomain, Event: e, Signature: sig, Deadline: r.Now().Add(time.Hour).UTC().Format(time.RFC3339Nano), StableWaitSignature: true}
+	w := agentResultWatch{Domain: agentResultDomain, Event: e, Signature: sig, Deadline: r.Now().Add(time.Hour).UTC().Format(time.RFC3339Nano), StableWaitSignature: true, DependencyWaitSignature: true}
 	for _, item := range items {
 		w.BaselineItems = append(w.BaselineItems, agentDeferredEvent(e, item).Transition)
 	}
@@ -685,7 +699,7 @@ func (r *Runner) observeAgentResults(ctx context.Context, h *Health) {
 			// A refusal to observe is not evidence that the child failed.
 			sig, state, reason = canonicalHash("observation_unavailable"), "unverified", "observation_unavailable"
 		}
-		if !unreadable && !w.StableWaitSignature {
+		if !unreadable && (!w.StableWaitSignature || !w.DependencyWaitSignature) {
 			// The signature scheme changing is not evidence of a new stop.
 			if w.Signature != "" && (state == "capacity_wait" || state == "dependency_wait") {
 				sameOrUnknown := true
@@ -703,6 +717,7 @@ func (r *Runner) observeAgentResults(ctx context.Context, h *Health) {
 				}
 			}
 			w.StableWaitSignature = true
+			w.DependencyWaitSignature = true
 			if publish(path, w) != nil {
 				h.Errors = append(h.Errors, "agent_watch_baseline_deferred")
 				continue

@@ -256,7 +256,14 @@ func executeLinuxJob(ctx context.Context, root, sdkRoot, helper, requestFile str
 	if e != nil {
 		return e
 	}
-	_ = conn.SetDeadline(time.Now().Add(time.Duration(binding.TimeoutMinutes+6) * time.Minute))
+	if e = requirePressSessionBudget(ctx, q.Source, q.Role); e != nil {
+		return e
+	}
+	grace := 6
+	if q.Source.Product == sourcepacket.PressProduct {
+		grace = 35
+	}
+	_ = conn.SetDeadline(time.Now().Add(time.Duration(binding.TimeoutMinutes+grace) * time.Minute))
 	connectionFinished := make(chan struct{})
 	defer close(connectionFinished)
 	go func(c net.Conn) {
@@ -276,7 +283,13 @@ func executeLinuxJob(ctx context.Context, root, sdkRoot, helper, requestFile str
 	raw = nil
 	decoder := json.NewDecoder(io.LimitReader(conn, 1<<20))
 	var event liveJobEvent
-	if decoder.Decode(&event) != nil || event.ID != instance || event.Stage != "source-ready" || !checkPhysicalProof(event.Proof, q) {
+	decodeErr := decoder.Decode(&event)
+	if event.ID == instance && event.Stage == "failed" && event.Failure == "press_sdk_preparation_failed" && event.PressSDK != nil {
+		if e = record(attempt, "press-sdk-preparation.private.json", event.PressSDK); e != nil {
+			return e
+		}
+	}
+	if decodeErr != nil || event.ID != instance || event.Stage != "source-ready" || !checkPhysicalProof(event.Proof, q) {
 		return errors.New("live source proof rejected")
 	}
 	if e = record(attempt, "source-proof.private.json", event); e != nil {

@@ -53,7 +53,7 @@ func TestRealHostSessionDeadlineCoversOriginalWindowsRoles(t *testing.T) {
 			}
 			want := 26 * time.Minute
 			if p.Source.Product == sourcepacket.PressProduct {
-				want = 96 * time.Minute
+				want = 130 * time.Minute
 			}
 			for _, got := range []time.Duration{h.remaining, time.Until(conn.deadline)} {
 				if got < want-time.Second || got > want {

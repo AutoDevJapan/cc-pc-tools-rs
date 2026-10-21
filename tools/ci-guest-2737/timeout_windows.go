@@ -16,7 +16,7 @@ func hostJobTimeout(args []string) time.Duration {
 	if file != "" {
 		if q, e := readJobRequest(file); e == nil && q.Source.Product == sourcepacket.PressProduct {
 			if j, ok := jobPolicy(q.Source, q.Role); ok {
-				return time.Duration(j.TimeoutMinutes+20) * time.Minute
+				return time.Duration(j.TimeoutMinutes+60) * time.Minute
 			}
 		}
 	}

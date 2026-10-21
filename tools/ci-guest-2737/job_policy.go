@@ -4,6 +4,8 @@ import (
 	sourcepacket "cc/ci-source-2737"
 	"cc/product-ci/normalci"
 	"cc/product-ci/pressci"
+	"context"
+	"errors"
 	"time"
 )
 
@@ -30,6 +32,20 @@ func jobPolicy(pin sourcepacket.Pin, role string) (pressci.Job, bool) {
 		return pressci.Job{}, false
 	}
 	return pressci.Job{Workflow: profile.Workflow, ID: role, Name: role, OS: osName, TimeoutMinutes: timeout}, true
+}
+
+// Fail before registration when time already consumed by gate/boot would
+// truncate the admitted session. No runner or shorter substitute is started.
+func requirePressSessionBudget(ctx context.Context, pin sourcepacket.Pin, role string) error {
+	if pin.Product != sourcepacket.PressProduct {
+		return nil
+	}
+	j, ok := jobPolicy(pin, role)
+	deadline, limited := ctx.Deadline()
+	if !ok || ctx.Err() != nil || limited && time.Until(deadline) < time.Duration(j.TimeoutMinutes+40)*time.Minute {
+		return errors.New("insufficient remaining Press session budget")
+	}
+	return nil
 }
 func jobLabel(pin sourcepacket.Pin, role string, run int64, attempt int) string {
 	if _, ok := jobPolicy(pin, role); !ok {
@@ -65,7 +81,7 @@ func rustProbeVersion(pin sourcepacket.Pin) string {
 func jobGuestTimeout(pin sourcepacket.Pin, role string) time.Duration {
 	if pin.Product == sourcepacket.PressProduct {
 		if j, ok := jobPolicy(pin, role); ok {
-			return time.Duration(j.TimeoutMinutes+10) * time.Minute
+			return time.Duration(j.TimeoutMinutes+30) * time.Minute
 		}
 	}
 	return 40 * time.Minute

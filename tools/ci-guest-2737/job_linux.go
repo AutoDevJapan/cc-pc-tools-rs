@@ -178,6 +178,15 @@ func serveLiveJob(conn net.Conn, input io.Reader, id string, expected sourcepack
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), jobGuestTimeout(plan.Source, plan.Role))
 	defer cancel()
+	var sdkInfo *pressSDKInventory
+	if plan.Source.Product == sourcepacket.PressProduct {
+		v, err := preparePressSDK(ctx)
+		if err != nil {
+			_ = writeLiveEvent(conn, out, liveJobEvent{ID: id, Stage: "failed", Failure: "press_sdk_preparation_failed", PressSDK: &v})
+			return
+		}
+		sdkInfo = &v
+	}
 	proof, e := sourcepacket.Materialize(ctx, p, expected, liveWorkspaceFor(expected))
 	if e != nil {
 		fail("job_source_materialization_failed")
@@ -195,7 +204,7 @@ func serveLiveJob(conn net.Conn, input io.Reader, id string, expected sourcepack
 		fail("job_source_owner_failed")
 		return
 	}
-	if e = writeLiveEvent(conn, out, liveJobEvent{ID: id, Stage: "source-ready", Proof: proof, RustProbe: probeLiveRust(ctx, plan.Source)}); e != nil {
+	if e = writeLiveEvent(conn, out, liveJobEvent{ID: id, Stage: "source-ready", Proof: proof, RustProbe: probeLiveRust(ctx, plan.Source), PressSDK: sdkInfo}); e != nil {
 		return
 	}
 	var config struct{ Token string }

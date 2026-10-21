@@ -19,7 +19,7 @@ func TestPressWindowsSeedAndHooksRequireExactRoleMergeAndAttempt(t *testing.T) {
 			if e != nil || s.Plan.timeoutMinutes() != 90 {
 				t.Fatalf("Press seed refused: %v", e)
 			}
-			if s.Plan.sessionTimeout() != 96*time.Minute {
+			if s.Plan.sessionTimeout() != 130*time.Minute {
 				t.Fatal("Windows session truncates original timeout")
 			}
 			bad := b

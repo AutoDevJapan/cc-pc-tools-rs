@@ -254,6 +254,9 @@ func executeWindowsJob(ctx context.Context, root, helper, file string, jobs, thr
 	if e != nil {
 		return e
 	}
+	if e = requirePressSessionBudget(ctx, q.Source, q.Role); e != nil {
+		return e
+	}
 	_, e = wr.HostSession(ctx, conn, w.seed, packet, w)
 	packet = sourcepacket.Packet{}
 	if e != nil {

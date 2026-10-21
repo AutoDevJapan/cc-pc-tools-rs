@@ -95,7 +95,7 @@ func testRealMTLSDeadline(t *testing.T, plan Plan) {
 	}
 	want := 26 * time.Minute
 	if plan.Source.Product != "" {
-		want = 96 * time.Minute
+		want = 130 * time.Minute
 	}
 	if got := <-remaining; got < want-time.Second || got > want {
 		t.Fatalf("effective service deadline %s, want %s", got, want)

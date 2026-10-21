@@ -1,6 +1,8 @@
 package main
 
 import (
+	sourcepacket "cc/ci-source-2737"
+	"cc/product-ci/pressci"
 	"context"
 	"encoding/json"
 	"errors"
@@ -28,6 +30,12 @@ func takeNormalCILock(path string) (*os.File, error) {
 // This gate-owned path boots only the immutable, source-free SDK. It never
 // fetches a product, requests a GitHub token or starts/registers a runner.
 func executePublicSDKProbe(ctx context.Context, root, sdkRoot, helper string, jobs int) (ret error) {
+	return executeSDKProbeFor(ctx, root, sdkRoot, helper, jobs, fixedSourcePin())
+}
+func pressSDKProbePin() sourcepacket.Pin {
+	return sourcepacket.Pin{Product: sourcepacket.PressProduct, Workflow: "local-checks.yml", HeadSHA: pressci.Head, TreeSHA: pressci.Tree, WorkflowSHA256: "935f455d7f7ecdf225f39a2a335a3d3a0ccc6d832d9a1c70fcf46e8906c9aa62"}
+}
+func executeSDKProbeFor(ctx context.Context, root, sdkRoot, helper string, jobs int, pin sourcepacket.Pin) (ret error) {
 	lock, e := takeNormalCILock(`D:\CC\Tools\product-ci\todo2737-normal-ci.lock`)
 	if e != nil {
 		return e
@@ -76,7 +84,7 @@ func executePublicSDKProbe(ctx context.Context, root, sdkRoot, helper string, jo
 	}()
 	var ident identity
 	var readyState ready
-	vm, ident, readyState, e = bootSDKForSource(ctx, attempt, sdkRoot, helper, id, fixedSourcePin(), jobs, 8)
+	vm, ident, readyState, e = bootSDKForSource(ctx, attempt, sdkRoot, helper, id, pin, jobs, 8)
 	if e != nil {
 		return e
 	}
@@ -95,15 +103,28 @@ func executePublicSDKProbe(ctx context.Context, root, sdkRoot, helper string, jo
 		}
 	}()
 	_ = c.SetDeadline(time.Now().Add(90 * time.Second))
+	if pin.Product == sourcepacket.PressProduct {
+		_ = c.SetDeadline(time.Now().Add(16 * time.Minute))
+	}
 	if e = json.NewEncoder(c).Encode(request{"probe-public-sdk", id}); e != nil {
 		return e
 	}
 	var p publicSDKProbe
-	if e = json.NewDecoder(io.LimitReader(c, 32768)).Decode(&p); e != nil {
+	limit := int64(32768)
+	if pin.Product == sourcepacket.PressProduct {
+		limit = 2 << 20
+	}
+	if e = json.NewDecoder(io.LimitReader(c, limit)).Decode(&p); e != nil {
 		return errors.New("public SDK probe frame unavailable")
 	}
-	if p.ID != id || p.ProductSource || p.RunnerRegistered || len(p.Rust) != 3 || len(p.Driver) > 4 {
+	if e = record(attempt, "public-sdk-probe.private.json", p); e != nil {
+		return e
+	}
+	if p.ID != id || p.ProductSource || p.RunnerRegistered || p.Failure != "" || len(p.Rust) != 3 || len(p.Driver) > 4 {
 		return errors.New("public SDK probe identity rejected")
 	}
-	return record(attempt, "public-sdk-probe.private.json", p)
+	if pin.Product == sourcepacket.PressProduct && (p.PressSDK == nil || p.PressSDK.OS != "ubuntu-24.04" || p.Rust[1].Version != p.PressSDK.Rust) {
+		return errors.New("Press SDK runtime receipt rejected")
+	}
+	return nil
 }

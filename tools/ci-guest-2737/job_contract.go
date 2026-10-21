@@ -40,6 +40,7 @@ type jobHookContext struct {
 	Diagnostic                                                 *hookDiagnostic `json:",omitempty"`
 }
 type liveJobEvent struct {
+	PressSDK           *pressSDKInventory `json:",omitempty"`
 	ID, Stage, Failure string
 	Proof              sourcepacket.Receipt
 	Context            jobHookContext

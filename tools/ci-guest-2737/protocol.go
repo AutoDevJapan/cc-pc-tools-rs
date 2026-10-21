@@ -33,6 +33,15 @@ type sourceResult struct {
 	Failure    string               `json:"failure,omitempty"`
 	OfficialCI bool                 `json:"official_ci_success"`
 }
+type pressSDKInventory struct {
+	OS, Chrome, Rust string
+	Steps            []pressSDKStep
+}
+type pressSDKStep struct {
+	Stage          string
+	Exit           int
+	Stdout, Stderr []byte
+}
 
 const offlineLabel = "cc-product-2737-1154066087-offline-bootstrap"
 
@@ -66,6 +75,8 @@ type sdkResult struct {
 }
 
 type publicSDKProbe struct {
+	PressSDK                        *pressSDKInventory `json:",omitempty"`
+	Failure                         string             `json:",omitempty"`
 	ID                              string
 	Rust                            []rustProbeResult
 	Driver                          []sdkArtifactProbe

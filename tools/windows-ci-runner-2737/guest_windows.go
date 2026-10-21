@@ -117,6 +117,9 @@ func (o *windowsOps) prepare(ctx context.Context, p sourcepacket.Packet) (source
 		k, v, _ := strings.Cut(entry, "=")
 		os.Setenv(k, v)
 	}
+	if e = preparePressWindowsSDK(ctx, o.plan, o.env); e != nil {
+		return sourcepacket.Receipt{}, e
+	}
 	b, e := readBounded(stockArchive, 512<<20)
 	if e != nil {
 		return sourcepacket.Receipt{}, e
@@ -168,7 +171,7 @@ func fixedEnvironmentValues(p Plan, sccache string) []string {
 		`SystemRoot=C:\Windows`, `WINDIR=C:\Windows`, `SystemDrive=C:`, `ComSpec=C:\Windows\System32\cmd.exe`,
 		`ProgramFiles=C:\Program Files`, `ProgramFiles(x86)=C:\Program Files (x86)`, `ProgramData=C:\ProgramData`,
 		`PATHEXT=.COM;.EXE;.BAT;.CMD;.PS1`,
-		`PATH=` + fixedServicePath(sccache),
+		`PATH=` + servicePathFor(p, sccache),
 		`USERPROFILE=` + sdkRoot + `\service-profile`, `HOME=` + sdkRoot + `\service-profile`,
 		`APPDATA=` + sdkRoot + `\service-profile\AppData\Roaming`, `LOCALAPPDATA=` + sdkRoot + `\service-profile\AppData\Local`,
 		`TEMP=` + proofTempRoot, `TMP=` + proofTempRoot, `SystemTemp=` + proofTempRoot,

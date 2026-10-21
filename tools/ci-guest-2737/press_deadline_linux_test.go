@@ -61,7 +61,7 @@ func TestPressLinuxAcceptedPlanExtendsStreamDeadline(t *testing.T) {
 			if json.Unmarshal(conn.Buffer.Bytes(), &result) != nil || result.Failure != "job_source_packet_rejected" {
 				t.Fatalf("did not enter source-free accepted plan path: %s", conn.Buffer.String())
 			}
-			want := time.Duration(tc.minutes+10) * time.Minute
+			want := time.Duration(tc.minutes+30) * time.Minute
 			if remaining := time.Until(conn.deadline); remaining < want-time.Second || remaining > want {
 				t.Fatalf("stream deadline %s, want %s", remaining, want)
 			}

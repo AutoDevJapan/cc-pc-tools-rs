@@ -85,8 +85,26 @@ func (g *guest) serve(conn net.Conn) {
 			return
 		}
 		g.active = true
+		press := g.source.Product == sourcepacket.PressProduct
+		if press {
+			g.sdkAttempted = true
+		}
 		g.mu.Unlock()
 		defer func() { g.mu.Lock(); g.active = false; g.mu.Unlock() }()
+		if press {
+			_ = conn.SetDeadline(time.Now().Add(16 * time.Minute))
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+			defer cancel()
+			inventory, err := preparePressSDK(ctx)
+			result := publicSDKProbe{ID: q.ID, PressSDK: &inventory}
+			if err != nil {
+				result.Failure = "press_sdk_preparation_failed"
+			} else {
+				result.Rust = probeRustVersionAt(ctx, "/home/ci2737", "1.95.0")
+			}
+			_ = json.NewEncoder(conn).Encode(result)
+			return
+		}
 		_ = conn.SetDeadline(time.Now().Add(90 * time.Second))
 		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 		defer cancel()

@@ -62,7 +62,7 @@ func (p Plan) timeoutMinutes() int {
 
 func (p Plan) sessionTimeout() time.Duration {
 	if p.Source.Product == sourcepacket.PressProduct {
-		return time.Duration(p.timeoutMinutes()+6) * time.Minute
+		return time.Duration(p.timeoutMinutes()+40) * time.Minute
 	}
 	return 26 * time.Minute
 }

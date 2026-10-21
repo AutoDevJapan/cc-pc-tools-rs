@@ -498,6 +498,8 @@ func main() {
 		e = runGatedBootstrap(ctx, os.Args[2], os.Args[3], os.Args[4])
 	} else if len(os.Args) == 5 && os.Args[1] == "probe-sdk" {
 		e = runGatedJob(ctx, gatedHello{Mode: "sdk-probe", Root: os.Args[2], SDKRoot: os.Args[3], Helper: os.Args[4]})
+	} else if len(os.Args) == 5 && os.Args[1] == "probe-press-sdk" {
+		e = runGatedJob(ctx, gatedHello{Mode: "press-sdk-probe", Root: os.Args[2], SDKRoot: os.Args[3], Helper: os.Args[4]})
 	} else if len(os.Args) == 3 && os.Args[1] == "test-gate" {
 		e = testGateFixtures(ctx, os.Args[2])
 	} else if len(os.Args) == 2 && os.Args[1] == "inspect-source" {

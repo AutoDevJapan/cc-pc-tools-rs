@@ -78,10 +78,7 @@ func TestAgentResultPublicBodyExcludesPrivateReferencesAndRawErrors(t *testing.T
 
 func TestAgentResultDeliverySurvivesParentAndRequiresReadback(t *testing.T) {
 	r, _ := fixture(t)
-	p, err := r.recordAgentResult(resultEvent())
-	if err != nil {
-		t.Fatal(err)
-	}
+	p := legacyAgentReceipt(t, r, resultEvent())
 	fail := true
 	wrong := false
 	sends := 0

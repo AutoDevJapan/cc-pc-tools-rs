@@ -391,7 +391,7 @@ func (s *ci3174Scope) snapshot(root string) (map[string]ci3174Entry, measured, e
 		// This completed CI root contains its original Git administrative file.
 		// Its pinned metadata is preserved without opening its body. No other
 		// protected name, new entry or caller-supplied Git tree is admitted.
-		if protected(filepath.Base(p)) && !(strings.EqualFold(filepath.Base(p), ".git") && (recorded || (s.captureCollected && filepath.ToSlash(rel) == "source/.git"))) {
+		if protected(filepath.Base(p)) && !(strings.EqualFold(filepath.Base(p), ".git") && (recorded || (s.captureCollected && filepath.ToSlash(rel) == ci3250Git))) {
 			return nil, m, fail("PROTECTED_PATH")
 		}
 		if s.baseline != nil && !recorded {

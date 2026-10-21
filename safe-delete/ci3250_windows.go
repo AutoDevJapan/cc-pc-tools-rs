@@ -12,6 +12,9 @@ import (
 	"time"
 )
 
+// Plan.source() in the reviewed Windows producer, not a caller-supplied tree.
+const ci3250Git = "runtime/runner/_work/civ6-banseiki/civ6-banseiki/.git"
+
 func ci3250WinPath(path string) string {
 	p, e := filepath.Abs(path)
 	if e != nil {

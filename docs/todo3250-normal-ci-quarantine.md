@@ -35,7 +35,7 @@ Git・secret名・reparse・外部hardlinkなどの通常保護をすべて維�
 - collectingまたはneeds_recoveryの終了資源だけ。登録・成功判定・queue書込は行わない。
 - 全項目の所有者Administrators、同volume、最大10,000子、通常file合計16GiB。
 - 通常fileのhardlinkは全aliasがこのroot内に収まる場合だけ保持する。外部alias、reparseやdirectoryの複数linkは拒否する。他targetの通常hardlink保護は不変。
-- .gitの初回metadata取得例外はsource/.gitだけ。通常の他保護名は拒否する。
+- .gitの初回metadata取得例外は、正規Plan.source()が示すruntime/runner/_work/civ6-banseiki/civ6-banseiki/.gitだけ。通常の他保護名は拒否する。
 
 ## 通常操作
 

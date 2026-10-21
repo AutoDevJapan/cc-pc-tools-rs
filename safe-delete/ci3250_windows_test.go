@@ -27,7 +27,7 @@ func TestCI3250QuarantineKeepsLongPathsGitAndInternalHardlinks(t *testing.T) {
 	s, _ := ci3174FixtureAt(t, r.Path)
 	s.captureCollected = true
 	s.internalLinks = true
-	git := filepath.Join(r.Path, "source", ".git")
+	git := filepath.Join(r.Path, filepath.FromSlash("runtime/runner/_work/civ6-banseiki/civ6-banseiki/.git"))
 	if e := os.MkdirAll(git, 0700); e != nil {
 		t.Fatal(e)
 	}
@@ -62,7 +62,7 @@ func TestCI3250QuarantineKeepsLongPathsGitAndInternalHardlinks(t *testing.T) {
 
 func TestCI3250CapturePreservesSourceGitAndOpaqueMetadata(t *testing.T) {
 	s, root := ci3174Fixture(t)
-	git := filepath.Join(root, "source", ".git")
+	git := filepath.Join(root, filepath.FromSlash("runtime/runner/_work/civ6-banseiki/civ6-banseiki/.git"))
 	if e := os.MkdirAll(git, 0700); e != nil {
 		t.Fatal(e)
 	}

@@ -6,12 +6,12 @@
   "source_reviewed_head": "4976ec73a30b030916991e6d84c695ceddad49de",
   "source_review_must": 0,
   "source_scope": "AIS全12パス/7異本文/5mirror/MITを確認。linkの派生候補は今回新作成で独立確認前。",
-  "bundle_sha256": "33c75886fe22c69cfe200f8a3d37752f154caf2af95b12ab2a3faaefbfd7f472",
+  "bundle_sha256": "22fdc6b5129f15b83d4b7cc3f83fd9887d34048148254fd7bd205b25b15d6f6d",
   "new_targets": 1,
   "new_files": 5,
-  "memory_validator": "PASS1/5",
-  "catalog_test_count1": "PASS",
-  "readonly_preflight": "PASS;targets1;no writes",
+  "memory_validator": "成功: メモリ内1件5ファイル。",
+  "catalog_test_count1": "成功: catalog test -count=1。",
+  "readonly_preflight": "成功: 対象1件、書込みなし。",
   "installed": 0,
   "independent_candidate_review": "pending",
   "static_cases": [
@@ -23,13 +23,13 @@
     },
     {
       "kind": "positive",
-      "expected": "編集しない。",
+      "expected": "manualから索引と正本を辿って有効性を確認し、変更せず報告。",
       "input": "同じroot内の既存ルートが既に動く",
       "real_model_turn": false
     },
     {
       "kind": "positive",
-      "expected": "projectのbridge/sync規則を優先し、意図的差を残す。",
+      "expected": "CLAUDE.mdと索引を読む。指定した索引の既存行を追加/更新し、必要ならCLAUDE.mdに索引への経路を足す。bridge規則が無い場合だけAGENTS.mdを新規作成してCLAUDE.mdを指す。",
       "input": "片方だけmanualがあり意図的runtime差がある",
       "real_model_turn": false
     },
@@ -62,6 +62,36 @@
       "expected": "行わない。",
       "input": "経路編集を口実に移動/削除/全memory更新",
       "real_model_turn": false
+    },
+    {
+      "input": "指定manualの既存経路の移転先が確認できた",
+      "expected": "既存行のパス・表示名だけ更新し重複行を足さず、辿り直す。",
+      "kind": "positive",
+      "real_model_turn": false
+    },
+    {
+      "input": "移転先が確認できない既存行",
+      "expected": "削除せず、未確認と理由を示す。",
+      "kind": "negative",
+      "real_model_turn": false
+    },
+    {
+      "input": "symlink/junction/hardlinkの作成や修復",
+      "expected": "選択しない。",
+      "kind": "negative",
+      "real_model_turn": false
+    },
+    {
+      "input": "README本文の通常リンク修正",
+      "expected": "選択しない。",
+      "kind": "negative",
+      "real_model_turn": false
+    },
+    {
+      "input": "Obsidianノート間リンクの編集",
+      "expected": "選択しない。",
+      "kind": "negative",
+      "real_model_turn": false
     }
   ],
   "known_unread": [
@@ -69,5 +99,14 @@
     "他workflowの補助/依存noticeやrendererはこの候補へ転用しない。"
   ],
   "invocation": "元の明示限定フラグはsource metadataに保持。Codexの自動発見は残し、依頼された経路編集だけを行う説明/本文へ限定。明示限定policyを指定されたと偽らない。",
-  "observed_at": "2026-10-21T02:53:43.8483856Z"
+  "observed_at": "2026-10-21T02:53:43.8483856Z",
+  "revision_review": {
+    "todo": 3270,
+    "head": "44891d7559266d614f7607d6b39cda029d6cc372",
+    "must": 0,
+    "raw_sha256": "34cd94365158ed9bdebfc2893a7d5e8690b8b2ef16b4904da454fc2153c3ba58",
+    "limits": "3270はv1候補を静的確認。具体的な短文提案をv2へ反映し、実配置後の差分は別の有限レビューで確認する。"
+  },
+  "candidate_v1_sha256": "33c75886fe22c69cfe200f8a3d37752f154caf2af95b12ab2a3faaefbfd7f472",
+  "amended_at": "2026-10-21T05:38:49.3594713Z"
 }

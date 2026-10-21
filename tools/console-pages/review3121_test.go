@@ -99,3 +99,9 @@ const ctx={Date:{now:()=>100},Set,opsState:{snapshot:{workforce:{processing:proo
 const row={workState:'processing',references:{sessions:['native-a','native-b','native-a','old']}};assert.match(ctx.opsCount([row]),/実作業 2件 \/ 作業記録 1件/);proof.validUntil=90;assert(ctx.opsCount([row]).includes('未確認'));
 `)
 }
+
+func TestUnavailableNativeCounterIsShownAsUnconfirmed(t *testing.T) {
+	node(t, `
+const host={textContent:''},ctx={data:{workforce:{processing:{state:'partial',bySource:{nativeToolReceipts:null}},acquisition:{}}},$:()=>host,opsTime:()=>'',opsValue:value=>value==null?'—':String(value)};vm.createContext(ctx);const source=line(input.index,'if(data&&data.workforce){const w=');vm.runInContext(source,ctx);assert(host.textContent.includes('native Tool結果 未確認'));host.textContent='';ctx.data.workforce.processing.bySource.nativeToolReceipts=0;vm.runInContext(source,ctx);assert(host.textContent.includes('native Tool結果 0件'));
+`)
+}

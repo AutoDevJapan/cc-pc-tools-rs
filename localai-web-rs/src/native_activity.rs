@@ -338,7 +338,7 @@ impl Registry {
                 role: request.role,
                 business_project: request.business_project,
                 bound_at_ms: now,
-                min_activity_at_ms: if previous.is_some() { now } else { 0 },
+                min_activity_at_ms: now,
                 receipt: None,
                 closed_at_ms: None,
                 outcome: None,
@@ -575,9 +575,9 @@ mod tests {
                 50_000,
             )
             .unwrap();
-        registry.activity(result(1, 100), 50_000).unwrap();
+        assert!(registry.activity(result(1, 100), 50_000).is_err());
         assert_eq!(registry.view(50_000)["sessions"], json!([]));
-        assert_eq!(registry.view(50_000)["bindings"][0]["lastActualAt"], 100);
+        assert!(registry.view(50_000)["bindings"][0]["lastActualAt"].is_null());
     }
     #[test]
     fn corrupt_state_is_preserved_and_get_does_not_create_state() {
@@ -614,6 +614,29 @@ mod tests {
         refused.executed = false;
         assert!(registry.activity(refused, 100).is_err());
         assert_eq!(registry.view(100)["sessions"], json!([]));
+    }
+
+    #[test]
+    fn first_binding_cannot_relabel_a_tool_result_from_before_its_scope() {
+        let temp = tempfile::tempdir().unwrap();
+        let registry = Registry::new(temp.path());
+        register(&registry, 200);
+        assert!(registry.activity(result(1, 199), 200).is_err());
+        assert!(registry.view(200)["sessions"]
+            .as_array()
+            .unwrap()
+            .is_empty());
+    }
+
+    #[test]
+    fn unavailable_native_source_is_unknown_instead_of_measured_zero() {
+        let mut board = projected_board();
+        crate::workforce::merge_native(
+            &mut board,
+            &json!({"source":"native","state":"unavailable","sessions":[]}),
+            100,
+        );
+        assert!(board["workforce"]["processing"]["bySource"]["nativeToolReceipts"].is_null());
     }
 
     fn projected_board() -> Value {

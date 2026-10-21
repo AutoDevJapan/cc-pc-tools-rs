@@ -684,8 +684,7 @@ pub fn merge_native(board: &mut Value, native: &Value, now: u64) {
             .unwrap_or(Value::Null);
     }
     workforce["processing"]["sessions"] = json!(proofs);
-    workforce["processing"]["bySource"] =
-        json!({"ccJobs":cc_count,"nativeToolReceipts":added.len()});
+    workforce["processing"]["bySource"] = json!({"ccJobs":cc_count,"nativeToolReceipts":if native["state"]=="unavailable"{None}else{Some(added.len())}});
     let mut counts = BTreeMap::<String, u64>::new();
     for task in workforce["tasks"].as_array().into_iter().flatten() {
         if let Some(state) = task["state"].as_str() {

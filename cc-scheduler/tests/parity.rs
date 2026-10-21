@@ -11,6 +11,8 @@ const T: f64 = 100000.;
 mod subwork_support;
 #[path = "support/no_action.rs"]
 mod no_action_tests;
+#[path = "support/dispatch_receipt.rs"]
+mod dispatch_receipt_tests;
 
 #[test]
 fn console_subwork_recovers_only_proven_idle_doing_retry_through_normal_gates() {
@@ -1474,6 +1476,10 @@ struct Fake {
     repair_denied: Option<String>,
     repair_calls: Vec<String>,
     repair_edit: Option<(PathBuf, Value)>,
+    repair_edit_after: usize,
+    repair_lock_on_call: Option<(usize, PathBuf)>,
+    repair_held_lock: Option<ByteLock>,
+    release_repair_lock_on_jobs: bool,
     launch_start: Option<PathBuf>,
     prepare_edit: Option<(PathBuf, Value)>,
     outcome_edit: Option<(PathBuf, cc_todo::Command)>,
@@ -1515,6 +1521,10 @@ impl Default for Fake {
             repair_denied: None,
             repair_calls: vec![],
             repair_edit: None,
+            repair_edit_after: 0,
+            repair_lock_on_call: None,
+            repair_held_lock: None,
+            release_repair_lock_on_jobs: false,
             launch_start: None,
             prepare_edit: None,
             outcome_edit: None,
@@ -1565,7 +1575,12 @@ impl Backend for Fake {
     }
     fn repair_scope_allowed(&mut self, repo: &str) -> bool {
         self.repair_calls.push(repo.into());
-        if let Some((path, db)) = self.repair_edit.take() {
+        if self.repair_lock_on_call.as_ref().is_some_and(|(call, _)| *call == self.repair_calls.len()) {
+            let (_, path) = self.repair_lock_on_call.take().unwrap();
+            self.repair_held_lock = Some(ByteLock::acquire(&path, Duration::ZERO).unwrap().unwrap());
+        }
+        let edit = if self.repair_calls.len() >= self.repair_edit_after { self.repair_edit.take() } else { None };
+        if let Some((path, db)) = edit {
             write_json(&path, &db, 1).unwrap();
         }
         self.repair_allowed && self.repair_denied.as_deref() != Some(repo)
@@ -1588,6 +1603,7 @@ impl Backend for Fake {
         Ok(self.fresh.clone().unwrap_or(self.ps.clone()))
     }
     fn jobs(&mut self) -> Result<Vec<Value>> {
+        if self.release_repair_lock_on_jobs { self.repair_held_lock.take(); }
         Ok(self.records.clone())
     }
     fn event_mtime(&mut self, _: &Value) -> Result<f64> {
@@ -4758,6 +4774,7 @@ fn help_uses_stdout_and_exit_zero_for_every_subcommand() {
         &["recover", "-h"],
         &["orphans", "-h"],
         &["checkpoint-workspace", "--help"],
+        &["dispatch-receipt", "--help"],
     ] {
         let mut c = invocation(&[env!("CARGO_BIN_EXE_scheduler")], Some(10));
         c.args = args.iter().map(|a| a.to_string()).collect();

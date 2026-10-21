@@ -1,0 +1,456 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"time"
+)
+
+const agentResultDomain = "parent-agent-result-v1"
+const agentResultAttempts = 4
+const agentResultBudget = 20 * time.Second
+
+// Public explanations are a closed vocabulary. Private source material is
+// referenced, never opened or copied into Discord or command diagnostics.
+type AgentResultEvent struct {
+	RequestID     string `json:"request_id"`
+	Todo          uint64 `json:"todo_id"`
+	Project       string `json:"project"`
+	Thread        string `json:"thread_id"`
+	Source        string `json:"source"`
+	Parent        string `json:"parent_id,omitempty"`
+	Child         string `json:"child_id,omitempty"`
+	Attempt       string `json:"attempt_id"`
+	Transition    string `json:"transition_id"`
+	State         string `json:"state"`
+	Reason        string `json:"reason"`
+	Remaining     string `json:"remaining"`
+	Next          string `json:"next_action"`
+	OwnerRequired bool   `json:"owner_required"`
+	PrivateRef    string `json:"private_ref,omitempty"`
+}
+type AgentResultRecord struct {
+	Domain         string           `json:"domain"`
+	ID             string           `json:"id"`
+	Event          AgentResultEvent `json:"event"`
+	ParentReceived string           `json:"parent_received_at"`
+	Attempts       int              `json:"attempts"`
+	NextAttempt    string           `json:"next_attempt_at,omitempty"`
+	LastError      string           `json:"last_error,omitempty"`
+	Message        string           `json:"message_id,omitempty"`
+	URL            string           `json:"url,omitempty"`
+	Verified       string           `json:"verified_at,omitempty"`
+}
+type agentResultWatch struct {
+	Domain     string           `json:"domain"`
+	Event      AgentResultEvent `json:"event"`
+	Signature  string           `json:"signature"`
+	Closed     bool             `json:"closed"`
+	Generation uint64           `json:"generation"`
+	Deadline   string           `json:"result_deadline"`
+}
+
+var agentStateLabels = map[string]string{
+	"completed": "完了", "stopped": "未完了で停止", "rejected": "実行を拒否", "start_failed": "起動できず停止",
+	"failed": "異常終了", "timeout": "時間切れ", "capacity_wait": "利用枠の回復待ち", "dependency_wait": "依存する作業の完了待ち",
+	"cancelled": "取り消し", "lost": "結果がないまま終了", "parent_stopped": "親担当が未完了で停止",
+	"unverified": "担当の状態を確認できず停止",
+}
+var agentReasonLabels = map[string]string{
+	"completed": "担当が作業の完了を報告しました。", "work_incomplete": "担当の実行は終わりましたが、依頼の完了は確認できていません。",
+	"policy_rejected": "実行環境が操作を拒否しました。", "initialization_rejected": "実行環境が担当の起動または初期化を拒否しました。",
+	"execution_failed": "担当の実行中にエラーが発生しました。", "timeout": "実行時間の上限に達しました。",
+	"capacity": "利用枠またはモデルの空きを待っています。", "dependency": "先に完了する必要のある作業を待っています。",
+	"cancelled": "担当の実行が取り消されました。", "result_missing": "担当が終了結果を残さず停止しました。",
+	"parent_stopped":          "親担当が処理を続けられず、既存の監督処理へ結果を保存しました。",
+	"validation_stop":         "通知経路の確認のため、検証担当を予定どおり停止しました。",
+	"authentication":          "実行に必要な認証を確認できませんでした。",
+	"observation_unavailable": "登録済み担当の状態を安全に確認できません。担当の成否は未確認です。",
+	"result_wait_limit":       "登録した結果待ちの期限に達しました。担当の成否は未確認です。",
+}
+var agentRemainingLabels = map[string]string{"none": "なし", "verification": "元の依頼に必要な検証と配送結果の確認が残っています。", "work": "元の依頼の実作業が残っています。", "unverified": "元の依頼の残作業はまだ確認できていません。"}
+var agentNextLabels = map[string]string{"none": "追加作業なし", "review_result": "親担当が保存済みの結果を確認して続行します。", "retry": "親担当が同じ依頼の通常の再開手順を進めます。", "wait_dependency": "既存の担当管理で待ち先の完了後に再開します。", "owner_decision": "保存済みの質問と本人の回答を確認して進めます。"}
+
+func validateAgentEvent(e AgentResultEvent) error {
+	if !conversationID.MatchString(e.RequestID) || !conversationID.MatchString(e.Attempt) || !conversationID.MatchString(e.Transition) || e.Todo == 0 || e.Project != "cc-pc-tools-rs" {
+		return errors.New("agent result scope invalid")
+	}
+	if _, ok := number(e.Thread); !ok {
+		return errors.New("agent result destination invalid")
+	}
+	for _, id := range []string{e.Parent, e.Child} {
+		if id != "" && !conversationID.MatchString(id) {
+			return errors.New("agent result identity invalid")
+		}
+	}
+	if e.Source != "multi_agent_v1" && e.Source != "codex_jobs" && e.Source != "launcher" && e.Source != "parent" {
+		return errors.New("agent result source invalid")
+	}
+	if agentStateLabels[e.State] == "" || agentReasonLabels[e.Reason] == "" || agentRemainingLabels[e.Remaining] == "" || agentNextLabels[e.Next] == "" {
+		return errors.New("agent result vocabulary invalid")
+	}
+	if e.State == "completed" && (e.Reason != "completed" || e.Remaining != "none" || e.Next != "none" || e.OwnerRequired) || e.State != "completed" && (e.Reason == "completed" || e.Remaining == "none" || e.Next == "none") || e.OwnerRequired != (e.Next == "owner_decision") {
+		return errors.New("agent result outcome inconsistent")
+	}
+	if e.PrivateRef != "" && (!filepath.IsAbs(e.PrivateRef) || len(e.PrivateRef) > 4096) {
+		return errors.New("agent result private reference invalid")
+	}
+	return nil
+}
+func agentResultID(e AgentResultEvent) string {
+	return canonicalHash([]any{agentResultDomain, e.RequestID, e.Todo, e.Source, e.Parent, e.Child, e.Attempt, e.Transition})
+}
+func (r *Runner) agentResultPath(id string) string {
+	return filepath.Join(r.Config.Home, "agent-results", "records", id+".json")
+}
+func (r *Runner) recordAgentResult(e AgentResultEvent) (AgentResultRecord, error) {
+	if err := validateAgentEvent(e); err != nil {
+		return AgentResultRecord{}, err
+	}
+	id := agentResultID(e)
+	p := AgentResultRecord{Domain: agentResultDomain, ID: id, Event: e, ParentReceived: r.Now().UTC().Format(time.RFC3339Nano)}
+	path := r.agentResultPath(id)
+	var old AgentResultRecord
+	if err := readJSON(path, 1<<20, &old); err == nil {
+		if old.Domain != agentResultDomain || old.ID != id || old.Event != e || old.ParentReceived == "" {
+			return p, errors.New("agent result retry differs")
+		}
+		return old, nil
+	} else if !os.IsNotExist(err) {
+		return p, errors.New("agent result receipt unavailable")
+	}
+	// This file is the parent's durable inbox and the supervisor's outbox.
+	if err := publish(path, p); err != nil {
+		return p, err
+	}
+	return p, nil
+}
+func agentResultBody(p AgentResultRecord) string {
+	state := "継続中"
+	if p.Event.State == "completed" {
+		state = "完了"
+	}
+	decision := "不要"
+	if p.Event.OwnerRequired {
+		decision = "必要（元の質問で扱います）"
+	}
+	return fmt.Sprintf("状態: %s\n【PCの道具】担当の結果を親へ返しました（元ToDo %d）。\n結果: %s\n理由: %s\n残作業: %s\n次の処置: %s\n本人の判断: %s", state, p.Event.Todo, agentStateLabels[p.Event.State], agentReasonLabels[p.Event.Reason], agentRemainingLabels[p.Event.Remaining], agentNextLabels[p.Event.Next], decision)
+}
+func agentResultFiles(home, kind string) ([]string, error) {
+	entries, err := os.ReadDir(filepath.Join(home, "agent-results", kind))
+	if os.IsNotExist(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var ids []string
+	for _, e := range entries {
+		id := strings.TrimSuffix(e.Name(), ".json")
+		if !e.IsDir() && len(id) == 64 && strings.Trim(id, "0123456789abcdef") == "" && e.Name() == id+".json" {
+			ids = append(ids, id)
+		}
+	}
+	sort.Strings(ids)
+	return ids, nil
+}
+func (r *Runner) agentResultSlice(kind string, limit int) ([]string, error) {
+	ids, err := agentResultFiles(r.Config.Home, kind)
+	if err != nil || len(ids) == 0 {
+		return nil, err
+	}
+	path := filepath.Join(r.Config.Home, "agent-results", kind+"-cursor.json")
+	var cursor string
+	if err = readJSON(path, 1024, &cursor); err != nil && !os.IsNotExist(err) {
+		return nil, err
+	}
+	start := sort.SearchStrings(ids, cursor)
+	if start < len(ids) && ids[start] == cursor {
+		start++
+	}
+	selected := make([]string, 0, min(limit, len(ids)))
+	for i := 0; i < min(limit, len(ids)); i++ {
+		selected = append(selected, ids[(start+i)%len(ids)])
+	}
+	return selected, nil
+}
+func (r *Runner) agentResultCursor(kind, id string) error {
+	return publish(filepath.Join(r.Config.Home, "agent-results", kind+"-cursor.json"), id)
+}
+
+func (r *Runner) deliverAgentResult(ctx context.Context, p *AgentResultRecord) error {
+	body := agentResultBody(*p)
+	path := filepath.Join(r.Config.Home, "agent-results", "bodies", p.ID+".txt")
+	if err := writeText(path, body); err != nil {
+		return err
+	}
+	// The ordinary sender owns durable reservations, nonces and lost-response recovery.
+	response, err := r.conversationLog(ctx, "agent-result-"+p.ID[:40], "【PCの道具】担当の結果", path, p.Event.Thread, false, nil)
+	if err != nil || response["delivery"] != "verified" {
+		return errors.New("delivery_unverified")
+	}
+	thread, _ := response["thread_id"].(string)
+	message, _ := response["message_id"].(string)
+	if thread != p.Event.Thread {
+		return errors.New("delivery_unverified")
+	}
+	if _, ok := number(message); !ok {
+		return errors.New("delivery_unverified")
+	}
+	var live Message
+	if r.get(ctx, "/channels/"+thread+"/messages/"+message, &live) != nil || live.ID != message || live.Channel != thread || live.Author.ID != r.State.Destination.Bot || !live.Author.Bot || live.Content != body || live.Flags&(4096|4) != 4096|4 || live.MentionEveryone || len(live.Mentions) != 0 {
+		return errors.New("delivery_unverified")
+	}
+	p.Message = message
+	p.URL = "https://discord.com/channels/" + r.State.Destination.Guild + "/" + thread + "/" + message
+	p.Verified = r.Now().UTC().Format(time.RFC3339Nano)
+	p.LastError = ""
+	p.NextAttempt = ""
+	return nil
+}
+func (r *Runner) agentResultPhase(ctx context.Context, h *Health) {
+	work, cancel := context.WithTimeout(ctx, agentResultBudget)
+	defer cancel()
+	r.observeAgentResults(work, h)
+	ids, err := r.agentResultSlice("records", 16)
+	if err != nil {
+		h.Errors = append(h.Errors, "agent_result_queue_deferred")
+		return
+	}
+	for _, id := range ids {
+		if work.Err() != nil {
+			return
+		}
+		var p AgentResultRecord
+		if err := readJSON(r.agentResultPath(id), 1<<20, &p); err != nil || p.Domain != agentResultDomain || p.ID != id || agentResultID(p.Event) != id || validateAgentEvent(p.Event) != nil || p.ParentReceived == "" {
+			h.Errors = append(h.Errors, "agent_result_receipt_deferred")
+			continue
+		}
+		if r.agentResultCursor("records", id) != nil {
+			h.Errors = append(h.Errors, "agent_result_cursor_deferred")
+			return
+		}
+		if p.Verified != "" || p.Attempts >= agentResultAttempts {
+			continue
+		}
+		if p.NextAttempt != "" {
+			at, err := time.Parse(time.RFC3339Nano, p.NextAttempt)
+			if err != nil || r.Now().Before(at) {
+				continue
+			}
+		}
+		p.Attempts++
+		p.LastError = "delivery_unverified"
+		p.NextAttempt = r.Now().Add(time.Duration(1<<uint(p.Attempts-1)) * time.Minute).UTC().Format(time.RFC3339Nano)
+		// Persist the attempt before any external operation. An interrupted parent
+		// leaves the same delivery ID and a bounded, pending retry.
+		if publish(r.agentResultPath(id), p) != nil {
+			h.Errors = append(h.Errors, "agent_result_attempt_deferred")
+			return
+		}
+		if err := r.deliverAgentResult(work, &p); err != nil {
+			h.Errors = append(h.Errors, "agent_result_delivery_deferred")
+		}
+		if publish(r.agentResultPath(id), p) != nil {
+			h.Errors = append(h.Errors, "agent_result_commit_deferred")
+		}
+		return // At most one ordinary delivery attempt per periodic tick.
+	}
+}
+func (r *Runner) resumeAgentResult(id string) error {
+	if len(id) != 64 || strings.Trim(id, "0123456789abcdef") != "" {
+		return errors.New("agent result identity invalid")
+	}
+	var p AgentResultRecord
+	if readJSON(r.agentResultPath(id), 1<<20, &p) != nil || p.ID != id || p.Domain != agentResultDomain || agentResultID(p.Event) != id {
+		return errors.New("agent result unavailable")
+	}
+	if p.Verified != "" {
+		return nil
+	}
+	p.Attempts = 0
+	p.NextAttempt = ""
+	return publish(r.agentResultPath(id), p)
+}
+
+func agentJobOutcome(job map[string]json.RawMessage) (string, string) {
+	text := func(key string) string { var v string; _ = json.Unmarshal(job[key], &v); return v }
+	status := text("status")
+	failure := text("last_failure_kind")
+	switch status {
+	case "succeeded":
+		line := strings.SplitN(strings.TrimSpace(strings.TrimPrefix(text("last_message"), "\ufeff")), "\n", 2)[0]
+		if strings.TrimSpace(line) == "状態: 完了" {
+			return "completed", "completed"
+		}
+		return "stopped", "work_incomplete"
+	case "cancelled", "canceled":
+		return "cancelled", "cancelled"
+	case "lost", "missing":
+		return "lost", "result_missing"
+	case "failed":
+		switch failure {
+		case "policy":
+			return "rejected", "policy_rejected"
+		case "timeout":
+			return "timeout", "timeout"
+		case "capacity", "quota":
+			return "capacity_wait", "capacity"
+		case "auth":
+			return "start_failed", "authentication"
+		}
+		return "failed", "execution_failed"
+	case "queued":
+		var wait []json.RawMessage
+		_ = json.Unmarshal(job["work_wait_on"], &wait)
+		if len(wait) > 0 {
+			return "dependency_wait", "dependency"
+		}
+		if failure == "capacity" || failure == "quota" || failure == "rate_limit" {
+			return "capacity_wait", "capacity"
+		}
+	}
+	return "", ""
+}
+func (r *Runner) agentWatchSnapshot(parent context.Context, e AgentResultEvent) (string, string, string, error) {
+	root := r.JobsPath
+	if root == "" {
+		root = "D:/CC/Tools/codex-jobs/jobs"
+	}
+	path := filepath.Join(root, e.Child, "job.json")
+	guard := r.AgentResultGuard
+	if guard == nil {
+		guard = historyReadGuard
+	}
+	ctx, cancel := context.WithTimeout(parent, 2*time.Second)
+	defer cancel()
+	if !guard(ctx, path) {
+		return "", "", "", errors.New("agent result source protected")
+	}
+	var job map[string]json.RawMessage
+	if readJSON(path, 1<<20, &job) != nil {
+		return "", "", "", errors.New("agent result source unavailable")
+	}
+	var id string
+	_ = json.Unmarshal(job["id"], &id)
+	if id != e.Child {
+		return "", "", "", errors.New("agent result source differs")
+	}
+	state, reason := agentJobOutcome(job)
+	if state == "" {
+		return "", state, reason, nil
+	}
+	// Only explicit state fields determine the transition. Body text is neither
+	// rejection evidence nor public report material.
+	signature := canonicalHash([]any{state, reason, job["status"], job["finished_at"], job["attempt"], job["attempts"], job["work_wait_on"], job["capacity_retry_at"]})
+	return signature, state, reason, nil
+}
+func agentWatchID(e AgentResultEvent) string {
+	return canonicalHash([]any{e.RequestID, e.Todo, e.Parent, e.Child, e.Attempt})
+}
+func (r *Runner) watchAgentResult(e AgentResultEvent) error {
+	if err := validateAgentEvent(e); err != nil {
+		return err
+	}
+	if e.Source != "codex_jobs" || !validJob(e.Child) {
+		return errors.New("external watch identity invalid")
+	}
+	path := filepath.Join(r.Config.Home, "agent-results", "watches", agentWatchID(e)+".json")
+	var prior agentResultWatch
+	if err := readJSON(path, 1<<20, &prior); err == nil {
+		if prior.Domain != agentResultDomain || prior.Event != e {
+			return errors.New("agent watch retry differs")
+		}
+		return nil
+	} else if !os.IsNotExist(err) {
+		return errors.New("agent watch unavailable")
+	}
+	sig, state, _, err := r.agentWatchSnapshot(context.Background(), e)
+	if err != nil {
+		return err
+	}
+	if state != "" {
+		return errors.New("register an active external job before its next transition")
+	}
+	return publish(path, agentResultWatch{Domain: agentResultDomain, Event: e, Signature: sig, Deadline: r.Now().Add(time.Hour).UTC().Format(time.RFC3339Nano)})
+}
+func (r *Runner) observeAgentResults(ctx context.Context, h *Health) {
+	ids, err := r.agentResultSlice("watches", 4)
+	if err != nil {
+		h.Errors = append(h.Errors, "agent_watch_queue_deferred")
+		return
+	}
+	for _, id := range ids {
+		if ctx.Err() != nil {
+			return
+		}
+		path := filepath.Join(r.Config.Home, "agent-results", "watches", id+".json")
+		var w agentResultWatch
+		if readJSON(path, 1<<20, &w) != nil || w.Domain != agentResultDomain || validateAgentEvent(w.Event) != nil || agentWatchID(w.Event) != id {
+			h.Errors = append(h.Errors, "agent_watch_receipt_deferred")
+			continue
+		}
+		if r.agentResultCursor("watches", id) != nil {
+			return
+		}
+		if w.Closed {
+			continue
+		}
+		deadline, deadlineErr := time.Parse(time.RFC3339Nano, w.Deadline)
+		if deadlineErr != nil {
+			h.Errors = append(h.Errors, "agent_watch_deadline_deferred")
+			continue
+		}
+		sig, state, reason, err := r.agentWatchSnapshot(ctx, w.Event)
+		if err != nil {
+			h.Errors = append(h.Errors, "agent_watch_source_deferred")
+			if ctx.Err() != nil {
+				return
+			}
+			// A refusal to observe is not evidence that the child failed.
+			sig, state, reason = canonicalHash("observation_unavailable"), "unverified", "observation_unavailable"
+		}
+		expired := !r.Now().Before(deadline) && (state == "" || state == "unverified" || state == "dependency_wait" || state == "capacity_wait")
+		if expired {
+			sig, state, reason = canonicalHash("result_wait_limit"), "unverified", "result_wait_limit"
+		}
+		if sig == w.Signature {
+			continue
+		}
+		w.Generation++
+		if state != "" {
+			e := w.Event
+			e.Transition = fmt.Sprintf("observed-%d-%s", w.Generation, sig[:32])
+			e.State = state
+			e.Reason = reason
+			e.Remaining = "unverified"
+			e.Next = "review_result"
+			e.OwnerRequired = false
+			if state == "completed" {
+				e.Remaining = "none"
+				e.Next = "none"
+			}
+			if state == "dependency_wait" {
+				e.Next = "wait_dependency"
+			}
+			if state == "capacity_wait" {
+				e.Next = "retry"
+			}
+			if _, err := r.recordAgentResult(e); err != nil {
+				h.Errors = append(h.Errors, "agent_watch_return_deferred")
+				continue
+			}
+			w.Closed = expired || state != "dependency_wait" && state != "capacity_wait" && state != "unverified"
+		}
+		w.Signature = sig
+		if publish(path, w) != nil {
+			h.Errors = append(h.Errors, "agent_watch_commit_deferred")
+		}
+	}
+}

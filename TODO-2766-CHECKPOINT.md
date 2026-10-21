@@ -1,5 +1,45 @@
 # GoDD Press 通常CIの再開記録（ToDo2766）
 
+## 2026-10-21 job113146: 受付を接続し、実RAM source照合と追加レビューへ進んだ
+
+この節が最新。元2766の通常CIは未成功で、親2642のmerge/配布/製品全体doneは本担当では行わない。本人判断は不要。
+
+- 今回は実job20261021-113146-todo-2766、同branch scheduler/todo-2766-godd-press-ci-2642。再開時は1784c0d/clean。起動入口の運用指示・AGENTS・元2642のnote/spec・最新owner-agent-conductを読み直した。新方針は全終了結果を親が永続記録してDiscordへ記録する義務を含む。この担当の原仕様はDiscord直接送信禁止なので、親への結果と配送依頼を残す。
+- 3246の実reviewを受領: job20261021-110245-todo-3246/succeeded/exit0、対応turn_context anthropic/claude-sonnet-5-5/max。原応答SHA B2F518173E58730DA45EA16D40FD9DAD95FE56BD7922232C8EE42A1BD9026B69、task_completeとlast_message一致。旧8aの指定12全文でMust0/Suggestion3/Nit3。原応答をREVIEW-2766-PREPARATION-3246.mdへbyte保存、元3246のnoteへ照合と処置を通常CAS editで返した。未読secure_files*/source_materialization/normal_ci_admission本体は未読のまま。新差分をレビュー済みとはしない。
+- 新実装68ac605c6520262d60b7ff26d0467f0717c0fd70/tree72cc7c66b29c1ff22a3905a90bc01e6e690cdd38をcommit/pushし、remote ref一致。32file、1649追加/82削除。sourcepacket/pressci/既存Linux・Windows controller/既存Windows backendを接続し、VM/SCM/SDKを複製していない。旧MCP αの空profileと役割・label・timeout・回収を保持。
+- Pressの候補と実mergeを別のpinへ固定し、元13roleのmatrix/run/attempt/runner/OS/timeoutをAPIとhookで照合。候補treeは元b2の3 route blob以外不変を要求。PrepareRoutesは元workflowのruns-on scalar以外をbyte不変にする。local-checksは元dispatch、残る2workflowは元PR event。events/checkout/permission/step/gateは変更しない。nonce変数とrole/run/attempt labelを要求。API mutation/route公開/dispatchの実装や実操作はこの差分に無い。
+- Windowsのworker権限/SYSTEM private proof/stock token・hookを保ち、checkout owner path1箇所だけPressへ選択。新Windows2roleは元90分、Linuxも元の各timeoutを保持し、外側の有限時間だけ必要な余裕を持たせた。共有cargo_gate/専用target/上限/intent/lock・VM・登録回収は共用。
+
+### 実検査と保持する失敗
+
+- source全module Windows race初回72.908sで、新しい公開fixtureのGit object書換えだけReadOnlyにより失敗。fixtureだけchmodしfocused race4.176s/exit0。残りの初回有効検査は保持。修正版のmerge/signature focused race4.172s/exit0。元verify.goだけのGo overlayでは新merge親pinの回帰が実FAIL/exit1。commit改変negative controlは旧版でも拒否できたので、それをREDとはしない。
+- real RAM Fetch初回はcommit段階failure。旧記録はAPI/payloadを細分しておらず、初回の単独原因を捏造しない。別途、実APIの署名付きpayloadでsignature末尾LF保持だけが実OIDに一致し、元の末尾LF除去方式は不一致を確認。timezoneは+0000で旧対応範囲だった。公開の同形式fixtureは旧originalPayload関数だけのoverlayで実FAIL/exit1、修正版GREEN。新診断はcommit_api固定分類/identity/payloadを区別する。
+- 追加のAPI診断1回はTLS timeout後に補助がnullから値を作りかけたため、元receiptを無効として保存。ErrorActionPreference=Stop/実exit/同identity確認後、有限の読取1回で実SHA一致を確認した。無効なfalse値を判定に使わない。overlay作成の初回補助も結果が無かったため実検査とはせず、分離した作成と実Go起動でREDを回収した。
+- 修正後の実RAM Fetch/検証はexit0。物理実行候補merge f3a704132f286d58eee2c16b819bc85cd4565c37/tree a0c5944f8fc69b78db78afd525d2eab104fe3319、PR候補b2、main2da7d4af1dd9911eaff970fdfe08b60531732eb6を区別。archive49,306,964bytes/SHA0326e36cc480c5fc6f29ac32f6c386a52eecbf249b03f8879ce7702de78a8a73、2812 entries/2315 blobs。host checkout無し。初版の広いArchiveGitObjectsVerified名を実際のArchiveBlobIDsVerified/CommitIDVerifiedへ訂正。物理tree/guest/runner/公式successは全て未確認/false。
+- product-ci全module raceはmain1.320s/normalci1.037s/pressci1.435s exit0。新13role、全非route byte不変、元契約・candidate/merge・owner/ref/nonce/workflow/run/attempt/runner/partial拒否を合成APIで検査。最新版pressci focused exit0。
+- 利用側ci-guest全module race14.528s/exit0、新role focused1.038s/exit0、timeout focused exit0。Windows runner全module race8.771s/exit0、新2role/ACL差分1箇所 focused1.029s/exit0。source/product-ci/guest/runner全module vet exit0、最終product vetもexit0。
+- Linux helperはGOOS=linux/amd64 compile-only成功。新差分の実Linux/guest実行やRust検査ではない。dirty版のcompile確認物はliveに使わず回収した。git diff --check成功。
+- 75原recordを同worktreeの無視対象evidence-2766-admission-20261021.private.jsonへ全byte/base64とbytes/SHAで保存し、全読戻し一致。bundle SHA F9343613CE2BF5DDA91AC41B7904A19698F7BE0A1FF11D42279ECC9FCD0C2476。無効な診断値/REDでなかったcontrol/未確認treeの解釈も同bundleに明記。
+
+### 追加レビュー3272と再開の一手
+
+固定base1784c0d→head68ac605/tree72cc7c6の32全文/局所を3272へ通常add --spec、claude-sonnet-5-5/maxで登録。保存spec全文一致、dispatchableを確認。指示はTODO-2766-ADMISSION-REVIEW-SPEC.md。登録時はtodo/jobs空であり、レビュー成功ではない。検査時間の初期転記2.998sを原stdoutの4.176sへ訂正し、未起動の保存specも更新/全文一致を確認。子Codexは直接起動していない。
+
+1. 正規wait2766 --on3272でこのレビューだけを待つ。親2642や既済2737/3246を依存に入れない。実job/対応turn_context/固定版/全読了と未読/原応答を照合し、実Mustを直す。
+2. その後に原head/ref/base/実merge/全workflowを再読して、route公開方法を確定する。現在mainはlocal-checksを変更済み（blob b6e9216...）。元10job構成との3-way mergeが競合せず成立することは未確認。元event/4shard/ゲートを勝手に削らず、旧sourceの成功を実mergeへ読み替えない。製品headはまだb2で不変。
+3. 実guestでSDKのOS/CPU/RAM、Chrome/Node、RustupとRust1.95の選択が原workflowの意味を満たすかを確認し、不足を新しい使い捨てguestだけへ追加する。原SDKはRust1.97.1/MSVC等の実測済み資産だが、それだけでPress用toolchain/Chromeの準備済みとはしない。既存SDK/golden/ホスト/他担当を変更しない。
+4. レビュー済み同clean sourceからhost/Windows agent/Linux helperを必要分だけ生成し、VCS/clean/OS/実SHAを揃える。今回のdirty compile物は回収済みで再利用しない。元API/head/tree/原ガイダンス/全workflow/必須job/元timeout、共有Cargo gate・専用target・sccache・直列条件を維持。
+5. 既存の同PR/branchだけへexpected旧SHA/forcefalseの必要最小変更を行う。新製品headが生じたら必要なCodeQL/native公式結果を新headで実取得する。b2の成功済みCodeQL38893812340を根拠なく再実行せず、元3通常runのbudget failureを保持。手動success/予算増額/新費用/alert修正dismissは行わない。元9件は2765の範囲。
+6. 原公式全jobと完全logのbytes/SHA、source固定、失敗と修正後確認、期限/取消し/PID0/VM・登録不在/lock解放まで実測して親2642へ返す。通常CI成功、親製品merge/配布、原29/2191/製品全体の完了はまだ無い。
+
+### 後片付け・親への報告・再開保存
+
+自分の新temp47fb3a1f0120bb045917e6c250e7694fは原記録退避/全hash一致後、safe-delete plan指定の通常削除を別呼出しで実行しfinish(source_absent)。9,968,357bytes/79entries。空き容量の前後差は未測定。原2710/2648/2730/2737の保留物・SDK・旧失敗・他担当は不触。新VM/runner/container/ブラウザ/実Cargo/GPU/Civ6/AI APIキー/費用/本人PC操作/Discord送信は無い。
+
+postflight-2766-113146.private.jsonで実repo1386702183/AutoDevJapan/private/admin/nonfork、PR175 open/Draft/同repo/ref、headb2/base4dc/mergef3aが不変と確認。parent2642へこの区切りの結果・未完・次の手・本人判断不要と、最新方針によるDiscord結果記録の配送依頼を通常noteに1回記録する。直接Discord禁止を迂回せず、配送を未確認のまま成功とはしない。
+
+自分のbranchへこの記録とspecをcommit/pushし、実job/branch/最終HEADのcheckpointをHidden/Wait/PassThru保存・原台帳読戻しする。結果はcheckpoint-2766-113146-*.private.json。状態は正規wait以外schedulerへ任せ、推測progressを付けない。
+
 ## 2026-10-21 再開: 2737完了を受領し、Pressの準備差分を保存
 
 この節が最新。通常CIはまだ未実行・未成功で、元2766は未完了。本人判断は不要。

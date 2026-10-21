@@ -216,9 +216,9 @@ func (r *Runner) recordAgentResult(e AgentResultEvent) (AgentResultRecord, error
 	return r.recordAgentResultWithin(context.Background(), e)
 }
 func agentResultNotifies(e AgentResultEvent) bool {
-	// A normal internal completion or periodic observation is progress.
-	// The parent explicitly marks its actual reply to the owner.
-	return e.OwnerReply || e.OwnerRequired || e.State != "completed" && e.State != "unverified"
+	// The owner's latest correction requires action, not merely a reply or stop.
+	// Every result is still returned and delivered, including silent holds.
+	return e.OwnerRequired
 }
 func (r *Runner) recordAgentResultWithin(ctx context.Context, e AgentResultEvent) (AgentResultRecord, error) {
 	if err := validateAgentEvent(e); err != nil {

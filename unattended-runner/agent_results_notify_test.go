@@ -48,67 +48,90 @@ func legacyAgentReceipt(t *testing.T, r *Runner, e AgentResultEvent) AgentResult
 	return r.mustAgentResult(t, p.ID)
 }
 
-func TestAgentResultNewRepliesStopsAndItemsNotifyOwner(t *testing.T) {
-	for _, state := range []string{"completed", "stopped", "start_failed", "item_deferred"} {
-		t.Run(state, func(t *testing.T) {
-			r, _ := fixture(t)
-			e := resultEvent()
-			e.Thread = "620" // A question's progress thread, distinct from the result topic.
-			e.State = state
-			if state == "completed" {
-				e.Reason, e.Remaining, e.Next = "completed", "none", "none"
-				e.OwnerReply = true // Parent's actual response to an owner request.
-			}
-			if state == "start_failed" {
-				e.Source, e.Parent, e.Child, e.Reason = "launcher", "", "", "initialization_rejected"
-			}
-			if state == "item_deferred" {
-				e = agentDeferredEvent(e, AgentDeferredItem{ID: "owned-item", Kind: "scratch",
-					Transition: "hold", Reason: "cleanup_busy", Scope: "unknown", Next: "retry"})
-			}
-			p, err := r.recordAgentResult(e)
-			if err != nil {
-				t.Fatal(err)
-			}
-			b, _ := json.Marshal(p)
-			var receipt map[string]any
-			_ = json.Unmarshal(b, &receipt)
-			if receipt["notify_owner"] != true {
-				t.Error("new parent receipt did not persist the owner-notification decision")
-			}
-			calls := 0
-			r.Run = func(_ context.Context, _ string, args ...string) (string, error) {
-				calls++
-				if !slices.Contains(args, "--notify") {
-					t.Error("new result did not use the normal notifying sender")
+func actionRequiredResultEvent() AgentResultEvent {
+	e := resultEvent()
+	e.OwnerRequired, e.Next = true, "owner_decision"
+	e.OwnerQuestion = AgentOwnerQuestion{Question: "この対象の処置を選んでください。", ChoiceA: "保持して調査を続ける", ChoiceB: "確認済みの不要物だけ回収する", URL: "https://discord.com/channels/100/620/621"}
+	return e
+}
+
+func TestAgentResultOwnerActionAloneControlsMentions(t *testing.T) {
+	for _, state := range []string{"completed", "stopped", "rejected", "start_failed", "failed", "timeout", "capacity_wait", "dependency_wait", "cancelled", "lost", "parent_stopped", "item_deferred", "unverified"} {
+		for _, required := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/action=%t", state, required), func(t *testing.T) {
+				r, _ := fixture(t)
+				e := resultEvent()
+				e.Thread = "620" // A question's progress thread, distinct from the result topic.
+				e.State = state
+				e.OwnerReply = true // A reply by itself must not cause a mention.
+				if state == "completed" {
+					e.Reason, e.Remaining, e.Next = "completed", "none", "none"
 				}
-				if slices.Contains(args, "--thread") {
-					t.Error("notifying result targeted a possibly silent question-progress thread")
+				if state == "start_failed" {
+					e.Source, e.Parent, e.Child, e.Reason = "launcher", "", "", "initialization_rejected"
 				}
-				return `{"domain":"new-owner-recovery-messages","delivery":"verified","thread_id":"610","message_id":"735"}`, nil
-			}
-			server(t, r, func(w http.ResponseWriter, req *http.Request) {
-				if req.Method != "GET" || req.URL.Path != "/channels/610/messages/735" {
-					t.Errorf("unexpected readback %s %s", req.Method, req.URL.Path)
+				if state == "item_deferred" {
+					e = agentDeferredEvent(e, AgentDeferredItem{ID: "owned-item", Kind: "scratch",
+						Transition: "hold", Reason: "cleanup_busy", Scope: "unknown", Next: "retry"})
 				}
-				m := resultReadback(r, p, true)
-				m["channel_id"] = "610"
-				respond(w, m)
+				if required {
+					e.OwnerRequired, e.Next = true, "owner_decision"
+					e.OwnerQuestion = actionRequiredResultEvent().OwnerQuestion
+				}
+				p, err := r.recordAgentResult(e)
+				if state == "completed" && required {
+					if err == nil {
+						t.Fatal("a completed outcome accepted an outstanding owner action")
+					}
+					return
+				}
+				if err != nil {
+					t.Fatal(err)
+				}
+				b, _ := json.Marshal(p)
+				var receipt map[string]any
+				_ = json.Unmarshal(b, &receipt)
+				if notify, _ := receipt["notify_owner"].(bool); notify != required || r.mustAgentResult(t, p.ID).NotifyOwner != required {
+					t.Error("new parent receipt did not persist the action-required mention decision")
+				}
+				destination := e.Thread
+				if required {
+					destination = "610"
+				}
+				calls := 0
+				r.Run = func(_ context.Context, _ string, args ...string) (string, error) {
+					calls++
+					if slices.Contains(args, "--notify") != required {
+						t.Error("normal sender mentioned the owner without required action, or omitted a required mention")
+					}
+					if required && slices.Contains(args, "--thread") {
+						t.Error("notifying result targeted a possibly silent question-progress thread")
+					}
+					return fmt.Sprintf(`{"domain":"new-owner-recovery-messages","delivery":"verified","thread_id":"%s","message_id":"735"}`, destination), nil
+				}
+				server(t, r, func(w http.ResponseWriter, req *http.Request) {
+					if req.Method != "GET" || req.URL.Path != "/channels/"+destination+"/messages/735" {
+						t.Errorf("unexpected readback %s %s", req.Method, req.URL.Path)
+					}
+					m := resultReadback(r, p, required)
+					m["channel_id"] = destination
+					respond(w, m)
+				})
+				r.agentResultPhase(context.Background(), &Health{})
+				saved := r.mustAgentResult(t, p.ID)
+				if saved.Verified == "" || saved.Message != "735" || saved.Event != e || !strings.Contains(saved.URL, "/"+destination+"/735") {
+					t.Fatal("the original result or its required mention/silent delivery was not GET-verified")
+				}
+				again, err := r.recordAgentResult(e)
+				if err != nil || again.ID != p.ID || again.Verified == "" {
+					t.Fatal("same transition lost its verified receipt")
+				}
+				r.agentResultPhase(context.Background(), &Health{})
+				if calls != 1 {
+					t.Fatal("same verified transition notified more than once")
+				}
 			})
-			r.agentResultPhase(context.Background(), &Health{})
-			saved := r.mustAgentResult(t, p.ID)
-			if saved.Verified == "" || saved.Message != "735" || saved.Event.Thread != "620" || !strings.Contains(saved.URL, "/610/735") {
-				t.Fatal("owner mention was not GET-verified")
-			}
-			again, err := r.recordAgentResult(e)
-			if err != nil || again.ID != p.ID || again.Verified == "" {
-				t.Fatal("same transition lost its verified receipt")
-			}
-			r.agentResultPhase(context.Background(), &Health{})
-			if calls != 1 {
-				t.Fatal("same verified transition notified more than once")
-			}
-		})
+		}
 	}
 }
 
@@ -116,7 +139,7 @@ func TestAgentResultNotifyRequiresExactOwnerReadback(t *testing.T) {
 	for _, mismatch := range []string{"silent", "missing", "foreign", "extra", "duplicate_body", "role", "roles_missing", "everyone"} {
 		t.Run(mismatch, func(t *testing.T) {
 			r, _ := fixture(t)
-			p, _ := r.recordAgentResult(resultEvent())
+			p, _ := r.recordAgentResult(actionRequiredResultEvent())
 			r.Run = func(context.Context, string, ...string) (string, error) {
 				return `{"domain":"new-owner-recovery-messages","delivery":"verified","thread_id":"610","message_id":"735"}`, nil
 			}
@@ -146,6 +169,42 @@ func TestAgentResultNotifyRequiresExactOwnerReadback(t *testing.T) {
 			saved := r.mustAgentResult(t, p.ID)
 			if saved.Verified != "" || saved.LastError != "delivery_unverified" {
 				t.Fatal("mismatched owner notification was marked reported")
+			}
+		})
+	}
+}
+
+func TestAgentResultNoActionReadbackRejectsUnexpectedNotification(t *testing.T) {
+	for _, mismatch := range []string{"flag", "owner", "body", "everyone", "role"} {
+		t.Run(mismatch, func(t *testing.T) {
+			r, _ := fixture(t)
+			p, err := r.recordAgentResult(resultEvent())
+			if err != nil {
+				t.Fatal(err)
+			}
+			r.Run = func(context.Context, string, ...string) (string, error) {
+				return `{"domain":"new-owner-recovery-messages","delivery":"verified","thread_id":"610","message_id":"735"}`, nil
+			}
+			server(t, r, func(w http.ResponseWriter, _ *http.Request) {
+				m := resultReadback(r, p, false)
+				switch mismatch {
+				case "flag":
+					m["flags"] = 4
+				case "owner":
+					m["mentions"] = []map[string]string{{"id": "300"}}
+				case "body":
+					m["content"] = m["content"].(string) + "\n<@300>"
+				case "everyone":
+					m["mention_everyone"] = true
+				case "role":
+					m["mention_roles"] = []string{"999"}
+				}
+				respond(w, m)
+			})
+			r.agentResultPhase(context.Background(), &Health{})
+			saved := r.mustAgentResult(t, p.ID)
+			if saved.Verified != "" || saved.LastError != "delivery_unverified" {
+				t.Fatal("unexpected notification was marked verified")
 			}
 		})
 	}
@@ -349,7 +408,7 @@ func TestAgentResultOldWaitSignatureDoesNotReplayAtDeployment(t *testing.T) {
 	save("queued")
 	r.observeAgentResults(context.Background(), &Health{})
 	files, _ = agentResultFiles(r.Config.Home, "records")
-	if len(files) != 1 || !r.mustAgentResult(t, files[0]).NotifyOwner {
+	if len(files) != 1 || r.mustAgentResult(t, files[0]).NotifyOwner {
 		t.Fatal("a new wait after running was not reported")
 	}
 }
@@ -390,8 +449,8 @@ func TestAgentResultOldWaitMigrationStillReportsChangedWaitKind(t *testing.T) {
 		t.Fatal("known change from dependency to capacity wait was dropped")
 	}
 	saved := r.mustAgentResult(t, files[0])
-	if saved.Event.State != "capacity_wait" || !saved.NotifyOwner {
-		t.Fatal("new capacity wait was not a notifying result")
+	if saved.Event.State != "capacity_wait" || saved.NotifyOwner {
+		t.Fatal("new capacity wait was not recorded silently")
 	}
 }
 
@@ -436,7 +495,7 @@ func TestAgentResultDistinctStopsDoNotAliasAtTheOrdinarySender(t *testing.T) {
 	}
 	server(t, r, func(w http.ResponseWriter, req *http.Request) {
 		id := strings.TrimPrefix(req.URL.Path, "/channels/610/messages/")
-		m := resultReadback(r, AgentResultRecord{Event: resultEvent(), Body: byID[id]}, true)
+		m := resultReadback(r, AgentResultRecord{Event: resultEvent(), Body: byID[id]}, false)
 		m["id"] = id
 		respond(w, m)
 	})

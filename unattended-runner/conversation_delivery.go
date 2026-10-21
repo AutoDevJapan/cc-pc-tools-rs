@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -107,11 +109,19 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 		return err
 	}
 	marker := "conversation-owner-reply:" + q.SenderID + ":" + reply.Message + ":" + canonicalHash([]string{req.Text, req.Edited})[:16]
-	if q.Wait && (len(row.QuestionDeliveries) != 0 || len(row.QuestionAnswers) != 0) {
-		answer, b := conversationAnswerBytes(q, reply, req, receipt)
-		if conversationDeliveryRecorded(row, q, answer, b) || conversationAnswerRecorded(row, q, answer, b) {
+	if q.Wait {
+		// Every waiting reply, including a second reply, gets an immutable input
+		// before any edit. Reacquisition must not silently replace that version.
+		answer, b, _, reacquired, err := r.conversationAnswerInput(q, reply, req, receipt)
+		if err != nil {
+			return err
+		}
+		if conversationDeliveryRecorded(row, q, answer, b) || conversationAnswerRecorded(row, q, answer, b) || (reacquired && hasNoteMarker(row.Note, marker)) {
 			req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
 			return r.save()
+		}
+		if reacquired {
+			return errors.New("conversation reacquisition delivery proof unavailable")
 		}
 	}
 	if q.Wait && conversationContinuedWait(row, q) {
@@ -295,8 +305,7 @@ func (r *Runner) deliverContinuedConversationReply(ctx context.Context, row *Tod
 	return r.save()
 }
 
-// Recovery compares the current acquisition without publishing an immutable
-// command input. Only an actual question-answer operation prepares that file.
+// Keep construction separate from the immutable input and its recovery checks.
 func conversationAnswerBytes(q ConversationQuestion, reply conversationReply, req *Request, receipt []byte) (conversationAnswerReceipt, []byte) {
 	answer := conversationAnswerReceipt{Domain: "discord-conversation-answer-v1", RequestID: q.SenderID, Todo: fmt.Sprint(q.Todo), Thread: q.Thread, Question: q.Message, Fingerprint: q.Fingerprint, QuestionSHA: q.ReceiptSHA, Message: reply.Message, Author: reply.Author, Source: "discord-api-v10", ReplySHA: canonicalHash(reply), Acquired: req.Acquired, ReceiptSHA: bytesHash(receipt)}
 	b, _ := json.MarshalIndent(answer, "", "  ")
@@ -304,9 +313,39 @@ func conversationAnswerBytes(q ConversationQuestion, reply conversationReply, re
 }
 
 func (r *Runner) prepareConversationAnswer(q ConversationQuestion, reply conversationReply, req *Request, receipt []byte) (conversationAnswerReceipt, []byte, string, error) {
+	answer, b, path, reacquired, err := r.conversationAnswerInput(q, reply, req, receipt)
+	if err == nil && reacquired {
+		err = errors.New("conversation reacquisition requires delivery proof")
+	}
+	return answer, b, path, err
+}
+
+// A ready file fixes this text/edit version's original acquisition. A new API
+// acquisition can confirm its old delivery, but can never manufacture a new
+// edit from an older answer after the intake index and note have been replaced.
+func (r *Runner) conversationAnswerInput(q ConversationQuestion, reply conversationReply, req *Request, receipt []byte) (conversationAnswerReceipt, []byte, string, bool, error) {
 	answer, b := conversationAnswerBytes(q, reply, req, receipt)
 	path := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+"-"+canonicalHash([]string{req.Text, req.Edited})[:16]+".ready.json")
-	return answer, b, path, writeConversationOnce(path, b)
+	if _, err := os.Lstat(path); os.IsNotExist(err) {
+		return answer, b, path, false, writeConversationOnce(path, b)
+	}
+	previous, err := boundedRegular(path)
+	if err != nil {
+		return answer, nil, path, false, err
+	}
+	var saved conversationAnswerReceipt
+	if json.Unmarshal(previous, &saved) != nil {
+		return answer, nil, path, false, errors.New("conversation saved answer invalid")
+	}
+	expected := answer
+	expected.Acquired, expected.ReceiptSHA = saved.Acquired, saved.ReceiptSHA
+	expectedBytes, _ := json.MarshalIndent(expected, "", "  ")
+	acquired, timeErr := time.Parse(time.RFC3339Nano, saved.Acquired)
+	created, createdErr := time.Parse(time.RFC3339Nano, req.Created)
+	if !bytes.Equal(previous, expectedBytes) || !shaPattern.MatchString(saved.ReceiptSHA) || timeErr != nil || createdErr != nil || acquired.Before(created) || acquired.After(r.Now().Add(time.Minute)) {
+		return answer, nil, path, false, errors.New("conversation saved answer association differs")
+	}
+	return saved, previous, path, saved != answer, nil
 }
 
 func conversationWaitUnchanged(row *TodoRow, q ConversationQuestion) bool {

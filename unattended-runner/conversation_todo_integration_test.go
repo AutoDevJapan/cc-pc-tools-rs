@@ -131,14 +131,134 @@ func TestConversationActualCanonicalRecaptureDoesNotWriteARecoveryProbe(t *testi
 	before, _ := os.ReadFile(f.r.TodoPath)
 	// Simulate a lost intake index entry, while its canonical receipt and the
 	// immutable ready file survived. A new acquisition has different bytes.
+	ready, _ := filepath.Glob(filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", reply.Message+"-*.ready.json"))
+	if len(ready) != 1 {
+		t.Fatal("immutable delivery input absent")
+	}
+	readyBefore, _ := os.ReadFile(ready[0])
 	delete(f.r.State.Requests, reply.Message)
 	now := time.Now().Add(time.Second)
 	f.r.Now = func() time.Time { return now }
 	health = Health{}
 	f.r.processConversations(context.Background(), &health)
 	after, _ := os.ReadFile(f.r.TodoPath)
-	if len(health.Errors) != 0 || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" || string(before) != string(after) {
+	readyAfter, _ := os.ReadFile(ready[0])
+	if len(health.Errors) != 0 || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" || string(before) != string(after) || string(readyBefore) != string(readyAfter) {
 		t.Fatalf("read-only recovery probe conflicted with an earlier acquisition: %v", health.Errors)
+	}
+}
+
+func TestConversationActualCanonicalRecaptureKeepsReplacedNotesAndNewHolds(t *testing.T) {
+	for _, kind := range []string{"normal", "imported", "continued"} {
+		t.Run(kind, func(t *testing.T) {
+			var f *conversationFixture
+			switch kind {
+			case "normal":
+				f = conversationNativeTest(t)
+				f.ask(t)
+			case "imported":
+				f = importedNative(t)
+			case "continued":
+				f = continuedNative(t)
+			}
+			reply := f.reply(t, 8, "a")
+			health := Health{}
+			f.r.processConversations(context.Background(), &health)
+			if len(health.Errors) != 0 || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
+				t.Fatal("initial delivery unavailable")
+			}
+			delete(f.r.State.Requests, reply.Message)
+			now := time.Now().Add(time.Second)
+			f.r.Now = func() time.Time { return now }
+			f.mutateTodo(t, func(row map[string]any) {
+				row["status"] = "block"
+				row["owner_stopped"] = true
+				row["note"] = "ジョブの結果に判断が必要です。"
+				row["owner_question_wait"] = map[string]any{"newer_question": true}
+				row["scheduler"] = map[string]any{"owner_instruction": "新しい担当への指示"}
+			})
+			before, _ := os.ReadFile(f.r.TodoPath)
+			health = Health{}
+			f.r.processConversations(context.Background(), &health)
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if len(health.Errors) != 0 || string(before) != string(after) || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
+				t.Fatalf("%s recapture rewrote a newer task or lost a committed delivery: %v", kind, health.Errors)
+			}
+		})
+	}
+}
+
+func TestConversationActualCanonicalRecapturedSecondReplyWithoutProofStaysPending(t *testing.T) {
+	f := conversationNativeTest(t)
+	f.ask(t)
+	f.reply(t, 8, "a")
+	f.r.processConversations(context.Background(), &Health{})
+	reply := f.reply(t, 9, "元の範囲で続けて")
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) != 0 || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
+		t.Fatal("second reply was not delivered")
+	}
+	delete(f.r.State.Requests, reply.Message)
+	now := time.Now().Add(time.Second)
+	f.r.Now = func() time.Time { return now }
+	f.mutateTodo(t, func(row map[string]any) {
+		row["status"] = "block"
+		row["owner_stopped"] = true
+		row["note"] = "新しい直接停止"
+	})
+	before, _ := os.ReadFile(f.r.TodoPath)
+	health = Health{}
+	// The existing per-reply cursor visits the first reply before this one.
+	for i := 0; i < 2; i++ {
+		f.r.processConversations(context.Background(), &health)
+	}
+	after, _ := os.ReadFile(f.r.TodoPath)
+	if string(before) != string(after) || len(health.Errors) == 0 || f.r.State.Requests[reply.Message].Phase != "conversation_reply_saved" {
+		t.Fatal("an unproven second reply was rewritten or acknowledged after intake loss")
+	}
+}
+
+func TestConversationActualCanonicalRecaptureRejectsDifferentSavedInput(t *testing.T) {
+	for _, change := range []string{"question", "unknown-field", "acquired", "receipt-sha"} {
+		t.Run(change, func(t *testing.T) {
+			f := conversationNativeTest(t)
+			f.ask(t)
+			reply := f.reply(t, 8, "a")
+			f.r.processConversations(context.Background(), &Health{})
+			ready, _ := filepath.Glob(filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", reply.Message+"-*.ready.json"))
+			if len(ready) != 1 {
+				t.Fatal("delivery input absent")
+			}
+			var input conversationAnswerReceipt
+			if readJSON(ready[0], 1<<20, &input) != nil {
+				t.Fatal("delivery input unavailable")
+			}
+			switch change {
+			case "question":
+				input.Question = "999"
+			case "acquired":
+				input.Acquired = "invalid"
+			case "receipt-sha":
+				input.ReceiptSHA = "invalid"
+			}
+			invalid, _ := json.MarshalIndent(input, "", "  ")
+			if change == "unknown-field" {
+				invalid = []byte(strings.TrimSuffix(string(invalid), "\n}") + ",\n  \"extra\": \"unrecognized\"\n}")
+			}
+			if os.WriteFile(ready[0], invalid, 0600) != nil {
+				t.Fatal("invalid fixture not saved")
+			}
+			delete(f.r.State.Requests, reply.Message)
+			f.mutateTodo(t, func(row map[string]any) { row["note"] = "新しい停止"; row["owner_stopped"] = true })
+			before, _ := os.ReadFile(f.r.TodoPath)
+			health := Health{}
+			f.r.processConversations(context.Background(), &health)
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if len(health.Errors) == 0 || string(before) != string(after) || f.r.State.Requests[reply.Message].Phase != "conversation_reply_saved" {
+				t.Fatal("different immutable input was trusted or changed a later task")
+			}
+		})
 	}
 }
 

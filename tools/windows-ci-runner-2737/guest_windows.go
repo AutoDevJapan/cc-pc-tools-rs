@@ -76,7 +76,7 @@ func RunGuestAgent() error {
 		if public.Instance != seed.Plan.Instance || public.ClientSHA256 != seed.ClientSHA256 {
 			return sdk.GuestBackend{}, errors.New("SDK and runner seeds disagree")
 		}
-		s := &channelServer{run: func(ctx context.Context, c net.Conn) error {
+		s := &channelServer{plan: seed.Plan, run: func(ctx context.Context, c net.Conn) error {
 			o := &windowsOps{plan: seed.Plan, hookCalls: make(chan hookCall), closed: make(chan struct{})}
 			return guestSession(ctx, c, seed, o)
 		}}

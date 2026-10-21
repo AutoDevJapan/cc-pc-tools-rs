@@ -5,6 +5,7 @@ import (
 	"cc/product-ci/normalci"
 	"strings"
 	"testing"
+	"time"
 )
 
 func pressFixturePin(workflow string) sourcepacket.Pin {
@@ -54,6 +55,18 @@ func TestPressGuestPoliciesBindAllOriginalRolesWithoutCrossProductFallback(t *te
 				if !validOfficialBinding(q, b) {
 					t.Fatal("fixed binding refused")
 				}
+				bad := b
+				bad.JobName = "other"
+				if validOfficialBinding(q, bad) {
+					t.Fatal("changed official job name accepted")
+				}
+				original := time.Duration(policy.TimeoutMinutes) * time.Minute
+				if jobGuestTimeout(pin, role) <= original || (policy.OS == "Linux" && guestLifetime(pin) <= jobGuestTimeout(pin, role)) {
+					t.Fatal("outer deadline truncates original role")
+				}
+				if rustProbeVersion(pin) != "1.95.0" || liveWorkspaceFor(pin) != "/home/ci2737/work/GoDD-Press/GoDD-Press" {
+					t.Fatal("Press diagnostics use alpha toolchain or workspace")
+				}
 				b.RepoID = 1154066087
 				if validOfficialBinding(q, b) {
 					t.Fatal("MCP alpha binding reused for Press")
@@ -78,6 +91,9 @@ func TestPressGuestPoliciesBindAllOriginalRolesWithoutCrossProductFallback(t *te
 	}
 	if count != 13 {
 		t.Fatal("original role count changed")
+	}
+	if jobGuestTimeout(sourcepacket.Pin{}, "verify") != 40*time.Minute || guestLifetime(sourcepacket.Pin{}) != 45*time.Minute || rustProbeVersion(sourcepacket.Pin{}) != "1.97.1" {
+		t.Fatal("alpha deadline/toolchain changed")
 	}
 	for _, p := range []sourcepacket.Pin{
 		{Product: "other", HeadSHA: strings.Repeat("a", 40), TreeSHA: strings.Repeat("b", 40), WorkflowSHA256: strings.Repeat("c", 64)},

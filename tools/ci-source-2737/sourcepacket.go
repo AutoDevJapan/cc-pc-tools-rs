@@ -163,17 +163,17 @@ func Fetch(ctx context.Context, pin Pin) (result Packet, retErr error) {
 
 	var c commitResponse
 	stage = "commit"
-	if err:=api(ctx,"repos/"+r.FullName+"/git/commits/"+pin.HeadSHA,&c);err!=nil{
-		stage="commit_api_"+sourceAPICode(err)
-		return Packet{},fixedErr()
+	if err := api(ctx, "repos/"+r.FullName+"/git/commits/"+pin.HeadSHA, &c); err != nil {
+		stage = "commit_api_" + sourceAPICode(err)
+		return Packet{}, fixedErr()
 	}
 	if c.SHA != pin.HeadSHA || c.Tree.SHA != pin.TreeSHA {
-		stage="commit_identity"
+		stage = "commit_identity"
 		return Packet{}, fixedErr()
 	}
 	payload, err := originalPayload(c, pin.HeadSHA)
 	if err != nil {
-		stage="commit_payload"
+		stage = "commit_payload"
 		return Packet{}, fixedErr()
 	}
 

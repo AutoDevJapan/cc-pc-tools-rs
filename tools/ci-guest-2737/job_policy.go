@@ -56,6 +56,12 @@ func liveWorkspaceFor(pin sourcepacket.Pin) string {
 	}
 	return liveWorkspace
 }
+func rustProbeVersion(pin sourcepacket.Pin) string {
+	if pin.Product == sourcepacket.PressProduct {
+		return "1.95.0"
+	}
+	return "1.97.1"
+}
 func jobGuestTimeout(pin sourcepacket.Pin, role string) time.Duration {
 	if pin.Product == sourcepacket.PressProduct {
 		if j, ok := jobPolicy(pin, role); ok {
@@ -63,4 +69,25 @@ func jobGuestTimeout(pin sourcepacket.Pin, role string) time.Duration {
 		}
 	}
 	return 40 * time.Minute
+}
+
+// The listener starts before the role plan arrives. Bound its lifetime by the
+// longest closed role for this pinned workflow, plus boot/transfer/drain time.
+// Each admitted stream gets the narrower role deadline in serveLiveJob.
+func guestLifetime(pin sourcepacket.Pin) time.Duration {
+	if pin.Product != sourcepacket.PressProduct {
+		return 45 * time.Minute
+	}
+	longest := time.Duration(0)
+	for _, role := range []string{"rust-core", "rust-integration-1", "rust-integration-2", "rust-integration-3", "rust-integration-4", "rust-field-read-signing", "rust-aux", "browser-package", "browser-cold-start", "local-gates", "rust-v2-https-ubuntu-24.04"} {
+		if j, ok := jobPolicy(pin, role); ok && j.OS == "Linux" {
+			if d := jobGuestTimeout(pin, role); d > longest {
+				longest = d
+			}
+		}
+	}
+	if longest == 0 {
+		return 45 * time.Minute // Invalid/non-Linux plans cannot enter live work.
+	}
+	return longest + 5*time.Minute
 }

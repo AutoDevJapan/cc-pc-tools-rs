@@ -15,6 +15,11 @@ import (
 )
 
 func TestRealMTLSChannelSingleUseAndWrongClientPin(t *testing.T) {
+	for _, p := range []Plan{testSeed().Plan, pressDeadlinePlan("rust-v2-https.yml", "rust-v2-https-windows-2022"), pressDeadlinePlan("windows-hidden-fixtures.yml", "junction-fixtures")} {
+		t.Run(p.Role, func(t *testing.T) { testRealMTLSDeadline(t, p) })
+	}
+}
+func testRealMTLSDeadline(t *testing.T, plan Plan) {
 	instance := testSeed().Plan.Instance
 	ip := net.ParseIP("192.168.77.20")
 	server, e := sdk.NewIdentity(instance, ip, x509.ExtKeyUsageServerAuth)
@@ -30,8 +35,11 @@ func TestRealMTLSChannelSingleUseAndWrongClientPin(t *testing.T) {
 		t.Fatal(e)
 	}
 	entered := make(chan struct{})
+	remaining := make(chan time.Duration, 1)
 	release := make(chan struct{})
-	s := &channelServer{run: func(ctx context.Context, c net.Conn) error {
+	s := &channelServer{plan: plan, run: func(ctx context.Context, c net.Conn) error {
+		deadline, _ := ctx.Deadline()
+		remaining <- time.Until(deadline)
 		close(entered)
 		select {
 		case <-release:
@@ -84,6 +92,13 @@ func TestRealMTLSChannelSingleUseAndWrongClientPin(t *testing.T) {
 	case <-entered:
 	case <-time.After(3 * time.Second):
 		t.Fatal("session did not enter")
+	}
+	want := 26 * time.Minute
+	if plan.Source.Product != "" {
+		want = 96 * time.Minute
+	}
+	if got := <-remaining; got < want-time.Second || got > want {
+		t.Fatalf("effective service deadline %s, want %s", got, want)
 	}
 	second, r, e := connect(client)
 	if second != nil {

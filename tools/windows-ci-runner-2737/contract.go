@@ -9,6 +9,7 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+	"time"
 )
 
 const Role = "windows-native-check"
@@ -58,6 +59,13 @@ func (p Plan) timeoutMinutes() int {
 	}
 	return j.TimeoutMinutes
 }
+
+func (p Plan) sessionTimeout() time.Duration {
+	if p.Source.Product == sourcepacket.PressProduct {
+		return time.Duration(p.timeoutMinutes()+6) * time.Minute
+	}
+	return 26 * time.Minute
+}
 func (p Plan) Validate() error {
 	_, _, label, ok := p.policy()
 	if !ok || !validHex(p.Instance, 32) || !validHex(p.Source.HeadSHA, 40) || !validHex(p.Source.TreeSHA, 40) || !validHex(p.Source.WorkflowSHA256, 64) || p.RunID < 1 || p.JobID < 1 || p.RunnerID != 0 || p.Attempt < 1 || p.Jobs < 1 || p.Jobs > 10 || p.Threads < 1 || p.Threads > 10 || p.Name != "todo2737-"+p.Instance || p.Label != label || len(p.Inputs) != 0 {
@@ -84,7 +92,7 @@ func NewSeed(pin sourcepacket.Pin, b normalci.Binding, instance, clientHash stri
 }
 func ValidateBinding(p Plan, b normalci.Binding) error {
 	profile, j, _, ok := p.policy()
-	if !ok || p.Validate() != nil || b.RepoID != profile.RepoID || b.PR != profile.PR || b.SHA != p.Source.HeadSHA || b.Tree != p.Source.TreeSHA || b.WorkflowSHA != p.Source.WorkflowSHA256 || b.RunID != p.RunID || b.JobID != p.JobID || b.Attempt != p.Attempt || b.Role != p.Role || b.Label != p.Label || b.OS != "Windows" || b.TimeoutMinutes != j.TimeoutMinutes || b.JobName == "" {
+	if !ok || p.Validate() != nil || b.RepoID != profile.RepoID || b.PR != profile.PR || b.SHA != p.Source.HeadSHA || b.Tree != p.Source.TreeSHA || b.WorkflowSHA != p.Source.WorkflowSHA256 || b.RunID != p.RunID || b.JobID != p.JobID || b.Attempt != p.Attempt || b.Role != p.Role || b.Label != p.Label || b.OS != "Windows" || b.TimeoutMinutes != j.TimeoutMinutes || b.JobName == "" || (p.Source.Product == sourcepacket.PressProduct && b.JobName != j.Name) {
 		return errors.New("official Windows binding changed")
 	}
 	return nil

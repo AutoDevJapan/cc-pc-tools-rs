@@ -30,6 +30,7 @@ type guest struct {
 	sourceTouched        bool
 	sdkAttempted         bool
 	source               sourcepacket.Pin
+	lifetime             *time.Timer
 }
 
 func (g *guest) result(r fixtureResult) { g.mu.Lock(); g.results[r.ID] = r; g.mu.Unlock() }
@@ -75,8 +76,7 @@ func (g *guest) serve(conn net.Conn) {
 		g.sourceTouched = true
 		g.mu.Unlock()
 		defer func() { g.mu.Lock(); g.active = false; g.mu.Unlock() }()
-		_ = conn.SetDeadline(time.Now().Add(40 * time.Minute))
-		serveLiveJob(conn, reader, q.ID, g.source)
+		serveLiveJob(conn, reader, q.ID, g.source, g.lifetime)
 		return
 	}
 	if q.Kind == "probe-public-sdk" {
@@ -342,7 +342,8 @@ func runGuest() error {
 	announce := func() { _, _ = fmt.Fprintln(serial, "CI2737-READY "+base64.StdEncoding.EncodeToString(public)) }
 	announce()
 	g := guest{results: map[string]fixtureResult{}, instance: p.Instance, source: p.Source}
-	deadline := time.AfterFunc(45*time.Minute, func() { _ = l.Close() })
+	deadline := time.AfterFunc(guestLifetime(p.Source), func() { _ = l.Close() })
+	g.lifetime = deadline
 	defer deadline.Stop()
 	go func() {
 		for n := 0; n < 120; n++ {

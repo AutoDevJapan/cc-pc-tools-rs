@@ -147,13 +147,23 @@ func (o *localJobOwner) handle(c net.Conn) {
 
 // The caller must already own a canonical shared Cargo lease. The public seed
 // fixes the source expectation; this stream cannot change it or select a shell.
-func serveLiveJob(conn net.Conn, input io.Reader, id string, expected sourcepacket.Pin) {
+func serveLiveJob(conn net.Conn, input io.Reader, id string, expected sourcepacket.Pin, lifetime *time.Timer) {
 	out := json.NewEncoder(conn)
 	fail := func(code string) { _ = writeLiveEvent(conn, out, liveJobEvent{ID: id, Stage: "failed", Failure: code}) }
 	var plan linuxJobPlan
 	if strictBlob(input, 32768, &plan) != nil || !validLinuxJob(plan, expected, id) {
 		fail("job_plan_rejected")
 		return
+	}
+	// Extend only after accepting the exact role/source/instance. A short frame
+	// deadline must not remain on the ACK reader during the original long job.
+	if conn.SetDeadline(time.Now().Add(jobGuestTimeout(plan.Source, plan.Role))) != nil {
+		return
+	}
+	if plan.Source.Product == sourcepacket.PressProduct && lifetime != nil {
+		// The boot-time cap cannot shorten a long role admitted later. Alpha's
+		// original absolute 45-minute guest lifetime remains unchanged.
+		lifetime.Reset(jobGuestTimeout(plan.Source, plan.Role) + 5*time.Minute)
 	}
 	raw, e := readBlob(input, 256<<20)
 	if e != nil {
@@ -185,7 +195,7 @@ func serveLiveJob(conn net.Conn, input io.Reader, id string, expected sourcepack
 		fail("job_source_owner_failed")
 		return
 	}
-	if e = writeLiveEvent(conn, out, liveJobEvent{ID: id, Stage: "source-ready", Proof: proof, RustProbe: probeLiveRust(ctx)}); e != nil {
+	if e = writeLiveEvent(conn, out, liveJobEvent{ID: id, Stage: "source-ready", Proof: proof, RustProbe: probeLiveRust(ctx, plan.Source)}); e != nil {
 		return
 	}
 	var config struct{ Token string }
@@ -297,7 +307,7 @@ func serveLiveJob(conn net.Conn, input io.Reader, id string, expected sourcepack
 	complete := owner.started && owner.completed
 	diagnostic := owner.diagnostic
 	owner.mu.Unlock()
-	terminalProbe := probeLiveRust(ctx)
+	terminalProbe := probeLiveRust(ctx, plan.Source)
 	if !complete {
 		// Wait until run.sh exits so its official logs can finish uploading before
 		// the host reacts to this terminal failure and stops the owned VM.

@@ -6,6 +6,7 @@ import (
 	"cc/product-ci/pressci"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestPressWindowsSeedAndHooksRequireExactRoleMergeAndAttempt(t *testing.T) {
@@ -17,6 +18,14 @@ func TestPressWindowsSeedAndHooksRequireExactRoleMergeAndAttempt(t *testing.T) {
 			s, e := NewSeed(pin, b, strings.Repeat("1", 32), strings.Repeat("2", 64), 1, 1)
 			if e != nil || s.Plan.timeoutMinutes() != 90 {
 				t.Fatalf("Press seed refused: %v", e)
+			}
+			if s.Plan.sessionTimeout() != 96*time.Minute {
+				t.Fatal("Windows session truncates original timeout")
+			}
+			bad := b
+			bad.JobName = "other"
+			if ValidateBinding(s.Plan, bad) == nil {
+				t.Fatal("changed official job name accepted")
 			}
 			c := HookContext{Repository: "AutoDevJapan/GoDD-Press", SHA: pin.HeadSHA, WorkflowSHA: pin.HeadSHA, Ref: "refs/pull/175/merge", Event: "pull_request", Role: j.ID, Name: s.Plan.Name, RunID: 7, Attempt: 2}
 			if c.Validate(s.Plan) != nil {
@@ -55,5 +64,8 @@ func TestPressWindowsSeedAndHooksRequireExactRoleMergeAndAttempt(t *testing.T) {
 				t.Fatal("MCP proof reused")
 			}
 		})
+	}
+	if testSeed().Plan.sessionTimeout() != 26*time.Minute {
+		t.Fatal("alpha session timeout changed")
 	}
 }

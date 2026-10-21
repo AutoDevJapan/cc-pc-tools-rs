@@ -98,7 +98,7 @@ func bindOfficialJob(ctx context.Context, root string, q linuxJobRequest, runner
 func validOfficialBinding(q linuxJobRequest, b jobBinding) bool {
 	profile, ok := q.Source.Profile()
 	policy, roleOK := jobPolicy(q.Source, q.Role)
-	return ok && roleOK && b.RepoID == profile.RepoID && b.PR == profile.PR && b.RunID == q.RunID && b.Attempt == q.Attempt && b.JobID > 0 && b.SHA == q.Source.HeadSHA && b.Tree == q.Source.TreeSHA && b.WorkflowSHA == q.Source.WorkflowSHA256 && b.Role == q.Role && b.OS == policy.OS && b.Label == jobLabel(q.Source, q.Role, q.RunID, q.Attempt) && b.TimeoutMinutes == policy.TimeoutMinutes && b.JobName != ""
+	return ok && roleOK && b.RepoID == profile.RepoID && b.PR == profile.PR && b.RunID == q.RunID && b.Attempt == q.Attempt && b.JobID > 0 && b.SHA == q.Source.HeadSHA && b.Tree == q.Source.TreeSHA && b.WorkflowSHA == q.Source.WorkflowSHA256 && b.Role == q.Role && b.OS == policy.OS && b.Label == jobLabel(q.Source, q.Role, q.RunID, q.Attempt) && b.TimeoutMinutes == policy.TimeoutMinutes && b.JobName != "" && (q.Source.Product != sourcepacket.PressProduct || b.JobName == policy.Name)
 }
 func sendLiveFrame(c net.Conn, v any) error {
 	b, e := json.Marshal(v)

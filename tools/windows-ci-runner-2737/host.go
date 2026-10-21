@@ -37,7 +37,7 @@ func HostSession(ctx context.Context, c net.Conn, seed Seed, packet sourcepacket
 		return Event{}, errors.New("host session rejected")
 	}
 	defer c.Close()
-	ctx, cancel := context.WithTimeout(ctx, 26*time.Minute)
+	ctx, cancel := context.WithTimeout(ctx, seed.Plan.sessionTimeout())
 	defer cancel()
 	done := make(chan struct{})
 	defer close(done)
@@ -48,7 +48,7 @@ func HostSession(ctx context.Context, c net.Conn, seed Seed, packet sourcepacket
 		case <-done:
 		}
 	}()
-	sessionDeadline := time.Now().Add(26 * time.Minute)
+	sessionDeadline := time.Now().Add(seed.Plan.sessionTimeout())
 	_ = c.SetDeadline(sessionDeadline)
 	p := seed.Plan
 	if b, e := host.Queued(ctx, p); e != nil || ValidateBinding(p, b) != nil {

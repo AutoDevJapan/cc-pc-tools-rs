@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	sourcepacket "cc/ci-source-2737"
 	"context"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -15,21 +17,24 @@ import (
 // Only closed commands and public version/hash fields cross the existing wire.
 // These probes neither install a toolchain nor compile the product, and are not
 // acceptance conditions. In particular, a cachekey is not compiler provenance.
-func probeLiveRust(ctx context.Context) []rustProbeResult {
-	return probeRustAt(ctx, liveWorkspace)
+func probeLiveRust(ctx context.Context, pin sourcepacket.Pin) []rustProbeResult {
+	return probeRustVersionAt(ctx, liveWorkspaceFor(pin), rustProbeVersion(pin))
 }
 
 func probeRustAt(ctx context.Context, directory string) []rustProbeResult {
+	return probeRustVersionAt(ctx, directory, "1.97.1")
+}
+func probeRustVersionAt(ctx context.Context, directory, version string) []rustProbeResult {
 	var result []rustProbeResult
 	for _, probe := range []struct{ name, script string }{
-		{"compiler", "/home/ci2737/.cargo/bin/rustup which --toolchain 1.97.1 rustc"},
-		{"verbose", "command -v rustc >/dev/null && rustc +1.97.1 --version --verbose"},
+		{"compiler", fmt.Sprintf("/home/ci2737/.cargo/bin/rustup which --toolchain %s rustc", version)},
+		{"verbose", fmt.Sprintf("command -v rustc >/dev/null && rustc +%s --version --verbose", version)},
 		{"cachekey", `DATE=$(rustc +1.97.1 --version --verbose | sed -ne 's/^commit-date: \(20[0-9][0-9]\)-\([01][0-9]\)-\([0-3][0-9]\)$/\1\2\3/p')
 HASH=$(rustc +1.97.1 --version --verbose | sed -ne 's/^commit-hash: //p')
 echo "$DATE$HASH" | head -c12`},
 	} {
 		flight, cancel := context.WithTimeout(ctx, 8*time.Second)
-		c := exec.CommandContext(flight, "/bin/bash", "-e", "-o", "pipefail", "-c", probe.script)
+		c := exec.CommandContext(flight, "/bin/bash", "-e", "-o", "pipefail", "-c", strings.ReplaceAll(probe.script, "+1.97.1", "+"+version))
 		c.Dir = directory
 		c.Env = []string{"HOME=/home/ci2737", "LANG=C.UTF-8", "PATH=" + liveRunnerPath, "CARGO_HOME=/home/ci2737/.cargo", "RUSTUP_HOME=/home/ci2737/.rustup", "RUSTUP_AUTO_INSTALL=0", "RUSTC_WRAPPER=/usr/local/bin/sccache"}
 		c.SysProcAttr = &syscall.SysProcAttr{Setpgid: true, Credential: &syscall.Credential{Uid: 1001, Gid: 1001}}
@@ -66,7 +71,7 @@ echo "$DATE$HASH" | head -c12`},
 		}
 		// A returned path is never a file-read capability: only this single known
 		// SDK compiler is eligible for an observational hash, never a source proof.
-		const compiler = "/home/ci2737/.rustup/toolchains/1.97.1-x86_64-unknown-linux-gnu/bin/rustc"
+		compiler := "/home/ci2737/.rustup/toolchains/" + version + "-x86_64-unknown-linux-gnu/bin/rustc"
 		if probe.name == "compiler" && exit == 0 && strings.TrimSpace(string(out.Bytes())) == compiler {
 			if f, e := os.Open(compiler); e == nil {
 				if info, e := f.Stat(); e == nil && info.Mode().IsRegular() && info.Size() <= 128<<20 {
@@ -102,7 +107,7 @@ func summarizeRustProbe(name string, exit int, out, stderr []byte) rustProbeResu
 	}
 	for _, line := range bytes.Split(out, []byte{'\n'}) {
 		s := strings.TrimSpace(string(line))
-		if regexp.MustCompile(`^rustc 1\.97\.1 \([a-f0-9]{7,40} 20[0-9]{2}-[0-9]{2}-[0-9]{2}\)$`).MatchString(s) {
+		if regexp.MustCompile(`^rustc 1\.(95\.0|97\.1) \([a-f0-9]{7,40} 20[0-9]{2}-[0-9]{2}-[0-9]{2}\)$`).MatchString(s) {
 			r.Version = s
 		}
 		if regexp.MustCompile(`^commit-hash: [a-f0-9]{40}$`).MatchString(s) {

@@ -59,6 +59,7 @@ func Dial(ctx context.Context, boot sdk.BootstrapResult, identity sdk.Identity, 
 // channelServer permits one TLS-authorized session per clone, including failed
 // sessions. Stop closes the channel and waits for the entire guest operation.
 type channelServer struct {
+	plan          Plan
 	mu            sync.Mutex
 	used, stopped bool
 	conn          net.Conn
@@ -93,7 +94,7 @@ func (s *channelServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.used = true
 	s.conn = c
 	s.done = make(chan struct{})
-	deadline, end := context.WithTimeout(context.Background(), 26*time.Minute)
+	deadline, end := context.WithTimeout(context.Background(), s.plan.sessionTimeout())
 	ctx, cancel := context.WithCancelCause(deadline)
 	s.cancel = func() { cancel(ErrServiceStop) }
 	s.result = errors.New("Windows channel upgrade did not enter session")

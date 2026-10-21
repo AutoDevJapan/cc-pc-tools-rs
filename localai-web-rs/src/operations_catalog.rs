@@ -218,7 +218,10 @@ mod tests {
 
     #[test]
     fn owner_catalogue_is_exact_and_aliases_share_membership() {
-        assert_eq!(PRODUCTS.len(), 30);
+        // The owner's media placement and the distinct MCP products coexist.
+        assert_eq!(PRODUCTS.len(), 31);
+        assert_eq!(find("youtube-daily").unwrap().department, 3);
+        assert_eq!(find("youtube_daily").unwrap().name, find("youtube-daily").unwrap().name);
         assert_eq!(find("GoDD-MCP-Alpha").unwrap().name, "GoDD MCP α");
         assert_eq!(find("godd-mcp-α").unwrap().name, "GoDD MCP α");
         assert_eq!(find("GoDD-Rosseta").unwrap().name, "GoDD Rosetta");

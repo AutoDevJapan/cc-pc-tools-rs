@@ -2,7 +2,7 @@
 use cc_scheduler::{
     backend::RealBackend,
     common::*,
-    engine::{step, Scheduler},
+    engine::{Scheduler, step},
 };
 use std::path::PathBuf;
 fn main() {
@@ -14,7 +14,9 @@ fn main() {
     let command = args.first().map(String::as_str);
     if command == Some("dispatch-subwork") {
         if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
-            println!("usage: scheduler dispatch-subwork --id <ID>\n\nTry one existing finite subwork through normal priority, capacity, resource and ownership gates. Preserve source, history and waits; no new registration.\n\noptions:\n  -h, --help  show this help message and exit");
+            println!(
+                "usage: scheduler dispatch-subwork --id <ID>\n\nTry one existing finite subwork through normal priority, capacity, resource and ownership gates. Preserve source, history and waits; no new registration.\n\noptions:\n  -h, --help  show this help message and exit"
+            );
             return;
         }
         let result = (|| -> Result<serde_json::Value> {
@@ -39,9 +41,37 @@ fn main() {
         }
         return;
     }
+    if command == Some("dispatch-one") {
+        if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
+            println!(
+                "usage: scheduler dispatch-one --id <ID>\n\nAllocate only this existing ToDo through ordinary priority, ownership and capacity gates. Keeps global settings, stops, dependencies and the saved launch scope. Does not run a global tick.\n"
+            );
+            return;
+        }
+        let result = (|| -> Result<serde_json::Value> {
+            let id = cc_scheduler::targeted_dispatch::parse_id(&args[1..])?;
+            let root = PathBuf::from("D:/CC/Tools/scheduler");
+            let mut engine = Scheduler::new(
+                root.clone(),
+                PathBuf::from("D:/CC/Tools/todo/todo.json"),
+                RealBackend::new(root),
+            )?;
+            cc_scheduler::targeted_dispatch::run(&mut engine, id)
+        })();
+        match result {
+            Ok(report) => println!("{}", encode(&report, 2)),
+            Err(error) => {
+                eprintln!("targeted dispatch failed {}", error.0);
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
     if command == Some("dispatch-receipt") {
         if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
-            println!("usage: scheduler dispatch-receipt --id <ID> [--apply --expected-state-sha256 <SHA256>]\n\nInspect one ordinary repair launch without exposing source text. Apply only an exact verified receipt; never launch, cancel, release waits or change source files.\n\noptions:\n  -h, --help  show this help message and exit");
+            println!(
+                "usage: scheduler dispatch-receipt --id <ID> [--apply --expected-state-sha256 <SHA256>]\n\nInspect one ordinary repair launch without exposing source text. Apply only an exact verified receipt; never launch, cancel, release waits or change source files.\n\noptions:\n  -h, --help  show this help message and exit"
+            );
             return;
         }
         let result = (|| -> Result<serde_json::Value> {
@@ -80,7 +110,9 @@ fn main() {
     }
     if command == Some("checkpoint-workspace") {
         if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
-            println!("usage: scheduler checkpoint-workspace --request-file <JSON>\n\nExplicitly save one owned task's current branch and HEAD receipt. Never launches or changes source files.\nJSON: id, job, expected_branch, branch, head\n\noptions:\n  -h, --help  show this help message and exit");
+            println!(
+                "usage: scheduler checkpoint-workspace --request-file <JSON>\n\nExplicitly save one owned task's current branch and HEAD receipt. Never launches or changes source files.\nJSON: id, job, expected_branch, branch, head\n\noptions:\n  -h, --help  show this help message and exit"
+            );
             return;
         }
         let result = (|| -> Result<serde_json::Value> {
@@ -120,9 +152,15 @@ fn main() {
         && args.iter().any(|x| matches!(x.as_str(), "-h" | "--help"))
     {
         match command {
-            Some("orphans") => println!("usage: scheduler orphans [-h] [--dry-run | --apply]\n\noptions:\n  -h, --help  show this help message and exit\n  --dry-run\n  --apply     also requires config.json kill_enabled=true"),
-            Some(c @ ("status" | "step" | "repair-step" | "recover")) => println!("usage: scheduler {c} [-h]\n\noptions:\n  -h, --help  show this help message and exit"),
-            _ => println!("usage: scheduler [-h] {{status,step,recover,orphans}} ...\n\nWindows capacity-aware ToDo dispatcher.\n\nstatus and orphans --dry-run only measure; step is also called by the hidden Discord tick.\nGeneral process termination requires config.json kill_enabled. Verified no-action recovery is checked separately in step/repair-step.\nOnly event type/id/status metadata is used; command lines, payloads and credentials are not retained.\n\npositional arguments:\n  {{status,step,recover,orphans}}\n    recover  reconcile dead jobs before Discord intake; never launch or kill\n\noptions:\n  -h, --help  show this help message and exit"),
+            Some("orphans") => println!(
+                "usage: scheduler orphans [-h] [--dry-run | --apply]\n\noptions:\n  -h, --help  show this help message and exit\n  --dry-run\n  --apply     also requires config.json kill_enabled=true"
+            ),
+            Some(c @ ("status" | "step" | "repair-step" | "recover")) => println!(
+                "usage: scheduler {c} [-h]\n\noptions:\n  -h, --help  show this help message and exit"
+            ),
+            _ => println!(
+                "usage: scheduler [-h] {{status,step,recover,orphans}} ...\n\nWindows capacity-aware ToDo dispatcher.\n\nstatus and orphans --dry-run only measure; step is also called by the hidden Discord tick.\nGeneral process termination requires config.json kill_enabled. Verified no-action recovery is checked separately in step/repair-step.\nOnly event type/id/status metadata is used; command lines, payloads and credentials are not retained.\n\npositional arguments:\n  {{status,step,recover,orphans}}\n    recover  reconcile dead jobs before Discord intake; never launch or kill\n\noptions:\n  -h, --help  show this help message and exit"
+            ),
         }
         return;
     }

@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-21T02:52:30.2547168Z",
+  "observed_at": "2026-10-21T05:39:42.9417629Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "現行27件の限定確認済み。資料への経路を追加するlink1候補を作成、未配置。全16資料の審査と導入を継続。",
+  "phase_b": "link1件を新規配置し現行28件。新規差分の配置後レビューと全16資料の評価/導入を継続。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -288,7 +288,7 @@
   "execution_held_shapes": 647,
   "candidate_designs": 28,
   "independently_accepted": 27,
-  "installed": 27,
+  "installed": 28,
   "integrated": 0,
   "excluded": 0,
   "units": {
@@ -346,15 +346,15 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "28設計=27配置+link1未配置。件数上限ではない。",
+    "candidate_designs": "28設計/28配置。件数上限ではない。",
     "additional_authored_drafts_not_in_plans": 0,
     "authored_total": 28,
-    "installed": 27,
-    "pending_plan_targets": 1,
+    "installed": 28,
+    "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "現27件は限定確認済み。全support/CLI/モデル文脈予算は未確認。",
-    "not_semantically_disposed_occurrences": 73193
+    "not_semantically_disposed_occurrences": 73192
   },
   "kepano_entrypoint_assessment": {
     "pinned_entrypoints": 6,
@@ -390,7 +390,7 @@
     },
     "limits": "91 source paths across7repos;AIS12 has7distinct full texts and5exacthash mirror paths;Tencent includes guides/stub.Not91independentadoptions;all support/inventory semantic review incomplete."
   },
-  "independent_acceptance_scope": "3249が固定4976ec7の診断v2実5と現27件135ハッシュを確認してMust0。新link候補は未配置・未受入。",
+  "independent_acceptance_scope": "新linkのv1は3270Must0。指摘に沿ったv2の実配置1件は受入前、他27件は従来の限定確認を維持。",
   "total_skill_named_body_read": 91,
   "obra_entrypoint_assessment": {
     "expected": 15,
@@ -404,8 +404,8 @@
     "diagnostic_support_read": 19,
     "diagnostic_workflow_blob_count": 20
   },
-  "current_guidance_delta_pending": 0,
-  "current_guidance_delta_pending_definition": "現行27件の実配置差分は受入済み。link未配置1と次の必要更新へ保持した軽微提案は別に数える。",
+  "current_guidance_delta_pending": 1,
+  "current_guidance_delta_pending_definition": "現行28件のうち新link1件のv2実配置差分は独立受入前。他27件は従来受入済み。",
   "ais_entrypoint_evaluation": {
     "source_paths": 12,
     "unique_contents": 7,
@@ -414,9 +414,21 @@
     "support_review_complete": false,
     "proposal_new_workflow": 2,
     "proposal_integration": 4,
-    "installed": 0,
+    "installed": 1,
     "integrated": 0,
     "excluded": 0,
     "source": "skills-3080-ais-evaluation.json"
-  }
+  },
+  "mizchi_partial_entrypoint_evaluation": {
+    "expected": 76,
+    "full_body_read": 4,
+    "unread": 72,
+    "complete": false,
+    "installed": 0,
+    "integrated": 0,
+    "excluded": 0,
+    "source": "skills-3080-mizchi-partial-evaluation.json"
+  },
+  "all_fulltext_primary_paths_including_partial_sources": 95,
+  "primary_coverage_definition": "7資料91パスの全入口確認に加え、mizchi76のうちSQL4パスを全文確認、残72は未読。計95source pathsで、AIS5同本文mirror/Tencentguideを含む。独立Skill導入数ではない。"
 }

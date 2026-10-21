@@ -138,6 +138,10 @@ fn app(state: AppState) -> Router {
         .route("/api/operations/workers/:id", get(operations_worker_detail))
         .route("/api/tasks", get(get_tasks))
         .route("/api/agent/workload", get(workload::handle))
+        .route("/api/agent/native", get(native_activity_snapshot))
+        .route("/api/agent/native/register", post(native_activity_register))
+        .route("/api/agent/native/activity", post(native_activity_record))
+        .route("/api/agent/native/close", post(native_activity_close))
         .route("/api/agent/display/:kind", get(shared_progress_display))
         .route("/api/agent/*path", axum::routing::any(agent::handle))
         .nest_service(
@@ -196,6 +200,48 @@ async fn shared_progress_display(
 
 async fn operations_snapshot(State(state): State<AppState>) -> Json<Value> {
     Json(state.operations.snapshot())
+}
+
+async fn native_activity_snapshot(State(state): State<AppState>) -> Json<Value> {
+    Json(state.operations.native_snapshot())
+}
+fn native_activity_response(result: Result<Value, &'static str>) -> Response {
+    match result {
+        Ok(value) => ([(header::CACHE_CONTROL, "no-store")], Json(value)).into_response(),
+        Err(code) => {
+            let status = if code == "native_store_unavailable" || code == "native_store_full" {
+                StatusCode::SERVICE_UNAVAILABLE
+            } else if code == "native_binding_changed" || code == "native_event_conflict" {
+                StatusCode::CONFLICT
+            } else {
+                StatusCode::BAD_REQUEST
+            };
+            (
+                status,
+                [(header::CACHE_CONTROL, "no-store")],
+                Json(json!({"ok":false,"source":"native","error":code})),
+            )
+                .into_response()
+        }
+    }
+}
+async fn native_activity_register(
+    State(state): State<AppState>,
+    Json(request): Json<localai_web_rs::native_activity::Register>,
+) -> Response {
+    native_activity_response(state.operations.register_native(request))
+}
+async fn native_activity_record(
+    State(state): State<AppState>,
+    Json(request): Json<localai_web_rs::native_activity::Activity>,
+) -> Response {
+    native_activity_response(state.operations.record_native(request))
+}
+async fn native_activity_close(
+    State(state): State<AppState>,
+    Json(request): Json<localai_web_rs::native_activity::Close>,
+) -> Response {
+    native_activity_response(state.operations.close_native(request))
 }
 
 #[derive(serde::Deserialize)]
@@ -540,6 +586,82 @@ mod tests {
             axum::serve(listener, router).await.unwrap();
         });
         (state, task)
+    }
+
+    #[tokio::test]
+    async fn native_tool_receipts_are_separate_and_closed_sources_leave_live() {
+        let root = tempfile::tempdir().unwrap();
+        let mut state = AppState::new(10012, 10013);
+        state.operations = std::sync::Arc::new(operations::Operations::new(
+            root.path().into(),
+            root.path().join("skills"),
+        ));
+        let router = app(state);
+        let id = "00000000-0000-7000-8000-000000000001";
+        let send = |path: &str, value: Value| {
+            let mut req = request(Method::POST, path, Body::from(value.to_string()));
+            req.headers_mut()
+                .insert(header::CONTENT_TYPE, "application/json".parse().unwrap());
+            router.clone().oneshot(req)
+        };
+        let bound = send(
+            "/api/agent/native/register",
+            json!({"session_id":id,"todo_id":1,"role":"work"}),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            bound.status(),
+            StatusCode::OK,
+            "registration is metadata, not a fabricated CC job"
+        );
+        let data: Value =
+            serde_json::from_slice(&to_bytes(bound.into_body(), JSON_LIMIT).await.unwrap())
+                .unwrap();
+        let generation = data["generation"].as_u64().unwrap();
+        assert!(data["executionKey"]
+            .as_str()
+            .unwrap()
+            .starts_with("native-"));
+        let bad = send(
+            "/api/agent/native/activity",
+            json!({"session_id":id,"generation":generation,"status":"working"}),
+        )
+        .await
+        .unwrap();
+        assert_eq!(bad.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
+        let observed = send("/api/agent/native/activity", json!({"session_id":id,"generation":generation,"actual_at_ms":now,"event_id":"runtime-result-1","tool":"exec_command","kind":"test","executed":true,"exit_code":0})).await.unwrap();
+        assert_eq!(observed.status(), StatusCode::OK);
+        let live = router
+            .clone()
+            .oneshot(request(Method::GET, "/api/agent/native", Body::empty()))
+            .await
+            .unwrap();
+        let live: Value =
+            serde_json::from_slice(&to_bytes(live.into_body(), JSON_LIMIT).await.unwrap()).unwrap();
+        assert_eq!(live["sessions"].as_array().unwrap().len(), 1);
+        assert_eq!(live["sessions"][0]["source"], "native");
+        let ended = send(
+            "/api/agent/native/close",
+            json!({"session_id":id,"generation":generation,"ended_at_ms":now,"outcome":"success"}),
+        )
+        .await
+        .unwrap();
+        assert_eq!(ended.status(), StatusCode::OK);
+        let view = router
+            .oneshot(request(Method::GET, "/api/agent/native", Body::empty()))
+            .await
+            .unwrap();
+        assert_eq!(view.status(), StatusCode::OK);
+        let data: Value =
+            serde_json::from_slice(&to_bytes(view.into_body(), JSON_LIMIT).await.unwrap()).unwrap();
+        assert_eq!(data["sessions"], json!([]));
+        assert_eq!(data["bindings"][0]["outcome"], "success");
+        assert!(!data.to_string().contains(id));
     }
 
     #[tokio::test]

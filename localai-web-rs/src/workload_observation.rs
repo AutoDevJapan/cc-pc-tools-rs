@@ -65,8 +65,10 @@ impl Ledger {
             }
             let file = std::fs::File::open(path)?;
             let ledger: Self = serde_json::from_reader(file.take(8 * 1024 * 1024))?;
-            if ledger.version != 1 {
-                return Err(std::io::Error::other("unknown observation version"));
+            if ledger.version != 2 {
+                // A derived cache with old session keys must not double count
+                // the same executions. Reading does not rewrite the old file.
+                return Ok(Self::default());
             }
             Ok(ledger)
         })();
@@ -80,7 +82,7 @@ impl Ledger {
     }
 
     pub(super) fn save(&mut self, path: &Path) {
-        if self.version != 1 {
+        if self.version != 2 {
             return;
         }
         let result = (|| {
@@ -220,7 +222,7 @@ impl Ledger {
             .retain(|date, _| date >= &earliest && date <= &today);
         self.updated_at = at;
         self.available = true;
-        self.version = 1;
+        self.version = 2;
         self.previous = Some(Sample {
             at,
             until: until.unwrap(),
@@ -427,4 +429,23 @@ mod tests {
         );
         assert_eq!(value["totals"]["active_ms"], 15_000);
     }
+}
+#[test]
+fn obsolete_key_version_is_not_counted_twice_after_upgrade() {
+    let temp = tempfile::tempdir().unwrap();
+    let path = temp.path().join("observations.json");
+    std::fs::write(&path, br#"{"version":1,"days":{},"updated_at":123}"#).unwrap();
+    let ledger = Ledger::load(&path);
+    assert_eq!(
+        ledger.revision(),
+        0,
+        "the previous key representation must start a new derived ledger"
+    );
+    assert!(!ledger.storage_failed());
+    assert!(
+        String::from_utf8(std::fs::read(path).unwrap())
+            .unwrap()
+            .contains("123"),
+        "read must not rewrite the old derived cache"
+    );
 }

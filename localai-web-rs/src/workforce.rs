@@ -521,6 +521,117 @@ pub fn apply_to_board(board: &mut Value) {
     }
 }
 
+/// Join instrumented native receipts, without turning native UUIDs into CC jobs.
+pub fn merge_native(board: &mut Value, native: &Value, now: u64) {
+    board["nativeActivity"] = native.clone();
+    let Some(workforce) = board.get_mut("workforce").filter(|value| value.is_object()) else {
+        return;
+    };
+    let mut proofs = workforce["processing"]["sessions"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    let cc_keys: BTreeSet<String> = proofs
+        .iter()
+        .filter_map(|proof| proof["key"].as_str().map(str::to_owned))
+        .collect();
+    let cc_count = workforce["processing"]["verifiedCount"].as_u64();
+    let mut added = BTreeSet::new();
+    for session in native["sessions"].as_array().into_iter().flatten() {
+        let (Some(id), Some(key), Some(until)) = (
+            session["todoId"].as_u64(),
+            session["key"].as_str(),
+            session["validUntil"].as_u64(),
+        ) else {
+            continue;
+        };
+        if until < now || !key.starts_with("native-") || added.contains(key) {
+            continue;
+        }
+        let Some(task) = workforce["tasks"]
+            .as_array_mut()
+            .into_iter()
+            .flatten()
+            .find(|task| task["todoId"] == id)
+        else {
+            continue;
+        };
+        if task["state"] == "done"
+            || task["references"]["sessions"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|key| key.as_str().is_some_and(|key| cc_keys.contains(key)))
+        {
+            continue;
+        }
+        task["recordedWorkState"] = task["state"].clone();
+        task["state"] = json!("processing");
+        let mut refs = task["references"]["sessions"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        refs.push(json!(key));
+        refs.sort_by(|a, b| a.as_str().cmp(&b.as_str()));
+        refs.dedup();
+        task["references"]["session"] = refs.first().cloned().unwrap_or(Value::Null);
+        task["references"]["sessions"] = json!(refs);
+        task["availability"]["session"] = json!("native_tool_receipt");
+        task["nativeExecution"] = session.clone();
+        added.insert(key.to_owned());
+        proofs.push(session.clone());
+    }
+    let total = cc_count.unwrap_or(0) + added.len() as u64;
+    workforce["processing"]["verifiedCount"] = if cc_count.is_some() || !added.is_empty() {
+        json!(total)
+    } else {
+        Value::Null
+    };
+    workforce["processing"]["total"] = Value::Null;
+    if workforce["processing"]["state"] != "unavailable" || !added.is_empty() {
+        workforce["processing"]["state"] = json!("partial")
+    }
+    if !added.is_empty() {
+        workforce["processing"]["validUntil"] = proofs
+            .iter()
+            .filter_map(|proof| proof["validUntil"].as_u64())
+            .max()
+            .map(Value::from)
+            .unwrap_or(Value::Null);
+        workforce["processing"]["observedAt"] = proofs
+            .iter()
+            .filter_map(|proof| proof["actualAt"].as_u64())
+            .chain(workforce["processing"]["observedAt"].as_u64())
+            .max()
+            .map(Value::from)
+            .unwrap_or(Value::Null);
+    }
+    workforce["processing"]["sessions"] = json!(proofs);
+    workforce["processing"]["bySource"] =
+        json!({"ccJobs":cc_count,"nativeToolReceipts":added.len()});
+    let mut counts = BTreeMap::<String, u64>::new();
+    for task in workforce["tasks"].as_array().into_iter().flatten() {
+        if let Some(state) = task["state"].as_str() {
+            *counts.entry(state.to_owned()).or_default() += 1;
+        }
+    }
+    if !added.is_empty() {
+        if let Some(states) = workforce["states"].as_object_mut() {
+            for (state, count) in states.iter_mut() {
+                *count = json!(counts.get(state).copied().unwrap_or(0));
+            }
+        }
+    }
+    if let Some(coverage) = workforce["coverage"].as_array_mut() {
+        for source in coverage {
+            if source["kind"] == "native_codex" {
+                source["state"] = native["state"].clone();
+                source["complete"] = json!(false);
+            }
+        }
+    }
+}
+
 fn apply_product(product: &mut Value, tasks: &BTreeMap<u64, Value>, protected: bool) {
     for worker in product["workers"].as_array_mut().into_iter().flatten() {
         let task = worker["id"]
@@ -557,6 +668,21 @@ fn apply_product(product: &mut Value, tasks: &BTreeMap<u64, Value>, protected: b
         worker["references"] = task
             .map(|task| task["references"].clone())
             .unwrap_or(json!({"sessions":[],"session":null}));
+        if let Some(native) = task.and_then(|task| task.get("nativeExecution")) {
+            worker["executionSource"] = native.clone();
+            worker["nativeExecutionKey"] = native["key"].clone();
+            worker["primaryJob"] = Value::Null;
+            worker["jobStatus"] = Value::Null;
+            worker["processingJobKey"] = Value::Null;
+            worker["currentStage"] = json!("native実行のTool結果を確認しています。");
+            worker["lastActivityAt"] = native["actualAt"]
+                .as_u64()
+                .and_then(|at| DateTime::from_timestamp_millis(at as i64))
+                .map(|at| json!(at.to_rfc3339()))
+                .unwrap_or(Value::Null);
+            worker["factsSource"] =
+                json!("元ToDoへ結び付いたnative実行の操作結果。CCjobと別のsourceです。");
+        }
         if protected {
             worker["lastResultAt"] = Value::Null;
             worker["lastResult"] = json!("作業本文を保護中のため取得できません。");

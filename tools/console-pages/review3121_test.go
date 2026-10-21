@@ -57,3 +57,21 @@ ctx.render(sample);for(const value of [sample.measurement.first_at,sample.measur
 (async()=>{await ctx.refreshWorkload();assert(text(host).includes('offline'));for(const value of [sample.measurement.first_at,sample.measurement.last_at,sample.updated_at])assert(text(host).includes(value),'fetch failure must retain the last observed timestamps')})().catch(error=>{console.error(error);process.exitCode=1});
 `)
 }
+
+func TestReview3121ProgressUsesOnlyTheCurrentSessionProofs(t *testing.T) {
+	node(t, `
+const ctx={Date,opsList:value=>Array.isArray(value)?value:[]};vm.createContext(ctx);vm.runInContext(between(input.index,'function processingRows(','function renderProgress('),ctx);
+const board={workforce:{processing:{state:'partial',validUntil:200,sessions:[{key:'native-verified',validUntil:200}]}},departments:[{products:[{workers:[{id:'todo-1',workState:'processing',references:{sessions:['stopped-related','native-verified']}}]}]}]};
+assert.deepEqual(Array.from(ctx.processingRows(board,100),row=>row.job),['native-verified']);
+board.workforce.processing.sessions=[];assert.equal(ctx.processingRows(board,100).length,0,'a closed native source must not remain live through an old task reference');
+`)
+}
+
+func TestReview3121HiddenPageDoesNotPauseMusicPlayback(t *testing.T) {
+	node(t, `
+let pauses=0,cancelled=0;const ctx={opsState:{},healthController:null,window:{cancelConsoleMusic(){cancelled++}},document:{querySelectorAll:()=>[{pause(){pauses++}}]}};
+vm.createContext(ctx);vm.runInContext(line(input.index,'function cancelPageFetches('),ctx);
+ctx.cancelPageFetches();assert.equal(pauses,0,'hiding the browser must not stop audio');
+ctx.cancelPageFetches('systems');assert.equal(pauses,1,'leaving the music page explicitly may stop playback');assert(cancelled>0);
+`)
+}

@@ -33,6 +33,7 @@ pub struct Operations {
     snapshot: RwLock<Value>,
     questions: RwLock<Value>,
     skills: crate::skills_inventory::Inventory,
+    native: crate::native_activity::Registry,
 }
 impl Operations {
     pub fn production() -> Self {
@@ -40,23 +41,66 @@ impl Operations {
     }
     /// Use one record root for both the resident snapshot and its HTTP consumer.
     pub fn new(root: PathBuf, skills_root: PathBuf) -> Self {
+        let native = crate::native_activity::Registry::new(&root);
         Self {
             root,
             snapshot: RwLock::new(empty()),
             questions: RwLock::new(Value::Null),
             skills: crate::skills_inventory::Inventory::new(skills_root),
+            native,
         }
     }
     pub fn snapshot(&self) -> Value {
-        let mut value = self.snapshot
+        let now = now_ms();
+        let mut value = self.cc_snapshot();
+        let native = self.native.view(now);
+        native_business_scopes(&mut value, &native);
+        crate::workforce::merge_native(&mut value, &native, now);
+        crate::workforce::apply_to_board(&mut value);
+        value
+    }
+    fn cc_snapshot(&self) -> Value {
+        let mut value = self
+            .snapshot
             .read()
             .unwrap_or_else(|e| e.into_inner())
             .clone();
         if let Some(workforce) = value.get_mut("workforce") {
             crate::workforce::expire(workforce, now_ms());
         }
-        if value["workforce"].is_object() {crate::workforce::apply_to_board(&mut value);}
+        if value["workforce"].is_object() {
+            crate::workforce::apply_to_board(&mut value);
+        }
         value
+    }
+    pub fn native_snapshot(&self) -> Value {
+        self.native.view(now_ms())
+    }
+    pub fn register_native(
+        &self,
+        mut request: crate::native_activity::Register,
+    ) -> Result<Value, &'static str> {
+        if let Some(project) = request.business_project.as_deref() {
+            request.business_project = Some(
+                catalog::find(project)
+                    .ok_or("invalid_native_business_project")?
+                    .name
+                    .to_owned(),
+            );
+        }
+        self.native.register(request, now_ms())
+    }
+    pub fn record_native(
+        &self,
+        request: crate::native_activity::Activity,
+    ) -> Result<Value, &'static str> {
+        self.native.activity(request, now_ms())
+    }
+    pub fn close_native(
+        &self,
+        request: crate::native_activity::Close,
+    ) -> Result<Value, &'static str> {
+        self.native.close(request, now_ms())
     }
     pub fn refresh(&self) {
         let live = self
@@ -69,19 +113,29 @@ impl Operations {
         value["skillsInventory"] = self.skills.snapshot(now);
         let active = crate::workforce_observation::acquire(&self.root);
         let completed = now_ms();
-        let previous = self.snapshot();
+        // Native overlays are per-request facts, never cached as CC observations.
+        let previous = self.cc_snapshot();
         value["workforce"] = crate::workforce::generation(
-            &value, active.as_ref().ok(), previous.get("workforce"), now, completed,
+            &value,
+            active.as_ref().ok(),
+            previous.get("workforce"),
+            now,
+            completed,
             active.as_ref().err().copied(),
         );
-        if value["workforce"]["state"]=="unavailable"
-            && value["protectionMode"]=="masked_metadata" && previous["protectionMode"]=="masked_metadata"
-            && previous["departments"].is_array() {
+        if value["workforce"]["state"] == "unavailable"
+            && value["protectionMode"] == "masked_metadata"
+            && previous["protectionMode"] == "masked_metadata"
+            && previous["departments"].is_array()
+        {
             // Retain only the already masked display, with its original data time.
             // The failed acquisition and unknown current counts remain explicit.
-            value["departments"]=previous["departments"].clone();
-            value["unassignedProducts"]=previous["unassignedProducts"].clone();
-            value["previousDataAt"]=previous.get("previousDataAt").unwrap_or(&previous["fetchedAt"]).clone();
+            value["departments"] = previous["departments"].clone();
+            value["unassignedProducts"] = previous["unassignedProducts"].clone();
+            value["previousDataAt"] = previous
+                .get("previousDataAt")
+                .unwrap_or(&previous["fetchedAt"])
+                .clone();
         }
         crate::workforce::apply_to_board(&mut value);
         *self.snapshot.write().unwrap_or_else(|e| e.into_inner()) = value;
@@ -146,6 +200,73 @@ impl Operations {
             "detailVersion":detail_version(item),"note":crate::console_ui::clean(&names,text(item,"note")),"history":history,
             "offset":offset,"total":total,"nextOffset":(next < total).then_some(next)}),
         )
+    }
+}
+fn native_business_scopes(board: &mut Value, native: &Value) {
+    let mut declared: BTreeMap<u64, BTreeSet<String>> = BTreeMap::new();
+    for binding in native["bindings"].as_array().into_iter().flatten() {
+        if let (Some(id), Some(project)) = (
+            binding["todoId"].as_u64(),
+            binding["businessProject"].as_str(),
+        ) {
+            if let Some(product) = catalog::find(project) {
+                declared
+                    .entry(id)
+                    .or_default()
+                    .insert(product.name.to_owned());
+            }
+        }
+    }
+    if declared.is_empty() || !board["departments"].is_array() {
+        return;
+    }
+    let mut tree = Tree::new();
+    for department in board["departments"].as_array().into_iter().flatten() {
+        let index = department["id"]
+            .as_str()
+            .and_then(|id| id.strip_prefix("department-"))
+            .and_then(|id| id.parse::<usize>().ok())
+            .unwrap_or(usize::MAX);
+        for product in department["products"].as_array().into_iter().flatten() {
+            let name = text(product, "name").to_owned();
+            tree.entry((index, name.clone())).or_default();
+            for worker in product["workers"].as_array().into_iter().flatten() {
+                add_native_scoped_worker(&mut tree, index, &name, worker, &declared);
+            }
+        }
+    }
+    for product in board["unassignedProducts"].as_array().into_iter().flatten() {
+        let name = text(product, "name").to_owned();
+        tree.entry((usize::MAX, name.clone())).or_default();
+        for worker in product["workers"].as_array().into_iter().flatten() {
+            add_native_scoped_worker(&mut tree, usize::MAX, &name, worker, &declared);
+        }
+    }
+    board["unassignedProducts"] = json!(unassigned_products(&tree));
+    board["departments"] = json!(departments(tree));
+}
+fn add_native_scoped_worker(
+    tree: &mut Tree,
+    department: usize,
+    name: &str,
+    worker: &Value,
+    declared: &BTreeMap<u64, BTreeSet<String>>,
+) {
+    let target = worker["id"]
+        .as_str()
+        .and_then(|id| id.strip_prefix("todo-"))
+        .and_then(|id| id.parse::<u64>().ok())
+        .and_then(|id| declared.get(&id))
+        .filter(|targets| targets.len() == 1)
+        .and_then(|targets| targets.first())
+        .and_then(|name| catalog::find(name));
+    let mut worker = worker.clone();
+    if let Some(product) = target {
+        // A declared business target changes placement, never privacy or code identity.
+        worker["nativeBusinessScope"] = json!({"source":"native_binding","project":product.name});
+        add(tree, product.department, product.name.to_owned(), worker);
+    } else {
+        add(tree, department, name.to_owned(), worker)
     }
 }
 pub async fn resident(board: Arc<Operations>) {
@@ -319,7 +440,7 @@ fn protected_stage(job: Option<&Value>) -> &'static str {
     match text(job, "status") {
         "queued" | "pending" => return "起動待ち",
         "starting" => return "担当を起動中",
-        "running" => {},
+        "running" => {}
         _ => return "工程は未記録",
     }
     let activity = job["activity"]
@@ -327,7 +448,10 @@ fn protected_stage(job: Option<&Value>) -> &'static str {
         .or_else(|| job["activity"]["type"].as_str())
         .or_else(|| job["activity"]["kind"].as_str())
         .unwrap_or("");
-    let kind = activity.split_once(':').map_or(activity, |(kind, _)| kind).trim();
+    let kind = activity
+        .split_once(':')
+        .map_or(activity, |(kind, _)| kind)
+        .trim();
     match kind {
         "command" | "command_execution" | "exec_command" | "running" => "コマンドを実行中",
         "mcp" => "連携ツールを実行中",
@@ -348,7 +472,9 @@ fn protected_stage(job: Option<&Value>) -> &'static str {
 }
 fn protected_activity(job: Option<&Value>) -> Option<String> {
     let job = job?;
-    if text(job, "status") != "running" { return None; }
+    if text(job, "status") != "running" {
+        return None;
+    }
     ["last_event_at", "last_heartbeat_at", "heartbeat_at"]
         .iter()
         .filter_map(|key| stamp(&job[*key]))
@@ -736,23 +862,51 @@ fn collect(root: &Path, now: u64) -> Value {
 // A missing name registry must not expose any free text or erase the available
 // activity metadata. This projection does not create or substitute a registry.
 fn protected_wait(item: &Value, current: Option<&Value>, queue: &Value, now: u64) -> &'static str {
-    if item["status"]=="wait" {return "dependency"}
-    if item["status"]=="recovery_unverified" {return "technical"}
-    let wait=&item["owner_question_wait"];
-    let question=&wait["question"];
-    if item["status"]=="block" && wait["domain"]=="todo-owner-question-wait-v1"
-        && question["domain"]=="discord-conversation-question-v1"
-        && question["todo_id"].as_str().and_then(|id|id.parse::<u64>().ok())==item["id"].as_u64()
-        && wait["block_note"].is_string() && wait["block_note"]==item["note"]
-        && stamp(&wait["blocked_at"]).is_some_and(|at|at<=now)
-        && wait["question_receipt_sha256"].as_str().is_some_and(|key|key.len()==64&&key.bytes().all(|b|b.is_ascii_hexdigit())) {
+    if item["status"] == "wait" {
+        return "dependency";
+    }
+    if item["status"] == "recovery_unverified" {
+        return "technical";
+    }
+    let wait = &item["owner_question_wait"];
+    let question = &wait["question"];
+    if item["status"] == "block"
+        && wait["domain"] == "todo-owner-question-wait-v1"
+        && question["domain"] == "discord-conversation-question-v1"
+        && question["todo_id"]
+            .as_str()
+            .and_then(|id| id.parse::<u64>().ok())
+            == item["id"].as_u64()
+        && wait["block_note"].is_string()
+        && wait["block_note"] == item["note"]
+        && stamp(&wait["blocked_at"]).is_some_and(|at| at <= now)
+        && wait["question_receipt_sha256"]
+            .as_str()
+            .is_some_and(|key| key.len() == 64 && key.bytes().all(|b| b.is_ascii_hexdigit()))
+    {
         return "decision";
     }
-    if item["status"]=="block" {return "unverified"}
-    if current.is_some_and(|job|job["status"]=="queued") {return "job_queue"}
-    if queue["queue"].as_array().is_some_and(|entries|entries.iter().any(|entry|
-        entry["todo_id"]==item["id"] && queue["preparation_failures"][text(entry,"key")].is_array())) {return "startup_error"}
-    if current.is_none() && queue["queue"].as_array().is_some_and(|entries|entries.iter().any(|entry|entry["todo_id"]==item["id"])) {return "intake"}
+    if item["status"] == "block" {
+        return "unverified";
+    }
+    if current.is_some_and(|job| job["status"] == "queued") {
+        return "job_queue";
+    }
+    if queue["queue"].as_array().is_some_and(|entries| {
+        entries.iter().any(|entry| {
+            entry["todo_id"] == item["id"]
+                && queue["preparation_failures"][text(entry, "key")].is_array()
+        })
+    }) {
+        return "startup_error";
+    }
+    if current.is_none()
+        && queue["queue"]
+            .as_array()
+            .is_some_and(|entries| entries.iter().any(|entry| entry["todo_id"] == item["id"]))
+    {
+        return "intake";
+    }
     "unverified"
 }
 
@@ -771,8 +925,12 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
     let job_result = jobs_at(jobs_path);
     let js = job_result.as_ref().map(Vec::as_slice).unwrap_or(&[]);
     let policy = read_json(&root.join("scheduler/priorities.json")).unwrap_or(Value::Null);
-    let ranks = todo.as_ref().map(|db|cc_scheduler::priority::todo_ranks(db,&policy)).unwrap_or_default();
-    let queue = read_json(&root.join("localai-web-rs/target/release/console-state.json")).unwrap_or(Value::Null);
+    let ranks = todo
+        .as_ref()
+        .map(|db| cc_scheduler::priority::todo_ranks(db, &policy))
+        .unwrap_or_default();
+    let queue = read_json(&root.join("localai-web-rs/target/release/console-state.json"))
+        .unwrap_or(Value::Null);
     let mut tree = Tree::new();
     let mut used = BTreeSet::new();
     let public_product = |raw: &str| {
@@ -1599,8 +1757,18 @@ mod tests {
         assert!(protected_activity(Some(&unknown)).is_none());
         let queued = json!({"status":"queued","last_event_at":"2026-10-19T15:00:00Z"});
         assert!(protected_activity(Some(&queued)).is_none());
-        assert_eq!(protected_stage(Some(&json!({"status":"queued","activity":"running: private command"}))), "起動待ち");
-        assert_eq!(protected_stage(Some(&json!({"status":"running","activity":"mcp: private.connector"}))), "連携ツールを実行中");
+        assert_eq!(
+            protected_stage(Some(
+                &json!({"status":"queued","activity":"running: private command"})
+            )),
+            "起動待ち"
+        );
+        assert_eq!(
+            protected_stage(Some(
+                &json!({"status":"running","activity":"mcp: private.connector"})
+            )),
+            "連携ツールを実行中"
+        );
         assert_eq!(protected_stage(None), "担当の起動待ち");
         assert!(protected_activity(None).is_none());
     }
@@ -1612,12 +1780,7 @@ mod tests {
         let skills_root = root.path().join("Skills");
         fs::create_dir_all(skills_root.join("example")).unwrap();
         fs::write(skills_root.join("example/SKILL.md"), "example definition").unwrap();
-        let board = Operations {
-            root: root.path().join("tools"),
-            snapshot: RwLock::new(empty()),
-            questions: RwLock::new(Value::Null),
-            skills: crate::skills_inventory::Inventory::new(skills_root),
-        };
+        let board = Operations::new(root.path().join("tools"), skills_root);
         board.refresh();
         let snapshot = board.snapshot();
         assert_eq!(snapshot["protectionMode"], "masked_metadata");
@@ -1639,12 +1802,7 @@ mod tests {
         let mut db = json!({"projects":{"demo":"D:/fixture"},"items":[{"id":1,"project":"demo","title":"履歴の復旧","status":"doing","note":"current","note_history":notes}]});
         let receipt = cc_todo::todo_history::archive(&store, &mut db, 1, true).unwrap();
         cc_todo::save(&store, &db).unwrap();
-        let board = Operations {
-            root: root.into(),
-            snapshot: RwLock::new(empty()),
-            questions: RwLock::new(Value::Null),
-            skills: crate::skills_inventory::Inventory::new(root.join("Skills")),
-        };
+        let board = Operations::new(root.into(), root.join("Skills"));
         assert_eq!(crate::console_ui::history_count(&db["items"][0]), 23);
         let first = board.worker_detail("todo-1", 0).unwrap();
         assert_eq!(first["total"], 23);
@@ -1678,12 +1836,7 @@ mod tests {
             {"id":1,"project":"demo","status":"doing","title":"接続復旧","progress":42,"note":note,"note_history":history,"updated":"2026-10-11 10:00","wait_on":[2]},
             {"id":2,"project":"SecretClient","status":"doing","title":"hidden-value","note":"hidden-value"}]});
         fs::write(root.join("todo/todo.json"), db.to_string()).unwrap();
-        let board = Operations {
-            root: root.into(),
-            snapshot: RwLock::new(empty()),
-            questions: RwLock::new(Value::Null),
-            skills: crate::skills_inventory::Inventory::new(root.join("Skills")),
-        };
+        let board = Operations::new(root.into(), root.join("Skills"));
         board.refresh();
         let snapshot = board.snapshot();
         let workers: Vec<_> = snapshot["departments"]

@@ -714,6 +714,22 @@ pub fn cmd_post(
     post_text(ctx, thread, &read_text(body_file)?, attach, notify, None)
 }
 
+// Old direct post questions must still use their saved question/answer and
+// lost-response recovery. A diagnostic '?' alone never creates an owner ask.
+fn legacy_post_requires_owner_action(body: &str) -> bool {
+    if crate::recovery_messages::report_declares_no_action(body) {
+        return false;
+    }
+    let without_marks = body.replace(['?', '？'], "");
+    if crate::questions::is_question(&without_marks) {
+        return true;
+    }
+    let first = question_prose(body.lines().next().unwrap_or(""));
+    choice_question_body(&without_marks)
+        && (first.contains("どちら") || first.contains("どれ"))
+        && (first.contains("しますか") || first.contains("選びますか"))
+}
+
 fn post_text(
     ctx: &mut Context,
     thread: &str,
@@ -725,6 +741,7 @@ fn post_text(
     let (clean_body, decision) = crate::decision_identity::extract(body)?;
     let body = clean_body.as_str();
     let action = (notify && crate::recovery_messages::log_requires_owner_action(body)?)
+        || legacy_post_requires_owner_action(body)
         || decision.is_some()
             && !crate::recovery_messages::report_declares_no_action(body)
             && crate::questions::is_question(body);

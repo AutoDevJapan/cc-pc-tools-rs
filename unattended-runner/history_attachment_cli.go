@@ -110,7 +110,7 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 		return fail()
 	}
 	stage = "owner_version_attachment_or_type"
-	attachment, ok, reason := historySelectedOwnerImage(scope, message, runner, mediaType)
+	attachment, ok, reason := historySelectedOwnerImage(scope, message, runner)
 	if !ok {
 		stage = reason
 		return fail()
@@ -153,14 +153,19 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 	if runner.get(ctx, messagePath, &current) != nil {
 		return fail()
 	}
-	if _, ok, _ := historySelectedOwnerImage(scope, current, runner, mediaType); !ok || ctx.Err() != nil {
+	currentAttachment, ok, _ := historySelectedOwnerImage(scope, current, runner)
+	if !ok || ctx.Err() != nil {
 		return fail()
 	}
 	stage = "private_publication"
 	if writeHistoryReceipt(output, data) != nil {
 		return fail()
 	}
-	result := map[string]any{"domain": "discord-owner-image-read-receipt-v1", "source": "discord-api-v10", "todo_id": scope.Todo, "guild_id": scope.Guild, "owner_id": scope.Owner, "thread_id": threadID, "message_id": scope.Message, "attachment_id": scope.Attachment, "content_sha256": scope.ContentSHA, "created_at": scope.Created, "edited_timestamp": scope.Edited, "source_size": scope.Size, "size": len(data), "representation": "cdn_response_bytes", "media_type": mediaType, "image_sha256": bytesHash(data), "scope_sha256": bytesHash(raw), "acquired_at": runner.Now().UTC().Format(time.RFC3339Nano), "delivery": "inspection_only", "application": "not_inferred"}
+	sourceType := "unknown"
+	if declared, _, err := mime.ParseMediaType(currentAttachment.ContentType); err == nil && historySupportedImageType(declared) {
+		sourceType = declared
+	}
+	result := map[string]any{"domain": "discord-owner-image-read-receipt-v1", "source": "discord-api-v10", "todo_id": scope.Todo, "guild_id": scope.Guild, "owner_id": scope.Owner, "thread_id": threadID, "message_id": scope.Message, "attachment_id": scope.Attachment, "content_sha256": scope.ContentSHA, "created_at": scope.Created, "edited_timestamp": scope.Edited, "source_size": scope.Size, "source_media_type": sourceType, "size": len(data), "representation": "cdn_response_bytes", "media_type": mediaType, "image_sha256": bytesHash(data), "scope_sha256": bytesHash(raw), "acquired_at": runner.Now().UTC().Format(time.RFC3339Nano), "delivery": "inspection_only", "application": "not_inferred"}
 	if json.NewEncoder(out).Encode(result) != nil {
 		return 1
 	}
@@ -195,7 +200,7 @@ func historyAttachmentScopeValid(scope historyAttachmentScope, now time.Time) bo
 	return true
 }
 
-func historySelectedOwnerImage(scope historyAttachmentScope, message historyOwnerImageMessage, runner *Runner, mediaType string) (historyOwnerImage, bool, string) {
+func historySelectedOwnerImage(scope historyAttachmentScope, message historyOwnerImageMessage, runner *Runner) (historyOwnerImage, bool, string) {
 	if message.ID != scope.Message || message.Author.ID != scope.Owner || message.Type == nil || (*message.Type != 0 && *message.Type != 19) || !historyMessageValid(message.Message, scope.Threads[0], runner) {
 		return historyOwnerImage{}, false, "owner_message_identity"
 	}
@@ -215,12 +220,6 @@ func historySelectedOwnerImage(scope historyAttachmentScope, message historyOwne
 	}
 	if selected.Size != scope.Size {
 		return historyOwnerImage{}, false, "attachment_size"
-	}
-	if selected.ContentType != "" {
-		declared, _, err := mime.ParseMediaType(selected.ContentType)
-		if err != nil || !historySupportedImageType(declared) || (mediaType != "image/*" && declared != mediaType) {
-			return historyOwnerImage{}, false, "attachment_media_type"
-		}
 	}
 	return selected, true, ""
 }

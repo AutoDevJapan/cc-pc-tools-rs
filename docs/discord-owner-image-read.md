@@ -26,7 +26,9 @@ are never printed or saved. No extra authentication or API key is introduced.
 The selected file must be a PNG/JPEG/WebP/GIF, at most 20 MiB, with a matching detected
 media type/output extension. The retrieved body must match its HTTP response length
 when supplied. Keep the original API metadata size bound to the selected attachment,
-and record that `source_size` separately from the downloaded `size`. The image SHA
+and record that `source_size` and recognized `source_media_type` separately from the
+downloaded `size` and detected `media_type`. Do not require the original descriptor's
+media type to match the returned representation. The image SHA
 describes the exact retrieved CDN representation, not a verified hash of the original
 upload. Do not infer why a CDN representation's size differs. With `.private.image`,
 detect the supported image type without requiring the caller to guess a format

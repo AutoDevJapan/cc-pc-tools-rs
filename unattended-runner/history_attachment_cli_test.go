@@ -96,6 +96,9 @@ func attachmentFixture(t *testing.T, mode string) (func(context.Context, history
 				sourceSize -= 7
 			}
 			attachment := map[string]any{"id": "51", "size": sourceSize, "content_type": mediaType, "filename": "private-label.png", "url": url}
+			if mode == "cdn_representation" {
+				attachment["content_type"] = "image/jpeg"
+			}
 			if mode == "wrong_attachment" {
 				attachment["id"] = "52"
 			}
@@ -221,14 +224,16 @@ func TestHistoryAttachmentAutoImageDoesNotRequireGuessingOwnerFormat(t *testing.
 
 func TestHistoryAttachmentPreservesCDNRepresentationAndSourceSizeSeparately(t *testing.T) {
 	load, calls, expected := attachmentFixture(t, "cdn_representation")
-	args, output := attachmentArgs(t, len(expected)-7)
+	args, _ := attachmentArgs(t, len(expected)-7)
+	output := filepath.Join(filepath.Dir(args[1]), "owner-representation.private.image")
+	args[3] = output
 	var stdout bytes.Buffer
 	if historyAttachmentCLIWith(args, &stdout, load, func(context.Context, string) bool { return true }) != 0 {
 		t.Fatal("valid CDN representation rejected solely because original metadata size differs")
 	}
 	actual, err := os.ReadFile(output)
 	var receipt map[string]any
-	if err != nil || !bytes.Equal(actual, expected) || json.Unmarshal(stdout.Bytes(), &receipt) != nil || receipt["size"] != float64(len(expected)) || receipt["source_size"] != float64(len(expected)-7) || receipt["image_sha256"] != bytesHash(actual) || receipt["representation"] != "cdn_response_bytes" || calls.api != 5 || calls.media != 1 {
+	if err != nil || !bytes.Equal(actual, expected) || json.Unmarshal(stdout.Bytes(), &receipt) != nil || receipt["size"] != float64(len(expected)) || receipt["source_size"] != float64(len(expected)-7) || receipt["source_media_type"] != "image/jpeg" || receipt["media_type"] != "image/png" || receipt["image_sha256"] != bytesHash(actual) || receipt["representation"] != "cdn_response_bytes" || calls.api != 5 || calls.media != 1 {
 		t.Fatal("original attachment size and exact retrieved representation were conflated")
 	}
 }

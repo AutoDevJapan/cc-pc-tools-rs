@@ -245,3 +245,39 @@ jobの `pid_created` を設定していない。既存の `policy::alive` はPID
 候補生成を完了すること。その後の3090の別モデルレビュー・配布も親の未完了作業である。
 今回の失敗結果は親3085が受領し、3255への永続記録と既存の話題への配送を行う。
 本人の判断やPC操作は不要。この担当の検査だけの完了を、親全体の成功や完了へ広げない。
+
+## 作成時刻を修正した固定版の再検査計画（2026-10-21）
+
+元3238をジョブ `20261021-135545-todo-3238` で再開した。
+通常CLIのjobs配列からこのジョブとToDoだけを抽出し、モデル `gpt-6.1-sol`、
+推論 `max`、割り当て資源 `cargo` を確認した。
+親の固定HEADは `b392804d00307c171bbfdbba370c7c91fc460bb2`。
+同じ親ソース・ブランチで変更なし、remoteの同じブランチへのpush済みも確認した。
+前回 `428adc6` との差分は、失敗したstill_alive条件の検査用jobへ
+processの作成時刻を渡すテストデータの3行追加・1行削除だけである。
+
+初回の3件中2件成功・1件失敗と固定HEADは書き換えない。
+初回receipt、全出力、stderr SHA256
+`5286c665cff94fcaa3b90ff5bbf2073b2e365f57725770592d06edfbd3b0fe39`
+を保持し、同じproduction sourceで成功した2件を再利用する。
+
+既存の所有記録付き生成先と通常のCargoゲートを使い、次を順に実行する。
+
+1. 失敗した `review_workspace_refuses_unverified_provenance_and_running_or_queued_review` だけを確認する。
+2. 成功後、未実施の既存parity192件を `not test(review_workspace_)` で確認する。
+3. 未実施のcc-todoのsubwork・capacity_cycle・verified_resume結合検査を確認する。
+4. 未実施の両ライブラリのdoctestと両クレートのall-targets Clippyを確認する。
+5. すべて成功後、両クレートのbinsをreleaseで1回生成する。
+6. todoとschedulerを新しい独立候補へ保存し、SHA256・サイズ・リンク数1を確認する。
+   候補schedulerの全体helpとdispatch-subworkのhelpだけを実行する。
+
+新しい全出力と途中結果は `.ci-work/3238-review-workspace-fixed-*`、
+正式な記録は `.ci-work/3085-cargo-review-workspace-fixed.private.json` へ保存する。
+候補名は `todo-3085-review-workspace-fixed.exe` と
+`scheduler-3085-review-workspace-fixed.exe`。旧receipt・旧候補を上書きしない。
+親ソースのHEAD・ブランチ・変更なしを各コマンドの前後に照合する。
+失敗時は後続と候補作成を止め、全出力を親へ返す。親ソースは修正しない。
+
+この担当は元の検査範囲だけを完遂する。新しいToDo・子ジョブ・レビュー・PRを作らず、
+本番や共有実行ファイルを更新しない。親3085と既存3090の完了を前提にしない。
+作業ブランチ名は変更しない。結果の受領、3255への永続記録、Discordへの配送は親が行う。

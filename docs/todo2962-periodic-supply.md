@@ -22,5 +22,13 @@ Red: TestPeriodicPhasesの未実装で失敗。Green: queue既存テストと新
 - 同4557dbeの実行物（SHA256 B88EAAE4305143E51FB3463DE8A1C91285364D601166E9E95022688C9FF1F49D）を配置した。現用の旧SHAを再確認して同driveのatomic replaceを行い、旧byteを保管した。タスク設定とVBSは変えていない。
 - 通常周期の起動器→更新版unattended-runner→CI queueという親子関係を、生成時刻とPIDで実観測した。通常処理が50秒を使った後にqueueが始まっている。最大65秒を使う回は次の1分起動がIgnoreNewで省略され、実効周期が約2分になる。同時workerは増やさない。
 - PR149は元f3e26f4の子2bd3a366f8974ba54df83927102aa5bdad3983e5へ3workflowだけを公開した。全tree比較とbranch再読が一致した。製品source・mode・他pathの変更は無い。https://github.com/AutoDevJapan/civ6-banseiki/pull/149
-- 新HEADでRust Windows/native-driver/live-chainの3件と標準CodeQL2件が作成された。PC queueの受付は3件だけで、最初のRust jobは実機準備中。CodeQL actionsは成功、Rustは実行中。公式割当・アプリ検査成功・成果物hash・終了回収・製品merge・次の通常供給は未完了。
+- 新HEADでRust Windows/native-driver/live-chainの3件と標準CodeQL2件が作成された。この時点のPC queue受付は3件、最初のRust jobは実機準備中だった。CodeQL actions成功・Rust実行中という当時の観測は、以下の最新結果で更新する。
 - 最初のPC3＋CodeQL2、merge後のPC3＋CodeQL2、移行検証最大2という計12件の上限を維持する。publishや同じ正式jobの無意味な再実行は繰り返さない。
+
+## 2026-10-21 09:28 JSTの実結果
+
+- 標準CodeQLの2解析は同じ製品HEADで成功した。Windowsの最初の資源は、SDK準備後、キャッシュのポートがWindowsの予約範囲と重なり停止した。GitHub jobは未割当・steps0で、製品検査は始まっていなかった。
+- 公開repoを回収時に拒否する不具合はPR291、空きポートの割当はPR319、回収後の未開始予約を再開する処理はPR321で通常mergeした。各固定HEADの必要正式検査と別モデルMust0を確認した。SDKのproxyは新規資源内のhardlinkにし、通常cleanupを妨げるreparseを増やさない。
+- 初回資源はPR323の限定した正規処理で退避済み。元場所不在、閉じた原所有記録、退避先の元ディレクトリIDと原診断の保持を確認した。再開CLIも管理者の回収marker・同じSCMの停止とGitHubの未割当状態を確認して成功した。読めないprocessを不在とせず、調査範囲と件数を証拠に残した。
+- 現用helper・queueとその固定pinを更新し、既存定期処理のpinだけを変更した。初期3件の予算キーを保ったまま、同じRust jobの予約を1回再開した。既存の通常周期が新しい所有資源を作り、現在はprepare中である。製品jobの再作成・rerunは0件。
+- 製品HEADは2bd3a366のまま。Windows3件の正式検査・成果物hash・正常cleanup、PR149のmerge、merge後の通常供給と回収、継続運用の有効化は未完了。基盤のmergeや配置だけを製品CIの成功とはしない。

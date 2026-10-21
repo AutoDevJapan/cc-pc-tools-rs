@@ -1,0 +1,210 @@
+package main
+
+import (
+	"context"
+	"encoding/hex"
+	"encoding/json"
+	"flag"
+	"io"
+	"mime"
+	"net/http"
+	"net/url"
+	"os"
+	"path/filepath"
+	"strings"
+	"time"
+)
+
+type historyAttachmentScope struct {
+	historyReadScope
+	Message    string `json:"message_id"`
+	Attachment string `json:"attachment_id"`
+	ContentSHA string `json:"expected_content_sha256"`
+	Created    string `json:"expected_created_at"`
+	Edited     string `json:"expected_edited_timestamp"`
+	Size       int64  `json:"expected_size"`
+}
+
+type historyOwnerImage struct {
+	ID          string `json:"id"`
+	Size        int64  `json:"size"`
+	ContentType string `json:"content_type"`
+	URL         string `json:"url"`
+}
+
+// URLs exist only in this direct API decoding type, never in a saved receipt.
+type historyOwnerImageMessage struct {
+	Message
+	Type        *int                `json:"type"`
+	Attachments []historyOwnerImage `json:"attachments"`
+}
+
+func historyAttachmentCLI(args []string, out io.Writer) int {
+	return historyAttachmentCLIWith(args, out, loadHistoryRead, historyReadGuard)
+}
+
+func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Context, historyReadScope) (*Runner, error), guard func(context.Context, string) bool) int {
+	fail := func() int { _, _ = io.WriteString(out, "attachment read unavailable\n"); return 1 }
+	var scopePath, output string
+	flags := flag.NewFlagSet("history-attachment", flag.ContinueOnError)
+	flags.SetOutput(io.Discard)
+	conversationStringFlag(flags, "scope", &scopePath)
+	conversationStringFlag(flags, "output", &output)
+	if flags.Parse(args) != nil || flags.NArg() != 0 || scopePath == "" || output == "" {
+		return fail()
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+	mediaType := historyImageOutputType(output)
+	if mediaType == "" || !historyPlainParent(output) || !guard(ctx, filepath.Dir(output)) {
+		return fail()
+	}
+	if _, err := os.Lstat(output); !os.IsNotExist(err) {
+		return fail()
+	}
+	raw, err := historyPrivateInput(ctx, scopePath, guard)
+	if err != nil {
+		return fail()
+	}
+	var scope historyAttachmentScope
+	if historyStrictJSON(raw, &scope) != nil || !historyAttachmentScopeValid(scope, time.Now()) {
+		return fail()
+	}
+	runner, err := load(ctx, scope.historyReadScope)
+	if err != nil || runner == nil || runner.State == nil || runner.Client == nil || runner.State.Destination.Guild != scope.Guild || runner.State.Destination.Owner != scope.Owner {
+		return fail()
+	}
+	var bot struct {
+		ID  string `json:"id"`
+		Bot bool   `json:"bot"`
+	}
+	if runner.get(ctx, "/users/@me", &bot) != nil || !bot.Bot || bot.ID != runner.State.Destination.Bot {
+		return fail()
+	}
+	threadID := scope.Threads[0]
+	var thread Thread
+	if runner.get(ctx, "/channels/"+threadID, &thread) != nil || thread.ID != threadID || thread.Guild != scope.Guild || thread.Type != 11 || (thread.Parent != runner.State.Destination.Forum && thread.Parent != requestForum) || (thread.Owner != bot.ID && thread.Owner != scope.Owner) {
+		return fail()
+	}
+	var starter Message
+	if runner.get(ctx, "/channels/"+threadID+"/messages/"+threadID, &starter) != nil || !historyMessageValid(starter, threadID, runner) || starter.ID != threadID || (starter.Author.ID != scope.Owner && starter.Author.ID != bot.ID) {
+		return fail()
+	}
+	messagePath := "/channels/" + threadID + "/messages/" + scope.Message
+	var message historyOwnerImageMessage
+	if runner.get(ctx, messagePath, &message) != nil {
+		return fail()
+	}
+	attachment, ok := historySelectedOwnerImage(scope, message, runner, mediaType)
+	if !ok {
+		return fail()
+	}
+	imageURL, ok := historyAttachmentURL(attachment.URL, threadID, scope.Attachment)
+	if !ok {
+		return fail()
+	}
+	request, err := http.NewRequestWithContext(ctx, http.MethodGet, imageURL, nil)
+	if err != nil {
+		return fail()
+	}
+	// Share only transport, never the bot header, cookie jar or redirect policy.
+	client := &http.Client{Transport: runner.Client.Transport, Timeout: 6 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	response, err := client.Do(request)
+	if err != nil {
+		return fail()
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK || (response.ContentLength >= 0 && response.ContentLength != scope.Size) {
+		return fail()
+	}
+	data, err := io.ReadAll(io.LimitReader(response.Body, scope.Size+1))
+	if err != nil || int64(len(data)) != scope.Size || http.DetectContentType(data) != mediaType {
+		return fail()
+	}
+	var current historyOwnerImageMessage
+	if runner.get(ctx, messagePath, &current) != nil {
+		return fail()
+	}
+	if _, ok := historySelectedOwnerImage(scope, current, runner, mediaType); !ok || ctx.Err() != nil {
+		return fail()
+	}
+	if writeHistoryReceipt(output, data) != nil {
+		return fail()
+	}
+	result := map[string]any{"domain": "discord-owner-image-read-receipt-v1", "source": "discord-api-v10", "todo_id": scope.Todo, "guild_id": scope.Guild, "owner_id": scope.Owner, "thread_id": threadID, "message_id": scope.Message, "attachment_id": scope.Attachment, "content_sha256": scope.ContentSHA, "created_at": scope.Created, "edited_timestamp": scope.Edited, "size": len(data), "media_type": mediaType, "image_sha256": bytesHash(data), "scope_sha256": bytesHash(raw), "acquired_at": runner.Now().UTC().Format(time.RFC3339Nano), "delivery": "inspection_only", "application": "not_inferred"}
+	if json.NewEncoder(out).Encode(result) != nil {
+		return 1
+	}
+	return 0
+}
+
+func historyAttachmentScopeValid(scope historyAttachmentScope, now time.Time) bool {
+	window := scope.historyReadScope
+	window.Domain = "discord-history-read-scope-v1"
+	if scope.Domain != "discord-owner-image-read-scope-v1" || len(scope.Threads) != 1 || !historyScopeValid(window, now) || scope.Size <= 0 || scope.Size > 20<<20 || len(scope.ContentSHA) != 64 || strings.ToLower(scope.ContentSHA) != scope.ContentSHA {
+		return false
+	}
+	if b, err := hex.DecodeString(scope.ContentSHA); err != nil || len(b) != 32 {
+		return false
+	}
+	message, valid := number(scope.Message)
+	thread, _ := number(scope.Threads[0])
+	high, _ := number(historyHighBefore(mustHistoryTime(scope.Until)))
+	if _, ok := number(scope.Attachment); !ok || !valid || message < thread || message >= high {
+		return false
+	}
+	created, err := time.Parse(time.RFC3339Nano, scope.Created)
+	if err != nil || created.Before(mustHistoryTime(scope.Since)) || !created.Before(mustHistoryTime(scope.Until)) {
+		return false
+	}
+	if scope.Edited != "" {
+		edited, err := time.Parse(time.RFC3339Nano, scope.Edited)
+		if err != nil || edited.Before(created) || edited.After(now) {
+			return false
+		}
+	}
+	return true
+}
+
+func historySelectedOwnerImage(scope historyAttachmentScope, message historyOwnerImageMessage, runner *Runner, mediaType string) (historyOwnerImage, bool) {
+	if message.ID != scope.Message || message.Author.ID != scope.Owner || message.Type == nil || (*message.Type != 0 && *message.Type != 19) || !historyMessageValid(message.Message, scope.Threads[0], runner) || message.Timestamp != scope.Created || message.Edited != scope.Edited || bytesHash([]byte(message.Content)) != scope.ContentSHA {
+		return historyOwnerImage{}, false
+	}
+	var selected historyOwnerImage
+	found := 0
+	for _, item := range message.Attachments {
+		if item.ID == scope.Attachment {
+			selected = item
+			found++
+		}
+	}
+	if found != 1 || selected.Size != scope.Size {
+		return historyOwnerImage{}, false
+	}
+	if selected.ContentType != "" {
+		declared, _, err := mime.ParseMediaType(selected.ContentType)
+		if err != nil || declared != mediaType {
+			return historyOwnerImage{}, false
+		}
+	}
+	return selected, true
+}
+
+func historyAttachmentURL(raw, thread, attachment string) (string, bool) {
+	u, err := url.Parse(raw)
+	prefix := "/attachments/" + thread + "/" + attachment + "/"
+	if err != nil || u.Scheme != "https" || u.Host != "cdn.discordapp.com" || u.User != nil || u.Fragment != "" || !strings.HasPrefix(u.EscapedPath(), prefix) || !strings.HasPrefix(u.Path, prefix) {
+		return "", false
+	}
+	name := strings.TrimPrefix(u.Path, prefix)
+	return raw, name != "" && name != "." && name != ".." && !strings.Contains(name, "/")
+}
+
+func historyImageOutputType(path string) string {
+	for suffix, mediaType := range map[string]string{".private.png": "image/png", ".private.jpg": "image/jpeg", ".private.jpeg": "image/jpeg", ".private.webp": "image/webp", ".private.gif": "image/gif"} {
+		if strings.HasSuffix(path, suffix) {
+			return mediaType
+		}
+	}
+	return ""
+}

@@ -1,0 +1,8 @@
+{
+  "at": "2026-10-21T11:08:05.3341317+09:00",
+  "executable": "D:\\削除希望\\20261021-todo-3242-post3226-fixed-red-bcd13dfc\\files\\inspect-owned-tree.exe",
+  "exit_code": 0,
+  "stdout": "{\"all_links_contained\":true,\"bytes\":3303410179,\"entries_including_root\":3685,\"files\":3197,\"internal_shared_file_identities\":56,\"manifest_sha256\":\"a14b3aacc5c04a9ea06b63db5ca2f218f17e89e99390343969de383cc34b607b\",\"no_reparse_points\":true,\"root\":\"D:\\\\削除希望\\\\20261021-todo-3242-post3226-fixed-red-bcd13dfc\\\\files\",\"root_file_id\":\"0025000000672293\",\"volume\":1215965535}\n",
+  "stderr": "",
+  "create_no_window": true
+}

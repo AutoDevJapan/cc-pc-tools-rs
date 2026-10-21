@@ -1,9 +1,9 @@
-# ToDo3242の再開メモ
+# ToDo3242の完了記録
 
-測定は完了した。固定source a1aafe73c9e0564a79dc11d67de4fea362ca6020で指定コマンドを1回実行し、2 FAIL / 2 PASS、exit100。全1,186 sourceファイルのGit生blob一致と前後不変を確認。全文stdout/stderr、実行情報、各SHAを自分のブランチへcommit/push済み。**Cargoを再実行しない。** 親の実装・配布の完了を意味しない。
+この測定と後片付けは完了。固定source a1aafe73c9e0564a79dc11d67de4fea362ca6020で指定コマンドを1回だけ実行し、2 FAIL / 2 PASS、exit100。全1,186 sourceファイルのGit生blob一致と前後不変を確認。全文stdout/stderrと各SHAを保存した。**Cargoを再実行しない。** 親の実装・配布の完了を意味しない。
 
-残作業は後片付けだけ。所有ID bcd13dfcd2f6a3494a968c067cd0c48f、元の場所はpreflight.json。planは3,298,968,579 byteのためquarantine(size)を指定。quarantineは移動前にQUARANTINE_CROSS_DRIVEで終了した。同Dの予定退避先もguardがclassification_unverified=true / client_resource=trueを返したため、作成・参照・移動はしていない。元の所有ルートとsource/targetを保持し、finishは未実行。cleanup-status.jsonに根拠を保存。
+所有付き一時データは、元依頼の同D退避手順に従って削除希望へ移動した。全3,197ファイル・56組の内部hardlinkの識別情報・内容・全linksを移動前後で照合。前後manifestはa14b3aacc5c04a9ea06b63db5ca2f218f17e89e99390343969de383cc34b607bで一致し、元の場所の不在とsafe-delete finishのsource_absentを確認済み。理由.txtも完了へ更新した。約3.30GBは削除希望内で保持されている。
 
-通常の整理経路で、この所有物だけを、保護設定やcaller許可を広げず同Dへ退避できることを確認する。既に判明したcross-driveの呼び直し、guard回避、分割削除、無関係なsource/設定の閲覧はしない。移動が可能になったら、所有・絶対境界・全links・停止・全ファイルの前後同一性・source_absentを確認してからfinishする。
+未完了の実作業と本人判断はない。正常完了の結果はPARENT-RESULT.json、測定の詳細はRESULT.md、整理の証拠はcleanup-completion.json。自分の共有ToDo状態はスケジューラが更新する。親のコード・PR・ToDo状態、原保護・caller許可は変更していない。子Codex・受領用helper・直接のDiscord通知は追加していない。
 
-自分の共有ToDo状態はスケジューラが更新する。親のcode・PR・ToDo状態は変更しない。独立PR・他のCargo検査・子Codex・受領用helper・Discord通知は追加しない。測定結果は通常CLIの最終応答で親が受領する。最後にToDo3242、現在のCC_JOB_ID、実HEADでcheckpoint-workspaceを保存する。
+終了前の最終commit/pushはgitの実HEADとremoteで照合する。最新のcheckpoint-workspace-request.jsonとcheckpoint-workspace-result.jsonは、自己参照するcommit SHAの循環を避けるためGitには含めず、このフォルダー内に保持する。新しい担当を起動して検査を重ねる必要はない。

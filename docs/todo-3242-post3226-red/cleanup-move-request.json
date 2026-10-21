@@ -1,0 +1,11 @@
+{
+  "id": "bcd13dfcd2f6a3494a968c067cd0c48f",
+  "source": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3242-3103\\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f",
+  "destination": "D:\\削除希望\\20261021-todo-3242-post3226-fixed-red-bcd13dfc\\files",
+  "prepared_at": "2026-10-21T11:07:32.0401864+09:00",
+  "source_manifest_sha256": "a14b3aacc5c04a9ea06b63db5ca2f218f17e89e99390343969de383cc34b607b",
+  "bytes": 3303410179,
+  "evidence_commit": "cf2191a356cd9c707e27a9686127636417e4a2d9",
+  "state": "prepared_not_moved",
+  "new_destination_created_without_overwrite": true
+}

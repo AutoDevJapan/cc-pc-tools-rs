@@ -1,0 +1,18 @@
+{
+  "verified_at": "2026-10-21T11:08:05.3595340+09:00",
+  "source": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3242-3103\\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f",
+  "destination": "D:\\削除希望\\20261021-todo-3242-post3226-fixed-red-bcd13dfc\\files",
+  "source_absent": true,
+  "root_file_id": "0025000000672293",
+  "volume": 1215965535,
+  "files": 3197,
+  "entries_including_root": 3685,
+  "bytes": 3303410179,
+  "all_links_contained_before_and_after": true,
+  "no_reparse_before_and_after": true,
+  "all_file_ids_links_sizes_attributes_creation_modification_times_sha256_unchanged": true,
+  "manifest_sha256": "a14b3aacc5c04a9ea06b63db5ca2f218f17e89e99390343969de383cc34b607b",
+  "move_exit_code": 0,
+  "space_reclaimed_claimed": false,
+  "state": "same_drive_move_and_full_preservation_verified_finish_pending"
+}

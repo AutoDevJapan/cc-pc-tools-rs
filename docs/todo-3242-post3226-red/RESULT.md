@@ -30,10 +30,21 @@ API検査は最初の`related_todo_ids`条件のjob詳細で停止した。そ�
 
 測定証拠は自分のブランチへcommit/pushし、GitHubのHEADと一致を確認済み。21個の固定証拠ファイルについて、SHA256とGitへ保存した生blobの一致も確認した（push-and-evidence-verification.json）。親のコード・PR・共有ToDo状態は変更していない。最終応答を通常CLIのwait経由で親が受領し、受領用helper・子Codex・Discord通知は使わない。
 
-## 後片付けで残っていること
+## 前回終了時の後片付けの記録（今回解消）
 
-測定自体は完了したが、後片付けは未完了。所有付き一時データ3,298,968,579 byteを元の場所に保持している。通常のplanは所有・境界・全reparse/hardlinkを確認したうえで、512MiBの容量上限を超えるため`quarantine(size)`を指定した。通常削除コマンドは返されなかったため、削除は実行していない。
+以下は前回終了時点の記録。今回の再開で解消し、後段に完了の証拠を記載した。前回は測定自体は完了したが、後片付けは未完了だった。所有付き一時データ3,298,968,579 byteを元の場所に保持している。通常のplanは所有・境界・全reparse/hardlinkを確認したうえで、512MiBの容量上限を超えるため`quarantine(size)`を指定した。通常削除コマンドは返されなかったため、削除は実行していない。
 
 指定どおりquarantineを1回呼んだが、補助ツールの退避先がCドライブに固定されており、移動前に`QUARANTINE_CROSS_DRIVE`で終了した。これは補助ツール自身の制限であり、自動承認レビューの拒否ではない。同Dドライブの予定退避先を通常guardで確認すると、`classification_unverified=true / client_resource=true`だった。その先は作成・参照・移動していない。原保護・caller許可を変更せず、データを小分けに消すなどの回避もしない。
 
 Cargoと把握した子プロセスは終了し、全文ストリームも排出済み。所有ルートのfile ID不変を確認した。元の場所が存在するためfinishは呼んでいない。証拠はcleanup-plan.json、cleanup-quarantine-attempt.json、cleanup-status.json、process-completion.json。通常の整理経路でこの所有物を同Dへ退避できることが確認されるまで保持する。Cargoの再実行や、判明済みの同じ失敗の再試行はしない。
+## 後片付けの完了
+
+今回の再開では、指定検査を再実行せず、後片付けだけを完了した。本人の最新方針にある「分類未確認と実行審査の拒否を混同しない」を確認した。原依頼で明示された、自分の所有付き一時データを同Dへ退避する手順に限定して実行した。原保護・caller許可は変更せず、AI作成・本人未採用の清掃条件案を新たな許可として適用していない。
+
+移動前に、元の測定の固定証拠21ファイルのSHA256一致、所有ルートのvolume/file ID、絶対境界、稼働プロセス不在、祖先と配下のreparse不在を確認した。全3,197ファイルと56組の内部hardlinkについて、file ID、全links、サイズ、属性、作成/更新時刻、SHA256を保存した。照合用のGo実行物4,441,600 byteも含め、対象は3,303,410,179 byteだった。清掃用の一度限りの照合だけで、製品検査やCargoの追加実行はしていない。
+
+事前証拠をcommit/pushした後、既存の未知資産を開かず、所有IDを含む未存在の専用退避先をDドライブの削除希望内に新設した。未完了の理由を先に記録し、通常のMove-Itemを1回実行した。移動後の全3,197ファイルと全リンクの識別情報・内容が一致し、元の場所の不在を確認したうえで、safe-delete finishの`source_absent`を受領した。理由.txtへ完了を追記した。約3.30GBは削除希望内に保持している。
+
+全ツリーの前後manifest SHA256はともに `a14b3aacc5c04a9ea06b63db5ca2f218f17e89e99390343969de383cc34b607b`。証拠は [cleanup-tree-before.jsonl](cleanup-tree-before.jsonl)、[cleanup-tree-after.jsonl](cleanup-tree-after.jsonl)、[cleanup-preservation.json](cleanup-preservation.json)、[cleanup-finish.json](cleanup-finish.json)、[cleanup-completion.json](cleanup-completion.json)。元のCへのquarantineの再試行、削除の分割、新費用、保護設定の変更はない。
+
+これで、この固定ソースの測定と自分の一時データの整理は完了した。ToDo3103の実装・別モデルレビュー・マージ・配布の完了を意味しない。正常完了の結果は [PARENT-RESULT.json](PARENT-RESULT.json) に保持し、通常CLIの最終応答で親へ返す。親が永続記録を照合してDiscordへ結果を記録する。本人判断は不要。

@@ -1,0 +1,82 @@
+[
+  {
+    "path": "inspect-owned-tree.go",
+    "bytes": 5417,
+    "sha256": "2f9d7022b3be60678b6a2e0e5a6216cf7fbd82d12bb9df5770e5902b55e59cc1"
+  },
+  {
+    "path": "cleanup-inspector-build.json",
+    "bytes": 517,
+    "sha256": "ff9d936934ddad9abdb87a14b408516c8f13acc2db4193e265a9d6a279fd57b6"
+  },
+  {
+    "path": "cleanup-plan-resume.json",
+    "bytes": 263,
+    "sha256": "469dfd2a52b2eedb7a539660b1c49ab7465be4ad79f61f55d82b43d2751867ea"
+  },
+  {
+    "path": "cleanup-preparation.json",
+    "bytes": 1828,
+    "sha256": "e9c58dbc8f5371cfffa0ab7fb2513e5d1957fdb624abcbc10a317a2d280fe1dc"
+  },
+  {
+    "path": "cleanup-resume-verification.json",
+    "bytes": 451,
+    "sha256": "058f77c0bb4a4cc36eb13ca33496d181728290c78e8db40fa974616241ccbbf3"
+  },
+  {
+    "path": "cleanup-tree-before.jsonl",
+    "bytes": 1095141,
+    "sha256": "a14b3aacc5c04a9ea06b63db5ca2f218f17e89e99390343969de383cc34b607b"
+  },
+  {
+    "path": "cleanup-tree-before-receipt.json",
+    "bytes": 1005,
+    "sha256": "436a1f3f69aec824126960e9b2e5b270ccda231e5ebce0367ba4d4d65cec13c9"
+  },
+  {
+    "path": "cleanup-move-request.json",
+    "bytes": 599,
+    "sha256": "f836b61b3200843b8cceb819124db008c38e562e1fa5f6ac3aaba160222ecbb1"
+  },
+  {
+    "path": "cleanup-tree-after.jsonl",
+    "bytes": 1095141,
+    "sha256": "a14b3aacc5c04a9ea06b63db5ca2f218f17e89e99390343969de383cc34b607b"
+  },
+  {
+    "path": "cleanup-tree-after-receipt.json",
+    "bytes": 655,
+    "sha256": "ac55fbf5ebfbce6304abfe43e5d112d88f4db516b24fc8977c43d9c4827c55f3"
+  },
+  {
+    "path": "cleanup-preservation.json",
+    "bytes": 856,
+    "sha256": "f5e4af20a8e8216d6acecf4ea3e90a1c77f069ea8d8bd0d245578d1d594a87f4"
+  },
+  {
+    "path": "cleanup-finish.json",
+    "bytes": 67,
+    "sha256": "15bfdeae12b9112a81e02c6d56c2b7185dc9ef260e471e77f408451f004824a2"
+  },
+  {
+    "path": "cleanup-completion.json",
+    "bytes": 978,
+    "sha256": "49b70d51c41e345d9d4f0d82bbc81b8be991127d7126c26db6cf1d0d2fccbf22"
+  },
+  {
+    "path": "PARENT-RESULT.json",
+    "bytes": 1522,
+    "sha256": "34ee3adb519c0f57a7e29234f7684910232a385a0f5bad99a775f26d702a85ab"
+  },
+  {
+    "path": "RESULT.md",
+    "bytes": 8194,
+    "sha256": "41ef30f2b0eb85dc61cdcbcc8ab86bbae9c881524a1f0d07cc94d3632608eb84"
+  },
+  {
+    "path": "RESUME.md",
+    "bytes": 1613,
+    "sha256": "f9448f2deb2b20f0eb24be71b218eabf4b1cbb3a76e6c513fa8f6e37f0d18b15"
+  }
+]

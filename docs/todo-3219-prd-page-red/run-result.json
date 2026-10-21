@@ -1,0 +1,17 @@
+{
+  "todo": 3219,
+  "job": "20261021-085441-todo-3219",
+  "source_commit": "b978286abbe1a729cb733325e58a36fc063aa393",
+  "command": "cargo nextest run --locked -p localai-web-rs --test prd_page_preservation --no-fail-fast",
+  "started_at": "2026-10-21T09:02:19.0498212+09:00",
+  "finished_at": "2026-10-21T09:02:58.1757563+09:00",
+  "elapsed_seconds": 39.1259351,
+  "exit": 100,
+  "source_unchanged": true,
+  "before_sha256": "53d22cf2b31074d41d7b99f8dceb7c46ba5f5d5c58064ac02c1fcfba30e7298d",
+  "after_sha256": "53d22cf2b31074d41d7b99f8dceb7c46ba5f5d5c58064ac02c1fcfba30e7298d",
+  "stdout_bytes": 0,
+  "stderr_bytes": 9002,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "3593e92e5dffe6040b6cf61df8af486021c860cb2346874593002b336193ee53"
+}

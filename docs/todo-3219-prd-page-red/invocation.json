@@ -1,0 +1,26 @@
+{
+  "todo": 3219,
+  "parent_todo": 3103,
+  "job": "20261021-085441-todo-3219",
+  "source_commit": "b978286abbe1a729cb733325e58a36fc063aa393",
+  "command": "cargo nextest run --locked -p localai-web-rs --test prd_page_preservation --no-fail-fast",
+  "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "argv": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "localai-web-rs",
+    "--test",
+    "prd_page_preservation",
+    "--no-fail-fast"
+  ],
+  "cwd": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3219-3103\\codex-owned-530173a87be6551df0272bbcc8d02eb0\\source-fixed",
+  "target": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3219-3103\\codex-owned-530173a87be6551df0272bbcc8d02eb0\\target",
+  "create_no_window": true,
+  "attempt": 1,
+  "started_at": "2026-10-21T09:02:19.0498212+09:00",
+  "pid": 61992,
+  "process_started_at": "2026-10-21T00:02:19.0717661Z",
+  "state": "exited-and-streams-drained"
+}

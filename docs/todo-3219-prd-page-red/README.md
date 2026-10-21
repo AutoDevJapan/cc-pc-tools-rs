@@ -54,4 +54,38 @@ SHA256の集約値は `53d22cf2b31074d41d7b99f8dceb7c46ba5f5d5c58064ac02c1fcfba3
 対象test・renderer・index/workload/shellのCRLFと単独CRはすべて0。
 古い変換済み展開フォルダーは測定に使わず、同じ所有領域とともに片付ける。
 
-現段階: sourceの準備と全バイト一致確認が完了。テストは未実行。
+## 実測結果
+
+2026-10-21 09:02:19.0498212〜09:02:58.1757563 +09:00、指定のCargoコマンドを1回だけ実行した。
+通常の `cargo.cmd` が呼ぶものと同じ `cargo_gate.exe` を `CreateNoWindow=true` で起動し、
+この担当専用targetと通常sccacheを使った。追加のCargoコマンドは実行していない。
+
+コンパイルは35.85秒で成功。nextest run IDは `5af14874-89bf-4f19-9046-db2f39088c72`。
+選択は1 binary / 1 testで、0 passed / 1 failed / 0 skipped、Cargoの終了コードは100。
+失敗は `prd_page_preservation.rs:11:5` のSHA256比較であり、コンパイル失敗や起動失敗ではない。
+
+| 比較対象 | LF正規化後のSHA256 |
+| --- | --- |
+| 公開 `console_page::index()` の実際の戻り値 | `ef55500abbbb0fb2ea4430d4196285b3cccffa8d291fdfb50e9f1f1fa7f7448b` |
+| 現在のPrd実応答から固定された期待値 | `335ad98840c97d0767b8e78bf8166f48c6044a1f2d1a8a25c3bdea831320abf9` |
+
+これにより、固定候補が現在のPrdページを保持しないことをRustの実テストで確認した（Red）。
+この結果だけで親の修復・配布・新UI承認を完了とはしない。
+
+実行前後の1,185ファイルはすべて元のGit blobと一致し、集約SHA256も同じだった。
+testの固定bytes、renderer、画面asset、`Cargo.lock` を変更していない。
+`invocation.json` は1回の実行とPIDを、`run-result.json` は実際のCargo exit100を保存する。
+記録用PowerShell自身の終了コードとは区別する。
+
+全文の生stdoutは0 byte、SHA256は `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`。
+全文の生stderrは9,002 byte、SHA256は `3593e92e5dffe6040b6cf61df8af486021c860cb2346874593002b336193ee53`。
+テスト本体のstdout/stderrは、nextestが外側のstderrへまとめた内容も含めてそのまま保存した。
+`.gitattributes` の `-text` で、ログがcommit時に改行変換されないようにしている。
+
+## 残る保存と後片付け
+
+測定用gate PID61992は終了後に不在と確認した。一時領域の通常planは
+6,172項目 / 2,303,864,602 byteのため `quarantine` / reason `size` を指定した。
+測定記録をcommit/pushしてGitHub側のHEADを照合してから、この所有領域だけを退避し、
+finishの `source_absent` とschedulerの再開情報保存を確認する。
+親が受領する原応答は通常のCLI経由とし、通知・メンション・受領helper・子Codexは追加しない。

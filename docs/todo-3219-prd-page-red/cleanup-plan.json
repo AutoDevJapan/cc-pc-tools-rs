@@ -1,0 +1,9 @@
+{
+  "action": "quarantine",
+  "bytes": 2303864602,
+  "entries": 6172,
+  "id": "530173a87be6551df0272bbcc8d02eb0",
+  "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3219-3103\\codex-owned-530173a87be6551df0272bbcc8d02eb0",
+  "protected_attributes": false,
+  "reason": "size"
+}

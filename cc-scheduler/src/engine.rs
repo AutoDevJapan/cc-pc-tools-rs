@@ -28,7 +28,8 @@ fn launch_inputs(item: &Value) -> Value {
         "workspace_receipt":item["scheduler"]["workspace_receipt"],"jobs":item["jobs"],
         "resume_generation":item["resume_generation"],"worker_receipt":item["worker_receipt"],
         "console_request":item["scheduler"]["console_request"],
-        "console_fresh_request":item["scheduler"]["console_fresh_request"]})
+        "console_fresh_request":item["scheduler"]["console_fresh_request"],
+        "targeted_hold":crate::targeted_dispatch::held(item)})
 }
 
 fn review_request_inputs(item: &Value) -> Value {
@@ -1533,7 +1534,24 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         if item["subwork"].is_object() {
             selection["task_type"] = item["subwork"]["kind"].clone();
         }
-        if item["scheduler"]["console_request"]["read_only"] == true {
+        // An unfinished successful conversation needs its recorded execution
+        // scope too, not only its model/session. Explicit saved inputs still win.
+        if let Some(source) = source.filter(|_| resume_session.is_some()) {
+            let sandbox = if !item["sandbox"].is_null() {
+                &item["sandbox"]
+            } else if !accepted_options["sandbox"].is_null() {
+                &accepted_options["sandbox"]
+            } else {
+                &source["sandbox"]
+            };
+            if !sandbox.is_null() {
+                selection["sandbox"] = sandbox.clone();
+            }
+        }
+        if item["scheduler"]["console_request"]["read_only"] == true
+            || ["research", "review"].contains(&s(&item["subwork"]["kind"]))
+            || cc_ask::job_policy::explicit_read_only(s(&item["title"]))
+        {
             selection["sandbox"] = json!("read-only");
         }
         // A resumed conversation may restore the previous model. Reuse it only
@@ -1551,6 +1569,21 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 })
         }) {
             resume_session = None;
+        }
+        // Do not carry capabilities from a conversation that was just retired.
+        if let Some(source) = source.filter(|_| resume_session.is_some()) {
+            for field in ["mcp_profile", "network", "add_dirs"] {
+                let value = if !item[field].is_null() {
+                    &item[field]
+                } else if !accepted_options[field].is_null() {
+                    &accepted_options[field]
+                } else {
+                    &source[field]
+                };
+                if !value.is_null() {
+                    selection[field] = value.clone();
+                }
+            }
         }
         let folder = self.root.join("prompts");
         fs::create_dir_all(&folder)?;
@@ -1735,6 +1768,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     || !truth(&i["dispatchable"])
                     || !truth(&i["spec"])
                     || todo_wait::waiting(&db, i)
+                    || (target.is_some() && crate::targeted_dispatch::held(i))
                 {
                     return false;
                 }
@@ -1868,6 +1902,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     .find(|r| r["id"] == prepared["id"])
                     .ok_or(Error("ValueError"))?;
                 if todo_wait::waiting(&db, &current) {
+                    return Ok(());
+                }
+                if target.is_some() && crate::targeted_dispatch::held(&current) {
                     return Ok(());
                 }
                 if s(&current["status"]) != "todo"

@@ -21,8 +21,11 @@
     "notification_count": 2,
     "model_called": false
   },
-  "current27_manifest": "current27-after-diagnostic-manifest.json in privateworkfolder",
-  "postinstall_review": "pending",
-  "scope": "New1only;existing26/managed/junction/guard unchanged.No sourcecommands/CLI/privatehistory/modelturn",
-  "recorded_at": "2026-10-21T01:26:21.2029365Z"
+  "current27_manifest": "作業フォルダのcurrent27-after-diagnostic-manifest.json。採用台帳が参照する対象別の最新manifestから27件を結合して再構成できる。",
+  "postinstall_review": "3249が固定4976ec7の実5と原文/許諾・記録・現27件135ハッシュを確認してMust0。実CLIやモデルターンではない。",
+  "scope": "新規1件だけ。既存26件・managed原本・junction・guardは不変。上流コマンド/CLI/私的履歴/モデルターンの実行無し。",
+  "recorded_at": "2026-10-21T01:26:21.2029365Z",
+  "current27_manifest_raw_sha256": "16b712e210b3aa3a784c70978740a0d0afc8ccdc58824808a662409b46f67390",
+  "discovery_raw_sha256": "7d805438913c174777c627772cc025237bdca3b0aa39c74974ac5700129ffed4",
+  "amended_at": "2026-10-21T02:51:44.6925748Z"
 }

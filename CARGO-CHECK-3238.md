@@ -332,3 +332,33 @@ runnerの排他も解放済み。元の生成先と証拠・旧候補・新候�
 この担当3238の有限な検査は完了した。親3085・3090の作業全体は完了していない。
 親が結果と候補を受領し、3255への永続記録、既存話題への通知なしの配送と読み返し確認、
 既存3090の別モデルレビューと実dispatch・配布を進める。本人の判断やPC操作は不要。
+
+## 保存済み計測状態を保持する追加差分の検査計画
+
+同じ3238をジョブ `20261021-150054-todo-3238` で再開した。
+正規CLIから当該ジョブだけを抽出し、`gpt-6.1-sol` / `max` / `cargo` を確認した。
+親の対象は固定HEAD `dce5c2042ef9ffecad96281c7cb2a988ae24406a`、
+ブランチは `scheduler/todo-3085-capacity-decision`。変更なし・push済みを確認した。
+
+今回の追加差分は、対象1件の起動入口がロック取得後に保存済み状態を読む修正、
+保存済みの起動間隔・観測と不正状態の保持を確かめる1件、返却理由の追加と説明だけ。
+前回の成功216件を新規実行として数えず、影響のない既存結果を再利用する。
+旧receipt・候補・出力は保持し、同じ所有記録付き生成先と通常の共有ゲートを使う。
+
+1. `parity` の `review_workspace_dispatch_preserves_saved_state_and_launch_interval` と
+   `review_workspace_dispatch_keeps_normal_capacity_model_and_admission_checks` の2件だけを実行する。
+2. 成功後、`cc-scheduler` / `cc-todo` の `clippy --all-targets -- -D warnings` を実行する。
+   公開面やdoccodeに変更がなく、doctest各0件は前回結果を再利用する。
+3. 両クレートの `build --release --locked --bins` を1回だけ実行する。
+4. 終了と所有・内包を確認し、新しい独立候補 `todo-3085-state-preserved.exe` と
+   `scheduler-3085-state-preserved.exe` を `.ci-work` に保存する。
+   生成元とのSHA256・サイズ一致、リンク数1を確認し、新schedulerのhelp2種だけを実行する。
+
+完全なstdout/stderr、argv、実件数、終了コード、各SHA256、実ジョブ、開始終了、
+固定ソースと候補の絶対パス・指紋・生成元を
+`.ci-work/3085-cargo-state-preserved.private.json` に保存する。
+途中結果と再開情報は `.ci-work/3238-state-preserved-*` に残す。
+各工程の前後に固定ソースを照合する。失敗時は後続を止め、同じ失敗を繰り返さない。
+親ソース・共有設定・本番は変更せず、新規ToDo・子Codex・PR・マージは行わない。
+この有限検査の結果を親へ返し、3238だけを完了する。親3085・3090は完了しない。
+作業ブランチ名は変更しない。親が受領・永続記録・既存話題への無通知配送を担当する。

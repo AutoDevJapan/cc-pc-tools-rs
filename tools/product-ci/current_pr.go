@@ -69,6 +69,9 @@ func lowerHex(s string, n int) bool {
 }
 
 func (b currentPRBinding) valid() bool {
+	if b.PR == 939 {
+		return finiteDependencyBinding(b)
+	}
 	if !(b.RepoID == 1285649124 && b.PR == 995 && lowerHex(b.Head, 40) && lowerHex(b.Tree, 40) && lowerHex(b.Base, 40) && b.RunID > 0 && b.Attempt > 0 && lowerHex(b.ReviewSHA256, 64) && lowerHex(b.AcceptanceSHA256, 64) && ((b.Kind == "secret" && lowerHex(b.Context, 40)) || (b.Kind == "codeql" && b.Context == ""))) {
 		return false
 	}
@@ -147,9 +150,13 @@ type currentPREvidence struct {
 
 func verifyCurrentPREvidence(data []byte, b currentPRBinding, kind string) error {
 	var v currentPREvidence
+	origin := 3056
+	if b.PR == 939 {
+		origin = 3059
+	}
 	d := json.NewDecoder(bytes.NewReader(data))
 	d.DisallowUnknownFields()
-	if d.Decode(&v) != nil || d.Decode(new(any)) != io.EOF || v.OriginTodo != 3056 || v.RepoID != b.RepoID || v.PR != b.PR || v.Head != b.Head || v.Tree != b.Tree || v.Kind != kind || !v.Success || v.Must != 0 || len(v.Original) == 0 || digest(v.Original) != v.OriginalSHA256 {
+	if d.Decode(&v) != nil || d.Decode(new(any)) != io.EOF || v.OriginTodo != origin || v.RepoID != b.RepoID || v.PR != b.PR || v.Head != b.Head || v.Tree != b.Tree || v.Kind != kind || !v.Success || v.Must != 0 || len(v.Original) == 0 || digest(v.Original) != v.OriginalSHA256 {
 		return errors.New("current PR original evidence source or result rejected")
 	}
 	return nil
@@ -160,6 +167,11 @@ func planCurrentPR(ctx context.Context, b currentPRBinding, read api) (codeQLPla
 }
 
 func planCurrentPRWithPolicy(ctx context.Context, b currentPRBinding, read api, pathDigest, workflowDigest string) (codeQLPlan, error) {
+	return planCurrentPRSnapshot(ctx, b, read, pathDigest, workflowDigest, false)
+}
+
+// Historical batch members are identity checks, never execution eligibility.
+func planCurrentPRSnapshot(ctx context.Context, b currentPRBinding, read api, pathDigest, workflowDigest string, historical bool) (codeQLPlan, error) {
 	if !b.valid() {
 		return codeQLPlan{}, errors.New("current PR scope rejected")
 	}
@@ -171,7 +183,7 @@ func planCurrentPRWithPolicy(ctx context.Context, b currentPRBinding, read api, 
 	var p codeQLPlan
 	var e error
 	if kind == "secret" {
-		p, e = planSecretJobWithPolicy(ctx, c, b.RunID, read, pathDigest, workflowDigest)
+		p, e = planSecretJobSnapshot(ctx, c, b.RunID, read, pathDigest, workflowDigest, historical)
 	} else {
 		p, e = productPlan(ctx, c, b.RunID, kind, read)
 	}
@@ -256,13 +268,13 @@ func planCurrentPRWithPolicy(ctx context.Context, b currentPRBinding, read api, 
 			return codeQLPlan{}, e
 		}
 		labelOK := len(job.Labels) == 1 && job.Labels[0] == p.Label
-		finished := b.Kind == "codeql" && job.Status == "completed" && job.Conclusion == "success"
+		finished := (b.Kind == "codeql" || historical) && job.Status == "completed" && job.Conclusion == "success"
 		if job.ID != id || job.RunID != b.RunID || job.RunAttempt != b.Attempt || job.Head != b.Head || !labelOK || (!finished && job.Status != "queued" && job.Status != "in_progress") || (job.Status == "queued" && job.RunnerID != 0) {
 			return codeQLPlan{}, errors.New("current PR official job differs")
 		}
 		active = active || !finished
 	}
-	if !active {
+	if !active && !historical {
 		return codeQLPlan{}, errors.New("current PR matrix already finished")
 	}
 	if _, e = verify(ctx, c, read); e != nil {
@@ -362,6 +374,12 @@ func checkCurrentPRReady(ctx context.Context, p codeQLPlan, read api) error {
 }
 
 func replanProductJob(ctx context.Context, c candidate, p codeQLPlan, read api) (codeQLPlan, error) {
+	if p.Batch != ([2]currentPRBinding{}) {
+		if !validFiniteSecretBatch(p) || c != (candidate{p.RepoID, p.PR, p.SHA}) {
+			return codeQLPlan{}, errors.New("finite batch execution identity differs")
+		}
+		return planFiniteSecretBatch(ctx, p.Batch, p.PR, read)
+	}
 	if p.Current != (currentPRBinding{}) {
 		if c != (candidate{p.Current.RepoID, p.Current.PR, p.Current.Head}) {
 			return codeQLPlan{}, errors.New("current PR execution identity differs")
@@ -373,10 +391,26 @@ func replanProductJob(ctx context.Context, c candidate, p codeQLPlan, read api) 
 
 func currentPRGuestPlan(p codeQLPlan) bool {
 	b := p.Current
+	if b.PR != 995 {
+		return false
+	}
 	return b.valid() && p.RepoID == b.RepoID && p.PR == b.PR && p.Candidate == b.Head && p.SHA == b.Head && p.Tree == b.Tree && p.RunID == b.RunID && p.Attempt == b.Attempt && p.ContextSHA == b.Context && ((b.Kind == "secret" && p.Kind == "secret" && p.Label == secretLabel(b.RepoID) && p.Role == "candidate-secret-workflow") || (b.Kind == "codeql" && p.Kind == "" && p.Label == codeQLLabel(b.RepoID) && p.Role == "candidate"))
 }
 
 func currentPRCLI(ctx context.Context, args []string) error {
+	if len(args) == 1 && args[0] == "current-pr-batch-qualify" {
+		snapshot, err := inputqual.ConstructDependency()
+		if err != nil {
+			return err
+		}
+		if _, err = consumeCurrentPRSnapshot(snapshot); err != nil {
+			return err
+		}
+		return json.NewEncoder(os.Stdout).Encode(snapshot.Report())
+	}
+	if len(args) > 0 && (args[0] == "current-pr-batch-inspect" || args[0] == "current-pr-batch-job") {
+		return finiteSecretBatchCLI(ctx, args)
+	}
 	if len(args) == 1 && args[0] == "current-pr-origin-qualify" {
 		snapshot, err := inputqual.Construct()
 		if err != nil {

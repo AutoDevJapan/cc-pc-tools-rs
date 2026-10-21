@@ -149,6 +149,13 @@ func checkCodeQLQueue(ctx context.Context, p codeQLPlan, read api) error {
 							}
 						}
 						if matched {
+							if p.Batch != ([2]currentPRBinding{}) {
+								if !finiteSecretBatchContains(p, r.ID, j.RunID, j.ID) {
+									return errors.New("job outside approved finite secret batch requests label")
+								}
+								targetJobs++
+								continue
+							}
 							if r.ID != p.RunID || j.RunID != p.RunID {
 								return errors.New("other run occupies the dedicated CodeQL label")
 							}

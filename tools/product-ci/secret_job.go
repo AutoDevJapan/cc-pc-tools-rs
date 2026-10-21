@@ -33,6 +33,10 @@ func planSecretJob(ctx context.Context, c candidate, runID int64, read api) (cod
 }
 
 func planSecretJobWithPolicy(ctx context.Context, c candidate, runID int64, read api, pathDigest, workflowDigest string) (codeQLPlan, error) {
+	return planSecretJobSnapshot(ctx, c, runID, read, pathDigest, workflowDigest, false)
+}
+
+func planSecretJobSnapshot(ctx context.Context, c candidate, runID int64, read api, pathDigest, workflowDigest string, historical bool) (codeQLPlan, error) {
 	r, e := verify(ctx, c, read)
 	if e != nil {
 		return codeQLPlan{}, e
@@ -44,7 +48,7 @@ func planSecretJobWithPolicy(ctx context.Context, c candidate, runID int64, read
 	if e = read(ctx, fmt.Sprintf("repos/%s/actions/runs/%d", r.FullName, runID), &run); e != nil {
 		return codeQLPlan{}, e
 	}
-	if run.ID != runID || run.RunAttempt < 1 || run.Repository.ID != c.ID || run.HeadRepo.ID != c.ID || run.HeadRepo.Fork || run.Repository.FullName != r.FullName || run.HeadRepo.FullName != r.FullName || run.HeadSHA != c.SHA || run.Event != "pull_request" || digest([]byte(run.Path)) != pathDigest || (run.Status != "queued" && run.Status != "in_progress" && run.Status != "pending" && run.Status != "waiting") || len(run.PullRequests) != 1 || run.PullRequests[0].Number != c.PR {
+	if run.ID != runID || run.RunAttempt < 1 || run.Repository.ID != c.ID || run.HeadRepo.ID != c.ID || run.HeadRepo.Fork || run.Repository.FullName != r.FullName || run.HeadRepo.FullName != r.FullName || run.HeadSHA != c.SHA || run.Event != "pull_request" || digest([]byte(run.Path)) != pathDigest || (run.Status != "queued" && run.Status != "in_progress" && run.Status != "pending" && run.Status != "waiting" && !(historical && run.Status == "completed")) || len(run.PullRequests) != 1 || run.PullRequests[0].Number != c.PR {
 		return codeQLPlan{}, errors.New("fixed secret workflow run rejected")
 	}
 	if e = verifyWorkflowBytes(ctx, r.FullName, run.Path, c.SHA, workflowDigest, read); e != nil {
@@ -84,6 +88,9 @@ func verifyWorkflowBytes(ctx context.Context, repo, path, ref, expected string, 
 }
 
 func validGuestPlan(p codeQLPlan) bool {
+	if p.Batch != ([2]currentPRBinding{}) {
+		return validFiniteSecretBatch(p)
+	}
 	if p.Current != (currentPRBinding{}) {
 		return currentPRGuestPlan(p)
 	}

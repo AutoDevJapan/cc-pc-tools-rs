@@ -212,15 +212,97 @@ fn targeted_dispatch_does_not_restore_writer_capabilities_into_a_readonly_reques
 
 #[test]
 fn targeted_dispatch_preserves_a_stop_recorded_during_preparation() {
-    let mut f = Fixture::new();
-    f.put(item(2, "other", "todo", &[]));
-    save_settings(&f);
-    let mut changed = f.e.todo().unwrap();
-    changed["items"][0]["stopped"] = json!(true);
-    f.e.backend.prepare_edit = Some((f.e.todo_path.clone(), changed));
-    targeted_dispatch::run(&mut f.e, 2).unwrap();
-    assert!(f.e.backend.launched.is_empty());
-    assert_eq!(f.get(2)["stopped"], true);
+    for stop in [false, true] {
+        let mut f = Fixture::new();
+        f.put(item(2, "other", "todo", &[]));
+        save_settings(&f);
+        f.e.backend.change_during_prepare = true;
+        f.e.backend.settings_change = Some((f.e.todo_path.clone(), json!({"stopped":stop})));
+        targeted_dispatch::run(&mut f.e, 2).unwrap();
+        assert_eq!(f.e.backend.launched.len(), usize::from(!stop));
+        assert_eq!(f.get(2)["stopped"], stop);
+        if stop {
+            // The concurrent write retained the allocation; the stop is the blocker.
+            assert!(truth(&f.get(2)["scheduler"]["key"]));
+        }
+    }
+}
+
+#[test]
+fn targeted_dispatch_rechecks_narrowed_scope_and_reprepares_the_current_values() {
+    let mut failures = vec![];
+    for preparing in [false, true] {
+        for (field, value) in [
+            ("sandbox", json!("read-only")),
+            ("mcp_profile", json!("minimal")),
+            ("network", json!(false)),
+            ("add_dirs", json!([])),
+        ] {
+            let mut f = Fixture::new();
+            f.managed(2, 1, "other", 0);
+            let cwd = f.get(2)["scheduler"]["worktree"].clone();
+            let source = &mut f.e.backend.records[0];
+            merge(
+                source,
+                json!({"status":"succeeded","last_message":"状態: 継続中", "thread_id":"12345678-1234-4321-9234-123456789abc", "cwd":cwd,
+                "sandbox":"danger-full-access","mcp_profile":"browser","network":true,"add_dirs":["D:/previous-scope"]}),
+            );
+            f.e.backend.ps.clear();
+            f.reconcile();
+            f.e.backend.clock += 61.;
+            f.e.backend.measure_count = 0;
+            f.e.backend.change_during_prepare = preparing;
+            let mut change = json!({});
+            change[field] = value.clone();
+            f.e.backend.settings_change = Some((f.e.todo_path.clone(), change));
+            save_settings(&f);
+            targeted_dispatch::run(&mut f.e, 2).unwrap();
+            if !f.e.backend.launched.is_empty() {
+                failures.push((preparing, field));
+                continue;
+            }
+            assert_eq!(f.get(2)[field], value);
+            targeted_dispatch::run(&mut f.e, 2).unwrap();
+            assert_eq!(f.e.backend.launched.len(), 1, "{preparing}/{field}");
+            let selected = &f.e.backend.launched[0]["item"]["scheduler"]["selection"];
+            assert_eq!(selected[field], value, "{preparing}/{field}");
+        }
+    }
+    assert!(
+        failures.is_empty(),
+        "scope changes were missed: {failures:?}"
+    );
+}
+
+#[test]
+fn targeted_dispatch_uses_an_applied_answer_instead_of_treating_question_history_as_a_stop() {
+    for close_fails in [false, true] {
+        let mut f = Fixture::new();
+        f.put(item(2, "other", "block", &[]));
+        f.e.edit(&json!(2), |row| {
+            row["scheduler"] = json!({"question":{"thread_id":"question-2"}})
+        })
+        .unwrap();
+        f.e.backend.owner_reply =
+            Some(json!({"id":"answer-2","stop":false,"text":"同じ依頼を再開してください。"}));
+        f.e.backend.close_fails = close_fails;
+        f.e.answers().unwrap();
+        assert_eq!(f.get(2)["status"], "todo");
+        assert_eq!(f.get(2)["scheduler"]["answer"], "answer-2");
+        assert!(f.get(2)["scheduler"]["question"].is_object());
+        save_settings(&f);
+        targeted_dispatch::run(&mut f.e, 2).unwrap();
+        if close_fails {
+            // Keep the pre-existing close gate; use answers(), not a forged receipt.
+            assert!(f.e.backend.launched.is_empty());
+            f.e.backend.close_fails = false;
+            f.e.answers().unwrap();
+            targeted_dispatch::run(&mut f.e, 2).unwrap();
+        }
+        assert_eq!(f.e.backend.launched.len(), 1, "close_fails={close_fails}");
+        assert!(s(&f.e.backend.launched[0]["text"]).contains("同じ依頼を再開"));
+        assert_eq!(f.get(2)["scheduler"]["answer"], "answer-2");
+    }
 }
 
 #[test]

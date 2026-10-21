@@ -23,9 +23,12 @@ pub(crate) fn held(item: &Value) -> bool {
         || ["owner_question_wait", "decision_wait", "wait_ready"]
             .iter()
             .any(|field| truth(&item[*field]))
+        // answers() keeps resolved questions as history. The existing priority
+        // gate separately retains any unfinished question-close prerequisite.
+        || (truth(&item["scheduler"]["question"])
+            && !truth(&item["scheduler"]["answer"])
+            && item["scheduler"]["retire_retry_question"] != true)
         || [
-            "question",
-            "question_close_pending",
             "owner_stop_job",
             "pending_cancel",
         ]

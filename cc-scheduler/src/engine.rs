@@ -22,6 +22,7 @@ fn launch_inputs(item: &Value) -> Value {
     json!({"spec":item["spec"],"needs":item["needs"],"subwork":item["subwork"],
         "title":item["title"],"project":item["project"],"dispatchable":item["dispatchable"],
         "model":item["model"],"effort":item["effort"],"model_origin":item["model_origin"],"effort_origin":item["effort_origin"],
+        "sandbox":item["sandbox"],"mcp_profile":item["mcp_profile"],"network":item["network"],"add_dirs":item["add_dirs"],
         "wait_on":item["wait_on"],"review_source_jobs":item["review_source_jobs"],"task_type":item["task_type"],"role":item["role"],
         "worktree":item["scheduler"]["worktree"],"branch":item["scheduler"]["branch"],
         "not_before":item["scheduler"]["not_before"],"resource_wait":item["scheduler"]["resource_wait"],

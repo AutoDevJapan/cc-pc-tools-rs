@@ -86,7 +86,7 @@ Tencentのstubを元にTeamAI固有の操作範囲・経路を選ぶ1候補を�
 
 ## 2026-10-21: 3193受領とPR284統合
 3193原応答を元依頼のexact1file通常審査で受領。固定4b253db、最新補正3の実15とbackup15/journal・TeamAI候補5とTencent7本文/notice・14ファイル差分を読了してMust0。補正3はそのまま受入。起動metadata3は更新後の説明で1件ずつ、原文/noticeは不変。実CLI/モデルturn/context予算は検査していない。
-S1-3をTeamAI配置前に反映し、近い負例・評価だけで使わない説明・中央へ解決されるjunction先の衝突確認・contribute直接pushとPR経路の区別・本人の端末env set待ちを作らず独立継続する条件・wikiの日本語/実担当/通常技術検査を明記した。v2 bundle SHAabad5d1526673310d0249f76208a2ed7cc9dd51dcf7b7041769e6b8c76a27991。primary原文/noticeはv1とbyte同一。memory1検査とcatalog-count1成功、中央write未実施。
+S1-3をTeamAI配置前に反映し、近い負例・評価だけで使わない説明・中央へ解決されるjunction先の衝突確認・contribute直接pushとPR経路の区別・本人の端末env set待ちを作らず独立継続する条件・wikiの日本語/実担当/通常技術検査を明記した。v2 bundle SHAabad5d1526673310d0249f76208a2ed7cc9dd51dcf7b7041769e6b8c76a27991。primary原文/noticeはv1とbyte同一。memory1検査とcatalog-count1成功。その候補作成時点は中央write未実施で、後節の実配置が最新。
 S4は実25/125検査manifestのSHAと版/範囲、S5は歴史Kepano/owned3証拠の対象別superseded_byを追記。古いmigrateのcosmetic reasonはliveのまま、今回補正3の前reasonは前版SHA/backupに保持される。動作に影響しない既存3本文の空白だけの再writeはしない。『まだ反映前』は356b8c0時点、4b253dbで反映済み。vettはvetの意味だった。
 4b253dbに対する全必要CI成功（documentation/CodeQL4言語と集計、Bugbot neutral）を再確認し、review3193 Must0とexactheadでPR284を通常mergeした。merge commit2d97926a185011e0139cce7033ef6f369e58c264、2026-10-20T21:30:20Z。mainへの25件の有限成果統合で、元3080/Issue283や73220候補の完了ではない。source branchは保持し、続きの変更を同じ作業場所/ブランチで追う。
 
@@ -96,9 +96,23 @@ TeamAI1件はv2固定データと元a・3193結果を対応させ、正規の新
 
 ## 2026-10-21: 3203受領・PR329統合・obra全15入口
 3203原応答を正規exact1file審査で受領しraw保存。固定32db040の実TeamAI5全文と全26/130hash、原文/notice、11docs差分、Tencent7本文を確認してMust0。初期SkillmetadataのTeamAIと実descriptionも一致。実CLIやモデルturn/context予算は未実施。必要全CI成功と同headを再確認し、PR329を正常merge（444b80162c142c6311175d01155496f6c8915dcb、2026-10-20T22:35:43Z）。元3080/Issue283は全体未完のまま。
-S1は仕様冒頭へ現在26/0/0/73194の正本台帳と履歴の区別を明記。S2/S3はcontribute-member.md、doc-template.md、phase0-init.mdを新たに全文/SHA確認し、学びcontribute直接pushと再利用Skill push/namespaceを区別、recall有効化の副作用、wikiのteamwiki出力とteamrepo未設定時--output条件を具体化した。補助25のうち3読了/22未読で全support完了とはしない。中央向けafter-v3と旧5hash/backup5/3限定置換の具体計画を作成し、まだ実反映前。新しい一般化を重ねず根拠範囲を設計から見直した。
+S1は仕様冒頭へ現在26/0/0/73194の正本台帳と履歴の区別を明記。S2/S3はcontribute-member.md、doc-template.md、phase0-init.mdを新たに全文/SHA確認し、学びcontribute直接pushと再利用Skill push/namespaceを区別、recall有効化の副作用、wikiのteamwiki出力とteamrepo未設定時--output条件を具体化した。補助25のうち3読了/22未読で全support完了とはしない。中央向けafter-v3と旧5hash/backup5/3限定置換の具体計画を作成。その時点は未反映で、後節の限定反映が最新。新しい一般化を重ねず根拠範囲を設計から見直した。
 obraの残12入口をすべて全文/SHA確認して全15入口評価を完了。各canonicalID/固定URL/SHA/用途・重複候補・採らない条件と未読supportを保存。14統合/方針修正候補+1専用workflow候補で、まだ0導入/0統合/0除外。6sourceの入口本文79読了は全16資料の全意味/全許諾審査完了ではない。rootMITを未読templates/scripts/researchへ包括適用せず、公的資料の強制命令/コード削除/毎手順fullsuite/通常操作の再承認/直接子起動は実行していない。
 
 ## TeamAI補助資料の根拠修正を反映
 3203のS2/S3を読了済み3supportで照合し、許諾・元source/descriptor・旧5hashを保って正規exact1write審査へ別提出した。許可後に既知teamai1の旧5を新規永続backupへ保全し、source.json/sources.md/SKILL.md最後の3だけ原子的置換、5読戻し成功。rawstub/MIT2不変、新規導入数追加0。memory1と実1、fresh metadata323中1found/enabled/説明一致/parse0/同名別path0、現行26/130file検査/candidate-count1成功。CLIやmodel/APIは起動していない。
 最新manifest/evidenceとliveadoption参照を更新し、旧install-teamai-manifest/current26-manifestは履歴として保持。current26-after-support-manifestは別ファイルで、過去hashを上書きしない。latestdeltaは別の限定確認へ回す。新たに全supportを読了したとはしない（Tencent25中3読了/22未読）。
+
+## 3215受領・PR331統合・次の診断候補
+3215は固定8867412/base32db040の全15obra入口とLICENSE、Tencentの変更根拠、実TeamAI5/backup5/2payload/journal/台帳を確認しMust0。全26/130ハッシュも独立照合した。原応答は作業場へraw保存。実行テスト・CLI・モデルの実ターンや文脈予算の検証ではなく、reviewer自身はGoテストを実行していない。
+
+S2/S3/S4/N2/N3/N4の文書を補正した。Tencentの補助25中3読了/22未読、実版と過去の未反映表示を区別し、改行正規化SHA、静的正負例、discovery通知数を追加。obraの根拠のないrole転換という理由を削り、brainstormingの停止理由を承認待ちに限定した。新規診断と既存metadata比較先を区別した。S1/N1はMustではなく、具体的な手順補足・軽微な表記修正として次のTeamAI更新へ保留し、中央に追加writeはしていない。毎回の軽微な指摘だけで同じ原本の更新と再レビューを繰返さない。
+
+親がPR331の固定8867412に対する必要全自動検査の成功を確認し、通常mergeでmainへ統合した。詳細はmerge-evidence。元3080/Issue283/全16資料は未完で、source branchと原資料を保持。
+
+diagnosing-superpowersはprimary+専用support19の全20本文とrootMITを確認し、新しい1候補5ファイルを作成。候補のメモリ内検査、catalogのtest-count1/vet、書込みなしpreflight成功。新候補はまだ配置・独立受入前、実導入数は26のまま。未知の実セッションや秘密は読んでいない。残る14obra統合候補と他資料の全件継続も保持し、この1候補を件数上限にしない。
+
+## 3231受領と診断用1件の配置
+3231は固定9896dde/base8867412、v1 d23d2f69の新候補5と原文/補助19/MIT、14文書差分を完読してMust0。原応答SHA5aba318683a0606bea698f9d07a3643d20d155e27ab12013924118ed8181c3d3を保持。親が全必要CI成功を確認してPR333を通常mergeした（db07525f226a84328f8e86f4eef7409c46377a08、2026-10-21T01:23:32Z）。
+S1/S2/S4/S5は具体手順・選択と適用外・観測限界・正規範囲を具体提案どおり補った。S3は同じ英語連結表現が続いたので生成元の説明を日本語へ整理し、既知不良表現の消失と原文/notice不変を確認した。英字数字/句読点の一般禁止はURL/SHA/版番号等を誤検知するため追加しない。S6は静的正3/負6を保存。N1-N5の文書と用語も補正し、TeamAI中央は追加変更していない。
+v2 cfe2c97bの新規1件5ファイルを元a/3231/固定内容/guard未分類とともに通常個別審査へ提示し許可後apply成功。memory/実1・現行27/135・fresh発見1/解析0とdescription一致。実モデル/私的session/CLIは使っていない。原26/managed/junction不変。最新v2差分と実配置は次の有限な独立確認へ渡す。元16資料と未判定73193件を保持。

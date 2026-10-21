@@ -50,7 +50,29 @@ fn processing(job: &Value, now: u64) -> bool {
         )
 }
 
-fn evidence(active: Option<&Value>, now: u64, stopped: &BTreeSet<u64>) -> (Value, BTreeSet<u64>) {
+// Only rows carrying an explicit current-job binding opt in. Other products
+// keep their existing observation contract. Null explicitly means no current job.
+fn observed_ids(job: &Value, bindings: &BTreeMap<u64, Value>) -> Vec<u64> {
+    job["todo_ids"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_u64)
+        .filter(|id| {
+            *id > 0
+                && bindings
+                    .get(id)
+                    .is_none_or(|key| key.is_string() && key == &job["job_key"])
+        })
+        .collect()
+}
+
+fn evidence(
+    active: Option<&Value>,
+    now: u64,
+    stopped: &BTreeSet<u64>,
+    bindings: &BTreeMap<u64, Value>,
+) -> (Value, BTreeSet<u64>) {
     let Some(input) = active else {
         return (
             json!({"state":"unavailable","verifiedCount":null,"total":null,"observedAt":null}),
@@ -93,25 +115,15 @@ fn evidence(active: Option<&Value>, now: u64, stopped: &BTreeSet<u64>) -> (Value
             invalid = true;
         }
         if !processing(job, now)
-            || job["todo_ids"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .filter_map(Value::as_u64)
-                .any(|id| stopped.contains(&id))
+            || observed_ids(job, bindings)
+                .iter()
+                .any(|id| stopped.contains(id))
             || !seen.insert(key)
         {
             continue;
         }
         count += 1;
-        ids.extend(
-            job["todo_ids"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .filter_map(Value::as_u64)
-                .filter(|id| *id > 0),
-        );
+        ids.extend(observed_ids(job, bindings));
     }
     let complete = !invalid
         && input["status"] == "ok"
@@ -215,7 +227,19 @@ pub fn project(board: &Value, active: Option<&Value>, now: u64) -> Value {
     } else {
         BTreeSet::new()
     };
-    let (processing, processing_ids) = evidence(active, now, &stopped);
+    let bindings = records(board)
+        .filter_map(|row| {
+            Some((
+                row["id"]
+                    .as_str()?
+                    .strip_prefix("todo-")?
+                    .parse::<u64>()
+                    .ok()?,
+                row.get("processingJobKey")?.clone(),
+            ))
+        })
+        .collect();
+    let (processing, processing_ids) = evidence(active, now, &stopped, &bindings);
     let current_ids = if stale {
         BTreeSet::new()
     } else {
@@ -269,9 +293,7 @@ pub fn project(board: &Value, active: Option<&Value>, now: u64) -> Value {
                 .filter(|job| {
                     state == "processing"
                         && self::processing(job, now)
-                        && job["todo_ids"]
-                            .as_array()
-                            .is_some_and(|ids| ids.iter().any(|value| value.as_u64() == Some(id)))
+                        && observed_ids(job, &bindings).contains(&id)
                 })
                 .filter_map(|job| job["job_key"].as_str())
                 .filter(|key| {

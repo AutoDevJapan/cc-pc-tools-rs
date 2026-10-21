@@ -2,7 +2,7 @@
 
 Attachment observations in `history-read` deliberately retain only IDs and sizes.
 That command remains metadata-only. A separate `history-attachment --scope <private
-JSON> --output <new .private.png|.private.jpg|.private.webp|.private.gif>` reads the
+JSON> --output <new .private.image|.private.png|.private.jpg|.private.webp|.private.gif>` reads the
 single image already identified on an owner reply, using the existing bot loader.
 It never launches a worker, changes intake, sends a message, or opens a browser.
 
@@ -24,12 +24,15 @@ header or cookies. URL signatures, filenames, descriptions and response error bo
 are never printed or saved. No extra authentication or API key is introduced.
 
 The selected file must be a PNG/JPEG/WebP/GIF, at most 20 MiB, with exact declared byte
-size and a matching detected media type/output extension. Recheck the exact API reply
+size and a matching detected media type/output extension. With `.private.image`,
+detect the supported image type without requiring the caller to guess a format
+that the metadata-only history receipt deliberately omits. Recheck the exact API reply
 version and attachment identity after download. Publish the unmodified bytes with
 the existing flushed, non-overwriting private writer only after all checks succeed.
 Stdout returns IDs, version timestamps/body SHA, media type, size, scope SHA and image
 SHA; it contains neither message text, CDN URL nor credentials. A failure publishes
-no image. Existing images/receipts are not replaced. A successful read does not imply
+no image and reports only a fixed failure-stage label. Existing images/receipts are
+not replaced. A successful read does not imply
 delivery to the handler, actual application, approval for another operation or close.
 
 Acceptance covers a mention-only owner reply with an image, exact bytes/provenance,

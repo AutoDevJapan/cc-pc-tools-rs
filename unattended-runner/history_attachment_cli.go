@@ -107,8 +107,9 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 		return fail()
 	}
 	stage = "owner_version_attachment_or_type"
-	attachment, ok := historySelectedOwnerImage(scope, message, runner, mediaType)
+	attachment, ok, reason := historySelectedOwnerImage(scope, message, runner, mediaType)
 	if !ok {
+		stage = reason
 		return fail()
 	}
 	stage = "cdn_url"
@@ -134,15 +135,17 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 	}
 	stage = "image_bytes"
 	data, err := io.ReadAll(io.LimitReader(response.Body, scope.Size+1))
-	if err != nil || int64(len(data)) != scope.Size || http.DetectContentType(data) != mediaType {
+	detectedType := http.DetectContentType(data)
+	if err != nil || int64(len(data)) != scope.Size || !historySupportedImageType(detectedType) || (mediaType != "image/*" && detectedType != mediaType) {
 		return fail()
 	}
+	mediaType = detectedType
 	stage = "owner_version_recheck"
 	var current historyOwnerImageMessage
 	if runner.get(ctx, messagePath, &current) != nil {
 		return fail()
 	}
-	if _, ok := historySelectedOwnerImage(scope, current, runner, mediaType); !ok || ctx.Err() != nil {
+	if _, ok, _ := historySelectedOwnerImage(scope, current, runner, mediaType); !ok || ctx.Err() != nil {
 		return fail()
 	}
 	stage = "private_publication"
@@ -184,9 +187,12 @@ func historyAttachmentScopeValid(scope historyAttachmentScope, now time.Time) bo
 	return true
 }
 
-func historySelectedOwnerImage(scope historyAttachmentScope, message historyOwnerImageMessage, runner *Runner, mediaType string) (historyOwnerImage, bool) {
-	if message.ID != scope.Message || message.Author.ID != scope.Owner || message.Type == nil || (*message.Type != 0 && *message.Type != 19) || !historyMessageValid(message.Message, scope.Threads[0], runner) || message.Timestamp != scope.Created || message.Edited != scope.Edited || bytesHash([]byte(message.Content)) != scope.ContentSHA {
-		return historyOwnerImage{}, false
+func historySelectedOwnerImage(scope historyAttachmentScope, message historyOwnerImageMessage, runner *Runner, mediaType string) (historyOwnerImage, bool, string) {
+	if message.ID != scope.Message || message.Author.ID != scope.Owner || message.Type == nil || (*message.Type != 0 && *message.Type != 19) || !historyMessageValid(message.Message, scope.Threads[0], runner) {
+		return historyOwnerImage{}, false, "owner_message_identity"
+	}
+	if message.Timestamp != scope.Created || message.Edited != scope.Edited || bytesHash([]byte(message.Content)) != scope.ContentSHA {
+		return historyOwnerImage{}, false, "owner_message_version"
 	}
 	var selected historyOwnerImage
 	found := 0
@@ -196,16 +202,19 @@ func historySelectedOwnerImage(scope historyAttachmentScope, message historyOwne
 			found++
 		}
 	}
-	if found != 1 || selected.Size != scope.Size {
-		return historyOwnerImage{}, false
+	if found != 1 {
+		return historyOwnerImage{}, false, "attachment_identity"
+	}
+	if selected.Size != scope.Size {
+		return historyOwnerImage{}, false, "attachment_size"
 	}
 	if selected.ContentType != "" {
 		declared, _, err := mime.ParseMediaType(selected.ContentType)
-		if err != nil || declared != mediaType {
-			return historyOwnerImage{}, false
+		if err != nil || !historySupportedImageType(declared) || (mediaType != "image/*" && declared != mediaType) {
+			return historyOwnerImage{}, false, "attachment_media_type"
 		}
 	}
-	return selected, true
+	return selected, true, ""
 }
 
 func historyAttachmentURL(raw, thread, attachment string) (string, bool) {
@@ -219,10 +228,14 @@ func historyAttachmentURL(raw, thread, attachment string) (string, bool) {
 }
 
 func historyImageOutputType(path string) string {
-	for suffix, mediaType := range map[string]string{".private.png": "image/png", ".private.jpg": "image/jpeg", ".private.jpeg": "image/jpeg", ".private.webp": "image/webp", ".private.gif": "image/gif"} {
+	for suffix, mediaType := range map[string]string{".private.image": "image/*", ".private.png": "image/png", ".private.jpg": "image/jpeg", ".private.jpeg": "image/jpeg", ".private.webp": "image/webp", ".private.gif": "image/gif"} {
 		if strings.HasSuffix(path, suffix) {
 			return mediaType
 		}
 	}
 	return ""
+}
+
+func historySupportedImageType(value string) bool {
+	return value == "image/png" || value == "image/jpeg" || value == "image/webp" || value == "image/gif"
 }

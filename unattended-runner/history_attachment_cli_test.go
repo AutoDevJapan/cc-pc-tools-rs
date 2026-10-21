@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	stdimage "image"
+	"image/jpeg"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -30,6 +32,15 @@ func attachmentFixture(t *testing.T, mode string) (func(context.Context, history
 	image, err := base64.StdEncoding.DecodeString("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==")
 	if err != nil {
 		t.Fatal(err)
+	}
+	mediaType := "image/png"
+	if mode == "jpeg" {
+		var buffer bytes.Buffer
+		if err := jpeg.Encode(&buffer, stdimage.NewRGBA(stdimage.Rect(0, 0, 1, 1)), nil); err != nil {
+			t.Fatal(err)
+		}
+		image = buffer.Bytes()
+		mediaType = "image/jpeg"
 	}
 	calls := &attachmentTestCalls{}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
@@ -80,7 +91,7 @@ func attachmentFixture(t *testing.T, mode string) (func(context.Context, history
 			case "userinfo":
 				url = "https://user@cdn.discordapp.com/attachments/100/51/private-label.png"
 			}
-			attachment := map[string]any{"id": "51", "size": len(image), "content_type": "image/png", "filename": "private-label.png", "url": url}
+			attachment := map[string]any{"id": "51", "size": len(image), "content_type": mediaType, "filename": "private-label.png", "url": url}
 			if mode == "wrong_attachment" {
 				attachment["id"] = "52"
 			}
@@ -113,7 +124,7 @@ func attachmentFixture(t *testing.T, mode string) (func(context.Context, history
 			}
 			body := image
 			status := http.StatusOK
-			header := http.Header{"Content-Type": {"image/png"}}
+			header := http.Header{"Content-Type": {mediaType}}
 			switch mode {
 			case "redirect":
 				status = http.StatusFound
@@ -181,6 +192,22 @@ func TestHistoryAttachmentReadsExactOwnerImageWithoutLeakingURLOrAuth(t *testing
 	}
 	if calls.badAuth || calls.loads != 1 || calls.api != 5 || calls.media != 1 {
 		t.Fatalf("unexpected requests or CDN authentication: %+v", calls)
+	}
+}
+
+func TestHistoryAttachmentAutoImageDoesNotRequireGuessingOwnerFormat(t *testing.T) {
+	load, calls, expected := attachmentFixture(t, "jpeg")
+	args, _ := attachmentArgs(t, len(expected))
+	output := filepath.Join(filepath.Dir(args[1]), "owner-image.private.image")
+	args[3] = output
+	var stdout bytes.Buffer
+	if historyAttachmentCLIWith(args, &stdout, load, func(context.Context, string) bool { return true }) != 0 {
+		t.Fatal("owner image format had to be guessed before reading API metadata")
+	}
+	actual, err := os.ReadFile(output)
+	var receipt map[string]any
+	if err != nil || !bytes.Equal(actual, expected) || json.Unmarshal(stdout.Bytes(), &receipt) != nil || receipt["media_type"] != "image/jpeg" || receipt["image_sha256"] != bytesHash(actual) || calls.badAuth || calls.media != 1 {
+		t.Fatal("automatic image type lost exact bytes, provenance or request isolation")
 	}
 }
 

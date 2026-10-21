@@ -823,6 +823,19 @@ struct Effect {
 }
 
 impl Effect {
+    fn quiet_copy(&self, request: &Request, phase: &str) -> Result<Self> {
+        let marker = format!("\n\n-# recovery:{}:{phase}", &request.fingerprint[..24]);
+        let suffix = format!("\n<@{}>{marker}", request.destination.owner);
+        let body = self
+            .content
+            .strip_suffix(&suffix)
+            .ok_or("reserved notification content differs; original retained")?;
+        Ok(Self {
+            content: format!("{body}{marker}"),
+            notify: false,
+            ..self.clone()
+        })
+    }
     fn payload(&self, owner: &str) -> Value {
         json!({"content":self.content,"flags":EMBEDS | if self.notify {0} else {SILENT},
             "allowed_mentions":{"parse":[],"users":if self.notify {vec![owner]} else {vec![]},
@@ -886,6 +899,13 @@ enum Event {
         original_fingerprint: String,
     },
     Pending {
+        request_id: String,
+        phase: String,
+        effect: Effect,
+    },
+    /// A final pre-POST downgrade, never a rewrite of the original reservation.
+    /// No Posted/Verified receipt may precede it. Uncertain sends never submit.
+    NotificationSuppressed {
         request_id: String,
         phase: String,
         effect: Effect,
@@ -1001,8 +1021,13 @@ impl Ledger {
     }
 
     fn effect(&self, id: &str, phase: &str) -> Option<&Effect> {
-        self.events.iter().find_map(|event| match event {
+        self.events.iter().rev().find_map(|event| match event {
             Event::Pending {
+                request_id,
+                phase: p,
+                effect,
+            }
+            | Event::NotificationSuppressed {
                 request_id,
                 phase: p,
                 effect,
@@ -1230,6 +1255,31 @@ impl Ledger {
                     {
                         return Err("invalid recovery effect reservation".into());
                     }
+                }
+                Event::NotificationSuppressed {
+                    request_id,
+                    phase,
+                    effect,
+                } => {
+                    let key = (request_id.clone(), phase.clone());
+                    let request = requests
+                        .get(request_id)
+                        .ok_or("notification suppression has no intent")?;
+                    let original = phases
+                        .get(&key)
+                        .ok_or("notification suppression has no reservation")?;
+                    if !matches!(request.operation, Kind::Log { .. })
+                        || log_requires_owner_action(&request.body)
+                        || !original.notify
+                        || effect.notify
+                        || posted.contains_key(&key)
+                        || verified.contains_key(&key)
+                        || complete.contains_key(request_id)
+                        || original.quiet_copy(request, phase)? != *effect
+                    {
+                        return Err("notification suppression differs or follows a possible delivery receipt".into());
+                    }
+                    phases.insert(key, effect);
                 }
                 Event::Posted {
                     request_id,
@@ -2244,7 +2294,8 @@ impl<'a> RecoveryApi<'a> {
 
     fn submit(
         &mut self,
-        ledger: &Ledger,
+        ledger: &mut Ledger,
+        home: &Path,
         request: &Request,
         phase: &str,
         effect: &Effect,
@@ -2255,6 +2306,26 @@ impl<'a> RecoveryApi<'a> {
         {
             return Err("a durable exact recovery reservation is required before POST".into());
         }
+        // This is the actual first POST boundary, not uncertain-outcome retry.
+        // Preserve the old Intent and Pending and append the effective payload.
+        let effective = if matches!(request.operation, Kind::Log { .. })
+            && effect.notify
+            && !log_requires_owner_action(&request.body)
+        {
+            let quiet = effect.quiet_copy(request, phase)?;
+            ledger.append(
+                home,
+                Event::NotificationSuppressed {
+                    request_id: request.request_id.clone(),
+                    phase: phase.into(),
+                    effect: quiet.clone(),
+                },
+            )?;
+            quiet
+        } else {
+            effect.clone()
+        };
+        let effect = &effective;
         let route = match &effect.target {
             Target::Forum { .. } => format!("/channels/{}/threads", self.destination.forum),
             Target::Thread { thread } => {
@@ -2380,7 +2451,7 @@ fn ensure(
     home: &Path,
     request: &Request,
     phase: &str,
-    effect: Effect,
+    mut effect: Effect,
     images: &[Image],
 ) -> Result<Receipt> {
     let id = &request.request_id;
@@ -2440,7 +2511,11 @@ fn ensure(
     let (thread, message) = if let Some(ids) = selected {
         ids
     } else {
-        let response = api.submit(ledger, request, phase, &effect, images);
+        let response = api.submit(ledger, home, request, phase, &effect, images);
+        effect = ledger
+            .effect(id, phase)
+            .ok_or("effective send reservation missing")?
+            .clone();
         let ids = response.ok().and_then(|response| {
             let message = match &effect.target {
                 Target::Forum { .. } => &response["message"]["id"],
@@ -2956,12 +3031,14 @@ fn log_requires_owner_action(body: &str) -> bool {
         return false;
     }
     let choices: Vec<_> = lines.collect();
-    ["a:", "b:"].iter().all(|prefix| {
-        choices.iter().any(|line| {
+    let choice = |prefix| {
+        choices.iter().find_map(|line| {
             line.strip_prefix(prefix)
-                .is_some_and(|choice| !choice.trim().is_empty())
+                .map(str::trim)
+                .filter(|choice| !choice.is_empty())
         })
-    })
+    };
+    choice("a:").zip(choice("b:")).is_some_and(|(a, b)| a != b)
 }
 
 fn execute_saved(
@@ -3697,7 +3774,13 @@ mod tests {
                     .and_then(|value| value.get("message").unwrap_or(value)["content"].as_str());
                 if !events.is_some_and(|events| {
                     events.iter().any(|event| {
-                        event["event"] == "pending"
+                        (event["event"] == "pending"
+                            || event["event"] == "notification_suppressed"
+                                && events.iter().any(|original| {
+                                    original["event"] == "pending"
+                                        && original["request_id"] == event["request_id"]
+                                        && original["phase"] == event["phase"]
+                                }))
                             && event["effect"]["content"].as_str() == content
                     })
                 }) {
@@ -4855,6 +4938,7 @@ mod tests {
             "本人対応不要。先行作業を待っています。",
             "通常の進捗を記録しました。",
             "回答が必要：\na: \nb: ",
+            "回答が必要：結果を報告します。\na: 続行\nb: 続行",
             "回答が必要：対応不要の報告です。\na: 続行\nb: 続行",
         ] {
             for post in [false, true] {
@@ -4951,16 +5035,53 @@ mod tests {
             true,
         )
         .unwrap();
-        ensure(
-            &mut api,
-            &mut ledger,
-            &fixture.home,
-            &request,
-            "log:0",
-            delivery,
-            &[],
-        )
-        .unwrap();
+        ledger
+            .append(
+                &fixture.home,
+                Event::Pending {
+                    request_id: request.request_id.clone(),
+                    phase: "log:0".into(),
+                    effect: delivery.clone(),
+                },
+            )
+            .unwrap();
+        // Historical fixture: transport an actual pre-correction payload,
+        // without passing it through the new submission policy.
+        let posted = api
+            .effects
+            .http(
+                "POST",
+                &format!("{API}/channels/{FORUM}/threads"),
+                Some(&json!({"name":request.title,"message":delivery.payload(OWNER)})),
+                true,
+            )
+            .unwrap();
+        let thread = core::s(&posted["id"]);
+        let message = core::s(&posted["message"]["id"]);
+        ledger
+            .append(
+                &fixture.home,
+                Event::Posted {
+                    request_id: request.request_id.clone(),
+                    phase: "log:0".into(),
+                    thread_id: thread.into(),
+                    message_id: message.into(),
+                },
+            )
+            .unwrap();
+        let receipt = api
+            .verify(&ledger, &request, &delivery, thread, message)
+            .unwrap();
+        ledger
+            .append(
+                &fixture.home,
+                Event::Verified {
+                    request_id: request.request_id.clone(),
+                    phase: "log:0".into(),
+                    receipt,
+                },
+            )
+            .unwrap();
         ledger
             .append(
                 &fixture.home,
@@ -4976,6 +5097,78 @@ mod tests {
         assert_eq!(out["effective_notify"], true); // Historical fact, no new POST.
         assert_eq!(fs::read(fixture.home.join(LEDGER)).unwrap(), before);
         assert_eq!(fixture.server.lock().unwrap().posts.len(), posts);
+        fixture.unchanged();
+    }
+
+    #[test]
+    fn recovery_messages_old_reserved_effect_is_quiet_at_actual_submit_boundary() {
+        let fixture = Fixture::new();
+        let args = fixture.log(
+            "old-reserved-unsent",
+            "対応不要。AI側で調査を続けます。",
+            true,
+        );
+        let mut ctx = fixture.context();
+        let (incoming, _) = prepare_log(&mut ctx, &args).unwrap();
+        let mut ledger = Ledger::load(&fixture.home).unwrap();
+        let request = reserve(&mut ledger, &fixture.home, &incoming).unwrap();
+        let mut api = RecoveryApi::bind(&mut ctx, &mut ledger, &request).unwrap();
+        let original = effect(
+            &request,
+            "log:0",
+            Target::Forum {
+                title: request.title.clone(),
+            },
+            &request.body,
+            true,
+            true,
+        )
+        .unwrap();
+        ledger
+            .append(
+                &fixture.home,
+                Event::Pending {
+                    request_id: request.request_id.clone(),
+                    phase: "log:0".into(),
+                    effect: original.clone(),
+                },
+            )
+            .unwrap();
+        let before = serde_json::to_value(&ledger.events).unwrap();
+        assert!(fixture.server.lock().unwrap().posts.is_empty());
+        api.submit(
+            &mut ledger,
+            &fixture.home,
+            &request,
+            "log:0",
+            &original,
+            &[],
+        )
+        .unwrap();
+        let state = fixture.server.lock().unwrap();
+        let payload = &state.posts[0].1["message"];
+        assert_eq!(
+            payload["allowed_mentions"],
+            json!({"parse":[],"users":[],"roles":[],"replied_user":false})
+        );
+        assert_eq!(
+            core::n(&payload["flags"]) & (SILENT | EMBEDS),
+            SILENT | EMBEDS
+        );
+        assert!(!core::s(&payload["content"]).contains("<@"));
+        drop(state);
+        let saved = Ledger::load(&fixture.home).unwrap();
+        assert_eq!(saved.request(&args.request_id), Some(&incoming));
+        assert_eq!(
+            serde_json::to_value(&saved.events[..before.as_array().unwrap().len()]).unwrap(),
+            before
+        );
+        assert!(!saved.effect(&args.request_id, "log:0").unwrap().notify);
+        // A crash after that POST recovers the quiet actual payload by GET.
+        let out = log(&mut ctx, &args).unwrap();
+        assert_eq!(out["delivery"], "verified");
+        assert_eq!(out["effective_notify"], false);
+        assert_eq!(fixture.server.lock().unwrap().posts.len(), 1);
         fixture.unchanged();
     }
 

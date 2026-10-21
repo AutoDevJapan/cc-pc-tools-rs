@@ -373,6 +373,9 @@ func (r *Runner) deliverAgentResult(ctx context.Context, p *AgentResultRecord) e
 			return errors.New("delivery_unverified")
 		}
 	}
+	if p.Event.OwnerRequired && p.NotifyOwner && !notify {
+		return errors.New("delivery_unverified")
+	}
 	thread, _ := response["thread_id"].(string)
 	message, _ := response["message_id"].(string)
 	if _, ok := number(thread); !ok || destination != "" && thread != destination {

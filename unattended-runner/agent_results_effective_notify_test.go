@@ -40,3 +40,22 @@ func TestAgentResultOldNotifyIntentAcceptsQuietSenderReceipt(t *testing.T) {
 		t.Fatal("verified old intent was resent")
 	}
 }
+
+func TestAgentResultConcreteOwnerQuestionCannotBeVerifiedAsSilent(t *testing.T) {
+	r, _ := fixture(t)
+	p, err := r.recordAgentResult(actionRequiredResultEvent())
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.Run = func(context.Context, string, ...string) (string, error) {
+		return `{"domain":"new-owner-recovery-messages","delivery":"verified","thread_id":"610","message_id":"735","effective_notify":false}`, nil
+	}
+	reads := 0
+	server(t, r, func(w http.ResponseWriter, q *http.Request) { reads++; respond(w, resultReadback(r, p, false)) })
+	if r.deliverAgentResult(context.Background(), &p) == nil || p.Verified != "" {
+		t.Fatal("required owner action was verified without its mention")
+	}
+	if reads != 0 {
+		t.Fatal("an inconsistent sender receipt reached final GET verification")
+	}
+}

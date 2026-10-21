@@ -9,7 +9,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -87,6 +89,9 @@ func agentResultCLI(args []string, out io.Writer) int {
 		}
 		var p AgentResultRecord
 		err = readJSON(r.agentResultPath(*id), 1<<20, &p)
+		if os.IsNotExist(err) {
+			err = readJSON(filepath.Join(r.Config.Home, "agent-results", "verified", *id+".json"), 1<<20, &p)
+		}
 		if err == nil && (p.ID != *id || p.Domain != agentResultDomain || agentResultID(p.Event) != *id || validateAgentEvent(p.Event) != nil) {
 			err = errors.New("agent result receipt invalid")
 		}
@@ -140,20 +145,40 @@ func loadAgentResultReceiver(configPath string) (conversationCLIBackend, func(),
 	}
 	return &Runner{Config: cfg, Now: time.Now}, func() {}, nil
 }
-func (r *Runner) agentReceiveLock() (func(), error) {
+func (r *Runner) agentReceiveLock(ctx context.Context) (func(), error) {
 	home := filepath.Join(r.Config.Home, "agent-results")
 	if err := os.MkdirAll(home, 0700); err != nil {
 		return nil, err
 	}
 	until := time.Now().Add(2 * time.Second)
 	for {
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		unlock, lockErr := acquire(filepath.Join(home, "receive.lock"))
 		if lockErr == nil {
 			return unlock, nil
 		}
+		if !agentLockContention(lockErr) {
+			return nil, lockErr
+		}
 		if !time.Now().Before(until) {
 			return nil, errAgentReceiverBusy
 		}
-		time.Sleep(20 * time.Millisecond)
+		timer := time.NewTimer(20 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil, ctx.Err()
+		case <-timer.C:
+		}
 	}
+}
+func agentLockContention(err error) bool {
+	// ERROR_LOCK_VIOLATION=33; access denied (5) and sharing violations (32)
+	// are not byte-range lock contention. Microsoft system-error-codes--0-499-.
+	if runtime.GOOS == "windows" {
+		return errors.Is(err, syscall.Errno(33))
+	}
+	return errors.Is(err, syscall.EWOULDBLOCK) || errors.Is(err, syscall.EAGAIN)
 }

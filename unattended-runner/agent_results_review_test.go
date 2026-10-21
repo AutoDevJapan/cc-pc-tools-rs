@@ -3,9 +3,11 @@ package main
 import (
 	"bytes"
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestAgentResultRecordDoesNotWaitForThePeriodicRunnerLockOrState(t *testing.T) {
@@ -85,5 +87,80 @@ func TestAgentResultFreezesItsBodyAndArchivesVerifiedHistory(t *testing.T) {
 	}
 	if _, err = os.Stat(r.agentResultPath(p.ID)); err != nil {
 		t.Fatal("status lost its archived receipt")
+	}
+}
+
+func TestAgentResultWaitLimitDoesNotCreateAnotherIdenticalWait(t *testing.T) {
+	r, _ := fixture(t)
+	r.JobsPath = filepath.Join(t.TempDir(), "jobs")
+	r.AgentResultGuard = func(context.Context, string) bool { return true }
+	e := resultEvent()
+	e.Source = "codex_jobs"
+	e.Child = "worker-3257"
+	path := filepath.Join(r.JobsPath, e.Child, "job.json")
+	if publish(path, map[string]any{"id": e.Child, "status": "running"}) != nil || r.watchAgentResult(e) != nil {
+		t.Fatal("watch")
+	}
+	if publish(path, map[string]any{"id": e.Child, "status": "queued", "work_wait_on": []int{7}}) != nil {
+		t.Fatal("fixture")
+	}
+	r.observeAgentResults(context.Background(), &Health{})
+	now := r.Now().Add(2 * time.Hour)
+	r.Now = func() time.Time { return now }
+	r.observeAgentResults(context.Background(), &Health{})
+	r.observeAgentResults(context.Background(), &Health{})
+	files, _ := agentResultFiles(r.Config.Home, "records")
+	if len(files) != 2 {
+		t.Fatalf("one wait and one wait-limit expected; got %d", len(files))
+	}
+}
+
+func TestAgentResultReceiverOpenFailureIsNotReportedAsContention(t *testing.T) {
+	r, _ := fixture(t)
+	if os.MkdirAll(filepath.Join(r.Config.Home, "agent-results", "receive.lock"), 0700) != nil {
+		t.Fatal("fixture")
+	}
+	started := time.Now()
+	_, err := r.recordAgentResult(resultEvent())
+	if err == nil || errors.Is(err, errAgentReceiverBusy) || time.Since(started) > time.Second {
+		t.Fatal("permanent open failure was treated as busy")
+	}
+}
+
+func TestAgentResultObservationRecoveryDoesNotDuplicateTheWorkerState(t *testing.T) {
+	r, _ := fixture(t)
+	r.JobsPath = filepath.Join(t.TempDir(), "jobs")
+	allow := true
+	r.AgentResultGuard = func(context.Context, string) bool { return allow }
+	e := resultEvent()
+	e.Source = "codex_jobs"
+	e.Child = "worker-3257"
+	path := filepath.Join(r.JobsPath, e.Child, "job.json")
+	if publish(path, map[string]any{"id": e.Child, "status": "running"}) != nil || r.watchAgentResult(e) != nil {
+		t.Fatal("watch")
+	}
+	if publish(path, map[string]any{"id": e.Child, "status": "queued", "work_wait_on": []int{7}}) != nil {
+		t.Fatal("fixture")
+	}
+	r.observeAgentResults(context.Background(), &Health{})
+	for range 3 {
+		allow = false
+		r.observeAgentResults(context.Background(), &Health{})
+		allow = true
+		r.observeAgentResults(context.Background(), &Health{})
+	}
+	files, _ := agentResultFiles(r.Config.Home, "records")
+	if len(files) != 2 {
+		t.Fatalf("one wait and one observation notice expected, got %d", len(files))
+	}
+	if publish(path, map[string]any{"id": e.Child, "status": "running"}) != nil {
+		t.Fatal("fixture")
+	}
+	r.observeAgentResults(context.Background(), &Health{})
+	allow = false
+	r.observeAgentResults(context.Background(), &Health{})
+	files, _ = agentResultFiles(r.Config.Home, "records")
+	if len(files) != 3 {
+		t.Fatal("a new worker phase lost its own observation notice")
 	}
 }

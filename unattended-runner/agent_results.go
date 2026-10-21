@@ -53,14 +53,15 @@ type AgentResultRecord struct {
 	Body           string           `json:"body"`
 }
 type agentResultWatch struct {
-	Domain        string           `json:"domain"`
-	Event         AgentResultEvent `json:"event"`
-	Signature     string           `json:"signature"`
-	Closed        bool             `json:"closed"`
-	Generation    uint64           `json:"generation"`
-	Deadline      string           `json:"result_deadline"`
-	BaselineItems []string         `json:"baseline_item_transitions,omitempty"`
-	WaitReported  bool             `json:"wait_limit_reported,omitempty"`
+	Domain              string           `json:"domain"`
+	Event               AgentResultEvent `json:"event"`
+	Signature           string           `json:"signature"`
+	Closed              bool             `json:"closed"`
+	Generation          uint64           `json:"generation"`
+	Deadline            string           `json:"result_deadline"`
+	BaselineItems       []string         `json:"baseline_item_transitions,omitempty"`
+	WaitReported        bool             `json:"wait_limit_reported,omitempty"`
+	ObservationReported bool             `json:"observation_reported,omitempty"`
 }
 
 var agentStateLabels = map[string]string{
@@ -173,12 +174,15 @@ func (r *Runner) archiveAgentFile(kind, archive, id string) error {
 	return os.Rename(filepath.Join(r.Config.Home, "agent-results", kind, id+".json"), to)
 }
 func (r *Runner) recordAgentResult(e AgentResultEvent) (AgentResultRecord, error) {
+	return r.recordAgentResultWithin(context.Background(), e)
+}
+func (r *Runner) recordAgentResultWithin(ctx context.Context, e AgentResultEvent) (AgentResultRecord, error) {
 	if err := validateAgentEvent(e); err != nil {
 		return AgentResultRecord{}, err
 	}
 	// All producers, including the periodic observer, share this short lock.
 	// The long-running runner lock is never needed for parent receipt ingestion.
-	unlock, err := r.agentReceiveLock()
+	unlock, err := r.agentReceiveLock(ctx)
 	if err != nil {
 		return AgentResultRecord{}, err
 	}
@@ -555,7 +559,8 @@ func (r *Runner) observeAgentResults(ctx context.Context, h *Health) {
 		if badItems {
 			h.Errors = append(h.Errors, "agent_item_progress_invalid")
 		}
-		if err != nil {
+		unreadable := err != nil
+		if unreadable {
 			h.Errors = append(h.Errors, "agent_watch_source_deferred")
 			if ctx.Err() != nil {
 				return
@@ -578,7 +583,7 @@ func (r *Runner) observeAgentResults(ctx context.Context, h *Health) {
 			if baseline {
 				continue
 			}
-			if _, itemErr := r.recordAgentResult(e); itemErr != nil {
+			if _, itemErr := r.recordAgentResultWithin(ctx, e); itemErr != nil {
 				h.Errors = append(h.Errors, "agent_item_return_deferred")
 			}
 		}
@@ -586,13 +591,22 @@ func (r *Runner) observeAgentResults(ctx context.Context, h *Health) {
 		if expired {
 			sig, state, reason = canonicalHash("result_wait_limit"), "unverified", "result_wait_limit"
 		}
-		if sig == w.Signature {
+		// Observation failures and the wait deadline are parent notices, not
+		// transitions of the worker itself. Never replace its saved signature.
+		if !expired && (unreadable && w.ObservationReported || !unreadable && sig == w.Signature) {
 			continue
 		}
-		w.Generation++
+		if !expired && !unreadable {
+			w.Generation++
+		}
 		if state != "" {
 			e := w.Event
 			e.Transition = fmt.Sprintf("observed-%d-%s", w.Generation, sig[:32])
+			if expired {
+				e.Transition = "result-wait-limit"
+			} else if unreadable {
+				e.Transition = fmt.Sprintf("observation-%d-%s", w.Generation, canonicalHash(w.Signature)[:24])
+			}
 			e.State = state
 			e.Reason = reason
 			e.Remaining = "unverified"
@@ -608,16 +622,21 @@ func (r *Runner) observeAgentResults(ctx context.Context, h *Health) {
 			if state == "capacity_wait" {
 				e.Next = "retry"
 			}
-			if _, err := r.recordAgentResult(e); err != nil {
+			if _, err := r.recordAgentResultWithin(ctx, e); err != nil {
 				h.Errors = append(h.Errors, "agent_watch_return_deferred")
 				continue
 			}
 			if expired {
 				w.WaitReported = true
+			} else if unreadable {
+				w.ObservationReported = true
 			}
 			w.Closed = state != "dependency_wait" && state != "capacity_wait" && state != "unverified"
 		}
-		w.Signature = sig
+		if !expired && !unreadable {
+			w.Signature = sig
+			w.ObservationReported = false
+		}
 		if publish(path, w) != nil {
 			h.Errors = append(h.Errors, "agent_watch_commit_deferred")
 		} else if w.Closed {

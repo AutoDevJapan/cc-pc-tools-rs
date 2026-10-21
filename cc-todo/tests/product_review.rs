@@ -104,3 +104,16 @@ fn prepared_binding_cannot_be_reused_with_other_inputs() {
         assert!(!scope::eligible(&row, 1791849601.));
     }
 }
+
+#[test]
+fn repeated_binding_expiry_uses_observed_time_and_never_changes_state() {
+    let (mut db, mut receipt, owner) = fixture();
+    bind_review_at(&mut db, &receipt, &owner, WITHIN_REVIEW_WINDOW).unwrap();
+    receipt["snapshot"] = snapshot(&db, &db["items"][1]);
+    let before = db.clone();
+    assert!(!bind_review_at(&mut db, &receipt, &owner, 1792540799.).unwrap());
+    for at in [1792540800., 1792540801.] {
+        assert!(bind_review_at(&mut db, &receipt, &owner, at).is_err());
+        assert_eq!(db, before);
+    }
+}

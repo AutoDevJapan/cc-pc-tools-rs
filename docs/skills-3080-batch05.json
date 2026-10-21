@@ -12,7 +12,7 @@
     "preserved_notice": "skills-3080-tencent-MIT.txt",
     "source_sha256": "31154d9c1a8bd8d37b449bdbb8a04f9b4618e5d330b52b0fdb7c452414d75a41",
     "attribution": "Copyright (C) 2026 Tencent. All rights reserved.",
-    "scope": "Fixed selected entrypoint/4workflow text only;no blanket support/script permission",
+    "scope": "選択した入口・4手順本文・読了した補助3件を根拠とする派生版。コピーしたのは入口原文と許諾原文だけで、未読22補助・CLI・recall agent全体への許可ではない。",
     "preservation": "Exact Tencent MIT declaration and all notice paragraphs, not generic substitution"
   },
   "targets": [

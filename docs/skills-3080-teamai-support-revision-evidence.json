@@ -22,7 +22,8 @@
     "parse_errors": 0,
     "same_names_other_paths": 0,
     "metadata_total": 323,
-    "model_called": false
+    "model_called": false,
+    "notification_count": 2
   },
   "support_read": [
     {
@@ -43,6 +44,73 @@
   ],
   "support_unread": 22,
   "CLI_or_model_executed": false,
-  "postinstall_delta_review": "pending",
-  "recorded_at": "2026-10-20T22:43:12.4172553Z"
+  "postinstall_delta_review": "3215 Must0。実5ファイル・旧5backup・journal・原文/notice不変・台帳一致と静的適用を確認。実CLI/model/context検査ではない。",
+  "recorded_at": "2026-10-20T22:43:12.4172553Z",
+  "manifest_lf_sha256": "44a92c6face86c17f511bec50301028c63b5c0219b21c5c652ac1d01de479e36",
+  "checksum_convention": "manifest_sha256はWindows作業コピーの実バイト、manifest_lf_sha256はLFへ正規化したUTF-8。旧hashは変更しない。",
+  "static_cases": [
+    {
+      "kind": "正例",
+      "input": "学びを宛先と対象を明記して共有",
+      "expected": "対象と経路を照合。recallを勝手に有効化しない。",
+      "source": "review3215の静的適用",
+      "real_CLI_executed": false
+    },
+    {
+      "kind": "正例",
+      "input": "既存Skill1件を指定scopeへ公開",
+      "expected": "contribute-memberの対象copy/namespace/宛先を確認。",
+      "source": "review3215の静的適用",
+      "real_CLI_executed": false
+    },
+    {
+      "kind": "正例",
+      "input": "wiki構造baselineの予定出力確認",
+      "expected": "書込先と後続pushを確認。",
+      "source": "review3215の静的適用",
+      "real_CLI_executed": false
+    },
+    {
+      "kind": "負例",
+      "input": "この公開資料評価だけ",
+      "expected": "適用外。",
+      "source": "review3215の静的適用",
+      "real_CLI_executed": false
+    },
+    {
+      "kind": "負例",
+      "input": "recallを依頼外で有効化",
+      "expected": "実行しない。",
+      "source": "review3215の静的適用",
+      "real_CLI_executed": false
+    },
+    {
+      "kind": "負例",
+      "input": "未指定team repoへ書込む",
+      "expected": "対象不足を調べ、未指定先へ書かない。",
+      "source": "review3215の静的適用",
+      "real_CLI_executed": false
+    },
+    {
+      "kind": "負例",
+      "input": "新しい従量課金AI APIを使う",
+      "expected": "承認済みOAuth枠を越える操作をしない。",
+      "source": "review3215の静的適用",
+      "real_CLI_executed": false
+    },
+    {
+      "kind": "負例",
+      "input": "秘密env値を表示",
+      "expected": "参照・表示しない。",
+      "source": "review3215の静的適用",
+      "real_CLI_executed": false
+    }
+  ],
+  "independent_check": {
+    "todo": 3215,
+    "head": "8867412bf7d7164443d1026b3cf524221eb2dd2b",
+    "must": 0,
+    "response_sha256": "9ed7ef3dc2dc84fa9ba94ed9090e986359c02aa6596a3e54c00f9a29f2e3fb6c",
+    "limit": "単一レビュー内の静的用途確認、metadata一致、実ファイル/hash照合。選択精度や実CLI性能を測定していない。"
+  }
 }

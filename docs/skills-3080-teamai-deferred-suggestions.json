@@ -9,5 +9,25 @@
     "support25件すべて未読という古い英語文とlocal_revision.reasonの空白を同じ更新で整える。"
   ],
   "reason": "Must0で現在版は受入済み。軽微な提案ごとの中央原本更新と再レビューを繰返さず、具体計画を保持して次の必要更新へまとめる。",
-  "current_live_changed": false
+  "current_live_changed": false,
+  "baseline_files": [
+    {
+      "path": "references/source.json",
+      "sha256": "73dcc724dc5f2eaa50dac457a6e6c5defae5def7d99fe0c745075fbd93f60f44"
+    },
+    {
+      "path": "references/sources.md",
+      "sha256": "1b5b605a80f901c3c385d26dd47e3f48726553ec249a5d4e87261bc47da37bbe"
+    },
+    {
+      "path": "SKILL.md",
+      "sha256": "1695769ac6a10ef91e81f632e55ab72f1e8d35e7bdf9532ba3db7ebde942a884"
+    }
+  ],
+  "target_lines": [
+    "SKILL.md:13-14",
+    "references/sources.md:14",
+    "references/source.json:24,48"
+  ],
+  "manual_step_source": "contribute-member.md:26-29 (Step A),fixed Tencent8787405e59353a8da33f7eaf6b9781b0b3188cd2"
 }

@@ -28,18 +28,19 @@ type codeQLSetup struct {
 }
 
 type codeQLPlan struct {
-	RepoID     int64            `json:"repo_id"`
-	PR         int              `json:"pr"`
-	Candidate  string           `json:"candidate_sha"`
-	RunID      int64            `json:"run_id"`
-	Attempt    int              `json:"attempt"`
-	SHA        string           `json:"source_sha"`
-	Tree       string           `json:"source_tree"`
-	Role       string           `json:"role"`
-	Label      string           `json:"label"`
-	Kind       string           `json:"kind,omitempty"`
-	ContextSHA string           `json:"job_context_sha,omitempty"`
-	Current    currentPRBinding `json:"current_pr,omitzero"`
+	RepoID     int64               `json:"repo_id"`
+	PR         int                 `json:"pr"`
+	Candidate  string              `json:"candidate_sha"`
+	RunID      int64               `json:"run_id"`
+	Attempt    int                 `json:"attempt"`
+	SHA        string              `json:"source_sha"`
+	Tree       string              `json:"source_tree"`
+	Role       string              `json:"role"`
+	Label      string              `json:"label"`
+	Kind       string              `json:"kind,omitempty"`
+	ContextSHA string              `json:"job_context_sha,omitempty"`
+	Current    currentPRBinding    `json:"current_pr,omitzero"`
+	Batch      [2]currentPRBinding `json:"finite_secret_batch,omitzero"`
 	// Repo is only transferred in memory to the guest's private tmpfs. It is
 	// intentionally excluded from every host receipt and diagnostic.
 	Repo string `json:"-"`
@@ -405,7 +406,8 @@ func executeProductPlan(ctx context.Context, c candidate, p codeQLPlan, dir, gue
 	if e = checkCodeQLQueue(ctx, p, get); e != nil {
 		return e
 	}
-	callback, key, closeAdmission, e := startCodeQLAdmissionForRunner(ctx, p, c, name)
+	selection := &codeQLSelection{}
+	callback, key, closeAdmission, e := startCodeQLAdmissionForRunner(ctx, p, c, name, selection.observe)
 	if e != nil {
 		return e
 	}
@@ -505,14 +507,28 @@ func executeProductPlan(ctx context.Context, c candidate, p codeQLPlan, dir, gue
 		RunID     int64
 		Attempt   int
 	}
-	if e != nil || json.Unmarshal(b, &proof) != nil || proof.SHA != p.SHA || proof.Tree != p.Tree || proof.RunID != p.RunID || proof.Attempt != p.Attempt {
+	if e != nil || json.Unmarshal(b, &proof) != nil {
 		return errors.New("actual checkout evidence unavailable or mismatched")
 	}
+	actual := p
+	if p.Batch != ([2]currentPRBinding{}) {
+		actual, e = selectFiniteBatchAdmission(p, codeQLAdmission{proof.RunID, proof.Attempt, proof.SHA})
+		if e != nil {
+			return e
+		}
+		if !selection.matches(actual) {
+			return errors.New("guest proof differs from independently admitted runner member")
+		}
+	}
+	if proof.SHA != actual.SHA || proof.Tree != actual.Tree || proof.RunID != actual.RunID || proof.Attempt != actual.Attempt {
+		return errors.New("actual checkout evidence unavailable or mismatched")
+	}
+	rec.PR, rec.SourceSHA, rec.SourceTree = actual.PR, actual.SHA, actual.Tree
 	rec.SourceTreeVerified = true
 	if e = os.WriteFile(filepath.Join(dir, "codeql-checkout.private.json"), b, 0600); e != nil {
 		return e
 	}
-	if _, e = verifyExecutionSource(ctx, c, get); e != nil {
+	if _, e = verifyExecutionSource(ctx, structCandidate(actual), get); e != nil {
 		return e
 	}
 	rec.Stage = "ephemeral-job-ended-official-results-still-required"
@@ -577,7 +593,7 @@ func codeQLGuest(configureOnly bool) error {
 }
 
 func checkCodeQLHook(p codeQLPlan, repo, sha, runID, attempt string) error {
-	if p.Current != (currentPRBinding{}) && !currentPRGuestPlan(p) {
+	if p.Current != (currentPRBinding{}) && !validGuestPlan(p) {
 		return errors.New("current PR hook plan rejected")
 	}
 	want := p.SHA
@@ -608,6 +624,12 @@ func codeQLHook(complete bool) error {
 	}
 	p := packet.Plan
 	p.Repo = packet.Repo
+	if p.Batch != ([2]currentPRBinding{}) {
+		p, e = selectFiniteBatchContext(p, os.Getenv("GITHUB_REPOSITORY"), os.Getenv("GITHUB_SHA"), os.Getenv("GITHUB_RUN_ID"), os.Getenv("GITHUB_RUN_ATTEMPT"))
+		if e != nil {
+			return e
+		}
+	}
 	if !complete {
 		observed := os.Getenv("GITHUB_SHA")
 		if len(observed) != 40 || strings.Trim(observed, "0123456789abcdef") != "" {

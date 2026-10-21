@@ -5,7 +5,9 @@ admission currently accepts only repository 1285649124, PR995, fixed head
 cbd688871651e46d4821a4535d57eaa408105ff2 and its original secret job. New heads
 and CodeQL input admission are not implemented by this finite repair. The
 original ToDo3059 requirement for ordinary same-PR corrections without repeated
-recompilation remains unfinished; the quoted requirement below is preserved.
+recompilation is handled separately by the canonical product-parent runtime
+handoff described in [the runtime specification](../../docs/product-ci-runtime-3059.md).
+The finite constructor itself continues to reject new heads and CodeQL.
 The generic planner remains source-bound and never follows an advancing branch.
 
 The 2026-10-20 direct assignment requires: 「helperを同じ元PR995の通常修正にも
@@ -15,7 +17,7 @@ The 2026-10-20 direct assignment requires: 「helperを同じ元PR995の通常�
 owner statements remain in the supplied operational specification; its contents
 and product material are not copied into this public repository.
 
-Original ToDo3059 acceptance (broader than this finite admission; unfinished):
+Original ToDo3059 acceptance (broader than the finite admission):
 
 1. Given the explicit PR and unchanged original evidence, secret and required
    default-setup CodeQL jobs accept the frozen head/tree/run/attempt/job.
@@ -90,4 +92,11 @@ can share the existing label. The actual assigned runner selects one fixed plan;
 its live hooks and final source/auth proof must match that plan. Every invocation
 remains ephemeral and serial, and any other queued job is rejected. No product
 workflow, cancellation, general protection classification or original candidate
-is changed. These routes do not implement the remaining future-head admission.
+is changed. These finite routes do not implement future-head admission.
+
+`current-pr-runtime-qualify/inspect/job` use the original product parent's
+canonical handoff with newly verified original review and acceptance outputs.
+This separate route supports frozen secret and CodeQL inputs for subsequent
+PR995 corrections without changing compiled SHA constants. It has no caller
+path argument and does not reuse the formerly rejected three inputs. Its input
+qualification and fixture checks are not a claim of new official job success.

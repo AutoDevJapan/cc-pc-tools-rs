@@ -411,8 +411,12 @@ func currentPRCLI(ctx context.Context, args []string) error {
 	if len(args) > 0 && (args[0] == "current-pr-batch-inspect" || args[0] == "current-pr-batch-job") {
 		return finiteSecretBatchCLI(ctx, args)
 	}
-	if len(args) == 1 && args[0] == "current-pr-origin-qualify" {
-		snapshot, err := inputqual.Construct()
+	if len(args) == 1 && (args[0] == "current-pr-origin-qualify" || args[0] == "current-pr-runtime-qualify") {
+		construct := inputqual.Construct
+		if args[0] == "current-pr-runtime-qualify" {
+			construct = inputqual.ConstructRuntime
+		}
+		snapshot, err := construct()
 		if err != nil {
 			return err
 		}
@@ -430,18 +434,24 @@ func currentPRCLI(ctx context.Context, args []string) error {
 	}
 	originInspect := len(args) == 1 && args[0] == "current-pr-origin-inspect"
 	originJob := (len(args) == 3 || len(args) == 4) && args[0] == "current-pr-origin-job"
-	if !(originInspect || originJob || (len(args) == 2 && args[0] == "current-pr-inspect") || ((len(args) == 4 || len(args) == 5) && args[0] == "current-pr-job")) {
-		return errors.New("current-pr-origin-qualify | current-pr-origin-inspect | current-pr-origin-job <new-owned-dir> <Linux-helper> <gitleaks-ELF>; caller-selected pin routes are unavailable")
+	runtimeInspect := len(args) == 1 && args[0] == "current-pr-runtime-inspect"
+	runtimeJob := (len(args) == 3 || len(args) == 4) && args[0] == "current-pr-runtime-job"
+	if !(originInspect || originJob || runtimeInspect || runtimeJob || (len(args) == 2 && args[0] == "current-pr-inspect") || ((len(args) == 4 || len(args) == 5) && args[0] == "current-pr-job")) {
+		return errors.New("current-pr-origin-qualify/inspect/job | current-pr-runtime-qualify/inspect/job <new-owned-dir> <Linux-helper> [gitleaks-ELF]; caller-selected pin routes are unavailable")
 	}
 	var b currentPRBinding
 	var e error
-	if originInspect || originJob {
+	if originInspect || originJob || runtimeInspect || runtimeJob {
 		var snapshot inputqual.Snapshot
-		snapshot, e = inputqual.Construct()
+		construct := inputqual.Construct
+		if runtimeInspect || runtimeJob {
+			construct = inputqual.ConstructRuntime
+		}
+		snapshot, e = construct()
 		if e == nil {
 			b, e = consumeCurrentPRSnapshot(snapshot)
 		}
-		if originInspect {
+		if originInspect || runtimeInspect {
 			args = []string{"current-pr-inspect", "constructed-original-purpose"}
 		} else {
 			args = append([]string{"current-pr-job", "constructed-original-purpose"}, args[1:]...)

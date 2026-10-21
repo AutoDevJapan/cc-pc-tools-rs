@@ -32,3 +32,27 @@ func TestCurrentCIInputMainDispatch(t *testing.T) {
 		})
 	}
 }
+
+func TestRuntimeCIInputMainDispatch(t *testing.T) {
+	const marker = "CC_TEST_3059_RUNTIME_MAIN"
+	if mode := os.Getenv(marker); mode != "" {
+		os.Args = []string{"product-ci", mode}
+		if mode == "current-pr-runtime-job" {
+			os.Args = append(os.Args, "synthetic-owned", "synthetic-linux", "synthetic-scanner")
+		}
+		main()
+		return
+	}
+	for _, mode := range []string{"current-pr-runtime-qualify", "current-pr-runtime-inspect", "current-pr-runtime-job"} {
+		t.Run(mode, func(t *testing.T) {
+			cmd := exec.Command(os.Args[0], "-test.run=^TestRuntimeCIInputMainDispatch$")
+			cmd.Env = append(os.Environ(), marker+"="+mode)
+			hideCurrentTestCommand(cmd)
+			output, err := cmd.CombinedOutput()
+			exit, ok := err.(*exec.ExitError)
+			if !ok || exit.ExitCode() != 1 || !strings.Contains(string(output), "locator_unavailable") || strings.Contains(string(output), "synthetic-") {
+				t.Fatal("runtime command did not enter its private qualification boundary")
+			}
+		})
+	}
+}

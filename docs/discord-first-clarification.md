@@ -92,6 +92,20 @@ Rustの通常CLIとrecovery、Go conversation、および実Rust CLIを使うGo�
 その通常マージを確認するまで、共通Go/Rustの実装・配布を重ねない。
 元ToDo3153全体の完了と、このPRのマージを混同しない。
 待機は元3259の有限wait-retryへ保存し、3153全体doneを依存条件にしない。
+既知の追加レビューだけが前提ならそのToDoを `wait --on` で待ち、レビュー終了後に
+PR #315の通常マージを改めて確認する。実装前の受入テストは、配送修復が変更する
+ファイルと別のファイルで準備できる。
+
+## 実装前の再現範囲
+
+`cc-ask/tests/clarification_first.rs` は通常Rust入口からGo runnerへの境界、
+`unattended-runner/conversation_first_clarification_test.go` はGoからRust senderへの境界で、
+未予約の確認・初回送信・検証拒否時のファイル不変を各3件で検査する。
+両方とも送信側を置き換えた架空データであり、本人性やDiscord実配達の成功を証明しない。
+Rust sender本体での元question:0・本人・現在版・競合・応答消失の検査と、実CLIの結合は
+後続の実装・統合時に行う。現段階の失敗をGreenや送信済みとして扱わない。
+
+## 実例への反映
 
 原質問と本人返信を保持する私的証拠を再照合し、指定された新しい問いへの説明を
 配布後の通常入口で初回送信する。実Discord GETで本文・投稿者・宛先・通知抑止を

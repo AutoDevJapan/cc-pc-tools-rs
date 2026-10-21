@@ -690,27 +690,54 @@ fn legacy_silent_report_does_not_validate_an_unused_action_heading() {
 
 #[test]
 fn legacy_explicit_owner_question_keeps_its_owner_mention() {
-    for post in [false, true] {
-        let mut h = Harness::new();
-        let body="回答が必要：表示の方向を選んでください。\na: 一覧を中心にする\nb: 対応不要として保持する";
-        if post {
-            let file = h.root.path().join("question.txt");
-            std::fs::write(&file, body).unwrap();
-            cmd_post(&mut h.ctx, "100", &file, &[], true).unwrap();
-        } else {
-            cmd_log(&mut h.ctx, "画面の方向", body, None, true).unwrap();
+    for body in [
+        "回答が必要：表示の方向を選んでください。\na: 一覧を中心にする\nb: 対応不要として保持する",
+        "回答が必要：公開範囲\na: 対象を公開する\nb: 非公開を保つ",
+    ] {
+        for post in [false, true] {
+            let mut h = Harness::new();
+            if post {
+                let file = h.root.path().join("question.txt");
+                std::fs::write(&file, body).unwrap();
+                cmd_post(&mut h.ctx, "100", &file, &[], true).unwrap();
+            } else {
+                cmd_log(&mut h.ctx, "画面の方向", body, None, true).unwrap();
+            }
+            let fake = h.fake.borrow();
+            let owner_messages = fake
+                .messages
+                .values()
+                .flatten()
+                .filter(|m| m["allowed_mentions"]["users"] == json!(["OWN"]))
+                .collect::<Vec<_>>();
+            assert_eq!(owner_messages.len(), 1);
+            assert!(s(&owner_messages[0]["content"]).contains("<@OWN>"));
+            assert_eq!(owner_messages[0]["allowed_mentions"]["replied_user"], false);
         }
-        let fake = h.fake.borrow();
-        let owner_messages = fake
-            .messages
+    }
+}
+
+#[test]
+fn legacy_log_routes_decision_questions_without_publishing_internal_metadata() {
+    let mut h = Harness::new();
+    let identity = json!({"todo_id":1,"resources":[{"kind":"service","id":"fixture-product"}],"decision":"publish","scope":{"specification":"fixture publication scope"}});
+    let body =
+        format!("公開してよいですか？\na 公開する\nb 保持する\n<!-- cc-decision {identity} -->");
+    cmd_log(&mut h.ctx, "公開方針", &body, None, true).unwrap();
+    let fake = h.fake.borrow();
+    assert!(fake
+        .http_calls
+        .iter()
+        .filter(|call| call["method"] == "POST")
+        .all(|call| !call["body"].to_string().contains("cc-decision")));
+    assert_eq!(
+        fake.messages
             .values()
             .flatten()
             .filter(|m| m["allowed_mentions"]["users"] == json!(["OWN"]))
-            .collect::<Vec<_>>();
-        assert_eq!(owner_messages.len(), 1);
-        assert!(s(&owner_messages[0]["content"]).contains("<@OWN>"));
-        assert_eq!(owner_messages[0]["allowed_mentions"]["replied_user"], false);
-    }
+            .count(),
+        1
+    );
 }
 
 #[test]

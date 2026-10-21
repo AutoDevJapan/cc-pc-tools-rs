@@ -628,6 +628,7 @@ pub fn cmd_log_attached(
         Some(path) => read_text(path)?.trim().to_owned(),
         None => text.to_owned(),
     };
+    let (_, decision) = crate::decision_identity::extract(&body)?;
     let action = notify && crate::recovery_messages::log_requires_owner_action(&body)?;
     let notify = notify && action;
     let prepared = crate::attachments::prepare(ctx, attach)?;
@@ -680,8 +681,8 @@ pub fn cmd_log_attached(
             atomic_json(&path, &known, 1)?;
         }
     }
-    if notify && crate::questions::is_question(&body) {
-        return post_text(ctx, &thread_id, &body, attach, true, None);
+    if decision.is_some() || action {
+        return post_text(ctx, &thread_id, &body, attach, notify, None);
     }
     let question = if notify && crate::questions::is_question(&body) {
         Some(ctx.call("GET", &format!("/channels/{thread_id}"), None)?)
@@ -725,13 +726,13 @@ fn post_text(
         || decision.is_some()
             && !crate::recovery_messages::report_declares_no_action(body)
             && crate::questions::is_question(body);
-    if decision.is_some() && (!action || !crate::questions::is_question(body)) {
+    if decision.is_some() && !action {
         return Err("判断の記録には具体的な質問本文が必要です".into());
     }
     if thread.is_empty() || !thread.chars().all(|c| c.is_ascii_digit()) {
         return Err("threadにはDiscordの数値IDを指定してください".into());
     }
-    if action && crate::questions::is_question(body) {
+    if action {
         crate::ask_gate::enforce("", body, None)?;
         let mut metadata = context.cloned().unwrap_or_else(|| json!({}));
         crate::decision_identity::bind(ctx, &mut metadata, decision.as_ref())?;

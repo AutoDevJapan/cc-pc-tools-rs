@@ -243,6 +243,10 @@ fn review_workspace_dispatch_keeps_normal_capacity_model_and_admission_checks() 
                 row["scheduler"]["subwork_admission"]["worktree"],
                 row["scheduler"]["worktree"]
             );
+            let repeated = f.e.dispatch_existing_subwork(2).unwrap();
+            assert_eq!(repeated["active"], true);
+            assert!(repeated["launched"].is_null());
+            assert_eq!(f.e.backend.launched.len(), 1);
         }
     }
 }

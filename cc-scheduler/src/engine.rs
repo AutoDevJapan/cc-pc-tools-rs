@@ -1425,6 +1425,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         if id <= 0 {
             return Err(Error("InputRejected"));
         }
+        remove(&mut self.report, "launched");
         let _lock = ByteLock::acquire(&self.root.join("scheduler.lock"), Duration::from_secs(30))?
             .ok_or(Error("TimeoutError"))?;
         let db = self.todo()?;

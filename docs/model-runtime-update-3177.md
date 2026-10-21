@@ -4,6 +4,8 @@
 この独立実装は配布資格の不足だけを扱う。モデル処理の実装、正式CI、別モデルレビュー、
 統合と配布は親3081が担当する。通常の保護分類、本人停止、ToDoの状態は変更しない。
 
+最新の候補結合は末尾の「ToDo3298の実生成物との結合」を参照する。以下の未生成・未結合という記述は、独立実装3177の完了時点の記録として保持する。
+
 ## 入力と結果
 
 `scrub391 --verify-model-runtime-update <実行物の絶対パス>` を専用入口にする。
@@ -133,3 +135,15 @@ Rust workspaceや他Go製品の全体検査、Cargo buildは実行していな�
 
 本担当は別モデルレビュー、正式CI、merge、本番guard配布、通常分類変更、原target更新を
 実施していない。モデルの実effortとFastの上流適用もこのGo検査では確認していない。
+
+## ToDo3298の実生成物との結合（2026-10-21）
+
+PR313の通常merge後の固定source `70a7962c36c0b9916ff6865afa9cb606d414962e` から、Cargo資源を割り当てた3298が指定7binを一度のrelease buildで生成した。exit 0、112.81秒、共有ゲートによる実効8並列。親3081はCargoを実行していない。独立build receiptのSHA256は `fb67ffda1315c1aff8c24d05bdff73f3620385f629b1ad6ec450c538c391ba62`。元のsource root・HEAD・branchと生成物を保持する。
+
+Cargoの生成物には同じtarget内のdeps名とのhardlinkがあった。リンク拒否を緩めず、所有付きの別フォルダへ7本を上書き無しでコピーし、全コピーのサイズとSHAが独立build receiptの値に一致することを確認した。コピーの記録は別のstaging receiptへ保存し、SHA256 `317f7e72731c62359e98af327f48772e46c5d61b40bc44a43608830b89da2e27` を固定する。元の生成物とreceiptは変更しない。
+
+今回はtodoの候補だけをcompiled profileへ結ぶ。新SHA256は `5db0e02c09b737a816b31ec811eeba3d129e4a6c0e76ff008692c2b640bbfd4d`。固定source、独立build receipt、コピー記録、原PR232の旧配布証拠をすべて既存readerで照合する。Discordは現在の正規分類で対象実行物が確認できるため、古いbaselineを現在値と推測して追加しない。guardの候補は空のままで、対象3leaf・元保護・一般分類・caller入力の契約は変更しない。
+
+結合前の正規readerは実todoに対してexit 1、`baseline_verified:true / qualified:false / reason:candidate_unbound`。結合後のreader Bはexit 0、`qualified:true / already_current:false / data_access_granted:false` と旧SHA `ba1d…6811`、新SHA `5db0…fd4d`、source70aを返した。guard自体や原todoを更新した結果ではない。親の関連Go検査は29件、subtest込み76件合格、vet/buildもexit 0。検査ログSHA256は `00A965047DFF0C611551E6663FF1641FEA4A0E71C9920548CC5BF24365218796`。
+
+source70aのマージ後Go CIは、待機中にmainが進んだためWindowsの受付が`obsolete branch revision rejected`で終了した。テストの失敗や実施済みの合格とは区別し、同じ古いmainを再投入しない。今回の限定結合は現在のmainを統合したbranchで正式CIと別モデルレビューを受ける。確認後にreader Bと既存AdminBrokerで有限CAS配布する。本番guardの置換、Consoleの別担当の配布、既存の停止・依存の解除はこの結合変更では実行しない。

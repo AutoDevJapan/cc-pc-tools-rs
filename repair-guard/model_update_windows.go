@@ -30,9 +30,15 @@ const model3082Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3082-
 const model3082Receipt = model3082Source + "/.ci-work/3082-runtime-20261020-232848-todo-3082.private.json"
 const model3082ReceiptSHA = "dfda87e2f50ca965f13ba432d7b1d893bd8530b5c8234911ec102423c9beb677"
 
-// These receipts were independently read in the bounded ToDo3177 assignment.
-// New Rust candidates have NOT been generated. Empty candidates intentionally
-// cannot qualify an update, even when an installed baseline is verified.
+const model3298Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3298-windows"
+const model3298Head = "70a7962c36c0b9916ff6865afa9cb606d414962e"
+const model3298BuildReceipt = model3298Source + "/codex-owned-5ca1100a696bda051f5c813a37f941d9/target/build-receipt.private.json"
+const model3081Distribution = model3298Source + "/codex-owned-0c95078c4ebbe13a42f392c2e12e60da"
+
+// The installed baseline has the independent ToDo3177 provenance. ToDo3298
+// built the candidate once from the merged source, then ToDo3081 copied it
+// without Cargo's second hardlink. Both receipts and the source HEAD stay
+// pinned. Discord uses its existing normal classifier; guard stays unbound.
 var model3081UpdateLeaves = []modelUpdateLeaf{
 	{kind: "todo", target: "D:/CC/Tools/todo/todo.exe", baselines: []consolePin{{
 		sha256: "ba1d65381bd31c38d05cf3798973427e2f0271dbc9d664afbfe91501a8de6811",
@@ -40,7 +46,14 @@ var model3081UpdateLeaves = []modelUpdateLeaf{
 			{model2903Source, model2903Source + "/.ci-work/todo-pr232-install.private.json", "3fa41d8c38e053473d6f513614b4d3617f574479b31de843e841370bf1ddfcc8"},
 			{model2903Source, model2903Source + "/.ci-work/install-todo-pr232.ps1", "bf0bf2dc1cb1b7f2fe0b887fc63772c719d3d00829057bf96d67cfe84efbb238"},
 		},
-	}}},
+	}}, candidate: modelUpdateCandidate{
+		root: model3298Source, path: model3081Distribution + "/todo.exe", head: model3298Head,
+		sha256: "5db0e02c09b737a816b31ec811eeba3d129e4a6c0e76ff008692c2b640bbfd4d",
+		evidence: []consoleEvidence{
+			{model3298Source, model3298BuildReceipt, "fb67ffda1315c1aff8c24d05bdff73f3620385f629b1ad6ec450c538c391ba62"},
+			{model3298Source, model3081Distribution + "/staging-receipt.private.json", "317f7e72731c62359e98af327f48772e46c5d61b40bc44a43608830b89da2e27"},
+		},
+	}},
 	{kind: "discord", target: "D:/CC/Tools/discord-ask/discord_ask.exe", baselines: []consolePin{{
 		sha256:   "eb14b19b445a247dfd85e498c20de2716a3dcc80bf6b65c188111738f6249295",
 		evidence: []consoleEvidence{{model3082Source, model3082Receipt, model3082ReceiptSHA}},

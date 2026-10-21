@@ -11,11 +11,11 @@
   "old_vcs_revision": "62fda9bf41ded95e75f5bad20a4f67257a3b74ac",
   "old_vcs_modified": false,
   "old_vcs_is_main_ancestor": false,
-  "new_sha256": "039b421c424914e90ae6efcb182dfe5423c84bec941064e5beb74ec79cbed83f",
-  "runtime_receipt_sha256": "84fec3eb34176718015e9384c374036f15e32013e15683244b3cb543c5acce76",
+  "new_sha256": "e47882b75ab21c7e021083ec9c9ff77ef6289b18472f4fa7b7f75877c2abe6c3",
+  "runtime_receipt_sha256": "0a53707316694de57452444f8d402e6d9ae07c816eccda88a62f7393b4243476",
   "source_files": {
     "repair-guard/audio2906_windows.go": "5e4fa9eed1218eb90ab3ccff37933b7494ee11048f1c57e4ab3022504dfc5330",
-    "repair-guard/capacity_update_windows.go": "c17f1679863115fe0d022b0afb4c42c6ff7cff58f7abffae1433c2cb772543ea",
+    "repair-guard/capacity_update_windows.go": "3a5a0335d25d23363fe5bbc19e61fd08ce64949f796a2bb503a5d24eeafe7ed6",
     "repair-guard/civ6-ci-2962-contract.json": "aa1c4d4f8cb323ade30675ab3034f88ec3e40281ec269bc799a9b530b7ad171c",
     "repair-guard/civ6ci_windows.go": "2a9688553b4c5e0dfc4600d7fbab61cea29fe9076915c1352d16c23ea2723afc",
     "repair-guard/collected3174_windows.go": "8879f14baf7fe7d9bf8fafd1c58b6aae6a037ed4276985464231f43101cca83b",
@@ -33,7 +33,7 @@
   },
   "source_git_blobs": {
     "repair-guard/audio2906_windows.go": "18d2ef5c847c97feeacd5e4da135880cf8882a94",
-    "repair-guard/capacity_update_windows.go": "dc7d6f60e9910a42fef4d305a01a2e76163d6ef2",
+    "repair-guard/capacity_update_windows.go": "f862c2dc9e883b5c0cca0002a1ae6a709747c104",
     "repair-guard/civ6-ci-2962-contract.json": "607b9ce60bad927249e018dc449c708374490282",
     "repair-guard/civ6ci_windows.go": "d4c0b00145904125536223bec6ddb84fcdacfc75",
     "repair-guard/collected3174_windows.go": "87fabadc8417bc079f3142999dcb8cb507fb0b79",
@@ -49,7 +49,7 @@
     "repair-guard/product_windows.go": "19c93265ab6f886f6c66ad4bc7b839befb329933",
     "repair-guard/runtime_windows.go": "517785f8dbf7e75daaebe08febf40df0bc4a3145"
   },
-  "build": "go build -trimpath -buildvcs=false -ldflags -s,-w",
+  "build": "go build -trimpath -buildvcs=false -ldflags \"-s -w\"",
   "data_access_granted": false,
   "original_registry_recovered": false,
   "registration_writer_todo": 3085,
@@ -58,5 +58,5 @@
   "old_vcs_merge_commit": "cd2f43134ca460b40d8e85a09e107964058e0244",
   "old_compile_inputs_equal_main": true,
   "old_provenance_note": "PR355 is merged; its original head is not a Git ancestor, and every repair-guard source and embed input is identical to verified main df54f94071280c66aa36b741458c60028cf9b55a. The recorded false ancestry is retained.",
-  "verified_at_utc": "2026-10-21T05:13:34.0900166Z"
+  "verified_at_utc": "2026-10-21T06:19:19.1663169+00:00"
 }

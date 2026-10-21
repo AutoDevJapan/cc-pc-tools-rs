@@ -4,7 +4,7 @@
   "repository": "AutoDevJapan/cc-pc-tools-rs",
   "source_root": "D:/CC/Work/unattended-operations-20261013-wt/todo-3085-capacity-decision",
   "base_sha": "df54f94071280c66aa36b741458c60028cf9b55a",
-  "verified_at_utc": "2026-10-21T05:12:13.0490897Z",
+  "verified_at_utc": "2026-10-21T06:18:06.9095874+00:00",
   "source_files": {
     "capacity-audit-3h/decision-worker.md": "2087c1660ca389b572065c78877ad37be05dee1963350df0349e60cbb86a18e4",
     "capacity-audit-3h/decision.go": "43d59b6d9906a7b9d6acaf816bfc47922c6a33ff397b27c1772f6902e0dfd355",
@@ -16,7 +16,7 @@
     "cc-ask/src/recovery_messages.rs": "ea4c8552fbd8f7a1cea5580497efccebe6a870fdb3cefcf8c4b39138ee9013db",
     "cc-ask/src/recovery_messages/clarification.rs": "186629a39bfa0447332018d4b39685ee05046b17e567a14e8d81d0f814ca83c5",
     "cc-scheduler/src/dispatch_receipt.rs": "f5227b884ee22cfceda56d7a45168940dc11d2f303633081847789b66aca3855",
-    "cc-scheduler/src/engine.rs": "1337e29079d99125910ab58da6db23aba19baee8c32ba5c420f7de6a4671d9c4",
+    "cc-scheduler/src/engine.rs": "70721ac07a836db1b321e709f399b2d972f1a60e64b90e79774b157024f303eb",
     "cc-scheduler/src/lib.rs": "be81427d7fac5c00cc7e020fefbec45f906526526ca876b7153f6f6fbdd594cc",
     "cc-scheduler/src/main.rs": "4fab7ed3a32604a8f572fd71ecc2511e4d35dc597c40ce66aa6504f6d05aa561",
     "cc-todo/src/answered_wait.rs": "adfce3487896ab116a6516f2d3ff8cfcadbf44dd34aee2d803fca36ace654cac",
@@ -38,7 +38,7 @@
   "todo": {
     "path": "D:/CC/Tools/todo/todo.exe",
     "old_sha256": "ba1d65381bd31c38d05cf3798973427e2f0271dbc9d664afbfe91501a8de6811",
-    "new_sha256": "3ec3ffb1de995d1f900398386004b69a4aed109fb9f0c91319ac1b32ba467b44",
+    "new_sha256": "0d3768d007097f995642da9019dc616737c8c07372fbf60292d3948775349ab4",
     "ownership": "canonical executable in cc-todo/src/lib.rs Paths::production and shared-todo SKILL",
     "candidate_relative_path": ".ci-work/todo-3085.exe"
   },
@@ -59,7 +59,7 @@
     "cc-ask/src/recovery_messages.rs": "435b2408f2a244a9c3a722014bbb9b5b4c6b34ca",
     "cc-ask/src/recovery_messages/clarification.rs": "208e31220f441d06bb655546952808c26d068759",
     "cc-scheduler/src/dispatch_receipt.rs": "7067c384c7a5a73403b096d6647f3e4e3c64ab5c",
-    "cc-scheduler/src/engine.rs": "d027d5d66aa4edd0faccc2ba116f3646c566c570",
+    "cc-scheduler/src/engine.rs": "1f0d4a788b411ddc185d582f238a3c461148995a",
     "cc-scheduler/src/lib.rs": "070721f25b048235c106b40c33531fcccd347f5e",
     "cc-scheduler/src/main.rs": "24ac7dc9ff0e3343081fe5ceaea106c9984efa6d",
     "cc-todo/src/answered_wait.rs": "e890e901cc3850b7556a6883989771185a88454b",
@@ -72,9 +72,9 @@
   },
   "source_fingerprint_scope": "source_files hashes compile-input working-copy bytes; source_git_blobs records normalized Git object IDs",
   "packaging": "Cargo hardlinked output is copied into an independent one-link distribution file; bytes and guard physical identity remain checked",
-  "todo_build_commit": "b392804d00307c171bbfdbba370c7c91fc460bb2",
-  "todo_build_receipt_sha256": "db66f8e29f0ae824a7120d4bead1e5138fdfd339017721711040a5e325199501",
+  "todo_build_commit": "dce5c2042ef9ffecad96281c7cb2a988ae24406a",
+  "todo_build_receipt_sha256": "33661a3809c109c4cec98a84dde9f28b13f44a10205edb9590fa7b726ff79506",
   "todo_build_check_todo": 3238,
   "rust_compile_inputs_unchanged_after_build": true,
-  "todo_build_job": "20261021-135545-todo-3238"
+  "todo_build_job": "20261021-150054-todo-3238"
 }

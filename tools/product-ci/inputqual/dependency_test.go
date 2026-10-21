@@ -51,7 +51,13 @@ func TestDependencyQualificationBindsOwnerQuestionAndSource(t *testing.T) {
 
 func TestDependencyAnchorRejectsChangedAndCopiedReceipts(t *testing.T) {
 	good := dependencyFixture(t)
-	root := t.TempDir()
+	// The Windows runner exposes its scratch through a directory junction.
+	// Fixtures must use the physical path, just like the original qualifier tests;
+	// production receipt reads continue rejecting every reparse-point ancestor.
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	refs := map[string]string{}
 	policy := map[string]struct{ pathSHA, contentSHA string }{}
 	for role, data := range good {

@@ -1,4 +1,46 @@
 # GoDD Press 通常CIの再開記録（ToDo2766）
+## 2026-10-21 job171146：実SDK準備を確認し、最小routeの競合を物理Gitで確定
+
+この節が最新。通常CIはまだ未成功で、2766は未完了。本人判断は不要。親2642の製品PR merge/配布/全製品done、原29/2191は変更しない。
+
+- f79cd149/cleanから実job20261021-171146-todo-2766で再開。起動入口AGENTS、最新owner-agent-conduct、元2642の最新note/spec、原GitHubのAGENTS全文と原3workflow全工程を再読。CLAUDE.mdは404。最新訂正は、対応不要・技術停止・依存待ちにメンション/返信ping/--notifyを付けない。前回の親への--notify依頼は旧条件であり撤回し、履歴としてのみ保持。子のDiscord直接送信禁止と、親経由の結果記録/配送確認は維持。
+- 3299は実job20261021-163547-todo-3299/succeeded/exit0、対応turn_context anthropic/claude-sonnet-5-5/max、task_completeと原last_message一致。旧7d6/tree7b0の指定読取でMust0/Suggestion3/Nit3。原応答はREVIEW-2766-DEADLINE-3299.md、原SHA8570BE7C5BBAC35A84DAD54833A02086CA8B309261863E80D5225089D09F9CB6。原bytesは今回private bundleにも保存しGit改行正規化と区別。未読secure_files*/source_materialization/normal_ci_admission本体等を読了としない。
+
+### 実装とGo検査
+
+- 312b9612ef5bcc516f4804e71f614ac004f3c26f/tree191e8b8f65d93e0a9f3fa18a00023ac13fab0dcfをcommit/push。既存のguest/kernel/Windows backendへ、Press専用の公開tool準備とsource-free probeを追加。新VM基盤/Windows helper/sourcepacket実装/同種担当は複製していない。
+- SDK公開artifactは閉selector、公式HTTPS URL/実bytes/SHA固定。Rustup Windows1.28.2は公式.sha256と一致、Chrome MSIはAuthenticode Valid/CN=Google LLCを取得時確認、Linux Google signing keyも固定hash。proxy/別host redirectなし、upstream変更はfail closed。秘密やrequest URL/commandは受け取らない。Chrome/Rustup installerはpublic SDKであり製品sourceではない。
+- Linuxは新しいcloneのUbuntu24.04/root/single-useを確認し、O_EXCLで固定key/source list、署名検証APTでChrome、user1001でRust1.95.0/rustfmt/clippyを導入する。固定子group/取消し/WaitDelay、各channel32KiB上限でSDKだけの原stdout/stderrを記録。公開probeはsource Fetch/runner/token/Cargoを実行せず、元共有cargo_gate/normalCI lock/intent/既存VM constructor/cleanup/fenceを共用。Press public probeはguestを消費し、後から製品操作へ転用しない。
+- Windowsは固定SYSTEM guest serviceだけがfreshなpress-sdkへ公開Rustupを導入し、Press PATHをcargo-home/binのproxyへ切替える。portable1.97.1へのfallbackを外し、元workflowのrustup1.95導入を保つ。V2 HTTPSだけChrome MSIを/qn/norestartで準備。元αのPATH/ACL等は保持。新Windows準備の実guest実行は未実施。保持assetはServer2025なので、元matrix Windows2022とのOS差やWindowsでの実選択を未実証のまま同等としない。
+- SDK時間を元のjob予算から引かないため、PressだけLinux guest role+30/host socket+35/listener+35、Windows session+40、whole host+60へ拡張。gate待ち/boot後の残りがrole+40未満ならtoken/登録前に拒否。元20/90/360のworkflow timeoutやαは不変。これは3299 Suggestion1/3への処置。timer/factory追加配線テスト、選択shardと隣の交換、role一覧共通化、1秒許容のNitは未対応として残す。
+- 旧production guest_windows.goだけのGo overlayでは、新PATH検査がportable1.97.1を検出して実FAIL/exit1。新callerでGREEN/exit0。全product-ci race main1.683s/pressci4.774s、Windows runner16.317s、guest19.433sと3module vetはexit0。最終guest/runner focused、Linux test compile、最後のmetadata追加後guest focusedもexit0。gofmt/diff check成功。新Linux SDK部分は次の実guestで検証した。旧結果を新source全件の重複実行とは書かない。
+
+### 既存基盤による使い捨てLinux VMの実SDK準備
+
+- clean312b961からhost/Linux helperをbuildし、host実VCS/clean/hashを確認。hostSHA bba4f0a262c7317ed555b8fb54157967e9c7ea53d573d3a630bf58aa40c2bd5c。312の後の2349は診断テストだけでproduction helper不変。
+- canonical gateでpublic probeを1回起動。instance6d3e6a4ff24a4445a7257d3dfe173856、VMaf6757c7-0dc6-4a32-89d7-1cec779bb575。新VMでUbuntu24.04、Google Chrome156.0.8078.47、rustc1.95.0(59807616e 2026-04-14)を実取得。APT update/install、rustup、Chrome --version、rustcの5commandが全exit0。原stdout/stderrは各32KiB未満で全回収。3Rust probeも全exit0、compiler単体SHAbff349e72704ff70bc08a234a3847338e797065bbedde5e556808bc87b7bf7c6。
+- host実exit0/終了、VM Off/メモリ0/除去、normalCI intent不在、canonical gate releaseを確認。既存SDK工具container56d077...は正確な所有/label/image/非hostbind/GPU等を照合して停止/PID0、再利用assetとして保持。新たな工具基盤を作らない。
+- これは公開SDKのruntime準備だけ。Chromeブラウザの実受入、元製品Rust、全製品物理Git、runner登録、公式CI、永続化/cold cloneの証明ではない。変更したcloneを新goldenとして流用せず回収へ送った。元2737のgolden/sdk/public imageは不変。
+
+### runs-onだけの変更が現在mainへ統合できない実測
+
+- 2349f4ee404e076894bae759fc72b18ac4254917/treedc1d4be45bf096c53f6127059270eaa03c70171fをcommit/push。opt-inのGo診断だけを追加。原3workflow bytesをAPI/RAMで取得し、nonce-ownedの通信なし/read-only/cap-drop ALL/no-new-privileges/CPU1/RAM256MiB容器のstdinへ送る。GPU/hostbind/socket/profile/authなし。ホストへ原source保存/checkoutは作らない。
+- guestのtmpfs/noexecでfixed名のworkflowを保存し、物理git hash-objectでbase/candidate/mainの各workflow blobを照合。物理git merge-fileの返り値/競合数だけを返し、workflow本文やmerge出力をhostへ戻さない。原API identity/head/mainを前後照合。全製品のblob/tree/commit proofとは別。
+- 初回は/work tmpfsがroot0755でimage default runnerに書けず、実Git統合前に停止。最初のharnessがguest stdoutを残さなかった欠落を保持。実containerのmode、test -w exit1、空workで原因を分離し、失敗container c370ae8...を停止/PID0/除去/不在確認。mode1777と失敗時のguest閉error/metadata保存へ修正し、別nonce容器で再検査。
+- 修正後の診断はexit0。local-checks.ymlはbase blob2458c4... / candidate route blob03f80733... / current main blobb6e9216...で**実merge exit7/競合7**。V2 HTTPSとhiddenの各workflowは実merge exit0/競合0。最後の容器87a4f82...もPID0/除去/不在。元3workflowの7個runs-onだけの変更ではPRの実mergeが壊れることを確認したので、製品へこの変更を公開していない。
+- 子の許可は同PR/branchの必要最小runs-onであり、親のソースをmerge/rebase/更新することではない。4shardや元step/gateを削る、main変更を黙って巻き戻す、別workflow/別branchへ置換する、旧head成功を新headへ移す方法は使わない。この技術的な衝突と範囲の調整が必要な点を親へ返す。親を依存に入れず、本人の新判断にも置き換えない。
+
+### 保存・後片付けと次の一手
+
+- 全83record（原review、実test/exit、SDK command原byte、VM/bootstrap/cleanup、失敗と修正後merge、postflight/登録）はevidence-2766-sdk-171146.private.jsonへ全byte/base64・bytes/SHAで保存し、全読戻し一致。306,305bytes/SHA35D7704A7A9921F8B0CC001228A61F6B20EE9DB6FAC8A8A16C9F36E0FF9B0E4F。原source/SDK private outputはcommitしない。
+- 自分の新root4d8372001e13d2368661252605b95ac5はVM/runner/intent終了と全証拠退避後、safe-delete planがsize理由のquarantineを指定。8,305,944,299bytes/97entriesをC同ドライブの削除希望/20261021-todo-2766-press-sdk-assets-and-source-preflight-4d837200へ移動しstate=quarantined。元不在/先存在を確認する。実削除ではなく、空き増加0。通常の回収工程へ残った資源と状態を親へ必ず返し、本人判断待ちや同じ削除の再試行にしない。既存SDK/他担当/2710・2648・2730拒否rootは不触。
+- 新27fileのSDK/診断差分だけの有限レビュー3311を通常--spec/claude-sonnet-5-5/maxで登録。TODO-2766-SDK-REVIEW-SPEC.mdと保存specの全文一致/dispatchableを確認。受付時jobs空、成功ではない。子Codexは直接起動しない。
+- 製品repo1386702183/AutoDevJapan/private/admin/nonfork、PR175 open/Draft/同repo/ref/headb2/base4dc/mergef3aは最後も不変。製品API書込0、CodeQL再実行0、手動success0。元3通常runのbudget起動前failure、元b2 CodeQL成功、旧a39 native/原log/cleanup拒否、9件別担当を保持。
+
+再開時は3311の実job/対応turn_context/原応答/固定版/未読を照合し、Mustを修正。SDK runtime成功と実7競合を親へ返し、親の技術的なscope調整の指示が届けば元の範囲を照合して反映する。同じ基盤準備や同じ失敗runの盲目rerun、新質問/新担当の量産はしない。共有ToDo2766は正規wait --on3311で再開を保持し、親2642の依存先/状態は変更しない。元13種類と発火した原必要公式job、完全原log、全source物理Git、取消し/回収の実証は未完了。本人の操作/判断、GPU/Civ6/AI APIキー/新費用/予算変更/Discord直接送信は今回0。
+
+この記録/specを自分のbranchへcommit/pushし、実job/branch/HEADのscheduler checkpointをHidden/Wait/PassThruで保存/原台帳読戻しする。短いnote参照を正規CASで2766へ、原review受領を3299へ、結果/技術制約/回収保留/次の手/本人判断不要と最新の無通知条件を2642へ1回配送する。Discord配送そのものは親経由であり、読戻し未確認を成功と書かない。
+
 ## 2026-10-21 job144040：期限の必須指摘を修正し、Linuxの受付も実行した
 
 この節が最新。通常CIは未成功、元2766は未完了。親2642の製品PRのmerge/配布/全製品doneは担当しない。本人判断は不要。

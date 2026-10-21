@@ -2,7 +2,7 @@
 
 Linux検査のコンテナは `--init` を明示して作成する。中止時も正常終了時も、OSがプロセス群の消滅を確認するまで生成先を保持する。未回収の終了済みプロセスも回収完了まで保持の対象となる。自分でプロセス群を離れる `setsid` などの呼び出しは、この終了確認の対象外であり、信頼する検査からの利用を前提とする。
 
-このリポジトリのWindows検査とLinux検査は、リポジトリ専用のself-hosted runnerへ送る。GitHubの予算上限や契約は変更しない。runnerが停止した場合はジョブを待機させ、Hosted runnerへ自動で切り替えない。
+このリポジトリのWindows検査とLinux検査は、以下の公開CodeQLを除き、リポジトリ専用のself-hosted runnerへ送る。GitHubの予算上限や契約は変更しない。PC向け検査でrunnerが停止した場合はジョブを待機させ、Hosted runnerへ自動で切り替えない。
 
 Windowsのラベルは `cc-pc-tools-windows`、Linuxは `cc-pc-tools-linux`。repoが `AutoDevJapan/cc-pc-tools-rs` であり、PRのheadも同じrepoである場合だけ実行する。runner開始hookは別repo、fork、未対応イベントを拒否する。Windowsはcheckout前の最初のstepでジョブ専用の読み取りtokenを使ってbranchの最新SHAを照合する。PRのmerge用SHAではなくhead SHAを固定して取得する。過去のHosted検査の失敗を手動statusで成功へ変更しない。
 
@@ -20,7 +20,7 @@ runnerのhook、shim、環境設定はジョブから読み取りだけとする
 
 運用結果、失敗理由、再開手順は `docs/runner-result.private.json` と `docs/runner-handoff.private.md` に保存する。登録、起動、固定sourceの検査成功、マージ、常駐復帰確認を別の到達点として記録する。資格情報や請求数字はGitへ入れない。
 
-CodeQLはPCのLinux runnerでactions、Go、JavaScript/TypeScript、Rustの解析を維持する。従来のHosted default setupから、Git管理する `codeql.yml` へ切り替える。解析結果のuploadと対象revisionを実検証し、元の失敗statusを上書きしない。週ごとの定期解析はmainの最新SHAだけを実行する。
+CodeQLはGit管理の `codeql.yml` でactions、Go、JavaScript/TypeScript、Rustの解析を維持する。公開repoであることをイベントの型付き `private: false` で確認できる場合は、[公開repoで無料の標準 `ubuntu-24.04`](https://docs.github.com/en/billing/concepts/product-billing/github-actions)へ固定してPCの検査枠と分離する。非公開または属性が不明の場合は既存のPC Linux runnerを使う。これは公開時の明示的な配置であり、PC検査の失敗をHostedへ逃がす処理ではない。Hostedでもcheckout前に同一repoの現在のbranch SHAと要求SHAを照合し、4言語・解析結果のupload・対象revisionを実検証する。dependency cacheは無効のままとし、元の失敗statusを上書きしない。週ごとの定期解析はmainの最新SHAだけを実行する。
 
 復旧テストは `safe-delete create` でWindowsのシステムTempに所有記録のある親を作り、その中にジョブ専用の子を作る。Windows Temp全体への列挙権限を追加せず、Gitが展開する仮想ドライブも使わない。再利用する親は所有記録と実体の一致、空であることを毎回確認する。子は検査終了後にplan、別stepで通常削除、finishの順で回収する。削除失敗はCI失敗として残し、所有と内容を照合して同じドライブの削除希望へ退避する。
 

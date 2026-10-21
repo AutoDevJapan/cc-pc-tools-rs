@@ -79,16 +79,11 @@ func sourceVerified(root string) bool {
 	return sourceOriginVerified(root, "autodevjapan/cc-pc-tools-rs")
 }
 func sourceOriginVerified(root, repository string) bool {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	command := exec.CommandContext(ctx, "git", "-C", root, "remote", "get-url", "origin")
-	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
-	command.WaitDelay = time.Second
-	output, err := command.Output()
-	if err != nil {
+	output, ok := currentGit(root, "remote", "get-url", "origin")
+	if !ok {
 		return false
 	}
-	origin := strings.ToLower(strings.TrimSpace(string(output)))
+	origin := strings.ToLower(output)
 	return origin == "https://github.com/"+repository+".git" || origin == "https://github.com/"+repository || origin == "git@github.com:"+repository+".git"
 }
 func boundedSchedulerTree(path string) bool {
@@ -178,6 +173,9 @@ func allowed(path string) bool {
 		return false
 	}
 	if owned2736PathAllowed(absolute) {
+		return true
+	}
+	if owned3107PathAllowed(absolute) {
 		return true
 	}
 	if conversationPathAllowed(absolute) {

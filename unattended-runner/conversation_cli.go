@@ -21,19 +21,22 @@ var errConversationArguments = errors.New("invalid conversation arguments")
 var errConversationBusy = errors.New("conversation busy")
 
 type conversationCLIOptions struct {
-	Config       string
-	Command      string
-	RequestID    string
-	Todo         uint64
-	OriginThread string
-	BodyFile     string
-	DecisionFile string
-	ReasonFile   string
-	Title        string
-	Wait         bool
-	Thread       string
-	Notify       bool
-	Attachments  []string
+	Config            string
+	Command           string
+	RequestID         string
+	Todo              uint64
+	OriginThread      string
+	BodyFile          string
+	DecisionFile      string
+	ReasonFile        string
+	Title             string
+	Wait              bool
+	Thread            string
+	Notify            bool
+	Attachments       []string
+	ClarificationFile string
+	CheckOnly         bool
+	Output            string
 }
 
 // Diagnostics from flag must never repeat an argument, body path or secret.
@@ -93,10 +96,13 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		conversationStringFlag(fs, "title", &opts.Title)
 		conversationStringFlag(fs, "body-file", &opts.BodyFile)
 		conversationStringFlag(fs, "thread", &opts.Thread)
+		conversationStringFlag(fs, "clarification-file", &opts.ClarificationFile)
+		fs.Var(&conversationBoolFlag{value: &opts.CheckOnly}, "check-only", "")
 		fs.Var(&conversationBoolFlag{value: &opts.Notify}, "notify", "")
 		conversationAttachmentFlags(fs, &opts.Attachments)
 	case "replies":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
+		conversationStringFlag(fs, "output", &opts.Output)
 	case "withdraw":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "reason-file", &opts.ReasonFile)
@@ -122,6 +128,12 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		}
 	case "log":
 		if opts.RequestID == "" || opts.Title == "" || opts.BodyFile == "" {
+			return opts, errConversationArguments
+		}
+		if opts.ClarificationFile != "" && (opts.Thread == "" || opts.Notify || len(opts.Attachments) != 0) {
+			return opts, errConversationArguments
+		}
+		if opts.CheckOnly && opts.ClarificationFile == "" {
 			return opts, errConversationArguments
 		}
 		if opts.Thread != "" {
@@ -162,6 +174,23 @@ type conversationCLIBackend interface {
 
 // This loader uses the independent runner state and lock, never the old ledger.
 func loadConversationCLIRunner(configPath string) (conversationCLIBackend, func(), error) {
+	return loadConversationRunner(configPath, conversationLoadOptions{Credentials: true})
+}
+
+func loadConversationStatusRunner(configPath string) (conversationCLIBackend, func(), error) {
+	return loadConversationRunner(configPath, conversationLoadOptions{ReadOnly: true})
+}
+
+func loadConversationRepliesRunner(configPath string) (conversationCLIBackend, func(), error) {
+	return loadConversationRunner(configPath, conversationLoadOptions{ReadOnly: true, Credentials: true})
+}
+
+type conversationLoadOptions struct {
+	ReadOnly    bool
+	Credentials bool
+}
+
+func loadConversationRunner(configPath string, mode conversationLoadOptions) (conversationCLIBackend, func(), error) {
 	var cfg Config
 	if readJSON(configPath, 1<<20, &cfg) != nil {
 		return nil, nil, errors.New("configuration unavailable")
@@ -170,12 +199,24 @@ func loadConversationCLIRunner(configPath string) (conversationCLIBackend, func(
 	if err != nil || since.Before(time.Date(2026, 10, 13, 0, 0, 0, 0, time.UTC)) || since.After(time.Now()) || !filepath.IsAbs(cfg.Home) || cfg.Project != "cc-pc-tools-rs" {
 		return nil, nil, errors.New("configuration scope invalid")
 	}
-	if os.MkdirAll(cfg.Home, 0700) != nil {
-		return nil, nil, errors.New("independent home unavailable")
-	}
-	unlock, err := acquire(filepath.Join(cfg.Home, "runner.lock"))
-	if err != nil {
-		return nil, nil, errConversationBusy
+	unlock := func() {}
+	if mode.ReadOnly {
+		// These are atomically replaced saved files, not a live cross-file
+		// transaction. Status never creates a home, empty index, lock or receipt.
+		for _, name := range []string{"unattended-state.json", "conversation-questions.json"} {
+			info, err := os.Lstat(filepath.Join(cfg.Home, name))
+			if err != nil || !info.Mode().IsRegular() {
+				return nil, nil, errors.New("saved status unavailable")
+			}
+		}
+	} else {
+		if os.MkdirAll(cfg.Home, 0700) != nil {
+			return nil, nil, errors.New("independent home unavailable")
+		}
+		unlock, err = acquire(filepath.Join(cfg.Home, "runner.lock"))
+		if err != nil {
+			return nil, nil, errConversationBusy
+		}
 	}
 	loaded := false
 	defer func() {
@@ -196,9 +237,12 @@ func loadConversationCLIRunner(configPath string) (conversationCLIBackend, func(
 	if err != nil {
 		return nil, nil, err
 	}
-	token := discordToken()
-	if token == "" {
-		return nil, nil, errors.New("Discord credential unavailable")
+	token := ""
+	if mode.Credentials {
+		token = discordToken()
+		if token == "" {
+			return nil, nil, errors.New("Discord credential unavailable")
+		}
 	}
 	runner := &Runner{Config: cfg, State: state, Client: &http.Client{Timeout: 6 * time.Second}, Token: token, Base: "https://discord.com/api/v10", Run: runCommand, Now: time.Now, TodoPath: "D:/CC/Tools/todo/todo.json"}
 	loaded = true
@@ -206,10 +250,22 @@ func loadConversationCLIRunner(configPath string) (conversationCLIBackend, func(
 }
 
 func conversationCLI(args []string, out io.Writer) int {
+	if opts, err := parseConversationCLI(args); err == nil {
+		if opts.Command == "status" {
+			return conversationCLIWithLoader(args, out, loadConversationStatusRunner)
+		}
+		if opts.Command == "replies" && opts.Output != "" {
+			return conversationCLIWithLoader(args, out, loadConversationRepliesRunner)
+		}
+	}
 	return conversationCLIWithLoader(args, out, loadConversationCLIRunner)
 }
 
 func conversationCLIWithLoader(args []string, out io.Writer, load func(string) (conversationCLIBackend, func(), error)) int {
+	return conversationCLIWithGuard(args, out, load, historyReadGuard)
+}
+
+func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (conversationCLIBackend, func(), error), guard func(context.Context, string) bool) int {
 	opts, err := parseConversationCLI(args)
 	if err != nil {
 		_, _ = io.WriteString(out, "invalid conversation arguments\n")
@@ -217,6 +273,10 @@ func conversationCLIWithLoader(args []string, out io.Writer, load func(string) (
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), conversationCLIDeadline)
 	defer cancel()
+	if opts.Output != "" && !conversationRepliesOutput(ctx, opts.Output, guard) {
+		_, _ = io.WriteString(out, "conversation unavailable\n")
+		return 1
+	}
 	runner, unlock, err := load(opts.Config)
 	if errors.Is(err, errConversationBusy) {
 		_, _ = io.WriteString(out, "busy\n")
@@ -235,9 +295,37 @@ func conversationCLIWithLoader(args []string, out io.Writer, load func(string) (
 			question, err = runner.conversationAsk(ctx, ConversationAskInput{RequestID: opts.RequestID, Todo: opts.Todo, OriginThread: opts.OriginThread, BodyFile: opts.BodyFile, DecisionFile: opts.DecisionFile, Title: opts.Title, Wait: opts.Wait, Attachments: opts.Attachments})
 			result = conversationQuestionPublic(question)
 		case "log":
-			result, err = runner.conversationLog(ctx, opts.RequestID, opts.Title, opts.BodyFile, opts.Thread, opts.Notify, opts.Attachments)
+			if opts.CheckOnly {
+				backend, ok := runner.(interface {
+					conversationCheckClarification(context.Context, string, string, string, string, string) (map[string]any, error)
+				})
+				if !ok {
+					err = errConversationArguments
+				} else {
+					result, err = backend.conversationCheckClarification(ctx, opts.RequestID, opts.Title, opts.BodyFile, opts.Thread, opts.ClarificationFile)
+				}
+			} else if opts.ClarificationFile == "" {
+				result, err = runner.conversationLog(ctx, opts.RequestID, opts.Title, opts.BodyFile, opts.Thread, opts.Notify, opts.Attachments)
+			} else if backend, ok := runner.(interface {
+				conversationClarification(context.Context, string, string, string, string, string) (map[string]any, error)
+			}); ok {
+				result, err = backend.conversationClarification(ctx, opts.RequestID, opts.Title, opts.BodyFile, opts.Thread, opts.ClarificationFile)
+			} else {
+				err = errConversationArguments
+			}
 		case "replies":
-			result, err = runner.conversationReplies(ctx, opts.RequestID)
+			if opts.Output != "" {
+				backend, ok := runner.(interface {
+					conversationRepliesSnapshot(context.Context, string, string) (map[string]any, error)
+				})
+				if !ok {
+					err = errConversationArguments
+				} else {
+					result, err = backend.conversationRepliesSnapshot(ctx, opts.RequestID, opts.Output)
+				}
+			} else {
+				result, err = runner.conversationReplies(ctx, opts.RequestID)
+			}
 		case "withdraw":
 			backend, ok := runner.(interface {
 				conversationWithdraw(context.Context, string, string) (map[string]any, error)

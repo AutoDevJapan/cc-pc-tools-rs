@@ -35,7 +35,7 @@ func validateGeneratedAssignment(s generatedQuestionSpec) error {
 	if json.Unmarshal(records[0], &meta) != nil || meta.Type != "session_meta" || meta.Payload.ID != s.Session || json.Unmarshal(records[1], &assignment) != nil || assignment.Type != "response_item" || assignment.Payload.Type != "message" || assignment.Payload.Role != "user" {
 		return errConversationMedia
 	}
-	pattern := regexp.MustCompile(`^(?:担当)?ToDo([0-9]+)(?:[^0-9]|$)`)
+	pattern := regexp.MustCompile(`^(?:担当)?ToDo(?:番号)?([0-9]+)(?:[^0-9]|$)`)
 	matched := 0
 	for _, content := range assignment.Payload.Content {
 		if content.Type != "input_text" {

@@ -221,6 +221,11 @@ func retirement3250RuntimeRead(rel string, limit int64) ([]byte, bool) {
 
 func retirement3250PathAllowed(path string) bool { return retirement3250Qualification(path) == "" }
 func retirement3250Qualification(path string) string {
+	clean, okSpelling := retirement3250RootSpelling(path)
+	if !okSpelling {
+		return "qualification-path-spelling"
+	}
+	path = clean
 	id := strings.TrimPrefix(filepath.Base(path), "codex-owned-")
 	if !retirement3250ID.MatchString(id) || id == owned3107ID || !same(path, filepath.Join(retirement3250Temp, "codex-owned-"+id)) || legacyMatch(path) || !conversationPhysical(path) {
 		return "qualification-stage-1"
@@ -292,6 +297,13 @@ func retirement3250Qualification(path string) string {
 		return "qualification-final-recheck"
 	}
 	return ""
+}
+
+func retirement3250RootSpelling(path string) (string, bool) {
+	clean := filepath.Clean(path)
+	// Accept either separator, without granting a lexically different path via
+	// dot/dotdot cleanup before the non-follow physical checks.
+	return clean, filepath.IsAbs(path) && strings.EqualFold(clean, strings.ReplaceAll(path, "/", `\`))
 }
 
 func retirement3250InventoryCheck(root string, volume uint32) string {

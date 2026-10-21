@@ -38,6 +38,21 @@ func TestRetirement3250SharedLeafDoesNotBlockAtomicWriter(t *testing.T) {
 	}
 }
 
+func TestRetirement3250RootSeparatorsAreCanonicalWithoutDotdotGrant(t *testing.T) {
+	raw := retirement3250Temp + "/codex-owned-bbdecd35aa4599f01cf61a3bfaa272b1"
+	a, ok := retirement3250RootSpelling(raw)
+	if !ok {
+		t.Fatal("forward spelling refused")
+	}
+	b, ok := retirement3250RootSpelling(filepath.FromSlash(raw))
+	if !ok || a != b {
+		t.Fatal("SCM image spelling differs")
+	}
+	if _, ok := retirement3250RootSpelling(retirement3250Temp + "/other/../codex-owned-bbdecd35aa4599f01cf61a3bfaa272b1"); ok {
+		t.Fatal("dotdot promoted")
+	}
+}
+
 func TestRetirement3250InventoryIsOpaqueAndRejectsExternalLinksAndDeny(t *testing.T) {
 	root := t.TempDir()
 	outside := t.TempDir()

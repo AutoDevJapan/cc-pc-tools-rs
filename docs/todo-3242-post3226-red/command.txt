@@ -1,0 +1,1 @@
+cargo nextest run --locked -p cc-job-policy -p localai-web-rs -E 'test(mcp_effective_) | test(mcp_related_review_) | test(mcp_live_requester_dependency_exclusion_controls)' --no-fail-fast

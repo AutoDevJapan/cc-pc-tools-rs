@@ -1,0 +1,47 @@
+{
+  "todo": 3242,
+  "parent_todo": 3103,
+  "issue": 289,
+  "parent_pr": 302,
+  "job": "20261021-104245-todo-3242",
+  "recorded_at": "2026-10-21T10:45:32.2128739+09:00",
+  "scope": "Fixed-source single Cargo measurement only; no implementation, PR, merge or deployment",
+  "workspace": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3242-3103",
+  "branch": "scheduler/todo-3242-3103",
+  "initial_head": "3e1a211ddeaa9d4d27bdabce12ffc3754863a232",
+  "source_commit": "a1aafe73c9e0564a79dc11d67de4fea362ca6020",
+  "implementation_base": "d4e1379d1302eb9277f373766fb3d51d418fbe40",
+  "remote": "https://github.com/AutoDevJapan/cc-pc-tools-rs.git",
+  "github_repository": {
+    "id": 1406818713,
+    "full_name": "AutoDevJapan/cc-pc-tools-rs",
+    "owner": "AutoDevJapan"
+  },
+  "oauth": {
+    "login": "mashfromband",
+    "user_id": 88025750,
+    "source": "GitHub CLI existing keyring",
+    "environment_token_present": false,
+    "api_key_present": false
+  },
+  "guard": {
+    "ok": true,
+    "client_resource": false,
+    "classification_unverified": false,
+    "original_registry_recovered": false,
+    "scope": "verified repair source and explicitly supplied operational receipts only"
+  },
+  "owned_temp": {
+    "id": "bcd13dfcd2f6a3494a968c067cd0c48f",
+    "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3242-3103\\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f",
+    "volume": 1215965535,
+    "file_id": 10414574145053331,
+    "created_at": "2026-10-21T10:44:48.3863499+09:00"
+  },
+  "cargo_entry": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "sccache": "D:/CC/Tools/sccache/sccache.exe",
+  "core_autocrlf": "true",
+  "policy": "Raw git archive, never worktree checkout; compare every blob without filters before and after; dedicated target; at most 10 threads; exactly one requested Cargo invocation",
+  "state": "preparing",
+  "test_invocations": 0
+}

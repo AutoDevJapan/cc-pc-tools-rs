@@ -1,0 +1,13 @@
+{
+  "source_commit": "a1aafe73c9e0564a79dc11d67de4fea362ca6020",
+  "created_at": "2026-10-21T10:48:06.0888518+09:00",
+  "archive": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3242-3103\\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f\\fixed-raw-source.tar",
+  "archive_sha256": "1493fa94f469dc06272e50dd5e5765475f8be0524956b90a3c6e342d91692fd4",
+  "archive_bytes": 14895616,
+  "files": 1186,
+  "converted_files_detected": 1167,
+  "method": "git cat-file --batch raw blob bytes from the shared object database, written as a raw PAX tar with System.Formats.Tar, then extracted; no checkout/clean/smudge/EOL conversion",
+  "initial_preflight_error": "Size differs: .config/nextest.toml; no Cargo started; initial git archive retained in owned temp with archive.json SHA256",
+  "extracted": true,
+  "requires_all_blob_verification_before_run": true
+}

@@ -88,8 +88,12 @@ pub enum Command {
         spec: Option<PathBuf>,
         #[arg(long)]
         model: Option<String>,
+        #[arg(long, requires="model", value_parser=["policy","owner_request"])]
+        model_origin: Option<String>,
         #[arg(long, value_parser=["none","minimal","low","medium","high","xhigh","max"])]
         effort: Option<String>,
+        #[arg(long, requires="effort", value_parser=["policy","owner_request"])]
+        effort_origin: Option<String>,
         #[arg(long, value_parser=["civ6","cargo"], help="exclusive resource; repeat if needed")]
         needs: Vec<String>,
         #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
@@ -434,7 +438,9 @@ pub fn add_item(db: &mut Value, args: &Command, paths: &Paths) -> Result<i64> {
         note,
         spec,
         model,
+        model_origin,
         effort,
+        effort_origin,
         needs,
         progress,
         subwork,
@@ -462,6 +468,14 @@ pub fn add_item(db: &mut Value, args: &Command, paths: &Paths) -> Result<i64> {
         return Err("add failed (ValueError)".into());
     }
     let id = db["next_id"].as_i64().ok_or("invalid next_id")?;
+    for (origin, value) in [(model_origin, model), (effort_origin, effort)] {
+        if let Some(origin) = origin
+            && (!["policy", "owner_request"].contains(&origin.as_str())
+                || value.as_ref().is_none_or(|value| value.is_empty()))
+        {
+            return Err("add failed (ValueError)".into());
+        }
+    }
     let display = |text: &str| {
         if project == cc_task_title::PRODUCT_NAME {
             cc_task_title::canonical_text(text)
@@ -535,6 +549,12 @@ pub fn add_item(db: &mut Value, args: &Command, paths: &Paths) -> Result<i64> {
         }
         if let Some(e) = effort {
             item["effort"] = json!(e);
+        }
+        if let Some(origin) = model_origin {
+            item["model_origin"] = json!(origin);
+        }
+        if let Some(origin) = effort_origin {
+            item["effort_origin"] = json!(origin);
         }
     }
     db["items"]

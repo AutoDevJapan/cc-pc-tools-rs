@@ -207,11 +207,14 @@ impl<'a> PrivacyIndex<'a> {
 
     fn linked_items(&self, job: &Value) -> Vec<usize> {
         let mut items = Vec::new();
-        if let Some(positions) = job["todo_id"]
-            .as_u64()
-            .and_then(|id| self.items_by_id.get(&id))
-        {
-            items.extend_from_slice(positions);
+        for id in job["todo_id"].as_u64().into_iter().chain(
+            rows(job, "related_todo_ids")
+                .iter()
+                .filter_map(Value::as_u64),
+        ) {
+            if let Some(positions) = self.items_by_id.get(&id) {
+                items.extend_from_slice(positions);
+            }
         }
         for id in ["id", "thread_id", "resume_session"]
             .into_iter()
@@ -808,14 +811,14 @@ mod tests {
         }
         assert!(
             response["items"][0]["note"]
-            .as_str()
-            .unwrap()
+                .as_str()
+                .unwrap()
                 .contains("正常な本文")
         );
         assert!(
             response["items"][0]["history"][0]["note"]
-            .as_str()
-            .unwrap()
+                .as_str()
+                .unwrap()
                 .contains("正常な本文")
         );
     }

@@ -104,7 +104,7 @@ func TestNoDuplicateOrOverlap(t *testing.T) {
 		state  State
 		active bool
 		want   string
-	}{{State{Date: "2026-10-05", Job: "today"}, false, "already launched today"}, {State{Date: "2026-10-04", Job: "old"}, true, "previous job still active"}} {
+	}{{State{Date: "2026-10-05", Job: "today", Todo: "123", TodoStarted: true}, false, "already launched today"}, {State{Date: "2026-10-04", Job: "old"}, true, "previous job still active"}} {
 		_, msg, e := execute("2026-10-05", c.state, "unused", func(string, ...string) (string, error) { t.Fatal("must not launch"); return "", nil }, func(string) (bool, error) { return c.active, nil })
 		if (c.active && e == nil) || (!c.active && e != nil) || msg != c.want {
 			t.Fatal(msg, e)

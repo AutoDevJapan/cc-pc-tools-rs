@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -25,10 +26,11 @@ const todoExe = "D:/CC/Tools/todo/todo.exe"
 var root = "D:/CC/Tools/x-bookmarks"
 
 type State struct {
-	Date string `json:"date"`
-	Job  string `json:"job"`
-	Todo string `json:"todo"`
-	Mode string `json:"mode,omitempty"`
+	Date        string `json:"date"`
+	Job         string `json:"job"`
+	Todo        string `json:"todo"`
+	Mode        string `json:"mode,omitempty"`
+	TodoStarted bool   `json:"todo_started,omitempty"`
 }
 
 type ManualRun struct {
@@ -145,13 +147,56 @@ func live(job string) (bool, error) {
 	return status == "running" || status == "starting" || status == "queued", err
 }
 func hiddenRun(exe string, args ...string) (string, error) {
-	c := exec.Command(exe, args...)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+	defer cancel()
+	c := exec.CommandContext(ctx, exe, args...)
 	c.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
-	b, e := c.CombinedOutput()
+	c.WaitDelay = 5 * time.Second
+	b, e := c.Output()
 	if e != nil {
-		return "", fmt.Errorf("%s: %w: %s", filepath.Base(exe), e, strings.TrimSpace(string(b)))
+		var exitErr *exec.ExitError
+		stderr := ""
+		if errors.As(e, &exitErr) {
+			stderr = strings.TrimSpace(string(exitErr.Stderr))
+		}
+		return "", fmt.Errorf("%s: %w: %s", filepath.Base(exe), e, stderr)
 	}
 	return strings.TrimSpace(string(b)), nil
+}
+
+func linkTodo(s State, statePath string, run Runner) (State, error) {
+	if s.TodoStarted {
+		return s, nil
+	}
+	if s.Todo == "" || s.Job == "" {
+		return s, fmt.Errorf("recorded job has no ToDo link")
+	}
+	if _, err := run(todoExe, "start", s.Todo, "--job", s.Job); err != nil {
+		return s, err
+	}
+	s.TodoStarted = true
+	return s, saveState(statePath, s)
+}
+
+func adoptManual(day string, todo int, statePath string) error {
+	b, err := os.ReadFile(statePath)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if err == nil {
+		var previous State
+		if err := json.Unmarshal(b, &previous); err != nil {
+			return err
+		}
+		if previous.Job != "" || (previous.Todo != "" && previous.Todo != strconv.Itoa(todo)) {
+			return fmt.Errorf("manual adoption must not overwrite an existing job or different ToDo")
+		}
+	}
+	s := State{Date: day, Todo: strconv.Itoa(todo), Mode: "manual"}
+	if _, err := manualRun(s); err != nil {
+		return err
+	}
+	return saveState(statePath, s)
 }
 func execute(day string, s State, statePath string, run Runner, check func(string) (bool, error)) (State, string, error) {
 	if s.Date == day && s.Mode == "manual" {
@@ -175,6 +220,10 @@ func execute(day string, s State, statePath string, run Runner, check func(strin
 				return s, "", fmt.Errorf("today's recorded job is %q; original ToDo %s remains unfinished", status, s.Todo)
 			}
 		}
+		s, err = linkTodo(s, statePath, run)
+		if err != nil {
+			return s, "launched; ToDo link failed", err
+		}
 		return s, "already launched today", nil
 	}
 	if s.Job != "" {
@@ -187,6 +236,9 @@ func execute(day string, s State, statePath string, run Runner, check func(strin
 		}
 	}
 	if s.Date != day {
+		if s.Todo != "" {
+			logLine("preserving previous daily ToDo " + s.Todo + "; item completion is tracked separately")
+		}
 		s = State{Date: day}
 		if e := saveState(statePath, s); e != nil {
 			return s, "", e
@@ -230,7 +282,8 @@ func execute(day string, s State, statePath string, run Runner, check func(strin
 	if e = saveState(statePath, s); e != nil {
 		return s, "", e
 	}
-	if _, e = run(todoExe, "start", s.Todo, "--job", id); e != nil {
+	s, e = linkTodo(s, statePath, run)
+	if e != nil {
 		return s, "launched; ToDo link failed", e
 	}
 	return s, "launched " + id, nil
@@ -302,7 +355,8 @@ func main() {
 		os.Exit(1)
 	}
 	if !ok {
-		return
+		logLine("another launcher holds the daily mutex; no launch performed")
+		os.Exit(1)
 	}
 	defer release()
 	if *adopt != 0 {
@@ -310,15 +364,12 @@ func main() {
 			logLine("invalid manual ToDo")
 			os.Exit(1)
 		}
-		s := State{Date: day, Todo: strconv.Itoa(*adopt), Mode: "manual"}
-		if _, e = manualRun(s); e == nil {
-			e = saveState(filepath.Join(root, "state.json"), s)
-		}
+		e = adoptManual(day, *adopt, filepath.Join(root, "state.json"))
 		if e != nil {
 			logLine(e.Error())
 			os.Exit(1)
 		}
-		logLine("adopted existing manual ToDo " + s.Todo + "; no job was invented or started")
+		logLine("adopted existing manual ToDo " + strconv.Itoa(*adopt) + "; no job was invented or started")
 		return
 	}
 	s, e := readState(filepath.Join(root, "state.json"))

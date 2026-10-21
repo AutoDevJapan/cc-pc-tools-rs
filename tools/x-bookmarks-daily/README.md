@@ -26,3 +26,8 @@ New daily ToDos retain their prompt through `--spec`; job launches carry the act
 ToDo, project and Japanese title. Nonzero child failures remain nonzero launcher results.
 The task's zero result only establishes successful launcher handling; daily item completion
 must still be read from the canonical run and verified separately.
+
+Manual adoption refuses to overwrite a recorded job, another ToDo or corrupt state.
+If linking an accepted worker to its ToDo fails, the next invocation retries that link
+without launching a new worker. Child commands use a three-minute timeout, bounded
+pipe drain and separate stdout receipt parsing; stderr warnings cannot become job IDs.

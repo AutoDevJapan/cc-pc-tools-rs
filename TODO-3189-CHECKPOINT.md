@@ -60,5 +60,18 @@
   product_review4件、対象Clippy/doctestはGreen。仕様はdocs/product-review-test-clock-3189.md。
   本番の期限や通常CLIは変更せず、このCI修正だけを別PRでレビュー/必要CI/通常mergeする。
   現branchはscheduler/todo-3189-ci-expiry。保存済みbranchからの変更を正規checkpointで保存する。
+- PR334の固定候補aa99324は実Opus5.5/maxレビュー3234でMust0。
+  Build speed39521213947は1307検査すべて成功、必要CodeQL39521213935も成功した。
+  本番の期限・通常CLIの時計を保ち、検査だけ固定した期限前後を確認している。
+  通常mergeでmain52814519b766f24159e4becc3c721b5700dac671へ反映した。
+  マージ後の結果はTODO-3189-FINAL.private.jsonに記録する。
+- 所有一時データ80件1,539,139バイトの原バイト列を、各SHAと共にprivate記録へ保管し読戻した。
+  safe-deleteのplan、別呼出しの通常削除、finishで整理を完了した。他担当の資料は整理していない。
+  証拠の目次はTODO-3189-EVIDENCE-MANIFEST.private.json。旧実行物のbackupと配布用releaseは保持する。
+- 元3126へCAS付きの通常noteで、実回収・no-op・source/hash・配布・追加CI修正のmergeを返した。
+  親のwait_on3189と元branch/HEADは保持したまま。この技術修復の完了後、元3126の真の次担当が
+  自分のCC_JOB_IDで最終checkpointを保存する。3189から3126への待機は循環するため作らない。
+- 最終結果の文書だけを現在branchへコミットし、終了時の実HEADを現在の真の担当で保存する。
+  元製品の修復、3050/3070の移行、本人への質問、UI候補の配布を繰り返していない。
 - 一時所有ID: 27075b23a6091a25d55408958e1de949。
   証拠はprivate記録として保持。元資料と他担当の成果は片付けない。

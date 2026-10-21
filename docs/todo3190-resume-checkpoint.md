@@ -2,6 +2,39 @@
 
 関連Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/325
 
+## 2026-10-21 17:53 JST：レビュー未完の間の反復起動を抑止
+
+PR315は前回と同じhead `b4fc59a984079ecafcde8de4038808fc7d18921b`、OPEN、
+base=main、mergeCommit/mergedAt=null、検査SUCCESS15/SKIPPED1/NEUTRAL1でした。
+3153はwait --on3300、3300は正常metadataでtodo/jobsTotal=0です。レビュー未完という同じ
+条件を確かめるだけの起動を繰り返さないため、元3190に通常のwait --on3300も登録しました。
+依頼の有限wait-retryと併記し、正常CLIで両条件を読み返しました。元3153全体のdone待ちや
+本人判断blockへ変えていません。レビューの完了を通常merge・配布と扱う変更でもありません。
+
+正常readbackはstatus=wait、wait_on=[3300]、waitPending=[3300]、waitReady=retry-time、
+notBefore=1792576430（2026-10-21 18:53:50 JST）、jobsTotal=9でした。既存cc-todo/lib.rsと
+ready.rs、todo-wait仕様を読取で確認し、通常CLIが期限と未完依存を別々に保持することに従いました。
+3300未完中は3190を起動せず、3300完了と期限後の通常再開時にPR315の実mergeを1回照合します。
+未mergeなら元3190の有限待機を保持し、正常merge確認後だけ最新mainへ統合して実装します。
+
+実jobは `20261021-174953-todo-3190`、正常statusはgpt-6.1-sol/max、todo_id/cwd一致。
+実turn_contextの独立照合はしていません。再開時HEADはf748718d、差分なし、同じbranchです。
+実所有者は正常repo照会でAutoDevJapan。guardはok=true/client_resource=false/
+classification_unverified=false、原保護一覧の復旧は未確認です。起動/プロジェクト指示と最新正本、
+前回記録、正常repo/PR・3153/3300/3190 metadata・自分のstatusと上記の待機処理だけを確認しました。
+本人原資料/元仕様/applied/旧台帳/保護名簿は未読。共有コードや元質問/回答/停止/他依存/稼働版の
+変更、実装・Red/Green・新規レビュー・merge・配布・方向の実記録/読戻し・質問closeは未実施です。
+
+登録原票は `todo3190-wait-registration-20261021-174953.private.json` と
+`todo3190-dependency-wait-20261021-174953.private.json`、読戻しは
+`todo3190-wait-readback-20261021-174953.private.json`。この担当の結果と残条件は
+`todo3190-parent-handoff-20261021-174953.private.json` へ永続保存しました。同じ待機の
+Discord報告や本人メンションは重ねず、以前の配送済み記録を保持します。
+この文書だけをcommit/pushし、最新HEADのcheckpoint要求/結果は
+`todo3190-checkpoint-final-20261021-174953.private.json` と
+`todo3190-checkpoint-final-result-20261021-174953.private.json` に保存します。
+元3050/3084/他依存/未完コードPrdと元の方向制約は保持しており、本人の対応は不要です。
+
 ## 2026-10-21 16:15 JSTの定期再確認
 
 PR315は最新head `b4fc59a984079ecafcde8de4038808fc7d18921b`、OPEN、base=main、

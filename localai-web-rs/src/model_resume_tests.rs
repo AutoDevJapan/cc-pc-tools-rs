@@ -114,10 +114,11 @@ fn watchdog_review_model_recovery_requires_the_current_saved_transition() {
             .unwrap();
         assert_eq!(next["model"], expected);
         assert_eq!(next["model_recovery_from"].is_string(), hint);
-        assert_eq!(
-            edited["model"], next_model,
-            "selection must not modify the saved ToDo"
-        );
+        let mut frozen_default = trigger.options.clone();
+        frozen_default["model"] = json!("gpt-6.1-sol");
+        let next = trigger_launch_options(&trigger, Some(&edited), &frozen_default, Some(&source)).unwrap();
+        assert_eq!(next["model"], expected);
+        assert_eq!(next["model_recovery_from"].is_string(), hint);
     }
 }
 
@@ -151,12 +152,14 @@ fn watchdog_review_recovery_passes_scoped_routing_and_provenance_through_tick() 
         db["items"][0]["jobs"] = json!(["source"]);
         db["items"][0]["model"] = json!("gpt-6.1-sol");
         db["items"][0]["model_origin"] = json!("policy");
-        db["items"][0]["stall_recovery"] =
-            json!({"pending":{"request":"stall-1-1","job":repaired}});
+        let pending = json!({"request":"stall-1-1","job":repaired,
+            "prompt":"保存した仕様と成果からレビューを再開する。",
+            "workspace":{"cwd":f.root,"isolate_worktree":false}});
+        db["items"][0]["stall_recovery"] = json!({"pending":pending});
         fs::write(f.console.paths.todo.join("todo.json"), db.to_string()).unwrap();
-        f.console.api(&Method::POST, "delegate", json!({"id":1,"request_id":"stall-1-1",
-            "prompt":"保存した仕様と成果からレビューを再開する。","cwd":f.root,"source_job_id":"source",
-            "isolate_worktree":false,"model":"gpt-6-astra","effort":"max","task_type":"review","sandbox":"read-only"})).unwrap();
+        let request = watchdog_request(&db["items"][0], &pending);
+        assert_eq!(request["model"], "gpt-6.1-sol", "use the production frozen request");
+        f.console.api(&Method::POST, "delegate", request).unwrap();
         f.console.tick().unwrap();
         assert_eq!(f.launches(), 1, "current={current}");
         let call = model_run(&f);
@@ -190,5 +193,6 @@ fn watchdog_review_recovery_passes_scoped_routing_and_provenance_through_tick() 
         );
         assert_eq!(model_arg(&call, "--effort").as_deref(), Some("max"));
         assert_eq!(model_arg(&call, "--sandbox").as_deref(), Some("read-only"));
+        assert_eq!(f.console.todos().unwrap()["items"][0]["model"], "gpt-6.1-sol");
     }
 }

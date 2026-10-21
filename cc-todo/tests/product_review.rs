@@ -38,7 +38,12 @@ fn only_original_review_changes_and_history_is_complete() {
     let mut r = r;
     r["snapshot"] = snapshot(&db, &db["items"][1]);
     let after = db.clone();
-    assert!(!bind_review(&mut db, &r, &owner).unwrap());
+    let replay = bind_review(&mut db, &r, &owner);
+    if scope::in_scope(cc_todo::time_s()) {
+        assert_eq!(replay, Ok(false));
+    } else {
+        assert_eq!(replay, Err("保存済みの割当が変わっています".into()));
+    }
     assert_eq!(db, after);
 }
 #[test]

@@ -1,0 +1,37 @@
+{
+  "todo": 3080,
+  "targets": [
+    {
+      "name": "diagnosing-superpowers",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "指定されたSuperpowers実行で完了済み作業が再実行された理由を、非秘密の記録から確認する。",
+      "negative": "Superpowersの公開Skill本文を棚卸しするだけで、実行セッションやその記録は診断しない。",
+      "sources": [
+        "obra/superpowers"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "5a652f8132cc901eb5ca61f89157839f87a2f20aed037fc7a2b51051bc37cd19"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "a37e0e9697144819e1d965176ac4ae5bc3fa02d11e7812036bbcadf6dafe2400"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "2b1036d99b3f1e6d819874fb61b1c6a256e91fa6256ed94321b7390187e97257"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "913447e0e4354d771cc4dd51580e0b1e57bf1ed155ccf694feaafe25d3d78952"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "414e3b3a4ebd9f367cbeda9dc26a7f3b6c89c95d6348d7db4f8dd7edc828bfff"
+        }
+      ]
+    }
+  ]
+}

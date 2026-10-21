@@ -42,7 +42,37 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 	if safeText(reply.Body, r.Token) != reply.Body {
 		return nil, errors.New("conversation owner receipt contains credential material")
 	}
+	acquiredAt := r.Now()
+	created, timeErr := time.Parse(time.RFC3339Nano, live.Timestamp)
+	if timeErr != nil || created.After(acquiredAt) {
+		// Do not freeze an acquisition before Discord's creation timestamp.
+		// The next bounded tick can acquire it after the local clock catches up.
+		return nil, errors.New("conversation owner source clock deferred")
+	}
+	if live.Edited != "" {
+		edited, err := time.Parse(time.RFC3339Nano, live.Edited)
+		if err != nil || edited.Before(created) || edited.After(acquiredAt) {
+			return nil, errors.New("conversation owner edit clock deferred")
+		}
+	}
 	old := r.State.Requests[reply.Message]
+	if old == nil {
+		path := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".json")
+		if _, statErr := os.Lstat(path); !os.IsNotExist(statErr) {
+			b, readErr := boundedRegular(path)
+			var saved Request
+			var savedProof conversationProof
+			if readErr != nil || json.Unmarshal(b, &saved) != nil || json.Unmarshal([]byte(saved.Context), &savedProof) != nil || saved.RecordVersion != 2 || saved.Source != "discord-api-v10" || saved.Conversation != q.RequestID || saved.Thread != q.Thread || saved.Guild != r.State.Destination.Guild || saved.Author != reply.Author || saved.Message != reply.Message || saved.Created != reply.Created || saved.Key != requestKey(q.Thread, reply.Message) || (saved.Todo != 0 && saved.Todo != q.Todo) || savedProof.RequestID != q.SenderID || savedProof.Thread != q.Thread || savedProof.Question != q.Message || savedProof.Owner != r.State.Destination.Owner || savedProof.Source != "discord-api-v10" || canonicalHash(savedProof.Decision) != q.DecisionSHA || bytesHash([]byte(savedProof.Body)) != q.QuestionSHA {
+				return nil, errors.New("conversation saved owner source differs")
+			}
+			// Restore the original private source without overwriting its bytes or
+			// trusting an intake phase as canonical delivery/application evidence.
+			saved.Phase, saved.Reported = "conversation_reply_saved", ""
+			saved.ConversationSourceRecovered = true
+			old = &saved
+			r.State.Requests[reply.Message] = old
+		}
+	}
 	if old != nil && (old.Thread != q.Thread || old.Author != reply.Author || old.Message != reply.Message || (old.Todo != 0 && old.Conversation != q.RequestID)) {
 		return nil, errors.New("conversation existing receipt association differs")
 	}
@@ -59,10 +89,11 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 		old.Text = reply.Body
 		old.Edited = live.Edited
 		old.ProgressThread = q.Progress
-		old.Acquired = r.Now().UTC().Format(time.RFC3339Nano)
+		old.Acquired = acquiredAt.UTC().Format(time.RFC3339Nano)
 		contextBytes, _ := json.Marshal(proof)
 		old.Context = string(contextBytes)
 		old.Phase = "conversation_reply_saved"
+		old.ConversationSourceRecovered = false
 		old.Reported = ""
 		if err := publish(filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".json"), old); err != nil {
 			return nil, err
@@ -76,7 +107,7 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 		return old, nil
 	}
 	contextBytes, _ := json.Marshal(proof)
-	req := &Request{Thread: q.Thread, Guild: r.State.Destination.Guild, RecordVersion: 2, Message: reply.Message, Author: reply.Author, Created: reply.Created, Edited: live.Edited, ReplyTo: live.Reference.Message, ReplyChannel: live.Reference.Channel, ReplyGuild: live.Reference.Guild, Acquired: r.Now().UTC().Format(time.RFC3339Nano), Source: "discord-api-v10", Text: reply.Body, Context: string(contextBytes), Key: requestKey(q.Thread, reply.Message), Phase: "conversation_reply_saved", ProgressThread: q.Progress, Conversation: q.RequestID}
+	req := &Request{Thread: q.Thread, Guild: r.State.Destination.Guild, RecordVersion: 2, Message: reply.Message, Author: reply.Author, Created: reply.Created, Edited: live.Edited, ReplyTo: live.Reference.Message, ReplyChannel: live.Reference.Channel, ReplyGuild: live.Reference.Guild, Acquired: acquiredAt.UTC().Format(time.RFC3339Nano), Source: "discord-api-v10", Text: reply.Body, Context: string(contextBytes), Key: requestKey(q.Thread, reply.Message), Phase: "conversation_reply_saved", ProgressThread: q.Progress, Conversation: q.RequestID}
 	path := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".json")
 	if err := publish(path, req); err != nil {
 		return nil, err
@@ -112,17 +143,33 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	if q.Wait {
 		// Every waiting reply, including a second reply, gets an immutable input
 		// before any edit. Reacquisition must not silently replace that version.
-		answer, b, _, reacquired, err := r.conversationAnswerInput(q, reply, req, receipt)
+		answer, b, answerFile, reacquired, err := r.conversationAnswerInput(q, reply, req, receipt)
 		if err != nil {
 			return err
 		}
-		if conversationDeliveryRecorded(row, q, answer, b) || conversationAnswerRecorded(row, q, answer, b) || (reacquired && hasNoteMarker(row.Note, marker)) {
+		if conversationDeliveryRecorded(row, q, answer, b) || conversationAnswerRecorded(row, q, answer, b) || (reacquired && conversationQuestionAnswered(row, q) && hasNoteMarker(row.Note, marker)) {
 			req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
 			return r.save()
 		}
 		if reacquired {
-			return errors.New("conversation reacquisition delivery proof unavailable")
+			if !hasNoteMarker(row.Note, marker) || !conversationWaitUnchanged(row, q) || !conversationWaitOwnerUnchanged(row) {
+				return errors.New("conversation reacquisition delivery proof unavailable")
+			}
+			// A note alone is a partial delivery. Complete only its exact original
+			// wait with the saved input; the canonical lock rejects any later hold.
+			if _, err = r.Run(ctx, conversationTodo, "question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile, "--scope-file", scopeFile); err != nil {
+				return errors.New("conversation reacquired partial answer deferred")
+			}
+			current, err := r.todo(q.Todo)
+			if err != nil || current.Project != q.Project || !conversationAnswerRecorded(current, q, answer, b) {
+				return errors.New("conversation reacquired answer readback deferred")
+			}
+			req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
+			return r.save()
 		}
+	}
+	if req.ConversationSourceRecovered && !hasNoteMarker(row.Note, marker) && (!q.Wait || conversationQuestionAnswered(row, q)) {
+		return errors.New("conversation recovered source delivery proof unavailable")
 	}
 	if q.Wait && conversationContinuedWait(row, q) {
 		return r.deliverContinuedConversationReply(ctx, row, q, reply, req, receipt, marker)

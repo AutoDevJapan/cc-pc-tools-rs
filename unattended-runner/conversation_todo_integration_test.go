@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -217,6 +218,37 @@ func TestConversationActualCanonicalRecapturedSecondReplyWithoutProofStaysPendin
 	if string(before) != string(after) || len(health.Errors) == 0 || f.r.State.Requests[reply.Message].Phase != "conversation_reply_saved" {
 		t.Fatal("an unproven second reply was rewritten or acknowledged after intake loss")
 	}
+	// A normal saved state/restart must retain the missing-delivery-proof bound.
+	stateBytes, _ := json.Marshal(f.r.State)
+	var restarted State
+	if json.Unmarshal(stateBytes, &restarted) != nil {
+		t.Fatal("restart fixture unavailable")
+	}
+	f.r.State = &restarted
+	for i := 0; i < 2; i++ {
+		f.r.processConversations(context.Background(), &Health{})
+	}
+	after, _ = os.ReadFile(f.r.TodoPath)
+	if string(before) != string(after) || f.r.State.Requests[reply.Message].Phase != "conversation_reply_saved" {
+		t.Fatal("restart lost the unproven source-recovery boundary")
+	}
+}
+
+func TestConversationActualCanonicalFutureEditDoesNotReplaceTheOriginalSource(t *testing.T) {
+	f := conversationNativeTest(t)
+	f.ask(t)
+	reply := f.reply(t, 8, "a")
+	f.r.processConversations(context.Background(), &Health{})
+	path := filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", reply.Message+".json")
+	before, _ := os.ReadFile(path)
+	now := time.Now()
+	f.r.Now = func() time.Time { return now }
+	f.edited = map[string]string{reply.Message: now.Add(time.Second).UTC().Format(time.RFC3339Nano)}
+	f.r.processConversations(context.Background(), &Health{})
+	after, _ := os.ReadFile(path)
+	if string(before) != string(after) {
+		t.Fatal("an edit ahead of the local clock overwrote the original acquisition")
+	}
 }
 
 func TestConversationActualCanonicalRecaptureRejectsDifferentSavedInput(t *testing.T) {
@@ -259,6 +291,95 @@ func TestConversationActualCanonicalRecaptureRejectsDifferentSavedInput(t *testi
 				t.Fatal("different immutable input was trusted or changed a later task")
 			}
 		})
+	}
+}
+
+func TestConversationActualCanonicalRecaptureCompletesOnlyTheOriginalPartialAnswer(t *testing.T) {
+	for _, stopped := range []bool{false, true} {
+		t.Run(fmt.Sprint(stopped), func(t *testing.T) {
+			f := conversationNativeTest(t)
+			f.ask(t)
+			reply := f.reply(t, 8, "a")
+			backend := f.r.Run
+			f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+				if path == conversationTodo && args[0] == "question-answer" {
+					return "", errors.New("interrupted after note edit, before answer commit")
+				}
+				return backend(ctx, path, args...)
+			}
+			f.r.processConversations(context.Background(), &Health{})
+			row, _ := f.r.todo(42)
+			if len(row.QuestionAnswers) != 0 || !strings.Contains(row.Note, "conversation-owner-reply:") {
+				t.Fatal("did not exercise partial delivery")
+			}
+			delete(f.r.State.Requests, reply.Message)
+			// Reproduce the prior recapture which published a new acquisition.
+			path := filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", reply.Message+".json")
+			if os.Remove(path) != nil {
+				t.Fatal("isolated lost-source fixture unavailable")
+			}
+			f.r.Run = backend
+			now := time.Now().Add(time.Second)
+			f.r.Now = func() time.Time { return now }
+			if stopped {
+				f.mutateTodo(t, func(row map[string]any) { row["owner_stopped"] = true })
+			}
+			before, _ := os.ReadFile(f.r.TodoPath)
+			health := Health{}
+			f.r.processConversations(context.Background(), &health)
+			row, _ = f.r.todo(42)
+			if stopped {
+				after, _ := os.ReadFile(f.r.TodoPath)
+				if len(health.Errors) == 0 || string(before) != string(after) || f.r.State.Requests[reply.Message].Phase != "conversation_reply_saved" {
+					t.Fatal("partial note acknowledged delivery or released a newer stop")
+				}
+			} else if len(health.Errors) != 0 || len(row.QuestionAnswers) != 1 || row.Status != "todo" || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
+				t.Fatal("intact original partial answer did not complete its canonical release")
+			}
+		})
+	}
+}
+
+func TestConversationActualCanonicalFutureReplyWaitsBeforeCreatingItsReceipt(t *testing.T) {
+	f := conversationNativeTest(t)
+	base := time.Now()
+	now := base.Add(-5 * time.Second)
+	f.r.Now = func() time.Time { return now }
+	f.ask(t)
+	reply := f.reply(t, 8, "a")
+	created := base.Add(-2 * time.Second)
+	now = created.Add(-time.Second)
+	reply.Created, reply.Message = created.Format(time.RFC3339Nano), snowflake(created)
+	f.replies[0] = reply
+	f.r.Now = func() time.Time { return now }
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	path := filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", reply.Message+".json")
+	if _, err := os.Stat(path); !os.IsNotExist(err) || f.r.State.Requests[reply.Message] != nil || len(health.Errors) == 0 {
+		t.Fatal("future API post created a permanently invalid acquisition")
+	}
+	now = created.Add(time.Second)
+	health = Health{}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) != 0 || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
+		t.Fatal("clock catch-up did not deliver the unchanged reply")
+	}
+}
+
+func TestConversationActualCanonicalRecapturePreservesTheOriginalSourceBytes(t *testing.T) {
+	f := conversationNativeTest(t)
+	f.ask(t)
+	reply := f.reply(t, 8, "a")
+	f.r.processConversations(context.Background(), &Health{})
+	path := filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", reply.Message+".json")
+	before, _ := os.ReadFile(path)
+	delete(f.r.State.Requests, reply.Message)
+	now := time.Now().Add(time.Second)
+	f.r.Now = func() time.Time { return now }
+	f.r.processConversations(context.Background(), &Health{})
+	after, _ := os.ReadFile(path)
+	if string(before) != string(after) {
+		t.Fatal("intake index loss overwrote the original per-reply application source")
 	}
 }
 

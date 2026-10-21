@@ -88,9 +88,13 @@ func launchKnownService(id string) error {
 	// Persistent wrappers retain the existing service lifetime; they add no
 	// restart loop. The finite startup checks above precede this one launch.
 	command := exec.Command(executable, arguments...)
+	command.Dir = working
+	return runServiceProcess(command)
+}
+
+func runServiceProcess(command *exec.Cmd) error {
 	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 	command.Stdout, command.Stderr = io.Discard, io.Discard
-	command.Dir = working
 	if err := command.Run(); err != nil {
 		return errors.New("service_process_failed")
 	}

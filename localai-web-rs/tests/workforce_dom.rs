@@ -1,3 +1,4 @@
+//! Exercises the retained index.html candidate, not the selected Prd page.
 use std::process::Command;
 
 #[test]

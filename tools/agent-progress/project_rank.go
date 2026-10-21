@@ -9,14 +9,17 @@ import (
 // Rank calculation is independent of the public-name allowlist. Exact policy
 // aliases are encoded as SHA-256 so protected aliases are not copied into this
 // module or diagnostics. This is not a secrecy guarantee for guessable names.
-// Port of cc-job-policy/src/priority.rs at 33b96765777a69663abba275b1df5b49e30458b2.
-// Canonical LF source SHA-256: c31787bfd508c40b62fd5bd57872a0c8d1a9ff31e907f6003bff52180287c86d.
+// Port of cc-job-policy priority and product-identity rules; synthetic behavior fixtures guard this boundary.
+// Canonical LF source SHA-256: fd4fd0a71c1438d77f67c7a0c5405495fc856bba34c4171c81cda6f6035472ac.
 func rankDigest(s string) string {
 	sum := sha256.Sum256([]byte(s))
 	return hex.EncodeToString(sum[:])
 }
 
 func projectRank(project string) int {
+	if r := mcpNamed(project); r.scoped {
+		return r.rank
+	}
 	p := strings.ToLower(project)
 	normalized := strings.NewReplacer("α", "alpha", "-", "", "_", "", " ", "", ":", "").Replace(p)
 	if rank := normalizedRanks[rankDigest(normalized)]; rank != 0 {

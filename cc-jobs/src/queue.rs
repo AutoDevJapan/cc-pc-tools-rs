@@ -1181,6 +1181,31 @@ impl Context {
                 .transpose()?
         };
         self.record_work_owner(&mut job);
+        if job["todo_id"].is_number()
+            && (job["capacity_history"].is_array() || job["capacity_owner_recheck"] == true)
+        {
+            let temporary_lock = if _subwork_store_lock.is_none() {
+                match FileLock::try_acquire(&self.todo_store().with_file_name("todo.lock")) {
+                    Ok(lock) => Some(lock),
+                    Err(_) => return Ok(None),
+                }
+            } else {
+                None
+            };
+            let store = self.todo_store();
+            let db = if store.exists() {
+                self.read_json(&store)?
+            } else {
+                json!({"items":[]})
+            };
+            if !crate::pool_retry::todo_owns_attempt(&db, &job) {
+                self.end_capacity_owner(&mut job);
+                self.save(&job)?;
+                return Ok(None);
+            }
+            drop(temporary_lock);
+        }
+        cc_job_policy::apply_managed_launch_policy(&mut job);
         let mut jobs = self.admission_jobs()?;
         // Recheck only the exact remembered owner, never scan terminal history
         // under the admission gate. Missing/unreadable evidence remains waiting.
@@ -1283,6 +1308,33 @@ impl Context {
             if let Some(reason) = reason {
                 self.save_admission_wait(&mut job, &reason)?;
                 return Ok(None);
+            }
+            if job["todo_id"].is_number()
+                && (job["capacity_history"].is_array() || job["capacity_owner_recheck"] == true)
+            {
+                if let Some(_row) = db["items"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .find(|row| row["id"] == job["todo_id"])
+                {
+                    if !crate::pool_retry::todo_owns_attempt(&db, &job) {
+                        self.end_capacity_owner(&mut job);
+                        self.save(&job)?;
+                        return Ok(None);
+                    }
+                    if job["capacity_owner_recheck"] == true {
+                        job["capacity_owner_recheck"] = json!(false);
+                        job["capacity_wait_pending"] = json!(true);
+                        job["retry_not_before"] = json!(self.rt.epoch());
+                        self.save(&job)?;
+                        return Ok(None);
+                    }
+                } else {
+                    self.end_capacity_owner(&mut job);
+                    self.save(&job)?;
+                    return Ok(None);
+                }
             }
         }
         if job["subwork"].is_object() {
@@ -1975,6 +2027,7 @@ pub fn prepare_resume(job: &mut Value, session: &str, now: &str) {
         "chrome_pipe",
         "gto",
         "gto_auto_attempt_at",
+        "execution_observed",
     ] {
         job[field] = Value::Null;
     }

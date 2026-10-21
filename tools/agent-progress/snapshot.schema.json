@@ -5,6 +5,8 @@
   "additionalProperties": false,
   "required": ["schema_version", "captured_at", "heartbeat_at", "status", "consistency", "sources", "tasks", "jobs", "task_total", "job_total", "truncated", "issues"],
   "properties": {
+    "product_bindings_configured": {"type": "boolean"},
+    "product_bindings_overridden": {"type": ["boolean", "null"]},
     "processing_contract": {"const": "agent-progress-active-v1"},
     "schema_version": {"const": 1},
     "captured_at": {"type": "string", "format": "date-time"},
@@ -29,6 +31,13 @@
     "issues": {"type": "array", "items": {"type": "string", "pattern": "^(todo_|jobs_|priority_)[a-z_]+$|^(row_limit|deadline)$"}}
   },
   "$defs": {
+    "product_identity": {
+      "type": "object", "additionalProperties": false, "required": ["state"],
+      "properties": {
+        "state": {"enum": ["verified", "owner_declared", "name_only", "unknown"]},
+        "product_id": {"enum": ["godd-mcp-contract", "godd-mcp-alpha"]}
+      }
+    },
     "clock": {
       "type": "object",
       "additionalProperties": false,
@@ -83,6 +92,7 @@
       "additionalProperties": false,
       "required": ["task_id", "display_name", "public_label", "label_kind", "department", "priority", "recorded_status", "percent", "progress_state", "execution", "phase", "task_type", "task_type_source", "detail", "job_keys", "wait_reasons", "record_updated", "last_activity", "parent_task_id"],
       "properties": {
+        "product_identity": {"$ref": "#/$defs/product_identity"},
         "task_id": {"type": "integer", "minimum": 1},
         "display_name": {"type": "string", "maxLength": 100},
         "public_label": {"$ref": "#/$defs/label"},
@@ -109,6 +119,7 @@
       "additionalProperties": false,
       "required": ["job_key", "todo_ids", "public_label", "label_kind", "department", "priority", "recorded_status", "execution", "worker_presence", "supervisor_presence", "phase", "task_type", "wait_reasons", "last_activity", "last_heartbeat", "source"],
       "properties": {
+        "product_identity": {"$ref": "#/$defs/product_identity"},
         "processing_verified": {"type": "boolean"},
         "job_key": {"$ref": "#/$defs/key"},
         "todo_ids": {"$ref": "#/$defs/ids"},

@@ -292,6 +292,8 @@ func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "  -verify-current-succession int")
 	fmt.Fprintln(output, "    \tverify one declared current product successor; no launch or mutation")
 	fmt.Fprintln(output, "  -refresh-owner-source string\n    \trefresh one positively registered self-source identity (bounded metadata only)")
+	fmt.Fprintln(output, "  -verify-model-runtime-update string")
+	fmt.Fprintln(output, "    \tqualify one exact ToDo3081 software update; grants no data access")
 }
 
 func verifyCurrentSuccession(taskID int) object {
@@ -310,6 +312,9 @@ func verifyCurrentSuccession(taskID int) object {
 }
 
 func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(int) object) int {
+	if model3081FlagPresent(args) {
+		return runModel3081CLI(args, stdout, model3081RuntimeReceipt)
+	}
 	return runGuardCLIWithPath(args, stdout, stderr, currentVerifier, classifyOwnerPath)
 }
 
@@ -381,7 +386,11 @@ func runGuardCLIWithPath(args []string, stdout, stderr io.Writer, currentVerifie
 	if ok {
 		verdict = pathVerifier(parsed.path)
 	}
-	result := map[string]any{"ok": ok, "client_resource": !verdict.AccessAllowed, "classification_unverified": verdict.Status == "unverified", "original_registry_recovered": false, "scope": "owner protection policy: client projects and owner card information; verified sources and purpose-checked receipts", "access_allowed": verdict.AccessAllowed, "protection_status": verdict.Status, "protection_categories": verdict.Categories}
+	retirement := ok && retirement3250PathAllowed(parsed.path)
+	if retirement && verdict.Status == "unverified" && !ownerCardPath(parsed.path) {
+		verdict = ownerPathVerdict{AccessAllowed: true, Status: "clear", Categories: []string{}}
+	}
+	result := map[string]any{"ok": ok, "client_resource": !verdict.AccessAllowed, "classification_unverified": verdict.Status == "unverified", "ci_retirement_qualified": retirement, "original_registry_recovered": false, "scope": "owner protection policy: client projects and owner card information; verified sources and purpose-checked receipts", "access_allowed": verdict.AccessAllowed, "protection_status": verdict.Status, "protection_categories": verdict.Categories}
 	_ = json.NewEncoder(stdout).Encode(result)
 	if !ok {
 		return 2

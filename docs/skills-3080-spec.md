@@ -88,3 +88,10 @@ Knap・setup-pre-commit・grillingの9ファイルを3180の具体指摘に沿�
 固定v2を通常の個別書込審査へ提出し、許可された新規1件だけを配置。原文とMIT全文を保持し5ファイルを読戻した。[配置証拠](skills-3080-diagnostic-installation-evidence.json)と[manifest](skills-3080-installed-diagnostic-manifest.json)を台帳へ接続した。新しいCodexのmetadata324中で対象1件・説明・enabledが一致、解析エラー0。現行27件135ファイルの実構造・参照・hash検査も成功。既存26件/managed/junctionは変更していない。v2差分の独立確認はこれからで、実セッション診断やモデルの文脈予算の検証ではない。
 
 [AIS-OS評価](skills-3080-ais-evaluation.json)は12入口を全バイト照合した。6用途それぞれに2runtime用の原パスがあり、5組は同一本文、level-upだけ探索するregistry pathが異なる2本文。異なる7本文をすべて読み、同一mirror5個も出典パスとハッシュを保持した。12導入や5統合とは数えず、ルートを追加する操作と3D可視化の2用途を新規候補、audit/面談/改善/初期設定の4用途を統合候補として保存。どれも未適用。元3048は同じ版のREADME/LICENSE/audit代表読取であり、全入口監査だったとはしない。未読の補助・renderer・assets・個別noticeは残し、UIは画像の本人確認前に実装しない。
+
+## 現行27件の受入と次のlink候補
+3249で実診断5ファイルと現行27件135ハッシュが確認されMust0。AIS-OSの全12出典も照合された。rootLICENSE以外に3d-brain同梱の第三者通知2パスがあることを評価へ補正し、その依存と未保存の起動metadataは未読として保持する。確認済み27件は再配置せず、軽微な本文提案は次の必要更新へまとめる。
+
+[linkの候補計画](skills-3080-batch07.json)は指定projectの資料をmanualから辿れるようにする1件。既に経路が働けば無変更、共通経路と意図的runtime差を分ける。現役metadataと用途を比較し、独立した経路編集と読戻しへ限定した。元の明示限定フラグは出典へ保存。Codex用は自動発見を維持し、依頼が経路編集を求める場合だけ使う。上流の未保存YAMLに値があると推測しない。
+
+正確なMIT全文・商標留保と原本文を保全し、[検査証拠](skills-3080-link-candidate-evidence.json)へメモリ内1件5ファイル・書込みなしpreflight・静的正負例を保存。候補1件はまだ未配置で、28設計=27導入+1未配置。元16資料全件の上限や完了ではない。

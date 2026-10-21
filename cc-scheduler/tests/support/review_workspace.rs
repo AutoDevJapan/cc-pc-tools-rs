@@ -191,7 +191,7 @@ fn review_workspace_migrates_recorded_parent_source_from_another_checkout() {
         row["scheduler"]["worktree"] = json!(source);
         row["scheduler"]["branch"] = json!(branch);
         row["scheduler"]["workspace_receipt"]["cwd"] = json!(source);
-        f.put(row.clone());
+        f.e.edit(&json!(2), |saved| *saved = row.clone()).unwrap();
         let bytes = fs::read(&f.e.todo_path).unwrap();
         let result = f.e.prepare(&row, f.repo.to_str().unwrap());
         if change == "valid" {

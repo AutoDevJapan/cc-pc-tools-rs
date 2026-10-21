@@ -46,3 +46,44 @@ releaseビルドは親が取り込む配布候補の生成に必要な1回だけ
 
 候補とreceiptは親3085が読み返すまで保持する。この担当は配布しない。
 最終レビューとマージは親3085/既存3090の範囲に残す。
+
+## 2026-10-21の結果
+
+指定した検査4件の実行と原因の切り分けは完了した。全体の検査結果は失敗。
+親ソースの修正や配布は行っていない。
+
+| 検査 | 終了コード | 結果 |
+| --- | ---: | --- |
+| cc-todo / cc-scheduler のnextest | 100 | 447件中446成功、1失敗、skip 0 |
+| 両クレートのdoctest | 0 | 両ライブラリとも対象0件 |
+| cc-todo のClippy（all-targets、警告をエラーとして扱う） | 0 | 成功 |
+| todo のreleaseビルド | 0 | 成功、未配布 |
+
+失敗した検査は `cc-todo::product_review::only_original_review_changes_and_history_is_complete`。
+`cc-todo/tests/product_review.rs:41` の2回目の `bind_review` が
+「保存済みの割当が変わっています」を返し、unwrapが失敗した。
+
+原因は `cc-todo/src/product_resume.rs:202` が実際の現在時刻を
+`cc-scheduler/src/product_review.rs:11-12` の固定期限と比較すること。
+固定期間は2026-10-13 00:00 UTC以上、2026-10-21 00:00 UTC未満であり、
+終了時刻は日本時間の2026-10-21 09:00。今回の検査は期限後の10:12〜10:14に実行した。
+テスト中の直接のeligible呼出しは過去の時刻を明示するが、2回目のbind_reviewには
+その時刻が渡らず、日付に依存する。本番の受付期限を延長せず、親担当が検査の時刻を
+固定して修正し、新しい固定ソースで影響する検査を確認する必要がある。
+この担当では同じ失敗の再実行、skipの追加、親ソースの編集を行っていない。
+
+親のHEAD・ブランチ・変更なしは全4件の前後と最終確認でも一致した。
+最終の正規scrub391判定も成功し、Cargo.lockのハッシュは開始時と一致した。
+
+テストが失敗したため `.ci-work/todo-3085-integrated.exe` は作成しなかった。
+release出力だけを専用生成先の `release/todo.exe` に保持している。
+サイズは7,632,384 bytes、現在のリンク数は2。配布候補として扱わない。
+
+- release SHA256: `8231fe28624328ac90fdd9792129ce8783bdc154cc8e3a729ebfe147718d4466`
+- receipt: `.ci-work/3085-cargo-receipt.private.json`
+- receipt SHA256: `535aeab44a2dd11be892272e70d068483799e52fc776643f29252c6fec164178`
+- 原因の記録: `.ci-work/3238-nextest-failure-analysis.private.json`
+- 全出力と各コマンドの終了結果: `.ci-work/3238-{nextest,doctest,clippy,release}.*`
+
+この検査の完了は親3085全体の完了を意味しない。親へ結果を返し、修正と最終レビューを残す。
+ソースや依存のキャッシュを含む専用生成先と全証拠は保持し、親の成果物を削除していない。

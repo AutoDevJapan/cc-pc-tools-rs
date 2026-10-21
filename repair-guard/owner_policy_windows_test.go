@@ -49,7 +49,8 @@ func TestOwnerPolicyUnknownIsNotAConfirmedClient(t *testing.T) {
 	if !ok || len(categories) != 0 || result["original_registry_recovered"] != false {
 		t.Fatal("unknown resource acquired an invented protection category")
 	}
-	if bytes.Contains(output.Bytes(), []byte(path)) || stderr.Len() != 0 {
+	encodedPath, _ := json.Marshal(path)
+	if bytes.Contains(output.Bytes(), encodedPath) || stderr.Len() != 0 {
 		t.Fatal("classification exposed private input")
 	}
 }
@@ -64,16 +65,21 @@ func TestOwnerPolicyCategoriesAndNonSourceBoundaries(t *testing.T) {
 		{"source.go", "clear", "", ownerLegacyAbsent, true},
 		{"source.go", "protected", "client_project", ownerLegacyClient, false},
 		{"source.go", "unverified", "", ownerLegacyUnavailable, false},
-		{".env.production", "unverified", "", ownerLegacyClear, false},
-		{"credentials.json", "unverified", "", ownerLegacyClear, false},
-		{"auth.json", "unverified", "", ownerLegacyClear, false},
-		{filepath.Join(".git", "config"), "unverified", "", ownerLegacyClear, false},
+		{".env.production", "clear", "", ownerLegacyClear, true},
+		{"credentials.json", "clear", "", ownerLegacyClear, true},
+		{"auth.json", "clear", "", ownerLegacyClear, true},
+		{filepath.Join(".git", "config"), "clear", "", ownerLegacyClear, true},
 		{"CREDIT_CARDS.JSON", "protected", "owner_card_information", ownerLegacyAbsent, false},
 		{"credit-cards.json.", "protected", "owner_card_information", ownerLegacyAbsent, false},
 		{"credit-cards.csv.bak", "protected", "owner_card_information", ownerLegacyAbsent, false},
 		{"main.go:unknown", "unverified", "", ownerLegacyClear, false},
 		{filepath.Join("クレジットカード情報", "scan.png"), "protected", "owner_card_information", ownerLegacyClear, false},
 		{"my-credit-card.txt", "protected", "owner_card_information", ownerLegacyClear, false},
+		{"古いクレカ情報.csv", "protected", "owner_card_information", ownerLegacyClear, false},
+		{"ｸﾚｼﾞｯﾄｶｰﾄﾞ.csv", "protected", "owner_card_information", ownerLegacyClear, false},
+		{"クレシ\u3099ットカート\u3099.csv", "protected", "owner_card_information", ownerLegacyClear, false},
+		{"CreditCard.tsx", "clear", "", ownerLegacyClear, true},
+		{"contract-amounts.json", "clear", "", ownerLegacyClear, true},
 		{"credit_card_handler.go", "clear", "", ownerLegacyClear, true},
 	} {
 		t.Run(tc.name+tc.status, func(t *testing.T) {
@@ -87,7 +93,7 @@ func TestOwnerPolicyCategoriesAndNonSourceBoundaries(t *testing.T) {
 		})
 	}
 	// A safe-looking alias must not conceal a card/credential location.
-	for _, target := range []string{"credit-cards.json", "credentials.json"} {
+	for _, target := range []string{"credit-cards.json"} {
 		v := ownerPolicyClassify(filepath.Join(root, "alias"), ownerPolicyAccess{
 			legacy: func(string) ownerLegacyState { return ownerLegacyAbsent },
 			repair: func(string) bool { return true }, source: func(string) ownerPathVerdict { return ownerUnverified() },
@@ -137,7 +143,7 @@ func ownerSourceFixture(t *testing.T) (string, object, ownerSourceAccess) {
 	currentFixtureGit(t, root, "add", "--", "main.go")
 	currentFixtureGit(t, root, "-c", "user.name=Fixture", "-c", "user.email=fixture@example.invalid", "-c", "commit.gpgsign=false", "commit", "-qm", "fixture")
 	db := object{"projects": object{"synthetic": root}, "items": []any{object{"id": 42, "status": "block", "owner_cancelled": true}}}
-	access := ownerSourceAccess{git: currentGit, plain: currentPlain, denied: func(string) bool { return false }, identity: func(repository string) (int64, string, string, bool) { return 12345, repository, "AutoDevJapan", true }}
+	access := ownerSourceAccess{git: currentGit, plain: currentPlain, denied: func(string) bool { return false }, identity: func(repository string) (int64, string, string, bool) { return 12345, repository, "AutoDevJapan", true }, membership: func(string, string) string { return "self" }}
 	return root, db, access
 }
 

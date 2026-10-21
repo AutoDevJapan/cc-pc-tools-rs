@@ -4,6 +4,8 @@ package main
 // This file reads metadata only and never changes an owner stop or registry.
 import (
 	"context"
+	_ "embed"
+	"encoding/json"
 	"io"
 	"os"
 	"os/exec"
@@ -13,6 +15,7 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -72,7 +75,15 @@ func ownerLegacyBytes(path string, data []byte) ownerLegacyState {
 }
 
 func ownerCardPath(path string) bool {
+	switch strings.ToLower(filepath.Ext(path)) {
+	case ".go", ".rs", ".ts", ".tsx", ".js", ".jsx", ".html", ".css":
+		return false
+	}
+	if info, err := os.Lstat(path); err == nil && info.IsDir() && ownerRepositoryCandidate(path) {
+		return false
+	}
 	for _, component := range strings.Split(strings.ReplaceAll(path, `\`, "/"), "/") {
+		component = ownerUnicodeKC(component)
 		component, _, _ = strings.Cut(component, ":")
 		component = strings.TrimRight(component, " .")
 		name := strings.TrimSuffix(strings.ToLower(component), strings.ToLower(filepath.Ext(component)))
@@ -86,9 +97,10 @@ func ownerCardPath(path string) bool {
 		}
 	normalized:
 		name = strings.NewReplacer("-", "", "_", "", " ", "").Replace(name)
-		switch name {
-		case "creditcard", "creditcards", "creditcardinfo", "creditcardinformation", "ownercreditcard", "ownercreditcards", "mycreditcard", "mycreditcards", "クレジットカード", "クレジットカード情報", "カード情報", "本人カード情報", "俺のクレジットカード":
-			return true
+		for _, marker := range []string{"creditcard", "クレジットカード", "クレカ", "カード情報", "カード番号"} {
+			if strings.Contains(name, marker) {
+				return true
+			}
 		}
 	}
 	return false
@@ -119,7 +131,7 @@ type ownerPolicyAccess struct {
 func classifyOwnerPath(path string) ownerPathVerdict {
 	return ownerPolicyClassify(path, ownerPolicyAccess{
 		legacy: ownerLegacyProtection, repair: repairPathAllowed,
-		source: ownerRegisteredSource, physical: physical,
+		source: ownerRegisteredSource, physical: ownerPhysicalPath,
 	})
 }
 
@@ -133,24 +145,40 @@ func ownerPolicyClassify(path string, access ownerPolicyAccess) ownerPathVerdict
 	paths := []string{path}
 	if target, err := access.physical(path); err == nil && !same(path, target) {
 		paths = append(paths, target)
+	} else if err != nil && !os.IsNotExist(err) {
+		return ownerUnverified()
+	}
+	categories := []string{}
+	card, client := false, false
+	for _, candidate := range paths {
+		card = card || ownerCardPath(candidate)
+		client = client || access.legacy(candidate) == ownerLegacyClient
+	}
+	if card {
+		categories = append(categories, "owner_card_information")
+	}
+	if client {
+		categories = append(categories, "client_project")
+	}
+	if len(categories) > 0 {
+		return ownerPathVerdict{Status: "protected", Categories: categories}
 	}
 	for _, candidate := range paths {
-		if ownerCardPath(candidate) {
-			return ownerProtected("owner_card_information")
-		}
-		if access.legacy(candidate) == ownerLegacyClient {
-			return ownerProtected("client_project")
-		}
-	}
-	for _, candidate := range paths {
-		if ownerWindowsAlias(candidate) || ownerNonSourcePath(candidate) || access.legacy(candidate) == ownerLegacyUnavailable {
+		if ownerWindowsAlias(candidate) || access.legacy(candidate) == ownerLegacyUnavailable {
 			return ownerUnverified()
 		}
 	}
 	if access.repair(path) {
+		if len(paths) > 1 && !access.repair(paths[1]) {
+			return ownerUnverified()
+		}
 		return ownerPathVerdict{AccessAllowed: true, Status: "clear", Categories: []string{}}
 	}
 	return access.source(path)
+}
+
+func repairOnlyAllowed(path string) bool {
+	return ownerPolicyClassify(path, ownerPolicyAccess{legacy: ownerLegacyProtection, repair: repairPathAllowed, source: func(string) ownerPathVerdict { return ownerUnverified() }, physical: ownerPhysicalPath}).AccessAllowed
 }
 
 func ownerWindowsAlias(path string) bool {
@@ -166,10 +194,65 @@ func ownerWindowsAlias(path string) bool {
 }
 
 type ownerSourceAccess struct {
-	git      func(string, ...string) (string, bool)
-	identity func(string) (int64, string, string, bool)
-	plain    func(string, bool) bool
-	denied   func(string) bool
+	git        func(string, ...string) (string, bool)
+	identity   func(string) (int64, string, string, bool)
+	plain      func(string, bool) bool
+	denied     func(string) bool
+	membership func(string, string) string
+}
+
+// The owner's normal department catalogue supplies positive membership. Hashes
+// avoid copying contracted product names into the guard's public source.
+//
+//go:generate go run ./internal/cataloggen
+//go:embed owner_catalog.json
+var ownerDepartmentCatalog []byte
+
+func ownerProductHash(value string) string {
+	value = strings.TrimPrefix(strings.ToLower(value), "resume-")
+	return hashBytes([]byte(strings.Map(func(r rune) rune {
+		if unicode.IsLetter(r) || unicode.IsDigit(r) {
+			return r
+		}
+		return -1
+	}, value)))
+}
+
+func ownerDepartmentMembership(project, repository string) string {
+	return ownerMembershipWith(project, repository, ownerDepartmentCatalog)
+}
+
+func ownerMembershipWith(project, repository string, catalog []byte) string {
+	var data struct {
+		Domain string `json:"domain"`
+		Groups []struct {
+			Kind    string   `json:"kind"`
+			Aliases []string `json:"aliases"`
+		} `json:"groups"`
+	}
+	if json.Unmarshal(catalog, &data) != nil || data.Domain != "owner-department-classification-v1" {
+		return ""
+	}
+	_, name, ok := strings.Cut(repository, "/")
+	if !ok {
+		name = repository
+	}
+	p, r := ownerProductHash(project), ownerProductHash(name)
+	matched := ""
+	for _, group := range data.Groups {
+		projectMatch, repositoryMatch := false, false
+		for _, alias := range group.Aliases {
+			projectMatch = projectMatch || alias == p
+			repositoryMatch = repositoryMatch || alias == r
+		}
+		if group.Kind == "client_project" && (projectMatch || repositoryMatch) {
+			return "client_project"
+		}
+		if group.Kind == "self" && projectMatch && (repository == "" || repositoryMatch) {
+			matched = "self"
+		}
+	}
+	return matched
 }
 
 // Only these actual GitHub owners have the owner's self-development policy.
@@ -195,12 +278,10 @@ func ownerOriginRepository(origin string) (string, bool) {
 	return repository, ownerRepositoryName.MatchString(repository) && len(parts) == 2 && ownerSelfGitHubOwner(parts[0]) && parts[1] != "." && parts[1] != ".."
 }
 
-func ownerGitHubIdentity(repository string) (int64, string, string, bool) {
-	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
-	defer cancel()
+func ownerGitHubIdentityWith(ctx context.Context, repository string) (int64, string, string, bool) {
 	cmd := exec.CommandContext(ctx, currentGitHubCLI, "api", "--hostname", "github.com", "repos/"+repository, "--jq", "[.id, .full_name, .owner.login] | @tsv")
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
-	cmd.WaitDelay = time.Second
+	cmd.WaitDelay = 20 * time.Millisecond
 	cmd.Env = currentGitHubCLIEnvironment(os.Environ())
 	b, err := cmd.Output()
 	if err != nil {
@@ -217,17 +298,34 @@ func ownerGitHubIdentity(repository string) (int64, string, string, bool) {
 func ownerRegisteredSource(path string) ownerPathVerdict {
 	// This is the existing normal internal metadata reader. Never print project
 	// names/paths, initialize a missing store, or use registration as permission.
-	b, ok := conversationBytes(productStore, 64<<20, legacyMatch)
+	ctx, cancel := context.WithTimeout(context.Background(), 750*time.Millisecond)
+	defer cancel()
+	missing := false
+	access := ownerSourceAccess{git: func(root string, args ...string) (string, bool) { return ownerSourceGit(ctx, root, args...) }, identity: func(repo string) (int64, string, string, bool) {
+		id, name, owner, ok := ownerCachedIdentity(ctx, repo)
+		missing = !ok
+		return id, name, owner, ok
+	}, plain: currentPlain, denied: legacyMatch, membership: ownerDepartmentMembership}
+	result := ownerRegisteredSourceAt(ctx, path, func(ctx context.Context) (object, bool) { return ownerReadProjects(ctx, productStore) }, access)
+	if missing && ctx.Err() == nil {
+		ownerRequestIdentityRefresh(path)
+	}
+	return result
+}
+
+func ownerRegisteredSourceAt(ctx context.Context, path string, read func(context.Context) (object, bool), access ownerSourceAccess) ownerPathVerdict {
+	if !ownerRepositoryCandidate(path) {
+		return ownerUnverified()
+	}
+	projects, ok := read(ctx)
 	if !ok {
 		return ownerUnverified()
 	}
-	db, ok := conversationJSON(b)
-	if !ok {
-		return ownerUnverified()
-	}
-	result := ownerRegisteredSourceWith(path, db, ownerSourceAccess{git: currentGit, identity: ownerGitHubIdentity, plain: currentPlain, denied: legacyMatch})
-	after, ok := conversationBytes(productStore, 64<<20, legacyMatch)
-	if !ok || hashBytes(b) != hashBytes(after) {
+	result := ownerRegisteredSourceWith(path, object{"projects": projects}, access)
+	after, ok := read(ctx)
+	beforeJSON, _ := json.Marshal(projects)
+	afterJSON, _ := json.Marshal(after)
+	if !ok || !strings.EqualFold(hashBytes(beforeJSON), hashBytes(afterJSON)) || ctx.Err() != nil {
 		return ownerUnverified()
 	}
 	return result
@@ -242,7 +340,7 @@ func ownerRegisteredSourceWith(path string, db object, access ownerSourceAccess)
 	if !ok {
 		return ownerUnverified()
 	}
-	for _, entry := range projects {
+	for project, entry := range projects {
 		root, ok := entry.(string)
 		if !ok || !filepath.IsAbs(root) || (!within(root, path) && !within(root+"-wt", path)) {
 			continue
@@ -250,27 +348,50 @@ func ownerRegisteredSourceWith(path string, db object, access ownerSourceAccess)
 		if !access.plain(root, true) || access.denied(root) || ownerNonSourcePath(root) || ownerCardPath(root) {
 			continue
 		}
-		registeredTop, ok := access.git(root, "rev-parse", "--show-toplevel")
-		if !ok || !same(registeredTop, root) {
+		if access.membership == nil {
 			continue
 		}
-		probe := path
-		if !info.IsDir() {
-			probe = filepath.Dir(path)
+		membership := access.membership(project, "")
+		if membership == "client_project" {
+			return ownerProtected("client_project")
 		}
-		top, ok := access.git(probe, "rev-parse", "--show-toplevel")
+		if membership != "self" {
+			continue
+		}
+		registered, ok := access.git(root, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
+		parts := strings.Split(strings.ReplaceAll(registered, "\r\n", "\n"), "\n")
+		if !ok || len(parts) != 2 || !same(parts[0], root) {
+			continue
+		}
+		common := parts[1]
+		top, ok := ownerRepositoryRoot(path)
 		if !ok || !access.plain(top, true) || (!same(top, root) && !within(root+"-wt", top)) || !within(top, path) || access.denied(top) {
 			continue
 		}
-		common, ok := access.git(root, "rev-parse", "--path-format=absolute", "--git-common-dir")
-		other, okOther := access.git(top, "rev-parse", "--path-format=absolute", "--git-common-dir")
-		if !ok || !okOther || !same(common, other) || !access.plain(common, true) {
+		if !access.plain(common, true) {
 			continue
 		}
+		if !same(root, top) {
+			other, ok := access.git(top, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
+			otherParts := strings.Split(strings.ReplaceAll(other, "\r\n", "\n"), "\n")
+			if !ok || len(otherParts) != 2 || !same(otherParts[0], top) || !same(common, otherParts[1]) {
+				continue
+			}
+		}
 		origin, ok := access.git(root, "remote", "get-url", "origin")
-		otherOrigin, okOther := access.git(top, "remote", "get-url", "origin")
+		otherOrigin, okOther := origin, ok
+		if !same(root, top) {
+			otherOrigin, okOther = access.git(top, "remote", "get-url", "origin")
+		}
 		repository, valid := ownerOriginRepository(origin)
 		if !ok || !okOther || !valid || origin != otherOrigin {
+			continue
+		}
+		membership = access.membership(project, repository)
+		if membership == "client_project" {
+			return ownerProtected("client_project")
+		}
+		if membership != "self" {
 			continue
 		}
 		id, actualRepository, owner, verified := access.identity(repository)

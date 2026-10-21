@@ -4,9 +4,9 @@ env:
 on:
   push:
     branches: [main]
-    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
+    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'localai-web-rs/src/operations_catalog.rs', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
   pull_request:
-    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
+    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'localai-web-rs/src/operations_catalog.rs', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
 permissions:
   contents: read
 concurrency:
@@ -84,6 +84,7 @@ jobs:
         with:
           go-version-file: repair-guard/go.mod
           cache: false
+      - run: go run ./internal/cataloggen -check
       - run: go test ./...
       - run: go vet ./...
       - run: go build -trimpath .

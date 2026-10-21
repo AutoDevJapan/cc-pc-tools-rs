@@ -2,6 +2,54 @@
 
 関連Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/325
 
+## 2026-10-21 12:34 JSTの再開照合と親への返却
+
+PR315はhead `b1559fcd17a38cff52ab8d9a93afd31432776e5e`、OPEN、base=main、
+mergeCommit/mergedAt=nullでした。最新検査には実行中・待機が残り、3275の正常metadataは
+todo/jobsTotal=0です。3153はwait --on3275で、3251の指摘後の修正という正常noteを確認しました。
+最新版のレビュー合格・通常merge・配布は未確認で、方向記録の実装は引き続き未着手です。
+GitHub照会の最初のjq表示はCLIラッパーの引数解釈で失敗し、jqを使わない正常JSON照会で
+上記を確認しました。審査拒否ではありません。照会原票は
+`todo3190-pr315-20261021-122943.private.json` に保持しています。
+
+今回の実jobは `20261021-122943-todo-3190`、正常statusはgpt-6.1-sol/max、todo_id/cwd一致。
+実turn_contextは独立照合していません。再開時HEADは6114d7d、差分なし、同じbranchでした。
+実所有者は正常repo照会でAutoDevJapan、guardはok=true/client_resource=false/
+classification_unverified=false。新しいAgentConduct正本、起動/プロジェクト方針を読みました。
+本人原文・主の補足・未採用案・実装状況を分け、禁止3件と元依頼の具体範囲を保持します。
+結果返却の手順を確認するためorigin/mainをfetchし、結果仕様と公開ソースを読取だけに使いました。
+mainは統合しておらず、共有コード・元仕様・質問・回答・停止・依存・稼働版は変更していません。
+
+元3190のwait-retryを1回登録し、終了0と正常readbackを確認しました。wait/retry-time、
+notBefore=1792557246（2026-10-21 13:34:06 JST）、jobsTotal=5、wait_on空です。
+3153全体のdone待ちや本人判断blockへ変えていません。原票は
+`todo3190-wait-{registration,readback}-20261021-122943.private.json` です。
+
+新しい結果返却方針に従い、正式な自分のjob/ToDoと、正常親一覧の実job
+`20261021-102443-todo-3110` を区別して、normal agent-result recordへ1遷移だけ保存しました。
+record=`b947029118957813e52435e05ce81a94d2e1aeb53c2f06d973f9d9f6a3079644`、
+parent_received_at=2026-10-21T03:34:43.7069096Z、work_completed=false、初回delivery=pending。
+参照原票は `todo3190-parent-handoff-20261021-122943.private.json` と
+`todo3190-agent-result-{input,received}-20261021-122943.private.json` です。
+正常conversation statusの対象2件metadataで、第一質問の別進捗投稿1561946072874618990を
+確認して結果の宛先としました。原質問への進捗、新質問、3257専用スレッドへの混載はしません。
+この照会は本文/現在sourceSHA/編集版/実記録の証明ではなく、方向反映やcloseの完了としません。
+親への永続受領とDiscord配送を区別し、結果のstatus原票を
+`todo3190-agent-result-status-20261021-122943.private.json` に残します。
+本人への本文メンション要件も親へ保持し、受付だけで通知・配送済みとは主張しません。
+追加の本人指示「通知冒頭は対応不要」を同じ私的引継ぎへ保存しました。通常の技術待機として
+本人の回答は求めません。既存recordの入力や本文を編集して再登録することもしません。
+12:36:01 JSTの正常status照会は終了1、`agent result storage unavailable` でした。
+これは自動審査拒否ではなくCLI実行結果で、原因をlock競合と断定していません。
+親への受領済みとDiscord GET未確認を分け、同じrecordだけを有限に再照合して結果を保持します。
+
+コード検査・build・新規レビュー・merge・配布・方向の実記録と読戻し・質問終了GETは未実施です。
+元3050/3084/他依存と未完コード/Prdを保持し、本人の操作・判断は不要です。
+この文書だけをcommit/pushし、最新実HEADのcheckpoint要求/結果は
+`todo3190-checkpoint-final-20261021-122943.private.json` と
+`todo3190-checkpoint-final-result-20261021-122943.private.json` に保存します。
+次回も同じ元番号でPR315の通常mergeを1回照合し、確認後に最新mainを統合して実装します。
+
 ## 2026-10-21 10:40 JSTの再開照合
 
 PR315はhead `117dabf751adcbe6a64129bcd38ab3c87a092a05` のままOPEN、base=main、

@@ -1,0 +1,37 @@
+{
+  "todo": 3080,
+  "targets": [
+    {
+      "name": "link",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "指定projectの資料を既存索引へ追加し、AGENTS.mdから正本まで辿れるようにする。",
+      "negative": "資料を読む・要約するだけの依頼で、manualや索引への経路変更は求められていない。",
+      "sources": [
+        "nateherkai/AIS-OS"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "fa4251aeae03c74bbc44045c66daacfe871cedc7c6c8fa2c3cc307c7376a9b9c"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "79f6fb36dbf642e59321081ffe67eb49476faf19f5cca43c56673a01df202493"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "9aaebd4225a4dba2d0db261545a819539cf941d3abb0ed714dfca3ec6f8759ad"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "42ee6a158b0cdb6f2d37a398e3b681a569b21d6f9a0352d0c36b43b6c52dc7f3"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "0024829f3f9092c1c0748e44c8dcb6bcc6d81862c0c158a3ae8bd98115923ec6"
+        }
+      ]
+    }
+  ]
+}

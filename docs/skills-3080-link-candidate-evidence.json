@@ -108,5 +108,11 @@
     "limits": "3270はv1候補を静的確認。具体的な短文提案をv2へ反映し、実配置後の差分は別の有限レビューで確認する。"
   },
   "candidate_v1_sha256": "33c75886fe22c69cfe200f8a3d37752f154caf2af95b12ab2a3faaefbfd7f472",
-  "amended_at": "2026-10-21T05:38:49.3594713Z"
+  "amended_at": "2026-10-21T05:38:49.3594713Z",
+  "superseded_by": {
+    "manifest": "skills-3080-installed-link-manifest.json",
+    "evidence": "skills-3080-link-installation-evidence.json",
+    "live_ledger": "skills-3080-adoptions.json",
+    "history": "候補検査時点の配置0表示を保持。現在版は配置済みだがv2差分の独立確認前。"
+  }
 }

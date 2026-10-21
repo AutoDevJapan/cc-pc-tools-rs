@@ -43,6 +43,17 @@ parent_received_at=2026-10-21T03:34:43.7069096Z、work_completed=false、初回d
 これは自動審査拒否ではなくCLI実行結果で、原因をlock競合と断定していません。
 親への受領済みとDiscord GET未確認を分け、同じrecordだけを有限に再照合して結果を保持します。
 
+12:38の同一入力による正常な冪等readbackでは、元のrecord ID/parent_received_atを保ったまま
+delivery=verified、attempts=1、message=1562308231458455677、
+verified_at=2026-10-21T03:35:10.8403992Zを確認しました。
+URL: https://discord.com/channels/1552944707464597524/1561946072874618990/1562308231458455677
+結果の受領・通常配送とGET照合が済んだ証拠であり、方向仕様の実記録や質問closeではありません。
+原票は `todo3190-agent-result-record-readback-20261021-122943.private.json`、
+照合票は `todo3190-agent-result-readback-verification-20261021-122943.private.json` です。
+最初の自分の日時比較はPowerShellの自動DateTime変換で失敗したため、同じ保存原票を文字列のまま
+解析して一致を確認しました。追加record呼出しや別の遷移は作っていません。
+本文冒頭の対応不要表示と本人メンションは今回独立確認していないため、親への引継ぎに残します。
+
 コード検査・build・新規レビュー・merge・配布・方向の実記録と読戻し・質問終了GETは未実施です。
 元3050/3084/他依存と未完コード/Prdを保持し、本人の操作・判断は不要です。
 この文書だけをcommit/pushし、最新実HEADのcheckpoint要求/結果は

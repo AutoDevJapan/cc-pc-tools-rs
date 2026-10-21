@@ -75,3 +75,19 @@ ctx.cancelPageFetches();assert.equal(pauses,0,'hiding the browser must not stop 
 ctx.cancelPageFetches('systems');assert.equal(pauses,1,'leaving the music page explicitly may stop playback');assert(cancelled>0);
 `)
 }
+
+func TestReview3121CancellingDetailDoesNotCreateTimeout(t *testing.T) {
+	node(t, `
+let reject;const ctx={opsState:{details:new Map(),detailController:null,selected:null},AbortController,setTimeout,clearTimeout,renderOpsDetail(){},api:()=>new Promise((_resolve,rejector)=>{reject=rejector})};
+vm.createContext(ctx);vm.runInContext(between(input.index,'async function loadOpsDetail(','function openOpsDetail('),ctx);
+(async()=>{const work=ctx.loadOpsDetail({id:'todo-1',detailAvailable:true,detailVersion:'v'});ctx.opsState.detailController.abort();ctx.opsState.detailController=null;reject(Object.assign(new Error('cancelled'),{name:'AbortError'}));await work;assert.equal(ctx.opsState.details.get('todo-1').error,'','a closed detail must not acquire a timeout error')})().catch(error=>{console.error(error);process.exitCode=1});
+`)
+}
+
+func TestReview3121ProgressRequiresSessionProof(t *testing.T) {
+	node(t, `
+const ctx={Date,opsList:value=>Array.isArray(value)?value:[]};vm.createContext(ctx);vm.runInContext(between(input.index,'function processingRows(','function renderProgress('),ctx);
+const board={workforce:{processing:{state:'partial',validUntil:200}},departments:[{products:[{workers:[{id:'todo-1',workState:'processing',references:{sessions:['old-unknown']}}]}]}]};
+assert.equal(ctx.processingRows(board,100).length,0,'a reference without a current proof must never become live');
+`)
+}

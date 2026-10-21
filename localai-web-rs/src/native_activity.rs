@@ -372,7 +372,7 @@ impl Registry {
             }
         }
         json!({"source":"native","state":if ledger.entries.is_empty(){"unobserved"}else{"partial"},"complete":false,
-            "sessions":sessions,"bindings":bindings,"knownSources":ledger.entries.len(),"scope":"instrumented runtime receipts only; no transcript scan or global inventory"})
+            "verifiedCount":sessions.len(),"sessions":sessions,"bindings":bindings,"knownSources":ledger.entries.len(),"scope":"instrumented runtime receipts only; no transcript scan or global inventory"})
     }
 }
 

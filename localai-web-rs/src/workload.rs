@@ -516,7 +516,9 @@ impl Workload {
         };
         Self {
             observed: RwLock::new(observation::Ledger::load(
-                &sources.cache.with_file_name("workload-observations.json"),
+                &sources
+                    .cache
+                    .with_file_name("workload-observations-v2.json"),
             )),
             sources,
             cache: RwLock::new(cache),
@@ -2353,7 +2355,7 @@ async fn observation_worker(
                     &workload
                         .sources
                         .cache
-                        .with_file_name("workload-observations.json"),
+                        .with_file_name("workload-observations-v2.json"),
                 );
                 workload
                     .observed

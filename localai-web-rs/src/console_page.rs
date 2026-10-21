@@ -2,10 +2,9 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
-// Keep the currently deployed page while backend identification is repaired.
-// index.html retains the separate candidate tracked by ToDo3084; it is not the
-// Prd asset until the owner has confirmed that visual scope.
-const INDEX: &str = include_str!("index_prd.html");
+// The reviewed repair restores existing functionality. Only the Systems panel
+// adds the owner's explicitly approved v2 layout (question ToDo3145).
+const INDEX: &str = include_str!("index.html");
 const MUSIC_SLOT: &str = "<!-- console-music-view -->";
 
 /// Authorize only compiled Console scripts, never scripts from broker/user
@@ -19,6 +18,7 @@ pub fn music_script_policy(policy: &str) -> String {
             INDEX,
             include_str!("workload.html"),
             include_str!("console_shell.html"),
+            include_str!("resources.html"),
         ]
         .into_iter()
         .flat_map(|html| scripts.captures_iter(html))
@@ -101,7 +101,11 @@ pub fn index() -> String {
 fn render(html: String) -> String {
     crate::console_ui::decorate_html(&html.replace(
         "</body>",
-        &format!("{}\n</body>", include_str!("workload.html")),
+        &format!(
+            "{}\n{}\n</body>",
+            include_str!("workload.html"),
+            include_str!("resources.html")
+        ),
     ))
 }
 
@@ -117,9 +121,8 @@ pub fn music(html: &str) -> Option<String> {
         Regex::new(r"(?is)<style\b([^>]*)>(.*?)</style\s*>|<script\b[^>]*>.*?</script\s*>").unwrap()
     });
     let body = BODY.captures(html)?.get(1)?.as_str();
-    static DUPLICATE_NAV: LazyLock<Regex> = LazyLock::new(|| {
-        Regex::new(r#"(?is)<a\b[^>]*>\s*(?:Consoleに戻る|KaraokeMakerを開く)\s*</a>"#).unwrap()
-    });
+    static DUPLICATE_NAV: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r#"(?is)<a\b[^>]*>\s*Consoleに戻る\s*</a>"#).unwrap());
     let body = DUPLICATE_NAV.replace_all(body, "");
     let mut assets = String::new();
     if let Some(head) = HEAD.captures(html).and_then(|capture| capture.get(1)) {
@@ -166,6 +169,16 @@ pub fn music(html: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn served_console_has_progress_and_preserves_karaoke_navigation() {
+        let page = index();
+        assert!(page.contains("id=\"view-progress\""));
+        assert!(!page.contains("id=\"view-chat\""));
+        let page = music("<html><body><a href=\"/\">Consoleに戻る</a><a href=\"/karaoke\">KaraokeMakerを開く</a></body></html>").unwrap();
+        assert!(page.contains("href=\"/karaoke\""));
+        assert!(!page.contains(">Consoleに戻る</a>"));
+    }
 
     #[test]
     fn operations_fetch_single_flight_timeout_backoff_and_detail_paging() {
@@ -287,12 +300,10 @@ const advance=async(ms)=>{now+=ms;for(const [id,t]of [...timers])if(t.at<=now){t
         let original = "default-src 'self'; style-src 'self' 'unsafe-inline'; media-src 'self' https://*.suno.com https://*.suno.ai; form-action 'self'; frame-ancestors 'none'; base-uri 'none'";
         let policy = music_script_policy(original);
         for directive in original.split(';').map(str::trim) {
-            assert!(
-                policy
-                    .split(';')
-                    .map(str::trim)
-                    .any(|part| part == directive)
-            );
+            assert!(policy
+                .split(';')
+                .map(str::trim)
+                .any(|part| part == directive));
         }
         let source = "untrusted_fixture()";
         let digest = ring::digest::digest(&ring::digest::SHA256, source.as_bytes());

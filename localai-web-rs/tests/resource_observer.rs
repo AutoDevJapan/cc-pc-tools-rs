@@ -33,6 +33,50 @@ fn row(v: &Value, pid: u32) -> &Value {
 }
 
 #[test]
+fn five_minute_growth_uses_its_own_window_and_never_ten_minutes_or_a_reused_pid() {
+    let mut history = History::default();
+    let mut value = Value::Null;
+    for step in 0..=40u64 {
+        value = history.observe(
+            sample(
+                1_000 + step * 15_000,
+                vec![process(
+                    42,
+                    0,
+                    123,
+                    step as f64,
+                    100 + step * 100,
+                    "cargo.exe",
+                )],
+            ),
+            &json!({}),
+        );
+        if step < 20 {
+            assert!(row(&value, 42)["fiveMinuteGrowthBytes"].is_null());
+        }
+    }
+    assert_eq!(row(&value, 42)["fiveMinuteGrowthBytes"], 2_000);
+    assert_eq!(row(&value, 42)["fiveMinuteWindowMs"], 300_000);
+    assert_eq!(row(&value, 42)["growthBytes"], 4_000);
+    let reused = history.observe(
+        sample(616_000, vec![process(42, 0, 456, 0., 9_000, "cargo.exe")]),
+        &json!({}),
+    );
+    assert!(row(&reused, 42)["fiveMinuteGrowthBytes"].is_null());
+    let gap = history.observe(
+        sample(
+            1_000_000,
+            vec![process(42, 0, 123, 90., 10_000, "cargo.exe")],
+        ),
+        &json!({}),
+    );
+    assert!(row(&gap, 42)["fiveMinuteGrowthBytes"].is_null());
+    let at = value["sampledAt"].as_u64().unwrap();
+    expire(&mut value, at + 46_000);
+    assert!(row(&value, 42)["fiveMinuteGrowthBytes"].is_null());
+}
+
+#[test]
 fn cpu_and_memory_deltas_have_real_windows_and_machine_cpu_units() {
     let mut h = History::default();
     let first = h.observe(

@@ -250,6 +250,21 @@ impl History {
                 .private_bytes
                 .zip(baseline)
                 .and_then(|(n, (_, o))| signed_delta(n, o));
+            // A ten-minute retained history is not a five-minute delta. Use
+            // the closest real sample at least five minutes old, allowing one
+            // bounded collection delay, and keep missing/reused identities null.
+            let five_minute = self.frames.iter().rev().find_map(|frame| {
+                let width = sample.tick_ms.checked_sub(frame.tick_ms)?;
+                if !(300_000..=345_000).contains(&width) {
+                    return None;
+                }
+                let old = same(p, frame)?;
+                Some((width, old.private_bytes?))
+            });
+            let five_minute_growth = p
+                .private_bytes
+                .zip(five_minute)
+                .and_then(|(current, (_, old))| signed_delta(current, old));
             let layer = if p.name.starts_with("vmmem") {
                 "vm"
             } else {
@@ -261,6 +276,7 @@ impl History {
                 "privateBytes":p.private_bytes,"workingSetBytes":p.working_set_bytes,
                 "privateDeltaBytes":delta,"growthBytes":growth,
                 "growthWindowMs":baseline.map(|(tick,_)|sample.tick_ms-tick),
+                "fiveMinuteGrowthBytes":five_minute_growth,"fiveMinuteWindowMs":five_minute.map(|(width,_)|width),
                 "metricsState":if p.cpu_seconds.is_none() || p.private_bytes.is_none(){"partial"}else{"ok"}}));
         }
         let current_jobs = valid_jobs(jobs, sample.at_ms);
@@ -327,6 +343,7 @@ impl History {
             "privateBytes",
             "privateDeltaBytes",
             "growthBytes",
+            "fiveMinuteGrowthBytes",
         ] {
             let mut order: Vec<_> = rows.values().filter(|p| p[key].is_number()).collect();
             order.sort_by(|a, b| {
@@ -400,6 +417,8 @@ pub fn expire(value: &mut Value, now: u64) {
                 "cpuDeltaSeconds",
                 "privateDeltaBytes",
                 "growthBytes",
+                "fiveMinuteGrowthBytes",
+                "fiveMinuteWindowMs",
             ] {
                 process[key] = Value::Null;
             }

@@ -1,7 +1,7 @@
 //! Counts jobs, task records and verified processing separately.
 //! Inputs must already be privacy-restricted projections; no source prose is read here.
 use chrono::DateTime;
-use serde_json::{Map, Value, json};
+use serde_json::{json, Map, Value};
 use std::collections::{BTreeMap, BTreeSet};
 
 const STATES: [&str; 12] = [

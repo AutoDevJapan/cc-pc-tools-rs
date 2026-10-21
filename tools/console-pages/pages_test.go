@@ -21,7 +21,7 @@ func page(t *testing.T, name string) string {
 
 func node(t *testing.T, script string) {
 	t.Helper()
-	input, err := json.Marshal(map[string]string{"index": page(t, "index.html"), "shell": page(t, "console_shell.html"), "workload": page(t, "workload.html")})
+	input, err := json.Marshal(map[string]string{"index": page(t, "index.html"), "shell": page(t, "console_shell.html"), "workload": page(t, "workload.html"), "resources": page(t, "resources.html")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -124,7 +124,7 @@ func TestProgressExcludesWaitsAndExpiredEvidence(t *testing.T) {
 	node(t, `
 const ctx={Date,opsList:x=>Array.isArray(x)?x:[],opsState:{}};vm.createContext(ctx);vm.runInContext(between(input.index,'function processingRows(','function renderProgress('),ctx);
 const row=(id,state)=>({id:'todo-'+id,primaryJob:'old-'+id,references:{sessions:['job-'+id]},workState:state});
-const board={workforce:{processing:{state:'complete',validUntil:200}},departments:[{products:[{workers:[row(1,'processing'),row(2,'resource_wait'),row(3,'dependency_wait'),row(4,'decision_wait'),row(5,'execution_unverified'),row(6,'done'),row(1,'processing')]}]}]};
+const board={workforce:{processing:{state:'complete',validUntil:200,sessions:[{key:'job-1',validUntil:200}]}},departments:[{products:[{workers:[row(1,'processing'),row(2,'resource_wait'),row(3,'dependency_wait'),row(4,'decision_wait'),row(5,'execution_unverified'),row(6,'done'),row(1,'processing')]}]}]};
 assert.deepEqual(Array.from(ctx.processingRows(board,100),x=>x.worker.id),['todo-1']);assert.equal(ctx.processingRows(board,201).length,0);board.workforce.processing.state='unavailable';assert.equal(ctx.processingRows(board,100).length,0);
 `)
 }
@@ -132,7 +132,7 @@ assert.deepEqual(Array.from(ctx.processingRows(board,100),x=>x.worker.id),['todo
 func TestUnlinkedProcessingIsNeverReportedAsNoWork(t *testing.T) {
 	node(t, `
 const host={innerHTML:'',contains:()=>false,querySelectorAll:()=>[],insertAdjacentHTML(_where,text){this.innerHTML+=text}},status={};
-const worker={id:'todo-1',task:'verified work',workState:'processing',references:{sessions:['verified']}},board={workforce:{processing:{state:'complete',observedAt:99,validUntil:200,verifiedCount:2}},departments:[{products:[{name:'Product',workers:[worker]}]}]};
+const worker={id:'todo-1',task:'verified work',workState:'processing',references:{sessions:['verified']}},board={workforce:{processing:{state:'complete',observedAt:99,validUntil:200,verifiedCount:2,sessions:[{key:'verified',validUntil:200},{key:'unlinked',validUntil:200}]}},departments:[{products:[{name:'Product',workers:[worker]}]}]};
 const ctx={Date:{now:()=>100},opsList:x=>Array.isArray(x)?x:[],opsState:{snapshot:board,items:new Map()},opsTime:String,opsNumber:x=>typeof x==='number'?x:null,esc:String,opsProgress:()=>'',document:{activeElement:{}},$:s=>s==='#progress-jobs'?host:status};
 vm.createContext(ctx);vm.runInContext(between(input.index,'function processingRows(','function switchView('),ctx);ctx.renderProgress();assert.match(status.textContent,/実作業 2件/);assert.match(host.innerHTML,/verified work/);assert.match(host.innerHTML,/ほかに 1件/);
 worker.references.sessions=[];ctx.renderProgress();assert.match(host.innerHTML,/実作業は観測されています/);assert(!host.innerHTML.includes('実作業を確認したジョブはありません'));
@@ -157,7 +157,7 @@ let resumed=0;const ctx={document:{hidden:false},$:selector=>({classList:{contai
 func TestProgressDetailKeepsItsCanonicalRecordAfterRefresh(t *testing.T) {
 	node(t, `
 const body={innerHTML:''},title={},worker={id:'todo-1',name:'Worker',task:'Current work',status:'working',workState:'processing',references:{sessions:['job']}};
-const board={workforce:{processing:{state:'complete',observedAt:99,validUntil:200,verifiedCount:1}},departments:[{id:'info',name:'Information',products:[{id:'product',name:'Product',workers:[worker]}]}]};
+const board={workforce:{processing:{state:'complete',observedAt:99,validUntil:200,verifiedCount:1,sessions:[{key:'job',validUntil:200}]}},departments:[{id:'info',name:'Information',products:[{id:'product',name:'Product',workers:[worker]}]}]};
 const host={innerHTML:'',contains:()=>false,querySelectorAll:()=>[]};const ctx={Date:{now:()=>100},opsList:x=>Array.isArray(x)?x:[],opsState:{snapshot:board,items:new Map(),details:new Map()},opsTime:String,opsNumber:x=>typeof x==='number'?x:null,opsDecimal:String,esc:String,opsProgress:()=>'',opsRobot:()=>'',opsStatus:x=>x,opsFacts:()=>'',opsValue:String,opsQuestionUrl:()=>null,opsColor:()=>'',document:{activeElement:{}},$:s=>s==='#progress-jobs'?host:s==='#progress-update'?{}:s==='#ops-dialog-body'?body:s==='#ops-dialog-title'?title:null};
 vm.createContext(ctx);vm.runInContext(between(input.index,'function processingRows(','function switchView(')+'\n'+between(input.index,'function renderOpsDetail(','async function loadOpsDetail('),ctx);ctx.renderProgress();ctx.opsState.selected=[...ctx.opsState.items.keys()][0];assert.deepEqual(JSON.parse(ctx.opsState.selected),['info','Information','product','Product','todo-1']);ctx.opsState.items.clear();worker.task='Updated work';ctx.renderOpsDetail();assert.equal(title.textContent,'Updated work');assert(body.innerHTML.includes('Information'));assert(!body.innerHTML.includes('この作業は現在の記録にありません'));
 `)
@@ -166,9 +166,9 @@ vm.createContext(ctx);vm.runInContext(between(input.index,'function processingRo
 func TestFetchesBelongToTheVisiblePage(t *testing.T) {
 	node(t, `
 let view='systems',calls=[];
-const ctx={document:{hidden:false},state:{},$:s=>s==='#view-systems'?{classList:{contains:()=>view==='systems'}}:{classList:{contains:()=>false}},publishConsoleSource(){},renderHealth(){},api:async(path)=>{calls.push(path);return{}},AbortController,setTimeout,clearTimeout};
+const ctx={document:{hidden:false},window:{refreshResources:async()=>{calls.push('/api/resources')}},state:{},$:s=>s==='#view-systems'?{classList:{contains:()=>view==='systems'}}:{classList:{contains:()=>false}},publishConsoleSource(){},api:async(path)=>{calls.push(path);return{}},AbortController,setTimeout,clearTimeout};
 vm.createContext(ctx);vm.runInContext(line(input.index,'let refreshInFlight=')+'\n'+between(input.index,'async function refresh(){','function esc('),ctx);
-(async()=>{await ctx.refresh();assert.deepEqual(calls,['/api/health']);view='kanban';await ctx.refresh();assert.deepEqual(calls,['/api/health']);view='systems';ctx.document.hidden=true;await ctx.refresh();assert.equal(calls.length,1)})().catch(e=>{console.error(e);process.exitCode=1});
+(async()=>{await ctx.refresh();assert.deepEqual(calls,['/api/resources']);view='kanban';await ctx.refresh();assert.deepEqual(calls,['/api/resources']);view='systems';ctx.document.hidden=true;await ctx.refresh();assert.equal(calls.length,1)})().catch(e=>{console.error(e);process.exitCode=1});
 `)
 }
 

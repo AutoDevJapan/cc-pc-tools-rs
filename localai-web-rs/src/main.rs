@@ -203,11 +203,17 @@ async fn operations_snapshot(State(state): State<AppState>) -> Json<Value> {
     Json(state.operations.snapshot())
 }
 async fn resources_snapshot(State(state): State<AppState>) -> impl IntoResponse {
-    ([(header::CACHE_CONTROL,"no-store")], Json(state.operations.resource_snapshot()))
+    (
+        [(header::CACHE_CONTROL, "no-store")],
+        Json(state.operations.resource_snapshot()),
+    )
 }
 
-async fn native_activity_snapshot(State(state): State<AppState>) -> Json<Value> {
-    Json(state.operations.native_snapshot())
+async fn native_activity_snapshot(State(state): State<AppState>) -> impl IntoResponse {
+    (
+        [(header::CACHE_CONTROL, "no-store")],
+        Json(state.operations.native_snapshot()),
+    )
 }
 fn native_activity_response(result: Result<Value, &'static str>) -> Response {
     match result {
@@ -756,20 +762,34 @@ mod tests {
 
     #[tokio::test]
     async fn resources_endpoint_reads_cache_and_keeps_the_existing_loopback_boundary() {
-        let app=app(AppState::new(10012,10013));
+        let app = app(AppState::new(10012, 10013));
         for _ in 0..2 {
-            let response=app.clone().oneshot(request(Method::GET,"/api/resources",Body::empty())).await.unwrap();
-            assert_eq!(response.status(),StatusCode::OK);
-            assert_eq!(response.headers()[header::CACHE_CONTROL],"no-store");
-            let value:Value=serde_json::from_slice(&to_bytes(response.into_body(),RESPONSE_LIMIT).await.unwrap()).unwrap();
-            assert_eq!(value["schemaVersion"],1);
-            assert_eq!(value["state"],"collecting");
+            let response = app
+                .clone()
+                .oneshot(request(Method::GET, "/api/resources", Body::empty()))
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::OK);
+            assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+            let value: Value = serde_json::from_slice(
+                &to_bytes(response.into_body(), RESPONSE_LIMIT)
+                    .await
+                    .unwrap(),
+            )
+            .unwrap();
+            assert_eq!(value["schemaVersion"], 1);
+            assert_eq!(value["state"], "collecting");
             assert!(value["sampledAt"].is_null());
-            assert_eq!(value["processes"],json!([]));
+            assert_eq!(value["processes"], json!([]));
         }
-        let mut external=request(Method::GET,"/api/resources",Body::empty());
-        external.headers_mut().insert(header::HOST,"outside.example".parse().unwrap());
-        assert_eq!(app.oneshot(external).await.unwrap().status(),StatusCode::FORBIDDEN);
+        let mut external = request(Method::GET, "/api/resources", Body::empty());
+        external
+            .headers_mut()
+            .insert(header::HOST, "outside.example".parse().unwrap());
+        assert_eq!(
+            app.oneshot(external).await.unwrap().status(),
+            StatusCode::FORBIDDEN
+        );
     }
 
     #[tokio::test]

@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const runtimeLeaf = "current-ci-handoff.private.json"
+const runtimeLeaf = "current-ci-handoff-3056.private.json"
 
 type runtimeReference struct {
 	File string `json:"file"`
@@ -156,7 +156,11 @@ func constructRuntime(p policy, readable func(string) bool) (Snapshot, error) {
 		}
 		return data, nil
 	}
-	data, e := read(filepath.Join(filepath.Dir(p.originSpec.path), runtimeLeaf), 64<<10)
+	// Specs live in the scheduler's specs store, not the product workspace.
+	// Keep the new operational handoff in the independently verified original
+	// helper source's ignored records directory, which the ordinary guard can
+	// classify without changing the guard's scope or the immutable specs.
+	data, e := read(filepath.Join(p.root, ".ci-work", runtimeLeaf), 64<<10)
 	if e != nil {
 		return Snapshot{}, e
 	}

@@ -11,6 +11,9 @@ import (
 func runtimeFixture(t *testing.T, kind, head string) (*fixture, runtimeHandoff) {
 	t.Helper()
 	f := newFixture(t)
+	if err := os.Mkdir(filepath.Join(f.p.root, ".ci-work"), 0700); err != nil {
+		t.Fatal(err)
+	}
 	h := runtimeHandoff{Version: 1, Task: 3059, Origin: 3056, Repo: 1285649124, PR: 995, Head: head, Tree: strings.Repeat("b", 40), Base: fixedBase, Run: 9001, Attempt: 2, Jobs: []int64{9011}, Kind: kind}
 	if kind == "secret" {
 		h.Context = fixedContext
@@ -29,7 +32,7 @@ func runtimeFixture(t *testing.T, kind, head string) (*fixture, runtimeHandoff) 
 			h.Acceptance = ref
 		}
 	}
-	f.put(filepath.Join(filepath.Dir(f.p.originSpec.path), runtimeLeaf), h)
+	f.put(filepath.Join(f.p.root, ".ci-work", runtimeLeaf), h)
 	return f, h
 }
 
@@ -127,7 +130,7 @@ func TestRuntimeRejectsInvalidScopeAndEvidence(t *testing.T) {
 			case "stop":
 				f.put(f.p.db, map[string]any{"items": []any{map[string]any{"id": 3059, "status": "doing", "owner_stopped": true, "spec": f.p.parentSpec.path}}})
 			}
-			path := filepath.Join(filepath.Dir(f.p.originSpec.path), runtimeLeaf)
+			path := filepath.Join(f.p.root, ".ci-work", runtimeLeaf)
 			f.put(path, h)
 			if change == "duplicate" {
 				data, _ := os.ReadFile(path)

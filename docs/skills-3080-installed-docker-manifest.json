@@ -1,0 +1,260 @@
+{
+  "targets": [
+    {
+      "name": "docker-agent-config",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "既存のagent.yamlへ読取専用のレビュー役を追加し、使える接続と権限を確認する。",
+      "negative": "agent.yamlは変えずdocker agent runの失敗だけを調べる。",
+      "sources": [
+        "docker/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "1993a9fff5cbfd0e9112df839b7db6559a6cefa6185d33f55386e4d8611740be"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "3bb33f65872155f0801efc9f6732e2868eb338c5ed6a81eec5c775c1382761cb"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "e9361087ecf3ff48347a2c6c059dc546fd77cb62a18c34ed2ebfcd71971ff6db"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "7f18147631bc6029771fa360ce409bc739fa3d580d112738d7c8b4b19ead185f"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "9fe4661ec92ce72abe38f8251cca74a9c0bb3dc704f4f83d40d45d50c5b69f0f"
+        }
+      ]
+    },
+    {
+      "name": "docker-agent-deploy",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "既存Prdで使うDocker AgentのMCP接続と、配布時に含まれる指示文を確認する。",
+      "negative": "serveやshareを扱わず既存agent.yamlのtoolsetsだけを変更する。",
+      "sources": [
+        "docker/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "f52287752b3edb2898afd508417bbbd7bbfe563ce82d5b6c23452ded5c6ea99c"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "3bb33f65872155f0801efc9f6732e2868eb338c5ed6a81eec5c775c1382761cb"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "e05b8191864e5e5f649a9df3202d2de40345caf128e291e0c1986e1dc9d678a4"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "512dfb8f13f9d5b4e57dc1a63d7ad68fbe6235aa539dbb4300fbd4ce2bd89178"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "58151960fea9a1fbfddaef6f74bc2bfd0147a584e30c5ab97db2e05255aeeea2"
+        }
+      ]
+    },
+    {
+      "name": "docker-agent-run",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "既存agent設定の非対話実行が失敗するので、どの接続と作業場所を使っているか調べる。",
+      "negative": "standalone sbx policyのnetwork規則だけを点検する。",
+      "sources": [
+        "docker/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "0ad212ab9363160489e3f62fa81eeca7a704df5cb734b502e1226be446387cb1"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "3bb33f65872155f0801efc9f6732e2868eb338c5ed6a81eec5c775c1382761cb"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "c44588f67e91f76fc295f11775b0ebdcc664d6114fcfe3ceafd2d4bc35350960"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "3768d6be6918a549d441e465db8001a255655567379b33ff7aa282d578f778cf"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "d7148aa5ed26955cb3ded8c4a214bc98ec6ada5d6cbb544d0c335c14e90620bc"
+        }
+      ]
+    },
+    {
+      "name": "docker-docs",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "今のDocker Sandboxesで使える起動flagを、公式文書と導入済み版から確かめる。",
+      "negative": "sbxenv.yamlの相対パスを直す実装が主題で、公式仕様の調査は不要。",
+      "sources": [
+        "docker/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "8c23675a8421da48b5f9ae082cc202843755ee1958c6ebce53b073bbef0faf9c"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "3bb33f65872155f0801efc9f6732e2868eb338c5ed6a81eec5c775c1382761cb"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "eaa04a83535310ff366a6623f9256d83579dcabe84f015eb3437c6f1d06285c6"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "c0350e3176a9b06be042925ac211d52664918c18b02510ffef247c55e2263065"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "96ab39275829981c5cba6a8f3bf7f48bd4b62653b2289285f9566b46676d5a38"
+        }
+      ]
+    },
+    {
+      "name": "docker-sandboxes-env",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "同じ設定を別フォルダから適用しても正しいworkspaceを使うようsbxenv.yamlを整理する。",
+      "negative": "sbxenv.yamlを使わずsbx createの起動flagだけを修正する。",
+      "sources": [
+        "docker/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "82fd5f04eabe66cd7215c646801727b3e00d42191870741d20789b53d44fcc58"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "3bb33f65872155f0801efc9f6732e2868eb338c5ed6a81eec5c775c1382761cb"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "89e8d9aa0bfcde7e6fd0abcc09c98229e95d4492a57bd302d8d962fdf4f11dd8"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "e7bd2d73eb3add4ab5a8be6f7d8754de920624b67e58a410c74f528c5c6e596a"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "13a2f9ca4acaa5fc7939b7973ab44d35f5422c66ac9e231963e934e935da3af2"
+        }
+      ]
+    },
+    {
+      "name": "docker-sandboxes-kits",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "既存agentへmixinを足すspec.yamlを、合成時の競合と起動処理から点検する。",
+      "negative": "kitやspec.yamlを変えず、あるsandboxの実効networkだけを調べる。",
+      "sources": [
+        "docker/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "a213f91829ba95acd521c72d73429efbbbcc6f80b681820a7f3b93e199d6b3a1"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "3bb33f65872155f0801efc9f6732e2868eb338c5ed6a81eec5c775c1382761cb"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "6915169ac16d076ebdeb5eadc2870567818067aefdcd7222d45cadd63e47ea5d"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "f6a661fbd274c1d9c115f02ca8b3dfb40043ce425385d0fa177b10593b82e44f"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "0dfc4e53aca960ddf1d5ab6e2a47f75f27413223a9fc067de2f95e8bbd064730"
+        }
+      ]
+    },
+    {
+      "name": "docker-sandboxes-lifecycle",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "自己所有sandboxの成果をhostへ回収し、再開可能な状態を残して終了する。",
+      "negative": "sandboxの作成や終了を扱わずsbxenv.yamlの合成規則だけを変更する。",
+      "sources": [
+        "docker/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "60a40b304b18dacba901e0013cca9ae5ad3c00b226373e813abedb5efbd5c492"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "3bb33f65872155f0801efc9f6732e2868eb338c5ed6a81eec5c775c1382761cb"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "d17191e2a2cd75dd50e046d037c6b03ebea628e7d942453264a2feb1e1198c5b"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "a4261ef2930a02150469ffe496256297cc4f8b3e07e3624d6ea774ecbc8da85a"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "a06d0f99c718f9dcec62289501d23f9f34c5d4a0a1e22ade81fbd9b5af28170a"
+        }
+      ]
+    },
+    {
+      "name": "docker-sandboxes-network-credentials",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "あるsandboxの通信拒否を、global規則とsandbox規則の実効判定から調べる。",
+      "negative": "kitのspec.yamlのschemaだけを直し、通信や認証の実効状態は変更しない。",
+      "sources": [
+        "docker/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "84018e1d691a9c634b06fc485527d3542d09efe4e8455d859094db73e6a1be76"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "3bb33f65872155f0801efc9f6732e2868eb338c5ed6a81eec5c775c1382761cb"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "14592b6f8ce77fd2f052f9f5ec92dc70ffe122e15fc8584be2b4cdab4e1e67c1"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "38c428d7c5fc2597121f0a4f8203d7654f779773f524691fb9ec70a22c74ea9e"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "2da028a7be327b5f30707d31cc30373414ae221a04fc9f156ccec961f306b005"
+        }
+      ]
+    }
+  ]
+}

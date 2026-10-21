@@ -87,6 +87,179 @@ fn argument<'a>(args: &'a [String], key: &str) -> &'a str {
         .unwrap_or("")
 }
 
+#[test]
+fn clarification_bridge_preserves_log_identity_and_fixed_evidence() {
+    let f = Fixture::new();
+    let mut fake = Fake::default();
+    let manifest = f.root.path().join("binding.json");
+    fs::write(&manifest, r#"{"fixture":"immutable binding"}"#).unwrap();
+    bridge::try_post(f.root.path(), &mut fake, "600", &f.body, false, &[]).unwrap();
+    let original = fake.calls[0].0.clone();
+    bridge::try_post_clarification(
+        f.root.path(),
+        &mut fake,
+        "600",
+        &f.body,
+        false,
+        &[],
+        &manifest,
+    )
+    .unwrap();
+    let resumed = &fake.calls[1].0;
+    assert_eq!(
+        argument(&original, "--request-id"),
+        argument(resumed, "--request-id")
+    );
+    assert_eq!(
+        argument(&original, "--body-file"),
+        argument(resumed, "--body-file")
+    );
+    assert_eq!(
+        fs::read(argument(resumed, "--clarification-file")).unwrap(),
+        fs::read(&manifest).unwrap()
+    );
+    assert!(bridge::try_post_clarification(
+        f.root.path(),
+        &mut fake,
+        "600",
+        &f.body,
+        true,
+        &[],
+        &manifest
+    )
+    .is_err());
+    assert!(bridge::try_post_clarification(
+        f.root.path(),
+        &mut fake,
+        "600",
+        &f.body,
+        false,
+        std::slice::from_ref(&f.body),
+        &manifest
+    )
+    .is_err());
+    fs::write(&manifest, "changed").unwrap();
+    bridge::try_post_clarification(
+        f.root.path(),
+        &mut fake,
+        "600",
+        &f.body,
+        false,
+        &[],
+        &manifest,
+    )
+    .unwrap();
+    assert_eq!(fake.calls.len(), 3);
+    assert_eq!(
+        argument(&original, "--request-id"),
+        argument(&fake.calls[2].0, "--request-id")
+    );
+    assert_ne!(
+        argument(&fake.calls[1].0, "--clarification-file"),
+        argument(&fake.calls[2].0, "--clarification-file")
+    );
+    assert_eq!(fake.http_calls, 0);
+    f.mode(r#"{"domain":"discord-conversation-mode-v1","enabled":false}"#);
+    assert!(bridge::try_post_clarification(
+        f.root.path(),
+        &mut fake,
+        "600",
+        &f.body,
+        false,
+        &[],
+        &manifest
+    )
+    .is_err());
+    f.unchanged_legacy();
+}
+
+#[test]
+fn clarification_bridge_check_never_turns_check_into_delivery() {
+    let f = Fixture::new();
+    let mut fake = Fake::default();
+    let manifest = f.root.path().join("binding.json");
+    fs::write(&manifest, "{}").unwrap();
+    bridge::try_post(f.root.path(), &mut fake, "600", &f.body, false, &[]).unwrap();
+    let id = argument(&fake.calls[0].0, "--request-id").to_owned();
+    fake.output = Some(Output {
+        code: 0,
+        stdout: json!({"domain":"discord-conversation-v1","request_id":id,
+        "check_only":true,"delivery":"not_sent","original_intent_retained":true})
+        .to_string(),
+        stderr: String::new(),
+    });
+    let checked = bridge::try_check_clarification(
+        f.root.path(),
+        &mut fake,
+        "600",
+        &f.body,
+        false,
+        &[],
+        &manifest,
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(checked["delivery"], "not_sent");
+    assert!(fake.calls[1].0.contains(&"--check-only".into()));
+    assert!(!f
+        .root
+        .path()
+        .join("conversation-bridge")
+        .join(id)
+        .join("clarification.json")
+        .exists());
+    fake.output = None;
+    assert!(bridge::try_check_clarification(
+        f.root.path(),
+        &mut fake,
+        "600",
+        &f.body,
+        false,
+        &[],
+        &manifest
+    )
+    .is_err());
+    f.unchanged_legacy();
+}
+
+#[test]
+fn clarification_check_does_not_create_missing_original_snapshot() {
+    let f = Fixture::new();
+    let mut fake = Fake::default();
+    let manifest = f.root.path().join("binding.json");
+    fs::write(&manifest, "{}").unwrap();
+    assert!(bridge::try_check_clarification(
+        f.root.path(),
+        &mut fake,
+        "600",
+        &f.body,
+        false,
+        &[],
+        &manifest
+    )
+    .is_err());
+    assert!(!f.root.path().join("conversation-bridge").exists());
+    assert!(fake.calls.is_empty());
+}
+
+#[test]
+fn normal_log_title_cannot_enable_check_mode() {
+    let f = Fixture::new();
+    let mut fake = Fake::default();
+    let result = bridge::try_log(
+        f.root.path(),
+        &mut fake,
+        "--check-only",
+        "進捗です。",
+        None,
+        false,
+        &[],
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(result["delivery"], "verified");
+}
+
 impl Effects for Fake {
     fn http(&mut self, _: &str, _: &str, _: Option<&Value>, _: bool) -> Result<Value> {
         self.http_calls += 1;

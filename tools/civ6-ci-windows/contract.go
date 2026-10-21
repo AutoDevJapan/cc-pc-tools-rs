@@ -42,6 +42,8 @@ type Plan struct {
 	ExecuteBefore  int64  `json:"execute_before,omitempty"`
 	Fixture        string `json:"fixture,omitempty"`
 	RuntimeFixture bool   `json:"runtime_fixture,omitempty"`
+	// Only the worker's verified, kernel-owned listener sets this. Never JSON input.
+	cacheListenerPort int
 }
 
 // name is the unique per-job identity: the official runner registration and the
@@ -119,9 +121,22 @@ func (p Plan) validate() error {
 }
 
 func readPlan(root string) (p Plan, err error) {
-	b, err := os.ReadFile(filepath.Join(root, "plan.json"))
+	p, err = readPlanFile(filepath.Join(root, "plan.json"))
+	if err == nil && p.Root != root {
+		err = errors.New("root mismatch")
+	}
+	return p, err
+}
+
+func readPlanFile(path string) (p Plan, err error) {
+	f, err := os.Open(path)
 	if err != nil {
 		return p, err
+	}
+	defer f.Close()
+	b, err := io.ReadAll(io.LimitReader(f, 65537))
+	if err != nil || len(b) > 65536 {
+		return p, errors.New("plan size bound")
 	}
 	d := json.NewDecoder(bytes.NewReader(b))
 	d.DisallowUnknownFields()
@@ -133,9 +148,6 @@ func readPlan(root string) (p Plan, err error) {
 	}
 	if err = p.validate(); err != nil {
 		return p, err
-	}
-	if p.Root != root {
-		return p, errors.New("root mismatch")
 	}
 	return p, nil
 }

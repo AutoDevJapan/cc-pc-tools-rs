@@ -1,0 +1,211 @@
+{
+  "todo": 3080,
+  "source": "Tencent/teamai-cli",
+  "commit": "8787405e59353a8da33f7eaf6b9781b0b3188cd2",
+  "tree_sha": "79bddaf611bc2c94c8ae7892e51392b8936eda90",
+  "tree_complete": true,
+  "tree_paths": 1259,
+  "entrypoints_expected": 7,
+  "entrypoints_read": 7,
+  "semantic_kind_counts": {
+    "usage_guides": 2,
+    "discovery_stub": 1,
+    "workflow_entrypoints": 4
+  },
+  "support_resource_review_complete": false,
+  "unread_support_files_under4workflows": 22,
+  "classification_is_not_installation": true,
+  "assessment_snapshot_before_adoption": true,
+  "live_dispositions": "skills-3080-adoptions.json",
+  "installed": 0,
+  "integrated": 0,
+  "excluded": 0,
+  "candidate_dispositions": {
+    "usage_guide_reference": 2,
+    "new_adaptation_candidate": 1,
+    "policy_rewrite_required": 4
+  },
+  "entries": [
+    {
+      "inventory_id": "github:d7c231b491d753bfa6995624af459ab3bead3277ebd54d4e8dbb8f8703fe4f2c",
+      "name": "guide",
+      "repo": "Tencent/teamai-cli",
+      "commit": "8787405e59353a8da33f7eaf6b9781b0b3188cd2",
+      "path": "docs/guide/skill.md",
+      "source_url": "https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/docs/guide/skill.md",
+      "source_sha256": "75cf9cc3f3bfc3ec0cd264ddfc0baf21d3fe4df41f732942dac17e716dd7e63f",
+      "retrieved_at": "2026-10-20T08:41:12.9725453Z",
+      "candidate_disposition": "usage_guide_reference",
+      "reason": "英語の導入案内と操作例であり、独立したfrontmatter付き手順ではない。同じTeamAI stubへのリンクとして保持する。",
+      "required_changes": "自動Skillインストール指示を実行せず、同じ上流候補との関係を保持。リンク先stubの評価を参照し、案内文を別Skillとして水増ししない。",
+      "body_semantic_review_scope": "Full selected public body read and SHA verified; links are references, not separately read support",
+      "independent_review_complete": false,
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false
+    },
+    {
+      "inventory_id": "github:77cc5b0afb75b33b366893e3725e4a6ab7eb1f738c324bc368fbb99dadda76fb",
+      "name": "zh-CN",
+      "repo": "Tencent/teamai-cli",
+      "commit": "8787405e59353a8da33f7eaf6b9781b0b3188cd2",
+      "path": "docs/guide/zh-CN/skill.md",
+      "source_url": "https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/docs/guide/zh-CN/skill.md",
+      "source_sha256": "56fcfedf00f68693f4af4e3ec173b5e8dd238119110aa598081f4fba885193c6",
+      "retrieved_at": "2026-10-20T08:41:12.9931618Z",
+      "candidate_disposition": "usage_guide_reference",
+      "reason": "中国語の同じ導入案内。SkillHub経由の代替installリンクがあるが、本文は実行手順の入口案内である。",
+      "required_changes": "英語案内と意味の重複を記録し、byte同一とは呼ばない。SkillHubやnpmの自動installを採らず、既存指定資料範囲だけで続ける。",
+      "body_semantic_review_scope": "Full selected public body read and SHA verified; links are references, not separately read support",
+      "independent_review_complete": false,
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false
+    },
+    {
+      "inventory_id": "github:a7eef188f845493ac46fd5af40c6725b0883bfb5396a52f0a83aef7332715253",
+      "name": "core",
+      "repo": "Tencent/teamai-cli",
+      "commit": "8787405e59353a8da33f7eaf6b9781b0b3188cd2",
+      "path": "skill-data/core/SKILL.md",
+      "source_url": "https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skill-data/core/SKILL.md",
+      "source_sha256": "3b05ebbc18bc31164d834eb44d96f8d4c9506bacabfb99a25b003e42829eddb8",
+      "retrieved_at": "2026-10-20T08:41:13.0101937Z",
+      "candidate_disposition": "policy_rewrite_required",
+      "reason": "sync/status/doctorとモデルaliasの解決順には独立の手順価値がある。一方、無条件CLI実行・secret env使用・通常loginを本人端末へ求める規則・自動hook配布はこのPC方針と衝突する。",
+      "required_changes": "依頼対象のrepo/owner/scopeと変更予定を先に確認し、dry-run/旧版保持/限定読戻しを組み込む。秘密/AI APIキーは参照せずOAuth枠を維持。モデル切替/alias変更を勝手に行わず既存scheduler指示を優先。未知copy削除やforce再pullを自動化しない。commands/troubleshooting等は未読のまま全対応を主張しない。",
+      "body_semantic_review_scope": "Fullentrypoint and selectedsupport read; remaining workflow support 2 unreviewed. No CLI execution or global permission.",
+      "independent_review_complete": false,
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false
+    },
+    {
+      "inventory_id": "github:16a37829ff7fecc51110f0cf522bf2b90d3282ac25f6f18a6afea0bb3b65137c",
+      "name": "setup",
+      "repo": "Tencent/teamai-cli",
+      "commit": "8787405e59353a8da33f7eaf6b9781b0b3188cd2",
+      "path": "skill-data/setup/SKILL.md",
+      "source_url": "https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skill-data/setup/SKILL.md",
+      "source_sha256": "f6cf5aaf4f0ce9a1a5cb6f7e8ca9fbdbb57a42981c38dffc4cca7573b14c3b06",
+      "retrieved_at": "2026-10-20T08:41:13.0132705Z",
+      "candidate_disposition": "policy_rewrite_required",
+      "reason": "新規teamと既存joinを分け、initがpullではない点とdoctorによる実結果確認が有用。全検出agentへの既定設定とhook/MCP/env配布は本人の中央Skills/junction保持と衝突し得る。",
+      "required_changes": "対象AIツールと既存中央保存先を限定し、管理配布やjunctionを上書きしない。無料の通常loginはAIが行い本人PC操作待ちにしない。未指定方向/権利/費用だけ既存Discordへ質問。setup-admin等5supportとprovider手順は未読なので未検証CLIflagやrepo作成を実行しない。 npm install -gを自動実行せず既存CLIと対象保存先を確認する。",
+      "body_semantic_review_scope": "Full selected public body read and SHA verified; own workflow supporting 5 files not semantically read",
+      "independent_review_complete": false,
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false
+    },
+    {
+      "inventory_id": "github:0a2b7268473b1907ac5802d38ddca5797e4d91af86ad175c87a31bc0b5670b23",
+      "name": "share",
+      "repo": "Tencent/teamai-cli",
+      "commit": "8787405e59353a8da33f7eaf6b9781b0b3188cd2",
+      "path": "skill-data/share/SKILL.md",
+      "source_url": "https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skill-data/share/SKILL.md",
+      "source_sha256": "46776fae2c5c7d94506b1405e972d6b1cd0fd957cd6f3037e7b5f13726c9dd0c",
+      "retrieved_at": "2026-10-20T08:41:13.0199613Z",
+      "candidate_disposition": "policy_rewrite_required",
+      "reason": "sessionの学びを簡潔な検索可能文書へ整理する用途はある。friction通知だけでsubagentと直接pushを起動する指示、PRなし共有branchへ送る既定、簡体字固定は採用できない。",
+      "required_changes": "依頼で許可された共有対象と宛先だけを扱い、秘密/顧客/未知sessionを送らない。本人向けは日本語。再委譲や自動外部送信をせず既存PR/別モデル/CI経路を保つ。doc-templateとpublishの正確な副作用は未読で、既存knowledge-to-skillsとのmetadata比較を深めてから統合又は専用入口を判断。",
+      "body_semantic_review_scope": "Fullentrypoint and selectedsupport read; remaining workflow support 0 unreviewed. No CLI execution or global permission.",
+      "independent_review_complete": false,
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false
+    },
+    {
+      "inventory_id": "github:5f0c005b7a1beae7bd1ad379fbc71d3ebc4214f640befd6885b34425d446c730",
+      "name": "wiki",
+      "repo": "Tencent/teamai-cli",
+      "commit": "8787405e59353a8da33f7eaf6b9781b0b3188cd2",
+      "path": "skill-data/wiki/SKILL.md",
+      "source_url": "https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skill-data/wiki/SKILL.md",
+      "source_sha256": "66aabfe64f574ab1ddfb10019660e4efdffde599b3d30b1fd72ab80bd9b3493b",
+      "retrieved_at": "2026-10-20T08:41:13.0221086Z",
+      "candidate_disposition": "policy_rewrite_required",
+      "reason": "大規模codebaseの根拠行・未確定関係・coverage・増分checkpointの設計が有用。1/50tokenの成果主張は本文に実測根拠の記載がなく、上流の別実測は未確認。80%は目標値、信頼ラベル範囲は本文の2箇所で異なる。",
+      "required_changes": "限定scope/guard/一次sourceを使いsource freshnessと主張正しさを分ける。新Python自作は禁止、配布済Python実行許可と混同しない。専任親を司令塔へ変更せず再委譲のみを強制しない。通常の技術検査を一律本人確認待ちにせず、UI画像/本当のowner判断は保持する。mainworkflowだけ読了で25supportやCLI/AST/GraphRAG実行は未確認。 知識ベースの簡体字固定は本人の日本語方針へ合わせる。commands.md未読のためcodebase --deep-enrichのAI/API利用有無は未確認であり、この機能を自動実行しない。",
+      "body_semantic_review_scope": "Fullentrypoint and selectedsupport read; remaining workflow support 15 unreviewed. No CLI execution or global permission.",
+      "independent_review_complete": false,
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false
+    },
+    {
+      "inventory_id": "github:ce166d7ba811d5f7f8ae37063d187dffc5a356a77738a09d0e83cf29c64d5328",
+      "name": "teamai",
+      "repo": "Tencent/teamai-cli",
+      "commit": "8787405e59353a8da33f7eaf6b9781b0b3188cd2",
+      "path": "skills/teamai/SKILL.md",
+      "source_url": "https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skills/teamai/SKILL.md",
+      "source_sha256": "82a22b1c37531834ab5784f93f950f0a8840ac4e4aa422f1ef2dc03437f9ad66",
+      "retrieved_at": "2026-10-20T08:41:13.032212Z",
+      "candidate_disposition": "new_adaptation_candidate",
+      "reason": "4workflowを安全に選び分ける1つのTeamAI固有入口として使う。CLIやsupportを導入/実行せず、別source occurrenceを自動で処理済みにしない。",
+      "required_changes": "Adapt the discovery stub into one narrowly triggered TeamAI entrypoint, not a fifth workflow or7independent skills. No automatic npm/npx, friction-triggered publication, hook/MCP/env/model profile changes, unknown-copy deletion, private session recall or secret access. Owner language and OAuth-only policy prevail. Four workflow bodies were read; their25support files and agent recall remain unreviewed, so CLI help/version and separate task scope are required before execution. Secondary fixed sources: [skill-data/core/SKILL.md](https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skill-data/core/SKILL.md) SHA256 3b05ebbc18bc31164d834eb44d96f8d4c9506bacabfb99a25b003e42829eddb8; [skill-data/setup/SKILL.md](https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skill-data/setup/SKILL.md) SHA256 f6cf5aaf4f0ce9a1a5cb6f7e8ca9fbdbb57a42981c38dffc4cca7573b14c3b06; [skill-data/share/SKILL.md](https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skill-data/share/SKILL.md) SHA256 46776fae2c5c7d94506b1405e972d6b1cd0fd957cd6f3037e7b5f13726c9dd0c; [skill-data/wiki/SKILL.md](https://github.com/Tencent/teamai-cli/blob/8787405e59353a8da33f7eaf6b9781b0b3188cd2/skill-data/wiki/SKILL.md) SHA256 66aabfe64f574ab1ddfb10019660e4efdffde599b3d30b1fd72ab80bd9b3493b;",
+      "body_semantic_review_scope": "Full selected public body read and SHA verified; links are references, not separately read support",
+      "independent_review_complete": false,
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false
+    }
+  ],
+  "source_license": {
+    "identifier": "MIT",
+    "path": "LICENSE",
+    "sha256": "31154d9c1a8bd8d37b449bdbb8a04f9b4618e5d330b52b0fdb7c452414d75a41",
+    "attribution": "Copyright (C) 2026 Tencent. All rights reserved.",
+    "scope": "Read exact root notice and complete-tree notice paths (root only). No supporting files copied or globally approved.",
+    "basis": "repo.json license metadata is NOASSERTION; MIT classification uses explicit declaration in fixed LICENSE body, not repository metadata",
+    "preservation_requirement": "On any copying preserve full exact LICENSE including the wording (including the next paragraph); not an abbreviated generic MIT replacement"
+  },
+  "scope_limits": [
+    "Tree enumeration counted7 case-insensitive skill.md matches:2guides+1stub+4workflows, not7standalone installed Skills",
+    "Meaning-overlap translation relation is not same-byte SHA duplicate",
+    "No teamai CLI on PATH at check; this does not prove machine-wide absence",
+    "No remote repo/CLI/install/push/recall/hook/env/model changes performed",
+    "Existing originals and source data retained; no blanket source exclusion or automatic library integration",
+    "agents/teamai-recall.md (about22KB) is outside these7skill-named paths and remains unreviewed/unadopted"
+  ],
+  "bounded_independent_review": {
+    "todo": 3180,
+    "head": "c328d7a7a6aa40d81c703b7301b103192c1a1f19",
+    "read": "7bodies+LICENSE+tree aggregates",
+    "must": 0,
+    "note": "Assessment is pre-adoption snapshot, not installed7"
+  },
+  "routing_candidate_note": "One new adapted entrypoint serves the discovered4workflows;not5workflows or7independent Skills. Other source occurrences remain pending.",
+  "latest_candidate_review": {
+    "todo": 3193,
+    "head": "4b253db26f74bfb1a779cf8a68d3b22feb9f211f",
+    "must": 0,
+    "response_sha256": "793ad1958140bb245a64ac9722c10fe6c58f3d63c8a5f0b0ca07bf89582adfd3",
+    "suggestions": "S1-S3 tightened in generated entry before adoption;no upstream/notice change"
+  },
+  "support_documents_read": [
+    {
+      "path": "skill-data/core/references/contribute-member.md",
+      "sha256": "83775b2c59aa6ac65c70529aff7bd14e6bf0f4dd6c05235b64b580afbc75ead2",
+      "bytes": 7748
+    },
+    {
+      "path": "skill-data/share/references/doc-template.md",
+      "sha256": "c2c54f3771ab49e6e40171e269821254b49f08051cb6382e9839d12ebfafa94f",
+      "bytes": 1161
+    },
+    {
+      "path": "skill-data/wiki/references/phases/phase0-init.md",
+      "sha256": "533afc3e4dc6cd4ea57c615a8c84ea624537ab1042f4bd86759821a0a1845c0e",
+      "bytes": 4643
+    }
+  ],
+  "superseded_by": {
+    "target": "teamai",
+    "current_manifest": "skills-3080-teamai-support-revision-manifest.json",
+    "live_dispositions": "skills-3080-adoptions.json",
+    "note": "Candidate table ispre-adoption snapshot;livecentral state isnotthese falseflags"
+  }
+}

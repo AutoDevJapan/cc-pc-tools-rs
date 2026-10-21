@@ -1,0 +1,39 @@
+{
+  "todo": 3080,
+  "purpose": "Corroborate the explicit show-me credit in mattpocock/skills pr entrypoint; not a seventeenth primary source or another installed Skill",
+  "parent_source": "mattpocock/skills",
+  "parent_commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
+  "parent_path": "skills/engineering/pr/SKILL.md",
+  "linked_repo": "humanlayer/skills",
+  "linked_owner": "humanlayer",
+  "linked_public": true,
+  "linked_commit": "653b6411c1f70c275a18e37673b042ff99f67ceb",
+  "linked_tree_complete": true,
+  "artifacts": [
+    {
+      "repo": "humanlayer/skills",
+      "commit": "653b6411c1f70c275a18e37673b042ff99f67ceb",
+      "path": "LICENSE",
+      "git_blob": "f7ad6f4a1d5ed9bbf0589c172c6360587d1530e3",
+      "sha256": "5f13c18ea00ea5c1384f41745feeca774079164f7f59a92e4ac0899ad217b26f",
+      "source_url": "https://github.com/humanlayer/skills/blob/653b6411c1f70c275a18e37673b042ff99f67ceb/LICENSE",
+      "retrieved_at": "2026-10-20T12:12:23.0508705Z",
+      "bytes": 1067
+    },
+    {
+      "repo": "humanlayer/skills",
+      "commit": "653b6411c1f70c275a18e37673b042ff99f67ceb",
+      "path": "plugins/show-me/skills/show-me/SKILL.md",
+      "git_blob": "f0ccd047c136d7b702b385e0ecad775ccb773eae",
+      "sha256": "434a2346cc95e313b0d367d477dda2e23ba642dd2181757415a09500664af100",
+      "source_url": "https://github.com/humanlayer/skills/blob/653b6411c1f70c275a18e37673b042ff99f67ceb/plugins/show-me/skills/show-me/SKILL.md",
+      "retrieved_at": "2026-10-20T12:12:23.5642259Z",
+      "bytes": 3328
+    }
+  ],
+  "license_notice": "skills-3080-humanlayer-MIT.txt",
+  "assessment": "Fixed linked entrypoint and MIT notice read. Shared examples are present in this source; no script/template execution or transfer of historical unspecified-version rights is inferred.",
+  "prior_hold": "Root MIT alone was insufficient; source was held until the credited author/source/notice could be inspected.",
+  "independently_accepted": false,
+  "installed": false
+}

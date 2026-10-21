@@ -22,6 +22,15 @@ func main() {
 	}
 }
 func dispatch(args []string) error {
+	// Read-only reconciliation after the old owned root has been retired. This
+	// mode never starts a service, creates a registration, or executes a job.
+	if len(args) == 2 && args[0] == "verify-collected" {
+		p, err := readPlanFile(args[1])
+		if err != nil {
+			return err
+		}
+		return platform("verify-collected", p, nil)
+	}
 	if len(args) > 0 && args[0] == "test" && os.Getenv("CIW_GATE_CHILD") == "1" {
 		return gateChild(args)
 	}

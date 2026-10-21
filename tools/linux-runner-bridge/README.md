@@ -1,5 +1,149 @@
 # Linux runner and the Windows Cargo gate
 
+## Bounded additional capacity (ToDo3122)
+
+The default compiled profile remains `primary`; its names, labels, finite mode,
+admission and resident lifecycle are unchanged. Build both Windows host and
+Linux guest with `-ldflags '-X main.normalBuildProfile=burst-3122'` for the single
+additional slot. Its container/image are `todo3122-linux-capacity[:local]`, runner
+name is `cc-pc-tools-linux-3122`, and bridge port is 17862. It retains the existing
+`cc-pc-tools-linux` label to accept already queued jobs without redispatch.
+The fixed build profile cannot be selected by a job's environment.
+
+The additional slot uses official ephemeral registration without `--replace`,
+the normal current-head hook and the same Cargo gate. Its supervisor runs one
+`--once` session, drains it and reclaims only its owned scratch, then both guest
+and host exit. A host exit is not proof that the GitHub job passed.
+Its four existing routing labels are explicitly custom (`--no-default-labels`)
+so only this slot's labels can be withdrawn on idle expiry. It accepts only its
+own name with ephemeral=true. Its Cargo target is `.ci-work/target-burst-3122`;
+the primary keeps `.ci-work/target` even if the operator uses the same worktree.
+
+`bridge.exe pool <this-worktree>/.ci-work/target-burst-3122` supplies one such host
+per invocation by default, with a two-hour admission window. An explicit second
+argument may request 1..16 hosts for a finite batch. Normal deployment uses one
+host per Task Scheduler invocation with a one-minute recurrence: disabling that
+task lets its current admission finish and prevents the next one. Before
+each one it reads current same-repository queued jobs and fresh Windows/VM
+capacity. Windows must have at least 24 GiB free, commit below 85%, CPU below
+75%, and 30 GiB free on each of C/D; the Docker VM must have 9 GiB available.
+The additional container is separately capped at 4 CPUs, 8 GiB and 1024 PIDs.
+Only jobs whose requested labels all match without case sensitivity are counted;
+at least one must have waited 60 seconds. Verified stopped containers are started
+before probing VM capacity. Writable-layer admission is bounded at 16 GiB;
+unknown or exceeded usage retains the container for maintenance.
+Use the existing hidden S4U/Limited Task Scheduler management pattern, IgnoreNew,
+and the one-minute recurrence to recheck remaining work. The pool holds loopback
+port 17863 to reject duplicate managers before registration. It stops when the
+queue drains or admission fails, never interrupts an active job to meet its
+admission deadline, and records its stage in `.ci-runtime/pool-status.private.json`.
+`bridge.exe queue` returns the observed eligible count and oldest UTC queue age.
+Keep this supporting worktree/runtime while the task uses it; remove only owned
+test resources after verification. Reboot recovery is not claimed.
+
+The additional host starts its two-minute idle deadline after registration
+binding succeeds. Guest setup is bounded separately and binding notification has
+three 45-second attempts. If the runner is busy then,
+it waits for the original job to finish with its original timeout. Otherwise it
+withdraws this owned ephemeral runner's custom labels, confirms zero labels and
+no assigned job/Worker over three fresh observations, and removes its idle
+registration. A synchronous notification after config.sh succeeds binds this
+host to the exact returned runner ID before run.sh starts; absent API fields do
+not substitute for that binding. After removal is confirmed as 404 and no Worker
+exists, only the owned idle run.sh group is signalled. The existing group drain
+must finish before the official SDK's remove command clears local configuration
+using a RAM-only removal token. No authentication file is manually deleted.
+Discovery/withdrawal/removal/stop/group-drain/SDK stages share one retained
+transaction and one ten-minute retry window, with 30 seconds between retries.
+Current API/SDK operations retain their own finite deadlines. A removed ID resumes at listener stop, including
+expected NotFound responses. Accepted work retains its RPC host. Otherwise an
+atomic admission retirement prevents new source from starting, exits 74 for an
+unverified attempt and retains diagnostic state. Idle completion uses exit 75,
+distinct from a GitHub job success; the pool ends that invocation without an
+immediate refill. Primary/2511 are excluded.
+See the pinned [official listener cleanup](https://github.com/actions/runner/blob/v2.338.0/src/Runner.Listener/Runner.cs).
+
+Before deleting/recreating this slot's container, stop further admission, wait
+for host completion and Worker/Listener absence, and save `bridge export-diagnostics`
+from inside the container as raw gzip bytes to the owned worktree. This command
+takes the supervisor lock, verifies quiescence, and exports only owned, ended
+`/work/bridge-diagnostics-todo3026` sessions (eight/64 MiB); it rejects links,
+special files and unfinished evidence. Verify gzip/tar and record hash/size before
+container removal. It never exports `/runner`, config or credentials. The pool
+itself reuses its container and does not delete it. A stale `.runner` after a
+failed session retains the container and fails registration with 96; do not
+delete that file to force reuse. Archive/verify idle first, then recreate only
+the owned container when there is no valid recovery binding. Normal successful ephemeral local removal is verified by
+the finite acceptance; interrupted reuse is not silently accepted.
+
+SDK cleanup probes file existence/type only and succeeds idempotently when
+`.runner`, `.credentials`, and `.credentials_rsaparams` are already absent.
+The official SDK handles removal; its transient token/transport failures retry
+without repeating committed remote deletion. Exit 19 proves this attempt's
+config.sh succeeded before ACK failed, so its ID discovery is retried too.
+Other unbound config failures and existing-config exit 96 never authorize
+adopting/deleting a same-name registration. An ACK-bound pre-job failure gets
+the same cleanup, and completed jobs keep their original result after cleanup.
+Worker presence uses exit 73, unknown probes remain errors, and unverified
+configuration setup uses 71, distinct from SDK failure class 39.
+
+The ten-minute value is the retry window, not a hard wall-clock deadline for a
+whole cleanup: one already-started attempt has bounded API, three-minute group
+wait and SDK timeouts, giving a conservative overall bound of about 22 minutes.
+The task uses ExecutionTimeLimit=PT0S so neither this cleanup nor an accepted CI
+job is terminated by the scheduler. Idle success 75 accepts child results
+0/130/143/255 only after verified withdrawal, group drain and SDK removal. Other
+results (including 137, which can indicate a forced/OOM exit) retain failure.
+
+## Recovery after an interrupted additional session
+
+Before acknowledging registration, the host publishes a private binding of
+the exact GitHub runner ID, fixed runner/container names and immutable Docker
+container ID under `.ci-runtime/burst-cleanup`. No token/key/config contents
+are stored. Stage snapshots are synced and atomically linked into new names;
+existing records must match and are never overwritten. Incomplete temporary
+records are not authority. Completed history is bounded to eight sessions;
+retirement is committed before reclaiming old stages so interrupted retention
+cannot make a completed session appear pending.
+Deletion I/O failures for already validated completed history are warnings in
+`.ci-runtime/burst-retention-warning.private.json`, not CI job failures or an
+admission prerequisite. The history can temporarily exceed eight while a file
+is locked, but a hard 64-entry bound is checked before publishing another
+binding. Retention resumes once the lock clears. Unknown evidence and failures
+to publish a binding or an unfinished stage still fail closed.
+Unpublished empty/temporary-only session directories are reaped by the single
+writer once their directory lock clears. One locked completed session does not
+prevent reclaiming other completed sessions. GC publication/enumeration errors
+and unknown evidence remain fail-closed; only validated deletion I/O is a warning.
+
+The normal `pool` entry resumes an unfinished binding before requesting another
+registration. Container ID and the successfully read GitHub inventory must
+agree with that binding (or confirm its ID/name is absent). A different
+same-name ID, another container, unknown/ambiguous metadata or unbound SDK files
+fail closed. A live old RPC host or assigned Worker is left to finish. A saved
+process-exit flag never replaces a fresh kernel/supervisor-lock observation.
+Known remote stages and idempotent SDK removal resume through the same finite
+cleanup transaction, then the ordinary resource/current-head admission runs
+again. Direct `host normal` does not bypass pending recovery; use `pool`.
+Unbound configuration failures still require investigation rather than adopting
+a registration by its display name. Status 76 means configuration is present
+and quiescent; 71/73/74/75 keep the setup/Worker/unverified/idle meanings above.
+
+The operator creates this worktree's real `.ci-runtime` directory before
+starting the host. For unbound SDK configuration, stop further task admission,
+wait for accepted work and verify kernel quiescence (configuration probe 0 or
+76). Verify the owned container and a successful repository inventory with no
+same-name agent before using the official SDK removal with a RAM-only token.
+Do not read, copy or manually delete opaque authentication files. Keep unknown
+journal evidence for investigation. For a different container ID, first prove
+the old bound agent is absent and archive its ended diagnostics and journal;
+then qualify the replacement through the original CI task. Never edit IDs or
+manufacture an empty binding to make admission pass.
+
+Keep the repeating task disabled while the existing highest-priority finite
+operation (currently ToDo3059) needs its shared resource window. Coordinate that
+window through its original task/normal controls before enabling repeated supply.
+
 The bridge keeps ToDo2511's finite mode available and adds a resident mode for
 ordinary `AutoDevJapan/cc-pc-tools-rs` CI. The finite invocation still requires
 one fixed revision and its approved task branch, uses port 17851 and the
@@ -83,9 +227,9 @@ do not report reboot recovery as verified without a separate test.
 
 ### Bounded resident scratch and diagnostics (ToDo3026)
 
-Normal mode uses the existing supervisor for successive `run.sh --once`
-sessions. Registration remains repository-scoped and reusable; it does not
-register an ephemeral runner for each job. The pinned official runner supports
+The primary normal mode uses the existing supervisor for successive `run.sh --once`
+sessions. Its registration remains repository-scoped and reusable. The additional
+profile above has a separate one-job ephemeral lifecycle. The pinned official runner supports
 `--once` ([upstream implementation](https://github.com/actions/runner/blob/v2.338.0/src/Runner.Listener/Runner.cs)); upstream warns this flag may be
 deprecated. Upgrading the official runner must recheck this lifecycle contract.
 The existing pre-job admission hook and Windows Cargo gate are unchanged.

@@ -1,0 +1,99 @@
+{
+  "todo": 3080,
+  "kind": "3known_owned_guidance_refinements_no_new_installs",
+  "targets": [
+    {
+      "name": "knap",
+      "new": false,
+      "positive": "指定のJSONデータと既存テンプレートから、出力先を確認してノート案を生成する。",
+      "negative": "テンプレートを使わず、Obsidianの.baseファイルのfilterだけを修正する。",
+      "sources": [
+        "kepano/obsidian-skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "ef5666573358cd7d18e04195f3e7c473b88d3e3140c41ab59bbee01c81e9989f"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "64c64d48361edfe8610016441bf593256ea9b67f133b00f47c55aa29ee878567"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "e083f5f7c305cdb01cb1ececeeced18f78d7f8962862235277d243b005b78044"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "614a1875bd1fb5ff1416e51b643b12e53329b5a1aac0604800a689f7e8b6f0cc"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "96ee1d93206adafc296fc01b015261e4f4194667624881eb649878b01a1f0698"
+        }
+      ]
+    },
+    {
+      "name": "setup-pre-commit",
+      "new": false,
+      "positive": "既存Node案件に、変更したファイルの整形と関連検査をコミット前に実行する設定を追加する。",
+      "negative": "Go案件の全件検査をコミットのたびに義務化する。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "c9819d7f1e3b198064edc1faa3154224ed67395e9f07f5d3cea4b67cf0a11a98"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "83daedba3dc510523f0c0d51d4d84873cb67fadd55d1a73c932e76ab9b7d567b"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "4f2e5a947c8d5f9980c3d297ec3af569068fed087fb4cb847919321223b900ae"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "f4196e0988b83f941d4a835888ef38f457a60b3cc8b75f541b8ea4109cc720fe"
+        }
+      ]
+    },
+    {
+      "name": "grilling",
+      "new": false,
+      "positive": "この計画の弱い前提を順に質問して、必要な要件が抜けていないか確かめてほしい。",
+      "negative": "実装方法を担当が決められる修正で、毎回本人へ承認を求める。",
+      "sources": [
+        "mattpocock/skills"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "befdff1e27a1dfe2a294d5871169ac1afe16d983911daa4f32627514a48c1e15"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "056e752ad86486160858c3e000170866b72471a511738354718b8073e50f8485"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "4f8b0ff063ce9331f39196f34dc631d1268054868fe417116aae6210dfbef71a"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "030e1e97e851964191dc37a46521483115d91b9f3fddcc42666f669538c806da"
+        }
+      ]
+    }
+  ]
+}

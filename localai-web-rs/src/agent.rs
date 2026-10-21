@@ -584,7 +584,12 @@ impl Console {
                 "todo_id",
                 "related_todo_ids",
                 "model",
+                "model_origin",
                 "effort",
+                "effort_origin",
+                "policy_resume_reset",
+                "review_source_jobs",
+                "review_excluded_models",
                 "sandbox",
                 "task_type",
             ] {
@@ -3486,7 +3491,44 @@ fn trigger_launch_options(
     if automatic_recovery(&t.key) {
         requested.as_object_mut().unwrap().remove("_todo_defaults");
     }
-    let mut options = launch_options(item, &requested, source, inherited)?;
+    let repair = item
+        .zip(source)
+        .filter(|_| inherited)
+        .and_then(|(item, source)| {
+            let pending = &item["stall_recovery"]["pending"];
+            (t.key.strip_prefix("manual:") == pending["request"].as_str()
+                && pending["job"]["id"] == source["id"]
+                && pending["job"]["model_repair_pending"] == true
+                && !cc_ask::job_policy::launch_context::fixed_execution_contract(&pending["job"])
+                && cc_ask::job_policy::same_model(
+                    strv(&pending["job"], "model_recovery_from"),
+                    strv(source, "model"),
+                )
+                && (requested["model"].is_null()
+                    || cc_ask::job_policy::same_model(
+                        strv(&pending["job"], "model"),
+                        strv(&requested, "model"),
+                    )))
+            .then_some(&pending["job"])
+        });
+    // A saved policy default must not undo the current failed-model repair.
+    // A new owner choice or a different later ToDo model still takes priority.
+    let mut selected_item = item.cloned();
+    match (repair, source, selected_item.as_mut()) {
+        (Some(repair), Some(source), Some(row))
+            if row["model_origin"] != "owner_request"
+                && (row["model"].is_null()
+                    || cc_ask::job_policy::same_model(
+                        strv(row, "model"),
+                        strv(source, "model"),
+                    )) =>
+        {
+            requested["model"] = repair["model"].clone();
+            row["model"] = Value::Null;
+        }
+        _ => (),
+    }
+    let mut options = launch_options(selected_item.as_ref(), &requested, source, inherited)?;
     if automatic_recovery(&t.key) {
         for field in ["model", "effort"] {
             let origin = format!("{field}_origin");
@@ -3516,21 +3558,11 @@ fn trigger_launch_options(
     ] {
         options.as_object_mut().unwrap().remove(field);
     }
-    if let (true, Some(item), Some(source)) = (inherited, item, source) {
-        let pending = &item["stall_recovery"]["pending"];
-        if t.key.strip_prefix("manual:") == pending["request"].as_str()
-            && pending["job"]["id"] == source["id"]
-            && pending["job"]["model_repair_pending"] == true
-            && cc_ask::job_policy::same_model(
-                strv(&pending["job"], "model_recovery_from"),
-                strv(source, "model"),
-            )
-            && cc_ask::job_policy::same_model(
-                strv(&pending["job"], "model"),
-                strv(&options, "model"),
-            )
-        {
-            options["model_recovery_from"] = pending["job"]["model_recovery_from"].clone();
+    if let (true, Some(source)) = (inherited, source) {
+        if let Some(repair) = repair.filter(|repair| {
+            cc_ask::job_policy::same_model(strv(repair, "model"), strv(&options, "model"))
+        }) {
+            options["model_recovery_from"] = repair["model_recovery_from"].clone();
         }
         if cc_ask::job_policy::review_task("", strv(&options, "task_type")) {
             for field in ["review_source_jobs", "review_excluded_models"] {

@@ -2085,6 +2085,7 @@ mod capacity_regressions {
         assert!(!cc_job_policy::same_model(s(&saved, "model"), "gpt-6.1-sol"),
             "review registration routed straight back to the model that just failed");
         assert!(!cc_job_policy::same_model(s(&saved, "model"), "anthropic/claude-opus-5-5"));
+        assert_eq!(saved["model"], "anthropic/claude-sonnet-5-5");
         assert_eq!(saved["effort"], "max");
         assert_eq!(saved["review_author_models"], json!(["anthropic/claude-opus-5-5"]));
         assert_eq!(saved["review_excluded_models"], json!(["anthropic/claude-opus-5-5"]));
@@ -2095,6 +2096,11 @@ mod capacity_regressions {
     fn inherited_owner_choices_are_bound_to_the_current_target_and_generation() {
         for (case, expected_model, expected_effort) in [
             ("different_values", "gpt-6.1-sol", "max"),
+            (
+                "live_environment_parent_different_values",
+                "gpt-6.1-sol",
+                "max",
+            ),
             ("different_todo", "gpt-6.1-sol", "max"),
             ("todo_request", "gpt-6-luna", "high"),
             ("live_environment_parent", "gpt-6-luna", "high"),
@@ -2105,10 +2111,10 @@ mod capacity_regressions {
             let t = Test::new();
             let mut parent = job(json!({"id":"launcher","status":"running",
                 "pid":std::process::id(),"pid_created":123,"cwd":t.ctx.root,
-                "todo_id":if ["different_values","live_environment_parent","stale_environment_parent"].contains(&case) {2} else {1},
+                "todo_id":if case == "different_values" || case.starts_with("live_environment_parent") {Value::Null} else {json!(1)},
                 "model":"gpt-6-luna","effort":"high",
                 "model_origin":"owner_request","effort_origin":"owner_request"}));
-            if case == "different_values" {
+            if case.contains("different_values") || case == "stale_environment_parent" {
                 parent["model"] = json!("anthropic/claude-opus-5-5");
                 parent["effort"] = json!("medium");
             }
@@ -2141,8 +2147,6 @@ mod capacity_regressions {
                 "gpt-6-luna",
                 "--effort",
                 "high",
-                "--todo-id",
-                "2",
                 "--model-origin",
                 "owner_request",
                 "--effort-origin",
@@ -2150,6 +2154,9 @@ mod capacity_regressions {
                 "--launch-key",
                 key,
             ];
+            if case != "different_values" && !case.starts_with("live_environment_parent") {
+                args.extend(["--todo-id", "2"]);
+            }
             if case.contains("environment_parent") {
                 t.rt.env
                     .lock()

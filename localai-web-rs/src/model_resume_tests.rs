@@ -17,7 +17,7 @@ fn explicit_console_resume_excludes_retired_threads_and_keeps_compatible_threads
         let path = f.console.paths.jobs.join("source/job.json");
         let mut source: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
         source["thread_id"] = json!(thread);
-        source["model"] = json!("gpt-6-sol");
+        source["model"] = json!("gpt-6.1-sol");
         source["effort"] = json!("max");
         source["policy_resume_reset"] = if retired {
             json!({"session":old})
@@ -31,7 +31,7 @@ fn explicit_console_resume_excludes_retired_threads_and_keeps_compatible_threads
                 "delegate",
                 json!({"id":1,"request_id":"resume-model-check",
             "prompt":"保存した仕様と成果から続行する。","cwd":f.root,"source_job_id":"source",
-            "resume_session":thread,"isolate_worktree":false,"model":"gpt-6-sol","effort":"max"}),
+            "resume_session":thread,"isolate_worktree":false,"model":"gpt-6.1-sol","effort":"max"}),
             )
             .unwrap();
         f.console.tick().unwrap();
@@ -97,4 +97,98 @@ fn watchdog_review_model_recovery_requires_the_current_saved_transition() {
     };
     let next = trigger_launch_options(&ordinary, Some(&item), &options, Some(&source)).unwrap();
     assert!(next["model_recovery_from"].is_null());
+    for (origin, next_model, expected, hint) in [
+        ("policy", "gpt-6.1-sol", "gpt-6-astra", true),
+        ("owner_request", "gpt-6.1-sol", "gpt-6.1-sol", false),
+        (
+            "policy",
+            "anthropic/claude-sonnet-5-5",
+            "anthropic/claude-sonnet-5-5",
+            false,
+        ),
+    ] {
+        let mut edited = item.clone();
+        edited["model"] = json!(next_model);
+        edited["model_origin"] = json!(origin);
+        let next = trigger_launch_options(&trigger, Some(&edited), &trigger.options, Some(&source))
+            .unwrap();
+        assert_eq!(next["model"], expected);
+        assert_eq!(next["model_recovery_from"].is_string(), hint);
+        assert_eq!(
+            edited["model"], next_model,
+            "selection must not modify the saved ToDo"
+        );
+    }
+}
+
+#[test]
+fn watchdog_review_recovery_passes_scoped_routing_and_provenance_through_tick() {
+    for current in [true, false] {
+        let f = Fixture::new();
+        f.on();
+        f.job(
+            "source",
+            "todo-1",
+            "failed",
+            "状態: 継続中\nモデルを復旧してレビューを続ける。",
+            "",
+        );
+        let source = json!({"id":"source","name":"todo-1","status":"failed","todo_id":1,
+            "cwd":f.root,"model":"gpt-6.1-sol","effort":"max","model_origin":"policy",
+            "effort_origin":"policy","task_type":"review","sandbox":"read-only",
+            "review_source_jobs":["original-writer"],"review_excluded_models":["anthropic/claude-opus-5-5"]});
+        fs::write(
+            f.console.paths.jobs.join("source/job.json"),
+            source.to_string(),
+        )
+        .unwrap();
+        let mut repaired = cc_ask::recovery_failure::repaired_job(
+            &source,
+            cc_ask::recovery_failure::Failure::Model,
+        );
+        repaired["model_repair_pending"] = json!(current);
+        let mut db = f.console.todos().unwrap();
+        db["items"][0]["jobs"] = json!(["source"]);
+        db["items"][0]["model"] = json!("gpt-6.1-sol");
+        db["items"][0]["model_origin"] = json!("policy");
+        db["items"][0]["stall_recovery"] =
+            json!({"pending":{"request":"stall-1-1","job":repaired}});
+        fs::write(f.console.paths.todo.join("todo.json"), db.to_string()).unwrap();
+        f.console.api(&Method::POST, "delegate", json!({"id":1,"request_id":"stall-1-1",
+            "prompt":"保存した仕様と成果からレビューを再開する。","cwd":f.root,"source_job_id":"source",
+            "isolate_worktree":false,"model":"gpt-6-astra","effort":"max","task_type":"review","sandbox":"read-only"})).unwrap();
+        f.console.tick().unwrap();
+        assert_eq!(f.launches(), 1, "current={current}");
+        let call = model_run(&f);
+        assert_eq!(
+            model_arg(&call, "--model-recovery-from").as_deref(),
+            current.then_some("gpt-6.1-sol")
+        );
+        assert_eq!(
+            model_arg(&call, "--model").as_deref(),
+            Some(if current {
+                "gpt-6-astra"
+            } else {
+                "gpt-6.1-sol"
+            })
+        );
+        assert_eq!(
+            model_arg(&call, "--review-source-jobs").as_deref(),
+            Some("original-writer")
+        );
+        assert_eq!(
+            model_arg(&call, "--review-excluded-models").as_deref(),
+            Some("anthropic/claude-opus-5-5")
+        );
+        assert_eq!(
+            model_arg(&call, "--model-origin").as_deref(),
+            Some("policy")
+        );
+        assert_eq!(
+            model_arg(&call, "--effort-origin").as_deref(),
+            Some("policy")
+        );
+        assert_eq!(model_arg(&call, "--effort").as_deref(), Some("max"));
+        assert_eq!(model_arg(&call, "--sandbox").as_deref(), Some("read-only"));
+    }
 }

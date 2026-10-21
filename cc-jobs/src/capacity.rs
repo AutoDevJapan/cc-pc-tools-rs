@@ -332,6 +332,7 @@ impl Context {
         // source author. Use the hint only for selection, without persisting
         // it in either durable review exclusion or authorship metadata.
         if let Some(failed) = job["model_recovery_from"].as_str()
+            && !cc_job_policy::launch_context::fixed_execution_contract(job)
             && !excluded_models
                 .iter()
                 .any(|model| same_model(model, failed))

@@ -173,7 +173,11 @@ func (j jobMeta) productItem() todoItem {
 func mcpPrimary(j jobMeta, ids []int64, items map[int64]todoItem) int64 {
 	if j.TodoID > 0 {
 		if _, exists := items[j.TodoID]; exists {
-			return j.TodoID
+			for _, id := range ids {
+				if id == j.TodoID {
+					return j.TodoID
+				}
+			}
 		}
 		return 0
 	}

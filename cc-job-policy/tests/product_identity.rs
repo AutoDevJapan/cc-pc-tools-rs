@@ -302,3 +302,36 @@ fn mcp_history_only_product_job_does_not_borrow_code_priority() {
         60
     );
 }
+
+#[test]
+fn mcp_private_live_sibling_keeps_all_raw_edges_private_without_changing_current() {
+    let items = vec![
+        json!({"id":1,"project":"tools","status":"doing"}),
+        json!({"id":9,"project":"tools","status":"doing"}),
+    ];
+    let mut jobs = vec![
+        json!({"id":"requester","todo_id":1,"status":"running","created_at":"2026-10-20T00:00:00Z","product_identity":{"repository_id":61001,"owner_id":71001}}),
+        json!({"id":"sibling","todo_id":1,"status":"running","created_at":"2026-10-20T02:00:00Z"}),
+        json!({"id":"review","todo_id":9,"related_todo_ids":[1],"status":"queued"}),
+    ];
+    let policy = bindings();
+    let active = cc_job_policy::product_identity::assignments(&items, &jobs, &policy);
+    assert_eq!(active.current(1).unwrap()["id"], "sibling");
+    assert!(
+        active.sensitive(&jobs[2]),
+        "current choice must not discard a live private sibling's privacy"
+    );
+    jobs[0]["status"] = json!("succeeded");
+    let ended = cc_job_policy::product_identity::assignments(&items, &jobs, &policy);
+    assert!(
+        !ended.sensitive(&jobs[2]),
+        "completed job-only ownership must not become a permanent private binding"
+    );
+    jobs[0]["status"] = json!("running");
+    jobs[0]["product_identity"] = json!({"repository_id":61002,"owner_id":71002});
+    let alpha = cc_job_policy::product_identity::assignments(&items, &jobs, &policy);
+    assert!(
+        !alpha.sensitive(&jobs[2]),
+        "the public Alpha sibling must not be treated as the distinct contract product"
+    );
+}

@@ -469,6 +469,18 @@ pub fn assignments<'a>(items: &'a [Value], jobs: &'a [Value], policy: &Value) ->
             let identity = out.record(row, policy);
             identity == Resolution::Unknown
                 || identity.product().is_some_and(|product| product.rank == 10)
+                || row["id"].as_u64().is_some_and(|id| {
+                    out.assigned(id).iter().any(|job| {
+                        matches!(
+                            record_text(job, "status"),
+                            "queued" | "pending" | "starting" | "running"
+                        ) && (out.target(job) == Resolution::Unknown
+                            || out
+                                .target(job)
+                                .product()
+                                .is_some_and(|product| product.rank == 10))
+                    })
+                })
         })
         .filter_map(|row| row["id"].as_u64())
         .collect();

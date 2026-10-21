@@ -194,7 +194,7 @@ func TestMCPIdentityPortMatchesReviewedCanonicalSource(t *testing.T) {
 		t.Fatal("canonical identity source unavailable")
 	}
 	sum := sha256.Sum256(bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n")))
-	if hex.EncodeToString(sum[:]) != "2d3d26919ec789081baa5c0d6565f6844d55931ddba2bea0f32d39190fe46baa" {
+	if hex.EncodeToString(sum[:]) != "09aa87e5e316261e84b9bd52c72c52ddc38cfd86b46989e777b4f11154dee651" {
 		t.Fatal("canonical identity source changed; review the port and synthetic fixtures")
 	}
 }

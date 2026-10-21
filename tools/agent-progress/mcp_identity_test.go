@@ -419,6 +419,22 @@ func TestMCPRuntimeBindingOverridePresenceIsReportedWithoutValues(t *testing.T) 
 	}
 }
 
+func TestMCPUnknownNewerReportDoesNotDisplaceVerifiedCurrentTarget(t *testing.T) {
+	f := fixtureFor(t, `{"items":[{"id":1,"project":"tools","status":"doing","wait_on":[7]},{"id":7,"project":"tools","status":"doing"}]}`)
+	f.opts.PriorityFile = filepath.Join(filepath.Dir(f.opts.TodoFile), "priority.json")
+	writeFixture(t, f.opts.PriorityFile, []byte(`{"product_identities":{"godd-mcp-contract":{"repository_id":61001,"owner_id":71001}}}`))
+	f.job(t, "verified", `{"id":"verified","todo_id":1,"status":"running","created_at":"2026-10-20T00:00:00Z","product_identity":{"repository_id":61001,"owner_id":71001}}`)
+	f.job(t, "unknown", `{"id":"unknown","todo_id":1,"status":"running","created_at":"2026-10-20T01:00:00Z","product_identity":{"repository_id":61001,"owner_id":71002}}`)
+	for _, task := range snap(f).Tasks {
+		if task.ID == 1 && (task.Priority != 10 || task.Department != "受託部") {
+			t.Fatal("unverified newer identity displaced the verified current target")
+		}
+		if task.ID == 7 && task.Priority != 10 {
+			t.Fatal("real prerequisite lost verified business urgency")
+		}
+	}
+}
+
 func TestMCPNoPrimaryPrefersAnUnblockedCurrentTaskOverWaitingHistory(t *testing.T) {
 	f := fixtureFor(t, `{"items":[{"id":1,"project":"GoDD-MCP-Alpha","status":"wait","jobs":["worker"]},{"id":2,"project":"GoDD-MCP-Alpha","status":"doing","jobs":["worker"]}]}`)
 	f.opts.ActiveOnly = true

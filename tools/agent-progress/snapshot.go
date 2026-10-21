@@ -117,7 +117,7 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 			// verified current job. Its secondary reviews are still not primary
 			// execution there; preserve their independent urgency calculation.
 			primary := mcpPrimary(j, ids, items)
-			ids = nil
+			ids = []int64{}
 			if primary > 0 {
 				ids = []int64{primary}
 			}

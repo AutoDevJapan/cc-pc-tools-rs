@@ -2,6 +2,39 @@
 
 関連Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/325
 
+## 2026-10-21 09:37 JSTの再開照合
+
+PR315はhead `117dabf751adcbe6a64129bcd38ab3c87a092a05` でOPEN、baseはmain、
+mergeCommit/mergedAtはnullでした。最新版の自動検査には待機が残ります。
+元3153の正常な現在noteでは3216のMustを修正し、取得stateとメモを両方失った場合の
+4caseをRedから修正したとの記録があり、現在の実待ち先は3233です。
+3233の正常metadataはtodo、jobsTotal=0で、最新版のレビュー合格は未確認です。
+3181/3205等の旧レビューや旧headの成功CIを最新版の合格・マージとは扱いません。
+
+今回の実jobは `20261021-093456-todo-3190`、正常jobs statusはgpt-6.1-sol/max、
+running、todo_id=3190、cwd一致でした。実turn_contextの独立照合は未実施です。
+再開時HEADは `f162d197414e52527609cd929ae950e47c51d8e1`、差分なしで、ブランチは
+`scheduler/todo-3190-3110` のままです。実所有者は正常repo照会でAutoDevJapan、guardは
+ok=true/client_resource=false/classification_unverified=false。原保護一覧の復旧は未確認です。
+起動/プロジェクト指示・前回記録・正常repo/PR・3153/3190の正常note・選択metadata・自分の
+jobs statusだけを追加確認し、本人原資料/元仕様/applied/旧台帳/保護名簿は開いていません。
+元3153の正常noteへ届いた親3110の配布票には、稼働版は165424e/cdf1e6b…とあります。
+これは親の観測であり、今回は実物/source/hashの独立照合も配布もしていません。
+
+元3190の `wait-retry --after 3600` を1回登録し、終了0と正常readbackを確認しました。
+status=wait、condition=retry-time、notBefore=1792546639（2026-10-21 10:37:19 JST）、
+jobsTotal=3、wait_on空。待機理由に最新headと3233の未完了を保存し、3153全体のdone待ちや
+本人判断blockへ変えていません。原票はworktree直下の
+`todo3190-wait-{registration,readback}-20261021-093456.private.json` です。
+この文書だけをcommit/pushし、今回の実job・実HEADでcheckpointします。最終要求と結果は
+同じ場所の `todo3190-checkpoint-final-20261021-093456.private.json` と
+`todo3190-checkpoint-final-result-20261021-093456.private.json` に保存します。
+
+PR315の通常マージ前なので実装/検査/レビュー追加/統合/配布/方向の実追記/質問closeは未実施。
+元3050/3084/3153の未完了、他の停止・依存・未資格scopeを保持しています。
+次回はPR315の通常マージを1回照合し、マージ済みなら実merge commitと最新mainの統合から
+再開します。本人のPC操作、新しい質問/メンション/完了通知、並行修正は行っていません。
+
 ## 2026-10-21 08:24 JSTの再開照合
 
 PR315は今回の正常照会でもOPENで、通常マージは未実施でした。headは

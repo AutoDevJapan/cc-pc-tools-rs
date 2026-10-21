@@ -1,0 +1,13 @@
+{
+  "compiler_finished": true,
+  "selected_two": true,
+  "expected_missing_hint": true,
+  "matched_source_line": true,
+  "resume_control_pass": true,
+  "summary": true,
+  "final_marker": true,
+  "exit_code": 100,
+  "gate_pid_alive": false,
+  "stdout_bytes": 0,
+  "stderr_bytes": 46187
+}

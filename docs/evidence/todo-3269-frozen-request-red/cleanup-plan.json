@@ -1,0 +1,10 @@
+{
+  "action": "quarantine",
+  "bytes": 1436299440,
+  "entries": 2182,
+  "id": "d111d047a5d0d972c63580ef437f7392",
+  "path": "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-d111d047a5d0d972c63580ef437f7392",
+  "protected_attributes": false,
+  "reason": "size",
+  "recorded_from": "single plan command output"
+}

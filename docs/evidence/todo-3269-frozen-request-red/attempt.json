@@ -1,0 +1,12 @@
+{
+  "id": 3269,
+  "parent_todo": 3081,
+  "issue": 277,
+  "job": "20261021-124551-todo-3269",
+  "source": "519cd0cb17e6a7b9a7c4830ae98ac40208f8771a",
+  "branch": "scheduler/todo-3269-frozen-request-red",
+  "attempt": 1,
+  "additional_attempts_allowed": 0,
+  "requested_at": "2026-10-21T12:49:55.4345045+09:00",
+  "state": "reserved-single-invocation"
+}

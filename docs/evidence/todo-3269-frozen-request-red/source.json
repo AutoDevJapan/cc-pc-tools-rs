@@ -1,0 +1,52 @@
+{
+  "observed_at": "2026-10-21T12:50:23.8972659+09:00",
+  "todo": 3269,
+  "job": "20261021-124551-todo-3269",
+  "parent_todo": 3081,
+  "repo": "AutoDevJapan/cc-pc-tools-rs",
+  "repository_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs",
+  "original_workplace": "D:/CC/Work/unattended-operations-20261013",
+  "current_worktree": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3269-work",
+  "source_ref": "scheduler/todo-3081-frozen-request-red",
+  "source_head": "519cd0cb17e6a7b9a7c4830ae98ac40208f8771a",
+  "product_baseline": "072c776898621d552bf1cf831014171ed105961c",
+  "product_diff": [
+    "M\tcc-todo/tests/product_review.rs",
+    "M\tlocalai-web-rs/src/model_resume_tests.rs"
+  ],
+  "owner_checked_via": "gh repo view and origin URL",
+  "client_guard_current": {
+    "classification_unverified": false,
+    "client_resource": false,
+    "ok": true,
+    "original_registry_recovered": false,
+    "scope": "verified repair source and explicitly supplied operational receipts only"
+  },
+  "client_guard_original": {
+    "classification_unverified": false,
+    "client_resource": false,
+    "ok": true,
+    "original_registry_recovered": false,
+    "scope": "verified repair source and explicitly supplied operational receipts only"
+  },
+  "instruction_files": [
+    "D:/CC/AGENTS.md",
+    "D:/CC/Policies/owner-agent-conduct-20261021.md",
+    "D:/CC/Policies/owner-model-effort-and-pool-retry-20261020.md",
+    "D:/CC/Skills/shared-todo/SKILL.md",
+    "D:/CC/Skills/rust-cargo-target-contention/SKILL.md",
+    "D:/CC/Skills/codex-safe-owned-temp-cleanup/SKILL.md",
+    "D:/CC/Skills/japanese-report-writing/SKILL.md",
+    "AGENTS.md",
+    "docs/cargo-gate.md",
+    "docs/build-speed.md",
+    "docs/test-build-scope.md"
+  ],
+  "claude_file_present": false,
+  "initial_checkpoint": {
+    "exit": 0,
+    "expected_branch": "scheduler/todo-3269-work",
+    "branch": "scheduler/todo-3269-frozen-request-red",
+    "head": "519cd0cb17e6a7b9a7c4830ae98ac40208f8771a"
+  }
+}

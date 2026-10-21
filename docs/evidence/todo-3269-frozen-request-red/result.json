@@ -1,0 +1,43 @@
+{
+  "todo": 3269,
+  "parent_todo": 3081,
+  "issue": 277,
+  "status": "finite-check-complete",
+  "source": "519cd0cb17e6a7b9a7c4830ae98ac40208f8771a",
+  "product": "072c776898621d552bf1cf831014171ed105961c",
+  "command_invocations": 1,
+  "exit_code": 100,
+  "selected": 2,
+  "passed": 1,
+  "failed": 1,
+  "skipped": 253,
+  "compile": "passed",
+  "fixture_or_request_failure": false,
+  "product_red": "missing --model-recovery-from on current=true at model_resume_tests.rs:166",
+  "red_reached": [
+    "production delegation_request produced policy Sol",
+    "delegate API accepted",
+    "Console tick completed",
+    "one launch observed",
+    "missing recovery hint asserted"
+  ],
+  "red_not_reached": [
+    "current=false old repair iteration",
+    "--model equals Astra assertion",
+    "review author/exclusion provenance assertions",
+    "origin/effort/sandbox assertions",
+    "real ToDo model unchanged assertion"
+  ],
+  "control": "explicit_console_resume_excludes_retired_threads_and_keeps_compatible_threads passed",
+  "control_cases": [
+    "old compatible thread resumes",
+    "retired old thread excluded",
+    "new compatible thread resumes with old retirement record"
+  ],
+  "tests_modified": 0,
+  "product_modified": 0,
+  "recorder_post_exit_error": true,
+  "owner_judgment_required": false,
+  "parent_should_continue_implementation": true,
+  "no_rerun": true
+}

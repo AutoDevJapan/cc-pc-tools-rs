@@ -1,0 +1,7 @@
+{
+  "id": 3269,
+  "job": "20261021-124551-todo-3269",
+  "expected_branch": "scheduler/todo-3269-work",
+  "branch": "scheduler/todo-3269-frozen-request-red",
+  "head": "519cd0cb17e6a7b9a7c4830ae98ac40208f8771a"
+}

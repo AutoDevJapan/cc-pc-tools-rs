@@ -1,0 +1,17 @@
+{
+  "observed_at": "2026-10-21T12:53:08.5723158+09:00",
+  "id": "d111d047a5d0d972c63580ef437f7392",
+  "original_path": "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-d111d047a5d0d972c63580ef437f7392",
+  "original_absent": true,
+  "destination": "C:\\Users\\makhmeto\\Downloads\\削除希望\\20261021-cc-pc-tools-rs-todo-3269-frozen-request-red-d111d047",
+  "destination_exists": true,
+  "artifact_bytes_reported": 1436299440,
+  "destination_total_bytes": 1436300053,
+  "destination_file_count": 1851,
+  "artifact_bytes_reclaimed": 0,
+  "state": "quarantined",
+  "reason": "safe-delete plan chose quarantine because size",
+  "next_action": "Parent passes this exact owned quarantine receipt to existing deletion-request cleanup; no repeated deletion attempted by this task",
+  "owner_judgment_required": false,
+  "fixture_children_remaining": 0
+}

@@ -1,0 +1,14 @@
+{
+  "observed_at": "2026-10-21T12:52:27.2424524+09:00",
+  "observer_exit_code": 1,
+  "cargo_exit_code": 100,
+  "exception": "Multiple ambiguous overloads found for WhenAll and the argument count: 1",
+  "location": "run-once.ps1:54",
+  "sequence": "child WaitForExit, persist exit_code/end timestamps, post-exit WhenAll exception, finally close streams and persist run.json",
+  "rerun": null,
+  "raw_logs_modified": null,
+  "copies_explicitly_awaited": null,
+  "copy_task_success_status": "not observed after recorder process exit",
+  "independent_log_checks": "compiler success, both test outcomes, final Summary and error: test run failed marker, byte counts and SHA256 verified after recorder exit",
+  "limitation": "explicit task-completion/EOF receipt was not saved; do not infer successful recorder exit from Cargo exit"
+}

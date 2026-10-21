@@ -1,0 +1,482 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.26
+   Compiling windows-link v0.2.1
+   Compiling cfg-if v1.0.5
+   Compiling memchr v2.8.3
+   Compiling smallvec v1.16.2
+   Compiling itoa v1.0.18
+   Compiling windows-sys v0.61.2
+   Compiling stable_deref_trait v1.2.1
+   Compiling pin-project-lite v0.2.17
+   Compiling once_cell v1.21.4
+   Compiling log v0.4.34
+   Compiling futures-core v0.3.34
+   Compiling bytes v1.12.1
+   Compiling serde_core v1.0.229
+   Compiling parking_lot_core v0.9.12
+   Compiling futures-sink v0.3.34
+   Compiling scopeguard v1.2.0
+   Compiling litemap v0.8.3
+   Compiling lock_api v0.4.14
+   Compiling writeable v0.6.4
+   Compiling percent-encoding v2.3.2
+   Compiling futures-channel v0.3.34
+   Compiling icu_properties_data v2.3.0
+   Compiling slab v0.4.12
+   Compiling futures-task v0.3.34
+   Compiling icu_normalizer_data v2.3.0
+   Compiling serde v1.0.229
+   Compiling utf8_iter v1.0.4
+   Compiling parking_lot v0.12.5
+   Compiling hashbrown v0.17.1
+   Compiling futures-io v0.3.34
+   Compiling zmij v1.0.23
+   Compiling equivalent v1.0.2
+   Compiling syn v3.0.6
+   Compiling syn v2.0.119
+   Compiling indexmap v2.14.2
+   Compiling serde_json v1.0.151
+   Compiling tracing-core v0.1.36
+   Compiling find-msvc-tools v0.1.14
+   Compiling shlex v2.0.1
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.4
+   Compiling version_check v0.9.5
+   Compiling cc v1.6.0
+   Compiling synstructure v0.14.0
+   Compiling zerovec-derive v0.11.6
+   Compiling displaydoc v0.2.7
+   Compiling futures-macro v0.3.34
+   Compiling tokio-macros v2.7.2
+   Compiling serde_derive v1.0.229
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling tokio v1.53.2
+   Compiling futures-util v0.3.34
+   Compiling generic-array v0.14.7
+   Compiling form_urlencoded v1.2.2
+   Compiling zerofrom v0.1.8
+   Compiling http v1.5.0
+   Compiling zeroize v1.9.1
+   Compiling yoke v0.8.3
+   Compiling http-body v1.1.0
+   Compiling rustls-pki-types v1.15.1
+   Compiling ring v0.17.14
+   Compiling tracing-attributes v0.1.31
+   Compiling zerovec v0.11.8
+   Compiling zerotrie v0.2.5
+   Compiling crc32fast v1.5.2
+   Compiling typenum v1.20.1
+   Compiling autocfg v1.5.1
+   Compiling tracing v0.1.44
+   Compiling simd-adler32 v0.3.10
+   Compiling tinystr v0.8.4
+   Compiling potential_utf v0.1.6
+   Compiling tower-service v0.3.3
+   Compiling num-traits v0.2.19
+   Compiling icu_collections v2.3.0
+   Compiling windows-interface v0.59.3
+   Compiling icu_locale_core v2.3.0
+   Compiling windows-implement v0.60.2
+   Compiling getrandom v0.2.17
+   Compiling windows-result v0.4.1
+   Compiling windows-strings v0.5.1
+   Compiling httparse v1.10.1
+   Compiling adler2 v2.0.1
+   Compiling untrusted v0.9.0
+   Compiling miniz_oxide v0.9.1
+   Compiling windows-core v0.62.2
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling aho-corasick v1.1.5
+   Compiling tower-layer v0.3.3
+   Compiling regex-syntax v0.8.11
+   Compiling libc v0.2.190
+   Compiling windows_x86_64_msvc v0.52.6
+   Compiling icu_provider v2.3.1
+   Compiling httpdate v1.0.3
+   Compiling try-lock v0.2.5
+   Compiling getrandom v0.4.3
+   Compiling rustls v0.23.45
+   Compiling want v0.3.2
+   Compiling regex-automata v0.4.18
+   Compiling digest v0.10.7
+   Compiling icu_normalizer v2.3.0
+   Compiling icu_properties v2.3.0
+   Compiling flate2 v1.1.10
+   Compiling webpki-roots v1.0.9
+   Compiling http-body-util v0.1.5
+   Compiling sync_wrapper v1.0.2
+   Compiling anstyle v1.0.14
+   Compiling atomic-waker v1.1.2
+   Compiling utf8parse v0.2.2
+   Compiling subtle v2.6.1
+   Compiling thiserror v2.0.21
+   Compiling cpufeatures v0.2.17
+   Compiling once_cell_polyfill v1.70.2
+   Compiling native-tls v0.2.18
+   Compiling base64 v0.22.1
+   Compiling sha2 v0.10.9
+   Compiling anstyle-wincon v3.0.11
+   Compiling anstyle-parse v1.0.0
+   Compiling chrono v0.4.45
+   Compiling webpki-roots v0.26.11
+   Compiling regex v1.13.1
+   Compiling thiserror-impl v2.0.21
+   Compiling anstyle-query v1.1.5
+   Compiling schannel v0.1.29
+   Compiling windows-threading v0.2.1
+   Compiling hyper v1.12.0
+   Compiling colorchoice v1.0.5
+   Compiling base64 v0.23.1
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling ipnet v2.12.2
+   Compiling anstream v1.0.0
+   Compiling windows-future v0.3.2
+   Compiling tower v0.5.3
+   Compiling idna_adapter v1.2.2
+   Compiling hyper-util v0.1.21
+   Compiling windows-targets v0.52.6
+   Compiling windows-numerics v0.3.1
+   Compiling rustls-webpki v0.103.15
+   Compiling windows-collections v0.3.2
+   Compiling futures-executor v0.3.34
+   Compiling idna v1.1.0
+   Compiling bumpalo v3.20.3
+   Compiling ryu v1.0.23
+   Compiling bitflags v2.13.2
+   Compiling heck v0.5.0
+   Compiling url v2.5.8
+   Compiling clap_lex v1.1.1
+   Compiling fastrand v2.5.0
+   Compiling zip v2.4.2
+   Compiling strsim v0.11.1
+   Compiling clap_derive v4.6.7
+   Compiling tempfile v3.27.0
+   Compiling serde_urlencoded v0.7.1
+   Compiling zopfli v0.8.3
+   Compiling clap_builder v4.6.7
+   Compiling windows v0.62.2
+   Compiling futures v0.3.34
+   Compiling windows-sys v0.59.0
+   Compiling tokio-native-tls v0.3.1
+   Compiling ureq v2.12.1
+   Compiling uuid v1.27.0
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3269-work\cc-job-policy)
+   Compiling rustversion v1.0.23
+   Compiling unicase v2.10.0
+   Compiling mime v0.3.17
+   Compiling mime_guess v2.0.5
+   Compiling cc-chrome v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3269-work\cc-chrome)
+   Compiling winreg v0.55.0
+   Compiling hyper-tls v0.6.0
+   Compiling tower-http v0.6.11
+   Compiling clap v4.6.7
+   Compiling reqwest v0.12.28
+   Compiling wmi v0.18.4
+   Compiling cc-local-llm v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3269-work\cc-local-llm)
+   Compiling cc-task-title v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3269-work\cc-task-title)
+   Compiling async-trait v0.1.92
+   Compiling lazy_static v1.5.1
+   Compiling sharded-slab v0.1.7
+   Compiling cc-live v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3269-work\cc-live)
+   Compiling tokio-util v0.7.19
+   Compiling axum-core v0.4.5
+   Compiling serde_path_to_error v0.1.20
+   Compiling tracing-log v0.2.0
+   Compiling nu-ansi-term v0.50.3
+   Compiling thread_local v1.1.10
+   Compiling matchit v0.7.3
+   Compiling http-range-header v0.4.2
+   Compiling tracing-subscriber v0.3.23
+   Compiling cc-redact v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3269-work\cc-redact)
+   Compiling tower-http v0.5.2
+   Compiling cc-ask v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3269-work\cc-ask)
+   Compiling axum v0.7.9
+   Compiling cc-scheduler v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3269-work\cc-scheduler)
+   Compiling cc-todo v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3269-work\cc-todo)
+   Compiling localai-web-rs v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3269-work\localai-web-rs)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 53.51s
+────────────
+ Nextest run ID 0eb649e1-6170-42dc-9ac8-767c6ba98d5c with nextest profile: default
+    Starting 2 tests across 1 binary (253 tests skipped)
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::source_workspace::tests::build_input_formats_are_bounded_and_limits_keep_their_boundary
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::source_workspace::tests::comments_and_strings_do_not_admit_unreferenced_data
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::source_workspace::tests::embedded_assets_are_copied_to_work_and_baseline_and_compile
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::source_workspace::tests::embedded_assets_obey_size_limit_and_failed_staging_is_removed
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::source_workspace::tests::include_paths_are_relative_and_cannot_escape
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::source_workspace::tests::includes_never_override_auth_runtime_client_or_hidden_exclusions
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::source_workspace::tests::nested_macros_and_escaped_literals_are_discovered
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::source_workspace::tests::retry_preserves_edits_and_task_ownership
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::absent_source_receipts_and_baselines_are_never_expired
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::agent_routes_reject_external_headers_and_oversized_bodies
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::api_routes_validate_input_and_use_existing_todo_cli
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::artifact_exclusion_uses_resolved_alias_not_raw_path
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::artifact_home_is_rejected_independently_of_registration_drive
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::atomic_receipt_survives_lost_response_block_and_done_note_changes
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::browser_delegation_uses_owner_chrome_profile
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::busy_shepherd_preserves_small_handoff_until_it_can_launch
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::capacity_rejection_preserves_readable_state
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::closed_pr_can_reopen_and_old_suppression_can_recover
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::closed_pr_receipt_covering_a_queued_decision_survives_retention
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::compacted_decisions_do_not_replay_expired_sources
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::continues_unfinished_jobs_without_an_owner_reply_and_deduplicates
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::corrupt_job_or_state_fails_closed
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::delegation_preserves_readonly_options_across_queue_reload
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::delegation_sends_the_todo_work_summary_instead_of_the_orchestrator_id
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::detects_decision_and_three_handoffs_without_cross_repo_collisions
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::display_api_masks_client_paths_messages_and_fails_closed_without_mutation
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::display_only_reads_selected_public_handoff_messages
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::durable_dedup_handles_lost_launcher_receipt_and_links_todo
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::excluded_project_and_completed_queued_item_do_not_launch
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::exe_todo_is_preferred
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::expired_manual_receipt_still_reconciles_existing_launch_without_duplicate
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::expired_pr_report_snapshot_archives_its_sources_before_their_decisions_replay
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::failed_link_keeps_new_owner_block_until_explicit_resume
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::failed_todo_link_is_recovered_without_relaunch
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::finite_todo_listing_keeps_large_original_bytes_and_protection
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::first_run_baselines_history_and_orchestrators_do_not_recurse
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::inbox_checkpoint_advances_only_after_persisting_and_deduplicates
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::inbox_does_not_redelegate_consumed_answers_after_question_closes
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::inbox_excludes_questions_and_request_forum
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::kill_switch_stops_inbox_and_launches_but_preserves_queue
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::large_todo_snapshot_and_canonical_admission_are_preserved
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::legacy_notes_do_not_authorize_recovery_but_committed_receipts_do
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::legacy_pr_snapshot_is_removed_after_exact_report_match_only
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::legacy_pr_without_report_snapshot_retains_its_coverage_after_closure_and_reload
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::legacy_queue_restores_saved_recovery_folder_and_session_before_launch
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::legacy_unlaunched_request_accepts_one_options_upgrade_and_keeps_its_launch_key
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::long_outage_preserves_unaccepted_work_but_archives_only_handled_sources
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::lost_response_rejects_reusing_a_request_for_another_project
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::lost_stall_receipt_is_restored_even_if_blocked_and_capacity_is_full
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::missing_review_retains_new_decision_and_report_snapshot_is_exact
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::missing_rust_tool_never_runs_a_substitute
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::non_git_items_get_independent_source_copies_without_runtime_state_or_overwrites
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::note_markers_never_replace_an_existing_immutable_request
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::offline_compaction_backs_up_exact_bytes_and_removes_only_generated_snapshot
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::offline_compaction_waits_for_the_same_state_lock_as_runtime_writes
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::one_failed_source_copy_defers_only_that_item_and_other_work_starts
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::only_an_individual_closed_pr_confirmation_expires_its_checkpoint
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::oversized_corrupt_or_unreadable_todo_never_changes_admission
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::pr_review_waits_for_active_shepherd_and_uses_start_time
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::pr_review_waits_for_missing_receipt_and_real_owner_question
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::pr_reviews_repeat_only_after_three_new_handoffs_and_survive_restart
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::project_matching_keeps_independent_repositories_under_broad_root_separate
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::question_capacity_restores_patrol_reader_without_changing_todo_or_queue
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::queued_decision_waits_for_owner_when_it_has_a_concrete_question
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::queued_message_becoming_an_open_question_is_not_launched
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::queued_pr_review_rechecks_closure_question_and_lost_response
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::queued_shepherd_decisions_merge_into_review_with_latest_reports
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::queued_stall_handoff_does_not_revive_a_newly_blocked_item
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::receipt_metadata_errors_cannot_create_another_item
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::recovery_options_are_durable_reused_and_conflicting_changes_are_rejected
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::resource_capacity_applies_to_all_delegation_and_recovers_without_fixed_cap
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::retention_preserves_recent_decision_source_and_pr_causal_checkpoint
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::retention_prunes_only_proven_finished_history_and_survives_reload
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::retired_individual_sources_still_count_towards_the_next_pr_review
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::retry_of_completed_handoff_returns_original_receipt
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::review_chain_advances_even_when_new_job_ids_sort_before_old_ids
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::scheduler_lock_defers_dispatch_until_released
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::secrets_never_reach_persisted_prompts
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::stall_handoff_waits_for_scheduler_capacity_and_cannot_duplicate_linked_work
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::state_replacement_keeps_nontransient_io_errors_without_retrying
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::state_replacement_retries_a_real_reader_without_losing_the_original
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::subwork_checkpoint_survives_interruption_before_dispatch
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::subwork_continuation_passes_inherited_read_only_to_scheduler
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::subwork_foreign_reservation_cannot_acknowledge_new_body
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::successful_unfinished_work_resumes_its_session_and_links_the_original_todo
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::suppressed_receipts_age_from_first_observation_and_queued_receipts_stay
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_ambiguous_explicit_links_hold_without_touching_body
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_ambiguous_head_allows_unrelated_formal_item_to_launch
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_full_execution_capacity_still_retires_closed_handoffs
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_full_intake_does_not_starve_an_accepted_formal_item
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_intake_binds_source_before_dispatch_even_without_capacity
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_interrupt_before_save_never_launches_and_restarts_from_disk
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_invalid_raw_number_is_held_without_rewriting_the_body
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_late_explicit_link_is_saved_then_launches_with_the_exact_item
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_late_link_with_a_hold_survives_reload_and_missing_links
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_legacy_fingerprint_does_not_poison_tick_or_rewrite_body
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_legacy_null_done_and_block_never_launch
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_legacy_null_linked_active_waits_then_resumes_once
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_legacy_suppressed_body_starts_a_new_observation_clock
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_lost_receipt_keeps_dependency_wait_until_ready
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_lost_receipt_recovers_same_key_and_retains_new_block
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_metadata_limit_does_not_starve_an_accepted_formal_item
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_missing_named_handoff_does_not_guess_any_number
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_missing_source_record_waits_and_recovers_exact_link
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_missing_todo_link_does_not_guess_from_name_or_cwd
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_new_block_after_admission_is_rechecked_before_launch
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_new_worker_after_admission_is_rechecked_before_launch
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_owner_question_suppression_preserves_body_after_reload
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_raw_active_receipt_prevents_a_second_worker
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_raw_receipt_cannot_override_a_conflicting_link
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_receipt_survives_missing_source_until_link_can_be_recovered
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_saved_association_conflict_preserves_legacy_request
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_scheduler_only_link_resolves_and_suppresses_block
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_suppressed_body_survives_reload_until_the_seven_day_boundary
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_suppressed_body_uses_existing_receipt_retention
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_suppression_preserves_unrelated_queued_and_pending_links
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_thread_link_resolves_without_guessing_other_same_folder_item
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1597_wait_keeps_handoff_until_dependencies_finish
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_ambiguous_decision_is_not_consumed_by_manual_canonical
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_cancelled_stall_is_rechecked_after_capacity_admission
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_cancelled_unlaunched_canonical_restores_original_decision_body
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_delegate_owner_marker_survives_wrapper_without_changing_receipt
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_dirty_non_dedicated_source_is_preserved_instead_of_forking_head
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_expired_canonical_drops_merged_body_without_replaying_started_work
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_explicit_request_is_durable_and_current_todo_wins_at_launch
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_fake_runner_covers_partial_and_default_settings
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_final_recheck_defers_changed_model_and_racing_owner
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_invalid_request_or_current_todo_never_invokes_runner
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_invalid_watch_settings_can_be_fixed_without_changing_request_id
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_legacy_stall_with_old_model_starts_one_new_conversation
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_linked_worker_blocks_queued_review_without_extra_start
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_missing_explicit_source_cannot_grant_fallback_review_scope
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_model_mismatch_also_clears_old_explicit_resume
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_new_manual_implementation_does_not_inherit_supplemental_review_scope
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_new_model_keeps_uncommitted_work_in_completed_owners_checkout
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_old_explicit_stall_and_decision_merge_into_existing_manual
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_omitted_cwd_restores_finished_owners_worktree_and_uncommitted_bytes
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_provider_qualified_subscription_model_survives_watch_and_launch
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_read_only_supplement_does_not_consume_implementation_recovery
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_review_m1_linked_source_in_another_checkout_does_not_wait_forever
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_review_m2_invalid_queued_item_does_not_starve_other_todos
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_review_m3_current_stall_survives_older_reservation_and_aliases_flatten
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_source_read_only_scope_survives_new_model_conversation
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_watch_partial_settings_and_invalid_values_are_not_dropped
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_watch_request_to_saved_queue_to_runner_uses_current_todo
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1624_watch_retry_freezes_request_but_launch_rechecks_todo
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1842_explicit_intake_wins_over_unchanged_todo_default
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1842_legacy_partial_request_replays_after_dispatch
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo1842_null_object_upgrade_and_original_replay_keep_one_launch
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2172_binding_never_guesses_missing_item_or_crosses_saved_association
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2172_broad_old_source_uses_registered_project_and_keeps_review_role
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2172_cycle_and_two_independent_receipts_remain_retriable
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2172_legacy_child_receipt_cannot_override_resumed_parent
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2172_lost_tool_response_retains_receipt_and_runs_independent_request
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2172_missing_or_invalid_running_store_never_becomes_an_empty_queue
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2172_registered_source_repair_unparks_the_same_handoff
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2172_shared_history_uses_explicit_binding_receipt_or_dependency
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2172_structural_failure_waits_for_saved_workspace_repair
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2299_artifact_intake_uses_same_receipt_and_rejects_foreign_scope
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2299_capacity_detail_needs_same_named_target_and_this_measurement
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2299_legacy_metadata_reconciles_before_capacity_without_checkout_probe
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2299_legacy_timeout_is_rechecked_but_scoped_timeout_keeps_retry
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2299_parked_candidates_do_not_consume_ready_attempts
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2299_patrol_alternates_todo_and_orphan_ready_classes
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2299_patrol_budget_deferral_keeps_receipts_and_failure_attempts
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2299_recovery_reuses_the_batch_and_refreshes_checkout_after_launch
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2299_resolved_receipt_is_todo_class_even_without_stored_id
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2299_shared_launch_lock_wait_is_recorded_without_changing_receipt
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2299_stage_does_not_renew_start_or_clear_previous_error
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2299_unresolved_source_is_parked_before_checkout_probe
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2299_wait_diagnostics_preserve_receipt_and_failure_history
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2341_busy_source_sessions_do_not_charge_ready_attempts
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2341_legacy_artifact_dispatch_retains_bytes_and_latest_permission_note
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2341_legacy_artifact_requires_current_unique_generation_receipt
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2341_pending_reservations_do_not_charge_ready_attempts
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2341_ready_receipt_precedes_bounded_rotating_failed_checkout_probes
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2341_repaired_receipt_rechecks_current_wait_before_launch
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo2341_waiting_recovery_backlog_preserves_evidence_and_launches_ready_tail
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo_capacity_reply_redaction_keeps_valid_json_and_canonical_identity
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo_receipt_recovers_cli_failure_lost_response_and_restart
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::todo_receipts_keep_distinct_requests_independent
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::unassigned_items_in_one_repository_launch_in_distinct_checkouts
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::unnumbered_handoff_waits_for_active_recovery_after_reservation_clears
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs agent::tests::watchdog_review_model_recovery_requires_the_current_saved_transition
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs command_capture::tests::fixture_large_output
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs command_capture::tests::real_command_success_failure_and_whole_flight_timeout
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs command_capture::tests::stops_large_output_before_waiting_for_process_exit
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs health_snapshot::tests::backend_errors_invalid_json_and_redirects_are_partial_observations
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs health_snapshot::tests::deadline_includes_waiting_for_headers_and_the_response_body
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs health_snapshot::tests::docker_head_requires_a_complete_successful_http_response
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs health_snapshot::tests::oversized_health_response_is_not_used_as_service_evidence
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs health_snapshot::tests::partial_success_keeps_legacy_details_and_probes_missing_services
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs health_snapshot::tests::unobserved_services_remain_null_and_old_failures_do_not_replace_new_health
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs health_snapshot::tests::verifies_service_identity_and_never_invents_missing_model_counts
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs music_bridge::tests::bridge_preserves_form_and_redirect_without_forwarding_credentials
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs music_bridge::tests::bridge_preserves_large_upload_audio_and_byte_ranges
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs music_bridge::tests::music_html_gets_shared_shell_but_head_and_ranges_remain_original
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs resident::tests::codex_job_environment_is_refused_but_scheduler_and_npm_install_are_allowed
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs resident::tests::preview_cannot_bypass_the_guard_on_a_resident_port
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs resident::tests::restart_uses_only_the_existing_scheduled_task
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs tests::accepts_same_origin_and_keeps_unknown_apis_private
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs tests::api_origin_host_and_cli_contracts_remain_strict
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs tests::health_failure_returns_200_with_real_independent_services_and_null_unknowns
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs tests::health_keys_are_unique_for_case_insensitive_powershell_clients
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs tests::health_merges_real_services_with_rust_identity
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs tests::preserves_backend_failures_and_rejects_redirects
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs tests::progress_navigation_opens_the_existing_live_jobs_panel
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs tests::proxies_json_and_binary_without_forwarding_sensitive_headers
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs tests::rejects_external_browser_requests_and_rebinding_hosts
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs tests::shared_progress_waits_for_snapshot_without_scanning_the_live_store
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs tests::shell_exception_never_authorizes_apis_frames_xhr_or_websockets
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs tests::top_level_navigation_serves_only_the_compiled_shell
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs tests::unavailable_backend_returns_explicit_json_503
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs tests::upload_allows_base64_bodies_larger_than_the_normal_json_limit
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs tests::validates_control_and_limits_request_body
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::arbitrary_worktree_uses_git_common_directory_without_subprocesses
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::changed_exclusions_prevent_cache_publication
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::claude_fixture_caps_gaps_splits_midnight_and_dedupes_streaming_usage
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::codex_cumulative_usage_is_not_counted_twice
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::codex_old_usage_seeds_baseline_without_charging_current_day
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::combined_fractional_files_never_exceed_total_read_budget
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::commit_fixture_dedupes_sha_and_filters_author_date_and_client
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::copies_and_nested_tools_share_counts_without_duplicate_git_results
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::discarded_summary_keeps_ten_minute_throttle_after_restart
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::elapsed_read_deadline_preserves_cursor_for_next_pass
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::end_to_end_excluded_job_never_enters_cache_or_summary
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::excluded_registration_protects_unrelated_directory_names
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::excluded_source_removes_grouped_work_slots_and_summaries
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::exclusion_file_failure_clears_cached_and_current_results
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::exclusions_apply_case_insensitive_to_paths_names_remotes_and_titles
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::historical_streaming_usage_survives_an_incremental_read_boundary
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::huge_unterminated_record_obeys_budget_and_resumes_discarding
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::incremental_offsets_survive_restart_and_partial_lines
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::intervals_merge_reverse_order_bridges_and_adjacent_events
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::jst_boundaries_and_calendar_validation
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::large_cache_restores_offsets_without_generic_json_copy
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::late_summary_cannot_restore_excluded_source_and_other_day_is_kept
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::migrated_old_transcript_is_identified_without_loading_body
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::old_summary_is_removed_when_inputs_change_or_disappear
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::overlapping_job_and_session_time_is_counted_once_per_project
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::partial_new_record_cannot_be_marked_as_old_transcript
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::production_sources_smoke_check
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::records_arriving_during_collection_are_left_for_next_refresh
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::running_job_uses_now_and_shares_runtime_across_jst_days
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::same_length_log_replacement_rebuilds_its_usage
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::summaries_mask_credential_syntax_and_preserve_markdown_evidence_links
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::summary_accepts_display_folder_only_when_original_repositories_exist
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::tail_probe_without_codex_baseline_replays_before_resumed_usage
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::title_fallback_has_only_recorded_work_and_short_links
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::todo_capacity_exclusion_failure_stops_aggregation_and_never_certifies_a_new_hash
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::unavailable_project_aliases_fail_closed
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::workload_route_returns_versioned_json_and_rejects_invalid_date
+        SKIP [         ] (───) localai-web-rs::bin/localai-web-rs workload::tests::worktree_mapping_uses_repository_and_registered_subfolders
+        FAIL [   0.257s] (1/2) localai-web-rs::bin/localai-web-rs agent::tests::watchdog_review_recovery_passes_scoped_routing_and_provenance_through_tick
+  stdout ───
+
+    running 1 test
+    test agent::tests::watchdog_review_recovery_passes_scoped_routing_and_provenance_through_tick ... FAILED
+
+    failures:
+
+    failures:
+        agent::tests::watchdog_review_recovery_passes_scoped_routing_and_provenance_through_tick
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 254 filtered out; finished in 0.25s
+
+  stderr ───
+
+    thread 'agent::tests::watchdog_review_recovery_passes_scoped_routing_and_provenance_through_tick' (5224) panicked at localai-web-rs\src\model_resume_tests.rs:166:9:
+    assertion `left == right` failed
+      left: None
+     right: Some("gpt-6.1-sol")
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+        PASS [   0.518s] (2/2) localai-web-rs::bin/localai-web-rs agent::tests::explicit_console_resume_excludes_retired_threads_and_keeps_compatible_threads
+────────────
+     Summary [   0.520s] 2 tests run: 1 passed, 1 failed, 253 skipped
+        FAIL [   0.257s] (1/2) localai-web-rs::bin/localai-web-rs agent::tests::watchdog_review_recovery_passes_scoped_routing_and_provenance_through_tick
+error: test run failed

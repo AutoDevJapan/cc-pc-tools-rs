@@ -1,0 +1,8 @@
+{
+  "observed_at": "2026-10-21T12:51:41.7819571+09:00",
+  "source_head_after": "519cd0cb17e6a7b9a7c4830ae98ac40208f8771a",
+  "source_changes": [],
+  "selected_test_sha256": "81E5E12280227F86E219CF502803695BA69BE97DF93F050C4F6F23747ADFB9B2",
+  "fixture_directory_exists": true,
+  "fixture_children": []
+}

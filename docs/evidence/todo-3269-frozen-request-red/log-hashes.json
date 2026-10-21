@@ -1,0 +1,12 @@
+[
+  {
+    "file": "stdout.log",
+    "bytes": 0,
+    "sha256": "E3B0C44298FC1C149AFBF4C8996FB92427AE41E4649B934CA495991B7852B855"
+  },
+  {
+    "file": "stderr.log",
+    "bytes": 46187,
+    "sha256": "C03E345AF609CE0812D024E03E832EFBE04DC3E6A769CE633DA0927C34CC3701"
+  }
+]

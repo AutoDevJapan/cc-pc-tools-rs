@@ -177,7 +177,7 @@
     function opsHistory(worker){return opsList(worker.history).map(entry=>{if(typeof entry==='string')return `<li>${esc(entry)}</li>`;if(!entry||typeof entry!=='object')return '<li>内容未記録</li>';return `<li>${esc(opsTime(entry.at||entry.updated_at||entry.timestamp||entry.updated))} · ${esc(entry.note||entry.message||entry.summary||entry.status||'内容未記録')}</li>`}).join('')}
     function opsQuestionUrl(value){try{const url=new URL(value);return url.protocol==='https:'&&['discord.com','www.discord.com'].includes(url.hostname)&&/^\/channels\/\d+\/\d+(?:\/\d+)?\/?$/.test(url.pathname)&&!url.username&&!url.password?url.href:null}catch{return null}}
     function opsPriority(worker){return ({attention:0,working:1,waiting:2,idle:3,done:4})[worker.status]??5}
-    function opsCount(workers){return `実作業 ${workers.filter(w=>w.workState==='processing').length}件 / 作業記録 ${workers.length}件`}
+    function opsCount(workers){const proof=opsState.snapshot&&opsState.snapshot.workforce&&opsState.snapshot.workforce.processing,now=Date.now(),known=proof&&['complete','partial'].includes(proof.state)&&typeof proof.validUntil==='number'&&now<=proof.validUntil,certified=new Set(opsList(proof&&proof.sessions).filter(source=>source&&typeof source.key==='string'&&typeof source.validUntil==='number'&&now<=source.validUntil).map(source=>source.key)),keys=new Set();for(const worker of workers)if(worker.workState==='processing')for(const key of opsList(worker.references&&worker.references.sessions))if(certified.has(key))keys.add(key);return `${known?'確認した実作業 '+keys.size+'件':'実作業は未確認'} / 作業記録 ${workers.length}件`}
     function expireOpsEvidence(data,now=Date.now()){
       const proof=data&&data.workforce&&data.workforce.processing;
       if(!proof)return;

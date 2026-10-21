@@ -91,3 +91,11 @@ const board={workforce:{processing:{state:'partial',validUntil:200}},departments
 assert.equal(ctx.processingRows(board,100).length,0,'a reference without a current proof must never become live');
 `)
 }
+
+func TestProductCountUsesDistinctLiveExecutionsRatherThanTaskRows(t *testing.T) {
+	node(t, `
+const proof={state:'partial',validUntil:200,sessions:[{key:'native-a',validUntil:200},{key:'native-b',validUntil:200}]};
+const ctx={Date:{now:()=>100},Set,opsState:{snapshot:{workforce:{processing:proof}}},opsList:value=>Array.isArray(value)?value:[]};vm.createContext(ctx);vm.runInContext(line(input.index,'function opsCount('),ctx);
+const row={workState:'processing',references:{sessions:['native-a','native-b','native-a','old']}};assert.match(ctx.opsCount([row]),/実作業 2件 \/ 作業記録 1件/);proof.validUntil=90;assert(ctx.opsCount([row]).includes('未確認'));
+`)
+}

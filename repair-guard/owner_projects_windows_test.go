@@ -110,7 +110,10 @@ func TestOwnerUnknownNonRepositoryDoesNotUseRegistrationOrGit(t *testing.T) {
 }
 
 func TestOwnerIdentityCacheAvoidsRepeatedAPIAndRefreshesExpiry(t *testing.T) {
-	home := t.TempDir()
+	home, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	now := time.Date(2026, 10, 21, 3, 0, 0, 0, time.UTC)
 	calls := 0
 	fetch := func(context.Context, string) (int64, string, string, bool) {

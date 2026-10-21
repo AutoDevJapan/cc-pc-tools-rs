@@ -1,0 +1,15 @@
+{
+  "at": "2026-10-21T11:05:49.3955955+09:00",
+  "executable": "C:/Program Files/Go/bin/go.exe",
+  "arguments": [
+    "build",
+    "-trimpath",
+    "-o",
+    "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3242-3103\\codex-owned-bcd13dfcd2f6a3494a968c067cd0c48f\\inspect-owned-tree.exe",
+    "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3242-3103\\docs\\todo-3242-post3226-red\\inspect-owned-tree.go"
+  ],
+  "exit_code": 0,
+  "stdout": "",
+  "stderr": "",
+  "create_no_window": true
+}

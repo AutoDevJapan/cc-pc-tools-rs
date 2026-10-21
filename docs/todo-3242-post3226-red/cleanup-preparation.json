@@ -1,0 +1,30 @@
+{
+  "todo": 3242,
+  "job": "20261021-110149-todo-3242",
+  "at": "2026-10-21T11:06:49.2533795+09:00",
+  "authorization": "Original task explicitly requires same-drive quarantine of this task-owned temp after ownership, absolute-boundary, stopped-process, all-link and full-identity checks; existing codex-safe-owned-temp-cleanup manual same-drive workflow",
+  "policy_source": "D:/CC/Policies/owner-agent-conduct-20261021.md",
+  "policy_sha256": "0e764a463477d25aeed53f544b75980bbce3300f264ec0bfccd3e23001671f01",
+  "new_spending": 0,
+  "own_source_guard": {
+    "client_resource": false,
+    "classification_unverified": false
+  },
+  "destination_guard": {
+    "client_resource": true,
+    "classification_unverified": true,
+    "original_registry_recovered": false,
+    "scope": "verified repair source and explicitly supplied operational receipts only"
+  },
+  "classification_note": "Unverified classification is retained verbatim, not treated as a successful classification or an execution-review rejection. The only new destination is task-specific, absent, and used solely to retain this proven owned tree; existing unknown assets are not opened or changed.",
+  "using_ai_proposed_cleanup_conditions_as_new_authorization": false,
+  "original_protection_or_caller_permissions_changed": false,
+  "cross_drive_quarantine_repeated": false,
+  "deletion_attempted": false,
+  "destination_absent_verified": true,
+  "destination_ancestors_reparse_free": true,
+  "full_tree_snapshot": "cleanup-tree-before.jsonl",
+  "all_links_contained": true,
+  "active_executables_inside_owned_tree": 0,
+  "next_action": "Submit the ordinary same-D Move-Item for this exact owned root once, then resnapshot every file ID, link count, size, metadata and SHA256; finish only on matching manifests and absent source"
+}

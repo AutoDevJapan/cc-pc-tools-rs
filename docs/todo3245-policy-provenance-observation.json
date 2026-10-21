@@ -112,5 +112,42 @@
     "guard_source": false,
     "installed_guard": false,
     "registry": false
+  },
+  "instruction_provenance": {
+    "delivery_target_confirmed_from": "supervisor operational specification",
+    "owner_original_utterance_verified": false,
+    "owner_original_message_id_verified": false,
+    "agents_block_is_policy_location_reference": true
+  },
+  "review": {
+    "todo": 3260,
+    "job": "20261021-123246-todo-3260",
+    "base": "3e1a211ddeaa9d4d27bdabce12ffc3754863a232",
+    "head": "39f381e",
+    "normal_cli_result_received": true,
+    "normal_cli_reported_model": "anthropic/claude-opus-5-5",
+    "normal_cli_reported_effort": "max",
+    "runtime_turn_context_verified": false,
+    "cli_stdout_sha256": "e48182b5e3d4a6a89ee95b6d21fda1539e02042638066950a1869a8b2022e00d",
+    "must": 1,
+    "suggestion": 2,
+    "nit": 2,
+    "source_receipt_received": false
+  },
+  "acquisition_dependency": {
+    "todo": 3280,
+    "registered": true,
+    "recipient": "original supervisor main that prepared the operational specification",
+    "source_workspace": "D:/CC/Work/unattended-operations-20261013-wt/todo-2903-qualified-release",
+    "target_event_search_hint_utc": "2026-10-20T12:38:34.0939180Z",
+    "timestamp_is_provenance_proof": false,
+    "original_writer_session_id_verified": false,
+    "original_writer_tool_call_id_verified": false,
+    "expected_records": [
+      "original write event and result",
+      "independently saved generated source bytes or expected SHA256",
+      "original acquisition/source identity"
+    ],
+    "receipt_received": false
   }
 }

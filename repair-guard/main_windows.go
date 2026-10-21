@@ -372,7 +372,9 @@ func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(i
 	}
 	ok := parsed.path != "" && filepath.IsAbs(parsed.path)
 	verified := ok && allowed(parsed.path)
-	result := map[string]any{"ok": ok, "client_resource": !verified, "classification_unverified": !verified, "original_registry_recovered": false, "scope": "verified repair source and explicitly supplied operational receipts only"}
+	retirement := ok && retirement3250PathAllowed(parsed.path)
+	verified = verified || retirement
+	result := map[string]any{"ok": ok, "client_resource": !verified, "classification_unverified": !verified, "ci_retirement_qualified": retirement, "original_registry_recovered": false, "scope": "verified repair source and explicitly supplied operational receipts only"}
 	_ = json.NewEncoder(stdout).Encode(result)
 	if !ok {
 		return 2

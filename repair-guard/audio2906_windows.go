@@ -45,7 +45,7 @@ func audio2906Identity(path string) (audio2906Metadata, error) {
 
 func resourceIdentity(path string, directories bool) (audio2906Metadata, error) {
 	var out audio2906Metadata
-	p, err := syscall.UTF16PtrFromString(path)
+	p, err := syscall.UTF16PtrFromString(retirement3250WinPath(path))
 	if err != nil {
 		return out, err
 	}

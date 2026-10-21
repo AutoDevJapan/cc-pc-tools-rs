@@ -69,7 +69,7 @@ board.workforce.processing.sessions=[];assert.equal(ctx.processingRows(board,100
 
 func TestReview3121HiddenPageDoesNotPauseMusicPlayback(t *testing.T) {
 	node(t, `
-let pauses=0,cancelled=0;const ctx={opsState:{},healthController:null,window:{cancelConsoleMusic(){cancelled++}},document:{querySelectorAll:()=>[{pause(){pauses++}}]}};
+let pauses=0,cancelled=0;const ctx={opsState:{},cancelOpsDetail(){},healthController:null,window:{cancelConsoleMusic(){cancelled++}},document:{querySelectorAll:()=>[{pause(){pauses++}}]}};
 vm.createContext(ctx);vm.runInContext(line(input.index,'function cancelPageFetches('),ctx);
 ctx.cancelPageFetches();assert.equal(pauses,0,'hiding the browser must not stop audio');
 ctx.cancelPageFetches('systems');assert.equal(pauses,1,'leaving the music page explicitly may stop playback');assert(cancelled>0);
@@ -78,9 +78,9 @@ ctx.cancelPageFetches('systems');assert.equal(pauses,1,'leaving the music page e
 
 func TestReview3121CancellingDetailDoesNotCreateTimeout(t *testing.T) {
 	node(t, `
-let reject;const ctx={opsState:{details:new Map(),detailController:null,selected:null},AbortController,setTimeout,clearTimeout,renderOpsDetail(){},api:()=>new Promise((_resolve,rejector)=>{reject=rejector})};
-vm.createContext(ctx);vm.runInContext(between(input.index,'async function loadOpsDetail(','function openOpsDetail('),ctx);
-(async()=>{const work=ctx.loadOpsDetail({id:'todo-1',detailAvailable:true,detailVersion:'v'});ctx.opsState.detailController.abort();ctx.opsState.detailController=null;reject(Object.assign(new Error('cancelled'),{name:'AbortError'}));await work;assert.equal(ctx.opsState.details.get('todo-1').error,'','a closed detail must not acquire a timeout error')})().catch(error=>{console.error(error);process.exitCode=1});
+let reject;const ctx={opsState:{details:new Map(),detailController:null,selected:null},healthController:null,window:{},document:{querySelectorAll:()=>[]},AbortController,setTimeout,clearTimeout,renderOpsDetail(){},api:()=>new Promise((_resolve,rejector)=>{reject=rejector})};
+vm.createContext(ctx);vm.runInContext(between(input.index,'async function loadOpsDetail(','function openOpsDetail(')+'\n'+line(input.index,'function cancelPageFetches('),ctx);
+(async()=>{const work=ctx.loadOpsDetail({id:'todo-1',detailAvailable:true,detailVersion:'v'});ctx.cancelPageFetches();reject(Object.assign(new Error('cancelled'),{name:'AbortError'}));await work;assert.equal(ctx.opsState.details.get('todo-1').error,'','hiding or leaving a page must not acquire a timeout error')})().catch(error=>{console.error(error);process.exitCode=1});
 `)
 }
 

@@ -22,12 +22,24 @@ fn approved_page_repair_retains_the_original_asset_and_operations_structure() {
         "retain the independent media-first asset; do not rewrite its evidence"
     );
     let html = localai_web_rs::console_page::index();
-    for anchor in ["id=\"view-kanban\" class=\"view active operations\"",
-        "id=\"ops-commander\"", "id=\"ops-departments\"", "id=\"ops-dialog\"",
-        "id=\"view-progress\"", "id=\"view-workload\"", "id=\"systems-resources\""] {
-        assert!(html.contains(anchor), "missing existing hierarchy/navigation: {anchor}");
+    for anchor in [
+        "id=\"view-kanban\" class=\"view active operations\"",
+        "id=\"ops-commander\"",
+        "id=\"ops-departments\"",
+        "id=\"ops-dialog\"",
+        "id=\"view-progress\"",
+        "id=\"view-workload\"",
+        "id=\"systems-resources\"",
+    ] {
+        assert!(
+            html.contains(anchor),
+            "missing existing hierarchy/navigation: {anchor}"
+        );
     }
     for retired in ["id=\"view-chat\"", "id=\"view-minimax\""] {
-        assert!(!html.contains(retired), "retired page must not load: {retired}");
+        assert!(
+            !html.contains(retired),
+            "retired page must not load: {retired}"
+        );
     }
 }

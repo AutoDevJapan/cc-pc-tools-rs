@@ -352,3 +352,44 @@ func TestAgentResultOldWaitSignatureDoesNotReplayAtDeployment(t *testing.T) {
 		t.Fatal("a new wait after running was not reported")
 	}
 }
+
+func TestAgentResultOldWaitMigrationStillReportsChangedWaitKind(t *testing.T) {
+	r, _ := fixture(t)
+	r.JobsPath = filepath.Join(t.TempDir(), "jobs")
+	r.AgentResultGuard = func(context.Context, string) bool { return true }
+	e := resultEvent()
+	e.Source, e.Child = "codex_jobs", "worker-changed-wait"
+	path := filepath.Join(r.JobsPath, e.Child, "job.json")
+	if publish(path, map[string]any{"id": e.Child, "status": "running"}) != nil || r.watchAgentResult(e) != nil {
+		t.Fatal("watch")
+	}
+	watchPath := r.agentWatchPath(agentWatchID(e))
+	var w agentResultWatch
+	if readJSON(watchPath, 1<<20, &w) != nil {
+		t.Fatal("watch read")
+	}
+	w.StableWaitSignature, w.Signature, w.Generation = false, strings.Repeat("c", 64), 1
+	prior := e
+	prior.Transition = "observed-1-" + strings.Repeat("c", 32)
+	prior.State, prior.Reason, prior.Next = "dependency_wait", "dependency", "wait_dependency"
+	p, err := r.recordAgentResult(prior)
+	if err != nil {
+		t.Fatal(err)
+	}
+	p.Verified = r.Now().UTC().Format(time.RFC3339Nano)
+	if publish(r.agentResultPath(p.ID), p) != nil || r.archiveAgentFile("records", "verified", p.ID) != nil || publish(watchPath, w) != nil {
+		t.Fatal("archived legacy wait")
+	}
+	if publish(path, map[string]any{"id": e.Child, "status": "queued", "last_failure_kind": "capacity"}) != nil {
+		t.Fatal("capacity")
+	}
+	r.observeAgentResults(context.Background(), &Health{})
+	files, _ := agentResultFiles(r.Config.Home, "records")
+	if len(files) != 1 {
+		t.Fatal("known change from dependency to capacity wait was dropped")
+	}
+	saved := r.mustAgentResult(t, files[0])
+	if saved.Event.State != "capacity_wait" || !saved.NotifyOwner {
+		t.Fatal("new capacity wait was not a notifying result")
+	}
+}

@@ -20,6 +20,24 @@ func TestRetirement3250RealMetadataQualification(t *testing.T) {
 	}
 }
 
+func TestRetirement3250SharedLeafDoesNotBlockAtomicWriter(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ledger.json")
+	if e := os.WriteFile(path, []byte("synthetic"), 0600); e != nil {
+		t.Fatal(e)
+	}
+	f, e := retirement3250OpenShared(path)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer f.Close()
+	if e = os.Rename(path, path+".old"); e != nil {
+		t.Fatal("reader blocked writer rename", e)
+	}
+	if e = os.WriteFile(path, []byte("replacement"), 0600); e != nil {
+		t.Fatal(e)
+	}
+}
+
 func TestRetirement3250InventoryIsOpaqueAndRejectsExternalLinksAndDeny(t *testing.T) {
 	root := t.TempDir()
 	outside := t.TempDir()
@@ -125,5 +143,31 @@ func TestRetirement3250ScopeIsFiniteAndProvenanceBound(t *testing.T) {
 				t.Fatal("out-of-scope input admitted")
 			}
 		})
+	}
+}
+
+func TestRetirement3250NormalAndTimeBoundaries(t *testing.T) {
+	now := time.Date(2026, 10, 21, 3, 0, 0, 0, time.UTC)
+	r, l := retirement3250Fixture(now)
+	e := l.Entries[owned3107Key]
+	e.Phase = "normal"
+	e.Plan.Event = "push"
+	e.Plan.PR = 0
+	e.Plan.Branch = "main"
+	e.Plan.ContextSHA = e.Plan.Head
+	e.Plan.WorkflowSHA = e.Plan.Head
+	e.Plan.WorkflowRef = "AutoDevJapan/civ6-banseiki/.github/workflows/rust.yml@refs/heads/main"
+	l.Budget.Normal = l.Budget.Initial
+	l.Budget.Initial = nil
+	if _, ok := retirement3250Binding(r.Path, r, l, now); !ok {
+		t.Fatal("normal postmerge plan refused before official merge check")
+	}
+	e.Queued.At = now.Format(time.RFC3339)
+	if _, ok := retirement3250Binding(r.Path, r, l, now); ok {
+		t.Fatal("queued after creation admitted")
+	}
+	e.Queued.At = now.Add(-25*time.Hour - time.Second).Format(time.RFC3339)
+	if _, ok := retirement3250Binding(r.Path, r, l, now); ok {
+		t.Fatal("creation outside queued age admitted")
 	}
 }

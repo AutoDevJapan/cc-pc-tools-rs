@@ -40,6 +40,59 @@ const retirement3250Floor = "263bb8d763b050da39c80f45560ee4349671524b"
 
 var retirement3250ID = regexp.MustCompile(`^[0-9a-f]{32}$`)
 
+// Lexical Win32 spelling only: no target lookup or link resolution.
+func retirement3250WinPath(path string) string {
+	p, e := filepath.Abs(path)
+	if e != nil {
+		return path
+	}
+	p = filepath.Clean(p)
+	if strings.HasPrefix(p, `\\?\`) {
+		return p
+	}
+	if strings.HasPrefix(p, `\\`) {
+		return `\\?\UNC\` + p[2:]
+	}
+	return `\\?\` + p
+}
+
+func retirement3250OpenShared(path string) (*os.File, error) {
+	p, e := syscall.UTF16PtrFromString(retirement3250WinPath(path))
+	if e != nil {
+		return nil, e
+	}
+	h, e := syscall.CreateFile(p, syscall.GENERIC_READ, 7, nil, syscall.OPEN_EXISTING, syscall.FILE_FLAG_OPEN_REPARSE_POINT, 0)
+	if e != nil {
+		return nil, e
+	}
+	var m syscall.ByHandleFileInformation
+	if syscall.GetFileInformationByHandle(h, &m) != nil || m.NumberOfLinks != 1 || m.FileAttributes&(syscall.FILE_ATTRIBUTE_DIRECTORY|syscall.FILE_ATTRIBUTE_REPARSE_POINT) != 0 {
+		syscall.CloseHandle(h)
+		return nil, os.ErrInvalid
+	}
+	return os.NewFile(uintptr(h), path), nil
+}
+
+// Only called for the qualified runtime's exact mutable ledger/log leaves.
+// FILE_SHARE_DELETE lets the existing atomic writer replace its old leaf.
+func retirement3250SharedBytes(path string, limit int64) ([]byte, bool) {
+	if legacyMatch(path) || !conversationPhysical(path) {
+		return nil, false
+	}
+	before, e := resourceIdentity(path, true)
+	if e != nil || before.Size > uint64(limit) {
+		return nil, false
+	}
+	f, e := retirement3250OpenShared(path)
+	if e != nil {
+		return nil, false
+	}
+	defer f.Close()
+	b, e := io.ReadAll(io.LimitReader(f, limit+1))
+	after, ae := resourceIdentity(path, true)
+	return b, e == nil && ae == nil && before == after && int64(len(b)) <= limit && !legacyMatch(path) && conversationPhysical(path)
+}
+
 type retirement3250Identity struct {
 	Version int    `json:"version"`
 	ID      string `json:"id"`
@@ -163,7 +216,7 @@ func retirement3250RuntimeRead(rel string, limit int64) ([]byte, bool) {
 			return nil, false
 		}
 	}
-	return conversationBytes(path, limit, legacyMatch)
+	return retirement3250SharedBytes(path, limit)
 }
 
 func retirement3250PathAllowed(path string) bool { return retirement3250Qualification(path) == "" }

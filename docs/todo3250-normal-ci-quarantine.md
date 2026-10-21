@@ -13,11 +13,16 @@ PR149/head2bd3a366/run39423559387/attempt1/job118630300541、prestart-1に対応
 秘密・原診断・reparseはopaqueに保持し、本文・リンク先・reparse payloadを読まずhashもしない。
 
 正規guardは根だけを分類する。子やcredentialの読取資格は付与しない。
+safe-deleteは通常分類の合算結果に加え、専用のci_retirement_qualified=trueを要求する。
+別の資格による許可を、この退避資格へ流用しない。資格不成立時だけ従来の通常退避へ戻り、
+Git・secret名・reparse・外部hardlinkなどの通常保護をすべて維持する。
 実所有者とソース、外部NTFS配備receipt、現用queue/helperの実hash、元safe-delete record、
 同じqueueの正式ledger、元のcollect-end、特権CollectedRoot、同SCMの停止/pid0、
 当該instanceのGitHub登録不在、元run/jobの不変IDを照合する。
 動的なledger/logだけは正規atomic更新でleaf IDが変わるため、旧leaf metadataを借用せず、
 固定したruntime祖先と新規時刻・所有者・single-link・no-reparseを要求して限定して読む。
+読み取りhandleはFILE_SHARE_DELETEを含め、正規writerのatomic置換を妨げない。
+生のWin32属性handleには字句変換だけで拡張長パスを付け、移動後の長いパスも検証する。
 元の除外一覧はguardのメモリ内で全項目名と照合し、本文や一致名を出力しない。
 
 ## 有限範囲
@@ -41,6 +46,7 @@ collector/controllerと同じ既存claim lockを保持し、移動前に全一�
 移動直前に終了資格を再検査し、同じ全項目を照合してから通常Move-Itemを実行する。
 移動後に全一覧とroot volume/file ID/birth、元root不在を照合し、原recordをquarantinedへ閉じる。
 失敗時は原物と理由と両場所を保持し、再登録・強制削除・別経路での移動を行わない。
+理由には実測していない削除拒否を記載しない。
 同一ユーザーの任意の同時改変を防ぐ新しいセキュリティ境界ではない。
 
 ## 検査・反映

@@ -6,24 +6,44 @@ import (
 	"encoding/json"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
 )
+
+func ci3250WinPath(path string) string {
+	p, e := filepath.Abs(path)
+	if e != nil {
+		return path
+	}
+	p = filepath.Clean(p)
+	if strings.HasPrefix(p, `\\?\`) {
+		return p
+	}
+	if strings.HasPrefix(p, `\\`) {
+		return `\\?\UNC\` + p[2:]
+	}
+	return `\\?\` + p
+}
 
 // Admission belongs to the normally distributed root-only guard. A caller can
 // supply only an original safe-delete ID; no root, manifest, grant or success
 // override exists. Keep the collector's existing claim lock until record close.
 func ci3250Guard(root string) error {
 	b, e := runHidden(90*time.Second, `D:\CC\Tools\client-records\scrub391.exe`, "--guard-path", root)
-	var r struct {
-		Client     *bool `json:"client_resource"`
-		Unverified *bool `json:"classification_unverified"`
-	}
-	if e != nil || json.Unmarshal(b, &r) != nil || r.Client == nil || r.Unverified == nil || *r.Client || *r.Unverified {
+	if e != nil || !ci3250QualifiedResponse(b) {
 		return fail("CI_RETIREMENT_UNQUALIFIED")
 	}
 	return nil
+}
+func ci3250QualifiedResponse(b []byte) bool {
+	var r struct {
+		Client     *bool `json:"client_resource"`
+		Unverified *bool `json:"classification_unverified"`
+		Retirement *bool `json:"ci_retirement_qualified"`
+	}
+	return json.Unmarshal(b, &r) == nil && r.Client != nil && !*r.Client && r.Unverified != nil && !*r.Unverified && r.Retirement != nil && *r.Retirement
 }
 
 func (c config) ci3250Candidate(id string) bool {

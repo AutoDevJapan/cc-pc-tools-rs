@@ -472,6 +472,10 @@ func (c config) quarantine(id, reason string) (result map[string]any, err error)
 	if reason == "windows" && c.ci3250Candidate(id) {
 		scope, unlock, e := c.ci3250Recovery(id)
 		if e != nil {
+			var refused *failure
+			if errors.As(e, &refused) && refused.Code == "CI_RETIREMENT_UNQUALIFIED" {
+				return c.quarantineScoped(id, reason, nil)
+			}
 			return nil, e
 		}
 		defer unlock()
@@ -495,7 +499,7 @@ func (c config) quarantinePreserved(id, reason string, scope *geminiScope, ci *c
 		return nil, fail("INVALID_REASON")
 	}
 	if ci != nil {
-		text = "通常の削除計画が保護対象を拒否した。終了と所有を確認した検査資源を、全項目の属性を照合して原物のまま退避する。本文とリンク先は未読。Windowsや実行前ポリシーの拒否とは区別する。"
+		text = "終了と所有を確認した検査資源を、全項目の属性を照合して原物のまま退避する。本文とリンク先は未読。Windowsや実行前ポリシーが拒否したと推定するものではない。"
 	}
 	r, err := c.load(id, true)
 	if err != nil {

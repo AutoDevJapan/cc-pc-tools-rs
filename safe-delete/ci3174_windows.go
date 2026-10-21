@@ -63,7 +63,7 @@ type ci3174Scope struct {
 // FSCTL_GET_REPARSE_POINT, Readlink, content hash or target-name query is used.
 func ci3174Identity(path string) (ci3174Entry, error) {
 	var out ci3174Entry
-	p, e := syscall.UTF16PtrFromString(path)
+	p, e := syscall.UTF16PtrFromString(ci3250WinPath(path))
 	if e != nil {
 		return out, fail("CI_METADATA_FAILED")
 	}
@@ -274,7 +274,7 @@ func ci3174Lock() (func(), error) {
 	if _, e := checked(path); e != nil {
 		return nil, e
 	}
-	p, _ := syscall.UTF16PtrFromString(path)
+	p, _ := syscall.UTF16PtrFromString(ci3250WinPath(path))
 	h, e := syscall.CreateFile(p, syscall.GENERIC_READ|syscall.GENERIC_WRITE, 7, nil, syscall.OPEN_EXISTING, syscall.FILE_FLAG_OPEN_REPARSE_POINT, 0)
 	if e != nil {
 		return nil, fail("CI_COLLECTION_LOCK_FAILED")

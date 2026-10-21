@@ -34,6 +34,22 @@ notBefore=1792550429（2026-10-21 11:40:29 JST）、jobsTotal=4、wait_on空で�
 方向の実記録と読戻し・質問終了GET、元3050/3084/他依存と未完コード/Prdの保持が残ります。
 本人の操作・判断は不要で、新しい質問/メンション/完了通知、並行実装は行っていません。
 
+### 今回のcheckpoint初回は排他待ちで失敗
+
+途中コミット `b9f5f2a8bc0f29ac11a9905fd4c8ec62f6a85da2` はoriginへpush済みです。
+同HEAD・実jobの初回checkpointは10:41:52 JSTに終了1、stderrは
+`workspace checkpoint failed TimeoutError` でした。入力照合や自動承認レビューの拒否では
+ありません。この結果は上記final-resultの原票へ保持し、成功として扱いません。
+
+関連ソースを読むと、この経路はscheduler.lockの30秒待ちと保存時のtodo.lockの2秒待ちで
+TimeoutErrorを返します。失敗した具体的なlockと保有者は応答からは特定できません。
+10:42:12 JSTの通常プロセス観測ではschedulerは0件で、正常なToDo metadata照会も成功しました。
+lockの中身・共有state原本は開かず、lockの削除・解除・担当の偽装・設定変更はしていません。
+この事実変更を確認し、成果を保ったまま最新の文書HEADで通常checkpointをあと1回だけ試します。
+要求と結果は `todo3190-checkpoint-final-retry-20261021-103840.private.json` と
+`todo3190-checkpoint-final-retry-result-20261021-103840.private.json` へ別に保存します。
+同じ失敗が残っても短時間の再試行は重ねず、元3190の既登録期限と再開記録を保持します。
+
 ## 2026-10-21 09:37 JSTの再開照合
 
 PR315はhead `117dabf751adcbe6a64129bcd38ab3c87a092a05` でOPEN、baseはmain、

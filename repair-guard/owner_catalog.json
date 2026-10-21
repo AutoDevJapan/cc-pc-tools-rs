@@ -1,7 +1,10 @@
 {
   "domain": "owner-department-classification-v1",
   "source": "localai-web-rs/src/operations_catalog.rs",
-  "source_sha256": "2067678b1185b44c4f486dbaf1d558075b19b9da7de5c2f383c291d19f13c745",
+  "source_declaration_sha256": "ab5670a5a22a68a757b16130fe139f3d1b6095baec9b1eadd18437003f5b76a7",
+  "department_source": "localai-web-rs/src/operations.rs",
+  "department_declaration_sha256": "cb863376fbdc2401666ea40e477a65751b5ccb5ae5b4b48d19b6274c2d2c3a18",
+  "contract_department": 4,
   "groups": [
     {
       "kind": "self",
@@ -174,7 +177,7 @@
       ]
     },
     {
-      "kind": "client_project",
+      "kind": "self",
       "aliases": [
         "0d83f2331cc4795ec0ffd73ef85abb90319abdc5028150914ab9b9779e8affa3",
         "556ef87a42924d67cc0ea146c9f3c7a74f247507c1588deb9c6ab697a2e38cdf",
@@ -184,13 +187,13 @@
       ]
     },
     {
-      "kind": "client_project",
+      "kind": "self",
       "aliases": [
         "3c75112d07fec6d89ff7ce9328d911b9bea33fcb809eb1e9ce547ed1313095d9"
       ]
     },
     {
-      "kind": "self",
+      "kind": "client_project",
       "aliases": [
         "eca194cd88616b628d635f9ec7a9a40439fe5a01df6a8ab249db20724009564c"
       ]
@@ -202,9 +205,15 @@
       ]
     },
     {
-      "kind": "self",
+      "kind": "client_project",
       "aliases": [
         "0a9d4ce4a27ee04539c8919e25f8c766b9a46d888edc119a2b8c0504e73e32a9"
+      ]
+    },
+    {
+      "kind": "client_project",
+      "aliases": [
+        "e41b6007fdba6520a7e5fc2a97beb9e085f9579a05bdaff8a4b2efd98824da11"
       ]
     }
   ]

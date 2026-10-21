@@ -11,13 +11,43 @@ import (
 	"os"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode"
 )
 
 func digest(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
-func generate(source []byte) ([]byte, error) {
+func generate(source []byte, departmentSources ...[]byte) ([]byte, error) {
 	source = bytes.ReplaceAll(source, []byte("\r\n"), []byte("\n"))
+	departments := source
+	if len(departmentSources) > 0 {
+		departments = bytes.ReplaceAll(departmentSources[0], []byte("\r\n"), []byte("\n"))
+	}
+	decl := regexp.MustCompile(`(?s)const DEPARTMENTS:\s*\[\(&str,\s*&str\);\s*([0-9]+)\]\s*=\s*\[(.*?)\];`).FindSubmatch(departments)
+	if len(decl) != 3 {
+		return nil, fmt.Errorf("department declaration missing")
+	}
+	rows := regexp.MustCompile(`\(\s*("[^"\\]*(?:\\.[^"\\]*)*")\s*,\s*"[^"\\]*(?:\\.[^"\\]*)*"\s*\)`).FindAllSubmatch(decl[2], -1)
+	count, err := strconv.Atoi(string(decl[1]))
+	if err != nil || len(rows) != count {
+		return nil, fmt.Errorf("department declaration shape changed")
+	}
+	contracted := -1
+	for index, row := range rows {
+		var name string
+		if json.Unmarshal(row[1], &name) != nil {
+			return nil, fmt.Errorf("department label invalid")
+		}
+		if name == "受託部" {
+			if contracted != -1 {
+				return nil, fmt.Errorf("contracted department is ambiguous")
+			}
+			contracted = index
+		}
+	}
+	if contracted < 0 {
+		return nil, fmt.Errorf("contracted department missing")
+	}
 	section := regexp.MustCompile(`(?s)pub const PRODUCTS: &\[Product\] = &\[(.*?)\n\];`).FindSubmatch(source)
 	if len(section) != 2 {
 		return nil, fmt.Errorf("catalogue section missing")
@@ -60,12 +90,13 @@ func generate(source []byte) ([]byte, error) {
 		}
 		set := map[string]bool{}
 		for _, value := range combined {
+			value = strings.TrimPrefix(strings.ToLower(value), "resume-")
 			normalized := strings.Map(func(r rune) rune {
 				if unicode.IsLetter(r) || unicode.IsDigit(r) {
 					return r
 				}
 				return -1
-			}, strings.ToLower(value))
+			}, value)
 			set[digest([]byte(normalized))] = true
 		}
 		hashes := []string{}
@@ -74,7 +105,11 @@ func generate(source []byte) ([]byte, error) {
 		}
 		sort.Strings(hashes)
 		kind := "self"
-		if string(dept[1]) == "0" {
+		department, err := strconv.Atoi(string(dept[1]))
+		if err != nil || department < 0 || department >= count {
+			return nil, fmt.Errorf("product department is outside declaration")
+		}
+		if department == contracted {
 			kind = "client_project"
 		}
 		groups = append(groups, group{kind, hashes})
@@ -83,11 +118,14 @@ func generate(source []byte) ([]byte, error) {
 		return nil, fmt.Errorf("empty catalogue")
 	}
 	result := struct {
-		Domain string  `json:"domain"`
-		Source string  `json:"source"`
-		SHA    string  `json:"source_sha256"`
-		Groups []group `json:"groups"`
-	}{"owner-department-classification-v1", "localai-web-rs/src/operations_catalog.rs", digest(source), groups}
+		Domain             string  `json:"domain"`
+		Source             string  `json:"source"`
+		SHA                string  `json:"source_declaration_sha256"`
+		DepartmentSource   string  `json:"department_source"`
+		DepartmentSHA      string  `json:"department_declaration_sha256"`
+		ContractDepartment int     `json:"contract_department"`
+		Groups             []group `json:"groups"`
+	}{"owner-department-classification-v1", "localai-web-rs/src/operations_catalog.rs", digest(section[0]), "localai-web-rs/src/operations.rs", digest(decl[0]), contracted, groups}
 	b, err := json.MarshalIndent(result, "", "  ")
 	return append(b, '\n'), err
 }
@@ -100,7 +138,12 @@ func main() {
 		fmt.Fprintln(os.Stderr, "catalogue source unavailable")
 		os.Exit(1)
 	}
-	want, err := generate(source)
+	departments, err := os.ReadFile("../localai-web-rs/src/operations.rs")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "department declaration unavailable")
+		os.Exit(1)
+	}
+	want, err := generate(source, departments)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

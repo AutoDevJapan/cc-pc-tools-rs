@@ -22,6 +22,28 @@ type ownerIdentityRecord struct {
 	Checked    int64  `json:"checked"`
 }
 
+func ownerReadIdentity(home, repository string, now time.Time) (ownerIdentityRecord, bool) {
+	path := filepath.Join(home, hashBytes([]byte(strings.ToLower(repository)))+".dpapi")
+	var r ownerIdentityRecord
+	if !currentPlain(path, false) {
+		return r, false
+	}
+	sealed, err := readBounded(path, 1<<20)
+	if err != nil {
+		return r, false
+	}
+	data, ok := ownerIdentityDPAPI(sealed, false)
+	if !ok || json.Unmarshal(data, &r) != nil {
+		return r, false
+	}
+	return r, ownerIdentityValid(r, repository, now)
+}
+
+func ownerIdentityAging(repository, home string, now time.Time) bool {
+	r, ok := ownerReadIdentity(home, repository, now)
+	return ok && now.Unix()-r.Checked >= 240
+}
+
 func ownerIdentityValid(record ownerIdentityRecord, repository string, now time.Time) bool {
 	return record.Domain == "owner-source-identity-v1" && record.Catalog == hashBytes(ownerDepartmentCatalog) && strings.EqualFold(record.Repository, repository) && record.ID > 0 && ownerSelfGitHubOwner(record.Owner) && strings.EqualFold(strings.Split(repository, "/")[0], record.Owner) && record.Checked <= now.Unix() && now.Unix()-record.Checked < 300
 }
@@ -32,23 +54,16 @@ func ownerCachedIdentity(ctx context.Context, repository string) (int64, string,
 	return ownerCachedIdentityAt(ctx, repository, ownerIdentityHome, time.Now, func(context.Context, string) (int64, string, string, bool) { return 0, "", "", false })
 }
 
-func ownerCachedIdentityAt(ctx context.Context, repository, home string, now func() time.Time, fetch func(context.Context, string) (int64, string, string, bool)) (int64, string, string, bool) {
+func ownerCachedIdentityAt(ctx context.Context, repository, home string, now func() time.Time, fetch func(context.Context, string) (int64, string, string, bool), force ...bool) (int64, string, string, bool) {
 	if ctx.Err() != nil {
 		return 0, "", "", false
 	}
 	if _, valid := ownerOriginRepository("https://github.com/" + repository); !valid {
 		return 0, "", "", false
 	}
-	path := filepath.Join(home, hashBytes([]byte(strings.ToLower(repository)))+".dpapi")
-	if currentPlain(path, false) {
-		sealed, err := readBounded(path, 1<<20)
-		if err == nil {
-			if data, ok := ownerIdentityDPAPI(sealed, false); ok {
-				var r ownerIdentityRecord
-				if json.Unmarshal(data, &r) == nil && ownerIdentityValid(r, repository, now()) {
-					return r.ID, r.Repository, r.Owner, true
-				}
-			}
+	if len(force) == 0 || !force[0] {
+		if r, ok := ownerReadIdentity(home, repository, now()); ok {
+			return r.ID, r.Repository, r.Owner, true
 		}
 	}
 	if ctx.Err() != nil {
@@ -62,27 +77,33 @@ func ownerCachedIdentityAt(ctx context.Context, repository, home string, now fun
 	if !ownerIdentityValid(r, repository, now()) {
 		return 0, "", "", false
 	}
-	data, err := json.Marshal(r)
-	if err == nil {
-		if sealed, ok := ownerIdentityDPAPI(data, true); ok && ctx.Err() == nil {
-			if os.MkdirAll(home, 0700) == nil && currentPlain(home, true) {
-				// A race may lose a cache update, never create authority. The next
-				// query then uses the bounded API path again. Only encrypted metadata
-				// from this normal API response is stored; no tokens are copied.
-				f, err := os.CreateTemp(home, "identity-*.pending")
-				if err == nil {
-					name := f.Name()
-					_, writeErr := f.Write(sealed)
-					closeErr := f.Close()
-					if writeErr == nil && closeErr == nil {
-						_ = os.Rename(name, path)
-					}
-					_ = os.Remove(name)
-				}
-			}
-		}
+	if ctx.Err() == nil {
+		_ = ownerWriteSealed(home, hashBytes([]byte(strings.ToLower(repository)))+".dpapi", r)
 	}
 	return id, actual, owner, ctx.Err() == nil
+}
+
+func ownerWriteSealed(home, name string, value any) bool {
+	data, err := json.Marshal(value)
+	if err != nil {
+		return false
+	}
+	sealed, ok := ownerIdentityDPAPI(data, true)
+	if !ok {
+		return false
+	}
+	if os.MkdirAll(home, 0700) != nil || !currentPlain(home, true) {
+		return false
+	}
+	f, err := os.CreateTemp(home, "identity-*.pending")
+	if err != nil {
+		return false
+	}
+	temp := f.Name()
+	defer os.Remove(temp)
+	_, err = f.Write(sealed)
+	closeErr := f.Close()
+	return err == nil && closeErr == nil && os.Rename(temp, filepath.Join(home, name)) == nil
 }
 
 type ownerIdentityBlob struct {

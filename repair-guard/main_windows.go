@@ -234,14 +234,16 @@ func repairPathAllowed(path string) bool {
 }
 
 type guardArgs struct {
-	path, succession string
-	refresh          string
-	refreshSet       bool
-	product          int
-	pathSet          bool
-	productSet       bool
-	successionSet    bool
-	remainingArgs    bool
+	path, succession  string
+	refresh           string
+	refreshSet        bool
+	refreshRequest    string
+	refreshRequestSet bool
+	product           int
+	pathSet           bool
+	productSet        bool
+	successionSet     bool
+	remainingArgs     bool
 }
 
 func parseGuardArgs(args []string) (guardArgs, error) {
@@ -251,8 +253,9 @@ func parseGuardArgs(args []string) (guardArgs, error) {
 	product := flags.Int("verify-product-resume", 0, "verify original ToDo 1626, 2407 or 2475; no launch or mutation")
 	succession := flags.String("verify-current-succession", "", "verify one declared current product successor; no launch or mutation")
 	refresh := flags.String("refresh-owner-source", "", "refresh one positively registered self-source identity; no source content read")
+	refreshRequest := flags.String("refresh-request", "", "owned finite refresh request identity")
 	err := flags.Parse(args)
-	parsed := guardArgs{path: *path, succession: *succession, product: *product, refresh: *refresh, remainingArgs: flags.NArg() != 0}
+	parsed := guardArgs{path: *path, succession: *succession, product: *product, refresh: *refresh, refreshRequest: *refreshRequest, remainingArgs: flags.NArg() != 0}
 	flags.Visit(func(f *flag.Flag) {
 		switch f.Name {
 		case "guard-path":
@@ -263,6 +266,8 @@ func parseGuardArgs(args []string) (guardArgs, error) {
 			parsed.successionSet = true
 		case "refresh-owner-source":
 			parsed.refreshSet = true
+		case "refresh-request":
+			parsed.refreshRequestSet = true
 		}
 	})
 	return parsed, err
@@ -342,12 +347,16 @@ func runGuardCLIWithPath(args []string, stdout, stderr io.Writer, currentVerifie
 			_ = json.NewEncoder(stdout).Encode(object{"refreshed": false})
 			return 2
 		}
-		ok := ownerRefreshIdentity(parsed.refresh)
+		ok := ownerRefreshIdentityRequest(parsed.refresh, parsed.refreshRequest)
 		_ = json.NewEncoder(stdout).Encode(object{"refreshed": ok, "original_registry_recovered": false})
 		if !ok {
 			return 1
 		}
 		return 0
+	}
+	if parsed.refreshRequestSet {
+		_ = json.NewEncoder(stdout).Encode(object{"refreshed": false})
+		return 2
 	}
 	if parsed.successionSet {
 		if parsed.pathSet || parsed.productSet || parsed.remainingArgs {

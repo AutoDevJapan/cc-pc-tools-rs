@@ -27,6 +27,10 @@ func ownerPhysicalPath(path string) (string, error) {
 		return "", &os.PathError{Op: "metadata", Path: "", Err: err}
 	}
 	defer syscall.CloseHandle(h)
+	return ownerHandlePath(h)
+}
+
+func ownerHandlePath(h syscall.Handle) (string, error) {
 	buffer := make([]uint16, 32768)
 	n, _, callErr := syscall.NewLazyDLL("kernel32.dll").NewProc("GetFinalPathNameByHandleW").Call(uintptr(h), uintptr(unsafe.Pointer(&buffer[0])), uintptr(len(buffer)), 0)
 	if n == 0 || n >= uintptr(len(buffer)) {
@@ -41,8 +45,13 @@ func ownerUnicodeKC(value string) string {
 	if err != nil {
 		return value
 	}
-	buffer := make([]uint16, len(in)*3+16)
-	n, _, _ := syscall.NewLazyDLL("normaliz.dll").NewProc("NormalizeString").Call(5, uintptr(unsafe.Pointer(&in[0])), uintptr(len(in)-1), uintptr(unsafe.Pointer(&buffer[0])), uintptr(len(buffer)))
+	proc := syscall.NewLazyDLL("normaliz.dll").NewProc("NormalizeString")
+	required, _, _ := proc.Call(5, uintptr(unsafe.Pointer(&in[0])), uintptr(len(in)-1), 0, 0)
+	if int32(required) <= 0 || required > 1<<20 {
+		return value
+	}
+	buffer := make([]uint16, int(required))
+	n, _, _ := proc.Call(5, uintptr(unsafe.Pointer(&in[0])), uintptr(len(in)-1), uintptr(unsafe.Pointer(&buffer[0])), uintptr(len(buffer)))
 	if int32(n) <= 0 || n > uintptr(len(buffer)) {
 		return value
 	}

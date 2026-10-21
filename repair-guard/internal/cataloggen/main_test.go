@@ -3,11 +3,14 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
+const fixtureDepartments = "const DEPARTMENTS: [(&str, &str); 6] = [(\"a\",\"a\"),(\"b\",\"b\"),(\"c\",\"c\"),(\"d\",\"d\"),(\"受託部\",\"e\"),(\"f\",\"f\")];\n"
+
 func TestProjectionKeepsDepartmentAndConcatAliasesWithoutNames(t *testing.T) {
-	source := []byte("pub const PRODUCTS: &[Product] = &[\nProduct { name: \"self-fixture\", department: 1, aliases: &[concat!(\"self-\", \"alias\")] },\nProduct { name: \"client-fixture\", department: 0, aliases: &[\"client-alias\"] },\n];")
+	source := []byte(fixtureDepartments + "pub const PRODUCTS: &[Product] = &[\nProduct { name: \"self-fixture\", department: 1, aliases: &[concat!(\"self-\", \"alias\")] },\nProduct { name: \"client-fixture\", department: 4, aliases: &[\"client-alias\"] },\n];")
 	b, err := generate(source)
 	if err != nil {
 		t.Fatal(err)
@@ -33,5 +36,26 @@ func TestProjectionKeepsDepartmentAndConcatAliasesWithoutNames(t *testing.T) {
 	}
 	if _, err := generate([]byte("unrecognized")); err == nil {
 		t.Fatal("unsupported source silently produced classification")
+	}
+}
+
+func TestProjectionRejectsMissingOrAmbiguousContractDepartment(t *testing.T) {
+	products := []byte("pub const PRODUCTS: &[Product] = &[\nProduct { name: \"fixture\", department: 0, aliases: &[] },\n];")
+	for _, departments := range []string{strings.ReplaceAll(fixtureDepartments, "受託部", "other"), strings.Replace(fixtureDepartments, "\"a\"", "\"受託部\"", 1)} {
+		if _, err := generate(products, []byte(departments)); err == nil {
+			t.Fatal("undefined/ambiguous department accepted")
+		}
+	}
+}
+
+func TestProjectionUsesDeclaredContractDepartment(t *testing.T) {
+	source := []byte("const DEPARTMENTS: [(&str, &str); 6] = [(\"a\",\"a\"),(\"b\",\"b\"),(\"c\",\"c\"),(\"d\",\"d\"),(\"受託部\",\"e\"),(\"f\",\"f\")];\npub const PRODUCTS: &[Product] = &[\nProduct { name: \"self-zero\", department: 0, aliases: &[] },\nProduct { name: \"client-four\", department: 4, aliases: &[] },\n];")
+	b, err := generate(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result struct{ Groups []struct{ Kind string } }
+	if json.Unmarshal(b, &result) != nil || len(result.Groups) != 2 || result.Groups[0].Kind != "self" || result.Groups[1].Kind != "client_project" {
+		t.Fatal("normal declaration's contracted department was inverted")
 	}
 }

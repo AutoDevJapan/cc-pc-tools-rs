@@ -75,14 +75,19 @@ func ownerLegacyBytes(path string, data []byte) ownerLegacyState {
 }
 
 func ownerCardPath(path string) bool {
+	codeLeaf := false
 	switch strings.ToLower(filepath.Ext(path)) {
 	case ".go", ".rs", ".ts", ".tsx", ".js", ".jsx", ".html", ".css":
-		return false
+		codeLeaf = true
 	}
 	if info, err := os.Lstat(path); err == nil && info.IsDir() && ownerRepositoryCandidate(path) {
 		return false
 	}
-	for _, component := range strings.Split(strings.ReplaceAll(path, `\`, "/"), "/") {
+	components := strings.Split(strings.ReplaceAll(path, `\`, "/"), "/")
+	for index, component := range components {
+		if index == len(components)-1 && codeLeaf {
+			continue
+		}
 		component = ownerUnicodeKC(component)
 		component, _, _ = strings.Cut(component, ":")
 		component = strings.TrimRight(component, " .")
@@ -154,14 +159,17 @@ func ownerPolicyClassify(path string, access ownerPolicyAccess) ownerPathVerdict
 		card = card || ownerCardPath(candidate)
 		client = client || access.legacy(candidate) == ownerLegacyClient
 	}
-	if card {
-		categories = append(categories, "owner_card_information")
-	}
 	if client {
 		categories = append(categories, "client_project")
 	}
 	if len(categories) > 0 {
 		return ownerPathVerdict{Status: "protected", Categories: categories}
+	}
+	// A filename is not evidence that real owner card information exists.
+	// Keep suspected data unknown and unread, without manufacturing a category
+	// or treating official test data as confirmed real card information.
+	if card {
+		return ownerUnverified()
 	}
 	for _, candidate := range paths {
 		if ownerWindowsAlias(candidate) || access.legacy(candidate) == ownerLegacyUnavailable {
@@ -199,6 +207,7 @@ type ownerSourceAccess struct {
 	plain      func(string, bool) bool
 	denied     func(string) bool
 	membership func(string, string) string
+	stable     func() bool
 }
 
 // The owner's normal department catalogue supplies positive membership. Hashes
@@ -300,17 +309,32 @@ func ownerRegisteredSource(path string) ownerPathVerdict {
 	// names/paths, initialize a missing store, or use registration as permission.
 	ctx, cancel := context.WithTimeout(context.Background(), 750*time.Millisecond)
 	defer cancel()
-	missing := false
+	refreshRepo := ""
 	access := ownerSourceAccess{git: func(root string, args ...string) (string, bool) { return ownerSourceGit(ctx, root, args...) }, identity: func(repo string) (int64, string, string, bool) {
 		id, name, owner, ok := ownerCachedIdentity(ctx, repo)
-		missing = !ok
+		if !ok || ownerIdentityAging(repo, ownerIdentityHome, time.Now()) {
+			refreshRepo = repo
+		}
 		return id, name, owner, ok
 	}, plain: currentPlain, denied: legacyMatch, membership: ownerDepartmentMembership}
-	result := ownerRegisteredSourceAt(ctx, path, func(ctx context.Context) (object, bool) { return ownerReadProjects(ctx, productStore) }, access)
-	if missing && ctx.Err() == nil {
-		ownerRequestIdentityRefresh(path)
+	result := ownerSourceQuery(ctx, path, access)
+	if refreshRepo != "" && ctx.Err() == nil {
+		ownerRequestIdentityRefresh(path, refreshRepo)
 	}
 	return result
+}
+
+func ownerSourceQuery(ctx context.Context, path string, access ownerSourceAccess) ownerPathVerdict {
+	var snapshot *ownerProjectSnapshot
+	access.stable = func() bool { return snapshot != nil && snapshot.current() }
+	return ownerRegisteredSourceAt(ctx, path, func(ctx context.Context) (object, bool) {
+		var ok bool
+		snapshot, ok = ownerReadProjectSnapshot(ctx, productStore, legacyMatch)
+		if !ok {
+			return nil, false
+		}
+		return snapshot.projects, true
+	}, access)
 }
 
 func ownerRegisteredSourceAt(ctx context.Context, path string, read func(context.Context) (object, bool), access ownerSourceAccess) ownerPathVerdict {
@@ -322,10 +346,7 @@ func ownerRegisteredSourceAt(ctx context.Context, path string, read func(context
 		return ownerUnverified()
 	}
 	result := ownerRegisteredSourceWith(path, object{"projects": projects}, access)
-	after, ok := read(ctx)
-	beforeJSON, _ := json.Marshal(projects)
-	afterJSON, _ := json.Marshal(after)
-	if !ok || !strings.EqualFold(hashBytes(beforeJSON), hashBytes(afterJSON)) || ctx.Err() != nil {
+	if access.stable == nil || !access.stable() || ctx.Err() != nil {
 		return ownerUnverified()
 	}
 	return result
@@ -339,6 +360,16 @@ func ownerRegisteredSourceWith(path string, db object, access ownerSourceAccess)
 	projects, ok := db["projects"].(map[string]any)
 	if !ok {
 		return ownerUnverified()
+	}
+	// Examine every covering registration before allowing any self group. Map
+	// iteration order must not override a contracted department declaration.
+	if access.membership != nil {
+		for project, entry := range projects {
+			root, ok := entry.(string)
+			if ok && filepath.IsAbs(root) && (within(root, path) || within(root+"-wt", path)) && access.plain(root, true) && access.membership(project, "") == "client_project" {
+				return ownerProtected("client_project")
+			}
+		}
 	}
 	for project, entry := range projects {
 		root, ok := entry.(string)
@@ -379,12 +410,8 @@ func ownerRegisteredSourceWith(path string, db object, access ownerSourceAccess)
 			}
 		}
 		origin, ok := access.git(root, "remote", "get-url", "origin")
-		otherOrigin, okOther := origin, ok
-		if !same(root, top) {
-			otherOrigin, okOther = access.git(top, "remote", "get-url", "origin")
-		}
 		repository, valid := ownerOriginRepository(origin)
-		if !ok || !okOther || !valid || origin != otherOrigin {
+		if !ok || !valid {
 			continue
 		}
 		membership = access.membership(project, repository)
@@ -394,21 +421,19 @@ func ownerRegisteredSourceWith(path string, db object, access ownerSourceAccess)
 		if membership != "self" {
 			continue
 		}
-		id, actualRepository, owner, verified := access.identity(repository)
-		if !verified || id <= 0 || !strings.EqualFold(actualRepository, repository) || !ownerSelfGitHubOwner(owner) || !strings.EqualFold(strings.Split(repository, "/")[0], owner) {
-			continue
-		}
-		// The owner's fixed product identity policy identifies this repository
-		// as contracted work even though its remote has one of the three owners.
-		if id == 1156778979 {
-			return ownerProtected("client_project")
-		}
 		if !same(path, top) {
 			rel, err := filepath.Rel(top, path)
 			tracked, ok := access.git(top, "--literal-pathspecs", "ls-files", "--error-unmatch", "--", filepath.ToSlash(rel))
 			if err != nil || !ok || tracked == "" {
 				continue
 			}
+		}
+		id, actualRepository, owner, verified := access.identity(repository)
+		if !verified || id <= 0 || !strings.EqualFold(actualRepository, repository) || !ownerSelfGitHubOwner(owner) || !strings.EqualFold(strings.Split(repository, "/")[0], owner) {
+			continue
+		}
+		if id == 1156778979 {
+			return ownerProtected("client_project")
 		}
 		if access.denied(path) || !access.plain(path, info.IsDir()) {
 			return ownerUnverified()

@@ -104,7 +104,7 @@ func TestOwnerUnknownNonRepositoryDoesNotUseRegistrationOrGit(t *testing.T) {
 	}
 	known, db, access := ownerSourceFixture(t)
 	read = func(context.Context) (object, bool) { reads++; return db["projects"].(object), true }
-	if !ownerRegisteredSourceAt(context.Background(), known, read, access).AccessAllowed || reads != 2 {
+	if !ownerRegisteredSourceAt(context.Background(), known, read, access).AccessAllowed || reads != 1 {
 		t.Fatal("positive source control did not exercise registration reader")
 	}
 }
@@ -135,6 +135,157 @@ func TestOwnerIdentityCacheAvoidsRepeatedAPIAndRefreshesExpiry(t *testing.T) {
 	now = now.Add(300 * time.Second)
 	if _, _, _, ok := ownerCachedIdentityAt(context.Background(), "AutoDevJapan/example", home, func() time.Time { return now }, fetch); !ok || calls != 2 {
 		t.Fatal("expired identity did not recheck API")
+	}
+}
+
+func TestOwnerRegistrationSnapshotDetectsReplacementWithSameBytesAndTime(t *testing.T) {
+	root, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(root, "registration.json")
+	data := []byte(`{"projects":{"fixture":"C:/fixture"},"items":[]}`)
+	if os.WriteFile(path, data, 0600) != nil {
+		t.Fatal("fixture write")
+	}
+	s, ok := ownerReadProjectSnapshot(context.Background(), path, func(string) bool { return false })
+	if !ok {
+		t.Fatal("normal registration snapshot rejected")
+	}
+	if !s.current() {
+		t.Fatal("fresh file generation rejected")
+	}
+	replacement := filepath.Join(root, "replacement.json")
+	if os.WriteFile(replacement, data, 0600) != nil {
+		t.Fatal("fixture replacement")
+	}
+	if os.Chtimes(replacement, s.info.ModTime(), s.info.ModTime()) != nil {
+		t.Fatal("fixture timestamp")
+	}
+	if err := os.Rename(replacement, path); err != nil {
+		t.Fatalf("reader prevented the ordinary atomic writer: %v", err)
+	}
+	if s.current() {
+		t.Fatal("replacement was hidden by equal bytes, size and timestamp")
+	}
+}
+
+func TestOwnerContractPriorityDoesNotDependOnRegistrationOrder(t *testing.T) {
+	root, _, access := ownerSourceFixture(t)
+	access.membership = func(project, repository string) string {
+		if project == "client-fixture" {
+			return "client_project"
+		}
+		return "self"
+	}
+	for i := 0; i < 40; i++ {
+		db := object{"projects": object{"synthetic": root, "client-fixture": root}}
+		v := ownerRegisteredSourceWith(root, db, access)
+		if v.AccessAllowed || v.Status != "protected" {
+			t.Fatal("self map entry bypassed a covering contracted declaration")
+		}
+	}
+}
+
+func TestOwnerUntrackedSourceDoesNotRefreshIdentity(t *testing.T) {
+	root, db, access := ownerSourceFixture(t)
+	path := filepath.Join(root, "untracked-fixture.json")
+	if os.WriteFile(path, []byte(`{"fixture":true}`), 0600) != nil {
+		t.Fatal("fixture write")
+	}
+	calls := 0
+	access.identity = func(repo string) (int64, string, string, bool) { calls++; return 12345, repo, "AutoDevJapan", true }
+	if ownerRegisteredSourceWith(path, db, access).AccessAllowed || calls != 0 {
+		t.Fatal("untracked data requested identity authority")
+	}
+	if !ownerRegisteredSourceWith(filepath.Join(root, "main.go"), db, access).AccessAllowed || calls != 1 {
+		t.Fatal("positive tracked control did not exercise identity")
+	}
+}
+
+func TestOwnerIdentityRefreshesBeforeExpiryWithoutExtendingStaleAuthority(t *testing.T) {
+	home, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 10, 21, 3, 0, 0, 0, time.UTC)
+	calls := 0
+	repo := "AutoDevJapan/example"
+	fetch := func(context.Context, string) (int64, string, string, bool) {
+		calls++
+		return 12345, repo, "AutoDevJapan", true
+	}
+	if _, _, _, ok := ownerCachedIdentityAt(context.Background(), repo, home, func() time.Time { return now }, fetch); !ok {
+		t.Fatal("initial identity failed")
+	}
+	if ownerIdentityAging(repo, home, now.Add(239*time.Second)) || !ownerIdentityAging(repo, home, now.Add(240*time.Second)) {
+		t.Fatal("proactive refresh window differs")
+	}
+	now = now.Add(240 * time.Second)
+	if _, _, _, ok := ownerCachedIdentityAt(context.Background(), repo, home, func() time.Time { return now }, fetch, true); !ok || calls != 2 {
+		t.Fatal("proactive refresh reused the old timestamp")
+	}
+	if ownerIdentityAging(repo, home, now) {
+		t.Fatal("successful refresh did not reset age")
+	}
+	if r, ok := ownerReadIdentity(home, repo, now.Add(299*time.Second)); !ok || r.Checked != now.Unix() {
+		t.Fatal("fresh identity was lost")
+	}
+	if _, ok := ownerReadIdentity(home, repo, now.Add(300*time.Second)); ok {
+		t.Fatal("expired identity remained authority")
+	}
+}
+
+func TestOwnerRefreshFailureCooldownAndClaimOwnership(t *testing.T) {
+	home, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Date(2026, 10, 21, 3, 0, 0, 0, time.UTC)
+	a := "AutoDevJapan/example-a"
+	b := "AutoDevJapan/example-b"
+	first, ok := ownerClaimRefresh(home, a, now)
+	if !ok {
+		t.Fatal("first finite refresh was not admitted")
+	}
+	if _, ok := ownerClaimRefresh(home, a, now.Add(time.Second)); ok {
+		t.Fatal("in-flight request was duplicated")
+	}
+	if ownerDropRefreshClaim(home, strings.Repeat("b", 32), now) {
+		t.Fatal("foreign claim identity removed the active request")
+	}
+	if !ownerWriteSealed(home, ownerRefreshFailureName(a), ownerRefreshFailure{"owner-source-refresh-failure-v1", a, hashBytes(ownerDepartmentCatalog), now.Unix()}) {
+		t.Fatal("failure state not preserved")
+	}
+	if !ownerDropRefreshClaim(home, first.ID, now) {
+		t.Fatal("owned finished request could not close")
+	}
+	if _, ok := ownerClaimRefresh(home, a, now.Add(299*time.Second)); ok {
+		t.Fatal("failed identity restarted before its finite cooldown")
+	}
+	second, ok := ownerClaimRefresh(home, b, now.Add(time.Second))
+	if !ok {
+		t.Fatal("one failed repository blocked independent metadata work")
+	}
+	if ownerDropRefreshClaim(home, first.ID, now) {
+		t.Fatal("late cleanup removed a newer claim")
+	}
+	if !ownerDropRefreshClaim(home, second.ID, now) {
+		t.Fatal("second owned request could not close")
+	}
+	third, ok := ownerClaimRefresh(home, a, now.Add(300*time.Second))
+	if !ok {
+		t.Fatal("finite retry did not reopen after cooldown")
+	}
+	recovered, ok := ownerClaimRefresh(home, b, now.Add(321*time.Second))
+	if !ok {
+		t.Fatal("interrupted stale request was not recovered")
+	}
+	if recovered.ID == third.ID || ownerDropRefreshClaim(home, third.ID, now.Add(322*time.Second)) {
+		t.Fatal("stale cleanup removed the recovery generation")
+	}
+	if !ownerDropRefreshClaim(home, recovered.ID, now.Add(322*time.Second)) {
+		t.Fatal("recovered request could not close")
 	}
 }
 
@@ -212,7 +363,7 @@ func TestOwnerHandleResolvesActualJunctionToCardDirectory(t *testing.T) {
 		t.Fatal("junction target was not resolved by handle")
 	}
 	v := ownerPolicyClassify(path, ownerPolicyAccess{legacy: func(string) ownerLegacyState { return ownerLegacyAbsent }, repair: func(string) bool { return true }, source: func(string) ownerPathVerdict { return ownerUnverified() }, physical: ownerPhysicalPath})
-	if v.AccessAllowed || v.Status != "protected" {
+	if v.AccessAllowed || v.Status != "unverified" {
 		t.Fatal("junction hid a card directory")
 	}
 }
@@ -220,43 +371,42 @@ func TestOwnerHandleResolvesActualJunctionToCardDirectory(t *testing.T) {
 // Opt-in acceptance uses only a separately prequalified self source root and
 // the normal internal registration/identity path. Never prints project data.
 func TestOwnerLiveSourceBudget(t *testing.T) {
-	path := os.Getenv("CC_GUARD_LIVE_SELF_SOURCE")
-	if path == "" {
-		t.Skip("explicit prequalified self-source acceptance only")
+	root := os.Getenv("CC_GUARD_LIVE_SELF_SOURCE")
+	if root == "" {
+		t.Skip("explicit prequalified self-source metadata acceptance only")
 	}
-	accepted := false
-	if !ownerRefreshIdentity(path) {
+	if !ownerRefreshIdentity(root) {
 		t.Fatal("normal bounded metadata refresh failed")
 	}
-	probeCtx, probeCancel := context.WithTimeout(context.Background(), time.Second)
-	projects, projectionOK := ownerReadProjects(probeCtx, productStore)
-	probeCancel()
-	match := false
-	member := ""
-	for project, entry := range projects {
-		if root, ok := entry.(string); ok && same(root, path) {
-			match = true
-			member = ownerDepartmentMembership(project, "")
-		}
+	targets := []struct{ kind, path string }{{"registered-root", root}, {"root-tracked-file", filepath.Join(root, "Cargo.toml")}}
+	if tree := os.Getenv("CC_GUARD_LIVE_SELF_WORKTREE"); tree != "" {
+		targets = append(targets, struct{ kind, path string }{"worktree-tracked-file", filepath.Join(tree, "Cargo.toml")})
 	}
-	t.Logf("registration_projection=%v count=%d matching_root=%v membership=%s plain_store=%v legacy_state=%d", projectionOK, len(projects), match, member, currentPlain(productStore, false), ownerLegacyProtection(productStore))
-	for attempt := 0; attempt < 3; attempt++ {
-		ctx, cancel := context.WithTimeout(context.Background(), 750*time.Millisecond)
-		calls := 0
-		started := time.Now()
-		access := ownerSourceAccess{git: func(root string, args ...string) (string, bool) { return ownerSourceGit(ctx, root, args...) }, plain: currentPlain, denied: legacyMatch, membership: ownerDepartmentMembership, identity: func(repo string) (int64, string, string, bool) {
-			return ownerCachedIdentityAt(ctx, repo, ownerIdentityHome, time.Now, func(ctx context.Context, repo string) (int64, string, string, bool) { calls++; return 0, "", "", false })
-		}}
-		v := ownerRegisteredSourceAt(ctx, path, func(ctx context.Context) (object, bool) { return ownerReadProjects(ctx, productStore) }, access)
-		elapsed := time.Since(started)
-		cancel()
-		t.Logf("attempt=%d allowed=%v status=%s elapsed=%s API_calls=%d", attempt+1, v.AccessAllowed, v.Status, elapsed, calls)
-		accepted = accepted || v.AccessAllowed
-		if elapsed > 850*time.Millisecond {
-			t.Fatal("source check exceeded the consumer's one-second budget")
-		}
-	}
-	if !accepted {
-		t.Fatal("normal self-source classification never succeeded within its finite budget")
+	for _, target := range targets {
+		t.Run(target.kind, func(t *testing.T) {
+			accepted := false
+			for attempt := 0; attempt < 3; attempt++ {
+				ctx, cancel := context.WithTimeout(context.Background(), 750*time.Millisecond)
+				calls := 0
+				started := time.Now()
+				access := ownerSourceAccess{git: func(root string, args ...string) (string, bool) { return ownerSourceGit(ctx, root, args...) }, plain: currentPlain, denied: legacyMatch, membership: ownerDepartmentMembership, identity: func(repo string) (int64, string, string, bool) {
+					return ownerCachedIdentityAt(ctx, repo, ownerIdentityHome, time.Now, func(context.Context, string) (int64, string, string, bool) { calls++; return 0, "", "", false })
+				}}
+				v := ownerSourceQuery(ctx, target.path, access)
+				elapsed := time.Since(started)
+				cancel()
+				t.Logf("attempt=%d allowed=%v status=%s elapsed=%s API_calls=%d", attempt+1, v.AccessAllowed, v.Status, elapsed, calls)
+				accepted = accepted || v.AccessAllowed
+				if v.AccessAllowed && elapsed >= 750*time.Millisecond {
+					t.Fatal("successful qualification exceeded its admission deadline")
+				}
+				if elapsed > time.Second {
+					t.Fatal("source check exceeded the consumer's one-second budget")
+				}
+			}
+			if !accepted {
+				t.Fatal("tracked self source never qualified within the finite budget")
+			}
+		})
 	}
 }

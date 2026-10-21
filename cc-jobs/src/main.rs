@@ -1,5 +1,9 @@
 use cc_jobs::*;
 fn main() {
+    if cc_job_policy::product_identity::status_requested(std::env::args().skip(1)) {
+        println!("{}", cc_job_policy::product_identity::status());
+        return;
+    }
     use std::io::Write;
     let result = Context::installed().map_err(Error::from).and_then(|ctx| {
         ctx.dispatch(

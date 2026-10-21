@@ -138,7 +138,7 @@ func TestOfficialPolicySourceAndProjectRankParity(t *testing.T) {
 	// are bound to the canonical LF bytes, not checkout newline conversion.
 	data = bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n"))
 	sum := sha256.Sum256(data)
-	if hex.EncodeToString(sum[:]) != "c31787bfd508c40b62fd5bd57872a0c8d1a9ff31e907f6003bff52180287c86d" {
+	if hex.EncodeToString(sum[:]) != "6ca1c0ac725ef1ed4b529c1d0e047a70ea4aa2e24a9c3b5e5037764c490fcb0a" {
 		t.Fatal("canonical ranking source changed; review the port against its new fixed revision")
 	}
 	// Check every exact canonical rule in memory, including coded aliases.
@@ -188,6 +188,16 @@ func TestOfficialPolicySourceAndProjectRankParity(t *testing.T) {
 	}
 }
 
+func TestMCPIdentityPortMatchesReviewedCanonicalSource(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "cc-job-policy", "src", "product_identity.rs"))
+	if err != nil {
+		t.Fatal("canonical identity source unavailable")
+	}
+	sum := sha256.Sum256(bytes.ReplaceAll(data, []byte("\r\n"), []byte("\n")))
+	if hex.EncodeToString(sum[:]) != "2d3d26919ec789081baa5c0d6565f6844d55931ddba2bea0f32d39190fe46baa" {
+		t.Fatal("canonical identity source changed; review the port and synthetic fixtures")
+	}
+}
 func TestOfficialLinkedJobPriorityAndInheritance(t *testing.T) {
 	f := fixtureFor(t, `{"items":[{"id":1,"project":"Re:X","status":"todo"},{"id":2,"project":"cc-example","status":"wait","wait_on":[3]},{"id":3,"project":"SYNTHETIC_PRIVATE","status":"todo"}]}`)
 	f.job(t, "linked", `{"id":"linked","project":"tools","status":"queued","todo_id":1}`)

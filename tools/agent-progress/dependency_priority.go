@@ -23,15 +23,14 @@ func mcpCurrentTargets(items map[int64]todoItem, jobs []loadedJob, policy priori
 		}
 		ids := positiveIDs(append(append(append([]int64{}, job.RelatedTodoIDs...), references[job.ID]...), job.TodoID))
 		ids, target := mcpRelations(job, ids, items, policy)
-		for _, id := range ids {
-			if chosen[id] {
-				continue
-			}
-			chosen[id] = true
-			if item, exists := items[id]; exists && !mcpResolve(item, policy, strconv.FormatInt(id, 10)).scoped &&
-				(target.state == "verified" || target.state == "owner_declared") {
-				targets[id] = target
-			}
+		id := mcpPrimary(job, ids, items)
+		if id == 0 || chosen[id] {
+			continue
+		}
+		chosen[id] = true
+		if item, exists := items[id]; exists && !mcpResolve(item, policy, strconv.FormatInt(id, 10)).scoped &&
+			(target.state == "verified" || target.state == "owner_declared") {
+			targets[id] = target
 		}
 	}
 	return targets

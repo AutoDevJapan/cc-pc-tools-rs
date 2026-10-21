@@ -105,11 +105,23 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 			if item, ok := items[id]; ok {
 				scoped = scoped || mcpResolve(item, policy, fmt.Sprint(id)).scoped
 			}
+			_, currentProduct := currentTargets[id]
+			scoped = scoped || currentProduct
 		}
 		if primary, ok := items[j.TodoID]; ok && (own.scoped || mcpResolve(primary, policy, fmt.Sprint(primary.ID)).scoped) {
 			priorityIDs = []int64{j.TodoID}
 		}
 		ids, business := mcpRelations(j, ids, items, policy)
+		if scoped && !business.scoped && !terminalStatus(j.Status) {
+			// A code-only record may acquire its business target from another
+			// verified current job. Its secondary reviews are still not primary
+			// execution there; preserve their independent urgency calculation.
+			primary := mcpPrimary(j, ids, items)
+			ids = nil
+			if primary > 0 {
+				ids = []int64{primary}
+			}
+		}
 		if opts.ActiveOnly {
 			activeIDs := []int64{}
 			for _, id := range ids {
@@ -159,9 +171,9 @@ func collect(ctx context.Context, opts Options, now time.Time, probe processProb
 				}
 			} else if business.id != "" {
 				rank = business.rank
-				primaryID := j.TodoID
-				if primaryID == 0 && len(ids) == 1 && (liveStatus(j.Status) || j.Status == "pending") {
-					primaryID = ids[0]
+				primaryID := int64(0)
+				if j.TodoID > 0 || liveStatus(j.Status) || j.Status == "pending" {
+					primaryID = mcpPrimary(j, ids, items)
 				}
 				if primary, ok := items[primaryID]; ok {
 					if !mcpResolve(primary, policy, fmt.Sprint(primary.ID)).scoped {

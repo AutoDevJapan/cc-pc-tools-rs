@@ -48,7 +48,7 @@ func TestMCPVerifiedJobReclassifiesCodeOnlyTask(t *testing.T) {
 
 func TestMCPRelatedReviewCannotReplaceTheCurrentPrimary(t *testing.T) {
 	for _, reference := range []string{"related_todo_ids", "jobs"} {
-		for _, check := range []string{"task", "dependency"} {
+		for _, check := range []string{"task", "dependency", "execution_relation"} {
 			t.Run(reference+"/"+check, func(t *testing.T) {
 				parent := map[string]any{"id": 1, "project": "tools", "status": "doing", "wait_on": []int{7}}
 				if reference == "jobs" {
@@ -69,9 +69,15 @@ func TestMCPRelatedReviewCannotReplaceTheCurrentPrimary(t *testing.T) {
 				f.job(t, "review", string(encoded))
 				f.job(t, "prerequisite", `{"id":"prerequisite","todo_id":7,"status":"running","product_identity":{"repository_id":61002,"owner_id":71002}}`)
 				got := snap(f)
-				if check == "task" {
+				if check == "task" || check == "execution_relation" {
 					for _, task := range got.Tasks {
 						if task.ID == 1 {
+							if check == "execution_relation" {
+								if len(task.JobKeys) != 1 || task.JobKeys[0] != jobKey("requester") {
+									t.Fatalf("secondary review claimed current execution: %v", task.JobKeys)
+								}
+								return
+							}
 							if task.Priority != 10 || task.Department != "受託部" || task.ProductIdentity == nil || task.ProductIdentity.ProductID != "godd-mcp-contract" {
 								t.Fatalf("current primary was replaced: %+v", task)
 							}

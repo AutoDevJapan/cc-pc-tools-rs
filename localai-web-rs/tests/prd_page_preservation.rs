@@ -1,6 +1,9 @@
 //! The existing Prd root response is the independent acceptance baseline.
 //! It was read from port 10012 and matched the renderer and assets at
 //! 9a907d39c2f8d0ba810436f78464a4e6f7fa7ebc before changing asset selection.
+//! The UI owners (3084/3110/3111) may replace the asset and this baseline only
+//! after the owner's image approval for that scope, including shell/workload.
+//! Re-measure the approved deployed response; do not bless a candidate hash.
 #[test]
 fn product_identity_delivery_keeps_the_existing_prd_page() {
     let html = localai_web_rs::console_page::index()

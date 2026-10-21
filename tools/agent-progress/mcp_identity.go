@@ -167,6 +167,41 @@ func mcpCompatible(a, b mcpResolution) bool {
 func (j jobMeta) productItem() todoItem {
 	return todoItem{Project: j.Project, OwnerProject: j.OwnerProject, Department: j.Department, ProductIdentity: j.ProductIdentity, RepositoryID: j.RepositoryID, RepositoryOwnerID: j.RepositoryOwnerID}
 }
+
+// Match the shared Rust index's execution choice. Related IDs remain available
+// for history, but a job occupies only its canonical primary's current slot.
+func mcpPrimary(j jobMeta, ids []int64, items map[int64]todoItem) int64 {
+	if j.TodoID > 0 {
+		if _, exists := items[j.TodoID]; exists {
+			return j.TodoID
+		}
+		return 0
+	}
+	candidates, current, eligible := []int64{}, []int64{}, []int64{}
+	for _, id := range positiveIDs(ids) {
+		item, exists := items[id]
+		if !exists {
+			continue
+		}
+		candidates = append(candidates, id)
+		if item.Scheduler.Job == j.ID {
+			current = append(current, id)
+		}
+		if item.Status == "doing" || item.Status == "todo" {
+			eligible = append(eligible, id)
+		}
+	}
+	if len(current) > 0 {
+		candidates = current
+	} else if len(eligible) > 0 {
+		candidates = eligible
+	}
+	if len(candidates) == 0 {
+		return 0
+	}
+	return candidates[0]
+}
+
 func mcpRelations(j jobMeta, ids []int64, items map[int64]todoItem, p priorityPolicy) ([]int64, mcpResolution) {
 	own := mcpResolve(j.productItem(), p, "")
 	scoped := own.scoped

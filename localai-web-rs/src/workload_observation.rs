@@ -198,10 +198,7 @@ impl Ledger {
                     day.jobs_observed |= complete || !jobs.is_empty();
                     for (job, key) in &jobs {
                         if previous.jobs.get(job) != Some(key)
-                            || !previous
-                                .deadlines
-                                .get(job)
-                                .is_some_and(|until| *until >= at)
+                            || previous.deadlines.get(job).is_none_or(|until| *until < at)
                         {
                             continue;
                         }

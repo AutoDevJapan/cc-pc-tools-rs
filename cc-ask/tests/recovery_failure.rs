@@ -63,13 +63,44 @@ fn remedies_preserve_work_and_permissions_but_replace_full_or_bad_model_sessions
         }
         if class == Failure::Model {
             assert_eq!(repaired["model"], "gpt-6-astra");
-            assert_eq!(repaired["effort"], "high");
+            assert_eq!(repaired["effort"], "max");
+            assert_eq!(
+                repaired["review_excluded_models"],
+                job["review_excluded_models"]
+            );
+            assert_eq!(repaired["model_recovery_from"], "gpt-6.1-sol");
+            assert_eq!(repaired["model_repair_pending"], true);
         } else {
             assert_eq!(repaired["model"], job["model"]);
         }
     }
     assert_eq!(repaired_job(&job, Failure::Task), job);
     assert_eq!(repaired_job(&job, Failure::Console), job);
+}
+
+#[test]
+fn model_repair_preserves_explicit_effort_and_unknown_identity() {
+    let explicit = json!({"model":"gpt-6.1-sol","effort":"high","thread_id":"old"});
+    assert_eq!(repaired_job(&explicit, Failure::Model)["effort"], "high");
+    let unknown = json!({"model":"owner-special-model","effort":"medium","thread_id":"original"});
+    assert_eq!(repaired_job(&unknown, Failure::Model), unknown);
+    let omitted = json!({"model":"gpt-6.1-sol"});
+    assert_eq!(repaired_job(&omitted, Failure::Model)["effort"], "max");
+}
+
+#[test]
+fn model_repair_keeps_owner_choices_and_existing_routing_exclusions() {
+    let owner = json!({"model":"gpt-6.1-sol","effort":"high","model_origin":"owner_request"});
+    assert_eq!(repaired_job(&owner, Failure::Model), owner);
+    let constrained = json!({"model":"gpt-6.1-sol","effort":"max",
+        "review_excluded_models":["gpt-6-astra"],"thread_id":"old"});
+    let repaired = repaired_job(&constrained, Failure::Model);
+    assert_eq!(repaired["model"], "gpt-6.1-sol");
+    assert_eq!(
+        repaired["review_excluded_models"],
+        constrained["review_excluded_models"]
+    );
+    assert!(repaired["thread_id"].is_null());
 }
 #[test]
 fn two_quick_retries_become_hourly_and_console_cooldown_survives_process_restart() {
@@ -81,4 +112,23 @@ fn two_quick_retries_become_hourly_and_console_cooldown_survives_process_restart
     assert!(!reserve_console(dir.path(), 10001.).unwrap());
     assert!(!reserve_console(dir.path(), 13599.).unwrap());
     assert!(reserve_console(dir.path(), 13600.).unwrap());
+}
+
+#[test]
+fn successive_model_failures_do_not_accumulate_permanent_author_exclusions() {
+    let source = json!({"model":"gpt-6.1-sol","effort":"max",
+        "review_excluded_models":["anthropic/claude-opus-5-5"]});
+    let first = repaired_job(&source, Failure::Model);
+    assert_eq!(first["model"], "gpt-6-astra");
+    let second = repaired_job(&first, Failure::Model);
+    assert_eq!(second["model"], "gpt-6.1-sol");
+    assert_eq!(second["model_recovery_from"], "gpt-6-astra");
+    assert_eq!(
+        first["review_excluded_models"],
+        source["review_excluded_models"]
+    );
+    assert_eq!(
+        second["review_excluded_models"],
+        source["review_excluded_models"]
+    );
 }

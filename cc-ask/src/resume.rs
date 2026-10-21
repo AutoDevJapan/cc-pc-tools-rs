@@ -496,6 +496,17 @@ fn continuation_selection(
         &question["selection"],
         question,
     ];
+    let execution_source = [
+        &source_job,
+        &question["continuation"]["job_info"],
+        &question["job_info"],
+    ]
+    .into_iter()
+    .find(|source| {
+        source["model"]
+            .as_str()
+            .is_some_and(|model| !model.is_empty())
+    });
     let kind = sources
         .iter()
         .find_map(|source| source["task_type"].as_str().filter(|v| !v.is_empty()));
@@ -511,12 +522,31 @@ fn continuation_selection(
     );
     let mut selection = pick_model(ctx, &task, &[], kind)?;
     selection["source_job_id"] = source_job["id"].clone();
+    for field in ["review_source_jobs","review_excluded_models"] {
+        if let Some(saved)=sources.iter().find_map(|source|source[field].as_array().filter(|v|!v.is_empty())) {
+            selection[field]=json!(saved);
+        }
+    }
     for field in ["model", "effort"] {
-        if let Some(saved) = sources
-            .iter()
-            .find_map(|source| source[field].as_str().filter(|value| !value.is_empty()))
-        {
-            selection[field] = json!(saved);
+        let mut source = sources.iter().copied().find(|source| {
+            source[field]
+                .as_str()
+                .is_some_and(|value| !value.is_empty())
+        });
+        let origin = format!("{field}_origin");
+        if source.is_none_or(|source| source[&origin] != "owner_request") {
+            if let Some(original) = execution_source.filter(|source| {
+                source[&origin] == "owner_request"
+                    && source[field]
+                        .as_str()
+                        .is_some_and(|value| !value.is_empty())
+            }) {
+                source = Some(original);
+            }
+        }
+        if let Some(source) = source {
+            selection[field] = source[field].clone();
+            selection[&origin] = source[&origin].clone();
         }
     }
     let source = sources
@@ -545,6 +575,17 @@ fn continuation_selection(
         .unwrap_or(Value::Null);
     if crate::restart::session_busy(ctx, s(&selection["resume_session"]), "")? {
         selection["resume_session"] = Value::Null;
+    }
+    for field in ["model_origin", "effort_origin"] {
+        if selection[field] != "owner_request" {
+            selection[field] = json!("policy");
+        }
+    }
+    crate::job_policy::apply_managed_launch_policy(&mut selection);
+    // A cached launch may already contain Sol/Max while its session still
+    // belongs to the original High/Luna worker. Compare with that worker.
+    if let Some(original) = execution_source {
+        crate::job_policy::launch_context::reconcile_resume(&mut selection, original);
     }
     Ok(selection)
 }

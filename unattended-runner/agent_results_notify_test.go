@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -55,6 +56,7 @@ func TestAgentResultNewRepliesStopsAndItemsNotifyOwner(t *testing.T) {
 			e.State = state
 			if state == "completed" {
 				e.Reason, e.Remaining, e.Next = "completed", "none", "none"
+				e.OwnerReply = true // Parent's actual response to an owner request.
 			}
 			if state == "start_failed" {
 				e.Source, e.Parent, e.Child, e.Reason = "launcher", "", "", "initialization_rejected"
@@ -194,12 +196,159 @@ func TestAgentResultTellsOwnerWhetherActionIsNeeded(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := agentResultBody(p)
-	if !strings.HasPrefix(body, "ご回答をお願いします。"+e.OwnerQuestion.Question) || !strings.Contains(body, "a: "+e.OwnerQuestion.ChoiceA) || !strings.Contains(body, "b: "+e.OwnerQuestion.ChoiceB) || !strings.Contains(body, e.OwnerQuestion.URL) || !strings.Contains(body, "この対象だけ回答を待ち") {
+	if !strings.HasPrefix(body, "回答が必要："+e.OwnerQuestion.Question) || !strings.Contains(body, "a: "+e.OwnerQuestion.ChoiceA) || !strings.Contains(body, "b: "+e.OwnerQuestion.ChoiceB) || !strings.Contains(body, e.OwnerQuestion.URL) || !strings.Contains(body, "この対象だけ回答を待ち") {
 		t.Fatal("question, choices or limited waiting scope missing")
 	}
 	e.OwnerRequired, e.Next = false, "review_result"
 	e.Transition = "unexpected-question"
 	if _, err := r.recordAgentResult(e); err == nil {
 		t.Fatal("no-action notice accepted an owner question")
+	}
+}
+
+func TestAgentResultInternalCompletionAndObservationStaySilent(t *testing.T) {
+	for _, reason := range []string{"completed", "observation_unavailable", "result_wait_limit"} {
+		r, _ := fixture(t)
+		e := resultEvent()
+		e.Reason = reason
+		if reason == "completed" {
+			e.State, e.Remaining, e.Next = "completed", "none", "none"
+		} else {
+			e.State = "unverified"
+		}
+		p, err := r.recordAgentResult(e)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if agentResultPublic(p)["notify_owner"] != false {
+			t.Errorf("internal completion/periodic observation notified the owner: %s", reason)
+		}
+	}
+}
+
+func TestAgentResultCapacityRetryClockDoesNotRepeatTheSameWait(t *testing.T) {
+	r, _ := fixture(t)
+	r.JobsPath = filepath.Join(t.TempDir(), "jobs")
+	r.AgentResultGuard = func(context.Context, string) bool { return true }
+	e := resultEvent()
+	e.Source, e.Child = "codex_jobs", "worker-capacity"
+	path := filepath.Join(r.JobsPath, e.Child, "job.json")
+	if publish(path, map[string]any{"id": e.Child, "status": "running"}) != nil || r.watchAgentResult(e) != nil {
+		t.Fatal("watch fixture")
+	}
+	for i, retry := range []string{"2026-10-21T01:00:00Z", "2026-10-21T01:10:00Z"} {
+		if publish(path, map[string]any{"id": e.Child, "status": "queued", "last_failure_kind": "capacity", "capacity_retry_at": retry, "attempts": i + 1}) != nil {
+			t.Fatal("capacity fixture")
+		}
+		r.observeAgentResults(context.Background(), &Health{})
+	}
+	files, _ := agentResultFiles(r.Config.Home, "records")
+	if len(files) != 1 {
+		t.Fatalf("one continuous capacity wait generated %d notifications", len(files))
+	}
+}
+
+func TestAgentResultQuestionDeliveryAndOutOfScopeFailure(t *testing.T) {
+	for _, guild := range []string{"100", "999"} {
+		t.Run(guild, func(t *testing.T) {
+			r, _ := fixture(t)
+			e := resultEvent()
+			e.OwnerRequired, e.Next = true, "owner_decision"
+			e.OwnerQuestion = AgentOwnerQuestion{Question: "保持方針を選んでください。", ChoiceA: "保持を続ける", ChoiceB: "確認済みの不要物だけ回収する", URL: "https://discord.com/channels/" + guild + "/620/621"}
+			p, err := r.recordAgentResult(e)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sends := 0
+			r.Run = func(context.Context, string, ...string) (string, error) {
+				sends++
+				return `{"domain":"new-owner-recovery-messages","delivery":"verified","thread_id":"610","message_id":"735"}`, nil
+			}
+			server(t, r, func(w http.ResponseWriter, _ *http.Request) { respond(w, resultReadback(r, p, true)) })
+			r.agentResultPhase(context.Background(), &Health{})
+			saved := r.mustAgentResult(t, p.ID)
+			if guild == "100" {
+				if sends != 1 || saved.Verified == "" {
+					t.Fatal("concrete question was not verified")
+				}
+			} else {
+				if sends != 0 || saved.Verified != "" || agentResultPublic(saved)["error_code"] != "owner_question_scope_invalid" {
+					t.Fatal("foreign question URL was sent or cause was hidden")
+				}
+				r.agentResultPhase(context.Background(), &Health{})
+				if r.mustAgentResult(t, p.ID).Attempts != 1 {
+					t.Fatal("permanent question scope failure was retried")
+				}
+			}
+		})
+	}
+}
+
+func TestAgentResultIncompleteHeldItemReturnsOneParentDiagnostic(t *testing.T) {
+	r, _ := fixture(t)
+	r.JobsPath = filepath.Join(t.TempDir(), "jobs")
+	r.AgentResultGuard = func(context.Context, string) bool { return true }
+	e := resultEvent()
+	e.Source, e.Child = "codex_jobs", "worker-incomplete-item"
+	path := filepath.Join(r.JobsPath, e.Child, "job.json")
+	if publish(path, map[string]any{"id": e.Child, "status": "running"}) != nil || r.watchAgentResult(e) != nil {
+		t.Fatal("watch")
+	}
+	item := AgentDeferredItem{ID: "held", Kind: "scratch", Transition: "hold-1", Reason: "cleanup_busy", Scope: "unknown", Next: "owner_decision", OwnerRequired: true}
+	for range 2 {
+		if publish(path, map[string]any{"id": e.Child, "status": "running", "item_deferred": []AgentDeferredItem{item}}) != nil {
+			t.Fatal("item")
+		}
+		r.observeAgentResults(context.Background(), &Health{})
+	}
+	files, _ := agentResultFiles(r.Config.Home, "records")
+	if len(files) != 1 {
+		t.Fatal("incomplete item was lost or repeatedly returned")
+	}
+	notice := r.mustAgentResult(t, files[0])
+	if notice.Event.Reason != "item_progress_invalid" || notice.ParentReceived == "" || notice.NotifyOwner {
+		t.Fatal("parent diagnostic asked owner to act without a question")
+	}
+}
+
+func TestAgentResultOldWaitSignatureDoesNotReplayAtDeployment(t *testing.T) {
+	r, _ := fixture(t)
+	r.JobsPath = filepath.Join(t.TempDir(), "jobs")
+	r.AgentResultGuard = func(context.Context, string) bool { return true }
+	e := resultEvent()
+	e.Source, e.Child = "codex_jobs", "worker-old-wait"
+	path := filepath.Join(r.JobsPath, e.Child, "job.json")
+	save := func(status string) {
+		t.Helper()
+		if publish(path, map[string]any{"id": e.Child, "status": status, "last_failure_kind": "capacity", "capacity_retry_at": "2026-10-21T02:00:00Z"}) != nil {
+			t.Fatal("job")
+		}
+	}
+	save("running")
+	if r.watchAgentResult(e) != nil {
+		t.Fatal("watch")
+	}
+	watchPath := r.agentWatchPath(agentWatchID(e))
+	var w agentResultWatch
+	if readJSON(watchPath, 1<<20, &w) != nil {
+		t.Fatal("watch read")
+	}
+	w.StableWaitSignature, w.Signature, w.Generation = false, strings.Repeat("b", 64), 1
+	if publish(watchPath, w) != nil {
+		t.Fatal("legacy watch")
+	}
+	save("queued")
+	r.observeAgentResults(context.Background(), &Health{})
+	files, _ := agentResultFiles(r.Config.Home, "records")
+	if len(files) != 0 {
+		t.Fatal("signature migration reposted an existing wait")
+	}
+	save("running")
+	r.observeAgentResults(context.Background(), &Health{})
+	save("queued")
+	r.observeAgentResults(context.Background(), &Health{})
+	files, _ = agentResultFiles(r.Config.Home, "records")
+	if len(files) != 1 || !r.mustAgentResult(t, files[0]).NotifyOwner {
+		t.Fatal("a new wait after running was not reported")
 	}
 }

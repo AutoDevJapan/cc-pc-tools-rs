@@ -198,3 +198,50 @@ Cargo.toml、Cargo.lock、nextest設定のハッシュは前回と一致した�
 作業ブランチ名は `scheduler/todo-3238-todo` のまま変更しない。
 検査結果は親3085が受領し、3255への永続記録と既存Discord話題への配送を担う。
 この担当の完了は検査だけであり、親3085・3090全体の完了とは区別する。
+
+## レビュー作業場所の修正に対する結果
+
+指定された有限な検査の実行と原因の切り分けは完了した。検査結果は失敗。
+実担当はジョブ `20261021-132803-todo-3238`、モデル `gpt-6.1-sol`、
+推論 `max`、割り当て資源 `cargo`。通常CLIの該当ジョブだけを抽出して確認した。
+
+固定HEAD `428adc60e998f55c93aa79baab200f3d267fbca2` に対して、
+新しい3件を13:32:44〜13:33:12 JSTに1回実行した。
+結果は終了コード100、3件中2件成功・1件失敗。
+既存192件は指定フィルターの対象外であり、実行した件数へ含めない。
+
+失敗は `review_workspace_refuses_unverified_provenance_and_running_or_queued_review` の
+`still_alive` 条件。`cc-scheduler/tests/support/review_workspace.rs:175` の
+`prepare(...).is_err()` が成立しなかった。
+この固定版のテストは終了済みのjobへ `pid=7` を追加し、作成時刻を持つprocessを置くが、
+jobの `pid_created` を設定していない。既存の `policy::alive` はPIDの再利用を区別するため
+作成時刻の一致も要求し、このjobは生存中と判定されない。
+実行中の同一processを表すテストデータになっていないことが、失敗の直接原因である。
+正しく作成時刻を照合できる実processでも本番の拒否を通り抜けると証明した結果ではない。
+
+指定の停止条件に従い、既存parity、cc-todoの関連3統合、doctest、Clippy、release、
+候補の包装、候補schedulerのhelpは未実行。同じ失敗を反復していない。
+新候補2個は存在せず、旧候補を今回の成功候補として流用していない。
+標準出力・標準エラーを省略せず保存し、実コマンドのargv・終了コード・件数・SHA256を記録した。
+
+実行直前・直後は親の固定HEAD・ブランチ・変更なしが一致していた。
+その後、親担当の修正コミット `b392804d00307c171bbfdbba370c7c91fc460bb2` を観測した。
+この担当は新しい版へ追従して検査せず、元の固定版の失敗結果を保持した。
+この担当による親sourceの編集、本番変更、共有exeの更新はない。
+
+- 正式な検査記録: `.ci-work/3085-cargo-review-workspace.private.json`
+- 記録SHA256: `84335c0b6a52a6054fe58561bf4e88691df87a6de1df1119239d3952fcf2f1c6`
+- 完全な出力: `.ci-work/3238-review-workspace-new-three.{stdout,stderr}.log`
+- 原因の記録: `.ci-work/3238-review-workspace-failure-analysis.private.json`
+- 実担当の照合: `.ci-work/3238-review-workspace-assignment.private.json`
+- 再開情報: `.ci-work/3238-review-workspace-resume.private.json`
+
+旧receiptと旧全出力・旧候補は全件のSHA256を照合して保持した。
+旧補足記録のSHA256も `f224bede5775f39b26b8a4ee2dfafb9ea96ba902d2640aaa2617840679bb5ebb` のまま。
+検査用processは終了し、生成先内の実行中exeは0、検査runnerの排他も解放済み。
+生成先と証拠は親の受領と次の有限な検査に必要なため保持する。
+
+残る作業は、親3085が修正後の固定版を指定して元3238を再開し、必要な検査と
+候補生成を完了すること。その後の3090の別モデルレビュー・配布も親の未完了作業である。
+今回の失敗結果は親3085が受領し、3255への永続記録と既存の話題への配送を行う。
+本人の判断やPC操作は不要。この担当の検査だけの完了を、親全体の成功や完了へ広げない。

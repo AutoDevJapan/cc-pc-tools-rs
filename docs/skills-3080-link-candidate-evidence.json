@@ -9,9 +9,9 @@
   "bundle_sha256": "22fdc6b5129f15b83d4b7cc3f83fd9887d34048148254fd7bd205b25b15d6f6d",
   "new_targets": 1,
   "new_files": 5,
-  "memory_validator": "成功: メモリ内1件5ファイル。",
-  "catalog_test_count1": "成功: catalog test -count=1。",
-  "readonly_preflight": "成功: 対象1件、書込みなし。",
+  "memory_validator": "歴史: v1候補時点のメモリ内1件5ファイル検査成功。v2は後の実配置証拠の検査を参照。",
+  "catalog_test_count1": "歴史: v1候補時点のcatalog test -count=1成功。",
+  "readonly_preflight": "歴史: v1候補時点の対象1件・書込みなしpreflight成功。v2の配置前確認/読戻しは実配置証拠に保存。",
   "installed": 0,
   "independent_candidate_review": "pending",
   "static_cases": [

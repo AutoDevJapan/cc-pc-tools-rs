@@ -39,9 +39,12 @@ func (s *runnerSignals) Write(p []byte) (int, error) {
 	n := len(p)
 	for len(p) > 0 {
 		take := min(len(p), 256)
-		b := make([]byte, len(s.tail)+take)
-		copy(b, s.tail)
-		copy(b[len(s.tail):], p[:take])
+		// A constant allocation also makes the bound independent of integer
+		// arithmetic involving an output-derived length.
+		b := make([]byte, runnerTailSize+256)
+		used := copy(b[:runnerTailSize], s.tail)
+		used += copy(b[used:], p[:take])
+		b = b[:used]
 		for i, c := range b {
 			if c >= 'A' && c <= 'Z' {
 				b[i] = c + ('a' - 'A')

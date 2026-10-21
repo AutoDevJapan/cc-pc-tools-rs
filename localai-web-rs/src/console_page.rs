@@ -2,7 +2,10 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
-const INDEX: &str = include_str!("index.html");
+// Keep the currently deployed page while backend identification is repaired.
+// index.html retains the separate candidate tracked by ToDo3084; it is not the
+// Prd asset until the owner has confirmed that visual scope.
+const INDEX: &str = include_str!("index_prd.html");
 const MUSIC_SLOT: &str = "<!-- console-music-view -->";
 
 /// Authorize only compiled Console scripts, never scripts from broker/user

@@ -1,0 +1,28 @@
+{
+  "todo": 3080,
+  "source_head": "66d441faedb7de118f8d5acba2b4de6b79df4c99",
+  "preinstallation_review": 3231,
+  "reviewed_bundle_sha256": "d23d2f69c62aa03b9b580c66542c2115fd049bc886a5817f99adb9a40055f203",
+  "installed_bundle_sha256": "cfe2c97b0f03d386be21f97dff0ab2d62dc5f3bafc00d9e437e2376c47c5588e",
+  "new_target": "diagnosing-superpowers",
+  "targets": 1,
+  "verified_files": 5,
+  "manifest": "skills-3080-installed-diagnostic-manifest.json",
+  "journal_sha256": "d393886fa1377998a75710e9841fd822057ae25eea45a65456c182dcc395255b",
+  "source_original_and_MIT_unchanged_from_reviewed_v1": true,
+  "validator": "PASS actual1/5",
+  "discovery": {
+    "found": 1,
+    "enabled": 1,
+    "description_match": true,
+    "parse_errors": 0,
+    "same_names_other_paths": 0,
+    "metadata_total": 324,
+    "notification_count": 2,
+    "model_called": false
+  },
+  "current27_manifest": "current27-after-diagnostic-manifest.json in privateworkfolder",
+  "postinstall_review": "pending",
+  "scope": "New1only;existing26/managed/junction/guard unchanged.No sourcecommands/CLI/privatehistory/modelturn",
+  "recorded_at": "2026-10-21T01:26:21.2029365Z"
+}

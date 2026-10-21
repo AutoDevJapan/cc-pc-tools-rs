@@ -45,13 +45,19 @@ struct Entry {
 #[serde(deny_unknown_fields)]
 struct Ledger {
     version: u32,
+    #[serde(default = "initial_generation")]
+    next_generation: u64,
     entries: BTreeMap<String, Entry>,
+}
+fn initial_generation() -> u64 {
+    1
 }
 
 impl Default for Ledger {
     fn default() -> Self {
         Self {
             version: 1,
+            next_generation: 1,
             entries: BTreeMap::new(),
         }
     }
@@ -224,6 +230,7 @@ impl Registry {
         let bytes = serde_json::to_vec(&Ledger {
             version: 1,
             entries,
+            ..Ledger::default()
         })
         .map_err(|_| "native_store_unavailable")?;
         let directory = self.path.with_file_name("native-activity-closed");
@@ -286,6 +293,21 @@ impl Registry {
                     return Ok((response(&id, entry), false));
                 }
             }
+            // Persist a global epoch before reclaiming UUIDs: an archived UUID
+            // must never restart at generation 1 and accept an old receipt.
+            let generation = ledger.next_generation.max(
+                ledger
+                    .entries
+                    .values()
+                    .map(|entry| entry.generation)
+                    .max()
+                    .unwrap_or(0)
+                    .checked_add(1)
+                    .ok_or("native_generation_exhausted")?,
+            );
+            ledger.next_generation = generation
+                .checked_add(1)
+                .ok_or("native_generation_exhausted")?;
             if ledger.entries.len() >= 2048 && !ledger.entries.contains_key(&id) {
                 let mut closed: Vec<_> = ledger
                     .entries
@@ -310,13 +332,6 @@ impl Registry {
             if let Some(old) = previous.filter(|entry| entry.closed_at_ms.is_some()) {
                 self.archive_closed(BTreeMap::from([(id.clone(), old.clone())]))?;
             }
-            let generation = match previous {
-                Some(old) => old
-                    .generation
-                    .checked_add(1)
-                    .ok_or("native_generation_exhausted")?,
-                None => 1,
-            };
             let entry = Entry {
                 generation,
                 todo_id: request.todo_id,
@@ -687,7 +702,7 @@ mod tests {
         register(&registry, 100);
         registry.activity(result(1, 100), 100).unwrap();
         let second = "00000000-0000-7000-8000-000000000002";
-        registry
+        let second_registration = registry
             .register(
                 Register {
                     session_id: second.into(),
@@ -698,7 +713,7 @@ mod tests {
                 100,
             )
             .unwrap();
-        let mut receipt = result(1, 101);
+        let mut receipt = result(second_registration["generation"].as_u64().unwrap(), 101);
         receipt.session_id = second.into();
         registry.activity(receipt, 101).unwrap();
         let mut board = projected_board();
@@ -785,5 +800,29 @@ mod tests {
             .entries
             .values()
             .all(|entry| entry.outcome.as_deref() == Some("success")));
+        let returned = registry
+            .register(
+                Register {
+                    session_id: ID.into(),
+                    todo_id: 7,
+                    role: "work".into(),
+                    business_project: None,
+                },
+                31,
+            )
+            .unwrap();
+        assert!(
+            returned["generation"].as_u64().unwrap() > 1,
+            "an archived UUID cannot restart its epoch"
+        );
+        assert!(
+            registry.activity(result(1, 31), 31).is_err(),
+            "old generation cannot certify another task after archive/reuse"
+        );
+        let reloaded = Registry::new(temp.path());
+        assert!(
+            reloaded.activity(result(1, 32), 32).is_err(),
+            "the epoch survives a process restart"
+        );
     }
 }

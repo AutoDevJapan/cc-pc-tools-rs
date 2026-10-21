@@ -403,5 +403,6 @@
     "diagnostic_support_read": 19,
     "diagnostic_workflow_blob_count": 20
   },
-  "current_guidance_delta_pending": 0
+  "current_guidance_delta_pending": 0,
+  "current_guidance_delta_pending_definition": "0は現行の実配置版で未受入の変更が無いこと。未適用の軽微な改善提案はskills-3080-teamai-deferred-suggestions.jsonに別保持。新規候補の未配置と区別。"
 }

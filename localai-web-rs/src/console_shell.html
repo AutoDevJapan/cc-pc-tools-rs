@@ -61,14 +61,34 @@ body:has(.console-shell){margin:0;background:#101418;color:#edf0f2;font:16px/1.6
     let musicLoading;
     let musicController=null,musicGeneration=0;
     window.cancelConsoleMusic=()=>{musicGeneration++;if(musicController)musicController.abort();musicController=null;musicLoading=null;const host=q('#view-music');if(host)host.removeAttribute('aria-busy')};
-    function musicFields(host){return Array.from(host.querySelectorAll('form')).flatMap((form,index)=>Array.from(form.querySelectorAll('input[name],textarea[name],select[name]')).filter(field=>!['hidden','password','file','submit','button'].includes(field.type)).map((field,ordinal)=>({field,key:JSON.stringify([index,form.getAttribute('action'),field.name,ordinal])})))}
+    function musicFields(host){
+      const textTypes=new Set(['text','search','email','url','tel','number','date','datetime-local','month','week','time','color','range','textarea']);
+      return Array.from(host.querySelectorAll('form')).flatMap(form=>Array.from(form.querySelectorAll('input[name],textarea[name],select[name]')).filter(field=>textTypes.has(field.type)||field.tagName==='TEXTAREA'||field.tagName==='SELECT'||['radio','checkbox','select-one','select-multiple'].includes(field.type)).map(field=>{
+        const kind=['radio','checkbox'].includes(field.type)?field.type:field.tagName==='SELECT'||String(field.type).startsWith('select')?'select':'text';
+        return {field,kind,key:JSON.stringify([form.getAttribute('method')||'get',form.getAttribute('action')||'',field.name,kind,kind==='radio'||kind==='checkbox'?field.value:null])};
+      }));
+    }
     function retainMusicState(host,content){
-      const fields=musicFields(host).filter(({field})=>field.dataset.consoleDirty==='true'),fresh=new Map(musicFields(content).map(item=>[item.key,item.field]));
+      const fields=musicFields(host).filter(({field})=>field.dataset.consoleDirty==='true'),fresh=new Map(),counts=new Map();
+      for(const item of musicFields(content))fresh.set(item.key,fresh.has(item.key)?null:item.field);
+      for(const item of fields)counts.set(item.key,(counts.get(item.key)||0)+1);
       const focused=fields.find(({field})=>field===document.activeElement);
-      for(const {key,field} of fields){const replacement=fresh.get(key);if(replacement)replacement.replaceWith(field)}
+      let restoreFocus=null;
+      for(const {key,field,kind} of fields){
+        const replacement=fresh.get(key);if(!replacement||counts.get(key)!==1)continue;
+        if(kind==='text'){replacement.replaceWith(field);if(focused&&focused.field===field)restoreFocus=field}
+        else{
+          if(kind==='select'){
+            const options=Array.from(replacement.options||[]);
+            if(field.multiple){const selected=new Set(Array.from(field.options||[]).filter(option=>option.selected).map(option=>option.value));if(!selected.size||options.some(option=>selected.has(option.value))){for(const option of options)option.selected=selected.has(option.value);replacement.dataset.consoleDirty='true'}}
+            else if(options.some(option=>option.value===field.value)){replacement.value=field.value;replacement.dataset.consoleDirty='true'}
+          }else{replacement.checked=field.checked;replacement.dataset.consoleDirty='true'}
+          if(focused&&focused.field===field)restoreFocus=replacement;
+        }
+      }
       const media=Array.from(host.querySelectorAll('audio')).map(node=>({node,source:node.getAttribute('src')}));
       for(const node of Array.from(content.querySelectorAll('audio'))){const old=media.find(item=>item.source&&item.source===node.getAttribute('src'));if(old){node.replaceWith(old.node);media.splice(media.indexOf(old),1)}}
-      return focused&&fresh.has(focused.key)?focused.field:null;
+      return restoreFocus;
     }
     document.addEventListener('input',event=>{if(event.target.closest?.('#view-music form')&&event.target.name&&!['hidden','password','file'].includes(event.target.type))event.target.dataset.consoleDirty='true'});
     document.addEventListener('change',event=>{if(event.target.closest?.('#view-music form')&&event.target.name&&!['hidden','password','file'].includes(event.target.type))event.target.dataset.consoleDirty='true'});

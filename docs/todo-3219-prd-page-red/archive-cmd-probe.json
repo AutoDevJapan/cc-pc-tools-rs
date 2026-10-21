@@ -1,0 +1,41 @@
+{
+  "path": "tools/codex-progress-tui/activation/codex.cmd",
+  "variants": [
+    {
+      "variant": "git-blob",
+      "bytes": 3146,
+      "sha256": "75f91be497de0715a44cce14081f2b57e441161cece7c8d29ef837e3a33bd086",
+      "crlf": 0,
+      "lone_cr": 0,
+      "lf": 76,
+      "normalized_sha256": "75f91be497de0715a44cce14081f2b57e441161cece7c8d29ef837e3a33bd086"
+    },
+    {
+      "variant": "source",
+      "bytes": 3222,
+      "sha256": "5a9e168dbdd7319fe497901deb0b0f5e07184085062a721ef7b02540051f3ad3",
+      "crlf": 76,
+      "lone_cr": 0,
+      "lf": 0,
+      "normalized_sha256": "75f91be497de0715a44cce14081f2b57e441161cece7c8d29ef837e3a33bd086"
+    },
+    {
+      "variant": "source-raw",
+      "bytes": 3222,
+      "sha256": "5a9e168dbdd7319fe497901deb0b0f5e07184085062a721ef7b02540051f3ad3",
+      "crlf": 76,
+      "lone_cr": 0,
+      "lf": 0,
+      "normalized_sha256": "75f91be497de0715a44cce14081f2b57e441161cece7c8d29ef837e3a33bd086"
+    },
+    {
+      "variant": "source-fixed",
+      "bytes": 3222,
+      "sha256": "5a9e168dbdd7319fe497901deb0b0f5e07184085062a721ef7b02540051f3ad3",
+      "crlf": 76,
+      "lone_cr": 0,
+      "lf": 0,
+      "normalized_sha256": "75f91be497de0715a44cce14081f2b57e441161cece7c8d29ef837e3a33bd086"
+    }
+  ]
+}

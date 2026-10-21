@@ -1,0 +1,15 @@
+{
+  "reason": "git archive still applied explicit text eol=crlf attributes to the activation scripts; restore exact bytes from fixed commit Git blobs before any Cargo invocation",
+  "source_commit": "b978286abbe1a729cb733325e58a36fc063aa393",
+  "test_invocations": 0,
+  "files": [
+    {
+      "path": "tools/codex-progress-tui/activation/codex.cmd",
+      "git_blob": "c8a827cddf3ed3a002ac04480c735064a47a95d7",
+      "archive_bytes": 3222,
+      "archive_sha256": "5a9e168dbdd7319fe497901deb0b0f5e07184085062a721ef7b02540051f3ad3",
+      "raw_blob_bytes": 3146,
+      "raw_blob_sha256": "75f91be497de0715a44cce14081f2b57e441161cece7c8d29ef837e3a33bd086"
+    }
+  ]
+}

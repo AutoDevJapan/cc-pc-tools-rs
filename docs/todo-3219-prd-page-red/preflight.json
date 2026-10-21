@@ -1,0 +1,46 @@
+{
+  "todo": 3219,
+  "parent_todo": 3103,
+  "job": "20261021-085441-todo-3219",
+  "checked_at": "2026-10-21T09:01:50.8619934+09:00",
+  "branch": "scheduler/todo-3219-3103",
+  "initial_head": "02067e4c475b566aef058ba89abe75488f76b2e9",
+  "source_commit": "b978286abbe1a729cb733325e58a36fc063aa393",
+  "source_parent": "9ecfafe20e20c51b2af00bc0696b119db551648a",
+  "source_directory": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3219-3103\\codex-owned-530173a87be6551df0272bbcc8d02eb0\\source-fixed",
+  "owner_id": "530173a87be6551df0272bbcc8d02eb0",
+  "archive_sha256": "502b8980c277f2344aca38f6d769b9316142e41e1ce8a172da145d1257be3290",
+  "archive_raw_restoration": "archive-raw-restoration.json",
+  "source_files": 1185,
+  "source_aggregate_sha256": "53d22cf2b31074d41d7b99f8dceb7c46ba5f5d5c58064ac02c1fcfba30e7298d",
+  "all_raw_git_blobs_match": true,
+  "source_has_git_directory": false,
+  "git_core_autocrlf": "true",
+  "git_settings_changed": false,
+  "repo": {
+    "id": 1406818713,
+    "owner": "AutoDevJapan",
+    "name": "cc-pc-tools-rs",
+    "oauth_login": "mashfromband",
+    "oauth_user_id": 88025750
+  },
+  "guard": {
+    "workspace_client_resource": false,
+    "common_git_client_resource": false,
+    "owned_temp_client_resource": false,
+    "source_client_resource": false
+  },
+  "gate": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "gate_config": {
+    "jobs_per_build": 8
+  },
+  "max_build_jobs": 10,
+  "max_test_threads": 10,
+  "rustc_wrapper": "D:/CC/Tools/sccache/sccache.exe",
+  "target": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3219-3103\\codex-owned-530173a87be6551df0272bbcc8d02eb0\\target",
+  "expected_prd_lf_sha256": "335ad98840c97d0767b8e78bf8166f48c6044a1f2d1a8a25c3bdea831320abf9",
+  "expected_candidate_lf_sha256": "ef55500abbbb0fb2ea4430d4196285b3cccffa8d291fdfb50e9f1f1fa7f7448b",
+  "test_invocations": 0,
+  "owner_policy_sha256": "51e2b9725f2360d55602d9545152673185ac978cbf66f222440e93576214051a",
+  "expected_command": "cargo nextest run --locked -p localai-web-rs --test prd_page_preservation --no-fail-fast"
+}

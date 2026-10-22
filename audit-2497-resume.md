@@ -448,3 +448,28 @@ ChatGPTのUIは同時ログイン2件までで、残りへ進むAdd accountが�
 同じ正規lookup-decisionで、a) この担当が追加したログインだけの入替え許可、b) 今回見つかった10/6の別の変更の過去承認、を別の具体対象として照会し、両方found=falseだった。失われた旧台帳を含む全履歴を検索できたという意味ではない。10/6変更の操作/承認は元2498へ必要証拠だけ渡し、今回のaを増額承認へ変えない。
 
 今回の新しい非カード観測と元の本人回答/出所は `account-scope-results-1562951696043221045.private.json`、正規再取得は `owner-reply-inspection-1562951696043221045.private.json` に保存。25セルの実保存/再読と実停止を記録済みで、受領やログイン開始だけを4件すべての請求確認完了としていない。元2497全体は未完了、資源なし・Cargo/GPU/新しい子ジョブ/引継ぎToDoは0。主要ChatGPTの10/30後確認、既存2946、原資料の限定した未確認を維持する。
+
+### 同じ07時台の実反映票・質問終了・別操作の承認待ち
+
+本人が明示指定した `unattended/applied/1562951696043221045.json` を、元のsource原文と実SHAの再読後にCreateNewで保存した。実担当は本job、revisionは実施内容を保存した40桁 `ab8c3bce0a3ebbb7a412c5a31caec86f6ec8cd5b`。指定されたsource/request/元2497/質問/返信/本人、返信版SHA・元票SHA、実時刻、completion、execution/origin_saved/identityの3検証文字列を保持した。completionとexecutionは実請求1件・3件の直接閲覧未完を明記し、全件実施へ昇格させていない。票のSHA256 `72447812aabc0942efffcf415d7ec648f615bf885241f8b96e282e554f14238f`。正規反映票の指定パスはguardが分類未確認のままであり、一般の保護範囲を変更・解除したとはしない。今回明示された1票以外を探索・変更しない。
+
+その後、通常conversation statusで同じ元質問phase=closed、本人返信phase=conversation_reply_appliedを確認した。通常のGo処理が作った同じ会話のclose-stateはphase=verified、verified_at=2026-10-22T22:55:16.8236962Zで、現在のreply/source/applied3つのSHAが一致した。GETによるアーカイブ確認を示すこの正規終了票のSHA256は `4c12c6c75c6589707806c15e25212433c5215db05c0bf99712b020447a44f1b9`。旧recovery-closeや手作業のDiscord PATCHは実行せず、旧質問台帳を変更していない。これは所有・読取範囲の本人回答の適用と元質問終了であり、元2497の監査完了ではない。
+
+自動審査が明示承認を要求した、今回担当が追加したChatGPTログインだけの入替えは、元2497へ別の具体操作として通常askで1回質問した。開始時の主要ChatGPTログイン、Googleの全ログイン、本人/他担当のタブ、契約/決済/パスワードを保持する固定scopeである。旧4件の所有確認・請求閲覧の許可を聞き直していない。
+
+- 質問: https://discord.com/channels/1552944707464597524/1562962493180219392
+- request: `normal-ask-6ba69622899b9bcccafdefe2a57d56a2c73df89db4b5cdbc3fcc14dab6a0cfcd`
+- 送信側request: `conversation-v1-71d7e28dcc8c9f7b56752ad8b5f6c197`
+- 別の無通知進捗: https://discord.com/channels/1552944707464597524/1562962499446513668
+- 質問receipt SHA256: `7e43ab777c28d37540a87ce4af0ab1da8c51697ae3e3319828a35ffdfc2b2072`
+- aは担当が今回追加した調査用ChatGPTセッションだけを順に解除し、許可済み3件へ通常ログインする許可。bは現ログインを保持し、直接請求の未確認を残して既存メール等で調べられる範囲を続ける選択。
+
+当該新質問の正規read-only APIを2026-10-22T22:59:42.4913903Zに確認し、本人返信0件・phase=waitingだった。sourceはdiscord-api-v10。根拠 `session-question-replies-final-2497.private.json` のSHA256 `513e9baac96017a014be71105aa3e51b806504af5982cb7b5ed7be1d1ca0ee7a`。新しいaskが登録した元2497のblockを手操作でstart/wait-retry/doneへ変更せず、今回の具体操作の回答待ちとして保持する。本人の回答後は同じ登録・scope・元ToDoを照合し、通常審査へ提示して実際の残り3件確認を続ける。新規ToDoや別担当へ同じ監査を付け替えない。
+
+実結果は当該所有質問の無通知進捗へ通常postでdelivery=verified（message `1562963000258723891`、request `normal-log-256a9dd954b7aee43608ab04185f53515031cbd34a2170ebc86c0177c02a6477`）。元の無通知進捗には短いまとめと新質問/結果先のリンクだけを送り、message `1562963759784394925`、request `normal-log-5e2aed1a64fb3e1f298e06563c76d4c5f4e57ab2d478cb0ea08a4702bc3741fb` のdelivery=verifiedを確認した。本文メンション・返信ping・notifyは付けていない。同文の新規再送や過去全件の再送は0。
+
+10/6の別の変更の非カード請求根拠と本人回答の適用/限界を、元2498の現行メモ全文を保持したCAS追記で渡した。通常CLI再読で追記後の全文が一致し、wait2497・担当・仕様・進捗が保持された。10/6の過去承認は正規照会のfound=falseだけで無承認とせず、新しい金銭質問はまだ送っていない。既存2498が許可資料を照合する条件として引き継ぐ。
+
+今回追加したセッションを消さずに、既存の主要アカウントへ通常の表示切替を行い、Makhmeto Personal accountへの復帰を実確認した。3枚の調査タブと復帰確認タブ1枚はすべて個別close成功。最終chrome-tabsは0、別inventoryにも自分のタブなし。元の主要ログインと今回追加したログインの2件は保持したままで、ログアウトしたとはしない。
+
+一時入力4件・27,266 bytesはsafe-delete所有ID `c76247f720d9cc452acd7528944d4d17` のplan→別の通常削除→finishでsource_absentを確認した。必要な実観測・元質問/返信・反映票・正規配送記録・新質問のdecisionと返信取得結果は私的な永続記録へ保持し、原資料や他担当データは片付けていない。全結果の現在対応は `account-scope-final-2497.private.json`。Gitには作業状態と再開手順のこのメモだけを追加し、実額・アカウント識別値・私的JSON・秘密をコミットしない。

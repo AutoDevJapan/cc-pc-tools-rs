@@ -366,3 +366,16 @@ func TestResetErrorIsPersistedAsIntegrityHold(t *testing.T) {
 		t.Fatal(state, err)
 	}
 }
+
+func TestSuppressionKeepsDurableConsumptionVisible(t *testing.T) {
+	s, o := synthetic()
+	e := testEngine(t, s, o)
+	if r := runSynthetic(e, o); !r.Consumed || !r.VirtualRequest {
+		t.Fatal(r)
+	}
+	o.Directives.Stop = true
+	r := runSynthetic(e, o)
+	if r.Decision != "suppressed" || !r.Consumed || r.ConsumeState != "intent_committed" || r.Attempts != 1 || r.VirtualRequest {
+		t.Fatal(r)
+	}
+}

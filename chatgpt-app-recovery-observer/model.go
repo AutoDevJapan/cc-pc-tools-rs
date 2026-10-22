@@ -146,6 +146,16 @@ func NewState() State { return State{Version: 1, Receipts: map[string]Receipt{}}
 // Decide is pure. Persistence, revalidation and virtual delivery are separate.
 func Decide(s State, o Observation) Result {
 	r := Result{At: o.At, Target: o.Process.Target, Incident: Incident(o), Stage: "decision", ConsumeState: "not_consumed"}
+	// Stop/error decisions must still report an earlier durable consume
+	// accurately. Suppression does not undo a previously committed receipt.
+	if prior, ok := s.Receipts[r.Incident]; ok {
+		switch prior.Attempt {
+		case "intent_committed", "unconfirmed", "completed", "failed_consumed":
+			r.Consumed = true
+			r.Attempts = 1
+			r.ConsumeState = prior.Attempt
+		}
+	}
 	answer := func(decision, reason string) Result { r.Decision = decision; r.Reason = reason; return r }
 	// A positive stop dominates every other observation, including stale data.
 	if o.Directives.Stop || o.Intent == Stopped || o.Intent == SignedOut {

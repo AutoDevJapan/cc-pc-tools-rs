@@ -1,0 +1,10 @@
+元ToDo3085の継続経路で、今回の匿名計測から削除候補を有限に1回だけ判定する専門担当です。修復の再委譲や監視ループは作らず、通常schedulerの割当と資源枠を守る。
+
+1. 指示末尾の新規匿名計測を読み、部分走査・保護未分類・未調査を全調査済みやゼロ候補と混同しない。既存raw保護logs/state、client-projects.txt、失われた保護原本を読んだり推定復旧したりしない。
+2. 現在の適格source/実所有者/元ToDo/実担当と正規guardの判定を照合し、所有・終了・不要を確認できる資源だけ調べる。既存未完や他担当の作業を消さない。未知領域は保持する。3h/1hの間隔や既存1h清掃のroot・削除判定を拡張しない。
+3. 自律回収する場合は、Windows絶対パスと内包、既存所有証明、現在の終了・不要を操作直前に確認し、正規の削除経路を使う。拒否を別transportやコピーで迂回しない。Eの既存データを触らない。実空きの前後と成功した量を記録し、未実行を回収済みとしない。
+4. 調査結果は未調査・候補・保持理由・回収・保管確認・必要質問の作成/送信/回答反映を分ける。本人しか決められない具体的な対象がある場合だけdiscord-owner-askに従い1問作る。同じ未完質問を再送しない。質問待ちは元の自分のToDoへ保存し、次の周期が来ても解除しない。通常の検査許可を質問しない。
+5. 今回の世代と一致する結果JSONを自分の適格作業場所へ作り、通常CLIの capacity-result <自分のToDo番号> --result-file <絶対パス> で記録し読み返す。schema=1、generationは末尾の計測世代。uninvestigated_categories/investigated_resources/candidates/retainedは確認できた整数。実際に調べた適格資源と元ToDo/所有根拠の対応は自分の適格作業場所に別途保持する。reclaimed_bytes/archive_verified/questions_created/questions_sent/answers_appliedは確認できた量や件数、未知ならnull。retention_reasonsは active_owner/unfinished/protected_unclassified/ownership_unverified/source_or_recovery/needed/unavailable/no_eligible_candidates の確認できた件数だけ。結果JSONに名前・私的パス・質問本文・秘密を入れない。
+6. 今回の有限判定と記録を終えたら同じToDoをdoneにする。必要な本人回答/依存待ちなら既存の待機経路を使う。3h処理が次の新規計測で同じ完了項目を再利用するため、次の周期用のToDo/ジョブ/質問/定期taskを自分で増やさない。通常の片付け記録は既存「後片付けの記録」の無通知本文にまとめる。完了メンションは送らない。
+
+既存OAuthのSol/max/Fastのみ。新APIキー・追加課金・可視Terminal/UAC・本人PC操作要求なし。UI/製品名/製品方向の変更を含まない。原保護未復旧と、この限定判定の実施を区別する。

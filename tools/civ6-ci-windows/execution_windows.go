@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -478,9 +477,7 @@ func worker(p Plan) error {
 	hidden(c)
 	c.Dir = p.runner()
 	c.Env = append(workerEnv(p), "ACTIONS_RUNNER_INPUT_TOKEN="+token)
-	c.Stdout = io.Discard
-	c.Stderr = io.Discard
-	e = c.Run()
+	e = runRunnerCommand(p.runtime(), "configure", c)
 	token = ""
 	c.Env = nil
 	if e != nil {
@@ -495,9 +492,7 @@ func worker(p Plan) error {
 	if e != nil {
 		return e
 	}
-	c.Stdout = io.Discard
-	c.Stderr = io.Discard
-	if e = c.Run(); e != nil {
+	if e = runRunnerCommand(p.runtime(), "listener", c); e != nil {
 		return errors.New("official runner listener failed")
 	}
 	return nil

@@ -38,7 +38,8 @@ const model3081Source = permanent3344Root + "/cbddcb32fb8ffc9364862b743c4435739f
 const model3309Source = permanent3344Root + "/e290e27ffdb63cbd35dcb8af559372293a94de87"
 const model3250Source = permanent3344Root + "/7bb3858a81d833dc5bd6e2320c2b81f4a55d0969"
 const model3338GuardSource = permanent3344Root + "/a36a77c42690eef7c0147a6a2eee76b496a48249"
-const model3344GuardSource = permanent3344Root + "/00e47e1cc5f8bd7d1d3c7af8cce4e3c04f36102a"
+const model3344GuardSource = permanent3344Root + "/8a4452d47a01895eee6701dd9f153585869e17f8"
+const model3085GuardSource = permanent3344Root + "/ed9c9a082c799728264502b0fef7993b6cae44d2"
 
 // The installed baseline has the independent ToDo3177 provenance. ToDo3298
 // built the candidate once from the merged source, then ToDo3081 copied it
@@ -72,10 +73,20 @@ var model3081UpdateLeaves = []modelUpdateLeaf{
 	}, {
 		sha256:   "e99f7cdc857705705871df42aa4cc159e5451df2a958076169425692ad456dc8",
 		evidence: []consoleEvidence{{model3338GuardSource, model3338GuardSource + "/guard-artifact-build.private.json", "a3e3e3d64dccab1927157f7802c0c8a57eb679df624f5554d6d9cb039cf567af"}},
+	}, {
+		// PR282 was normally deployed while the independent 3344 review ran.
+		// Its public input map and unchanged original build receipt anchor this
+		// observed baseline; the artifact copy is labelled as a byte copy.
+		sha256: "3fa853b5ff57bbd95cefa6571577fd4d24d3ca92aae4f813f90fe08bd6f8faa9",
+		evidence: []consoleEvidence{
+			{model3085GuardSource, model3085GuardSource + "/docs/evidence/capacity-3085-guard.json", "6bd7a8415cb675e70f1fa3332158429c9b61a5aed42143047871922e0c2dc0d2"},
+			{model3085GuardSource, model3085GuardSource + "/.provenance-3085/original-guard-build.private.json", "57f8669d43bc9bbad97916758eeb51110aa96316322271ede591596f03bbe91b"},
+			{model3085GuardSource, model3085GuardSource + "/.provenance-3085/guard-artifact-byte-copy.private.exe", "3fa853b5ff57bbd95cefa6571577fd4d24d3ca92aae4f813f90fe08bd6f8faa9"},
+		},
 	}}, candidate: modelUpdateCandidate{
 		root: model3344GuardSource, path: model3344GuardSource + "/guard-artifact.private.exe",
-		head: "00e47e1cc5f8bd7d1d3c7af8cce4e3c04f36102a", sha256: "a9213277d0d8f2c4dfdf9c9366cbc5caaa4252f97882d72aa997577111395623",
-		evidence: []consoleEvidence{{model3344GuardSource, model3344GuardSource + "/guard-artifact-build.private.json", "50f9d8adc3eb8e4650f1462f88092a16d98846b9ae3ed7df93713ef69a6edb76"}},
+		head: "8a4452d47a01895eee6701dd9f153585869e17f8", sha256: "8ad7256ecd0b443ea0d9f90a995dd2fe99d352e1504895072bcff0753f1208ac",
+		evidence: []consoleEvidence{{model3344GuardSource, model3344GuardSource + "/guard-artifact-build.private.json", "986e8a5960d7f56bddc33d9ce5f840d938abe6586ab47b92091426f0ec1a04df"}},
 	}},
 	{kind: "jobs", target: jobsRuntime, baselines: []consolePin{{
 		sha256:   "7ae20f2bfa824aa6dc27d7046bb997df137bd8980b3291d4e195804714b42c77",

@@ -102,3 +102,12 @@ Knap・setup-pre-commit・grillingの9ファイルを3180の具体指摘に沿�
 固定v2を通常の個別書込審査へ提示し許可後に新規link1名だけを配置した。[実manifest](skills-3080-installed-link-manifest.json)と[配置証拠](skills-3080-link-installation-evidence.json)を採用台帳へ接続し、原文/MITは前版と同一。実1件5ファイルと現行28件140ファイルの検査、新Codexのmetadata325中1件の発見・説明一致・enabled・解析0を確認した。これは実manualの編集検査やモデルターンの証拠ではない。実配置v2の差分は次の独立レビューで確認する。旧27件とjunction/managedは不変。
 
 [mizchiの部分評価](skills-3080-mizchi-partial-evaluation.json)は全76入口のうちSQL関連4本文を全文確認した区切り。残72パスを保存し、4件を代表上限にしない。計画のSCANを即時の性能欠陥としない、SELECTで未使用の索引でもFK CASCADEを支える場合がある、1行正規表現で0件でもSQL安全の保証ではない、という追加価値と限界を保存した。補助コード・個別権利・既存原本との差分は未確認。READMEのMIT説明だけを未知素材へ包括適用せず、同梱スクリプトやinstallは実行していない。
+
+## 3296受入後の補助確認とSQL本文案
+3296は固定e127436の実link5・原文/MIT・記録一致とSQL4の前評価を確認しMust0。PR363は必要全自動検査の成功後にmainへ統合した。[他改訂の証拠](skills-3080-external-revision-evidence.json)のとおり、diagnosing-bugsは配置後16:13 JSTに別の改訂がある。配置時SHAとmanifestを歴史として保持し、現在の全ディスク一致の保証には使わず、巻き戻さない。link本文の軽微提案も次の必要更新へ保存し、今回は中央28件へ書いていない。
+
+mizchiのroot READMEを分割で全文確認し、SQL4のREADME4本と共通CLAUDEを追加で読んだ。全記載を実行指示にはせず、install・mirror-write・hook追加は行っていない。補助コード6パスは固定treeに存在するが保存済み本文に無く、追加取得の拒否を迂回しない。存在しないpkfire recipeと未読コードを区別する。12行の先読みはN+1検査に帰属し、SQL注入検査は1行読み/大文字キーワード/複数行見逃しと修正した。各終了コードの意味を別に保存した。
+
+[SQLの2本文案](skills-3080-mizchi-sql-draft.json)はカタログ形式検査とSQLite/D1の計画比較を対象とする。28件の配置計画とは別の未配置草案で、設計済み28+追加本文案2、全30案を導入済みとはしない。個別出典・許諾範囲と補助コードの取得制約を解く工程を残し、原文/noticeを捏造した配置用bundleを作らない。新検査器が必要と実証された場合だけGoで作る。
+
+言語移行と上流依存修正の2入口も全文・SHA照合し、mizchiは76=6確認+70未読。言語移行は固定oracleと標準/要件を分ける新規手順候補、依存修正は完全SHA/lockfile/実mergeを追う既存統合候補として保持した。両者の補助と個別権利は未確認、未適用。全sourceを代表だけで終了しない。

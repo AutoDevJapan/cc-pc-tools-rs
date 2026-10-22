@@ -1,0 +1,14 @@
+{
+  "todo": 3080,
+  "target": "diagnosing-bugs",
+  "observed_sha256": "365223fa124aa677d1756f23ae1a5e0c32fd241c08d18bfeb6b2f76e3f0b2e95",
+  "observed_length": 2724,
+  "last_write_utc": "2026-10-21T07:13:50.5697629Z",
+  "deployment_sha256": "4f05d718b9a8b5ba0edf7cdddc5bd9a3989251c6976598a85c7abda6e611cd4f",
+  "source_manifest": "skills-3080-installed-manifest.json",
+  "extra_reference_exists": true,
+  "observed_at": "2026-10-21T08:40:57.0928770Z",
+  "updater": "未確認。自分の配置後に別の改訂があるため、巻き戻さない。",
+  "body_read": false,
+  "action": "配置時manifestと台帳SHAは歴史として保持。次回検査は他改訂の所有/現行受入の記録を限定照合し、旧SHAへ戻さない。"
+}

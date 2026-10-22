@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -77,13 +78,17 @@ func ownerCachedIdentityAt(ctx context.Context, repository, home string, now fun
 	if !ownerIdentityValid(r, repository, now()) {
 		return 0, "", "", false
 	}
-	if ctx.Err() != nil || !ownerWriteSealed(home, hashBytes([]byte(strings.ToLower(repository)))+".dpapi", r) {
+	if ctx.Err() != nil || !ownerWriteSealedWith(ctx, home, hashBytes([]byte(strings.ToLower(repository)))+".dpapi", r, os.Rename) {
 		return 0, "", "", false
 	}
 	return id, actual, owner, ctx.Err() == nil
 }
 
 func ownerWriteSealed(home, name string, value any) bool {
+	return ownerWriteSealedWith(context.Background(), home, name, value, os.Rename)
+}
+
+func ownerWriteSealedWith(ctx context.Context, home, name string, value any, rename func(string, string) error) bool {
 	data, err := json.Marshal(value)
 	if err != nil {
 		return false
@@ -103,7 +108,29 @@ func ownerWriteSealed(home, name string, value any) bool {
 	defer os.Remove(temp)
 	_, err = f.Write(sealed)
 	closeErr := f.Close()
-	return err == nil && closeErr == nil && os.Rename(temp, filepath.Join(home, name)) == nil
+	if err != nil || closeErr != nil {
+		return false
+	}
+	for attempt := 0; attempt < 5; attempt++ {
+		if ctx.Err() != nil {
+			return false
+		}
+		err = rename(temp, filepath.Join(home, name))
+		if err == nil {
+			return true
+		}
+		// Only transient Windows reader/sharing collisions are retried. A
+		// deadline or persistent/non-sharing failure still creates no identity.
+		if attempt == 4 || (!errors.Is(err, syscall.ERROR_ACCESS_DENIED) && !errors.Is(err, syscall.Errno(32))) {
+			return false
+		}
+		select {
+		case <-ctx.Done():
+			return false
+		case <-time.After(20 * time.Millisecond):
+		}
+	}
+	return false
 }
 
 type ownerIdentityBlob struct {

@@ -81,13 +81,14 @@ func ownerCardPath(path string) bool {
 	case ".go", ".rs", ".ts", ".tsx", ".js", ".jsx", ".html", ".css":
 		codeLeaf = true
 	}
-	if info, err := os.Lstat(path); err == nil && info.IsDir() && ownerRepositoryCandidate(path) {
+	if info, err := os.Lstat(path); err == nil && info.IsDir() {
 		// A directory verdict qualifies the working location, not every child.
 		// Repository names below its marker are software metadata, but a marker
 		// must not conceal an outside storage location that needs classification.
-		root, _ := ownerRepositoryRoot(path)
-		path = filepath.Dir(root)
-		codeLeaf = false
+		if root, ok := ownerRepositoryRoot(path); ok {
+			path = filepath.Dir(root)
+			codeLeaf = false
+		}
 	}
 	components := strings.Split(strings.ReplaceAll(path, `\`, "/"), "/")
 	for index, component := range components {

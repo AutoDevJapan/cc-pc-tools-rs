@@ -385,6 +385,64 @@ func TestOwnerIdentityRefreshRequiresDurableCache(t *testing.T) {
 	}
 }
 
+func TestOwnerIdentitySaveRecoversOnlyTransientReaderCollision(t *testing.T) {
+	home, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+	repo := "AutoDevJapan/example"
+	name := hashBytes([]byte(strings.ToLower(repo))) + ".dpapi"
+	record := ownerIdentityRecord{"owner-source-identity-v1", hashBytes(ownerDepartmentCatalog), repo, "AutoDevJapan", 12345, now.Unix()}
+	if !ownerWriteSealed(home, name, record) {
+		t.Fatal("initial sealed fixture")
+	}
+	reader, err := os.Open(filepath.Join(home, name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer reader.Close()
+	calls := 0
+	nativeCollision := false
+	record.ID = 12346
+	ok := ownerWriteSealedWith(context.Background(), home, name, record, func(from, to string) error {
+		calls++
+		err := os.Rename(from, to)
+		if calls == 1 {
+			nativeCollision = err != nil
+			_ = reader.Close()
+		}
+		return err
+	})
+	if !nativeCollision || !ok || calls != 2 {
+		t.Fatal("ordinary reader collision was treated as a lasting identity failure")
+	}
+	got, valid := ownerReadIdentity(home, repo, now)
+	if !valid || got.ID != 12346 {
+		t.Fatal("saved identity was not reusable")
+	}
+	calls = 0
+	if ownerWriteSealedWith(context.Background(), home, name, record, func(string, string) error { calls++; return syscall.Errno(2) }) || calls != 1 {
+		t.Fatal("non-sharing failure was retried")
+	}
+	calls = 0
+	if ownerWriteSealedWith(context.Background(), home, name, record, func(string, string) error { calls++; return syscall.Errno(32) }) || calls != 5 {
+		t.Fatal("persistent sharing failure exceeded its finite retry count")
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	calls = 0
+	if ownerWriteSealedWith(ctx, home, name, record, func(string, string) error { calls++; return nil }) || calls != 0 {
+		t.Fatal("expired save performed a replacement")
+	}
+	ctx, cancel = context.WithCancel(context.Background())
+	defer cancel()
+	calls = 0
+	if ownerWriteSealedWith(ctx, home, name, record, func(string, string) error { calls++; cancel(); return syscall.Errno(32) }) || calls != 1 {
+		t.Fatal("save retried after its deadline was cancelled")
+	}
+}
+
 func TestOwnerAbandonedRefreshClaimCoolsOnlyItsRepository(t *testing.T) {
 	for _, skew := range []time.Duration{21 * time.Second, -time.Hour} {
 		home, err := physical(t.TempDir())
@@ -432,12 +490,26 @@ func TestOwnerUnrelatedWorktreeDoesNotLoadLegacyProductQualification(t *testing.
 }
 
 func TestOwnerRepositoryDirectoryDoesNotHideOutsideCardLocation(t *testing.T) {
-	root := filepath.Join(t.TempDir(), "credit-cards", "source-fixture")
+	base, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	root := filepath.Join(base, "credit-cards", "source-fixture")
 	if os.MkdirAll(filepath.Join(root, ".git"), 0700) != nil {
 		t.Fatal("fixture mkdir")
 	}
+	if !ownerRepositoryCandidate(root) {
+		t.Fatal("card-location fixture did not exercise repository discovery")
+	}
 	if !ownerCardPath(root) {
 		t.Fatal("repository marker hid its outside card location")
+	}
+	ordinary := filepath.Join(base, "ordinary", "source-fixture")
+	if os.MkdirAll(filepath.Join(ordinary, ".git"), 0700) != nil || !ownerRepositoryCandidate(ordinary) {
+		t.Fatal("ordinary repository fixture")
+	}
+	if ownerCardPath(ordinary) {
+		t.Fatal("ordinary parent acquired a card classification candidate")
 	}
 }
 

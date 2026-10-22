@@ -37,7 +37,8 @@
       "entrypoint_sha256": "4f05d718b9a8b5ba0edf7cdddc5bd9a3989251c6976598a85c7abda6e611cd4f",
       "reason": "原因不明の障害を再現・最小化・反証で診断する独立した用途。候補本文作成済み。",
       "upstream_original_preserved": true,
-      "source_notice_preserved": true
+      "source_notice_preserved": true,
+      "subsequent_revision": "配置時SHA/manifestは保持。後続の別改訂をskills-3080-external-revision-evidence.jsonへ記録、現在のディスク一致保証と区別。"
     },
     {
       "inventory_id": "github:d05f1de9d9c51e0126f79512bbfc6d0527d8b745994687686fc46328fbef8673",

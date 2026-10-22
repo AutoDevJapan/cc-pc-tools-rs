@@ -6,18 +6,17 @@
   "tree_complete": true,
   "tree_entries": 996,
   "entrypoints_expected": 76,
-  "entrypoints_fulltext_read_this_job": 4,
-  "entrypoints_unread": 72,
+  "entrypoints_unread": 70,
   "classification_is_not_installation": true,
   "assessment_snapshot_before_adoption": true,
   "live_dispositions": "skills-3080-adoptions.json",
-  "scope": "SQL関連4本文の有限区切り。76件を4件へ縮小せず、残72パスを次工程へ保持する。",
+  "scope": "全76入口のうちSQL4と移行/依存修正2本文の有限区切り。残70を保持し代表打切りにしない。",
   "previous3048": "同じ固定版のREADMEとdep-lib-review代表本文のみ。今回の4SQL全文確認とは別。",
   "source_readme": {
     "path": "README.md",
     "sha256": "f6cf85dee46f1e10efb5efedf06cbfb46261f4927a41427c8b78c05980cafedb",
     "bytes": 19120,
-    "read_chars": "15000..19010/19010だけ。全文読了ではない。",
+    "read_chars": "0..19010/19010を分割して全文確認。前回15000..末尾、今回0..8000と8000..15000。",
     "license_statement": "Each skill may carry its own license.未記載はrepository owner discretionでMIT、個別許諾優先と記載。",
     "other_commands_executed": false
   },
@@ -27,7 +26,7 @@
   ],
   "root_notice_present": false,
   "selected4_nested_notices": [],
-  "license_scope": "完全treeで上記2noticeのみ。選択SQL4には個別LICENSEが無く、README説明を未知素材への包括許諾へしない。上流個別のcredit/原文notice/同梱scriptの確認を残す。",
+  "license_scope": "固定treeのnotice2パスとAPI license=null、README個別優先/未記載MITという説明を保存。選択SQL4のREADME4とroot CLAUDE/README全文を確認したが、追加の個別notice/著作者表示は見つからない。補助コード本文/個別creditは未確認で、全素材の許諾や転用可否を確定していない。",
   "entries": [
     {
       "inventory_id": "github:bc31a54a1b9d47aa5265ec13d193f7228af8d4b382c863ecb8bdb30ec0c89b08",
@@ -83,8 +82,8 @@
       "bytes": 5153,
       "body_read_complete": true,
       "candidate_disposition": "integration_candidate_pending_support_and_rights",
-      "reason": "sql-data-integrity/backend-correctnessというmetadataとの統合候補。catalogでSELECT未使用の索引でもFK CASCADEを支える先頭列がある点、N+1候補を自動欠陥としない点を比較する。",
-      "required_changes": "index-coverage.mjs/n-plus-one.mjs未読。監査外のinlineSQL/動的queryや実bind/統計を確認せず索引削除しない。索引0という観測を即FIXへ直結せず実データと用途を照合。全table集計/書込batchの合法例を残す。",
+      "reason": "索引網羅/FK連鎖/N+1の精査候補。sql-data-integrity/backend-correctnessだけでなく、postgres-fk-lock-contention、database-migrations、sqlite-wal-snapshotの現役metadataも比較先へ加え、統合か独立手順かを確定しない。",
+      "required_changes": "index-coverage.mjs/n-plus-one.mjs未読。監査外のinlineSQL/動的queryや実bind/統計を確認せず索引削除しない。索引0という観測を即FIXへ直結せず実データと用途を照合。全table集計/書込batchの合法例を残す。 N+1補助は正規表現と12行窓で候補を拾う。UNIQUE/PRIMARY KEY制約、UPDATE/DELETEのWHERE、部分索引も確認対象。FK連鎖はforeign_keysが有効な条件を確認する。",
       "support_read_complete": false,
       "individual_rights_review": "未完。READMEの未記載時MITという説明は全文noticeや個別creditの確認の代わりにはしない。",
       "installed_by_todo3080": false,
@@ -105,9 +104,51 @@
       "body_read_complete": true,
       "candidate_disposition": "integration_candidate_pending_support_and_rights",
       "reason": "security-reviewへSQLの値bindと識別子の扱い、複数行/小文字/組立ての見逃しと誤検知を具体差分として比較する。0件/exit0をSQL安全の証明にしない。",
-      "required_changes": "scanner/secretlint recipeは未読。大文字1行だけの正規表現と12行探索などの限界を明示し、ソースからsinkへの流れ/値bind/許可した識別子を確認。optoutコメントで実害を隠さず根拠を残す。未知全秘密ファイルや履歴をdumpしない。依頼外hook/依存install/外部送信を実行しない。",
+      "required_changes": "scanner/secretlint recipeは未読。1行読み・大文字キーワード限定の正規表現などの限界を明示し、ソースからsinkへの流れ/値bind/許可した識別子を確認。optoutコメントで実害を隠さず根拠を残す。未知全秘密ファイルや履歴をdumpしない。依頼外hook/依存install/外部送信を実行しない。",
       "support_read_complete": false,
       "individual_rights_review": "未完。READMEの未記載時MITという説明は全文noticeや個別creditの確認の代わりにはしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:3606e576d708825ba7b83347fbfe47c39f10e91b84872a3300136e18a06d2844",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "translate-programming-language/SKILL.md",
+      "name": "translate-programming-language",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/translate-programming-language/SKILL.md",
+      "source_sha256": "7ae6f908541d344baa50c0bf927e6cabda29660dcb25f258a488bf560348a393",
+      "retrieved_at": "2026-10-20T08:41:08.988691Z",
+      "bytes": 5589,
+      "body_read_complete": true,
+      "candidate_disposition": "possible_new_migration_workflow_pending_support_and_rights",
+      "reason": "跨言語移行の境界をbyte/構造/意味に分け、固定runtimeのoracleと公的標準を比較する用途。互換層の出口条件と生成fixture/未完stubを追う独立手順の候補。",
+      "required_changes": "referencesのoracle-driven-parity/test-migration/compatibility-knowledge/rollout-and-cutoverは未読。fixtureの手書きを全禁止せず、source既存bugと標準/明示要件を区別する。shadow/replay/canaryは実顧客データや他Org環境へ自動拡張しない。対象の必要関連検査を選び、無関係な全suite/全skip0/旧runtime常駐義務を一律追加しない。既存言語とGo/Rustの本人指定を維持。",
+      "support_read_complete": false,
+      "individual_rights_review": "未完。READMEと固定treeの個別出典/noticeを照合中。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:48485004fed690e38257eb433c0632e4a712b7be55fc3f0227a3e12d639b5d22",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "upstream-fix-and-pin/SKILL.md",
+      "name": "upstream-fix-and-pin",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/upstream-fix-and-pin/SKILL.md",
+      "source_sha256": "dc368338cc41cbacb11519aa2bb5b4837ae25c988e9285d8d8032776d565cea9",
+      "retrieved_at": "2026-10-20T08:41:09.008781Z",
+      "bytes": 6134,
+      "body_read_complete": true,
+      "candidate_disposition": "integration_candidate_pending_support_and_rights",
+      "reason": "git-github-workflow/frontend-node-engineeringの現役metadataとの統合候補。上流fixと下流依存を固定完全SHAで追跡し、暫定pinから検証済みmerge/releaseへ戻す出口が有用。",
+      "required_changes": "install-time prepare/scriptは先に対象と副作用を調べ、無条件allowlist追加しない。dist常時追跡やhook追加はproject方針と利用者確認に従う。latest main HEADが修正済みmergeと同一とせず、実PR mergeSHA/lockfile/成果物と照合。link依存は再現性/対象branchを記録し、待機は元ToDoの正規依存を使い2週間固定の新timerや子ジョブ直接起動を追加しない。",
+      "support_read_complete": false,
+      "individual_rights_review": "未完。READMEと固定treeの個別出典/noticeを照合中。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
@@ -180,9 +221,7 @@
     "tech-article-reproducibility/SKILL.md",
     "tech-trend-watch/SKILL.md",
     "tools/waxa/examples/echo-skill/skills/echo-skill/SKILL.md",
-    "translate-programming-language/SKILL.md",
     "ts2moonbit-migration/SKILL.md",
-    "upstream-fix-and-pin/SKILL.md",
     "utels-project-bootstrap/SKILL.md",
     "vlmkit/SKILL.md",
     "void-app/SKILL.md",
@@ -193,6 +232,121 @@
   "excluded": 0,
   "support_code_executed": false,
   "private_data_used": false,
-  "next": "残72本文を同canonicalから継続。SQL4は補助/個別許諾を調べ、独立価値と既存個別原本の具体差分確認後に作成/統合。",
-  "observed_at": "2026-10-21T05:41:23.6252248Z"
+  "next": "sqlc/D1/SQLiteを使う元依頼範囲の自社repoがあるか既存資料で確認し、Rust/Go format!/Sprintf向け規則の未対応を区別。SQL2本文案を具体化し、個別出典/許諾と補助取得制約を保持。残72本文も同canonicalから続ける。",
+  "observed_at": "2026-10-21T08:44:34.7951321Z",
+  "code_execution_status": "SQL4補助コードは本文未保存・未読・未実行。既存追加取得の拒否を別経路で迂回しない。",
+  "supporting_texts_fullread": [
+    {
+      "path": "CLAUDE.md",
+      "bytes": 2605,
+      "sha256": "56d708ac232e74ff29d29cadcb852dcae27e09580f4a48c32ccea37066055dbc",
+      "collected_at": "2026-10-20T08:41:08.2719166Z"
+    },
+    {
+      "path": "sql-lint/README.md",
+      "bytes": 1199,
+      "sha256": "6636405803072677899eea9621cf1ea764075b3bac0f23deb41841a3438084a0",
+      "collected_at": "2026-10-20T08:41:08.9588461Z"
+    },
+    {
+      "path": "sql-plan-audit/README.md",
+      "bytes": 1246,
+      "sha256": "fd4a96853d6738ea065ac45c542d40e228e5fe559cb58799cbc96821d8653dee",
+      "collected_at": "2026-10-20T08:41:08.960936Z"
+    },
+    {
+      "path": "sql-schema-audit/README.md",
+      "bytes": 1292,
+      "sha256": "9e773b8b87ce815d4d93a38cf924af5a48d2de99bf11226db73c2207e581c050",
+      "collected_at": "2026-10-20T08:41:08.963031Z"
+    },
+    {
+      "path": "sql-security/README.md",
+      "bytes": 1406,
+      "sha256": "55944816a0a3065a6fc87ec7585856efc4c974573036d308e1e8f525c5725c15",
+      "collected_at": "2026-10-20T08:41:08.9665945Z"
+    }
+  ],
+  "supporting_code_unread": [
+    {
+      "path": "sql-lint/.sqlfluff",
+      "bytes": 829,
+      "git_blob": "e2942af2e99ae169c9346395b25a04895a40510b",
+      "body_collected": false,
+      "body_read": false,
+      "execution": "未実行。固定treeのmetadataだけ確認。"
+    },
+    {
+      "path": "sql-lint/scripts/catalog-lint.mjs",
+      "bytes": 4482,
+      "git_blob": "6e7823bb8cffca4faeb6873394fcc2f6948a3683",
+      "body_collected": false,
+      "body_read": false,
+      "execution": "未実行。固定treeのmetadataだけ確認。"
+    },
+    {
+      "path": "sql-plan-audit/scripts/explain-runner.mjs",
+      "bytes": 7283,
+      "git_blob": "9a01723efbe0dac6df5ce29f10121274473a8850",
+      "body_collected": false,
+      "body_read": false,
+      "execution": "未実行。固定treeのmetadataだけ確認。"
+    },
+    {
+      "path": "sql-schema-audit/scripts/index-coverage.mjs",
+      "bytes": 9402,
+      "git_blob": "5f8d2d3e124e03736a863e8809867b8ce73fefb7",
+      "body_collected": false,
+      "body_read": false,
+      "execution": "未実行。固定treeのmetadataだけ確認。"
+    },
+    {
+      "path": "sql-schema-audit/scripts/n-plus-one.mjs",
+      "bytes": 3507,
+      "git_blob": "2099377767c4b9d560b33e5b03e96b7345b5b268",
+      "body_collected": false,
+      "body_read": false,
+      "execution": "未実行。固定treeのmetadataだけ確認。"
+    },
+    {
+      "path": "sql-security/scripts/sql-injection-scan.mjs",
+      "bytes": 4492,
+      "git_blob": "62c44b1d621496595077d973f6a4d1e3589d0521",
+      "body_collected": false,
+      "body_read": false,
+      "execution": "未実行。固定treeのmetadataだけ確認。"
+    }
+  ],
+  "missing_reference": {
+    "path": "pkfire/assets/recipes/14-secretlint-pre-push.pkl",
+    "status": "固定treeに参照先が無い。未読でなく存在未確認の参照。",
+    "executed": false
+  },
+  "source_api_license": null,
+  "command_exit_semantics": [
+    {
+      "source": "sql-lint",
+      "meaning": "本文記載:0=検出無し/1=指摘。安全や意味の証明ではない。"
+    },
+    {
+      "source": "sql-plan-audit",
+      "meaning": "本文記載:回帰も内部エラーも1。成功でも出力先指定時に無出力があり、stderrと成果物/exitを確認する。"
+    },
+    {
+      "source": "sql-schema-audit n-plus-one",
+      "meaning": "本文記載:常に0。候補に担当の精査が必要で、安全/回帰なしの判定にしない。"
+    },
+    {
+      "source": "sql-security",
+      "meaning": "本文記載:単一行の検出無し0でも安全の証明ではない。複数行・小文字などを見逃しうる。"
+    }
+  ],
+  "prior_primary_review": {
+    "todo": 3296,
+    "head": "e127436e75dcd50dc4896d76b6a5a5e4626fe44c",
+    "must": 0,
+    "raw_sha256": "237d5a7391b947f16ef22f9cdc843887c85133a271f676f524956f23c29ce6b7",
+    "limits": "SQL4本文の前評価を確認。今回の補助5+README追加範囲と本文案は新しい未受入差分。"
+  },
+  "entrypoints_fulltext_read": 6
 }

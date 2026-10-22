@@ -68,6 +68,24 @@ Check ((Get-Acl -LiteralPath $failed.Target).Sddl-eq$failedAcl) 'partial failure
 Check (@(Get-ChildItem -LiteralPath $failed.BackupRoot -Filter '*.retained.*').Count-eq1) 'rollback byte anchor was not retained'
 $result=Install-PinnedRuntime @failed
 Check ($result-eq'updated' -and (Hash $failed.Target)-eq$failed.New) 'retry after rollback failed'
+$retentionFailure=Fixture 'retention-failure'
+$retentionAcl=(Get-Acl -LiteralPath $retentionFailure.Target).Sddl
+$caught=$false
+try{
+ Install-PinnedRuntime @retentionFailure -ReplaceAction {
+  param($s,$t,$b)
+  [IO.File]::Move($t,$b)
+  throw 'simulated Windows partial replace failure'
+ } -RetainAction {
+  param($s,$t)
+  throw 'simulated rollback copy failure'
+ }|Out-Null
+}catch{$caught=$true}
+Check ($caught -and (Test-Path -LiteralPath $retentionFailure.Target)) 'retention failure prevented restoring the destination'
+Check ((Hash $retentionFailure.Target)-eq$retentionFailure.Old) 'retention failure changed the old destination'
+Check ((Get-Acl -LiteralPath $retentionFailure.Target).Sddl-eq$retentionAcl) 'retention failure lost the original ACL'
+$result=Install-PinnedRuntime @retentionFailure
+Check ($result-eq'updated' -and (Hash $retentionFailure.Target)-eq$retentionFailure.New) 'retry after retention failure failed'
 $unknown=Fixture 'unknown'
 $stage=$unknown.Target+'.3085-stage';[IO.File]::WriteAllText($stage,'unowned bytes')
 $caught=$false

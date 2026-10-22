@@ -61,7 +61,7 @@ function Assert-Guard([string]$Path,[string]$Old,[string]$New) {
     if ($parsed.qualified -ne $true -or $parsed.domain -ne 'capacity-runtime-update-3085' -or $parsed.todo_id -ne 3085 -or $parsed.old_sha256 -ne $Old -or $parsed.new_sha256 -ne $New -or $parsed.source_receipt_sha256 -ne $guardManifest.runtime_receipt_sha256 -or $parsed.data_access_granted -ne $false -or $parsed.original_registry_recovered -ne $false) { throw 'Runtime update is not qualified' }
 }
 function Install-PinnedRuntime {
-    param([string]$Source,[string]$Target,[string]$BackupRoot,[string]$Old,[string]$New,[scriptblock]$ReplaceAction=$null)
+    param([string]$Source,[string]$Target,[string]$BackupRoot,[string]$Old,[string]$New,[scriptblock]$ReplaceAction=$null,[scriptblock]$RetainAction=$null)
     foreach ($path in @($Source,$Target,$BackupRoot)) { Assert-Plain $path }
     if ((Hash $Source) -ne $New) { throw 'Source artifact changed' }
     $stage = Join-Path ([IO.Path]::GetDirectoryName($Target)) (([IO.Path]::GetFileName($Target)) + '.3085-stage')
@@ -96,14 +96,15 @@ function Install-PinnedRuntime {
         if (-not (Test-Path -LiteralPath $Target) -and (Test-Path -LiteralPath $backup) -and (Hash $backup) -eq $Old) {
             Assert-Plain $Target
             if ([IO.Path]::GetPathRoot($backup) -ine [IO.Path]::GetPathRoot($Target)) { throw 'Rollback must remain on the same volume' }
-            # Keep an independent byte anchor, then rename the original image
-            # back. Copying it to a new file would inherit a different ACL.
-            $retained = $backup + '.retained.' + [Guid]::NewGuid().ToString('N')
-            Assert-Plain $retained
-            [IO.File]::Copy($backup,$retained,$false)
-            if ((Hash $retained) -ne $Old) { throw 'Retained rollback fingerprint mismatch' }
+            # Restore the original image first: a failed optional byte copy
+            # must not leave the public name missing. Rename preserves ACLs.
             [IO.File]::Move($backup,$Target)
             if ((Hash $Target) -ne $Old) { throw 'Rollback fingerprint mismatch' }
+            $retained = $backup + '.retained.' + [Guid]::NewGuid().ToString('N')
+            Assert-Plain $retained
+            if ($null -eq $RetainAction) { $RetainAction = { param($s,$t) [IO.File]::Copy($s,$t,$false) } }
+            & $RetainAction $Target $retained
+            if ((Hash $retained) -ne $Old) { throw 'Retained rollback fingerprint mismatch' }
         }
         throw
     }

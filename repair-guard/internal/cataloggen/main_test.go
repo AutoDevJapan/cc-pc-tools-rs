@@ -59,3 +59,12 @@ func TestProjectionUsesDeclaredContractDepartment(t *testing.T) {
 		t.Fatal("normal declaration's contracted department was inverted")
 	}
 }
+
+func TestProjectionRejectsDuplicateAuthorityDeclarations(t *testing.T) {
+	products := "pub const PRODUCTS: &[Product] = &[\nProduct { name: \"fixture\", department: 0, aliases: &[] },\n];\n"
+	for _, source := range []string{fixtureDepartments + fixtureDepartments + products, fixtureDepartments + products + products} {
+		if _, err := generate([]byte(source)); err == nil {
+			t.Fatal("duplicate authority declaration accepted")
+		}
+	}
+}

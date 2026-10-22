@@ -23,10 +23,11 @@ func generate(source []byte, departmentSources ...[]byte) ([]byte, error) {
 	if len(departmentSources) > 0 {
 		departments = bytes.ReplaceAll(departmentSources[0], []byte("\r\n"), []byte("\n"))
 	}
-	decl := regexp.MustCompile(`(?s)const DEPARTMENTS:\s*\[\(&str,\s*&str\);\s*([0-9]+)\]\s*=\s*\[(.*?)\];`).FindSubmatch(departments)
-	if len(decl) != 3 {
-		return nil, fmt.Errorf("department declaration missing")
+	declarations := regexp.MustCompile(`(?s)const DEPARTMENTS:\s*\[\(&str,\s*&str\);\s*([0-9]+)\]\s*=\s*\[(.*?)\];`).FindAllSubmatch(departments, -1)
+	if len(declarations) != 1 {
+		return nil, fmt.Errorf("department declaration missing or ambiguous")
 	}
+	decl := declarations[0]
 	rows := regexp.MustCompile(`\(\s*("[^"\\]*(?:\\.[^"\\]*)*")\s*,\s*"[^"\\]*(?:\\.[^"\\]*)*"\s*\)`).FindAllSubmatch(decl[2], -1)
 	count, err := strconv.Atoi(string(decl[1]))
 	if err != nil || len(rows) != count {
@@ -48,10 +49,11 @@ func generate(source []byte, departmentSources ...[]byte) ([]byte, error) {
 	if contracted < 0 {
 		return nil, fmt.Errorf("contracted department missing")
 	}
-	section := regexp.MustCompile(`(?s)pub const PRODUCTS: &\[Product\] = &\[(.*?)\n\];`).FindSubmatch(source)
-	if len(section) != 2 {
-		return nil, fmt.Errorf("catalogue section missing")
+	sections := regexp.MustCompile(`(?s)pub const PRODUCTS: &\[Product\] = &\[(.*?)\n\];`).FindAllSubmatch(source, -1)
+	if len(sections) != 1 {
+		return nil, fmt.Errorf("catalogue section missing or ambiguous")
 	}
+	section := sections[0]
 	type group struct {
 		Kind    string   `json:"kind"`
 		Aliases []string `json:"aliases"`

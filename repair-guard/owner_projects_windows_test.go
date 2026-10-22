@@ -63,6 +63,8 @@ func TestOwnerProjectProjectionIgnoresItemUpdatesAndRejectsMalformedProjects(t *
 		`{"projects":{"fixture":"C:/fixtur\ufffd"}}`,
 		`{"projects":{},"items":[`,
 		`{"projects":{}} {}`,
+		`{"projects":{},"items":[{"bad":[1,]}]}`,
+		`{"projects":{},"items":[` + strings.Repeat("[", 130) + "null" + strings.Repeat("]", 130) + `]}`,
 	} {
 		if _, ok := ownerProjectProjection(context.Background(), strings.NewReader(input)); ok {
 			t.Fatal("malformed registration admitted")
@@ -85,6 +87,17 @@ func TestOwnerProjectionExceedsOld64MiBLimitWithoutItems(t *testing.T) {
 		t.Fatal("large unrelated history disabled registration")
 	}
 	t.Logf("projects-only projection of 65MiB: %s", time.Since(started))
+}
+
+func TestOwnerProjectionManySmallItems(t *testing.T) {
+	item := `{"id":1,"status":"done","project":"fixture","jobs":["fixture-a","fixture-b"],"history":[{"note":"old"},{"note":"new"}],"note":"synthetic","at":12345},`
+	input := `{"items":[` + strings.Repeat(item, 400000) + `null],"projects":{"fixture":"C:/fixture"}}`
+	started := time.Now()
+	p, ok := ownerProjectProjection(context.Background(), strings.NewReader(input))
+	if !ok || len(p) != 1 || p["fixture"] != "C:/fixture" {
+		t.Fatal("many small items affected source authority")
+	}
+	t.Logf("many-small-items bytes=%d elapsed=%s", len(input), time.Since(started))
 }
 
 func TestOwnerUnknownNonRepositoryDoesNotUseRegistrationOrGit(t *testing.T) {
@@ -300,6 +313,116 @@ func TestOwnerRefreshCLIRejectsMixedAndRelativeInput(t *testing.T) {
 		}) != 2 {
 			t.Fatal("mixed/relative refresh accepted")
 		}
+	}
+}
+
+func TestOwnerRefreshCannotMixWithCapacityRuntimeQualification(t *testing.T) {
+	for _, flag := range []string{"--refresh-owner-source", "--refresh-request"} {
+		var out, stderr bytes.Buffer
+		calls := 0
+		code := runGuardCLIWithRuntime([]string{"--verify-capacity-runtime-update", `C:\fixture.exe`, flag, `C:\fixture`}, &out, &stderr, nil, func(string) object {
+			calls++
+			return object{"qualified": true}
+		})
+		if code != 1 || calls != 0 || strings.TrimSpace(out.String()) != `{"qualified":false}` {
+			t.Fatal("mixed entry points reached a runtime verifier")
+		}
+	}
+}
+
+func TestOwnerRefreshLocalFailureDoesNotCoolUnattemptedIdentity(t *testing.T) {
+	home, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+	repository := "AutoDevJapan/example"
+	claim, ok := ownerClaimRefresh(home, repository, now)
+	if !ok {
+		t.Fatal("claim fixture")
+	}
+	fetches := 0
+	fetch := func(context.Context, string) (int64, string, string, bool) { fetches++; return 0, "", "", false }
+	query := func(context.Context, string, ownerSourceAccess) ownerPathVerdict { return ownerUnverified() }
+	if ownerRefreshIdentityRequestWith("unused", strings.Repeat("f", 32), home, func() time.Time { return now }, query, fetch) {
+		t.Fatal("unowned refresh request accepted")
+	}
+	if _, ok := ownerReadRefreshClaim(home); !ok {
+		t.Fatal("wrong request removed another claim")
+	}
+	if ownerRefreshIdentityRequestWith("unused", claim.ID, home, func() time.Time { return now }, query, fetch) {
+		t.Fatal("unverified local input reported refreshed")
+	}
+	if fetches != 0 || ownerRefreshCooling(home, repository, now) {
+		t.Fatal("local registration failure cooled an API request that never happened")
+	}
+	if _, ok := ownerReadRefreshClaim(home); ok {
+		t.Fatal("finished owned claim remained")
+	}
+	claim, ok = ownerClaimRefresh(home, repository, now)
+	if !ok {
+		t.Fatal("local failure disabled a valid next attempt")
+	}
+	query = func(ctx context.Context, _ string, access ownerSourceAccess) ownerPathVerdict {
+		access.identity(repository)
+		return ownerUnverified()
+	}
+	if ownerRefreshIdentityRequestWith("unused", claim.ID, home, func() time.Time { return now }, query, fetch) || fetches != 1 || !ownerRefreshCooling(home, repository, now) {
+		t.Fatal("actual fetch failure did not create finite cooldown")
+	}
+}
+
+func TestOwnerIdentityRefreshRequiresDurableCache(t *testing.T) {
+	home := filepath.Join(t.TempDir(), "not-a-directory")
+	if os.WriteFile(home, []byte("fixture"), 0600) != nil {
+		t.Fatal("fixture write")
+	}
+	_, _, _, ok := ownerCachedIdentityAt(context.Background(), "AutoDevJapan/example", home, time.Now, func(context.Context, string) (int64, string, string, bool) {
+		return 12345, "AutoDevJapan/example", "AutoDevJapan", true
+	})
+	if ok {
+		t.Fatal("refresh reported success without a reusable identity")
+	}
+}
+
+func TestOwnerAbandonedRefreshClaimCoolsOnlyItsRepository(t *testing.T) {
+	for _, skew := range []time.Duration{21 * time.Second, -time.Hour} {
+		home, err := physical(t.TempDir())
+		if err != nil {
+			t.Fatal(err)
+		}
+		now := time.Now()
+		a, b := "AutoDevJapan/example", "AutoDevJapan/another"
+		claim, ok := ownerClaimRefresh(home, a, now)
+		if !ok {
+			t.Fatal("claim fixture")
+		}
+		if _, ok := ownerClaimRefresh(home, a, now.Add(skew)); ok || !ownerRefreshCooling(home, a, now.Add(skew)) {
+			t.Fatal("abandoned/skewed helper immediately restarted")
+		}
+		next, ok := ownerClaimRefresh(home, b, now.Add(skew))
+		if !ok || next.ID == claim.ID {
+			t.Fatal("abandoned repository disabled another request")
+		}
+		if ownerDropRefreshClaim(home, claim.ID, now.Add(skew)) || !ownerDropRefreshClaim(home, next.ID, now.Add(skew)) {
+			t.Fatal("cleanup removed another generation")
+		}
+	}
+}
+
+func TestOwnerUnicodeFailureIsNotAnUnnormalizedName(t *testing.T) {
+	if _, ok := ownerUnicodeKC("credit\x00card"); ok {
+		t.Fatal("failed normalization returned unchecked name")
+	}
+}
+
+func TestOwnerRepositoryDirectoryDoesNotHideOutsideCardLocation(t *testing.T) {
+	root := filepath.Join(t.TempDir(), "credit-cards", "source-fixture")
+	if os.MkdirAll(filepath.Join(root, ".git"), 0700) != nil {
+		t.Fatal("fixture mkdir")
+	}
+	if !ownerCardPath(root) {
+		t.Fatal("repository marker hid its outside card location")
 	}
 }
 

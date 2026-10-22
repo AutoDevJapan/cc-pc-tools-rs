@@ -77,8 +77,8 @@ func ownerCachedIdentityAt(ctx context.Context, repository, home string, now fun
 	if !ownerIdentityValid(r, repository, now()) {
 		return 0, "", "", false
 	}
-	if ctx.Err() == nil {
-		_ = ownerWriteSealed(home, hashBytes([]byte(strings.ToLower(repository)))+".dpapi", r)
+	if ctx.Err() != nil || !ownerWriteSealed(home, hashBytes([]byte(strings.ToLower(repository)))+".dpapi", r) {
+		return 0, "", "", false
 	}
 	return id, actual, owner, ctx.Err() == nil
 }

@@ -95,7 +95,7 @@ func ownerDropRefreshClaim(home, expected string, now time.Time) bool {
 		if valid {
 			created = time.Unix(0, claim.Created)
 		}
-		if now.Sub(created) < 20*time.Second {
+		if age := now.Sub(created); age >= 0 && age < 20*time.Second {
 			return false
 		}
 	}
@@ -103,6 +103,26 @@ func ownerDropRefreshClaim(home, expected string, now time.Time) bool {
 	ok, _, _ := syscall.NewLazyDLL("kernel32.dll").NewProc("SetFileInformationByHandle").Call(uintptr(h), 4, uintptr(unsafe.Pointer(&deleteFile)), 1)
 	return ok != 0
 }
+
+func ownerReapRefreshClaim(home string, now time.Time) bool {
+	claim, valid := ownerReadRefreshClaim(home)
+	if !valid {
+		return ownerDropRefreshClaim(home, "", now)
+	}
+	if age := now.Sub(time.Unix(0, claim.Created)); age >= 0 && age < 20*time.Second {
+		return false
+	}
+	if !ownerDropRefreshClaim(home, claim.ID, now) {
+		return false
+	}
+	// A vanished helper must not restart every 20 seconds. This is request
+	// throttling only: neither a stale claim nor its timestamp grants access.
+	if _, ok := ownerOriginRepository("https://github.com/" + claim.Repository); ok && claim.Catalog == hashBytes(ownerDepartmentCatalog) {
+		_ = ownerWriteSealed(home, ownerRefreshFailureName(claim.Repository), ownerRefreshFailure{"owner-source-refresh-failure-v1", claim.Repository, claim.Catalog, now.Unix()})
+	}
+	return true
+}
+
 func ownerClaimRefresh(home, repository string, now time.Time) (ownerRefreshClaim, bool) {
 	if ownerRefreshCooling(home, repository, now) {
 		return ownerRefreshClaim{}, false
@@ -112,7 +132,7 @@ func ownerClaimRefresh(home, repository string, now time.Time) (ownerRefreshClai
 	}
 	path := filepath.Join(home, "refresh.pending")
 	if _, err := os.Lstat(path); err == nil {
-		if !ownerDropRefreshClaim(home, "", now) {
+		if !ownerReapRefreshClaim(home, now) || ownerRefreshCooling(home, repository, now) {
 			return ownerRefreshClaim{}, false
 		}
 	}
@@ -157,41 +177,47 @@ func ownerRequestIdentityRefresh(path, repository string) {
 }
 func ownerRefreshIdentity(path string) bool { return ownerRefreshIdentityRequest(path, "") }
 func ownerRefreshIdentityRequest(path, request string) bool {
+	return ownerRefreshIdentityRequestWith(path, request, ownerIdentityHome, time.Now, ownerSourceQuery, ownerGitHubIdentityWith)
+}
+
+func ownerRefreshIdentityRequestWith(path, request, home string, now func() time.Time, query func(context.Context, string, ownerSourceAccess) ownerPathVerdict, fetch func(context.Context, string) (int64, string, string, bool)) bool {
 	var claim ownerRefreshClaim
 	if request != "" {
 		var ok bool
-		claim, ok = ownerReadRefreshClaim(ownerIdentityHome)
+		claim, ok = ownerReadRefreshClaim(home)
 		if !ok || claim.ID != request || claim.Catalog != hashBytes(ownerDepartmentCatalog) {
 			return false
 		}
-		defer func() { _ = ownerDropRefreshClaim(ownerIdentityHome, request, time.Now()) }()
+		defer func() { _ = ownerDropRefreshClaim(home, request, now()) }()
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
 	defer cancel()
-	attempted := claim.Repository
+	attempted := ""
 	identityReady := false
 	access := ownerSourceAccess{git: func(root string, args ...string) (string, bool) { return ownerSourceGit(ctx, root, args...) }, identity: func(repo string) (int64, string, string, bool) {
 		if claim.Repository != "" && !strings.EqualFold(claim.Repository, repo) {
 			return 0, "", "", false
 		}
-		attempted = repo
-		if ownerRefreshCooling(ownerIdentityHome, repo, time.Now()) {
-			id, name, owner, ok := ownerCachedIdentity(ctx, repo)
+		if ownerRefreshCooling(home, repo, now()) {
+			id, name, owner, ok := ownerCachedIdentityAt(ctx, repo, home, now, func(context.Context, string) (int64, string, string, bool) { return 0, "", "", false })
 			identityReady = identityReady || ok
 			return id, name, owner, ok
 		}
-		id, name, owner, ok := ownerCachedIdentityAt(ctx, repo, ownerIdentityHome, time.Now, ownerGitHubIdentityWith, ownerIdentityAging(repo, ownerIdentityHome, time.Now()))
+		id, name, owner, ok := ownerCachedIdentityAt(ctx, repo, home, now, func(ctx context.Context, repository string) (int64, string, string, bool) {
+			attempted = repository
+			return fetch(ctx, repository)
+		}, ownerIdentityAging(repo, home, now()))
 		identityReady = identityReady || ok
 		return id, name, owner, ok
 	}, plain: currentPlain, denied: legacyMatch, membership: ownerDepartmentMembership}
-	_ = ownerSourceQuery(ctx, path, access)
+	_ = query(ctx, path, access)
 	// Updating an API identity is distinct from admitting the source path. A
 	// concurrent ordinary ToDo write may invalidate the path snapshot without
 	// turning the already verified repository identity into a network failure.
 	// The next normal guard still rechecks its current registration and stop.
 	success := identityReady && ctx.Err() == nil
 	if !success && attempted != "" {
-		_ = ownerWriteSealed(ownerIdentityHome, ownerRefreshFailureName(attempted), ownerRefreshFailure{"owner-source-refresh-failure-v1", attempted, hashBytes(ownerDepartmentCatalog), time.Now().Unix()})
+		_ = ownerWriteSealed(home, ownerRefreshFailureName(attempted), ownerRefreshFailure{"owner-source-refresh-failure-v1", attempted, hashBytes(ownerDepartmentCatalog), now().Unix()})
 	}
 	return success
 }

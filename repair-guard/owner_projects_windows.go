@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"os/exec"
@@ -68,15 +69,46 @@ func (r ownerDeadlineReader) Read(p []byte) (int, error) {
 	return r.input.Read(p)
 }
 
-// Decode only projects. Other values are skipped without constructing maps or
-// arrays. Duplicate top-level/project keys are rejected; item content is not
-// interpreted as source authority and never returned or logged.
+// Decoder validates the JSON before invoking this method. Check the retained
+// depth bound, but neither copy the bytes nor decode individual item fields.
+type ownerDiscardJSON struct{}
+
+func (*ownerDiscardJSON) UnmarshalJSON(data []byte) error {
+	depth, quoted, escaped := 1, false, false
+	for _, b := range data {
+		if quoted {
+			if escaped {
+				escaped = false
+			} else if b == '\\' {
+				escaped = true
+			} else if b == '"' {
+				quoted = false
+			}
+			continue
+		}
+		switch b {
+		case '"':
+			quoted = true
+		case '{', '[':
+			depth++
+			if depth > 128 {
+				return errors.New("registration nesting exceeds bound")
+			}
+		case '}', ']':
+			depth--
+		}
+	}
+	return nil
+}
+
+// Decode only projects. Unrelated arrays are skipped one element at a time,
+// without maps, arrays or field tokens. Duplicate top-level/project keys are
+// rejected; item content is never used as authority, returned or logged.
 func ownerProjectProjection(ctx context.Context, input io.Reader) (object, bool) {
 	d := json.NewDecoder(bufio.NewReaderSize(ownerDeadlineReader{ctx, input}, 64<<10))
 	d.UseNumber()
-	var skip func(int) bool
-	skip = func(depth int) bool {
-		if depth > 128 || ctx.Err() != nil {
+	skip := func() bool {
+		if ctx.Err() != nil {
 			return false
 		}
 		token, err := d.Token()
@@ -100,7 +132,8 @@ func ownerProjectProjection(ctx context.Context, input io.Reader) (object, bool)
 					return false
 				}
 			}
-			if !skip(depth + 1) {
+			var ignored ownerDiscardJSON
+			if ctx.Err() != nil || d.Decode(&ignored) != nil {
 				return false
 			}
 		}
@@ -121,7 +154,7 @@ func ownerProjectProjection(ctx context.Context, input io.Reader) (object, bool)
 		}
 		seen[name] = true
 		if name != "projects" {
-			if !skip(0) {
+			if !skip() {
 				return nil, false
 			}
 			continue
@@ -160,14 +193,6 @@ func ownerProjectProjection(ctx context.Context, input io.Reader) (object, bool)
 		return nil, false
 	}
 	return projects, true
-}
-
-func ownerReadProjects(ctx context.Context, path string) (object, bool) {
-	snapshot, ok := ownerReadProjectSnapshot(ctx, path, legacyMatch)
-	if !ok {
-		return nil, false
-	}
-	return snapshot.projects, snapshot.current()
 }
 
 type ownerProjectSnapshot struct {

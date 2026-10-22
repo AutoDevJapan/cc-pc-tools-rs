@@ -40,20 +40,30 @@ func ownerHandlePath(h syscall.Handle) (string, error) {
 	return filepath.Clean(resolved), err
 }
 
-func ownerUnicodeKC(value string) string {
+func ownerUnicodeKC(value string) (string, bool) {
+	if value == "" {
+		return "", true
+	}
 	in, err := syscall.UTF16FromString(value)
 	if err != nil {
-		return value
+		return "", false
 	}
 	proc := syscall.NewLazyDLL("normaliz.dll").NewProc("NormalizeString")
 	required, _, _ := proc.Call(5, uintptr(unsafe.Pointer(&in[0])), uintptr(len(in)-1), 0, 0)
 	if int32(required) <= 0 || required > 1<<20 {
-		return value
+		return "", false
 	}
-	buffer := make([]uint16, int(required))
-	n, _, _ := proc.Call(5, uintptr(unsafe.Pointer(&in[0])), uintptr(len(in)-1), uintptr(unsafe.Pointer(&buffer[0])), uintptr(len(buffer)))
-	if int32(n) <= 0 || n > uintptr(len(buffer)) {
-		return value
+	for attempt := 0; attempt < 2; attempt++ {
+		buffer := make([]uint16, int(required))
+		n, _, _ := proc.Call(5, uintptr(unsafe.Pointer(&in[0])), uintptr(len(in)-1), uintptr(unsafe.Pointer(&buffer[0])), uintptr(len(buffer)))
+		if int32(n) > 0 && n <= uintptr(len(buffer)) {
+			return syscall.UTF16ToString(buffer[:n]), true
+		}
+		needed := -int64(int32(n))
+		if needed <= int64(len(buffer)) || needed > 1<<20 {
+			break
+		}
+		required = uintptr(needed)
 	}
-	return syscall.UTF16ToString(buffer[:n])
+	return "", false
 }

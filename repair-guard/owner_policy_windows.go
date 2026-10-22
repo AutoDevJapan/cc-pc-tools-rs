@@ -1,7 +1,8 @@
 package main
 
 // The resource classification is separate from permission to run a task.
-// This file reads metadata only and never changes an owner stop or registry.
+// Source qualification reads metadata, may request finite identity refresh,
+// and never changes an owner stop or the original protection registry.
 import (
 	"context"
 	_ "embed"
@@ -81,14 +82,23 @@ func ownerCardPath(path string) bool {
 		codeLeaf = true
 	}
 	if info, err := os.Lstat(path); err == nil && info.IsDir() && ownerRepositoryCandidate(path) {
-		return false
+		// A directory verdict qualifies the working location, not every child.
+		// Repository names below its marker are software metadata, but a marker
+		// must not conceal an outside storage location that needs classification.
+		root, _ := ownerRepositoryRoot(path)
+		path = filepath.Dir(root)
+		codeLeaf = false
 	}
 	components := strings.Split(strings.ReplaceAll(path, `\`, "/"), "/")
 	for index, component := range components {
 		if index == len(components)-1 && codeLeaf {
 			continue
 		}
-		component = ownerUnicodeKC(component)
+		var normalizedOK bool
+		component, normalizedOK = ownerUnicodeKC(component)
+		if !normalizedOK {
+			return true // Unknown spelling is not a confirmed protection category.
+		}
 		component, _, _ = strings.Cut(component, ":")
 		component = strings.TrimRight(component, " .")
 		name := strings.TrimSuffix(strings.ToLower(component), strings.ToLower(filepath.Ext(component)))

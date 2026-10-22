@@ -13,6 +13,8 @@ mod subwork_support;
 mod no_action_tests;
 #[path = "support/dispatch_receipt.rs"]
 mod dispatch_receipt_tests;
+#[path = "support/review_workspace.rs"]
+mod review_workspace_tests;
 #[path = "support/targeted_dispatch.rs"]
 mod targeted_dispatch_tests;
 
@@ -1661,6 +1663,7 @@ fn test_orphan_minimum_age_and_missing_job() {
 }
 
 struct Fake {
+    real_workspaces: bool,
     prepare_registry: Option<PathBuf>,
     current_product: Option<(Value, String)>,
     action_path: Option<PathBuf>,
@@ -1706,6 +1709,7 @@ struct Fake {
 impl Default for Fake {
     fn default() -> Self {
         Self {
+            real_workspaces: false,
             prepare_registry: None,
             current_product: None,
             action_path: None,
@@ -1918,7 +1922,22 @@ impl Backend for Fake {
             .unwrap_or("done")
             .into())
     }
-    fn worktree(&mut self, _: &str, i: &Value) -> Result<()> {
+    fn workspace_recovery(
+        &mut self,
+        repo: &str,
+        i: &Value,
+        jobs: &[Value],
+    ) -> Result<Option<Value>> {
+        if self.real_workspaces {
+            cc_scheduler::preparation::recover_workspace(&mut SystemRunner, repo, i, jobs)
+        } else {
+            Ok(None)
+        }
+    }
+    fn worktree(&mut self, repo: &str, i: &Value) -> Result<()> {
+        if self.real_workspaces {
+            return cc_scheduler::preparation::ensure_workspace(&mut SystemRunner, repo, i, &self.records);
+        }
         if let Some(path) = self.prepare_registry.take() { fs::write(path, "GoDD-AO")?; }
         if i["id"].as_u64() == self.worktree_failure && self.worktree_failure.is_some() {
             return Err(Error("OriginMissing"));
@@ -5035,6 +5054,7 @@ fn help_uses_stdout_and_exit_zero_for_every_subcommand() {
         &["orphans", "-h"],
         &["checkpoint-workspace", "--help"],
         &["dispatch-receipt", "--help"],
+        &["dispatch-subwork", "--help"],
     ] {
         let mut c = invocation(&[env!("CARGO_BIN_EXE_scheduler")], Some(10));
         c.args = args.iter().map(|a| a.to_string()).collect();

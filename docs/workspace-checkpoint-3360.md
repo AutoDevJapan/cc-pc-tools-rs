@@ -12,14 +12,19 @@
 元資料、Gitのファイルやrefを変更せず、起動・取消・移動を行わない。
 
 競合確認と保存は、通常のジョブ受付と共通の.queue.lockの同じbyte範囲を保持して行う。
+遅いguardとGitのroot/commonの確認はロック前に行う。最後のbranch/HEADの照合は
+最新の実状態を保つためロック内に残し、他の担当が受付から作業を始めることを防ぐ。
 queued担当を例外にできるのは、次の全条件を確認した場合に限る。
 
 - 元行の現担当であるstarting/runningのsourceが生存している。
-- queued担当に生存過程、所有生存印、再起動予約、取消、読取不能印がない。
+- queued担当には実行過程（codex_pid）、誕生時刻が不明または不一致の過程、
+  監督配下の作業の可能性がある子過程、所有生存印、再起動予約、取消、読取不能印がない。
+  生存している監督過程（pid）だけは、その誕生時刻をpid_createdと照合した場合に許す。
 - 正規queue_wait_reasonがwork_ownerで、そのowner_job_id/owner_todo_idがsourceと元行に一致する。
 - cwdと保存済みwork_ownerの作業場所が両担当と元行で同じ実パスであり、repositoryとgit_commonも一致する。
 - queued担当のtodo_idは未登録または同じ元行である。別ToDoや別cwdの競合を免除しない。
-- 追加のwork_wait_evidenceがある場合も同じownerを指す。矛盾した証拠を無視しない。
+- 追加のwork_wait_evidenceがある場合はowner全体とcandidate_identityも現在の保存所有情報と一致する。
+  矛盾した証拠を無視しない。
 
 それ以外のqueued、starting、running、生存過程を持つ終了担当は従来どおり拒否する。
 待機担当を削除・取消して保存を通す手段は追加しない。
@@ -34,7 +39,7 @@ queued担当を例外にできるのは、次の全条件を確認した場合�
 ## 受入条件
 
 1. 正規の待機担当が存在しても現所有担当の保存が成功する。元行の他の値とGitの途中成果は同じ。
-2. 待機証拠の欠落・矛盾、別owner/ToDo/cwd、starting/running、生存過程、予約を拒否する。
+2. 待機証拠の欠落・矛盾、別owner/ToDo/cwd、starting/running、実行過程や不明な過程、予約を拒否する。
 3. 元branch、HEAD、所有、guard、途中のnote/依存/本人停止の変更を拒否する。
 4. --checkは保存せず、拒否条件と比較結果を示す。通常保存の結果は改めて読み返す。
 5. 共通queue lockでジョブ受付と排他する。テストで同じbyteの競合を確認する。

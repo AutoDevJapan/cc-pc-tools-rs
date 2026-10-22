@@ -69,6 +69,43 @@ fn require(checks: &mut Value, key: &str, matches: bool, reason: &'static str) -
     }
 }
 
+/// `pid` is the queue supervisor; `codex_pid` is the execution process.
+/// Only the birth-verified supervisor can remain alive while admission is locked.
+fn waiting_processes_safe(job: &Value, ps: &policy::Processes, at: f64) -> bool {
+    for key in ["pid", "codex_pid"] {
+        if !job[key].is_null()
+            && job[key]
+                .as_u64()
+                .is_none_or(|pid| pid == 0 || pid > u32::MAX as u64)
+        {
+            return false;
+        }
+    }
+    if job["codex_pid"]
+        .as_u64()
+        .is_some_and(|pid| ps.contains_key(&(pid as u32)))
+    {
+        return false;
+    }
+    let Some((pid, monitor)) = job["pid"]
+        .as_u64()
+        .and_then(|pid| ps.get(&(pid as u32)).map(|p| (pid, p)))
+    else {
+        // Retain the existing recent-registration grace and reboot reservations.
+        return !policy::alive(job, ps, at);
+    };
+    let Some(created) = monitor["created"].as_u64() else {
+        return false;
+    };
+    job["pid_created"].as_u64() == Some(created)
+        && !ps.values().any(|child| {
+            child["ppid"].as_u64() == Some(pid)
+                && child["created"]
+                    .as_u64()
+                    .is_none_or(|birth| birth >= created)
+        })
+}
+
 fn run<B: Backend>(
     engine: &mut Scheduler<B>,
     runner: &mut dyn Runner,
@@ -82,16 +119,6 @@ fn run<B: Backend>(
         let _lock =
             ByteLock::acquire(&engine.root.join("scheduler.lock"), Duration::from_secs(30))?
                 .ok_or(Error("TimeoutError"))?;
-        // Registration and queued -> starting admission use this same byte [0, 1).
-        // Keep it through ToDo CAS; a verified inactive waiter cannot start meanwhile.
-        let queue = engine
-            .root
-            .parent()
-            .ok_or(Error("CheckpointQueueUnavailable"))?
-            .join("codex-jobs/jobs");
-        std::fs::create_dir_all(&queue)?;
-        let _queue = ByteLock::acquire(&queue.join(".queue.lock"), Duration::from_secs(30))?
-            .ok_or(Error("CheckpointQueueBusy"))?;
         let db = engine.todo()?;
         let item = arr(&db["items"])
             .into_iter()
@@ -122,6 +149,23 @@ fn run<B: Backend>(
                 && engine.backend.repair_scope_allowed(cwd),
             "ClientResource",
         )?;
+        let target = resolve(Path::new(cwd))?;
+        let base = resolve(Path::new(repo))?;
+        // Slow guards and repository discovery do not reserve global admission.
+        if git_root(runner, &base)?.is_none() || git_root(runner, &target)?.is_none() {
+            return Err(Error("NonGit"));
+        }
+        same_common(runner, &base, &target)?;
+        // Registration and queued -> starting admission use this same byte [0, 1).
+        // Keep it through the fresh process/branch/HEAD checks and ToDo CAS.
+        let queue = engine
+            .root
+            .parent()
+            .ok_or(Error("CheckpointQueueUnavailable"))?
+            .join("codex-jobs/jobs");
+        std::fs::create_dir_all(&queue)?;
+        let _queue = ByteLock::acquire(&queue.join(".queue.lock"), Duration::from_secs(30))?
+            .ok_or(Error("CheckpointQueueBusy"))?;
         let jobs = engine.backend.jobs()?;
         let processes = engine.backend.snapshot()?;
         let at = engine.backend.clock();
@@ -138,7 +182,6 @@ fn run<B: Backend>(
                 && arr(&item["jobs"]).contains(&source["id"]),
             "CheckpointSourceOwnership",
         )?;
-        let target = resolve(Path::new(cwd))?;
         require(
             &mut checks,
             "source_cwd_matches",
@@ -163,16 +206,16 @@ fn run<B: Backend>(
                 &mut checks,
                 "competing_worker_inactive",
                 other["status"] == "queued"
-                    && !policy::alive(other, &processes, at)
-                    && other["work_owner_live"] != true
+                    && waiting_processes_safe(other, &processes, at)
                     && [
+                        "work_owner_live",
                         "cancel_requested",
                         "queue_restart_pending",
                         "reboot_launch_pending",
                         "queue_unreadable",
                     ]
                     .iter()
-                    .all(|key| other[*key] != true),
+                    .all(|key| other[*key].is_null() || other[*key] == false),
                 "CheckpointCompetingWorker",
             )?;
             let reason = &other["queue_wait_reason"];
@@ -189,8 +232,9 @@ fn run<B: Backend>(
                     && (other["todo_id"].is_null() || other["todo_id"] == item["id"])
                     && (evidence.is_null()
                         || (evidence["owner_job_id"] == source["id"]
-                            && evidence["owner"]["id"] == source["id"]
-                            && evidence["owner"]["todo_id"] == item["id"])),
+                            && evidence["owner"]
+                                == cc_job_policy::work_owner::owner_evidence(source)
+                            && evidence["candidate_identity"] == other["work_owner"])),
                 "CheckpointWaitUnverified",
             )?;
             let identity = &other["work_owner"];
@@ -214,12 +258,7 @@ fn run<B: Backend>(
             )?;
             waiters += 1;
         }
-        checks["competing_workers_absent"] = json!(true);
-        let base = resolve(Path::new(repo))?;
-        if git_root(runner, &base)?.is_none() || git_root(runner, &target)?.is_none() {
-            return Err(Error("NonGit"));
-        }
-        same_common(runner, &base, &target)?;
+        checks["unverified_competing_workers_absent"] = json!(true);
         let branch = crate::backend::run_git(runner, &target, &["branch", "--show-current"])?;
         let head = crate::backend::run_git(runner, &target, &["rev-parse", "--verify", "HEAD"])?;
         require(
@@ -249,18 +288,26 @@ fn run<B: Backend>(
         // A subsequent dispatch still checks the actual branch through ensure_workspace().
         let mut saved = false;
         let mut matched = false;
-        let row = engine.edit_in_project(&item["id"], Some(repo), |row| {
-            if *row == item {
-                matched = true;
-            }
-            if matched && !repeated {
-                row["scheduler"]["branch"] = json!(branch);
-                row["scheduler"]["workspace_checkpoint"] = json!({
-                    "request":request,"at":at,"launched":0
-                });
-                saved = true;
-            }
-        })?;
+        let row = engine
+            .edit_in_project(&item["id"], Some(repo), |row| {
+                if *row == item {
+                    matched = true;
+                }
+                if matched && !repeated {
+                    row["scheduler"]["branch"] = json!(branch);
+                    row["scheduler"]["workspace_checkpoint"] = json!({
+                        "request":request,"at":at,"launched":0
+                    });
+                    saved = true;
+                }
+            })
+            .map_err(|error| {
+                if error.0 == "InputRejected" {
+                    Error("CheckpointRowChanged")
+                } else {
+                    error
+                }
+            })?;
         if !matched
             || row["scheduler"]["branch"] != request.branch
             || row["scheduler"]["workspace_checkpoint"]["request"] != json!(request)

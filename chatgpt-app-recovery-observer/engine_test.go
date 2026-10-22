@@ -595,3 +595,24 @@ func TestStopCannotRelabelChangedScopeOrLogAsTrusted(t *testing.T) {
 		})
 	}
 }
+
+func TestKnownStopKeepsPriorityWhenTickContextExpires(t *testing.T) {
+	s, o := synthetic()
+	e := testEngine(t, s, o)
+	o.Directives.Stop = true
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	unlock, err := e.Store.Lock(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unlock()
+	r := e.finish(ctx, s, o)
+	if r.Decision != "suppressed" || r.VirtualRequest {
+		t.Fatal(r)
+	}
+	loaded, err := e.Store.Load()
+	if err != nil || loaded.Receipts[Incident(o)].Attempt != "suppressed" {
+		t.Fatal("known stop was not preserved", loaded.Receipts, err)
+	}
+}

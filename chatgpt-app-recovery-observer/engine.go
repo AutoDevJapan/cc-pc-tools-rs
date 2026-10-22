@@ -102,7 +102,7 @@ func (e Engine) Tick(ctx context.Context) Result {
 // adding a production flag or a public no-stop evidence constructor.
 func (e Engine) finish(ctx context.Context, s State, o Observation) Result {
 	r := Decide(s, o)
-	if ctx.Err() != nil {
+	if ctx.Err() != nil && r.Decision != "suppressed" {
 		r.Decision = "unknown"
 		r.Reason = "deadline"
 		return r

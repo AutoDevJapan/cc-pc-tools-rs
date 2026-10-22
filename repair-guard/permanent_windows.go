@@ -24,7 +24,7 @@ var permanent3344Sources = []permanentSource{
 	{model3081Source, "cbddcb32fb8ffc9364862b743c4435739fab1aec"},
 	{model3309Source, "e290e27ffdb63cbd35dcb8af559372293a94de87"},
 	{model3338GuardSource, "a36a77c42690eef7c0147a6a2eee76b496a48249"},
-	{model3344GuardSource, "b4872860870e6832be851d630b2fd4035922a80c"},
+	{model3344GuardSource, "00e47e1cc5f8bd7d1d3c7af8cce4e3c04f36102a"},
 }
 
 func permanentRuntimeSourceVerified(root string) bool {

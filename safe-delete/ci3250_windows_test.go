@@ -10,6 +10,27 @@ import (
 	"testing"
 )
 
+func TestCI3250WorktreeRetirementStaysOnSameDrive(t *testing.T) {
+	const original = `C:\Users\makhmeto\Downloads\削除希望`
+	if !ci3250OwnedParent(ci3250Worktree) || !ci3250OwnedParent(`C:\Users\makhmeto\AppData\Local\Temp`) {
+		t.Fatal("qualified producer parent refused")
+	}
+	for _, parent := range []string{ci3250Worktree + "-other", filepath.Join(ci3250Worktree, "nested"), filepath.Dir(ci3250Worktree)} {
+		if ci3250OwnedParent(parent) || ci3250QuarantineParent(parent, original) != original {
+			t.Fatal("unknown parent redirected", parent)
+		}
+	}
+	if !same(ci3250QuarantineParent(ci3250Worktree, original), `D:\削除希望`) {
+		t.Fatal("qualified D resource would be moved across drives")
+	}
+	if ci3250QuarantineParent(`C:\Users\makhmeto\AppData\Local\Temp`, original) != original {
+		t.Fatal("existing C destination changed")
+	}
+	if ci3250QuarantineParent(ci3250Worktree, t.TempDir()) == `D:\削除希望` {
+		t.Fatal("fixture configuration acquired production destination")
+	}
+}
+
 func TestCI3250RequiresItsOwnQualificationResult(t *testing.T) {
 	for _, input := range []string{`{"client_resource":false,"classification_unverified":false}`, `{"client_resource":false,"classification_unverified":false,"ci_retirement_qualified":false}`, `{"client_resource":true,"classification_unverified":false,"ci_retirement_qualified":true}`} {
 		if ci3250QualifiedResponse([]byte(input)) {

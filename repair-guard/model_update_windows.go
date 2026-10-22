@@ -34,6 +34,9 @@ const model3298Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3298-
 const model3298Head = "70a7962c36c0b9916ff6865afa9cb606d414962e"
 const model3298BuildReceipt = model3298Source + "/codex-owned-5ca1100a696bda051f5c813a37f941d9/target/build-receipt.private.json"
 const model3081Distribution = model3298Source + "/codex-owned-0c95078c4ebbe13a42f392c2e12e60da"
+const model3081Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3081-fast"
+const model3309Source = "C:/Users/makhmeto/AppData/Local/Temp/agent-conduct-c2d9dde771e44d36a3bd8343653b307c/dots-launcher-repair-3309"
+const model3250Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3250-windows"
 
 // The installed baseline has the independent ToDo3177 provenance. ToDo3298
 // built the candidate once from the merged source, then ToDo3081 copied it
@@ -61,7 +64,36 @@ var model3081UpdateLeaves = []modelUpdateLeaf{
 	{kind: "guard", target: "D:/CC/Tools/client-records/scrub391.exe", baselines: []consolePin{{
 		sha256:   "78d90055f5324366589d6c2bec1ff0d1adc297a60a1fbc34c6de9af0c4ae5069",
 		evidence: []consoleEvidence{{model3082Source, model3082Receipt, model3082ReceiptSHA}},
+	}, {
+		sha256:   "274e8abc5c90d5ca7dcf401b824d5ff50e078c966fd74a35af86f78dd9d900d9",
+		evidence: []consoleEvidence{{model3250Source, model3250Source + "/codex-owned-1bd08feb8beaad849537a5ea1b45bdfd/guard-pr351-installed.private.json", "2de2b7789fb32d159f3d1e41e40f828167a10db1f944512d2f30510a4f782115"}},
 	}}},
+	{kind: "jobs", target: jobsRuntime, baselines: []consolePin{{
+		sha256:   "7ae20f2bfa824aa6dc27d7046bb997df137bd8980b3291d4e195804714b42c77",
+		evidence: []consoleEvidence{{model2903Source, model2903Source + "/.ci-work/3255-existing-runtime3081-current-CAS-drift-20261022.private.json", "92e0ef180fbefa0385ffe36c738323b955edb065622802361178ce1cf038a3ed"}},
+	}}, candidate: modelUpdateCandidate{
+		root: model3309Source, path: model3309Source + "/codex-owned-f47d20fe42907634de18cbd7f6309d3d/codex_jobs.exe",
+		head: "e290e27ffdb63cbd35dcb8af559372293a94de87", sha256: "85beac9a785971e15d452a293c4f5c9d17f5133ef4fac00965dfcf0bd297a71f",
+		evidence: []consoleEvidence{
+			{model3081Source, model3081Source + "/docs/model3081-3309-build.private.json", "aff3e9dee09275a24996d8a415db638da57e88a4a473eab02686feb5228d0fc6"},
+			{model3081Source, model3081Source + "/docs/model3081-3309-result.private.json", "68774dd3285b36a64e8891cd05122732f7718823777de0c260340beb8b125409"},
+		},
+	}},
+}
+
+// The new owner repair is bound to the existing launcher and two actual
+// software versions. It does not extend the old finite qualification's clock.
+func modelLauncherRuntimeAllowed(path string) bool {
+	return modelLauncherQualified(path, model3081RuntimeReceipt)
+}
+
+func modelLauncherQualified(path string, verify func(string) object) bool {
+	if !same(path, jobsRuntime) {
+		return false
+	}
+	r := verify(path)
+	return r["qualified"] == true && r["domain"] == "model-runtime-update-3081-v1" &&
+		r["todo_id"] == 3081 && r["target_kind"] == "jobs" && r["data_access_granted"] == false
 }
 
 func model3081FlagPresent(args []string) bool {

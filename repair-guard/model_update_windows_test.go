@@ -116,7 +116,7 @@ func TestModelUpdateRejectsScopeOutsideExactLeaf(t *testing.T) {
 	for _, path := range []string{f.root, filepath.Dir(f.leaf.target), f.leaf.target + ".bak", f.leaf.target + ":stream", f.candidate, f.receipt, f.buildReceipt, filepath.Join(filepath.Dir(f.leaf.target), "sibling.exe"), filepath.Join(f.root, "private.json")} {
 		requireModelUpdateRefused(t, f.result(path))
 	}
-	if len(model3081UpdateLeaves) != 3 {
+	if len(model3081UpdateLeaves) != 4 {
 		t.Fatal("production update scope expanded")
 	}
 	bound := 0
@@ -132,20 +132,50 @@ func TestModelUpdateRejectsScopeOutsideExactLeaf(t *testing.T) {
 				!modelCandidateEvidenceIndependent(leaf.candidate, leaf) {
 				t.Fatal("built ToDo candidate lost its fixed source or independent receipts")
 			}
+		} else if leaf.kind == "jobs" {
+			bound++
+			if leaf.target != jobsRuntime || leaf.candidate.root != model3309Source ||
+				!modelDigestValid(leaf.candidate.sha256) || len(leaf.candidate.evidence) != 2 ||
+				!modelCandidateEvidenceIndependent(leaf.candidate, leaf) {
+				t.Fatal("launcher repair lost its exact independent provenance")
+			}
 		} else if leaf.candidate.path != "" || leaf.candidate.sha256 != "" || leaf.candidate.root != "" || leaf.candidate.head != "" || len(leaf.candidate.evidence) != 0 {
 			t.Fatal("another production leaf was bound without this build's provenance")
 		}
-		if leaf.kind != "todo" && leaf.kind != "discord" && leaf.kind != "guard" {
+		if leaf.kind != "todo" && leaf.kind != "discord" && leaf.kind != "guard" && leaf.kind != "jobs" {
 			t.Fatal("unknown production kind")
 		}
 		for _, path := range []string{filepath.Dir(leaf.target), leaf.target + ".bak", leaf.target + ":stream", filepath.Join(filepath.Dir(leaf.target), "state.json")} {
 			requireModelUpdateRefused(t, model3081RuntimeReceipt(path))
 		}
 	}
-	if bound != 1 {
-		t.Fatal("expected exactly the verified ToDo candidate")
+	if bound != 2 {
+		t.Fatal("expected exactly the verified ToDo and launcher candidates")
 	}
 	requireModelUpdateRefused(t, model3081RuntimeReceipt("D:/CC/Tools/civ6-live/review.exe"))
+}
+
+func TestModelUpdateLauncherQualificationIsSoftwareOnlyAndExact(t *testing.T) {
+	good := func(string) object {
+		return object{"qualified": true, "domain": "model-runtime-update-3081-v1", "todo_id": 3081, "target_kind": "jobs", "data_access_granted": false}
+	}
+	if !modelLauncherQualified(jobsRuntime, good) {
+		t.Fatal("qualified exact launcher refused")
+	}
+	for _, path := range []string{filepath.Dir(jobsRuntime), jobsRuntime + ".bak", jobsRuntime + ":stream", "D:/CC/Tools/todo/todo.exe"} {
+		if modelLauncherQualified(path, good) {
+			t.Fatal("software qualification escaped the exact launcher leaf")
+		}
+	}
+	for _, key := range []string{"qualified", "domain", "todo_id", "target_kind", "data_access_granted"} {
+		if modelLauncherQualified(jobsRuntime, func(path string) object {
+			r := good(path)
+			delete(r, key)
+			return r
+		}) {
+			t.Fatalf("missing %s accepted", key)
+		}
+	}
 }
 
 func TestModelUpdateRejectsUnpinnedOrUnverifiedCandidate(t *testing.T) {

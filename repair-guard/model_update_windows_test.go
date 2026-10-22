@@ -119,9 +119,21 @@ func TestModelUpdateRejectsScopeOutsideExactLeaf(t *testing.T) {
 	if len(model3081UpdateLeaves) != 3 {
 		t.Fatal("production update scope expanded")
 	}
+	bound := 0
 	for _, leaf := range model3081UpdateLeaves {
-		if leaf.candidate.path != "" || leaf.candidate.sha256 != "" || len(leaf.baselines) == 0 {
-			t.Fatal("unbuilt production candidate invented or old provenance omitted")
+		if len(leaf.baselines) == 0 {
+			t.Fatal("independent installed provenance omitted")
+		}
+		if leaf.kind == "todo" {
+			bound++
+			if leaf.candidate.root != model3298Source || leaf.candidate.head != model3298Head ||
+				!within(leaf.candidate.root, leaf.candidate.path) || filepath.Base(leaf.candidate.path) != "todo.exe" ||
+				!modelDigestValid(leaf.candidate.sha256) || len(leaf.candidate.evidence) != 2 ||
+				!modelCandidateEvidenceIndependent(leaf.candidate, leaf) {
+				t.Fatal("built ToDo candidate lost its fixed source or independent receipts")
+			}
+		} else if leaf.candidate.path != "" || leaf.candidate.sha256 != "" || leaf.candidate.root != "" || leaf.candidate.head != "" || len(leaf.candidate.evidence) != 0 {
+			t.Fatal("another production leaf was bound without this build's provenance")
 		}
 		if leaf.kind != "todo" && leaf.kind != "discord" && leaf.kind != "guard" {
 			t.Fatal("unknown production kind")
@@ -129,6 +141,9 @@ func TestModelUpdateRejectsScopeOutsideExactLeaf(t *testing.T) {
 		for _, path := range []string{filepath.Dir(leaf.target), leaf.target + ".bak", leaf.target + ":stream", filepath.Join(filepath.Dir(leaf.target), "state.json")} {
 			requireModelUpdateRefused(t, model3081RuntimeReceipt(path))
 		}
+	}
+	if bound != 1 {
+		t.Fatal("expected exactly the verified ToDo candidate")
 	}
 	requireModelUpdateRefused(t, model3081RuntimeReceipt("D:/CC/Tools/civ6-live/review.exe"))
 }

@@ -4120,6 +4120,10 @@ mod tests {
         }
     }
 
+    mod decision_lookup_tests {
+        include!("recovery_messages/decision_lookup_tests.rs");
+    }
+
     fn clarification_fixture(f: &Fixture, ctx: &mut Context) -> (LogArgs, PathBuf, Value) {
         clarification_fixture_body(f, ctx, "これは元の質問の背景を補う説明です。")
     }

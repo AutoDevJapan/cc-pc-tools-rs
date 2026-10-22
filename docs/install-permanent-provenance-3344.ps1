@@ -1,4 +1,4 @@
-# Finite ToDo3344 / PR377 deployment. Validate by default; apply only after
+# Finite ToDo3344 / PR377 and PR380 deployment. Validate by default; apply only after
 # the fixed source's separate model review, all applicable CI, and normal merge.
 param([switch]$Apply)
 $ErrorActionPreference = 'Stop'
@@ -110,7 +110,9 @@ try {
         $current = Qualify $item
         if ($current -eq $item.new) { Record 'already-current' @{kind=$item.kind;sha256=$current}; continue }
         $name = [IO.Path]::GetFileName($item.target)
-        $copy = "$stage/3344-install-$name"
+        # Unprotected ACLs inherit from the staging parent on Set-Acl. Keep the
+        # replacement beside its target so inherited ACEs remain identical.
+        $copy = Join-Path ([IO.Path]::GetDirectoryName($item.target)) "3344-install-$name"
         $backup = "$stage/3344-before-$name"
         if (Test-Path -LiteralPath $backup) { throw 'Prior backup needs reconciliation; no overwrite' }
         if (Test-Path -LiteralPath $copy) {

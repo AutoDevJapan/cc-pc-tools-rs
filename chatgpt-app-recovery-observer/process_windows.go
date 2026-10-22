@@ -168,16 +168,25 @@ func registeredScope(ctx context.Context) (windowsScope, error) {
 	return scope, nil
 }
 
+var errNotRegisteredApp = errors.New("not_registered_app")
+
+func identityFailure(code uintptr) error {
+	if code == 15700 || code == 15703 {
+		return errNotRegisteredApp
+	}
+	return errors.New("process_identity_unknown")
+}
+
 func identityString(proc *syscall.LazyProc, h syscall.Handle) (string, error) {
 	var n uint32
 	code, _, _ := proc.Call(uintptr(h), uintptr(unsafe.Pointer(&n)), 0)
 	if code != 122 || n == 0 || n > 32768 {
-		return "", errors.New("process_identity_unknown")
+		return "", identityFailure(code)
 	}
 	b := make([]uint16, n)
 	code, _, _ = proc.Call(uintptr(h), uintptr(unsafe.Pointer(&n)), uintptr(unsafe.Pointer(&b[0])))
 	if code != 0 {
-		return "", errors.New("process_identity_unknown")
+		return "", identityFailure(code)
 	}
 	return syscall.UTF16ToString(b), nil
 }
@@ -265,6 +274,9 @@ func (w *WindowsSource) ReadProcess(ctx context.Context) (ProcessSample, error) 
 
 func matchProcess(h syscall.Handle, pid uint32, scope windowsScope) (bool, string, error) {
 	app, err := identityString(processAUMID, h)
+	if errors.Is(err, errNotRegisteredApp) {
+		return false, "", nil
+	}
 	if err != nil {
 		return false, "", err
 	}

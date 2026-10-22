@@ -1,7 +1,10 @@
+//go:build windows
+
 package observer
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -290,6 +293,7 @@ func TestBaselineLogResetAndClock(t *testing.T) {
 	if loaded.Cursor != o.Cursor || loaded.Pending != nil {
 		t.Fatal("baseline replayed old events")
 	}
+	o.Directives.Generation = loaded.StopGeneration // Keep this test about log/time integrity, not a new stop generation.
 	o.Cursor.Epoch = "reset"
 	if r := Decide(loaded, o); r.Reason != "log_reset" {
 		t.Fatal(r)
@@ -377,5 +381,217 @@ func TestSuppressionKeepsDurableConsumptionVisible(t *testing.T) {
 	r := runSynthetic(e, o)
 	if r.Decision != "suppressed" || !r.Consumed || r.ConsumeState != "intent_committed" || r.Attempts != 1 || r.VirtualRequest {
 		t.Fatal(r)
+	}
+}
+
+func TestStopGenerationAcrossThreeTicks(t *testing.T) {
+	for _, early := range []string{"not_due", "present", "process_unknown", "scope_unknown", "no_event"} {
+		t.Run(early, func(t *testing.T) {
+			s, o := synthetic()
+			e := testEngine(t, s, o)
+			e.Processes = processFunc(func(context.Context) (ProcessSample, error) { p := o.Process; p.Presence = Unknown; return p, nil })
+			if r := runSynthetic(e, o); r.Decision != "unknown" || r.NextCheck.IsZero() {
+				t.Fatal(r)
+			}
+			// The second tick sees a changed directive generation while returning
+			// before eligibility or while the persisted next-read time is pending.
+			second := o
+			second.At = o.At.Add(30 * time.Second)
+			second.Directives.Generation = 8
+			if early == "present" {
+				second.Process.Presence = Present
+			}
+			if early == "process_unknown" {
+				second.Process.Presence = Unknown
+			}
+			if early == "scope_unknown" {
+				second.Process.ScopeKnown = false
+			}
+			if early == "no_event" {
+				second.Event = nil
+			}
+			if r := runSynthetic(e, second); r.VirtualRequest {
+				t.Fatal("request on generation change", r)
+			}
+			// Reload, as a new runner would. A delayed old candidate must remain
+			// invalid even after the preflight next-read time has passed.
+			e.Store = &FileStore{Path: e.Store.(*FileStore).Path}
+			third := o
+			third.At = o.At.Add(70 * time.Second)
+			third.Directives.Generation = 8
+			e.Clock = clockFunc(func() time.Time { return third.At })
+			e.Processes = processFunc(func(context.Context) (ProcessSample, error) { return third.Process, nil })
+			e.Directives = directiveFunc(func(context.Context) (Directives, error) { return third.Directives, nil })
+			if r := runSynthetic(e, third); r.VirtualRequest || r.Decision != "suppressed" {
+				t.Fatal("old candidate survived generation change", r)
+			}
+		})
+	}
+}
+
+func TestEventReadFailureDoesNotCreateIntegrityHold(t *testing.T) {
+	s, o := synthetic()
+	e := testEngine(t, s, o)
+	e.Events = eventFunc(func(context.Context, Cursor, ProcessSample, string) (Cursor, *Event, error) {
+		ev := *o.Event
+		ev.Epoch = "partial-untrusted-epoch"
+		return Cursor{}, &ev, errors.New("temporary_read_failure")
+	})
+	if r := e.Tick(context.Background()); r.Decision != "unknown" || r.VirtualRequest {
+		t.Fatal(r)
+	}
+	loaded, err := e.Store.Load()
+	if err != nil || loaded.IntegrityHold != "" {
+		t.Fatal("transient I/O became a permanent hold", loaded.IntegrityHold, err)
+	}
+	e.Events = eventFunc(func(context.Context, Cursor, ProcessSample, string) (Cursor, *Event, error) {
+		return o.Cursor, o.Event, nil
+	})
+	if r := e.Tick(context.Background()); r.Reason != "native_intent_unknown" || r.VirtualRequest {
+		t.Fatal(r)
+	}
+}
+
+func TestStopWinsOverPreflightDeadline(t *testing.T) {
+	s, o := synthetic()
+	e := testEngine(t, s, o)
+	e.Clock = clockFunc(func() time.Time { return o.At.Add(PreflightWindow + time.Second) })
+	e.Directives = directiveFunc(func(context.Context) (Directives, error) { d := o.Directives; d.Stop = true; return d, nil })
+	r := runSynthetic(e, o)
+	if r.Decision != "suppressed" || r.VirtualRequest {
+		t.Fatal(r)
+	}
+	loaded, err := e.Store.Load()
+	if err != nil || loaded.Receipts[Incident(o)].Attempt != "suppressed" {
+		t.Fatal(loaded.Receipts, err)
+	}
+}
+
+func TestTickRejectsMismatchedGenerationAsUnknown(t *testing.T) {
+	s, o := synthetic()
+	e := testEngine(t, s, o)
+	e.Events = eventFunc(func(context.Context, Cursor, ProcessSample, string) (Cursor, *Event, error) {
+		ev := *o.Event
+		ev.Instance = Fingerprint("another-process-generation")
+		ev.SessionMatches = false
+		return o.Cursor, &ev, nil
+	})
+	r := e.Tick(context.Background())
+	if r.Decision != "unknown" || r.Reason != "process_generation_or_exit_unverified" || r.VirtualRequest {
+		t.Fatal(r)
+	}
+}
+
+func TestCandidateGenerationRemainsPinnedWhenScopeIsLost(t *testing.T) {
+	s, o := synthetic()
+	e := testEngine(t, s, o)
+	e.Processes = processFunc(func(context.Context) (ProcessSample, error) { p := o.Process; p.Presence = Unknown; return p, nil })
+	if r := runSynthetic(e, o); r.Decision != "unknown" {
+		t.Fatal(r)
+	}
+	now := o.At.Add(30 * time.Second)
+	e.Clock = clockFunc(func() time.Time { return now })
+	e.Directives = directiveFunc(func(context.Context) (Directives, error) { d := o.Directives; d.Generation = 8; return d, nil })
+	e.Processes = processFunc(func(context.Context) (ProcessSample, error) {
+		return ProcessSample{}, errors.New("temporary_process_failure")
+	})
+	if r := e.Tick(context.Background()); r.VirtualRequest {
+		t.Fatal(r)
+	}
+	loaded, err := e.Store.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rec := loaded.Receipts[Incident(o)]; !rec.GenerationKnown || rec.Generation != 7 || rec.Attempt != "suppressed" {
+		t.Fatal("candidate adopted a newer generation", rec)
+	}
+	third := o
+	third.At = o.At.Add(70 * time.Second)
+	third.Directives.Generation = 8
+	if r := runSynthetic(e, third); r.VirtualRequest || r.Decision != "suppressed" {
+		t.Fatal(r)
+	}
+}
+
+func TestUnknownCandidateGenerationCannotBeAdoptedOnReload(t *testing.T) {
+	s, o := synthetic()
+	e := testEngine(t, s, o)
+	first := o
+	first.Directives.Fresh = false
+	if r := runSynthetic(e, first); r.Decision != "unknown" {
+		t.Fatal(r)
+	}
+	o.At = o.At.Add(time.Minute)
+	if r := runSynthetic(e, o); r.VirtualRequest || r.Reason != "candidate_stop_generation_unknown" {
+		t.Fatal(r)
+	}
+}
+
+func TestPruneOnlyExpiredRollingRequests(t *testing.T) {
+	s, o := synthetic()
+	s.Requests = []time.Time{o.At.Add(-2 * time.Hour), o.At.Add(-time.Hour), o.At.Add(-30 * time.Minute)}
+	n := Advance(s, o, Decide(s, o))
+	if len(n.Requests) != 1 || !n.Requests[0].Equal(o.At.Add(-30*time.Minute)) || len(s.Requests) != 3 {
+		t.Fatal(n.Requests, s.Requests)
+	}
+	if _, ok := n.Receipts[Incident(o)]; !ok {
+		t.Fatal("candidate receipt missing")
+	}
+}
+
+func TestStoredStateExplicitlyKeepsLiveActivationDisabled(t *testing.T) {
+	s, o := synthetic()
+	e := testEngine(t, s, o)
+	if r := runSynthetic(e, o); !r.VirtualRequest {
+		t.Fatal(r)
+	}
+	st := e.Store.(*FileStore)
+	b, err := os.ReadFile(st.Path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var env envelope
+	if json.Unmarshal(b, &env) != nil {
+		t.Fatal("invalid envelope")
+	}
+	var fields map[string]any
+	if json.Unmarshal(env.State, &fields) != nil || fields["live_activation_enabled"] != false || fields["live_activation_calls"] != float64(0) {
+		t.Fatal("state omitted disabled live activation fields")
+	}
+	loaded, err := st.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	loaded.LiveActivationEnabled = true
+	if st.Save(loaded) == nil {
+		t.Fatal("state enabled live activation")
+	}
+	loaded.LiveActivationEnabled = false
+	loaded.LiveActivationCalls = 1
+	if st.Save(loaded) == nil {
+		t.Fatal("state accepted live activation calls")
+	}
+}
+
+func TestStopCannotRelabelChangedScopeOrLogAsTrusted(t *testing.T) {
+	for _, change := range []string{"target", "log"} {
+		t.Run(change, func(t *testing.T) {
+			s, o := synthetic()
+			e := testEngine(t, s, o)
+			o.Directives.Generation++
+			if change == "target" {
+				o.Process.Target = Fingerprint("other-session")
+			} else {
+				o.Cursor.Epoch = "reset"
+				o.Event.Epoch = "reset"
+			}
+			if r := runSynthetic(e, o); r.Decision != "suppressed" || r.VirtualRequest {
+				t.Fatal(r)
+			}
+			loaded, err := e.Store.Load()
+			if err != nil || loaded.IntegrityHold == "" || loaded.Target != s.Target || loaded.Cursor != s.Cursor {
+				t.Fatal("early stop adopted changed scope/log", loaded, err)
+			}
+		})
 	}
 }

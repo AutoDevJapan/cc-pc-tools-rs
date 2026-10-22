@@ -85,8 +85,9 @@ func (e Engine) Tick(ctx context.Context) Result {
 	}
 	if everr != nil {
 		c = Cursor{}
+		ev = nil
 	}
-	if ev == nil && s.Pending != nil && c.Epoch == s.Pending.Epoch {
+	if everr == nil && ev == nil && s.Pending != nil && c.Epoch == s.Pending.Epoch {
 		copy := *s.Pending
 		ev = &copy
 	}
@@ -143,7 +144,7 @@ func (e Engine) finish(ctx context.Context, s State, o Observation) Result {
 		pre.Decision = "suppressed"
 		pre.Reason = "stop_generation_changed"
 	}
-	if now.Before(o.At) || now.Sub(receipt.PreflightStarted) >= PreflightWindow || ctx.Err() != nil {
+	if pre.Decision != "suppressed" && (now.Before(o.At) || now.Sub(receipt.PreflightStarted) >= PreflightWindow || ctx.Err() != nil) {
 		pre.Decision = "unknown"
 		pre.Reason = "preflight_deadline"
 	}
@@ -153,11 +154,11 @@ func (e Engine) finish(ctx context.Context, s State, o Observation) Result {
 		}
 		if pre.Decision == "suppressed" || pre.Decision == "superseded" {
 			receipt.Attempt = pre.Decision
-			receipt.At = now
+			receipt.At = n.LastAt
 		}
-		if receipt.Rechecks >= PreflightLimit || pre.Reason == "preflight_deadline" {
+		if pre.Decision != "suppressed" && pre.Decision != "superseded" && (receipt.Rechecks >= PreflightLimit || pre.Reason == "preflight_deadline") {
 			receipt.Attempt = "unknown_exhausted"
-			receipt.At = now
+			receipt.At = n.LastAt
 		}
 		receipt.NextCheck = now.Add(time.Minute)
 		if receipt.Attempt != "" {

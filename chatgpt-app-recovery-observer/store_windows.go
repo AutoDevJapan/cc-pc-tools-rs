@@ -106,6 +106,9 @@ func isFingerprint(v string) bool {
 }
 
 func validateState(s State) error {
+	if s.LiveActivationEnabled || s.LiveActivationCalls != 0 {
+		return ErrCorrupt
+	}
 	switch s.IntegrityHold {
 	case "", "clock_reversed", "log_reset", "state_target_mismatch", "event_time_or_epoch_unknown":
 	default:

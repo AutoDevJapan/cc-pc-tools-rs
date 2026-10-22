@@ -126,11 +126,21 @@ func checkAnchor(cursor Cursor) error {
 	defer eventClose.Call(q)
 	h, err := nextEvent(q)
 	if err != nil {
-		return ErrLogReset
+		return anchorResult(cursor, 0, "", err)
 	}
 	defer eventClose.Call(h)
 	record, anchor, err := eventHeader(h)
-	if err != nil || record != cursor.Record || anchor != cursor.Anchor {
+	return anchorResult(cursor, record, anchor, err)
+}
+
+func anchorResult(cursor Cursor, record uint64, anchor string, err error) error {
+	if errors.Is(err, syscall.Errno(259)) {
+		return ErrLogReset
+	}
+	if err != nil {
+		return errors.New("event_anchor_unreadable")
+	}
+	if record != cursor.Record || anchor != cursor.Anchor {
 		return ErrLogReset
 	}
 	return nil
@@ -185,7 +195,7 @@ func parseHangXML(b []byte, scope windowsScope, epoch, last string, p ProcessSam
 			fields[d.Name] = d.Value
 		}
 	}
-	if fields["AppName"] != "ChatGPT.exe" || fields["PackageFullName"] != scope.fullPackage || fields["PackageRelativeAppId"] != "App" {
+	if !strings.EqualFold(fields["AppName"], "ChatGPT.exe") || fields["PackageFullName"] != scope.fullPackage || fields["PackageRelativeAppId"] != "App" {
 		return nil, nil
 	}
 	pid, err := parseHex(fields["ProcessId"])

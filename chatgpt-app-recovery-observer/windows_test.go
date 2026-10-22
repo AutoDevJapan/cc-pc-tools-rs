@@ -1,9 +1,12 @@
+//go:build windows
+
 package observer
 
 import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -11,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -132,11 +136,14 @@ func TestProductionHasNoActivationCapability(t *testing.T) {
 				return true
 			}
 			if sel, ok := call.Fun.(*ast.SelectorExpr); ok {
-				if sel.Sel.Name == "NewProc" {
+				if sel.Sel.Name == "NewProc" || sel.Sel.Name == "FindProc" || sel.Sel.Name == "MustFindProc" {
 					v, ok := call.Args[0].(*ast.BasicLit)
 					if !ok || !allowed[strings.Trim(v.Value, `"`)] {
 						t.Errorf("non-observation native binding in %s", path)
 					}
+				}
+				if sel.Sel.Name == "GetProcAddress" {
+					t.Errorf("dynamic native binding outside the checked list in %s", path)
 				}
 				for _, forbidden := range []string{"StartProcess", "CreateProcess", "TerminateProcess", "Kill", "ShellExecute", "ActivateApplication"} {
 					if sel.Sel.Name == forbidden {
@@ -158,6 +165,48 @@ func TestProductionHasNoActivationCapability(t *testing.T) {
 	fake.deliver(t, e, o, r)
 	if fake.calls.Load() != 1 || r.LiveActivationEnabled || r.LiveActivationCalls != 0 {
 		t.Fatal("positive fake case did not reach the tested consume/delivery boundary", r)
+	}
+}
+
+func TestAnchorFailuresDistinguishResetFromUnavailable(t *testing.T) {
+	c := Cursor{Epoch: "epoch", Record: 10, Anchor: "anchor"}
+	for _, tc := range []struct {
+		name   string
+		record uint64
+		anchor string
+		err    error
+		reset  bool
+	}{
+		{"same", 10, "anchor", nil, false},
+		{"missing", 0, "", syscall.Errno(259), true},
+		{"changed", 10, "reused", nil, true},
+		{"record_changed", 11, "anchor", nil, true},
+		{"timeout", 0, "", syscall.Errno(1460), false},
+		{"access_denied", 0, "", syscall.Errno(5), false},
+		{"render_failed", 0, "", errors.New("render_failed"), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := anchorResult(c, tc.record, tc.anchor, tc.err)
+			if errors.Is(err, ErrLogReset) != tc.reset {
+				t.Fatal(err)
+			}
+			if tc.err != nil && !tc.reset && err == nil {
+				t.Fatal("lost unavailable result")
+			}
+		})
+	}
+}
+
+func TestUnpackagedIdentityIsDistinctFromObservationFailure(t *testing.T) {
+	for _, code := range []uintptr{15700, 15703} {
+		if !errors.Is(identityFailure(code), errNotRegisteredApp) {
+			t.Fatal(code)
+		}
+	}
+	for _, code := range []uintptr{5, 87, 1460} {
+		if errors.Is(identityFailure(code), errNotRegisteredApp) {
+			t.Fatal("unreadable process treated as out of scope", code)
+		}
 	}
 }
 

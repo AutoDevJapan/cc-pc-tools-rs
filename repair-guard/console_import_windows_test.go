@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -54,7 +57,8 @@ func newConsoleImportFixture(t *testing.T) consoleImportFixture {
 	}
 	f := consoleImportFixture{profile: consoleImportProfile{
 		root: candidate, head: gitValue(candidate, "HEAD"), tree: gitValue(candidate, "HEAD^{tree}"),
-		sourceRoot: source, sourceHead: gitValue(source, "HEAD"),
+		originalProtectionRoot: filepath.Join(root, "old-origin-metadata-only"),
+		sourceRoot:             source, sourceHead: gitValue(source, "HEAD"),
 		evidence:     []consoleEvidence{{source, filepath.Join(source, "independent-proof.json"), hashBytes([]byte("original generation and source classification receipt\n"))}},
 		sourceInputs: []consoleEvidence{{source, filepath.Join(source, "workspace.cfg"), hashBytes([]byte("original workspace\n"))}},
 		files: []consoleImportFile{
@@ -63,7 +67,65 @@ func newConsoleImportFixture(t *testing.T) consoleImportFixture {
 			{"generated.cfg", "", hashBytes([]byte("single-member workspace\n")), ""},
 		},
 	}, protected: func(string) bool { return false }}
+	manifestFiles := []object{}
+	for _, file := range f.profile.files {
+		manifestFiles = append(manifestFiles, object{"path": file.relative, "sha256": strings.ToUpper(file.candidateSHA)})
+	}
+	manifestBytes, err := json.Marshal(object{"file_count": len(manifestFiles), "files": manifestFiles})
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.profile.manifestPath = filepath.Join(source, "manifest.json")
+	if err := os.WriteFile(f.profile.manifestPath, manifestBytes, 0600); err != nil {
+		t.Fatal(err)
+	}
+	f.profile.evidence = append(f.profile.evidence, consoleEvidence{source, f.profile.manifestPath, hashBytes(manifestBytes)})
 	return f
+}
+
+func TestConsoleImportRejectsCompiledTableDriftFromIndependentManifest(t *testing.T) {
+	f := newConsoleImportFixture(t)
+	path := filepath.Join(f.profile.root, "source.txt")
+	if !f.allowed(path) {
+		t.Fatal("positive control")
+	}
+	modified := []byte("unrelated new payload\n")
+	if err := os.WriteFile(path, modified, 0600); err != nil {
+		t.Fatal(err)
+	}
+	currentFixtureGit(t, f.profile.root, "add", "source.txt")
+	currentFixtureGit(t, f.profile.root, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "--amend", "-q", "-m", "changed candidate")
+	head, err := civ6GitAt(f.profile.root, "rev-parse", "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tree, err := civ6GitAt(f.profile.root, "rev-parse", "HEAD^{tree}")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.profile.head = strings.TrimSpace(string(head))
+	f.profile.tree = strings.TrimSpace(string(tree))
+	f.profile.files[0].candidateSHA = hashBytes(modified)
+	// The independently pinned original manifest still describes the old bytes.
+	if f.allowed(path) {
+		t.Fatal("compiled table replaced independent derivation proof")
+	}
+}
+
+func TestConsoleImportRetainsOriginalClientVerdictWithoutReadingOldSource(t *testing.T) {
+	f := newConsoleImportFixture(t)
+	path := filepath.Join(f.profile.root, "source.txt")
+	if !f.allowed(path) {
+		t.Fatal("positive control with absent original source")
+	}
+	old := filepath.Join(f.profile.originalProtectionRoot, "source.txt")
+	if _, err := os.Stat(f.profile.originalProtectionRoot); !os.IsNotExist(err) {
+		t.Fatal("original protection path is not absent")
+	}
+	f.protected = func(path string) bool { return same(path, old) }
+	if f.allowed(path) {
+		t.Fatal("copy lost the original client's protection verdict")
+	}
 }
 
 func (f consoleImportFixture) allowed(path string) bool {
@@ -147,7 +209,7 @@ func TestConsoleImportRefusesChangedBytesProvenanceSourceAndOwner(t *testing.T) 
 }
 
 func TestConsoleImportRejectsHardlinkedPayloadAndEvidence(t *testing.T) {
-	for _, kind := range []string{"candidate", "proof"} {
+	for _, kind := range []string{"candidate", "proof", "source", "source input"} {
 		t.Run(kind, func(t *testing.T) {
 			f := newConsoleImportFixture(t)
 			path := filepath.Join(f.profile.root, "source.txt")
@@ -158,6 +220,12 @@ func TestConsoleImportRejectsHardlinkedPayloadAndEvidence(t *testing.T) {
 			if kind == "proof" {
 				linked = f.profile.evidence[0].path
 			}
+			if kind == "source" {
+				linked = filepath.Join(f.profile.sourceRoot, "source.txt")
+			}
+			if kind == "source input" {
+				linked = f.profile.sourceInputs[0].path
+			}
 			if err := os.Link(linked, filepath.Join(filepath.Dir(linked), "hardlink")); err != nil {
 				t.Fatal(err)
 			}
@@ -165,6 +233,26 @@ func TestConsoleImportRejectsHardlinkedPayloadAndEvidence(t *testing.T) {
 				t.Fatal("hardlinked payload or receipt accepted")
 			}
 		})
+	}
+}
+
+func TestConsoleImportRejectsJunctionRoot(t *testing.T) {
+	f := newConsoleImportFixture(t)
+	path := filepath.Join(f.profile.root, "source.txt")
+	if !f.allowed(path) {
+		t.Fatal("positive control")
+	}
+	realRoot := f.profile.root + "-real"
+	if err := os.Rename(f.profile.root, realRoot); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command("cmd", "/c", "mklink", "/J", f.profile.root, realRoot)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("fixture junction: %v %s", err, out)
+	}
+	if f.allowed(path) {
+		t.Fatal("junction root accepted")
 	}
 }
 

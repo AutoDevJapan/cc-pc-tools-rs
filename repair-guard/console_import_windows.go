@@ -1,6 +1,8 @@
 package main
 
 import (
+	"encoding/json"
+	"io"
 	"path/filepath"
 	"strings"
 )
@@ -18,6 +20,8 @@ type consoleImportFile struct {
 
 type consoleImportProfile struct {
 	root, head, tree, sourceRoot, sourceHead string
+	manifestPath                             string
+	originalProtectionRoot                   string
 	evidence, sourceInputs                   []consoleEvidence
 	files                                    []consoleImportFile
 }
@@ -26,6 +30,9 @@ var console3264Import = consoleImportProfile{
 	root: console3264ImportRoot, head: "82ab222aff65dba36928ea6ea8bd20ea562c94d4",
 	tree:       "ddb8bb857badcceb4b105f448da3b241bcd69349",
 	sourceRoot: model2903Source, sourceHead: console3264SourceHead,
+	manifestPath: model2903Source + "/.provenance-3264/console-3264-private-import-manifest-20261022.json",
+	// Membership checks only: the original files are not runtime inputs.
+	originalProtectionRoot: "D:/CC/Work/unattended-operations-20261013-wt/todo-2903-qualified-release",
 	evidence: []consoleEvidence{
 		{model2903Source, model2903Source + "/.provenance-3264/legacy-3264-to-3081-handoff-final.json", "303907892635bf5170f841f70926ae689ea2581788bac59ca97e9e80d4532b02"},
 		{model2903Source, model2903Source + "/.provenance-3264/console-3264-private-import-manifest-20261022.json", "41cc359bed2928699511d61aaefe790e5d3abbf822467f98a0ccca15ebdcd389"},
@@ -100,6 +107,9 @@ func consoleImportWith(path string, profile consoleImportProfile, protected, sou
 		protected(profile.root) || !runtimeLeaf(path, filepath.Dir(path), protected, true) || !lineage(profile) {
 		return false
 	}
+	if profile.originalProtectionRoot != "" && (protected(profile.originalProtectionRoot) || protected(filepath.Join(profile.originalProtectionRoot, selected.relative))) {
+		return false
+	}
 	session := modelPinSession{protected: protected, source: source, head: modelSourceHead}
 	defer session.close()
 	if !session.sourceRoot(profile.sourceRoot, profile.sourceHead) || len(profile.evidence) == 0 || len(profile.sourceInputs) == 0 {
@@ -116,17 +126,64 @@ func consoleImportWith(path string, profile consoleImportProfile, protected, sou
 			}
 		}
 	}
+	if profile.manifestPath == "" || !within(profile.sourceRoot, profile.manifestPath) {
+		return false
+	}
+	manifestMatched := false
+	for _, record := range session.files {
+		if !same(record.path, profile.manifestPath) {
+			continue
+		}
+		if _, err := record.file.Seek(0, io.SeekStart); err != nil {
+			return false
+		}
+		body, err := io.ReadAll(io.LimitReader(record.file, (1<<20)+1))
+		if err != nil || len(body) > 1<<20 || !consoleImportManifestMatches(body, profile.files) {
+			return false
+		}
+		manifestMatched = true
+	}
+	if !manifestMatched {
+		return false
+	}
 	if selected.sourceSHA != "" {
 		original := filepath.Join(profile.sourceRoot, selected.relative)
 		if !modelDigestValid(selected.sourceSHA) || !civ6Commit.MatchString(selected.sourceBlob) ||
 			!session.match(original, []string{selected.sourceSHA}) {
 			return false
 		}
-		blob, err := civ6GitAt(profile.sourceRoot, "rev-parse", "--verify", "HEAD:"+filepath.ToSlash(selected.relative))
+		blob, err := permanentGitAt(profile.sourceRoot, "rev-parse", "--verify", "HEAD:"+filepath.ToSlash(selected.relative))
 		if err != nil || strings.TrimSpace(string(blob)) != selected.sourceBlob {
 			return false
 		}
 	}
 	return modelDigestValid(selected.candidateSHA) && session.match(path, []string{selected.candidateSHA}) &&
 		session.recheck() && !protected(profile.root) && lineage(profile)
+}
+
+func consoleImportManifestMatches(body []byte, files []consoleImportFile) bool {
+	var manifest struct {
+		Count int `json:"file_count"`
+		Files []struct {
+			Path string `json:"path"`
+			SHA  string `json:"sha256"`
+		} `json:"files"`
+	}
+	if json.Unmarshal(body, &manifest) != nil || manifest.Count != len(files) || len(manifest.Files) != len(files) {
+		return false
+	}
+	byPath := map[string]string{}
+	for _, file := range manifest.Files {
+		digest := strings.ToLower(file.SHA)
+		if file.Path == "" || !modelDigestValid(digest) || byPath[file.Path] != "" {
+			return false
+		}
+		byPath[file.Path] = digest
+	}
+	for _, file := range files {
+		if byPath[filepath.ToSlash(file.relative)] != file.candidateSHA {
+			return false
+		}
+	}
+	return true
 }

@@ -85,6 +85,19 @@ func TestPermanentMirrorBoundaryNeedsNoOldSource(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+	currentFixtureGit(t, old, "init", "-q")
+	currentFixtureGit(t, old, "config", "core.autocrlf", "false")
+	if err := os.WriteFile(filepath.Join(old, "fixture.go"), []byte("package fixture\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	currentFixtureGit(t, old, "add", "fixture.go")
+	currentFixtureGit(t, old, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "-m", "source")
+	currentFixtureGit(t, f.root, "clone", "--no-hardlinks", "--no-local", old, permanent)
+	currentFixtureGit(t, permanent, "remote", "set-url", "origin", "https://github.com/AutoDevJapan/cc-pc-tools-rs.git")
+	head, err := civ6GitAt(permanent, "rev-parse", "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
 	for _, name := range []string{"baseline.json", "build.json", "new.exe"} {
 		body := map[string]string{"baseline.json": "independent source receipt", "build.json": "independent reviewed build", "new.exe": "new model software"}[name]
 		for _, root := range []string{old, permanent} {
@@ -106,6 +119,7 @@ func TestPermanentMirrorBoundaryNeedsNoOldSource(t *testing.T) {
 	}
 	f.leaf.baselines[0].evidence = []consoleEvidence{{permanent, filepath.Join(permanent, "baseline.json"), hashBytes(baselineBytes)}}
 	f.leaf.candidate.root = permanent
+	f.leaf.candidate.head = strings.TrimSpace(string(head))
 	f.leaf.candidate.path = filepath.Join(permanent, "new.exe")
 	f.leaf.candidate.evidence = []consoleEvidence{{permanent, filepath.Join(permanent, "build.json"), hashBytes([]byte("independent reviewed build"))}}
 	if err := os.RemoveAll(old); err != nil {
@@ -115,12 +129,16 @@ func TestPermanentMirrorBoundaryNeedsNoOldSource(t *testing.T) {
 		t.Fatal("old synthetic source still exists")
 	}
 	verify := func(path string) object {
-		return modelRuntimeUpdateWith(path, []modelUpdateLeaf{f.leaf}, func(string) bool { return false }, func(root string) bool { return same(root, permanent) }, func(root, head string) bool { return same(root, permanent) && head == f.leaf.candidate.head })
+		return modelRuntimeUpdateWith(path, []modelUpdateLeaf{f.leaf}, func(string) bool { return false }, func(root string) bool {
+			return permanentSourceVerifiedWith(root, []permanentSource{{permanent, f.leaf.candidate.head}})
+		}, modelSourceHead)
 	}
 	r := verify(f.leaf.target)
 	if r["qualified"] != true || r["already_current"] != false {
 		t.Fatalf("new independent source without an old source failed: %v", r)
 	}
+	unlisted := modelRuntimeUpdateWith(f.leaf.target, []modelUpdateLeaf{f.leaf}, func(string) bool { return false }, func(root string) bool { return permanentSourceVerifiedWith(root, nil) }, modelSourceHead)
+	requireModelUpdateRefused(t, unlisted)
 	for _, path := range []string{old, filepath.Join(old, "new.exe"), f.root, f.candidate + ".bak", f.candidate + ":stream"} {
 		requireModelUpdateRefused(t, verify(path))
 	}

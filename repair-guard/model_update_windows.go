@@ -275,6 +275,19 @@ func (s *modelPinSession) close() {
 }
 
 func (s *modelPinSession) sourceRoot(root, head string) bool {
+	for i, known := range s.roots {
+		if !same(known.path, root) {
+			continue
+		}
+		if head == "" || head == known.head {
+			return true
+		}
+		if known.head == "" && s.head(root, head) {
+			s.roots[i].head = head
+			return true
+		}
+		return false
+	}
 	resolved, err := physical(root)
 	if err != nil || !same(resolved, root) || s.protected(root) || !s.source(root) || (head != "" && !s.head(root, head)) {
 		return false

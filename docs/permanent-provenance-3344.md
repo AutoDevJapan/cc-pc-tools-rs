@@ -90,3 +90,22 @@ A/Bのsourceと生成物、最終mergeと実配布、通常の分類受入は分
 これは別source/実生成/独立receiptの照合であり、別担当がbuildしたとの主張ではない。
 通常のソフト資格検査で現在のguardからAへの一致を確認した。実置換はまだ行っていない。
 配布手順は[有限な配布スクリプト](install-permanent-provenance-3344.ps1)を使う。
+
+### 3349レビュー後の追加修復（未配布）
+
+最初の固定差分は実Opus5.5/maxがMust0で読了した。受入条件に関わる提案を取り込み、
+launcherの通常入口を完全な常設source資格だけで判定する位置へ移した。旧baseは他の
+既存用途の保持対象として扱い、この3機能の資格を旧baseのGit管理領域に依存させない。
+合成した実Git sourceを独立cloneし、旧sourceを削除しても正常分類する検査を加えた。
+
+Consoleは元の固定manifestを、SHA確認時と同じ開いたhandleから読んで56件と照合する。
+表とcandidateだけを変更し元manifestからずらす実Redを確認し、照合で拒否した。
+最初の検査案はroot以外のcommitを拒否する既存検査で止まり、意図する差を通っていなかった。
+root commitを保つfixtureへ訂正した実Redを`todo3344-manifest-drift-real-red.private.json`に保持する。
+元のclient判定は旧pathの文字列照合でも保持する。旧sourceの実在や通常読取は要求しない。
+source/sourceInputsのハードリンクとjunctionの負例も追加した。
+
+常設sourceのGit検査はreplace objectと暗黙fetchを使わず、Windows改行を正規化した
+追跡差分を確認する。実assetのSHAは元の全バイトを要求する。session内の同じrootは
+最初と最後に検査し、最後には全ての原receipt/candidate/targetのhandleを保持する。
+この追加を含む最終A2/B2を生成し、必要な追加レビューとCIを確認してから配布する。

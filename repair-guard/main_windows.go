@@ -181,6 +181,11 @@ func allowed(path string) bool {
 	if ombCaptureAllowed(absolute) {
 		return true
 	}
+	// The exact launcher now has its own complete permanent-source proof.
+	// It must not depend on the old linked repair checkout's Git directory.
+	if modelLauncherRuntimeAllowed(absolute) {
+		return true
+	}
 	if owned3107PathAllowed(absolute) {
 		return true
 	}
@@ -229,7 +234,7 @@ func allowed(path string) bool {
 	if legacyMatch(target) {
 		return false
 	}
-	if (runtimeExecutable(absolute, target, publicationGateRuntime) || runtimeExecutable(absolute, target, schedulerRuntime) || finiteRuntimeExecutable(absolute, target, jobsRuntime, time.Now().Unix()) || modelLauncherRuntimeAllowed(absolute) || progressTUIRuntime(absolute, target, progressTUIDirectory)) && sourceVerified(base) {
+	if (runtimeExecutable(absolute, target, publicationGateRuntime) || runtimeExecutable(absolute, target, schedulerRuntime) || finiteRuntimeExecutable(absolute, target, jobsRuntime, time.Now().Unix()) || progressTUIRuntime(absolute, target, progressTUIDirectory)) && sourceVerified(base) {
 		return true
 	}
 	for _, root := range roots {

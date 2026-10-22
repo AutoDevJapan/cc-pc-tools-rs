@@ -1,6 +1,13 @@
 package main
 
-import "strings"
+import (
+	"context"
+	"os"
+	"os/exec"
+	"strings"
+	"syscall"
+	"time"
+)
 
 // These are normal public Git fetches at exact commits, with byte-identical
 // copies of the independently pinned receipts. No old receipt is rewritten to
@@ -34,14 +41,27 @@ func permanentSourceVerifiedWith(root string, sources []permanentSource) bool {
 			!civ6Commit.MatchString(source.head) || !consoleSourceVerified(root) {
 			return false
 		}
-		head, err := civ6GitAt(root, "rev-parse", "HEAD")
+		head, err := permanentGitAt(root, "rev-parse", "HEAD")
 		if err != nil || strings.TrimSpace(string(head)) != source.head {
 			return false
 		}
-		// Check the committed source, not just the caller-controlled origin or
-		// HEAD name. Untracked, separately pinned original receipts are allowed.
-		_, err = civ6GitAt(root, "diff", "--quiet", "--no-ext-diff", "--no-textconv", "HEAD", "--")
+		// Check tracked content with the declared Windows newline normalization.
+		// Per-asset SHA pins still require the exact original source bytes.
+		// Untracked, separately pinned original receipts are allowed.
+		_, err = permanentGitAt(root, "-c", "core.autocrlf=true", "diff", "--quiet", "--no-ext-diff", "--no-textconv", "HEAD", "--")
 		return err == nil
 	}
 	return false
+}
+
+func permanentGitAt(root string, args ...string) ([]byte, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	argv := append([]string{"-C", root, "--no-replace-objects"}, args...)
+	cmd := exec.CommandContext(ctx, "git", argv...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	cmd.WaitDelay = time.Second
+	// Partial clones may never fetch an object as a side effect of classification.
+	cmd.Env = append(civ6GitEnvironment(os.Environ()), "GIT_NO_LAZY_FETCH=1")
+	return cmd.Output()
 }

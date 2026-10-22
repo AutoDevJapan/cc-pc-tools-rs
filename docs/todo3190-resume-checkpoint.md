@@ -2,6 +2,55 @@
 
 関連Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/325
 
+## 2026-10-23 00:43 JST：先行マージの統合と方向専用CLIの実装
+
+これ以前の待機記録は履歴です。PR315は通常マージ済みです。最終headは
+`0c5d6c802c831ad728255600669e71624b5121be`、mergeは
+`0a7070b53795739603bf67eb43a4ba11e29992b6`、mergedAtは2026-10-22T08:20:33Zでした。
+正常GitHub照会でSUCCESS15/SKIPPED1/NEUTRAL1と実owner AutoDevJapanを確認し、
+mergeがorigin/mainの祖先であることを確認しました。元3153全体の完了は条件にしていません。
+最新main `d423c9db` を自分のbranchへ通常統合したmergeは `5a948848` です。
+仕様保存 `fc56e61b` までpushと実jobによるcheckpointが成功しています。
+
+実jobは `20261023-001750-todo-3190`。正常jobs statusでmodel=gpt-6.1-sol、effort=max、
+todo_id=3190、cwd一致を確認しました。独立したturn_contextの照合は未実施です。
+最新AGENTS/運用正本と元の範囲を保持し、worktreeと登録rootは正常guardで
+client_resource=false/classification_unverified=falseを確認しました。
+
+`docs/direction-records.md` の仕様から正常CLIの受入検査を作り、Rust/Goとも変更前は
+direction-recordが未実装のため意図した失敗を確認しました。方向専用のkindを追加し、
+実担当のToDo/job所属・現在の割当・実worktree・保存済み仕様と起動promptの対象IDを
+照合します。両project/rootと行全体を同一ToDo lock内で比較し、元noteへの原文追記と
+方向票を原子的に保存します。通常の機能appliedの元担当job条件は維持します。
+方向票は元行とnote実体を再検証し、全返信/fresh API/現版SHAとarchive GETを経て終了します。
+元3050・3084・停止・依存・未完コード/Prd、原質問と回答を変更・完了扱いにしません。
+
+検査結果（この候補の変更範囲）：
+
+- `cargo nextest run --locked -p cc-todo -p cc-jobs -p cc-scheduler` を、cc-todo全件と
+  利用側のtodo/workspace_checkpointに式で絞り、282件成功、715件は選択外でした。
+  原出力はGit対象外の `todo3190-nextest-scope.private.log`。Rustの生成先はこのworktreeのtargetです。
+- `cargo test --locked -p cc-todo --doc` 成功（対象doctestは0件）。
+- 新しいRust実行物を `CC_CONVERSATION_TODO_BINARY` に指定した
+  `go test -race ./...` 成功、98.066秒。`go vet ./...` も成功しました。
+  Goの正常CLI→Rust実行物→元行/本文読戻し→archive GETをfixtureで確認しました。
+- 元担当偽装、foreign job/project、未知scope、同noteでのproject変更、新停止/依存、
+  古い本文・編集版・SHA、未保存/配送だけ、機能票への昇格を拒否しました。
+  保存応答とarchive応答の喪失から二重追記/PATCHなしに再開できることも確認しました。
+
+実回答の読取は、配布済みの正常 `conversation replies --output` だけで実施しました。
+1件目は2026-10-23にfresh API成功、設定済み本人・質問・返信・原文・編集なしを照合しました。
+2件目の同じ正常CLIは `conversation unavailable` / exit1で、原因の内訳はまだ未確認です。
+原私的ファイル、旧台帳、canonical applied、保護一覧をraw読取/コピーして補っていません。
+新しいコードを実回答へ未マージ適用していません。
+
+残作業は別モデルMaxの実読レビューとMust修正、同headの必要CI、通常merge、最新共有版との
+並行変更/source/hash再照合と配布、実回答2件のfresh読取、元仕様への実記録/読戻し、無通知の
+既存進捗、質問終了GETです。検査fixture成功を実回答の反映済みとは扱いません。
+レビュー依存は正常 `todo wait --on` で登録し、自分の元3190から再開します。
+親3110への結果とレビュー番号/PR/実HEAD/checkpointは同じ作業フォルダの私的再開票へ残します。
+本人の対応とメンションは不要です。
+
 ## 2026-10-21 17:53 JST：レビュー未完の間の反復起動を抑止
 
 PR315は前回と同じhead `b4fc59a984079ecafcde8de4038808fc7d18921b`、OPEN、

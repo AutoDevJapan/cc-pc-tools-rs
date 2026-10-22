@@ -22,9 +22,11 @@ var errConversationCloseSource = errors.New("conversation close source associati
 var errConversationCloseApplied = errors.New("conversation implementation receipt invalid or unavailable")
 
 type conversationCloseStamp struct {
-	ReplySHA   string `json:"reply_sha256"`
-	SourceSHA  string `json:"source_receipt_sha256,omitempty"`
-	AppliedSHA string `json:"applied_receipt_sha256,omitempty"`
+	ReplySHA          string `json:"reply_sha256"`
+	SourceSHA         string `json:"source_receipt_sha256,omitempty"`
+	AppliedSHA        string `json:"applied_receipt_sha256,omitempty"`
+	DirectionSHA      string `json:"direction_receipt_sha256,omitempty"`
+	DirectionInputSHA string `json:"direction_input_sha256,omitempty"`
 }
 
 type conversationCloseHistory struct {
@@ -64,6 +66,7 @@ type conversationCloseThread struct {
 }
 
 type conversationCloseApplication struct {
+	Kind         string `json:"kind,omitempty"`
 	Source       string `json:"source"`
 	RequestID    string `json:"request_id"`
 	OriginTodo   uint64 `json:"origin_todo_id"`
@@ -171,7 +174,7 @@ func (r *Runner) conversationCloseLoad(q ConversationQuestion, path string) (*co
 		return nil, errConversationCloseState
 	}
 	for id, stamp := range record.Replies {
-		if _, ok := number(id); !ok || !shaPattern.MatchString(stamp.ReplySHA) || (stamp.SourceSHA != "" && !shaPattern.MatchString(stamp.SourceSHA)) || (stamp.AppliedSHA != "" && !shaPattern.MatchString(stamp.AppliedSHA)) {
+		if _, ok := number(id); !ok || !shaPattern.MatchString(stamp.ReplySHA) || (stamp.SourceSHA != "" && !shaPattern.MatchString(stamp.SourceSHA)) || (stamp.AppliedSHA != "" && !shaPattern.MatchString(stamp.AppliedSHA)) || (stamp.DirectionSHA != "" && (!shaPattern.MatchString(stamp.DirectionSHA) || !shaPattern.MatchString(stamp.DirectionInputSHA))) {
 			return nil, errConversationCloseState
 		}
 	}
@@ -190,13 +193,13 @@ func (r *Runner) conversationCloseSave(path string, record *conversationCloseRec
 	return nil
 }
 
-func (r *Runner) conversationCloseReply(ctx context.Context, q ConversationQuestion, current *conversationProof, reply conversationReply, row *TodoRow) (conversationCloseStamp, bool, error) {
+func (r *Runner) conversationReplySource(ctx context.Context, q ConversationQuestion, current *conversationProof, reply conversationReply) (conversationCloseStamp, bool, error) {
 	stamp := conversationCloseStamp{ReplySHA: canonicalHash(reply)}
 	req := r.State.Requests[reply.Message]
 	if req == nil || req.Phase == "conversation_reply_saved" || req.Todo == 0 {
 		return stamp, false, nil
 	}
-	if req.Phase != "conversation_reply_delivered" && req.Phase != "conversation_reply_applied" {
+	if req.Phase != "conversation_reply_delivered" && req.Phase != "conversation_reply_applied" && req.Phase != "conversation_direction_recorded" {
 		return stamp, false, nil
 	}
 	if req.Conversation != q.RequestID || req.Todo != q.Todo || req.Source != "discord-api-v10" || req.RecordVersion != 2 || req.Guild != r.State.Destination.Guild || req.Thread != q.Thread || req.Message != reply.Message || req.Author != r.State.Destination.Owner || req.Created != reply.Created || req.Key != requestKey(q.Thread, reply.Message) {
@@ -258,22 +261,32 @@ func (r *Runner) conversationCloseReply(ctx context.Context, q ConversationQuest
 	if live.Content != reply.Body || live.Edited != req.Edited {
 		return stamp, false, nil
 	}
+	return stamp, true, nil
+}
+
+func (r *Runner) conversationCloseReply(ctx context.Context, q ConversationQuestion, current *conversationProof, reply conversationReply, row *TodoRow) (conversationCloseStamp, bool, error) {
+	stamp, ready, err := r.conversationReplySource(ctx, q, current, reply)
+	if err != nil || !ready {
+		return stamp, false, err
+	}
+	req := r.State.Requests[reply.Message]
 	b, missing, err := conversationCloseRead(filepath.Join(r.Config.Home, "applied", reply.Message+".json"), 128<<10)
 	if missing {
-		return stamp, false, nil
+		return r.conversationDirectionApplied(ctx, q, current, reply, row, stamp)
 	}
 	if err != nil {
 		return stamp, false, errConversationCloseApplied
 	}
 	stamp.AppliedSHA = bytesHash(b)
 	var applied conversationCloseApplication
-	if json.Unmarshal(b, &applied) != nil {
+	if json.Unmarshal(b, &applied) != nil || (applied.Kind != "" && applied.Kind != "implementation") {
 		return stamp, false, errConversationCloseApplied
 	}
 	// An old receipt is pending even if its revision/job once passed validation.
 	if applied.ReplySHA != stamp.ReplySHA || applied.SourceSHA != stamp.SourceSHA {
 		return stamp, false, nil
 	}
+	acquired, _ := time.Parse(time.RFC3339Nano, req.Acquired)
 	at, err := time.Parse(time.RFC3339Nano, applied.AppliedAt)
 	if err != nil || at.Before(acquired) || at.After(r.Now()) || applied.Source != "discord-api-v10" || applied.RequestID != q.SenderID || applied.OriginTodo != q.Todo || applied.Todo != q.Todo || applied.Thread != q.Thread || applied.Question != q.Message || applied.Message != reply.Message || applied.Author != req.Author || len(applied.Revision) != 40 || strings.Trim(applied.Revision, "0123456789abcdefABCDEF") != "" || strings.TrimSpace(applied.Completion) == "" || strings.TrimSpace(applied.Verification.Execution) == "" || strings.TrimSpace(applied.Verification.Origin) == "" || strings.TrimSpace(applied.Verification.Identity) == "" {
 		return stamp, false, errConversationCloseApplied
@@ -304,9 +317,16 @@ func (r *Runner) conversationCloseSnapshot(ctx context.Context, q ConversationQu
 		}
 		if !applied {
 			all = false
-		} else if mark && r.State.Requests[reply.Message].Phase != "conversation_reply_applied" {
+		} else if mark {
+			phase := "conversation_reply_applied"
+			if stamp.DirectionSHA != "" {
+				phase = "conversation_direction_recorded"
+			}
+			if r.State.Requests[reply.Message].Phase == phase {
+				continue
+			}
 			previous[reply.Message] = r.State.Requests[reply.Message].Phase
-			r.State.Requests[reply.Message].Phase = "conversation_reply_applied"
+			r.State.Requests[reply.Message].Phase = phase
 			dirty = true
 		}
 	}
@@ -351,11 +371,18 @@ func (r *Runner) conversationClosePATCH(ctx context.Context, q ConversationQuest
 	return nil
 }
 
-func (r *Runner) conversationCloseFilesUnchanged(q ConversationQuestion, stamps map[string]conversationCloseStamp) bool {
+func (r *Runner) conversationCloseFilesUnchanged(ctx context.Context, q ConversationQuestion, stamps map[string]conversationCloseStamp) bool {
 	for id, stamp := range stamps {
-		applied, missing, err := conversationCloseRead(filepath.Join(r.Config.Home, "applied", id+".json"), 128<<10)
-		if err != nil || missing || bytesHash(applied) != stamp.AppliedSHA {
-			return false
+		if stamp.DirectionSHA != "" {
+			result, err := r.conversationDirectionCheck(ctx, q, id, stamp.DirectionInputSHA)
+			if err != nil || result.ReceiptSHA != stamp.DirectionSHA {
+				return false
+			}
+		} else {
+			applied, missing, err := conversationCloseRead(filepath.Join(r.Config.Home, "applied", id+".json"), 128<<10)
+			if err != nil || missing || bytesHash(applied) != stamp.AppliedSHA {
+				return false
+			}
 		}
 		source, missing, err := conversationCloseRead(filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", id+".json"), maxState)
 		if err != nil || missing || bytesHash(source) != stamp.SourceSHA {
@@ -438,7 +465,7 @@ func (r *Runner) closeConversation(ctx context.Context, q ConversationQuestion, 
 			return false, worker.conversationCloseSave(path, record, "reopened", initialProof, stamps)
 		}
 	}
-	if !worker.conversationCloseFilesUnchanged(q, stamps) {
+	if !worker.conversationCloseFilesUnchanged(ctx, q, stamps) {
 		return false, worker.conversationCloseSave(path, record, "pending", initialProof, stamps)
 	}
 	if !archived {
@@ -471,7 +498,7 @@ func (r *Runner) closeConversation(ctx context.Context, q ConversationQuestion, 
 	if err != nil {
 		return false, err
 	}
-	if !archived || !worker.conversationCloseFilesUnchanged(q, stamps) {
+	if !archived || !worker.conversationCloseFilesUnchanged(ctx, q, stamps) {
 		return false, worker.conversationCloseSave(path, record, "pending", initialProof, stamps)
 	}
 	if record.VerifiedAt == "" {

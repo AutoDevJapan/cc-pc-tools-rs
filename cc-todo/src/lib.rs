@@ -31,6 +31,7 @@ pub use cc_job_policy::todo_store::{
 pub use cc_job_policy::todo_wait::pending_on;
 pub mod answered_wait;
 pub mod conversation_wait;
+pub mod direction_record;
 pub mod product_resume;
 pub mod product_retry;
 pub mod ready;
@@ -151,6 +152,21 @@ pub enum Command {
         scope_file: Option<PathBuf>,
         #[arg(long)]
         expected_state_file: Option<PathBuf>,
+    },
+    /// Record an API-verified direction as a specification note, never feature completion.
+    DirectionRecord {
+        #[arg(long)]
+        input_file: PathBuf,
+        #[arg(long)]
+        origin_scope_file: PathBuf,
+        #[arg(long)]
+        origin_state_file: PathBuf,
+        #[arg(long)]
+        actor_scope_file: PathBuf,
+        #[arg(long)]
+        actor_state_file: PathBuf,
+        #[arg(long)]
+        verify_only: bool,
     },
     /// Preserve selected old notes in immutable segments; preview unless --apply.
     ArchiveHistory {
@@ -1235,6 +1251,26 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             }
             edit_item(db, *id, note_file.as_deref(), spec.as_deref(), paths)?;
         }
+        Command::DirectionRecord {
+            input_file,
+            origin_scope_file,
+            origin_state_file,
+            actor_scope_file,
+            actor_state_file,
+            verify_only,
+        } => output.push(
+            direction_record::record(
+                db,
+                paths,
+                input_file,
+                origin_scope_file,
+                origin_state_file,
+                actor_scope_file,
+                actor_state_file,
+                *verify_only,
+            )?
+            .to_string(),
+        ),
         Command::ArchiveHistory { id, apply } => output
             .push(cc_job_policy::todo_history::archive(&paths.store, db, *id, *apply)?.to_string()),
         Command::RestoreHistory { id, apply } => output
@@ -1494,6 +1530,7 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
             | Command::QuestionAnswer { .. }
             | Command::QuestionWithdraw { .. }
             | Command::AnsweredWait { .. }
+            | Command::DirectionRecord { .. }
     ) && output
         .first()
         .and_then(|line| serde_json::from_str::<Value>(line).ok())

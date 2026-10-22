@@ -1,14 +1,21 @@
 {
   "findings": [
     {
-      "result": "そのままの採用不可。GitHub公式はAWSのcustom claims未対応を示す。実sub/audとreusable workflow/immutable ID形式を確認する。",
+      "result": "前回の結論を訂正。AWS IAM公式はGitHub用のjob_workflow_ref条件キーを明示し、reusable workflowを使うjobの参照先を限定できると説明する。GitHub公式のcustom claims未対応という注記だけでは標準claimの不対応を証明しない。実jobのclaim有無/完全ref/aud/subと適用版を照合する。",
       "claim": "job_workflow_refを独立したAWS IAM condition keyに置けばworkflowを限定できる",
       "deployed": false,
       "source_path": "aws-github-oidc-scoped-role/SKILL.md",
       "primary_urls": [
         "https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-aws",
-        "https://docs.github.com/en/actions/reference/security/oidc"
-      ]
+        "https://docs.github.com/en/actions/reference/security/oidc",
+        "https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_policies_iam-condition-keys.html#condition-keys-wif"
+      ],
+      "correction": {
+        "now": "AWS側のGitHub用条件キー表で対応を確認。普通のworkflow全般へは一般化せずreusableの実条件を確認。",
+        "at": "2026-10-22T20:26:08.0683285Z",
+        "previous": "GitHubのcustom claims注記だけで独立condition keyを不採用とした。",
+        "deployed_policy_changed": false
+      }
     },
     {
       "result": "Go公式はpure-Go resolverの選択とdebugの設定として説明する。IP family/経路の診断と分け、IPv4強制の保証にしない。",
@@ -45,5 +52,5 @@
   "todo": 3080,
   "limits": "AWS/Cloudflare/flakerの実アカウント変更・新資源作成・上流コード実行は無し。診断候補を製品で実証済みとしない。",
   "purpose": "取得済み12候補の技術記述を一次資料で照合。新しい候補取得や647拒否取得の再試行ではない。",
-  "observed_at": "2026-10-22T18:58:33.3160528Z"
+  "observed_at": "2026-10-22T20:26:08.0683285Z"
 }

@@ -1,0 +1,85 @@
+{
+  "todo": 3080,
+  "version": 2,
+  "target": "github-actions-ci",
+  "disposition": "integrated_existing",
+  "integrated_source_count": 1,
+  "additional_adoption_count": 0,
+  "changed_files": 3,
+  "new_guidance_files": 0,
+  "backup_files": 7,
+  "backup": "D:/CC/Skills/.trash/todo3080-gh-ci-v2-20261023-051942",
+  "applied_at": "2026-10-22T20:29:57.3550280Z",
+  "manifest": "skills-3080-installed-gh-ci-integration-v2-manifest.json",
+  "bundle": "skills-3080-gh-ci-integration-v2-bundle.json",
+  "fingerprints": [
+    {
+      "normalized_lf_sha256": "3797366cd4f8d83d2d0c07beef3d0c7c13054311b161174d708014a1f69bb989",
+      "path": "docs/skills-3080-installed-gh-ci-integration-v2-manifest.json",
+      "line_endings": "JSON外側の改行だけLFへ正規化。embedded content文字列内のescapeは不変。旧v1のraw working-copy SHAは歴史として保持。",
+      "working_copy_sha256": "d59038119def0e8f75851714bbb2dce77df24a7ccdac654a70f47f9ecdaa9fa9"
+    },
+    {
+      "normalized_lf_sha256": "2fbee132b326e48fe56a84eef25ae75be730c618fc8df2f919c715408e1b79c7",
+      "path": "docs/skills-3080-gh-ci-integration-v2-bundle.json",
+      "line_endings": "JSON外側の改行だけLFへ正規化。embedded content文字列内のescapeは不変。旧v1のraw working-copy SHAは歴史として保持。",
+      "working_copy_sha256": "0ca59bbe395818622c3ee56d87381eaab62935124c805064609ae5942a2a3b72"
+    }
+  ],
+  "historical_version1_manifest": "skills-3080-installed-gh-ci-integration-manifest.json",
+  "historical_version1_evidence": "skills-3080-gh-ci-integration-evidence.json",
+  "source_and_license_unchanged": true,
+  "index_and_old_guide_unchanged": true,
+  "actual_check": "既存3048 Go検査器で実1target6filesの構造/参照/日本語description/hash/正負例PASS",
+  "discovery": {
+    "enabled": 1,
+    "parse_errors": 0,
+    "description_unchanged": true,
+    "target_matches": 1,
+    "model_called": false,
+    "method": "fresh official Codex app-server; skills/list forceReload",
+    "total_metadata": 325
+  },
+  "review3368": {
+    "must_local_correction": "SQL草案review_pendingをtrueへ戻した",
+    "independent_v2_acceptance_pending": true,
+    "raw_sha256": "c0f40d79b4386bd5ce7a7d11101e23dbd56d5013b6614d56bfd1caf756ada973",
+    "head": "b0107b649d5f6a890742aaad926f1b0116018f58",
+    "must": 1
+  },
+  "static_cases": [
+    {
+      "decision": "同HEAD/必要集合を照合し完了を待つ",
+      "input": "現在HEADの必要checkはpending、別runはsuccess"
+    },
+    {
+      "decision": "未設定へ読み替えずmergeしない",
+      "input": "required取得が権限エラー/通信失敗"
+    },
+    {
+      "decision": "repo規則と全checkで必要範囲を決める",
+      "input": "必須集合未設定を確認済み"
+    },
+    {
+      "decision": "passへ付け替えず受入条件と原因を確認",
+      "input": "必要な検査がskip/cancelで未実行"
+    },
+    {
+      "decision": "URLだけで終了せず元依頼の範囲で追い、未取得理由と次手を返す",
+      "input": "外部CIだけが失敗した必要check"
+    },
+    {
+      "decision": "本PCの自律merge方針を流用せず元依頼/先方規則の実権限を確認",
+      "input": "他Org/顧客repoで規則が沈黙"
+    },
+    {
+      "decision": "同repo/jobを照合して個別job APIを試し、未提供なら未取得と記録",
+      "input": "進行中runの個別jobログが標準CLIで未取得"
+    }
+  ],
+  "static_evaluation": "親の文面照合。実モデルturn/実失敗修復の試験ではない。",
+  "independent_review_pending": true,
+  "context_budget_evaluated": false,
+  "legacy_helper_changed_or_executed": false,
+  "other_guidance_or_junction_modified": false
+}

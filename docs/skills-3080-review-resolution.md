@@ -144,3 +144,15 @@ S3/S4/S5は残70という当時の数、maintainer表示と著作権表示の違
 S6/S7とNitは下流consumerの要件、実ownerと元依頼の適用範囲、候補時点の履歴、追加草案への参照、SQL報告行、Node22とSQLite/D1 engine/compile option差、sql-securityの指摘あり終了1を補足した。既に受入済みのlinkの軽微な表現だけの更新は重ねず、過去snapshotの表現は当時の記録と区別する。
 
 CI・AWS・Cloudflare関連12入口を親が追加で全読・SHA照合し、mizchi76=18確認+58未読。個別Apache noticeがあるgh-fix-ciは既存の同用途へ実統合した。既存2ファイルの更新と新4ファイルだけで、旧GUIDEと変更前版を保全。Go検査器の実構造・参照・hashとfresh skills/listの対象1発見が成功。採用台帳は新規28と既存統合1を分け、保存則のGo検査も統合の実manifestと照合するよう更新し、対象moduleのtest-count1/vetを確認した。新12・改訂草案・実統合差分の独立受入はまだ別工程であり、3313や以前の28受入を流用しない。
+
+## 3368のMust1修正と限定再確認
+
+原応答SHAc0f40d79b4386bd5ce7a7d11101e23dbd56d5013b6614d56bfd1caf756ada973を保存。固定b0107b64/base779dd151の14差分、新12入口、中央7とREADME11を読了。実job20261023-044752-todo-3368はanthropic/claude-sonnet-5-5/effort max(owner_request)、status succeeded。読了は成功だが、Must1があるため受入成功とはしない。旧HEADの全必要CIは成功しているが、今回の新差分には流用しない。
+
+M1はSQL草案のreview_pendingをtrueへ戻し、最新reviewのhead/SHA/Must1と残る独立確認を構造化した。Go検査は受入済み表示に最新の完了receipt/Must0が必要なことを確かめ、旧false表示と欠落/未解消receiptを負例として検出する。
+
+S1-S3とNitは、必要checkの確定と未設定/取得失敗の区別、skip/cancelの受入根拠、別run成功の流用防止、個別job API、外部CIを未調査のまま放置しない次の手、実ownerと元権限、旧helperの状態へ反映。未知helper等に新たな許可を与える資料ではないと明示し、既存許可の操作へ独自の禁止を足さない。v2ではSKILL/current/source.jsonの3ファイルだけを変更し、backup7と原文/notice/index/旧GUIDE不変を実測。既存Go検査の実6fileとfresh discovery1/enabled/説明一致/解析0が成功した。追加の独立確認は未完。
+
+S4をAWS IAM公式まで追うと、現在の条件キー表にjob_workflow_refが存在した。前回のGitHub custom claims注記だけによる不採用の断定を訂正。reusable workflowの実claim/ref/aud/subを確認する候補へ戻し、従量推論やMarketplace例の採用とは分けた。S5はCloudflare本文の昇格再実行/本人への定型確認を普遍規則にしない点を追加。S6は部分評価の35+41=76、集合排他、ID/commit/SHAと実台帳の対応を検査し、失われたpath/重複/未記録統合等の変異も検出。S7は親もREADME11を全読してSHAを保存し、追加noticeが無い範囲だけを閉じ、全支持資料の許諾完了とはしない。JSONの作業コピー/固定Gitの改行差もv2指紋で分けた。
+
+新17入口は親が全読/SHA確認し、既存用途との比較・本人方針との衝突・個別支持/許諾の未確認を記録。metadataによる候補評価であり、原本への新規配置/統合/除外ではない。review-imageのAPIキー経路は適用しないが、元候補全体の理由のない除外にしない。元16資料を少数代表へ縮小せず、mizchi残41と他資料の残候補を継続する。

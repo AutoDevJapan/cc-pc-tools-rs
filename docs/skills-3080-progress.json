@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-22T18:51:46.9327332Z",
+  "observed_at": "2026-10-22T20:26:08.0683285Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "PR367を3313 Must0と全必要CI成功後mainへ統合。SQL2の近い静的適用例を補い、mizchi CI/クラウド関連12入口を追加全文評価。既存gh-fix-ciとの統合を具体化する。全16資料の残候補を継続。",
+  "phase_b": "3368のMust1はSQL草案の未受入表示を補正中。CI実統合の限定改善と一次資料訂正、新17入口の評価を保存。全16資料の残候補を継続。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -406,7 +406,7 @@
     "diagnostic_workflow_blob_count": 20
   },
   "current_guidance_delta_pending": 1,
-  "current_guidance_delta_pending_definition": "新規28の限定受入は保持。既存github-actions-ciへの実統合1は構造/発見確認済み、別モデルの受入が未完。SQL2の改訂草案は未配置。",
+  "current_guidance_delta_pending_definition": "既存統合1のv2差分は実構造/発見済み、独立受入前。SQL2の待機表示Must1をtrueへ修正。28新規の過去受入は維持。",
   "ais_entrypoint_evaluation": {
     "source_paths": 12,
     "unique_contents": 7,
@@ -422,16 +422,16 @@
   },
   "mizchi_partial_entrypoint_evaluation": {
     "expected": 76,
-    "full_body_read": 18,
-    "unread": 58,
+    "full_body_read": 35,
+    "unread": 41,
     "complete": false,
     "installed": 0,
     "integrated": 1,
     "excluded": 0,
     "source": "skills-3080-mizchi-partial-evaluation.json"
   },
-  "all_fulltext_primary_paths_including_partial_sources": 109,
-  "primary_coverage_definition": "7資料91入口pathに加えmizchi76中18を全文確認、残58未読。計109source pathsはAIS mirror/Tencent guideを含み、独立導入数と別。",
+  "all_fulltext_primary_paths_including_partial_sources": 126,
+  "primary_coverage_definition": "7資料91入口+部分mizchi35=126sourcepaths。mizchi残41未読、AIS mirror/Tencent guideを含み126独立Skillではない。",
   "external_revisions": {
     "count": 1,
     "target": "diagnosing-bugs",
@@ -441,15 +441,16 @@
   },
   "integration_acceptance": {
     "discovery": "fresh Codex metadata325/対象1/enabled/説明一致/解析0",
-    "evidence": "skills-3080-gh-ci-integration-evidence.json",
+    "evidence": "skills-3080-gh-ci-integration-v2-evidence.json",
     "new_skill_metadata": 0,
     "independent_review_pending": true,
-    "files_changed": 2,
+    "files_changed": 3,
     "model_turn_tested": false,
     "original_guide_unchanged": true,
-    "files_added": 4,
+    "files_added": 0,
     "structural_check": "既存3048 Go検査器で実1件6fileの構造/参照/hash/説明/正負例を確認",
     "target": "github-actions-ci",
-    "integrated": 1
+    "integrated": 1,
+    "version": 2
   }
 }

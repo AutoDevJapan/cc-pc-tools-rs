@@ -6,11 +6,11 @@
   "tree_complete": true,
   "tree_entries": 996,
   "entrypoints_expected": 76,
-  "entrypoints_unread": 58,
+  "entrypoints_unread": 41,
   "classification_is_not_installation": true,
   "assessment_snapshot_before_adoption": false,
   "live_dispositions": "skills-3080-adoptions.json",
-  "scope": "全76のうち18入口を全文確認。SQL4・移行/依存2の既確認6に、CI/クラウド配備関連12を追加。残58を原pathで継続し、12を代表件数上限としない。",
+  "scope": "全76中35入口を全文確認。既確認18にフロントエンド/Playwright/画像判定関連17を追加。残41を原pathで継続し、用途群を件数上限へしない。",
   "previous3048": "同じ固定版のREADMEとdep-lib-review代表本文のみ。今回の全文確認は別に記録し、前回の代表確認を76件の監査へ広げない。",
   "source_readme": {
     "path": "README.md",
@@ -243,11 +243,12 @@
           "bytes": 1354,
           "git_blob": "b3df4a9bfd2fbfc349abfee30a46d71a8996f137",
           "body_saved": true,
-          "body_read": false,
-          "executed": false
+          "body_read": true,
+          "executed": false,
+          "sha256": "fd0897453d18c12ba2e32ec6c906f55d6af239641c08f513446aa4946d008036"
         }
       ],
-      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。 READMEを親も全読/SHA照合し、生成install案内のみで追加notice/credit無しを確認。未読code/全supportの許諾完了とはしない。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
@@ -278,11 +279,12 @@
           "bytes": 1371,
           "git_blob": "3222960542c2e7078f33a5c6518a658f76446f9a",
           "body_saved": true,
-          "body_read": false,
-          "executed": false
+          "body_read": true,
+          "executed": false,
+          "sha256": "647eb30f8bcfbcd61978b622e0c295075b546d8ec0bab4cdf9361a8b69fa06b0"
         }
       ],
-      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。 READMEを親も全読/SHA照合し、生成install案内のみで追加notice/credit無しを確認。未読code/全supportの許諾完了とはしない。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
@@ -313,11 +315,12 @@
           "bytes": 1597,
           "git_blob": "dbc901170370a83c69901697b69cfe20bca8a4d2",
           "body_saved": true,
-          "body_read": false,
-          "executed": false
+          "body_read": true,
+          "executed": false,
+          "sha256": "f721510e510fea9c2a51be135e9a7fe3ba744285c440c346a360e1ec5e01d650"
         }
       ],
-      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。 READMEを親も全読/SHA照合し、生成install案内のみで追加notice/credit無しを確認。未読code/全supportの許諾完了とはしない。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
@@ -337,7 +340,7 @@
       "body_read_at": "2026-10-22T18:51:46.9327332Z",
       "candidate_disposition": "policy_and_technical_rewrite_candidate_pending_rights",
       "reason": "AWSのOIDC trustをrepo/ref/audで限定する候補。OAuth最小権限とGitHub workflowのscopeを比較する。",
-      "required_changes": "GitHub公式はAWSでcustom claims未対応とするため、job_workflow_refを独立IAM conditionに置く上流例をそのまま採らない。実sub形式（immutable IDsの有無）/reusable workflowを確認する。Bedrock従量推論・Marketplace Subscribe・広域ReadOnlyAccess/秘密参照は導入しない。既存OAuth契約と元依頼の対象を維持。",
+      "required_changes": "前回のcustom claims未対応だけを根拠にjob_workflow_refを不採用とした断定を訂正。AWS IAM公式はGitHub用job_workflow_ref条件キーを明示し、reusable workflowを使うjobの参照先と説明する。実workflow種別/claimの有無/完全ref、aud、実sub形式（immutable IDの有無）を確認し、通常workflowのファイル名一般へ拡張しない。上流のBedrock従量推論・Marketplace Subscribe等を既存OAuth/追加支出無しの条件へ持ち込まない。ReadOnlyAccessの個別権限も実policyで照合する。",
       "compare_metadata": [
         "oauth-least-privilege"
       ],
@@ -348,11 +351,12 @@
           "bytes": 1464,
           "git_blob": "14c379359bef7f869d07eabc57587d0812f3df77",
           "body_saved": true,
-          "body_read": false,
-          "executed": false
+          "body_read": true,
+          "executed": false,
+          "sha256": "a86257d4661554656708cc56f91ee80d799b6c812374a002f7e7eeb407a64f20"
         }
       ],
-      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。 READMEを親も全読/SHA照合し、生成install案内のみで追加notice/credit無しを確認。未読code/全supportの許諾完了とはしない。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
@@ -383,11 +387,12 @@
           "bytes": 1475,
           "git_blob": "78a4e279ea847be49a9d5a2b61a3d63635f92689",
           "body_saved": true,
-          "body_read": false,
-          "executed": false
+          "body_read": true,
+          "executed": false,
+          "sha256": "5e1e59782359a05a06f3d6ba2b222293984bd354a0c6675ef4686500243fb5f5"
         }
       ],
-      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。 READMEを親も全読/SHA照合し、生成install案内のみで追加notice/credit無しを確認。未読code/全supportの許諾完了とはしない。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
@@ -418,8 +423,9 @@
           "bytes": 1295,
           "git_blob": "aa1524d1d231d42c8d587b3fc712ea9e1fceb3b2",
           "body_saved": true,
-          "body_read": false,
-          "executed": false
+          "body_read": true,
+          "executed": false,
+          "sha256": "a5f3951922338daa2ae34b08b37ac84de8ff11a0e816166f688cba9b6af684cd"
         },
         {
           "path": "cloudflare-access-app-setup/assets/scripts/setup-access-app.ts",
@@ -430,7 +436,7 @@
           "executed": false
         }
       ],
-      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。 READMEを親も全読/SHA照合し、生成install案内のみで追加notice/credit無しを確認。未読code/全supportの許諾完了とはしない。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
@@ -450,7 +456,7 @@
       "body_read_at": "2026-10-22T18:51:46.9327332Z",
       "candidate_disposition": "integration_candidate_pending_large_support_review",
       "reason": "Cloudflare製品別の参照経路と既存bindingを維持する移行をcloud-infra-deployへ比較する。個別Apache noticeは取得済み。",
-      "required_changes": "cf betaとWranglerのCLI/認証/configを同一視せず、現在の公式資料と実projectの版を照合する。既存binding/DO履歴/秘密を失わない。全Worker移行・Node24固定・有料製品/推論の選択・新stgを一律追加しない。多数の製品別supportは未監査。",
+      "required_changes": "cf betaとWranglerのCLI/認証/configを同一視せず、現在の公式資料と実projectの版を照合する。既存binding/DO履歴/秘密を失わない。全Worker移行・Node24固定・有料製品/推論の選択・新stgを一律追加しない。多数の製品別supportは未監査。 上流の定型の昇格再実行・本人へのproceed確認を新しい運用規則として取り込まない。既存許可と正規審査に沿って進め、実際の審査拒否は迂回せず理由と次の手を親へ返す。",
       "compare_metadata": [
         "cloud-infra-deploy"
       ],
@@ -469,8 +475,9 @@
           "bytes": 1239,
           "git_blob": "9fe5031e4ff397fca592922ac4641e7bc6a9acb1",
           "body_saved": true,
-          "body_read": false,
-          "executed": false
+          "body_read": true,
+          "executed": false,
+          "sha256": "b06e92833948ac659bd6dfd63469485c5784b1af3d9d379197efd68c193f58e6"
         },
         {
           "path": "cloudflare-deploy/agents/openai.yaml",
@@ -2961,7 +2968,7 @@
           "executed": false
         }
       ],
-      "individual_rights_review": "個別LICENSE.txtのApache-2.0原文をSHA照合。取込み対象は入口本文とnoticeだけで、helper/assets/全supportの再配布承認ではない。",
+      "individual_rights_review": "個別LICENSE.txtのApache-2.0原文をSHA照合。取込み対象は入口本文とnoticeだけで、helper/assets/全supportの再配布承認ではない。 READMEを親も全読/SHA照合し、生成install案内のみで追加notice/credit無しを確認。未読code/全supportの許諾完了とはしない。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
@@ -2992,8 +2999,9 @@
           "bytes": 1277,
           "git_blob": "bae14c67f9c9688490ecff43f8d310cdb29a37cf",
           "body_saved": true,
-          "body_read": false,
-          "executed": false
+          "body_read": true,
+          "executed": false,
+          "sha256": "68615c294332f3cd4ffdc324c6a1fe0bd90ab62efc858b864b562fe526d1472c"
         },
         {
           "path": "cloudflare-mbt-worker-bundle/assets/scripts/check-worker-bundle.test.ts",
@@ -3060,7 +3068,7 @@
           "executed": false
         }
       ],
-      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。 READMEを親も全読/SHA照合し、生成install案内のみで追加notice/credit無しを確認。未読code/全supportの許諾完了とはしない。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
@@ -3091,8 +3099,9 @@
           "bytes": 1286,
           "git_blob": "2d12bb03e1444d5c2c87650954629ce9b6bc941f",
           "body_saved": true,
-          "body_read": false,
-          "executed": false
+          "body_read": true,
+          "executed": false,
+          "sha256": "540103d6f54c4fc917f3f53c4b1230023c4ede628df23c7820c73046bd9800ce"
         },
         {
           "path": "cloudflare-workers-cd-rollback/assets/scripts/deployment-state.test.ts",
@@ -3151,7 +3160,7 @@
           "executed": false
         }
       ],
-      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。 READMEを親も全読/SHA照合し、生成install案内のみで追加notice/credit無しを確認。未読code/全supportの許諾完了とはしない。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
@@ -3182,8 +3191,9 @@
           "bytes": 1325,
           "git_blob": "a86da7e8f8d98d0a401c28cd6ce6335f059f9d0f",
           "body_saved": true,
-          "body_read": false,
-          "executed": false
+          "body_read": true,
+          "executed": false,
+          "sha256": "7538392707b6260bed84c811caf206136b04ae0f2562a76b55da1d25ab6d4aca"
         },
         {
           "path": "cloudflare-workers-otel-utels/assets/scripts/d1-wrap.ts",
@@ -3218,7 +3228,7 @@
           "executed": false
         }
       ],
-      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。 READMEを親も全読/SHA照合し、生成install案内のみで追加notice/credit無しを確認。未読code/全supportの許諾完了とはしない。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
@@ -3249,11 +3259,12 @@
           "bytes": 1578,
           "git_blob": "f0973a6b7706c835146534aa3b9586d45522e264",
           "body_saved": true,
-          "body_read": false,
-          "executed": false
+          "body_read": true,
+          "executed": false,
+          "sha256": "19aa6d6df7d9e5b1de707d69c7517e4672fa48addac6c08cdf446d2771730533"
         }
       ],
-      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。 READMEを親も全読/SHA照合し、生成install案内のみで追加notice/credit無しを確認。未読code/全supportの許諾完了とはしない。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
@@ -3333,6 +3344,662 @@
       "integrated_by_todo3080": true,
       "excluded_by_todo3080": false,
       "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:a2386792a042fff5a40315050a9baa62d470162c5ee76225df33fd0f3e842824",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "frontend-expert/SKILL.md",
+      "name": "frontend-expert",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/frontend-expert/SKILL.md",
+      "source_sha256": "d8fff95e9c422670a4c3d17d0d3bcf903c7fc9ee38881ccf448f7faa36baac59",
+      "retrieved_at": "2026-10-20T08:41:08.8204131Z",
+      "bytes": 3929,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T20:26:08.0683285Z",
+      "candidate_disposition": "integration_candidate_pending_support_and_rights",
+      "reason": "component責務・stateの所有・DOM意味を既存frontend-node-engineering/codebase-designへ統合する候補。視点別reportの入口を増やすだけにはしない。",
+      "required_changes": "500行・3〜5sample・aliasの用途限定・全cloneを普遍規則にしない。固定sample外を全監査済みとせず、URL/store/UIの所有を実要件で決める。見た目の変更は同範囲の画像回答後。",
+      "compare_metadata": [
+        "frontend-node-engineering",
+        "codebase-design"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "frontend-expert/README.md",
+          "bytes": 1266,
+          "git_blob": "d29c7216336aaae36f2c3d1b2ba40c65b6e078fd",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT表記は保持。この17ディレクトリには個別notice無し。README/参照先/取込み対象ごとの出典と許諾を確認中であり、一括除外や導入済みにしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:ef8571cf7eaf7020752f14ac4b1083f4cdacdfff0aa440454a4ec08bc20c57d7",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "frontend-ops-expert/SKILL.md",
+      "name": "frontend-ops-expert",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/frontend-ops-expert/SKILL.md",
+      "source_sha256": "813962ab58f0b06570981de5960bb7fe8cc46540607966cda381739e59ef854f",
+      "retrieved_at": "2026-10-20T08:41:08.823596Z",
+      "bytes": 1788,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T20:26:08.0683285Z",
+      "candidate_disposition": "integration_candidate_pending_support_and_rights",
+      "reason": "CI履歴・baseline・更新依存の運用をgithub-actions-ciへ比較する候補。",
+      "required_changes": "last50PRやファイルmtimeだけで全履歴/基準の正当性を判断しない。母数・実行条件・版を揃え、観測値と未測定を分ける。新しい週次起動や人の通常修復待ちをこの資料から追加しない。",
+      "compare_metadata": [
+        "github-actions-ci"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "frontend-ops-expert/README.md",
+          "bytes": 1191,
+          "git_blob": "29b06727d343b0335339d673145aeffafb8c8edd",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT表記は保持。この17ディレクトリには個別notice無し。README/参照先/取込み対象ごとの出典と許諾を確認中であり、一括除外や導入済みにしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:8167b193273f9d0ca1e29c08110a0b91a9c611f99052b5f305a1d952c10f85b3",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "react-expert/SKILL.md",
+      "name": "react-expert",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/react-expert/SKILL.md",
+      "source_sha256": "9bdaab7b51ebe02fe6a9510822c7d28b34ec7bb2621b885981ad19bdfbead2ee",
+      "retrieved_at": "2026-10-20T08:41:08.9391827Z",
+      "bytes": 1637,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T20:26:08.0683285Z",
+      "candidate_disposition": "integration_candidate_pending_support_and_rights",
+      "reason": "React hooks/Context/derived stateの限定したレビュー視点をfrontend-node-engineeringへ比較する候補。",
+      "required_changes": "非Reactに適用しない。3〜5componentの標本を全件としない。主観1〜5を実測の品質点とせず、依存配列とrender頻度は実コード/計測で照合しmemoやRSC移行を一律導入しない。",
+      "compare_metadata": [
+        "frontend-node-engineering"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "react-expert/README.md",
+          "bytes": 1161,
+          "git_blob": "d4b16b3f4e2c2d2f761f0971e4f76a948bf2222e",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT表記は保持。この17ディレクトリには個別notice無し。README/参照先/取込み対象ごとの出典と許諾を確認中であり、一括除外や導入済みにしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:327ef1fd2ccad47ffa382b1994a5b9ae71e9a5896ca45afcd833ca69abed69b7",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "security-expert/SKILL.md",
+      "name": "security-expert",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/security-expert/SKILL.md",
+      "source_sha256": "e5545d18946baf62377793c66d90bfd24fd6a9074326cf32c9db837661167340",
+      "retrieved_at": "2026-10-20T08:41:08.9508405Z",
+      "bytes": 1841,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T20:26:08.0683285Z",
+      "candidate_disposition": "integration_candidate_pending_support_and_rights",
+      "reason": "依存の実到達性・HTML sink・client bundleの公開値をsecurity-reviewへ比較する候補。",
+      "required_changes": "前後20行やclient importだけで安全/到達不能を断定せず、build/SSR/CIも経路に含める。環境変数名と実秘密を分け、値の収集や履歴dumpをしない。3週での自動gate/新通知を追加しない。",
+      "compare_metadata": [
+        "security-review"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "security-expert/README.md",
+          "bytes": 1178,
+          "git_blob": "88680db790a0e6867a760398e8148fcaa64944b3",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT表記は保持。この17ディレクトリには個別notice無し。README/参照先/取込み対象ごとの出典と許諾を確認中であり、一括除外や導入済みにしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:203f4234879ca2894dcab831d8999515c7583769e2f966440f0e703ed42b489a",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "performance-expert/SKILL.md",
+      "name": "performance-expert",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/performance-expert/SKILL.md",
+      "source_sha256": "720e4db7b36671f4e08ce953610e59c17788f0d49c625c6c8d04b9787cea8441",
+      "retrieved_at": "2026-10-20T08:41:08.9161609Z",
+      "bytes": 3612,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T20:26:08.0683285Z",
+      "candidate_disposition": "integration_candidate_pending_support_and_rights",
+      "reason": "bundle/field CWV/lab計測と未測定を分けるfrontend-node-engineeringの比較候補。",
+      "required_changes": "CWV区分・版・field percentileとlab TBTを一次資料で確認し、JS gzip200kbや特定libraryへの置換を普遍基準にしない。計測なしの速度改善保証や新有料計測/自動週次を追加しない。",
+      "compare_metadata": [
+        "frontend-node-engineering"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "performance-expert/README.md",
+          "bytes": 1251,
+          "git_blob": "25dae12743a4f2f1f7e3a4709a0a0817969bf807",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT表記は保持。この17ディレクトリには個別notice無し。README/参照先/取込み対象ごとの出典と許諾を確認中であり、一括除外や導入済みにしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:1373b0b39bee58db533aa63f41843a8759f6f796a7b67277462d2afc99c08612",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "frontend-review-triage/SKILL.md",
+      "name": "frontend-review-triage",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/frontend-review-triage/SKILL.md",
+      "source_sha256": "d1dd427bbed1b113af3b6b6f3ba12e1f2961be70142954b59b77b085896d5e79",
+      "retrieved_at": "2026-10-20T08:41:08.8441852Z",
+      "bytes": 3170,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T20:26:08.0683285Z",
+      "candidate_disposition": "possible_new_bounded_workflow_pending_support_and_rights",
+      "reason": "指定フロントエンドrepoの初回状態を根拠/未確認付きで棚卸しする限定手順候補。",
+      "required_changes": "<client-repo>はサンプル表記であり、未指示の受託製品へのアクセス許可ではない。audit-triage.shやchecklistは未読。app分類を法的適合性の証明へ変えず、上位規則/元範囲を維持。上位20Issue/標本を全件とせず、実依頼が読取なら保持し通常修復の人待ちへ一般化しない。",
+      "compare_metadata": [
+        "triage",
+        "frontend-node-engineering"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "frontend-review-triage/README.md",
+          "bytes": 1380,
+          "git_blob": "ce4b4649ab243f011520befd9f20e9e2c229710d",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT表記は保持。この17ディレクトリには個別notice無し。README/参照先/取込み対象ごとの出典と許諾を確認中であり、一括除外や導入済みにしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:d5c376d8d01bad022a93b5e65ab7498e9d2176ee4daef5a8036fc1f8b211038b",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "frontend-review-weekly/SKILL.md",
+      "name": "frontend-review-weekly",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/frontend-review-weekly/SKILL.md",
+      "source_sha256": "64647502218439abaafcbac3ef6323c33dce662d4b16c7e919f330ed830151de",
+      "retrieved_at": "2026-10-20T08:41:08.8457712Z",
+      "bytes": 5463,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T20:26:08.0683285Z",
+      "candidate_disposition": "policy_rewrite_candidate_pending_support_and_rights",
+      "reason": "過去reportと同条件KPIを比較し、繰返す問題の自動検査化を判断する手順候補。",
+      "required_changes": "全audit/5子並列/週次timer/Issue作成/外部trend巡回を自動追加しない。新規依存・テスト不具合の技術判断まで人の許可必須にする原条件は本人方針と衝突するため採らず、元依頼・本人専決だけを区別。原baselineを改善値だけで無根拠に置換しない。",
+      "compare_metadata": [
+        "frontend-node-engineering",
+        "github-actions-ci"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "frontend-review-weekly/README.md",
+          "bytes": 1281,
+          "git_blob": "16c36a800b29d3e1314926957614ec509b70c2f9",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT表記は保持。この17ディレクトリには個別notice無し。README/参照先/取込み対象ごとの出典と許諾を確認中であり、一括除外や導入済みにしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:e772072901308ebef1334b1a9c992e470eb103f7e500d672cde551d25d0baf91",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "frontend-review-ci/SKILL.md",
+      "name": "frontend-review-ci",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/frontend-review-ci/SKILL.md",
+      "source_sha256": "18937dda18e8470ee65c3ca5edfa05e53d24103be2d4ea6bd6be99fccf5fdf37",
+      "retrieved_at": "2026-10-20T08:41:08.8277782Z",
+      "bytes": 4715,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T20:26:08.0683285Z",
+      "candidate_disposition": "integration_candidate_pending_support_and_rights",
+      "reason": "DAGのcritical pathとstep別の実時間からCI改善を選ぶ既存手順への統合候補。",
+      "required_changes": "先頭200行/代表runを全失敗の調査としない。5/10/15分固定target・skipLibCheck/isolate:false・flakyをdailyへ移す策を無条件で採らない。測定条件と受入を保ち、runner増額/全検査重複をしない。修復依頼に人のworkflow操作やPR作成を戻さない。",
+      "compare_metadata": [
+        "github-actions-ci"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "frontend-review-ci/README.md",
+          "bytes": 1286,
+          "git_blob": "11454739235f2135a3219718d262b3cc2028c740",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT表記は保持。この17ディレクトリには個別notice無し。README/参照先/取込み対象ごとの出典と許諾を確認中であり、一括除外や導入済みにしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:55682ffbceba15e6d2536ddac6e44ea99293b3f13d08a619b51e02ab0fc81565",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "frontend-review-deps/SKILL.md",
+      "name": "frontend-review-deps",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/frontend-review-deps/SKILL.md",
+      "source_sha256": "c7dc4543cc9c628cb68b5913c4b1c40993c803ae5b29ebdd42aa3ed8c0a0fab4",
+      "retrieved_at": "2026-10-20T08:41:08.8309332Z",
+      "bytes": 5844,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T20:26:08.0683285Z",
+      "candidate_disposition": "policy_and_technical_rewrite_candidate_pending_support_and_rights",
+      "reason": "実依存の到達経路・移行範囲・互換性をfrontend-node-engineering/security-reviewへ比較する候補。",
+      "required_changes": "devDependencyやSPAでRCE/path traversal/SSRFを一律ignoreせずbuild/CI/SSR/供給経路を確認。popularityや6ヶ月major不在だけで廃止を断定せず公式advisory/版/経路を追う。Temporal/標準API/5kb閾値/全E2E/Linux VRT固定を一律導入せず、Windows完成優先と影響範囲検査を維持。",
+      "compare_metadata": [
+        "frontend-node-engineering",
+        "security-review"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "frontend-review-deps/README.md",
+          "bytes": 1321,
+          "git_blob": "066b5c728724ec0713031f4a82cf9ea691135a45",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT表記は保持。この17ディレクトリには個別notice無し。README/参照先/取込み対象ごとの出典と許諾を確認中であり、一括除外や導入済みにしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:ee73e4f3ce417005caabc9d8b96e9445f7ed0d3f16d3f3df6e511814fe2efb98",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "frontend-review-hygiene/SKILL.md",
+      "name": "frontend-review-hygiene",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/frontend-review-hygiene/SKILL.md",
+      "source_sha256": "f2c4501a6a62e7c6f79d4b302434f185732fbbb4e2af3434d3f55d55237295a1",
+      "retrieved_at": "2026-10-20T08:41:08.8373243Z",
+      "bytes": 2883,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T20:26:08.0683285Z",
+      "candidate_disposition": "integration_candidate_pending_support_and_rights",
+      "reason": "型・lint・deadcode・重複の報告とbaselineを分ける既存手順への統合候補。",
+      "required_changes": "anyや行数の増加を同条件の実害なしに退行としない。report欠落/parse失敗を0件へ落とさず、baselineの版/対象を確認。生成物の除外は利用側を確かめる。未読auditと全toolchain置換を自動実行しない。",
+      "compare_metadata": [
+        "frontend-node-engineering"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "frontend-review-hygiene/README.md",
+          "bytes": 1337,
+          "git_blob": "ee363d6571ce9d4a7511aba2f1ee78a37b7a6f1d",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT表記は保持。この17ディレクトリには個別notice無し。README/参照先/取込み対象ごとの出典と許諾を確認中であり、一括除外や導入済みにしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:449829eb40f612d959ff6a24376b9d449cebfddf54409bb60c2bd34c586b1c52",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "frontend-review-security/SKILL.md",
+      "name": "frontend-review-security",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/frontend-review-security/SKILL.md",
+      "source_sha256": "ab20f564277d252138bc5a809e919560c63866b6ef58d40cf725f06c7ce0c560",
+      "retrieved_at": "2026-10-20T08:41:08.8399477Z",
+      "bytes": 6726,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T20:26:08.0683285Z",
+      "candidate_disposition": "policy_and_technical_rewrite_candidate_pending_support_and_rights",
+      "reason": "auth未解決状態・server認可・token refresh単一化・logout後cache・公開env/HTML sinkを既存手順へ比較する候補。",
+      "required_changes": "httpOnlyだけでXSS安全、SameSiteだけで全CSRF対策済みとはしない。server logout失敗時にも必要なclient clear/保護遷移が成立するか確認。実秘密/全履歴をdumpしない。人にstg検査/Issue作成を戻す原条件を採らず、Prdと許可された使い捨て検証を分ける。読取依頼のdesk review境界は保持する。",
+      "compare_metadata": [
+        "security-review",
+        "auth-logout-route-race"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "frontend-review-security/README.md",
+          "bytes": 1399,
+          "git_blob": "74382a558a00e8ae3023a64ec84e6229f08230a6",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT表記は保持。この17ディレクトリには個別notice無し。README/参照先/取込み対象ごとの出典と許諾を確認中であり、一括除外や導入済みにしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:f7f58e52c2b0fa108a35aa46e7638d69bfa3bd52350516ce69b224da6b0e418a",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "frontend-review-state/SKILL.md",
+      "name": "frontend-review-state",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/frontend-review-state/SKILL.md",
+      "source_sha256": "a7423ba82a4b6ca7390a41c046e95b09cf14086dcc8f3e79b37b03d754159e48",
+      "retrieved_at": "2026-10-20T08:41:08.8415287Z",
+      "bytes": 5563,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T20:26:08.0683285Z",
+      "candidate_disposition": "integration_candidate_pending_support_and_rights",
+      "reason": "URL/server/form/UIの所有とlogout cache分離をfrontend-node-engineering/web-form-stateへ比較する候補。",
+      "required_changes": "global store内のserver/form/URL stateを常にbugと断定せず、同期・SSR・offline等の契約を確認。既存libraryを一律React Hook Form/TanStackへ移さない。先頭20件や3〜5storeを全件確認とせず、実logout失敗/再login/非同期応答の競合を確認する。",
+      "compare_metadata": [
+        "frontend-node-engineering",
+        "web-form-state",
+        "auth-logout-route-race"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "frontend-review-state/README.md",
+          "bytes": 1304,
+          "git_blob": "65959aa03a913eb185c836cf0be370e0bb136891",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT表記は保持。この17ディレクトリには個別notice無し。README/参照先/取込み対象ごとの出典と許諾を確認中であり、一括除外や導入済みにしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:a75fc70b2deac3207a85fe5c03a549d1d81dbec5092c97b60722d976f5e0c2bf",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "frontend-review-performance/SKILL.md",
+      "name": "frontend-review-performance",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/frontend-review-performance/SKILL.md",
+      "source_sha256": "e6e642009f6e00fe55adcbe2d9a85eb8e502335ce77da838add509ca52f31c86",
+      "retrieved_at": "2026-10-20T08:41:08.8388857Z",
+      "bytes": 6447,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T20:26:08.0683285Z",
+      "candidate_disposition": "integration_candidate_pending_support_and_rights",
+      "reason": "React profilerと具体操作からmemo/virtualization/高頻度描画を判断する既存手順への統合候補。",
+      "required_changes": "100要素以上なら必ず仮想化、毎frameは必ずWebGL、JSX内callbackは必ず悪いという一般化をしない。計測条件・a11y・cleanup/renderer解放を確認。readonly reviewの非実行境界と実修復の必要計測を分け、今回GPUモデル/描画処理は起動しない。",
+      "compare_metadata": [
+        "frontend-node-engineering",
+        "ui-testing",
+        "webgl-effects"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "frontend-review-performance/README.md",
+          "bytes": 1348,
+          "git_blob": "92c6de581d68ab2026bd5174188e002280c7a6cd",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT表記は保持。この17ディレクトリには個別notice無し。README/参照先/取込み対象ごとの出典と許諾を確認中であり、一括除外や導入済みにしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:de3915d08c9e807fd44aa97c713030beab0fb4e92b1a3188f055acaaa045a64d",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "frontend-review-testing/SKILL.md",
+      "name": "frontend-review-testing",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/frontend-review-testing/SKILL.md",
+      "source_sha256": "c421921e0b4ea471e3fe855f7c817f18952aa4a62a2032745095fd425f2a39dd",
+      "retrieved_at": "2026-10-20T08:41:08.8431011Z",
+      "bytes": 5488,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T20:26:08.0683285Z",
+      "candidate_disposition": "policy_rewrite_candidate_pending_support_and_rights",
+      "reason": "ユーザー操作/非同期結果の検査、実装追随テストとcoverage水増しを避けるui-testing/test-qualityの比較候補。",
+      "required_changes": "テスト失敗の仕様/実装/テストの切分けを毎回人の判断待ちにしない。coverage80/60や推奨library不在を自動欠陥にせず、観測可能な振舞いと関連範囲で検査する。in-source testsの本番除去を実成果物で確認。MSW固定・全coverage合算・Linux VRTを無条件追加しない。",
+      "compare_metadata": [
+        "ui-testing",
+        "test-quality"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "frontend-review-testing/README.md",
+          "bytes": 1266,
+          "git_blob": "03f9184cb2a788916c892e18d66f4f8f71dcabc6",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT表記は保持。この17ディレクトリには個別notice無し。README/参照先/取込み対象ごとの出典と許諾を確認中であり、一括除外や導入済みにしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:1144085b4f5422f1ea4387be34784913f7b92579bfbb39dfb68b21213bbd5c99",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "playwright-cli/SKILL.md",
+      "name": "playwright-cli",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/playwright-cli/SKILL.md",
+      "source_sha256": "dc6f7e100b20369010393b116f3d748cfa7d3b298046638e854b5a02d4e0e7f7",
+      "retrieved_at": "2026-10-20T08:41:08.9203577Z",
+      "bytes": 2507,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T20:26:08.0683285Z",
+      "candidate_disposition": "integration_candidate_pending_support_and_rights",
+      "reason": "Playwright test実行/CLIと実サービスの対話操作を分けるbrowser-automation/ui-testingの比較候補。",
+      "required_changes": "npx経由の未確認install/全件test/ブラウザ新規login/--ui/--headed/codegenを自動で実行しない。既存testの隔離と実サービスのowner Chrome/CUA経路を分け、元の言語/資源/端末非表示/画像確認を維持する。",
+      "compare_metadata": [
+        "browser-automation",
+        "ui-testing"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "playwright-cli/README.md",
+          "bytes": 1284,
+          "git_blob": "e0ed132ab5569bdc30adc85f5ebdef62133575c5",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT表記は保持。この17ディレクトリには個別notice無し。README/参照先/取込み対象ごとの出典と許諾を確認中であり、一括除外や導入済みにしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:95620508e81de3fbd4d52c7123931103262b85eab2baaec4b15aac49e6f3ccd0",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "review-image/SKILL.md",
+      "name": "review-image",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/review-image/SKILL.md",
+      "source_sha256": "7ffd47e7429bd8069872feae7fa3395e96ce266c82a76446eda72e9ccc539205",
+      "retrieved_at": "2026-10-20T08:41:08.9466343Z",
+      "bytes": 5107,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T20:26:08.0683285Z",
+      "candidate_disposition": "policy_rewrite_candidate_pending_support_and_rights",
+      "reason": "画像判定のpass/fail/実行エラーを区別する考え方を既存画像確認手順へ比較する候補。",
+      "required_changes": "上流はOpenRouter APIキーと従量課金Deno scriptsが必須で、今回の利用経路としては採らない。新費用/APIキー/広いenv/read/net権限を導入しない。必要な判定は既存OAuthの範囲で設計し、model passを本人のUI画像承認の代用にしない。未読codeや安いという保証は採らず、個別許諾も未確定。",
+      "compare_metadata": [
+        "image-generation-editing",
+        "ui-testing"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "review-image/README.md",
+          "bytes": 1305,
+          "git_blob": "f579e0d8bfe15abd681832df2179e097d21f8b9a",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "review-image/agents/openai.yaml",
+          "bytes": 253,
+          "git_blob": "717d215cfbe9c2cbd12d1874979260d1a7b46e41",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "review-image/scripts/review-image-ci.ts",
+          "bytes": 2888,
+          "git_blob": "687ad83d4d1cce34da7c50ab45ae45673305e39f",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "review-image/scripts/review-image-ci_test.ts",
+          "bytes": 1225,
+          "git_blob": "a39ca029cb8391cda125f202aa1d9d0b96b94e72",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "review-image/scripts/review-image.ts",
+          "bytes": 7327,
+          "git_blob": "cd50dc16b33dc0a712f100d33d92304ccd283a21",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "review-image/scripts/review-image_test.ts",
+          "bytes": 2379,
+          "git_blob": "a3424041c1ba5dec19e7e7986e12fcc86502845f",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT表記は保持。この17ディレクトリには個別notice無し。README/参照先/取込み対象ごとの出典と許諾を確認中であり、一括除外や導入済みにしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:a40a635b7f6a067b59aea998029269b763c6e81465d37eb12c1ce26235665f25",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "playwright-test/SKILL.md",
+      "name": "playwright-test",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/playwright-test/SKILL.md",
+      "source_sha256": "ac4eb9c54c1b99a1bd1ee01465c189aaa3202e8c45d0be062a6e1e19fd5e9b01",
+      "retrieved_at": "2026-10-20T08:41:08.9276305Z",
+      "bytes": 18654,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T20:26:08.0683285Z",
+      "candidate_disposition": "integration_candidate_pending_support_and_rights",
+      "reason": "web-first assertion・操作前のnetwork待機登録・routeのmethod確認・download待機などをui-testingへ比較する候補。",
+      "required_changes": "公式はnetworkidleを検査の準備完了判断に非推奨とし、expect.configureのflaky:true例は公式のtimeout/soft設定と一致しない。failOnFlakyTestsは別configで版を確認する。retry注釈だけでretry回数が変わるとせず、cacheや既取得応答で未発火のwaitを避ける。HAR/authstate/traceの秘密保護とテスト成果物の実内容確認、Windows優先/影響範囲/資源/端末非表示を維持する。",
+      "compare_metadata": [
+        "ui-testing",
+        "playwright-download-verification"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "playwright-test/README.md",
+          "bytes": 1263,
+          "git_blob": "70dcbcf609cab5292f20fd190ec5b589a771bddf",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "playwright-test/SKILL-ja.md",
+          "bytes": 19773,
+          "git_blob": "4ca73c57b2b66ffae51baed1555c12914da8aa72",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT表記は保持。この17ディレクトリには個別notice無し。README/参照先/取込み対象ごとの出典と許諾を確認中であり、一括除外や導入済みにしない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
     }
   ],
   "pending_entrypoint_paths": [
@@ -3347,17 +4014,6 @@
     "extract-glossary/SKILL.md",
     "formal-methods-drift-guard/SKILL.md",
     "formal-methods-reconciler/SKILL.md",
-    "frontend-expert/SKILL.md",
-    "frontend-ops-expert/SKILL.md",
-    "frontend-review-ci/SKILL.md",
-    "frontend-review-deps/SKILL.md",
-    "frontend-review-hygiene/SKILL.md",
-    "frontend-review-performance/SKILL.md",
-    "frontend-review-security/SKILL.md",
-    "frontend-review-state/SKILL.md",
-    "frontend-review-testing/SKILL.md",
-    "frontend-review-triage/SKILL.md",
-    "frontend-review-weekly/SKILL.md",
     "gleam-practice/SKILL.md",
     "justfile/SKILL.md",
     "k8s-crd-from-typed-schema/SKILL.md",
@@ -3373,15 +4029,9 @@
     "opentelemetry/SKILL.md",
     "optimizing-descriptions/SKILL.md",
     "otel-node/SKILL.md",
-    "performance-expert/SKILL.md",
     "pi-coding-agent/SKILL.md",
-    "playwright-cli/SKILL.md",
-    "playwright-test/SKILL.md",
     "publish-agent-skill/SKILL.md",
-    "react-expert/SKILL.md",
     "retrospective-codify/SKILL.md",
-    "review-image/SKILL.md",
-    "security-expert/SKILL.md",
     "skill-finder/SKILL.md",
     "skill-selector/SKILL.md",
     "sqlc-gen-moonbit-safety/SKILL.md",
@@ -3400,8 +4050,8 @@
   "excluded": 0,
   "support_code_executed": false,
   "private_data_used": false,
-  "next": "残58本文を同じcanonicalから続け、既読候補の許諾/支持資料と具体差分を確かめて導入・統合する。SQL2は本文案と静的適用例を保存し、notice形式や取得制約を解消せず配置済みとしない。",
-  "observed_at": "2026-10-22T18:51:46.9327332Z",
+  "next": "SQL草案の待機表示Must1、CI手順の必須check/所有者/外部CI、AWS根拠を補正し限定再確認。新17候補の支持/許諾/既存差分と残41入口、全16資料の候補を継続する。",
+  "observed_at": "2026-10-22T20:26:08.0683285Z",
   "code_execution_status": "SQL4補助コードは本文未保存・未読・未実行。既存追加取得の拒否を別経路で迂回しない。",
   "supporting_texts_fullread": [
     {
@@ -3516,13 +4166,13 @@
     "raw_sha256": "237d5a7391b947f16ef22f9cdc843887c85133a271f676f524956f23c29ce6b7",
     "limits": "SQL4本文の前評価を確認。今回の補助5+README追加範囲と本文案は新しい未受入差分。"
   },
-  "entrypoints_fulltext_read": 18,
+  "entrypoints_fulltext_read": 35,
   "latest_primary_review": {
-    "todo": 3313,
-    "must": 0,
-    "raw_sha256": "1f58a8bb4c42040c8d143979a99cacca21556c2c406c214542174c5b01ffc597",
-    "head": "779dd15197d3a4547e6d6d8643e742bafe8c7643",
-    "scope": "既確認6入口とSQL草案2/追加支持資料の限定レビュー。今回の新12入口を覆わない。"
+    "must": 1,
+    "scope": "前12入口と実統合/SQL草案を確認。新17入口と今回の補正は未受入。",
+    "raw_sha256": "c0f40d79b4386bd5ce7a7d11101e23dbd56d5013b6614d56bfd1caf756ada973",
+    "head": "b0107b649d5f6a890742aaad926f1b0116018f58",
+    "todo": 3368
   },
   "historical_snapshot_note": "SQL4/新2の候補時点の評価は保持。gh-fix-ciの実統合と受入待ちを採用台帳へ接続し、候補評価と実操作を区別する。"
 }

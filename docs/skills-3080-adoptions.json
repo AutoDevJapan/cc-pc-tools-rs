@@ -412,12 +412,19 @@
       "source_sha256": "9bb7f0a67de15a4b69ad793e8169cae34ae5e0ac76a9403a483bafd418233ea4",
       "target": "github-actions-ci",
       "disposition": "integrated_existing",
-      "manifest": "skills-3080-installed-gh-ci-integration-manifest.json",
-      "entrypoint_sha256": "fc3c21f3b4fa6b31ea92b7d364a7f9ba204f2819bcdde1b0fc4a46a322d0b892",
+      "manifest": "skills-3080-installed-gh-ci-integration-v2-manifest.json",
+      "entrypoint_sha256": "baaed00d82f19fd287e9dccf12e4960acd0371308e2456008cd53be5eb548574",
       "reason": "既存の同用途を維持し、毎回の承認/本人PC操作待ちを現行の指示に合わせて改訂。新metadataを増やさず、原文と個別noticeを保全。",
       "upstream_original_preserved": true,
       "source_notice_preserved": true,
-      "independent_review_pending": true
+      "independent_review_pending": true,
+      "prior_revisions": [
+        {
+          "scope": "実配置v1の歴史。3368が読了、SQL草案待機表示Must1を補正。v2は限定差分の受入前。",
+          "entrypoint_sha256": "fc3c21f3b4fa6b31ea92b7d364a7f9ba204f2819bcdde1b0fc4a46a322d0b892",
+          "manifest": "skills-3080-installed-gh-ci-integration-manifest.json"
+        }
+      ]
     }
   ]
 }

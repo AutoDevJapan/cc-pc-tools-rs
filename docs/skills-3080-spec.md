@@ -121,3 +121,15 @@ mizchiのroot READMEを分割で全文確認し、SQL4のREADME4本と共通CLAU
 同用途のgh-fix-ciは既存github-actions-ciへ[統合](skills-3080-gh-ci-integration-evidence.json)した。通常修復の承認を毎回求める旧指示を改訂し、実HEAD・実行回・jobログ・未完了を区別する。新しい入口は作らず、変更前3ファイルを.trashへ保全して既存2ファイルを更新、原文と個別Apache全文を含む4ファイルを追加した。旧GUIDEは無改変で保持した。既存3048 Go検査器の実1件6ファイル検査、fresh Codex metadata325中の対象1発見・enabled・説明一致・解析0を確認。実モデルによる修復の試験や文脈予算の実証とは分け、独立レビューは次の有限工程とする。
 
 全件は73220=導入28+統合1+除外0+未判定保留73191で、残は本文有72116+未取得428+拒否保持647。全16資料の継続責任は元3080に保持する。現jobのmetadataはgpt-6.1-sol/effort max（policy）で、Fast/実効推論量/認証経路は独立照合していない。前ジョブのhigh表示を今回の観測へ流用しない。
+
+## 3368後の補正とフロントエンド関連17入口
+
+3368は固定b0107b64の14差分・中央7ファイル・新12入口を読了し、SQL草案の待機表示にMust1を返した。`review_pending:false`が改訂草案を受入済みと誤読させるため、trueへ戻し、対象head・原応答SHA・Mustと残る独立確認を分けた。過去3313のMust0を後続版へ流用しない。レビューの読了と受入を分け、次の固定差分確認までPR381はmergeしない。
+
+既存CI手順の[v2証拠](skills-3080-gh-ci-integration-v2-evidence.json)は、必須check集合とskip/cancel、他run成功の流用防止、必要な外部CIの原因追跡、個別jobログAPI、本PCの自律merge方針の3所有者と元依頼の境界を補った。既存権限のある他repoへの新しい禁止は作らず、この資料から権限を増やさない。旧helper/metadata/assetsは今回未変更・未実行と明記した。変更前7ファイルを保全して3ファイルだけを更新し、raw/Apache/index/旧GUIDEを保持。実1target6filesのGo検査とfresh発見1/enabled/説明一致/解析0が成功した。これは統合1の改訂で、統合を2件へ増やさない。v1のmanifest/配置証拠は履歴として保持し、JSONの作業コピーとLF正規化の指紋を区別する。
+
+AWSの独立条件キーを不採用とした前回の根拠は訂正した。AWS IAM公式はGitHub用job_workflow_refを明示し、reusable workflowを使うjobに対応する。GitHubのcustom claims注記だけで標準claimの非対応を証明したとはしない。実claim/ref/aud/subの確認と、今回許可されない従量推論・追加権限は別に扱う。[一次資料照合](skills-3080-mizchi-infra-primary-checks.json)に旧判断と訂正を保持し、実AWS policyは変更していない。
+
+フロントエンド/Playwright/画像判定関連17入口を追加で全読し、mizchi76=35確認+41未読、全primary126pathとなった。上流の一律な依存/性能基準、人に技術判断を戻す条件、OpenRouter API経路、未確認のPlaywright設定はそのまま採らない。[Playwright一次資料](skills-3080-mizchi-frontend-primary-checks.json)も照合した。新17は未導入/未統合/未除外の評価候補で、個別支持/許諾/既存原本との差分を残す。前12のREADME11は親も全文/SHA確認し、追加noticeが無いという範囲だけを閉じた。
+
+部分評価の集合・固定commit・live採用台帳の対応をGoで検査する。失われた未読path、確認済みとの重複、重複ID、根拠の無い統合、source SHA不一致、未解消/欠落reviewをfalseの待機表示で閉じる変異を検出する。意味や許諾の承認ではない。導入28/統合1/除外0/未判定保留73191は不変で、全16資料の継続を保持する。

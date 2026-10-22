@@ -72,7 +72,7 @@
   "renderable_plans_added": 0,
   "source_scripts_executed": false,
   "model_turn_tested": false,
-  "review_pending": false,
+  "review_pending": true,
   "next": "個別許諾/原文保全方式と補助コードの取得制約、既存原本との限定比較を確認後、必要な生成器のnotice形式だけを実証に応じて拡張する。未取得コードの取得拒否を迂回しない。",
   "static_cases": [
     {
@@ -175,9 +175,18 @@
     "sqlc_or_d1_catalog_in_this_repo": "review3313はskills文書以外で未発見。他repoは未調査。"
   },
   "reviewed_draft": {
-    "subsequent_text_changes": "今回の境界例と精度補足は次の限定レビューで確認",
+    "subsequent_text_changes": "779dd151後の草案は3368が全読したが、待機表示のMust1を修正中。今回の補正を独立確認するまでreview_pending=true。",
     "todo": 3313,
     "must": 0,
-    "head": "779dd15197d3a4547e6d6d8643e742bafe8c7643"
+    "head": "779dd15197d3a4547e6d6d8643e742bafe8c7643",
+    "latest_review": {
+      "raw_sha256": "c0f40d79b4386bd5ce7a7d11101e23dbd56d5013b6614d56bfd1caf756ada973",
+      "remaining_independent_confirmation": true,
+      "todo": 3368,
+      "head": "b0107b649d5f6a890742aaad926f1b0116018f58",
+      "must": 1,
+      "must_reason": "未受入の改訂草案のreview_pendingがfalseだった",
+      "local_resolution": "trueへ修正。次の固定差分確認前に受入済みとはしない。"
+    }
   }
 }

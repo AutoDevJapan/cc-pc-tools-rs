@@ -82,3 +82,11 @@ UI実装承認はfalseのまま。元の画像と拒否receiptを保持する。
 配布するguard Aはこの機能を含む固定public sourceから独立に生成する。別のreader B
 だけへAの実SHAと原build receiptを結び、自己SHAの循環を作らずに正規CASで配布する。
 A/Bのsourceと生成物、最終mergeと実配布、通常の分類受入は分けて記録する。
+
+全guardの合成回帰はdf400542で405合格・既存1省略、192.32秒。vetは成功した。
+その後の残るConsole receipt参照と旧source不在の合成検査は関連範囲で成功した。
+実Aはb4872860を通常Gitで別途取得した常設sourceから生成し、元build receiptを
+別ファイルに保存した。Bは4cd89bd2の別のGit取得先から生成した読取用の実行物。
+これは別source/実生成/独立receiptの照合であり、別担当がbuildしたとの主張ではない。
+通常のソフト資格検査で現在のguardからAへの一致を確認した。実置換はまだ行っていない。
+配布手順は[有限な配布スクリプト](install-permanent-provenance-3344.ps1)を使う。

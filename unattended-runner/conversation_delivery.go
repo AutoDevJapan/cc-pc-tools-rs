@@ -539,6 +539,9 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 			if err == nil {
 				err = r.deliverConversationReply(ctx, q, reply, req)
 			}
+			if err == nil {
+				err = r.deliverOwnerReplyMediaObservation(ctx, q, reply, req)
+			}
 			if err != nil {
 				health.Errors = append(health.Errors, "conversation_delivery_deferred")
 				return

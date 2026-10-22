@@ -299,3 +299,125 @@ func TestMonthlyFailuresNeverPublishOrAdvance(t *testing.T) {
 		})
 	}
 }
+
+func TestMonthlyCursorFailureKeepsOriginalReceipt(t *testing.T) {
+	for _, mode := range []string{"scope_change", "cursor_change", "page_failure"} {
+		t.Run(mode, func(t *testing.T) {
+			f := newMonthlyFixture(t)
+			s := monthlyTestScope("discord-monthly-history-read-scope-v1")
+			s["channel_ids"] = []string{"100", "400"}
+			f.responses["/channels/100/messages"] = []any{monthlyMessage("800", "100", monthlyTestOwner, "original", false)}
+			args, path := monthlyTestArgs(t, s)
+			var out bytes.Buffer
+			if monthlyReadCLIWith(args, &out, f.load, monthlyPermit) != 0 {
+				t.Fatal(out.String())
+			}
+			_, original := monthlyTestReceipt(t, path)
+			cursor := path
+			if mode == "scope_change" {
+				s["channel_ids"] = []string{"100"}
+				b, _ := json.Marshal(s)
+				if err := os.WriteFile(args[1], b, 0600); err != nil {
+					t.Fatal(err)
+				}
+			} else if mode == "cursor_change" {
+				var altered map[string]any
+				if err := json.Unmarshal(original, &altered); err != nil {
+					t.Fatal(err)
+				}
+				altered["next"].(map[string]any)["before"] = "801"
+				b, _ := json.Marshal(altered)
+				cursor = filepath.Join(filepath.Dir(path), "altered.private.json")
+				if err := os.WriteFile(cursor, b, 0600); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				f.status["/channels/100/messages"] = 403
+			}
+			next := filepath.Join(filepath.Dir(path), "next.private.json")
+			args[3] = next
+			args = append(args, "--cursor", cursor)
+			loads := f.loads
+			out.Reset()
+			if monthlyReadCLIWith(args, &out, f.load, monthlyPermit) == 0 {
+				t.Fatal("bad continuation succeeded")
+			}
+			if mode != "page_failure" && f.loads != loads {
+				t.Fatal("bad cursor loaded credentials")
+			}
+			if _, err := os.Stat(next); !os.IsNotExist(err) {
+				t.Fatal("failed continuation published")
+			}
+			_, current := monthlyTestReceipt(t, path)
+			if !bytes.Equal(original, current) {
+				t.Fatal("prior receipt changed")
+			}
+		})
+	}
+}
+
+func TestMonthlyArchiveTiesAreAcceptedAndBoundaryIsExplicit(t *testing.T) {
+	f := newMonthlyFixture(t)
+	s := monthlyTestScope("discord-monthly-history-inventory-scope-v1")
+	s["mode"], s["channel_id"] = "public-archived", "200"
+	thread := func(id string) map[string]any {
+		return map[string]any{"id": id, "type": 11, "parent_id": "200", "thread_metadata": map[string]any{"archive_timestamp": "2026-09-01T01:00:00Z"}}
+	}
+	f.responses["/channels/200/threads/archived/public"] = map[string]any{"threads": []any{thread("400"), thread("399")}, "has_more": true}
+	args, path := monthlyTestArgs(t, s)
+	var out bytes.Buffer
+	if monthlyInventoryCLIWith(args, &out, f.load, monthlyPermit) != 0 {
+		t.Fatal(out.String())
+	}
+	p, original := monthlyTestReceipt(t, path)
+	if p["timestamp_boundary_unresolved"] != true || len(p["channels"].([]any)) != 2 {
+		t.Fatal("equal-time page lost coverage qualification")
+	}
+	// An API returning the exclusive boundary again cannot advance the walk.
+	next := filepath.Join(filepath.Dir(path), "next.private.json")
+	args[3] = next
+	args = append(args, "--cursor", path)
+	out.Reset()
+	if monthlyInventoryCLIWith(args, &out, f.load, monthlyPermit) == 0 {
+		t.Fatal("nonprogressing timestamp page accepted")
+	}
+	if _, err := os.Stat(next); !os.IsNotExist(err) {
+		t.Fatal("invalid archive receipt")
+	}
+	_, current := monthlyTestReceipt(t, path)
+	if !bytes.Equal(original, current) {
+		t.Fatal("original archive overwritten")
+	}
+}
+
+func TestMonthlyRoleOverwritePrecedenceAndThreadType(t *testing.T) {
+	f := newMonthlyFixture(t)
+	f.responses["/guilds/"+monthlyTestGuild+"/roles"] = []any{map[string]any{"id": monthlyTestGuild, "permissions": "0"}, map[string]any{"id": "501", "permissions": "0"}, map[string]any{"id": "502", "permissions": "0"}}
+	f.responses["/guilds/"+monthlyTestGuild+"/members/"+monthlyTestBot] = map[string]any{"user": map[string]any{"id": monthlyTestBot, "bot": true}, "roles": []string{"501", "502"}}
+	f.responses["/channels/100"].(map[string]any)["permission_overwrites"] = []any{
+		map[string]any{"id": monthlyTestGuild, "type": 0, "allow": "0", "deny": "66560"},
+		map[string]any{"id": "501", "type": 0, "allow": "1024", "deny": "65536"},
+		map[string]any{"id": "502", "type": 0, "allow": "65536", "deny": "1024"},
+	}
+	f.responses["/channels/399/messages"] = []any{}
+	s := monthlyTestScope("discord-monthly-history-read-scope-v1")
+	s["channel_ids"] = []string{"399"}
+	args, path := monthlyTestArgs(t, s)
+	var out bytes.Buffer
+	if monthlyReadCLIWith(args, &out, f.load, monthlyPermit) != 0 {
+		t.Fatal(out.String())
+	}
+	p, _ := monthlyTestReceipt(t, path)
+	if p["channel_type"] != float64(12) || p["complete"] != true {
+		t.Fatal("parent decode changed selected type")
+	}
+	found := false
+	for _, path := range f.paths {
+		if path == "GET /channels/399/thread-members/"+monthlyTestBot {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("private thread membership was not verified")
+	}
+}

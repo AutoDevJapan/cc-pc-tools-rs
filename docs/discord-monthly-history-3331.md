@@ -18,7 +18,8 @@ joined-private archiveのbeforeはsnowflake。時刻境界の未確認を累積�
 
 `monthly-history-read` はdomain `discord-monthly-history-read-scope-v1` と
 同じ固定条件、明示channel_ids（1〜10）を指定し、1回100投稿以下を取得する。
-text/announcementとpublic/private/announcement threadを扱う。既存の2forum専用
+text/announcement、音声・stage内のテキスト、public/private/announcement threadを扱う。
+音声・stageではCONNECTも照合し、音声への接続は行わない。既存の2forum専用
 history-read/history-inventoryの資格条件は変えない。
 本人本文だけを私的な原票へ残し、他者の本文・名前は保存しない。
 本文の解釈・元担当への配送・全月の照合は元3327が行う。

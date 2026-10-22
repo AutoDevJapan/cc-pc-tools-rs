@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -419,5 +420,43 @@ func TestMonthlyRoleOverwritePrecedenceAndThreadType(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("private thread membership was not verified")
+	}
+}
+
+func TestMonthlyVoiceChatNeedsConnectPermission(t *testing.T) {
+	for _, kind := range []int{2, 13} {
+		for _, connect := range []bool{false, true} {
+			t.Run(strconv.Itoa(kind)+"/"+strconv.FormatBool(connect), func(t *testing.T) {
+				f := newMonthlyFixture(t)
+				f.responses["/channels/600"] = map[string]any{"id": "600", "type": kind, "guild_id": monthlyTestGuild, "permission_overwrites": []any{}}
+				f.responses["/channels/600/messages"] = []any{}
+				if connect {
+					f.responses["/guilds/"+monthlyTestGuild+"/roles"] = []any{map[string]any{"id": monthlyTestGuild, "permissions": "1115136"}}
+				}
+				s := monthlyTestScope("discord-monthly-history-read-scope-v1")
+				s["channel_ids"] = []string{"600"}
+				args, path := monthlyTestArgs(t, s)
+				var out bytes.Buffer
+				code := monthlyReadCLIWith(args, &out, f.load, monthlyPermit)
+				if connect {
+					if code != 0 {
+						t.Fatal("permitted voice chat failed", out.String())
+					}
+					p, _ := monthlyTestReceipt(t, path)
+					if p["channel_type"] != float64(kind) {
+						t.Fatal("wrong voice channel type")
+					}
+				} else {
+					if code == 0 {
+						t.Fatal("missing CONNECT accepted")
+					}
+					for _, path := range f.paths {
+						if strings.Contains(path, "/messages?") {
+							t.Fatal("history requested without CONNECT")
+						}
+					}
+				}
+			})
+		}
 	}
 }

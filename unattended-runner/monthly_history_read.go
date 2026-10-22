@@ -11,6 +11,7 @@ const monthlyView = uint64(1 << 10)
 const monthlyHistory = uint64(1 << 16)
 const monthlyAdmin = uint64(1 << 3)
 const monthlyManageThreads = uint64(1 << 34)
+const monthlyConnect = uint64(1 << 20)
 
 type monthlyOverwrite struct {
 	ID    string `json:"id"`
@@ -113,7 +114,7 @@ func monthlyReadable(ctx context.Context, r *Runner, id string) (monthlyChannel,
 	}
 	parent := c
 	thread := *c.Type == 10 || *c.Type == 11 || *c.Type == 12
-	if !thread && *c.Type != 0 && *c.Type != 5 {
+	if !thread && *c.Type != 0 && *c.Type != 5 && *c.Type != 2 && *c.Type != 13 {
 		return c, monthlyInvalid("selected_channel_type")
 	}
 	if thread {
@@ -133,6 +134,11 @@ func monthlyReadable(ctx context.Context, r *Runner, id string) (monthlyChannel,
 	permissions, err := monthlyPermissions(ctx, r, parent)
 	if err != nil {
 		return c, err
+	}
+	// Reading voice-channel text also needs CONNECT; no voice connection or
+	// membership mutation is made by this reader.
+	if (*c.Type == 2 || *c.Type == 13) && permissions&monthlyConnect == 0 {
+		return c, monthlyInvalid("connect_permission")
 	}
 	if *c.Type == 12 && permissions&monthlyManageThreads == 0 {
 		var membership struct {

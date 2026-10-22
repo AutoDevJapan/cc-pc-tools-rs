@@ -178,6 +178,9 @@ func allowed(path string) bool {
 	if consoleImport3264Allowed(absolute) {
 		return true
 	}
+	if ombCaptureAllowed(absolute) {
+		return true
+	}
 	if owned3107PathAllowed(absolute) {
 		return true
 	}
@@ -302,6 +305,8 @@ func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "    \tverify one declared current product successor; no launch or mutation")
 	fmt.Fprintln(output, "  -verify-model-runtime-update string")
 	fmt.Fprintln(output, "    \tqualify one exact ToDo3081 software update; grants no data access")
+	fmt.Fprintln(output, "  -export-omb-runtime-capture")
+	fmt.Fprintln(output, "    \tmaterialize the one independently verified new OMB report capture; no UI approval")
 }
 
 func verifyCurrentSuccession(taskID int) object {
@@ -320,6 +325,9 @@ func verifyCurrentSuccession(taskID int) object {
 }
 
 func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(int) object) int {
+	if ombCaptureFlagPresent(args) {
+		return runOMBCaptureCLI(args, stdout, exportOMBCapture)
+	}
 	if model3081FlagPresent(args) {
 		return runModel3081CLI(args, stdout, model3081RuntimeReceipt)
 	}

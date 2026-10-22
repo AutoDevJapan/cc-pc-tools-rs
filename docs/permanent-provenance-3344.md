@@ -59,3 +59,26 @@
 - 実private repoは既に3339の新Consoleを保存し、mainは別の新しい履歴だった。
   古い56件のarchiveでmainを上書きしない。元担当を保持し、正常分類と正規送信審査後に
   この旧1commit/56bytesを別の保存用refで照合する。
+
+## OMBの新しいcapture
+
+今回の担当がChromeの公式`http://127.0.0.1:38799/`を新規タブで開き、
+`mcp__cua_repl.js`の実`getScreenshot()`戻り値を目視確認した。親には実行済みの
+正確なwrapperと検証入力を`omb-capture-wrapper-3344.json`で先に返した。
+原Codex記録のsession/open call/result/capture call/resultを行番号とSHAで固定する。
+変数を書き換える別CUA呼出し、別URL・別session・別tool・別の戻り値は拒否する。
+toolが返すJPEGを初めてファイルに書く専用exporterを使い、旧PNGをコピーしない。
+toolがディスクpathを返したとは主張しない。新しい元pathと実バイトを別途結ぶ。
+
+証拠は当該通常logの稼働報告用で、質問画像の資格として登録しない。
+原tool記録と、その戻り値を実際に見た非秘密確認が不足すれば通常分類しない。
+UI実装承認はfalseのまま。元の画像と拒否receiptを保持する。
+確認用タブは作成時の正式所有記録をinventoryと照合して個別closeし、closed1/failed0。
+
+`--export-omb-runtime-capture`は入力pathやmanifestを受け付けず、固定した新captureだけを
+新規作成する。既存の同byteは再試行でき、別byteを上書きしない。通常の添付は
+配布したguardの`--guard-path`、同じ`discord_ask log --attach`で実受入する。
+
+配布するguard Aはこの機能を含む固定public sourceから独立に生成する。別のreader B
+だけへAの実SHAと原build receiptを結び、自己SHAの循環を作らずに正規CASで配布する。
+A/Bのsourceと生成物、最終mergeと実配布、通常の分類受入は分けて記録する。

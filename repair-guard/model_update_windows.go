@@ -25,19 +25,20 @@ type modelUpdateLeaf struct {
 	candidate    modelUpdateCandidate
 }
 
-const model2903Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-2903-qualified-release"
-const model3082Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3082-discord"
+const model2903Source = permanent3344Root + "/9fb62b51c7b4f145efadfbd894224795fbc3157e"
+const model3082Source = permanent3344Root + "/eae2d2bd7e3e16fe3833b252b065c0ee8ee92a4b"
 const model3082Receipt = model3082Source + "/.ci-work/3082-runtime-20261020-232848-todo-3082.private.json"
 const model3082ReceiptSHA = "dfda87e2f50ca965f13ba432d7b1d893bd8530b5c8234911ec102423c9beb677"
 
-const model3298Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3298-windows"
+const model3298Source = permanent3344Root + "/70a7962c36c0b9916ff6865afa9cb606d414962e"
 const model3298Head = "70a7962c36c0b9916ff6865afa9cb606d414962e"
 const model3298BuildReceipt = model3298Source + "/codex-owned-5ca1100a696bda051f5c813a37f941d9/target/build-receipt.private.json"
 const model3081Distribution = model3298Source + "/codex-owned-0c95078c4ebbe13a42f392c2e12e60da"
-const model3081Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3081-fast"
-const model3309Source = "C:/Users/makhmeto/AppData/Local/Temp/agent-conduct-c2d9dde771e44d36a3bd8343653b307c/dots-launcher-repair-3309"
-const model3250Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3250-windows"
-const model3338GuardSource = model3081Source + "/codex-owned-471299b48ad6e65615889e37523be073/source"
+const model3081Source = permanent3344Root + "/cbddcb32fb8ffc9364862b743c4435739fab1aec"
+const model3309Source = permanent3344Root + "/e290e27ffdb63cbd35dcb8af559372293a94de87"
+const model3250Source = permanent3344Root + "/7bb3858a81d833dc5bd6e2320c2b81f4a55d0969"
+const model3338GuardSource = permanent3344Root + "/a36a77c42690eef7c0147a6a2eee76b496a48249"
+const model3344GuardSource = permanent3344Root + "/00e47e1cc5f8bd7d1d3c7af8cce4e3c04f36102a"
 
 // The installed baseline has the independent ToDo3177 provenance. ToDo3298
 // built the candidate once from the merged source, then ToDo3081 copied it
@@ -68,10 +69,13 @@ var model3081UpdateLeaves = []modelUpdateLeaf{
 	}, {
 		sha256:   "274e8abc5c90d5ca7dcf401b824d5ff50e078c966fd74a35af86f78dd9d900d9",
 		evidence: []consoleEvidence{{model3250Source, model3250Source + "/codex-owned-1bd08feb8beaad849537a5ea1b45bdfd/guard-pr351-installed.private.json", "2de2b7789fb32d159f3d1e41e40f828167a10db1f944512d2f30510a4f782115"}},
-	}}, candidate: modelUpdateCandidate{
-		root: model3338GuardSource, path: model3338GuardSource + "/guard-artifact.private.exe",
-		head: "a36a77c42690eef7c0147a6a2eee76b496a48249", sha256: "e99f7cdc857705705871df42aa4cc159e5451df2a958076169425692ad456dc8",
+	}, {
+		sha256:   "e99f7cdc857705705871df42aa4cc159e5451df2a958076169425692ad456dc8",
 		evidence: []consoleEvidence{{model3338GuardSource, model3338GuardSource + "/guard-artifact-build.private.json", "a3e3e3d64dccab1927157f7802c0c8a57eb679df624f5554d6d9cb039cf567af"}},
+	}}, candidate: modelUpdateCandidate{
+		root: model3344GuardSource, path: model3344GuardSource + "/guard-artifact.private.exe",
+		head: "00e47e1cc5f8bd7d1d3c7af8cce4e3c04f36102a", sha256: "a9213277d0d8f2c4dfdf9c9366cbc5caaa4252f97882d72aa997577111395623",
+		evidence: []consoleEvidence{{model3344GuardSource, model3344GuardSource + "/guard-artifact-build.private.json", "50f9d8adc3eb8e4650f1462f88092a16d98846b9ae3ed7df93713ef69a6edb76"}},
 	}},
 	{kind: "jobs", target: jobsRuntime, baselines: []consolePin{{
 		sha256:   "7ae20f2bfa824aa6dc27d7046bb997df137bd8980b3291d4e195804714b42c77",
@@ -146,7 +150,7 @@ func runModel3081CLI(args []string, stdout io.Writer, verify func(string) object
 }
 
 func model3081RuntimeReceipt(path string) object {
-	return modelRuntimeUpdateWith(path, model3081UpdateLeaves, legacyMatch, consoleSourceVerified, modelSourceHead)
+	return modelRuntimeUpdateWith(path, model3081UpdateLeaves, legacyMatch, permanentRuntimeSourceVerified, modelSourceHead)
 }
 
 func modelSourceHead(root, expected string) bool {
@@ -271,6 +275,19 @@ func (s *modelPinSession) close() {
 }
 
 func (s *modelPinSession) sourceRoot(root, head string) bool {
+	for i, known := range s.roots {
+		if !same(known.path, root) {
+			continue
+		}
+		if head == "" || head == known.head {
+			return true
+		}
+		if known.head == "" && s.head(root, head) {
+			s.roots[i].head = head
+			return true
+		}
+		return false
+	}
 	resolved, err := physical(root)
 	if err != nil || !same(resolved, root) || s.protected(root) || !s.source(root) || (head != "" && !s.head(root, head)) {
 		return false

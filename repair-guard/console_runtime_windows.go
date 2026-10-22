@@ -21,7 +21,7 @@ type consoleLeaf struct {
 }
 
 const console3050Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3050-console"
-const console3020Receipts = "D:/CC/Work/unattended-operations-20261013-wt/todo-2903-qualified-release"
+const console3020Receipts = model2903Source
 const console3103Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3103-godd-mcp-godd-mcp"
 
 // The source and independent distribution receipts identify these two exact

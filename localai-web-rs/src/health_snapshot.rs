@@ -1,23 +1,24 @@
 //! Read-only health observations; a failed optional backend cannot hide the console.
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use std::time::{Duration, Instant};
 
-const LEGACY_TIMEOUT: Duration = Duration::from_millis(750);
 const PROBE_TIMEOUT: Duration = Duration::from_millis(1500);
 const BODY_LIMIT: usize = 2 * 1024 * 1024;
-const SERVICE_KEYS: [&str; 5] = ["godd", "opencodex", "ollama", "deepseek", "docker"];
+const SERVICE_KEYS: [&str; 3] = ["godd", "opencodex", "docker"];
 
 #[derive(Clone, Copy)]
 enum Service {
     Godd,
     OpenCodex,
+    #[cfg(test)]
     Ollama,
+    #[cfg(test)]
     DeepSeek,
 }
 
 pub struct HealthSnapshot {
     started: Instant,
-    endpoints: [String; 4],
+    endpoints: [String; 2],
     #[cfg(test)]
     docker_override: Option<Value>,
 }
@@ -29,8 +30,6 @@ impl HealthSnapshot {
             endpoints: [
                 "http://127.0.0.1:10101/_godd_ao/healthz".into(),
                 "http://127.0.0.1:10100/healthz".into(),
-                "http://127.0.0.1:11434/api/tags".into(),
-                "http://127.0.0.1:8080/health".into(),
             ],
             #[cfg(test)]
             docker_override: None,
@@ -44,8 +43,6 @@ impl HealthSnapshot {
         snapshot.endpoints = [
             format!("{base}/_godd_ao/healthz"),
             format!("{base}/healthz"),
-            format!("{base}/api/tags"),
-            format!("{base}/health"),
         ];
         snapshot.docker_override = Some(observation(
             Err(Failure::Unavailable),
@@ -55,77 +52,19 @@ impl HealthSnapshot {
         snapshot
     }
 
-    pub async fn snapshot(&self, client: &reqwest::Client, backend: &str, port: u16) -> Value {
-        let legacy_endpoint = format!("{backend}/api/health");
-        let legacy = read_json(client, &legacy_endpoint, LEGACY_TIMEOUT)
-            .await
-            .and_then(|value| {
-                if value.is_object()
-                    && !value
-                        .get("error")
-                        .is_some_and(|error| !error.is_null() && error != false && error != "")
-                {
-                    Ok(value)
-                } else {
-                    Err(Failure::InvalidResponse)
-                }
-            });
-        let mut health = legacy
-            .as_ref()
-            .ok()
-            .and_then(Value::as_object)
-            .cloned()
-            .unwrap_or_default();
-        let previous: Vec<_> = SERVICE_KEYS
-            .iter()
-            .map(|key| take_key(&mut health, key))
-            .collect();
-        let (godd, opencodex, ollama, deepseek, docker) = tokio::join!(
-            service_snapshot(
-                previous[0].as_ref(),
-                client,
-                &self.endpoints[0],
-                Service::Godd
-            ),
-            service_snapshot(
-                previous[1].as_ref(),
-                client,
-                &self.endpoints[1],
-                Service::OpenCodex
-            ),
-            service_snapshot(
-                previous[2].as_ref(),
-                client,
-                &self.endpoints[2],
-                Service::Ollama
-            ),
-            service_snapshot(
-                previous[3].as_ref(),
-                client,
-                &self.endpoints[3],
-                Service::DeepSeek
-            ),
-            self.docker_snapshot(previous[4].as_ref()),
+    pub async fn snapshot(&self, client: &reqwest::Client, _backend: &str, port: u16) -> Value {
+        let (godd, opencodex, docker) = tokio::join!(
+            service_snapshot(None, client, &self.endpoints[0], Service::Godd),
+            service_snapshot(None, client, &self.endpoints[1], Service::OpenCodex),
+            self.docker_snapshot(None),
         );
-        let services = [godd, opencodex, ollama, deepseek, docker];
-        let partial = legacy.is_err()
-            || services
-                .iter()
-                .any(|service| !service["online"].is_boolean());
+        let services = [godd, opencodex, docker];
+        let partial = services
+            .iter()
+            .any(|service| !service["online"].is_boolean());
+        let mut health = serde_json::Map::new();
         for (key, value) in SERVICE_KEYS.into_iter().zip(services) {
             health.insert(key.into(), value);
-        }
-        // Replace the old backend's identity without introducing case-folded duplicate keys.
-        for key in [
-            "port",
-            "status",
-            "backend",
-            "console",
-            "checkedAt",
-            "partial",
-            "legacyBackend",
-        ] {
-            take_key(&mut health, key);
         }
         health.insert("port".into(), json!(port));
         health.insert("status".into(), json!("ok"));
@@ -134,22 +73,11 @@ impl HealthSnapshot {
         health.insert("partial".into(), json!(partial));
         health.insert(
             "console".into(),
-            json!({
-                "online":true,"status":"ok","statusText":"稼働中","port":port,
-                "pid":std::process::id(),"uptimeSeconds":self.started.elapsed().as_secs(),
-            }),
-        );
-        health.insert(
-            "legacyBackend".into(),
-            observation(
-                legacy.map(|_| json!({"online":true})),
-                "legacy-backend",
-                &legacy_endpoint,
-            ),
+            json!({"online":true,"status":"ok","statusText":"稼働中","port":port,
+            "pid":std::process::id(),"uptimeSeconds":self.started.elapsed().as_secs()}),
         );
         Value::Object(health)
     }
-
     async fn docker_snapshot(&self, previous: Option<&Value>) -> Value {
         if let Some(value) = legacy_service(previous) {
             return value;
@@ -340,6 +268,7 @@ fn service_details(kind: Service, value: &Value) -> Result<Value, Failure> {
             }
             Ok(details)
         }
+        #[cfg(test)]
         Service::Ollama => {
             let models = value["models"].as_array().ok_or(Failure::InvalidResponse)?;
             if models.iter().any(|model| {
@@ -351,6 +280,7 @@ fn service_details(kind: Service, value: &Value) -> Result<Value, Failure> {
             }
             Ok(json!({"online":true,"modelCount":models.len()}))
         }
+        #[cfg(test)]
         Service::DeepSeek => Ok(json!({"online":reported_online(value)?})),
     }
 }
@@ -492,7 +422,7 @@ fn docker_headers(bytes: &[u8]) -> Result<Value, Failure> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use axum::{http::StatusCode, response::IntoResponse, routing::get, Json, Router};
+    use axum::{Json, Router, http::StatusCode, response::IntoResponse, routing::get};
     use tokio::io::AsyncWriteExt;
 
     struct Fixture {
@@ -665,7 +595,8 @@ mod tests {
             assert_eq!(value["console"]["pid"], std::process::id());
             assert_eq!(value["port"], 10012);
             assert_eq!(value["partial"], true);
-            assert_eq!(value["legacyBackend"]["reason"], reason);
+            let _ = reason;
+            assert!(value.get("legacyBackend").is_none());
             assert!(value["legacyBackend"]["online"].is_null());
             assert!(!value.to_string().contains("upstream detail"));
             for key in SERVICE_KEYS {
@@ -675,53 +606,40 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn partial_success_keeps_legacy_details_and_probes_missing_services() {
-        let server = fixture(
-            Router::new()
-                .route(
-                    "/api/health",
-                    get(|| async {
-                        Json(json!({
-                            "Port":10013,"Backend":"PowerShell","Status":"old",
-                            "GoDD":{"Online":true,"routeVersion":4},
-                            "OpenCodex":{"online":false,"version":"reported-version"},
-                            "ollama":{"online":null,"model":"installed","modelCount":0},
-                            "extension":{"legacyValue":7},
-                        }))
-                    }),
-                )
-                .route(
-                    "/api/tags",
-                    get(|| async { Json(json!({"models":[{"name":"fixture-model"}]})) }),
-                )
-                .route(
-                    "/health",
-                    get(|| async { Json(json!({"status":"loading"})) }),
-                ),
-        )
-        .await;
+    async fn health_queries_only_current_services() {
+        use std::sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        };
+        let calls = Arc::new(AtomicUsize::new(0));
+        let trap = calls.clone();
+        let router = Router::new()
+            .route(
+                "/_godd_ao/healthz",
+                get(|| async { Json(json!({"service":"godd-ao-semantic-proxy","status":"ok"})) }),
+            )
+            .route(
+                "/healthz",
+                get(|| async { Json(json!({"service":"opencodex","status":"ok"})) }),
+            )
+            .fallback(get(move || {
+                let trap = trap.clone();
+                async move {
+                    trap.fetch_add(1, Ordering::SeqCst);
+                    Json(json!({"status":"ok"}))
+                }
+            }));
+        let server = fixture(router).await;
         let value = HealthSnapshot::for_test(&server.base)
             .snapshot(&client(), &server.base, 10012)
             .await;
-        assert_eq!(value["port"], 10012);
-        assert_eq!(value["backend"], "Rust/Axum");
         assert_eq!(value["godd"]["online"], true);
-        assert_eq!(value["godd"]["routeVersion"], 4);
-        assert_eq!(value["godd"]["source"], "legacy-backend");
-        assert_eq!(value["opencodex"]["online"], false);
-        assert_eq!(value["opencodex"]["version"], "reported-version");
-        assert_eq!(value["ollama"]["online"], true);
-        assert_eq!(value["ollama"]["modelCount"], 1);
-        assert_eq!(value["ollama"]["model"], "installed");
-        assert_eq!(value["ollama"]["source"], "loopback-http");
-        assert_eq!(value["deepseek"]["online"], false);
-        assert_eq!(value["extension"]["legacyValue"], 7);
-        let object = value.as_object().unwrap();
-        let normalized: std::collections::HashSet<_> =
-            object.keys().map(|key| key.to_ascii_lowercase()).collect();
-        assert_eq!(normalized.len(), object.len());
+        assert_eq!(value["opencodex"]["online"], true);
+        assert_eq!(calls.load(Ordering::SeqCst), 0);
+        for retired in ["ollama", "deepseek", "legacyBackend"] {
+            assert!(value.get(retired).is_none());
+        }
     }
-
     #[tokio::test]
     async fn oversized_health_response_is_not_used_as_service_evidence() {
         let server =

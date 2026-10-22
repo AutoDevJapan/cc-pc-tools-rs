@@ -122,10 +122,18 @@ func agentResultPublic(p AgentResultRecord) map[string]any {
 	delivery := "pending"
 	if p.Verified != "" {
 		delivery = "verified"
+	} else if p.LastError == "owner_question_scope_invalid" {
+		delivery = "invalid_input"
+	} else if p.LastError == "owner_action_notification_missing" {
+		delivery = "invalid_notification"
 	} else if p.Attempts >= agentResultAttempts {
 		delivery = "retry_exhausted"
 	}
-	return map[string]any{"domain": p.Domain, "record_id": p.ID, "todo_id": p.Event.Todo, "parent_received_at": p.ParentReceived, "work_completed": p.Event.State == "completed", "delivery": delivery, "attempts": p.Attempts, "message_id": p.Message, "url": p.URL, "verified_at": p.Verified}
+	errorCode := ""
+	if p.LastError == "delivery_unverified" || p.LastError == "owner_question_scope_invalid" || p.LastError == "owner_action_notification_missing" {
+		errorCode = p.LastError
+	}
+	return map[string]any{"domain": p.Domain, "record_id": p.ID, "todo_id": p.Event.Todo, "parent_received_at": p.ParentReceived, "work_completed": p.Event.State == "completed", "notify_owner": p.NotifyOwner, "delivery": delivery, "error_code": errorCode, "attempts": p.Attempts, "message_id": p.Message, "url": p.URL, "verified_at": p.Verified}
 }
 
 // Keep the command independent of environment-specific output paths; the saved

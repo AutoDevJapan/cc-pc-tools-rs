@@ -18,11 +18,15 @@ use std::{
     time::{Duration, Instant},
 };
 
+#[path = "workload_observation.rs"]
+mod observation;
+
 const DAY: i64 = 86_400_000;
 const JST: i64 = 9 * 3_600_000;
 const KEEP_DAYS: i64 = 7;
 const READ_BUDGET: u64 = 8 * 1024 * 1024;
 const REFRESH_READ_BUDGET: u64 = 64 * 1024 * 1024;
+const CACHE_VERSION: u32 = 2;
 const CACHE_LIMIT: u64 = 128 * 1024 * 1024;
 
 fn string<'a>(v: &'a Value, k: &str) -> &'a str {
@@ -309,6 +313,7 @@ struct Cursor {
     last: Option<i64>,
     #[serde(skip_serializing_if = "zero_u64")]
     cumulative_tokens: u64,
+    cumulative_seen: bool,
     // Claude streams several records for one assistant message; retain only the largest usage.
     #[serde(skip_serializing_if = "BTreeMap::is_empty")]
     message_tokens: BTreeMap<String, u64>,
@@ -467,12 +472,13 @@ pub struct Workload {
     sources: Sources,
     cache: RwLock<Cache>,
     phase: RwLock<String>,
+    observed: RwLock<observation::Ledger>,
 }
 impl Workload {
     pub fn production() -> Self {
         let sources = Sources::production();
         let cache = load_cache(&sources.cache)
-            .filter(|c| c.version == 1)
+            .filter(|c| c.version == CACHE_VERSION)
             .unwrap_or_default();
         // Recheck exclusions before exposing persisted data after a restart.
         let cache = match load_exclusions(&sources) {
@@ -509,6 +515,11 @@ impl Workload {
             _ => Cache::default(),
         };
         Self {
+            observed: RwLock::new(observation::Ledger::load(
+                &sources
+                    .cache
+                    .with_file_name("workload-observations-v2.json"),
+            )),
             sources,
             cache: RwLock::new(cache),
             phase: RwLock::new(String::new()),
@@ -520,7 +531,11 @@ impl Workload {
             .ok()
             .is_none_or(|e| hash(&e.0.join("\n")) != c.exclusion_hash)
         {
-            return json!({"date":date,"collecting":true,"updated_at":null,"warnings":["除外設定の確認が終わるまで、集計を表示しません。"],"totals":Numbers::default(),"projects":[],"timeline":[],"history":[]});
+            return self
+                .observed
+                .read()
+                .unwrap_or_else(|e| e.into_inner())
+                .snapshot(date, Utc::now().timestamp_millis());
         }
         let projects = c.days.get(date).cloned().unwrap_or_default();
         let mut totals = Numbers::default();
@@ -670,9 +685,10 @@ fn session_record(cursor: &mut Cursor, v: &Value, earliest: i64, now: i64) {
     }
     if ms < earliest {
         if kind == "event_msg" && string(p, "type") == "token_count" {
-            cursor.cumulative_tokens = cursor
-                .cumulative_tokens
-                .max(number(&p["info"]["total_token_usage"], "total_tokens"));
+            if let Some(total) = p["info"]["total_token_usage"]["total_tokens"].as_u64() {
+                cursor.cumulative_seen = true;
+                cursor.cumulative_tokens = cursor.cumulative_tokens.max(total);
+            }
         }
         return;
     }
@@ -702,8 +718,15 @@ fn session_record(cursor: &mut Cursor, v: &Value, earliest: i64, now: i64) {
         }
     } else if kind == "event_msg" && string(p, "type") == "token_count" {
         let info = &p["info"];
-        let total = number(&info["total_token_usage"], "total_tokens");
-        let delta = total.saturating_sub(cursor.cumulative_tokens);
+        let Some(total) = info["total_token_usage"]["total_tokens"].as_u64() else {
+            return;
+        };
+        let delta = if cursor.cumulative_seen || cursor.cumulative_tokens > 0 {
+            total.saturating_sub(cursor.cumulative_tokens)
+        } else {
+            number(&info["last_token_usage"], "total_tokens").min(total)
+        };
+        cursor.cumulative_seen = true;
         cursor.cumulative_tokens = cursor.cumulative_tokens.max(total);
         cursor.days.entry(d.clone()).or_default().tokens += delta;
     }
@@ -1360,7 +1383,7 @@ fn aggregate_progress(
                 return cache;
             }
             return Cache {
-                version: 1,
+                version: CACHE_VERSION,
                 warnings: vec!["除外設定を読み取れないため、仕事量の集計を停止しています。".into()],
                 ..Cache::default()
             };
@@ -1385,10 +1408,10 @@ fn aggregate_progress(
         }
     };
     let exclusion_hash = hash(&exclusions.0.join("\n"));
-    if cache.exclusion_hash != exclusion_hash {
+    if cache.version != CACHE_VERSION || cache.exclusion_hash != exclusion_hash {
         cache = Cache::default();
     }
-    cache.version = 1;
+    cache.version = CACHE_VERSION;
     cache.exclusion_hash = exclusion_hash;
     cache.warnings.clear();
     let earliest = midnight(now) - (KEEP_DAYS - 1) * DAY;
@@ -1935,7 +1958,7 @@ fn save(sources: &Sources, cache: &Cache) -> std::io::Result<()> {
     file.flush()?;
     file.get_ref().sync_all()?;
     drop(file);
-    if cache.version == 1 && !exclusion_matches(sources, cache) {
+    if cache.version == CACHE_VERSION && !exclusion_matches(sources, cache) {
         let _ = fs::remove_file(&temp);
         return Err(std::io::Error::other("exclusion settings changed"));
     }
@@ -2310,7 +2333,42 @@ async fn persistence_worker(workload: Arc<Workload>) {
     }
 }
 
-pub async fn resident(workload: Arc<Workload>) {
+async fn observation_worker(
+    workload: Arc<Workload>,
+    operations: Arc<crate::operations::Operations>,
+) {
+    let mut tick = tokio::time::interval(Duration::from_secs(15));
+    tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    loop {
+        tick.tick().await;
+        let board = operations.snapshot();
+        let workload = workload.clone();
+        let _ = tokio::task::spawn_blocking(move || {
+            let pending = {
+                let mut ledger = workload.observed.write().unwrap_or_else(|e| e.into_inner());
+                let previous = ledger.revision();
+                ledger.observe(&board, Utc::now().timestamp_millis());
+                (ledger.revision() != previous || ledger.storage_failed()).then(|| ledger.clone())
+            };
+            if let Some(mut ledger) = pending {
+                ledger.save(
+                    &workload
+                        .sources
+                        .cache
+                        .with_file_name("workload-observations-v2.json"),
+                );
+                workload
+                    .observed
+                    .write()
+                    .unwrap_or_else(|e| e.into_inner())
+                    .record_storage_failure(ledger.storage_failed());
+            }
+        })
+        .await;
+    }
+}
+pub async fn resident(workload: Arc<Workload>, operations: Arc<crate::operations::Operations>) {
+    tokio::spawn(observation_worker(workload.clone(), operations));
     tokio::spawn(repository_worker(workload.clone()));
     tokio::spawn(summary_worker(workload.clone()));
     tokio::spawn(persistence_worker(workload.clone()));

@@ -12,7 +12,7 @@ mod commander_health;
 mod product_identity_tests;
 #[path = "waiting_state.rs"]
 mod waiting_state;
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
@@ -38,21 +38,37 @@ pub struct Operations {
     snapshot: RwLock<Value>,
     questions: RwLock<Value>,
     skills: crate::skills_inventory::Inventory,
+    native: crate::native_activity::Registry,
+    resources: crate::resource_observer::Resources,
 }
 impl Operations {
     pub fn production() -> Self {
-        Self::new("D:/CC/Tools".into(), "D:/CC/Skills".into())
+        let mut board = Self::new("D:/CC/Tools".into(), "D:/CC/Skills".into());
+        board.resources = crate::resource_observer::Resources::production();
+        board
     }
     /// Use one record root for both the resident snapshot and its HTTP consumer.
     pub fn new(root: PathBuf, skills_root: PathBuf) -> Self {
+        let native = crate::native_activity::Registry::new(&root);
         Self {
             root,
             snapshot: RwLock::new(empty()),
             questions: RwLock::new(Value::Null),
             skills: crate::skills_inventory::Inventory::new(skills_root),
+            native,
+            resources: crate::resource_observer::Resources::default(),
         }
     }
     pub fn snapshot(&self) -> Value {
+        let now = now_ms();
+        let mut value = self.cc_snapshot();
+        let native = self.native.view(now);
+        native_business_scopes(&mut value, &native);
+        crate::workforce::merge_native(&mut value, &native, now);
+        crate::workforce::apply_to_board(&mut value);
+        value
+    }
+    fn cc_snapshot(&self) -> Value {
         let mut value = self
             .snapshot
             .read()
@@ -66,6 +82,35 @@ impl Operations {
         }
         value
     }
+    pub fn native_snapshot(&self) -> Value {
+        self.native.view(now_ms())
+    }
+    pub fn register_native(
+        &self,
+        mut request: crate::native_activity::Register,
+    ) -> Result<Value, &'static str> {
+        if let Some(project) = request.business_project.as_deref() {
+            request.business_project = Some(
+                catalog::find(project)
+                    .ok_or("invalid_native_business_project")?
+                    .name
+                    .to_owned(),
+            );
+        }
+        self.native.register(request, now_ms())
+    }
+    pub fn record_native(
+        &self,
+        request: crate::native_activity::Activity,
+    ) -> Result<Value, &'static str> {
+        self.native.activity(request, now_ms())
+    }
+    pub fn close_native(
+        &self,
+        request: crate::native_activity::Close,
+    ) -> Result<Value, &'static str> {
+        self.native.close(request, now_ms())
+    }
     pub fn refresh(&self) {
         let live = self
             .questions
@@ -73,7 +118,12 @@ impl Operations {
             .unwrap_or_else(|e| e.into_inner())
             .clone();
         let now = now_ms();
-        let mut value = collect_with_questions(&self.root, now, &live);
+        let mut value = collect_with_questions(&self.root, now, &live, self.resources.enabled());
+        let resource_jobs = value
+            .as_object_mut()
+            .and_then(|v| v.remove("_resourceJobs"))
+            .unwrap_or(Value::Null);
+        self.resources.refresh(&resource_jobs);
         value["skillsInventory"] = self.skills.snapshot(now);
         let active = crate::workforce_observation::acquire(&self.root);
         let completed = now_ms();
@@ -86,7 +136,8 @@ impl Operations {
         now: u64,
         completed: u64,
     ) {
-        let previous = self.snapshot();
+        // Native overlays are per-request facts, never cached as CC observations.
+        let previous = self.cc_snapshot();
         value["workforce"] = crate::workforce::generation(
             &value,
             active.as_ref().ok(),
@@ -111,6 +162,10 @@ impl Operations {
         }
         crate::workforce::apply_to_board(&mut value);
         *self.snapshot.write().unwrap_or_else(|e| e.into_inner()) = value;
+    }
+    /// HTTP reads a bounded cached generation; collection belongs to `refresh`.
+    pub fn resource_snapshot(&self) -> Value {
+        self.resources.snapshot()
     }
     pub fn worker_detail(&self, id: &str, offset: usize) -> Result<Value, u16> {
         let names = cc_ask::task_title::Names::load(&self.root.join("client-projects.txt"))
@@ -179,6 +234,138 @@ impl Operations {
         )
     }
 }
+fn native_business_scopes(board: &mut Value, native: &Value) {
+    let mut declared: BTreeMap<u64, BTreeSet<String>> = BTreeMap::new();
+    for binding in native["bindings"].as_array().into_iter().flatten() {
+        if binding["state"] == "closed"
+            || !matches!(binding["role"].as_str(), Some("work" | "review"))
+        {
+            continue;
+        }
+        if let (Some(id), Some(project)) = (
+            binding["todoId"].as_u64(),
+            binding["businessProject"].as_str(),
+        ) {
+            if let Some(product) = catalog::find(project) {
+                declared
+                    .entry(id)
+                    .or_default()
+                    .insert(product.name.to_owned());
+            }
+        }
+    }
+    if declared.is_empty() || !board["departments"].is_array() {
+        return;
+    }
+    let mut tree = Tree::new();
+    for department in board["departments"].as_array().into_iter().flatten() {
+        let index = department["id"]
+            .as_str()
+            .and_then(|id| id.strip_prefix("department-"))
+            .and_then(|id| id.parse::<usize>().ok())
+            .unwrap_or(usize::MAX);
+        for product in department["products"].as_array().into_iter().flatten() {
+            let name = text(product, "name").to_owned();
+            tree.entry((index, name.clone())).or_default();
+            for worker in product["workers"].as_array().into_iter().flatten() {
+                add_native_scoped_worker(&mut tree, index, &name, worker, &declared);
+            }
+        }
+    }
+    for product in board["unassignedProducts"].as_array().into_iter().flatten() {
+        let name = text(product, "name").to_owned();
+        tree.entry((usize::MAX, name.clone())).or_default();
+        for worker in product["workers"].as_array().into_iter().flatten() {
+            add_native_scoped_worker(&mut tree, usize::MAX, &name, worker, &declared);
+        }
+    }
+    board["unassignedProducts"] = json!(unassigned_products(&tree));
+    board["departments"] = json!(departments(tree));
+}
+fn add_native_scoped_worker(
+    tree: &mut Tree,
+    department: usize,
+    name: &str,
+    worker: &Value,
+    declared: &BTreeMap<u64, BTreeSet<String>>,
+) {
+    let target = worker["id"]
+        .as_str()
+        .and_then(|id| id.strip_prefix("todo-"))
+        .and_then(|id| id.parse::<u64>().ok())
+        .and_then(|id| declared.get(&id))
+        .filter(|targets| targets.len() == 1)
+        .and_then(|targets| targets.first())
+        .and_then(|name| catalog::find(name));
+    let target = target.filter(|_| {
+        worker["recordedStatus"] == "doing"
+            && !matches!(
+                worker["productIdentity"]["state"].as_str(),
+                Some("unknown" | "verified" | "owner_declared" | "name_only")
+            )
+            && worker["productIdentity"]["productId"].is_null()
+    });
+    let mut worker = worker.clone();
+    if let Some(product) = target {
+        // A declared business target changes placement, never privacy or code identity.
+        worker["nativeBusinessScope"] = json!({"source":"native_binding","project":product.name});
+        add(tree, product.department, product.name.to_owned(), worker);
+    } else {
+        add(tree, department, name.to_owned(), worker)
+    }
+}
+
+#[cfg(test)]
+mod native_scope_regressions {
+    use super::*;
+    fn fixture(identity: Value) -> Value {
+        json!({"departments":[{"id":"department-5","name":"情報システム部","products":[{"name":"PCの道具","workers":[
+            {"id":"todo-1","recordedStatus":"doing","status":"unknown","productIdentity":identity}]}]}],"unassignedProducts":[]})
+    }
+    fn target(board: &Value) -> String {
+        board["departments"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|d| d["products"].as_array().unwrap())
+            .find(|p| {
+                p["workers"]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .any(|w| w["id"] == "todo-1")
+            })
+            .unwrap()["name"]
+            .as_str()
+            .unwrap()
+            .to_owned()
+    }
+    #[test]
+    fn native_scope_uses_only_open_work_bindings_and_never_rescues_mcp_or_unknown() {
+        let binding = |role: &str, state: &str| json!({"bindings":[{"todoId":1,"businessProject":"youtube-daily","role":role,"state":state}]});
+        let mut board = fixture(json!({"state":"not_applicable","productId":null}));
+        native_business_scopes(&mut board, &binding("work", "observed"));
+        assert_eq!(target(&board), "youtube-daily");
+        for (role, state) in [
+            ("work", "closed"),
+            ("audit", "observed"),
+            ("supervision", "observed"),
+        ] {
+            let mut board = fixture(Value::Null);
+            native_business_scopes(&mut board, &binding(role, state));
+            assert_eq!(target(&board), "PCの道具");
+        }
+        for identity in [
+            json!({"state":"unknown","productId":null}),
+            json!({"state":"verified","productId":"godd-mcp-alpha"}),
+            json!({"state":"owner_declared","productId":"godd-mcp-contract"}),
+        ] {
+            let mut board = fixture(identity);
+            native_business_scopes(&mut board, &binding("work", "observed"));
+            assert_eq!(target(&board), "PCの道具");
+        }
+    }
+}
 pub async fn resident(board: Arc<Operations>) {
     let inspection = board.clone();
     tokio::spawn(async move {
@@ -221,7 +408,7 @@ pub fn metadata_display(
     if !matches!(kind, "todo" | "jobs" | "handoff") {
         return Err("invalid display");
     }
-    let board = protected_metadata_at(root, todo_path, jobs_path, now_ms());
+    let board = protected_metadata_at(root, todo_path, jobs_path, now_ms(), false);
     metadata_display_snapshot(&board, kind)
 }
 
@@ -876,12 +1063,31 @@ fn jobs_at(path: &Path) -> Result<Vec<Value>, ()> {
     out.sort_by(|a, b| text(b, "created_at").cmp(text(a, "created_at")));
     Ok(out)
 }
+fn resource_jobs(js: &[Value], db: Option<&Value>, jobs_path: &Path, now: u64) -> Value {
+    crate::resource_observer::job_metadata(js, jobs_path, now, |job| {
+        let project = job["project"]
+            .as_str()
+            .filter(|p| !p.is_empty())
+            .or_else(|| {
+                db.and_then(|db| db["items"].as_array())
+                    .and_then(|items| items.iter().find(|item| item["id"] == job["todo_id"]))
+                    .and_then(|item| item["project"].as_str())
+            })?;
+        catalog::find(project)
+            .or_else(|| {
+                db.and_then(|db| db["projects"][project].as_str())
+                    .and_then(catalog::registered_root)
+            })
+            .map(|product| product.name.to_owned())
+    })
+}
 #[cfg(test)]
 fn collect(root: &Path, now: u64) -> Value {
     collect_with_questions(
         root,
         now,
         &read_json(&root.join("discord-ask/operations-history.json")).unwrap_or(Value::Null),
+        false,
     )
 }
 // A missing name registry must not expose any free text or erase the available
@@ -935,22 +1141,28 @@ fn protected_wait(item: &Value, current: Option<&Value>, queue: &Value, now: u64
     "unverified"
 }
 
-fn protected_metadata(root: &Path, now: u64) -> Value {
+fn protected_metadata(root: &Path, now: u64, collect_resources: bool) -> Value {
     protected_metadata_at(
         root,
         &root.join("todo/todo.json"),
         &root.join("codex-jobs/jobs"),
         now,
+        collect_resources,
     )
 }
-fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u64) -> Value {
+fn protected_metadata_at(
+    root: &Path,
+    todo_path: &Path,
+    jobs_path: &Path,
+    now: u64,
+    collect_resources: bool,
+) -> Value {
     let todo = cc_todo::read_store(todo_path)
         .ok()
         .filter(|db| db["items"].is_array() && db["projects"].is_object());
     let job_result = jobs_at(jobs_path);
     let js = job_result.as_ref().map(Vec::as_slice).unwrap_or(&[]);
     let policy = priority_policy(root);
-
     let queue = read_json(&root.join("localai-web-rs/target/release/console-state.json"))
         .unwrap_or(Value::Null);
     let mut tree = Tree::new();
@@ -1188,11 +1400,9 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
     };
     let mut out = empty();
     out["fetchedAt"] = json!(now);
-    out["productBindingsOverridden"] = json!(
-        policy
-            .as_object()
-            .map(|p| p.contains_key("product_identities"))
-    );
+    out["productBindingsOverridden"] = json!(policy
+        .as_object()
+        .map(|p| p.contains_key("product_identities")));
     out["protectionMode"] = json!("masked_metadata");
     out["sourceOk"] = json!(false);
     out["metadataOk"] = json!(todo.is_some() && job_result.is_ok());
@@ -1211,12 +1421,10 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
         ("cpuPercent", scheduler["cpu_percent"].clone()),
         (
             "memoryUsedGb",
-            json!(
-                scheduler["ram_total_gb"]
-                    .as_f64()
-                    .zip(scheduler["available_gb"].as_f64())
-                    .map(|(total, free)| total - free)
-            ),
+            json!(scheduler["ram_total_gb"]
+                .as_f64()
+                .zip(scheduler["available_gb"].as_f64())
+                .map(|(total, free)| total - free)),
         ),
         ("memoryTotalGb", scheduler["ram_total_gb"].clone()),
         ("jobLimit", scheduler["hard_cap"].clone()),
@@ -1284,9 +1492,12 @@ fn protected_metadata_at(root: &Path, todo_path: &Path, jobs_path: &Path, now: u
             "巡回完了の記録から取得"
         )
     ]);
+    if collect_resources {
+        out["_resourceJobs"] = resource_jobs(js, todo.as_ref(), jobs_path, now);
+    }
     out
 }
-fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
+fn collect_with_questions(root: &Path, now: u64, live: &Value, collect_resources: bool) -> Value {
     static QUESTION_URL: std::sync::OnceLock<regex::Regex> = std::sync::OnceLock::new();
     let question_pattern = QUESTION_URL.get_or_init(|| {
         regex::Regex::new(r"https://discord\.com/channels/[0-9]+/[0-9]+(?:/[0-9]+)?")
@@ -1295,7 +1506,7 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
     let mut sources = Vec::new();
     let privacy = cc_ask::task_title::Names::load(&root.join("client-projects.txt"));
     if privacy.is_err() {
-        return protected_metadata(root, now);
+        return protected_metadata(root, now, collect_resources);
     }
     let names = privacy.unwrap();
     let policy = priority_policy(root);
@@ -1575,12 +1786,10 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
             if !client {
                 worker["factsSource"] =
                     json!(format!("共有ToDo #{}", item["id"].as_u64().unwrap_or(0)));
-                worker["note"] = json!(
-                    crate::console_ui::clean(&names, text(item, "note"))
-                        .chars()
-                        .take(360)
-                        .collect::<String>()
-                );
+                worker["note"] = json!(crate::console_ui::clean(&names, text(item, "note"))
+                    .chars()
+                    .take(360)
+                    .collect::<String>());
                 worker["historyCount"] = json!(crate::console_ui::history_count(item));
                 worker["detailAvailable"] = json!(true);
                 worker["detailVersion"] = json!(detail_version(item));
@@ -1651,12 +1860,10 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
                 "task":task,"status":status,"progress":null,"updatedAt":j["finished_at"].as_str().or(j["started_at"].as_str()),
                 "detail":if active(j){"共有ジョブの担当です。"}else{"過去の失敗記録です。現在の障害を示すものではありません。"},"historyFailures":usize::from(failed(j))});
         if !client {
-            worker["report"] = json!(
-                crate::console_ui::clean(&names, text(j, "last_message"))
-                    .chars()
-                    .take(360)
-                    .collect::<String>()
-            );
+            worker["report"] = json!(crate::console_ui::clean(&names, text(j, "last_message"))
+                .chars()
+                .take(360)
+                .collect::<String>());
             worker["detailAvailable"] = json!(true);
             worker["detailVersion"] = json!(detail_version(j));
         }
@@ -1798,10 +2005,14 @@ fn collect_with_questions(root: &Path, now: u64, live: &Value) -> Value {
     } else {
         Value::Null
     };
-    json!({"metadataOk":todo.is_ok()&&jobs.is_ok(),"productBindingsConfigured":cc_scheduler::product_identity::bindings_configured(),"productBindingsOverridden":policy.as_object().map(|p|p.contains_key("product_identities")),"fetchedAt":now,"sourceOk":sources.iter().all(|s|s["ok"]==true || s["state"]=="unknown"),"sources":sources,
+    let mut result = json!({"metadataOk":todo.is_ok()&&jobs.is_ok(),"productBindingsConfigured":cc_scheduler::product_identity::bindings_configured(),"productBindingsOverridden":policy.as_object().map(|p|p.contains_key("product_identities")),"fetchedAt":now,"sourceOk":sources.iter().all(|s|s["ok"]==true || s["state"]=="unknown"),"sources":sources,
         "commander":commander,
         "metrics":metrics,"ownerQuestions":decisions["questions"],"decisionTasks":decisions["tasks"],"blockedDecisionTasks":decisions["blockedTasks"],
-        "unassignedProducts":unassigned_products(&tree),"departments":departments(tree)})
+        "unassignedProducts":unassigned_products(&tree),"departments":departments(tree)});
+    if collect_resources {
+        result["_resourceJobs"] = resource_jobs(js, db, &root.join("codex-jobs/jobs"), now);
+    }
+    result
 }
 fn infer_project(job: &Value, db: Option<&Value>) -> String {
     let cwd = text(job, "cwd").replace('\\', "/").to_lowercase();
@@ -1869,12 +2080,7 @@ mod tests {
         let skills_root = root.path().join("Skills");
         fs::create_dir_all(skills_root.join("example")).unwrap();
         fs::write(skills_root.join("example/SKILL.md"), "example definition").unwrap();
-        let board = Operations {
-            root: root.path().join("tools"),
-            snapshot: RwLock::new(empty()),
-            questions: RwLock::new(Value::Null),
-            skills: crate::skills_inventory::Inventory::new(skills_root),
-        };
+        let board = Operations::new(root.path().join("tools"), skills_root);
         board.refresh();
         let snapshot = board.snapshot();
         assert_eq!(snapshot["protectionMode"], "masked_metadata");
@@ -1896,12 +2102,7 @@ mod tests {
         let mut db = json!({"projects":{"demo":"D:/fixture"},"items":[{"id":1,"project":"demo","title":"履歴の復旧","status":"doing","note":"current","note_history":notes}]});
         let receipt = cc_todo::todo_history::archive(&store, &mut db, 1, true).unwrap();
         cc_todo::save(&store, &db).unwrap();
-        let board = Operations {
-            root: root.into(),
-            snapshot: RwLock::new(empty()),
-            questions: RwLock::new(Value::Null),
-            skills: crate::skills_inventory::Inventory::new(root.join("Skills")),
-        };
+        let board = Operations::new(root.into(), root.join("Skills"));
         assert_eq!(crate::console_ui::history_count(&db["items"][0]), 23);
         let first = board.worker_detail("todo-1", 0).unwrap();
         assert_eq!(first["total"], 23);
@@ -1935,12 +2136,7 @@ mod tests {
             {"id":1,"project":"demo","status":"doing","title":"接続復旧","progress":42,"note":note,"note_history":history,"updated":"2026-10-11 10:00","wait_on":[2]},
             {"id":2,"project":"SecretClient","status":"doing","title":"hidden-value","note":"hidden-value"}]});
         fs::write(root.join("todo/todo.json"), db.to_string()).unwrap();
-        let board = Operations {
-            root: root.into(),
-            snapshot: RwLock::new(empty()),
-            questions: RwLock::new(Value::Null),
-            skills: crate::skills_inventory::Inventory::new(root.join("Skills")),
-        };
+        let board = Operations::new(root.into(), root.join("Skills"));
         board.refresh();
         let snapshot = board.snapshot();
         let workers: Vec<_> = snapshot["departments"]
@@ -2023,18 +2219,14 @@ mod tests {
         assert_eq!(find("todo-5")["summary"], "");
         assert!(find("todo-5")["questionUrl"].is_null());
         assert_eq!(output["metrics"]["ownerDecisions"], 1);
-        assert!(
-            find("todo-2")["summary"]
-                .as_str()
-                .unwrap()
-                .contains("画像案への回答を待っています")
-        );
-        assert!(
-            !find("todo-2")["summary"]
-                .as_str()
-                .unwrap()
-                .contains("hidden-value")
-        );
+        assert!(find("todo-2")["summary"]
+            .as_str()
+            .unwrap()
+            .contains("画像案への回答を待っています"));
+        assert!(!find("todo-2")["summary"]
+            .as_str()
+            .unwrap()
+            .contains("hidden-value"));
         assert_eq!(
             find("todo-2")["questionUrl"],
             "https://discord.com/channels/100/200/200"
@@ -2049,13 +2241,11 @@ mod tests {
         assert_ne!(output["commander"]["status"], "attention");
         assert_eq!(output["commander"]["status"], "working");
         assert_eq!(output["sourceOk"], true);
-        assert!(
-            output["sources"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .any(|s| s["state"] == "unknown")
-        );
+        assert!(output["sources"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|s| s["state"] == "unknown"));
         assert_eq!(output["metrics"]["memoryUsedGb"], 56.0);
         assert!(find("todo-1")["updatedAt"].is_string());
         let serialized = output.to_string();
@@ -2139,6 +2329,7 @@ mod tests {
             root,
             1_000_000,
             &json!({"question":"SecretClient hidden-value"}),
+            false,
         );
         assert_eq!(board["sourceOk"], false);
         assert_eq!(board["metadataOk"], true);
@@ -2162,16 +2353,14 @@ mod tests {
         assert_eq!(skills["workers"][0]["status"], "working");
         assert_eq!(skills["workers"][0]["detailAvailable"], false);
         assert_eq!(skills["workers"][0]["historyFailures"], 0);
-        assert!(
-            board["departments"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .flat_map(|d| d["products"].as_array().unwrap())
-                .chain(board["unassignedProducts"].as_array().unwrap())
-                .flat_map(|p| p["workers"].as_array().unwrap())
-                .any(|w| w["status"] == "attention")
-        );
+        assert!(board["departments"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|d| d["products"].as_array().unwrap())
+            .chain(board["unassignedProducts"].as_array().unwrap())
+            .flat_map(|p| p["workers"].as_array().unwrap())
+            .any(|w| w["status"] == "attention"));
         let encoded = board.to_string();
         for protected in [
             "SecretClient",
@@ -2195,14 +2384,12 @@ mod tests {
         assert!(board["metrics"]["activeJobs"].is_null());
         assert!(board["metrics"]["todoDependencyWaits"].is_null());
         assert_eq!(board["departments"].as_array().unwrap().len(), 6);
-        assert!(
-            board["departments"]
-                .as_array()
-                .unwrap()
-                .iter()
-                .flat_map(|d| d["products"].as_array().unwrap())
-                .all(|p| p["workers"].as_array().unwrap().is_empty())
-        );
+        assert!(board["departments"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .flat_map(|d| d["products"].as_array().unwrap())
+            .all(|p| p["workers"].as_array().unwrap().is_empty()));
         assert!(!temp.path().join("client-projects.txt").exists());
     }
     #[test]
@@ -2299,21 +2486,17 @@ mod tests {
             .unwrap();
         assert_eq!(rosetta["workers"].as_array().unwrap().len(), 2);
         assert_eq!(rosetta["workers"][0]["progress"], 35);
-        assert!(
-            list("自社サービス部")
-                .iter()
-                .all(|p| p["name"] != "Social Pilot")
-        );
+        assert!(list("自社サービス部")
+            .iter()
+            .all(|p| p["name"] != "Social Pilot"));
         let extras = snapshot["unlistedRegistrations"].as_array().unwrap();
         assert_eq!(extras.len(), 3);
         assert!(extras.iter().any(
             |p| p["name"] == "Skills" && p["previouslyAssignedDepartment"] == "情報システム部"
         ));
-        assert!(
-            extras
-                .iter()
-                .any(|p| p["name"] == "Social Pilot" && p["unfinishedTasks"] == 1)
-        );
+        assert!(extras
+            .iter()
+            .any(|p| p["name"] == "Social Pilot" && p["unfinishedTasks"] == 1));
         assert!(extras.iter().any(|p| p["registeredTasks"] == 1
             && p["unfinishedTasks"] == 0
             && p["taskIds"] == json!([5])));

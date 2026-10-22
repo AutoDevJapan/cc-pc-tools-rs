@@ -3,7 +3,7 @@ use axum::{
     extract::{Path, Query, Request, State},
     http::{header, HeaderMap, Method, StatusCode},
     middleware::{self, Next},
-    response::{Html, IntoResponse, Json, Redirect, Response},
+    response::{Html, IntoResponse, Json, Response},
     routing::{get, post},
     Router,
 };
@@ -119,7 +119,7 @@ async fn main() {
     println!("Rust Web Server listening on http://127.0.0.1:{port}");
     if std::env::var("LOCALAI_WEB_PREVIEW").as_deref() != Ok("1") {
         tokio::spawn(agent::resident(console));
-        tokio::spawn(workload::resident(workload));
+        tokio::spawn(workload::resident(workload, operations.clone()));
         tokio::spawn(operations::resident(operations));
     }
     axum::serve(listener, app).await.unwrap();
@@ -135,9 +135,14 @@ fn app(state: AppState) -> Router {
         .route("/api/resident/restart", post(restart_resident))
         .route("/api/omb-board", get(omb_board))
         .route("/api/operations", get(operations_snapshot))
+        .route("/api/resources", get(resources_snapshot))
         .route("/api/operations/workers/:id", get(operations_worker_detail))
         .route("/api/tasks", get(get_tasks))
         .route("/api/agent/workload", get(workload::handle))
+        .route("/api/agent/native", get(native_activity_snapshot))
+        .route("/api/agent/native/register", post(native_activity_register))
+        .route("/api/agent/native/activity", post(native_activity_record))
+        .route("/api/agent/native/close", post(native_activity_close))
         .route("/api/agent/display/:kind", get(shared_progress_display))
         .route("/api/agent/*path", axum::routing::any(agent::handle))
         .nest_service(
@@ -170,10 +175,7 @@ async fn index_html() -> impl IntoResponse {
 }
 
 async fn progress_page() -> impl IntoResponse {
-    (
-        [(header::CACHE_CONTROL, "no-store")],
-        Redirect::temporary("/?view=kanban&opsStatus=working&opsPanel=jobs"),
-    )
+    index_html().await
 }
 
 async fn shared_progress_display(
@@ -189,14 +191,82 @@ async fn shared_progress_display(
         return agent::cached_display_response(Err("作業状況を取得中です。まもなく再試行します。"));
     }
     if snapshot["protectionMode"] == "masked_metadata" {
-        return agent::cached_display_response(operations::metadata_display_snapshot(&snapshot, &kind)
-            .map_err(|_| "進捗の元記録を確認できません。前回の表示を保持します。"));
+        return agent::cached_display_response(
+            operations::metadata_display_snapshot(&snapshot, &kind)
+                .map_err(|_| "進捗の元記録を確認できません。前回の表示を保持します。"),
+        );
     }
     agent::handle(State(state), request).await
 }
 
 async fn operations_snapshot(State(state): State<AppState>) -> Json<Value> {
     Json(state.operations.snapshot())
+}
+async fn resources_snapshot(State(state): State<AppState>) -> impl IntoResponse {
+    (
+        [(header::CACHE_CONTROL, "no-store")],
+        Json(state.operations.resource_snapshot()),
+    )
+}
+
+async fn native_activity_snapshot(State(state): State<AppState>) -> impl IntoResponse {
+    (
+        [(header::CACHE_CONTROL, "no-store")],
+        Json(state.operations.native_snapshot()),
+    )
+}
+fn native_activity_response(result: Result<Value, &'static str>) -> Response {
+    match result {
+        Ok(value) => ([(header::CACHE_CONTROL, "no-store")], Json(value)).into_response(),
+        Err(code) => {
+            let status = if code == "native_store_unavailable" || code == "native_store_full" {
+                StatusCode::SERVICE_UNAVAILABLE
+            } else if code == "native_binding_changed" || code == "native_event_conflict" {
+                StatusCode::CONFLICT
+            } else {
+                StatusCode::BAD_REQUEST
+            };
+            (
+                status,
+                [(header::CACHE_CONTROL, "no-store")],
+                Json(json!({"ok":false,"source":"native","error":code})),
+            )
+                .into_response()
+        }
+    }
+}
+async fn native_activity_register(
+    State(state): State<AppState>,
+    Json(request): Json<localai_web_rs::native_activity::Register>,
+) -> Response {
+    let operations = state.operations.clone();
+    native_activity_response(
+        tokio::task::spawn_blocking(move || operations.register_native(request))
+            .await
+            .unwrap_or(Err("native_store_unavailable")),
+    )
+}
+async fn native_activity_record(
+    State(state): State<AppState>,
+    Json(request): Json<localai_web_rs::native_activity::Activity>,
+) -> Response {
+    let operations = state.operations.clone();
+    native_activity_response(
+        tokio::task::spawn_blocking(move || operations.record_native(request))
+            .await
+            .unwrap_or(Err("native_store_unavailable")),
+    )
+}
+async fn native_activity_close(
+    State(state): State<AppState>,
+    Json(request): Json<localai_web_rs::native_activity::Close>,
+) -> Response {
+    let operations = state.operations.clone();
+    native_activity_response(
+        tokio::task::spawn_blocking(move || operations.close_native(request))
+            .await
+            .unwrap_or(Err("native_store_unavailable")),
+    )
 }
 
 #[derive(serde::Deserialize)]
@@ -544,6 +614,82 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn native_tool_receipts_are_separate_and_closed_sources_leave_live() {
+        let root = tempfile::tempdir().unwrap();
+        let mut state = AppState::new(10012, 10013);
+        state.operations = std::sync::Arc::new(operations::Operations::new(
+            root.path().into(),
+            root.path().join("skills"),
+        ));
+        let router = app(state);
+        let id = "00000000-0000-7000-8000-000000000001";
+        let send = |path: &str, value: Value| {
+            let mut req = request(Method::POST, path, Body::from(value.to_string()));
+            req.headers_mut()
+                .insert(header::CONTENT_TYPE, "application/json".parse().unwrap());
+            router.clone().oneshot(req)
+        };
+        let bound = send(
+            "/api/agent/native/register",
+            json!({"session_id":id,"todo_id":1,"role":"work"}),
+        )
+        .await
+        .unwrap();
+        assert_eq!(
+            bound.status(),
+            StatusCode::OK,
+            "registration is metadata, not a fabricated CC job"
+        );
+        let data: Value =
+            serde_json::from_slice(&to_bytes(bound.into_body(), JSON_LIMIT).await.unwrap())
+                .unwrap();
+        let generation = data["generation"].as_u64().unwrap();
+        assert!(data["executionKey"]
+            .as_str()
+            .unwrap()
+            .starts_with("native-"));
+        let bad = send(
+            "/api/agent/native/activity",
+            json!({"session_id":id,"generation":generation,"status":"working"}),
+        )
+        .await
+        .unwrap();
+        assert_eq!(bad.status(), StatusCode::UNPROCESSABLE_ENTITY);
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64;
+        let observed = send("/api/agent/native/activity", json!({"session_id":id,"generation":generation,"actual_at_ms":now,"event_id":"runtime-result-1","tool":"exec_command","kind":"test","executed":true,"exit_code":0})).await.unwrap();
+        assert_eq!(observed.status(), StatusCode::OK);
+        let live = router
+            .clone()
+            .oneshot(request(Method::GET, "/api/agent/native", Body::empty()))
+            .await
+            .unwrap();
+        let live: Value =
+            serde_json::from_slice(&to_bytes(live.into_body(), JSON_LIMIT).await.unwrap()).unwrap();
+        assert_eq!(live["sessions"].as_array().unwrap().len(), 1);
+        assert_eq!(live["sessions"][0]["source"], "native");
+        let ended = send(
+            "/api/agent/native/close",
+            json!({"session_id":id,"generation":generation,"ended_at_ms":now,"outcome":"success"}),
+        )
+        .await
+        .unwrap();
+        assert_eq!(ended.status(), StatusCode::OK);
+        let view = router
+            .oneshot(request(Method::GET, "/api/agent/native", Body::empty()))
+            .await
+            .unwrap();
+        assert_eq!(view.status(), StatusCode::OK);
+        let data: Value =
+            serde_json::from_slice(&to_bytes(view.into_body(), JSON_LIMIT).await.unwrap()).unwrap();
+        assert_eq!(data["sessions"], json!([]));
+        assert_eq!(data["bindings"][0]["outcome"], "success");
+        assert!(!data.to_string().contains(id));
+    }
+
+    #[tokio::test]
     async fn rejects_external_browser_requests_and_rebinding_hosts() {
         let app = app(AppState::new(10012, 10013));
         for (name, value) in [
@@ -609,11 +755,20 @@ mod tests {
     #[tokio::test]
     async fn shared_progress_waits_for_snapshot_without_scanning_the_live_store() {
         let mut request = navigation(Method::GET, "/api/agent/display/jobs", "same-origin");
-        request.headers_mut().insert(header::HOST, "localhost:10012".parse().unwrap());
-        let response = app(AppState::new(10012, 10013)).oneshot(request).await.unwrap();
+        request
+            .headers_mut()
+            .insert(header::HOST, "localhost:10012".parse().unwrap());
+        let response = app(AppState::new(10012, 10013))
+            .oneshot(request)
+            .await
+            .unwrap();
         assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
-        let body = to_bytes(response.into_body(), RESPONSE_LIMIT).await.unwrap();
-        assert!(std::str::from_utf8(&body).unwrap().contains("作業状況を取得中"));
+        let body = to_bytes(response.into_body(), RESPONSE_LIMIT)
+            .await
+            .unwrap();
+        assert!(std::str::from_utf8(&body)
+            .unwrap()
+            .contains("作業状況を取得中"));
         let envelope: Value = serde_json::from_slice(&body).unwrap();
         assert_eq!(envelope["version"], 1);
         assert_eq!(envelope["ok"], false);
@@ -621,7 +776,39 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn progress_navigation_opens_the_existing_live_jobs_panel() {
+    async fn resources_endpoint_reads_cache_and_keeps_the_existing_loopback_boundary() {
+        let app = app(AppState::new(10012, 10013));
+        for _ in 0..2 {
+            let response = app
+                .clone()
+                .oneshot(request(Method::GET, "/api/resources", Body::empty()))
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::OK);
+            assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
+            let value: Value = serde_json::from_slice(
+                &to_bytes(response.into_body(), RESPONSE_LIMIT)
+                    .await
+                    .unwrap(),
+            )
+            .unwrap();
+            assert_eq!(value["schemaVersion"], 1);
+            assert_eq!(value["state"], "collecting");
+            assert!(value["sampledAt"].is_null());
+            assert_eq!(value["processes"], json!([]));
+        }
+        let mut external = request(Method::GET, "/api/resources", Body::empty());
+        external
+            .headers_mut()
+            .insert(header::HOST, "outside.example".parse().unwrap());
+        assert_eq!(
+            app.oneshot(external).await.unwrap().status(),
+            StatusCode::FORBIDDEN
+        );
+    }
+
+    #[tokio::test]
+    async fn progress_navigation_serves_the_dedicated_processing_page() {
         let mut request = navigation(Method::GET, "/progress", "none");
         request
             .headers_mut()
@@ -630,11 +817,8 @@ mod tests {
             .oneshot(request)
             .await
             .unwrap();
-        assert_eq!(response.status(), StatusCode::TEMPORARY_REDIRECT);
-        assert_eq!(
-            response.headers()[header::LOCATION],
-            "/?view=kanban&opsStatus=working&opsPanel=jobs"
-        );
+        assert_eq!(response.status(), StatusCode::OK);
+        assert!(response.headers().get(header::LOCATION).is_none());
         assert_eq!(response.headers()[header::CACHE_CONTROL], "no-store");
     }
 
@@ -879,12 +1063,19 @@ mod tests {
 
     #[tokio::test]
     async fn health_merges_real_services_with_rust_identity() {
-        let (state, task) = test_backend(Router::new().route(
-            "/api/health",
-            get(|| async {
-                Json(json!({"port":10013,"godd":{"online":true},"opencodex":{"online":false}}))
-            }),
-        ))
+        let (state, task) = test_backend(
+            Router::new()
+                .route(
+                    "/_godd_ao/healthz",
+                    get(|| async {
+                        Json(json!({"service":"godd-ao-semantic-proxy","status":"ok"}))
+                    }),
+                )
+                .route(
+                    "/healthz",
+                    get(|| async { Json(json!({"service":"opencodex","status":"unhealthy"})) }),
+                ),
+        )
         .await;
         let response = app(state)
             .oneshot(request(Method::GET, "/api/health", Body::empty()))
@@ -957,12 +1148,11 @@ mod tests {
         assert_eq!(value["port"], 10012);
         assert_eq!(value["backend"], "Rust/Axum");
         assert_eq!(value["partial"], true);
-        assert_eq!(value["legacyBackend"]["httpStatus"], 500);
+        assert!(value.get("legacyBackend").is_none());
         assert_eq!(value["godd"]["online"], true);
         assert_eq!(value["opencodex"]["online"], true);
-        assert_eq!(value["ollama"]["online"], true);
-        assert_eq!(value["ollama"]["modelCount"], 0);
-        assert!(value["deepseek"]["online"].is_null());
+        assert!(value.get("ollama").is_none());
+        assert!(value.get("deepseek").is_none());
         assert!(value["docker"]["online"].is_null());
         assert!(value["error"].is_null());
         task.abort();

@@ -5,7 +5,6 @@ package main
 import (
 	"context"
 	"errors"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -88,9 +87,17 @@ func launchKnownService(id string) error {
 	// Persistent wrappers retain the existing service lifetime; they add no
 	// restart loop. The finite startup checks above precede this one launch.
 	command := exec.Command(executable, arguments...)
-	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
-	command.Stdout, command.Stderr = io.Discard, io.Discard
 	command.Dir = working
+	return runServiceProcess(command)
+}
+
+func runServiceProcess(command *exec.Cmd) error {
+	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	// nil connects output directly to os.DevNull. io.Discard instead makes
+	// os/exec copy from pipes and wait for EOF, which a surviving descendant
+	// can hold forever after the service exits. Keep waiting for the service's
+	// own lifetime, without owning or terminating its descendants.
+	command.Stdout, command.Stderr = nil, nil
 	if err := command.Run(); err != nil {
 		return errors.New("service_process_failed")
 	}

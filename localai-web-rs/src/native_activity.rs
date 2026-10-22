@@ -718,12 +718,35 @@ mod tests {
                 101,
             )
             .unwrap();
-        fs::remove_file(source).unwrap();
+        use std::io::Write;
+        writeln!(
+            fs::OpenOptions::new().append(true).open(&source).unwrap(),
+            "broken record"
+        )
+        .unwrap();
+        registry.refresh_runtime(102);
+        assert_eq!(
+            registry.view(102)["collectionIssues"][0]["reason"],
+            "source_record_invalid"
+        );
+        let backup = source_root.join("owned-fixture-paused");
+        fs::rename(&source, &backup).unwrap();
         registry.refresh_runtime(102);
         let failure = registry.view(102);
         assert_eq!(failure["state"], "partial");
         assert_eq!(failure["collectionIssues"][0]["reason"], "read_failed");
         assert_eq!(failure["collectionIssues"][0]["lastSuccessAt"], 101);
+        fs::rename(&backup, &source).unwrap();
+        registry.refresh_runtime(103);
+        assert_eq!(
+            registry.view(103)["state"],
+            "partial",
+            "recovered I/O does not erase an earlier observation gap"
+        );
+        assert_eq!(
+            registry.view(103)["collectionIssues"][0]["reason"],
+            "source_record_invalid"
+        );
     }
     #[test]
     fn healthy_empty_and_closed_native_collections_are_real_zero_with_bounded_scope() {

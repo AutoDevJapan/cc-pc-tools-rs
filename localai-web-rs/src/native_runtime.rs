@@ -20,6 +20,8 @@ pub(crate) struct Cursor {
     pending: BTreeMap<String, String>,
     #[serde(default)]
     discarding: bool,
+    #[serde(default)]
+    gap: Option<String>,
     pub last_success_at: u64,
     pub error: Option<String>,
 }
@@ -136,6 +138,7 @@ impl Cursor {
             offset,
             pending: BTreeMap::new(),
             discarding: boundary.is_none(),
+            gap: boundary.is_none().then(|| "source_line_too_large".into()),
             last_success_at: now,
             error: boundary.is_none().then(|| "source_line_too_large".into()),
         })
@@ -163,12 +166,9 @@ impl Cursor {
         let old_offset = self.offset;
         let old_error = self.error.clone();
         let old_success = self.last_success_at;
-        let mut gap = self.error.clone().filter(|code| {
-            matches!(
-                code.as_str(),
-                "source_line_too_large" | "source_record_invalid" | "source_pending_limit"
-            )
-        });
+        let old_gap = self.gap.clone();
+        let mut gap = old_gap.clone();
+        let mut clock_ahead = false;
         let mut result = Observation {
             receipt: None,
             ended: None,
@@ -217,7 +217,7 @@ impl Cursor {
                 // Read-time events keep their original time and are retried on
                 // the next bounded pass instead of being clamped or dropped.
                 if at - now > 2_000 {
-                    gap = Some("source_clock_ahead".into());
+                    clock_ahead = true;
                 }
                 break;
             }
@@ -287,9 +287,13 @@ impl Cursor {
             gap = Some("source_line_too_large".into());
         }
         self.offset += consumed as u64;
-        self.error = gap.or_else(|| {
-            (length.saturating_sub(old_offset) > LIMIT).then(|| "source_backlog".into())
-        });
+        self.gap = gap;
+        self.error = clock_ahead
+            .then(|| "source_clock_ahead".into())
+            .or_else(|| self.gap.clone())
+            .or_else(|| {
+                (length.saturating_sub(old_offset) > LIMIT).then(|| "source_backlog".into())
+            });
         if self.error.is_none()
             && (consumed > 0 || old_error.is_some() || now.saturating_sub(old_success) >= 60_000)
         {
@@ -297,6 +301,7 @@ impl Cursor {
         }
         result.changed = self.offset != old_offset
             || self.error != old_error
+            || self.gap != old_gap
             || self.last_success_at != old_success;
         Ok(result)
     }

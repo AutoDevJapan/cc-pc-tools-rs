@@ -6,19 +6,20 @@
   "tree_complete": true,
   "tree_entries": 996,
   "entrypoints_expected": 76,
-  "entrypoints_unread": 70,
+  "entrypoints_unread": 58,
   "classification_is_not_installation": true,
-  "assessment_snapshot_before_adoption": true,
+  "assessment_snapshot_before_adoption": false,
   "live_dispositions": "skills-3080-adoptions.json",
-  "scope": "全76入口のうちSQL4と移行/依存修正2本文の有限区切り。残70を保持し代表打切りにしない。",
-  "previous3048": "同じ固定版のREADMEとdep-lib-review代表本文のみ。今回の4SQL全文確認とは別。",
+  "scope": "全76のうち18入口を全文確認。SQL4・移行/依存2の既確認6に、CI/クラウド配備関連12を追加。残58を原pathで継続し、12を代表件数上限としない。",
+  "previous3048": "同じ固定版のREADMEとdep-lib-review代表本文のみ。今回の全文確認は別に記録し、前回の代表確認を76件の監査へ広げない。",
   "source_readme": {
     "path": "README.md",
     "sha256": "f6cf85dee46f1e10efb5efedf06cbfb46261f4927a41427c8b78c05980cafedb",
     "bytes": 19120,
     "read_chars": "0..19010/19010を分割して全文確認。前回15000..末尾、今回0..8000と8000..15000。",
     "license_statement": "Each skill may carry its own license.未記載はrepository owner discretionでMIT、個別許諾優先と記載。",
-    "other_commands_executed": false
+    "other_commands_executed": false,
+    "attribution_limit": "maintained by @mizchiは管理者の表示であり、著作権表示の原文ではない。"
   },
   "notice_paths": [
     "cloudflare-deploy/LICENSE.txt",
@@ -40,7 +41,7 @@
       "bytes": 4045,
       "body_read_complete": true,
       "candidate_disposition": "possible_new_catalog_workflow_pending_support_and_rights",
-      "reason": "sqlc形式の名前重複/空本文/末尾の安価な検査と、style検査を分ける限定用途。sql-data-integrityは集計・tenant/監査データの整合というmetadataであり、catalog形式検査との追加価値を精査する。",
+      "reason": "sqlc形式の名前重複/空本文/末尾セミコロンの安価な検査と、style検査を分ける限定用途。sql-data-integrityは集計・tenant/監査データの整合というmetadataであり、catalog形式検査との追加価値を精査する。",
       "required_changes": "同梱catalog-lint.mjsと.sqlfluff未読。SELECT *が常に過剰取得/LIKE部分一致が常に誤りと断定しない。単純patternはコメント/文字列/複数行/方言の限界を検証し、毎commitの新hook/installを自動追加しない。配布済みPython製品を使うことと新規自作Python禁止を区別する。",
       "support_read_complete": false,
       "individual_rights_review": "未完。READMEの未記載時MITという説明は全文noticeや個別creditの確認の代わりにはしない。",
@@ -125,13 +126,76 @@
       "body_read_complete": true,
       "candidate_disposition": "possible_new_migration_workflow_pending_support_and_rights",
       "reason": "跨言語移行の境界をbyte/構造/意味に分け、固定runtimeのoracleと公的標準を比較する用途。互換層の出口条件と生成fixture/未完stubを追う独立手順の候補。",
-      "required_changes": "referencesのoracle-driven-parity/test-migration/compatibility-knowledge/rollout-and-cutoverは未読。fixtureの手書きを全禁止せず、source既存bugと標準/明示要件を区別する。shadow/replay/canaryは実顧客データや他Org環境へ自動拡張しない。対象の必要関連検査を選び、無関係な全suite/全skip0/旧runtime常駐義務を一律追加しない。既存言語とGo/Rustの本人指定を維持。",
+      "required_changes": "byte/構造/意味の契約を分け、固定source runtimeの出力・公的標準の条項・明示要件を期待値の出所として保存する。手書きfixtureもこの出所を示す。parity移行stubのpending/skip 0という出口は保ち、無関係な検査のskip 0へ広げない。旧runtimeはrollback期間中に配備可能とする条件であり、常駐義務ではない。対象の関連検査、Go/Rustの本人指定、Prd/実データの範囲を保つ。references4は未読。",
       "support_read_complete": false,
       "individual_rights_review": "未完。READMEと固定treeの個別出典/noticeを照合中。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": false,
+      "compare_metadata": [
+        "rust-go-path-json-parity",
+        "fallback-trim-order-parity",
+        "agent-system-design"
+      ],
+      "supporting_resources": [
+        {
+          "path": "translate-programming-language/README.md",
+          "bytes": 1628,
+          "git_blob": "bd31569b23983a55fa85e97348711492448033e4",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "translate-programming-language/SKILL-ja.md",
+          "bytes": 5234,
+          "git_blob": "78e15247b670995cdac47a4eb5cbb2c83e4e9248",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "translate-programming-language/agents/openai.yaml",
+          "bytes": 263,
+          "git_blob": "ec13646c7e79127791f1beac44daf1f337df3972",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "translate-programming-language/references/compatibility-knowledge.md",
+          "bytes": 2933,
+          "git_blob": "ceec0a0e09fe0c7937451c872c0cff23dda9c486",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "translate-programming-language/references/oracle-driven-parity.md",
+          "bytes": 3673,
+          "git_blob": "1078ff76fea608eeb81e3f0805634e4b84e8f40e",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "translate-programming-language/references/rollout-and-cutover.md",
+          "bytes": 2830,
+          "git_blob": "6908e7c9f072f14f6b6c06d8d4cbd2152199ec23",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "translate-programming-language/references/test-migration.md",
+          "bytes": 2898,
+          "git_blob": "84a64f61365d5ebc98a15ce350d6354059c4c6fd",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ]
     },
     {
       "inventory_id": "github:48485004fed690e38257eb433c0632e4a712b7be55fc3f0227a3e12d639b5d22",
@@ -146,36 +210,3141 @@
       "body_read_complete": true,
       "candidate_disposition": "integration_candidate_pending_support_and_rights",
       "reason": "git-github-workflow/frontend-node-engineeringの現役metadataとの統合候補。上流fixと下流依存を固定完全SHAで追跡し、暫定pinから検証済みmerge/releaseへ戻す出口が有用。",
-      "required_changes": "install-time prepare/scriptは先に対象と副作用を調べ、無条件allowlist追加しない。dist常時追跡やhook追加はproject方針と利用者確認に従う。latest main HEADが修正済みmergeと同一とせず、実PR mergeSHA/lockfile/成果物と照合。link依存は再現性/対象branchを記録し、待機は元ToDoの正規依存を使い2週間固定の新timerや子ジョブ直接起動を追加しない。",
+      "required_changes": "install-time prepare/scriptは先に対象と副作用を調べ、無条件allowlist追加しない。dist常時追跡やhook追加はproject方針と下流consumerの要件確認に従う。latest main HEADが修正済みmergeと同一とせず、実PR mergeSHA/lockfile/成果物と照合。link依存は再現性/対象branchを記録し、待機は元ToDoの正規依存を使い2週間固定の新timerや子ジョブ直接起動を追加しない。 上流push/PRという外部変更は、元依頼で指定された所有対象と範囲だけに適用する。本PCの自律merge/Prd方針は実ownerがAutoDevJapan・BM1314・mashfrombandのrepoに限り、顧客固有の規則と他Orgの範囲を変えない。",
       "support_read_complete": false,
       "individual_rights_review": "未完。READMEと固定treeの個別出典/noticeを照合中。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:d9826c3b2e0d784334d98b05e172056e9cc3bb3ae340dc62ffe81389f793a8cd",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "actions-ci-tuning/SKILL.md",
+      "name": "actions-ci-tuning",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/actions-ci-tuning/SKILL.md",
+      "source_sha256": "0e74801dd2d4acc61ec97bea1c87b4d26e892da8a8ba29e32ab3160ae8f688a4",
+      "retrieved_at": "2026-10-20T08:41:08.2765653Z",
+      "bytes": 10251,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T18:51:46.9327332Z",
+      "candidate_disposition": "integration_candidate_pending_rights_and_corrections",
+      "reason": "キャッシュ・shard結果・artifact欠落とチェック待ちをgithub-actions-ciへ比較する。独立した同用途Skillを増やさない。",
+      "required_changes": "固定action版や速度改善の一般保証、全ジョブ分割をそのまま採らない。pnpmのPATH設定とcache復元を区別し、欠落artifactの表示を合格へ変えない。全suiteの追加や通知サービスの自動登録をしない。",
+      "compare_metadata": [
+        "github-actions-ci"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "actions-ci-tuning/README.md",
+          "bytes": 1354,
+          "git_blob": "b3df4a9bfd2fbfc349abfee30a46d71a8996f137",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:94b5087a071ba624461652a5505a784dedcb8d2176d879a5d9573ecaa45f36a9",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "aws-ecs-codedeploy-blue-green/SKILL.md",
+      "name": "aws-ecs-codedeploy-blue-green",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/aws-ecs-codedeploy-blue-green/SKILL.md",
+      "source_sha256": "6c09d96e4154444e1eced9621bcb3a204d8e7027af30fe46ff58ece26df87dbe",
+      "retrieved_at": "2026-10-20T08:41:08.3054553Z",
+      "bytes": 8879,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T18:51:46.9327332Z",
+      "candidate_disposition": "possible_new_workflow_pending_rights_and_corrections",
+      "reason": "既存ECSのtraffic配分・CodeDeployとIaCの所有競合を扱う独立手順の候補。",
+      "required_changes": "ALB weighted routingだけでCodeDeployと同じ自動rollbackを保証しない。ignore_changesは管理主体を確認した属性だけに限定。既存Prdの配備過程とstg新設を分け、新ALB/並列task等の追加支出を発生させない。接続drain/health/DB互換を実設定で検証する。",
+      "compare_metadata": [
+        "cloud-infra-deploy"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "aws-ecs-codedeploy-blue-green/README.md",
+          "bytes": 1371,
+          "git_blob": "3222960542c2e7078f33a5c6518a658f76446f9a",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:b8a91ab92159731c7324d48cc014357d08f933fc1501e72bad9a2cb58737c0ec",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "aws-ecs-service-connect-ipv6/SKILL.md",
+      "name": "aws-ecs-service-connect-ipv6",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/aws-ecs-service-connect-ipv6/SKILL.md",
+      "source_sha256": "280d002de4baa6bcc4c38962967665bb0ca48cb9e7ac181d9b47859e77c0e699",
+      "retrieved_at": "2026-10-20T08:41:08.308601Z",
+      "bytes": 3745,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T18:51:46.9327332Z",
+      "candidate_disposition": "possible_new_diagnostic_pending_rights_and_corrections",
+      "reason": "Service Connectのalias/実IP family/経路を切り分ける診断候補。",
+      "required_changes": "IPv6が返っただけで原因確定としない。公式AWS資料と既知issueを照合し、task内hosts/DNSと接続先・経路・portを分ける。GODEBUG=netdns=go+1はpure-Go resolver選択とdebugで、gai.conf有効化やIPv4強制の保証ではない。HTTPへ変更すれば解決という一般保証やmesh撤去を自動適用しない。",
+      "compare_metadata": [
+        "backend-correctness"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "aws-ecs-service-connect-ipv6/README.md",
+          "bytes": 1597,
+          "git_blob": "dbc901170370a83c69901697b69cfe20bca8a4d2",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:570684c9f60d35b1f71e6eae85046bd33ec104bffed5e8dab2bead4e4de92a98",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "aws-github-oidc-scoped-role/SKILL.md",
+      "name": "aws-github-oidc-scoped-role",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/aws-github-oidc-scoped-role/SKILL.md",
+      "source_sha256": "f9d34a27763717fe1be7df2cb7fa9b6a3b09acd7c29235e79d3f63b6d47850ce",
+      "retrieved_at": "2026-10-20T08:41:08.3125386Z",
+      "bytes": 6389,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T18:51:46.9327332Z",
+      "candidate_disposition": "policy_and_technical_rewrite_candidate_pending_rights",
+      "reason": "AWSのOIDC trustをrepo/ref/audで限定する候補。OAuth最小権限とGitHub workflowのscopeを比較する。",
+      "required_changes": "GitHub公式はAWSでcustom claims未対応とするため、job_workflow_refを独立IAM conditionに置く上流例をそのまま採らない。実sub形式（immutable IDsの有無）/reusable workflowを確認する。Bedrock従量推論・Marketplace Subscribe・広域ReadOnlyAccess/秘密参照は導入しない。既存OAuth契約と元依頼の対象を維持。",
+      "compare_metadata": [
+        "oauth-least-privilege"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "aws-github-oidc-scoped-role/README.md",
+          "bytes": 1464,
+          "git_blob": "14c379359bef7f869d07eabc57587d0812f3df77",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:f180c0437c523e487ce6c5965e498950ae844d9d62d2ffc5b554a2ca0d430654",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "aws-vault-mfa-iam/SKILL.md",
+      "name": "aws-vault-mfa-iam",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/aws-vault-mfa-iam/SKILL.md",
+      "source_sha256": "3aab3a2671ff506c12996d09728cd30763c60e74997f1f6082845060e61b6659",
+      "retrieved_at": "2026-10-20T08:41:08.3199633Z",
+      "bytes": 2815,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T18:51:46.9327332Z",
+      "candidate_disposition": "possible_new_diagnostic_pending_rights_and_corrections",
+      "reason": "STSが通ることとIAM操作が許可されることを分けるAWS認証診断候補。",
+      "required_changes": "InvalidClientTokenIdをMFA不足と断定せず、profile/期限/region/境界policyを照合する。既存の正規認証を優先し、TOTP新登録・passkey廃止・全session清掃を自動で行わない。本人PC操作を求めず、スマホの一手が必要な場合だけ正規質問を使う。固定8device/1h等を実版未確認の保証にしない。",
+      "compare_metadata": [
+        "no-credential-entry-by-agent"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "aws-vault-mfa-iam/README.md",
+          "bytes": 1475,
+          "git_blob": "78a4e279ea847be49a9d5a2b61a3d63635f92689",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:4fa03b4048fbfdd972cd96b555bf43f331fccd69d95201a36c4496d6fc1f2bbe",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "cloudflare-access-app-setup/SKILL.md",
+      "name": "cloudflare-access-app-setup",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/cloudflare-access-app-setup/SKILL.md",
+      "source_sha256": "7c8ad6b72e17f577cd92a833098ea07756a88c87b8e36f1860754345eb73b61e",
+      "retrieved_at": "2026-10-20T08:41:08.3241861Z",
+      "bytes": 2933,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T18:51:46.9327332Z",
+      "candidate_disposition": "possible_new_workflow_pending_support_and_rights",
+      "reason": "既存WorkerのAccess appと許可policy/tokenの同一対象照合・更新を扱う候補。",
+      "required_changes": "未読setup scriptの冪等性を保証しない。出力のclient_secretをログや会話へ載せず、既存正規認証と最小範囲で扱う。新しい恒久MCP権限やPRごとのstgを自動追加しない。ドメイン管理はRakkoだけという対象制限を保持。",
+      "compare_metadata": [
+        "cloud-infra-deploy"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "cloudflare-access-app-setup/README.md",
+          "bytes": 1295,
+          "git_blob": "aa1524d1d231d42c8d587b3fc712ea9e1fceb3b2",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-access-app-setup/assets/scripts/setup-access-app.ts",
+          "bytes": 5845,
+          "git_blob": "1ec88b46b0deb85e086e7622fc11641f929c5a7a",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:56228bdf13d416beff301b61454644c9d3bdc51e888c9776e8ef75fd688ae992",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "cloudflare-deploy/SKILL.md",
+      "name": "cloudflare-deploy",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/cloudflare-deploy/SKILL.md",
+      "source_sha256": "bae7d8ab7ebfcfa90251d879d7e0b669b20ef829aa43532122a683a02591c2f3",
+      "retrieved_at": "2026-10-20T08:41:08.3268449Z",
+      "bytes": 11695,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T18:51:46.9327332Z",
+      "candidate_disposition": "integration_candidate_pending_large_support_review",
+      "reason": "Cloudflare製品別の参照経路と既存bindingを維持する移行をcloud-infra-deployへ比較する。個別Apache noticeは取得済み。",
+      "required_changes": "cf betaとWranglerのCLI/認証/configを同一視せず、現在の公式資料と実projectの版を照合する。既存binding/DO履歴/秘密を失わない。全Worker移行・Node24固定・有料製品/推論の選択・新stgを一律追加しない。多数の製品別supportは未監査。",
+      "compare_metadata": [
+        "cloud-infra-deploy"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "cloudflare-deploy/LICENSE.txt",
+          "bytes": 10776,
+          "git_blob": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+          "body_saved": true,
+          "body_read": true,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/README.md",
+          "bytes": 1239,
+          "git_blob": "9fe5031e4ff397fca592922ac4641e7bc6a9acb1",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/agents/openai.yaml",
+          "bytes": 331,
+          "git_blob": "e1162ab0c58b7cf250795df35ee845102092107c",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/assets/cloudflare-small.svg",
+          "bytes": 1221,
+          "git_blob": "7feedbc2b37ff9f28f81d30aff52e605090bee86",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/assets/cloudflare.png",
+          "bytes": 1187,
+          "git_blob": "cf23088bbb1fec745d4ef350b8002a9b5ae42ca8",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/agents-sdk/README.md",
+          "bytes": 3109,
+          "git_blob": "e243179c51b5e475204afc7f990f191456454726",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/agents-sdk/api.md",
+          "bytes": 5862,
+          "git_blob": "9e16aa621641d12aa92beb0cdd7b3c2678ee0c7d",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/agents-sdk/configuration.md",
+          "bytes": 3919,
+          "git_blob": "94b801f333fda91f7f6449bb61b316f3468b1ca3",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/agents-sdk/gotchas.md",
+          "bytes": 5452,
+          "git_blob": "eeacb2596e4531afdc4babbf39717e44ab280bea",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/agents-sdk/patterns.md",
+          "bytes": 5595,
+          "git_blob": "2e72d4bb4947163b84df9f2a45086f9b23c9ff65",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/ai-gateway/README.md",
+          "bytes": 6648,
+          "git_blob": "9fd99ee2ffc95b8125e49bfd969243a79ccd27fa",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/ai-gateway/configuration.md",
+          "bytes": 3298,
+          "git_blob": "278bd76bb26b2c233f9d418708381e52f9d2dab0",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/ai-gateway/dynamic-routing.md",
+          "bytes": 1835,
+          "git_blob": "540be5c27944405a188e7479e8d036f9a92e0cfd",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/ai-gateway/features.md",
+          "bytes": 2724,
+          "git_blob": "f2c9bfa6ef3262c799a7c04736a7e2176f279fac",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/ai-gateway/sdk-integration.md",
+          "bytes": 3024,
+          "git_blob": "28ab9647ff34b04c59adfb334fa0a727824888ba",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/ai-gateway/troubleshooting.md",
+          "bytes": 2420,
+          "git_blob": "4d6635760fce534cf04d72ef032ca59fb9131bdd",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/ai-search/README.md",
+          "bytes": 4865,
+          "git_blob": "8a082dea89dc99e5a2aceeca484a5e2a82e0daac",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/ai-search/api.md",
+          "bytes": 2519,
+          "git_blob": "b6220c464a687aaa35a923f4c0781e4fa6b50f6f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/ai-search/configuration.md",
+          "bytes": 2104,
+          "git_blob": "1d0d0c0cb43a8551424b837d25946245bdf0abdd",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/ai-search/gotchas.md",
+          "bytes": 2135,
+          "git_blob": "04c987f6a6813bccec5625ff8e126e84dd145383",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/ai-search/patterns.md",
+          "bytes": 2008,
+          "git_blob": "4a70f089beb85cc9088176d48c311337d7407257",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/analytics-engine/README.md",
+          "bytes": 3539,
+          "git_blob": "0ccc20879690f37437998abf4ae238b9c69b3854",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/analytics-engine/api.md",
+          "bytes": 3161,
+          "git_blob": "20e7084151fcef6ea33a1613e7dce17a7f20301f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/analytics-engine/configuration.md",
+          "bytes": 2705,
+          "git_blob": "38cbae36d18d8be4a5e551b0ea599d664355f3c9",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/analytics-engine/gotchas.md",
+          "bytes": 2362,
+          "git_blob": "39824cc647854909a3ace7c95667b6ad82c3a660",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/analytics-engine/patterns.md",
+          "bytes": 2312,
+          "git_blob": "dc3fc5d4614eca930bd68826550546276e558d9e",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/api-shield/README.md",
+          "bytes": 1796,
+          "git_blob": "86613c86fe683ffe0b1fe9f6856614200458659f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/api-shield/api.md",
+          "bytes": 3900,
+          "git_blob": "c833501ff6838eb7c602729bfc1f9a5cd2425049",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/api-shield/configuration.md",
+          "bytes": 5020,
+          "git_blob": "f95744c5e30ba80255ef66d1eee6ca97bc94c513",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/api-shield/gotchas.md",
+          "bytes": 4946,
+          "git_blob": "255517f064f76ae816fedfd4b331f8e6cff9420e",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/api-shield/patterns.md",
+          "bytes": 5844,
+          "git_blob": "5721dba456183c1520e034c4332b8028dc409110",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/api/README.md",
+          "bytes": 2719,
+          "git_blob": "b09b9cc6d0c9ff25c347d83c42a68620ae7c3f98",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/api/api.md",
+          "bytes": 4308,
+          "git_blob": "33710149c916b6c3bada3a7e3debc229554fc68a",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/api/configuration.md",
+          "bytes": 4086,
+          "git_blob": "f65bf8a465d80886a64b406dbf29bad3774a3f42",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/api/gotchas.md",
+          "bytes": 5390,
+          "git_blob": "e6666dc5906b969f945ecc825357eba3e4eb2422",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/api/patterns.md",
+          "bytes": 4639,
+          "git_blob": "3c7c693b1ae5097b96a7968a813652c52194c8be",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/argo-smart-routing/README.md",
+          "bytes": 4060,
+          "git_blob": "ef5539d0652a4c777274324272209f2049331ce7",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/argo-smart-routing/api.md",
+          "bytes": 6579,
+          "git_blob": "5cd8f5e3795acaae4090ee9b4c488f6b2eb6043f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/argo-smart-routing/configuration.md",
+          "bytes": 4457,
+          "git_blob": "6a2f842100b14f877bf4a6b622b5db3e45de8a8e",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/argo-smart-routing/gotchas.md",
+          "bytes": 4327,
+          "git_blob": "8d011d3cdf584bcbbe7f4d553eaad29503233521",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/argo-smart-routing/patterns.md",
+          "bytes": 3053,
+          "git_blob": "1173b2d6041912c83cadc7ba44919eb7da8e4795",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/bindings/README.md",
+          "bytes": 4386,
+          "git_blob": "646ca52e653c40332c84ed596c2ba30b1e7732bb",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/bindings/api.md",
+          "bytes": 5543,
+          "git_blob": "bd55f25bded12e1e9f13947d827c7c74b58f1a3a",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/bindings/configuration.md",
+          "bytes": 1477,
+          "git_blob": "c67e019f0a06e93288c4c7e6c251e8b945cbbe56",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/bindings/gotchas.md",
+          "bytes": 6513,
+          "git_blob": "2a6d5953f609dc48816dab6152b303d4b813ed67",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/bindings/patterns.md",
+          "bytes": 5402,
+          "git_blob": "b8aa93f18c56c0ecde9a4ffa4079f19c339a40b2",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/bot-management/README.md",
+          "bytes": 3762,
+          "git_blob": "a76808db1bf2abb8ff76677cdf36acee592dd142",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/bot-management/api.md",
+          "bytes": 6147,
+          "git_blob": "fa801770fc3072eceff667205cf9c1d6310df1a8",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/bot-management/configuration.md",
+          "bytes": 5744,
+          "git_blob": "4166bcc2b051b02f22a2a2615b25908337a6af8e",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/bot-management/gotchas.md",
+          "bytes": 5657,
+          "git_blob": "685bcbdfcbbcb2ab411005f9e2f408afb6460597",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/bot-management/patterns.md",
+          "bytes": 4970,
+          "git_blob": "4ca70855b6bfa382ee878b2b495d234c6b509999",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/browser-rendering/README.md",
+          "bytes": 3436,
+          "git_blob": "8e65aa4e38ac60737662b936296c3e94a5839542",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/browser-rendering/api.md",
+          "bytes": 3320,
+          "git_blob": "c155e72bfed91591172c2d6518795e2f8df925b3",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/browser-rendering/configuration.md",
+          "bytes": 2146,
+          "git_blob": "05737f489ebd7208a3e4fa7652c47b2bb12a8f72",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/browser-rendering/gotchas.md",
+          "bytes": 2520,
+          "git_blob": "7e34f2bd89610d745f58efd207072734887ac835",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/browser-rendering/patterns.md",
+          "bytes": 2647,
+          "git_blob": "a652c2b58ab87261904ede1cc8799f24eb34ee4c",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/c3/README.md",
+          "bytes": 3696,
+          "git_blob": "831e4946831374b74f90a67cebceaa5257413bf2",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/c3/api.md",
+          "bytes": 2630,
+          "git_blob": "adc205f6e5173fc33101c6a0b3334cb6a2d0e1c1",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/c3/configuration.md",
+          "bytes": 1981,
+          "git_blob": "0b2b8450fd00161f17eb1b75ba0ae91fcbaf3f25",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/c3/gotchas.md",
+          "bytes": 2651,
+          "git_blob": "1cf6b6b46276a521c350f56197306c193ee21b99",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/c3/patterns.md",
+          "bytes": 2547,
+          "git_blob": "14b809aa11b9aa68b6088b4064739cfd494955ae",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/cache-reserve/README.md",
+          "bytes": 5609,
+          "git_blob": "395347a21dcae34c29d2a25452b0480c2391f58a",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/cache-reserve/api.md",
+          "bytes": 6018,
+          "git_blob": "18c49d8e000e7eea4c90a303af6c0993dfdbf609",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/cache-reserve/configuration.md",
+          "bytes": 4004,
+          "git_blob": "521654a31a5af2b4f0917198dc0f148d853a8deb",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/cache-reserve/gotchas.md",
+          "bytes": 5797,
+          "git_blob": "9995cf85c79a69160251b7b77256e175f5a2c695",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/cache-reserve/patterns.md",
+          "bytes": 6265,
+          "git_blob": "65f9488656ec57641cb7bb66fc24d30ebd30b461",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/cf/README.md",
+          "bytes": 1414,
+          "git_blob": "109ac3bdc7b4e332d882b14d238df7d24032303c",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/cf/api.md",
+          "bytes": 3321,
+          "git_blob": "df3ffc51853476a6d99b7226be5530eebe5fd9eb",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/cf/auth.md",
+          "bytes": 1457,
+          "git_blob": "3f4a3361e938ad32ce18aa165dea15082d67317d",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/cf/configuration.md",
+          "bytes": 4207,
+          "git_blob": "09ca73d13846af57d3bbc178f6d95ac193738bfd",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/cf/gotchas.md",
+          "bytes": 2980,
+          "git_blob": "93f76ed8cb84ec58dbc977222efb37b611cbc303",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/cf/patterns.md",
+          "bytes": 2605,
+          "git_blob": "72ab8f4e61e31094142999323c2f035eeb3e4077",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/ci/github-actions.md",
+          "bytes": 2524,
+          "git_blob": "944ad47d1f0f919b4464a47f92bbbf3ce57e3eee",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/containers/README.md",
+          "bytes": 3875,
+          "git_blob": "c73b306c4f1336dae3a6db819dd06ca023d1ca93",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/containers/api.md",
+          "bytes": 4310,
+          "git_blob": "c41f7213687d6190e3ebc053f69f897b3f7f2f54",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/containers/configuration.md",
+          "bytes": 5768,
+          "git_blob": "3e241d9b539db63d1a0a1f6be3ee34a9ba10a1b6",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/containers/gotchas.md",
+          "bytes": 4485,
+          "git_blob": "306e8c5b379fc3d2c2534c319a201c62eb88db43",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/containers/patterns.md",
+          "bytes": 4925,
+          "git_blob": "92042942c26d1cad3feb03170504defef4b5e549",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/cron-triggers/README.md",
+          "bytes": 3293,
+          "git_blob": "2f50001a6a1f3623f04377167c8c2c2e1a2c241f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/cron-triggers/api.md",
+          "bytes": 6210,
+          "git_blob": "9eed321958879413888c1f32885f4c769dc63bfa",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/cron-triggers/configuration.md",
+          "bytes": 4594,
+          "git_blob": "4b368539b00945fe78497cf8a4afff6b02725504",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/cron-triggers/gotchas.md",
+          "bytes": 6660,
+          "git_blob": "4e3908cc0a02389a0e4e2bd49d2756a6c0f04d9f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/cron-triggers/patterns.md",
+          "bytes": 7324,
+          "git_blob": "351da597a10b6bfffb420961a6fe04af19a3a27f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/d1/README.md",
+          "bytes": 5063,
+          "git_blob": "96e3f1d853513649a032c14b08760113e322a2da",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/d1/api.md",
+          "bytes": 7150,
+          "git_blob": "c91f726ca544e7f6aaadef37cf6e41779bec6e95",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/d1/configuration.md",
+          "bytes": 5730,
+          "git_blob": "0d3b50604144a611f280a8a157c8cca9f0d81105",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/d1/gotchas.md",
+          "bytes": 4662,
+          "git_blob": "71ed4d087fc74b294d48a04f76e505cd4503ab23",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/d1/patterns.md",
+          "bytes": 7595,
+          "git_blob": "b92d437f0d0d0bbb41824a466cda238d4d6f7fdf",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/ddos/README.md",
+          "bytes": 2054,
+          "git_blob": "117dd21433f509893f155e3b4039af0d9098d928",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/ddos/api.md",
+          "bytes": 4170,
+          "git_blob": "b96284aa3f2d98dc1083693def220ac29a24b324",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/ddos/configuration.md",
+          "bytes": 3005,
+          "git_blob": "14c6e32e03bea0f420d66d2fd16a6478abda726a",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/ddos/gotchas.md",
+          "bytes": 3912,
+          "git_blob": "f2a97d1cc2bfb08ca135ebef0b1989cfd6505d52",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/ddos/patterns.md",
+          "bytes": 5680,
+          "git_blob": "a46ef2f0a104ff4eac1a3ac7141abcd47ee77fa5",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/do-storage/README.md",
+          "bytes": 3109,
+          "git_blob": "3be022dcb3fa2147b819069492d7a9c47a67e794",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/do-storage/api.md",
+          "bytes": 3571,
+          "git_blob": "e659598b41d6ab2aa76a902953ab9286f7ee73e3",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/do-storage/configuration.md",
+          "bytes": 2579,
+          "git_blob": "7dfee197c2920bcc0896a68d0950ee9cb21222b3",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/do-storage/gotchas.md",
+          "bytes": 5200,
+          "git_blob": "8898f08a927dd0aac654dc232178e8e62e190e9c",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/do-storage/patterns.md",
+          "bytes": 5278,
+          "git_blob": "2885915891cce366f13906711bf975e654eba5f2",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/do-storage/testing.md",
+          "bytes": 5256,
+          "git_blob": "8ccdd52f5b691d61e61c30e92e987bb0e8661879",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/durable-objects/README.md",
+          "bytes": 6964,
+          "git_blob": "5ca62cfce0c3aa51c7fcb1297a968fa4bf57e5fe",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/durable-objects/api.md",
+          "bytes": 6142,
+          "git_blob": "89c7e4d7b07d49f131e3e5e9861d128e6e25c244",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/durable-objects/configuration.md",
+          "bytes": 4610,
+          "git_blob": "e2e6a1a174fa45f969293b54947bb6cb67785c19",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/durable-objects/gotchas.md",
+          "bytes": 7662,
+          "git_blob": "913288d857c946ce5c903c4ef23f4ea0ed31a6bd",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/durable-objects/patterns.md",
+          "bytes": 6691,
+          "git_blob": "d91f382b13fc0633bf65d3b004858a2db7bbc0cc",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/email-routing/README.md",
+          "bytes": 3775,
+          "git_blob": "0a5c947fa758066b3da9ff681cd3400b4fee1199",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/email-routing/api.md",
+          "bytes": 5655,
+          "git_blob": "6777254868250747f64539c0a7a7ea6936f09de8",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/email-routing/configuration.md",
+          "bytes": 3915,
+          "git_blob": "223f11573d7f09a3424f2b08e7e229f6f48176c4",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/email-routing/gotchas.md",
+          "bytes": 4450,
+          "git_blob": "a0864b3c2e2d04ffead288d80c2a6eaff5e0c778",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/email-routing/patterns.md",
+          "bytes": 5480,
+          "git_blob": "21636779ea0a38edbd3b6b5381ccc1730a4f3379",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/email-workers/README.md",
+          "bytes": 5712,
+          "git_blob": "072d157ea95d085976ca9cb32518db700c3e88c2",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/email-workers/api.md",
+          "bytes": 6078,
+          "git_blob": "74da66cddd787cfc1054123b1f364a3d264840a7",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/email-workers/configuration.md",
+          "bytes": 3063,
+          "git_blob": "75e58a46c1ac2b6555043bc32948930cc319ba87",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/email-workers/gotchas.md",
+          "bytes": 3385,
+          "git_blob": "77dfe2044597a7835bb3685871e29fbfb8e2df79",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/email-workers/patterns.md",
+          "bytes": 2785,
+          "git_blob": "f1e65f506ed6d8ca3e2ca7266fa56802dc40b99b",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/hyperdrive/README.md",
+          "bytes": 3262,
+          "git_blob": "855020b69422075df221a8c0b071f7bfaddcb639",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/hyperdrive/api.md",
+          "bytes": 4219,
+          "git_blob": "f5fdb6dec58a53d8fdc83dc4ca114ee81ada181b",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/hyperdrive/configuration.md",
+          "bytes": 4257,
+          "git_blob": "16a51de3f6b2e0bdc2a2f3666eecb5b2f5c0f6ea",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/hyperdrive/gotchas.md",
+          "bytes": 4270,
+          "git_blob": "26f7e15f0a31ed9cc0928fa3000549c9da82cfbc",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/hyperdrive/patterns.md",
+          "bytes": 6324,
+          "git_blob": "976df35883a128102f73df81a546d1f4519f62b7",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/images/README.md",
+          "bytes": 3244,
+          "git_blob": "a0e61e1458765dc7edb11a0dec6ccabffb1bcb50",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/images/api.md",
+          "bytes": 2918,
+          "git_blob": "1d38a9d9518bea8e9a54e5a0d2e681d056c221d2",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/images/configuration.md",
+          "bytes": 4507,
+          "git_blob": "0e2145f942161c6360dca4eafb8820fcbe287cf9",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/images/gotchas.md",
+          "bytes": 2834,
+          "git_blob": "b1c30988a638a10309061e0f4d4f01dc91c9b622",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/images/patterns.md",
+          "bytes": 3582,
+          "git_blob": "c07bf3cd2f9fff0e41830e0b7810b7dda025680f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/kv/README.md",
+          "bytes": 3227,
+          "git_blob": "bf89b3dc9568298ce92f2391baf42fb1aea1e751",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/kv/api.md",
+          "bytes": 4327,
+          "git_blob": "35063f265f428d9c3cc32abcfdc4866dfe970409",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/kv/configuration.md",
+          "bytes": 3427,
+          "git_blob": "1ef67a312099c54bfbe6436fae459aeba6fb79ca",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/kv/gotchas.md",
+          "bytes": 4455,
+          "git_blob": "5ad321325762acf00eed7e70fd1f15471c0eccdb",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/kv/patterns.md",
+          "bytes": 4740,
+          "git_blob": "8386074f56fac188ecfa9523e26543f3c6cc48de",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/miniflare/README.md",
+          "bytes": 3308,
+          "git_blob": "90d3cf3668181a101a491fcfe020bd286464b1de",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/miniflare/api.md",
+          "bytes": 4606,
+          "git_blob": "e4df4d7de5dd2156ca7e186d379ddab8cb45f9e0",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/miniflare/configuration.md",
+          "bytes": 3869,
+          "git_blob": "c085e236e6a70a594ec1652a73f757882c5bc4c5",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/miniflare/gotchas.md",
+          "bytes": 4068,
+          "git_blob": "082c49a27c051b68bd83ca26a2cee68abbb9ac87",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/miniflare/patterns.md",
+          "bytes": 4604,
+          "git_blob": "acf8c50c7f6486e57b5007e8a94736584a39aa3d",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/network-interconnect/README.md",
+          "bytes": 3230,
+          "git_blob": "e337f1bd54a33362d5d83febae558c875fbdc64e",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/network-interconnect/api.md",
+          "bytes": 5626,
+          "git_blob": "85e5e12d3b6578dc701057a6103772a658c2b2fe",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/network-interconnect/configuration.md",
+          "bytes": 4257,
+          "git_blob": "0f1005ccc254096228f997c564f7e05a1f0c9e4a",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/network-interconnect/gotchas.md",
+          "bytes": 5554,
+          "git_blob": "988080774fba4191bade4e3cf80ae6628b709a3a",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/network-interconnect/patterns.md",
+          "bytes": 4041,
+          "git_blob": "7ff9dd3057f103f69d988ca9ca63e212e36673b2",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/observability/README.md",
+          "bytes": 3887,
+          "git_blob": "58feed6363f5efae8b1aafb1aeb56ebf204e9b99",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/observability/api.md",
+          "bytes": 3480,
+          "git_blob": "a0161dee94fa5a20a15c5cbe579843caae006024",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/observability/configuration.md",
+          "bytes": 3928,
+          "git_blob": "a26be9c923bd4d74c938cdc72f89243783afded5",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/observability/gotchas.md",
+          "bytes": 4099,
+          "git_blob": "b36c942fb4942d587a10cffbc8e4ab70733b039f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/observability/patterns.md",
+          "bytes": 2481,
+          "git_blob": "9135c682f39620045ece3ed2a310698a883f47d6",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pages-functions/README.md",
+          "bytes": 3666,
+          "git_blob": "23cd06c00d5788ae2b947a64d5f36d6c3cfa637d",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pages-functions/api.md",
+          "bytes": 5021,
+          "git_blob": "d9ddf1650f2ff46067ad56d29eca189891eb165e",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pages-functions/configuration.md",
+          "bytes": 3346,
+          "git_blob": "f258509c0bda1fa499193319d8217c8ff522c038",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pages-functions/gotchas.md",
+          "bytes": 4194,
+          "git_blob": "c558bc6b63c2d6f322a076db3b957711a57b7d46",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pages-functions/patterns.md",
+          "bytes": 4558,
+          "git_blob": "3602c3ecece9f37d262353134662531c65b967e7",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pages/README.md",
+          "bytes": 3178,
+          "git_blob": "27656fa015fbc9aec250fcbd497f5332db5d7923",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pages/api.md",
+          "bytes": 6324,
+          "git_blob": "5b5dfd92cce40ab88fa81604e139c8d2c3d055cc",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pages/configuration.md",
+          "bytes": 6209,
+          "git_blob": "95ab54edfdbc9643d66349b430473769e5f024de",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pages/gotchas.md",
+          "bytes": 8342,
+          "git_blob": "59f7c5fe85ee77b534c5a14ce0657e42210fb900",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pages/patterns.md",
+          "bytes": 6336,
+          "git_blob": "d8010881636351435159fb3dc83fffdac513675b",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pipelines/README.md",
+          "bytes": 3744,
+          "git_blob": "40acb078585cea12cae0fc66f6b48397140a44d9",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pipelines/api.md",
+          "bytes": 5453,
+          "git_blob": "b0b85fd3e23f1ba55f1e52cc24a2cb18a064756d",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pipelines/configuration.md",
+          "bytes": 3091,
+          "git_blob": "0af556b8ee57ad5f730ab4b70baa0eefdde32486",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pipelines/gotchas.md",
+          "bytes": 2771,
+          "git_blob": "c021a306122dce11d92cde6e227469197516ee40",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pipelines/patterns.md",
+          "bytes": 2424,
+          "git_blob": "3ed1f3c3bae68db2016018028a7edef863660e56",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pulumi/README.md",
+          "bytes": 3219,
+          "git_blob": "16317af3f6156c4799c904a897f6cc7483dbd3bc",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pulumi/api.md",
+          "bytes": 6105,
+          "git_blob": "e36910a94dc8da388ab7d5f59bec85977483c507",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pulumi/configuration.md",
+          "bytes": 6001,
+          "git_blob": "cfdfb160afe8804e98c1c2cf2118899bf8ce84ea",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pulumi/gotchas.md",
+          "bytes": 6880,
+          "git_blob": "0c11c638f793fadd1f1f993c094e93a5a3f6ae6f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/pulumi/patterns.md",
+          "bytes": 7318,
+          "git_blob": "a61faef65dcd347baf34c1dc4ddcbc4bf1525eec",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/queues/README.md",
+          "bytes": 3402,
+          "git_blob": "89d58cba869f6abd75313a21bbe159643c5c6f2e",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/queues/api.md",
+          "bytes": 5563,
+          "git_blob": "ded029cf88a533745794aa1f2eceb14e3a4f1b63",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/queues/configuration.md",
+          "bytes": 4172,
+          "git_blob": "0edd9e78b3bf66b44b3e5de3956807baf0a718b4",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/queues/gotchas.md",
+          "bytes": 7577,
+          "git_blob": "bbfc4a9d86b3773defe0d978a4e4742d1fc5d6f2",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/queues/patterns.md",
+          "bytes": 5498,
+          "git_blob": "9ff01c1d1c6298596840e82bde247f82757ddea6",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/r2-data-catalog/README.md",
+          "bytes": 7105,
+          "git_blob": "88702fad986bfc1ff982f2307cb55133638e9074",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/r2-data-catalog/api.md",
+          "bytes": 5991,
+          "git_blob": "3d57d4fc9d4fe0fcbce3bbcedf23a94662ad940d",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/r2-data-catalog/configuration.md",
+          "bytes": 5641,
+          "git_blob": "f86100c278585ae8895d6d1d300677fcc94b2e57",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/r2-data-catalog/gotchas.md",
+          "bytes": 6470,
+          "git_blob": "95564df6d38c0f688d06d25082efa6de954d5a6d",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/r2-data-catalog/patterns.md",
+          "bytes": 5883,
+          "git_blob": "b6b181f7944b516d4234ba03d5162c904fff73f3",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/r2-sql/README.md",
+          "bytes": 5553,
+          "git_blob": "9f975ff6583672118211190ea0ca24cb901e580c",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/r2-sql/api.md",
+          "bytes": 4007,
+          "git_blob": "7e67c8ff3ec50b3bff655d89bbf0a3847ce30568",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/r2-sql/configuration.md",
+          "bytes": 4083,
+          "git_blob": "8b1bdf1ece99b2b6edec4fcfb5156f6553e0affa",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/r2-sql/gotchas.md",
+          "bytes": 6579,
+          "git_blob": "8961e42354023499321067aca4704b31fa4b860c",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/r2-sql/patterns.md",
+          "bytes": 7102,
+          "git_blob": "f46dd61cd01187454b45e071520edc2d39086d62",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/r2/README.md",
+          "bytes": 3169,
+          "git_blob": "f404aa0c7b78e6b271734779b4523470e2062b59",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/r2/api.md",
+          "bytes": 5993,
+          "git_blob": "8bad821e9d72f3bc24cbda10118e6795da9f375c",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/r2/configuration.md",
+          "bytes": 3998,
+          "git_blob": "d237d4cfce64957dab9fabfeb7bb802157914fd5",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/r2/gotchas.md",
+          "bytes": 5392,
+          "git_blob": "5033740dccb7d15ccbd8ba38ad10190f816e418d",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/r2/patterns.md",
+          "bytes": 5844,
+          "git_blob": "85191d62e4a357cbda956dec343af548ad848128",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/realtime-sfu/README.md",
+          "bytes": 3422,
+          "git_blob": "af7d4f17caa0f4705be1b37fbc725fdf36a8b6cf",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/realtime-sfu/api.md",
+          "bytes": 3768,
+          "git_blob": "6e6dae6dbd51ea04991d38278413f1aff9244354",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/realtime-sfu/configuration.md",
+          "bytes": 3853,
+          "git_blob": "af38c95091dfb7830b71b733af3a7fb7b02b603f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/realtime-sfu/gotchas.md",
+          "bytes": 4902,
+          "git_blob": "efe5ee7759c7f3cfd5256755c49f924bc38b15d5",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/realtime-sfu/patterns.md",
+          "bytes": 5403,
+          "git_blob": "95ddc42fc4e17dc1ef78aabbb6e239f4feeffc3c",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/realtimekit/README.md",
+          "bytes": 4391,
+          "git_blob": "6286fa4898e7b31124e5047eeda6974e0f001fd6",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/realtimekit/api.md",
+          "bytes": 8352,
+          "git_blob": "18e9a3f3a65e6da3ddb0e666ac52347f96b3df40",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/realtimekit/configuration.md",
+          "bytes": 5536,
+          "git_blob": "c41dbc972861ffa97de8b910c1d72e38dd8ecccb",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/realtimekit/gotchas.md",
+          "bytes": 7227,
+          "git_blob": "88abd3540e69d77ded6564a8dd7b78e083f751f5",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/realtimekit/patterns.md",
+          "bytes": 8004,
+          "git_blob": "013615ba06e80ab299b71726521c7e56dda97e47",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/sandbox/README.md",
+          "bytes": 3463,
+          "git_blob": "416a66b36bcb0d81688dcd55f96f8666db532297",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/sandbox/api.md",
+          "bytes": 5316,
+          "git_blob": "ea2cd0fdf7512f9734f121e3093c8b8037a9735a",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/sandbox/configuration.md",
+          "bytes": 3759,
+          "git_blob": "12f6000ab520a822ef9cf4e615504d5b6f5a08d7",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/sandbox/gotchas.md",
+          "bytes": 5800,
+          "git_blob": "56313f4fa2d0f29d5b57a774855fd5b58fbb706c",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/sandbox/patterns.md",
+          "bytes": 5236,
+          "git_blob": "adeb0a047572662f476aa3608e7ee2569a54bc49",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/secrets-store/README.md",
+          "bytes": 2547,
+          "git_blob": "1dcdf3f8d522d2c8330f6779f45689510286257c",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/secrets-store/api.md",
+          "bytes": 4358,
+          "git_blob": "2e4e6e2401728afc23a26d97a5e3b20b36218fed",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/secrets-store/configuration.md",
+          "bytes": 4234,
+          "git_blob": "9359294e2a9cae6b392ada7aaf35e71fa30c5113",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/secrets-store/gotchas.md",
+          "bytes": 4182,
+          "git_blob": "1dd959071ccc49f7edcea8e97319ac84d166fdb0",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/secrets-store/patterns.md",
+          "bytes": 6004,
+          "git_blob": "cb80d7153fc625b3402f591d911893ede0fd7c9e",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/smart-placement/README.md",
+          "bytes": 5368,
+          "git_blob": "29e9159ecabd72421c6c48085fb87192809c1d3b",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/smart-placement/api.md",
+          "bytes": 5903,
+          "git_blob": "3c3e0eb9ec2ed1b8a4d9042b910e7419ca59577f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/smart-placement/configuration.md",
+          "bytes": 6463,
+          "git_blob": "e060e60f161097d8cb7135fd337b4c34258d7715",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/smart-placement/gotchas.md",
+          "bytes": 5981,
+          "git_blob": "279183e64a6d5b37cc2acf4e35c8fca4baa0320c",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/smart-placement/patterns.md",
+          "bytes": 6128,
+          "git_blob": "2aadd3e10d85c31948c0badf0e17a4f78a3f03a1",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/snippets/README.md",
+          "bytes": 3132,
+          "git_blob": "a09a1c41230349545de1ff258164a041670f8ca8",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/snippets/api.md",
+          "bytes": 5133,
+          "git_blob": "76a5a4bef573b5755ec6477a3f8f77905f9eb6cf",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/snippets/configuration.md",
+          "bytes": 6311,
+          "git_blob": "b5bea0fb1199e90e314e84c0e01735a0b35c0e94",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/snippets/gotchas.md",
+          "bytes": 2220,
+          "git_blob": "832077e39f711cbe15e70f215be3538f30fa7db9",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/snippets/patterns.md",
+          "bytes": 3346,
+          "git_blob": "a60c42057be75f5868473204039aa8df92185f1f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/spectrum/README.md",
+          "bytes": 2355,
+          "git_blob": "f78350daff3c265ee16ab95840c31e370c0dd73c",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/spectrum/api.md",
+          "bytes": 4924,
+          "git_blob": "645fe2e78229c1ae68a11d0e8691d77b362cb7d1",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/spectrum/configuration.md",
+          "bytes": 4332,
+          "git_blob": "81aa72f382795672f4e9903fd746ee07daf18c9d",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/spectrum/gotchas.md",
+          "bytes": 3739,
+          "git_blob": "ef31a368e9bc57c01bf5d4d681945c3c418239b9",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/spectrum/patterns.md",
+          "bytes": 4778,
+          "git_blob": "403248698f5e97d9a55684b4b9ddfac7ef53e7b8",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/static-assets/README.md",
+          "bytes": 2541,
+          "git_blob": "1c75409cf1af8d4ad73dfea539e86e305bc9fb84",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/static-assets/api.md",
+          "bytes": 4451,
+          "git_blob": "08bb568daabf74ea1817cc7c97d4711f91d7bc4d",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/static-assets/configuration.md",
+          "bytes": 5170,
+          "git_blob": "34df9ca35cd83c54c506f0ebb3764529eab0108c",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/static-assets/gotchas.md",
+          "bytes": 4471,
+          "git_blob": "3d13019263277e4d00c80ced30a8e7fa3f44ec63",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/static-assets/patterns.md",
+          "bytes": 4895,
+          "git_blob": "11ddda24b45055cafcac51fc39964eef1fac5b59",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/stream/README.md",
+          "bytes": 4208,
+          "git_blob": "432253eadff2b08439d614ec91fbc9099653e615",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/stream/api-live.md",
+          "bytes": 5174,
+          "git_blob": "6c4f4c079cdc7c9752494e04117b610f92fd3ea2",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/stream/api.md",
+          "bytes": 5260,
+          "git_blob": "0c35a7137613faa3de158bd0bfc79e9dbcba9701",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/stream/configuration.md",
+          "bytes": 3554,
+          "git_blob": "1d98fe739ed6762334339866a27688c43fc2e18f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/stream/gotchas.md",
+          "bytes": 4308,
+          "git_blob": "2b1cf8b28bdb313c7773cdcad18f4b212ab80a3a",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/stream/patterns.md",
+          "bytes": 6394,
+          "git_blob": "2e7782de2cb9006783aeb2958dd0f02cd6fa4ef9",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/tail-workers/README.md",
+          "bytes": 3364,
+          "git_blob": "20d5679eb02cc629e96f0cbdf90d3a05643cfb8c",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/tail-workers/api.md",
+          "bytes": 5132,
+          "git_blob": "624d9e9636d25fbb6c700e5f3cdf6fe4f8bfb9f3",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/tail-workers/configuration.md",
+          "bytes": 3818,
+          "git_blob": "5467fddb24c51032a4e50f4211f4a23dda9c9c3d",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/tail-workers/gotchas.md",
+          "bytes": 4939,
+          "git_blob": "16ad2dc8ed042d5b7427cc57364ca565e0936a3c",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/tail-workers/patterns.md",
+          "bytes": 4034,
+          "git_blob": "a696ec2622e5c3396a40da046a67f424d0fa99b0",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/terraform/README.md",
+          "bytes": 4012,
+          "git_blob": "f6f93a54fd0872089cfe2e7d6b0c02dca0cfdef1",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/terraform/api.md",
+          "bytes": 4020,
+          "git_blob": "8a06c1c2582074b9be5c514bd74e496244839270",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/terraform/configuration.md",
+          "bytes": 7921,
+          "git_blob": "241169ab2712504faa878b29b9c3f2c40926dde1",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/terraform/gotchas.md",
+          "bytes": 5612,
+          "git_blob": "ed307b4bacf5d4f9dd4b3ed61471a4e1d1aa9431",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/terraform/patterns.md",
+          "bytes": 6984,
+          "git_blob": "11d2fd1f848a3d195326a17c16310df265480952",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/tunnel/README.md",
+          "bytes": 3738,
+          "git_blob": "f70a6681afb98c7a9a9c375f284852edd5b61e46",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/tunnel/api.md",
+          "bytes": 4444,
+          "git_blob": "faa3013b5082080bf7eeaf9c78121eae6318d8c0",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/tunnel/configuration.md",
+          "bytes": 3698,
+          "git_blob": "32b705096da14e1a996b6b89618373ad6af0fcce",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/tunnel/gotchas.md",
+          "bytes": 3933,
+          "git_blob": "f368856550e9f4a560c23e5275489deeffc7f5fd",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/tunnel/networking.md",
+          "bytes": 3993,
+          "git_blob": "8c3930d9082f1ced84a7596ff77269f8e1c85deb",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/tunnel/patterns.md",
+          "bytes": 3853,
+          "git_blob": "7ef6d2944bb1085ba15d899cd16734850326843a",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/turn/README.md",
+          "bytes": 4037,
+          "git_blob": "6f0fbd5a4e680ddf4b3a83bf4e1ef968a5326e0c",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/turn/api.md",
+          "bytes": 5220,
+          "git_blob": "498f5e4b0dc0356e0b9def94c8a161ec938a68bb",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/turn/configuration.md",
+          "bytes": 4522,
+          "git_blob": "ecc7d4a28fa44d69deb628d3811ebc3e4d449046",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/turn/gotchas.md",
+          "bytes": 7364,
+          "git_blob": "a8ac406a0412d7c55d40bacbb0a1c5816fb9dd7f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/turn/patterns.md",
+          "bytes": 6189,
+          "git_blob": "39333bee42526f9586684035791ee9660433e62c",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/turnstile/README.md",
+          "bytes": 3539,
+          "git_blob": "29de799532fa3c07129831a3b429d25dffc29980",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/turnstile/api.md",
+          "bytes": 6424,
+          "git_blob": "f65ee4f8e35dd03ae3e91363fbe6bd8affbb708c",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/turnstile/configuration.md",
+          "bytes": 6719,
+          "git_blob": "215bdabd1edc981b5fdc79285c63c6b12d970b28",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/turnstile/gotchas.md",
+          "bytes": 6276,
+          "git_blob": "f7556b4cf24475ed40ee7158ce2db7ee89b34553",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/turnstile/patterns.md",
+          "bytes": 4677,
+          "git_blob": "c147a6f5ca26bb62775f1dceb298c86d81467f93",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/vectorize/README.md",
+          "bytes": 4632,
+          "git_blob": "197e464add29d0fe6f4423951ad2ccd5bd26b96a",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/vectorize/api.md",
+          "bytes": 2375,
+          "git_blob": "e29d87f6c6f24861798daaec5db9cd9563c01012",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/vectorize/configuration.md",
+          "bytes": 2330,
+          "git_blob": "80ee37d13dcc1cafcb8d56a9436650e418c3aff3",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/vectorize/gotchas.md",
+          "bytes": 2501,
+          "git_blob": "6213a742fb69eb8d37c9305942f326e7ea84ba8b",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/vectorize/patterns.md",
+          "bytes": 2858,
+          "git_blob": "892ed8eaadb4443a0a92e91b621de3c9a47c2c83",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/waf/README.md",
+          "bytes": 3799,
+          "git_blob": "981355094658391713b1cb1034a1bdea8c0b640d",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/waf/api.md",
+          "bytes": 5831,
+          "git_blob": "a7bc9e0ae964a5275d328a4907c3ece71761b8a8",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/waf/configuration.md",
+          "bytes": 5109,
+          "git_blob": "12124585d1b34d4d6b783aa21bd6bb46264c478a",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/waf/gotchas.md",
+          "bytes": 6290,
+          "git_blob": "05b0dc11915d641812751b55d7875e8a44c43044",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/waf/patterns.md",
+          "bytes": 5356,
+          "git_blob": "1fe0004d3e6b197d0edab0993ad3ada42f9d5926",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/web-analytics/README.md",
+          "bytes": 5236,
+          "git_blob": "fcc19385986c0736385be8863fabca2b3fa29f44",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/web-analytics/configuration.md",
+          "bytes": 2003,
+          "git_blob": "ff8f18d3c6ab4a286f36b4dac650280334354884",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/web-analytics/gotchas.md",
+          "bytes": 1999,
+          "git_blob": "cad1424c7c40cc7efb09787d3ce30e40898516be",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/web-analytics/integration.md",
+          "bytes": 1772,
+          "git_blob": "ec89140dea0347224b13175da1216288f45383cb",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/web-analytics/patterns.md",
+          "bytes": 2237,
+          "git_blob": "8e83575ee6fe18dc75e5026569c7875721a73458",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workerd/README.md",
+          "bytes": 3121,
+          "git_blob": "6e447d8ce1dad68009c3ebe9ff235ff89778be18",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workerd/api.md",
+          "bytes": 5303,
+          "git_blob": "b3687cfc35c95d006a2573037ea86e1a98b7f678",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workerd/configuration.md",
+          "bytes": 5263,
+          "git_blob": "bad5f43bc90f4289d4bc2b85d272c779e880b4d7",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workerd/gotchas.md",
+          "bytes": 4781,
+          "git_blob": "dc35109ec72b752810904442effec5b640338989",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workerd/patterns.md",
+          "bytes": 5282,
+          "git_blob": "8478db7b230243beb3b2b871e0058ec18831a3e8",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-ai/README.md",
+          "bytes": 6386,
+          "git_blob": "90efa0bb510ba87e91ddf0d8f098b98615f2f6f3",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-ai/api.md",
+          "bytes": 2715,
+          "git_blob": "e65f97aefbdea5f2d21ec3934783bc6d9c96392e",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-ai/configuration.md",
+          "bytes": 2333,
+          "git_blob": "3517affd1c23f27a1e21211fccedf27f443aefcc",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-ai/gotchas.md",
+          "bytes": 3037,
+          "git_blob": "632a18bb9edb05c5795ca9755d9fce7b7675afd9",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-ai/patterns.md",
+          "bytes": 3063,
+          "git_blob": "8295a5bfdd35424b36a405e145f60652ad24d587",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-for-platforms/README.md",
+          "bytes": 3913,
+          "git_blob": "7bfd9b7200be08131a2d6b28307df13a27d3cf22",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-for-platforms/api.md",
+          "bytes": 5515,
+          "git_blob": "663c608fa4e21bb8918b329d827744d6b3894c08",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-for-platforms/configuration.md",
+          "bytes": 4236,
+          "git_blob": "44d6957777a92d42b70df5f4ea9359f3ae1fe5e0",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-for-platforms/gotchas.md",
+          "bytes": 5440,
+          "git_blob": "a32fe188ca68a05702adc9566881af97fe1411cc",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-for-platforms/patterns.md",
+          "bytes": 5587,
+          "git_blob": "d1984309376b43e7fba396d58a3c2894822b4d9e",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-playground/README.md",
+          "bytes": 4360,
+          "git_blob": "0e49dc34518603bf736454ba8376059bd31927d5",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-playground/api.md",
+          "bytes": 2224,
+          "git_blob": "1382ab4b58e35842ecba1a1a66f0f9ce386b68f4",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-playground/configuration.md",
+          "bytes": 4806,
+          "git_blob": "0dab05718c8f4e08bc49bc0ae2a8063508334da9",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-playground/gotchas.md",
+          "bytes": 2019,
+          "git_blob": "9271dc435482a37c94c74ba5526be1495c3d85a8",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-playground/patterns.md",
+          "bytes": 3303,
+          "git_blob": "4af891c532aef30a3453d2fb499b729f098525bc",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-vpc/README.md",
+          "bytes": 5828,
+          "git_blob": "49a8a7fe0a52dc4ba092a531fbabcdb0772d4727",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-vpc/api.md",
+          "bytes": 5665,
+          "git_blob": "d08244bec91862d227a7a37d7472c75d90428326",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-vpc/configuration.md",
+          "bytes": 4242,
+          "git_blob": "35a712722b4d54b624940cc496fb62c47bdfc804",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-vpc/gotchas.md",
+          "bytes": 4821,
+          "git_blob": "648bb32130f2a7e46da7c40cef401a81b118483b",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers-vpc/patterns.md",
+          "bytes": 6011,
+          "git_blob": "392627e2708a3c9d9c63856b7a7b75a49b47fcb2",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers/README.md",
+          "bytes": 3789,
+          "git_blob": "9f9a9e9802876c87de8e51be00574c50b19622e5",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers/api.md",
+          "bytes": 5158,
+          "git_blob": "a4fc13f71a27ea684968f2f8a13f29d3723bedc7",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers/configuration.md",
+          "bytes": 773,
+          "git_blob": "aeecdee3c742257d2ee5d01da2c659cadb114d19",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers/frameworks.md",
+          "bytes": 4620,
+          "git_blob": "699a11fa7aaa3ccbac495b9be30fb1f6c1acfc95",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers/gotchas.md",
+          "bytes": 5095,
+          "git_blob": "a8dd2c594bfc457623c679b0bc6be7279938be1b",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workers/patterns.md",
+          "bytes": 5791,
+          "git_blob": "c70ff7b6d079d975d52728bd342db3ccfd76eaa5",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workflows/README.md",
+          "bytes": 2773,
+          "git_blob": "30829df322286c43ea049a5ecfeda0995fca10a4",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workflows/api.md",
+          "bytes": 6767,
+          "git_blob": "a28a9ca804a25b70885e0bedf7516a274de86ce1",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workflows/configuration.md",
+          "bytes": 4051,
+          "git_blob": "b2539580a070f590286dc134dbb378d7415cc12b",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workflows/gotchas.md",
+          "bytes": 4993,
+          "git_blob": "cf578d624a2b7d3efa1bd9aa2be63dde2da9f70f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/workflows/patterns.md",
+          "bytes": 6982,
+          "git_blob": "97e8bd2a1df0f38f86091476526e81e8a3bb9161",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/zaraz/IMPLEMENTATION_SUMMARY.md",
+          "bytes": 3494,
+          "git_blob": "dd8da196be21fd7855fbe93502223f195c3a3842",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/zaraz/README.md",
+          "bytes": 3909,
+          "git_blob": "0e28155858ad77f0345536fbe758d296bd15c9d2",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/zaraz/api.md",
+          "bytes": 3197,
+          "git_blob": "5d8e1cc8c1f11e550c261a501033e57bc7c7b1b5",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/zaraz/configuration.md",
+          "bytes": 1811,
+          "git_blob": "e2e534ce66ec646f62edd15b5abd59100a87e240",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/zaraz/gotchas.md",
+          "bytes": 2001,
+          "git_blob": "eaa6b4917ab5c77bcfd0494598e887030390537e",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-deploy/references/zaraz/patterns.md",
+          "bytes": 2133,
+          "git_blob": "c5ef967eddb2e6685b543830244e3eea55f58397",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "個別LICENSE.txtのApache-2.0原文をSHA照合。取込み対象は入口本文とnoticeだけで、helper/assets/全supportの再配布承認ではない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:9c99c93e664bc38f4013173fa6c973e114fded7e0ebac9eb97a49731e25f0178",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "cloudflare-mbt-worker-bundle/SKILL.md",
+      "name": "cloudflare-mbt-worker-bundle",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/cloudflare-mbt-worker-bundle/SKILL.md",
+      "source_sha256": "d7ec466b2490754c94acae5f9f8dcea579c3bdaae9a644fac5734ae3373be512",
+      "retrieved_at": "2026-10-20T08:41:08.7715247Z",
+      "bytes": 4414,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T18:51:46.9327332Z",
+      "candidate_disposition": "possible_new_workflow_pending_support_and_rights",
+      "reason": "既存MoonBit Workerの生成JS変換と配備bundleを同一版で照合する限定候補。",
+      "required_changes": "新規製品の既定Go/GoDD Rustを変更しない。特定runtime symbolやseed書換えを一般化せず版と生成物で検証する。期待pattern不在を無視せず、生成前/生成後とbuild/deploy modeを照合。依存beta/新stg/実配備は自動追加しない。",
+      "compare_metadata": [
+        "frontend-node-engineering"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "cloudflare-mbt-worker-bundle/README.md",
+          "bytes": 1277,
+          "git_blob": "bae14c67f9c9688490ecff43f8d310cdb29a37cf",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-mbt-worker-bundle/assets/scripts/check-worker-bundle.test.ts",
+          "bytes": 1278,
+          "git_blob": "359ca82dd359c2dc4d3e7030fb97bd042d9c444a",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-mbt-worker-bundle/assets/scripts/check-worker-bundle.ts",
+          "bytes": 3304,
+          "git_blob": "ffe9d9f51888c3f8912922041b9a8d48de77b8fd",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-mbt-worker-bundle/assets/scripts/prepare-worker.ts.template",
+          "bytes": 4524,
+          "git_blob": "5bdbb77636d840a5f1a80ff9d18c1cc31173cf97",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-mbt-worker-bundle/assets/templates/cloudflare.config.ts.template",
+          "bytes": 1521,
+          "git_blob": "023de4e6d43128d2801f49cd7a79a7be12747c98",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-mbt-worker-bundle/assets/templates/vite.config.ts.template",
+          "bytes": 150,
+          "git_blob": "158ddc59c5414a305c047fe352ac40bb13b26041",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-mbt-worker-bundle/assets/templates/worker.ts.template",
+          "bytes": 1723,
+          "git_blob": "7f82271b0c0266512f2ff737f51d73e39745f3ec",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-mbt-worker-bundle/references/cf-traps.md",
+          "bytes": 1633,
+          "git_blob": "d378d464335c25d4348452ebe4ca18db6db6d026",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-mbt-worker-bundle/references/moonbit-ffi-rewrites.md",
+          "bytes": 3441,
+          "git_blob": "8e8a1d4701fbb0c7dad82fce2e980ddf9007b724",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:6adb164273d6fd0c77ba7fdea6892bff398a9ae619f5ab8a464d3ac3cd1d2cc7",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "cloudflare-workers-cd-rollback/SKILL.md",
+      "name": "cloudflare-workers-cd-rollback",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/cloudflare-workers-cd-rollback/SKILL.md",
+      "source_sha256": "d88292a2cb241efc3b5f9d301209b0ce02e262993996cfe20f31eed6d1c15d53",
+      "retrieved_at": "2026-10-20T08:41:08.7787041Z",
+      "bytes": 4691,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T18:51:46.9327332Z",
+      "candidate_disposition": "integration_candidate_pending_support_and_rights",
+      "reason": "失敗したWorkers配備から元のtraffic配分を戻す手順を既存配備Skillへ比較する。",
+      "required_changes": "read失敗とfirst deployを分け、配分の全version_id/percentageを固定して保存する価値がある。Worker rollbackがDB migrationを戻すとしない。秘密変更をforceで迂回せず、Prd内での直列化を保つ。staging callerや新有料資源は採らず、未読helperのlatest-first/10007分類を実証済みにしない。",
+      "compare_metadata": [
+        "cloud-infra-deploy"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "cloudflare-workers-cd-rollback/README.md",
+          "bytes": 1286,
+          "git_blob": "2d12bb03e1444d5c2c87650954629ce9b6bc941f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-workers-cd-rollback/assets/scripts/deployment-state.test.ts",
+          "bytes": 1557,
+          "git_blob": "0126302324f3cb32c93ece2762e118d669a1ed2d",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-workers-cd-rollback/assets/scripts/deployment-state.ts",
+          "bytes": 1974,
+          "git_blob": "e6817172490af2042277179bae1cc52fecaa0a04",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-workers-cd-rollback/assets/scripts/smoke.ts",
+          "bytes": 2047,
+          "git_blob": "3897a0ae689acd7dcdd168e9b2b4b16836b2e118",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-workers-cd-rollback/assets/workflows/cd-production.yml",
+          "bytes": 1778,
+          "git_blob": "09a1191adf4edd40a9af0ffb0564e7ad232ec4f3",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-workers-cd-rollback/assets/workflows/cd-staging.yml",
+          "bytes": 2231,
+          "git_blob": "e682b9564f5790b51d52206c2f38eeef90efcf47",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-workers-cd-rollback/assets/workflows/deploy.yml",
+          "bytes": 11096,
+          "git_blob": "9424b278f0837e0f251b0c634be835718fe582fb",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-workers-cd-rollback/references/cd-traps.md",
+          "bytes": 2098,
+          "git_blob": "3cc89c772198e5d5b0a87fc9fb742c1ad045457f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:61e5ce191b7243d82a09ef424ce9f13c17ac9b22323745b60157ca97458e9b90",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "cloudflare-workers-otel-utels/SKILL.md",
+      "name": "cloudflare-workers-otel-utels",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/cloudflare-workers-otel-utels/SKILL.md",
+      "source_sha256": "31e3689d1f6bf65bda964a66fd7803e4cb8e572b614b8aec709ab270ad3555a8",
+      "retrieved_at": "2026-10-20T08:41:08.7808555Z",
+      "bytes": 5687,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T18:51:46.9327332Z",
+      "candidate_disposition": "integration_candidate_pending_support_rights_and_privacy_review",
+      "reason": "fetch境界の計測、D1 prepare/bind chain、route cardinalityを観測Skillへ比較する。",
+      "required_changes": "未読runtimeのno-op保証を採らない。query SQL・URL・例外payloadの秘密/個人情報を吟味し、bind値を無差別送信しない。exporter/utels新規連携は元依頼と契約内の範囲だけ。sampling/コスト・scheduled handler保持を確認。新stg/新言語を導入しない。",
+      "compare_metadata": [
+        "observability-notifications"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "cloudflare-workers-otel-utels/README.md",
+          "bytes": 1325,
+          "git_blob": "a86da7e8f8d98d0a401c28cd6ce6335f059f9d0f",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-workers-otel-utels/assets/scripts/d1-wrap.ts",
+          "bytes": 8162,
+          "git_blob": "d6ab557d3ae48c573fa8e8b040d07f7690777f56",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-workers-otel-utels/assets/scripts/telemetry-runtime.ts",
+          "bytes": 18892,
+          "git_blob": "18b7355aacd9cfd3d52d3d316663e9d58ed16086",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-workers-otel-utels/assets/tests/d1-wrap.test.ts",
+          "bytes": 10459,
+          "git_blob": "4e6500d2471e3b6defad7aa6d543a7180777c364",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "cloudflare-workers-otel-utels/assets/tests/telemetry.test.ts",
+          "bytes": 9401,
+          "git_blob": "b9242b79f5d19fd76b5ad0df3765981d8619cfef",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:ff1e83cc06506a7e6191579d37e6a17d2ae87756974ae899a6feacbf0b1234d9",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "flaker-storage-cache-on-ci/SKILL.md",
+      "name": "flaker-storage-cache-on-ci",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/flaker-storage-cache-on-ci/SKILL.md",
+      "source_sha256": "671b9fd2648aa8589dfa712e12b097d6eb65e4f083e5c8c9dd94b659a3272476",
+      "retrieved_at": "2026-10-20T08:41:08.8035527Z",
+      "bytes": 6492,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T18:51:46.9327332Z",
+      "candidate_disposition": "possible_new_workflow_pending_rights_and_corrections",
+      "reason": "flakerのDuckDBファイルの所在、report取り込みとCI履歴の消失を扱う限定候補。",
+      "required_changes": "actions/cacheのstepにalways()を付けてもpost-if success()を変えないため失敗時保存を保証しない。必要ならrestore/save分離を版付きで確認。run_idはrerun/job共有があるため衝突しないという主張を採らず、単一writerとbranch/ref scopeを確認。forkのwrite全面禁止とPR cache不可視を混同しない。cacheは永続DBではない。exit0無出力を実作業の証拠にしない。",
+      "compare_metadata": [
+        "github-actions-ci"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "flaker-storage-cache-on-ci/README.md",
+          "bytes": 1578,
+          "git_blob": "f0973a6b7706c835146534aa3b9586d45522e264",
+          "body_saved": true,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先・未記載MITの表示を保持。原notice/個別creditと取込み範囲を確認中。root notice無しを全候補の利用不可や除外へ変えない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:b42ae7debd7346ed232f75cdb212f9d8a9cb05bd347c93c8b7de82e8d5433fc8",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "gh-fix-ci/SKILL.md",
+      "name": "gh-fix-ci",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/gh-fix-ci/SKILL.md",
+      "source_sha256": "9bb7f0a67de15a4b69ad793e8169cae34ae5e0ac76a9403a483bafd418233ea4",
+      "retrieved_at": "2026-10-20T08:41:08.8526241Z",
+      "bytes": 3735,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-22T18:51:46.9327332Z",
+      "candidate_disposition": "integrated_existing_pending_independent_acceptance",
+      "reason": "既存github-actions-ciのgh-fix-ci参照と同用途。承認待ちを毎回挟む旧手順を現在の本人指示へ合わせて統合し、metadataの件数を増やさない。",
+      "required_changes": "public由来の新規承認待ち/本人PCログイン要求を採らず、既存許可に沿って調査・修正・関連検査・別モデルレビュー・CI確認・mergeまで続ける。外部CIはこの手順の読取対象外でURLを示し、別の元依頼で許可された対応を禁止しない。未読Python helperをコピー/実行せず、既存ghを使う。",
+      "compare_metadata": [
+        "github-actions-ci"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "gh-fix-ci/LICENSE.txt",
+          "bytes": 10776,
+          "git_blob": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+          "body_saved": true,
+          "body_read": true,
+          "executed": false
+        },
+        {
+          "path": "gh-fix-ci/README.md",
+          "bytes": 1381,
+          "git_blob": "fec14d03794483e76fad3edfb9a90f944ab36cac",
+          "body_saved": true,
+          "body_read": true,
+          "executed": false
+        },
+        {
+          "path": "gh-fix-ci/agents/openai.yaml",
+          "bytes": 302,
+          "git_blob": "262bd70c8214ffc8fcc698465a8122d69066fe4f",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "gh-fix-ci/assets/github-small.svg",
+          "bytes": 853,
+          "git_blob": "828e9d9d1d29e1a525a1aeee5eb1e4162249c77e",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "gh-fix-ci/assets/github.png",
+          "bytes": 1838,
+          "git_blob": "e23dbe59099a594c06a46081ce48b82aa409b0e7",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "gh-fix-ci/scripts/inspect_pr_checks.py",
+          "bytes": 15222,
+          "git_blob": "06cd03c5fc61c784d082e1c25a533c94e0912b3f",
+          "body_saved": false,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "個別LICENSE.txtのApache-2.0原文をSHA照合。取込み対象は入口本文とnoticeだけで、helper/assets/全supportの再配布承認ではない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": true,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
     }
   ],
   "pending_entrypoint_paths": [
-    "actions-ci-tuning/SKILL.md",
     "ai-index/SKILL.md",
     "apm-usage/SKILL.md",
     "ast-grep-practice/SKILL.md",
-    "aws-ecs-codedeploy-blue-green/SKILL.md",
-    "aws-ecs-service-connect-ipv6/SKILL.md",
-    "aws-github-oidc-scoped-role/SKILL.md",
-    "aws-vault-mfa-iam/SKILL.md",
     "chezmoi-management/SKILL.md",
-    "cloudflare-access-app-setup/SKILL.md",
-    "cloudflare-deploy/SKILL.md",
-    "cloudflare-mbt-worker-bundle/SKILL.md",
-    "cloudflare-workers-cd-rollback/SKILL.md",
-    "cloudflare-workers-otel-utels/SKILL.md",
     "conventional-changelog/SKILL.md",
     "dep-lib-review/SKILL.md",
     "dotenvx/SKILL.md",
     "empirical-prompt-tuning/SKILL.md",
     "extract-glossary/SKILL.md",
-    "flaker-storage-cache-on-ci/SKILL.md",
     "formal-methods-drift-guard/SKILL.md",
     "formal-methods-reconciler/SKILL.md",
     "frontend-expert/SKILL.md",
@@ -189,7 +3358,6 @@
     "frontend-review-testing/SKILL.md",
     "frontend-review-triage/SKILL.md",
     "frontend-review-weekly/SKILL.md",
-    "gh-fix-ci/SKILL.md",
     "gleam-practice/SKILL.md",
     "justfile/SKILL.md",
     "k8s-crd-from-typed-schema/SKILL.md",
@@ -228,12 +3396,12 @@
     "waxa-eval/SKILL.md"
   ],
   "installed": 0,
-  "integrated": 0,
+  "integrated": 1,
   "excluded": 0,
   "support_code_executed": false,
   "private_data_used": false,
-  "next": "sqlc/D1/SQLiteを使う元依頼範囲の自社repoがあるか既存資料で確認し、Rust/Go format!/Sprintf向け規則の未対応を区別。SQL2本文案を具体化し、個別出典/許諾と補助取得制約を保持。残72本文も同canonicalから続ける。",
-  "observed_at": "2026-10-21T08:44:34.7951321Z",
+  "next": "残58本文を同じcanonicalから続け、既読候補の許諾/支持資料と具体差分を確かめて導入・統合する。SQL2は本文案と静的適用例を保存し、notice形式や取得制約を解消せず配置済みとしない。",
+  "observed_at": "2026-10-22T18:51:46.9327332Z",
   "code_execution_status": "SQL4補助コードは本文未保存・未読・未実行。既存追加取得の拒否を別経路で迂回しない。",
   "supporting_texts_fullread": [
     {
@@ -319,7 +3487,7 @@
   ],
   "missing_reference": {
     "path": "pkfire/assets/recipes/14-secretlint-pre-push.pkl",
-    "status": "固定treeに参照先が無い。未読でなく存在未確認の参照。",
+    "status": "固定commitのtreeに無い。他repoや別版は未確認。",
     "executed": false
   },
   "source_api_license": null,
@@ -338,7 +3506,7 @@
     },
     {
       "source": "sql-security",
-      "meaning": "本文記載:単一行の検出無し0でも安全の証明ではない。複数行・小文字などを見逃しうる。"
+      "meaning": "本文記載:検出無し0/指摘あり1。単一行・大文字限定なので0でもSQL安全の証明ではない。"
     }
   ],
   "prior_primary_review": {
@@ -348,5 +3516,13 @@
     "raw_sha256": "237d5a7391b947f16ef22f9cdc843887c85133a271f676f524956f23c29ce6b7",
     "limits": "SQL4本文の前評価を確認。今回の補助5+README追加範囲と本文案は新しい未受入差分。"
   },
-  "entrypoints_fulltext_read": 6
+  "entrypoints_fulltext_read": 18,
+  "latest_primary_review": {
+    "todo": 3313,
+    "must": 0,
+    "raw_sha256": "1f58a8bb4c42040c8d143979a99cacca21556c2c406c214542174c5b01ffc597",
+    "head": "779dd15197d3a4547e6d6d8643e742bafe8c7643",
+    "scope": "既確認6入口とSQL草案2/追加支持資料の限定レビュー。今回の新12入口を覆わない。"
+  },
+  "historical_snapshot_note": "SQL4/新2の候補時点の評価は保持。gh-fix-ciの実統合と受入待ちを採用台帳へ接続し、候補評価と実操作を区別する。"
 }

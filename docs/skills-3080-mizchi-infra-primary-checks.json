@@ -1,0 +1,49 @@
+{
+  "findings": [
+    {
+      "result": "そのままの採用不可。GitHub公式はAWSのcustom claims未対応を示す。実sub/audとreusable workflow/immutable ID形式を確認する。",
+      "claim": "job_workflow_refを独立したAWS IAM condition keyに置けばworkflowを限定できる",
+      "deployed": false,
+      "source_path": "aws-github-oidc-scoped-role/SKILL.md",
+      "primary_urls": [
+        "https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-aws",
+        "https://docs.github.com/en/actions/reference/security/oidc"
+      ]
+    },
+    {
+      "result": "Go公式はpure-Go resolverの選択とdebugの設定として説明する。IP family/経路の診断と分け、IPv4強制の保証にしない。",
+      "claim": "netdns=go+1がgai.confを有効にしIPv4を強制する",
+      "deployed": false,
+      "source_path": "aws-ecs-service-connect-ipv6/SKILL.md",
+      "primary_urls": [
+        "https://go.dev/src/net/conf.go",
+        "https://go.dev/doc/godebug",
+        "https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-connect-concepts-deploy.html"
+      ]
+    },
+    {
+      "result": "現在のaction.ymlはpost-if success()。restore/saveの分離、ref/job/rerunのwriter条件を実版で確認し、stepのalways()だけで保存保証しない。現在mainの確認であり、採用するactionの固定SHAでの再確認は別。",
+      "claim": "actions/cacheのstepにalways()を付ければ失敗時もpostで保存し、run_idで衝突しない",
+      "deployed": false,
+      "source_path": "flaker-storage-cache-on-ci/SKILL.md",
+      "primary_urls": [
+        "https://github.com/actions/cache/blob/main/action.yml",
+        "https://github.com/actions/cache/tree/main/save#always-save-cache"
+      ]
+    },
+    {
+      "result": "CLI公式のpr checks pending終了8とrun view --exit-statusのpending-or-passed例を照合し、終了0のみで完了としない手順へ改訂。",
+      "claim": "PR/run/jobの失敗と未完了を区別する",
+      "deployed": true,
+      "source_path": "gh-fix-ci/SKILL.md",
+      "primary_urls": [
+        "https://cli.github.com/manual/gh_pr_checks",
+        "https://cli.github.com/manual/gh_run_view"
+      ]
+    }
+  ],
+  "todo": 3080,
+  "limits": "AWS/Cloudflare/flakerの実アカウント変更・新資源作成・上流コード実行は無し。診断候補を製品で実証済みとしない。",
+  "purpose": "取得済み12候補の技術記述を一次資料で照合。新しい候補取得や647拒否取得の再試行ではない。",
+  "observed_at": "2026-10-22T18:58:33.3160528Z"
+}

@@ -1,4 +1,4 @@
-最新件数と配置先の正本は [採用台帳](skills-3080-adoptions.json) と [進行記録](skills-3080-progress.json)（2026-10-21時点: 導入28・統合0・除外0・残73192）。過去の配置数・未配置表示は各作業時点の履歴で、再配置の指示ではない。
+最新件数と配置先の正本は [採用台帳](skills-3080-adoptions.json) と [進行記録](skills-3080-progress.json)（2026-10-23時点: 導入28・統合1・除外0・残73191）。統合1は実配置と構造・発見確認済みで、別モデルの受入は未完。過去の配置数・未配置表示は各作業時点の履歴で、再配置の指示ではない。
 
 # 指定16資料からのSkills拡張（元3048、継続3080）
 
@@ -101,7 +101,7 @@ Knap・setup-pre-commit・grillingの9ファイルを3180の具体指摘に沿�
 
 固定v2を通常の個別書込審査へ提示し許可後に新規link1名だけを配置した。[実manifest](skills-3080-installed-link-manifest.json)と[配置証拠](skills-3080-link-installation-evidence.json)を採用台帳へ接続し、原文/MITは前版と同一。実1件5ファイルと現行28件140ファイルの検査、新Codexのmetadata325中1件の発見・説明一致・enabled・解析0を確認した。これは実manualの編集検査やモデルターンの証拠ではない。実配置v2の差分は次の独立レビューで確認する。旧27件とjunction/managedは不変。
 
-[mizchiの部分評価](skills-3080-mizchi-partial-evaluation.json)は全76入口のうちSQL関連4本文を全文確認した区切り。残72パスを保存し、4件を代表上限にしない。計画のSCANを即時の性能欠陥としない、SELECTで未使用の索引でもFK CASCADEを支える場合がある、1行正規表現で0件でもSQL安全の保証ではない、という追加価値と限界を保存した。補助コード・個別権利・既存原本との差分は未確認。READMEのMIT説明だけを未知素材へ包括適用せず、同梱スクリプトやinstallは実行していない。
+[mizchiの部分評価](skills-3080-mizchi-partial-evaluation.json)は全76入口のうちSQL関連4本文を全文確認した区切り。当時の残72パスを保存し、4件を代表上限にしない。計画のSCANを即時の性能欠陥としない、SELECTで未使用の索引でもFK CASCADEを支える場合がある、1行正規表現で0件でもSQL安全の保証ではない、という追加価値と限界を保存した。補助コード・個別権利・既存原本との差分は未確認。READMEのMIT説明だけを未知素材へ包括適用せず、同梱スクリプトやinstallは実行していない。
 
 ## 3296受入後の補助確認とSQL本文案
 3296は固定e127436の実link5・原文/MIT・記録一致とSQL4の前評価を確認しMust0。PR363は必要全自動検査の成功後にmainへ統合した。[他改訂の証拠](skills-3080-external-revision-evidence.json)のとおり、diagnosing-bugsは配置後16:13 JSTに別の改訂がある。配置時SHAとmanifestを歴史として保持し、現在の全ディスク一致の保証には使わず、巻き戻さない。link本文の軽微提案も次の必要更新へ保存し、今回は中央28件へ書いていない。
@@ -111,3 +111,13 @@ mizchiのroot READMEを分割で全文確認し、SQL4のREADME4本と共通CLAU
 [SQLの2本文案](skills-3080-mizchi-sql-draft.json)はカタログ形式検査とSQLite/D1の計画比較を対象とする。28件の配置計画とは別の未配置草案で、設計済み28+追加本文案2、全30案を導入済みとはしない。個別出典・許諾範囲と補助コードの取得制約を解く工程を残し、原文/noticeを捏造した配置用bundleを作らない。新検査器が必要と実証された場合だけGoで作る。
 
 言語移行と上流依存修正の2入口も全文・SHA照合し、mizchiは76=6確認+70未読。言語移行は固定oracleと標準/要件を分ける新規手順候補、依存修正は完全SHA/lockfile/実mergeを追う既存統合候補として保持した。両者の補助と個別権利は未確認、未適用。全sourceを代表だけで終了しない。
+
+## 2026-10-23の再開と最初の既存統合
+
+3313は固定779dd151のSQL草案2、前6入口と追加資料・記録を確認しMust0。必要CI成功後に[PR367](skills-3080-pr367-merge-evidence.json)をmainへ統合した。草案には近い正負12例とNode/engine差・報告行の注意を補った。現在このrepoにsqlc/D1 catalogがあるという証拠は無く、他repoも未調査とした。本人aを現在使用中の製品だけへ縮める条件は追加せず、個別許諾と補助の問題が残るため未配置を維持する。
+
+[mizchi部分評価](skills-3080-mizchi-partial-evaluation.json)はCI・AWS・Cloudflare関連12入口を追加して76中18全文確認、残58未読となった。支持資料は固定treeと保存済み索引で存在・保存・未読を区別し、取得が拒否された647件を再取得していない。[一次資料の照合](skills-3080-mizchi-infra-primary-checks.json)ではOIDC custom claim、Go resolver、CI cacheの保存条件を上流の一般保証から分けた。候補の問題を全資料の除外へ広げない。
+
+同用途のgh-fix-ciは既存github-actions-ciへ[統合](skills-3080-gh-ci-integration-evidence.json)した。通常修復の承認を毎回求める旧指示を改訂し、実HEAD・実行回・jobログ・未完了を区別する。新しい入口は作らず、変更前3ファイルを.trashへ保全して既存2ファイルを更新、原文と個別Apache全文を含む4ファイルを追加した。旧GUIDEは無改変で保持した。既存3048 Go検査器の実1件6ファイル検査、fresh Codex metadata325中の対象1発見・enabled・説明一致・解析0を確認。実モデルによる修復の試験や文脈予算の実証とは分け、独立レビューは次の有限工程とする。
+
+全件は73220=導入28+統合1+除外0+未判定保留73191で、残は本文有72116+未取得428+拒否保持647。全16資料の継続責任は元3080に保持する。現jobのmetadataはgpt-6.1-sol/effort max（policy）で、Fast/実効推論量/認証経路は独立照合していない。前ジョブのhigh表示を今回の観測へ流用しない。

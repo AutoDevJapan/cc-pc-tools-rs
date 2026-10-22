@@ -80,6 +80,15 @@ func startDetached(mk func() *exec.Cmd) (c *exec.Cmd, breakaway bool, err error)
 }
 
 func replaceFile(from, to string) error {
+	return moveFile(from, to, 0x1|0x8)
+}
+
+func publishFile(from, to string) error {
+	// MOVEFILE_WRITE_THROUGH without MOVEFILE_REPLACE_EXISTING.
+	return moveFile(from, to, 0x8)
+}
+
+func moveFile(from, to string, flags uintptr) error {
 	a, e := syscall.UTF16PtrFromString(from)
 	if e != nil {
 		return e
@@ -88,7 +97,7 @@ func replaceFile(from, to string) error {
 	if e != nil {
 		return e
 	}
-	ok, _, err := kernel32.NewProc("MoveFileExW").Call(uintptr(unsafe.Pointer(a)), uintptr(unsafe.Pointer(b)), 0x1|0x8)
+	ok, _, err := kernel32.NewProc("MoveFileExW").Call(uintptr(unsafe.Pointer(a)), uintptr(unsafe.Pointer(b)), flags)
 	if ok == 0 {
 		return err
 	}

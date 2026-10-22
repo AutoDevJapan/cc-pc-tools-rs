@@ -29,8 +29,21 @@ type expiredJob struct {
 }
 
 func (j expiredJob) matches(p Plan) bool {
-	return j.ID == p.JobID && j.RunID == p.RunID && j.Attempt == p.Attempt && j.Head == p.Head && j.Name == p.JobName &&
-		j.RunnerID != nil && *j.RunnerID == 0 && j.RunnerName != nil && *j.RunnerName == "" && j.Steps != nil && len(j.Steps) == 0
+	return j.ID == p.JobID && j.RunID == p.RunID && j.Attempt == p.Attempt && j.Head == p.Head && j.Name == p.JobName
+}
+
+func (j expiredJob) cancelledUnassigned() bool {
+	return j.RunnerID != nil && *j.RunnerID == 0 && j.RunnerName != nil && *j.RunnerName == "" && j.Steps != nil && len(j.Steps) == 0
+}
+
+func (j expiredJob) queuedUnassigned() bool {
+	return (j.RunnerID == nil || *j.RunnerID == 0) && (j.RunnerName == nil || *j.RunnerName == "") && len(j.Steps) == 0
+}
+
+func neverCreated(e *Entry) bool {
+	// A supervisor may have claimed an expired reservation without reaching
+	// create_intent. Its launch evidence is retained, not mistaken for a root.
+	return e.Cleanup == (CleanupRec{State: "none"}) && e.Started.HelperAt == "" && e.Started.Helper == (ProcID{})
 }
 
 type expiredProof struct {
@@ -73,7 +86,7 @@ func (d *Deps) ReplaceExpired(ctx context.Context, key, replacementKey string) e
 		!slices.Contains(l.Budget.Initial, key) || len(l.Budget.Initial) > InitialBudget || len(l.Budget.Replacements) >= InitialBudget {
 		return errors.New("entry is not an original unassigned initial acceptance slot")
 	}
-	if f, ok := l.Fences["Windows"]; ok && f.Key != key {
+	if f, ok := l.Fences["Windows"]; ok && f.Key != key && !neverCreated(ent) {
 		return errors.New("another Windows entry is fenced")
 	}
 	for _, r := range l.Budget.Replacements {
@@ -120,7 +133,7 @@ func (d *Deps) ReplaceExpired(ctx context.Context, key, replacementKey string) e
 		wantLabels, gotLabels := slices.Clone(d.C.Labels(ent.Plan)), slices.Clone(cancelled.Labels)
 		slices.Sort(wantLabels)
 		slices.Sort(gotLabels)
-		if !cancelled.matches(ent.Plan) || cancelled.Status != "completed" || cancelled.Conclusion != "cancelled" ||
+		if !cancelled.matches(ent.Plan) || !cancelled.cancelledUnassigned() || cancelled.Status != "completed" || cancelled.Conclusion != "cancelled" ||
 			se != nil || ee != nil || ended.Before(started.Add(24*time.Hour)) || ended.After(d.Now()) || !slices.Equal(wantLabels, gotLabels) {
 			return errors.New("original official job was not timeout-cancelled without assignment")
 		}
@@ -131,7 +144,7 @@ func (d *Deps) ReplaceExpired(ctx context.Context, key, replacementKey string) e
 		wantLabels, gotLabels = slices.Clone(d.C.Labels(next)), slices.Clone(current.Labels)
 		slices.Sort(wantLabels)
 		slices.Sort(gotLabels)
-		if !current.matches(next) || current.Status != "queued" || !slices.Equal(wantLabels, gotLabels) {
+		if !current.matches(next) || !current.queuedUnassigned() || current.Status != "queued" || !slices.Equal(wantLabels, gotLabels) {
 			return errors.New("replacement is not the same queued unassigned job")
 		}
 		return nil
@@ -144,9 +157,7 @@ func (d *Deps) ReplaceExpired(ctx context.Context, key, replacementKey string) e
 		return err
 	}
 	proof := expiredProof{Original: ent, Replacement: next, Cancelled: cancelled, At: stamp(d.Now())}
-	if ent.Cleanup == (CleanupRec{State: "none"}) && ent.Started == (StartRec{}) {
-		// The stored create_intent always precedes creation: this entry created nothing.
-	} else {
+	if !neverCreated(ent) {
 		cl := ent.Cleanup
 		if !hex32.MatchString(cl.SafeDeleteID) || cl.Instance != cl.SafeDeleteID || !absClean(cl.Root) || filepath.Base(cl.Root) != "codex-owned-"+cl.Instance || d.Retired == nil || d.VerifyRetired == nil {
 			return errors.New("original resource identity or collection proof unavailable")
@@ -190,10 +201,11 @@ func (d *Deps) ReplaceExpired(ctx context.Context, key, replacementKey string) e
 		// interrupted command can reuse only its identical original proof.
 		current.Budget.Replacements = append(current.Budget.Replacements, ReplacementRec{Original: key, Replacement: replacementKey, ProofSHA256: digestHexBytes(body)})
 		current.Entries[key].State = StateRefused
-		current.Entries[key].Reason = "expired without assignment; replacement: " + replacementKey
 		current.Entries[replacementKey] = &Entry{Key: replacementKey, Plan: next, OS: "Windows", Phase: "initial", State: StateReserved,
 			Queued: QueuedRec{At: stamp(d.Now())}, Cleanup: CleanupRec{State: "none"}, Replaces: key}
-		delete(current.Fences, "Windows")
+		if f, ok := current.Fences["Windows"]; ok && f.Key == key {
+			delete(current.Fences, "Windows")
+		}
 		delete(current.Refusals, replacementKey)
 		return nil
 	})
@@ -204,34 +216,48 @@ func saveExpiredProof(path string, p expiredProof) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
-	if os.IsExist(err) {
+	reuse := func() ([]byte, error) {
 		old, err := boundedRegular(path, 256<<10)
 		if err != nil {
 			return nil, err
 		}
 		var previous expiredProof
-		if json.Unmarshal(old, &previous) != nil {
+		if json.Unmarshal(old, &previous) != nil || previous.Census.Queryable != 0 || previous.Census.Unreadable < 0 {
 			return nil, errors.New("existing replacement proof invalid")
 		}
-		// Keep the first observation time. Every current external proof has just
-		// been rechecked; the saved original cannot be changed by a retry.
-		p.At = previous.At
+		// Fresh collection has just passed. Unrelated unreadable process counts
+		// may change; keep the first census and time as immutable observations.
+		p.At, p.Census = previous.At, previous.Census
 		want, _ := json.Marshal(p)
 		if !bytes.Equal(old, want) {
 			return nil, errors.New("existing replacement proof differs")
 		}
 		return old, nil
 	}
+	if _, err := os.Lstat(path); err == nil {
+		return reuse()
+	} else if !os.IsNotExist(err) {
+		return nil, err
+	}
+	// Publish only a complete, synced file. A crash during its write leaves an
+	// unused temporary file, not an unrecoverable partial original archive.
+	f, err := os.CreateTemp(filepath.Dir(path), ".replacement-*.tmp")
 	if err != nil {
 		return nil, err
 	}
+	defer os.Remove(f.Name())
 	_, err = f.Write(b)
 	if err == nil {
 		err = f.Sync()
 	}
 	if ce := f.Close(); err == nil {
 		err = ce
+	}
+	if err == nil {
+		err = publishFile(f.Name(), path)
+		if os.IsExist(err) {
+			return reuse()
+		}
 	}
 	return b, err
 }

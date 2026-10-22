@@ -74,7 +74,7 @@ func TestExpiredUnassignedReplacementPreservesOriginalSlotAndEvidence(t *testing
 }
 
 func TestExpiredReplacementRejectsUnsafeOrUnboundedRecovery(t *testing.T) {
-	for _, name := range []string{"not-expired", "assigned", "steps", "missing-steps", "missing-runner", "missing-runner-name", "failure", "short-wait", "other-head", "other-name", "wrong-attempt", "new-assigned", "new-started", "new-completed", "contract", "retirement", "collection", "live", "unknown-resource", "foreign-fence", "not-in-budget", "context", "changed-during-proof"} {
+	for _, name := range []string{"not-expired", "assigned", "steps", "missing-steps", "missing-runner", "missing-runner-name", "failure", "short-wait", "other-head", "other-name", "wrong-attempt", "new-assigned", "new-runner-name", "new-started", "new-completed", "new-label", "old-label", "contract", "retirement", "collection", "census-live", "census-invalid", "live", "unknown-resource", "foreign-fence", "not-in-budget", "context", "changed-during-proof"} {
 		t.Run(name, func(t *testing.T) {
 			h, oldKey, newKey, old, next := expiredHarness(t, true)
 			ctx := context.Background()
@@ -103,10 +103,16 @@ func TestExpiredReplacementRejectsUnsafeOrUnboundedRecovery(t *testing.T) {
 				newKey = "801/3/8022"
 			case "new-assigned":
 				next["runner_id"] = 4
+			case "new-runner-name":
+				next["runner_name"] = "assigned"
 			case "new-started":
 				next["steps"] = []obj{{"name": "test"}}
 			case "new-completed":
 				next["status"] = "completed"
+			case "new-label":
+				next["labels"] = []string{"foreign"}
+			case "old-label":
+				old["labels"] = []string{"foreign"}
 			case "contract":
 				h.c.verifyErr = func(Plan) error { return errors.New("source changed") }
 			case "retirement":
@@ -114,6 +120,13 @@ func TestExpiredReplacementRejectsUnsafeOrUnboundedRecovery(t *testing.T) {
 			case "collection":
 				h.d.VerifyRetired = func(context.Context, *Entry, string) (CollectionObservation, error) {
 					return CollectionObservation{}, errors.New("not collected")
+				}
+			case "census-live", "census-invalid":
+				h.d.VerifyRetired = func(context.Context, *Entry, string) (CollectionObservation, error) {
+					if name == "census-live" {
+						return CollectionObservation{Queryable: 1}, nil
+					}
+					return CollectionObservation{Unreadable: -1}, nil
 				}
 			case "live":
 				h.d.Alive = func(ProcID) bool { return true }
@@ -207,5 +220,166 @@ func TestChangedReplacementProofFailsWithoutChangingTheLedger(t *testing.T) {
 	after, _ := json.Marshal(h.ledger())
 	if string(before) != string(after) {
 		t.Fatal("changed proof mutated the ledger")
+	}
+}
+
+func TestExpiredQueuedReplacementAcceptsNullUnassignedFields(t *testing.T) {
+	for _, field := range []string{"runner_id", "runner_name", "steps", "all"} {
+		t.Run(field, func(t *testing.T) {
+			h, oldKey, newKey, _, next := expiredHarness(t, false)
+			if field == "all" {
+				next["runner_id"], next["runner_name"], next["steps"] = nil, nil, nil
+			} else {
+				next[field] = nil
+			}
+			if err := h.d.ReplaceExpired(context.Background(), oldKey, newKey); err != nil {
+				t.Fatal(err)
+			}
+			if len(h.ledger().Budget.Replacements) != 1 || h.sd.n != 1 || h.win.names() != "Windows:lifecycle" {
+				t.Fatal("admission created a resource or lost the original slot")
+			}
+		})
+	}
+}
+
+func addExpiredSibling(t *testing.T, h *harness, oldKey string, run, job int64) (string, string) {
+	t.Helper()
+	original := h.ledger().Entries[oldKey]
+	now := h.now
+	h.now, _ = time.Parse(time.RFC3339Nano, original.Queued.At)
+	key := h.seed("Windows", run, job, "test (windows-latest)", false)
+	h.now = now
+	started, _ := time.Parse(time.RFC3339Nano, original.Queued.At)
+	h.gh.data[fmt.Sprintf("repos/%s/actions/jobs/%d", Repository, job)] = obj{
+		"id": job, "run_id": run, "run_attempt": 1, "head_sha": headSHA, "name": "test (windows-latest)",
+		"status": "completed", "conclusion": "cancelled", "runner_id": 0, "runner_name": "", "steps": []obj{},
+		"started_at": stamp(started), "completed_at": stamp(started.Add(24 * time.Hour)),
+	}
+	h.gh.data[fmt.Sprintf("repos/%s/actions/jobs/%d", Repository, job+1)] = obj{
+		"id": job + 1, "run_id": run, "run_attempt": 2, "head_sha": headSHA, "name": "test (windows-latest)",
+		"status": "queued", "runner_id": nil, "runner_name": nil, "steps": nil,
+	}
+	return key, fmt.Sprintf("%d/2/%d", run, job+1)
+}
+
+func TestExpiredUncreatedSiblingCanBeReplacedWithoutClearingForeignFence(t *testing.T) {
+	h, oldKey, _, _, _ := expiredHarness(t, true)
+	key, next := addExpiredSibling(t, h, oldKey, 803, 8031)
+	fence := h.ledger().Fences["Windows"]
+	if err := h.d.ReplaceExpired(context.Background(), key, next); err != nil {
+		t.Fatal(err)
+	}
+	if h.ledger().Fences["Windows"] != fence || h.tick().Launched != 0 || h.sd.n != 1 {
+		t.Fatal("sibling admission released a foreign fence or executed work")
+	}
+}
+
+func TestThreeExpiredReplacementsSurviveInterleavedOrdinaryTicks(t *testing.T) {
+	h, first, firstNext, _, _ := expiredHarness(t, true)
+	second, secondNext := addExpiredSibling(t, h, first, 803, 8031)
+	third, thirdNext := addExpiredSibling(t, h, first, 805, 8051)
+	h.win.out = Outcome{Started: true, HelperOK: true, Collected: true}
+	for i, pair := range [][2]string{{first, firstNext}, {second, secondNext}, {third, thirdNext}} {
+		if i > 0 {
+			if h.tick().Launched != 1 || h.spawned[len(h.spawned)-1] != pair[0] {
+				t.Fatal("fixture did not let the ordinary tick claim the expired sibling")
+			}
+			creates, calls := h.sd.n, h.win.names()
+			if err := h.d.Supervise(context.Background(), pair[0]); err != nil {
+				t.Fatal(err)
+			}
+			e := h.ledger().Entries[pair[0]]
+			if e.State != StateNeedsRecovery || e.Started.IntentAt == "" || e.Cleanup.State != "none" || h.sd.n != creates || h.win.names() != calls {
+				t.Fatal("expired sibling created resources or launch evidence was discarded")
+			}
+		}
+		if err := h.d.ReplaceExpired(context.Background(), pair[0], pair[1]); err != nil {
+			t.Fatal(err)
+		}
+		if h.tick().Launched != 1 || h.spawned[len(h.spawned)-1] != pair[1] {
+			t.Fatal("ordinary tick did not launch the replacement")
+		}
+		if err := h.d.Supervise(context.Background(), pair[1]); err != nil {
+			t.Fatal(err)
+		}
+		if h.ledger().Entries[pair[1]].State != StateSucceeded {
+			t.Fatal("replacement lifecycle did not finish")
+		}
+	}
+	l := h.ledger()
+	if len(l.Budget.Initial) != 3 || len(l.Budget.Normal) != 0 || len(l.Budget.Replacements) != 3 || len(l.Fences) != 0 || h.sd.n != 4 {
+		t.Fatalf("budget, fence or actual resource count changed: %+v", l)
+	}
+	before, _ := json.Marshal(l)
+	if err := h.d.ReplaceExpired(context.Background(), first, "801/2/8099"); err == nil {
+		t.Fatal("fourth replacement admitted")
+	}
+	after, _ := json.Marshal(h.ledger())
+	if string(before) != string(after) {
+		t.Fatal("fourth replacement changed the ledger")
+	}
+}
+
+func TestExpiredReplacementRechecksCensusAndKeepsFirstSavedObservation(t *testing.T) {
+	h, oldKey, newKey, _, _ := expiredHarness(t, true)
+	before := h.ledger()
+	if err := h.d.ReplaceExpired(context.Background(), oldKey, newKey); err != nil {
+		t.Fatal(err)
+	}
+	path := h.d.home("entries", safeKey(oldKey), "replacement-2.json")
+	original, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := h.d.Store.Update(func(l *Ledger) error { *l = *before; return nil }); err != nil {
+		t.Fatal(err)
+	}
+	calls := 0
+	h.d.VerifyRetired = func(context.Context, *Entry, string) (CollectionObservation, error) {
+		calls++
+		return CollectionObservation{Unreadable: 5}, nil
+	}
+	h.now = h.now.Add(time.Minute)
+	if err := h.d.ReplaceExpired(context.Background(), oldKey, newKey); err != nil {
+		t.Fatal(err)
+	}
+	after, err := os.ReadFile(path)
+	if err != nil || string(after) != string(original) || calls != 1 {
+		t.Fatal("retry skipped current collection or overwrote the original census")
+	}
+}
+
+func TestReplacementProofPublicationNeverOverwritesExistingBytes(t *testing.T) {
+	dir := t.TempDir()
+	from, to := filepath.Join(dir, "new.tmp"), filepath.Join(dir, "original.json")
+	if err := os.WriteFile(from, []byte("new"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(to, []byte("original"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := publishFile(from, to); !os.IsExist(err) {
+		t.Fatalf("exclusive publication did not report an existing archive: %v", err)
+	}
+	got, err := os.ReadFile(to)
+	if err != nil || string(got) != "original" {
+		t.Fatal("original archive overwritten")
+	}
+}
+
+func TestReplacementProofIgnoresInterruptedUnpublishedTemporaryFile(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".replacement-interrupted.tmp"), []byte(`{"original_entry":`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(dir, "replacement-2.json")
+	want := expiredProof{At: stamp(time.Now())}
+	b, err := saveExpiredProof(path, want)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := os.ReadFile(path)
+	if err != nil || string(got) != string(b) || !json.Valid(got) {
+		t.Fatal("complete original archive was not published")
 	}
 }

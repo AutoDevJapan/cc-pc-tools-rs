@@ -28,6 +28,29 @@ SHA256を台帳へ記録する。元entryの期限・延期・PID・回収情報
 旧stateだけをrefusedへ閉じ、新keyへの関係を記録する。元entryの変更前の全体は
 証拠に残る。保存途中からの再開は同一証拠だけを再利用し、上書きしない。
 
+queuedの未割当情報はnullまたは0/空、stepsはnullまたは空を受け付ける。
+取消済みの原jobは実観測どおり0/空・空配列を要求する。名前・run・attempt・head・
+ラベル・現在のsourceを確認する条件は同じである。
+
+定期tickが期限切れの予約を先にclaimしても、create_intentより前に止まり、
+Cleanupがnone、helper開始時刻とhelper識別が空なら、作成前の原本として扱う。
+supervisorの起動記録は保存し、生存中のsupervisorは受け付けない。未作成の原本は
+別entryの停止を示すfenceがあっても差替えを記録できるが、そのfenceは消さない。
+作成済みの資源の回収条件は維持する。A・B・Cの復旧の間にtickが割り込む条件も検査する。
+
+証拠は同じdirectoryの一時ファイルを同期してから、既存ファイルを上書きしない操作で
+公開する。保存後・台帳更新前の中断では、外部の回収と公式jobを再検査し、最初の時刻と
+process censusを保持する。無関係な読取不能processの件数が変わっても、現在の検査が
+合格すれば原証拠を変更せず再開する。生存processや回収不明を成功とみなさない。
+
+## 更新と受付の順序
+
+replace-expiredは通常tickと同じ非昇格アカウントで実行する。
+別モデルのMust解消・必要CI・通常merge後、旧attemptの回収を確認するWindows helperを
+先に配置し、設定のSHA pinを合わせてからqueueを更新する。共通guard/safe-deleteは
+既存writerと直列化し、最新sourceと元の配布証拠を保持した正規更新だけを使う。
+旧jobの取消や期限、台帳を手書きで変更しない。差替え受付の成功は製品検査成功とは別である。
+
 initial/normalの元予算配列は減らさず、増やさず、元keyを保持する。
 初回3枠それぞれに差替えは1回まで。差替えからさらに差替えることはできない。
 新しい正式jobにも既存の24時間・最大6延期・Windows 1件・Cargo gateを適用する。

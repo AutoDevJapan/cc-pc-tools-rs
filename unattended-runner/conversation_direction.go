@@ -218,14 +218,12 @@ func (r *Runner) conversationDirectionRecord(ctx context.Context, opts conversat
 		if existing.Input.ActorTodo != strconv.FormatUint(opts.Todo, 10) {
 			return nil, errDirection
 		}
-		_, applied, err := r.conversationDirectionApplied(ctx, q, proof, *selected, row, stamp)
+		verified, applied, err := r.conversationDirectionApplied(ctx, q, proof, *selected, row, stamp)
 		if err != nil || !applied {
 			return nil, errDirection
 		}
-		result, err = r.conversationDirectionCheck(ctx, q, opts.Message, existing.InputSHA)
-		if err != nil {
-			return nil, errDirection
-		}
+		result = conversationDirectionResult{Domain: "todo-direction-record-v1", Kind: directionKind, Recorded: true,
+			InputSHA: verified.DirectionInputSHA, ReceiptSHA: verified.DirectionSHA}
 	} else {
 		job := os.Getenv("CC_JOB_ID")
 		if !validJob(job) {
@@ -266,9 +264,19 @@ func (r *Runner) conversationDirectionRecord(ctx context.Context, opts conversat
 		return nil, errDirection
 	}
 	if closed {
-		q.Phase = "closed"
-		index.Questions[q.RequestID] = q
-		if publish(r.conversationPath(), index) != nil {
+		// Progress posting saves Logs in this same index. Retain its verified
+		// message/notification receipt rather than republishing the earlier copy.
+		latest, err := r.loadConversations()
+		if err != nil {
+			return nil, errDirection
+		}
+		current, ok := latest.Questions[q.RequestID]
+		if !ok || r.conversationCloseIdentity(current) != r.conversationCloseIdentity(q) {
+			return nil, errDirection
+		}
+		current.Phase = "closed"
+		latest.Questions[q.RequestID] = current
+		if publish(r.conversationPath(), latest) != nil {
 			return nil, errDirection
 		}
 	}

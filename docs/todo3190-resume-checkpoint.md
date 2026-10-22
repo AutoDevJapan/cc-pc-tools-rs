@@ -2,6 +2,51 @@
 
 関連Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/325
 
+## 2026-10-23 04:20 JST：別モデル指摘2件を修正
+
+元3348の読取レビューが完了しました。実jobは `20261023-034451-todo-3348`、
+正常jobs照会はsucceeded、anthropic/claude-opus-5-5、effort=max、exit0です。
+固定base d423c9db / head d3f668e6のレビュー原応答と自分の実model/effortを、
+`todo3190-review3348-and-own-job-20261023-040950.private.json` に保持しました。
+独立したturn_context照合は未実施です。指定差分12ファイルを実読したとの結果で、
+近接のclose_test/native integration/continued.rsは未読、テストと実APIは未実行と区別しています。
+
+Must2件は、保存後の元行・現在担当spec/job状態の完全一致による永続的な再開失敗と、
+無通知進捗のLog受領票を古い質問indexで上書きする問題でした。両方の再現検査を追加し、
+変更前に `direction_record_mismatch` と受領票消失で失敗するRedを確認しました。
+修正後は、全行CASを実際の書込み区間だけに使い、読戻しは保存済みの不変条件を照合します。
+実jobのToDo/cwdと起動prompt、元記録の両project/root・input/source・本文blockは保持します。
+通常の担当交代・spec更新・依存解消・job終了や後日のcancelは事実を消しません。
+新しい元作業の停止・依存追加は質問終了を保留し、解除後に同じ記録で再開します。
+質問終了のpublish直前にindexを読み直して、同一質問のphaseだけを更新します。
+
+Suggestionにも、実運用上必要な範囲で対応しました。同一actor/originは拒否し、記録時に
+両scopeのroot SHAを保存して読戻しでも照合します。同一処理中の余分なverify1回と、
+返信検査の重複GETを除きました。改行は原入力bytesを保持したままnote表示だけ正常CLIに
+揃え、後日の通常編集で記録を失わないようにしました。実際の元3050・3084と自分3190が
+同じcc-pc-tools-rsであることは通常todo listで確認しました。照合条件は緩めていません。
+
+今回の検査：方向記録のRust実CLI11検査が成功しました。通常遷移後のverifyと応答喪失からの
+再開、次の自然巡回、新停止の解除後の同一票回復、root/prompt/jobの差し替え拒否を含みます。
+Go全moduleのraceは84.263秒で成功し、最終Rust実行物を使う方向CLIのraceは9.907秒で成功、
+vetも成功しました。cc-todo docは成功（対象0件）です。最終Rustのnote改行修正前に始めた
+Go全module検査中、Cargoが使用中のtodo.exe置換を試みてOS error5で失敗しました。
+検査終了後に同じtargetで順番に再実行し、Rust11件と最終Go方向CLIの成功を確認しました。
+共有版の削除やACL変更で迂回していません。前候補の282件を今回の全件再実行と扱いません。
+
+実jobは `20261023-040950-todo-3190`、正常statusはgpt-6.1-sol/max、todo_id/cwd一致です。
+PR376の旧headは全自動検査成功でしたが、修正後headの結果へ流用しません。
+共有runtimeの実測はGo source=0a7070b53795739603bf67eb43a4ba11e29992b6、VCS clean、
+SHA256=3441493d81a5854b3cf484591643c69e857dcc076ffaf8875b596b908176619f、
+todo.exe SHA256=f8710b516d3ecdd37564d7a1ab978c8689ab1bdd2ffaec4150d0e4bed4c0b983でした。
+Rust共有版は前回の4b351d…から変わっています。配布前には最新main/実物の来歴と並行修復を
+再照合し、古い実行物へ上書きしません。今回も配布・実方向記録・質問closeは未実施です。
+
+前回の2件目API取得失敗は、同じ正常CLIの有限再試行で成功し、2件とも本人・原文・編集なしを
+確認した私的受領票を保持しています。原資料のraw読取で補った結果ではありません。
+新しい修正候補をcommit/pushし、追加差分の別モデルMax確認を正常spec付きToDoへ登録します。
+元3190をその完了待ちに保存し、レビュー後にMust修正/CI/通常merge/配布/実反映を継続します。
+
 ## 2026-10-23 00:43 JST：先行マージの統合と方向専用CLIの実装
 
 これ以前の待機記録は履歴です。PR315は通常マージ済みです。最終headは

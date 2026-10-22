@@ -64,7 +64,7 @@ func (r *Runner) conversationRepliesSnapshot(ctx context.Context, requestID, out
 		// An inspection file's SHA is never a canonical application source SHA.
 		// Expose the latter only when the actual delivered capture also matches
 		// this fresh question/reply/edit. An absent capture remains unverified.
-		if stamp, ready, err := r.conversationReplySource(ctx, q, proof, reply); err == nil && ready {
+		if stamp, ready, err := r.conversationReplySourceMessage(ctx, q, proof, reply, &live.Message); err == nil && ready {
 			version["source_receipt_sha256"] = stamp.SourceSHA
 			sources = append(sources, map[string]any{"message_id": reply.Message, "reply_sha256": stamp.ReplySHA, "source_receipt_sha256": stamp.SourceSHA})
 		}

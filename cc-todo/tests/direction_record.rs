@@ -268,3 +268,147 @@ fn direction_rejects_explicit_actor_stops_even_when_status_is_doing() {
         f.reject_unchanged(false);
     }
 }
+
+#[test]
+fn recorded_direction_survives_normal_work_transitions_and_original_actor_retirement() {
+    for change in [
+        "dependency-completed",
+        "new-worker",
+        "origin-spec",
+        "actor-spec",
+        "actor-retired",
+    ] {
+        let f = Fixture::new();
+        let saved = f.ok(false);
+        let mut db = f.db();
+        match change {
+            "dependency-completed" => {
+                db["items"][2]["status"] = json!("done");
+                db["items"][0]["status"] = json!("todo");
+                db["items"][0].as_object_mut().unwrap().remove("wait_on");
+            }
+            "new-worker" => {
+                db["items"][0]["status"] = json!("doing");
+                db["items"][0]["scheduler"] =
+                    json!({"job":"next-product-worker","worktree":"D:/next-worktree"});
+                db["items"][0]["jobs"] = json!(["product-worker", "next-product-worker"]);
+                db["items"][0]["resume_generation"] = json!(2);
+            }
+            "origin-spec" => db["items"][0]["spec"] = json!("next-version.md"),
+            "actor-spec" => {
+                fs::write(f.temp.path().join("next-actor.md"), "next assignment").unwrap();
+                db["items"][1]["spec"] = json!(f.temp.path().join("next-actor.md"));
+            }
+            _ => {
+                db["items"][1]["status"] = json!("done");
+                db["items"][1]["scheduler"] = json!({"job":null});
+                let job_path = f.temp.path().join("jobs/actual-worker/job.json");
+                let mut j: Value = serde_json::from_slice(&fs::read(job_path).unwrap()).unwrap();
+                j["status"] = json!("cancelled");
+                j["cancel_reason"] = json!("completed-parent");
+                f.write("jobs/actual-worker/job.json", &j);
+            }
+        }
+        f.write("todo.json", &db);
+        f.snapshot();
+        assert_eq!(
+            f.ok(true)["receipt_sha256"],
+            saved["receipt_sha256"],
+            "{change}"
+        );
+        assert_eq!(f.ok(false)["changed"], false, "{change}");
+        assert_eq!(f.db(), db, "readback mutated normal work state");
+    }
+}
+
+#[test]
+fn recorded_scope_and_prompt_remain_bound_after_normal_snapshot_refresh() {
+    for change in ["root", "prompt", "job-cwd", "job-todo"] {
+        let f = Fixture::new();
+        f.ok(false);
+        let mut db = f.db();
+        match change {
+            "root" => db["projects"]["tools"] = json!("D:/rebound-root"),
+            "prompt" => fs::write(
+                f.temp.path().join("jobs/actual-worker/prompt.md"),
+                "normal-question 123 124 changed",
+            )
+            .unwrap(),
+            _ => {
+                let mut j: Value = serde_json::from_slice(
+                    &fs::read(f.temp.path().join("jobs/actual-worker/job.json")).unwrap(),
+                )
+                .unwrap();
+                if change == "job-cwd" {
+                    j["cwd"] = json!("D:/rebound-job")
+                } else {
+                    j["todo_id"] = json!(3)
+                }
+                f.write("jobs/actual-worker/job.json", &j);
+            }
+        }
+        f.write("todo.json", &db);
+        f.snapshot();
+        if change == "root" {
+            for (i, name) in [(0, "origin"), (1, "actor")] {
+                f.write(&format!("{name}-scope.json"), &json!({"domain":"discord-conversation-todo-scope-v1",
+                    "todo_id":(i+1).to_string(),"project":"tools","project_path_sha256":sha(b"D:/rebound-root")}));
+            }
+        }
+        f.reject_unchanged(true);
+    }
+}
+
+#[test]
+fn new_hold_defers_close_but_releasing_it_recovers_the_same_record() {
+    for change in ["block", "stop", "dependency"] {
+        let f = Fixture::new();
+        let saved = f.ok(false);
+        let recorded = f.db();
+        let mut db = recorded.clone();
+        match change {
+            "block" => db["items"][0]["status"] = json!("block"),
+            "stop" => db["items"][0]["owner_stopped"] = json!(true),
+            _ => db["items"][0]["wait_on"] = json!([3, 9]),
+        }
+        f.write("todo.json", &db);
+        f.snapshot();
+        f.reject_unchanged(true);
+        f.write("todo.json", &recorded);
+        f.snapshot();
+        assert_eq!(f.ok(true)["receipt_sha256"], saved["receipt_sha256"]);
+    }
+}
+
+#[test]
+fn direction_preserves_raw_input_and_normalizes_only_the_note_display() {
+    let f = Fixture::new();
+    let mut input: Value =
+        serde_json::from_slice(&fs::read(f.temp.path().join("input.json")).unwrap()).unwrap();
+    input["owner_reply"] = json!("a\r\nkeep\rstructure");
+    f.write("input.json", &input);
+    f.ok(false);
+    let db = f.db();
+    assert!(
+        db["items"][0]["note"]
+            .as_str()
+            .unwrap()
+            .contains("a\nkeep\nstructure")
+    );
+    assert_eq!(
+        db["items"][0]["owner_direction_records"][0]["input"]["owner_reply"],
+        input["owner_reply"]
+    );
+    f.snapshot();
+    f.ok(true);
+}
+
+#[test]
+fn direction_rejects_the_original_product_todo_as_its_distinct_actor() {
+    let f = Fixture::new();
+    let mut input: Value =
+        serde_json::from_slice(&fs::read(f.temp.path().join("input.json")).unwrap()).unwrap();
+    input["actor_todo_id"] = json!("1");
+    f.write("input.json", &input);
+    f.reject_unchanged(false);
+}

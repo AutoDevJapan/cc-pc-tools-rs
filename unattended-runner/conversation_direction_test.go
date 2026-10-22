@@ -284,3 +284,82 @@ func TestDirectionInspectionReturnsCanonicalSourceSHAButNeverApplication(t *test
 		t.Fatal("inspection mutated task or archived question")
 	}
 }
+
+func TestDirectionCloseKeepsSilentProgressDeliveryReceipt(t *testing.T) {
+	f, opts := directionNative(t)
+	backend := f.r.Run
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		raw, err := backend(ctx, path, args...)
+		if path == conversationSender && args[0] == "recovery-log" && err == nil {
+			var report map[string]any
+			if json.Unmarshal([]byte(raw), &report) != nil {
+				return "", errors.New("invalid fixture log")
+			}
+			report["effective_notify"] = false
+			b, _ := json.Marshal(report)
+			return string(b), nil
+		}
+		return raw, err
+	}
+	if code, _ := directionCLI(t, f, opts); code != 0 {
+		t.Fatal("direction fixture did not record")
+	}
+	index, err := f.r.loadConversations()
+	if err != nil {
+		t.Fatal(err)
+	}
+	key := "reply-" + bytesHash([]byte(f.q.RequestID + opts.Message + "conversation_direction_recorded"))[:32]
+	log, ok := index.Logs[key]
+	if !ok || log.Message == "" || log.VerifiedThread != f.q.Progress || log.EffectiveNotify == nil || *log.EffectiveNotify {
+		t.Fatal("closing the question lost the verified silent progress delivery receipt")
+	}
+}
+
+func TestDirectionLostResponseResumesAfterNormalWorkTransitionAndLaterTick(t *testing.T) {
+	f, opts := directionNative(t)
+	backend := f.r.Run
+	lost := false
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		raw, err := backend(ctx, path, args...)
+		if path == conversationTodo && args[0] == "direction-record" && !lost && err == nil {
+			lost = true
+			return "", errors.New("lost saved result")
+		}
+		return raw, err
+	}
+	if code, _ := directionCLI(t, f, opts); code == 0 || !lost {
+		t.Fatal("fixture did not lose saved result")
+	}
+	f.mutateTodo(t, func(row map[string]any) {
+		row["status"] = "doing"
+		delete(row, "wait_on")
+		row["spec"] = "new-product-spec.md"
+		row["scheduler"] = map[string]any{"job": "next-product-worker", "worktree": "D:/next-worker"}
+		row["jobs"] = []string{"worker-42", "next-product-worker"}
+		row["resume_generation"] = 2
+	})
+	var db map[string]any
+	if readJSON(f.r.TodoPath, maxTodo, &db) != nil {
+		t.Fatal("fixture unavailable")
+	}
+	actor := db["items"].([]any)[1].(map[string]any)
+	actor["status"] = "done"
+	actor["scheduler"] = map[string]any{"job": nil}
+	actor["spec"] = "next-assignment.md"
+	if publish(f.r.TodoPath, db) != nil {
+		t.Fatal("fixture transition unavailable")
+	}
+	if publish(filepath.Join(f.r.Config.Home, "isolated-jobs", "direction-worker", "job.json"), map[string]any{"id": "direction-worker", "todo_id": 43, "status": "cancelled", "cancel_reason": "parent-ended", "cwd": f.r.Config.Home}) != nil {
+		t.Fatal("fixture retirement unavailable")
+	}
+	t.Setenv("CC_JOB_ID", "resumed-worker")
+	f.r.Run = backend
+	if code, result := directionCLI(t, f, opts); code != 0 || result["question_closed_get_verified"] != true || result["changed"] != false {
+		t.Fatal("normal work transition invalidated actual recording")
+	}
+	h := Health{}
+	f.r.processConversations(context.Background(), &h)
+	if len(h.Errors) != 0 || f.close != 1 {
+		t.Fatalf("later tick invalidated recorded direction: %v", h.Errors)
+	}
+}

@@ -68,12 +68,68 @@ fn row(db: &Value, id: i64) -> Result<&Value> {
     }
     Ok(selected)
 }
-fn control(row: &Value) -> Value {
-    let mut v = row.clone();
-    for k in ["note", "note_history", "updated", RECORDS] {
-        v.as_object_mut().unwrap().remove(k);
+const HOLD_FIELDS: &[&str] = &[
+    "stopped",
+    "cancel_requested",
+    "owner_stopped",
+    "paused",
+    "owner_postponement_recorded",
+    "stop_kind",
+    "decision_wait",
+    "owner_question_wait",
+    "wait_ready",
+    "resume_condition",
+    "external_resume_condition",
+];
+fn holds(row: &Value) -> Value {
+    let mut value = json!({"blocked":row["status"]=="block"});
+    for k in HOLD_FIELDS
+        .iter()
+        .chain(["wait_on", "work_owner_wait_on"].iter())
+    {
+        value[*k] = row[*k].clone();
     }
-    v
+    value
+}
+fn no_new_holds(saved: &Value, row: &Value) -> bool {
+    if !saved.is_object()
+        || row["status"] == "recovery_unverified"
+        || (row["status"] == "block" && saved["blocked"] != true)
+    {
+        return false;
+    }
+    for k in HOLD_FIELDS {
+        let current = &row[*k];
+        if !current.is_null() && current != false && current != "" && current != &saved[*k] {
+            return false;
+        }
+    }
+    for k in ["wait_on", "work_owner_wait_on"] {
+        if row[k].is_null() {
+            continue;
+        }
+        let Some(current) = row[k].as_array() else {
+            return false;
+        };
+        if !current.iter().all(|v| {
+            v.as_i64().is_some_and(|id| id > 0)
+                && saved[k].as_array().is_some_and(|old| old.contains(v))
+        }) {
+            return false;
+        }
+    }
+    true
+}
+fn recorded_scope(db: &Value, id: i64) -> Result<Value> {
+    let item = row(db, id)?;
+    let project = text(item, "project");
+    let root = db["projects"][project]
+        .as_str()
+        .ok_or("direction_scope_unavailable")?;
+    Ok(
+        json!({"domain":"discord-conversation-todo-scope-v1","todo_id":id.to_string(),
+        "project":project,"project_path_sha256":sha(root.as_bytes())}),
+    )
 }
 // Exact identifiers in both persisted assignment and executed prompt are required;
 // a project name, title similarity, historical job or generic audit is insufficient.
@@ -98,7 +154,7 @@ fn assigned(body: &str, input: &Value) -> bool {
             })
         })
 }
-fn actor_proof(paths: &Paths, actor: &Value, input: &Value, verify: bool) -> Result<Value> {
+fn actor_identity(paths: &Paths, actor: &Value, input: &Value) -> Result<(Value, Vec<u8>)> {
     let job_id = text(input, "job_id");
     if !crate::job_refs::valid_id(job_id)
         || !crate::job_refs::ids(&actor["jobs"]).any(|j| j == job_id)
@@ -108,21 +164,25 @@ fn actor_proof(paths: &Paths, actor: &Value, input: &Value, verify: bool) -> Res
     let job_path = paths.jobs.join(job_id).join("job.json");
     let job: Value =
         serde_json::from_slice(&bridge::bytes(&job_path)?).map_err(|_| "direction_job_invalid")?;
-    if job["id"] != job_id
-        || job["todo_id"] != actor["id"]
-        || cc_job_policy::cancellation::blocks_recovery(actor, &job)
-        || !matches!(
-            text(&job, "status"),
-            "running" | "succeeded" | "failed" | "lost"
-        )
-    {
+    if job["id"] != job_id || job["todo_id"] != actor["id"] {
         return fail("actor_job_mismatch");
     }
-    if !verify
-        && (std::env::var("CC_JOB_ID").ok().as_deref() != Some(job_id)
-            || actor["status"] != "doing"
-            || job["status"] != "running"
-            || (actor["scheduler"]["job"] != job_id && actor["worker_receipt"]["job"] != job_id))
+    let prompt = bridge::bytes(&paths.jobs.join(job_id).join("prompt.md"))?;
+    if !Path::new(text(&job, "cwd")).is_absolute()
+        || !std::str::from_utf8(&prompt).is_ok_and(|s| assigned(s, input))
+    {
+        return fail("actor_identity_invalid");
+    }
+    Ok((job, prompt))
+}
+fn actor_proof(paths: &Paths, actor: &Value, input: &Value) -> Result<Value> {
+    let job_id = text(input, "job_id");
+    let (job, prompt) = actor_identity(paths, actor, input)?;
+    if std::env::var("CC_JOB_ID").ok().as_deref() != Some(job_id)
+        || actor["status"] != "doing"
+        || job["status"] != "running"
+        || cc_job_policy::cancellation::blocks_recovery(actor, &job)
+        || (actor["scheduler"]["job"] != job_id && actor["worker_receipt"]["job"] != job_id)
     {
         return fail("actor_not_current");
     }
@@ -151,13 +211,26 @@ fn actor_proof(paths: &Paths, actor: &Value, input: &Value, verify: bool) -> Res
         paths.store.parent().unwrap().join(spec)
     };
     let spec_bytes = bridge::bytes(&spec)?;
-    let prompt = bridge::bytes(&paths.jobs.join(job_id).join("prompt.md"))?;
     if !std::str::from_utf8(&spec_bytes).is_ok_and(|s| assigned(s, input))
         || !std::str::from_utf8(&prompt).is_ok_and(|s| assigned(s, input))
     {
         return fail("assignment_scope_mismatch");
     }
     Ok(json!({"spec_sha256":sha(&spec_bytes),"prompt_sha256":sha(&prompt),"cwd":cwd}))
+}
+fn recorded_actor_matches(
+    paths: &Paths,
+    actor: &Value,
+    input: &Value,
+    saved: &Value,
+) -> Result<bool> {
+    let (job, prompt) = actor_identity(paths, actor, input)?;
+    // A later assignment/spec edit or retirement does not undo an earlier actual
+    // write. Its identity and executed prompt remain independently verifiable.
+    Ok(saved.as_object().is_some_and(|o| o.len() == 3)
+        && hex(text(saved, "spec_sha256"), 64)
+        && saved["prompt_sha256"] == sha(&prompt)
+        && saved["cwd"] == job["cwd"])
 }
 fn validate(input: &Value) -> Result<(i64, i64)> {
     let obj = input.as_object().ok_or("direction_input_invalid")?;
@@ -235,6 +308,9 @@ fn validate(input: &Value) -> Result<(i64, i64)> {
     ))
 }
 fn block(input: &Value, input_sha: &str) -> String {
+    // The source input retains the exact API bytes. Render the note with the
+    // normal edit CLI's newline convention so later ordinary edits preserve it.
+    let lines = |s: &str| s.replace("\r\n", "\n").replace('\r', "\n");
     format!(
         "[discord-direction-record-v1 sha256={input_sha}]\n仕様へ記録、機能は未完了。画像案の実装承認・配布・元作業全体の完了ではありません。\n実担当: ToDo {} / job {}\n元作業・保存先: ToDo {}\n出所: Discord API v10 / author {} / thread {} / question {} / reply {}\n質問日時: {} / 回答日時: {} / 編集日時: {} / 取得日時: {}\n原質問（原文）:\n{}\n本人回答（原文）:\n{}\nsource_receipt_sha256={}\n[/discord-direction-record-v1 sha256={input_sha}]",
         text(input, "actor_todo_id"),
@@ -248,8 +324,8 @@ fn block(input: &Value, input_sha: &str) -> String {
         text(input, "created_at"),
         text(input, "edited_at"),
         text(input, "acquired_at"),
-        text(input, "original_question"),
-        text(input, "owner_reply"),
+        lines(text(input, "original_question")),
+        lines(text(input, "owner_reply")),
         text(input, "source_receipt_sha256")
     )
 }
@@ -267,6 +343,9 @@ pub fn record(
     let bytes = bridge::bytes(input_file)?;
     let input: Value = serde_json::from_slice(&bytes).map_err(|_| "direction_input_invalid")?;
     let (origin_id, actor_id) = validate(&input)?;
+    if origin_id == actor_id {
+        return fail("actor_must_be_distinct");
+    }
     for (id, scope, state) in [
         (origin_id, origin_scope, origin_state),
         (actor_id, actor_scope, actor_state),
@@ -277,7 +356,8 @@ pub fn record(
             return fail("project_mismatch");
         }
     }
-    let actor = actor_proof(paths, row(db, actor_id)?, &input, verify)?;
+    let actor_scope = recorded_scope(db, actor_id)?;
+    let origin_scope = recorded_scope(db, origin_id)?;
     let origin = row(db, origin_id)?;
     let input_sha = sha(&bytes);
     let append = block(&input, &input_sha);
@@ -303,8 +383,10 @@ pub fn record(
         if saved["domain"] != RECEIPT
             || saved["kind"] != KIND
             || saved["input"] != input
-            || saved["actor"] != actor
-            || saved["origin_control"] != control(origin)
+            || !recorded_actor_matches(paths, row(db, actor_id)?, &input, &saved["actor"])?
+            || saved["actor_scope"] != actor_scope
+            || saved["origin_scope"] != origin_scope
+            || !no_new_holds(&saved["origin_holds"], origin)
             || saved["note_block_sha256"] != sha(append.as_bytes())
             || text(origin, "note").matches(&append).count() != 1
         {
@@ -318,6 +400,7 @@ pub fn record(
         {
             return fail("record_unavailable");
         }
+        let actor = actor_proof(paths, row(db, actor_id)?, &input)?;
         let note = text(origin, "note");
         if !origin["note"].is_null() && !origin["note"].is_string() {
             return fail("note_invalid");
@@ -327,7 +410,8 @@ pub fn record(
             return fail("note_limit");
         }
         let receipt = json!({"domain":RECEIPT,"kind":KIND,"input":input,"input_sha256":input_sha,
-            "actor":actor,"origin_control":control(origin),"note_block_sha256":sha(append.as_bytes()),
+            "actor":actor,"actor_scope":actor_scope,"origin_scope":origin_scope,
+            "origin_holds":holds(origin),"note_block_sha256":sha(append.as_bytes()),
             "recorded_at":Utc::now().to_rfc3339()});
         let mut changed = origin.clone();
         if changed.get("note_history").is_some_and(|v| !v.is_array()) {

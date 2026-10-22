@@ -194,6 +194,10 @@ func (r *Runner) conversationCloseSave(path string, record *conversationCloseRec
 }
 
 func (r *Runner) conversationReplySource(ctx context.Context, q ConversationQuestion, current *conversationProof, reply conversationReply) (conversationCloseStamp, bool, error) {
+	return r.conversationReplySourceMessage(ctx, q, current, reply, nil)
+}
+
+func (r *Runner) conversationReplySourceMessage(ctx context.Context, q ConversationQuestion, current *conversationProof, reply conversationReply, observed *Message) (conversationCloseStamp, bool, error) {
 	stamp := conversationCloseStamp{ReplySHA: canonicalHash(reply)}
 	req := r.State.Requests[reply.Message]
 	if req == nil || req.Phase == "conversation_reply_saved" || req.Todo == 0 {
@@ -252,7 +256,9 @@ func (r *Runner) conversationReplySource(ctx context.Context, q ConversationQues
 		return stamp, false, nil
 	}
 	var live Message
-	if r.get(ctx, "/channels/"+q.Thread+"/messages/"+reply.Message, &live) != nil {
+	if observed != nil {
+		live = *observed
+	} else if r.get(ctx, "/channels/"+q.Thread+"/messages/"+reply.Message, &live) != nil {
 		return stamp, false, errConversationClose
 	}
 	if live.ID != reply.Message || live.Channel != q.Thread || live.Author.ID != req.Author || live.Author.Bot || live.Timestamp != reply.Created || live.Reference.Message != req.ReplyTo || live.Reference.Channel != req.ReplyChannel || live.Reference.Guild != req.ReplyGuild || (live.Reference.Channel != "" && live.Reference.Channel != q.Thread) || (live.Reference.Guild != "" && live.Reference.Guild != r.State.Destination.Guild) {

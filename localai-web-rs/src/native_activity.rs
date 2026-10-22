@@ -545,11 +545,17 @@ impl Registry {
             if entry.generation != request.generation || entry.closed_at_ms.is_some() {
                 return Err("native_binding_changed");
             }
-            // Every connection starts after existing bytes. Earlier results never migrate into this generation.
-            entry.runtime = Some(
+            let source =
                 crate::native_runtime::Cursor::attach(&request.rollout_path, root, &id, now)
-                    .map_err(|_| "native_runtime_source_unavailable")?,
-            );
+                    .map_err(|_| "native_runtime_source_unavailable")?;
+            if entry
+                .runtime
+                .as_ref()
+                .is_some_and(|current| current.same_source(&source))
+            {
+                return Ok((response(&id, entry), false));
+            }
+            entry.runtime = Some(source);
             entry.min_activity_at_ms = now;
             entry.receipt = None;
             Ok((response(&id, entry), true))
@@ -662,6 +668,22 @@ mod tests {
         let live = registry.view(104);
         assert_eq!(live["verifiedCount"], 1);
         assert_eq!(live["runtimeConnections"], 1);
+        registry
+            .connect_at(
+                Connect {
+                    session_id: ID.into(),
+                    generation: 1,
+                    rollout_path: source.clone(),
+                },
+                &source_root,
+                105,
+            )
+            .unwrap();
+        assert_eq!(
+            registry.view(105)["verifiedCount"],
+            1,
+            "repeated connection cannot discard a real receipt"
+        );
         registry.refresh_runtime(105);
         assert_eq!(registry.view(105)["verifiedCount"], 1);
         append(

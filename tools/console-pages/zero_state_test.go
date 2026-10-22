@@ -19,6 +19,7 @@ func TestResourceNormalEmptyBuildListIsAZeroRatherThanUnobserved(t *testing.T) {
 sample.builds=[];sample.buildCounts={observed:0,processing:0,executing:0,waiting:0,unverified:0,truncated:false};
 const view=ctx.resourceModel(sample,1100);assert.equal(view.active,0);assert.match(view.html,/ビルド0件/);assert(!view.html.includes('実行・CPU処理を確認 · 待機 0 · 未確認 0'));
 sample.currentAvailable=false;const failure=ctx.resourceModel(sample,1100);assert.equal(failure.active,null);assert(!failure.html.includes('ビルド0件'));
+sample.currentAvailable=true;for(const state of ['partial','collecting']){sample.state=state;const incomplete=ctx.resourceModel(sample,1100);assert.equal(incomplete.active,null);assert(!incomplete.html.includes('ビルド0件'),'incomplete inventory cannot certify no builds')}
 `)
 }
 

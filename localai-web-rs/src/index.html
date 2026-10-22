@@ -384,9 +384,9 @@
     function opsProcessingSummary(proof,now=Date.now()){
       const known=Boolean(proof&&['complete','partial'].includes(proof.state)&&typeof proof.validUntil==='number'&&now<=proof.validUntil),count=known&&Number.isSafeInteger(proof.verifiedCount)?proof.verifiedCount:null;
       const issues=opsList(proof&&proof.collectionIssues),seen=new Set(),messages=[];
-      for(const issue of issues){const name=issue.kind==='native'?'会話中の担当':'通常の担当',reason=issue.reason==='stale'?'前回の情報が古くなっています':issue.reason==='source_backlog'?'実行記録の取得が追いついていません':'取得できません',key=name+reason;if(seen.has(key))continue;seen.add(key);messages.push(name+'の情報'+(reason==='取得できません'?'を取得できません':reason==='前回の情報が古くなっています'?'は更新が止まっています':'の取得が追いついていません')+'。'+(issue.lastSuccessAt?'最後に取得できた時刻 '+opsTime(issue.lastSuccessAt)+'。':'')+'自動で再試行します。')}
+      for(const issue of issues){const name=issue.kind==='native'?'会話中の担当':'通常の担当',gap=['source_line_too_large','source_record_invalid','source_pending_limit'].includes(issue.reason),reconnect=['source_truncated','source_identity_changed','source_link'].includes(issue.reason),reason=gap?'記録の一部を読み取れません':reconnect?'実行記録が変わりました':issue.reason==='source_clock_ahead'?'記録の時刻がPCの時刻より先になっています':issue.reason==='stale'?'情報の更新が止まっています':issue.reason==='source_backlog'?'実行記録の取得が追いついていません':'情報を取得できません',key=name+reason;if(seen.has(key))continue;seen.add(key);messages.push(name+'の'+reason+'。'+(issue.lastSuccessAt?'最後に取得できた時刻 '+opsTime(issue.lastSuccessAt)+'。':'')+(reconnect?'接続をやり直す必要があります。':gap?'新しい操作の結果を確認しています。':'自動で再試行します。'))}
       if(!known&&!messages.length)messages.push(proof&&proof.state==='stale'?'稼働情報の更新が止まっています。自動で再試行します。':'稼働情報を取得できません。自動で再試行します。');
-      return {known,count,detail:messages.join(' '),text:(count===null?'稼働情報を取得できません':(messages.length?'取得できた担当の':'')+'稼働'+count+'件')+(messages.length?' · '+messages.join(' '):'')};
+      return {known,count,detail:messages.join(' '),text:(count===null?(messages.length?'':'稼働情報を取得できません'):(messages.length?'取得できた担当の':'')+'稼働'+count+'件')+(messages.length?(count===null?'':' · ')+messages.join(' '):'')};
     }
     function renderProgress(){
       const host=$('#progress-jobs'),status=$('#progress-update');if(!host||!status)return;

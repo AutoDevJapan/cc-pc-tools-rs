@@ -239,7 +239,7 @@ fn run<B: Backend>(
             require(
                 &mut checks,
                 "task_row_unchanged",
-                arr(&fresh["items"]).iter().any(|row| *row == item)
+                arr(&fresh["items"]).contains(&item)
                     && fresh["projects"][s(&item["project"])] == repo,
                 "CheckpointRowChanged",
             )?;

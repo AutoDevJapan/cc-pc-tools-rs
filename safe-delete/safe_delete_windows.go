@@ -479,6 +479,11 @@ func (c config) quarantine(id, reason string) (result map[string]any, err error)
 			return nil, e
 		}
 		defer unlock()
+		r, e := c.load(id, true)
+		if e != nil {
+			return nil, e
+		}
+		c.Quarantine = ci3250QuarantineParent(r.Root, c.Quarantine)
 		return c.quarantinePreserved(id, reason, nil, scope)
 	}
 	var scope *geminiScope

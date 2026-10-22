@@ -38,6 +38,18 @@ const retirement3250Temp = "C:/Users/makhmeto/AppData/Local/Temp"
 const retirement3250Store = "D:/CC/Tools/safe-delete/receipts-go"
 const retirement3250Floor = "263bb8d763b050da39c80f45560ee4349671524b"
 
+// Immutable parent identities observed without opening directory contents.
+// The worktree is the existing, qualified ToDo2962 source, not another root.
+func retirement3250Parent(path string) (volume uint32, id uint64, created int64, ok bool) {
+	if same(path, retirement3250Temp) {
+		return 2229119083, 562949953422078, 134072793159133344, true
+	}
+	if same(path, civ6Source) {
+		return 1215965535, 0x00a300000003a5c1, 134368742189204451, true
+	}
+	return 0, 0, 0, false
+}
+
 var retirement3250ID = regexp.MustCompile(`^[0-9a-f]{32}$`)
 
 // Lexical Win32 spelling only: no target lookup or link resolution.
@@ -131,9 +143,10 @@ type retirement3250Ledger struct {
 
 func retirement3250Binding(path string, r retirement3250Record, l retirement3250Ledger, now time.Time) (*retirement3250Entry, bool) {
 	created, err := time.Parse(time.RFC3339Nano, r.Created)
+	_, _, _, parentOK := retirement3250Parent(r.Root)
 	if err != nil || created.Before(time.Date(2026, 10, 21, 0, 25, 0, 0, time.UTC)) || now.Before(created) || now.Sub(created) > 24*time.Hour ||
-		!retirement3250ID.MatchString(r.ID) || r.ID == owned3107ID || !same(path, filepath.Join(retirement3250Temp, "codex-owned-"+r.ID)) ||
-		!same(r.Path, path) || !same(r.Root, retirement3250Temp) || r.Version != 2 || r.State != "owned" || r.Destination != "" || r.Project != "civ6-ci-queue" || r.Volume == 0 || r.FileID == 0 ||
+		!parentOK || !retirement3250ID.MatchString(r.ID) || r.ID == owned3107ID || !same(path, filepath.Join(r.Root, "codex-owned-"+r.ID)) ||
+		!same(r.Path, path) || r.Version != 2 || r.State != "owned" || r.Destination != "" || r.Project != "civ6-ci-queue" || r.Volume == 0 || r.FileID == 0 ||
 		l.Version != 1 || len(l.Budget.Initial) > 3 || len(l.Budget.Normal) > 3 || len(l.Budget.Continuation) != 0 || len(l.Entries) > 6 {
 		return nil, false
 	}
@@ -227,7 +240,9 @@ func retirement3250Qualification(path string) string {
 	}
 	path = clean
 	id := strings.TrimPrefix(filepath.Base(path), "codex-owned-")
-	if !retirement3250ID.MatchString(id) || id == owned3107ID || !same(path, filepath.Join(retirement3250Temp, "codex-owned-"+id)) || legacyMatch(path) || !conversationPhysical(path) {
+	parentPath := filepath.Dir(path)
+	volume, parentID, parentBirth, parentOK := retirement3250Parent(parentPath)
+	if !parentOK || !retirement3250ID.MatchString(id) || id == owned3107ID || !same(path, filepath.Join(parentPath, "codex-owned-"+id)) || legacyMatch(path) || !conversationPhysical(path) {
 		return "qualification-stage-1"
 	}
 	// Original producer record is external to the opaque resource. Never adopt,
@@ -258,9 +273,9 @@ func retirement3250Qualification(path string) string {
 	}
 	root, err := resourceIdentity(path, true)
 	created, _ := time.Parse(time.RFC3339Nano, r.Created)
-	parent, pe := resourceIdentity(retirement3250Temp, true)
+	parent, pe := resourceIdentity(parentPath, true)
 	if err != nil || pe != nil || root.Owner != "S-1-5-32-544" || root.Volume != r.Volume || root.ID != r.FileID || root.Links != 1 || root.Attributes&syscall.FILE_ATTRIBUTE_DIRECTORY == 0 ||
-		root.Created > civ6Filetime(created) || civ6Filetime(created)-root.Created > 10000000 || parent.Volume != r.Volume || parent.ID != 562949953422078 || parent.Created != 134072793159133344 {
+		root.Created > civ6Filetime(created) || civ6Filetime(created)-root.Created > 10000000 || parent.Volume != r.Volume || parent.Volume != volume || parent.ID != parentID || parent.Created != parentBirth {
 		return "qualification-stage-6"
 	}
 	entryRel := "state/entries/" + strings.ReplaceAll(e.Key, "/", "-")

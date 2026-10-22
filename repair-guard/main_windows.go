@@ -164,6 +164,17 @@ func repairPathAllowed(path string) bool {
 	if owned2736PathAllowed(absolute) {
 		return true
 	}
+	if consoleImport3264Allowed(absolute) {
+		return true
+	}
+	if ombCaptureAllowed(absolute) {
+		return true
+	}
+	// The exact launcher now has its own complete permanent-source proof.
+	// It must not depend on the old linked repair checkout's Git directory.
+	if modelLauncherRuntimeAllowed(absolute) {
+		return true
+	}
 	if owned3107PathAllowed(absolute) {
 		return true
 	}
@@ -212,7 +223,7 @@ func repairPathAllowed(path string) bool {
 	if legacyMatch(target) {
 		return false
 	}
-	if (runtimeExecutable(absolute, target, publicationGateRuntime) || runtimeExecutable(absolute, target, schedulerRuntime) || finiteRuntimeExecutable(absolute, target, jobsRuntime, time.Now().Unix()) || modelLauncherRuntimeAllowed(absolute) || progressTUIRuntime(absolute, target, progressTUIDirectory)) && sourceVerified(base) {
+	if (runtimeExecutable(absolute, target, publicationGateRuntime) || runtimeExecutable(absolute, target, schedulerRuntime) || finiteRuntimeExecutable(absolute, target, jobsRuntime, time.Now().Unix()) || progressTUIRuntime(absolute, target, progressTUIDirectory)) && sourceVerified(base) {
 		return true
 	}
 	for _, root := range roots {
@@ -304,6 +315,8 @@ func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "    \tqualify one exact ToDo3085 software update; grants no data access")
 	fmt.Fprintln(output, "  -verify-model-runtime-update string")
 	fmt.Fprintln(output, "    \tqualify one exact ToDo3081 software update; grants no data access")
+	fmt.Fprintln(output, "  -export-omb-runtime-capture")
+	fmt.Fprintln(output, "    \tmaterialize the one independently verified new OMB report capture; no UI approval")
 }
 
 func verifyCurrentSuccession(taskID int) object {
@@ -322,6 +335,9 @@ func verifyCurrentSuccession(taskID int) object {
 }
 
 func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(int) object) int {
+	if ombCaptureFlagPresent(args) {
+		return runOMBCaptureCLI(args, stdout, exportOMBCapture)
+	}
 	if model3081FlagPresent(args) {
 		return runModel3081CLI(args, stdout, model3081RuntimeReceipt)
 	}

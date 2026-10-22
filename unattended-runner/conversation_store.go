@@ -292,25 +292,49 @@ func (r *Runner) loadConversations() (*conversationIndex, error) {
 }
 
 func (r *Runner) conversationTask(ctx context.Context, id uint64) (*TodoRow, error) {
-	row, err := r.todo(id)
-	if err != nil || row.Project == "owner" {
-		return nil, errors.New("conversation task unavailable")
-	}
 	var db struct {
 		Projects map[string]string `json:"projects"`
+		Items    []json.RawMessage `json:"items"`
 	}
-	if readJSON(r.TodoPath, maxTodo, &db) != nil || !filepath.IsAbs(db.Projects[row.Project]) {
+	if readJSON(r.TodoPath, maxTodo, &db) != nil {
 		return nil, errors.New("conversation task scope unavailable")
 	}
-	raw, err := r.Run(ctx, "D:/CC/Tools/client-records/scrub391.exe", "--guard-path", db.Projects[row.Project])
+	var selected json.RawMessage
+	var project string
+	for _, raw := range db.Items {
+		var header struct {
+			ID      uint64 `json:"id"`
+			Project string `json:"project"`
+		}
+		if json.Unmarshal(raw, &header) != nil {
+			return nil, errors.New("conversation task unavailable")
+		}
+		if header.ID == id {
+			if selected != nil {
+				return nil, errors.New("conversation duplicate task")
+			}
+			selected, project = raw, header.Project
+		}
+	}
+	root := db.Projects[project]
+	if selected == nil || project == "owner" || !filepath.IsAbs(root) {
+		return nil, errors.New("conversation task scope unavailable")
+	}
+	raw, err := r.Run(ctx, "D:/CC/Tools/client-records/scrub391.exe", "--guard-path", root)
 	var proof struct {
 		Client     *bool `json:"client_resource"`
-		Unverified bool  `json:"classification_unverified"`
+		Unverified *bool `json:"classification_unverified"`
 	}
-	if err != nil || json.Unmarshal([]byte(raw), &proof) != nil || proof.Client == nil || *proof.Client || proof.Unverified {
+	if err != nil || json.Unmarshal([]byte(raw), &proof) != nil || proof.Client == nil || *proof.Client || proof.Unverified == nil || *proof.Unverified {
 		return nil, errors.New("conversation task scope unverified")
 	}
-	return row, nil
+	var row TodoRow
+	if json.Unmarshal(selected, &row) != nil {
+		return nil, errors.New("conversation task unavailable")
+	}
+	row.conversationState = selected
+	row.conversationScope = conversationTodoScope{Domain: "discord-conversation-todo-scope-v1", Todo: fmt.Sprint(id), Project: project, RootSHA: bytesHash([]byte(root))}
+	return &row, nil
 }
 
 func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput) (ConversationQuestion, error) {
@@ -554,7 +578,11 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		}
 	}
 	if q.Wait && q.Phase == "posted" {
-		if _, err = r.Run(ctx, conversationTodo, "question-wait", fmt.Sprint(q.Todo), "--question-file", q.ReceiptFile); err != nil {
+		scopeFile, scopeErr := r.conversationScopeFile(row, q)
+		if scopeErr != nil {
+			return zero, scopeErr
+		}
+		if _, err = r.Run(ctx, conversationTodo, "question-wait", fmt.Sprint(q.Todo), "--question-file", q.ReceiptFile, "--scope-file", scopeFile); err != nil {
 			return zero, errors.New("conversation posted; task wait recording pending")
 		}
 		current, err := r.todo(q.Todo)

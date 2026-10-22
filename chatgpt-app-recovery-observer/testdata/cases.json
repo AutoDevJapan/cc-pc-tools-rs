@@ -1,0 +1,390 @@
+{
+  "warning": "Synthetic assumptions only; no native lifecycle proof and no live activation.",
+  "limits": {
+    "event_ttl_seconds": 300,
+    "activation_attempts_per_incident": 1,
+    "min_distinct_incident_gap_seconds": 600,
+    "max_distinct_incidents_per_rolling_hour": 3,
+    "max_preflight_rechecks": 2,
+    "max_preflight_seconds": 180
+  },
+  "defaults": {
+    "adapter": "fake_only",
+    "process": "absent",
+    "event": "synthetic_verified_exit",
+    "fresh": true,
+    "package_matches": true,
+    "session_matches": true,
+    "session_known": true,
+    "instance_matches": true,
+    "intent": "synthetic_no_stop_confirmed",
+    "owner_stop": false,
+    "directives_fresh": true,
+    "log_epoch_matches": true,
+    "time_trustworthy": true,
+    "persist_success": true,
+    "stop_generation_changed": false,
+    "lock_acquired": true,
+    "incidents_last_hour": 0
+  },
+  "cases": [
+    {
+      "id": "present",
+      "given": {
+        "process": "present"
+      },
+      "expected": {
+        "decision": "retain",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "process_unknown",
+      "given": {
+        "process": "unknown"
+      },
+      "expected": {
+        "decision": "unknown",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "absent_without_event",
+      "given": {
+        "event": "missing"
+      },
+      "expected": {
+        "decision": "observe",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "old_event",
+      "given": {
+        "fresh": false
+      },
+      "expected": {
+        "decision": "expired",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "consumed_event",
+      "given": {
+        "consumed": true
+      },
+      "expected": {
+        "decision": "already_consumed",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "same_episode_new_record",
+      "given": {
+        "episode_consumed": true,
+        "record_changed": true
+      },
+      "expected": {
+        "decision": "already_consumed",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "wrong_package",
+      "given": {
+        "package_matches": false
+      },
+      "expected": {
+        "decision": "out_of_scope",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "wrong_session",
+      "given": {
+        "session_matches": false
+      },
+      "expected": {
+        "decision": "out_of_scope",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "pid_reused",
+      "given": {
+        "instance_matches": false
+      },
+      "expected": {
+        "decision": "unknown",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "hang_without_exit",
+      "given": {
+        "event": "hang",
+        "exit_verified": false
+      },
+      "expected": {
+        "decision": "unknown",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "native_signed_out",
+      "given": {
+        "intent": "signed_out"
+      },
+      "expected": {
+        "decision": "suppressed",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "native_quit",
+      "given": {
+        "intent": "stopped"
+      },
+      "expected": {
+        "decision": "suppressed",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "native_intent_unknown",
+      "given": {
+        "intent": "unknown"
+      },
+      "expected": {
+        "decision": "unknown",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "explicit_owner_stop",
+      "given": {
+        "owner_stop": true
+      },
+      "expected": {
+        "decision": "suppressed",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "owner_directives_unknown",
+      "given": {
+        "directives_fresh": false
+      },
+      "expected": {
+        "decision": "unknown",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "session_unknown",
+      "given": {
+        "session_known": false
+      },
+      "expected": {
+        "decision": "unknown",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "log_epoch_changed",
+      "given": {
+        "log_epoch_matches": false
+      },
+      "expected": {
+        "decision": "unknown",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "clock_reversed_or_future",
+      "given": {
+        "time_trustworthy": false
+      },
+      "expected": {
+        "decision": "unknown",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "state_persist_fails",
+      "given": {
+        "persist_success": false
+      },
+      "expected": {
+        "decision": "persist_failed",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "stop_before_activation",
+      "given": {
+        "stop_generation_changed": true
+      },
+      "expected": {
+        "decision": "suppressed",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "concurrent_tick_no_lock",
+      "given": {
+        "lock_acquired": false
+      },
+      "expected": {
+        "decision": "busy",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "activation_in_flight",
+      "given": {
+        "attempt_state": "intent_committed"
+      },
+      "expected": {
+        "decision": "reconcile_only",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "activation_result_unknown",
+      "given": {
+        "attempt_state": "unconfirmed"
+      },
+      "expected": {
+        "decision": "reconcile_only",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "activation_failed_no_replay",
+      "given": {
+        "attempt_state": "failed_consumed"
+      },
+      "expected": {
+        "decision": "already_consumed",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "cooldown",
+      "given": {
+        "cooldown_active": true
+      },
+      "expected": {
+        "decision": "cooldown",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "rolling_budget_exhausted",
+      "given": {
+        "incidents_last_hour": 3
+      },
+      "expected": {
+        "decision": "budget_exhausted",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "positive_synthetic_only",
+      "given": {},
+      "expected": {
+        "decision": "eligible_in_fake_only",
+        "fake_activation_calls": 1,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "crash_after_intent_commit",
+      "given": {
+        "attempt_state": "intent_committed",
+        "runner_restarted": true
+      },
+      "expected": {
+        "decision": "reconcile_only",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "new_instance_after_event",
+      "given": {
+        "later_instance_observed": true
+      },
+      "expected": {
+        "decision": "superseded",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "initial_baseline_never_backfill",
+      "given": {
+        "first_run": true,
+        "event_before_baseline": true
+      },
+      "expected": {
+        "decision": "baseline_only",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "known_907326_pre_recovery",
+      "given": {
+        "event_record": 907326,
+        "fresh": false,
+        "already_manually_recovered": true
+      },
+      "expected": {
+        "decision": "expired",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    },
+    {
+      "id": "signout_then_cleanup_crash",
+      "given": {
+        "intent": "unknown",
+        "event": "synthetic_verified_exit",
+        "cleanup_may_follow_signout": true
+      },
+      "expected": {
+        "decision": "unknown",
+        "fake_activation_calls": 0,
+        "live_activation_calls": 0
+      }
+    }
+  ]
+}

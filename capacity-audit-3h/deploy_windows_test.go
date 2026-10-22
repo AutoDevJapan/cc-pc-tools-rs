@@ -34,11 +34,16 @@ function Fixture([string]$name){
  $backup=Join-Path $dir 'backups';New-Item -ItemType Directory -Path $backup|Out-Null
  $src=Join-Path $dir 'source.exe';$dst=Join-Path $dir 'runtime.exe'
  [IO.File]::WriteAllText($src,'new software');[IO.File]::WriteAllText($dst,'old software')
+ $acl=Get-Acl -LiteralPath $dst
+ $acl.SetAccessRuleProtection($true,$true)
+ Set-Acl -LiteralPath $dst -AclObject $acl
  return @{Source=$src;Target=$dst;BackupRoot=$backup;Old=(Hash $dst);New=(Hash $src)}
 }
 $normal=Fixture 'normal'
+$normalAcl=(Get-Acl -LiteralPath $normal.Target).Sddl
 $result=Install-PinnedRuntime @normal
 Check ($result-eq'updated' -and (Hash $normal.Target)-eq$normal.New) 'normal replace failed'
+Check ((Get-Acl -LiteralPath $normal.Target).Sddl-eq$normalAcl) 'normal replace changed the original ACL'
 $first=Join-Path $normal.BackupRoot 'runtime.exe.before-3085'
 Check ((Hash $first)-eq$normal.Old) 'old software not backed up'
 $stage=$normal.Target+'.3085-stage';[IO.File]::Copy($normal.Source,$stage)
@@ -49,16 +54,18 @@ $result=Install-PinnedRuntime @normal
 Check ($result-eq'updated' -and (Hash $first)-eq$normal.Old) 'existing backup was changed'
 Check ((Get-ChildItem -LiteralPath $normal.BackupRoot -File).Count-eq2) 'fresh rollback backup missing'
 $failed=Fixture 'failure'
+$failedAcl=(Get-Acl -LiteralPath $failed.Target).Sddl
 $caught=$false
 try{
  Install-PinnedRuntime @failed -ReplaceAction {
   param($s,$t,$b)
-  [IO.File]::Copy($t,$b,$false)
-  [IO.File]::Delete($t)
+  [IO.File]::Move($t,$b)
   throw 'simulated Windows partial replace failure'
  }|Out-Null
 }catch{$caught=$true}
 Check ($caught -and (Hash $failed.Target)-eq$failed.Old) 'partial failure lost the old destination'
+Check ((Get-Acl -LiteralPath $failed.Target).Sddl-eq$failedAcl) 'partial failure lost the original ACL'
+Check (@(Get-ChildItem -LiteralPath $failed.BackupRoot -Filter '*.retained.*').Count-eq1) 'rollback byte anchor was not retained'
 $result=Install-PinnedRuntime @failed
 Check ($result-eq'updated' -and (Hash $failed.Target)-eq$failed.New) 'retry after rollback failed'
 $unknown=Fixture 'unknown'
@@ -71,7 +78,11 @@ Check ($caught -and (Hash $unknown.Target)-eq$unknown.Old -and [IO.File]::ReadAl
 	if err := os.WriteFile(script, []byte(body), 0600); err != nil {
 		t.Fatal(err)
 	}
-	source, err := filepath.Abs("deploy-3085.ps1")
+	production := os.Getenv("CAPACITY_DEPLOY_TEST_SCRIPT")
+	if production == "" {
+		production = "deploy-3085.ps1"
+	}
+	source, err := filepath.Abs(production)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,6 +100,14 @@ Check ($caught -and (Hash $unknown.Target)-eq$unknown.Old -and [IO.File]::ReadAl
 		ownedArgument = syscall.UTF16ToString(shortName[:n])
 	}
 	cmd := exec.CommandContext(ctx, "powershell.exe", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", script, "-ProductionScript", source, "-OwnedRoot", ownedArgument)
+	// A PowerShell 7 parent must not make Windows PowerShell 5 load its
+	// incompatible security module when exercising the real file ACLs.
+	for _, entry := range os.Environ() {
+		if !strings.HasPrefix(strings.ToUpper(entry), "PSMODULEPATH=") {
+			cmd.Env = append(cmd.Env, entry)
+		}
+	}
+	cmd.Env = append(cmd.Env, "PSModulePath="+filepath.Join(os.Getenv("SystemRoot"), "System32", "WindowsPowerShell", "v1.0", "Modules"))
 	hide(cmd)
 	cmd.WaitDelay = 2 * time.Second
 	out, err := cmd.CombinedOutput()

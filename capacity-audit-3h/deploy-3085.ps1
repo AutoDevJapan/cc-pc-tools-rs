@@ -95,7 +95,14 @@ function Install-PinnedRuntime {
         # software if a Windows partial failure removed the destination name.
         if (-not (Test-Path -LiteralPath $Target) -and (Test-Path -LiteralPath $backup) -and (Hash $backup) -eq $Old) {
             Assert-Plain $Target
-            [IO.File]::Copy($backup,$Target,$false)
+            if ([IO.Path]::GetPathRoot($backup) -ine [IO.Path]::GetPathRoot($Target)) { throw 'Rollback must remain on the same volume' }
+            # Keep an independent byte anchor, then rename the original image
+            # back. Copying it to a new file would inherit a different ACL.
+            $retained = $backup + '.retained.' + [Guid]::NewGuid().ToString('N')
+            Assert-Plain $retained
+            [IO.File]::Copy($backup,$retained,$false)
+            if ((Hash $retained) -ne $Old) { throw 'Retained rollback fingerprint mismatch' }
+            [IO.File]::Move($backup,$Target)
             if ((Hash $Target) -ne $Old) { throw 'Rollback fingerprint mismatch' }
         }
         throw

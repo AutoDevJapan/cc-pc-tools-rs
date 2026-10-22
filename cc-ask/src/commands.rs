@@ -628,6 +628,16 @@ pub fn cmd_log_attached(
         Some(path) => read_text(path)?.trim().to_owned(),
         None => text.to_owned(),
     };
+    let (clean_body, decision, extracted) = match crate::decision_identity::extract(&body) {
+        Ok((clean, decision)) => (clean, decision, true),
+        Err(_) => (body.clone(), None, false), // A quoted example remains a quiet report.
+    };
+    let action =
+        extracted && notify && crate::recovery_messages::log_requires_owner_action(&clean_body)?;
+    let decision_question = decision.is_some()
+        && !crate::recovery_messages::report_declares_no_action(&clean_body)
+        && (crate::questions::is_question(&clean_body)
+            || crate::recovery_messages::log_requires_owner_action(&clean_body).unwrap_or(false));
     let prepared = crate::attachments::prepare(ctx, attach)?;
     if body.is_empty() && prepared.is_none() {
         return Err("本文または添付ファイルを指定してください".into());
@@ -678,21 +688,16 @@ pub fn cmd_log_attached(
             atomic_json(&path, &known, 1)?;
         }
     }
-    if notify && crate::questions::is_question(&body) {
+    if action || decision_question {
         return post_text(ctx, &thread_id, &body, attach, true, None);
     }
-    let question = if notify && crate::questions::is_question(&body) {
-        Some(ctx.call("GET", &format!("/channels/{thread_id}"), None)?)
-    } else {
-        None
-    };
     let message_ids = crate::attachments::post_tracked(
         ctx,
         &thread_id,
-        &body,
+        &clean_body,
         prepared.as_ref(),
-        notify,
-        question.as_ref(),
+        false,
+        None,
     )?;
     let value = json!({"thread_id":thread_id,"url":format!("https://discord.com/channels/{}/{}",s(&ctx.cfg["guild_id"]),thread_id),"message_id":message_ids.last(),"message_ids":message_ids});
     print_json(&value, None)?;
@@ -709,6 +714,22 @@ pub fn cmd_post(
     post_text(ctx, thread, &read_text(body_file)?, attach, notify, None)
 }
 
+// Old direct post questions must still use their saved question/answer and
+// lost-response recovery. A diagnostic '?' alone never creates an owner ask.
+fn legacy_post_requires_owner_action(body: &str) -> bool {
+    if crate::recovery_messages::report_declares_no_action(body) {
+        return false;
+    }
+    let without_marks = body.replace(['?', '？'], "");
+    if crate::questions::is_question(&without_marks) {
+        return true;
+    }
+    let first = question_prose(body.lines().next().unwrap_or(""));
+    choice_question_body(&without_marks)
+        && (first.contains("どちら") || first.contains("どれ"))
+        && (first.contains("しますか") || first.contains("選びますか"))
+}
+
 fn post_text(
     ctx: &mut Context,
     thread: &str,
@@ -719,13 +740,18 @@ fn post_text(
 ) -> Result<Value> {
     let (clean_body, decision) = crate::decision_identity::extract(body)?;
     let body = clean_body.as_str();
-    if decision.is_some() && !crate::questions::is_question(body) {
+    let action = (notify && crate::recovery_messages::log_requires_owner_action(body)?)
+        || legacy_post_requires_owner_action(body)
+        || decision.is_some()
+            && !crate::recovery_messages::report_declares_no_action(body)
+            && crate::questions::is_question(body);
+    if decision.is_some() && !action {
         return Err("判断の記録には具体的な質問本文が必要です".into());
     }
     if thread.is_empty() || !thread.chars().all(|c| c.is_ascii_digit()) {
         return Err("threadにはDiscordの数値IDを指定してください".into());
     }
-    if crate::questions::is_question(body) {
+    if action {
         crate::ask_gate::enforce("", body, None)?;
         let mut metadata = context.cloned().unwrap_or_else(|| json!({}));
         crate::decision_identity::bind(ctx, &mut metadata, decision.as_ref())?;
@@ -798,7 +824,7 @@ fn post_text(
     } else {
         body
     };
-    let notify = notify && !separated;
+    let notify = notify && !separated && action;
     let prepared = crate::attachments::prepare(ctx, attach)?;
     let channel = ctx.call("GET", &format!("/channels/{thread}"), None)?;
     if ![10, 11, 12].contains(&n(&channel["type"]))
@@ -806,7 +832,7 @@ fn post_text(
     {
         return Err("指定されたIDは設定されたサーバーのスレッドではありません".into());
     }
-    let is_question = crate::questions::is_question(body);
+    let is_question = action && crate::questions::is_question(body);
     let _guard = if is_question {
         Some(crate::attachments::question_lock(ctx, thread)?)
     } else {

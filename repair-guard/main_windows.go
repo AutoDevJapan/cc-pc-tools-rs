@@ -212,7 +212,7 @@ func repairPathAllowed(path string) bool {
 	if legacyMatch(target) {
 		return false
 	}
-	if (runtimeExecutable(absolute, target, publicationGateRuntime) || runtimeExecutable(absolute, target, schedulerRuntime) || finiteRuntimeExecutable(absolute, target, jobsRuntime, time.Now().Unix()) || progressTUIRuntime(absolute, target, progressTUIDirectory)) && sourceVerified(base) {
+	if (runtimeExecutable(absolute, target, publicationGateRuntime) || runtimeExecutable(absolute, target, schedulerRuntime) || finiteRuntimeExecutable(absolute, target, jobsRuntime, time.Now().Unix()) || modelLauncherRuntimeAllowed(absolute) || progressTUIRuntime(absolute, target, progressTUIDirectory)) && sourceVerified(base) {
 		return true
 	}
 	for _, root := range roots {
@@ -235,6 +235,8 @@ func repairPathAllowed(path string) bool {
 
 type guardArgs struct {
 	path, succession  string
+	runtimeUpdate     string
+	runtimeUpdateSet  bool
 	refresh           string
 	refreshSet        bool
 	refreshRequest    string
@@ -254,10 +256,14 @@ func parseGuardArgs(args []string) (guardArgs, error) {
 	succession := flags.String("verify-current-succession", "", "verify one declared current product successor; no launch or mutation")
 	refresh := flags.String("refresh-owner-source", "", "refresh one positively registered self-source identity; no source content read")
 	refreshRequest := flags.String("refresh-request", "", "owned finite refresh request identity")
+	runtimeUpdate := flags.String("verify-capacity-runtime-update", "", "qualify one exact ToDo3085 software update; grants no data access")
 	err := flags.Parse(args)
 	parsed := guardArgs{path: *path, succession: *succession, product: *product, refresh: *refresh, refreshRequest: *refreshRequest, remainingArgs: flags.NArg() != 0}
+	parsed.runtimeUpdate = *runtimeUpdate
 	flags.Visit(func(f *flag.Flag) {
 		switch f.Name {
+		case "verify-capacity-runtime-update":
+			parsed.runtimeUpdateSet = true
 		case "guard-path":
 			parsed.pathSet = true
 		case "verify-product-resume":
@@ -297,6 +303,8 @@ func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "  -verify-current-succession int")
 	fmt.Fprintln(output, "    \tverify one declared current product successor; no launch or mutation")
 	fmt.Fprintln(output, "  -refresh-owner-source string\n    \trefresh one positively registered self-source identity (bounded metadata only)")
+	fmt.Fprintln(output, "  -verify-capacity-runtime-update string")
+	fmt.Fprintln(output, "    \tqualify one exact ToDo3085 software update; grants no data access")
 	fmt.Fprintln(output, "  -verify-model-runtime-update string")
 	fmt.Fprintln(output, "    \tqualify one exact ToDo3081 software update; grants no data access")
 }
@@ -320,12 +328,24 @@ func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(i
 	if model3081FlagPresent(args) {
 		return runModel3081CLI(args, stdout, model3081RuntimeReceipt)
 	}
-	return runGuardCLIWithPath(args, stdout, stderr, currentVerifier, classifyOwnerPath)
+	return runGuardCLIWithRuntime(args, stdout, stderr, currentVerifier, capacity3085RuntimeReceipt)
+}
+
+func runGuardCLIWithRuntime(args []string, stdout, stderr io.Writer, currentVerifier func(int) object, runtimeVerifier func(string) object) int {
+	return runGuardCLIWithVerifiers(args, stdout, stderr, currentVerifier, runtimeVerifier, classifyOwnerPath)
 }
 
 func runGuardCLIWithPath(args []string, stdout, stderr io.Writer, currentVerifier func(int) object, pathVerifier func(string) ownerPathVerdict) int {
+	return runGuardCLIWithVerifiers(args, stdout, stderr, currentVerifier, capacity3085RuntimeReceipt, pathVerifier)
+}
+
+func runGuardCLIWithVerifiers(args []string, stdout, stderr io.Writer, currentVerifier func(int) object, runtimeVerifier func(string) object, pathVerifier func(string) ownerPathVerdict) int {
 	parsed, err := parseGuardArgs(args)
 	if err != nil {
+		if capacity3085FlagPresent(args) {
+			_ = json.NewEncoder(stdout).Encode(object{"qualified": false})
+			return 1
+		}
 		if currentSuccessionFlagPresent(args) {
 			_ = json.NewEncoder(stdout).Encode(object{"verified": false})
 			return 1
@@ -337,6 +357,20 @@ func runGuardCLIWithPath(args []string, stdout, stderr io.Writer, currentVerifie
 		fmt.Fprintln(stderr, err)
 		printGuardUsage(stderr)
 		return 2
+	}
+	if capacity3085FlagPresent(args) {
+		if !parsed.runtimeUpdateSet || parsed.pathSet || parsed.productSet || parsed.successionSet || parsed.refreshSet || parsed.refreshRequestSet || parsed.remainingArgs || !filepath.IsAbs(parsed.runtimeUpdate) {
+			_ = json.NewEncoder(stdout).Encode(object{"qualified": false})
+			return 1
+		}
+		receipt := runtimeVerifier(parsed.runtimeUpdate)
+		if receipt["qualified"] != true {
+			receipt = object{"qualified": false}
+		}
+		if json.NewEncoder(stdout).Encode(receipt) != nil || receipt["qualified"] != true {
+			return 1
+		}
+		return 0
 	}
 	if currentSuccessionFlagPresent(args) && !parsed.successionSet {
 		_ = json.NewEncoder(stdout).Encode(object{"verified": false})

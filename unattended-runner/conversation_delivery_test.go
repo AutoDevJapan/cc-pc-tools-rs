@@ -106,7 +106,7 @@ func conversationTest(t *testing.T, wait bool) *conversationFixture {
 				return "", err
 			}
 			row, err := r.todo(42)
-			if err != nil || len(args) != 6 || args[4] != "--expected-note-sha256" || bytesHash([]byte(row.Note)) != args[5] {
+			if err != nil || len(args) != 10 || args[4] != "--expected-note-sha256" || bytesHash([]byte(row.Note)) != args[5] || args[6] != "--scope-file" || args[8] != "--expected-state-file" {
 				return "", errors.New("conversation_note_changed")
 			}
 			f.mutateTodo(t, func(row map[string]any) { row["note"] = string(b) })

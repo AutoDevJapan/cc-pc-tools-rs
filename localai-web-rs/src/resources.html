@@ -1,0 +1,54 @@
+<style>
+#systems-resources{min-width:0}#systems-resources h3{font-size:24px;margin:0 0 10px}#systems-resources h4{font-size:20px;margin:0 0 10px}
+.resource-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:16px 0}.resource-card,.resource-panel{border:1px solid #43515d;border-radius:6px;padding:18px;background:#1a2026;min-width:0}.resource-card strong{display:block;font-size:30px;line-height:1.4}.resource-card small,.resource-note{color:#bfccd6}.resource-card progress{display:block;width:100%;height:12px;accent-color:#70ce8e}.resource-panel{margin:12px 0}.resource-scroll{overflow:auto}.resource-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}.resource-table th,.resource-table td{text-align:left;border:1px solid #43515d;padding:10px;white-space:nowrap}.resource-table th{background:#202a30}.resource-table td:first-child{white-space:normal;overflow-wrap:anywhere;min-width:130px}.resource-sort{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.resource-sort button{background:#202a30;border:1px solid #52606c;border-radius:5px;color:inherit;font:inherit;padding:8px 12px}.resource-sort button[aria-pressed=true]{background:#315c49}.resource-state{border:1px solid #58806a;border-radius:4px;padding:3px 7px;display:inline-block}.resource-note{font-size:14px;margin:8px 0}.resource-notice{color:#ffd49b}
+@media(max-width:720px){.resource-summary{grid-template-columns:1fr}.resource-card,.resource-panel{padding:12px}.resource-table th,.resource-table td{padding:8px}}
+</style>
+<script>
+(function(){
+  'use strict';
+  const root=()=>document.querySelector('#systems-resources');
+  let resourceSort='cpu',resourceLast=null,resourceController=null,resourceFlight=null;
+  function resourceNumber(value){return typeof value==='number'&&Number.isFinite(value)?value:null}
+  function resourceEscape(value){return String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]))}
+  function resourceBytes(value,signed=false){const n=resourceNumber(value);if(n===null)return '取得できません';const magnitude=Math.abs(n),unit=magnitude>=1073741824?'GiB':'MiB',amount=magnitude/(unit==='GiB'?1073741824:1048576);return (n<0?'−':signed&&n>0?'+':'')+amount.toFixed(1)+' '+unit}
+  function resourcePercent(value){const n=resourceNumber(value);return n===null?'取得できません':n.toFixed(1)+'%'}
+  function resourceList(value){return Array.isArray(value)?value:[]}
+  function resourceFiveMinute(process){const width=resourceNumber(process.fiveMinuteWindowMs);return width!==null&&width>=300000&&width<=345000?resourceNumber(process.fiveMinuteGrowthBytes):null}
+  function resourceModel(data,now,sort='cpu'){
+    const sampled=resourceNumber(data&&data.sampledAt),age=sampled===null?null:now-sampled;
+    const current=Boolean(data&&data.schemaVersion===1&&data.currentAvailable===true&&age!==null&&age>=0&&age<=45000&&['ready','partial','collecting'].includes(data.state));
+    const host=data&&data.host||{},counts=data&&data.buildCounts||{};
+    const active=current&&resourceNumber(counts.executing)!==null&&resourceNumber(counts.processing)!==null?counts.executing+counts.processing:null;
+    const count=value=>current&&resourceNumber(value)!==null?String(value):'未確認';
+    const cpu=current?resourceNumber(host.cpuPercent):null,used=current?resourceNumber(host.usedPhysicalBytes):null,total=current?resourceNumber(host.totalPhysicalBytes):null;
+    const bar=(value,max)=>value!==null&&max!==null&&max>0?`<progress max="${max}" value="${Math.max(0,Math.min(value,max))}"></progress>`:'';
+    const processes=resourceList(data&&data.processes),builds=resourceList(data&&data.builds);
+    const byIdentity=new Map(processes.map(process=>[String(process.pid)+':'+process.created,process]));
+    const stateNames={executing:'実行を確認',processing:'CPU処理を確認',waiting:'資源待ち',unverified:'実行未確認'};
+    const product=build=>build.job&&typeof build.job.product==='string'?build.job.product:'対応未確認';
+    const metric=(process,key)=>current?resourceNumber(process&&process[key]):null;
+    const growth=process=>current?resourceFiveMinute(process):null;
+    const sorted=processes.slice().sort((a,b)=>{const av=sort==='growth'?growth(a):metric(a,'cpuPercent'),bv=sort==='growth'?growth(b):metric(b,'cpuPercent');return av===null&&bv===null?Number(a.pid)-Number(b.pid):av===null?1:bv===null?-1:bv-av||Number(a.pid)-Number(b.pid)});
+    const buildRows=builds.map(build=>{const process=byIdentity.get(String(build.pid)+':'+build.created),seconds=current?resourceNumber(build.elapsedSeconds):null,elapsed=seconds===null?'取得できません':Math.floor(seconds/60)+':'+String(Math.floor(seconds%60)).padStart(2,'0');return `<tr><td>${resourceEscape(product(build))}</td><td>${resourceEscape(build.tool||'未確認')}</td><td><span class="resource-state">${current?stateNames[build.state]||'実行未確認':'実行未確認'}</span></td><td>${elapsed}</td><td>${resourcePercent(metric(process,'cpuPercent'))}</td><td>${resourceBytes(metric(process,'privateBytes'))}</td></tr>`}).join('');
+    const processRows=sorted.map(process=>{const build=builds.find(build=>build.pid===process.pid&&build.created===process.created),name=(build?product(build)+' · ':'')+String(process.name||'取得できません'),change=growth(process);return `<tr><td>${resourceEscape(name)}${process.layer==='vm'?'（VM・別の層）':''}</td><td>${resourcePercent(metric(process,'cpuPercent'))}</td><td>${resourceBytes(metric(process,'privateBytes'))}</td><td>${!current?'取得できません':change===null?'蓄積中':resourceBytes(change,true)}</td></tr>`}).join('');
+    const at=sampled===null?'未取得':new Date(sampled).toLocaleString('ja-JP');
+    const notice=!current?'観測が古いか、現在値を取得できません。前回の一覧は実行中と数えません。':data.state==='partial'||data.processesTruncated?'取得した範囲だけを表示しています。':'15秒ごとに取得した値です。';
+    const html=`<h3>ビルドとPCの負荷</h3><p class="resource-note">どの製品のビルドが動き、何がCPUやメモリを使っているか確認します。</p><p class="resource-note resource-notice" role="status">確認 ${resourceEscape(at)} · ${notice}</p><div class="resource-summary"><article class="resource-card">PC全体のCPU<strong>${resourcePercent(cpu)}</strong>${bar(cpu,100)}</article><article class="resource-card">PC全体のメモリ<strong>${used!==null&&total!==null?resourceBytes(used)+' / '+resourceBytes(total):'取得できません'}</strong>${bar(used,total)}</article><article class="resource-card">実行中のビルド<strong>${active===null?'取得できません':active+'件'}</strong><small>実行・CPU処理を確認 · 待機 ${count(counts.waiting)} · 未確認 ${count(counts.unverified)}</small></article></div><section class="resource-panel"><h4>ビルドの状態</h4><div class="resource-scroll"><table class="resource-table"><thead><tr><th>製品</th><th>処理</th><th>状態</th><th>経過</th><th>CPU</th><th>私有メモリ</th></tr></thead><tbody>${buildRows||'<tr><td colspan="6">'+(current?'取得した範囲にビルドはありません。':'現在のビルドは取得できません。')+'</td></tr>'}</tbody></table></div><p class="resource-note">CPU・私有メモリは代表プロセスの値です。待機や実行未確認を実行中の件数に含めません。</p></section><section class="resource-panel"><div class="resource-sort"><h4>負荷の内訳</h4><div><button type="button" data-resource-sort="cpu" aria-pressed="${sort==='cpu'}">CPU順</button><button type="button" data-resource-sort="growth" aria-pressed="${sort==='growth'}">5分メモリ増加順</button></div></div><div class="resource-scroll"><table class="resource-table"><thead><tr><th>製品・処理</th><th>CPU</th><th>私有メモリ</th><th>5分間の増加</th></tr></thead><tbody>${processRows||'<tr><td colspan="4">現在のプロセスを取得できません。</td></tr>'}</tbody></table></div><p class="resource-note">一覧のメモリは私有メモリです。PC全体の物理メモリとは合算しません。VM・コンテナも別の層として扱います。</p><p class="resource-note">取得できない値は「取得できません」、5分の履歴不足は「蓄積中」と表示します。最大128プロセスの観測であり、全CPU使用量の内訳ではありません。</p></section>`;
+    return {html,active};
+  }
+  function renderResources(data){const host=root();if(!host)return;resourceLast=data;const focused=document.activeElement&&document.activeElement.dataset.resourceSort;const positions=Array.from(host.querySelectorAll(".resource-scroll"),node=>node.scrollLeft);host.innerHTML=resourceModel(data,Date.now(),resourceSort).html;host.querySelectorAll(".resource-scroll").forEach((node,index)=>{node.scrollLeft=positions[index]||0});host.querySelectorAll('[data-resource-sort]').forEach(button=>button.onclick=()=>{resourceSort=button.dataset.resourceSort;renderResources(resourceLast);host.querySelector(`[data-resource-sort="${resourceSort}"]`)?.focus()});if(focused)host.querySelector(`[data-resource-sort="${focused}"]`)?.focus()}
+  function visible(){return !document.hidden&&document.querySelector('#view-systems')?.classList.contains('active')}
+  window.refreshResources=()=>{
+    if(!visible())return Promise.resolve();if(resourceFlight)return resourceFlight;
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),12000);resourceController=controller;
+    resourceFlight=fetch('/api/resources',{signal:controller.signal,cache:'no-store',headers:{Accept:'application/json'}}).then(async response=>{if(!response.ok)throw new Error('HTTP '+response.status);const data=await response.json();if(resourceController!==controller||controller.signal.aborted)return;if(data.schemaVersion!==1||!Array.isArray(data.processes)||!Array.isArray(data.builds))throw new Error('負荷の観測形式を確認してください');renderResources(data)}).catch(error=>{if(resourceController!==controller)return;if(resourceLast)renderResources({...resourceLast,currentAvailable:false});else if(root())root().textContent='負荷を取得できません。'+(error.name==='AbortError'?'接続が時間切れになりました。':error.message)}).finally(()=>{clearTimeout(timer);if(resourceController===controller){resourceController=null;resourceFlight=null}});
+    return resourceFlight;
+  };
+  window.cancelResources=()=>{const controller=resourceController;resourceController=null;resourceFlight=null;if(controller)controller.abort()};
+  window.addEventListener('console-view',event=>{if(event.detail.view==='systems')window.refreshResources();else window.cancelResources()});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)window.cancelResources();else if(visible())window.refreshResources()});
+  window.addEventListener('pagehide',window.cancelResources);
+  // The existing page poll owns the 15-second schedule; do not add a second loop.
+  if(visible())window.refreshResources();
+})();
+</script>

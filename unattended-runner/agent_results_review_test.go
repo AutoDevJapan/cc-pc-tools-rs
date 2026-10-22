@@ -55,7 +55,7 @@ func TestAgentResultInvalidItemCannotHideTerminalOrOtherValidItems(t *testing.T)
 	for _, id := range files {
 		states[r.mustAgentResult(t, id).Event.State] = true
 	}
-	if len(files) != 2 || !states["completed"] || !states["item_deferred"] || len(h.Errors) == 0 {
+	if len(files) != 3 || !states["completed"] || !states["item_deferred"] || !states["unverified"] || len(h.Errors) == 0 {
 		t.Fatal("bad item swallowed terminal or valid progress", states, h.Errors)
 	}
 }

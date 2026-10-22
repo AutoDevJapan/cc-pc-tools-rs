@@ -30,6 +30,7 @@ pub use cc_job_policy::todo_store::{
 };
 pub use cc_job_policy::todo_wait::pending_on;
 pub mod answered_wait;
+pub mod capacity_cycle;
 pub mod conversation_wait;
 pub mod product_resume;
 pub mod product_retry;
@@ -59,6 +60,23 @@ pub struct SubworkOptions {
 }
 #[derive(Subcommand, Debug)]
 pub enum Command {
+    /// Queue or reuse the one finite capacity-decision worker; never launch it.
+    CapacityCycle {
+        #[arg(long)]
+        report_file: PathBuf,
+        #[arg(long)]
+        spec: PathBuf,
+        #[arg(long)]
+        project: String,
+    },
+    /// Record aggregate decisions for the exact active measurement generation.
+    CapacityResult {
+        id: i64,
+        #[arg(long)]
+        result_file: PathBuf,
+    },
+    /// Read only the new anonymous capacity decision record; never open old scan logs.
+    CapacityStatus,
     #[command(args_override_self = true, infer_long_args = true)]
     Project { name: String, path: String },
     /// Rename one project and its display text without changing paths or task state.
@@ -146,6 +164,11 @@ pub enum Command {
         /// Compare the exact current note while holding todo.lock before replacing it.
         #[arg(long, requires = "note_file")]
         expected_note_sha256: Option<String>,
+        /// Scope checked by the conversation caller, rechecked under todo.lock.
+        #[arg(long, requires = "expected_state_file")]
+        scope_file: Option<PathBuf>,
+        #[arg(long)]
+        expected_state_file: Option<PathBuf>,
     },
     /// Preserve selected old notes in immutable segments; preview unless --apply.
     ArchiveHistory {
@@ -207,6 +230,8 @@ pub enum Command {
         id: i64,
         #[arg(long)]
         question_file: PathBuf,
+        #[arg(long)]
+        scope_file: Option<PathBuf>,
     },
     /// Apply one exact owner answer and return the original task to ordinary scheduling.
     QuestionAnswer {
@@ -219,6 +244,11 @@ pub enum Command {
         delivery_note_file: Option<PathBuf>,
         #[arg(long, requires = "delivery_note_file")]
         expected_state_file: Option<PathBuf>,
+        /// Deliver to a later active generation without releasing the old question wait.
+        #[arg(long, requires_all = ["delivery_note_file", "expected_state_file"])]
+        delivery_only: bool,
+        #[arg(long)]
+        scope_file: Option<PathBuf>,
     },
     /// Withdraw an unnecessary exact question, without manufacturing an owner answer.
     QuestionWithdraw {
@@ -231,6 +261,8 @@ pub enum Command {
         /// Snapshot of the original row, compared under the canonical lock.
         #[arg(long)]
         expected_state_file: PathBuf,
+        #[arg(long)]
+        scope_file: Option<PathBuf>,
     },
     /// Wait for a scheduled readiness check without repeatedly launching a worker.
     WaitReady {
@@ -953,6 +985,31 @@ pub fn rename_project(
 }
 
 pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<String>> {
+    // All conversation mutations bind the exact guarded project and registered
+    // root before their existing locked transition, including replay paths.
+    match cmd {
+        Command::Edit {
+            id,
+            scope_file,
+            expected_state_file,
+            ..
+        } => {
+            if let Some(path) = scope_file {
+                conversation_wait::check_scope(db, *id, path)?;
+            }
+            if let Some(path) = expected_state_file {
+                conversation_wait::check_snapshot(db, *id, path)?;
+            }
+        }
+        Command::QuestionWait { id, scope_file, .. }
+        | Command::QuestionAnswer { id, scope_file, .. }
+        | Command::QuestionWithdraw { id, scope_file, .. } => {
+            if let Some(path) = scope_file {
+                conversation_wait::check_scope(db, *id, path)?;
+            }
+        }
+        _ => (),
+    }
     if let Command::Start { job, .. } = cmd
         && !job.is_empty()
         && !job_refs::valid_id(job)
@@ -979,6 +1036,18 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
     }
     let mut output = Vec::new();
     match cmd {
+        Command::CapacityStatus => output.push(capacity_cycle::status(db)?.to_string()),
+        Command::CapacityCycle {
+            report_file,
+            spec,
+            project,
+        } => output.push(
+            capacity_cycle::ingest(db, paths, project, report_file, spec, ready::now_epoch())?
+                .to_string(),
+        ),
+        Command::CapacityResult { id, result_file } => {
+            output.push(capacity_cycle::record_result(db, *id, result_file)?.to_string())
+        }
         Command::Project { name, path } => {
             db["projects"][cc_task_title::canonical_project(name)] = json!(path)
         }
@@ -1176,6 +1245,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             note_file,
             spec,
             expected_note_sha256,
+            ..
         } => {
             if let Some(expected) = expected_note_sha256 {
                 use sha2::{Digest, Sha256};
@@ -1224,6 +1294,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         }
         Command::Done { id, note } => {
             let i = find(db, *id)?;
+            capacity_cycle::validate_completion(i)?;
             i["status"] = json!("done");
             set_progress(i, 100)?;
             if !note.is_empty() {
@@ -1246,9 +1317,9 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 set_progress(find(db, *id)?, *percent)?;
             }
         }
-        Command::QuestionWait { id, question_file } => {
-            output.push(conversation_wait::register(db, paths, *id, question_file)?.to_string())
-        }
+        Command::QuestionWait {
+            id, question_file, ..
+        } => output.push(conversation_wait::register(db, paths, *id, question_file)?.to_string()),
         Command::AnsweredWait {
             id,
             evidence_file,
@@ -1270,16 +1341,33 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             answer_file,
             delivery_note_file,
             expected_state_file,
+            delivery_only,
+            ..
         } => output.push(
-            conversation_wait::answer(
-                db,
-                paths,
-                *id,
-                answer_file,
-                delivery_note_file
-                    .as_deref()
-                    .zip(expected_state_file.as_deref()),
-            )?
+            (if *delivery_only {
+                conversation_wait::deliver(
+                    db,
+                    paths,
+                    *id,
+                    answer_file,
+                    delivery_note_file
+                        .as_deref()
+                        .ok_or("conversation_delivery_files_required")?,
+                    expected_state_file
+                        .as_deref()
+                        .ok_or("conversation_delivery_files_required")?,
+                )
+            } else {
+                conversation_wait::answer(
+                    db,
+                    paths,
+                    *id,
+                    answer_file,
+                    delivery_note_file
+                        .as_deref()
+                        .zip(expected_state_file.as_deref()),
+                )
+            })?
             .to_string(),
         ),
         Command::QuestionWithdraw {
@@ -1287,6 +1375,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             question_file,
             reason_file,
             expected_state_file,
+            ..
         } => output.push(
             conversation_wait::withdraw(
                 db,
@@ -1444,6 +1533,7 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
     if matches!(
         cli.command,
         Command::List { .. }
+            | Command::CapacityStatus
             | Command::RenameProject { dry_run: true, .. }
             | Command::History { .. }
             | Command::ArchiveHistory { apply: false, .. }

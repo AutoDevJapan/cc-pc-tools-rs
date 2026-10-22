@@ -10644,7 +10644,12 @@ mod end_to_end {
                 TERMINAL.contains(&s(&t.job(&jid), "status"))
             });
             let job = t.job(&jid);
-            assert_eq!(job["status"], expected);
+            assert_eq!(job["status"], expected, "capacity fixture {mode}: {}", json!({
+                "last_error":job["last_error"],"last_failure_kind":job["last_failure_kind"],
+                "retry_ended":job["capacity_retry_ended"],"same_model_retry_count":job["capacity_same_model_retry_count"],
+                "retry_count":job["capacity_retry_count"],"inventory":job["capacity_inventory"],
+                "fixture_supervisor":fs::read_to_string(t.tmp.0.join("tool/jobs").join(&jid).join("supervisor.log"))
+                    .unwrap_or_default().chars().rev().take(3000).collect::<Vec<_>>().into_iter().rev().collect::<String>()}));
             assert_eq!(job["capacity_same_model_retry_count"], count);
             assert_eq!(job["capacity_retry_count"].as_u64().unwrap_or(0), switches);
             let calls: Vec<Value> = fs::read_to_string(t.rec.join("capacity-calls.jsonl"))

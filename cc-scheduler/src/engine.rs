@@ -12,6 +12,26 @@ fn todo_store_error(error: cc_job_policy::todo_store::Error) -> Error {
         cc_job_policy::todo_store::Error::Io(e) => e.into(),
     }
 }
+fn invalid_subwork(error: &str, stage: &'static str) -> Error {
+    // Emit only fixed classifications. Never print a store value or an
+    // unrecognized error, and preserve the caller's existing failure code.
+    let reason = match error {
+        "subwork ToDo is missing" => "parent_missing",
+        "invalid subwork relation" => "relation_invalid",
+        "invalid or cyclic subwork parent" => "parent_invalid",
+        "subwork and parent must belong to the same repository and Git common directory" => {
+            "repository_mismatch"
+        }
+        "subwork names a different PR" => "pr_mismatch",
+        "independent subwork cannot depend on its parent completion" => "dependency_cycle",
+        "subwork requires its own scheduler-owned worktree" => "checkout_not_independent",
+        "subwork checkout is missing" => "checkout_missing",
+        "parent has more than one active root worker" => "multiple_live_parents",
+        _ => "validation_failed",
+    };
+    eprintln!("subwork validation failed stage={stage} reason={reason}");
+    Error("InvalidSubwork")
+}
 use serde_json::{Value, json};
 use std::{
     fs,
@@ -22,13 +42,16 @@ fn launch_inputs(item: &Value) -> Value {
     json!({"spec":item["spec"],"needs":item["needs"],"subwork":item["subwork"],
         "title":item["title"],"project":item["project"],"dispatchable":item["dispatchable"],
         "model":item["model"],"effort":item["effort"],"model_origin":item["model_origin"],"effort_origin":item["effort_origin"],
+        "sandbox":item["sandbox"],"mcp_profile":item["mcp_profile"],"network":item["network"],"add_dirs":item["add_dirs"],
         "wait_on":item["wait_on"],"review_source_jobs":item["review_source_jobs"],"task_type":item["task_type"],"role":item["role"],
         "worktree":item["scheduler"]["worktree"],"branch":item["scheduler"]["branch"],
         "not_before":item["scheduler"]["not_before"],"resource_wait":item["scheduler"]["resource_wait"],
         "workspace_receipt":item["scheduler"]["workspace_receipt"],"jobs":item["jobs"],
+        "subwork_workspace_migration":item["scheduler"]["subwork_workspace_migration"],
         "resume_generation":item["resume_generation"],"worker_receipt":item["worker_receipt"],
         "console_request":item["scheduler"]["console_request"],
-        "console_fresh_request":item["scheduler"]["console_fresh_request"]})
+        "console_fresh_request":item["scheduler"]["console_fresh_request"],
+        "targeted_hold":crate::targeted_dispatch::held(item)})
 }
 
 fn review_request_inputs(item: &Value) -> Value {
@@ -1223,6 +1246,35 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
         }
         let base = resolve(Path::new(repo))?;
         let jobs = self.backend.jobs()?;
+        if i["subwork"].is_object() {
+            let mut proposed = i.clone();
+            if crate::preparation::inherited_review_workspace(i, &jobs) {
+                let source =
+                    crate::preparation::workspace_source(i, &jobs).ok_or(Error("InputRejected"))?;
+                let ps = self.backend.snapshot()?;
+                let at = self.backend.clock();
+                if !arr(&i["jobs"]).contains(&source["id"])
+                    || !matches!(
+                        s(&source["status"]),
+                        "succeeded" | "failed" | "lost" | "cancelled" | "canceled"
+                    )
+                    || jobs.iter().any(|job| {
+                        (job["todo_id"] == i["id"]
+                            || arr(&job["related_todo_ids"]).contains(&i["id"])
+                            || arr(&i["jobs"]).contains(&job["id"]))
+                            && (live(job) || alive(job, &ps, at))
+                    })
+                {
+                    return Err(Error("InputRejected"));
+                }
+                // Validate provenance as an unallocated checkout. The stored
+                // relation, old receipt and writer's source remain untouched.
+                proposed["scheduler"]["worktree"] = Value::Null;
+                proposed["scheduler"]["branch"] = Value::Null;
+            }
+            cc_job_policy::subwork::resolve(&self.todo()?, &proposed, &[], false)
+                .map_err(|error| invalid_subwork(&error, "before_workspace"))?;
+        }
         let recovered = self.backend.workspace_recovery(repo, i, &jobs)?;
         let expected_inputs = launch_inputs(i);
         let now = self.backend.clock();
@@ -1244,7 +1296,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         self.backend.worktree(repo, &item)?;
         if item["subwork"].is_object() {
             cc_job_policy::subwork::resolve(&self.todo()?, &item, &[], true)
-                .map_err(|_| Error("InvalidSubwork"))?;
+                .map_err(|error| invalid_subwork(&error, "after_workspace"))?;
         }
         let spec = Path::new(s(&item["spec"]));
         if spec.metadata().map_err(|_| Error("InputRejected"))?.len() > 1024 * 1024 {
@@ -1533,7 +1585,24 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         if item["subwork"].is_object() {
             selection["task_type"] = item["subwork"]["kind"].clone();
         }
-        if item["scheduler"]["console_request"]["read_only"] == true {
+        // An unfinished successful conversation needs its recorded execution
+        // scope too, not only its model/session. Explicit saved inputs still win.
+        if let Some(source) = source.filter(|_| resume_session.is_some()) {
+            let sandbox = if !item["sandbox"].is_null() {
+                &item["sandbox"]
+            } else if !accepted_options["sandbox"].is_null() {
+                &accepted_options["sandbox"]
+            } else {
+                &source["sandbox"]
+            };
+            if !sandbox.is_null() {
+                selection["sandbox"] = sandbox.clone();
+            }
+        }
+        if item["scheduler"]["console_request"]["read_only"] == true
+            || ["research", "review"].contains(&s(&item["subwork"]["kind"]))
+            || cc_ask::job_policy::explicit_read_only(s(&item["title"]))
+        {
             selection["sandbox"] = json!("read-only");
         }
         // A resumed conversation may restore the previous model. Reuse it only
@@ -1551,6 +1620,21 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 })
         }) {
             resume_session = None;
+        }
+        // Do not carry capabilities from a conversation that was just retired.
+        if let Some(source) = source.filter(|_| resume_session.is_some()) {
+            for field in ["mcp_profile", "network", "add_dirs"] {
+                let value = if !item[field].is_null() {
+                    &item[field]
+                } else if !accepted_options[field].is_null() {
+                    &accepted_options[field]
+                } else {
+                    &source[field]
+                };
+                if !value.is_null() {
+                    selection[field] = value.clone();
+                }
+            }
         }
         let folder = self.root.join("prompts");
         fs::create_dir_all(&folder)?;
@@ -1583,6 +1667,52 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
     }
     pub fn dispatch(&mut self, cfg: &Value, pri: &Value) -> Result<()> {
         self.dispatch_for(cfg, pri, None)
+    }
+    /// Try one existing finite subwork using ordinary admission, without registration.
+    pub fn dispatch_existing_subwork(&mut self, id: i64) -> Result<Value> {
+        if id <= 0 {
+            return Err(Error("InputRejected"));
+        }
+        remove(&mut self.report, "launched");
+        let _lock = ByteLock::acquire(&self.root.join("scheduler.lock"), Duration::from_secs(30))?
+            .ok_or(Error("TimeoutError"))?;
+        self.state = read_json(&self.root.join("state.json"), json!({}))?;
+        if !self.state.is_object() {
+            return Err(Error("AttributeError"));
+        }
+        let db = self.todo()?;
+        let item = arr(&db["items"])
+            .into_iter()
+            .find(|row| row["id"] == id)
+            .ok_or(Error("InputRejected"))?;
+        if !item["subwork"].is_object() || item["project"] == "owner" {
+            return Err(Error("InputRejected"));
+        }
+        let jobs = self.backend.jobs()?;
+        let ps = self.backend.snapshot()?;
+        let at = self.backend.clock();
+        let active = jobs.iter().any(|job| {
+            (job["todo_id"] == id
+                || arr(&item["jobs"]).contains(&job["id"])
+                || arr(&job["related_todo_ids"]).contains(&json!(id)))
+                && (live(job) || alive(job, &ps, at))
+        });
+        if !active {
+            let (cfg, pri) = self.settings()?;
+            self.dispatch_for(&cfg, &pri, Some(id))?;
+            self.persist()?;
+        }
+        let current = arr(&self.todo()?["items"])
+            .into_iter()
+            .find(|row| row["id"] == id)
+            .ok_or(Error("InputRejected"))?;
+        Ok(
+            json!({"id":id,"status":current["status"],"phase":current["scheduler"]["phase"],
+            "active":active,"launched":self.report["launched"],"priority_wait":self.report["priority_wait"],
+            "allowance_now":self.report["allowance_now"],"busy_resources":self.report["busy_resources"],
+            "not_before":current["scheduler"]["not_before"],
+            "preparation_reason":current["scheduler"]["preparation_failure"]["reason"]}),
+        )
     }
     /// Caller holds scheduler.lock. The accepted body is durable before any launch.
     /// Preparation and admission remain the same as ordinary finite work.
@@ -1735,6 +1865,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     || !truth(&i["dispatchable"])
                     || !truth(&i["spec"])
                     || todo_wait::waiting(&db, i)
+                    || (target.is_some() && crate::targeted_dispatch::held(i))
                 {
                     return false;
                 }
@@ -1868,6 +1999,9 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     .find(|r| r["id"] == prepared["id"])
                     .ok_or(Error("ValueError"))?;
                 if todo_wait::waiting(&db, &current) {
+                    return Ok(());
+                }
+                if target.is_some() && crate::targeted_dispatch::held(&current) {
                     return Ok(());
                 }
                 if s(&current["status"]) != "todo"

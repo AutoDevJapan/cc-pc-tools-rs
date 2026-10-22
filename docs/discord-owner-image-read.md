@@ -2,7 +2,7 @@
 
 Attachment observations in `history-read` deliberately retain only IDs and sizes.
 That command remains metadata-only. A separate `history-attachment --scope <private
-JSON> --output <new .private.image|.private.png|.private.jpg|.private.webp|.private.gif>` reads the
+JSON> --output <new .private.image|.private.png|.private.jpg|.private.jpeg|.private.webp|.private.gif>` reads the
 single image already identified on an owner reply, using the existing bot loader.
 It never launches a worker, changes intake, sends a message, or opens a browser.
 
@@ -35,10 +35,18 @@ detect the supported image type without requiring the caller to guess a format
 that the metadata-only history receipt deliberately omits. Recheck the exact API reply
 version and attachment identity after download. Publish the unmodified bytes with
 the existing flushed, non-overwriting private writer only after all checks succeed.
-Stdout returns IDs, version timestamps/body SHA, media type, size, scope SHA and image
-SHA; it contains neither message text, CDN URL nor credentials. A failure publishes
-no image and reports only a fixed failure-stage label. Existing images/receipts are
-not replaced. A successful read does not imply
+Stdout returns IDs, reply version timestamps/body SHA, acquisition time, scope SHA,
+the original descriptor's size/type, the retrieved representation's size/type and
+image SHA, and `representation: "cdn_response_bytes"`. It contains neither message
+text, CDN URL nor credentials. Errors report a fixed failure-stage label and
+sanitized HTTP status, response length and a recognized image media type when
+available; they never print raw transport errors or response bodies. The CDN
+request, including body reading, has a six-second timeout.
+
+Failures before image publication leave no output. If writing the success receipt
+to stdout fails after publication, the command returns nonzero but the image can
+already exist. Inspect the requested output before retrying; an existing output is
+never overwritten. A successful read does not imply
 delivery to the handler, actual application, approval for another operation or close.
 
 Acceptance covers a mention-only owner reply with an image, exact bytes/provenance,

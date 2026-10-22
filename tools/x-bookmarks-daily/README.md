@@ -30,10 +30,11 @@ must still be read from the canonical run and verified separately.
 The prompt instructs the worker to distinguish an unverified asset classification from
 a confirmed client resource and a concrete execution-tool refusal. An unverified
 classification alone must not park every explicitly requested Skill or X operational-file
-operation behind registry restoration. It identifies the appropriate Skill's SKILL.md and
-references, done.txt, and the original dated run as the permitted operational scope.
-It instructs the worker to present the original scope and provenance to normal operations,
-exclude already refused actions, and retain actual protections. For this X task it forbids
+operation behind registry restoration. The prompt bounds the operational scope to its
+existing steps, including the appropriate Skill's SKILL.md/references and worker-owned
+.trash backup, done.txt, the original dated run, and eligible source-post removal.
+The prompt requires presenting the original scope and provenance to normal operations,
+excluding already refused actions, and retaining actual protections. For this X task it forbids
 guard/protection changes including path exceptions or registry edits, protected-original
 copies, and substitute completion ledgers. A new daily launch/status question cannot
 authorize repeating a rejected action. The prompt also requires checking an existing

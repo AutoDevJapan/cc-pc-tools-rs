@@ -27,6 +27,10 @@ func ci3250QuarantineParent(root, configured string) string {
 	return configured
 }
 
+func ci3250PreservedReason(root, reason string) bool {
+	return reason == "windows" || same(root, ci3250Worktree) && (reason == "size" || reason == "attributes")
+}
+
 func ci3250WinPath(path string) string {
 	p, e := filepath.Abs(path)
 	if e != nil {

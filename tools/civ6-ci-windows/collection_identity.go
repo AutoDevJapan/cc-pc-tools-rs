@@ -44,7 +44,7 @@ func checkCollectionRemote(p Plan, read readAPI) error {
 			Fork     bool
 		} `json:"head_repository"`
 	}
-	if e := read(fmt.Sprintf("repos/%s/actions/runs/%d", repository, p.RunID), &run); e != nil {
+	if e := read(fmt.Sprintf("repos/%s/actions/runs/%d/attempts/%d", repository, p.RunID, p.Attempt), &run); e != nil {
 		return e
 	}
 	if run.ID != p.RunID || run.Attempt != p.Attempt || run.HeadSHA != p.Head || run.Event != p.Event || !contract.MatchRunPath(p.Plan, run.Path) || run.HeadBranch != p.Branch || run.Repository.ID != repositoryID || run.Repository.FullName != repository || run.HeadRepository.ID != repositoryID || run.HeadRepository.FullName != repository || run.HeadRepository.Fork {

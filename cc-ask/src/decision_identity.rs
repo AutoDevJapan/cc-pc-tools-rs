@@ -561,6 +561,9 @@ pub(crate) fn preflight(
 
 /// Explicit bounded repair of reviewed duplicate threads. Never posts, launches or deletes replies.
 pub fn lookup(ctx: &mut Context, value: &Value) -> Result<Value> {
+    if crate::conversation_bridge::enabled(&ctx.here)? {
+        return crate::recovery_messages::lookup_decision(ctx, value);
+    }
     let _guard = ByteLock::acquire(
         &ctx.here.join("question-progress.lock"),
         Duration::from_secs(60),

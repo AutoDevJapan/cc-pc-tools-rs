@@ -30,6 +30,9 @@ mod clarification;
 const LEDGER: &str = "recovery-messages.json";
 const LOCK: &str = "recovery-messages.lock";
 const DOMAIN: &str = "new-owner-recovery-messages";
+
+mod decision_lookup;
+pub use decision_lookup::lookup_decision;
 const EMBEDS: u64 = 4;
 const TEXT_BYTES: usize = 128 * 1024;
 const LEDGER_BYTES: usize = 32 * 1024 * 1024;

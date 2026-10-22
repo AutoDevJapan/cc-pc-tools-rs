@@ -416,6 +416,21 @@ func TestOwnerUnicodeFailureIsNotAnUnnormalizedName(t *testing.T) {
 	}
 }
 
+func TestOwnerUnrelatedWorktreeDoesNotLoadLegacyProductQualification(t *testing.T) {
+	root, _, _ := ownerSourceFixture(t)
+	product := currentProduct{root: root, task: 99999, repository: "autodevjapan/example", ongoing: true}
+	calls := 0
+	qualifies := func(currentProduct) bool { calls++; return true }
+	at := time.Date(2026, 10, 21, 0, 0, 0, 0, time.UTC)
+	wrong := filepath.Join(root+"-wt", "agent-old-fixture", "main.go")
+	if currentProductsScopePathAllowed(wrong, []currentProduct{product}, at, qualifies, func(string) bool { return false }) || calls != 0 {
+		t.Fatal("unrelated worktree loaded the whole legacy product qualification")
+	}
+	if !currentProductsScopePathAllowed(root, []currentProduct{product}, at, qualifies, func(string) bool { return false }) || calls != 1 {
+		t.Fatal("normal registered root did not exercise legacy qualification")
+	}
+}
+
 func TestOwnerRepositoryDirectoryDoesNotHideOutsideCardLocation(t *testing.T) {
 	root := filepath.Join(t.TempDir(), "credit-cards", "source-fixture")
 	if os.MkdirAll(filepath.Join(root, ".git"), 0700) != nil {
@@ -533,5 +548,34 @@ func TestOwnerLiveSourceBudget(t *testing.T) {
 				t.Fatal("tracked self source never qualified within the finite budget")
 			}
 		})
+	}
+}
+
+func TestOwnerLiveGuardStages(t *testing.T) {
+	root, tree := os.Getenv("CC_GUARD_LIVE_SELF_SOURCE"), os.Getenv("CC_GUARD_LIVE_SELF_WORKTREE")
+	if root == "" || tree == "" {
+		t.Skip("explicit prequalified source metadata acceptance only")
+	}
+	for _, target := range []struct{ kind, path string }{{"root", root}, {"root-file", filepath.Join(root, "Cargo.toml")}, {"worktree-file", filepath.Join(tree, "Cargo.toml")}} {
+		var repairTime, sourceTime time.Duration
+		start := time.Now()
+		v := ownerPolicyClassify(target.path, ownerPolicyAccess{legacy: ownerLegacyProtection, physical: ownerPhysicalPath,
+			repair: func(path string) bool {
+				s := time.Now()
+				ok := repairPathAllowed(path)
+				repairTime += time.Since(s)
+				return ok
+			},
+			source: func(path string) ownerPathVerdict {
+				s := time.Now()
+				v := ownerRegisteredSource(path)
+				sourceTime += time.Since(s)
+				return v
+			},
+		})
+		t.Logf("kind=%s allowed=%v total=%s repair=%s source=%s", target.kind, v.AccessAllowed, time.Since(start), repairTime, sourceTime)
+		if !v.AccessAllowed {
+			t.Fatal("normal qualified source rejected")
+		}
 	}
 }

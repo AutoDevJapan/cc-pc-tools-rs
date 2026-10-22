@@ -48,84 +48,234 @@ pub fn checkpoint<B: Backend>(
     runner: &mut dyn Runner,
     request: &Request,
 ) -> Result<Value> {
-    if !request.valid() {
-        return Err(Error("InputRejected"));
+    run(engine, runner, request, false)
+}
+
+/// The same validation as saving, with no ToDo edit or job operation.
+pub fn inspect<B: Backend>(
+    engine: &mut Scheduler<B>,
+    runner: &mut dyn Runner,
+    request: &Request,
+) -> Result<Value> {
+    run(engine, runner, request, true)
+}
+
+fn require(checks: &mut Value, key: &str, matches: bool, reason: &'static str) -> Result<()> {
+    checks[key] = json!(matches);
+    if matches {
+        Ok(())
+    } else {
+        Err(Error(reason))
     }
-    let _lock = ByteLock::acquire(&engine.root.join("scheduler.lock"), Duration::from_secs(30))?
-        .ok_or(Error("TimeoutError"))?;
-    let db = engine.todo()?;
-    let item = arr(&db["items"])
-        .into_iter()
-        .find(|row| row["id"] == request.id)
-        .ok_or(Error("InputRejected"))?;
-    let repeated = item["scheduler"]["workspace_checkpoint"]["request"] == json!(request)
-        && item["scheduler"]["branch"] == request.branch;
-    if !matches!(s(&item["status"]), "todo" | "doing" | "wait")
-        || item["project"] == "owner"
-        || (!repeated && item["scheduler"]["branch"] != request.expected_branch)
-    {
-        return Err(Error("InputRejected"));
-    }
-    let repo = s(&db["projects"][s(&item["project"])]);
-    let cwd = s(&item["scheduler"]["worktree"]);
-    if repo.is_empty()
-        || cwd.is_empty()
-        || !engine.backend.repair_scope_allowed(repo)
-        || !engine.backend.repair_scope_allowed(cwd)
-    {
-        return Err(Error("ClientResource"));
-    }
-    let jobs = engine.backend.jobs()?;
-    let processes = engine.backend.snapshot()?;
-    let at = engine.backend.clock();
-    let source = jobs
-        .iter()
-        .find(|job| job["id"] == request.job)
-        .filter(|job| owns_workspace(&item, job))
-        .filter(|job| {
-            job["todo_id"] == item["id"] || arr(&job["related_todo_ids"]).contains(&item["id"])
-        })
-        .filter(|job| arr(&item["jobs"]).contains(&job["id"]))
-        .ok_or(Error("InputRejected"))?;
-    let target = resolve(Path::new(cwd))?;
-    if s(&source["cwd"]).is_empty()
-        || resolve(Path::new(s(&source["cwd"])))? != target
-        || jobs.iter().any(|job| {
+}
+
+fn run<B: Backend>(
+    engine: &mut Scheduler<B>,
+    runner: &mut dyn Runner,
+    request: &Request,
+    check_only: bool,
+) -> Result<Value> {
+    let mut checks = json!({});
+    let mut waiters = 0;
+    let result = (|| -> Result<bool> {
+        require(&mut checks, "input_valid", request.valid(), "InputRejected")?;
+        let _lock =
+            ByteLock::acquire(&engine.root.join("scheduler.lock"), Duration::from_secs(30))?
+                .ok_or(Error("TimeoutError"))?;
+        // Registration and queued -> starting admission use this same byte [0, 1).
+        // Keep it through ToDo CAS; a verified inactive waiter cannot start meanwhile.
+        let queue = engine
+            .root
+            .parent()
+            .ok_or(Error("CheckpointQueueUnavailable"))?
+            .join("codex-jobs/jobs");
+        std::fs::create_dir_all(&queue)?;
+        let _queue = ByteLock::acquire(&queue.join(".queue.lock"), Duration::from_secs(30))?
+            .ok_or(Error("CheckpointQueueBusy"))?;
+        let db = engine.todo()?;
+        let item = arr(&db["items"])
+            .into_iter()
+            .find(|row| row["id"] == request.id)
+            .ok_or(Error("CheckpointItemMissing"))?;
+        let repeated = item["scheduler"]["workspace_checkpoint"]["request"] == json!(request)
+            && item["scheduler"]["branch"] == request.branch;
+        require(
+            &mut checks,
+            "task_state_allowed",
+            matches!(s(&item["status"]), "todo" | "doing" | "wait") && item["project"] != "owner",
+            "CheckpointTaskState",
+        )?;
+        require(
+            &mut checks,
+            "expected_branch_matches",
+            repeated || item["scheduler"]["branch"] == request.expected_branch,
+            "CheckpointExpectedBranch",
+        )?;
+        let repo = s(&db["projects"][s(&item["project"])]);
+        let cwd = s(&item["scheduler"]["worktree"]);
+        require(
+            &mut checks,
+            "scope_allowed",
+            !repo.is_empty()
+                && !cwd.is_empty()
+                && engine.backend.repair_scope_allowed(repo)
+                && engine.backend.repair_scope_allowed(cwd),
+            "ClientResource",
+        )?;
+        let jobs = engine.backend.jobs()?;
+        let processes = engine.backend.snapshot()?;
+        let at = engine.backend.clock();
+        let source = jobs
+            .iter()
+            .find(|job| job["id"] == request.job)
+            .ok_or(Error("CheckpointSourceMissing"))?;
+        require(
+            &mut checks,
+            "source_owned",
+            owns_workspace(&item, source)
+                && (source["todo_id"] == item["id"]
+                    || arr(&source["related_todo_ids"]).contains(&item["id"]))
+                && arr(&item["jobs"]).contains(&source["id"]),
+            "CheckpointSourceOwnership",
+        )?;
+        let target = resolve(Path::new(cwd))?;
+        require(
+            &mut checks,
+            "source_cwd_matches",
+            !s(&source["cwd"]).is_empty() && resolve(Path::new(s(&source["cwd"])))? == target,
+            "CheckpointSourceCwd",
+        )?;
+        require(
+            &mut checks,
+            "source_is_current",
+            !(policy::live(source) || policy::alive(source, &processes, at))
+                || item["scheduler"]["job"] == source["id"],
+            "CheckpointSourceNotCurrent",
+        )?;
+        for other in jobs.iter().filter(|job| {
             job["id"] != source["id"]
                 && (policy::live(job) || policy::alive(job, &processes, at))
-                && (job["todo_id"] == item["id"] || norm(s(&job["cwd"])) == norm(cwd))
-        })
-        || ((policy::live(source) || policy::alive(source, &processes, at))
-            && item["scheduler"]["job"] != source["id"])
-    {
-        return Err(Error("InputRejected"));
-    }
-    let base = resolve(Path::new(repo))?;
-    if git_root(runner, &base)?.is_none() || git_root(runner, &target)?.is_none() {
-        return Err(Error("NonGit"));
-    }
-    same_common(runner, &base, &target)?;
-    let branch = crate::backend::run_git(runner, &target, &["branch", "--show-current"])?;
-    let head = crate::backend::run_git(runner, &target, &["rev-parse", "--verify", "HEAD"])?;
-    if branch != request.branch || !head.eq_ignore_ascii_case(&request.head) {
-        return Err(Error("BranchMismatch"));
-    }
-    // The full row comparison keeps intervening owner decisions, waits and new workers.
-    // A subsequent dispatch still checks the actual branch through ensure_workspace().
-    let mut saved = false;
-    let row = engine.edit_in_project(&item["id"], Some(repo), |row| {
-        if *row == item && !repeated {
-            row["scheduler"]["branch"] = json!(branch);
-            row["scheduler"]["workspace_checkpoint"] = json!({
-                "request":request,"at":at,"launched":0
-            });
-            saved = true;
+                && (job["todo_id"] == item["id"]
+                    || (!s(&job["cwd"]).is_empty()
+                        && resolve(Path::new(s(&job["cwd"]))).is_ok_and(|p| p == target)))
+        }) {
+            require(
+                &mut checks,
+                "competing_worker_inactive",
+                other["status"] == "queued"
+                    && !policy::alive(other, &processes, at)
+                    && other["work_owner_live"] != true
+                    && [
+                        "cancel_requested",
+                        "queue_restart_pending",
+                        "reboot_launch_pending",
+                        "queue_unreadable",
+                    ]
+                    .iter()
+                    .all(|key| other[*key] != true),
+                "CheckpointCompetingWorker",
+            )?;
+            let reason = &other["queue_wait_reason"];
+            let evidence = &other["work_wait_evidence"];
+            require(
+                &mut checks,
+                "queued_wait_owner_matches",
+                item["scheduler"]["job"] == source["id"]
+                    && matches!(s(&source["status"]), "starting" | "running")
+                    && policy::alive(source, &processes, at)
+                    && reason["code"] == "work_owner"
+                    && reason["owner_job_id"] == source["id"]
+                    && reason["owner_todo_id"] == item["id"]
+                    && (other["todo_id"].is_null() || other["todo_id"] == item["id"])
+                    && (evidence.is_null()
+                        || (evidence["owner_job_id"] == source["id"]
+                            && evidence["owner"]["id"] == source["id"]
+                            && evidence["owner"]["todo_id"] == item["id"])),
+                "CheckpointWaitUnverified",
+            )?;
+            let identity = &other["work_owner"];
+            let owner = &source["work_owner"];
+            require(
+                &mut checks,
+                "queued_identity_matches",
+                ["repository", "git_common"]
+                    .iter()
+                    .all(|key| !s(&owner[*key]).is_empty() && identity[*key] == owner[*key])
+                    && [
+                        s(&other["cwd"]),
+                        s(&identity["worktree"]),
+                        s(&owner["worktree"]),
+                    ]
+                    .iter()
+                    .all(|path| {
+                        !path.is_empty() && resolve(Path::new(path)).is_ok_and(|p| p == target)
+                    }),
+                "CheckpointWaitIdentity",
+            )?;
+            waiters += 1;
         }
-    })?;
-    if row["scheduler"]["branch"] != request.branch
-        || row["scheduler"]["workspace_checkpoint"]["request"] != json!(request)
-    {
-        return Err(Error("InputRejected"));
-    }
-    Ok(json!({"id":request.id,"saved":saved,"launched":0,"source_files_changed":false}))
+        checks["competing_workers_absent"] = json!(true);
+        let base = resolve(Path::new(repo))?;
+        if git_root(runner, &base)?.is_none() || git_root(runner, &target)?.is_none() {
+            return Err(Error("NonGit"));
+        }
+        same_common(runner, &base, &target)?;
+        let branch = crate::backend::run_git(runner, &target, &["branch", "--show-current"])?;
+        let head = crate::backend::run_git(runner, &target, &["rev-parse", "--verify", "HEAD"])?;
+        require(
+            &mut checks,
+            "actual_branch_matches",
+            branch == request.branch,
+            "BranchMismatch",
+        )?;
+        require(
+            &mut checks,
+            "actual_head_matches",
+            head.eq_ignore_ascii_case(&request.head),
+            "CheckpointHeadMismatch",
+        )?;
+        if check_only {
+            let fresh = engine.todo()?;
+            require(
+                &mut checks,
+                "task_row_unchanged",
+                arr(&fresh["items"]).iter().any(|row| *row == item)
+                    && fresh["projects"][s(&item["project"])] == repo,
+                "CheckpointRowChanged",
+            )?;
+            return Ok(false);
+        }
+        // The full row comparison keeps intervening owner decisions, waits and new workers.
+        // A subsequent dispatch still checks the actual branch through ensure_workspace().
+        let mut saved = false;
+        let mut matched = false;
+        let row = engine.edit_in_project(&item["id"], Some(repo), |row| {
+            if *row == item {
+                matched = true;
+            }
+            if matched && !repeated {
+                row["scheduler"]["branch"] = json!(branch);
+                row["scheduler"]["workspace_checkpoint"] = json!({
+                    "request":request,"at":at,"launched":0
+                });
+                saved = true;
+            }
+        })?;
+        if !matched
+            || row["scheduler"]["branch"] != request.branch
+            || row["scheduler"]["workspace_checkpoint"]["request"] != json!(request)
+        {
+            return Err(Error("CheckpointRowChanged"));
+        }
+        checks["task_row_unchanged"] = json!(true);
+        Ok(saved)
+    })();
+    let (eligible, reason, saved) = match result {
+        Ok(saved) => (true, None, saved),
+        Err(error) if !check_only => return Err(error),
+        Err(error) => (false, Some(error.0), false),
+    };
+    Ok(json!({"id":request.id,"eligible":eligible,"reason":reason,
+        "saved":saved,"check_only":check_only,"checks":checks,"verified_owner_waiters":waiters,
+        "launched":0,"source_files_changed":false}))
 }

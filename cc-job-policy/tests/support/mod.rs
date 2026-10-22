@@ -40,7 +40,7 @@ impl Fixture {
         let mut owner = work_owner::checkout(parent_tree.to_str().unwrap());
         owner["pr"] = json!(86);
         let jobs = vec![
-            json!({"id":"parent","todo_id":1,"status":"running","subwork_live":true,
+            json!({"id":"parent","todo_id":1,"status":"running","subwork_live":true,"model":"gpt-6.1-sol","requested_model":"gpt-6.1-sol","effort":"max",
             "cwd":parent_tree,"work_owner":owner,"created_at":"2026-10-10T01:00:00+09:00"}),
         ];
         let db = json!({"projects":{"demo":repo,"alias":repo},"next_id":3,"items":[

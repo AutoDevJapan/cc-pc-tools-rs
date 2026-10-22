@@ -1,7 +1,10 @@
 # Operations の部署別製品と復旧中の表示
 
 2026-10-12 の本人指定は `localai-web-rs/src/operations_catalog.rs` を正本とする。
-GoDD 9製品、自社サービス12製品、ゲーム2製品、受託2製品を指定順で表示する。
+GoDD 9製品、自社サービス12製品、ゲーム2製品、受託3製品を指定順で表示する。
+2026-10-20の本人訂正により、受託部へGoDD MCPを追加した。
+GoDD MCP αとは別製品とし、固定IDとrepository/ownerの対応は
+[製品識別の仕様](distinct-godd-mcp-products-3103.md)で管理する。
 情報システム部は PCの道具、local-ai-concole、OpenCodex と、以前の指示による内部部署 Skills を表示する。
 稼働担当が0でも指定製品を消さず、製品内のジョブは最初は閉じる。
 稼働状態で製品の順番を並べ替えず、画面の更新後も利用者が選んだ開閉を保持する。

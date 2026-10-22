@@ -1,0 +1,31 @@
+{
+  "todo": 3080,
+  "source_head": "6f5ac72a9445b1a20534126f8162fd5a5a6385e5",
+  "preinstallation_review": 3270,
+  "reviewed_bundle_sha256": "33c75886fe22c69cfe200f8a3d37752f154caf2af95b12ab2a3faaefbfd7f472",
+  "installed_bundle_sha256": "22fdc6b5129f15b83d4b7cc3f83fd9887d34048148254fd7bd205b25b15d6f6d",
+  "review_raw_sha256": "34cd94365158ed9bdebfc2893a7d5e8690b8b2ef16b4904da454fc2153c3ba58",
+  "new_target": "link",
+  "targets": 1,
+  "readback_files": 5,
+  "manifest": "skills-3080-installed-link-manifest.json",
+  "journal_sha256": "30f693c39313dea37e06ac473941f96631de5ad7d311fb18060acf166b5c9e74",
+  "raw_source_and_MIT_unchanged": true,
+  "validator": "成功: 実1件5ファイル。",
+  "current28_manifest_sha256": "ad0ed9d9462c4d1086d347230197e7911859b2162db33dd983aa940ad1783653",
+  "current28_reconstruction": "採用台帳が指定する対象別最新manifestから28件を結合。旧snapshotは保持。",
+  "discovery": {
+    "found": 1,
+    "enabled": 1,
+    "description_match": true,
+    "parse_errors": 0,
+    "same_names_other_paths": 0,
+    "metadata_total": 325,
+    "notifications": 2,
+    "model_called": false,
+    "raw_sha256": "b901d6be8cbdc07360094ac82b53e26a5a5790b0ac6f89d4d34ef809ec6e6935"
+  },
+  "postinstall_review": "未受入。今回のv2と実配置差分を次の限定レビューへ渡す。",
+  "scope": "新規link1名のみ配置。既存27/managed/junction/guardは不変。実manual編集/モデルターン/private履歴は未実行。",
+  "recorded_at": "2026-10-21T05:39:42.9339436Z"
+}

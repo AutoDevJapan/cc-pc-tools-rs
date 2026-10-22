@@ -62,6 +62,28 @@ Status does not load a Discord credential. Shared JSON reads close the handle be
 
 `content_sha256` checks equality, not confidentiality: short choice letters such as a/b can be guessed from an unkeyed hash; their meaning belongs to the original question. Receipts and status remain private. Public archive pagination follows the API's exclusive timestamp cursor; equal timestamps at a page boundary can leave threads unobserved. `complete` means this API walk reached its end, not proof of every historical thread or every unfinished question.
 
+## Attachment observations in read-only history
+
+A message containing only a mention may still have an attachment. History receipts must
+preserve the API's attachment observation on retained owner/bot messages and the starter.
+An explicit `attachments: []` means the API returned an empty array. Missing or null
+attachment data is recorded as `attachments: null` (unknown), never an empty array.
+This is the API observation, not proof that a user provided no information: Discord can
+also limit message-content fields according to the application's access.
+
+For each returned attachment, retain only its numeric ID and nonnegative byte size.
+Do not retain filename, description, content type, signed/CDN/proxy URL or media bytes.
+Do not download or open attachments. Malformed retained attachment IDs or sizes fail
+the page without publishing a success receipt; existing scope, cursor, identity, guard,
+output and GET-only restrictions remain in force. No canonical intake, sender, normal
+reply proof hash, application or question-close behavior changes.
+
+Acceptance covers a mention-only reply with attachments and a starter attachment,
+explicitly empty versus unknown observations, zero-byte attachments, rejection of
+invalid retained metadata before publication, and omission of attachment labels/URLs
+from both receipt and stdout. The source contract is the official
+[message and attachment structure](https://docs.discord.com/developers/resources/message#attachment-object).
+
 ## Non-mutating inspection of registered conversation replies
 
 `conversation replies --request-id <existing ID> --output <new .private.json>` reads an existing question and obtains its proof through the same normal `recovery-replies --read-only` association checks. It does not acquire `runner.lock`, initialize missing stores, update `latest-replies.json`, deliver, apply or close anything. The default replies command still writes its existing cache and retains the lock, as do mutating commands.

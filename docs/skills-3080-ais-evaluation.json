@@ -12,8 +12,8 @@
   "unique_texts_fully_read": 7,
   "all12source_bytes_verified": true,
   "support_resource_review_complete": false,
-  "prior3048_scope": "README/LICENSE/representative audit only,same fixed commit;not all12primary",
-  "current_new_read_scope": "All7distinct primary texts including bothlevel-up variants;5samehash mirrors checked. Source paths preserved as12occurrences,not6adoptions.",
+  "prior3048_scope": "同じ固定commitのREADME/LICENSEと代表auditだけ。全12入口の監査ではない。",
+  "current_new_read_scope": "異なる7本文を全文確認し、5個の同本文mirrorも全バイトとSHAを照合。出典12パスを保持し、6採用とは数えない。",
   "candidate_groups": [
     {
       "name": "3d-brain",
@@ -95,10 +95,10 @@
       "bytes": 8580,
       "retrieved_at": "2026-10-20T08:41:09.2780766Z",
       "purpose": "Use when someone asks to build a 3D brain, visualize their AIOS or second brain, turn their knowledge into an interactive graph, or run /3d-brain or /3D brain.",
-      "body_coverage": "7unique texts read fully;5identical mirror occurrences verified by SHA/bytes",
+      "body_coverage": "異なる7本文を全文確認し、5個の同本文mirrorをSHAと全バイトで照合。",
       "candidate_disposition": "possible_new_workflow_pending_support_review",
       "reason": "指定保管庫を正確な明示リンクと分類で可視化する独立用途は有用。同じ球状UIを即実装する契約や全private記憶読取は採用しない。",
-      "required_changes": "portable-spec/config/acceptance/renderer/adapterと依存noticeは未読。先に限定補助を調べ、見た目は画像をDiscordへ直接提示して本人回答後だけ実装。new常用コードはGo既定、承認済みWindowsブラウザと仮想入力を使う。未承認のapp起動/Node/npm/install/類似private探索をしない。",
+      "required_changes": "portable-spec/config/acceptance/renderer/adapterと依存noticeは未読。先に限定補助を調べ、見た目は画像をDiscordへ直接提示して本人回答後だけ実装。new常用コードはGo既定、承認済みWindowsブラウザと仮想入力を使う。未承認のapp起動/Node/npm/install/類似private探索をしない。 起動はnpm/サーバーを伴うため、明示限定と狭い暗黙発見を別途比較する。linkの判断を流用しない。",
       "same_content_paths": [
         ".agents/skills/3d-brain/SKILL.md",
         ".claude/skills/3d-brain/SKILL.md"
@@ -107,7 +107,7 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true
     },
     {
       "inventory_id": "github:583a946b0b891131258cd5d7f66450e96bc391a1da4c7ba41fe24fc9c74003d5",
@@ -120,7 +120,7 @@
       "bytes": 15803,
       "retrieved_at": "2026-10-20T08:41:09.3349304Z",
       "purpose": "Use when someone asks to audit their AIOS, score the Four Cs, find stale paths or unlinked projects, compare AGENTS.md and CLAUDE.md, check Claude/Codex skill compatibility, or assess migration readiness. Automatically saves dated reports and tracks evidence-backed improvements across runs.",
-      "body_coverage": "7unique texts read fully;5identical mirror occurrences verified by SHA/bytes",
+      "body_coverage": "異なる7本文を全文確認し、5個の同本文mirrorをSHAと全バイトで照合。",
       "candidate_disposition": "integration_candidate_with_policy_rewrite",
       "reason": "agent-system-designの元3048既知監査と重なるが、ルーティング正例/失敗と版・鮮度・実稼働・過去finding遷移を分ける部分は追加価値を精査する。",
       "required_changes": "rubric/history/compatibility/reporttemplate未読。20基準100点・30日・5probe・weeklyや全保存を機械的義務にしない。読取権限は対象依頼に限定し、秘密env/keyや外部顧客記録を探さない。稼働/設定/未確認を分け、既知個別原本と比較して具体差分だけ作る。",
@@ -132,7 +132,7 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true
     },
     {
       "inventory_id": "github:ab96aea932e588183441fdc82548555b56596fe440857a5d303f8b657f95a873",
@@ -145,7 +145,7 @@
       "bytes": 7228,
       "retrieved_at": "2026-10-20T08:41:09.3385993Z",
       "purpose": "Interview the user relentlessly about a plan, design, or topic, checkpointing every answer to a brainstorm file so nothing is lost. Use when the user wants to stress-test a plan, get grilled on a design, run a brainstorm or discovery session, extract what's in their head into a doc, build up their AI OS context over time, or says \"grill me\".",
-      "body_coverage": "7unique texts read fully;5identical mirror occurrences verified by SHA/bytes",
+      "body_coverage": "異なる7本文を全文確認し、5個の同本文mirrorをSHAと全バイトで照合。",
       "candidate_disposition": "integration_candidate_with_policy_rewrite",
       "reason": "既存grillingの意思決定質問/既存知識再利用と重なる。回答毎の原文/訂正リンク/保存失敗/停止・再開を追加差分として照合する。",
       "required_changes": "人にしか決められない未指定要件だけを既存Discord経路で具体的に1問、既存回答を再質問しない。元依頼が面談ならその範囲を保持し、導入だけで面談を開始しない。固定brainstorms保存先/全回答を事実に昇格/私的文面公開を採らず、元scopeの永続記録へ最小限保存する。",
@@ -157,7 +157,7 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true
     },
     {
       "inventory_id": "github:6836637afcca1029db53b67eeaa0f1b2396e41b587ab148a96eafb535faba007",
@@ -170,10 +170,10 @@
       "bytes": 10720,
       "retrieved_at": "2026-10-20T08:41:09.3397379Z",
       "purpose": "Use when someone asks to level up their AIOS, close an audit gap, find what to automate next, or improve one workflow. Walks the 3Ms from choosing the constraint to shipping one useful artifact or verified repair.",
-      "body_coverage": "7unique texts read fully;5identical mirror occurrences verified by SHA/bytes",
+      "body_coverage": "異なる7本文を全文確認し、5個の同本文mirrorをSHAと全バイトで照合。",
       "candidate_disposition": "integration_candidate_with_policy_rewrite",
       "reason": "loop-me/ai-workflowの発火入力/判断/出力/評価の設計と重なる。既存auditの具体findingを再面談なしに受け取る点、手作業廃止/自動化/委譲の比較は差分候補。",
-      "required_changes": "source2版の違いはmetadata探索の.agentsと.claude。商標留保を保持、ブランド新設しない。14日/毎金曜/60-30-10/4-6回で習慣化/毎artifactBike/全範囲1artifactという一律義務、Goの代わりPython、新AI APIや無条件manual/L1待ち、本人紙作業待ちを採らない。既存自律許可と安全検査、全候補scopeを保持。framework補助未読。",
+      "required_changes": "元の2版の違いはmetadata探索先の .agents と .claude。商標留保を保持、ブランド新設しない。14日・毎金曜・60/30/10比率・4〜6回での習慣化・全成果へのBike方式・全範囲を1成果にする制限という一律義務、Goの代わりPython、新AI APIや無条件manual/L1待ち、本人紙作業待ちを採らない。既存自律許可と安全検査、全候補scopeを保持。framework補助未読。",
       "same_content_paths": [
         ".agents/skills/level-up/SKILL.md"
       ],
@@ -181,7 +181,7 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true
     },
     {
       "inventory_id": "github:b3f606e5e0512d2540f66637133b3d5f5d8ee7a563d99c99c5259a660ec1bd05",
@@ -194,7 +194,7 @@
       "bytes": 2175,
       "retrieved_at": "2026-10-20T08:41:09.3409359Z",
       "purpose": "Use when someone asks to link a project, file, folder, or important context into AGENTS.md or their AIOS routing, or says \"link this into my AIOS\" or \"add this to my routing\".",
-      "body_coverage": "7unique texts read fully;5identical mirror occurrences verified by SHA/bytes",
+      "body_coverage": "異なる7本文を全文確認し、5個の同本文mirrorをSHAと全バイトで照合。",
       "candidate_disposition": "possible_new_routing_workflow_pending_comparison",
       "reason": "manual→index→正本の必要最小ルートを追加し読戻しする操作は独立再利用候補。一般のcodebase設計や知識要約だけと混同しない。",
       "required_changes": "上流は明示invoke限定。対象projectroot/元指定target存在/目的/安全な公開可否を照合し、アクセス失敗を消失としない。既存CLAUDEだけならbridgingはprojectrule優先、全manual同一化しない。通常許可済みeditを再承認待ちにせず、仕様不明で本人しか決められない点だけDiscordで質問。source本文にsupport参照なし、実候補の作成/metadata重複確認は次工程。",
@@ -206,7 +206,8 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "authored_plan": "skills-3080-batch07.jsonの新候補1件は配置前修正済み、まだ未配置。independent_review_completeは元本文/評価の3249確認を指し、派生候補や実配置の受入印ではない。"
     },
     {
       "inventory_id": "github:15771b8593ea6d4719d91e9e03db32e523416e3fcf593a082c365c047a0e2b7a",
@@ -219,7 +220,7 @@
       "bytes": 7888,
       "retrieved_at": "2026-10-20T08:41:09.341447Z",
       "purpose": "Use on Day 1 of an AIS-OS install, when someone says \"set me up\", \"onboard me\", \"let's get started\", \"fill in my AIOS\", or has just cloned the kit. Combined wizard — runs the 7-question intake AND scaffolds the Day-1 file set at the end. Idempotent — re-run any time after editing aios-intake.md.",
-      "body_coverage": "7unique texts read fully;5identical mirror occurrences verified by SHA/bytes",
+      "body_coverage": "異なる7本文を全文確認し、5個の同本文mirrorをSHAと全バイトで照合。",
       "candidate_disposition": "integration_candidate_with_policy_rewrite",
       "reason": "agent-system-designの新session経路/基準文書と重なる。既存contextの差分だけ更新し、受領回答/保全/再開を分ける点を調べる。",
       "required_changes": "intake asset/framework未読。7問固定/生メールの本人貼付強制/名前や売上の仮定/GmailからCalendar自動推定/Day1-14予定/MCPやAPI新権限/機械的一括context上書きを採らない。既存本人回答から足りる点を復元し、真の本人要件だけ質問。原回答と未確認/提案のラベル・個別backups/更新前SHA/読戻しを保持。",
@@ -231,7 +232,7 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true
     },
     {
       "inventory_id": "github:421294aa30419d363ecd368773a303b491bfc04b279e24b068d7d26e98e2f97c",
@@ -244,10 +245,10 @@
       "bytes": 8580,
       "retrieved_at": "2026-10-20T08:41:09.3434777Z",
       "purpose": "Use when someone asks to build a 3D brain, visualize their AIOS or second brain, turn their knowledge into an interactive graph, or run /3d-brain or /3D brain.",
-      "body_coverage": "7unique texts read fully;5identical mirror occurrences verified by SHA/bytes",
+      "body_coverage": "異なる7本文を全文確認し、5個の同本文mirrorをSHAと全バイトで照合。",
       "candidate_disposition": "possible_new_workflow_pending_support_review",
       "reason": "指定保管庫を正確な明示リンクと分類で可視化する独立用途は有用。同じ球状UIを即実装する契約や全private記憶読取は採用しない。",
-      "required_changes": "portable-spec/config/acceptance/renderer/adapterと依存noticeは未読。先に限定補助を調べ、見た目は画像をDiscordへ直接提示して本人回答後だけ実装。new常用コードはGo既定、承認済みWindowsブラウザと仮想入力を使う。未承認のapp起動/Node/npm/install/類似private探索をしない。",
+      "required_changes": "portable-spec/config/acceptance/renderer/adapterと依存noticeは未読。先に限定補助を調べ、見た目は画像をDiscordへ直接提示して本人回答後だけ実装。new常用コードはGo既定、承認済みWindowsブラウザと仮想入力を使う。未承認のapp起動/Node/npm/install/類似private探索をしない。 起動はnpm/サーバーを伴うため、明示限定と狭い暗黙発見を別途比較する。linkの判断を流用しない。",
       "same_content_paths": [
         ".agents/skills/3d-brain/SKILL.md",
         ".claude/skills/3d-brain/SKILL.md"
@@ -256,7 +257,7 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true
     },
     {
       "inventory_id": "github:1cf525959fecc58264a980c01d2f3488f2bbc9c2eef208b354700148c213ed18",
@@ -269,7 +270,7 @@
       "bytes": 15803,
       "retrieved_at": "2026-10-20T08:41:09.4303146Z",
       "purpose": "Use when someone asks to audit their AIOS, score the Four Cs, find stale paths or unlinked projects, compare AGENTS.md and CLAUDE.md, check Claude/Codex skill compatibility, or assess migration readiness. Automatically saves dated reports and tracks evidence-backed improvements across runs.",
-      "body_coverage": "7unique texts read fully;5identical mirror occurrences verified by SHA/bytes",
+      "body_coverage": "異なる7本文を全文確認し、5個の同本文mirrorをSHAと全バイトで照合。",
       "candidate_disposition": "integration_candidate_with_policy_rewrite",
       "reason": "agent-system-designの元3048既知監査と重なるが、ルーティング正例/失敗と版・鮮度・実稼働・過去finding遷移を分ける部分は追加価値を精査する。",
       "required_changes": "rubric/history/compatibility/reporttemplate未読。20基準100点・30日・5probe・weeklyや全保存を機械的義務にしない。読取権限は対象依頼に限定し、秘密env/keyや外部顧客記録を探さない。稼働/設定/未確認を分け、既知個別原本と比較して具体差分だけ作る。",
@@ -281,7 +282,7 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true
     },
     {
       "inventory_id": "github:c88e1dc1bda360eadd29d06c08621746c456b4a2cd3f655b9f27818449e5bffc",
@@ -294,7 +295,7 @@
       "bytes": 7228,
       "retrieved_at": "2026-10-20T08:41:09.4308376Z",
       "purpose": "Interview the user relentlessly about a plan, design, or topic, checkpointing every answer to a brainstorm file so nothing is lost. Use when the user wants to stress-test a plan, get grilled on a design, run a brainstorm or discovery session, extract what's in their head into a doc, build up their AI OS context over time, or says \"grill me\".",
-      "body_coverage": "7unique texts read fully;5identical mirror occurrences verified by SHA/bytes",
+      "body_coverage": "異なる7本文を全文確認し、5個の同本文mirrorをSHAと全バイトで照合。",
       "candidate_disposition": "integration_candidate_with_policy_rewrite",
       "reason": "既存grillingの意思決定質問/既存知識再利用と重なる。回答毎の原文/訂正リンク/保存失敗/停止・再開を追加差分として照合する。",
       "required_changes": "人にしか決められない未指定要件だけを既存Discord経路で具体的に1問、既存回答を再質問しない。元依頼が面談ならその範囲を保持し、導入だけで面談を開始しない。固定brainstorms保存先/全回答を事実に昇格/私的文面公開を採らず、元scopeの永続記録へ最小限保存する。",
@@ -306,7 +307,7 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true
     },
     {
       "inventory_id": "github:b7d89eb7461bac52115b88bda7541c2f8e26f0b50176e1561957d6afae95f6f8",
@@ -319,10 +320,10 @@
       "bytes": 10720,
       "retrieved_at": "2026-10-20T08:41:09.43189Z",
       "purpose": "Use when someone asks to level up their AIOS, close an audit gap, find what to automate next, or improve one workflow. Walks the 3Ms from choosing the constraint to shipping one useful artifact or verified repair.",
-      "body_coverage": "7unique texts read fully;5identical mirror occurrences verified by SHA/bytes",
+      "body_coverage": "異なる7本文を全文確認し、5個の同本文mirrorをSHAと全バイトで照合。",
       "candidate_disposition": "integration_candidate_with_policy_rewrite",
       "reason": "loop-me/ai-workflowの発火入力/判断/出力/評価の設計と重なる。既存auditの具体findingを再面談なしに受け取る点、手作業廃止/自動化/委譲の比較は差分候補。",
-      "required_changes": "source2版の違いはmetadata探索の.agentsと.claude。商標留保を保持、ブランド新設しない。14日/毎金曜/60-30-10/4-6回で習慣化/毎artifactBike/全範囲1artifactという一律義務、Goの代わりPython、新AI APIや無条件manual/L1待ち、本人紙作業待ちを採らない。既存自律許可と安全検査、全候補scopeを保持。framework補助未読。",
+      "required_changes": "元の2版の違いはmetadata探索先の .agents と .claude。商標留保を保持、ブランド新設しない。14日・毎金曜・60/30/10比率・4〜6回での習慣化・全成果へのBike方式・全範囲を1成果にする制限という一律義務、Goの代わりPython、新AI APIや無条件manual/L1待ち、本人紙作業待ちを採らない。既存自律許可と安全検査、全候補scopeを保持。framework補助未読。",
       "same_content_paths": [
         ".claude/skills/level-up/SKILL.md"
       ],
@@ -330,7 +331,7 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true
     },
     {
       "inventory_id": "github:d288c6bfa021752fa67509714af89d7bcf52c64ac4ffc5e896c4b41a7b1030c8",
@@ -343,7 +344,7 @@
       "bytes": 2175,
       "retrieved_at": "2026-10-20T08:41:09.43189Z",
       "purpose": "Use when someone asks to link a project, file, folder, or important context into AGENTS.md or their AIOS routing, or says \"link this into my AIOS\" or \"add this to my routing\".",
-      "body_coverage": "7unique texts read fully;5identical mirror occurrences verified by SHA/bytes",
+      "body_coverage": "異なる7本文を全文確認し、5個の同本文mirrorをSHAと全バイトで照合。",
       "candidate_disposition": "possible_new_routing_workflow_pending_comparison",
       "reason": "manual→index→正本の必要最小ルートを追加し読戻しする操作は独立再利用候補。一般のcodebase設計や知識要約だけと混同しない。",
       "required_changes": "上流は明示invoke限定。対象projectroot/元指定target存在/目的/安全な公開可否を照合し、アクセス失敗を消失としない。既存CLAUDEだけならbridgingはprojectrule優先、全manual同一化しない。通常許可済みeditを再承認待ちにせず、仕様不明で本人しか決められない点だけDiscordで質問。source本文にsupport参照なし、実候補の作成/metadata重複確認は次工程。",
@@ -355,7 +356,8 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "authored_plan": "skills-3080-batch07.jsonの新候補1件は配置前修正済み、まだ未配置。independent_review_completeは元本文/評価の3249確認を指し、派生候補や実配置の受入印ではない。"
     },
     {
       "inventory_id": "github:a9be3dc1687e4cf91d2793102ff73fd8205f778a00c3405968309476decbb4fb",
@@ -368,7 +370,7 @@
       "bytes": 7888,
       "retrieved_at": "2026-10-20T08:41:09.43189Z",
       "purpose": "Use on Day 1 of an AIS-OS install, when someone says \"set me up\", \"onboard me\", \"let's get started\", \"fill in my AIOS\", or has just cloned the kit. Combined wizard — runs the 7-question intake AND scaffolds the Day-1 file set at the end. Idempotent — re-run any time after editing aios-intake.md.",
-      "body_coverage": "7unique texts read fully;5identical mirror occurrences verified by SHA/bytes",
+      "body_coverage": "異なる7本文を全文確認し、5個の同本文mirrorをSHAと全バイトで照合。",
       "candidate_disposition": "integration_candidate_with_policy_rewrite",
       "reason": "agent-system-designの新session経路/基準文書と重なる。既存contextの差分だけ更新し、受領回答/保全/再開を分ける点を調べる。",
       "required_changes": "intake asset/framework未読。7問固定/生メールの本人貼付強制/名前や売上の仮定/GmailからCalendar自動推定/Day1-14予定/MCPやAPI新権限/機械的一括context上書きを採らない。既存本人回答から足りる点を復元し、真の本人要件だけ質問。原回答と未確認/提案のラベル・個別backups/更新前SHA/読戻しを保持。",
@@ -380,7 +382,7 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true
     }
   ],
   "license": {
@@ -389,19 +391,40 @@
     "sha256": "79f6fb36dbf642e59321081ffe67eb49476faf19f5cca43c56673a01df202493",
     "bytes": 1246,
     "copyright": "Copyright (c) 2026 Nate Herk",
-    "scope": "Rootnotice fully read;tree has rootLICENSE only.Individual primary evidence,not unseenassets/scripts/thirdparty approval. Framework MIT content and reserved name trademark are separate."
+    "scope": "LICENSEという名前のファイルはrootだけ。同梱3d-brainには両runtimeのTHIRD-PARTY-NOTICES.txtがあり未読で、依存の許諾は未確認。選択した各本文の根拠と、未読assets/scripts/thirdpartyを分ける。framework本文のMITと名称商標の留保は別。"
   },
   "installed": 0,
   "integrated": 0,
   "excluded": 0,
-  "review_pending": true,
+  "review_pending": false,
   "limits": [
-    "No private context/session/credential or external records read",
-    "No bundled code/install/MCP/cron/app/AIAPI executed",
-    "Proposals and mirror equality are not adoption/integration/exclusion decisions",
-    "Do not artificially cap original16source expansion"
+    "私的なcontext/セッション/認証情報や外部の記録は読んでいない。",
+    "同梱コード・install・MCP・cron・app・AI APIは実行していない。",
+    "採否候補と本文同一は実導入/統合/除外の判定ではない。",
+    "元16資料の拡張を人工の件数上限で打ち切らない。"
   ],
   "observed_at": "2026-10-21T00:17:47.1224346Z",
   "schema": "occurrence-groups-v1",
-  "disposition_unit": "6用途の採否候補、12出典パス/7異本文を保持。5同本文mirrorは導入/統合として処理済みにしない。"
+  "disposition_unit": "6用途の採否候補、12出典パス/7異本文を保持。5同本文mirrorは導入/統合として処理済みにしない。",
+  "all_notice_paths": [
+    "LICENSE",
+    ".agents/skills/3d-brain/assets/template/THIRD-PARTY-NOTICES.txt",
+    ".claude/skills/3d-brain/assets/template/THIRD-PARTY-NOTICES.txt"
+  ],
+  "uncollected_invocation_metadata": [
+    ".agents/skills/link/agents/openai.yaml",
+    ".claude/skills/link/agents/openai.yaml",
+    "他の各workflowのagents/openai.yamlも未保存/未読。647拒否の追加取得へ戻らない。"
+  ],
+  "classification_is_not_installation": true,
+  "assessment_snapshot_before_adoption": true,
+  "live_dispositions": "skills-3080-adoptions.json",
+  "review": {
+    "todo": 3249,
+    "head": "4976ec73a30b030916991e6d84c695ceddad49de",
+    "must": 0,
+    "source12bytehash_verified": true,
+    "unique7text_and_MIT_fullread": true,
+    "support_unread": true
+  }
 }

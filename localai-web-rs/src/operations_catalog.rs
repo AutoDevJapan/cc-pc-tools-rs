@@ -149,10 +149,22 @@ pub const PRODUCTS: &[Product] = &[
         department: 4,
         aliases: &[],
     },
+    // Owner's 2026-10-21 instruction replaces the old separate placement
+    // for this product only. The original membership receipt remains intact.
+    Product {
+        name: "youtube-daily",
+        department: 3,
+        aliases: &[],
+    },
     Product {
         name: "ARPS",
         department: 4,
         aliases: &[],
+    },
+    Product {
+        name: "GoDD MCP",
+        department: 4,
+        aliases: &["GoDD-MCP"],
     },
 ];
 
@@ -166,6 +178,9 @@ fn key(name: &str) -> String {
 }
 
 pub fn find(name: &str) -> Option<&'static Product> {
+    if let Some(product) = cc_scheduler::product_identity::by_name(name) {
+        return PRODUCTS.iter().find(|p| p.name == product.name);
+    }
     let key = key(name);
     PRODUCTS
         .iter()
@@ -203,7 +218,10 @@ mod tests {
 
     #[test]
     fn owner_catalogue_is_exact_and_aliases_share_membership() {
-        assert_eq!(PRODUCTS.len(), 29);
+        // The owner's media placement and the distinct MCP products coexist.
+        assert_eq!(PRODUCTS.len(), 31);
+        assert_eq!(find("youtube-daily").unwrap().department, 3);
+        assert_eq!(find("youtube_daily").unwrap().name, find("youtube-daily").unwrap().name);
         assert_eq!(find("GoDD-MCP-Alpha").unwrap().name, "GoDD MCP α");
         assert_eq!(find("godd-mcp-α").unwrap().name, "GoDD MCP α");
         assert_eq!(find("GoDD-Rosseta").unwrap().name, "GoDD Rosetta");

@@ -1,3 +1,4 @@
+//! Exercises the Operations functions from the selected Console page.
 use std::process::Command;
 
 #[test]
@@ -50,14 +51,19 @@ fn expired_proof_is_not_displayed_as_processing_and_wait_filters_remain_distinct
         r#"
 const assert=require('node:assert/strict');
 const opsList=v=>Array.isArray(v)?v:[];
+let now=1000;Date.now=()=>now;
+const opsState={{snapshot:null}};
 {functions}
-const row={{id:'todo-1',recordedStatus:'doing',status:'working',workState:'processing'}};
-const data={{workforce:{{processing:{{validUntil:1000,verifiedCount:1,total:1,state:'complete'}}}},departments:[{{products:[{{workers:[row]}}]}}]}};
+const row={{id:'todo-1',recordedStatus:'doing',status:'working',workState:'processing',references:{{sessions:['live-worker']}}}};
+const data={{workforce:{{processing:{{validUntil:1000,verifiedCount:1,total:1,state:'complete',sessions:[{{key:'live-worker',validUntil:1000}}]}}}},departments:[{{products:[{{workers:[row]}}]}}]}};
+opsState.snapshot=data;
 expireOpsEvidence(data,1000);assert.equal(data.workforce.processing.verifiedCount,1);
-assert.match(opsCount([row]),/実作業 1件/);
+assert.match(opsCount([row]),/確認した実作業 1件 \/ 作業記録 1件/);
+now=1001;
 expireOpsEvidence(data,1001);assert.equal(data.workforce.processing.verifiedCount,null);
 assert.equal(data.workforce.processing.total,null);assert.equal(row.status,'unknown');
-assert.equal(row.recordedStatus,'doing');assert.match(opsCount([row]),/実作業 0件 \/ 作業記録 1件/);
+assert.equal(row.recordedStatus,'doing');assert.equal(row.references.sessions.length,0);
+assert.match(opsCount([row]),/実作業は未確認 \/ 作業記録 1件/);
 for(const state of ['dependency_wait','resource_wait','decision_wait','job_queued','intake_wait','recovery_unverified']){{
  const task={{workState:state,status:'waiting'}};
  assert(opsMatchesStatus(task,state));

@@ -79,16 +79,11 @@ func sourceVerified(root string) bool {
 	return sourceOriginVerified(root, "autodevjapan/cc-pc-tools-rs")
 }
 func sourceOriginVerified(root, repository string) bool {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-	defer cancel()
-	command := exec.CommandContext(ctx, "git", "-C", root, "remote", "get-url", "origin")
-	command.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
-	command.WaitDelay = time.Second
-	output, err := command.Output()
-	if err != nil {
+	output, ok := currentGit(root, "remote", "get-url", "origin")
+	if !ok {
 		return false
 	}
-	origin := strings.ToLower(strings.TrimSpace(string(output)))
+	origin := strings.ToLower(output)
 	return origin == "https://github.com/"+repository+".git" || origin == "https://github.com/"+repository || origin == "git@github.com:"+repository+".git"
 }
 func boundedSchedulerTree(path string) bool {
@@ -228,7 +223,7 @@ func allowed(path string) bool {
 	if legacyMatch(target) {
 		return false
 	}
-	if (runtimeExecutable(absolute, target, publicationGateRuntime) || runtimeExecutable(absolute, target, schedulerRuntime) || finiteRuntimeExecutable(absolute, target, jobsRuntime, time.Now().Unix()) || progressTUIRuntime(absolute, target, progressTUIDirectory)) && sourceVerified(base) {
+	if (runtimeExecutable(absolute, target, publicationGateRuntime) || runtimeExecutable(absolute, target, schedulerRuntime) || finiteRuntimeExecutable(absolute, target, jobsRuntime, time.Now().Unix()) || modelLauncherRuntimeAllowed(absolute) || progressTUIRuntime(absolute, target, progressTUIDirectory)) && sourceVerified(base) {
 		return true
 	}
 	for _, root := range roots {
@@ -302,6 +297,8 @@ func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "    \tverify original ToDo 1626, 2407 or 2475; no launch or mutation")
 	fmt.Fprintln(output, "  -verify-current-succession int")
 	fmt.Fprintln(output, "    \tverify one declared current product successor; no launch or mutation")
+	fmt.Fprintln(output, "  -verify-model-runtime-update string")
+	fmt.Fprintln(output, "    \tqualify one exact ToDo3081 software update; grants no data access")
 }
 
 func verifyCurrentSuccession(taskID int) object {
@@ -320,6 +317,9 @@ func verifyCurrentSuccession(taskID int) object {
 }
 
 func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(int) object) int {
+	if model3081FlagPresent(args) {
+		return runModel3081CLI(args, stdout, model3081RuntimeReceipt)
+	}
 	parsed, err := parseGuardArgs(args)
 	if err != nil {
 		if currentSuccessionFlagPresent(args) {
@@ -372,7 +372,9 @@ func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(i
 	}
 	ok := parsed.path != "" && filepath.IsAbs(parsed.path)
 	verified := ok && allowed(parsed.path)
-	result := map[string]any{"ok": ok, "client_resource": !verified, "classification_unverified": !verified, "original_registry_recovered": false, "scope": "verified repair source and explicitly supplied operational receipts only"}
+	retirement := ok && retirement3250PathAllowed(parsed.path)
+	verified = verified || retirement
+	result := map[string]any{"ok": ok, "client_resource": !verified, "classification_unverified": !verified, "ci_retirement_qualified": retirement, "original_registry_recovered": false, "scope": "verified repair source and explicitly supplied operational receipts only"}
 	_ = json.NewEncoder(stdout).Encode(result)
 	if !ok {
 		return 2

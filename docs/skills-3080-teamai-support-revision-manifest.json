@@ -1,0 +1,37 @@
+{
+  "todo": 3080,
+  "kind": "knownTeamAIclarification_nonewinstall",
+  "targets": [
+    {
+      "name": "teamai",
+      "new": false,
+      "positive": "指定されたTeamAI共有リポジトリの同期予定と既存設定の違いを確認する。",
+      "negative": "TeamAI候補Skillの文面や上流リポジトリを評価するだけで、共有設定・同期・学び共有には触れない。",
+      "sources": [
+        "Tencent/teamai-cli"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "82a22b1c37531834ab5784f93f950f0a8840ac4e4aa422f1ef2dc03437f9ad66"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "31154d9c1a8bd8d37b449bdbb8a04f9b4618e5d330b52b0fdb7c452414d75a41"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "73dcc724dc5f2eaa50dac457a6e6c5defae5def7d99fe0c745075fbd93f60f44"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "1b5b605a80f901c3c385d26dd47e3f48726553ec249a5d4e87261bc47da37bbe"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "1695769ac6a10ef91e81f632e55ab72f1e8d35e7bdf9532ba3db7ebde942a884"
+        }
+      ]
+    }
+  ]
+}

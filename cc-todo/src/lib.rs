@@ -88,8 +88,12 @@ pub enum Command {
         spec: Option<PathBuf>,
         #[arg(long)]
         model: Option<String>,
+        #[arg(long, requires="model", value_parser=["policy","owner_request"])]
+        model_origin: Option<String>,
         #[arg(long, value_parser=["none","minimal","low","medium","high","xhigh","max"])]
         effort: Option<String>,
+        #[arg(long, requires="effort", value_parser=["policy","owner_request"])]
+        effort_origin: Option<String>,
         #[arg(long, value_parser=["civ6","cargo"], help="exclusive resource; repeat if needed")]
         needs: Vec<String>,
         #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
@@ -142,6 +146,11 @@ pub enum Command {
         /// Compare the exact current note while holding todo.lock before replacing it.
         #[arg(long, requires = "note_file")]
         expected_note_sha256: Option<String>,
+        /// Scope checked by the conversation caller, rechecked under todo.lock.
+        #[arg(long, requires = "expected_state_file")]
+        scope_file: Option<PathBuf>,
+        #[arg(long)]
+        expected_state_file: Option<PathBuf>,
     },
     /// Preserve selected old notes in immutable segments; preview unless --apply.
     ArchiveHistory {
@@ -203,6 +212,8 @@ pub enum Command {
         id: i64,
         #[arg(long)]
         question_file: PathBuf,
+        #[arg(long)]
+        scope_file: Option<PathBuf>,
     },
     /// Apply one exact owner answer and return the original task to ordinary scheduling.
     QuestionAnswer {
@@ -215,6 +226,11 @@ pub enum Command {
         delivery_note_file: Option<PathBuf>,
         #[arg(long, requires = "delivery_note_file")]
         expected_state_file: Option<PathBuf>,
+        /// Deliver to a later active generation without releasing the old question wait.
+        #[arg(long, requires_all = ["delivery_note_file", "expected_state_file"])]
+        delivery_only: bool,
+        #[arg(long)]
+        scope_file: Option<PathBuf>,
     },
     /// Withdraw an unnecessary exact question, without manufacturing an owner answer.
     QuestionWithdraw {
@@ -227,6 +243,8 @@ pub enum Command {
         /// Snapshot of the original row, compared under the canonical lock.
         #[arg(long)]
         expected_state_file: PathBuf,
+        #[arg(long)]
+        scope_file: Option<PathBuf>,
     },
     /// Wait for a scheduled readiness check without repeatedly launching a worker.
     WaitReady {
@@ -434,7 +452,9 @@ pub fn add_item(db: &mut Value, args: &Command, paths: &Paths) -> Result<i64> {
         note,
         spec,
         model,
+        model_origin,
         effort,
+        effort_origin,
         needs,
         progress,
         subwork,
@@ -462,6 +482,14 @@ pub fn add_item(db: &mut Value, args: &Command, paths: &Paths) -> Result<i64> {
         return Err("add failed (ValueError)".into());
     }
     let id = db["next_id"].as_i64().ok_or("invalid next_id")?;
+    for (origin, value) in [(model_origin, model), (effort_origin, effort)] {
+        if let Some(origin) = origin
+            && (!["policy", "owner_request"].contains(&origin.as_str())
+                || value.as_ref().is_none_or(|value| value.is_empty()))
+        {
+            return Err("add failed (ValueError)".into());
+        }
+    }
     let display = |text: &str| {
         if project == cc_task_title::PRODUCT_NAME {
             cc_task_title::canonical_text(text)
@@ -535,6 +563,12 @@ pub fn add_item(db: &mut Value, args: &Command, paths: &Paths) -> Result<i64> {
         }
         if let Some(e) = effort {
             item["effort"] = json!(e);
+        }
+        if let Some(origin) = model_origin {
+            item["model_origin"] = json!(origin);
+        }
+        if let Some(origin) = effort_origin {
+            item["effort_origin"] = json!(origin);
         }
     }
     db["items"]
@@ -933,6 +967,31 @@ pub fn rename_project(
 }
 
 pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<String>> {
+    // All conversation mutations bind the exact guarded project and registered
+    // root before their existing locked transition, including replay paths.
+    match cmd {
+        Command::Edit {
+            id,
+            scope_file,
+            expected_state_file,
+            ..
+        } => {
+            if let Some(path) = scope_file {
+                conversation_wait::check_scope(db, *id, path)?;
+            }
+            if let Some(path) = expected_state_file {
+                conversation_wait::check_snapshot(db, *id, path)?;
+            }
+        }
+        Command::QuestionWait { id, scope_file, .. }
+        | Command::QuestionAnswer { id, scope_file, .. }
+        | Command::QuestionWithdraw { id, scope_file, .. } => {
+            if let Some(path) = scope_file {
+                conversation_wait::check_scope(db, *id, path)?;
+            }
+        }
+        _ => (),
+    }
     if let Command::Start { job, .. } = cmd
         && !job.is_empty()
         && !job_refs::valid_id(job)
@@ -1156,6 +1215,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             note_file,
             spec,
             expected_note_sha256,
+            ..
         } => {
             if let Some(expected) = expected_note_sha256 {
                 use sha2::{Digest, Sha256};
@@ -1226,9 +1286,9 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 set_progress(find(db, *id)?, *percent)?;
             }
         }
-        Command::QuestionWait { id, question_file } => {
-            output.push(conversation_wait::register(db, paths, *id, question_file)?.to_string())
-        }
+        Command::QuestionWait {
+            id, question_file, ..
+        } => output.push(conversation_wait::register(db, paths, *id, question_file)?.to_string()),
         Command::AnsweredWait {
             id,
             evidence_file,
@@ -1250,16 +1310,33 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             answer_file,
             delivery_note_file,
             expected_state_file,
+            delivery_only,
+            ..
         } => output.push(
-            conversation_wait::answer(
-                db,
-                paths,
-                *id,
-                answer_file,
-                delivery_note_file
-                    .as_deref()
-                    .zip(expected_state_file.as_deref()),
-            )?
+            (if *delivery_only {
+                conversation_wait::deliver(
+                    db,
+                    paths,
+                    *id,
+                    answer_file,
+                    delivery_note_file
+                        .as_deref()
+                        .ok_or("conversation_delivery_files_required")?,
+                    expected_state_file
+                        .as_deref()
+                        .ok_or("conversation_delivery_files_required")?,
+                )
+            } else {
+                conversation_wait::answer(
+                    db,
+                    paths,
+                    *id,
+                    answer_file,
+                    delivery_note_file
+                        .as_deref()
+                        .zip(expected_state_file.as_deref()),
+                )
+            })?
             .to_string(),
         ),
         Command::QuestionWithdraw {
@@ -1267,6 +1344,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             question_file,
             reason_file,
             expected_state_file,
+            ..
         } => output.push(
             conversation_wait::withdraw(
                 db,

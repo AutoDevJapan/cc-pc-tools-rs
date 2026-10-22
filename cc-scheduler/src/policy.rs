@@ -597,7 +597,7 @@ pub fn capacity(
 /// Preserve the original conversation only for unfinished successful work in the
 /// same folder, and never compete with another worker using that conversation.
 pub fn continuation_session<'a>(job: &'a Value, cwd: &str, jobs: &[Value]) -> Option<&'a str> {
-    let session = s(&job["thread_id"]);
+    let session = cc_ask::job_policy::launch_context::usable_thread_session(job)?;
     let norm = |p: &str| p.replace('\\', "/").trim_end_matches('/').to_lowercase();
     (s(&job["status"]) == "succeeded"
         && cc_ask::core::result_state(s(&job["last_message"])) == "状態: 継続中"

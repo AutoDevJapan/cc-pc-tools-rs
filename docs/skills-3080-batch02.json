@@ -1,0 +1,166 @@
+{
+  "todo": 3080,
+  "phase": "B",
+  "status": "authored_candidates_pending_review_and_scoped_install",
+  "batch_is_not_total_scope_or_count_cap": true,
+  "source_repo": "mattpocock/skills",
+  "source_commit": "5beb35b040e3de97e54fa9e386d7e42d15c295c2",
+  "license": {
+    "identifier": "MIT",
+    "path": "LICENSE",
+    "preserved_notice": "skills-3080-upstream-MIT.txt",
+    "source_sha256": "0e7ac423bf2c6e223b7c5b156f8cf72da49d748e56a1641402c31f22ad07dbb5",
+    "attribution": "Copyright (c) 2026 Matt Pocock",
+    "scope": "Fixed upstream entrypoints identified by each target path/SHA; individually reviewed author-owned text, no bundled executable or separately credited assets copied."
+  },
+  "targets": [
+    {
+      "name": "triage",
+      "source_path": "skills/engineering/triage/SKILL.md",
+      "description": "外部から届いたIssueやPRを再現・重複・不足要件から整理し、着手できる依頼にするときに使う。",
+      "positive": "外部の不具合報告について、既存実装と重複するか再現できるかを確認し、実装用の依頼にまとめる。",
+      "negative": "仕様と受入条件が決まっている自分の実装タスクを毎回選別し直す。",
+      "distinct_from_existing": "shared-todoの担当・依存の運用やgit-github-workflowのPR操作と異なり、未整理の外部報告が実装可能になるまでの判断を扱う。既存本文全体の比較は未実施。",
+      "guidance": [
+        "依頼されたIssue・PRの本文、コメント、過去の整理結果を読み、既回答の点と不足を分ける。PRを一覧対象に含めるか、対象のプロジェクト規則を確認する。",
+        "報告された機能を業務概念で検索し、実装済み・既存依頼との重複・過去に拒否された要件を区別する。似た題名だけで重複として閉じない。",
+        "不具合なら元の症状を再現できるかを確かめる。外部PRは差分を先に確認し、未確認のスクリプトや認証を使う処理をそのまま実行しない。必要な検査を隔離した資源で行う。",
+        "既存ラベルに対応させて、不具合か改善か、調査中か情報不足か実装可能かを記録する。新しい状態名やラベルを勝手に増やさない。",
+        "実装できる依頼には目的、確認済み事実、受入条件、依存、必要な証拠をまとめる。情報不足なら、未解決の具体的な問いだけを残す。",
+        "技術的な整理は担当が進める。本人しか決められない要件は既存回答を確認して正式経路で1回質問する。技術的な操作やPRマージを本人へ任せる状態を作らない。第三者への返信・closeは元の依頼範囲に従う。"
+      ],
+      "adaptations": "Removes mandatory maintainer permission at each state transition, automatic AI disclaimer, fixed label creation, and human-merge state. Preserves scope, untrusted-code review, existing answers, and evidence before closing duplicates.",
+      "source_sha256": "917b0baf74be583e74f110857ed45df2766617f75c00baf61fd136d7af515edf",
+      "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/engineering/triage/SKILL.md",
+      "retrieved_at": "2026-10-20T08:40:54.4473045Z",
+      "upstream_disable_model_invocation": true,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "promoted",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.4077444Z"
+      }
+    },
+    {
+      "name": "wayfinder",
+      "source_path": "skills/engineering/wayfinder/SKILL.md",
+      "description": "複数回にまたがる未確定の計画を、決まったこと・未決の問い・依存の対応から整理するときに使う。",
+      "positive": "要件がまだ固まっていない大きな移行について、先に解くべき設計判断と調査を整理する。",
+      "negative": "既に委譲された有限な実装を、計画だけ作って他の担当へ渡し直す。",
+      "distinct_from_existing": "spec-atdd-tdd-issue-workflowで確定仕様から実装する前段階の、不確実な意思決定と情報の配置を扱う。",
+      "guidance": [
+        "本人が求める到達点と範囲を、元の依頼から明示する。計画整理を頼まれたのか実装まで頼まれたのかを保ち、担当済みの実装を計画だけで完了にしない。",
+        "1つの正本に、到達点、決まったこと、まだ具体化できない問い、範囲外を区別して残す。細部は原証拠へ参照し、同じ決定を複製しない。",
+        "具体的に表せる未決事項だけを作業へし、先行する判断・調査の結果を依存として持たせる。単に答えを知らないだけの問いと、問い自体がまだ定まらない領域を分ける。候補1件ごとの大量ToDoは作らない。",
+        "事実は担当が調べ、本人の意思を必要とする問いだけを正式経路で尋ねる。画像が必要な方向判断では同じ質問に画像を揃える。仮想の本人回答で枝を確定しない。",
+        "結果を得るたびに、決まった内容の証拠と影響する依存を更新する。後から決め直された事項は旧判断と新判断の対象・日時・範囲を残す。",
+        "次の作業に必要な情報が揃ったかで計画段階を区切る。元の依頼が実装も含むなら仕様・受入条件へ接続してそのまま進める。1回に1つしか決めないなどの人工的な停止条件は置かない。"
+      ],
+      "adaptations": "No compulsory planning-only role, one-ticket-per-session cap, new labels, tracker proliferation, background jobs, wiki, or owner PC checklist. Existing canonical task and scheduler dependency recording remain authoritative.",
+      "source_sha256": "9be7b478c389605a24517d27752f278933588da97a1b5921b165f455edf4c5b7",
+      "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/engineering/wayfinder/SKILL.md",
+      "retrieved_at": "2026-10-20T08:40:54.4478194Z",
+      "upstream_disable_model_invocation": true,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "promoted",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.4134039Z"
+      }
+    },
+    {
+      "name": "grilling",
+      "source_path": "skills/productivity/grilling/SKILL.md",
+      "description": "本人が計画の前提を厳しく確かめたいときに、未決の依存を分けて具体的に質問するときに使う。",
+      "positive": "この計画の弱い前提を順に質問して、必要な要件が抜けていないか確かめてほしい。",
+      "negative": "実装方法を担当が決められる修正で、毎回本人へ承認を求める。",
+      "distinct_from_existing": "decision-thinking-frameworksの一般的な会議・判断の振返りと異なり、本人が依頼した計画への聞き取りを、回答の依存関係で進める手順。",
+      "guidance": [
+        "計画の前提と判断を並べ、既に答えのあるもの、担当が調べられる事実、本人が決める未指定事項を分ける。質問を増やすための質問は作らない。",
+        "他の未回答事項が決まらないと意味が定まらない質問を、先の質問と同時に確定させない。既に確定した前提から回答できる問いを先に扱う。",
+        "1つの判断を具体的なa/b等の選択肢にし、何が変わるかと推奨理由を添える。本人向けの正式な判断はDiscordで1質問1投稿とし、既存の同一範囲の回答を照合する。",
+        "回答を受けると影響する後続の問いを更新する。本人の回答を別対象の承認へ流用したり、担当が本人の代わりに回答したりしない。",
+        "必要な判断が揃ったことを要件と照合する。本人が壁打ちだけを望む場合と、実装を依頼した場合を区別し、実装済みの許可を毎回の合意確認で止めない。"
+      ],
+      "adaptations": "No relentless questioning of routine technical choices, blanket final reapproval, parallel owner questions in one post, automatic agent creation, or invented approval. The two upstream wrapper entrypoints are merge candidates, not additional standalone skills.",
+      "source_sha256": "befdff1e27a1dfe2a294d5871169ac1afe16d983911daa4f32627514a48c1e15",
+      "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/productivity/grilling/SKILL.md",
+      "retrieved_at": "2026-10-20T08:40:54.4556984Z",
+      "upstream_disable_model_invocation": false,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "promoted",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.4184882Z"
+      }
+    },
+    {
+      "name": "loop-me",
+      "source_path": "skills/in-progress/loop-me/SKILL.md",
+      "description": "繰り返す業務を、発火条件・入力・成果・本人判断の条件から仕様化するときに使う。",
+      "positive": "毎週届く依頼の整理を自動化したいので、何で起動し、何を作り、どこだけ本人が決めるか仕様にしたい。",
+      "negative": "このPCの既存ジョブが止まったので、スケジューラから再開する。",
+      "distinct_from_existing": "work-schedulerの既存運用やai-workflowのAI向け指示設計とは異なり、新しい反復業務を自動化可能な仕様へ表す。",
+      "guidance": [
+        "本人が対象にした繰返し業務について、発火条件、入力、作業結果、終了条件を具体化する。依頼のない生活習慣や他製品へ対象を広げない。",
+        "起動は定時か出来事かを区別する。受信イベントで十分なら不要な常時巡回を増やさない。既存の起動・通知・重複防止の仕組みを先に確認する。",
+        "本人の判断が本当に必要な箇所と、担当が通常の操作で進められる箇所を分ける。判断を頼む時点までに、具体的な成果と選択肢を準備する。",
+        "失敗、同じ入力の再処理、中断後の再開で何が起きるかを仕様へ含める。設定しただけの起動、受領、実操作、検証成功を別の証拠で確認する。",
+        "既存の回答と既知の情報を使用し、不明な事実は担当が調べる。本人しか決められない未指定の要件だけを質問する。AI・定期実行・人の確認が不要なら追加しない。",
+        "仕様の作成と仕組みの有効化を区別する。新しい定期タスク、外部送信、費用を仕様だけで許可済みにしない。必要な実装は本人のGo/Rust方針と通常の共有スケジューラで進める。"
+      ],
+      "adaptations": "No forced workspace interview, file creation/deletion, unrequested automation search, schedules, AI, or new product names. A finished specification is not a verified running workflow.",
+      "source_sha256": "e44d1cc3e760fb86ac42964c2a5f1fcac511715db50fb375f3f7be814de1eaa7",
+      "source_url": "https://github.com/mattpocock/skills/blob/5beb35b040e3de97e54fa9e386d7e42d15c295c2/skills/in-progress/loop-me/SKILL.md",
+      "retrieved_at": "2026-10-20T08:40:54.4504366Z",
+      "upstream_disable_model_invocation": true,
+      "derivative_invocation": {
+        "mode": "implicit_with_narrow_trigger",
+        "reason": "Current creator policy keeps implicit discovery enabled unless the user requests explicit-only. The Japanese description and entrypoint constrain use to the concrete requested workflow; no automatic interview, file, install, or scope expansion."
+      },
+      "upstream_status": "beta_public_not_in_plugin",
+      "upstream_status_adoption_reason": "Maintain a fixed derivative with current policy and tests; upstream promotion/support is not claimed. No upstream installer or script is run.",
+      "individual_license_review": {
+        "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb",
+        "tree_complete": true,
+        "license_paths": [
+          "LICENSE"
+        ],
+        "nested_license_notice_copying_paths": [],
+        "scope": "Selected authored entrypoint only; the complete fixed tree has one LICENSE and no nested LICENSE/NOTICE/COPYING. Cited support and assets remain separate.",
+        "checked_at": "2026-10-20T12:29:05.4246454Z"
+      }
+    }
+  ],
+  "source_tree": "b4ff05745c3973fe0e0a777a354a4470243e75bb"
+}

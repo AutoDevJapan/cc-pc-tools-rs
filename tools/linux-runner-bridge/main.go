@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -32,11 +33,13 @@ const gateDir = `D:\CC\Tools\codex-jobs`
 const gh = `D:\CC\Tools\codex-jobs\gh_gate.exe`
 const docker = `C:\Program Files\Docker\Docker\resources\bin\docker.exe`
 const container = "todo2511-cc-pc-tools-linux"
-const normalContainer = "todo2510-normal-linux"
-const normalImage = "todo2510-normal-linux:local"
-const normalPort = "127.0.0.1:17852"
-const normalRunner = "cc-pc-tools-linux"
+const normalLabel = "cc-pc-tools-linux"
 const normalBranch = "main"
+
+var normalContainer = compiledNormalProfile.container
+var normalImage = compiledNormalProfile.image
+var normalPort = compiledNormalProfile.listen
+var normalRunner = compiledNormalProfile.runner
 
 var revisionPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 var branchPattern = regexp.MustCompile(`^scheduler/todo-251[01]-[a-z0-9-]+$`)
@@ -57,6 +60,14 @@ type host struct {
 	key, mode, revision, branch, target string
 	mu                                  sync.Mutex
 	getHead                             func(string) (string, error)
+	profile                             normalProfile
+	registrationMu                      sync.Mutex
+	boundRunnerID                       atomic.Int64
+	jobAdmission                        atomic.Int32
+	registered                          chan struct{}
+	lookupRegistration                  func() (int64, error)
+	persistRegistration                 func(int64) error
+	containerID                         string
 }
 
 func command(name string, args ...string) *exec.Cmd {
@@ -210,6 +221,9 @@ func (h *host) remoteHead(branch string) (string, error) {
 		return "", errors.New("branch rejected")
 	}
 	ref := "repos/" + repo + "/git/ref/heads/" + url.PathEscape(branch)
+	if h.profile.ephemeral {
+		return burstOutput(30*time.Second, gh, "api", ref, "--jq", ".object.sha")
+	}
 	return output(command(gh, "api", ref, "--jq", ".object.sha"))
 }
 func (h *host) current() error {
@@ -285,6 +299,9 @@ type normalContainerInspection struct {
 		User  string `json:"User"`
 	} `json:"Config"`
 	HostConfig struct {
+		NanoCPUs       int64             `json:"NanoCpus"`
+		Memory         int64             `json:"Memory"`
+		PidsLimit      int64             `json:"PidsLimit"`
 		Init           bool              `json:"Init"`
 		Privileged     bool              `json:"Privileged"`
 		CapDrop        []string          `json:"CapDrop"`
@@ -321,6 +338,10 @@ func inspectNormalContainer(data string) (normalContainerInspection, error) {
 // Validate immutable Docker configuration before starting the container.
 // A stopped container cannot answer docker exec checks until after startup.
 func validateNormalContainerConfiguration(c normalContainerInspection) error {
+	return validateNormalContainerForProfile(c, compiledNormalProfile)
+}
+
+func validateNormalContainerForProfile(c normalContainerInspection, p normalProfile) error {
 	allCapabilitiesDropped := false
 	for _, cap := range c.HostConfig.CapDrop {
 		if cap == "ALL" {
@@ -333,8 +354,11 @@ func validateNormalContainerConfiguration(c normalContainerInspection) error {
 			noNewPrivileges = true
 		}
 	}
-	if c.Config.Image != normalImage || c.Config.User != "runner" || !c.HostConfig.Init || c.HostConfig.Privileged || !allCapabilitiesDropped || !noNewPrivileges || len(c.HostConfig.Devices) != 0 || len(c.HostConfig.DeviceRequests) != 0 || len(c.HostConfig.Binds) != 0 || c.HostConfig.Tmpfs["/tmp"] == "" || c.HostConfig.Tmpfs["/runner"] == "" {
+	if c.Config.Image != p.image || c.Config.User != "runner" || !c.HostConfig.Init || c.HostConfig.Privileged || !allCapabilitiesDropped || !noNewPrivileges || len(c.HostConfig.Devices) != 0 || len(c.HostConfig.DeviceRequests) != 0 || len(c.HostConfig.Binds) != 0 || c.HostConfig.Tmpfs["/tmp"] == "" || c.HostConfig.Tmpfs["/runner"] == "" {
 		return errors.New("normal runner container isolation rejected")
+	}
+	if p.ephemeral && (c.HostConfig.NanoCPUs <= 0 || c.HostConfig.NanoCPUs > 4_000_000_000 || c.HostConfig.Memory <= 0 || c.HostConfig.Memory > 8<<30 || c.HostConfig.PidsLimit <= 0 || c.HostConfig.PidsLimit > 1024) {
+		return errors.New("additional runner CPU/memory/PID bounds rejected")
 	}
 	runnerTmpfs := strings.Split(c.HostConfig.Tmpfs["/runner"], ",")
 	canExecuteRunner := false
@@ -380,6 +404,9 @@ func validateNormalContainerRuntime(name string, run dockerOutput, pause func(ti
 
 func verifyNormalContainer() error {
 	return verifyNormalContainerWith(normalContainer, func(args ...string) (string, error) {
+		if compiledNormalProfile.ephemeral {
+			return burstOutput(20*time.Second, docker, args...)
+		}
 		return output(command(docker, args...))
 	})
 }
@@ -529,9 +556,56 @@ func (h *host) serve(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid request", 400)
 		return
 	}
+	if r.URL.Path == "/registered" {
+		if h.mode != "normal" || !h.profile.ephemeral || q.Repository != repo || h.jobAdmission.Load() == 2 {
+			http.Error(w, "registration rejected", 403)
+			return
+		}
+		h.registrationMu.Lock()
+		defer h.registrationMu.Unlock()
+		if h.boundRunnerID.Load() == 0 {
+			lookup := h.lookupRegistration
+			if lookup == nil {
+				lookup = func() (int64, error) { return configuredBurstRunnerID(h.profile) }
+			}
+			id, err := lookup()
+			if err != nil || id <= 0 || h.jobAdmission.Load() == 2 {
+				http.Error(w, "registration not confirmed", 503)
+				return
+			}
+			if h.persistRegistration != nil {
+				if err := h.persistRegistration(id); err != nil {
+					http.Error(w, "registration recovery receipt unavailable", 503)
+					return
+				}
+			}
+			h.boundRunnerID.Store(id)
+			if h.registered != nil {
+				select {
+				case h.registered <- struct{}{}:
+				default:
+				}
+			}
+			if data, err := json.Marshal(struct {
+				ID          int64     `json:"runnerId"`
+				Name        string    `json:"name"`
+				At          time.Time `json:"at"`
+				ContainerID string    `json:"containerId,omitempty"`
+			}{id, h.profile.runner, time.Now().UTC(), h.containerID}); err == nil {
+				_ = os.WriteFile(filepath.Join(".ci-runtime", "burst-registration.private.json"), data, 0600)
+			}
+			reportStage("burst-registration-bound")
+		}
+		w.WriteHeader(204)
+		return
+	}
 	if r.URL.Path == "/authorize" {
 		if e := h.authorize(q); e != nil {
 			http.Error(w, e.Error(), 403)
+			return
+		}
+		if h.profile.ephemeral && !h.jobAdmission.CompareAndSwap(0, 1) && h.jobAdmission.Load() != 1 {
+			http.Error(w, "admission retired", 503)
 			return
 		}
 		w.WriteHeader(204)
@@ -656,11 +730,19 @@ func gatedChild(args []string) int {
 }
 
 func dockerExecuteArgs(mode, jobs, tests string, args []string) []string {
+	return dockerExecuteArgsForProfile(compiledNormalProfile, mode, jobs, tests, args)
+}
+
+func dockerExecuteArgsForProfile(p normalProfile, mode, jobs, tests string, args []string) []string {
 	a := []string{"exec", "-i"}
 	if mode == "normal" {
 		a = append(a, "-e", "CC_LINUX_RUNNER_MODE=normal")
 	}
-	a = append(a, "--workdir", "/work/cc-pc-tools-rs/cc-pc-tools-rs", normalContainerFor(mode), "/opt/bridge/bridge", "execute", jobs, tests)
+	runnerContainer := container
+	if mode == "normal" {
+		runnerContainer = p.container
+	}
+	a = append(a, "--workdir", "/work/cc-pc-tools-rs/cc-pc-tools-rs", runnerContainer, "/opt/bridge/bridge", "execute", jobs, tests)
 	return append(a, args...)
 }
 
@@ -753,9 +835,13 @@ func rpc(path string, q request) int {
 	}
 }
 func bridgeURL(mode, path string) string {
+	return bridgeURLForProfile(compiledNormalProfile, mode, path)
+}
+
+func bridgeURLForProfile(p normalProfile, mode, path string) string {
 	port := "17851"
 	if mode == "normal" {
-		port = "17852"
+		port = strings.TrimPrefix(p.listen, "127.0.0.1:")
 	}
 	return "http://host.docker.internal:" + port + path
 }
@@ -851,12 +937,12 @@ func hostMain(args []string) int {
 	mode := "finite"
 	var revision, branch, target, listen, runnerContainer, runnerName, labels string
 	ephemeral := true
-	if len(args) == 3 && revisionPattern.MatchString(args[0]) && branchPattern.MatchString(args[1]) {
+	if len(args) == 3 && !compiledNormalProfile.ephemeral && revisionPattern.MatchString(args[0]) && branchPattern.MatchString(args[1]) {
 		// Keep the original finite ToDo2511 invocation and its restrictions.
 		revision, branch, target = args[0], args[1], args[2]
 		listen, runnerContainer, runnerName, labels = "127.0.0.1:17851", container, "cc-pc-tools-linux-2511", "cc-pc-tools-linux"
 	} else if len(args) == 2 && args[0] == "normal" && args[1] != "" {
-		mode, target, listen, runnerContainer, runnerName, labels, ephemeral = "normal", args[1], normalPort, normalContainer, normalRunner, normalRunner, false
+		mode, target, listen, runnerContainer, runnerName, labels, ephemeral = "normal", args[1], normalPort, normalContainer, normalRunner, compiledNormalProfile.label, compiledNormalProfile.ephemeral
 	} else {
 		fmt.Fprintln(os.Stderr, "expected host REVISION scheduler/todo-251x-branch TARGET or host normal TARGET")
 		return 1
@@ -865,7 +951,13 @@ func hostMain(args []string) int {
 	if _, e := rand.Read(key); e != nil {
 		return 1
 	}
-	h := host{key: hex.EncodeToString(key), mode: mode, revision: revision, branch: branch, target: target}
+	h := host{key: hex.EncodeToString(key), mode: mode, revision: revision, branch: branch, target: target, profile: compiledNormalProfile, registered: make(chan struct{}, 1)}
+	callOutput := func(name string, args ...string) (string, error) {
+		if mode == "normal" && h.profile.ephemeral {
+			return burstOutput(30*time.Second, name, args...)
+		}
+		return output(command(name, args...))
+	}
 	if mode == "finite" && h.current() != nil {
 		return 1
 	}
@@ -881,9 +973,9 @@ func hostMain(args []string) int {
 		reportStage("target-validation-started")
 		cwd, cwdErr := os.Getwd()
 		targetAbs, targetErr := filepath.Abs(target)
-		expected, expectedErr := filepath.Abs(filepath.Join(cwd, ".ci-work", "target"))
+		expected, expectedErr := filepath.Abs(filepath.Join(cwd, ".ci-work", compiledNormalProfile.targetDir))
 		if cwdErr != nil || targetErr != nil || expectedErr != nil || !strings.EqualFold(filepath.Clean(targetAbs), filepath.Clean(expected)) {
-			fmt.Fprintln(os.Stderr, "normal Cargo target must be this worktree's .ci-work/target")
+			fmt.Fprintln(os.Stderr, "normal Cargo target must match this compiled profile's worktree target")
 			return 1
 		}
 		workInfo, statErr := os.Lstat(filepath.Join(cwd, ".ci-work"))
@@ -896,7 +988,7 @@ func hostMain(args []string) int {
 		}
 		reportStage("target-validated")
 	}
-	permission, e := output(command(gh, "repo", "view", repo, "--json", "viewerPermission", "--jq", ".viewerPermission"))
+	permission, e := callOutput(gh, "repo", "view", repo, "--json", "viewerPermission", "--jq", ".viewerPermission")
 	if e != nil || permission != "ADMIN" {
 		reportStage("oauth-repository-permission-failed")
 		return 1
@@ -910,6 +1002,25 @@ func hostMain(args []string) int {
 		}
 		reportStage("normal-container-verified")
 	}
+	var journal *burstJournal
+	if mode == "normal" && h.profile.ephemeral {
+		j, err := runtimeBurstJournal()
+		if err != nil {
+			reportStage("owned-recovery-identity-unavailable")
+			return burstUnverifiedExit
+		}
+		if _, pending, err := j.pending(); err != nil || pending {
+			reportStage("use-pool-for-owned-pending-recovery")
+			return burstUnverifiedExit
+		}
+		if err := j.capacity(); err != nil {
+			reportStage("owned-recovery-capacity-unavailable")
+			return burstUnverifiedExit
+		}
+		journal = &j
+		h.containerID = j.containerID
+		h.persistRegistration = func(id int64) error { return j.save(&burstDrainState{ID: id}) }
+	}
 	l, e := net.Listen("tcp", listen)
 	if e != nil {
 		reportStage("bridge-listen-failed")
@@ -921,7 +1032,7 @@ func hostMain(args []string) int {
 	// The random bridge key and runner token stay in RAM and the official config
 	// process. Neither appears in command arguments, Docker config or host files.
 	for {
-		configured, checkErr := output(command(docker, "exec", runnerContainer, "/bin/sh", "-c", "test -f /runner/.runner && printf configured || printf unconfigured"))
+		configured, checkErr := callOutput(docker, "exec", runnerContainer, "/bin/sh", "-c", "test -f /runner/.runner && printf configured || printf unconfigured")
 		if checkErr != nil {
 			reportStage("runner-container-check-failed")
 			_ = s.Close()
@@ -931,7 +1042,7 @@ func hostMain(args []string) int {
 		if configured != "configured" {
 			reportStage("runner-token-request")
 			var tokenErr error
-			token, tokenErr = output(command(gh, "api", "--method", "POST", "repos/"+repo+"/actions/runners/registration-token", "--jq", ".token"))
+			token, tokenErr = callOutput(gh, "api", "--method", "POST", "repos/"+repo+"/actions/runners/registration-token", "--jq", ".token")
 			if tokenErr != nil || token == "" {
 				reportStage("runner-token-request-failed")
 				_ = s.Close()
@@ -946,10 +1057,27 @@ func hostMain(args []string) int {
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
 		reportStage("runner-registration-started")
-		code := exitCode(c.Run())
+		code := 1
+		if ephemeral && mode == "normal" {
+			if err := c.Start(); err != nil {
+				return 1
+			}
+			done := make(chan int, 1)
+			go func() { done <- exitCode(c.Wait()) }()
+			code = awaitBurstProcess(done, h.registered, h.boundRunnerID.Load, func() bool { return h.jobAdmission.Load() == 1 }, func() bool { return h.jobAdmission.CompareAndSwap(0, 2) || h.jobAdmission.Load() == 2 }, journal)
+		} else {
+			code = exitCode(c.Run())
+		}
 		token = ""
 		if ephemeral {
-			_ = s.Shutdown(context.Background())
+			if mode == "normal" {
+				reportStage(fmt.Sprintf("burst-host-ended-%d", code))
+			}
+			if code == burstUnverifiedExit {
+				_ = s.Close()
+			} else {
+				_ = s.Shutdown(context.Background())
+			}
 			return code
 		}
 		if code == 96 {
@@ -1013,7 +1141,7 @@ func register() int {
 		return 15
 	}
 	ephemeral, e := reader.ReadString('\n')
-	if e != nil || (strings.TrimSpace(runnerName) != normalRunner && strings.TrimSpace(runnerName) != "cc-pc-tools-linux-2511") || strings.TrimSpace(labels) != normalRunner || (strings.TrimSpace(ephemeral) != "true" && strings.TrimSpace(ephemeral) != "false") {
+	if e != nil || !validRegistration(compiledNormalProfile, strings.TrimSpace(runnerName), strings.TrimSpace(labels), strings.TrimSpace(ephemeral)) {
 		return 16
 	}
 	keyPath := filepath.Join(os.TempDir(), "bridge-key")
@@ -1030,10 +1158,23 @@ func register() int {
 		return 96
 	}
 	cargs := []string{"--unattended", "--url", "https://github.com/" + repo, "--name", strings.TrimSpace(runnerName), "--labels", strings.TrimSpace(labels), "--work", "/work"}
+	if compiledNormalProfile.ephemeral {
+		// Keep all four existing routing labels, but make them withdrawable on
+		// idle expiry. The primary runner's default labels remain unchanged.
+		for i := range cargs {
+			if cargs[i] == "--labels" {
+				cargs[i+1] = "self-hosted,Linux,X64," + compiledNormalProfile.label
+				break
+			}
+		}
+		cargs = append(cargs, "--no-default-labels")
+	}
 	if strings.TrimSpace(ephemeral) == "true" {
 		cargs = append(cargs, "--ephemeral", "--disableupdate")
 	}
-	cargs = append(cargs, "--replace")
+	if !compiledNormalProfile.ephemeral || strings.TrimSpace(runnerName) == "cc-pc-tools-linux-2511" {
+		cargs = append(cargs, "--replace")
+	}
 	_ = os.Remove(filepath.Join(os.TempDir(), "runner-config-summary.json"))
 	c := exec.Command("/runner/config.sh", cargs...)
 	c.Dir = "/runner"
@@ -1041,7 +1182,10 @@ func register() int {
 	var configOutput bytes.Buffer
 	c.Stdout = &configOutput
 	c.Stderr = &configOutput
-	if configErr := c.Run(); configErr != nil {
+	if configErr := runRunnerConfiguration(c, compiledNormalProfile.ephemeral); configErr != nil {
+		if errors.Is(configErr, errConfigurationUnverified) {
+			return burstSetupUnverifiedExit
+		}
 		failureClass := runnerConfigFailureClass(configOutput.Bytes())
 		reportRunnerConfigSummary(configOutput.Bytes())
 		configOutput.Reset()
@@ -1049,8 +1193,11 @@ func register() int {
 	}
 	configOutput.Reset()
 	token = ""
+	if compiledNormalProfile.ephemeral && !notifyBurstRegistration() {
+		return 19
+	}
 	mode := "normal"
-	if strings.TrimSpace(ephemeral) == "true" {
+	if strings.TrimSpace(ephemeral) == "true" && strings.TrimSpace(runnerName) == "cc-pc-tools-linux-2511" {
 		mode = "finite"
 	}
 	if mode == "normal" {
@@ -1085,6 +1232,25 @@ func main() {
 		os.Exit(1)
 	}
 	switch args[0] {
+	case "unconfigure-idle":
+		os.Exit(unconfigureBurstIdle())
+	case "configuration-absent":
+		os.Exit(burstConfigurationState())
+	case "stop-idle":
+		os.Exit(stopBurstIdleListener())
+	case "export-diagnostics":
+		os.Exit(exportBurstDiagnostics())
+	case "idle-state":
+		os.Exit(burstWorkerIdle())
+	case "queue":
+		snapshot, err := currentQueue(runnerAPI, time.Now().UTC())
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		_ = json.NewEncoder(os.Stdout).Encode(snapshot)
+	case "pool":
+		os.Exit(burstPoolMain(args[1:]))
 	case "host":
 		os.Exit(hostMain(args[1:]))
 	case "execute":

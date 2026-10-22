@@ -586,32 +586,11 @@ impl Context {
         )
     }
 
-    pub(crate) fn launch_model(&self, job: &Value, prefer_claude: bool) -> String {
-        // Old records have no provenance: keep their model, as with explicit jobs.
-        // Once an attempt has a session, retries/resumes must retain its model.
-        if !prefer_claude
-            || job["model_explicit"] != false
-            || !s(job, "thread_id").is_empty()
-            || !s(job, "resume_session").is_empty()
-            || !s(job, "context_phase").is_empty()
-            || truth(&job["first_started_at"])
-        {
-            return s(job, "model").to_owned();
-        }
-        // Haiku is limited to an explicitly classified single-file read task.
-        // Multi-file reviews, research and implementation require Sonnet.
-        if s(job, "sandbox") == "read-only"
-            && [
-                "single_file_review",
-                "single_file_summary",
-                "single_file_check",
-            ]
-            .contains(&s(job, "task_type"))
-        {
-            "anthropic/claude-haiku-5-5".into()
-        } else {
-            "anthropic/claude-sonnet-5-5".into()
-        }
+    pub(crate) fn launch_model(&self, job: &Value, _prefer_claude: bool) -> String {
+        // 2026-10-20: a provider pacing hint cannot bypass the protocol-capacity
+        // path's same-model OAuth retries, or replace an owner's model choice.
+        // Provider lane limits still apply; only capacity.rs may choose a fallback.
+        s(job, "model").to_owned()
     }
 
     fn limit_state(&self) -> Result<LimitState> {

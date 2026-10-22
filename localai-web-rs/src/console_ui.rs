@@ -207,11 +207,14 @@ impl<'a> PrivacyIndex<'a> {
 
     fn linked_items(&self, job: &Value) -> Vec<usize> {
         let mut items = Vec::new();
-        if let Some(positions) = job["todo_id"]
-            .as_u64()
-            .and_then(|id| self.items_by_id.get(&id))
-        {
-            items.extend_from_slice(positions);
+        for id in job["todo_id"].as_u64().into_iter().chain(
+            rows(job, "related_todo_ids")
+                .iter()
+                .filter_map(Value::as_u64),
+        ) {
+            if let Some(positions) = self.items_by_id.get(&id) {
+                items.extend_from_slice(positions);
+            }
         }
         for id in ["id", "thread_id", "resume_session"]
             .into_iter()
@@ -808,14 +811,14 @@ mod tests {
         }
         assert!(
             response["items"][0]["note"]
-            .as_str()
-            .unwrap()
+                .as_str()
+                .unwrap()
                 .contains("正常な本文")
         );
         assert!(
             response["items"][0]["history"][0]["note"]
-            .as_str()
-            .unwrap()
+                .as_str()
+                .unwrap()
                 .contains("正常な本文")
         );
     }
@@ -944,7 +947,7 @@ function production(start,end){const at=input.shell.indexOf(start);const stop=in
 const functions=production('    const array=value=>','    const waiting=')+
   production('    function sharedResponse(', '    function retrySource(')+
   production('    const short=value=>','    if(operationsView){');
-const run=new Function('assert','document','window','make','todoList','jobsHost','handoffHost','todoSearch','todoProject','todoStatus','jobsSearch','musicBusy','sources','receive','shared','operationsView','refreshAgents','fetch','input',
+const run=new Function('assert','document','window','make','todoList','jobsHost','handoffHost','todoSearch','todoProject','todoStatus','jobsSearch','musicBusy','sharedControllers','sources','receive','shared','operationsView','refreshAgents','fetch','input',
   'let sharedData={},sharedSignature={},pendingShared={},sharedComposing=false;'+functions+`
 return (async()=>{
   loadShared(); await new Promise(resolve=>setImmediate(resolve));
@@ -996,10 +999,10 @@ return (async()=>{
   assert.equal(sources.get('operations').error,'');
 })();`;
 (async()=>{
-  await run(assert,document,window,make,todoList,jobsHost,handoffHost,todoSearch,todoProject,todoStatus,jobsSearch,musicBusy,sources,receive,shared,operationsView,refreshAgents,fetch,input);
+  await run(assert,document,window,make,todoList,jobsHost,handoffHost,todoSearch,todoProject,todoStatus,jobsSearch,musicBusy,new Map(),sources,receive,shared,operationsView,refreshAgents,fetch,input);
   assert.deepEqual(calls.slice(0,3),['/api/agent/display/todo','/api/agent/display/jobs','/api/agent/display/handoff']);
-  const verify=new Function('assert','document','window','make','todoList','jobsHost','handoffHost','todoSearch','todoProject','todoStatus','jobsSearch','musicBusy','sources','receive','shared','operationsView','refreshAgents','fetch','input','setResponse','sharedData','sharedSignature','pendingShared','sharedComposing',checks);
-  await verify(assert,document,window,make,todoList,jobsHost,handoffHost,todoSearch,todoProject,todoStatus,jobsSearch,musicBusy,sources,receive,shared,operationsView,refreshAgents,fetch,input,value=>nextResponse=value,{}, {}, {}, false);
+  const verify=new Function('assert','document','window','make','todoList','jobsHost','handoffHost','todoSearch','todoProject','todoStatus','jobsSearch','musicBusy','sharedControllers','sources','receive','shared','operationsView','refreshAgents','fetch','input','setResponse','sharedData','sharedSignature','pendingShared','sharedComposing',checks);
+  await verify(assert,document,window,make,todoList,jobsHost,handoffHost,todoSearch,todoProject,todoStatus,jobsSearch,musicBusy,new Map(),sources,receive,shared,operationsView,refreshAgents,fetch,input,value=>nextResponse=value,{}, {}, {}, false);
   process.stdout.write('shared display response/render regression passed\n');
 })().catch(error=>{console.error(error);process.exitCode=1;});
 "#;

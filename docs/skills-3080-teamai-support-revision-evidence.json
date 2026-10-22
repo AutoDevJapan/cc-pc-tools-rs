@@ -1,0 +1,118 @@
+{
+  "todo": 3080,
+  "source_head": "58d3c672f6f3966a8952caa5c1e3851e650b9877",
+  "review": 3203,
+  "payload_sha256": "5e244502941a99840d7c36a3e797afbb6faa6a6c5cb03d4bcfcbab4459099aa9",
+  "after_bundle_sha256": "ed60982a2de623099177666c061b4a2d80970e3945162431be6e929865f2814b",
+  "writer_sha256": "a5c330f97fba22799705c6f31e43a6d17d41c1d6ce11040507956c98fea9d9ad",
+  "backup_path": "D:/CC/Skills/.trash/todo3080-teamai-support-20261021-20261021-073253-todo-3080-991c1ae3",
+  "backup_journal_sha256": "aa4ab71e6c97ba95b306aae73ff1c356a7b1d756e3047e8ad7bc1399f88ec48d",
+  "before_backup_files": 5,
+  "changed_files": 3,
+  "after_files_verified": 5,
+  "upstream_notice_unchanged": 2,
+  "new_installs": 0,
+  "manifest": "skills-3080-teamai-support-revision-manifest.json",
+  "manifest_sha256": "8bb1eb5c4f4bc38c5f056674a5dc2eeb7110942c645e35461da311fcac6a06ce",
+  "validator": "PASS actual1/5",
+  "discovery": {
+    "found": 1,
+    "enabled": 1,
+    "description_match": true,
+    "parse_errors": 0,
+    "same_names_other_paths": 0,
+    "metadata_total": 323,
+    "model_called": false,
+    "notification_count": 2
+  },
+  "support_read": [
+    {
+      "path": "skill-data/core/references/contribute-member.md",
+      "sha256": "83775b2c59aa6ac65c70529aff7bd14e6bf0f4dd6c05235b64b580afbc75ead2",
+      "bytes": 7748
+    },
+    {
+      "path": "skill-data/share/references/doc-template.md",
+      "sha256": "c2c54f3771ab49e6e40171e269821254b49f08051cb6382e9839d12ebfafa94f",
+      "bytes": 1161
+    },
+    {
+      "path": "skill-data/wiki/references/phases/phase0-init.md",
+      "sha256": "533afc3e4dc6cd4ea57c615a8c84ea624537ab1042f4bd86759821a0a1845c0e",
+      "bytes": 4643
+    }
+  ],
+  "support_unread": 22,
+  "CLI_or_model_executed": false,
+  "postinstall_delta_review": "3215 Must0。実5ファイル・旧5backup・journal・原文/notice不変・台帳一致と静的適用を確認。実CLI/model/context検査ではない。",
+  "recorded_at": "2026-10-20T22:43:12.4172553Z",
+  "manifest_lf_sha256": "44a92c6face86c17f511bec50301028c63b5c0219b21c5c652ac1d01de479e36",
+  "checksum_convention": "manifest_sha256はWindows作業コピーの実バイト、manifest_lf_sha256はLFへ正規化したUTF-8。旧hashは変更しない。",
+  "static_cases": [
+    {
+      "kind": "正例",
+      "input": "学びを宛先と対象を明記して共有",
+      "expected": "対象と経路を照合。recallを勝手に有効化しない。",
+      "source": "review3215の静的適用",
+      "real_CLI_executed": false
+    },
+    {
+      "kind": "正例",
+      "input": "既存Skill1件を指定scopeへ公開",
+      "expected": "contribute-memberの対象copy/namespace/宛先を確認。",
+      "source": "review3215の静的適用",
+      "real_CLI_executed": false
+    },
+    {
+      "kind": "正例",
+      "input": "wiki構造baselineの予定出力確認",
+      "expected": "書込先と後続pushを確認。",
+      "source": "review3215の静的適用",
+      "real_CLI_executed": false
+    },
+    {
+      "kind": "負例",
+      "input": "この公開資料評価だけ",
+      "expected": "適用外。",
+      "source": "review3215の静的適用",
+      "real_CLI_executed": false
+    },
+    {
+      "kind": "負例",
+      "input": "recallを依頼外で有効化",
+      "expected": "実行しない。",
+      "source": "review3215の静的適用",
+      "real_CLI_executed": false
+    },
+    {
+      "kind": "負例",
+      "input": "未指定team repoへ書込む",
+      "expected": "対象不足を調べ、未指定先へ書かない。",
+      "source": "review3215の静的適用",
+      "real_CLI_executed": false
+    },
+    {
+      "kind": "負例",
+      "input": "新しい従量課金AI APIを使う",
+      "expected": "承認済みOAuth枠を越える操作をしない。",
+      "source": "review3215の静的適用",
+      "real_CLI_executed": false
+    },
+    {
+      "kind": "負例",
+      "input": "秘密env値を表示",
+      "expected": "参照・表示しない。",
+      "source": "review3215の静的適用",
+      "real_CLI_executed": false
+    }
+  ],
+  "independent_check": {
+    "todo": 3215,
+    "head": "8867412bf7d7164443d1026b3cf524221eb2dd2b",
+    "must": 0,
+    "response_sha256": "9ed7ef3dc2dc84fa9ba94ed9090e986359c02aa6596a3e54c00f9a29f2e3fb6c",
+    "limit": "単一レビュー内の静的用途確認、metadata一致、実ファイル/hash照合。選択精度や実CLI性能を測定していない。"
+  },
+  "amended_at": "2026-10-21T01:24:33.7943036Z",
+  "postinstall_delta_review_initial": "pending at recorded_at;3215 later received and appended"
+}

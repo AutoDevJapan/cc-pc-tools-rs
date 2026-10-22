@@ -1,0 +1,114 @@
+[
+  {
+    "path": "skills/docker-agent-config/skill.yaml",
+    "sha256": "4ecee0b4f50dfbe323e4c2ded50a58e8db069d1164c58bead191d219853d61fe",
+    "content": "schema: v1\nid: docker-agent-config\nversion: 0.1.2\ntitle: Docker Agent Configuration\ndescription: Reference and rules for authoring agent.yaml configs for Docker Agent (cagent) — agents, models, providers, toolsets, and multi-agent teams.\nowns:\n  - agent.yaml\n  - agent.yml\n  - agent.hcl\n  - docker-agent-model-config\n  - docker-agent-toolsets\n  - docker-agent-multi-agent-teams\nuse_when:\n  - The main artifact being created, edited, or reviewed is an agent.yaml/agent.yml/agent.hcl file for Docker Agent.\n  - The task is adding, removing, or configuring a model, provider, or toolset (built-in or MCP) on an agent.\n  - The task is designing a multi-agent team with a coordinator and sub_agents.\ndo_not_use_when:\n  - The main task is invoking docker agent run and choosing CLI flags such as --safety or --sandbox.\n  - The main task is serving an agent over MCP/API/A2A/chat, sharing it via a registry, or evaluating it.\n  - The main task is a generic Dockerfile or Compose file unrelated to Docker Agent.\ndelegates_to:\n  - docker-agent-run\n  - docker-agent-deploy\n",
+    "source": "already acquired supplemental source"
+  },
+  {
+    "path": "skills/docker-agent-deploy/skill.yaml",
+    "sha256": "449ccdd1d39f084c60c2303f1c0e5614d5da44d69cea676dd9c42bf2284b7feb",
+    "content": "schema: v1\nid: docker-agent-deploy\nversion: 0.1.1\ntitle: 'Docker Agent: Serving, Sharing, and Evaluating'\ndescription: Rules for exposing Docker Agents as servers, distributing them via OCI registries, and evaluating them for regressions in CI.\nowns:\n  - docker-agent-serve\n  - docker-agent-share\n  - docker-agent-eval\n  - evals/*.json\nuse_when:\n  - The task is exposing an agent over MCP, an HTTP API, an OpenAI-compatible chat endpoint, or A2A/ACP.\n  - The task is publishing an agent to or pulling one from an OCI registry with docker agent share.\n  - The task is writing, running, or gating CI on docker agent eval sessions.\ndo_not_use_when:\n  - The main task is authoring or editing the agent.yaml itself (models, toolsets, sub_agents).\n  - The main task is running an agent interactively on a developer machine, or choosing --safety/--sandbox for local use.\ndelegates_to:\n  - docker-agent-config\n  - docker-agent-run\n",
+    "source": "already acquired supplemental source"
+  },
+  {
+    "path": "skills/docker-agent-run/skill.yaml",
+    "sha256": "1ec155f0e9c55b3a934729fbeb5034281641271cfed8a0d4410870cd84dc8131",
+    "content": "schema: v1\nid: docker-agent-run\nversion: 0.1.2\ntitle: 'Docker Agent: Running and Operating Agents'\ndescription: 'Rules for running Docker Agent locally — safety/approval modes, sandbox isolation, aliases, worktrees, and troubleshooting a run.'\nowns:\n  - docker-agent-run-flags\n  - docker-agent-safety-modes\n  - docker-agent-sandbox\n  - docker-agent-alias\n  - docker-agent-worktree\nuse_when:\n  - The task is invoking docker agent run interactively or headlessly against an existing agent config.\n  - The task is choosing or debugging --safety, --yolo, or --sandbox behavior for a run.\n  - The task is creating an alias, a git worktree run, or diagnosing a failed run with docker agent doctor.\ndo_not_use_when:\n  - The task uses standalone sbx lifecycle, policy, or secret commands rather than the Docker Agent wrapper.\n  - The main task is authoring or editing the agent.yaml itself (models, toolsets, sub_agents).\n  - The main task is serving an agent as a server, sharing it via a registry, or evaluating it.\ndelegates_to:\n  - docker-sandboxes-lifecycle\n  - docker-sandboxes-network-credentials\n  - docker-agent-config\n  - docker-agent-deploy\n",
+    "source": "already acquired supplemental source"
+  },
+  {
+    "path": "skills/docker-docs/skill.yaml",
+    "sha256": "229821c54e999668f053e6d104e3f4e4f6099bf2450a4620c6c947aed41f987a",
+    "content": "schema: v1\nid: docker-docs\nversion: 0.1.0\ntitle: Docker Docs\ndescription: Answer questions about any Docker product from current, cited official Docker documentation, using the Docker docs MCP search tool or the docs.docker.com llms.txt and Markdown fallback.\nowns:\n  - docker-docs-retrieval\n  - docker-product-disambiguation\n  - docker-docs-mcp-setup\nuse_when:\n  - The user asks how a Docker product works or which command, flag, setting, or file field to use.\n  - The answer depends on release-sensitive facts such as CLI syntax, experimental features, limits, pricing, or plan entitlements.\n  - The user names a Docker product or alias that needs disambiguation, such as sbx, cloud sandboxes, DHI, DMR, cagent, Offload, or Gordon.\n  - The user asks for a citation or the docs page for a Docker topic, or wants another skill's guidance checked against current docs.\n  - The user explicitly asks to configure or troubleshoot the Docker docs MCP server.\ndo_not_use_when:\n  - The task is a generic software task that only mentions Docker in passing.\n  - A more specific Docker skill owns the workflow; use it and consult this skill only to verify details.\n  - The question is about third-party software that runs in containers rather than a Docker product.\ndelegates_to:\n  - docker-project-foundations\n  - docker-build-strategies\n  - docker-compose-patterns\n  - docker-sandboxes-lifecycle\n  - docker-sandboxes-network-credentials\n  - docker-sandboxes-env\n  - docker-sandboxes-kits\n  - docker-agent-config\n  - docker-agent-run\n  - docker-agent-deploy\n  - docker-destructive-guardrails\ninterface:\n  display_name: Docker Docs\n  short_description: Current, cited answers from official Docker documentation across every Docker product.\n  default_prompt: Use Docker Docs to look up current official Docker documentation for any Docker product, including Sandboxes, DHI, Docker Agent, Model Runner, and MCP Toolkit.\npolicy:\n  allow_implicit_invocation: true\n",
+    "source": "already acquired supplemental source"
+  },
+  {
+    "path": "skills/docker-sandboxes-env/skill.yaml",
+    "sha256": "9a64ad717b24b2c729505d8431588074f4680acd0a82d510bd5114e649beedaf",
+    "content": "schema: v1\nid: docker-sandboxes-env\nversion: 0.1.0\ntitle: 'Docker Sandboxes: Declarative sbxenv.yaml Environments'\ndescription: Author, plan, and run declarative sbxenv.yaml environments (workspace, kits, args, host lifecycle hooks, secrets/registries/bindings, ports) for Docker Sandboxes.\nowns:\n  - sbxenv.yaml\n  - sbx-env\n  - sandbox-environment-lifecycle-hooks\n  - sandbox-environment-plan-approval\nuse_when:\n  - The user wants a checked-in, reproducible definition of a sandbox environment instead of a long sbx create/run command line.\n  - The user wants host-side setup or teardown commands tied to a sandbox's create, attach, or remove lifecycle.\n  - The user wants to parameterize a shared environment file with named arguments.\n  - The user is debugging why sbx env create/run is asking for approval, or why a declared resource was skipped or flagged.\ndo_not_use_when:\n  - The task is the underlying sbx create/run/rm flag-based workflow with no sbxenv.yaml file involved.\n  - The task is choosing network policy or storing a secret/registry credential independent of any environment file.\n  - The task is authoring the kit spec.yaml a kits entry points at.\ndelegates_to:\n  - docker-sandboxes-lifecycle\n  - docker-sandboxes-network-credentials\n  - docker-sandboxes-kits\n",
+    "source": "already acquired supplemental source"
+  },
+  {
+    "path": "skills/docker-sandboxes-kits/skill.yaml",
+    "sha256": "99fceac3195b14c1e196a3856ad97fdd255fbb6c73e7c81772dc8c503759a6d8",
+    "content": "schema: v1\nid: docker-sandboxes-kits\nversion: 0.1.0\ntitle: 'Docker Sandboxes: Kits (spec.yaml)'\ndescription: Author, validate, package, sign, and compose reusable sandbox/mixin kits (spec.yaml, schema v2).\nowns:\n  - spec.yaml\n  - sbx-kit\n  - kit-spec-v2\nuse_when:\n  - The user wants to write, validate, or pack a spec.yaml for a kind sandbox or kind mixin kit.\n  - The user wants a mixin to add a tool, credential, network allowance, or files to an existing built-in agent.\n  - The user wants to publish a kit to or pull one from an OCI registry, sign it, or verify a signature or provenance attestation.\n  - The user is debugging a kit-validation error, an argument-substitution error, or sbx kit add's recreate-aware requirement.\ndo_not_use_when:\n  - The task is creating, running, or removing the sandbox a kit is composed into, independent of the kit's own content.\n  - The task is what a credential or network rule a kit declares actually does at runtime, or secrets/policy unrelated to any kit.\n  - The task is the sbxenv.yaml file format that references kits via its own kits block.\ndelegates_to:\n  - docker-sandboxes-lifecycle\n  - docker-sandboxes-network-credentials\n  - docker-sandboxes-env\n",
+    "source": "already acquired supplemental source"
+  },
+  {
+    "path": "skills/docker-sandboxes-lifecycle/skill.yaml",
+    "sha256": "6d2a3666dcb08453b302b3afc3decb778a1f07a6cc7318afc578499548adfb74",
+    "content": "schema: v1\nid: docker-sandboxes-lifecycle\nversion: 0.1.0\ntitle: 'Docker Sandboxes: Local Lifecycle & Workspace Isolation'\ndescription: Create, reattach to, and tear down local `sbx` sandboxes; choose workspace bind-mount vs --clone isolation.\nowns:\n  - sbx-run\n  - sbx-create\n  - sbx-ls\n  - sbx-stop\n  - sbx-rm\n  - sbx-prune\n  - sbx-exec\n  - sbx-cp\n  - sbx-ports\n  - sandbox-workspace-clone-mode\nuse_when:\n  - The user wants to start, reattach to, stop, or remove a local sbx sandbox.\n  - The user wants an agent to work on a repository without a writable bind mount of the host working tree (--clone).\n  - The user wants extra read-only workspaces mounted alongside the primary one, or wants to copy files/publish ports/exec into a sandbox.\n  - The user wants to clean up stopped sandboxes or remove a specific one.\ndo_not_use_when:\n  - The task is docker agent run --sandbox or its docker agent sandbox allowlist.\n  - The task is about sandbox network egress policy or service/registry credentials.\n  - The task is authoring or running a declarative sbxenv.yaml file.\n  - The task is authoring, packaging, signing, or composing a kit spec.yaml.\ndelegates_to:\n  - docker-agent-run\n  - docker-sandboxes-network-credentials\n  - docker-sandboxes-env\n  - docker-sandboxes-kits\n",
+    "source": "already acquired supplemental source"
+  },
+  {
+    "path": "skills/docker-sandboxes-network-credentials/skill.yaml",
+    "sha256": "6a3dc1f3dac85c8de6a1e42d242e76709ed75c7865fcc54345a4dd37004e7a1d",
+    "content": "schema: v1\nid: docker-sandboxes-network-credentials\nversion: 0.1.0\ntitle: 'Docker Sandboxes: Network Policy & Credentials'\ndescription: Configure sandbox network egress policy and provision service/registry credentials safely through the proxy-injection model.\nowns:\n  - sbx-policy\n  - sbx-secret\n  - sandbox-network-egress-precedence\n  - sandbox-registry-credential-scope\nuse_when:\n  - The user wants to allow, deny, or inspect which hosts a sandbox or all sandboxes can reach.\n  - The user wants to give an agent an API key, OAuth token, or other service credential without exposing the raw value inside the sandbox.\n  - The user wants to pull a private template image or kit from an authenticated registry.\n  - The user is debugging a blocked network request or a credential that is not being injected.\ndo_not_use_when:\n  - The task is docker agent run --sandbox or its docker agent sandbox allowlist.\n  - The task is creating, reattaching to, or removing a sandbox itself.\n  - The task is authoring the sbxenv.yaml file format that declares secrets/registries/bindings.\n  - The task is authoring a kit spec.yaml's own credentials or permissions.network schema.\ndelegates_to:\n  - docker-agent-run\n  - docker-sandboxes-lifecycle\n  - docker-sandboxes-env\n  - docker-sandboxes-kits\n",
+    "source": "already acquired supplemental source"
+  },
+  {
+    "path": "skills/docker-agent-config/agents/openai.yaml",
+    "git_blob": "81a8cd8a9af56ccbc04ba4a8ce1ec92a51db1d25",
+    "sha256": "7f241ddcb91f10f15c8ce9f63daddbc4435f299a8a907613f6e3e4a4e927d44b",
+    "content": "interface:\n  display_name: Docker Agent Configuration\n  short_description: Reference and rules for authoring agent.yaml configs for Docker Agent (cagent) — agents, models, providers, toolsets, and multi-agent teams.\n  default_prompt: Use this skill when creating or editing an agent.yaml configuration file for Docker Agent.\npolicy:\n  allow_implicit_invocation: true\n",
+    "source": "fixed public YAML metadata; not refused MDX/text/template shape",
+    "retrieved_at": "2026-10-20T15:04:00.7807514Z"
+  },
+  {
+    "path": "skills/docker-agent-deploy/agents/openai.yaml",
+    "git_blob": "1fcb8125d13e402fb001d639b7ad467aa40fb9a1",
+    "sha256": "5cf06cf791c3863b4aeedd870092bf29adb1fe1e96a62a548cfe42abc8248a8e",
+    "content": "interface:\n  display_name: 'Docker Agent: Serving, Sharing, and Evaluating'\n  short_description: Rules for exposing Docker Agents as servers, distributing them via OCI registries, and evaluating them for regressions in CI.\n  default_prompt: Use this skill when serving a Docker Agent as an MCP/API/A2A/chat server, sharing it via a registry, or evaluating it.\npolicy:\n  allow_implicit_invocation: true\n",
+    "source": "fixed public YAML metadata; not refused MDX/text/template shape",
+    "retrieved_at": "2026-10-20T15:04:01.0454872Z"
+  },
+  {
+    "path": "skills/docker-agent-run/agents/openai.yaml",
+    "git_blob": "df4ff15fe4490c1c8fdd5281905985d4802fabcf",
+    "sha256": "a9b4b79ae64d60b610fd331049c8691ea7b4204558183f4079fb4aa1fdac0302",
+    "content": "interface:\n  display_name: 'Docker Agent: Running and Operating Agents'\n  short_description: 'Rules for running Docker Agent locally — safety/approval modes, sandbox isolation, aliases, worktrees, and troubleshooting a run.'\n  default_prompt: Use this skill when running a Docker Agent with docker agent run, choosing a safety mode, or using the sandbox flag.\npolicy:\n  allow_implicit_invocation: true\n",
+    "source": "fixed public YAML metadata; not refused MDX/text/template shape",
+    "retrieved_at": "2026-10-20T15:04:01.3073446Z"
+  },
+  {
+    "path": "skills/docker-docs/agents/openai.yaml",
+    "git_blob": "942ff863cd66e77cb879d966e36281535e3816ee",
+    "sha256": "0ddabe164766b9477c25959eac74ee0b5de02ce29aa7ef1f662ea27669a54df0",
+    "content": "interface:\n  display_name: Docker Docs\n  short_description: Current, cited answers from official Docker documentation across every Docker product.\n  default_prompt: Use Docker Docs to look up current official Docker documentation for any Docker product, including Sandboxes, DHI, Docker Agent, Model Runner, and MCP Toolkit.\ndependencies:\n  tools:\n    - type: mcp\n      value: docker-docs\n      description: Docker documentation search MCP server\n      transport: streamable_http\n      url: https://ai-backend-service.docker.com/mcp\npolicy:\n  allow_implicit_invocation: true\n",
+    "source": "fixed public YAML metadata; not refused MDX/text/template shape",
+    "retrieved_at": "2026-10-20T15:04:01.5721371Z"
+  },
+  {
+    "path": "skills/docker-sandboxes-env/agents/openai.yaml",
+    "git_blob": "0dd9fdf5119087c799286a16cfe54afa8eeb3073",
+    "sha256": "073fd1857e8c766e2e48e0196b34c7748b861238fb615a2e5084ef204d35572c",
+    "content": "interface:\n  display_name: 'Docker Sandboxes: Declarative sbxenv.yaml Environments'\n  short_description: Author, plan, and run declarative sbxenv.yaml environments for Docker Sandboxes. Experimental.\n  default_prompt: Use this skill when authoring or running an sbxenv.yaml file for Docker Sandboxes (`sbx env create/run/plan/exec/rm`), including its lifecycle hooks and approval plan.\npolicy:\n  allow_implicit_invocation: true\n",
+    "source": "fixed public YAML metadata; not refused MDX/text/template shape",
+    "retrieved_at": "2026-10-20T15:04:01.8443597Z"
+  },
+  {
+    "path": "skills/docker-sandboxes-kits/agents/openai.yaml",
+    "git_blob": "bea9dba35e40dabf37cdea5cf5bc17ce64e699d5",
+    "sha256": "1ffe3f39733ee351362b0001b302577a919551275277f79808f5095da69e21d6",
+    "content": "interface:\n  display_name: 'Docker Sandboxes: Kits (spec.yaml)'\n  short_description: Author, validate, package, sign, and compose reusable sandbox/mixin kits (spec.yaml, schema v2). Experimental.\n  default_prompt: Use this skill when authoring, validating, packaging, signing, or composing a Docker Sandboxes kit spec.yaml (`sbx kit ...`).\npolicy:\n  allow_implicit_invocation: true\n",
+    "source": "fixed public YAML metadata; not refused MDX/text/template shape",
+    "retrieved_at": "2026-10-20T15:04:02.1138931Z"
+  },
+  {
+    "path": "skills/docker-sandboxes-lifecycle/agents/openai.yaml",
+    "git_blob": "70425e924dfd4da6cbeda4420ceef1aaaa60fc92",
+    "sha256": "7504f9cb364cf7c7324b3989fa1c28e783b4ac1f2acd36169061ecb83ebac5a6",
+    "content": "interface:\n  display_name: 'Docker Sandboxes: Local Lifecycle & Workspace Isolation'\n  short_description: Create, reattach to, and tear down local `sbx` sandboxes; choose workspace bind-mount vs --clone isolation.\n  default_prompt: Use this skill when running, reattaching to, or cleaning up local Docker Sandboxes (`sbx run`/`create`/`ls`/`stop`/`rm`/`prune`), or choosing between a bind-mounted workspace and `--clone` isolation.\npolicy:\n  allow_implicit_invocation: true\n",
+    "source": "fixed public YAML metadata; not refused MDX/text/template shape",
+    "retrieved_at": "2026-10-20T15:04:02.3647466Z"
+  },
+  {
+    "path": "skills/docker-sandboxes-network-credentials/agents/openai.yaml",
+    "git_blob": "56e678ae99f08f48ab10507b977dc9b40030e258",
+    "sha256": "3c404432406886ca13675ecbebf886f538ed82918d15df9dcc8d91ead0673527",
+    "content": "interface:\n  display_name: 'Docker Sandboxes: Network Policy & Credentials'\n  short_description: Configure sandbox network egress policy and provision service/registry credentials safely through the proxy-injection model.\n  default_prompt: Use this skill when configuring `sbx policy` network allow/deny rules or `sbx secret` service/registry credentials for Docker Sandboxes.\npolicy:\n  allow_implicit_invocation: true\n",
+    "source": "fixed public YAML metadata; not refused MDX/text/template shape",
+    "retrieved_at": "2026-10-20T15:04:02.7284835Z"
+  }
+]

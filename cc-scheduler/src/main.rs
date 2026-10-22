@@ -6,8 +6,75 @@ use cc_scheduler::{
 };
 use std::path::PathBuf;
 fn main() {
+    if cc_scheduler::product_identity::status_requested(std::env::args().skip(1)) {
+        println!("{}", cc_scheduler::product_identity::status());
+        return;
+    }
     let args: Vec<String> = std::env::args().skip(1).collect();
     let command = args.first().map(String::as_str);
+    if command == Some("dispatch-one") {
+        if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
+            println!("usage: scheduler dispatch-one --id <ID>\n\nAllocate only this existing ToDo through ordinary priority, ownership and capacity gates. Keeps global settings, stops, dependencies and the saved launch scope. Does not run a global tick.\n");
+            return;
+        }
+        let result = (|| -> Result<serde_json::Value> {
+            let id = cc_scheduler::targeted_dispatch::parse_id(&args[1..])?;
+            let root = PathBuf::from("D:/CC/Tools/scheduler");
+            let mut engine = Scheduler::new(
+                root.clone(),
+                PathBuf::from("D:/CC/Tools/todo/todo.json"),
+                RealBackend::new(root),
+            )?;
+            cc_scheduler::targeted_dispatch::run(&mut engine, id)
+        })();
+        match result {
+            Ok(report) => println!("{}", encode(&report, 2)),
+            Err(error) => {
+                eprintln!("targeted dispatch failed {}", error.0);
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
+    if command == Some("dispatch-receipt") {
+        if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
+            println!("usage: scheduler dispatch-receipt --id <ID> [--apply --expected-state-sha256 <SHA256>]\n\nInspect one ordinary repair launch without exposing source text. Apply only an exact verified receipt; never launch, cancel, release waits or change source files.\n\noptions:\n  -h, --help  show this help message and exit");
+            return;
+        }
+        let result = (|| -> Result<serde_json::Value> {
+            let expected = if args.len() == 6
+                && args[3] == "--apply"
+                && args[4] == "--expected-state-sha256"
+                && args[5].len() == 64
+                && args[5].bytes().all(|b| b.is_ascii_hexdigit())
+            {
+                Some(args[5].as_str())
+            } else if args.len() == 3 {
+                None
+            } else {
+                return Err(Error("InputRejected"));
+            };
+            if args[1] != "--id" {
+                return Err(Error("InputRejected"));
+            }
+            let id = args[2].parse().map_err(|_| Error("InputRejected"))?;
+            let root = PathBuf::from("D:/CC/Tools/scheduler");
+            let mut engine = Scheduler::new(
+                root.clone(),
+                PathBuf::from("D:/CC/Tools/todo/todo.json"),
+                RealBackend::new(root),
+            )?;
+            cc_scheduler::dispatch_receipt::run(&mut engine, id, expected)
+        })();
+        match result {
+            Ok(report) => println!("{}", encode(&report, 2)),
+            Err(error) => {
+                eprintln!("dispatch receipt failed {}", error.0);
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
     if command == Some("checkpoint-workspace") {
         if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
             println!("usage: scheduler checkpoint-workspace --request-file <JSON>\n\nExplicitly save one owned task's current branch and HEAD receipt. Never launches or changes source files.\nJSON: id, job, expected_branch, branch, head\n\noptions:\n  -h, --help  show this help message and exit");

@@ -71,11 +71,12 @@ type conversationIndex struct {
 }
 
 type conversationLogRecord struct {
-	InputSHA       string `json:"input_sha256"`
-	BodyFile       string `json:"body_file"`
-	Thread         string `json:"destination_thread_id,omitempty"`
-	Message        string `json:"message_id,omitempty"`
-	VerifiedThread string `json:"verified_thread_id,omitempty"`
+	InputSHA        string `json:"input_sha256"`
+	BodyFile        string `json:"body_file"`
+	Thread          string `json:"destination_thread_id,omitempty"`
+	Message         string `json:"message_id,omitempty"`
+	VerifiedThread  string `json:"verified_thread_id,omitempty"`
+	EffectiveNotify *bool  `json:"effective_notify,omitempty"`
 }
 
 type conversationAlias struct {
@@ -291,25 +292,49 @@ func (r *Runner) loadConversations() (*conversationIndex, error) {
 }
 
 func (r *Runner) conversationTask(ctx context.Context, id uint64) (*TodoRow, error) {
-	row, err := r.todo(id)
-	if err != nil || row.Project == "owner" {
-		return nil, errors.New("conversation task unavailable")
-	}
 	var db struct {
 		Projects map[string]string `json:"projects"`
+		Items    []json.RawMessage `json:"items"`
 	}
-	if readJSON(r.TodoPath, maxTodo, &db) != nil || !filepath.IsAbs(db.Projects[row.Project]) {
+	if readJSON(r.TodoPath, maxTodo, &db) != nil {
 		return nil, errors.New("conversation task scope unavailable")
 	}
-	raw, err := r.Run(ctx, "D:/CC/Tools/client-records/scrub391.exe", "--guard-path", db.Projects[row.Project])
+	var selected json.RawMessage
+	var project string
+	for _, raw := range db.Items {
+		var header struct {
+			ID      uint64 `json:"id"`
+			Project string `json:"project"`
+		}
+		if json.Unmarshal(raw, &header) != nil {
+			return nil, errors.New("conversation task unavailable")
+		}
+		if header.ID == id {
+			if selected != nil {
+				return nil, errors.New("conversation duplicate task")
+			}
+			selected, project = raw, header.Project
+		}
+	}
+	root := db.Projects[project]
+	if selected == nil || project == "owner" || !filepath.IsAbs(root) {
+		return nil, errors.New("conversation task scope unavailable")
+	}
+	raw, err := r.Run(ctx, "D:/CC/Tools/client-records/scrub391.exe", "--guard-path", root)
 	var proof struct {
 		Client     *bool `json:"client_resource"`
-		Unverified bool  `json:"classification_unverified"`
+		Unverified *bool `json:"classification_unverified"`
 	}
-	if err != nil || json.Unmarshal([]byte(raw), &proof) != nil || proof.Client == nil || *proof.Client || proof.Unverified {
+	if err != nil || json.Unmarshal([]byte(raw), &proof) != nil || proof.Client == nil || *proof.Client || proof.Unverified == nil || *proof.Unverified {
 		return nil, errors.New("conversation task scope unverified")
 	}
-	return row, nil
+	var row TodoRow
+	if json.Unmarshal(selected, &row) != nil {
+		return nil, errors.New("conversation task unavailable")
+	}
+	row.conversationState = selected
+	row.conversationScope = conversationTodoScope{Domain: "discord-conversation-todo-scope-v1", Todo: fmt.Sprint(id), Project: project, RootSHA: bytesHash([]byte(root))}
+	return &row, nil
 }
 
 func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput) (ConversationQuestion, error) {
@@ -553,7 +578,11 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		}
 	}
 	if q.Wait && q.Phase == "posted" {
-		if _, err = r.Run(ctx, conversationTodo, "question-wait", fmt.Sprint(q.Todo), "--question-file", q.ReceiptFile); err != nil {
+		scopeFile, scopeErr := r.conversationScopeFile(row, q)
+		if scopeErr != nil {
+			return zero, scopeErr
+		}
+		if _, err = r.Run(ctx, conversationTodo, "question-wait", fmt.Sprint(q.Todo), "--question-file", q.ReceiptFile, "--scope-file", scopeFile); err != nil {
 			return zero, errors.New("conversation posted; task wait recording pending")
 		}
 		current, err := r.todo(q.Todo)
@@ -649,6 +678,24 @@ func (r *Runner) conversationProof(ctx context.Context, q ConversationQuestion) 
 }
 
 func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile, thread string, notify bool, attachments []string) (map[string]any, error) {
+	return r.conversationLogInner(ctx, requestID, title, bodyFile, thread, notify, attachments, "", false)
+}
+
+func (r *Runner) conversationClarification(ctx context.Context, requestID, title, bodyFile, thread, manifest string) (map[string]any, error) {
+	if thread == "" || manifest == "" {
+		return nil, errors.New("clarification requires an exact original destination and binding")
+	}
+	return r.conversationLogInner(ctx, requestID, title, bodyFile, thread, false, nil, manifest, false)
+}
+
+func (r *Runner) conversationCheckClarification(ctx context.Context, requestID, title, bodyFile, thread, manifest string) (map[string]any, error) {
+	if thread == "" || manifest == "" {
+		return nil, errors.New("exact clarification input required")
+	}
+	return r.conversationLogInner(ctx, requestID, title, bodyFile, thread, false, nil, manifest, true)
+}
+
+func (r *Runner) conversationLogInner(ctx context.Context, requestID, title, bodyFile, thread string, notify bool, attachments []string, clarification string, checkOnly bool) (map[string]any, error) {
 	if !conversationID.MatchString(requestID) || strings.TrimSpace(title) == "" {
 		return nil, errors.New("conversation log identity invalid")
 	}
@@ -691,6 +738,11 @@ func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile
 	if exists && record.InputSHA != inputHash {
 		return nil, errors.New("conversation log retry input differs")
 	}
+	// A clarification only resumes the original failed request; its immutable
+	// input hash and sender ID do not include this new association evidence.
+	if clarification != "" && (!exists || record.Thread != thread) {
+		return nil, errors.New("clarification requires the existing exact log reservation")
+	}
 	if !exists {
 		destination := thread
 		if destination == "" {
@@ -706,6 +758,29 @@ func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile
 		}
 	}
 	args := []string{"recovery-log", "--request-id", "conversation-log-" + bytesHash([]byte(requestID))[:32], "--title", title, "--body-file", record.BodyFile}
+	if clarification != "" {
+		saved, readErr := boundedRegular(record.BodyFile)
+		if readErr != nil || bytesHash(saved) != bytesHash(body) {
+			return nil, errors.New("saved clarification body differs")
+		}
+		binding, readErr := boundedRegular(clarification)
+		if readErr != nil || len(binding) > 16<<10 {
+			return nil, errors.New("clarification binding unavailable")
+		}
+		path := clarification
+		if !checkOnly {
+			// Invalid association evidence must not permanently poison the fixed
+			// request. Only the sender's verified binding commits authority.
+			path = filepath.Join(r.Config.Home, "conversation-clarifications", requestID+"-"+bytesHash(binding)+".json")
+			if err = writeConversationOnce(path, binding); err != nil {
+				return nil, err
+			}
+		}
+		args = append(args, "--clarification-file", path)
+		if checkOnly {
+			args = append(args, "--check-only")
+		}
+	}
 	if record.Thread != "" {
 		if _, ok := number(record.Thread); !ok {
 			return nil, errors.New("conversation log destination invalid")
@@ -723,6 +798,12 @@ func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile
 		return nil, errors.New("conversation log pending; retry the same request")
 	}
 	var report map[string]any
+	if checkOnly {
+		if json.Unmarshal([]byte(raw), &report) != nil || report["domain"] != "new-owner-recovery-messages" || report["check_only"] != true || report["delivery"] != "not_sent" || report["request_id"] != "conversation-log-"+bytesHash([]byte(requestID))[:32] {
+			return nil, errors.New("clarification verification pending")
+		}
+		return map[string]any{"domain": conversationDomain, "request_id": requestID, "delivery": "not_sent", "check_only": true, "original_intent_retained": true}, nil
+	}
 	if json.Unmarshal([]byte(raw), &report) != nil || report["domain"] != "new-owner-recovery-messages" || report["delivery"] != "verified" {
 		return nil, errors.New("conversation log verification pending")
 	}
@@ -739,6 +820,13 @@ func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile
 	}
 	record.VerifiedThread = verifiedThread
 	record.Message = message
+	if effective, present := report["effective_notify"]; present {
+		value, ok := effective.(bool)
+		if !ok {
+			return nil, errors.New("conversation log notification receipt invalid")
+		}
+		record.EffectiveNotify = &value
+	}
 	index.Logs[requestID] = record
 	if thread == "" {
 		index.Topics[title] = verifiedThread
@@ -746,7 +834,11 @@ func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile
 	if err = publish(r.conversationPath(), index); err != nil {
 		return nil, err
 	}
-	return map[string]any{"domain": conversationDomain, "delivery": "verified", "request_id": requestID, "thread_id": report["thread_id"], "message_id": report["message_id"], "url": report["url"], "reused": report["reused"]}, nil
+	result := map[string]any{"domain": conversationDomain, "delivery": "verified", "request_id": requestID, "thread_id": report["thread_id"], "message_id": report["message_id"], "url": report["url"], "reused": report["reused"]}
+	if record.EffectiveNotify != nil {
+		result["effective_notify"] = *record.EffectiveNotify
+	}
+	return result, nil
 }
 
 func (r *Runner) conversationReplies(ctx context.Context, requestID string) (map[string]any, error) {

@@ -1,0 +1,87 @@
+# ToDo3122: Linux CIの実待機を解消する
+
+通常Linux runnerの単一枠に、CodeQLと他の正式検査が並ぶ。PR286のActions解析は
+2026-10-20 12:45:46Zに作成され、14:13:52Zにrunner27を取得した。待機88.1分、
+実行56秒で成功した。この自然な割当を追加是正の効果には含めない。
+
+## 範囲と受入条件
+
+- 既存通常runnerを停止せず、既存PCの測定した余力内で追加枠を1台だけ提供する。
+  通常と追加枠でcontainer、bridge接続先、runner名、hostのCargo targetを分離する。
+  生成先はprimaryが`.ci-work/target`、追加枠が`.ci-work/target-burst-3122`。
+- 同じrepoの現在headだけを受け付ける既存hook、OAuth、Cargoゲート、process-groupの
+  排出、診断保持、UID1001/init/capdrop/no-new-privileges/tmpfsの制限を維持する。
+  外部fork、他repo、古いhead、任意の追加枠は受け付けない。
+- 追加枠はコンパイル時に固定するprofileで選ぶ。workflowやジョブの環境変数から
+  接続先を変えない。許可するprofileは従来のprimaryと、この作業のburst-3122だけ。
+  同じ旧ラベルを提供し、既存キューのjobを再発火せず受け取る。
+- 追加枠は4CPU/8GiB/1024PID、別のworktree/targetと1ジョブ限りのephemeral登録を使う。登録前に
+  PCとDocker VMの空きRAM/CPUを測り、停止時は自分のrunnerをidleにして排出し回収する。
+  稼働中の検査を取消さない。必要な回数だけ原キューと余力を再測定して起動し、
+  1回の受入/排出後にhostも終了する。無制限のrunner/常駐を増やさない。
+- PR296などの現在headをAPIで取り直す。jobのcreated_at、runner割当、実開始、
+  完了、conclusionを区別し、追加runnerが実際にcurrent-head jobを完走した証拠を残す。
+  sourceの変更・登録・Listener起動だけでは完了にしない。
+- 別モデルの固定差分レビュー、関連Go検査と必要CI、PR/merge、実運用の証拠を確認する。
+  原製品のmerge/配布は元担当が行う。顧客repoと他担当の本体を変更しない。
+
+## 時刻の扱い
+
+GitHubの日時はUTCの元文字列を保持する。PowerShellはConvertFrom-Jsonの
+`-DateKind String`とDateTimeOffsetを使う。上の既知2時刻で88.1分になることを
+検算し、queueにあるjobのstarted_atを実開始として扱わない。
+
+一次資料: [GitHubのrunner割当](https://docs.github.com/en/actions/reference/runners/self-hosted-runners)。
+同じlabelsを持つonline/idle runnerが割当対象であり、1台のrunnerは同時に1jobを実行する。
+
+## 有限の再供給
+
+既存bridgeの`pool TARGET`入口を、Windowsの同じ定期タスク管理方式で実行する。
+1回のpoolは通常1受付で終了し、明示した有限batchだけ最大16回、入場する時間は2時間まで。
+1回ずつ本物のephemeral jobの
+終了と排出を待ち、次の現在headの未割当キューと資源を再取得する。成功済みjobを
+再実行する操作はない。原検査の成功はGitHubの個別job APIで別に確認する。
+
+hostは空きRAM24GiB以上（追加8GiBを使っても16GiB残す）、commit85%未満、
+CPU75%未満、C/D各30GiB以上を要求する。Docker VMは空き9GiB以上を要求し、
+追加8GiBと残り1GiBを確保する。不明/不足/API失敗時はその回を終了する。
+タスクのIgnoreNewとpool専用loopback portの保持で管理処理の重複を防ぐ。
+子hostも独立portを保持してから登録する。追加profileは`--replace`を使わない。
+
+追加runnerの4ラベルは同じ名前のcustomとして登録し、2分のidle期限で自分の
+登録だけを退かせられるようにする。実jobが割当済みなら元のtimeoutで完了を待つ。
+idleならラベルを外し、3回の新しいAPI観測でラベル0/未割当とWorker不在を確かめて
+登録解除する。config完了直後の同期通知で、この起動が登録したIDを先に結び付ける。
+解除の404とWorker不在を確認して追加枠のidle groupだけを止め、排出後に公式SDKの
+removeでlocal configを片付ける。tokenはRAMとstdinだけに渡し、認証fileを手動削除しない。
+不明な状態で強制終了しない。元primary/finite2511にはこの処理を適用しない。
+解除段階を保持し、30秒間隔で最大10分の再試行を行う。解除済みIDの404は次段階へ進める。
+計時は登録結合後から開始する。受理済みjobはRPC hostを保持し、未受理のまま上限に
+達した場合は新たな受理を閉じて終了74と未検証記録を残す。idle完了は終了75で区別する。
+
+container回収前にはsupervisor lock/静止/所有/終了印を確認するexport-diagnosticsで
+既存の最大8回/64MiBだけをgzipへ保全し、検証とhash記録後に消す。
+正常ephemeral後の`.runner`除去と、残留時の96停止/保全を実機で区別して確認する。
+現在の最高優先3059の共有窓は元担当と正規メモで調整し、必要な間は反復供給を止める。
+
+タスクの反復は1分ごとに同じ入口だけを起動する。待機がなければ登録せず終了する。
+通常は1受付で終了するため、高優先の共有窓が必要になったら既存タスクを無効にするだけで
+次の入場を止められる。実行中jobは最後まで排出し、強制取消しをしない。
+PCのOS再起動/ログオン後の復帰は未検証のままとし、実検証なしに保証しない。
+追加containerはこの管理が使う継続資源と、検査終了後に回収する資源を区別する。
+
+## 中断後も通常の入口から再供給する
+
+追加枠は登録を返答する前に、runner IDと名前、Dockerの不変container IDを自分の
+worktreeの`.ci-runtime/burst-cleanup`へ結び付ける。認証内容は保存しない。同期済みの
+bindingと段階記録は新しい名前へ原子的に公開し、内容が違う既存記録を上書きしない。
+次のpoolは同じID/CIDを確認して未完の後始末を再開し、完了後に資源と現在headを取り直す。
+同名別ID、別CID、不明な記録、結合の無いSDK構成は採用しない。記録済みの終了状態も
+生のkernel/supervisor lock確認の代わりにしない。既存hostや割当jobがあれば待機する。
+
+完了履歴は通常8件を保持し、退役印を確定してから古い完了記録だけを回収する。
+完了記録の削除I/O失敗は警告として残し、CI成功や次の入場を失敗へ変えない。
+一時的に回収できない場合も64件の上限を越えて新規結合しない。未完記録や不明fileは消さない。
+10分は再試行窓であり、実行中の有限API/SDK操作を含む保守的上限は約22分。
+TaskのExecutionTimeLimit=PT0Sと照合し、受付済みjobを時間切れで強制終了しない。
+71はsetup未確認、73はWorker生存、74は後始末未確認、75はidle完了、76は構成あり/静止済みを示す。

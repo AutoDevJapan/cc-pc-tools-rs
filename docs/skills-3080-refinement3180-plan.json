@@ -1,0 +1,26 @@
+{
+  "todo": 3080,
+  "status": "Applied3known:9changed15readbackverified;actual validator/discovery PASS;final delta review pending",
+  "review": 3180,
+  "original_response_sha256": "799005d5526efb4834418425163ea784cdb1c313f6c3db4b061723cf302e1c9a",
+  "targets": [
+    "knap",
+    "setup-pre-commit",
+    "grilling"
+  ],
+  "payload_sha256": "15d16a12ea723e7b06087dffb5114088b176c5d960d913a318abb7aac6580731",
+  "after_bundle_sha256": "458f49a75126b35d73d821136a031fb33b88688da7935dc757ea882d8b1ec78b",
+  "writer_sha256": "bb8d413aa9c02f9e1be7887f27d4c1f3570c62b446162926c7fb4e54cef9f546",
+  "backup_path": "D:/CC/Skills/.trash/todo3080-refine3180-20261021-20261021-050449-todo-3080-209b1d8c",
+  "files_changed": 9,
+  "files_before_backup": 15,
+  "unchanged_original_notice": 6,
+  "new_installs": 0,
+  "constraints": [
+    "Exact known3current before hashes and physical roots/ancestors/exact5files only",
+    "New persistent backup, full15 before readback and bothpayloads+journal before replacing",
+    "Only9 changed refs/entry, entrylast, atomic File.Replace NullString.Value;no retry/delete/rollback",
+    "Other originals/managed/synced/junction/guard untouched; separate normal execution review",
+    "Actual validation/freshdiscovery and separate historymanifest/adoption references, no new count"
+  ]
+}

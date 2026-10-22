@@ -3279,6 +3279,7 @@ fn pr_uses_utf8_draft_payload_and_prints_api_url() {
 #[test]
 fn review_preserves_facts_and_uses_jobs_executable() {
     let f = Fixture::new();
+    review_author(&f,"gpt-6.1-sol");
     let facts = f.root.join("facts.txt");
     fs::write(&facts, "  結果 {name}\n").unwrap();
     let mut r = Fake::outputs(&[("notice\njob-id\n", "", 0)]);
@@ -3295,6 +3296,44 @@ fn review_preserves_facts_and_uses_jobs_executable() {
         .windows(2)
         .any(|s| s == ["--sandbox", "read-only"]));
     assert_eq!(r.printed, vec!["job-id"]);
+    assert!(r.calls[0].args.windows(2).any(|a|a==["--model","anthropic/claude-opus-5-5"]));
+    assert!(r.calls[0].args.windows(2).any(|a|a==["--review-source-jobs","finished-name"]));
+}
+
+fn review_author(f:&Fixture,model:&str){
+    f.json("jobs/finished-name/job.json",json!({"id":"finished-name","name":"impl-name","task_type":"implementation",
+        "cwd":f.p.wt.join("name"),"status":"succeeded","model":model,"requested_model":model}));
+}
+
+#[test]
+fn review_uses_another_model_after_an_opus_author_exits() {
+    let f=Fixture::new();review_author(&f,"anthropic/claude-opus-5-5");
+    let facts=f.root.join("facts.txt");fs::write(&facts,"verified").unwrap();
+    let mut r=Fake::outputs(&[("job-id\n","",0)]);
+    review::cli(&mut r,&f.p,&["name".into(),"123".into(),path(facts)]).unwrap();
+    assert!(r.calls[0].args.windows(2).any(|a|a==["--model","gpt-6.1-sol"]));
+    assert!(r.calls[0].args.windows(2).any(|a|a==["--effort","max"]));
+}
+
+#[test]
+fn review_without_source_metadata_uses_the_distinct_default_without_claiming_authorship() {
+    let f = Fixture::new();
+    let facts = f.root.join("facts.txt");
+    fs::write(&facts, "verified").unwrap();
+    let mut r = Fake::outputs(&[("job-id\n", "", 0)]);
+    review::cli(&mut r, &f.p, &["name".into(), "123".into(), path(facts)]).unwrap();
+    assert!(
+        r.calls[0]
+            .args
+            .windows(2)
+            .any(|args| args == ["--model", "anthropic/claude-opus-5-5"])
+    );
+    assert!(
+        !r.calls[0]
+            .args
+            .iter()
+            .any(|arg| arg == "--review-source-jobs")
+    );
 }
 #[test]
 fn merge_pr_posts_marks_ready_and_squashes_in_order() {
@@ -3324,6 +3363,7 @@ fn merge_pr_posts_marks_ready_and_squashes_in_order() {
 #[test]
 fn failed_review_launch_never_reports_success() {
     let f = Fixture::new();
+    review_author(&f,"gpt-6.1-sol");
     let facts = f.root.join("facts.txt");
     fs::write(&facts, "検証済み").unwrap();
     let mut r = Fake::outputs(&[("partial job id", "launch denied", 7)]);
@@ -3787,6 +3827,7 @@ fn ready_scheduler_item_counts_as_competitor_and_blocks_requeued_chain() {
 #[test]
 fn review_launch_failure_or_missing_job_id_never_returns_success() {
     let f = Fixture::new();
+    review_author(&f,"gpt-6.1-sol");
     let facts = f.root.join("facts.txt");
     fs::write(&facts, "検証済み").unwrap();
     let mut rejected = Fake::outputs(&[("", "launch rejected", 17)]);

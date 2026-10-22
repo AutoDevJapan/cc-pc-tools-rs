@@ -17,7 +17,9 @@ concurrency:
 jobs:
   analyze:
     if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: [self-hosted, Linux, X64, cc-pc-tools-linux]
+    # Standard Ubuntu is free for public repositories. Missing/private metadata
+    # stays on the bounded PC runner rather than selecting billable hosting.
+    runs-on: ${{ toJSON(github.event.repository.private) == 'false' && 'ubuntu-24.04' || fromJSON('["self-hosted","Linux","X64","cc-pc-tools-linux"]') }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -32,8 +34,21 @@ jobs:
           - language: rust
             build-mode: none
     steps:
-      # The Linux runner's host admission hook checks the actual PR head and
-      # current remote branch before any repository source is checked out.
+      # PC jobs retain the host admission hook; hosted jobs make the same
+      # current-head check before any repository source is checked out.
+      - name: Admit current hosted source before checkout
+        if: runner.environment == 'github-hosted'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_REPOSITORY: ${{ github.repository }}
+          CI_BRANCH: ${{ github.head_ref || github.ref_name }}
+          CI_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          branch=$(jq -rn --arg branch "$CI_BRANCH" '$branch | @uri')
+          current=$(gh api --method GET "repos/$CI_REPOSITORY/git/ref/heads/$branch" --jq '.object.sha')
+          test "$CI_SOURCE_SHA" = "$current"
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}

@@ -261,6 +261,15 @@ pub trait Runtime: Send + Sync {
             _ => unavailable(),
         }
     }
+    /// Public account selectors and quota observations only; no credential files.
+    fn capacity_pool_sample(&self, job: &Value, at: f64) -> Value {
+        crate::pool_retry::sample(self, job, at)
+    }
+    fn capacity_model_catalog(&self, job: &Value) -> io::Result<Value> {
+        crate::pool_retry::model_catalog(self, job).ok_or_else(|| {
+            io::Error::other("native metadata for the same-model account route is unavailable")
+        })
+    }
     /// Production uses the installed redaction data. Test runtimes provide
     /// their own fixture root without modifying the owner's installed files.
     fn task_title_tools(&self) -> PathBuf {

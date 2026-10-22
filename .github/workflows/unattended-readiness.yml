@@ -63,7 +63,9 @@ jobs:
   repair-guard:
     if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: [self-hosted, Windows, X64, cc-pc-tools-windows]
-    timeout-minutes: 5
+    # Compilation plus the complete guard suite exceeded the former 5m bound
+    # even though tests, vet and build succeeded. Keep a finite job budget.
+    timeout-minutes: 10
     defaults:
       run:
         working-directory: repair-guard

@@ -13,6 +13,23 @@ struct Fixture {
     temp: tempfile::TempDir,
 }
 impl Fixture {
+    fn normal(&self, args: &[&str]) {
+        let mut c = Command::new(env!("CARGO_BIN_EXE_todo"));
+        c.args(args)
+            .env("CC_TODO_HOME", self.temp.path())
+            .env("CC_TODO_JOBS", self.temp.path().join("jobs"));
+        #[cfg(windows)]
+        {
+            use std::os::windows::process::CommandExt;
+            c.creation_flags(0x08000000);
+        }
+        let out = c.output().unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+    }
     fn new() -> Self {
         let f = Self {
             temp: tempfile::tempdir().unwrap(),
@@ -69,6 +86,9 @@ impl Fixture {
         }
     }
     fn call(&self, verify: bool) -> Output {
+        self.call_flags(verify, &[])
+    }
+    fn call_flags(&self, verify: bool, flags: &[&str]) -> Output {
         let mut c = Command::new(env!("CARGO_BIN_EXE_todo"));
         c.arg("direction-record")
             .arg("--input-file")
@@ -80,8 +100,9 @@ impl Fixture {
                 .arg(self.temp.path().join(format!("{name}-expected.json")));
         }
         if verify {
-            c.arg("--verify-only");
+            c.arg("--verify-only").arg("--check-holds");
         }
+        c.args(flags);
         c.env("CC_TODO_HOME", self.temp.path())
             .env("CC_TODO_JOBS", self.temp.path().join("jobs"))
             .env("CC_JOB_ID", "actual-worker");
@@ -216,12 +237,11 @@ fn direction_rejects_foreign_jobs_missing_assignment_and_functional_promotion() 
 
 #[test]
 fn direction_verification_rechecks_actual_note_and_preserves_new_control_state() {
-    for change in ["note", "block", "dependency", "project", "record"] {
+    for change in ["block", "dependency", "project", "record"] {
         let f = Fixture::new();
         f.ok(false);
         let mut db = f.db();
         match change {
-            "note" => db["items"][0]["note"] = json!("only a delivery reference"),
             "block" => db["items"][0]["owner_stopped"] = json!(true),
             "dependency" => db["items"][0]["wait_on"] = json!([9]),
             "project" => db["items"][0]["project"] = json!("other"),
@@ -411,4 +431,216 @@ fn direction_rejects_the_original_product_todo_as_its_distinct_actor() {
     input["actor_todo_id"] = json!("1");
     f.write("input.json", &input);
     f.reject_unchanged(false);
+}
+
+#[test]
+fn saved_direction_is_durable_after_actual_done_note_replacement() {
+    let f = Fixture::new();
+    let saved = f.ok(false);
+    f.normal(&[
+        "done",
+        "1",
+        "--note",
+        "product worker completed its own stage",
+    ]);
+    f.snapshot();
+    assert_eq!(f.ok(true)["receipt_sha256"], saved["receipt_sha256"]);
+    assert_eq!(
+        f.db()["items"][0]["note"],
+        "product worker completed its own stage"
+    );
+}
+
+#[test]
+fn actual_block_then_start_recovers_the_saved_record_without_restoring_old_note() {
+    let f = Fixture::new();
+    let saved = f.ok(false);
+    f.normal(&["done", "3"]);
+    f.normal(&["block", "1", "new owner hold"]);
+    f.snapshot();
+    let held = f.call(true);
+    assert!(!held.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&held.stderr).trim(),
+        "direction_close_held"
+    );
+    f.normal(&["start", "1"]);
+    f.snapshot();
+    assert_eq!(f.ok(true)["receipt_sha256"], saved["receipt_sha256"]);
+    assert_eq!(f.db()["items"][0]["note"], "new owner hold");
+    let immediate = f.call_flags(true, &["--verify-note"]);
+    assert!(!immediate.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&immediate.stderr).trim(),
+        "direction_note_readback_changed"
+    );
+}
+
+#[test]
+fn unchanged_numeric_work_owner_dependency_is_not_a_new_hold() {
+    let f = Fixture::new();
+    let mut db = f.db();
+    db["items"][0]["work_owner_wait_on"] = json!(3);
+    f.write("todo.json", &db);
+    f.snapshot();
+    let saved = f.ok(false);
+    f.snapshot();
+    assert_eq!(f.ok(true)["receipt_sha256"], saved["receipt_sha256"]);
+    let mut db = f.db();
+    db["items"][0]["work_owner_wait_on"] = json!(9);
+    f.write("todo.json", &db);
+    f.snapshot();
+    f.reject_unchanged(true);
+}
+
+#[test]
+fn a_new_block_is_distinct_even_if_a_block_existed_when_the_record_was_written() {
+    let f = Fixture::new();
+    f.normal(&["done", "3"]);
+    f.normal(&["block", "1", "first hold"]);
+    f.snapshot();
+    f.ok(false);
+    f.snapshot();
+    f.ok(true);
+    f.normal(&["start", "1"]);
+    f.normal(&["block", "1", "another hold"]);
+    f.snapshot();
+    f.reject_unchanged(true);
+}
+
+#[test]
+fn two_recorded_answers_on_one_existing_block_do_not_invalidate_each_other() {
+    let f = Fixture::new();
+    f.normal(&["block", "1", "existing hold is retained"]);
+    f.snapshot();
+    let first = f.ok(false);
+    let first_bytes = fs::read(f.temp.path().join("input.json")).unwrap();
+    let mut input: Value = serde_json::from_slice(&first_bytes).unwrap();
+    input["owner_reply"] = json!("same direction with a later captured version");
+    input["source_receipt_sha256"] = json!("1".repeat(64));
+    f.write("input.json", &input);
+    f.snapshot();
+    f.ok(false);
+    f.snapshot();
+    f.ok(true);
+    fs::write(f.temp.path().join("input.json"), first_bytes).unwrap();
+    assert_eq!(f.ok(true)["receipt_sha256"], first["receipt_sha256"]);
+    assert_eq!(f.db()["items"][0]["status"], "block");
+    assert_eq!(
+        f.db()["items"][0]["owner_direction_records"]
+            .as_array()
+            .unwrap()
+            .len(),
+        2
+    );
+}
+
+// Only the scheduler's actual finished-job transition is exercised. Any attempt
+// to launch, cancel, notify or consult an external process fails this test.
+struct FinishedProduct;
+impl cc_scheduler::backend::Backend for FinishedProduct {
+    fn clock(&self) -> f64 {
+        100_000.
+    }
+    fn outcome(&mut self, _: &Value) -> cc_scheduler::common::Result<String> {
+        Ok("todo".into())
+    }
+    fn measure(
+        &mut self,
+        _: &mut Value,
+    ) -> cc_scheduler::common::Result<(Value, cc_scheduler::policy::Processes)> {
+        unreachable!()
+    }
+    fn snapshot(&mut self) -> cc_scheduler::common::Result<cc_scheduler::policy::Processes> {
+        unreachable!()
+    }
+    fn jobs(&mut self) -> cc_scheduler::common::Result<Vec<Value>> {
+        unreachable!()
+    }
+    fn event_mtime(&mut self, _: &Value) -> cc_scheduler::common::Result<f64> {
+        unreachable!()
+    }
+    fn mark_lost(&mut self, _: &mut Value) -> cc_scheduler::common::Result<bool> {
+        unreachable!()
+    }
+    fn launch(
+        &mut self,
+        _: &Value,
+        _: &std::path::Path,
+        _: &Value,
+    ) -> cc_scheduler::common::Result<String> {
+        unreachable!()
+    }
+    fn cancel(&mut self, _: &mut Value) -> cc_scheduler::common::Result<bool> {
+        unreachable!()
+    }
+    fn kill_orphan(&mut self, _: &Value) -> cc_scheduler::common::Result<bool> {
+        unreachable!()
+    }
+    fn pick(&mut self, _: &str) -> cc_scheduler::common::Result<Value> {
+        unreachable!()
+    }
+    fn model_exists(&mut self, _: &str) -> bool {
+        unreachable!()
+    }
+    fn notify(&mut self, _: &Value) -> cc_scheduler::common::Result<Value> {
+        unreachable!()
+    }
+    fn reply(&mut self, _: &Value) -> cc_scheduler::common::Result<Option<Value>> {
+        unreachable!()
+    }
+    fn close_question(&mut self, _: &Value) -> cc_scheduler::common::Result<()> {
+        unreachable!()
+    }
+    fn worktree(&mut self, _: &str, _: &Value) -> cc_scheduler::common::Result<()> {
+        unreachable!()
+    }
+}
+
+#[test]
+fn actual_scheduler_finished_job_preserves_the_durable_direction_specification() {
+    let f = Fixture::new();
+    let mut db = f.db();
+    db["items"][0]["status"] = json!("doing");
+    db["items"][0].as_object_mut().unwrap().remove("wait_on");
+    db["items"][0]["scheduler"] = json!({"job":"product-worker","phase":"running"});
+    db["items"][0]["resume_generation"] = json!(1);
+    f.write("todo.json", &db);
+    f.snapshot();
+    let saved = f.ok(false);
+    let before = f.db()["items"][0].clone();
+    let mut scheduler = cc_scheduler::engine::Scheduler::new(
+        f.temp.path().join("scheduler"),
+        f.temp.path().join("todo.json"),
+        FinishedProduct,
+    )
+    .unwrap();
+    let mut jobs = vec![
+        json!({"id":"product-worker","todo_id":1,"status":"succeeded","last_message":"状態: 継続中"}),
+    ];
+    scheduler
+        .reconcile_item(
+            &before,
+            &mut jobs,
+            &Default::default(),
+            &cc_scheduler::policy::defaults(),
+        )
+        .unwrap();
+    let after = f.db();
+    assert_eq!(after["items"][0]["scheduler"]["phase"], "queued");
+    assert_eq!(after["items"][0]["scheduler"]["last_job"], "product-worker");
+    assert_eq!(
+        after["items"][0]["processed_results"]["product-worker"]["reason"],
+        "todo"
+    );
+    assert_eq!(
+        after["items"][0]["note"],
+        "作業が残っています。資源の空きを確認して自動で続けます。"
+    );
+    assert_eq!(
+        after["items"][0]["owner_direction_records"],
+        before["owner_direction_records"]
+    );
+    f.snapshot();
+    assert_eq!(f.ok(true)["receipt_sha256"], saved["receipt_sha256"]);
 }

@@ -17,6 +17,15 @@ const directionKind = "specification_direction"
 
 var errDirection = errors.New("direction specification recording deferred")
 
+type directionCheckMode int
+
+const (
+	directionWrite directionCheckMode = iota
+	directionVerify
+	directionVerifyNote
+	directionCheckHolds
+)
+
 // This is API-attested input to the canonical ToDo writer, never an applied JSON.
 // Owner text stays private. The public CLI returns only stage/receipt metadata.
 type conversationDirectionInput struct {
@@ -108,7 +117,7 @@ func findDirection(row *TodoRow, q ConversationQuestion, message, source string)
 
 // Both guarded row snapshots are passed to Rust. The guard check itself is not
 // an exemption: Rust binds project/root and both exact rows under todo.lock.
-func (r *Runner) directionCommand(ctx context.Context, q ConversationQuestion, input conversationDirectionInput, b []byte, verify bool) (conversationDirectionResult, error) {
+func (r *Runner) directionCommand(ctx context.Context, q ConversationQuestion, input conversationDirectionInput, b []byte, mode directionCheckMode) (conversationDirectionResult, error) {
 	var zero conversationDirectionResult
 	actorID, ok := number(input.ActorTodo)
 	if !ok || !validJob(input.Job) {
@@ -130,19 +139,25 @@ func (r *Runner) directionCommand(ctx context.Context, q ConversationQuestion, i
 		}
 		args = append(args, "--"+selected.name+"-scope-file", base+"-scope.json", "--"+selected.name+"-state-file", base+"-state.json")
 	}
-	if verify {
+	if mode != directionWrite {
 		args = append(args, "--verify-only")
+	}
+	if mode == directionVerifyNote {
+		args = append(args, "--verify-note")
+	}
+	if mode == directionCheckHolds {
+		args = append(args, "--check-holds")
 	}
 	raw, err := r.Run(ctx, conversationTodo, args...)
 	var result conversationDirectionResult
 	if err != nil || json.Unmarshal([]byte(raw), &result) != nil || result.Domain != "todo-direction-record-v1" || result.Kind != directionKind ||
-		!result.Recorded || result.InputSHA != bytesHash(b) || !shaPattern.MatchString(result.ReceiptSHA) || (verify && result.Changed) {
+		!result.Recorded || result.InputSHA != bytesHash(b) || !shaPattern.MatchString(result.ReceiptSHA) || (mode != directionWrite && result.Changed) {
 		return zero, errDirection
 	}
 	return result, nil
 }
 
-func (r *Runner) conversationDirectionCheck(ctx context.Context, q ConversationQuestion, message, inputSHA string) (conversationDirectionResult, error) {
+func (r *Runner) conversationDirectionCheck(ctx context.Context, q ConversationQuestion, message, inputSHA string, mode directionCheckMode) (conversationDirectionResult, error) {
 	var zero conversationDirectionResult
 	if !shaPattern.MatchString(inputSHA) {
 		return zero, errDirection
@@ -151,7 +166,7 @@ func (r *Runner) conversationDirectionCheck(ctx context.Context, q ConversationQ
 	if err != nil || bytesHash(b) != inputSHA || input.RequestID != q.RequestID || input.Message != message {
 		return zero, errDirection
 	}
-	return r.directionCommand(ctx, q, input, b, true)
+	return r.directionCommand(ctx, q, input, b, mode)
 }
 func (r *Runner) conversationDirectionApplied(ctx context.Context, q ConversationQuestion, proof *conversationProof, reply conversationReply, row *TodoRow, stamp conversationCloseStamp) (conversationCloseStamp, bool, error) {
 	record, err := findDirection(row, q, reply.Message, stamp.SourceSHA)
@@ -168,7 +183,7 @@ func (r *Runner) conversationDirectionApplied(ctx context.Context, q Conversatio
 		input != directionInput(q, proof, reply, req, stamp.SourceSHA, actor, input.Job, input.Revision) {
 		return stamp, false, errDirection
 	}
-	result, err := r.directionCommand(ctx, q, input, b, true)
+	result, err := r.directionCommand(ctx, q, input, b, directionVerify)
 	if err != nil {
 		return stamp, false, err
 	}
@@ -234,11 +249,11 @@ func (r *Runner) conversationDirectionRecord(ctx context.Context, opts conversat
 		if safeText(string(b), r.Token) != string(b) || writeConversationOnce(directionFile(r, q, opts.Message, bytesHash(b)), b) != nil {
 			return nil, errDirection
 		}
-		result, err = r.directionCommand(ctx, q, input, b, false)
+		result, err = r.directionCommand(ctx, q, input, b, directionWrite)
 		if err != nil {
 			return nil, errDirection
 		}
-		readback, err := r.conversationDirectionCheck(ctx, q, opts.Message, result.InputSHA)
+		readback, err := r.conversationDirectionCheck(ctx, q, opts.Message, result.InputSHA, directionVerifyNote)
 		if err != nil || readback.ReceiptSHA != result.ReceiptSHA {
 			return nil, errDirection
 		}

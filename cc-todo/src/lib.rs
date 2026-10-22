@@ -167,6 +167,12 @@ pub enum Command {
         actor_state_file: PathBuf,
         #[arg(long)]
         verify_only: bool,
+        /// Immediately check the note written by this invocation, not later task notes.
+        #[arg(long, requires = "verify_only")]
+        verify_note: bool,
+        /// Check new task holds before first closing this answer version.
+        #[arg(long, requires = "verify_only")]
+        check_holds: bool,
     },
     /// Preserve selected old notes in immutable segments; preview unless --apply.
     ArchiveHistory {
@@ -1258,6 +1264,8 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             actor_scope_file,
             actor_state_file,
             verify_only,
+            verify_note,
+            check_holds,
         } => output.push(
             direction_record::record(
                 db,
@@ -1267,7 +1275,11 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 origin_state_file,
                 actor_scope_file,
                 actor_state_file,
-                *verify_only,
+                direction_record::Readback {
+                    verify: *verify_only,
+                    note: *verify_note,
+                    holds: *check_holds,
+                },
             )?
             .to_string(),
         ),

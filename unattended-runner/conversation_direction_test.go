@@ -257,6 +257,13 @@ func TestDirectionActualCLIAllCurrentRepliesMustBeRecordedBeforeArchive(t *testi
 	if code, result := directionCLI(t, f, opts); code != 0 || result["recorded"] != true || result["question_closed_get_verified"] != false || f.archived {
 		t.Fatal("one recorded direction closed a question with an unrecorded current answer")
 	}
+	stageNote := filepath.Join(f.r.Config.Home, "next-product-stage-note.txt")
+	if os.WriteFile(stageNote, []byte("作業が残っています。資源の空きを確認して自動で続けます。"), 0600) != nil {
+		t.Fatal("stage-note fixture unavailable")
+	}
+	if _, err := f.r.Run(context.Background(), conversationTodo, "edit", "42", "--note-file", stageNote); err != nil {
+		t.Fatal(err)
+	}
 	source, err := os.ReadFile(filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", second.Message+".json"))
 	if err != nil {
 		t.Fatal(err)
@@ -361,5 +368,63 @@ func TestDirectionLostResponseResumesAfterNormalWorkTransitionAndLaterTick(t *te
 	f.r.processConversations(context.Background(), &h)
 	if len(h.Errors) != 0 || f.close != 1 {
 		t.Fatalf("later tick invalidated recorded direction: %v", h.Errors)
+	}
+}
+
+func TestDirectionVerifiedCloseSurvivesNormalDoneAndLaterBlockNotes(t *testing.T) {
+	for _, command := range [][]string{{"done", "42", "--note", "product stage completed"}, {"block", "42", "a new independent owner hold"}} {
+		t.Run(command[0], func(t *testing.T) {
+			f, opts := directionNative(t)
+			if code, _ := directionCLI(t, f, opts); code != 0 {
+				t.Fatal("direction fixture did not close")
+			}
+			if _, err := f.r.Run(context.Background(), conversationTodo, command...); err != nil {
+				t.Fatal(err)
+			}
+			before, _ := os.ReadFile(f.r.TodoPath)
+			h := Health{}
+			f.r.processConversations(context.Background(), &h)
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if len(h.Errors) != 0 || f.close != 1 || !bytes.Equal(before, after) {
+				t.Fatalf("completed question was invalidated by ordinary note replacement: %v", h.Errors)
+			}
+		})
+	}
+}
+
+func TestDirectionLostWriteResponseRecoversAfterActualBlockAndStart(t *testing.T) {
+	f, opts := directionNative(t)
+	backend := f.r.Run
+	lost := false
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		out, err := backend(ctx, path, args...)
+		if path == conversationTodo && args[0] == "direction-record" && !lost && err == nil {
+			lost = true
+			return "", errors.New("lost saved reply")
+		}
+		return out, err
+	}
+	if code, _ := directionCLI(t, f, opts); code == 0 || !lost {
+		t.Fatal("lost-save fixture did not execute")
+	}
+	f.r.Run = backend
+	for _, args := range [][]string{{"done", "44"}, {"block", "42", "new owner hold"}} {
+		if _, err := backend(context.Background(), conversationTodo, args...); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if code, result := directionCLI(t, f, opts); code != 0 || result["recorded"] != true || result["question_closed_get_verified"] != false || f.archived {
+		t.Fatal("new hold undid durable recording or closed first-time question")
+	}
+	if _, err := backend(context.Background(), conversationTodo, "start", "42"); err != nil {
+		t.Fatal(err)
+	}
+	f.r.NoticeAttempted = false
+	if code, result := directionCLI(t, f, opts); code != 0 || result["changed"] != false || result["question_closed_get_verified"] != true {
+		t.Fatal("actual block/start left the question permanently unclosable")
+	}
+	row, _ := f.r.todo(42)
+	if row.Note != "new owner hold" || len(row.DirectionRecords) != 1 {
+		t.Fatal("recovery restored an old note or duplicated durable specification")
 	}
 }

@@ -2,6 +2,51 @@
 
 関連Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/325
 
+## 2026-10-23 06:32 JST：通常のメモ置換後も仕様記録を保持
+
+追加レビュー3370（job `20261023-055240-todo-3370`）は読取だけを正常完了しました。
+固定差分d3f668e6..b841d42fを実読し、無通知進捗の受領票保持は解消と確認する一方、
+通常のjob終了/block/start/doneが元noteを置換すると方向記録の確認が止まるMust1件を返しました。
+原応答は `todo3190-review3370-and-own-20261023-061940-todo-3190.private.json` に保持しています。
+正常jobs出力の対応する `execution_observed.source=native_turn_context` で、3370は
+anthropic/claude-opus-5-5/max、自分のjob `20261023-061940-todo-3190` はgpt-6.1-sol/maxと
+照合しました。観測票は `todo3190-runtime-observation-20261023-061940-todo-3190.private.json` です。
+
+同じ領域の指摘が続いたため、読戻しの役割を分けました。原子的な保存では元noteへの
+実追記と、本文を持つ `owner_direction_records` を同時に残します。書込み直後は正常CLIの
+verify-noteでnoteの実体を確認し、その後は永続記録・原入力/source・実actor/job/prompt・
+両project/rootを照合します。通常のメモ置換で仕様の事実を失わず、古いメモも復元しません。
+初回の質問終了だけはcheck-holdsで新しい停止や依存を保留し、解除後に同じ票で再開します。
+archive GET確認済みの同一proofと票集合は、後続の新しい作業状態で失敗に戻しません。
+新規/編集された返信、sourceや票の変更は初回の終了検証に戻し、API/全返信とscope確認を保ちます。
+
+Suggestionも修正しました。work_owner_wait_onの正規の数値を受け付け、既存blockを世代・
+question・停止理由の本文hashで識別します。方向票の正確な追記だけを停止理由の比較から除き、
+同じ元ToDoへの2件目の方向記録を新blockと誤認しません。改ざん/未保存と一時的保留を
+別の終了コード（record_mismatch/note_readback_changed/close_held）に分けました。
+
+実際のRust CLIのdoneによるメモ置換と、Go巡回のclosed後のdone/blockでRedを確認し、
+修正後に成功しました。Rustの正常block→start、2件目までの間の正常note編集、応答喪失からの
+再開、既存blockの再停止識別、数値依存、実際のScheduler::reconcile_itemのjob終了も検査しました。
+Scheduler検査は最初、継続結果のphaseをfinishedと誤って期待して失敗しました。実装は正常に
+queuedへ戻していたため、実際の継続仕様に合わせ、last_jobとprocessed_resultsも照合しました。
+製品実装を検査へ合わせて変更していません。
+
+検査はcc-todoのdirection_record/conversation_wait/parityの95件が成功しました。
+初回の途中結果43件の成功を再利用し、失敗した1件と未実行51件だけを再実行して52件成功を
+確認しました。原出力は `todo3190-review3370-rust-scope.private.log` と
+`todo3190-review3370-rust-remaining.private.log`、除外式も私的票に保存しています。
+最新Rust実行物を指定したGo全module raceは83.659秒で成功、vetも成功しました。
+cc-todo doc成功（対象0件）、差分/書式検査も成功です。原出力は同じreview3370名の私的logです。
+GPU・Civ6・外部サービスを起動せず、Schedulerの外部副作用は検査用backendで禁止しています。
+
+PR376のb841d42fは全自動検査SUCCESS15/SKIPPED1でしたが、この新しい修正候補の結果へ
+流用しません。実回答の書込み、質問close、merge、配布は未実施です。今回の候補を保存し、
+追加差分の別モデルMax確認を共有ToDoへ登録して元3190の正常完了待ちを保持します。
+レビュー後は同headのCI、通常merge、最新共有runtime/RustCLIの来歴とhash・並行修正の照合、
+通常配布、2件のfresh API/source再照合、実仕様記録/読戻し、質問終了GETを続けます。
+本人のPC操作や新しい質問/メンションは不要です。元3050/3084/他停止・依存・未完コードPrdは保持します。
+
 ## 2026-10-23 04:20 JST：別モデル指摘2件を修正
 
 元3348の読取レビューが完了しました。実jobは `20261023-034451-todo-3348`、

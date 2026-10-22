@@ -377,10 +377,14 @@ func (r *Runner) conversationClosePATCH(ctx context.Context, q ConversationQuest
 	return nil
 }
 
-func (r *Runner) conversationCloseFilesUnchanged(ctx context.Context, q ConversationQuestion, stamps map[string]conversationCloseStamp) bool {
+func (r *Runner) conversationCloseFilesUnchanged(ctx context.Context, q ConversationQuestion, stamps map[string]conversationCloseStamp, checkHolds bool) bool {
 	for id, stamp := range stamps {
 		if stamp.DirectionSHA != "" {
-			result, err := r.conversationDirectionCheck(ctx, q, id, stamp.DirectionInputSHA)
+			mode := directionVerify
+			if checkHolds {
+				mode = directionCheckHolds
+			}
+			result, err := r.conversationDirectionCheck(ctx, q, id, stamp.DirectionInputSHA, mode)
 			if err != nil || result.ReceiptSHA != stamp.DirectionSHA {
 				return false
 			}
@@ -462,6 +466,11 @@ func (r *Runner) closeConversation(ctx context.Context, q ConversationQuestion, 
 	if !all || freshProof != initialProof || canonicalHash(freshStamps) != canonicalHash(stamps) {
 		return false, worker.conversationCloseSave(path, record, "pending", freshProof, freshStamps)
 	}
+	// New holds govern first close of this exact proof/receipt set. Later work
+	// cannot undo an already verified archive; current replies/API/record hashes
+	// still have to match. A new or edited reply starts a new close verification.
+	checkHolds := record.Phase != "verified" || record.VerifiedAt == "" || record.ProofSHA != initialProof ||
+		record.VerifiedScope != scope || canonicalHash(record.Replies) != canonicalHash(stamps)
 	archived, err := worker.conversationCloseThreadGET(ctx, q)
 	if err != nil {
 		return false, err
@@ -471,7 +480,7 @@ func (r *Runner) closeConversation(ctx context.Context, q ConversationQuestion, 
 			return false, worker.conversationCloseSave(path, record, "reopened", initialProof, stamps)
 		}
 	}
-	if !worker.conversationCloseFilesUnchanged(ctx, q, stamps) {
+	if !worker.conversationCloseFilesUnchanged(ctx, q, stamps, checkHolds) {
 		return false, worker.conversationCloseSave(path, record, "pending", initialProof, stamps)
 	}
 	if !archived {
@@ -504,7 +513,7 @@ func (r *Runner) closeConversation(ctx context.Context, q ConversationQuestion, 
 	if err != nil {
 		return false, err
 	}
-	if !archived || !worker.conversationCloseFilesUnchanged(ctx, q, stamps) {
+	if !archived || !worker.conversationCloseFilesUnchanged(ctx, q, stamps, checkHolds) {
 		return false, worker.conversationCloseSave(path, record, "pending", initialProof, stamps)
 	}
 	if record.VerifiedAt == "" {

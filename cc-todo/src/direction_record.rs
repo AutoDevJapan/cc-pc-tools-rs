@@ -10,6 +10,12 @@ const INPUT: &str = "discord-conversation-direction-v1";
 const RECEIPT: &str = "todo-direction-record-v1";
 const KIND: &str = "specification_direction";
 const RECORDS: &str = "owner_direction_records";
+#[derive(Default)]
+pub struct Readback {
+    pub verify: bool,
+    pub note: bool,
+    pub holds: bool,
+}
 const FIELDS: &[&str] = &[
     "domain",
     "kind",
@@ -82,7 +88,8 @@ const HOLD_FIELDS: &[&str] = &[
     "external_resume_condition",
 ];
 fn holds(row: &Value) -> Value {
-    let mut value = json!({"blocked":row["status"]=="block"});
+    let mut value = json!({"blocked":row["status"]=="block","block_generation":row["resume_generation"],
+        "block_question":row["scheduler"]["question"],"block_note_sha256":sha(block_note(row).as_bytes())});
     for k in HOLD_FIELDS
         .iter()
         .chain(["wait_on", "work_owner_wait_on"].iter())
@@ -91,10 +98,31 @@ fn holds(row: &Value) -> Value {
     }
     value
 }
+fn block_note(row: &Value) -> String {
+    let mut note = text(row, "note").to_string();
+    // Two recordings in one original task must not reinterpret each other's
+    // append as a new block. Remove only exact canonical direction additions.
+    if let Some(records) = row[RECORDS].as_array() {
+        for receipt in records.iter().rev() {
+            let block = text(receipt, "note_block");
+            if !block.is_empty() {
+                note = note.replacen(&format!("\n\n{block}"), "", 1);
+            }
+        }
+    }
+    note
+}
 fn no_new_holds(saved: &Value, row: &Value) -> bool {
     if !saved.is_object()
         || row["status"] == "recovery_unverified"
         || (row["status"] == "block" && saved["blocked"] != true)
+    {
+        return false;
+    }
+    if row["status"] == "block"
+        && (saved["block_generation"] != row["resume_generation"]
+            || saved["block_question"] != row["scheduler"]["question"]
+            || saved["block_note_sha256"] != sha(block_note(row).as_bytes()))
     {
         return false;
     }
@@ -106,6 +134,13 @@ fn no_new_holds(saved: &Value, row: &Value) -> bool {
     }
     for k in ["wait_on", "work_owner_wait_on"] {
         if row[k].is_null() {
+            continue;
+        }
+        // Work-owner dependencies use one numeric ID, unlike wait_on's array.
+        if k == "work_owner_wait_on" && row[k].as_i64().is_some_and(|n| n > 0) {
+            if row[k] != saved[k] {
+                return false;
+            }
             continue;
         }
         let Some(current) = row[k].as_array() else {
@@ -338,7 +373,7 @@ pub fn record(
     origin_state: &Path,
     actor_scope: &Path,
     actor_state: &Path,
-    verify: bool,
+    readback: Readback,
 ) -> Result<Value> {
     let bytes = bridge::bytes(input_file)?;
     let input: Value = serde_json::from_slice(&bytes).map_err(|_| "direction_input_invalid")?;
@@ -386,15 +421,20 @@ pub fn record(
             || !recorded_actor_matches(paths, row(db, actor_id)?, &input, &saved["actor"])?
             || saved["actor_scope"] != actor_scope
             || saved["origin_scope"] != origin_scope
-            || !no_new_holds(&saved["origin_holds"], origin)
             || saved["note_block_sha256"] != sha(append.as_bytes())
-            || text(origin, "note").matches(&append).count() != 1
+            || saved["note_block"] != append
         {
             return fail("record_mismatch");
         }
+        if readback.note && text(origin, "note").matches(&append).count() != 1 {
+            return fail("note_readback_changed");
+        }
+        if readback.holds && !no_new_holds(&saved["origin_holds"], origin) {
+            return fail("close_held");
+        }
         saved.clone()
     } else {
-        if verify
+        if readback.verify
             || !matched.is_empty()
             || !matches!(text(origin, "status"), "todo" | "doing" | "wait" | "block")
         {
@@ -411,7 +451,8 @@ pub fn record(
         }
         let receipt = json!({"domain":RECEIPT,"kind":KIND,"input":input,"input_sha256":input_sha,
             "actor":actor,"actor_scope":actor_scope,"origin_scope":origin_scope,
-            "origin_holds":holds(origin),"note_block_sha256":sha(append.as_bytes()),
+            "origin_holds":holds(origin),"note_block":append,"note_block_sha256":sha(append.as_bytes()),
+            "note_after_sha256":sha(next.as_bytes()),
             "recorded_at":Utc::now().to_rfc3339()});
         let mut changed = origin.clone();
         if changed.get("note_history").is_some_and(|v| !v.is_array()) {

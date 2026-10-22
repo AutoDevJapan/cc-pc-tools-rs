@@ -26,24 +26,34 @@ Rustの `direction-record` は元のnoteを保持して、元質問と本人回�
 区別する。原文と担当の説明を混ぜず、機能未完了・画像承認ではない旨を付ける。
 
 同じ原子的な保存で、元行に `owner_direction_records` を作る。記録にはactor、origin、
-destination、scopeと追記bytesのhashを保持する。正常な読戻しはその記録とnoteの
-実内容を照合する。行の状態・job・依存・停止・進み具合・元specは変更しない。
+destination、scope、仕様追記の本文とbytesのhashを保持する。書込み直後は
+`--verify-only --verify-note` で記録とnoteの実内容を照合する。
+行の状態・job・依存・停止・進み具合・元specは変更しない。
 応答を失った場合は既存記録を読戻し、追記や履歴を重複作成しない。
 
 行全体の一致は書込み時のCAS条件とし、保存済みの事実を通常の担当交代・spec更新・
-依存解消・jobの終了や後日のキャンセルで無効にしない。読戻しでは元記録の入力と
-本文block、保存した両project/root、実jobのToDo所属・cwdと元promptのhashを照合する。
-新しい元作業の停止（blockへの変更、停止/判断待ち条件の追加変更）や依存先の追加が
-あれば質問終了を保留する。停止の解除や既存依存の解消は記録を無効にせず、解除後に
-同じ記録で再開できる。保存元のspec hashは記録時の証拠として保持する。
+依存解消・jobの終了や後日のキャンセルで無効にしない。その後の読戻しは
+`owner_direction_records` の元入力・仕様追記の本文/hash、保存した両project/root、
+実jobのToDo所属・cwdと元promptのhashを照合する。通常のjob終了、block/start、doneや
+editで現在のnoteが置き換わっても、原子的に保存した仕様追記と実担当の事実を保つ。
+再開時に古いnoteを復元しない。保存元specのhashは記録時の証拠として保持する。
+
+最初にその回答版の質問を閉じる時は `--check-holds` も付け、元作業の新しい停止
+（blockへの変更、停止/判断待ち条件の追加変更）や依存先の追加があれば保留する。
+停止の解除や既存依存の解消後は同じ記録で再開する。work_owner_wait_onは数値を保つ。
+既存blockはresume_generation・scheduler.question・停止理由の本文hashで識別し、
+正常な方向記録の追記だけを本文hashから除く。同じ元作業への2件目の記録は新blockではない。
 
 ## 終了の検証
 
 通常の機能applied票の元担当job条件は保持する。方向の票は別kindとし、
-実際に保存された元ToDoの記録とnoteを再照合した場合だけ質問終了に使う。
+実際に保存された元ToDoの方向記録を再照合した場合だけ質問終了に使う。
 方向の票をapplied JSONへコピーしても通常の機能反映として受け付けない。
 fresh API、全返信、現在の返信/source SHA、終了前後の再確認、archive PATCHの
 応答喪失からのGETによる再開を維持する。
+既にarchive GETを確認した同一proof・同一受領票集合では、後続作業の停止を
+過去の質問終了の失敗へ変更しない。API、返信編集版、source、方向記録、project/rootは
+引き続き再照合する。新規/編集された返信や受領票の変更は初回の終了検証として扱う。
 
 進捗は既存の別の無通知投稿へ「仕様へ記録、機能は未完了」と報告する。
 質問本文と本人回答は編集・削除しない。元ToDoや依存先をdoneにしない。

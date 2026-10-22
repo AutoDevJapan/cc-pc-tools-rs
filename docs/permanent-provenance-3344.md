@@ -109,3 +109,22 @@ source/sourceInputsのハードリンクとjunctionの負例も追加した。
 追跡差分を確認する。実assetのSHAは元の全バイトを要求する。session内の同じrootは
 最初と最後に検査し、最後には全ての原receipt/candidate/targetのhandleを保持する。
 この追加を含む最終A2/B2を生成し、必要な追加レビューとCIを確認してから配布する。
+
+実A2は固定00e47e1c、SHA a9213277d0d8f2c4dfdf9c9366cbc5caaa4252f97882d72aa997577111395623。
+その原build receiptはSHA50f9d8adc3eb8e4650f1462f88092a16d98846b9ae3ed7df93713ef69a6edb76。
+実B2は固定eeafa472から生成した別readerで、A2との差分はその資格pinだけ。
+A2の固定sourceを明記した関連guard全体は410合格・既存1省略、244.53秒、vet成功。
+元Tempや旧worktreeを実際に破壊して試していない。A2の実分類で56件を再受入し、
+旧画像と保留2fixtureが拒否のままであることも配布後に確認する。
+
+配布手順の既存copyは、同じ元byteであることを確認できた場合だけ再利用する。
+新guardで保持3実行物と新JPEGを通常分類する比較も配布前に実行する。
+旧backupは上書きせず、既存の復旧記録があれば照合してから続行する。
+この検証のみの実行は成功したが、Applyの実完了ではない。
+
+原captureのnativeファイルは当該実tool記録として配送・読み返しまで保持する。
+証拠JSONは常設mirrorの`.provenance-omb/record-3344.private.json`、SHAは
+e8cd963f4a766867314eb4c00d88de4b14380d96728cd69ee65c9b1838846352。
+新JPEGを今後再送する場合も、この原記録と元byteの検査が必要である。
+途中書込み失敗時の画像の自動復旧は未実装だが、今回の新規保存とSHA読返しは成功済み。
+この一般化を今回の正常配送の達成条件と混同しない。

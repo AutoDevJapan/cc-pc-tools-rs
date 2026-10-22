@@ -3,13 +3,13 @@
 param([switch]$Apply)
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
-$reader = 'D:/CC/RuntimeSources/todo-3344/4cd89bd2a88ad8eb1c2ae11fe7ca78f0356088a1/guard-reader.private.exe'
-$readerSHA = '4cfe5635749c5938feced30f13971da56d7ad7ee50e3d2731fa55193e5623871'
+$reader = 'D:/CC/RuntimeSources/todo-3344/eeafa472c6a71cfe299a1616c243c80b82832bb4/guard-reader.private.exe'
+$readerSHA = 'defd489384c4cb1f15724c2173439e38c07a49426584182d57bc18d3e6317d64'
 $stage = 'D:/CC/RuntimeSources/todo-3344/deployment-377'
 $guardTarget = 'D:/CC/Tools/client-records/scrub391.exe'
 $journal = "$stage/deployment-3344.private.jsonl"
 $changes = @(
-    @{kind='guard';target=$guardTarget;source='D:/CC/RuntimeSources/todo-3344/b4872860870e6832be851d630b2fd4035922a80c/guard-artifact.private.exe';old='e99f7cdc857705705871df42aa4cc159e5451df2a958076169425692ad456dc8';new='a9cb1c42b801972df4c8dad2f4bc23cafd144e80291f1040a28ad4eda3e16c23';head='b4872860870e6832be851d630b2fd4035922a80c'}
+    @{kind='guard';target=$guardTarget;source='D:/CC/RuntimeSources/todo-3344/00e47e1cc5f8bd7d1d3c7af8cce4e3c04f36102a/guard-artifact.private.exe';old='e99f7cdc857705705871df42aa4cc159e5451df2a958076169425692ad456dc8';new='a9213277d0d8f2c4dfdf9c9366cbc5caaa4252f97882d72aa997577111395623';head='00e47e1cc5f8bd7d1d3c7af8cce4e3c04f36102a'}
 )
 $retain = @(
     @{target='D:/CC/Tools/codex-jobs/codex_jobs.exe';sha='85beac9a785971e15d452a293c4f5c9d17f5133ef4fac00965dfcf0bd297a71f'},
@@ -70,6 +70,12 @@ foreach ($item in $retain) {
     if ($q.client_resource -ne $false -or $q.classification_unverified -ne $false -or (Digest $item.target) -ne $item.sha) { throw 'Retained runtime changed' }
 }
 foreach ($item in $changes) { [void](Qualify $item) }
+# Compare the exact staged engine through the ordinary consumer interface.
+# This is read-only and also runs in the default validation mode.
+foreach ($path in @($retain.target) + @('D:/OMB/evidence/omb-runtime-3344.jpg')) {
+    $q = (Hidden $changes[0].source @('--guard-path', $path)) | ConvertFrom-Json
+    if ($q.ok -ne $true -or $q.client_resource -ne $false -or $q.classification_unverified -ne $false) { throw 'Staged normal classification changed' }
+}
 if (-not $Apply) { @{validated=$true;applied=$false;replacements=1;retained_runtimes=3;todo_preserved='3153 independently deployed source0a7070b5, sha4b351db6; not re-read or replaced here'} | ConvertTo-Json -Compress; exit 0 }
 $lockPath = 'D:/CC/Tools/scheduler/scheduler.lock'
 Plain $lockPath
@@ -90,8 +96,14 @@ try {
         $name = [IO.Path]::GetFileName($item.target)
         $copy = "$stage/3344-install-$name"
         $backup = "$stage/3344-before-$name"
-        if ((Test-Path -LiteralPath $copy) -or (Test-Path -LiteralPath $backup)) { throw 'Prior install files need reconciliation; no overwrite' }
-        [IO.File]::Copy($item.source, $copy, $false)
+        if (Test-Path -LiteralPath $backup) { throw 'Prior backup needs reconciliation; no overwrite' }
+        if (Test-Path -LiteralPath $copy) {
+            Plain $copy
+            if ((Digest $copy) -ne $item.new) { throw 'Prior staged bytes need reconciliation; no overwrite' }
+            Record 'reused-verified-copy' @{kind=$item.kind;sha256=$item.new;path=$copy}
+        } else {
+            [IO.File]::Copy($item.source, $copy, $false)
+        }
         Plain $copy
         $acl = Get-Acl -LiteralPath $item.target
         Set-Acl -LiteralPath $copy -AclObject $acl

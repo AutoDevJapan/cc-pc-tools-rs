@@ -101,6 +101,9 @@ type Request struct {
 	PriorEdits     []EditVersion   `json:"prior_edits,omitempty"`
 	Origin         *ProgressOrigin `json:"origin,omitempty"`
 	Conversation   string          `json:"conversation_request_id,omitempty"`
+	// An intake-index recovery never proves a delivery, including after restart.
+	ConversationSourceRecovered bool   `json:"conversation_source_recovered,omitempty"`
+	ConversationRecoveryNote    string `json:"conversation_recovery_note,omitempty"`
 }
 type State struct {
 	Domain                   string                         `json:"domain"`
@@ -827,6 +830,9 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "history-attachment" {
+		os.Exit(historyAttachmentCLI(os.Args[2:], os.Stdout))
+	}
 	if len(os.Args) > 1 && os.Args[1] == "agent-result" {
 		os.Exit(agentResultCLI(os.Args[2:], os.Stdout))
 	}

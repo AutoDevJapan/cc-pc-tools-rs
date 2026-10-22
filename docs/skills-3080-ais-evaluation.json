@@ -98,7 +98,7 @@
       "body_coverage": "異なる7本文を全文確認し、5個の同本文mirrorをSHAと全バイトで照合。",
       "candidate_disposition": "possible_new_workflow_pending_support_review",
       "reason": "指定保管庫を正確な明示リンクと分類で可視化する独立用途は有用。同じ球状UIを即実装する契約や全private記憶読取は採用しない。",
-      "required_changes": "portable-spec/config/acceptance/renderer/adapterと依存noticeは未読。先に限定補助を調べ、見た目は画像をDiscordへ直接提示して本人回答後だけ実装。new常用コードはGo既定、承認済みWindowsブラウザと仮想入力を使う。未承認のapp起動/Node/npm/install/類似private探索をしない。",
+      "required_changes": "portable-spec/config/acceptance/renderer/adapterと依存noticeは未読。先に限定補助を調べ、見た目は画像をDiscordへ直接提示して本人回答後だけ実装。new常用コードはGo既定、承認済みWindowsブラウザと仮想入力を使う。未承認のapp起動/Node/npm/install/類似private探索をしない。 起動はnpm/サーバーを伴うため、明示限定と狭い暗黙発見を別途比較する。linkの判断を流用しない。",
       "same_content_paths": [
         ".agents/skills/3d-brain/SKILL.md",
         ".claude/skills/3d-brain/SKILL.md"
@@ -207,7 +207,7 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": true,
-      "authored_plan": "skills-3080-batch07.json;2出典パス/同本文に対して1候補、未配置"
+      "authored_plan": "skills-3080-batch07.jsonの新候補1件は配置前修正済み、まだ未配置。independent_review_completeは元本文/評価の3249確認を指し、派生候補や実配置の受入印ではない。"
     },
     {
       "inventory_id": "github:15771b8593ea6d4719d91e9e03db32e523416e3fcf593a082c365c047a0e2b7a",
@@ -248,7 +248,7 @@
       "body_coverage": "異なる7本文を全文確認し、5個の同本文mirrorをSHAと全バイトで照合。",
       "candidate_disposition": "possible_new_workflow_pending_support_review",
       "reason": "指定保管庫を正確な明示リンクと分類で可視化する独立用途は有用。同じ球状UIを即実装する契約や全private記憶読取は採用しない。",
-      "required_changes": "portable-spec/config/acceptance/renderer/adapterと依存noticeは未読。先に限定補助を調べ、見た目は画像をDiscordへ直接提示して本人回答後だけ実装。new常用コードはGo既定、承認済みWindowsブラウザと仮想入力を使う。未承認のapp起動/Node/npm/install/類似private探索をしない。",
+      "required_changes": "portable-spec/config/acceptance/renderer/adapterと依存noticeは未読。先に限定補助を調べ、見た目は画像をDiscordへ直接提示して本人回答後だけ実装。new常用コードはGo既定、承認済みWindowsブラウザと仮想入力を使う。未承認のapp起動/Node/npm/install/類似private探索をしない。 起動はnpm/サーバーを伴うため、明示限定と狭い暗黙発見を別途比較する。linkの判断を流用しない。",
       "same_content_paths": [
         ".agents/skills/3d-brain/SKILL.md",
         ".claude/skills/3d-brain/SKILL.md"
@@ -357,7 +357,7 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": true,
-      "authored_plan": "skills-3080-batch07.json;2出典パス/同本文に対して1候補、未配置"
+      "authored_plan": "skills-3080-batch07.jsonの新候補1件は配置前修正済み、まだ未配置。independent_review_completeは元本文/評価の3249確認を指し、派生候補や実配置の受入印ではない。"
     },
     {
       "inventory_id": "github:a9be3dc1687e4cf91d2793102ff73fd8205f778a00c3405968309476decbb4fb",

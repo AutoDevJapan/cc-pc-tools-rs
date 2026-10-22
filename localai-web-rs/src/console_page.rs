@@ -2,10 +2,9 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
-// Keep the currently deployed page while backend identification is repaired.
-// index.html retains the separate candidate tracked by ToDo3084; it is not the
-// Prd asset until the owner has confirmed that visual scope.
-const INDEX: &str = include_str!("index_prd.html");
+// The reviewed repair restores existing functionality. Only the Systems panel
+// adds the owner's explicitly approved v2 layout (question ToDo3145).
+const INDEX: &str = include_str!("index.html");
 const MUSIC_SLOT: &str = "<!-- console-music-view -->";
 
 /// Authorize only compiled Console scripts, never scripts from broker/user
@@ -19,6 +18,7 @@ pub fn music_script_policy(policy: &str) -> String {
             INDEX,
             include_str!("workload.html"),
             include_str!("console_shell.html"),
+            include_str!("resources.html"),
         ]
         .into_iter()
         .flat_map(|html| scripts.captures_iter(html))
@@ -101,7 +101,11 @@ pub fn index() -> String {
 fn render(html: String) -> String {
     crate::console_ui::decorate_html(&html.replace(
         "</body>",
-        &format!("{}\n</body>", include_str!("workload.html")),
+        &format!(
+            "{}\n{}\n</body>",
+            include_str!("workload.html"),
+            include_str!("resources.html")
+        ),
     ))
 }
 
@@ -117,6 +121,9 @@ pub fn music(html: &str) -> Option<String> {
         Regex::new(r"(?is)<style\b([^>]*)>(.*?)</style\s*>|<script\b[^>]*>.*?</script\s*>").unwrap()
     });
     let body = BODY.captures(html)?.get(1)?.as_str();
+    static DUPLICATE_NAV: LazyLock<Regex> =
+        LazyLock::new(|| Regex::new(r#"(?is)<a\b[^>]*>\s*Consoleに戻る\s*</a>"#).unwrap());
+    let body = DUPLICATE_NAV.replace_all(body, "");
     let mut assets = String::new();
     if let Some(head) = HEAD.captures(html).and_then(|capture| capture.get(1)) {
         for asset in ASSETS.captures_iter(head.as_str()) {
@@ -132,7 +139,7 @@ pub fn music(html: &str) -> Option<String> {
         }
     }
     let section = format!(
-        "<section id=\"view-music\" class=\"view active\" data-music-loaded=\"true\" aria-label=\"音楽制作 · Suno\">{assets}<p class=\"console-music-note\">下書き・曲候補の選択を扱います。MVと投稿は未接続です。</p><div class=\"console-music-body\">{body}</div></section>"
+        "<section id=\"view-music\" class=\"view active\" data-music-loaded=\"true\" aria-label=\"音楽制作 · Suno\">{assets}<details class=\"console-music-note\"><summary>制作範囲</summary><p>下書き・曲候補の選択を扱います。MVと投稿は未接続です。</p></details><div class=\"console-music-body\">{body}</div></section>"
     );
     let html = INDEX
         .replace(
@@ -164,6 +171,16 @@ mod tests {
     use super::*;
 
     #[test]
+    fn served_console_has_progress_and_preserves_karaoke_navigation() {
+        let page = index();
+        assert!(page.contains("id=\"view-progress\""));
+        assert!(!page.contains("id=\"view-chat\""));
+        let page = music("<html><body><a href=\"/\">Consoleに戻る</a><a href=\"/karaoke\">KaraokeMakerを開く</a></body></html>").unwrap();
+        assert!(page.contains("href=\"/karaoke\""));
+        assert!(!page.contains(">Consoleに戻る</a>"));
+    }
+
+    #[test]
     fn operations_fetch_single_flight_timeout_backoff_and_detail_paging() {
         use std::{
             io::Write,
@@ -178,7 +195,7 @@ let now=100000,calls=0,mode='good',pending=[],timers=new Map(),sequence=0;
 const button={disabled:false},events={};
 const good={fetchedAt:123,departments:[],sources:[],sourceOk:true};
 const ctx={AbortController,console,Date:{now:()=>now},window:{addEventListener:(k,f)=>events[k]=f},
-  $:()=>button,publishConsoleSource(){},renderOperations(){},renderOpsDetail(){},
+  $:()=>button,publishConsoleSource(){},renderOperations(){},renderProgress(){},renderOpsDetail(){},
   setTimeout:(f,ms)=>{const id=++sequence;timers.set(id,{f,at:now+ms});return id},clearTimeout:id=>timers.delete(id),
   fetch:async(path,options)=>{calls++;assert.equal(options.cache,'no-store');
     if(mode==='down')throw new TypeError('Failed to fetch');
@@ -208,7 +225,7 @@ const advance=async(ms)=>{now+=ms;for(const [id,t]of [...timers])if(t.at<=now){t
   mode='down';await ctx.loadOpsDetail(worker,10);assert.equal(ctx.ops.details.get(worker.id).data.history.length,2);assert(ctx.ops.details.get(worker.id).error);
   mode='stale';await ctx.loadOpsDetail(worker);assert.equal(ctx.ops.details.get(worker.id).data,null);assert(ctx.ops.details.get(worker.id).error.includes('更新'));
   mode='hang';const detail=ctx.loadOpsDetail(worker);await tick();const before=calls;await ctx.loadOpsDetail(worker);assert.equal(calls,before);await advance(12000);await detail;assert.equal(ctx.ops.details.get(worker.id).loading,false);assert.equal(timers.size,0);
-  assert(html.includes('setInterval(()=>{refresh();refreshOperations()},15000)'));
+  assert(html.includes('function refreshCurrentPage()'));
   assert(html.includes('productChoices.get(productKey):filtering'));
   console.log('operations transport regression passed');
 })().catch(error=>{console.error(error);process.exitCode=1});
@@ -250,7 +267,7 @@ const advance=async(ms)=>{now+=ms;for(const [id,t]of [...timers])if(t.at<=now){t
         assert!(page.contains(controls));
         assert!(page.contains("@scope (.console-music-body) {button{color:red}@media(max-width:560px){.row{display:block}}}"));
         assert!(page.contains("id=\"view-music\" class=\"view active\""));
-        for view in ["kanban", "chat", "minimax", "workload", "systems"] {
+        for view in ["kanban", "progress", "workload", "systems"] {
             assert_eq!(page.matches(&format!("id=\"view-{view}\"")).count(), 1);
         }
         assert_eq!(page.matches("<aside class=\"sidebar\">").count(), 1);
@@ -318,10 +335,10 @@ const vm = require('node:vm');
 const input = JSON.parse(require('node:fs').readFileSync(0, 'utf8'));
 for (const source of input.scripts) new vm.Script(source);
 async function loaderScenario() {
-  const host={dataset:{musicLoaded:'false'},childNodes:[],replaceChildren(...nodes){this.childNodes=nodes},append(...nodes){this.childNodes.push(...nodes)}};
+  const host={dataset:{musicLoaded:'false'},childNodes:[],querySelectorAll(){return[]},setAttribute(){},removeAttribute(){},contains(){return false},replaceChildren(...nodes){this.childNodes=nodes},append(...nodes){this.childNodes.push(...nodes)}};
   let requests=0,reply;
-  const ctx={window:{},q:()=>host,make:(tag,cls,text)=>({tag,cls,text}),document:{importNode:node=>({...node})},AbortController,setTimeout,clearTimeout,
-    DOMParser:class {parseFromString(text){return {querySelector:()=>text==='valid'?{childNodes:[{tag:'FORM',draft:''},{tag:'AUDIO',currentTime:0}]}:null}}},
+  const ctx={window:{},q:()=>host,make:(tag,cls,text)=>({tag,cls,text}),document:{addEventListener(){},importNode:node=>({...node})},AbortController,setTimeout,clearTimeout,
+    DOMParser:class {parseFromString(text){return {querySelector:()=>text==='valid'?{querySelectorAll(){return[]},childNodes:[{tag:'FORM',draft:''},{tag:'AUDIO',currentTime:0}]}:null}}},
     fetch:()=>{requests++;return new Promise(resolve=>reply=resolve)},
   };
   vm.createContext(ctx);vm.runInContext(input.loader,ctx);
@@ -341,15 +358,15 @@ for (const source of input.scripts) {
   assert(input.policy.includes("'sha256-"+hash+"'"),'Every compiled Console script must be allowed by the actual music policy');
 }
 function scenario(hasMusic,fromRoot=false) {
-  const views = ['kanban','chat','minimax','workload','systems',...(hasMusic?['music']:[])];
+  const views = ['kanban','progress','workload','systems',...(hasMusic?['music']:[])];
   const node = view => ({id:'view-'+view,dataset:{view},active:false,attrs:{},classList:{toggle(_,on){this.owner.active=on}},setAttribute(k,v){this.attrs[k]=v},removeAttribute(k){delete this.attrs[k]},focus(){this.focused=true}});
   const panels=views.map(node),links=views.map(node); [...panels,...links].forEach(n=>n.classList.owner=n);
   const title=node('title'),subtitle=node('subtitle'),listeners={},stack=[];
   let refreshes=0;
-  const ctx={URL,location:{href:hasMusic&&!fromRoot?'http://localhost:10012/music/project':'http://localhost:10012/'},
+  const ctx={URL,location:{href:hasMusic&&!fromRoot?'http://localhost:10012/music/project':'http://localhost:10012/',get pathname(){return new URL(this.href).pathname}},
     $:selector=>selector==='#page-title'?title:selector==='#page-subtitle'?subtitle:panels.find(n=>'#'+n.id===selector),
     $$:selector=>selector==='.view'?panels:links,
-    refreshOperations(){refreshes++},refresh(){},CustomEvent:class {constructor(type,options){this.type=type;this.detail=options.detail}},
+    refreshOperations(){refreshes++},refresh(){},cancelPageFetches(){},refreshCurrentPage(){if(panels.some(n=>n.active&&["kanban","progress"].includes(n.dataset.view)))refreshes++},CustomEvent:class {constructor(type,options){this.type=type;this.detail=options.detail}},
     window:{dispatchEvent(){},addEventListener(name,fn){listeners[name]=fn}},
   };
   ctx.history={pushState(_a,_b,url){stack.push(ctx.location.href);ctx.location.href=String(url)},replaceState(_a,_b,url){ctx.location.href=String(url)}};

@@ -30,9 +30,19 @@ const model3082Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3082-
 const model3082Receipt = model3082Source + "/.ci-work/3082-runtime-20261020-232848-todo-3082.private.json"
 const model3082ReceiptSHA = "dfda87e2f50ca965f13ba432d7b1d893bd8530b5c8234911ec102423c9beb677"
 
-// These receipts were independently read in the bounded ToDo3177 assignment.
-// New Rust candidates have NOT been generated. Empty candidates intentionally
-// cannot qualify an update, even when an installed baseline is verified.
+const model3298Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3298-windows"
+const model3298Head = "70a7962c36c0b9916ff6865afa9cb606d414962e"
+const model3298BuildReceipt = model3298Source + "/codex-owned-5ca1100a696bda051f5c813a37f941d9/target/build-receipt.private.json"
+const model3081Distribution = model3298Source + "/codex-owned-0c95078c4ebbe13a42f392c2e12e60da"
+const model3081Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3081-fast"
+const model3309Source = "C:/Users/makhmeto/AppData/Local/Temp/agent-conduct-c2d9dde771e44d36a3bd8343653b307c/dots-launcher-repair-3309"
+const model3250Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3250-windows"
+const model3338GuardSource = model3081Source + "/codex-owned-471299b48ad6e65615889e37523be073/source"
+
+// The installed baseline has the independent ToDo3177 provenance. ToDo3298
+// built the candidate once from the merged source, then ToDo3081 copied it
+// without Cargo's second hardlink. Both receipts and the source HEAD stay
+// pinned. Discord uses its existing normal classifier; guard stays unbound.
 var model3081UpdateLeaves = []modelUpdateLeaf{
 	{kind: "todo", target: "D:/CC/Tools/todo/todo.exe", baselines: []consolePin{{
 		sha256: "ba1d65381bd31c38d05cf3798973427e2f0271dbc9d664afbfe91501a8de6811",
@@ -40,7 +50,14 @@ var model3081UpdateLeaves = []modelUpdateLeaf{
 			{model2903Source, model2903Source + "/.ci-work/todo-pr232-install.private.json", "3fa41d8c38e053473d6f513614b4d3617f574479b31de843e841370bf1ddfcc8"},
 			{model2903Source, model2903Source + "/.ci-work/install-todo-pr232.ps1", "bf0bf2dc1cb1b7f2fe0b887fc63772c719d3d00829057bf96d67cfe84efbb238"},
 		},
-	}}},
+	}}, candidate: modelUpdateCandidate{
+		root: model3298Source, path: model3081Distribution + "/todo.exe", head: model3298Head,
+		sha256: "5db0e02c09b737a816b31ec811eeba3d129e4a6c0e76ff008692c2b640bbfd4d",
+		evidence: []consoleEvidence{
+			{model3298Source, model3298BuildReceipt, "fb67ffda1315c1aff8c24d05bdff73f3620385f629b1ad6ec450c538c391ba62"},
+			{model3298Source, model3081Distribution + "/staging-receipt.private.json", "317f7e72731c62359e98af327f48772e46c5d61b40bc44a43608830b89da2e27"},
+		},
+	}},
 	{kind: "discord", target: "D:/CC/Tools/discord-ask/discord_ask.exe", baselines: []consolePin{{
 		sha256:   "eb14b19b445a247dfd85e498c20de2716a3dcc80bf6b65c188111738f6249295",
 		evidence: []consoleEvidence{{model3082Source, model3082Receipt, model3082ReceiptSHA}},
@@ -48,7 +65,40 @@ var model3081UpdateLeaves = []modelUpdateLeaf{
 	{kind: "guard", target: "D:/CC/Tools/client-records/scrub391.exe", baselines: []consolePin{{
 		sha256:   "78d90055f5324366589d6c2bec1ff0d1adc297a60a1fbc34c6de9af0c4ae5069",
 		evidence: []consoleEvidence{{model3082Source, model3082Receipt, model3082ReceiptSHA}},
-	}}},
+	}, {
+		sha256:   "274e8abc5c90d5ca7dcf401b824d5ff50e078c966fd74a35af86f78dd9d900d9",
+		evidence: []consoleEvidence{{model3250Source, model3250Source + "/codex-owned-1bd08feb8beaad849537a5ea1b45bdfd/guard-pr351-installed.private.json", "2de2b7789fb32d159f3d1e41e40f828167a10db1f944512d2f30510a4f782115"}},
+	}}, candidate: modelUpdateCandidate{
+		root: model3338GuardSource, path: model3338GuardSource + "/guard-artifact.private.exe",
+		head: "a36a77c42690eef7c0147a6a2eee76b496a48249", sha256: "e99f7cdc857705705871df42aa4cc159e5451df2a958076169425692ad456dc8",
+		evidence: []consoleEvidence{{model3338GuardSource, model3338GuardSource + "/guard-artifact-build.private.json", "a3e3e3d64dccab1927157f7802c0c8a57eb679df624f5554d6d9cb039cf567af"}},
+	}},
+	{kind: "jobs", target: jobsRuntime, baselines: []consolePin{{
+		sha256:   "7ae20f2bfa824aa6dc27d7046bb997df137bd8980b3291d4e195804714b42c77",
+		evidence: []consoleEvidence{{model2903Source, model2903Source + "/.ci-work/3255-existing-runtime3081-current-CAS-drift-20261022.private.json", "92e0ef180fbefa0385ffe36c738323b955edb065622802361178ce1cf038a3ed"}},
+	}}, candidate: modelUpdateCandidate{
+		root: model3309Source, path: model3309Source + "/codex-owned-f47d20fe42907634de18cbd7f6309d3d/codex_jobs.exe",
+		head: "e290e27ffdb63cbd35dcb8af559372293a94de87", sha256: "85beac9a785971e15d452a293c4f5c9d17f5133ef4fac00965dfcf0bd297a71f",
+		evidence: []consoleEvidence{
+			{model3081Source, model3081Source + "/docs/model3081-3309-build.private.json", "aff3e9dee09275a24996d8a415db638da57e88a4a473eab02686feb5228d0fc6"},
+			{model3081Source, model3081Source + "/docs/model3081-3309-result.private.json", "68774dd3285b36a64e8891cd05122732f7718823777de0c260340beb8b125409"},
+		},
+	}},
+}
+
+// The new owner repair is bound to the existing launcher and two actual
+// software versions. It does not extend the old finite qualification's clock.
+func modelLauncherRuntimeAllowed(path string) bool {
+	return modelLauncherQualified(path, model3081RuntimeReceipt)
+}
+
+func modelLauncherQualified(path string, verify func(string) object) bool {
+	if !same(path, jobsRuntime) {
+		return false
+	}
+	r := verify(path)
+	return r["qualified"] == true && r["domain"] == "model-runtime-update-3081-v1" &&
+		r["todo_id"] == 3081 && r["target_kind"] == "jobs" && r["data_access_granted"] == false
 }
 
 func model3081FlagPresent(args []string) bool {

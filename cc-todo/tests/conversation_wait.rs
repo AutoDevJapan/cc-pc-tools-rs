@@ -11,6 +11,408 @@ use std::{
 
 const WAIT: &str = "owner_question_wait";
 const ANSWERS: &str = "owner_question_answer_receipts";
+const DELIVERIES: &str = "owner_question_delivery_receipts";
+
+#[test]
+fn conversation_scope_rejects_project_or_root_changes_before_any_mutation() {
+    for command in [
+        "edit",
+        "question-wait",
+        "question-answer",
+        "question-withdraw",
+    ] {
+        for change in ["project", "root"] {
+            let f = Fixture::new();
+            let (_, answer_file, _) = f.park();
+            let mut db = f.read();
+            let scope_file = f.file("scope.json", &json!({"domain":"discord-conversation-todo-scope-v1",
+                "todo_id":"1", "project":"cc-pc-tools-rs", "project_path_sha256":sha(f.temp.path().to_str().unwrap().as_bytes())}));
+            let expected = f.file("expected.json", &db["items"][0]);
+            let note = f.temp.path().join("scope-note.txt");
+            fs::write(&note, "guarded delivery reference").unwrap();
+            if change == "project" {
+                db["projects"]["other-project"] = db["projects"]["cc-pc-tools-rs"].clone();
+                db["items"][0]["project"] = json!("other-project");
+            } else {
+                db["projects"]["cc-pc-tools-rs"] =
+                    json!(f.temp.path().join("another-root").to_str().unwrap());
+            }
+            f.write(&db);
+            let before = f.raw();
+            let q = f.temp.path().join("question.json");
+            let mut args = vec![command, "1", "--scope-file", scope_file.to_str().unwrap()];
+            match command {
+                "edit" => args.extend([
+                    "--note-file",
+                    note.to_str().unwrap(),
+                    "--expected-state-file",
+                    expected.to_str().unwrap(),
+                ]),
+                "question-wait" => args.extend(["--question-file", q.to_str().unwrap()]),
+                "question-answer" => args.extend(["--answer-file", answer_file.to_str().unwrap()]),
+                "question-withdraw" => args.extend([
+                    "--question-file",
+                    q.to_str().unwrap(),
+                    "--reason-file",
+                    note.to_str().unwrap(),
+                    "--expected-state-file",
+                    expected.to_str().unwrap(),
+                ]),
+                _ => unreachable!(),
+            }
+            let out = f.command(&args).output().unwrap();
+            assert!(
+                !out.status.success(),
+                "accepted changed {change} for {command}"
+            );
+            assert_eq!(
+                String::from_utf8_lossy(&out.stderr).trim(),
+                "conversation_scope_changed",
+                "wrong failure for {command}"
+            );
+            assert_eq!(f.raw(), before, "scope failure changed {command}");
+        }
+    }
+}
+
+#[test]
+fn scoped_edit_requires_the_exact_guarded_row_even_when_the_note_is_unchanged() {
+    let f = Fixture::new();
+    let mut db = f.read();
+    let scope_file = f.file("scope.json", &json!({"domain":"discord-conversation-todo-scope-v1", "todo_id":"1",
+        "project":"cc-pc-tools-rs", "project_path_sha256":sha(f.temp.path().to_str().unwrap().as_bytes())}));
+    let expected = f.file("expected.json", &db["items"][0]);
+    let note = f.temp.path().join("scope-note.txt");
+    fs::write(&note, "guarded delivery reference").unwrap();
+    db["items"][0]["resume_generation"] = json!(8);
+    f.write(&db);
+    let before = f.raw();
+    let out = f
+        .command(&[
+            "edit",
+            "1",
+            "--scope-file",
+            scope_file.to_str().unwrap(),
+            "--expected-state-file",
+            expected.to_str().unwrap(),
+            "--note-file",
+            note.to_str().unwrap(),
+        ])
+        .output()
+        .unwrap();
+    assert!(!out.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&out.stderr).trim(),
+        "conversation_state_changed"
+    );
+    assert_eq!(f.raw(), before);
+}
+
+#[test]
+fn withdrawal_accepts_a_large_original_row_without_losing_history() {
+    let f = Fixture::new();
+    f.withdraw_ready();
+    let mut db = f.read();
+    let history = json!([{"note":"saved history ".repeat(90_000)}]);
+    db["items"][0]["note_history"] = history.clone();
+    f.write(&db);
+    f.snapshot();
+    assert!(
+        fs::metadata(f.temp.path().join("withdrawal-origin.json"))
+            .unwrap()
+            .len()
+            > 1024 * 1024
+    );
+    let out = f.withdraw();
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    assert_eq!(f.read()["items"][0]["note_history"], history);
+}
+
+#[test]
+fn snapshot_larger_than_the_store_limit_is_rejected_without_mutation() {
+    let f = Fixture::new();
+    f.withdraw_ready();
+    f.snapshot();
+    fs::OpenOptions::new()
+        .write(true)
+        .open(f.temp.path().join("withdrawal-origin.json"))
+        .unwrap()
+        .set_len(cc_job_policy::todo_store::MAX_BYTES as u64 + 1)
+        .unwrap();
+    let before = f.raw();
+    let out = f.withdraw();
+    assert!(!out.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&out.stderr).trim(),
+        "conversation_file_too_large"
+    );
+    assert_eq!(f.raw(), before);
+}
+
+fn continued(f: &Fixture) -> (std::path::PathBuf, Value) {
+    let (_, answer_file, answer) = f.park();
+    let mut db = f.read();
+    let row = &mut db["items"][0];
+    row["status"] = json!("doing");
+    row["resume_generation"] = json!(8);
+    row["worker_receipt"] = json!({"job":null,"generation":8});
+    row["scheduler"] = json!({"job":null,"worktree":"saved-worktree","branch":"saved-branch"});
+    row["note"] = json!("新しい直接指示を優先する\n元の依頼と途中成果を保持する");
+    f.write(&db);
+    (answer_file, answer)
+}
+
+fn deliver_only(f: &Fixture, answer: &Path, expected: &Value) -> Output {
+    let expected_file = f.file("delivery-expected.json", expected);
+    let note_file = f.temp.path().join("delivery-note.txt");
+    fs::write(
+        &note_file,
+        format!(
+            "{}\n\nprivate reply reference",
+            expected["note"].as_str().unwrap()
+        ),
+    )
+    .unwrap();
+    f.command(&[
+        "question-answer",
+        "1",
+        "--delivery-only",
+        "--answer-file",
+        answer.to_str().unwrap(),
+        "--delivery-note-file",
+        note_file.to_str().unwrap(),
+        "--expected-state-file",
+        expected_file.to_str().unwrap(),
+    ])
+    .output()
+    .unwrap()
+}
+
+#[test]
+fn continued_delivery_preserves_everything_except_its_note_time_and_receipt() {
+    let f = Fixture::new();
+    let (answer_file, a) = continued(&f);
+    let before = f.read();
+    let out = deliver_only(&f, &answer_file, &before["items"][0]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let meta: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(meta["delivered"], true);
+    assert_eq!(meta["resumed"], false);
+    assert_eq!(meta["answered"], false);
+    let mut after = f.read();
+    let record = &after["items"][0][DELIVERIES][0];
+    assert!(
+        after["items"][0]["scheduler"]["owner_instruction"]
+            .as_str()
+            .is_some_and(|s| s.contains("private reply reference")),
+        "the next worker would lose the delivered reference"
+    );
+    assert_eq!(record["answer"], a);
+    assert_eq!(record["wait"], before["items"][0][WAIT]);
+    assert_eq!(record["recipient"]["resume_generation"], 8);
+    assert_eq!(
+        record["recipient"]["worker_receipt"],
+        before["items"][0]["worker_receipt"]
+    );
+    assert_eq!(
+        record["note_sha256"],
+        sha(after["items"][0]["note"].as_str().unwrap().as_bytes())
+    );
+    assert_eq!(
+        record["instruction_sha256"],
+        sha(after["items"][0]["scheduler"]["owner_instruction"]
+            .as_str()
+            .unwrap()
+            .as_bytes())
+    );
+    after["items"][0]["scheduler"]
+        .as_object_mut()
+        .unwrap()
+        .remove("owner_instruction");
+    for key in ["note", "updated", DELIVERIES] {
+        let row = after["items"][0].as_object_mut().unwrap();
+        match before["items"][0].get(key) {
+            Some(value) => {
+                row.insert(key.into(), value.clone());
+            }
+            None => {
+                row.remove(key);
+            }
+        }
+    }
+    assert_eq!(
+        after, before,
+        "delivery changed task/hold/owner/original work"
+    );
+}
+
+#[test]
+fn continued_delivery_keeps_prior_instructions_and_future_time_holds_for_the_next_worker() {
+    let f = Fixture::new();
+    let (answer_file, _) = continued(&f);
+    let mut db = f.read();
+    let row = &mut db["items"][0];
+    row["scheduler"]["owner_instruction"] = json!("最新の直接指示を優先する");
+    row["scheduler"]["not_before"] = json!(10_000_000_000_f64);
+    row["stall_recovery"]["next_at"] = json!(10_000_000_000_f64);
+    row["discord_restart_not_before"] = json!(10_000_000_000_f64);
+    f.write(&db);
+    let out = deliver_only(&f, &answer_file, &db["items"][0]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let mut after = f.read();
+    let row = &mut after["items"][0];
+    let instruction = row["scheduler"]["owner_instruction"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert!(instruction.starts_with("最新の直接指示を優先する\n\n"));
+    assert!(instruction.contains("private reply reference"));
+    assert_eq!(
+        row["scheduler"]["not_before"],
+        db["items"][0]["scheduler"]["not_before"]
+    );
+    assert_eq!(row["stall_recovery"], db["items"][0]["stall_recovery"]);
+    assert_eq!(
+        row["discord_restart_not_before"],
+        db["items"][0]["discord_restart_not_before"]
+    );
+    row["note"] = json!("通常の結果取込で更新されたメモ");
+    cc_scheduler::common::resume_without_worker(row);
+    assert_eq!(row["scheduler"]["owner_instruction"], instruction);
+    assert_eq!(row[WAIT], db["items"][0][WAIT]);
+}
+
+#[test]
+fn continued_delivery_retry_does_not_touch_a_later_stop_and_edits_need_a_new_delivery() {
+    let f = Fixture::new();
+    let (answer_file, _) = continued(&f);
+    let before = f.read();
+    assert!(
+        deliver_only(&f, &answer_file, &before["items"][0])
+            .status
+            .success()
+    );
+    let mut db = f.read();
+    db["items"][0]["status"] = json!("block");
+    db["items"][0]["owner_stopped"] = json!(true);
+    f.write(&db);
+    let raw = f.raw();
+    let out = deliver_only(&f, &answer_file, &before["items"][0]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let meta: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(meta["changed"], false);
+    assert_eq!(meta["resumed"], false);
+    assert_eq!(f.raw(), raw);
+    db["items"][0]["status"] = json!("doing");
+    db["items"][0]
+        .as_object_mut()
+        .unwrap()
+        .remove("owner_stopped");
+    f.write(&db);
+    let mut edited: Value = serde_json::from_slice(&fs::read(&answer_file).unwrap()).unwrap();
+    edited["reply_sha256"] = json!("d".repeat(64));
+    edited["receipt_file_sha256"] = json!("e".repeat(64));
+    let edit_file = f.file("edited-answer.json", &edited);
+    assert!(
+        deliver_only(&f, &edit_file, &db["items"][0])
+            .status
+            .success()
+    );
+    let after = f.read();
+    assert_eq!(after["items"][0][DELIVERIES].as_array().unwrap().len(), 2);
+    assert_eq!(after["items"][0][DELIVERIES][1]["answer"], edited);
+    assert!(after["items"][0].get(ANSWERS).is_none());
+}
+
+#[test]
+fn continued_delivery_rejects_changed_state_generation_identity_and_holds_without_writing() {
+    for case in [
+        "cas",
+        "missing-wait",
+        "question",
+        "owner",
+        "sha",
+        "missing-generation",
+        "same-generation",
+        "backward-generation",
+        "missing-origin",
+        "different-wait",
+        "block",
+        "done",
+        "unknown",
+        "stop",
+        "dependency",
+        "ready",
+    ] {
+        let f = Fixture::new();
+        let (answer_file, _) = continued(&f);
+        let mut db = f.read();
+        let mut expected = db["items"][0].clone();
+        let row = &mut db["items"][0];
+        match case {
+            "cas" => row["note"] = json!("途中で新しい指示"),
+            "missing-wait" => {
+                row.as_object_mut().unwrap().remove(WAIT);
+            }
+            "question" => row[WAIT]["question"]["question_fingerprint"] = json!("f".repeat(64)),
+            "owner" => row[WAIT]["question"]["owner_id"] = json!("999"),
+            "sha" => row[WAIT]["question_receipt_sha256"] = json!("f".repeat(64)),
+            "missing-generation" => {
+                row.as_object_mut().unwrap().remove("resume_generation");
+            }
+            "same-generation" => row["resume_generation"] = json!(7),
+            "backward-generation" => row["resume_generation"] = json!(6),
+            "missing-origin" => {
+                row[WAIT].as_object_mut().unwrap().remove("origin");
+            }
+            "different-wait" => row[WAIT]["question"]["request_id"] = json!("another-generation"),
+            "block" | "done" | "unknown" => row["status"] = json!(case),
+            "stop" => row["owner_stopped"] = json!(true),
+            "dependency" => row["wait_on"] = json!([2]),
+            "ready" => row["wait_ready"] = json!({"condition":"external"}),
+            _ => unreachable!(),
+        }
+        if case != "cas" {
+            expected = row.clone();
+        }
+        f.write(&db);
+        let raw = f.raw();
+        let out = deliver_only(&f, &answer_file, &expected);
+        assert!(!out.status.success(), "accepted {case}");
+        assert!(
+            String::from_utf8_lossy(&out.stderr).starts_with("conversation_"),
+            "{case}: {}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert_eq!(f.raw(), raw, "rejection changed {case}");
+    }
+}
+
+#[test]
+fn normal_answer_cannot_release_a_different_current_generation() {
+    let f = Fixture::new();
+    let (_, answer_file, _) = f.park();
+    let mut db = f.read();
+    db["items"][0]["resume_generation"] = json!(8);
+    f.write(&db);
+    f.reject("question-answer", "--answer-file", &answer_file);
+}
 
 struct Fixture {
     temp: tempfile::TempDir,

@@ -78,6 +78,45 @@ fn processing_requires_identity_recent_processing_and_no_wait() {
 }
 
 #[test]
+fn one_quiet_session_does_not_expire_another_processing_job() {
+    let mut board = board();
+    board["departments"][0]["products"][0]["workers"]
+        .as_array_mut()
+        .unwrap()
+        .push(json!({
+        "id":"todo-7","recordedStatus":"doing","status":"working","jobStatus":"running"}));
+    let mut active = active();
+    let mut second = active["jobs"][0].clone();
+    second["job_key"] = json!(format!("job-{}", "b".repeat(64)));
+    second["todo_ids"] = json!([7]);
+    second["last_activity"]["at"] = json!("1970-01-01T00:16:40Z");
+    active["jobs"][0]["last_activity"]["at"] = json!("1970-01-01T00:16:15Z");
+    active["jobs"].as_array_mut().unwrap().push(second);
+    let mut view = project(&board, Some(&active), NOW);
+    let task_state = |view: &Value, id: u64| {
+        view["tasks"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|task| task["todoId"] == id)
+            .unwrap()["state"]
+            .as_str()
+            .unwrap()
+            .to_owned()
+    };
+    assert_eq!(view["processing"]["verifiedCount"], 2);
+    localai_web_rs::workforce::expire(&mut view, NOW + 6_000);
+    assert_eq!(view["processing"]["verifiedCount"], 1);
+    assert_eq!(view["processing"]["state"], "partial");
+    assert!(view["processing"]["total"].is_null());
+    assert_eq!(task_state(&view, 3), "execution_unverified");
+    assert_eq!(task_state(&view, 7), "processing");
+    localai_web_rs::workforce::expire(&mut view, NOW + 30_001);
+    assert!(view["processing"]["verifiedCount"].is_null());
+    assert_eq!(task_state(&view, 7), "execution_unverified");
+}
+
+#[test]
 fn incomplete_and_stale_evidence_never_certifies_a_total_or_current_zero() {
     let mut input = active();
     input["status"] = json!("degraded");

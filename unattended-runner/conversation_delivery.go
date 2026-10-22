@@ -29,6 +29,22 @@ type conversationAnswerReceipt struct {
 	ReceiptSHA  string `json:"receipt_file_sha256"`
 }
 
+// Publish a captured value to state only after its source file is durable.
+// A failed state save must leave the previous in-memory capture intact too.
+func (r *Runner) saveConversationCapture(req *Request) error {
+	previous, existed := r.State.Requests[req.Message]
+	r.State.Requests[req.Message] = req
+	if err := r.save(); err != nil {
+		if existed {
+			r.State.Requests[req.Message] = previous
+		} else {
+			delete(r.State.Requests, req.Message)
+		}
+		return err
+	}
+	return nil
+}
+
 func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQuestion, proof *conversationProof, reply conversationReply) (*Request, error) {
 	// Read the exact live owner post as well as the sender's question proof. This
 	// preserves edit/reference metadata which the sender's reply projection omits.
@@ -82,17 +98,10 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 			// Persist the recovered attempt decision before delivery writes its
 			// input. Otherwise a failed edit followed by restart can mistake our
 			// own unsuccessful attempt for lost prior delivery evidence.
-			previous := old
-			old = &saved
-			r.State.Requests[reply.Message] = old
-			if err := r.save(); err != nil {
-				if previous == nil {
-					delete(r.State.Requests, reply.Message)
-				} else {
-					r.State.Requests[reply.Message] = previous
-				}
+			if err := r.saveConversationCapture(&saved); err != nil {
 				return nil, err
 			}
+			old = &saved
 		}
 	}
 	if old != nil && (old.Thread != q.Thread || old.Author != reply.Author || old.Message != reply.Message || (old.Todo != 0 && old.Conversation != q.RequestID)) {
@@ -106,25 +115,26 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 		if err := writeConversationOnce(path, previous); err != nil {
 			return nil, err
 		}
-		old.PriorVersions = append(old.PriorVersions, old.Text)
-		old.PriorEdits = append(old.PriorEdits, EditVersion{Edited: old.Edited, SHA256: bytesHash([]byte(old.Text))})
-		old.Text = reply.Body
-		old.Edited = live.Edited
-		old.ProgressThread = q.Progress
-		old.Acquired = acquiredAt.UTC().Format(time.RFC3339Nano)
+		next := *old
+		next.PriorVersions = append(append([]string(nil), old.PriorVersions...), old.Text)
+		next.PriorEdits = append(append([]EditVersion(nil), old.PriorEdits...), EditVersion{Edited: old.Edited, SHA256: bytesHash([]byte(old.Text))})
+		next.Text = reply.Body
+		next.Edited = live.Edited
+		next.ProgressThread = q.Progress
+		next.Acquired = acquiredAt.UTC().Format(time.RFC3339Nano)
 		contextBytes, _ := json.Marshal(proof)
-		old.Context = string(contextBytes)
-		old.Phase = "conversation_reply_saved"
-		old.ConversationSourceRecovered = false
-		old.ConversationRecoveryNote = ""
-		old.Reported = ""
-		if err := publish(filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".json"), old); err != nil {
+		next.Context = string(contextBytes)
+		next.Phase = "conversation_reply_saved"
+		next.ConversationSourceRecovered = false
+		next.ConversationRecoveryNote = ""
+		next.Reported = ""
+		if err := publish(filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".json"), &next); err != nil {
 			return nil, err
 		}
-		if err := r.save(); err != nil {
+		if err := r.saveConversationCapture(&next); err != nil {
 			return nil, err
 		}
-		return old, nil
+		return &next, nil
 	}
 	if old != nil && old.Conversation == q.RequestID && old.Phase != "conversation_capture_pending" {
 		return old, nil
@@ -135,8 +145,7 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 	if err := publish(path, req); err != nil {
 		return nil, err
 	}
-	r.State.Requests[reply.Message] = req
-	if err := r.save(); err != nil {
+	if err := r.saveConversationCapture(req); err != nil {
 		return nil, err
 	}
 	return req, nil

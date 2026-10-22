@@ -7,10 +7,116 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestConversationEditedReceiptFailureKeepsPreviousState(t *testing.T) {
+	for _, wait := range []bool{false, true} {
+		t.Run(fmt.Sprint(wait), func(t *testing.T) {
+			f := conversationTest(t, wait)
+			f.ask(t)
+			reply := f.reply(t, 8, "a")
+			health := Health{}
+			f.r.processConversations(context.Background(), &health)
+			if len(health.Errors) != 0 {
+				t.Fatal(health.Errors)
+			}
+			previous, _ := json.Marshal(f.r.State.Requests[reply.Message])
+			path := filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", reply.Message+".json")
+			if err := os.Rename(path, path+".previous"); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Mkdir(path, 0700); err != nil {
+				t.Fatal(err)
+			}
+			f.replies[0].Body = "b"
+			f.edited = map[string]string{reply.Message: f.r.Now().Format(time.RFC3339Nano)}
+			proof, err := f.r.conversationProof(context.Background(), f.q)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err = f.r.captureConversationReply(context.Background(), f.q, proof, f.replies[0]); err == nil {
+				t.Fatal("receipt replacement unexpectedly succeeded")
+			}
+			after, _ := json.Marshal(f.r.State.Requests[reply.Message])
+			if string(previous) != string(after) {
+				t.Fatal("failed receipt replacement mutated the previous capture")
+			}
+			// A later save in the same tick must not commit an undeliverable edit.
+			if err = f.r.save(); err != nil {
+				t.Fatal(err)
+			}
+			var restarted State
+			if err = readJSON(filepath.Join(f.r.Config.Home, "unattended-state.json"), maxState, &restarted); err != nil {
+				t.Fatal(err)
+			}
+			f.r.State = &restarted
+			if err = os.Remove(path); err != nil {
+				t.Fatal(err)
+			}
+			if err = os.Rename(path+".previous", path); err != nil {
+				t.Fatal(err)
+			}
+			health = Health{}
+			f.r.processConversations(context.Background(), &health)
+			req := f.r.State.Requests[reply.Message]
+			if len(health.Errors) != 0 || req.Text != "b" || req.Phase != "conversation_reply_delivered" || !reflect.DeepEqual(req.PriorVersions, []string{"a"}) {
+				t.Fatalf("edit did not recover exactly once: errors=%v request=%+v", health.Errors, req)
+			}
+		})
+	}
+}
+
+func TestConversationCaptureStateSaveFailureCanRetry(t *testing.T) {
+	for _, edited := range []bool{false, true} {
+		t.Run(fmt.Sprint(edited), func(t *testing.T) {
+			f := conversationTest(t, false)
+			f.ask(t)
+			reply := f.reply(t, 8, "a")
+			if edited {
+				health := Health{}
+				f.r.processConversations(context.Background(), &health)
+				if len(health.Errors) != 0 {
+					t.Fatal(health.Errors)
+				}
+				f.replies[0].Body = "b"
+				f.edited = map[string]string{reply.Message: f.r.Now().Format(time.RFC3339Nano)}
+			}
+			previous, existed := f.r.State.Requests[reply.Message]
+			before, _ := json.Marshal(previous)
+			statePath := filepath.Join(f.r.Config.Home, "unattended-state.json")
+			if err := os.Remove(statePath); err != nil && !os.IsNotExist(err) {
+				t.Fatal(err)
+			}
+			if err := os.Mkdir(statePath, 0700); err != nil {
+				t.Fatal(err)
+			}
+			proof, err := f.r.conversationProof(context.Background(), f.q)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err = f.r.captureConversationReply(context.Background(), f.q, proof, f.replies[0]); err == nil {
+				t.Fatal("state save unexpectedly succeeded")
+			}
+			after, exists := f.r.State.Requests[reply.Message]
+			afterBytes, _ := json.Marshal(after)
+			if exists != existed || after != previous || string(before) != string(afterBytes) {
+				t.Fatal("failed state save changed the previous capture")
+			}
+			if err = os.Remove(statePath); err != nil {
+				t.Fatal(err)
+			}
+			health := Health{}
+			f.r.processConversations(context.Background(), &health)
+			if len(health.Errors) != 0 || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" || f.r.State.Requests[reply.Message].Text != f.replies[0].Body {
+				t.Fatalf("capture could not retry after persistence recovered: %v", health.Errors)
+			}
+		})
+	}
+}
 
 func TestConversationRecoveredAttemptSurvivesFailedEditAndRestart(t *testing.T) {
 	for _, wait := range []bool{false, true} {
@@ -98,6 +204,9 @@ func TestConversationRecoveredStateSaveFailureDoesNotAttemptDelivery(t *testing.
 				f.r.processConversations(context.Background(), &health)
 				if len(health.Errors) == 0 || f.r.State.Requests[reply.Message] != previous {
 					t.Fatal("failed persistence left recovered state eligible for delivery")
+				}
+				if _, exists := f.r.State.Requests[reply.Message]; exists != pending {
+					t.Fatal("failed recovery changed whether the request key exists")
 				}
 			}
 			notePath := filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", reply.Message+".note.txt")

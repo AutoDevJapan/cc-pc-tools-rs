@@ -69,8 +69,33 @@ fn require(checks: &mut Value, key: &str, matches: bool, reason: &'static str) -
     }
 }
 
-/// `pid` is the queue supervisor; `codex_pid` is the execution process.
-/// Only the birth-verified supervisor can remain alive while admission is locked.
+fn possible_child(child: &Value, parent: u64, born: u64) -> bool {
+    child["ppid"].as_u64() == Some(parent)
+        && child["created"].as_u64().is_none_or(|birth| birth >= born)
+}
+
+fn console_leaf(child: &Value, ps: &policy::Processes, monitor_birth: u64) -> bool {
+    let Some(pid) = child["pid"]
+        .as_u64()
+        .filter(|pid| *pid > 0 && *pid <= u32::MAX as u64)
+    else {
+        return false;
+    };
+    let Some(born) = child["created"]
+        .as_u64()
+        .filter(|born| *born >= monitor_birth)
+    else {
+        return false;
+    };
+    s(&child["name"]).eq_ignore_ascii_case("conhost.exe")
+        && !ps
+            .values()
+            .any(|descendant| possible_child(descendant, pid, born))
+}
+
+/// A queued supervisor may have a birth-verified, leaf console host. This is
+/// plumbing, not execution: a live codex_pid, unknown child or host descendant
+/// still blocks, and the caller separately verifies the exact owner wait.
 fn waiting_processes_safe(job: &Value, ps: &policy::Processes, at: f64) -> bool {
     for key in ["pid", "codex_pid"] {
         if !job[key].is_null()
@@ -98,12 +123,10 @@ fn waiting_processes_safe(job: &Value, ps: &policy::Processes, at: f64) -> bool 
         return false;
     };
     job["pid_created"].as_u64() == Some(created)
-        && !ps.values().any(|child| {
-            child["ppid"].as_u64() == Some(pid)
-                && child["created"]
-                    .as_u64()
-                    .is_none_or(|birth| birth >= created)
-        })
+        && ps
+            .values()
+            .filter(|child| possible_child(child, pid, created))
+            .all(|child| console_leaf(child, ps, created))
 }
 
 fn run<B: Backend>(

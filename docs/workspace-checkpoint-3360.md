@@ -20,6 +20,10 @@ queued担当を例外にできるのは、次の全条件を確認した場合�
 - queued担当には実行過程（codex_pid）、誕生時刻が不明または不一致の過程、
   監督配下の作業の可能性がある子過程、所有生存印、再起動予約、取消、読取不能印がない。
   生存している監督過程（pid）だけは、その誕生時刻をpid_createdと照合した場合に許す。
+- 監督の子は、名前がconhost.exe（大小文字を区別しない）、誕生時刻が既知で監督以後、
+  自分に現在の子や誕生不明の子がないものだけを補助過程として許す。
+  それ以外の子、未知の誕生時刻、補助過程の下の実行は拒否する。
+  codex_pidが生存していれば名前がconhostでも拒否する。名前だけで実行権を与えない。
 - 正規queue_wait_reasonがwork_ownerで、そのowner_job_id/owner_todo_idがsourceと元行に一致する。
 - cwdと保存済みwork_ownerの作業場所が両担当と元行で同じ実パスであり、repositoryとgit_commonも一致する。
 - queued担当のtodo_idは未登録または同じ元行である。別ToDoや別cwdの競合を免除しない。
@@ -43,6 +47,12 @@ queued担当を例外にできるのは、次の全条件を確認した場合�
 3. 元branch、HEAD、所有、guard、途中のnote/依存/本人停止の変更を拒否する。
 4. --checkは保存せず、拒否条件と比較結果を示す。通常保存の結果は改めて読み返す。
 5. 共通queue lockでジョブ受付と排他する。テストで同じbyteの競合を確認する。
+
+Windowsの実過程を使う受入は、CREATE_NO_WINDOWで起動した有限の所有console過程と
+そのconhostの誕生・親子を通常native snapshotで読み、隔離したToDo/backendへ渡して
+inspectと保存を確かめる。実本番のToDo/jobを編集して正例を作るものではない。
+所有過程の終了とconhostの消滅も確認する。起動flagはMicrosoftの
+[Process Creation Flags](https://learn.microsoft.com/en-us/windows/win32/procthread/process-creation-flags)を参照する。
 
 変更前の正規待機の受入をRedにし、最小実装後にGreenを記録する。
 対象はcc-schedulerとその既存結合検査・doctest・Clippy。共有ポリシーは変更しない。

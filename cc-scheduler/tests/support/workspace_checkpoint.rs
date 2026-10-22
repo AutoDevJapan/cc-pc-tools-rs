@@ -24,6 +24,7 @@ fn waiting_fixture() -> (
         "created_at":T-1200.,"work_owner":identity,
         "queue_wait_reason":{"code":"work_owner","owner_job_id":"owned","owner_todo_id":1}}));
     f.e.backend.ps.insert(10, proc(10, 0, "codex_jobs.exe"));
+    f.e.backend.ps.insert(11, proc(11, 10, "conhost.exe"));
     (f, request, target)
 }
 
@@ -35,6 +36,7 @@ fn workspace_checkpoint_saves_with_exact_inactive_owner_waiter() {
         // A fresh, birth-verified supervisor is normal, even during registration grace.
         f.e.backend.records[1]["created_at"] = json!(T - 5.);
         if evidence {
+            f.e.backend.ps.get_mut(&11).unwrap()["name"] = json!("ConHost.EXE");
             f.e.backend.records[1]["work_wait_evidence"] = json!({
                 "owner_job_id":"owned", "owner":cc_job_policy::work_owner::owner_evidence(&f.e.backend.records[0]),
                 "candidate_identity":f.e.backend.records[1]["work_owner"]});
@@ -64,6 +66,106 @@ fn workspace_checkpoint_saves_with_exact_inactive_owner_waiter() {
     }
 }
 
+/// Use the real Windows snapshot and real hidden-console topology, with only
+/// the task store and admission backend isolated in the existing fixture.
+#[test]
+fn workspace_checkpoint_accepts_native_hidden_console_waiter() {
+    use std::{
+        os::windows::process::CommandExt,
+        process::{Child, Command, Stdio},
+        time::Instant,
+    };
+    struct Probe(Child);
+    impl Drop for Probe {
+        fn drop(&mut self) {
+            let _ = self.0.kill();
+            let _ = self.0.wait();
+        }
+    }
+    let (mut f, request, target) = waiting_fixture();
+    let program = PathBuf::from(std::env::var_os("SystemRoot").unwrap()).join("System32/ping.exe");
+    let mut probe = Probe(
+        Command::new(program)
+            .args(["-n", "30", "127.0.0.1"])
+            .current_dir(f.temp.path())
+            .creation_flags(
+                NO_WINDOW | windows_sys::Win32::System::Threading::CREATE_NEW_PROCESS_GROUP,
+            )
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+            .unwrap(),
+    );
+    let pid = probe.0.id();
+    let deadline = Instant::now() + Duration::from_secs(4);
+    let (snapshot, console) = loop {
+        let ps = cc_scheduler::native::process_snapshot().unwrap();
+        if let Some(console) = ps
+            .values()
+            .find(|p| {
+                p["ppid"] == pid
+                    && s(&p["name"]).eq_ignore_ascii_case("conhost.exe")
+                    && p["created"].is_u64()
+            })
+            .cloned()
+        {
+            break (ps, console);
+        }
+        assert!(
+            Instant::now() < deadline,
+            "hidden console host was not observed"
+        );
+        std::thread::sleep(Duration::from_millis(20));
+    };
+    let birth = snapshot[&pid]["created"].as_u64().unwrap();
+    let console_id = console["pid"].as_u64().unwrap() as u32;
+    assert!(console["created"].as_u64().unwrap() >= birth);
+    f.e.backend.records[1]["pid"] = json!(pid);
+    f.e.backend.records[1]["pid_created"] = json!(birth);
+    f.e.backend.ps.retain(|id, _| *id == 9);
+    f.e.backend
+        .ps
+        .extend(snapshot.into_iter().filter(|(id, p)| {
+            *id == pid || *id == console_id || p["ppid"] == pid || p["ppid"] == console_id
+        }));
+    let before = f.get(1);
+    assert!(
+        probe.0.try_wait().unwrap().is_none(),
+        "owned console probe exited before inspection"
+    );
+    let inspected =
+        cc_scheduler::workspace_checkpoint::inspect(&mut f.e, &mut SystemRunner, &request).unwrap();
+    assert_eq!(inspected["eligible"], true, "{inspected}");
+    assert_eq!(inspected["saved"], false);
+    assert_eq!(f.get(1), before);
+    let saved = checkpoint(&mut f.e, &mut SystemRunner, &request).unwrap();
+    assert_eq!(saved["saved"], true);
+    assert_eq!(saved["verified_owner_waiters"], 1);
+    assert!(
+        probe.0.try_wait().unwrap().is_none(),
+        "owned console probe exited before checkpoint completed"
+    );
+    assert_eq!(
+        fs::read_to_string(target.join("unfinished.txt")).unwrap(),
+        "keep this pending work"
+    );
+    drop(probe);
+    let deadline = Instant::now() + Duration::from_secs(4);
+    loop {
+        let ps = cc_scheduler::native::process_snapshot().unwrap();
+        let remains = ps
+            .get(&console_id)
+            .is_some_and(|p| p["created"].is_null() || p["created"] == console["created"]);
+        if !remains {
+            break;
+        }
+        assert!(Instant::now() < deadline, "owned console host did not exit");
+        std::thread::sleep(Duration::from_millis(20));
+    }
+    assert!(f.e.backend.launched.is_empty());
+}
+
 #[test]
 fn workspace_checkpoint_rejects_ambiguous_or_active_waiters() {
     use cc_scheduler::workspace_checkpoint::inspect;
@@ -85,6 +187,12 @@ fn workspace_checkpoint_rejects_ambiguous_or_active_waiters() {
         ("wrong_birth", "CheckpointCompetingWorker"),
         ("supervisor_child", "CheckpointCompetingWorker"),
         ("unknown_child_birth", "CheckpointCompetingWorker"),
+        ("console_descendant", "CheckpointCompetingWorker"),
+        ("unknown_console_descendant", "CheckpointCompetingWorker"),
+        ("unknown_console_birth", "CheckpointCompetingWorker"),
+        ("bad_console_name", "CheckpointCompetingWorker"),
+        ("malformed_console_pid", "CheckpointCompetingWorker"),
+        ("execution_named_console", "CheckpointCompetingWorker"),
         ("malformed_pid", "CheckpointCompetingWorker"),
         ("malformed_flag", "CheckpointCompetingWorker"),
         ("owner_live", "CheckpointCompetingWorker"),
@@ -133,6 +241,21 @@ fn workspace_checkpoint_rejects_ambiguous_or_active_waiters() {
                 }
                 f.e.backend.ps.insert(11, child);
             }
+            "console_descendant" | "unknown_console_descendant" => {
+                let mut descendant = proc(12, 11, "worker.exe");
+                if gate == "unknown_console_descendant" {
+                    descendant["created"] = Value::Null;
+                }
+                f.e.backend.ps.insert(12, descendant);
+            }
+            "unknown_console_birth" => {
+                f.e.backend.ps.get_mut(&11).unwrap()["created"] = Value::Null
+            }
+            "bad_console_name" => {
+                f.e.backend.ps.get_mut(&11).unwrap()["name"] = json!("OpenConsole.exe")
+            }
+            "malformed_console_pid" => f.e.backend.ps.get_mut(&11).unwrap()["pid"] = Value::Null,
+            "execution_named_console" => waiter["codex_pid"] = json!(11),
             "malformed_pid" => waiter["pid"] = json!("unknown"),
             "malformed_flag" => waiter["queue_restart_pending"] = json!("unknown"),
             "owner_live" => waiter["work_owner_live"] = json!(true),

@@ -41,3 +41,21 @@
 分類の合格、CI、merge、配布、外部保存、画像配送は各々の実結果で判定する。
 親への実結果は `D:/OMB/workspace/recovery-20261022/permanent-provenance-result.json`。
 未完条件と再開手順を別のprivate receiptにも残す。
+
+## 実測した第1区切り
+
+- Issue375。旧分類器は実candidateのpackage manifestを未分類と返した。
+  `TestModelUpdateRuntimeInputsArePermanent` は旧worktree依存を理由にRedとなった。
+- 公開元の7固定commitをGitで取得し、元の独立receiptと候補をSHA一致で複製した。
+  原receiptのcwdや生成時刻は変更していない。旧sourceは残した。
+- Console53件はWindowsの改行も含めて原sourceと同じバイトを複製し、公開Gitの
+  53blob、旧/新SHA、追跡sourceの差分なしを照合した。これはGit取得後の明示した
+  byteコピーであり、新しい生成・ビルド証拠と主張していない。
+- `go test -count=1 -run 'TestPermanent|TestModelUpdate' .` は成功。
+  Consoleの合成Git/ファイル境界検査は78.97秒で成功。最初の50秒の検査補助の期限は
+  短すぎたため、元の時間切れを保持し、240秒の有限枠で同じ関連検査を完了した。
+- 検査用の新しいguardは実candidate manifestを通常の`--guard-path`で正常分類した。
+  この時点では本番配布・全56件の受入・外部保存・画像配送は未実施。
+- 実private repoは既に3339の新Consoleを保存し、mainは別の新しい履歴だった。
+  古い56件のarchiveでmainを上書きしない。元担当を保持し、正常分類と正規送信審査後に
+  この旧1commit/56bytesを別の保存用refで照合する。

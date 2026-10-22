@@ -1,10 +1,61 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 )
+
+func TestPermanentSourceBindsRealGitOriginCommitAndTrackedBytes(t *testing.T) {
+	root, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	currentFixtureGit(t, root, "init", "-q")
+	currentFixtureGit(t, root, "remote", "add", "origin", "https://github.com/AutoDevJapan/cc-pc-tools-rs.git")
+	path := filepath.Join(root, "source.go")
+	if err := os.WriteFile(path, []byte("package fixture\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	currentFixtureGit(t, root, "add", "source.go")
+	currentFixtureGit(t, root, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "-m", "source")
+	head, err := civ6GitAt(root, "rev-parse", "HEAD")
+	if err != nil {
+		t.Fatal(err)
+	}
+	profiles := []permanentSource{{root, strings.TrimSpace(string(head))}}
+	verify := func() bool { return permanentSourceVerifiedWith(root, profiles) }
+	if !verify() {
+		t.Fatal("clean fixed public-origin fixture rejected")
+	}
+	profiles[0].head = strings.Repeat("b", 40)
+	if verify() {
+		t.Fatal("different commit accepted")
+	}
+	profiles[0].head = strings.TrimSpace(string(head))
+	currentFixtureGit(t, root, "remote", "set-url", "origin", "https://github.com/another-owner/cc-pc-tools-rs.git")
+	if verify() {
+		t.Fatal("different owner accepted")
+	}
+	currentFixtureGit(t, root, "remote", "set-url", "origin", "https://github.com/AutoDevJapan/cc-pc-tools-rs.git")
+	if !verify() {
+		t.Fatal("restored positive control rejected")
+	}
+	if err := os.WriteFile(path, []byte("package modified\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if verify() {
+		t.Fatal("modified tracked source accepted")
+	}
+	currentFixtureGit(t, root, "add", "source.go")
+	if verify() {
+		t.Fatal("staged modification accepted")
+	}
+	if permanentSourceVerifiedWith(filepath.Dir(root), profiles) || permanentSourceVerifiedWith(root, nil) {
+		t.Fatal("parent or undeclared source accepted")
+	}
+}
 
 func TestModelUpdateRuntimeInputsArePermanent(t *testing.T) {
 	for _, leaf := range model3081UpdateLeaves {

@@ -27,6 +27,16 @@ ToDo, project and Japanese title. Nonzero child failures remain nonzero launcher
 The task's zero result only establishes successful launcher handling; daily item completion
 must still be read from the canonical run and verified separately.
 
+The worker prompt distinguishes an unverified asset classification from a confirmed
+client resource and a concrete execution-tool refusal. An unverified classification
+alone must not park every explicitly requested Skill or X operational-file operation
+behind registry restoration. The worker presents the original scope and provenance
+to the normal operation, retains actual protections, and holds only a refused operation.
+It never disables guards, copies protected originals, substitutes completion ledgers,
+or treats a new daily launch/status question as permission to repeat a rejected action.
+An existing worker's real job/run evidence is checked before any overlapping processing.
+These instructions do not establish that the next worker has executed or completed them.
+
 Manual adoption refuses to overwrite a recorded job, another ToDo or corrupt state.
 If linking an accepted worker to its ToDo fails, the next invocation retries that link
 without launching a new worker. Child commands use a three-minute timeout, bounded

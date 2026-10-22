@@ -221,12 +221,9 @@ func repairPathAllowed(path string) bool {
 			return true
 		}
 	}
-	if !sourceVerified(base) {
-		return false
-	}
 	for _, receipt := range receipts {
 		resolved, e := physical(receipt)
-		if e == nil && same(absolute, receipt) && same(target, resolved) {
+		if e == nil && same(absolute, receipt) && same(target, resolved) && sourceVerified(base) {
 			return true
 		}
 	}

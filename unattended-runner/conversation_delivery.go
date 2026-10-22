@@ -79,8 +79,20 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 				}
 				saved.ConversationSourceRecovered = hasNoteMarker(string(priorNote), conversationReplyMarker(q, &saved))
 			}
+			// Persist the recovered attempt decision before delivery writes its
+			// input. Otherwise a failed edit followed by restart can mistake our
+			// own unsuccessful attempt for lost prior delivery evidence.
+			previous := old
 			old = &saved
 			r.State.Requests[reply.Message] = old
+			if err := r.save(); err != nil {
+				if previous == nil {
+					delete(r.State.Requests, reply.Message)
+				} else {
+					r.State.Requests[reply.Message] = previous
+				}
+				return nil, err
+			}
 		}
 	}
 	if old != nil && (old.Thread != q.Thread || old.Author != reply.Author || old.Message != reply.Message || (old.Todo != 0 && old.Conversation != q.RequestID)) {

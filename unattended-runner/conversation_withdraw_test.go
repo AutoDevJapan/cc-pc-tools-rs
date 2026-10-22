@@ -74,7 +74,7 @@ func withdrawalTest(t *testing.T, native bool) *withdrawalFixture {
 				return `{"withdrawn":true}`, nil
 			}
 			if !native {
-				if len(args) != 8 || args[2] != "--question-file" || args[4] != "--reason-file" || args[6] != "--expected-state-file" {
+				if len(args) != 10 || args[2] != "--question-file" || args[4] != "--reason-file" || args[6] != "--expected-state-file" || args[8] != "--scope-file" {
 					t.Fatal("canonical command contract differs")
 				}
 				origin, err := boundedRegular(args[7])
@@ -322,6 +322,23 @@ func TestConversationWithdrawOwnerReplyWinsBeforeReleaseAndRacesNeverReportSucce
 				t.Fatal("question with a reply was archived")
 			}
 		})
+	}
+}
+
+func TestConversationWithdrawActualCanonicalCapturesSnapshotAfterFirstProof(t *testing.T) {
+	w := withdrawalTest(t, true)
+	w.onProof = func(n int) {
+		if n == 1 {
+			w.f.mutateTodo(t, func(row map[string]any) { row["ordinary_progress"] = "saved while checking Discord" })
+		}
+	}
+	result, err := w.run()
+	if err != nil || result["withdrawn"] != true || w.commands != 1 {
+		t.Fatal("an ordinary update during the first proof poisoned the immutable withdrawal intent")
+	}
+	var db map[string]any
+	if readJSON(w.f.r.TodoPath, maxTodo, &db) != nil || db["items"].([]any)[0].(map[string]any)["ordinary_progress"] != "saved while checking Discord" {
+		t.Fatal("withdrawal lost the ordinary update")
 	}
 }
 

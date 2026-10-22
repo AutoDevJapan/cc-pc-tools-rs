@@ -167,6 +167,9 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "model",
                     "auto-model",
                     "effort",
+                    "effort-origin",
+                    "model-origin",
+                    "model-recovery-from",
                     "sandbox",
                     "scope-source",
                     "cwd",
@@ -180,6 +183,8 @@ pub fn parse(args: &[String]) -> Result<Args> {
                     "original-product-retry-key",
                     "resume-session",
                     "parent-job-id",
+                    "review-source-jobs",
+                    "review-excluded-models",
                     "subwork-of",
                     "assigned-needs",
                     "pr-url",
@@ -873,6 +878,27 @@ impl Context {
         }
         job["model_explicit"] = json!(a.model_explicit);
         job["requested_model"] = job["model"].clone();
+        if let Some(origin) = a.value("effort-origin") {
+            if !["owner_request", "policy"].contains(&origin) {
+                return Err(Error::new("invalid effort origin"));
+            }
+            job["effort_origin"] = json!(origin);
+        }
+        if let Some(origin) = a.value("model-origin") {
+            if !["owner_request", "policy"].contains(&origin) {
+                return Err(Error::new("invalid model origin"));
+            }
+            job["model_origin"] = json!(origin);
+        }
+        if let Some(model) = a.value("model-recovery-from") {
+            if !["gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna"]
+                .iter()
+                .any(|known| cc_job_policy::same_model(model, known))
+            {
+                return Err(Error::new("invalid model recovery hint"));
+            }
+            job["model_recovery_from"] = json!(model);
+        }
         let scope_source = a.value("scope-source").unwrap_or("launcher");
         if !["launcher", "owner_marker", "owner_request"].contains(&scope_source) {
             return Err(Error::new("invalid --scope-source"));
@@ -1036,6 +1062,11 @@ impl Context {
             )));
         }
         job["parent_job_id"] = json!(parent);
+        job["parent_origin"] = json!(if a.value("parent-job-id").is_some() {
+            "explicit"
+        } else {
+            "inherited"
+        });
         job["task_title"] = json!(a.value("task-title"));
         job["project"] = json!(
             a.value("project")
@@ -1087,6 +1118,10 @@ impl Context {
                 .into_iter()
                 .flatten()
                 .find(|i| i["id"] == job["todo_id"]);
+            if let Some(item) = item {
+                job["todo_dependency_generation"] =
+                    json!(item["dependency_generation"].as_u64().unwrap_or(0));
+            }
             if a.value("subwork-of").is_some() || item.is_some_and(|i| i["subwork"].is_object()) {
                 let item = item.ok_or_else(|| Error::new("subwork ToDo is missing"))?;
                 let parent = a
@@ -1143,6 +1178,107 @@ impl Context {
             }
         } else if a.value("subwork-of").is_some() {
             return Err(Error::new("subwork ToDo store is missing"));
+        }
+        if let Some(ids)=a.value("review-source-jobs") {
+            job["review_source_jobs"]=json!(ids.split(',').filter(|id|!id.is_empty()).collect::<Vec<_>>());
+        }
+        if let Some(models)=a.value("review-excluded-models") {
+            let models:Vec<_>=models.split(',').collect();
+            if models.iter().any(|m|m.is_empty()||m.len()>80||!m.bytes().all(|b|b.is_ascii_alphanumeric()||b"_.-/".contains(&b))) {
+                return Err(Error::new("invalid review model exclusion"));
+            }
+            job["review_excluded_models"]=json!(models);
+        }
+        if !s(&job, "parent_job_id").is_empty() {
+            // Plain flags supplied by an AI caller are saved hints. An owner
+            // override must be carried explicitly, with its original request.
+            for origin in ["model_origin", "effort_origin"] {
+                if job[origin].is_null() {
+                    job[origin] = json!("policy");
+                }
+            }
+        }
+        // AI children may propagate an existing individual choice, but cannot
+        // turn their own flags into a new owner request. A ToDo's saved request
+        // or the calling parent's matching choice is the accepted provenance.
+        if let Some(caller) = a
+            .value("parent-job-id")
+            .or_else(|| env.get("CC_JOB_ID").map(String::as_str))
+            .filter(|id| valid_job_id(id))
+            .and_then(|id| self.try_load(id))
+            .filter(|parent| self.running_job(parent))
+        {
+            let same_todo = job["todo_id"].as_u64().is_some_and(|id| id > 0)
+                && caller["todo_id"] == job["todo_id"];
+            let validated_subwork = job["subwork_validated"] == true
+                && job["parent_job_id"] == caller["id"]
+                && job["subwork"]["parent_todo_id"] == caller["todo_id"];
+            let unnumbered_scope = job["todo_id"].is_null()
+                && caller["todo_id"].is_null()
+                && s(&caller, "cwd")
+                    .replace('\\', "/")
+                    .trim_end_matches('/')
+                    .eq_ignore_ascii_case(s(&job, "cwd").replace('\\', "/").trim_end_matches('/'));
+            let parent = (same_todo || validated_subwork || unnumbered_scope).then_some(caller);
+            let todo = if job["todo_id"].as_u64().is_some() && self.todo_store().exists() {
+                let db = self.read_json(&self.todo_store())?;
+                db["items"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .find(|row| row["id"] == job["todo_id"])
+                    .cloned()
+            } else {
+                None
+            };
+            for field in ["model", "effort"] {
+                let origin = format!("{field}_origin");
+                let prepared = todo
+                    .as_ref()
+                    .filter(|row| {
+                        !s(&job, "launch_key").is_empty()
+                            && row["scheduler"]["key"] == job["launch_key"]
+                            && row["scheduler"]["phase"] == "prepared"
+                    })
+                    .map(|row| &row["scheduler"]["selection"]);
+                let recorded = parent
+                    .iter()
+                    .chain(todo.iter())
+                    .chain(prepared)
+                    .any(|source| {
+                        source[&origin] == "owner_request"
+                            && if field == "model" {
+                                cc_job_policy::same_model(s(source, field), s(&job, field))
+                            } else {
+                                source[field] == job[field]
+                            }
+                    });
+                if job[&origin] == "owner_request" && !recorded {
+                    job[&origin] = json!("policy");
+                }
+            }
+        }
+        let conversation_source = json!({"model":job["model"],"effort":job["effort"]});
+        self.validate_review_launch(&mut job)?;
+        cc_job_policy::apply_managed_launch_policy(&mut job);
+        cc_job_policy::launch_context::reconcile_resume(&mut job, &conversation_source);
+        if crate::capacity::review_job(&job)
+            && job["sandbox"] == "read-only"
+            && job["todo_id"].as_u64().is_some_and(|id| id > 0)
+            && !s(&job, "launch_key").is_empty()
+        {
+            let db = self.read_json(&self.todo_store())?;
+            if let Some(row) = db["items"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .find(|row| {
+                    row["id"] == job["todo_id"] && row["scheduler"]["key"] == job["launch_key"]
+                })
+                .filter(|row| row["spec"].as_str().is_some_and(|spec| !spec.is_empty()))
+            {
+                job["finite_review"] = json!({"todo_id":job["todo_id"],"spec":row["spec"],"launch_key":job["launch_key"]});
+            }
         }
         let bad = codex_args(&job)
             .into_iter()

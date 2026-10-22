@@ -5,7 +5,11 @@ admission currently accepts only repository 1285649124, PR995, fixed head
 cbd688871651e46d4821a4535d57eaa408105ff2 and its original secret job. New heads
 and CodeQL input admission are not implemented by this finite repair. The
 original ToDo3059 requirement for ordinary same-PR corrections without repeated
-recompilation remains unfinished; the quoted requirement below is preserved.
+recompilation remains operationally unverified. The separate canonical
+product-parent runtime handoff is implemented as described in
+[the runtime specification](../../docs/product-ci-runtime-3059.md), but has not
+executed a real job through this new route.
+The finite constructor itself continues to reject new heads and CodeQL.
 The generic planner remains source-bound and never follows an advancing branch.
 
 The 2026-10-20 direct assignment requires: 「helperを同じ元PR995の通常修正にも
@@ -15,7 +19,7 @@ The 2026-10-20 direct assignment requires: 「helperを同じ元PR995の通常�
 owner statements remain in the supplied operational specification; its contents
 and product material are not copied into this public repository.
 
-Original ToDo3059 acceptance (broader than this finite admission; unfinished):
+Original ToDo3059 acceptance (broader than the finite admission):
 
 1. Given the explicit PR and unchanged original evidence, secret and required
    default-setup CodeQL jobs accept the frozen head/tree/run/attempt/job.
@@ -74,3 +78,30 @@ receipt; context is the reviewed helper workflow constant and requires the live
 API match before execution. Review and acceptance are representations from the
 same independent original receipt; the raw reviewer response is not read, and
 the receipt's 36-artifact assertion is retained rather than independently rerun.
+
+## Additional answered two-source execution
+
+The original single995 route above is unchanged. The separately qualified
+`current-pr-batch-qualify` admits the original dependency939 from its independent
+owner reply, complete source-diff snapshot and different-model source review.
+Private references use an executable-side `batch-input-3059.json`; both original
+locations and the verified bytes are pinned. This command certifies input only.
+
+`current-pr-batch-inspect` and `current-pr-batch-job <new-owned-dir>
+<Linux-helper> <gitleaks-ELF>` additionally require the original995 constructor.
+Only the exact pair described in [the batch specification](../../docs/product-ci-secret-batch-3059.md)
+can share the existing label. The actual assigned runner selects one fixed plan;
+its live hooks and final source/auth proof must match that plan. Every invocation
+remains ephemeral and serial, and any other queued job is rejected. No product
+workflow, cancellation, general protection classification or original candidate
+is changed. These finite routes do not implement future-head admission.
+
+`current-pr-runtime-qualify/inspect/job` use the original product parent's
+canonical handoff with newly verified original review and acceptance outputs.
+Fixture checks accept frozen secret and CodeQL inputs for different PR995
+heads without changing compiled SHA constants. PR995 has since merged; the
+existing live verifier rejects merged PRs, so runtime-inspect/job cannot execute
+that merged PR. Operational use and success through this route remain unverified.
+It has no caller
+path argument and does not reuse the formerly rejected three inputs. Its input
+qualification and fixture checks are not a claim of new official job success.

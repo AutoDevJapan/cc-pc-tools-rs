@@ -1,0 +1,13 @@
+{
+  "todo": 3080,
+  "source_review": 3249,
+  "status": "次の必要な限定更新へまとめる。未適用。",
+  "current_live_changed": false,
+  "baseline_SKILL_sha256": "414e3b3a4ebd9f367cbeda9dc26a7f3b6c89c95d6348d7db4f8dd7edc828bfff",
+  "changes": [
+    "対応するtool結果が在って成功主張と違う場合、不一致として両根拠を示す短い手順を追加。",
+    "正当なstatus/test再実行を反復異常に数えない。上流の読取/検索3回・編集2回・shell2回という目安は根拠であって一律の違反判定にしない。"
+  ],
+  "reason": "Must0版を維持。本文の残り263Bなので重複短縮とまとめ、旧版保全・限定検査と必要レビューを1回で行う。",
+  "no_reinstallation": true
+}

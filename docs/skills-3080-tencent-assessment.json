@@ -109,7 +109,7 @@
       "retrieved_at": "2026-10-20T08:41:13.0199613Z",
       "candidate_disposition": "policy_rewrite_required",
       "reason": "sessionの学びを簡潔な検索可能文書へ整理する用途はある。friction通知だけでsubagentと直接pushを起動する指示、PRなし共有branchへ送る既定、簡体字固定は採用できない。",
-      "required_changes": "doc-templateとcontribute-memberは全文確認済み。学びはteam repoのteamai-learningsブランチへ直接pushし、recall無効時には有効化せず手動Step Aを使える。現在の本文への追記は次の限定更新でまとめる。送信先と対象が元依頼または本人回答に明記された共有だけを許可済みと扱い、CLI実装は未読として残す。",
+      "required_changes": "doc-templateとcontribute-memberは全文確認済み。上流は学びをteam repoのteamai-learningsブランチへ直接pushする。当Skillは元依頼か本人回答に宛先と対象が明記された共有だけを許可済みと扱う。recall無効時には有効化せず手動Step Aを使える。本文への追記は次の必要更新でまとめる。CLI実装は未読。",
       "body_semantic_review_scope": "Fullentrypoint and selectedsupport read; remaining workflow support 0 unreviewed. No CLI execution or global permission.",
       "independent_review_complete": false,
       "installed_by_todo3080": false,

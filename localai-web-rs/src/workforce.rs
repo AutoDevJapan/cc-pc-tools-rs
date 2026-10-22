@@ -50,7 +50,29 @@ fn processing(job: &Value, now: u64) -> bool {
         )
 }
 
-fn evidence(active: Option<&Value>, now: u64, stopped: &BTreeSet<u64>) -> (Value, BTreeSet<u64>) {
+// Only rows carrying an explicit current-job binding opt in. Other products
+// keep their existing observation contract. Null explicitly means no current job.
+fn observed_ids(job: &Value, bindings: &BTreeMap<u64, Value>) -> Vec<u64> {
+    job["todo_ids"]
+        .as_array()
+        .into_iter()
+        .flatten()
+        .filter_map(Value::as_u64)
+        .filter(|id| {
+            *id > 0
+                && bindings
+                    .get(id)
+                    .is_none_or(|key| key.is_string() && key == &job["job_key"])
+        })
+        .collect()
+}
+
+fn evidence(
+    active: Option<&Value>,
+    now: u64,
+    stopped: &BTreeSet<u64>,
+    bindings: &BTreeMap<u64, Value>,
+) -> (Value, BTreeSet<u64>) {
     let Some(input) = active else {
         return (
             json!({"state":"unavailable","verifiedCount":null,"total":null,"observedAt":null}),
@@ -78,6 +100,7 @@ fn evidence(active: Option<&Value>, now: u64, stopped: &BTreeSet<u64>) -> (Value
     let mut seen = BTreeSet::new();
     let mut ids = BTreeSet::new();
     let mut count = 0usize;
+    let mut sessions = Vec::new();
     let mut invalid = false;
     for job in input["jobs"].as_array().unwrap() {
         // Opaque collector keys only. Never return source paths, arbitrary labels or prose.
@@ -93,25 +116,17 @@ fn evidence(active: Option<&Value>, now: u64, stopped: &BTreeSet<u64>) -> (Value
             invalid = true;
         }
         if !processing(job, now)
-            || job["todo_ids"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .filter_map(Value::as_u64)
-                .any(|id| stopped.contains(&id))
+            || observed_ids(job, bindings)
+                .iter()
+                .any(|id| stopped.contains(id))
             || !seen.insert(key)
         {
             continue;
         }
         count += 1;
-        ids.extend(
-            job["todo_ids"]
-                .as_array()
-                .into_iter()
-                .flatten()
-                .filter_map(Value::as_u64)
-                .filter(|id| *id > 0),
-        );
+        sessions.push(json!({"key":format!("job-{key}"),
+            "validUntil":at(&job["last_activity"]["at"]).unwrap().min(observed.unwrap()).saturating_add(30_000)}));
+        ids.extend(observed_ids(job, bindings));
     }
     let complete = !invalid
         && input["status"] == "ok"
@@ -126,12 +141,12 @@ fn evidence(active: Option<&Value>, now: u64, stopped: &BTreeSet<u64>) -> (Value
         .iter()
         .filter(|job| processing(job, now))
         .filter_map(|job| at(&job["last_activity"]["at"]))
-        .min()
+        .max()
         .unwrap_or(observed.unwrap());
     (
         json!({"state":if complete {"complete"} else {"partial"},"verifiedCount":count,
         "total":if complete {Some(count)} else {None},"observedAt":observed,
-        "startedAt":captured,"validUntil":expires.min(observed.unwrap()).saturating_add(30_000)}),
+        "startedAt":captured,"validUntil":expires.min(observed.unwrap()).saturating_add(30_000),"sessions":sessions}),
         ids,
     )
 }
@@ -159,7 +174,23 @@ fn complete_collections(board: &Value) -> bool {
         .is_some_and(|products| products.iter().all(product))
 }
 
-fn state(worker: &Value, id: u64, processing: &BTreeSet<u64>) -> &'static str {
+fn strict_job_match(worker: &Value) -> bool {
+    worker.get("processingJobKey").is_some()
+        || matches!(
+            worker["productIdentity"]["productId"].as_str(),
+            Some("godd-mcp-contract" | "godd-mcp-alpha")
+        )
+        || worker["productIdentity"]["state"] == "unknown"
+}
+
+fn accepts_job(worker: &Value, job: &Value) -> bool {
+    !strict_job_match(worker)
+        || (worker["primaryJob"].is_string()
+            && worker["processingJobKey"].is_string()
+            && worker["processingJobKey"] == job["job_key"])
+}
+
+fn state(worker: &Value, id: u64, processing: &BTreeSet<u64>, matched: bool) -> &'static str {
     // Canonical work waits take precedence over a collector captured before the wait.
     match worker["recordedStatus"].as_str() {
         Some("done") => "done",
@@ -181,7 +212,7 @@ fn state(worker: &Value, id: u64, processing: &BTreeSet<u64>) -> &'static str {
         _ if worker["waitingKind"] == "intake" => "intake_wait",
         _ if worker["waitingKind"] == "startup_error" => "startup_failure",
         _ if worker["jobStatus"] == "queued" => "job_queued",
-        _ if processing.contains(&id) => "processing",
+        _ if processing.contains(&id) && matched => "processing",
         Some("todo") => "not_started",
         _ => "execution_unverified",
     }
@@ -215,7 +246,19 @@ pub fn project(board: &Value, active: Option<&Value>, now: u64) -> Value {
     } else {
         BTreeSet::new()
     };
-    let (processing, processing_ids) = evidence(active, now, &stopped);
+    let bindings = records(board)
+        .filter_map(|row| {
+            Some((
+                row["id"]
+                    .as_str()?
+                    .strip_prefix("todo-")?
+                    .parse::<u64>()
+                    .ok()?,
+                row.get("processingJobKey")?.clone(),
+            ))
+        })
+        .collect();
+    let (processing, processing_ids) = evidence(active, now, &stopped, &bindings);
     let current_ids = if stale {
         BTreeSet::new()
     } else {
@@ -251,7 +294,17 @@ pub fn project(board: &Value, active: Option<&Value>, now: u64) -> Value {
             if !seen.insert(id) {
                 continue;
             }
-            let state = state(worker, id, &current_ids);
+            let matched = active
+                .into_iter()
+                .flat_map(|input| input["jobs"].as_array().into_iter().flatten())
+                .any(|job| {
+                    self::processing(job, now)
+                        && accepts_job(worker, job)
+                        && job["todo_ids"]
+                            .as_array()
+                            .is_some_and(|ids| ids.contains(&json!(id)))
+                });
+            let state = state(worker, id, &current_ids, matched);
             *counts.get_mut(state).unwrap() += 1;
             finished += usize::from(state == "done");
             let progress = worker["progress"]
@@ -269,9 +322,8 @@ pub fn project(board: &Value, active: Option<&Value>, now: u64) -> Value {
                 .filter(|job| {
                     state == "processing"
                         && self::processing(job, now)
-                        && job["todo_ids"]
-                            .as_array()
-                            .is_some_and(|ids| ids.iter().any(|value| value.as_u64() == Some(id)))
+                        && accepts_job(worker, job)
+                        && observed_ids(job, &bindings).contains(&id)
                 })
                 .filter_map(|job| job["job_key"].as_str())
                 .filter(|key| {
@@ -347,7 +399,7 @@ pub fn project(board: &Value, active: Option<&Value>, now: u64) -> Value {
             "currentSession":null,"sessionReason":"個別の担当は作業ごとの観測で確認します。"}),
         );
     }
-    json!({"schemaVersion":1,"state":if stale {"stale"} else if ready {"available"} else {"unavailable"},"observedAt":fetched,
+    json!({"collectorBindingsConfigured":active.and_then(|input|input["product_bindings_configured"].as_bool()),"collectorBindingsOverridden":active.and_then(|input|input["product_bindings_overridden"].as_bool()),"schemaVersion":1,"state":if stale {"stale"} else if ready {"available"} else {"unavailable"},"observedAt":fetched,
         "inventory":{"taskRecords":if ready {Some(tasks.len())} else {None},
             "unfinishedTaskRecords":if ready {Some(tasks.len()-finished)} else {None},
             "jobOnlyRecords":if ready {Some(job_rows)} else {None},
@@ -402,6 +454,69 @@ pub fn expire(value: &mut Value, now: u64) {
     let expired = value["processing"]["validUntil"]
         .as_u64()
         .is_some_and(|until| now > until);
+    if let Some(sessions) = value["processing"]["sessions"].as_array().cloned() {
+        let retained: Vec<_> = sessions
+            .iter()
+            .filter(|session| {
+                session["validUntil"]
+                    .as_u64()
+                    .is_some_and(|until| now <= until)
+            })
+            .cloned()
+            .collect();
+        if retained.len() != sessions.len() || expired {
+            let keys: BTreeSet<_> = retained
+                .iter()
+                .filter_map(|session| session["key"].as_str())
+                .map(str::to_owned)
+                .collect();
+            value["processing"]["state"] = json!(if retained.is_empty() {
+                "stale"
+            } else {
+                "partial"
+            });
+            value["processing"]["verifiedCount"] = if retained.is_empty() {
+                Value::Null
+            } else {
+                json!(retained.len())
+            };
+            value["processing"]["total"] = Value::Null;
+            let mut moved = 0u64;
+            for task in value["tasks"].as_array_mut().into_iter().flatten() {
+                if task["state"] != "processing" {
+                    continue;
+                }
+                let sessions: Vec<_> = task["references"]["sessions"]
+                    .as_array()
+                    .into_iter()
+                    .flatten()
+                    .filter(|key| key.as_str().is_some_and(|key| keys.contains(key)))
+                    .cloned()
+                    .collect();
+                task["references"]["session"] = sessions.first().cloned().unwrap_or(Value::Null);
+                task["references"]["sessions"] = json!(sessions);
+                if sessions.is_empty() {
+                    task["state"] = json!("execution_unverified");
+                    task["availability"]["session"] = json!("stale");
+                    moved += 1;
+                }
+            }
+            if moved > 0 {
+                value["states"]["processing"] = json!(value["states"]["processing"]
+                    .as_u64()
+                    .unwrap_or(0)
+                    .saturating_sub(moved));
+                value["states"]["execution_unverified"] = json!(
+                    value["states"]["execution_unverified"]
+                        .as_u64()
+                        .unwrap_or(0)
+                        + moved
+                );
+            }
+            value["processing"]["sessions"] = json!(retained);
+        }
+        return;
+    }
     if expired {
         value["processing"]["state"] = json!("stale");
         value["processing"]["verifiedCount"] = Value::Null;
@@ -455,6 +570,144 @@ pub fn apply_to_board(board: &mut Value) {
     }
 }
 
+/// Join instrumented native receipts, without turning native UUIDs into CC jobs.
+pub fn merge_native(board: &mut Value, native: &Value, now: u64) {
+    board["nativeActivity"] = json!({"source":"native","state":native["state"],"complete":false,
+        "knownSources":native["knownSources"],"scope":native["scope"]});
+    let eligible: BTreeSet<u64> = records(board)
+        .filter(|row| row["recordedStatus"] == "doing")
+        .filter_map(|row| row["id"].as_str()?.strip_prefix("todo-")?.parse().ok())
+        .collect();
+    let Some(workforce) = board.get_mut("workforce").filter(|value| value.is_object()) else {
+        return;
+    };
+    let mut proofs = workforce["processing"]["sessions"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default();
+    let cc_keys: BTreeSet<String> = proofs
+        .iter()
+        .filter_map(|proof| proof["key"].as_str().map(str::to_owned))
+        .collect();
+    let cc_count = workforce["processing"]["verifiedCount"].as_u64();
+    let mut added = BTreeSet::new();
+    for session in native["sessions"].as_array().into_iter().flatten() {
+        let (Some(id), Some(key), Some(until)) = (
+            session["todoId"].as_u64(),
+            session["key"].as_str(),
+            session["validUntil"].as_u64(),
+        ) else {
+            continue;
+        };
+        if until < now
+            || !key.starts_with("native-")
+            || added.contains(key)
+            || !eligible.contains(&id)
+        {
+            continue;
+        }
+        let Some(task) = workforce["tasks"]
+            .as_array_mut()
+            .into_iter()
+            .flatten()
+            .find(|task| task["todoId"] == id)
+        else {
+            continue;
+        };
+        if task["state"] == "done"
+            || task["references"]["sessions"]
+                .as_array()
+                .into_iter()
+                .flatten()
+                .any(|key| key.as_str().is_some_and(|key| cc_keys.contains(key)))
+        {
+            continue;
+        }
+        if task.get("recordedWorkState").is_none() {
+            task["recordedWorkState"] = task["state"].clone();
+        }
+        task["state"] = json!("processing");
+        let mut refs = task["references"]["sessions"]
+            .as_array()
+            .cloned()
+            .unwrap_or_default();
+        refs.push(json!(key));
+        refs.sort_by(|a, b| a.as_str().cmp(&b.as_str()));
+        refs.dedup();
+        task["references"]["session"] = refs.first().cloned().unwrap_or(Value::Null);
+        task["references"]["sessions"] = json!(refs);
+        task["availability"]["session"] = json!("native_tool_receipt");
+        if task["nativeExecution"]["actualAt"].as_u64().unwrap_or(0)
+            <= session["actualAt"].as_u64().unwrap_or(0)
+        {
+            task["nativeExecution"] = session.clone();
+        }
+        if !task["nativeExecutions"].is_array() {
+            task["nativeExecutions"] = json!([]);
+        }
+        task["nativeExecutions"]
+            .as_array_mut()
+            .unwrap()
+            .push(session.clone());
+        task["references"]["session"] = task["nativeExecution"]["key"].clone();
+        added.insert(key.to_owned());
+        proofs.push(session.clone());
+    }
+    let total = cc_count.unwrap_or(0) + added.len() as u64;
+    workforce["processing"]["verifiedCount"] = if cc_count.is_some() || !added.is_empty() {
+        json!(total)
+    } else {
+        Value::Null
+    };
+    workforce["processing"]["total"] = Value::Null;
+    if !added.is_empty()
+        || matches!(
+            workforce["processing"]["state"].as_str(),
+            Some("complete" | "partial")
+        )
+    {
+        workforce["processing"]["state"] = json!("partial")
+    }
+    if !added.is_empty() {
+        workforce["processing"]["validUntil"] = proofs
+            .iter()
+            .filter_map(|proof| proof["validUntil"].as_u64())
+            .max()
+            .map(Value::from)
+            .unwrap_or(Value::Null);
+        workforce["processing"]["observedAt"] = proofs
+            .iter()
+            .filter_map(|proof| proof["actualAt"].as_u64())
+            .chain(workforce["processing"]["observedAt"].as_u64())
+            .max()
+            .map(Value::from)
+            .unwrap_or(Value::Null);
+    }
+    workforce["processing"]["sessions"] = json!(proofs);
+    workforce["processing"]["bySource"] = json!({"ccJobs":cc_count,"nativeToolReceipts":if native["state"]=="unavailable"{None}else{Some(added.len())}});
+    let mut counts = BTreeMap::<String, u64>::new();
+    for task in workforce["tasks"].as_array().into_iter().flatten() {
+        if let Some(state) = task["state"].as_str() {
+            *counts.entry(state.to_owned()).or_default() += 1;
+        }
+    }
+    if !added.is_empty() {
+        if let Some(states) = workforce["states"].as_object_mut() {
+            for (state, count) in states.iter_mut() {
+                *count = json!(counts.get(state).copied().unwrap_or(0));
+            }
+        }
+    }
+    if let Some(coverage) = workforce["coverage"].as_array_mut() {
+        for source in coverage {
+            if source["kind"] == "native_codex" {
+                source["state"] = native["state"].clone();
+                source["complete"] = json!(false);
+            }
+        }
+    }
+}
+
 fn apply_product(product: &mut Value, tasks: &BTreeMap<u64, Value>, protected: bool) {
     for worker in product["workers"].as_array_mut().into_iter().flatten() {
         let task = worker["id"]
@@ -465,6 +718,31 @@ fn apply_product(product: &mut Value, tasks: &BTreeMap<u64, Value>, protected: b
         let state = task
             .and_then(|task| task["state"].as_str())
             .unwrap_or("execution_unverified");
+        let native_processing = task.is_some_and(|task| {
+            let native = &task["nativeExecution"];
+            native["source"] == "native"
+                && native["verification"] == "runtime_tool_receipt"
+                && native["key"]
+                    .as_str()
+                    .is_some_and(|key| key.starts_with("native-"))
+                && task["references"]["sessions"]
+                    .as_array()
+                    .is_some_and(|keys| keys.contains(&native["key"]))
+        });
+        let state = if state == "processing"
+            && !native_processing
+            && strict_job_match(worker)
+            && (!worker["primaryJob"].is_string()
+                || !worker["processingJobKey"].is_string()
+                || !task.is_some_and(|task| {
+                    task["references"]["sessions"]
+                        .as_array()
+                        .is_some_and(|keys| keys.contains(&worker["processingJobKey"]))
+                })) {
+            "execution_unverified"
+        } else {
+            state
+        };
         worker["workState"] = json!(state);
         worker["status"] = json!(match state {
             "processing" => "working",
@@ -491,6 +769,24 @@ fn apply_product(product: &mut Value, tasks: &BTreeMap<u64, Value>, protected: b
         worker["references"] = task
             .map(|task| task["references"].clone())
             .unwrap_or(json!({"sessions":[],"session":null}));
+        if let Some(native) = task.and_then(|task| task.get("nativeExecution")) {
+            worker["executionSource"] = native.clone();
+            worker["nativeExecutionKey"] = native["key"].clone();
+            worker["nativeExecutions"] = task.unwrap()["nativeExecutions"].clone();
+            worker["primaryJob"] = Value::Null;
+            worker["jobStatus"] = Value::Null;
+            worker["processingJobKey"] = Value::Null;
+            worker["currentStage"] = json!("native実行のTool結果を確認しています。");
+            worker["lastActivityAt"] = native["actualAt"]
+                .as_u64()
+                .and_then(|at| DateTime::from_timestamp_millis(at as i64))
+                .map(|at| json!(at.to_rfc3339()))
+                .unwrap_or(Value::Null);
+            worker["factsSource"] =
+                json!("元ToDoへ結び付いたnative実行の操作結果。CCjobと別のsourceです。");
+            worker["stopReason"] = json!("");
+            worker["nextAction"] = json!("確認できた実作業を続け、結果を元のToDoへ記録します。");
+        }
         if protected {
             worker["lastResultAt"] = Value::Null;
             worker["lastResult"] = json!("作業本文を保護中のため取得できません。");

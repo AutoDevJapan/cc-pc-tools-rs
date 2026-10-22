@@ -2,9 +2,9 @@ name: Agent progress tools
 on:
   push:
     branches: [main]
-    paths: ['tools/agent-progress/**', 'tools/codex-progress-tui/**', '.github/workflows/agent-progress.yml']
+    paths: ['tools/agent-progress/**', 'tools/codex-progress-tui/**', 'cc-job-policy/src/priority.rs', 'cc-job-policy/src/product_identity.rs', '.github/workflows/agent-progress.yml']
   pull_request:
-    paths: ['tools/agent-progress/**', 'tools/codex-progress-tui/**', '.github/workflows/agent-progress.yml']
+    paths: ['tools/agent-progress/**', 'tools/codex-progress-tui/**', 'cc-job-policy/src/priority.rs', 'cc-job-policy/src/product_identity.rs', '.github/workflows/agent-progress.yml']
 permissions:
   contents: read
 concurrency:

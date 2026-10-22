@@ -102,6 +102,6 @@ const row={workState:'processing',references:{sessions:['native-a','native-b','n
 
 func TestUnavailableNativeCounterIsShownAsUnconfirmed(t *testing.T) {
 	node(t, `
-const host={textContent:''},ctx={data:{workforce:{processing:{state:'partial',bySource:{nativeToolReceipts:null}},acquisition:{}}},$:()=>host,opsTime:()=>'',opsValue:value=>value==null?'—':String(value)};vm.createContext(ctx);const source=line(input.index,'if(data&&data.workforce){const w=');vm.runInContext(source,ctx);assert(host.textContent.includes('native Tool結果 未確認'));host.textContent='';ctx.data.workforce.processing.bySource.nativeToolReceipts=0;vm.runInContext(source,ctx);assert(host.textContent.includes('native Tool結果 0件'));
+const host={textContent:''},ctx={Date,Set,opsList:v=>Array.isArray(v)?v:[],data:{workforce:{processing:{state:'partial',bySource:{nativeToolReceipts:null}},acquisition:{}}},$:()=>host,opsTime:()=>'',opsValue:value=>value==null?'—':String(value)};vm.createContext(ctx);vm.runInContext(between(input.index,'function opsProcessingSummary(','function renderProgress('),ctx);const source=line(input.index,'if(data&&data.workforce){const w=');vm.runInContext(source,ctx);assert(host.textContent.includes('会話中の担当 取得できません'));host.textContent='';ctx.data.workforce.processing.bySource.nativeToolReceipts=0;vm.runInContext(source,ctx);assert(host.textContent.includes('会話中の担当 0件'));
 `)
 }

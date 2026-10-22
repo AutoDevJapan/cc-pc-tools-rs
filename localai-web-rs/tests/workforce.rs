@@ -1,5 +1,5 @@
 use localai_web_rs::workforce::project;
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 const NOW: u64 = 1_000_000;
 
@@ -23,6 +23,62 @@ fn active() -> Value {
             "todo_ids":[3],"recorded_status":"running","execution":"running","worker_presence":"verified_alive",
             "phase":"tool","wait_reasons":[],"source":{"status":"ok","complete":true},
             "last_activity":{"at":"1970-01-01T00:16:38Z","state":"fresh"}}]})
+}
+
+#[test]
+fn normal_empty_sources_and_native_close_do_not_force_permanent_partial() {
+    let mut input = active();
+    input["jobs"] = json!([]);
+    let mut view = board();
+    view["workforce"] = project(&view, Some(&input), NOW);
+    localai_web_rs::workforce::merge_native(
+        &mut view,
+        &json!({"state":"complete","complete":true,"verifiedCount":0,
+            "sessions":[],"bindings":[],"knownSources":0,"observedAt":NOW,"scope":"connected_sessions"}),
+        NOW,
+    );
+    assert_eq!(view["workforce"]["processing"]["state"], "complete");
+    assert_eq!(view["workforce"]["processing"]["verifiedCount"], 0);
+    // All-PC inventory remains outside this finite collection contract.
+    assert_eq!(
+        view["workforce"]["processing"]["scope"],
+        "connected_sessions"
+    );
+}
+
+#[test]
+fn one_source_failure_keeps_other_sources_valid_zero_and_does_not_certify_total() {
+    let mut input = active();
+    input["jobs"] = json!([]);
+    let mut view = board();
+    view["workforce"] = project(&view, Some(&input), NOW);
+    localai_web_rs::workforce::merge_native(
+        &mut view,
+        &json!({"state":"unavailable","complete":false,"sessions":[],"bindings":[]}),
+        NOW,
+    );
+    let proof = &view["workforce"]["processing"];
+    assert_eq!(proof["bySource"]["ccJobs"], 0);
+    assert!(proof["bySource"]["nativeToolReceipts"].is_null());
+    assert_eq!(proof["state"], "partial");
+    assert_eq!(proof["collectionIssues"][0]["kind"], "native");
+    assert!(proof["total"].is_null());
+}
+
+#[test]
+fn completed_execution_is_not_unknown_or_product_completion_when_task_remains_open() {
+    let mut board = board();
+    let worker = &mut board["departments"][0]["products"][0]["workers"][2];
+    worker["jobStatus"] = json!("succeeded");
+    let data = project(&board, None, NOW);
+    let task = data["tasks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|task| task["todoId"] == 3)
+        .unwrap();
+    assert_eq!(task["state"], "not_started");
+    assert_eq!(data["inventory"]["unfinishedTaskRecords"], 5);
 }
 
 #[test]

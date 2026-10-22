@@ -27,14 +27,17 @@ ToDo, project and Japanese title. Nonzero child failures remain nonzero launcher
 The task's zero result only establishes successful launcher handling; daily item completion
 must still be read from the canonical run and verified separately.
 
-The worker prompt distinguishes an unverified asset classification from a confirmed
-client resource and a concrete execution-tool refusal. An unverified classification
-alone must not park every explicitly requested Skill or X operational-file operation
-behind registry restoration. The worker presents the original scope and provenance
-to the normal operation, retains actual protections, and holds only a refused operation.
-It never disables guards, copies protected originals, substitutes completion ledgers,
-or treats a new daily launch/status question as permission to repeat a rejected action.
-An existing worker's real job/run evidence is checked before any overlapping processing.
+The prompt instructs the worker to distinguish an unverified asset classification from
+a confirmed client resource and a concrete execution-tool refusal. An unverified
+classification alone must not park every explicitly requested Skill or X operational-file
+operation behind registry restoration. It identifies the appropriate Skill's SKILL.md and
+references, done.txt, and the original dated run as the permitted operational scope.
+It instructs the worker to present the original scope and provenance to normal operations,
+exclude already refused actions, and retain actual protections. For this X task it forbids
+guard/protection changes including path exceptions or registry edits, protected-original
+copies, and substitute completion ledgers. A new daily launch/status question cannot
+authorize repeating a rejected action. The prompt also requires checking an existing
+worker's real job/run evidence before overlapping processing.
 These instructions do not establish that the next worker has executed or completed them.
 
 Manual adoption refuses to overwrite a recorded job, another ToDo or corrupt state.

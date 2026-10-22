@@ -7,10 +7,12 @@
 
 保護判定は、実際の受託資産の検出、`classification_unverified`という分類未確認、
 正規の実行ツールが具体操作を拒否した結果を区別する。分類未確認だけを根拠に、
-本人が明示したSkillや元X運用leafの通常読取・更新を新たな本人許可待ち、
-または保護原本の全体復旧待ちへ変えない。元依頼・対象・出所を正規の操作へ対応付け、
-許可済みの同じexact pathで実行を試す。実際の受託資産の検出や上位制約は保持する。
-guardの無効化・一律false化、保護原本のコピー、別名の台帳による代用は行わない。
+本人が明示した適合SkillのSKILL.md・references、下記done.txt・元の日付のrunへの
+通常読取・更新を、新たな本人許可待ちや保護原本の全体復旧待ちへ変えない。
+元依頼・対象・出所を正規の操作へ対応付け、既拒否の具体操作を除き、許可済みの
+同じ絶対パスで実行を試す。実際の受託資産の検出や上位制約は保持する。
+このX作業のために、対象パスの例外追加や元保護一覧の編集を含め、guard・保護設定を
+変更しない。保護原本のコピー、別名の台帳による代用も行わない。
 
 1. shared-todo、local-console、social-media-research、knowledge-to-skills、japanese-report-writing、現在のbrowser/computer-use Skillを読む。
 2. 元ToDo、D:/CC/Tools/x-bookmarks/done.txt、該当するruns/YYYY-MM-DD.jsonを読む。

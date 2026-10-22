@@ -67,6 +67,30 @@ func TestRunnerSignalsOfficialHttpFailure(t *testing.T) {
 	}
 }
 
+func TestRunnerSignalsHttpAcrossTrimAndChunkBoundaries(t *testing.T) {
+	if len(runnerPatterns) > 32 {
+		t.Fatal("fixed observations exceed the bitset capacity")
+	}
+	for _, code := range []int{401, 403, 404, 429, 500} {
+		phrase := fmt.Sprintf("Response status code does not indicate success: %d (failure).", code)
+		want := fmt.Sprintf("http_%d", code)
+		if code == 500 {
+			want = ""
+		}
+		for _, prefix := range []int{127, 128, 129, 255, 256, 257} {
+			input := strings.Repeat("x", prefix) + phrase + strings.Repeat("y", 257)
+			for split := 0; split <= len(input); split++ {
+				var out runnerSignals
+				_, _ = out.Write([]byte(input[:split]))
+				_, _ = out.Write([]byte(input[split:]))
+				if got := strings.Join(out.snapshot(), ","); got != want {
+					t.Fatalf("code %d prefix %d split %d: %s", code, prefix, split, got)
+				}
+			}
+		}
+	}
+}
+
 func assertRunnerReceiptNoSecret(t *testing.T, root string) {
 	t.Helper()
 	entries, err := os.ReadDir(root)

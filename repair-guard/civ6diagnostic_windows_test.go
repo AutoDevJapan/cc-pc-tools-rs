@@ -54,7 +54,9 @@ func TestCiv6RetryDiagnosticNamesAreFiniteAndCredentialFree(t *testing.T) {
 		"state/evidence/39423559387-1-118630300541/prestart-1/root/runtime/runner/_diag/Runner.log",
 		"state/evidence/39423559387-1-118630300541/prestart-1/root/runtime/sdk-msvc.log",
 		"state/evidence/39423559387-1-118630300541/prestart-1/root/unknown.json",
+		"state/evidence/39423559387-1-118630300541/prestart-1/root/runtime/runner-configure-result.json",
 		"state/entries/39423559387-1-118630300541/prestart-3/execute.log",
+		"state/evidence/39423559387-1-118630300541/prestart-3/root/runtime/runner-configure-result.json",
 		"state/evidence/39423559387-1-118630300541/prestart-2/root/runtime/runner/.credentials",
 		"state/evidence/39423559387-1-118630300541/prestart-2/root/runtime/runner/_diag/Runner.log",
 		"state/evidence/39423559387-1-118630300541/prestart-2/root/runtime/runner-unknown-result.json",
@@ -70,6 +72,7 @@ func TestCiv6RetryDiagnosticNamesAreFiniteAndCredentialFree(t *testing.T) {
 func TestCiv6SecondRetryReceiptNeedsIdentity(t *testing.T) {
 	a, r, save := civ6Fixture(t)
 	civ6MakeRoot(t, a, r)
+	save()
 	rel := "state/evidence/39423559387-1-118630300541/prestart-2/root/runtime/runner-configure-result.json"
 	path := filepath.Join(a.home, filepath.FromSlash(rel))
 	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
@@ -85,6 +88,21 @@ func TestCiv6SecondRetryReceiptNeedsIdentity(t *testing.T) {
 		v, _ := filepath.Rel(a.home, cur)
 		r.Objects[filepath.ToSlash(v)] = civ6Record(t, cur)
 	}
+	leaf := r.Objects[rel]
+	delete(r.Objects, rel)
+	save()
+	if civ6Allowed(path, a) {
+		t.Fatal("receipt with only the leaf identity missing accepted")
+	}
+	r.Objects[rel] = leaf
+	runtimeRel := filepath.ToSlash(filepath.Dir(rel))
+	runtime := r.Objects[runtimeRel]
+	delete(r.Objects, runtimeRel)
+	save()
+	if civ6Allowed(path, a) {
+		t.Fatal("receipt with only the runtime directory identity missing accepted")
+	}
+	r.Objects[runtimeRel] = runtime
 	save()
 	if !civ6Allowed(path, a) {
 		t.Fatal("recorded next retry receipt rejected")

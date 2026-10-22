@@ -141,7 +141,7 @@ func TestModelUpdateRejectsScopeOutsideExactLeaf(t *testing.T) {
 			}
 		} else if leaf.kind == "guard" {
 			bound++
-			if leaf.candidate.root != model3338GuardSource || !modelDigestValid(leaf.candidate.sha256) ||
+			if leaf.candidate.root != model3344GuardSource || !modelDigestValid(leaf.candidate.sha256) ||
 				len(leaf.candidate.evidence) != 1 || !modelCandidateEvidenceIndependent(leaf.candidate, leaf) {
 				t.Fatal("guard A lost its separate fixed source and build receipt")
 			}

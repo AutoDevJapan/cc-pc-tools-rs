@@ -38,6 +38,7 @@ const model3081Source = permanent3344Root + "/cbddcb32fb8ffc9364862b743c4435739f
 const model3309Source = permanent3344Root + "/e290e27ffdb63cbd35dcb8af559372293a94de87"
 const model3250Source = permanent3344Root + "/7bb3858a81d833dc5bd6e2320c2b81f4a55d0969"
 const model3338GuardSource = permanent3344Root + "/a36a77c42690eef7c0147a6a2eee76b496a48249"
+const model3344GuardSource = permanent3344Root + "/b4872860870e6832be851d630b2fd4035922a80c"
 
 // The installed baseline has the independent ToDo3177 provenance. ToDo3298
 // built the candidate once from the merged source, then ToDo3081 copied it
@@ -68,10 +69,13 @@ var model3081UpdateLeaves = []modelUpdateLeaf{
 	}, {
 		sha256:   "274e8abc5c90d5ca7dcf401b824d5ff50e078c966fd74a35af86f78dd9d900d9",
 		evidence: []consoleEvidence{{model3250Source, model3250Source + "/codex-owned-1bd08feb8beaad849537a5ea1b45bdfd/guard-pr351-installed.private.json", "2de2b7789fb32d159f3d1e41e40f828167a10db1f944512d2f30510a4f782115"}},
-	}}, candidate: modelUpdateCandidate{
-		root: model3338GuardSource, path: model3338GuardSource + "/guard-artifact.private.exe",
-		head: "a36a77c42690eef7c0147a6a2eee76b496a48249", sha256: "e99f7cdc857705705871df42aa4cc159e5451df2a958076169425692ad456dc8",
+	}, {
+		sha256:   "e99f7cdc857705705871df42aa4cc159e5451df2a958076169425692ad456dc8",
 		evidence: []consoleEvidence{{model3338GuardSource, model3338GuardSource + "/guard-artifact-build.private.json", "a3e3e3d64dccab1927157f7802c0c8a57eb679df624f5554d6d9cb039cf567af"}},
+	}}, candidate: modelUpdateCandidate{
+		root: model3344GuardSource, path: model3344GuardSource + "/guard-artifact.private.exe",
+		head: "b4872860870e6832be851d630b2fd4035922a80c", sha256: "a9cb1c42b801972df4c8dad2f4bc23cafd144e80291f1040a28ad4eda3e16c23",
+		evidence: []consoleEvidence{{model3344GuardSource, model3344GuardSource + "/guard-artifact-build.private.json", "529d5d0222d98c37702347b51930ae1366d411eec67a2f81a635ef738965c3d4"}},
 	}},
 	{kind: "jobs", target: jobsRuntime, baselines: []consolePin{{
 		sha256:   "7ae20f2bfa824aa6dc27d7046bb997df137bd8980b3291d4e195804714b42c77",

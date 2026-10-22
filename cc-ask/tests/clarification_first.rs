@@ -10,12 +10,13 @@ use std::{collections::BTreeMap, fs, path::PathBuf};
 
 // The Go integration test starts this exact Rust test executable. Effects::run
 // delegates to the Go test process, which calls real conversationLogInner and
-// substitutes only the Discord sender. Production endpoints are never changed.
+// injects its synthetic runner and substitutes the Discord sender. Go CLI/log/
+// index/immutable storage are real. Production endpoints are never changed.
 #[test]
+#[ignore = "Go-driven cross-language helper; requires explicit fixture environment"]
 fn real_go_state_bridge_fixture() {
-    let Some(root) = std::env::var_os("CLARIFICATION_BRIDGE_FIXTURE_HOME") else {
-        return;
-    };
+    let root = std::env::var_os("CLARIFICATION_BRIDGE_FIXTURE_HOME")
+        .expect("Go-driven fixture environment required");
     let root = PathBuf::from(root);
     let go_test = std::env::var_os("CLARIFICATION_GO_TEST_EXE").unwrap();
     fs::write(

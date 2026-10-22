@@ -15,10 +15,11 @@ import (
 )
 
 // This helper is called by the real Rust bridge test executable. Only the
-// Discord transport is substituted; the Go CLI/log/index/immutable storage are real.
+// runner loader/state and Discord sender are injected; the Go CLI/log/index/
+// immutable storage are real.
 func TestClarificationGoStateHelper(t *testing.T) {
 	if os.Getenv("CLARIFICATION_GO_STATE_HELPER") != "1" {
-		return
+		t.Skip("Rust-driven Go helper requires explicit fixture environment")
 	}
 	var args []string
 	if json.Unmarshal([]byte(os.Getenv("CLARIFICATION_CALL_ARGS")), &args) != nil || len(args) < 5 {
@@ -64,7 +65,7 @@ func TestClarificationRealRustBridgeCRLFRetryAndExistingGoReservation(t *testing
 					t.Error(err)
 				}
 			})
-			command := exec.Command(rustTest, "--exact", "real_go_state_bridge_fixture", "--nocapture")
+			command := exec.Command(rustTest, "--ignored", "--exact", "real_go_state_bridge_fixture", "--nocapture")
 			command.Env = append(os.Environ(), "CLARIFICATION_BRIDGE_FIXTURE_HOME="+home, "CLARIFICATION_GO_TEST_EXE="+self)
 			if seed {
 				command.Env = append(command.Env, "CLARIFICATION_SEED_FAILED_LOG=1")

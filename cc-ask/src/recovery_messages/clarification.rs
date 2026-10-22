@@ -304,7 +304,12 @@ pub(super) fn authorize(
     if CloseLedger::load(home)?
         .records
         .get(&binding.thread_id)
-        .is_some_and(|closed| closed.binding.request_id == binding.question_request_id)
+        .is_some_and(|closed| {
+            closed.binding.request_id == binding.question_request_id
+                && (matches!(closed.phase.as_str(), "verified" | "patch_pending")
+                    || closed.outcome.is_some()
+                    || closed.patch_attempted)
+        })
     {
         return Err(
             "original question has an explicit close record; no new explanation phase reserved"
@@ -330,12 +335,26 @@ fn requests_explanation(body: &str) -> bool {
     {
         return false;
     }
+    if regex::Regex::new(
+        r"(?i)(?:^|[\s、。，,.!?！？:：])[abａｂ]\s*(?:で|を(?:選|採用|希望)|に(?:し|決め)|採用)",
+    )
+    .unwrap()
+    .is_match(body)
+    {
+        return false;
+    }
     let explicit = regex::Regex::new(r"(?i)説明(?:して|を)|詳しく|解説して|explain|clarif")
         .unwrap()
-        .is_match(body);
+        .is_match(body)
+        || regex::Regex::new(r"教えて(?:ほしい|ください)?\s*[。！!]*\s*$")
+            .unwrap()
+            .is_match(body);
+    let why = regex::Regex::new(r"なぜ|どうして|なんで")
+        .unwrap()
+        .is_match(&body.replace("なぜなら", "").replace("なんでも", ""));
     let question = body.contains(['?', '？'])
         || regex::Regex::new(r"(?:なの|ですか|ますか|どういう意味|何のため)\s*[。！!]*\s*$")
             .unwrap()
             .is_match(body);
-    explicit || question && regex::Regex::new(r"(?i)どういう|何の|何で|なんで|なぜ|どうして|要る|いる|必要|ひつよう|理由|内訳|用途|根拠|経費|けいひ|費用|料金|why|what").unwrap().is_match(body)
+    explicit || why || question && regex::Regex::new(r"(?i)どういう|何の|何で|要る|いる|必要|ひつよう|理由|内訳|用途|根拠|経費|けいひ|費用|料金|why|what").unwrap().is_match(body)
 }

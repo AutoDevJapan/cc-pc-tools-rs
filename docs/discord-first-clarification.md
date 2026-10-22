@@ -81,7 +81,8 @@ GET成功後の別プロセス実行・再実行・応答消失も、同じ固�
 | 既存送信予約へ用途JSONを初めて指定 | 後付けを拒否 |
 | 通知・メンション・返信ping・添付・新質問・選択肢・通常進捗 | 送信を拒否し、元質問を進捗先にしない |
 
-Rustの通常CLIとrecovery、Go conversation、および実Rust CLIを使うGo結合検査を対象にする。
+Rustの通常入口とrecovery、Go conversation、およびRustの公開入口関数を呼ぶテスト実行物と
+Goの保存処理を結ぶ検査を対象にする。
 失敗の再現を実装より先に確認し、修正後に同じ条件と関連利用側を検査する。
 別モデルmaxの固定base/headレビューと必要CIの成功後に通常マージする。
 配布は並行変更を含む最新mainと既存実行物のsource/hashを照合して行う。
@@ -104,11 +105,14 @@ PR #315の通常マージを改めて確認する。実装前の受入テスト�
 両方とも送信側を置き換えた架空データであり、本人性やDiscord実配達の成功を証明しない。
 修正後はRust sender本体でも元question:0・本人・現在版・競合・応答消失・部分回収を検査する。
 `unattended-runner/conversation_bridge_integration_test.go` は実際のRustテスト実行物を起動し、
-Rustの通常入口と実際のGo CLI・conversationLogInner・保存処理を通す。Discord senderだけを置き換える。
+Rustの公開入口関数と実際のGo CLI・conversationLogInner・保存処理を通す。
+Goのrunner loader・設定と状態の初期値・Discord senderを架空データへ置き換える。
 CRLF本文の初回送信後の再実行と、既存未送信予約からの再開を確認する。
 実行時は `CLARIFICATION_RUST_TEST_EXE` に同sourceから生成した `clarification_first` の実行物を明示し、
 Goの `TestClarificationRealRustBridgeCRLFRetryAndExistingGoReservation` を実行する。
 Rust側の `real_go_state_bridge_fixture` はこの結合検査の補助であり、単独の呼出しを受入成功に数えない。
+通常のRust検査ではignore、Go補助は環境変数がなければskipする。
+この結合検査は明示した実行物を使う手動検査であり、現在のCIでは実行せずskipする。
 外部Discordの実配達と本番のCLI全段階は、配布後の指定実例で別に確認する。
 
 ## 実例への反映

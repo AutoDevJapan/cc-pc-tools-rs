@@ -813,6 +813,9 @@ func (r *Runner) conversationLogInner(ctx context.Context, requestID, title, bod
 	}
 	raw, err := r.Run(ctx, conversationSender, args...)
 	if err != nil {
+		if clarification != "" {
+			return nil, errors.New("clarification delivery incomplete; inspect the current owner reply and saved delivery before retrying; keep the original request unchanged")
+		}
 		return nil, errors.New("conversation log pending; retry the same request")
 	}
 	var report map[string]any

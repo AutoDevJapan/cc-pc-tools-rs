@@ -4337,10 +4337,17 @@ mod tests {
             ("どういうこと？", true),
             ("これ要る？", true),
             ("何の費用？", true),
+            ("なぜ必要なのか教えて", true),
+            ("どうして必要", true),
+            ("なんで", true),
+            ("内訳を教えて", true),
+            ("なぜなら安い", false),
             ("a", false),
             ("bで進めて", false),
             ("必要です", false),
             ("aで。なぜなら安い", false),
+            ("aで、なんで？", false),
+            ("bを選ぶ。理由を教えて", false),
             ("必要じゃない。止めて", false),
             ("説明は不要、aで", false),
         ] {
@@ -4400,6 +4407,49 @@ mod tests {
 
     #[test]
     fn first_clarification_does_not_reopen_an_explicitly_closed_question() {
+        for (phase, outcome, attempted, accepted) in [
+            ("reply_pending", None, false, true),
+            ("reply_pending", Some("archived"), false, false),
+            ("reply_pending", None, true, false),
+            ("patch_pending", None, true, false),
+            ("verified", Some("archived"), false, false),
+        ] {
+            let f = Fixture::new();
+            let mut ctx = f.context();
+            let (args, manifest, _) = clarification_case(&f, &mut ctx, "元の説明です。", false);
+            f.server
+                .lock()
+                .unwrap()
+                .channels
+                .get_mut(args.thread.as_ref().unwrap())
+                .unwrap()["thread_metadata"] = json!({"archived":true});
+            fs::write(f.home.join(CLOSE_LEDGER),json!({"domain":DOMAIN,"version":1,"records":{args.thread.as_ref().unwrap():{
+            "binding":{"request_id":"clarification-question","thread_id":args.thread,"question_message_id":args.thread,
+            "origin_todo_id":2472,"todo_id":2472,"message_id":"9999","author_id":OWNER,"job_id":"fixture-job","revision":"a".repeat(40),
+            "question_fingerprint":"a".repeat(64),"reply_sha256":"a".repeat(64),"receipt_sha256":"a".repeat(64),"verification_sha256":"a".repeat(64),"completion":"synthetic completion"},
+            "phase":phase,"outcome":outcome,"pending_reply_ids":[],"patch_attempted":attempted}}}).to_string()).unwrap();
+            let before = fs::read(f.home.join(LEDGER)).unwrap();
+            let posts = f.server.lock().unwrap().posts.len();
+            let result = log_clarification(&mut ctx, &args, &manifest);
+            if accepted {
+                assert_eq!(result.unwrap()["delivery"], "verified", "{phase}");
+            } else {
+                assert!(
+                    result.unwrap_err().contains("explicit close record"),
+                    "{phase}"
+                );
+                assert_eq!(fs::read(f.home.join(LEDGER)).unwrap(), before);
+            }
+            assert_eq!(
+                f.server.lock().unwrap().posts.len(),
+                posts + usize::from(accepted)
+            );
+            f.unchanged();
+        }
+    }
+
+    #[test]
+    fn first_clarification_accepts_discord_auto_archive_without_a_close_record() {
         let f = Fixture::new();
         let mut ctx = f.context();
         let (args, manifest, _) = clarification_case(&f, &mut ctx, "元の説明です。", false);
@@ -4409,16 +4459,13 @@ mod tests {
             .channels
             .get_mut(args.thread.as_ref().unwrap())
             .unwrap()["thread_metadata"] = json!({"archived":true});
-        fs::write(f.home.join(CLOSE_LEDGER),json!({"domain":DOMAIN,"version":1,"records":{args.thread.as_ref().unwrap():{
-            "binding":{"request_id":"clarification-question","thread_id":args.thread,"question_message_id":args.thread,
-            "origin_todo_id":2472,"todo_id":2472,"message_id":"9999","author_id":OWNER,"job_id":"fixture-job","revision":"a".repeat(40),
-            "question_fingerprint":"a".repeat(64),"reply_sha256":"a".repeat(64),"receipt_sha256":"a".repeat(64),"verification_sha256":"a".repeat(64),"completion":"synthetic completion"},
-            "phase":"verified","outcome":"archived","pending_reply_ids":[],"patch_attempted":true}}}).to_string()).unwrap();
-        let before = fs::read(f.home.join(LEDGER)).unwrap();
         let posts = f.server.lock().unwrap().posts.len();
-        assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
-        assert_eq!(fs::read(f.home.join(LEDGER)).unwrap(), before);
-        assert_eq!(f.server.lock().unwrap().posts.len(), posts);
+        assert_eq!(
+            log_clarification(&mut ctx, &args, &manifest).unwrap()["delivery"],
+            "verified"
+        );
+        assert_eq!(f.server.lock().unwrap().posts.len(), posts + 1);
+        assert!(!f.home.join(CLOSE_LEDGER).exists());
         f.unchanged();
     }
 

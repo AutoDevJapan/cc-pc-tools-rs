@@ -78,15 +78,50 @@ func TestModelUpdateRuntimeInputsArePermanent(t *testing.T) {
 
 func TestPermanentMirrorBoundaryNeedsNoOldSource(t *testing.T) {
 	f := newModelUpdateFixture(t)
-	old := filepath.Join(f.root, "absent-old-temporary-source")
-	if within(old, f.leaf.candidate.root) || strings.Contains(f.leaf.candidate.path, old) {
-		t.Fatal("fixture depends on the old source")
+	old := filepath.Join(f.root, "old-temporary-source")
+	permanent := filepath.Join(f.root, "permanent-source")
+	for _, root := range []string{old, permanent} {
+		if err := os.Mkdir(root, 0700); err != nil {
+			t.Fatal(err)
+		}
 	}
-	r := f.result(f.leaf.target)
+	for _, name := range []string{"baseline.json", "build.json", "new.exe"} {
+		body := map[string]string{"baseline.json": "independent source receipt", "build.json": "independent reviewed build", "new.exe": "new model software"}[name]
+		for _, root := range []string{old, permanent} {
+			if err := os.WriteFile(filepath.Join(root, name), []byte(body), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	// Actual fixture files are copied into the new independent source, then the
+	// old synthetic source is removed. No live source is moved or deleted.
+	baselineBytes, err := os.ReadFile(f.receipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, root := range []string{old, permanent} {
+		if err := os.WriteFile(filepath.Join(root, "baseline.json"), baselineBytes, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f.leaf.baselines[0].evidence = []consoleEvidence{{permanent, filepath.Join(permanent, "baseline.json"), hashBytes(baselineBytes)}}
+	f.leaf.candidate.root = permanent
+	f.leaf.candidate.path = filepath.Join(permanent, "new.exe")
+	f.leaf.candidate.evidence = []consoleEvidence{{permanent, filepath.Join(permanent, "build.json"), hashBytes([]byte("independent reviewed build"))}}
+	if err := os.RemoveAll(old); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := os.Stat(old); !os.IsNotExist(err) {
+		t.Fatal("old synthetic source still exists")
+	}
+	verify := func(path string) object {
+		return modelRuntimeUpdateWith(path, []modelUpdateLeaf{f.leaf}, func(string) bool { return false }, func(root string) bool { return same(root, permanent) }, func(root, head string) bool { return same(root, permanent) && head == f.leaf.candidate.head })
+	}
+	r := verify(f.leaf.target)
 	if r["qualified"] != true || r["already_current"] != false {
 		t.Fatalf("new independent source without an old source failed: %v", r)
 	}
 	for _, path := range []string{old, filepath.Join(old, "new.exe"), f.root, f.candidate + ".bak", f.candidate + ":stream"} {
-		requireModelUpdateRefused(t, f.result(path))
+		requireModelUpdateRefused(t, verify(path))
 	}
 }

@@ -37,6 +37,7 @@ const model3081Distribution = model3298Source + "/codex-owned-0c95078c4ebbe13a42
 const model3081Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3081-fast"
 const model3309Source = "C:/Users/makhmeto/AppData/Local/Temp/agent-conduct-c2d9dde771e44d36a3bd8343653b307c/dots-launcher-repair-3309"
 const model3250Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3250-windows"
+const model3338GuardSource = model3081Source + "/codex-owned-471299b48ad6e65615889e37523be073/source"
 
 // The installed baseline has the independent ToDo3177 provenance. ToDo3298
 // built the candidate once from the merged source, then ToDo3081 copied it
@@ -67,7 +68,11 @@ var model3081UpdateLeaves = []modelUpdateLeaf{
 	}, {
 		sha256:   "274e8abc5c90d5ca7dcf401b824d5ff50e078c966fd74a35af86f78dd9d900d9",
 		evidence: []consoleEvidence{{model3250Source, model3250Source + "/codex-owned-1bd08feb8beaad849537a5ea1b45bdfd/guard-pr351-installed.private.json", "2de2b7789fb32d159f3d1e41e40f828167a10db1f944512d2f30510a4f782115"}},
-	}}},
+	}}, candidate: modelUpdateCandidate{
+		root: model3338GuardSource, path: model3338GuardSource + "/guard-artifact.private.exe",
+		head: "a36a77c42690eef7c0147a6a2eee76b496a48249", sha256: "e99f7cdc857705705871df42aa4cc159e5451df2a958076169425692ad456dc8",
+		evidence: []consoleEvidence{{model3338GuardSource, model3338GuardSource + "/guard-artifact-build.private.json", "a3e3e3d64dccab1927157f7802c0c8a57eb679df624f5554d6d9cb039cf567af"}},
+	}},
 	{kind: "jobs", target: jobsRuntime, baselines: []consolePin{{
 		sha256:   "7ae20f2bfa824aa6dc27d7046bb997df137bd8980b3291d4e195804714b42c77",
 		evidence: []consoleEvidence{{model2903Source, model2903Source + "/.ci-work/3255-existing-runtime3081-current-CAS-drift-20261022.private.json", "92e0ef180fbefa0385ffe36c738323b955edb065622802361178ce1cf038a3ed"}},

@@ -139,6 +139,12 @@ func TestModelUpdateRejectsScopeOutsideExactLeaf(t *testing.T) {
 				!modelCandidateEvidenceIndependent(leaf.candidate, leaf) {
 				t.Fatal("launcher repair lost its exact independent provenance")
 			}
+		} else if leaf.kind == "guard" {
+			bound++
+			if leaf.candidate.root != model3338GuardSource || !modelDigestValid(leaf.candidate.sha256) ||
+				len(leaf.candidate.evidence) != 1 || !modelCandidateEvidenceIndependent(leaf.candidate, leaf) {
+				t.Fatal("guard A lost its separate fixed source and build receipt")
+			}
 		} else if leaf.candidate.path != "" || leaf.candidate.sha256 != "" || leaf.candidate.root != "" || leaf.candidate.head != "" || len(leaf.candidate.evidence) != 0 {
 			t.Fatal("another production leaf was bound without this build's provenance")
 		}
@@ -149,8 +155,8 @@ func TestModelUpdateRejectsScopeOutsideExactLeaf(t *testing.T) {
 			requireModelUpdateRefused(t, model3081RuntimeReceipt(path))
 		}
 	}
-	if bound != 2 {
-		t.Fatal("expected exactly the verified ToDo and launcher candidates")
+	if bound != 3 {
+		t.Fatal("expected the verified ToDo, launcher and separate guard A candidates")
 	}
 	requireModelUpdateRefused(t, model3081RuntimeReceipt("D:/CC/Tools/civ6-live/review.exe"))
 }

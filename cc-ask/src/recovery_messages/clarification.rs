@@ -99,7 +99,7 @@ impl Binding {
         Ok(())
     }
 
-    pub(super) fn check_input(&self, request: &Request) -> Result<()> {
+    fn check_identity(&self, request: &Request) -> Result<()> {
         let Kind::Log {
             thread: Some(thread),
         } = &request.operation
@@ -115,6 +115,11 @@ impl Binding {
         {
             return Err(INVALID.into());
         }
+        Ok(())
+    }
+
+    pub(super) fn check_input(&self, request: &Request) -> Result<()> {
+        self.check_identity(request)?;
         no_mentions(&request.body)?;
         if regex::Regex::new(r"(?im)[?？]|^\s*(?:[abａｂ0-9０-９][.．、:：)）]|[（(][abａｂ0-9０-９][)）]|[ab]\s*/\s*[ab])|選んで|選択して|回答して|答えて|教えて|承認して|決めて|ください|お願い|どちら(?:に|が|を)|いかが|(?:です|ます)か(?:[。！!\s]|$)")
             .unwrap().is_match(&request.body)
@@ -152,7 +157,11 @@ impl Bindings {
             }
         }
         for (id, request) in &value.requests {
-            value.records.get(id).ok_or(INVALID)?.check_input(request)?;
+            value
+                .records
+                .get(id)
+                .ok_or(INVALID)?
+                .check_identity(request)?;
             if request.request_id != *id || request.fingerprint()? != request.fingerprint {
                 return Err(INVALID.into());
             }
@@ -188,6 +197,7 @@ pub(super) fn authorize(
     request: &Request,
     binding: &Binding,
     persist: bool,
+    new_phase: bool,
 ) -> Result<()> {
     binding.check_input(request)?;
     if ledger
@@ -239,10 +249,11 @@ pub(super) fn authorize(
         Event::Pending { request_id, .. } | Event::Posted { request_id, .. }
         | Event::Verified { request_id, .. } | Event::DeliveryVerified { request_id }
             if request_id == &request.request_id)
-    }) || bindings.records.values().any(|saved| {
-        saved.question_request_id == binding.question_request_id
-            && saved.reply_message_id == binding.reply_message_id
-    }) {
+    }) || bindings
+        .records
+        .values()
+        .any(|saved| saved.reply_message_id == binding.reply_message_id)
+    {
         return Err(INVALID.into());
     }
     let expected = ledger
@@ -255,11 +266,11 @@ pub(super) fn authorize(
         &receipt.thread_id,
         &receipt.message_id,
     )?;
-    // Each existing Pending phase can only execute GET recovery in ensure().
-    // Keep an already authorized delivery recoverable after an owner edit,
-    // without permitting any newly reserved POST phase from stale evidence.
+    // Existing phases must be recoverable even if a later part has never been
+    // reserved. Only a new phase is subject to the current owner reply version.
     if bindings.records.get(&request.request_id) == Some(binding)
-        && parts(&request.body).iter().enumerate().all(|(index, _)| {
+        && !new_phase
+        && parts(&request.body).iter().enumerate().any(|(index, _)| {
             ledger
                 .effect(&request.request_id, &format!("log:{index}"))
                 .is_some()
@@ -284,13 +295,21 @@ pub(super) fn authorize(
         || core::n(&reply["id"]) <= core::n(&json!(binding.question_message_id))
         || chrono::DateTime::parse_from_rfc3339(&binding.reply_timestamp).map_err(|_| INVALID)?
             < chrono::DateTime::parse_from_rfc3339(&receipt.timestamp).map_err(|_| INVALID)?
-        || !regex::Regex::new(
-            r"(?i)どういう意味|何のため|説明|詳しく|なぜ|どうして|(?:必要|ひつよう|理由|内訳|用途|根拠|経費|けいひ).*(?:[?？]|なの|じゃない|ですか|なのか)|clarif|what.*(?:mean|for)|explain|why",
-        )
-        .unwrap()
-        .is_match(body)
+        || !requests_explanation(body)
     {
         return Err(INVALID.into());
+    }
+    // An explicit close is durable and uses this same message lock. Ordinary
+    // Discord auto-archiving alone does not indicate an owner stop or close.
+    if CloseLedger::load(home)?
+        .records
+        .get(&binding.thread_id)
+        .is_some_and(|closed| closed.binding.request_id == binding.question_request_id)
+    {
+        return Err(
+            "original question has an explicit close record; no new explanation phase reserved"
+                .into(),
+        );
     }
     if persist && !bindings.records.contains_key(&request.request_id) {
         bindings
@@ -302,4 +321,21 @@ pub(super) fn authorize(
         bindings.save(home)?;
     }
     Ok(())
+}
+
+fn requests_explanation(body: &str) -> bool {
+    if regex::Regex::new(r"(?:説明|補足|解説)(?:は|が|も)?(?:不要|いらない|要らない)")
+        .unwrap()
+        .is_match(body)
+    {
+        return false;
+    }
+    let explicit = regex::Regex::new(r"(?i)説明(?:して|を)|詳しく|解説して|explain|clarif")
+        .unwrap()
+        .is_match(body);
+    let question = body.contains(['?', '？'])
+        || regex::Regex::new(r"(?:なの|ですか|ますか|どういう意味|何のため)\s*[。！!]*\s*$")
+            .unwrap()
+            .is_match(body);
+    explicit || question && regex::Regex::new(r"(?i)どういう|何の|何で|なんで|なぜ|どうして|要る|いる|必要|ひつよう|理由|内訳|用途|根拠|経費|けいひ|費用|料金|why|what").unwrap().is_match(body)
 }

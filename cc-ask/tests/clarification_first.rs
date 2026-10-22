@@ -8,6 +8,79 @@ use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use std::{collections::BTreeMap, fs, path::PathBuf};
 
+// The Go integration test starts this exact Rust test executable. Effects::run
+// delegates to the Go test process, which calls real conversationLogInner and
+// substitutes only the Discord sender. Production endpoints are never changed.
+#[test]
+fn real_go_state_bridge_fixture() {
+    let Some(root) = std::env::var_os("CLARIFICATION_BRIDGE_FIXTURE_HOME") else {
+        return;
+    };
+    let root = PathBuf::from(root);
+    let go_test = std::env::var_os("CLARIFICATION_GO_TEST_EXE").unwrap();
+    fs::write(
+        root.join("conversation-mode.json"),
+        r#"{"domain":"discord-conversation-mode-v1","enabled":true}"#,
+    )
+    .unwrap();
+    let body = root.join("source.txt");
+    fs::write(&body, "固定の説明です。\r\n同じ本文を保持します。").unwrap();
+    let proof = root.join("proof.json");
+    fs::write(&proof, r#"{"fixture":"cross-layer-proof"}"#).unwrap();
+    struct GoState(std::ffi::OsString);
+    impl Effects for GoState {
+        fn http(&mut self, _: &str, _: &str, _: Option<&Value>, _: bool) -> Result<Value> {
+            Err("no HTTP in cross-layer fixture".into())
+        }
+        fn run(&mut self, args: &[String], _: u64) -> Result<Output> {
+            let mut cmd = std::process::Command::new(&self.0);
+            cmd.arg("-test.run=^TestClarificationGoStateHelper$")
+                .env("CLARIFICATION_GO_STATE_HELPER", "1")
+                .env(
+                    "CLARIFICATION_CALL_ARGS",
+                    serde_json::to_string(args).unwrap(),
+                );
+            #[cfg(windows)]
+            {
+                use std::os::windows::process::CommandExt;
+                cmd.creation_flags(0x08000000);
+            }
+            let out = cmd
+                .output()
+                .map_err(|_| "Go test helper did not complete")?;
+            let text =
+                String::from_utf8(out.stdout).map_err(|_| "Go helper output is not UTF-8")?;
+            let code = text
+                .lines()
+                .find_map(|line| line.strip_prefix("CC_CODE="))
+                .and_then(|v| v.parse().ok())
+                .ok_or("Go helper code missing")?;
+            let stdout = text
+                .lines()
+                .find_map(|line| line.strip_prefix("CC_REPORT="))
+                .ok_or("Go helper result missing")?
+                .to_owned();
+            Ok(Output {
+                code,
+                stdout,
+                stderr: String::new(),
+            })
+        }
+    }
+    let mut runner = GoState(go_test);
+    if std::env::var_os("CLARIFICATION_SEED_FAILED_LOG").is_some() {
+        assert!(bridge::try_post(&root, &mut runner, "610", &body, false, &[]).is_err());
+    }
+    for _ in 0..2 {
+        let result =
+            bridge::try_post_clarification(&root, &mut runner, "610", &body, false, &[], &proof)
+                .unwrap()
+                .unwrap();
+        assert_eq!(result["delivery"], "verified");
+        assert_eq!(result["message_id"], "620");
+    }
+}
+
 fn sha(bytes: &[u8]) -> String {
     format!("{:x}", Sha256::digest(bytes))
 }
@@ -214,6 +287,37 @@ fn first_send_validates_before_saving_original_and_keeps_normal_identity() {
     assert!(sent
         .iter()
         .all(|value| value != "--notify" && value != "--attach" && value != "--check-only"));
+}
+
+#[test]
+fn crlf_retry_preflight_uses_the_same_saved_bytes_as_the_first_send() {
+    let f = Fixture::new();
+    let mut runner = f.runner(false);
+    bridge::try_post_clarification(
+        f.root.path(),
+        &mut runner,
+        "600",
+        &f.body,
+        false,
+        &[],
+        &f.binding,
+    )
+    .unwrap();
+    let first_input = fs::read(arg(&runner.sends[0], "--body-file")).unwrap();
+    let again = bridge::try_post_clarification(
+        f.root.path(),
+        &mut runner,
+        "600",
+        &f.body,
+        false,
+        &[],
+        &f.binding,
+    );
+    assert!(again.is_ok());
+    assert_eq!(
+        fs::read(arg(&runner.checks[1].0, "--body-file")).unwrap(),
+        first_input
+    );
 }
 
 #[test]

@@ -2683,7 +2683,7 @@ pub fn check_clarification(ctx: &mut Context, args: &LogArgs, manifest: &Path) -
     let _lock = ByteLock::acquire(&home.join(LOCK), Duration::ZERO)?;
     let mut ledger = Ledger::load(&home)?;
     let mut api = RecoveryApi::inspect(ctx, &mut ledger, &request)?;
-    clarification::authorize(&mut api, &ledger, &home, &request, &binding, false)?;
+    clarification::authorize(&mut api, &ledger, &home, &request, &binding, false, false)?;
     Ok(
         json!({"domain":DOMAIN,"request_id":request.request_id,"delivery":"not_sent",
         "check_only":true,"original_intent_retained":true,
@@ -3069,7 +3069,7 @@ fn execute_inner(
         // Authenticate against the independent question before creating the
         // new intent/bot record. Pin the entire validated intent atomically in
         // the purpose journal first, so a crash cannot permit rebinding.
-        clarification::authorize(&mut api, &ledger, &home, request, binding, true)?;
+        clarification::authorize(&mut api, &ledger, &home, request, binding, true, false)?;
     }
     let incoming = match (incoming, saved) {
         (Some(request), None) => request,
@@ -3134,9 +3134,7 @@ fn execute_inner(
                 request.notify && log_requires_owner_action(&request.body)?
             };
             if let Some(thread) = thread {
-                if let Some(binding) = clarification {
-                    clarification::authorize(&mut api, &ledger, &home, &request, binding, true)?;
-                } else {
+                if clarification.is_none() {
                     let is_progress =
                         RecoveryApi::known_progress(&ledger, &api.destination, &api.bot, thread)
                             .ok_or(
@@ -3154,7 +3152,7 @@ fn execute_inner(
                 if ledger.effect(&request.request_id, &phase).is_none() {
                     if let Some(binding) = clarification {
                         clarification::authorize(
-                            &mut api, &ledger, &home, &request, binding, true,
+                            &mut api, &ledger, &home, &request, binding, true, true,
                         )?;
                     }
                 }
@@ -4335,9 +4333,16 @@ mod tests {
     fn first_clarification_accepts_a_question_about_necessity_but_not_a_choice() {
         for (reply, accepted) in [
             ("その費用は必要ではないの？", true),
+            ("なんで？", true),
+            ("どういうこと？", true),
+            ("これ要る？", true),
+            ("何の費用？", true),
             ("a", false),
             ("bで進めて", false),
             ("必要です", false),
+            ("aで。なぜなら安い", false),
+            ("必要じゃない。止めて", false),
+            ("説明は不要、aで", false),
         ] {
             let f = Fixture::new();
             let mut ctx = f.context();
@@ -4389,6 +4394,74 @@ mod tests {
             log_clarification(&mut ctx, &args, &manifest).unwrap()["delivery"],
             "verified"
         );
+        assert_eq!(f.server.lock().unwrap().posts.len(), posts + 1);
+        f.unchanged();
+    }
+
+    #[test]
+    fn first_clarification_does_not_reopen_an_explicitly_closed_question() {
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let (args, manifest, _) = clarification_case(&f, &mut ctx, "元の説明です。", false);
+        f.server
+            .lock()
+            .unwrap()
+            .channels
+            .get_mut(args.thread.as_ref().unwrap())
+            .unwrap()["thread_metadata"] = json!({"archived":true});
+        fs::write(f.home.join(CLOSE_LEDGER),json!({"domain":DOMAIN,"version":1,"records":{args.thread.as_ref().unwrap():{
+            "binding":{"request_id":"clarification-question","thread_id":args.thread,"question_message_id":args.thread,
+            "origin_todo_id":2472,"todo_id":2472,"message_id":"9999","author_id":OWNER,"job_id":"fixture-job","revision":"a".repeat(40),
+            "question_fingerprint":"a".repeat(64),"reply_sha256":"a".repeat(64),"receipt_sha256":"a".repeat(64),"verification_sha256":"a".repeat(64),"completion":"synthetic completion"},
+            "phase":"verified","outcome":"archived","pending_reply_ids":[],"patch_attempted":true}}}).to_string()).unwrap();
+        let before = fs::read(f.home.join(LEDGER)).unwrap();
+        let posts = f.server.lock().unwrap().posts.len();
+        assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
+        assert_eq!(fs::read(f.home.join(LEDGER)).unwrap(), before);
+        assert_eq!(f.server.lock().unwrap().posts.len(), posts);
+        f.unchanged();
+    }
+
+    #[test]
+    fn first_clarification_partial_lost_response_recovers_before_rejecting_edited_remainder() {
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let (args, manifest, _) =
+            clarification_case(&f, &mut ctx, &"元の説明です。".repeat(500), false);
+        assert!(parts(&fs::read_to_string(&args.body_file).unwrap()).len() > 1);
+        let posts = f.server.lock().unwrap().posts.len();
+        {
+            let mut server = f.server.lock().unwrap();
+            server.drop_response = true;
+            server.block_reads_after_post = true;
+        }
+        assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
+        assert!(Ledger::load(&f.home)
+            .unwrap()
+            .receipt(&args.request_id, "log:0")
+            .is_none());
+        {
+            let mut server = f.server.lock().unwrap();
+            server.blocked = false;
+            server
+                .messages
+                .get_mut(args.thread.as_ref().unwrap())
+                .unwrap()
+                .iter_mut()
+                .find(|v| v["author"]["id"] == OWNER)
+                .unwrap()["edited_timestamp"] = json!("2026-10-12T00:00:03Z");
+        }
+        assert_eq!(
+            check_clarification(&mut ctx, &args, &manifest).unwrap()["delivery"],
+            "not_sent"
+        );
+        assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
+        let ledger = Ledger::load(&f.home).unwrap();
+        assert!(
+            ledger.receipt(&args.request_id, "log:0").is_some(),
+            "sent first part was not recovered"
+        );
+        assert!(ledger.effect(&args.request_id, "log:1").is_none());
         assert_eq!(f.server.lock().unwrap().posts.len(), posts + 1);
         f.unchanged();
     }

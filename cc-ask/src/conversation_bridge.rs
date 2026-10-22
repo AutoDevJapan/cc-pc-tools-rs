@@ -729,15 +729,16 @@ fn send_log(
     let directory = root.join(&request);
     let body_path = directory.join("body.txt");
     if let Some((manifest, _, source)) = clarification {
-        match fs::symlink_metadata(&body_path) {
+        let inspected_body = match fs::symlink_metadata(&body_path) {
             Ok(_) => {
                 if read_bounded(&body_path, INPUT_LIMIT)? != text.as_bytes() {
                     return Err(SAVE_FAILED.into());
                 }
+                body_path.as_path()
             }
-            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => source,
             Err(_) => return Err(SAVE_FAILED.into()),
-        }
+        };
         let mut args = runner_args(home, "log")?;
         args.extend([
             "--request-id".into(),
@@ -745,7 +746,7 @@ fn send_log(
             "--title".into(),
             title.into(),
             "--body-file".into(),
-            string_path(source)?,
+            string_path(inspected_body)?,
             "--thread".into(),
             thread.ok_or(INVALID_INPUT)?.into(),
             "--clarification-file".into(),

@@ -102,8 +102,14 @@ PR #315の通常マージを改めて確認する。実装前の受入テスト�
 `unattended-runner/conversation_first_clarification_test.go` はGoからRust senderへの境界で、
 未予約の確認・初回送信・検証拒否時のファイル不変を各3件で検査する。
 両方とも送信側を置き換えた架空データであり、本人性やDiscord実配達の成功を証明しない。
-Rust sender本体での元question:0・本人・現在版・競合・応答消失の検査と、実CLIの結合は
-後続の実装・統合時に行う。現段階の失敗をGreenや送信済みとして扱わない。
+修正後はRust sender本体でも元question:0・本人・現在版・競合・応答消失・部分回収を検査する。
+`unattended-runner/conversation_bridge_integration_test.go` は実際のRustテスト実行物を起動し、
+Rustの通常入口と実際のGo CLI・conversationLogInner・保存処理を通す。Discord senderだけを置き換える。
+CRLF本文の初回送信後の再実行と、既存未送信予約からの再開を確認する。
+実行時は `CLARIFICATION_RUST_TEST_EXE` に同sourceから生成した `clarification_first` の実行物を明示し、
+Goの `TestClarificationRealRustBridgeCRLFRetryAndExistingGoReservation` を実行する。
+Rust側の `real_go_state_bridge_fixture` はこの結合検査の補助であり、単独の呼出しを受入成功に数えない。
+外部Discordの実配達と本番のCLI全段階は、配布後の指定実例で別に確認する。
 
 ## 実例への反映
 

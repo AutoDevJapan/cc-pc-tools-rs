@@ -15,6 +15,15 @@ import (
 	"time"
 )
 
+func firstCheckReport(args []string) string {
+	body, _ := os.ReadFile(argValue(args, "--body-file"))
+	proof, _ := os.ReadFile(argValue(args, "--clarification-file"))
+	text := strings.TrimLeft(string(body), "\ufeff")
+	text = strings.ReplaceAll(strings.ReplaceAll(text, "\r\n", "\n"), "\r", "\n")
+	value, _ := json.Marshal(map[string]any{"domain": "new-owner-recovery-messages", "request_id": argValue(args, "--request-id"), "check_only": true, "delivery": "not_sent", "source_body_sha256": bytesHash(body), "body_sha256": bytesHash([]byte(text)), "binding_sha256": bytesHash(proof)})
+	return string(value)
+}
+
 func firstClarificationFiles(t *testing.T, root string) map[string]string {
 	t.Helper()
 	files := map[string]string{}
@@ -89,7 +98,7 @@ func TestFirstClarificationCheckDoesNotRequireOrCreateLogReservation(t *testing.
 			return "", errors.New("check must never send")
 		}
 		checks++
-		return `{"domain":"new-owner-recovery-messages","request_id":"conversation-log-` + bytesHash([]byte("fresh-log"))[:32] + `","check_only":true,"delivery":"not_sent"}`, nil
+		return firstCheckReport(args), nil
 	}
 	report, err := f.r.conversationCheckClarification(context.Background(), "fresh-log", "補足", body, "610", proof)
 	if err != nil {
@@ -122,7 +131,7 @@ func TestFirstClarificationSendValidatesBeforePersistingOriginal(t *testing.T) {
 				premature = !os.IsNotExist(statErr)
 			}
 			checks++
-			return `{"domain":"new-owner-recovery-messages","request_id":"conversation-log-` + bytesHash([]byte("fresh-log"))[:32] + `","check_only":true,"delivery":"not_sent"}`, nil
+			return firstCheckReport(args), nil
 		}
 		sends++
 		if checks == 0 {
@@ -173,5 +182,77 @@ func TestFirstClarificationRejectionLeavesAllInputsUnchanged(t *testing.T) {
 	}
 	if after := firstClarificationFiles(t, f.r.Config.Home); !reflect.DeepEqual(after, before) {
 		t.Fatal("rejected explanation left original input or reservation", before, after)
+	}
+}
+
+func TestFirstClarificationMismatchedReadBytesCannotCreateOriginal(t *testing.T) {
+	for _, field := range []string{"source_body_sha256", "binding_sha256", "request_id"} {
+		t.Run(field, func(t *testing.T) {
+			f := conversationTest(t, false)
+			body, proof := firstClarificationInput(t, f)
+			before := firstClarificationFiles(t, f.r.Config.Home)
+			f.r.Run = func(_ context.Context, _ string, args ...string) (string, error) {
+				var checked map[string]any
+				if json.Unmarshal([]byte(firstCheckReport(args)), &checked) != nil {
+					t.Fatal("fixture report")
+				}
+				checked[field] = "wrong"
+				raw, _ := json.Marshal(checked)
+				return string(raw), nil
+			}
+			if _, err := f.r.conversationClarification(context.Background(), "fresh-log", "補足", body, "610", proof); err == nil {
+				t.Fatal("different inspected input accepted")
+			}
+			if after := firstClarificationFiles(t, f.r.Config.Home); !reflect.DeepEqual(before, after) {
+				t.Fatal("mismatched input persisted")
+			}
+		})
+	}
+}
+
+func TestFirstClarificationUsesTheAcceptedBytesWhenOriginalFilesChange(t *testing.T) {
+	f := conversationTest(t, false)
+	body, proof := firstClarificationInput(t, f)
+	originalBody, _ := os.ReadFile(body)
+	originalProof, _ := os.ReadFile(proof)
+	checks, sends := 0, 0
+	valid := false
+	f.r.Run = func(_ context.Context, _ string, args ...string) (string, error) {
+		for _, value := range args {
+			if value == "--check-only" {
+				checks++
+				result := firstCheckReport(args)
+				if os.WriteFile(body, []byte("changed body"), 0600) != nil || os.WriteFile(proof, []byte("changed proof"), 0600) != nil {
+					t.Fatal("fixture mutation")
+				}
+				return result, nil
+			}
+		}
+		sends++
+		sentBody, _ := os.ReadFile(argValue(args, "--body-file"))
+		sentProof, _ := os.ReadFile(argValue(args, "--clarification-file"))
+		valid = string(sentBody) == string(originalBody) && string(sentProof) == string(originalProof)
+		return `{"domain":"new-owner-recovery-messages","delivery":"verified","thread_id":"610","message_id":"620"}`, nil
+	}
+	if _, err := f.r.conversationClarification(context.Background(), "fresh-log", "補足", body, "610", proof); err != nil {
+		t.Fatal(err)
+	}
+	if checks != 1 || sends != 1 || !valid {
+		t.Fatal("validated bytes changed", checks, sends, valid)
+	}
+}
+
+func TestFirstClarificationCLICheckDoesNotCreateRunnerHomeOrLock(t *testing.T) {
+	f := conversationConfigFixture(t)
+	f.config.Home = filepath.Join(f.root, "absent-home")
+	conversationWriteJSON(t, f.configPath, f.config)
+	before := firstClarificationFiles(t, f.root)
+	var out strings.Builder
+	code := conversationCLI([]string{"--config", f.configPath, "log", "--request-id", "fresh-log", "--title", "説明", "--body-file", filepath.Join(f.root, "missing-body"), "--thread", "610", "--clarification-file", filepath.Join(f.root, "missing-proof"), "--check-only"}, &out)
+	if code == 0 {
+		t.Fatal("missing independent original accepted")
+	}
+	if after := firstClarificationFiles(t, f.root); !reflect.DeepEqual(before, after) {
+		t.Fatal("check created home, lock or original", out.String())
 	}
 }

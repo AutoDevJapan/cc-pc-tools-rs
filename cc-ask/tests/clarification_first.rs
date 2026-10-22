@@ -133,7 +133,9 @@ impl Effects for Runner {
         };
         let report = if checking {
             json!({"domain":"discord-conversation-v1","request_id":arg(args,"--request-id"),
-                "check_only":true,"delivery":"not_sent","original_intent_retained":true})
+                "check_only":true,"delivery":"not_sent","original_intent_retained":true,
+                "body_sha256":sha(String::from_utf8(fs::read(arg(args,"--body-file")).unwrap()).unwrap().trim_start_matches('\u{feff}').replace("\r\n","\n").replace('\r',"\n").as_bytes()),
+                "binding_sha256":sha(&fs::read(arg(args,"--clarification-file")).unwrap())})
         } else {
             json!({"domain":"discord-conversation-v1","request_id":arg(args,"--request-id"),
                 "delivery":"verified","thread_id":"600","message_id":"604","reused":false})

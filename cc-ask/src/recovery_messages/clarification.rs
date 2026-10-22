@@ -33,6 +33,10 @@ pub(super) struct Binding {
 struct Bindings {
     domain: String,
     records: BTreeMap<String, Binding>,
+    // New authorizations pin the full intent before reserve(). Old records are
+    // still checked against their already saved immutable ledger intent.
+    #[serde(default)]
+    requests: BTreeMap<String, Request>,
 }
 
 fn hash(text: &str) -> String {
@@ -41,17 +45,18 @@ fn hash(text: &str) -> String {
 
 impl Binding {
     pub(super) fn read(path: &Path) -> Result<Self> {
+        Ok(Self::read_with_hash(path)?.0)
+    }
+
+    pub(super) fn read_with_hash(path: &Path) -> Result<(Self, String)> {
         let info = fs::symlink_metadata(path).map_err(|_| INVALID)?;
         if !info.is_file() || info.file_type().is_symlink() {
             return Err(INVALID.into());
         }
-        let value: Self = serde_json::from_slice(&read_bounded(
-            fs::File::open(path).map_err(|_| INVALID)?,
-            16 * 1024,
-        )?)
-        .map_err(|_| INVALID)?;
+        let bytes = read_bounded(fs::File::open(path).map_err(|_| INVALID)?, 16 * 1024)?;
+        let value: Self = serde_json::from_slice(&bytes).map_err(|_| INVALID)?;
         value.validate()?;
-        Ok(value)
+        Ok((value, format!("{:x}", Sha256::digest(&bytes))))
     }
 
     fn validate(&self) -> Result<()> {
@@ -126,6 +131,7 @@ impl Bindings {
                 return Ok(Self {
                     domain: DOMAIN.into(),
                     records: BTreeMap::new(),
+                    requests: BTreeMap::new(),
                 })
             }
             Ok(m) if m.is_file() && !m.file_type().is_symlink() => {}
@@ -142,6 +148,12 @@ impl Bindings {
         for (id, binding) in &value.records {
             binding.validate()?;
             if id != &binding.request_id {
+                return Err(INVALID.into());
+            }
+        }
+        for (id, request) in &value.requests {
+            value.records.get(id).ok_or(INVALID)?.check_input(request)?;
+            if request.request_id != *id || request.fingerprint()? != request.fingerprint {
                 return Err(INVALID.into());
             }
         }
@@ -178,7 +190,15 @@ pub(super) fn authorize(
     persist: bool,
 ) -> Result<()> {
     binding.check_input(request)?;
-    if ledger.request(&binding.request_id) != Some(request) || api.bot != binding.bot_id {
+    if ledger
+        .request(&binding.request_id)
+        .is_some_and(|saved| saved != request)
+        || api.bot != binding.bot_id
+        || ledger.events.iter().any(|event| {
+            matches!(event, Event::Intent {request: saved}
+            if saved.request_id != request.request_id && saved.fingerprint == request.fingerprint)
+        })
+    {
         return Err(INVALID.into());
     }
     let question = ledger
@@ -203,6 +223,13 @@ pub(super) fn authorize(
         return Err(INVALID.into());
     }
     let mut bindings = Bindings::load(home)?;
+    if bindings
+        .requests
+        .get(&request.request_id)
+        .is_some_and(|saved| saved != request)
+    {
+        return Err(INVALID.into());
+    }
     if let Some(saved) = bindings.records.get(&request.request_id) {
         if saved != binding {
             return Err(INVALID.into());
@@ -258,7 +285,7 @@ pub(super) fn authorize(
         || chrono::DateTime::parse_from_rfc3339(&binding.reply_timestamp).map_err(|_| INVALID)?
             < chrono::DateTime::parse_from_rfc3339(&receipt.timestamp).map_err(|_| INVALID)?
         || !regex::Regex::new(
-            r"(?i)どういう意味|何のため|説明|詳しく|clarif|what.*(?:mean|for)|explain",
+            r"(?i)どういう意味|何のため|説明|詳しく|なぜ|どうして|(?:必要|ひつよう|理由|内訳|用途|根拠|経費|けいひ).*(?:[?？]|なの|じゃない|ですか|なのか)|clarif|what.*(?:mean|for)|explain|why",
         )
         .unwrap()
         .is_match(body)
@@ -269,6 +296,9 @@ pub(super) fn authorize(
         bindings
             .records
             .insert(request.request_id.clone(), binding.clone());
+        bindings
+            .requests
+            .insert(request.request_id.clone(), request.clone());
         bindings.save(home)?;
     }
     Ok(())

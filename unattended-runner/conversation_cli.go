@@ -254,7 +254,7 @@ func conversationCLI(args []string, out io.Writer) int {
 		if opts.Command == "status" {
 			return conversationCLIWithLoader(args, out, loadConversationStatusRunner)
 		}
-		if opts.Command == "replies" && opts.Output != "" {
+		if opts.Command == "replies" && opts.Output != "" || opts.Command == "log" && opts.CheckOnly {
 			return conversationCLIWithLoader(args, out, loadConversationRepliesRunner)
 		}
 	}

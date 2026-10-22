@@ -44,8 +44,17 @@ func TestClarificationResumesExactLogWithoutChangingOriginalReservation(t *testi
 	original := before.Logs["original-log"]
 	calls := 0
 	f.r.Run = func(_ context.Context, _ string, args ...string) (string, error) {
-		calls++
-		if args[0] != "recovery-log" || argValue(args, "--request-id") != "conversation-log-"+bytesHash([]byte("original-log"))[:32] || argValue(args, "--thread") != "610" || argValue(args, "--body-file") != original.BodyFile {
+		checking := false
+		for _, arg := range args {
+			checking = checking || arg == "--check-only"
+		}
+		if argValue(args, "--request-id") != "conversation-log-"+bytesHash([]byte("original-log"))[:32] {
+			return "", errors.New("binding rejects a different request")
+		}
+		if !checking {
+			calls++
+		}
+		if args[0] != "recovery-log" || argValue(args, "--thread") != "610" || !checking && argValue(args, "--body-file") != original.BodyFile {
 			t.Error("original sender input changed")
 		}
 		proof, err := os.ReadFile(argValue(args, "--clarification-file"))
@@ -54,7 +63,7 @@ func TestClarificationResumesExactLogWithoutChangingOriginalReservation(t *testi
 		}
 		for _, arg := range args {
 			if arg == "--check-only" {
-				return `{"domain":"new-owner-recovery-messages","request_id":"conversation-log-` + bytesHash([]byte("original-log"))[:32] + `","check_only":true,"delivery":"not_sent"}`, nil
+				return firstCheckReport(args), nil
 			}
 		}
 		return `{"domain":"new-owner-recovery-messages","delivery":"verified","thread_id":"610","message_id":"620","reused":true}`, nil
@@ -101,7 +110,7 @@ func TestClarificationResumesExactLogWithoutChangingOriginalReservation(t *testi
 	if _, err := f.r.conversationClarification(context.Background(), "original-log", "説明", body, "610", manifest); err == nil || correctedPath == "" {
 		t.Fatal("new proof did not reach authoritative sender validation")
 	}
-	if filepath.Base(correctedPath) != "original-log-"+bytesHash([]byte(`{"fixture":"changed"}`))+".json" {
-		t.Fatal("association snapshot is not content-addressed")
+	if correctedPath != manifest {
+		t.Fatal("invalid binding must be inspected before creating a snapshot")
 	}
 }

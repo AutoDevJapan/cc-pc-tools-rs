@@ -447,6 +447,9 @@ fn metadata(raw: &str, ask: bool, check_only: bool) -> Result<Value> {
             | "question_fingerprint"
             | "decision_identity_sha256"
             | "question_body_sha256"
+            | "body_sha256"
+            | "source_body_sha256"
+            | "binding_sha256"
             | "question_receipt_sha256" => value
                 .as_str()
                 .is_some_and(|v| v.len() == 64 && v.bytes().all(|b| b.is_ascii_hexdigit())),
@@ -650,7 +653,7 @@ pub fn try_post_clarification(
         Some(thread),
         false,
         &[],
-        Some((manifest, false)),
+        Some((manifest, false, body_file)),
     )
 }
 
@@ -674,7 +677,7 @@ pub fn try_check_clarification(
         Some(thread),
         false,
         &[],
-        Some((manifest, true)),
+        Some((manifest, true, body_file)),
     )
 }
 
@@ -689,7 +692,7 @@ fn send_log(
     thread: Option<&str>,
     notify: bool,
     attach: &[PathBuf],
-    clarification: Option<(&Path, bool)>,
+    clarification: Option<(&Path, bool, &Path)>,
 ) -> Result<Option<Value>> {
     if title.trim().is_empty()
         || text.len() as u64 > INPUT_LIMIT
@@ -698,8 +701,15 @@ fn send_log(
         return Err(INVALID_INPUT.into());
     }
     let root = home.join("conversation-bridge");
-    let check_only = clarification.is_some_and(|(_, check)| check);
-    if !check_only {
+    let check_only = clarification.is_some_and(|(_, check, _)| check);
+    // Preflight reads caller files without creating any bridge snapshot. Its
+    // digests must identify the exact retained bytes used below.
+    let proof = if let Some((manifest, _, _)) = clarification {
+        Some(read_bounded(manifest, 16 * 1024)?)
+    } else {
+        None
+    };
+    if clarification.is_none() {
         private_directory(&root)?;
     }
     let snapshots = attachments(&root, effects, attach, None)?;
@@ -718,15 +728,43 @@ fn send_log(
     let request = format!("normal-log-{}", sha(identity.to_string().as_bytes()));
     let directory = root.join(&request);
     let body_path = directory.join("body.txt");
-    if check_only {
-        // A check only inspects the pre-existing failed request's snapshot.
-        if read_bounded(&body_path, INPUT_LIMIT)? != text.as_bytes() {
-            return Err(SAVE_FAILED.into());
+    if let Some((manifest, _, source)) = clarification {
+        match fs::symlink_metadata(&body_path) {
+            Ok(_) => {
+                if read_bounded(&body_path, INPUT_LIMIT)? != text.as_bytes() {
+                    return Err(SAVE_FAILED.into());
+                }
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(_) => return Err(SAVE_FAILED.into()),
         }
-    } else {
-        private_directory(&directory)?;
-        save_bytes(&root, &body_path, text.as_bytes())?;
+        let mut args = runner_args(home, "log")?;
+        args.extend([
+            "--request-id".into(),
+            request.clone(),
+            "--title".into(),
+            title.into(),
+            "--body-file".into(),
+            string_path(source)?,
+            "--thread".into(),
+            thread.ok_or(INVALID_INPUT)?.into(),
+            "--clarification-file".into(),
+            string_path(manifest)?,
+            "--check-only".into(),
+        ]);
+        let checked = execute(effects, &args, false, true)?.ok_or(CHILD_FAILED)?;
+        if checked["request_id"] != request
+            || checked["body_sha256"] != sha(text.trim_start_matches('\u{feff}').as_bytes())
+            || checked["binding_sha256"] != sha(proof.as_ref().ok_or(INVALID_INPUT)?)
+        {
+            return Err(CHILD_FAILED.into());
+        }
+        if check_only {
+            return Ok(Some(checked));
+        }
     }
+    private_directory(&directory)?;
+    save_bytes(&root, &body_path, text.as_bytes())?;
     let mut argv = runner_args(home, "log")?;
     argv.extend([
         "--request-id".into(),
@@ -742,22 +780,14 @@ fn send_log(
     if notify {
         argv.push("--notify".into());
     }
-    if let Some((manifest, check_only)) = clarification {
-        let bytes = read_bounded(manifest, 16 * 1024)?;
-        let path = if check_only {
-            manifest.to_owned()
-        } else {
-            let path = directory.join(format!("clarification-{}.json", sha(&bytes)));
-            save_bytes(&root, &path, &bytes)?;
-            path
-        };
+    if clarification.is_some() {
+        let bytes = proof.ok_or(INVALID_INPUT)?;
+        let path = directory.join(format!("clarification-{}.json", sha(&bytes)));
+        save_bytes(&root, &path, &bytes)?;
         argv.extend(["--clarification-file".into(), string_path(&path)?]);
-        if check_only {
-            argv.push("--check-only".into());
-        }
     }
     append_attachments(&root, &directory, snapshots, &mut argv)?;
-    execute(effects, &argv, false, check_only)
+    execute(effects, &argv, false, false)
 }
 
 fn append_attachments(

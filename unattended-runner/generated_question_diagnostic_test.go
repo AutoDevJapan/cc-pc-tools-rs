@@ -5,15 +5,25 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
 type generatedDiagnosticOutput struct {
 	Stage, Code           string
 	Validated, Registered bool
+}
+
+func requireGeneratedDiagnostic(t *testing.T, got string, validated bool, stage, code string) {
+	t.Helper()
+	// Test-owned wire contract: a path or internal error in any added field,
+	// including its Windows JSON-escaped spelling, must fail the comparison.
+	want := fmt.Sprintf("{\"domain\":\"owner-generated-question-diagnostic-v1\",\"validated\":%t,\"registered\":false,\"stage\":%q,\"code\":%q}\n", validated, stage, code)
+	if got != want {
+		t.Fatalf("diagnostic differs from the complete fixed contract: got %q want %q", got, want)
+	}
 }
 
 func TestGeneratedQuestionDiagnosticStopsBeforeUnqualifiedEvidenceRead(t *testing.T) {
@@ -150,6 +160,7 @@ func TestGeneratedQuestionDiagnosticReportsContractWithoutRegistering(t *testing
 			if code != wantExit || report.Stage != wantStage || report.Code != wantCode || report.Validated != fictional || report.Registered {
 				t.Fatalf("exit=%d report=%+v", code, report)
 			}
+			requireGeneratedDiagnostic(t, out.String(), fictional, wantStage, wantCode)
 			after, err := os.ReadFile(manifest)
 			if err != nil || !bytes.Equal(before, after) {
 				t.Fatal("check changed original evidence", err)
@@ -194,7 +205,7 @@ func TestGeneratedQuestionDiagnosticSeparatesReadSchemaScopeAndNativeFailures(t 
 			if _, err := r.check(context.Background(), manifest); err != nil {
 				t.Fatal("healthy control failed", err)
 			}
-			wantStage := ""
+			wantStage, wantCode := "", ""
 			switch kind {
 			case "read":
 				read := r.Read
@@ -205,20 +216,24 @@ func TestGeneratedQuestionDiagnosticSeparatesReadSchemaScopeAndNativeFailures(t 
 					return read(path, limit)
 				}
 				wantStage = "evidence_read"
+				wantCode = "original_evidence_read_failed"
 			case "schema":
 				if err := os.WriteFile(manifest, []byte(`{"not_a_bundle":true}`), 0600); err != nil {
 					t.Fatal(err)
 				}
 				wantStage = "evidence_schema"
+				wantCode = "original_evidence_schema_invalid"
 			case "scope":
 				bundle.Scope.Todo++
 				writeGeneratedBundle(t, manifest, bundle)
 				wantStage = "bundle_contract"
+				wantCode = "original_scope_or_metadata_invalid"
 			case "native":
 				if err := os.WriteFile(s.Rollout, []byte("unrelated sensitive native record"), 0600); err != nil {
 					t.Fatal(err)
 				}
 				wantStage = "image_validation"
+				wantCode = "original_generation_or_image_not_qualified"
 			}
 			var out bytes.Buffer
 			if code := generatedQuestionEvidenceCLI([]string{"--evidence", manifest, "--diagnostic"}, &out, r, true); code != 1 {
@@ -228,9 +243,7 @@ func TestGeneratedQuestionDiagnosticSeparatesReadSchemaScopeAndNativeFailures(t 
 			if err := json.Unmarshal(out.Bytes(), &report); err != nil || report.Stage != wantStage || report.Validated || report.Registered {
 				t.Fatalf("report=%+v error=%v", report, err)
 			}
-			if strings.Contains(out.String(), "sensitive") || strings.Contains(out.String(), "permission") || strings.Contains(out.String(), manifest) {
-				t.Fatal("diagnostic exposed rejected input or an internal error")
-			}
+			requireGeneratedDiagnostic(t, out.String(), false, wantStage, wantCode)
 		})
 	}
 }

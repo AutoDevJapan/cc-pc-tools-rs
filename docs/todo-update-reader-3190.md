@@ -245,6 +245,44 @@ Suggestionは、テストの許可判定を引数列全体の一致にして反�
   共有repoはshallow cloneである。configには800件を超えるbranchの節と core・extensions・remote があり、includeは無い。
   読んだメタデータはguardの分類で clear だった。configの中身はログや文書へ出していない。
 
+### 別モデルの再レビュー（ToDo3505）
+
+gpt-6.1-sol・推論max（job `20261024-051252-todo-3505`、6分28秒、終了コード0）が、base `308cb24d`・head `8b4f34b9` の
+変更8ファイルを差分と全文で読んだ。レビュー担当はテスト・ビルド・CIを実行していない。前回のMustとSuggestionは
+解消と判定された。新たな指摘は Must 2件で、どちらもコードとGitの一次資料からの判断であり、再現テストは伴わない。
+
+- Must: `objects/info/alternates` が無いことを確かめた後でも、共有repoのobjectsは変更できる。Gitの起動前に
+  alternatesが置かれると、Gitはその内容と参照先を分類なしで読み得る。再確認の前に消されれば、最後の不在確認も通る。
+  `GIT_OBJECT_DIRECTORY` の指定は、読取先の隔離にはならない。
+- Must: `packed-refs` の見出しを読み飛ばし、`sorted` の宣言と実際の並びを確かめていない。Gitは `sorted` を信じて
+  二分探索するので、逆順の記録ではGitが解けないbranchを、readerだけが受け付け得る。コロンの後の空白を欠く見出しも、
+  Gitは拒否するがreaderは受け付けていた。
+- 合わせて、この文書の「照合中の変更は拒否する」という断定は、途中で作られて消える変更の検出を保証しないと指摘された。
+
+### 3回目のMustの修正
+
+Gitの実行をやめ、objectsもreader自身が読むようにした（検証の順序の5）。looseとpack（version 2のindex、
+offset delta、名前を指すdelta）を読み、どのobjectも名前（SHA-1）で中身を確かめる。alternates・commit-graph・
+multi-pack-index・replace refは読まないので、照合中に別のstoreを指すファイルが置かれても、読む中身は変わらない。
+`packed-refs` はGitと同じに見出しと `sorted` を解釈し、宣言と並びが合わないファイルを拒否する。
+再確認の説明は、検出できる範囲に合わせて書き直した（検証の順序の10）。
+
+- Red（commit `3b9b98d3`）: `go test -race -count=1 ./...` は終了コード1、163秒。上位26件が合格、3件が失敗し、
+  subtest込みで合格153、失敗6、skip 0、ビルド失敗0、data race 0。失敗はすべて意図した理由による。
+  alternatesだけにあるobjectで資格を得た。宣言と逆順の `packed-refs` と、空白を欠く見出しの `packed-refs` でも
+  資格を得た（どちらもGit自身は `origin/main` を解けない）。`packedRefs` は逆順・見出しの誤り・未知の特性を受け付けた。
+- Green（commit `fe1d5941`）: `go test -race -count=1 ./...` は終了コード0、156秒。上位32件、subtest込み180件が合格し、
+  失敗0・skip 0・data race 0。`go vet ./...` とgofmtも差分なし。readerが読んだ全object、commit、tree一覧、祖先は、
+  looseだけ、offset delta、名前を指すdelta、packとlooseの混在の4通りの合成repoで、Git自身の出力と一致した。
+- 照合の要所を壊した18の版を `go test -overlay` で当てた。最初は17が検出され、HEADのcommitのtreeと固定treeの照合を
+  外した版が生き残った。存在しないtreeを固定したテストでは、後のtree一覧の読取でも拒否されていたためである。
+  READMEだけが違う実在のtreeを固定値とreceiptに記録するテストへ替えると、その版は資格を出し、テストが失敗した。
+  壊したのは、`sorted` の並び、見出しの空白、未知の特性、objectの名前の照合、indexとpackのguard分類、
+  loose objectのguard分類、shallowの境界、packのchecksum、indexのchecksum、deltaの複写範囲、deltaの結果の大きさ、
+  treeの再帰、祖先の判定、HEADのtreeの照合、読んで閉じたファイルの再照合、不在の再照合、includeの拒否、alternatesの不在。
+- 実物の共有repoのobjects（loose 558件、pack 6件とそのindex、multi-pack-index）は、すべてリンク数1だった。
+  固定HEADのcommitはpackの中にある。
+
 ### 実物への事前の観測（merge前）
 
 最初の実装から生成した検査用readerで、実物に対して1回照合した。終了コード0、9.6秒で、
@@ -261,6 +299,11 @@ source `0e16e817…` / tree `31d45a74…`、receipt `20345f44…087c`、入力12
 `data_access_granted:false`）を返した。reader自身が実物のconfig・HEAD・ref（branchは `packed-refs`、`origin/main` はloose）と
 `shallow` を読んで受け付け、Gitは空のrepoで固定objectsとshallowの写しだけを読んだ。
 
+3回目の修正のcommit `fe1d5941` から `go build -trimpath` で生成したreader（SHA256 `fec6e90d…10dd`、vcs.modified=false）
+でも実物を1回照合した。終了コード0、11.8秒で、同じ固定値の `qualified:true`（入力126件・dep-info 116件・crate 8件、
+`data_access_granted:false`）を返した。Gitは実行せず、reader自身が実物のpackから固定HEADのcommitを読み、
+`origin/main` からの祖先とtreeの一覧を求めた。
+
 いずれもmerge前のsourceによる観測で、最終の結果はmerge後のsourceから生成したreaderで取り直す。
 対象の置換、guardの変更、ToDoの状態変更はしていない。
 
@@ -272,5 +315,6 @@ SHA256 `d4392e63…0718`、同じサイズと更新時刻で、`target/release/d
 
 修正前のhead `d9edfd4d` では、専用workflow（windows、run 39994455364）とCodeQL（run 39994455228）が成功した。
 1回目の修正のhead `308cb24d` でも、専用workflow（windows、run 40002129622）とCodeQL（run 40002129620）が成功した。
-2回目の修正後のheadの正式CI、修正の別モデル再レビュー、通常merge、merge後のsourceから生成したreaderによる
+2回目の修正のhead `8b4f34b9` でも、専用workflow（windows、run 40015024286）とCodeQL（run 40015024382）が成功した。
+3回目の修正後のheadの正式CI、修正の別モデル再レビュー、通常merge、merge後のsourceから生成したreaderによる
 実物の照合、親3190への結果の返却が残る。

@@ -66,7 +66,7 @@ PR399は `702c35757df244b1ae46730a6b434d1272ad34f9` から通常マージ
 旧版不一致、リンク、既存backup、並行writer、最後の照合失敗、path差替えの拒否が成功。
 旧backupは検証済みbyte copyであり、元inodeを移動したと偽らない。
 継承フラグと共有handleに関するfixture上の失敗を直し、失敗原ログも保持した。
-Windowsの[継承対応ACL API](https://learn.microsoft.com/en-us/windows/win32/api/aclapi/nf-aclapi-setnamedsecurityinfow)と
+Windowsの[handleを使うACL API](https://learn.microsoft.com/en-us/windows/win32/api/aclapi/nf-aclapi-setsecurityinfo)と
 [handleによるrename](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_rename_info)を使う。
 原byteのdeny-write handleとbyte排他を保ち、現物へ適用する前に別モデルmaxで確認する。
 
@@ -98,7 +98,7 @@ PR399のsafe-delete sourceと候補の最新mainは差分0で、正式CIの同so
 v2の既存AdminBroker上の関連テストは12個、subtest込み33件成功、失敗0。
 vetも成功し、実際の公開sourceに対する昇格時のGit照合も確認した。
 readerの元49件は同じ入力として再利用し、overlay対応表が2fileだけであることと、
-初期化式が実行処理を含まないことの追加2件が成功した。原engineは変更していない。
+初期化式にcall・関数リテラルがないことの追加2件が成功した。原engineは変更していない。
 
 原build receiptの短縮したcommandにmoduleのcwdが無かった点は、新しい注記で
 実際のcwdと絶対出力pathを補った。原receiptのbyte/SHAは変更していない。
@@ -109,3 +109,34 @@ readerのGoは1.27.0、safe-delete候補は1.27.1と実物のbuild情報から�
 safe-delete/reader/Go依存の差分は0だった。元buildのhead/hashを付け替えていない。
 v2の変更差分は追加の固定レビューへ回す。実物への適用は引き続き0で、
 原old証拠の受領と実qualifiedのGreenが必要である。
+
+## 追加レビューと復旧記録の修正（2026-10-24）
+
+3484の実Opus5.5/maxによる追加差分レビューは正常終了し、Must0だった。
+12対象のSHAとbyte数は一致した。Go本体・テスト・手順は読了し、元49件のログは
+Action・テスト名・時刻を確認した範囲である。全ログ本文の読了とは扱わない。
+
+同じ復旧領域への2回の指摘を受け、v2を保持してv3で事前確認と停止記録を揃えた。
+候補のpin、3つの残物名、既存journalをvalidate/applyの共通preflightで確認する。
+既存の途中backupがあっても、先に新しいstageを作らない。途中journalは自動再開しない。
+staged/backupのNTFS identity・ACLを同期保存し、置換前・置換後・結果不明を区別する。
+作成途中で元identityが記録できなかった残物は、不明のまま保全し勝手に片付けない。
+
+元v2で「残物が増える」「置換後の失敗で元識別情報を失う」の2件Redを実測し、
+v3で同じ2件がGreenになった。関連する管理者テスト14個、subtest込み45件とvetも成功した。
+backup移動先には異なる継承ACEを実際に付け、元ACLが保たれることを確認した。
+拒否テストは該当するエラーまで照合した。実行中の呼出し元を調べ、元担当と更新区間を
+調整してから適用する手順を残した。queueや定期taskの設定は本担当で変更していない。
+
+readerはGo1.27.0と同じ2input overlayで別の所有出力先へ再ビルドし、元SHAと一致した。
+v3のテストexeも、入力3fileを固定した新しいビルドで実行済みexeと同byteになった。
+Program FilesのGo1.27.0と、moduleの要求で自動選択されるGo1.27.1を記録で区別した。
+前注記の「actual prior tool invocation」は再現用の説明として訂正し、過去の生の
+tool-call原記録を今回取得したとは主張しない。元receiptと前注記のbyteは保持する。
+ignoredのprivate controllerはpublic commitに含まれるとせず、sourceの固定SHAを別記する。
+
+最新main `b6d1da58dea2740b3d948aaf04c060fb43ab1510` まで候補入力の差分は0。
+v1/v2は過去の証拠として保持し、今後のapplyには使わない。未知のcurrentを受理せず、
+元3451の原配布証拠、追加dataの固定レビュー、実Green、実配布と受入が引き続き必要である。
+同一SIDの最後のnamespace競合では、競合fileを上書きした後に失敗を検出し得る限界も
+明記した。これを攻撃者へのセキュリティ境界や、失われた別fileを復元する機能とは主張しない。

@@ -15,6 +15,8 @@ type partialEntry struct {
 	Name       string `json:"name"`
 	Commit     string `json:"commit"`
 	SHA        string `json:"source_sha256"`
+	Blob       string `json:"git_blob"`
+	Bytes      int    `json:"bytes"`
 	Read       bool   `json:"body_read_complete"`
 	Installed  bool   `json:"installed_by_todo3080"`
 	Integrated bool   `json:"integrated_by_todo3080"`

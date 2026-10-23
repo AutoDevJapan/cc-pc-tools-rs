@@ -6276,7 +6276,7 @@
         }
       ],
       "required_changes": "現役の管理原本を保持し、有用な差分を比較する。価値があれば「描画して目視」「ASCIIハイフンのみ」等の品質規則だけ現役pdfへ追記候補。uv/pip/brew/aptのinstall文は未実行。補助2件(非保存)は未読。 別版/別経路や再利用可能な手順まで一括除外した決定ではない。現役原本を保持して有用な差分を比較する候補として記録する。",
-      "compare_metadata": "同名 pdf(現役), pdf:pdf(plugin, 説明ほぼ同一で上位互換), documents:documents。両者の本文は未読(metadata比較)",
+      "compare_metadata": "同名 pdf(現役), pdf:pdf(plugin, metadataの用途説明は近い。本文未比較のため上位互換は未確定), documents:documents。両者の本文は未読(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
       "inventory_id": "github:e7c90cae3943320e5d8722b8dc592c38b26f916e652fa5a77f70536c1ce492f5",

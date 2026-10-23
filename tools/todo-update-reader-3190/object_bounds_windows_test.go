@@ -214,6 +214,38 @@ func TestDeltaDepthLimit(t *testing.T) {
 	}
 }
 
+// The depth limit bounds a delta's whole chain, also where the chain reaches
+// an object that an earlier read rebuilt and kept: a delta based on a kept
+// delta is one deeper than that delta.
+func TestDeltaDepthCountsKeptBases(t *testing.T) {
+	base := []byte("0123456789abcdef")
+	first := append(slices.Clone(base), '1')
+	second := append(slices.Clone(first), '2')
+	// grow is a delta that copies all of from and adds one byte.
+	grow := func(from []byte, add byte) []byte {
+		return []byte{byte(len(from)), byte(len(from) + 1), 0x90, byte(len(from)), 1, add}
+	}
+	whole := slices.Concat(entryHead(objBlob, len(base)), deflated(t, base))
+	onBase := slices.Concat(entryHead(objOfsDelta, 6), ofsBase(len(whole)), deflated(t, grow(base, '1')))
+	onFirst := slices.Concat(entryHead(objOfsDelta, 6), ofsBase(len(onBase)), deflated(t, grow(first, '2')))
+	objects := filepath.Join(testLongPath(t, t.TempDir()), "objects")
+	writeRawPack(t, filepath.Join(objects, "pack"), []rawEntry{
+		{rawName(t, "blob", base), whole}, {rawName(t, "blob", first), onBase}, {rawName(t, "blob", second), onFirst},
+	})
+	for _, limit := range []int{2, 1} {
+		limits := productionProfile.limits
+		limits.deltaDepth = limit
+		store := openRawStore(t, objects, limits)
+		if _, got, ok := store.object(objectName("blob", first)); !ok || !bytes.Equal(got, first) {
+			t.Fatalf("with %d deltas allowed, reading a chain of 1 delta = %q, %v", limit, got, ok)
+		}
+		_, got, ok := store.object(objectName("blob", second))
+		if ok != (limit == 2) || ok && !bytes.Equal(got, second) {
+			t.Fatalf("with %d deltas allowed and the first delta kept, reading a chain of 2 deltas = %q, %v", limit, got, ok)
+		}
+	}
+}
+
 // Every byte that the store reads or produces counts against the read limit:
 // the compressed bytes as they are read, each pack entry's inflated size and
 // each delta's result, and each loose file's size and inflated size. Each

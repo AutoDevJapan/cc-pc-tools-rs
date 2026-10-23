@@ -2,7 +2,7 @@
   "source_commands_executed": 0,
   "global_adoptions_unchanged": true,
   "todo": 3080,
-  "recorded_at": "2026-10-23T17:38:36.7953115Z",
+  "recorded_at": "2026-10-23T19:37:25.1602515Z",
   "current_public_primary_count": 213,
   "job": "20261024-023253-todo-3080",
   "remaining": "所定の新差分レビュー/個別実統合先の正規分類/必要な適用例・実配置・発見。全16資料と未保存/拒否範囲は継続。",
@@ -3621,18 +3621,21 @@
               "start": 0,
               "end": 7345,
               "total": 7345
-            },
-            {
-              "start": 3400,
-              "end": 5000,
-              "total": 7345
             }
           ],
           "git_blob": "d5bf2ba4bb6441ec511d8132ca6fa214031382a2",
           "body_saved": true,
           "sha256": "526e998d483aa7d8a815317abde099acae8050c80d59b9e73a69571b8058a8ed",
           "path": "templates/base/DESIGN.md",
-          "source_executed": false
+          "source_executed": false,
+          "read_range_unit": "UTF-16 code units in decoded .NET string; bytes is the original UTF-8 byte count",
+          "supplemental_reread_ranges": [
+            {
+              "start": 3400,
+              "end": 5000,
+              "total": 7345
+            }
+          ]
         },
         {
           "body_read_complete": false,

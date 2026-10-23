@@ -5,7 +5,7 @@
     "saved": 485,
     "unsaved": 205
   },
-  "recorded_at": "2026-10-23T17:38:36.7953115Z",
+  "recorded_at": "2026-10-23T19:37:25.1602515Z",
   "support_code_executed": false,
   "required_changes_definition": "親の技術適用案であり本人の禁止を追加しない。元依頼の対象/承認、既存のOAuth枠、Prd/Rakko/画像確認、新規支出禁止を維持。この読取作業で接続・配置・外部送信の範囲を増やさない。",
   "entrypoints_read": 44,
@@ -553,7 +553,6 @@
       "compare_metadata": "近: desktop-native-apps, frontend-node-engineering, backend-correctness。.NET Web専用なし(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "新規",
       "inventory_id": "github:cf6f7ec9164d7c060bece5c5f7b795336c97510f860dff6718b8b7c8b48d1360",
       "source_sha256": "1f487ef3565e5ac1ee6c93cbeb9ac666292b30285877c82ddb0a77c9777fe92f",
       "body_read_by": "reader3475",
@@ -561,7 +560,12 @@
       "reason": "[独立Skill/索引型] ASP.NET Core(Blazor/Razor/MVC/Minimal API等)の参照13本へ振り分ける。.NET Web専用の既存はなく重複薄。価値は参照側で本文は索引。",
       "retrieved_at": "2026-10-20T08:41:11.9913334Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/aspnet-core/SKILL.md",
-      "candidate_disposition": "new_workflow_candidate_pending_support_and_comparison"
+      "candidate_disposition": "new_workflow_candidate_pending_support_and_comparison",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "新規",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/chatgpt-apps/SKILL.md",
@@ -665,7 +669,6 @@
       "compare_metadata": "近: openai-docs(.system), coding-agent-tools(MCP), frontend-node-engineering, sites:sites。専用なし(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "修正必要",
       "inventory_id": "github:2e0ee243c19dfad463737e0c64bf90a78204a90843582ff815d73cb73541cc74",
       "source_sha256": "c3a13a659ce26e9d067b5a97c321e8abec6d8e878afce31b7e841dfcf2635c3a",
       "body_read_by": "reader3475",
@@ -673,7 +676,12 @@
       "reason": "[独立Skill] ChatGPT Apps SDK(MCPサーバー+ウィジェット)の足場化手順。openai-docs必須前提、ngrok公開/審査提出、TS/Python記述が現方針と衝突。",
       "retrieved_at": "2026-10-20T08:41:12.0055139Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/chatgpt-apps/SKILL.md",
-      "candidate_disposition": "adaptation_candidate_pending_policy_and_support"
+      "candidate_disposition": "adaptation_candidate_pending_policy_and_support",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "修正必要",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/cli-creator/SKILL.md",
@@ -714,7 +722,6 @@
       "compare_metadata": "統合先: coding-agent-tools, skill-maintenance(3048記録)。統合済み本文は未読(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "既存統合",
       "inventory_id": "github:3774bec325396a60903dd96be87c7440003f13d4e8a45d59faf14517574f0b3d",
       "source_sha256": "24058eabf0aafce6def3fb937ac93cbe3fa341c653c658dc589edb77f73d6152",
       "body_read_by": "reader3475",
@@ -722,7 +729,12 @@
       "reason": "[独立Skill] API文書等から合成可能なCLIを作る手順。3048が同一SHAで読みcoding-agent-toolsへ統合済みと親記録。今回の全読でも本文差分なし。",
       "retrieved_at": "2026-10-20T08:41:12.0197204Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/cli-creator/SKILL.md",
-      "candidate_disposition": "existing_integration_candidate_pending_actual_delta"
+      "candidate_disposition": "existing_integration_candidate_pending_actual_delta",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "既存統合",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/cloudflare-deploy/SKILL.md",
@@ -3531,11 +3543,10 @@
           "body_read": false
         }
       ],
-      "required_changes": "正規の実行審査を保ち、許可済み通常操作への毎回の本人確認を追加しない。拒否の迂回や一律の昇格再実行はしない。有料製品は既存契約内のみと費用ゲート追記。Pages preview配備は避けPrdのみ。ドメイン/DNSはRakko限定。実際に使う参照の範囲と個別権利を確認する。未使用310件全体の監査を常に導入条件へ足さない。",
+      "required_changes": "正規の実行審査を保ち、許可済み通常操作への毎回の本人確認を追加しない。拒否の迂回や一律の昇格再実行はしない。有料製品は既存契約内のみと費用ゲート追記。GitHub実ownerがAutoDevJapan/BM1314/mashfrombandのrepoではPages preview配備を作らず既存Prdのみ。他ownerや顧客契約は先方の規則を保持する。ドメイン/DNSはRakko限定。実際に使う参照の範囲と個別権利を確認する。未使用310件全体の監査を常に導入条件へ足さない。",
       "compare_metadata": "近: cloud-infra-deploy(Cloudflare設定), web-saas-delivery-lessons, frontend-node-engineering, sites:sites(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "修正必要",
       "inventory_id": "github:0ab793e37d3b44eaf3a16af08020907fd32239fbbafa1813a00f57d13497e095",
       "source_sha256": "d7632537cf19be17cf33d2c696b9d9c2ea3ee51026030e9b203d5b9255e75b15",
       "body_read_by": "reader3475",
@@ -3543,7 +3554,12 @@
       "reason": "[deploy+参照索引] Workers/Pages等Cloudflare製品の決定木と参照索引。cloud-infra-deployは設定/運用開始確認で用途が別。昇格再実行と確認質問、有料製品誘導が現方針と衝突。",
       "retrieved_at": "2026-10-20T08:41:12.0224047Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/cloudflare-deploy/SKILL.md",
-      "candidate_disposition": "adaptation_candidate_pending_policy_and_support"
+      "candidate_disposition": "adaptation_candidate_pending_policy_and_support",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "修正必要",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/define-goal/SKILL.md",
@@ -3575,7 +3591,6 @@
       "compare_metadata": "近: wayfinder(計画), grilling(聞取り), loop-me, shared-todo(完了条件)。目標ツール連携の既存なし(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "修正必要",
       "inventory_id": "github:ced9bda2a816c62210a3276fb9f6047f0374d8dd27767e33e49cb706d6853680",
       "source_sha256": "708df89ff19cbae82a762efae036735d1914b5c7e44df1832e0b723f6cd9ee30",
       "body_read_by": "reader3475",
@@ -3583,7 +3598,12 @@
       "reason": "[独立Skill] 曖昧な意図を測定可能な目標へ整え、求められた時だけcreate_goalを呼ぶ。弱い目標の書換えで本人が与えない数値閾値を足す余地がある。",
       "retrieved_at": "2026-10-20T08:41:12.3860757Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/define-goal/SKILL.md",
-      "candidate_disposition": "adaptation_candidate_pending_policy_and_support"
+      "candidate_disposition": "adaptation_candidate_pending_policy_and_support",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "修正必要",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/figma-code-connect-components/SKILL.md",
@@ -3660,7 +3680,6 @@
       "compare_metadata": "近: figma-design-to-code(Figma MCP取得/コード化)。Code Connect記載の有無は未確認(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "保留",
       "inventory_id": "github:b6acdd7d9298ea90665a11073d6998a0fa07c84bcae2c354616b8eee242b3a95",
       "source_sha256": "0f19edad8aed28063a3517c419fbcbef5421d024f189fd02a17fae25093ec69d",
       "body_read_by": "reader3475",
@@ -3668,7 +3687,12 @@
       "reason": "[tool reference] Figma MCPでCode Connect対応付けを提案取得→コード探索→登録。figma-design-to-codeと部分重複。権利が外部規約参照のため保留。",
       "retrieved_at": "2026-10-20T08:41:12.3866027Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/figma-code-connect-components/SKILL.md",
-      "candidate_disposition": "terms_or_spec_review_pending_selected_use"
+      "candidate_disposition": "terms_or_spec_review_pending_selected_use",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "保留",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/figma-create-design-system-rules/SKILL.md",
@@ -3745,7 +3769,6 @@
       "compare_metadata": "近: figma-design-to-code, coding-agent-tools(AGENTS.md扱い), skill-maintenance(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "保留",
       "inventory_id": "github:34131a8827748d5fad9908ca427eb093252786aba56c61f5e3b0f8e2477cdaaa",
       "source_sha256": "1f4d7e16ba5325a80da32e2e6bde0ea850ba9287f35f4675d51d55d2f0dc6e2a",
       "body_read_by": "reader3475",
@@ -3753,7 +3776,12 @@
       "reason": "[tool reference] create_design_system_rulesを起点にコードベースを分析し規則文書を作る。AGENTS.md/CLAUDE.md書込が管理配布物と衝突し得る。権利は外部規約参照で保留。",
       "retrieved_at": "2026-10-20T08:41:12.3886304Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/figma-create-design-system-rules/SKILL.md",
-      "candidate_disposition": "terms_or_spec_review_pending_selected_use"
+      "candidate_disposition": "terms_or_spec_review_pending_selected_use",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "保留",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/figma-create-new-file/SKILL.md",
@@ -3821,7 +3849,6 @@
       "compare_metadata": "近: figma-design-to-code(descriptionに「ファイル作成」あり)(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "保留",
       "inventory_id": "github:a9353a00e34cd66f74e75ff24eec8977b737d3419f0081ca15feba52ac31dc2d",
       "source_sha256": "23f429203bd57f186905b2523d4ff8bdf10d3b85b39fc7eed4786097d81f1adc",
       "body_read_by": "reader3475",
@@ -3829,7 +3856,12 @@
       "reason": "[tool reference] Figma MCP create_new_file(planKey解決→下書きへ空ファイル作成)だけの薄い手順。figma-useへ節として統合が自然。権利が外部規約参照で保留。",
       "retrieved_at": "2026-10-20T08:41:12.3891482Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/figma-create-new-file/SKILL.md",
-      "candidate_disposition": "terms_or_spec_review_pending_selected_use"
+      "candidate_disposition": "terms_or_spec_review_pending_selected_use",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "保留",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/figma-generate-design/SKILL.md",
@@ -3897,7 +3929,6 @@
       "compare_metadata": "近: figma-design-to-code, ui-design-styles, web-design-process(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "保留",
       "inventory_id": "github:647c24d3e78c583bab7834e0ea777da483bb1a4e56538f4e79b603e2855e6dd9",
       "source_sha256": "45d2b97103bdeb31cb2744fca2c79bcefb659c88faca626bea30ec2f9342dcc9",
       "body_read_by": "reader3475",
@@ -3905,7 +3936,12 @@
       "reason": "[workflow] 既存デザインシステムの部品/変数/スタイルを探しFigma画面を節ごとに組む。figma-use併用必須、use_figmaへskillNames(記録用)を送る。権利が外部規約参照で保留。",
       "retrieved_at": "2026-10-20T08:41:12.3938762Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/figma-generate-design/SKILL.md",
-      "candidate_disposition": "terms_or_spec_review_pending_selected_use"
+      "candidate_disposition": "terms_or_spec_review_pending_selected_use",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "保留",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/figma-generate-library/SKILL.md",
@@ -4117,7 +4153,6 @@
       "compare_metadata": "近: figma-design-to-code(descriptionに「ライブラリ作成」あり), ui-design-styles, ui-accessibility(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "保留",
       "inventory_id": "github:3491c2a12f3c69ac091b13ba3214c06c4621bdad758b187175e141526f8ac43b",
       "source_sha256": "7f42103c59fc181d7081404a56545f321c458d97f5ee7f7a0ab2af75ea69a85f",
       "body_read_by": "reader3475",
@@ -4125,7 +4160,12 @@
       "reason": "[workflow] コードからFigmaのデザインシステムを20〜100回超のuse_figmaで構築。各段階の承認待ち、/tmp台帳、skillNames送信が現方針と衝突。権利が外部規約参照で保留。",
       "retrieved_at": "2026-10-20T08:41:12.3953902Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/figma-generate-library/SKILL.md",
-      "candidate_disposition": "terms_or_spec_review_pending_selected_use"
+      "candidate_disposition": "terms_or_spec_review_pending_selected_use",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "保留",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/figma-implement-design/SKILL.md",
@@ -4184,7 +4224,6 @@
       "compare_metadata": "最も近い: figma-design-to-code。ほか frontend-node-engineering, ui-accessibility, ui-testing(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "保留",
       "inventory_id": "github:58338792851082438309c806bfae58d67d7110cf2b8b293a4de4d311fb948b5c",
       "source_sha256": "63f3d12d444547bbf68c10a12982b1f42e0f6e26fc074324564a13184d4b15ad",
       "body_read_by": "reader3475",
@@ -4192,7 +4231,12 @@
       "reason": "[workflow] Figmaの文脈と画面画像を取得し、既存部品/トークンに合わせコードへ翻訳して見た目を照合。figma-design-to-codeとほぼ重なる。権利が外部規約参照で保留。",
       "retrieved_at": "2026-10-20T08:41:12.4034115Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/figma-implement-design/SKILL.md",
-      "candidate_disposition": "terms_or_spec_review_pending_selected_use"
+      "candidate_disposition": "terms_or_spec_review_pending_selected_use",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "保留",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/figma-use/SKILL.md",
@@ -4458,15 +4502,19 @@
       "compare_metadata": "近: figma-design-to-code, browser-automation。Plugin API規則を持つ既存は不明(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "保留",
       "inventory_id": "github:e5e59dd28b3da952fe5ba5ec76939eca18d15a37b4a821f10a4df312f3928bcb",
       "source_sha256": "afa9c4ae068a18b93e4914b2d224180ace113db7713dd66f4df397f16ba9c4b4",
       "body_read_by": "reader3475",
       "body_read_complete": true,
-      "reason": "[tool reference] use_figma(Plugin API)の必須規則(return/ID返却/色0-1/font/ページ切替)と参照11本の入口。他figma系の前提。大型型定義等の権利が未確認で保留。",
+      "reason": "[tool reference] use_figma(Plugin API)の必須規則(return/ID返却/色0-1/font/ページ切替)と本文が列挙する参照12本の入口（固定treeのreferences配下は22本）。他figma系の前提。大型型定義等の権利が未確認で保留。",
       "retrieved_at": "2026-10-20T08:41:12.4044715Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/figma-use/SKILL.md",
-      "candidate_disposition": "terms_or_spec_review_pending_selected_use"
+      "candidate_disposition": "terms_or_spec_review_pending_selected_use",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "保留",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/figma/SKILL.md",
@@ -4543,7 +4591,6 @@
       "compare_metadata": "近: figma-design-to-code。同snapshot内でfigma-implement-designと流れ重複(本文確認済み)(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "保留",
       "inventory_id": "github:cceab8c2fc8d411fdc8103a60d8bbb42df91d1c3d3caa10604ef49f8e830a4b7",
       "source_sha256": "5b11f7c8d0ce4c047b401323e7b8fe6559bd3162a3397bf5248634a5444609d5",
       "body_read_by": "reader3475",
@@ -4551,7 +4598,12 @@
       "reason": "[guide] Figma MCP入口。必須フローと素材規則がfigma-implement-designとほぼ同内容で独立価値は小さい(設定参照2本が残る)。権利が外部規約参照で保留。",
       "retrieved_at": "2026-10-20T08:41:12.4361607Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/figma/SKILL.md",
-      "candidate_disposition": "terms_or_spec_review_pending_selected_use"
+      "candidate_disposition": "terms_or_spec_review_pending_selected_use",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "保留",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/gh-address-comments/SKILL.md",
@@ -4610,7 +4662,6 @@
       "compare_metadata": "統合先: git-github-workflow(コメント整理), self-review-pr-merge(指摘対応)。既存本文は未読(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "既存統合",
       "inventory_id": "github:119865f68857802d5aa3c759f4ce1954e2789a9b9f2cf8c2ecc3137b2facc2c4",
       "source_sha256": "77389eefd3fb6584210668ca8e43f4b8de87e7722ddd953474bc9e24cdfaaedd",
       "body_read_by": "reader3475",
@@ -4618,7 +4669,12 @@
       "reason": "[独立Skill/超短] PRのレビュー指摘をgh+fetch_comments.pyで一覧し本人に選ばせる手順。git-github-workflow/self-review-pr-mergeと重複し、固有は取得スクリプトの考え方のみ。",
       "retrieved_at": "2026-10-20T08:41:12.4392861Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/gh-address-comments/SKILL.md",
-      "candidate_disposition": "existing_integration_candidate_pending_actual_delta"
+      "candidate_disposition": "existing_integration_candidate_pending_actual_delta",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "既存統合",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/gh-fix-ci/SKILL.md",
@@ -4677,7 +4733,6 @@
       "compare_metadata": "統合先: github-actions-ci(mizchi版SHA 9bb7f0a6で統合済み)。本文SHAは別で同源流かは未照合(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "既存統合",
       "inventory_id": "github:471d53b2b5f0b28cfe5fe2356ebb4b6b0785fe09cdd7fac023231665d668a37a",
       "source_sha256": "7b326b4a2f0f5f85122144628ec02077e48841e0e0e82efce88b3415bcfb7c26",
       "body_read_by": "reader3475",
@@ -4685,7 +4740,12 @@
       "reason": "[独立Skill] 失敗PRチェックのActionsログを取得し要約する手順。3080でmizchi版gh-fix-ciをgithub-actions-ciへ統合済みで同用途。差分は外部CIの線引きとログ取得手順程度。",
       "retrieved_at": "2026-10-20T08:41:12.4398071Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/gh-fix-ci/SKILL.md",
-      "candidate_disposition": "existing_integration_candidate_pending_actual_delta"
+      "candidate_disposition": "existing_integration_candidate_pending_actual_delta",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "既存統合",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/hatch-pet/SKILL.md",
@@ -4816,7 +4876,6 @@
       "compare_metadata": "近: work-pets:create-pet/pets/update-pet(別形式), imagegen, image-generation-editing, vtuber-streaming(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "修正必要",
       "inventory_id": "github:6a3c3c02112ce6da0de8a17f75066c739458020253ae5ae578e34858362fd8ff",
       "source_sha256": "7ab0f01e8561085d1b494a6ca74abed766c655da8ec98284fb38a362c19d6871",
       "body_read_by": "reader3475",
@@ -4824,7 +4883,12 @@
       "reason": "[独立Skill/大型] Codex用アニメペット(9状態)を$imagegenで行別生成し、スクリプトで組立/検査/梱包する。子worker並列起動、APIフォールバック確認、Python8本、承認待ちが現方針と衝突。",
       "retrieved_at": "2026-10-20T08:41:12.4413885Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/hatch-pet/SKILL.md",
-      "candidate_disposition": "adaptation_candidate_pending_policy_and_support"
+      "candidate_disposition": "adaptation_candidate_pending_policy_and_support",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "修正必要",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/jupyter-notebook/SKILL.md",
@@ -4937,7 +5001,6 @@
       "compare_metadata": "近: documents-slides-data(ノートブック等), spreadsheets, speech-tts-asr。専用既存は不明(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "修正必要",
       "inventory_id": "github:ec2afa56b06ffef43cc10a5f574402efe16455d2d1ca43d950ba7f723c3ff4cf",
       "source_sha256": "62f102e8554b25716dccef0ffab4572d4e3eaf05ccc76562d33a065bc9c521fb",
       "body_read_by": "reader3475",
@@ -4945,7 +5008,12 @@
       "reason": "[独立Skill] 実験/教材の.ipynb構造と品質基準、new_notebook.pyで雛形生成。documents-slides-dataと部分重複。uv/jupyterlab導入などPython前提が新規Python不可の方針と衝突。",
       "retrieved_at": "2026-10-20T08:41:12.4494873Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/jupyter-notebook/SKILL.md",
-      "candidate_disposition": "adaptation_candidate_pending_policy_and_support"
+      "candidate_disposition": "adaptation_candidate_pending_policy_and_support",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "修正必要",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/linear/SKILL.md",
@@ -4995,7 +5063,6 @@
       "compare_metadata": "近: shared-todo, git-github-workflow(Issue/PR), triage。Linear専用なし(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "新規",
       "inventory_id": "github:9e252728557935c94f42fb035570096eb391db7d500c02340e0d4e40c67d1ab3",
       "source_sha256": "ce0f39c95b6c9190f8ea33614393cdb556b2684dd8388ded394e9cb915f42601",
       "body_read_by": "reader3475",
@@ -5003,7 +5070,12 @@
       "reason": "[tool reference] Linear MCP(課題/プロジェクト/コメント/サイクル)の操作手順と実用ワークフロー。catalogにLinear用Skillなし。接続しない限り実害なし。",
       "retrieved_at": "2026-10-20T08:41:12.4558297Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/linear/SKILL.md",
-      "candidate_disposition": "new_workflow_candidate_pending_support_and_comparison"
+      "candidate_disposition": "new_workflow_candidate_pending_support_and_comparison",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "新規",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/migrate-to-codex/SKILL.md",
@@ -5179,7 +5251,6 @@
       "compare_metadata": "近: skill-maintenance(Codexへ移す), coding-agent-tools, link。各agent置き場は中央junction統一で必要性低(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "修正必要",
       "inventory_id": "github:2727f5145f982bb8c73274b551a07e9096170b534a2794076c48bc3488eea1c8",
       "source_sha256": "145b7fe48360642cb7a42bad3a817f10833fa8a387ffcb4c2df8a47c01a832e2",
       "body_read_by": "reader3475",
@@ -5187,7 +5258,12 @@
       "reason": "[独立Skill] Claude Codeの指示/skill/agent/MCP設定をCodex側へ変換。skill-maintenanceに近い用途。AGENTS.md/.codex/~/.codexへ確認なし書込・--replace削除が管理配布物と衝突。",
       "retrieved_at": "2026-10-20T08:41:12.4576661Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/migrate-to-codex/SKILL.md",
-      "candidate_disposition": "adaptation_candidate_pending_policy_and_support"
+      "candidate_disposition": "adaptation_candidate_pending_policy_and_support",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "修正必要",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/netlify-deploy/SKILL.md",
@@ -5260,11 +5336,10 @@
           "body_read": false
         }
       ],
-      "required_changes": "preview/draftを既定から外しPrdのみ。新規作成は元の依頼/既存承認/費用/Prd範囲を照合し、この資料で範囲を増やさない。元の実行権限と正規審査を保ち、許可済み通常操作を再承認待ちにしない。NETLIFY_AUTH_TOKENは記録しない。npx版固定を確認。参照3は個別確認。",
+      "required_changes": "GitHub実ownerがAutoDevJapan/BM1314/mashfrombandのrepoではpreview/draftを外し既存Prdのみ。他ownerや顧客契約は先方の規則を保持する。新規作成は元の依頼/既存承認/費用/Prd範囲を照合し、この資料で範囲を増やさない。元の実行権限と正規審査を保ち、許可済み通常操作を再承認待ちにしない。NETLIFY_AUTH_TOKENは記録しない。npx版固定を確認。参照3は個別確認。",
       "compare_metadata": "近: cloud-infra-deploy, web-saas-delivery-lessons, frontend-node-engineering, sites:sites。Netlify専用なし(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "修正必要",
       "inventory_id": "github:17350a87d59037557bf9e8c20b6ed1ebcefc4fac682f541e50445c77cc333a85",
       "source_sha256": "bb2c29bf599a043cade932f60cc64f632ca100e8767ccdfa2ba1a42c8d43958f",
       "body_read_by": "reader3475",
@@ -5272,7 +5347,12 @@
       "reason": "[deploy] npx netlifyで認証→リンク/新規作成→preview/本番配備する手順。現配備先(Vercel/Railway)と別。既定preview配備・昇格再実行と確認質問・新規サイト作成が現方針と衝突。",
       "retrieved_at": "2026-10-20T08:41:12.4597417Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/netlify-deploy/SKILL.md",
-      "candidate_disposition": "adaptation_candidate_pending_policy_and_support"
+      "candidate_disposition": "adaptation_candidate_pending_policy_and_support",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "修正必要",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/notion-knowledge-capture/SKILL.md",
@@ -5439,7 +5519,6 @@
       "compare_metadata": "近: knowledge-to-skills, import-memory, obsidian-*(別基盤)。Notion専用なし。推奨plugin一覧にNotion(未導入)あり重複未確認(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "新規",
       "inventory_id": "github:102bbbcf899769911780cad990c87af98f282abcc7453d437225f18747e1f898",
       "source_sha256": "b49383b229bc766190ea22bb58502cfcf7e08449f5fce55a104eef1e54e27f00",
       "body_read_by": "reader3475",
@@ -5447,7 +5526,12 @@
       "reason": "[tool reference] 会話/メモをNotionの決定記録・how-to・FAQ等へ構造化して作成/更新(Notion MCP前提)。catalogにNotion用なし。固有価値はDBスキーマとテンプレ。",
       "retrieved_at": "2026-10-20T08:41:12.4668489Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/notion-knowledge-capture/SKILL.md",
-      "candidate_disposition": "new_workflow_candidate_pending_support_and_comparison"
+      "candidate_disposition": "new_workflow_candidate_pending_support_and_comparison",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "新規",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/notion-meeting-intelligence/SKILL.md",
@@ -5623,7 +5707,6 @@
       "compare_metadata": "近: morning, deep-research, obsidian-cli(別基盤)。会議準備専用なし。推奨plugin一覧にNotion(未導入)あり重複未確認(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "新規",
       "inventory_id": "github:7b658f121e9d4342e5b1cec58dd8ba332a665951c9865116d74c729c0411d362",
       "source_sha256": "bad61faccbbe0f2cab53bcfbc4cb22f847ba8593ef14c2e37fea5b9b03346332",
       "body_read_by": "reader3475",
@@ -5631,7 +5714,12 @@
       "reason": "[tool reference] Notionの過去メモ/仕様を集め、会議の議題/事前資料をテンプレから作り調査を足す(Notion MCP前提)。会議準備専用の既存Skillなし。",
       "retrieved_at": "2026-10-20T08:41:12.4749646Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/notion-meeting-intelligence/SKILL.md",
-      "candidate_disposition": "new_workflow_candidate_pending_support_and_comparison"
+      "candidate_disposition": "new_workflow_candidate_pending_support_and_comparison",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "新規",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/notion-research-documentation/SKILL.md",
@@ -5843,7 +5931,6 @@
       "compare_metadata": "近: deep-research, source-grounded-content-review, evidence-based-text-review。Notion内限定が差分。推奨plugin一覧にNotion(未導入)あり(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "新規",
       "inventory_id": "github:6db0198e9c1a2218b74f7340ad30372e658f739cd06a3a80f4ca0ee1019579d5",
       "source_sha256": "e88a46da978cf6f088a788fa92ee736df699a355a72f41f14bdc258bf3ef57e7",
       "body_read_by": "reader3475",
@@ -5851,7 +5938,12 @@
       "reason": "[tool reference] Notion内の複数ページを検索/取得し出典付きの要約・比較・総合報告をNotionに作る。deep-researchは汎用調査でNotion内資料に限る点が差分。",
       "retrieved_at": "2026-10-20T08:41:12.4875732Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/notion-research-documentation/SKILL.md",
-      "candidate_disposition": "new_workflow_candidate_pending_support_and_comparison"
+      "candidate_disposition": "new_workflow_candidate_pending_support_and_comparison",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "新規",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/notion-spec-to-implementation/SKILL.md",
@@ -6027,7 +6119,6 @@
       "compare_metadata": "近: shared-todo, wayfinder, triage, spec-atdd-tdd-issue-workflow。Notion計画管理は既存なし。推奨plugin一覧にNotion(未導入)あり(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "新規",
       "inventory_id": "github:3307d4e8f4e6bb71680f1564527adac34e41076362728ab92b7165f55f0ff7c3",
       "source_sha256": "6e22c4c6df441e849fa6b4b825371b579c9bb4896f97bedca5f8536020427a81",
       "body_read_by": "reader3475",
@@ -6035,7 +6126,12 @@
       "reason": "[tool reference] Notion上の仕様(PRD)から実装計画ページとタスクを作り進捗を保つ。ローカルのSpecDD/Issue/共有ToDoとは管理先が別で、Notionを正本にする案件でのみ価値。",
       "retrieved_at": "2026-10-20T08:41:12.4972729Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/notion-spec-to-implementation/SKILL.md",
-      "candidate_disposition": "new_workflow_candidate_pending_support_and_comparison"
+      "candidate_disposition": "new_workflow_candidate_pending_support_and_comparison",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "新規",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/openai-docs/SKILL.md",
@@ -6126,19 +6222,23 @@
           "body_read": false
         }
       ],
-      "required_changes": "導入せず現役を維持。codex mcp add等のinstall手順は未実行。.system版との差分(API Key Setup節)はAPIキー不使用の方針に合わず不採用。補助8件(保存3)は未読。 別版/別経路や再利用可能な手順まで一括除外した決定ではない。現役原本を保持して有用な差分を比較する候補として記録する。",
+      "required_changes": "現役の管理原本を保持し、有用な差分を比較する。codex mcp add等のinstall手順は未実行。.system版との差分(API Key Setup節)はAPIキー不使用の方針に合わず不採用。補助8件(保存3)は未読。 別版/別経路や再利用可能な手順まで一括除外した決定ではない。現役原本を保持して有用な差分を比較する候補として記録する。",
       "compare_metadata": "現役 .system/openai-docs(中央SHA 8ce80211, 5475B)は本snapshot2版と別revision。説明文も異なる。中央はSHAのみ確認",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "除外",
       "inventory_id": "github:c837dc59c9b6ff8b7bb644c95dd8dc767f92d432133a8188e868e788cb11e613",
       "source_sha256": "057d24b4f36dab38299857777e4c0ca5bcce65d8cf89d917c174c1a0ae23d9f8",
       "body_read_by": "reader3475",
       "body_read_complete": true,
-      "reason": "[独立Skill/mirror元] OpenAI公式docsをMCP優先で引きCodex自己知識・モデル選択/移行を扱う。現役.system/openai-docsと同名で、snapshotの.system版とも6行差。重複かつ名前衝突。",
+      "reason": "[候補・metadata比較] OpenAI公式docsとCodexのモデル選択/移行を扱う。現役.system/openai-docsと同名だが本文は未比較。固定snapshot内の.system版との6行差は確認済みで、現役本文との同一性・価値の欠如の確定判断ではない。",
       "retrieved_at": "2026-10-20T08:41:12.5078744Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/openai-docs/SKILL.md",
-      "candidate_disposition": "overlap_or_unsupported_path_pending_useful_subset_comparison"
+      "candidate_disposition": "overlap_or_unsupported_path_pending_useful_subset_comparison",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "除外",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/pdf/SKILL.md",
@@ -6175,19 +6275,23 @@
           "body_read": false
         }
       ],
-      "required_changes": "導入しない。価値があれば「描画して目視」「ASCIIハイフンのみ」等の品質規則だけ現役pdfへ追記候補。uv/pip/brew/aptのinstall文は未実行。補助2件(非保存)は未読。 別版/別経路や再利用可能な手順まで一括除外した決定ではない。現役原本を保持して有用な差分を比較する候補として記録する。",
+      "required_changes": "現役の管理原本を保持し、有用な差分を比較する。価値があれば「描画して目視」「ASCIIハイフンのみ」等の品質規則だけ現役pdfへ追記候補。uv/pip/brew/aptのinstall文は未実行。補助2件(非保存)は未読。 別版/別経路や再利用可能な手順まで一括除外した決定ではない。現役原本を保持して有用な差分を比較する候補として記録する。",
       "compare_metadata": "同名 pdf(現役), pdf:pdf(plugin, 説明ほぼ同一で上位互換), documents:documents。両者の本文は未読(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "除外",
       "inventory_id": "github:e7c90cae3943320e5d8722b8dc592c38b26f916e652fa5a77f70536c1ce492f5",
       "source_sha256": "d108cf2b36355ab37eb5962933f4d09785ec002f3105c506129320209306b9d2",
       "body_read_by": "reader3475",
       "body_read_complete": true,
-      "reason": "[独立Skill/短い] PDFをPoppler描画で目視確認しreportlab/pdfplumber/pypdfで作成/抽出。現役のpdfとpdf:pdfがあり、後者はAcroForms含む上位互換。同名衝突とPython新規前提も方針外。",
+      "reason": "[候補・metadata比較] Poppler描画とPythonライブラリでPDFを作成/抽出する入口。現役pdf/pdf:pdfの説明にはAcroForms等もあるが本文未比較で、上位互換や全重複は未確定。同名衝突と新規Python実装の方針を踏まえ、手順差分を比較する。",
       "retrieved_at": "2026-10-20T08:41:12.5137665Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/pdf/SKILL.md",
-      "candidate_disposition": "overlap_or_unsupported_path_pending_useful_subset_comparison"
+      "candidate_disposition": "overlap_or_unsupported_path_pending_useful_subset_comparison",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "除外",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/playwright-interactive/SKILL.md",
@@ -6238,7 +6342,6 @@
       "compare_metadata": "近: ui-testing, browser-automation, ui-accessibility, built-in-browser, chrome-browser(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "修正必要",
       "inventory_id": "github:6e055eeb32ca5f9e47ca18babcc84013688371acb7d3b3a476493faca719a2d5",
       "source_sha256": "f6c1155d923e6ae3ccc12abfef2266f119f8e9546df2ddeee1f5eb369845a0a1",
       "body_read_by": "reader3475",
@@ -6246,7 +6349,12 @@
       "reason": "[tool reference+QA規律] js_repl常駐のPlaywright(Web/Electron)で反復UIデバッグ。QA台帳・機能/視覚QA分離が有用。js_repl/codex.emitImage/sandbox全開放が前提でこの環境は未確認。",
       "retrieved_at": "2026-10-20T08:41:12.522622Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/playwright-interactive/SKILL.md",
-      "candidate_disposition": "adaptation_candidate_pending_policy_and_support"
+      "candidate_disposition": "adaptation_candidate_pending_policy_and_support",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "修正必要",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/playwright/SKILL.md",
@@ -6324,7 +6432,6 @@
       "compare_metadata": "近: browser-automation, built-in-browser, chrome-browser, ui-testing, playwright-download-verification(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "修正必要",
       "inventory_id": "github:3a3087b3cebe52f07b00b947a28b07123d7dca597ac9d1899b5c76054ca223f3",
       "source_sha256": "0ffaabcc8e0990627c4725f18bf1c7955534a796c1c199e872909de2013ce6a8",
       "body_read_by": "reader3475",
@@ -6332,7 +6439,12 @@
       "reason": "[tool reference] playwright-cli(snapshot参照ID中心)の実ブラウザ操作手順。microsoft/playwright-cli由来でNOTICEあり。独自ブラウザ起動はログイン済みChrome方針と合わず、npx/bash/Node導入確認が衝突。",
       "retrieved_at": "2026-10-20T08:41:12.5248461Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/playwright/SKILL.md",
-      "candidate_disposition": "adaptation_candidate_pending_policy_and_support"
+      "candidate_disposition": "adaptation_candidate_pending_policy_and_support",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "修正必要",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/render-deploy/SKILL.md",
@@ -6526,7 +6638,6 @@
       "compare_metadata": "近: cloud-infra-deploy, web-saas-delivery-lessons(Railway等), frontend-node-engineering, sites:sites。Render専用なし(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "修正必要",
       "inventory_id": "github:a1627daf67cfce95b3702c81bfe6414a3612300cb6832ffd24e1b42cafe419bb",
       "source_sha256": "c17c75adeb1834ed5cee1e440a651ae476c4101cd63762fcd9a58eada917552d",
       "body_read_by": "reader3475",
@@ -6534,7 +6645,12 @@
       "reason": "[deploy] render.yaml作成・検証・deeplink・MCP直接作成でRenderへ配備。現配備先(Vercel/Railway)と別PaaS。APIキーのMCP登録、curl|sh導入、昇格再実行と確認質問、新規作成が現方針と衝突。",
       "retrieved_at": "2026-10-20T08:41:12.527477Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/render-deploy/SKILL.md",
-      "candidate_disposition": "adaptation_candidate_pending_policy_and_support"
+      "candidate_disposition": "adaptation_candidate_pending_policy_and_support",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "修正必要",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/screenshot/SKILL.md",
@@ -6638,7 +6754,6 @@
       "compare_metadata": "統合先: computer-use, computer-use:computer-use。built-in-browserも近い(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "既存統合",
       "inventory_id": "github:a6d38d79337c9a5209fbe6cd49095ec300a0b4d7c1f8892b28fa6a1a6561953d",
       "source_sha256": "081935a6a163277537d46365f49d6b4a3cb40b4748347e7e88759c5927fa8cf5",
       "body_read_by": "reader3475",
@@ -6646,7 +6761,12 @@
       "reason": "[tool reference] デスクトップ/ウィンドウ/領域の画面を指定先か一時領域へ保存。macOS/Linux向けPython・bashとWindows用PowerShell補助。computer-use系と部分重複。Windows優先ではPowerShell補助のみ対象。",
       "retrieved_at": "2026-10-20T08:41:12.5433455Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/screenshot/SKILL.md",
-      "candidate_disposition": "existing_integration_candidate_pending_actual_delta"
+      "candidate_disposition": "existing_integration_candidate_pending_actual_delta",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "既存統合",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/security-best-practices/SKILL.md",
@@ -6768,7 +6888,6 @@
       "compare_metadata": "統合先: security-review(認可/認証/漏洩/注入)。backend-correctnessも近い。言語別参照の有無は未確認(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "既存統合",
       "inventory_id": "github:c53ca315bac81334d235f3f91edd53575cf909197a956a05990d2f5e19cdc87b",
       "source_sha256": "7b3dae1ffc5434d890f3c65c8f552af52d0307fab3b35dec13013c9ca3844c4f",
       "body_read_by": "reader3475",
@@ -6776,7 +6895,12 @@
       "reason": "[独立Skill+言語別参照] python/JS・TS/Go別の安全実装規範(参照10本)。security-reviewと用途が重なり、言語別参照が追加価値。Goは既定言語で相性良い。報告後の修正承認待ちが方針と不整合。",
       "retrieved_at": "2026-10-20T08:41:12.5443887Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/security-best-practices/SKILL.md",
-      "candidate_disposition": "existing_integration_candidate_pending_actual_delta"
+      "candidate_disposition": "existing_integration_candidate_pending_actual_delta",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "既存統合",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/security-ownership-map/SKILL.md",
@@ -6789,7 +6913,7 @@
       "body_read_method": "full_output_read",
       "commit": "49f948faa9258a0c61caceaf225e179651397431",
       "support_read_complete": false,
-      "individual_rights_review": "Apache-2.0(4dd13869, 著作権者欄ひな形)。補助6件(Python3本+neo4j-import.md等, 保存1+非保存5)は個別権利未確認。networkx/Neo4j条件は別。root包括許可なし。",
+      "individual_rights_review": "Apache-2.0(4dd13869, 著作権者欄ひな形)。補助6件(Python4本+neo4j-import.md等, 保存1+非保存5)は個別権利未確認。networkx/Neo4j条件は別。root包括許可なし。",
       "license_paths": [
         "skills/.curated/security-ownership-map/LICENSE.txt"
       ],
@@ -6849,11 +6973,10 @@
           "body_read": false
         }
       ],
-      "required_changes": "script表記(skills/skills/...)をD:/CC/Skills基準へ。Python3本は無改変試用かGo代替、pip install networkxは必要時のみ。people.csv等の作者識別情報は目的に必要な範囲へ絞り、共有先と元の依頼を照合する。必要な成果を一律に削除しない。",
+      "required_changes": "script表記(skills/skills/...)をD:/CC/Skills基準へ。Python4本は無改変試用かGo代替、pip install networkxは必要時のみ。people.csv等の作者識別情報は目的に必要な範囲へ絞り、共有先と元の依頼を照合する。必要な成果を一律に削除しない。",
       "compare_metadata": "近: security-review, git-verification, git-github-workflow。所有/バス係数の既存なし(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "新規",
       "inventory_id": "github:f941ef30176f5c72f8d352e8c9b00e297b883496f08a7f6072ab6b4ea6958d19",
       "source_sha256": "f06c1a59247569326702c945f397af163ea96cf2ecfdf2dde280605bf89a3ec8",
       "body_read_by": "reader3475",
@@ -6861,7 +6984,12 @@
       "reason": "[tool reference] git履歴から人×ファイルの所有グラフを作り、機微コードのバス係数/孤立コード/共変更をCSV/JSONで出す。同等の既存なし。個人開発では価値小、複数人repo解析で有用。",
       "retrieved_at": "2026-10-20T08:41:12.5680483Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/security-ownership-map/SKILL.md",
-      "candidate_disposition": "new_workflow_candidate_pending_support_and_comparison"
+      "candidate_disposition": "new_workflow_candidate_pending_support_and_comparison",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "新規",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/security-threat-model/SKILL.md",
@@ -6911,7 +7039,6 @@
       "compare_metadata": "近: security-review, wayfinder, documents-slides-data。脅威モデル作成の既存は不明(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "新規",
       "inventory_id": "github:14d10577531b4a117e0cde0105666ccfbb607f0ea0c9f9d0a65316ee4310bec5",
       "source_sha256": "1283c0dd62a8104d9edda4583569b5d8510b4ddaa45120687c999250fd96bad2",
       "body_read_by": "reader3475",
@@ -6919,7 +7046,12 @@
       "reason": "[独立Skill] リポジトリの証拠から信頼境界・資産・攻撃者能力・悪用経路・緩和策を整理し脅威モデルMarkdownを作る。security-reviewは実装確認中心で成果物が別。出力契約は参照に依存。",
       "retrieved_at": "2026-10-20T08:41:12.5733507Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/security-threat-model/SKILL.md",
-      "candidate_disposition": "new_workflow_candidate_pending_support_and_comparison"
+      "candidate_disposition": "new_workflow_candidate_pending_support_and_comparison",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "新規",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/sentry/SKILL.md",
@@ -6969,7 +7101,6 @@
       "compare_metadata": "統合先: observability-notifications(Slack/Discord通知とSentry調査)。diagnosing-bugsも近い。既存本文は未読(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "既存統合",
       "inventory_id": "github:21f3444d70a4fbf90ca230bcf2627175b6b151ca2e6789fb4ca7fbf17107e33b",
       "source_sha256": "508c6f5c100586c81a34397d30f00f4b8771b66d698a7ac1836998df925dd007",
       "body_read_by": "reader3475",
@@ -6977,7 +7108,12 @@
       "reason": "[tool reference] Sentry CLIでissue/イベント/APIを読み取る手順。observability-notificationsが「Sentry調査」を含み強く重なる。CLI参照とPII伏せ・トークン非表示の規則が追加価値。",
       "retrieved_at": "2026-10-20T08:41:12.5764984Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/sentry/SKILL.md",
-      "candidate_disposition": "existing_integration_candidate_pending_actual_delta"
+      "candidate_disposition": "existing_integration_candidate_pending_actual_delta",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "既存統合",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/speech/SKILL.md",
@@ -7126,7 +7262,6 @@
       "compare_metadata": "近: speech-tts-asr(ローカルTTS/ASR), voice-and-video-production, vtuber-streaming。API依存が差(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "除外",
       "inventory_id": "github:91e3a1a5334fd27fb728d1da962aee10546c0d0998fce2358ac50bac9f3ca83b",
       "source_sha256": "d6120efc03ea0e80204f687801cfaec8efc4519a3430b68e13e4ebd8e1c69b52",
       "body_read_by": "reader3475",
@@ -7134,7 +7269,12 @@
       "reason": "[tool reference] OpenAI Audio APIのTTSをPython CLIで行う。実呼出しにOPENAI_API_KEY必須(従量)でAPIキー不使用の方針に反し、音声生成はElevenLabs契約のWeb画面を使う指示とも合わない。",
       "retrieved_at": "2026-10-20T08:41:12.5775626Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/speech/SKILL.md",
-      "candidate_disposition": "method_subset_candidate_api_execution_not_adopted"
+      "candidate_disposition": "method_subset_candidate_api_execution_not_adopted",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "除外",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/transcribe/SKILL.md",
@@ -7202,7 +7342,6 @@
       "compare_metadata": "近: speech-tts-asr(ローカルTTS/ASR/字幕), voice-and-video-production。重複度は本文未読(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "除外",
       "inventory_id": "github:deaf6d9adb6cf55bc6638619c20e2ecacbad27376094da6790d446d570ef43ad",
       "source_sha256": "f530021da9f377362ee4214e0bc689cbb5404640d2eb88ee272d51d61f530a09",
       "body_read_by": "reader3475",
@@ -7210,7 +7349,12 @@
       "reason": "[tool reference] 音声をOpenAIの文字起こしモデルで書き起こし話者分離も行う。実呼出しにOPENAI_API_KEY必須(従量)でAPIキー不使用の方針に反する。ローカル文字起こしのspeech-tts-asrが既にある。",
       "retrieved_at": "2026-10-20T08:41:12.5847107Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/transcribe/SKILL.md",
-      "candidate_disposition": "output_contract_subset_pending_value_comparison_api_not_adopted"
+      "candidate_disposition": "output_contract_subset_pending_value_comparison_api_not_adopted",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "除外",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/vercel-deploy/SKILL.md",
@@ -7223,7 +7367,7 @@
       "body_read_method": "full_output_read",
       "commit": "49f948faa9258a0c61caceaf225e179651397431",
       "support_read_complete": false,
-      "individual_rights_review": "MIT License, Copyright (c) 2026 Vercel(e0fad1e1)を明記、表示保持で再利用可。補助4件(deploy.sh等, 非保存)は個別未確認。Vercel規約は未照合。",
+      "individual_rights_review": "MIT License, Copyright (c) 2026 Vercel(e0fad1e1)を明記、表示保持を条件に再利用の余地があるが、本記録での個別受入は未了。補助4件(deploy.sh等, 非保存)は個別未確認。Vercel規約は未照合。",
       "license_paths": [
         "skills/.curated/vercel-deploy/LICENSE.txt"
       ],
@@ -7265,11 +7409,10 @@
           "body_read": false
         }
       ],
-      "required_changes": "既定をPrd(--prod)のみにしpreview廃止。認証なしdeploy.shへの丸ごと送信は未採用。実送信先/送信対象/既存承認を確認せず実行しない。配備後にPrd URLの動作確認を必須化。元の実行権限と正規審査を保ち、許可済み通常操作を再承認待ちにしない。ログインはオーナーChromeのOAuth。",
+      "required_changes": "GitHub実ownerがAutoDevJapan/BM1314/mashfrombandのrepoでは既存Prd(--prod)のみとしpreviewを廃止。他ownerや顧客契約は先方の規則を保持する。認証なしdeploy.shへの丸ごと送信は未採用。実送信先/送信対象/既存承認を確認せず実行しない。配備後にPrd URLの動作確認を必須化。元の実行権限と正規審査を保ち、許可済み通常操作を再承認待ちにしない。ログインはオーナーChromeのOAuth。",
       "compare_metadata": "近: frontend-node-engineering, web-saas-delivery-lessons, cloud-infra-deploy, sites:sites(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "修正必要",
       "inventory_id": "github:059212fb5a1656ec6c064ad7a99b9df9b3cd4300aff43bf514a715d092963a00",
       "source_sha256": "f4a6cbfbb378a320fae179a79f727a881d19677e9b3db96ed49d2dc02a74fa46",
       "body_read_by": "reader3475",
@@ -7277,7 +7420,12 @@
       "reason": "[deploy] vercel deployで配備する短い手順。既定がpreview、認証なしdeploy.shは外部へ丸ごと送りclaim URLを返し、配備後fetch確認を禁じる。いずれもPrdのみ・動作確認必須の現方針と逆。",
       "retrieved_at": "2026-10-20T08:41:12.5892368Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/vercel-deploy/SKILL.md",
-      "candidate_disposition": "adaptation_candidate_pending_policy_and_support"
+      "candidate_disposition": "adaptation_candidate_pending_policy_and_support",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "修正必要",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/winui-app/SKILL.md",
@@ -7471,7 +7619,6 @@
       "compare_metadata": "補完: desktop-native-apps(WinUI3/Appleの性能調査)。windows-shell, ui-accessibility, ui-design-styles(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "修正必要",
       "inventory_id": "github:8a9bf2614b7f256bd700a1d77025f3765863dead67ce65b645d34589d75f150f",
       "source_sha256": "917341ec9eb688d73e21362910a7178a92b2ae49544b7d8f17ee9e19adfe2ea8",
       "body_read_by": "reader3475",
@@ -7479,7 +7626,12 @@
       "reason": "[独立Skill/大型] WinUI 3/Windows App SDKの準備・新規作成・設計・検査(C#)。Windows完成優先の方針と合い、desktop-native-appsと補完。winget configureでVS導入、検証済みアプリを起動したまま残す点が衝突。",
       "retrieved_at": "2026-10-20T08:41:12.5907921Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/winui-app/SKILL.md",
-      "candidate_disposition": "adaptation_candidate_pending_policy_and_support"
+      "candidate_disposition": "adaptation_candidate_pending_policy_and_support",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "修正必要",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.curated/yeet/SKILL.md",
@@ -7529,7 +7681,6 @@
       "compare_metadata": "統合先: git-github-workflow(PR作成), self-review-pr-merge, git-verification。既存本文は未読(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "既存統合",
       "inventory_id": "github:09c270893e995dbcb8ef7efe695b1852901d3ed4262695188857dd75de283e0c",
       "source_sha256": "4829d4909081e1abf91507fb581e6f566ce7064001892414f32191895b08a595",
       "body_read_by": "reader3475",
@@ -7537,7 +7688,12 @@
       "reason": "[独立Skill] 明示指示時にadd -A→commit→push→gh pr createを一括で行い、PRテンプレ探索/題名規約/本文方針を定める。git-github-workflowと重複し、固有はテンプレ探索と本文規約。",
       "retrieved_at": "2026-10-20T08:41:12.6190498Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/yeet/SKILL.md",
-      "candidate_disposition": "existing_integration_candidate_pending_actual_delta"
+      "candidate_disposition": "existing_integration_candidate_pending_actual_delta",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "既存統合",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.system/imagegen/SKILL.md",
@@ -7641,15 +7797,19 @@
       "compare_metadata": "現役 .system/imagegen(中央SHA 706d4d96, 19516B)は本snapshot(826d05b8, 16204B)と別revision、説明は一致。中央はSHAのみ確認",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "除外",
       "inventory_id": "github:abbf11ba0cf2a3b83546eaf64c9c55f692ec48b2c3d19b5010a0f4a1f40a6cc3",
       "source_sha256": "826d05b806d51fa81cd650f1c0854b0a1f7fbccd1b152c588ded1797a2e7218f",
       "body_read_by": "reader3475",
       "body_read_complete": true,
-      "reason": "[独立Skill/.system同梱] 画像生成/編集の本体。内蔵image_gen既定で、APIキー要のCLIは本人明示時のみ(不使用方針と整合)。現役imagegenと説明一致の別revision。同梱の重複導入。",
+      "reason": "[候補・metadata比較] .system同梱の画像生成/編集手順。説明上は現役imagegenと用途が重なる別revisionで、現役本文との同一性は未確認。管理配布物を直接上書きせず、再利用できる差分を比較する。",
       "retrieved_at": "2026-10-20T08:41:12.6253319Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.system/imagegen/SKILL.md",
-      "candidate_disposition": "overlap_or_unsupported_path_pending_useful_subset_comparison"
+      "candidate_disposition": "overlap_or_unsupported_path_pending_useful_subset_comparison",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "除外",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.system/openai-docs/SKILL.md",
@@ -7744,15 +7904,19 @@
       "compare_metadata": "現役 .system/openai-docs(中央SHA 8ce80211, 5475B)と別revision。curated版とはSHA違い(669a42cc/057d24b4)。中央はSHAのみ確認",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "除外",
       "inventory_id": "github:946d666bf975771847cc1cb6c6a9ff8963d072b3248439a62afb9f464bf7c6d6",
       "source_sha256": "669a42ccf3323fe0ceda6e466730bcb05dddf1e0c220d6523ea504909fc49165",
       "body_read_by": "reader3475",
       "body_read_complete": true,
-      "reason": "[mirror] curated版に「API Key Setup」6行を足しただけの同系統。.systemはCodex同梱領域で現役にopenai-docsが既にある。追加節はAPIキー確認を促し不使用方針と不整合。",
+      "reason": "[候補・metadata比較] OpenAI公式docsとCodexのモデル選択/移行を扱う。現役.system/openai-docsと同名だが本文は未比較。固定snapshot内の.system版との6行差は確認済みで、現役本文との同一性・価値の欠如の確定判断ではない。",
       "retrieved_at": "2026-10-20T08:41:12.6300843Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.system/openai-docs/SKILL.md",
-      "candidate_disposition": "overlap_or_unsupported_path_pending_useful_subset_comparison"
+      "candidate_disposition": "overlap_or_unsupported_path_pending_useful_subset_comparison",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "除外",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.system/plugin-creator/SKILL.md",
@@ -7802,7 +7966,6 @@
       "compare_metadata": "近: skill-maintenance(プラグインを作る), plugin-management:plugin-management, template-creator, skill-creator。中央.systemはmarker管理(metadata比較)",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "保留",
       "inventory_id": "github:16e7b668896e0714529cb9d7ffb658544a8e1f0cc784ccc7dfb26719055143cb",
       "source_sha256": "3b43cb214f458a1ae13e1b93a69e493241d8e12c5a474afe8ae81ae0507aa216",
       "body_read_by": "reader3475",
@@ -7810,7 +7973,12 @@
       "reason": "[独立Skill/.system] .codex-plugin/plugin.jsonとmarketplace.jsonの足場(Python script)。中央.systemに不在(同梱集合はimagegen/openai-docs/review-agent/skill-creator/skill-installer)。上流は非推奨で仕様が現行か未確認。",
       "retrieved_at": "2026-10-20T08:41:12.6322247Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.system/plugin-creator/SKILL.md",
-      "candidate_disposition": "terms_or_spec_review_pending_selected_use"
+      "candidate_disposition": "terms_or_spec_review_pending_selected_use",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "保留",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.system/skill-creator/SKILL.md",
@@ -7878,7 +8046,6 @@
       "compare_metadata": "現役 .system/skill-creator(中央SHA cccd2910, 15540B)は別revision。r0にも同名あり。skill-maintenance。中央はSHAのみ確認",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "除外",
       "inventory_id": "github:708952d34a9cb5ea94e99ca633d751943b41efea3a5a14d0ad3ec9408fbb2903",
       "source_sha256": "a17383bfb1448637ac1f757ad891ddb9676fa30b0eff620200f0e1cbc0cc0d50",
       "body_read_by": "reader3475",
@@ -7886,7 +8053,12 @@
       "reason": "[独立Skill/.system同梱] Skill作成の原則(簡潔さ/段階的開示)とinit_skill.py・quick_validate.py。現役skill-creator(.system)とr0同名があり、skill-maintenanceも近い。skills/public等は中央規則と不整合。",
       "retrieved_at": "2026-10-20T08:41:12.6363292Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.system/skill-creator/SKILL.md",
-      "candidate_disposition": "overlap_or_unsupported_path_pending_useful_subset_comparison"
+      "candidate_disposition": "overlap_or_unsupported_path_pending_useful_subset_comparison",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "除外",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     },
     {
       "path": "skills/.system/skill-installer/SKILL.md",
@@ -7963,7 +8135,6 @@
       "compare_metadata": "現役 .system/skill-installer(中央SHA 2892d8b2, 3425B)は本snapshot(83b31cff, 3240B)と別revision、説明は一致。中央はSHAのみ確認",
       "comparison_limit": "名前/descriptionと元3048記録による候補比較。現役の中央本文は未読で、別revisionの同名だけで同一性/上位互換/再利用価値の欠如を断定しない。",
       "independent_review_complete": false,
-      "reader_candidate_disposition": "除外",
       "inventory_id": "github:40f581c159c085ddf3b0cac9da85b4d554d0d8ec6013c7d1fce03cd900ba07fe",
       "source_sha256": "83b31cffb2552a923f4152f0338bea548274accc5489d151a95bced8e7bcfb74",
       "body_read_by": "reader3475",
@@ -7971,7 +8142,12 @@
       "reason": "[installer/.system同梱] curated一覧表示とGitHubからのskill導入。現役skill-installerと説明一致の別revision。「.systemは再取得で上書き可」と複数path一括導入が管理配布物と中央Skills運用に反する。",
       "retrieved_at": "2026-10-20T08:41:12.6373725Z",
       "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.system/skill-installer/SKILL.md",
-      "candidate_disposition": "overlap_or_unsupported_path_pending_useful_subset_comparison"
+      "candidate_disposition": "overlap_or_unsupported_path_pending_useful_subset_comparison",
+      "historical_reader_proposal": {
+        "scope": "3475原応答の当時の提案。未判定候補のcanonical分類や本人採用済み方針ではない。",
+        "disposition": "除外",
+        "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f"
+      }
     }
   ],
   "integrated": 0,
@@ -8002,6 +8178,11 @@
     "job": "20261024-015948-todo-3475",
     "raw_sha256": "0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900f",
     "effective_reasoning_measured": false,
-    "notice_unique_full": 6
-  }
+    "notice_unique_full": 6,
+    "preserved_at": "2026-10-23T17:34:41.9440782Z",
+    "receiver_job": "20261024-023253-todo-3080",
+    "status": "succeeded",
+    "recorded_at": "2026-10-23T19:37:25.1602515Z"
+  },
+  "reason_scope": "中央本文未比較のものは名前/description上の見立て。historical_reader_proposalは原提案の保全で、canonical candidate_dispositionや台帳の除外判定とは別。"
 }

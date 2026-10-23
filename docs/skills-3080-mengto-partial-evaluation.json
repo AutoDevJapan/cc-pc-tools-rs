@@ -1,0 +1,3379 @@
+{
+  "todo": 3080,
+  "source": "MengTo/Skills",
+  "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+  "tree_sha": "8afedc8719f37d2026b55aef282ac27d8d873d76",
+  "tree_complete": true,
+  "recorded_at": "2026-10-23T19:55:54.3620926Z",
+  "entrypoints_expected": 177,
+  "entrypoints_fulltext_read": 45,
+  "entrypoints_unread": 132,
+  "installed": 0,
+  "integrated": 1,
+  "excluded": 0,
+  "central_write": 6,
+  "classification_is_not_installation": true,
+  "scope": "親の3D16/game20と3488の媒体2/UI3/workflow4を受領照合。45/177は読取評価だけで、採用上限ではない。",
+  "entries": [
+    {
+      "inventory_id": "github:709d1f4fe1039448270b3f743f5432fbeb31d85416d441d4dba335b9e2df97eb",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/3d/3d-cloth-material/SKILL.md",
+      "name": "3d-cloth-material",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-cloth-material/SKILL.md",
+      "source_sha256": "c5a4a06037b65ae9958438462ef696cd15a7434b3a170d36a5e90e482edbbf3c",
+      "bytes": 9799,
+      "retrieved_at": "2026-10-20T08:40:54.7020143Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "parent_evaluation_recorded_at": "2026-10-23T18:03:09.6932242Z",
+      "candidate_disposition": "new_material_workflow_candidate_pending_support_and_target",
+      "reason": "布の模様を静止座標に固定し、折り目の接線角から長さを積分してUV伸縮を避ける。織組織、縫い目、裾の厚み、透過と摩耗を分けるため、一般的なシェーダーや衣装調整のmetadataより用途が具体的。布シミュレーション/衝突解決とは別という境界も有用。",
+      "required_changes": "弧長が常に厳密という表現は実離散メッシュ/法線/UVで確認する。sheen/anisotropyが0を跨ぐ再コンパイル、r163+の環境強度の記述は対象renderer版で確認し、0.0001やDPR2を一律に強制しない。織密度とtexture.repeatの単位も選ぶ実装で照合。 見た目の実装は同対象の具体画像と本人の明示回答後。本文の定数・品質点・Apple GPU/headlessの測定を本PCの合格値や実成功へ流用しない。既存renderer/版/色空間/所有する資源/停止と破棄を照合し、必要な対象だけテストする。未読デモ/モジュールのコピーやnpm導入を読取だけで実行しない。",
+      "compare_metadata": [
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "game-development"
+      ],
+      "comparison_limit": "現役catalogの名前/descriptionだけの用途比較。中央本文の差分は未確認で、実統合前に対象本文を比較する。未読の中央原本を同名だけで除外/上書きしない。",
+      "positive_candidate": "カーテンの接写で織目が伸び、裾が薄い板に見える原因と修正を調べる。",
+      "negative_candidate": "キャラクターの布が体を貫通するシミュレーションだけを直す。",
+      "individual_rights_review": "固定treeのnoticeはroot LICENSEだけ（MIT、Copyright (c) 2026 Meng To）。入口の作者手順文の採用候補には正確な原文とMIT全文を保持する。Kibori/Seijaku/Blue Hour等のデモ実装、写真・スキャン・モデル・フォント・外部API/依存の許諾をroot MITだけで一括受入せず、取り込む実体ごとに別確認する。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/3d/3d-cloth-material/PROMPT.md",
+          "bytes": 4431,
+          "git_blob": "9d73e9f5742549280945444afebee9e6d408fadd",
+          "body_saved": true,
+          "source_sha256": "8c5be7f31d282ca1f223a823c53c21a408220057ec468db400f3df4acf70859f",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-cloth-material/agents/openai.yaml",
+          "bytes": 303,
+          "git_blob": "00b5258fb3623fba2fef09c35079167dc44da4b0",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-cloth-material/demo.html",
+          "bytes": 51203,
+          "git_blob": "125f251372aebaecb13a99afa3fccc35dccab08d",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-cloth-material/preview.jpg",
+          "bytes": 211198,
+          "git_blob": "c4293aa37b3689ab65273aa9b8911e0e7cc50509",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:fab88427bee2bdceb455b105d4cc67286c5137688358e999728494f258e7bd3a",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/3d/3d-falling-leaves/SKILL.md",
+      "name": "3d-falling-leaves",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-falling-leaves/SKILL.md",
+      "source_sha256": "63adf8b5ec0d96d397f56ff09facd9f68248f6ed881a2e05427f1c4e3ccf1d11",
+      "bytes": 5214,
+      "retrieved_at": "2026-10-20T08:40:54.739159Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "parent_evaluation_recorded_at": "2026-10-23T18:03:09.6932242Z",
+      "candidate_disposition": "new_scene_effect_candidate_pending_reference_and_target",
+      "reason": "3Dの葉をカメラ向きspriteと区別し、表裏/側面の回転と横流れを同じ位相へ結ぶ。個体seed、視界外wrap、屋根下除外、alpha/depth/shadowの整合と隠れたタブからの復帰が具体的。2D overlayへ適用しない入口になる。",
+      "required_changes": "REFERENCESと実インスタンス/影passは未読。元シーン固有の屋根矩形を持ち込まず、alpha-to-coverageは実multisampleの対象だけで確認する。omegaを0へ近づける場合の分母と、更新後boundsを必要な版で確認する。 見た目の実装は同対象の具体画像と本人の明示回答後。本文の定数・品質点・Apple GPU/headlessの測定を本PCの合格値や実成功へ流用しない。既存renderer/版/色空間/所有する資源/停止と破棄を照合し、必要な対象だけテストする。未読デモ/モジュールのコピーやnpm導入を読取だけで実行しない。",
+      "compare_metadata": [
+        "webgl-effects",
+        "web-animation",
+        "game-development"
+      ],
+      "comparison_limit": "現役catalogの名前/descriptionだけの用途比較。中央本文の差分は未確認で、実統合前に対象本文を比較する。未読の中央原本を同名だけで除外/上書きしない。",
+      "positive_candidate": "歩き回る3D屋外で落葉の再配置が見え、屋内にも葉が降る。",
+      "negative_candidate": "2Dページ上の落葉canvasだけを追加する。",
+      "individual_rights_review": "固定treeのnoticeはroot LICENSEだけ（MIT、Copyright (c) 2026 Meng To）。入口の作者手順文の採用候補には正確な原文とMIT全文を保持する。Kibori/Seijaku/Blue Hour等のデモ実装、写真・スキャン・モデル・フォント・外部API/依存の許諾をroot MITだけで一括受入せず、取り込む実体ごとに別確認する。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/3d/3d-falling-leaves/REFERENCES.md",
+          "bytes": 296,
+          "git_blob": "97c8f8549e4e4a423eae07f09b4e064c29ec4a3a",
+          "body_saved": true,
+          "source_sha256": "5c1aefb4431602c9994d166eb3f331c8d54f88ed1c1adb77333f0a169a86dc04",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-falling-leaves/agents/openai.yaml",
+          "bytes": 234,
+          "git_blob": "73859562691f5a6ad25d4e95248c62c3b3b33853",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:29a0ba0843498fe31de765752ffa07dfd7835d47f3ac062d641e41169e601167",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/3d/3d-four-seasons/SKILL.md",
+      "name": "3d-four-seasons",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-four-seasons/SKILL.md",
+      "source_sha256": "2696252a795b1c234d4b06a1091418e68ae305f4d773e9b69e941392fa7286c7",
+      "bytes": 5028,
+      "retrieved_at": "2026-10-20T08:40:54.7401976Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "parent_evaluation_recorded_at": "2026-10-23T18:03:09.6932242Z",
+      "candidate_disposition": "new_scene_state_workflow_candidate_pending_reference_and_target",
+      "reason": "四季を4要素の重みで表し、葉/空/日光/地面/雪/粒子へ同じ状態を渡す。途中切替は現在の重みから新目標へ進め、前フレームの色を再着色して漂う問題を避ける。常緑樹と落葉樹、露出と屋内、積雪と降雪を分ける。",
+      "required_changes": "温帯の色表を全地域/樹種へ一般化しない。法線だけで屋内へ雪を載せず露出maskを対象に合わせる。各materialのshader hooksとshadow/depthの同一状態は未読の参照実装から独立して検証する。 見た目の実装は同対象の具体画像と本人の明示回答後。本文の定数・品質点・Apple GPU/headlessの測定を本PCの合格値や実成功へ流用しない。既存renderer/版/色空間/所有する資源/停止と破棄を照合し、必要な対象だけテストする。未読デモ/モジュールのコピーやnpm導入を読取だけで実行しない。",
+      "compare_metadata": [
+        "game-development",
+        "webgl-effects",
+        "web-animation"
+      ],
+      "comparison_limit": "現役catalogの名前/descriptionだけの用途比較。中央本文の差分は未確認で、実統合前に対象本文を比較する。未読の中央原本を同名だけで除外/上書きしない。",
+      "positive_candidate": "季節を連続で切り替えると色が漂い、葉のない冬にも夏の影が残る。",
+      "negative_candidate": "日付文字列だけを春夏秋冬のラベルへ変える。",
+      "individual_rights_review": "固定treeのnoticeはroot LICENSEだけ（MIT、Copyright (c) 2026 Meng To）。入口の作者手順文の採用候補には正確な原文とMIT全文を保持する。Kibori/Seijaku/Blue Hour等のデモ実装、写真・スキャン・モデル・フォント・外部API/依存の許諾をroot MITだけで一括受入せず、取り込む実体ごとに別確認する。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/3d/3d-four-seasons/REFERENCES.md",
+          "bytes": 470,
+          "git_blob": "619917a54b6766e29d9da28f8ebe96c2348090a9",
+          "body_saved": true,
+          "source_sha256": "8f5d9301cc22fc166057b55b26f7a9af8d7c717d9a58a828b714c2bbb6c1b220",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-four-seasons/agents/openai.yaml",
+          "bytes": 228,
+          "git_blob": "72278b03b6ff4a200ce4d3719b8cb1ca2a3416ce",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:70122bd962c6e17475151962141da342b373dc115a4383be3a7f50d6f4ad2216",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/3d/3d-high-poly-models/SKILL.md",
+      "name": "3d-high-poly-models",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-high-poly-models/SKILL.md",
+      "source_sha256": "a95cdb4d72e98aaeb4ed04a36b07bb26eab9d19496e4c2be590145f4d519cc4d",
+      "bytes": 5745,
+      "retrieved_at": "2026-10-20T08:40:54.7412439Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "parent_evaluation_recorded_at": "2026-10-23T18:03:09.6932242Z",
+      "candidate_disposition": "new_runtime_geometry_workflow_candidate_pending_reference_and_comparison",
+      "reason": "接写で見える輪郭・中間の形・微細模様を分け、geometry/変位/mapsの担当を決める。高精細masterを保持し、runtime LOD/instancing/圧縮/量子化の効果を別々に扱う。unique三角形と実描画passの三角形を混同しない。",
+      "required_changes": "スキャン資産の権利と第三者モデルは個別確認。Three LOD/Curve/GLBや実export処理は未照合で、全モデルへ同じポリゴン数・分割・正規化を強制しない。Windowsの実表示/対象viewerに必要な確認を選ぶ。 見た目の実装は同対象の具体画像と本人の明示回答後。本文の定数・品質点・Apple GPU/headlessの測定を本PCの合格値や実成功へ流用しない。既存renderer/版/色空間/所有する資源/停止と破棄を照合し、必要な対象だけテストする。未読デモ/モジュールのコピーやnpm導入を読取だけで実行しない。",
+      "compare_metadata": [
+        "3d-modeling-vrchat",
+        "game-development",
+        "webgl-effects"
+      ],
+      "comparison_limit": "現役catalogの名前/descriptionだけの用途比較。中央本文の差分は未確認で、実統合前に対象本文を比較する。未読の中央原本を同名だけで除外/上書きしない。",
+      "positive_candidate": "接写の彫刻の輪郭を保ちながら遠景の描画負荷を下げたい。",
+      "negative_candidate": "低解像度の色画像だけがぼやけておりメッシュ輪郭に問題はない。",
+      "individual_rights_review": "固定treeのnoticeはroot LICENSEだけ（MIT、Copyright (c) 2026 Meng To）。入口の作者手順文の採用候補には正確な原文とMIT全文を保持する。Kibori/Seijaku/Blue Hour等のデモ実装、写真・スキャン・モデル・フォント・外部API/依存の許諾をroot MITだけで一括受入せず、取り込む実体ごとに別確認する。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/3d/3d-high-poly-models/REFERENCES.md",
+          "bytes": 482,
+          "git_blob": "52c33510fb75fcf68d1a6c70407a3e7e0b98065c",
+          "body_saved": true,
+          "source_sha256": "15e125f85eeb0c8812a8f290ba2ff38ac15be9eb99ad7db4eea4c0dab8aca105",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-high-poly-models/agents/openai.yaml",
+          "bytes": 269,
+          "git_blob": "95ce92bafce7f610d5ce0fb0378293337df5c9ef",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:57934e4f29ef479db656c2b1371bde1c4bc66382e9920b868b0576badda6e0e5",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/3d/3d-high-resolution-textures/SKILL.md",
+      "name": "3d-high-resolution-textures",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-high-resolution-textures/SKILL.md",
+      "source_sha256": "6bda76f3420184bde18cf5f0d543727543cf8d9a96f3b5393cd7044e09bfe5aa",
+      "bytes": 5753,
+      "retrieved_at": "2026-10-20T08:40:54.742293Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "parent_evaluation_recorded_at": "2026-10-23T18:03:09.6932242Z",
+      "candidate_disposition": "new_texture_delivery_workflow_candidate_pending_reference_and_comparison",
+      "reason": "必要texel密度を投影画素とUV範囲へ結び、PBR色/data/HDR、mip/alpha縁、異方性、近景への段階的昇格とGPU破棄を一式で扱う。4K RGBA8 mip約85.3MiBの見積りでdownload量とGPUメモリを分ける点が具体的。",
+      "required_changes": "4K/8Kや最大anisotropyを普遍的な既定にしない。KTX2 transcoder/外部画像とライセンス、対象版AO UV channelとoutput変換を別確認。アップスケールを新しい実ディテールの証明にしない。 見た目の実装は同対象の具体画像と本人の明示回答後。本文の定数・品質点・Apple GPU/headlessの測定を本PCの合格値や実成功へ流用しない。既存renderer/版/色空間/所有する資源/停止と破棄を照合し、必要な対象だけテストする。未読デモ/モジュールのコピーやnpm導入を読取だけで実行しない。",
+      "compare_metadata": [
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "frontend-node-engineering"
+      ],
+      "comparison_limit": "現役catalogの名前/descriptionだけの用途比較。中央本文の差分は未確認で、実統合前に対象本文を比較する。未読の中央原本を同名だけで除外/上書きしない。",
+      "positive_candidate": "4K素材のdownloadは小さいのにGPUメモリが増え、段階読込時に止まる。",
+      "negative_candidate": "CSS内の小さいアイコンの幅だけを変える。",
+      "individual_rights_review": "固定treeのnoticeはroot LICENSEだけ（MIT、Copyright (c) 2026 Meng To）。入口の作者手順文の採用候補には正確な原文とMIT全文を保持する。Kibori/Seijaku/Blue Hour等のデモ実装、写真・スキャン・モデル・フォント・外部API/依存の許諾をroot MITだけで一括受入せず、取り込む実体ごとに別確認する。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/3d/3d-high-resolution-textures/REFERENCES.md",
+          "bytes": 527,
+          "git_blob": "65965f0c9f91fdbc73516bcfa80ae6d81b2cf75f",
+          "body_saved": true,
+          "source_sha256": "ea471a4eb40d95e044bdeb403a2b05572185f9027ec8024b421e9675249defd3",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-high-resolution-textures/agents/openai.yaml",
+          "bytes": 263,
+          "git_blob": "6650758fdea9976db9c0f8f1e4c3fae6d3b6ba5d",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:31c71080ac741cb3feeaa3bb3dbb57ac6a76efc26ab8dc75ab5c62cf03075bb1",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/3d/3d-metal-material/SKILL.md",
+      "name": "3d-metal-material",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-metal-material/SKILL.md",
+      "source_sha256": "db4911870fc3717d99d71016c0afc38a7f61b1b43f3bfaa8d501cdf69301462e",
+      "bytes": 10281,
+      "retrieved_at": "2026-10-20T08:40:54.7433616Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "parent_evaluation_recorded_at": "2026-10-23T18:03:09.6932242Z",
+      "candidate_disposition": "new_material_workflow_candidate_pending_corrections_and_target",
+      "reason": "金属が灰色樹脂に見える原因を導体F0・構造のあるHDR反射・粗さ変化・面取り・接地・tone mapへ分ける。磨き/ブラシ/腐食を別の層とし、microdetailの画素footprintとfinish別program cacheを示す。",
+      "required_changes": "『導体は色がない』はF0の色付き反射と拡散成分の説明へ分ける。agedの腐食層ではmetalnessを下げる表もあるため、全surfaceを常に1とする命令にしない。r163+環境強度やACESの数値、PMREM blurは対象版/構成で照合。人物/武器を提示するなら本人指定の実資料と保持/人体確認を別に守る。 見た目の実装は同対象の具体画像と本人の明示回答後。本文の定数・品質点・Apple GPU/headlessの測定を本PCの合格値や実成功へ流用しない。既存renderer/版/色空間/所有する資源/停止と破棄を照合し、必要な対象だけテストする。未読デモ/モジュールのコピーやnpm導入を読取だけで実行しない。",
+      "compare_metadata": [
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "game-development"
+      ],
+      "comparison_limit": "現役catalogの名前/descriptionだけの用途比較。中央本文の差分は未確認で、実統合前に対象本文を比較する。未読の中央原本を同名だけで除外/上書きしない。",
+      "positive_candidate": "3D金属板の反射が灰色に潰れ、粗さを上げると黒い塊になる。",
+      "negative_candidate": "木製の取手だけを自然に見せたい。",
+      "individual_rights_review": "固定treeのnoticeはroot LICENSEだけ（MIT、Copyright (c) 2026 Meng To）。入口の作者手順文の採用候補には正確な原文とMIT全文を保持する。Kibori/Seijaku/Blue Hour等のデモ実装、写真・スキャン・モデル・フォント・外部API/依存の許諾をroot MITだけで一括受入せず、取り込む実体ごとに別確認する。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/3d/3d-metal-material/PROMPT.md",
+          "bytes": 3677,
+          "git_blob": "db113f6f776286ba2f63637cb6604ef8d197d271",
+          "body_saved": true,
+          "source_sha256": "4742a8f351f54c538c2678c8afd99eaf5a88c39985890995b75d61d564f32397",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-metal-material/agents/openai.yaml",
+          "bytes": 373,
+          "git_blob": "9b75227da20b7d420df6fc7ff3d7fbfd4dfbf0b6",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-metal-material/demo.html",
+          "bytes": 43626,
+          "git_blob": "1277055e43662c5cb39e0c0890174ead9334d628",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-metal-material/preview.jpg",
+          "bytes": 132843,
+          "git_blob": "2d8d7c309c8e3807253e744207fc17242468e366",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:7954413ce35f01682a5e1d2323dbd97230efe385a21df4f86c7040bfa845485c",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/3d/3d-orbit-inspect-demo/SKILL.md",
+      "name": "3d-orbit-inspect-demo",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-orbit-inspect-demo/SKILL.md",
+      "source_sha256": "70011ca8c3c67185088f3171f94fb55dbbcd6a79e46fe4e0fc90b2d0b7317240",
+      "bytes": 9908,
+      "retrieved_at": "2026-10-20T08:40:54.7607134Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "parent_evaluation_recorded_at": "2026-10-23T18:03:09.6932242Z",
+      "candidate_disposition": "new_interaction_workflow_candidate_pending_accessibility_and_target",
+      "reason": "hover時のカメラleanとclick時の対象物liftを分け、pointerdownでleanを止めることでクリック先が動く競合を防ぐ。元姿勢の保存、中断close、2passのlayer/light/depth、focus復帰とキーボード操作が具体的。建物tourや単一浮遊meshとは用途を分ける。",
+      "required_changes": "Object3D.cloneの対策で既存userDataを一括消去しない。所有する一時stateを分け、必要なデータを保持する。dialogのfocus trapはClose1個だけの固定仮定を外し、背面inert/複数control/復帰タイミングを実UIで確認。pointercancel/lostcaptureとtouch scrollを検証し、数値境界は対象で調整。 見た目の実装は同対象の具体画像と本人の明示回答後。本文の定数・品質点・Apple GPU/headlessの測定を本PCの合格値や実成功へ流用しない。既存renderer/版/色空間/所有する資源/停止と破棄を照合し、必要な対象だけテストする。未読デモ/モジュールのコピーやnpm導入を読取だけで実行しない。",
+      "compare_metadata": [
+        "webgl-effects",
+        "web-animation",
+        "ui-accessibility",
+        "async-form-focus-management"
+      ],
+      "comparison_limit": "現役catalogの名前/descriptionだけの用途比較。中央本文の差分は未確認で、実統合前に対象本文を比較する。未読の中央原本を同名だけで除外/上書きしない。",
+      "positive_candidate": "製品モデルをhoverからクリックすると対象が逃げ、詳細表示を閉じた後focusが消える。",
+      "negative_candidate": "建物内を複数の部屋へ案内するcamera pathだけを設計する。",
+      "individual_rights_review": "固定treeのnoticeはroot LICENSEだけ（MIT、Copyright (c) 2026 Meng To）。入口の作者手順文の採用候補には正確な原文とMIT全文を保持する。Kibori/Seijaku/Blue Hour等のデモ実装、写真・スキャン・モデル・フォント・外部API/依存の許諾をroot MITだけで一括受入せず、取り込む実体ごとに別確認する。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/3d/3d-orbit-inspect-demo/PROMPT.md",
+          "bytes": 4398,
+          "git_blob": "3b2483d8140add800979f27f75380602e6297f67",
+          "body_saved": true,
+          "source_sha256": "74339b754c70b66deb47188790e8cf60f89e30554856ab5434843d4c61354f23",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-orbit-inspect-demo/agents/openai.yaml",
+          "bytes": 320,
+          "git_blob": "1a2afc6b11d65f4a45ae7e94203f3ea6f5040bbb",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-orbit-inspect-demo/demo.html",
+          "bytes": 37491,
+          "git_blob": "7f617469dac7aa4cd3b352d33086efb66c4be256",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-orbit-inspect-demo/preview-full.jpg",
+          "bytes": 147575,
+          "git_blob": "91fe8463c69ef62e6105cea1e32b88cc100f412d",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-orbit-inspect-demo/preview.jpg",
+          "bytes": 193887,
+          "git_blob": "72497186c2cbe95fdcae626644d42e3b080013ff",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:3d98ac5b5f881acf71e673a93b79049d696259c36a80fd92a25d8f8a2ee24489",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/3d/3d-paper-material/SKILL.md",
+      "name": "3d-paper-material",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-paper-material/SKILL.md",
+      "source_sha256": "546863de8cdb5ee6c50a0dc423ffd4356f93542ed8642521d514ce7b5243dbe0",
+      "bytes": 9448,
+      "retrieved_at": "2026-10-20T08:40:54.802761Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "parent_evaluation_recorded_at": "2026-10-23T18:03:09.6932242Z",
+      "candidate_disposition": "new_material_workflow_candidate_pending_corrections_and_target",
+      "reason": "紙の繊維/輪郭の毛羽/厚み/曲げ/インク滲み/透過を別の信号へ分ける。接写windowを別焼きし、輪郭のpartial coverageと影cutoutを区別するため、白い平面や単純な紙textureからの具体的な修正手順になる。製本のbend rigや燃焼とは別。",
+      "required_changes": "bark fleck例のsmoothstep(0.5,0.12,...)は同source群の落葉手順が避ける逆順edgeと矛盾する。GLSL ES3.00の公式8.3で逆順edgeの未定義を確認したため1-smoothstep(0.12,0.5,...)等へ直して検証する候補。samples0/alpha-to-coverage/half-float/Safari回避は版と実target条件を照合し、一律規則にしない。4層は接写上の近似で実紙の断面再現と断定しない。 見た目の実装は同対象の具体画像と本人の明示回答後。本文の定数・品質点・Apple GPU/headlessの測定を本PCの合格値や実成功へ流用しない。既存renderer/版/色空間/所有する資源/停止と破棄を照合し、必要な対象だけテストする。未読デモ/モジュールのコピーやnpm導入を読取だけで実行しない。",
+      "compare_metadata": [
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "game-development"
+      ],
+      "comparison_limit": "現役catalogの名前/descriptionだけの用途比較。中央本文の差分は未確認で、実統合前に対象本文を比較する。未読の中央原本を同名だけで除外/上書きしない。",
+      "positive_candidate": "3D和紙の接写で縁がはさみ切りのように見え、逆光が一様に光る。",
+      "negative_candidate": "本をめくる骨組みと衝突だけを実装する。",
+      "individual_rights_review": "固定treeのnoticeはroot LICENSEだけ（MIT、Copyright (c) 2026 Meng To）。入口の作者手順文の採用候補には正確な原文とMIT全文を保持する。Kibori/Seijaku/Blue Hour等のデモ実装、写真・スキャン・モデル・フォント・外部API/依存の許諾をroot MITだけで一括受入せず、取り込む実体ごとに別確認する。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/3d/3d-paper-material/PROMPT.md",
+          "bytes": 3301,
+          "git_blob": "1cc72aac485aa8d6ecc6c07871f90a2531d340b5",
+          "body_saved": true,
+          "source_sha256": "efe6656c31f02f5bb274319415307020e4a99dac13fd99c11b7f50174d190dd7",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-paper-material/agents/openai.yaml",
+          "bytes": 318,
+          "git_blob": "4616606b86786521c90c818aec80f66bcd932d5e",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-paper-material/demo.html",
+          "bytes": 52376,
+          "git_blob": "2fa45fecfa8b1287b7cfb790969e2396ad556904",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-paper-material/preview.jpg",
+          "bytes": 127049,
+          "git_blob": "f23a72ede5b37fb83c25fbd06a3dc1fa8704e616",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "primary_check_indices": [
+        0
+      ],
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:8d45c064b59f58146ec2cd435cc55a71f835c1936934715b8b4a0cc231aac696",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/3d/3d-retina-resolution/SKILL.md",
+      "name": "3d-retina-resolution",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-retina-resolution/SKILL.md",
+      "source_sha256": "632232040749513e129f58b55ed3361378af9c6803dfd29f8ca596e273d55174",
+      "bytes": 6282,
+      "retrieved_at": "2026-10-20T08:40:54.8231563Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "parent_evaluation_recorded_at": "2026-10-23T18:03:09.6932242Z",
+      "candidate_disposition": "existing_integration_candidate_after_actual_scoped_comparison",
+      "reason": "固定200%=CSS各辺2倍とnative DPR連動Autoを分け、renderer/composer/custom targetを同じ規約でresizeする。pointerはCSS座標、readbackだけ物理解像度と分ける。明示200%を黙って下げず実scaleを報告する点に追加価値がある。 実比較ではnative DPR上限とrenderer resizeの既存記述に、固定200%/Auto、composer/custom target、CSS pointerの差を補えると確認。既存入口を保って参照1件を追加する候補にした。",
+      "required_changes": "200%という依頼が面積/各辺のどちらか不明なら仕様と既存UIを確かめる。snippetのcomposerとadapterは定義済み前提で、そのまま未宣言値を読む実装にしない。zero size/zoom/DPR移動/orthographicと実GPU上限を対象に合わせ、既存flex寸法修復との差分を比較する。 見た目の実装は同対象の具体画像と本人の明示回答後。本文の定数・品質点・Apple GPU/headlessの測定を本PCの合格値や実成功へ流用しない。既存renderer/版/色空間/所有する資源/停止と破棄を照合し、必要な対象だけテストする。未読デモ/モジュールのコピーやnpm導入を読取だけで実行しない。",
+      "compare_metadata": [
+        "webgl-effects",
+        "ui-accessibility",
+        "flex-shrunk-child-percent-height"
+      ],
+      "comparison_limit": "webgl-effects本文、index、threejs/GUIDEの3点を正規個別読取審査の下で全読しSHA照合。その他の現役本文は未読。",
+      "positive_candidate": "WebGLの本画面だけ2倍にしたがpost処理がぼやけ、選択位置もずれる。",
+      "negative_candidate": "元画像自体に無い細部を生成したいだけで描画bufferは適切。",
+      "individual_rights_review": "固定treeのnoticeはroot LICENSEだけ（MIT、Copyright (c) 2026 Meng To）。入口の作者手順文の採用候補には正確な原文とMIT全文を保持する。Kibori/Seijaku/Blue Hour等のデモ実装、写真・スキャン・モデル・フォント・外部API/依存の許諾をroot MITだけで一括受入せず、取り込む実体ごとに別確認する。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/3d/3d-retina-resolution/REFERENCES.md",
+          "bytes": 429,
+          "git_blob": "48836e0dfd446971d8091f3b529601c5130b3946",
+          "body_saved": true,
+          "source_sha256": "b79006739461996ef659c179aa4fb931c05a05aa238c4a76961cebca014fed94",
+          "body_read": true,
+          "executed": false,
+          "read_method": "parent_full_output_SHA_bytes_strict_UTF8",
+          "read_recorded_at": "2026-10-23T18:04:45.5643278Z"
+        },
+        {
+          "path": "agent-skills/3d/3d-retina-resolution/agents/openai.yaml",
+          "bytes": 241,
+          "git_blob": "93dc7c397ad7ab05569d70da30dcbdd8234892a6",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": true,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "target_guard": {
+        "access_allowed": false,
+        "classification_unverified": true,
+        "client_resource": true,
+        "state": "new planned central target held;zero read/write",
+        "recovery_todo": 2851,
+        "owner_action_required": false,
+        "path_omitted": true,
+        "proposal_not_selected_after_overlap_comparison": true,
+        "previous_path_untouched": true
+      },
+      "source_invocation_metadata": {
+        "agent_policy_in_tree": true,
+        "body_saved": false,
+        "body_read": false,
+        "policy_inferred": false,
+        "body_scope_only": true
+      },
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
+      "integration_evidence": "skills-3080-retina-integration-evidence.json",
+      "renderable_install_plan": true,
+      "individual_rights_accepted_scope": "原文と作者手順文の日本語適応にroot MITを適用し、MIT全文とCopyright (c) 2026 Meng Toを実保存。第三者code/demo/mediaは未取込。"
+    },
+    {
+      "inventory_id": "github:eecbfba6d29822509e21b1923bd81b051f45ab1f14461d42b51dff92f30faf90",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/3d/3d-sky-background/SKILL.md",
+      "name": "3d-sky-background",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-sky-background/SKILL.md",
+      "source_sha256": "74a4a1bf52e0f3c0075cf8aca7c80e6d6a46014796a4047dba4150ddf9c31f81",
+      "bytes": 5015,
+      "retrieved_at": "2026-10-20T08:40:54.8242036Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "parent_evaluation_recorded_at": "2026-10-23T18:03:09.6932242Z",
+      "candidate_disposition": "new_scene_effect_candidate_pending_reference_and_target",
+      "reason": "背景の空・環境反射・直接太陽光を分け、同じsun方向とhazeで合わせる。360度equirectと部分写真の角度を区別し、seam/translation parallax/非同期asset失敗/PMREMの更新周期まで扱う。",
+      "required_changes": "部分写真の反転を自由orbit全体の解法にしない。写真/HDRの権利、inverse tone mapの固有fit、実rendererの環境更新と破棄を別確認。背景写真を追加しただけでPBRの照明が完成したと扱わない。 見た目の実装は同対象の具体画像と本人の明示回答後。本文の定数・品質点・Apple GPU/headlessの測定を本PCの合格値や実成功へ流用しない。既存renderer/版/色空間/所有する資源/停止と破棄を照合し、必要な対象だけテストする。未読デモ/モジュールのコピーやnpm導入を読取だけで実行しない。",
+      "compare_metadata": [
+        "webgl-effects",
+        "game-development",
+        "web-animation"
+      ],
+      "comparison_limit": "現役catalogの名前/descriptionだけの用途比較。中央本文の差分は未確認で、実統合前に対象本文を比較する。未読の中央原本を同名だけで除外/上書きしない。",
+      "positive_candidate": "空は夕焼けだが反射と影の太陽方向が合わず、回すと継ぎ目が出る。",
+      "negative_candidate": "2D背景gradientの色だけを変更する。",
+      "individual_rights_review": "固定treeのnoticeはroot LICENSEだけ（MIT、Copyright (c) 2026 Meng To）。入口の作者手順文の採用候補には正確な原文とMIT全文を保持する。Kibori/Seijaku/Blue Hour等のデモ実装、写真・スキャン・モデル・フォント・外部API/依存の許諾をroot MITだけで一括受入せず、取り込む実体ごとに別確認する。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/3d/3d-sky-background/REFERENCES.md",
+          "bytes": 387,
+          "git_blob": "2a76b68297cb33deec35ef170b9e8db74df1bdca",
+          "body_saved": true,
+          "source_sha256": "eac9b8836de425b7b5d2ae91777f9c2a3c39e5dcf17e84ee9af9da4a6e507b8e",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-sky-background/agents/openai.yaml",
+          "bytes": 228,
+          "git_blob": "9daf7f681feda15581534f5be70ee85095133342",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:32b954e6fb09280ec5b99faf879afdbbfdd5c7ca20ccedc3d59ba01b5ad9c856",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/3d/3d-sky-rays/SKILL.md",
+      "name": "3d-sky-rays",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-sky-rays/SKILL.md",
+      "source_sha256": "1b70c0cf1cdb44769f56f429016904e39cef5f85d3832412dd3eb8dbfda94c97",
+      "bytes": 4918,
+      "retrieved_at": "2026-10-20T08:40:54.8247411Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "parent_evaluation_recorded_at": "2026-10-23T18:03:09.6932242Z",
+      "candidate_disposition": "new_scene_effect_candidate_pending_reference_and_target",
+      "reason": "屋根/葉の遮蔽maskを使うscreen-space sun shaftを、実体積散乱と区別して構成する。sun背面判定、offscreen UV、重み正規化、alphaの保持、HDR合成前tone map、葉cutoutの同期が具体的。水中のworld parallax用途とは分ける。",
+      "required_changes": "scene alphaの意味を全passで確認せず流用しない。24-48/72samplesを品質合格値にせず、半解像度・jitter・overdrawの実負荷を対象PCで確認する。screen-spaceの限界とforegroundへのartistic近似を保持。 見た目の実装は同対象の具体画像と本人の明示回答後。本文の定数・品質点・Apple GPU/headlessの測定を本PCの合格値や実成功へ流用しない。既存renderer/版/色空間/所有する資源/停止と破棄を照合し、必要な対象だけテストする。未読デモ/モジュールのコピーやnpm導入を読取だけで実行しない。",
+      "compare_metadata": [
+        "webgl-effects",
+        "web-animation",
+        "game-development"
+      ],
+      "comparison_limit": "現役catalogの名前/descriptionだけの用途比較。中央本文の差分は未確認で、実統合前に対象本文を比較する。未読の中央原本を同名だけで除外/上書きしない。",
+      "positive_candidate": "木漏れ日のrayが葉の矩形を出し、太陽の背面を向いても残る。",
+      "negative_candidate": "水中でカメラ移動に応じて魚の間を通る3D光柱を作る。",
+      "individual_rights_review": "固定treeのnoticeはroot LICENSEだけ（MIT、Copyright (c) 2026 Meng To）。入口の作者手順文の採用候補には正確な原文とMIT全文を保持する。Kibori/Seijaku/Blue Hour等のデモ実装、写真・スキャン・モデル・フォント・外部API/依存の許諾をroot MITだけで一括受入せず、取り込む実体ごとに別確認する。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/3d/3d-sky-rays/REFERENCES.md",
+          "bytes": 293,
+          "git_blob": "0514c88eda617908ade84df7338c3fae296b137b",
+          "body_saved": true,
+          "source_sha256": "5132743e7cb0165e35629a6d5e60349ffa9c65a2048c6ff7deb7cb164d98219c",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-sky-rays/agents/openai.yaml",
+          "bytes": 210,
+          "git_blob": "32fbd3c7f25ec51d64ae937f439bbda89b6c1df0",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:896c34ba4a99ae3711407ba96fda39996823607f6a3b2e6ddd456f62af1b19a6",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/3d/3d-ultra-realistic-water/SKILL.md",
+      "name": "3d-ultra-realistic-water",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-ultra-realistic-water/SKILL.md",
+      "source_sha256": "54e31ca705a4fbac10a93f1a4b9297be35e8eec798bb64eedb6f38ef65246a30",
+      "bytes": 10833,
+      "retrieved_at": "2026-10-20T08:40:54.8257533Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "parent_evaluation_recorded_at": "2026-10-23T18:03:09.6932242Z",
+      "candidate_disposition": "new_scene_effect_candidate_pending_support_corrections_and_target",
+      "reason": "Gerstnerスペクトルの導関数をpixelで評価し、波長と画素footprintごとにfadeする海面の候補。float64位相wrap、floating originで泡textureも同量ずらすこと、浮力が描画と同じ横変位を反転すること、水平線のhazeを共有することが具体的。",
+      "required_changes": "再利用例はcreateWakeをocean引数内で呼ぶ一方、後段で未宣言wake.updateを参照する。wakeを保存するか実module APIを確認して修正する。crestのsmoothstep(0.6,0.28,J)はGLSL ES3.00公式8.3の未定義に該当し修正。Q合計上限や4反復の精度はこのmoduleの定義/実入力の条件と分け、一般保証にしない。assets/ocean.mjsとocean.mdは未読で未取込。 見た目の実装は同対象の具体画像と本人の明示回答後。本文の定数・品質点・Apple GPU/headlessの測定を本PCの合格値や実成功へ流用しない。既存renderer/版/色空間/所有する資源/停止と破棄を照合し、必要な対象だけテストする。未読デモ/モジュールのコピーやnpm導入を読取だけで実行しない。",
+      "compare_metadata": [
+        "webgl-effects",
+        "game-development",
+        "web-animation"
+      ],
+      "comparison_limit": "現役catalogの名前/descriptionだけの用途比較。中央本文の差分は未確認で、実統合前に対象本文を比較する。未読の中央原本を同名だけで除外/上書きしない。",
+      "positive_candidate": "移動する船の海面が遠景でちらつき、座標原点を戻すと泡と浮力が跳ぶ。",
+      "negative_candidate": "cursorに反応する2DUIの水紋だけを作る。",
+      "individual_rights_review": "固定treeのnoticeはroot LICENSEだけ（MIT、Copyright (c) 2026 Meng To）。入口の作者手順文の採用候補には正確な原文とMIT全文を保持する。Kibori/Seijaku/Blue Hour等のデモ実装、写真・スキャン・モデル・フォント・外部API/依存の許諾をroot MITだけで一括受入せず、取り込む実体ごとに別確認する。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/3d/3d-ultra-realistic-water/agents/openai.yaml",
+          "bytes": 328,
+          "git_blob": "75e6e48ccdbc468b3156cdc458925e2d080fa409",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-ultra-realistic-water/assets/ocean.mjs",
+          "bytes": 30285,
+          "git_blob": "aff8df828e0fdfaa0612cfd27027de69dfceb313",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-ultra-realistic-water/demo/PROMPT.md",
+          "bytes": 3774,
+          "git_blob": "56a6d049378563fb38cdf58c78c1bac34de3b38f",
+          "body_saved": true,
+          "source_sha256": "8841eb6a22f1debd319ddcd95ef73285d29debfddac9521df656ab6798ab11fc",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-ultra-realistic-water/demo/build.mjs",
+          "bytes": 5419,
+          "git_blob": "87a0f457d44ebf9063a78bc414d2082abf4890d4",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-ultra-realistic-water/demo/index.html",
+          "bytes": 821621,
+          "git_blob": "e9ab34356a44077cb96385e35873a05a63780614",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-ultra-realistic-water/demo/preview.jpg",
+          "bytes": 224608,
+          "git_blob": "cf8a8d2a22e7f3382e05ccf9f5a78a967d151453",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-ultra-realistic-water/demo/src/ui.css",
+          "bytes": 5800,
+          "git_blob": "028c236275d6ba2664721972fba0040f5f9da09a",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-ultra-realistic-water/demo/src/ui.html",
+          "bytes": 1833,
+          "git_blob": "1fe3513291ad8e9f0bcee6c5b36426ee04961253",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-ultra-realistic-water/demo/src/ui.js",
+          "bytes": 3504,
+          "git_blob": "fa592999b51588e1653010f319ea8370570dea45",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-ultra-realistic-water/references/ocean.md",
+          "bytes": 6007,
+          "git_blob": "6723a90f0a93db59806beb694a51e7b195d666b5",
+          "body_saved": true,
+          "source_sha256": "1afea44a18ecfac8de8ba129ca1d13556b9d015077a64595c4ac89873642f227",
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "primary_check_indices": [
+        0
+      ],
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:902a0a522b75574bc5a87780cf16f5ea986493124e4bdb578182b36bf6f21df5",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/3d/3d-underwater-god-rays/SKILL.md",
+      "name": "3d-underwater-god-rays",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-underwater-god-rays/SKILL.md",
+      "source_sha256": "1ddd8ac574ddf6545a16008d7531f95cd4c707e0ffa977e987715b3b456c4f21",
+      "bytes": 9994,
+      "retrieved_at": "2026-10-20T08:40:54.8872081Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "parent_evaluation_recorded_at": "2026-10-23T18:03:09.6932242Z",
+      "candidate_disposition": "new_scene_effect_candidate_pending_support_and_target",
+      "reason": "sunに直交するworld位置でswellを評価しview rayに沿って積分するため、screen-space rayと異なるparallaxと魚への同じ光模様を扱う。半解像度target/安定jitter/共有uniform/単一tone map/水面下面を具体化する。",
+      "required_changes": "assets/underwater-light.mjs/demoは未読で、重複uniformを防ぐ契約と宣言責任を実moduleと照合する。μ=ray·sunの奇数べきや負領域の挙動、map/render順序、projection更新も対象で確認。Blue Hourの2200モデル/38秒/別GPU値を再現実績としない。 見た目の実装は同対象の具体画像と本人の明示回答後。本文の定数・品質点・Apple GPU/headlessの測定を本PCの合格値や実成功へ流用しない。既存renderer/版/色空間/所有する資源/停止と破棄を照合し、必要な対象だけテストする。未読デモ/モジュールのコピーやnpm導入を読取だけで実行しない。",
+      "compare_metadata": [
+        "webgl-effects",
+        "game-development",
+        "web-animation"
+      ],
+      "comparison_limit": "現役catalogの名前/descriptionだけの用途比較。中央本文の差分は未確認で、実統合前に対象本文を比較する。未読の中央原本を同名だけで除外/上書きしない。",
+      "positive_candidate": "水中光線がカメラに貼り付き、魚が柱を横切っても明暗が変わらない。",
+      "negative_candidate": "空から木々の間に見えるscreen-space光線だけを追加する。",
+      "individual_rights_review": "固定treeのnoticeはroot LICENSEだけ（MIT、Copyright (c) 2026 Meng To）。入口の作者手順文の採用候補には正確な原文とMIT全文を保持する。Kibori/Seijaku/Blue Hour等のデモ実装、写真・スキャン・モデル・フォント・外部API/依存の許諾をroot MITだけで一括受入せず、取り込む実体ごとに別確認する。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/3d/3d-underwater-god-rays/agents/openai.yaml",
+          "bytes": 415,
+          "git_blob": "5ab64e742a2ed3bf10e3c0174e33885fc1c689a6",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-underwater-god-rays/assets/underwater-light.mjs",
+          "bytes": 9476,
+          "git_blob": "21296c0b26daa8a277db01ca80eceb874114e0a5",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-underwater-god-rays/demo/PROMPT.md",
+          "bytes": 3868,
+          "git_blob": "2ccf82721e9d2e6b92253b0303bcfd91b1832817",
+          "body_saved": true,
+          "source_sha256": "3524e552479d0310a9f2f74801d74f1f2970f0863ef374b7f22cf040986e27b4",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-underwater-god-rays/demo/build.mjs",
+          "bytes": 6366,
+          "git_blob": "1a9bc1c64956b83a04da4f375e3b7c00aca2b6bb",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-underwater-god-rays/demo/index.html",
+          "bytes": 1763791,
+          "git_blob": "88e2295e7286124074ef97992c3aa9c19c2566e5",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-underwater-god-rays/demo/preview.jpg",
+          "bytes": 149906,
+          "git_blob": "cb8b02aff7506eee93a811c2051dd2b11afcd1ed",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-underwater-god-rays/demo/src/ui.css",
+          "bytes": 11995,
+          "git_blob": "2565198f02d99fa0ebb8b0dab9d86ee28c620012",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-underwater-god-rays/demo/src/ui.html",
+          "bytes": 4929,
+          "git_blob": "d46a37b3be5784687c50b6c42ae0de0521835c74",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-underwater-god-rays/demo/src/ui.js",
+          "bytes": 8169,
+          "git_blob": "1796054045cee4b5bda9b7089f7789017b0c6c9f",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-underwater-god-rays/demo/src/water.js",
+          "bytes": 1405,
+          "git_blob": "f47a7cd4d0656c0bdad0ec80a34b83651a2107e8",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:4626a28f6ca9f66b3a74b43507b256211a1cf0fae273355b0cbb4f7ec2ea0e69",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/3d/3d-virtual-tour/SKILL.md",
+      "name": "3d-virtual-tour",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-virtual-tour/SKILL.md",
+      "source_sha256": "e1626474c570185db9a41baba57baac8c551620e98203a90a56e03fcc5a44e86",
+      "bytes": 9098,
+      "retrieved_at": "2026-10-20T08:40:55.0121635Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "parent_evaluation_recorded_at": "2026-10-23T18:03:09.6932242Z",
+      "candidate_disposition": "new_camera_navigation_workflow_candidate_pending_reference_and_target",
+      "reason": "guided/room/inspect/freewalkごとのcamera所有を分け、最終書込を一つにする。経路全体とnear planeの壁通過、途中行先変更、scroll/play状態の復帰、部屋とplanの同一stop registry、asset遅延/中断とtouch captureまでを扱う。",
+      "required_changes": "滑らかな曲線や直線遷移を衝突回避の証明にしない。前後seek/中断/hidden/別行先から復帰を実sceneで確認する。freewalk/collisionは依頼がある場合に限る拡張で、元の参考が実装済みとしない。建築/写真/scanの利用権は別。 見た目の実装は同対象の具体画像と本人の明示回答後。本文の定数・品質点・Apple GPU/headlessの測定を本PCの合格値や実成功へ流用しない。既存renderer/版/色空間/所有する資源/停止と破棄を照合し、必要な対象だけテストする。未読デモ/モジュールのコピーやnpm導入を読取だけで実行しない。",
+      "compare_metadata": [
+        "game-development",
+        "webgl-effects",
+        "web-animation",
+        "ui-accessibility"
+      ],
+      "comparison_limit": "現役catalogの名前/descriptionだけの用途比較。中央本文の差分は未確認で、実統合前に対象本文を比較する。未読の中央原本を同名だけで除外/上書きしない。",
+      "positive_candidate": "3D室内tourから外観inspectへ移ると壁を通り、戻ると部屋とscroll位置がずれる。",
+      "negative_candidate": "一つの商品をその場で回すだけで部屋や経路はない。",
+      "individual_rights_review": "固定treeのnoticeはroot LICENSEだけ（MIT、Copyright (c) 2026 Meng To）。入口の作者手順文の採用候補には正確な原文とMIT全文を保持する。Kibori/Seijaku/Blue Hour等のデモ実装、写真・スキャン・モデル・フォント・外部API/依存の許諾をroot MITだけで一括受入せず、取り込む実体ごとに別確認する。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/3d/3d-virtual-tour/REFERENCES.md",
+          "bytes": 825,
+          "git_blob": "385fe9efa7565f1ae5a4dedf09042ccfb11b838f",
+          "body_saved": true,
+          "source_sha256": "4b2b8272f7f1f276416a3d412e5b475cd2c9fcc0e48778f8dec9e38ff7f70e74",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-virtual-tour/agents/openai.yaml",
+          "bytes": 268,
+          "git_blob": "6270f5c4346e4932c88a28ba38846ba9e5598ae3",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:796ba2120ce77e2b5a8f6eeba65b7e3367cc775594bdb59dbf4cf527094c069a",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/3d/3d-wood-lighting-scorecard/SKILL.md",
+      "name": "3d-wood-lighting-scorecard",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-wood-lighting-scorecard/SKILL.md",
+      "source_sha256": "9c2594010aab8cf2bde1ab862fa336187e8220fd1b9c27a005a4ef83fd2d8809",
+      "bytes": 11318,
+      "retrieved_at": "2026-10-20T08:40:55.0147708Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "parent_evaluation_recorded_at": "2026-10-23T18:03:09.6932242Z",
+      "candidate_disposition": "material_lighting_subset_candidate_scoring_not_quality_acceptance",
+      "reason": "窓の向きと直接光/反射/shaft、木の粗さ/凹凸、接地shadow、HDR合成を対応付け、1層ずつのablationと固定camera/timeで差を調べる。数値が上がって絵が悪化した例を戻し、平均8.8でもspecular6.5と最低項目を残す点が有用。木材本体との重複は同一派生元として保持する。",
+      "required_changes": "『木は暗室の一方向keyでだけ木に見える』や閾値p1<7/target8を普遍基準にしない。scorecard.mjs/rubric/metrics未読未実行で品質測定成功を主張しない。npm/headless実行を本PCのChrome利用規則へ置換せず、同対象の画像回答を点数/別judgeで代替しない。grain材質はwood-materialと重複し、採用単位は本文差分で判断する。 見た目の実装は同対象の具体画像と本人の明示回答後。本文の定数・品質点・Apple GPU/headlessの測定を本PCの合格値や実成功へ流用しない。既存renderer/版/色空間/所有する資源/停止と破棄を照合し、必要な対象だけテストする。未読デモ/モジュールのコピーやnpm導入を読取だけで実行しない。",
+      "compare_metadata": [
+        "webgl-effects",
+        "ui-design-styles",
+        "web-design-process",
+        "game-development"
+      ],
+      "comparison_limit": "現役catalogの名前/descriptionだけの用途比較。中央本文の差分は未確認で、実統合前に対象本文を比較する。未読の中央原本を同名だけで除外/上書きしない。",
+      "positive_candidate": "暗い木工sceneで光束を足すと木目が消え、点数は上がるが画像が悪くなる。",
+      "negative_candidate": "単なる誤字修正に視覚scorecardと目標8点を必須で追加する。",
+      "individual_rights_review": "固定treeのnoticeはroot LICENSEだけ（MIT、Copyright (c) 2026 Meng To）。入口の作者手順文の採用候補には正確な原文とMIT全文を保持する。Kibori/Seijaku/Blue Hour等のデモ実装、写真・スキャン・モデル・フォント・外部API/依存の許諾をroot MITだけで一括受入せず、取り込む実体ごとに別確認する。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/3d/3d-wood-lighting-scorecard/PROMPT.md",
+          "bytes": 5604,
+          "git_blob": "656ac8fc4857eee50db36bd9dc17c34b915d2840",
+          "body_saved": true,
+          "source_sha256": "fdf0be03119b1c1bf3afeac0fdfa00c2420d2ad3004179f18365c2906e3ba3ca",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-wood-lighting-scorecard/agents/openai.yaml",
+          "bytes": 378,
+          "git_blob": "c9ddd8369819d3938fb72bfd883398ba443a1608",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-wood-lighting-scorecard/demo.html",
+          "bytes": 65609,
+          "git_blob": "99337ece2b60e5acd13f56ecc3b2587f6cfc800f",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-wood-lighting-scorecard/preview.jpg",
+          "bytes": 147082,
+          "git_blob": "7c23cd3f5a2894dfddedffb7e497b293c45ea727",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-wood-lighting-scorecard/references/last-scorecard.json",
+          "bytes": 11705,
+          "git_blob": "6397ac2ff8cae279cad40de628c1d0a9f7560880",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-wood-lighting-scorecard/references/metrics.js",
+          "bytes": 16566,
+          "git_blob": "2f5f1a2932e399082cd8c466e6a1235567dedc84",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-wood-lighting-scorecard/references/rubric.md",
+          "bytes": 7788,
+          "git_blob": "6c9b7bb93deed9aeca214a5864058c7881deaa33",
+          "body_saved": true,
+          "source_sha256": "ddca3eda90041ee5b1471af6299fdc2680e71ddddaf05601d5af733366f7e159",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-wood-lighting-scorecard/references/scorecard.mjs",
+          "bytes": 9740,
+          "git_blob": "5bfb2bc51ae4e615572fc97f1ca76ef98f1666b6",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:2f1222d0143baefe038638b6325bac4b1aa4a9c9989daa3ffcaf655e7f050715",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/3d/3d-wood-material/SKILL.md",
+      "name": "3d-wood-material",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-wood-material/SKILL.md",
+      "source_sha256": "0f7748f4e947c1d3c4a286ab83cd6b8afcfa9bc6cd4a069f0a1d7f2a3c1d872a",
+      "bytes": 11039,
+      "retrieved_at": "2026-10-20T08:40:55.0345515Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "parent_evaluation_recorded_at": "2026-10-23T18:03:09.6932242Z",
+      "candidate_disposition": "new_material_workflow_candidate_pending_support_and_target",
+      "reason": "同じperiodic fieldを年輪/導管/繊維/放射組織/工具痕へ別scaleで使い、色/粗さ/凹凸へ同じgrainを渡す。object-spaceと端面の法線で木口を分け、seedを安定させ、各footprintでaliasを抑える。lighting/scorecardとは用途を分ける。",
+      "required_changes": "元demoとPROMPTの実行/コピーを導入条件へしない。onBeforeCompileの挿入点/環境強度とcache keyは対象版で確認。半径の式0.055と上限0.24等を全モデルの実寸へ流用せず、樹種の見本/木口/仕上げを具体画像で比較する。物理写真の代替や全距離のphotoreal保証にしない。 見た目の実装は同対象の具体画像と本人の明示回答後。本文の定数・品質点・Apple GPU/headlessの測定を本PCの合格値や実成功へ流用しない。既存renderer/版/色空間/所有する資源/停止と破棄を照合し、必要な対象だけテストする。未読デモ/モジュールのコピーやnpm導入を読取だけで実行しない。",
+      "compare_metadata": [
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "game-development"
+      ],
+      "comparison_limit": "現役catalogの名前/descriptionだけの用途比較。中央本文の差分は未確認で、実統合前に対象本文を比較する。未読の中央原本を同名だけで除外/上書きしない。",
+      "positive_candidate": "複数の木材に同じ年輪tileが並び、木口まで側面と同じ模様になる。",
+      "negative_candidate": "写真を貼るだけの素材のdownloadとKTX2配信を直す。",
+      "individual_rights_review": "固定treeのnoticeはroot LICENSEだけ（MIT、Copyright (c) 2026 Meng To）。入口の作者手順文の採用候補には正確な原文とMIT全文を保持する。Kibori/Seijaku/Blue Hour等のデモ実装、写真・スキャン・モデル・フォント・外部API/依存の許諾をroot MITだけで一括受入せず、取り込む実体ごとに別確認する。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/3d/3d-wood-material/PROMPT.md",
+          "bytes": 3111,
+          "git_blob": "1e3a352c8008183cf4cb911611176ce2187a12fb",
+          "body_saved": true,
+          "source_sha256": "ff58e6c92b7905a7fc85ddd071eea955e8eba49d38df6c42f27287ddd4e9f49b",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-wood-material/agents/openai.yaml",
+          "bytes": 311,
+          "git_blob": "076308f2d3e23aea6465e54d769ea710250bf180",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-wood-material/demo.html",
+          "bytes": 37628,
+          "git_blob": "6884726ed432415817f135921c163b7aacb3f63f",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/3d/3d-wood-material/preview.jpg",
+          "bytes": 272671,
+          "git_blob": "0efcd4b0b4b7c3f3362e20c66ede0837be6d43fc",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:77f491d4d72871f2c31152c773d92fe3ee2377d8a0993b9673d562a01250c8e2",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/author-game-levels/SKILL.md",
+      "name": "author-game-levels",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/author-game-levels/SKILL.md",
+      "source_sha256": "df8da94bf505ed20f3d9062151354a5c6901ca4dc3d5b0c6f493a700277c3644",
+      "bytes": 4374,
+      "retrieved_at": "2026-10-20T08:40:55.8813363Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "project_constraint_rewrite_and_level_design_subset",
+      "reason": "level data/visual/collision/nav/encounterの層とstable IDを分け、移動・回避・再挑戦・gate/resetと光源の対応を検証する具体的な手順。",
+      "required_changes": "階段/斜面/高低差を全ゲームで禁止する文は元のflat-world案件の制約へ限定する。本人が縦移動を仕様にした場合も禁止する独自規則にしない。emitterごとの対応台帳と視認性の確認は採用候補だが全作業の必須形式へ広げない。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/author-game-levels/agents/openai.yaml",
+          "bytes": 203,
+          "git_blob": "ce2550a66b3f7e47b84cb5ceaede1e99b6600e90",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:423793c2062917a1dadbabd18843c3a0d29c2f91f6465b953dcce98fb680dceb",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/build-game-audio-feedback/SKILL.md",
+      "name": "build-game-audio-feedback",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/build-game-audio-feedback/SKILL.md",
+      "source_sha256": "f547a7f1941e254852ad64418d0fadf47308d434fb808897e87e70dcbe012cfc",
+      "bytes": 1107,
+      "retrieved_at": "2026-10-20T08:40:55.8818645Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "existing_game_audio_integration_candidate",
+      "reason": "入力受付・予兆・接触・miss・damage・警告を別cueへ対応付け、優先度/voice上限/音楽state/操作からのaudio unlock/視覚代替をまとめる。",
+      "required_changes": "音素材の許諾と実音の確認を別に行う。音声生成が要る場合は本人の既存契約の用途/枠を保持し、新API/追加購入を導入しない。mute/hidden復帰を実対象の必要な端末で確認。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/build-game-audio-feedback/agents/openai.yaml",
+          "bytes": 204,
+          "git_blob": "e3ef731b6ae56b346d17a1d79d46f661e4f058ff",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:cbf4afbf99a4fe89b8e8143c7deb9095f8847b283ff7aeb4a57f4c18ef24937e",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/build-game-camera-controls/SKILL.md",
+      "name": "build-game-camera-controls",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/build-game-camera-controls/SKILL.md",
+      "source_sha256": "9a9f5765d410bde6280a4fd35b0210e593b9c5729689dd1f0abd0edc84604fdf",
+      "bytes": 1195,
+      "retrieved_at": "2026-10-20T08:40:55.8823824Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "existing_game_camera_integration_candidate",
+      "reason": "カメラのtarget/位置の平滑化を分け、戦闘対象・目的・操作cueの可読を優先する。lock-onやshakeをbase camera上の一時modifierとし、touch操作域とresetを分ける。",
+      "required_changes": "orbit/tourのsourceともカメラ所有の原則が重なる。中央game-development本文との具体差分は未確認で、独立入口の必要性は実比較後に決める。全geometryを隠す回避ではなく対象の遮蔽方針を保つ。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/build-game-camera-controls/agents/openai.yaml",
+          "bytes": 216,
+          "git_blob": "36426ee7ec66156efba3fce8f17d8a8436bd23c2",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:d8dff1294478f735c0e39073429164e1bd87d6c0d78feb7315c839a0b187fa98",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/build-game-changelog/SKILL.md",
+      "name": "build-game-changelog",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/build-game-changelog/SKILL.md",
+      "source_sha256": "02cae71e942ccd8eab6ec84b7e0a990cb079155ec459bad71bff83f6464827fa",
+      "bytes": 8694,
+      "retrieved_at": "2026-10-20T08:40:55.8829058Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "release_ledger_and_navigation_workflow_candidate",
+      "reason": "commitではなく実配備へrelease版を結び、履歴を固定revision差分から復元する。commit自身の最終SHAを同commitへ含められない循環を分け、menu back/close/Escape/focusを1つの経路にする。",
+      "required_changes": "新規ゲームの0.9.0開始や毎Prd配備patch増分を本人の全製品方針へしない。既存版体系・要件・実配備を優先し、不明な履歴は欠落として保存。UIは画像回答後、releaseを含む依頼の範囲だけ既存Prdと実live確認を行う。毎文書修正のbuild/全件testに広げない。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/build-game-changelog/agents/openai.yaml",
+          "bytes": 241,
+          "git_blob": "ff781bc062229e8c56a1093f859e76d0caee6179",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/game-development/build-game-changelog/references/reference-architecture.md",
+          "bytes": 8379,
+          "git_blob": "432b4e9a3c552a7062df71318dc61e04d2ccd0f7",
+          "body_saved": true,
+          "source_sha256": "e9f6e67de3c3a419860ce3f44ac999078571690c54f66249a55dac99e2a2bc37",
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:dcfad5899bfe731a670bd01b4cfafa5a4aa3d03303f40df2b562279b41baf405",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/build-game-inventory/SKILL.md",
+      "name": "build-game-inventory",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/build-game-inventory/SKILL.md",
+      "source_sha256": "361fed9d464173899301651ea3e1313ce17f28472a236edcb0e022763bb945ee",
+      "bytes": 1669,
+      "retrieved_at": "2026-10-20T08:40:55.8839535Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "inventory_transaction_workflow_candidate",
+      "reason": "item定義/所有/stack/装備compatibility/runtimeを分け、移動・装備・交換の次状態を全体で計算し、合法な行先が決まってから1度だけcommitする。ID保存と重複effect防止の境界テストが具体的。",
+      "required_changes": "memory内の原子的更新と永続保存/通信失敗/競合を混同しない。必要な利用側のschema移行と重複dispatchを確認。dragのみを必須にせずkeyboard/touchの経路を保ち、UI画像回答を先に行う。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/build-game-inventory/agents/openai.yaml",
+          "bytes": 209,
+          "git_blob": "50de150276cd5e8d49436efa7c33333400a31a0c",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:8566a813be1a3b67e72e430142ee4dc7c6dd89426f30e08be72396659bb93d74",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/build-game-map-editor/SKILL.md",
+      "name": "build-game-map-editor",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/build-game-map-editor/SKILL.md",
+      "source_sha256": "fd45a877e4477dedeb553318eb030b80eb9ec3bb048dd7378e5a61e39c41149c",
+      "bytes": 9138,
+      "retrieved_at": "2026-10-20T08:40:55.8844853Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "editor_draft_boundary_workflow_pending_auth_and_project_corrections",
+      "reason": "production sourceからversioned documentを作り、独立draft/validated export/source統合の段階を明確にする。stable sourceID、manifest一致、drag1回のundo、visibilityとdataの分離、pauseしたsceneでsaveに触れない境界が具体的。",
+      "required_changes": "flat-planeを元案件条件へ限定し、IP/password/HMACの方式を全製品の必須認証にしない。現役認証・trusted proxy・必要権限で決める。parse不正draftを空として上書きせず、元データを保ったままエラーと復旧先を示す。全件testや毎回公開承認を追加せず本人の既存承認と範囲を使う。editor modeは新しい非Prd配備環境を作る理由にしない。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/build-game-map-editor/agents/openai.yaml",
+          "bytes": 223,
+          "git_blob": "1f82c68b32963425877dec4b26d8007b4958aab4",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/game-development/build-game-map-editor/references/vesperfall-implementation.md",
+          "bytes": 6767,
+          "git_blob": "7f303419b49d4460a5525f65abf18289d2594af6",
+          "body_saved": true,
+          "source_sha256": "e05622ec32624cccabe2056522c7fcf6a7b57f993385800522542f80a37cebd7",
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:30c4d85780ef724bd06c8bb809383c1078a04873e1174760dbfcfe582f2c2fb5",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/build-game-monster-system/SKILL.md",
+      "name": "build-game-monster-system",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/build-game-monster-system/SKILL.md",
+      "source_sha256": "e3e50af4a34f5e2d446c66ddb39cbb8de46b974d92f88e90d985baa595e5930d",
+      "bytes": 4476,
+      "retrieved_at": "2026-10-20T08:40:55.886226Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "monster_contract_workflow_pending_support_and_comparison",
+      "reason": "definition/rig/runtime/view adapterの4層を分け、joints/sockets/hurtbox/actionIDとactive windowを共通契約にする。movesetの純粋samplerと各loopでのID更新、LOD後のsocket維持を直接fixture化できる。",
+      "required_changes": "9状態/Y-up/Z-forward/mesh規約を別engine/生物へ固定しない。monster-contractと実loader/collisionを採用する範囲だけ確認。in-app browser指定を本PCのChrome条件へ置換し、画像方向と人体/持ち方の資料確認を先に守る。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/build-game-monster-system/agents/openai.yaml",
+          "bytes": 248,
+          "git_blob": "b3bcce4589ced0b0d599b870ae6040aa79003945",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/game-development/build-game-monster-system/references/monster-contract.md",
+          "bytes": 7357,
+          "git_blob": "6bee6e771adc1637dccbaea5bfe811ba68cee656",
+          "body_saved": true,
+          "source_sha256": "6b95113966ed7241856be22ca7eef58e9be906946f6aa56180830a4eda8ba330",
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:e466d95aad251335896e174c8cf39d0be12ded7c89484c9198d21d98da1c2894",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/build-hybrid-game-assets/SKILL.md",
+      "name": "build-hybrid-game-assets",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/build-hybrid-game-assets/SKILL.md",
+      "source_sha256": "bb64cbecfd06fdc3376323d4f5b4ef2c6e987442f8adcc3b9ddd7015a79cabf6",
+      "bytes": 2992,
+      "retrieved_at": "2026-10-20T08:40:55.8878786Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "existing_asset_representation_integration_candidate",
+      "reason": "imported rigged mesh、procedural geometry、2DUI、構図reference、imageからの再構成を分ける。隠れた形状を画像から抽出したと偽らず、runtime表現/出典/scale/pivot/socket/collisionを結ぶ。",
+      "required_changes": "表のpreferred representationを全案件で強制しない。素材の取得/生成・画像の権利は個別確認。本人へ見せる人物や武器は実物資料と人体/持ち方を照合し、見た目は画像の明示回答後に実装する。クレジット追加購入や新規商品名を勝手に作らない。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/build-hybrid-game-assets/agents/openai.yaml",
+          "bytes": 209,
+          "git_blob": "503899791d27677c699f3467ccaf48d85595a721",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:974ef3e6e05b2cdaf44b06c191d9cb7af0c278448083474d9642be67253f3bc3",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/build-isometric-arpg/SKILL.md",
+      "name": "build-isometric-arpg",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/build-isometric-arpg/SKILL.md",
+      "source_sha256": "ddcb64e5b9fb5b3ae7df2f3cc157c45768e359903840440d97ed69c22881d189",
+      "bytes": 2348,
+      "retrieved_at": "2026-10-20T08:40:55.8883914Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "game_vertical_slice_workflow_candidate",
+      "reason": "移動/1戦闘動作/1敵/報酬/遷移の遊べるsliceへ分け、authoritative contact、single combat clock、atomic reward/save、難しい状態へ直接入るfixtureを保つ。",
+      "required_changes": "先のsliceが完全になるまで別の独立作業を禁止する規則にしない。既存の未完了と依存を保ち、UI画像回答・言語・Windows優先と実要求の端末を保持。green buildと実playを分ける。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/build-isometric-arpg/agents/openai.yaml",
+          "bytes": 199,
+          "git_blob": "bbf69aa45614da75f577efb2322e40a54981bc1d",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:34049dd0e19d2dc76fa3a751174dd46d8868beee9262bf8219506276bc5e3f4a",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/build-mobile-threejs-games/SKILL.md",
+      "name": "build-mobile-threejs-games",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/build-mobile-threejs-games/SKILL.md",
+      "source_sha256": "7c38939b8b919f8cac1ca2f7040b35a5c05ae43adcd9c4c143184180bc7b007a",
+      "bytes": 1202,
+      "retrieved_at": "2026-10-20T08:40:55.8889302Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "conditional_mobile_controls_integration_candidate",
+      "reason": "touch movement/action/target/cancel領域、non-drag inventory、safe area、portrait/landscape時のHUDとstate維持、audio unlockとbackground復帰をまとめる。",
+      "required_changes": "mobileが明示用途または現役Web製品の対応範囲である時に使い、全Windowsアプリの完了条件へ自動追加しない。全機器対応や低性能端末の成功をsize指定だけで証明せず、必要な実機/実ブラウザの観測と分ける。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/build-mobile-threejs-games/agents/openai.yaml",
+          "bytes": 218,
+          "git_blob": "9726c4f3812658f8d517e8e67997cb1970de6dd5",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:8af599d156e7c8a9c6f79879e37c7d03482ba52fedfae252a268960a99ddacea",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/build-rigged-game-assets/SKILL.md",
+      "name": "build-rigged-game-assets",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/build-rigged-game-assets/SKILL.md",
+      "source_sha256": "093ab5940d129a9cd661a60098a8becec1cc9365ea12786375ea375e82fc7cc9",
+      "bytes": 7757,
+      "retrieved_at": "2026-10-20T08:40:55.8894549Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "rigged_actor_delivery_workflow_pending_support_and_rights",
+      "reason": "元の高精細sourceとruntime最適化、catalog-only/review-only/runtimeを分け、characterの着脱装備とmonsterの攻撃/破壊可能部位を別profileにする。1枚のcard画像と1live inspector、同じruntimeモデル/clip/socketの証明を対応付ける。",
+      "required_changes": "未読template/requirements/validatorを実行・取り込み済みとしない。配布Pythonの無改変試用は新Python実装と区別。4influence/必須clip/512px等は対象engine契約へ限定し、full suiteを一律追加しない。generatorやmodel/animationの個別許諾と既存枠を確認し追加支出しない。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/build-rigged-game-assets/agents/openai.yaml",
+          "bytes": 295,
+          "git_blob": "95bbd74fa8c051ef17ade81f2d72ee62784abb2e",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/game-development/build-rigged-game-assets/assets/character-asset-manifest.template.json",
+          "bytes": 4637,
+          "git_blob": "5f65f50e2dccfdeb36d103fe9175e69cf3b2c2f9",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/game-development/build-rigged-game-assets/assets/monster-asset-manifest.template.json",
+          "bytes": 3205,
+          "git_blob": "2a6b1cd212f1fe9414a1ebeb5b0c34d8d7b90dae",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/game-development/build-rigged-game-assets/references/catalog-and-testing.md",
+          "bytes": 5520,
+          "git_blob": "bdce0483804580a6630920646fac39366a655e98",
+          "body_saved": true,
+          "source_sha256": "1e3f0e15c4dabe0329f265ebeeb90138b47789d3ebf229e5bd8c673f6132ab19",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/game-development/build-rigged-game-assets/references/requirements.md",
+          "bytes": 7696,
+          "git_blob": "932b3ab8689ccf26a58f066b4bf8407418bdd810",
+          "body_saved": true,
+          "source_sha256": "e55a1e96c7dce6f3cd36475b9545f1b545b10cc8b90a0c7b23801539f28d6a8e",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/game-development/build-rigged-game-assets/scripts/validate_asset_manifest.py",
+          "bytes": 16134,
+          "git_blob": "25b0e22f4af432a7511d1258847a9b2b98e6509f",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:38bb0d4a6f21b0c29cbfa8b6214812a7cdea16a9216c058a1225711c9908280b",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/build-threejs-enemy-systems/SKILL.md",
+      "name": "build-threejs-enemy-systems",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/build-threejs-enemy-systems/SKILL.md",
+      "source_sha256": "b33c08b3296ea1a39d37705be29d773db428ef8a337a92f3640eb2cb6792bbb8",
+      "bytes": 4418,
+      "retrieved_at": "2026-10-20T08:40:55.8910372Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "shared_enemy_definition_workflow_candidate",
+      "reason": "immutable敵定義とinstance state、legal move選択とauthoritative contact、presentation normalizationとLODを分ける。fallbackもfootprint/socket/timingを保ち、placeholderとPrd完成を区別する。",
+      "required_changes": "monster-systemとtune-enemy-aiの重なりを保持して実統合前に対象本文を比較する。必要なstate/clipだけを元combat契約で定め、全アプリへboss/gear/mobileのfixtureを要求しない。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/build-threejs-enemy-systems/agents/openai.yaml",
+          "bytes": 263,
+          "git_blob": "c1ba7d0174247e3e3652c8c3b8262bad40fc5864",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:264a83ece383f6be22f64bba371a4c31a1234b1035722320cfdff4ce4c02a62a",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/build-vesperfall-review-assets/SKILL.md",
+      "name": "build-vesperfall-review-assets",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/build-vesperfall-review-assets/SKILL.md",
+      "source_sha256": "4fd07049c2c0ce6bd27c1288e30d88bb5e2d8443dbadb87f625dd76b8f025597",
+      "bytes": 3480,
+      "retrieved_at": "2026-10-20T08:40:55.8915661Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "project_named_example_generic_review_subset_pending_support",
+      "reason": "catalogのtransparent PNGとlive runtimeモデルを組にし、実ファイル/宣言のみのURL/import/procedural/review再構成を正しくラベルする。groundingを武器先端でなくfoot/contactから取る例が具体的。",
+      "required_changes": "元の第三者ゲーム名を本人の製品名や新規事業として採用しない。source固有path/512x512/1canvasを普遍化せずtarget契約へ合わせる。in-app browser onlyとfull testsは本人のChrome/対象test規則へ修正。未読validate_pair.pyを成功済みとしない。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/build-vesperfall-review-assets/agents/openai.yaml",
+          "bytes": 273,
+          "git_blob": "93cd3b60cea8f205ab212ff8b6512c81e0d4add1",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/game-development/build-vesperfall-review-assets/references/catalog-contract.md",
+          "bytes": 1739,
+          "git_blob": "b9afb28221c98fb62f1d3d7f67cad0d3b9316879",
+          "body_saved": true,
+          "source_sha256": "881ce3f129c42c4ddb58bab7208f873fa26877d32dec4b33254457b046e3e4b6",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "agent-skills/game-development/build-vesperfall-review-assets/scripts/validate_pair.py",
+          "bytes": 1495,
+          "git_blob": "03626cf8835442d91e480eab891ab42a35e27c87",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:866ca21d53a483e30f7714d08925ff74dc966ffb566c99ffa087e5700400193c",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/create-game-vfx/SKILL.md",
+      "name": "create-game-vfx",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/create-game-vfx/SKILL.md",
+      "source_sha256": "14579867468da3b065d1b8c9644f4e9a8cea552526936c2518f3c150e049b9b0",
+      "bytes": 1078,
+      "retrieved_at": "2026-10-20T08:40:55.8920946Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "existing_game_feedback_integration_candidate",
+      "reason": "effectごとにtrigger/owner/duration/意味/上限/cleanupを決め、予兆・接触・成功/失敗・持続statusを分ける。poolとidempotent resetで連打/死亡/一時停止の漏れを抑える。",
+      "required_changes": "演出がdamage判定を所有する形にしない。粒子数や色の固定値は作らず、意味の可読とreduced-motionの代替を対象画面で比較。追加UI/見た目は画像回答後。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/create-game-vfx/agents/openai.yaml",
+          "bytes": 197,
+          "git_blob": "4558632a7f0bcba84f8100056e0005c7c2098b53",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:efea3e18c8a1c529f0dc118a714c53698807049e54bc8775759fcba4a1fafbec",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/design-action-combat/SKILL.md",
+      "name": "design-action-combat",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/design-action-combat/SKILL.md",
+      "source_sha256": "0b6289f0c651987554e2c82dda45e18582eb2a21412672778ed76cd1a214df17",
+      "bytes": 1866,
+      "retrieved_at": "2026-10-20T08:40:55.892674Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "combat_timing_and_contact_workflow_candidate",
+      "reason": "startup/active/recovery/cancel/resource/contactを明示し、range/direction/stateを満たしたauthoritative eventだけをactionID+targetIDで1度適用する。防御選択とphase境界を決定的fixtureで確認する。",
+      "required_changes": "特定ゲームの面白さや公平性を数値だけで保証しない。本人の戦闘要件と画像方向を保ち、勝手に武器/人体/新しい製品方向を作らない。技術的なtiming/IDの内部選択は通常の担当判断で進める。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/design-action-combat/agents/openai.yaml",
+          "bytes": 209,
+          "git_blob": "a7626535fe47495ce9157829840d9dcf0624d3f0",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:382998d3830f6337c6f2838a64421601e482aaf2ac3cb66841051d81e443cf6b",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/design-game-encounters/SKILL.md",
+      "name": "design-game-encounters",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/design-game-encounters/SKILL.md",
+      "source_sha256": "0cb2da5d4fbc25815fbd57b4627b9fafb1b3cc050712e7103476b214f7514a61",
+      "bytes": 1033,
+      "retrieved_at": "2026-10-20T08:40:55.8931959Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "existing_encounter_composition_integration_candidate",
+      "reason": "敵数だけでなくobjective/空間/役割/spawn/資源/退路/報酬の判断を配置する。offscreen damageとretryによる重複reward、同時commit攻撃上限をfixtureへ結ぶ。",
+      "required_changes": "全ゲームへ同じfairnessや難度/人数上限を押し付けず元の遊び方の仕様に従う。現在のカメラ/操作/端末で観測し、rawクリア時間だけでqualityを断定しない。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/design-game-encounters/agents/openai.yaml",
+          "bytes": 203,
+          "git_blob": "c0f7552ac62c407f2b115bd21d03ebf8d59ff8fe",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:153988a15c1b7cf16741074f845ee57b203ee0315654f9f5d76196982b339d0e",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/optimize-threejs-games/SKILL.md",
+      "name": "optimize-threejs-games",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/optimize-threejs-games/SKILL.md",
+      "source_sha256": "d50e8c26ae8130b5cb37da32835024ab281090f107bd52caa476b80a60f2e2b5",
+      "bytes": 1682,
+      "retrieved_at": "2026-10-20T08:40:55.8937179Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "existing_performance_measurement_integration_candidate",
+      "reason": "同じseed/配置/quality/端末で比較し、CPUのsimulation/allocとGPUのresolution/overdraw/shadowを切り分ける。装飾から削り戦闘判定/操作の意味を保ち、元のencounterへ戻って回帰を確認する。",
+      "required_changes": "項目だけでCPU/GPU律速を断定せず、実profileと対象版/負荷を記録。既存webgl-effectsのDPR/破棄手順と重なるため、実比較後にgame固有の追加だけ統合する。自分が起動した終了資源を片付ける規則を保持。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/optimize-threejs-games/agents/openai.yaml",
+          "bytes": 210,
+          "git_blob": "6e87ccb2d52485544e2f0bf6822fde3ec14f435a",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:7bcda1fac6b466079da1784e652e600a58437fe518711d1b3f9fc706d912edc6",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/ship-web-games/SKILL.md",
+      "name": "ship-web-games",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/ship-web-games/SKILL.md",
+      "source_sha256": "519256cb8d557d77a1a4368b8fb120ff0add8de3a56469accd6405fa717d511d",
+      "bytes": 1136,
+      "retrieved_at": "2026-10-20T08:40:55.8937179Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "existing_release_evidence_integration_candidate",
+      "reason": "検証したcommitを実配備へ結び、load/first input/core interaction/assets/saveのPrd証拠をbuild成功と分け、rollback/temporary資源を追う。",
+      "required_changes": "指定3所有者と既存Prd/元依頼の範囲を保持し、第三者gameへの公開や新しいpreview/stgを許可する指示にしない。無関係な署名/追加保存費用や全suiteを増やさず、同最終版の有効なCIを再利用する。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/ship-web-games/agents/openai.yaml",
+          "bytes": 191,
+          "git_blob": "a4321866ebc4b9101feceb2b927582ac2f107c36",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:a5a3b85d3994a4db7d3a009b1aafbe6f5ba608b3dff72e59bd91378f23f8b9d1",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/test-playable-web-games/SKILL.md",
+      "name": "test-playable-web-games",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/test-playable-web-games/SKILL.md",
+      "source_sha256": "4e22866b1eae238420d48de06ba1df11e70e033a02097575acde827a94d25f9a",
+      "bytes": 1715,
+      "retrieved_at": "2026-10-20T08:40:55.894242Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "gameplay_acceptance_matrix_workflow_candidate",
+      "reason": "launch/new/control/combat/reward/save/retry/pause/completionの道筋と、難しい状態へ直接入るseed/query fixtureを組み合わせる。画面応答・state・console・再現手順をbuild成功と分ける。",
+      "required_changes": "全小変更へ全行程/全端末を課さず、変更の影響と元契約で選ぶ。既知baselineも原因を調べ、単に無関係として放置しない。必要な実playをモック/スクリーンショット1枚で代用しない。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/test-playable-web-games/agents/openai.yaml",
+          "bytes": 206,
+          "git_blob": "5e0b330398ed33267f7040a0e12715370c66028e",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:7e7b86ab5a899b4639cffd87d65ca9184dedb899d1ba98d46b6a74f2a49860ca",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/game-development/tune-enemy-ai/SKILL.md",
+      "name": "tune-enemy-ai",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/tune-enemy-ai/SKILL.md",
+      "source_sha256": "13bcd0294240d0520bb1e132871ffe6f1ab36ff7c00868483f2f3490dab4e360",
+      "bytes": 1700,
+      "retrieved_at": "2026-10-20T08:40:55.8948249Z",
+      "body_read_complete": true,
+      "body_read_by": "parent023253",
+      "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
+      "candidate_disposition": "enemy_decision_state_workflow_candidate",
+      "reason": "perception/intent/motionを分離し、状態の前提/終了/最小滞在/cooldownを明示する。path完了の想定や描画poseを移動成功にせず、対象喪失・遮蔽・interrupt・resetでtransitionを確認する。",
+      "required_changes": "sourceのstate一覧を全敵へ一律必須にせず現在のmoveset/AI契約へ合わせる。minimum dwellやcommitが反応性を壊さないか、境界とpauseの実入力を確かめる。source内の他enemy系との重複は採否前に比較する。 新規実装のGoDDはRust、その他はGo既定。既存engineへの修正と言語の新規選択を分ける。",
+      "compare_metadata": [
+        "game-development",
+        "3d-modeling-vrchat",
+        "webgl-effects",
+        "ui-testing"
+      ],
+      "comparison_limit": "現役catalogの用途比較。game-development/3d-modeling-vrchat本文は未読。webgl-effectsは別の解像度統合候補のためroot/index/threejs GUIDE3点だけを正規個別審査で確認しており、他の全guideの本文差分を確認した意味ではない。",
+      "individual_rights_review": "root MIT1064bytes/SHA b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6、Copyright (c) 2026 Meng Toを全読。今回選択した入口配下のnoticeとroot LICENSEを照合した範囲で、この候補の作者手順文を原文/正確なMITと保持する範囲だけ。未読の参照・template・Python・models・media・外部製品の個別許諾は未確認。",
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "agent-skills/game-development/tune-enemy-ai/agents/openai.yaml",
+          "bytes": 195,
+          "git_blob": "88f72c1680a2a2b6061945f08af79d2c97d11008",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+    },
+    {
+      "inventory_id": "github:342ad2a939322fb3fc06620b83e8472b22e8bef2cd8e40584dcd3b05b7079060",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/media/aura-asset-images/SKILL.md",
+      "name": "aura-asset-images",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/media/aura-asset-images/SKILL.md",
+      "source_sha256": "c902c2b2b8182b4738c7e6a93d5a33fe62a495844c2e0b4a7b0152812b93cd76",
+      "bytes": 6225,
+      "body_read_complete": true,
+      "body_read_by": "child3488; parent read complete assessments and verified fixed identities",
+      "body_read_method": "reader full output; parent machine SHA/bytes/blob/catalog validation",
+      "candidate_disposition": "partial_crop_guidance_candidate_external_asset_rights_unconfirmed",
+      "reason": "本文は『タグ検索→5件選ぶ→直URLを返す』手順と25件の直リンクだけで、Aura Assetsの利用条件(商用可否・出典表示・再配布)にも、人物写真が実在の人物か生成画像かにも触れていない。リンク先はSupabaseの公開ストレージで、_800w→_1600w の置換は推測に頼り、404なら戻す記述まである。READMEはAura Buildを冒頭で紹介するが、作者との関係は読んだ範囲に書かれていない。デモの参照元はNeuformのページ。不足は、利用条件、人物画像の素性、リンクの現存の3点。",
+      "required_changes": [
+        "人物画像を仮置き用途へ一括制限しない。画像の権利と実績表示の真実性を個別確認。未確認の直URLや高解像度への文字置換は採用せず、比率・切り抜き手順の部分統合は検討を続ける。",
+        "25件の直リンクと _1600w 置換の推測は外す。残すなら『未検証の例』と明記する。",
+        "画像ごとに利用条件を確認してから使う手順を入れる。確認前は本番に使わない。",
+        "比率と切り抜きの指針だけを、素材選びを扱う既存Skillへ統合する案を併記する。",
+        "aura.build を開く手順は、本人のログイン済みChromeを使い、自分で開いたタブを作業後に閉じる既存方針に合わせる。",
+        "次の手: 公式の利用条件ページで条件を確認する(本調査では外部取得をしていない)。"
+      ],
+      "compare_metadata": [
+        "web-design-process",
+        "image-generation-editing",
+        "generative-media-tools",
+        "imagegen",
+        "frontend-node-engineering"
+      ],
+      "comparison_limit": "名前とdescriptionのみ。web-design-process の『素材選び』と本文がどこまで重なるかは未確認。",
+      "individual_rights_review": {
+        "license": "ルートLICENSE(MIT、Copyright (c) 2026 Meng To)。この入口の配下に個別LICENSEと入れ子noticeは無い。",
+        "credits": "デモのPROMPT.mdがNeuformのページ(順位#1、2,154 views、47 favorites、27 remixes)を参照元として挙げる。画像の作者表示は読んだ範囲に無い。ルートscripts/にneuform同期用らしき名前のファイルがあるが、未保存で未読。",
+        "unconfirmed_scope": "Aura Assetsの利用条件、画像の作者・生成元・人物の権利、Neuformデモの権利、Supabaseバケットの利用許可。ルートMITはこれらに広げていない。"
+      },
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "historical_reader_proposal": {
+        "required_changes": [
+          "25件の直リンクと _1600w 置換の推測は外す。残すなら『未検証の例』と明記する。",
+          "画像ごとに利用条件を確認してから使う手順を入れる。確認前は本番に使わない。",
+          "人物画像は、顧客の声や実績の証拠として見せない(同じ9件のUI側が『偽の実績』として扱う種類)。",
+          "比率と切り抜きの指針だけを、素材選びを扱う既存Skillへ統合する案を併記する。",
+          "aura.build を開く手順は、本人のログイン済みChromeを使い、自分で開いたタブを作業後に閉じる既存方針に合わせる。",
+          "次の手: 公式の利用条件ページで条件を確認する(本調査では外部取得をしていない)。"
+        ],
+        "not_final_disposition": true,
+        "disposition": "hold_needs_info",
+        "not_owner_policy": true
+      },
+      "parent_policy_correction": "人物画像を仮置き用途へ一括制限しない。画像の権利と実績表示の真実性を個別確認。未確認の直URLや高解像度への文字置換は採用せず、比率・切り抜き手順の部分統合は検討を続ける。",
+      "supporting_resources": [
+        {
+          "path": "agent-skills/media/aura-asset-images/demo/assets/page-01-65695f80-23f9-46ee-8487-cbb6c93cc48b-3840w.webp",
+          "source_sha256": null,
+          "bytes": 536390,
+          "git_blob": "14c17545abe76f947ee8bf0df2c35fb5e6d37adc",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/media/aura-asset-images/demo/assets/page-02-724142aa-44a6-48d3-9cf3-761e00d05b78-1600w.jpg",
+          "source_sha256": null,
+          "bytes": 989406,
+          "git_blob": "735c2baf4929acbcd8cf0b63a975870a5de418a7",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/media/aura-asset-images/demo/assets/page-03-4734259a-bad7-422f-981e-ce01e79184f2-1600w.jpg",
+          "source_sha256": null,
+          "bytes": 44753,
+          "git_blob": "ebf14e0f6e4547525ebdf610a29ebca420fec70e",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/media/aura-asset-images/demo/assets/page-04-005600e5-f6ab-4e59-bc86-eaeb02797dfa-1600w.jpg",
+          "source_sha256": null,
+          "bytes": 728581,
+          "git_blob": "bf5d1b2112d445fa92dc7a48efe810e7d5698cf5",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/media/aura-asset-images/demo/assets/page-05-e534354d-c5f2-4399-a1d9-2f50338e8c47-1600w.jpg",
+          "source_sha256": null,
+          "bytes": 85289,
+          "git_blob": "8e519cedbdd3976485487aea85409c434129ea3b",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/media/aura-asset-images/demo/assets/page-06-fb6415fd-bf4d-4ccf-8e9d-7ab445e99207-1600w.jpg",
+          "source_sha256": null,
+          "bytes": 201962,
+          "git_blob": "c17c9ed9481fe26fe7fdfca9a0a8dab4dd3a771d",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/media/aura-asset-images/demo/assets/source-preview.jpg",
+          "source_sha256": null,
+          "bytes": 139542,
+          "git_blob": "f77fe5bede25677fe105589063c8b434ac5215e2",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/media/aura-asset-images/demo/index.html",
+          "source_sha256": null,
+          "bytes": 45479,
+          "git_blob": "ea0c87673cd6f78aa82acd6bcbacfb81d4c24047",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/media/aura-asset-images/demo/preview.jpg",
+          "source_sha256": null,
+          "bytes": 98478,
+          "git_blob": "bf6de1b52e81dab7a024e352bafd940a156fc4b8",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/media/aura-asset-images/demo/PROMPT.md",
+          "source_sha256": "fdd5d7b77073f19fb4a1fec10109241ebd50aed37ad292b9699b00ae2a39d608",
+          "bytes": 2961,
+          "git_blob": "07037db28fca751488282d30de10f3cc32bddea7",
+          "executed": false,
+          "read_by": "child3488",
+          "body_saved": true,
+          "body_read": true
+        },
+        {
+          "path": "agent-skills/media/aura-asset-images/demo/source.json",
+          "source_sha256": null,
+          "bytes": 4525,
+          "git_blob": "5e2c932e6df28abc5fd2a033ffa92da4301fae79",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        }
+      ]
+    },
+    {
+      "inventory_id": "github:7eadf250a1952e8b4563eab285bc8b6d58c5bb21656fbd0804d3ec4dec10f015",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/media/unsplash-asset-images/SKILL.md",
+      "name": "unsplash-asset-images",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/media/unsplash-asset-images/SKILL.md",
+      "source_sha256": "cd057d9a7dcaf2de444aec22c1f3277392aab85b9a296beabc20ba3a7b48950c",
+      "bytes": 5096,
+      "body_read_complete": true,
+      "body_read_by": "child3488; parent read complete assessments and verified fixed identities",
+      "body_read_method": "reader full output; parent machine SHA/bytes/blob/catalog validation",
+      "candidate_disposition": "adapt_or_integrate_candidate_pending_individual_scope_and_actual_comparison",
+      "reason": "本文は写真ページのURLだけを返し、取得は公式ページのDownloadボタン経由と書く。直リンクを避けるので、権利を確認しながら使いやすい。一方でライセンスの記述は短く、『一般に無償』『Unsplash+は避ける』『撮影者表記は必須でないが推奨』にとどまる。写真に写る人物や商標の扱いは無い。25件の候補は到達を確認できない(外部取得なし)。『二次リンクを含めない』と『本番URLでcrop=facesを使う』の関係も、本文で説明されていない。",
+      "required_changes": [
+        "人物画像を仮置きへ一括制限せず権利と表示の真実性で判断する。外部写真の権利はroot MITから推定しない。未検証の画像配信パラメータを共通仕様にしない。",
+        "利用時点で写真ページのライセンス表示を確認し、撮影者名とURLを記録する手順を足す。人物や商標が写る写真は別途確認する。",
+        "25件は未検証の例と明記するか、検索手順に置き換える。",
+        "crop=faces は自社の画像配信で使うパラメーターとして書き分け、二次リンクを持ち込まない規則と両立させる。",
+        "比率表は aura 側と重複するので、統合先で1つにする。",
+        "ブラウザ操作は、本人のログイン済みChromeと後片付けの既存方針に合わせる。"
+      ],
+      "compare_metadata": [
+        "web-design-process",
+        "image-generation-editing",
+        "frontend-node-engineering",
+        "ui-design-styles"
+      ],
+      "comparison_limit": "名前とdescriptionのみ。素材選びの本文がどこまで重なるかは未確認。",
+      "individual_rights_review": {
+        "license": "ルートLICENSE(MIT)。個別LICENSEと入れ子noticeは無い。Unsplash Licenseの現行条件は、外部取得をしていないため未確認。",
+        "credits": "撮影者名は本文に無い。",
+        "unconfirmed_scope": "25件の写真そのものの条件、写る人物と商標の権利。ルートMITはこれらに広げていない。"
+      },
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "historical_reader_proposal": {
+        "required_changes": [
+          "利用時点で写真ページのライセンス表示を確認し、撮影者名とURLを記録する手順を足す。人物や商標が写る写真は別途確認する。",
+          "25件は未検証の例と明記するか、検索手順に置き換える。",
+          "crop=faces は自社の画像配信で使うパラメーターとして書き分け、二次リンクを持ち込まない規則と両立させる。",
+          "人物写真を顧客の声などの証拠として使わない旨を足す。",
+          "比率表は aura 側と重複するので、統合先で1つにする。",
+          "ブラウザ操作は、本人のログイン済みChromeと後片付けの既存方針に合わせる。"
+        ],
+        "not_final_disposition": true,
+        "disposition": "adopt_with_changes",
+        "not_owner_policy": true
+      },
+      "parent_policy_correction": "人物画像を仮置きへ一括制限せず権利と表示の真実性で判断する。外部写真の権利はroot MITから推定しない。未検証の画像配信パラメータを共通仕様にしない。",
+      "supporting_resources": [
+        {
+          "path": "agent-skills/media/unsplash-asset-images/demo/index.html",
+          "source_sha256": null,
+          "bytes": 16588,
+          "git_blob": "5177188f5cc9f7c70aca7b11446e8548b4b7d457",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/media/unsplash-asset-images/demo/preview.jpg",
+          "source_sha256": null,
+          "bytes": 78882,
+          "git_blob": "a3190a6dd00d2d98517b37d208133a913d4e10b4",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/media/unsplash-asset-images/demo/PROMPT.md",
+          "source_sha256": "008f809be75f01901d10d76a774bf0456a047ab4bf47c12a651938665e0fa04d",
+          "bytes": 2031,
+          "git_blob": "c8d953eb14aaead880d6807f44e57d3c85e84e49",
+          "executed": false,
+          "read_by": "child3488",
+          "body_saved": true,
+          "body_read": true
+        }
+      ]
+    },
+    {
+      "inventory_id": "github:a90b192efd8aa367c1fa88cbe7170f8b4354aa319d981e2b33478a91c1d918f1",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/ui/audit-ai-design-slop/SKILL.md",
+      "name": "audit-ai-design-slop",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/ui/audit-ai-design-slop/SKILL.md",
+      "source_sha256": "91e1e68e624d911fd66f672db5930484c6d024ba1834bb837acc3af4e14601ca",
+      "bytes": 6210,
+      "body_read_complete": true,
+      "body_read_by": "child3488; parent read complete assessments and verified fixed identities",
+      "body_read_method": "reader full output; parent machine SHA/bytes/blob/catalog validation",
+      "candidate_disposition": "adapt_or_integrate_candidate_pending_individual_scope_and_actual_comparison",
+      "reason": "点数もAI判定も付けず、証拠と『不明』を分け、新しい書体・配色・レイアウトを指示しない。この境界は、本人の既存方針(見た目の点数を品質やAIらしさの保証にしない)と同じ向きで、レビュー専用の作業に向く。全ページ審査では no-ai-design-slop の ARTICLE.md(17,823B)を読む設計のため、2件は組で扱う前提になる。",
+      "required_changes": [
+        "ARTICLEの第三者派生元の許諾は未確認。未確認のARTICLE全面コピーを必須とせず、作者手順の採用範囲と参照先を切り分ける。",
+        "本人へ見せる出力は日本語にし、出力様式(総評・確認範囲・指摘表・不明点)も訳す。",
+        "画面確認は、本人のログイン済みChromeと後片付けの既存方針に合わせた実行条件として書く。",
+        "agents/openai.yaml(240B)は未保存・未読なので、内容を見るまでコピーしない。",
+        "REFERENCES.mdの元資料は、本文をどこまで取り込むかに応じて、個別に出典を確認する。"
+      ],
+      "compare_metadata": [
+        "ui-accessibility",
+        "ui-design-styles",
+        "web-design-process",
+        "ui-testing",
+        "subagent-review"
+      ],
+      "comparison_limit": "名前とdescriptionのみ。ui-accessibility のdescriptionに『デザイン監査』があり、本文がどこまで重なるかは未確認。1ファイルずつ本文を比べる必要がある。",
+      "individual_rights_review": {
+        "license": "ルートLICENSE(MIT)。個別LICENSEと入れ子noticeは無い。",
+        "credits": "REFERENCES.md(825B、no-ai-design-slop側と同一内容)に、作者のX投稿、GoogleDesignのX投稿、YouTube動画、impeccable.style/slop、getdesign.md、Leonxlnx/taste-skill、petergyang/no-ai-slop、WCAG 2.2、NN/g、Material、Apple HIG、GOV.UKのリンクがある。リンクのみで、各条件は未確認。",
+        "unconfirmed_scope": "上記の第三者資料の許諾。本文がそれらから文章を取り込んでいるかは比較していない。"
+      },
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "historical_reader_proposal": {
+        "required_changes": [
+          "../no-ai-design-slop/ARTICLE.md への相対参照を保つか、必要部分を同じ場所へ置く。",
+          "本人へ見せる出力は日本語にし、出力様式(総評・確認範囲・指摘表・不明点)も訳す。",
+          "画面確認は、本人のログイン済みChromeと後片付けの既存方針に合わせた実行条件として書く。",
+          "agents/openai.yaml(240B)は未保存・未読なので、内容を見るまでコピーしない。",
+          "REFERENCES.mdの元資料は、本文をどこまで取り込むかに応じて、個別に出典を確認する。"
+        ],
+        "not_final_disposition": true,
+        "disposition": "adopt_with_changes",
+        "not_owner_policy": true
+      },
+      "parent_policy_correction": "ARTICLEの第三者派生元の許諾は未確認。未確認のARTICLE全面コピーを必須とせず、作者手順の採用範囲と参照先を切り分ける。",
+      "supporting_resources": [
+        {
+          "path": "agent-skills/ui/audit-ai-design-slop/agents/openai.yaml",
+          "source_sha256": null,
+          "bytes": 240,
+          "git_blob": "8a8f61a83a861b14a9308f5014a07c0a85412cb2",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/ui/audit-ai-design-slop/REFERENCES.md",
+          "source_sha256": "0a880d009eed16c04491f3a1333e5e3c093e73fa4029923633ab1c3e7fbcbe2f",
+          "bytes": 825,
+          "git_blob": "2a7a768cdafe3430728e751ac02dd5c932b72aa7",
+          "executed": false,
+          "read_by": "child3488",
+          "body_saved": true,
+          "body_read": true
+        }
+      ]
+    },
+    {
+      "inventory_id": "github:c2223158378efba9ca76cbd839955a4c9419bb6975690ecd627e79b62ecce89e",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/ui/design-first-ui-prompting/SKILL.md",
+      "name": "design-first-ui-prompting",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/ui/design-first-ui-prompting/SKILL.md",
+      "source_sha256": "5e3d4db0eb0ea983f2bedb90f28f358901c292388a7889e2f66ac133ceff743c",
+      "bytes": 3090,
+      "body_read_complete": true,
+      "body_read_by": "child3488; parent read complete assessments and verified fixed identities",
+      "body_read_method": "reader full output; parent machine SHA/bytes/blob/catalog validation",
+      "candidate_disposition": "adapt_or_integrate_candidate_pending_individual_scope_and_actual_comparison",
+      "reason": "3,090Bと小さく、本人の画像先行の流れに合う。ただし web-design-process の『生成用プロンプト』と重なる可能性があり、本文は比較していない。同じ階層の ARTICLE.md は『Remix everything』『Steal better headlines』と他サイトの流用を勧め、GPT-5.1とGemini 3の使い分けまで書く。これは no-ai-design-slop の『参照から原理を取り、識別・レイアウト・素材・文言は写さない』と食い違う。SKILL.md自体は、書体名とFigmaを例に挙げる程度。",
+      "required_changes": [
+        "見た目の方向は具体画像と同対象の明示回答へつなぐ。書体・外部ツールを一括受入せず、技術的細部を毎回質問する規則を加えない。",
+        "取り込むのは SKILL.md だけにし、ARTICLE.md の流用の勧めとモデル指定は持ち込まない。",
+        "『Questions to ask』は、本人へ技術的な細部を聞く手順にしない。見た目の方向は、具体画像を見せて本人の明示回答を得てから実装する流れにつなぐ。",
+        "例に出る商用書体(Söhne・Neue Haas・SF Pro・Canela)は例示と明記し、使用時にライセンスを確認する。",
+        "Figmaでの組版は任意の工程にする。",
+        "参照画像を置くローカル参照フォルダは、gitに入れない・第三者画像を公開しない注意とともに残す。"
+      ],
+      "compare_metadata": [
+        "web-design-process",
+        "image-generation-editing",
+        "imagegen",
+        "ui-design-styles",
+        "figma-design-to-code"
+      ],
+      "comparison_limit": "名前とdescriptionのみ。web-design-process との本文の重なりは未確認。1ファイルずつ本文を比べれば重複を判定できる。",
+      "individual_rights_review": {
+        "license": "ルートLICENSE(MIT)。個別LICENSEと入れ子noticeは無い。",
+        "credits": "REFERENCES.md(141B)は mobbin.com・bentogrids.com・Figma Community・Iconify・Simple Icons のリンクのみ。ARTICLE.mdはSuperhero・Midjourney・Nano Banana Pro・Unicorn Studio・Screen Studio・Webflow/Framer/UI8でのテンプレ販売などに言及する。",
+        "unconfirmed_scope": "各サービス・書体・アイコン集の条件。ルートMITは文章に限り、これらに広げていない。"
+      },
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "historical_reader_proposal": {
+        "required_changes": [
+          "取り込むのは SKILL.md だけにし、ARTICLE.md の流用の勧めとモデル指定は持ち込まない。",
+          "『Questions to ask』は、本人へ技術的な細部を聞く手順にしない。見た目の方向は、具体画像を見せて本人の明示回答を得てから実装する流れにつなぐ。",
+          "例に出る商用書体(Söhne・Neue Haas・SF Pro・Canela)は例示と明記し、使用時にライセンスを確認する。",
+          "Figmaでの組版は任意の工程にする。",
+          "参照画像を置くローカル参照フォルダは、gitに入れない・第三者画像を公開しない注意とともに残す。"
+        ],
+        "not_final_disposition": true,
+        "disposition": "adopt_with_changes",
+        "not_owner_policy": true
+      },
+      "parent_policy_correction": "見た目の方向は具体画像と同対象の明示回答へつなぐ。書体・外部ツールを一括受入せず、技術的細部を毎回質問する規則を加えない。",
+      "supporting_resources": [
+        {
+          "path": "agent-skills/ui/design-first-ui-prompting/ARTICLE.md",
+          "source_sha256": "3c586eef7ff5b5e406dd66c56b3c5d00fe074c124c9819f45ea23fc97e91581f",
+          "bytes": 3183,
+          "git_blob": "22582787af37e155d47edc37fd5dbdefb0afece4",
+          "executed": false,
+          "read_by": "child3488",
+          "body_saved": true,
+          "body_read": true
+        },
+        {
+          "path": "agent-skills/ui/design-first-ui-prompting/demo/index.html",
+          "source_sha256": null,
+          "bytes": 16500,
+          "git_blob": "2e25dae4b17c06645f416367b382f1f925d46aaa",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/ui/design-first-ui-prompting/demo/preview.jpg",
+          "source_sha256": null,
+          "bytes": 57451,
+          "git_blob": "0697bc6a2ae94f6f55e2094dae6e9d8b1038d579",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/ui/design-first-ui-prompting/demo/PROMPT.md",
+          "source_sha256": "91ca7d14f6d0a55e83aa3bb9e95d02b081cefae2b82b0fadc9a783036ee47c47",
+          "bytes": 1972,
+          "git_blob": "a1c32969d09701b16a4ffe853b5643518263bcc6",
+          "executed": false,
+          "read_by": "child3488",
+          "body_saved": true,
+          "body_read": true
+        },
+        {
+          "path": "agent-skills/ui/design-first-ui-prompting/REFERENCES.md",
+          "source_sha256": "d1d98c3825cd347b460a7333a2f1369740e65cf96a604717589c1a694d5678f1",
+          "bytes": 141,
+          "git_blob": "16f996211cc54d76570c212106f7ba9405697632",
+          "executed": false,
+          "read_by": "child3488",
+          "body_saved": true,
+          "body_read": true
+        }
+      ]
+    },
+    {
+      "inventory_id": "github:a6f9b97f02b8ac05e3e96a14a42c841ddd47a11030d72c7df8f00f691897fb8c",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/ui/no-ai-design-slop/SKILL.md",
+      "name": "no-ai-design-slop",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/ui/no-ai-design-slop/SKILL.md",
+      "source_sha256": "a433154b01f99eed1f0c0744cee557451c898253dd7abc5f1921f234ff592998",
+      "bytes": 7007,
+      "body_read_complete": true,
+      "body_read_by": "child3488; parent read complete assessments and verified fixed identities",
+      "body_read_method": "reader full output; parent machine SHA/bytes/blob/catalog validation",
+      "candidate_disposition": "adapt_or_integrate_candidate_pending_individual_scope_and_actual_comparison",
+      "reason": "点数やAI判定を付けない点は audit と同じで、製品の方向を保つ作りも、見た目の方向を本人が決める既存方針に近い。食い違いは2点ある。(1)『システムが無ければ小さなシステムを先に定義する』は、本人の『具体画像→明示回答→実装』と順序が合わない。(2) ARTICLE.mdは冒頭で、Impeccableのslopカタログ・DesignCodeのanti-slopワークフロー・作者自身の原則を合成したと書いており、元資料の条件は未確認。",
+      "required_changes": [
+        "ARTICLEの第三者派生元の許諾は未確認。ARTICLE丸ごとのコピーを先に決めず、作者手順の有用部分と既存の見た目確認方針を照合する。",
+        "『小さなシステムを定義する』を『具体画像で提案し、本人の明示回答後に実装する』に置き換える。既存システムがあるときの保持はそのまま残す。",
+        "複数ビューポートでの描画確認は、本人のログイン済みChromeと後片付けの既存方針に合わせた実行条件として書く。",
+        "agents/openai.yaml(255B)は未保存・未読なので、内容を見るまでコピーしない。",
+        "REFERENCES.mdとARTICLE.md冒頭の合成元を、出典として残す。"
+      ],
+      "compare_metadata": [
+        "ui-design-styles",
+        "ui-accessibility",
+        "web-design-process",
+        "ui-testing",
+        "web-animation"
+      ],
+      "comparison_limit": "名前とdescriptionのみ。ui-accessibility と web-design-process の本文との重なりは未確認。",
+      "individual_rights_review": {
+        "license": "ルートLICENSE(MIT)。個別LICENSEと入れ子noticeは無い。",
+        "credits": "REFERENCES.md(825B、audit側と同一内容)。ARTICLE.md冒頭の合成元3つ(Impeccable slop catalog・DesignCode anti-slop workflow・作者の原則)。",
+        "unconfirmed_scope": "ImpeccableカタログとDesignCodeワークフローの条件、および本文との文章上の近さ(未比較)。"
+      },
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "historical_reader_proposal": {
+        "required_changes": [
+          "『小さなシステムを定義する』を『具体画像で提案し、本人の明示回答後に実装する』に置き換える。既存システムがあるときの保持はそのまま残す。",
+          "ARTICLE.mdを同じ場所に置く(全ページ・再設計・詳細レビューで読む前提のため)。カタログは記録用の道具であり、項目を数えて点数や禁止リストにしない旨を残す。",
+          "複数ビューポートでの描画確認は、本人のログイン済みChromeと後片付けの既存方針に合わせた実行条件として書く。",
+          "agents/openai.yaml(255B)は未保存・未読なので、内容を見るまでコピーしない。",
+          "REFERENCES.mdとARTICLE.md冒頭の合成元を、出典として残す。"
+        ],
+        "not_final_disposition": true,
+        "disposition": "adopt_with_changes",
+        "not_owner_policy": true
+      },
+      "parent_policy_correction": "ARTICLEの第三者派生元の許諾は未確認。ARTICLE丸ごとのコピーを先に決めず、作者手順の有用部分と既存の見た目確認方針を照合する。",
+      "supporting_resources": [
+        {
+          "path": "agent-skills/ui/no-ai-design-slop/agents/openai.yaml",
+          "source_sha256": null,
+          "bytes": 255,
+          "git_blob": "14801c5fef75e1d80a68d915d669832b4f2bea36",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/ui/no-ai-design-slop/ARTICLE.md",
+          "source_sha256": "e53853cf0eadba1cac1e3095d942cfaa07eee133884f8028159bc650833beec7",
+          "bytes": 17823,
+          "git_blob": "c25445fb2470218763e3d4a4bf7dbedc43f721c3",
+          "executed": false,
+          "read_by": "child3488",
+          "body_saved": true,
+          "body_read": true
+        },
+        {
+          "path": "agent-skills/ui/no-ai-design-slop/REFERENCES.md",
+          "source_sha256": "0a880d009eed16c04491f3a1333e5e3c093e73fa4029923633ab1c3e7fbcbe2f",
+          "bytes": 825,
+          "git_blob": "2a7a768cdafe3430728e751ac02dd5c932b72aa7",
+          "executed": false,
+          "read_by": "child3488",
+          "body_saved": true,
+          "body_read": true
+        }
+      ]
+    },
+    {
+      "inventory_id": "github:20a6a31a255cb66888ca84564332d74dd2a4a957be0c3c260171e8b46a62ce99",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/workflow/workflow-progress-screenshots/SKILL.md",
+      "name": "workflow-progress-screenshots",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/workflow/workflow-progress-screenshots/SKILL.md",
+      "source_sha256": "31cee01b1e30508fe594b22832d1f717f42bafb17b4d6576904951fd543410f6",
+      "bytes": 4233,
+      "body_read_complete": true,
+      "body_read_by": "child3488; parent read complete assessments and verified fixed identities",
+      "body_read_method": "reader full output; parent machine SHA/bytes/blob/catalog validation",
+      "candidate_disposition": "adapt_or_integrate_candidate_pending_individual_scope_and_actual_comparison",
+      "reason": "本人の『画像は直接添付する』『UIは先に画像で見せる』と同じ向きで、実装後の報告に実画面の根拠を付ける手順として使える。ただし本文の送信手段は SendUserFile というホスト固有ツールで、この読取セッションの道具一覧には無い。付属の capture.mjs(Node)と compare.py(Python)は未保存で未読。『節目ごとに頼まれなくても送る』運用は、本人の『同じ種類の通知はまとめる』と合わせる調整が要る。",
+      "required_changes": [
+        "ログイン不要ならheadless自由というChrome例外は加えない。既存のChrome利用とタブ後片付けを保持。実装中画像は事前の画像回答の代用にしない。未使用helperの全面監査は必須化しない。",
+        "送信先を、Discordの通知なし進捗投稿への直接添付に置き換える。本人の回答が要る画像だけを、質問スレッドに揃える(既存方針)。",
+        "実装中に出す画面は、実装前の画像確認と本人の明示回答の代わりにならないと明記する。",
+        "compare.py(Python)は常用ツールとして取り込まない。必要ならGoで作り直す。無改変の配布物を単発で試すことは、これと区別する。capture.mjsを常用にするなら、中身を読んだうえで、新しい道具はGoが既定という言語方針との整合を判断する。",
+        "送る前の確認に、秘密情報や顧客データが写っていないかを加える(既存の秘密情報の扱いを具体化する技術修正案)。",
+        "画像は節目ごとの小さなバッチにまとめ、別々の投稿を増やさない。"
+      ],
+      "compare_metadata": [
+        "ui-testing",
+        "browser-automation",
+        "built-in-browser",
+        "chrome-browser",
+        "image-generation-editing",
+        "discord-owner-ask",
+        "observability-notifications"
+      ],
+      "comparison_limit": "名前とdescriptionのみ。",
+      "individual_rights_review": {
+        "license": "ルートLICENSE(MIT)。個別LICENSEと入れ子noticeは無い。",
+        "credits": "無し。",
+        "unconfirmed_scope": "未保存の2スクリプトの個別ヘッダーと著作表示。"
+      },
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "historical_reader_proposal": {
+        "required_changes": [
+          "送信先を、Discordの通知なし進捗投稿への直接添付に置き換える。本人の回答が要る画像だけを、質問スレッドに揃える(既存方針)。",
+          "実装中に出す画面は、実装前の画像確認と本人の明示回答の代わりにならないと明記する。",
+          "compare.py(Python)は常用ツールとして取り込まない。必要ならGoで作り直す。無改変の配布物を単発で試すことは、これと区別する。capture.mjsを常用にするなら、中身を読んだうえで、新しい道具はGoが既定という言語方針との整合を判断する。",
+          "ログインが必要な画面は、本人のログイン済みChromeで撮り、タブを閉じる(既存方針)。ログイン不要のローカル画面はヘッドレス撮影でもよい、という実行条件として書く。",
+          "送る前の確認に、秘密情報や顧客データが写っていないかを加える(既存の秘密情報の扱いを具体化する技術修正案)。",
+          "画像は節目ごとの小さなバッチにまとめ、別々の投稿を増やさない。"
+        ],
+        "not_final_disposition": true,
+        "disposition": "adopt_with_changes",
+        "not_owner_policy": true
+      },
+      "parent_policy_correction": "ログイン不要ならheadless自由というChrome例外は加えない。既存のChrome利用とタブ後片付けを保持。実装中画像は事前の画像回答の代用にしない。未使用helperの全面監査は必須化しない。",
+      "supporting_resources": [
+        {
+          "path": "agent-skills/workflow/workflow-progress-screenshots/scripts/capture.mjs",
+          "source_sha256": null,
+          "bytes": 6313,
+          "git_blob": "225af94816f3f35383bb3d6f4570c3079970c64d",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/workflow/workflow-progress-screenshots/scripts/compare.py",
+          "source_sha256": null,
+          "bytes": 1955,
+          "git_blob": "fdbd6a0d701ee3e2768dd1e099ad73854f9a0e0f",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        }
+      ]
+    },
+    {
+      "inventory_id": "github:ccd568bdd090e06b9e264fd2fb3da236939dcd6099a14f2109aa1c8dfba0ed34",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/workflow/workflow-score-to-target/SKILL.md",
+      "name": "workflow-score-to-target",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/workflow/workflow-score-to-target/SKILL.md",
+      "source_sha256": "a5c321c911d66f5e940cc7b4826be7866ef267b72d13bda688e8b6453eb080a9",
+      "bytes": 5197,
+      "body_read_complete": true,
+      "body_read_by": "child3488; parent read complete assessments and verified fixed identities",
+      "body_read_method": "reader full output; parent machine SHA/bytes/blob/catalog validation",
+      "candidate_disposition": "adapt_or_integrate_candidate_pending_individual_scope_and_actual_comparison",
+      "reason": "採点を『利用者が目標を示した依頼』に結び、『点数は判断であり、測った項目を明記する』と書く点が、本人の既存方針と合う。懸念は3点。例がゲーム(武器・スキル・勝率)に偏っている。『盲検の審査員2名・毎ラウンドの再撮影・機械テストの追加』は、本人の『恒常的な過剰テストを足さない』と衝突し得る(2名は『できれば』の任意事項)。audit-ai-design-slop は数値のslopスコアを禁じるため、両方を採用するなら適用場面を分ける必要がある。",
+      "required_changes": [
+        "内部の比較・採点や品質保証の別モデルレビューを本人の明示依頼時だけに制限する新禁止は加えない。採点を本人の同対象画像回答や品質/AI判定の証明にしない。追加テストは実害と影響範囲で選ぶ。",
+        "点数を品質やAIらしさの保証と書かない。原文の『点数は判断』を強調する。",
+        "『機械テストを足す』は、変更の影響範囲に絞る。",
+        "例をゲームから一般化し、本人向けの報告は日本語にする。",
+        "採点表の保存先 qa/<area>/README.md は、対象リポジトリの規則に合う場合だけ使う。"
+      ],
+      "compare_metadata": [
+        "ai-workflow",
+        "subagent-review",
+        "test-quality",
+        "ui-accessibility",
+        "game-development"
+      ],
+      "comparison_limit": "名前とdescriptionのみ。",
+      "individual_rights_review": {
+        "license": "ルートLICENSE(MIT)。個別LICENSEと入れ子noticeは無い。templates 2件にも個別noticeは無い。",
+        "credits": "無し。",
+        "unconfirmed_scope": "特に無し(未保存ファイルが無い入口)。ベンチマークとして例に出る外部ゲームの権利は対象外。"
+      },
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "historical_reader_proposal": {
+        "required_changes": [
+          "点数づけは、本人が目標点を明示した依頼に限って使う。AIが見た目の点数を自発的に付けて合格判定にしない。",
+          "点数を品質やAIらしさの保証と書かない。原文の『点数は判断』を強調する。",
+          "審査は既定を独立した1名とし、既存の別モデルレビューの手順に従う。2名は依頼があるときだけにする。",
+          "『機械テストを足す』は、変更の影響範囲に絞る。",
+          "例をゲームから一般化し、本人向けの報告は日本語にする。",
+          "採点表の保存先 qa/<area>/README.md は、対象リポジトリの規則に合う場合だけ使う。"
+        ],
+        "not_final_disposition": true,
+        "disposition": "adopt_with_changes",
+        "not_owner_policy": true
+      },
+      "parent_policy_correction": "内部の比較・採点や品質保証の別モデルレビューを本人の明示依頼時だけに制限する新禁止は加えない。採点を本人の同対象画像回答や品質/AI判定の証明にしない。追加テストは実害と影響範囲で選ぶ。",
+      "supporting_resources": [
+        {
+          "path": "agent-skills/workflow/workflow-score-to-target/templates/critic-prompt.md",
+          "source_sha256": "b29079152b75833637e8359d55c5f33f1e4816e669f7616c3383acda0e793559",
+          "bytes": 1000,
+          "git_blob": "42cba9d91e0623692bc319ae92a401c230e36e7c",
+          "executed": false,
+          "read_by": "child3488",
+          "body_saved": true,
+          "body_read": true
+        },
+        {
+          "path": "agent-skills/workflow/workflow-score-to-target/templates/scorecard.md",
+          "source_sha256": "d48776cfd3d0dd4a1175df53abed077621245490fa62a006b1247f4da82df970",
+          "bytes": 1149,
+          "git_blob": "e017d354625a5acf8008ae1571b0fb12764fd13a",
+          "executed": false,
+          "read_by": "child3488",
+          "body_saved": true,
+          "body_read": true
+        }
+      ]
+    },
+    {
+      "inventory_id": "github:0828768147981c9265ddbed8502c5d3be6258c4b577e1958d57a79dc33ca0df1",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/workflow/workflow-ship-change/SKILL.md",
+      "name": "workflow-ship-change",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/workflow/workflow-ship-change/SKILL.md",
+      "source_sha256": "88de94f7919d69252b18bde500aa41547ee4c865c2e097f9b45730a9d9016b80",
+      "bytes": 8286,
+      "body_read_complete": true,
+      "body_read_by": "child3488; parent read complete assessments and verified fixed identities",
+      "body_read_method": "reader full output; parent machine SHA/bytes/blob/catalog validation",
+      "candidate_disposition": "adapt_or_integrate_candidate_pending_individual_scope_and_actual_comparison",
+      "reason": "手順の大半が作者のゲーム(ゲーム内の変更履歴ページ、?review=<name> の画面、Netlify・Supabaseのメディア、pnpm images:optimize など)に固定されている。そのまま取り込むと、本人の既存方針と衝突する手順が入る。(a)『ドラフト/プレビューURLで先に確認』は、本人の『配備はPrdのみ、Preview/dev/stgは作らない』と衝突する。(b)『50MB超は必ず本人に確認』は、毎回の技術承認になる。(c)『pushした最終コミットで全テスト』は、変更の影響範囲に絞る方針と合わない。(d)『push/公開は常設の許可』は作者のプロジェクト内の話で、このPCでは本人が定めた対象リポジトリとPrdの範囲に従う。(e) シェルスクリプト4本は未保存・未読で、lsof などmac/Linux前提の記述がある。一方で、各段の証拠・実測・公開前後の確認という原則には価値がある。",
+      "required_changes": [
+        "Prd限定はGitHub実owner AutoDevJapan/BM1314/mashfrombandの範囲。他owner/顧客契約は先方規則を保つ。50MB等の技術値だけで承認待ちを増やさず、許可済み通常公開を聞き直さない。",
+        "取り込むなら原則だけを、gitとデプロイを扱う既存Skillへ統合する。",
+        "自社3所有者のrepoではCIと使い捨て検証→既存Prd反映→Prd動作/戻し手順とする。他owner/顧客契約には先方規則を適用する。",
+        "容量は実測して扱う。新費用/権利/元の許可外の公開/取り消せない必要データ消失など本人だけの判断に限定し、承認済みの通常公開は聞き直さない。",
+        "フルテストは影響範囲に絞り、共有設定の変更など必要な場合だけ理由つきで実行する。同じソースの有効なCI結果は再利用する。",
+        "『共有チェックアウトでは明示パスだけをステージする』は条件として残し、git add -A の恒久禁止にはしない。",
+        "『権限チェックに止められたら別経路で再試行しない』は、既存の『審査の拒否を迂回しない』と一致するので残す。『ユーザーに手順を伝える』は、本人へのPC操作の依頼にしない。",
+        "lsof はWindowsの手段に置き換える。他の担当のプロセスを止めない原則は残す。",
+        "変更履歴・?review= など作者のプロジェクト固有の部分は除く。"
+      ],
+      "compare_metadata": [
+        "git-github-workflow",
+        "self-review-pr-merge",
+        "git-verification",
+        "git-worktree-parallel",
+        "github-actions-ci",
+        "web-saas-delivery-lessons",
+        "cloud-infra-deploy",
+        "windows-process-identity"
+      ],
+      "comparison_limit": "名前とdescriptionのみ。統合先の本文は未読で、すでに同じ原則があるかは未確認。",
+      "individual_rights_review": {
+        "license": "ルートLICENSE(MIT)。個別LICENSEと入れ子noticeは無い。",
+        "credits": "無し。",
+        "unconfirmed_scope": "未保存の4スクリプト(.sh)の個別ヘッダーと著作表示。"
+      },
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "historical_reader_proposal": {
+        "required_changes": [
+          "取り込むなら原則だけを、gitとデプロイを扱う既存Skillへ統合する。",
+          "『ドラフトURL→本番』を、CIと使い捨ての検証用資源で確認→Prd反映→Prdでの動作確認と戻し手順、に置き換える。",
+          "50MBの確認は『実測して報告』に変え、本人への確認は新しい支出・公開・権利・取り消し不能に当たる場合に限る。",
+          "フルテストは影響範囲に絞り、共有設定の変更など必要な場合だけ理由つきで実行する。同じソースの有効なCI結果は再利用する。",
+          "『共有チェックアウトでは明示パスだけをステージする』は条件として残し、git add -A の恒久禁止にはしない。",
+          "『権限チェックに止められたら別経路で再試行しない』は、既存の『審査の拒否を迂回しない』と一致するので残す。『ユーザーに手順を伝える』は、本人へのPC操作の依頼にしない。",
+          "lsof はWindowsの手段に置き換える。他の担当のプロセスを止めない原則は残す。",
+          "変更履歴・?review= など作者のプロジェクト固有の部分は除く。"
+        ],
+        "not_final_disposition": true,
+        "disposition": "merge_partial",
+        "not_owner_policy": true
+      },
+      "parent_policy_correction": "Prd限定はGitHub実owner AutoDevJapan/BM1314/mashfrombandの範囲。他owner/顧客契約は先方規則を保つ。50MB等の技術値だけで承認待ちを増やさず、許可済み通常公開を聞き直さない。",
+      "supporting_resources": [
+        {
+          "path": "agent-skills/workflow/workflow-ship-change/scripts/commit-size.sh",
+          "source_sha256": null,
+          "bytes": 1459,
+          "git_blob": "3cd6ada0eabcd649dccb1db853045b86f1b81ea6",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/workflow/workflow-ship-change/scripts/push-main.sh",
+          "source_sha256": null,
+          "bytes": 1950,
+          "git_blob": "0f190a4e00f8dc8f38a83cb6b317a7895223056c",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/workflow/workflow-ship-change/scripts/upload-size.sh",
+          "source_sha256": null,
+          "bytes": 1253,
+          "git_blob": "17aa89c4e5769d20db596cfa35023106a3b7c21f",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/workflow/workflow-ship-change/scripts/verify-live.sh",
+          "source_sha256": null,
+          "bytes": 1875,
+          "git_blob": "5f4d70f2b0efcc498bb768711e057bceba532476",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        }
+      ]
+    },
+    {
+      "inventory_id": "github:1b18c5be70ab0a85b144c52c089120cbfaf137e7f601f4c8228be8426bbd4987",
+      "repo": "MengTo/Skills",
+      "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "path": "agent-skills/workflow/workflow-threads-manager/SKILL.md",
+      "name": "workflow-threads-manager",
+      "source_url": "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/workflow/workflow-threads-manager/SKILL.md",
+      "source_sha256": "9e7b4afa5a8130d59a383f12726866f2d9d3d95b1e9bc472e73744c99d5d135a",
+      "bytes": 8381,
+      "body_read_complete": true,
+      "body_read_by": "child3488; parent read complete assessments and verified fixed identities",
+      "body_read_method": "reader full output; parent machine SHA/bytes/blob/catalog validation",
+      "candidate_disposition": "workflow_principles_integration_candidate_without_host_specific_tools",
+      "reason": "動作が、Claude Desktop向けのセッション管理ツール(mcp__ccd_session_mgmt__* の list_sessions・list_events・send_message・archive_session)と SendUserFile、作者のゲーム内変更履歴に固定されている。これらは、この読取セッションの道具一覧に無い。このPCの運用文書(OMB・共有ToDo・スケジューラー)が同じ役目を持つため、取り込むと監督の経路が二重になる懸念がある(推測)。判定表と原則は参考になる。",
+      "required_changes": [
+        "ホスト固有tool不在だけで有用な担当/依存/状態/再開の原則を全除外しない。AI提案を本人承認へ昇格しない一方、正規APIで照合した本人返信は担当/履歴を経由しても対象・出所とともに引き継ぐ。",
+        "main未反映の枝を喪失と決めず実差分・ロック・担当を照合し、担当/停止理由/次の手を保持する。",
+        "使う経路は既存OMB/共有ToDo/正規schedulerとし、ホスト固有APIや未読Pythonを新たに導入しない。",
+        "他担当の発言のうちAI提案と、本人ID/正規取得/質問世代/具体対象が照合された本人返信を分ける。後者は元依頼の範囲で実反映まで追う。"
+      ],
+      "compare_metadata": [
+        "agent-job-management",
+        "durable-task-handoff",
+        "safe-session-handoff",
+        "session-handoff-prompt",
+        "conversation-catch-up",
+        "shared-todo",
+        "local-console",
+        "work-scheduler",
+        "process-lifecycle"
+      ],
+      "comparison_limit": "名前とdescriptionのみ。OMB・共有ToDo・スケジューラーの運用文書は本調査で読んでおらず、役割の重なりは推測。",
+      "individual_rights_review": {
+        "license": "ルートLICENSE(MIT)。個別LICENSEと入れ子noticeは無い。",
+        "credits": "無し。",
+        "unconfirmed_scope": "未保存の5スクリプト(.sh 3・.py 2)の個別ヘッダーと著作表示。"
+      },
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_read_complete": false,
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "historical_reader_proposal": {
+        "required_changes": [
+          "取り込まない。",
+          "必要なら、次の原則だけを監督や引き継ぎを扱う既存Skillへ統合する案とする(別途判断)。『mainに無いブランチ』を失われた作業と決めつけず、件名比較とロック確認をする。他の担当が拒否された操作を繰り返さない。他セッションの発言を本人の承認として扱わない。報告は緊急→新規→整理→未完了→残りの順に書く。",
+          "統合する場合も、切れたセッションの再開提案を本人の同意待ちにしない(このPCでは停滞監視とスケジューラーが続ける運用)。archive_session・send_message・Python 2本(audit-changelog.py・contact-sheet.py)は除く。"
+        ],
+        "not_final_disposition": true,
+        "disposition": "reference_only",
+        "not_owner_policy": true
+      },
+      "parent_policy_correction": "ホスト固有tool不在だけで有用な担当/依存/状態/再開の原則を全除外しない。AI提案を本人承認へ昇格しない一方、正規APIで照合した本人返信は担当/履歴を経由しても対象・出所とともに引き継ぐ。",
+      "supporting_resources": [
+        {
+          "path": "agent-skills/workflow/workflow-threads-manager/scripts/audit-changelog.py",
+          "source_sha256": null,
+          "bytes": 3950,
+          "git_blob": "0b49fee36a6241550d93260e5f6c4f395d54bead",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/workflow/workflow-threads-manager/scripts/contact-sheet.py",
+          "source_sha256": null,
+          "bytes": 2603,
+          "git_blob": "1d4357a0b5acbb39cabce264261548db8ab99aaa",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/workflow/workflow-threads-manager/scripts/live-check.sh",
+          "source_sha256": null,
+          "bytes": 1433,
+          "git_blob": "99a0c6f46f7aa2751d5b03c26d867858d2cdcdf6",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/workflow/workflow-threads-manager/scripts/repo-status.sh",
+          "source_sha256": null,
+          "bytes": 2297,
+          "git_blob": "7366d041ecc1d1065767df3ba6f420d0b5992e81",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        },
+        {
+          "path": "agent-skills/workflow/workflow-threads-manager/scripts/save-captures.sh",
+          "source_sha256": null,
+          "bytes": 1441,
+          "git_blob": "8b279bfe2a53aad0363a216299557451e88930b9",
+          "executed": false,
+          "read_by": null,
+          "body_saved": false,
+          "body_read": false
+        }
+      ]
+    }
+  ],
+  "pending_entrypoint_paths": [
+    "agent-skills/codex/article-prompts-to-skills/SKILL.md",
+    "agent-skills/codex/audit-reference-originality/SKILL.md",
+    "agent-skills/codex/audit-verify-explain-grade-5/SKILL.md",
+    "agent-skills/codex/browser-video-recording/SKILL.md",
+    "agent-skills/codex/build-daily-inspiration-sites/SKILL.md",
+    "agent-skills/codex/codex-gpt-image-2-5-flare/SKILL.md",
+    "agent-skills/codex/daily-ui-inspiration-capture/SKILL.md",
+    "agent-skills/codex/elevenlabs-tts/SKILL.md",
+    "agent-skills/codex/generate-reference-inspired-brand-worlds/SKILL.md",
+    "agent-skills/codex/html-to-interaction-prompts/SKILL.md",
+    "agent-skills/codex/implement-fog-of-war/SKILL.md",
+    "agent-skills/codex/iterate-until-verified/SKILL.md",
+    "agent-skills/codex/optimize-web-animations/SKILL.md",
+    "agent-skills/codex/performance-profiling/SKILL.md",
+    "agent-skills/codex/publish-project-to-github/SKILL.md",
+    "agent-skills/codex/stitched-full-page-capture/SKILL.md",
+    "agent-skills/codex/video-to-superprompt/SKILL.md",
+    "agent-skills/codex/web-technique-to-skill/SKILL.md",
+    "agent-skills/codex/write-like-meng-on-x/SKILL.md",
+    "agent-skills/codex/x-bookmark-quote-posts/SKILL.md",
+    "agent-skills/game-combat/fire-smoke-skill-vfx/SKILL.md",
+    "agent-skills/game-combat/game-dev-combat-animation/SKILL.md",
+    "agent-skills/game-combat/game-dev-combat-skill-polish/SKILL.md",
+    "agent-skills/game-combat/ice-frost-skill-vfx/SKILL.md",
+    "agent-skills/game-combat/lightning-energy-skill-vfx/SKILL.md",
+    "agent-skills/game-combat/water-crystal-skill-vfx/SKILL.md",
+    "agent-skills/illustration/illustration-bold-pop/SKILL.md",
+    "agent-skills/illustration/illustration-flat-with-black/SKILL.md",
+    "agent-skills/illustration/illustration-flat/SKILL.md",
+    "agent-skills/illustration/illustration-framed-panel/SKILL.md",
+    "agent-skills/illustration/illustration-grainy-gouache/SKILL.md",
+    "agent-skills/illustration/illustration-halftone-line/SKILL.md",
+    "agent-skills/illustration/illustration-ink-sketch/SKILL.md",
+    "agent-skills/illustration/illustration-isometric-mono/SKILL.md",
+    "agent-skills/illustration/illustration-line-interior/SKILL.md",
+    "agent-skills/illustration/illustration-one-line/SKILL.md",
+    "agent-skills/illustration/illustration-outlined-cartoon/SKILL.md",
+    "agent-skills/illustration/illustration-teal-spot/SKILL.md",
+    "agent-skills/illustration/illustration-two-colour-brush/SKILL.md",
+    "agent-skills/illustration/illustration-vintage-emblem/SKILL.md",
+    "agent-skills/web-design/add-mouse-driven-orbit/SKILL.md",
+    "agent-skills/web-design/add-shader-cursor-trail/SKILL.md",
+    "agent-skills/web-design/agency-grid-layout-minimal/SKILL.md",
+    "agent-skills/web-design/ambient-section-particles/SKILL.md",
+    "agent-skills/web-design/animation-on-scroll/SKILL.md",
+    "agent-skills/web-design/animation-systems/SKILL.md",
+    "agent-skills/web-design/atmosphere-background/SKILL.md",
+    "agent-skills/web-design/background-grid-webgl/SKILL.md",
+    "agent-skills/web-design/beam-glow-states/SKILL.md",
+    "agent-skills/web-design/beautiful-shadows/SKILL.md",
+    "agent-skills/web-design/blue-cloudy-clean-modern/SKILL.md",
+    "agent-skills/web-design/blue-laser-clean-glass-layout/SKILL.md",
+    "agent-skills/web-design/book-serif-index/SKILL.md",
+    "agent-skills/web-design/bright-green-tech-system-webgl/SKILL.md",
+    "agent-skills/web-design/build-awwwards-quality-sites/SKILL.md",
+    "agent-skills/web-design/build-interactive-particle-trail/SKILL.md",
+    "agent-skills/web-design/build-threejs-scroll-worlds/SKILL.md",
+    "agent-skills/web-design/build-wireframe-scan-reveal/SKILL.md",
+    "agent-skills/web-design/cinematic-gsap-lenis-motion-system/SKILL.md",
+    "agent-skills/web-design/cinematic-scroll-storytelling/SKILL.md",
+    "agent-skills/web-design/clean-minimal-beige-light-mode/SKILL.md",
+    "agent-skills/web-design/cobejs/SKILL.md",
+    "agent-skills/web-design/company-logos/SKILL.md",
+    "agent-skills/web-design/container-lines/SKILL.md",
+    "agent-skills/web-design/corner-diagonals/SKILL.md",
+    "agent-skills/web-design/corner-lasers/SKILL.md",
+    "agent-skills/web-design/css-alpha-masking/SKILL.md",
+    "agent-skills/web-design/css-border-gradient/SKILL.md",
+    "agent-skills/web-design/dark-blue-contrasting-clean/SKILL.md",
+    "agent-skills/web-design/dark-glass-clean-layout/SKILL.md",
+    "agent-skills/web-design/dither-background/SKILL.md",
+    "agent-skills/web-design/dither-laser-dark-mode/SKILL.md",
+    "agent-skills/web-design/documentary-brutalist-agency/SKILL.md",
+    "agent-skills/web-design/editorial-portfolio-chapters/SKILL.md",
+    "agent-skills/web-design/editorial-service-booking/SKILL.md",
+    "agent-skills/web-design/editorial-tech/SKILL.md",
+    "agent-skills/web-design/falling-leaves/SKILL.md",
+    "agent-skills/web-design/fire-paper-loader/SKILL.md",
+    "agent-skills/web-design/framed-grid-layout/SKILL.md",
+    "agent-skills/web-design/framed-tech-dark-border-gradient/SKILL.md",
+    "agent-skills/web-design/funky-purple-container-tech/SKILL.md",
+    "agent-skills/web-design/glass-dark-mode-clock/SKILL.md",
+    "agent-skills/web-design/glass-dark-ui/SKILL.md",
+    "agent-skills/web-design/globe-gl/SKILL.md",
+    "agent-skills/web-design/globe-particles/SKILL.md",
+    "agent-skills/web-design/gooey-blob-system/SKILL.md",
+    "agent-skills/web-design/gsap-scrolltrigger-storytelling/SKILL.md",
+    "agent-skills/web-design/gsap/SKILL.md",
+    "agent-skills/web-design/high-contrast-skeuomorphic-clean/SKILL.md",
+    "agent-skills/web-design/horizontal-scroll-scenes/SKILL.md",
+    "agent-skills/web-design/html-demo/SKILL.md",
+    "agent-skills/web-design/image-first-grid-layout/SKILL.md",
+    "agent-skills/web-design/landing-page/SKILL.md",
+    "agent-skills/web-design/light-mode-paper-technical/SKILL.md",
+    "agent-skills/web-design/liquid-metal-border/SKILL.md",
+    "agent-skills/web-design/marquee-loop/SKILL.md",
+    "agent-skills/web-design/masked-reveal/SKILL.md",
+    "agent-skills/web-design/matterjs/SKILL.md",
+    "agent-skills/web-design/mesh-gradient-dark-blue-clean/SKILL.md",
+    "agent-skills/web-design/nested-container-clean-agency/SKILL.md",
+    "agent-skills/web-design/nested-container-frames/SKILL.md",
+    "agent-skills/web-design/number-details/SKILL.md",
+    "agent-skills/web-design/operational-enterprise-ai/SKILL.md",
+    "agent-skills/web-design/orange-clean-paper-saas/SKILL.md",
+    "agent-skills/web-design/paper-cinder-transition/SKILL.md",
+    "agent-skills/web-design/pointer-trail-emitter/SKILL.md",
+    "agent-skills/web-design/pricing-page/SKILL.md",
+    "agent-skills/web-design/product-proof-saas/SKILL.md",
+    "agent-skills/web-design/progressive-blur/SKILL.md",
+    "agent-skills/web-design/reveal-hover-effect/SKILL.md",
+    "agent-skills/web-design/scroll-progress-timeline/SKILL.md",
+    "agent-skills/web-design/scroll-scrubbed-visual-sequence/SKILL.md",
+    "agent-skills/web-design/scroll-scrubbed-word-reveal/SKILL.md",
+    "agent-skills/web-design/scroll-world-storytelling/SKILL.md",
+    "agent-skills/web-design/shaders-cursor-ripples/SKILL.md",
+    "agent-skills/web-design/skeuomorphic-ui/SKILL.md",
+    "agent-skills/web-design/solar-duotone-bold/SKILL.md",
+    "agent-skills/web-design/split-layout-technical/SKILL.md",
+    "agent-skills/web-design/staggered-word-reveal/SKILL.md",
+    "agent-skills/web-design/tailwindcss/SKILL.md",
+    "agent-skills/web-design/tech-green-dark-mode-modern/SKILL.md",
+    "agent-skills/web-design/technical-wireframe-info-layout/SKILL.md",
+    "agent-skills/web-design/thinking-orbs/SKILL.md",
+    "agent-skills/web-design/threejs-landscape/SKILL.md",
+    "agent-skills/web-design/threejs-towers/SKILL.md",
+    "agent-skills/web-design/threejs-weather/SKILL.md",
+    "agent-skills/web-design/threejs/SKILL.md",
+    "agent-skills/web-design/unicorn-studio/SKILL.md",
+    "agent-skills/web-design/vantajs/SKILL.md",
+    "agent-skills/web-design/webgl-3d-object/SKILL.md",
+    "agent-skills/web-design/webgl-landing-steering/SKILL.md",
+    "agent-skills/web-design/webgl-laser/SKILL.md"
+  ],
+  "counts": {
+    "support_read": 11,
+    "parent_read": 36,
+    "reader9_support": 37,
+    "reader9_support_unsaved": 27,
+    "support_saved": 34,
+    "child_read": 9,
+    "reader9_support_saved_read": 10,
+    "reader9_all_blobs_including_primary": 46,
+    "reader9_primary": 9,
+    "support_excluding_primary": 132
+  },
+  "notice": {
+    "scope": "今回45入口の作者手順文の評価に限る。第三者デモ/画像/書体/ARTICLE派生元の権利は未確認。rootのみという旧全tree表現を訂正。未使用helperを全部監査する新義務は設けない。",
+    "root_license_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+    "selected_entrypoint_subtree_notice_paths": [],
+    "root_license_path": "LICENSE",
+    "copyright": "Copyright (c) 2026 Meng To",
+    "all_tree_notice_paths": [
+      "agent-skills/web-design/scroll-world-storytelling/demo/threejs/assets/THREE-LICENSE.txt",
+      "LICENSE"
+    ],
+    "license": "MIT"
+  },
+  "reader": {
+    "status": "succeeded",
+    "job": "20261024-031947-todo-3488",
+    "effective_reasoning_independently_verified": false,
+    "parent_fixed_identity_verified_at": "2026-10-23T19:35:27.2930243Z",
+    "todo": 3488,
+    "requested_effort": "max",
+    "raw_sha256": "1b1fc6a3d350f85e359f1cc16cec171cb151f12a9536a62d26d37ae018f7b022",
+    "effort_origin": "owner_request",
+    "job_model": "anthropic/claude-sonnet-5-5",
+    "model_origin": "owner_request",
+    "receiver_job": "20261024-041741-todo-3080",
+    "preserved_at": "2026-10-23T19:19:14.7922032Z"
+  },
+  "parent_policy_corrections": {
+    "workflow-progress-screenshots": "ログイン不要ならheadless自由というChrome例外は加えない。既存のChrome利用とタブ後片付けを保持。実装中画像は事前の画像回答の代用にしない。未使用helperの全面監査は必須化しない。",
+    "workflow-score-to-target": "内部の比較・採点や品質保証の別モデルレビューを本人の明示依頼時だけに制限する新禁止は加えない。採点を本人の同対象画像回答や品質/AI判定の証明にしない。追加テストは実害と影響範囲で選ぶ。",
+    "workflow-threads-manager": "ホスト固有tool不在だけで有用な担当/依存/状態/再開の原則を全除外しない。AI提案を本人承認へ昇格しない一方、正規APIで照合した本人返信は担当/履歴を経由しても対象・出所とともに引き継ぐ。",
+    "workflow-ship-change": "Prd限定はGitHub実owner AutoDevJapan/BM1314/mashfrombandの範囲。他owner/顧客契約は先方規則を保つ。50MB等の技術値だけで承認待ちを増やさず、許可済み通常公開を聞き直さない。",
+    "aura-asset-images": "人物画像を仮置き用途へ一括制限しない。画像の権利と実績表示の真実性を個別確認。未確認の直URLや高解像度への文字置換は採用せず、比率・切り抜き手順の部分統合は検討を続ける。",
+    "unsplash-asset-images": "人物画像を仮置きへ一括制限せず権利と表示の真実性で判断する。外部写真の権利はroot MITから推定しない。未検証の画像配信パラメータを共通仕様にしない。",
+    "audit-ai-design-slop": "ARTICLEの第三者派生元の許諾は未確認。未確認のARTICLE全面コピーを必須とせず、作者手順の採用範囲と参照先を切り分ける。",
+    "no-ai-design-slop": "ARTICLEの第三者派生元の許諾は未確認。ARTICLE丸ごとのコピーを先に決めず、作者手順の有用部分と既存の見た目確認方針を照合する。",
+    "design-first-ui-prompting": "見た目の方向は具体画像と同対象の明示回答へつなぐ。書体・外部ツールを一括受入せず、技術的細部を毎回質問する規則を加えない。"
+  },
+  "actual_existing_comparison": {
+    "qualified_single_file_reads": 3,
+    "body": "webgl-retina-before.json",
+    "plan": "webgl-retina-integration-plan-v3.json",
+    "plan_sha256": "43d95f23efdd849de0683770e177d49e81080873ddbe9160cfc7b4b7494565e8",
+    "index_and_existing_guide_read": true,
+    "unknown_guides_bulk_read": false,
+    "regular_execution_review_approved_read_only": true,
+    "guard_still_unverified": true,
+    "central_write": 6,
+    "managed_plugin_or_system_skill_modified": false,
+    "gto_binary_on_path": false
+  },
+  "review_pending": true,
+  "new_source_commands_executed": 0,
+  "new_parent_fulltext_read": 0,
+  "prior_parent_fulltext_read": 36,
+  "not_scope_limit": true
+}

@@ -32,17 +32,9 @@ fn same_keys(a: &Value, b: &Value) -> bool {
 }
 
 fn machine_identity_preserved(a: &Value, b: &Value) -> bool {
-    same_keys(a, b)
-        && [
-            "owner",
-            "guild",
-            "parent",
-            "todo_id",
-            "decision",
-            "resources",
-        ]
-        .iter()
-        .all(|key| a.get(key) == b.get(key))
+    // Scope may also contain image hashes, versions and risk boundaries.
+    // A changed normalized identity is never a usable display of this decision.
+    a.is_object() && a == b
 }
 
 // The legacy display redactor works on JSON text. A matching name must never

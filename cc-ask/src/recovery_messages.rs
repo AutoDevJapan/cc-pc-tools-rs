@@ -4331,6 +4331,7 @@ mod tests {
 
     #[test]
     fn first_clarification_accepts_a_question_about_necessity_but_not_a_choice() {
+        let mut mismatches = Vec::new();
         for (reply, accepted) in [
             ("その費用は必要ではないの？", true),
             ("なんで？", true),
@@ -4347,6 +4348,16 @@ mod tests {
             ("bを選べば費用はどうなる？", true),
             ("aにしたら何の機能が止まる？", true),
             ("aであれば費用は必要なの？", true),
+            ("なんでaがいいの？", true),
+            ("aがいい理由は？", true),
+            ("aが良いのはなぜ？", true),
+            ("なぜaにしたの？", true),
+            ("cにした理由は？", true),
+            ("aにすると何の機能が止まる？", true),
+            ("aにすると、何の機能が止まる？", true),
+            ("なぜaにしたらいいの？", true),
+            ("なぜか教えて", true),
+            ("なぜかな？", true),
             ("なぜなら安い", false),
             ("どうしてもaにしたい", false),
             ("どうしても必要", false),
@@ -4363,6 +4374,9 @@ mod tests {
             ("cで、なんで？", false),
             ("aにする。なんで必要？", false),
             ("dがいい。理由を教えて", false),
+            ("aにしたらいい。なんで迷うの？", false),
+            ("bを選べばいい。理由を教えて", false),
+            ("aにすると決めた。なんで必要？", false),
             ("必要じゃない。止めて", false),
             ("説明は不要、aで", false),
         ] {
@@ -4381,12 +4395,12 @@ mod tests {
             drop(server);
             proof["reply_body_sha256"] = json!(format!("{:x}", Sha256::digest(reply.as_bytes())));
             fs::write(&manifest, proof.to_string()).unwrap();
-            assert_eq!(
-                check_clarification(&mut ctx, &args, &manifest).is_ok(),
-                accepted,
-                "{reply}"
-            );
+            let actual = check_clarification(&mut ctx, &args, &manifest).is_ok();
+            if actual != accepted {
+                mismatches.push((reply, accepted, actual));
+            }
         }
+        assert!(mismatches.is_empty(), "{mismatches:?}");
     }
 
     #[test]

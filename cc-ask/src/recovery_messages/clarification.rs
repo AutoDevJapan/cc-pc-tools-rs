@@ -335,18 +335,43 @@ fn requests_explanation(body: &str) -> bool {
     {
         return false;
     }
-    // A commitment is different from asking about the consequences of an
-    // option. Inspect complete choice phrases before the explanatory clause.
+    // Inspect each clause: a question about an option is not a commitment, but
+    // a later explanatory question must not relabel an earlier "aで、" choice.
     let choice = regex::Regex::new(r"(?i)(?:^|[^a-z0-9ａ-ｚ０-９])[a-dａ-ｄ]\s*(?:で|を(?:選んだ|選ぶ|選びます|選びたい|選べ|選択|採用|希望)|に(?:する|し(?:ます|た|て|よう)|決め)|が(?:いい|良い)|採用)").unwrap();
-    for phrase in choice.find_iter(body) {
-        let remaining = &body[phrase.end()..];
-        if !["ら", "ば", "なら", "あれば", "あるなら", "したら", "すれば"]
-            .iter()
-            .any(|suffix| remaining.starts_with(suffix))
-        {
-            return false;
+    for clause in
+        body.split_inclusive(['。', '、', '，', ',', '！', '!', '？', '?', '\n', ';', '；'])
+    {
+        if !choice.is_match(clause) || explanation_requested(clause) {
+            continue;
+        }
+        for phrase in choice.find_iter(clause) {
+            if !conditional_option_tail(&clause[phrase.end()..]) {
+                return false;
+            }
         }
     }
+    explanation_requested(body)
+}
+
+fn conditional_option_tail(remaining: &str) -> bool {
+    let remaining = remaining.trim_start();
+    // "したらいい" is a recommendation unless the clause itself asks why.
+    if regex::Regex::new(r"^(?:ら|ば|なら|と)(?:いい|良い)")
+        .unwrap()
+        .is_match(remaining)
+    {
+        return false;
+    }
+    let bare = remaining.trim_end_matches([
+        '。', '、', '，', ',', '！', '!', '？', '?', '\n', ';', '；', ' ',
+    ]);
+    bare == "と"
+        || ["ら", "ば", "なら", "あれば", "あるなら", "したら", "すれば"]
+            .iter()
+            .any(|suffix| remaining.starts_with(suffix))
+}
+
+fn explanation_requested(body: &str) -> bool {
     let explicit = regex::Regex::new(
         r"(?i)説明(?:して|を(?:お願い|ください|聞きたい))|解説して|explain|clarif",
     )
@@ -369,13 +394,24 @@ fn requests_explanation(body: &str) -> bool {
         });
     let why = regex::Regex::new(r"なぜ|どうして|なんで")
         .unwrap()
-        .is_match(
-            &body
-                .replace("なぜなら", "")
-                .replace("なぜか", "")
-                .replace("どうしても", "")
-                .replace("なんでも", ""),
-        );
+        .find_iter(body)
+        .any(|word| {
+            let tail = &body[word.end()..];
+            match word.as_str() {
+                "なぜ" => {
+                    if tail.starts_with("なら") {
+                        return false;
+                    }
+                    tail.strip_prefix('か').is_none_or(|after| {
+                        ["教え", "分か", "わか", "な？", "な?"]
+                            .iter()
+                            .any(|text| after.starts_with(text))
+                    })
+                }
+                "どうして" | "なんで" => !tail.starts_with('も'),
+                _ => false,
+            }
+        });
     let question = body.contains(['?', '？'])
         || regex::Regex::new(r"(?:なの|ですか|ますか|どういう意味|何のため)\s*[。！!]*\s*$")
             .unwrap()

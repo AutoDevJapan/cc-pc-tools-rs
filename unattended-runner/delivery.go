@@ -161,19 +161,20 @@ func (r *Runner) questionContext(ctx context.Context, request *Request) error {
 type TodoRow struct {
 	conversationState  json.RawMessage
 	conversationScope  conversationTodoScope
-	ID                 uint64            `json:"id"`
-	Project            string            `json:"project"`
-	Status             string            `json:"status"`
-	Note               string            `json:"note"`
-	Spec               json.RawMessage   `json:"spec"`
-	Jobs               []json.RawMessage `json:"jobs"`
-	Progress           *uint8            `json:"progress"`
-	WaitOn             []uint64          `json:"wait_on"`
-	WaitReady          json.RawMessage   `json:"wait_ready"`
-	QuestionWait       json.RawMessage   `json:"owner_question_wait,omitempty"`
-	QuestionAnswers    []json.RawMessage `json:"owner_question_answer_receipts,omitempty"`
-	QuestionDeliveries []json.RawMessage `json:"owner_question_delivery_receipts,omitempty"`
-	ResumeGeneration   json.RawMessage   `json:"resume_generation,omitempty"`
+	ID                 uint64                         `json:"id"`
+	Project            string                         `json:"project"`
+	Status             string                         `json:"status"`
+	Note               string                         `json:"note"`
+	Spec               json.RawMessage                `json:"spec"`
+	Jobs               []json.RawMessage              `json:"jobs"`
+	Progress           *uint8                         `json:"progress"`
+	WaitOn             []uint64                       `json:"wait_on"`
+	WaitReady          json.RawMessage                `json:"wait_ready"`
+	QuestionWait       json.RawMessage                `json:"owner_question_wait,omitempty"`
+	QuestionAnswers    []json.RawMessage              `json:"owner_question_answer_receipts,omitempty"`
+	QuestionDeliveries []json.RawMessage              `json:"owner_question_delivery_receipts,omitempty"`
+	DirectionRecords   []conversationDirectionReceipt `json:"owner_direction_records,omitempty"`
+	ResumeGeneration   json.RawMessage                `json:"resume_generation,omitempty"`
 	Qualification      struct {
 		Receipt productRetryProof `json:"receipt"`
 	} `json:"product_resume_qualification"`
@@ -424,7 +425,7 @@ func (r *Runner) results(ctx context.Context) error {
 		if request == nil || request.Todo == 0 || request.Phase == "reported" || request.Phase == "status_answered" || request.Phase == "origin_blocked" || request.Phase == "product_reply_saved" || request.Phase == "product_reply_delivered" || request.Phase == "product_reply_applied" || r.isConfiguredRequestReport(request.Todo) {
 			continue
 		}
-		if request.Binding != nil || request.Phase == "source_edit_saved" || request.Phase == "source_edit_delivered" {
+		if request.Binding != nil || request.Phase == "source_edit_saved" || request.Phase == "source_edit_delivered" || request.Phase == "source_edit_applied" {
 			continue
 		}
 		r.State.ResultCursor = id

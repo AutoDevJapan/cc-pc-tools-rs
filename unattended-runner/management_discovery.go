@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"sort"
 	"strings"
 	"time"
@@ -28,7 +29,7 @@ func (r *Runner) discoverManagement(ctx context.Context, active []Thread) {
 		if _, ok := parents[t.Parent]; !ok || t.Guild != "" && t.Guild != scope.Guild || !monthlyID(t.ID) || (t.Type != 10 && t.Type != 11 && t.Type != 12) {
 			continue
 		}
-		if _, exists := r.State.Threads[t.ID]; !exists {
+		if old, exists := r.State.Threads[t.ID]; !exists || old.Managed {
 			t.Guild = scope.Guild
 			t.Managed = true
 			r.State.Threads[t.ID] = t
@@ -65,6 +66,11 @@ func (r *Runner) discoverManagement(ctx context.Context, active []Thread) {
 	s.Mode, s.Channel = parts[1], parts[0]
 	page, err = readMonthlyInventory(ctx, r, s, "", prior.Next, prior.BoundaryUnresolved)
 	if err != nil {
+		failure := monthlyFailure{Stage: "archive_source"}
+		_ = errors.As(err, &failure)
+		prior.FailureStage, prior.HTTPStatus, prior.Checked, prior.Complete = failure.Stage, failure.Status, r.Now().UTC().Format(time.RFC3339Nano), false
+		r.State.Discovery["management:"+key] = prior
+		_ = r.save()
 		r.DiscoveryErrors = append(r.DiscoveryErrors, "management_archive_unavailable")
 		return
 	}

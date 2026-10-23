@@ -51,6 +51,19 @@ func TestManagementScanCapturesRegisteredEditWithoutNewTask(t *testing.T) {
 	}
 }
 
+func TestManagementLegacyMetadataUpgradeDoesNotReplayCompletedTask(t *testing.T) {
+	r, c := fixture(t)
+	m := msg(c.Add(time.Second), "500", "300", "同じ完了済み指示")
+	q := captured(m, "reported", c)
+	q.Todo, q.Reported = 42, "complete"
+	typ := 0
+	attachments := []historyReadAttachment{}
+	changed, err := r.observeOrdinary(q, historyReadMessage{Message: m, Type: &typ, Attachments: &attachments})
+	if err != nil || changed || q.Phase != "reported" || q.Reported != "complete" || len(q.PriorVersions) != 0 {
+		t.Fatal("schema enrichment replayed a completed task", err)
+	}
+}
+
 func captured(m Message, phase string, c time.Time) *Request {
 	return &Request{Thread: m.Channel, Guild: "100", RecordVersion: 2, Message: m.ID, Author: m.Author.ID, Created: m.Timestamp, Edited: m.Edited, Acquired: c.Add(time.Minute).Format(time.RFC3339Nano), Source: "discord-api-v10", Text: m.Content, Key: requestKey(m.Channel, m.ID), Phase: phase}
 }

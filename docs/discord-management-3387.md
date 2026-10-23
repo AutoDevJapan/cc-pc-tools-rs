@@ -106,6 +106,8 @@ Request、Threads、Scans、Discoveryに状態を持ち、別の受信registry�
   timestampの同値境界は未確認のまま表示し、全件完了と呼ばない。
 - message型と添付は`historyReadMessage`を再利用する。欠落は未知であり、
   `attachments: []`と区別する。添付URLやファイル名を共通metadataへ出さない。
+  旧receiptが観測していない型・添付は未知を保持し、項目の追加だけを理由に
+  完了済みtaskを再配送しない。
 
 `intake status [--after <message-id>]`は最大50件のmetadataだけを返す。
 元投稿ID、本人ID、版hash、元ToDo、段階、`pending_owner: OMB`と次の手、

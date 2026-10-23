@@ -45,6 +45,12 @@ func (r *Runner) observeOrdinary(q *Request, live historyReadMessage) (bool, err
 	next := *q
 	next.Text, next.Edited = safeText(live.Content, r.Token), live.Edited
 	next.MessageType, next.Attachments = live.Type, live.Attachments
+	// Old saved receipts did not observe type/attachments. Keep that historical
+	// unknown rather than replaying every completed task on a schema upgrade.
+	// Actual text/edit changes still acquire the complete current observation.
+	if q.Todo != 0 && q.MessageType == nil && q.Attachments == nil && next.Text == q.Text && next.Edited == q.Edited {
+		return false, nil
+	}
 	if len(next.Text) > 32<<10 {
 		return false, errors.New("ordinary source limit exceeded")
 	}

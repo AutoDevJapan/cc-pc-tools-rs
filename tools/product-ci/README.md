@@ -220,9 +220,10 @@ Each invocation freezes `repo_id`, `pr`, `head_sha`, `head_tree`, `base_sha`,
 `run_id`, `attempt`, sorted `job_ids` (up to eight; secret requires one),
 `kind` (`secret` or `codeql`), `context_sha` (merge context for secret; empty
 for CodeQL), `review_sha256`, and `acceptance_sha256`. A new correction needs
-fresh independent admission. That broader normal-head/CodeQL admission remains
-unfinished under ToDo3059; this finite runtime admits only its original fixed
-secret job. Former caller-selected pin entry points reject before opening any
+fresh independent admission. The original finite constructor still admits only
+its original fixed secret job. The separately answered successor route implements
+source-bound corrections and CodeQL admission; its operational acceptance remains
+pending under ToDo3059. Former caller-selected pin entry points reject before opening any
 input. The retained planner schema names `review_file` and `acceptance_file` handoff
 envelopes. Each envelope binds `origin_todo_id:3056`, `repo_id`, `pr`,
 `head_sha`, `head_tree`, its `kind` (`review` or `acceptance`), `success:true`,
@@ -251,7 +252,7 @@ still accept the already assigned job. Only an as-yet-unobserved assignment
 gets up to three API reads separated by 500 ms within the existing callback
 deadline; an invalid observed assignment is rejected immediately. CodeQL's
 head branch must equal this PR's branch or its exact numeric
-`refs/pull/995/head`, whose Git ref SHA is independently checked. Other PR
+`refs/pull/<frozen-PR>/head`, whose Git ref SHA is independently checked. Other PR
 refs and unrelated branches are rejected. A new invocation can retain
 successful members of the same frozen matrix while serving its remaining jobs.
 If the source advances after an official job ends, the helper's final source

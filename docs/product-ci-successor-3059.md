@@ -1,14 +1,18 @@
-# 同じ製品作業の次の修正を検査する
+# 同じ製品作業の次の修正をテストする
 
 Issue267 / ToDo3059。元の995/939の成功と旧4候補を保持する。
 2026-10-23に正規取得した本人回答aは、同じ製品作業3056で製品担当が確定した
-今後の修正PRをrepository1285649124の検査対象へ加える判断である。
+今後の修正PRをrepository1285649124のテスト対象へ加える判断である。
 別案件・別repo・任意callerのPR指定へ広げない。追加費用や本人のPC操作は不要。
 
 新しい`current-pr-successor-qualify/inspect/job`は、既存995専用runtimeや有限batchと
 別の入口とする。実行版に付随する`successor-input-3059.json`は、正規本人回答の
-元ファイルと、製品担当のcanonical handoffの位置だけを持つ。両位置と本人回答の
-byte hashはレビュー済みsourceへ固定し、locator自身に対象追加の権限を持たせない。
+元ファイルと、製品担当のcanonical handoffへの参照だけを持つ。本人回答の位置と
+byte hashはレビュー済みsourceへ固定する。handoffは既存の正式locatorのrootから
+`filepath.Join(root, ".ci-work", "current-ci-successor-handoff-3056.private.json")`として
+導く。rootのGit originを確認し、locatorのhandoffもこの場所と一致しなければ拒否する。
+受け手のworktreeや、別の場所へコピーしたhandoffは使えない。locator自身には
+対象追加や保存場所の変更を認める権限はない。
 原回答の本人・元質問・元ToDo・aの意味と同じscopeを照合する。
 
 製品担当は`.ci-work/current-ci-successor-handoff-3056.private.json`を発行する。
@@ -31,8 +35,13 @@ todo_id3059/origin_todo_id3056/repo1285649124は固定する。PR番号は製品
    成功済みの検査をこの機能の受入のためだけに再発火しない。
 
 元ToDo/specの位置・hashと明示停止の照合は既存runtimeと共通する。
+この新経路は、修復担当3059がdoneになっても、元の製品作業3056がtodo/doing/waitで
+続いている間は利用できる。3056のdoneや両方の明示停止では拒否する。3059が未完なら
+従来どおりdispatchableが必要である。旧v1 runtimeの期間条件は変えない。
+PR995/939も、新しい親の確定記録と同じ要件を満たせば番号だけでは除外しない。
+merge済みや成功済みのjobを再発火することは認めず、openとqueuedの既存条件を保つ。
 新しい保存先や原出力の読取にも通常guardを使う。元の未分類データをコピーして
 資格を作ったり、原の製品source/CSV/workflowをこの担当で変更したりしない。
-原出力は各4MiB、secret workflow digestとCodeQL matrixは従来の検査を維持する。
+原出力は各4MiB、secret workflow digestとCodeQL matrixは従来の照合を維持する。
 
 これは今回の実装仕様であり、新経路の配布・実job成功を主張する文書ではない。

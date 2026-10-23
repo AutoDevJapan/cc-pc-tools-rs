@@ -8,6 +8,11 @@ import (
 	"testing"
 )
 
+func constructTestSuccessor(p policy, refs map[string]string, locations map[string]struct{ pathSHA, contentSHA string }, readable func(string) bool) (Snapshot, error) {
+	identity := successorIdentity{Author: hash([]byte("synthetic-author")), Message: hash([]byte("synthetic-message")), Question: hash([]byte("synthetic-question")), Request: hash([]byte("synthetic-request"))}
+	return constructSuccessorWithIdentity(p, refs, locations, readable, identity)
+}
+
 func successorFixture(t *testing.T, kind string, pr int, head string) (*fixture, map[string]string, map[string]struct{ pathSHA, contentSHA string }) {
 	t.Helper()
 	f, h := runtimeFixture(t, kind, head)
@@ -18,10 +23,10 @@ func successorFixture(t *testing.T, kind string, pr int, head string) (*fixture,
 		result.PR = pr
 		ref.SHA = f.put(ref.File, result).sha
 	}
-	handoff := filepath.Join(f.p.root, ".ci-work", runtimeLeaf)
+	handoff := filepath.Join(f.p.root, ".ci-work", successorLeaf)
 	f.put(handoff, h)
-	context, _ := json.Marshal(map[string]any{"request_id": "conversation-v1-305da59f578d2683be0abddca6f9b36d", "question_message_id": "1562901983306711121", "original_decision": map[string]any{"todo_id": 3059, "scope": map[string]string{"action": "extend-current-pr-runtime-to-parent-qualified-successor-corrections"}}})
-	owner := f.put(filepath.Join(f.p.root, "synthetic-owner.json"), map[string]any{"source": "discord-api-v10", "author_id": "730822776147148835", "message_id": "1562951926155317390", "thread_id": "1562901983306711121", "text": "a\nsynthetic fixture", "question_context": string(context)})
+	context, _ := json.Marshal(map[string]any{"request_id": "synthetic-request", "question_message_id": "synthetic-question", "original_decision": map[string]any{"todo_id": 3059, "scope": map[string]string{"action": "extend-current-pr-runtime-to-parent-qualified-successor-corrections"}}})
+	owner := f.put(filepath.Join(f.p.root, "synthetic-owner.json"), map[string]any{"source": "discord-api-v10", "author_id": "synthetic-author", "message_id": "synthetic-message", "thread_id": "synthetic-question", "text": "a\nsynthetic fixture", "question_context": string(context)})
 	refs := map[string]string{"owner_reply": owner.path, "handoff": handoff}
 	locations := map[string]struct{ pathSHA, contentSHA string }{"owner_reply": {locationDigest(owner.path), owner.sha}, "handoff": {locationDigest(handoff), ""}}
 	return f, refs, locations
@@ -31,7 +36,7 @@ func TestSuccessorAuthorityAndFrozenDifferentSources(t *testing.T) {
 	for _, kind := range []string{"secret", "codeql"} {
 		for i, pr := range []int{1016, 1017} {
 			f, refs, locations := successorFixture(t, kind, pr, strings.Repeat(string(rune('c'+i)), 40))
-			s, err := constructSuccessor(f.p, refs, locations, func(string) bool { return true })
+			s, err := constructTestSuccessor(f.p, refs, locations, func(string) bool { return true })
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -103,7 +108,7 @@ func TestSuccessorRejectsAuthorityBeforeParentRead(t *testing.T) {
 				f.put(f.p.db, db)
 			}
 			parentRead := false
-			_, err := constructSuccessor(f.p, refs, locations, func(path string) bool {
+			_, err := constructTestSuccessor(f.p, refs, locations, func(path string) bool {
 				if path == refs["handoff"] {
 					parentRead = true
 				}
@@ -135,10 +140,70 @@ func TestSuccessorRejectsMismatchedParentAndGuard(t *testing.T) {
 				os.WriteFile(filepath.Join(f.p.root, "review-new-output.json"), []byte("changed"), 0600)
 			}
 			f.put(refs["handoff"], h)
-			_, err := constructSuccessor(f.p, refs, locations, func(path string) bool { return fault != "guard" || path != h.Review.File })
+			_, err := constructTestSuccessor(f.p, refs, locations, func(path string) bool { return fault != "guard" || path != h.Review.File })
 			if err == nil {
 				t.Fatal("mismatched source or denied evidence accepted")
 			}
 		})
+	}
+}
+
+func TestSuccessorRejectsReceiverHandoffOutsideVerifiedRoot(t *testing.T) {
+	f, refs, locations := successorFixture(t, "secret", 1016, strings.Repeat("c", 40))
+	receiver, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	copy := filepath.Join(receiver, "current-ci-successor-handoff-3056.private.json")
+	if err := os.WriteFile(copy, mustReadFixture(t, refs["handoff"]), 0600); err != nil {
+		t.Fatal(err)
+	}
+	refs["handoff"] = copy
+	locations["handoff"] = struct{ pathSHA, contentSHA string }{locationDigest(copy), ""}
+	if _, err := constructTestSuccessor(f.p, refs, locations, func(string) bool { return true }); err == nil {
+		t.Fatal("receiver-owned handoff outside verified source root accepted")
+	}
+}
+
+func TestSuccessorSurvivesRepairCompletionWhileProductWorkContinues(t *testing.T) {
+	f, refs, locations := successorFixture(t, "secret", 1016, strings.Repeat("c", 40))
+	var db map[string]any
+	if err := json.Unmarshal(mustReadFixture(t, f.p.db), &db); err != nil {
+		t.Fatal(err)
+	}
+	for _, value := range db["items"].([]any) {
+		row := value.(map[string]any)
+		if row["id"] == float64(3059) {
+			row["status"], row["dispatchable"] = "done", false
+		}
+	}
+	f.put(f.p.db, db)
+	if _, err := constructTestSuccessor(f.p, refs, locations, func(string) bool { return true }); err != nil {
+		t.Fatalf("repair completion disabled still-authorized product work: %v", err)
+	}
+	// A completed repair is not an exemption from a later explicit owner stop.
+	for _, value := range db["items"].([]any) {
+		row := value.(map[string]any)
+		if row["id"] == float64(3059) {
+			row["owner_stopped"] = true
+		}
+	}
+	f.put(f.p.db, db)
+	if _, err := constructTestSuccessor(f.p, refs, locations, func(string) bool { return true }); err == nil {
+		t.Fatal("completed repair ignored an explicit stop")
+	}
+}
+
+func TestSuccessorRejectsV1AtCanonicalParentLocation(t *testing.T) {
+	f, refs, locations := successorFixture(t, "secret", 1016, strings.Repeat("c", 40))
+	var h runtimeHandoff
+	if err := json.Unmarshal(mustReadFixture(t, refs["handoff"]), &h); err != nil {
+		t.Fatal(err)
+	}
+	h.Version = 1
+	f.put(refs["handoff"], h)
+	_, err := constructTestSuccessor(f.p, refs, locations, func(string) bool { return true })
+	if err == nil || !strings.Contains(err.Error(), "runtime_handoff") {
+		t.Fatal("v1 handoff admitted through successor route")
 	}
 }

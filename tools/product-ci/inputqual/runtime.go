@@ -78,6 +78,12 @@ func runtimeHex(s string, n int) bool {
 }
 
 func runtimeScope(p policy) bool {
+	return runtimeScopeFor(p, false)
+}
+
+// The answered successor scope outlives the repair task, but never the original
+// product work. Explicit stops and immutable scope anchors still apply to both.
+func runtimeScopeFor(p policy, successor bool) bool {
 	if p.origin == nil || !p.origin(p.root) {
 		return false
 	}
@@ -114,13 +120,17 @@ func runtimeScope(p policy) bool {
 			Spec         string `json:"spec"`
 			Dispatchable bool   `json:"dispatchable"`
 		}
-		if decode(raw, &row, false) != nil || seen[id.ID] || explicitStop(raw) || (row.Status != "doing" && row.Status != "todo" && row.Status != "wait") {
+		if decode(raw, &row, false) != nil || seen[id.ID] || explicitStop(raw) {
+			return false
+		}
+		repairDone := successor && id.ID == 3059 && row.Status == "done"
+		if !repairDone && row.Status != "doing" && row.Status != "todo" && row.Status != "wait" {
 			return false
 		}
 		spec := p.originSpec.path
 		if id.ID == 3059 {
 			spec = p.parentSpec.path
-			if !row.Dispatchable {
+			if !repairDone && !row.Dispatchable {
 				return false
 			}
 		}
@@ -137,7 +147,7 @@ func constructRuntime(p policy, readable func(string) bool) (Snapshot, error) {
 }
 
 func constructRuntimeAt(p policy, readable func(string) bool, handoff string, successor bool) (Snapshot, error) {
-	if !runtimeScope(p) {
+	if !runtimeScopeFor(p, successor) {
 		return Snapshot{}, rejected("runtime_task_scope")
 	}
 	// The parent-selected canonical handoff is the trust boundary. There is no

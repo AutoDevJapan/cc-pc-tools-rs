@@ -24,6 +24,9 @@ func successorCLI(ctx context.Context, args []string) error {
 	if err != nil {
 		return err
 	}
+	if job && ((b.Kind == "secret" && len(args) != 4) || (b.Kind == "codeql" && len(args) != 3)) {
+		return errors.New("successor execution arguments rejected")
+	}
 	if qualify {
 		return json.NewEncoder(os.Stdout).Encode(s.Report())
 	}
@@ -39,9 +42,6 @@ func successorCLI(ctx context.Context, args []string) error {
 	}
 	if inspect {
 		return json.NewEncoder(os.Stdout).Encode(p)
-	}
-	if (b.Kind == "secret" && len(args) != 4) || (b.Kind == "codeql" && len(args) != 3) {
-		return errors.New("successor execution arguments rejected")
 	}
 	scanner := ""
 	if len(args) == 4 {

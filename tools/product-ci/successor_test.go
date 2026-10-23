@@ -90,3 +90,88 @@ func TestSuccessorRejectsUnqualifiedScopeAndOldSource(t *testing.T) {
 		})
 	}
 }
+
+func TestSuccessorPlanRoundTripHooksAndLiveAdmission(t *testing.T) {
+	for _, kind := range []string{"secret", "codeql"} {
+		t.Run(kind, func(t *testing.T) {
+			pin, review, acceptance, read, path, workflow := successorPinFixture(t, kind, 1016)
+			b, err := parseCurrentPRSnapshot(pin, review, acceptance)
+			if err != nil {
+				t.Fatal(err)
+			}
+			p, err := planCurrentPRWithPolicy(context.Background(), b, read, path, workflow)
+			if err != nil {
+				t.Fatal(err)
+			}
+			packet := p
+			packet.Repo = "" // The name is carried by the separate private packet.
+			data, err := json.Marshal(packet)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var round codeQLPlan
+			if err := json.Unmarshal(data, &round); err != nil || round != packet || !validGuestPlan(round) {
+				t.Fatal("successor authority changed across host/guest JSON")
+			}
+			round.Repo = p.Repo
+			contextSHA := p.SHA
+			if kind == "secret" {
+				contextSHA = p.ContextSHA
+			}
+			if err := checkCodeQLHook(round, p.Repo, contextSHA, fmt.Sprint(p.RunID), fmt.Sprint(p.Attempt)); err != nil {
+				t.Fatal(err)
+			}
+			if checkCodeQLHook(round, p.Repo, strings.Repeat("e", 40), fmt.Sprint(p.RunID), fmt.Sprint(p.Attempt)) == nil {
+				t.Fatal("changed successor hook source accepted")
+			}
+			if kind != "codeql" {
+				return
+			}
+			assigned := func(ctx context.Context, endpoint string, out any) error {
+				if err := read(ctx, endpoint, out); err != nil {
+					return err
+				}
+				if strings.Contains(endpoint, "/actions/jobs/") {
+					data, _ := json.Marshal(out)
+					var job map[string]any
+					json.Unmarshal(data, &job)
+					job["runner_name"], job["runner_id"], job["status"] = "owned-successor", 44, "in_progress"
+					data, _ = json.Marshal(job)
+					return json.Unmarshal(data, out)
+				}
+				return nil
+			}
+			c := candidate{b.RepoID, b.PR, b.Head}
+			if err := verifyCodeQLAdmissionPlan(context.Background(), c, p, "owned-successor", assigned); err != nil {
+				t.Fatal(err)
+			}
+			stale := func(ctx context.Context, endpoint string, out any) error {
+				if strings.Contains(endpoint, "/pulls/1016") {
+					return fmt.Errorf("synthetic source changed")
+				}
+				return assigned(ctx, endpoint, out)
+			}
+			if verifyCodeQLAdmissionPlan(context.Background(), c, p, "owned-successor", stale) == nil {
+				t.Fatal("live successor source change accepted")
+			}
+		})
+	}
+}
+
+func TestSuccessorBindingsCannotEnterOldFiniteBatch(t *testing.T) {
+	for _, index := range []int{0, 1} {
+		p := batchFixture()
+		b := p.Batch[index]
+		b.OriginTodo, b.OwnerScopeSHA256 = 3056, successorReceiptFixture
+		if !b.valid() {
+			t.Fatal("positive successor control invalid")
+		}
+		p.Batch[index] = b
+		if validFiniteBindings(p.Batch) || validFiniteSecretBatch(p) {
+			t.Fatal("successor authority entered finite batch")
+		}
+		if index == 1 && finiteDependencyBinding(b) {
+			t.Fatal("successor entered old dependency route")
+		}
+	}
+}

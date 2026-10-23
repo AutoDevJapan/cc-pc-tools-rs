@@ -210,6 +210,12 @@ retain `all_required_checks_success=false`.
 PR995 only. The original four fixed candidates and release modes are unchanged.
 See [the acceptance specification](current-pr.md) (Issue267, ToDo3059).
 
+`current-pr-successor-qualify/inspect/job` adds a separate owner-approved route
+for later corrections in this same original product work. The canonical product
+parent supplies the frozen PR, source, original review and acceptance; callers
+cannot choose a PR or input path. See [the successor specification](../../docs/product-ci-successor-3059.md).
+Qualification and fixture results do not establish operational job success.
+
 Each invocation freezes `repo_id`, `pr`, `head_sha`, `head_tree`, `base_sha`,
 `run_id`, `attempt`, sorted `job_ids` (up to eight; secret requires one),
 `kind` (`secret` or `codeql`), `context_sha` (merge context for secret; empty

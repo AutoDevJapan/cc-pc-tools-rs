@@ -133,6 +133,10 @@ func runtimeScope(p policy) bool {
 }
 
 func constructRuntime(p policy, readable func(string) bool) (Snapshot, error) {
+	return constructRuntimeAt(p, readable, filepath.Join(p.root, ".ci-work", runtimeLeaf), false)
+}
+
+func constructRuntimeAt(p policy, readable func(string) bool, handoff string, successor bool) (Snapshot, error) {
 	if !runtimeScope(p) {
 		return Snapshot{}, rejected("runtime_task_scope")
 	}
@@ -155,12 +159,19 @@ func constructRuntime(p policy, readable func(string) bool) (Snapshot, error) {
 	// Keep the new operational handoff in the independently verified original
 	// helper source's ignored records directory, which the ordinary guard can
 	// classify without changing the guard's scope or the immutable specs.
-	data, e := read(filepath.Join(p.root, ".ci-work", runtimeLeaf), 64<<10)
+	data, e := read(handoff, 64<<10)
 	if e != nil {
 		return Snapshot{}, e
 	}
 	var h runtimeHandoff
-	if decode(data, &h, true) != nil || h.Version != 1 || h.Task != 3059 || h.Origin != 3056 || h.Repo != 1285649124 || h.PR != 995 || !runtimeHex(h.Head, 40) || !runtimeHex(h.Tree, 40) || !runtimeHex(h.Base, 40) || h.Run <= 0 || h.Attempt <= 0 || len(h.Jobs) == 0 || len(h.Jobs) > 8 || (h.Kind != "secret" && h.Kind != "codeql") || (h.Kind == "secret" && (len(h.Jobs) != 1 || !runtimeHex(h.Context, 40))) || (h.Kind == "codeql" && h.Context != "") {
+	if decode(data, &h, true) != nil {
+		return Snapshot{}, rejected("runtime_handoff")
+	}
+	validTarget := h.Version == 1 && h.PR == 995
+	if successor {
+		validTarget = h.Version == 2 && h.PR > 0
+	}
+	if !validTarget || h.Task != 3059 || h.Origin != 3056 || h.Repo != 1285649124 || !runtimeHex(h.Head, 40) || !runtimeHex(h.Tree, 40) || !runtimeHex(h.Base, 40) || h.Run <= 0 || h.Attempt <= 0 || len(h.Jobs) == 0 || len(h.Jobs) > 8 || (h.Kind != "secret" && h.Kind != "codeql") || (h.Kind == "secret" && (len(h.Jobs) != 1 || !runtimeHex(h.Context, 40))) || (h.Kind == "codeql" && h.Context != "") {
 		return Snapshot{}, rejected("runtime_handoff")
 	}
 	previous := int64(0)
@@ -219,6 +230,10 @@ func constructRuntime(p policy, readable func(string) bool) (Snapshot, error) {
 			acceptance = envelope
 		}
 	}
+	origin, approvedScope := 0, ""
+	if successor {
+		origin, approvedScope = 3056, SuccessorScopeSHA256
+	}
 	pin, e := json.Marshal(struct {
 		Repo           int64   `json:"repo_id"`
 		PR             int     `json:"pr"`
@@ -234,10 +249,15 @@ func constructRuntime(p policy, readable func(string) bool) (Snapshot, error) {
 		Acceptance     string  `json:"acceptance_sha256"`
 		ReviewFile     string  `json:"review_file"`
 		AcceptanceFile string  `json:"acceptance_file"`
-	}{h.Repo, h.PR, h.Head, h.Tree, h.Base, h.Run, h.Attempt, h.Jobs, h.Kind, h.Context, hash(review), hash(acceptance), "canonical-parent-review", "canonical-parent-acceptance"})
+		Origin         int     `json:"origin_todo_id,omitempty"`
+		OwnerScope     string  `json:"owner_scope_sha256,omitempty"`
+	}{h.Repo, h.PR, h.Head, h.Tree, h.Base, h.Run, h.Attempt, h.Jobs, h.Kind, h.Context, hash(review), hash(acceptance), "canonical-parent-review", "canonical-parent-acceptance", origin, approvedScope})
 	if e != nil {
 		return Snapshot{}, rejected("runtime_pin")
 	}
 	r := Report{Qualified: true, Purpose: "original-3059-runtime-current-pr-ci", Task: 3059, OriginTask: 3056, RepoID: h.Repo, PR: h.PR, Head: h.Head, Tree: h.Tree, Run: h.Run, Job: h.Jobs[0], PinSHA: hash(pin), ReviewSHA: hash(review), AcceptanceSHA: hash(acceptance), ScopeSHA: p.parentSpec.sha, IndependentReceiptSHA: hash(data), GeneralClassificationUnverified: true, InputConstruction: "official-helper-from-canonical-product-parent-handoff", ConstructedInputCreator: "official-product-ci-helper", ReviewRepresentation: "source-bound original output; parent result and raw output hash verified", BaseAuthority: "canonical-product-parent-handoff", ContextAuthority: "canonical-handoff; requires live workflow match"}
+	if successor {
+		r.Purpose, r.OwnerScopeSHA = "original-3059-qualified-product-successor-ci", approvedScope
+	}
 	return Snapshot{pin: pin, review: review, acceptance: acceptance, report: r}, nil
 }

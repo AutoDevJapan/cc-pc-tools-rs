@@ -41,8 +41,8 @@ func (ids currentPRJobIDs) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ids[:n])
 }
 
-// This is an additional finite route, not a replacement for the four original
-// candidates or a latest-head policy. Every invocation supplies one frozen pin.
+// Qualified routes retain one frozen pin per invocation; none follows a moving
+// branch. Successors additionally retain the approved scope and original parent.
 type currentPRBinding struct {
 	RepoID           int64           `json:"repo_id"`
 	PR               int             `json:"pr"`
@@ -56,6 +56,8 @@ type currentPRBinding struct {
 	Context          string          `json:"context_sha"`
 	ReviewSHA256     string          `json:"review_sha256"`
 	AcceptanceSHA256 string          `json:"acceptance_sha256"`
+	OriginTodo       int             `json:"origin_todo_id,omitempty"`
+	OwnerScopeSHA256 string          `json:"owner_scope_sha256,omitempty"`
 }
 
 type currentPRInput struct {
@@ -69,10 +71,14 @@ func lowerHex(s string, n int) bool {
 }
 
 func (b currentPRBinding) valid() bool {
-	if b.PR == 939 {
+	if b.PR == 939 && !b.successor() {
 		return finiteDependencyBinding(b)
 	}
-	if !(b.RepoID == 1285649124 && b.PR == 995 && lowerHex(b.Head, 40) && lowerHex(b.Tree, 40) && lowerHex(b.Base, 40) && b.RunID > 0 && b.Attempt > 0 && lowerHex(b.ReviewSHA256, 64) && lowerHex(b.AcceptanceSHA256, 64) && ((b.Kind == "secret" && lowerHex(b.Context, 40)) || (b.Kind == "codeql" && b.Context == ""))) {
+	target := b.PR == 995 && b.OriginTodo == 0 && b.OwnerScopeSHA256 == ""
+	if b.successor() {
+		target = b.PR > 0
+	}
+	if !(b.RepoID == 1285649124 && target && lowerHex(b.Head, 40) && lowerHex(b.Tree, 40) && lowerHex(b.Base, 40) && b.RunID > 0 && b.Attempt > 0 && lowerHex(b.ReviewSHA256, 64) && lowerHex(b.AcceptanceSHA256, 64) && ((b.Kind == "secret" && lowerHex(b.Context, 40)) || (b.Kind == "codeql" && b.Context == ""))) {
 		return false
 	}
 	previous, ended := int64(0), false
@@ -87,6 +93,10 @@ func (b currentPRBinding) valid() bool {
 		previous = id
 	}
 	return b.JobIDs[0] > 0 && (b.Kind != "secret" || b.JobIDs[1] == 0)
+}
+
+func (b currentPRBinding) successor() bool {
+	return b.OriginTodo == 3056 && b.OwnerScopeSHA256 == inputqual.SuccessorScopeSHA256
 }
 
 func readCurrentPRInput(file string) (currentPRBinding, error) {
@@ -151,7 +161,7 @@ type currentPREvidence struct {
 func verifyCurrentPREvidence(data []byte, b currentPRBinding, kind string) error {
 	var v currentPREvidence
 	origin := 3056
-	if b.PR == 939 {
+	if b.PR == 939 && !b.successor() {
 		origin = 3059
 	}
 	d := json.NewDecoder(bytes.NewReader(data))
@@ -391,13 +401,16 @@ func replanProductJob(ctx context.Context, c candidate, p codeQLPlan, read api) 
 
 func currentPRGuestPlan(p codeQLPlan) bool {
 	b := p.Current
-	if b.PR != 995 {
+	if b.PR != 995 && !b.successor() {
 		return false
 	}
 	return b.valid() && p.RepoID == b.RepoID && p.PR == b.PR && p.Candidate == b.Head && p.SHA == b.Head && p.Tree == b.Tree && p.RunID == b.RunID && p.Attempt == b.Attempt && p.ContextSHA == b.Context && ((b.Kind == "secret" && p.Kind == "secret" && p.Label == secretLabel(b.RepoID) && p.Role == "candidate-secret-workflow") || (b.Kind == "codeql" && p.Kind == "" && p.Label == codeQLLabel(b.RepoID) && p.Role == "candidate"))
 }
 
 func currentPRCLI(ctx context.Context, args []string) error {
+	if len(args) > 0 && strings.HasPrefix(args[0], "current-pr-successor-") {
+		return successorCLI(ctx, args)
+	}
 	if len(args) == 1 && args[0] == "current-pr-batch-qualify" {
 		snapshot, err := inputqual.ConstructDependency()
 		if err != nil {

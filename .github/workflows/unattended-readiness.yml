@@ -59,6 +59,17 @@ jobs:
           cache: false
       - run: go test -race -timeout 120s ./...
       - run: go vet ./...
+      - name: Accept delegated implementation through the canonical writer
+        if: matrix.module == 'unattended-runner' && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          cargo build --locked -p cc-todo --bin todo
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $metadata = cargo metadata --no-deps --format-version 1 | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:CC_CONVERSATION_TODO_BINARY = Join-Path $metadata.target_directory 'debug/todo.exe'
+          go test -race -timeout 120s -run '^TestImplementationNative|^TestDirectionActual' ./...
+          exit $LASTEXITCODE
       - run: go build -trimpath .
   repair-guard:
     if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)

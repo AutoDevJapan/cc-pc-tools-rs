@@ -30,7 +30,24 @@ type monthlyAuditScope struct {
 }
 
 func (s monthlyAuditScope) valid(domain string) bool {
-	return s.Domain == domain && s.Todo == 3327 && s.Guild == monthlyGuild && s.Owner == monthlyOwner && s.Since == monthlySince && s.Until == monthlyUntil && !mustHistoryTime(s.Until).After(time.Now())
+	return s.validAt(domain, time.Now())
+}
+
+func (s monthlyAuditScope) validAt(domain string, now time.Time) bool {
+	if s.Domain != domain || s.Guild != monthlyGuild || s.Owner != monthlyOwner {
+		return false
+	}
+	if s.Todo == 3327 {
+		// Existing receipts/cursors retain the original, exact audit authority.
+		return s.Since == monthlySince && s.Until == monthlyUntil && !mustHistoryTime(s.Until).After(now)
+	}
+	if s.Todo != 3387 {
+		return false
+	}
+	since, sinceErr := time.Parse(time.RFC3339Nano, s.Since)
+	until, untilErr := time.Parse(time.RFC3339Nano, s.Until)
+	lower := time.Date(2026, 9, 23, 0, 0, 0, 0, time.FixedZone("JST", 9*60*60))
+	return sinceErr == nil && untilErr == nil && !since.Before(lower) && since.Before(until) && until.Sub(since) <= 31*24*time.Hour && !until.After(now)
 }
 func (s monthlyAuditScope) loaderScope() historyReadScope {
 	return historyReadScope{Domain: "discord-history-read-scope-v1", Todo: s.Todo, Guild: s.Guild, Owner: s.Owner, Since: s.Since, Until: s.Until, Threads: []string{"1"}}

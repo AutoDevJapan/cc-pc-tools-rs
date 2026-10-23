@@ -339,8 +339,10 @@ fn requests_explanation(body: &str) -> bool {
     // cannot relabel a commitment; a bare "なぜ、" still introduces a question.
     let choice = regex::Regex::new(r"(?i)[a-dａ-ｄ]\s*(?:で|を(?:選んだ|選ぶ|選びます|選びたい|選べ|選択|採用|希望)|に(?:する|すれ|し(?:ます|た|て|よう)|決め)|が(?:いい|良い)|採用)").unwrap();
     let separator = regex::Regex::new(r"[、，,\s…]+|けど|けれど|ので|のに|から").unwrap();
-    let reason_query_tail =
-        regex::Regex::new(r"のか(?:を)?教えて(?:ください|ほしい(?:です)?)?[。!！]*$").unwrap();
+    let reason_query_tail = regex::Regex::new(
+        r"(?:のか(?:を)?教えて(?:ください|ほしい(?:です)?)?|ですか|ますか|でしょうか)[。!！]*$",
+    )
+    .unwrap();
     for sentence in body.split_inclusive(['。', '！', '!', '？', '?', '\n', ';', '；']) {
         let options: Vec<_> = choice.find_iter(sentence).collect();
         let mut spans = Vec::new();
@@ -415,7 +417,20 @@ fn directive_before_reason(body: &str, option: &str) -> bool {
     let no_ka = regex::Regex::new(r"のか(?:を)?教えて").unwrap();
     let cutoff = [
         topic.find(body).map(|m| m.start()),
-        why_start(body),
+        why_start(body).filter(|&start| {
+            let before = &body[..start];
+            // Colloquial causes such as "大丈夫なんで" / "十分なんです"
+            // must not hide a following instruction. A standalone reason word
+            // or nominal question can end the predicate before that word.
+            before.is_empty()
+                || ["の", "のは", "のが", "のって", "のも"]
+                    .iter()
+                    .any(|ending| before.ends_with(ending))
+                || before
+                    .chars()
+                    .next_back()
+                    .is_some_and(|c| c.is_whitespace() || "、，,".contains(c))
+        }),
         no_ka.find(body).map(|m| m.start()),
     ]
     .into_iter()
@@ -634,6 +649,41 @@ mod intent_tests {
                 let question = format!("{option}{explanation}");
                 if !requests_explanation(&question) {
                     mismatches.push((question, true));
+                }
+            }
+        }
+        assert!(mismatches.is_empty(), "{mismatches:?}");
+    }
+
+    #[test]
+    fn clarification_colloquial_cause_does_not_hide_a_directive() {
+        let mut mismatches = Vec::new();
+        for option in ["aで", "bで", "ｃ で"] {
+            for predicate in ["大丈夫", "十分", "決まり"] {
+                for ending in [
+                    "なんでお願いします",
+                    "なんですが、進めてください",
+                    "なんで進めて",
+                    "なんですよ。進めて",
+                ] {
+                    let reply = format!("{option}{predicate}{ending}");
+                    if requests_explanation(&reply) {
+                        mismatches.push((reply, false));
+                    }
+                }
+                for ending in ["のはなんで？", "なのはなんで？"] {
+                    let reply = format!("{option}{predicate}{ending}");
+                    if !requests_explanation(&reply) {
+                        mismatches.push((reply, true));
+                    }
+                }
+            }
+            for why in ["なぜ", "なんで", "どうして"] {
+                for ending in ["のですか", "んですか", "のでしょうか"] {
+                    let reply = format!("{why}{option}進めている{ending}");
+                    if !requests_explanation(&reply) {
+                        mismatches.push((reply, true));
+                    }
                 }
             }
         }

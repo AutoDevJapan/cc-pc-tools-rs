@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-23T19:37:25.1602515Z",
+  "observed_at": "2026-10-23T19:55:54.3620926Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "PR410は3487最終Must0と同799のCI6成功後に通常merge3b6efbae/読戻し済み。新たにMengTo45/177の本文評価を固定sourceへ照合し総primary258path。中央導入28/統合1/除外7は不変で、v2解像度統合案は別差分レビュー中。全16資料の個別支持/許諾/実配置/実適用は未完。",
+  "phase_b": "PR410通常merge済み。MengTo45/177の評価と3487補足をPR412へ保存し、解像度の既存統合1対象を中央へ反映/6hash/構造/対象1発見まで確認。導入28/統合2/除外7/残73183。新しい統合のv3追加差分レビューと実適用3502、全16資料の評価/許諾/実導入は継続。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -289,7 +289,7 @@
   "candidate_designs": 28,
   "independently_accepted": 28,
   "installed": 28,
-  "integrated": 1,
+  "integrated": 2,
   "excluded": 7,
   "units": {
     "github_agent_procedure": 483,
@@ -354,7 +354,7 @@
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "自分の28配置について限定受入済み。現在の全ディスクが配置時と同一という保証とは分ける。",
-    "not_semantically_disposed_occurrences": 73184,
+    "not_semantically_disposed_occurrences": 73183,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
@@ -611,7 +611,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-23T19:37:25.1602515Z",
+  "recorded_at": "2026-10-23T19:55:54.3620926Z",
   "total_skill_named_body_read_definition": "full_source_body_read_coverageの完全読取10資料137path。別枠mizchi76とMengTo45を含む総数は258。導入数や全候補の意味/許諾完了数ではない。",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -680,7 +680,7 @@
     "source": "skills-3080-mengto-partial-evaluation.json",
     "unread": 132,
     "excluded": 0,
-    "integrated": 0,
+    "integrated": 1,
     "full_body_read": 45
   },
   "review_attempt_failure": {
@@ -697,18 +697,19 @@
     "todo": 3487
   },
   "retina_integration_preparation": {
-    "static_cases": 13,
-    "v2_review_todo": 3499,
-    "central_written": 0,
-    "review3490": {
-      "fixed_v1_sha256": "eabf4ac9d99735b1fbb50258750aaf08f43490fe2e97d9a3fefcf6f94a690c3c",
-      "must": 1
-    },
-    "files": 6,
-    "must_corrected": true,
-    "v2_sha256": "93ce59c6ca6e17bd5dfcc8b1d46acc660e080c4ff1397c2eb9bfe9993ced12d6",
-    "model_turn_tested": false,
-    "review_pending": true
+    "application_pending": true,
+    "review3499_must": 0,
+    "applied": true,
+    "new_entrypoints": 0,
+    "v3_additional_review_pending": true,
+    "v3_plan_sha256": "43d95f23efdd849de0683770e177d49e81080873ddbe9160cfc7b4b7494565e8",
+    "discovery_parse_errors": 0,
+    "application_todo": 3502,
+    "discovery_target_enabled": 1,
+    "evidence": "skills-3080-retina-integration-evidence.json",
+    "scan_traversal_limit_warnings": 2,
+    "files": 6
   },
-  "timestamp_definition": "observed_at/recorded_atは文書更新時点。各review/preserved_atは実観測/受領時刻を保持。過去の取得時刻を現在の更新時刻で埋めない。"
+  "timestamp_definition": "observed_at/recorded_atは文書更新時点。各review/preserved_atは実観測/受領時刻を保持。過去の取得時刻を現在の更新時刻で埋めない。",
+  "catalog_discovery_limit": "fresh skills/listは326 metadataを返し対象1を有効として発見したが、traversal-limit警告2件を観測。全catalog走査/予算の成功ではない。"
 }

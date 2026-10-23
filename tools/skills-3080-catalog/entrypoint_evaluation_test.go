@@ -183,7 +183,7 @@ func TestDuplicateExclusionsKeepCanonicalAdoptionsAndSeparateLedgerRows(t *testi
 		Count    int                 `json:"excluded"`
 	}
 	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
-	if len(ledger.Entries) != 29 || ledger.Count != 7 || len(decisions.Entries) != ledger.Count || !reflect.DeepEqual(decisions.Entries, ledger.Excluded) {
+	if len(ledger.Entries) != 30 || ledger.Count != 7 || len(decisions.Entries) != ledger.Count || !reflect.DeepEqual(decisions.Entries, ledger.Excluded) {
 		t.Fatal("exclusion receipt differs from ledger or was counted as an adoption")
 	}
 	if err := validateDuplicateDecisions(decisions.Entries, ledger.Entries); err != nil {

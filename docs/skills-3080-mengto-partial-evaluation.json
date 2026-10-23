@@ -4,14 +4,14 @@
   "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
   "tree_sha": "8afedc8719f37d2026b55aef282ac27d8d873d76",
   "tree_complete": true,
-  "recorded_at": "2026-10-23T19:35:27.2930243Z",
+  "recorded_at": "2026-10-23T19:55:54.3620926Z",
   "entrypoints_expected": 177,
   "entrypoints_fulltext_read": 45,
   "entrypoints_unread": 132,
   "installed": 0,
-  "integrated": 0,
+  "integrated": 1,
   "excluded": 0,
-  "central_write": 0,
+  "central_write": 6,
   "classification_is_not_installation": true,
   "scope": "親の3D16/game20と3488の媒体2/UI3/workflow4を受領照合。45/177は読取評価だけで、採用上限ではない。",
   "entries": [
@@ -619,7 +619,7 @@
         }
       ],
       "installed_by_todo3080": false,
-      "integrated_by_todo3080": false,
+      "integrated_by_todo3080": true,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "target_guard": {
@@ -640,7 +640,10 @@
         "policy_inferred": false,
         "body_scope_only": true
       },
-      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。"
+      "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
+      "integration_evidence": "skills-3080-retina-integration-evidence.json",
+      "renderable_install_plan": true,
+      "individual_rights_accepted_scope": "原文と作者手順文の日本語適応にroot MITを適用し、MIT全文とCopyright (c) 2026 Meng Toを実保存。第三者code/demo/mediaは未取込。"
     },
     {
       "inventory_id": "github:eecbfba6d29822509e21b1923bd81b051f45ab1f14461d42b51dff92f30faf90",
@@ -3358,13 +3361,13 @@
   "actual_existing_comparison": {
     "qualified_single_file_reads": 3,
     "body": "webgl-retina-before.json",
-    "plan": "webgl-retina-integration-plan-v2.json",
-    "plan_sha256": "93ce59c6ca6e17bd5dfcc8b1d46acc660e080c4ff1397c2eb9bfe9993ced12d6",
+    "plan": "webgl-retina-integration-plan-v3.json",
+    "plan_sha256": "43d95f23efdd849de0683770e177d49e81080873ddbe9160cfc7b4b7494565e8",
     "index_and_existing_guide_read": true,
     "unknown_guides_bulk_read": false,
     "regular_execution_review_approved_read_only": true,
     "guard_still_unverified": true,
-    "central_write": 0,
+    "central_write": 6,
     "managed_plugin_or_system_skill_modified": false,
     "gto_binary_on_path": false
   },

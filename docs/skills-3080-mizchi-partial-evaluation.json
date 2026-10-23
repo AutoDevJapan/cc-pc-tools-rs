@@ -4275,11 +4275,13 @@
           "executed": false
         }
       ],
-      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。今回10配下に個別noticeは無し。README9は全文確認し追加表示無し。本文内の第三者creditと参照先・取込み範囲は未完で、未読supportへ包括適用しない。",
+      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。今回10配下に個別noticeは無し。README9は全文確認し追加表示無し。本文内の第三者creditと参照先・取込み範囲は未完で、未読supportへ包括適用しない。 Jev field notesの派生元mizchi/jev-playgroundの個別license/credit/取込み範囲は未確認。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3417,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:55c9c49e81cdce26af64189a2e87c3ff0bdb86847e42ec44e145da2ac451a58f",
@@ -4295,7 +4297,7 @@
       "body_read_at": "2026-10-23T03:08:37.8811343Z",
       "candidate_disposition": "tool_reference_candidate_pending_version_and_rights",
       "reason": "APM manifest・lockfile・target・衝突・postinstallの操作資料候補。既存skill-maintenanceの配置方式をAPMへ変更する指示とはしない。",
-      "required_changes": "APMの実版・公式CLI/manifestを確認するまで0.12+や認証順位を保証しない。installがhookや複数のagent配置先を書き得る点を調べ、D:/CC/Skillsと既存junctionを保持する。PAT/credentialの値を読まない。汎用specの1024文字上限と本PCの日本語60字方針を分ける。上流の--forceやglobal更新を自動実行しない。",
+      "required_changes": "APMの実版・公式CLI/manifestを確認するまで0.12+や認証順位を保証しない。installがhookや複数のagent配置先を書き得る点を調べ、D:/CC/Skillsと既存junctionを保持する。PAT/credentialの値を読まない。汎用specの1024文字上限と本PCの日本語60字方針を分ける。上流の--forceやglobal更新を自動実行しない。 本文のchezmoi節はAPM上書き、Priority節はlocal優先と説明が食い違うため、対象実版と衝突条件を照合する。",
       "compare_metadata": [
         "skill-maintenance",
         "coding-agent-tools"
@@ -4343,7 +4345,9 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3417,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:ae0d45677c10d87022cc4b58d2ed9af7550a8b3336d5c114a57822da2d1be790",
@@ -4390,7 +4394,9 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3417,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:dd568d73da532f5ae91da2c4e7a41752a5d95680b2b38909f647aada4487d704",
@@ -4406,7 +4412,7 @@
       "body_read_at": "2026-10-23T03:08:37.8811343Z",
       "candidate_disposition": "integration_candidate_pending_rights_and_trigger_evidence",
       "reason": "利用意図と症状に合うdescription、近接負例、固定train/validation、実際の本文読取による発火測定を既存のSkill管理へ比較する候補。",
-      "required_changes": "metaは常に明示専用というmizchi個人方針を本PCへ移さない。説明1024文字は一般仕様、本PC日本語descriptionは60字。mirror書込みやwaxa auditを自動実行しない。上流公式の約20問/3試行/0.5/60:40は出発点で普遍的合格基準ではない。metadata発見を発火率やcontext警告の実証と分ける。",
+      "required_changes": "metaは常に明示専用というmizchi個人方針を本PCへ移さない。説明1024文字は一般仕様、本PC日本語descriptionは60字。mirror書込みやwaxa auditを自動実行しない。上流公式の約20問/3試行/0.5/60:40は出発点で普遍的合格基準ではない。metadata発見を発火率やcontext警告の実証と分ける。 Project側のpushy/名指し無しでの発火も上流個人方針として区別し、一律の発火方針へしない。",
       "compare_metadata": [
         "skill-maintenance"
       ],
@@ -4426,7 +4432,9 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3417,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:096e1b5a18f9490a69c8d3b8b3ea5da6d4c8aa186ee832e0802b077a84c7a2fa",
@@ -4442,7 +4450,7 @@
       "body_read_at": "2026-10-23T03:08:37.8811343Z",
       "candidate_disposition": "integration_candidate_pending_support_and_rights",
       "reason": "発見・配達された版/補助ファイル・実行時の振る舞いを別々に検証し、consumer実体と固定sourceを照合する配布手順を既存Skill管理へ比較する候補。",
-      "required_changes": "本PCのSkill実体は中央D、repo内Skillや新marketplace/恒久権限を追加しない。ruby generator/Node helper/テンプレートは未読未実行で、JSON parseやinstall終了だけを配布完了としない。既存OAuth/Chrome/junctionを保ち、別認証profileを作らない。必要なconsumer検証と通常の本PC配置を混同せず、依頼された配布先だけ扱う。",
+      "required_changes": "本PCのSkill実体は中央D、repo内Skillや新marketplace/恒久権限を追加しない。ruby generator/Node helper/テンプレートは未読未実行で、JSON parseやinstall終了だけを配布完了としない。既存OAuth/Chrome/junctionを保ち、別認証profileを作らない。必要なconsumer検証と通常の本PC配置を混同せず、依頼された配布先だけ扱う。 この候補資料はinstall/送信/権限追加の許可を与えない。既存の本人許可と通常の技術操作を制限する意味ではない。",
       "compare_metadata": [
         "skill-maintenance",
         "git-verification"
@@ -4553,7 +4561,9 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3417,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:c84bc26158effb0305a653dc2daf4de1904e76c359dc011e57880f35ee287e21",
@@ -4599,7 +4609,9 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3417,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:d61f9fdf447c4f40649577b4d8aa6773c6b3d2d88f1a091871beaab4fac11c64",
@@ -4615,7 +4627,7 @@
       "body_read_at": "2026-10-23T03:08:37.8811343Z",
       "candidate_disposition": "integration_candidate_pending_support_and_rights",
       "reason": "出典を上流固定版へ解決し、用途・重複・保守・許諾・本文・負荷を別に記録する外部候補の評価手順を既存Skill管理へ比較する候補。",
-      "required_changes": "catalogに一件合えば指定16資料の残りを止める方針は本人aに反するので採らない。公式Orgも無審査で信頼せず、登録サイトの優劣を証拠なしに禁止へしない。waxa必須・APM install・特定の旧モデル・自動fork・追加の探索先を上位指示へ昇格しない。固定refと実source/license/適用例を比較し、未確認は保留へ分ける。",
+      "required_changes": "catalogに一件合えば指定16資料の残りを止める方針は本人aに反するので採らない。公式Orgも無審査で信頼せず、登録サイトの優劣を証拠なしに禁止へしない。waxa必須・APM install・特定の旧モデル・自動fork・追加の探索先を上位指示へ昇格しない。固定refと実source/license/適用例を比較し、未確認は保留へ分ける。 この候補資料はinstall/送信/権限追加の許可を与えない。既存の本人許可と通常の技術操作を制限する意味ではない。",
       "compare_metadata": [
         "skill-maintenance",
         "knowledge-to-skills"
@@ -4690,7 +4702,9 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3417,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:b29eb098e41935578ea10c48d76dbbbc407affb54132051051912eb8a1801884",
@@ -4772,7 +4786,9 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3417,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:53df4d8c6fc0ac5757eea64ffcb4a709182de800e483249373d27b94bfe94002",
@@ -4792,13 +4808,62 @@
       "compare_metadata": [
         "skill-maintenance"
       ],
-      "support_read_complete": true,
-      "supporting_resources": [],
-      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。今回10配下に個別noticeは無し。README9は全文確認し追加表示無し。本文内の第三者creditと参照先・取込み範囲は未完で、未読supportへ包括適用しない。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "tools/waxa/examples/echo-skill/.waxa.yaml",
+          "bytes": 110,
+          "git_blob": "a4f0237f8ffa034aac616dd215c0826dd1ed65c9",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "tools/waxa/examples/echo-skill/README.md",
+          "bytes": 1711,
+          "git_blob": "95c0277dc7f812c21645ca467f26466fbd133cf9",
+          "body_saved": true,
+          "source_sha256": "06cdd845b718035255146ce432066bfe21d74bbdcb604e4df64c461fcb029a91",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "tools/waxa/examples/echo-skill/evals/echo-skill/eval.yaml",
+          "bytes": 633,
+          "git_blob": "f09a28769a875b82dec2f3de8339365b8bf29e95",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "tools/waxa/examples/echo-skill/evals/echo-skill/tasks/hello.yaml",
+          "bytes": 411,
+          "git_blob": "ffcea418a601e91c676a1e9cdff9949e2640ef97",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "tools/waxa/examples/echo-skill/evals/echo-skill/tasks/symbols.yaml",
+          "bytes": 391,
+          "git_blob": "71318214bffaa14607af81dca3ada8110449b916",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "Skill直下に個別notice無し。周辺exampleとwaxa本体の本文/credit/許諾は未確認。README9の全読対象にはこのexampleのREADMEを含めない。デモ分類を採否台帳の除外へ変更しない。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3417,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "support_scope": "同じexample配下全blobをmetadata列挙。周辺README/.waxa.yaml/evalsは未読、tools/waxa本体も未読。未保存分は再取得していない。"
     },
     {
       "inventory_id": "github:6f428ead093cda43db5d2462a7c0700a7e14b33727ad98a83529e1c0bb902a8b",
@@ -4814,7 +4879,7 @@
       "body_read_at": "2026-10-23T03:08:37.8811343Z",
       "candidate_disposition": "evaluation_tool_candidate_pending_implementation_and_rights",
       "reason": "実行有無と自己申告、表層regexと意味評価、with/without比較、有限反復の履歴を区別する評価ツールの候補。導入前に実CLI・モデル経路・scopeを読む必要がある。",
-      "required_changes": "mock設定が無視され実claudeが動くという上流警告を検証前に試さない。npx/自動反復/子ジョブ直接起動をせず正規ToDo・既存OAuth・資源制約に合わせる。LLM合格ならregexだけを広げると決めつけず誤採点も調べ、評価不能を実行成功や無条件収束へ変えない。3〜4反復・2試行等は経験則。補助のtools/waxa実装はこの本文読了に含めない。",
+      "required_changes": "mock設定が無視され実claudeが動くという上流警告を検証前に試さない。npx/自動反復/子ジョブ直接起動をせず正規ToDo・既存OAuth・資源制約に合わせる。LLM合格ならregexだけを広げると決めつけず誤採点も調べ、評価不能を実行成功や無条件収束へ変えない。3〜4反復・2試行等は経験則。補助のtools/waxa実装はこの本文読了に含めない。 この候補資料はinstall/送信/権限追加の許可を与えない。既存の本人許可と通常の技術操作を制限する意味ではない。",
       "compare_metadata": [
         "skill-maintenance",
         "ai-model-evaluation",
@@ -4832,11 +4897,13 @@
           "executed": false
         }
       ],
-      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。今回10配下に個別noticeは無し。README9は全文確認し追加表示無し。本文内の第三者creditと参照先・取込み範囲は未完で、未読supportへ包括適用しない。",
+      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。今回10配下に個別noticeは無し。README9は全文確認し追加表示無し。本文内の第三者creditと参照先・取込み範囲は未完で、未読supportへ包括適用しない。 本文が派生元とするmicrosoft/wazaの個別license/credit/取込み範囲は未確認。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3417,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:c3c1612c465df67377d0493e3a58c849a981292c3dfd228eb136c0c1bdae68b2",
@@ -5045,7 +5112,9 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3420,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:01f196f1d23d113931fd9f71e538607b88027ed81f94d6c271c074f85eb0d580",
@@ -5182,7 +5251,9 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3420,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:cbf2aeb41f3c978c539f4b546b67fb30ae2b8c7de6b4042b246e4f2ece87a705",
@@ -5219,7 +5290,9 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3420,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:50131ecbbad137be7c2eba0675c9f7c400cdb7606af2799b6251cbc9c3e7ee30",
@@ -5240,7 +5313,7 @@
         "ai-workflow",
         "subagent-review"
       ],
-      "required_changes": "直接子ジョブを起動せず正規共有ToDoのspec/subworkと割当資源を使う。1/2〜4/10+等の上流目安を運用枠へしない。論文の+80.8%/-70%/15倍等は上流自己申告で未一次照合、現在PCの実績としない。parentが実作業/検証/結果受領の責任を持ち、再委譲だけへ変わらない。",
+      "required_changes": "直接子ジョブを起動せず正規共有ToDoのspec/subworkと割当資源を使う。1/2〜4/10+等の上流目安を運用枠へしない。Googleの260構成比較での+80.8%/-70%（L32）とAnthropic Researchの約15倍（L49）は別の出所。いずれも本文の紹介で元の実験条件は未一次照合、本PCの実績ではない。parentが実作業/検証/結果受領の責任を持ち、再委譲だけへ変わらない。",
       "support_read_complete": false,
       "supporting_resources": [
         {
@@ -5284,7 +5357,9 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3420,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:00632081125d36d46714bf0195fbbd44e39d40b62941af1adbc4758363e2c539",
@@ -5305,7 +5380,7 @@
         "knowledge-to-skills",
         "source-grounded-content-review"
       ],
-      "required_changes": "テンプレートは想像して採点する内容なので実再現の証拠ではない。20点や主観的成功率を配布/実行成功へ変えない。匿名化/秘密保護/版固定を保ち、未読記事のシェルや外部送信を自動実行しない。独立した再現は正規ToDo/既存OAuthへ。公開リンク必須を私的資料の無断公開へ広げず、既存の非公開対象は保持。",
+      "required_changes": "テンプレートは想像して採点する内容なので実再現の証拠ではない。20点や主観的成功率を配布/実行成功へ変えない。匿名化/秘密保護/版固定を保ち、未読記事のシェルや外部送信を自動実行しない。独立した再現は正規ToDo/既存OAuthへ。公開リンク必須を私的資料の無断公開へ広げず、既存の非公開対象は保持。 作者の/Users/mz/.claude/skillsという絶対パスは本PCへコピーせず、D:/CC/Skillsの中央配置と参照先に合わせる。",
       "support_read_complete": false,
       "supporting_resources": [
         {
@@ -5331,7 +5406,9 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3420,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:21c8a50a9702ddb435237a97daa689da4542f1c7530a22511cb26758385ba5b0",
@@ -5346,7 +5423,7 @@
       "body_read_complete": true,
       "body_read_at": "2026-10-23T03:21:16.3768634Z",
       "candidate_disposition": "integration_candidate_pending_support_and_rights",
-      "reason": "技術選択の満足度/利用率/保持/保守と移行費用を、現在の不具合と分けて記録する候補。",
+      "reason": "技術選択の満足度・利用率・retention・interestと移行費用を、現在の不具合と分けて記録する候補。",
       "compare_metadata": [
         "business-strategy",
         "frontend-node-engineering",
@@ -5369,7 +5446,9 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3420,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:ebc648c4dae246d9d559642f850424397b9b9dfed317e37b7df1607a37500604",
@@ -5407,7 +5486,9 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3420,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:90363624c915dcdc4f83d4ac490e37002fa60f3be36439dffa90a51c0d24ca3e",
@@ -5427,7 +5508,7 @@
         "observability-notifications",
         "frontend-node-engineering"
       ],
-      "required_changes": "ESMの全計装が非対応とはせず公式loader対応/対象module/実版を確認する。raw URL pathnameをhttp.route/span名へ使うとIDごとに増えるためroute templateと秘匿化を検討。すべての応答をOKにせず5xx/例外/終了を確認、Headers getterも明示。debug exporterの出力無しを必ず上流故障と決めずsampling/filter/buffering/送信先も調査。SDKのResource/processor API等の世代を固定して検証し、収集先/権限/費用を勝手に追加しない。",
+      "required_changes": "ESMの全計装が非対応とはせず公式loader対応/対象module/実版を確認する。raw URL pathnameをhttp.route/span名へ使うとIDごとに増えるためroute templateと秘匿化を検討。すべての応答をOKにせず5xx/例外/終了を確認、Headers getterも明示。debug exporterの出力無しを必ず上流故障と決めずsampling/filter/buffering/送信先も調査。SDKのResource/processor API等の世代を固定して検証し、収集先/権限/費用を勝手に追加しない。 未バンドルESM+実験的loaderとバンドル出力を分ける。公式loader対応は上流のbundle無音事例を反証しない。Fix C L128の起動例は公式loader指定との照合が必要。",
       "support_read_complete": false,
       "supporting_resources": [
         {
@@ -5444,7 +5525,9 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3420,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:9f9e80dd48e449b2f0e064336fa704ea1fc6cd1b8330b005df91f5c385f5ef3a",
@@ -5465,7 +5548,7 @@
         "security-review",
         "cloud-infra-deploy"
       ],
-      "required_changes": "curl|shやget全表示、平文decrypt、gh secret --bodyでのargv露出を自動実行しない。本件は秘密値の読取無しで調査する。公式では既存環境が優先で後勝ちは--overload時なので、上流例のlater winsを無条件に採らない。rotation CLIの有無を固定時点の断定へせず実版公式で確認。新keyだけを先に本番へ替えると旧ciphertextの再配備を壊し得るため段階切替/rollbackを先に決める。Prd限定/既存OAuth/新費用禁止を保持。",
+      "required_changes": "curl|shやget全表示、平文decrypt、gh secret --bodyでのargv露出を自動実行しない。本件は秘密値の読取無しで調査する。公式では既存環境が優先で後勝ちは--overload時なので、上流例のlater winsを無条件に採らない。rotation CLIの有無を固定時点の断定へせず実版公式で確認。新keyだけを先に本番へ替えると旧ciphertextの再配備を壊し得るため段階切替/rollbackを先に決める。Prd限定/既存OAuth/新費用禁止を保持。 L3のdescriptionが.env.keysをcommit対象に並べる列挙は採らない。暗号化envと秘密復号鍵の保管先を分ける（公式env-keys-fileは鍵をsource controlへcommitしない）。秘密値は読まない。",
       "support_read_complete": false,
       "supporting_resources": [
         {
@@ -5518,7 +5601,9 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3420,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:3c0d98cb9225a7bfe09217dc947987787627022228da57f7e6f2688b669ac12d",
@@ -5538,7 +5623,7 @@
         "coding-agent-tools",
         "windows-shell"
       ],
-      "required_changes": "上流個人のpkfire推奨を本PCへ適用しない。現行just公式実装のdry-runはbacktickを実行せず式文字列を返すため、親の最初の懸念を訂正した。未知recipe/assetsは先に読む。cargo release/testの例を割当無しで起動せず、Python自作例やBash/apt前提をWindowsへ移さない。ignore-errorsで失敗を隠さず、削除やrelease/pushは所有/元依頼/既存手順を確認する。",
+      "required_changes": "上流個人のpkfire推奨を本PCの方針へしない。対象Just版のdry-run仕様とrecipe/assetsを先に確認する。Cargo例は正規資源割当と変更の影響範囲に沿って実行する。Python自作例やBash/apt前提をWindowsへそのまま移さず、ignore-errorsで実失敗を成功にしない。削除/release/pushは所有・元依頼・既存手順に合わせる。",
       "support_read_complete": false,
       "supporting_resources": [
         {
@@ -5582,7 +5667,9 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3420,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:a7974025818694cce586a0f1abaacec7f3468b1fc5b372b5a8b2319c439b622a",
@@ -5603,7 +5690,7 @@
         "backend-correctness",
         "frontend-node-engineering"
       ],
-      "required_changes": "D1のBigInt非対応と安全なNumber範囲を公式で照合。Int64を無条件Numberへ変換すると2^53を越す値を失うため範囲検証/表現/格納schemaを先に定める。上流の特定版でのhang/1101を普遍的原因としない。default applyの未読scriptや全生成後hookを実行せず、空/未生成を成功へする検査は利用側で誤った合格にならないか確認。nested brace以外のparser限界と実generator版を確認する。",
+      "required_changes": "D1のBigInt非対応と安全なNumber範囲を公式で照合。Int64を無条件Numberへ変換すると2^53を越す値を失うため範囲検証/表現/格納schemaを先に定める。上流の特定版でのhang/1101を普遍的原因としない。default applyの未読scriptや全生成後hookを実行せず、空/未生成を成功へする検査は利用側で誤った合格にならないか確認。nested brace以外のparser限界と実generator版を確認する。 読み戻しもNumberの安全整数範囲を越えれば精度を失い得る。?と?NNNの混在自体は公式で許容され、generator固有のエラー化条件と1101は未実証。",
       "support_read_complete": false,
       "supporting_resources": [
         {
@@ -5652,11 +5739,13 @@
           "executed": false
         }
       ],
-      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。この12配下に個別notice無し。README12は全文/SHA確認し追加のnotice無し。補助/第三者credit/取込み範囲は未完で一括除外や許諾完了としない。",
+      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。この12配下に個別notice無し。README12は全文/SHA確認し追加のnotice無し。補助/第三者credit/取込み範囲は未完で一括除外や許諾完了としない。 本文が出所とするmizchi/mnemo、mizchi/cloudflare-starterkit-mbtの別repoの個別許諾/credit/取込み範囲は未確認。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3420,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:9e4e6c20f466c5c0dc5b059f5c608da379a236da0255331aa57b713d899255a9",
@@ -5707,11 +5796,13 @@
           "executed": false
         }
       ],
-      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。この12配下に個別notice無し。README12は全文/SHA確認し追加のnotice無し。補助/第三者credit/取込み範囲は未完で一括除外や許諾完了としない。",
+      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。この12配下に個別notice無し。README12は全文/SHA確認し追加のnotice無し。補助/第三者credit/取込み範囲は未完で一括除外や許諾完了としない。 mnemo由来setup-utels.mjsの別repoの個別許諾/credit/取込み範囲は未確認。",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": true,
+      "independent_review_todo": 3420,
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     }
   ],
   "pending_entrypoint_paths": [
@@ -5740,8 +5831,8 @@
   "excluded": 0,
   "support_code_executed": false,
   "private_data_used": false,
-  "next": "今回の新22候補と版照合テストを固定差分ごとに独立レビュー。残19入口と個別support/許諾/既存本文比較、全16資料の未判定を同canonicalで継続する。",
-  "observed_at": "2026-10-23T03:23:49.8750553Z",
+  "next": "3417/3420の原応答を保全済み。今回の補足とGo版照合の限定確認/同HEAD CI/PR395mergeを追い、残19と全16資料の採否・個別許諾・実配置を継続する。",
+  "observed_at": "2026-10-23T14:40:28.9070940Z",
   "code_execution_status": "SQL4補助コードは本文未保存・未読・未実行。既存追加取得の拒否を別経路で迂回しない。",
   "supporting_texts_fullread": [
     {
@@ -5858,12 +5949,69 @@
   },
   "entrypoints_fulltext_read": 57,
   "latest_primary_review": {
-    "todo": 3378,
-    "head": "f817c1841abffa97b9be8195c7eb3a5ffc151471",
+    "todo": 3420,
+    "base": "f76520645b2083849a549be101a00fc6b645096a",
+    "head": "0ebda988fd008a41c9227bb0598abbeca128c26d",
     "must": 0,
-    "raw_sha256": "f5925ada6f6042b1e6f16da5b711790310cdbd03f78240fd486367a902260298",
-    "scope": "旧35入口の評価差分/実CI v2/SQL表示補正が対象。今回の新10は未レビュー。SQL2/12例の新たな本文再受入という意味ではない。"
+    "suggestions": 6,
+    "nits": 5,
+    "raw_sha256": "06ddd1f50e3163812c82edeada81e506c65ffc9b4b99b67dac282624341207c3",
+    "actual_model": "anthropic/claude-sonnet-5-5",
+    "effort": "max",
+    "scope": "後続12本文/差分5と支持metadata59。README1全読+11テンプレート同一性照合。旧45/支持実装/実行/導入は範囲外。",
+    "received_at": "2026-10-23T14:40:28.9070940Z"
   },
   "historical_snapshot_note": "SQL4/新2の候補時点の評価は保持。gh-fix-ciの実統合と受入待ちを採用台帳へ接続し、候補評価と実操作を区別する。",
-  "fixed_entrypoint_roster": "skills-3080-mizchi-fixed-entrypoints.json"
+  "fixed_entrypoint_roster": "skills-3080-mizchi-fixed-entrypoints.json",
+  "primary_reviews": [
+    {
+      "todo": 3296,
+      "head": "e127436e75dcd50dc4896d76b6a5a5e4626fe44c",
+      "must": 0,
+      "raw_sha256": "237d5a7391b947f16ef22f9cdc843887c85133a271f676f524956f23c29ce6b7",
+      "limits": "SQL4本文の前評価を確認。今回の補助5+README追加範囲と本文案は新しい未受入差分。"
+    },
+    {
+      "todo": 3368,
+      "head": "b0107b649d5f6a890742aaad926f1b0116018f58",
+      "must": 1,
+      "raw_sha256": "c0f40d79b4386bd5ce7a7d11101e23dbd56d5013b6614d56bfd1caf756ada973",
+      "scope": "当時の新12入口/実CI統合/SQL2本文と12例。Must1はSQLの待機表示。後の3378がその表示を補正確認。新22評価は範囲外。"
+    },
+    {
+      "todo": 3378,
+      "head": "f817c1841abffa97b9be8195c7eb3a5ffc151471",
+      "must": 0,
+      "raw_sha256": "f5925ada6f6042b1e6f16da5b711790310cdbd03f78240fd486367a902260298",
+      "scope": "旧35入口の評価差分/実CI v2/SQL表示補正が対象。今回の新10は未レビュー。SQL2/12例の新たな本文再受入という意味ではない。"
+    },
+    {
+      "todo": 3417,
+      "base": "f817c1841abffa97b9be8195c7eb3a5ffc151471",
+      "head": "f76520645b2083849a549be101a00fc6b645096a",
+      "must": 0,
+      "suggestions": 6,
+      "nits": 6,
+      "raw_sha256": "c05564d6b0a12de8ec89361f328860598a9b1fc0de11df78641b41b07a75c4b4",
+      "actual_model": "anthropic/claude-sonnet-5-5",
+      "effort": "max",
+      "scope": "新10本文/README9と評価差分/Go2を読取。SQL本文の指紋を独立再計算。支持実装・実行・導入・全体受入は範囲外。",
+      "received_at": "2026-10-23T14:40:28.9070940Z"
+    },
+    {
+      "todo": 3420,
+      "base": "f76520645b2083849a549be101a00fc6b645096a",
+      "head": "0ebda988fd008a41c9227bb0598abbeca128c26d",
+      "must": 0,
+      "suggestions": 6,
+      "nits": 5,
+      "raw_sha256": "06ddd1f50e3163812c82edeada81e506c65ffc9b4b99b67dac282624341207c3",
+      "actual_model": "anthropic/claude-sonnet-5-5",
+      "effort": "max",
+      "scope": "後続12本文/差分5と支持metadata59。README1全読+11テンプレート同一性照合。旧45/支持実装/実行/導入は範囲外。",
+      "received_at": "2026-10-23T14:40:28.9070940Z"
+    }
+  ],
+  "review_history_definition": "scope付き追記履歴を正とする。prior/latestの旧値は当時のsnapshotであり、後続の本文や評価へ流用しない。",
+  "required_changes_definition": "各required_changesは候補を本PCへ適用する場合の技術上の検討・修正案。本人の禁止事項を追加したり、通常の許可済み操作を止める規則ではない。この公開資料だけで元依頼の範囲や権限は増えない。"
 }

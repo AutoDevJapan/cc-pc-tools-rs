@@ -210,3 +210,35 @@ func TestPartialAssessmentRejectsLostPathsAndUnrecordedChanges(t *testing.T) {
 		})
 	}
 }
+
+func TestEveryFinishedDispositionRequiresMatchingLedgerAndAssessment(t *testing.T) {
+	for _, disposition := range []string{"installed_new_adaptation", "integrated_existing", "excluded"} {
+		for _, kind := range []string{"valid", "missing_ledger", "missing_flag", "wrong_flag"} {
+			t.Run(disposition+"_"+kind, func(t *testing.T) {
+				e := partialEntry{ID: "github:one", Path: "one/SKILL.md", Name: "one", Commit: strings.Repeat("a", 40), SHA: strings.Repeat("b", 64), Read: true}
+				a := partialAssessment{Source: "example/skills", Commit: e.Commit, Expected: 2, Read: 1, Unread: 1, Entries: []partialEntry{e}, Pending: []string{"two/SKILL.md"}}
+				switch disposition {
+				case "installed_new_adaptation":
+					a.Entries[0].Installed, a.Installed = true, 1
+				case "integrated_existing":
+					a.Entries[0].Integrated, a.Integrated = true, 1
+				case "excluded":
+					a.Entries[0].Excluded, a.Excluded = true, 1
+				}
+				rows := []partialAdoption{{ID: e.ID, Source: a.Source, Commit: e.Commit, Path: e.Path, SHA: e.SHA, Disposition: disposition}}
+				switch kind {
+				case "missing_ledger":
+					rows = nil
+				case "missing_flag":
+					a.Entries[0] = e
+				case "wrong_flag":
+					a.Entries[0].Installed, a.Entries[0].Integrated, a.Entries[0].Excluded = true, true, true
+				}
+				err := validatePartial(a, rows, a.Source, a.Commit, 2, pathSetSHA([]string{"one/SKILL.md", "two/SKILL.md"}))
+				if (err != nil) != (kind != "valid") {
+					t.Fatalf("disposition must agree in both directions: %v", err)
+				}
+			})
+		}
+	}
+}

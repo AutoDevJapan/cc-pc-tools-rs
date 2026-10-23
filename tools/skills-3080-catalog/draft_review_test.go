@@ -71,6 +71,50 @@ type latestDraftReview struct {
 	SHA        string `json:"raw_sha256"`
 	ContentSHA string `json:"parent_computed_authored_content_sha256"`
 	Remaining  bool   `json:"remaining_independent_confirmation"`
+	Resolves   int    `json:"resolves_todo"`
+	BodyAgain  *bool  `json:"body_reaccepted"`
+}
+
+// This body was read by 3368; 3378 resolved its display-only Must. A changed
+// body needs new independent evidence and an intentional update to this anchor.
+const sqlReviewedAuthoredSHA = "119786b834b0114244e413de9633f49fbda9e66815c626831d0818b27f10beb2"
+
+func validateDraftReviewHistory(pending bool, reviews []latestDraftReview, latest int, contentSHA string) error {
+	if len(reviews) == 0 || reviews[len(reviews)-1].Todo != latest {
+		return errors.New("latest review is not the end of append-only review history")
+	}
+	seen := map[int]latestDraftReview{}
+	for _, r := range reviews {
+		if r.Todo < 1 || seen[r.Todo].Todo != 0 {
+			return errors.New("missing or repeated review receipt")
+		}
+		seen[r.Todo] = r
+	}
+	if pending {
+		return nil
+	}
+	if contentSHA != sqlReviewedAuthoredSHA {
+		return errors.New("authored content differs from the independently reviewed body anchor")
+	}
+	r := reviews[len(reviews)-1]
+	if err := validateDraftReview(false, r, contentSHA); err != nil {
+		return err
+	}
+	body, ok := seen[r.Resolves]
+	// Keep the actual historical Must and its later resolution separate. Neither
+	// deleting 3368 nor relabelling 3378 as a body review may close this draft.
+	if !ok || r.Todo != 3378 || r.Resolves != 3368 || r.BodyAgain == nil || *r.BodyAgain || body.Must == nil || *body.Must != 1 || !body.Remaining || body.ContentSHA != contentSHA {
+		return errors.New("accepted draft lacks its body-review and display-resolution pair")
+	}
+	for _, s := range []string{body.Head, body.SHA} {
+		if _, err := hex.DecodeString(s); err != nil {
+			return err
+		}
+	}
+	if body.Head != "b0107b649d5f6a890742aaad926f1b0116018f58" || body.SHA != "c0f40d79b4386bd5ce7a7d11101e23dbd56d5013b6614d56bfd1caf756ada973" {
+		return errors.New("body-review identity differs from the preserved 3368 response")
+	}
+	return nil
 }
 
 func validateDraftReview(pending bool, r latestDraftReview, contentSHA string) error {
@@ -106,17 +150,7 @@ func TestDraftContentAndReviewReceiptsReferToTheSameVersion(t *testing.T) {
 	if d.Reviewed.Algorithm != "sql-authored-v1" || d.Reviewed.SHA != contentSHA {
 		t.Fatalf("authored scope differs from recorded identity: calculated %s", contentSHA)
 	}
-	if len(d.Reviewed.Reviews) == 0 || d.Reviewed.Reviews[len(d.Reviewed.Reviews)-1].Todo != d.Reviewed.Latest {
-		t.Fatal("latest review is not the end of append-only review history")
-	}
-	seen := map[int]bool{}
-	for _, r := range d.Reviewed.Reviews {
-		if r.Todo < 1 || seen[r.Todo] {
-			t.Fatal("missing or repeated review receipt")
-		}
-		seen[r.Todo] = true
-	}
-	if err := validateDraftReview(d.Pending, d.Reviewed.Reviews[len(d.Reviewed.Reviews)-1], contentSHA); err != nil {
+	if err := validateDraftReviewHistory(d.Pending, d.Reviewed.Reviews, d.Reviewed.Latest, contentSHA); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -163,6 +197,143 @@ func TestDraftContentIdentityChangesWithInstructionsAndExpectedBehavior(t *testi
 		if _, err := draftContentSHA([]byte(invalid)); err == nil {
 			t.Fatal("empty or malformed authored scope accepted")
 		}
+	}
+}
+
+func TestEveryAuthoredFieldAndArrayElementAffectsContentIdentity(t *testing.T) {
+	b := loadPublicReceipt(t, "skills-3080-mizchi-sql-draft.json", new(any))
+	original, err := draftContentSHA(b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var initial struct {
+		Drafts []draftContent `json:"drafts"`
+		Cases  []draftCase    `json:"static_cases"`
+	}
+	if err := json.Unmarshal(b, &initial); err != nil {
+		t.Fatal(err)
+	}
+	check := func(name string, mutate func(map[string]any), wantSame bool) {
+		t.Run(name, func(t *testing.T) {
+			var m map[string]any
+			if err := json.Unmarshal(b, &m); err != nil {
+				t.Fatal(err)
+			}
+			mutate(m)
+			modified, err := json.Marshal(m)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got, err := draftContentSHA(modified)
+			if err != nil || (got == original) != wantSame {
+				t.Fatalf("authored field coverage: same=%v: %v", got == original, err)
+			}
+		})
+	}
+	for i := range initial.Drafts {
+		for _, field := range []string{"name", "source_repo", "source_commit", "source_path", "source_sha256", "description", "positive", "negative", "adaptations", "distinct_from_existing"} {
+			check("draft_"+initial.Drafts[i].Name+"_"+field, func(m map[string]any) {
+				d := m["drafts"].([]any)[i].(map[string]any)
+				old := d[field].(string)
+				d[field] = old + " changed"
+				if field == "name" {
+					for _, c := range m["static_cases"].([]any) {
+						row := c.(map[string]any)
+						if row["skill"] == old {
+							row["skill"] = d[field]
+						}
+					}
+				}
+			}, false)
+		}
+		for j := range initial.Drafts[i].Guidance {
+			check("guidance_"+initial.Drafts[i].Name+"_"+initial.Drafts[i].Guidance[j], func(m map[string]any) {
+				m["drafts"].([]any)[i].(map[string]any)["guidance"].([]any)[j] = "changed instruction"
+			}, false)
+		}
+	}
+	for i := range initial.Cases {
+		for _, field := range []string{"reason", "input", "skill", "expected"} {
+			check("case_"+initial.Cases[i].Input+"_"+field, func(m map[string]any) {
+				c := m["static_cases"].([]any)[i].(map[string]any)
+				if field == "skill" {
+					for _, d := range initial.Drafts {
+						if d.Name != c[field] {
+							c[field] = d.Name
+							break
+						}
+					}
+				} else {
+					c[field] = c[field].(string) + " changed"
+				}
+			}, false)
+		}
+	}
+	for _, field := range []string{"drafts", "static_cases"} {
+		check(field+"_order", func(m map[string]any) {
+			a := m[field].([]any)
+			a[0], a[len(a)-1] = a[len(a)-1], a[0]
+		}, false)
+	}
+	check("metadata_outside_authored_projection", func(m map[string]any) {
+		for _, v := range m["drafts"].([]any) {
+			d := v.(map[string]any)
+			for _, field := range []string{"inventory_id", "source_url", "retrieved_at", "status", "installed", "individual_license_review"} {
+				d[field] = "metadata changed"
+			}
+		}
+		m["real_model_turn"] = true
+	}, true)
+}
+
+func TestAcceptedSQLDraftRequiresItsHistoricalBodyReviewAndResolution(t *testing.T) {
+	var d struct {
+		Reviewed struct {
+			Latest  int                 `json:"latest_review_todo"`
+			Reviews []latestDraftReview `json:"reviews"`
+		} `json:"reviewed_draft"`
+	}
+	loadPublicReceipt(t, "skills-3080-mizchi-sql-draft.json", &d)
+	for _, kind := range []string{"valid", "body_removed", "body_digest_changed", "body_receipt_changed", "resolves_missing", "resolves_unknown", "body_reaccepted_missing", "body_reaccepted_true", "body_must_erased", "body_relabelled_resolved", "digest_rewritten_with_body", "latest_missing", "duplicate_receipt"} {
+		t.Run(kind, func(t *testing.T) {
+			reviews := append([]latestDraftReview(nil), d.Reviewed.Reviews...)
+			latest := d.Reviewed.Latest
+			contentSHA := sqlReviewedAuthoredSHA
+			last := len(reviews) - 1
+			switch kind {
+			case "body_removed":
+				reviews = append(reviews[:1], reviews[2:]...)
+			case "body_digest_changed":
+				reviews[1].ContentSHA = strings.Repeat("c", 64)
+			case "body_receipt_changed":
+				reviews[1].SHA = strings.Repeat("c", 64)
+			case "resolves_missing":
+				reviews[last].Resolves = 0
+			case "resolves_unknown":
+				reviews[last].Resolves = 9999
+			case "body_reaccepted_missing":
+				reviews[last].BodyAgain = nil
+			case "body_reaccepted_true":
+				v := true
+				reviews[last].BodyAgain = &v
+			case "body_must_erased":
+				v := 0
+				reviews[1].Must = &v
+			case "body_relabelled_resolved":
+				reviews[1].Remaining = false
+			case "digest_rewritten_with_body":
+				contentSHA = strings.Repeat("c", 64)
+				reviews[1].ContentSHA, reviews[last].ContentSHA = contentSHA, contentSHA
+			case "latest_missing":
+				latest = 9999
+			case "duplicate_receipt":
+				reviews = append([]latestDraftReview{reviews[0]}, reviews...)
+			}
+			err := validateDraftReviewHistory(false, reviews, latest, contentSHA)
+			if (err != nil) != (kind != "valid") {
+				t.Fatalf("body review/resolution conservation %s: %v", kind, err)
+			}
+		})
 	}
 }
 

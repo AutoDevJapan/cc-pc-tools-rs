@@ -4,14 +4,14 @@
   "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
   "tree_sha": "8afedc8719f37d2026b55aef282ac27d8d873d76",
   "tree_complete": true,
-  "recorded_at": "2026-10-23T21:43:58.8069249Z",
+  "recorded_at": "2026-10-23T22:12:19.2969482Z",
   "entrypoints_expected": 177,
   "entrypoints_fulltext_read": 92,
   "entrypoints_unread": 85,
   "installed": 0,
-  "integrated": 1,
+  "integrated": 2,
   "excluded": 0,
-  "central_write": 6,
+  "central_write": 12,
   "classification_is_not_installation": true,
   "scope": "PR413で受領した68に親のweb-design24本文を追加した92/177。残85はweb-design68と別担当のillustration14/game-combat3（未受領）。24は候補評価だけで中央書込や採否完了へ加算しない。",
   "entries": [
@@ -4162,7 +4162,7 @@
       "body_read_complete": true,
       "body_read_by": "20261024-044343-todo-3501",
       "body_read_method": "child full visible read; parent full assessment read and independent fixed-byte identity verification",
-      "candidate_disposition": "adapt_or_integrate_candidate_pending_individual_scope_and_target_comparison",
+      "candidate_disposition": "integrated_existing_with_final_review_and_use_checks_pending",
       "reason": "1資料→1能力の境界（統合・省略・既存更新の基準）と失敗例（ページ複製・巨大Skill・断片化・テーマ固定・証拠なしの検証）が具体的で、knowledge-to-skillsの判断基準になる",
       "required_changes": [
         "能力の境界と失敗例を抽出し、既存と用途を比較して中央Skillsへ統合する。上流repo専用のdemo/gallery/previewを全件必須にしない。",
@@ -4272,7 +4272,7 @@
         }
       ],
       "installed_by_todo3080": false,
-      "integrated_by_todo3080": false,
+      "integrated_by_todo3080": true,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "git_blob": "68182c688d58e8422af2f262c78dd56d669f1c96",
@@ -4289,6 +4289,14 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
+      },
+      "integration_evidence": "skills-3080-article-integration-evidence.json",
+      "actual_existing_comparison": {
+        "source": "root/index/same-name GUIDE full comparison",
+        "before_preserved": true,
+        "files": 3,
+        "substantive_revision": true,
+        "byte_equality_with_upstream": false
       }
     },
     {
@@ -9261,7 +9269,7 @@
     "unknown_guides_bulk_read": false,
     "regular_execution_review_approved_read_only": true,
     "guard_still_unverified": true,
-    "central_write": 6,
+    "central_write": 12,
     "managed_plugin_or_system_skill_modified": false,
     "gto_binary_on_path": false,
     "reported3501": {
@@ -9276,11 +9284,11 @@
       "review_todo": 3517,
       "guard_classification_unchanged": true,
       "existing_reference_present": true,
-      "plan_v2_sha256": "abd2fcc665882d02829eeb152aa431df424c8a192939d2efb33b6ac8b95cb454",
-      "new_writes": 0,
-      "applied": false,
+      "new_writes": 6,
+      "applied": true,
       "files": 3,
-      "full_text_read": true
+      "full_text_read": true,
+      "final_plan_sha256": "91db52921270a7f8bc8065df42447b62cc6ee8bed7d224ea31421ca9791fcedd"
     }
   },
   "review_pending": true,

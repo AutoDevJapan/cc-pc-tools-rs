@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-23T21:43:58.8069249Z",
+  "observed_at": "2026-10-23T22:12:19.2969482Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "PR413は3509Must0と同ca2CI6成功後に通常mergebf5fa8d8、読戻し済み。親のweb-design24評価を追加して全305/MengTo92・残85。導入28/統合2/除外7/残73183は不変。記事統合案は3511Must2をv2で修正し3517が追加差分確認中。3512の17は実読中だが未受領で加算しない。全16資料の実作業を継続。",
+  "phase_b": "PR413通常merge済み。固定853の24評価/3509補足は3521が読取確認中。記事抽出手順は3517のv2Must0受領後、v3補足を具体6fileの正規審査で中央へ反映し、旧3保全/6hash・bytes/実Go検査器/対象1発見を確認。導入28/統合3/除外7/残73182。最終v3差分・明示使用3527・新headのCI/mergeは未完。全16資料を継続。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -289,7 +289,7 @@
   "candidate_designs": 28,
   "independently_accepted": 28,
   "installed": 28,
-  "integrated": 2,
+  "integrated": 3,
   "excluded": 7,
   "units": {
     "github_agent_procedure": 483,
@@ -354,7 +354,7 @@
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "自分の28配置について限定受入済み。現在の全ディスクが配置時と同一という保証とは分ける。",
-    "not_semantically_disposed_occurrences": 73183,
+    "not_semantically_disposed_occurrences": 73182,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
@@ -612,7 +612,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-23T21:43:58.8069249Z",
+  "recorded_at": "2026-10-23T22:12:19.2969482Z",
   "total_skill_named_body_read_definition": "完全読取10資料137path。別枠mizchi76とMengTo92を含む総数305。全候補の意味/個別許諾/実導入完了数ではない。",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -695,7 +695,7 @@
     "source": "skills-3080-mengto-partial-evaluation.json",
     "unread": 85,
     "excluded": 0,
-    "integrated": 1,
+    "integrated": 2,
     "full_body_read": 92
   },
   "review_attempt_failure": {
@@ -807,5 +807,20 @@
     "owner_action_required": false,
     "new_primary_paths": 24
   },
-  "discovery_diagnostics": "skills-3080-discovery-limit-evidence.json"
+  "discovery_diagnostics": "skills-3080-discovery-limit-evidence.json",
+  "article_integration": {
+    "files": 6,
+    "application_todo": 3527,
+    "explicit_use_check_pending": true,
+    "evidence": "skills-3080-article-integration-evidence.json",
+    "scan_warnings": 2,
+    "applied": true,
+    "review3517_v2_must": 0,
+    "parse_errors": 0,
+    "new_entrypoints": 0,
+    "discovery_found": 1,
+    "actual_go_validator_passed": true,
+    "manifest": "skills-3080-installed-article-integration-manifest.json",
+    "v3_final_review_pending": true
+  }
 }

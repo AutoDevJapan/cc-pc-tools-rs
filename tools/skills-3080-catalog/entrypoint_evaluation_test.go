@@ -178,12 +178,14 @@ func TestDuplicateExclusionsKeepCanonicalAdoptionsAndSeparateLedgerRows(t *testi
 	}
 	loadPublicReceipt(t, "skills-3080-duplicate-decisions.json", &decisions)
 	var ledger struct {
-		Entries  []canonicalAdoption `json:"entries"`
-		Excluded []duplicateDecision `json:"excluded_entries"`
-		Count    int                 `json:"excluded"`
+		Entries    []canonicalAdoption `json:"entries"`
+		Excluded   []duplicateDecision `json:"excluded_entries"`
+		Count      int                 `json:"excluded"`
+		Installed  int                 `json:"installed_new"`
+		Integrated int                 `json:"integrated"`
 	}
 	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
-	if len(ledger.Entries) != 30 || ledger.Count != 7 || len(decisions.Entries) != ledger.Count || !reflect.DeepEqual(decisions.Entries, ledger.Excluded) {
+	if len(ledger.Entries) != ledger.Installed+ledger.Integrated || ledger.Count != 7 || len(decisions.Entries) != ledger.Count || !reflect.DeepEqual(decisions.Entries, ledger.Excluded) {
 		t.Fatal("exclusion receipt differs from ledger or was counted as an adoption")
 	}
 	if err := validateDuplicateDecisions(decisions.Entries, ledger.Entries); err != nil {

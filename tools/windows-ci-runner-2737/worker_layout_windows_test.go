@@ -66,9 +66,11 @@ func TestWorkerGitLookupAvoidsPrivateSDKAncestors(t *testing.T) {
 			paths = strings.Split(value, ";")
 		}
 	}
-	want := `C:\ProgramData\AutoDevJapan\windows-ci-git-2737`
+	// The product's committed-pin verifier uses this absolute executable;
+	// a different PATH-only installation cannot satisfy that contract.
+	want := `C:\Program Files\Git`
 	if len(paths) < 2 || paths[0] != want+`\cmd` || paths[1] != want+`\bin` {
-		t.Fatal("anchored Git lookup still crosses the private SDK ancestor")
+		t.Fatal("worker Git lookup does not match the product's fixed executable")
 	}
 	for _, path := range paths {
 		if strings.EqualFold(path, sdkRoot+`\git\cmd`) || strings.EqualFold(path, sdkRoot+`\git\bin`) {

@@ -31,7 +31,11 @@ const runnerRoot = `C:\ProgramData\AutoDevJapan\windows-ci-runner-2737`
 const workerTempRoot = runnerRoot + `\_temp`
 const workerProfileRoot = runnerRoot + `\_profile`
 const workerTargetRoot = runnerRoot + `\_target`
-const workerGitRoot = `C:\ProgramData\AutoDevJapan\windows-ci-git-2737`
+
+// Match the product's fixed committed-pin verifier executable. This remains a
+// fresh physical SDK copy, outside both private SDK and mutable runner trees.
+const workerGitRoot = `C:\Program Files\Git`
+
 const sourceRoot = runnerRoot + `\_work\GoDD-MCP-Alpha\GoDD-MCP-Alpha`
 const hookRoot = sdkRoot + `\runner-hooks`
 const planPath = agentRoot + `\runner-seed.json`

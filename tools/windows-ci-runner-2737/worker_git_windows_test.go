@@ -107,12 +107,16 @@ func gitCopyJunction(t *testing.T, link, target string) {
 }
 
 func TestWorkerGitRejectsParentAndChildJunctions(t *testing.T) {
-	for _, parent := range []bool{false, true} {
+	for _, mode := range []string{"source-parent", "source-child", "destination-parent"} {
 		source, destination := gitCopyFixture(t)
-		if parent {
+		if mode == "source-parent" {
 			alias := filepath.Join(filepath.Dir(source), "external-alias")
 			gitCopyJunction(t, alias, filepath.Dir(source))
 			source = filepath.Join(alias, filepath.Base(source))
+		} else if mode == "destination-parent" {
+			alias := filepath.Join(filepath.Dir(source), "destination-alias")
+			gitCopyJunction(t, alias, t.TempDir())
+			destination = filepath.Join(alias, "fresh-git")
 		} else {
 			external := t.TempDir()
 			if e := os.WriteFile(filepath.Join(external, "git.exe"), []byte("public synthetic tool bytes"), 0600); e != nil {

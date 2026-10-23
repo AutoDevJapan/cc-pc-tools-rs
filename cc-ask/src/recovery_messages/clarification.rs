@@ -339,6 +339,8 @@ fn requests_explanation(body: &str) -> bool {
     // cannot relabel a commitment; a bare "なぜ、" still introduces a question.
     let choice = regex::Regex::new(r"(?i)[a-dａ-ｄ]\s*(?:で|を(?:選んだ|選ぶ|選びます|選びたい|選べ|選択|採用|希望)|に(?:する|すれ|し(?:ます|た|て|よう)|決め)|が(?:いい|良い)|採用)").unwrap();
     let separator = regex::Regex::new(r"[、，,\s…]+|けど|けれど|ので|のに|から").unwrap();
+    let reason_query_tail =
+        regex::Regex::new(r"のか(?:を)?教えて(?:ください|ほしい(?:です)?)?[。!！]*$").unwrap();
     for sentence in body.split_inclusive(['。', '！', '!', '？', '?', '\n', ';', '；']) {
         let options: Vec<_> = choice.find_iter(sentence).collect();
         let mut spans = Vec::new();
@@ -381,12 +383,7 @@ fn requests_explanation(body: &str) -> bool {
                 let after = after.replace("ている", "てる").replace("でいる", "でる");
                 let prefix_question = (asks_why(before)
                     || matches!(previous, "なぜ" | "どうして" | "なんで"))
-                    && (clause.contains(['?', '？'])
-                        || regex::Regex::new(
-                            r"のか(?:を)?教えて(?:ください|ほしい(?:です)?)?[。!！]*$",
-                        )
-                        .unwrap()
-                        .is_match(&after));
+                    && (clause.contains(['?', '？']) || reason_query_tail.is_match(&after));
                 let tail_question = explanation_requested(&after)
                     || nominal_reason_tail(&after)
                         && explanation_requested(&sentence[span.start + phrase.end()..]);

@@ -356,6 +356,7 @@ fn requests_explanation(body: &str) -> bool {
         r"(?:のか(?:を)?教えて(?:ください|ほしい(?:です)?)?|ですか|ますか|でしょうか)[。!！]*$",
     )
     .unwrap();
+    let acknowledgement = regex::Regex::new(r"(?:分かった|わかった|理解した)$").unwrap();
     for sentence in body.split_inclusive(['。', '！', '!', '？', '?', '\n', ';', '；']) {
         let options: Vec<_> = choice.find_iter(sentence).collect();
         let mut spans = Vec::new();
@@ -410,9 +411,7 @@ fn requests_explanation(body: &str) -> bool {
                     && nominal_reason_start(&after);
                 // An embedded why-clause followed by an acknowledgement is
                 // an assertion, even when an explanation request follows it.
-                let acknowledged = regex::Regex::new(r"(?:分かった|わかった|理解した)$")
-                    .unwrap()
-                    .is_match(&after);
+                let acknowledged = acknowledgement.is_match(&after);
                 // A predicate-attached causal "なんで" is a commitment even
                 // when the instruction continues in the next clause.
                 let questioned = !choice_instruction
@@ -585,13 +584,19 @@ fn colloquial_option_cause(body: &str) -> bool {
 fn action_request(body: &str) -> bool {
     // Match the request ending, not a predicate followed by a reason noun:
     // "進めてくれる？" requests action; "進めてくれる理由は？" asks why.
-    regex::Regex::new(r"て(?:もらえ(?:ますか|ませんか|ないでしょうか|る\s*[?？])|(?:いただけ|頂け)(?:ますか|ませんか|る\s*[?？])|くれ(?:る\s*[?？]|ますか|ませんか)|もいい\s*[?？])|お願い(?:できますか|できませんか|できないでしょうか)|(?:進め|実行し|開始し|選ん|選択し|採用し|決め|変更し|停止し|止め)て(?:ください|ほしい|くれ|ね|よ)?(?:[、，,。!！?？\s]|$)")
+    let polite_action = regex::Regex::new(r"て(?:もらえ(?:ますか|ませんか|ないでしょうか|る\s*[?？])|(?:いただけ|頂け)(?:ますか|ませんか|る\s*[?？])|くれ(?:る\s*[?？]|ますか|ませんか)|もいい\s*[?？])")
         .unwrap()
         .find_iter(body)
         .any(|request| {
             let before = &body[..request.start()];
             !explanation_verb_before(before)
-        })
+        });
+    // These matches include their action verb, so an earlier explanation verb
+    // cannot exempt them (the exemption above applies only to the matched て).
+    polite_action
+        || regex::Regex::new(r"お願い(?:できますか|できませんか|できないでしょうか)|(?:進め|実行し|開始し|選ん|選択し|採用し|決め|変更し|停止し|止め)て(?:ください|ほしい|くれ|ね|よ)?(?:[、，,。!！?？\s]|$)")
+            .unwrap()
+            .is_match(body)
 }
 
 fn explanation_verb_before(body: &str) -> bool {

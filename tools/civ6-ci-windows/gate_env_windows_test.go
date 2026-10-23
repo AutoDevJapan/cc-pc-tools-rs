@@ -35,3 +35,18 @@ func TestControllerGatePreservesOnlyConfigLocations(t *testing.T) {
 		}
 	}
 }
+
+func TestSDKProxiesRemainInsideNormalOwnedCleanup(t *testing.T) {
+	env := map[string]string{}
+	for _, entry := range workerEnv(fixturePlan()) {
+		k, v, _ := strings.Cut(entry, "=")
+		env[k] = v
+	}
+	// Released rustup (1.28/1.29) and the newer spelling both remain explicit;
+	// neither an inherited host value nor CI=true decides how proxies are made.
+	for _, key := range []string{"RUSTUP_HARDLINK_PROXIES", "RUSTUP_FORCE_HARDLINK_PROXIES"} {
+		if env[key] != "1" {
+			t.Fatalf("%s does not prevent uncollectable symlink proxies", key)
+		}
+	}
+}

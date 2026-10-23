@@ -16,16 +16,16 @@ func checkCollectionRemote(p Plan, read readAPI) error {
 		return errors.New("real collection identity required")
 	}
 	var repo struct {
-		ID            int64
-		FullName      string `json:"full_name"`
-		Private, Fork bool
-		Owner         struct{ Login string }
-		Permissions   struct{ Admin bool }
+		ID          int64
+		FullName    string `json:"full_name"`
+		Fork        bool
+		Owner       struct{ Login string }
+		Permissions struct{ Admin bool }
 	}
 	if e := read("repos/"+repository, &repo); e != nil {
 		return e
 	}
-	if repo.ID != repositoryID || repo.FullName != repository || repo.Owner.Login != "AutoDevJapan" || !repo.Private || repo.Fork || !repo.Permissions.Admin {
+	if repo.ID != repositoryID || repo.FullName != repository || repo.Owner.Login != "AutoDevJapan" || repo.Fork || !repo.Permissions.Admin {
 		return errors.New("collection repository identity rejected")
 	}
 	var run struct {
@@ -44,7 +44,7 @@ func checkCollectionRemote(p Plan, read readAPI) error {
 			Fork     bool
 		} `json:"head_repository"`
 	}
-	if e := read(fmt.Sprintf("repos/%s/actions/runs/%d", repository, p.RunID), &run); e != nil {
+	if e := read(fmt.Sprintf("repos/%s/actions/runs/%d/attempts/%d", repository, p.RunID, p.Attempt), &run); e != nil {
 		return e
 	}
 	if run.ID != p.RunID || run.Attempt != p.Attempt || run.HeadSHA != p.Head || run.Event != p.Event || !contract.MatchRunPath(p.Plan, run.Path) || run.HeadBranch != p.Branch || run.Repository.ID != repositoryID || run.Repository.FullName != repository || run.HeadRepository.ID != repositoryID || run.HeadRepository.FullName != repository || run.HeadRepository.Fork {

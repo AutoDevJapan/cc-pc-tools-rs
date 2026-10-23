@@ -68,7 +68,7 @@ func civ6VerifyPin(path, want string) error {
 	return nil
 }
 
-// civ6CIQueue runs one finite pass after every other stage of the tick. It can
+// civ6CIQueue runs one finite pass in periodicTick's separate bounded phase. It can
 // only add a health note: a missing time budget, a rejected pin or a failing
 // pass never changes intake, scheduling or reporting, and the heavy job is
 // started by the queue as a detached fixed worker, never waited for here.

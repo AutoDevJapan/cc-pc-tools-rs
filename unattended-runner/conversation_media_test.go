@@ -91,6 +91,31 @@ func TestConversationMediaDirectAndBridgeSourcesAreCheckedLive(t *testing.T) {
 	}
 }
 
+func TestConversationMediaQuestionNamespaceKeepsOriginalGuardAndRequestBinding(t *testing.T) {
+	f := mediaFixture(t)
+	f.normal = "normal-ask-" + strings.Repeat("b", 64)
+	f.sender = "conversation-v1-" + bytesHash([]byte(f.normal))[:32]
+	f.snapshot = filepath.Join(f.home, "conversation-bridge", f.normal, "attachment-0.png")
+	f.descriptor = filepath.Join(filepath.Dir(f.snapshot), "attachment-0.source.json")
+	if err := os.MkdirAll(filepath.Dir(f.snapshot), 0700); err != nil {
+		t.Fatal(err)
+	}
+	f.write(t)
+	f.verify(t, f.snapshot)
+	if len(f.guardPaths) != 1 || !conversationMediaSamePath(f.guardPaths[0], f.source) {
+		t.Fatal("question snapshot hid its original source")
+	}
+	for _, sender := range []string{"conversation-log-" + bytesHash([]byte(f.normal))[:32], "conversation-v1-" + strings.Repeat("c", 32)} {
+		if _, err := verifyConversationMedia(context.Background(), f.snapshot, sender, f.deps()); err == nil {
+			t.Fatal("question image accepted for another sender")
+		}
+	}
+	f.deny = true
+	if _, err := verifyConversationMedia(context.Background(), f.snapshot, f.sender, f.deps()); err == nil {
+		t.Fatal("question image bypassed source denial")
+	}
+}
+
 func TestConversationMediaCLIOnlyReturnsFixedMetadataAndNeverUsesRunnerLock(t *testing.T) {
 	f := mediaFixture(t)
 	unlock, err := acquire(filepath.Join(f.home, "runner.lock"))

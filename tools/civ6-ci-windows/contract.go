@@ -39,8 +39,11 @@ type Plan struct {
 	ControllerSID  string `json:"controller_sid"`
 	Seconds        int    `json:"seconds"`
 	CleanupSeconds int    `json:"cleanup_seconds,omitempty"`
+	ExecuteBefore  int64  `json:"execute_before,omitempty"`
 	Fixture        string `json:"fixture,omitempty"`
 	RuntimeFixture bool   `json:"runtime_fixture,omitempty"`
+	// Only the worker's verified, kernel-owned listener sets this. Never JSON input.
+	cacheListenerPort int
 }
 
 // name is the unique per-job identity: the official runner registration and the
@@ -73,6 +76,9 @@ var windowsWorkflows = map[string]string{
 func (p Plan) requiredLabels() []string { return contract.Labels(p.Plan) }
 
 func (p Plan) validate() error {
+	if p.ExecuteBefore < 0 {
+		return errors.New("absolute execution deadline rejected")
+	}
 	if !hex32.MatchString(p.Instance) || !filepath.IsAbs(p.Root) || filepath.Clean(p.Root) != p.Root || filepath.Base(p.Root) != "codex-owned-"+p.Instance {
 		return errors.New("new safe-delete root and instance required")
 	}
@@ -94,11 +100,14 @@ func (p Plan) validate() error {
 	if p.RuntimeFixture {
 		return errors.New("runtime fixture cannot be official execution")
 	}
+	if p.ExecuteBefore == 0 {
+		return errors.New("official execution requires an absolute deadline")
+	}
 	if e := p.Plan.Validate(); e != nil {
 		return e
 	}
 	job, ok := windowsWorkflows[p.Workflow]
-	if !ok || p.Event == "dynamic" || p.Job != job || p.OS() != "Windows" || !slices.Equal(p.requiredLabels(), []string{"self-hosted", "Windows", "X64", contract.WindowsLabel}) {
+	if !ok || p.Event == "dynamic" || p.Job != job || p.OS() != "Windows" || !slices.Equal(p.requiredLabels(), []string{"self-hosted", "Windows", "X64", contract.WindowsLabel, contract.JobLabel(p.Plan)}) {
 		return errors.New("only the three original Windows jobs are served")
 	}
 	if p.Head == fixtureHead || p.Tree == fixtureTree {
@@ -112,9 +121,22 @@ func (p Plan) validate() error {
 }
 
 func readPlan(root string) (p Plan, err error) {
-	b, err := os.ReadFile(filepath.Join(root, "plan.json"))
+	p, err = readPlanFile(filepath.Join(root, "plan.json"))
+	if err == nil && p.Root != root {
+		err = errors.New("root mismatch")
+	}
+	return p, err
+}
+
+func readPlanFile(path string) (p Plan, err error) {
+	f, err := os.Open(path)
 	if err != nil {
 		return p, err
+	}
+	defer f.Close()
+	b, err := io.ReadAll(io.LimitReader(f, 65537))
+	if err != nil || len(b) > 65536 {
+		return p, errors.New("plan size bound")
 	}
 	d := json.NewDecoder(bytes.NewReader(b))
 	d.DisallowUnknownFields()
@@ -126,9 +148,6 @@ func readPlan(root string) (p Plan, err error) {
 	}
 	if err = p.validate(); err != nil {
 		return p, err
-	}
-	if p.Root != root {
-		return p, errors.New("root mismatch")
 	}
 	return p, nil
 }
@@ -158,7 +177,7 @@ func boundedRead(r io.Reader, n int64) ([]byte, error) {
 // download URL is accepted by this helper. The listener keeps the three default
 // labels and adds only the dedicated one, matching the reviewed runs-on array.
 func configureArgs(p Plan) []string {
-	return []string{"configure", "--unattended", "--url", "https://github.com/" + repository, "--name", p.name(), "--labels", contract.WindowsLabel, "--ephemeral", "--disableupdate", "--work", "_work"}
+	return []string{"configure", "--unattended", "--url", "https://github.com/" + repository, "--name", p.name(), "--labels", contract.WindowsLabel + "," + contract.JobLabel(p.Plan), "--ephemeral", "--disableupdate", "--work", "_work"}
 }
 
 // checkEvent compares the actual SDK context to the shared contract and then

@@ -244,7 +244,7 @@ fn log_reuses_one_thread_and_notify_is_explicit() {
     assert_eq!(first["thread_id"], second["thread_id"]);
     assert_eq!(c.borrow().uploads.len(), 2);
     assert_eq!(payload(&c.borrow().uploads[0].2)["flags"], SILENT);
-    assert_eq!(payload(&c.borrow().uploads[1].2)["flags"], 0);
+    assert_eq!(payload(&c.borrow().uploads[1].2)["flags"], SILENT);
     assert_eq!(
         payload(&c.borrow().uploads[1].2)["allowed_mentions"],
         json!({"parse":[]})

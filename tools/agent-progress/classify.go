@@ -9,9 +9,11 @@ import (
 )
 
 type priorityPolicy struct {
-	Items    map[string]json.RawMessage `json:"items"`
-	Projects map[string]json.RawMessage `json:"projects"`
-	legacy   map[string]json.RawMessage
+	ProductBindingsPresent bool                       `json:"-"`
+	ProductIdentities      map[string]productBinding  `json:"product_identities"`
+	Items                  map[string]json.RawMessage `json:"items"`
+	Projects               map[string]json.RawMessage `json:"projects"`
+	legacy                 map[string]json.RawMessage
 }
 
 type label struct {
@@ -114,6 +116,9 @@ func itemLabel(item todoItem, policy priorityPolicy) label {
 }
 
 func policyLabel(item todoItem, policy priorityPolicy, policyID string) label {
+	if r := mcpResolve(item, policy, policyID); r.scoped {
+		return r.label()
+	}
 	project, department := item.Project, item.Department
 	raw := policy.Items[policyID]
 	var owner struct {

@@ -180,7 +180,7 @@ fn title_fallback_has_only_recorded_work_and_short_links() {
 fn large_cache_restores_offsets_without_generic_json_copy() {
     let f = Fixture::new();
     let mut cache = Cache {
-        version: 1,
+        version: CACHE_VERSION,
         ..Cache::default()
     };
     cache.cursors.insert(
@@ -220,7 +220,7 @@ fn copies_and_nested_tools_share_counts_without_duplicate_git_results() {
     )
     .unwrap();
     let mut cache = Cache {
-        version: 1,
+        version: CACHE_VERSION,
         exclusion_hash: hash(&load_exclusions(&f.sources).unwrap().0.join("\n")),
         ..Cache::default()
     };
@@ -455,6 +455,7 @@ async fn production_sources_smoke_check() {
     cache = aggregate(&sources, cache, now);
     save(&sources, &cache).unwrap();
     let workload = Workload {
+        observed: RwLock::new(observation::Ledger::default()),
         sources: sources.clone(),
         cache: RwLock::new(cache.clone()),
         phase: RwLock::new(String::new()),
@@ -581,7 +582,10 @@ fn codex_cumulative_usage_is_not_counted_twice() {
         );
     }
     assert_eq!(cursor.session_id, "fixture-session");
-    assert_eq!(cursor.days["2026-10-01"].tokens, 300);
+    // The first 250 cumulative tokens seed the baseline. Only the next 50
+    // belong to this observation, even when the 300-total record is repeated.
+    assert_eq!(cursor.cumulative_tokens, 300);
+    assert_eq!(cursor.days["2026-10-01"].tokens, 50);
     assert_eq!(cursor.days["2026-10-01"].tools, 1);
     assert_eq!(
         cursor.days["2026-10-01"]
@@ -954,7 +958,7 @@ fn huge_unterminated_record_obeys_budget_and_resumes_discarding() {
 fn changed_exclusions_prevent_cache_publication() {
     let f = Fixture::new();
     let c = Cache {
-        version: 1,
+        version: CACHE_VERSION,
         exclusion_hash: hash(&load_exclusions(&f.sources).unwrap().0.join("\n")),
         ..Cache::default()
     };
@@ -1006,12 +1010,13 @@ async fn workload_route_returns_versioned_json_and_rejects_invalid_date() {
     let f = Fixture::new();
     let mut state = crate::AppState::new(10012, 10013);
     let cache = Cache {
-        version: 1,
+        version: CACHE_VERSION,
         exclusion_hash: hash(&exclusions().0.join("\n")),
         updated_at: at("2026-10-01T12:00:00+09:00"),
         ..Cache::default()
     };
     state.workload = Arc::new(Workload {
+        observed: RwLock::new(observation::Ledger::default()),
         sources: f.sources.clone(),
         cache: RwLock::new(cache),
         phase: RwLock::new(String::new()),
@@ -1070,6 +1075,7 @@ fn todo_capacity_exclusion_failure_stops_aggregation_and_never_certifies_a_new_h
     assert_eq!(stopped.exclusion_hash, "old-hash");
     assert!(stopped.warnings.iter().any(|w| w.contains("64MiB")));
     let workload = Workload {
+        observed: RwLock::new(observation::Ledger::default()),
         sources: f.sources.clone(),
         cache: RwLock::new(stopped),
         phase: RwLock::new(String::new()),
@@ -1083,4 +1089,36 @@ fn todo_capacity_exclusion_failure_stops_aggregation_and_never_certifies_a_new_h
         .is_empty());
     fs::write(&f.sources.todo, "{broken").unwrap();
     assert!(load_exclusions(&f.sources).is_err());
+}
+
+#[test]
+fn first_cumulative_token_total_is_only_a_baseline() {
+    let now = 1_792_500_000_000;
+    let mut cursor = Cursor::default();
+    let record = |total, last| {
+        json!({"timestamp":Utc.timestamp_millis_opt(now).unwrap().to_rfc3339(),
+        "type":"event_msg","payload":{"type":"token_count","info":{
+        "total_token_usage":{"total_tokens":total},"last_token_usage":{"total_tokens":last}}}})
+    };
+    session_record(&mut cursor, &record(900_000, 0), now - 1000, now);
+    assert_eq!(cursor.days[&day(now)].tokens, 0);
+    session_record(&mut cursor, &record(900_025, 25), now - 1000, now);
+    session_record(&mut cursor, &record(900_025, 25), now - 1000, now);
+    assert_eq!(cursor.days[&day(now)].tokens, 25);
+    let mut first = Cursor::default();
+    session_record(&mut first, &record(900_007, 7), now - 1000, now);
+    assert_eq!(first.days[&day(now)].tokens, 7);
+}
+
+#[test]
+fn missing_token_usage_never_seeds_a_cumulative_baseline() {
+    let now = at("2026-10-20T23:00:00+09:00");
+    let mut cursor = Cursor::default();
+    let invalid = json!({"timestamp":"2026-10-20T23:00:00+09:00","type":"event_msg","payload":{"type":"token_count","info":null}});
+    session_record(&mut cursor, &invalid, now - 1000, now);
+    assert!(!cursor.cumulative_seen);
+    let first = json!({"timestamp":"2026-10-20T23:00:00+09:00","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"total_tokens":900_000}}}});
+    session_record(&mut cursor, &first, now - 1000, now);
+    assert_eq!(cursor.cumulative_tokens, 900_000);
+    assert_eq!(cursor.days[&day(now)].tokens, 0);
 }

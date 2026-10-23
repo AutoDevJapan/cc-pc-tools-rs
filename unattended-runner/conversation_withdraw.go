@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -201,7 +202,7 @@ func (r *Runner) conversationWithdraw(ctx context.Context, requestID, reasonFile
 		original.Phase, current.Phase = "", ""
 		original.Wait, current.Wait = false, false
 		original.ReplyCursor, current.ReplyCursor = "", ""
-		if original != current {
+		if !reflect.DeepEqual(original, current) {
 			return nil, errConversationWithdraw
 		}
 		switch record.Phase {
@@ -241,6 +242,10 @@ func (r *Runner) conversationWithdraw(ctx context.Context, requestID, reasonFile
 	if err != nil || row.Project != q.Project {
 		return nil, errConversationWithdraw
 	}
+	scopeFile, err := worker.conversationScopeFile(row, q)
+	if err != nil {
+		return nil, errConversationWithdraw
+	}
 	proofSHA, replied, err := worker.withdrawalProof(ctx, q)
 	if err != nil {
 		return nil, err
@@ -267,6 +272,17 @@ func (r *Runner) conversationWithdraw(ctx context.Context, requestID, reasonFile
 		return map[string]any{"request_id": requestID, "withdrawn": false, "owner_reply_pending": true}, nil
 	}
 	if missing {
+		// Do not freeze an obsolete row while the first Discord proof is in
+		// flight. Recheck the real guard and capture the immutable intent now;
+		// later changes still fail the canonical locked comparison.
+		row, err = worker.conversationTask(ctx, q.Todo)
+		if err != nil || row.Project != q.Project {
+			return nil, errConversationWithdraw
+		}
+		scopeFile, err = worker.conversationScopeFile(row, q)
+		if err != nil {
+			return nil, errConversationWithdraw
+		}
 		b, err := boundedRegular(q.ReceiptFile)
 		var receipt conversationQuestionReceipt
 		// Rust is the locked authority for note provenance, including the exact
@@ -274,10 +290,7 @@ func (r *Runner) conversationWithdraw(ctx context.Context, requestID, reasonFile
 		if err != nil || bytesHash(b) != q.ReceiptSHA || json.Unmarshal(b, &receipt) != nil || receipt.Domain != "discord-conversation-question-v1" || receipt.RequestID != q.SenderID || receipt.Todo != fmt.Sprint(q.Todo) || receipt.Guild != r.State.Destination.Guild || receipt.Owner != r.State.Destination.Owner || receipt.Bot != r.State.Destination.Bot || receipt.Thread != q.Thread || receipt.Message != q.Message || receipt.Progress != q.Progress || receipt.Fingerprint != q.Fingerprint || row.Status != "block" || !conversationWaitRecorded(row, q) {
 			return nil, errConversationWithdraw
 		}
-		origin, err := r.withdrawalRow(q.Todo)
-		if err != nil {
-			return nil, err
-		}
+		origin := row.conversationState
 		if writeConversationOnce(originPath, origin) != nil || writeConversationOnce(savedReason, reason) != nil {
 			return nil, errConversationWithdraw
 		}
@@ -316,7 +329,7 @@ func (r *Runner) conversationWithdraw(ctx context.Context, requestID, reasonFile
 		if record.Phase != "prepared" {
 			return nil, errConversationWithdraw
 		}
-		if _, err = r.Run(ctx, conversationTodo, "question-withdraw", fmt.Sprint(q.Todo), "--question-file", q.ReceiptFile, "--reason-file", savedReason, "--expected-state-file", originPath); err != nil {
+		if _, err = r.Run(ctx, conversationTodo, "question-withdraw", fmt.Sprint(q.Todo), "--question-file", q.ReceiptFile, "--reason-file", savedReason, "--expected-state-file", originPath, "--scope-file", scopeFile); err != nil {
 			return nil, errConversationWithdraw
 		}
 		saved, err = r.withdrawalRecorded(q, record)

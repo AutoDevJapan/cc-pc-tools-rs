@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -26,32 +27,36 @@ type ConversationAskInput struct {
 	RequestID, OriginThread, BodyFile, DecisionFile, Title string
 	Todo                                                   uint64
 	Wait                                                   bool
+	Attachments                                            []string
 }
 
 // All public fields are receipt metadata. Question and answer text stays in the
 // private sender/receipt files, never in command output or health reports.
 type ConversationQuestion struct {
-	RequestID    string `json:"request_id"`
-	SenderID     string `json:"sender_request_id"`
-	Todo         uint64 `json:"todo_id"`
-	Project      string `json:"project"`
-	OriginThread string `json:"origin_thread_id"`
-	InputSHA     string `json:"input_sha256"`
-	BodyFile     string `json:"body_file"`
-	DecisionFile string `json:"decision_file"`
-	Title        string `json:"title,omitempty"`
-	Wait         bool   `json:"wait_requested"`
-	Phase        string `json:"phase"`
-	Created      string `json:"created_at"`
-	Thread       string `json:"thread_id,omitempty"`
-	Message      string `json:"question_message_id,omitempty"`
-	Progress     string `json:"progress_thread_id,omitempty"`
-	Fingerprint  string `json:"question_fingerprint,omitempty"`
-	DecisionSHA  string `json:"decision_identity_sha256,omitempty"`
-	QuestionSHA  string `json:"question_body_sha256,omitempty"`
-	ReceiptFile  string `json:"question_receipt_file,omitempty"`
-	ReceiptSHA   string `json:"question_receipt_sha256,omitempty"`
-	ReplyCursor  string `json:"reply_cursor,omitempty"`
+	ExistingURL      string   `json:"-"`
+	RequestID        string   `json:"request_id"`
+	SenderID         string   `json:"sender_request_id"`
+	Todo             uint64   `json:"todo_id"`
+	Project          string   `json:"project"`
+	OriginThread     string   `json:"origin_thread_id"`
+	InputSHA         string   `json:"input_sha256"`
+	BodyFile         string   `json:"body_file"`
+	DecisionFile     string   `json:"decision_file"`
+	Title            string   `json:"title,omitempty"`
+	Wait             bool     `json:"wait_requested"`
+	Phase            string   `json:"phase"`
+	Created          string   `json:"created_at"`
+	Thread           string   `json:"thread_id,omitempty"`
+	Message          string   `json:"question_message_id,omitempty"`
+	Progress         string   `json:"progress_thread_id,omitempty"`
+	Fingerprint      string   `json:"question_fingerprint,omitempty"`
+	DecisionSHA      string   `json:"decision_identity_sha256,omitempty"`
+	QuestionSHA      string   `json:"question_body_sha256,omitempty"`
+	ReceiptFile      string   `json:"question_receipt_file,omitempty"`
+	ReceiptSHA       string   `json:"question_receipt_sha256,omitempty"`
+	ReplyCursor      string   `json:"reply_cursor,omitempty"`
+	Attachments      []string `json:"attachments,omitempty"`
+	AttachmentHashes []string `json:"attachment_sha256,omitempty"`
 }
 
 type conversationIndex struct {
@@ -66,17 +71,20 @@ type conversationIndex struct {
 }
 
 type conversationLogRecord struct {
-	InputSHA       string `json:"input_sha256"`
-	BodyFile       string `json:"body_file"`
-	Thread         string `json:"destination_thread_id,omitempty"`
-	Message        string `json:"message_id,omitempty"`
-	VerifiedThread string `json:"verified_thread_id,omitempty"`
+	InputSHA        string `json:"input_sha256"`
+	BodyFile        string `json:"body_file"`
+	Thread          string `json:"destination_thread_id,omitempty"`
+	Message         string `json:"message_id,omitempty"`
+	VerifiedThread  string `json:"verified_thread_id,omitempty"`
+	EffectiveNotify *bool  `json:"effective_notify,omitempty"`
 }
 
 type conversationAlias struct {
-	Target   string                `json:"target_request_id"`
-	InputSHA string                `json:"input_sha256"`
-	Intent   *ConversationQuestion `json:"original_intent,omitempty"`
+	Target      string                `json:"target_request_id"`
+	InputSHA    string                `json:"input_sha256"`
+	Intent      *ConversationQuestion `json:"original_intent,omitempty"`
+	ImagePaths  []string              `json:"image_paths,omitempty"`
+	ImageHashes []string              `json:"image_sha256,omitempty"`
 }
 
 type conversationQuestionReceipt struct {
@@ -233,6 +241,9 @@ func (r *Runner) loadConversations() (*conversationIndex, error) {
 		if q.BodyFile != filepath.Join(dir, "question.txt") || q.DecisionFile != filepath.Join(dir, "decision.json") {
 			return nil, errors.New("conversation private paths differ")
 		}
+		if !conversationQuestionImageRecord(q) {
+			return nil, errors.New("conversation question images invalid")
+		}
 		if q.Phase != "reserved" {
 			if q.Thread != q.Message || !shaPattern.MatchString(q.Fingerprint) || !shaPattern.MatchString(q.DecisionSHA) || !shaPattern.MatchString(q.QuestionSHA) || !shaPattern.MatchString(q.ReceiptSHA) {
 				return nil, errors.New("conversation receipt invalid")
@@ -281,25 +292,49 @@ func (r *Runner) loadConversations() (*conversationIndex, error) {
 }
 
 func (r *Runner) conversationTask(ctx context.Context, id uint64) (*TodoRow, error) {
-	row, err := r.todo(id)
-	if err != nil || row.Project == "owner" {
-		return nil, errors.New("conversation task unavailable")
-	}
 	var db struct {
 		Projects map[string]string `json:"projects"`
+		Items    []json.RawMessage `json:"items"`
 	}
-	if readJSON(r.TodoPath, maxTodo, &db) != nil || !filepath.IsAbs(db.Projects[row.Project]) {
+	if readJSON(r.TodoPath, maxTodo, &db) != nil {
 		return nil, errors.New("conversation task scope unavailable")
 	}
-	raw, err := r.Run(ctx, "D:/CC/Tools/client-records/scrub391.exe", "--guard-path", db.Projects[row.Project])
+	var selected json.RawMessage
+	var project string
+	for _, raw := range db.Items {
+		var header struct {
+			ID      uint64 `json:"id"`
+			Project string `json:"project"`
+		}
+		if json.Unmarshal(raw, &header) != nil {
+			return nil, errors.New("conversation task unavailable")
+		}
+		if header.ID == id {
+			if selected != nil {
+				return nil, errors.New("conversation duplicate task")
+			}
+			selected, project = raw, header.Project
+		}
+	}
+	root := db.Projects[project]
+	if selected == nil || project == "owner" || !filepath.IsAbs(root) {
+		return nil, errors.New("conversation task scope unavailable")
+	}
+	raw, err := r.Run(ctx, "D:/CC/Tools/client-records/scrub391.exe", "--guard-path", root)
 	var proof struct {
 		Client     *bool `json:"client_resource"`
-		Unverified bool  `json:"classification_unverified"`
+		Unverified *bool `json:"classification_unverified"`
 	}
-	if err != nil || json.Unmarshal([]byte(raw), &proof) != nil || proof.Client == nil || *proof.Client || proof.Unverified {
+	if err != nil || json.Unmarshal([]byte(raw), &proof) != nil || proof.Client == nil || *proof.Client || proof.Unverified == nil || *proof.Unverified {
 		return nil, errors.New("conversation task scope unverified")
 	}
-	return row, nil
+	var row TodoRow
+	if json.Unmarshal(selected, &row) != nil {
+		return nil, errors.New("conversation task unavailable")
+	}
+	row.conversationState = selected
+	row.conversationScope = conversationTodoScope{Domain: "discord-conversation-todo-scope-v1", Todo: fmt.Sprint(id), Project: project, RootSHA: bytesHash([]byte(root))}
+	return &row, nil
 }
 
 func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput) (ConversationQuestion, error) {
@@ -336,11 +371,19 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 	if safeText(string(body), r.Token) != string(body) || safeText(string(decision), r.Token) != string(decision) {
 		return zero, errors.New("conversation input contains credential material")
 	}
-	inputHash := canonicalHash([]any{input.Todo, input.OriginThread, bytesHash(body), canonicalHash(json.RawMessage(decision)), input.Title, input.Wait})
 	index, err := r.loadConversations()
 	if err != nil {
 		return zero, err
 	}
+	paths, hashes, err := conversationQuestionRetryImages(index, input)
+	if err != nil {
+		return zero, err
+	}
+	identity := []any{input.Todo, input.OriginThread, bytesHash(body), canonicalHash(json.RawMessage(decision)), input.Title, input.Wait}
+	if len(hashes) != 0 {
+		identity = append(identity, hashes)
+	}
+	inputHash := canonicalHash(identity)
 	q, exists := index.Questions[input.RequestID]
 	if alias, exists := index.Aliases[input.RequestID]; exists {
 		if alias.InputSHA != inputHash {
@@ -360,11 +403,31 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 	}
 	if !exists {
 		for _, old := range index.Questions {
+			if old.Project != row.Project || old.Todo != input.Todo || old.Phase == "reserved" || old.Phase == "withdrawn" || slices.Equal(old.AttachmentHashes, hashes) {
+				continue
+			}
+			original, readErr := boundedRegular(old.DecisionFile)
+			if readErr != nil {
+				return zero, readErr
+			}
+			if canonicalHash(json.RawMessage(original)) != canonicalHash(json.RawMessage(decision)) {
+				continue
+			}
+			if _, proofErr := r.conversationProof(ctx, old); proofErr != nil {
+				return zero, proofErr
+			}
+			old.Phase, old.Wait = "duplicate", false
+			old.ExistingURL = "https://discord.com/channels/" + r.State.Destination.Guild + "/" + old.Thread
+			return old, nil
+		}
+	}
+	if !exists {
+		for _, old := range index.Questions {
 			if old.InputSHA == inputHash {
 				q = old
 				exists = true
 				if old.RequestID != input.RequestID {
-					index.Aliases[input.RequestID] = conversationAlias{Target: old.RequestID, InputSHA: inputHash}
+					index.Aliases[input.RequestID] = conversationAlias{Target: old.RequestID, InputSHA: inputHash, ImagePaths: paths, ImageHashes: hashes}
 					if err = publish(r.conversationPath(), index); err != nil {
 						return zero, err
 					}
@@ -379,6 +442,7 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		}
 		dir := filepath.Join(r.Config.Home, "conversations", input.RequestID)
 		q = ConversationQuestion{RequestID: input.RequestID, SenderID: "conversation-v1-" + bytesHash([]byte(input.RequestID))[:32], Todo: input.Todo, Project: row.Project, OriginThread: input.OriginThread, InputSHA: inputHash, BodyFile: filepath.Join(dir, "question.txt"), DecisionFile: filepath.Join(dir, "decision.json"), Title: input.Title, Wait: input.Wait, Phase: "reserved", Created: r.Now().UTC().Format(time.RFC3339Nano)}
+		q.Attachments, q.AttachmentHashes = paths, hashes
 		if err = writeConversationOnce(q.BodyFile, body); err != nil {
 			return zero, err
 		}
@@ -407,12 +471,23 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		if q.Title != "" {
 			args = append(args, "--title", q.Title)
 		}
+		for _, path := range q.Attachments {
+			args = append(args, "--attach", path)
+		}
+		for _, sha := range q.AttachmentHashes {
+			args = append(args, "--expected-image-sha256", sha)
+		}
 		raw, callErr := r.Run(ctx, conversationSender, args...)
 		if callErr != nil {
 			return zero, errors.New("conversation send pending; retry the same request")
 		}
 		var report struct {
 			Domain, Delivery string
+			Outcome          string          `json:"outcome"`
+			ExistingRequest  string          `json:"existing_request_id"`
+			URL              string          `json:"url"`
+			ExistingVerified bool            `json:"existing_metadata_verified"`
+			Todo             uint64          `json:"todo_id"`
 			Request          string          `json:"request_id"`
 			Thread           string          `json:"thread_id"`
 			Message          string          `json:"message_id"`
@@ -420,9 +495,41 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 			Fingerprint      string          `json:"original_fingerprint"`
 			Body             string          `json:"original_question"`
 			Decision         json.RawMessage `json:"decision"`
+			Images           []string        `json:"image_sha256"`
 		}
-		if json.Unmarshal([]byte(raw), &report) != nil || report.Domain != "new-owner-recovery-messages" || report.Delivery != "verified" || report.Thread != report.Message || report.Request == "" || !shaPattern.MatchString(report.Fingerprint) {
+		decodeErr := json.Unmarshal([]byte(raw), &report)
+		if decodeErr == nil && report.Domain == "new-owner-recovery-messages" && report.Outcome == "existing_question_images_differ" && report.Delivery == "not_sent" && report.Request == q.SenderID && report.Todo == q.Todo && report.ExistingRequest != q.SenderID && conversationID.MatchString(report.ExistingRequest) {
+			if report.Thread != "" {
+				if _, ok := number(report.Thread); !ok || !report.ExistingVerified || report.URL != "https://discord.com/channels/"+r.State.Destination.Guild+"/"+report.Thread {
+					return zero, errors.New("conversation duplicate proof invalid")
+				}
+			} else if report.URL != "" || report.ExistingVerified {
+				return zero, errors.New("conversation duplicate proof invalid")
+			}
+			delete(index.Questions, q.RequestID)
+			for id, alias := range index.Aliases {
+				if alias.Target == q.RequestID {
+					delete(index.Aliases, id)
+				}
+			}
+			if err = publish(r.conversationPath(), index); err != nil {
+				return zero, err
+			}
+			result := q
+			for _, old := range index.Questions {
+				if old.SenderID == report.ExistingRequest {
+					result = old
+					break
+				}
+			}
+			result.Phase, result.Wait, result.ExistingURL = "duplicate", false, report.URL
+			return result, nil
+		}
+		if decodeErr != nil || report.Domain != "new-owner-recovery-messages" || report.Delivery != "verified" || report.Thread != report.Message || report.Request == "" || !shaPattern.MatchString(report.Fingerprint) {
 			return zero, errors.New("conversation send verification pending")
+		}
+		if len(report.Images) != len(q.AttachmentHashes) || (len(report.Images) != 0 && canonicalHash(report.Images) != canonicalHash(q.AttachmentHashes)) {
+			return zero, errors.New("conversation question image verification pending")
 		}
 		for _, id := range []string{report.Thread, report.Progress} {
 			if _, ok := number(id); !ok {
@@ -441,11 +548,11 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 				continue
 			}
 			if canonical.SenderID == q.SenderID || canonical.Thread == q.Thread {
-				if canonical.SenderID != q.SenderID || canonical.Thread != q.Thread || canonical.Todo != q.Todo || canonical.Project != q.Project || canonical.Fingerprint != q.Fingerprint || canonical.QuestionSHA != q.QuestionSHA || canonical.DecisionSHA != q.DecisionSHA {
+				if canonical.SenderID != q.SenderID || canonical.Thread != q.Thread || canonical.Todo != q.Todo || canonical.Project != q.Project || canonical.Fingerprint != q.Fingerprint || canonical.QuestionSHA != q.QuestionSHA || canonical.DecisionSHA != q.DecisionSHA || !slices.Equal(canonical.AttachmentHashes, report.Images) {
 					return zero, errors.New("conversation canonical question differs")
 				}
 				intent := index.Questions[q.RequestID]
-				index.Aliases[q.RequestID] = conversationAlias{Target: canonical.RequestID, InputSHA: q.InputSHA, Intent: &intent}
+				index.Aliases[q.RequestID] = conversationAlias{Target: canonical.RequestID, InputSHA: q.InputSHA, Intent: &intent, ImagePaths: q.Attachments, ImageHashes: q.AttachmentHashes}
 				delete(index.Questions, q.RequestID)
 				if err = publish(r.conversationPath(), index); err != nil {
 					return zero, err
@@ -471,7 +578,11 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		}
 	}
 	if q.Wait && q.Phase == "posted" {
-		if _, err = r.Run(ctx, conversationTodo, "question-wait", fmt.Sprint(q.Todo), "--question-file", q.ReceiptFile); err != nil {
+		scopeFile, scopeErr := r.conversationScopeFile(row, q)
+		if scopeErr != nil {
+			return zero, scopeErr
+		}
+		if _, err = r.Run(ctx, conversationTodo, "question-wait", fmt.Sprint(q.Todo), "--question-file", q.ReceiptFile, "--scope-file", scopeFile); err != nil {
 			return zero, errors.New("conversation posted; task wait recording pending")
 		}
 		current, err := r.todo(q.Todo)
@@ -567,6 +678,24 @@ func (r *Runner) conversationProof(ctx context.Context, q ConversationQuestion) 
 }
 
 func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile, thread string, notify bool, attachments []string) (map[string]any, error) {
+	return r.conversationLogInner(ctx, requestID, title, bodyFile, thread, notify, attachments, "", false)
+}
+
+func (r *Runner) conversationClarification(ctx context.Context, requestID, title, bodyFile, thread, manifest string) (map[string]any, error) {
+	if thread == "" || manifest == "" {
+		return nil, errors.New("clarification requires an exact original destination and binding")
+	}
+	return r.conversationLogInner(ctx, requestID, title, bodyFile, thread, false, nil, manifest, false)
+}
+
+func (r *Runner) conversationCheckClarification(ctx context.Context, requestID, title, bodyFile, thread, manifest string) (map[string]any, error) {
+	if thread == "" || manifest == "" {
+		return nil, errors.New("exact clarification input required")
+	}
+	return r.conversationLogInner(ctx, requestID, title, bodyFile, thread, false, nil, manifest, true)
+}
+
+func (r *Runner) conversationLogInner(ctx context.Context, requestID, title, bodyFile, thread string, notify bool, attachments []string, clarification string, checkOnly bool) (map[string]any, error) {
 	if !conversationID.MatchString(requestID) || strings.TrimSpace(title) == "" {
 		return nil, errors.New("conversation log identity invalid")
 	}
@@ -609,6 +738,11 @@ func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile
 	if exists && record.InputSHA != inputHash {
 		return nil, errors.New("conversation log retry input differs")
 	}
+	// A clarification only resumes the original failed request; its immutable
+	// input hash and sender ID do not include this new association evidence.
+	if clarification != "" && (!exists || record.Thread != thread) {
+		return nil, errors.New("clarification requires the existing exact log reservation")
+	}
 	if !exists {
 		destination := thread
 		if destination == "" {
@@ -624,6 +758,29 @@ func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile
 		}
 	}
 	args := []string{"recovery-log", "--request-id", "conversation-log-" + bytesHash([]byte(requestID))[:32], "--title", title, "--body-file", record.BodyFile}
+	if clarification != "" {
+		saved, readErr := boundedRegular(record.BodyFile)
+		if readErr != nil || bytesHash(saved) != bytesHash(body) {
+			return nil, errors.New("saved clarification body differs")
+		}
+		binding, readErr := boundedRegular(clarification)
+		if readErr != nil || len(binding) > 16<<10 {
+			return nil, errors.New("clarification binding unavailable")
+		}
+		path := clarification
+		if !checkOnly {
+			// Invalid association evidence must not permanently poison the fixed
+			// request. Only the sender's verified binding commits authority.
+			path = filepath.Join(r.Config.Home, "conversation-clarifications", requestID+"-"+bytesHash(binding)+".json")
+			if err = writeConversationOnce(path, binding); err != nil {
+				return nil, err
+			}
+		}
+		args = append(args, "--clarification-file", path)
+		if checkOnly {
+			args = append(args, "--check-only")
+		}
+	}
 	if record.Thread != "" {
 		if _, ok := number(record.Thread); !ok {
 			return nil, errors.New("conversation log destination invalid")
@@ -641,6 +798,12 @@ func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile
 		return nil, errors.New("conversation log pending; retry the same request")
 	}
 	var report map[string]any
+	if checkOnly {
+		if json.Unmarshal([]byte(raw), &report) != nil || report["domain"] != "new-owner-recovery-messages" || report["check_only"] != true || report["delivery"] != "not_sent" || report["request_id"] != "conversation-log-"+bytesHash([]byte(requestID))[:32] {
+			return nil, errors.New("clarification verification pending")
+		}
+		return map[string]any{"domain": conversationDomain, "request_id": requestID, "delivery": "not_sent", "check_only": true, "original_intent_retained": true}, nil
+	}
 	if json.Unmarshal([]byte(raw), &report) != nil || report["domain"] != "new-owner-recovery-messages" || report["delivery"] != "verified" {
 		return nil, errors.New("conversation log verification pending")
 	}
@@ -657,6 +820,13 @@ func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile
 	}
 	record.VerifiedThread = verifiedThread
 	record.Message = message
+	if effective, present := report["effective_notify"]; present {
+		value, ok := effective.(bool)
+		if !ok {
+			return nil, errors.New("conversation log notification receipt invalid")
+		}
+		record.EffectiveNotify = &value
+	}
 	index.Logs[requestID] = record
 	if thread == "" {
 		index.Topics[title] = verifiedThread
@@ -664,7 +834,11 @@ func (r *Runner) conversationLog(ctx context.Context, requestID, title, bodyFile
 	if err = publish(r.conversationPath(), index); err != nil {
 		return nil, err
 	}
-	return map[string]any{"domain": conversationDomain, "delivery": "verified", "request_id": requestID, "thread_id": report["thread_id"], "message_id": report["message_id"], "url": report["url"], "reused": report["reused"]}, nil
+	result := map[string]any{"domain": conversationDomain, "delivery": "verified", "request_id": requestID, "thread_id": report["thread_id"], "message_id": report["message_id"], "url": report["url"], "reused": report["reused"]}
+	if record.EffectiveNotify != nil {
+		result["effective_notify"] = *record.EffectiveNotify
+	}
+	return result, nil
 }
 
 func (r *Runner) conversationReplies(ctx context.Context, requestID string) (map[string]any, error) {
@@ -693,10 +867,35 @@ func (r *Runner) conversationStatus() (map[string]any, error) {
 		return nil, err
 	}
 	phases := map[string]int{}
-	for _, q := range index.Questions {
+	questions := []map[string]any{}
+	for _, key := range orderedConversationKeys(index) {
+		q := index.Questions[key]
 		phases[q.Phase]++
+		questions = append(questions, conversationQuestionPublic(q))
 	}
-	return map[string]any{"domain": conversationDomain, "questions": len(index.Questions), "phases": phases, "legacy_state": "unchanged", "original_registry_recovered": false}, nil
+	replies := []map[string]any{}
+	intake := []map[string]any{}
+	ids := make([]string, 0, len(r.State.Requests))
+	for id := range r.State.Requests {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		req := r.State.Requests[id]
+		if req == nil || req.Author != r.State.Destination.Owner {
+			continue
+		}
+		intake = append(intake, map[string]any{"message_id": req.Message, "thread_id": req.Thread, "author_id": req.Author, "todo_id": req.Todo, "request_id": req.Conversation, "phase": req.Phase, "source": req.Source, "created_at": req.Created, "edited_at": req.Edited, "acquired_at": req.Acquired, "content_sha256": bytesHash([]byte(req.Text)), "progress_thread_id": req.ProgressThread})
+		if req.Conversation == "" {
+			continue
+		}
+		q, ok := index.Questions[req.Conversation]
+		if !ok || req.Thread != q.Thread || req.Todo != q.Todo {
+			continue
+		}
+		replies = append(replies, map[string]any{"message_id": req.Message, "thread_id": req.Thread, "author_id": req.Author, "todo_id": req.Todo, "request_id": req.Conversation, "phase": req.Phase, "source": req.Source, "created_at": req.Created, "edited_at": req.Edited, "acquired_at": req.Acquired})
+	}
+	return map[string]any{"domain": conversationDomain, "questions": len(index.Questions), "phases": phases, "items": questions, "reply_stages": replies, "intake_stages": intake, "stage_evidence": "saved_state_only", "snapshot_consistency": "independent_saved_files", "legacy_state": "unchanged", "original_registry_recovered": false}, nil
 }
 
 func orderedConversationKeys(index *conversationIndex) []string {

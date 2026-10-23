@@ -6,6 +6,9 @@ use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 use std::{fs, io::Read, path::Path};
 
+mod continued;
+pub use continued::deliver;
+
 const MAX_BYTES: u64 = 1024 * 1024;
 const QUESTION: &str = "discord-conversation-question-v1";
 const ANSWER: &str = "discord-conversation-answer-v1";
@@ -90,7 +93,18 @@ fn reparse(meta: &fs::Metadata) -> bool {
 }
 
 /// Bound the read, reject reparse points/non-files, and hash and parse this one buffer.
-fn bytes(path: &Path) -> Result<Vec<u8>> {
+pub(crate) fn bytes(path: &Path) -> Result<Vec<u8>> {
+    bytes_with_limit(path, MAX_BYTES)
+}
+
+// A selected row can contain the original note, note history and prior receipts.
+// Its CAS snapshot must accept every row which fits the canonical store, while
+// question/answer envelopes and human input retain their smaller input ceiling.
+fn snapshot_bytes(path: &Path) -> Result<Vec<u8>> {
+    bytes_with_limit(path, cc_job_policy::todo_store::MAX_BYTES as u64)
+}
+
+fn bytes_with_limit(path: &Path, limit: u64) -> Result<Vec<u8>> {
     let absolute = std::path::absolute(path).map_err(|_| "conversation_file_unavailable")?;
     for ancestor in absolute.ancestors() {
         let meta = fs::symlink_metadata(ancestor).map_err(|_| "conversation_file_unavailable")?;
@@ -129,14 +143,14 @@ fn bytes(path: &Path) -> Result<Vec<u8>> {
     if !meta.is_file() || reparse(&meta) {
         return fail("file_not_regular");
     }
-    if meta.len() > MAX_BYTES {
+    if meta.len() > limit {
         return fail("file_too_large");
     }
     let mut data = Vec::new();
-    file.take(MAX_BYTES + 1)
+    file.take(limit + 1)
         .read_to_end(&mut data)
         .map_err(|_| "conversation_file_unavailable")?;
-    if data.len() as u64 > MAX_BYTES {
+    if data.len() as u64 > limit {
         return fail("file_too_large");
     }
     Ok(data)
@@ -334,6 +348,36 @@ fn row_index(db: &Value, id: i64) -> Result<usize> {
     Ok(index)
 }
 
+/// A caller's guard result is not a Rust identity proof. Bind the exact project
+/// and registered path which that caller checked, under the canonical store lock.
+pub fn check_scope(db: &Value, id: i64, path: &Path) -> Result<()> {
+    let (scope, _) = read(
+        path,
+        &["domain", "todo_id", "project", "project_path_sha256"],
+    )?;
+    let index = row_index(db, id)?;
+    let project = text(&db["items"][index], "project");
+    if scope["domain"] != "discord-conversation-todo-scope-v1"
+        || text(&scope, "todo_id") != id.to_string()
+        || text(&scope, "project") != project
+        || !hash(text(&scope, "project_path_sha256"))
+        || text(&scope, "project_path_sha256")
+            != digest(db["projects"][project].as_str().unwrap().as_bytes())
+    {
+        return fail("scope_changed");
+    }
+    Ok(())
+}
+
+pub fn check_snapshot(db: &Value, id: i64, path: &Path) -> Result<()> {
+    let expected: Value =
+        serde_json::from_slice(&snapshot_bytes(path)?).map_err(|_| "conversation_state_invalid")?;
+    if db["items"][row_index(db, id)?] != expected {
+        return fail("state_changed");
+    }
+    Ok(())
+}
+
 fn dependencies_clear(db: &Value, row: &Value, key: &str) -> bool {
     if row[key].is_null() {
         return true;
@@ -352,7 +396,7 @@ fn dependencies_clear(db: &Value, row: &Value, key: &str) -> bool {
         })
     })
 }
-fn clear(db: &Value, row: &Value, at: DateTime<Utc>) -> Result<()> {
+fn holds_clear(db: &Value, row: &Value) -> Result<()> {
     if cc_job_policy::cancellation::owner_stopped(row, &Value::Null)
         || [
             "stopped",
@@ -391,6 +435,10 @@ fn clear(db: &Value, row: &Value, at: DateTime<Utc>) -> Result<()> {
     {
         return fail("other_hold");
     }
+    Ok(())
+}
+fn clear(db: &Value, row: &Value, at: DateTime<Utc>) -> Result<()> {
+    holds_clear(db, row)?;
     for value in [
         &row["scheduler"]["not_before"],
         &row["stall_recovery"]["next_at"],
@@ -829,7 +877,7 @@ pub fn withdraw(
         return fail("reason_invalid");
     }
     let reason_sha = digest(&reason_bytes);
-    let expected_bytes = bytes(expected_file)?;
+    let expected_bytes = snapshot_bytes(expected_file)?;
     let expected: Value =
         serde_json::from_slice(&expected_bytes).map_err(|_| "conversation_state_invalid")?;
     let expected_sha = digest(&expected_bytes);
@@ -964,8 +1012,14 @@ pub fn answer(
     if row["status"] != "block" {
         return fail("block_changed");
     }
+    if wait
+        .get("origin")
+        .is_some_and(|origin| *origin != origin_identity(row))
+    {
+        return fail("owner_changed_or_active");
+    }
     let note = if let Some((note_file, expected_file)) = delivery {
-        let expected: Value = serde_json::from_slice(&bytes(expected_file)?)
+        let expected: Value = serde_json::from_slice(&snapshot_bytes(expected_file)?)
             .map_err(|_| "conversation_state_invalid")?;
         if *row != expected {
             return fail("state_changed");

@@ -1,5 +1,5 @@
 use crate::{common::*, native, policy::*};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     collections::BTreeMap,
     fs,
@@ -95,7 +95,7 @@ pub struct Network;
 pub fn token() -> Result<String> {
     let mut value = std::env::var("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
     if value.is_empty() {
-        use winreg::{enums::HKEY_CURRENT_USER, RegKey};
+        use winreg::{RegKey, enums::HKEY_CURRENT_USER};
         value = RegKey::predef(HKEY_CURRENT_USER)
             .open_subkey("Environment")
             .and_then(|k| k.get_value("GODD_DISCORD_BOT_TOKEN"))
@@ -225,7 +225,11 @@ pub fn valid_model(m: &str) -> bool {
     m.len() <= 80
         && MODEL_SYNTAX
             .get_or_init(|| regex::Regex::new(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$").unwrap())
-            .is_match(m.strip_prefix("anthropic/").unwrap_or(m))
+            .is_match(
+                m.strip_prefix("anthropic/")
+                    .or_else(|| m.strip_prefix("openai/"))
+                    .unwrap_or(m),
+            )
 }
 pub fn valid_effort(e: &str) -> bool {
     matches!(
@@ -446,6 +450,25 @@ impl RealBackend {
                     .extend(["--parent-job-id".into(), parent.into()]);
             }
         }
+        if let Some(sources)=selection["review_source_jobs"].as_array().filter(|ids|!ids.is_empty()) {
+            invocation.args.extend(["--review-source-jobs".into(),sources.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(",")]);
+        }
+        invocation.args.extend([
+            "--effort-origin".into(),
+            if selection["effort_origin"] == "owner_request" {
+                "owner_request".into()
+            } else {
+                "policy".into()
+            },
+        ]);
+        invocation.args.extend([
+            "--model-origin".into(),
+            if selection["model_origin"] == "owner_request" {
+                "owner_request".into()
+            } else {
+                "policy".into()
+            },
+        ]);
         if let Some(value) = selection["mcp_profile"].as_str() {
             invocation
                 .args
@@ -833,8 +856,8 @@ pub fn result_outcome(result: &str) -> &'static str {
 pub fn job_result_outcome(job: &Value, result: &str) -> &'static str {
     if cc_job_policy::review_result::completed(job, result) {
         let body = result.split_once('\n').map(|(_, body)| body).unwrap_or("");
-        // Retain the existing duplicate-status and body checks after recognizing
-        // this one completed child-review spelling. Root parsing stays strict.
+        // Parent work can remain unfinished in prose. Conflicting standalone
+        // status headers remain ambiguous even for a bound finite reader.
         result_outcome(&format!("状態: 完了\n{body}"))
     } else {
         result_outcome(result)

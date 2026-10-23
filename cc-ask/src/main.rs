@@ -19,7 +19,14 @@ enum Commands {
     /// Audit full archived histories with an ID-only checkpoint; never posts or launches.
     AuditHistory(cc_ask::history_audit::Args),
     /// Send a new explicitly requested message using independent append-only receipts.
-    RecoveryLog(cc_ask::recovery_messages::LogArgs),
+    RecoveryLog {
+        #[command(flatten)]
+        args: cc_ask::recovery_messages::LogArgs,
+        #[arg(long)]
+        clarification_file: Option<PathBuf>,
+        #[arg(long, requires = "clarification_file")]
+        check_only: bool,
+    },
     /// Create one new owner decision and its separate silent progress post.
     RecoveryAsk(cc_ask::recovery_messages::AskArgs),
     /// Repair one exact unsent recovery ask to a previously verified progress post.
@@ -139,6 +146,12 @@ enum Commands {
         attach: Vec<PathBuf>,
         #[arg(long)]
         notify: bool,
+        /// Exact original question, owner explanation request and fixed log binding.
+        #[arg(long)]
+        clarification_file: Option<PathBuf>,
+        /// Check the exact association using GET; never send the explanation.
+        #[arg(long, requires = "clarification_file")]
+        check_only: bool,
     },
     Close {
         thread: String,
@@ -230,6 +243,40 @@ fn run(command: Commands) -> Result<()> {
             body_file,
             notify,
             attach,
+            clarification_file: Some(manifest),
+            check_only: true,
+        } => cc_ask::conversation_bridge::try_check_clarification(
+            &home,
+            &mut RealEffects,
+            thread,
+            body_file,
+            *notify,
+            attach,
+            manifest,
+        )?,
+        Commands::Post {
+            thread,
+            body_file,
+            notify,
+            attach,
+            clarification_file: Some(manifest),
+            check_only: false,
+        } => cc_ask::conversation_bridge::try_post_clarification(
+            &home,
+            &mut RealEffects,
+            thread,
+            body_file,
+            *notify,
+            attach,
+            manifest,
+        )?,
+        Commands::Post {
+            thread,
+            body_file,
+            notify,
+            attach,
+            clarification_file: None,
+            ..
         } => cc_ask::conversation_bridge::try_post(
             &home,
             &mut RealEffects,
@@ -330,7 +377,9 @@ fn run(command: Commands) -> Result<()> {
                 followup::Command::Register { config } => followup::register(&mut ctx, &config)?,
                 followup::Command::Tick => followup::tick(&mut ctx)?,
                 followup::Command::Inspect => followup::inspect(&ctx)?,
-                followup::Command::Claim{message,handler} => followup::claim(&mut ctx,&message,&handler)?,
+                followup::Command::Claim { message, handler } => {
+                    followup::claim(&mut ctx, &message, &handler)?
+                }
                 followup::Command::Applied {
                     message,
                     result_file,
@@ -338,17 +387,34 @@ fn run(command: Commands) -> Result<()> {
             };
             println!("{value}");
         }
-        Commands::RecoveryLog(args) => {
-            println!("{}", cc_ask::recovery_messages::log(&mut ctx, &args)?)
+        Commands::RecoveryLog {
+            args,
+            clarification_file,
+            check_only,
+        } => {
+            let result = match clarification_file {
+                Some(path) if check_only => {
+                    cc_ask::recovery_messages::check_clarification(&mut ctx, &args, &path)?
+                }
+                Some(path) => cc_ask::recovery_messages::log_clarification(&mut ctx, &args, &path)?,
+                None => cc_ask::recovery_messages::log(&mut ctx, &args)?,
+            };
+            println!("{result}");
         }
         Commands::RecoveryAsk(args) => {
             println!("{}", cc_ask::recovery_messages::ask(&mut ctx, &args)?)
         }
         Commands::RecoveryRepairOrigin(args) => {
-            println!("{}", cc_ask::recovery_messages::repair_origin(&mut ctx, &args)?)
+            println!(
+                "{}",
+                cc_ask::recovery_messages::repair_origin(&mut ctx, &args)?
+            )
         }
         Commands::RecoveryResumeAsk(args) => {
-            println!("{}", cc_ask::recovery_messages::resume_ask(&mut ctx, &args)?)
+            println!(
+                "{}",
+                cc_ask::recovery_messages::resume_ask(&mut ctx, &args)?
+            )
         }
         Commands::RecoveryReplies(args) => {
             println!("{}", cc_ask::recovery_messages::replies(&mut ctx, &args)?)
@@ -463,7 +529,12 @@ fn run(command: Commands) -> Result<()> {
             body_file,
             attach,
             notify,
+            clarification_file,
+            ..
         } => {
+            if clarification_file.is_some() {
+                return Err("説明補足を旧送信へ切り替えることはできません".into());
+            }
             cmd_post(&mut ctx, &thread, &body_file, &attach, notify)?;
         }
         Commands::Inbox { state_file } => {
@@ -508,7 +579,7 @@ mod tests {
             "image.png",
         ])
         .unwrap();
-        let Commands::RecoveryLog(args) = cli.command else {
+        let Commands::RecoveryLog { args, .. } = cli.command else {
             panic!("wrong recovery command");
         };
         assert_eq!(args.request_id, "new-notice-2472");
@@ -588,10 +659,24 @@ mod tests {
         .is_err());
         assert!(Cli::try_parse_from(["discord_ask", "recovery-replies"]).is_err());
         assert!(Cli::try_parse_from(["discord_ask", "recovery-close"]).is_err());
-        let close = Cli::try_parse_from(["discord_ask", "recovery-close", "--manifest", "exact.json"]).unwrap();
-        assert!(matches!(close.command, Commands::RecoveryClose(args) if args.manifest.to_str() == Some("exact.json")));
-        let legacy = Cli::try_parse_from(["discord_ask", "recovery-close", "--manifest", "exact.json", "--legacy-reply-timestamp", "2026-10-13T19:14:10.114+09:00"]).unwrap();
-        assert!(matches!(legacy.command, Commands::RecoveryClose(args) if args.legacy_reply_timestamp.as_deref() == Some("2026-10-13T19:14:10.114+09:00")));
+        let close =
+            Cli::try_parse_from(["discord_ask", "recovery-close", "--manifest", "exact.json"])
+                .unwrap();
+        assert!(
+            matches!(close.command, Commands::RecoveryClose(args) if args.manifest.to_str() == Some("exact.json"))
+        );
+        let legacy = Cli::try_parse_from([
+            "discord_ask",
+            "recovery-close",
+            "--manifest",
+            "exact.json",
+            "--legacy-reply-timestamp",
+            "2026-10-13T19:14:10.114+09:00",
+        ])
+        .unwrap();
+        assert!(
+            matches!(legacy.command, Commands::RecoveryClose(args) if args.legacy_reply_timestamp.as_deref() == Some("2026-10-13T19:14:10.114+09:00"))
+        );
         let cli = Cli::try_parse_from([
             "discord_ask",
             "recovery-replies",

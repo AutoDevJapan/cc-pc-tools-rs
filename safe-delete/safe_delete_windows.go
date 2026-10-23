@@ -461,6 +461,44 @@ func driveSpace() []map[string]any {
 	return result
 }
 func (c config) quarantine(id, reason string) (result map[string]any, err error) {
+	if id == console3451ID && reason == "windows" {
+		scope, e := c.console3451Recovery(id)
+		if e != nil {
+			return nil, e
+		}
+		return c.quarantinePreserved(id, reason, nil, scope)
+	}
+	if id == ci3174ID && reason == "windows" {
+		scope, unlock, e := c.ci3174Recovery(id)
+		if e != nil {
+			return nil, e
+		}
+		defer unlock()
+		return c.quarantinePreserved(id, reason, nil, scope)
+	}
+	if c.ci3250Candidate(id) {
+		r, e := c.load(id, true)
+		if e != nil {
+			return nil, e
+		}
+		if ci3250PreservedReason(r.Root, reason) {
+			scope, unlock, e := c.ci3250Recovery(id)
+			if e != nil {
+				var refused *failure
+				if errors.As(e, &refused) && refused.Code == "CI_RETIREMENT_UNQUALIFIED" {
+					return c.quarantineScoped(id, reason, nil)
+				}
+				return nil, e
+			}
+			defer unlock()
+			r, e := c.load(id, true)
+			if e != nil {
+				return nil, e
+			}
+			c.Quarantine = ci3250QuarantineParent(r.Root, c.Quarantine)
+			return c.quarantinePreserved(id, reason, nil, scope)
+		}
+	}
 	var scope *geminiScope
 	if reason == "hardlink" {
 		scope, err = c.geminiRecovery(id)
@@ -471,15 +509,27 @@ func (c config) quarantine(id, reason string) (result map[string]any, err error)
 	return c.quarantineScoped(id, reason, scope)
 }
 func (c config) quarantineScoped(id, reason string, scope *geminiScope) (result map[string]any, err error) {
+	return c.quarantinePreserved(id, reason, scope, nil)
+}
+func (c config) quarantinePreserved(id, reason string, scope *geminiScope, ci *ci3174Scope) (result map[string]any, err error) {
 	text, ok := reasons[reason]
 	if !ok {
 		return nil, fail("INVALID_REASON")
+	}
+	if ci != nil {
+		text = "終了と所有を確認した検査資源を、全項目の属性を照合して原物のまま退避する。本文とリンク先は未読。Windowsや実行前ポリシーが拒否したと推定するものではない。"
 	}
 	r, err := c.load(id, true)
 	if err != nil {
 		return nil, err
 	}
-	m, err := c.measureWithShared(r.Path, scope)
+	var ciBefore map[string]ci3174Entry
+	var m measured
+	if ci != nil {
+		ciBefore, m, err = ci.snapshot(r.Path)
+	} else {
+		m, err = c.measureWithShared(r.Path, scope)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -545,6 +595,23 @@ func (c config) quarantineScoped(id, reason string, scope *geminiScope) (result 
 		return nil, fail("QUARANTINE_REASON_WRITE_FAILED")
 	}
 	reasonWritten = true
+	if ci != nil {
+		phase = "preservation_record"
+		if ci.originalReceipt == nil {
+			return nil, fail("CI_PROOF_INVALID")
+		}
+		original, readErr := ci.originalReceipt()
+		if readErr != nil {
+			return nil, readErr
+		}
+		if os.WriteFile(filepath.Join(dest, "original-receipt.json"), original, 0600) != nil {
+			return nil, fail("PRESERVATION_RECORD_WRITE_FAILED")
+		}
+		b, encodeErr := json.MarshalIndent(ciBefore, "", "  ")
+		if encodeErr != nil || os.WriteFile(filepath.Join(dest, "preservation.json"), b, 0600) != nil {
+			return nil, fail("PRESERVATION_RECORD_WRITE_FAILED")
+		}
+	}
 	if scope != nil {
 		phase = "preservation_record"
 		b, encodeErr := json.MarshalIndent(before, "", "  ")
@@ -553,6 +620,14 @@ func (c config) quarantineScoped(id, reason string, scope *geminiScope) (result 
 		}
 	}
 	phase = "move"
+	if ci != nil {
+		if err = ci.settled(); err != nil {
+			return nil, err
+		}
+		if err = ci.verify(r.Path, ciBefore, r); err != nil {
+			return nil, err
+		}
+	}
 	if scope != nil {
 		if err = scope.verify(r.Path, before, r); err != nil {
 			return nil, err
@@ -568,6 +643,12 @@ func (c config) quarantineScoped(id, reason string, scope *geminiScope) (result 
 	if scope != nil {
 		phase = "verify_preservation"
 		if err = scope.verify(filepath.Join(dest, "files"), before, r); err != nil {
+			return nil, err
+		}
+	}
+	if ci != nil {
+		phase = "verify_preservation"
+		if err = ci.verify(filepath.Join(dest, "files"), ciBefore, r); err != nil {
 			return nil, err
 		}
 	}
@@ -600,7 +681,7 @@ func appendReason(path, text string) error {
 }
 func main() {
 	if len(os.Args) < 2 || os.Args[1] == "--help" {
-		fmt.Println("safe-delete create --project NAME [--content NAME] [--root PATH]\nsafe-delete plan|finish --id ID\nsafe-delete quarantine --id ID --reason policy|windows|locked|attributes|size|hardlink\nhardlink is restricted to ToDo2307's fixed receipt and media.\nDeletion plans must be submitted separately to the caller's ordinary exec tool.")
+		fmt.Println("safe-delete create --project NAME [--content NAME] [--root PATH]\nsafe-delete plan|finish --id ID\nsafe-delete quarantine --id ID --reason policy|windows|locked|attributes|size|hardlink\nhardlink is restricted to ToDo2307's fixed receipt and media.\nToDo3174's fixed collected CI receipt uses windows quarantine only, with root client guard and opaque preservation.\nDeletion plans must be submitted separately to the caller's ordinary exec tool.")
 		return
 	}
 	c := defaultConfig()
@@ -617,6 +698,17 @@ func main() {
 		err = fail("INVALID_ARGUMENTS")
 	} else {
 		switch os.Args[1] {
+		case "inspect-console":
+			// A read-only candidate can verify the original producer record before
+			// distribution. No caller-supplied store or mutation is accepted.
+			c.Store = "D:/CC/Tools/safe-delete/receipts-go"
+			var scope *ci3174Scope
+			scope, err = c.console3451Recovery(*id)
+			if err == nil {
+				var measured measured
+				_, measured, err = scope.snapshot(console3451Root)
+				result = map[string]any{"id": *id, "state": "qualified_for_preservation", "bytes": measured.Bytes, "entries": measured.Entries, "changed": false}
+			}
 		case "create":
 			result, err = c.create(*root, *project, *content)
 		case "plan":

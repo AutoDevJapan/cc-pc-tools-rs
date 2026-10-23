@@ -1,9 +1,25 @@
 # 所有付き一時フォルダーの退避
 
+## Consoleの画面テストで作成した一時データ
+
+今回の元の作成記録に一致する所有IDだけを、`quarantine --id <ID> --reason windows` から保全付きで退避する。通常のplanと他のGit保護は変えない。公式GitHubのrun・job・PR・main応答を原文ごとにハッシュ固定し、成功した同じソース、mainへの統合、配布物2件の実ハッシュを照合する。作成記録・所有者・処理の終了・Gitの保存状態・全項目の安定を確認し、元のGit情報を含めた全データを同じCドライブの削除希望へ移す。移動前後の全メタデータ・内部別名・原記録を照合する。削除や別フォルダーの許可は含まない。
+
+この公開リポジトリの通常Windowsテストは、無料の標準GitHub実行機を使う。開始前にGitHubの現在のPR/mainとheadを照合する。非公開のコピーでは既存の隔離されたPC実行機と受付手順を維持する。
+
 PCで配備済みのGo版safe-deleteのソースと既存検査を、このリポジトリーで管理する。
 新規道具はGoを使うPCオーナーの指示に従う。通常のplan・quarantine・finishの
 所有照合、Git保護、外部ハードリンク拒否、reparse拒否、項目数上限は維持する。
 実行ファイルの隣のreceipts-goを使い、既存フォルダーの所有登録は追加しない。
+
+## ToDo3174の終了済みWindows検査資源
+
+固定ID4378ff571926b0ddbec4ed99368a6405の`quarantine --reason windows`だけに、
+正規collect後の原記録・source・公開API・全属性一覧・停止SCM・回収marker・
+client guardを確認する資格を設ける。既存claim lockを保持し、SDKのopaque reparse
+13件のリンク先を読まず、通常Move-Itemの前後で全3,626項目の実体保持を確認する。
+原receipt bytesと属性一覧を退避先へ保存し、保持確認後だけ原receiptを閉じる。
+planと他のrootの境界は従来どおり。詳しい受入条件は
+[有限な退避の仕様](../docs/todo3174-ci-quarantine.md)に記録する。
 
 ## ToDo2307のGemini試写の一時データ
 

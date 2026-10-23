@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -19,6 +21,42 @@ func currentFixtureGit(t *testing.T, root string, args ...string) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 	if b, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("fixture git failed: %v: %s", err, b)
+	}
+}
+
+func TestCurrentGitProbeRetriesOnlyOneTransportDeadline(t *testing.T) {
+	type result struct {
+		output   string
+		err      error
+		timedOut bool
+	}
+	for _, test := range []struct {
+		name    string
+		results []result
+		want    string
+		ok      bool
+		calls   int
+	}{
+		{"success", []result{{" verified \n", nil, false}}, "verified", true, 1},
+		{"transient deadline", []result{{"partial", context.DeadlineExceeded, true}, {"verified", nil, false}}, "verified", true, 2},
+		{"two deadlines", []result{{"partial", context.DeadlineExceeded, true}, {"partial", context.DeadlineExceeded, true}}, "", false, 2},
+		{"Git failure", []result{{"partial", errors.New("exit status 128"), false}}, "", false, 1},
+		{"cancelled", []result{{"partial", context.Canceled, false}}, "", false, 1},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			calls := 0
+			output, ok := retryCurrentGitProbe(func() (string, error, bool) {
+				if calls >= len(test.results) {
+					t.Fatal("probe exceeded its finite retry allowance")
+				}
+				r := test.results[calls]
+				calls++
+				return r.output, r.err, r.timedOut
+			})
+			if output != test.want || ok != test.ok || calls != test.calls {
+				t.Fatalf("output=%q verified=%v calls=%d", output, ok, calls)
+			}
+		})
 	}
 }
 

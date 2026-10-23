@@ -1,0 +1,400 @@
+use super::*;
+
+fn legacy_review() -> Fixture {
+    let mut f = Fixture::new();
+    let mut runner = SystemRunner;
+    run_git(&mut runner, &f.repo, &["init", "--quiet"]).unwrap();
+    run_git(
+        &mut runner,
+        &f.repo,
+        &[
+            "remote",
+            "add",
+            "origin",
+            "https://github.com/adj/fixture.git",
+        ],
+    )
+    .unwrap();
+    fs::write(f.repo.join("source.txt"), "fixed source").unwrap();
+    run_git(&mut runner, &f.repo, &["add", "source.txt"]).unwrap();
+    run_git(
+        &mut runner,
+        &f.repo,
+        &[
+            "-c",
+            "user.name=fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "--quiet",
+            "-m",
+            "source",
+        ],
+    )
+    .unwrap();
+    let parent = PathBuf::from(format!("{}-wt", f.repo.display())).join("todo-1-writer");
+    run_git(
+        &mut runner,
+        &f.repo,
+        &[
+            "worktree",
+            "add",
+            "-b",
+            "scheduler/todo-1-writer",
+            parent.to_str().unwrap(),
+        ],
+    )
+    .unwrap();
+    // Reuse an existing reserved ref so this offline acceptance test cannot fetch.
+    run_git(&mut runner, &f.repo, &["branch", "scheduler/todo-2-review"]).unwrap();
+    fs::write(parent.join("unfinished.txt"), "keep writer work").unwrap();
+    let mut owner = cc_job_policy::work_owner::checkout(parent.to_str().unwrap());
+    owner["pr"] = json!(282);
+    let mut writer = item(1, "other", "doing", &[]);
+    writer["title"] = json!("PR282 writer");
+    writer["jobs"] = json!(["parent"]);
+    writer["scheduler"] =
+        json!({"job":"parent","worktree":parent,"branch":"scheduler/todo-1-writer"});
+    f.put(writer);
+    let mut review = item(2, "other", "todo", &[]);
+    review["title"] = json!("PR282 fixed review");
+    review["jobs"] = json!(["legacy"]);
+    review["model"] = json!("anthropic/claude-opus-5-5");
+    review["effort"] = json!("max");
+    review["subwork"] =
+        json!({"parent_todo_id":1,"origin_job_id":"parent","kind":"review","owner":owner});
+    review["scheduler"] = json!({"last_job":"legacy","phase":"preparing","worktree":parent,
+        "branch":"scheduler/todo-1-writer","workspace_receipt":{"job":"legacy","todo_id":2,"cwd":parent}});
+    f.put(review);
+    f.e.backend.records = vec![
+        json!({"id":"parent","todo_id":1,"status":"succeeded","cwd":parent,"work_owner":owner}),
+        json!({"id":"legacy","todo_id":2,"status":"succeeded","cwd":parent,"exit_code":0}),
+    ];
+    f.e.backend.ps.clear();
+    f.e.backend.real_workspaces = true;
+    f
+}
+
+#[test]
+fn review_workspace_separates_execution_without_replacing_source_or_history() {
+    let mut f = legacy_review();
+    let before = f.get(2);
+    let writer = f.get(1);
+    let parent = Path::new(s(&writer["scheduler"]["worktree"]));
+    let head = run_git(&mut SystemRunner, parent, &["rev-parse", "HEAD"]).unwrap();
+    let status = run_git(&mut SystemRunner, parent, &["status", "--porcelain"]).unwrap();
+    assert!(cc_job_policy::subwork::resolve(&f.e.todo().unwrap(), &before, &[], true).is_err());
+    let repo = f.repo.to_str().unwrap().to_owned();
+    let prepared = f.e.prepare(&before, &repo).unwrap().unwrap();
+    assert_ne!(
+        prepared["scheduler"]["worktree"],
+        before["scheduler"]["worktree"]
+    );
+    assert_eq!(prepared["scheduler"]["branch"], "scheduler/todo-2-review");
+    cc_job_policy::subwork::resolve(&f.e.todo().unwrap(), &prepared, &[], true).unwrap();
+    for field in [
+        "subwork", "jobs", "spec", "note", "model", "effort", "status", "needs", "wait_on",
+    ] {
+        assert_eq!(prepared[field], before[field], "{field}");
+    }
+    assert_eq!(
+        prepared["scheduler"]["workspace_receipt"],
+        before["scheduler"]["workspace_receipt"]
+    );
+    let receipt = prepared["scheduler"]["subwork_workspace_migration"].clone();
+    assert_eq!(receipt["source_job"], "legacy");
+    assert_eq!(
+        receipt["previous"]["worktree"],
+        before["scheduler"]["worktree"]
+    );
+    assert_eq!(
+        receipt["previous"]["workspace_receipt"],
+        before["scheduler"]["workspace_receipt"]
+    );
+    let repeated = f.e.prepare(&prepared, &repo).unwrap().unwrap();
+    assert_eq!(
+        repeated["scheduler"]["worktree"],
+        prepared["scheduler"]["worktree"]
+    );
+    assert_eq!(
+        repeated["scheduler"]["subwork_workspace_migration"],
+        receipt
+    );
+    assert_eq!(
+        run_git(&mut SystemRunner, parent, &["rev-parse", "HEAD"]).unwrap(),
+        head
+    );
+    assert_eq!(
+        run_git(&mut SystemRunner, parent, &["status", "--porcelain"]).unwrap(),
+        status
+    );
+    assert_eq!(
+        fs::read_to_string(parent.join("unfinished.txt")).unwrap(),
+        "keep writer work"
+    );
+    assert_eq!(f.get(1), writer);
+    assert!(f.e.backend.launched.is_empty());
+}
+
+#[test]
+fn review_workspace_migrates_recorded_parent_source_from_another_checkout() {
+    for change in [
+        "valid",
+        "unrecorded",
+        "repository",
+        "common",
+        "tree",
+        "branch",
+        "pr",
+        "other_parent",
+    ] {
+        let mut f = legacy_review();
+        let writer = f.get(1);
+        let parent = PathBuf::from(s(&writer["scheduler"]["worktree"]));
+        let source = parent.parent().unwrap().join("todo-1-source");
+        let branch = if change == "other_parent" {
+            "scheduler/todo-9-source"
+        } else {
+            "scheduler/todo-1-source"
+        };
+        run_git(
+            &mut SystemRunner,
+            &f.repo,
+            &["worktree", "add", "-b", branch, source.to_str().unwrap()],
+        )
+        .unwrap();
+        fs::write(
+            source.join("unfinished-source.txt"),
+            "keep review read source",
+        )
+        .unwrap();
+        let source_head = run_git(&mut SystemRunner, &source, &["rev-parse", "HEAD"]).unwrap();
+        let source_status =
+            run_git(&mut SystemRunner, &source, &["status", "--porcelain"]).unwrap();
+        let parent_status =
+            run_git(&mut SystemRunner, &parent, &["status", "--porcelain"]).unwrap();
+        let mut recorded = cc_job_policy::work_owner::checkout(source.to_str().unwrap());
+        recorded["pr"] = json!(282);
+        match change {
+            "unrecorded" => recorded = Value::Null,
+            "repository" => recorded["repository"] = json!("unknown/repository"),
+            "common" => recorded["git_common"] = json!("unknown"),
+            "tree" => recorded["worktree"] = writer["scheduler"]["worktree"].clone(),
+            "branch" => recorded["branch"] = json!("scheduler/todo-1-other"),
+            "pr" => recorded["pr"] = json!(283),
+            _ => (),
+        }
+        f.e.backend.records[1]["cwd"] = json!(source);
+        f.e.backend.records[1]["work_owner"] = recorded;
+        let jobs_before = f.e.backend.records.clone();
+        let mut row = f.get(2);
+        row["scheduler"]["worktree"] = json!(source);
+        row["scheduler"]["branch"] = json!(branch);
+        row["scheduler"]["workspace_receipt"]["cwd"] = json!(source);
+        f.e.edit(&json!(2), |saved| *saved = row.clone()).unwrap();
+        let bytes = fs::read(&f.e.todo_path).unwrap();
+        let result = f.e.prepare(&row, f.repo.to_str().unwrap());
+        if change == "valid" {
+            let prepared = result.unwrap().unwrap();
+            assert_eq!(prepared["scheduler"]["branch"], "scheduler/todo-2-review");
+            assert_ne!(prepared["scheduler"]["worktree"], json!(source));
+            assert_eq!(prepared["subwork"], row["subwork"]);
+            assert_eq!(prepared["jobs"], row["jobs"]);
+            assert_eq!(
+                prepared["scheduler"]["workspace_receipt"],
+                row["scheduler"]["workspace_receipt"]
+            );
+            let migration = &prepared["scheduler"]["subwork_workspace_migration"];
+            assert_eq!(migration["source_job"], "legacy");
+            assert_eq!(migration["source_worktree"], json!(source));
+            assert_eq!(migration["source_branch"], branch);
+            assert_eq!(migration["previous"]["worktree"], json!(source));
+            cc_job_policy::subwork::resolve(&f.e.todo().unwrap(), &prepared, &[], true).unwrap();
+            let repeated =
+                f.e.prepare(&prepared, f.repo.to_str().unwrap())
+                    .unwrap()
+                    .unwrap();
+            assert_eq!(
+                repeated["scheduler"]["worktree"],
+                prepared["scheduler"]["worktree"]
+            );
+            assert_eq!(
+                repeated["scheduler"]["subwork_workspace_migration"],
+                *migration
+            );
+        } else {
+            assert!(result.is_err(), "{change}");
+            assert_eq!(fs::read(&f.e.todo_path).unwrap(), bytes, "{change}");
+            assert!(!PathBuf::from(format!("{}-wt/todo-2-review", f.repo.display())).exists());
+        }
+        assert_eq!(
+            run_git(&mut SystemRunner, &source, &["rev-parse", "HEAD"]).unwrap(),
+            source_head
+        );
+        assert_eq!(
+            run_git(&mut SystemRunner, &source, &["status", "--porcelain"]).unwrap(),
+            source_status
+        );
+        assert_eq!(
+            run_git(&mut SystemRunner, &parent, &["status", "--porcelain"]).unwrap(),
+            parent_status
+        );
+        assert_eq!(
+            fs::read_to_string(source.join("unfinished-source.txt")).unwrap(),
+            "keep review read source"
+        );
+        assert_eq!(f.get(1), writer);
+        assert_eq!(f.e.backend.records, jobs_before);
+        assert!(f.e.backend.launched.is_empty());
+    }
+}
+
+#[test]
+fn review_workspace_refuses_unverified_provenance_and_running_or_queued_review() {
+    for change in [
+        "parent",
+        "kind",
+        "owner",
+        "unlinked",
+        "live",
+        "queued",
+        "still_alive",
+        "unknown",
+        "allocation",
+    ] {
+        let mut f = legacy_review();
+        let mut row = f.get(2);
+        match change {
+            "parent" => row["subwork"]["origin_job_id"] = json!("unknown"),
+            "kind" => row["subwork"]["kind"] = json!("implementation"),
+            "owner" => row["subwork"]["owner"]["git_common"] = json!("unknown"),
+            "unlinked" => row["jobs"] = json!([]),
+            "live" => f.e.backend.records[1]["status"] = json!("running"),
+            "queued" => {
+                f.e.backend
+                    .records
+                    .push(json!({"id":"new","todo_id":2,"status":"queued"}))
+            }
+            "still_alive" => {
+                let process = proc(7, 0, "codex.exe");
+                f.e.backend.records[1]["pid"] = json!(7);
+                f.e.backend.records[1]["pid_created"] = process["created"].clone();
+                f.e.backend.ps.insert(7, process);
+            }
+            "unknown" => f.e.backend.records[1]["status"] = Value::Null,
+            "allocation" => row["scheduler"]["worktree"] = json!(f.temp.path().join("unrelated")),
+            _ => unreachable!(),
+        }
+        f.e.edit(&json!(2), |saved| *saved = row.clone()).unwrap();
+        let bytes = fs::read(&f.e.todo_path).unwrap();
+        assert!(
+            f.e.prepare(&row, f.repo.to_str().unwrap()).is_err(),
+            "{change}"
+        );
+        assert_eq!(fs::read(&f.e.todo_path).unwrap(), bytes, "{change}");
+        assert!(!PathBuf::from(format!("{}-wt/todo-2-review", f.repo.display())).exists());
+        assert!(f.e.backend.launched.is_empty());
+    }
+}
+
+#[test]
+fn review_workspace_dispatch_keeps_normal_capacity_model_and_admission_checks() {
+    for gate in [
+        "open", "cpu", "memory", "cargo", "deadline", "wait", "stop", "active",
+    ] {
+        let mut f = legacy_review();
+        match gate {
+            "cpu" => f.e.backend.m["cpu_percent"] = json!(99),
+            "memory" => f.e.backend.m["available_gb"] = json!(3),
+            "cargo" => {
+                f.e.edit(&json!(2), |row| row["needs"] = json!(["cargo"]))
+                    .unwrap();
+                f.e.backend.ps.insert(8, proc(8, 0, "cargo.exe"));
+            }
+            "deadline" => {
+                f.e.edit(&json!(2), |row| {
+                    row["scheduler"]["not_before"] = json!(T + 3600.)
+                })
+                .unwrap();
+            }
+            "wait" => {
+                f.e.edit(&json!(2), |row| row["wait_on"] = json!([1]))
+                    .unwrap();
+            }
+            "stop" => {
+                f.e.edit(&json!(2), |row| row["status"] = json!("block"))
+                    .unwrap();
+            }
+            "active" => {
+                f.e.backend
+                    .records
+                    .push(json!({"id":"other","todo_id":2,"status":"queued"}))
+            }
+            _ => (),
+        }
+        let report = f.e.dispatch_existing_subwork(2).unwrap();
+        assert_eq!(
+            report["launched"].is_object(),
+            gate == "open",
+            "{gate}: {report}"
+        );
+        assert_eq!(
+            f.e.backend.launched.len(),
+            usize::from(gate == "open"),
+            "{gate}"
+        );
+        if gate == "open" {
+            let row = f.get(2);
+            assert_eq!(row["scheduler"]["branch"], "scheduler/todo-2-review");
+            assert_eq!(
+                f.e.backend.launched[0]["item"]["scheduler"]["selection"]["model"],
+                "anthropic/claude-opus-5-5"
+            );
+            assert_eq!(
+                f.e.backend.launched[0]["item"]["scheduler"]["selection"]["effort"],
+                "max"
+            );
+            assert_eq!(
+                row["scheduler"]["subwork_admission"]["worktree"],
+                row["scheduler"]["worktree"]
+            );
+            let repeated = f.e.dispatch_existing_subwork(2).unwrap();
+            assert_eq!(repeated["active"], true);
+            assert!(repeated["launched"].is_null());
+            assert_eq!(f.e.backend.launched.len(), 1);
+        }
+    }
+}
+
+#[test]
+fn review_workspace_dispatch_preserves_saved_state_and_launch_interval() {
+    for malformed in [false, true] {
+        let mut f = legacy_review();
+        let path = f.e.root.join("state.json");
+        let saved = if malformed {
+            json!(["invalid state; do not replace it"])
+        } else {
+            json!({"last_launch":T,"project_last_launch":{"retained-project":T-60.},
+                "retained_observation":{"count":7}})
+        };
+        write_json(&path, &saved, 2).unwrap();
+        let db_before = fs::read(&f.e.todo_path).unwrap();
+        let state_before = fs::read(&path).unwrap();
+        let result = f.e.dispatch_existing_subwork(2);
+        assert!(f.e.backend.launched.is_empty());
+        assert_eq!(fs::read(&f.e.todo_path).unwrap(), db_before);
+        if malformed {
+            assert_eq!(result.unwrap_err().0, "AttributeError");
+            assert_eq!(fs::read(&path).unwrap(), state_before);
+        } else {
+            let report = result.unwrap();
+            assert!(report["launched"].is_null());
+            assert_eq!(report["allowance_now"], 0);
+            let after = read_json(&path, Value::Null).unwrap();
+            assert_eq!(after["retained_observation"], saved["retained_observation"]);
+            assert_eq!(after["project_last_launch"], saved["project_last_launch"]);
+            assert_eq!(after["last_launch"], T);
+        }
+        assert!(!PathBuf::from(format!("{}-wt/todo-2-review", f.repo.display())).exists());
+    }
+}

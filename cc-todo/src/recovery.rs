@@ -462,6 +462,9 @@ fn plan_with_intake(
                     && n(&i["scheduler"]["not_before"]) <= t
                     // Finite independent work uses scheduler's resource-aware launch contract.
                     && !i["subwork"].is_object()
+                    // A periodic capacity decision starts a finite measurement
+                    // generation through the scheduler, never the old chat via intake.
+                    && !crate::capacity_cycle::scheduler_only(i)
             })
             .cloned()
             .collect();

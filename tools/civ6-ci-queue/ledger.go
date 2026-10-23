@@ -44,7 +44,9 @@ func terminalState(s string) bool {
 // being queued, being started, the official success and the cleanup are four
 // different facts and none implies another.
 type QueuedRec struct {
-	At string `json:"at"`
+	At        string `json:"at"`
+	Deferrals int    `json:"prestart_deferrals,omitempty"`
+	RetryAt   string `json:"retry_at,omitempty"`
 }
 type StartRec struct {
 	IntentAt   string `json:"intent_at,omitempty"`
@@ -73,24 +75,41 @@ type CleanupRec struct {
 }
 
 type Entry struct {
-	Key      string      `json:"key"`
-	Plan     Plan        `json:"plan"`
-	OS       string      `json:"os"`
-	Phase    string      `json:"phase"` // initial, normal, continuation
-	State    string      `json:"state"`
-	Queued   QueuedRec   `json:"queued"`
-	Started  StartRec    `json:"started"`
-	Official OfficialRec `json:"official"`
-	Cleanup  CleanupRec  `json:"cleanup"`
-	Reason   string      `json:"reason,omitempty"`
+	Key       string        `json:"key"`
+	Plan      Plan          `json:"plan"`
+	OS        string        `json:"os"`
+	Phase     string        `json:"phase"` // initial, normal, continuation
+	State     string        `json:"state"`
+	Queued    QueuedRec     `json:"queued"`
+	Started   StartRec      `json:"started"`
+	Official  OfficialRec   `json:"official"`
+	Cleanup   CleanupRec    `json:"cleanup"`
+	Reason    string        `json:"reason,omitempty"`
+	Prestarts []PrestartRec `json:"prestarts,omitempty"`
+	Replaces  string        `json:"replaces_expired_entry,omitempty"`
+}
+
+type PrestartRec struct {
+	At      string      `json:"at"`
+	Reason  string      `json:"reason"`
+	Cleanup *CleanupRec `json:"cleanup,omitempty"`
 }
 
 // Budget is the persistent, one-time reservation: a key is appended exactly
 // once, in the same atomic ledger write that creates its entry.
 type Budget struct {
-	Initial      []string `json:"initial"`
-	Normal       []string `json:"normal"`
-	Continuation []string `json:"continuation,omitempty"`
+	Initial      []string         `json:"initial"`
+	Normal       []string         `json:"normal"`
+	Continuation []string         `json:"continuation,omitempty"`
+	Replacements []ReplacementRec `json:"expired_replacements,omitempty"`
+}
+
+// A replacement binds one new official attempt to one existing initial slot.
+// Initial/Normal retain their original keys; no reservation is refunded.
+type ReplacementRec struct {
+	Original    string `json:"original"`
+	Replacement string `json:"replacement"`
+	ProofSHA256 string `json:"proof_sha256"`
 }
 
 type Fence struct {
@@ -300,11 +319,17 @@ func (l *Ledger) activeFor(osName string) *Entry {
 	return nil
 }
 
-func (l *Ledger) nextReserved(osName string) *Entry {
+func (l *Ledger) nextReserved(osName string, now time.Time) *Entry {
 	var best *Entry
 	for _, e := range l.Entries {
 		if e.OS != osName || e.State != StateReserved || e.Started.Attempts != 0 {
 			continue
+		}
+		if e.Queued.RetryAt != "" {
+			next, err := time.Parse(time.RFC3339Nano, e.Queued.RetryAt)
+			if err != nil || now.Before(next) {
+				continue
+			}
 		}
 		if best == nil || e.Plan.RunID < best.Plan.RunID || (e.Plan.RunID == best.Plan.RunID && e.Plan.JobID < best.Plan.JobID) {
 			best = e

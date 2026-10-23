@@ -1060,40 +1060,40 @@ pub fn fallback_type(task: &str) -> &'static str {
     }
     "implementation"
 }
-pub fn pick_model(
-    ctx: &mut Context,
-    task: &str,
-    exclude: &[String],
-    task_type: Option<&str>,
-) -> Result<Value> {
-    let mut excluded = Vec::new();
-    for x in exclude {
-        if !excluded.contains(x) {
-            excluded.push(x.clone())
-        }
-    }
-    let picked=ctx.effects.http("POST","http://127.0.0.1:11500/api/pick",Some(&json!({"task":safe_text(task),"exclude":excluded})),false).and_then(|p|{for key in ["model","effort","task_type","reason"]{if s(&p[key]).trim().is_empty(){return Err("ValueError".into())}}if !regex::Regex::new(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$").unwrap().is_match(s(&p["model"]))||excluded.iter().any(|x|x==s(&p["model"]))||!["none","minimal","low","medium","high","xhigh","max"].contains(&s(&p["effort"]))||!regex::Regex::new(r"^[a-z][a-z0-9_-]{0,63}$").unwrap().is_match(s(&p["task_type"])){return Err("ValueError".into())}let reason=safe_text(s(&p["reason"])).split_whitespace().collect::<Vec<_>>().join(" ").chars().take(400).collect::<String>();let kind=task_type.unwrap_or(s(&p["task_type"]));let profile=crate::job_policy::model_profile("",kind);let model=if excluded.is_empty(){profile.model}else{s(&p["model"])};let selected=json!({"model":model,"effort":profile.effort,"task_type":kind,"reason":reason,"source":p.get("source").cloned().unwrap_or(json!("jev"))});if s(&selected["source"])=="fallback"{println!("pick fallback (router) {} {}",s(&selected["model"]),s(&selected["task_type"]));}Ok(selected)});
+pub fn pick_model(ctx: &mut Context, task: &str, exclude: &[String], task_type: Option<&str>) -> Result<Value> {
+    let mut excluded=Vec::new();
+    for model in exclude {if !excluded.contains(model){excluded.push(model.clone());}}
+    let picked=ctx.effects.http("POST","http://127.0.0.1:11500/api/pick",Some(&json!({"task":safe_text(task),"exclude":excluded})),false)
+        .and_then(|p| {
+            for key in ["model","effort","task_type","reason"] {if s(&p[key]).trim().is_empty(){return Err("ValueError".into());}}
+            let routed=s(&p["model"]);
+            let bare=routed.strip_prefix("anthropic/").or_else(||routed.strip_prefix("openai/")).unwrap_or(routed);
+            if !regex::Regex::new(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,79}$").unwrap().is_match(bare)
+                || excluded.iter().any(|author|crate::job_policy::same_model(author,routed))
+                || !["none","minimal","low","medium","high","xhigh","max"].contains(&s(&p["effort"]))
+                || !regex::Regex::new(r"^[a-z][a-z0-9_-]{0,63}$").unwrap().is_match(s(&p["task_type"])) {return Err("ValueError".into());}
+            let kind=task_type.unwrap_or(s(&p["task_type"]));
+            let profile=crate::job_policy::model_profile("",kind);
+            let model=if crate::job_policy::review_task("",kind) {
+                crate::job_policy::review_profile(&excluded).ok_or("no independent review model")?.model
+            }else if excluded.is_empty(){profile.model}else{routed};
+            let reason=safe_text(s(&p["reason"])).split_whitespace().collect::<Vec<_>>().join(" ").chars().take(400).collect::<String>();
+            Ok(json!({"model":model,"effort":profile.effort,"task_type":kind,"reason":reason,
+                "source":p.get("source").cloned().unwrap_or(json!("jev")),"review_excluded_models":excluded}))
+        });
     match picked {
-        Ok(v) => Ok(v),
-        Err(error) => {
-            let kind = task_type.unwrap_or_else(|| fallback_type(task));
-            let models = if ["documentation", "research", "live_debug"].contains(&kind) {
-                ["gpt-6-luna", "gpt-6.1-sol", "gpt-6-sol"]
-            } else {
-                ["gpt-6.1-sol", "gpt-6-sol", "gpt-6-luna"]
-            };
-            let model = models
-                .iter()
-                .find(|x| !excluded.iter().any(|v| v == **x))
-                .ok_or("no unexcluded fallback model")?;
-            eprintln!(
-                "pick fallback (local) {} {model} {kind}",
-                error_detail(&error)
-            );
-            let profile = crate::job_policy::model_profile("", kind);
-            Ok(
-                json!({"model":if excluded.iter().any(|v| v == profile.model) { model } else { profile.model },"effort":profile.effort,"task_type":kind,"source":"fallback","reason":"Jev のモデル選択が準備中のため、作業の種類ごとの既定の割り当てで選びました。"}),
-            )
+        Ok(value)=>Ok(value),
+        Err(error)=>{
+            let kind=task_type.unwrap_or_else(||fallback_type(task));
+            let profile=crate::job_policy::model_profile("",kind);
+            let fallbacks=if ["documentation","research","live_debug"].contains(&kind){["gpt-6-luna","gpt-6.1-sol","gpt-6-sol"]}else{["gpt-6.1-sol","gpt-6-sol","gpt-6-luna"]};
+            let model=if crate::job_policy::review_task("",kind){
+                crate::job_policy::review_profile(&excluded).ok_or("no independent review model")?.model
+            }else if !excluded.iter().any(|author|crate::job_policy::same_model(author,profile.model)){profile.model}
+            else{*fallbacks.iter().find(|model|!excluded.iter().any(|author|crate::job_policy::same_model(author,model))).ok_or("no unexcluded fallback model")?};
+            eprintln!("pick fallback (local) {} {model} {kind}",error_detail(&error));
+            Ok(json!({"model":model,"effort":profile.effort,"task_type":kind,"source":"fallback",
+                "reason":"Jev のモデル選択が準備中のため、作業の種類ごとの既定の割り当てで選びました。","review_excluded_models":excluded}))
         }
     }
 }
@@ -1374,6 +1374,41 @@ pub fn launch_job_with_session(
     session: Option<&str>,
 ) -> Result<String> {
     use std::io::Write;
+    let requested_session = session.filter(|id| !id.is_empty()).or_else(|| {
+        selection["policy_resume_reset"]["session"]
+            .as_str()
+            .filter(|id| !id.is_empty())
+    });
+    // All Discord restart/steering/resume paths share this final boundary.
+    let mut normalized = selection.clone();
+    // This registers a new logical launch. A past job's capacity history is
+    // evidence, not an active retry exemption. Leave its original record and
+    // durable budget intact; same-job capacity retries stay in cc-jobs.
+    normalized
+        .as_object_mut()
+        .ok_or("invalid launch selection")?
+        .retain(|field, _| !field.starts_with("capacity_"));
+    if normalized["last_failure_kind"] == "capacity" {
+        normalized["last_failure_kind"] = Value::Null;
+    }
+    // Only repaired_job's current transition carries this routing hint. A
+    // later ordinary restart of the resulting job re-evaluates the default.
+    if normalized["model_repair_pending"] != true {
+        normalized
+            .as_object_mut()
+            .unwrap()
+            .remove("model_recovery_from");
+    }
+    normalized["launch_key"] = json!(key);
+    normalized["resume_session"] = session.map(|id| json!(id)).unwrap_or(Value::Null);
+    for origin in ["model_origin", "effort_origin"] {
+        if normalized[origin] != "owner_request" {
+            normalized[origin] = json!("policy");
+        }
+    }
+    cc_job_policy::apply_managed_launch_policy(&mut normalized);
+    let session = cc_job_policy::launch_context::usable_resume_session(&normalized);
+    let selection = &normalized;
     let root = ctx.jobs.join("jobs");
     std::fs::create_dir_all(&root).map_err(|e| e.to_string())?;
     // Also serializes separate cc-ask state directories. Reserve ownership before
@@ -1396,11 +1431,20 @@ pub fn launch_job_with_session(
         let reservation =
             read_json(&root.join(format!(".discord-launch-{}.json", s(&job["launch_key"]))))
                 .unwrap_or(Value::Null);
-        let same_session = session.filter(|id| !id.is_empty()).is_some_and(|id| {
-            ["thread_id", "resume_session"]
+        let same_session = [requested_session, session]
+            .into_iter()
+            .flatten()
+            .filter(|id| !id.is_empty())
+            .any(|id| {
+                [
+                    s(&info["thread_id"]),
+                    s(&info["resume_session"]),
+                    s(&reservation["session"]),
+                    s(&reservation["requested_session"]),
+                ]
                 .iter()
-                .any(|field| s(&info[*field]).eq_ignore_ascii_case(id))
-        });
+                .any(|field| field.eq_ignore_ascii_case(id))
+            });
         let existing_prompt = root.join(jid).join("prompt.md");
         let owns_thread = !diagnosis
             && (s(&reservation["thread_id"]) == tid
@@ -1419,18 +1463,22 @@ pub fn launch_job_with_session(
     }
     atomic_json(
         &root.join(format!(".discord-launch-{key}.json")),
-        &json!({"thread_id":if diagnosis { "" } else { tid },"session":session,"key":key}),
+        &json!({"thread_id":if diagnosis { "" } else { tid },"session":session,
+            "requested_session":requested_session,"key":key}),
         2,
     )?;
     let mut file = tempfile::Builder::new()
         .suffix(".md")
         .tempfile()
         .map_err(|_| "OSError".to_string())?;
-    let prompt = if truth(&selection["verbatim_owner_messages"]) {
+    let mut prompt = if truth(&selection["verbatim_owner_messages"]) {
         prompt.to_owned()
     } else {
         safe_text(prompt)
     };
+    if session.is_none() && selection["policy_resume_reset"].is_object() {
+        prompt.push_str("\n最新のモデル・推論設定へ移行するため新しい会話で再開します。元の仕様、保存済み履歴と作業フォルダの途中成果を読み、完了した操作を繰り返さず続行してください。\n");
+    }
     let prompt = crate::prompt_context::prepare(
         ctx,
         thread,
@@ -1498,6 +1546,52 @@ pub fn launch_job_with_session(
         &prompt,
     );
     args.extend(["--mcp-profile".into(), profile.into()]);
+    args.extend([
+        "--effort-origin".into(),
+        if selection["effort_origin"] == "owner_request" {
+            "owner_request".into()
+        } else {
+            "policy".into()
+        },
+    ]);
+    args.extend([
+        "--model-origin".into(),
+        if selection["model_origin"] == "owner_request" {
+            "owner_request".into()
+        } else {
+            "policy".into()
+        },
+    ]);
+    if let Some(model) = selection["model_recovery_from"].as_str() {
+        args.extend(["--model-recovery-from".into(), model.into()]);
+    }
+    if cc_job_policy::review_task("", s(&selection["task_type"])) {
+        if let Some(ids) = selection["review_source_jobs"]
+            .as_array()
+            .filter(|v| !v.is_empty())
+        {
+            args.extend([
+                "--review-source-jobs".into(),
+                ids.iter()
+                    .filter_map(Value::as_str)
+                    .collect::<Vec<_>>()
+                    .join(","),
+            ]);
+        }
+    }
+    if let Some(models) = selection["review_excluded_models"]
+        .as_array()
+        .filter(|v| !v.is_empty())
+    {
+        args.extend([
+            "--review-excluded-models".into(),
+            models
+                .iter()
+                .filter_map(Value::as_str)
+                .collect::<Vec<_>>()
+                .join(","),
+        ]);
+    }
     if let Some(id) = selection["todo_id"].as_i64().filter(|id| *id > 0) {
         args.extend(["--todo-id".into(), id.to_string()]);
     }

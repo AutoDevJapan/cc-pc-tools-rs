@@ -324,6 +324,39 @@ fn same_thread_and_session_are_reserved_once_even_after_supervisor_metadata_rewr
 }
 
 #[test]
+fn a_fresh_context_keeps_the_original_work_session_reserved() {
+    let mut h = Harness::new();
+    let selection = json!({"model":"gpt-6.1-sol","effort":"high","task_type":"implementation"});
+    launch_job_with_session(
+        &mut h.ctx,
+        &json!({"id":"100","name":"元作業"}),
+        "元の作業を続ける",
+        &selection,
+        "first",
+        false,
+        None,
+        None,
+        Some("old-work-session"),
+    )
+    .unwrap();
+    assert_eq!(h.fake.borrow().launches[0]["resume_session"], "");
+    let error = launch_job_with_session(
+        &mut h.ctx,
+        &json!({"id":"200","name":"同じ元作業"}),
+        "同じ途中成果を続ける",
+        &selection,
+        "second",
+        false,
+        None,
+        None,
+        Some("old-work-session"),
+    )
+    .unwrap_err();
+    assert!(launch_blocked(&error));
+    assert_eq!(h.fake.borrow().launches.len(), 1);
+}
+
+#[test]
 fn aggregate_headings_in_a_message_never_drop_that_message_or_later_answers() {
     let mut h = Harness::new();
     h.fake

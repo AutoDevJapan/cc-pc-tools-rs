@@ -22,15 +22,15 @@ func countState(l *Ledger, st string) int {
 	return n
 }
 
-func TestPR149AdmitsExactlySixJobsOnceAndLaunchesOnePerOS(t *testing.T) {
+func TestPR149AdmitsThreeWindowsJobsOnceAndIgnoresLinuxAndHostedCodeQL(t *testing.T) {
 	h := newHarness(t)
 	h.gh.pr149()
 	r1 := h.tick()
-	if r1.Admitted != 4 || r1.Launched != 2 {
+	if r1.Admitted != 3 || r1.Launched != 1 {
 		t.Fatalf("first tick %+v", r1)
 	}
 	r2 := h.tick()
-	if r2.Admitted != 2 || r2.Launched != 0 {
+	if r2.Admitted != 0 || r2.Launched != 0 {
 		t.Fatalf("second tick %+v", r2)
 	}
 	verified := h.c.verified
@@ -43,10 +43,10 @@ func TestPR149AdmitsExactlySixJobsOnceAndLaunchesOnePerOS(t *testing.T) {
 		t.Fatal("known jobs were verified again")
 	}
 	l := h.ledger()
-	if len(l.Entries) != 6 || len(l.Budget.Initial) != 6 || len(l.Budget.Normal) != 0 {
+	if len(l.Entries) != 3 || len(l.Budget.Initial) != 3 || len(l.Budget.Normal) != 0 {
 		t.Fatalf("ledger %d entries, budget %+v", len(l.Entries), l.Budget)
 	}
-	if countState(l, StateLaunching) != 2 || countState(l, StateReserved) != 4 || len(h.spawned) != 2 {
+	if countState(l, StateLaunching) != 1 || countState(l, StateReserved) != 2 || len(h.spawned) != 1 {
 		t.Fatalf("one worker per OS expected: %v", h.spawned)
 	}
 	osSeen := map[string]int{}
@@ -55,12 +55,12 @@ func TestPR149AdmitsExactlySixJobsOnceAndLaunchesOnePerOS(t *testing.T) {
 			osSeen[e.OS]++
 		}
 	}
-	if osSeen["Linux"] != 1 || osSeen["Windows"] != 1 {
+	if osSeen["Linux"] != 0 || osSeen["Windows"] != 1 {
 		t.Fatalf("OS workers %v", osSeen)
 	}
 }
 
-func TestSeventhInitialJobIsBlockedWithoutContinuation(t *testing.T) {
+func TestFourthInitialWindowsJobIsBlockedWithoutContinuation(t *testing.T) {
 	h := newHarness(t)
 	h.gh.pr149()
 	h.gh.addRun(105, ".github/workflows/native-driver.yml", "pull_request", 149, map[int64]string{1051: "native-driver"})
@@ -68,7 +68,7 @@ func TestSeventhInitialJobIsBlockedWithoutContinuation(t *testing.T) {
 		h.tick()
 	}
 	l := h.ledger()
-	if len(l.Entries) != 6 {
+	if len(l.Entries) != 3 {
 		t.Fatalf("budget exceeded: %d", len(l.Entries))
 	}
 	if _, ok := l.Refusals["105/1/1051"]; !ok {
@@ -78,7 +78,7 @@ func TestSeventhInitialJobIsBlockedWithoutContinuation(t *testing.T) {
 	h.now = h.now.Add(10 * time.Minute)
 	h.tick()
 	l = h.ledger()
-	if len(l.Budget.Continuation) != 1 || len(l.Budget.Initial) != 6 {
+	if len(l.Budget.Continuation) != 1 || len(l.Budget.Initial) != 3 {
 		t.Fatalf("continuation not recorded separately: %+v", l.Budget)
 	}
 }
@@ -86,12 +86,12 @@ func TestSeventhInitialJobIsBlockedWithoutContinuation(t *testing.T) {
 func TestForeignForkAndAdvancedHeadAreNeverAdmitted(t *testing.T) {
 	h := newHarness(t)
 	foreign := obj{"id": 201, "run_attempt": 1, "path": ".github/workflows/rust.yml", "event": "pull_request", "status": "queued", "head_sha": headSHA, "head_branch": "x", "repository": obj{"id": 5, "full_name": "Other/repo"}, "head_repository": obj{"id": 5, "full_name": "Other/repo"}, "pull_requests": []obj{{"number": 1}}}
-	h.gh.addRunObj(foreign, map[int64]string{2011: "test (ubuntu-latest)"})
+	h.gh.addRunObj(foreign, map[int64]string{2011: "test (windows-latest)"})
 	forkRepo := obj{"id": 999, "full_name": "fork/civ6-banseiki", "fork": true}
 	fork := obj{"id": 202, "run_attempt": 1, "path": ".github/workflows/rust.yml", "event": "pull_request", "status": "queued", "head_sha": headSHA, "head_branch": "x", "repository": repoObj(), "head_repository": forkRepo, "pull_requests": []obj{}}
-	h.gh.addRunObj(fork, map[int64]string{2021: "test (ubuntu-latest)"})
+	h.gh.addRunObj(fork, map[int64]string{2021: "test (windows-latest)"})
 	// A run whose PR head moved on: the run's head differs from the PR head.
-	h.gh.addRun(203, ".github/workflows/rust.yml", "pull_request", 149, map[int64]string{2031: "test (ubuntu-latest)"})
+	h.gh.addRun(203, ".github/workflows/rust.yml", "pull_request", 149, map[int64]string{2031: "test (windows-latest)"})
 	h.gh.data["repos/"+Repository+"/pulls/149"] = obj{"number": 149, "state": "open", "merge_commit_sha": mergeSHA, "head": obj{"sha": strings.Repeat("d", 40), "ref": branch, "repo": repoObj()}}
 	r := h.tick()
 	if r.Admitted != 0 || len(h.ledger().Entries) != 0 || len(h.spawned) != 0 {
@@ -104,7 +104,7 @@ func TestForeignForkAndAdvancedHeadAreNeverAdmitted(t *testing.T) {
 
 func TestContractRejectionBacksOffInsteadOfRepeating(t *testing.T) {
 	h := newHarness(t)
-	h.gh.addRun(101, ".github/workflows/rust.yml", "pull_request", 149, map[int64]string{1011: "test (ubuntu-latest)"})
+	h.gh.addRun(101, ".github/workflows/rust.yml", "pull_request", 149, map[int64]string{1011: "test (windows-latest)"})
 	h.c.verifyErr = func(Plan) error { return errors.New("source workflow differs from reviewed continuation template") }
 	h.tick()
 	n := h.c.verified
@@ -126,6 +126,20 @@ func TestUnwiredContractNeverAdmits(t *testing.T) {
 	r := h.tick()
 	if len(h.ledger().Entries) != 0 || len(r.Errors) == 0 {
 		t.Fatalf("%+v", r)
+	}
+}
+
+func TestNormalManualMainEventCanReplenishWindows(t *testing.T) {
+	h := newHarness(t)
+	r := obj{"id": 205, "run_attempt": 1, "path": ".github/workflows/native-driver.yml", "event": "workflow_dispatch", "status": "queued", "head_sha": headSHA, "head_branch": "main", "repository": repoObj(), "head_repository": repoObj(), "pull_requests": []obj{}}
+	h.gh.addRunObj(r, map[int64]string{2051: "native-driver"})
+	got := h.tick()
+	if got.Admitted != 1 || got.Launched != 1 {
+		t.Fatalf("manual main was never replenished: %+v", got)
+	}
+	entry := h.ledger().Entries["205/1/2051"]
+	if entry.Plan.Event != "workflow_dispatch" || entry.Plan.Branch != "main" {
+		t.Fatal(entry.Plan)
 	}
 }
 

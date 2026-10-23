@@ -12,11 +12,26 @@ func collectionReader(p Plan, state string, bad string, others bool) readAPI {
 		var v any
 		switch ep {
 		case "repos/" + repository:
+			if bad == "public" {
+				repo["private"] = false
+			}
+			if bad == "repo-id" {
+				repo["id"] = repositoryID + 1
+			}
+			if bad == "repo-name" {
+				repo["full_name"] = "AutoDevJapan/other"
+			}
+			if bad == "fork" {
+				repo["fork"] = true
+			}
+			if bad == "no-admin" {
+				repo["permissions"] = map[string]bool{"admin": false}
+			}
 			if bad == "owner" {
 				repo["owner"] = map[string]string{"login": "other"}
 			}
 			v = repo
-		case fmt.Sprintf("repos/%s/actions/runs/%d", repository, p.RunID):
+		case fmt.Sprintf("repos/%s/actions/runs/%d/attempts/%d", repository, p.RunID, p.Attempt):
 			run := map[string]any{"id": p.RunID, "run_attempt": p.Attempt, "head_sha": p.Head, "event": p.Event, "path": p.Workflow, "head_branch": p.Branch, "repository": repo, "head_repository": repo, "status": state}
 			switch bad {
 			case "run":
@@ -71,6 +86,36 @@ func collectionReader(p Plan, state string, bad string, others bool) readAPI {
 			return e
 		}
 		return json.Unmarshal(b, out)
+	}
+}
+
+func TestCollectionReadsTheOriginalAttemptAfterRunHasAdvanced(t *testing.T) {
+	p := fixturePlan()
+	read := collectionReader(p, "completed", "", true)
+	calls := 0
+	err := checkCollectionRemote(p, func(ep string, out any) error {
+		if ep == fmt.Sprintf("repos/%s/actions/runs/%d", repository, p.RunID) {
+			t.Fatal("mutable current attempt used for old collection")
+		}
+		if ep == fmt.Sprintf("repos/%s/actions/runs/%d/attempts/%d", repository, p.RunID, p.Attempt) {
+			calls++
+		}
+		return read(ep, out)
+	})
+	if err != nil || calls != 1 {
+		t.Fatalf("original attempt was not verified: %v, %d", err, calls)
+	}
+}
+
+func TestCollectionAcceptsApprovedPublicRepositoryWithoutWideningIdentity(t *testing.T) {
+	p := fixturePlan()
+	if err := checkCollectionRemote(p, collectionReader(p, "queued", "public", true)); err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []string{"repo-id", "repo-name", "owner", "fork", "no-admin", "remaining"} {
+		if checkCollectionRemote(p, collectionReader(p, "queued", bad, true)) == nil {
+			t.Fatalf("unsafe collection accepted: %s", bad)
+		}
 	}
 }
 

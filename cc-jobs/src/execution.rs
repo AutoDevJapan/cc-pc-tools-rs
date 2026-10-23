@@ -60,6 +60,32 @@ impl Profile {
 }
 
 impl Context {
+    pub fn capacity_catalog_args(&self, job: &Value, args: &mut Vec<String>) -> Result<()> {
+        if !crate::pool_retry::public_selector(s(job, "capacity_account_selector"))
+            || crate::pool_retry::native_model(s(job, "model")).is_none()
+        {
+            return Ok(());
+        }
+        if !crate::queue::valid_job_id(s(job, "id")) {
+            return Err(Error::new("invalid account-route job identity"));
+        }
+        let catalog = self.rt.capacity_model_catalog(job)?;
+        let path = self
+            .job_dir(s(job, "id"))
+            .join("capacity-model-catalog.json");
+        std::fs::create_dir_all(path.parent().unwrap())?;
+        self.write_snapshot(&path, pretty(&catalog).as_bytes())?;
+        // Root config overrides precede `resume <id> -`, including on the
+        // native CLI. Never depend on a fixture accepting options anywhere.
+        args.splice(
+            2..2,
+            [
+                "-c".into(),
+                format!("model_catalog_json={}", path.to_string_lossy()),
+            ],
+        );
+        Ok(())
+    }
     /// The exact builder used by supervise_attempt. Inventory failure returns
     /// before spawning; no browser bridge is exposed to an isolated worker.
     pub fn execution_spawn(&self, job: &Value) -> Result<Spawn> {
@@ -103,11 +129,13 @@ impl Context {
                 .any(|name| key.eq_ignore_ascii_case(name))
             });
         }
+        let mut argv = codex_args_with_policy(
+            &rendered,
+            research_policy.unwrap_or_else(|| profile.policy(job)),
+        );
+        self.capacity_catalog_args(job, &mut argv)?;
         Ok(Spawn {
-            argv: codex_args_with_policy(
-                &rendered,
-                research_policy.unwrap_or_else(|| profile.policy(job)),
-            ),
+            argv,
             prompt,
             cwd: PathBuf::from(s(job, "cwd")),
             env,

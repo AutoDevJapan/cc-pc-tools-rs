@@ -18,9 +18,99 @@ fn main() {
     }
     if args.iter().any(|a| a == "account") {
         let at = chrono::Local::now().timestamp() as f64;
+        if args.iter().any(|a| a == "openai")
+            && std::env::var("CC_JOBS_FIXTURE_MODE").is_ok_and(|mode| mode.starts_with("capacity-"))
+        {
+            println!(
+                "{}",
+                json!({"accounts":(1..=4).map(|n| json!({
+                "id":format!("fixture-{n}"),"type":"codex","health":"healthy","creditsAfterLimit":false,
+                "quota":{"weeklyPercent":10.,"weeklyResetAt":at+86400.}
+            })).collect::<Vec<_>>()})
+            );
+            return;
+        }
         println!(
             "{}",
             json!({"accounts":[{"id":"fixture-oauth","type":"oauth","health":"healthy","quota":{"weeklyPercent":10.,"weeklyResetAt":at+86400.}}]})
+        );
+        return;
+    }
+    if args
+        .windows(2)
+        .any(|a| a == ["get", "codexAccountNamespaces"])
+    {
+        println!(
+            "{}",
+            json!({"p000001":"fixture-1","p000002":"fixture-2","p000003":"fixture-3","p000004":"fixture-4"})
+        );
+        return;
+    }
+    if args.windows(2).any(|a| a == ["get", "codexAccounts"]) {
+        println!(
+            "{}",
+            json!(
+                (1..=4)
+                    .map(|n| json!({"id":format!("fixture-{n}"),"logLabel":format!("p{n:06}")}))
+                    .collect::<Vec<_>>()
+            )
+        );
+        return;
+    }
+    if args.iter().any(|a| a == "logs") {
+        // Fault injection: collection can finish after the sampler's start time.
+        // This delay reproduces slow metadata I/O, rather than waiting for a child.
+        if std::env::var("CC_JOBS_FIXTURE_DIR").is_ok_and(|dir| {
+            std::path::Path::new(&dir)
+                .join("delay-capacity-observation")
+                .exists()
+        }) {
+            std::thread::sleep(Duration::from_millis(1500));
+        }
+        let previous = std::env::var("CC_JOBS_FIXTURE_DIR")
+            .ok()
+            .and_then(|dir| {
+                fs::read_to_string(std::path::Path::new(&dir).join("capacity-calls.jsonl")).ok()
+            })
+            .and_then(|text| {
+                text.lines()
+                    .last()
+                    .and_then(|line| serde_json::from_str::<Value>(line).ok())
+            });
+        let label = previous
+            .as_ref()
+            .and_then(|call| call["argv"].as_array())
+            .and_then(|args| {
+                args.windows(2)
+                    .find(|w| w[0] == "-m")
+                    .and_then(|w| w[1].as_str())
+                    .and_then(|model| model.split_once('/').map(|v| v.0))
+            })
+            .filter(|label| pool_retry::public_selector(label))
+            .unwrap_or("p000001");
+        let model = args
+            .windows(2)
+            .find(|w| w[0] == "--model")
+            .map(|w| w[1].as_str())
+            .unwrap_or("gpt-6-luna");
+        // A log query reports the failed attempt's time, not the time spent
+        // collecting metadata. Otherwise a slow query invents a future event
+        // relative to the sampler and correctly fails attribution.
+        let timestamp = previous.as_ref().and_then(|call| call["timestamp"].as_i64());
+        println!(
+            "{}",
+            json!({"logs":[{"model":model,"accountLogLabel":label,"status":503,
+            "timestamp":timestamp}]})
+        );
+        return;
+    }
+    if args.iter().any(|a| a == "catalog") {
+        println!(
+            "{}",
+            json!({"models":(["gpt-6.1-sol","gpt-6-luna"].map(|slug|json!({
+                "slug":slug,"context_window":1000000,"supports_reasoning_summaries":true,
+                "supported_reasoning_levels":[{"effort":"max"}],"base_instructions":"fixture"
+            })))})
         );
         return;
     }
@@ -339,7 +429,16 @@ fn main() {
             .append(true)
             .open(calls)
             .unwrap();
-        writeln!(log, "{}", json!({"argv":args,"cwd":std::env::current_dir().unwrap().to_string_lossy(),"prompt":String::from_utf8_lossy(&fs::read(root.join("stdin.bin")).unwrap())})).unwrap();
+        let catalog = args
+            .iter()
+            .find_map(|a| a.strip_prefix("model_catalog_json="))
+            .and_then(|path| fs::read(path).ok())
+            .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
+            .unwrap_or(Value::Null);
+        writeln!(log, "{}", json!({"argv":args,"cwd":std::env::current_dir().unwrap().to_string_lossy(),
+            "timestamp":chrono::Local::now().timestamp_millis(),
+            "prompt":String::from_utf8_lossy(&fs::read(root.join("stdin.bin")).unwrap()),
+            "catalog_model":catalog["models"][0]["slug"],"catalog_context":catalog["models"][0]["context_window"]})).unwrap();
         let selected = args
             .windows(2)
             .find(|w| w[0] == "-m")

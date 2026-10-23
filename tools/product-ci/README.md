@@ -205,25 +205,37 @@ retain `all_required_checks_success=false`.
 
 ## Fixed native secret-scan workflow
 
-`current-pr-inspect <pin-json>` and `current-pr-job <pin-json> <new-owned-dir>
-<Linux-helper> [gitleaks-ELF]` add a separate route for repository 1285649124,
+`current-pr-origin-inspect` and `current-pr-origin-job <new-owned-dir>
+<Linux-helper> <gitleaks-ELF>` add a separate route for repository 1285649124,
 PR995 only. The original four fixed candidates and release modes are unchanged.
 See [the acceptance specification](current-pr.md) (Issue267, ToDo3059).
+
+`current-pr-successor-qualify/inspect/job` adds a separate owner-approved route
+for later corrections in this same original product work. The canonical product
+parent supplies the frozen PR, source, original review and acceptance; callers
+cannot choose a PR or input path. See [the successor specification](../../docs/product-ci-successor-3059.md).
+Qualification and fixture results do not establish operational job success.
 
 Each invocation freezes `repo_id`, `pr`, `head_sha`, `head_tree`, `base_sha`,
 `run_id`, `attempt`, sorted `job_ids` (up to eight; secret requires one),
 `kind` (`secret` or `codeql`), `context_sha` (merge context for secret; empty
 for CodeQL), `review_sha256`, and `acceptance_sha256`. A new correction needs
-a new fixed input and evidence, rather than a new compiled SHA constant.
-The input also names private `review_file` and `acceptance_file` handoff
+fresh independent admission. The original finite constructor still admits only
+its original fixed secret job. The separately answered successor route implements
+source-bound corrections and CodeQL admission; its operational acceptance remains
+pending under ToDo3059. Former caller-selected pin entry points reject before opening any
+input. The retained planner schema names `review_file` and `acceptance_file` handoff
 envelopes. Each envelope binds `origin_todo_id:3056`, `repo_id`, `pr`,
 `head_sha`, `head_tree`, its `kind` (`review` or `acceptance`), `success:true`,
-`must:0`, and the exact base64 `original` output plus `original_sha256`.
+`must:0`, and base64 `original` bytes plus `original_sha256`. The finite
+constructor uses the independent receipt's review record and exact acceptance
+receipt; it does not claim to read the raw reviewer response.
 The parent is responsible for confirming that original review and necessary
 acceptance really succeeded on this source. Evidence is read into RAM and
 fingerprinted; original content and paths are never included in host receipts.
-The two evidence roles are checked independently, even when paths coincide.
-These handoff statements authorize this finite inspection; they do not prove
+The role representations originate in that same independently pinned receipt.
+Original task scope and independently retained evidence authorize only this
+finite purpose; caller handoff statements cannot mint permission or prove
 official CI success. Job arrays exceeding eight entries, empty arrays, zero,
 negative, duplicate and unordered IDs are rejected rather than truncated.
 
@@ -240,7 +252,7 @@ still accept the already assigned job. Only an as-yet-unobserved assignment
 gets up to three API reads separated by 500 ms within the existing callback
 deadline; an invalid observed assignment is rejected immediately. CodeQL's
 head branch must equal this PR's branch or its exact numeric
-`refs/pull/995/head`, whose Git ref SHA is independently checked. Other PR
+`refs/pull/<frozen-PR>/head`, whose Git ref SHA is independently checked. Other PR
 refs and unrelated branches are rejected. A new invocation can retain
 successful members of the same frozen matrix while serving its remaining jobs.
 If the source advances after an official job ends, the helper's final source

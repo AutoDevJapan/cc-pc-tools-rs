@@ -7,8 +7,14 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
+
+// The official Windows listener enumerates its parent directories before
+// authentication. Keep new jobs out of the owner's private Temp hierarchy.
+// This is the already-qualified controller worktree, not a caller input.
+const windowsOwnedParent = "D:/CC/Work/unattended-operations-20261013-wt/todo-2962-ci-pc-actions"
 
 type OwnedRec struct {
 	ID   string `json:"id"`
@@ -46,7 +52,11 @@ func (s fixedSafeDelete) call(ctx context.Context, args ...string) ([]byte, erro
 }
 
 func (s fixedSafeDelete) Create(ctx context.Context, project, content string) (OwnedRec, error) {
-	out, e := s.call(ctx, "create", "--project", project, "--content", content)
+	args := []string{"create", "--project", project, "--content", content}
+	if runtime.GOOS == "windows" {
+		args = append(args, "--root", windowsOwnedParent)
+	}
+	out, e := s.call(ctx, args...)
 	var r struct {
 		ID    string `json:"id"`
 		Path  string `json:"path"`
@@ -54,6 +64,9 @@ func (s fixedSafeDelete) Create(ctx context.Context, project, content string) (O
 	}
 	if e != nil || json.Unmarshal(out, &r) != nil || r.State != "owned" || !hex32.MatchString(r.ID) || !absClean(r.Path) || filepath.Base(r.Path) != "codex-owned-"+r.ID {
 		return OwnedRec{}, errors.New("owned root creation unconfirmed")
+	}
+	if runtime.GOOS == "windows" && !strings.EqualFold(filepath.Clean(filepath.Dir(r.Path)), filepath.Clean(windowsOwnedParent)) {
+		return OwnedRec{}, errors.New("owned root is outside the qualified controller worktree")
 	}
 	return OwnedRec{ID: r.ID, Path: r.Path}, nil
 }

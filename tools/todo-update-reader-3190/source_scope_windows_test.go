@@ -2,45 +2,60 @@ package main
 
 import (
 	"os"
+	"path/filepath"
+	"slices"
 	"strings"
 	"syscall"
 	"testing"
 	"time"
 )
 
-// objectOnlyGit lists the Git commands that read only refs, configuration and
-// objects. Others, such as diff, status, ls-files, hash-object or add, can open
-// working files that the guard has not classified one by one.
-var objectOnlyGit = map[string]bool{"rev-parse": true, "remote": true, "merge-base": true, "ls-tree": true}
-
-func gitSubcommand(args string) string {
-	fields := strings.Fields(args)
-	for i := 0; i < len(fields); i++ {
-		if fields[i] == "-c" {
-			i++
-			continue
-		}
-		return fields[i]
+// objectReads are the only Git commands the reader may run, with exactly these
+// arguments. Each reads commits or trees from the fixed object store.
+func objectReads(f *fixture) []string {
+	return []string{
+		"rev-parse --verify --quiet " + f.p.head + "^{tree}",
+		"merge-base --is-ancestor " + f.p.head + " " + f.main,
+		"ls-tree -r -z --full-tree " + f.p.head,
 	}
-	return ""
 }
 
-// expectGitObjectOnly fails on any recorded Git call that can read working
-// files and returns how many Git calls the reader made.
-func expectGitObjectOnly(t *testing.T, f *fixture) int {
-	t.Helper()
+func gitCalls(f *fixture) []string {
 	f.mu.Lock()
 	defer f.mu.Unlock()
-	calls := 0
+	var calls []string
 	for _, event := range f.events {
 		if args, ok := strings.CutPrefix(event, "git:"); ok {
-			calls++
-			if !objectOnlyGit[gitSubcommand(args)] {
-				t.Errorf("git %s can read working files the guard has not classified", args)
-			}
+			calls = append(calls, args)
 		}
 	}
 	return calls
+}
+
+// expectOnlyObjectReads fails on any Git call other than the object reads.
+func expectOnlyObjectReads(t *testing.T, f *fixture) {
+	t.Helper()
+	allowed := objectReads(f)
+	for _, call := range gitCalls(f) {
+		if !slices.Contains(allowed, call) {
+			t.Errorf("git %s is not one of the object reads", call)
+		}
+	}
+}
+
+// expectObjectReads requires exactly the object reads, each once, in order.
+func expectObjectReads(t *testing.T, f *fixture) {
+	t.Helper()
+	if got, want := gitCalls(f), objectReads(f); !slices.Equal(got, want) {
+		t.Errorf("git calls\n got %q\nwant %q", got, want)
+	}
+}
+
+func expectUntouched(t *testing.T, f *fixture, name string) {
+	t.Helper()
+	if f.index("read:"+key(name)) >= 0 || f.index("guard-path:"+key(name)) >= 0 {
+		t.Fatalf("%s was classified or read: %v", name, f.events)
+	}
 }
 
 // denyReads holds name open without sharing, so every other open fails until
@@ -62,6 +77,18 @@ func denyReads(t *testing.T, name string) func() {
 	return func() { syscall.CloseHandle(h) }
 }
 
+func appendFile(t *testing.T, name, content string) {
+	t.Helper()
+	file, err := os.OpenFile(name, os.O_APPEND|os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer file.Close()
+	if _, err := file.WriteString(content); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // rebuildReceipt records the working inputs as they are now, as a receipt
 // written after the change would; the blobs stay those of the fixed tree.
 func (f *fixture) rebuildReceipt() {
@@ -72,10 +99,9 @@ func (f *fixture) rebuildReceipt() {
 	f.writeReceipt()
 }
 
-// The guard classifies files one by one, so Git may read only refs,
-// configuration and objects. A protected tracked file outside the inputs is
-// never opened: it cannot decide the result even when it changes and nobody
-// may read it.
+// The guard classifies files one by one, so Git never opens a working file.
+// A protected tracked file outside the inputs cannot decide the result even
+// when it changes and nobody may read it.
 func TestGitNeverReadsWorkingFiles(t *testing.T) {
 	cases := map[string]func(t *testing.T, name string){
 		"timestamp changed": func(t *testing.T, name string) {
@@ -98,13 +124,150 @@ func TestGitNeverReadsWorkingFiles(t *testing.T) {
 			if !got.Qualified || reason != "" {
 				t.Fatalf("verify = qualified %v reason %q: a protected file outside the inputs decided the result", got.Qualified, reason)
 			}
-			if f.index("read:"+key(protected)) >= 0 || f.index("guard-path:"+key(protected)) >= 0 {
-				t.Fatalf("a file outside the inputs was classified or read: %v", f.events)
+			expectUntouched(t, f, protected)
+			expectObjectReads(t, f)
+		})
+	}
+}
+
+// Git reads no configuration file. An include that names a protected,
+// unreadable file never reaches Git, and the reader refuses a repository
+// configuration that Git would have to follow or that rewrites the remote.
+func TestGitReadsNoConfiguration(t *testing.T) {
+	t.Run("global include", func(t *testing.T) {
+		f := newFixture(t, nil)
+		protected := f.path("README.md")
+		f.protected[key(protected)] = clientVerdict
+		home := filepath.Join(f.base, "home")
+		writeFile(t, filepath.Join(home, ".gitconfig"), "[include]\n\tpath = "+filepath.ToSlash(protected)+"\n")
+		t.Setenv("HOME", home)
+		t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg"))
+		release := denyReads(t, protected)
+		defer release()
+		if got, reason := f.verify(); !got.Qualified || reason != "" {
+			t.Fatalf("verify = qualified %v reason %q: the global configuration reached Git", got.Qualified, reason)
+		}
+		expectUntouched(t, f, protected)
+		expectObjectReads(t, f)
+	})
+	for name, section := range map[string]string{
+		"include":             "[include]\n\tpath = PROTECTED\n",
+		"conditional include": "[includeIf \"gitdir:C:/\"]\n\tpath = PROTECTED\n",
+		"URL rewrite":         "[url \"https://example.invalid/\"]\n\tinsteadOf = https://github.com/\n",
+	} {
+		t.Run("repository "+name, func(t *testing.T) {
+			f := newFixture(t, nil)
+			protected := f.path("README.md")
+			f.protected[key(protected)] = clientVerdict
+			appendFile(t, filepath.Join(f.common, "config"), strings.ReplaceAll(section, "PROTECTED", filepath.ToSlash(protected)))
+			release := denyReads(t, protected)
+			defer release()
+			expectReason(t, f, "source_git")
+			if calls := gitCalls(f); len(calls) != 0 {
+				t.Fatalf("Git ran %q before the configuration was refused", calls)
 			}
-			if expectGitObjectOnly(t, f) == 0 {
-				t.Fatalf("the source was verified without Git")
+			expectUntouched(t, f, protected)
+		})
+	}
+}
+
+// The reader reads the worktree link, HEAD, refs, configuration and shallow
+// boundary itself, each classified by the guard first, and refuses what it
+// cannot tie to the fixed source.
+func TestReadsGitMetadataItself(t *testing.T) {
+	t.Run("branch only in packed-refs", func(t *testing.T) {
+		f := newFixture(t, nil)
+		f.gitIn(f.repo, "pack-refs", "--all")
+		if _, err := os.Lstat(filepath.Join(f.common, "refs", "heads", "work")); !os.IsNotExist(err) {
+			t.Fatalf("pack-refs kept the loose branch: %v", err)
+		}
+		if got, reason := f.verify(); !got.Qualified || reason != "" {
+			t.Fatalf("verify = qualified %v reason %q with packed refs", got.Qualified, reason)
+		}
+		expectObjectReads(t, f)
+	})
+	t.Run("shallow boundary", func(t *testing.T) {
+		f := newFixture(t, nil)
+		writeFile(t, filepath.Join(f.common, "shallow"), f.p.head+"\n")
+		if got, reason := f.verify(); !got.Qualified || reason != "" {
+			t.Fatalf("verify = qualified %v reason %q with a shallow boundary", got.Qualified, reason)
+		}
+		expectObjectReads(t, f)
+	})
+	rejections := map[string]func(f *fixture){
+		"worktree file names another worktree": func(f *fixture) {
+			f.gitIn(f.repo, "worktree", "add", "-q", "-b", "other", filepath.Join(f.base, "other"))
+			writeFile(f.t, f.path(".git"), "gitdir: "+filepath.ToSlash(filepath.Join(f.common, "worktrees", "other"))+"\n")
+		},
+		"worktree registration names another checkout": func(f *fixture) {
+			writeFile(f.t, filepath.Join(f.gitDir, "gitdir"), filepath.ToSlash(filepath.Join(f.base, "elsewhere", ".git"))+"\n")
+		},
+		"common directory elsewhere": func(f *fixture) {
+			writeFile(f.t, filepath.Join(f.gitDir, "commondir"), "../../..\n")
+		},
+		"HEAD outside refs": func(f *fixture) {
+			writeFile(f.t, filepath.Join(f.gitDir, "HEAD"), "ref: refs/heads/../../config\n")
+		},
+		"symbolic remote-tracking ref": func(f *fixture) {
+			writeFile(f.t, filepath.Join(f.common, "refs", "remotes", "origin", "main"), "ref: refs/heads/main\n")
+		},
+		"per-worktree configuration": func(f *fixture) {
+			f.gitIn(f.repo, "config", "extensions.worktreeConfig", "true")
+			writeFile(f.t, filepath.Join(f.gitDir, "config.worktree"), "[core]\n\tbare = false\n")
+		},
+		"alternate object store": func(f *fixture) {
+			writeFile(f.t, filepath.Join(f.common, "objects", "info", "alternates"), filepath.ToSlash(filepath.Join(f.base, "elsewhere"))+"\n")
+		},
+		"reftable refs": func(f *fixture) {
+			appendFile(f.t, filepath.Join(f.common, "config"), "[extensions]\n\trefStorage = reftable\n")
+		},
+		"second origin URL": func(f *fixture) {
+			appendFile(f.t, filepath.Join(f.common, "config"), "[remote \"origin\"]\n\turl = https://github.com/AutoDevJapan/cc-pc-tools-rs.git\n")
+		},
+		"configuration line not understood": func(f *fixture) {
+			appendFile(f.t, filepath.Join(f.common, "config"), "[core]\n\tbroken = \"unterminated\n")
+		},
+		"malformed shallow boundary": func(f *fixture) {
+			writeFile(f.t, filepath.Join(f.common, "shallow"), "not a commit\n")
+		},
+	}
+	for name, edit := range rejections {
+		t.Run(name, func(t *testing.T) {
+			f := newFixture(t, nil)
+			edit(f)
+			expectReason(t, f, "source_git")
+			expectOnlyObjectReads(t, f)
+		})
+	}
+	for name, path := range map[string]func(*fixture) string{
+		"worktree file":            func(f *fixture) string { return f.path(".git") },
+		"worktree HEAD":            func(f *fixture) string { return filepath.Join(f.gitDir, "HEAD") },
+		"repository configuration": func(f *fixture) string { return filepath.Join(f.common, "config") },
+		"remote-tracking ref":      func(f *fixture) string { return filepath.Join(f.common, "refs", "remotes", "origin", "main") },
+		"object store":             func(f *fixture) string { return filepath.Join(f.common, "objects") },
+	} {
+		t.Run("protected "+name, func(t *testing.T) {
+			f := newFixture(t, nil)
+			refused := path(f)
+			f.protected[key(refused)] = clientVerdict
+			expectReason(t, f, "guard_classification")
+			if f.index("read:"+key(refused)) >= 0 {
+				t.Fatalf("%s was read although the guard refused it", refused)
+			}
+			if calls := gitCalls(f); len(calls) != 0 {
+				t.Fatalf("Git ran %q although the source was refused", calls)
 			}
 		})
+	}
+}
+
+func TestIsolatedGitEnvironment(t *testing.T) {
+	parent := []string{`PATH=C:\bin`, `HOME=C:\home`, `GIT_DIR=C:\evil`, `Git_Config_Global=C:\evil.cfg`, "GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=include.path"}
+	got := isolatedEnvironment(parent, `C:\tmp\g`, `C:\repo\.git\objects`)
+	want := []string{`PATH=C:\bin`, `HOME=C:\home`, `GIT_DIR=C:\tmp\g`, `GIT_OBJECT_DIRECTORY=C:\repo\.git\objects`,
+		"GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null", "GIT_NO_LAZY_FETCH=1", "GIT_OPTIONAL_LOCKS=0", "GIT_TERMINAL_PROMPT=0"}
+	if !slices.Equal(got, want) {
+		t.Fatalf("environment\n got %q\nwant %q", got, want)
 	}
 }
 

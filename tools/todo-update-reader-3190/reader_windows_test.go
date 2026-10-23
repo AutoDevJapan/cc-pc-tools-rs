@@ -56,6 +56,10 @@ type fixture struct {
 	t            *testing.T
 	base         string
 	root         string
+	repo         string
+	common       string
+	gitDir       string
+	main         string
 	target       string
 	receipt      map[string]any
 	inputs       []fixtureInput
@@ -87,24 +91,29 @@ func newFixture(t *testing.T, edit func(map[string]string)) *fixture {
 	}
 	base := testLongPath(t, t.TempDir())
 	f := &fixture{
-		t: t, base: base, root: filepath.Join(base, "source"),
+		t: t, base: base, root: filepath.Join(base, "source"), repo: filepath.Join(base, "repo"),
 		target:    filepath.Join(base, "tools", "todo", "todo.exe"),
 		protected: map[string]string{},
 	}
-	if err := os.MkdirAll(f.root, 0o755); err != nil {
+	if err := os.MkdirAll(f.repo, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	f.git("init", "-q", "-b", "main")
-	f.git("config", "core.autocrlf", "true")
-	f.git("remote", "add", "origin", "https://github.com/AutoDevJapan/cc-pc-tools-rs.git")
+	// Mirror the real source: a linked worktree of a repository elsewhere,
+	// checked out on Windows with CRLF working files and LF blobs.
+	f.gitIn(f.repo, "init", "-q", "-b", "main")
+	f.gitIn(f.repo, "config", "core.autocrlf", "true")
+	f.gitIn(f.repo, "remote", "add", "origin", "https://github.com/AutoDevJapan/cc-pc-tools-rs.git")
 	for name, content := range tracked {
-		// Mirror the Windows checkout: CRLF working files, LF blobs.
-		f.write(name, crlf(content))
+		writeFile(t, filepath.Join(f.repo, filepath.FromSlash(name)), crlf(content))
 	}
-	f.git("add", "-A")
-	f.git("-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "-m", "fixture")
-	f.git("update-ref", "refs/remotes/origin/main", "HEAD")
+	f.gitIn(f.repo, "add", "-A")
+	f.gitIn(f.repo, "-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "-m", "fixture")
+	f.gitIn(f.repo, "update-ref", "refs/remotes/origin/main", "HEAD")
+	f.gitIn(f.repo, "worktree", "add", "-q", "-b", "work", f.root)
+	f.common = filepath.Join(f.repo, ".git")
+	f.gitDir = filepath.Join(f.common, "worktrees", "source")
 	head, tree := f.gitOut("rev-parse", "HEAD"), f.gitOut("rev-parse", "HEAD^{tree}")
+	f.main = head
 
 	writeFile(t, f.target, fixtureBaseline)
 	f.write(fixtureCandidateName, fixtureCandidate)
@@ -207,7 +216,12 @@ func testGit(t *testing.T, root string, args ...string) (string, error) {
 
 func (f *fixture) git(args ...string) {
 	f.t.Helper()
-	if out, err := testGit(f.t, f.root, args...); err != nil {
+	f.gitIn(f.root, args...)
+}
+
+func (f *fixture) gitIn(dir string, args ...string) {
+	f.t.Helper()
+	if out, err := testGit(f.t, dir, args...); err != nil {
 		f.t.Fatalf("git %v: %v\n%s", args, err, out)
 	}
 }
@@ -402,7 +416,10 @@ func TestQualifiesFixedUpdate(t *testing.T) {
 	}
 	// Every file the reader reads is classified by the official guard first;
 	// the installed leaf is qualified only by the existing purpose entry.
-	paths := []string{f.root, f.path(fixtureReceiptName), f.path(fixtureLogName), f.path("target/release/todo.d"), f.path(fixtureCandidateName)}
+	paths := []string{f.root, f.path(fixtureReceiptName), f.path(fixtureLogName), f.path("target/release/todo.d"), f.path(fixtureCandidateName),
+		f.path(".git"), filepath.Join(f.gitDir, "gitdir"), filepath.Join(f.gitDir, "commondir"), filepath.Join(f.gitDir, "HEAD"),
+		filepath.Join(f.common, "config"), filepath.Join(f.common, "refs", "heads", "work"),
+		filepath.Join(f.common, "refs", "remotes", "origin", "main"), filepath.Join(f.common, "objects")}
 	for _, in := range f.inputs {
 		paths = append(paths, f.path(in.Path))
 	}
@@ -419,10 +436,8 @@ func TestQualifiesFixedUpdate(t *testing.T) {
 	if f.index("guard-path:"+key(f.target)) >= 0 {
 		t.Errorf("the general classifier was used for the installed leaf")
 	}
-	// Git reads only refs, configuration and objects, never a working file.
-	if expectGitObjectOnly(t, f) == 0 {
-		t.Errorf("the source was verified without Git")
-	}
+	// Git ran only the three object reads, isolated from every other file.
+	expectObjectReads(t, f)
 }
 
 func TestBaselineIsReadOnlyAfterPurposeQualification(t *testing.T) {
@@ -776,7 +791,7 @@ func TestRejectsProtectedResources(t *testing.T) {
 				if f.index("read:"+key(f.path(rel))) >= 0 {
 					t.Fatalf("%s was read although the guard refused it", rel)
 				}
-				expectGitObjectOnly(t, f)
+				expectOnlyObjectReads(t, f)
 			})
 		}
 	}

@@ -10,9 +10,12 @@ import (
 // A fixed-purpose, read-only diagnosis of the same compiled leaf. Contents
 // are read only by the unchanged engine; no unknown digest is returned.
 // This is not a qualification or a baseline-creation path.
-func TestResident3278ActualPurposeDiagnosis(t *testing.T) {
+func TestActual3278Diagnosis(t *testing.T) {
+	if len(model3081UpdateLeaves) != 1 {
+		t.Fatal("fixed diagnosis must have exactly one leaf")
+	}
 	leaf := model3081UpdateLeaves[0]
-	if len(model3081UpdateLeaves) != 1 || leaf.kind != "resident" || leaf.target != "D:/CC/Tools/resident-guard/resident-guard.exe" {
+	if leaf.kind != "resident" || leaf.target != "D:/CC/Tools/resident-guard/resident-guard.exe" {
 		t.Fatal("fixed diagnosis scope changed")
 	}
 	if !runtimeLeaf(leaf.target, filepath.Dir(leaf.target), legacyMatch, true) {

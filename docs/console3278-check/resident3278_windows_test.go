@@ -2,7 +2,10 @@ package main
 
 import (
 	"bytes"
+	"go/ast"
 	"go/format"
+	"go/parser"
+	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -27,6 +30,29 @@ func TestResident3278RuntimeDiffIsCompiledDataOnly(t *testing.T) {
 		re := regexp.MustCompile(`(?s)var ` + spec.declaration + ` = .*?\r?\n\}`)
 		if len(re.FindAll(base, -1)) != 1 || len(re.FindAll(overlay, -1)) != 1 {
 			t.Fatal("compiled declaration is missing or duplicated")
+		}
+		parsed, err := parser.ParseFile(token.NewFileSet(), spec.file, overlay, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, declaration := range parsed.Decls {
+			group, ok := declaration.(*ast.GenDecl)
+			if !ok {
+				continue
+			}
+			for _, item := range group.Specs {
+				value, ok := item.(*ast.ValueSpec)
+				if !ok || len(value.Names) != 1 || value.Names[0].Name != spec.declaration {
+					continue
+				}
+				ast.Inspect(value, func(node ast.Node) bool {
+					switch node.(type) {
+					case *ast.CallExpr, *ast.FuncLit:
+						t.Error("compiled data must not execute a function")
+					}
+					return true
+				})
+			}
 		}
 		normalize := func(source []byte) []byte {
 			t.Helper()

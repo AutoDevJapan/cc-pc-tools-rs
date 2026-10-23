@@ -171,7 +171,8 @@ func (s *session) evidence(name, pin string, limit int64, reason string) ([]byte
 }
 
 // inputs pins every receipt input, has the guard classify all of them, then
-// hashes each pinned file. Manifest bytes are kept for the closure check.
+// hashes each pinned file and ties its bytes to the fixed tree's blob. Git
+// never reads these files. Manifest bytes are kept for the closure check.
 func (s *session) inputs(inputs []receiptInput, tree map[string]treeEntry, p profile) (map[string][]byte, string) {
 	files := make([]*pinnedFile, len(inputs))
 	for i, in := range inputs {
@@ -189,7 +190,7 @@ func (s *session) inputs(inputs []receiptInput, tree map[string]treeEntry, p pro
 	manifests := map[string][]byte{}
 	for i, in := range inputs {
 		data, sum, ok := s.read(files[i])
-		if !ok || sum != in.SHA256 {
+		if !ok || sum != in.SHA256 || !checkedOut(data, in.Blob) {
 			return nil, "input"
 		}
 		if path.Base(in.Path) == "Cargo.toml" {
@@ -295,7 +296,10 @@ func checkSource(p profile, env environment) (map[string]treeEntry, bool) {
 }
 
 // sourceStillFixed is checked before reading and again after every file is
-// pinned: the same worktree top, origin, HEAD and clean tracked content.
+// pinned: the same worktree top, origin and HEAD. Git reads only refs,
+// configuration and objects. It never opens a working file: the guard
+// classifies files one by one, and only the pinned inputs are compared, by
+// the reader itself.
 func sourceStillFixed(p profile, env environment) bool {
 	top, ok := gitText(env, p.root, "rev-parse", "--show-toplevel")
 	if !ok || !strings.EqualFold(filepath.Clean(filepath.FromSlash(top)), p.root) {
@@ -305,11 +309,8 @@ func sourceStillFixed(p profile, env environment) bool {
 	if !ok || !slices.Contains(p.origins, strings.ToLower(origin)) {
 		return false
 	}
-	if head, ok := gitText(env, p.root, "rev-parse", "--verify", "HEAD"); !ok || head != p.head {
-		return false
-	}
-	_, err := env.git(p.root, "-c", "core.autocrlf=true", "diff", "--quiet", "--no-ext-diff", "--no-textconv", "HEAD", "--")
-	return err == nil
+	head, ok := gitText(env, p.root, "rev-parse", "--verify", "HEAD")
+	return ok && head == p.head
 }
 
 type limitedBuffer struct {

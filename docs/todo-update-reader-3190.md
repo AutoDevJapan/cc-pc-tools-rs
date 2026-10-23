@@ -31,9 +31,10 @@ callerからmanifest、hash、source、root、ToDo番号、許可ディレクト
 | `data_access_granted` / `original_registry_recovered` | 常に `false` |
 
 拒否は標準出力に `{"qualified":false}` だけを出し、終了コード1。標準エラーには固定の理由コード
-（`target_path`、`target_leaf`、`baseline_qualification`、`baseline_mismatch`、`source_root`、
+（`argument`、`target_path`、`target_leaf`、`baseline_qualification`、`baseline_mismatch`、`source_root`、
 `source_git`、`receipt`、`log`、`dep_info`、`input`、`closure`、`candidate`、
-`guard_classification`、`recheck`）だけを出す。未知の現在SHA、パスの中身、receiptの本文は出さない。
+`guard_classification`、`recheck`）だけを出す。`argument` は引数の不足・重複・追加と相対パスで、照合を始めずに返す。
+未知の現在SHA、パスの中身、receiptの本文は出さない。
 返却時にhandleは閉じるので、この結果は将来の置換を予約するものではない。置換の直前の再照合と
 有限CASは親3190の配布工程が行う。置換後の状態はこのreaderの対象外で、置換後に同じ照合を求めない。
 
@@ -66,20 +67,26 @@ callerからmanifest、hash、source、root、ToDo番号、許可ディレクト
 4. その後でだけ同じhandleから対象を読み、固定の旧SHAと一致することを確かめる。違えば拒否し、値を出さない。
 5. source rootの祖先と自身が reparse point でないこと、実パス、guardの `--guard-path` が clear であることを確かめる。
    Gitは `GIT_*` 環境を除き、窓を出さず、期限付きで呼ぶ。worktreeの最上位、origin、HEAD、tree、
-   追跡ファイルの差分なし（`core.autocrlf=true`）、`origin/main` の祖先であることを確かめる。
+   `origin/main` の祖先であることを確かめる。Gitに読ませるのは参照・設定・オブジェクトだけで
+   （`rev-parse`、`remote get-url`、`merge-base`、`ls-tree`）、作業ファイルは開かせない。
+   guardは1件ずつ分類するので、rootがclearでも、分類していない追跡ファイルをGitに読ませない。
 6. receipt・log・dep-info・各入力・新候補は、それぞれ同じ方法で開いて保持し、guardの clear を確かめてから読む。
    読んだbytesそのものをhashして解析する。
 7. receiptの全項目を固定値と照合する。未知の項目と `data_access_granted` が false でない記録は拒否する。
 8. 各入力は、固定treeの通常ファイル（mode 100644/100755）のblobとreceiptのblobが一致し、
-   working fileのSHA256がreceiptと一致することを確かめる。
+   working fileのSHA256がreceiptと一致することを確かめる。さらに、保持したhandleから読んだbytesの
+   Git blob値をreader自身が計算し、固定treeのblobと照合する。一致とみなすのは、bytesがblobそのものか、
+   `core.autocrlf=true` でLFをすべてCRLFにした形の場合だけ。NUL、単独のCR、CRLFとLFの混在は変換として認めない。
+   入力以外の追跡ファイルは分類も読取もしないので、その変更は結果を左右しない。
 9. 新候補のサイズとSHA256を固定値とreceiptの両方に照合する。
 10. 最後に保持した全handleの同一性（volume・file ID・サイズ・更新時刻・リンク数・属性）と実パス、
-    source rootの実パス、HEAD、追跡ファイルの差分なしを再確認する。照合中の変更は拒否する。
+    source rootの実パス、worktreeの最上位・origin・HEADを再確認する。照合中の変更は拒否する。
+    入力は書込を共有しないhandleで保持しているので、照合中には変えられない。
 
 ## compiler closure の確認
 
 dep-info はコンパイラが読んだローカルファイルの一覧である。次の条件をすべて満たす場合だけ、
-126件の入力がそのビルドのrepo内の入力として過不足ないとみなす。
+receiptの126件の入力が、原dep-infoの116件と manifest/lock の10件にちょうど対応するとみなす。
 
 - dep-info の対象が `<source>/target/release/todo.exe` で、全項目がsource root内の入力に含まれる。
 - 入力からdep-infoの項目を除いた残りが、`Cargo.lock`、workspaceの `Cargo.toml`、
@@ -89,10 +96,11 @@ dep-info はコンパイラが読んだローカルファイルの一覧であ�
 - 固定treeの各crateとrootに `build.rs`、`.cargo/config(.toml)` がなく、rootに `rust-toolchain(.toml)` がない。
   各 `Cargo.toml` に `build =` の指定がない。
 
-repo外の要素は入力に含まれない。具体的には toolchain の版、利用者・上位ディレクトリのCargo設定と
-環境変数（`RUSTFLAGS` やsccacheなど）、registry crate の展開済みsource（`--locked` と `Cargo.lock` の
-checksumで版を固定）である。このreaderは再ビルドによる再現性の証明ではなく、候補・原記録・固定sourceの
-相互の一致を確かめる。
+次のものは入力に含まれず、このreaderは照合しない。toolchain の版、利用者・上位ディレクトリのCargo設定と
+環境変数（`RUSTFLAGS` やsccacheなど）、worktree内の未追跡ファイル（未追跡の `build.rs` や
+`.cargo/config.toml` など。固定treeに無いことだけを確かめる）、registry crate の展開済みsourceの実bytes
+（`--locked` と `Cargo.lock` のchecksumで版を固定）。このreaderは再ビルドによる再現性の証明ではなく、
+候補・原記録・固定sourceの相互の一致を確かめる。
 
 ## 受入条件とテスト
 
@@ -113,6 +121,8 @@ guardのCLI応答を模した関数で、実物の配布先・guard・親の作�
 | 元client一致 | `TestRejectsProtectedResources` |
 | data access の拡大 | `TestRejectsDataAccessExpansion` |
 | closure の過不足 | `TestRejectsClosureGaps` |
+| Gitに作業ファイルを読ませない。入力以外の保護された追跡ファイルは結果を左右しない | `TestGitNeverReadsWorkingFiles`、`TestQualifiesFixedUpdate`、`TestRejectsProtectedResources` |
+| 入力のbytesが固定treeのblob（そのままか、LFをすべてCRLFにした形）である | `TestInputsMustBeTheCommittedBytes`、`TestCheckedOutForms` |
 | 実物の固定値 | `TestProductionProfileBindsOneFixedUpdate` |
 
 symlinkの作成は権限が必要なため、合成テストは junction と hardlink で reparse 属性とリンク数の拒否を確かめる。

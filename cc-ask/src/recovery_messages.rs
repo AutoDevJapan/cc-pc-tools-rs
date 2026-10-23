@@ -4339,6 +4339,8 @@ mod tests {
     #[test]
     fn first_clarification_accepts_a_question_about_necessity_but_not_a_choice() {
         let mut mismatches = Vec::new();
+        let issue_cases: Vec<(String, bool)> =
+            serde_json::from_str(include_str!("../tests/fixtures/clarification-414.json")).unwrap();
         for (reply, accepted) in [
             ("その費用は必要ではないの？", true),
             ("なんで？", true),
@@ -4510,7 +4512,10 @@ mod tests {
             ("aにすると決めた。なんで必要？", false),
             ("必要じゃない。止めて", false),
             ("説明は不要、aで", false),
-        ] {
+        ]
+        .into_iter()
+        .chain(issue_cases.iter().map(|(reply, accepted)| (reply.as_str(), *accepted)))
+        {
             let f = Fixture::new();
             let mut ctx = f.context();
             let (args, manifest, mut proof) =

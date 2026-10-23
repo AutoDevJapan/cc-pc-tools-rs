@@ -732,6 +732,22 @@ mod intent_tests {
     use super::requests_explanation;
 
     #[test]
+    fn issue_414_explanation_and_action_contrasts() {
+        let cases: Vec<(String, bool)> =
+            serde_json::from_str(include_str!("../../tests/fixtures/clarification-414.json"))
+                .unwrap();
+        let mut mismatches = Vec::new();
+        for (reply, expected) in cases {
+            let actual = requests_explanation(&reply);
+            eprintln!("issue414 {reply:?}: expected={expected} actual={actual}");
+            if actual != expected {
+                mismatches.push((reply, expected, actual));
+            }
+        }
+        assert!(mismatches.is_empty(), "{mismatches:?}");
+    }
+
+    #[test]
     fn choice_and_reason_matrix_keeps_clause_order_and_predicates() {
         let mut mismatches = Vec::new();
         for separator in ["、", ",", " ", "　", "…", "けど", "ので", "のに", "から"] {

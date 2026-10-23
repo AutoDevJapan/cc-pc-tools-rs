@@ -60,8 +60,10 @@ func checkHistories(t *testing.T, cases map[string]historyCase) {
 // Git keeps one type for each object name that it looks up or reads, and
 // refuses to use that object as another type (object.c, object_as_type). A
 // commit's tree line looks its name up as a tree and each parent line looks
-// its name up as a commit, so merge-base refuses a history in which one name
-// is both. The reader refuses the source there too.
+// its name up as a commit, and when Git first parses a commit it gives each
+// name in the shallow file the commit type (shallow.c, register_shallow),
+// whether or not the history reaches it. So merge-base refuses a history in
+// which one name is both. The reader refuses the source there too.
 func TestRefusesNamesOfTwoTypes(t *testing.T) {
 	checkHistories(t, map[string]historyCase{
 		"tree line names the fixed commit, also the parent": {128, func(f *fixture, put func(string) string) string {
@@ -74,7 +76,25 @@ func TestRefusesNamesOfTwoTypes(t *testing.T) {
 		"parent line names the fixed tree": {128, func(f *fixture, put func(string) string) string {
 			return put("tree " + f.p.tree + "\nparent " + f.p.head + "\nparent " + f.p.tree + "\n" + laterDates + "\nmain\n")
 		}},
+		"tree line names a shallow boundary that main does not reach": {128, func(f *fixture, put func(string) string) string {
+			const boundary = "2222222222222222222222222222222222222222"
+			writeFile(f.t, filepath.Join(f.common, "shallow"), boundary+"\n")
+			return put("tree " + boundary + "\nparent " + f.p.head + "\n" + laterDates + "\nmain\n")
+		}},
 	})
+}
+
+// A name in the shallow file has the commit type in git ls-tree too, so a
+// directory of the fixed tree that the shallow file names makes Git refuse
+// the listing. The reader refuses the source.
+func TestRefusesShallowNamesOfTrees(t *testing.T) {
+	f := newFixture(t, nil)
+	directory := f.gitOut("rev-parse", "HEAD:app")
+	writeFile(t, filepath.Join(f.common, "shallow"), directory+"\n")
+	if out, err := testGit(t, f.root, "ls-tree", "-r", "--full-tree", f.p.head); err == nil {
+		t.Fatalf("git ls-tree listed a tree whose directory the shallow file names:\n%s", out)
+	}
+	expectReason(t, f, "source_git")
 }
 
 // Git's merge-base walk does not stop at the fixed commit. Before it answers,

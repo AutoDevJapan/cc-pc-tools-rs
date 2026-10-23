@@ -300,7 +300,7 @@ func (s *session) checkSource(p profile) (map[string]treeEntry, string) {
 		return nil, reason
 	}
 	defer store.close()
-	if tree, _, _, ok := store.commit(p.head); !ok || tree != p.tree {
+	if tree, _, ok := store.commit(p.head); !ok || tree != p.tree {
 		return nil, store.failure()
 	}
 	if !store.reaches(mainID, p.head) {

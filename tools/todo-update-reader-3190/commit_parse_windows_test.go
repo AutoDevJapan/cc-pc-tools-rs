@@ -90,7 +90,7 @@ func TestParseCommitAgreesWithGit(t *testing.T) {
 			if gitRead != (tc.git != nil) || gitRead && (gitTree != tree || !slices.Equal(gitParents, tc.git)) {
 				t.Fatalf("Git read tree %q parents %q (%v), want parents %q", gitTree, gitParents, gitRead, tc.git)
 			}
-			gotTree, gotParents, _, ok := parseCommit([]byte(tc.body))
+			gotTree, gotParents, ok := parseCommit([]byte(tc.body))
 			if ok != (tc.reader != nil) || ok && (gotTree != gitTree || !slices.Equal(gotParents, tc.reader)) {
 				t.Fatalf("parseCommit read tree %q parents %q (%v), want parents %q", gotTree, gotParents, ok, tc.reader)
 			}

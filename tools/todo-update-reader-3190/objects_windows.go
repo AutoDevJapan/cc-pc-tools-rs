@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"compress/zlib"
-	"container/heap"
 	"crypto/sha1"
 	"encoding/binary"
 	"encoding/hex"
@@ -74,6 +73,7 @@ type objectStore struct {
 	limits  objectLimits
 	packs   []*pack
 	shallow map[string]bool
+	kinds   map[string]string // the one type of each object name (typed)
 	reason  string
 	cache   map[packedAt]packedObject
 	cached  int
@@ -86,8 +86,9 @@ type packedAt struct {
 }
 
 type packedObject struct {
-	kind int
-	data []byte
+	kind  int
+	data  []byte
+	depth int // the deltas of the entry's chain: none for a whole object
 }
 
 // pack is one pack file and its version 2 index.
@@ -125,43 +126,13 @@ type namedEntry struct {
 	entry treeEntry
 }
 
-type queuedCommit struct {
-	id      string
-	parents []string
-	when    int64
-	order   int
-}
-
-// commitQueue holds queued commits newest first, then in the order queued.
-type commitQueue []queuedCommit
-
-func (q commitQueue) Len() int { return len(q) }
-
-func (q commitQueue) Less(i, j int) bool {
-	if q[i].when != q[j].when {
-		return q[i].when > q[j].when
-	}
-	return q[i].order < q[j].order
-}
-
-func (q commitQueue) Swap(i, j int) { q[i], q[j] = q[j], q[i] }
-
-func (q *commitQueue) Push(x any) { *q = append(*q, x.(queuedCommit)) }
-
-func (q *commitQueue) Pop() any {
-	old := *q
-	last := old[len(old)-1]
-	*q = old[:len(old)-1]
-	return last
-}
-
 // openObjects lists the store's packs and reads their indexes. The guard
 // classifies the pack directory, which is then listed through the handle that
 // pins it, and every index and pack before any is opened. An index without its
 // pack is skipped, as Git skips it, and no other file of the directory is
 // opened.
 func (s *session) openObjects(src sourceObjects, limits objectLimits) (*objectStore, string) {
-	o := &objectStore{s: s, dir: src.dir, limits: limits, shallow: map[string]bool{}, cache: map[packedAt]packedObject{}}
+	o := &objectStore{s: s, dir: src.dir, limits: limits, shallow: map[string]bool{}, kinds: map[string]string{}, cache: map[packedAt]packedObject{}}
 	if text, ok := strings.CutSuffix(string(src.shallow), "\n"); ok {
 		for _, id := range strings.Split(text, "\n") {
 			o.shallow[id] = true
@@ -455,20 +426,25 @@ func inflateExact(z io.Reader, size int64) ([]byte, bool) {
 // unpack_entry does for a pack stored on disk. It first follows the entries'
 // headers alone down to a whole object, or to one already rebuilt: an entry
 // reached twice, or a chain of more deltas than the depth limit, is refused
-// before anything is inflated. It then inflates the base and applies the
-// deltas from the innermost one up, inflating each delta only to apply it, so
-// it holds the object being rebuilt, one delta and the result at a time.
+// before anything is inflated. A chain counts the deltas below an object
+// already rebuilt too. It then inflates the base and applies the deltas from
+// the innermost one up, inflating each delta only to apply it, so it holds
+// the object being rebuilt, one delta and the result at a time.
 func (o *objectStore) entry(p *pack, off int64) (int, []byte, bool) {
 	var (
 		deltas  []deltaStep
 		reached = map[int64]bool{}
 		kind    int
 		data    []byte
+		below   int // the deltas of the base's own chain
 	)
 	at := off
 	for {
 		if cached, ok := o.cache[packedAt{p, at}]; ok {
-			kind, data = cached.kind, cached.data
+			kind, data, below = cached.kind, cached.data, cached.depth
+			if len(deltas)+below > o.limits.deltaDepth {
+				return 0, nil, false
+			}
 			break
 		}
 		if reached[at] {
@@ -484,7 +460,7 @@ func (o *objectStore) entry(p *pack, off int64) (int, []byte, bool) {
 				return 0, nil, false
 			}
 			kind = h.kind
-			o.remember(p, at, kind, data)
+			o.remember(p, at, kind, data, 0)
 			break
 		}
 		if len(deltas) == o.limits.deltaDepth {
@@ -514,15 +490,16 @@ func (o *objectStore) entry(p *pack, off int64) (int, []byte, bool) {
 		if data, ok = applyDelta(data, delta); !ok {
 			return 0, nil, false
 		}
-		o.remember(p, step.at, kind, data)
+		o.remember(p, step.at, kind, data, below+len(deltas)-i)
 	}
 	return kind, data, true
 }
 
-// remember keeps a rebuilt object for later reads while the cache has room.
-func (o *objectStore) remember(p *pack, at int64, kind int, data []byte) {
+// remember keeps a rebuilt object, and the number of deltas of its chain, for
+// later reads while the cache has room.
+func (o *objectStore) remember(p *pack, at int64, kind int, data []byte, depth int) {
 	if o.cached+len(data) <= maxCachedBytes {
-		o.cache[packedAt{p, at}] = packedObject{kind, data}
+		o.cache[packedAt{p, at}] = packedObject{kind, data, depth}
 		o.cached += len(data)
 	}
 }
@@ -613,7 +590,8 @@ func deltaSize(d []byte) (uint64, []byte, bool) {
 }
 
 // object returns the type and bytes of the object named id, taken from a pack
-// or a loose file of the store and checked against id.
+// or a loose file of the store and checked against id. The name takes the
+// object's type.
 func (o *objectStore) object(id string) (string, []byte, bool) {
 	raw, err := hex.DecodeString(id)
 	if err != nil || !hexDigest(id, 40) {
@@ -630,13 +608,30 @@ func (o *objectStore) object(id string) (string, []byte, bool) {
 	return o.checked(id, kind, data, ok)
 }
 
-// checked accepts an object only if its name is id.
+// checked accepts an object only if its name is id and the name has no other
+// type.
 func (o *objectStore) checked(id, kind string, data []byte, ok bool) (string, []byte, bool) {
 	if !ok || kind == "" || objectName(kind, data) != id {
 		o.refuse("source_git")
 		return "", nil, false
 	}
+	if !o.typed(id, kind) {
+		return "", nil, false
+	}
 	return kind, data, true
+}
+
+// typed gives the object name id the type kind, as Git's object table does
+// when it reads the object or looks the name up: a name keeps its first type,
+// and Git refuses to use its object as another (object.c, object_as_type). A
+// name given a second type refuses the source.
+func (o *objectStore) typed(id, kind string) bool {
+	if had, ok := o.kinds[id]; ok && had != kind {
+		o.refuse("source_git")
+		return false
+	}
+	o.kinds[id] = kind
+	return true
 }
 
 // packed reads the object at index position i of p.
@@ -715,92 +710,84 @@ func knownKind(kind string) bool {
 	return false
 }
 
-// commit reads a commit's tree, its parents (none for a shallow boundary, as
-// Git's shallow file defines it) and its committer time.
-func (o *objectStore) commit(id string) (string, []string, int64, bool) {
+// commit reads a commit's tree and its parents: none for a shallow boundary,
+// as Git's shallow file defines it. The tree line gives the tree's name the
+// tree type, as Git's parse_commit_buffer looks it up as a tree. The parents
+// take the commit type when the walk reads them; Git does not look up a
+// shallow boundary's parents, and the walk does not read them.
+func (o *objectStore) commit(id string) (string, []string, bool) {
 	kind, data, ok := o.object(id)
 	if !ok {
-		return "", nil, 0, false
+		return "", nil, false
 	}
-	tree, parents, when, parsed := parseCommit(data)
+	tree, parents, parsed := parseCommit(data)
 	if kind != "commit" || !parsed {
 		o.refuse("source_git")
-		return "", nil, 0, false
+		return "", nil, false
+	}
+	if !o.typed(tree, "tree") {
+		return "", nil, false
 	}
 	if o.shallow[id] {
 		parents = nil
 	}
-	return tree, parents, when, true
+	return tree, parents, true
 }
 
 // parseCommit reads a commit's tree and parents as Git's parse_commit_buffer
 // does: a "tree <id>\n" line that more bytes follow, then, while a line starts
 // with "parent " and more than such a line's length follows, "parent <id>\n".
 // Git reads a shorter "parent " line as no parent; the reader refuses that
-// commit, so every commit that it reads has the parents that Git reads. The
-// committer line's time only orders the walk.
-func parseCommit(data []byte) (string, []string, int64, bool) {
+// commit, so every commit that it reads has the parents that Git reads.
+func parseCommit(data []byte) (string, []string, bool) {
 	const treeLine, parentLine = len("tree \n") + 40, len("parent \n") + 40
 	text := string(data)
 	if len(text) <= treeLine || !strings.HasPrefix(text, "tree ") || text[treeLine-1] != '\n' || !hexDigest(text[5:treeLine-1], 40) {
-		return "", nil, 0, false
+		return "", nil, false
 	}
 	tree := text[5 : treeLine-1]
 	var parents []string
 	for text = text[treeLine:]; strings.HasPrefix(text, "parent "); text = text[parentLine:] {
 		if len(text) <= parentLine || text[parentLine-1] != '\n' || !hexDigest(text[7:parentLine-1], 40) {
-			return "", nil, 0, false
+			return "", nil, false
 		}
 		parents = append(parents, text[7:parentLine-1])
 	}
-	header, _, _ := strings.Cut(text, "\n\n")
-	var when int64
-	for _, line := range strings.Split(header, "\n") {
-		if who, ok := strings.CutPrefix(line, "committer "); ok {
-			if i := strings.LastIndexByte(who, '>'); i >= 0 {
-				if fields := strings.Fields(who[i+1:]); len(fields) > 0 {
-					when, _ = strconv.ParseInt(fields[0], 10, 64)
-				}
-			}
-			break
-		}
-	}
-	return tree, parents, when, true
+	return tree, parents, true
 }
 
-// reaches reports whether target is tip or one of its ancestors. Like Git's
-// merge-base walk it reads each commit when it is queued and takes the newest
-// first; a shallow boundary has no parents. A commit it cannot read, or more
-// commits than the limit, refuse the source.
+// reaches reports whether target is tip or one of its ancestors. It reads
+// every commit that tip reaches, down to the shallow boundary, whose commits
+// have no parents, and does not stop at target: before Git's merge-base
+// answers, it reads every commit that tip reaches and target does not, with
+// the parents of each (commit-reach.c, paint_down_to_common). A commit there
+// that Git cannot read, or that gives a name a second type, makes Git refuse
+// the history; the walk reads it too, wherever it lies, and refuses the
+// source. A commit that the walk cannot read, or more commits than the limit,
+// refuse the source.
 func (o *objectStore) reaches(tip, target string) bool {
-	q := &commitQueue{}
-	seen := map[string]bool{}
-	queue := func(id string) bool {
-		if len(seen) == o.limits.commits {
+	seen := map[string]bool{tip: true}
+	todo := []string{tip}
+	found := false
+	for read := 0; len(todo) > 0; read++ {
+		if read == o.limits.commits {
 			return false
 		}
-		_, parents, when, ok := o.commit(id)
-		if ok {
-			seen[id] = true
-			heap.Push(q, queuedCommit{id: id, parents: parents, when: when, order: len(seen)})
+		id := todo[len(todo)-1]
+		todo = todo[:len(todo)-1]
+		_, parents, ok := o.commit(id)
+		if !ok {
+			return false
 		}
-		return ok
-	}
-	if !queue(tip) {
-		return false
-	}
-	for q.Len() > 0 {
-		c := heap.Pop(q).(queuedCommit)
-		if c.id == target {
-			return true
-		}
-		for _, parent := range c.parents {
-			if !seen[parent] && !queue(parent) {
-				return false
+		found = found || id == target
+		for _, parent := range parents {
+			if !seen[parent] {
+				seen[parent] = true
+				todo = append(todo, parent)
 			}
 		}
 	}
-	return false
+	return found
 }
 
 // listTree lists every entry below the tree id as `git ls-tree -r --full-tree`

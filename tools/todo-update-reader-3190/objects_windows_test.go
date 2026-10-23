@@ -346,7 +346,7 @@ func TestObjectStoreAgreesWithGit(t *testing.T) {
 			}
 
 			head := git("rev-parse", "HEAD")
-			tree, parents, _, ok := store.commit(head)
+			tree, parents, ok := store.commit(head)
 			wantParents := strings.Fields(git("rev-list", "--parents", "-n", "1", "HEAD"))[1:]
 			if !ok || tree != git("rev-parse", "HEAD^{tree}") || !slices.Equal(parents, wantParents) {
 				t.Fatalf("commit %s: tree %s parents %v (%v)", head, tree, parents, ok)

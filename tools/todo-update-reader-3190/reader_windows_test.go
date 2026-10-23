@@ -208,12 +208,24 @@ func (f *fixture) input(rel string) fixtureInput {
 	return fixtureInput{Path: rel, Blob: f.gitOut("rev-parse", "HEAD:"+rel), SHA256: sha(data)}
 }
 
-func testGit(t *testing.T, root string, args ...string) (string, error) {
-	t.Helper()
-	cmd := exec.Command("git", append([]string{"-C", root}, args...)...)
+// gitCommand is git run in dir for a test, with Git's automatic maintenance
+// off, so that a synthetic repository keeps the objects its test wrote as the
+// test wrote them. Git 2.54.0, which the PC and its CI runner use, starts
+// maintenance after a commit, detached, and its default strategy (geometric)
+// repacks the loose objects and removes their files as soon as objects/17
+// holds two of them: too_many_loose_objects in builtin/gc.c samples that one
+// directory against ceil(100 / 256). A fixture whose commit name started
+// with 17 lost its loose commit that way while its test read it.
+func gitCommand(dir string, args ...string) *exec.Cmd {
+	cmd := exec.Command("git", append([]string{"-C", dir, "-c", "maintenance.auto=false"}, args...)...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: createNoWindow}
 	cmd.Env = childEnvironment(os.Environ())
-	out, err := cmd.CombinedOutput()
+	return cmd
+}
+
+func testGit(t *testing.T, root string, args ...string) (string, error) {
+	t.Helper()
+	out, err := gitCommand(root, args...).CombinedOutput()
 	return strings.TrimSpace(string(out)), err
 }
 

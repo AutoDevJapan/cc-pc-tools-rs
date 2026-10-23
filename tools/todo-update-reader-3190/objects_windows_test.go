@@ -6,12 +6,10 @@ import (
 	"fmt"
 	"maps"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
-	"syscall"
 	"testing"
 )
 
@@ -184,10 +182,7 @@ func TestPackedRefsAsGitReadsThem(t *testing.T) {
 // gitRaw returns Git's standard output exactly.
 func gitRaw(t *testing.T, dir string, args ...string) []byte {
 	t.Helper()
-	cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: createNoWindow}
-	cmd.Env = childEnvironment(os.Environ())
-	out, err := cmd.Output()
+	out, err := gitCommand(dir, args...).Output()
 	if err != nil {
 		t.Fatalf("git %v: %v", args, err)
 	}

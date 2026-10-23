@@ -23,6 +23,12 @@ fn reference_only(proof: &Value) -> Value {
         "read_only":true,"ledger_written":false,"legacy_state":"unchanged",
         "legacy_searched":false,"text_available":false,"redaction":"registry_unavailable",
         "approval":"not_inferred","next_action":"この照会は新方式の質問を対象にします。本文の伏せ字確認に必要な原名簿が利用できないため、本文は表示せず元URLと返信IDを返します。元ToDoに配送済みの私的返信原票を正規の保護判定で確認して読み、元質問と現在版を照合して続行してください。未読や未反映を理由に同じ質問を送らず、旧記録の回答も元ToDoで確認してください。画像は返されたSHAと今回の画像を照合し、異なる場合は旧回答を流用しないでください。"});
+    if proof["source"] == "discord-api-v10" {
+        result["source"] = json!("discord-api-v10");
+    }
+    if proof["decision_identity"]["todo_id"].as_u64().is_some() {
+        result["todo_id"] = proof["decision_identity"]["todo_id"].clone();
+    }
     for key in [
         "suppressed",
         "delivery",
@@ -42,10 +48,12 @@ fn reference_only(proof: &Value) -> Value {
     }
     for key in ["decision_identity", "request_id", "original_question"] {
         if let Some(value) = proof.get(key) {
-            result[format!("{key}_sha256")] = json!(format!(
-                "{:x}",
-                Sha256::digest(value.to_string().as_bytes())
-            ));
+            let bytes = value
+                .as_str()
+                .map(str::as_bytes)
+                .map(Vec::from)
+                .unwrap_or_else(|| value.to_string().into_bytes());
+            result[format!("{key}_sha256")] = json!(format!("{:x}", Sha256::digest(bytes)));
         }
     }
     if let Some(replies) = proof["owner_replies"].as_array() {

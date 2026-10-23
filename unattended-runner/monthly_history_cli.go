@@ -152,6 +152,7 @@ type monthlyChannel struct {
 	Type     *int   `json:"type"`
 	Guild    string `json:"guild_id"`
 	Parent   string `json:"parent_id"`
+	Last     string `json:"last_message_id"`
 	Metadata *struct {
 		ArchiveTimestamp string `json:"archive_timestamp"`
 	} `json:"thread_metadata"`
@@ -162,13 +163,14 @@ type monthlyChannelMetadata struct {
 	Type    int    `json:"type"`
 	Parent  string `json:"parent_id"`
 	Archive string `json:"archive_timestamp,omitempty"`
+	Last    string `json:"last_message_id,omitempty"`
 }
 
 func (c monthlyChannel) valid(guild string, requireGuild bool) bool {
 	return monthlyID(c.ID) && c.Type != nil && *c.Type >= 0 && *c.Type <= 255 && (c.Guild == guild || (!requireGuild && c.Guild == "")) && (c.Parent == "" || monthlyID(c.Parent))
 }
 func (c monthlyChannel) structural() monthlyChannelMetadata {
-	s := monthlyChannelMetadata{ID: c.ID, Type: *c.Type, Parent: c.Parent}
+	s := monthlyChannelMetadata{ID: c.ID, Type: *c.Type, Parent: c.Parent, Last: c.Last}
 	if c.Metadata != nil {
 		s.Archive = c.Metadata.ArchiveTimestamp
 	}

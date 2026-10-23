@@ -101,7 +101,7 @@ func TestManagementUnboundFollowupStaysPendingAndIsNotCountedRegistered(t *testi
 	if err := r.register(context.Background(), q); err != nil {
 		t.Fatal(err)
 	}
-	if q.Todo != 0 || q.Phase != "origin_pending" || q.PendingOwner != "OMB" || q.NextAction == "" || *calls != 0 {
+	if q.Todo != 0 || q.Phase != "task_binding_pending" || q.PendingOwner != "OMB" || q.NextAction == "" || *calls != 0 {
 		t.Fatal("unbound followup became a new task")
 	}
 	var h Health

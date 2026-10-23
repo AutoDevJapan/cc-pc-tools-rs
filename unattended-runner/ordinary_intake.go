@@ -31,7 +31,7 @@ func ordinaryVersion(q *Request) string {
 }
 
 func (r *Runner) parkUnbound(q *Request) {
-	q.Phase, q.PendingOwner, q.NextAction = "origin_pending", "OMB", "read_source_and_bind_original_task"
+	q.Phase, q.PendingOwner, q.NextAction = "task_binding_pending", "OMB", "read_source_and_bind_original_task"
 }
 
 func (r *Runner) observeOrdinary(q *Request, live historyReadMessage) (bool, error) {
@@ -48,7 +48,7 @@ func (r *Runner) observeOrdinary(q *Request, live historyReadMessage) (bool, err
 	// Old saved receipts did not observe type/attachments. Keep that historical
 	// unknown rather than replaying every completed task on a schema upgrade.
 	// Actual text/edit changes still acquire the complete current observation.
-	if q.Todo != 0 && q.MessageType == nil && q.Attachments == nil && next.Text == q.Text && next.Edited == q.Edited {
+	if q.MessageType == nil && q.Attachments == nil && next.Text == q.Text && next.Edited == q.Edited {
 		return false, nil
 	}
 	if len(next.Text) > 32<<10 {
@@ -77,14 +77,29 @@ func (r *Runner) observeOrdinary(q *Request, live historyReadMessage) (bool, err
 	next.PriorVersions = append(append([]string(nil), q.PriorVersions...), q.Text)
 	next.PriorEdits = append(append([]EditVersion(nil), q.PriorEdits...), EditVersion{Edited: q.Edited, SHA256: bytesHash([]byte(q.Text))})
 	next.Acquired, next.Reported, next.DeliveryVersion, next.Context = r.Now().UTC().Format(time.RFC3339Nano), "", "", ""
+	next.QuestionContextVersion = ""
 	if q.Todo != 0 {
 		next.Phase, next.PendingOwner, next.NextAction = "source_edit_saved", "OMB", "deliver_current_version_to_original_task"
 		if q.Origin != nil && q.Origin.Scope == productReportScope {
 			next.Phase = "product_reply_saved"
 			next.Context = q.Context
 		}
-	} else {
-		r.parkUnbound(&next)
+	} else if q.Phase == "captured" || q.Phase == "context_pending" {
+		// An actual pre-registration edit keeps its place in admission. Question
+		// provenance is rechecked against the new source before registration.
+		next.Phase = "captured"
+		if ordinaryShortAnswer(next.Text) || r.KnownQuestionThreads[q.Thread] {
+			next.Phase = "context_pending"
+		}
+	} else if q.Phase == "empty" || q.Phase == "status_answered" || q.Phase == "status_query" {
+		next.Phase = "captured"
+		if strings.TrimSpace(next.Text) == "" {
+			next.Phase = "empty"
+		} else if isPureStatusQuestion(next.Text, r.State.Destination.Bot) {
+			next.Phase = "status_query"
+		} else {
+			r.parkUnbound(&next)
+		}
 	}
 	previous := *q
 	*q = next
@@ -111,10 +126,11 @@ func (r *Runner) ordinarySourceFile(q *Request) (string, error) {
 		return "", statErr
 	}
 	// Store source facts only, so retries after task binding have identical bytes.
-	source := *q
-	source.Todo, source.Binding, source.DeliveryVersion, source.Reported = 0, nil, "", ""
-	source.Phase, source.PendingOwner, source.NextAction = "source", "", ""
-	source.Context, source.PriorVersions, source.PriorEdits = "", nil, nil
+	source := Request{Thread: q.Thread, Guild: q.Guild, RecordVersion: q.RecordVersion,
+		Message: q.Message, Author: q.Author, Created: q.Created, Edited: q.Edited,
+		ReplyTo: q.ReplyTo, ReplyChannel: q.ReplyChannel, ReplyGuild: q.ReplyGuild,
+		Acquired: q.Acquired, Source: q.Source, Text: q.Text, Key: q.Key,
+		MessageType: q.MessageType, Attachments: q.Attachments, Phase: "source"}
 	b, err := json.Marshal(source)
 	if err != nil {
 		return "", err
@@ -124,7 +140,7 @@ func (r *Runner) ordinarySourceFile(q *Request) (string, error) {
 
 func (r *Runner) bindOrdinary(ctx context.Context, message string, binding IntakeBinding) error {
 	q := r.State.Requests[message]
-	if q == nil || q.Conversation != "" || binding.Todo == 0 || binding.Project == "" || !shaPattern.MatchString(binding.SourceSHA) ||
+	if q == nil || q.Conversation != "" || q.Origin != nil && q.Origin.Scope == productReportScope || binding.Todo == 0 || binding.Project == "" || !shaPattern.MatchString(binding.SourceSHA) ||
 		strings.TrimSpace(binding.Evidence) == "" || len(binding.Evidence) > 4096 || safeText(binding.Evidence, r.Token) != binding.Evidence {
 		return errors.New("ordinary binding input invalid")
 	}
@@ -140,6 +156,9 @@ func (r *Runner) bindOrdinary(ctx context.Context, message string, binding Intak
 	}
 	if ordinaryVersion(q) != binding.SourceSHA || q.Todo != 0 && q.Todo != binding.Todo || q.Binding != nil && (q.Binding.Todo != binding.Todo || q.Binding.Project != binding.Project) {
 		return errors.New("ordinary binding source or task changed")
+	}
+	if q.Binding != nil && q.DeliveryVersion == binding.SourceSHA && (q.Phase == "source_edit_applied" || q.Phase == "reported") {
+		return nil
 	}
 	row, err := r.conversationTask(ctx, binding.Todo)
 	if err != nil || row.Project != binding.Project || row.Status == "recovery_unverified" {
@@ -162,18 +181,20 @@ func ordinaryShortAnswer(text string) bool {
 }
 
 func (r *Runner) deliverOrdinary(ctx context.Context, q *Request) error {
-	if q.Todo == 0 || q.Conversation != "" {
+	if q.Todo == 0 || q.Conversation != "" || q.Origin != nil && q.Origin.Scope == productReportScope || r.KnownQuestionThreads[q.Thread] {
 		return errors.New("ordinary original task missing")
 	}
 	if err := r.validateSource(ctx, q, q.Binding != nil); err != nil {
 		return err
 	}
 	if ordinaryShortAnswer(q.Text) {
-		q.NextAction = "verify_exact_original_question_generation"
+		q.Phase, q.PendingOwner, q.NextAction = "source_context_pending", "OMB", "verify_exact_original_question_generation"
 		_ = r.save()
 		return errors.New("ordinary edit requires exact question delivery")
 	}
 	if q.MessageType != nil && *q.MessageType != 0 && *q.MessageType != 19 {
+		q.Phase, q.PendingOwner, q.NextAction = "source_context_pending", "OMB", "read_message_type_and_original_context"
+		_ = r.save()
 		return errors.New("ordinary message type needs context")
 	}
 	row, err := r.conversationTask(ctx, q.Todo)
@@ -188,6 +209,11 @@ func (r *Runner) deliverOrdinary(ctx context.Context, q *Request) error {
 		return err
 	}
 	version := ordinaryVersion(q)
+	// Existing workers are instructed to read this directory at safe boundaries.
+	// Publish the current source there as well as the durable normal ToDo note.
+	if err := publish(r.steeringReceiptPath(q.Todo, q.Message), q); err != nil {
+		return err
+	}
 	marker := "intake-owner-source:" + q.Message + ":" + version
 	block := fmt.Sprintf("%s\n本人の正規Discord投稿: %s\n元ToDo %d / source_sha256=%s。原文・編集版・返信先・添付の既知/不明を読み、元の対象と質問世代を保って反映する。旧版の反映票を使わない。停止・依存を解除せず、担当の正規再開を追う。\n実反映後は %s に source=discord-api-v10, todo_id=%d, message_id=%s, thread_id=%s, author_id=%s, source_sha256=%s, job_id（実担当）, revision（40桁）, applied_at（RFC3339）, verification を記録する。受領だけを実反映にしない。\n", marker, sourceFile, q.Todo, version, filepath.Join(r.Config.Home, "applied", q.Message+".json"), q.Todo, q.Message, q.Thread, q.Author, version)
 	if !strings.Contains(row.Note, block) {
@@ -211,6 +237,9 @@ func (r *Runner) deliverOrdinary(ctx context.Context, q *Request) error {
 	}
 	previous := *q
 	q.DeliveryVersion, q.Phase, q.PendingOwner, q.NextAction = version, "source_edit_delivered", "OMB", "worker_read_apply_and_verify_current_source"
+	if row.Status == "done" || row.Status == "block" || row.Status == "wait" {
+		q.NextAction = "review_original_wait_stop_or_completion_and_track_authorized_worker_resume"
+	}
 	if q.Binding != nil {
 		binding := *q.Binding
 		binding.SourceSHA = version
@@ -228,7 +257,7 @@ func (r *Runner) deliverOrdinary(ctx context.Context, q *Request) error {
 func (r *Runner) refreshOrdinary(ctx context.Context, health *Health) {
 	ids := make([]string, 0)
 	for id, q := range r.State.Requests {
-		if q != nil && q.Conversation == "" {
+		if q != nil && q.Conversation == "" && (!r.State.Threads[q.Thread].Managed || r.Config.ManagementIntake) {
 			ids = append(ids, id)
 		}
 	}
@@ -245,13 +274,40 @@ func (r *Runner) refreshOrdinary(ctx context.Context, health *Health) {
 			return
 		}
 		q := r.State.Requests[id]
-		if err := r.validateSource(ctx, q, q.Binding != nil); err != nil {
+		if err := r.validateSourceMode(ctx, q, q.Binding != nil, false); err != nil {
 			health.Errors = append(health.Errors, "ordinary_source_recheck_deferred")
 			continue
 		}
-		if (q.Phase == "source_edit_saved" || q.Phase == "steering_saved") && q.Todo != 0 {
+	}
+}
+
+// Delivery has its own bounded fair turn; a large historical edit watch cannot
+// delay already captured instructions by N/2 ticks.
+func (r *Runner) processOrdinaryPending(ctx context.Context, health *Health) {
+	ids := make([]string, 0)
+	for id, q := range r.State.Requests {
+		if q != nil && q.Todo != 0 && q.Conversation == "" &&
+			(q.Phase == "source_edit_saved" || q.Phase == "source_edit_delivered") {
+			ids = append(ids, id)
+		}
+	}
+	sort.Strings(ids)
+	start := sort.Search(len(ids), func(i int) bool { return ids[i] > r.State.OrdinaryDeliveryCursor })
+	for i := 0; i < min(2, len(ids)); i++ {
+		if ctx.Err() != nil {
+			return
+		}
+		id := ids[(start+i)%len(ids)]
+		r.State.OrdinaryDeliveryCursor = id
+		if err := r.save(); err != nil {
+			health.Errors = append(health.Errors, "ordinary_delivery_cursor_deferred")
+			return
+		}
+		q := r.State.Requests[id]
+		if q.Phase == "source_edit_saved" {
 			if err := r.deliverOrdinary(ctx, q); err != nil {
 				health.Errors = append(health.Errors, "ordinary_delivery_deferred")
+				continue
 			}
 		}
 		if q.Phase == "source_edit_delivered" {
@@ -260,6 +316,48 @@ func (r *Runner) refreshOrdinary(ctx context.Context, health *Health) {
 			}
 		}
 	}
+}
+
+func (r *Runner) observeLegacySteeringApplication(q *Request, row *TodoRow) (bool, error) {
+	if q.Phase != "steering_saved" || q.Edited != "" || len(q.PriorEdits) != 0 || q.DeliveryVersion != "" {
+		return false, nil
+	}
+	var proof struct {
+		Todo         uint64 `json:"todo_id"`
+		Message      string `json:"message_id"`
+		Job          string `json:"job_id"`
+		Revision     string `json:"revision"`
+		Verification string `json:"verification"`
+		ReceiptSHA   string `json:"receipt_sha256"`
+	}
+	path := filepath.Join(r.Config.Home, "applied", q.Message+".json")
+	if _, err := os.Lstat(path); os.IsNotExist(err) {
+		return false, nil
+	}
+	if err := readJSON(path, 1<<20, &proof); err != nil {
+		return false, err
+	}
+	if proof.Todo != q.Todo || proof.Message != q.Message || !validJob(proof.Job) || strings.TrimSpace(proof.Revision) == "" || strings.TrimSpace(proof.Verification) == "" {
+		return false, nil
+	}
+	owned := false
+	for _, raw := range row.Jobs {
+		var job string
+		if json.Unmarshal(raw, &job) == nil && job == proof.Job {
+			owned = true
+		}
+	}
+	if !owned {
+		return false, nil
+	}
+	if proof.ReceiptSHA != "" {
+		b, err := boundedRegular(r.steeringReceiptPath(q.Todo, q.Message))
+		if err != nil || bytesHash(b) != proof.ReceiptSHA {
+			return false, nil
+		}
+	}
+	q.Phase, q.Reported, q.PendingOwner, q.NextAction = "reported", "applied", "OMB", "verify_parent_receipt_and_product_delivery"
+	return true, r.save()
 }
 
 func (r *Runner) observeOrdinaryApplication(ctx context.Context, q *Request) error {

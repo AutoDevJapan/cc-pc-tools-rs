@@ -55,6 +55,66 @@ fn setup() -> (Test, subwork_support::Fixture, Request) {
 }
 
 #[test]
+fn native_session_history_does_not_block_normal_registration_or_change_the_store() {
+    let t = Test::new();
+    let home = tempfile::tempdir().unwrap();
+    let session = "00000000-0000-7000-8000-000000000001";
+    let db = json!({"items":[{"id":1,"status":"todo","jobs":[session]}]});
+    let store = home.path().join("todo.json");
+    fs::write(&store, db.to_string()).unwrap();
+    t.rt.env
+        .lock()
+        .unwrap()
+        .insert("CC_TODO_HOME".into(), home.path().to_string_lossy().into());
+    let before = fs::read(&store).unwrap();
+    t.run(&["--todo-id", "1"], b"fixture ordinary task")
+        .unwrap();
+    let jobs = t.ctx.list_jobs(&HashSet::new());
+    assert_eq!(jobs.len(), 1);
+    assert!(jobs[0]["fixed_review_requalification"].is_null());
+    assert_eq!(fs::read(&store).unwrap(), before);
+    assert!(!t.ctx.job_dir(session).exists());
+}
+
+#[test]
+fn missing_managed_or_existing_broken_native_record_still_rejects_registration() {
+    for existing_native in [false, true] {
+        let t = Test::new();
+        let home = tempfile::tempdir().unwrap();
+        let id = if existing_native {
+            "00000000-0000-7000-8000-000000000001"
+        } else {
+            "20261024-000000-missing-managed"
+        };
+        if existing_native {
+            fs::create_dir_all(t.ctx.job_dir(id)).unwrap();
+            fs::write(t.ctx.job_dir(id).join("job.json"), b"broken").unwrap();
+        }
+        let store = home.path().join("todo.json");
+        fs::write(
+            &store,
+            json!({"items":[{"id":1,"status":"todo","jobs":[id]}]}).to_string(),
+        )
+        .unwrap();
+        t.rt.env
+            .lock()
+            .unwrap()
+            .insert("CC_TODO_HOME".into(), home.path().to_string_lossy().into());
+        let before = fs::read(&store).unwrap();
+        let error = t
+            .run(&["--todo-id", "1"], b"fixture ordinary task")
+            .unwrap_err();
+        assert!(
+            error
+                .message
+                .contains("no such job (or unreadable job.json)")
+        );
+        assert_eq!(fs::read(&store).unwrap(), before);
+        assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 0);
+    }
+}
+
+#[test]
 fn original_reader_admits_and_receives_fixed_read_only_source_while_cleanup_stays_unfinished() {
     let (t, f, r) = setup();
     let request = t.ctx.root.join("request.json");
@@ -451,7 +511,12 @@ fn normal_continuations_cannot_regain_launcher_capabilities_before_fresh_qualifi
             let prompt = fs::read(t.ctx.job_dir(s(&next, "id")).join("prompt.md")).unwrap();
             assert!(String::from_utf8_lossy(&prompt).ends_with(cc_job_policy::READ_GUIDANCE));
             let mut db = f.db.clone();
-            db["items"][1]["jobs"] = json!(["child", next["id"]]);
+            db["items"][1]["jobs"] = json!([
+                "00000000-0000-7000-8000-000000000001",
+                "child",
+                next["id"],
+                "00000000-0000-7000-8000-000000000002"
+            ]);
             db["items"][1]["scheduler"]["job"] = next["id"].clone();
             db["items"][1]["scheduler"]["key"] = json!("abcdabcdabcdabcdabcdabcdabcdabcd");
             fs::write(f.dir.path().join("todo.json"), db.to_string()).unwrap();

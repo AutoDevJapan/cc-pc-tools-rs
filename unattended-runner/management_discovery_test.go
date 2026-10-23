@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"net/http"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -67,10 +68,31 @@ func TestManagementDeniedReadDoesNotCreateEmptyCoverageOrMoveWatermark(t *testin
 	if reads != 0 || r.State.Scans["500"].After != snowflake(c) || len(r.State.Requests) != 0 {
 		t.Fatal("unread source advanced or reached message history")
 	}
+	p := r.State.Discovery["read:500"]
+	if p.HTTPStatus != 403 || p.FailureStage == "" || p.Complete {
+		t.Fatal("denial stage/status was not retained", p)
+	}
 }
 
 func TestManagementNormalTickRechecksReportedEditWithNoNewLastMessage(t *testing.T) {
 	r, q, m, calls := ordinaryFixture(t)
+	if err := publish(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), map[string]any{"domain": "new-owner-recovery-messages", "events": []any{}}); err != nil {
+		t.Fatal(err)
+	}
+	server(t, r, func(w http.ResponseWriter, req *http.Request) {
+		switch req.URL.Path {
+		case "/users/@me":
+			respond(w, map[string]any{"id": "400", "bot": true})
+		case "/channels/" + requestForum:
+			respond(w, Thread{ID: requestForum, Type: 15, Guild: "100"})
+		case "/channels/500":
+			respond(w, Thread{ID: "500", Parent: requestForum, Guild: "100", Owner: "300", Type: 11})
+		case "/channels/500/messages/" + m.ID:
+			respond(w, m)
+		default:
+			respond(w, map[string]any{"threads": []Thread{}, "has_more": false})
+		}
+	})
 	q.Todo, q.Phase, q.Reported = 42, "reported", "complete"
 	q.Text = "編集前の本文"
 	r.State.Threads["500"] = Thread{ID: "500", Type: 11, Guild: "100", Parent: requestForum, Owner: "300", Last: m.ID}

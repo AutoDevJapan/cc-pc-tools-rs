@@ -72,6 +72,13 @@ func intakeCLIWith(args []string, out io.Writer, load func(string, bool) (*Runne
 		return fail()
 	}
 	defer unlock()
+	// loadConversationRunner does not perform discovery. Load exact question
+	// receipts under the same lock before permitting a general-purpose binding.
+	if command == "bind" {
+		if _, err := r.knownBotThreads(); err != nil {
+			return fail()
+		}
+	}
 	if command == "status" {
 		ids := make([]string, 0, len(r.State.Requests))
 		for id, q := range r.State.Requests {

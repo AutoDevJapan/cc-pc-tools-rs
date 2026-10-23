@@ -701,7 +701,7 @@ func TestUnappliedSteeringRetainsBlockedOriginalForVersionedDelivery(t *testing.
 	if e := r.results(context.Background()); e != nil {
 		t.Fatal(e)
 	}
-	if req.Todo != 10 || req.Phase != "source_edit_saved" || req.PendingOwner != "OMB" {
+	if req.Todo != 10 || req.Phase != "steering_saved" || req.PendingOwner != "OMB" {
 		t.Fatal("unapplied steering lost its original task or recovery owner")
 	}
 }

@@ -18,6 +18,9 @@ func (r *Runner) validateRequest(ctx context.Context, request *Request) error {
 	return r.validateSource(ctx, request, false)
 }
 func (r *Runner) validateSource(ctx context.Context, request *Request, binding bool) error {
+	return r.validateSourceMode(ctx, request, binding, true)
+}
+func (r *Runner) validateSourceMode(ctx context.Context, request *Request, binding, admission bool) error {
 	cutoff, _ := time.Parse(time.RFC3339Nano, r.State.Since)
 	stamp, err := time.Parse(time.RFC3339Nano, request.Created)
 	if err != nil || stamp.Before(cutoff) || stamp.After(r.Now().Add(time.Minute)) || request.Source != "discord-api-v10" || request.Author != r.State.Destination.Owner || request.Key != requestKey(request.Thread, request.Message) {
@@ -31,7 +34,7 @@ func (r *Runner) validateSource(ctx context.Context, request *Request, binding b
 	}
 	var thread Thread
 	if err := r.get(ctx, "/channels/"+request.Thread, &thread); err != nil {
-		if strings.Contains(err.Error(), "status 404") {
+		if admission && strings.Contains(err.Error(), "status 404") {
 			request.Phase = "source_unavailable"
 			_ = r.save()
 		}
@@ -47,7 +50,7 @@ func (r *Runner) validateSource(ctx context.Context, request *Request, binding b
 			return err
 		}
 	}
-	if !binding && legacy && thread.Owner == r.State.Destination.Bot && request.Origin == nil && r.ProgressLinks[thread.ID].Todo == 0 && !r.KnownQuestionThreads[thread.ID] && !(request.Phase == "status_query" && isPureStatusQuestion(request.Text, r.State.Destination.Bot)) {
+	if admission && !binding && legacy && thread.Owner == r.State.Destination.Bot && request.Origin == nil && r.ProgressLinks[thread.ID].Todo == 0 && !r.KnownQuestionThreads[thread.ID] && !(request.Phase == "status_query" && isPureStatusQuestion(request.Text, r.State.Destination.Bot)) {
 		request.Phase = "origin_pending"
 		if err := r.save(); err != nil {
 			return err
@@ -56,7 +59,7 @@ func (r *Runner) validateSource(ctx context.Context, request *Request, binding b
 	}
 	var live historyReadMessage
 	if err := r.get(ctx, "/channels/"+request.Thread+"/messages/"+request.Message, &live); err != nil {
-		if strings.Contains(err.Error(), "status 404") {
+		if admission && strings.Contains(err.Error(), "status 404") {
 			request.Phase = "source_unavailable"
 			_ = r.save()
 		}
@@ -152,6 +155,7 @@ func (r *Runner) questionContext(ctx context.Context, request *Request) error {
 		// The API reader validates the receipt/generation and owner. Keep its original
 		// scope with this delivery rather than interpreting the answer in this runner.
 		request.Context = safeText(raw, r.Token)
+		request.QuestionContextVersion = ordinaryVersion(request)
 		request.Phase = "captured"
 		return r.save()
 	}
@@ -207,6 +211,9 @@ func (r *Runner) todo(id uint64) (*TodoRow, error) {
 	}
 	return nil, errors.New("task receipt missing")
 }
+
+var errTaskBindingAmbiguous = errors.New("original task binding ambiguous")
+
 func (r *Runner) threadActive(request *Request) (*Request, error) {
 	var found *Request
 	for _, old := range r.State.Requests {
@@ -218,10 +225,10 @@ func (r *Runner) threadActive(request *Request) (*Request, error) {
 			return nil, err
 		}
 		if row.Project != r.Config.Project {
-			return nil, errors.New("original task project differs")
+			return nil, fmt.Errorf("%w: project differs", errTaskBindingAmbiguous)
 		}
 		if found != nil && found.Todo != old.Todo {
-			return nil, errors.New("multiple original tasks require exact binding")
+			return nil, fmt.Errorf("%w: multiple original tasks", errTaskBindingAmbiguous)
 		}
 		found = old
 	}
@@ -271,11 +278,15 @@ func (r *Runner) sendStatus(ctx context.Context, request *Request, phase string)
 			}
 		}
 	}
-	path := filepath.Join(r.Config.Home, "notices", request.Key+"-"+phase+".txt")
+	noticeKey := request.Key
+	if len(request.PriorEdits) != 0 || request.Binding != nil {
+		noticeKey += "-" + ordinaryVersion(request)[:16]
+	}
+	path := filepath.Join(r.Config.Home, "notices", noticeKey+"-"+phase+".txt")
 	if err := writeText(path, body); err != nil {
 		return err
 	}
-	args := []string{"recovery-log", "--request-id", "unattended-" + request.Key + "-" + phase, "--title", "【PCの道具】Discordの依頼への対応", "--body-file", path}
+	args := []string{"recovery-log", "--request-id", "unattended-" + noticeKey + "-" + phase, "--title", "【PCの道具】Discordの依頼への対応", "--body-file", path}
 	if request.ProgressThread != "" {
 		args = append(args, "--thread", request.ProgressThread)
 	}
@@ -288,7 +299,7 @@ func (r *Runner) sendStatus(ctx context.Context, request *Request, phase string)
 		Thread   string `json:"thread_id"`
 	}
 	if err != nil || json.Unmarshal([]byte(raw), &receipt) != nil || receipt.Delivery != "verified" {
-		thread, proofErr := r.recoverStatusReceipt(ctx, "unattended-"+request.Key+"-"+phase, body)
+		thread, proofErr := r.recoverStatusReceipt(ctx, "unattended-"+noticeKey+"-"+phase, body)
 		if proofErr != nil {
 			return errors.New("status receipt unverified")
 		}
@@ -425,7 +436,7 @@ func (r *Runner) results(ctx context.Context) error {
 		if request == nil || request.Todo == 0 || request.Phase == "reported" || request.Phase == "status_answered" || request.Phase == "origin_blocked" || request.Phase == "product_reply_saved" || request.Phase == "product_reply_delivered" || request.Phase == "product_reply_applied" || r.isConfiguredRequestReport(request.Todo) {
 			continue
 		}
-		if request.Binding != nil || request.Phase == "source_edit_saved" || request.Phase == "source_edit_delivered" || request.Phase == "source_edit_applied" {
+		if request.Phase == "source_edit_saved" || request.Phase == "source_edit_delivered" || request.Phase == "source_context_pending" {
 			continue
 		}
 		r.State.ResultCursor = id
@@ -436,18 +447,28 @@ func (r *Runner) results(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if row.Project != r.Config.Project {
+		project := r.Config.Project
+		if request.Binding != nil {
+			project = request.Binding.Project
+		}
+		if row.Project != project {
 			return errors.New("task project association differs")
+		}
+		if request.Phase == "source_edit_applied" && row.Status != "done" {
+			continue
 		}
 		stage := "accepted"
 		if request.Phase == "steering_saved" {
+			applied, err := r.observeLegacySteeringApplication(request, row)
+			if err != nil {
+				return err
+			}
+			if applied {
+				return nil
+			}
 			stage = "steering"
 			if row.Status == "done" || row.Status == "block" {
-				// The legacy receipt lacks a source-version hash. Preserve its
-				// bytes, but require the ordinary versioned delivery/application
-				// protocol instead of clearing the original task or inheriting it.
-				request.Phase, request.Reported = "source_edit_saved", ""
-				request.PendingOwner, request.NextAction = "OMB", "deliver_current_version_to_original_task"
+				request.PendingOwner, request.NextAction = "OMB", "review_original_wait_stop_or_completion_and_track_authorized_worker_resume"
 				return r.save()
 			}
 		} else if row.Status == "doing" {

@@ -1,0 +1,29 @@
+{
+  "todo": 3080,
+  "observed_at": "2026-10-23T03:08:37.8811343Z",
+  "source_commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+  "claims": [
+    {
+      "source_path": "optimizing-descriptions/SKILL.md",
+      "official_url": "https://agentskills.io/skill-creation/optimizing-descriptions",
+      "finding": "説明は利用意図を示し、近接負例と実際のSKILL.md読取で発火を測る。約20問/3回/0.5/60:40は目安。両splitを固定し、validationの失敗文言を修正側へ漏らさない。",
+      "not_proven": "本PCでの発火率/文脈予算、上流個人方針のmeta全明示専用、waxa CLIの実装保証。"
+    },
+    {
+      "source_path": "apm-usage/SKILL.md",
+      "official_url": "https://agentskills.io/specification",
+      "finding": "一般仕様のname/descriptionと任意licenseの存在を確認。metadataと本文/補助を段階的に読む推奨。",
+      "not_proven": "APMの実CLI/権限/書込先/衝突動作。一般1024文字上限は本PC日本語60字方針を変更しない。"
+    },
+    {
+      "source_path": "empirical-prompt-tuning/SKILL.md",
+      "official_url": "https://agentskills.io/skill-creation/evaluating-skills",
+      "finding": "現実的な複数例/境界とwith/without比較、独立文脈、実出力を根拠にした評価という部分を照合。",
+      "not_proven": "上流固有の数値閾値/2回連続自己申告だけの収束、記述レビューから実行成功への拡大。"
+    }
+  ],
+  "source_scripts_executed": false,
+  "new_installations": 0,
+  "api_key_use": false,
+  "implementation_evaluation_pending": true
+}

@@ -4342,6 +4342,11 @@ mod tests {
         let issue_cases: Vec<(String, bool)> =
             serde_json::from_str(include_str!("../tests/fixtures/clarification-414.json")).unwrap();
         for (reply, accepted) in [
+            ("これでやって？", false),
+            ("作って？", false),
+            ("送って？", false),
+            ("使って？", false),
+            ("待って？", false),
             ("作業領域ってなに？", true),
             ("作業領域って何？", true),
             ("作業領域とは何ですか", true),

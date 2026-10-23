@@ -778,9 +778,11 @@ fn conditional_option_tail(remaining: &str) -> bool {
 fn explanation_requested(body: &str) -> bool {
     // A definition question has its own sentence ending. Do not treat an
     // indefinite なにか in a later statement as a request for explanation.
-    // The whole-reply action/choice/quotation rules run before this helper.
+    // The caller first checks whole-reply actions and quotations. This helper
+    // also classifies an option's tail before the caller accepts that option.
+    // A bare って? could be the end of an action such as 作って?.
     let definition = regex::Regex::new(
-        r"(?:って|とは)\s*(?:[?？]|(?:なに|何)(?:(?:なの|です|なんです|でしょう)か?|か(?:を)?教えて(?:ください|ほしい(?:です)?)?)?\s*[?？]?\s*$)",
+        r"(?:とは\s*[?？]|(?:って|とは)\s*(?:なに|何)(?:(?:なの|です|なんです|でしょう)か?|か(?:を)?教えて(?:ください|ほしい(?:です)?)?)?\s*[?？]?\s*$)",
     )
     .unwrap();
     let definition = body
@@ -849,6 +851,21 @@ fn why_start(body: &str) -> Option<usize> {
 #[cfg(test)]
 mod intent_tests {
     use super::requests_explanation;
+
+    #[test]
+    fn definition_questions_do_not_accept_action_verb_tails() {
+        let mismatches: Vec<_> = [
+            "これでやって？",
+            "作って？",
+            "送って？",
+            "使って？",
+            "待って？",
+        ]
+        .into_iter()
+        .filter(|reply| requests_explanation(reply))
+        .collect();
+        assert!(mismatches.is_empty(), "{mismatches:?}");
+    }
 
     #[test]
     fn definition_questions_keep_the_original_explanation_scope() {

@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -296,5 +297,12 @@ func (r *Runner) legacyImplementationJob(row *TodoRow, applied conversationClose
 	if !validJob(applied.Job) || readJSON(filepath.Join(root, applied.Job, "job.json"), 1<<20, &job) != nil || job.ID != applied.Job || job.Todo != row.ID || !filepath.IsAbs(job.Cwd) {
 		return false
 	}
-	return row.Scheduler.Worktree != "" && filepath.Clean(job.Cwd) == filepath.Clean(row.Scheduler.Worktree)
+	if row.Scheduler.Worktree == "" {
+		return false
+	}
+	a, b := filepath.Clean(job.Cwd), filepath.Clean(row.Scheduler.Worktree)
+	if runtime.GOOS == "windows" {
+		return strings.EqualFold(a, b)
+	}
+	return a == b
 }

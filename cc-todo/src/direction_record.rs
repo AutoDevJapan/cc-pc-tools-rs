@@ -516,22 +516,6 @@ fn record_for(
     }
     let actor_scope = recorded_scope(db, actor_id)?;
     let origin_scope = recorded_scope(db, origin_id)?;
-    if implementation {
-        let project = text(&input, "project");
-        let root = std::fs::canonicalize(text(&db["projects"], project))
-            .map_err(|_| "implementation_root_unavailable")?;
-        let (job, _) = actor_identity(paths, row(db, actor_id)?, &input)?;
-        let cwd = std::fs::canonicalize(text(&job, "cwd"))
-            .map_err(|_| "implementation_workspace_unavailable")?;
-        let root = crate::normalized(&root.to_string_lossy());
-        let cwd = crate::normalized(&cwd.to_string_lossy());
-        if cwd != root
-            && !cwd.starts_with(&format!("{root}\\"))
-            && !cwd.starts_with(&format!("{root}-wt\\"))
-        {
-            return fail("actor_project_root_mismatch");
-        }
-    }
     let origin = row(db, origin_id)?;
     let input_sha = sha(&bytes);
     let append = block(&input, &input_sha, implementation);
@@ -578,6 +562,22 @@ fn record_for(
             || !matches!(text(origin, "status"), "todo" | "doing" | "wait" | "block")
         {
             return fail("record_unavailable");
+        }
+        if implementation {
+            let project = text(&input, "project");
+            let root = std::fs::canonicalize(text(&db["projects"], project))
+                .map_err(|_| "implementation_root_unavailable")?;
+            let (job, _) = actor_identity(paths, row(db, actor_id)?, &input)?;
+            let cwd = std::fs::canonicalize(text(&job, "cwd"))
+                .map_err(|_| "implementation_workspace_unavailable")?;
+            let root = crate::normalized(&root.to_string_lossy());
+            let cwd = crate::normalized(&cwd.to_string_lossy());
+            if cwd != root
+                && !cwd.starts_with(&format!("{root}\\"))
+                && !cwd.starts_with(&format!("{root}-wt\\"))
+            {
+                return fail("actor_project_root_mismatch");
+            }
         }
         let actor = actor_proof(paths, row(db, actor_id)?, &input)?;
         let note = text(origin, "note");

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -257,6 +258,91 @@ func TestImplementationNativeNewStopDefersExplicitCloseAndPreservesReceipt(t *te
 	if code != 0 || result["question_closed_get_verified"] != false || f.close != 0 || !bytes.Equal(before, after) {
 		t.Fatal("new stop lost or falsely closed", code, result)
 	}
+}
+
+func TestImplementationNativeTickDoesNotSendOrResumeCancelledWork(t *testing.T) {
+	f, opts := implementationNative(t)
+	if code, _ := implementationCLI(t, f, opts); code != 0 {
+		t.Fatal("record fixture")
+	}
+	before, _ := os.ReadFile(f.r.TodoPath)
+	start := len(f.commands)
+	posts := f.posts
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	f.r.reportConversations(context.Background(), &health)
+	after, _ := os.ReadFile(f.r.TodoPath)
+	if len(health.Errors) != 0 || !bytes.Equal(before, after) || f.posts != posts || f.close != 0 || f.r.State.Requests[opts.Message].Phase != "conversation_implementation_recorded" {
+		t.Fatal("tick posted, resumed or reclassified separate application", health.Errors)
+	}
+	for _, command := range f.commands[start:] {
+		if command == "question-answer" || command == "recovery-log" || command == "recovery-close" {
+			t.Fatal("tick sent or released cancelled original")
+		}
+	}
+}
+
+func TestImplementationNativeEditAfterRecordingKeepsOriginalAndDefersClose(t *testing.T) {
+	f, opts := implementationNative(t)
+	if code, _ := implementationCLI(t, f, opts); code != 0 {
+		t.Fatal("record fixture")
+	}
+	path := filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", opts.Message+".json")
+	before, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.edited = map[string]string{opts.Message: f.r.Now().UTC().Format(time.RFC3339Nano)}
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	after, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(before, after) || f.close != 0 {
+		t.Fatal("tick overwrote an implemented canonical original")
+	}
+	opts.Command = "close"
+	code, result := implementationCLI(t, f, opts)
+	if code != 0 || result["question_closed_get_verified"] != false || f.close != 0 {
+		t.Fatal("edit inherited earlier implementation", code, result)
+	}
+}
+
+func TestImplementationLegacyJobOwnershipAndWorkspaceMustMatch(t *testing.T) {
+	for _, change := range []string{"owner", "cwd"} {
+		t.Run(change, func(t *testing.T) {
+			f := conversationCloseTest(t)
+			f.addReply(t, "Current owner reply", true)
+			job := map[string]any{"id": "worker-42", "todo_id": 42, "cwd": f.r.Config.Home}
+			if change == "owner" {
+				job["todo_id"] = 43
+			} else {
+				job["cwd"] = t.TempDir()
+			}
+			if publish(filepath.Join(f.r.JobsPath, "worker-42", "job.json"), job) != nil {
+				t.Fatal("fixture")
+			}
+			closed, err := f.r.closeConversation(context.Background(), f.q, f.current())
+			if closed || err == nil {
+				t.Fatal("foreign job identity closed original")
+			}
+			f.check(t, 0)
+		})
+	}
+}
+
+func TestImplementationLegacyWindowsPathCaseIsEquivalent(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Windows path comparison")
+	}
+	f := conversationCloseTest(t)
+	f.addReply(t, "Current owner reply", true)
+	if publish(filepath.Join(f.r.JobsPath, "worker-42", "job.json"), map[string]any{"id": "worker-42", "todo_id": 42, "cwd": strings.ToUpper(f.r.Config.Home)}) != nil {
+		t.Fatal("fixture")
+	}
+	closed, err := f.r.closeConversation(context.Background(), f.q, f.current())
+	if err != nil || !closed {
+		t.Fatal("same Windows workspace rejected", err)
+	}
+	f.check(t, 1)
 }
 
 func TestImplementationRejectsLegacyJobNameWithoutRealJob(t *testing.T) {

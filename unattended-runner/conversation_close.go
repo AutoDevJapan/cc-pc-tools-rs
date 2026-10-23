@@ -348,7 +348,9 @@ func (r *Runner) conversationCloseSnapshot(ctx context.Context, q ConversationQu
 			all = false
 		} else if mark {
 			phase := "conversation_reply_applied"
-			if stamp.DirectionSHA != "" {
+			if stamp.ImplementationSHA != "" {
+				phase = "conversation_implementation_recorded"
+			} else if stamp.DirectionSHA != "" {
 				phase = "conversation_direction_recorded"
 			}
 			if r.State.Requests[reply.Message].Phase == phase {

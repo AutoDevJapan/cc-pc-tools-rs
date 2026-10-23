@@ -905,7 +905,7 @@ func (r *Runner) conversationStatus() (map[string]any, error) {
 			continue
 		}
 		q, ok := index.Questions[req.Conversation]
-		if !ok || req.Thread != q.Thread || (req.Todo != q.Todo && !(req.Todo == 0 && (req.Phase == "conversation_implementation_recorded" || req.Phase == "conversation_reply_applied"))) {
+		if !ok || req.Thread != q.Thread || (req.Todo != q.Todo && !(req.Todo == 0 && (req.Phase == "conversation_implementation_recorded" || req.Phase == "conversation_reply_applied" || req.Phase == "conversation_source_verified"))) {
 			continue
 		}
 		replies = append(replies, map[string]any{"message_id": req.Message, "thread_id": req.Thread, "author_id": req.Author, "todo_id": req.Todo, "origin_todo_id": q.Todo, "request_id": req.Conversation, "phase": req.Phase, "source": req.Source, "created_at": req.Created, "edited_at": req.Edited, "acquired_at": req.Acquired})

@@ -48,6 +48,11 @@ evidence-fileは `completion`, `execution`, `origin_saved`, `identity`, `applied
 元作業の保持、APIと原本の照合、取得以降の実反映確認日時を記す。
 jobは引数で指定せず現在の `CC_JOB_ID` を使う。同じ証拠で再実行する。
 別版・別成果を既存の反映へ上書きしない。記録コマンドは投稿・closeを行わない。
+その戻り値の `question_closed_get_verified:false` は、この記録コマンドでは
+GETによる終了確認を行わない意味である。終了済みかどうかはcloseの結果で確認する。
+通常tickも別担当の記録を元作業の継続報告へ変換しない。記録後に編集された回答は
+再取得を必要とし、元のcanonical sourceを保持する。担当の作業フォルダーを
+片付けた後も、保存済みの実ジョブ・prompt・scopeによる反映票の照合は継続できる。
 
 既存の独立チェックは不足の再現証拠として再利用する。新入口のGreenと
 新実装の別モデルレビューは別に取得する。配布は最新mainと並行writerを照合して

@@ -361,6 +361,10 @@ fn implementation_accepts_registered_sibling_worktree_but_rejects_nested_new_sto
     f.ok(false);
     f.snapshot();
     assert_eq!(f.ok(true)["recorded"], true);
+    // Historical readback binds the original job/prompt and saved scope. It
+    // must survive normal retirement of the actor's finished working tree.
+    fs::remove_dir_all(&worktree).unwrap();
+    assert_eq!(f.ok(true)["recorded"], true);
     db = f.db();
     db["items"][0]["scheduler"]["paused"] = json!(true);
     f.write("todo.json", &db);
@@ -376,6 +380,7 @@ fn implementation_acceptance_runs_go_with_this_canonical_writer() {
     command
         .args([
             "test",
+            "-count=1",
             "-json",
             "-race",
             "-timeout",
@@ -390,7 +395,11 @@ fn implementation_acceptance_runs_go_with_this_canonical_writer() {
                 .unwrap()
                 .join("unattended-runner"),
         )
-        .env("CC_CONVERSATION_TODO_BINARY", env!("CARGO_BIN_EXE_todo"));
+        .env("CC_CONVERSATION_TODO_BINARY", env!("CARGO_BIN_EXE_todo"))
+        // The surrounding Rust CI selects Go for tools/test-scope (1.24).
+        // Resolve this module's declared Go version rather than inheriting
+        // its caller's GOTOOLCHAIN=local and running a stale compiler.
+        .env("GOTOOLCHAIN", "auto");
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
@@ -408,6 +417,15 @@ fn implementation_acceptance_runs_go_with_this_canonical_writer() {
         .lines()
         .map(|s| serde_json::from_str(s).unwrap())
         .collect();
+    for event in &events {
+        let name = event["Test"].as_str().unwrap_or("");
+        if name.starts_with("TestImplementationNative") || name.starts_with("TestDirectionActual") {
+            assert_ne!(
+                event["Action"], "skip",
+                "required native acceptance skipped: {name}"
+            );
+        }
+    }
     for name in [
         "TestImplementationNativeSavedSourceAndCancelledOriginRoundTrip",
         "TestImplementationNativeRejectsVersionSourceAndActorMismatch",
@@ -422,6 +440,27 @@ fn implementation_acceptance_runs_go_with_this_canonical_writer() {
             "native acceptance missing or skipped: {name}"
         );
     }
+}
+
+#[test]
+fn implementation_rejects_an_existing_foreign_project_workspace() {
+    let f = Fixture::implementation();
+    let foreign = tempfile::tempdir().unwrap();
+    let mut db = f.db();
+    db["items"][1]["scheduler"]["worktree"] = json!(foreign.path());
+    f.write("todo.json", &db);
+    let mut job: Value = serde_json::from_slice(
+        &fs::read(f.temp.path().join("jobs/actual-worker/job.json")).unwrap(),
+    )
+    .unwrap();
+    job["cwd"] = json!(foreign.path());
+    f.write("jobs/actual-worker/job.json", &job);
+    f.snapshot();
+    let before = fs::read(f.temp.path().join("todo.json")).unwrap();
+    let out = f.call(false);
+    assert!(!out.status.success());
+    assert!(String::from_utf8_lossy(&out.stderr).contains("actor_project_root_mismatch"));
+    assert_eq!(fs::read(f.temp.path().join("todo.json")).unwrap(), before);
 }
 
 #[test]

@@ -44,8 +44,10 @@ func (r *Runner) conversationSourceReacquire(ctx context.Context, q Conversation
 	}
 	// Record the old intake separately; neither its hash nor an inspection hash
 	// is the canonical source hash of this fresh API acquisition.
+	priorIntakeSHA := ""
 	if old != nil {
 		b, _ := json.Marshal(old)
+		priorIntakeSHA = bytesHash(b)
 		if safeText(string(b), r.Token) != string(b) || writeConversationOnce(filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".sources", "intake-"+bytesHash(b)+".json"), b) != nil {
 			return nil, errImplementation
 		}
@@ -77,6 +79,9 @@ func (r *Runner) conversationSourceReacquire(ctx context.Context, q Conversation
 	result := map[string]any{"domain": "discord-conversation-source-generation-v1", "reacquired": true, "canonical_current": true, "source_receipt_sha256": sourceSHA, "reply_sha256": stamp.ReplySHA, "original_source_exists": !missing, "original_source_overwritten": false, "delivery_inferred": false, "application_inferred": false}
 	if !missing {
 		result["retained_original_source_sha256"] = bytesHash(prior)
+	}
+	if priorIntakeSHA != "" {
+		result["retained_intake_sha256"] = priorIntakeSHA
 	}
 	return result, nil
 }

@@ -1,0 +1,41 @@
+{
+  "todo": 3080,
+  "recorded_at": "2026-10-23T14:54:46.1642800Z",
+  "source_commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+  "paths": [
+    "dep-lib-review/SKILL.md",
+    "stryker-js/SKILL.md",
+    "node-sqlite-vec/SKILL.md",
+    "k8s-crd-from-typed-schema/SKILL.md"
+  ],
+  "claims": [
+    {
+      "not_proven": "Vitest全版非互換、sqlite-vec実バイナリ/rowid全動作、上流例のtransaction安全性",
+      "finding": "現行公式はv22.5追加を記載。allowExtension:trueがloadExtension関数/メソッドを有効化し、後でfalseにできる。constructor=falseからtrueにはできない。読み戻し用setReadBigIntsも別API。",
+      "method": "web.open/find current official SQLite documentation",
+      "applies_to": "node-sqlite-vec/SKILL.md",
+      "url": "https://nodejs.org/api/sqlite.html"
+    },
+    {
+      "not_proven": "上流adapter実装、実clusterでのstatus loop、tuple/format変換の同値性",
+      "finding": "公式Structural SchemaはoneOf/anyOf/allOf/notを条件付きで許容し、型定義を論理式外にも求める。metadataの制約はname/generateNameだけ許容。全union禁止/全metadata禁止と異なる。",
+      "method": "web.open/find official structural schema rules",
+      "applies_to": "k8s-crd-from-typed-schema/SKILL.md",
+      "url": "https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions/#specifying-a-structural-schema"
+    },
+    {
+      "not_proven": "未保存helperのselector/summary実装、Stryker/Vitest実行、上流working templateの再現",
+      "finding": "Timeoutはdetectedに含むがassertion成功の証拠と区別。RuntimeError/CompileError/Ignoredはscoreに算入されず、状態と未測定を分ける。",
+      "method": "web.open/find official states and metrics",
+      "applies_to": "stryker-js/SKILL.md, references/evaluate-tests.md",
+      "url": "https://stryker-mutator.io/docs/mutation-testing-elements/mutant-states-and-metrics/"
+    }
+  ],
+  "time_definition": "過去のfetch時刻は捏造しない。recorded_atは今回の照合記録生成時刻で、ツールは独立の取得時刻を返さない。",
+  "source_scripts_executed": false,
+  "central_skills_written": 0,
+  "installed": 0,
+  "integrated": 0,
+  "excluded": 0,
+  "review_pending": true
+}

@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -75,11 +76,35 @@ type latestDraftReview struct {
 	BodyAgain  *bool  `json:"body_reaccepted"`
 }
 
-// This body was read by 3368; 3378 resolved its display-only Must. A changed
-// body needs new independent evidence and an intentional update to this anchor.
+// Anchors are independent of the mutable receipt JSON. A new body needs its
+// own independently confirmed response; adding an anchor does not replace the
+// old body-review/display-resolution history.
 const sqlReviewedAuthoredSHA = "119786b834b0114244e413de9633f49fbda9e66815c626831d0818b27f10beb2"
 
+type draftReviewAnchor struct {
+	BodyTodo       int
+	BodyHead       string
+	BodySHA        string
+	BodyMust       int
+	ResolutionTodo int
+	ResolutionHead string
+	ResolutionSHA  string
+}
+
+var sqlDraftReviewAnchors = map[string]draftReviewAnchor{
+	sqlReviewedAuthoredSHA: {
+		BodyTodo: 3368, BodyHead: "b0107b649d5f6a890742aaad926f1b0116018f58",
+		BodySHA: "c0f40d79b4386bd5ce7a7d11101e23dbd56d5013b6614d56bfd1caf756ada973", BodyMust: 1,
+		ResolutionTodo: 3378, ResolutionHead: "f817c1841abffa97b9be8195c7eb3a5ffc151471",
+		ResolutionSHA: "f5925ada6f6042b1e6f16da5b711790310cdbd03f78240fd486367a902260298",
+	},
+}
+
 func validateDraftReviewHistory(pending bool, reviews []latestDraftReview, latest int, contentSHA string) error {
+	return validateAnchoredDraftReviewHistory(pending, reviews, latest, contentSHA, sqlDraftReviewAnchors)
+}
+
+func validateAnchoredDraftReviewHistory(pending bool, reviews []latestDraftReview, latest int, contentSHA string, anchors map[string]draftReviewAnchor) error {
 	if len(reviews) == 0 || reviews[len(reviews)-1].Todo != latest {
 		return errors.New("latest review is not the end of append-only review history")
 	}
@@ -93,26 +118,27 @@ func validateDraftReviewHistory(pending bool, reviews []latestDraftReview, lates
 	if pending {
 		return nil
 	}
-	if contentSHA != sqlReviewedAuthoredSHA {
-		return errors.New("authored content differs from the independently reviewed body anchor")
+	anchor, ok := anchors[contentSHA]
+	if !ok {
+		return errors.New("authored content has no independently reviewed body anchor")
 	}
 	r := reviews[len(reviews)-1]
 	if err := validateDraftReview(false, r, contentSHA); err != nil {
 		return err
 	}
-	body, ok := seen[r.Resolves]
-	// Keep the actual historical Must and its later resolution separate. Neither
-	// deleting 3368 nor relabelling 3378 as a body review may close this draft.
-	if !ok || r.Todo != 3378 || r.Resolves != 3368 || r.BodyAgain == nil || *r.BodyAgain || body.Must == nil || *body.Must != 1 || !body.Remaining || body.ContentSHA != contentSHA {
-		return errors.New("accepted draft lacks its body-review and display-resolution pair")
+	body, ok := seen[anchor.BodyTodo]
+	if !ok || body.Head != anchor.BodyHead || body.SHA != anchor.BodySHA || body.Must == nil || *body.Must != anchor.BodyMust || body.ContentSHA != contentSHA {
+		return errors.New("body-review identity differs from its independent anchor")
 	}
-	for _, s := range []string{body.Head, body.SHA} {
-		if _, err := hex.DecodeString(s); err != nil {
-			return err
+	if anchor.ResolutionTodo == 0 {
+		if anchor.BodyMust != 0 || r.Todo != body.Todo || r.Resolves != 0 {
+			return errors.New("accepted body lacks its anchored completed review")
 		}
+		return nil
 	}
-	if body.Head != "b0107b649d5f6a890742aaad926f1b0116018f58" || body.SHA != "c0f40d79b4386bd5ce7a7d11101e23dbd56d5013b6614d56bfd1caf756ada973" {
-		return errors.New("body-review identity differs from the preserved 3368 response")
+	// Look up the resolved body by identity, not its position in the history.
+	if r.Todo != anchor.ResolutionTodo || r.Head != anchor.ResolutionHead || r.SHA != anchor.ResolutionSHA || r.Resolves != body.Todo || r.BodyAgain == nil || *r.BodyAgain || anchor.BodyMust < 1 || !body.Remaining {
+		return errors.New("accepted draft lacks its anchored body-review and display-resolution pair")
 	}
 	return nil
 }
@@ -231,7 +257,11 @@ func TestEveryAuthoredFieldAndArrayElementAffectsContentIdentity(t *testing.T) {
 		})
 	}
 	for i := range initial.Drafts {
-		for _, field := range []string{"name", "source_repo", "source_commit", "source_path", "source_sha256", "description", "positive", "negative", "adaptations", "distinct_from_existing"} {
+		for _, fieldInfo := range reflect.VisibleFields(reflect.TypeOf(draftContent{})) {
+			field := fieldInfo.Tag.Get("json")
+			if field == "guidance" {
+				continue // Every guidance element and its order are checked below.
+			}
 			check("draft_"+initial.Drafts[i].Name+"_"+field, func(m map[string]any) {
 				d := m["drafts"].([]any)[i].(map[string]any)
 				old := d[field].(string)
@@ -251,9 +281,14 @@ func TestEveryAuthoredFieldAndArrayElementAffectsContentIdentity(t *testing.T) {
 				m["drafts"].([]any)[i].(map[string]any)["guidance"].([]any)[j] = "changed instruction"
 			}, false)
 		}
+		check("guidance_order_"+initial.Drafts[i].Name, func(m map[string]any) {
+			a := m["drafts"].([]any)[i].(map[string]any)["guidance"].([]any)
+			a[0], a[len(a)-1] = a[len(a)-1], a[0]
+		}, false)
 	}
 	for i := range initial.Cases {
-		for _, field := range []string{"reason", "input", "skill", "expected"} {
+		for _, fieldInfo := range reflect.VisibleFields(reflect.TypeOf(draftCase{})) {
+			field := fieldInfo.Tag.Get("json")
 			check("case_"+initial.Cases[i].Input+"_"+field, func(m map[string]any) {
 				c := m["static_cases"].([]any)[i].(map[string]any)
 				if field == "skill" {
@@ -278,11 +313,14 @@ func TestEveryAuthoredFieldAndArrayElementAffectsContentIdentity(t *testing.T) {
 	check("metadata_outside_authored_projection", func(m map[string]any) {
 		for _, v := range m["drafts"].([]any) {
 			d := v.(map[string]any)
-			for _, field := range []string{"inventory_id", "source_url", "retrieved_at", "status", "installed", "individual_license_review"} {
+			for _, field := range []string{"inventory_id", "source_url", "retrieved_at", "status", "installed", "individual_license_review", "renderable_install_plan", "source_original"} {
 				d[field] = "metadata changed"
 			}
 		}
-		m["real_model_turn"] = true
+		for _, v := range m["static_cases"].([]any) {
+			v.(map[string]any)["real_model_turn"] = true
+		}
+		m["static_evaluation"].(map[string]any)["real_model_turn"] = true
 	}, true)
 }
 
@@ -294,7 +332,7 @@ func TestAcceptedSQLDraftRequiresItsHistoricalBodyReviewAndResolution(t *testing
 		} `json:"reviewed_draft"`
 	}
 	loadPublicReceipt(t, "skills-3080-mizchi-sql-draft.json", &d)
-	for _, kind := range []string{"valid", "body_removed", "body_digest_changed", "body_receipt_changed", "resolves_missing", "resolves_unknown", "body_reaccepted_missing", "body_reaccepted_true", "body_must_erased", "body_relabelled_resolved", "digest_rewritten_with_body", "latest_missing", "duplicate_receipt"} {
+	for _, kind := range []string{"valid", "body_removed", "body_digest_changed", "body_receipt_changed", "resolution_head_changed", "resolution_receipt_changed", "resolves_missing", "resolves_unknown", "body_reaccepted_missing", "body_reaccepted_true", "body_must_erased", "body_relabelled_resolved", "digest_rewritten_with_body", "latest_missing", "duplicate_receipt"} {
 		t.Run(kind, func(t *testing.T) {
 			reviews := append([]latestDraftReview(nil), d.Reviewed.Reviews...)
 			latest := d.Reviewed.Latest
@@ -307,6 +345,10 @@ func TestAcceptedSQLDraftRequiresItsHistoricalBodyReviewAndResolution(t *testing
 				reviews[1].ContentSHA = strings.Repeat("c", 64)
 			case "body_receipt_changed":
 				reviews[1].SHA = strings.Repeat("c", 64)
+			case "resolution_head_changed":
+				reviews[last].Head = strings.Repeat("c", 40)
+			case "resolution_receipt_changed":
+				reviews[last].SHA = strings.Repeat("c", 64)
 			case "resolves_missing":
 				reviews[last].Resolves = 0
 			case "resolves_unknown":
@@ -335,6 +377,70 @@ func TestAcceptedSQLDraftRequiresItsHistoricalBodyReviewAndResolution(t *testing
 			}
 		})
 	}
+}
+
+func TestNewBodyVersionCanUseItsOwnIndependentReviewAnchor(t *testing.T) {
+	zero := 0
+	contentSHA := strings.Repeat("d", 64)
+	// Synthetic evidence only: no new real SQL body has been accepted.
+	response := latestDraftReview{Todo: 9001, Head: strings.Repeat("a", 40), SHA: strings.Repeat("b", 64), Must: &zero, ContentSHA: contentSHA}
+	anchors := make(map[string]draftReviewAnchor)
+	for sha, a := range sqlDraftReviewAnchors {
+		anchors[sha] = a
+	}
+	anchors[contentSHA] = draftReviewAnchor{BodyTodo: response.Todo, BodyHead: response.Head, BodySHA: response.SHA}
+	for _, kind := range []string{"valid_new_version", "unanchored", "old_review_relabelled", "new_unresolved_must"} {
+		t.Run(kind, func(t *testing.T) {
+			r := response
+			selected := anchors
+			switch kind {
+			case "unanchored":
+				selected = sqlDraftReviewAnchors
+			case "old_review_relabelled":
+				r.Head = sqlDraftReviewAnchors[sqlReviewedAuthoredSHA].BodyHead
+			case "new_unresolved_must":
+				one := 1
+				r.Must = &one
+			}
+			err := validateAnchoredDraftReviewHistory(false, []latestDraftReview{r}, r.Todo, contentSHA, selected)
+			if (err != nil) != (kind != "valid_new_version") {
+				t.Fatalf("new independent body review: %v", err)
+			}
+		})
+	}
+}
+
+func TestSQLDraftKeysAreExplicitlyAuthoredOrOperationalMetadata(t *testing.T) {
+	var m map[string]any
+	loadPublicReceipt(t, "skills-3080-mizchi-sql-draft.json", &m)
+	check := func(label string, values map[string]any, projected reflect.Type, metadata []string) {
+		t.Helper()
+		known := map[string]bool{}
+		if projected != nil {
+			for _, f := range reflect.VisibleFields(projected) {
+				known[f.Tag.Get("json")] = true
+			}
+		}
+		for _, k := range metadata {
+			if known[k] {
+				t.Fatalf("%s: %s is both authored and metadata", label, k)
+			}
+			known[k] = true
+		}
+		for k := range values {
+			if !known[k] {
+				t.Errorf("%s has unclassified key %s; decide its authored identity before use", label, k)
+			}
+		}
+	}
+	check("root", m, nil, []string{"todo", "source", "commit", "tree_sha", "status", "not_scope_limit", "drafts", "drafts_count", "installed", "integrated", "excluded", "renderable_plans_added", "source_scripts_executed", "model_turn_tested", "review_pending", "next", "static_cases", "static_evaluation", "usage_evidence", "reviewed_draft", "review_pending_definition"})
+	for _, d := range m["drafts"].([]any) {
+		check("draft", d.(map[string]any), reflect.TypeOf(draftContent{}), []string{"inventory_id", "source_url", "retrieved_at", "status", "installed", "renderable_install_plan", "individual_license_review", "source_original"})
+	}
+	for _, c := range m["static_cases"].([]any) {
+		check("case", c.(map[string]any), reflect.TypeOf(draftCase{}), []string{"real_model_turn"})
+	}
+	check("static_evaluation", m["static_evaluation"].(map[string]any), nil, []string{"cases", "positive", "method", "negative_or_boundary", "real_model_turn"})
 }
 
 func TestDraftReviewCannotCloseWithAnUnresolvedOrWrongVersionReceipt(t *testing.T) {

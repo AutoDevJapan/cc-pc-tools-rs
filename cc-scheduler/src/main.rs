@@ -2,7 +2,7 @@
 use cc_scheduler::{
     backend::RealBackend,
     common::*,
-    engine::{Scheduler, step},
+    engine::{step, Scheduler},
 };
 use std::path::PathBuf;
 fn main() {
@@ -111,12 +111,13 @@ fn main() {
     if command == Some("checkpoint-workspace") {
         if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
             println!(
-                "usage: scheduler checkpoint-workspace --request-file <JSON>\n\nExplicitly save one owned task's current branch and HEAD receipt. Never launches or changes source files.\nJSON: id, job, expected_branch, branch, head\n\noptions:\n  -h, --help  show this help message and exit"
+                "usage: scheduler checkpoint-workspace --request-file <JSON> [--check]\n\nExplicitly save one owned task's current branch and HEAD receipt. --check validates without saving and reports fixed reasons and comparisons only. Never launches or changes source files.\nJSON: id, job, expected_branch, branch, head\n\noptions:\n  -h, --help  show this help message and exit"
             );
             return;
         }
         let result = (|| -> Result<serde_json::Value> {
-            if args.len() != 3 || args[1] != "--request-file" {
+            let check_only = args.len() == 4 && args[3] == "--check";
+            if !(args.len() == 3 || check_only) || args[1] != "--request-file" {
                 return Err(Error("InputRejected"));
             }
             use std::io::Read;
@@ -134,7 +135,19 @@ fn main() {
                 PathBuf::from("D:/CC/Tools/todo/todo.json"),
                 RealBackend::new(root),
             )?;
-            cc_scheduler::workspace_checkpoint::checkpoint(&mut engine, &mut SystemRunner, &request)
+            if check_only {
+                cc_scheduler::workspace_checkpoint::inspect(
+                    &mut engine,
+                    &mut SystemRunner,
+                    &request,
+                )
+            } else {
+                cc_scheduler::workspace_checkpoint::checkpoint(
+                    &mut engine,
+                    &mut SystemRunner,
+                    &request,
+                )
+            }
         })();
         match result {
             Ok(report) => println!("{}", encode(&report, 2)),

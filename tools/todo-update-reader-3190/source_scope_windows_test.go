@@ -3,53 +3,11 @@ package main
 import (
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"syscall"
 	"testing"
 	"time"
 )
-
-// objectReads are the only Git commands the reader may run, with exactly these
-// arguments. Each reads commits or trees from the fixed object store.
-func objectReads(f *fixture) []string {
-	return []string{
-		"rev-parse --verify --quiet " + f.p.head + "^{tree}",
-		"merge-base --is-ancestor " + f.p.head + " " + f.main,
-		"ls-tree -r -z --full-tree " + f.p.head,
-	}
-}
-
-func gitCalls(f *fixture) []string {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	var calls []string
-	for _, event := range f.events {
-		if args, ok := strings.CutPrefix(event, "git:"); ok {
-			calls = append(calls, args)
-		}
-	}
-	return calls
-}
-
-// expectOnlyObjectReads fails on any Git call other than the object reads.
-func expectOnlyObjectReads(t *testing.T, f *fixture) {
-	t.Helper()
-	allowed := objectReads(f)
-	for _, call := range gitCalls(f) {
-		if !slices.Contains(allowed, call) {
-			t.Errorf("git %s is not one of the object reads", call)
-		}
-	}
-}
-
-// expectObjectReads requires exactly the object reads, each once, in order.
-func expectObjectReads(t *testing.T, f *fixture) {
-	t.Helper()
-	if got, want := gitCalls(f), objectReads(f); !slices.Equal(got, want) {
-		t.Errorf("git calls\n got %q\nwant %q", got, want)
-	}
-}
 
 func expectUntouched(t *testing.T, f *fixture, name string) {
 	t.Helper()
@@ -99,10 +57,10 @@ func (f *fixture) rebuildReceipt() {
 	f.writeReceipt()
 }
 
-// The guard classifies files one by one, so Git never opens a working file.
-// A protected tracked file outside the inputs cannot decide the result even
-// when it changes and nobody may read it.
-func TestGitNeverReadsWorkingFiles(t *testing.T) {
+// The guard classifies files one by one, and nothing reads a working file on
+// the reader's behalf. A protected tracked file outside the inputs cannot
+// decide the result even when it changes and nobody may read it.
+func TestNeverReadsWorkingFiles(t *testing.T) {
 	cases := map[string]func(t *testing.T, name string){
 		"timestamp changed": func(t *testing.T, name string) {
 			later := time.Now().Add(time.Hour)
@@ -125,15 +83,16 @@ func TestGitNeverReadsWorkingFiles(t *testing.T) {
 				t.Fatalf("verify = qualified %v reason %q: a protected file outside the inputs decided the result", got.Qualified, reason)
 			}
 			expectUntouched(t, f, protected)
-			expectObjectReads(t, f)
+			expectReadsClassified(t, f)
 		})
 	}
 }
 
-// Git reads no configuration file. An include that names a protected,
-// unreadable file never reaches Git, and the reader refuses a repository
-// configuration that Git would have to follow or that rewrites the remote.
-func TestGitReadsNoConfiguration(t *testing.T) {
+// No Git configuration is read. A global include that names a protected,
+// unreadable file changes nothing, and the reader refuses a repository
+// configuration that Git would have to follow or that rewrites the remote
+// before it reads any object.
+func TestReadsNoGitConfiguration(t *testing.T) {
 	t.Run("global include", func(t *testing.T) {
 		f := newFixture(t, nil)
 		protected := f.path("README.md")
@@ -145,10 +104,10 @@ func TestGitReadsNoConfiguration(t *testing.T) {
 		release := denyReads(t, protected)
 		defer release()
 		if got, reason := f.verify(); !got.Qualified || reason != "" {
-			t.Fatalf("verify = qualified %v reason %q: the global configuration reached Git", got.Qualified, reason)
+			t.Fatalf("verify = qualified %v reason %q: the global configuration was read", got.Qualified, reason)
 		}
 		expectUntouched(t, f, protected)
-		expectObjectReads(t, f)
+		expectReadsClassified(t, f)
 	})
 	for name, section := range map[string]string{
 		"include":             "[include]\n\tpath = PROTECTED\n",
@@ -163,8 +122,8 @@ func TestGitReadsNoConfiguration(t *testing.T) {
 			release := denyReads(t, protected)
 			defer release()
 			expectReason(t, f, "source_git")
-			if calls := gitCalls(f); len(calls) != 0 {
-				t.Fatalf("Git ran %q before the configuration was refused", calls)
+			if f.index("read:"+key(looseObject(f, f.p.head))) >= 0 {
+				t.Fatal("objects were read before the configuration was refused")
 			}
 			expectUntouched(t, f, protected)
 		})
@@ -184,29 +143,34 @@ func TestReadsGitMetadataItself(t *testing.T) {
 		if got, reason := f.verify(); !got.Qualified || reason != "" {
 			t.Fatalf("verify = qualified %v reason %q with packed refs", got.Qualified, reason)
 		}
-		expectObjectReads(t, f)
+		expectReadsClassified(t, f)
 	})
-	t.Run("shallow boundary", func(t *testing.T) {
-		// As in the real shallow clone, HEAD's parent is not in the object
-		// store. Only the boundary given to Git keeps the ancestry check from
-		// looking for it.
-		f := newFixture(t, nil)
-		parent := f.p.head
-		f.git("-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "--allow-empty", "-m", "boundary")
-		head := f.gitOut("rev-parse", "HEAD")
-		f.gitIn(f.repo, "update-ref", "refs/remotes/origin/main", head)
-		f.p.head, f.main = head, head
-		f.receipt["source_head"] = head
-		f.writeReceipt()
-		if err := os.Remove(filepath.Join(f.common, "objects", parent[:2], parent[2:])); err != nil {
-			t.Fatal(err)
-		}
-		writeFile(t, filepath.Join(f.common, "shallow"), head+"\n")
-		if got, reason := f.verify(); !got.Qualified || reason != "" {
-			t.Fatalf("verify = qualified %v reason %q with a shallow boundary", got.Qualified, reason)
-		}
-		expectObjectReads(t, f)
-	})
+	// As in the real shallow clone, a boundary commit's parent is not in the
+	// store. The main commit merges a boundary, which the walk reaches first,
+	// and the fixed HEAD: with the shallow file the walk stops at the
+	// boundary, and without it the missing parent refuses the store.
+	for name, shallow := range map[string]bool{"shallow boundary on another path": true, "missing parent without a shallow boundary": false} {
+		t.Run(name, func(t *testing.T) {
+			f := newFixture(t, nil)
+			commit := func(args ...string) string {
+				return f.gitOut(append([]string{"-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit-tree", f.p.tree}, args...)...)
+			}
+			missing := commit("-m", "outside the clone")
+			boundary := commit("-p", missing, "-m", "boundary")
+			main := commit("-p", boundary, "-p", f.p.head, "-m", "merge")
+			f.gitIn(f.repo, "update-ref", "refs/remotes/origin/main", main)
+			removeObject(t, looseObject(f, missing))
+			if !shallow {
+				expectReason(t, f, "source_git")
+				return
+			}
+			writeFile(t, filepath.Join(f.common, "shallow"), boundary+"\n")
+			if got, reason := f.verify(); !got.Qualified || reason != "" {
+				t.Fatalf("verify = qualified %v reason %q with a shallow boundary", got.Qualified, reason)
+			}
+			expectReadsClassified(t, f)
+		})
+	}
 	rejections := map[string]func(f *fixture){
 		"worktree file names another worktree": func(f *fixture) {
 			f.gitIn(f.repo, "worktree", "add", "-q", "-b", "other", filepath.Join(f.base, "other"))
@@ -255,7 +219,7 @@ func TestReadsGitMetadataItself(t *testing.T) {
 			f := newFixture(t, nil)
 			edit(f)
 			expectReason(t, f, "source_git")
-			expectOnlyObjectReads(t, f)
+			expectReadsClassified(t, f)
 		})
 	}
 	for name, path := range map[string]func(*fixture) string{
@@ -273,25 +237,15 @@ func TestReadsGitMetadataItself(t *testing.T) {
 			if f.index("read:"+key(refused)) >= 0 {
 				t.Fatalf("%s was read although the guard refused it", refused)
 			}
-			if calls := gitCalls(f); len(calls) != 0 {
-				t.Fatalf("Git ran %q although the source was refused", calls)
+			if f.index("read:"+key(looseObject(f, f.p.head))) >= 0 {
+				t.Fatalf("objects were read although %s was refused", refused)
 			}
 		})
 	}
 }
 
-func TestIsolatedGitEnvironment(t *testing.T) {
-	parent := []string{`PATH=C:\bin`, `HOME=C:\home`, `GIT_DIR=C:\evil`, `Git_Config_Global=C:\evil.cfg`, "GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=include.path"}
-	got := isolatedEnvironment(parent, `C:\tmp\g`, `C:\repo\.git\objects`)
-	want := []string{`PATH=C:\bin`, `HOME=C:\home`, `GIT_DIR=C:\tmp\g`, `GIT_OBJECT_DIRECTORY=C:\repo\.git\objects`,
-		"GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null", "GIT_NO_LAZY_FETCH=1", "GIT_OPTIONAL_LOCKS=0", "GIT_TERMINAL_PROMPT=0"}
-	if !slices.Equal(got, want) {
-		t.Fatalf("environment\n got %q\nwant %q", got, want)
-	}
-}
-
-// With Git kept off the working files, the reader itself ties each pinned
-// input to the fixed tree's blob, in the form Git writes it out on this PC.
+// The reader itself ties each pinned input to the fixed tree's blob, in the
+// form Git writes it out on this PC.
 func TestInputsMustBeTheCommittedBytes(t *testing.T) {
 	t.Run("LF working file is the blob itself", func(t *testing.T) {
 		f := newFixture(t, nil)

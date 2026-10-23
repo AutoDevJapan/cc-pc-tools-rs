@@ -322,10 +322,6 @@ func (f *fixture) guard(args ...string) ([]byte, int, bool) {
 func (f *fixture) env() environment {
 	return environment{
 		guard: f.guard,
-		git: func(src gitSource, args ...string) ([]byte, error) {
-			f.record("git:" + strings.Join(args, " "))
-			return runGit(src, args...)
-		},
 		beforeRead: func(path string) {
 			f.record("read:" + key(path))
 			if f.onRead != nil {
@@ -425,7 +421,8 @@ func TestQualifiesFixedUpdate(t *testing.T) {
 	paths := []string{f.root, f.path(fixtureReceiptName), f.path(fixtureLogName), f.path("target/release/todo.d"), f.path(fixtureCandidateName),
 		f.path(".git"), filepath.Join(f.gitDir, "gitdir"), filepath.Join(f.gitDir, "commondir"), filepath.Join(f.gitDir, "HEAD"),
 		filepath.Join(f.common, "config"), filepath.Join(f.common, "refs", "heads", "work"),
-		filepath.Join(f.common, "refs", "remotes", "origin", "main"), filepath.Join(f.common, "objects")}
+		filepath.Join(f.common, "refs", "remotes", "origin", "main"), filepath.Join(f.common, "objects"),
+		filepath.Join(f.common, "objects", "pack"), looseObject(f, f.p.head), looseObject(f, f.p.tree)}
 	for _, in := range f.inputs {
 		paths = append(paths, f.path(in.Path))
 	}
@@ -442,8 +439,8 @@ func TestQualifiesFixedUpdate(t *testing.T) {
 	if f.index("guard-path:"+key(f.target)) >= 0 {
 		t.Errorf("the general classifier was used for the installed leaf")
 	}
-	// Git ran only the three object reads, isolated from every other file.
-	expectObjectReads(t, f)
+	// No Git runs; every file the reader opened was classified first.
+	expectReadsClassified(t, f)
 }
 
 func TestBaselineIsReadOnlyAfterPurposeQualification(t *testing.T) {
@@ -616,8 +613,20 @@ func TestRejectsSourceChanges(t *testing.T) {
 		// The reader compares inputs itself; Git never reads them.
 		{"tracked input edited", "input", func(f *fixture) { f.write("lib-a/src/lib.rs", crlf("pub fn a() { panic!() }\n")) }},
 		{"tracked input deleted", "input", func(f *fixture) { os.Remove(f.path("lib-a/src/lib.rs")) }},
-		{"another tree is pinned", "source_git", func(f *fixture) { f.p.tree = strings.Repeat("6", 40) }},
+		// A tree in the store that differs from HEAD's only outside the inputs,
+		// pinned and recorded in the receipt: only HEAD's own tree refuses it.
+		{"another tree is pinned", "source_git", func(f *fixture) {
+			f.write("README.md", crlf("another tracked file that is not a compiler input\n"))
+			f.git("add", "README.md")
+			f.p.tree = f.gitOut("write-tree")
+			f.receipt["source_tree"] = f.p.tree
+			f.writeReceipt()
+		}},
 		{"head not merged into origin/main", "source_git", func(f *fixture) { f.git("update-ref", "-d", "refs/remotes/origin/main") }},
+		{"origin/main does not contain HEAD", "source_git", func(f *fixture) {
+			other := f.gitOut("-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit-tree", f.p.tree, "-m", "unrelated")
+			f.gitIn(f.repo, "update-ref", "refs/remotes/origin/main", other)
+		}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -754,7 +763,7 @@ func TestPinnedFilesResistReplacement(t *testing.T) {
 
 func TestRejectsChangesBeforeRecheck(t *testing.T) {
 	// Inputs stay pinned against writes and tracked files outside the inputs are
-	// never read (TestGitNeverReadsWorkingFiles), so the races left are in the
+	// never read (TestNeverReadsWorkingFiles), so the races left are in the
 	// Git metadata, which is read once and closed for the other worktrees.
 	cases := map[string]func(*fixture){
 		"new commit": func(f *fixture) {
@@ -822,7 +831,7 @@ func TestRejectsProtectedResources(t *testing.T) {
 				if f.index("read:"+key(f.path(rel))) >= 0 {
 					t.Fatalf("%s was read although the guard refused it", rel)
 				}
-				expectOnlyObjectReads(t, f)
+				expectReadsClassified(t, f)
 			})
 		}
 	}

@@ -20,11 +20,10 @@ import (
 )
 
 // environment is the reader's only connection to the outside: the deployed
-// guard's CLI and Git, which sees only the fixed object store. Tests replace
-// the guard with a recorded fake.
+// guard's CLI. The reader runs no Git; it reads the repository's files itself.
+// Tests replace the guard with a recorded fake and observe every read.
 type environment struct {
 	guard         func(args ...string) (stdout []byte, exitCode int, ran bool)
-	git           func(src gitSource, args ...string) ([]byte, error)
 	beforeRead    func(path string)
 	beforeRecheck func()
 }
@@ -40,7 +39,7 @@ const (
 )
 
 func productionEnvironment() environment {
-	return environment{guard: runGuard, git: runGit}
+	return environment{guard: runGuard}
 }
 
 // exactLeaf accepts only the compiled leaf, spelled with either separator or
@@ -172,8 +171,8 @@ func (s *session) evidence(name, pin string, limit int64, reason string) ([]byte
 }
 
 // inputs pins every receipt input, has the guard classify all of them, then
-// hashes each pinned file and ties its bytes to the fixed tree's blob. Git
-// never reads these files. Manifest bytes are kept for the closure check.
+// hashes each pinned file and ties its bytes to the fixed tree's blob. Nothing
+// else reads these files. Manifest bytes are kept for the closure check.
 func (s *session) inputs(inputs []receiptInput, tree map[string]treeEntry, p profile) (map[string][]byte, string) {
 	files := make([]*pinnedFile, len(inputs))
 	for i, in := range inputs {
@@ -201,7 +200,17 @@ func (s *session) inputs(inputs []receiptInput, tree map[string]treeEntry, p pro
 	return manifests, ""
 }
 
+// classifyAll has the guard classify every pinned file.
 func (s *session) classifyAll(files []*pinnedFile) bool {
+	paths := make([]string, len(files))
+	for i, f := range files {
+		paths[i] = f.path
+	}
+	return s.classifyPaths(paths)
+}
+
+// classifyPaths has the guard classify every path, guardWorkers at a time.
+func (s *session) classifyPaths(paths []string) bool {
 	var failed atomic.Bool
 	var wg sync.WaitGroup
 	next := make(chan string)
@@ -216,8 +225,8 @@ func (s *session) classifyAll(files []*pinnedFile) bool {
 			}
 		}()
 	}
-	for _, f := range files {
-		next <- f.path
+	for _, path := range paths {
+		next <- path
 	}
 	close(next)
 	wg.Wait()
@@ -273,34 +282,31 @@ func capacityQualified(env environment, p profile) bool {
 	return true
 }
 
-func gitText(env environment, src gitSource, args ...string) (string, bool) {
-	out, err := env.git(src, args...)
-	return strings.TrimSpace(string(out)), err == nil
-}
-
-// checkSource reads the fixed worktree's Git metadata itself (readSource),
-// then lets Git read only the object store: the fixed commit's tree, its
-// ancestry to the main commit and the tree listing. It never lets Git open a
-// configuration, reference or working file; the guard classifies files one by
-// one, and only the pinned inputs are compared, by the reader itself.
+// checkSource reads the fixed worktree's Git metadata (readSource) and then
+// the objects it needs (objectStore), both by the reader itself: the fixed
+// commit's tree, its ancestry from the main commit and the tree's listing. No
+// Git runs, so no configuration, alternate store or working file is read on
+// the reader's behalf. The guard classifies files one by one, and only the
+// pinned inputs are compared with the tree, by the reader itself.
 func (s *session) checkSource(p profile) (map[string]treeEntry, string) {
 	src, mainID, reason := s.readSource(p)
 	if reason != "" {
 		return nil, reason
 	}
-	if tree, ok := gitText(s.env, src, "rev-parse", "--verify", "--quiet", p.head+"^{tree}"); !ok || tree != p.tree {
-		return nil, "source_git"
+	store, reason := s.openObjects(src)
+	if reason != "" {
+		return nil, reason
 	}
-	if _, err := s.env.git(src, "merge-base", "--is-ancestor", p.head, mainID); err != nil {
-		return nil, "source_git"
+	defer store.close()
+	if tree, _, _, ok := store.commit(p.head); !ok || tree != p.tree {
+		return nil, store.failure()
 	}
-	out, err := s.env.git(src, "ls-tree", "-r", "-z", "--full-tree", p.head)
-	if err != nil {
-		return nil, "source_git"
+	if !store.reaches(mainID, p.head) {
+		return nil, store.failure()
 	}
-	tree, ok := parseTree(out)
+	tree, ok := store.listTree(p.tree)
 	if !ok {
-		return nil, "source_git"
+		return nil, store.failure()
 	}
 	return tree, ""
 }
@@ -320,7 +326,7 @@ func (b *limitedBuffer) Write(p []byte) (int, error) {
 }
 
 // childEnvironment removes inherited GIT_* overrides from the guard's
-// environment. Git itself runs in isolatedEnvironment.
+// environment.
 func childEnvironment(parent []string) []string {
 	out := make([]string, 0, len(parent)+3)
 	for _, entry := range parent {

@@ -131,6 +131,17 @@ func plainFile(info syscall.ByHandleFileInformation) bool {
 // open opens one regular, single-link file without following a reparse point
 // and without reading it. The handle shares only reads.
 func (s *session) open(path string, limit int64) (*pinnedFile, bool) {
+	return s.openShared(path, limit, syscall.FILE_SHARE_READ)
+}
+
+// openObject opens a file of the object store the same way, but lets the
+// worktrees sharing the repository delete or rename it meanwhile, as Git does
+// when it repacks. Writes stay denied, and objects are checked by their names.
+func (s *session) openObject(path string, limit int64) (*pinnedFile, bool) {
+	return s.openShared(path, limit, syscall.FILE_SHARE_READ|syscall.FILE_SHARE_DELETE)
+}
+
+func (s *session) openShared(path string, limit int64, share uint32) (*pinnedFile, bool) {
 	if !s.plainAncestors(path) {
 		return nil, false
 	}
@@ -141,7 +152,7 @@ func (s *session) open(path string, limit int64) (*pinnedFile, bool) {
 	if err != nil {
 		return nil, false
 	}
-	h, err := syscall.CreateFile(name, syscall.GENERIC_READ, syscall.FILE_SHARE_READ, nil, syscall.OPEN_EXISTING, fileFlagOpenReparsePoint|fileFlagSequentialScan, 0)
+	h, err := syscall.CreateFile(name, syscall.GENERIC_READ, share, nil, syscall.OPEN_EXISTING, fileFlagOpenReparsePoint|fileFlagSequentialScan, 0)
 	if err != nil {
 		return nil, false
 	}

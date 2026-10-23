@@ -75,18 +75,27 @@ callerからmanifest、hash、source、root、ToDo番号、許可ディレクト
      拡張は `worktreeConfig` だけを認める。origin のURLはちょうど1つで、固定のoriginと一致する。Gitと同じ意味に
      読めない書き方（継続行、見出しの後の値、旧形式の見出し、未知のescape、閉じない引用符、制御文字）も拒否する。
    - HEADの指すbranchが固定HEADのcommitを指し、`refs/remotes/origin/main` のcommitを求められる。
+   - `packed-refs` はGitと同じに読む。先頭の行が `#` で始まれば、`# pack-refs with: ` と既知の特性
+     （`peeled`・`fully-peeled`・`sorted`）だけを認める。Gitは `sorted` を宣言したファイルを二分探索するので、
+     宣言があれば名前がbyte順に厳密な昇順であることを求める。宣言が無ければ、Gitと同じく並びを問わない。
    - `config.worktree`・`info/grafts`・`objects/info/alternates` が無い。`shallow` は40桁のcommitの行だけ。
 
-   その後でだけ、guardの clear を確かめたobjectsディレクトリをGitに渡す。Gitは `%TEMP%` に作る空のrepo
-   （HEAD、空のrefs、必要なら `shallow` の写し）で動き、objectsだけが共有repoのものになる。`GIT_*` の環境は引き継がず、
-   system・globalの設定も読まない（`GIT_CONFIG_NOSYSTEM=1`、`GIT_CONFIG_GLOBAL=/dev/null`）。窓を出さず、期限付きで呼ぶ。
-   Gitに許すのは次の3回だけで、引数まで固定する。
-   - `rev-parse --verify --quiet <HEAD>^{tree}`（結果が固定treeと一致する）
-   - `merge-base --is-ancestor <HEAD> <origin/mainのcommit>`
-   - `ls-tree -r -z --full-tree <HEAD>`
+   Gitは実行しない。objectsもreader自身が読む。読むのは共有repoのobjectsディレクトリにあるloose objectと、
+   `objects/pack` の `pack-<40桁>.idx`（version 2）と対になる `.pack`（version 2か3）だけである。
+   alternates・commit-graph・multi-pack-index・replace refは読まない。guardが `objects` と `objects/pack` の
+   ディレクトリ、各index・pack・loose objectを1件ずつ clear と分類してから開く。indexは末尾のchecksumを確かめ、
+   packは先頭の件数と末尾のchecksumがindexの記録と一致する場合だけ使う。packの各entryは、そのままの形か、
+   offset delta・名前を指すdeltaとして同じpackの中から組み立てる。どのobjectも、型と中身から計算したSHA-1の
+   名前が求めた名前と一致する場合だけ使う。そのため、照合中に共有repoのobjectが増えたり、別のstoreを指す
+   ファイルが一時的に置かれたりしても、readerが読む中身は変わらない。objectsで確かめるのは次の3つ。
+   - 固定HEADのcommitのtreeが、固定treeと一致する。
+   - `refs/remotes/origin/main` のcommitから親をたどると、固定HEADに着く。`shallow` にあるcommitは、
+     Gitのshallow cloneと同じく親を持たないものとして扱う。読めない親があれば拒否する。
+   - 固定treeを再帰的にたどった一覧。`git ls-tree -r --full-tree` と同じく、通常ファイル・link・submoduleの
+     entryを並べ、directoryは並べない。
 
-   Gitは設定・参照・作業ファイルを1つも開かない。guardは1件ずつ分類するので、rootがclearでも、
-   分類していないファイルをGitに読ませない。
+   Gitが設定・別のstore・作業ファイルを読むことはない。guardは1件ずつ分類するので、rootがclearでも、
+   分類していないファイルは読まない。
 6. receipt・log・dep-info・各入力・新候補は、それぞれ同じ方法で開いて保持し、guardの clear を確かめてから読む。
    読んだbytesそのものをhashして解析する。
 7. receiptの全項目を固定値と照合する。未知の項目と `data_access_granted` が false でない記録は拒否する。
@@ -97,9 +106,12 @@ callerからmanifest、hash、source、root、ToDo番号、許可ディレクト
    入力以外の追跡ファイルは分類も読取もしないので、その変更は結果を左右しない。
 9. 新候補のサイズとSHA256を固定値とreceiptの両方に照合する。
 10. 最後に、保持した全handleの同一性（volume・file ID・サイズ・更新時刻・リンク数・属性）と実パス、
-    source rootとobjectsディレクトリの実パスを再確認する。読んで閉じたGitの設定と参照は開き直し、同一性と
+    source rootと `objects`・`objects/pack` ディレクトリの実パスを再確認する。読んで閉じたGitの設定と参照は開き直し、同一性と
     SHA256が最初に読んだときと同じことを確かめる。無かったファイル（`config.worktree`、`info/grafts`、
-    `objects/info/alternates`、looseで無かったref、`shallow` など）が今も無いことも確かめる。照合中の変更は拒否する。
+    `objects/info/alternates`、looseで無かったref、`shallow` など）が今も無いことも確かめる。
+    この再確認が拒否できるのは、再確認の時点で残っている変更である。途中で作られて再確認の前に消えたファイルは
+    検出できない。そのためreaderは、alternates・grafts・worktreeごとの設定を読む処理を持たず、Gitも実行しない。
+    objectは名前で中身を確かめるので、再確認の対象にしない。
     入力は書込を共有しないhandleで保持しているので、照合中には変えられない。共有repoのconfigやrefは
     ほかのworktreeが書き換えることがあり、照合中に書き換わると `recheck` で拒否される。その場合は再実行する。
 
@@ -126,7 +138,8 @@ receiptの126件の入力が、原dep-infoの116件と manifest/lock の10件に
 
 テストは `tools/todo-update-reader-3190` の `go test`。合成したGit repo（実物と同じく、別の場所のrepoに属する
 linked worktree）、ファイル、receiptと、guardのCLI応答を模した関数で、実物の配布先・guard・親の作業場所を使わずに確かめる。
-理由コードも照合し、別の理由による偶然の拒否を合格にしない。
+理由コードも照合し、別の理由による偶然の拒否を合格にしない。objectの読取は、Git自身の出力
+（`git cat-file --batch-all-objects`、`git ls-tree`、`git rev-list`）と比べる。
 
 | 条件 | テスト |
 | --- | --- |
@@ -137,12 +150,14 @@ linked worktree）、ファイル、receiptと、guardのCLI応答を模した�
 | 別origin、HEAD/treeの移動、未merge | `TestRejectsSourceChanges` |
 | 親・兄弟・ADS・別名、任意入力 | `TestRejectsOtherPaths`、`TestCLIAcceptsOnlyThePurposeFlag` |
 | hardlink、junction | `TestRejectsLinks` |
-| 照合中の置換・変更 | `TestPinnedFilesResistReplacement`、`TestRejectsChangesBeforeRecheck` |
+| 照合中の置換・変更 | `TestPinnedFilesResistReplacement`、`TestRejectsChangesBeforeRecheck`、`TestObjectsIgnoreAlternates` |
 | 元client一致 | `TestRejectsProtectedResources` |
 | data access の拡大 | `TestRejectsDataAccessExpansion` |
 | closure の過不足 | `TestRejectsClosureGaps` |
-| Gitに設定・参照・作業ファイルを読ませない。Gitの呼び出しは引数まで固定の3回だけ。入力以外の保護された追跡ファイルは結果を左右しない | `TestGitNeverReadsWorkingFiles`、`TestGitReadsNoConfiguration`、`TestIsolatedGitEnvironment`、`TestQualifiesFixedUpdate`、`TestRejectsProtectedResources` |
-| Gitの設定と参照をreader自身がguardの分類後に読み、Gitと同じ意味に解釈する | `TestReadsGitMetadataItself`、`TestConfigParserAgreesWithGit`、`TestConfigParserRefusesWhatItDoesNotRead`、`TestPackedRefs` |
+| Gitを実行せず、設定・別のstore・作業ファイルを読まない。読む全ファイルをguardが先に分類する。入力以外の保護された追跡ファイルは結果を左右しない | `TestNeverReadsWorkingFiles`、`TestReadsNoGitConfiguration`、`TestObjectsIgnoreAlternates`、`TestQualifiesFixedUpdate`、`TestRejectsProtectedResources` |
+| Gitの設定と参照をreader自身がguardの分類後に読み、Gitと同じ意味に解釈する | `TestReadsGitMetadataItself`、`TestConfigParserAgreesWithGit`、`TestConfigParserRefusesWhatItDoesNotRead`、`TestPackedRefs`、`TestPackedRefsAsGitReadsThem` |
+| objectをGitと同じに読む（loose、pack、offset delta、名前を指すdelta、commit・tree・祖先） | `TestObjectStoreAgreesWithGit`、`TestQualifiesFromPacks` |
+| 壊れたobject・別のobject・保護されたobjectのファイルを拒否する | `TestRejectsDamagedObjects`、`TestApplyDeltaRefusesMalformedDeltas` |
 | 入力のbytesが固定treeのblob（そのままか、LFをすべてCRLFにした形）である | `TestInputsMustBeTheCommittedBytes`、`TestCheckedOutForms` |
 | 実物の固定値 | `TestProductionProfileBindsOneFixedUpdate` |
 

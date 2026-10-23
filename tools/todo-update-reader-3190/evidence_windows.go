@@ -187,26 +187,6 @@ func validInputs(inputs []receiptInput) bool {
 	return true
 }
 
-// parseTree reads `git ls-tree -r -z --full-tree` output.
-func parseTree(out []byte) (map[string]treeEntry, bool) {
-	tree := map[string]treeEntry{}
-	for _, record := range strings.Split(string(out), "\x00") {
-		if record == "" {
-			continue
-		}
-		meta, name, ok := strings.Cut(record, "\t")
-		fields := strings.Fields(meta)
-		if !ok || len(fields) != 3 || name == "" {
-			return nil, false
-		}
-		if _, dup := tree[name]; dup {
-			return nil, false
-		}
-		tree[name] = treeEntry{mode: fields[0], kind: fields[1], object: fields[2]}
-	}
-	return tree, len(tree) > 0
-}
-
 // parseDepInfo reads Cargo's one-rule dep-info for artifact. Every compiler
 // input must be a plain path inside root; escapes and variables are refused.
 func parseDepInfo(data []byte, root, artifact string) ([]string, bool) {

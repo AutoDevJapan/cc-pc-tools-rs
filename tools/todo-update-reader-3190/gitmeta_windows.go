@@ -10,24 +10,15 @@ import (
 // maxMetadataBytes bounds each Git metadata file the reader reads itself.
 const maxMetadataBytes = 4 << 20
 
-// gitSource is all that Git sees of the fixed source: the repository's object
-// store and, for a shallow clone, its boundary commits. Git reads no
-// configuration, reference or working file of the source; the reader reads
-// those itself, each after the guard has classified it.
-type gitSource struct {
-	objects string
-	shallow []byte
-}
-
 // readSource ties the source root to its repository from bytes the reader
 // read itself, the way Git's files backend would: the worktree link and its
 // registration, HEAD and the branch it names, the origin in the repository
 // configuration and the main ref. It refuses what Git would read in another
 // way: an include or URL rewrite, per-worktree configuration, grafts,
-// alternates or another ref storage. It returns the object store Git may read
-// and the commit of the main ref.
-func (s *session) readSource(p profile) (gitSource, string, string) {
-	fail := func(reason string) (gitSource, string, string) { return gitSource{}, "", reason }
+// alternates or another ref storage. It returns the object store, which the
+// reader then reads itself, and the commit of the main ref.
+func (s *session) readSource(p profile) (sourceObjects, string, string) {
+	fail := func(reason string) (sourceObjects, string, string) { return sourceObjects{}, "", reason }
 
 	link, reason := s.required(filepath.Join(p.root, ".git"))
 	if reason != "" {
@@ -51,7 +42,8 @@ func (s *session) readSource(p profile) (gitSource, string, string) {
 		return fail("source_git")
 	}
 
-	// Nothing may redirect what Git reads for this worktree.
+	// Nothing may change what Git would read for this worktree. The reader never
+	// reads an alternate store; a store that borrows objects is refused.
 	for _, path := range []string{
 		filepath.Join(gitDir, "config.worktree"),
 		filepath.Join(common, "info", "grafts"),
@@ -110,7 +102,7 @@ func (s *session) readSource(p profile) (gitSource, string, string) {
 	if !s.pinDir(objects) {
 		return fail("source_git")
 	}
-	return gitSource{objects: objects, shallow: shallow}, mainID, ""
+	return sourceObjects{dir: objects, shallow: shallow}, mainID, ""
 }
 
 // metadata reads one Git metadata file. The guard classifies it first; then it
@@ -242,20 +234,40 @@ func refName(name string) bool {
 	return true
 }
 
-// packedRefs reads the packed-refs file Git writes: an optional header line,
-// "<id> <name>" lines and "^<id>" lines that peel the tag before them. It
-// refuses a repeated name and anything else.
+// packedRefs reads packed-refs as Git does (refs/packed-backend.c): an
+// optional first line "# pack-refs with: " and its traits, "<id> <name>"
+// records and "^<id>" lines that peel the record before them. Git trusts the
+// "sorted" trait and finds a name by binary search, so a file that declares it
+// must have its names in strictly ascending byte order; without the trait Git
+// sorts the records itself. The reader also refuses an unknown trait, a
+// repeated name and any other line.
 func packedRefs(data []byte) (map[string]string, bool) {
 	text, ok := strings.CutSuffix(string(data), "\n")
 	if !ok {
 		return nil, false
 	}
-	refs := map[string]string{}
-	peelable := false
-	for i, line := range strings.Split(text, "\n") {
-		if i == 0 && strings.HasPrefix(line, "# pack-refs with:") {
-			continue
+	lines := strings.Split(text, "\n")
+	sorted := false
+	if strings.HasPrefix(lines[0], "#") {
+		traits, found := strings.CutPrefix(lines[0], "# pack-refs with: ")
+		if !found {
+			return nil, false
 		}
+		for _, trait := range strings.Split(traits, " ") {
+			switch trait {
+			case "", "peeled", "fully-peeled":
+			case "sorted":
+				sorted = true
+			default:
+				return nil, false
+			}
+		}
+		lines = lines[1:]
+	}
+	refs := map[string]string{}
+	previous := ""
+	peelable := false
+	for _, line := range lines {
 		if id, found := strings.CutPrefix(line, "^"); found {
 			if !peelable || !hexDigest(id, 40) {
 				return nil, false
@@ -271,7 +283,11 @@ func packedRefs(data []byte) (map[string]string, bool) {
 		if _, dup := refs[name]; dup {
 			return nil, false
 		}
+		if sorted && previous != "" && name <= previous {
+			return nil, false
+		}
 		refs[name] = id
+		previous = name
 		peelable = true
 	}
 	return refs, true

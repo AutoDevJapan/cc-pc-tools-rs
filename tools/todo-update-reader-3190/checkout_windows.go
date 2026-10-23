@@ -7,14 +7,17 @@ import (
 	"strconv"
 )
 
-// gitBlobID is the SHA-1 object name Git gives data stored as a blob. It ties
-// bytes to an entry of the fixed tree; SHA-256 pins the same bytes separately.
-func gitBlobID(data []byte) string {
+// objectName is the SHA-1 name Git gives an object of kind with data.
+func objectName(kind string, data []byte) string {
 	h := sha1.New()
-	h.Write([]byte("blob " + strconv.Itoa(len(data)) + "\x00"))
+	h.Write([]byte(kind + " " + strconv.Itoa(len(data)) + "\x00"))
 	h.Write(data)
 	return hex.EncodeToString(h.Sum(nil))
 }
+
+// gitBlobID is the name Git gives data stored as a blob. It ties bytes to an
+// entry of the fixed tree; SHA-256 pins the same bytes separately.
+func gitBlobID(data []byte) string { return objectName("blob", data) }
 
 // checkedOut reports whether working bytes are exactly a fixed blob as Git
 // writes it out on this PC: the blob itself or, under core.autocrlf=true, the

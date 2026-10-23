@@ -1,9 +1,12 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"reflect"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -50,11 +53,15 @@ func TestOpenAIEntryEvaluationConservesPinnedPathsNotNames(t *testing.T) {
 		Entries []struct {
 			partialEntry
 			URL         string              `json:"source_url"`
+			Bytes       int                 `json:"bytes"`
 			Method      string              `json:"body_read_method"`
 			Disposition string              `json:"candidate_disposition"`
 			Reason      string              `json:"reason"`
 			Changes     string              `json:"required_changes"`
 			License     []string            `json:"license_paths"`
+			Compared    string              `json:"comparison_limit"`
+			Independent bool                `json:"independent_review_complete"`
+			SupportRead bool                `json:"support_read_complete"`
 			Support     []evaluatedResource `json:"supporting_resources"`
 		} `json:"entries"`
 	}
@@ -75,7 +82,7 @@ func TestOpenAIEntryEvaluationConservesPinnedPathsNotNames(t *testing.T) {
 	ids, paths, supportPaths, counts := map[string]bool{}, []string{}, map[string]bool{}, map[string]int{}
 	saved, full, diff := 0, 0, 0
 	for _, e := range a.Entries {
-		if e.ID == "" || ids[e.ID] || e.Name == "" || !e.Read || !validHex(e.SHA, 64) || e.Commit != a.Commit || e.URL != "https://github.com/"+a.Source+"/blob/"+a.Commit+"/"+e.Path || e.Reason == "" || e.Changes == "" || e.Disposition == "" || e.Installed || e.Integrated || e.Excluded {
+		if e.ID == "" || ids[e.ID] || e.Name == "" || !e.Read || !validHex(e.SHA, 64) || e.Bytes < 1 || e.Commit != a.Commit || e.URL != "https://github.com/"+a.Source+"/blob/"+a.Commit+"/"+e.Path || e.Reason == "" || e.Changes == "" || e.Disposition == "" || e.Compared == "" || e.Independent || e.SupportRead || e.Installed || e.Integrated || e.Excluded {
 			t.Fatal("read candidate lost identity or claimed installation")
 		}
 		ids[e.ID], paths = true, append(paths, e.Path)
@@ -113,6 +120,16 @@ func TestOpenAIEntryEvaluationConservesPinnedPathsNotNames(t *testing.T) {
 	}
 	if len(supportPaths) != 690 || saved != 485 || a.Support.Count != len(supportPaths) || a.Support.Saved != saved || a.Support.Unsaved != len(supportPaths)-saved {
 		t.Fatal("support saved and unread counters differ")
+	}
+	// Pinned from the complete source tree and content index, independently of
+	// the mutable evaluation file. A valid-looking replacement hash is not enough.
+	sort.Slice(a.Entries, func(i, j int) bool { return a.Entries[i].Path < a.Entries[j].Path })
+	h := sha256.New()
+	for _, e := range a.Entries {
+		fmt.Fprintf(h, "%s\t%s\t%d\n", e.Path, e.SHA, e.Bytes)
+	}
+	if hex.EncodeToString(h.Sum(nil)) != "3c13c1ba2e72fc6ad90814e188aa4919c4b9195c5edd1a33773afb0f3d4daf3a" {
+		t.Fatal("source path/hash/bytes differ from the pinned corpus")
 	}
 }
 
@@ -172,7 +189,7 @@ func TestDuplicateExclusionsKeepCanonicalAdoptionsAndSeparateLedgerRows(t *testi
 	if err := validateDuplicateDecisions(decisions.Entries, ledger.Entries); err != nil {
 		t.Fatal(err)
 	}
-	for _, kind := range []string{"unknown_canonical", "duplicate", "adopted_id", "wrong_sha", "wrong_path", "wrong_commit", "wrong_repo", "wrong_manifest", "wrong_target", "claimed_copy_license", "claimed_copy", "not_excluded"} {
+	for _, kind := range []string{"unknown_canonical", "duplicate", "adopted_id", "wrong_sha", "wrong_path", "wrong_commit", "wrong_repo", "wrong_manifest", "wrong_target", "claimed_copy_license", "claimed_copy", "claimed_execution", "not_excluded"} {
 		t.Run(kind, func(t *testing.T) {
 			rows := append([]duplicateDecision(nil), decisions.Entries...)
 			switch kind {
@@ -198,6 +215,8 @@ func TestDuplicateExclusionsKeepCanonicalAdoptionsAndSeparateLedgerRows(t *testi
 				rows[0].CopyRights = true
 			case "claimed_copy":
 				rows[0].Copied = true
+			case "claimed_execution":
+				rows[0].Executed = true
 			case "not_excluded":
 				rows[0].Disposition = "installed_new_adaptation"
 			}
@@ -221,6 +240,9 @@ func TestCoverageSeparatesCompleteSourcesMizchiAndAuthoredDrafts(t *testing.T) {
 		Mizchi struct {
 			Read int `json:"full_body_read"`
 		} `json:"mizchi_partial_entrypoint_evaluation"`
+		Mengto struct {
+			Read int `json:"full_body_read"`
+		} `json:"mengto_partial_entrypoint_evaluation"`
 		Authored struct {
 			Additional int      `json:"additional_authored_drafts_not_in_plans"`
 			Total      int      `json:"authored_total"`
@@ -230,12 +252,12 @@ func TestCoverageSeparatesCompleteSourcesMizchiAndAuthoredDrafts(t *testing.T) {
 	loadPublicReceipt(t, "skills-3080-progress.json", &p)
 	sum := 0
 	for repo, n := range p.Coverage.ByRepo {
-		if strings.Contains(strings.ToLower(repo), "mizchi") || n < 1 {
+		if strings.Contains(strings.ToLower(repo), "mizchi") || strings.Contains(strings.ToLower(repo), "mengto") || n < 1 {
 			t.Fatal("separate partial source double-counted")
 		}
 		sum += n
 	}
-	if sum != 137 || len(p.Coverage.ByRepo) != p.Coverage.Repos || p.SkillRead != sum || p.Coverage.Paths != sum || p.Mizchi.Read != 76 || p.TotalRead != sum+p.Mizchi.Read {
+	if sum != 137 || len(p.Coverage.ByRepo) != p.Coverage.Repos || p.SkillRead != sum || p.Coverage.Paths != sum || p.Mizchi.Read != 76 || p.Mengto.Read < 45 || p.TotalRead != sum+p.Mizchi.Read+p.Mengto.Read {
 		t.Fatal("body read coverage does not conserve source paths")
 	}
 	var sql struct {

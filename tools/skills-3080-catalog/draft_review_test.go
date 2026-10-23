@@ -113,7 +113,7 @@ func validateDistinctDraftAnchors(anchors map[string]draftReviewAnchor) error {
 			if i == 1 {
 				response = a.ResolutionSHA
 			}
-			if todo < 1 || todos[todo] || len(response) != 64 || responses[response] {
+			if todo < 1 || todos[todo] || !validHex(response, 64) || responses[response] {
 				return errors.New("a distinct body version reuses an independent review identity")
 			}
 			todos[todo], responses[response] = true, true
@@ -468,7 +468,7 @@ func TestNewBodyVersionCanUseItsOwnIndependentReviewAnchor(t *testing.T) {
 }
 
 func TestDistinctBodyVersionsCannotReuseReviewIdentities(t *testing.T) {
-	for _, kind := range []string{"valid", "body_todo", "resolution_todo", "body_sha", "resolution_sha", "cross_role_todo", "cross_role_sha"} {
+	for _, kind := range []string{"valid", "body_todo", "resolution_todo", "body_sha", "resolution_sha", "cross_role_todo", "cross_role_sha", "zero_body_todo", "short_sha", "nonhex_sha"} {
 		t.Run(kind, func(t *testing.T) {
 			old := sqlDraftReviewAnchors[sqlReviewedAuthoredSHA]
 			fresh := draftReviewAnchor{BodyTodo: 9001, BodySHA: strings.Repeat("d", 64), ResolutionTodo: 9002, ResolutionSHA: strings.Repeat("e", 64)}
@@ -485,6 +485,12 @@ func TestDistinctBodyVersionsCannotReuseReviewIdentities(t *testing.T) {
 				fresh.BodyTodo = old.ResolutionTodo
 			case "cross_role_sha":
 				fresh.ResolutionSHA = old.BodySHA
+			case "zero_body_todo":
+				fresh.BodyTodo = 0
+			case "short_sha":
+				fresh.BodySHA = strings.Repeat("d", 63)
+			case "nonhex_sha":
+				fresh.BodySHA = strings.Repeat("z", 64)
 			}
 			err := validateDistinctDraftAnchors(map[string]draftReviewAnchor{sqlReviewedAuthoredSHA: old, strings.Repeat("f", 64): fresh})
 			if (err != nil) != (kind != "valid") {

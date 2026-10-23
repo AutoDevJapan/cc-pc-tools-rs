@@ -122,7 +122,8 @@ func TestPartialMizchiAssessmentConservesUnfinishedPathsAndAdoptions(t *testing.
 	var a partialAssessment
 	loadPublicReceipt(t, "skills-3080-mizchi-partial-evaluation.json", &a)
 	var ledger struct {
-		Entries []partialAdoption `json:"entries"`
+		Entries  []partialAdoption `json:"entries"`
+		Excluded []partialAdoption `json:"excluded_entries"`
 	}
 	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
 	var p struct {
@@ -135,6 +136,9 @@ func TestPartialMizchiAssessmentConservesUnfinishedPathsAndAdoptions(t *testing.
 			Integrated int  `json:"integrated"`
 			Excluded   int  `json:"excluded"`
 		} `json:"mizchi_partial_entrypoint_evaluation"`
+		Mengto struct {
+			Read int `json:"full_body_read"`
+		} `json:"mengto_partial_entrypoint_evaluation"`
 		TotalRead int `json:"all_fulltext_primary_paths_including_partial_sources"`
 		Complete  struct {
 			Paths int `json:"case_insensitive_skill_named_paths"`
@@ -160,14 +164,14 @@ func TestPartialMizchiAssessmentConservesUnfinishedPathsAndAdoptions(t *testing.
 	if roster.Source != a.Source || roster.Commit != a.Commit || roster.Tree != "afbd6cabdc055717936a1c454627ccc62050705b" || len(roster.Paths) != 76 || roster.SHA != pinnedSHA || pathSetSHA(roster.Paths) != pinnedSHA {
 		t.Fatal("fixed entrypoint roster differs from its independent tree anchor")
 	}
-	if p.Partial.Expected != a.Expected || p.Partial.Read != a.Read || p.Partial.Unread != a.Unread || p.Partial.Complete != (a.Unread == 0) || p.Partial.Installed != a.Installed || p.Partial.Integrated != a.Integrated || p.Partial.Excluded != a.Excluded || p.TotalRead != p.Complete.Paths+a.Read {
+	if p.Partial.Expected != a.Expected || p.Partial.Read != a.Read || p.Partial.Unread != a.Unread || p.Partial.Complete != (a.Unread == 0) || p.Partial.Installed != a.Installed || p.Partial.Integrated != a.Integrated || p.Partial.Excluded != a.Excluded || p.TotalRead != p.Complete.Paths+a.Read+p.Mengto.Read {
 		t.Fatal("progress summary differs from the partial assessment")
 	}
 	matches := 0
 	for _, r := range p.Repos {
 		if r.Source == a.Source {
 			matches++
-			if err := validatePartial(a, ledger.Entries, r.Source, r.Commit, r.Count, pinnedSHA); err != nil {
+			if err := validatePartial(a, append(ledger.Entries, ledger.Excluded...), r.Source, r.Commit, r.Count, pinnedSHA); err != nil {
 				t.Fatal(err)
 			}
 		}

@@ -8201,7 +8201,7 @@
       "scope": "固定11差分/Go2全文と新19評価・固定19本文/README/支持metadata。旧57本文/非README96本文の全読、実Goテスト、配置/許諾受入ではない。"
     }
   },
-  "recorded_at": "2026-10-23T16:37:17.8639403Z",
+  "recorded_at": "2026-10-23T19:37:25.1602515Z",
   "observed_at_definition": "旧observed_atとbody_read_atは記録生成時刻で独立の取得/受領時刻ではない。今回recorded_atは親の更新時刻。source retrieved_atは取得索引由来。受領保存時刻はpreserved_atと区別する。",
   "independent_review_complete_definition": "trueは現行評価版の独立確認を示す。旧22のtrueを未束縛のまま持ち越さずfalseとし、固定head/raw付きhistorical_evaluation_reviewを保持。falseは原本文未読や過去レビュー未実施という意味ではない。",
   "reader3458": {
@@ -8228,5 +8228,6 @@
     "readme_template_with_complete_difference_count": 1
   },
   "review_metadata_definition": "job_model/requested_effortはjob設定であり実効推論量の実測ではない。旧actual_model/effortを改名。旧received_atは文書生成時刻だったためrecorded_atへ訂正。preserved_atは原応答受領保存の実記録。",
-  "review_model_limit": "job_modelとrequested_effortは保存job設定。対応turn_contextによる実行モデル・実効推論量・Fastの独立実測をこのmetadataだけから断定しない。"
+  "review_model_limit": "job_modelとrequested_effortは保存job設定。対応turn_contextによる実行モデル・実効推論量・Fastの独立実測をこのmetadataだけから断定しない。",
+  "timestamp_definition": "recorded_atはこの文書の更新時刻。入れ子のreview recorded_at/preserved_atはその観測/受領時刻を保持する。"
 }

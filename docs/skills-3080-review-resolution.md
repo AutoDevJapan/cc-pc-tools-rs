@@ -221,3 +221,19 @@ S4をAWS IAM公式まで追うと、現在の条件キー表にjob_workflow_ref�
 3475原応答SHA0475ffb9c21e0eb385f67e8c91070d5e27f1417af84e550d526ae335e3e8900fを受領保全。固定OpenAI44本文は43全文出力+同源1の全差分照合、notice46path/11本文は6全文+Apache5の基準全文との全行差分。支持690は未読。親は理由と修正案を全件読み、同名だけの除外やAPI実行不可だけによる全手順の除外、毎回承認の追加を補正した。評価・調査の読了と、個別権利の受入・実導入を分ける。
 
 設計2入口は元3048の既存統合を保持する。旧7資料91+2+44=137と別枠mizchi76で213path。既存採用29の元本文SHAと一致する別出現7件を、canonical固定出典を保持して除外した。これは親の採否で、新しい固定差分のレビューは未実施。導入28/統合1は変わらず、残73184=本文72109+未取得428+取得審査保持647。中央書込0、全16資料は未完である。
+# PR410後の追加評価と3487指摘への対応
+
+PR410の固定799cb672は3487最終（job設定Sonnet5.5・要求max、実効推論量未測定）のMust0と同版CI6成功後に通常merge済み。mergeは3b6efbae、2026-10-23T19:22:33Z。初回3487は`max_output_tokens`による応答未完了で、同番号の後続成功と分けて記録する。混雑とは推測しない。
+
+3487のSuggestion4件は次の差分で対応した。
+
+- S1: spec先頭と最新段落を導入28/統合1/除外7/残73184へ訂正。既存統合1の後続受入と、新19に対する3473/3487の確認範囲を記載。元の分類保留3対象と、今回別に審査する解像度統合案を分けた。
+- S2: 文書更新時刻と入れ子の観測・原応答保存時刻を分離し、progress/mizchiの先頭を更新した。元の取得時刻を推測で埋めていない。
+- S3: OpenAI候補の未比較本文を「上位互換」「同一重複」と確定しない。元44件のreader分類をhistorical_reader_proposalへ保持し、canonical候補と最終台帳の除外を分けた。
+- S4: Cloudflare/Netlify/VercelのPrd限定にGitHub実owner AutoDevJapan/BM1314/mashfrombandの範囲を付け、他owner/顧客契約は先方規則を保つ。
+
+Nitは、N1の実際の台帳読取にexcluded_entriesを含めた。冗長な判定ごとに独立変異の証明を増やす提案は採らず、台帳と評価の両方向の意味ある負例を維持する。N2はExecuted=true、body todo=0、短いSHA、非hex SHAを追加。N3は固定tree/索引から独立計算したOpenAI44の(path,SHA,bytes)指紋と、比較限界・独立受入・支持未読を照合する。N4はAISの評価時点excluded=0とlive overlayの除外1を分けた。N5はPython4本、figma-useの本文列挙12（表11+本文中のdesign-systems参照）/固定treeのreferences22を区別。N6はreaderの受領時刻/担当/status/更新時刻と、Vercelの未受入表示を補った。N7はDESIGN.mdの原UTF8 7349bytes/復号後7345 UTF16単位を実照合し、補足再読範囲を別fieldへ移した。N8はjob設定と要求maxの表現へ統一した。SQL2本文とその独立指紋は変更していない。
+
+新しいMengTo45評価は、親36と3488の9の結果を固定commit/tree/catalog/索引と本文SHA/bytes/Git blobへ照合したもの。支持132と入口45を分け、9配下46blobのうち支持は37、保存読了10/未保存27と記録した。全treeのnoticeはroot LICENSEと別範囲THREE-LICENSE.txtを区別し、MITを第三者素材・ARTICLE派生元へ広げていない。子の原提案は歴史として保全し、親がChrome、正規本人返信、内部の比較/レビュー、Prdの対象範囲を補正した。
+
+3490の旧統合案Must1は、出荷sourceからreview_pending/central_writtenを削除したv2へ修正済み。旧v1は不変で、3499が追加差分を確認中。中央実反映と発見はまだ未実施であり、これらの評価を導入済みへ加算しない。新差分のGo test-count1/vetは成功したが、旧799の成功を新データへ流用したものではない。実行時のGo/JSON入力指紋を非公開receiptへ保存した。

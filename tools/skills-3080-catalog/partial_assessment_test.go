@@ -178,7 +178,7 @@ func TestPartialMizchiAssessmentConservesUnfinishedPathsAndAdoptions(t *testing.
 }
 
 func TestPartialAssessmentRejectsLostPathsAndUnrecordedChanges(t *testing.T) {
-	for _, kind := range []string{"valid", "overlap", "lost_pending", "same_count_substitution", "duplicate_id", "unrecorded_integration", "wrong_source_hash", "valid_integration"} {
+	for _, kind := range []string{"valid", "overlap", "lost_pending", "same_count_substitution", "duplicate_id", "unrecorded_integration", "wrong_source_hash", "valid_integration", "unassessed_id", "duplicate_row", "wrong_path", "wrong_commit", "unknown_disposition", "other_repo"} {
 		t.Run(kind, func(t *testing.T) {
 			e := partialEntry{ID: "github:one", Path: "one/SKILL.md", Name: "one", Commit: strings.Repeat("a", 40), SHA: strings.Repeat("b", 64), Read: true}
 			a := partialAssessment{Source: "example/skills", Commit: e.Commit, Expected: 2, Read: 1, Unread: 1, Entries: []partialEntry{e}, Pending: []string{"two/SKILL.md"}}
@@ -193,17 +193,33 @@ func TestPartialAssessmentRejectsLostPathsAndUnrecordedChanges(t *testing.T) {
 			case "duplicate_id":
 				e.Path, e.Name = "two/SKILL.md", "two"
 				a.Entries, a.Pending, a.Read, a.Unread = append(a.Entries, e), nil, 2, 0
-			case "unrecorded_integration", "wrong_source_hash", "valid_integration":
+			case "unrecorded_integration", "wrong_source_hash", "valid_integration", "unassessed_id", "duplicate_row", "wrong_path", "wrong_commit", "unknown_disposition", "other_repo":
 				a.Entries[0].Integrated, a.Integrated = true, 1
 				if kind != "unrecorded_integration" {
 					rows = []partialAdoption{{ID: e.ID, Source: a.Source, Commit: e.Commit, Path: e.Path, SHA: e.SHA, Disposition: "integrated_existing"}}
 					if kind == "wrong_source_hash" {
 						rows[0].SHA = strings.Repeat("c", 64)
 					}
+					switch kind {
+					case "unassessed_id":
+						rows[0].ID = "github:unassessed"
+					case "duplicate_row":
+						rows = append(rows, rows[0])
+					case "wrong_path":
+						rows[0].Path = "wrong/SKILL.md"
+					case "wrong_commit":
+						rows[0].Commit = strings.Repeat("c", 40)
+					case "unknown_disposition":
+						rows[0].Disposition = "candidate"
+					case "other_repo":
+						other := rows[0]
+						other.Source, other.Path, other.Commit = "other/skills", "different/SKILL.md", "unrelated"
+						rows = append(rows, other)
+					}
 				}
 			}
 			err := validatePartial(a, rows, "example/skills", strings.Repeat("a", 40), 2, pathSetSHA([]string{"one/SKILL.md", "two/SKILL.md"}))
-			wantError := kind != "valid" && kind != "valid_integration"
+			wantError := kind != "valid" && kind != "valid_integration" && kind != "other_repo"
 			if (err != nil) != wantError {
 				t.Fatalf("source conservation detection: %s: %v", kind, err)
 			}

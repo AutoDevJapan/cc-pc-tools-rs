@@ -1,0 +1,3799 @@
+{
+  "source_commands_executed": 0,
+  "global_adoptions_unchanged": true,
+  "todo": 3080,
+  "recorded_at": "2026-10-23T17:38:36.7953115Z",
+  "current_public_primary_count": 213,
+  "job": "20261024-023253-todo-3080",
+  "remaining": "所定の新差分レビュー/個別実統合先の正規分類/必要な適用例・実配置・発見。全16資料と未保存/拒否範囲は継続。",
+  "state": "entrypoint_evaluation_only_pending_review",
+  "central_write": 0,
+  "entries": [
+    {
+      "comparison_limit": "起動catalogの名前/descriptionと元3048証拠を比較。現行中央本文は未知の保護判定を迂回して読んでいない。",
+      "central_write": 0,
+      "entrypoints_expected": 1,
+      "source_sha256": "59469635bbbd21acddbc664d95e8d97147f454b2d8f4a0a89c7d2c5afbe67577",
+      "current_snapshot_review_pending": true,
+      "prior3048": {
+        "scope": "同固定版のREADME/LICENSE/SKILL/監査手順の代表範囲。既存ui-design-stylesへの統合は保持し、今回を新規導入と数えない。",
+        "new_scope": "今回は67460bytesの入口全66585charsを6分割で読了。structure/contract/auditも全文。全106個別支持や全assetsの受入ではない。"
+      },
+      "notices": [
+        {
+          "body_read_complete": true,
+          "bytes": 1078,
+          "read_ranges": [
+            {
+              "start": 0,
+              "end": 1078,
+              "total": 1078
+            }
+          ],
+          "git_blob": "f4bfc53d8d773d3b10d95c2d58a5773dd4e2f3aa",
+          "body_saved": true,
+          "sha256": "06088a8b94598626f27612dea42300154bf7be967c85d9d3eee4490cb056af7d",
+          "path": "LICENSE",
+          "source_executed": false
+        }
+      ],
+      "candidate_disposition": "existing_integration_candidate_after_policy_and_scope_corrections",
+      "tree_complete": true,
+      "required_changes": [
+        "毎回Audience/Usecase/Toneを聞く条件、回答しない場合の推定採用をそのまま移さない。元依頼と既存回答を先に使い、未指定の見た目は具体画像と本人の明示回答を保つ。",
+        "色/テーマ/部品の強制ローテーションは同じ製品の一貫性を壊し得る。テーマ間の差を1軸/2軸のどちらとするかも本文内で不一致。代替案を比較する材料に限定する。",
+        "root overflow-x:clipで見切れを隠す、クリック文を必ず1行、常に全8状態、イタリック禁止、全色OKLCH、常にtokens.cssや追記だけといった一律規則へしない。対象契約と本PCの既存CSS構成・日本語・操作性で判断する。",
+        "57/58ゲートの数が揺れ、Build前PreviewでBuild後の成功行を求める。未測定は未実施と書き、仮の58/58や1-5嗜好点を品質・AI判定の証拠にしない。",
+        "CSS/画像/Design契約の変更をpackage.json/mtimeだけで検知できるとしない。必要な入力版を照合し古いpreflightやstampを現状の証拠へ流用しない。",
+        "画像を渡されたことだけで所有権を断定しない。HTML/CSSのfont-family指定と実レンダーで使われたfontを分ける。study.md未読につき抽出手順全体は未受入。",
+        "未読テーマ・fonts・外部画像・実装は取り込まず、MIT本文を確認した作者の手順文と既読supportの範囲を個別に保持する。新しい外部モデル/API利用は追加しない。"
+      ],
+      "tree_entries": 345,
+      "commit": "13ac0ec7e148655948100b6396439e481361d690",
+      "resource_fulltext_count": 6,
+      "path": "skills/hallmark/SKILL.md",
+      "entrypoints_read": 1,
+      "source": "Nutlope/hallmark",
+      "resources": [
+        {
+          "body_read_complete": false,
+          "bytes": 1567,
+          "read_ranges": [],
+          "git_blob": "2a1e77309ce56fb59f9c12569385b5416cc82325",
+          "body_saved": false,
+          "sha256": null,
+          "path": ".gitignore",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": true,
+          "bytes": 1078,
+          "read_ranges": [
+            {
+              "start": 0,
+              "end": 1078,
+              "total": 1078
+            }
+          ],
+          "git_blob": "f4bfc53d8d773d3b10d95c2d58a5773dd4e2f3aa",
+          "body_saved": true,
+          "sha256": "06088a8b94598626f27612dea42300154bf7be967c85d9d3eee4490cb056af7d",
+          "path": "LICENSE",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": true,
+          "bytes": 6321,
+          "read_ranges": [
+            {
+              "start": 0,
+              "end": 6302,
+              "total": 6302
+            }
+          ],
+          "git_blob": "974d732e5502dd42b74d388ec54911b9aab2ba95",
+          "body_saved": true,
+          "sha256": "878aa11aab1785f7a9d6c2eec889220b53cda4ddc22bf38cf575af98f99bfe72",
+          "path": "README.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3928,
+          "read_ranges": [],
+          "git_blob": "231bbb9de45521826a4682da70792cfe52c72df2",
+          "body_saved": true,
+          "sha256": "a6199d266f5f4701772319bdc6d7a7f3746f571e6d3aa9256a0fb4e4d64e15e9",
+          "path": "ROADMAP.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 13097,
+          "read_ranges": [],
+          "git_blob": "5cca1cc5bab91b1472deb1bae5b27951536cbfe8",
+          "body_saved": true,
+          "sha256": "f7c732c49c698c103035fb0450a15385170a2db2c23075180890757524b5ee2c",
+          "path": "docs/recipes.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 211700,
+          "read_ranges": [],
+          "git_blob": "86f098ed7aba652d8c27791d19b4380c384cf713",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-anya.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 164776,
+          "read_ranges": [],
+          "git_blob": "793c55386828ac3019396ca71efd65fc13c55d00",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-bananastudio.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 147978,
+          "read_ranges": [],
+          "git_blob": "cd1bcb77a2306448832e52e2b744460a51cd1a6e",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-carnival-01.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 158420,
+          "read_ranges": [],
+          "git_blob": "add204d9bc18ac5de58a77c0116427aabb623056",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-cobalt-01.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 117544,
+          "read_ranges": [],
+          "git_blob": "2548048f103c676ba2778c75cde84076d5cf6f37",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-custom-02.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 138093,
+          "read_ranges": [],
+          "git_blob": "ef49babcd4c1ca03bd2d528fa1b69b90217bdaa3",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-custom-03.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 401434,
+          "read_ranges": [],
+          "git_blob": "8e4a0b0de2c0baba5823562768193ac2fde75277",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-custom-04.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 140782,
+          "read_ranges": [],
+          "git_blob": "f93d3512566e3d042c67d3a0e8e55f18fdb37d34",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-garden-01.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 152942,
+          "read_ranges": [],
+          "git_blob": "dd992fb751790290108874d3de22f491e9df6e7d",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-hum-07.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 137401,
+          "read_ranges": [],
+          "git_blob": "15656de5236498b95765a092635d426f1b08a848",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-hyperlane.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 168282,
+          "read_ranges": [],
+          "git_blob": "03d56d2f961c7165ea7d88e14b4e67315f972f33",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-lumen-01.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 191756,
+          "read_ranges": [],
+          "git_blob": "66a4d379473c4afe2a7d3cd82074ac2de9f8272c",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-najm.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 134075,
+          "read_ranges": [],
+          "git_blob": "36ed0a188b310a3cd02f16c1f0c1ecef9a98f873",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-press-01.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 202157,
+          "read_ranges": [],
+          "git_blob": "70405276164ec9de26e1e783d9f263ad6b3fd3de",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-riso-01.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 141237,
+          "read_ranges": [],
+          "git_blob": "01ff2cc3f6c1724b2f14f2b01c9be6f087ad162c",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-slow-pour.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 145245,
+          "read_ranges": [],
+          "git_blob": "7550bce8bc189d2bc671aaad774c14b11fa7cd04",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-soroe.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 180347,
+          "read_ranges": [],
+          "git_blob": "301444574f928103807dab53ecb2dd9b92b1a163",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-tally.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 163332,
+          "read_ranges": [],
+          "git_blob": "69a7d93dd76518c7d6ee5a3178c588915e249fde",
+          "body_saved": false,
+          "sha256": null,
+          "path": "docs/screenshots/hero-wayfare.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 12380,
+          "read_ranges": [],
+          "git_blob": "491477482ce3c3be695f7602484bd1603a1ddc21",
+          "body_saved": true,
+          "sha256": "3cbbbc1e1515114e0e1cee6eb8534793539342f33ed074b0917ff378aac91616",
+          "path": "docs/study-examples.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 14340,
+          "read_ranges": [],
+          "git_blob": "e8177d028032aa242b3bf3f1035c355c342b4b34",
+          "body_saved": true,
+          "sha256": "83083b5e37b99cb8211268b778aa0cb3f677f8fe53f8d817f54fcad799882e0e",
+          "path": "docs/talk-slides.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 707,
+          "read_ranges": [],
+          "git_blob": "ded1f0da8a6501ab90205e50fb61fb0c535d8760",
+          "body_saved": false,
+          "sha256": null,
+          "path": "package.json",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 8,
+          "read_ranges": [],
+          "git_blob": "e985853ed84acf10f62f639a4733083229c5a55d",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/.gitignore",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 804638,
+          "read_ranges": [],
+          "git_blob": "0e1cdb75cc8d20eb2cdcc35f0fa0e36c183d07d8",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/OG-hallmark.png",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3728,
+          "read_ranges": [],
+          "git_blob": "bd63924b37689c573fecaf949ca4d881fa2dea72",
+          "body_saved": true,
+          "sha256": "da2dcd9297b28c945fa443060a000d83f86f073c2128b8fc904863670437f63e",
+          "path": "site/_tests/01-tide-podcast/brief.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3208,
+          "read_ranges": [],
+          "git_blob": "81f14c600a048d8ee2fa55c5f9b0497710d081a2",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/01-tide-podcast/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 5686,
+          "read_ranges": [],
+          "git_blob": "8614cf194eb2426f640bdc375b8dd47a748d6258",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/01-tide-podcast/style.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3507,
+          "read_ranges": [],
+          "git_blob": "076b528b0193bd7079752816abca05554f061f4a",
+          "body_saved": true,
+          "sha256": "1feb8cb9ab17e53cdc75564bcd75c4071a431b064017177abc9b5a890adc92c4",
+          "path": "site/_tests/02-streampipe-cli/brief.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 6843,
+          "read_ranges": [],
+          "git_blob": "0eefed10dac714dacc972030213e25343f0c4b31",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/02-streampipe-cli/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 6047,
+          "read_ranges": [],
+          "git_blob": "97e894099f796509afe3a37408141db7f8ae9f5f",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/02-streampipe-cli/style.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3400,
+          "read_ranges": [],
+          "git_blob": "3cf9b86c216253d70d3fdc25b54bfc788d9c9a26",
+          "body_saved": true,
+          "sha256": "bc7419a83a03f43a034becf8a00fa713d557ed128d1822ff117f9fd24aaf4359",
+          "path": "site/_tests/03-maple-bakery/brief.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 6182,
+          "read_ranges": [],
+          "git_blob": "c66af06551ecb6aeeeb4aad8193e8b950418c4bb",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/03-maple-bakery/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 5546,
+          "read_ranges": [],
+          "git_blob": "ce166890614d6ef3f19f8012e0b321cfe3caa07e",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/03-maple-bakery/style.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3546,
+          "read_ranges": [],
+          "git_blob": "3627c9796a539d88b8df752854863fa2c9dda364",
+          "body_saved": true,
+          "sha256": "2e64d726b368d18608e9a2dc680e2a6b59f78af23fe8db20747b0cbec82a48d1",
+          "path": "site/_tests/04-meridian-manifesto/brief.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4412,
+          "read_ranges": [],
+          "git_blob": "f855c9c9d93f6cd2717b1b5e9700cc972d7ef19e",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/04-meridian-manifesto/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 5999,
+          "read_ranges": [],
+          "git_blob": "715489827cc58042b562c731924e6335b2ef8f87",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/04-meridian-manifesto/style.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3738,
+          "read_ranges": [],
+          "git_blob": "26481684f6245d14366c04086aef49db165b20af",
+          "body_saved": true,
+          "sha256": "bf0f654597d56be4e9a7d0b58b5d448a598b1c35bd65ae7462f9b7a51111a2d7",
+          "path": "site/_tests/05-tracejam-saas/brief.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 9137,
+          "read_ranges": [],
+          "git_blob": "59e35b0874e72be27a4e038e50d7255d0d75df1f",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/05-tracejam-saas/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 11577,
+          "read_ranges": [],
+          "git_blob": "7c9cfe42d208cd677e3390ac6ab68b92e8b20584",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/05-tracejam-saas/style.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3861,
+          "read_ranges": [],
+          "git_blob": "1c5eff79918803a5db4769b29c27c4368aa3dd35",
+          "body_saved": true,
+          "sha256": "f3d91f48cc8ccd3f347e013095b3f6d3a9a8a13a0fe2860e890d7dc114e71c1d",
+          "path": "site/_tests/06-anya-portfolio/brief.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 7559,
+          "read_ranges": [],
+          "git_blob": "16f90912d0f7a977a898ee6c4386fd9e3885d02b",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/06-anya-portfolio/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 7327,
+          "read_ranges": [],
+          "git_blob": "5eccc2179511bbc1426f1484d7be17c04bf9244b",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/06-anya-portfolio/style.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3820,
+          "read_ranges": [],
+          "git_blob": "f6c89fcd87eb4444315ae07eaff74aac5c837597",
+          "body_saved": true,
+          "sha256": "5b0d52c7063177d3d679517aecf963f6559f94efeb80034c28fe42adee214ff1",
+          "path": "site/_tests/07-foundry-compliance/brief.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 7020,
+          "read_ranges": [],
+          "git_blob": "80f6f890272e9baa1fc3ca6b9fd42eb804868d06",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/07-foundry-compliance/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 12057,
+          "read_ranges": [],
+          "git_blob": "fa7c395c8310cc6617984dfd77c55e2863c6c4b9",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/07-foundry-compliance/style.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3650,
+          "read_ranges": [],
+          "git_blob": "a3e7cf4497dccf63490bb80efea73954d4ca182e",
+          "body_saved": true,
+          "sha256": "c5a8aa9b2f8ae28917855c031bfcd9ddd140b624fb671da49356ab6714f47ed6",
+          "path": "site/_tests/08-cohort-courses/brief.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 5066,
+          "read_ranges": [],
+          "git_blob": "c8bd3d4bf464189bb600713506f91479849665b3",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/08-cohort-courses/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 9390,
+          "read_ranges": [],
+          "git_blob": "baeb9d704d1db5233a3e48f3bc42520aabbe1880",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/08-cohort-courses/style.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 18974,
+          "read_ranges": [],
+          "git_blob": "fe1b21e06e3e7a31cda7529b57652f650e4e2c74",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/09-slow-pour/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 15602,
+          "read_ranges": [],
+          "git_blob": "101ee3b071b36b75d0c4fd3f825bdf323fcd711f",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/10-owl-hours/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 17094,
+          "read_ranges": [],
+          "git_blob": "ff65543b3485d9a70b7f41113014fe7ef4f70433",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/11-soroe-ceramics/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 18768,
+          "read_ranges": [],
+          "git_blob": "c554cc21b0ed360e85d2fcae6746aa594c264e42",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/12-loafer/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 17228,
+          "read_ranges": [],
+          "git_blob": "2163049feefe203439c7793fdb5248b8987413c1",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/13-alma/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 18864,
+          "read_ranges": [],
+          "git_blob": "47fdea03cc422fcd07b9f96359b18394e7fa1eab",
+          "body_saved": true,
+          "sha256": "0f2315864403c6fb01326d6a5dbc1da4b06423e707df69c21228011af35a8d9d",
+          "path": "site/_tests/README.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 482329,
+          "read_ranges": [],
+          "git_blob": "e4daba789d464d3fb995543ce2ffe04b188fec81",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/Podcast-loop.mp4",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 228939,
+          "read_ranges": [],
+          "git_blob": "f9aa4c73cc8a3dc039dcf7461fce4ca91a52c971",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/after-quiet-hour.png",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 275359,
+          "read_ranges": [],
+          "git_blob": "cdb6882d42afe4ccaccdbec3b48137a6645e6c13",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/anya.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 581413,
+          "read_ranges": [],
+          "git_blob": "817136b88804593bf69ed0dbd725f9df30bac36d",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/audit-example.png",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 521827,
+          "read_ranges": [],
+          "git_blob": "5c3cb5165a9fbeef11c0fa411d4a1ea5b0936f60",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/bananastudio.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 251151,
+          "read_ranges": [],
+          "git_blob": "6d6044ca6f7c81dcab0d76b21d36f74019ab2049",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/before-quiet-hour.png",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 549545,
+          "read_ranges": [],
+          "git_blob": "1364ff6bab01ac9d7548ce11226ce16980e7b898",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/carnival-01.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 361006,
+          "read_ranges": [],
+          "git_blob": "539a682151a588904aab66e3cf90f5d0efd88e67",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/cobalt-01.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1152350,
+          "read_ranges": [],
+          "git_blob": "65ed3075b87dbc0ceab66bfd9077616c5b48e742",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/custom-04.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 273417,
+          "read_ranges": [],
+          "git_blob": "a3b97e7a2e8371e5eeb33ff00993f73acbb1ceba",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/example-redesign-uractivation.png",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 791709,
+          "read_ranges": [],
+          "git_blob": "201a883f1a932566307ce7b34a93078857584f68",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/garden-01.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 281428,
+          "read_ranges": [],
+          "git_blob": "f98bd005231b5280dda530e16987ec8ec79208ff",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/grid-01.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 494628,
+          "read_ranges": [],
+          "git_blob": "ac10e5a2af9d4be70ce95ad42014c4a9d06d5026",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/hum-07.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 523078,
+          "read_ranges": [],
+          "git_blob": "608d90ce5424216260410b1109cbe798e1b68dc9",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/hyperlane.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 447840,
+          "read_ranges": [],
+          "git_blob": "91a032b5cf52410beea980ce3900f00913554b8f",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/lumen-01.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 317024,
+          "read_ranges": [],
+          "git_blob": "9f5b47a077275be5f4c9b1c21f5393ae14c35ea1",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/najm.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 833216,
+          "read_ranges": [],
+          "git_blob": "f93820d44d44f76a224544664e0f362b10063ab1",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/press-01.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 977804,
+          "read_ranges": [],
+          "git_blob": "2e1f0e3fe2977ae1994b30b124c2cc4dc4b0e375",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/riso-01.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 260004,
+          "read_ranges": [],
+          "git_blob": "fdf0bd521849e429da752e6c1a911130efb7af1b",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/study-example.png",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 572178,
+          "read_ranges": [],
+          "git_blob": "d237daa445024bc903d1b1b575f20fff44cce9b0",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/tally.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 913061,
+          "read_ranges": [],
+          "git_blob": "09afa6d72e3b88bfe5950f5e534bc15775736173",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/uractivation-after-loop.mp4",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 447918,
+          "read_ranges": [],
+          "git_blob": "c2f85476e4969c2caa695e8d2304f2e2066c9ec9",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/_thumbs/wayfare.jpg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 6569,
+          "read_ranges": [],
+          "git_blob": "8e055195c4d134276d4cca3e031a6a0a8cde3536",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/all-themes.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3238,
+          "read_ranges": [],
+          "git_blob": "aa69676a146b8d2e5a6cd0b83f9fd0696d183cb4",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/custom/01-coffeebox/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 6117,
+          "read_ranges": [],
+          "git_blob": "933a9c71436fc327eccfd3b1d0e67623346952e6",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/custom/01-coffeebox/style.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 6169,
+          "read_ranges": [],
+          "git_blob": "730571224e6b53d5385b5449fbd9204608e693a2",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/custom/02-loop/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 9001,
+          "read_ranges": [],
+          "git_blob": "b3b04ed52977b0ad09838b857184ec9d6ff42455",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/custom/02-loop/style.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 6490,
+          "read_ranges": [],
+          "git_blob": "dfe6b58c634d814c3acf970b54d6734f517b2e23",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/custom/03-mossroot/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 6375,
+          "read_ranges": [],
+          "git_blob": "6835738892cf69e2a07d52a8c13af16e8e1355ee",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/custom/03-mossroot/style.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3112,
+          "read_ranges": [],
+          "git_blob": "0cd5e4a7d37c513dace819bd24c4f614385270bb",
+          "body_saved": true,
+          "sha256": "5a1e8324f5b45e5a73c3ad1b74b8557afc508725a622c665a32c9719b35928ed",
+          "path": "site/_tests/custom/README.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1392,
+          "read_ranges": [],
+          "git_blob": "7b70cb17486b92694ea0ddd6ecaa00bdc3715723",
+          "body_saved": true,
+          "sha256": "9ab5466793e27c9b085ea039d1cb69ac3a19e9836769f525ee02e7526e97ca41",
+          "path": "site/_tests/verbs/README.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 6164,
+          "read_ranges": [],
+          "git_blob": "b021dcee5864a8dae2a6e535a8d51ca89c1dcca4",
+          "body_saved": true,
+          "sha256": "4f791854ee5e244fcdf0e17f9a8fa263d77c9ef63023085fc90655540460873c",
+          "path": "site/_tests/verbs/audit/audit-report.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4501,
+          "read_ranges": [],
+          "git_blob": "056a322d192dda45eb98133d4364c29472985fcd",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/verbs/audit/input.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1554,
+          "read_ranges": [],
+          "git_blob": "42c9cdca71f765c01866870997c2bfbccd968e2c",
+          "body_saved": true,
+          "sha256": "e71ab7fe1de60b4b9b889ba1ddda183c4cc8de3d05172069b59ecd84ebaf8a52",
+          "path": "site/_tests/verbs/audit/notes.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3717,
+          "read_ranges": [],
+          "git_blob": "393305e1adcd9cb8b01d6a76251754c4ee2d874b",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/verbs/redesign/input.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 6313,
+          "read_ranges": [],
+          "git_blob": "5abf1612d79255294932e7dd911a5cbb976d212b",
+          "body_saved": true,
+          "sha256": "ad848c2ab0919765dd4da4541b2bf3109e46239724fadf80bbe1c89355cebd24",
+          "path": "site/_tests/verbs/redesign/notes.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 12097,
+          "read_ranges": [],
+          "git_blob": "7ad49332394c5e2e585a7a70ca24bff5953bfbfd",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/verbs/redesign/output.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3782,
+          "read_ranges": [],
+          "git_blob": "57687365cb081f59f63afec8055295fb2af1a4c4",
+          "body_saved": true,
+          "sha256": "6dc34633a6b0e1d05ff54caf5a623bdfa9fc6ec55a291681878dd3f8273a4409",
+          "path": "site/_tests/verbs/study/diagnosis.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2300,
+          "read_ranges": [],
+          "git_blob": "3762f2615dc1f28bf466ed344d5164b26bce0359",
+          "body_saved": true,
+          "sha256": "725c8d592b514a69617bb9bfb3bfef79527b2569814cf9a1be3f7c7339b18b9c",
+          "path": "site/_tests/verbs/study/input-description.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4913,
+          "read_ranges": [],
+          "git_blob": "cc95350bb7a75238532ebea0e4740e4233a8cd70",
+          "body_saved": true,
+          "sha256": "21176409951b1fa6e9983e48d3221c596d5c90405f5b64df598e484153e5906d",
+          "path": "site/_tests/verbs/study/notes.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4981,
+          "read_ranges": [],
+          "git_blob": "775adef08db7dd381a67d430619c86f78ec19b89",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/verbs/study/output.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2804,
+          "read_ranges": [],
+          "git_blob": "d23bba3a89781612838507962583908ff44e2cc7",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/_tests/verbs/study/output.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 6335,
+          "read_ranges": [],
+          "git_blob": "efc4a1dc8ef442fa0dbcb233fb2c124579bd7879",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/css/base.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 133993,
+          "read_ranges": [],
+          "git_blob": "3d2d1bdfc7c45141aea6cc28631f5e6cd4145e13",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/css/components.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 60760,
+          "read_ranges": [],
+          "git_blob": "2b389ab391069da471b033b028fc233402ab307a",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/css/sections.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 55659,
+          "read_ranges": [],
+          "git_blob": "31c00b0b2dbd2763b4ed2ab7c26354a01ea0a5a1",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/css/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1092,
+          "read_ranges": [],
+          "git_blob": "71cd62be719173da7e2f8d955e77352a9d8c687a",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/bananastudio/.hallmark/log.json",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 23467,
+          "read_ranges": [],
+          "git_blob": "fae7032a37c1c0f1e289eb738f48d39eb8ea9821",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/bananastudio/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 44597,
+          "read_ranges": [],
+          "git_blob": "d8a857bff5fc085c21c63011544d146cfcbfd575",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/bananastudio/styles.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3305,
+          "read_ranges": [],
+          "git_blob": "9c2819c41aa6a3b994d33ffd3929cb8e5a1aa450",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/bananastudio/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 12126,
+          "read_ranges": [],
+          "git_blob": "f017835b63ff33de90406a0b8d6dc80acbdd37fc",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/carnival-01/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 21280,
+          "read_ranges": [],
+          "git_blob": "a6a7616de569fe24ca0c5d000aab327299d97a71",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/carnival-01/styles.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3448,
+          "read_ranges": [],
+          "git_blob": "7ddd3000065527289a239e603725ea89d294dca9",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/carnival-01/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 19244,
+          "read_ranges": [],
+          "git_blob": "21f4fa6b636b0b86f9654199919d06fe868bba3b",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/cobalt-01/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 7998,
+          "read_ranges": [],
+          "git_blob": "066a027a55b201d2e6a1f0c76f59878aee2d70c8",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/cobalt-01/script.js",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 29767,
+          "read_ranges": [],
+          "git_blob": "4d03d6dfccdedd593608d8a920014d663b3ed8c5",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/cobalt-01/styles.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4064,
+          "read_ranges": [],
+          "git_blob": "d7e3dd28523277622ae8ae07924e746cf8786fb7",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/cobalt-01/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4451,
+          "read_ranges": [],
+          "git_blob": "8ff9ef42182f9b040ebca46f68bf969a74f3b2d2",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-01/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 12960,
+          "read_ranges": [],
+          "git_blob": "a22d02c3f448da3cf04d37aba230778b88c56bed",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-01/styles.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2845,
+          "read_ranges": [],
+          "git_blob": "fbf02d5178a49b2265877acbdb6119d8d9737d1a",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-01/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 7662,
+          "read_ranges": [],
+          "git_blob": "8bd77df83b4aa3f18f0c15a1fc2a94aee7e2d4e4",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-02/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1566,
+          "read_ranges": [],
+          "git_blob": "b2e62c17a43ad306a539243fe77f9e6071b6ccff",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-02/script.js",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 18965,
+          "read_ranges": [],
+          "git_blob": "708bac8ad8f54e2e80fa4d2b63b40157f4e0375c",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-02/styles.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4274,
+          "read_ranges": [],
+          "git_blob": "317995fff9ca7d1262e48a16d04fb590ba8afb64",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-02/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 27021,
+          "read_ranges": [],
+          "git_blob": "cb2c25ca4b5bb5c7a2796316b346148fb61838f7",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-03/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4253,
+          "read_ranges": [],
+          "git_blob": "9ca09be62b9c128a956559b2f3875cd186400f50",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-03/script.js",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 18518,
+          "read_ranges": [],
+          "git_blob": "1d93bbe77abde645350e12d141a7d69fbdccb291",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-03/styles.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4268,
+          "read_ranges": [],
+          "git_blob": "799b8f2aba84a71e7361604d79ec384d627c1a48",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-03/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 11692,
+          "read_ranges": [],
+          "git_blob": "3880aa51b7b98ba6d8a5f75e1f871a8bc3843f54",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-04/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 740,
+          "read_ranges": [],
+          "git_blob": "a40422820b619659a0f7a5c86f6a685bad040baa",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-04/script.js",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 21407,
+          "read_ranges": [],
+          "git_blob": "45dc5ed1a6a539a0d492e1358425df935a2a9b59",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-04/styles.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3987,
+          "read_ranges": [],
+          "git_blob": "c633d0c870e0bcde4586726e51bedf2b97a16be5",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-04/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 11319,
+          "read_ranges": [],
+          "git_blob": "2aa12304a9b1d1ef57aa3229c57d59718fa6564b",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-05/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 7187,
+          "read_ranges": [],
+          "git_blob": "6140b3af0c4d7e4c258c6f159c7580f21d86383c",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-05/script.js",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 17899,
+          "read_ranges": [],
+          "git_blob": "963e7526e5c77e275c7547b30a064915a7e0f273",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-05/styles.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3514,
+          "read_ranges": [],
+          "git_blob": "04142b0a4fd0dc353296d4c49db58ea4e1817109",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/custom-05/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 19602,
+          "read_ranges": [],
+          "git_blob": "dd9899cd9026da29c4de964165a2c90ad6692213",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/garden-01/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2919,
+          "read_ranges": [],
+          "git_blob": "dac5015151a9eaffe40edf72e5507803f1c8bded",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/garden-01/script.js",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 30395,
+          "read_ranges": [],
+          "git_blob": "9bb88aa5d91f23c93424a4052b26256953825b60",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/garden-01/styles.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 6941,
+          "read_ranges": [],
+          "git_blob": "8f30bde81fdbfdd3a607e48fb6ea489a6ff4087f",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/garden-01/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 9822,
+          "read_ranges": [],
+          "git_blob": "91ed2fc96874021bd0ba154a0eb66075b2acd358",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/grid-01/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 18483,
+          "read_ranges": [],
+          "git_blob": "4cf82f5d4a99a8e875f287abb89f0f6c3c66dbdd",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/grid-01/styles.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 16762,
+          "read_ranges": [],
+          "git_blob": "c21e81ee86330f80c7e1e976009f3865be067843",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/hum-07/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3410,
+          "read_ranges": [],
+          "git_blob": "5567d6423e8bd05ae80b784f3e84e975f1252adc",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/hum-07/script.js",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 32184,
+          "read_ranges": [],
+          "git_blob": "5bdc30092bcae55e13b1c1ac4859969629f8c86d",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/hum-07/styles.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3951,
+          "read_ranges": [],
+          "git_blob": "5620403adbb24f3b838df84b5e36edb352f03c41",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/hum-07/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 354,
+          "read_ranges": [],
+          "git_blob": "5652d2aae3d0839d8786326ba6f8099f6d4fb476",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/hyperlane/.hallmark/log.json",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 16203,
+          "read_ranges": [],
+          "git_blob": "4097ef4996d2dff1f7598a6efa05bff5d4c63aaf",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/hyperlane/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3516,
+          "read_ranges": [],
+          "git_blob": "3bc1c10af75238ad493edcca3220c68204f33897",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/hyperlane/script.js",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 28305,
+          "read_ranges": [],
+          "git_blob": "8f484bfca9ad3d832ff2121f84b1b43c8d0bb66b",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/hyperlane/styles.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2856,
+          "read_ranges": [],
+          "git_blob": "2e58b4f7eab3ea94b4639a83e98870d303dc7f0e",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/hyperlane/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 18210,
+          "read_ranges": [],
+          "git_blob": "447074b1207add73b0397844502c0ae4db8fb094",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/lumen-01/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 30252,
+          "read_ranges": [],
+          "git_blob": "fc9e418a25d28f2524909d94a35d9ff48bbe7b77",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/lumen-01/styles.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3188,
+          "read_ranges": [],
+          "git_blob": "6104ebe6ecbeb8bd425966f27b3576f2ccea87f5",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/lumen-01/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 362,
+          "read_ranges": [],
+          "git_blob": "ab0cb4a18020eccdd342eae668fa729bb077f14c",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/najm/.hallmark/log.json",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 14896,
+          "read_ranges": [],
+          "git_blob": "ff2ff71f9ad78ca16e3bca31529a0b92e11f0d61",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/najm/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4460,
+          "read_ranges": [],
+          "git_blob": "da9b66922305816879b40cbae8b53735ec726ea7",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/najm/script.js",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 28023,
+          "read_ranges": [],
+          "git_blob": "2c111d2998fd00eb788997a17db0421ba0fde195",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/najm/styles.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2887,
+          "read_ranges": [],
+          "git_blob": "0471f8ece7b5034a1af4cd830810b84d14e25cd9",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/najm/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 17244,
+          "read_ranges": [],
+          "git_blob": "0e7b5d4668601624c5c62dee531e811dd31a9285",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/press-01/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 5359,
+          "read_ranges": [],
+          "git_blob": "d674009b1e5f22472c0e48bd96d1a341a011ac09",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/press-01/script.js",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 32256,
+          "read_ranges": [],
+          "git_blob": "6aed4c62f7bcb8393b0bdc90d2fca75e8e55de52",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/press-01/styles.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 5408,
+          "read_ranges": [],
+          "git_blob": "f3e2bcef65629b71847e6a49328018e83254565f",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/press-01/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 18253,
+          "read_ranges": [],
+          "git_blob": "47f4d15d89cfe6c8309711dcb17b49c74ec90dcc",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/riso-01/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 5155,
+          "read_ranges": [],
+          "git_blob": "2fb1eff229b505302b365d86e9a93f0486ce9330",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/riso-01/script.js",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 30980,
+          "read_ranges": [],
+          "git_blob": "7adbda78cc77a74bddbff74ea5c8db7eddb2af7c",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/riso-01/styles.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4772,
+          "read_ranges": [],
+          "git_blob": "5b748fe145169a70d3cb3717a40bcf42d6da1374",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/riso-01/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2838,
+          "read_ranges": [],
+          "git_blob": "2244cc1789518898c758253409a72ed634baeec5",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/scroll-demos.json",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2881,
+          "read_ranges": [],
+          "git_blob": "256ba1f70e1037898b15c66617d63dfc89465535",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/tally/app.js",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 19059,
+          "read_ranges": [],
+          "git_blob": "8297fa89516965fdf1a9d71ccfa9a24c7a54c708",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/tally/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 30277,
+          "read_ranges": [],
+          "git_blob": "daf63ca6e98912909f3abe5a810e405809bc0a80",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/tally/styles.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2900,
+          "read_ranges": [],
+          "git_blob": "9b41f20da784eb0391a46987cc5856aed52106e9",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/tally/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 713,
+          "read_ranges": [],
+          "git_blob": "637a2b3d7b148e3b1b4f7ffbf36554b6576579f5",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/wayfare/.hallmark/log.json",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 18510,
+          "read_ranges": [],
+          "git_blob": "d8bbfc26ec359ef2e5f3b82dd189775c4cabcded",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/wayfare/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 26198,
+          "read_ranges": [],
+          "git_blob": "daf589a646da78c67007b411ed9e168fa3d1e45c",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/wayfare/style.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2658,
+          "read_ranges": [],
+          "git_blob": "2cdb85ed6c0fee3f9c091977efd66eee8ec7e16b",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/examples/wayfare/tokens.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3777,
+          "read_ranges": [],
+          "git_blob": "60a88139245d1975aa540385cd1544e2d3a44241",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/favicon-dark.svg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3777,
+          "read_ranges": [],
+          "git_blob": "2e3c923b247dd2fcb3e3e02ef6d956875ec6a87d",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/favicon-light.svg",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 63661,
+          "read_ranges": [],
+          "git_blob": "109431276072202c7834d345e6e20b4af8e1f75b",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 48136,
+          "read_ranges": [],
+          "git_blob": "f52a3e98aa67ee416cc32591639de7a609b7b204",
+          "body_saved": false,
+          "sha256": null,
+          "path": "site/js/main.js",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": true,
+          "bytes": 67460,
+          "read_ranges": [
+            {
+              "start": 0,
+              "end": 12000,
+              "total": 66585
+            },
+            {
+              "start": 12000,
+              "end": 24000,
+              "total": 66585
+            },
+            {
+              "start": 24000,
+              "end": 36000,
+              "total": 66585
+            },
+            {
+              "start": 36000,
+              "end": 48000,
+              "total": 66585
+            },
+            {
+              "start": 48000,
+              "end": 60000,
+              "total": 66585
+            },
+            {
+              "start": 60000,
+              "end": 66585,
+              "total": 66585
+            }
+          ],
+          "git_blob": "645221da63743de870501760a48694acdf7aef10",
+          "body_saved": true,
+          "sha256": "59469635bbbd21acddbc664d95e8d97147f454b2d8f4a0a89c7d2c5afbe67577",
+          "path": "skills/hallmark/SKILL.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 25676,
+          "read_ranges": [],
+          "git_blob": "e643cfbe81908ba76a443c128ad5987cd50ffd7b",
+          "body_saved": true,
+          "sha256": "a36eb346ad59cafaa26119ed1e7c0bbb8aca6637209ee110eb630dd1a9307070",
+          "path": "skills/hallmark/references/anti-patterns.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 25332,
+          "read_ranges": [],
+          "git_blob": "e1d7d93c8befe4ffca9564f66b12176cf2db2c12",
+          "body_saved": true,
+          "sha256": "60929b3dc2258b69caf3012d99d174e1ad73da9645263db81a9b271cd6fd7d61",
+          "path": "skills/hallmark/references/assets.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4339,
+          "read_ranges": [],
+          "git_blob": "6bf19cab4e535456ee8c8f6f6f16fef58f653810",
+          "body_saved": true,
+          "sha256": "31c470d16ceb17ccce290cbdd00b9e9a88f2094df8eaaefb67c86ec1e1cdb876",
+          "path": "skills/hallmark/references/color.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 30980,
+          "read_ranges": [],
+          "git_blob": "56fd0efafb15de8754ed71c6fb5230fe24e5fc30",
+          "body_saved": true,
+          "sha256": "4d9ff4eeb675b9d668516ce5d098031d3552453b3671e50da30fb38cb9ab58bb",
+          "path": "skills/hallmark/references/component-cookbook.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 464,
+          "read_ranges": [],
+          "git_blob": "9319f53617c3d002a4e1f74914d13b5fcd5eea17",
+          "body_saved": true,
+          "sha256": "bfc3bcef6e23062710845dd8986dbf98574c6c46ffade1db255dbe13a3203262",
+          "path": "skills/hallmark/references/components/c1-outlined-chip.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 672,
+          "read_ranges": [],
+          "git_blob": "9600223fb45a8a76b13eeacd5bc9f6375668b12d",
+          "body_saved": true,
+          "sha256": "1a6e3d564f49a1d3345117bf2f8af5aea46938c6974bf7eb86cf890e5068bc95",
+          "path": "skills/hallmark/references/components/c2-inline-form-as-cta.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 280,
+          "read_ranges": [],
+          "git_blob": "68ce77fc2ba2d03cab940c2971d99e6c13aa3975",
+          "body_saved": true,
+          "sha256": "59362c6d9f683ec15c3e09862f2ea6cd8e2a84574738ece98e479c58607d0d69",
+          "path": "skills/hallmark/references/components/c3-typographic-link.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 671,
+          "read_ranges": [],
+          "git_blob": "8f8c05b305a15bec8ae95dbfcad8fafd321c9b61",
+          "body_saved": true,
+          "sha256": "67234a8d8722bf0685d00a64ac737748c82af7e0c25271d0c50f418739bd03c6",
+          "path": "skills/hallmark/references/components/c4-sticky-bottom-bar.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 782,
+          "read_ranges": [],
+          "git_blob": "fab987ee8aaf6680790a256415865543a4b7bba9",
+          "body_saved": true,
+          "sha256": "d696a5ab7d6258cff0d2d9527fe07651bfbda6a725a4dfd8de00f678e1fb2bbc",
+          "path": "skills/hallmark/references/components/f1-bento-grid.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 899,
+          "read_ranges": [],
+          "git_blob": "7675d5296b7b6accf21cb761270f8e384abab306",
+          "body_saved": true,
+          "sha256": "0079ce8c01e8d008882411ed807aa367276cc67af9b956c4f06da1714007ae83",
+          "path": "skills/hallmark/references/components/f2-sticky-scroll-stack.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 419,
+          "read_ranges": [],
+          "git_blob": "4007334f81b6551332d7f4a945f95d86083b6c4b",
+          "body_saved": true,
+          "sha256": "16331628cf441c7b570055c8edd60693d0aa793d1bc5eb2bfd145da700d9f072",
+          "path": "skills/hallmark/references/components/f3-tabular-spec-sheet.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 448,
+          "read_ranges": [],
+          "git_blob": "ac82a1829b6f51de25f2c731f1853f7c0185288f",
+          "body_saved": true,
+          "sha256": "d3ca2aa99f7e639b8ccda20f5e263f3a33b03830f8c93d666f469b8e629975e2",
+          "path": "skills/hallmark/references/components/f4-step-sequence.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 410,
+          "read_ranges": [],
+          "git_blob": "014aefdff6619107526d9c3d4ed78ff63780034c",
+          "body_saved": true,
+          "sha256": "58f9f4811ea60f923b2f44e0f3e9bac95c40929f8b1af4fdeedd1eae424051ec",
+          "path": "skills/hallmark/references/components/f5-annotated-screenshot.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2729,
+          "read_ranges": [],
+          "git_blob": "1521921a2dce8acf30d974abd5aba3669672c3dd",
+          "body_saved": true,
+          "sha256": "22ebc07b00d71c950be8d1a0fdad2cc0e7340cfbbf2cd62c43804bfcfaaf106a",
+          "path": "skills/hallmark/references/components/f6-product-card-grid.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 501,
+          "read_ranges": [],
+          "git_blob": "92972ccc302a63af2bfdc3e01ff9d6331fa80454",
+          "body_saved": true,
+          "sha256": "7f5671b583e9991f9a4671c223d6c15efdee5c1161dc616cbe2b398eb8d1b6db",
+          "path": "skills/hallmark/references/components/ft1-mast-headed.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 362,
+          "read_ranges": [],
+          "git_blob": "f994f8b79311afef44950d457b47d09ed5c9788f",
+          "body_saved": true,
+          "sha256": "de13bf7d9bfaddb42a84fc8584646e914f2273abdb34aa98ea9bd2f5d7ff0493",
+          "path": "skills/hallmark/references/components/ft2-inline-rule-single-line.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 483,
+          "read_ranges": [],
+          "git_blob": "a02f8d29f9e68ad99bb91eeaf1e79561b5ddf941",
+          "body_saved": true,
+          "sha256": "9f70608d62872be05af910a6168017c872ee1c17b2dbb8329128569231aa3cce",
+          "path": "skills/hallmark/references/components/ft3-index-style-category-list.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 501,
+          "read_ranges": [],
+          "git_blob": "7d2b2502be364793554aebe35fc098ff9609d235",
+          "body_saved": true,
+          "sha256": "b8d087773614698036e63474a8546024d874bb6da2b575e64fcaacc2fba0ad60",
+          "path": "skills/hallmark/references/components/ft4-dense-typographic.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1303,
+          "read_ranges": [],
+          "git_blob": "e0d88a74e7e8a321def67bb7654a4e4a9593fb78",
+          "body_saved": true,
+          "sha256": "71be63a51def6a3b59badcd481e49d4d5c5d9f3d63a3b4a5b9c05482110f4000",
+          "path": "skills/hallmark/references/components/ft5-statement.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1119,
+          "read_ranges": [],
+          "git_blob": "ba84f7691228de2a3b44b72cee630d84e71bd913",
+          "body_saved": true,
+          "sha256": "8119d22fbbfb3efa83d0bdc41acbfc5037f2c80cb7c39659623d5216eb16c03e",
+          "path": "skills/hallmark/references/components/ft6-letter-close.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1755,
+          "read_ranges": [],
+          "git_blob": "df67edc72c859dd32c8fbe4b7bd4552e5cdbc133",
+          "body_saved": true,
+          "sha256": "2cd766761a8e18bff7bc473b3303392b806a15e461187ac325138f77a308dd48",
+          "path": "skills/hallmark/references/components/ft7-newsletter-first.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1500,
+          "read_ranges": [],
+          "git_blob": "e5a0f295475751264ee343fa9f84f9d23d35af1c",
+          "body_saved": true,
+          "sha256": "32b8d38df984b0db385e9ce2251bbf6bb8df279e3933c441b97a0b703961e9f0",
+          "path": "skills/hallmark/references/components/ft8-marquee-scroll.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 507,
+          "read_ranges": [],
+          "git_blob": "b15087c5b746bc7f7fc3e6c3cc86879f5403e3a0",
+          "body_saved": true,
+          "sha256": "8258b25e27232994126701a4f72bf05267fc9c5dfdc14bcf186efaf96a7dbb10",
+          "path": "skills/hallmark/references/components/h1-marquee.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 600,
+          "read_ranges": [],
+          "git_blob": "f5c8cae8999dff7657597522814d828156bc9f3f",
+          "body_saved": true,
+          "sha256": "f6077864f5c58414d7a10648aa8a3162767f2e356d0701d01953181a83cf3364",
+          "path": "skills/hallmark/references/components/h2-split-diptych.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 420,
+          "read_ranges": [],
+          "git_blob": "e2bb4558140d636e60e4e28fe3e0ac4b87b72023",
+          "body_saved": true,
+          "sha256": "4b1427750c5041ab9201cd18fcdd3dd7a93622644eff518d9ad300339f9a46b7",
+          "path": "skills/hallmark/references/components/h3-quote-led.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 509,
+          "read_ranges": [],
+          "git_blob": "414815a015da7e06f092a4584efec8693754c303",
+          "body_saved": true,
+          "sha256": "9ada00461ea12be83dec2fba58e19fffd2c559925e68eb72ec18e0ec434f6cec",
+          "path": "skills/hallmark/references/components/h4-stat-led.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 361,
+          "read_ranges": [],
+          "git_blob": "19a7e743805e2ddfac9c2d2d4cf472d8501d4701",
+          "body_saved": true,
+          "sha256": "afcd7bb6b4c888d7e8460e7af5e86dc50149ca253419757bed2834bf66083321",
+          "path": "skills/hallmark/references/components/h5-letter-hero.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 586,
+          "read_ranges": [],
+          "git_blob": "4aaf01d8bcd02f2bd79bf7e636aadbcfd26b91e7",
+          "body_saved": true,
+          "sha256": "59e046afd5648bfe2737966f1203c0212e7311fbf0e1edee448e3f68f45aa0d0",
+          "path": "skills/hallmark/references/components/h6-photographic-fold.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1613,
+          "read_ranges": [],
+          "git_blob": "82fecbf84496166cebf26dc45ddfb566fc5f9ca2",
+          "body_saved": true,
+          "sha256": "12b6f32a47a0b2e73547a0ac8b641cc19b1caa05dda4ffde424defb53afaa0de",
+          "path": "skills/hallmark/references/components/h7-demo-video-clipped-by-viewport-edge.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1309,
+          "read_ranges": [],
+          "git_blob": "7159f778ad2bc54a3026a6ffdd6bb193fff82a78",
+          "body_saved": true,
+          "sha256": "954b0a3aebfe6de8a3be70fedda669099125dd2ebc9c07948fbdb457fd8dc166",
+          "path": "skills/hallmark/references/components/h8-mockup-split-browser-framed.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1479,
+          "read_ranges": [],
+          "git_blob": "7b65eac49580799f10fd23254bdcbd433f217aa7",
+          "body_saved": true,
+          "sha256": "1d3d32859e6e451a67bfc38a403bd80115a42b6898a4d8788e4cfadb8c83e8d6",
+          "path": "skills/hallmark/references/components/h9-custom-illustration-centerpiece.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 388,
+          "read_ranges": [],
+          "git_blob": "f74a5b0b128e73211ab92864ca5c75ea403d17f2",
+          "body_saved": true,
+          "sha256": "8504774127e33f24a09844eb4c678e91b09ed513690fce51f7863d7cf3fdeab1",
+          "path": "skills/hallmark/references/components/n1-wordmark-2-links.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1387,
+          "read_ranges": [],
+          "git_blob": "6297780024a0a987a3d89632f2ff128dc3ee50bf",
+          "body_saved": true,
+          "sha256": "056c2107492ab0eb9dafc7ab4c7ff5454222c1ee127fa45615ccc7b8955da36a",
+          "path": "skills/hallmark/references/components/n10-floating-on-scroll-morph.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3155,
+          "read_ranges": [],
+          "git_blob": "94568719cdc733d1b2577428458611ac9b73943d",
+          "body_saved": true,
+          "sha256": "b715421012d0997d25d5739c209be6129132fc91add677d75a8ad82d8672e1d4",
+          "path": "skills/hallmark/references/components/n11-mega-menu.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2858,
+          "read_ranges": [],
+          "git_blob": "f9edee523b4ec15206a720f492107b52288c89ea",
+          "body_saved": true,
+          "sha256": "2d52ecb8725b1991d4f6b78301cd6f112464f7b17315bdf0febbff67bca50a56",
+          "path": "skills/hallmark/references/components/n12-banner-retract.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3314,
+          "read_ranges": [],
+          "git_blob": "fe0d186520e49b03f196ca768fbacb755c5ebc5d",
+          "body_saved": true,
+          "sha256": "6375fa0a1bbc92cba9a435159aa46cb084fc030c63e1abf8f073688959d7be75",
+          "path": "skills/hallmark/references/components/n13-inline-cmdk-pill.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3047,
+          "read_ranges": [],
+          "git_blob": "b39d53922fb983589254e91faf59b5e2c019c502",
+          "body_saved": true,
+          "sha256": "c2631c7807e33eea9b02faa9121a0f9e64861467b57b8635ee97f5fa52bb60ae",
+          "path": "skills/hallmark/references/components/n1b-saas-three-section.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 617,
+          "read_ranges": [],
+          "git_blob": "b4dcc97ab8587fce14d332ef4da83fc6fce69ca0",
+          "body_saved": true,
+          "sha256": "70ea848537c5fe29be30f5e4b7478ecc39f86d0089f207549dc98a873b6c8fc1",
+          "path": "skills/hallmark/references/components/n2-floating-chip.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 536,
+          "read_ranges": [],
+          "git_blob": "a31ddfbb8ff150eb1da19ad437b249c362574880",
+          "body_saved": true,
+          "sha256": "20ed8a06a599d73190502a4801a3be2933b8e06874371167196b7d32dae66111",
+          "path": "skills/hallmark/references/components/n3-side-rail.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 373,
+          "read_ranges": [],
+          "git_blob": "24a4f3f216dc66d638ce358c3ac8d5fed09b5426",
+          "body_saved": true,
+          "sha256": "bccddb3a25a6afd457163b71e09de07ac23bf5d922fdeb9561e25d825bb97dcf",
+          "path": "skills/hallmark/references/components/n4-hidden-behind-k.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1418,
+          "read_ranges": [],
+          "git_blob": "b6170f354f2b816ebec51c5ac65877547183b15d",
+          "body_saved": true,
+          "sha256": "6dc8ffb9628fd7ee3669208091e11497864cecea69becc6b513ebdc1f3a737a3",
+          "path": "skills/hallmark/references/components/n5-floating-pill.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1619,
+          "read_ranges": [],
+          "git_blob": "24f055a05abfa0dbac0250ccd81d92af816598b6",
+          "body_saved": true,
+          "sha256": "243a28d1165328c3479a1b75a3ae05dbfe2a6b8c9f867df8e35873b391f8edd5",
+          "path": "skills/hallmark/references/components/n6-newspaper-masthead.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1380,
+          "read_ranges": [],
+          "git_blob": "24d0f0f0938a6a2ff54d4771d30f9b99311ee14e",
+          "body_saved": true,
+          "sha256": "6c58d29129f7fd89b9fc755143648397749cdd06043ae0c0b51e6f07e7e6dcb5",
+          "path": "skills/hallmark/references/components/n7-brutal-slab.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1651,
+          "read_ranges": [],
+          "git_blob": "17c23a72a6678ac46f76e3d4f44c485b28deb299",
+          "body_saved": true,
+          "sha256": "c88d787bd2e5cf8bf6fb2c4121602dc0289760b41235d437468322821ee4334b",
+          "path": "skills/hallmark/references/components/n8-terminal-command.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 868,
+          "read_ranges": [],
+          "git_blob": "8361dfa10fddad652dfbb937a785c13b6a21ced2",
+          "body_saved": true,
+          "sha256": "cc20c76a5abe7099ed2bde3480c81f75f02a760a4c0d2ac79de1503dca9f9ee3",
+          "path": "skills/hallmark/references/components/n9-edge-aligned-minimal.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 495,
+          "read_ranges": [],
+          "git_blob": "14a59389c6661f38cafedac63ece9f865e65307e",
+          "body_saved": true,
+          "sha256": "074ed68eafb03ca775b0593d0599fe20c7891356f473f04996f42425e6586585",
+          "path": "skills/hallmark/references/components/s1-left-margin-numbered.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 357,
+          "read_ranges": [],
+          "git_blob": "57531f39905fa23c3c57bc08e3561b32c4857bcc",
+          "body_saved": true,
+          "sha256": "7b6d04cb896051006fe41b041a67ed77d25010edb579c60b03d88f68ae471462",
+          "path": "skills/hallmark/references/components/s2-hanging.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1179,
+          "read_ranges": [],
+          "git_blob": "dbdd0f3d973434061662a7c189c9947de55b466a",
+          "body_saved": true,
+          "sha256": "4101cd7a28fe21a9b8094848ac6cc13c89f9e6f9bf801f04ac69b986c76727b4",
+          "path": "skills/hallmark/references/components/s3-sticky-pinned.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 438,
+          "read_ranges": [],
+          "git_blob": "6d6d03f8f0fbcf37d327d5622cb4a7cecc0cf3ae",
+          "body_saved": true,
+          "sha256": "4b6d36da05383df1b29afe17b96645b816de07373016deb667efca340bb61ac6",
+          "path": "skills/hallmark/references/components/s4-inline-no-break.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 358,
+          "read_ranges": [],
+          "git_blob": "1f84a975e8e342b36f52edf105c262b3e345625d",
+          "body_saved": true,
+          "sha256": "55c159e2d8299501f14ac97468404dc8cad35695c2b7eaad2e972d314620eca0",
+          "path": "skills/hallmark/references/components/s5-bottom-anchored.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 465,
+          "read_ranges": [],
+          "git_blob": "95c92072f76a6ca7394384d309350004f67d047f",
+          "body_saved": true,
+          "sha256": "c7139796972c5f47d723742cbff02916a1ee0f2496456b86ac05d8839542be38",
+          "path": "skills/hallmark/references/components/t1-pull-quote-with-marginalia.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 733,
+          "read_ranges": [],
+          "git_blob": "1ac2a14e3df67b969c8dee8f19efc04e66de140d",
+          "body_saved": true,
+          "sha256": "942121342a61bb4650722f7ba1b605347c6178d69ebeb740139b0bfb5c810e7f",
+          "path": "skills/hallmark/references/components/t2-logo-wall-hairline.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 490,
+          "read_ranges": [],
+          "git_blob": "71011d49deb0237602959398dab386f2f6ddec2a",
+          "body_saved": true,
+          "sha256": "7bca56e2cd630da3669f7cf8befd1bd654a5b249cf38b6d9af5a7c62e33b9239",
+          "path": "skills/hallmark/references/components/t3-single-huge-quote.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 470,
+          "read_ranges": [],
+          "git_blob": "e534b423f0fdcf5042cd74dcede495e2c4432b5e",
+          "body_saved": true,
+          "sha256": "a5fb5615902f9c4026f4ae7b0c96b536bb3cbb2fb4259031342d1cd190dab729",
+          "path": "skills/hallmark/references/components/t4-numbered-stat-strip.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": true,
+          "bytes": 2027,
+          "read_ranges": [
+            {
+              "start": 0,
+              "end": 2019,
+              "total": 2019
+            }
+          ],
+          "git_blob": "410d19f046270ad090e830409d4a8f8310240b1e",
+          "body_saved": true,
+          "sha256": "2923a056b95da63d04100ac56bc8cdff6bc0a717ac3e5da5cef69eb5feb4619c",
+          "path": "skills/hallmark/references/contract.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 12261,
+          "read_ranges": [],
+          "git_blob": "eaca077ee8e66c69c1c8495c9fac93a091d30d26",
+          "body_saved": true,
+          "sha256": "703cdbf81fbef6f71d90596a32041d2a33a46fb71ba07ccf5ede6b4b1471d347",
+          "path": "skills/hallmark/references/copy.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 34133,
+          "read_ranges": [],
+          "git_blob": "c965449641d0a8e7110079e1dfc870d65b5b8b55",
+          "body_saved": true,
+          "sha256": "417ff74cd83e1fea50c41948c53e18365269b880806ef4f31d9e0ebda0f99246",
+          "path": "skills/hallmark/references/custom-craft.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 24059,
+          "read_ranges": [],
+          "git_blob": "4118a75e269d83026ea396f06b9d9df23d95b4cf",
+          "body_saved": true,
+          "sha256": "da0fb051689bf9d100e50e67209566623c1fbe72e09b943248c458985c39e780",
+          "path": "skills/hallmark/references/custom-theme.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 6846,
+          "read_ranges": [],
+          "git_blob": "b8f39a703d7c2bea2a2095d0867ced5901fc9a42",
+          "body_saved": true,
+          "sha256": "a9368b64dd9b6e53e8c707830ce28fd8601d3195a81647ea46b6995aa3556b3c",
+          "path": "skills/hallmark/references/design-md.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 14620,
+          "read_ranges": [],
+          "git_blob": "6d9ffada9ddb5fa973d0a64383a025f774f57c2e",
+          "body_saved": true,
+          "sha256": "de0a73d9bec7a31abbd0cbbf1ecd51c2e440f1f3fdc08f476a343959ca6c22f3",
+          "path": "skills/hallmark/references/export-formats.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 5266,
+          "read_ranges": [],
+          "git_blob": "a4c00338fc3251b7ca302ae5b71cda386832a6d5",
+          "body_saved": true,
+          "sha256": "c8c80f6560700bf6ee6baf28b81ec1539e9ff920d885624707de5fe8803c25d1",
+          "path": "skills/hallmark/references/floating-nav.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 5075,
+          "read_ranges": [],
+          "git_blob": "941bcd04542768126db8e87c2da7413c50d9c87b",
+          "body_saved": true,
+          "sha256": "58d36e9a59c7d9e0ca99edeaaadab885f2635386fa69d52ea9eda3c29977e190",
+          "path": "skills/hallmark/references/genres/atmospheric.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4121,
+          "read_ranges": [],
+          "git_blob": "853604be39983c2af5ce98c279c2960b3352eb67",
+          "body_saved": true,
+          "sha256": "1e88cd0c94435c6a9edd1c0b93b67db4321fb3481ff0d66ee24869e655847319",
+          "path": "skills/hallmark/references/genres/editorial.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4836,
+          "read_ranges": [],
+          "git_blob": "648c67e6ce5cf4a44e2402163d30d253eb866dd4",
+          "body_saved": true,
+          "sha256": "6125db00e38f2baca9369ed4d4aa917d977b85dd5eac6f19dac89707c3c3534b",
+          "path": "skills/hallmark/references/genres/modern-minimal.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 5218,
+          "read_ranges": [],
+          "git_blob": "e16142ed5569b8bc4159251d430ab1513382471b",
+          "body_saved": true,
+          "sha256": "e52c6ff3fe21b5024c83ac1f03285e1d627e3469ff140d6bea728642026c4f95",
+          "path": "skills/hallmark/references/genres/playful.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 32151,
+          "read_ranges": [],
+          "git_blob": "be0e521e488cbf80413af697379b172e42c433a7",
+          "body_saved": true,
+          "sha256": "63c14cc2c256dd78a69a1c36f4bcb764940aa7f1ba2e6dd40ca36013f8884a83",
+          "path": "skills/hallmark/references/hero-enrichment.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 8544,
+          "read_ranges": [],
+          "git_blob": "48efb96f502af1636c2c41155aba314cadbb4d65",
+          "body_saved": true,
+          "sha256": "39d71df8dd6186b27f174fd8ab8ffd379553be3917cff50810c72365f6d6cb53",
+          "path": "skills/hallmark/references/imagery-kit.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 13537,
+          "read_ranges": [],
+          "git_blob": "07453213da7264a25079287102d8642ebd32d9d7",
+          "body_saved": true,
+          "sha256": "e816eb2d067ba9f6f288a3831549da95624a05f432ed2a50f54136f27dd2d67f",
+          "path": "skills/hallmark/references/interaction-and-states.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 6766,
+          "read_ranges": [],
+          "git_blob": "8844d518ae8a82ea5b57f68581a284e89085c6a9",
+          "body_saved": true,
+          "sha256": "987f3a45f5dbe81547117a77987bcedf5376608a6412067e04337047e0c7c839",
+          "path": "skills/hallmark/references/layout-and-space.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 11597,
+          "read_ranges": [],
+          "git_blob": "0d28032c3250847a5f54dcddb367a9c383f47df1",
+          "body_saved": true,
+          "sha256": "a6f19a17073aca18a6ff7a8fc8c3c5f711865e01c6d97de609771b47fe8394bc",
+          "path": "skills/hallmark/references/macrostructures.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1836,
+          "read_ranges": [],
+          "git_blob": "ab6f035cc8a7b9039bd3ab340b413ae9ad7d93a4",
+          "body_saved": true,
+          "sha256": "aa268415862188414f8db94715e20ae7d29df3dc7c494083683378705f3f8493",
+          "path": "skills/hallmark/references/macrostructures/01-bento-grid.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1722,
+          "read_ranges": [],
+          "git_blob": "225ac77ca7b8bd2a3bb05c1e3484f5f70704cc54",
+          "body_saved": true,
+          "sha256": "8ca81106396f2bd00eb9ef5d5d1f00c3aab0500394e706d6a2b3221a6c0d910f",
+          "path": "skills/hallmark/references/macrostructures/02-long-document.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1645,
+          "read_ranges": [],
+          "git_blob": "b88f72913f6802113173147e94f91f4b11a57ef4",
+          "body_saved": true,
+          "sha256": "2b7c35860086da6232cb3725c059bead9a31a91872d464266ce6e07a5a75f755",
+          "path": "skills/hallmark/references/macrostructures/03-marquee-hero.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2120,
+          "read_ranges": [],
+          "git_blob": "7d99d1094106876c673f079b8898389e5d389e0d",
+          "body_saved": true,
+          "sha256": "a6930b4ba6377c8ef5fcb7af6bf4393cd924292cf03871a37636dd4b77de22b7",
+          "path": "skills/hallmark/references/macrostructures/04-stat-led.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1690,
+          "read_ranges": [],
+          "git_blob": "1e14ed64f737bd937e0fef9a0f015f4760070084",
+          "body_saved": true,
+          "sha256": "0cbe92772c7b2ffd9b24b9e446b1e1cd9ed22930b39030ef5a6e9cba5512d31f",
+          "path": "skills/hallmark/references/macrostructures/05-workbench.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1621,
+          "read_ranges": [],
+          "git_blob": "8ee3437277fed4e7b8c87c9952ec33b3a7ddb4cf",
+          "body_saved": true,
+          "sha256": "373473bed23d055164edc04b16344fcd3861c1ab39ff73f3c75dc1719663d488",
+          "path": "skills/hallmark/references/macrostructures/06-conversational-faq.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1711,
+          "read_ranges": [],
+          "git_blob": "0b89da31d717f99b0b74a3fd88b753342e8dea50",
+          "body_saved": true,
+          "sha256": "dc1327bad300179c1b233d02d20137776dc98c9affcfd3942b9f3f796ca67b93",
+          "path": "skills/hallmark/references/macrostructures/07-manifesto.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1491,
+          "read_ranges": [],
+          "git_blob": "17ba98a1b75ecbd45bd4f791bf2f664bbfe51910",
+          "body_saved": true,
+          "sha256": "e5c77bb6ca6d82616c9c63bb6e68ee17c6af7bbca935f9ff29481294d7d1f74c",
+          "path": "skills/hallmark/references/macrostructures/08-photographic.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1817,
+          "read_ranges": [],
+          "git_blob": "36c1965e1442090d4155322b6ca59a2de9c1262b",
+          "body_saved": true,
+          "sha256": "39069a564d9ebd76daf26f46ec7776828dc45fc6a72ae712b3bf7a4fd012f650",
+          "path": "skills/hallmark/references/macrostructures/09-quote-led.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1614,
+          "read_ranges": [],
+          "git_blob": "ab343b42e7a35b25443143237a27faf0902c77c7",
+          "body_saved": true,
+          "sha256": "7f23cead7f91c2ee2335eb2c87fb0aa1e7826f4573748d549756523085ed6ad4",
+          "path": "skills/hallmark/references/macrostructures/10-specimen.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1186,
+          "read_ranges": [],
+          "git_blob": "c4fd2a33253d99be260301c88f6535bd80a965bc",
+          "body_saved": true,
+          "sha256": "99ff614600f18cfc80dfa3b9a2158dbea3b3674f76f40b70e721b9255796c265",
+          "path": "skills/hallmark/references/macrostructures/11-catalogue.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1253,
+          "read_ranges": [],
+          "git_blob": "9320d85ef3cf3c962fe1b6a859313bc0da21bc17",
+          "body_saved": true,
+          "sha256": "6f3ad86e87223bd9b6b1267e27532811efbb60f50606e7f72c8525d2cc01d709",
+          "path": "skills/hallmark/references/macrostructures/12-letter.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1208,
+          "read_ranges": [],
+          "git_blob": "7527d8b7a70adb5306f5e033c4c6df570302d304",
+          "body_saved": true,
+          "sha256": "25c832844a1b5e6ce17a335ac98e81d98d9e3372f514d83dc26ac299cc077865",
+          "path": "skills/hallmark/references/macrostructures/13-index-first.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1428,
+          "read_ranges": [],
+          "git_blob": "cfe0a784be257812d2fc92f0136acfa51b4e760a",
+          "body_saved": true,
+          "sha256": "e604a1106131fe3a65721066a304922e757a78c997c197227840931079c780fd",
+          "path": "skills/hallmark/references/macrostructures/14-narrative-workflow.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1336,
+          "read_ranges": [],
+          "git_blob": "bf05bda7ce422e30d8fb0b178f9a0155706ca7a3",
+          "body_saved": true,
+          "sha256": "400effa4de50d5f2fabd88be37447aa845deb3b67810ed4f2b995df458c852e4",
+          "path": "skills/hallmark/references/macrostructures/15-split-studio.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1386,
+          "read_ranges": [],
+          "git_blob": "e693e6ca9aa0759252718fd50cbce0fa1cbbbbb5",
+          "body_saved": true,
+          "sha256": "a389fae7fe39550352bdf1ce68cdaa3965a434fa1154f67d3c276e550d1d165a",
+          "path": "skills/hallmark/references/macrostructures/16-feature-stack.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1271,
+          "read_ranges": [],
+          "git_blob": "dea1ae8c0cd2e55bd6e6c16b4d5c32eb0170c538",
+          "body_saved": true,
+          "sha256": "a1487fde891f73bf34a2ca38a631a2cb5c71d3a7b2ccd940114354e291ea8034",
+          "path": "skills/hallmark/references/macrostructures/17-type-specimen.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1057,
+          "read_ranges": [],
+          "git_blob": "968ae6ddd9674f51fe12625fa6cf09284db4c939",
+          "body_saved": true,
+          "sha256": "af5d0f34a7ef7b81d6f4c8c845497ae553d44f418526d7e503346c9243b034e3",
+          "path": "skills/hallmark/references/macrostructures/18-portfolio-grid.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1269,
+          "read_ranges": [],
+          "git_blob": "f2a035b5e745767920b8922e83b930634efb6df1",
+          "body_saved": true,
+          "sha256": "5a576f25f4c8d58c14f574e3413560118343df9a9669db80c6c452daf509c3c3",
+          "path": "skills/hallmark/references/macrostructures/19-map-diagram.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1209,
+          "read_ranges": [],
+          "git_blob": "5dfee944d4217cff1c1a44f9582195029da92bd2",
+          "body_saved": true,
+          "sha256": "fe206580a39ffc4b3534f3a7414155aa626fe16b82b608a0b8b415c1510f17ad",
+          "path": "skills/hallmark/references/macrostructures/20-ecosystem-index.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1171,
+          "read_ranges": [],
+          "git_blob": "c6f65c6c0bf3dd23d58635957e4d782e740e48c0",
+          "body_saved": true,
+          "sha256": "ad3cbdbe9181e9472cb7b7fffbbe35021dc9b5b99ea86adc026f34d6b2c2f01f",
+          "path": "skills/hallmark/references/macrostructures/21-component-playground.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 20017,
+          "read_ranges": [],
+          "git_blob": "1e0fb62ed6702849e6ee6a07525c84e0776fcb35",
+          "body_saved": true,
+          "sha256": "613ca56c2c16e40aeb594af21fabd651732d9de63c848aee51113602525f6e64",
+          "path": "skills/hallmark/references/microinteractions.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4340,
+          "read_ranges": [],
+          "git_blob": "e3207a1db5f8b234d618406250f8e39f3819871e",
+          "body_saved": true,
+          "sha256": "330d056810315f65819579f8207afe402703a9192bc76a2009558a59b7c84ccf",
+          "path": "skills/hallmark/references/motion.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2834,
+          "read_ranges": [],
+          "git_blob": "9f5126233577c3a85f4f44c357534e19d4b3be20",
+          "body_saved": true,
+          "sha256": "df61c24c9a67457ef7369ec5f20575095326df72ffe6534c8fa9730581ebf7d9",
+          "path": "skills/hallmark/references/preview-examples.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 5918,
+          "read_ranges": [],
+          "git_blob": "58d0e1faec1d86dfee860b94ec5f8b3eb1c25e92",
+          "body_saved": true,
+          "sha256": "2bf18d72af704ca5dd3c220359a4c77c718efa19c40f62d9bff61ac4a90209b0",
+          "path": "skills/hallmark/references/responsive.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 31065,
+          "read_ranges": [],
+          "git_blob": "3bc7ec12f91706c33dac1397ecaad81551143475",
+          "body_saved": true,
+          "sha256": "6eb49fc64ca54929d2c1600e2a6014268f1a7593787c0ed3f6ecb4ac8390ad86",
+          "path": "skills/hallmark/references/slop-test.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": true,
+          "bytes": 15714,
+          "read_ranges": [
+            {
+              "start": 0,
+              "end": 11000,
+              "total": 15620
+            },
+            {
+              "start": 11000,
+              "end": 15620,
+              "total": 15620
+            }
+          ],
+          "git_blob": "e4e5e327ef445a88c43b9137250f33cfd0bc5351",
+          "body_saved": true,
+          "sha256": "ca5c0296ae428f8c4c5214407d431bbda5c453f98f2e7abdec03d644271af32b",
+          "path": "skills/hallmark/references/structure.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 42639,
+          "read_ranges": [],
+          "git_blob": "5d72092b14570442846493f196b26107af80340a",
+          "body_saved": true,
+          "sha256": "021fe4d001b38ee87414c1bb69321d2e44b67df8ede76ecec225c41a634aab20",
+          "path": "skills/hallmark/references/study.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 19616,
+          "read_ranges": [],
+          "git_blob": "d3b876780b438b104cd692fa2fd7ab6be240b0da",
+          "body_saved": true,
+          "sha256": "119a9c803eac74958e5df6151da8a2575a1cc2d061a619bdb7f32cf972308ee2",
+          "path": "skills/hallmark/references/themes/carnival.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 11273,
+          "read_ranges": [],
+          "git_blob": "7f7c324a743d885adb4d96ea0a4669a061a34881",
+          "body_saved": true,
+          "sha256": "13be92af729e6b82d1b1e51aa078f7c007e2900c8f0798b2c0fd2c0eeac7019e",
+          "path": "skills/hallmark/references/themes/cobalt.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 14564,
+          "read_ranges": [],
+          "git_blob": "94a2702221011ca0a8e306e7a2a8fe1b41f2c943",
+          "body_saved": true,
+          "sha256": "e68e8b97f62d613dc94a03afd346b9e12de8ffcc65dc8633c4c223c92875c7da",
+          "path": "skills/hallmark/references/themes/grid.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 32317,
+          "read_ranges": [],
+          "git_blob": "51fe8e86a55554d1dd6e8d3a7ecf13152d943dca",
+          "body_saved": true,
+          "sha256": "bbdd1e89a32d6b15e99493ba9497816a0915bd4e9bf150b95868db597c20e1d5",
+          "path": "skills/hallmark/references/themes/hum.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 28180,
+          "read_ranges": [],
+          "git_blob": "cb0623c3c60a3ede8c26e56069c286bd8fa2066a",
+          "body_saved": true,
+          "sha256": "d5459478d3aa1ea6330c221dfe011b717a70dbb036f597403b3a6b3cf82dd53b",
+          "path": "skills/hallmark/references/themes/lumen.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 18381,
+          "read_ranges": [],
+          "git_blob": "a67a8ca14813f1834c0e9ae810505e35ab2ef7e9",
+          "body_saved": true,
+          "sha256": "94d7b2d2b138bd8687e09dc3dd618eaafff500b0497a6d69cb4c29b764e94b9c",
+          "path": "skills/hallmark/references/typography.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": true,
+          "bytes": 2803,
+          "read_ranges": [
+            {
+              "start": 0,
+              "end": 2773,
+              "total": 2773
+            }
+          ],
+          "git_blob": "855ed5cf11985a34e94e1b6162f0f1dc64ec0da4",
+          "body_saved": true,
+          "sha256": "0a5b484453f1697a8675a7020df9159d0b4ce22f059b873501bfd82c26d6a31a",
+          "path": "skills/hallmark/references/verbs/audit.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 13849,
+          "read_ranges": [],
+          "git_blob": "494b022b38cf8796d5eb6b0e8dd50c9a71dea9ba",
+          "body_saved": true,
+          "sha256": "c2830f3b7d68e9622f55d376048a5a454c5ef59d309a211e716d1142e86acbdf",
+          "path": "skills/hallmark/references/verbs/redesign.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 103,
+          "read_ranges": [],
+          "git_blob": "43dc9369c0b6ca5682d6c050c26684586e60b686",
+          "body_saved": false,
+          "sha256": null,
+          "path": "vercel.json",
+          "source_executed": false
+        }
+      ],
+      "excluded": false,
+      "inventory_id": "github:2a1406174b87aa84c14f467b315203268efabb8f35b9fdd04a28ad1d17dc8ac0",
+      "individual_rights_review": {
+        "unaccepted": "第三者の写真/フォント/テーマ実装、Anthropic等の派生元、未読の支持/サイト資産の許諾は別。根拠無くMITを全素材へ広げない。",
+        "scope": "作者の既読入口/structure/contract/audit本文の限定採用候補。原文と正確なMIT全文を保全する。",
+        "identifier": "MIT",
+        "license_path": "LICENSE",
+        "license_bytes": 1078,
+        "license_sha256": "06088a8b94598626f27612dea42300154bf7be967c85d9d3eee4490cb056af7d",
+        "exact_copyright": "Copyright (c) 2026 Hallmark contributors",
+        "notice_paths_in_fixed_tree": [
+          "LICENSE"
+        ]
+      },
+      "tree": "02ebcc67f58295654c073cfb74a20a9a86db1f8f",
+      "installed": false,
+      "compare_metadata": [
+        "ui-design-styles",
+        "web-design-process",
+        "ui-accessibility"
+      ],
+      "integrated": false,
+      "additional_value": "ページ全体と単一部品を分け、構成・見出し位置・本文配置・区切り・操作・画像・動きの選択を用途へ結ぶ。監査と改造を別の操作として扱い、宣言した構成と実画面の差を指摘する。既存design.mdがある製品では一貫性を優先する。"
+    },
+    {
+      "comparison_limit": "起動catalogの名前/descriptionと元3048証拠を比較。現行中央本文は未知の保護判定を迂回して読んでいない。",
+      "central_write": 0,
+      "entrypoints_expected": 1,
+      "source_sha256": "1129052be467c02c2113ec52d2a39701793e066a2bbc7b5db7d2264e5b76dcab",
+      "current_snapshot_review_pending": true,
+      "prior3048": {
+        "scope": "同版README/LICENSE/SKILLの代表確認と既存ui-accessibilityへの統合。今回は新規導入/統合数へ加えない。",
+        "new_scope": "入口/README/LICENSEに加えscorecardとbase DESIGN全文。base表示の中間切詰めは3400..5000の再読で補った。全fixture/validator実装は未読・未実行。"
+      },
+      "notices": [
+        {
+          "body_read_complete": true,
+          "bytes": 1065,
+          "read_ranges": [
+            {
+              "start": 0,
+              "end": 1065,
+              "total": 1065
+            }
+          ],
+          "git_blob": "8d53b8e120f80e351011c8612527877c95a6c764",
+          "body_saved": true,
+          "sha256": "da0bd6d51cdbb65d241fdd9307ccc157b442fcc7691c52d485afc3e2c0fb2814",
+          "path": "LICENSE",
+          "source_executed": false
+        }
+      ],
+      "candidate_disposition": "existing_integration_candidate_preserving_3048_adoption",
+      "tree_complete": true,
+      "required_changes": [
+        "入口はfrontmatterのname/descriptionを欠くため、採用時は本PCの短い日本語description/正負例/固定参照を既存Skillへ接続する。未知本文との差分は実統合前に確認する。",
+        "UI実装へ直行せず、元依頼の具体画像と同対象の明示回答を保持する。既存の画像回答を再質問せず、構造テストの成功を見た目の承認へ置き換えない。",
+        "Python製配布validatorの無改変試用は許可範囲だが新しいPython実装はしない。未読validatorの実行、全ブラウザ導入、npm installをSkill読取だけで始めない。必要な影響範囲と既存ツールを選ぶ。",
+        "PASS/WARN/FAILは対象条件と根拠へ束縛し、未実施/証拠不足を成功にしない。主因を1つ記録しても複合原因や未確認を消さない。",
+        "base profileの数値やCSSを普遍的な合格値にせず、Windowsの実表示と日本語/長URL/表/フォーム/狭幅の必要条件で検証する。Mac未完をWindows完了の依存へしない。"
+      ],
+      "tree_entries": 97,
+      "commit": "4bc933689ba8391c27f558fa7b8d6905a0a2af90",
+      "resource_fulltext_count": 5,
+      "path": "skills/japanese-ui-contract-review/SKILL.md",
+      "entrypoints_read": 1,
+      "source": "hirokaji/jp-ui-contracts",
+      "resources": [
+        {
+          "body_read_complete": false,
+          "bytes": 4117,
+          "read_ranges": [],
+          "git_blob": "d797769267b9b568f9a5eec74b431cd8dc2480a3",
+          "body_saved": false,
+          "sha256": null,
+          "path": ".github/ISSUE_TEMPLATE/broken-output-report.yml",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 416,
+          "read_ranges": [],
+          "git_blob": "9af3e239aa333db94bdf6cd755ab0d9a9d3b7dc8",
+          "body_saved": false,
+          "sha256": null,
+          "path": ".github/ISSUE_TEMPLATE/config.yml",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2944,
+          "read_ranges": [],
+          "git_blob": "e9116f5bbcf1b822af9dace87fe01bb6711fbd69",
+          "body_saved": false,
+          "sha256": null,
+          "path": ".github/ISSUE_TEMPLATE/profile-gap-request.yml",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 519,
+          "read_ranges": [],
+          "git_blob": "d648af32aea58bef4203f42592ad86555ffb2ed8",
+          "body_saved": false,
+          "sha256": null,
+          "path": ".github/dependabot.yml",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1047,
+          "read_ranges": [],
+          "git_blob": "60c743985b1d897d25be2c9c4892c943b5fc308b",
+          "body_saved": true,
+          "sha256": "466ec4022bd9b851064b77134cd0b783c1fc88e029d186a83fc0b2096af83d3f",
+          "path": ".github/pull_request_template.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2823,
+          "read_ranges": [],
+          "git_blob": "00274d0737e676383b5e7e3b17d2d01cf5d61c57",
+          "body_saved": false,
+          "sha256": null,
+          "path": ".github/workflows/contract-validation.yml",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4830,
+          "read_ranges": [],
+          "git_blob": "71da846b8c11916e1f9f540fa2b4d656b0705bb9",
+          "body_saved": false,
+          "sha256": null,
+          "path": ".github/workflows/post-release-v0.2.0.yml",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 6593,
+          "read_ranges": [],
+          "git_blob": "fc53bfadd1b60e3260560e113a21831488e0fe25",
+          "body_saved": false,
+          "sha256": null,
+          "path": ".github/workflows/publish-v0.2.0.yml",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 112,
+          "read_ranges": [],
+          "git_blob": "6adba5c28152286cf26c5513ef8c130b59eb548d",
+          "body_saved": false,
+          "sha256": null,
+          "path": ".gitignore",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3333,
+          "read_ranges": [],
+          "git_blob": "7bf4076595362a34a101b2fcef3114a5b7fabc17",
+          "body_saved": true,
+          "sha256": "7b91be8c9244c30df45d19f2b2d636b06c87e092623385cefcf007d47956b793",
+          "path": "AGENTS.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4599,
+          "read_ranges": [],
+          "git_blob": "520caeebdc5bd7d7a4bfa0d5691b93eef5665581",
+          "body_saved": true,
+          "sha256": "521a24b1ad62e8864d045d41d2bd50c3e38301d6c0a4df0a1eb1d3aaee743e5f",
+          "path": "CHANGELOG.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4610,
+          "read_ranges": [],
+          "git_blob": "996ac13447d9b12805a448d3bd1b878c8c5405ab",
+          "body_saved": true,
+          "sha256": "4a909afb72648d10b1deb04e78db795654af10019d21aac94ce9fac21ac3716c",
+          "path": "CONTRIBUTING.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": true,
+          "bytes": 1065,
+          "read_ranges": [
+            {
+              "start": 0,
+              "end": 1065,
+              "total": 1065
+            }
+          ],
+          "git_blob": "8d53b8e120f80e351011c8612527877c95a6c764",
+          "body_saved": true,
+          "sha256": "da0bd6d51cdbb65d241fdd9307ccc157b442fcc7691c52d485afc3e2c0fb2814",
+          "path": "LICENSE",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": true,
+          "bytes": 11020,
+          "read_ranges": [
+            {
+              "start": 0,
+              "end": 8000,
+              "total": 10632
+            },
+            {
+              "start": 8000,
+              "end": 10632,
+              "total": 10632
+            }
+          ],
+          "git_blob": "8f0634de72eafd62be268fc423e16b65e5ba3701",
+          "body_saved": true,
+          "sha256": "66e567af13497a389b9cb4ce31de4037ad388efd6033b6b7771ddade2986f82d",
+          "path": "README.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2811,
+          "read_ranges": [],
+          "git_blob": "cd6246ba5701ebeae86371a0e1aeb844ed879d69",
+          "body_saved": false,
+          "sha256": null,
+          "path": "RELEASE_MANIFEST.json",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 6,
+          "read_ranges": [],
+          "git_blob": "0ea3a944b399d25f7e1b8fe684d754eb8da9fe7f",
+          "body_saved": false,
+          "sha256": null,
+          "path": "VERSION",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1386,
+          "read_ranges": [],
+          "git_blob": "f8714c23382ea4b50ff53edc9eee6f48a7fc1e72",
+          "body_saved": true,
+          "sha256": "97d39a3c79fd7a4ff3231e104ec40fae0caae98cb0e4456fc486f81632e7ecc5",
+          "path": "docs/css-recipes.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1820,
+          "read_ranges": [],
+          "git_blob": "067dcdfed835c677ca20f72d63a3ceb4c43d06f4",
+          "body_saved": true,
+          "sha256": "937c3c3eae1140871d7a2477754df1b295e8896063e82f4c13beedee388504f4",
+          "path": "docs/japanese-typography-notes.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2873,
+          "read_ranges": [],
+          "git_blob": "3b6d24fc3c6f4055007e272f24b8b990bd48b172",
+          "body_saved": true,
+          "sha256": "ecc5c159f2ab40a79e5143fe810e8b7e7f9d67361de250aa640462578bebb7bc",
+          "path": "docs/maintenance.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2137,
+          "read_ranges": [],
+          "git_blob": "808592f9e9fe3c4aa534d731d6a494c1251db7be",
+          "body_saved": true,
+          "sha256": "d5e5ff360c4dbb7d9c5a1a102df6d949dcf3a951c2cf0f5a04cc2355362b77ba",
+          "path": "docs/philosophy.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1110,
+          "read_ranges": [],
+          "git_blob": "8e36d6ffdca40ea50631207ca07d939dc8f151cc",
+          "body_saved": true,
+          "sha256": "db65b7fa5bfa7f3d57e061df6692d6feb57747c0cde1e1987fc9821f102661ff",
+          "path": "docs/profile-selector.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1977,
+          "read_ranges": [],
+          "git_blob": "259b4cb87e29319a10c4dc126b623f765858bc72",
+          "body_saved": true,
+          "sha256": "a8da3b8072003549eadcde598cfd3e83c8dc173eba9ca4baea93b987842af1d0",
+          "path": "docs/profiles.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1375,
+          "read_ranges": [],
+          "git_blob": "27ed506536c89a181a869413f4ff7ddc2acb427c",
+          "body_saved": true,
+          "sha256": "bd1305c2d5f3320aa6419c2ed0f29ad51a98aa29dee3c91173e25da8133be16d",
+          "path": "docs/releases/v0.2.0-publication-verification.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4002,
+          "read_ranges": [],
+          "git_blob": "86f00d42ebe3389b4a8d47fe75fc348705fe368e",
+          "body_saved": true,
+          "sha256": "e4a8d694bc6650272e4bca9a500d3a6073a31bc0f7a3f2935427ac9e72a3ff35",
+          "path": "docs/releases/v0.2.0.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4025,
+          "read_ranges": [],
+          "git_blob": "830e7637ca16b4feeef74e90f03dc32a4977fa57",
+          "body_saved": true,
+          "sha256": "a9adc2a01e31e34fabdc2706a5a9a66996af1ce2adb8e4620a0aa148d48918f4",
+          "path": "docs/v0.2-release-gate.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 594,
+          "read_ranges": [],
+          "git_blob": "99b80a874a95f51a5b9a4148beed13616fb20728",
+          "body_saved": true,
+          "sha256": "71f2a11097aa6d1cfb26fb7dbc541bd0ac4d2ae094a55ed27584a933a82aa26b",
+          "path": "examples/README.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1970,
+          "read_ranges": [],
+          "git_blob": "4db34fae881e09eed655dcff4389843a2eda2524",
+          "body_saved": true,
+          "sha256": "a8707c5482c830008c4caffb9a1a87a706b75f73ace98bb35cee08ed1de4d2af",
+          "path": "examples/sample-media/DESIGN.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 7664,
+          "read_ranges": [],
+          "git_blob": "099371d0c0d3262ba0f23a7add68a9eab285e11a",
+          "body_saved": false,
+          "sha256": null,
+          "path": "examples/sample-media/preview.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1636,
+          "read_ranges": [],
+          "git_blob": "e30113de0b453f34358da9f9d144fc1c7046f1c0",
+          "body_saved": true,
+          "sha256": "9a47d7e0bd20f2c079b32a6edeb378da646aa3926130a07438b7d03102892bbb",
+          "path": "examples/sample-saas/DESIGN.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 9396,
+          "read_ranges": [],
+          "git_blob": "893b643af5ceeca6e6f8ca980e9dd35400af0ff7",
+          "body_saved": false,
+          "sha256": null,
+          "path": "examples/sample-saas/preview.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1198,
+          "read_ranges": [],
+          "git_blob": "aec2d04de23737fd6cc606dbc927af04fe8c4684",
+          "body_saved": true,
+          "sha256": "862ab74e5b6a78743c56024825ad9442a9bd7fa7ffc30c849fdd2a7cb308e5af",
+          "path": "fixtures/README.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1441,
+          "read_ranges": [],
+          "git_blob": "c2f0b7c41945ba5f59d3a4c622ae15507c24ebe0",
+          "body_saved": true,
+          "sha256": "23eb50348bddda9471e0af8166072e716ac21b9f8c80ccb24189f99341e726c4",
+          "path": "fixtures/dense-tables/README.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4029,
+          "read_ranges": [],
+          "git_blob": "04c23541998120d0359f0728b2b2876a0daa7583",
+          "body_saved": false,
+          "sha256": null,
+          "path": "fixtures/dense-tables/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1729,
+          "read_ranges": [],
+          "git_blob": "265d6e42028d527dae7deb7be8887b4d3eedd2a9",
+          "body_saved": true,
+          "sha256": "1f5751020698b72991aff8a0a9974edce8b1629ab7f3f484011a7a752ebeef23",
+          "path": "fixtures/docs-prose-code/README.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4930,
+          "read_ranges": [],
+          "git_blob": "36f059fa2531e00279b61e87a3b3f5c63816807b",
+          "body_saved": false,
+          "sha256": null,
+          "path": "fixtures/docs-prose-code/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2874,
+          "read_ranges": [],
+          "git_blob": "43774addcacb9779966cd330068b17644453cbf6",
+          "body_saved": true,
+          "sha256": "ab09b88b7e245971b383ae76246f94d8d9382c1869bd4fd0bdd1a83c93f51632",
+          "path": "fixtures/fixture-matrix.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1661,
+          "read_ranges": [],
+          "git_blob": "1396f9ddf1bb684ed4ce0018abf6dfd8f7bfceb2",
+          "body_saved": true,
+          "sha256": "f661152ae8655cda03da8bd01602ac0db699187fadb74046e4fa809d6d614b3c",
+          "path": "fixtures/forms-ime-errors/README.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2972,
+          "read_ranges": [],
+          "git_blob": "1f53abd9ddd23052a817d50855427c07df4b1f67",
+          "body_saved": false,
+          "sha256": null,
+          "path": "fixtures/forms-ime-errors/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1662,
+          "read_ranges": [],
+          "git_blob": "79d16bc80f6e24c85a49e690538204b4f323736e",
+          "body_saved": true,
+          "sha256": "3993b09d2e6668c0e988d2bf370ce86e6f76adc38a7cce1ee7bc56f193842266",
+          "path": "fixtures/long-paragraphs/README.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2731,
+          "read_ranges": [],
+          "git_blob": "54c6fa9d8035d15f44a0685d33bfb234ac1bcb2b",
+          "body_saved": false,
+          "sha256": null,
+          "path": "fixtures/long-paragraphs/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1349,
+          "read_ranges": [],
+          "git_blob": "134f27444afa40d24d13fb98e1aaf58551acd991",
+          "body_saved": true,
+          "sha256": "aad9aff03b13143ead9aacb640cef96dab34275104e1f4fb2cdde1f0048f9bab",
+          "path": "fixtures/long-url-overflow/README.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1598,
+          "read_ranges": [],
+          "git_blob": "72ad32f29d9ddf796801387f9dbf5a8727d71e86",
+          "body_saved": false,
+          "sha256": null,
+          "path": "fixtures/long-url-overflow/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1539,
+          "read_ranges": [],
+          "git_blob": "b55fc06ee55564c450573b98c008db74680bf86b",
+          "body_saved": true,
+          "sha256": "304ca589b3e5c9fce0d4dcce84b795b4804d762a745dd1181c626c5661ec13dc",
+          "path": "fixtures/mixed-script-headings/README.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1752,
+          "read_ranges": [],
+          "git_blob": "6c8e5b9ae5dc8d22d81d04919f47b9020e326913",
+          "body_saved": false,
+          "sha256": null,
+          "path": "fixtures/mixed-script-headings/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1534,
+          "read_ranges": [],
+          "git_blob": "0cf23c41da6d4fcf5b087c5867d37c09aa0deca9",
+          "body_saved": true,
+          "sha256": "11523d9b28ab1ed0e597cc726fa174d6cb0eb2c8cdd8e7e91af8356f20d64235",
+          "path": "fixtures/mobile-wrap-stress/README.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4079,
+          "read_ranges": [],
+          "git_blob": "47188414a1fbc9aa9a6d0acb38d2e891e80151c0",
+          "body_saved": false,
+          "sha256": null,
+          "path": "fixtures/mobile-wrap-stress/index.html",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 331,
+          "read_ranges": [],
+          "git_blob": "6f69a43364fc63e9c5cfe170aa3a0bba169f0996",
+          "body_saved": false,
+          "sha256": null,
+          "path": "package.json",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1158,
+          "read_ranges": [],
+          "git_blob": "1118cd1a80e89feb2afc4e6230630ec2b7b5aa52",
+          "body_saved": false,
+          "sha256": null,
+          "path": "playwright.config.mjs",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 312,
+          "read_ranges": [],
+          "git_blob": "b551b9375174efc187447dcb7e12ea3eb01642d4",
+          "body_saved": false,
+          "sha256": null,
+          "path": "recipes/forms.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 268,
+          "read_ranges": [],
+          "git_blob": "a20ef9f9d63784e24b242c69f0c989fa3e91c9da",
+          "body_saved": false,
+          "sha256": null,
+          "path": "recipes/headings.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 338,
+          "read_ranges": [],
+          "git_blob": "fb82a399bf56f922f3d99ab00eb1a7ece7eaf40d",
+          "body_saved": false,
+          "sha256": null,
+          "path": "recipes/ja-text.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 258,
+          "read_ranges": [],
+          "git_blob": "333d036d56ea2de334df5672dfb5a2d1e1f61198",
+          "body_saved": false,
+          "sha256": null,
+          "path": "recipes/mixed-script.css",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1351,
+          "read_ranges": [],
+          "git_blob": "7da90dba38ee68416e0247eaefe2538407500b1b",
+          "body_saved": false,
+          "sha256": null,
+          "path": "schema/design-contract.schema.json",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": true,
+          "bytes": 3654,
+          "read_ranges": [
+            {
+              "start": 0,
+              "end": 3654,
+              "total": 3654
+            }
+          ],
+          "git_blob": "fb9b3d12c928dcace687966b768a2248a5f433a3",
+          "body_saved": true,
+          "sha256": "1129052be467c02c2113ec52d2a39701793e066a2bbc7b5db7d2264e5b76dcab",
+          "path": "skills/japanese-ui-contract-review/SKILL.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": true,
+          "bytes": 7349,
+          "read_ranges": [
+            {
+              "start": 0,
+              "end": 7345,
+              "total": 7345
+            },
+            {
+              "start": 3400,
+              "end": 5000,
+              "total": 7345
+            }
+          ],
+          "git_blob": "d5bf2ba4bb6441ec511d8132ca6fa214031382a2",
+          "body_saved": true,
+          "sha256": "526e998d483aa7d8a815317abde099acae8050c80d59b9e73a69571b8058a8ed",
+          "path": "templates/base/DESIGN.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1395,
+          "read_ranges": [],
+          "git_blob": "59bc38f7e80d4b971502cfe77d461818e996c147",
+          "body_saved": true,
+          "sha256": "0b1e299224441d6abb50b4eef50d6f84022801337f26474b6ed28a5a36b7b045",
+          "path": "templates/dashboard/DESIGN.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1387,
+          "read_ranges": [],
+          "git_blob": "2d54524dead91f381d36ec6fe9ff4badab604626",
+          "body_saved": true,
+          "sha256": "036211bb2ce96d7ad73dd0b5000ae0a174f02d31e9c08584ce703e80c2c86d57",
+          "path": "templates/docs/DESIGN.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1444,
+          "read_ranges": [],
+          "git_blob": "e94d63e0d37a63d73ef7e105dc6669aa6d10cc9b",
+          "body_saved": true,
+          "sha256": "4937b998d8d50c6df8ff357ad209103122e3aa7fb530e7378c632d2929875f2c",
+          "path": "templates/media/DESIGN.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1414,
+          "read_ranges": [],
+          "git_blob": "33c640eebfd7574297d769e9c4c36e46a264c59b",
+          "body_saved": true,
+          "sha256": "fc03f4e6247aa0f3fb7da600b33c7576d28a8aa3a1fa2c913ab90b88c1f11c62",
+          "path": "templates/saas/DESIGN.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 4789,
+          "read_ranges": [],
+          "git_blob": "552ac046ccd1ce0118eabe989a4b675eefd20085",
+          "body_saved": false,
+          "sha256": null,
+          "path": "tests/rendered/fixtures.spec.mjs",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3389,
+          "read_ranges": [],
+          "git_blob": "4ae80baaf9144a1e0a47a3726603f60bce070be9",
+          "body_saved": false,
+          "sha256": null,
+          "path": "tests/test_contract.py",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1335,
+          "read_ranges": [],
+          "git_blob": "4b024f6e9a82361a524dd871a0ba5438e66783a0",
+          "body_saved": false,
+          "sha256": null,
+          "path": "tests/test_fixture_manifest.py",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 2030,
+          "read_ranges": [],
+          "git_blob": "ad71ce486c63a44940b92abad2ed6c5b55f0891d",
+          "body_saved": false,
+          "sha256": null,
+          "path": "tests/test_release_metadata.py",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 6458,
+          "read_ranges": [],
+          "git_blob": "d64b55e5a79cd9ae64a3a8b6ffd814aa5c789154",
+          "body_saved": false,
+          "sha256": null,
+          "path": "validators/contract.py",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 3205,
+          "read_ranges": [],
+          "git_blob": "48a6a08a518b56ef3f6fac01eedc3167c792cac9",
+          "body_saved": true,
+          "sha256": "272cc7e89dffa5d2c3d19b12a9645ec6306c92d7e1bbc14e5bae25d980415f86",
+          "path": "validators/lint-rules.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 1461,
+          "read_ranges": [],
+          "git_blob": "b65e9b2a7fcc2e1ced53a13fc17f48c8bce3efd6",
+          "body_saved": true,
+          "sha256": "e19fef8b12787f1020ca2afee55253d01af8abed2279c217473834b9cadaa126",
+          "path": "validators/review-checklist.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": true,
+          "bytes": 3462,
+          "read_ranges": [
+            {
+              "start": 0,
+              "end": 3462,
+              "total": 3462
+            }
+          ],
+          "git_blob": "904f7b1519e599465f087e5c659de009801f5129",
+          "body_saved": true,
+          "sha256": "6076deac9a8321e692c69f79d44a800cc534110cdb3fb4416000c341a21fd9fb",
+          "path": "validators/scorecard.md",
+          "source_executed": false
+        },
+        {
+          "body_read_complete": false,
+          "bytes": 842,
+          "read_ranges": [],
+          "git_blob": "c7aa373cc8e1a993cda4a3fe25f927334a89985f",
+          "body_saved": true,
+          "sha256": "8e88aa46474273e20fe824a623c986b603274102f167960df6fcc406bcff4320",
+          "path": "validators/screenshot-review-prompt.md",
+          "source_executed": false
+        }
+      ],
+      "excluded": false,
+      "inventory_id": "github:4425f9b1757c22713ca4f5b2d034460b6f8ffbb1716e0a7d70f6f26111742ef9",
+      "individual_rights_review": {
+        "unaccepted": "未読のPython/Playwright実装・fixtures・個別assetや参照規格を包括受入しない。外部依存は使う対象ごとに確認。",
+        "scope": "既読入口/scorecard/base契約文の限定採用候補。原文と正確なMIT全文を保持する。",
+        "identifier": "MIT",
+        "license_path": "LICENSE",
+        "license_bytes": 1065,
+        "license_sha256": "da0bd6d51cdbb65d241fdd9307ccc157b442fcc7691c52d485afc3e2c0fb2814",
+        "exact_copyright": "Copyright (c) 2026 hirokaji",
+        "notice_paths_in_fixed_tree": [
+          "LICENSE"
+        ]
+      },
+      "tree": "53f8ed5939eb1e62a0c8089b0fb07e121e13aeae",
+      "installed": false,
+      "compare_metadata": [
+        "ui-accessibility",
+        "web-design-process",
+        "ui-testing"
+      ],
+      "integrated": false,
+      "additional_value": "DESIGN.mdの明示条件と実表示の失敗を結び、rule/profile/fixture/validator/implementationの主因を区別して修正先を決める。幾何計測・DOM/a11y・画像による観測の得手不得手と未実施を分ける。"
+    }
+  ]
+}

@@ -776,6 +776,16 @@ fn conditional_option_tail(remaining: &str) -> bool {
 }
 
 fn explanation_requested(body: &str) -> bool {
+    // A definition question has its own sentence ending. Do not treat an
+    // indefinite なにか in a later statement as a request for explanation.
+    // The whole-reply action/choice/quotation rules run before this helper.
+    let definition = regex::Regex::new(
+        r"(?:って|とは)\s*(?:[?？]|(?:なに|何)(?:(?:なの|です|なんです|でしょう)か?|か(?:を)?教えて(?:ください|ほしい(?:です)?)?)?\s*[?？]?\s*$)",
+    )
+    .unwrap();
+    let definition = body
+        .split_inclusive(['。', '！', '!', '？', '?', '\n', ';', '；'])
+        .any(|sentence| definition.is_match(sentence.trim().trim_end_matches(['。', '！', '!'])));
     let explicit = regex::Regex::new(
         r"(?i)説明(?:して|を(?:お願い|ください|聞きたい))|解説して|explain|clarif",
     )
@@ -804,7 +814,7 @@ fn explanation_requested(body: &str) -> bool {
         || regex::Regex::new(r"(?:なの|ですか|ますか|どういう意味|何のため)\s*[。！!]*\s*$")
             .unwrap()
             .is_match(body);
-    explicit || detail || asks_why(body) || question && regex::Regex::new(r"(?i)どういう|何の|何で|要る|いる|必要|ひつよう|理由|内訳|用途|根拠|経費|けいひ|費用|料金|why|what").unwrap().is_match(body)
+    definition || explicit || detail || asks_why(body) || question && regex::Regex::new(r"(?i)どういう|何の|何で|要る|いる|必要|ひつよう|理由|内訳|用途|根拠|経費|けいひ|費用|料金|why|what").unwrap().is_match(body)
 }
 
 fn asks_why(body: &str) -> bool {
@@ -839,6 +849,30 @@ fn why_start(body: &str) -> Option<usize> {
 #[cfg(test)]
 mod intent_tests {
     use super::requests_explanation;
+
+    #[test]
+    fn definition_questions_keep_the_original_explanation_scope() {
+        for (reply, expected) in [
+            ("作業領域ってなに？", true),
+            ("作業領域って何？", true),
+            ("作業領域とは何ですか", true),
+            (
+                "まず、作業領域ってなに？そして、作業領域を二種類に制限したい。",
+                true,
+            ),
+            ("「作業領域」ってなに？", true),
+            ("作業領域とは？", true),
+            ("作業領域ってなにかを教えて", true),
+            ("作業領域を二種類に制限したい。", false),
+            ("作業領域ってなにか変わったね。", false),
+            ("「作業領域ってなに？」という質問を保存して", false),
+            ("作業領域ってなに？ aで進めてください", false),
+            ("aでいいよ。作業領域ってなに？", false),
+            ("説明は不要。作業領域ってなに？", false),
+        ] {
+            assert_eq!(requests_explanation(reply), expected, "{reply}");
+        }
+    }
 
     #[test]
     fn issue_414_explanation_and_action_contrasts() {

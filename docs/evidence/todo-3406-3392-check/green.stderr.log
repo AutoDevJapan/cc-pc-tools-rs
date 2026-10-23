@@ -1,0 +1,73 @@
+   Compiling cc-ask v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3406-rust\cc-ask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 52.59s
+────────────
+ Nextest run ID c88c0a50-c92e-4774-9a15-f9b04dce8f24 with nextest profile: default
+    Starting 66 tests across 49 binaries (778 tests skipped)
+        PASS [   0.348s] ( 1/66) cc-ask recovery_messages::tests::decision_lookup_tests::normal_lookup_missing_redaction_registry_keeps_answer_reference_without_text
+        PASS [   0.425s] ( 2/66) cc-ask recovery_messages::tests::decision_lookup_tests::normal_lookup_keeps_new_scope_resource_image_and_original_todo_distinct
+        PASS [   0.157s] ( 3/66) cc-ask recovery_messages::tests::decision_lookup_tests::normal_lookup_retains_pending_intent_and_rejects_corrupt_or_foreign_input
+        PASS [   0.523s] ( 4/66) cc-ask recovery_messages::tests::decision_lookup_tests::normal_lookup_finds_current_answer_without_writes_or_another_question
+        PASS [   0.107s] ( 5/66) cc-ask::conversation_bridge clarification_bridge_check_never_turns_check_into_delivery
+        PASS [   0.033s] ( 6/66) cc-ask::conversation_bridge clarification_check_does_not_create_missing_original_snapshot
+        PASS [   0.567s] ( 7/66) cc-ask recovery_messages::tests::decision_lookup_tests::normal_lookup_invalid_mode_fails_before_discord_without_legacy_fallback
+        PASS [   0.596s] ( 8/66) cc-ask recovery_messages::tests::decision_lookup_tests::normal_lookup_redacts_synthetic_client_names_in_every_output_branch
+        PASS [   0.104s] ( 9/66) cc-ask::conversation_bridge clarification_bridge_preserves_log_identity_and_fixed_evidence
+        PASS [   0.074s] (10/66) cc-ask::conversation_bridge conversation_bridge_ask_identity_is_stable_across_json_key_order_and_body_path
+        PASS [   0.638s] (11/66) cc-ask recovery_messages::tests::decision_lookup_tests::normal_lookup_archived_reply_is_get_only_and_api_failure_is_not_no_answer
+        PASS [   0.640s] (12/66) cc-ask recovery_messages::tests::decision_lookup_tests::normal_lookup_posted_but_unverified_question_is_pending_never_not_sent
+        PASS [   0.115s] (13/66) cc-ask::conversation_bridge conversation_bridge_ask_rejects_missing_decision_mismatched_origins_and_missing_images
+        PASS [   0.184s] (14/66) cc-ask::conversation_bridge conversation_bridge_ask_carries_guarded_images_with_stable_provenance
+        PASS [   0.149s] (15/66) cc-ask::conversation_bridge conversation_bridge_ask_keeps_gate_decision_origin_and_canonical_wait
+        PASS [   0.095s] (16/66) cc-ask::conversation_bridge conversation_bridge_changed_saved_snapshot_prevents_another_child
+        PASS [   0.045s] (17/66) cc-ask::conversation_bridge conversation_bridge_disabled_and_dry_run_never_start_children_or_snapshot_inputs
+        PASS [   0.772s] (18/66) cc-ask recovery_messages::tests::decision_lookup_tests::normal_lookup_preserves_waiting_and_current_free_text_edits_without_approval
+        PASS [   0.094s] (19/66) cc-ask::conversation_bridge conversation_bridge_duplicate_returns_original_question_url_without_claiming_a_new_wait
+        PASS [   0.137s] (20/66) cc-ask::conversation_bridge conversation_bridge_failures_never_fallback_or_expose_child_text_and_paths
+        PASS [   0.130s] (21/66) cc-ask::conversation_bridge conversation_bridge_images_use_same_hashed_snapshot_and_videos_audio_are_rejected
+        PASS [   0.287s] (22/66) cc-ask::conversation_bridge conversation_bridge_busy_lease_retries_exact_immutable_command
+        PASS [   0.428s] (23/66) cc-ask::conversation_bridge conversation_bridge_media_cannot_hide_sensitive_original_components
+        PASS [   0.430s] (24/66) cc-ask::conversation_bridge conversation_bridge_media_size_limits_precede_any_copy_or_guard
+        PASS [   0.042s] (25/66) cc-ask::conversation_bridge conversation_bridge_protected_source_never_reaches_the_go_sender
+        PASS [   0.117s] (26/66) cc-ask::conversation_bridge conversation_bridge_post_preserves_explicit_thread_and_different_thread_changes_identity
+        PASS [   0.090s] (27/66) cc-ask::conversation_bridge normal_log_title_cannot_enable_check_mode
+        PASS [   0.715s] (28/66) cc-ask::conversation_bridge conversation_bridge_log_forwards_fixed_runner_arguments_and_immutable_body
+        PASS [   0.583s] (29/66) cc-ask::conversation_bridge conversation_bridge_mode_requires_exact_two_field_schema_without_activation
+        PASS [   0.166s] (30/66) cc-ask::conversation_bridge conversation_bridge_question_qualification_is_scoped_and_never_reclassifies_the_source
+        PASS [   0.039s] (31/66) cc-ask::decision_identity canonical_scope_order_and_path_spelling_keep_one_permission
+        PASS [   0.166s] (32/66) cc-ask::decision_identity ambiguous_incoming_original_is_never_selected_even_for_disjoint_legacy_work
+        PASS [   0.358s] (33/66) cc-ask::decision_identity changed_option_letter_order_cannot_replace_the_original_answer_meaning
+        PASS [   1.023s] (34/66) cc-ask::conversation_bridge conversation_bridge_media_provenance_is_immutable_across_same_byte_aliases
+        PASS [   1.264s] (35/66) cc-ask::conversation_bridge conversation_bridge_log_identity_uses_content_title_notify_and_image_bytes
+        PASS [   0.267s] (36/66) cc-ask::decision_identity decision_actions_cannot_be_replaced_with_new_titles
+        PASS [   0.117s] (37/66) cc-ask::decision_identity decision_metadata_is_removed_from_owner_visible_text
+        PASS [   1.536s] (38/66) cc-ask::conversation_bridge conversation_bridge_cli_invalid_mode_fails_before_legacy_config_or_api
+        PASS [   1.637s] (39/66) cc-ask::conversation_bridge conversation_bridge_cli_gate_precedes_enabled_mode_and_dry_run_uses_legacy_path
+        PASS [   0.921s] (40/66) cc-ask::decision_identity changed_attachments_alone_do_not_create_new_decision_or_inherit_the_new_asset
+        PASS [   0.184s] (41/66) cc-ask::decision_identity embedded_identity_cannot_overwrite_an_explicit_original_todo
+        PASS [   0.218s] (42/66) cc-ask::decision_identity explicit_original_selects_only_a_recorded_todo_of_a_multi_task_worker
+        PASS [   0.235s] (43/66) cc-ask::decision_identity explicit_original_todo_cannot_escape_its_recorded_worker_lineage
+        PASS [   1.086s] (44/66) cc-ask::decision_identity changed_original_question_or_foreign_source_cannot_supply_approval
+        PASS [   1.037s] (45/66) cc-ask::decision_identity closed_consumed_owner_answer_is_returned_with_original_scope_and_sender
+        PASS [   0.882s] (46/66) cc-ask::decision_identity disjoint_legacy_evidence_does_not_hide_conflicting_explicit_original
+        PASS [   1.133s] (47/66) cc-ask::decision_identity different_owner_cannot_consume_a_previous_owners_approval
+        PASS [   1.123s] (48/66) cc-ask::decision_identity disjoint_ambiguous_legacy_todos_do_not_block_an_explicit_new_decision
+        PASS [   0.996s] (49/66) cc-ask::decision_identity failed_registration_then_paraphrased_retry_keeps_the_original_question_and_one_mention
+        PASS [   0.374s] (50/66) cc-ask::decision_identity original_todo_is_recovered_from_its_recorded_job_not_its_title
+        PASS [   2.665s] (51/66) cc-ask::decision_identity answer_snapshot_save_failure_does_not_send_and_retry_returns_same_answer
+        PASS [   1.704s] (52/66) cc-ask::decision_identity legacy_without_todo_evidence_still_requires_scope_for_the_same_work
+        PASS [   1.954s] (53/66) cc-ask::decision_identity handoff_reloads_actual_discord_answer_instead_of_trusting_forged_cached_content
+        PASS [   1.651s] (54/66) cc-ask::decision_identity missing_scope_after_paraphrase_never_resends_or_applies_an_old_answer
+        PASS [   2.192s] (55/66) cc-ask::decision_identity new_answer_invalidates_review_digest_and_handoff_preserves_original_task_evidence
+        PASS [   1.847s] (56/66) cc-ask::decision_identity post_and_direct_producers_share_identity_and_never_publish_internal_json
+        PASS [   0.830s] (57/66) cc-ask::decision_identity shared_boundary_binds_todo_from_preparsed_identity_and_rejects_conflicting_context
+        PASS [   1.972s] (58/66) cc-ask::decision_identity overlapping_or_unknown_legacy_candidates_still_fail_closed
+        PASS [   1.012s] (59/66) cc-ask::decision_identity saved_disjoint_legacy_candidates_allow_only_the_new_explicit_original
+        PASS [   0.114s] (60/66) cc-ask::decision_identity verified_answer_reaches_waiting_todo_spec_once_without_claiming_application
+        PASS [   1.590s] (61/66) cc-ask::decision_identity reviewed_four_duplicates_keep_all_replies_and_return_latest_owner_identity_without_posts
+        PASS [   0.387s] (62/66) cc-ask::decision_identity title_paraphrase_and_another_worker_reuse_an_unanswered_decision_without_posts
+        PASS [   3.167s] (63/66) cc-ask::decision_identity genuinely_new_target_scope_and_specification_never_inherit_old_a
+        PASS [   0.381s] (64/66) cc-ask::decision_identity unavailable_reply_history_is_a_failure_and_never_a_reason_to_resend
+        PASS [   0.533s] (65/66) cc-ask::decision_identity two_concurrent_workers_with_different_titles_create_one_pair
+        PASS [   2.007s] (66/66) cc-ask::decision_identity saved_overlapping_or_invalid_legacy_candidates_cannot_be_excluded
+────────────
+     Summary [   6.667s] 66 tests run: 66 passed, 778 skipped

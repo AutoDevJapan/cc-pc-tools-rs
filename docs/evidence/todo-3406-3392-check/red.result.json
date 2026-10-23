@@ -1,0 +1,33 @@
+{
+  "todo_id": 3406,
+  "parent_todo_id": 3392,
+  "job": "20261023-103917-todo-3406",
+  "stage": "red",
+  "started_at": "2026-10-23T10:42:54.9154426+09:00",
+  "source_head": "babed84edc0048ac9100cc7489402de4bf3acf53",
+  "source_tree": "43a0257371bdd965045f3e5d76314c4546774da0",
+  "cwd": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3406-rust",
+  "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "cargo_arguments": [
+    "nextest",
+    "run",
+    "--locked",
+    "-p",
+    "cc-ask",
+    "-E",
+    "test(normal_lookup_redacts_synthetic_client_names_in_every_output_branch) | test(normal_lookup_posted_but_unverified_question_is_pending_never_not_sent)"
+  ],
+  "command": "cargo nextest run --locked -p cc-ask -E 'test(normal_lookup_redacts_synthetic_client_names_in_every_output_branch) | test(normal_lookup_posted_but_unverified_question_is_pending_never_not_sent)'",
+  "target_dir": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3406-rust\\codex-owned-facf6bf26f2bff0187676ad938dfcc33",
+  "stdout": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3406-rust\\.ci-work\\todo-3406-3392-check\\red.stdout.log",
+  "stderr": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3406-rust\\.ci-work\\todo-3406-3392-check\\red.stderr.log",
+  "use_shell_execute": false,
+  "create_no_window": true,
+  "status": "exited",
+  "timeout_seconds": 1800,
+  "pid": 62376,
+  "process_created_at": "2026-10-23T01:42:54.9838096Z",
+  "exit_code": 100,
+  "elapsed_seconds": 84.458,
+  "finished_at": "2026-10-23T10:44:19.4641727+09:00"
+}

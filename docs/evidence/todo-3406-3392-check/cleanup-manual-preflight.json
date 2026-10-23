@@ -1,0 +1,12 @@
+{
+  "source": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3406-rust\\codex-owned-facf6bf26f2bff0187676ad938dfcc33",
+  "destination": "D:\\削除希望\\20261023-todo-3406-cargo-facf6bf2\\target",
+  "bytes": 8365990608.0,
+  "entry_count": 5175,
+  "no_reparse_points": true,
+  "no_git_source": true,
+  "same_drive": true,
+  "reason": "safe-delete plan:size; quarantine tool preflight:QUARANTINE_CROSS_DRIVE; same-drive move prescribed by Skill",
+  "phase": "verified-before-move",
+  "owner_decision_required": false
+}

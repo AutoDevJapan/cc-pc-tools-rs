@@ -1,0 +1,194 @@
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.26
+   Compiling windows-link v0.2.1
+   Compiling cfg-if v1.0.5
+   Compiling stable_deref_trait v1.2.1
+   Compiling memchr v2.8.3
+   Compiling litemap v0.8.3
+   Compiling serde_core v1.0.229
+   Compiling writeable v0.6.4
+   Compiling version_check v0.9.5
+   Compiling windows-sys v0.61.2
+   Compiling icu_normalizer_data v2.3.0
+   Compiling utf8_iter v1.0.4
+   Compiling shlex v2.0.1
+   Compiling find-msvc-tools v0.1.14
+   Compiling icu_properties_data v2.3.0
+   Compiling generic-array v0.14.7
+   Compiling equivalent v1.0.2
+   Compiling cc v1.6.0
+   Compiling zmij v1.0.23
+   Compiling hashbrown v0.17.1
+   Compiling serde v1.0.229
+   Compiling ring v0.17.14
+   Compiling indexmap v2.14.2
+   Compiling typenum v1.20.1
+   Compiling crc32fast v1.5.2
+   Compiling smallvec v1.16.2
+   Compiling syn v3.0.6
+   Compiling syn v2.0.119
+   Compiling serde_json v1.0.151
+   Compiling zeroize v1.9.1
+   Compiling rustls-pki-types v1.15.1
+   Compiling log v0.4.34
+   Compiling simd-adler32 v0.3.10
+   Compiling autocfg v1.5.1
+   Compiling itoa v1.0.18
+   Compiling synstructure v0.14.0
+   Compiling displaydoc v0.2.7
+   Compiling zerovec-derive v0.11.6
+   Compiling serde_derive v1.0.229
+   Compiling num-traits v0.2.19
+   Compiling windows-interface v0.59.3
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling windows-implement v0.60.2
+   Compiling windows-result v0.4.1
+   Compiling windows-strings v0.5.1
+   Compiling zerofrom v0.1.8
+   Compiling getrandom v0.2.17
+   Compiling adler2 v2.0.1
+   Compiling once_cell v1.21.4
+   Compiling untrusted v0.9.0
+   Compiling percent-encoding v2.3.2
+   Compiling pin-project-lite v0.2.17
+   Compiling yoke v0.8.3
+   Compiling miniz_oxide v0.9.1
+   Compiling windows-core v0.62.2
+   Compiling form_urlencoded v1.2.2
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling zerovec v0.11.8
+   Compiling zerotrie v0.2.5
+   Compiling rustls v0.23.45
+   Compiling futures-core v0.3.34
+   Compiling windows_x86_64_msvc v0.52.6
+   Compiling futures-sink v0.3.34
+   Compiling getrandom v0.4.3
+   Compiling digest v0.10.7
+   Compiling flate2 v1.1.10
+   Compiling futures-channel v0.3.34
+   Compiling futures-macro v0.3.34
+   Compiling webpki-roots v1.0.9
+   Compiling aho-corasick v1.1.5
+   Compiling thiserror v2.0.21
+   Compiling tinystr v0.8.4
+   Compiling potential_utf v0.1.6
+   Compiling futures-task v0.3.34
+   Compiling anstyle v1.0.14
+   Compiling icu_collections v2.3.0
+   Compiling utf8parse v0.2.2
+   Compiling cpufeatures v0.2.17
+   Compiling regex-syntax v0.8.11
+   Compiling once_cell_polyfill v1.70.2
+   Compiling icu_locale_core v2.3.0
+   Compiling subtle v2.6.1
+   Compiling slab v0.4.12
+   Compiling futures-io v0.3.34
+   Compiling anstyle-wincon v3.0.11
+   Compiling sha2 v0.10.9
+   Compiling anstyle-parse v1.0.0
+   Compiling futures-util v0.3.34
+   Compiling regex-automata v0.4.18
+   Compiling webpki-roots v0.26.11
+   Compiling chrono v0.4.45
+   Compiling thiserror-impl v2.0.21
+   Compiling anstyle-query v1.1.5
+   Compiling rustls-webpki v0.103.15
+   Compiling windows-threading v0.2.1
+   Compiling colorchoice v1.0.5
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling base64 v0.22.1
+   Compiling windows-future v0.3.2
+   Compiling regex v1.13.1
+   Compiling anstream v1.0.0
+   Compiling icu_provider v2.3.1
+   Compiling windows-targets v0.52.6
+   Compiling windows-collections v0.3.2
+   Compiling windows-numerics v0.3.1
+   Compiling tokio-macros v2.7.2
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.4
+   Compiling icu_properties v2.3.0
+   Compiling icu_normalizer v2.3.0
+   Compiling fastrand v2.5.0
+   Compiling zip v2.4.2
+   Compiling bytes v1.12.1
+   Compiling heck v0.5.0
+   Compiling strsim v0.11.1
+   Compiling bumpalo v3.20.3
+   Compiling futures-executor v0.3.34
+   Compiling clap_lex v1.1.1
+   Compiling tempfile v3.27.0
+   Compiling tokio v1.53.2
+   Compiling idna_adapter v1.2.2
+   Compiling clap_derive v4.6.7
+   Compiling zopfli v0.8.3
+   Compiling futures v0.3.34
+   Compiling clap_builder v4.6.7
+   Compiling windows v0.62.2
+   Compiling windows-sys v0.59.0
+   Compiling idna v1.1.0
+   Compiling cc-job-policy v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3406-rust\cc-job-policy)
+   Compiling uuid v1.27.0
+   Compiling url v2.5.8
+   Compiling ureq v2.12.1
+   Compiling winreg v0.55.0
+   Compiling wmi v0.18.4
+   Compiling clap v4.6.7
+   Compiling cc-local-llm v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3406-rust\cc-local-llm)
+   Compiling cc-task-title v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3406-rust\cc-task-title)
+   Compiling cc-live v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3406-rust\cc-live)
+   Compiling cc-chrome v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3406-rust\cc-chrome)
+   Compiling cc-ask v0.1.0 (D:\CC\Work\unattended-operations-20261013-wt\todo-3406-rust\cc-ask)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 57.67s
+────────────
+ Nextest run ID 2b72e086-6a61-4312-93d7-44b550625ef3 with nextest profile: default
+    Starting 2 tests across 49 binaries (842 tests skipped)
+        FAIL [   0.115s] (1/2) cc-ask recovery_messages::tests::decision_lookup_tests::normal_lookup_posted_but_unverified_question_is_pending_never_not_sent
+  stdout ───
+
+    running 1 test
+    test recovery_messages::tests::decision_lookup_tests::normal_lookup_posted_but_unverified_question_is_pending_never_not_sent ... FAILED
+
+    failures:
+
+    failures:
+        recovery_messages::tests::decision_lookup_tests::normal_lookup_posted_but_unverified_question_is_pending_never_not_sent
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 138 filtered out; finished in 0.08s
+
+  stderr ───
+
+    thread 'recovery_messages::tests::decision_lookup_tests::normal_lookup_posted_but_unverified_question_is_pending_never_not_sent' (48932) panicked at cc-ask\src\recovery_messages/decision_lookup_tests.rs:257:9:
+    assertion `left == right` failed
+      left: String("not_sent")
+     right: "pending"
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+  Cancelling due to test failure: 1 test still running
+        FAIL [   0.179s] (2/2) cc-ask recovery_messages::tests::decision_lookup_tests::normal_lookup_redacts_synthetic_client_names_in_every_output_branch
+  stdout ───
+
+    running 1 test
+    test recovery_messages::tests::decision_lookup_tests::normal_lookup_redacts_synthetic_client_names_in_every_output_branch ... FAILED
+
+    failures:
+
+    failures:
+        recovery_messages::tests::decision_lookup_tests::normal_lookup_redacts_synthetic_client_names_in_every_output_branch
+
+    test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 138 filtered out; finished in 0.16s
+
+  stderr ───
+
+    thread 'recovery_messages::tests::decision_lookup_tests::normal_lookup_redacts_synthetic_client_names_in_every_output_branch' (60240) panicked at cc-ask\src\recovery_messages/decision_lookup_tests.rs:190:5:
+    assertion failed: !result.to_string().contains("ExampleClient3392")
+    note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+────────────
+     Summary [   0.184s] 2 tests run: 0 passed, 2 failed, 842 skipped
+        FAIL [   0.115s] (1/2) cc-ask recovery_messages::tests::decision_lookup_tests::normal_lookup_posted_but_unverified_question_is_pending_never_not_sent
+        FAIL [   0.179s] (2/2) cc-ask recovery_messages::tests::decision_lookup_tests::normal_lookup_redacts_synthetic_client_names_in_every_output_branch
+error: test run failed

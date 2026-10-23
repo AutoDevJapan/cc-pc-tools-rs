@@ -1,0 +1,17 @@
+{
+  "action": "same-drive-manual-quarantine",
+  "completed": true,
+  "source": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3406-rust\\codex-owned-facf6bf26f2bff0187676ad938dfcc33",
+  "destination": "D:\\削除希望\\20261023-todo-3406-cargo-facf6bf2\\target",
+  "bytes": 8365990608.0,
+  "entries": 5175,
+  "source_absent": true,
+  "candidate_kept": true,
+  "disk_reclaimed": false,
+  "available_bytes_after": 2499275829248,
+  "safe_delete_receipt_id": "facf6bf26f2bff0187676ad938dfcc33",
+  "safe_delete_receipt_state": "owned; tool quarantine failed before mutation; manual move receipt recorded here",
+  "owner_decision_required": false,
+  "next_action": "normal cleanup worker can verify this preserved receipt and quarantine; parent reports retained bytes without owner mention",
+  "finished_at": "2026-10-23T10:52:01.5554472+09:00"
+}

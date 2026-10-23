@@ -1,0 +1,24 @@
+{
+  "source_head": "babed84edc0048ac9100cc7489402de4bf3acf53",
+  "derived_from": "red.stderr.log",
+  "compiled": true,
+  "exit_code": 100,
+  "test_count": 2,
+  "passed": 0,
+  "failed": 2,
+  "tests": [
+    {
+      "name": "normal_lookup_redacts_synthetic_client_names_in_every_output_branch",
+      "status": "failed",
+      "expected": true,
+      "assertion": "!result.to_string().contains(\"ExampleClient3392\")"
+    },
+    {
+      "name": "normal_lookup_posted_but_unverified_question_is_pending_never_not_sent",
+      "status": "failed",
+      "expected": true,
+      "left": "not_sent",
+      "right": "pending"
+    }
+  ]
+}

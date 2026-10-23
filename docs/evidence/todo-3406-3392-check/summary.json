@@ -1,0 +1,32 @@
+{
+  "report": "correlated Cargo gate process exits, full captured stdout/stderr, and parsed nextest outcomes",
+  "red": {
+    "expected_failures": 2,
+    "exit_code": 100,
+    "passed": 0
+  },
+  "green": {
+    "exit_code": 0,
+    "failed": 0,
+    "normal_lookup": 9,
+    "decision_identity": 32,
+    "conversation_bridge": 25,
+    "passed": 66,
+    "skipped": 778
+  },
+  "doctest": {
+    "failed": 0,
+    "exit_code": 0,
+    "tests": 0
+  },
+  "clippy": {
+    "warnings_denied": true,
+    "exit_code": 0
+  },
+  "release": {
+    "exit_code": 0
+  },
+  "source_head": "490ffd47e78aa0c5f7a4c5d2f054bddd05746314",
+  "release_eligible": false,
+  "deployed": false
+}

@@ -1,0 +1,31 @@
+{
+  "todo_id": 3406,
+  "parent_todo_id": 3392,
+  "job": "20261023-103917-todo-3406",
+  "stage": "metadata",
+  "started_at": "2026-10-23T10:49:40.1939416+09:00",
+  "source_head": "490ffd47e78aa0c5f7a4c5d2f054bddd05746314",
+  "source_tree": "7607183cb4b64246a3ab8ceb43b4d1cc9f7a9e35",
+  "cwd": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3406-rust",
+  "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+  "cargo_arguments": [
+    "metadata",
+    "--locked",
+    "--format-version",
+    "1",
+    "--no-deps"
+  ],
+  "command": "cargo metadata --locked --format-version 1 --no-deps",
+  "target_dir": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3406-rust\\codex-owned-facf6bf26f2bff0187676ad938dfcc33",
+  "stdout": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3406-rust\\.ci-work\\todo-3406-3392-check\\metadata.stdout.log",
+  "stderr": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3406-rust\\.ci-work\\todo-3406-3392-check\\metadata.stderr.log",
+  "use_shell_execute": false,
+  "create_no_window": true,
+  "status": "exited",
+  "timeout_seconds": 1800,
+  "pid": 49012,
+  "process_created_at": "2026-10-23T01:49:40.3610259Z",
+  "exit_code": 0,
+  "elapsed_seconds": 0.166,
+  "finished_at": "2026-10-23T10:49:40.5803998+09:00"
+}

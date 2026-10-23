@@ -23,6 +23,14 @@ pub struct Request {
 impl Request {
     fn valid(&self) -> bool {
         let prefix = format!("scheduler/todo-{}-", self.id);
+        let owned_branch = |branch: &str| {
+            branch.starts_with(&prefix)
+                && branch.len() > prefix.len()
+                && branch.len() <= 240
+                && branch
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b"_/-".contains(&b))
+        };
         self.id > 0
             && !self.job.is_empty()
             && self.job.len() <= 240
@@ -30,14 +38,8 @@ impl Request {
                 .job
                 .bytes()
                 .all(|b| b.is_ascii_alphanumeric() || b"_-".contains(&b))
-            && [&self.expected_branch, &self.branch].iter().all(|branch| {
-                branch.starts_with(&prefix)
-                    && branch.len() > prefix.len()
-                    && branch.len() <= 240
-                    && branch
-                        .bytes()
-                        .all(|b| b.is_ascii_alphanumeric() || b"_/-".contains(&b))
-            })
+            && (self.expected_branch == "main" || owned_branch(&self.expected_branch))
+            && owned_branch(&self.branch)
             && [40, 64].contains(&self.head.len())
             && self.head.bytes().all(|b| b.is_ascii_hexdigit())
     }
@@ -218,6 +220,28 @@ fn run<B: Backend>(
                 || item["scheduler"]["job"] == source["id"],
             "CheckpointSourceNotCurrent",
         )?;
+        if request.expected_branch == "main" {
+            // Only the exact currently recorded assignment may leave main. A
+            // historical job or user-supplied branch name is not provenance.
+            // Keep checking this on repeats, including a completed current job.
+            let owner = &source["work_owner"];
+            let actual = cc_job_policy::work_owner::checkout(cwd);
+            require(
+                &mut checks,
+                "source_assignment_matches",
+                item["scheduler"]["job"] == source["id"]
+                    && source["todo_id"] == item["id"]
+                    && owner["branch"] == request.expected_branch
+                    && !s(&actual["repository"]).is_empty()
+                    && owner["repository"] == actual["repository"]
+                    && ["worktree", "git_common"].iter().all(|key| {
+                        !s(&owner[*key]).is_empty()
+                            && cc_job_policy::work_owner::norm(Path::new(s(&owner[*key])))
+                                == s(&actual[*key])
+                    }),
+                "CheckpointSourceAssignment",
+            )?;
+        }
         for other in jobs.iter().filter(|job| {
             job["id"] != source["id"]
                 && (policy::live(job) || policy::alive(job, &processes, at))

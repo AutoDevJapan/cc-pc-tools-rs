@@ -1,0 +1,158 @@
+{
+  "todo": 3080,
+  "observed_at": "2026-10-23T03:23:49.8750553Z",
+  "source_commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+  "new_entrypoints": 12,
+  "readme_fulltexts": 12,
+  "claims": [
+    {
+      "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-js/main/api/src/trace/tracer.ts",
+      "finding": "startActiveSpanのcontextは独立引数。callbackがendを呼ぶ責務。return Promiseの同期finallyは非同期完了を待たないという点は言語の意味から親が推論。",
+      "applies_to": [
+        {
+          "path": "opentelemetry/SKILL.md",
+          "lines": "91"
+        },
+        {
+          "path": "otel-node/SKILL.md",
+          "lines": "87-90"
+        }
+      ],
+      "previous_url_retrieved_at": null,
+      "previous_recorded_at": "2026-10-23T03:23:49.8750553Z",
+      "method": "前ジョブの公式Web照合。今回はweb.open/findによる現行本文の限定再確認。独立の取得時刻はツールが返さず、補足記録時刻と区別する。",
+      "recheck_recorded_at": "2026-10-23T14:41:22.8704529Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-js/main/api/src/propagation/TextMapPropagator.ts",
+      "finding": "default getterはcarrier[key]/Object.keysであり、Fetch Headersにはget/keysを合わせる必要があるという推論。",
+      "applies_to": [
+        {
+          "path": "otel-node/SKILL.md",
+          "lines": "84"
+        }
+      ],
+      "previous_url_retrieved_at": null,
+      "previous_recorded_at": "2026-10-23T03:23:49.8750553Z",
+      "method": "前ジョブの公式Web照合。今回はweb.open/findによる現行本文の限定再確認。独立の取得時刻はツールが返さず、補足記録時刻と区別する。",
+      "recheck_recorded_at": "2026-10-23T14:41:22.8704529Z"
+    },
+    {
+      "url": "https://opentelemetry.io/docs/languages/js/libraries/",
+      "finding": "未バンドルESMを実行時に計装する場合の公式hookとSDK先行初期化を確認。--experimental-loaderを使い、ESM対応は発展中とされる。バンドル済みの全組合せの保証や、上流のbundle無音事例の反証ではない。Fix Cの起動例にhook指定が無いため対象版で照合する。",
+      "applies_to": [
+        {
+          "path": "otel-node/SKILL.md",
+          "lines": "64-72,128"
+        }
+      ],
+      "previous_url_retrieved_at": null,
+      "previous_recorded_at": "2026-10-23T03:23:49.8750553Z",
+      "method": "前ジョブの公式Web照合。今回はweb.open/findによる現行本文の限定再確認。独立の取得時刻はツールが返さず、補足記録時刻と区別する。",
+      "recheck_recorded_at": "2026-10-23T14:41:22.8704529Z",
+      "additional_url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-js/main/doc/esm-support.md",
+      "official_section": "Initializing the SDK / Instrumentation Hook Required for ESM / 起動例"
+    },
+    {
+      "url": "https://developers.cloudflare.com/d1/worker-api/",
+      "finding": "過去の公式照合記録はBigInt非対応とNumberの安全整数範囲を記している。読み戻しをNumberで扱う場合も範囲外の整数の精度は保証できない。今回のoverviewではその型説明を再発見できず、現行D1の詳細な型対応は適用前に対象版で再照合する。",
+      "applies_to": [
+        {
+          "path": "sqlc-gen-moonbit-safety/SKILL.md",
+          "lines": "34-38"
+        }
+      ],
+      "previous_url_retrieved_at": null,
+      "previous_recorded_at": "2026-10-23T03:23:49.8750553Z",
+      "method": "前ジョブの公式Web照合。今回はweb.open/findによる現行本文の限定再確認。独立の取得時刻はツールが返さず、補足記録時刻と区別する。",
+      "recheck_recorded_at": "2026-10-23T14:41:22.8704529Z",
+      "historical_finding": "BigInt API非対応、JavaScript integerはMAX_SAFE_INTEGERまで。範囲外のInt64を無条件Numberへ変える安全性は保証されない。",
+      "recheck_status": "exact_type_conversion_section_not_reconfirmed"
+    },
+    {
+      "url": "https://developers.cloudflare.com/d1/worker-api/prepared-statements/",
+      "finding": "公式の番号付けでは?NNNは明示番号、?は既割当最大番号+1。混在自体は許容。generator固有のhang/1101や混在時のエラー化条件は上流の報告で未実証。",
+      "applies_to": [
+        {
+          "path": "sqlc-gen-moonbit-safety/SKILL.md",
+          "lines": "38"
+        }
+      ],
+      "previous_url_retrieved_at": null,
+      "previous_recorded_at": "2026-10-23T03:23:49.8750553Z",
+      "method": "前ジョブの公式Web照合。今回はweb.open/findによる現行本文の限定再確認。独立の取得時刻はツールが返さず、補足記録時刻と区別する。",
+      "recheck_recorded_at": "2026-10-23T14:41:22.8704529Z"
+    },
+    {
+      "url": "https://dotenvx.com/docs/cli/run-environment-variable-precedence/",
+      "finding": "既存環境が.envより優先。",
+      "applies_to": [
+        {
+          "path": "dotenvx/SKILL.md",
+          "lines": "32-33,70"
+        }
+      ],
+      "previous_url_retrieved_at": null,
+      "previous_recorded_at": "2026-10-23T03:23:49.8750553Z",
+      "method": "前ジョブの公式Web照合。今回はweb.open/findによる現行本文の限定再確認。独立の取得時刻はツールが返さず、補足記録時刻と区別する。",
+      "recheck_recorded_at": "2026-10-23T14:41:22.8704529Z"
+    },
+    {
+      "url": "https://dotenvx.com/docs/cli/run-overload/",
+      "finding": "後のfileが勝つ説明は--overloadに対応。rotate CLIは旧検索結果と現404を区別し未確定。",
+      "applies_to": [
+        {
+          "path": "dotenvx/SKILL.md",
+          "lines": "32-33,70"
+        }
+      ],
+      "previous_url_retrieved_at": null,
+      "previous_recorded_at": "2026-10-23T03:23:49.8750553Z",
+      "method": "前ジョブの公式Web照合。今回はweb.open/findによる現行本文の限定再確認。独立の取得時刻はツールが返さず、補足記録時刻と区別する。",
+      "recheck_recorded_at": "2026-10-23T14:41:22.8704529Z"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/casey/just/master/src/evaluator.rs",
+      "finding": "現行公式evaluate_valueのExpression::Backtickはdry_run時に式文字列を返す（L489-494）。run_commandはassert!(!context.config.dry_run)（L646-653）。親の初期推測を訂正する。Just実CLIとdotenv-command等の別経路の実行、上流のテスト実施とは区別する。",
+      "applies_to": [
+        {
+          "path": "justfile/SKILL.md",
+          "lines": "45,103"
+        }
+      ],
+      "previous_url_retrieved_at": null,
+      "previous_recorded_at": "2026-10-23T03:23:49.8750553Z",
+      "method": "前ジョブの公式Web照合。今回はweb.open/findによる現行本文の限定再確認。独立の取得時刻はツールが返さず、補足記録時刻と区別する。",
+      "recheck_recorded_at": "2026-10-23T14:41:22.8704529Z",
+      "test_evidence": "Just実行0。dry-runテストsourceの直接fetchはcache missで未読。分岐/呼出しを静的に確認した範囲。"
+    },
+    {
+      "method": "web.open current official text, Format / footer instruction",
+      "finding": ".env.keysは秘密復号鍵。公式はsource controlへcommitしないと明記。暗号化envと鍵の保管先を分ける。",
+      "recheck_recorded_at": "2026-10-23T14:41:22.8704529Z",
+      "url": "https://dotenvx.com/docs/env-keys-file/",
+      "applies_to": [
+        {
+          "path": "dotenvx/SKILL.md",
+          "lines": "3,61-63"
+        }
+      ],
+      "previous_url_retrieved_at": null
+    }
+  ],
+  "limits": [
+    "公式ページ/現行upstream sourceを観測時点で照合したもの。固定mizchi版のコードを実行した証拠ではない。",
+    "本文上のAPI不整合と親の推論を分け、HTTP Headersの型/非同期完了/数値精度を適用前に対象版で確認する。",
+    "Just dry-runのbacktick懸念は公式実装で反証され訂正。dotenvx rotation CLIの有無は実版未確定。",
+    "D1のBigInt非対応は全Worker1101の原因を証明しない。ESM loader対応はすべてのbundler組合せの動作保証ではない。"
+  ],
+  "source_scripts_executed": false,
+  "secrets_read": false,
+  "remote_config_changed": false,
+  "installed": 0,
+  "integrated": 0,
+  "excluded": 0,
+  "review_pending": true,
+  "recorded_at_definition": "observed_atは前ジョブの記録生成時刻。URL別の過去取得時刻は未保存で、正確な観測時刻を逆算しない。",
+  "current_supplement_recorded_at": "2026-10-23T14:41:22.8704529Z"
+}

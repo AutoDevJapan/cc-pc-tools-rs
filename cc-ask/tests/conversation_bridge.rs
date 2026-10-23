@@ -105,7 +105,7 @@ fn clarification_bridge_preserves_log_identity_and_fixed_evidence() {
         &manifest,
     )
     .unwrap();
-    let resumed = &fake.calls[1].0;
+    let resumed = &fake.calls[2].0;
     assert_eq!(
         argument(&original, "--request-id"),
         argument(resumed, "--request-id")
@@ -149,14 +149,14 @@ fn clarification_bridge_preserves_log_identity_and_fixed_evidence() {
         &manifest,
     )
     .unwrap();
-    assert_eq!(fake.calls.len(), 3);
+    assert_eq!(fake.calls.len(), 5);
     assert_eq!(
         argument(&original, "--request-id"),
-        argument(&fake.calls[2].0, "--request-id")
+        argument(&fake.calls[4].0, "--request-id")
     );
     assert_ne!(
-        argument(&fake.calls[1].0, "--clarification-file"),
-        argument(&fake.calls[2].0, "--clarification-file")
+        argument(&fake.calls[2].0, "--clarification-file"),
+        argument(&fake.calls[4].0, "--clarification-file")
     );
     assert_eq!(fake.http_calls, 0);
     f.mode(r#"{"domain":"discord-conversation-mode-v1","enabled":false}"#);
@@ -184,7 +184,9 @@ fn clarification_bridge_check_never_turns_check_into_delivery() {
     fake.output = Some(Output {
         code: 0,
         stdout: json!({"domain":"discord-conversation-v1","request_id":id,
-        "check_only":true,"delivery":"not_sent","original_intent_retained":true})
+        "check_only":true,"delivery":"not_sent","original_intent_retained":true,
+        "body_sha256":format!("{:x}",<sha2::Sha256 as sha2::Digest>::digest(fs::read(&f.body).unwrap())),
+        "binding_sha256":format!("{:x}",<sha2::Sha256 as sha2::Digest>::digest(fs::read(&manifest).unwrap()))})
         .to_string(),
         stderr: String::new(),
     });
@@ -208,7 +210,11 @@ fn clarification_bridge_check_never_turns_check_into_delivery() {
         .join(id)
         .join("clarification.json")
         .exists());
-    fake.output = None;
+    fake.output = Some(Output {
+        code: 0,
+        stdout: json!({"domain":"discord-conversation-v1","delivery":"verified"}).to_string(),
+        stderr: String::new(),
+    });
     assert!(bridge::try_check_clarification(
         f.root.path(),
         &mut fake,
@@ -225,7 +231,10 @@ fn clarification_bridge_check_never_turns_check_into_delivery() {
 #[test]
 fn clarification_check_does_not_create_missing_original_snapshot() {
     let f = Fixture::new();
-    let mut fake = Fake::default();
+    let mut fake = Fake {
+        error: true,
+        ..Fake::default()
+    };
     let manifest = f.root.path().join("binding.json");
     fs::write(&manifest, "{}").unwrap();
     assert!(bridge::try_check_clarification(
@@ -239,7 +248,7 @@ fn clarification_check_does_not_create_missing_original_snapshot() {
     )
     .is_err());
     assert!(!f.root.path().join("conversation-bridge").exists());
-    assert!(fake.calls.is_empty());
+    assert_eq!(fake.calls.len(), 1);
 }
 
 #[test]
@@ -318,7 +327,16 @@ impl Effects for Fake {
             return Ok(output);
         }
         let request = argument(args, "--request-id");
-        let value = if args[4] == "ask" {
+        let value = if args.last().is_some_and(|arg| arg == "--check-only") {
+            use sha2::{Digest, Sha256};
+            let text = String::from_utf8(fs::read(argument(args, "--body-file")).unwrap())
+                .unwrap()
+                .trim_start_matches('\u{feff}')
+                .replace("\r\n", "\n")
+                .replace('\r', "\n");
+            json!({"domain":"discord-conversation-v1","request_id":request,"check_only":true,"delivery":"not_sent","original_intent_retained":true,
+                "body_sha256":format!("{:x}",Sha256::digest(text.as_bytes())),"binding_sha256":format!("{:x}",Sha256::digest(fs::read(argument(args,"--clarification-file")).unwrap()))})
+        } else if args[4] == "ask" {
             json!({"request_id":request,"phase":"waiting","todo_id":2823,"thread_id":"600","progress_thread_id":"601","wait_requested":true})
         } else {
             json!({"domain":"discord-conversation-v1","delivery":"verified","request_id":request,"thread_id":"600","message_id":"601","reused":false})

@@ -96,17 +96,22 @@ fn holds(row: &Value) -> Value {
     {
         value[*k] = row[*k].clone();
     }
+    for k in HOLD_FIELDS {
+        value["scheduler_holds"][*k] = row["scheduler"][*k].clone();
+    }
     value
 }
 fn block_note(row: &Value) -> String {
     let mut note = text(row, "note").to_string();
     // Two recordings in one original task must not reinterpret each other's
     // append as a new block. Remove only exact canonical direction additions.
-    if let Some(records) = row[RECORDS].as_array() {
-        for receipt in records.iter().rev() {
-            let block = text(receipt, "note_block");
-            if !block.is_empty() {
-                note = note.replacen(&format!("\n\n{block}"), "", 1);
+    for key in [RECORDS, "owner_implementation_records"] {
+        if let Some(records) = row[key].as_array() {
+            for receipt in records.iter().rev() {
+                let block = text(receipt, "note_block");
+                if !block.is_empty() {
+                    note = note.replacen(&format!("\n\n{block}"), "", 1);
+                }
             }
         }
     }
@@ -129,6 +134,14 @@ fn no_new_holds(saved: &Value, row: &Value) -> bool {
     for k in HOLD_FIELDS {
         let current = &row[*k];
         if !current.is_null() && current != false && current != "" && current != &saved[*k] {
+            return false;
+        }
+        let current = &row["scheduler"][*k];
+        if !current.is_null()
+            && current != false
+            && current != ""
+            && current != &saved["scheduler_holds"][*k]
+        {
             return false;
         }
     }
@@ -169,25 +182,28 @@ fn recorded_scope(db: &Value, id: i64) -> Result<Value> {
 // Exact identifiers in both persisted assignment and executed prompt are required;
 // a project name, title similarity, historical job or generic audit is insufficient.
 fn assigned(body: &str, input: &Value) -> bool {
-    ["request_id", "question_message_id", "message_id"]
-        .iter()
-        .all(|k| {
-            let id = text(input, k);
-            body.match_indices(id).any(|(i, _)| {
-                // Original assignments also use labels such as q123 / reply124.
-                // Decimal IDs must not be a substring of a different numeric ID.
-                let boundary = |c: char| {
-                    if *k == "request_id" {
-                        !c.is_ascii_alphanumeric() && c != '-' && c != '_'
-                    } else {
-                        !c.is_ascii_digit()
-                    }
-                };
-                (i == 0 || body[..i].chars().next_back().is_some_and(boundary))
-                    && (i + id.len() == body.len()
-                        || body[i + id.len()..].chars().next().is_some_and(boundary))
-            })
+    let keys = if input["kind"] == "implementation" {
+        ["origin_todo_id", "question_message_id", "message_id"]
+    } else {
+        ["request_id", "question_message_id", "message_id"]
+    };
+    keys.iter().all(|k| {
+        let id = text(input, k);
+        body.match_indices(id).any(|(i, _)| {
+            // Original assignments also use labels such as q123 / reply124.
+            // Decimal IDs must not be a substring of a different numeric ID.
+            let boundary = |c: char| {
+                if *k == "request_id" {
+                    !c.is_ascii_alphanumeric() && c != '-' && c != '_'
+                } else {
+                    !c.is_ascii_digit()
+                }
+            };
+            (i == 0 || body[..i].chars().next_back().is_some_and(boundary))
+                && (i + id.len() == body.len()
+                    || body[i + id.len()..].chars().next().is_some_and(boundary))
         })
+    })
 }
 fn actor_identity(paths: &Paths, actor: &Value, input: &Value) -> Result<(Value, Vec<u8>)> {
     let job_id = text(input, "job_id");
@@ -267,17 +283,37 @@ fn recorded_actor_matches(
         && saved["prompt_sha256"] == sha(&prompt)
         && saved["cwd"] == job["cwd"])
 }
-fn validate(input: &Value) -> Result<(i64, i64)> {
+fn validate(input: &Value, implementation: bool) -> Result<(i64, i64)> {
     let obj = input.as_object().ok_or("direction_input_invalid")?;
-    if obj.len() != FIELDS.len()
+    let extra = [
+        "completion",
+        "execution",
+        "origin_saved",
+        "identity",
+        "applied_at",
+    ];
+    if obj.len() != FIELDS.len() + if implementation { extra.len() } else { 0 }
         || FIELDS
             .iter()
             .any(|k| !obj.contains_key(*k) || !input[*k].is_string())
-        || input["domain"] != INPUT
-        || input["kind"] != KIND
+        || input["domain"]
+            != if implementation {
+                "discord-conversation-implementation-v1"
+            } else {
+                INPUT
+            }
+        || input["kind"]
+            != if implementation {
+                "implementation"
+            } else {
+                KIND
+            }
         || input["source"] != "discord-api-v10"
     {
         return fail("input_invalid");
+    }
+    if implementation && extra.iter().any(|k| text(input, k).trim().is_empty()) {
+        return fail("execution_evidence_required");
     }
     for k in ["request_id", "sender_request_id"] {
         let s = text(input, k);
@@ -333,6 +369,12 @@ fn validate(input: &Value) -> Result<(i64, i64)> {
     {
         return fail("time_invalid");
     }
+    if implementation {
+        let applied = at("applied_at")?;
+        if applied < a || applied > Utc::now() {
+            return fail("time_invalid");
+        }
+    }
     Ok((
         text(input, "origin_todo_id")
             .parse()
@@ -342,12 +384,35 @@ fn validate(input: &Value) -> Result<(i64, i64)> {
             .map_err(|_| "direction_input_invalid")?,
     ))
 }
-fn block(input: &Value, input_sha: &str) -> String {
+fn block(input: &Value, input_sha: &str, implementation: bool) -> String {
     // The source input retains the exact API bytes. Render the note with the
     // normal edit CLI's newline convention so later ordinary edits preserve it.
     let lines = |s: &str| s.replace("\r\n", "\n").replace('\r', "\n");
+    let marker = if implementation {
+        "implementation"
+    } else {
+        "direction"
+    };
+    let summary = if implementation {
+        "別担当の成果を記録。元作業の取消・待ち・停止は保持。"
+    } else {
+        "仕様へ記録、機能は未完了。画像案の実装承認・配布・元作業全体の完了ではありません。"
+    };
+    let execution = if implementation {
+        format!(
+            "\n実反映: {}\n実行と検証: {}\n元作業の保持: {}\n本人・出所の照合: {}\nrevision={} / applied_at={}",
+            text(input, "completion"),
+            text(input, "execution"),
+            text(input, "origin_saved"),
+            text(input, "identity"),
+            text(input, "revision"),
+            text(input, "applied_at")
+        )
+    } else {
+        String::new()
+    };
     format!(
-        "[discord-direction-record-v1 sha256={input_sha}]\n仕様へ記録、機能は未完了。画像案の実装承認・配布・元作業全体の完了ではありません。\n実担当: ToDo {} / job {}\n元作業・保存先: ToDo {}\n出所: Discord API v10 / author {} / thread {} / question {} / reply {}\n質問日時: {} / 回答日時: {} / 編集日時: {} / 取得日時: {}\n原質問（原文）:\n{}\n本人回答（原文）:\n{}\nsource_receipt_sha256={}\n[/discord-direction-record-v1 sha256={input_sha}]",
+        "[discord-{marker}-record-v1 sha256={input_sha}]\n{summary}\n実担当: ToDo {} / job {}\n元作業・保存先: ToDo {}\n出所: Discord API v10 / author {} / thread {} / question {} / reply {}\n質問日時: {} / 回答日時: {} / 編集日時: {} / 取得日時: {}\n原質問（原文）:\n{}\n本人回答（原文）:\n{}\nsource_receipt_sha256={}{execution}\n[/discord-{marker}-record-v1 sha256={input_sha}]",
         text(input, "actor_todo_id"),
         text(input, "job_id"),
         text(input, "origin_todo_id"),
@@ -375,9 +440,67 @@ pub fn record(
     actor_state: &Path,
     readback: Readback,
 ) -> Result<Value> {
+    record_for(
+        db,
+        paths,
+        input_file,
+        origin_scope,
+        origin_state,
+        actor_scope,
+        actor_state,
+        readback,
+        false,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+pub fn record_implementation(
+    db: &mut Value,
+    paths: &Paths,
+    input_file: &Path,
+    origin_scope: &Path,
+    origin_state: &Path,
+    actor_scope: &Path,
+    actor_state: &Path,
+    readback: Readback,
+) -> Result<Value> {
+    record_for(
+        db,
+        paths,
+        input_file,
+        origin_scope,
+        origin_state,
+        actor_scope,
+        actor_state,
+        readback,
+        true,
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn record_for(
+    db: &mut Value,
+    paths: &Paths,
+    input_file: &Path,
+    origin_scope: &Path,
+    origin_state: &Path,
+    actor_scope: &Path,
+    actor_state: &Path,
+    readback: Readback,
+    implementation: bool,
+) -> Result<Value> {
+    let (receipt_domain, kind, records_key) = if implementation {
+        (
+            "todo-implementation-record-v1",
+            "implementation",
+            "owner_implementation_records",
+        )
+    } else {
+        (RECEIPT, KIND, RECORDS)
+    };
     let bytes = bridge::bytes(input_file)?;
     let input: Value = serde_json::from_slice(&bytes).map_err(|_| "direction_input_invalid")?;
-    let (origin_id, actor_id) = validate(&input)?;
+    let (origin_id, actor_id) = validate(&input, implementation)?;
     if origin_id == actor_id {
         return fail("actor_must_be_distinct");
     }
@@ -393,10 +516,26 @@ pub fn record(
     }
     let actor_scope = recorded_scope(db, actor_id)?;
     let origin_scope = recorded_scope(db, origin_id)?;
+    if implementation {
+        let project = text(&input, "project");
+        let root = std::fs::canonicalize(text(&db["projects"], project))
+            .map_err(|_| "implementation_root_unavailable")?;
+        let (job, _) = actor_identity(paths, row(db, actor_id)?, &input)?;
+        let cwd = std::fs::canonicalize(text(&job, "cwd"))
+            .map_err(|_| "implementation_workspace_unavailable")?;
+        let root = crate::normalized(&root.to_string_lossy());
+        let cwd = crate::normalized(&cwd.to_string_lossy());
+        if cwd != root
+            && !cwd.starts_with(&format!("{root}\\"))
+            && !cwd.starts_with(&format!("{root}-wt\\"))
+        {
+            return fail("actor_project_root_mismatch");
+        }
+    }
     let origin = row(db, origin_id)?;
     let input_sha = sha(&bytes);
-    let append = block(&input, &input_sha);
-    let records = match origin.get(RECORDS) {
+    let append = block(&input, &input_sha, implementation);
+    let records = match origin.get(records_key) {
         Some(v) => v.as_array().ok_or("direction_records_invalid")?.clone(),
         None => vec![],
     };
@@ -415,8 +554,8 @@ pub fn record(
     }
     let receipt = if matched.len() == 1 {
         let saved = matched[0];
-        if saved["domain"] != RECEIPT
-            || saved["kind"] != KIND
+        if saved["domain"] != receipt_domain
+            || saved["kind"] != kind
             || saved["input"] != input
             || !recorded_actor_matches(paths, row(db, actor_id)?, &input, &saved["actor"])?
             || saved["actor_scope"] != actor_scope
@@ -449,7 +588,7 @@ pub fn record(
         if next.len() > 1024 * 1024 {
             return fail("note_limit");
         }
-        let receipt = json!({"domain":RECEIPT,"kind":KIND,"input":input,"input_sha256":input_sha,
+        let receipt = json!({"domain":receipt_domain,"kind":kind,"input":input,"input_sha256":input_sha,
             "actor":actor,"actor_scope":actor_scope,"origin_scope":origin_scope,
             "origin_holds":holds(origin),"note_block":append,"note_block_sha256":sha(append.as_bytes()),
             "note_after_sha256":sha(next.as_bytes()),
@@ -462,7 +601,7 @@ pub fn record(
         cc_scheduler::common::push(&mut changed["note_history"], history);
         changed["note"] = json!(next);
         changed["updated"] = json!(crate::now());
-        changed[RECORDS] = json!(
+        changed[records_key] = json!(
             records
                 .into_iter()
                 .chain([receipt.clone()])
@@ -472,7 +611,7 @@ pub fn record(
         receipt
     };
     Ok(
-        json!({"domain":RECEIPT,"kind":KIND,"recorded":true,"changed":changed_record,
+        json!({"domain":receipt_domain,"kind":kind,"recorded":true,"changed":changed_record,
         "input_sha256":input_sha,"receipt_sha256":sha(&serde_json::to_vec(&receipt).unwrap())}),
     )
 }

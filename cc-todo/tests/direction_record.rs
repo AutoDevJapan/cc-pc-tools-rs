@@ -81,7 +81,7 @@ impl Fixture {
                 &format!("{name}-scope.json"),
                 &json!({"domain":"discord-conversation-todo-scope-v1",
                 "todo_id":(i+1).to_string(),"project":"tools",
-                "project_path_sha256":sha(self.temp.path().to_str().unwrap().as_bytes())}),
+                    "project_path_sha256":sha(db["projects"]["tools"].as_str().unwrap().as_bytes())}),
             );
         }
     }
@@ -93,9 +93,16 @@ impl Fixture {
     }
     fn call_with_holds(&self, verify: bool, check_holds: bool, flags: &[&str]) -> Output {
         let mut c = Command::new(env!("CARGO_BIN_EXE_todo"));
-        c.arg("direction-record")
-            .arg("--input-file")
-            .arg(self.temp.path().join("input.json"));
+        let input: Value =
+            serde_json::from_slice(&fs::read(self.temp.path().join("input.json")).unwrap())
+                .unwrap();
+        c.arg(if input["kind"] == "implementation" {
+            "implementation-record"
+        } else {
+            "direction-record"
+        })
+        .arg("--input-file")
+        .arg(self.temp.path().join("input.json"));
         for name in ["origin", "actor"] {
             c.arg(format!("--{name}-scope-file"))
                 .arg(self.temp.path().join(format!("{name}-scope.json")));
@@ -143,6 +150,167 @@ impl Fixture {
     }
 }
 
+impl Fixture {
+    fn implementation() -> Self {
+        let f = Self::new();
+        let mut input: Value =
+            serde_json::from_slice(&fs::read(f.temp.path().join("input.json")).unwrap()).unwrap();
+        input["domain"] = json!("discord-conversation-implementation-v1");
+        input["kind"] = json!("implementation");
+        for (k, v) in [
+            (
+                "completion",
+                "Only the separate assigned policy was installed.",
+            ),
+            (
+                "execution",
+                "Revision built, installed hash matched, normal acceptance passed.",
+            ),
+            (
+                "origin_saved",
+                "Original cancellation and dependencies retained.",
+            ),
+            (
+                "identity",
+                "Current owner API version and original source matched.",
+            ),
+            ("applied_at", "2026-10-20T00:03:00Z"),
+        ] {
+            input[k] = json!(v);
+        }
+        f.write("input.json", &input);
+        fs::write(
+            f.temp.path().join("actor.md"),
+            "origin 1 question 123 reply 124",
+        )
+        .unwrap();
+        fs::write(
+            f.temp.path().join("jobs/actual-worker/prompt.md"),
+            "origin 1 question 123 reply 124",
+        )
+        .unwrap();
+        let mut db = f.db();
+        db["items"][0]["status"] = json!("block");
+        db["items"][0]["owner_stopped"] = json!(true);
+        db["items"][0]["scheduler"] = json!({"owner_stopped":true,"stop_kind":"owner_cancelled"});
+        f.write("todo.json", &db);
+        f.snapshot();
+        f
+    }
+}
+
+#[test]
+fn implementation_keeps_cancelled_origin_and_records_only_actual_actor() {
+    let f = Fixture::implementation();
+    let before = f.db();
+    f.reject_unchanged(true);
+    let result = f.ok(false);
+    assert_eq!(result["domain"], "todo-implementation-record-v1");
+    let after = f.db();
+    for key in [
+        "status",
+        "wait_on",
+        "jobs",
+        "spec",
+        "progress",
+        "owner_stopped",
+        "scheduler",
+    ] {
+        assert_eq!(after["items"][0][key], before["items"][0][key]);
+    }
+    assert_eq!(after["items"][1], before["items"][1]);
+    let receipt = &after["items"][0]["owner_implementation_records"][0];
+    assert_eq!(receipt["input"]["actor_todo_id"], "2");
+    assert_eq!(receipt["input"]["job_id"], "actual-worker");
+    assert!(
+        after["items"][0]["note"]
+            .as_str()
+            .unwrap()
+            .contains("Original cancellation and dependencies retained.")
+    );
+    f.snapshot();
+    assert_eq!(f.ok(true)["receipt_sha256"], result["receipt_sha256"]);
+    let bytes = fs::read(f.temp.path().join("todo.json")).unwrap();
+    assert_eq!(f.ok(false)["changed"], false);
+    assert_eq!(fs::read(f.temp.path().join("todo.json")).unwrap(), bytes);
+}
+
+#[test]
+fn implementation_rejects_unowned_missing_or_out_of_scope_jobs_and_empty_execution() {
+    for change in [
+        "missing-job",
+        "owner",
+        "workspace",
+        "prompt",
+        "spec",
+        "no-execution",
+        "not-current",
+        "root",
+    ] {
+        let f = Fixture::implementation();
+        let path = f.temp.path().join("jobs/actual-worker/job.json");
+        let mut job: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+        match change {
+            "missing-job" => fs::remove_file(path).unwrap(),
+            "owner" => {
+                job["todo_id"] = json!(3);
+                f.write("jobs/actual-worker/job.json", &job);
+            }
+            "workspace" => {
+                job["cwd"] = json!(std::env::temp_dir());
+                f.write("jobs/actual-worker/job.json", &job);
+            }
+            "prompt" => fs::write(
+                f.temp.path().join("jobs/actual-worker/prompt.md"),
+                "wrong question 1235 reply 1245",
+            )
+            .unwrap(),
+            "spec" => {
+                fs::write(f.temp.path().join("actor.md"), "origin 1 unrelated audit").unwrap()
+            }
+            "no-execution" => {
+                let mut v: Value =
+                    serde_json::from_slice(&fs::read(f.temp.path().join("input.json")).unwrap())
+                        .unwrap();
+                v["execution"] = json!("");
+                f.write("input.json", &v);
+            }
+            "not-current" => {
+                job["status"] = json!("succeeded");
+                f.write("jobs/actual-worker/job.json", &job);
+            }
+            _ => {
+                let mut db = f.db();
+                db["projects"]["tools"] = json!(std::env::temp_dir().join("different-root"));
+                f.write("todo.json", &db);
+                f.snapshot();
+            }
+        }
+        f.reject_unchanged(false);
+    }
+}
+
+#[test]
+fn implementation_keeps_prior_receipt_when_input_conflicts_or_a_new_hold_appears() {
+    let f = Fixture::implementation();
+    f.ok(false);
+    f.snapshot();
+    let mut v: Value =
+        serde_json::from_slice(&fs::read(f.temp.path().join("input.json")).unwrap()).unwrap();
+    v["completion"] = json!("Different claimed result");
+    f.write("input.json", &v);
+    f.reject_unchanged(false);
+    v["completion"] = json!("Only the separate assigned policy was installed.");
+    f.write("input.json", &v);
+    let mut db = f.db();
+    db["items"][0]["cancel_requested"] = json!(true);
+    f.write("todo.json", &db);
+    f.snapshot();
+    f.reject_unchanged(true);
+    let out = f.call_with_holds(true, false, &[]);
+    assert!(out.status.success());
+}
+
 #[test]
 fn direction_records_actual_actor_and_specification_without_completing_product() {
     let f = Fixture::new();
@@ -170,6 +338,34 @@ fn direction_records_actual_actor_and_specification_without_completing_product()
     let raw = fs::read(f.temp.path().join("todo.json")).unwrap();
     assert_eq!(f.ok(false)["changed"], false);
     assert_eq!(raw, fs::read(f.temp.path().join("todo.json")).unwrap());
+}
+
+#[test]
+fn implementation_accepts_registered_sibling_worktree_but_rejects_nested_new_stop() {
+    let f = Fixture::implementation();
+    let root = f.temp.path().join("repository");
+    let worktree = f.temp.path().join("repository-wt/actor");
+    fs::create_dir_all(&root).unwrap();
+    fs::create_dir_all(&worktree).unwrap();
+    let mut db = f.db();
+    db["projects"]["tools"] = json!(root);
+    db["items"][1]["scheduler"]["worktree"] = json!(worktree);
+    f.write("todo.json", &db);
+    let mut job: Value = serde_json::from_slice(
+        &fs::read(f.temp.path().join("jobs/actual-worker/job.json")).unwrap(),
+    )
+    .unwrap();
+    job["cwd"] = json!(worktree);
+    f.write("jobs/actual-worker/job.json", &job);
+    f.snapshot();
+    f.ok(false);
+    f.snapshot();
+    assert_eq!(f.ok(true)["recorded"], true);
+    db = f.db();
+    db["items"][0]["scheduler"]["paused"] = json!(true);
+    f.write("todo.json", &db);
+    f.snapshot();
+    f.reject_unchanged(true);
 }
 
 #[test]

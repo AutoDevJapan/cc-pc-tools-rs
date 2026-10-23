@@ -7,7 +7,9 @@ Issueと実装は同じ受入条件で管理する。実データ・本人原文
 `conversation source-verify` は正規APIの現在の質問・回答版と、保存済みの
 canonical per-reply sourceを比較する。saved/todo0でも原本の検証は可能とする。
 inspectionのSHA、本文の一致だけ、担当への配送だけでは実反映としない。
-原本がない場合や編集された場合は拒否し、元の世代を上書きしない。
+原本がない場合や編集された場合は拒否する。`source-reacquire` は現在のAPI版を
+別のimmutableなcanonical世代へ取得し、旧原本と旧intakeの参照を保持する。
+消失した原本を空作成せず、元の世代を上書きしない。旧SHAを新世代のSHAと偽らない。
 
 `conversation implementation-record` は元質問・元ToDo・別担当の通常登録・
 project/root・現在の実ジョブ・実行場所・元依頼への担当割当・revision・具体的な
@@ -30,6 +32,22 @@ ToDo writerは同じロックで両方のスナップショットを照合し、
 - 競合時は両ToDoを保持する。同じ入力の再実行と応答消失後の読戻しは重複しない。
 - 全現在返信が反映されるまでcloseしない。新返信・編集・新しい停止も照合する。
 - PATCHの応答消失はGETで回復し、GET未確認を終了と報告しない。
+
+## 利用順
+
+```text
+unattended-runner.exe conversation source-verify --request-id <元request> --message-id <本人reply>
+unattended-runner.exe conversation source-reacquire --request-id <元request> --message-id <本人reply>
+unattended-runner.exe conversation implementation-record --request-id <元request> --message-id <本人reply> --actor-todo-id <実担当> --source-sha256 <確認したcanonical SHA> --revision <実反映の40桁commit> --evidence-file <UTF-8 JSON>
+unattended-runner.exe conversation close --request-id <元request>
+```
+
+再取得は原本が現在版と一致しない場合だけ使う。正常一致は同じ世代を返す。
+evidence-fileは `completion`, `execution`, `origin_saved`, `identity`, `applied_at`
+だけを持つ。各文字列には実施した成果、具体的なコマンド・結果・配布と読戻し、
+元作業の保持、APIと原本の照合、取得以降の実反映確認日時を記す。
+jobは引数で指定せず現在の `CC_JOB_ID` を使う。同じ証拠で再実行する。
+別版・別成果を既存の反映へ上書きしない。記録コマンドは投稿・closeを行わない。
 
 既存の独立チェックは不足の再現証拠として再利用する。新入口のGreenと
 新実装の別モデルレビューは別に取得する。配布は最新mainと並行writerを照合して

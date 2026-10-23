@@ -51,6 +51,25 @@ func deflated(t *testing.T, data []byte) []byte {
 	return buf.Bytes()
 }
 
+// padded is data as one zlib stream that holds blocks empty stored blocks
+// before a final stored block of the data.
+func padded(data []byte, blocks int) []byte {
+	n := len(data)
+	stream := slices.Concat([]byte{0x78, 0x01}, bytes.Repeat([]byte{0, 0, 0, 0xff, 0xff}, blocks),
+		[]byte{1, byte(n), byte(n >> 8), ^byte(n), ^byte(n >> 8)}, data)
+	return binary.BigEndian.AppendUint32(stream, adler32.Checksum(data))
+}
+
+// rawName is the 20-byte name of the object of kind with data.
+func rawName(t *testing.T, kind string, data []byte) []byte {
+	t.Helper()
+	name, err := hex.DecodeString(objectName(kind, data))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return name
+}
+
 // rawEntry is one entry of a pack that writeRawPack writes: the name that the
 // index gives it, and its bytes from its type and size to the end of its zlib
 // stream.
@@ -119,10 +138,11 @@ func openRawStore(t *testing.T, objects string, limits objectLimits) *objectStor
 	return store
 }
 
-// A delta chain that returns to an entry is refused once the entries' headers
-// show the loop, before anything is inflated, however large the deltas say
-// they are. Inflating each delta on the way down would hold one per step until
-// the depth limit: tens of gigabytes for 16 MiB deltas.
+// A delta chain that returns to an entry is refused as soon as the entries'
+// headers show the loop, before anything is inflated, however large the
+// deltas say they are. Inflating each delta on the way down would hold one per
+// step up to the depth limit: tens of gigabytes for 16 MiB deltas. Walking
+// the headers on to the depth limit would allocate about a megabyte.
 func TestDeltaCyclesInflateNothing(t *testing.T) {
 	const size = 16 << 10
 	delta := deflated(t, make([]byte, size))
@@ -147,7 +167,7 @@ func TestDeltaCyclesInflateNothing(t *testing.T) {
 			if ok || store.failure() != "source_git" {
 				t.Fatalf("object = %v, reason %q; want the cycle refused", ok, store.failure())
 			}
-			if grown := after.TotalAlloc - before.TotalAlloc; grown > 1<<20 {
+			if grown := after.TotalAlloc - before.TotalAlloc; grown > 256<<10 {
 				t.Fatalf("refusing the cycle allocated %d bytes", grown)
 			}
 			if store.spent != 0 {
@@ -194,35 +214,63 @@ func TestDeltaDepthLimit(t *testing.T) {
 	}
 }
 
-// The compressed bytes read count against the read limit, so a stream padded
-// with empty blocks is refused under a limit that its inflated size meets.
-func TestReadLimitCountsCompressedBytes(t *testing.T) {
-	data := []byte("a blob whose stream is padded with empty blocks\n")
-	id := objectName("blob", data)
-	name, err := hex.DecodeString(id)
-	if err != nil {
-		t.Fatal(err)
+// Every byte that the store reads or produces counts against the read limit:
+// the compressed bytes as they are read, each pack entry's inflated size and
+// each delta's result, and each loose file's size and inflated size. Each
+// object below is read under the production limit, and refused under a limit
+// that only the bytes of its case pass.
+func TestReadLimitCountsEveryByte(t *testing.T) {
+	const limit = 512 << 10
+	small := []byte("a blob that fits under any limit\n")
+	large := make([]byte, 1<<20)
+	base := make([]byte, 64<<10)
+	// A delta from base to large: the two sizes, then 16 copies of all of base.
+	delta := slices.Concat([]byte{0x80, 0x80, 0x04, 0x80, 0x80, 0x40}, bytes.Repeat([]byte{0x80}, 16))
+	cases := map[string]struct {
+		data  []byte
+		write func(t *testing.T, objects string)
+	}{
+		"compressed bytes of a pack entry": {small, func(t *testing.T, objects string) {
+			writeRawPack(t, filepath.Join(objects, "pack"), []rawEntry{
+				{rawName(t, "blob", small), slices.Concat(entryHead(objBlob, len(small)), padded(small, 1<<18))},
+			})
+		}},
+		"inflated size of a pack entry": {large, func(t *testing.T, objects string) {
+			writeRawPack(t, filepath.Join(objects, "pack"), []rawEntry{
+				{rawName(t, "blob", large), slices.Concat(entryHead(objBlob, len(large)), deflated(t, large))},
+			})
+		}},
+		"size that a delta rebuilds": {large, func(t *testing.T, objects string) {
+			whole := slices.Concat(entryHead(objBlob, len(base)), deflated(t, base))
+			writeRawPack(t, filepath.Join(objects, "pack"), []rawEntry{
+				{rawName(t, "blob", base), whole},
+				{rawName(t, "blob", large), slices.Concat(entryHead(objOfsDelta, len(delta)), ofsBase(len(whole)), deflated(t, delta))},
+			})
+		}},
+		"bytes of a loose file": {small, func(t *testing.T, objects string) {
+			id := objectName("blob", small)
+			content := slices.Concat([]byte("blob "+strconv.Itoa(len(small))+"\x00"), small)
+			writeFile(t, filepath.Join(objects, id[:2], id[2:]), string(padded(content, 1<<18)))
+		}},
+		"inflated size of a loose object": {large, func(t *testing.T, objects string) {
+			writeLooseObject(t, objects, "blob", string(large))
+		}},
 	}
-	// A zlib header, 2^18 empty stored blocks, a final stored block of the
-	// data and the data's Adler-32 checksum.
-	n := len(data)
-	stream := slices.Concat([]byte{0x78, 0x01}, bytes.Repeat([]byte{0, 0, 0, 0xff, 0xff}, 1<<18),
-		[]byte{1, byte(n), byte(n >> 8), ^byte(n), ^byte(n >> 8)}, data)
-	stream = binary.BigEndian.AppendUint32(stream, adler32.Checksum(data))
-	objects := filepath.Join(testLongPath(t, t.TempDir()), "objects")
-	writeRawPack(t, filepath.Join(objects, "pack"), []rawEntry{{name: name, data: slices.Concat(entryHead(objBlob, n), stream)}})
-
-	store := openRawStore(t, objects, productionProfile.limits)
-	if kind, got, ok := store.object(id); !ok || kind != "blob" || !bytes.Equal(got, data) {
-		t.Fatalf("object = %q %q %v", kind, got, ok)
-	}
-	if store.spent < int64(len(stream)) {
-		t.Fatalf("reading a stream of %d bytes counted %d bytes", len(stream), store.spent)
-	}
-	limits := productionProfile.limits
-	limits.readBytes = int64(len(stream)) / 2
-	if _, _, ok := openRawStore(t, objects, limits).object(id); ok {
-		t.Fatalf("a stream of %d bytes was read under a limit of %d bytes", len(stream), limits.readBytes)
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			objects := filepath.Join(testLongPath(t, t.TempDir()), "objects")
+			tc.write(t, objects)
+			id := objectName("blob", tc.data)
+			if kind, got, ok := openRawStore(t, objects, productionProfile.limits).object(id); !ok || kind != "blob" || !bytes.Equal(got, tc.data) {
+				t.Fatalf("under the production limit, object = %q of %d bytes, %v", kind, len(got), ok)
+			}
+			limits := productionProfile.limits
+			limits.readBytes = limit
+			store := openRawStore(t, objects, limits)
+			if _, _, ok := store.object(id); ok || store.failure() != "source_git" {
+				t.Fatalf("under a limit of %d bytes, object = %v, reason %q", limit, ok, store.failure())
+			}
+		})
 	}
 }
 
@@ -249,6 +297,13 @@ func TestObjectLimits(t *testing.T) {
 		return f.gitOut(append([]string{"-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit-tree", f.p.tree}, args...)...)
 	}
 	repack := func(f *fixture) { f.gitIn(f.repo, "repack", "-a", "-d", "-q") }
+	// twoPacks leaves the fixture's objects in one pack and a commit that a tag
+	// names in a second one.
+	twoPacks := func(f *fixture) {
+		repack(f)
+		f.gitIn(f.repo, "update-ref", "refs/tags/second-pack", commit(f, "-m", "a commit in a second pack"))
+		f.gitIn(f.repo, "repack", "-d", "-q")
+	}
 	packFiles := func(f *fixture, pattern string) []string {
 		matches, err := filepath.Glob(filepath.Join(f.common, "objects", "pack", pattern))
 		if err != nil || len(matches) == 0 {
@@ -266,9 +321,7 @@ func TestObjectLimits(t *testing.T) {
 		"index and pack pairs": {
 			func(l *objectLimits, n int64) { l.packs = int(n) },
 			func(f *fixture) int64 {
-				repack(f)
-				f.gitIn(f.repo, "update-ref", "refs/tags/second-pack", commit(f, "-m", "a commit in a second pack"))
-				f.gitIn(f.repo, "repack", "-d", "-q")
+				twoPacks(f)
 				return int64(len(packFiles(f, "pack-*.idx")))
 			},
 		},
@@ -276,10 +329,14 @@ func TestObjectLimits(t *testing.T) {
 			func(l *objectLimits, n int64) { l.packEntries = int(n) },
 			func(f *fixture) int64 { repack(f); return int64(len(packFiles(f, "*"))) },
 		},
+		// Each of the two indexes fits under the bound; only their total does not.
 		"index bytes": {
 			func(l *objectLimits, n int64) { l.indexBytes = n },
 			func(f *fixture) int64 {
-				repack(f)
+				twoPacks(f)
+				if n := len(packFiles(f, "pack-*.idx")); n != 2 {
+					f.t.Fatalf("%d indexes", n)
+				}
 				var total int64
 				for _, idx := range packFiles(f, "pack-*.idx") {
 					info, err := os.Stat(idx)

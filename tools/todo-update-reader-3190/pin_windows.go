@@ -2,12 +2,14 @@ package main
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
+	"unicode/utf16"
 	"unsafe"
 )
 
@@ -19,7 +21,20 @@ const (
 	fileReadAttributes       = 0x00000080
 )
 
-var procGetFinalPathNameByHandleW = syscall.NewLazyDLL("kernel32.dll").NewProc("GetFinalPathNameByHandleW")
+// GetFileInformationByHandleEx returns FILE_FULL_DIR_INFO records: the offset
+// of the next record, the name's length in bytes, then the name.
+const (
+	fileFullDirectoryInfo        = 14
+	fileFullDirectoryRestartInfo = 15
+	dirInfoNameLength            = 60
+	dirInfoName                  = 68
+)
+
+var (
+	kernel32                         = syscall.NewLazyDLL("kernel32.dll")
+	procGetFinalPathNameByHandleW    = kernel32.NewProc("GetFinalPathNameByHandleW")
+	procGetFileInformationByHandleEx = kernel32.NewProc("GetFileInformationByHandleEx")
+)
 
 // pinnedFile is one evidence file held open for reading with writes, deletes
 // and renames denied to everyone else until the session closes.
@@ -30,8 +45,8 @@ type pinnedFile struct {
 	size int64
 }
 
-// pinnedDir keeps the identity of the source root. Others may still create
-// files in it, so only its identity and physical path are rechecked.
+// pinnedDir keeps the identity of a directory. Others may still create files
+// in it, so only its identity and physical path are rechecked.
 type pinnedDir struct {
 	handle syscall.Handle
 	path   string
@@ -229,27 +244,71 @@ func (s *session) unchanged(f *pinnedFile) bool {
 	return ok && strings.EqualFold(actual, f.path) && plain && info.Mode().IsRegular()
 }
 
-func (s *session) pinDir(path string) bool {
+// pinDir opens a directory without following a reparse point and keeps it open
+// until the session closes. Its entries are listed through the returned handle.
+func (s *session) pinDir(path string) (pinnedDir, bool) {
 	if !s.plainAncestors(path) || !s.plainDir(path) {
-		return false
+		return pinnedDir{}, false
 	}
 	name, err := syscall.UTF16PtrFromString(path)
 	if err != nil {
-		return false
+		return pinnedDir{}, false
 	}
 	h, err := syscall.CreateFile(name, fileListDirectory|fileReadAttributes, syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE|syscall.FILE_SHARE_DELETE, nil, syscall.OPEN_EXISTING, fileFlagBackupSemantics|fileFlagOpenReparsePoint, 0)
 	if err != nil {
-		return false
+		return pinnedDir{}, false
 	}
 	d := pinnedDir{handle: h, path: path}
 	actual, ok := finalPath(h)
 	if syscall.GetFileInformationByHandle(h, &d.info) != nil || reparse(d.info.FileAttributes) ||
 		d.info.FileAttributes&syscall.FILE_ATTRIBUTE_DIRECTORY == 0 || !ok || !strings.EqualFold(actual, path) {
 		syscall.CloseHandle(h)
-		return false
+		return pinnedDir{}, false
 	}
 	s.dirs = append(s.dirs, d)
-	return true
+	return d, true
+}
+
+// list returns the names of the pinned directory's entries, read through its
+// handle, so a directory that takes the path after the pin is never listed.
+// A directory of more than limit entries is refused.
+func (d pinnedDir) list(limit int) ([]string, bool) {
+	buf := make([]uint64, 8<<10) // the records start at 8-byte boundaries
+	raw := unsafe.Slice((*byte)(unsafe.Pointer(&buf[0])), 8*len(buf))
+	var names []string
+	for class := uintptr(fileFullDirectoryRestartInfo); ; class = fileFullDirectoryInfo {
+		r, _, err := procGetFileInformationByHandleEx.Call(uintptr(d.handle), class, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(raw)))
+		if r == 0 {
+			return names, err == syscall.ERROR_NO_MORE_FILES
+		}
+		for at := 0; ; {
+			if at > len(raw)-dirInfoName {
+				return nil, false
+			}
+			next := int(binary.LittleEndian.Uint32(raw[at:]))
+			size := int(binary.LittleEndian.Uint32(raw[at+dirInfoNameLength:]))
+			if size%2 != 0 || size > len(raw)-at-dirInfoName {
+				return nil, false
+			}
+			units := make([]uint16, size/2)
+			for i := range units {
+				units[i] = binary.LittleEndian.Uint16(raw[at+dirInfoName+2*i:])
+			}
+			if name := string(utf16.Decode(units)); name != "." && name != ".." {
+				if len(names) == limit {
+					return nil, false
+				}
+				names = append(names, name)
+			}
+			if next == 0 {
+				break
+			}
+			if next < dirInfoName {
+				return nil, false
+			}
+			at += next
+		}
+	}
 }
 
 func dirUnchanged(d pinnedDir) bool {

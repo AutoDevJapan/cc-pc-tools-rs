@@ -99,7 +99,7 @@ func (s *session) readSource(p profile) (sourceObjects, string, string) {
 	if !guardClear(s.env, objects) {
 		return fail("guard_classification")
 	}
-	if !s.pinDir(objects) {
+	if _, ok := s.pinDir(objects); !ok {
 		return fail("source_git")
 	}
 	return sourceObjects{dir: objects, shallow: shallow}, mainID, ""

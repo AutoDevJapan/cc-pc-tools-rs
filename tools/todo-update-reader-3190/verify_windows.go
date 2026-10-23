@@ -81,7 +81,7 @@ func verifyUpdate(requested string, p profile, env environment) (qualification, 
 		return qualification{}, "baseline_mismatch"
 	}
 
-	if !s.pinDir(p.root) || !guardClear(env, p.root) {
+	if _, ok := s.pinDir(p.root); !ok || !guardClear(env, p.root) {
 		return qualification{}, "source_root"
 	}
 	tree, reason := s.checkSource(p)

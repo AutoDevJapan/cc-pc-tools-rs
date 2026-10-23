@@ -7,6 +7,7 @@ import (
 	"crypto/sha1"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -16,17 +17,14 @@ import (
 	"strings"
 )
 
-// Bounds of the object reads. The commits and trees read here, and the delta
-// bases on the way to them, are far smaller than maxObjectBytes.
+// Bounds of each object read. The commits and trees read here, and the delta
+// bases on the way to them, are far smaller than maxObjectBytes. The profile's
+// objectLimits bound the totals.
 const (
 	maxObjectBytes = 16 << 20
 	maxLooseBytes  = 16 << 20
-	maxIndexBytes  = 256 << 20
 	maxPackBytes   = 1 << 40
-	maxDeltaChain  = 4096
-	maxCommits     = 1 << 20
 	maxTreeDepth   = 128
-	maxTreeEntries = 1 << 20
 	maxCachedBytes = 64 << 20
 )
 
@@ -68,7 +66,8 @@ type sourceObjects struct {
 // store. The guard classifies every file before it is opened, each file is
 // read from a plain single-link handle that denies writes, and every object
 // is checked against its name before it is used. The result therefore rests
-// on the objects' names, and the store's files are not rechecked.
+// on the objects' names, and the store's files are not rechecked. The
+// profile's objectLimits bound what it lists, reads and rebuilds.
 type objectStore struct {
 	s       *session
 	dir     string
@@ -78,7 +77,7 @@ type objectStore struct {
 	reason  string
 	cache   map[packedAt]packedObject
 	cached  int
-	spent   int64
+	spent   int64 // bytes counted against limits.readBytes
 }
 
 type packedAt struct {
@@ -112,6 +111,13 @@ type entryHeader struct {
 	data   int64
 	base   int64
 	baseID []byte
+}
+
+// deltaStep is a delta on the way down to its whole base: where its entry
+// starts, and its header.
+type deltaStep struct {
+	at int64
+	h  entryHeader
 }
 
 type namedEntry struct {
@@ -150,9 +156,10 @@ func (q *commitQueue) Pop() any {
 }
 
 // openObjects lists the store's packs and reads their indexes. The guard
-// classifies the pack directory, then every index and pack, before any is
-// opened. An index without its pack is skipped, as Git skips it, and no other
-// file of the directory is opened.
+// classifies the pack directory, which is then listed through the handle that
+// pins it, and every index and pack before any is opened. An index without its
+// pack is skipped, as Git skips it, and no other file of the directory is
+// opened.
 func (s *session) openObjects(src sourceObjects, limits objectLimits) (*objectStore, string) {
 	o := &objectStore{s: s, dir: src.dir, limits: limits, shallow: map[string]bool{}, cache: map[packedAt]packedObject{}}
 	if text, ok := strings.CutSuffix(string(src.shallow), "\n"); ok {
@@ -169,35 +176,41 @@ func (s *session) openObjects(src sourceObjects, limits objectLimits) (*objectSt
 	if !guardClear(s.env, dir) {
 		return nil, "guard_classification"
 	}
-	if !s.pinDir(dir) {
+	pinned, ok := s.pinDir(dir)
+	if !ok {
 		return nil, "source_git"
 	}
 	if s.env.beforeList != nil {
 		s.env.beforeList(dir)
 	}
-	entries, err := os.ReadDir(dir)
-	if err != nil {
+	names, ok := pinned.list(limits.packEntries)
+	if !ok {
 		return nil, "source_git"
 	}
 	present := map[string]bool{}
-	for _, e := range entries {
-		present[e.Name()] = true
+	for _, name := range names {
+		present[name] = true
 	}
 	var paths []string
-	for _, e := range entries {
-		packName := strings.TrimSuffix(e.Name(), ".idx") + ".pack"
-		if packIndexName.MatchString(e.Name()) && present[packName] {
-			paths = append(paths, filepath.Join(dir, e.Name()), filepath.Join(dir, packName))
+	for _, name := range names {
+		packName := strings.TrimSuffix(name, ".idx") + ".pack"
+		if packIndexName.MatchString(name) && present[packName] {
+			paths = append(paths, filepath.Join(dir, name), filepath.Join(dir, packName))
 		}
+	}
+	if len(paths) > 2*limits.packs {
+		return nil, "source_git"
 	}
 	if !s.classifyPaths(paths) {
 		return nil, "guard_classification"
 	}
+	var indexed int64
 	for i := 0; i < len(paths); i += 2 {
-		f, ok := s.openObject(paths[i], maxIndexBytes)
+		f, ok := s.openObject(paths[i], limits.indexBytes-indexed)
 		if !ok {
 			return nil, "source_git"
 		}
+		indexed += f.size
 		data, _, ok := s.read(f)
 		f.file.Close()
 		p := &pack{path: paths[i+1]}
@@ -232,6 +245,34 @@ func (o *objectStore) failure() string {
 		return "source_git"
 	}
 	return o.reason
+}
+
+// charge counts n more bytes read from the store, inflated or rebuilt from
+// deltas, and refuses the source once the total would pass the read limit.
+func (o *objectStore) charge(n int64) bool {
+	if n > o.limits.readBytes-o.spent {
+		return false
+	}
+	o.spent += n
+	return true
+}
+
+// errReadLimit stops an inflation whose compressed bytes pass the read limit.
+var errReadLimit = errors.New("object store read limit reached")
+
+// metered counts the compressed bytes that an inflation reads against the
+// read limit as it reads them, so padding that inflates to nothing counts too.
+type metered struct {
+	r io.Reader
+	o *objectStore
+}
+
+func (m metered) Read(b []byte) (int, error) {
+	n, err := m.r.Read(b)
+	if !m.o.charge(int64(n)) {
+		return 0, errReadLimit
+	}
+	return n, err
 }
 
 // parseIndex reads a version 2 pack index: the fanout table, the sorted
@@ -385,10 +426,15 @@ func (p *pack) header(off int64) (entryHeader, bool) {
 	return h, h.size <= maxObjectBytes
 }
 
-// inflate decompresses the zlib stream at at. It must hold exactly size bytes
-// and end there with a matching checksum.
-func (p *pack) inflate(at, size int64) ([]byte, bool) {
-	z, err := zlib.NewReader(io.NewSectionReader(p.file.file, at, p.file.size-20-at))
+// inflate decompresses the zlib stream at at of p. It must hold exactly size
+// bytes and end there with a matching checksum. The size counts against the
+// read limit before anything is inflated, and the compressed bytes as they
+// are read.
+func (o *objectStore) inflate(p *pack, at, size int64) ([]byte, bool) {
+	if !o.charge(size) {
+		return nil, false
+	}
+	z, err := zlib.NewReader(metered{io.NewSectionReader(p.file.file, at, p.file.size-20-at), o})
 	if err != nil {
 		return nil, false
 	}
@@ -405,46 +451,91 @@ func inflateExact(z io.Reader, size int64) ([]byte, bool) {
 	return data, n == 0 && err == io.EOF
 }
 
-// entry inflates the entry at off and applies its deltas against bases in the
-// same pack, as Git's unpack_entry does for a pack stored on disk.
-func (o *objectStore) entry(p *pack, off int64, depth int) (int, []byte, bool) {
-	if cached, ok := o.cache[packedAt{p, off}]; ok {
-		return cached.kind, cached.data, true
-	}
-	h, ok := p.header(off)
-	if !ok || depth > maxDeltaChain {
-		return 0, nil, false
-	}
-	data, ok := p.inflate(h.data, h.size)
-	if !ok {
-		return 0, nil, false
-	}
-	kind := h.kind
-	if kind == objOfsDelta || kind == objRefDelta {
-		base := h.base
-		if kind == objRefDelta {
+// entry rebuilds the object at off against bases in the same pack, as Git's
+// unpack_entry does for a pack stored on disk. It first follows the entries'
+// headers alone down to a whole object, or to one already rebuilt: an entry
+// reached twice, or a chain of more deltas than the depth limit, is refused
+// before anything is inflated. It then inflates the base and applies the
+// deltas from the innermost one up, inflating each delta only to apply it, so
+// it holds the object being rebuilt, one delta and the result at a time.
+func (o *objectStore) entry(p *pack, off int64) (int, []byte, bool) {
+	var (
+		deltas  []deltaStep
+		reached = map[int64]bool{}
+		kind    int
+		data    []byte
+	)
+	at := off
+	for {
+		if cached, ok := o.cache[packedAt{p, at}]; ok {
+			kind, data = cached.kind, cached.data
+			break
+		}
+		if reached[at] {
+			return 0, nil, false
+		}
+		reached[at] = true
+		h, ok := p.header(at)
+		if !ok {
+			return 0, nil, false
+		}
+		if h.kind != objOfsDelta && h.kind != objRefDelta {
+			if data, ok = o.inflate(p, h.data, h.size); !ok {
+				return 0, nil, false
+			}
+			kind = h.kind
+			o.remember(p, at, kind, data)
+			break
+		}
+		if len(deltas) == o.limits.deltaDepth {
+			return 0, nil, false
+		}
+		deltas = append(deltas, deltaStep{at, h})
+		if at = h.base; h.kind == objRefDelta {
 			i, in := p.find(h.baseID)
 			if !in {
 				return 0, nil, false
 			}
-			if base, ok = p.offset(i); !ok {
+			if at, ok = p.offset(i); !ok {
 				return 0, nil, false
 			}
 		}
-		baseKind, baseData, ok := o.entry(p, base, depth+1)
+	}
+	for i := len(deltas) - 1; i >= 0; i-- {
+		step := deltas[i]
+		delta, ok := o.inflate(p, step.h.data, step.h.size)
 		if !ok {
 			return 0, nil, false
 		}
-		if data, ok = applyDelta(baseData, data); !ok {
+		size, ok := deltaResult(delta)
+		if !ok || !o.charge(size) {
 			return 0, nil, false
 		}
-		kind = baseKind
-	}
-	if o.cached+len(data) <= maxCachedBytes {
-		o.cache[packedAt{p, off}] = packedObject{kind, data}
-		o.cached += len(data)
+		if data, ok = applyDelta(data, delta); !ok {
+			return 0, nil, false
+		}
+		o.remember(p, step.at, kind, data)
 	}
 	return kind, data, true
+}
+
+// remember keeps a rebuilt object for later reads while the cache has room.
+func (o *objectStore) remember(p *pack, at int64, kind int, data []byte) {
+	if o.cached+len(data) <= maxCachedBytes {
+		o.cache[packedAt{p, at}] = packedObject{kind, data}
+		o.cached += len(data)
+	}
+}
+
+// deltaResult reads the size of the object that a delta rebuilds: the second
+// of the delta's two leading sizes.
+func deltaResult(delta []byte) (int64, bool) {
+	_, rest, ok := deltaSize(delta)
+	if !ok {
+		return 0, false
+	}
+	size, _, ok := deltaSize(rest)
+	return int64(size), ok && size <= maxObjectBytes
 }
 
 // applyDelta rebuilds an object from its base and a delta, as Git's
@@ -554,12 +645,13 @@ func (o *objectStore) packed(p *pack, i int) (string, []byte, bool) {
 	if !ok || !o.openPack(p) {
 		return "", nil, false
 	}
-	kind, data, ok := o.entry(p, off, 0)
+	kind, data, ok := o.entry(p, off)
 	return objectKinds[kind], data, ok
 }
 
 // loose reads the loose file of id. A missing file means that the store does
-// not hold the object.
+// not hold the object. The file's size, then the size that it inflates to,
+// count against the read limit before they are read.
 func (o *objectStore) loose(id string) (string, []byte, bool) {
 	path := filepath.Join(o.dir, id[:2], id[2:])
 	if _, err := os.Lstat(path); err != nil {
@@ -573,17 +665,22 @@ func (o *objectStore) loose(id string) (string, []byte, bool) {
 	if !ok {
 		return "", nil, false
 	}
+	if !o.charge(f.size) {
+		f.file.Close()
+		return "", nil, false
+	}
 	data, _, ok := o.s.read(f)
 	f.file.Close()
 	if !ok {
 		return "", nil, false
 	}
-	return inflateLoose(data)
+	return inflateLoose(data, o.charge)
 }
 
 // inflateLoose reads a loose object file: one zlib stream of
-// "<type> <size>\x00" and exactly size bytes.
-func inflateLoose(data []byte) (string, []byte, bool) {
+// "<type> <size>\x00" and exactly size bytes. The size is charged before the
+// bytes are inflated.
+func inflateLoose(data []byte, charge func(int64) bool) (string, []byte, bool) {
 	z, err := zlib.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return "", nil, false
@@ -602,7 +699,7 @@ func inflateLoose(data []byte) (string, []byte, bool) {
 	}
 	kind, text, _ := strings.Cut(string(header), " ")
 	size, err := strconv.ParseInt(text, 10, 64)
-	if err != nil || size < 0 || size > maxObjectBytes || strconv.FormatInt(size, 10) != text || !knownKind(kind) {
+	if err != nil || size < 0 || size > maxObjectBytes || strconv.FormatInt(size, 10) != text || !knownKind(kind) || !charge(size) {
 		return "", nil, false
 	}
 	content, ok := inflateExact(z, size)
@@ -636,25 +733,29 @@ func (o *objectStore) commit(id string) (string, []string, int64, bool) {
 	return tree, parents, when, true
 }
 
-// parseCommit reads the header Git requires of a commit: the tree line first,
-// then the parent lines. The committer line's time only orders the walk.
+// parseCommit reads a commit's tree and parents as Git's parse_commit_buffer
+// does: a "tree <id>\n" line that more bytes follow, then, while a line starts
+// with "parent " and more than such a line's length follows, "parent <id>\n".
+// Git reads a shorter "parent " line as no parent; the reader refuses that
+// commit, so every commit that it reads has the parents that Git reads. The
+// committer line's time only orders the walk.
 func parseCommit(data []byte) (string, []string, int64, bool) {
-	header, _, _ := strings.Cut(string(data), "\n\n")
-	lines := strings.Split(header, "\n")
-	tree, ok := strings.CutPrefix(lines[0], "tree ")
-	if !ok || !hexDigest(tree, 40) {
+	const treeLine, parentLine = len("tree \n") + 40, len("parent \n") + 40
+	text := string(data)
+	if len(text) <= treeLine || !strings.HasPrefix(text, "tree ") || text[treeLine-1] != '\n' || !hexDigest(text[5:treeLine-1], 40) {
 		return "", nil, 0, false
 	}
+	tree := text[5 : treeLine-1]
 	var parents []string
-	for lines = lines[1:]; len(lines) > 0 && strings.HasPrefix(lines[0], "parent "); lines = lines[1:] {
-		id := strings.TrimPrefix(lines[0], "parent ")
-		if !hexDigest(id, 40) {
+	for text = text[treeLine:]; strings.HasPrefix(text, "parent "); text = text[parentLine:] {
+		if len(text) <= parentLine || text[parentLine-1] != '\n' || !hexDigest(text[7:parentLine-1], 40) {
 			return "", nil, 0, false
 		}
-		parents = append(parents, id)
+		parents = append(parents, text[7:parentLine-1])
 	}
+	header, _, _ := strings.Cut(text, "\n\n")
 	var when int64
-	for _, line := range lines {
+	for _, line := range strings.Split(header, "\n") {
 		if who, ok := strings.CutPrefix(line, "committer "); ok {
 			if i := strings.LastIndexByte(who, '>'); i >= 0 {
 				if fields := strings.Fields(who[i+1:]); len(fields) > 0 {
@@ -669,12 +770,15 @@ func parseCommit(data []byte) (string, []string, int64, bool) {
 
 // reaches reports whether target is tip or one of its ancestors. Like Git's
 // merge-base walk it reads each commit when it is queued and takes the newest
-// first; a shallow boundary has no parents. A commit it cannot read refuses
-// the source.
+// first; a shallow boundary has no parents. A commit it cannot read, or more
+// commits than the limit, refuse the source.
 func (o *objectStore) reaches(tip, target string) bool {
 	q := &commitQueue{}
 	seen := map[string]bool{}
 	queue := func(id string) bool {
+		if len(seen) == o.limits.commits {
+			return false
+		}
 		_, parents, when, ok := o.commit(id)
 		if ok {
 			seen[id] = true
@@ -685,7 +789,7 @@ func (o *objectStore) reaches(tip, target string) bool {
 	if !queue(tip) {
 		return false
 	}
-	for q.Len() > 0 && len(seen) <= maxCommits {
+	for q.Len() > 0 {
 		c := heap.Pop(q).(queuedCommit)
 		if c.id == target {
 			return true
@@ -701,9 +805,11 @@ func (o *objectStore) reaches(tip, target string) bool {
 
 // listTree lists every entry below the tree id as `git ls-tree -r --full-tree`
 // does: subtrees are entered and not listed; blobs, links and submodule
-// commits are listed under their path.
+// commits are listed under their path. The entries read, subtrees included,
+// and the listed paths' total length are bounded by the limits.
 func (o *objectStore) listTree(id string) (map[string]treeEntry, bool) {
 	out := map[string]treeEntry{}
+	entries, pathBytes := 0, int64(0)
 	var walk func(id, prefix string, depth int) bool
 	walk = func(id, prefix string, depth int) bool {
 		kind, data, ok := o.object(id)
@@ -714,12 +820,13 @@ func (o *objectStore) listTree(id string) (map[string]treeEntry, bool) {
 			o.refuse("source_git")
 			return false
 		}
-		entries, ok := parseTreeObject(data)
-		if !ok {
+		read, ok := parseTreeObject(data)
+		if !ok || len(read) > o.limits.treeEntries-entries {
 			o.refuse("source_git")
 			return false
 		}
-		for _, e := range entries {
+		entries += len(read)
+		for _, e := range read {
 			path := prefix + e.name
 			if e.entry.kind == "tree" {
 				if !walk(e.entry.object, path+"/", depth+1) {
@@ -727,10 +834,11 @@ func (o *objectStore) listTree(id string) (map[string]treeEntry, bool) {
 				}
 				continue
 			}
-			if _, dup := out[path]; dup || len(out) == maxTreeEntries {
+			if _, dup := out[path]; dup || int64(len(path)) > o.limits.pathBytes-pathBytes {
 				o.refuse("source_git")
 				return false
 			}
+			pathBytes += int64(len(path))
 			out[path] = e.entry
 		}
 		return true

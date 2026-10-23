@@ -429,10 +429,9 @@
     {
       "reason": "既存入口を維持し固定200%/Auto、renderer/composer/targetとCSS pointer、DPR検知・解放、GPU失敗時の実scaleを参照へ補う。",
       "manifest": "skills-3080-installed-retina-integration-manifest.json",
-      "independent_review_pending": true,
+      "independent_review_pending": false,
       "entrypoint_sha256": "347c6eabe30cf3d4d4d52b711bedff193b706a8d8f6c04bbb0f24e0e85d163c4",
       "source_sha256": "632232040749513e129f58b55ed3361378af9c6803dfd29f8ca596e273d55174",
-      "application_pending": true,
       "disposition": "integrated_existing",
       "source_path": "agent-skills/3d/3d-retina-resolution/SKILL.md",
       "source_repo": "MengTo/Skills",
@@ -441,7 +440,10 @@
       "source_notice_preserved": true,
       "upstream_original_preserved": true,
       "inventory_id": "github:8d45c064b59f58146ec2cd435cc55a71f835c1936934715b8b4a0cc231aac696",
-      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7"
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "explicit_use_check_pending": false,
+      "explicit_use_assessment": "A pass; B/C core pass with parent corrections. No real rendering or implicit selection proof.",
+      "independent_review_todo": 3504
     }
   ],
   "excluded_entries": [

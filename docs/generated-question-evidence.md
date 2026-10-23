@@ -15,6 +15,33 @@ discord_ask.exe ask ... --body-file <body> --decision-file <decision> --attach <
 新しい画像にも同じコマンドと形式を使う。画像ごとのコード追加・ビルド・配布は不要。
 質問本文やdecisionを変える場合は、新しいscopeの証拠を検証して登録し直す。
 
+停止した段階を調べるときは、同じcheckに`--diagnostic`を付ける。
+
+```text
+unattended-runner.exe --check-generated-question-evidence --evidence <evidence.json> --diagnostic
+```
+
+検証順序と読取条件は通常checkと同じで、最初の失敗だけをJSONの`stage`と`code`へ返す。
+証拠・元画像・session・本文・内部エラーの文字列を出力せず、鍵や用途資格も作らない。
+未成立は終了コード1、全検証成功は0と`validated=true / registered=false`を返す。
+引数不正は従来どおりのエラーとなり、registerに診断指定を付けることはできない。
+
+| stage | code | 確認できた段階 |
+|---|---|---|
+| `evidence_guard` | `original_evidence_not_qualified` | 原証拠の通常guardが利用を認めなかった。証拠本文は読んでおらず、後続条件は未確認 |
+| `evidence_read` | `original_evidence_read_failed` | guard通過後、原証拠を正常に読み取れなかった |
+| `evidence_schema` | `original_evidence_schema_invalid` | 読み取った原証拠が既存の厳密なJSON形式に適合しない |
+| `content_review` | `fictional_data_required` | 現行形式の架空データ申告が成立しない |
+| `bundle_contract` | `original_scope_or_metadata_invalid` | 原証拠のscopeまたはmetadataが既存契約に適合しない |
+| `image_validation` | `original_generation_or_image_not_qualified` | 個別の原出所・実ツール応答・原画像の検証に進んだが成立しない |
+| `complete` | `evidence_validated` | 通常checkの全条件が成立した。未登録なので送信資格やUI承認とは別 |
+
+guard未成立を、実際の顧客内容の検出や、後続の`fictional_data`だけが原因と断定しない。
+実在する本人のデータを架空と申告して通すこともできない。原証拠を通常経路で読めず、
+本人の依頼・元ToDo・原出所・質問scopeを独立に結ぶ用途検証も存在しない場合は、
+停止段階と未確認の入力を元担当へ返す。原監査の書換え、別コピー、一般guardの解除や
+画像ごとの固定許可で代用しない。
+
 証拠JSONのdomainは`owner-generated-question-evidence-v1`。必要な項目:
 
 - `scope`: todo_id、question_sha256、decision_sha256、owner_id、guild_id、forum_id。

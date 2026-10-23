@@ -395,7 +395,7 @@
   },
   "installed": 0,
   "integrated": 0,
-  "excluded": 0,
+  "excluded": 1,
   "review_pending": false,
   "limits": [
     "私的なcontext/セッション/認証情報や外部の記録は読んでいない。",
@@ -426,5 +426,10 @@
     "source12bytehash_verified": true,
     "unique7text_and_MIT_fullread": true,
     "support_unread": true
+  },
+  "exclusion_overlay": {
+    "inventory_id": "github:d288c6bfa021752fa67509714af89d7bcf52c64ac4ffc5e896c4b41a7b1030c8",
+    "source": "skills-3080-duplicate-decisions.json",
+    "scope": "旧entriesは候補時点snapshot。今回mirror1だけを別出現の重複として判定。実link配置を2件へ増やさない。"
   }
 }

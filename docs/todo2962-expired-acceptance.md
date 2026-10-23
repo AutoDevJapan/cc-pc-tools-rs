@@ -18,7 +18,8 @@ queue自身はGitHubへの書込、rerun、成功statusの作成を行わない�
   runner名空、steps空。source/run/attempt/job名/全ラベルが元Planと一致する。
 - 旧資源を作った場合は、元safe-delete記録のclose・元root不在・SCM停止・
   正式登録不在・privileged collection markerとprocess censusを再照合する。
-  作成していない場合は、元entryにcreate intent・PID・helper・root等が一切ない。
+  作成していない場合は、元entryにcreate intent・helper・root等が一切ない。
+  期限切れを検出したsupervisorの終了済み起動記録は保持する。
 - 次の公式jobは同じrunのattempt 2だけ。元Planのsource/tree/PR/workflow/名前を保ち、
   共通contractで現在の所有・head・固定workflow bytes・実jobを再検証する。
   新jobもqueued・未割当・steps空である。外部観測は回収確認の前後に新しく取得する。
@@ -42,6 +43,10 @@ supervisorの起動記録は保存し、生存中のsupervisorは受け付けな
 公開する。保存後・台帳更新前の中断では、外部の回収と公式jobを再検査し、最初の時刻と
 process censusを保持する。無関係な読取不能processの件数が変わっても、現在の検査が
 合格すれば原証拠を変更せず再開する。生存processや回収不明を成功とみなさない。
+
+実運用では、未作成の2件を先に、回収を確認する資源がある1件を最後に差し替える。
+archive保存後・台帳更新前に別tickが原entryを変更すると、原証拠との比較は拒否する。
+その場合は証拠を保持して原因を調べ、archiveの上書きや台帳の手編集で通さない。
 
 ## 更新と受付の順序
 
@@ -69,3 +74,15 @@ root資格・元記録・停止・全項目不変の確認を経て、同じDド
 旧C領域のsize/attributes経路と、未知領域・別の拒否理由の扱いは広げない。
 Windows親のvolume/file ID/作成時刻は実供給直前に実測値と照合する。
 MAX_PATHを含む実製品受入、次回通常eventの供給と回収はまだ未検証である。
+
+## 2026-10-23の確認結果
+
+[PR385](https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/385)は、追加レビュー3388の
+Sonnet5.5/maxによるMust 0と、同じ最終HEAD `aa7a95e6381c86af997859954184383ffcd6f14e` の
+正式18チェック（17成功・1中立、未完了・失敗なし）を確認してマージした。
+マージcommitは `6c57c3e78a799b1e253ab15944dd5e9899cae55e`。
+
+共通ツール2本の更新は、既存担当3258の保護判定ソースと配布を保持して直列に行う。
+親2962のWindows helper・queueの候補は未配布で、製品PR149は未マージ。
+Windows 3件の次attempt、正式なテスト成功、成果物のハッシュ、通常イベントでの再供給と
+終了回収はまだ確認していない。解析2件の成功をWindowsテストの成功として扱わない。

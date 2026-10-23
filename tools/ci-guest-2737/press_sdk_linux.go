@@ -52,6 +52,9 @@ func preparePressSDK(ctx context.Context) (pressSDKInventory, error) {
 		c.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 		if user {
 			c.SysProcAttr.Credential = &syscall.Credential{Uid: 1001, Gid: 1001}
+		} else {
+			// Root package operations never search the worker-writable cargo PATH.
+			c.Env = []string{"HOME=/root", "LANG=C.UTF-8", "PATH=/usr/sbin:/usr/bin:/sbin:/bin", "DEBIAN_FRONTEND=noninteractive"}
 		}
 		c.Cancel = func() error {
 			if c.Process != nil {
@@ -82,10 +85,14 @@ func preparePressSDK(ctx context.Context) (pressSDKInventory, error) {
 		}
 		return out.Bytes(), nil
 	}
-	if _, e = run(false, "/usr/bin/apt-get", "update"); e != nil {
+	if _, e = run(false, "/usr/bin/apt-get", "update", "-qq"); e != nil {
 		return result, e
 	}
-	if _, e = run(false, "/usr/bin/apt-get", "install", "-y", "--no-install-recommends", "google-chrome-stable"); e != nil {
+	if _, e = run(false, "/usr/bin/apt-get", "install", "-qq", "-y", "--no-install-recommends", "google-chrome-stable"); e != nil {
+		return result, e
+	}
+	// A second update also detects incompatible source entries from postinst.
+	if _, e = run(false, "/usr/bin/apt-get", "update", "-qq"); e != nil {
 		return result, e
 	}
 	if _, e = run(true, "/home/ci2737/.cargo/bin/rustup", "toolchain", "install", "1.95.0", "--profile", "minimal", "--component", "rustfmt", "--component", "clippy", "--no-self-update"); e != nil {

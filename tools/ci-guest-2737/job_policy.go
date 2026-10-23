@@ -42,7 +42,7 @@ func requirePressSessionBudget(ctx context.Context, pin sourcepacket.Pin, role s
 	}
 	j, ok := jobPolicy(pin, role)
 	deadline, limited := ctx.Deadline()
-	if !ok || ctx.Err() != nil || limited && time.Until(deadline) < time.Duration(j.TimeoutMinutes+40)*time.Minute {
+	if !ok || !limited || ctx.Err() != nil || time.Until(deadline) < time.Duration(j.TimeoutMinutes+40)*time.Minute {
 		return errors.New("insufficient remaining Press session budget")
 	}
 	return nil

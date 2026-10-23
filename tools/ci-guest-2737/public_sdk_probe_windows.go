@@ -123,7 +123,7 @@ func executeSDKProbeFor(ctx context.Context, root, sdkRoot, helper string, jobs 
 	if p.ID != id || p.ProductSource || p.RunnerRegistered || p.Failure != "" || len(p.Rust) != 3 || len(p.Driver) > 4 {
 		return errors.New("public SDK probe identity rejected")
 	}
-	if pin.Product == sourcepacket.PressProduct && (p.PressSDK == nil || p.PressSDK.OS != "ubuntu-24.04" || p.Rust[1].Version != p.PressSDK.Rust) {
+	if pin.Product == sourcepacket.PressProduct && (!validPressSDKInventory(p.PressSDK) || p.Rust[1].Version != p.PressSDK.Rust) {
 		return errors.New("Press SDK runtime receipt rejected")
 	}
 	return nil

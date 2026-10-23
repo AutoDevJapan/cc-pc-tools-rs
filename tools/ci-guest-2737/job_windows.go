@@ -292,6 +292,9 @@ func executeLinuxJob(ctx context.Context, root, sdkRoot, helper, requestFile str
 	if decodeErr != nil || event.ID != instance || event.Stage != "source-ready" || !checkPhysicalProof(event.Proof, q) {
 		return errors.New("live source proof rejected")
 	}
+	if q.Source.Product == sourcepacket.PressProduct && !validPressSDKInventory(event.PressSDK) {
+		return errors.New("Press SDK runtime receipt rejected before registration")
+	}
 	if e = record(attempt, "source-proof.private.json", event); e != nil {
 		return e
 	}

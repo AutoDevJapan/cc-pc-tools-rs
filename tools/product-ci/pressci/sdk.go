@@ -34,8 +34,15 @@ func PublicSDKAsset(name string) (SDKAsset, bool) {
 
 func VerifySDKAsset(name string, b []byte) error {
 	a, ok := PublicSDKAsset(name)
+	if !ok {
+		return errors.New("public Press SDK artifact rejected")
+	}
+	return verifySDKBytes(a, b)
+}
+
+func verifySDKBytes(a SDKAsset, b []byte) error {
 	h := sha256.Sum256(b)
-	if !ok || int64(len(b)) != a.Bytes || hex.EncodeToString(h[:]) != a.SHA256 {
+	if int64(len(b)) != a.Bytes || hex.EncodeToString(h[:]) != a.SHA256 {
 		return errors.New("public Press SDK artifact rejected")
 	}
 	return nil
@@ -46,8 +53,18 @@ func FetchSDKAsset(ctx context.Context, name string) ([]byte, error) {
 	if !ok {
 		return nil, errors.New("public Press SDK selector rejected")
 	}
-	transport := &http.Transport{Proxy: nil, TLSHandshakeTimeout: 15 * time.Second, ResponseHeaderTimeout: 30 * time.Second}
+	transport := sdkTransport()
 	defer transport.CloseIdleConnections()
+	return fetchPinnedSDK(ctx, a, transport)
+}
+
+func sdkTransport() *http.Transport {
+	return &http.Transport{Proxy: nil, TLSHandshakeTimeout: 15 * time.Second, ResponseHeaderTimeout: 30 * time.Second}
+}
+
+// Transport injection is private and test-only; callers can select only the
+// compiled public artifacts above, never a URL supplied by the job.
+func fetchPinnedSDK(ctx context.Context, a SDKAsset, transport http.RoundTripper) ([]byte, error) {
 	client := &http.Client{Transport: transport, Timeout: 3 * time.Minute, CheckRedirect: func(r *http.Request, via []*http.Request) error {
 		u, _ := url.Parse(a.URL)
 		if len(via) > 3 || r.URL.Scheme != "https" || r.URL.Host != u.Host || r.URL.User != nil {
@@ -68,7 +85,7 @@ func FetchSDKAsset(ctx context.Context, name string) ([]byte, error) {
 		return nil, errors.New("public Press SDK download status rejected")
 	}
 	b, err := io.ReadAll(io.LimitReader(resp.Body, a.Bytes+1))
-	if err != nil || VerifySDKAsset(name, b) != nil {
+	if err != nil || verifySDKBytes(a, b) != nil {
 		return nil, errors.New("public Press SDK bytes rejected")
 	}
 	return b, nil

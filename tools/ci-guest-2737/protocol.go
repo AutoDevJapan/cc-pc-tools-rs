@@ -16,6 +16,7 @@ import (
 	"io"
 	"math/big"
 	"net"
+	"strings"
 	"time"
 )
 
@@ -41,6 +42,22 @@ type pressSDKStep struct {
 	Stage          string
 	Exit           int
 	Stdout, Stderr []byte
+}
+
+func validPressSDKInventory(p *pressSDKInventory) bool {
+	if p == nil || p.OS != "ubuntu-24.04" || !strings.HasPrefix(p.Chrome, "Google Chrome ") || !strings.HasPrefix(p.Rust, "rustc 1.95.0 ") {
+		return false
+	}
+	want := []string{"apt-get/update", "apt-get/install", "apt-get/update", "rustup/toolchain", "chrome/--version", "rustc/+1.95.0"}
+	if len(p.Steps) != len(want) {
+		return false
+	}
+	for i, step := range p.Steps {
+		if step.Stage != want[i] || step.Exit != 0 || len(step.Stdout) > 32<<10 || len(step.Stderr) > 32<<10 {
+			return false
+		}
+	}
+	return strings.TrimSpace(string(p.Steps[4].Stdout)) == p.Chrome && strings.TrimSpace(string(p.Steps[5].Stdout)) == p.Rust
 }
 
 const offlineLabel = "cc-product-2737-1154066087-offline-bootstrap"

@@ -49,6 +49,30 @@ assume that changing all routes will merge without conflicts. Publication and
 actual guest acceptance remain pending the fixed delta review and source
 reconciliation. These implementations and synthetic tests are not official CI.
 
+The host passes its absolute deadline across the canonical Cargo gate before
+queueing. The real child retains that deadline and rejects missing, expired or
+insufficient Press budgets before entering an executor; the post-boot check
+uses the same deadline before any registration token. The host also requires a
+complete, successful Ubuntu/Chrome/Rust 1.95 preparation receipt before Linux
+registration. Root package commands use only the system PATH, and a second
+APT update checks post-install repository compatibility. This changed APT path
+still needs a fresh guest run; the earlier five-command SDK result is separate.
+
+The opt-in workflow diagnostic registers cleanup before container creation,
+including failed creates with a lost response. Cleanup uses an independent
+bounded context, checks its nonce/name/image, stops the process, verifies PID0,
+removes the owned container and verifies absence. Both work and cleanup pin the
+local Docker pipe and discard inherited Docker routing variables. The retained
+image cannot be pulled implicitly. `CC2766_CLEANUP_PROBE=1` enables a source-free
+real cancellation probe; its current failed attempt must not be counted as
+cleanup success. Ordinary unit tests and compilation are separate evidence.
+
+The Chrome MSI URL is a moving official URL. A new upstream version must fail
+the compiled byte/hash pin. Re-pinning requires downloading the public installer
+in an owned directory, checking its Google Authenticode signature, recording
+the complete bytes/SHA256/size, reviewing the changed pin and re-running guest
+acceptance. Never adopt bytes from a job-provided URL or silently refresh a pin.
+
 `press-ci-source-inspect <pin.json>` verifies the actual source packet in RAM
 and emits only numeric/hash/count expectations, with physical-checkout,
 runner-admission and official-success flags false. It cannot materialize source

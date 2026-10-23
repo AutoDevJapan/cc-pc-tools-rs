@@ -22,7 +22,10 @@ import (
 const sharedCargoGate = `D:\CC\Tools\codex-jobs\cargo_gate.exe`
 const sharedGateDirectory = `D:\CC\Tools\codex-jobs`
 
-type gatedHello struct{ ID, Mode, Root, SDKRoot, Helper, Request string }
+type gatedHello struct {
+	ID, Mode, Root, SDKRoot, Helper, Request string
+	Deadline                                 time.Time
+}
 type gatedControl struct{ ID, Kind string }
 type gateFrame struct {
 	ID, Stage, Target string
@@ -72,7 +75,10 @@ func gateChild() error {
 		return errors.New("gate start not acknowledged")
 	}
 	if q.Mode == "offline-bootstrap" || q.Mode == "linux-job" || q.Mode == "windows-job" || q.Mode == "sdk-probe" || q.Mode == "press-sdk-probe" {
-		ctx, cancel := context.WithCancel(context.Background())
+		ctx, cancel, e := gatedWorkContext(q)
+		if e != nil {
+			return e
+		}
 		defer cancel()
 		go func() {
 			for {
@@ -83,7 +89,6 @@ func gateChild() error {
 				}
 			}
 		}()
-		var e error
 		if q.Mode == "press-sdk-probe" {
 			e = executeSDKProbeFor(ctx, q.Root, q.SDKRoot, q.Helper, jobs, pressSDKProbePin())
 		} else if q.Mode == "sdk-probe" {
@@ -143,6 +148,13 @@ func startGateFixture(ctx context.Context, root string) (s *gateSession, ret err
 	return startGatedWork(ctx, gatedHello{Mode: "fixture", Root: root})
 }
 func startGatedWork(ctx context.Context, q gatedHello) (s *gateSession, ret error) {
+	// Serialize the parent's absolute deadline before starting/waiting for the
+	// shared gate. A new timeout in the child would refund queue/boot time.
+	var limited bool
+	q.Deadline, limited = ctx.Deadline()
+	if !limited || ctx.Err() != nil {
+		return nil, errors.New("gate parent deadline unavailable")
+	}
 	exe, e := os.Executable()
 	if e != nil {
 		return nil, e

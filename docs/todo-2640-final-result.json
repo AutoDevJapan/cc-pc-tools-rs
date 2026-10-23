@@ -122,5 +122,13 @@
     "files": 23,
     "logical_bytes": 529340,
     "archive_sha256": "834D4CA5E487952E697826073318E3BCD8C03C0673F730CB072F60E80926C344"
-  }
+  },
+  "own_current_temp_cleanup": {
+    "id": "c0d20a62abafd4a47ec31ee9c8c8aca2",
+    "state": "source_absent",
+    "files": 5,
+    "logical_bytes": 5250,
+    "archive_sha256": "9E8415803B6AD29BDD44310196FEC16D6E1B1866FA13060AB553DC238FE3044C"
+  },
+  "own_cleanup_complete": true
 }

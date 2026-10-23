@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-23T16:37:17.8639403Z",
+  "observed_at": "2026-10-23T17:38:36.7953115Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "PR395は限定3456 Must0/同HEAD6CI成功後に通常merge済み。mizchi76/76本文確認、今回15は子の読取結果を親が照合・補正したもの。新19とSQL2/変異1草案は未導入。全16資料の個別評価/許諾/実配置を継続する。",
+  "phase_b": "PR406は3473 Must0/同1088の6CI成功後に通常merge f5b29f68。openai44/設計2の本文評価を追加し213source paths、同一本文7別出現を親が重複として対象外へ整理。導入28/統合1は不変。全16資料の個別支持/許諾/実配置/実適用は未完。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -290,7 +290,7 @@
   "independently_accepted": 28,
   "installed": 28,
   "integrated": 1,
-  "excluded": 0,
+  "excluded": 7,
   "units": {
     "github_agent_procedure": 483,
     "github_design_example": 199,
@@ -354,8 +354,7 @@
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "自分の28配置について限定受入済み。現在の全ディスクが配置時と同一という保証とは分ける。",
-    "not_semantically_disposed_occurrences": 73191,
-    "additional_draft_source": "skills-3080-mizchi-sql-draft.json",
+    "not_semantically_disposed_occurrences": 73184,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
@@ -382,8 +381,8 @@
     "authored_routing_entrypoints": 1
   },
   "full_source_body_read_coverage": {
-    "repos": 7,
-    "case_insensitive_skill_named_paths": 91,
+    "repos": 10,
+    "case_insensitive_skill_named_paths": 137,
     "by_repo": {
       "mattpocock": 38,
       "docker": 12,
@@ -391,12 +390,15 @@
       "kepano": 6,
       "tencent": 7,
       "obra": 15,
-      "ais_os": 12
+      "ais_os": 12,
+      "nutlope": 1,
+      "hirokaji": 1,
+      "openai": 44
     },
-    "limits": "91 source paths across7repos;AIS12 has7distinct full texts and5exacthash mirror paths;Tencent includes guides/stub.Not91independentadoptions;all support/inventory semantic review incomplete."
+    "limits": "旧7資料91+設計2+OpenAI44=137source paths。mizchi76は既存の別枠を維持し再加算しない。mirror/guideを含み独立Skill数/導入数ではない。全支持/全候補の意味・許諾監査は未完。"
   },
-  "independent_acceptance_scope": "28新規とlinkv2の過去限定受入を保持。CI既存統合1のv2は3378Must0/同HEAD自動テスト成功/PR381mergeで親が限定受入。SQL2は3368本文と3378表示を分けて同一内容を限定受入。新22評価は3417/3420の固定差分読取Must0を受領。今回の補足差分は別確認、許諾/配置/実ターンは別。旧配置のdiagnosing-bugs1件の後続別改訂も別証拠を保持。",
-  "total_skill_named_body_read": 91,
+  "independent_acceptance_scope": "28新規とlinkv2の過去限定受入を保持。CI既存統合1のv2は3378Must0/同HEAD自動テスト成功/PR381mergeで親が限定受入。SQL2は3368本文と3378表示を分けて同一内容を限定受入。新22評価は3417/3420の固定差分読取Must0を受領。補足のb006版は3456、新19を含む1088版は3473でMust0。今回の追加差分は別確認、許諾/配置/実ターンは別。旧配置のdiagnosing-bugs1件の後続別改訂も別証拠を保持。",
+  "total_skill_named_body_read": 137,
   "obra_entrypoint_assessment": {
     "expected": 15,
     "full_body_read": 15,
@@ -410,7 +412,7 @@
     "diagnostic_workflow_blob_count": 20
   },
   "current_guidance_delta_pending": 0,
-  "current_guidance_delta_pending_definition": "実CI v2差分は3378Must0と同HEADのCI成功後、親が限定受入/PR381通常merge済み。SQL2は3368本文/3378表示を分けて同じ内容を限定受入したが、未配置/許諾/支持/実適用は未完。新22評価は3417/3420 Must0を受領。後続の補足差分は別確認。",
+  "current_guidance_delta_pending_definition": "実CI v2差分は3378Must0と同HEADのCI成功後、親が限定受入/PR381通常merge済み。SQL2は3368本文/3378表示を分けて同じ内容を限定受入したが、未配置/許諾/支持/実適用は未完。新22評価は3417/3420 Must0を受領。b006の補足は3456、1088の新19と補正は3473でMust0。今回の追加差分は別確認。",
   "ais_entrypoint_evaluation": {
     "source_paths": 12,
     "unique_contents": 7,
@@ -435,8 +437,8 @@
     "source": "skills-3080-mizchi-partial-evaluation.json",
     "complete_definition": "本文の全path読取のみ。個別許諾・支持・採否・実導入は未完。"
   },
-  "all_fulltext_primary_paths_including_partial_sources": 167,
-  "primary_coverage_definition": "旧7資料91入口+既存構造のmizchi76=167source paths。mizchiを旧91側へ重複加算しない。AIS mirror/Tencent guide/echo fixtureを含み167独立Skillでも導入数でもない。",
+  "all_fulltext_primary_paths_including_partial_sources": 213,
+  "primary_coverage_definition": "10資料137+別枠mizchi76=213source paths。OpenAIの同源1本文は全文baseline+全差分照合。7重複判定のbyte同一性確認は新しい独立本文全読として加算しない。",
   "external_revisions": {
     "count": 1,
     "target": "diagnosing-bugs",
@@ -530,9 +532,28 @@
         "nits": 5,
         "must": 0,
         "head": "b006b682ba6a7603e050362dcc07c27325e6c46f"
+      },
+      {
+        "receiver_job": "20261024-023253-todo-3080",
+        "preserved_at": "2026-10-23T17:34:41.9386838Z",
+        "todo": 3473,
+        "job": "20261024-014452-todo-3473",
+        "effort_origin": "owner_request",
+        "raw_sha256": "b5e73dc163b2d62fd59de7ee388ff942cd024e1a5af75d6161c6826e5f28d269",
+        "status": "succeeded",
+        "model_origin": "owner_request",
+        "job_model": "anthropic/claude-sonnet-5-5",
+        "requested_effort": "max",
+        "base": "856a33670626893f1d9190c07985adf07ea9c625",
+        "head": "1088a94e822fab5ce1a8b9dea42bb36c58e52c13",
+        "must": 0,
+        "suggestions": 6,
+        "nits": 9,
+        "recorded_at": "2026-10-23T17:47:33.4898996Z",
+        "scope": "固定11差分/Go2全文と新19評価・固定19本文/README/支持metadata。旧57本文/非README96本文の全読、実Goテスト、配置/許諾受入ではない。"
       }
     ],
-    "current_delta": "b006の補正差分は3456 Must0受領後PR395merge済み。今回の後続差分の受入を意味しない。",
+    "current_delta": "3456/b006はPR395、3473/1088はPR406へ通常merge済み。今回の46評価/重複7/3473補正はその後の未確認差分。",
     "merged_pr": {
       "checks": "6 SUCCESS; optional Bugbot NEUTRAL",
       "merge": "856a33670626893f1d9190c07985adf07ea9c625",
@@ -589,5 +610,69 @@
     "operation": "既存Skillへの統合書込",
     "guard_client_resource": true,
     "state": "classification_unverified"
+  },
+  "recorded_at": "2026-10-23T17:38:36.7953115Z",
+  "total_skill_named_body_read_definition": "full_source_body_read_coverageの10資料137pathのみ。別枠mizchi76を含む総数はall_fulltext_primary_paths_including_partial_sources=213。",
+  "openai_entrypoint_evaluation": {
+    "rights_accepted": false,
+    "support_unread": 690,
+    "unread": 0,
+    "read": 44,
+    "source": "skills-3080-openai-entrypoint-evaluation.json",
+    "reader": 3475,
+    "expected": 44
+  },
+  "design_entrypoint_evaluation": {
+    "new_central_write": 0,
+    "read": 2,
+    "old3048_integrations_preserved": true,
+    "source": "skills-3080-design-entrypoint-evaluation.json",
+    "expected": 2
+  },
+  "duplicate_exclusions": {
+    "count": 7,
+    "new_skills": 0,
+    "source": "skills-3080-duplicate-decisions.json",
+    "review_pending": true,
+    "new_integration": 0
+  },
+  "latest_merged_delta": {
+    "review_raw_sha256": "b5e73dc163b2d62fd59de7ee388ff942cd024e1a5af75d6161c6826e5f28d269",
+    "must": 0,
+    "merged_at": "2026-10-23T17:34:57Z",
+    "suggestions": 6,
+    "merge": "f5b29f68dc98e091409b4ba7405760fd11dbb17d",
+    "checks": "6 SUCCESS; optional Bugbot NEUTRAL",
+    "nits": 9,
+    "review_todo": 3473,
+    "head": "1088a94e822fab5ce1a8b9dea42bb36c58e52c13",
+    "number": 406
+  },
+  "latest_received_review": {
+    "receiver_job": "20261024-023253-todo-3080",
+    "preserved_at": "2026-10-23T17:34:41.9386838Z",
+    "todo": 3473,
+    "job": "20261024-014452-todo-3473",
+    "effort_origin": "owner_request",
+    "raw_sha256": "b5e73dc163b2d62fd59de7ee388ff942cd024e1a5af75d6161c6826e5f28d269",
+    "status": "succeeded",
+    "model_origin": "owner_request",
+    "job_model": "anthropic/claude-sonnet-5-5",
+    "requested_effort": "max",
+    "base": "856a33670626893f1d9190c07985adf07ea9c625",
+    "head": "1088a94e822fab5ce1a8b9dea42bb36c58e52c13",
+    "must": 0,
+    "suggestions": 6,
+    "nits": 9,
+    "recorded_at": "2026-10-23T17:47:33.4898996Z",
+    "scope": "固定11差分/Go2全文と新19評価・固定19本文/README/支持metadata。旧57本文/非README96本文の全読、実Goテスト、配置/許諾受入ではない。"
+  },
+  "latest_merged_pr": {
+    "number": 406,
+    "head": "1088a94e822fab5ce1a8b9dea42bb36c58e52c13",
+    "merge": "f5b29f68dc98e091409b4ba7405760fd11dbb17d",
+    "merged_at": "2026-10-23T17:34:57Z",
+    "checks": "6 SUCCESS, optional Bugbot NEUTRAL",
+    "current_additional_delta_accepted": false
   }
 }

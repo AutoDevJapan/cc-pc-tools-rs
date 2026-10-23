@@ -357,12 +357,15 @@ fn requests_explanation(body: &str) -> bool {
     )
     .unwrap();
     let teach = regex::Regex::new(r"教えて(?:ほしい(?:です)?|ください)?\s*$").unwrap();
+    let more = regex::Regex::new(
+        r"^(?:もっと|もう少し)?\s*詳しく(?:教えて(?:ほしい(?:です)?|ください)?)?$",
+    )
+    .unwrap();
     let detail = body
         .split(['。', '！', '!', '？', '?', '\n', ';', '；'])
         .any(|sentence| {
             let sentence = sentence.trim();
-            (topic.is_match(sentence) && teach.is_match(sentence))
-                || matches!(sentence, "詳しく" | "もっと詳しく" | "もう少し詳しく")
+            (topic.is_match(sentence) && teach.is_match(sentence)) || more.is_match(sentence)
         });
     let why = regex::Regex::new(r"なぜ|どうして|なんで")
         .unwrap()

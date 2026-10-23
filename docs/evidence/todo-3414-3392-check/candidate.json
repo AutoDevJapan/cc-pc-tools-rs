@@ -1,0 +1,69 @@
+{
+  "schema": "todo3414-3392-candidate-v1",
+  "todo_id": 3414,
+  "job": "20261023-120331-todo-3414",
+  "parent_todo_id": 3392,
+  "parent_job": "20261023-102927-todo-3392",
+  "repository": "AutoDevJapan/cc-pc-tools-rs",
+  "issue": 392,
+  "pull_request": 393,
+  "source_head": "138d2fd805447ff2e1285310aaf89ea39ba2b529",
+  "source_tree": "ed62c16d131f02ffcf36c5711d76484d50d4859d",
+  "built_path": "D:/OMB/tmp/codex-owned-9975d44bed860ed1b6bc8f25c81e902d/target/release/discord_ask.exe",
+  "candidate_path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3414-rust\\.ci-work\\candidate-138d2fd805447ff2e1285310aaf89ea39ba2b529-20261023-120331-todo-3414\\discord_ask.exe",
+  "sha256": "dff5f38dd96740734d2290191f357aef598ca58a114b6b8a0b03fbb6a20a129b",
+  "bytes": 12027392,
+  "input_closure_path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3414-rust\\.ci-work\\input-closure.json",
+  "input_closure_sha256": "a8240f8936c61b03690d3d3f90eb36fce27dec84b9d4684d9c8aa4fd6a8e34dd",
+  "input_files_count": 195,
+  "dep_info_input_count": 83,
+  "all_dep_info_inputs_included": true,
+  "build_result": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3414-rust\\.ci-work\\11-release.meta.json",
+  "build_result_sha256": "b8e0fc79a0b3207926092356aab063996d8c6c62ae4f5675bb87273f6c00a2b7",
+  "rustc_version": "rustc 1.95.0 (59807616e 2026-04-14)\nbinary: rustc\ncommit-hash: 59807616e1fa2540724bfbac14d7976d7e4a3860\ncommit-date: 2026-04-14\nhost: x86_64-pc-windows-msvc\nrelease: 1.95.0\nLLVM version: 22.1.2",
+  "sccache_version": "sccache 0.18.0",
+  "cargo_gate": {
+    "path": "D:\\CC\\Tools\\codex-jobs\\cargo_gate.exe",
+    "bytes": 1104896,
+    "sha256": "a7d47faf071772d0c6ca1349b3c0a4ecaa256f0bbd9686fc81c937ac1b26c9bd"
+  },
+  "sccache": {
+    "path": "D:\\CC\\Tools\\sccache\\sccache.exe",
+    "bytes": 23757824,
+    "sha256": "b85863f6c0579c57a74071b8904f9850a8ef03dac26bfc94dc30225155bd7449"
+  },
+  "rustc": {
+    "path": "C:\\Users\\makhmeto\\.rustup\\toolchains\\1.95.0-x86_64-pc-windows-msvc\\bin\\rustc.exe",
+    "bytes": 111104,
+    "sha256": "e3ebbd547ea7b73c034d588ba569602b379f3b05ad1a3b5f8dcfab9d4478d74a"
+  },
+  "release_eligible": false,
+  "latest_max_review_verified": false,
+  "latest_ci_verified": false,
+  "deployed": false,
+  "new_candidate": true,
+  "existing_3409_candidate_overwritten": false,
+  "source_fix_required": false,
+  "candidate_guard": {
+    "ci_retirement_qualified": false,
+    "classification_unverified": false,
+    "client_resource": false,
+    "ok": true,
+    "original_registry_recovered": false,
+    "scope": "verified repair source and explicitly supplied operational receipts only"
+  },
+  "candidate_guard_result": {
+    "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3414-rust\\.ci-work\\12-candidate-guard.stdout.log",
+    "bytes": 221,
+    "sha256": "69c6b2c91fca26803b53e220b07166ce474a62124968373f617fa52f2510c7d6"
+  },
+  "remaining_parent_conditions": [
+    "latest fixed-source review",
+    "finite CI3411 reconciliation and necessary CI",
+    "merge",
+    "latest input/producer comparison",
+    "distribution",
+    "deployed acceptance"
+  ],
+  "created_utc": "2026-10-23T03:15:34.7658062Z"
+}

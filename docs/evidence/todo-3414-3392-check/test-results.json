@@ -1,0 +1,535 @@
+{
+  "schema": "todo3414-parsed-nextest-v1",
+  "provenance": "Parsed from original nextest stderr; not native nextest JSON",
+  "red_head": "10fffdbd2bb0ce2690e166a9bfff0861d39753a6",
+  "red_exit": 100,
+  "red_compile_success": true,
+  "red_expected_assertions": 2,
+  "green_head": "138d2fd805447ff2e1285310aaf89ea39ba2b529",
+  "green_exit": 0,
+  "passed": 70,
+  "skipped": 778,
+  "groups": [
+    {
+      "binary": "",
+      "passed": 70
+    }
+  ],
+  "tests": [
+    {
+      "binary": "cc-ask",
+      "name": "recovery_messages::tests::decision_lookup_tests::normal_lookup_invalid_mode_fails_before_discord_without_legacy_fallback",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask",
+      "name": "recovery_messages::tests::decision_lookup_tests::normal_lookup_missing_question_does_not_claim_a_hidden_body_or_thread",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask",
+      "name": "recovery_messages::tests::decision_lookup_tests::normal_lookup_keeps_new_scope_resource_image_and_original_todo_distinct",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask",
+      "name": "recovery_messages::tests::decision_lookup_tests::normal_lookup_missing_redaction_registry_keeps_answer_reference_without_text",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask",
+      "name": "recovery_messages::tests::decision_lookup_tests::normal_lookup_marks_display_redaction_and_does_not_call_pending_text_available",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask",
+      "name": "recovery_messages::tests::decision_lookup_tests::normal_lookup_archived_reply_is_get_only_and_api_failure_is_not_no_answer",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "clarification_bridge_check_never_turns_check_into_delivery",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask",
+      "name": "recovery_messages::tests::decision_lookup_tests::normal_lookup_retains_pending_intent_and_rejects_corrupt_or_foreign_input",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "clarification_check_does_not_create_missing_original_snapshot",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask",
+      "name": "recovery_messages::tests::decision_lookup_tests::normal_lookup_finds_current_answer_without_writes_or_another_question",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask",
+      "name": "recovery_messages::tests::decision_lookup_tests::normal_lookup_posted_but_unverified_question_is_pending_never_not_sent",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "clarification_bridge_preserves_log_identity_and_fixed_evidence",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_ask_identity_is_stable_across_json_key_order_and_body_path",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_ask_carries_guarded_images_with_stable_provenance",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_ask_keeps_gate_decision_origin_and_canonical_wait",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask",
+      "name": "recovery_messages::tests::decision_lookup_tests::normal_lookup_masked_decision_kind_or_resource_uses_original_reply_reference",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_changed_saved_snapshot_prevents_another_child",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_ask_rejects_missing_decision_mismatched_origins_and_missing_images",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask",
+      "name": "recovery_messages::tests::decision_lookup_tests::normal_lookup_redacts_synthetic_client_names_in_every_output_branch",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask",
+      "name": "recovery_messages::tests::decision_lookup_tests::normal_lookup_preserves_waiting_and_current_free_text_edits_without_approval",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask",
+      "name": "recovery_messages::tests::decision_lookup_tests::normal_lookup_redaction_cannot_change_protocol_keys_or_delivery_values",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_disabled_and_dry_run_never_start_children_or_snapshot_inputs",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_busy_lease_retries_exact_immutable_command",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_duplicate_returns_original_question_url_without_claiming_a_new_wait",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_failures_never_fallback_or_expose_child_text_and_paths",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_log_forwards_fixed_runner_arguments_and_immutable_body",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_media_cannot_hide_sensitive_original_components",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_media_size_limits_precede_any_copy_or_guard",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_protected_source_never_reaches_the_go_sender",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_post_preserves_explicit_thread_and_different_thread_changes_identity",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_images_use_same_hashed_snapshot_and_videos_audio_are_rejected",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_media_provenance_is_immutable_across_same_byte_aliases",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_mode_requires_exact_two_field_schema_without_activation",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "canonical_scope_order_and_path_spelling_keep_one_permission",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "ambiguous_incoming_original_is_never_selected_even_for_disjoint_legacy_work",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "normal_log_title_cannot_enable_check_mode",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_question_qualification_is_scoped_and_never_reclassifies_the_source",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "changed_option_letter_order_cannot_replace_the_original_answer_meaning",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_log_identity_uses_content_title_notify_and_image_bytes",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "decision_actions_cannot_be_replaced_with_new_titles",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "decision_metadata_is_removed_from_owner_visible_text",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "closed_consumed_owner_answer_is_returned_with_original_scope_and_sender",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "changed_original_question_or_foreign_source_cannot_supply_approval",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_cli_invalid_mode_fails_before_legacy_config_or_api",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "changed_attachments_alone_do_not_create_new_decision_or_inherit_the_new_asset",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "embedded_identity_cannot_overwrite_an_explicit_original_todo",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "explicit_original_selects_only_a_recorded_todo_of_a_multi_task_worker",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "disjoint_legacy_evidence_does_not_hide_conflicting_explicit_original",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "different_owner_cannot_consume_a_previous_owners_approval",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "disjoint_ambiguous_legacy_todos_do_not_block_an_explicit_new_decision",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "explicit_original_todo_cannot_escape_its_recorded_worker_lineage",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::conversation_bridge",
+      "name": "conversation_bridge_cli_gate_precedes_enabled_mode_and_dry_run_uses_legacy_path",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "original_todo_is_recovered_from_its_recorded_job_not_its_title",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "legacy_without_todo_evidence_still_requires_scope_for_the_same_work",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "failed_registration_then_paraphrased_retry_keeps_the_original_question_and_one_mention",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "missing_scope_after_paraphrase_never_resends_or_applies_an_old_answer",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "handoff_reloads_actual_discord_answer_instead_of_trusting_forged_cached_content",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "overlapping_or_unknown_legacy_candidates_still_fail_closed",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "new_answer_invalidates_review_digest_and_handoff_preserves_original_task_evidence",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "post_and_direct_producers_share_identity_and_never_publish_internal_json",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "shared_boundary_binds_todo_from_preparsed_identity_and_rejects_conflicting_context",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "answer_snapshot_save_failure_does_not_send_and_retry_returns_same_answer",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "title_paraphrase_and_another_worker_reuse_an_unanswered_decision_without_posts",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "saved_disjoint_legacy_candidates_allow_only_the_new_explicit_original",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "reviewed_four_duplicates_keep_all_replies_and_return_latest_owner_identity_without_posts",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "two_concurrent_workers_with_different_titles_create_one_pair",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "unavailable_reply_history_is_a_failure_and_never_a_reason_to_resend",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "genuinely_new_target_scope_and_specification_never_inherit_old_a",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "verified_answer_reaches_waiting_todo_spec_once_without_claiming_application",
+      "status": "passed"
+    },
+    {
+      "binary": "cc-ask::decision_identity",
+      "name": "saved_overlapping_or_invalid_legacy_candidates_cannot_be_excluded",
+      "status": "passed"
+    }
+  ],
+  "steps": [
+    {
+      "arguments": [
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "cc-ask",
+        "-E",
+        "test(normal_lookup_missing_question_does_not_claim_a_hidden_body_or_thread) | test(normal_lookup_masked_decision_kind_or_resource_uses_original_reply_reference)"
+      ],
+      "create_no_window": true,
+      "cwd": "D:/CC/Work/unattended-operations-20261013-wt/todo-3414-rust",
+      "environment": {
+        "CARGO_BUILD_JOBS": "10",
+        "CARGO_INCREMENTAL": "",
+        "CARGO_TARGET_DIR": "D:/OMB/tmp/codex-owned-9975d44bed860ed1b6bc8f25c81e902d/target",
+        "CC_JOB_ID": "20261023-120331-todo-3414",
+        "RUSTC_WRAPPER": "D:/CC/Tools/sccache/sccache.exe",
+        "RUST_TEST_THREADS": "",
+        "SCCACHE_DIR": "D:/CC/BuildCache/sccache",
+        "SCCACHE_SERVER_PORT": "42259"
+      },
+      "error": "exit status 100",
+      "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+      "exit_code": 100,
+      "finished": "2026-10-23T12:09:59.5425343+09:00",
+      "head": "10fffdbd2bb0ce2690e166a9bfff0861d39753a6",
+      "label": "02-red-nextest",
+      "pid": 20560,
+      "started": "2026-10-23T12:08:37.8608108+09:00",
+      "state": "finished",
+      "tree": "eef136142734922d44c2da6bfc50f8570d2a7ea4"
+    },
+    {
+      "arguments": [
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "cc-ask",
+        "-E",
+        "test(normal_lookup_) | binary(decision_identity) | binary(conversation_bridge)"
+      ],
+      "create_no_window": true,
+      "cwd": "D:/CC/Work/unattended-operations-20261013-wt/todo-3414-rust",
+      "environment": {
+        "CARGO_BUILD_JOBS": "10",
+        "CARGO_INCREMENTAL": "",
+        "CARGO_TARGET_DIR": "D:/OMB/tmp/codex-owned-9975d44bed860ed1b6bc8f25c81e902d/target",
+        "CC_JOB_ID": "20261023-120331-todo-3414",
+        "RUSTC_WRAPPER": "D:/CC/Tools/sccache/sccache.exe",
+        "RUST_TEST_THREADS": "",
+        "SCCACHE_DIR": "D:/CC/BuildCache/sccache",
+        "SCCACHE_SERVER_PORT": "42259"
+      },
+      "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+      "exit_code": 0,
+      "finished": "2026-10-23T12:12:49.0976884+09:00",
+      "head": "138d2fd805447ff2e1285310aaf89ea39ba2b529",
+      "label": "05-green-nextest",
+      "pid": 47096,
+      "started": "2026-10-23T12:11:21.7226353+09:00",
+      "state": "finished",
+      "tree": "ed62c16d131f02ffcf36c5711d76484d50d4859d"
+    },
+    {
+      "arguments": [
+        "test",
+        "--locked",
+        "-p",
+        "cc-ask",
+        "--doc"
+      ],
+      "create_no_window": true,
+      "cwd": "D:/CC/Work/unattended-operations-20261013-wt/todo-3414-rust",
+      "environment": {
+        "CARGO_BUILD_JOBS": "10",
+        "CARGO_INCREMENTAL": "",
+        "CARGO_TARGET_DIR": "D:/OMB/tmp/codex-owned-9975d44bed860ed1b6bc8f25c81e902d/target",
+        "CC_JOB_ID": "20261023-120331-todo-3414",
+        "RUSTC_WRAPPER": "D:/CC/Tools/sccache/sccache.exe",
+        "RUST_TEST_THREADS": "",
+        "SCCACHE_DIR": "D:/CC/BuildCache/sccache",
+        "SCCACHE_SERVER_PORT": "42259"
+      },
+      "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+      "exit_code": 0,
+      "finished": "2026-10-23T12:13:15.3544598+09:00",
+      "head": "138d2fd805447ff2e1285310aaf89ea39ba2b529",
+      "label": "09-doctest",
+      "pid": 77384,
+      "started": "2026-10-23T12:13:09.4411038+09:00",
+      "state": "finished",
+      "tree": "ed62c16d131f02ffcf36c5711d76484d50d4859d"
+    },
+    {
+      "arguments": [
+        "clippy",
+        "--locked",
+        "-p",
+        "cc-ask",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "create_no_window": true,
+      "cwd": "D:/CC/Work/unattended-operations-20261013-wt/todo-3414-rust",
+      "environment": {
+        "CARGO_BUILD_JOBS": "10",
+        "CARGO_INCREMENTAL": "",
+        "CARGO_TARGET_DIR": "D:/OMB/tmp/codex-owned-9975d44bed860ed1b6bc8f25c81e902d/target",
+        "CC_JOB_ID": "20261023-120331-todo-3414",
+        "RUSTC_WRAPPER": "D:/CC/Tools/sccache/sccache.exe",
+        "RUST_TEST_THREADS": "",
+        "SCCACHE_DIR": "D:/CC/BuildCache/sccache",
+        "SCCACHE_SERVER_PORT": "42259"
+      },
+      "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+      "exit_code": 0,
+      "finished": "2026-10-23T12:13:41.1580489+09:00",
+      "head": "138d2fd805447ff2e1285310aaf89ea39ba2b529",
+      "label": "10-clippy",
+      "pid": 84296,
+      "started": "2026-10-23T12:13:15.5159588+09:00",
+      "state": "finished",
+      "tree": "ed62c16d131f02ffcf36c5711d76484d50d4859d"
+    },
+    {
+      "arguments": [
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "cc-ask",
+        "--bin",
+        "discord_ask"
+      ],
+      "create_no_window": true,
+      "cwd": "D:/CC/Work/unattended-operations-20261013-wt/todo-3414-rust",
+      "environment": {
+        "CARGO_BUILD_JOBS": "10",
+        "CARGO_INCREMENTAL": "",
+        "CARGO_TARGET_DIR": "D:/OMB/tmp/codex-owned-9975d44bed860ed1b6bc8f25c81e902d/target",
+        "CC_JOB_ID": "20261023-120331-todo-3414",
+        "RUSTC_WRAPPER": "D:/CC/Tools/sccache/sccache.exe",
+        "RUST_TEST_THREADS": "",
+        "SCCACHE_DIR": "D:/CC/BuildCache/sccache",
+        "SCCACHE_SERVER_PORT": "42259"
+      },
+      "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+      "exit_code": 0,
+      "finished": "2026-10-23T12:14:28.3222855+09:00",
+      "head": "138d2fd805447ff2e1285310aaf89ea39ba2b529",
+      "label": "11-release",
+      "pid": 32064,
+      "started": "2026-10-23T12:13:41.8184556+09:00",
+      "state": "finished",
+      "tree": "ed62c16d131f02ffcf36c5711d76484d50d4859d"
+    }
+  ],
+  "doctest_count": 0,
+  "clippy_all_targets": "passed with -D warnings",
+  "release": "passed"
+}

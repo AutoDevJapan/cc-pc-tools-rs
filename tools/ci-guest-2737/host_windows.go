@@ -494,6 +494,8 @@ func main() {
 		e = runGatedWindowsJob(ctx, os.Args[2], os.Args[3], os.Args[4])
 	} else if len(os.Args) == 6 && os.Args[1] == "linux-job" {
 		e = runGatedLinuxJob(ctx, os.Args[2], os.Args[3], os.Args[4], os.Args[5])
+	} else if len(os.Args) == 3 && os.Args[1] == "recover-uncreated-job" {
+		e = recoverUncreatedJob(ctx, os.Args[2])
 	} else if len(os.Args) == 5 && os.Args[1] == "bootstrap-offline" {
 		e = runGatedBootstrap(ctx, os.Args[2], os.Args[3], os.Args[4])
 	} else if len(os.Args) == 5 && os.Args[1] == "probe-sdk" {

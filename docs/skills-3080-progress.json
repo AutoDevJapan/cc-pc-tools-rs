@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-23T14:54:46.1642800Z",
+  "observed_at": "2026-10-23T16:37:17.8639403Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "既存CI統合1はPR381merge済み。SQL2は未導入。新22評価のMust0後の補足はb006/限定3456と同HEAD CIを追跡。追加4を親が全文確認しmizchi61/76・残15（読取3458登録、未読のまま）。全16資料と実配置を継続。",
+  "phase_b": "PR395は限定3456 Must0/同HEAD6CI成功後に通常merge済み。mizchi76/76本文確認、今回15は子の読取結果を親が照合・補正したもの。新19とSQL2/変異1草案は未導入。全16資料の個別評価/許諾/実配置を継続する。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -426,16 +426,17 @@
   },
   "mizchi_partial_entrypoint_evaluation": {
     "expected": 76,
-    "full_body_read": 61,
-    "unread": 15,
-    "complete": false,
+    "full_body_read": 76,
+    "unread": 0,
+    "complete": true,
     "installed": 0,
     "integrated": 1,
     "excluded": 0,
-    "source": "skills-3080-mizchi-partial-evaluation.json"
+    "source": "skills-3080-mizchi-partial-evaluation.json",
+    "complete_definition": "本文の全path読取のみ。個別許諾・支持・採否・実導入は未完。"
   },
-  "all_fulltext_primary_paths_including_partial_sources": 152,
-  "primary_coverage_definition": "7資料91入口+部分mizchi61=152sourcepaths。AIS mirror/Tencent guide/echo fixtureを含み152独立Skillではない。残15は3458登録だけで未読。",
+  "all_fulltext_primary_paths_including_partial_sources": 167,
+  "primary_coverage_definition": "旧7資料91入口+既存構造のmizchi76=167source paths。mizchiを旧91側へ重複加算しない。AIS mirror/Tencent guide/echo fixtureを含み167独立Skillでも導入数でもない。",
   "external_revisions": {
     "count": 1,
     "target": "diagnosing-bugs",
@@ -482,7 +483,7 @@
     "installed": 0,
     "integrated": 0,
     "excluded": 0,
-    "review_pending": true,
+    "review_pending": false,
     "fixed_scope_reviews": [
       {
         "todo": 3417,
@@ -492,10 +493,12 @@
         "suggestions": 6,
         "nits": 6,
         "raw_sha256": "c05564d6b0a12de8ec89361f328860598a9b1fc0de11df78641b41b07a75c4b4",
-        "actual_model": "anthropic/claude-sonnet-5-5",
-        "effort": "max",
         "scope": "新10本文/README9と評価差分/Go2を読取。SQL本文の指紋を独立再計算。支持実装・実行・導入・全体受入は範囲外。",
-        "received_at": "2026-10-23T14:40:28.9070940Z"
+        "job_model": "anthropic/claude-sonnet-5-5",
+        "requested_effort": "max",
+        "recorded_at": "2026-10-23T14:40:28.9070940Z",
+        "model_origin": "owner_request",
+        "effort_origin": "owner_request"
       },
       {
         "todo": 3420,
@@ -505,23 +508,78 @@
         "suggestions": 6,
         "nits": 5,
         "raw_sha256": "06ddd1f50e3163812c82edeada81e506c65ffc9b4b99b67dac282624341207c3",
-        "actual_model": "anthropic/claude-sonnet-5-5",
-        "effort": "max",
         "scope": "後続12本文/差分5と支持metadata59。README1全読+11テンプレート同一性照合。旧45/支持実装/実行/導入は範囲外。",
-        "received_at": "2026-10-23T14:40:28.9070940Z"
+        "job_model": "anthropic/claude-sonnet-5-5",
+        "requested_effort": "max",
+        "recorded_at": "2026-10-23T14:40:28.9070940Z",
+        "model_origin": "owner_request",
+        "effort_origin": "owner_request"
+      },
+      {
+        "recorded_at": "2026-10-23T16:37:17.8639403Z",
+        "model_origin": "owner_request",
+        "suggestions": 7,
+        "requested_effort": "max",
+        "base": "0ebda988fd008a41c9227bb0598abbeca128c26d",
+        "effort_origin": "owner_request",
+        "preserved_at": "2026-10-23T16:26:27.3389133Z",
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b",
+        "scope": "固定9差分とGo2全文。新4/今回15は範囲外。原文全件の再読・実行・導入受入ではない。",
+        "job_model": "anthropic/claude-sonnet-5-5",
+        "todo": 3456,
+        "nits": 5,
+        "must": 0,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f"
       }
     ],
-    "current_delta": "3417/3420のSuggestionとNitを補足。新しい差分のみ限定確認待ち。既受入の旧版/新22全読を繰り返さない。"
+    "current_delta": "b006の補正差分は3456 Must0受領後PR395merge済み。今回の後続差分の受入を意味しない。",
+    "merged_pr": {
+      "checks": "6 SUCCESS; optional Bugbot NEUTRAL",
+      "merge": "856a33670626893f1d9190c07985adf07ea9c625",
+      "api_original_commit": "17de0ea4689729f19eadf5c6a716bee761885e96",
+      "merged_at": "2026-10-23T16:26:53Z",
+      "commit_metadata_note": "API公開b006と元17deはtree同一。commit metadata/作者表示は異なり、同一commitとしない。",
+      "required_checks": "gh checks --required explicitly reported none",
+      "number": 395,
+      "head": "b006b682ba6a7603e050362dcc07c27325e6c46f"
+    },
+    "review_model_limit": "job_model/requested_effortはjob設定で、実効推論量の実測ではない。recorded_atは文書生成時刻、preserved_atは原応答保存の実記録。"
   },
   "new_assessment_review_pending": {
     "review_pending": true,
     "excluded": 0,
     "integrated": 0,
     "installed": 0,
-    "readmes": 4,
+    "readmes": 19,
     "additional_support_fulltext": 1,
     "source": "mizchi/skills",
-    "count": 4
+    "count": 19,
+    "readme_methods": {
+      "reader_full": 9,
+      "reader_template": 6,
+      "parent_full": 4
+    },
+    "reader_receipt": {
+      "rights_accepted": false,
+      "job_model": "anthropic/claude-sonnet-5-5",
+      "support_metadata_count": 111,
+      "requested_effort": "max",
+      "independent_evaluation_review": false,
+      "effort_origin": "owner_request",
+      "parent_read_all_bodies": false,
+      "readme_fulltext_count": 9,
+      "support_nonreadme_saved": 36,
+      "raw_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
+      "readme_extra_link": "void-app README Cheat sheet",
+      "body_fulltext_count": 15,
+      "job": "20261024-005251-todo-3458",
+      "todo": 3458,
+      "readme_description_template_count": 6,
+      "support_nonreadme_unread": 96,
+      "preserved_at": "2026-10-23T16:26:27.3520370Z",
+      "model_origin": "policy",
+      "support_nonreadme_unsaved": 60
+    }
   },
   "central_integration_hold": {
     "owner_action_required": false,

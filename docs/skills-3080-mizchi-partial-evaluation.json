@@ -6,11 +6,11 @@
   "tree_complete": true,
   "tree_entries": 996,
   "entrypoints_expected": 76,
-  "entrypoints_unread": 15,
+  "entrypoints_unread": 0,
   "classification_is_not_installation": true,
   "assessment_snapshot_before_adoption": false,
   "live_dispositions": "skills-3080-adoptions.json",
-  "scope": "全76中61入口を全文確認。既57に依存/変異テスト/SQLite vector/CRDの4入口とREADME4、評価手順1を追加。残15の全読調査は3458に正規登録し、読了結果を親が照合して反映する。登録を読了や導入へ数えない。",
+  "scope": "全76入口本文を確認済み。前61は親、今回15は読取3458の実結果を固定path/SHA/bytesで親が照合。15の評価は親が現方針へ訂正。全支持・個別許諾・採否・実導入の完了ではない。",
   "previous3048": "同じ固定版のREADMEとdep-lib-review代表本文のみ。今回の全文確認は別に記録し、前回の代表確認を76件の監査へ広げない。",
   "source_readme": {
     "path": "README.md",
@@ -4279,9 +4279,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:55c9c49e81cdce26af64189a2e87c3ff0bdb86847e42ec44e145da2ac451a58f",
@@ -4345,9 +4353,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:ae0d45677c10d87022cc4b58d2ed9af7550a8b3336d5c114a57822da2d1be790",
@@ -4394,9 +4410,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:dd568d73da532f5ae91da2c4e7a41752a5d95680b2b38909f647aada4487d704",
@@ -4432,9 +4456,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:096e1b5a18f9490a69c8d3b8b3ea5da6d4c8aa186ee832e0802b077a84c7a2fa",
@@ -4561,9 +4593,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:c84bc26158effb0305a653dc2daf4de1904e76c359dc011e57880f35ee287e21",
@@ -4609,9 +4649,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:d61f9fdf447c4f40649577b4d8aa6773c6b3d2d88f1a091871beaab4fac11c64",
@@ -4702,9 +4750,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:b29eb098e41935578ea10c48d76dbbbc407affb54132051051912eb8a1801884",
@@ -4786,9 +4842,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:53df4d8c6fc0ac5757eea64ffcb4a709182de800e483249373d27b94bfe94002",
@@ -4860,10 +4924,18 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3417,
       "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
-      "support_scope": "同じexample配下全blobをmetadata列挙。周辺README/.waxa.yaml/evalsは未読、tools/waxa本体も未読。未保存分は再取得していない。"
+      "support_scope": "同じexample配下全blobをmetadata列挙。周辺README/.waxa.yaml/evalsは未読、tools/waxa本体も未読。未保存分は再取得していない。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:6f428ead093cda43db5d2462a7c0700a7e14b33727ad98a83529e1c0bb902a8b",
@@ -4901,9 +4973,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:c3c1612c465df67377d0493e3a58c849a981292c3dfd228eb136c0c1bdae68b2",
@@ -5112,9 +5192,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:01f196f1d23d113931fd9f71e538607b88027ed81f94d6c271c074f85eb0d580",
@@ -5251,9 +5339,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:cbf2aeb41f3c978c539f4b546b67fb30ae2b8c7de6b4042b246e4f2ece87a705",
@@ -5290,9 +5386,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:50131ecbbad137be7c2eba0675c9f7c400cdb7606af2799b6251cbc9c3e7ee30",
@@ -5357,9 +5461,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:00632081125d36d46714bf0195fbbd44e39d40b62941af1adbc4758363e2c539",
@@ -5406,9 +5518,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:21c8a50a9702ddb435237a97daa689da4542f1c7530a22511cb26758385ba5b0",
@@ -5446,9 +5566,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:ebc648c4dae246d9d559642f850424397b9b9dfed317e37b7df1607a37500604",
@@ -5486,9 +5614,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:90363624c915dcdc4f83d4ac490e37002fa60f3be36439dffa90a51c0d24ca3e",
@@ -5525,9 +5661,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:9f9e80dd48e449b2f0e064336fa704ea1fc6cd1b8330b005df91f5c385f5ef3a",
@@ -5601,9 +5745,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:3c0d98cb9225a7bfe09217dc947987787627022228da57f7e6f2688b669ac12d",
@@ -5667,9 +5819,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:a7974025818694cce586a0f1abaacec7f3468b1fc5b372b5a8b2319c439b622a",
@@ -5690,7 +5850,7 @@
         "backend-correctness",
         "frontend-node-engineering"
       ],
-      "required_changes": "D1のBigInt非対応と安全なNumber範囲を公式で照合。Int64を無条件Numberへ変換すると2^53を越す値を失うため範囲検証/表現/格納schemaを先に定める。上流の特定版でのhang/1101を普遍的原因としない。default applyの未読scriptや全生成後hookを実行せず、空/未生成を成功へする検査は利用側で誤った合格にならないか確認。nested brace以外のparser限界と実generator版を確認する。 読み戻しもNumberの安全整数範囲を越えれば精度を失い得る。?と?NNNの混在自体は公式で許容され、generator固有のエラー化条件と1101は未実証。",
+      "required_changes": "D1のBigInt非対応と安全なNumber範囲を公式で照合。Int64を無条件Numberへ変換すると2^53を越す値を失うため範囲検証/表現/格納schemaを先に定める。上流の特定版でのhang/1101を普遍的原因としない。default applyの未読scriptや全生成後hookを実行せず、空/未生成を成功へする検査は利用側で誤った合格にならないか確認。nested brace以外のparser限界と実generator版を確認する。 読み戻しもNumberの安全整数範囲を越えれば精度を失い得る。公式の番号規則では?と?NNNの混在が直ちに非対応とは言えない。ただし無名?は数え間違えやすいため公式は勧めず、?NNNを推奨する。親は番号付きへ揃える案を採り、generator固有のエラー化条件と1101は未実証とする。",
       "support_read_complete": false,
       "supporting_resources": [
         {
@@ -5743,9 +5903,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:9e4e6c20f466c5c0dc5b059f5c608da379a236da0255331aa57b713d899255a9",
@@ -5800,9 +5968,17 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": true,
+      "independent_review_complete": false,
       "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
+      "historical_evaluation_review": {
+        "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
+        "current_snapshot_reviewed": false,
+        "head": "b006b682ba6a7603e050362dcc07c27325e6c46f",
+        "todo": 3456,
+        "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
+      },
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
     },
     {
       "inventory_id": "github:55695478feafb25f7879473215bb7eb690bd323a3ca595537e0085371c406501",
@@ -6083,31 +6259,1693 @@
         "disposition": "missing local reference; external k1c adapter not read/licensed/used",
         "fixed_tree_present": false
       }
+    },
+    {
+      "inventory_id": "github:af6f0ebed2c189724983918a2ddd99fb11539fc1be6d3507f4f1d2a7b9f0bf6f",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "ast-grep-practice/SKILL.md",
+      "name": "ast-grep-practice",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/ast-grep-practice/SKILL.md",
+      "source_sha256": "1609695594f0563ae3a7b14759610a06dab5128a56042785c5dc77c171c938e0",
+      "retrieved_at": "2026-10-20T08:41:08.2928456Z",
+      "bytes": 18249,
+      "body_read_complete": true,
+      "body_read_by": "delegated_reader3458",
+      "body_read_receipt_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
+      "parent_evaluation_recorded_at": "2026-10-23T16:37:17.8639403Z",
+      "candidate_disposition": "tool_reference_candidate_pending_corrections_and_rights",
+      "reason": "ast-grepをプロジェクトのlintとして運用する手引きで、sgconfig.yml、fix/rewrite、constraints、transform、規則テスト(分類テストとスナップショット)、CIのexit codeまでを一式で示す。ESLintやclippyで書けない構造パターン(特定関数呼び出しの禁止、非推奨APIの書換え)を規則にでき、TS・Rust・Go・Pythonの規則例は本PCの既定言語GoとRustの検査(エラー握りつぶし、defer Close漏れ、unwrap)への応用候補になる。名称と説明で比べた限り中央Skillsに同種の入口は見当たらず、新規のツール参照として有用。",
+      "required_changes": "適用時の技術上の修正案。Goのno-ignored-error例はrule直下にhasキーを2回書いており、YAMLの重複キーは読込時に拒否または後勝ちになり得るため、all:で束ねる。左辺はexpression_listなのでfield: leftのidentifier判定も要確認(未照合)。no-lodash-importはfixに未捕捉の$_とlodash/xxxを書き、本文自身の『未一致のメタ変数は空文字になる』により壊れたimportを生む。Rustのno-unwrapは#[test]をfunction_itemのregexで除外するが、属性が兄弟ノードなら除外が効かない(未照合)。actions/setup-node@v7等の版は未照合で、採用する設定で個別確認する。cargo installは共有Cargoゲート経由か事前ビルド版のnpmを使い、--update-allの前に差分確認を置く。",
+      "compare_metadata": [
+        "frontend-node-engineering",
+        "rust-language-patterns",
+        "test-quality"
+      ],
+      "comparison_limit": "現行catalogの名前/説明との用途比較。未知の中央本文は一括読取せず、実統合前に対象本文を比較する。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "ast-grep-practice/README.md",
+          "bytes": 1233,
+          "git_blob": "9d17d8ba15196746662373b8994f3e2bd237a26e",
+          "body_saved": true,
+          "source_sha256": "ac16fc64a6c240a3868275437d30832f8ef6f5e67252c7c3ae10dc8bcf352c11",
+          "body_read": true,
+          "read_method": "reader_fulltext",
+          "executed": false
+        },
+        {
+          "path": "ast-grep-practice/SKILL-ja.md",
+          "bytes": 19713,
+          "git_blob": "82d5a4c92d44c1bc761e6413fb3f315b472a9a8b",
+          "body_saved": true,
+          "source_sha256": "be2fe0f3543aa71bbc97bec4d9c3c7a8392bcb979e0d7ec92edf03e1de8563a1",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "ast-grep-practice/references/cli.md",
+          "bytes": 4665,
+          "git_blob": "012eb9a7506f7a2867f3e9c2b1b10e38b0b618c8",
+          "body_saved": true,
+          "source_sha256": "20f47f7693019f6e392cf59a2bb0f938c3763ff177f7eb5f6ed1360bc9b78938",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "ast-grep-practice/references/kind-catalog.md",
+          "bytes": 4741,
+          "git_blob": "7513fe554f8d81355a7bb56ceaa153e96876180b",
+          "body_saved": true,
+          "source_sha256": "0a616ac78efa38aeeee5b8afc939bee0489c5d1d92b82475480e429d03a14ec4",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "ast-grep-practice/references/rule-yaml.md",
+          "bytes": 6515,
+          "git_blob": "7fb32248b07386aca833a75b883c750b4fc57aec",
+          "body_saved": true,
+          "source_sha256": "1b801dd897252f442384980235eaf06354bb6dc0ac8378f196e4e20746e1c7c0",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "ast-grep-practice/references/testing.md",
+          "bytes": 4399,
+          "git_blob": "fa101b75dbc5f7b4785d2bf35ac63366686dbf66",
+          "body_saved": true,
+          "source_sha256": "d7e2282b5b6ef954891af059adbe9b8ae23edcc385ba00f6a9e80e42ac6607d7",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの『個別license優先、未記載はMIT』は所有者の説明で、LICENSEファイルは無く(API license=null)、この配下にも個別LICENSE/NOTICEは無い(固定tree照合)。READMEは生成された導入案内のみで追加の著作表示は無い。公式docs(ast-grep.github.io)のRule catalog例を転用していれば、その表示とlicenseは未確認。root READMEがupstream skillとして挙げるast-grep/agent-skillとの派生関係も未確認。SKILL-ja.mdと参照4件は保存済みで未読。",
+      "credits_to_verify": [
+        "ast-grep公式docsとRule catalog(ast-grep.github.io)の例文の転用有無とlicense(未照合)",
+        "ast-grep/agent-skill(root READMEが別repoのupstreamとして列挙。本文との派生関係は未確認)",
+        "SKILL-ja.mdと参照4件(保存済み未読)の出典表示"
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "evaluation_review_status": "parent_adapted_reader_proposal_pending_fixed_delta_review"
+    },
+    {
+      "inventory_id": "github:31318f7364b1107013ecc8dffe46a849ee5d722c160c2bdf49399d3e4cc9181d",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "chezmoi-management/SKILL.md",
+      "name": "chezmoi-management",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/chezmoi-management/SKILL.md",
+      "source_sha256": "e6feefa4b65e96edef906d3948b13a3ded8e199335e9fed5d934ba78c0c3a99e",
+      "retrieved_at": "2026-10-20T08:41:08.3231385Z",
+      "bytes": 13850,
+      "body_read_complete": true,
+      "body_read_by": "delegated_reader3458",
+      "body_read_receipt_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
+      "parent_evaluation_recorded_at": "2026-10-23T16:37:17.8639403Z",
+      "candidate_disposition": "personal_environment_notes_reference_only_pending_neutral_rewrite_and_rights",
+      "reason": "作者個人のdotfiles運用メモで、ソースを~/.local/share/chezmoi、リモートをmizchi/chezmoi-dotfilesに置き、home-manager(nix)・chezmoi・APMの三者で設定の持ち主を分け、pre-pushでpkfireとsecretlintを回す前提で書かれている。移せる要点は『1つの設定の正本は1か所に置く』『.tmplに対するre-addは展開後の内容でテンプレートを壊す』『push前に秘密検査をかける』の3点。本PCはWindowsで、~/.claude等がD:/CC/Skillsへのjunctionであり、本文の手順をそのまま使うと中央Skillsを上書きし得るため、そのままは導入せず中立化した参考にとどめる。",
+      "required_changes": "適用時の技術上の修正案。/Users/mzや固定リモートなど個人環境の値と、他人のdotfilesを丸ごと適用するchezmoi init <他人のrepo> --applyを除き、chezmoiの一般手順だけ残す。chezmoi statusの2桁を[source][dest]と説明する点は、公式の『1桁目=最後にchezmoiが書いた状態との差、2桁目=適用で起きる変更』と食い違う疑いがあり、merge.command未設定時にgit config merge.toolを参照するという説明も未照合なので、親が公式で確認する。pushの緊急回避に--no-verifyを示した直後に使うなと書く矛盾を直し、rollbackのgit reset --hardにはcommitまたはstashを先に置く。skills領域をchezmoi管理に入れず、run_afterのapm install --globalも採らない。",
+      "compare_metadata": [
+        "skill-maintenance",
+        "windows-shell"
+      ],
+      "comparison_limit": "現行catalogの名前/説明との用途比較。未知の中央本文は一括読取せず、実統合前に対象本文を比較する。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "chezmoi-management/README.md",
+          "bytes": 1501,
+          "git_blob": "77ba440066f583479d7082be5ff02ba7bf8ed6a0",
+          "body_saved": true,
+          "source_sha256": "406fa53215a36080889a0bf7815b50a4763aacae79c1423546873c4f123d172f",
+          "body_read": true,
+          "read_method": "reader_fulltext",
+          "executed": false
+        },
+        {
+          "path": "chezmoi-management/SKILL-ja.md",
+          "bytes": 12170,
+          "git_blob": "9c1940d1b3c23502d251b1bd8090817d9b4839a7",
+          "body_saved": true,
+          "source_sha256": "63aae758edb359aa7fb1b0e567d700ed432d824d3d84bd6f707ab788605676f8",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの『個別license優先、未記載はMIT』は所有者の説明で、LICENSEファイルは無く(API license=null)、この配下にも個別LICENSE/NOTICEは無い(固定tree照合)。READMEは生成された導入案内のみで追加の著作表示は無い。pkfire・secretlint・chezmoi公式docsの設定例と手順の転用有無、固定リモートmizchi/chezmoi-dotfilesの許諾は未確認。SKILL-ja.mdは保存済み未読。",
+      "credits_to_verify": [
+        "twpayne/chezmoi公式docs(コマンド説明の転用有無とlicense、未照合)",
+        "mizchi/pkfireとsecretlintの設定例(上流license未照合。pkfireは固定tree内にSkillが無い)",
+        "mizchi/chezmoi-dotfiles(別repo、本文が出所。許諾未確認)",
+        "SKILL-ja.md(保存済み未読)"
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "evaluation_review_status": "parent_adapted_reader_proposal_pending_fixed_delta_review"
+    },
+    {
+      "inventory_id": "github:3046bcc8f19d2571b91ef3fb781bf2ce02e704cccc3ce3050850f364de81244e",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "conventional-changelog/SKILL.md",
+      "name": "conventional-changelog",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/conventional-changelog/SKILL.md",
+      "source_sha256": "3a1401f1b50b5520686e0946be7f3f9b01850f37c27f18d9799b9b67b29dd4ad",
+      "retrieved_at": "2026-10-20T08:41:08.7883412Z",
+      "bytes": 18433,
+      "body_read_complete": true,
+      "body_read_by": "delegated_reader3458",
+      "body_read_receipt_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
+      "parent_evaluation_recorded_at": "2026-10-23T16:37:17.8639403Z",
+      "candidate_disposition": "integration_candidate_pending_rights_and_corrections",
+      "reason": "Conventional CommitsとKeep a Changelogを軸に、release-please、changesets、git-cliff、towncrier、conventional-changelog-cli、autoの比較表と、release-pleaseのmanifest/pre-release/monorepo設定、git-cliffとcargo-releaseの連携、commitlintのpre-commit導入、よくある失敗を示す。リリース手順が案件ごとにばらつく状況での選定表として使え、本PCのgit-github-workflowやgithub-actions-ciにリリース自動化の項として足せる。Go・Rust製品にはgit-cliff系が合う。中央Skillsに同種の入口は見当たらない(名称と説明のみで比較)。",
+      "required_changes": "適用時の技術上の修正案。比較表はgit-cliffのversion bumpを×とするが、後段は『git-cliff自身がbumpを決める機能』に触れており表と矛盾する。その設定節名を[changelog.bump]と書く点は、上流が[bump]である疑い(未照合)。conventional-changelog-cliは仕様に沿うconventionalcommits presetでなくangularを主として説明している。googleapis/release-please-action@v5とcommitlint hookのrev v9.16.0は実在と現行を親が確認し、実装時はSHA固定にする。npm-releaseとpkfireのSkillは固定tree内に無い参照。release-pleaseのタグとRelease作成がPrd限定の配備を自動起動しないこと、既存や顧客側のコミット規約を上書きしないことを確認する。npm install -gはproject-localかnpx固定にする。",
+      "compare_metadata": [
+        "git-github-workflow",
+        "github-actions-ci"
+      ],
+      "comparison_limit": "現行catalogの名前/説明との用途比較。未知の中央本文は一括読取せず、実統合前に対象本文を比較する。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "conventional-changelog/README.md",
+          "bytes": 1311,
+          "git_blob": "b3d39f4d00105d5ae69e077d4a5c5b6c507d2b35",
+          "body_saved": true,
+          "source_sha256": "65a40ab627e9487ec693c9b906fcdfad894b8cebb20aa8768394bfb0b6a52d2a",
+          "body_read": true,
+          "read_method": "reader_fulltext",
+          "executed": false
+        },
+        {
+          "path": "conventional-changelog/SKILL-ja.md",
+          "bytes": 18788,
+          "git_blob": "f99e41377fd7a788b2ef6e5b7b0f0e5255e659da",
+          "body_saved": true,
+          "source_sha256": "ab42c9eb6f8b22de73a4041ca220bca0bca118b0d9d5bbc5b60f6733d2b56990",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの『個別license優先、未記載はMIT』は所有者の説明で、LICENSEファイルは無く(API license=null)、この配下にも個別LICENSE/NOTICEは無い(固定tree照合)。READMEは生成された導入案内のみで追加の著作表示は無い。Keep a Changelog雛形文とConventional Commits要約、各ツール設定例の引用表示は未確認。SKILL-ja.mdは保存済み未読。",
+      "credits_to_verify": [
+        "Keep a Changelog 1.1.0の雛形文(keepachangelog.com)とConventional Commits仕様の要約(conventionalcommits.org)の表示要否(未照合)",
+        "release-please、git-cliff、commitlint、cargo-release、towncrier、intuit/autoの設定例(各上流license未照合)",
+        "alessandrojcm/commitlint-pre-commit-hook",
+        "SKILL-ja.md(保存済み未読)"
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "evaluation_review_status": "parent_adapted_reader_proposal_pending_fixed_delta_review"
+    },
+    {
+      "inventory_id": "github:77660365fefbcdf99be3ba8830e3a05471bb24c9dfb78d80a10b4fea6766ab55",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "gleam-practice/SKILL.md",
+      "name": "gleam-practice",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/gleam-practice/SKILL.md",
+      "source_sha256": "a7f39a87992a7fb4d633d5a1919a9f4e580aab785dda6fb4f9e360a042326100",
+      "retrieved_at": "2026-10-20T08:41:08.8557642Z",
+      "bytes": 19809,
+      "body_read_complete": true,
+      "body_read_by": "delegated_reader3458",
+      "body_read_receipt_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
+      "parent_evaluation_recorded_at": "2026-10-23T16:37:17.8639403Z",
+      "candidate_disposition": "language_reference_candidate_existing_gleam_targets_pending_support_corrections_and_rights",
+      "reason": "Gleam(Erlangターゲット)でWisp+Mist製HTTPサービスを作る実務手引きで、純粋ロジックとactorの分離、gleam_otpの3種のsupervisor、gleam/dynamic/decodeのJSON、justfileとCI、gleeunit・birdie・qcheck、性能測定、@externalの境界規則、レビュー項目を含む。Gleamは本PCの既定(Go)ではなく、既存のGleam資産に出会った時の参考としてのみ価値があり、言語変更の許可にはならない。公開面を小さく保つ、薄いweb層、FFIの境界を狭めるといった設計指針は他言語にも通じる。",
+      "required_changes": "適用時の技術上の修正案。雛形はSECRET_KEY_BASE未設定時に公開済みの固定文字列へ黙って戻るため、未設定なら起動失敗にする。mist.bindが0.0.0.0なので開発でも127.0.0.1を既定にする。gleam_otpは『v0.16+前提』と書きながらactor.new・on_messageの新しいAPIを使い、supervisor_factoryとsupervisor_dynamicのモジュール名、LSP『v1.2+』のJSON生成も、親が公式で版と実在を照合する(未照合)。デコーダ例のOk(nt) -> // ...は式が空で不成立。set shell bashにはWindows用のshell設定を足し、just ciを毎回必須とせず、影響範囲を選ぶ本PCのテスト方針に合わせる。参照するassets 7件は未保存なので、保存済み範囲で書き直す。",
+      "compare_metadata": [
+        "backend-correctness",
+        "codebase-design"
+      ],
+      "comparison_limit": "現行catalogの名前/説明との用途比較。未知の中央本文は一括読取せず、実統合前に対象本文を比較する。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "gleam-practice/README.md",
+          "bytes": 1396,
+          "git_blob": "9be5ba5e4db6a49b68b4c01b79c89409db463bb5",
+          "body_saved": true,
+          "source_sha256": "473ac43e2c583e650e3338e98e5a272163efa84bd62120001245a3abc199c069",
+          "body_read": true,
+          "read_method": "reader_fulltext",
+          "executed": false
+        },
+        {
+          "path": "gleam-practice/SKILL-ja.md",
+          "bytes": 20080,
+          "git_blob": "e4ad5222dcfe8bc4d5cc48d5955fc5ee2cfcb776",
+          "body_saved": true,
+          "source_sha256": "7998fcf03fd90b7d88b73c83027fe31d6407932f149b268577bd96abfc20134b",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "gleam-practice/assets/README.md",
+          "bytes": 2218,
+          "git_blob": "60666a6fe6dde132b6fd86055676407a197fce92",
+          "body_saved": true,
+          "source_sha256": "b5029c9942cc83881fbc39de1eecf4b618a25454752a2c770e35cb4ad09c9be5",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "gleam-practice/assets/bench/http.js",
+          "bytes": 668,
+          "git_blob": "86352e6a9e0acc2127a84737c8288dd92f08620c",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "gleam-practice/assets/github-actions/ci.yml",
+          "bytes": 1042,
+          "git_blob": "7cdb309b77278f263011eab07421f9a0ac724f76",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "gleam-practice/assets/justfile",
+          "bytes": 666,
+          "git_blob": "9270e0d022a2d5241972239e9c64b3f6ba2164e8",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "gleam-practice/assets/test/property_test.gleam",
+          "bytes": 271,
+          "git_blob": "35e9d1e54a39fb5afa0beeb2e25056807013e5de",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "gleam-practice/assets/test/qcheck_parallel_test.gleam",
+          "bytes": 915,
+          "git_blob": "ccc1f820249c33b9b2c28da30f1074d4fc12465c",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "gleam-practice/assets/test/snapshot_test.gleam",
+          "bytes": 267,
+          "git_blob": "30d2f344a9ceccdeb7a52818304476da5d585e30",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "gleam-practice/assets/test/timeout_test.gleam",
+          "bytes": 571,
+          "git_blob": "f3cdcff2dfea56f805013ba7ba9c25006fd936e9",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの『個別license優先、未記載はMIT』は所有者の説明で、LICENSEファイルは無く(API license=null)、この配下にも個別LICENSE/NOTICEは無い(固定tree照合)。READMEは生成された導入案内のみで追加の著作表示は無い。assets 7件(justfile、ci.yml、bench/http.js、test 4件)は未保存で権利未確認。Wisp・Mist・gleam_otp・k6等の上流表示は未照合。SKILL-ja.mdとassets/README.mdは保存済み未読。",
+      "credits_to_verify": [
+        "Gleam公式docs・hexdocs(wisp、mist、gleam_otp)の例の転用有無(未照合)",
+        "k6はAGPL系と記憶、外部CLI利用に限るなら同梱不要だが上流license未照合",
+        "birdie・qcheck・glacier・cleam・glychee等の上流license(未照合)",
+        "assets 7件(未保存)とSKILL-ja.md・assets/README.md(保存済み未読)"
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "evaluation_review_status": "parent_adapted_reader_proposal_pending_fixed_delta_review"
+    },
+    {
+      "inventory_id": "github:f2867376fffac37dda29d8eba924284d8cff94e9a4b8d42dc4c98f010a781f60",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "maintainer-persona/SKILL.md",
+      "name": "maintainer-persona",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/maintainer-persona/SKILL.md",
+      "source_sha256": "8d27199dfef26393c3832ada52bf57b4e157ded6cb63466de350ac6084e66ebd",
+      "retrieved_at": "2026-10-20T08:41:08.8620216Z",
+      "bytes": 25658,
+      "body_read_complete": true,
+      "body_read_by": "delegated_reader3458",
+      "body_read_receipt_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
+      "parent_evaluation_recorded_at": "2026-10-23T16:37:17.8639403Z",
+      "candidate_disposition": "policy_and_technical_rewrite_candidate_pending_unsaved_scripts_and_rights",
+      "reason": "他人のリポジトリへissueやPRを出す前に、対象の履歴(レビュー者、本文長のp90、見出し、言語、初回PRの扱い)をghで計測してpersonaファイルに残し、日本語下書き→承認→必要なら英訳→新規読者による確認→送信前ゲートの順で進める工程。『測ってから書く』『主張は固定版のfile:lineで裏取りする』『重複issueとPRを全状態で検索する』など上流への報告の質を上げる手順が具体的で有用。送信時は元依頼と対象repo・操作種別・既存承認を照合する。許可済みの通常送信に毎回の本人確認を追加しない。",
+      "required_changes": "適用時の技術上の修正案。measure.tsなどスクリプト7件は未保存で未読のため、コードは移せず、移すなら本文の仕様からGoで新規に作る。lintはai-indexのslopscore.py(Python)依存で、配布物の無改変実行は本人許可(2026-10-06)の範囲、改変や移植はGoにする。手順7の新規サブエージェント派遣は直接起動せず共有ToDoの--specへ置き換える。送信は自社3所有者以外へのissue・PR・forkになるので、対象repoと種別の範囲は本人の既存回答で足りるかを親が確認し、上流の各回承認をそのまま規則にしない。AI利用の開示が要る対象では文体調整で隠さず開示する。冒頭の44件中13件マージ等は出典が無名で一般則にしない。bash連鎖はPowerShell用に書き直す。",
+      "compare_metadata": [
+        "git-github-workflow",
+        "japanese-report-writing"
+      ],
+      "comparison_limit": "現行catalogの名前/説明との用途比較。未知の中央本文は一括読取せず、実統合前に対象本文を比較する。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "maintainer-persona/README.md",
+          "bytes": 1677,
+          "git_blob": "f5d5a2aa6473cead7f116a15be6d886383660def",
+          "body_saved": true,
+          "source_sha256": "b720ee89f8a88eacf593d41cc8824afe01321f465ca9f6b468acc40f9f35a47f",
+          "body_read": true,
+          "read_method": "reader_fulltext",
+          "executed": false
+        },
+        {
+          "path": "maintainer-persona/scripts/check-draft.ts",
+          "bytes": 5689,
+          "git_blob": "46afa7f3928b08fb341e3d95dc48925130c859ac",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "maintainer-persona/scripts/check-draft_test.ts",
+          "bytes": 3703,
+          "git_blob": "9de86560ae2fe6728cf8675d1eb6dea795401a92",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "maintainer-persona/scripts/measure.ts",
+          "bytes": 13039,
+          "git_blob": "fc956cc5fc8fdcca13f76f8706fd7244bec30dfb",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "maintainer-persona/scripts/measure_test.ts",
+          "bytes": 3643,
+          "git_blob": "9100d5c491784d875c91dee660f7900a29c0d341",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "maintainer-persona/scripts/package.json",
+          "bytes": 38,
+          "git_blob": "8898b2624187e77f624a9815c8a5ff5f818c01bf",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "maintainer-persona/scripts/persona.ts",
+          "bytes": 13646,
+          "git_blob": "f89580c9cc72a5402dead0b27e4e65ed12ff2111",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "maintainer-persona/scripts/persona_test.ts",
+          "bytes": 9243,
+          "git_blob": "848d79479648fbed94336022a74c363d91b3f7be",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの『個別license優先、未記載はMIT』は所有者の説明で、LICENSEファイルは無く(API license=null)、この配下にも個別LICENSE/NOTICEは無い(固定tree照合)。READMEは生成された導入案内のみで追加の著作表示は無い。scripts 7件(measure.ts、check-draft.ts等)は未保存で権利未確認。同repoのai-index・natural-writing-ja/en・upstream-fix-and-pinへの依存先の個別許諾は各自で未照合。",
+      "credits_to_verify": [
+        "ai-index(slopscore.py)・natural-writing-ja/en・upstream-fix-and-pin(同repo別Skillへの依存、個別license未照合)",
+        "冒頭の44件・13件・22件の実測に使った無名のOSSプロジェクト(出典なし)",
+        "GitHub CLIとGitHub APIの利用条件(未照合)",
+        "scripts 7件(未保存)の著作表示"
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "evaluation_review_status": "parent_adapted_reader_proposal_pending_fixed_delta_review"
+    },
+    {
+      "inventory_id": "github:2fdf7884fead6d6eaa7472d729e53240dfbcd85fe38b7a424872125274153710",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "mizchi-blog-style/SKILL.md",
+      "name": "mizchi-blog-style",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/mizchi-blog-style/SKILL.md",
+      "source_sha256": "b6819309302f653b5afbc3929fc7e38c1f1500a629c9e5efeed35bf9983364dd",
+      "retrieved_at": "2026-10-20T08:41:08.8647682Z",
+      "bytes": 18108,
+      "body_read_complete": true,
+      "body_read_by": "delegated_reader3458",
+      "body_read_receipt_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
+      "parent_evaluation_recorded_at": "2026-10-23T16:37:17.8639403Z",
+      "candidate_disposition": "third_party_voice_profile_method_donor_pending_rights_and_recalibration",
+      "reason": "mizchi個人のZenn記事18本から作った『mizchi文体度』の採点表で、段落粒度、見出しの名詞ラベル、コード間の散文量、冒頭は機会から、締めは次の行動、文体純度を構造から測り、語句マーカーは下限確認に限る。オーナー本人の文体ではなく第三者1人の声を模す資料なので、既定の書き方や人格としては移さない。再利用価値は『語句の出現率を追うとパロディになる』『自分のコーパスで較正してから構造で測る』という方法で、必要時にオーナー自身の記事で作り直す際の手本になる。",
+      "required_changes": "適用時の技術上の修正案。説明と採点軸が『mizchi本人の声』に固定されるため、既定発動にせず、明示依頼時だけの第三者文体参考にするか、方法論をwriting-shape等へ一般化する。基礎集計が互いに合わない: 937文÷766段落は1.22文なのに本文は平均1.45、64,340字÷937文は68.7字で平均文長44.5と合わず、766段落の64%は約490なのに本文は313個。ai-indexの較正文書(未読)で再集計するまで数値を目標にしない。『0.00の型は1件でも疑う』はn=18の1人の記事で、本文自身がAI判定に使えないと書く点と矛盾するため、AI判定や検出回避の根拠にしない。dispatch雛形の『mizchiの長年の読者として』という強制人格は移さない。",
+      "compare_metadata": [
+        "writing-shape",
+        "writing-fragments",
+        "japanese-report-writing"
+      ],
+      "comparison_limit": "現行catalogの名前/説明との用途比較。未知の中央本文は一括読取せず、実統合前に対象本文を比較する。",
+      "support_read_complete": true,
+      "supporting_resources": [
+        {
+          "path": "mizchi-blog-style/README.md",
+          "bytes": 1460,
+          "git_blob": "d4142f5a0ba1824d17c003df0798492292a19013",
+          "body_saved": true,
+          "source_sha256": "ba5674899e7a180d1fc99b9a6b291829c6dd9158601b7e0b05160d97ff658f5c",
+          "body_read": true,
+          "read_method": "reader_fulltext",
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの『個別license優先、未記載はMIT』は所有者の説明で、LICENSEファイルは無く(API license=null)、この配下にも個別LICENSE/NOTICEは無い(固定tree照合)。READMEは生成された導入案内のみで追加の著作表示は無い。本文中の記事断片(Zenn、mizchi本人の記事)は記事側のlicenseを確認していない。dispatch雛形が読ませる同repo別Skillの許諾も未照合。",
+      "credits_to_verify": [
+        "Zenn記事18本の引用断片(mizchi本人。記事側のlicense未確認)",
+        "zenn.dev/mizchiの利用条件(未照合)",
+        "ai-index(calibration.md・slopscore.py)とnatural-writing-ja・empirical-prompt-tuning(同repo依存、個別license未照合)"
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "evaluation_review_status": "parent_adapted_reader_proposal_pending_fixed_delta_review"
+    },
+    {
+      "inventory_id": "github:3a88fabdf9a5404c75015427695b767805660737f09bba95659a60cb7278b9a6",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "moonbit-js-binding/SKILL.md",
+      "name": "moonbit-js-binding",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/moonbit-js-binding/SKILL.md",
+      "source_sha256": "148bc52287b376fe7f9ff566e242eeb79efcab5efcc3c90fc02839fd4473145d",
+      "retrieved_at": "2026-10-20T08:41:08.8673263Z",
+      "bytes": 25131,
+      "body_read_complete": true,
+      "body_read_by": "delegated_reader3458",
+      "body_read_receipt_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
+      "parent_evaluation_recorded_at": "2026-10-23T16:37:17.8639403Z",
+      "candidate_disposition": "language_reference_candidate_existing_moonbit_targets_pending_version_support_and_rights",
+      "reason": "MoonBitからJavaScript(ブラウザ、Node、npm)を呼ぶextern js宣言の手引きで、型対応表、moon.pkgのlink.jsと#module、JsValueとnull/undefinedの区別、Promiseの橋渡し(%async.suspend)、#cfgとtargetsによる出力先の分け方、落とし穴9項目を4段階の手順で示す。MoonBit v0.10.12とmoonbitlang/async 0.21.0で確認と版が固定されている。MoonBitの案件が現れた時の参照資料として有用で、Go既定を変える根拠にはならない。",
+      "required_changes": "適用時の技術上の修正案。版依存が強く、moon.mod DSL、preferred_target、#export_name、async 0.17以上などを現行docsと照合する必要がある(親の外部確認、本読取では未照合)。Int64を『JS numberに通り53bit超が欠ける』とする説明は、ts2moonbit-migrationの『.d.tsでbigint』と食い違うので統一する。Phase 5は『8件のテストが通る』、末尾の例は『12件』と件数が一致しない。plan modeでSkillの読込を促す節と@referencesの取込記法はClaude Code固有で移さない。assets/js_binding_proj 11件は未保存のため、サンプル実行を前提にした説明は保存済み範囲で書き直す。MoonBit導入や新言語化は本資料の範囲外。",
+      "compare_metadata": [
+        "codebase-design",
+        "backend-correctness"
+      ],
+      "comparison_limit": "現行catalogの名前/説明との用途比較。未知の中央本文は一括読取せず、実統合前に対象本文を比較する。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "moonbit-js-binding/README.md",
+          "bytes": 1330,
+          "git_blob": "2c8c8a21c1df9036244b1e002db8432fd0bc79be",
+          "body_saved": true,
+          "source_sha256": "8f5c263ea49f3441ca1abe39f039cb2cc6b27480985f976769d552baf9c87908",
+          "body_read": true,
+          "read_method": "reader_fulltext",
+          "executed": false
+        },
+        {
+          "path": "moonbit-js-binding/assets/js_binding_proj/moon.mod",
+          "bytes": 465,
+          "git_blob": "6e472bd36e56ff0ea8b316ef279b2c19c7143953",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-js-binding/assets/js_binding_proj/src/async.mbt",
+          "bytes": 1885,
+          "git_blob": "04f301e7b725089820d8d390d2bec058bbb1b40f",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-js-binding/assets/js_binding_proj/src/async_test.mbt",
+          "bytes": 202,
+          "git_blob": "46ac0c741f5e78f787d9f4abcb54a8ee1005c828",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-js-binding/assets/js_binding_proj/src/cross_target.mbt",
+          "bytes": 821,
+          "git_blob": "41e2f3d4b712d78ad59051e1c35dca1347790ce1",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-js-binding/assets/js_binding_proj/src/cross_target_test.mbt",
+          "bytes": 183,
+          "git_blob": "14dd8af9a99dbd6408a58e1615d1fcef2aa04901",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-js-binding/assets/js_binding_proj/src/ffi.mbt",
+          "bytes": 2294,
+          "git_blob": "776657e3072dcbbc950e17e5292b8597aa941c67",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-js-binding/assets/js_binding_proj/src/lib.mbt",
+          "bytes": 588,
+          "git_blob": "dac21332b8261aed8a6c3835c7b5d4e96f1b2bd2",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-js-binding/assets/js_binding_proj/src/lib_test.mbt",
+          "bytes": 1000,
+          "git_blob": "5bac85e29deab1db3bb6dcee938596367259f7b4",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-js-binding/assets/js_binding_proj/src/modules.mbt",
+          "bytes": 819,
+          "git_blob": "daa1260f98456e8b1520d00b9c11e6e067e78ad0",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-js-binding/assets/js_binding_proj/src/modules_test.mbt",
+          "bytes": 212,
+          "git_blob": "b7a85e9d1d5c8f39d791d9dd0b29d0a8dc5f8643",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-js-binding/assets/js_binding_proj/src/moon.pkg",
+          "bytes": 316,
+          "git_blob": "54bf2929750dd4ed16a0478034b4a3b34349eb45",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-js-binding/references/cfg-and-target-gating.md",
+          "bytes": 4193,
+          "git_blob": "aab5e3f34f3afbc1041295af624192dea5bd81e9",
+          "body_saved": true,
+          "source_sha256": "f1409412c20618507c3947b61ca6e3e9f7768ac8dc17fa08526ffb6494f9f859",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-js-binding/references/error-handling.md",
+          "bytes": 3336,
+          "git_blob": "aaf52fcef6727902ce433ee1b4e25998307e27b8",
+          "body_saved": true,
+          "source_sha256": "d799e70adf950b10ad09decd1de826c6fca74051ca3576aeec69ee6af39e3156",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-js-binding/references/interop-patterns.md",
+          "bytes": 5723,
+          "git_blob": "ed8d5a274e90738ff7cb45071ca13e299fd26138",
+          "body_saved": true,
+          "source_sha256": "819fe304561158bef9669386ea5e95f03c393f84b7b6911b1edfd4e1efa91755",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-js-binding/references/promise-bridging.md",
+          "bytes": 4630,
+          "git_blob": "84b78c60c5f933a5d11de197a2b3ed4d7d5abc16",
+          "body_saved": true,
+          "source_sha256": "2c7b10f344fc38783038c7c846254102dbec84c213d7f0ba4618f442edc96e39",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-js-binding/references/typescript-integration.md",
+          "bytes": 3286,
+          "git_blob": "457699b2f44c4ae470c4e63121a994299caf1a04",
+          "body_saved": true,
+          "source_sha256": "7c5fd939239572cd0f03b63e3fc15d7629acd53f7662356ad0d6e911e45098da",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの『個別license優先、未記載はMIT』は所有者の説明で、LICENSEファイルは無く(API license=null)、この配下にも個別LICENSE/NOTICEは無い(固定tree照合)。READMEは生成された導入案内のみで追加の著作表示は無い。assets/js_binding_proj 11件は未保存で権利未確認。moonbitlang/coreの抜粋(Int16::from_int64)の上流表示は未照合。references 5件は保存済み未読。",
+      "credits_to_verify": [
+        "moonbitlang/coreの抜粋(Int16::from_int64。上流license表示は未照合)",
+        "moonbitlang/asyncとMoonBit公式docs(参照のみ、未照合)",
+        "assets/js_binding_proj 11件(未保存)とreferences 5件(保存済み未読)"
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "evaluation_review_status": "parent_adapted_reader_proposal_pending_fixed_delta_review"
+    },
+    {
+      "inventory_id": "github:7a8f5957c71d63c09367bdd2b0999ef0cc66338e8cd6d42fd79997be0aa62c0d",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "moonbit-practice/SKILL.md",
+      "name": "moonbit-practice",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/moonbit-practice/SKILL.md",
+      "source_sha256": "bd9618a9eba507953d55d4314d3bb7cd6af7a08b45b2f758ff73a531e9a92357",
+      "retrieved_at": "2026-10-20T08:41:08.8736699Z",
+      "bytes": 31440,
+      "body_read_complete": true,
+      "body_read_by": "delegated_reader3458",
+      "body_read_receipt_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
+      "parent_evaluation_recorded_at": "2026-10-23T16:37:17.8639403Z",
+      "candidate_disposition": "language_reference_candidate_existing_moonbit_targets_pending_version_support_and_rights",
+      "reason": "AIがMoonBitを書くときの誤り防止集で、v0.10.x系の破壊的変更(try?廃止、fn new廃止、trait/implのfn必須化、extend、guard、debug_inspect、標準quickcheck)を一覧し、スナップショットは手書きせずmoon test -uに任せる原則、moon ide、エラー処理とdefer、CIとNixとmooncakes公開の手順を含む。『v0.10.12、docs snapshot 2026-09』に紐づく変化の速い資料なので、既存のMoonBit案件で版を確かめて使う参照として有用。言語変更の許可にはならない。",
+      "required_changes": "適用時の技術上の修正案。使用前にmoon versionと本文の版を照合する工程を先頭に置く。冒頭は『moon fmtが廃止構文のほとんどを移行する』、早見表は『移行するのはJSON→DSLとfnキーワードだけ』と書き、食い違う。moonbit-docsとnpm-releaseのSkillは固定tree内に無い参照。『Read/grepよりmoon ide』は特定ツール名に依存するため、本PCではrgを併用し置換はしない。moonx(レジストリ上のWasmツール実行)とcurlインストーラ前提のCI例は未検証コードの実行にあたるので、版とハッシュを固定する。Nix例のmoonModJsonはJSON必須で、本文のDSL優先と整合させる。assets 5件は未保存。",
+      "compare_metadata": [
+        "codebase-design",
+        "test-quality"
+      ],
+      "comparison_limit": "現行catalogの名前/説明との用途比較。未知の中央本文は一括読取せず、実統合前に対象本文を比較する。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "moonbit-practice/README.md",
+          "bytes": 1273,
+          "git_blob": "f680d74e2f35ff1bd58f964478dbfb2e78dff47e",
+          "body_saved": true,
+          "source_sha256": "09d2eeefc993f66d551bf292874d781ea25211c28d0782f2ca86c7177a12e115",
+          "body_read": true,
+          "read_method": "reader_fulltext",
+          "executed": false
+        },
+        {
+          "path": "moonbit-practice/assets/ci-nix.yaml",
+          "bytes": 612,
+          "git_blob": "45790998cf101817eb2e58a2588fe0b592457f6c",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-practice/assets/ci.yaml",
+          "bytes": 1028,
+          "git_blob": "76aa224a07b1aedafea7a5e8ea2eabafe488c304",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-practice/assets/moon.mod",
+          "bytes": 1118,
+          "git_blob": "3b04c7eaee4d9ef7f632eb1a04d74051c9abe769",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-practice/assets/moon.pkg",
+          "bytes": 1630,
+          "git_blob": "02735b466174754937097e8f7bb4517f9cb0d20e",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-practice/assets/publish-to-npm.yaml",
+          "bytes": 1611,
+          "git_blob": "e25f80992eb67263a286c7aa3de7f838a11169aa",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-practice/reference/configuration.md",
+          "bytes": 9333,
+          "git_blob": "f4fca2057243f55805cc2269ccead7ec606ca93d",
+          "body_saved": true,
+          "source_sha256": "83fd4c7299bfb266a61e83a495828ff6dd6286d1c5e7c43a1668ed6ecb36a098",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-practice/reference/ffi-native.md",
+          "bytes": 5444,
+          "git_blob": "c3368df50a6e836335ac8e364f52ac601d7daf3c",
+          "body_saved": true,
+          "source_sha256": "59eb79e87d8a93b10e869c468ec6f597a7bfde9cd719141a16ab569374d778ee",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-practice/reference/ffi.md",
+          "bytes": 4230,
+          "git_blob": "ce00ca32b9529a7661eaaf3c95a29020233a2252",
+          "body_saved": true,
+          "source_sha256": "079d2e0eccb88b809c6cfc0f80fb8a29c8669de370feb3e60e57c31099250423",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-practice/reference/ide.md",
+          "bytes": 5314,
+          "git_blob": "636ca161d903bcab7fd6cf8f5d1691e515d64100",
+          "body_saved": true,
+          "source_sha256": "c5ea2300112b1cac90b9980b9692b5d5e055813da97c9c156a97d0a4b1a01241",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-practice/reference/language.md",
+          "bytes": 8154,
+          "git_blob": "27699185b698aca3eb688e70774558889b773f25",
+          "body_saved": true,
+          "source_sha256": "ded95cb1197e0ae9ecc77a1be28038c25f5bcd7507f9189bec2fb57a4c28e524",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-practice/reference/mbtx.md",
+          "bytes": 9157,
+          "git_blob": "03a9d50b4ce3a9df0dc8e2a202d9d79192aefc02",
+          "body_saved": true,
+          "source_sha256": "8afface0c24b32e6834cd102ce16b4016e25b34d4ba174f6a813bdc112831bce",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-practice/reference/nix.md",
+          "bytes": 6927,
+          "git_blob": "7aaff15e7f5b9e228b53b4227bde1f853fecd19a",
+          "body_saved": true,
+          "source_sha256": "1737b862534030754ce06165bcf1ae9f36aaceaf553208fdd4aad4f6ff2b5ed6",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-practice/reference/performance.md",
+          "bytes": 4672,
+          "git_blob": "d3d311dea229ab9df87040e3711c4d4ee3845106",
+          "body_saved": true,
+          "source_sha256": "57c655e80417662cfd6d76fc233510e9fcad11725f6399c5ec6945fadbfa4f3f",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-practice/reference/refactor.md",
+          "bytes": 2740,
+          "git_blob": "a2b6fee76df53da27e397db45545650023a9041f",
+          "body_saved": true,
+          "source_sha256": "79a9f1bd18f00f0189ac2e60dec34b73a065d4f1fa8c37a27f244295bd5ee1f8",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-practice/reference/skills-marketplace.md",
+          "bytes": 10585,
+          "git_blob": "9592577a123589fb55bf4cd63b08318d72e7a12b",
+          "body_saved": true,
+          "source_sha256": "394a635145c788738b455560408cbecd09c4906981cb221e04cd3a527e78fa8e",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-practice/reference/stdlib.md",
+          "bytes": 8201,
+          "git_blob": "1936415d0418f6214096fe41fe3584d5a663fe29",
+          "body_saved": true,
+          "source_sha256": "10a183c4782bac1a17f829b9015f7bc3ce42073836abf75b64fa91e7d5148b57",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "moonbit-practice/reference/testing.md",
+          "bytes": 6491,
+          "git_blob": "001f31cb031ff39c92978099da6da917c039a458",
+          "body_saved": true,
+          "source_sha256": "d2365a0552b9d801a8a9d0694f3a66611204f05b10d896c1322fca467e16150e",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの『個別license優先、未記載はMIT』は所有者の説明で、LICENSEファイルは無く(API license=null)、この配下にも個別LICENSE/NOTICEは無い(固定tree照合)。READMEは生成された導入案内のみで追加の著作表示は無い。別repoのmizchi/moonbit-practiceにある同名skillとの正本関係、moonbitlang/moonbit-agent-guideとの派生関係は未確認。references 12件は保存済み未読、assets 5件は未保存で権利未確認。",
+      "credits_to_verify": [
+        "moonbitlang/moonbit-agent-guide(root READMEが別repoのupstreamとして列挙。派生関係は未確認)",
+        "mizchi/moonbit-practice(chezmoi-managementが同名skillのAPM導入を記載。正本関係は未確認)",
+        "moonbit-community/moonbit-overlayとmooncakes marketplaceの規約(未照合)",
+        "references 12件(保存済み未読)とassets 5件(未保存)"
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "evaluation_review_status": "parent_adapted_reader_proposal_pending_fixed_delta_review"
+    },
+    {
+      "inventory_id": "github:29ff2144da3dec2fef5a993bd95c20f2f65e523a4a54762539dafea1cf8f25a3",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "natural-writing-en/SKILL.md",
+      "name": "natural-writing-en",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/natural-writing-en/SKILL.md",
+      "source_sha256": "1fb68c4e5917a6374338e24323757ae6239ff3ad60eef88339967fd36911f5ab",
+      "retrieved_at": "2026-10-20T08:41:08.8932462Z",
+      "bytes": 15698,
+      "body_read_complete": true,
+      "body_read_by": "delegated_reader3458",
+      "body_read_receipt_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
+      "parent_evaluation_recorded_at": "2026-10-23T16:37:17.8639403Z",
+      "candidate_disposition": "integration_candidate_pending_scope_corrections_and_rights",
+      "reason": "英語の説明文を『その文は状況を更新するか、文書を更新するか』の1軸で点検する規範で、前置きの削除、文長の緩急、分母を示す数値、冒頭は機会か訂正から、締めは具体的な行動、5段階の『一般文との入れ替え可能性』判定、投稿後の確認項目を示す。LLMが書いた英文のREADMEやPR説明を推敲する場面で使え、本PCの文章規則(AIくさい語を避ける)と矛盾しない。品質を上げる指針であり、検出器の回避や著者判定を保証するものとは扱わない。",
+      "required_changes": "適用時の技術上の修正案。閾値(burstiness CV 0.40以上、希少語3/500語未満等)は人間の記事1本(bharatsharma.pro、1,813語)とAI例1件から出した値で、『測定済みの予算』は過大なので目安に降格し、合否ゲートにしない。英語の実測0.62は0.6を満たすのに『0.6下限の道具は実文の大半を誤検出』と述べるのは、日本語n=18の下限0.36を英語へ流用した飛躍。style vocabularyのrobustやnuancedは統計などで正当な技術語になり得るので無条件に削らない。日本語読者2人の測定を英語の根拠に置く節は削る。JevSlop由来の5段階質問とk16shikano gistの出典表示を整え、slopscore.pyとcompare-axes.py(Python)は配布物の無改変実行の範囲に置く。",
+      "compare_metadata": [
+        "writing-shape",
+        "japanese-report-writing"
+      ],
+      "comparison_limit": "現行catalogの名前/説明との用途比較。未知の中央本文は一括読取せず、実統合前に対象本文を比較する。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "natural-writing-en/README.md",
+          "bytes": 1581,
+          "git_blob": "62575b97bbfd7b51aeca6106be426c2cbd2267fc",
+          "body_saved": true,
+          "source_sha256": "216a8c4fa33b387cc166d55543cf3d32bfaea2256f0620f3b2df30d01b0264f3",
+          "body_read": false,
+          "read_method": "reader_description_and_exact_template_comparison",
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの『個別license優先、未記載はMIT』は所有者の説明で、LICENSEファイルは無く(API license=null)、この配下にも個別LICENSE/NOTICEは無い(固定tree照合)。READMEは生成された導入案内のみで追加の著作表示は無い。JevSlop(本文がMITとする)の質問文と数値の引用に伴うMIT表示の同梱要否、k16shikano gist、bharatsharma.pro記事の引用許諾は未確認。",
+      "credits_to_verify": [
+        "k16shikanoのcognitive-rhythm-writing gist(軸の出典。gistのlicenseは未確認)",
+        "TKY-27/JevSlop(本文はMITとする。5段階質問と数値の引用に対する著作権表示と許諾文の要否は未照合)",
+        "bharatsharma.proの記事(冒頭文と締め文の引用、許諾未確認)",
+        "ai-index(calibration.md、slopscore.py、compare-axes.py)"
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "evaluation_review_status": "parent_adapted_reader_proposal_pending_fixed_delta_review"
+    },
+    {
+      "inventory_id": "github:eef0ed715e8efccb6380787fa33361f4cc014e24815960f82193d8c6c1b1935a",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "natural-writing-ja/SKILL.md",
+      "name": "natural-writing-ja",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/natural-writing-ja/SKILL.md",
+      "source_sha256": "65bd22cd252afcad1d010c01bb0e0f27210283c646ac8b490a0303ae79c0618f",
+      "retrieved_at": "2026-10-20T08:41:08.89594Z",
+      "bytes": 18181,
+      "body_read_complete": true,
+      "body_read_by": "delegated_reader3458",
+      "body_read_receipt_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
+      "parent_evaluation_recorded_at": "2026-10-23T16:37:17.8639403Z",
+      "candidate_disposition": "integration_candidate_pending_scope_corrections_and_rights",
+      "reason": "日本語の説明文を同じ『状況/文書』軸で点検する規範で、敬体・常体の純度、立てる→流す→止める拍、体言止めと反問、『自分』による主観の出し方、冒頭と締め、AIくささの表、投稿後の5つの確認を示す。ブログや解説記事の推敲には有用だが、本PCのオーナー向け報告(japanese-report-writing)とは目的が違うため報告文には適用しない。品質の指針であり、検出器回避の保証ではない。writing-shapeやwriting-fragmentsと並べる統合の候補。",
+      "required_changes": "適用時の技術上の修正案。説明文は『人間の技術文937文』とするが本文は『mizchiのZenn記事18本』で、1人の著者の較正値を日本語一般の規範として扱っている。1著者の値と明記し、文長24–56字や体言止め最大8.8/万字を目標にしない。本文の『CV0.35未満は機械的』は、mizchi-blog-styleの『人間下限0.36対AI0.32でCVは判定根拠にしない』と食い違う。『表の他の型は全て0.00』も、blog-styleが英語直訳のコロンを5.4/万字と測る点と合わない。937文という集計は64,340字・平均44.5字とも整合しない。体言止めの推奨はオーナー向け報告の『名詞を連ねない』と衝突するので、適用範囲から報告文を除く。",
+      "compare_metadata": [
+        "writing-shape",
+        "writing-fragments",
+        "japanese-report-writing"
+      ],
+      "comparison_limit": "現行catalogの名前/説明との用途比較。未知の中央本文は一括読取せず、実統合前に対象本文を比較する。",
+      "support_read_complete": true,
+      "supporting_resources": [
+        {
+          "path": "natural-writing-ja/README.md",
+          "bytes": 1535,
+          "git_blob": "b504516b64120bce82a5a0ffe90da6b605d75fb0",
+          "body_saved": true,
+          "source_sha256": "207422f2c87e8e8ddd5db255e7f058fcf22ad751c25ca5d01a16cd09c0921097",
+          "body_read": true,
+          "read_method": "reader_fulltext",
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの『個別license優先、未記載はMIT』は所有者の説明で、LICENSEファイルは無く(API license=null)、この配下にも個別LICENSE/NOTICEは無い(固定tree照合)。READMEは生成された導入案内のみで追加の著作表示は無い。k16shikano gistを『軸と拍と4つの許容形』の出典として明記するが、そのlicenseと派生の可否は未確認。引用されたZenn記事断片の記事側許諾も未確認。",
+      "credits_to_verify": [
+        "k16shikanoのcognitive-rhythm-writing gist(軸・拍・許容形の出典。license未確認)",
+        "Zenn記事18本の引用断片(mizchi本人、記事側license未確認)",
+        "ai-index(calibration.md、slopscore.py)",
+        "first-readerの転写(固定tree内に無く、未取得)"
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "evaluation_review_status": "parent_adapted_reader_proposal_pending_fixed_delta_review"
+    },
+    {
+      "inventory_id": "github:6e31e1496a19c0bf9f6413558044c5db9c1989bab6f4faf7f5294cb38593b455",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "nix-setup/SKILL.md",
+      "name": "nix-setup",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/nix-setup/SKILL.md",
+      "source_sha256": "142bedb39fb82f373f8097e5126ddb76ca7226ec13b90dd05140353d3426eca3",
+      "retrieved_at": "2026-10-20T08:41:08.8995197Z",
+      "bytes": 24599,
+      "body_read_complete": true,
+      "body_read_by": "delegated_reader3458",
+      "body_read_receipt_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
+      "parent_evaluation_recorded_at": "2026-10-23T16:37:17.8639403Z",
+      "candidate_disposition": "environment_reference_candidate_existing_nix_targets_pending_support_and_rights",
+      "reason": "devbox(Nix基盤)または純flakeで再現できる開発環境を作る手引きで、devboxとflakeの選び方、言語別テンプレート(MoonBit、Rust、TS+pnpm、Python+uv、Haskell、OCaml、OxCaml)、direnv、home-manager、GitHub Actions、sandbox環境向けの導入、既存repoへの追加の落とし穴、direnv 2.37系の不具合事例を持つ。Nixは主にmacOSとLinux前提で、WindowsのPowerShell中心の本PCには直接載らない。LinuxのCIやコンテナで既にNixを使う案件に出会った時の参考として価値がある。",
+      "required_changes": "適用時の技術上の修正案。curlパイプ実行(devbox、Determinate nix-installer)、sandbox無効で/etcへ書くsetup_nix.sh、devShell起動時に走るopam initやpinの自動実行は、案件ごとに版と検証を固定した形に限る。DeterminateSystems/*@mainは可変参照なのでSHA固定が要り、magic-nix-cache-actionの現行性は未照合。『nodePackages.*は2025年に削除』と『24.11以降で削除』が食い違う。MoonBit節はmoon.mod.jsonの存在でmoon updateを走らせるが、moonbit-practice等はDSLのmoon.modを推す。全テンプレートに入るapmは中央Skills運用と衝突するため外す。assets 29件は未保存で、テンプレート自体は審査も採用もできない。",
+      "compare_metadata": [
+        "windows-shell",
+        "docker-operations"
+      ],
+      "comparison_limit": "現行catalogの名前/説明との用途比較。未知の中央本文は一括読取せず、実統合前に対象本文を比較する。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "nix-setup/README.md",
+          "bytes": 1367,
+          "git_blob": "c3da02722d9f39e78d5dda613ff60e48edc82c6b",
+          "body_saved": true,
+          "source_sha256": "036bccbb057b23982b381d6589fee9143b9c8a0271e7f47ce2006dffd9ab52d0",
+          "body_read": false,
+          "read_method": "reader_description_and_exact_template_comparison",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/SKILL-ja.md",
+          "bytes": 22121,
+          "git_blob": "b20b4383459cf9aab2727a0eb61dc65a0eb177ac",
+          "body_saved": true,
+          "source_sha256": "86cdfc998655a4a41f598e5672538363959cd50237c37f656162e8138c38d898",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/apm.nix",
+          "bytes": 2325,
+          "git_blob": "0a2a3f9da8965b8ad34dc56b85f7b9d736ec21e5",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/devbox/devbox.json",
+          "bytes": 287,
+          "git_blob": "c947178a07c9be9cd2ac08bba4a4d0d828d7c7c0",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/devbox/gh_action_example.yaml",
+          "bytes": 307,
+          "git_blob": "ea56e9c3fabb12040ae398dfc01cb81c95d17985",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/haskell/.envrc",
+          "bytes": 10,
+          "git_blob": "3550a30f2de389e537ee40ca5e64a77dc185c79b",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/haskell/flake.nix",
+          "bytes": 1549,
+          "git_blob": "a656c259277456bdcb992f7a8aa9f6b89d669779",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/home-manager/.gitignore",
+          "bytes": 135,
+          "git_blob": "629e9bf319e70dab5474d8c47ef63d64c77665ad",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/home-manager/ccweb.nix",
+          "bytes": 598,
+          "git_blob": "090eacb44a59ffebf805bdf715bee6cb11169ca3",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/home-manager/common.nix",
+          "bytes": 1713,
+          "git_blob": "35d42d71b18358e151e8a183e0bf68389857624a",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/home-manager/flake.nix",
+          "bytes": 1871,
+          "git_blob": "61e5b08ef00d632f94f9040747cf83bb08d8052e",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/home-manager/macos.nix",
+          "bytes": 615,
+          "git_blob": "260eabf3bb0d15da643d15669a88ea79381dd466",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/moonbit/.envrc",
+          "bytes": 10,
+          "git_blob": "3550a30f2de389e537ee40ca5e64a77dc185c79b",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/moonbit/flake.nix",
+          "bytes": 1468,
+          "git_blob": "42f1bb24b264af84585149ad7f7aba28d2abed3e",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/ocaml/.envrc",
+          "bytes": 10,
+          "git_blob": "3550a30f2de389e537ee40ca5e64a77dc185c79b",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/ocaml/.gitignore",
+          "bytes": 228,
+          "git_blob": "798ad3488b460f96d8c9552f0abde08f358973bb",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/ocaml/flake.nix",
+          "bytes": 2578,
+          "git_blob": "2e84df06936c146482d9165e90ea04f10fb5449d",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/oxcaml/.envrc",
+          "bytes": 10,
+          "git_blob": "3550a30f2de389e537ee40ca5e64a77dc185c79b",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/oxcaml/.gitignore",
+          "bytes": 276,
+          "git_blob": "abe0530d60a06aebf71b130185713e5b3a72137c",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/oxcaml/flake.nix",
+          "bytes": 2543,
+          "git_blob": "c78913b70a9660fc33025dff2b36fb79b5bd22fa",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/python-uv/.envrc",
+          "bytes": 38,
+          "git_blob": "b050f6f28d678c3a7312947f65a47ede9bf0de0c",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/python-uv/flake.nix",
+          "bytes": 1129,
+          "git_blob": "22b4334dce0f99cd57cfb92bce67daa22e8ad42d",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/rust/.envrc",
+          "bytes": 147,
+          "git_blob": "0dfe50580ef80661ed9422fa59b87f816bde9cd9",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/rust/flake.nix",
+          "bytes": 1493,
+          "git_blob": "59f9a2e5f9299fd5fb5d964e8685f17ea3b6bba2",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/setup_nix.sh",
+          "bytes": 2187,
+          "git_blob": "8d372a4413c4c52a4964f9f2dd27ea11d2ec63d2",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/typescript/.envrc",
+          "bytes": 116,
+          "git_blob": "cc824b3b8465be795ecbc2eef3b4cc1f40fb311d",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/assets/typescript/flake.nix",
+          "bytes": 1022,
+          "git_blob": "4aa0523fcf7c3bd14101b8bd6df5538d4e68bc5b",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/evals/eval.yaml",
+          "bytes": 767,
+          "git_blob": "bda8147a7b6753d9392afb41a341f73c141342b2",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/evals/ledger.yaml",
+          "bytes": 916,
+          "git_blob": "fe0abeac6dc28a007448c9d2929f8cf97900469c",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/evals/tasks/scenario-a-devbox-default.yaml",
+          "bytes": 2613,
+          "git_blob": "54200704412cbec2c7580547d8634d9d2562244b",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "nix-setup/evals/tasks/scenario-b-flake-overlay.yaml",
+          "bytes": 3282,
+          "git_blob": "47c1b8db6e4536a2a0f92a0024424c7789ae5e70",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの『個別license優先、未記載はMIT』は所有者の説明で、LICENSEファイルは無く(API license=null)、この配下にも個別LICENSE/NOTICEは無い(固定tree照合)。READMEは生成された導入案内のみで追加の著作表示は無い。assets 25件とevals 4件は未保存で権利未確認。apm.nixの対象microsoft/apm、各overlay、『vibe-lang's flake.nix』の参照元の許諾は未照合。SKILL-ja.mdは保存済み未読。",
+      "credits_to_verify": [
+        "DeterminateSystems/nix-installer、oxalica/rust-overlay、moonbit-community/moonbit-overlay、microsoft/apm、jetify-com/devbox(各上流の入出力とlicense未照合)",
+        "『Reference: vibe-lang's flake.nix』の出典repo",
+        "SKILL-ja.md(保存済み未読)とassets・evals 29件(未保存)"
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "evaluation_review_status": "parent_adapted_reader_proposal_pending_fixed_delta_review"
+    },
+    {
+      "inventory_id": "github:6f9393a68dcbee0e4291491399e4a9db91203e0a965652402f451004bf589e00",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "pi-coding-agent/SKILL.md",
+      "name": "pi-coding-agent",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/pi-coding-agent/SKILL.md",
+      "source_sha256": "65e0a2364bca595984c7c7533732deec8bae90c982ae2150172f0c9f35e5f69a",
+      "retrieved_at": "2026-10-20T08:41:08.9187608Z",
+      "bytes": 21890,
+      "body_read_complete": true,
+      "body_read_by": "delegated_reader3458",
+      "body_read_receipt_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
+      "parent_evaluation_recorded_at": "2026-10-23T16:37:17.8639403Z",
+      "candidate_disposition": "tool_reference_candidate_pending_auth_policy_security_and_rights",
+      "reason": "npmパッケージ@mariozechner/pi-coding-agentのSDKとpi拡張で、Nodeスクリプトにコーディングエージェントを埋め込む手引き。cwdとtoolsの罠(定数ツールはimport時のcwdを固定する)、streaming中のsteerとfollowUp、TypeBoxのスキーマ、peerDependenciesの規則、pi install、print/RPCモード、拡張の自動検出場所など、実害を避ける具体策が多い。piを使う案件や拡張が現れた時の参照として有用。本PC既存のエージェント運用を置き換える根拠にはならない。",
+      "required_changes": "適用時の技術上の修正案。認証例がANTHROPIC_API_KEYとauth.jsonで、本PCの『APIキーによる従量課金呼び出しをせずOAuthサブスク枠のみ』と合わないため、例を削るかOAuth方式へ書き直す(piのOAuth対応と各社規約は未照合)。createAgentSession()の既定はcwd配下の.pi/extensionsも自動で読み全権限で実行するため、未信頼のリポジトリでは使わない旨を足す。pi installと.pi/settings.jsonによる起動時の自動導入には、信頼確認の工程を添える。localhost:1234は自動起動の根拠にしない。元依頼でGPU処理が必要なら現在の空きと実行処理を測り、既存枠と対象範囲で判断する。『Node 20.6+』なのに--experimental-strip-typesを勧める点(同フラグはNode 22系以降と記憶、未照合)、『Three combinations』が4行の点、パッケージ名と所在の現行性を確認する。",
+      "compare_metadata": [
+        "coding-agent-tools",
+        "agent-job-management"
+      ],
+      "comparison_limit": "現行catalogの名前/説明との用途比較。未知の中央本文は一括読取せず、実統合前に対象本文を比較する。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "pi-coding-agent/README.md",
+          "bytes": 1557,
+          "git_blob": "1904abdf2f552a5e60cd64a06e71b747cf814b82",
+          "body_saved": true,
+          "source_sha256": "54de816829980cf9639dda0e4b176b2b7e9c032ba731c7b04e3a76731fc8218d",
+          "body_read": false,
+          "read_method": "reader_description_and_exact_template_comparison",
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの『個別license優先、未記載はMIT』は所有者の説明で、LICENSEファイルは無く(API license=null)、この配下にも個別LICENSE/NOTICEは無い(固定tree照合)。READMEは生成された導入案内のみで追加の著作表示は無い。badlogic/pi-monoの上流docsとexamples(permission-gate.ts等)の参照・転用の許諾は未照合。typeboxとjitiは参照のみ。",
+      "credits_to_verify": [
+        "badlogic/pi-mono(上流docs・examples・permission-gate.ts等の参照。license未照合)",
+        "sinclairzx81/typeboxとunjs/jiti(参照のみ)",
+        "pi.dev/packagesの利用条件(未照合)"
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "evaluation_review_status": "parent_adapted_reader_proposal_pending_fixed_delta_review"
+    },
+    {
+      "inventory_id": "github:d512e07373093a7cc6a8158f787817fcc719b11092ca41377c7aed26b42f994e",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "ts2moonbit-migration/SKILL.md",
+      "name": "ts2moonbit-migration",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/ts2moonbit-migration/SKILL.md",
+      "source_sha256": "24feb67377feb7546a1da8ea86c3d3a3b1c785379ba32dcd6b40aafadc15a12e",
+      "retrieved_at": "2026-10-20T08:41:08.9939519Z",
+      "bytes": 16844,
+      "body_read_complete": true,
+      "body_read_by": "delegated_reader3458",
+      "body_read_receipt_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
+      "parent_evaluation_recorded_at": "2026-10-23T16:37:17.8639403Z",
+      "candidate_disposition": "migration_method_donor_language_change_not_authorized_pending_support_and_rights",
+      "reason": "TypeScriptのライブラリやNodeサービスをMoonBitのjsターゲットへ移植し、既存のJS/TS利用側から実装差が見えないよう公開契約(.d.tsとテスト)を正として移す手順。先に契約を捕捉する、型を意味で分類する(2^53超はBigInt、バイナリはBytes、nullとundefinedを分ける)、境界アダプタと慣用的コアを分ける、元のテストを成果物へ当て、影の実行とカナリアとロールバック期間で切り替える流れが具体的。移植先がMoonBitなので言語変更にあたり、本資料は許可にならない。契約先取りと並走検証の方法はTSからGo・Rustへの移行にも通じる。",
+      "required_changes": "適用時の技術上の修正案。Go既定の本PCでは、MoonBit化の手順ではなく方法論(契約の捕捉、fixtureの由来の記録、parity検証、カナリア)を、言語移行の未配置候補とrust-go-path-json-parityの側へ統合する案にする。『検証はmoonc v0.9.3』と『設定はv0.10.12』で版が分かれ、try?廃止・fn必須・extendはその後の変更なので例の再検証が要る。Int64を『.d.tsでbigint』とする記述は、moonbit-js-binding側の『JS numberで53bit超を失う』と食い違う。semver 198/198とimmer 12/12に再現手順が無い。mizchi/js・x・npm_typedの導入はtoolkit-map(保存済み未読)頼みで、参照6件は未読。",
+      "compare_metadata": [
+        "rust-go-path-json-parity",
+        "codebase-design"
+      ],
+      "comparison_limit": "現行catalogの名前/説明との用途比較。未知の中央本文は一括読取せず、実統合前に対象本文を比較する。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "ts2moonbit-migration/README.md",
+          "bytes": 1465,
+          "git_blob": "6a2d1fce7bbf4c62d24c05452e81d6a7804a707b",
+          "body_saved": true,
+          "source_sha256": "334b45974c1bde9b2435776ee18c120d8c304c4cc86c8bf3ce965c822c3d5b29",
+          "body_read": false,
+          "read_method": "reader_description_and_exact_template_comparison",
+          "executed": false
+        },
+        {
+          "path": "ts2moonbit-migration/references/boundary-and-core.md",
+          "bytes": 6853,
+          "git_blob": "72606179a9f82a71619164fa48df50fedbe35a25",
+          "body_saved": true,
+          "source_sha256": "61c775e20d16fabaf6f2eabff5b04c121c4fec12f7671d362c1d219bb33a886f",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "ts2moonbit-migration/references/build-and-publish.md",
+          "bytes": 5865,
+          "git_blob": "d8c5455d8bbace2b76a4788fcc8c4296adcd141d",
+          "body_saved": true,
+          "source_sha256": "34911dbffe7ec017b60a50f675c958e0b9f5ccf5bcefc2c4f046244c57963862",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "ts2moonbit-migration/references/contract-capture.md",
+          "bytes": 3198,
+          "git_blob": "e0bd1839b6180bc4541718c29a42e38208080831",
+          "body_saved": true,
+          "source_sha256": "5267cd9a99b33d3671712ab60e710e095073753d6417f86bc11e136a7535528a",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "ts2moonbit-migration/references/parity-verification.md",
+          "bytes": 3488,
+          "git_blob": "84d50d041c0b2a7932fdcd488fd33ce43123748f",
+          "body_saved": true,
+          "source_sha256": "8fd8f328b65ef1a69849d5a296c1a9be751695e70b1c1f874eb0012ffa54d184",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "ts2moonbit-migration/references/toolkit-map.md",
+          "bytes": 5408,
+          "git_blob": "f32beb034c18eddda060cb16bfd1273f533fce9b",
+          "body_saved": true,
+          "source_sha256": "84bf7601572e2594f4e690d581781dddaf1fe35d220c1489c5b06b728147f0b6",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "ts2moonbit-migration/references/type-mapping.md",
+          "bytes": 6236,
+          "git_blob": "75258fad019b1531facb55d479efd760bf169a80",
+          "body_saved": true,
+          "source_sha256": "699296212e1b88d8f5cd6e3ca1275ed6ebe4c9571d84b88d7c992040802a5569",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの『個別license優先、未記載はMIT』は所有者の説明で、LICENSEファイルは無く(API license=null)、この配下にも個別LICENSE/NOTICEは無い(固定tree照合)。READMEは生成された導入案内のみで追加の著作表示は無い。mizchi/js、x、npm_typed、cloudflare等の別repoパッケージの個別許諾は未確認。semverとimmerの比較は結果の記載のみ。references 6件は保存済み未読。",
+      "credits_to_verify": [
+        "mizchi/js・js_browser・x・npm_typed・cloudflare(別repoのMoonBitパッケージ。個別license未確認)",
+        "semverとimmerの移植比較(上流は参照のみ)",
+        "references 6件(保存済み未読)"
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "evaluation_review_status": "parent_adapted_reader_proposal_pending_fixed_delta_review"
+    },
+    {
+      "inventory_id": "github:f8560bd42b9d480f4cb71bb5effa2445beeb96550661601fe2874893b2e2d973",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "vlmkit/SKILL.md",
+      "name": "vlmkit",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/vlmkit/SKILL.md",
+      "source_sha256": "a4a7054995e0e37f217e30ff15281322f85b43bba11624a6ca62b9ba3d653c17",
+      "retrieved_at": "2026-10-20T08:41:09.0139979Z",
+      "bytes": 12150,
+      "body_read_complete": true,
+      "body_read_by": "delegated_reader3458",
+      "body_read_receipt_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
+      "parent_evaluation_recorded_at": "2026-10-23T16:37:17.8639403Z",
+      "candidate_disposition": "tool_reference_candidate_local_deterministic_subset_pending_policy_support_and_rights",
+      "reason": "Playwrightとpixelmatchを基にした視覚回帰ツールvlmkitの入口で、CSSやHTMLを変えた後に『見た目が変わったか、どこか、どのCSSプロパティが原因か』を、算出スタイル差、領域別diffRatio、ビューポート別PNGで示し、CIゲートやフレームワーク移行の見た目同等性の確認に使える。決定的なローカル差分の部分は本PCのフロントエンド検査(ui-testingやbrowser-automation)を補う。VLMによる変更列挙とLLMによるCSS自動修復は外部APIキー前提で、本PCの方針では使えない。",
+      "required_changes": "適用時の技術上の修正案。OPENROUTER・GEMINI・ANTHROPICの各APIキーと、外部の有料になり得るVRT_CAPTURE_BACKEND=cloudflareは、本PCの既存方針(APIキー不使用、新規支出なし)に合わせて使わない構成にする。VLM/LLMの修復ループは除外せず『APIキー不使用では未適用』と記録する。bash <(curl .../main/doctor.sh)は可変ブランチのスクリプトの直接実行なので固定版と検証付きの手順へ置き換え、doctor.sh(未保存・未読)の同等性を主張せず、必要な検査は独立に仕様化する。『Node 22では動かない』は22.18以降が型除去を既定有効にする記憶と食い違い、node_modules内の.tsはNodeが型除去しないためライブラリdeep importが動くか疑わしい(いずれも未照合)。見出しvrt、@mizchi/vrt、mizchi/skills/vlmkit/vlmkitと名称が混在する。サブスキル5件は別repoで未取得。",
+      "compare_metadata": [
+        "ui-testing",
+        "browser-automation"
+      ],
+      "comparison_limit": "現行catalogの名前/説明との用途比較。未知の中央本文は一括読取せず、実統合前に対象本文を比較する。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "vlmkit/README.md",
+          "bytes": 1709,
+          "git_blob": "a8ccc5110d8dd07d232e3ef81e78b7b8ff6fe6aa",
+          "body_saved": true,
+          "source_sha256": "04da8ce9d09cd5c916748db55ca173a7fc521f64ae078a9f71c93b887c7dbc90",
+          "body_read": false,
+          "read_method": "reader_description_and_exact_template_comparison",
+          "executed": false
+        },
+        {
+          "path": "vlmkit/scripts/doctor.sh",
+          "bytes": 5136,
+          "git_blob": "b676d4fbd246535bfe4914ad3888cb98657995bf",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの『個別license優先、未記載はMIT』は所有者の説明で、LICENSEファイルは無く(API license=null)、この配下にも個別LICENSE/NOTICEは無い(固定tree照合)。READMEは生成された導入案内のみで追加の著作表示は無い。scripts/doctor.shは未保存。サブスキル5件とvlmkit本体は別repo(固定commit外)で、その許諾は未確認。Playwright・pixelmatchとVLM既定モデルの規約は未照合。",
+      "credits_to_verify": [
+        "Playwright・pixelmatch(上流license未照合)",
+        "mizchi/vlmkit(旧vrt)本体と5つのサブスキル(別repo、未取得)",
+        "既定VLM(bytedance/ui-tars)とOpenRouterの規約",
+        "doctor.sh(未保存)"
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "evaluation_review_status": "parent_adapted_reader_proposal_pending_fixed_delta_review"
+    },
+    {
+      "inventory_id": "github:fcc52366389dd3c1a3e5670e8743a460ebf0e8858e95e4ab70898eca2d074fdf",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "void-app/SKILL.md",
+      "name": "void-app",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/void-app/SKILL.md",
+      "source_sha256": "5845df47520d3e9d8ee9ccd4dd027abab0fbad75ce8ea265e5c2795b3d36dddd",
+      "retrieved_at": "2026-10-20T08:41:09.022647Z",
+      "bytes": 15644,
+      "body_read_complete": true,
+      "body_read_by": "delegated_reader3458",
+      "body_read_receipt_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
+      "parent_evaluation_recorded_at": "2026-10-23T16:37:17.8639403Z",
+      "candidate_disposition": "framework_reference_candidate_existing_void_targets_pending_deployment_policy_support_and_rights",
+      "reason": "VoidZeroのVoidとVite+でReactとCloudflare D1の全体構成アプリを作る手引きで、本文は2026-10-18にVoid 1.1.11、Vite+ 1.3.0、Node 24.21、pnpm 12.14で確認したと記載するが、親は実在・再現を未照合。型付きloaderとaction、Drizzleスキーマから移行SQLの生成、void dbの破壊的コマンドの区別、Vite+のtest設定、Playwrightでの確認、ReactへのSolid埋込、Astro静的ページとVoid認証、デプロイ前の注意を扱う。Voidを使う案件が出た時の参照として有用で、移行SQLを実SQLで旧→新へ流して既存行の保存を確かめる手順はdatabase-migrationsにも流用できる。",
+      "required_changes": "適用時の技術上の修正案。void deploy --platform cloudflareは推論したリソースを自動作成して公開するため、新規Cloudflare資源・課金・Prd限定の方針に照らして実行前に確認し、本資料だけで配備の許可とはしない。本文は『デプロイは未実施』と明記しており、配備の成功根拠にしない。link_notesへの列追加『検証済み』は参照アプリが同梱されず再現できない。redirectの回避策は1.1.11固有なので版が変われば再確認する。pnpm approve-builds --yesは対象名を絞る書き方を保つ。認証の無いCRUD雛形を公開しない注意は残す。参照ブログ(azukiazusa.dev)は動機の記述で、API根拠にしない。",
+      "compare_metadata": [
+        "frontend-node-engineering",
+        "database-migrations",
+        "cloud-infra-deploy"
+      ],
+      "comparison_limit": "現行catalogの名前/説明との用途比較。未知の中央本文は一括読取せず、実統合前に対象本文を比較する。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "void-app/README.md",
+          "bytes": 1446,
+          "git_blob": "8a65afb1e12a4cce232f804df76837cd08b32daa",
+          "body_saved": true,
+          "source_sha256": "e922013b57a2a4b4b8e71e9c3fa6da022836a671081c0d35ef19265debe98d8c",
+          "body_read": false,
+          "read_method": "reader_description_and_exact_template_comparison",
+          "executed": false
+        },
+        {
+          "path": "void-app/SKILL-ja.md",
+          "bytes": 18532,
+          "git_blob": "08661cc582e9c2c4c6052108c5a3125c9621bbd8",
+          "body_saved": true,
+          "source_sha256": "84884056058a87233a1f6c88b305c89dea737c6516cbce33d27ef6604757b746",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "void-app/references/astro-static-auth.md",
+          "bytes": 6466,
+          "git_blob": "9ff843e138d17a6c82213989f3ae405a9bf56f97",
+          "body_saved": true,
+          "source_sha256": "4a6dcf36f722acb77e8ba207be216639b93fce90a7a2b61aa8991d6a2ebfa9a0",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        },
+        {
+          "path": "void-app/references/react-solid.md",
+          "bytes": 5178,
+          "git_blob": "db2b1ce736c86f91c5b4c476a51b4e31827b6954",
+          "body_saved": true,
+          "source_sha256": "85c29a4e85665b81a170c75bdcec827ebb6ebe8d43e72cedbacc326404dc821b",
+          "body_read": false,
+          "read_method": "unread",
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの『個別license優先、未記載はMIT』は所有者の説明で、LICENSEファイルは無く(API license=null)、この配下にも個別LICENSE/NOTICEは無い(固定tree照合)。READMEは生成された導入案内のみで追加の著作表示は無い。Void・Vite+の公式docsと同梱docsの引用範囲、azukiazusa.devブログの転用有無は未確認。SKILL-ja.mdと参照2件(astro-static-auth、react-solid)は保存済み未読。",
+      "credits_to_verify": [
+        "VoidZero(void、Vite+)の公式docsとnode_modules/void/docsの引用範囲(license未照合)",
+        "azukiazusa.devのブログ(動機の参考。転用有無と許諾は未確認)",
+        "Better Auth、Drizzle(drizzle-zod)、Astro、Solid、vite-plugin-solid(参照のみ)",
+        "SKILL-ja.mdと参照2件(保存済み未読)"
+      ],
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "evaluation_review_status": "parent_adapted_reader_proposal_pending_fixed_delta_review"
     }
   ],
-  "pending_entrypoint_paths": [
-    "ast-grep-practice/SKILL.md",
-    "chezmoi-management/SKILL.md",
-    "conventional-changelog/SKILL.md",
-    "gleam-practice/SKILL.md",
-    "maintainer-persona/SKILL.md",
-    "mizchi-blog-style/SKILL.md",
-    "moonbit-js-binding/SKILL.md",
-    "moonbit-practice/SKILL.md",
-    "natural-writing-en/SKILL.md",
-    "natural-writing-ja/SKILL.md",
-    "nix-setup/SKILL.md",
-    "pi-coding-agent/SKILL.md",
-    "ts2moonbit-migration/SKILL.md",
-    "vlmkit/SKILL.md",
-    "void-app/SKILL.md"
-  ],
+  "pending_entrypoint_paths": [],
   "installed": 0,
   "integrated": 1,
   "excluded": 0,
   "support_code_executed": false,
   "private_data_used": false,
-  "next": "3456の限定レビュー/同HEAD CI/PR395mergeを追う。新4の技術訂正と個別許諾/統合案を進め、3458の残15読了を実job/原応答/固定SHAで照合する。中央統合先は保護分類未確認につきその書込だけ保留し、全16資料を継続。",
+  "next": "新19評価/草案と3456指摘の補正を新PRで限定レビューし、必要な個別許諾/支持/既存差分を満たして実配置へ進める。全16資料・647取得拒否・中央統合分類保留は継続。",
   "observed_at": "2026-10-23T14:54:46.1642800Z",
   "code_execution_status": "SQL4補助コードは本文未保存・未読・未実行。既存追加取得の拒否を別経路で迂回しない。",
   "supporting_texts_fullread": [
@@ -6223,19 +8061,22 @@
     "raw_sha256": "237d5a7391b947f16ef22f9cdc843887c85133a271f676f524956f23c29ce6b7",
     "limits": "SQL4本文の前評価を確認。今回の補助5+README追加範囲と本文案は新しい未受入差分。"
   },
-  "entrypoints_fulltext_read": 61,
+  "entrypoints_fulltext_read": 76,
   "latest_primary_review": {
-    "todo": 3420,
-    "base": "f76520645b2083849a549be101a00fc6b645096a",
-    "head": "0ebda988fd008a41c9227bb0598abbeca128c26d",
-    "must": 0,
-    "suggestions": 6,
+    "recorded_at": "2026-10-23T16:37:17.8639403Z",
+    "model_origin": "owner_request",
+    "suggestions": 7,
+    "requested_effort": "max",
+    "base": "0ebda988fd008a41c9227bb0598abbeca128c26d",
+    "effort_origin": "owner_request",
+    "preserved_at": "2026-10-23T16:26:27.3389133Z",
+    "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b",
+    "scope": "固定9差分とGo2全文。新4/今回15は範囲外。原文全件の再読・実行・導入受入ではない。",
+    "job_model": "anthropic/claude-sonnet-5-5",
+    "todo": 3456,
     "nits": 5,
-    "raw_sha256": "06ddd1f50e3163812c82edeada81e506c65ffc9b4b99b67dac282624341207c3",
-    "actual_model": "anthropic/claude-sonnet-5-5",
-    "effort": "max",
-    "scope": "後続12本文/差分5と支持metadata59。README1全読+11テンプレート同一性照合。旧45/支持実装/実行/導入は範囲外。",
-    "received_at": "2026-10-23T14:40:28.9070940Z"
+    "must": 0,
+    "head": "b006b682ba6a7603e050362dcc07c27325e6c46f"
   },
   "historical_snapshot_note": "SQL4/新2の候補時点の評価は保持。gh-fix-ciの実統合と受入待ちを採用台帳へ接続し、候補評価と実操作を区別する。",
   "fixed_entrypoint_roster": "skills-3080-mizchi-fixed-entrypoints.json",
@@ -6259,7 +8100,7 @@
       "head": "f817c1841abffa97b9be8195c7eb3a5ffc151471",
       "must": 0,
       "raw_sha256": "f5925ada6f6042b1e6f16da5b711790310cdbd03f78240fd486367a902260298",
-      "scope": "旧35入口の評価差分/実CI v2/SQL表示補正が対象。今回の新10は未レビュー。SQL2/12例の新たな本文再受入という意味ではない。"
+      "scope": "旧35入口の評価差分/実CI v2/SQL表示補正が対象。今回の新10は未レビュー。SQL2/12例の新たな本文再受入という意味ではない。 新10未レビューは3378当時の表示で、後続3417で確認済み。"
     },
     {
       "todo": 3417,
@@ -6269,10 +8110,12 @@
       "suggestions": 6,
       "nits": 6,
       "raw_sha256": "c05564d6b0a12de8ec89361f328860598a9b1fc0de11df78641b41b07a75c4b4",
-      "actual_model": "anthropic/claude-sonnet-5-5",
-      "effort": "max",
       "scope": "新10本文/README9と評価差分/Go2を読取。SQL本文の指紋を独立再計算。支持実装・実行・導入・全体受入は範囲外。",
-      "received_at": "2026-10-23T14:40:28.9070940Z"
+      "job_model": "anthropic/claude-sonnet-5-5",
+      "requested_effort": "max",
+      "recorded_at": "2026-10-23T14:40:28.9070940Z",
+      "model_origin": "owner_request",
+      "effort_origin": "owner_request"
     },
     {
       "todo": 3420,
@@ -6282,23 +8125,82 @@
       "suggestions": 6,
       "nits": 5,
       "raw_sha256": "06ddd1f50e3163812c82edeada81e506c65ffc9b4b99b67dac282624341207c3",
-      "actual_model": "anthropic/claude-sonnet-5-5",
-      "effort": "max",
       "scope": "後続12本文/差分5と支持metadata59。README1全読+11テンプレート同一性照合。旧45/支持実装/実行/導入は範囲外。",
-      "received_at": "2026-10-23T14:40:28.9070940Z"
+      "job_model": "anthropic/claude-sonnet-5-5",
+      "requested_effort": "max",
+      "recorded_at": "2026-10-23T14:40:28.9070940Z",
+      "model_origin": "owner_request",
+      "effort_origin": "owner_request"
+    },
+    {
+      "recorded_at": "2026-10-23T16:37:17.8639403Z",
+      "model_origin": "owner_request",
+      "suggestions": 7,
+      "requested_effort": "max",
+      "base": "0ebda988fd008a41c9227bb0598abbeca128c26d",
+      "effort_origin": "owner_request",
+      "preserved_at": "2026-10-23T16:26:27.3389133Z",
+      "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b",
+      "scope": "固定9差分とGo2全文。新4/今回15は範囲外。原文全件の再読・実行・導入受入ではない。",
+      "job_model": "anthropic/claude-sonnet-5-5",
+      "todo": 3456,
+      "nits": 5,
+      "must": 0,
+      "head": "b006b682ba6a7603e050362dcc07c27325e6c46f"
     }
   ],
   "review_history_definition": "scope付き追記履歴を正とする。prior/latestの旧値は当時のsnapshotであり、後続の本文や評価へ流用しない。",
   "required_changes_definition": "各required_changesは候補を本PCへ適用する場合の技術上の検討・修正案。本人の禁止事項を追加したり、通常の許可済み操作を止める規則ではない。この公開資料だけで元依頼の範囲や権限は増えない。",
   "new_assessment_review_pending": {
+    "scope": "前4と3458由来15を親が反映した新差分。固定b006レビューを新19へ流用しない。",
     "central_write": 0,
-    "count": 4,
     "paths": [
       "dep-lib-review/SKILL.md",
       "stryker-js/SKILL.md",
       "node-sqlite-vec/SKILL.md",
-      "k8s-crd-from-typed-schema/SKILL.md"
+      "k8s-crd-from-typed-schema/SKILL.md",
+      "ast-grep-practice/SKILL.md",
+      "chezmoi-management/SKILL.md",
+      "conventional-changelog/SKILL.md",
+      "gleam-practice/SKILL.md",
+      "maintainer-persona/SKILL.md",
+      "mizchi-blog-style/SKILL.md",
+      "moonbit-js-binding/SKILL.md",
+      "moonbit-practice/SKILL.md",
+      "natural-writing-en/SKILL.md",
+      "natural-writing-ja/SKILL.md",
+      "nix-setup/SKILL.md",
+      "pi-coding-agent/SKILL.md",
+      "ts2moonbit-migration/SKILL.md",
+      "vlmkit/SKILL.md",
+      "void-app/SKILL.md"
     ],
-    "scope": "新4評価と一次資料訂正。3456の固定b006差分確認には含めず別確認する。"
-  }
+    "count": 19
+  },
+  "recorded_at": "2026-10-23T16:37:17.8639403Z",
+  "observed_at_definition": "旧observed_atとbody_read_atは記録生成時刻で独立の取得/受領時刻ではない。今回recorded_atは親の更新時刻。source retrieved_atは取得索引由来。受領保存時刻はpreserved_atと区別する。",
+  "independent_review_complete_definition": "trueは現行評価版の独立確認を示す。旧22のtrueを未束縛のまま持ち越さずfalseとし、固定head/raw付きhistorical_evaluation_reviewを保持。falseは原本文未読や過去レビュー未実施という意味ではない。",
+  "reader3458": {
+    "rights_accepted": false,
+    "job_model": "anthropic/claude-sonnet-5-5",
+    "support_metadata_count": 111,
+    "requested_effort": "max",
+    "independent_evaluation_review": false,
+    "effort_origin": "owner_request",
+    "parent_read_all_bodies": false,
+    "readme_fulltext_count": 9,
+    "support_nonreadme_saved": 36,
+    "raw_sha256": "885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22",
+    "readme_extra_link": "void-app README Cheat sheet",
+    "body_fulltext_count": 15,
+    "job": "20261024-005251-todo-3458",
+    "todo": 3458,
+    "readme_description_template_count": 6,
+    "support_nonreadme_unread": 96,
+    "preserved_at": "2026-10-23T16:26:27.3520370Z",
+    "model_origin": "policy",
+    "support_nonreadme_unsaved": 60
+  },
+  "review_metadata_definition": "job_model/requested_effortはjob設定であり実効推論量の実測ではない。旧actual_model/effortを改名。旧received_atは文書生成時刻だったためrecorded_atへ訂正。preserved_atは原応答受領保存の実記録。",
+  "review_model_limit": "job_modelとrequested_effortは保存job設定。対応turn_contextによる実行モデル・実効推論量・Fastの独立実測をこのmetadataだけから断定しない。"
 }

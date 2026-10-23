@@ -10638,15 +10638,19 @@ mod end_to_end {
         t.diagnostic.store(true, Ordering::Relaxed);
         fs::write(t.rec.join("delay-capacity-observation"), b"fixture only").unwrap();
         let jid = t.start("capacity-once", &t.tmp.0, b"same capacity request");
-        // The old sampler rejects an observation collected >1 s after sampling
-        // began, then silently queues this job for a 900 s technical cooldown.
+        // The old fixture stamps the event when metadata is collected >1 s
+        // after sampling began. Attribution correctly rejects that future
+        // event, queuing this job for a 900 s technical cooldown.
         // Stop at that incorrect branch instead of waiting out the cooldown.
         t.until_phase_for("delayed_capacity_observation", Duration::from_secs(120), || {
             let job = t.job(&jid);
             job["capacity_wait_pending"] == true || TERMINAL.contains(&s(&job, "status"))
         });
         let job = t.job(&jid);
-        assert_eq!(job["status"], "succeeded", "{}", t.phase_snapshot("delayed_capacity_observation", Duration::ZERO));
+        assert_eq!(
+            job["status"], "succeeded", "{}",
+            t.phase_snapshot("delayed_capacity_observation", Duration::ZERO)
+        );
         assert_eq!(job["capacity_same_model_retry_count"], 1);
         assert_eq!(job["capacity_wait_count"].as_u64().unwrap_or(0), 0);
         let calls = fs::read_to_string(t.rec.join("capacity-calls.jsonl")).unwrap();
@@ -10659,6 +10663,7 @@ mod end_to_end {
             ("capacity-always", "failed", 3, 2),
         ] {
             let t = E2e::new();
+            t.diagnostic.store(true, Ordering::Relaxed);
             let jid = t.start(mode, &t.tmp.0, "再開する内容\nsecond line".as_bytes());
             t.until_phase_for("finite_capacity_retry", Duration::from_secs(120), || {
                 TERMINAL.contains(&s(&t.job(&jid), "status"))
@@ -11245,6 +11250,7 @@ mod end_to_end {
                     "same_model_retries":job["capacity_same_model_retry_count"],"model_switches":job["capacity_retry_count"],
                     "capacity_wait_pending":job["capacity_wait_pending"],"capacity_wait_count":job["capacity_wait_count"],
                     "retry_not_before":job["retry_not_before"],"pool_at":job["capacity_inventory"]["pool"]["at"],"pool_verified":job["capacity_inventory"]["pool"]["verified"],
+                    "capacity_supervisor":if phase.contains("capacity") {fs::read_to_string(self.tmp.0.join("tool/jobs").join(s(job,"id")).join("supervisor.log")).unwrap_or_default()} else {String::new()},
                     "wait_code":job["queue_wait_reason"]["code"],"wait_owner":alias(s(&job["queue_wait_reason"],"owner_job_id")),"max_running":job["queue_wait_reason"]["max_running"],
                     "admission_error":!job["queue_admission_error"].is_null(),"owner_hint":job["work_owner"].is_object(),"supervisor":process("pid"),"agent":process("codex_pid")})
             }).collect();

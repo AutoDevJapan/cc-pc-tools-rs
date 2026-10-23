@@ -66,10 +66,27 @@ callerからmanifest、hash、source、root、ToDo番号、許可ディレクト
    上の表と完全に一致し、終了コード0の場合だけ次へ進む。元client一致などで容量用途が拒否すれば止める。
 4. その後でだけ同じhandleから対象を読み、固定の旧SHAと一致することを確かめる。違えば拒否し、値を出さない。
 5. source rootの祖先と自身が reparse point でないこと、実パス、guardの `--guard-path` が clear であることを確かめる。
-   Gitは `GIT_*` 環境を除き、窓を出さず、期限付きで呼ぶ。worktreeの最上位、origin、HEAD、tree、
-   `origin/main` の祖先であることを確かめる。Gitに読ませるのは参照・設定・オブジェクトだけで
-   （`rev-parse`、`remote get-url`、`merge-base`、`ls-tree`）、作業ファイルは開かせない。
-   guardは1件ずつ分類するので、rootがclearでも、分類していない追跡ファイルをGitに読ませない。
+   続けて、Gitの設定と参照をreader自身が読む。対象は、worktreeの `.git`、その登録先の `commondir`・`gitdir`・`HEAD`、
+   共有repoの `config`、HEADの指すbranchと `refs/remotes/origin/main`（looseが無ければ `packed-refs`）、`shallow` である。
+   各ファイルはguardの clear を確かめてから、reparse pointでないリンク数1のhandleで1回だけ読み、すぐ閉じる。
+   共有repoはほかの多くのworktreeも使うので、読んだ後まで開いたままにしない。読んだbytesで次を確かめる。
+   - `.git` は `gitdir: <絶対パス>` の1行で、登録先の `commondir` は `../..`、`gitdir` はこのworktreeの `.git` を指す。
+   - `config` を厳密に解析する。`include`・`includeIf`・`url` の節を拒否する。core は通常の非bare repoのキーだけ、
+     拡張は `worktreeConfig` だけを認める。origin のURLはちょうど1つで、固定のoriginと一致する。Gitと同じ意味に
+     読めない書き方（継続行、見出しの後の値、旧形式の見出し、未知のescape、閉じない引用符、制御文字）も拒否する。
+   - HEADの指すbranchが固定HEADのcommitを指し、`refs/remotes/origin/main` のcommitを求められる。
+   - `config.worktree`・`info/grafts`・`objects/info/alternates` が無い。`shallow` は40桁のcommitの行だけ。
+
+   その後でだけ、guardの clear を確かめたobjectsディレクトリをGitに渡す。Gitは `%TEMP%` に作る空のrepo
+   （HEAD、空のrefs、必要なら `shallow` の写し）で動き、objectsだけが共有repoのものになる。`GIT_*` の環境は引き継がず、
+   system・globalの設定も読まない（`GIT_CONFIG_NOSYSTEM=1`、`GIT_CONFIG_GLOBAL=/dev/null`）。窓を出さず、期限付きで呼ぶ。
+   Gitに許すのは次の3回だけで、引数まで固定する。
+   - `rev-parse --verify --quiet <HEAD>^{tree}`（結果が固定treeと一致する）
+   - `merge-base --is-ancestor <HEAD> <origin/mainのcommit>`
+   - `ls-tree -r -z --full-tree <HEAD>`
+
+   Gitは設定・参照・作業ファイルを1つも開かない。guardは1件ずつ分類するので、rootがclearでも、
+   分類していないファイルをGitに読ませない。
 6. receipt・log・dep-info・各入力・新候補は、それぞれ同じ方法で開いて保持し、guardの clear を確かめてから読む。
    読んだbytesそのものをhashして解析する。
 7. receiptの全項目を固定値と照合する。未知の項目と `data_access_granted` が false でない記録は拒否する。
@@ -79,9 +96,12 @@ callerからmanifest、hash、source、root、ToDo番号、許可ディレクト
    `core.autocrlf=true` でLFをすべてCRLFにした形の場合だけ。NUL、単独のCR、CRLFとLFの混在は変換として認めない。
    入力以外の追跡ファイルは分類も読取もしないので、その変更は結果を左右しない。
 9. 新候補のサイズとSHA256を固定値とreceiptの両方に照合する。
-10. 最後に保持した全handleの同一性（volume・file ID・サイズ・更新時刻・リンク数・属性）と実パス、
-    source rootの実パス、worktreeの最上位・origin・HEADを再確認する。照合中の変更は拒否する。
-    入力は書込を共有しないhandleで保持しているので、照合中には変えられない。
+10. 最後に、保持した全handleの同一性（volume・file ID・サイズ・更新時刻・リンク数・属性）と実パス、
+    source rootとobjectsディレクトリの実パスを再確認する。読んで閉じたGitの設定と参照は開き直し、同一性と
+    SHA256が最初に読んだときと同じことを確かめる。無かったファイル（`config.worktree`、`info/grafts`、
+    `objects/info/alternates`、looseで無かったref、`shallow` など）が今も無いことも確かめる。照合中の変更は拒否する。
+    入力は書込を共有しないhandleで保持しているので、照合中には変えられない。共有repoのconfigやrefは
+    ほかのworktreeが書き換えることがあり、照合中に書き換わると `recheck` で拒否される。その場合は再実行する。
 
 ## compiler closure の確認
 
@@ -104,8 +124,8 @@ receiptの126件の入力が、原dep-infoの116件と manifest/lock の10件に
 
 ## 受入条件とテスト
 
-テストは `tools/todo-update-reader-3190` の `go test`。合成したGit repo、ファイル、receiptと、
-guardのCLI応答を模した関数で、実物の配布先・guard・親の作業場所を使わずに確かめる。
+テストは `tools/todo-update-reader-3190` の `go test`。合成したGit repo（実物と同じく、別の場所のrepoに属する
+linked worktree）、ファイル、receiptと、guardのCLI応答を模した関数で、実物の配布先・guard・親の作業場所を使わずに確かめる。
 理由コードも照合し、別の理由による偶然の拒否を合格にしない。
 
 | 条件 | テスト |
@@ -121,7 +141,8 @@ guardのCLI応答を模した関数で、実物の配布先・guard・親の作�
 | 元client一致 | `TestRejectsProtectedResources` |
 | data access の拡大 | `TestRejectsDataAccessExpansion` |
 | closure の過不足 | `TestRejectsClosureGaps` |
-| Gitに作業ファイルを読ませない。入力以外の保護された追跡ファイルは結果を左右しない | `TestGitNeverReadsWorkingFiles`、`TestQualifiesFixedUpdate`、`TestRejectsProtectedResources` |
+| Gitに設定・参照・作業ファイルを読ませない。Gitの呼び出しは引数まで固定の3回だけ。入力以外の保護された追跡ファイルは結果を左右しない | `TestGitNeverReadsWorkingFiles`、`TestGitReadsNoConfiguration`、`TestIsolatedGitEnvironment`、`TestQualifiesFixedUpdate`、`TestRejectsProtectedResources` |
+| Gitの設定と参照をreader自身がguardの分類後に読み、Gitと同じ意味に解釈する | `TestReadsGitMetadataItself`、`TestConfigParserAgreesWithGit`、`TestConfigParserRefusesWhatItDoesNotRead`、`TestPackedRefs` |
 | 入力のbytesが固定treeのblob（そのままか、LFをすべてCRLFにした形）である | `TestInputsMustBeTheCommittedBytes`、`TestCheckedOutForms` |
 | 実物の固定値 | `TestProductionProfileBindsOneFixedUpdate` |
 
@@ -174,6 +195,41 @@ Suggestion と Nit はこの文書へ反映した。
 - 新しい照合の要所を壊した3つの版（blob照合を呼ばない、NULの確認を外す、CRとLFの対の確認を外す）は、
   すべて対応するテストが失敗した。
 
+### 別モデルの再レビュー（ToDo3491）
+
+gpt-6.1-sol・推論max（job `20261024-033144-todo-3491`、4分17秒、終了コード0）が、base `d9edfd4d`・head `308cb24d` の
+変更5ファイルを差分と全文で読んだ。レビュー担当はテスト・ビルド・CIを実行していない。前回のMustは「一部解消」、
+前回のSuggestion 2件とNitは解消と判定された。新たな指摘は Must 1件、Suggestion 1件。
+
+- Must: `remote get-url` などは既存のGit設定を読む。system・global・repo・worktreeの設定にある `include.path` と
+  `includeIf.*.path` を隔離していないので、設定が保護されたファイルをincludeすれば、guardの1件ずつの分類より先に
+  Gitがその中身を読み得る。修正案は、既存の設定を読ませないGitの実行環境にすること、必要な設定はguardが分類して
+  固定したbytesからincludeを追わずに取ること、include先を保護した回帰テストを足すこと。実環境にそうした設定が
+  あるという指摘ではなく、Gitの仕様とコードからの判断である。
+- Suggestion: テストでGitの呼び出しを許す判定を、サブコマンド名ではなく引数列の全体で照合する。
+
+### 2回目のMustの修正
+
+Gitに渡すのを固定objectsの読取だけにした（検証の順序の5）。worktreeの登録・HEAD・ref・config・shallowは、
+guardの分類の後でreader自身が読む。Gitは設定を1つも読まない空のrepoで動き、呼び出しは引数まで固定の3回だけ。
+最後の再照合では、読んで閉じたファイルの同一性とSHA256、無かったファイルが今も無いことを確かめる（検証の順序の10）。
+Suggestionは、テストの許可判定を引数列全体の一致にして反映した。
+
+- Red（commit `6bda9f63`、隔離した環境はstub）: fixtureを実物と同じlinked worktreeにした。`go test -count=1 ./...` は
+  終了コード1、131秒。合格90、失敗48、skip 0、ビルド失敗0。global設定から保護ファイルをincludeした例は `source_git` で
+  失敗し、Gitが実際にinclude先を開こうとしたことを示した。
+- Green（commit `2f804f13`）: `go test -race -count=1 ./...` は終了コード0、144秒。上位27件、subtest込み153件が合格し、
+  失敗0・skip 0・data race 0。`go vet ./...` とgofmtも差分なし。Redのテストだけでも、同じ実装で138件が合格した。
+  修正と同時に足したテストは、親commitのobjectが無いshallow clone、bareや `core.worktree` の設定、再照合の前の
+  refのpack・alternatesの追加・同じ大きさと日時でのrefの書換え、受け付けたconfigをGit自身（`git config --list`）も
+  同じ値に読むこと、packed-refsの書式。
+- 新しい照合の要所を壊した11の版を `go test -overlay` で当て、すべて対応するテストが失敗した。壊したのは、
+  include・includeIf・urlの拒否、登録先の逆リンク、`config.worktree` の不在、global設定の無効化、shallowの受け渡し、
+  読んで閉じたファイルの再照合、不在の再照合、SHA256の比較、HEADの照合、originの照合、alternatesの不在。
+- 実物の親の作業場所は、別の場所の共有repoに属するlinked worktreeで、branchは `packed-refs` にだけあり、
+  共有repoはshallow cloneである。configには800件を超えるbranchの節と core・extensions・remote があり、includeは無い。
+  読んだメタデータはguardの分類で clear だった。configの中身はログや文書へ出していない。
+
 ### 実物への事前の観測（merge前）
 
 最初の実装から生成した検査用readerで、実物に対して1回照合した。終了コード0、9.6秒で、
@@ -185,7 +241,12 @@ source `0e16e817…` / tree `31d45a74…`、receipt `20345f44…087c`、入力12
 でも実物を1回照合した。終了コード0、8.7秒で、同じ固定値の `qualified:true`（入力126件・dep-info 116件・crate 8件、
 `data_access_granted:false`）を返した。実物の126件はすべて、固定treeのblobそのものか、LFをすべてCRLFにした形だった。
 
-どちらもmerge前のsourceによる観測で、最終の結果はmerge後のsourceから生成したreaderで取り直す。
+2回目の修正のcommit `2f804f13` から `go build -trimpath` で生成したreader（SHA256 `2528d5cc…1825`、vcs.modified=false）
+でも実物を1回照合した。終了コード0、10.0秒で、同じ固定値の `qualified:true`（入力126件・dep-info 116件・crate 8件、
+`data_access_granted:false`）を返した。reader自身が実物のconfig・HEAD・ref（branchは `packed-refs`、`origin/main` はloose）と
+`shallow` を読んで受け付け、Gitは空のrepoで固定objectsとshallowの写しだけを読んだ。
+
+いずれもmerge前のsourceによる観測で、最終の結果はmerge後のsourceから生成したreaderで取り直す。
 対象の置換、guardの変更、ToDoの状態変更はしていない。
 
 補足として、親の作業場所に残るCargoの出力 `target/release/todo.exe` は、配布用コピーと同じ
@@ -195,5 +256,6 @@ SHA256 `d4392e63…0718`、同じサイズと更新時刻で、`target/release/d
 ### 未完了
 
 修正前のhead `d9edfd4d` では、専用workflow（windows、run 39994455364）とCodeQL（run 39994455228）が成功した。
-修正後のheadの正式CI、修正の別モデル再レビュー、通常merge、merge後のsourceから生成したreaderによる実物の照合、
-親3190への結果の返却が残る。
+1回目の修正のhead `308cb24d` でも、専用workflow（windows、run 40002129622）とCodeQL（run 40002129620）が成功した。
+2回目の修正後のheadの正式CI、修正の別モデル再レビュー、通常merge、merge後のsourceから生成したreaderによる
+実物の照合、親3190への結果の返却が残る。

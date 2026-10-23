@@ -329,10 +329,23 @@ pub(super) fn authorize(
 }
 
 fn requests_explanation(body: &str) -> bool {
+    // Classify speech acts before associating options with reason clauses.
+    // A following topic/case particle makes a quotation an opaque noun. Keep
+    // whole quoted commitments inspectable. The ASCII placeholder deliberately
+    // retains the nominal boundary recognized by written_noun_tail().
+    let quoted = regex::Regex::new(r#"(?:「[^「」\n]*」|『[^『』\n]*』|“[^“”\n]*”|"[^"\n]*")(?P<particle>って|という|について|と|の|を|は|が|も|に|で|へ)"#).unwrap();
+    let body = quoted.replace_all(body, "QUOTE$particle");
+    let body = body.as_ref();
     if regex::Regex::new(r"(?:説明|補足|解説)(?:は|が|も)?(?:不要|いらない|要らない)")
         .unwrap()
         .is_match(body)
     {
+        return false;
+    }
+    // A request after a reason word, a conjunction or another sentence still
+    // takes precedence. Explanation verbs share one exemption below; they do
+    // not exempt a later action in the same sentence.
+    if action_request(body) {
         return false;
     }
     // Associate each option with its own clause. Reasons in another clause
@@ -341,6 +354,10 @@ fn requests_explanation(body: &str) -> bool {
     let separator = regex::Regex::new(r"[、，,\s…]+|けど|けれど|ので|のに|から").unwrap();
     let reason_query_tail = regex::Regex::new(
         r"(?:のか(?:を)?教えて(?:ください|ほしい(?:です)?)?|ですか|ますか|でしょうか)[。!！]*$",
+    )
+    .unwrap();
+    let acknowledgement = regex::Regex::new(
+        r"(?:分かった|わかった|理解した|分かりました|わかりました|理解しました)[。!！]*$",
     )
     .unwrap();
     for sentence in body.split_inclusive(['。', '！', '!', '？', '?', '\n', ';', '；']) {
@@ -383,20 +400,26 @@ fn requests_explanation(body: &str) -> bool {
                 // The standalone topic "いる" must not turn an option's
                 // progressive/confirmation predicate into a necessity question.
                 let after = after.replace("ている", "てる").replace("でいる", "でる");
-                // An action request stays an action even when a fee/topic word
-                // precedes it, or the option itself is conditional.
-                if action_request(&format!("{}{after}", phrase.as_str())) {
-                    return false;
-                }
                 let prefix_question = (asks_why(before)
                     || matches!(previous, "なぜ" | "どうして" | "なんで"))
                     && (clause.contains(['?', '？']) || reason_query_tail.is_match(&after));
                 let tail_question = explanation_requested(&after)
                     || nominal_reason_tail(&after)
                         && explanation_requested(&sentence[span.start + phrase.end()..]);
+                // "aにして理由を教えて" first fixes an option. A why-query
+                // before the option or a nominalized predicate remains a
+                // question ("なぜaにして…の？", "aにしてもらえる理由は？").
+                let choice_instruction = phrase.as_str().ends_with("にして")
+                    && !prefix_question
+                    && nominal_reason_start(&after);
+                // An embedded why-clause followed by an acknowledgement is
+                // an assertion, even when an explanation request follows it.
+                let acknowledged = acknowledgement.is_match(&after);
                 // A predicate-attached causal "なんで" is a commitment even
                 // when the instruction continues in the next clause.
-                let questioned = !colloquial_option_cause(&after)
+                let questioned = !choice_instruction
+                    && !acknowledged
+                    && !colloquial_option_cause(&after)
                     && (prefix_question || tail_question)
                     && !directive_before_reason(&after, phrase.as_str());
                 if !questioned && !conditional_option_tail(&after) {
@@ -409,6 +432,12 @@ fn requests_explanation(body: &str) -> bool {
         }
     }
     explanation_requested(body)
+}
+
+fn nominal_reason_start(body: &str) -> bool {
+    regex::Regex::new(r"^(?:説明|理由|内訳|費用|料金|経費|用途|根拠|背景|意味)(?:を|も|は)")
+        .unwrap()
+        .is_match(body)
 }
 
 fn nominal_reason_tail(body: &str) -> bool {
@@ -523,7 +552,7 @@ fn nominal_before_ga(before: &str) -> bool {
                     || ["これ", "それ", "あれ", "どれ", "この", "その", "あの", "どの", "少し", "ちょっと", "多少", "いくら"]
                         .iter().any(|word| amount.ends_with(word))
                     || amount.chars().next_back().is_some_and(|c| {
-                        c.is_numeric() || "〇一二三四五六七八九十百千円人個本枚件回日週月年秒分時間倍割社席台枠行点類%％".contains(c)
+                        c.is_numeric() || "〇一二三四五六七八九十百千万億兆円人名個本枚件回日週月年秒分時間倍割社席台枠行点類%％".contains(c)
                     })
             })
         || before.strip_suffix('つ').is_some_and(|number| {
@@ -556,15 +585,84 @@ fn colloquial_option_cause(body: &str) -> bool {
 }
 
 fn action_request(body: &str) -> bool {
-    regex::Regex::new(r"て(?:もらえ|いただけ)(?:ますか|ませんか|る\s*[?？])")
+    // Match the request ending, not a predicate followed by a reason noun:
+    // "進めてくれる？" requests action; "進めてくれる理由は？" asks why.
+    let polite_action = regex::Regex::new(r"て(?:(?:もらえ|くれ|いただけ|頂け)ない\s*[?？]|もらえ(?:ますか|ませんか|ないでしょうか|る\s*[?？])|(?:いただけ|頂け)(?:ますか|ませんか|る\s*[?？])|くれ(?:る\s*[?？]|ますか|ませんか)|もいい\s*[?？])")
         .unwrap()
         .find_iter(body)
         .any(|request| {
             let before = &body[..request.start()];
-            !["教え", "説明し", "説明をし", "解説し", "解説をし", "見せ"]
-                .iter()
-                .any(|verb| before.ends_with(verb))
-        })
+            !explanation_verb_before(before)
+        });
+    // A nominal request for information retains the existing explanation form.
+    // Procedures and payment are actions; their objects are not information.
+    let named_action = regex::Regex::new(r"お願い(?:できますか|できませんか|できないでしょうか)")
+        .unwrap()
+        .find_iter(body)
+        .any(|request| !information_object(&body[..request.start()]));
+    // These matches include their action verb, so an earlier explanation verb
+    // cannot exempt them (the first exemption applies only to the matched て).
+    // In a why-query, a linking て followed by a narrative の？ is not an
+    // imperative (なんで勝手に決めて、進めたの？). Later requests still win.
+    let narrative_query = regex::Regex::new(r"(?:た|だ|る)の[?？]\s*$").unwrap();
+    let explicit_action = regex::Regex::new(r"(?:(?:進め|実行し|開始し|選択し|採用し|決め|変更し|停止し|止め)て|選んで)(?:ください(?:ね|ませ)?|ほしい(?:です)?|くれ|ね|よ)?(?:[、，,。!！?？\s]|$)")
+        .unwrap()
+        .find_iter(body)
+        .any(|request| {
+            let before = body[..request.start()]
+                .rsplit(['。', '！', '!', '？', '?', '\n', ';', '；'])
+                .next()
+                .unwrap_or("");
+            let after = body[request.end()..]
+                .split_inclusive(['。', '！', '!', '？', '?', '\n', ';', '；'])
+                .next()
+                .unwrap_or("");
+            !(request.as_str().ends_with(['、', '，', ','])
+                && asks_why(before)
+                && narrative_query.is_match(after))
+        });
+    polite_action || named_action || explicit_action
+}
+
+fn information_object(body: &str) -> bool {
+    [
+        "説明を",
+        "解説を",
+        "内訳を",
+        "理由を",
+        "根拠を",
+        "詳細を",
+        "補足を",
+        "背景を",
+        "用途を",
+        "意味を",
+    ]
+    .iter()
+    .any(|object| body.ends_with(object))
+}
+
+fn explanation_verb_before(body: &str) -> bool {
+    if body.ends_with("指示し") {
+        return false;
+    }
+    [
+        "教え",
+        "説明し",
+        "説明をし",
+        "解説し",
+        "解説をし",
+        "見せ",
+        "示し",
+        "聞かせ",
+        "伝え",
+        "知らせ",
+        "話し",
+    ]
+    .iter()
+    .any(|verb| body.ends_with(verb))
+        || ["まとめ", "補足し", "出し"]
+            .iter()
+            .any(|verb| body.strip_suffix(verb).is_some_and(information_object))
 }
 
 fn directive_before_reason(body: &str, option: &str) -> bool {
@@ -615,12 +713,23 @@ fn directive_before_reason(body: &str, option: &str) -> bool {
                     // is not an instruction. Keep standalone "ては？" rejected.
                     let explanation_topic = tail == "は"
                         || (word.end() == prefix.len() && quoted_reason_topic(prefix))
-                        || ["はいけ", "はなら", "はだめ", "は駄目"]
+                        || ["はいけ", "はなら", "はだめ", "は駄目", "はダメ", "はまずい"]
                             .iter()
                             .any(|negative| tail.starts_with(negative))
-                        || ["も", "る", "いる", "いた", "いま", "いな"]
-                            .iter()
-                            .any(|suffix| tail.starts_with(suffix));
+                        || [
+                            "も",
+                            "る",
+                            "いる",
+                            "いた",
+                            "いま",
+                            "いな",
+                            "頂け",
+                            "いただけ",
+                            "くれる",
+                            "くれない",
+                        ]
+                        .iter()
+                        .any(|suffix| tail.starts_with(suffix));
                     !explanation_topic
                 }
                 "です" | "ます" => !tail.starts_with(['か', '?', '？']),
@@ -730,6 +839,124 @@ fn why_start(body: &str) -> Option<usize> {
 #[cfg(test)]
 mod intent_tests {
     use super::requests_explanation;
+
+    #[test]
+    fn issue_414_explanation_and_action_contrasts() {
+        let cases: Vec<(String, bool)> =
+            serde_json::from_str(include_str!("../../tests/fixtures/clarification-414.json"))
+                .unwrap();
+        let mut mismatches = Vec::new();
+        for (reply, expected) in cases {
+            let actual = requests_explanation(&reply);
+            eprintln!("issue414 {reply:?}: expected={expected} actual={actual}");
+            if actual != expected {
+                mismatches.push((reply, expected, actual));
+            }
+        }
+        assert!(mismatches.is_empty(), "{mismatches:?}");
+    }
+
+    #[test]
+    fn explanation_please_and_explicit_actions_have_separate_scope() {
+        let mut mismatches = Vec::new();
+        for (reply, expected) in [
+            ("説明をお願いできますか？", true),
+            ("aで説明をお願いできますか？", true),
+            ("説明をお願いできますか？ その後aで進めてください", false),
+            ("aで必要な手続きをお願いできますか？", false),
+            ("費用の理由を説明し進めてください？", false),
+            ("aで内訳を示し実行してください？", false),
+        ] {
+            let actual = requests_explanation(reply);
+            if actual != expected {
+                mismatches.push((reply, expected, actual));
+            }
+        }
+        assert!(mismatches.is_empty(), "{mismatches:?}");
+    }
+
+    #[test]
+    fn acknowledgement_statement_endings_do_not_become_reason_queries() {
+        let mut mismatches = Vec::new();
+        for (reply, expected) in [
+            ("aでこれがなんで必要か分かった。理由を教えて", false),
+            ("aでこれがなんで必要か分かった！理由を教えて", false),
+            ("aでこれがなんで必要か教えて", true),
+        ] {
+            let actual = requests_explanation(reply);
+            if actual != expected {
+                mismatches.push((reply, expected, actual));
+            }
+        }
+        assert!(mismatches.is_empty(), "{mismatches:?}");
+    }
+
+    #[test]
+    fn reviewed_information_action_and_quotation_contrasts() {
+        let mut mismatches = Vec::new();
+        for (reply, expected) in [
+            ("aで費用の内訳の説明をお願いできますか？", true),
+            ("費用の内訳をまとめてもらえますか？", true),
+            ("費用の内訳を補足してもらえますか？", true),
+            ("費用の内訳を出してもらえますか？", true),
+            ("aで費用を出してもらえますか？", false),
+            ("aで費用を確認して進めてくれない？", false),
+            ("aで費用を確認して進めてもらえない？", false),
+            ("aで費用の理由を教えてくれない？", true),
+            ("aで進めてくれない理由は？", true),
+            ("なんで勝手に決めて、進めたの？", true),
+            ("なんで止まってるの、aで進めて、理由も教えて？", false),
+            ("「aで進めます」。なんで必要？", false),
+            ("aでこれがなんで必要か分かりました。理由を教えて", false),
+            ("追加を指示してもらえますか？なぜ必要か教えて", false),
+            ("aにして費用は？", false),
+            ("なぜaにして費用は必要？", true),
+        ] {
+            let actual = requests_explanation(reply);
+            if actual != expected {
+                mismatches.push((reply.to_owned(), expected, actual));
+            }
+        }
+        for (open, close) in [("「", "」"), ("『", "』"), ("“", "”"), ("\"", "\"")] {
+            let reply = format!("aで{open}費用{close}ってなんで必要？");
+            let actual = requests_explanation(&reply);
+            if !actual {
+                mismatches.push((reply, true, actual));
+            }
+        }
+        assert!(mismatches.is_empty(), "{mismatches:?}");
+    }
+
+    #[test]
+    fn explicit_action_verbs_and_endings_are_not_reason_queries() {
+        let mut mismatches = Vec::new();
+        for verb in [
+            "進めて",
+            "実行して",
+            "開始して",
+            "選んで",
+            "選択して",
+            "採用して",
+            "決めて",
+            "変更して",
+            "停止して",
+            "止めて",
+        ] {
+            for ending in ["。", "ください。", "くださいね。", "ほしいです。"] {
+                let reply = format!("bを{verb}{ending}理由も教えて");
+                let actual = requests_explanation(&reply);
+                if actual {
+                    mismatches.push((reply, false, actual));
+                }
+            }
+            let reply = format!("aで{verb}くれる理由は？");
+            let actual = requests_explanation(&reply);
+            if !actual {
+                mismatches.push((reply, true, actual));
+            }
+        }
+        assert!(mismatches.is_empty(), "{mismatches:?}");
+    }
 
     #[test]
     fn choice_and_reason_matrix_keeps_clause_order_and_predicates() {

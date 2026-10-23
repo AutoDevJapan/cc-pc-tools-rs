@@ -83,7 +83,14 @@
     "all_before_hashes_verified": true,
     "files": 3,
     "retained": true,
-    "replacement_snapshots": 3
+    "replacement_snapshots": 3,
+    "replacement_snapshot_recheck": {
+      "not_historical_observation": true,
+      "before_sha256_matches": true,
+      "source": "private article-replacement-snapshots080546.json; exact owned backup files only",
+      "observed_at": "2026-10-23T23:19:20.4293866+00:00",
+      "files": 3
+    }
   },
   "structure": {
     "description_characters": 40,
@@ -111,7 +118,7 @@
     "method": "fresh official installed Codex app-server; initialize + skills/list forceReload"
   },
   "review": {
-    "v3_final_delta_review_pending": true,
+    "v3_final_delta_review_pending": false,
     "v1": {
       "must": 2,
       "plan_sha256": "c87258022da6ec0a3cb4c544f6336968dccee3e3d37d749e94a06dc567f8c2fd",
@@ -130,7 +137,24 @@
       "nits": 7,
       "job_model": "anthropic/claude-sonnet-5-5"
     },
-    "v2_review_reused_for_v3": false
+    "v2_review_reused_for_v3": false,
+    "v3": {
+      "raw_sha256": "d4182f1fce53ce00ce7218f863d2862ac56267a4e6feec8c7c31679de0765ac4",
+      "requested_effort": "max",
+      "native_observation": {
+        "effort": "max",
+        "model": "anthropic/claude-sonnet-5-5",
+        "source": "native_turn_context"
+      },
+      "head": "ab3446b619f6d47e10f4f08418dfb301f46b925f",
+      "scope": "固定8差分。最終GUIDE/source/upstream/MIT、6file plan/receipt/manifestのbyteと意味を確認。中央実ファイル/実Goは親の保存記録のみ。後続編集は対象外。",
+      "must": 0,
+      "nits": 7,
+      "suggestions": 6,
+      "todo": 3529,
+      "job_model": "anthropic/claude-sonnet-5-5",
+      "base": "853c240b6935b305fa70767bc3bc0db2d2a3c1d5"
+    }
   },
   "v3_changes": [
     "read_byを根拠のある担当へ分離し、既存3比較は専用fieldへ。取得時刻の意味を明確化。",
@@ -139,19 +163,56 @@
   ],
   "explicit_use": {
     "external_actions": 0,
-    "pending": true,
+    "pending": false,
     "implicit_selection_proven": false,
-    "cases": 3,
+    "cases": [
+      {
+        "basis": "全a-eを台帳化し、独立encoding/既存取込契約/同じ仕組み/装飾/repo工程を分けた。権利未提供を採用済み件数にしない。",
+        "result": "core passed",
+        "id": "A"
+      },
+      {
+        "basis": "要約だけへSkill/demo/browser/gitを足さず、提供されていない記事を要約したと主張しない。",
+        "result": "passed",
+        "id": "B"
+      },
+      {
+        "basis": "root MITを写真へ広げず、helper必須化と本人方針、読取/候補/配置/発見/使用/暗黙選択/予算を分けた。",
+        "parent_limit": "架空ケースの未依頼の第三者素材公開を行わないという判断。既存に許可された通常公開や第三者素材一般へ新たな本人承認待ちを加える規則にはしない。",
+        "result": "core passed",
+        "id": "C"
+      }
+    ],
     "kind": "explicit installed root/guide/source application to synthetic A/B/C",
-    "todo": 3527
+    "todo": 3527,
+    "raw_sha256": "e76b1c506b33e8dfe8418fb6063d9f3b5a8b878a0ee7ace275640435c9e24681",
+    "job": "20261024-072253-todo-3527",
+    "job_model": "anthropic/claude-sonnet-5-5",
+    "native_observation": {
+      "effort": "max",
+      "model": "anthropic/claude-sonnet-5-5",
+      "source": "native_turn_context"
+    },
+    "parent_full_response_read": true,
+    "actual_read": {
+      "total_central_bytes": 12307,
+      "case_input_bytes": 3484,
+      "root_in_context_also_observed": true,
+      "source_bytes": 5375,
+      "guide_bytes": 5680,
+      "raw_byte_hashes_match": true,
+      "root_bytes": 1252
+    },
+    "real_product_acceptance": false,
+    "other_root_linked_references_read_by_checker": false
   },
   "acceptance_fields": {
     "discovery": "target-only done; scan warnings remain",
-    "merge": "pending final new PR",
+    "merge": "PR417 mergedc6b5ceaa, 2026-10-23T23:12:30Z; read back verified",
     "structure": "done",
-    "independent_final_delta_review": "pending",
-    "ci": "pending final new head",
-    "explicit_use": "pending3527",
+    "independent_final_delta_review": "done for fixed853..ab by3529; later changes require a new bounded review",
+    "ci": "PR417 exactab3446:6SUCCESS and optionalBugbotNEUTRAL; all complete",
+    "explicit_use": "synthetic A/B/C core passed using actual central root/guide/source; no real product execution",
     "central_write": "done"
   },
   "counting": {
@@ -167,13 +228,14 @@
     "pending_available_after": 72107
   },
   "limits": [
-    "guard classification remains unverified; exact read/write passed regular execution review; protection settings and junction unchanged",
+    "guard classification remains unverified; exact six-file write completed in preserved writer log; a separate approval decision ID was not preserved",
     "plain central folder outside plugin/.system/synced; no full GTO registry ownership audit claimed",
-    "other central reference bodies not compared; original three holds and fetch647 rejection unchanged",
-    "guide/source v3 final delta awaits independent review; real explicit use is not yet received",
+    "root-linked old summary contradiction detected; one-file correction not attempted after guard returned client_resource/classification_unverified; no owner decision requested",
+    "original three holds and fetch647 rejection unchanged; whole task continues",
+    "synthetic explicit use and fixed final review are received; implicit selection, full catalog/context budget and product rendering remain unproven",
     "no upstream helper/demo/install/MCP action, no external fetch during apply, no product UI implementation"
   ],
-  "recorded_at": "2026-10-23T22:12:19.2969482Z",
+  "recorded_at": "2026-10-23T23:19:20.4293866+00:00",
   "related_go_checks": {
     "fix": "compare adoption rows with installed_new+integrated; keep seven duplicate decisions/canonical identity checks",
     "vet_exit": 0,
@@ -182,5 +244,56 @@
     "test_exit": 0,
     "initial_test_failure": "fixed row-count30 assumption in duplicate-exclusion test",
     "test_command": "go test -count=1 ./..."
-  }
+  },
+  "license_read_evidence": {
+    "limit": "3529は3501原応答を許可範囲外として未読だった。今回の親は保存済み原応答の該当宣言を照合。中央sourceの読了者表記は変更しない。",
+    "reader3501_original_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
+    "independent_3511": "v1 embedded MIT full read and exact corpus identity",
+    "pointer": "3501原応答のJSON summary.read.license_full=1、最上位sourceとnoticeがroot MITを指定",
+    "independent_3521": "root MIT bytes/SHA/content independently read and verified"
+  },
+  "execution_record": {
+    "exit": 0,
+    "completed_at": "2026-10-24T07:06:22+09:00",
+    "separate_approval_decision_id_available": false,
+    "source": "preserved job events.jsonl: exact apply command completed",
+    "limit": "writer tool callの正常終了を保存。審査サービスの独立decision ID/明示判定を別に保存した記録ではない。",
+    "event_item": "item_198",
+    "job": "20261024-054244-todo-3080"
+  },
+  "article_scope_additional_root_texts": [
+    {
+      "path": "README.md",
+      "scope": "3501部分読取/3512権利語句走査。本文全読ではない。"
+    },
+    {
+      "path": "CLAUDE.md",
+      "scope": "記事受入の旧3本文の範囲外。後続3512は全文読了を申告した。"
+    },
+    {
+      "path": "DEMOS.md",
+      "scope": "3512権利語句走査のみ。本文全読ではない。"
+    }
+  ],
+  "historical_go_input_limit": "旧test/vet保存JSONにコマンド/cwd/事前入力指紋はなく、入力97指紋は実行後。PR417の同head CI成功は別の最終版証拠。新35と今回修正は新しい事前指紋付きの関連Go結果で確認する。",
+  "root_linked_old_summary": {
+    "next": "既存の保護分類/目的確認の正規経路を照合する。拒否や保護設定を迂回せず、独立した候補評価を継続。",
+    "guard_result": {
+      "access_allowed": false,
+      "protection_status": "unverified",
+      "client_resource": true,
+      "classification_unverified": true
+    },
+    "current_bytes_after_guard_not_read": true,
+    "observed_before_guard_bytes": 4704,
+    "scope": "previous-guideのarticle要約1行が全demo/browser必須を残す",
+    "detected": true,
+    "new_write": 0,
+    "suggestion": "S6",
+    "status": "technical classification hold",
+    "review_todo": 3529,
+    "owner_action_required": false,
+    "applied_v3_six_files_unchanged": true
+  },
+  "go_checks_recorded_at": "2026-10-23T23:19:20.4293866+00:00"
 }

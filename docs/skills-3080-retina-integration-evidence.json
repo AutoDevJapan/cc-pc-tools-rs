@@ -315,7 +315,7 @@
     "原の中央3対象の分類保留と647取得拒否を解除するものではない。guard/配布設定/junctionは未変更。",
     "今回の更新は既存の入口を保存した限定統合。全16資料の評価・個別許諾・実導入完了ではない。"
   ],
-  "recorded_at": "2026-10-23T21:43:58.8069249Z",
+  "recorded_at": "2026-10-23T23:19:20.4293866+00:00",
   "state_definitions": {
     "applied": "central six-file write completed",
     "explicit_use_check_pending": "installed-text use assessment has not yet been received and judged; false after3502 with retained parent corrections"
@@ -408,7 +408,13 @@
     "full_plan_text_diff_hunks": 5,
     "independent_review": false,
     "v3_static_cases_rejudged": false,
-    "recorded_at": "2026-10-23T21:46:32.4414931Z",
-    "diff_sha256_scope": "保存したgit diff(stdout UTF8)の指紋。headerはこの作業場所のpathを含み、移植可能な固定基準ではない。固定基準は計画SHAと各本文SHA/bytes。"
+    "diff_sha256_scope": "保存したgit diff(stdout UTF8)の指紋。headerはこの作業場所のpathを含み、移植可能な固定基準ではない。固定基準は計画SHAと各本文SHA/bytes。",
+    "declared_changes_cover_all_hunks": true,
+    "additional_change_summary": [
+      "GUIDEの来歴を、特定の初回草案を取得したという表現から完成版仕様は未確認という表現へ訂正",
+      "source.checked_byを保存済み観測の継承から公式文書の該当箇所を個別に読んだ記録へ訂正",
+      "source.adaptationsの句点後の空白1つを除去"
+    ],
+    "computed_at": "2026-10-23T21:46:32.4414931Z"
   }
 }

@@ -185,6 +185,14 @@ func TestDuplicateExclusionsKeepCanonicalAdoptionsAndSeparateLedgerRows(t *testi
 		Integrated int                 `json:"integrated"`
 	}
 	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
+	var progress struct {
+		Installed  int `json:"installed"`
+		Integrated int `json:"integrated"`
+	}
+	loadPublicReceipt(t, "skills-3080-progress.json", &progress)
+	if ledger.Installed != progress.Installed || ledger.Integrated != progress.Integrated {
+		t.Fatal("adoption rows differ from independently published progress counts")
+	}
 	if len(ledger.Entries) != ledger.Installed+ledger.Integrated || ledger.Count != 7 || len(decisions.Entries) != ledger.Count || !reflect.DeepEqual(decisions.Entries, ledger.Excluded) {
 		t.Fatal("exclusion receipt differs from ledger or was counted as an adoption")
 	}
@@ -259,7 +267,7 @@ func TestCoverageSeparatesCompleteSourcesMizchiAndAuthoredDrafts(t *testing.T) {
 		}
 		sum += n
 	}
-	if sum != 137 || len(p.Coverage.ByRepo) != p.Coverage.Repos || p.SkillRead != sum || p.Coverage.Paths != sum || p.Mizchi.Read != 76 || p.Mengto.Read < 92 || p.TotalRead != sum+p.Mizchi.Read+p.Mengto.Read {
+	if sum != 137 || len(p.Coverage.ByRepo) != p.Coverage.Repos || p.SkillRead != sum || p.Coverage.Paths != sum || p.Mizchi.Read != 76 || p.Mengto.Read < 127 || p.TotalRead != sum+p.Mizchi.Read+p.Mengto.Read {
 		t.Fatal("body read coverage does not conserve source paths")
 	}
 	var sql struct {

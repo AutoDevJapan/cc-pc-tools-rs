@@ -134,9 +134,9 @@ func TestUnlinkedProcessingIsNeverReportedAsNoWork(t *testing.T) {
 const host={innerHTML:'',contains:()=>false,querySelectorAll:()=>[],insertAdjacentHTML(_where,text){this.innerHTML+=text}},status={};
 const worker={id:'todo-1',task:'verified work',workState:'processing',references:{sessions:['verified']}},board={workforce:{processing:{state:'complete',observedAt:99,validUntil:200,verifiedCount:2,sessions:[{key:'verified',validUntil:200},{key:'unlinked',validUntil:200}]}},departments:[{products:[{name:'Product',workers:[worker]}]}]};
 const ctx={Date:{now:()=>100},opsList:x=>Array.isArray(x)?x:[],opsState:{snapshot:board,items:new Map()},opsTime:String,opsNumber:x=>typeof x==='number'?x:null,esc:String,opsProgress:()=>'',document:{activeElement:{}},$:s=>s==='#progress-jobs'?host:status};
-vm.createContext(ctx);vm.runInContext(between(input.index,'function processingRows(','function switchView('),ctx);ctx.renderProgress();assert.match(status.textContent,/実作業 2件/);assert.match(host.innerHTML,/verified work/);assert.match(host.innerHTML,/ほかに 1件/);
-worker.references.sessions=[];ctx.renderProgress();assert.match(host.innerHTML,/実作業は観測されています/);assert(!host.innerHTML.includes('実作業を確認したジョブはありません'));
-board.workforce.processing.verifiedCount=0;worker.workState='resource_wait';ctx.renderProgress();assert.match(host.innerHTML,/現在、実作業を確認したジョブはありません/);
+vm.createContext(ctx);vm.runInContext(between(input.index,'function processingRows(','function switchView('),ctx);ctx.renderProgress();assert.match(status.textContent,/稼働2件/);assert.match(host.innerHTML,/verified work/);assert.match(host.innerHTML,/ほかに 1件/);
+worker.references.sessions=[];ctx.renderProgress();assert.match(host.innerHTML,/処理中の担当がいます/);assert(!host.innerHTML.includes('実作業を確認したジョブはありません'));
+board.workforce.processing.verifiedCount=0;worker.workState='resource_wait';ctx.renderProgress();assert.match(host.innerHTML,/該当する処理はありません/);
 `)
 }
 

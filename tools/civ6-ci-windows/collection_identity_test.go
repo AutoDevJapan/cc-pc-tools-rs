@@ -31,7 +31,7 @@ func collectionReader(p Plan, state string, bad string, others bool) readAPI {
 				repo["owner"] = map[string]string{"login": "other"}
 			}
 			v = repo
-		case fmt.Sprintf("repos/%s/actions/runs/%d", repository, p.RunID):
+		case fmt.Sprintf("repos/%s/actions/runs/%d/attempts/%d", repository, p.RunID, p.Attempt):
 			run := map[string]any{"id": p.RunID, "run_attempt": p.Attempt, "head_sha": p.Head, "event": p.Event, "path": p.Workflow, "head_branch": p.Branch, "repository": repo, "head_repository": repo, "status": state}
 			switch bad {
 			case "run":
@@ -86,6 +86,24 @@ func collectionReader(p Plan, state string, bad string, others bool) readAPI {
 			return e
 		}
 		return json.Unmarshal(b, out)
+	}
+}
+
+func TestCollectionReadsTheOriginalAttemptAfterRunHasAdvanced(t *testing.T) {
+	p := fixturePlan()
+	read := collectionReader(p, "completed", "", true)
+	calls := 0
+	err := checkCollectionRemote(p, func(ep string, out any) error {
+		if ep == fmt.Sprintf("repos/%s/actions/runs/%d", repository, p.RunID) {
+			t.Fatal("mutable current attempt used for old collection")
+		}
+		if ep == fmt.Sprintf("repos/%s/actions/runs/%d/attempts/%d", repository, p.RunID, p.Attempt) {
+			calls++
+		}
+		return read(ep, out)
+	})
+	if err != nil || calls != 1 {
+		t.Fatalf("original attempt was not verified: %v, %d", err, calls)
 	}
 }
 

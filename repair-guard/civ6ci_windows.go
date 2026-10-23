@@ -77,7 +77,7 @@ func civ6Name(rel string) (directory, valid bool) {
 		}
 		if p[1] == "entries" && len(p) == 4 {
 			switch p[3] {
-			case "result.json", "plan.json", "admin-prepare.ps1", "admin-collect.ps1", "admin-collect-unstarted.ps1", "prepare.log", "execute.log", "stop.log", "collect.log", "collect-unstarted.log", "run.log":
+			case "result.json", "plan.json", "replacement-2.json", "admin-prepare.ps1", "admin-collect.ps1", "admin-collect-unstarted.ps1", "prepare.log", "execute.log", "stop.log", "collect.log", "collect-unstarted.log", "run.log":
 				return false, true
 			}
 			return false, civ6ResultTemp.MatchString(p[3])

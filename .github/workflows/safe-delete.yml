@@ -5,16 +5,19 @@ on:
     paths: ['safe-delete/**', '.github/workflows/safe-delete.yml']
   pull_request:
     paths: ['safe-delete/**', '.github/workflows/safe-delete.yml']
-# Superseded PR heads need no second verification; preserve every main run.
+# Cancel only superseded PR runs; source admission rejects obsolete main heads.
 concurrency:
   group: ${{ github.workflow }}-pr-head-v2-${{ github.event_name == 'pull_request' && github.run_attempt == 1 && github.event.pull_request.number || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
 permissions:
   contents: read
+  pull-requests: read
 jobs:
   native:
     if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
-    runs-on: [self-hosted, Windows, X64, cc-pc-tools-windows]
+    # Standard hosted Windows is free for this public repository. Private
+    # copies retain the existing isolated PC runner and its admission hook.
+    runs-on: ${{ github.event.repository.private == false && github.event.repository.visibility == 'public' && 'windows-latest' || fromJSON('["self-hosted","Windows","X64","cc-pc-tools-windows"]') }}
     timeout-minutes: 10
     defaults:
       run:
@@ -24,11 +27,31 @@ jobs:
         env:
           CI_JOB_TOKEN: ${{ github.token }}
         working-directory: ${{ runner.temp }}
-        if: runner.os == 'Windows'
+        if: runner.environment == 'self-hosted'
         shell: pwsh
         run: |
           & $env:PC_CI_ADMISSION admit
           exit $LASTEXITCODE
+      - name: Admit current public head before hosted checkout
+        if: runner.environment == 'github-hosted'
+        env:
+          CI_JOB_TOKEN: ${{ github.token }}
+          EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        working-directory: ${{ runner.temp }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference='Stop'
+          $sourceEvent=Get-Content -LiteralPath $env:GITHUB_EVENT_PATH -Raw|ConvertFrom-Json
+          if($sourceEvent.repository.private -ne $false -or $sourceEvent.repository.full_name -ne 'AutoDevJapan/cc-pc-tools-rs'){throw 'Hosted scope is not this public repository'}
+          $headers=@{Authorization=('Bearer '+$env:CI_JOB_TOKEN);Accept='application/vnd.github+json'}
+          if($env:GITHUB_EVENT_NAME -eq 'pull_request'){
+            $number=[int]$sourceEvent.pull_request.number
+            $current=Invoke-RestMethod -Uri "https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/pulls/$number" -Headers $headers
+            if($current.state -ne 'open' -or $current.head.repo.full_name -ne 'AutoDevJapan/cc-pc-tools-rs' -or $current.head.sha -ne $env:EXPECTED_HEAD){throw 'PR source is obsolete or outside this repository'}
+          }elseif($env:GITHUB_EVENT_NAME -eq 'push' -and $sourceEvent.ref -eq 'refs/heads/main'){
+            $current=Invoke-RestMethod -Uri 'https://api.github.com/repos/AutoDevJapan/cc-pc-tools-rs/branches/main' -Headers $headers
+            if($current.commit.sha -ne $env:EXPECTED_HEAD){throw 'Main source is obsolete'}
+          }else{throw 'Unsupported source event'}
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}

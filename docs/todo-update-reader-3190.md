@@ -89,20 +89,35 @@ callerからmanifest、hash、source、root、ToDo番号、許可ディレクト
    indexは末尾のchecksumを確かめ、packは先頭の件数と末尾のchecksumがindexの記録と一致する場合だけ使う。
    packの各entryは、そのままの形か、offset delta・名前を指すdeltaとして同じpackの中から組み立てる。
    組み立てはGitの `unpack_entry` と同じ順で行う。まずentryの見出しだけを基底までたどり、同じentryに戻る
-   循環と、深さの上限を超える連鎖は、何も展開せずに拒否する。次に基底を展開し、内側のdeltaから1つずつ展開して当てる。
+   循環と、深さの上限を超える連鎖は、何も展開せずに拒否する。前の読取で組み立ててcacheに残したobjectに着いたときも、
+   そのobjectの連鎖の深さを足して数える。次に基底を展開し、内側のdeltaから1つずつ展開して当てる。
    同時に持つのは、組み立て中のobject、delta 1つ、その結果だけである。どのobjectも、型と中身から計算したSHA-1の
    名前が求めた名前と一致する場合だけ使う。そのため、照合中に共有repoのobjectが増えたり、別のstoreを指す
    ファイルが一時的に置かれたりしても、readerが読む中身は変わらない。読取の量には上限を置く（次の節）。
    objectsで確かめるのは次の3つ。
    - 固定HEADのcommitのtreeが、固定treeと一致する。
-   - `refs/remotes/origin/main` のcommitから親をたどると、固定HEADに着く。`shallow` にあるcommitは、
-     Gitのshallow cloneと同じく親を持たないものとして扱う。読めない親があれば拒否する。
+   - `refs/remotes/origin/main` のcommitから届くcommitの中に、固定HEADがある。readerは固定HEADに着いた後も止まらず、
+     届くcommitを全部読む。Gitの `merge-base --is-ancestor` は、答える前に、`origin/main` から届いて固定HEADからは
+     届かないcommitを全部と、それぞれの親を読む（`commit-reach.c` の `paint_down_to_common`）。そのどこかに
+     Gitが読めないcommitがあれば、Gitは履歴を拒否する（終了コード128）。これは実物と同じくcommit-graphが無い場合で、
+     commit-graphがあれば、Gitが読むcommitはさらに少ない。readerが読む範囲はどちらの場合も含むので、readerも拒否する。
+     `shallow` にあるcommitは、Gitのshallow cloneと同じく親を持たないものとして扱い、その先は読まない。
+     読めない親があれば拒否する。
      commitはGitの `parse_commit_buffer` と同じに解析する。`tree <40桁>` と改行の後に1byte以上が要る。
      `parent ` で始まる行は、その後にこの行の長さ（48byte）を超えるbytesが続く場合だけ、
      `parent <40桁>` と改行の形の親として読む。Gitはそれより短い `parent ` の行を親として読まないので、
      readerはその形のcommitを拒否する。こうしてreaderが受け付けるcommitの親は、Gitが読む親と一致する。
    - 固定treeを再帰的にたどった一覧。`git ls-tree -r --full-tree` と同じく、通常ファイル・link・submoduleの
      entryを並べ、directoryは並べない。
+
+   Gitは、調べたobjectの名前ごとに型を1つだけ記録し、同じ名前を別の型として使うと拒否する（`object.c` の
+   `object_as_type`）。commitのtree行は名前をtreeとして、親の行は名前をcommitとして調べるので、1つの名前がtree行と
+   親の行の両方に現れる履歴などは、Gitが拒否する。readerも名前ごとに型を1つだけ持つ。読んだobjectの型と、
+   commitのtree行が指す名前のtree型を記録し、2つ目の型が付けば拒否する。親は、たどるときにcommitとして読むので、
+   そのとき型が付く。shallowの境界のcommitの親は、Gitが調べないので、readerも読まず、型も付けない。
+   正しいrepoでは名前ごとの型は1つなので、この確認が正しい履歴を拒否することはない。readerが読む範囲はGitより広い。
+   そのため、固定HEADの祖先のうちGitが読まずに済んだcommitが壊れていれば、Gitが受け付ける履歴でもreaderは拒否する。
+   広げたのは拒否する側だけである。
 
    Gitが設定・別のstore・作業ファイルを読むことはない。guardは1件ずつ分類するので、rootがclearでも、
    分類していないファイルは読まない。
@@ -131,16 +146,18 @@ callerからmanifest、hash、source、root、ToDo番号、許可ディレクト
 
 objectsを読む量にはprofileの `objectLimits` で上限を置き、超えれば `source_git` で拒否する。
 共有repoのobjectsが、メモリや読取の量を使い尽くす形に細工されていても、readerが使う量は上限の中に収まる。
-実物の必要量は、reader自身の数え方で、配布済みguardの分類を通して測った値である（計測用の一時的な版で1回）。
+実物の必要量は、reader自身の数え方で、配布済みguardの分類を通して測った値である（5回目の修正の後、
+計測用の一時的な版で1回。`origin/main` は `c6b5ceaa`）。readerは `origin/main` から届くcommitを全部読むので、
+commit数と読取byteは `origin/main` が進むと増える。どちらの上限も、実物の必要量の50倍以上ある。
 
 | 上限 | 値 | 実物の必要量 |
 | --- | --- | --- |
 | `objects/pack` の項目 | 4,096 | 20 |
 | indexとpackの組 | 64 | 6 |
 | indexの合計 | 256MiB | 529,584 bytes |
-| 読取byte | 512MiB | 982,328 bytes |
-| deltaの連鎖 | 4,095（Gitが書く最大） | 3 |
-| 祖先をたどって読むcommit | 65,536 | 45 |
+| 読取byte | 512MiB | 6,755,668 bytes |
+| deltaの連鎖（cacheに残したobjectの連鎖を含む） | 4,095（Gitが書く最大） | 3 |
+| `origin/main` から届いて読むcommit | 65,536 | 1,291 |
 | 固定treeの下のentry（directoryを含む） | 65,536 | 1,657 |
 | 一覧のパスの合計 | 16MiB | 53,698 bytes |
 
@@ -148,6 +165,7 @@ objectsを読む量にはprofileの `objectLimits` で上限を置き、超え�
 loose objectのファイルの大きさと展開後の大きさを数える。大きさは、そのbytesを確保する前に数える。
 中身の無いブロックで水増しした圧縮データも、読んだ分だけ数えるので上限で止まる。
 1つのobjectは16MiBまで、cacheに残す組み立て済みのobjectは合計64MiBまでで、これは以前と同じである。
+型を記録する名前の数は、読むcommit、そのtree行、固定treeの下のentryの上限で決まる。実物では2,663件だった。
 
 ## compiler closure の確認
 
@@ -192,8 +210,10 @@ linked worktree）、ファイル、receiptと、guardのCLI応答を模した�
 | Gitの設定と参照をreader自身がguardの分類後に読み、Gitと同じ意味に解釈する | `TestReadsGitMetadataItself`、`TestConfigParserAgreesWithGit`、`TestConfigParserRefusesWhatItDoesNotRead`、`TestPackedRefs`、`TestPackedRefsAsGitReadsThem` |
 | objectをGitと同じに読む（loose、pack、offset delta、名前を指すdelta、commit・tree・祖先） | `TestObjectStoreAgreesWithGit`、`TestQualifiesFromPacks` |
 | commitの親をGitと同じに読む。Gitが親として読まない `parent ` の行と、Gitが拒否する形を拒否する | `TestParseCommitAgreesWithGit`、`TestRefusesParentsGitDoesNotRead` |
+| 1つの名前に2つの型を付ける履歴を、Gitと同じく拒否する | `TestRefusesNamesOfTwoTypes` |
+| 固定HEADに着いた後も、Gitの `merge-base` が読むcommitを読み、Gitが拒否する履歴を拒否する。正しい側枝は受け付ける | `TestReadsEveryCommitGitReads` |
 | `objects/pack` を固定したhandleから列挙し、差し替えたjunctionの先を列挙・分類・読取しない | `TestListsOnlyThePinnedPackDirectory` |
-| deltaの循環を何も展開せずに拒否し、連鎖の深さ・読取byte・packの数・項目数・indexの合計・commit数・treeのentry数・パスの合計に上限を置く | `TestDeltaCyclesInflateNothing`、`TestDeltaDepthLimit`、`TestReadLimitCountsEveryByte`、`TestReadLimit`、`TestObjectLimits` |
+| deltaの循環を何も展開せずに拒否し、連鎖の深さ（cacheに残したobjectの連鎖を含む）・読取byte・packの数・項目数・indexの合計・commit数・treeのentry数・パスの合計に上限を置く | `TestDeltaCyclesInflateNothing`、`TestDeltaDepthLimit`、`TestDeltaDepthCountsKeptBases`、`TestReadLimitCountsEveryByte`、`TestReadLimit`、`TestObjectLimits` |
 | 壊れたobject・別のobject・保護されたobjectのファイルを拒否する | `TestRejectsDamagedObjects`、`TestApplyDeltaRefusesMalformedDeltas` |
 | 入力のbytesが固定treeのblob（そのままか、LFをすべてCRLFにした形）である | `TestInputsMustBeTheCommittedBytes`、`TestCheckedOutForms` |
 | 実物の固定値 | `TestProductionProfileBindsOneFixedUpdate` |
@@ -370,6 +390,47 @@ SuggestionとNitはない。
 - 途中、Greenの全体の実行が487秒かかった。同じ時間帯に同じテストをRedの本体とGreenで交互に2回ずつ動かすと、
   Greenは37〜41秒、Redは42〜47秒で、遅れはPCの混雑によるものだった。最終の実行は195秒である。
 
+### 別モデルの再レビュー（ToDo3531）
+
+gpt-6.1-sol・推論max（job `20261024-074948-todo-3531`、5分42秒、終了コード0）が、base `206181d4`・head `b3c0b718` の
+変更10ファイルを差分と全文で読んだ。レビュー担当はテスト・ビルド・CIを実行していない。前回のMust 3件のうち、
+`objects/pack` の列挙とdeltaの組み立ては解消、commitの解析は「一部解消」と判定された。新たな指摘は Must 1件と
+Suggestion 1件で、どちらもコードとGitの一次資料からの判断であり、再現テストは伴わない。Nitはない。
+
+- Must: commitが指す名前の型の食い違いを確かめていない。`tree <固定HEAD>` と `parent <固定HEAD>` のcommitを
+  正しい名前で置いて `origin/main` にすると、readerは固定HEADに着いて資格を出す。Gitは固定HEADをtreeとcommitの
+  両方としては扱えないので拒否する（`commit.c` のcommitの解析、`object.c` の型の照合）。
+- Suggestion: cacheに当たるとたどるのをやめるので、深さの上限は展開していない部分にしか効かない。上限1でも、
+  深さ1のobjectを先にcacheへ入れると、それを基底にする深さ2のobjectを受け付ける。
+
+### 5回目のMustの修正
+
+Mustを直し、同じ種類の食い違いも合わせて直した。Suggestionも直した（検証の順序の5、objectsの読取の上限）。
+
+- Gitと同じく、名前ごとに型を1つだけ持つ。読んだobjectの型と、tree行が指す名前のtree型を記録し、2つ目の型が
+  付けば拒否する。
+- Gitの `merge-base` は、固定HEADに着いた後も、`origin/main` から届いて固定HEADから届かないcommitを全部読む。
+  これまでのreaderは固定HEADに着くと止まったので、その先にあるGitが読めないcommitや、型の食い違うcommitを
+  見逃していた。readerは `origin/main` から届くcommitを全部読むようにした。たどる順序に頼らないので、
+  commitの日時は読まない。
+- cacheに残すobjectに、その連鎖の深さを持たせる。cacheに当たった場合も、連鎖全体の深さで上限を確かめる。
+
+結果は次のとおり。
+
+- Red（commit `edbf9629`）: 新しい3つのテストを `go test -race -count=1` で実行し、終了コード1、14秒。失敗はすべて
+  意図した理由による。Gitの `merge-base --is-ancestor` が終了コード128で拒否する6つの履歴で、readerは資格を出した。
+  指摘の形（tree行と親の行が固定HEADを指す）、tree行と親の行が同じcommitを指す形、固定HEADより古い側枝の先に
+  無いcommitがある形、側枝の先でtree行が固定HEADを指す形である。側枝の2つは、合流commitの親の並びを2通りにした。
+  上限1で、cacheに残った深さ1のdeltaを基底にする深さ2の連鎖を読んだ。親の行が固定treeを指す履歴は既に拒否されていた。
+  正しい側枝は、両方の並びでGitが終了コード0を返し、readerも資格を出した。data race・panic・ビルド失敗は0。
+- Green（commit `c2ff8584`）: `go test -race -count=1 ./...` は終了コード0、268秒（変異テストと同時に実行）。
+  上位43件、subtest込み226件が合格し、失敗0・skip 0・data race 0。`go vet ./...` とgofmtも差分なし。
+- 照合の要所を壊した34の版を `go test -overlay` で当て、すべて対応するテストが失敗した。新しい10の版は、
+  固定HEADで止まる、最初の親だけをたどる、tree行の型を記録しない、読んだobjectの型を記録しない、型の食い違いを許す、
+  tree行をcommit型として記録する、cacheの深さを足さない、cacheの深さを0として残す、深さの比較を1つずらす、
+  shallowの境界の親をたどる、である。固定HEADで止まる版は、側枝を先に挙げた合流でだけ検出された。
+  親の並びを2通りにしたのはこのためである。前の24の版は、新しいコードに合わせて当て直し、すべて検出された。
+
 ### 実物への事前の観測（merge前）
 
 最初の実装から生成した検査用readerで、実物に対して1回照合した。終了コード0、9.6秒で、
@@ -395,6 +456,10 @@ source `0e16e817…` / tree `31d45a74…`、receipt `20345f44…087c`、入力12
 でも実物を1回照合した。終了コード0、15.0秒で、同じ固定値の `qualified:true`（入力126件・dep-info 116件・crate 8件、
 `data_access_granted:false`）を返した。`objects/pack` は固定したhandleから列挙し、読取の量は上限の中に収まった。
 
+5回目の修正のcommit `c2ff8584` から `go build -trimpath` で生成したreader（SHA256 `341d866a…9bec`、vcs.modified=false）
+でも実物を1回照合した。終了コード0、15.2秒で、同じ固定値の `qualified:true`（入力126件・dep-info 116件・crate 8件、
+`data_access_granted:false`）を返した。`origin/main`（`c6b5ceaa`）から届く1,291件のcommitを全部読み、拒否はなかった。
+
 いずれもmerge前のsourceによる観測で、最終の結果はmerge後のsourceから生成したreaderで取り直す。
 対象の置換、guardの変更、ToDoの状態変更はしていない。
 
@@ -408,5 +473,6 @@ SHA256 `d4392e63…0718`、同じサイズと更新時刻で、`target/release/d
 1回目の修正のhead `308cb24d` でも、専用workflow（windows、run 40002129622）とCodeQL（run 40002129620）が成功した。
 2回目の修正のhead `8b4f34b9` でも、専用workflow（windows、run 40015024286）とCodeQL（run 40015024382）が成功した。
 3回目の修正のhead `206181d4` でも、専用workflow（windows、run 40025021344）とCodeQL（run 40025021288）が成功した。
-4回目の修正後のheadの正式CI、修正の別モデル再レビュー、通常merge、merge後のsourceから生成したreaderによる
+4回目の修正のhead `b3c0b718` でも、専用workflow（windows、run 40034507365）とCodeQL（run 40034507248）が成功した。
+5回目の修正後のheadの正式CI、修正の別モデル再レビュー、通常merge、merge後のsourceから生成したreaderによる
 実物の照合、親3190への結果の返却が残る。

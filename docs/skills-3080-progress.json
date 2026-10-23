@@ -1,7 +1,7 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-23T03:08:37.8811343Z",
+  "observed_at": "2026-10-23T03:23:49.8750553Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
   "phase_b": "3368のMust1はSQL草案の未受入表示を補正中。CI実統合の限定改善と一次資料訂正、新17入口の評価を保存。全16資料の残候補を継続。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
@@ -391,7 +391,7 @@
     },
     "limits": "91 source paths across7repos;AIS12 has7distinct full texts and5exacthash mirror paths;Tencent includes guides/stub.Not91independentadoptions;all support/inventory semantic review incomplete."
   },
-  "independent_acceptance_scope": "28新規とlinkv2の過去限定受入を保持。CI既存統合1のv2は3378Must0/同HEAD自動テスト成功/PR381mergeで親が限定受入。SQL2は3368本文と3378表示を分けて同一内容を限定受入。新10評価は未レビュー、許諾/配置/実ターンは別。旧配置のdiagnosing-bugs1件の後続別改訂も別証拠を保持。",
+  "independent_acceptance_scope": "28新規とlinkv2の過去限定受入を保持。CI既存統合1のv2は3378Must0/同HEAD自動テスト成功/PR381mergeで親が限定受入。SQL2は3368本文と3378表示を分けて同一内容を限定受入。新22評価は未レビュー、許諾/配置/実ターンは別。旧配置のdiagnosing-bugs1件の後続別改訂も別証拠を保持。",
   "total_skill_named_body_read": 91,
   "obra_entrypoint_assessment": {
     "expected": 15,
@@ -406,7 +406,7 @@
     "diagnostic_workflow_blob_count": 20
   },
   "current_guidance_delta_pending": 0,
-  "current_guidance_delta_pending_definition": "実CI v2差分は3378Must0と同HEADのCI成功後、親が限定受入/PR381通常merge済み。SQL2は3368本文/3378表示を分けて同じ内容を限定受入したが、未配置/許諾/支持/実適用は未完。新10評価は別の未レビュー差分。",
+  "current_guidance_delta_pending_definition": "実CI v2差分は3378Must0と同HEADのCI成功後、親が限定受入/PR381通常merge済み。SQL2は3368本文/3378表示を分けて同じ内容を限定受入したが、未配置/許諾/支持/実適用は未完。新22評価は別の未レビュー差分。",
   "ais_entrypoint_evaluation": {
     "source_paths": 12,
     "unique_contents": 7,
@@ -422,16 +422,16 @@
   },
   "mizchi_partial_entrypoint_evaluation": {
     "expected": 76,
-    "full_body_read": 45,
-    "unread": 31,
+    "full_body_read": 57,
+    "unread": 19,
     "complete": false,
     "installed": 0,
     "integrated": 1,
     "excluded": 0,
     "source": "skills-3080-mizchi-partial-evaluation.json"
   },
-  "all_fulltext_primary_paths_including_partial_sources": 136,
-  "primary_coverage_definition": "7資料91入口+部分mizchi45=136sourcepaths。mizchi残31未読。AIS mirror/Tencent guideとecho fixtureを含み136独立Skillではない。",
+  "all_fulltext_primary_paths_including_partial_sources": 148,
+  "primary_coverage_definition": "7資料91入口+部分mizchi57=148sourcepaths。mizchi残19未読、AIS mirror/Tencent guideとecho fixtureを含み148独立Skillではない。",
   "external_revisions": {
     "count": 1,
     "target": "diagnosing-bugs",
@@ -472,12 +472,26 @@
   },
   "assessment_delta_pending": {
     "source": "mizchi/skills",
-    "new_fulltext_entrypoints": 10,
-    "new_readme_fulltexts": 9,
+    "new_fulltext_entrypoints": 22,
+    "new_readme_fulltexts": 21,
     "path_roster_and_review_identity_tests": true,
     "installed": 0,
     "integrated": 0,
     "excluded": 0,
-    "review_pending": true
+    "review_pending": true,
+    "fixed_scope_reviews": [
+      {
+        "todo": 3417,
+        "head": "f76520645b2083849a549be101a00fc6b645096a",
+        "scope": "最初の新10とレビュー版照合テスト",
+        "state": "registered_not_accepted"
+      },
+      {
+        "todo": null,
+        "head": null,
+        "scope": "後続の新12候補と一次資料照合",
+        "state": "registration_pending"
+      }
+    ]
   }
 }

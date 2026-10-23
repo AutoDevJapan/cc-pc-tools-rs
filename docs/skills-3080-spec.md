@@ -142,4 +142,8 @@ Skill管理/評価関連10入口とREADME9を保存済みgzipから全文/SHA確
 
 [全76パスの固定索引](skills-3080-mizchi-fixed-entrypoints.json)と、順序を固定したUTF-8/LFのSHA-256を別に保存する。Goテストは読了/未読の合計だけでなく、この完全集合とprogressの45/31/136も照合する。同件数のパス取り違えを負例で検出する。SQLの版照合は記述/例/出典の変更を検出し、reviewやinstalled等の運用metadataの追記では指紋を変えない。欠落receipt・未解消Must・残る確認・不正なtodo/head/SHA・本文の別版を受入済みにする反例も確認する。
 
+続いて形式手法・用語・協働・技術記事・OpenTelemetry・運用関連12入口とREADME12を全読/SHA確認した。部分評価は57/76、残19、全primary148pathとなる。新22候補は未導入/未統合/未除外。形式モデルの緑を実装の証明にせず、反例の実装再現と採用済み仕様を保つ手順に追加価値がある。上流の数値基準・本人への技術確認待ち・直接子起動を本PCへ移さない。
+
+[一次資料の照合](skills-3080-mizchi-engineering-primary-checks.json)ではOpenTelemetryの親context引数とgetter、ESM loader対応、D1のBigInt非対応/安全整数範囲、dotenvxの既存環境優先とoverload時の後勝ちを区別した。同期callbackがPromiseをreturnする例では、finallyのspan.endが非同期処理より先になる可能性を親の推論として記録する。未読のscriptを修正済み/実行済みとしない。Justのdry-runでもbacktickを実行するという親の初期懸念は、公式の現行実装が式文字列を返すと確認できたため撤回した。全候補の許諾・支持資料・既存本文との比較は引き続き必要。
+
 部分評価の集合・固定commit・live採用台帳の対応をGoで検査する。失われた未読path、確認済みとの重複、重複ID、根拠の無い統合、source SHA不一致、未解消/欠落reviewをfalseの待機表示で閉じる変異を検出する。意味や許諾の承認ではない。導入28/統合1/除外0/未判定保留73191は不変で、全16資料の継続を保持する。

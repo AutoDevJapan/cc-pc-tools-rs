@@ -1,0 +1,54 @@
+{
+  "todo": 3080,
+  "observed_at": "2026-10-23T03:23:49.8750553Z",
+  "source_commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+  "new_entrypoints": 12,
+  "readme_fulltexts": 12,
+  "claims": [
+    {
+      "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-js/main/api/src/trace/tracer.ts",
+      "finding": "startActiveSpanのcontextは独立引数。callbackがendを呼ぶ責務。return Promiseの同期finallyは非同期完了を待たないという点は言語の意味から親が推論。"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/open-telemetry/opentelemetry-js/main/api/src/propagation/TextMapPropagator.ts",
+      "finding": "default getterはcarrier[key]/Object.keysであり、Fetch Headersにはget/keysを合わせる必要があるという推論。"
+    },
+    {
+      "url": "https://opentelemetry.io/docs/languages/js/libraries/",
+      "finding": "公式はESM loader hookを案内。全ESM計装非対応という一般化を採らない。"
+    },
+    {
+      "url": "https://developers.cloudflare.com/d1/worker-api/",
+      "finding": "BigInt API非対応、JavaScript integerはMAX_SAFE_INTEGERまで。範囲外のInt64を無条件Numberへ変える安全性は保証されない。"
+    },
+    {
+      "url": "https://developers.cloudflare.com/d1/worker-api/prepared-statements/",
+      "finding": "?NNNと?の番号付けを照合。sqlc-generator固有のhang/1101を実証した記録ではない。"
+    },
+    {
+      "url": "https://dotenvx.com/docs/cli/run-environment-variable-precedence/",
+      "finding": "既存環境が.envより優先。"
+    },
+    {
+      "url": "https://dotenvx.com/docs/cli/run-overload/",
+      "finding": "後のfileが勝つ説明は--overloadに対応。rotate CLIは旧検索結果と現404を区別し未確定。"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/casey/just/master/src/evaluator.rs",
+      "finding": "現行公式evaluate_value Backtickはconfig.dry_run時に式文字列を返す。dry-runでもbacktickを実行し得るとした親の初期推測を訂正。対象CLI実版やdotenv-command等の他経路の実機確認とは別。"
+    }
+  ],
+  "limits": [
+    "公式ページ/現行upstream sourceを観測時点で照合したもの。固定mizchi版のコードを実行した証拠ではない。",
+    "本文上のAPI不整合と親の推論を分け、HTTP Headersの型/非同期完了/数値精度を適用前に対象版で確認する。",
+    "Just dry-runのbacktick懸念は公式実装で反証され訂正。dotenvx rotation CLIの有無は実版未確定。",
+    "D1のBigInt非対応は全Worker1101の原因を証明しない。ESM loader対応はすべてのbundler組合せの動作保証ではない。"
+  ],
+  "source_scripts_executed": false,
+  "secrets_read": false,
+  "remote_config_changed": false,
+  "installed": 0,
+  "integrated": 0,
+  "excluded": 0,
+  "review_pending": true
+}

@@ -6,11 +6,11 @@
   "tree_complete": true,
   "tree_entries": 996,
   "entrypoints_expected": 76,
-  "entrypoints_unread": 31,
+  "entrypoints_unread": 19,
   "classification_is_not_installation": true,
   "assessment_snapshot_before_adoption": false,
   "live_dispositions": "skills-3080-adoptions.json",
-  "scope": "全76中45入口を全文確認。既確認35にSkill管理/評価関連10を追加。残31の原pathを保持し、全16資料の範囲や件数上限を変えない。",
+  "scope": "全76中57入口を全文確認。既確認45に形式手法/用語/協働/記事/監視/運用関連12を追加。残19を原pathで継続し、件数上限や全体完了にしない。",
   "previous3048": "同じ固定版のREADMEとdep-lib-review代表本文のみ。今回の全文確認は別に記録し、前回の代表確認を76件の監査へ広げない。",
   "source_readme": {
     "path": "README.md",
@@ -4837,6 +4837,881 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:c3c1612c465df67377d0493e3a58c849a981292c3dfd228eb136c0c1bdae68b2",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "formal-methods-drift-guard/SKILL.md",
+      "name": "formal-methods-drift-guard",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/formal-methods-drift-guard/SKILL.md",
+      "source_sha256": "1400919493f904aeb0e7cd595571944688f41856364a4f5bf2ff757345ff2eba",
+      "retrieved_at": "2026-10-20T08:41:08.8077712Z",
+      "bytes": 8701,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-23T03:21:16.3768634Z",
+      "candidate_disposition": "possible_formal_model_maintenance_workflow",
+      "reason": "仕様・実装・モデル・harnessのどこが変わったかを分け、性質を弱めず反例/対象版/実行結果を残す継続手順。",
+      "compare_metadata": [
+        "domain-modeling",
+        "test-quality",
+        "spec-atdd-tdd-issue-workflow"
+      ],
+      "required_changes": "技術的な抽象化/通常修正を毎回本人の判断待ちへしない。既存の本人回答と採用済み仕様を正本にし、未指定の製品要件だけを質問する。モデル上のSAT/UNSATやログの観測を実装の証明へ広げず、solverの版/範囲/停止/結果parse失敗を区別する。新しいsolver/script起動は別工程。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "formal-methods-drift-guard/README.md",
+          "bytes": 1597,
+          "git_blob": "092462dcf997693c61fd6404ead695a2904871be",
+          "body_saved": true,
+          "source_sha256": "f7a750045ba462cd68300a54f58d556402c0d7e282e980c7ed96681c62db7850",
+          "body_read": true,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/SKILL-ja.md",
+          "bytes": 9747,
+          "git_blob": "045429beee4321d468e63f0b72423337aa8d1dfc",
+          "body_saved": true,
+          "source_sha256": "0ca62f9c6918cc9b4c2cae18d9342e870123d4153a51f067b173574fe0ac57b5",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/agents/openai.yaml",
+          "bytes": 296,
+          "git_blob": "ed0402e137264bf24a1b7af08b4b49f1452d5938",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/evals/eval.yaml",
+          "bytes": 1717,
+          "git_blob": "1c55216b264a0cd082f406be48cc1c28e876f469",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/evals/fixtures/harness-drift/ci-new.log",
+          "bytes": 93,
+          "git_blob": "cce3e726fb76f77d5456a024da2c03eafc4b6ab7",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/evals/fixtures/harness-drift/ci-old.log",
+          "bytes": 91,
+          "git_blob": "2adf47671babc485fc85e6034ace59303b509501",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/evals/fixtures/harness-drift/model.txt",
+          "bytes": 58,
+          "git_blob": "5dd96e880cdb7cf1ff373fcc494191bdb18dee8e",
+          "body_saved": true,
+          "source_sha256": "f174406661565281bb102ada795b514f6680922451064af8a7cb7890e16a3b97",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/evals/fixtures/harness-drift/parser.txt",
+          "bytes": 153,
+          "git_blob": "7e57f2f86c576a4a3f521ff27cc0aa86cc6ab174",
+          "body_saved": true,
+          "source_sha256": "1a13af5c40a447540275d5362916b2b0ae036cc0ec519a28f58e987450051114",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/evals/fixtures/harness-drift/spec.md",
+          "bytes": 151,
+          "git_blob": "a33a84d1181b0ffb5c1dafc2fcb6c79a6e199603",
+          "body_saved": true,
+          "source_sha256": "2da9ea631564077d19671646ee58392853998340d4d6f1fd72477f06a1f040fc",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/evals/fixtures/incident-trace/docs.md",
+          "bytes": 170,
+          "git_blob": "37355d5b9b41af6fa93f2941edc386b1cd42f949",
+          "body_saved": true,
+          "source_sha256": "e4f725f51d1b6e361030fae99971f24ff1463c51f4511fbc70f66c955a49dc39",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/evals/fixtures/incident-trace/incident-trace.log",
+          "bytes": 325,
+          "git_blob": "d48364bddf503203dff0a0a4e7db0c426370deb0",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/evals/fixtures/incident-trace/model.p",
+          "bytes": 105,
+          "git_blob": "70b154acaa44cffd32a700e735a344a569427f25",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/evals/fixtures/incident-trace/previous-ci.log",
+          "bytes": 62,
+          "git_blob": "d92d09eab9f23814ab21e36a357e31c371de46ca",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/evals/holdout.yaml",
+          "bytes": 1620,
+          "git_blob": "483c7758dea8eb0fb9b5a49fd246a8b4bb9ecfbe",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/evals/holdouts/scenario-c-harness-drift-fixture.yaml",
+          "bytes": 3951,
+          "git_blob": "823a4e8d562695e5da2607fd7a516df0d5ccb939",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/evals/holdouts/scenario-d-incident-trace-fixture.yaml",
+          "bytes": 4366,
+          "git_blob": "0d9619e71693e04f3ee6461c396a6787766bfa24",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/evals/ledger.yaml",
+          "bytes": 7400,
+          "git_blob": "b47b3046b1d3d12abfbaf9a58ce0a2e03ff38e72",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/evals/tasks/scenario-a-authz-spec-drift.yaml",
+          "bytes": 3706,
+          "git_blob": "f8ae1013633fd260634ba7eb0be7f9bd851d8750",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/evals/tasks/scenario-b-config-code-drift.yaml",
+          "bytes": 3443,
+          "git_blob": "211a78fc96076d5d3505846d306306e2489a47fb",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-drift-guard/references/drift-ledger.md",
+          "bytes": 3944,
+          "git_blob": "7d057f5173c493c726b76d5586c4fe0174ff92de",
+          "body_saved": true,
+          "source_sha256": "130bc2129c316bec619b23ffc141f6c9fb24117db1b4a232e8331dd3df747652",
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。この12配下に個別notice無し。README12は全文/SHA確認し追加のnotice無し。補助/第三者credit/取込み範囲は未完で一括除外や許諾完了としない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:01f196f1d23d113931fd9f71e538607b88027ed81f94d6c271c074f85eb0d580",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "formal-methods-reconciler/SKILL.md",
+      "name": "formal-methods-reconciler",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/formal-methods-reconciler/SKILL.md",
+      "source_sha256": "697a2ada4d17267c65dce62481c737e127a87aac801c8866a4b997a668810b54",
+      "retrieved_at": "2026-10-20T08:41:08.8129975Z",
+      "bytes": 7659,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-23T03:21:16.3768634Z",
+      "candidate_disposition": "possible_new_formal_reconciliation_workflow",
+      "reason": "受入条件を小さな形式モデルにし、反例を実装の再現テストへ落とす手順。domain-modelingは用語/境界のmetadataで、形式モデルの選択・実行・反例再現とは別の追加価値候補。",
+      "compare_metadata": [
+        "domain-modeling",
+        "test-quality",
+        "deterministic-concurrency-tests"
+      ],
+      "required_changes": "docs/codeの矛盾だけで通常修復を止めず、採用済み仕様/本人指示を調査する。Z3で時間を扱えない等の断定やtool一覧を普遍的制限にしない。モデルの仮定を実DB/lock/retryと照合し、実装不一致を必ずモデルバグと決めず両側を調べる。新規コードはGo既定/対象製品の言語を保持。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "formal-methods-reconciler/README.md",
+          "bytes": 1591,
+          "git_blob": "6cbc195324549bf78266b1deecd805162faa00c2",
+          "body_saved": true,
+          "source_sha256": "2d6f5bb44b4888fdc8bc517c1b0fb80efe8824263c33de6e0f161a11cb56a3ef",
+          "body_read": true,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-reconciler/SKILL-ja.md",
+          "bytes": 9067,
+          "git_blob": "da51ec924c1b3d6f5502ec6479b542c06a2e63f1",
+          "body_saved": true,
+          "source_sha256": "5aa924d029366a10ddbbefbe909fc8ef1dc118956b3ff38e9bfe5362a508feeb",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-reconciler/agents/openai.yaml",
+          "bytes": 309,
+          "git_blob": "f2987d4fcd7232d424b8f0d4cd69838a0ed3ee9b",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-reconciler/evals/eval.yaml",
+          "bytes": 1914,
+          "git_blob": "4130601fcd9a32dca51cbdf76cf153684d42eccd",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-reconciler/evals/ledger.yaml",
+          "bytes": 5457,
+          "git_blob": "7badbfc035e8fdc6e3654d2c11c819ff00a99a8f",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-reconciler/evals/tasks/scenario-a-config-z3.yaml",
+          "bytes": 3816,
+          "git_blob": "bac04a6bc7a448af64b5a35cb76ab8c44a9c6298",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-reconciler/evals/tasks/scenario-b-authz-alloy.yaml",
+          "bytes": 3847,
+          "git_blob": "c6ca3b143522541a166eccfc5b5af42ea9ccc358",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-reconciler/evals/tasks/scenario-c-async-tla-p.yaml",
+          "bytes": 3913,
+          "git_blob": "b10514df196c8bbafe54e848b25050329cf73b1e",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-reconciler/references/domain-ledger.md",
+          "bytes": 2962,
+          "git_blob": "a46bca06ef7f81e145c5755246b3f80301198656",
+          "body_saved": true,
+          "source_sha256": "01056d6d17d77a34a9c1ef3764761930d0b2d39230ad760bc57667cb0e0a38cf",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-reconciler/references/reference-implementations.md",
+          "bytes": 4235,
+          "git_blob": "8c59671ae011f05bdc3045d6145baaac4d42e8ec",
+          "body_saved": true,
+          "source_sha256": "2b9fa742da0fc9137851304fa4cd9f7eda907753cfbfcece03c24cef7afa4027",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-reconciler/references/research-patterns.md",
+          "bytes": 3214,
+          "git_blob": "c3bfa0eda3162f354092fcb6e173c41bd4d9bd2e",
+          "body_saved": true,
+          "source_sha256": "4e97380e0a30d59ce203cb38d8939798da5b97fb661f2c01a994f9a29a1de6be",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "formal-methods-reconciler/references/tool-selection.md",
+          "bytes": 3221,
+          "git_blob": "1e9480c591bfcfd919203bfc1a0137ad2bea291f",
+          "body_saved": true,
+          "source_sha256": "54058f6a96132357dc96576f15954affe37031427a0a6a1f4eeb2a6aa1fe24a9",
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。この12配下に個別notice無し。README12は全文/SHA確認し追加のnotice無し。補助/第三者credit/取込み範囲は未完で一括除外や許諾完了としない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:cbf2aeb41f3c978c539f4b546b67fb30ae2b8c7de6b4042b246e4f2ece87a705",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "extract-glossary/SKILL.md",
+      "name": "extract-glossary",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/extract-glossary/SKILL.md",
+      "source_sha256": "4fc93b67c0ade44bc194b7522de29c7ede6608d8de96f3dbd435b5578e7e7a0a",
+      "retrieved_at": "2026-10-20T08:41:08.8013905Z",
+      "bytes": 8864,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-23T03:21:16.3768634Z",
+      "candidate_disposition": "integration_candidate_pending_support_and_rights",
+      "reason": "用語の業界/ドメイン/組織/実装の区分、repo責務、固定URLと確度を分けたオンボーディング資料の作成をdomain-modelingへ比較する。",
+      "compare_metadata": [
+        "domain-modeling",
+        "documents-slides-data"
+      ],
+      "required_changes": "指定外Orgや保護対象を一括探索せず、実ownerとguard/元の対象を確認。非公開内容を公開URLがあるだけで転載しない。SkillはD中央へ置き、repo/.claude/skillsへ作らない。sourceの10node/15edgeを固定上限にせず、図の作成がUI変更の画像承認を代替しない。入力曖昧性は既存指示と根拠で解き、通常のcommit/PRは元の承認範囲で進める。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "extract-glossary/README.md",
+          "bytes": 1608,
+          "git_blob": "73ae970631703badda4317af4c601f8582dc6e66",
+          "body_saved": true,
+          "source_sha256": "6df603eb3f95b71a2ee825931259beb1dd652e042539b12fd2d06b38e90361b7",
+          "body_read": true,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。この12配下に個別notice無し。README12は全文/SHA確認し追加のnotice無し。補助/第三者credit/取込み範囲は未完で一括除外や許諾完了としない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:50131ecbbad137be7c2eba0675c9f7c400cdb7606af2799b6251cbc9c3e7ee30",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "multi-agent-orchestration/SKILL.md",
+      "name": "multi-agent-orchestration",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/multi-agent-orchestration/SKILL.md",
+      "source_sha256": "bff5bf25419f4ae27d916937e68a20c3fa5da74c778b30eb39a1d32b8eaacbe3",
+      "retrieved_at": "2026-10-20T08:41:08.8901163Z",
+      "bytes": 7481,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-23T03:21:16.3768634Z",
+      "candidate_disposition": "integration_candidate_pending_support_and_rights",
+      "reason": "独立証拠とwrite-scope/固定contract/依存を見て並行化を判断し、同モデルpersonaの票を独立レビューとしない手順をagent-system-designへ比較する。",
+      "compare_metadata": [
+        "agent-system-design",
+        "ai-workflow",
+        "subagent-review"
+      ],
+      "required_changes": "直接子ジョブを起動せず正規共有ToDoのspec/subworkと割当資源を使う。1/2〜4/10+等の上流目安を運用枠へしない。論文の+80.8%/-70%/15倍等は上流自己申告で未一次照合、現在PCの実績としない。parentが実作業/検証/結果受領の責任を持ち、再委譲だけへ変わらない。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "multi-agent-orchestration/README.md",
+          "bytes": 1449,
+          "git_blob": "400229931ca2ea9b4722749b55587c87a023ff68",
+          "body_saved": true,
+          "source_sha256": "d0d0b7519e46c464302449ca071bf794ccc20d74e8f5904f177c303156068f86",
+          "body_read": true,
+          "executed": false
+        },
+        {
+          "path": "multi-agent-orchestration/SKILL-ja.md",
+          "bytes": 8899,
+          "git_blob": "c2900e25a64cfda6361dea573b990d5b30599cd1",
+          "body_saved": true,
+          "source_sha256": "d38570a5680ed69bb0b6949bbc44abcbc94eb9de860a17412ea588f41cff1a5d",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "multi-agent-orchestration/references/flue.md",
+          "bytes": 7530,
+          "git_blob": "d96939ce018bdb892ebbe92076031c1688e32338",
+          "body_saved": true,
+          "source_sha256": "7d853ba41cc767492019ca2f5c6078e6c3acad7a55db1f81c01da8aa0d9fb4ee",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "multi-agent-orchestration/references/sources.md",
+          "bytes": 3906,
+          "git_blob": "04953018541ec774d50d536fa7d6055c35ab06fb",
+          "body_saved": true,
+          "source_sha256": "7e5f0f0f3e7ed6dad257e5a6390da87bd0c44d9f4c93d70035deea29b1fcdc9a",
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。この12配下に個別notice無し。README12は全文/SHA確認し追加のnotice無し。補助/第三者credit/取込み範囲は未完で一括除外や許諾完了としない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:00632081125d36d46714bf0195fbbd44e39d40b62941af1adbc4758363e2c539",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "tech-article-reproducibility/SKILL.md",
+      "name": "tech-article-reproducibility",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/tech-article-reproducibility/SKILL.md",
+      "source_sha256": "206cd1cc6045af339855f348061bd4f8b27c9118e596e989c37f6c501aa8a37f",
+      "retrieved_at": "2026-10-20T08:41:08.9741963Z",
+      "bytes": 5539,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-23T03:21:16.3768634Z",
+      "candidate_disposition": "integration_candidate_pending_support_and_rights",
+      "reason": "技術記事の環境/版/最小コード/config/実出力/リンク/隠れた前提を、初見の読者が再現できるかという軸で比較する手順候補。",
+      "compare_metadata": [
+        "evidence-based-text-review",
+        "knowledge-to-skills",
+        "source-grounded-content-review"
+      ],
+      "required_changes": "テンプレートは想像して採点する内容なので実再現の証拠ではない。20点や主観的成功率を配布/実行成功へ変えない。匿名化/秘密保護/版固定を保ち、未読記事のシェルや外部送信を自動実行しない。独立した再現は正規ToDo/既存OAuthへ。公開リンク必須を私的資料の無断公開へ広げず、既存の非公開対象は保持。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "tech-article-reproducibility/README.md",
+          "bytes": 1314,
+          "git_blob": "ade9705f351d846153bec6cdd3beeb50313a52ce",
+          "body_saved": true,
+          "source_sha256": "3355324224a81c95fad0699bbd72182becc14e5cd329704ecfa1c94c7e8fa659",
+          "body_read": true,
+          "executed": false
+        },
+        {
+          "path": "tech-article-reproducibility/SKILL-ja.md",
+          "bytes": 5585,
+          "git_blob": "b75a0dd1ff79d1210f8728fcf1a13551331790d0",
+          "body_saved": true,
+          "source_sha256": "7b98b6b489486dd2ccd3816f08813ef11150385882e17a7a7aa88fab81a9b7e3",
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。この12配下に個別notice無し。README12は全文/SHA確認し追加のnotice無し。補助/第三者credit/取込み範囲は未完で一括除外や許諾完了としない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:21c8a50a9702ddb435237a97daa689da4542f1c7530a22511cb26758385ba5b0",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "tech-trend-watch/SKILL.md",
+      "name": "tech-trend-watch",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/tech-trend-watch/SKILL.md",
+      "source_sha256": "b88638d59a60a1cc246f8de51b6f190275d48a6fc48c926d75eb9c098fe21845",
+      "retrieved_at": "2026-10-20T08:41:08.976287Z",
+      "bytes": 7710,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-23T03:21:16.3768634Z",
+      "candidate_disposition": "integration_candidate_pending_support_and_rights",
+      "reason": "技術選択の満足度/利用率/保持/保守と移行費用を、現在の不具合と分けて記録する候補。",
+      "compare_metadata": [
+        "business-strategy",
+        "frontend-node-engineering",
+        "ai-model-evaluation"
+      ],
+      "required_changes": "調査票の母集団/設問/版と公式Radarの定義/発行間隔を確認する。70/55%やHOLD2年、人気からP0移行へ直結しない。jest/Vitestの年代/数値/4h例は未検証の例で、現在の事実や本PCの実測としない。既存Go/Rust/Windows優先と本人の製品要件を勝手に変更しない。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "tech-trend-watch/README.md",
+          "bytes": 1386,
+          "git_blob": "adc843fb3c105fb35a39f20c67cfeb7721dc0256",
+          "body_saved": true,
+          "source_sha256": "327c6237d1259fc54fe9da3fdef3e0cf557b0c723c76a1130e88f8a70f25e501",
+          "body_read": true,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。この12配下に個別notice無し。README12は全文/SHA確認し追加のnotice無し。補助/第三者credit/取込み範囲は未完で一括除外や許諾完了としない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:ebc648c4dae246d9d559642f850424397b9b9dfed317e37b7df1607a37500604",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "opentelemetry/SKILL.md",
+      "name": "opentelemetry",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/opentelemetry/SKILL.md",
+      "source_sha256": "2143f1155b1bc5157c552949ee447a878c1cf9c25965eef80d97eba895b3118a",
+      "retrieved_at": "2026-10-20T08:41:08.9053057Z",
+      "bytes": 5192,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-23T03:21:16.3768634Z",
+      "candidate_disposition": "possible_observability_design_workflow_pending_corrections",
+      "reason": "trace/metric/logの目的、spanの寿命/伝播、採取率と出力を分ける計装設計の候補。",
+      "compare_metadata": [
+        "observability-notifications",
+        "backend-correctness",
+        "callback-shutdown-quiescence"
+      ],
+      "required_changes": "同期callback内でPromiseをreturnするとfinallyが先にspan.endし得るためasync/awaitと拒否時の完了を確認する。親contextはSpanOptions.contextではなくAPIの独立引数、Headersはgetterを合わせる。最新版SDK/semantic conventionを確認し、SimpleSpanProcessorが必ずevent loopをブロックする/未endがprocessor queueに溜まる/ tail採取なら100%errorを保持できるという一般保証にしない。user.id等を属性にしても秘密/個人情報の収集や外部送信許可にはならず、新費用/キーを追加しない。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "opentelemetry/README.md",
+          "bytes": 1358,
+          "git_blob": "5ad2cc472670f60c3bcc40eb820fc7d823711d0e",
+          "body_saved": true,
+          "source_sha256": "084a289238c5ef83af5468a2fdf7aed54c0aa07bd256b5cfc32491e1d3380633",
+          "body_read": true,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。この12配下に個別notice無し。README12は全文/SHA確認し追加のnotice無し。補助/第三者credit/取込み範囲は未完で一括除外や許諾完了としない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:90363624c915dcdc4f83d4ac490e37002fa60f3be36439dffa90a51c0d24ca3e",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "otel-node/SKILL.md",
+      "name": "otel-node",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/otel-node/SKILL.md",
+      "source_sha256": "e455cbfee98e798bad894be32243fe5bdf7ed84ef5a1d49767d6d979ba95d810",
+      "retrieved_at": "2026-10-20T08:41:08.9145891Z",
+      "bytes": 5311,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-23T03:21:16.3768634Z",
+      "candidate_disposition": "possible_node_observability_workflow_pending_corrections",
+      "reason": "NodeのSDK初期化順、bundling/ESM/loaderによる計装欠落を切り分け、Collector到達とexportを別に確認する候補。",
+      "compare_metadata": [
+        "observability-notifications",
+        "frontend-node-engineering"
+      ],
+      "required_changes": "ESMの全計装が非対応とはせず公式loader対応/対象module/実版を確認する。raw URL pathnameをhttp.route/span名へ使うとIDごとに増えるためroute templateと秘匿化を検討。すべての応答をOKにせず5xx/例外/終了を確認、Headers getterも明示。debug exporterの出力無しを必ず上流故障と決めずsampling/filter/buffering/送信先も調査。SDKのResource/processor API等の世代を固定して検証し、収集先/権限/費用を勝手に追加しない。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "otel-node/README.md",
+          "bytes": 1329,
+          "git_blob": "b2bc1cedf6b9b8d815050a1e2944673b370dd301",
+          "body_saved": true,
+          "source_sha256": "5b44481470e4a67efc25cbd6e235c69aca83da9ab7d830c2d30686a76ab62e78",
+          "body_read": true,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。この12配下に個別notice無し。README12は全文/SHA確認し追加のnotice無し。補助/第三者credit/取込み範囲は未完で一括除外や許諾完了としない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:9f9e80dd48e449b2f0e064336fa704ea1fc6cd1b8330b005df91f5c385f5ef3a",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "dotenvx/SKILL.md",
+      "name": "dotenvx",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/dotenvx/SKILL.md",
+      "source_sha256": "6eb68373c888d420f4acc7a458a0f51f9178db4ae08e5748baf3dee212c54b78",
+      "retrieved_at": "2026-10-20T08:41:08.7946505Z",
+      "bytes": 4789,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-23T03:21:16.3768634Z",
+      "candidate_disposition": "tool_reference_candidate_pending_corrections_and_rights",
+      "reason": "暗号化envの入力順/既存環境の優先、配置とrotation時の整合を調べる資料候補。",
+      "compare_metadata": [
+        "coding-agent-tools",
+        "security-review",
+        "cloud-infra-deploy"
+      ],
+      "required_changes": "curl|shやget全表示、平文decrypt、gh secret --bodyでのargv露出を自動実行しない。本件は秘密値の読取無しで調査する。公式では既存環境が優先で後勝ちは--overload時なので、上流例のlater winsを無条件に採らない。rotation CLIの有無を固定時点の断定へせず実版公式で確認。新keyだけを先に本番へ替えると旧ciphertextの再配備を壊し得るため段階切替/rollbackを先に決める。Prd限定/既存OAuth/新費用禁止を保持。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "dotenvx/README.md",
+          "bytes": 1454,
+          "git_blob": "db7fb04b041266f8a26315a658254fef58a22e35",
+          "body_saved": true,
+          "source_sha256": "5c1d812d54b183e9b40d219050d3f0b00755d54e78d343015a19459af165a11e",
+          "body_read": true,
+          "executed": false
+        },
+        {
+          "path": "dotenvx/SKILL-ja.md",
+          "bytes": 4569,
+          "git_blob": "1cf9704bf46b188c1a9944b260a90c3a5559ae33",
+          "body_saved": true,
+          "source_sha256": "72c8a9d768367fcb9f1365e99f1ce67df15a8ad784d842375e081b526e6c2598",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "dotenvx/assets/.env.example",
+          "bytes": 181,
+          "git_blob": "fa1264bd5deb3bdcfd83ceb61f6a8429274257d3",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "dotenvx/assets/env.example",
+          "bytes": 181,
+          "git_blob": "fa1264bd5deb3bdcfd83ceb61f6a8429274257d3",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "dotenvx/assets/gh_action_example.yaml",
+          "bytes": 385,
+          "git_blob": "01203660caf65bb0254d250fb335016be2db5a2e",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。この12配下に個別notice無し。README12は全文/SHA確認し追加のnotice無し。補助/第三者credit/取込み範囲は未完で一括除外や許諾完了としない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:3c0d98cb9225a7bfe09217dc947987787627022228da57f7e6f2688b669ac12d",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "justfile/SKILL.md",
+      "name": "justfile",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/justfile/SKILL.md",
+      "source_sha256": "a1b16da4ac0b22de559669a1a1f59154f8095b4d17072ddb16e1f0d175e3d5ce",
+      "retrieved_at": "2026-10-20T08:41:08.858896Z",
+      "bytes": 3155,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-23T03:21:16.3768634Z",
+      "candidate_disposition": "tool_reference_candidate_pending_version_and_rights",
+      "reason": "既存justfileのrecipe/依存/引数/shell設定を対象範囲で読むコマンドrunner資料候補。",
+      "compare_metadata": [
+        "coding-agent-tools",
+        "windows-shell"
+      ],
+      "required_changes": "上流個人のpkfire推奨を本PCへ適用しない。現行just公式実装のdry-runはbacktickを実行せず式文字列を返すため、親の最初の懸念を訂正した。未知recipe/assetsは先に読む。cargo release/testの例を割当無しで起動せず、Python自作例やBash/apt前提をWindowsへ移さない。ignore-errorsで失敗を隠さず、削除やrelease/pushは所有/元依頼/既存手順を確認する。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "justfile/.claude-plugin/manifest.json",
+          "bytes": 182,
+          "git_blob": "a7ef506624dbac57e1aae231a7dd597b7a76c93d",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "justfile/README.md",
+          "bytes": 1316,
+          "git_blob": "9b91610022e56262966e975535360f92cd4fa7f9",
+          "body_saved": true,
+          "source_sha256": "b3cfc07c4d34a2f36a88b43d3d8a3f1efe0155631cc08f060b9cca4bd60b6bde",
+          "body_read": true,
+          "executed": false
+        },
+        {
+          "path": "justfile/assets/gh_action_example.yaml",
+          "bytes": 278,
+          "git_blob": "f40d6608c6805e136646f5fc0264e3ed5935faae",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "justfile/assets/justfile",
+          "bytes": 296,
+          "git_blob": "0d2f6df3bd9390a6e3db571b260adec081f84aac",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。この12配下に個別notice無し。README12は全文/SHA確認し追加のnotice無し。補助/第三者credit/取込み範囲は未完で一括除外や許諾完了としない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:a7974025818694cce586a0f1abaacec7f3468b1fc5b372b5a8b2319c439b622a",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "sqlc-gen-moonbit-safety/SKILL.md",
+      "name": "sqlc-gen-moonbit-safety",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/sqlc-gen-moonbit-safety/SKILL.md",
+      "source_sha256": "724e4009216d35286b4136b56bbd6c1a91c7db8c4693c2b0f7164fa98a65f0d9",
+      "retrieved_at": "2026-10-20T08:41:08.9681776Z",
+      "bytes": 3989,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-23T03:21:16.3768634Z",
+      "candidate_disposition": "specialized_codegen_workflow_pending_support_and_corrections",
+      "reason": "MoonBit/sqlc/D1の生成物とbindの型、placeholder番号の混在を検査する限定用途候補。",
+      "compare_metadata": [
+        "sql-data-integrity",
+        "backend-correctness",
+        "frontend-node-engineering"
+      ],
+      "required_changes": "D1のBigInt非対応と安全なNumber範囲を公式で照合。Int64を無条件Numberへ変換すると2^53を越す値を失うため範囲検証/表現/格納schemaを先に定める。上流の特定版でのhang/1101を普遍的原因としない。default applyの未読scriptや全生成後hookを実行せず、空/未生成を成功へする検査は利用側で誤った合格にならないか確認。nested brace以外のparser限界と実generator版を確認する。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "sqlc-gen-moonbit-safety/README.md",
+          "bytes": 1265,
+          "git_blob": "562e096ed89a895d989fc686e63c2e08a0adc066",
+          "body_saved": true,
+          "source_sha256": "0ae52da78708091cda52cee28e9b3846e5af36234e650b1247b358a2a2b4670f",
+          "body_read": true,
+          "executed": false
+        },
+        {
+          "path": "sqlc-gen-moonbit-safety/assets/scripts/check-sql-placeholder-mix.ts",
+          "bytes": 3122,
+          "git_blob": "0ca47b84dbf4b60dd32d409c47162f1074185bf2",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "sqlc-gen-moonbit-safety/assets/scripts/patch-int64-binds.ts",
+          "bytes": 8987,
+          "git_blob": "63edb7bb2ccf4fc1dc4511b2c0a762fb1cb607e3",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "sqlc-gen-moonbit-safety/assets/tests/patch-int64-binds.test.ts",
+          "bytes": 5770,
+          "git_blob": "cb5a802cfa0d22e9b751b8f8669dd4baa295b3d0",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "sqlc-gen-moonbit-safety/references/d1-bind-hang.md",
+          "bytes": 2714,
+          "git_blob": "1b12baae5f109a72a910387ea0a1692b9821499e",
+          "body_saved": true,
+          "source_sha256": "941068a33069a08f0dee5ce9677a34bc39ffaaafd8bb613d469289848a4ba5a1",
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。この12配下に個別notice無し。README12は全文/SHA確認し追加のnotice無し。補助/第三者credit/取込み範囲は未完で一括除外や許諾完了としない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:9e4e6c20f466c5c0dc5b059f5c608da379a236da0255331aa57b713d899255a9",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "utels-project-bootstrap/SKILL.md",
+      "name": "utels-project-bootstrap",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/utels-project-bootstrap/SKILL.md",
+      "source_sha256": "bcaccb7adc67e7e25680344090541656f2065cd812899f4d8c6d517658af4ca8",
+      "retrieved_at": "2026-10-20T08:41:09.0114301Z",
+      "bytes": 3323,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-23T03:21:16.3768634Z",
+      "candidate_disposition": "service_bootstrap_candidate_pending_scope_support_and_rights",
+      "reason": "登録・秘密の配送・部分失敗/slug衝突を別々に記録し、重複登録を避ける限定サービス操作資料候補。",
+      "compare_metadata": [
+        "cloud-infra-deploy",
+        "observability-notifications"
+      ],
+      "required_changes": "utels.dev登録/API token/cf/新しい恒久権限/新費用はこの資料だけで許可されない。ここでは未読helperのコピー/実行/登録/秘密読取を行わない。Windowsでは/dev/stdin前提を検証し、既存OAuthを優先。Prdのみ、登録成功とsecret反映を分ける。SQL LIKEのslug挿入を文字列結合せずparameterにし、500/1101だけで重複と決めず既存IDを根拠で照合する。",
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "utels-project-bootstrap/README.md",
+          "bytes": 1224,
+          "git_blob": "65316aa9c6cb79a112328115f13cb343afbad89d",
+          "body_saved": true,
+          "source_sha256": "d767c70d43475f707331a00a8c1c70410be23658015d655bdb0367af51d37048",
+          "body_read": true,
+          "executed": false
+        },
+        {
+          "path": "utels-project-bootstrap/assets/scripts/setup-utels.test.ts",
+          "bytes": 3762,
+          "git_blob": "63167002457b2acafb0f99a33cd6cf963f6cc76e",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "utels-project-bootstrap/assets/scripts/setup-utels.ts",
+          "bytes": 6774,
+          "git_blob": "e0d67332d94d279e234b7d09dae74f369735a7b6",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの個別優先/未記載MIT説明を保持。この12配下に個別notice無し。README12は全文/SHA確認し追加のnotice無し。補助/第三者credit/取込み範囲は未完で一括除外や許諾完了としない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
     }
   ],
   "pending_entrypoint_paths": [
@@ -4844,31 +5719,19 @@
     "chezmoi-management/SKILL.md",
     "conventional-changelog/SKILL.md",
     "dep-lib-review/SKILL.md",
-    "dotenvx/SKILL.md",
-    "extract-glossary/SKILL.md",
-    "formal-methods-drift-guard/SKILL.md",
-    "formal-methods-reconciler/SKILL.md",
     "gleam-practice/SKILL.md",
-    "justfile/SKILL.md",
     "k8s-crd-from-typed-schema/SKILL.md",
     "maintainer-persona/SKILL.md",
     "mizchi-blog-style/SKILL.md",
     "moonbit-js-binding/SKILL.md",
     "moonbit-practice/SKILL.md",
-    "multi-agent-orchestration/SKILL.md",
     "natural-writing-en/SKILL.md",
     "natural-writing-ja/SKILL.md",
     "nix-setup/SKILL.md",
     "node-sqlite-vec/SKILL.md",
-    "opentelemetry/SKILL.md",
-    "otel-node/SKILL.md",
     "pi-coding-agent/SKILL.md",
-    "sqlc-gen-moonbit-safety/SKILL.md",
     "stryker-js/SKILL.md",
-    "tech-article-reproducibility/SKILL.md",
-    "tech-trend-watch/SKILL.md",
     "ts2moonbit-migration/SKILL.md",
-    "utels-project-bootstrap/SKILL.md",
     "vlmkit/SKILL.md",
     "void-app/SKILL.md"
   ],
@@ -4877,8 +5740,8 @@
   "excluded": 0,
   "support_code_executed": false,
   "private_data_used": false,
-  "next": "新10の個別support/credit/既存本文との差分と限定レビュー、残31入口を続ける。SQL2の許諾/未保存supportと全16資料の未判定を維持。647の既存拒否を再試行しない。",
-  "observed_at": "2026-10-23T03:08:37.8811343Z",
+  "next": "今回の新22候補と版照合テストを固定差分ごとに独立レビュー。残19入口と個別support/許諾/既存本文比較、全16資料の未判定を同canonicalで継続する。",
+  "observed_at": "2026-10-23T03:23:49.8750553Z",
   "code_execution_status": "SQL4補助コードは本文未保存・未読・未実行。既存追加取得の拒否を別経路で迂回しない。",
   "supporting_texts_fullread": [
     {
@@ -4993,7 +5856,7 @@
     "raw_sha256": "237d5a7391b947f16ef22f9cdc843887c85133a271f676f524956f23c29ce6b7",
     "limits": "SQL4本文の前評価を確認。今回の補助5+README追加範囲と本文案は新しい未受入差分。"
   },
-  "entrypoints_fulltext_read": 45,
+  "entrypoints_fulltext_read": 57,
   "latest_primary_review": {
     "todo": 3378,
     "head": "f817c1841abffa97b9be8195c7eb3a5ffc151471",

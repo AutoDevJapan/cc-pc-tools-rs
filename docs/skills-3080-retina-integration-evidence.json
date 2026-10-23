@@ -253,7 +253,6 @@
     "effort_origin": "owner_request",
     "effective_reasoning_measured": false,
     "raw_sha256": "472a2db6c9d077a7affd9c9a039b33989437f47dfea0c24c1f114622e28da84a",
-    "received_at": "2026-10-23T20:44:06.5397296Z",
     "receiver_job": "20261024-054244-todo-3080",
     "parent_full_read": true,
     "explicit_use_check_pending": false,
@@ -285,7 +284,7 @@
       {
         "id": "B",
         "assessment": "core pass with parent correction",
-        "expected": "Auto1.25 to2; buffer1125x750 to1800x1200; re-arm resolution query; unchanged CSS; owner-specific resize/dispose",
+        "expected": "Auto1.25 to2; buffer1125x750 to1800x1200; re-arm resolution query; unchanged CSS; target-owner-specific resize/dispose",
         "correction": "GPU/viewport/target constraints must be checked before renderer/composer/target allocation or resize, not after the answer steps1-4."
       },
       {
@@ -300,7 +299,8 @@
     "implicit_selection_proven": false,
     "whole_catalog_proven": false,
     "context_budget_proven": false,
-    "recorded_at": "2026-10-23T20:55:13.1528116+00:00"
+    "recorded_at": "2026-10-23T20:55:13.1528116+00:00",
+    "preserved_at": "2026-10-23T20:44:06.5397296Z"
   },
   "initial_write_failure": {
     "cause": "PowerShell File.Replace null backup argument became empty path",
@@ -315,9 +315,100 @@
     "原の中央3対象の分類保留と647取得拒否を解除するものではない。guard/配布設定/junctionは未変更。",
     "今回の更新は既存の入口を保存した限定統合。全16資料の評価・個別許諾・実導入完了ではない。"
   ],
-  "recorded_at": "2026-10-23T20:55:13.1528116+00:00",
+  "recorded_at": "2026-10-23T21:43:58.8069249Z",
   "state_definitions": {
     "applied": "central six-file write completed",
     "explicit_use_check_pending": "installed-text use assessment has not yet been received and judged; false after3502 with retained parent corrections"
+  },
+  "v2_to_v3_verbatim_diff_verified": false,
+  "v2_to_v3_verbatim_diff_definition": "独立レビューでの逐語差分の照合。3504はv3最終文を読んだがv2との差分は未照合。親の機械差分は別に記録する。",
+  "parent_v2_to_v3_mechanical_diff": {
+    "method": "Parent mechanical byte/SHA/declared-size and complete git no-index text comparison; no central writes",
+    "parent_job": "20261024-054244-todo-3080",
+    "before_plan_sha256": "93ce59c6ca6e17bd5dfcc8b1d46acc660e080c4ff1397c2eb9bfe9993ced12d6",
+    "after_plan_sha256": "43d95f23efdd849de0683770e177d49e81080873ddbe9160cfc7b4b7494565e8",
+    "fixed_plans_unchanged": true,
+    "payloads": [
+      {
+        "before_sha256": "347c6eabe30cf3d4d4d52b711bedff193b706a8d8f6c04bbb0f24e0e85d163c4",
+        "after_sha256": "347c6eabe30cf3d4d4d52b711bedff193b706a8d8f6c04bbb0f24e0e85d163c4",
+        "byte_identical": true,
+        "after_bytes": 11129,
+        "before_bytes": 11129,
+        "text_diff_hunks": 0,
+        "path": "SKILL.md",
+        "text_diff_sha256": null
+      },
+      {
+        "before_sha256": "010dd81db21484babf74dc88961417f2908e59f9022108fff0f963468ed9310f",
+        "after_sha256": "010dd81db21484babf74dc88961417f2908e59f9022108fff0f963468ed9310f",
+        "byte_identical": true,
+        "after_bytes": 6441,
+        "before_bytes": 6441,
+        "text_diff_hunks": 0,
+        "path": "references/index.md",
+        "text_diff_sha256": null
+      },
+      {
+        "before_sha256": "6baf641e64aa6bc45367ccc8a30c424c54da217af4789d979b049edb8368b30b",
+        "after_sha256": "7fe261f29c5dfd0397d19e705c0e974e7c47218ecdee876b06bafcd0788c30a4",
+        "byte_identical": false,
+        "after_bytes": 5872,
+        "before_bytes": 5647,
+        "text_diff_hunks": 2,
+        "path": "references/retina-resolution.md",
+        "text_diff_sha256": "6ffc366dc15d9643d43ddc76f9a9c9133deb90a8a4d858fe34185b472f1283d4"
+      },
+      {
+        "before_sha256": "632232040749513e129f58b55ed3361378af9c6803dfd29f8ca596e273d55174",
+        "after_sha256": "632232040749513e129f58b55ed3361378af9c6803dfd29f8ca596e273d55174",
+        "byte_identical": true,
+        "after_bytes": 6282,
+        "before_bytes": 6282,
+        "text_diff_hunks": 0,
+        "path": "references/retina-resolution-upstream.txt",
+        "text_diff_sha256": null
+      },
+      {
+        "before_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "after_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "byte_identical": true,
+        "after_bytes": 1064,
+        "before_bytes": 1064,
+        "text_diff_hunks": 0,
+        "path": "references/retina-resolution-mit.txt",
+        "text_diff_sha256": null
+      },
+      {
+        "before_sha256": "8f3557e2ee0443603a2a36fcadcbd0df3e5ff003fe7e711a5653a4c121a2d1a9",
+        "after_sha256": "7f10b53e62338e25f08046b7df47cbdc7c53df795262afc62e6c77dbb8350261",
+        "byte_identical": false,
+        "after_bytes": 4132,
+        "before_bytes": 4115,
+        "text_diff_hunks": 4,
+        "path": "references/retina-resolution-source.json",
+        "text_diff_sha256": "ce89ca2731e34bb04a6268f16b61906273839c48b2ec54514caf5ccfabaa73cc"
+      }
+    ],
+    "payloads_changed": 2,
+    "payloads_unchanged": 4,
+    "top_level_changed_fields": [
+      "changes_since_review",
+      "files",
+      "review_resolution",
+      "revision",
+      "static_cases",
+      "supersedes_plan_sha256"
+    ],
+    "static_case_count": 13,
+    "static_case_changed_indices": [
+      7
+    ],
+    "full_plan_text_diff_sha256": "dec875321f2ac45f94b099c25f49b2682839daf1ad017ee08b422a6246f6645d",
+    "full_plan_text_diff_hunks": 5,
+    "independent_review": false,
+    "v3_static_cases_rejudged": false,
+    "recorded_at": "2026-10-23T21:46:32.4414931Z",
+    "diff_sha256_scope": "保存したgit diff(stdout UTF8)の指紋。headerはこの作業場所のpathを含み、移植可能な固定基準ではない。固定基準は計画SHAと各本文SHA/bytes。"
   }
 }

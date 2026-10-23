@@ -3,10 +3,10 @@
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "catalog_occurrences": 73220,
   "installed_new": 28,
-  "integrated": 2,
+  "integrated": 3,
   "excluded": 7,
-  "pending_occurrences": 73183,
-  "pending_available_body_occurrences": 72108,
+  "pending_occurrences": 73182,
+  "pending_available_body_occurrences": 72107,
   "unavailable_site_occurrences": 428,
   "execution_held_occurrences": 647,
   "duplicate_policy": "One installed occurrence does not implicitly approve other copies, URLs or licenses",
@@ -443,7 +443,26 @@
       "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
       "explicit_use_check_pending": false,
       "explicit_use_assessment": "A pass; B/C core pass with parent corrections. No real rendering or implicit selection proof.",
-      "independent_review_todo": 3504
+      "independent_review_todo": 3504,
+      "v2_to_v3_verbatim_diff_verified": false
+    },
+    {
+      "upstream_original_preserved": true,
+      "source_notice_preserved": true,
+      "source_sha256": "566c5bd361aa738d40843e647d73b8867dbc6825818b0ad9d67f7e5c23b8ee62",
+      "source_path": "agent-skills/codex/article-prompts-to-skills/SKILL.md",
+      "application_todo": 3527,
+      "inventory_id": "github:41f804392ff42c56ba7a05d1b269efdbb80f189a55b8979ccae5eb67771d05ed",
+      "disposition": "integrated_existing",
+      "evidence": "skills-3080-article-integration-evidence.json",
+      "entrypoint_sha256": "db6b27a23966815715dcacf75eaccab46093b6fc5f21fa8979deb475d6f3eac2",
+      "explicit_use_check_pending": true,
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "independent_review_pending": true,
+      "manifest": "skills-3080-installed-article-integration-manifest.json",
+      "source_repo": "MengTo/Skills",
+      "target": "knowledge-to-skills",
+      "reason": "作者repo専用の一律demo/gallery手順を現在の抽出/統合手順へ実質改訂し、固定出典・原文・MIT・実読範囲・具体例を同じ参照へ保全。"
     }
   ],
   "excluded_entries": [

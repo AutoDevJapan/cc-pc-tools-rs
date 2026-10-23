@@ -27,12 +27,13 @@ const maxState = 8 << 20
 const maxTodo = 64 << 20
 
 type Config struct {
-	Since          string                `json:"since"`
-	Home           string                `json:"home"`
-	NotifyConfig   string                `json:"notify_config"`
-	Project        string                `json:"project"`
-	ProductReports []ProductReportConfig `json:"product_reports,omitempty"`
-	Civ6Queue      *Civ6QueueConfig      `json:"civ6_ci_queue,omitempty"`
+	Since            string                `json:"since"`
+	Home             string                `json:"home"`
+	NotifyConfig     string                `json:"notify_config"`
+	Project          string                `json:"project"`
+	ProductReports   []ProductReportConfig `json:"product_reports,omitempty"`
+	Civ6Queue        *Civ6QueueConfig      `json:"civ6_ci_queue,omitempty"`
+	ManagementIntake bool                  `json:"management_intake,omitempty"`
 }
 type Destination struct {
 	Guild string `json:"guild_id"`
@@ -47,6 +48,7 @@ type Thread struct {
 	Owner    string `json:"owner_id"`
 	Type     int    `json:"type"`
 	Last     string `json:"last_message_id"`
+	Managed  bool   `json:"management_intake,omitempty"`
 	Metadata struct {
 		ArchiveTimestamp string `json:"archive_timestamp"`
 	} `json:"thread_metadata"`
@@ -73,9 +75,10 @@ type Message struct {
 	} `json:"author"`
 }
 type Scan struct {
-	After  string `json:"after"`
-	Before string `json:"before,omitempty"`
-	High   string `json:"high,omitempty"`
+	After        string `json:"after"`
+	Before       string `json:"before,omitempty"`
+	High         string `json:"high,omitempty"`
+	ReplayBefore string `json:"replay_before,omitempty"`
 }
 type Request struct {
 	Thread         string          `json:"thread_id"`
@@ -102,8 +105,14 @@ type Request struct {
 	Origin         *ProgressOrigin `json:"origin,omitempty"`
 	Conversation   string          `json:"conversation_request_id,omitempty"`
 	// An intake-index recovery never proves a delivery, including after restart.
-	ConversationSourceRecovered bool   `json:"conversation_source_recovered,omitempty"`
-	ConversationRecoveryNote    string `json:"conversation_recovery_note,omitempty"`
+	ConversationSourceRecovered bool                     `json:"conversation_source_recovered,omitempty"`
+	ConversationRecoveryNote    string                   `json:"conversation_recovery_note,omitempty"`
+	MessageType                 *int                     `json:"message_type,omitempty"`
+	Attachments                 *[]historyReadAttachment `json:"attachments,omitempty"`
+	DeliveryVersion             string                   `json:"delivery_version,omitempty"`
+	Binding                     *IntakeBinding           `json:"task_binding,omitempty"`
+	PendingOwner                string                   `json:"pending_owner,omitempty"`
+	NextAction                  string                   `json:"next_action,omitempty"`
 }
 type State struct {
 	Domain                   string                         `json:"domain"`
@@ -126,6 +135,9 @@ type State struct {
 	ConversationNoticeTurn   bool                           `json:"conversation_notice_turn,omitempty"`
 	ConversationReportCursor string                         `json:"conversation_report_cursor,omitempty"`
 	ProgressLinkCursor       string                         `json:"progress_link_cursor,omitempty"`
+	OrdinaryCursor           string                         `json:"ordinary_cursor,omitempty"`
+	ManagedDiscoveryCursor   string                         `json:"managed_discovery_cursor,omitempty"`
+	ReplayCursor             string                         `json:"replay_cursor,omitempty"`
 }
 type Health struct {
 	Mode                string                   `json:"mode"`
@@ -373,6 +385,23 @@ func (r *Runner) discover(ctx context.Context) error {
 	return r.save()
 }
 func (r *Runner) scan(ctx context.Context, thread Thread) (int, error) {
+	return r.scanPage(ctx, thread, false)
+}
+func (r *Runner) scanPage(ctx context.Context, thread Thread, replay bool) (int, error) {
+	if thread.Managed {
+		if _, err := monthlyReadable(ctx, r, thread.ID); err != nil {
+			if r.State.Discovery == nil {
+				r.State.Discovery = map[string]DiscoveryPage{}
+			}
+			failure := monthlyFailure{Stage: "read_source"}
+			_ = errors.As(err, &failure)
+			r.State.Discovery["read:"+thread.ID] = DiscoveryPage{Checked: r.Now().UTC().Format(time.RFC3339Nano), FailureStage: failure.Stage, HTTPStatus: failure.Status}
+			if saveErr := r.save(); saveErr != nil {
+				return 0, saveErr
+			}
+			return 0, err
+		}
+	}
 	conversation, conversationErr := r.conversationForThread(thread.ID)
 	if conversationErr != nil {
 		return 0, conversationErr
@@ -387,11 +416,16 @@ func (r *Runner) scan(ctx context.Context, thread Thread) (int, error) {
 	if !ok {
 		return 0, errors.New("scan identity invalid")
 	}
-	path := "/channels/" + thread.ID + "/messages?limit=100"
-	if scan.Before != "" {
-		path += "&before=" + url.QueryEscape(scan.Before)
+	before := scan.Before
+	if replay {
+		after, _ = number(snowflake(cutoff))
+		before = scan.ReplayBefore
 	}
-	var messages []Message
+	path := "/channels/" + thread.ID + "/messages?limit=100"
+	if before != "" {
+		path += "&before=" + url.QueryEscape(before)
+	}
+	var messages []historyReadMessage
 	if err := r.get(ctx, path, &messages); err != nil {
 		return 0, err
 	}
@@ -408,9 +442,9 @@ func (r *Runner) scan(ctx context.Context, thread Thread) (int, error) {
 		if !valid || message.Channel != thread.ID {
 			return 0, errors.New("message source differs")
 		}
-		if scan.Before != "" {
-			before, _ := number(scan.Before)
-			if mid >= before {
+		if before != "" {
+			beforeID, _ := number(before)
+			if mid >= beforeID {
 				return 0, errors.New("history cursor did not advance")
 			}
 		}
@@ -422,16 +456,20 @@ func (r *Runner) scan(ctx context.Context, thread Thread) (int, error) {
 		}
 		if mid <= after {
 			finished = true
-			continue
 		}
 		stamp, err := time.Parse(time.RFC3339Nano, message.Timestamp)
 		if err != nil {
 			return 0, errors.New("message timestamp invalid")
 		}
-		if message.Author.ID != r.State.Destination.Owner || message.Author.Bot || stamp.Before(cutoff) {
+		if message.Author.ID != r.State.Destination.Owner || message.Author.Bot || !stamp.After(cutoff) {
 			continue
 		}
-		if _, exists := r.State.Requests[message.ID]; exists {
+		if old := r.State.Requests[message.ID]; old != nil {
+			if old.Conversation == "" && old.RecordVersion == 2 {
+				if _, err := r.observeOrdinary(old, message); err != nil {
+					return captured, err
+				}
+			}
 			continue
 		}
 		text := safeText(message.Content, r.Token)
@@ -461,6 +499,11 @@ func (r *Runner) scan(ctx context.Context, thread Thread) (int, error) {
 			phase = "reference_mismatch"
 		}
 		r.State.Requests[message.ID] = &Request{Thread: thread.ID, Guild: r.State.Destination.Guild, RecordVersion: 2, Message: message.ID, Author: message.Author.ID, Created: message.Timestamp, Edited: message.Edited, ReplyTo: message.Reference.Message, ReplyChannel: message.Reference.Channel, ReplyGuild: message.Reference.Guild, Acquired: r.Now().UTC().Format(time.RFC3339Nano), Source: "discord-api-v10", Text: text, Context: preceding, Key: requestKey(thread.ID, message.ID), Phase: phase}
+		r.State.Requests[message.ID].MessageType = message.Type
+		r.State.Requests[message.ID].Attachments = message.Attachments
+		if thread.Managed && phase != "empty" && phase != "reference_mismatch" && phase != "status_query" {
+			r.parkUnbound(r.State.Requests[message.ID])
+		}
 		if conversation != "" {
 			r.State.Requests[message.ID].Conversation = conversation
 			r.State.Requests[message.ID].Phase = "conversation_capture_pending"
@@ -471,7 +514,13 @@ func (r *Runner) scan(ctx context.Context, thread Thread) (int, error) {
 		}
 		captured++
 	}
-	if finished {
+	if replay {
+		if finished {
+			scan.ReplayBefore = ""
+		} else {
+			scan.ReplayBefore = strconv.FormatUint(min, 10)
+		}
+	} else if finished {
 		scan.After = strconv.FormatUint(max(after, high), 10)
 		scan.Before = ""
 		scan.High = ""
@@ -479,7 +528,16 @@ func (r *Runner) scan(ctx context.Context, thread Thread) (int, error) {
 		scan.Before = strconv.FormatUint(min, 10)
 		scan.High = strconv.FormatUint(high, 10)
 	}
-	r.State.Cursor = thread.ID
+	if !replay {
+		r.State.Cursor = thread.ID
+	}
+	if thread.Managed {
+		coverage := "ordinary_after_watermark"
+		if replay {
+			coverage = "ordinary_cutover_replay"
+		}
+		r.State.Discovery["read:"+thread.ID] = DiscoveryPage{Before: before, Returned: len(messages), Complete: finished, Checked: r.Now().UTC().Format(time.RFC3339Nano), Coverage: coverage, LowerBound: strconv.FormatUint(after, 10)}
+	}
 	return captured, r.save()
 }
 func (r *Runner) existingTodo(key string) (uint64, error) {
@@ -523,6 +581,10 @@ func (r *Runner) register(ctx context.Context, request *Request) error {
 		return r.registerOrigin(ctx, request, *origin)
 	}
 	if previous, err := r.threadActive(request); err != nil {
+		r.parkUnbound(request)
+		if saveErr := r.save(); saveErr != nil {
+			return saveErr
+		}
 		return err
 	} else if previous != nil {
 		return r.deliverSteering(ctx, request, previous)
@@ -532,6 +594,12 @@ func (r *Runner) register(ctx context.Context, request *Request) error {
 	} else if id != 0 {
 		request.Todo = id
 		request.Phase = "registered"
+		return r.save()
+	}
+	// A reply/reference is not proof of a standalone new request. Unknown
+	// routing remains in the existing intake until an exact binding is supplied.
+	if request.ReplyTo != "" || request.Message != request.Thread || r.State.Threads[request.Thread].Managed {
+		r.parkUnbound(request)
 		return r.save()
 	}
 	original := filepath.Join(r.Config.Home, "requests", request.Message+".json")
@@ -695,6 +763,14 @@ func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
 	}
 	r.recheckOriginBlocked(intakeCtx, &health)
 	r.admit(intakeCtx, &health)
+	ordinaryCtx, cancelOrdinary := context.WithTimeout(intakeCtx, 4*time.Second)
+	r.refreshOrdinary(ordinaryCtx, &health)
+	cancelOrdinary()
+	if r.Config.ManagementIntake {
+		replayCtx, cancelReplay := context.WithTimeout(intakeCtx, 4*time.Second)
+		r.replayManagement(replayCtx, &health)
+		cancelReplay()
+	}
 	if intakeCtx.Err() != nil && ctx.Err() == nil {
 		health.Errors = append(health.Errors, "intake_budget_exhausted")
 	}
@@ -777,7 +853,7 @@ func (r *Runner) admit(ctx context.Context, health *Health) {
 		}
 		if req.Phase == "steering_saved" || req.Phase == "product_reply_saved" {
 			health.SteeringSaved++
-		} else {
+		} else if req.Todo != 0 {
 			health.Registered++
 		}
 		return
@@ -830,6 +906,9 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "intake" {
+		os.Exit(intakeCLI(os.Args[2:], os.Stdout))
+	}
 	if len(os.Args) > 1 && os.Args[1] == "monthly-history-inventory" {
 		os.Exit(monthlyInventoryCLI(os.Args[2:], os.Stdout))
 	}

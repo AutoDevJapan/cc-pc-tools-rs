@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,6 +15,9 @@ import (
 )
 
 func (r *Runner) validateRequest(ctx context.Context, request *Request) error {
+	return r.validateSource(ctx, request, false)
+}
+func (r *Runner) validateSource(ctx context.Context, request *Request, binding bool) error {
 	cutoff, _ := time.Parse(time.RFC3339Nano, r.State.Since)
 	stamp, err := time.Parse(time.RFC3339Nano, request.Created)
 	if err != nil || stamp.Before(cutoff) || stamp.After(r.Now().Add(time.Minute)) || request.Source != "discord-api-v10" || request.Author != r.State.Destination.Owner || request.Key != requestKey(request.Thread, request.Message) {
@@ -36,17 +38,23 @@ func (r *Runner) validateRequest(ctx context.Context, request *Request) error {
 		return err
 	}
 	botRequest := thread.Parent == requestForum && thread.Owner == r.State.Destination.Bot && (r.ProgressLinks[thread.ID].Todo != 0 || r.KnownQuestionThreads[thread.ID])
-	if thread.ID != request.Thread || thread.Type != 11 || thread.Guild != r.State.Destination.Guild || !((thread.Parent == requestForum && thread.Owner == r.State.Destination.Owner) || botRequest || (thread.Parent == r.State.Destination.Forum && thread.Owner == r.State.Destination.Bot)) {
+	legacy := thread.Type == 11 && ((thread.Parent == requestForum && thread.Owner == r.State.Destination.Owner) || botRequest || (thread.Parent == r.State.Destination.Forum && thread.Owner == r.State.Destination.Bot))
+	if thread.ID != request.Thread || thread.Guild != r.State.Destination.Guild {
 		return errors.New("owner thread scope differs")
 	}
-	if thread.Owner == r.State.Destination.Bot && request.Origin == nil && r.ProgressLinks[thread.ID].Todo == 0 && !r.KnownQuestionThreads[thread.ID] && !(request.Phase == "status_query" && isPureStatusQuestion(request.Text, r.State.Destination.Bot)) {
+	if !legacy {
+		if _, err := monthlyReadable(ctx, r, request.Thread); err != nil {
+			return err
+		}
+	}
+	if !binding && legacy && thread.Owner == r.State.Destination.Bot && request.Origin == nil && r.ProgressLinks[thread.ID].Todo == 0 && !r.KnownQuestionThreads[thread.ID] && !(request.Phase == "status_query" && isPureStatusQuestion(request.Text, r.State.Destination.Bot)) {
 		request.Phase = "origin_pending"
 		if err := r.save(); err != nil {
 			return err
 		}
 		return errors.New("owner reply original association pending")
 	}
-	var live Message
+	var live historyReadMessage
 	if err := r.get(ctx, "/channels/"+request.Thread+"/messages/"+request.Message, &live); err != nil {
 		if strings.Contains(err.Error(), "status 404") {
 			request.Phase = "source_unavailable"
@@ -77,16 +85,9 @@ func (r *Runner) validateRequest(ctx context.Context, request *Request) error {
 	if request.RecordVersion > 2 || request.Guild != r.State.Destination.Guild || live.Reference.Message != request.ReplyTo || live.Reference.Channel != request.ReplyChannel || live.Reference.Guild != request.ReplyGuild {
 		return errors.New("owner message metadata differs; receipt retained")
 	}
-	if edited := safeText(live.Content, r.Token); edited != request.Text || live.Edited != request.Edited {
-		request.PriorVersions = append(request.PriorVersions, request.Text)
-		sum := sha256.Sum256([]byte(request.Text))
-		request.PriorEdits = append(request.PriorEdits, EditVersion{Edited: request.Edited, SHA256: fmt.Sprintf("%x", sum[:])})
-		request.Text = edited
-		request.Edited = live.Edited
-		request.Acquired = r.Now().UTC().Format(time.RFC3339Nano)
-		if err := r.save(); err != nil {
-			return err
-		}
+	if changed, err := r.observeOrdinary(request, live); err != nil {
+		return err
+	} else if changed {
 		return errors.New("owner edit saved; registration deferred")
 	}
 	return nil
@@ -206,6 +207,7 @@ func (r *Runner) todo(id uint64) (*TodoRow, error) {
 	return nil, errors.New("task receipt missing")
 }
 func (r *Runner) threadActive(request *Request) (*Request, error) {
+	var found *Request
 	for _, old := range r.State.Requests {
 		if old.Message == request.Message || old.Todo == 0 || old.Thread != request.Thread {
 			continue
@@ -214,11 +216,15 @@ func (r *Runner) threadActive(request *Request) (*Request, error) {
 		if err != nil {
 			return nil, err
 		}
-		if row.Status != "done" && row.Status != "block" {
-			return old, nil
+		if row.Project != r.Config.Project {
+			return nil, errors.New("original task project differs")
 		}
+		if found != nil && found.Todo != old.Todo {
+			return nil, errors.New("multiple original tasks require exact binding")
+		}
+		found = old
 	}
-	return nil, nil
+	return found, nil
 }
 func (r *Runner) deliverSteering(ctx context.Context, request *Request, old *Request) error {
 	if err := r.validateRequest(ctx, request); err != nil {
@@ -418,6 +424,9 @@ func (r *Runner) results(ctx context.Context) error {
 		if request == nil || request.Todo == 0 || request.Phase == "reported" || request.Phase == "status_answered" || request.Phase == "origin_blocked" || request.Phase == "product_reply_saved" || request.Phase == "product_reply_delivered" || request.Phase == "product_reply_applied" || r.isConfiguredRequestReport(request.Todo) {
 			continue
 		}
+		if request.Binding != nil || request.Phase == "source_edit_saved" || request.Phase == "source_edit_delivered" {
+			continue
+		}
 		r.State.ResultCursor = id
 		if err := r.save(); err != nil {
 			return err
@@ -433,29 +442,12 @@ func (r *Runner) results(ctx context.Context) error {
 		if request.Phase == "steering_saved" {
 			stage = "steering"
 			if row.Status == "done" || row.Status == "block" {
-				var proof struct {
-					Todo         uint64 `json:"todo_id"`
-					Message      string `json:"message_id"`
-					Job          string `json:"job_id"`
-					Revision     string `json:"revision"`
-					Verification string `json:"verification"`
-				}
-				e := readJSON(filepath.Join(r.Config.Home, "applied", request.Message+".json"), 1<<20, &proof)
-				owned := false
-				for _, raw := range row.Jobs {
-					var jid string
-					if json.Unmarshal(raw, &jid) == nil && jid == proof.Job && validJob(jid) {
-						owned = true
-					}
-				}
-				if e == nil && proof.Todo == request.Todo && proof.Message == request.Message && owned && proof.Revision != "" && proof.Verification != "" {
-					stage = "complete"
-				} else {
-					request.Todo = 0
-					request.Phase = "captured"
-					request.Reported = ""
-					return r.save()
-				}
+				// The legacy receipt lacks a source-version hash. Preserve its
+				// bytes, but require the ordinary versioned delivery/application
+				// protocol instead of clearing the original task or inheriting it.
+				request.Phase, request.Reported = "source_edit_saved", ""
+				request.PendingOwner, request.NextAction = "OMB", "deliver_current_version_to_original_task"
+				return r.save()
 			}
 		} else if row.Status == "doing" {
 			stage = "working"

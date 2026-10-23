@@ -576,7 +576,7 @@ func TestIntakeCursorAdvancesPastBlockedOrigins(t *testing.T) {
 	for i := range messages {
 		thread := fmt.Sprintf("blocked-%d", i+1)
 		if i == 4 {
-			thread = "500"
+			thread = snowflake(c.Add(time.Duration(i+1) * time.Second))
 		}
 		messages[i] = msg(c.Add(time.Duration(i+1)*time.Second), thread, "300", fmt.Sprintf("request %d", i+1))
 		r.State.Requests[messages[i].ID] = &Request{Thread: thread, Guild: "100", RecordVersion: 2, Message: messages[i].ID, Author: "300", Created: messages[i].Timestamp, Source: "discord-api-v10", Text: messages[i].Content, Key: requestKey(thread, messages[i].ID), Phase: "captured"}
@@ -591,7 +591,7 @@ func TestIntakeCursorAdvancesPastBlockedOrigins(t *testing.T) {
 		if strings.Contains(q.URL.Path, "/messages/") {
 			respond(w, messages[4])
 		} else {
-			respond(w, Thread{ID: "500", Type: 11, Guild: "100", Parent: requestForum, Owner: "300"})
+			respond(w, Thread{ID: messages[4].Channel, Type: 11, Guild: "100", Parent: requestForum, Owner: "300"})
 		}
 	})
 	adds := 0
@@ -676,7 +676,7 @@ func TestOwnerEditTimestampChangeIsSavedWithOriginalIdentity(t *testing.T) {
 		t.Fatal("owner edit timestamp was not preserved as a deferred update")
 	}
 }
-func TestBlockedThreadCreatesNewTaskRatherThanUnclaimedSteering(t *testing.T) {
+func TestBlockedThreadPreservesOriginalTaskForFollowup(t *testing.T) {
 	r, c := fixture(t)
 	old := &Request{Thread: "500", Message: "600", Todo: 10, Phase: "registered"}
 	r.State.Requests[old.Message] = old
@@ -691,11 +691,11 @@ func TestBlockedThreadCreatesNewTaskRatherThanUnclaimedSteering(t *testing.T) {
 		}
 	})
 	r.Run = func(context.Context, string, ...string) (string, error) { return "added 11", nil }
-	if e := r.register(context.Background(), req); e != nil || req.Todo != 11 || req.Phase != "registered" {
+	if e := r.register(context.Background(), req); e != nil || req.Todo != 10 || req.Phase != "steering_saved" {
 		t.Fatalf("blocked delivery %v", e)
 	}
 }
-func TestUnappliedSteeringResumesWhenPriorTaskBlocked(t *testing.T) {
+func TestUnappliedSteeringRetainsBlockedOriginalForVersionedDelivery(t *testing.T) {
 	r, _ := fixture(t)
 	req := &Request{Thread: "500", Message: "600", Todo: 10, Phase: "steering_saved"}
 	r.State.Requests[req.Message] = req
@@ -703,8 +703,8 @@ func TestUnappliedSteeringResumesWhenPriorTaskBlocked(t *testing.T) {
 	if e := r.results(context.Background()); e != nil {
 		t.Fatal(e)
 	}
-	if req.Todo != 0 || req.Phase != "captured" {
-		t.Fatal("unapplied steering stranded")
+	if req.Todo != 10 || req.Phase != "source_edit_saved" || req.PendingOwner != "OMB" {
+		t.Fatal("unapplied steering lost its original task or recovery owner")
 	}
 }
 func TestLostSenderResponseRequiresExactSilentReceipt(t *testing.T) {

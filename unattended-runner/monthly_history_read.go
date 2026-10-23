@@ -30,7 +30,8 @@ func monthlyPermissions(ctx context.Context, r *Runner, c monthlyChannel) (uint6
 		ID          string `json:"id"`
 		Permissions string `json:"permissions"`
 	}
-	if err := monthlyGet(ctx, r, "/guilds/"+monthlyGuild+"/roles", "roles", &roles); err != nil {
+	guild := r.State.Destination.Guild
+	if err := monthlyGet(ctx, r, "/guilds/"+guild+"/roles", "roles", &roles); err != nil {
 		return 0, err
 	}
 	var member struct {
@@ -40,7 +41,7 @@ func monthlyPermissions(ctx context.Context, r *Runner, c monthlyChannel) (uint6
 		} `json:"user"`
 		Roles []string `json:"roles"`
 	}
-	if err := monthlyGet(ctx, r, "/guilds/"+monthlyGuild+"/members/"+r.State.Destination.Bot, "bot_member", &member); err != nil {
+	if err := monthlyGet(ctx, r, "/guilds/"+guild+"/members/"+r.State.Destination.Bot, "bot_member", &member); err != nil {
 		return 0, err
 	}
 	if roles == nil || member.Roles == nil || member.User.ID != r.State.Destination.Bot || !member.User.Bot {
@@ -57,11 +58,11 @@ func monthlyPermissions(ctx context.Context, r *Runner, c monthlyChannel) (uint6
 		}
 		roleBits[role.ID] = bits
 	}
-	permissions, ok := roleBits[monthlyGuild]
+	permissions, ok := roleBits[guild]
 	if !ok {
 		return 0, monthlyInvalid("everyone_role")
 	}
-	selected := map[string]bool{monthlyGuild: true}
+	selected := map[string]bool{guild: true}
 	for _, id := range member.Roles {
 		bits, ok := roleBits[id]
 		if !ok || selected[id] {
@@ -86,7 +87,7 @@ func monthlyPermissions(ctx context.Context, r *Runner, c monthlyChannel) (uint6
 			return 0, monthlyInvalid("duplicate_overwrite")
 		}
 		seen[key] = true
-		if *o.Type == 0 && o.ID == monthlyGuild {
+		if *o.Type == 0 && o.ID == guild {
 			everyoneAllow, everyoneDeny = allow, deny
 		} else if *o.Type == 0 && selected[o.ID] {
 			rolesAllow |= allow
@@ -109,7 +110,7 @@ func monthlyReadable(ctx context.Context, r *Runner, id string) (monthlyChannel,
 	if err := monthlyGet(ctx, r, "/channels/"+id, "selected_channel", &c); err != nil {
 		return c, err
 	}
-	if !c.valid(monthlyGuild, true) || c.ID != id {
+	if !c.valid(r.State.Destination.Guild, true) || c.ID != id {
 		return c, monthlyInvalid("selected_channel")
 	}
 	parent := c
@@ -127,7 +128,7 @@ func monthlyReadable(ctx context.Context, r *Runner, id string) (monthlyChannel,
 		if err := monthlyGet(ctx, r, "/channels/"+c.Parent, "thread_parent", &parent); err != nil {
 			return c, err
 		}
-		if !parent.valid(monthlyGuild, true) || parent.ID != c.Parent || (*parent.Type != 0 && *parent.Type != 5 && *parent.Type != 15 && *parent.Type != 16) {
+		if !parent.valid(r.State.Destination.Guild, true) || parent.ID != c.Parent || (*parent.Type != 0 && *parent.Type != 5 && *parent.Type != 15 && *parent.Type != 16) {
 			return c, monthlyInvalid("thread_parent")
 		}
 	}

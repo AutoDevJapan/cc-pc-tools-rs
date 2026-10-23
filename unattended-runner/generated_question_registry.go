@@ -11,6 +11,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -97,8 +98,11 @@ func (r generatedQuestionRegistry) spec(b generatedQuestionBundle) (generatedQue
 			return s, errConversationMedia
 		}
 	}
-	if b.Domain != generatedEvidenceDomain || b.Scope.Todo == 0 || !shaPattern.MatchString(b.Scope.Body) || !shaPattern.MatchString(b.Scope.Decision) || !generatedUUID.MatchString(b.Session) || !b.Content.New || !b.Content.NoConfidential || strings.TrimSpace(b.Content.Reference) == "" {
+	if b.Domain != generatedEvidenceDomain || b.Scope.Todo == 0 || !shaPattern.MatchString(b.Scope.Body) || !shaPattern.MatchString(b.Scope.Decision) || !generatedUUID.MatchString(b.Session) {
 		return s, errConversationMedia
+	}
+	if !b.Content.New || !b.Content.NoConfidential || strings.TrimSpace(b.Content.Reference) == "" {
+		return s, generatedFailure("content_review", "content_review_incomplete")
 	}
 	if !b.Content.Fictional {
 		return s, generatedFailure("content_review", "fictional_data_required")
@@ -212,7 +216,10 @@ func eraseGeneratedKey(key []byte) {
 func (r generatedQuestionRegistry) check(ctx context.Context, evidence string) (generatedQuestionBundle, error) {
 	empty := generatedQuestionBundle{}
 	allowed, err := r.Guard(ctx, evidence)
-	if err != nil || !allowed {
+	if err != nil {
+		return empty, generatedFailure("evidence_guard", "original_evidence_guard_failed")
+	}
+	if !allowed {
 		return empty, generatedFailure("evidence_guard", "original_evidence_not_qualified")
 	}
 	b, err := r.Read(evidence, 512<<10)
@@ -225,7 +232,8 @@ func (r generatedQuestionRegistry) check(ctx context.Context, evidence string) (
 	}
 	s, err := r.spec(bundle)
 	if err != nil {
-		if _, ok := err.(*generatedQuestionFailure); ok {
+		var failure *generatedQuestionFailure
+		if errors.As(err, &failure) {
 			return empty, err
 		}
 		return empty, generatedFailure("bundle_contract", "original_scope_or_metadata_invalid")

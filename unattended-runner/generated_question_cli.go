@@ -76,9 +76,11 @@ func generatedQuestionEvidenceCLI(args []string, out io.Writer, registry generat
 	var evidence string
 	conversationStringFlag(fs, "evidence", &evidence)
 	var diagnostic bool
-	fs.BoolVar(&diagnostic, "diagnostic", false, "report the first failed check without registering or exposing input contents")
+	if checkOnly {
+		fs.BoolVar(&diagnostic, "diagnostic", false, "report the first failed check without registering or exposing input contents")
+	}
 	fail := func() int { _, _ = io.WriteString(out, "generated question evidence not registered\n"); return 1 }
-	if fs.Parse(args) != nil || fs.NArg() != 0 || evidence == "" || (diagnostic && !checkOnly) {
+	if fs.Parse(args) != nil || fs.NArg() != 0 || evidence == "" {
 		return fail()
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)

@@ -29,15 +29,22 @@ unattended-runner.exe --check-generated-question-evidence --evidence <evidence.j
 | stage | code | 確認できた段階 |
 |---|---|---|
 | `evidence_guard` | `original_evidence_not_qualified` | 原証拠の通常guardが利用を認めなかった。証拠本文は読んでおらず、後続条件は未確認 |
+| `evidence_guard` | `original_evidence_guard_failed` | guardの実行・時間制限・応答形式の確認が正常に終わらなかった。証拠本文は読んでいない |
 | `evidence_read` | `original_evidence_read_failed` | guard通過後、原証拠を正常に読み取れなかった |
 | `evidence_schema` | `original_evidence_schema_invalid` | 読み取った原証拠が既存の厳密なJSON形式に適合しない |
 | `content_review` | `fictional_data_required` | 現行形式の架空データ申告が成立しない |
-| `bundle_contract` | `original_scope_or_metadata_invalid` | 原証拠のscopeまたはmetadataが既存契約に適合しない |
-| `image_validation` | `original_generation_or_image_not_qualified` | 個別の原出所・実ツール応答・原画像の検証に進んだが成立しない |
+| `content_review` | `content_review_incomplete` | 新規生成・秘密/顧客内容なしの申告または確認の根拠が不足している |
+| `bundle_contract` | `original_scope_or_metadata_invalid` | domain・session・scope・元ToDoの継続状態などが既存契約に適合しない |
+| `image_validation` | `original_generation_or_image_not_qualified` | 個別の原出所・実ツール応答・原画像の検証に進んだが、期限や元保護の確認などを含む条件が成立しない |
+| `validation` | `evidence_not_qualified` | 分類済みの停止理由を持たない内部エラーに対する固定の予備表示。内部エラーの文字列は出さない |
 | `complete` | `evidence_validated` | 通常checkの全条件が成立した。未登録なので送信資格やUI承認とは別 |
 
+表は停止理由の分類であり、判定順ではない。基本のdomain・session・scope確認は内容申告より前に、
+残るmetadataや元ToDoの継続状態などの確認は内容申告より後に行う。
+`bundle_contract`から、内容申告や後続の画像検証を通ったとは推定しない。
 guard未成立を、実際の顧客内容の検出や、後続の`fictional_data`だけが原因と断定しない。
-実在する本人のデータを架空と申告して通すこともできない。原証拠を通常経路で読めず、
+内容は担当の自己申告であり、検証器が真偽を判定したものではない。実在する本人のデータを
+架空と偽って申告しない。原証拠を通常経路で読めず、
 本人の依頼・元ToDo・原出所・質問scopeを独立に結ぶ用途検証も存在しない場合は、
 停止段階と未確認の入力を元担当へ返す。原監査の書換え、別コピー、一般guardの解除や
 画像ごとの固定許可で代用しない。

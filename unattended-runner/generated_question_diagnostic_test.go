@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -42,8 +43,84 @@ func TestGeneratedQuestionDiagnosticStopsBeforeUnqualifiedEvidenceRead(t *testin
 	if report.Stage != "evidence_guard" || report.Code != "original_evidence_not_qualified" || report.Validated || report.Registered || reads != 0 {
 		t.Fatalf("report=%+v reads=%d", report, reads)
 	}
-	if strings.Contains(out.String(), manifest) || strings.Contains(out.String(), s.Session) {
-		t.Fatal("diagnostic exposed an input path or native session")
+	want := "{\"domain\":\"owner-generated-question-diagnostic-v1\",\"validated\":false,\"registered\":false,\"stage\":\"evidence_guard\",\"code\":\"original_evidence_not_qualified\"}\n"
+	if out.String() != want {
+		t.Fatal("diagnostic exposed unexpected fields or input data", out.String())
+	}
+}
+
+func TestGeneratedQuestionDiagnosticSeparatesGuardExecutionFailure(t *testing.T) {
+	s, _ := generatedFixture(t)
+	r := generatedRegistryFixture(t, s)
+	manifest := filepath.Join(filepath.Dir(s.Proof), "evidence.json")
+	writeGeneratedBundle(t, manifest, generatedBundle(s))
+	if _, err := r.check(context.Background(), manifest); err != nil {
+		t.Fatal("healthy control failed", err)
+	}
+	reads := 0
+	r.Guard = func(context.Context, string) (bool, error) {
+		return false, errors.New("internal command error containing sensitive input")
+	}
+	r.Read = func(string, int64) ([]byte, error) { reads++; return nil, os.ErrPermission }
+	var out bytes.Buffer
+	code := generatedQuestionEvidenceCLI([]string{"--evidence", manifest, "--diagnostic"}, &out, r, true)
+	want := "{\"domain\":\"owner-generated-question-diagnostic-v1\",\"validated\":false,\"registered\":false,\"stage\":\"evidence_guard\",\"code\":\"original_evidence_guard_failed\"}\n"
+	if code != 1 || reads != 0 || out.String() != want {
+		t.Fatalf("exit=%d reads=%d output=%s", code, reads, out.String())
+	}
+}
+
+func TestGeneratedQuestionDiagnosticContentReviewMissingFields(t *testing.T) {
+	for _, field := range []string{"new", "no-confidential", "reference"} {
+		t.Run(field, func(t *testing.T) {
+			s, _ := generatedFixture(t)
+			r := generatedRegistryFixture(t, s)
+			bundle := generatedBundle(s)
+			switch field {
+			case "new":
+				bundle.Content.New = false
+			case "no-confidential":
+				bundle.Content.NoConfidential = false
+			case "reference":
+				bundle.Content.Reference = " "
+			}
+			manifest := filepath.Join(filepath.Dir(s.Proof), "evidence.json")
+			writeGeneratedBundle(t, manifest, bundle)
+			var out bytes.Buffer
+			code := generatedQuestionEvidenceCLI([]string{"--evidence", manifest, "--diagnostic"}, &out, r, true)
+			want := "{\"domain\":\"owner-generated-question-diagnostic-v1\",\"validated\":false,\"registered\":false,\"stage\":\"content_review\",\"code\":\"content_review_incomplete\"}\n"
+			if code != 1 || out.String() != want {
+				t.Fatalf("exit=%d output=%s", code, out.String())
+			}
+		})
+	}
+}
+
+func TestGeneratedQuestionRegisterRejectsDiagnosticBeforeReadingHealthyEvidence(t *testing.T) {
+	for _, flag := range []string{"--diagnostic", "--diagnostic=false"} {
+		t.Run(flag, func(t *testing.T) {
+			s, _ := generatedFixture(t)
+			r := generatedRegistryFixture(t, s)
+			manifest := filepath.Join(filepath.Dir(s.Proof), "evidence.json")
+			writeGeneratedBundle(t, manifest, generatedBundle(s))
+			guard := r.Guard
+			calls := 0
+			r.Guard = func(ctx context.Context, path string) (bool, error) {
+				calls++
+				return guard(ctx, path)
+			}
+			var out bytes.Buffer
+			if code := generatedQuestionEvidenceCLI([]string{"--evidence", manifest, flag}, &out, r, false); code != 1 || calls != 0 || out.String() != "generated question evidence not registered\n" {
+				t.Fatalf("exit=%d guard calls=%d output=%s", code, calls, out.String())
+			}
+			if _, err := os.Stat(r.Home); !os.IsNotExist(err) {
+				t.Fatal("rejected diagnostic created a registration", err)
+			}
+			out.Reset()
+			if code := generatedQuestionEvidenceCLI([]string{"--evidence", manifest}, &out, r, false); code != 0 || calls == 0 {
+				t.Fatalf("healthy ordinary registration failed: exit=%d calls=%d output=%s", code, calls, out.String())
+			}
+		})
 	}
 }
 

@@ -45,3 +45,16 @@ PR148の通常CI4件が開始前のHosted予算制限で失敗している。Dra
 - 保存commit4b88876c7706a628d6c2b8504ab54bd43e1eacf1をremoteで照合した。scheduler checkpointも同branch/実HEAD/元jobでlaunched=0の保存を読戻し確認した。最終追記後も新しい実HEADを通常checkpointで保存する。
 - 初回checkpointはInputRejectedだった。GUI subsystemのscheduler.exeをPowerShellから直接呼ぶと完了前に後続のnote/wait操作へ進み、行全体の照合と競合し得ることを実装から確認した。同じ内容の正規呼出しはその後に保存済み。以後は非表示Start-Processの-Wait/-PassThruで終了とexitを受け取り、状態変更を並行させない。guard変更や拒否操作の別経路は使っていない。
 - 恒久CodeQL原logを再計測し、353569bytesと前記SHA256の一致を確認した。原log本文は表示していない。
+
+## 2026-10-23 再開・マージ直前の照合
+
+前節は2026-10-17時点の履歴。通常CIの停止条件は、2736から配送された2026-10-20の実結果で解消している。2736は自己作成資源の回収だけを2381に待っており、その状態を変更しない。
+
+- 実APIでAutoDevJapan/civ6-banseiki（repo1392152644）のpublic/nonfork/admin、同head/base repoを確認。公開は既済の2988によるもので、本担当は公開・予算を変更していない。
+- PR148のheadはafabad463b1e3f8eb74cfaf9ac2b885776bb8c1a、baseは1100676d1ed421794c252fb4b15ed3d954e21a5b。合成merge b5a571cd844f077b81123892b56deace17b41d5fと候補のtreeはf1dd8d999e76e269145627f921d2ddeff9d13bb9で一致。draft/open/mergeable/cleanを確認した。
+- 最終差分は4file（20行追加・1行削除）。doctest追加、AlreadyExistsの安定した文脈、3workflowのevent SHA checkoutだけ。75a以降の追加差分は3workflowだけで、元のOS・コマンド・timeout・失敗伝播を維持している。
+- head一致の正式7checkはすべてcompleted/success。Rust39386622982、native39386622979、live39386622996、CodeQL39386619421。Windows1854件・Linux1850件、両OSのfmt/doctestコマンド/release/138scenario、native173件（既存ignore1）、live166件（既存ignore3）が成功。現時点のdoctest実例は0件で、実例を新設したとはしない。実ゲーム/GPU/Civ6は起動していない。
+- 固定資料のSonnet5.5レビュー3072/3073の原文・受領記録・実モデル記録を読み、Must0と範囲を確認。checkout後のmerge tree照合・raw log保存のSuggestionは対応済み。元2647/2729のレビュー範囲を広げない。CodeQLの過去の警告スレッドはresolved、未解決0件をAPIで確認した。
+- 2736の受入packetは20205bytes/SHA256 3388DF4B591386AABF3E4D1F0638DDCDFD90451EA15AD35FA3AEA229568D96AD。指定18証拠の実bytes/SHAと、6原job logの実bytes/SHAがすべて一致した。原文・raw logはコミットせず、作成元の恒久rootに保持する。
+- 現在の6完了条件は5/6（83%）。残るのはPR148の通常マージと反映確認。固定head一致でready→通常mergeし、実merge tree/mainを確認する。追加のビルド・同じ成功CIの手動再実行は行わない。
+- 自己作成資源の残留（2736/2381）、元880/134/995/996の停止・依存・製品受入は別の未完として保持する。旧製品フォルダ・原保護設定は操作しない。本人判断は不要。

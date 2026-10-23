@@ -105,3 +105,12 @@ PR148のマージ前7check成功と実mergeは上記の事実として保持す�
 - main392e7f9のLinux job120228730034はcompleted/success。原log525411bytes/SHA256 DBE260F4846FB2DE7A77359126439FC35322F5B3999CD25CCE4BD5B87EE515B5を保存した。CodeQLのmain解析2010422054/2010401220も同commit・error空/results_count0。
 - Windows job120228729688はall Rust/Lua testsが成功し、Build all toolsを実行中。mainのCodeQL/native/live/Linuxはsuccess。Windowsのビルド・残stepの終端を確認してから完了とする。同じテストを追加起動しない。
 - Issue150はPR151の通常マージでclosed（2026-10-23T03:45:31Z）を確認した。旧main224b801の失敗とその原logは保持する。
+
+## 最終結果：この独立工程は完了
+
+- main392e7f9の自然CIは、Rust39896710610/native39896710609/live39896710625/CodeQL39896710409の全4run・6checkでcompleted/success。Windows120228729688もテスト・doctestコマンド・release build・scenario確認を含め終端successとなった。main refとtree b5680a158cfcad929e49e97702eec210cc82135dの一致を再確認した。
+- mainの原Rust logsはWindows535182bytes/SHA256 4704DF43D0BE3A89DE5F637DEA3431A21DDA2FAF467DEFA2DBAAA53FBEE6EBB3、Linux525411bytes/SHA256 DBE260F4846FB2DE7A77359126439FC35322F5B3999CD25CCE4BD5B87EE515B5。正常取得exit0。Windows1854件/Linux1850件、failed0、以前失敗した2テストの個別ok・実main SHAを両方の原logで確認した。
+- 最終PR記録 https://github.com/AutoDevJapan/civ6-banseiki/pull/151#issuecomment-6357077088 。Discordは既存の万世記スレッドへ通知なしで結果を1回配送しdelivery verified。thread1563030711253082142/message1563040014378598461/request normal-log-b1d2a65bd040a59e4a9a285b28844889f5d759c88a1c1e26be7bc9f416b678f1。清掃記録も既存専用スレッド1561297764258807821/message1563038270613622816へdelivery verified。メンション・返信ping・notifyは0。
+- ToDo2640の6条件（要件/非重複、修正commit、PR保存、別モデルreview、必要CI、通常mergeと反映確認）は6/6・100%。PR148と追加修復PR151の通常マージ、マージ後成功、自作Temp2件の回収を確認した。新規の未回収資源・未受領レビューはない。共有ToDoの最終状態はschedulerが更新する。
+- 元880/134/995/996の製品受入・停止・依存・未完と、2736/2381の過去の検証資源回収はそのまま残す。この独立工程の完了を元製品全体・実ゲーム/本人LAN受入・既存回収の完了へ拡大しない。本人判断/PC操作/費用/GPU/Civ6/旧製品フォルダ操作は不要・未実施。
+- 原log/packet/応答の恒久保存先はdocs/todo-2640-evidence（既存Git ignore対象）。公開される記録はこのcheckpointとtodo-2640-final-result.jsonだけ。最終保存commitをpushし、実HEADでscheduler checkpointを保存して終了する。

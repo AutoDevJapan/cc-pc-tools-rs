@@ -50,48 +50,49 @@
     "recovery_pr": 151,
     "recovery_head": "cee678945825905c20fa606ff5ef71c434d9e8a5",
     "review_todo": 3418,
-    "recovery_complete": false,
+    "recovery_complete": true,
     "recovery_checks": [
       {
-        "name": "test (ubuntu-latest)",
-        "status": "IN_PROGRESS",
-        "conclusion": ""
-      },
-      {
-        "name": "Analyze (actions)",
-        "status": "COMPLETED",
-        "conclusion": "SUCCESS"
-      },
-      {
-        "name": "native-driver",
-        "status": "COMPLETED",
-        "conclusion": "SUCCESS"
-      },
-      {
-        "name": "live-chain",
-        "status": "COMPLETED",
-        "conclusion": "SUCCESS"
-      },
-      {
-        "name": "test (windows-latest)",
-        "status": "IN_PROGRESS",
-        "conclusion": ""
-      },
-      {
+        "id": 120228734803,
         "name": "Analyze (rust)",
-        "status": "COMPLETED",
-        "conclusion": "SUCCESS"
+        "status": "completed",
+        "conclusion": "success"
       },
       {
-        "name": "CodeQL",
-        "status": "COMPLETED",
-        "conclusion": "SUCCESS"
+        "id": 120228734635,
+        "name": "Analyze (actions)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120228730034,
+        "name": "test (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120228729742,
+        "name": "native-driver",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120228729688,
+        "name": "test (windows-latest)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120228729554,
+        "name": "live-chain",
+        "status": "completed",
+        "conclusion": "success"
       }
     ],
     "recovery_merge": "392e7f9bbcea6ee5867b78da37de1efd9f9fec48",
     "recovery_merged_at": "2026-10-23T03:45:29Z"
   },
-  "independent_work_complete": false,
+  "independent_work_complete": true,
   "review_wait": {
     "todo": 3418,
     "observed_status": "done",
@@ -102,9 +103,12 @@
   },
   "discord": {
     "delivery": "verified",
-    "url": "https://discord.com/channels/1552944707464597524/1563030711253082142",
-    "request_id": "normal-log-edf528ab6e4b136e594deb9738c62e2c928e299ff3635e07f52f4af0b0bf3d35",
-    "notify": false
+    "domain": "discord-conversation-v1",
+    "message_id": "1563040014378598461",
+    "request_id": "normal-log-b1d2a65bd040a59e4a9a285b28844889f5d759c88a1c1e26be7bc9f416b678f1",
+    "reused": false,
+    "thread_id": "1563030711253082142",
+    "url": "https://discord.com/channels/1552944707464597524/1563030711253082142"
   },
   "recovery_review_receipt": {
     "todo": 3418,
@@ -130,5 +134,107 @@
     "logical_bytes": 5250,
     "archive_sha256": "9E8415803B6AD29BDD44310196FEC16D6E1B1866FA13060AB553DC238FE3044C"
   },
-  "own_cleanup_complete": true
+  "own_cleanup_complete": true,
+  "completed_job": "20261023-123956-todo-2640",
+  "final_main": "392e7f9bbcea6ee5867b78da37de1efd9f9fec48",
+  "final_tree": "b5680a158cfcad929e49e97702eec210cc82135d",
+  "final_ci": {
+    "checks": [
+      {
+        "id": 120228734803,
+        "name": "Analyze (rust)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120228734635,
+        "name": "Analyze (actions)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120228730034,
+        "name": "test (ubuntu-latest)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120228729742,
+        "name": "native-driver",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120228729688,
+        "name": "test (windows-latest)",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 120228729554,
+        "name": "live-chain",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "runs": [
+      {
+        "id": 39896710625,
+        "name": "Shared Civ6 live chain",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 39896710609,
+        "name": "Native Civ6 driver",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 39896710409,
+        "name": "Push on main",
+        "status": "completed",
+        "conclusion": "success"
+      },
+      {
+        "id": 39896710610,
+        "name": "Rust tools and Lua tests",
+        "status": "completed",
+        "conclusion": "success"
+      }
+    ],
+    "rust_logs": [
+      {
+        "job": 120228729688,
+        "file": "main392-job120228729688.original.log",
+        "bytes": 535182,
+        "sha256": "4704DF43D0BE3A89DE5F637DEA3431A21DDA2FAF467DEFA2DBAAA53FBEE6EBB3",
+        "download_exit": 0,
+        "reported_pass": 1854,
+        "reported_fail": 0,
+        "moved_checkout_regression_pass": true,
+        "explicit_repo_regression_pass": true,
+        "tested_main_in_log": true
+      },
+      {
+        "job": 120228730034,
+        "file": "main392-job120228730034.original.log",
+        "bytes": 525411,
+        "sha256": "DBE260F4846FB2DE7A77359126439FC35322F5B3999CD25CCE4BD5B87EE515B5",
+        "download_exit": 0,
+        "reported_pass": 1850,
+        "reported_fail": 0,
+        "moved_checkout_regression_pass": true,
+        "explicit_repo_regression_pass": true,
+        "tested_main_in_log": true
+      }
+    ],
+    "all_success": true,
+    "manual_reruns": 0
+  },
+  "completion_conditions": {
+    "total": 6,
+    "verified": 6,
+    "progress": 100
+  }
 }

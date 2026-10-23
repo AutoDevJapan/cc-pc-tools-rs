@@ -1,0 +1,42 @@
+{
+  "todo": 2640,
+  "repo": "AutoDevJapan/civ6-banseiki",
+  "repo_id": 1392152644,
+  "pr": 148,
+  "pr_url": "https://github.com/AutoDevJapan/civ6-banseiki/pull/148",
+  "state": "closed",
+  "merged": true,
+  "merged_at": "2026-10-23T03:04:39Z",
+  "head": "afabad463b1e3f8eb74cfaf9ac2b885776bb8c1a",
+  "merge_commit": "224b80173e5e6599bde92f2facba6631c165c3df",
+  "tree": "f1dd8d999e76e269145627f921d2ddeff9d13bb9",
+  "parents": [
+    "1100676d1ed421794c252fb4b15ed3d954e21a5b",
+    "afabad463b1e3f8eb74cfaf9ac2b885776bb8c1a"
+  ],
+  "main": "224b80173e5e6599bde92f2facba6631c165c3df",
+  "premerge_checks_success": 7,
+  "tested_tree_matches": true,
+  "product_complete": false,
+  "remaining_cleanup_todos": [
+    2736,
+    2381
+  ],
+  "original_todos_unchanged": [
+    880,
+    134,
+    995,
+    996
+  ],
+  "evidence_packet_sha256": "3388DF4B591386AABF3E4D1F0638DDCDFD90451EA15AD35FA3AEA229568D96AD",
+  "evidence_metadata_verified": 18,
+  "raw_job_logs_verified": 6,
+  "reviews": [
+    2647,
+    2729,
+    3072,
+    3073
+  ],
+  "review_must_remaining": 0,
+  "doctest_cases_found": 0
+}

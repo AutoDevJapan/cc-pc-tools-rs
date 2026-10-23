@@ -58,3 +58,10 @@ PR148の通常CI4件が開始前のHosted予算制限で失敗している。Dra
 - 2736の受入packetは20205bytes/SHA256 3388DF4B591386AABF3E4D1F0638DDCDFD90451EA15AD35FA3AEA229568D96AD。指定18証拠の実bytes/SHAと、6原job logの実bytes/SHAがすべて一致した。原文・raw logはコミットせず、作成元の恒久rootに保持する。
 - 現在の6完了条件は5/6（83%）。残るのはPR148の通常マージと反映確認。固定head一致でready→通常mergeし、実merge tree/mainを確認する。追加のビルド・同じ成功CIの手動再実行は行わない。
 - 自己作成資源の残留（2736/2381）、元880/134/995/996の停止・依存・製品受入は別の未完として保持する。旧製品フォルダ・原保護設定は操作しない。本人判断は不要。
+
+## 2026-10-23 通常マージの実結果
+
+- PR148をreadyへ変更し、同headの全7check成功とbase不変を再照合して、head一致を指定した通常mergeを実行した。admin override・手動success・force更新は使っていない。
+- merged=true / closed、merged_at=2026-10-23T03:04:39Z（12:04:39 JST）。実mergeは224b80173e5e6599bde92f2facba6631c165c3df。第1親1100676、第2親afabad、2親・tree f1dd8d999e76e269145627f921d2ddeff9d13bb9・main ref一致を実APIで確認した。
+- 独立工程の6条件は6/6達成。元の製品全体と回収工程の完了には拡大しない。既存CIへの運用反映は、mainへの通常pushで自動開始した4run（Rust39893051727/native39893051712/live39893051925/CodeQL39893051537）を確認中。手動rerunやPC側の重複ビルドは行っていない。
+- 本担当で新規作成した一時フォルダの所有IDは42a2934d2dabcd1da3f38a56785ed0c7。最終結果と再開情報を保存後に正規planの通常削除を行い、finishの結果を確認する。

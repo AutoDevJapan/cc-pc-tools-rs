@@ -20,10 +20,11 @@ import (
 )
 
 // environment is the reader's only connection to the outside: the deployed
-// guard's CLI and Git. Tests replace the guard with a recorded fake.
+// guard's CLI and Git, which sees only the fixed object store. Tests replace
+// the guard with a recorded fake.
 type environment struct {
 	guard         func(args ...string) (stdout []byte, exitCode int, ran bool)
-	git           func(root string, args ...string) ([]byte, error)
+	git           func(src gitSource, args ...string) ([]byte, error)
 	beforeRead    func(path string)
 	beforeRecheck func()
 }
@@ -82,9 +83,9 @@ func verifyUpdate(requested string, p profile, env environment) (qualification, 
 	if !s.pinDir(p.root) || !guardClear(env, p.root) {
 		return qualification{}, "source_root"
 	}
-	tree, ok := checkSource(p, env)
-	if !ok {
-		return qualification{}, "source_git"
+	tree, reason := s.checkSource(p)
+	if reason != "" {
+		return qualification{}, reason
 	}
 
 	data, reason := s.evidence(filepath.Join(p.root, p.receiptName), p.receiptSHA, maxEvidenceBytes, "receipt")
@@ -138,7 +139,7 @@ func verifyUpdate(requested string, p profile, env environment) (qualification, 
 	if env.beforeRecheck != nil {
 		env.beforeRecheck()
 	}
-	if !s.recheck() || !sourceStillFixed(p, env) {
+	if !s.recheck() {
 		return qualification{}, "recheck"
 	}
 	return qualification{
@@ -272,45 +273,36 @@ func capacityQualified(env environment, p profile) bool {
 	return true
 }
 
-func gitText(env environment, root string, args ...string) (string, bool) {
-	out, err := env.git(root, args...)
+func gitText(env environment, src gitSource, args ...string) (string, bool) {
+	out, err := env.git(src, args...)
 	return strings.TrimSpace(string(out)), err == nil
 }
 
-// checkSource verifies the fixed worktree and returns the fixed commit's tree.
-func checkSource(p profile, env environment) (map[string]treeEntry, bool) {
-	if !sourceStillFixed(p, env) {
-		return nil, false
+// checkSource reads the fixed worktree's Git metadata itself (readSource),
+// then lets Git read only the object store: the fixed commit's tree, its
+// ancestry to the main commit and the tree listing. It never lets Git open a
+// configuration, reference or working file; the guard classifies files one by
+// one, and only the pinned inputs are compared, by the reader itself.
+func (s *session) checkSource(p profile) (map[string]treeEntry, string) {
+	src, mainID, reason := s.readSource(p)
+	if reason != "" {
+		return nil, reason
 	}
-	if tree, ok := gitText(env, p.root, "rev-parse", "--verify", "--quiet", p.head+"^{tree}"); !ok || tree != p.tree {
-		return nil, false
+	if tree, ok := gitText(s.env, src, "rev-parse", "--verify", "--quiet", p.head+"^{tree}"); !ok || tree != p.tree {
+		return nil, "source_git"
 	}
-	if _, err := env.git(p.root, "merge-base", "--is-ancestor", p.head, p.mainRef); err != nil {
-		return nil, false
+	if _, err := s.env.git(src, "merge-base", "--is-ancestor", p.head, mainID); err != nil {
+		return nil, "source_git"
 	}
-	out, err := env.git(p.root, "ls-tree", "-r", "-z", "--full-tree", p.head)
+	out, err := s.env.git(src, "ls-tree", "-r", "-z", "--full-tree", p.head)
 	if err != nil {
-		return nil, false
+		return nil, "source_git"
 	}
-	return parseTree(out)
-}
-
-// sourceStillFixed is checked before reading and again after every file is
-// pinned: the same worktree top, origin and HEAD. Git reads only refs,
-// configuration and objects. It never opens a working file: the guard
-// classifies files one by one, and only the pinned inputs are compared, by
-// the reader itself.
-func sourceStillFixed(p profile, env environment) bool {
-	top, ok := gitText(env, p.root, "rev-parse", "--show-toplevel")
-	if !ok || !strings.EqualFold(filepath.Clean(filepath.FromSlash(top)), p.root) {
-		return false
+	tree, ok := parseTree(out)
+	if !ok {
+		return nil, "source_git"
 	}
-	origin, ok := gitText(env, p.root, "remote", "get-url", "origin")
-	if !ok || !slices.Contains(p.origins, strings.ToLower(origin)) {
-		return false
-	}
-	head, ok := gitText(env, p.root, "rev-parse", "--verify", "HEAD")
-	return ok && head == p.head
+	return tree, ""
 }
 
 type limitedBuffer struct {
@@ -327,8 +319,8 @@ func (b *limitedBuffer) Write(p []byte) (int, error) {
 	return b.Buffer.Write(p)
 }
 
-// childEnvironment removes inherited GIT_* overrides so another repository,
-// index or object store cannot stand in for the declared source.
+// childEnvironment removes inherited GIT_* overrides from the guard's
+// environment. Git itself runs in isolatedEnvironment.
 func childEnvironment(parent []string) []string {
 	out := make([]string, 0, len(parent)+3)
 	for _, entry := range parent {
@@ -346,21 +338,6 @@ func hiddenProcess(cmd *exec.Cmd) {
 	cmd.WaitDelay = time.Second
 	cmd.Env = childEnvironment(os.Environ())
 	cmd.Stderr = io.Discard
-}
-
-func runGit(root string, args ...string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	argv := append([]string{"-C", root, "--no-replace-objects", "-c", "core.fsmonitor=false"}, args...)
-	cmd := exec.CommandContext(ctx, "git", argv...)
-	hiddenProcess(cmd)
-	out := &limitedBuffer{limit: 32 << 20}
-	cmd.Stdout = out
-	err := cmd.Run()
-	if out.overflow {
-		return nil, errors.New("git output limit exceeded")
-	}
-	return out.Bytes(), err
 }
 
 // runGuard executes the deployed guard by its fixed path. The executable must

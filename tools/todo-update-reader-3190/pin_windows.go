@@ -38,10 +38,21 @@ type pinnedDir struct {
 	info   syscall.ByHandleFileInformation
 }
 
+// releasedFile is Git metadata that was classified, read and closed again, so
+// the worktrees sharing the repository can keep updating it. The recheck
+// reopens it and compares its identity, size, write time and digest.
+type releasedFile struct {
+	path string
+	info syscall.ByHandleFileInformation
+	sum  string
+}
+
 type session struct {
 	env      environment
 	files    []*pinnedFile
 	dirs     []pinnedDir
+	released []releasedFile
+	absent   []string
 	dirCache map[string]bool
 }
 
@@ -117,9 +128,9 @@ func plainFile(info syscall.ByHandleFileInformation) bool {
 	return !reparse(info.FileAttributes) && info.FileAttributes&syscall.FILE_ATTRIBUTE_DIRECTORY == 0 && info.NumberOfLinks == 1
 }
 
-// pin opens one regular, single-link file without following a reparse point
+// open opens one regular, single-link file without following a reparse point
 // and without reading it. The handle shares only reads.
-func (s *session) pin(path string, limit int64) (*pinnedFile, bool) {
+func (s *session) open(path string, limit int64) (*pinnedFile, bool) {
 	if !s.plainAncestors(path) {
 		return nil, false
 	}
@@ -144,8 +155,32 @@ func (s *session) pin(path string, limit int64) (*pinnedFile, bool) {
 		f.file.Close()
 		return nil, false
 	}
-	s.files = append(s.files, f)
 	return f, true
+}
+
+// pin opens a file and keeps it open until the session closes.
+func (s *session) pin(path string, limit int64) (*pinnedFile, bool) {
+	f, ok := s.open(path, limit)
+	if ok {
+		s.files = append(s.files, f)
+	}
+	return f, ok
+}
+
+// release closes a file that was read once and keeps its identity and the
+// digest of the bytes read for the recheck.
+func (s *session) release(f *pinnedFile, sum string) {
+	s.released = append(s.released, releasedFile{path: f.path, info: f.info, sum: sum})
+	f.file.Close()
+}
+
+// absentFile records a path that must not exist now or at the recheck.
+func (s *session) absentFile(path string) bool {
+	if _, err := os.Lstat(path); !os.IsNotExist(err) {
+		return false
+	}
+	s.absent = append(s.absent, path)
+	return true
 }
 
 // read returns exactly the bytes behind the pinned handle and their digest.
@@ -227,6 +262,25 @@ func (s *session) recheck() bool {
 	}
 	for _, d := range s.dirs {
 		if !s.plainAncestors(d.path) || !s.plainDir(d.path) || !dirUnchanged(d) {
+			return false
+		}
+	}
+	for _, r := range s.released {
+		f, ok := s.open(r.path, maxMetadataBytes)
+		if !ok {
+			return false
+		}
+		_, sum, read := s.read(f)
+		now := f.info
+		f.file.Close()
+		before := r.info
+		before.LastAccessTime = now.LastAccessTime
+		if !read || sum != r.sum || before != now {
+			return false
+		}
+	}
+	for _, path := range s.absent {
+		if _, err := os.Lstat(path); !os.IsNotExist(err) {
 			return false
 		}
 	}

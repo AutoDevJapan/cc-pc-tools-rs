@@ -187,8 +187,21 @@ func TestReadsGitMetadataItself(t *testing.T) {
 		expectObjectReads(t, f)
 	})
 	t.Run("shallow boundary", func(t *testing.T) {
+		// As in the real shallow clone, HEAD's parent is not in the object
+		// store. Only the boundary given to Git keeps the ancestry check from
+		// looking for it.
 		f := newFixture(t, nil)
-		writeFile(t, filepath.Join(f.common, "shallow"), f.p.head+"\n")
+		parent := f.p.head
+		f.git("-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "--allow-empty", "-m", "boundary")
+		head := f.gitOut("rev-parse", "HEAD")
+		f.gitIn(f.repo, "update-ref", "refs/remotes/origin/main", head)
+		f.p.head, f.main = head, head
+		f.receipt["source_head"] = head
+		f.writeReceipt()
+		if err := os.Remove(filepath.Join(f.common, "objects", parent[:2], parent[2:])); err != nil {
+			t.Fatal(err)
+		}
+		writeFile(t, filepath.Join(f.common, "shallow"), head+"\n")
 		if got, reason := f.verify(); !got.Qualified || reason != "" {
 			t.Fatalf("verify = qualified %v reason %q with a shallow boundary", got.Qualified, reason)
 		}
@@ -220,6 +233,12 @@ func TestReadsGitMetadataItself(t *testing.T) {
 		},
 		"reftable refs": func(f *fixture) {
 			appendFile(f.t, filepath.Join(f.common, "config"), "[extensions]\n\trefStorage = reftable\n")
+		},
+		"bare repository": func(f *fixture) {
+			appendFile(f.t, filepath.Join(f.common, "config"), "[core]\n\tbare = true\n")
+		},
+		"work tree set by configuration": func(f *fixture) {
+			appendFile(f.t, filepath.Join(f.common, "config"), "[core]\n\tworktree = "+filepath.ToSlash(filepath.Join(f.base, "elsewhere"))+"\n")
 		},
 		"second origin URL": func(f *fixture) {
 			appendFile(f.t, filepath.Join(f.common, "config"), "[remote \"origin\"]\n\turl = https://github.com/AutoDevJapan/cc-pc-tools-rs.git\n")

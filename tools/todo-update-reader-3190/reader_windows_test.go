@@ -321,9 +321,9 @@ func (f *fixture) guard(args ...string) ([]byte, int, bool) {
 func (f *fixture) env() environment {
 	return environment{
 		guard: f.guard,
-		git: func(root string, args ...string) ([]byte, error) {
+		git: func(src gitSource, args ...string) ([]byte, error) {
 			f.record("git:" + strings.Join(args, " "))
-			return runGit(root, args...)
+			return runGit(src, args...)
 		},
 		beforeRead: func(path string) { f.record("read:" + key(path)) },
 		beforeRecheck: func() {
@@ -748,13 +748,38 @@ func TestPinnedFilesResistReplacement(t *testing.T) {
 
 func TestRejectsChangesBeforeRecheck(t *testing.T) {
 	// Inputs stay pinned against writes and tracked files outside the inputs are
-	// never read (TestGitNeverReadsWorkingFiles), so the races left are Git's.
+	// never read (TestGitNeverReadsWorkingFiles), so the races left are in the
+	// Git metadata, which is read once and closed for the other worktrees.
 	cases := map[string]func(*fixture){
 		"new commit": func(f *fixture) {
 			f.git("-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "--allow-empty", "-m", "racing")
 		},
 		"origin changed": func(f *fixture) {
 			f.git("remote", "set-url", "origin", "https://github.com/someone-else/cc-pc-tools-rs.git")
+		},
+		"branch packed": func(f *fixture) { f.gitIn(f.repo, "pack-refs", "--all") },
+		"alternate object store added": func(f *fixture) {
+			writeFile(f.t, filepath.Join(f.common, "objects", "info", "alternates"), filepath.ToSlash(filepath.Join(f.base, "elsewhere"))+"\n")
+		},
+		// Same file, same size, write time restored: only the digest differs.
+		"main ref rewritten in place": func(f *fixture) {
+			name := filepath.Join(f.common, "refs", "remotes", "origin", "main")
+			info, err := os.Stat(name)
+			if err != nil {
+				f.t.Fatal(err)
+			}
+			file, err := os.OpenFile(name, os.O_WRONLY, 0)
+			if err != nil {
+				f.t.Fatal(err)
+			}
+			_, err = file.WriteAt([]byte(strings.Repeat("0", 40)), 0)
+			file.Close()
+			if err != nil {
+				f.t.Fatal(err)
+			}
+			if err := os.Chtimes(name, info.ModTime(), info.ModTime()); err != nil {
+				f.t.Fatal(err)
+			}
 		},
 	}
 	for name, change := range cases {

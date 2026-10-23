@@ -4514,8 +4514,11 @@ mod tests {
             ("説明は不要、aで", false),
         ]
         .into_iter()
-        .chain(issue_cases.iter().map(|(reply, accepted)| (reply.as_str(), *accepted)))
-        {
+        .chain(
+            issue_cases
+                .iter()
+                .map(|(reply, accepted)| (reply.as_str(), *accepted)),
+        ) {
             let f = Fixture::new();
             let mut ctx = f.context();
             let (args, manifest, mut proof) =

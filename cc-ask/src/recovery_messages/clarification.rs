@@ -329,10 +329,23 @@ pub(super) fn authorize(
 }
 
 fn requests_explanation(body: &str) -> bool {
+    // Classify speech acts before associating options with reason clauses.
+    // Balanced quotations are opaque nouns: a quoted instruction is not an
+    // instruction to us, and its contents must not create option boundaries.
+    let quoted =
+        regex::Regex::new(r#"「[^「」\n]*」|『[^『』\n]*』|“[^“”\n]*”|"[^"\n]*""#).unwrap();
+    let body = quoted.replace_all(body, "QUOTE");
+    let body = body.as_ref();
     if regex::Regex::new(r"(?:説明|補足|解説)(?:は|が|も)?(?:不要|いらない|要らない)")
         .unwrap()
         .is_match(body)
     {
+        return false;
+    }
+    // A request after a reason word, a conjunction or another sentence still
+    // takes precedence. Explanation verbs share one exemption below; they do
+    // not exempt a later action in the same sentence.
+    if action_request(body) {
         return false;
     }
     // Associate each option with its own clause. Reasons in another clause
@@ -383,20 +396,28 @@ fn requests_explanation(body: &str) -> bool {
                 // The standalone topic "いる" must not turn an option's
                 // progressive/confirmation predicate into a necessity question.
                 let after = after.replace("ている", "てる").replace("でいる", "でる");
-                // An action request stays an action even when a fee/topic word
-                // precedes it, or the option itself is conditional.
-                if action_request(&format!("{}{after}", phrase.as_str())) {
-                    return false;
-                }
                 let prefix_question = (asks_why(before)
                     || matches!(previous, "なぜ" | "どうして" | "なんで"))
                     && (clause.contains(['?', '？']) || reason_query_tail.is_match(&after));
                 let tail_question = explanation_requested(&after)
                     || nominal_reason_tail(&after)
                         && explanation_requested(&sentence[span.start + phrase.end()..]);
+                // "aにして理由を教えて" first fixes an option. A why-query
+                // before the option or a nominalized predicate remains a
+                // question ("なぜaにして…の？", "aにしてもらえる理由は？").
+                let choice_instruction = phrase.as_str().ends_with("にして")
+                    && !prefix_question
+                    && nominal_reason_start(&after);
+                // An embedded why-clause followed by an acknowledgement is
+                // an assertion, even when an explanation request follows it.
+                let acknowledged = regex::Regex::new(r"(?:分かった|わかった|理解した)$")
+                    .unwrap()
+                    .is_match(&after);
                 // A predicate-attached causal "なんで" is a commitment even
                 // when the instruction continues in the next clause.
-                let questioned = !colloquial_option_cause(&after)
+                let questioned = !choice_instruction
+                    && !acknowledged
+                    && !colloquial_option_cause(&after)
                     && (prefix_question || tail_question)
                     && !directive_before_reason(&after, phrase.as_str());
                 if !questioned && !conditional_option_tail(&after) {
@@ -409,6 +430,12 @@ fn requests_explanation(body: &str) -> bool {
         }
     }
     explanation_requested(body)
+}
+
+fn nominal_reason_start(body: &str) -> bool {
+    regex::Regex::new(r"^(?:説明|理由|内訳|費用|料金|経費|用途|根拠|背景|意味)(?:を|も|は)")
+        .unwrap()
+        .is_match(body)
 }
 
 fn nominal_reason_tail(body: &str) -> bool {
@@ -523,7 +550,7 @@ fn nominal_before_ga(before: &str) -> bool {
                     || ["これ", "それ", "あれ", "どれ", "この", "その", "あの", "どの", "少し", "ちょっと", "多少", "いくら"]
                         .iter().any(|word| amount.ends_with(word))
                     || amount.chars().next_back().is_some_and(|c| {
-                        c.is_numeric() || "〇一二三四五六七八九十百千円人個本枚件回日週月年秒分時間倍割社席台枠行点類%％".contains(c)
+                        c.is_numeric() || "〇一二三四五六七八九十百千万億兆円人名個本枚件回日週月年秒分時間倍割社席台枠行点類%％".contains(c)
                     })
             })
         || before.strip_suffix('つ').is_some_and(|number| {
@@ -556,15 +583,33 @@ fn colloquial_option_cause(body: &str) -> bool {
 }
 
 fn action_request(body: &str) -> bool {
-    regex::Regex::new(r"て(?:もらえ|いただけ)(?:ますか|ませんか|る\s*[?？])")
+    // Match the request ending, not a predicate followed by a reason noun:
+    // "進めてくれる？" requests action; "進めてくれる理由は？" asks why.
+    regex::Regex::new(r"て(?:もらえ(?:ますか|ませんか|ないでしょうか|る\s*[?？])|(?:いただけ|頂け)(?:ますか|ませんか|る\s*[?？])|くれ(?:る\s*[?？]|ますか|ませんか)|もいい\s*[?？])|お願い(?:できますか|できませんか|できないでしょうか)|(?:進め|実行し|開始し|選ん|選択し|採用し|決め|変更し|停止し|止め)て(?:ください|ほしい|くれ|ね|よ)?(?:[、，,。!！?？\s]|$)")
         .unwrap()
         .find_iter(body)
         .any(|request| {
             let before = &body[..request.start()];
-            !["教え", "説明し", "説明をし", "解説し", "解説をし", "見せ"]
-                .iter()
-                .any(|verb| before.ends_with(verb))
+            !explanation_verb_before(before)
         })
+}
+
+fn explanation_verb_before(body: &str) -> bool {
+    [
+        "教え",
+        "説明し",
+        "説明をし",
+        "解説し",
+        "解説をし",
+        "見せ",
+        "示し",
+        "聞かせ",
+        "伝え",
+        "知らせ",
+        "話し",
+    ]
+    .iter()
+    .any(|verb| body.ends_with(verb))
 }
 
 fn directive_before_reason(body: &str, option: &str) -> bool {
@@ -615,12 +660,22 @@ fn directive_before_reason(body: &str, option: &str) -> bool {
                     // is not an instruction. Keep standalone "ては？" rejected.
                     let explanation_topic = tail == "は"
                         || (word.end() == prefix.len() && quoted_reason_topic(prefix))
-                        || ["はいけ", "はなら", "はだめ", "は駄目"]
+                        || ["はいけ", "はなら", "はだめ", "は駄目", "はダメ", "はまずい"]
                             .iter()
                             .any(|negative| tail.starts_with(negative))
-                        || ["も", "る", "いる", "いた", "いま", "いな"]
-                            .iter()
-                            .any(|suffix| tail.starts_with(suffix));
+                        || [
+                            "も",
+                            "る",
+                            "いる",
+                            "いた",
+                            "いま",
+                            "いな",
+                            "頂け",
+                            "いただけ",
+                            "くれる",
+                        ]
+                        .iter()
+                        .any(|suffix| tail.starts_with(suffix));
                     !explanation_topic
                 }
                 "です" | "ます" => !tail.starts_with(['か', '?', '？']),

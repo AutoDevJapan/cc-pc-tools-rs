@@ -1,0 +1,350 @@
+{
+  "schema": "todo3409-3392-evidence-index-v1",
+  "todo_id": 3409,
+  "job": "20261023-112229-todo-3409",
+  "source_head": "90dd0c09f34541183672f6e1afda0f74fd363b05",
+  "source_tree": "63e5d28efc490405aeb07d302e898d81ba1ca8ce",
+  "raw_directory": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work",
+  "candidate_path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\candidate-90dd0c09f34541183672f6e1afda0f74fd363b05-20261023-112229-todo-3409\\discord_ask.exe",
+  "candidate_sha256": "44ae9022979d0bac68707775036fc1855f5b544c0620fb86d523cc999fbb3832",
+  "candidate_bytes": 12026880,
+  "input_closure_sha256": "deadd7f76f134f24eb0b27a860358e64ae4b34d4088b7711825e4cf6bdd7dd79",
+  "candidate_manifest_sha256": "13d5292406cdbdba0f204a4e6f787dfbe8cd1a0b0cf37b1eea8048652023a790",
+  "original_logs_retained": true,
+  "log_excerpt_only": false,
+  "files": [
+    {
+      "name": "candidate-preservation.private.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\candidate-preservation.private.json",
+      "bytes": 2414,
+      "sha256": "a891e76804c7965718e1738503f69d3a2b597d591085f5a019434f2d6c6d70f8"
+    },
+    {
+      "name": "candidate.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\candidate.json",
+      "bytes": 2645,
+      "sha256": "13d5292406cdbdba0f204a4e6f787dfbe8cd1a0b0cf37b1eea8048652023a790"
+    },
+    {
+      "name": "cargo-metadata.meta.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\cargo-metadata.meta.json",
+      "bytes": 848,
+      "sha256": "e1bab5b12b1140e8055a8eebdd88d0725c46eb6f636a3cf333a45943a8923bf2"
+    },
+    {
+      "name": "cargo-metadata.stderr.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\cargo-metadata.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "cargo-metadata.stdout.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\cargo-metadata.stdout.log",
+      "bytes": 82536,
+      "sha256": "d23218cafc5e6c25eb6c55cb77336366551b859ff6016d13f1b39c5c546c9673"
+    },
+    {
+      "name": "checkpoint-before-captured.meta.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\checkpoint-before-captured.meta.json",
+      "bytes": 937,
+      "sha256": "15c5f77783fb2bdc3e29b28dcb69dd249d450164c83dc2c4d6349f440acf0373"
+    },
+    {
+      "name": "checkpoint-before-captured.stderr.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\checkpoint-before-captured.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "checkpoint-before-captured.stdout.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\checkpoint-before-captured.stdout.log",
+      "bytes": 554,
+      "sha256": "fd967f8b5f099784a93bd93b5250f4378d57191de46831220e43e64975ac7098"
+    },
+    {
+      "name": "checkpoint-before.private.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\checkpoint-before.private.json",
+      "bytes": 203,
+      "sha256": "5750a5c5f8109d2b1e0ee95bc6d76d675d13ceb6cd028e017b0286c866efaa31"
+    },
+    {
+      "name": "checkpoint-before.stderr.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\checkpoint-before.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "checkpoint-before.stdout.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\checkpoint-before.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "checkpoint-source.meta.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\checkpoint-source.meta.json",
+      "bytes": 928,
+      "sha256": "65cc3d11b7390a3bbb68b0de68337b1992ef76da4e247d57e33a1013c220fbe1"
+    },
+    {
+      "name": "checkpoint-source.private.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\checkpoint-source.private.json",
+      "bytes": 209,
+      "sha256": "8af0ae3b40f7d79e8153e164ba3ee351a7654fba948cb15605610205ab219ee9"
+    },
+    {
+      "name": "checkpoint-source.stderr.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\checkpoint-source.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "checkpoint-source.stdout.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\checkpoint-source.stdout.log",
+      "bytes": 553,
+      "sha256": "dc05a871e1bc05373b709e4d70e46194118fde350b15017b5ce63a39b94d101b"
+    },
+    {
+      "name": "cleanup-plan.meta.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\cleanup-plan.meta.json",
+      "bytes": 828,
+      "sha256": "f64d6888fde3c3fb1c0bc487a4950f93504eaf4544ca3df430e34ef00167a0bc"
+    },
+    {
+      "name": "cleanup-plan.stderr.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\cleanup-plan.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "cleanup-plan.stdout.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\cleanup-plan.stdout.log",
+      "bytes": 211,
+      "sha256": "2ace5cff7d46c3e3f58bc83031de27300a68da6c9ecdd85fcbe9f87bd6703d69"
+    },
+    {
+      "name": "cleanup-result.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\cleanup-result.json",
+      "bytes": 1295,
+      "sha256": "af82a979bb7e141a0d2cb177df028d87557f2fd68207ffa26df740790dd4f101"
+    },
+    {
+      "name": "clippy.meta.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\clippy.meta.json",
+      "bytes": 873,
+      "sha256": "aba91ae533c0a2fb57abdf8ddf49121239fc774dbbe420691cf50c57bdc43228"
+    },
+    {
+      "name": "clippy.stderr.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\clippy.stderr.log",
+      "bytes": 4318,
+      "sha256": "cf0773bdf97b1a9096cb9ab0bf7ef83d3714ed2858bf7e3fe793255f4efca52e"
+    },
+    {
+      "name": "clippy.stdout.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\clippy.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "doctest.meta.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\doctest.meta.json",
+      "bytes": 825,
+      "sha256": "054c5df71a337bd3d530bf739ecf703a11ac452478ae67e9af6d08360f903d9d"
+    },
+    {
+      "name": "doctest.stderr.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\doctest.stderr.log",
+      "bytes": 93,
+      "sha256": "0160007b03c27fa28d6a5ca82d1a8192431c9c0a3c110724695f5cb7bb242c10"
+    },
+    {
+      "name": "doctest.stdout.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\doctest.stdout.log",
+      "bytes": 113,
+      "sha256": "df166913f47ff1f04202cae9b31df67ed272d692d99a0023a8117dc3029100dd"
+    },
+    {
+      "name": "finalize-evidence.private.ps1",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\finalize-evidence.private.ps1",
+      "bytes": 9634,
+      "sha256": "ddf96653bee4243c8bd2c8fae95c0f0f4e6f68c0c515040a4b5e4b521a30eb0d"
+    },
+    {
+      "name": "green-nextest.meta.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\green-nextest.meta.json",
+      "bytes": 930,
+      "sha256": "66e0527085df490c375767af08398f295eda5ffdbd11e1c71111e28ad1e40953"
+    },
+    {
+      "name": "green-nextest.stderr.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\green-nextest.stderr.log",
+      "bytes": 9693,
+      "sha256": "e8ec86bab35c793b8af83796750c700a9984c11c875d290a7197243c4968cb05"
+    },
+    {
+      "name": "green-nextest.stdout.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\green-nextest.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "guard-candidate.meta.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\guard-candidate.meta.json",
+      "bytes": 961,
+      "sha256": "f9f1434d5887779114277f841e9ee3c51861052b66c26a0dbd89ae582d263a84"
+    },
+    {
+      "name": "guard-candidate.stderr.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\guard-candidate.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "guard-candidate.stdout.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\guard-candidate.stdout.log",
+      "bytes": 221,
+      "sha256": "69c6b2c91fca26803b53e220b07166ce474a62124968373f617fa52f2510c7d6"
+    },
+    {
+      "name": "guard-target.meta.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\guard-target.meta.json",
+      "bytes": 845,
+      "sha256": "6dd422e51e8e29af71de81cd02e75e07c1e397f65fd165cf2bfb7bc814b97c0a"
+    },
+    {
+      "name": "guard-target.stderr.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\guard-target.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "guard-target.stdout.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\guard-target.stdout.log",
+      "bytes": 219,
+      "sha256": "9e5f8e92d5a9c87382fe8bc16ee695a07c54e834941b21f38f70f0b0819d1cce"
+    },
+    {
+      "name": "input-closure-before.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\input-closure-before.json",
+      "bytes": 53138,
+      "sha256": "390389e4377fd2701b1011dcda1285d568219d528fba07b62bca8da8237154c9"
+    },
+    {
+      "name": "input-closure.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\input-closure.json",
+      "bytes": 55743,
+      "sha256": "deadd7f76f134f24eb0b27a860358e64ae4b34d4088b7711825e4cf6bdd7dd79"
+    },
+    {
+      "name": "manifest-formatting-receipt.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\manifest-formatting-receipt.json",
+      "bytes": 690,
+      "sha256": "2ee64a1c1b2ff1dab5b20a0b1a6144e577899b0cb747b204f23241d5fe5e64b9"
+    },
+    {
+      "name": "ownership.private.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\ownership.private.json",
+      "bytes": 480,
+      "sha256": "6a5e2f598a651eaa96b35bacd8f468e480c85ff72d5b81e3ef986e5f159dec6c"
+    },
+    {
+      "name": "red-nextest.meta.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\red-nextest.meta.json",
+      "bytes": 1015,
+      "sha256": "6e900065fc6d9406fe6f1533f11a9ac9d9837025bb5380f8085af7c15edd8bab"
+    },
+    {
+      "name": "red-nextest.stderr.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\red-nextest.stderr.log",
+      "bytes": 7790,
+      "sha256": "bec53d6338f140bc497be11d809e62fe8f8f4b81c7f456071704f86f77d83c3e"
+    },
+    {
+      "name": "red-nextest.stdout.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\red-nextest.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "release-discord_ask.d",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\release-discord_ask.d",
+      "bytes": 7370,
+      "sha256": "d3e972759bb8898ce450fafe32577464552b9cc99b02d52b7512fd38f2505076"
+    },
+    {
+      "name": "release.meta.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\release.meta.json",
+      "bytes": 864,
+      "sha256": "b0b244c44d87712e9031266a79b868395db53e190384d0a72d4ab3dc147ae88c"
+    },
+    {
+      "name": "release.stderr.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\release.stderr.log",
+      "bytes": 5045,
+      "sha256": "27990d956c7f8b5dd90638ab38a564a22192e487bb49c9e7b1bc7e6f0094b065"
+    },
+    {
+      "name": "release.stdout.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\release.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "run-command.private.ps1",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\run-command.private.ps1",
+      "bytes": 3302,
+      "sha256": "5e846bdd5f26e4237ce9b84d8df0eef5c23a0869df1d0b69476f4327a36d9e7c"
+    },
+    {
+      "name": "rustc-version.meta.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\rustc-version.meta.json",
+      "bytes": 772,
+      "sha256": "10f7d2c5011d6f759e4489cd1ca6a071623e11f0bbc99d6e9665c653d3072d1f"
+    },
+    {
+      "name": "rustc-version.stderr.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\rustc-version.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "rustc-version.stdout.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\rustc-version.stdout.log",
+      "bytes": 194,
+      "sha256": "185aa337caf524a621d7b1ce7b21a4d6f92f3ea592d009e481fea0e00e0d0434"
+    },
+    {
+      "name": "safe-delete-ownership.original.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\safe-delete-ownership.original.json",
+      "bytes": 397,
+      "sha256": "684d3c767e129afd8942a6815ac566a4cf112e8a1c11b648243a608aa4093d7d"
+    },
+    {
+      "name": "sccache-version.meta.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\sccache-version.meta.json",
+      "bytes": 773,
+      "sha256": "b9d11396b0c82f514445038d9ecb5b0474b72a706994e255462d0f7d240430a7"
+    },
+    {
+      "name": "sccache-version.stderr.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\sccache-version.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "sccache-version.stdout.log",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\sccache-version.stdout.log",
+      "bytes": 15,
+      "sha256": "80804e07b8d1daa7eb6cc9e298e213e6ae85f428832f612b0e0bc429928ae2e5"
+    },
+    {
+      "name": "test-results.json",
+      "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust\\.ci-work\\test-results.json",
+      "bytes": 5562,
+      "sha256": "474e1a012478aad7f3250d1009b2f442903c31da766f7238ecf467f4a9e5d844"
+    }
+  ],
+  "files_count": 55,
+  "scope": "Immutable evidence through candidate and cleanup-plan; final checkpoint receipts and ongoing resume note remain private outside this index",
+  "created_utc": "2026-10-23T02:37:21.8338435+00:00"
+}

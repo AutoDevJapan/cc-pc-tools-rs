@@ -1,0 +1,174 @@
+{
+  "schema": "todo3409-test-results-from-original-logs-v1",
+  "note": "Summaries extracted from retained raw stdout/stderr, not native nextest JSON",
+  "red": {
+    "passed": 0,
+    "skipped": 844,
+    "run": 2,
+    "failed": 2,
+    "expected_assertions_verified": true,
+    "exit": 100
+  },
+  "green": {
+    "conversation_bridge": 25,
+    "passed": 68,
+    "skipped": 778,
+    "failed": 0,
+    "exit": 0,
+    "decision_identity": 32,
+    "run": 68,
+    "lookup": 11
+  },
+  "doctest": {
+    "failed": 0,
+    "passed": 0,
+    "exit": 0
+  },
+  "clippy": {
+    "exit": 0
+  },
+  "release": {
+    "exit": 0
+  },
+  "stages": [
+    {
+      "stage": "red-nextest",
+      "todo": 3409,
+      "job": "20261023-112229-todo-3409",
+      "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+      "arguments": [
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "cc-ask",
+        "-E",
+        "test(normal_lookup_redaction_cannot_change_protocol_keys_or_delivery_values) | test(normal_lookup_marks_display_redaction_and_does_not_call_pending_text_available)"
+      ],
+      "working_directory": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust",
+      "head": "eff8bb59489c76584c1813cf457439c618414f04",
+      "tree": "e05b79ace8f602e6cc208d5b127c0a1eb29cb3bf",
+      "target": "D:/OMB/tmp/codex-owned-3de77355c6a4b764aed1aeb6ddb75fb7/target",
+      "rustc_wrapper": "D:/CC/Tools/sccache/sccache.exe",
+      "create_no_window": true,
+      "started_utc": "2026-10-23T11:27:09.3903557+09:00",
+      "timeout_seconds": 1800,
+      "status": "completed",
+      "pid": 82964,
+      "exit_code": 100,
+      "finished_utc": "2026-10-23T11:28:19.5350771+09:00",
+      "output_drained": true
+    },
+    {
+      "stage": "green-nextest",
+      "todo": 3409,
+      "job": "20261023-112229-todo-3409",
+      "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+      "arguments": [
+        "nextest",
+        "run",
+        "--locked",
+        "-p",
+        "cc-ask",
+        "-E",
+        "test(normal_lookup_) | binary(decision_identity) | binary(conversation_bridge)"
+      ],
+      "working_directory": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust",
+      "head": "90dd0c09f34541183672f6e1afda0f74fd363b05",
+      "tree": "63e5d28efc490405aeb07d302e898d81ba1ca8ce",
+      "target": "D:/OMB/tmp/codex-owned-3de77355c6a4b764aed1aeb6ddb75fb7/target",
+      "rustc_wrapper": "D:/CC/Tools/sccache/sccache.exe",
+      "create_no_window": true,
+      "started_utc": "2026-10-23T11:29:03.1089445+09:00",
+      "timeout_seconds": 1800,
+      "status": "completed",
+      "pid": 25956,
+      "exit_code": 0,
+      "finished_utc": "2026-10-23T11:29:51.9002564+09:00",
+      "output_drained": true
+    },
+    {
+      "stage": "doctest",
+      "todo": 3409,
+      "job": "20261023-112229-todo-3409",
+      "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+      "arguments": [
+        "test",
+        "--locked",
+        "-p",
+        "cc-ask",
+        "--doc"
+      ],
+      "working_directory": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust",
+      "head": "90dd0c09f34541183672f6e1afda0f74fd363b05",
+      "tree": "63e5d28efc490405aeb07d302e898d81ba1ca8ce",
+      "target": "D:/OMB/tmp/codex-owned-3de77355c6a4b764aed1aeb6ddb75fb7/target",
+      "rustc_wrapper": "D:/CC/Tools/sccache/sccache.exe",
+      "create_no_window": true,
+      "started_utc": "2026-10-23T11:30:13.2905913+09:00",
+      "timeout_seconds": 1800,
+      "status": "completed",
+      "pid": 75396,
+      "exit_code": 0,
+      "finished_utc": "2026-10-23T11:30:16.2146043+09:00",
+      "output_drained": true
+    },
+    {
+      "stage": "clippy",
+      "todo": 3409,
+      "job": "20261023-112229-todo-3409",
+      "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+      "arguments": [
+        "clippy",
+        "--locked",
+        "-p",
+        "cc-ask",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "working_directory": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust",
+      "head": "90dd0c09f34541183672f6e1afda0f74fd363b05",
+      "tree": "63e5d28efc490405aeb07d302e898d81ba1ca8ce",
+      "target": "D:/OMB/tmp/codex-owned-3de77355c6a4b764aed1aeb6ddb75fb7/target",
+      "rustc_wrapper": "D:/CC/Tools/sccache/sccache.exe",
+      "create_no_window": true,
+      "started_utc": "2026-10-23T11:30:16.3888228+09:00",
+      "timeout_seconds": 1800,
+      "status": "completed",
+      "pid": 50272,
+      "exit_code": 0,
+      "finished_utc": "2026-10-23T11:30:44.7524279+09:00",
+      "output_drained": true
+    },
+    {
+      "stage": "release",
+      "todo": 3409,
+      "job": "20261023-112229-todo-3409",
+      "executable": "D:/CC/Tools/codex-jobs/cargo_gate.exe",
+      "arguments": [
+        "build",
+        "--locked",
+        "--release",
+        "-p",
+        "cc-ask",
+        "--bin",
+        "discord_ask"
+      ],
+      "working_directory": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3409-rust",
+      "head": "90dd0c09f34541183672f6e1afda0f74fd363b05",
+      "tree": "63e5d28efc490405aeb07d302e898d81ba1ca8ce",
+      "target": "D:/OMB/tmp/codex-owned-3de77355c6a4b764aed1aeb6ddb75fb7/target",
+      "rustc_wrapper": "D:/CC/Tools/sccache/sccache.exe",
+      "create_no_window": true,
+      "started_utc": "2026-10-23T11:30:45.0887+09:00",
+      "timeout_seconds": 1800,
+      "status": "completed",
+      "pid": 81892,
+      "exit_code": 0,
+      "finished_utc": "2026-10-23T11:31:32.6113348+09:00",
+      "output_drained": true
+    }
+  ]
+}

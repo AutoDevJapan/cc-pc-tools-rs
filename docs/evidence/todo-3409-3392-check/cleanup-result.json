@@ -1,0 +1,36 @@
+{
+  "schema": "todo3409-owned-target-cleanup-v1",
+  "todo_id": 3409,
+  "job": "20261023-112229-todo-3409",
+  "ownership_id": "3de77355c6a4b764aed1aeb6ddb75fb7",
+  "path": "D:\\OMB\\tmp\\codex-owned-3de77355c6a4b764aed1aeb6ddb75fb7",
+  "bytes": 8360100069,
+  "entries": 5176,
+  "size_source": "normal safe-delete plan",
+  "plan_action": "quarantine",
+  "plan_reason": "size",
+  "guard_client_resource": true,
+  "guard_classification_unverified": true,
+  "status": "held_classification_unverified",
+  "target_preserved": true,
+  "candidate_and_logs_preserved": true,
+  "deleted": false,
+  "quarantined": false,
+  "space_reclaimed_claimed": false,
+  "cleanup_operation_attempted": false,
+  "approval_review_rejected": false,
+  "reason": "Normal guard reports classification_unverified for the safe-delete-created D:/OMB/tmp target; no deletion or move attempted",
+  "next_action": "Existing cleanup supervision can reconcile this exact normal ownership receipt and guard scope before collection; do not recreate an original registry or change guard policy",
+  "owner_action_required": false,
+  "drives": [
+    {
+      "drive": "C",
+      "free_bytes": 136389435392
+    },
+    {
+      "drive": "D",
+      "free_bytes": 2488118300672
+    }
+  ],
+  "observed_utc": "2026-10-23T02:36:08.5740594+00:00"
+}

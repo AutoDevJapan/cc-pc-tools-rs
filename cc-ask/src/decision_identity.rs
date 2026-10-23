@@ -367,7 +367,7 @@ pub(crate) fn reuse(
     redact(ctx, &out)
 }
 
-fn redact(ctx: &Context, out: &Value) -> Result<Value> {
+pub(crate) fn redact(ctx: &Context, out: &Value) -> Result<Value> {
     let names = crate::project::ProjectNames::load(&ctx.client_projects)?;
     serde_json::from_str(&names.redact(&safe_text(out.to_string())))
         .map_err(|_| "invalid redacted decision output".into())

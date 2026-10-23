@@ -145,14 +145,23 @@ func TestSuccessorPlanRoundTripHooksAndLiveAdmission(t *testing.T) {
 			if err := verifyCodeQLAdmissionPlan(context.Background(), c, p, "owned-successor", assigned); err != nil {
 				t.Fatal(err)
 			}
+			changedSourceRead := false
 			stale := func(ctx context.Context, endpoint string, out any) error {
-				if strings.Contains(endpoint, "/pulls/1016") {
-					return fmt.Errorf("synthetic source changed")
+				if err := assigned(ctx, endpoint, out); err != nil {
+					return err
 				}
-				return assigned(ctx, endpoint, out)
+				if strings.HasSuffix(endpoint, "/pulls/1016") {
+					pr, ok := out.(*pull)
+					if !ok {
+						return fmt.Errorf("unexpected pull response type")
+					}
+					pr.Head.SHA = strings.Repeat("e", 40)
+					changedSourceRead = true
+				}
+				return nil
 			}
-			if verifyCodeQLAdmissionPlan(context.Background(), c, p, "owned-successor", stale) == nil {
-				t.Fatal("live successor source change accepted")
+			if err := verifyCodeQLAdmissionPlan(context.Background(), c, p, "owned-successor", stale); err == nil || !strings.Contains(err.Error(), "fixed same-repository PR head rejected") || !changedSourceRead {
+				t.Fatalf("live admission did not reject the changed head response: %v (read=%v)", err, changedSourceRead)
 			}
 		})
 	}

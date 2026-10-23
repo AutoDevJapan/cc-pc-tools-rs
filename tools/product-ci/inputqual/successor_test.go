@@ -56,8 +56,23 @@ func TestSuccessorAuthorityAndFrozenDifferentSources(t *testing.T) {
 			}); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := constructRuntime(f.p, func(string) bool { return true }); err == nil {
-				t.Fatal("old995 runtime silently expanded")
+		}
+	}
+}
+
+func TestLegacyRuntimeRejectsSuccessorVersionAtItsOwnLocation(t *testing.T) {
+	for _, kind := range []string{"secret", "codeql"} {
+		for _, pr := range []int{995, 1016} {
+			f, refs, locations := successorFixture(t, kind, pr, strings.Repeat("c", 40))
+			if _, err := constructTestSuccessor(f.p, refs, locations, func(string) bool { return true }); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(filepath.Join(f.p.root, ".ci-work", runtimeLeaf), mustReadFixture(t, refs["handoff"]), 0600); err != nil {
+				t.Fatal(err)
+			}
+			_, err := constructRuntime(f.p, func(string) bool { return true })
+			if err == nil || !strings.Contains(err.Error(), "runtime_handoff") {
+				t.Fatalf("legacy runtime did not reject the v2 handoff itself: %v", err)
 			}
 		}
 	}
@@ -160,8 +175,8 @@ func TestSuccessorRejectsReceiverHandoffOutsideVerifiedRoot(t *testing.T) {
 	}
 	refs["handoff"] = copy
 	locations["handoff"] = struct{ pathSHA, contentSHA string }{locationDigest(copy), ""}
-	if _, err := constructTestSuccessor(f.p, refs, locations, func(string) bool { return true }); err == nil {
-		t.Fatal("receiver-owned handoff outside verified source root accepted")
+	if _, err := constructTestSuccessor(f.p, refs, locations, func(string) bool { return true }); err == nil || !strings.Contains(err.Error(), "successor_parent_root") {
+		t.Fatalf("receiver-owned handoff did not fail at the verified root boundary: %v", err)
 	}
 }
 
@@ -189,8 +204,8 @@ func TestSuccessorSurvivesRepairCompletionWhileProductWorkContinues(t *testing.T
 		}
 	}
 	f.put(f.p.db, db)
-	if _, err := constructTestSuccessor(f.p, refs, locations, func(string) bool { return true }); err == nil {
-		t.Fatal("completed repair ignored an explicit stop")
+	if _, err := constructTestSuccessor(f.p, refs, locations, func(string) bool { return true }); err == nil || !strings.Contains(err.Error(), "runtime_task_scope") {
+		t.Fatalf("completed repair did not reject the explicit task stop: %v", err)
 	}
 }
 

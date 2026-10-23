@@ -77,10 +77,6 @@ func runtimeHex(s string, n int) bool {
 	return len(s) == n && strings.Trim(s, "0123456789abcdef") == ""
 }
 
-func runtimeScope(p policy) bool {
-	return runtimeScopeFor(p, false)
-}
-
 // The answered successor scope outlives the repair task, but never the original
 // product work. Explicit stops and immutable scope anchors still apply to both.
 func runtimeScopeFor(p policy, successor bool) bool {

@@ -58,13 +58,14 @@ func constructSuccessorWithIdentity(p policy, refs map[string]string, locations 
 	if len(refs) != 2 || len(locations) != 2 {
 		return Snapshot{}, rejected("successor_locator_schema")
 	}
+	handoff := filepath.Join(p.root, ".ci-work", successorLeaf)
 	for _, role := range []string{"owner_reply", "handoff"} {
 		want, ok := locations[role]
 		if !ok || !canonical(refs[role]) {
 			return Snapshot{}, rejected("successor_location")
 		}
 		if role == "handoff" {
-			if !same(refs[role], filepath.Join(p.root, ".ci-work", successorLeaf)) {
+			if !same(refs[role], handoff) {
 				return Snapshot{}, rejected("successor_parent_root")
 			}
 		} else if locationDigest(refs[role]) != want.pathSHA {
@@ -109,5 +110,5 @@ func constructSuccessorWithIdentity(p policy, refs map[string]string, locations 
 	if strings.TrimSpace(choice) != "a" {
 		return Snapshot{}, rejected("successor_owner_choice")
 	}
-	return constructRuntimeAt(p, readable, refs["handoff"], true)
+	return constructRuntimeAt(p, readable, handoff, true)
 }

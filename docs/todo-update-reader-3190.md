@@ -119,6 +119,14 @@ callerからmanifest、hash、source、root、ToDo番号、許可ディレクト
    そのため、固定HEADの祖先のうちGitが読まずに済んだcommitが壊れていれば、Gitが受け付ける履歴でもreaderは拒否する。
    広げたのは拒否する側だけである。
 
+   shallowファイルの名前も型を持つ。Gitは最初にcommitを解析するときにshallowファイルを読み、そこにある名前を、
+   履歴から届くかどうかに関係なく、すべてcommitとして調べる（`shallow.c` の `register_shallow`）。そのため、
+   tree行や固定treeのdirectoryがshallowの名前を指すと、Gitは拒否する（`merge-base` は終了コード128、
+   `ls-tree` は `object … is a commit, not a tree` を表示して異常終了する）。readerは、shallowの全ての名前に、
+   storeを開く時点でcommit型を付ける。Gitはこの登録を最初のcommitのtree行を調べた後で行い、そのtreeとの
+   食い違いは表示するだけで先へ進む。そのため、固定treeそのものがshallowに載っている形は、Gitは受け付けるが
+   readerは拒否する。
+
    Gitが設定・別のstore・作業ファイルを読むことはない。guardは1件ずつ分類するので、rootがclearでも、
    分類していないファイルは読まない。
 6. receipt・log・dep-info・各入力・新候補は、それぞれ同じ方法で開いて保持し、guardの clear を確かめてから読む。
@@ -141,6 +149,8 @@ callerからmanifest、hash、source、root、ToDo番号、許可ディレクト
     固定の後でこのディレクトリが改名されれば、実パスが変わるので再確認で拒否する。
     入力は書込を共有しないhandleで保持しているので、照合中には変えられない。共有repoのconfigやrefは
     ほかのworktreeが書き換えることがあり、照合中に書き換わると `recheck` で拒否される。その場合は再実行する。
+    共有repoで自動maintenanceがrepackすると、照合中にloose objectやpackが消え、`source_git` で拒否されることもある。
+    この拒否も安全な側の結果で、再実行すればよい。
 
 ## objectsの読取の上限
 
@@ -192,6 +202,9 @@ receiptの126件の入力が、原dep-infoの116件と manifest/lock の10件に
 linked worktree）、ファイル、receiptと、guardのCLI応答を模した関数で、実物の配布先・guard・親の作業場所を使わずに確かめる。
 理由コードも照合し、別の理由による偶然の拒否を合格にしない。objectの読取は、Git自身の出力
 （`git cat-file --batch-all-objects`、`git ls-tree`、`git rev-list`、`git log`、`git merge-base`、`git verify-pack`）と比べる。
+テストが起動するGitには `-c maintenance.auto=false` を付け、合成repoをテストが書いたとおりに保つ。Git 2.54.0は
+commitの後に自動maintenanceを切り離して動かし、既定のstrategy（geometric）は、`objects/17` にloose objectが
+2つあるだけでrepackして、looseのファイルを消す（`builtin/gc.c` の `too_many_loose_objects`）。
 
 | 条件 | テスト |
 | --- | --- |
@@ -210,7 +223,7 @@ linked worktree）、ファイル、receiptと、guardのCLI応答を模した�
 | Gitの設定と参照をreader自身がguardの分類後に読み、Gitと同じ意味に解釈する | `TestReadsGitMetadataItself`、`TestConfigParserAgreesWithGit`、`TestConfigParserRefusesWhatItDoesNotRead`、`TestPackedRefs`、`TestPackedRefsAsGitReadsThem` |
 | objectをGitと同じに読む（loose、pack、offset delta、名前を指すdelta、commit・tree・祖先） | `TestObjectStoreAgreesWithGit`、`TestQualifiesFromPacks` |
 | commitの親をGitと同じに読む。Gitが親として読まない `parent ` の行と、Gitが拒否する形を拒否する | `TestParseCommitAgreesWithGit`、`TestRefusesParentsGitDoesNotRead` |
-| 1つの名前に2つの型を付ける履歴を、Gitと同じく拒否する | `TestRefusesNamesOfTwoTypes` |
+| 1つの名前に2つの型を付ける履歴（shallowの名前を含む）を、Gitと同じく拒否する | `TestRefusesNamesOfTwoTypes`、`TestRefusesShallowNamesOfTrees` |
 | 固定HEADに着いた後も、Gitの `merge-base` が読むcommitを読み、Gitが拒否する履歴を拒否する。正しい側枝は受け付ける | `TestReadsEveryCommitGitReads` |
 | `objects/pack` を固定したhandleから列挙し、差し替えたjunctionの先を列挙・分類・読取しない | `TestListsOnlyThePinnedPackDirectory` |
 | deltaの循環を何も展開せずに拒否し、連鎖の深さ（cacheに残したobjectの連鎖を含む）・読取byte・packの数・項目数・indexの合計・commit数・treeのentry数・パスの合計に上限を置く | `TestDeltaCyclesInflateNothing`、`TestDeltaDepthLimit`、`TestDeltaDepthCountsKeptBases`、`TestReadLimitCountsEveryByte`、`TestReadLimit`、`TestObjectLimits` |
@@ -431,6 +444,42 @@ Mustを直し、同じ種類の食い違いも合わせて直した。Suggestion
   shallowの境界の親をたどる、である。固定HEADで止まる版は、側枝を先に挙げた合流でだけ検出された。
   親の並びを2通りにしたのはこのためである。前の24の版は、新しいコードに合わせて当て直し、すべて検出された。
 
+### 正式CIの失敗（run 40040005613）と別モデルの再レビュー（ToDo3545）
+
+5回目の修正のhead `4ed83158` で、専用workflow（windows、run 40040005613）が失敗した。CodeQL（run 40040005526）は成功した。
+失敗したのは `TestObjectsIgnoreAlternates` の1件で、fixtureのloose commit（`178adb4b…`）のファイルが、テストが動かす前に
+消えていた。readerの変更ではなく、テストの合成repoで動いたGitの自動maintenanceが原因だった。Git 2.54.0は、
+commitの後にmaintenanceを切り離して動かす。既定のstrategy（geometric）は、`objects/17` だけを数えてloose objectの
+総数を見積もり（`builtin/gc.c` の `too_many_loose_objects`。閾値は100を256で割って切り上げた1）、`17` で始まる名前の
+loose objectが2つあればrepackしてlooseのファイルを消す。fixtureのcommitの名前は時刻で変わるので、まれにこの条件に当たる。
+手元でも、`objects/17` に2つのloose objectを置いたrepoで普通にcommitすると、0.5秒以内に `objects/17` が消えて
+packが1つできた。`-c maintenance.auto=false` を付けると、5秒後も残った。
+
+gpt-6.1-sol・推論max（job `20261024-083553-todo-3545`、4分30秒、終了コード0）が、base `b3c0b718`・head `4ed83158` の
+変更7ファイルを差分と全文で読んだ。レビュー担当はテスト・ビルド・CIを実行していない。前回のSuggestionは解消、
+前回のMustは「一部解消」と判定された。新たな指摘は Must 1件で、コードとGitの一次資料からの判断であり、再現テストは
+伴わない。SuggestionとNitはない。
+
+- Must: shallowの名前を境界の印として持つだけで、commit型を付けていない。Gitは `register_shallow` で、履歴から
+  届かない名前にもcommit型を付ける。届かないshallowの名前をtree行が指すcommitを正しい名前で置いて `origin/main` に
+  すると、Gitは型の食い違いで終了コード128を返すが、readerは資格を出す。
+
+### 6回目の修正
+
+- テストが起動するGitに `-c maintenance.auto=false` を付けた（commit `59414fcd`）。readerは変えていない。
+- shallowファイルの全ての名前に、storeを開く時点でcommit型を付ける（検証の順序の5）。
+
+結果は次のとおり。
+
+- Red（commit `64b28eb2`）: 新しい2つの形を `go test -race -count=1` で実行し、終了コード1。どちらも意図した理由で
+  失敗した。届かないshallowの名前をtree行が指す履歴では、Gitの `merge-base --is-ancestor` が終了コード128なのに、
+  readerは資格を出した。固定treeのdirectoryをshallowに載せると、Gitの `ls-tree -r` は失敗したのに、readerは資格を出した。
+  ほかの3つの型の形は合格した。data race・panic・ビルド失敗は0。
+- Green（commit `bb3bb1be`）: `go test -race -count=1 ./...` は終了コード0、255秒（変異テストと同時に実行）。
+  上位44件、subtest込み228件が合格し、失敗0・skip 0・data race 0。`go vet ./...` とgofmtも差分なし。
+- 照合の要所を壊した35の版を `go test -overlay` で当て、すべて対応するテストが失敗した。新しい1つの版は、
+  shallowの名前に型を付けない。
+
 ### 実物への事前の観測（merge前）
 
 最初の実装から生成した検査用readerで、実物に対して1回照合した。終了コード0、9.6秒で、
@@ -460,6 +509,10 @@ source `0e16e817…` / tree `31d45a74…`、receipt `20345f44…087c`、入力12
 でも実物を1回照合した。終了コード0、15.2秒で、同じ固定値の `qualified:true`（入力126件・dep-info 116件・crate 8件、
 `data_access_granted:false`）を返した。`origin/main`（`c6b5ceaa`）から届く1,291件のcommitを全部読み、拒否はなかった。
 
+6回目の修正のcommit `bb3bb1be` から `go build -trimpath` で生成したreader（SHA256 `a148a4c9…525e`、vcs.modified=false）
+でも実物を1回照合した。終了コード0、15.2秒で、同じ固定値の `qualified:true`（入力126件・dep-info 116件・crate 8件、
+`data_access_granted:false`）を返した。
+
 いずれもmerge前のsourceによる観測で、最終の結果はmerge後のsourceから生成したreaderで取り直す。
 対象の置換、guardの変更、ToDoの状態変更はしていない。
 
@@ -474,5 +527,7 @@ SHA256 `d4392e63…0718`、同じサイズと更新時刻で、`target/release/d
 2回目の修正のhead `8b4f34b9` でも、専用workflow（windows、run 40015024286）とCodeQL（run 40015024382）が成功した。
 3回目の修正のhead `206181d4` でも、専用workflow（windows、run 40025021344）とCodeQL（run 40025021288）が成功した。
 4回目の修正のhead `b3c0b718` でも、専用workflow（windows、run 40034507365）とCodeQL（run 40034507248）が成功した。
-5回目の修正後のheadの正式CI、修正の別モデル再レビュー、通常merge、merge後のsourceから生成したreaderによる
+5回目の修正のhead `4ed83158` では、CodeQL（run 40040005526）が成功し、専用workflow（run 40040005613）は
+テストの合成repoで動いた自動maintenanceのために失敗した（前の節）。
+6回目の修正後のheadの正式CI、修正の別モデル再レビュー、通常merge、merge後のsourceから生成したreaderによる
 実物の照合、親3190への結果の返却が残る。

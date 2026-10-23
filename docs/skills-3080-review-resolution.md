@@ -179,3 +179,24 @@ S4をAWS IAM公式まで追うと、現在の条件キー表にjob_workflow_ref�
 3420の提案は、ESM loaderとbundle出力、D1の読み戻し精度と混在許容、一次資料の対象行/手段/時刻の区別、sqlc/utelsの取込み元の許諾未確認、Justの採用条件と訂正履歴の分離、dotenvxの秘密鍵の保管を補足した。公式の現在のD1概要では過去の型変換節を再確認できず、そこは未再確認と明示した。Just実CLI/テストは未実施。数値の出所、作者の絶対パス、過去値の時点、候補条件と本人禁止の区別も補足した。今回の補足差分とGoテストは新しい限定確認の対象とする。
 
 既存GitHub連携は正常で実owner AutoDevJapan/repository ID1406818713とPR395 open/0eb HEAD、同HEADの6成功+Bugbot neutralを取得した。gh CLIは保存済み認証がinvalidで、通常OAuth復旧はブラウザへのコード貼り付けが利用できず未完。秘密値・コードを表示せず、開いた認証タブ1枚は所有記録を照合して閉じた。取得拒否647の迂回はしていない。
+
+## 補足の公開と追加4候補
+
+補足9ファイルは通常Git送信の認証も利用できなかったため、既存GitHub連携のGitデータAPIで保存した。各blobと全treeが実装側の17de0ea4と一致し、APIが生成した別commit metadataのb006b682を同じ作業ブランチへ通常のfast-forwardで反映した。元の17deは自身の保全参照へ残した。b006の6自動テストは成功、Bugbotはneutral。限定レビュー3456の実結果受領とMust対応後にPR395をmergeする。登録をレビュー成功としない。
+
+別の4入口/README4とStryker評価手順1を全読して61/76・残15・全primary152pathへ進めた。上流のNode<=22の説明と二重ロード許可の必須化は公式と異なり、CRDの論理式/metadataの全面禁止も公式の制約付き許容と異なる。依存更新のdev/browser一律ignoreや変換時の制約消失を採用前の修正候補にした。新4は未導入/未統合/未除外で、今回の限定3456には含まれない。
+
+変異レポートの判断手順1案/静的6例を保存した。SQL2と合わせ草案は3、設計/配置28は不変。実モデル適用やStryker実行、中央反映の証拠ではない。既存Skillへの統合書込1対象が正規の保護判定で分類未確認となったため、その書込だけ保留し、対象の名前/パスを報告していない。中央変更0で元の状態を保持し、保護設定を変更/迂回せずに独立作業を続ける。残15本文の読取調査は3458へまとめて登録し、親が固定出典と実結果を照合してから件数へ反映する。
+
+## 3456の補正と3458の読取結果
+
+3456原応答SHA4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b、固定0ebda988..b006b682、Must0/S7/N5を受領保全済み。job設定はSonnet5.5/要求max、両originはowner_request。原応答は9差分/Go2全文の確認で、新19本文や外部資料の全監査ではない。PR395は通常merge856a3367済み。
+
+- S1: 独立anchor表を導入し、3368本文/3378表示補正のheadと原応答SHAを両方固定。新版本文に独立Must0を足すsynthetic正例と、anchor無し/旧review改名の反例を追加する。実SQL本文の新規受入は0。
+- S2: 実在するstatic_cases[].real_model_turnとstatic_evaluation.real_model_turnを対照変異。renderable_install_plan/source_original、guidance順、reflectの射影field列挙、未知キー分類を追加する。
+- S3: 台帳無しフラグだけ、台帳/フラグ一致でカウンタ±1、他フラグを1つだけ追加する例へ分け、各ガードを独立に確かめる。
+- S4/S5/S7: 旧22のtrueを現版未確認へ戻し、固定headの過去確認を保持。recorded_at/preserved_atとjob_model/requested_effort/originを分け、実効推論量を断定しない。
+- S6: D1のBigInt非対応と安全整数範囲を現行Type conversion節で再確認。bind節は無名?を非推奨としている。混在の即時非対応とは断定せず、番号付きへ揃えるのは親の技術推奨と明記する。各claimの再照合状態を分ける。
+- Nit: 3378の旧新10未確認は当時の表示と注記。Justの可変masterは観測commit未保存の限界を保持。SQL射影外キーを閉じた一覧にし、rosterはGo sort.StringsのUTF-8バイト順と記す。b006/17deの同treeと作者表示差を保持する。
+
+3458原応答SHA885700995189c4d47e38ae8830eea36a6f3e33fa4ffb47e3df0740f9ddeeee22を保全し、15path/SHA/bytesと支持111件を固定tree/索引で照合した。READMEは9全読+6定型照合で、非README支持96は未読。公開反映は親が毎回承認/GPU固定禁止の評価文を訂正した新差分で、readerの提案を本人方針や独立レビュー承認へ昇格しない。mizchi76/76・primary167、導入28/統合1は不変。新19と本補正の別モデル確認は次の固定差分に限る。

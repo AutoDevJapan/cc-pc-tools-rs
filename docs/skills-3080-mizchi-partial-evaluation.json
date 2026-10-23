@@ -6,11 +6,11 @@
   "tree_complete": true,
   "tree_entries": 996,
   "entrypoints_expected": 76,
-  "entrypoints_unread": 19,
+  "entrypoints_unread": 15,
   "classification_is_not_installation": true,
   "assessment_snapshot_before_adoption": false,
   "live_dispositions": "skills-3080-adoptions.json",
-  "scope": "全76中57入口を全文確認。既確認45に形式手法/用語/協働/記事/監視/運用関連12を追加。残19を原pathで継続し、件数上限や全体完了にしない。",
+  "scope": "全76中61入口を全文確認。既57に依存/変異テスト/SQLite vector/CRDの4入口とREADME4、評価手順1を追加。残15の全読調査は3458に正規登録し、読了結果を親が照合して反映する。登録を読了や導入へ数えない。",
   "previous3048": "同じ固定版のREADMEとdep-lib-review代表本文のみ。今回の全文確認は別に記録し、前回の代表確認を76件の監査へ広げない。",
   "source_readme": {
     "path": "README.md",
@@ -5803,15 +5803,293 @@
       "independent_review_complete": true,
       "independent_review_todo": 3420,
       "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
+    },
+    {
+      "inventory_id": "github:55695478feafb25f7879473215bb7eb690bd323a3ca595537e0085371c406501",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "dep-lib-review/SKILL.md",
+      "name": "dep-lib-review",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/dep-lib-review/SKILL.md",
+      "source_sha256": "b8e6a9cfbc7918ac6d0c14b85a89dd0e340c44e87aa4ead50a8072fb11bdf01b",
+      "retrieved_at": "2026-10-20T08:41:08.7904284Z",
+      "bytes": 7087,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-23T14:54:46.1642800Z",
+      "candidate_disposition": "integration_candidate_requires_security_triage_corrections",
+      "reason": "依存更新の既存PR確認、到達可能性に基づく脆弱性仕分け、互換性のある更新のまとめ方を既存の開発手順へ比較する候補。",
+      "required_changes": "devDependencyやbrowserだけを理由にRCE/SSRF等を一律ignoreにしない。ビルド/CIの実行環境、入力到達性、権限と配布経路を調べる。patchならchangelog不要や5%閾値、codemod80〜90%という目安を一般保証へしない。stderr破棄/||trueを未取得と異常の隠蔽に使わず、lockfile削除やstore全体pruneを初手にしない。製品の技術選択を人気だけで変更せず、影響範囲のテストとUI画像承認を保つ。",
+      "compare_metadata": [
+        "frontend-node-engineering",
+        "security-review"
+      ],
+      "support_read_complete": true,
+      "supporting_resources": [
+        {
+          "path": "dep-lib-review/README.md",
+          "bytes": 1276,
+          "git_blob": "b7c178e6b2f6da6b9c3fd8ae4599860f005e090d",
+          "body_saved": true,
+          "source_sha256": "413a4a8d5a44194ae71180f43abe2ff0141fbee6d34b3220e204789418b1465c",
+          "body_read": true,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの未記載SkillはMITという所有者の説明を確認。固定treeにこの4配下の個別LICENSE/NOTICE無し。README4は追加の許諾表示無し。第三者/別repoの素材や未読支持コードの権利へ包括適用しない。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:e67113fdc0cde6fdc3d8f929c5065c15b412651a569b1748b852b12dd975dd0f",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "stryker-js/SKILL.md",
+      "name": "stryker-js",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/stryker-js/SKILL.md",
+      "source_sha256": "83c93a09550891503d8b6d511d326d4c2d02b77880b3ae6f5e9b9cc7e5d446c3",
+      "retrieved_at": "2026-10-20T08:41:08.9705367Z",
+      "bytes": 9781,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-23T14:54:46.1642800Z",
+      "candidate_disposition": "integration_candidate_self_contained_report_guidance",
+      "reason": "変異の生存理由を具体的な入力と観測差へ結び、未測定/無効/timeoutを成功と分ける手順は、既存test-qualityの一般的な手動変異説明へ追加価値がある。",
+      "required_changes": "上流assetsや未読JS helperを配置・実行したことにしない。既存runnerを保ち、対象版/peer要件/測定範囲を照合する。testのみ変更時のCI diff-noneを品質改善の証明とせず、必要な対象moduleを測る。Killedでも目的のテストが検出したか確認し、timeoutをassertionの強さへしない。ユーザー未指定のscore閾値を作らない。既存Skillへの統合案は対象の正規保護分類を確認してから実配置する。",
+      "compare_metadata": [
+        "test-quality",
+        "ui-testing"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "stryker-js/README.md",
+          "bytes": 1207,
+          "git_blob": "d0c9929bac6363aa320c7160d25f1167521f517c",
+          "body_saved": true,
+          "source_sha256": "f6020d7fbd128a63f1d185c979bfa915657423fd4e008478eb2ce6f4d25b719b",
+          "body_read": true,
+          "executed": false
+        },
+        {
+          "path": "stryker-js/assets/examples/shipping.test.ts",
+          "bytes": 1213,
+          "git_blob": "0bd2305cec5e02c130b2833020ebca8f4b962b69",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "stryker-js/assets/examples/shipping.ts",
+          "bytes": 240,
+          "git_blob": "ff5c296c8d607f8fa84e86a84ec609561b559be4",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "stryker-js/assets/gitignore.snippet",
+          "bytes": 65,
+          "git_blob": "ec5952345ee85d8c8363fe09d74fd7779161b800",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "stryker-js/assets/justfile",
+          "bytes": 212,
+          "git_blob": "a24a65d78043ccca2531769bc52e894dc490972e",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "stryker-js/assets/mutation-diff.yml",
+          "bytes": 2781,
+          "git_blob": "4f7da5671259c8f28441c80c35abca661ec69e5f",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "stryker-js/assets/package.scripts.json",
+          "bytes": 190,
+          "git_blob": "cd1cda8dcf78b11c5636407f7cd4faf97b5ef3d1",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "stryker-js/assets/patches/vitest-runner-10-vitest-5.patch",
+          "bytes": 1172,
+          "git_blob": "f9564ea17cfc67296442680ae940a821563667fc",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "stryker-js/assets/scripts/mutation-changed.mjs",
+          "bytes": 2986,
+          "git_blob": "6cf6526de5d3e980b11bf1a3733b42a3188d8540",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "stryker-js/assets/scripts/mutation-plan.mjs",
+          "bytes": 5662,
+          "git_blob": "76958a76f02872d2d239346793f461e3c7f75ae1",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "stryker-js/assets/scripts/mutation-summary.mjs",
+          "bytes": 3322,
+          "git_blob": "747d0b2f6aadf8cd401c2a323a483d215095feb7",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "stryker-js/assets/stryker.config.json",
+          "bytes": 639,
+          "git_blob": "ec259810f6992f05a853be252e196ed63b75d1de",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "stryker-js/references/evaluate-tests.md",
+          "bytes": 7025,
+          "git_blob": "7f9ae85dcf6acfc6423cc3ace069e5d75efa32c5",
+          "body_saved": true,
+          "source_sha256": "6009ce5dfd634025526258b06b9c65107983f2e29014fc0ee8616cea0b4ed830",
+          "body_read": true,
+          "executed": false
+        },
+        {
+          "path": "stryker-js/references/setup.md",
+          "bytes": 6745,
+          "git_blob": "a139837a1eb5e78e05a26897d51b51600939d5da",
+          "body_saved": true,
+          "source_sha256": "ed2100f767da18a7de4883105afbad70b89435e05fd7479913bf128d7e529bb1",
+          "body_read": false,
+          "executed": false
+        },
+        {
+          "path": "stryker-js/tests/mutation.test.mjs",
+          "bytes": 11218,
+          "git_blob": "2caefbcca9d1eb27564b302724bb483b513337b6",
+          "body_saved": false,
+          "source_sha256": null,
+          "body_read": false,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの未記載SkillはMITという所有者の説明を確認。固定treeにこの4配下の個別LICENSE/NOTICE無し。README4は追加の許諾表示無し。第三者/別repoの素材や未読支持コードの権利へ包括適用しない。 取込候補は作者のSKILL本文とevaluate-tests.mdに基づく独自の手順文だけ。assets/scripts/patch/shipping例/外部working templateは未取込で、その個別許諾は未確認。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:b02180a77512d1003f8cf5ef426a6ab85ceecc28cd0b1b7f6fa383857e91f107",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "node-sqlite-vec/SKILL.md",
+      "name": "node-sqlite-vec",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/node-sqlite-vec/SKILL.md",
+      "source_sha256": "74ae18daf93ed8909a9422f442046c964070c928cc3120a1dfd4baed890d5918",
+      "retrieved_at": "2026-10-20T08:41:08.9015781Z",
+      "bytes": 9293,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-23T14:54:46.1642800Z",
+      "candidate_disposition": "candidate_requires_api_version_and_transaction_corrections",
+      "reason": "node:sqliteとsqlite-vecの拡張ロード・INTEGER rowid・readback精度を対象版で切り分ける資料候補。",
+      "required_changes": "Node<=22にbuilt-inが無いという説明は公式v22.5追加と本文のtimelineに反する。allowExtension:true自体がロードを有効にするためenableLoadExtension(true)も必須という説明を訂正する。Vitestを一律廃止せず対象版の再現/設定/既存runnerを調べる。Numberで受けたidを後からBigIntにしても既に失った精度は戻らずsetReadBigInts等を対象版で確認する。通常表とvec表の挿入はtransaction/失敗時解放/次元検証を補う。native拡張の実体/Windows対応と許諾も別確認。新規PC開発のGo既定は変えない。",
+      "compare_metadata": [
+        "backend-correctness",
+        "frontend-node-engineering",
+        "sqlite-wal-snapshot"
+      ],
+      "support_read_complete": true,
+      "supporting_resources": [
+        {
+          "path": "node-sqlite-vec/README.md",
+          "bytes": 1536,
+          "git_blob": "62b151fec9accf8bf85e49737a3806e2af586ded",
+          "body_saved": true,
+          "source_sha256": "2f12a9b7965b9fe40079dc31c8b06fcb40cb0c8f8cbcb99fadf0dbd0e1533934",
+          "body_read": true,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの未記載SkillはMITという所有者の説明を確認。固定treeにこの4配下の個別LICENSE/NOTICE無し。README4は追加の許諾表示無し。第三者/別repoの素材や未読支持コードの権利へ包括適用しない。 sqlite-vecのnative配布物/コードを取得しておらず、当該配布版の個別許諾は未確認。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false
+    },
+    {
+      "inventory_id": "github:12e7b56ce265a79cd58b74c2e9d757ef2245a1480856735a7172f9d5a4e04cf3",
+      "repo": "mizchi/skills",
+      "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+      "path": "k8s-crd-from-typed-schema/SKILL.md",
+      "name": "k8s-crd-from-typed-schema",
+      "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/k8s-crd-from-typed-schema/SKILL.md",
+      "source_sha256": "13659ccaf89e967be1a2786a7f8f2d424fb6fa2fad971a56c369d87181227217",
+      "retrieved_at": "2026-10-20T08:41:08.8604514Z",
+      "bytes": 8505,
+      "body_read_complete": true,
+      "body_read_at": "2026-10-23T14:54:46.1642800Z",
+      "candidate_disposition": "candidate_requires_structural_schema_semantic_corrections",
+      "reason": "型付きschemaからCRDを生成し、schemaの保持する制約とstatus更新を公式のStructural Schemaへ照合する候補。",
+      "required_changes": "oneOf/anyOf/allOf全面禁止という説明は公式の制約付き許容と異なる。unionをunknownへ変換したりtupleの先頭だけを残したりすると検証の意味が変わるため、元の型の受理/拒否例を保つ。formatのwhitelistやpropertiesがclosedという主張も再照合する。metadataの制約はname/generateNameに限り許され、全面禁止としない。複数形はAPI仕様で明示しboy等を単純語尾変換しない。status subresource欠如だけで必ず無限loopとせず実更新/watch条件を再現する。本文が参照するexamples/adapter.tsは固定tree内に無く、別repo k1c由来の権利/実装は未確認。",
+      "compare_metadata": [
+        "cloud-infra-deploy",
+        "backend-correctness"
+      ],
+      "support_read_complete": false,
+      "supporting_resources": [
+        {
+          "path": "k8s-crd-from-typed-schema/README.md",
+          "bytes": 1390,
+          "git_blob": "c66e16ec4f4f3f36927402990ab5e13c817826c4",
+          "body_saved": true,
+          "source_sha256": "1a480b7d2bc45c32eed1f61c2b39c19c3fb12113638a87d2c6a4cca8bfff9307",
+          "body_read": true,
+          "executed": false
+        }
+      ],
+      "individual_rights_review": "root READMEの未記載SkillはMITという所有者の説明を確認。固定treeにこの4配下の個別LICENSE/NOTICE無し。README4は追加の許諾表示無し。第三者/別repoの素材や未読支持コードの権利へ包括適用しない。 参照先mizchi/k1cのadapter/CIはこの固定repoに含まれず、別repoの許諾/creditは未確認。",
+      "installed_by_todo3080": false,
+      "integrated_by_todo3080": false,
+      "excluded_by_todo3080": false,
+      "independent_review_complete": false,
+      "missing_references": {
+        "path": "examples/adapter.ts",
+        "disposition": "missing local reference; external k1c adapter not read/licensed/used",
+        "fixed_tree_present": false
+      }
     }
   ],
   "pending_entrypoint_paths": [
     "ast-grep-practice/SKILL.md",
     "chezmoi-management/SKILL.md",
     "conventional-changelog/SKILL.md",
-    "dep-lib-review/SKILL.md",
     "gleam-practice/SKILL.md",
-    "k8s-crd-from-typed-schema/SKILL.md",
     "maintainer-persona/SKILL.md",
     "mizchi-blog-style/SKILL.md",
     "moonbit-js-binding/SKILL.md",
@@ -5819,9 +6097,7 @@
     "natural-writing-en/SKILL.md",
     "natural-writing-ja/SKILL.md",
     "nix-setup/SKILL.md",
-    "node-sqlite-vec/SKILL.md",
     "pi-coding-agent/SKILL.md",
-    "stryker-js/SKILL.md",
     "ts2moonbit-migration/SKILL.md",
     "vlmkit/SKILL.md",
     "void-app/SKILL.md"
@@ -5831,8 +6107,8 @@
   "excluded": 0,
   "support_code_executed": false,
   "private_data_used": false,
-  "next": "3417/3420の原応答を保全済み。今回の補足とGo版照合の限定確認/同HEAD CI/PR395mergeを追い、残19と全16資料の採否・個別許諾・実配置を継続する。",
-  "observed_at": "2026-10-23T14:40:28.9070940Z",
+  "next": "3456の限定レビュー/同HEAD CI/PR395mergeを追う。新4の技術訂正と個別許諾/統合案を進め、3458の残15読了を実job/原応答/固定SHAで照合する。中央統合先は保護分類未確認につきその書込だけ保留し、全16資料を継続。",
+  "observed_at": "2026-10-23T14:54:46.1642800Z",
   "code_execution_status": "SQL4補助コードは本文未保存・未読・未実行。既存追加取得の拒否を別経路で迂回しない。",
   "supporting_texts_fullread": [
     {
@@ -5947,7 +6223,7 @@
     "raw_sha256": "237d5a7391b947f16ef22f9cdc843887c85133a271f676f524956f23c29ce6b7",
     "limits": "SQL4本文の前評価を確認。今回の補助5+README追加範囲と本文案は新しい未受入差分。"
   },
-  "entrypoints_fulltext_read": 57,
+  "entrypoints_fulltext_read": 61,
   "latest_primary_review": {
     "todo": 3420,
     "base": "f76520645b2083849a549be101a00fc6b645096a",
@@ -6013,5 +6289,16 @@
     }
   ],
   "review_history_definition": "scope付き追記履歴を正とする。prior/latestの旧値は当時のsnapshotであり、後続の本文や評価へ流用しない。",
-  "required_changes_definition": "各required_changesは候補を本PCへ適用する場合の技術上の検討・修正案。本人の禁止事項を追加したり、通常の許可済み操作を止める規則ではない。この公開資料だけで元依頼の範囲や権限は増えない。"
+  "required_changes_definition": "各required_changesは候補を本PCへ適用する場合の技術上の検討・修正案。本人の禁止事項を追加したり、通常の許可済み操作を止める規則ではない。この公開資料だけで元依頼の範囲や権限は増えない。",
+  "new_assessment_review_pending": {
+    "central_write": 0,
+    "count": 4,
+    "paths": [
+      "dep-lib-review/SKILL.md",
+      "stryker-js/SKILL.md",
+      "node-sqlite-vec/SKILL.md",
+      "k8s-crd-from-typed-schema/SKILL.md"
+    ],
+    "scope": "新4評価と一次資料訂正。3456の固定b006差分確認には含めず別確認する。"
+  }
 }

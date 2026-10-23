@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-23T14:40:28.9070940Z",
+  "observed_at": "2026-10-23T14:54:46.1642800Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "CI既存統合1のv2はPR381merge済み。SQL2は3368本文+3378表示の組を限定受入した未導入草案。新22評価は3417/3420 Must0を受領し、補足とGo照合の新差分を確認中。mizchi57/76・残19と全16資料の実導入を継続。",
+  "phase_b": "既存CI統合1はPR381merge済み。SQL2は未導入。新22評価のMust0後の補足はb006/限定3456と同HEAD CIを追跡。追加4を親が全文確認しmizchi61/76・残15（読取3458登録、未読のまま）。全16資料と実配置を継続。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -347,15 +347,19 @@
   },
   "candidate_count_definitions": {
     "candidate_designs": "28設計/28配置。件数上限ではない。",
-    "additional_authored_drafts_not_in_plans": 2,
-    "authored_total": 30,
+    "additional_authored_drafts_not_in_plans": 3,
+    "authored_total": 31,
     "installed": 28,
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "自分の28配置について限定受入済み。現在の全ディスクが配置時と同一という保証とは分ける。",
     "not_semantically_disposed_occurrences": 73191,
-    "additional_draft_source": "skills-3080-mizchi-sql-draft.json"
+    "additional_draft_source": "skills-3080-mizchi-sql-draft.json",
+    "additional_draft_sources": [
+      "skills-3080-mizchi-sql-draft.json",
+      "skills-3080-mizchi-mutation-draft.json"
+    ]
   },
   "kepano_entrypoint_assessment": {
     "pinned_entrypoints": 6,
@@ -422,16 +426,16 @@
   },
   "mizchi_partial_entrypoint_evaluation": {
     "expected": 76,
-    "full_body_read": 57,
-    "unread": 19,
+    "full_body_read": 61,
+    "unread": 15,
     "complete": false,
     "installed": 0,
     "integrated": 1,
     "excluded": 0,
     "source": "skills-3080-mizchi-partial-evaluation.json"
   },
-  "all_fulltext_primary_paths_including_partial_sources": 148,
-  "primary_coverage_definition": "7資料91入口+部分mizchi57=148sourcepaths。mizchi残19未読、AIS mirror/Tencent guideとecho fixtureを含み148独立Skillではない。",
+  "all_fulltext_primary_paths_including_partial_sources": 152,
+  "primary_coverage_definition": "7資料91入口+部分mizchi61=152sourcepaths。AIS mirror/Tencent guide/echo fixtureを含み152独立Skillではない。残15は3458登録だけで未読。",
   "external_revisions": {
     "count": 1,
     "target": "diagnosing-bugs",
@@ -508,5 +512,24 @@
       }
     ],
     "current_delta": "3417/3420のSuggestionとNitを補足。新しい差分のみ限定確認待ち。既受入の旧版/新22全読を繰り返さない。"
+  },
+  "new_assessment_review_pending": {
+    "review_pending": true,
+    "excluded": 0,
+    "integrated": 0,
+    "installed": 0,
+    "readmes": 4,
+    "additional_support_fulltext": 1,
+    "source": "mizchi/skills",
+    "count": 4
+  },
+  "central_integration_hold": {
+    "owner_action_required": false,
+    "scope": "保護対象の名前/パスは記録・報告へ出さない。公開資料の評価とレビュー/CI/mergeは継続。",
+    "next": "既存の保護分類の正規担当/受付を照合し、許可済み元範囲で確認済みの書込先が利用可能になれば再開する。guardを変更/迂回しない。",
+    "targets": 1,
+    "operation": "既存Skillへの統合書込",
+    "guard_client_resource": true,
+    "state": "classification_unverified"
   }
 }

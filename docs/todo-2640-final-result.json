@@ -87,13 +87,15 @@
         "status": "COMPLETED",
         "conclusion": "SUCCESS"
       }
-    ]
+    ],
+    "recovery_merge": "392e7f9bbcea6ee5867b78da37de1efd9f9fec48",
+    "recovery_merged_at": "2026-10-23T03:45:29Z"
   },
   "independent_work_complete": false,
   "review_wait": {
     "todo": 3418,
-    "observed_status": "todo",
-    "job_observed": false,
+    "observed_status": "done",
+    "job_observed": true,
     "model_requested": "claude-haiku-5-5",
     "effort_requested": "max",
     "packet_sha256": "D30CE866527F4431DE811523FD15D4C24DAF497CC2F0AF04F3CB2EF7D33A0A39"
@@ -103,5 +105,22 @@
     "url": "https://discord.com/channels/1552944707464597524/1563030711253082142",
     "request_id": "normal-log-edf528ab6e4b136e594deb9738c62e2c928e299ff3635e07f52f4af0b0bf3d35",
     "notify": false
+  },
+  "recovery_review_receipt": {
+    "todo": 3418,
+    "job": "20261023-122948-todo-3418",
+    "model": "anthropic/claude-haiku-5-5",
+    "effort": "max",
+    "must": 0,
+    "actual_tests": 0,
+    "response_bytes": 3876,
+    "response_sha256": "093A58EF457C13E0E1DCCA7DD2AD86B57F53F180945BAD408DC44DFAB09CDFA7"
+  },
+  "own_previous_temp_cleanup": {
+    "id": "42a2934d2dabcd1da3f38a56785ed0c7",
+    "state": "source_absent",
+    "files": 23,
+    "logical_bytes": 529340,
+    "archive_sha256": "834D4CA5E487952E697826073318E3BCD8C03C0673F730CB072F60E80926C344"
   }
 }

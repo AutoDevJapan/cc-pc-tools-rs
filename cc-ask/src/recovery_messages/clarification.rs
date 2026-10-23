@@ -383,6 +383,11 @@ fn requests_explanation(body: &str) -> bool {
                 // The standalone topic "いる" must not turn an option's
                 // progressive/confirmation predicate into a necessity question.
                 let after = after.replace("ている", "てる").replace("でいる", "でる");
+                // An action request stays an action even when a fee/topic word
+                // precedes it, or the option itself is conditional.
+                if action_request(&format!("{}{after}", phrase.as_str())) {
+                    return false;
+                }
                 let prefix_question = (asks_why(before)
                     || matches!(previous, "なぜ" | "どうして" | "なんで"))
                     && (clause.contains(['?', '？']) || reason_query_tail.is_match(&after));
@@ -421,33 +426,63 @@ fn predicate_tail(predicate: &str) -> bool {
         ])
 }
 
+fn written_noun_tail(body: &str) -> bool {
+    body.chars()
+        .next_back()
+        .is_some_and(|c| c.is_ascii_alphanumeric() || matches!(c, '\u{30a1}'..='\u{30fa}' | 'ー'))
+}
+
+fn referential_tail(body: &str) -> bool {
+    [
+        "これ",
+        "それ",
+        "あれ",
+        "どれ",
+        "ここ",
+        "そこ",
+        "どこ",
+        "こちら",
+        "そちら",
+        "あちら",
+        "どちら",
+        "わたし",
+        "あなた",
+        "だれ",
+        "みんな",
+    ]
+    .iter()
+    .any(|word| body.ends_with(word))
+}
+
+fn quoted_reason_topic(body: &str) -> bool {
+    body.strip_suffix("って").is_some_and(|noun| {
+        referential_tail(noun) || written_noun_tail(noun) || nominal_reason_tail(noun)
+    })
+}
+
 fn reason_word_boundary(before: &str) -> bool {
     // A noun such as "同じもの" ends in の without being a nominalized
     // question. Keep an explicit particle or a completed predicate's の.
     let nominal_no = before.strip_suffix('の').is_some_and(predicate_tail);
-    // These whole words end in the same kana as a particle but introduce a
-    // causal なんで. Do not infer a particle from their final character.
-    let lexical_noun = ["しろうと", "いつも"]
+    let particle = ['と', 'も', 'は', 'が', 'を', 'に', 'へ']
         .iter()
-        .any(|noun| before.ends_with(noun));
-    let particle = !lexical_noun
-        && ['と', 'も', 'は', 'が', 'を', 'に', 'へ']
-            .iter()
-            .any(|&particle| {
-                before.strip_suffix(particle).is_some_and(|predicate| {
-                    matches!(particle, 'は' | 'を' | 'へ')
-                        || predicate_tail(predicate)
-                        || predicate.strip_suffix('の').is_some_and(predicate_tail)
-                        || matches!(particle, 'も' | 'は') && predicate.ends_with(['て', 'で'])
-                        || matches!(particle, 'が' | 'に' | 'も')
-                            && predicate.chars().next_back().is_some_and(|c| {
-                                matches!(c, '\u{3400}'..='\u{9fff}' | '\u{f900}'..='\u{faff}'
-                                    | '\u{30a1}'..='\u{30fa}' | 'ー')
-                            })
-                })
-            });
+        .any(|&particle| {
+            before.strip_suffix(particle).is_some_and(|predicate| {
+                matches!(particle, 'は' | 'を' | 'へ')
+                    || predicate_tail(predicate)
+                    || predicate.strip_suffix('の').is_some_and(predicate_tail)
+                    || matches!(particle, 'も' | 'は') && predicate.ends_with(['て', 'で'])
+                    || matches!(particle, 'が' | 'に' | 'も')
+                        && (written_noun_tail(predicate)
+                            || referential_tail(predicate)
+                            || predicate.chars().next_back().is_some_and(
+                                |c| matches!(c, '\u{3400}'..='\u{9fff}' | '\u{f900}'..='\u{faff}'),
+                            ))
+            })
+        });
     before.is_empty()
         || nominal_no
+        || quoted_reason_topic(before)
         || particle
         || ["のは", "のが", "のも"]
             .iter()
@@ -478,6 +513,19 @@ fn nominal_before_ga(before: &str) -> bool {
     ]
     .iter()
     .any(|noun| before.ends_with(noun))
+        || before
+            .strip_suffix("くらい")
+            .or_else(|| before.strip_suffix("ぐらい"))
+            .is_some_and(|amount| {
+                // A degree word needs an amount/unit cue. The bare adjective
+                // くらいが must remain an adversative assertion.
+                written_noun_tail(amount)
+                    || ["これ", "それ", "あれ", "どれ", "この", "その", "あの", "どの", "少し", "ちょっと", "多少", "いくら"]
+                        .iter().any(|word| amount.ends_with(word))
+                    || amount.chars().next_back().is_some_and(|c| {
+                        c.is_numeric() || "〇一二三四五六七八九十百千円人個本枚件回日週月年秒分時間倍割社席台枠行点類%％".contains(c)
+                    })
+            })
         || before.strip_suffix('つ').is_some_and(|number| {
             number
                 .chars()
@@ -493,13 +541,30 @@ fn colloquial_option_cause(body: &str) -> bool {
     let Some(tail) = body[start..].strip_prefix("なんで") else {
         return false;
     };
-    if reason_word_boundary(&body[..start]) {
+    // Whole nouns ending in と/も are causal only for なんで. They must not
+    // suppress the separate question word どうして.
+    let lexical_cause = ["しろうと", "いつも"]
+        .iter()
+        .any(|noun| body[..start].ends_with(noun));
+    if !lexical_cause && reason_word_boundary(&body[..start]) {
         return false;
     }
     // "十分なんですか" / "なんでしょうか" are questions, unlike
     // "十分なんで、進めて" or the assertion "十分なんですよ".
     let tail = tail.trim_end_matches(|c: char| c.is_whitespace() || "。?!？！ー笑".contains(c));
     !["すか", "すかね", "しょうか", "しょうかね"].contains(&tail)
+}
+
+fn action_request(body: &str) -> bool {
+    regex::Regex::new(r"て(?:もらえ|いただけ)(?:ますか|ませんか|る\s*[?？])")
+        .unwrap()
+        .find_iter(body)
+        .any(|request| {
+            let before = &body[..request.start()];
+            !["教え", "説明し", "説明をし", "解説し", "解説をし", "見せ"]
+                .iter()
+                .any(|verb| before.ends_with(verb))
+        })
 }
 
 fn directive_before_reason(body: &str, option: &str) -> bool {
@@ -529,15 +594,6 @@ fn directive_before_reason(body: &str, option: &str) -> bool {
     .unwrap_or(body.len());
     let prefix = &body[..cutoff];
     let joined = format!("{option}{}", &body[..assertion_cutoff]);
-    // The choice expression may itself consume て ("aにして"). Inspect the
-    // complete prefix, while a following 理由 keeps the genuine reason query
-    // "してもらえる理由は？" outside the request pattern.
-    if regex::Regex::new(r"て(?:もらえ|いただけ)(?:ますか|ませんか|る\s*[?？])")
-        .unwrap()
-        .is_match(&format!("{option}{prefix}"))
-    {
-        return true;
-    }
     if regex::Regex::new(r"[うくぐすつぬぶむるただい]が|けれど|(?:よ(?:ね)?|[oO][kK])\s*$")
         .unwrap()
         .find_iter(&joined)
@@ -557,10 +613,15 @@ fn directive_before_reason(body: &str, option: &str) -> bool {
                 "て" => {
                     // A topic particle directly before the recognized reason
                     // is not an instruction. Keep standalone "ては？" rejected.
-                    tail != "は"
-                        && !["も", "る", "いる", "いた", "いま", "いな"]
+                    let explanation_topic = tail == "は"
+                        || (word.end() == prefix.len() && quoted_reason_topic(prefix))
+                        || ["はいけ", "はなら", "はだめ", "は駄目"]
                             .iter()
-                            .any(|suffix| tail.starts_with(suffix))
+                            .any(|negative| tail.starts_with(negative))
+                        || ["も", "る", "いる", "いた", "いま", "いな"]
+                            .iter()
+                            .any(|suffix| tail.starts_with(suffix));
+                    !explanation_topic
                 }
                 "です" | "ます" => !tail.starts_with(['か', '?', '？']),
                 _ => true,
@@ -988,6 +1049,106 @@ mod intent_tests {
             let reply = format!("aにして{ending}");
             if !requests_explanation(&reply) {
                 mismatches.push((reply, true));
+            }
+        }
+        assert!(mismatches.is_empty(), "{mismatches:?}");
+    }
+
+    #[test]
+    fn clarification_quantity_topics_and_full_clause_requests_stay_distinct() {
+        let mut mismatches = Vec::new();
+        for option in ["aで", "b で", "ｃで"] {
+            for noun in [
+                "これが",
+                "これに",
+                "これも",
+                "Stripeが",
+                "APIも",
+                "わたしが",
+            ] {
+                for why in ["なんで", "どうして", "なぜ"] {
+                    let reply = format!("{option}{noun}{why}必要？");
+                    if !requests_explanation(&reply) {
+                        mismatches.push((reply, true));
+                    }
+                }
+            }
+            for quantity in [
+                "月5ドルぐらい",
+                "どれくらい",
+                "これくらい",
+                "何個ぐらい",
+                "少しぐらい",
+            ] {
+                let reply = format!("{option}{quantity}が必要な理由は？");
+                if !requests_explanation(&reply) {
+                    mismatches.push((reply, true));
+                }
+            }
+            for topic in ["これって", "費用って", "APIって", "プランって"] {
+                for why in ["なんで", "どうして"] {
+                    let reply = format!("{option}{topic}{why}必要？");
+                    if !requests_explanation(&reply) {
+                        mismatches.push((reply, true));
+                    }
+                }
+            }
+            for prohibition in [
+                "進めてはいけない",
+                "進めてはならない",
+                "進めてはだめ",
+                "進めては駄目",
+            ] {
+                let reply = format!("{option}{prohibition}理由は？");
+                if !requests_explanation(&reply) {
+                    mismatches.push((reply, true));
+                }
+            }
+            for explanation in ["費用の理由を説明し", "費用の理由を教え", "費用の内訳を見せ"]
+            {
+                for ending in ["てもらえますか？", "てもらえませんか？", "ていただける？"]
+                {
+                    let reply = format!("{option}{explanation}{ending}");
+                    if !requests_explanation(&reply) {
+                        mismatches.push((reply, true));
+                    }
+                }
+            }
+            for noun in ["いつも", "しろうと"] {
+                for why in ["どうして", "なぜ"] {
+                    let reply = format!("{option}{noun}{why}必要？");
+                    if !requests_explanation(&reply) {
+                        mismatches.push((reply, true));
+                    }
+                }
+                let cause = format!("{option}{noun}なんで、お願いします");
+                if requests_explanation(&cause) {
+                    mismatches.push((cause, false));
+                }
+            }
+            for command in ["やって", "走って"] {
+                let reply = format!("{option}{command}なんで必要？");
+                if requests_explanation(&reply) {
+                    mismatches.push((reply, false));
+                }
+            }
+            for assertion in ["くらいがそれはなんで必要？", "まんがなんで、お願いします"]
+            {
+                let reply = format!("{option}{assertion}");
+                if requests_explanation(&reply) {
+                    mismatches.push((reply, false));
+                }
+            }
+        }
+        for option in ["aで", "b で", "ｃで", "aにしたら"] {
+            for action in ["費用を確認して進め", "必要な手続きを進め"] {
+                for ending in ["てもらえますか？", "てもらえませんか？", "ていただける？"]
+                {
+                    let reply = format!("{option}{action}{ending}");
+                    if requests_explanation(&reply) {
+                        mismatches.push((reply, false));
+                    }
+                }
             }
         }
         assert!(mismatches.is_empty(), "{mismatches:?}");

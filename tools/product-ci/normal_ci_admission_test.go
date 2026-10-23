@@ -176,3 +176,30 @@ func TestNormalCIRejectsSourceRunJobAndRunnerSubstitution(t *testing.T) {
 		})
 	}
 }
+
+func TestNormalCIRejectsClaimedWorkflowDigestBeforeJobInventory(t *testing.T) {
+	for _, claimed := range []string{
+		"fa5a017fca45710ebccae6a1ca7dfc70070199d9eacb8d94ddb6797d93320220",
+		strings.Repeat("f", 64),
+	} {
+		p, original := normalJobFixture(t, "")
+		jobReads := 0
+		read := func(ctx context.Context, endpoint string, out any) error {
+			if strings.Contains(endpoint, "/attempts/1/jobs?") {
+				jobReads++
+			}
+			return original(ctx, endpoint, out)
+		}
+		if _, err := normalCIJobPlan(context.Background(), p, read); err != nil || jobReads != 1 {
+			t.Fatalf("valid workflow did not reach the same inventory spy: %v, reads=%d", err, jobReads)
+		}
+		jobReads = 0
+		p.WorkflowSHA = claimed
+		if _, err := normalCIJobPlan(context.Background(), p, read); err == nil || !strings.Contains(err.Error(), "workflow-bytes") {
+			t.Fatalf("claimed digest accepted for different thirteen-command bytes: %v", err)
+		}
+		if jobReads != 0 {
+			t.Fatal("job inventory read before workflow authentication")
+		}
+	}
+}

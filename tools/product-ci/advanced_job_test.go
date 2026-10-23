@@ -23,6 +23,14 @@ func advancedFixture(c candidate, fault string) api {
 		data[route] = map[string]any{"name": "CC_PRODUCT_2737_CI", "value": "todo2737-" + strings.Repeat("d", 32)}
 	case "missing-lease":
 		delete(data, route)
+	case "empty-lease":
+		data[route] = map[string]any{"name": "CC_PRODUCT_2737_CI", "value": ""}
+	case "coordinated-other-branch":
+		pr["head"].(map[string]any)["ref"] = "another-branch"
+		run["head_branch"] = "another-branch"
+		data["repos/AutoDevJapan/GoDD-MCP-Alpha/git/ref/heads/another-branch"] = map[string]any{"object": map[string]any{"sha": c.SHA}}
+	case "coordinated-other-repository":
+		repo["full_name"] = "AutoDevJapan/another-repository"
 	case "default-enabled":
 		data["repos/AutoDevJapan/GoDD-MCP-Alpha/code-scanning/default-setup"] = map[string]any{"state": "configured"}
 	case "automatic-pr":
@@ -39,6 +47,9 @@ func advancedFixture(c candidate, fault string) api {
 		run["path"] = ".github/workflows/other.yml"
 	}
 	return func(_ context.Context, key string, out any) error {
+		if fault == "coordinated-other-repository" {
+			key = strings.ReplaceAll(key, "AutoDevJapan/another-repository", "AutoDevJapan/GoDD-MCP-Alpha")
+		}
 		key = strings.ReplaceAll(key, url.PathEscape("codex/todo2641-http-response-pseudo-20261015"), "codex/todo2641-http-response-pseudo-20261015")
 		v, ok := data[key]
 		if !ok {
@@ -65,7 +76,7 @@ func TestAdvancedCodeQLPreservesFullDispatchAndRejectsOtherSources(t *testing.T)
 	if checkCodeQLHook(p, p.Repo, strings.Repeat("b", 40), "7", "1") == nil {
 		t.Fatal("advanced dispatch accepted a merge context")
 	}
-	for _, fault := range []string{"wrong-lease", "missing-lease", "default-enabled", "automatic-pr", "wrong-source", "wrong-branch", "fork", "finished", "wrong-workflow"} {
+	for _, fault := range []string{"wrong-lease", "missing-lease", "empty-lease", "coordinated-other-branch", "coordinated-other-repository", "default-enabled", "automatic-pr", "wrong-source", "wrong-branch", "fork", "finished", "wrong-workflow"} {
 		t.Run(fault, func(t *testing.T) {
 			if _, e = planAdvancedWithPolicy(context.Background(), c, 7, advancedFixture(c, fault), expected); e == nil {
 				t.Fatal("changed advanced configuration accepted")
@@ -97,6 +108,10 @@ func TestNewAdvancedPinDoesNotChangeHistoricalOrOtherProductModes(t *testing.T) 
 		t.Fatal("new advanced source accepted as default setup")
 	}
 	p.Kind = "secret"
+	p.RepoID = candidates[0].ID
+	p.PR = candidates[0].PR
+	p.Label = secretLabel(p.RepoID)
+	p.ContextSHA = strings.Repeat("a", 40)
 	if validGuestPlan(p) {
 		t.Fatal("new advanced source accepted as secret scan")
 	}

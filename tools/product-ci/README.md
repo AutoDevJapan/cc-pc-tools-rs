@@ -254,7 +254,8 @@ the proposal never certifies those steps or the product's completion.
 `normal_ci_admission.go` adds read-only binding resolution for a controller's
 explicit source/tree/workflow/run/attempt/job role. It accepts only this repo
 and PR, the fixed head ref, full workflow_dispatch, the four prepared routes,
-original timeouts and thirteen Windows Cargo commands. The exact workflow
+original timeouts and the Windows Cargo command count bound to the delivered
+workflow digest. The exact workflow
 digest is mandatory. A fresh queued job must be unclaimed; a live hook must
 match the official assigned runner ID and unique task nonce name. It rechecks
 the PR/ref after inspection. Source/run/event/job/label/runner substitutions
@@ -315,6 +316,10 @@ run is complete or cancelled AND its processes/VMs/registrations have drained,
 `normal-ci-route-release <same-owned-dir>` removes that switch and proves
 absence. A changed foreign value is never overwritten or deleted. Repeated
 release is idempotent for the remote flag and does not change product source.
+The current task lease is shared with advanced CodeQL admission, including
+its hook revalidation. Keep it until both the Windows/native workflow and
+all four CodeQL language jobs are terminal and the owned workers have drained;
+releasing it immediately after Windows would reject the remaining CodeQL jobs.
 The controller owns this reserved variable namespace; GitHub variable deletion
 has no atomic value-CAS, so an out-of-band writer is outside that exclusivity
 contract and observed ownership changes fail closed.

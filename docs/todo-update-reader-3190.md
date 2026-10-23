@@ -120,5 +120,36 @@ symlink も同じ reparse 属性で拒否される。
 
 ## 実測と未完了
 
-実装前Red、実装後Green、CI、別モデルのレビュー、merge、merge後のreaderによる実物の照合は、
-それぞれ完了した時点でこの節に追記する。
+### Red（実装前）
+
+commit `5b22ab24` は仕様、CLI、固定値、受入テストだけを含み、`verifyUpdate` は常に `unimplemented` を返す。
+`tools/todo-update-reader-3190` で `go test -count=1 ./...` は終了コード1。検証系の14テストが
+subtest込み102行すべて `unimplemented` か `exactLeaf` の未実装で失敗し、fixture作成の失敗は0。
+CLIの4テストはこの時点で実装済みの契約として合格した。コンパイル失敗をRedに数えていない。
+
+### Green（実装後）
+
+`go test -race -count=1 ./...` は終了コード0。上位18件、subtest込み106件が合格し、失敗0・skip 0・
+data race 0、136秒。`go vet ./...` とgofmtも差分なし。Cargo、GPU、Civ6は使っていない。
+
+照合の要所を壊した8つの版を `go test -overlay` で当て、7つは対応するテストが失敗した
+（容量用途の未知の項目、読取の順序、hardlink、最後の再照合、receiptの重複key、build script、入力のguard分類）。
+祖先のreparse確認を外した版は生き残った。handleの実パス照合が祖先のjunctionを独立に拒否するためで、
+junctionの拒否自体はテストで確認している。
+
+### 実物への事前の観測（merge前）
+
+実装commitから生成した検査用readerで、実物に対して1回照合した。終了コード0、9.6秒で、
+`qualified:true`、current `f8710b51…b983`、new `d4392e63…0718`（8,017,920 bytes）、
+source `0e16e817…` / tree `31d45a74…`、receipt `20345f44…087c`、入力126件・dep-info 116件・crate 8件、
+`data_access_granted:false` を返した。これはmerge前のsourceによる観測で、最終の結果はmerge後のsourceから
+生成したreaderで取り直す。対象の置換、guardの変更、ToDoの状態変更はしていない。
+
+補足として、親の作業場所に残るCargoの出力 `target/release/todo.exe` は、配布用コピーと同じ
+SHA256 `d4392e63…0718`、同じサイズと更新時刻で、`target/release/deps/todo.exe` とhardlinkされている。
+リンクを持つためreaderの照合対象ではなく、コピーと原出力が同じbytesであることの観測として記録する。
+
+### 未完了
+
+正式CI、別モデルのレビューとMustの解消、通常merge、merge後のsourceから生成したreaderによる実物の照合、
+親3190への結果の返却が残る。完了した時点でこの節に追記する。

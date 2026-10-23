@@ -3,11 +3,18 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
+	"slices"
+	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -23,20 +30,286 @@ type environment struct {
 
 const guardExecutable = `D:\CC\Tools\client-records\scrub391.exe`
 
-const createNoWindow = 0x08000000
+const (
+	createNoWindow   = 0x08000000
+	maxEvidenceBytes = 1 << 20
+	maxInputBytes    = 16 << 20
+	maxArtifactBytes = 64 << 20
+	guardWorkers     = 4
+)
 
 func productionEnvironment() environment {
 	return environment{guard: runGuard, git: runGit}
 }
 
-// verifyUpdate is not implemented yet (ToDo3463 Red).
-func verifyUpdate(path string, p profile, env environment) (qualification, string) {
-	return qualification{}, "unimplemented"
+// exactLeaf accepts only the compiled leaf, spelled with either separator or
+// any case. Parents, siblings, streams, trailing dots or spaces, device and
+// extended-length prefixes and short names never compare equal.
+func exactLeaf(path, target string) bool {
+	if len(path) < 3 || !filepath.IsAbs(path) || strings.HasPrefix(path, `\\`) || strings.HasPrefix(path, "//") ||
+		strings.ContainsAny(path[2:], `:*?"<>|`) {
+		return false
+	}
+	return strings.EqualFold(filepath.Clean(path), target)
 }
 
-// exactLeaf is not implemented yet (ToDo3463 Red).
-func exactLeaf(path, target string) bool {
-	return false
+// verifyUpdate qualifies the one fixed update or returns a fixed reason code.
+// It never returns a partially filled qualification.
+func verifyUpdate(requested string, p profile, env environment) (qualification, string) {
+	if !exactLeaf(requested, p.target) {
+		return qualification{}, "target_path"
+	}
+	s := newSession(env)
+	defer s.close()
+
+	// Hold the installed leaf, unread, so the purpose entry and the digest
+	// below observe one file object that nobody can write or replace.
+	target, ok := s.pin(p.target, maxArtifactBytes)
+	if !ok {
+		return qualification{}, "target_leaf"
+	}
+	if !capacityQualified(env, p) {
+		return qualification{}, "baseline_qualification"
+	}
+	_, current, ok := s.read(target)
+	if !ok {
+		return qualification{}, "target_leaf"
+	}
+	if current != p.baselineSHA {
+		return qualification{}, "baseline_mismatch"
+	}
+
+	if !s.pinDir(p.root) || !guardClear(env, p.root) {
+		return qualification{}, "source_root"
+	}
+	tree, ok := checkSource(p, env)
+	if !ok {
+		return qualification{}, "source_git"
+	}
+
+	data, reason := s.evidence(filepath.Join(p.root, p.receiptName), p.receiptSHA, maxEvidenceBytes, "receipt")
+	if reason != "" {
+		return qualification{}, reason
+	}
+	var receipt buildReceipt
+	if !decodeSingle(data, &receipt, true) || !receiptMatches(receipt, p) {
+		return qualification{}, "receipt"
+	}
+
+	data, reason = s.evidence(filepath.Join(p.root, p.logName), p.logSHA, maxEvidenceBytes, "log")
+	if reason != "" {
+		return qualification{}, reason
+	}
+	logCrates, ok := parseBuildLog(data, p.root)
+	if !ok {
+		return qualification{}, "log"
+	}
+
+	data, reason = s.evidence(filepath.Join(p.root, filepath.FromSlash(p.depInfoName)), p.depInfoSHA, maxEvidenceBytes, "dep_info")
+	if reason != "" {
+		return qualification{}, reason
+	}
+	artifact := filepath.Join(p.root, filepath.FromSlash(strings.TrimSuffix(p.depInfoName, path.Ext(p.depInfoName))+".exe"))
+	deps, ok := parseDepInfo(data, p.root, artifact)
+	if !ok {
+		return qualification{}, "dep_info"
+	}
+
+	manifests, reason := s.inputs(receipt.Inputs, tree, p)
+	if reason != "" {
+		return qualification{}, reason
+	}
+	crates, ok := closureComplete(receipt.Inputs, deps, logCrates, tree, manifests, p)
+	if !ok {
+		return qualification{}, "closure"
+	}
+
+	candidate, ok := s.pin(filepath.Join(p.root, p.candidateName), maxArtifactBytes)
+	if !ok {
+		return qualification{}, "candidate"
+	}
+	if !guardClear(env, candidate.path) {
+		return qualification{}, "guard_classification"
+	}
+	if _, sum, ok := s.read(candidate); !ok || candidate.size != p.candidateBytes || sum != p.candidateSHA {
+		return qualification{}, "candidate"
+	}
+
+	if env.beforeRecheck != nil {
+		env.beforeRecheck()
+	}
+	if !s.recheck() || !sourceStillFixed(p, env) {
+		return qualification{}, "recheck"
+	}
+	return qualification{
+		Qualified: true, Domain: qualificationDomain, TodoID: qualificationTodo, VerifierTodoID: verifierTodo,
+		TargetKind: qualificationKind, Target: filepath.ToSlash(p.target),
+		CurrentSHA256: current, NewSHA256: p.candidateSHA, NewBytes: p.candidateBytes,
+		SourceRepository: receipt.Repository, SourceRoot: filepath.ToSlash(p.root), SourceHead: p.head, SourceTree: p.tree,
+		BuildReceiptSHA256: p.receiptSHA, BuildJob: receipt.Job, BuildCommand: slices.Clone(receipt.Command),
+		BuildLogSHA256: p.logSHA, DepInfoSHA256: p.depInfoSHA,
+		InputsVerified: len(receipt.Inputs), DepInfoEntries: len(deps), LocalCrates: crates,
+		BaselineQualifiedBy: p.capacity.domain, BaselineSourceReceiptSHA256: p.capacity.receiptSHA,
+	}, ""
+}
+
+// evidence pins one build record, has the guard classify it, and returns the
+// exact bytes whose digest matched the compiled pin.
+func (s *session) evidence(name, pin string, limit int64, reason string) ([]byte, string) {
+	f, ok := s.pin(name, limit)
+	if !ok {
+		return nil, reason
+	}
+	if !guardClear(s.env, name) {
+		return nil, "guard_classification"
+	}
+	data, sum, ok := s.read(f)
+	if !ok || sum != pin {
+		return nil, reason
+	}
+	return data, ""
+}
+
+// inputs pins every receipt input, has the guard classify all of them, then
+// hashes each pinned file. Manifest bytes are kept for the closure check.
+func (s *session) inputs(inputs []receiptInput, tree map[string]treeEntry, p profile) (map[string][]byte, string) {
+	files := make([]*pinnedFile, len(inputs))
+	for i, in := range inputs {
+		entry, ok := tree[in.Path]
+		if !ok || entry.kind != "blob" || (entry.mode != "100644" && entry.mode != "100755") || entry.object != in.Blob {
+			return nil, "input"
+		}
+		if files[i], ok = s.pin(filepath.Join(p.root, filepath.FromSlash(in.Path)), maxInputBytes); !ok {
+			return nil, "input"
+		}
+	}
+	if !s.classifyAll(files) {
+		return nil, "guard_classification"
+	}
+	manifests := map[string][]byte{}
+	for i, in := range inputs {
+		data, sum, ok := s.read(files[i])
+		if !ok || sum != in.SHA256 {
+			return nil, "input"
+		}
+		if path.Base(in.Path) == "Cargo.toml" {
+			manifests[in.Path] = data
+		}
+	}
+	return manifests, ""
+}
+
+func (s *session) classifyAll(files []*pinnedFile) bool {
+	var failed atomic.Bool
+	var wg sync.WaitGroup
+	next := make(chan string)
+	for range guardWorkers {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for name := range next {
+				if !failed.Load() && !guardClear(s.env, name) {
+					failed.Store(true)
+				}
+			}
+		}()
+	}
+	for _, f := range files {
+		next <- f.path
+	}
+	close(next)
+	wg.Wait()
+	return !failed.Load()
+}
+
+type guardVerdict struct {
+	OK                       *bool     `json:"ok"`
+	AccessAllowed            *bool     `json:"access_allowed"`
+	ClientResource           *bool     `json:"client_resource"`
+	ClassificationUnverified *bool     `json:"classification_unverified"`
+	ProtectionStatus         *string   `json:"protection_status"`
+	ProtectionCategories     *[]string `json:"protection_categories"`
+}
+
+// guardClear asks the deployed guard's general classifier about one path and
+// accepts only an explicit clear verdict with no protection category.
+func guardClear(env environment, name string) bool {
+	out, code, ran := env.guard("--guard-path", name)
+	var v guardVerdict
+	if !ran || code != 0 || !decodeSingle(out, &v, false) {
+		return false
+	}
+	return v.OK != nil && *v.OK && v.AccessAllowed != nil && *v.AccessAllowed &&
+		v.ClientResource != nil && !*v.ClientResource &&
+		v.ClassificationUnverified != nil && !*v.ClassificationUnverified &&
+		v.ProtectionStatus != nil && *v.ProtectionStatus == "clear" &&
+		v.ProtectionCategories != nil && len(*v.ProtectionCategories) == 0
+}
+
+// capacityQualified requires the existing ToDo3085 purpose entry to return
+// exactly its known qualification for the installed baseline, nothing more.
+func capacityQualified(env environment, p profile) bool {
+	out, code, ran := env.guard("--verify-capacity-runtime-update", p.target)
+	var report map[string]any
+	if !ran || code != 0 || !decodeSingle(out, &report, false) {
+		return false
+	}
+	want := map[string]any{
+		"qualified": true, "domain": p.capacity.domain,
+		"todo_id": json.Number(strconv.FormatInt(p.capacity.todoID, 10)), "target_kind": p.capacity.targetKind,
+		"old_sha256": p.capacity.oldSHA, "new_sha256": p.baselineSHA, "source_receipt_sha256": p.capacity.receiptSHA,
+		"data_access_granted": false, "original_registry_recovered": false,
+	}
+	if len(report) != len(want) {
+		return false
+	}
+	for name, value := range want {
+		if report[name] != value {
+			return false
+		}
+	}
+	return true
+}
+
+func gitText(env environment, root string, args ...string) (string, bool) {
+	out, err := env.git(root, args...)
+	return strings.TrimSpace(string(out)), err == nil
+}
+
+// checkSource verifies the fixed worktree and returns the fixed commit's tree.
+func checkSource(p profile, env environment) (map[string]treeEntry, bool) {
+	if !sourceStillFixed(p, env) {
+		return nil, false
+	}
+	if tree, ok := gitText(env, p.root, "rev-parse", "--verify", "--quiet", p.head+"^{tree}"); !ok || tree != p.tree {
+		return nil, false
+	}
+	if _, err := env.git(p.root, "merge-base", "--is-ancestor", p.head, p.mainRef); err != nil {
+		return nil, false
+	}
+	out, err := env.git(p.root, "ls-tree", "-r", "-z", "--full-tree", p.head)
+	if err != nil {
+		return nil, false
+	}
+	return parseTree(out)
+}
+
+// sourceStillFixed is checked before reading and again after every file is
+// pinned: the same worktree top, origin, HEAD and clean tracked content.
+func sourceStillFixed(p profile, env environment) bool {
+	top, ok := gitText(env, p.root, "rev-parse", "--show-toplevel")
+	if !ok || !strings.EqualFold(filepath.Clean(filepath.FromSlash(top)), p.root) {
+		return false
+	}
+	origin, ok := gitText(env, p.root, "remote", "get-url", "origin")
+	if !ok || !slices.Contains(p.origins, strings.ToLower(origin)) {
+		return false
+	}
+	if head, ok := gitText(env, p.root, "rev-parse", "--verify", "HEAD"); !ok || head != p.head {
+		return false
+	}
+	_, err := env.git(p.root, "-c", "core.autocrlf=true", "diff", "--quiet", "--no-ext-diff", "--no-textconv", "HEAD", "--")
+	return err == nil
 }
 
 type limitedBuffer struct {
@@ -58,8 +331,8 @@ func (b *limitedBuffer) Write(p []byte) (int, error) {
 func childEnvironment(parent []string) []string {
 	out := make([]string, 0, len(parent)+3)
 	for _, entry := range parent {
-		key, _, _ := strings.Cut(entry, "=")
-		if strings.HasPrefix(strings.ToUpper(key), "GIT_") {
+		name, _, _ := strings.Cut(entry, "=")
+		if strings.HasPrefix(strings.ToUpper(name), "GIT_") {
 			continue
 		}
 		out = append(out, entry)
@@ -90,13 +363,9 @@ func runGit(root string, args ...string) ([]byte, error) {
 }
 
 // runGuard executes the deployed guard by its fixed path. The executable must
-// be a plain file; its classification is trusted as the PC's protection authority.
+// be a plain file; its classification is the PC's protection authority.
 func runGuard(args ...string) ([]byte, int, bool) {
-	info, err := os.Lstat(guardExecutable)
-	if err != nil || !info.Mode().IsRegular() {
-		return nil, -1, false
-	}
-	if data, ok := info.Sys().(*syscall.Win32FileAttributeData); !ok || data.FileAttributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT != 0 {
+	if info, ok := lstatPlain(guardExecutable); !ok || !info.Mode().IsRegular() {
 		return nil, -1, false
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
@@ -105,7 +374,7 @@ func runGuard(args ...string) ([]byte, int, bool) {
 	hiddenProcess(cmd)
 	out := &limitedBuffer{limit: 1 << 20}
 	cmd.Stdout = out
-	err = cmd.Run()
+	err := cmd.Run()
 	if out.overflow {
 		return nil, -1, false
 	}

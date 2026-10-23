@@ -91,12 +91,17 @@ func (r *Runner) observeOrdinary(q *Request, live historyReadMessage) (bool, err
 		if ordinaryShortAnswer(next.Text) || r.KnownQuestionThreads[q.Thread] {
 			next.Phase = "context_pending"
 		}
+	} else if q.Phase == "history_watch" {
+		r.parkUnbound(&next)
 	} else if q.Phase == "empty" || q.Phase == "status_answered" || q.Phase == "status_query" {
-		next.Phase = "captured"
 		if strings.TrimSpace(next.Text) == "" {
 			next.Phase = "empty"
 		} else if isPureStatusQuestion(next.Text, r.State.Destination.Bot) {
 			next.Phase = "status_query"
+		} else if r.KnownQuestionThreads[q.Thread] || ordinaryShortAnswer(next.Text) {
+			next.Phase, next.PendingOwner, next.NextAction = "context_pending", "OMB", "verify_exact_original_question_generation"
+		} else if next.Message == next.Thread && next.ReplyTo == "" && !r.State.Threads[next.Thread].Managed {
+			next.Phase = "captured"
 		} else {
 			r.parkUnbound(&next)
 		}
@@ -131,6 +136,7 @@ func (r *Runner) ordinarySourceFile(q *Request) (string, error) {
 		ReplyTo: q.ReplyTo, ReplyChannel: q.ReplyChannel, ReplyGuild: q.ReplyGuild,
 		Acquired: q.Acquired, Source: q.Source, Text: q.Text, Key: q.Key,
 		MessageType: q.MessageType, Attachments: q.Attachments, Phase: "source"}
+	source.HistoryWatch = q.HistoryWatch
 	b, err := json.Marshal(source)
 	if err != nil {
 		return "", err
@@ -140,7 +146,7 @@ func (r *Runner) ordinarySourceFile(q *Request) (string, error) {
 
 func (r *Runner) bindOrdinary(ctx context.Context, message string, binding IntakeBinding) error {
 	q := r.State.Requests[message]
-	if q == nil || q.Conversation != "" || q.Origin != nil && q.Origin.Scope == productReportScope || binding.Todo == 0 || binding.Project == "" || !shaPattern.MatchString(binding.SourceSHA) ||
+	if q == nil || q.Conversation != "" || r.ordinaryProductScope(q) || r.isConfiguredRequestReport(binding.Todo) || binding.Todo == 0 || binding.Project == "" || !shaPattern.MatchString(binding.SourceSHA) ||
 		strings.TrimSpace(binding.Evidence) == "" || len(binding.Evidence) > 4096 || safeText(binding.Evidence, r.Token) != binding.Evidence {
 		return errors.New("ordinary binding input invalid")
 	}
@@ -181,8 +187,12 @@ func ordinaryShortAnswer(text string) bool {
 }
 
 func (r *Runner) deliverOrdinary(ctx context.Context, q *Request) error {
-	if q.Todo == 0 || q.Conversation != "" || q.Origin != nil && q.Origin.Scope == productReportScope || r.KnownQuestionThreads[q.Thread] {
+	if q.Todo == 0 || q.Conversation != "" || r.ordinaryProductScope(q) || r.isConfiguredRequestReport(q.Todo) {
 		return errors.New("ordinary original task missing")
+	}
+	if r.KnownQuestionThreads[q.Thread] {
+		q.Phase, q.PendingOwner, q.NextAction = "source_context_pending", "OMB", "verify_exact_original_question_generation"
+		return r.save()
 	}
 	if err := r.validateSource(ctx, q, q.Binding != nil); err != nil {
 		return err
@@ -252,6 +262,10 @@ func (r *Runner) deliverOrdinary(ctx context.Context, q *Request) error {
 	return nil
 }
 
+func (r *Runner) ordinaryProductScope(q *Request) bool {
+	return q.Origin != nil && q.Origin.Scope == productReportScope || r.State.ProgressLinks[q.Thread].Scope == productReportScope || r.ProgressLinks[q.Thread].Scope == productReportScope
+}
+
 // Independent of message Last/After, with an attempted cursor saved before I/O.
 // Completed sources remain revisitable; no failed first source can starve later IDs.
 func (r *Runner) refreshOrdinary(ctx context.Context, health *Health) {
@@ -319,7 +333,7 @@ func (r *Runner) processOrdinaryPending(ctx context.Context, health *Health) {
 }
 
 func (r *Runner) observeLegacySteeringApplication(q *Request, row *TodoRow) (bool, error) {
-	if q.Phase != "steering_saved" || q.Edited != "" || len(q.PriorEdits) != 0 || q.DeliveryVersion != "" {
+	if q.Phase != "steering_saved" || len(q.PriorEdits) != 0 || q.DeliveryVersion != "" {
 		return false, nil
 	}
 	var proof struct {
@@ -350,13 +364,16 @@ func (r *Runner) observeLegacySteeringApplication(q *Request, row *TodoRow) (boo
 	if !owned {
 		return false, nil
 	}
+	if q.Edited != "" && proof.ReceiptSHA == "" {
+		return false, nil
+	}
 	if proof.ReceiptSHA != "" {
 		b, err := boundedRegular(r.steeringReceiptPath(q.Todo, q.Message))
 		if err != nil || bytesHash(b) != proof.ReceiptSHA {
 			return false, nil
 		}
 	}
-	q.Phase, q.Reported, q.PendingOwner, q.NextAction = "reported", "applied", "OMB", "verify_parent_receipt_and_product_delivery"
+	q.Phase, q.Reported, q.PendingOwner, q.NextAction = "steering_applied", "applied", "OMB", "verify_parent_receipt_and_product_delivery"
 	return true, r.save()
 }
 

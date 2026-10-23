@@ -39,27 +39,34 @@ func intakeCLIWith(args []string, out io.Writer, load func(string, bool) (*Runne
 		return fail()
 	}
 	command := args[0]
-	if command != "status" && command != "bind" {
+	if command != "status" && command != "bind" && command != "watch" {
 		return fail()
 	}
 	config, input, after := conversationDefaultConfig, "", ""
 	f := flag.NewFlagSet("intake", flag.ContinueOnError)
 	f.SetOutput(io.Discard)
 	conversationStringFlag(f, "config", &config)
-	if command == "bind" {
+	if command != "status" {
 		conversationStringFlag(f, "input", &input)
 	} else {
 		conversationStringFlag(f, "after", &after)
 	}
-	if f.Parse(args[1:]) != nil || f.NArg() != 0 || command == "bind" && input == "" {
+	if f.Parse(args[1:]) != nil || f.NArg() != 0 || command != "status" && input == "" {
 		return fail()
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 	var plan intakeBindInput
+	var watch HistoryWatchInput
 	if command == "bind" {
 		b, err := historyPrivateInput(ctx, input, guard)
 		if err != nil || historyStrictJSON(b, &plan) != nil || plan.Domain != "discord-intake-binding-v1" || !monthlyID(plan.Message) || !monthlyID(plan.Thread) || !monthlyID(plan.Author) || plan.Todo == 0 || !shaPattern.MatchString(plan.SourceSHA) {
+			return fail()
+		}
+	}
+	if command == "watch" {
+		b, err := historyPrivateInput(ctx, input, guard)
+		if err != nil || historyStrictJSON(b, &watch) != nil || watch.Domain != "discord-intake-history-watch-v1" || !monthlyID(watch.Message) || !shaPattern.MatchString(watch.ReceiptSHA) {
 			return fail()
 		}
 	}
@@ -72,6 +79,16 @@ func intakeCLIWith(args []string, out io.Writer, load func(string, bool) (*Runne
 		return fail()
 	}
 	defer unlock()
+	if command == "watch" {
+		if err := r.watchHistory(ctx, watch, guard); err != nil {
+			return fail()
+		}
+		q := r.State.Requests[watch.Message]
+		if json.NewEncoder(out).Encode(map[string]any{"domain": "discord-intake-history-watch-result-v1", "message_id": q.Message, "source_sha256": ordinaryVersion(q), "phase": q.Phase, "application": "not_inferred"}) != nil {
+			return 1
+		}
+		return 0
+	}
 	// loadConversationRunner does not perform discovery. Load exact question
 	// receipts under the same lock before permitting a general-purpose binding.
 	if command == "bind" {

@@ -114,6 +114,7 @@ type Request struct {
 	Binding                     *IntakeBinding           `json:"task_binding,omitempty"`
 	PendingOwner                string                   `json:"pending_owner,omitempty"`
 	NextAction                  string                   `json:"next_action,omitempty"`
+	HistoryWatch                *HistoryWatch            `json:"history_watch,omitempty"`
 }
 type State struct {
 	Domain                   string                         `json:"domain"`
@@ -401,7 +402,11 @@ func (r *Runner) scanPage(ctx context.Context, thread Thread, replay bool) (int,
 			}
 			failure := monthlyFailure{Stage: "read_source"}
 			_ = errors.As(err, &failure)
-			r.State.Discovery["read:"+thread.ID] = DiscoveryPage{Checked: r.Now().UTC().Format(time.RFC3339Nano), FailureStage: failure.Stage, HTTPStatus: failure.Status}
+			key := "read:" + thread.ID
+			if replay {
+				key = "replay:" + thread.ID
+			}
+			r.State.Discovery[key] = DiscoveryPage{Checked: r.Now().UTC().Format(time.RFC3339Nano), FailureStage: failure.Stage, HTTPStatus: failure.Status}
 			if saveErr := r.save(); saveErr != nil {
 				return 0, saveErr
 			}
@@ -741,6 +746,11 @@ func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
 		if r.ProgressLinkRegistryInvalid {
 			health.Errors = append(health.Errors, "progress_link_registry_unverified")
 		}
+		// Delivery already waiting in durable state takes a turn before a slow
+		// history page can consume the finite intake deadline.
+		deliveryCtx, cancelDelivery := context.WithTimeout(intakeCtx, 4*time.Second)
+		r.processOrdinaryPending(deliveryCtx, &health)
+		cancelDelivery()
 		r.scanIntakeThreads(intakeCtx, &health, false, 8)
 		if r.Config.ManagementIntake {
 			r.scanIntakeThreads(intakeCtx, &health, true, 2)
@@ -752,9 +762,6 @@ func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
 		ordinaryCtx, cancelOrdinary := context.WithTimeout(intakeCtx, 4*time.Second)
 		r.refreshOrdinary(ordinaryCtx, &health)
 		cancelOrdinary()
-		deliveryCtx, cancelDelivery := context.WithTimeout(intakeCtx, 4*time.Second)
-		r.processOrdinaryPending(deliveryCtx, &health)
-		cancelDelivery()
 	}
 	if health.API && r.Config.ManagementIntake {
 		replayCtx, cancelReplay := context.WithTimeout(intakeCtx, 4*time.Second)
@@ -780,7 +787,7 @@ func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
 	}
 	r.reportUpdates(ctx, &health)
 	for _, req := range r.State.Requests {
-		if req.Phase != "reported" && req.Phase != "empty" && req.Phase != "source_unavailable" && req.Phase != "status_answered" && req.Phase != "product_reply_applied" {
+		if req.Phase != "reported" && req.Phase != "empty" && req.Phase != "source_unavailable" && req.Phase != "status_answered" && req.Phase != "product_reply_applied" && req.Phase != "history_watch" {
 			health.Pending++
 		}
 	}
@@ -796,10 +803,24 @@ func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
 }
 func (r *Runner) admit(ctx context.Context, health *Health) {
 	mids := make([]string, 0, len(r.State.Requests))
+	migrated := false
 	for id, req := range r.State.Requests {
+		if req.Conversation == "" && req.Todo == 0 && req.Phase == "origin_pending" && req.Origin == nil {
+			if r.KnownQuestionThreads[req.Thread] {
+				req.Phase = "context_pending"
+				migrated = true
+			} else if req.NextAction == "read_source_and_bind_original_task" {
+				r.parkUnbound(req)
+				migrated = true
+			}
+		}
 		if req.Conversation == "" && req.Todo == 0 && (req.Phase == "captured" || req.Phase == "context_pending" || req.Phase == "origin_pending") {
 			mids = append(mids, id)
 		}
+	}
+	if migrated && r.save() != nil {
+		health.Errors = append(health.Errors, "intake_phase_migration_deferred")
+		return
 	}
 	sort.Strings(mids)
 	start := sort.SearchStrings(mids, r.State.IntakeCursor)

@@ -177,7 +177,7 @@
   "reviewed_draft": {
     "content_identity_algorithm": "sql-authored-v1",
     "authored_content_sha256": "119786b834b0114244e413de9633f49fbda9e66815c626831d0818b27f10beb2",
-    "content_identity_scope": "Go draftContent構造体の名前/固定出典/description/正負例/guidance/adaptations/既存との差分とdraftCaseのreason/input/skill/expectedをJSON MarshalしたSHA-256。配列順を保持し、review/installed/権利調査等の運用metadataとJSONの空白/キー順を含めない。 射影外はinventory_id/source_url/retrieved_at/status/installed/individual_license_review/real_model_turn等。本文や例の指示/期待値は射影に含む。",
+    "content_identity_scope": "Go draftContentのname/source_repo/source_commit/source_path/source_sha256/description/positive/negative/guidance/adaptations/distinct_from_existingとdraftCaseのreason/input/skill/expectedをJSON MarshalしたSHA-256。配列順を保持。draft内の射影外キーはinventory_id/source_url/retrieved_at/status/installed/renderable_install_plan/individual_license_review/source_original。case内はreal_model_turnだけを射影外とする。static_evaluationはcases/positive/method/negative_or_boundary/real_model_turnの運用記録。root内のdrafts/static_cases以外はtodo/source/commit/tree_sha/status/not_scope_limit/drafts_count/installed/integrated/excluded/renderable_plans_added/source_scripts_executed/model_turn_tested/review_pending/next/static_evaluation/usage_evidence/reviewed_draft/review_pending_definitionで、本文指紋の射影外。JSONの空白とキー順も含めない。未知キーはGoテストで未分類として検出する。",
     "acceptance_basis": "親が3368の本文2/12例の全読と表示以外のMust無し、3378の表示補正Must0を組にして同じ内容を限定受入。3378単独での本文再受入や権利/実配置/実行成功ではない。新たに計算したdigestは親の版同一性確認で、レビュー応答にその値があったと偽らない。",
     "latest_review_todo": 3378,
     "reviews": [

@@ -23,7 +23,7 @@ func (r *Runner) validateSource(ctx context.Context, request *Request, binding b
 func (r *Runner) validateSourceMode(ctx context.Context, request *Request, binding, admission bool) error {
 	cutoff, _ := time.Parse(time.RFC3339Nano, r.State.Since)
 	stamp, err := time.Parse(time.RFC3339Nano, request.Created)
-	if err != nil || stamp.Before(cutoff) || stamp.After(r.Now().Add(time.Minute)) || request.Source != "discord-api-v10" || request.Author != r.State.Destination.Owner || request.Key != requestKey(request.Thread, request.Message) {
+	if err != nil || stamp.Before(cutoff) && !r.validHistoryWatch(request) || stamp.After(r.Now().Add(time.Minute)) || request.Source != "discord-api-v10" || request.Author != r.State.Destination.Owner || request.Key != requestKey(request.Thread, request.Message) {
 		return errors.New("owner receipt association differs")
 	}
 	if _, ok := number(request.Thread); !ok {
@@ -201,7 +201,7 @@ func (r *Runner) todo(id uint64) (*TodoRow, error) {
 	for i := range db.Items {
 		if db.Items[i].ID == id {
 			if found != nil {
-				return nil, errors.New("duplicate task receipt")
+				return nil, fmt.Errorf("%w: duplicate task receipt", errTaskBindingAmbiguous)
 			}
 			found = &db.Items[i]
 		}
@@ -209,7 +209,7 @@ func (r *Runner) todo(id uint64) (*TodoRow, error) {
 	if found != nil {
 		return found, nil
 	}
-	return nil, errors.New("task receipt missing")
+	return nil, fmt.Errorf("%w: task receipt missing", errTaskBindingAmbiguous)
 }
 
 var errTaskBindingAmbiguous = errors.New("original task binding ambiguous")
@@ -454,7 +454,7 @@ func (r *Runner) results(ctx context.Context) error {
 		if row.Project != project {
 			return errors.New("task project association differs")
 		}
-		if request.Phase == "source_edit_applied" && row.Status != "done" {
+		if (request.Phase == "source_edit_applied" || request.Phase == "steering_applied") && row.Status != "done" {
 			continue
 		}
 		stage := "accepted"
@@ -464,6 +464,9 @@ func (r *Runner) results(ctx context.Context) error {
 				return err
 			}
 			if applied {
+				if row.Status == "done" {
+					return r.sendStatus(ctx, request, "complete")
+				}
 				return nil
 			}
 			stage = "steering"

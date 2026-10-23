@@ -163,7 +163,7 @@ type monthlyChannelMetadata struct {
 	Type    int    `json:"type"`
 	Parent  string `json:"parent_id"`
 	Archive string `json:"archive_timestamp,omitempty"`
-	Last    string `json:"last_message_id,omitempty"`
+	Last    string `json:"-"`
 }
 
 func (c monthlyChannel) valid(guild string, requireGuild bool) bool {

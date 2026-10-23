@@ -5,7 +5,7 @@
   "tree_complete": true,
   "tree_entries": 996,
   "entrypoints_expected": 76,
-  "path_digest_algorithm": "basenameがSKILL.mdと大小無視で一致するpathを選別。path自体はordinal順で整列し、各pathの後にLFを加えたUTF-8のSHA-256。",
+  "path_digest_algorithm": "basenameがSKILL.mdと大小無視で一致するpathを選別。path自体はUTF-8バイトの辞書順（Go sort.Strings）で整列し、各pathの後にLFを加えたUTF-8のSHA-256。このASCII rosterでは旧ordinal順と同一。",
   "path_set_sha256": "24248fae07401fe08d0d063b61e5c2586f0a2d31c631b38f3cd5e5714f451f7a",
   "paths": [
     "actions-ci-tuning/SKILL.md",

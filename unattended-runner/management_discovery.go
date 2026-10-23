@@ -66,7 +66,8 @@ func (r *Runner) discoverManagement(ctx context.Context, active []Thread) {
 	s.Mode, s.Channel = parts[1], parts[0]
 	// Unlike the immutable monthly audit, this recurring pass starts afresh
 	// after its terminal page. Do not carry an old boundary flag into a new pass.
-	page, err = readMonthlyInventory(ctx, r, s, "", prior.Next, false)
+	ties := prior.Next != "" && prior.BoundaryUnresolved
+	page, err = readMonthlyInventory(ctx, r, s, "", prior.Next, ties)
 	if err != nil {
 		failure := monthlyFailure{Stage: "archive_source"}
 		_ = errors.As(err, &failure)
@@ -93,7 +94,7 @@ func (r *Runner) discoverManagement(ctx context.Context, active []Thread) {
 	}
 	r.State.Discovery["management:"+key] = DiscoveryPage{Before: prior.Next, Next: page.Next, Returned: page.Scanned, HasMore: !page.Complete, Complete: page.Complete && !page.TimestampBoundary, Pages: prior.Pages + 1, Checked: page.Acquired, BoundaryUnresolved: page.TimestampBoundary}
 	if reachedLower {
-		r.State.Discovery["management:"+key] = DiscoveryPage{Before: prior.Next, Returned: page.Scanned, Complete: true, Pages: prior.Pages + 1, Checked: page.Acquired, Coverage: "archive_lower_bound_reached", LowerBound: r.State.Since}
+		r.State.Discovery["management:"+key] = DiscoveryPage{Before: prior.Next, Returned: page.Scanned, Complete: !page.TimestampBoundary, Pages: prior.Pages + 1, Checked: page.Acquired, BoundaryUnresolved: page.TimestampBoundary, Coverage: "archive_lower_bound_reached", LowerBound: r.State.Since}
 	}
 	if r.save() != nil {
 		r.State.Discovery["management:"+key] = prior

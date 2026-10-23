@@ -258,7 +258,7 @@ func TestIntakeReviewLegacySteeringApplicationDoesNotRedispatch(t *testing.T) {
 	if err := r.results(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if q.Phase != "reported" || q.Reported != "applied" || *calls != 0 {
+	if q.Phase != "steering_applied" || q.Reported != "applied" || *calls != 0 {
 		t.Fatal("legacy application redispatched", q.Phase, *calls, h.Errors)
 	}
 	if _, err := os.Stat(filepath.Join(r.Config.Home, "requests", "delivery")); !os.IsNotExist(err) {
@@ -295,7 +295,7 @@ func TestIntakeReviewManagedDiscoveryRetainsLastAndStopsBeforeCutover(t *testing
 	})
 	r.discoverManagement(context.Background(), nil)
 	p := r.State.Discovery["management:800/public-archived"]
-	if r.State.Threads["900"].Last != "999" || r.State.Threads["700"].Last != "777" || r.State.Threads["600"].ID != "" || !p.Complete || p.Next != "" || p.BoundaryUnresolved || p.Coverage != "archive_lower_bound_reached" {
+	if r.State.Threads["900"].Last != "999" || r.State.Threads["700"].Last != "777" || r.State.Threads["600"].ID != "" || p.Complete || p.Next != "" || !p.BoundaryUnresolved || p.Coverage != "archive_lower_bound_reached" {
 		t.Fatal("discovery discarded last or crossed old cutoff", r.State.Threads, p, r.DiscoveryErrors)
 	}
 }

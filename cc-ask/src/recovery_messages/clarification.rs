@@ -335,33 +335,95 @@ fn requests_explanation(body: &str) -> bool {
     {
         return false;
     }
-    // Associate the question with each option expression. A later request for
-    // reasons must not turn a committed option into a question about that option.
+    // Associate each option with its own clause. Reasons in another clause
+    // cannot relabel a commitment; a bare "なぜ、" still introduces a question.
     let choice = regex::Regex::new(r"(?i)[a-dａ-ｄ]\s*(?:で|を(?:選んだ|選ぶ|選びます|選びたい|選べ|選択|採用|希望)|に(?:する|すれ|し(?:ます|た|て|よう)|決め)|が(?:いい|良い)|採用)").unwrap();
-    let reason_tail = regex::Regex::new(r"^(?:のは|の[？?]|のか|理由|根拠)").unwrap();
+    let separator = regex::Regex::new(r"[、，,\s…]+|けど|ので|のに|から").unwrap();
     for sentence in body.split_inclusive(['。', '！', '!', '？', '?', '\n', ';', '；']) {
-        for phrase in choice.find_iter(sentence) {
-            let before = &sentence[..phrase.start()];
-            if before.chars().next_back().is_some_and(|c| {
-                c.is_ascii_alphanumeric() || matches!(c, 'ａ'..='ｚ' | 'Ａ'..='Ｚ' | '０'..='９')
-            }) {
+        let options: Vec<_> = choice.find_iter(sentence).collect();
+        let mut spans = Vec::new();
+        let mut start = 0;
+        for boundary in separator.find_iter(sentence) {
+            // Whitespace between an option letter and its predicate belongs to
+            // the expression itself, not to the surrounding clause boundary.
+            if options
+                .iter()
+                .any(|option| option.start() < boundary.start() && boundary.end() < option.end())
+            {
                 continue;
             }
-            let after = sentence[phrase.end()..].trim_start();
-            let questioned = (asks_why(before) && sentence.contains(['?', '？']))
-                || (reason_tail.is_match(after) && explanation_requested(sentence));
-            if !questioned && !conditional_option_tail(after) {
-                return false;
+            // "のですか" is an interrogative ending, not the conjunction "ので".
+            if boundary.as_str() == "ので" && sentence[boundary.end()..].starts_with('す') {
+                continue;
+            }
+            spans.push(start..boundary.start());
+            start = boundary.end();
+        }
+        spans.push(start..sentence.len());
+        let mut previous = "";
+        for span in spans {
+            let clause = &sentence[span.clone()];
+            for phrase in choice.find_iter(clause) {
+                let before = &clause[..phrase.start()];
+                if before.chars().next_back().is_some_and(|c| {
+                    c.is_ascii_alphanumeric()
+                        || matches!(c, 'ａ'..='ｚ' | 'Ａ'..='Ｚ' | '０'..='９')
+                }) {
+                    continue;
+                }
+                let after = clause[phrase.end()..].trim_start();
+                let prefix_question = (asks_why(before)
+                    || before.trim().is_empty()
+                        && matches!(previous, "なぜ" | "どうして" | "なんで"))
+                    && clause.contains(['?', '？']);
+                let tail_question = explanation_requested(after)
+                    || nominal_reason_tail(after)
+                        && explanation_requested(&sentence[span.start + phrase.end()..]);
+                let questioned =
+                    (prefix_question || tail_question) && !directive_before_reason(after);
+                if !questioned && !conditional_option_tail(after) {
+                    return false;
+                }
+            }
+            if !clause.trim().is_empty() {
+                previous = clause.trim();
             }
         }
     }
     explanation_requested(body)
 }
 
+fn nominal_reason_tail(body: &str) -> bool {
+    regex::Regex::new(r"(?:説明|理由|内訳|必要|ひつよう|費用|料金|経費|けいひ|用途|根拠|背景|意味)(?:は|が|も|の)?$")
+        .unwrap()
+        .is_match(body)
+}
+
+fn directive_before_reason(body: &str) -> bool {
+    let topic = regex::Regex::new(
+        r"説明|理由|内訳|必要|ひつよう|費用|料金|経費|けいひ|用途|根拠|背景|意味|何のため",
+    )
+    .unwrap();
+    let prefix = &body[..topic.find(body).map_or(body.len(), |m| m.start())];
+    regex::Regex::new(r"お願い|ます|です|て")
+        .unwrap()
+        .find_iter(prefix)
+        .any(|word| {
+            let tail = &prefix[word.end()..];
+            match word.as_str() {
+                "て" => !["も", "いる", "いた", "いま", "いな"]
+                    .iter()
+                    .any(|suffix| tail.starts_with(suffix)),
+                "です" | "ます" => !tail.starts_with('か'),
+                _ => true,
+            }
+        })
+}
+
 fn conditional_option_tail(remaining: &str) -> bool {
     let remaining = remaining.trim_start();
-    // Conditional recommendations still commit to an option. Their reasons can
-    // be questioned explicitly by the caller, but a later question is separate.
+    // A conditional is not itself a commitment. A recommendation needs its own
+    // explanation question, checked by the caller before this fallback.
     if regex::Regex::new(r"^(?:ら|ば|なら|と|あれば|あるなら|したら|すれば)(?:いい|良い|よい)")
         .unwrap()
         .is_match(remaining)
@@ -385,10 +447,14 @@ fn conditional_option_tail(remaining: &str) -> bool {
             "すれば",
             "場合",
             "とき",
-            "時",
         ]
         .iter()
         .any(|suffix| remaining.starts_with(suffix))
+        || remaining.strip_prefix('時').is_some_and(|tail| {
+            tail.chars()
+                .next()
+                .is_none_or(|next| next.is_whitespace() || "はにのも、，,。？！?!".contains(next))
+        })
 }
 
 fn explanation_requested(body: &str) -> bool {
@@ -441,4 +507,69 @@ fn asks_why(body: &str) -> bool {
                 _ => false,
             }
         })
+}
+
+#[cfg(test)]
+mod intent_tests {
+    use super::requests_explanation;
+
+    #[test]
+    fn choice_and_reason_matrix_keeps_clause_order_and_predicates() {
+        let mut mismatches = Vec::new();
+        for separator in ["、", ",", " ", "　", "…", "けど", "ので", "のに", "から"] {
+            let reason_prefix = match separator {
+                "けど" | "のに" => "なんで迷うか分からない",
+                "ので" | "から" => "なんで迷うか分かった",
+                _ => "なんで迷うの",
+            };
+            for (decision, instruction) in [
+                ("aにする", "aで進めてって言ったよね"),
+                ("bにした", "bでお願いします"),
+                ("cにすると決めた", "cにしたらいいでしょ"),
+                ("dを採用する", "dを採用してほしい"),
+            ] {
+                for reply in [
+                    format!("{decision}{separator}なんで必要？"),
+                    format!("{reason_prefix}{separator}{instruction}？"),
+                ] {
+                    if requests_explanation(&reply) {
+                        mismatches.push((reply, false));
+                    }
+                }
+            }
+        }
+        for separator in ["", "、", ",", " ", "　", "…"] {
+            for choice in ["aがいい", "bにした", "cを選ぶ", "dを採用する"] {
+                let reply = format!("なぜ{separator}{choice}の？");
+                if !requests_explanation(&reply) {
+                    mismatches.push((reply, true));
+                }
+            }
+        }
+        for predicate in ["aでも", "bでの", "cで進めたら", "dを採用すると"] {
+            for topic in ["費用", "料金", "必要な理由"] {
+                let reply = format!("{predicate}{topic}は？");
+                if !requests_explanation(&reply) {
+                    mismatches.push((reply, true));
+                }
+            }
+        }
+        for choice in ["aで", "a で", "ａ　で"] {
+            let committed = format!("{choice}進めて、理由も教えて");
+            if requests_explanation(&committed) {
+                mismatches.push((committed, false));
+            }
+            let hypothetical = format!("{choice}進めたら費用は？");
+            if !requests_explanation(&hypothetical) {
+                mismatches.push((hypothetical, true));
+            }
+        }
+        for reply in ["なぜ、aにしたのですか？", "なぜaで進めているのですか？"]
+        {
+            if !requests_explanation(reply) {
+                mismatches.push((reply.into(), true));
+            }
+        }
+        assert!(mismatches.is_empty(), "{mismatches:?}");
+    }
 }

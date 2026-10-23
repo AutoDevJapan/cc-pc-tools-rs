@@ -75,6 +75,10 @@ func generatedQuestionEvidenceCLI(args []string, out io.Writer, registry generat
 	fs.SetOutput(io.Discard)
 	var evidence string
 	conversationStringFlag(fs, "evidence", &evidence)
+	var diagnostic bool
+	if checkOnly {
+		fs.BoolVar(&diagnostic, "diagnostic", false, "report the first failed check without registering or exposing input contents")
+	}
 	fail := func() int { _, _ = io.WriteString(out, "generated question evidence not registered\n"); return 1 }
 	if fs.Parse(args) != nil || fs.NArg() != 0 || evidence == "" {
 		return fail()
@@ -91,7 +95,17 @@ func generatedQuestionEvidenceCLI(args []string, out io.Writer, registry generat
 		count, err = registry.register(ctx, evidence)
 	}
 	if err != nil {
+		if diagnostic {
+			_ = json.NewEncoder(out).Encode(generatedDiagnostic(err))
+			return 1
+		}
 		return fail()
+	}
+	if diagnostic {
+		if json.NewEncoder(out).Encode(generatedDiagnostic(nil)) != nil {
+			return 1
+		}
+		return 0
 	}
 	if json.NewEncoder(out).Encode(map[string]any{"domain": generatedEvidenceDomain, "images": count, "registered": !checkOnly, "validated": true}) != nil {
 		return 1

@@ -1,0 +1,103 @@
+{
+  "todo": 3080,
+  "recorded_at": "2026-10-23T21:09:52.7884865+00:00",
+  "installed_cli_version": "0.163.0",
+  "official_source_commit": "83086188ae0614bd882818ff1aa23f3194962012",
+  "official_tag": "rust-v0.163.0",
+  "source_urls": [
+    "https://github.com/openai/codex/blob/83086188ae0614bd882818ff1aa23f3194962012/codex-rs/ext/skills/src/loader/discovery.rs",
+    "https://github.com/openai/codex/blob/83086188ae0614bd882818ff1aa23f3194962012/codex-rs/ext/skills/src/loader/mod.rs",
+    "https://github.com/openai/codex/blob/83086188ae0614bd882818ff1aa23f3194962012/codex-rs/ext/skills/src/loader/host.rs",
+    "https://github.com/openai/codex/blob/83086188ae0614bd882818ff1aa23f3194962012/codex-rs/exec-server/src/local_file_system.rs"
+  ],
+  "source_files": [
+    {
+      "bytes": 6987,
+      "path": "codex-rs/ext/skills/src/loader/discovery.rs",
+      "saved_sha256": "c5c2901e47a52a30d6bf4cdea822cdcc0a05bd7f4e702ce27430e4ea06930494"
+    },
+    {
+      "bytes": 1442,
+      "path": "codex-rs/ext/skills/src/loader/mod.rs",
+      "saved_sha256": "5b97cef387ccead62e3cdec2ebc0308747e4c9d5a5d6a6bc3ae341b61d6db35d"
+    },
+    {
+      "bytes": 14787,
+      "path": "codex-rs/ext/skills/src/loader/host.rs",
+      "saved_sha256": "361a9aa3dc6d5659c472d2c8ce433b0bd415806144b2e2c0fd4a5b9de902e1f6"
+    },
+    {
+      "bytes": 46287,
+      "path": "codex-rs/exec-server/src/local_file_system.rs",
+      "saved_sha256": "4530dee7c781cd9ad961e9de999920aca0cbcbbf8e1e1a33a23c301b2612e484"
+    }
+  ],
+  "binary_equivalence_to_source_proven": false,
+  "source_limits": {
+    "directories": 2000,
+    "full_walk_is_separate_from_parsing": true,
+    "entries": 20000,
+    "host_hidden_directories": "skip",
+    "warning_condition": "walk.truncated",
+    "depth": 6,
+    "user_directory_symlinks": "follow"
+  },
+  "metadata_measurement": {
+    "root": "central Skills",
+    "method": "metadata only, depth6, nested reparse points skipped; no file bodies read",
+    "directories": 4665,
+    "entries": 12930,
+    "files": 8193,
+    "case_insensitive_skill_files": 2250,
+    "directories_under_dot_names": 2650,
+    "nested_reparse_points_skipped": 9,
+    "errors": 0,
+    "depth_counts": {
+      "1": 302,
+      "2": 177,
+      "6": 207,
+      "5": 616,
+      "3": 1008,
+      "4": 2354,
+      "0": 1
+    },
+    "bounded_scan_complete": true,
+    "remaining_queue": 0,
+    "elapsed_ms": 464,
+    "scope_limits": "Not an exact executor walk reproduction: aliases not followed and entry ordering not matched. No private directory names saved."
+  },
+  "non_dot_directory_count": 2015,
+  "measurement_timestamp_limit": "metadata walk was observed in this job before the direct-coverage RPC; exact metadata-walk UTC time was not separately saved. recorded_at is artifact creation time.",
+  "diagnosis": "同版公式sourceはroot当たり2000directoryでtruncatedを返す。本文を読まないdepth6計数はdot配下を除いて2015directoryとなり、この制限に達する条件を満たす。nested reparse pointsは未追跡で、実walkerのcanonicalization/順序/応答byte上限を完全再現したとはしない。",
+  "direct_entrypoint_discovery": {
+    "known_direct_entrypoint_paths": 297,
+    "returned_matching_direct_paths": 297,
+    "missing_direct_paths": 0,
+    "metadata_total": 326,
+    "scan_traversal_limit_warnings": 2,
+    "parse_errors": 0,
+    "direct_entrypoint_metadata_coverage_complete": true,
+    "whole_recursive_walk_proven": false,
+    "model_invoked": false,
+    "context_budget_proven": false,
+    "scope": "Immediate non-dot non-reparse skill folders only. No unknown skill body read or private names/paths saved.",
+    "checked_at": "2026-10-23T21:08:28.0149034+00:00"
+  },
+  "resolved": {
+    "explanation_of_scan_limit_supported": true,
+    "active_direct_entrypoints_missing": 0
+  },
+  "not_proven": [
+    "complete recursive catalog walk",
+    "metadata for every nested or managed skill root",
+    "implicit skill selection",
+    "model turn context budget",
+    "hardware/browser rendering"
+  ],
+  "changes_made": {
+    "codex_config_or_binary": 0,
+    "guard_or_junctions": 0,
+    "central_files": 0
+  },
+  "next": "warningは保持し、現在の直下297入口のmetadata発見成功と区別する。必要な候補を既存入口へ統合しながら、追加の管理/入れ子rootも実測に基づき扱う。全体の導入をこの警告だけの待ちにしない。"
+}

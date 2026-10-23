@@ -257,7 +257,7 @@ func TestCoverageSeparatesCompleteSourcesMizchiAndAuthoredDrafts(t *testing.T) {
 		}
 		sum += n
 	}
-	if sum != 137 || len(p.Coverage.ByRepo) != p.Coverage.Repos || p.SkillRead != sum || p.Coverage.Paths != sum || p.Mizchi.Read != 76 || p.Mengto.Read < 45 || p.TotalRead != sum+p.Mizchi.Read+p.Mengto.Read {
+	if sum != 137 || len(p.Coverage.ByRepo) != p.Coverage.Repos || p.SkillRead != sum || p.Coverage.Paths != sum || p.Mizchi.Read != 76 || p.Mengto.Read < 92 || p.TotalRead != sum+p.Mizchi.Read+p.Mengto.Read {
 		t.Fatal("body read coverage does not conserve source paths")
 	}
 	var sql struct {

@@ -443,7 +443,8 @@
       "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
       "explicit_use_check_pending": false,
       "explicit_use_assessment": "A pass; B/C core pass with parent corrections. No real rendering or implicit selection proof.",
-      "independent_review_todo": 3504
+      "independent_review_todo": 3504,
+      "v2_to_v3_verbatim_diff_verified": false
     }
   ],
   "excluded_entries": [

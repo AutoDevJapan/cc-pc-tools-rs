@@ -7,7 +7,7 @@ import (
 	"fmt"
 )
 
-const advanced2737Head = "f7edc78a637f752aa78b95b491323caa3dbc515f"
+const advanced2737Head = "ff7da61a41974c0ab1630d5ad311201585de8eec"
 
 // Only the advanced command moves to the explicitly delivered candidate.
 // Historical proposals, default setup and other products keep their pins.

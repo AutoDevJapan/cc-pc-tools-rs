@@ -160,10 +160,16 @@ fn normal_lookup_retains_pending_intent_and_rejects_corrupt_or_foreign_input() {
             },
         )
         .unwrap();
+    fs::remove_file(&ctx.client_projects).unwrap();
     let pending = normal_lookup(&mut ctx, &args).unwrap();
     assert_eq!(pending["found"], true);
     assert_eq!(pending["suppressed"], "existing_question_pending");
     assert_eq!(pending["delivery"], "not_sent");
+    assert_eq!(pending["text_redacted"], false);
+    assert!(!pending["next_action"]
+        .as_str()
+        .unwrap()
+        .contains("conversation replies"));
     for key in ["owner", "guild", "parent"] {
         let mut input = core::read_json(&args.decision_file).unwrap();
         input[key] = json!("999");
@@ -339,4 +345,41 @@ fn normal_lookup_marks_display_redaction_and_does_not_call_pending_text_availabl
     assert_eq!(missing["found"], false);
     assert_eq!(missing["text_available"], false);
     f.unchanged();
+}
+
+#[test]
+fn normal_lookup_missing_question_does_not_claim_a_hidden_body_or_thread() {
+    let (f, mut ctx, args, _) = lookup_fixture();
+    fs::remove_file(&ctx.client_projects).unwrap();
+    let mut input = core::read_json(&args.decision_file).unwrap();
+    input["resources"][0]["id"] = json!("unasked-resource");
+    let result = crate::decision_identity::lookup(&mut ctx, &input).unwrap();
+    assert_eq!(result["found"], false);
+    assert_eq!(result["text_available"], false);
+    assert_eq!(result["text_redacted"], false);
+    assert!(result.get("thread_id").is_none());
+    assert!(!result["next_action"].as_str().unwrap().contains("本文"));
+    assert!(!result["next_action"]
+        .as_str()
+        .unwrap()
+        .contains("conversation replies"));
+    f.unchanged();
+}
+
+#[test]
+fn normal_lookup_masked_decision_kind_or_resource_uses_original_reply_reference() {
+    for name in ["direction", "worker-registration"] {
+        let (f, mut ctx, args, sent) = lookup_fixture();
+        let id = f.add_reply(core::s(&sent["thread_id"]), OWNER, "a", false);
+        fs::write(&ctx.client_projects, format!("{name}\n")).unwrap();
+        let result = normal_lookup(&mut ctx, &args).unwrap();
+        assert_eq!(result["found"], true);
+        assert_eq!(result["text_available"], false);
+        assert!(result.get("decision_identity").is_none());
+        assert!(result.get("original_decision").is_none());
+        assert_eq!(result["url"], sent["url"]);
+        assert_eq!(result["owner_replies"][0]["message_id"], id);
+        assert_eq!(result["approval"], "not_inferred");
+        f.unchanged();
+    }
 }

@@ -50,7 +50,58 @@
     "recovery_pr": 151,
     "recovery_head": "cee678945825905c20fa606ff5ef71c434d9e8a5",
     "review_todo": 3418,
-    "recovery_complete": false
+    "recovery_complete": false,
+    "recovery_checks": [
+      {
+        "name": "test (ubuntu-latest)",
+        "status": "IN_PROGRESS",
+        "conclusion": ""
+      },
+      {
+        "name": "Analyze (actions)",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS"
+      },
+      {
+        "name": "native-driver",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS"
+      },
+      {
+        "name": "live-chain",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS"
+      },
+      {
+        "name": "test (windows-latest)",
+        "status": "IN_PROGRESS",
+        "conclusion": ""
+      },
+      {
+        "name": "Analyze (rust)",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS"
+      },
+      {
+        "name": "CodeQL",
+        "status": "COMPLETED",
+        "conclusion": "SUCCESS"
+      }
+    ]
   },
-  "independent_work_complete": false
+  "independent_work_complete": false,
+  "review_wait": {
+    "todo": 3418,
+    "observed_status": "todo",
+    "job_observed": false,
+    "model_requested": "claude-haiku-5-5",
+    "effort_requested": "max",
+    "packet_sha256": "D30CE866527F4431DE811523FD15D4C24DAF497CC2F0AF04F3CB2EF7D33A0A39"
+  },
+  "discord": {
+    "delivery": "verified",
+    "url": "https://discord.com/channels/1552944707464597524/1563030711253082142",
+    "request_id": "normal-log-edf528ab6e4b136e594deb9738c62e2c928e299ff3635e07f52f4af0b0bf3d35",
+    "notify": false
+  }
 }

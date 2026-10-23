@@ -77,3 +77,12 @@ PR148のマージ前7check成功と実mergeは上記の事実として保持す�
 - 新helperはtempfile::tempdir_inでcompiled binaryの親配下へfixtureを作る。Unixのimmutable hard linkとWindowsのcopy処理、既存2テストの全assertionを保持する。製品・SSOT・UI・workflowは変更しない。PCのCargo/GPU/Civ6は起動しない。
 - 読取レビューは通常ToDo3418、parent2640/currentjob、kind review、model claude-haiku-5-5 / effort max / needsなしで登録済み。単一パケットを読む範囲。packet SHA256 D30CE866527F4431DE811523FD15D4C24DAF497CC2F0AF04F3CB2EF7D33A0A39。受付だけをレビュー済みとしない。初回addはmodelにslashを含むためValueError、sourceのvalidationを確認し、同じモデルの正規CLI表記へ訂正して登録した。子ジョブの直接起動はない。
 - 再開は3418の実応答・モデル・読取範囲を受領し、PR151の同head CIを確認してMustを解消する。通常mergeとマージ後CIを確認後に最終結果を更新する。元880等の未完・2736/2381の回収待ちは不変。42a2934dの原ログ・候補・レビューpacketは未完成果であり、レビュー受領と恒久保存前に回収しない。
+
+## 追加修正の受領待ち
+
+- 原失敗logをdocs/todo-2640-evidence/main-224b801-linux.original.logへ488252bytes/同SHAで保存し、候補・レビューpacket・spec・前2回の取得失敗理由を同配下pr151-recovery.private.jsonへ保持した。両方とも既存Git ignoreが適用されることを確認。原logやprivate packetはpushせず、上記の公開source/PR/固定hashと再開記録だけを保存する。
+- PR151の同cee678でCodeQL Rust/Actions/集約・native・liveはsuccess。Rust run39894294450はWindows120221013267/Linux120221013484とも実行中。登録のみをGreenへ数えない。
+- 3418は通常todo/未jobの起動待ち。直接の子ジョブ起動や別レビューの重複登録はしない。通常ToDo waitで3418を待ち、終了後の再開で実レビュー応答とPR151の実CIを受領する。元2640のCI修復・マージを3418へ再委譲していない。
+- 本人対応不要の進捗を正規logで1回配送し、delivery=verifiedを確認。URL: https://discord.com/channels/1552944707464597524/1563030711253082142 。request_id normal-log-edf528ab6e4b136e594deb9738c62e2c928e299ff3635e07f52f4af0b0bf3d35。メンション/返信ping/notify/添付はない。
+- Temp42a2934dは測定時23file/528920bytes。未受領レビューの入力を含む作業中データとして保持する。削除を試みて拒否された対象ではない。3418の実読取・応答保存後、必要な証拠の恒久SHA保存を確認してから通常plan→別削除→finishを行う。既存2736/2381の残留には触れない。
+- 正常マージ済みPR148を失敗扱いにせず、追加修復PR151・レビュー待ち・元880等の製品未完を分ける。本人判断/PC操作/新費用は不要。

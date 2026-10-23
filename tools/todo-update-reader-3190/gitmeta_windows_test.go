@@ -92,18 +92,30 @@ func TestConfigParserRefusesWhatItDoesNotRead(t *testing.T) {
 
 func TestPackedRefs(t *testing.T) {
 	a, b := strings.Repeat("a", 40), strings.Repeat("b", 40)
-	refs, ok := packedRefs([]byte("# pack-refs with: peeled fully-peeled sorted \n" + a + " refs/heads/work\n" + b + " refs/tags/v1\n^" + a + "\n"))
-	if !ok || len(refs) != 2 || refs["refs/heads/work"] != a || refs["refs/tags/v1"] != b {
-		t.Fatalf("packedRefs = %v, %v", refs, ok)
+	header := "# pack-refs with: peeled fully-peeled sorted \n"
+	for name, data := range map[string]string{
+		"written by Git":         header + a + " refs/heads/work\n" + b + " refs/tags/v1\n^" + a + "\n",
+		"no header in any order": b + " refs/tags/v1\n" + a + " refs/heads/work\n",
+		"not declared sorted":    "# pack-refs with: peeled \n" + b + " refs/tags/v1\n" + a + " refs/heads/work\n",
+	} {
+		refs, ok := packedRefs([]byte(data))
+		if !ok || len(refs) != 2 || refs["refs/heads/work"] != a || refs["refs/tags/v1"] != b {
+			t.Errorf("%s: packedRefs = %v, %v", name, refs, ok)
+		}
 	}
 	for name, data := range map[string]string{
-		"repeated name":      a + " refs/heads/work\n" + b + " refs/heads/work\n",
-		"peel without a ref": "^" + a + "\n",
-		"second peel":        b + " refs/tags/v1\n^" + a + "\n^" + a + "\n",
-		"header not first":   a + " refs/heads/work\n# pack-refs with: peeled\n",
-		"short object name":  "abc refs/heads/work\n",
-		"name outside refs":  a + " HEAD\n",
-		"no final newline":   a + " refs/heads/work",
+		"repeated name":                 a + " refs/heads/work\n" + b + " refs/heads/work\n",
+		"peel without a ref":            "^" + a + "\n",
+		"second peel":                   b + " refs/tags/v1\n^" + a + "\n^" + a + "\n",
+		"header not first":              a + " refs/heads/work\n# pack-refs with: peeled\n",
+		"short object name":             "abc refs/heads/work\n",
+		"name outside refs":             a + " HEAD\n",
+		"no final newline":              a + " refs/heads/work",
+		"declared sorted, out of order": header + b + " refs/tags/v1\n" + a + " refs/heads/work\n",
+		"declared sorted, longer first": header + a + " refs/heads/work/x\n" + b + " refs/heads/work\n",
+		"no space after the colon":      "# pack-refs with:peeled fully-peeled sorted \n" + a + " refs/heads/work\n",
+		"another comment first":         "# written by hand\n" + a + " refs/heads/work\n",
+		"unknown trait":                 "# pack-refs with: peeled future \n" + a + " refs/heads/work\n",
 	} {
 		if _, ok := packedRefs([]byte(data)); ok {
 			t.Errorf("%s: packedRefs accepted %q", name, data)

@@ -71,6 +71,7 @@ type fixture struct {
 	capacityExit int
 	onCapacity   func()
 	onRecheck    func()
+	onRead       func(path string)
 }
 
 func sha(data []byte) string {
@@ -325,7 +326,12 @@ func (f *fixture) env() environment {
 			f.record("git:" + strings.Join(args, " "))
 			return runGit(src, args...)
 		},
-		beforeRead: func(path string) { f.record("read:" + key(path)) },
+		beforeRead: func(path string) {
+			f.record("read:" + key(path))
+			if f.onRead != nil {
+				f.onRead(key(path))
+			}
+		},
 		beforeRecheck: func() {
 			if f.onRecheck != nil {
 				f.onRecheck()

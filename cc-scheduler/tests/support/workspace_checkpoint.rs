@@ -1,14 +1,23 @@
 use super::*;
 use cc_scheduler::workspace_checkpoint::checkpoint;
 
-fn main_fixture() -> (Fixture, cc_scheduler::workspace_checkpoint::Request, PathBuf) {
+fn main_fixture() -> (
+    Fixture,
+    cc_scheduler::workspace_checkpoint::Request,
+    PathBuf,
+) {
     let (mut f, mut request, target) = checkpoint_fixture();
     // All data is synthetic. Establish the same persisted assignment identity
     // as a normal scheduler launch, before the worker switches off main.
     run_git(
         &mut SystemRunner,
         &target,
-        &["remote", "set-url", "origin", "https://github.com/example/repair.git"],
+        &[
+            "remote",
+            "add",
+            "origin",
+            "https://github.com/example/repair.git",
+        ],
     )
     .unwrap();
     let mut assigned = cc_job_policy::work_owner::checkout(target.to_str().unwrap());
@@ -42,10 +51,16 @@ fn workspace_checkpoint_main_preserves_assignment_and_supports_normal_resume() {
         assert_eq!(report["eligible"], true, "{report}");
         assert_eq!(report["saved"], false);
         assert_eq!(fs::read(&f.e.todo_path).unwrap(), store);
-        assert_eq!(checkpoint(&mut f.e, &mut SystemRunner, &request).unwrap()["saved"], true);
+        assert_eq!(
+            checkpoint(&mut f.e, &mut SystemRunner, &request).unwrap()["saved"],
+            true
+        );
         let saved = f.get(1);
         ensure_workspace(&mut SystemRunner, f.repo.to_str().unwrap(), &saved, &jobs).unwrap();
-        assert_eq!(checkpoint(&mut f.e, &mut SystemRunner, &request).unwrap()["saved"], false);
+        assert_eq!(
+            checkpoint(&mut f.e, &mut SystemRunner, &request).unwrap()["saved"],
+            false
+        );
         assert_eq!(f.get(1), saved);
         let mut after = saved;
         after["scheduler"]["branch"] = before["scheduler"]["branch"].clone();
@@ -53,9 +68,18 @@ fn workspace_checkpoint_main_preserves_assignment_and_supports_normal_resume() {
         after["updated"] = before["updated"].clone();
         assert_eq!(after, before);
         assert_eq!(f.e.backend.records, jobs);
-        assert_eq!(run_git(&mut SystemRunner, &target, &["status", "--porcelain"]).unwrap(), status);
-        assert_eq!(run_git(&mut SystemRunner, &target, &["rev-parse", "HEAD"]).unwrap(), request.head);
-        assert_eq!(fs::read_to_string(target.join("unfinished.txt")).unwrap(), "keep this pending work");
+        assert_eq!(
+            run_git(&mut SystemRunner, &target, &["status", "--porcelain"]).unwrap(),
+            status
+        );
+        assert_eq!(
+            run_git(&mut SystemRunner, &target, &["rev-parse", "HEAD"]).unwrap(),
+            request.head
+        );
+        assert_eq!(
+            fs::read_to_string(target.join("unfinished.txt")).unwrap(),
+            "keep this pending work"
+        );
         assert!(f.e.backend.launched.is_empty());
     }
 }
@@ -92,7 +116,10 @@ fn workspace_checkpoint_main_rejects_unbound_or_changed_assignment() {
         match gate {
             "other_todo" => f.e.backend.records[0]["todo_id"] = json!(2),
             "other_job" => request.job = "missing".into(),
-            "historical_job" => { f.e.edit(&json!(1), |r| r["scheduler"]["job"] = json!("new-owner")).unwrap(); }
+            "historical_job" => {
+                f.e.edit(&json!(1), |r| r["scheduler"]["job"] = json!("new-owner"))
+                    .unwrap();
+            }
             "related_only" => {
                 f.e.backend.records[0]["todo_id"] = json!(2);
                 f.e.backend.records[0]["related_todo_ids"] = json!([1]);
@@ -101,9 +128,16 @@ fn workspace_checkpoint_main_rejects_unbound_or_changed_assignment() {
             "old_branch" => f.e.backend.records[0]["work_owner"]["branch"] = json!("develop"),
             "owner_tree" => f.e.backend.records[0]["work_owner"]["worktree"] = json!(f.repo),
             "owner_common" => f.e.backend.records[0]["work_owner"]["git_common"] = json!(f.repo),
-            "owner_repository" => f.e.backend.records[0]["work_owner"]["repository"] = json!("example/other"),
+            "owner_repository" => {
+                f.e.backend.records[0]["work_owner"]["repository"] = json!("example/other")
+            }
             "source_cwd" => f.e.backend.records[0]["cwd"] = json!(f.repo),
-            "expected" => { f.e.edit(&json!(1), |r| r["scheduler"]["branch"] = json!("scheduler/todo-1-new")).unwrap(); }
+            "expected" => {
+                f.e.edit(&json!(1), |r| {
+                    r["scheduler"]["branch"] = json!("scheduler/todo-1-new")
+                })
+                .unwrap();
+            }
             "arbitrary_expected" => request.expected_branch = "develop".into(),
             "other_todo_expected" => request.expected_branch = "scheduler/todo-2-old".into(),
             "arbitrary_destination" => request.branch = "feature/work".into(),
@@ -124,7 +158,11 @@ fn workspace_checkpoint_main_rejects_unbound_or_changed_assignment() {
             "competing_todo" | "competing_cwd" => {
                 let mut other = job("other", 9, "running");
                 other["todo_id"] = json!(if gate == "competing_todo" { 1 } else { 2 });
-                other["cwd"] = json!(if gate == "competing_cwd" { &target } else { &f.repo });
+                other["cwd"] = json!(if gate == "competing_cwd" {
+                    &target
+                } else {
+                    &f.repo
+                });
                 f.e.backend.records.push(other);
                 f.e.backend.ps.insert(9, proc(9, 0, "codex.exe"));
             }
@@ -135,7 +173,13 @@ fn workspace_checkpoint_main_rejects_unbound_or_changed_assignment() {
         let report = inspect(&mut f.e, &mut SystemRunner, &request).unwrap();
         assert_eq!(report["reason"], reason, "{gate}: {report}");
         assert_eq!(report["eligible"], false, "{gate}");
-        assert_eq!(checkpoint(&mut f.e, &mut SystemRunner, &request).unwrap_err().0, reason, "{gate}");
+        assert_eq!(
+            checkpoint(&mut f.e, &mut SystemRunner, &request)
+                .unwrap_err()
+                .0,
+            reason,
+            "{gate}"
+        );
         assert_eq!(fs::read(&f.e.todo_path).unwrap(), before, "{gate}");
         assert_eq!(f.e.backend.records, jobs, "{gate}");
         assert!(f.e.backend.launched.is_empty(), "{gate}");
@@ -147,7 +191,9 @@ fn workspace_checkpoint_main_preserves_concurrent_row_and_project_changes() {
     for repeated in [false, true] {
         for field in ["note", "wait_on", "status", "job", "branch", "project"] {
             let (mut f, request, _) = main_fixture();
-            if repeated { checkpoint(&mut f.e, &mut SystemRunner, &request).unwrap(); }
+            if repeated {
+                checkpoint(&mut f.e, &mut SystemRunner, &request).unwrap();
+            }
             let mut changed = f.e.todo().unwrap();
             let row = &mut changed["items"][0];
             match field {
@@ -156,11 +202,19 @@ fn workspace_checkpoint_main_preserves_concurrent_row_and_project_changes() {
                 "status" => row["status"] = json!("block"),
                 "job" => row["scheduler"]["job"] = json!("next-owner"),
                 "branch" => row["scheduler"]["branch"] = json!("scheduler/todo-1-next"),
-                "project" => changed["projects"]["other"] = json!(f.temp.path().join("other-project")),
+                "project" => {
+                    changed["projects"]["other"] = json!(f.temp.path().join("other-project"))
+                }
                 _ => unreachable!(),
             }
             f.e.backend.repair_edit = Some((f.e.todo_path.clone(), changed.clone()));
-            assert_eq!(checkpoint(&mut f.e, &mut SystemRunner, &request).unwrap_err().0, "CheckpointRowChanged", "{repeated}/{field}");
+            assert_eq!(
+                checkpoint(&mut f.e, &mut SystemRunner, &request)
+                    .unwrap_err()
+                    .0,
+                "CheckpointRowChanged",
+                "{repeated}/{field}"
+            );
             assert_eq!(f.e.todo().unwrap(), changed);
             assert!(f.e.backend.launched.is_empty());
         }

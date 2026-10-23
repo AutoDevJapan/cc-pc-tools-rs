@@ -1,6 +1,7 @@
 # mainから本人の作業ブランチへの再開情報保存
 
-ToDo3470。既存のcheckpoint-workspaceが、正規に割り当てた旧mainを入力時に拒否する。
+ToDo3470、[Issue405](https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/405)。
+既存のcheckpoint-workspaceが、正規に割り当てた旧mainを入力時に拒否する。
 旧値を架空の作業ブランチへ置き換えず、同じ入口で実際の移行を保存する。
 
 今回追加する旧ブランチはmainだけ。保存先は従来どおり同じToDo番号の

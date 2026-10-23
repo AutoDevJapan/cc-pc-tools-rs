@@ -175,6 +175,17 @@ func allowed(path string) bool {
 	if owned2736PathAllowed(absolute) {
 		return true
 	}
+	if consoleImport3264Allowed(absolute) {
+		return true
+	}
+	if ombCaptureAllowed(absolute) {
+		return true
+	}
+	// The exact launcher now has its own complete permanent-source proof.
+	// It must not depend on the old linked repair checkout's Git directory.
+	if modelLauncherRuntimeAllowed(absolute) {
+		return true
+	}
 	if owned3107PathAllowed(absolute) {
 		return true
 	}
@@ -223,7 +234,7 @@ func allowed(path string) bool {
 	if legacyMatch(target) {
 		return false
 	}
-	if (runtimeExecutable(absolute, target, publicationGateRuntime) || runtimeExecutable(absolute, target, schedulerRuntime) || finiteRuntimeExecutable(absolute, target, jobsRuntime, time.Now().Unix()) || modelLauncherRuntimeAllowed(absolute) || progressTUIRuntime(absolute, target, progressTUIDirectory)) && sourceVerified(base) {
+	if (runtimeExecutable(absolute, target, publicationGateRuntime) || runtimeExecutable(absolute, target, schedulerRuntime) || finiteRuntimeExecutable(absolute, target, jobsRuntime, time.Now().Unix()) || progressTUIRuntime(absolute, target, progressTUIDirectory)) && sourceVerified(base) {
 		return true
 	}
 	for _, root := range roots {
@@ -245,6 +256,8 @@ func allowed(path string) bool {
 }
 
 type guardArgs struct {
+	runtimeUpdate    string
+	runtimeUpdateSet bool
 	path, succession string
 	product          int
 	pathSet          bool
@@ -259,10 +272,14 @@ func parseGuardArgs(args []string) (guardArgs, error) {
 	path := flags.String("guard-path", "", "resource absolute path")
 	product := flags.Int("verify-product-resume", 0, "verify original ToDo 1626, 2407 or 2475; no launch or mutation")
 	succession := flags.String("verify-current-succession", "", "verify one declared current product successor; no launch or mutation")
+	runtimeUpdate := flags.String("verify-capacity-runtime-update", "", "qualify one exact ToDo3085 software update; grants no data access")
 	err := flags.Parse(args)
 	parsed := guardArgs{path: *path, succession: *succession, product: *product, remainingArgs: flags.NArg() != 0}
+	parsed.runtimeUpdate = *runtimeUpdate
 	flags.Visit(func(f *flag.Flag) {
 		switch f.Name {
+		case "verify-capacity-runtime-update":
+			parsed.runtimeUpdateSet = true
 		case "guard-path":
 			parsed.pathSet = true
 		case "verify-product-resume":
@@ -297,8 +314,12 @@ func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "    \tverify original ToDo 1626, 2407 or 2475; no launch or mutation")
 	fmt.Fprintln(output, "  -verify-current-succession int")
 	fmt.Fprintln(output, "    \tverify one declared current product successor; no launch or mutation")
+	fmt.Fprintln(output, "  -verify-capacity-runtime-update string")
+	fmt.Fprintln(output, "    \tqualify one exact ToDo3085 software update; grants no data access")
 	fmt.Fprintln(output, "  -verify-model-runtime-update string")
 	fmt.Fprintln(output, "    \tqualify one exact ToDo3081 software update; grants no data access")
+	fmt.Fprintln(output, "  -export-omb-runtime-capture")
+	fmt.Fprintln(output, "    \tmaterialize the one independently verified new OMB report capture; no UI approval")
 }
 
 func verifyCurrentSuccession(taskID int) object {
@@ -317,11 +338,22 @@ func verifyCurrentSuccession(taskID int) object {
 }
 
 func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(int) object) int {
+	if ombCaptureFlagPresent(args) {
+		return runOMBCaptureCLI(args, stdout, exportOMBCapture)
+	}
 	if model3081FlagPresent(args) {
 		return runModel3081CLI(args, stdout, model3081RuntimeReceipt)
 	}
+	return runGuardCLIWithRuntime(args, stdout, stderr, currentVerifier, capacity3085RuntimeReceipt)
+}
+
+func runGuardCLIWithRuntime(args []string, stdout, stderr io.Writer, currentVerifier func(int) object, runtimeVerifier func(string) object) int {
 	parsed, err := parseGuardArgs(args)
 	if err != nil {
+		if capacity3085FlagPresent(args) {
+			_ = json.NewEncoder(stdout).Encode(object{"qualified": false})
+			return 1
+		}
 		if currentSuccessionFlagPresent(args) {
 			_ = json.NewEncoder(stdout).Encode(object{"verified": false})
 			return 1
@@ -333,6 +365,20 @@ func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(i
 		fmt.Fprintln(stderr, err)
 		printGuardUsage(stderr)
 		return 2
+	}
+	if capacity3085FlagPresent(args) {
+		if !parsed.runtimeUpdateSet || parsed.pathSet || parsed.productSet || parsed.successionSet || parsed.remainingArgs || !filepath.IsAbs(parsed.runtimeUpdate) {
+			_ = json.NewEncoder(stdout).Encode(object{"qualified": false})
+			return 1
+		}
+		receipt := runtimeVerifier(parsed.runtimeUpdate)
+		if receipt["qualified"] != true {
+			receipt = object{"qualified": false}
+		}
+		if json.NewEncoder(stdout).Encode(receipt) != nil || receipt["qualified"] != true {
+			return 1
+		}
+		return 0
 	}
 	if currentSuccessionFlagPresent(args) && !parsed.successionSet {
 		_ = json.NewEncoder(stdout).Encode(object{"verified": false})

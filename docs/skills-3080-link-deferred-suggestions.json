@@ -1,0 +1,13 @@
+{
+  "todo": 3080,
+  "source_review": 3296,
+  "current_live_changed": false,
+  "status": "次の必要更新へまとめる。未適用。",
+  "changes": [
+    "descriptionを編集依頼に限定する表現へ戻すか、変更点の記述を本文の限定と一致させる。",
+    "CLAUDEだけの経路行の主語、最小差分、READMEが索引として使われる場合と本文リンク修正の除外を明確にする。",
+    "source.json/sources.mdの内部語と余分な空白を同じ限定更新で整える。"
+  ],
+  "reason": "実害Must0の受入版を保持し、軽微提案ごとのwrite/レビューを繰返さない。",
+  "baseline_manifest": "skills-3080-installed-link-manifest.json"
+}

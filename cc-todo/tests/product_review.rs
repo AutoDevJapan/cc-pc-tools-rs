@@ -1,7 +1,8 @@
 use cc_scheduler::product_review as scope;
 use cc_todo::product_resume::{bind_review_at, snapshot};
 use serde_json::{Value, json};
-const DURING_ALLOCATION: f64 = 1791849601.;
+const WITHIN_REVIEW_WINDOW: f64 = 1791849601.;
+const AFTER_REVIEW_WINDOW: f64 = 1792540800.;
 fn fixture() -> (Value, Value, Value) {
     let owner = json!({"repository":"autodevjapan/phosgaea-vol1","git_common":"recovered-common",
         "worktree":"original-tree","branch":"original-branch"});
@@ -20,7 +21,7 @@ fn fixture() -> (Value, Value, Value) {
 fn only_original_review_changes_and_history_is_complete() {
     let (mut db, r, owner) = fixture();
     let before = db.clone();
-    assert!(bind_review_at(&mut db, &r, &owner, DURING_ALLOCATION).unwrap());
+    assert!(bind_review_at(&mut db, &r, &owner, WITHIN_REVIEW_WINDOW).unwrap());
     assert_eq!(db["items"][0], before["items"][0]);
     assert_eq!(db["items"][2], before["items"][2]);
     let row = &db["items"][1];
@@ -39,7 +40,9 @@ fn only_original_review_changes_and_history_is_complete() {
     let mut r = r;
     r["snapshot"] = snapshot(&db, &db["items"][1]);
     let after = db.clone();
-    assert!(!bind_review_at(&mut db, &r, &owner, DURING_ALLOCATION).unwrap());
+    assert!(!bind_review_at(&mut db, &r, &owner, WITHIN_REVIEW_WINDOW).unwrap());
+    assert_eq!(db, after);
+    assert!(bind_review_at(&mut db, &r, &owner, AFTER_REVIEW_WINDOW).is_err());
     assert_eq!(db, after);
 }
 #[test]
@@ -64,21 +67,24 @@ fn changed_scope_stops_dependencies_workers_and_preparation_never_write() {
         }
         r["snapshot"] = snapshot(&db, &db["items"][1]);
         let before = db.clone();
-        assert!(bind_review_at(&mut db, &r, &owner, DURING_ALLOCATION).is_err(), "{patch}");
+        assert!(
+            bind_review_at(&mut db, &r, &owner, WITHIN_REVIEW_WINDOW).is_err(),
+            "{patch}"
+        );
         assert_eq!(db, before);
     }
     for field in ["spec", "jobs", "scheduler", "subwork"] {
         let (mut db, r, owner) = fixture();
         db["items"][1][field] = json!("changed");
         let before = db.clone();
-        assert!(bind_review_at(&mut db, &r, &owner, DURING_ALLOCATION).is_err());
+        assert!(bind_review_at(&mut db, &r, &owner, WITHIN_REVIEW_WINDOW).is_err());
         assert_eq!(db, before);
     }
 }
 #[test]
 fn prepared_binding_cannot_be_reused_with_other_inputs() {
     let (mut db, r, owner) = fixture();
-    bind_review_at(&mut db, &r, &owner, DURING_ALLOCATION).unwrap();
+    bind_review_at(&mut db, &r, &owner, WITHIN_REVIEW_WINDOW).unwrap();
     let row = &db["items"][1];
     let job = json!({"todo_id":2407,"launch_key":scope::KEY});
     assert!(cc_job_policy::subwork::finite_review_launch(
@@ -102,7 +108,7 @@ fn prepared_binding_cannot_be_reused_with_other_inputs() {
 #[test]
 fn repeated_binding_expiry_uses_observed_time_and_never_changes_state() {
     let (mut db, mut receipt, owner) = fixture();
-    bind_review_at(&mut db, &receipt, &owner, DURING_ALLOCATION).unwrap();
+    bind_review_at(&mut db, &receipt, &owner, WITHIN_REVIEW_WINDOW).unwrap();
     receipt["snapshot"] = snapshot(&db, &db["items"][1]);
     let before = db.clone();
     assert!(!bind_review_at(&mut db, &receipt, &owner, 1792540799.).unwrap());

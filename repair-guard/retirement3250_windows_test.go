@@ -161,6 +161,23 @@ func TestRetirement3250ScopeIsFiniteAndProvenanceBound(t *testing.T) {
 	}
 }
 
+func TestRetirement3250QualifiedWorktreeParent(t *testing.T) {
+	now := time.Date(2026, 10, 23, 0, 0, 0, 0, time.UTC)
+	for _, parent := range []string{civ6Source, civ6Source + "-other", filepath.Join(civ6Source, "nested"), filepath.Dir(civ6Source)} {
+		r, l := retirement3250Fixture(now)
+		r.Root, r.Path = parent, filepath.Join(parent, "codex-owned-"+r.ID)
+		l.Entries[owned3107Key].Cleanup.Root = r.Path
+		_, ok := retirement3250Binding(r.Path, r, l, now)
+		if ok != same(parent, civ6Source) {
+			t.Fatalf("worktree parent %s misclassified", parent)
+		}
+	}
+	volume, id, birth, ok := retirement3250Parent(civ6Source)
+	if !ok || volume != 1215965535 || id != 0x00a300000003a5c1 || birth != 134368742189204451 {
+		t.Fatal("independent immutable source parent anchor differs")
+	}
+}
+
 func TestRetirement3250NormalAndTimeBoundaries(t *testing.T) {
 	now := time.Date(2026, 10, 21, 3, 0, 0, 0, time.UTC)
 	r, l := retirement3250Fixture(now)

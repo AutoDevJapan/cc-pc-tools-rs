@@ -1,0 +1,147 @@
+# 稼働証拠の常設とConsoleの派生成果の分類（3344 / 元3338）
+
+本人の「じゃあ、解消して。」を保持した元3338の依頼に基づく技術修復。
+3081は完了し、PR371の統合と2本の配布を親が受領した。3344が後続のguardの
+単一writerになる。3340のGo観測部品、原保護台帳、禁止3件と変更管理は変更しない。
+
+## 入力と証拠
+
+- `D:/CC/Policies/runtime-source-dependencies-3338.json` は稼働入力の保持登録。
+  旧入力を移動・削除して試さない。公開された正確なGitコミットを通常のGitで取得し、
+  対応するsource/byte/独立receiptのSHAと物理パスを確認して常設する。
+- 複製したbuild receiptは元の全バイトとSHAを保ち、別の移管receiptでコピーの事実を記録する。
+  原build時のcwd/path/timeを複製先の値へ改変しない。
+- 元3264のhandoff、manifest、全109件の分類結果、元53ファイルと派生56ファイルの
+  対応を使う。private repositoryは実ID1429803672 / AutoDevJapan/local-ai-console。
+  payloadの普通の閲覧は正常分類後だけとし、分類器の限定hash照合と区別する。
+- 保留fixture2件、未知、別owner、別hash、変更source、リンク、元client一致は拒否する。
+  生成設定3件とpackage manifestの5依存変更も元の生成・移管記録に結ぶ。
+- OMBの旧画像と拒否receiptを保存する。新captureの原tool call/result/元path/画像SHA/
+  loopback URL/目視確認を使う。古い画像や要約を実tool記録へ書き換えない。
+
+## 受入条件
+
+1. 旧Tempや終了するworktreeを参照しない固定された常設source/receiptから、通常guardが
+   既存launcherの分類を継続する。対応と独立証拠を欠く場合は拒否する。
+2. 合成テストで旧一時source不在の正例、改変receipt/source/byte、リンク、別owner、
+   親・隣接・ADS、過去client一致の負例を確認する。実稼働入力は壊さない。
+3. 既存guardの通常入口が派生56件を出所付きで正常分類する。53→56の対応は
+   元hash・Git blob・固定commit・独立manifestを確認し、単なるパス許可にしない。
+4. 別モデルの固定差分レビュー、関連Go検査、正式CI、通常merge、正規配布、
+   配布したbyteの通常guard受入を確認する。
+5. 元担当との単一writerを保ってConsoleを既存private repoへ保存し、remote commit/treeと
+   56実bytesを照合する。UI実装・稼働版の置換・保留fixtureは含めない。
+6. 新しい非秘密OMB公式loopback画面を正規captureし、同じ通常Discord
+   `log --attach`の実添付と読み返しを確認する。配送とUI実装承認を区別する。
+
+## 検査と終了の区分
+
+変更前に振る舞いのRedを実行し、最小の修復でGreenを確認する。Goのguardとその
+実入口・利用側を対象とし、Cargo/GPU/Civ6は起動しない。sourceの取得、コピー、
+分類の合格、CI、merge、配布、外部保存、画像配送は各々の実結果で判定する。
+親への実結果は `D:/OMB/workspace/recovery-20261022/permanent-provenance-result.json`。
+未完条件と再開手順を別のprivate receiptにも残す。
+
+## 実測した第1区切り
+
+- Issue375。旧分類器は実candidateのpackage manifestを未分類と返した。
+  `TestModelUpdateRuntimeInputsArePermanent` は旧worktree依存を理由にRedとなった。
+- 公開元の7固定commitをGitで取得し、元の独立receiptと候補をSHA一致で複製した。
+  原receiptのcwdや生成時刻は変更していない。旧sourceは残した。
+- Console53件はWindowsの改行も含めて原sourceと同じバイトを複製し、公開Gitの
+  53blob、旧/新SHA、追跡sourceの差分なしを照合した。これはGit取得後の明示した
+  byteコピーであり、新しい生成・ビルド証拠と主張していない。
+- `go test -count=1 -run 'TestPermanent|TestModelUpdate' .` は成功。
+  Consoleの合成Git/ファイル境界検査は78.97秒で成功。最初の50秒の検査補助の期限は
+  短すぎたため、元の時間切れを保持し、240秒の有限枠で同じ関連検査を完了した。
+- 検査用の新しいguardは実candidate manifestを通常の`--guard-path`で正常分類した。
+  この時点では本番配布・全56件の受入・外部保存・画像配送は未実施。
+- 実private repoは既に3339の新Consoleを保存し、mainは別の新しい履歴だった。
+  古い56件のarchiveでmainを上書きしない。元担当を保持し、正常分類と正規送信審査後に
+  この旧1commit/56bytesを別の保存用refで照合する。
+
+## OMBの新しいcapture
+
+今回の担当がChromeの公式`http://127.0.0.1:38799/`を新規タブで開き、
+`mcp__cua_repl.js`の実`getScreenshot()`戻り値を目視確認した。親には実行済みの
+正確なwrapperと検証入力を`omb-capture-wrapper-3344.json`で先に返した。
+原Codex記録のsession/open call/result/capture call/resultを行番号とSHAで固定する。
+変数を書き換える別CUA呼出し、別URL・別session・別tool・別の戻り値は拒否する。
+toolが返すJPEGを初めてファイルに書く専用exporterを使い、旧PNGをコピーしない。
+toolがディスクpathを返したとは主張しない。新しい元pathと実バイトを別途結ぶ。
+
+証拠は当該通常logの稼働報告用で、質問画像の資格として登録しない。
+原tool記録と、その戻り値を実際に見た非秘密確認が不足すれば通常分類しない。
+UI実装承認はfalseのまま。元の画像と拒否receiptを保持する。
+確認用タブは作成時の正式所有記録をinventoryと照合して個別closeし、closed1/failed0。
+
+`--export-omb-runtime-capture`は入力pathやmanifestを受け付けず、固定した新captureだけを
+新規作成する。既存の同byteは再試行でき、別byteを上書きしない。通常の添付は
+配布したguardの`--guard-path`、同じ`discord_ask log --attach`で実受入する。
+
+配布するguard Aはこの機能を含む固定public sourceから独立に生成する。別のreader B
+だけへAの実SHAと原build receiptを結び、自己SHAの循環を作らずに正規CASで配布する。
+A/Bのsourceと生成物、最終mergeと実配布、通常の分類受入は分けて記録する。
+
+全guardの合成回帰はdf400542で405合格・既存1省略、192.32秒。vetは成功した。
+その後の残るConsole receipt参照と旧source不在の合成検査は関連範囲で成功した。
+実Aはb4872860を通常Gitで別途取得した常設sourceから生成し、元build receiptを
+別ファイルに保存した。Bは4cd89bd2の別のGit取得先から生成した読取用の実行物。
+これは別source/実生成/独立receiptの照合であり、別担当がbuildしたとの主張ではない。
+通常のソフト資格検査で現在のguardからAへの一致を確認した。実置換はまだ行っていない。
+配布手順は[有限な配布スクリプト](install-permanent-provenance-3344.ps1)を使う。
+
+### 3349レビュー後の追加修復（未配布）
+
+最初の固定差分は実Opus5.5/maxがMust0で読了した。受入条件に関わる提案を取り込み、
+launcherの通常入口を完全な常設source資格だけで判定する位置へ移した。旧baseは他の
+既存用途の保持対象として扱い、この3機能の資格を旧baseのGit管理領域に依存させない。
+合成した実Git sourceを独立cloneし、旧sourceを削除しても正常分類する検査を加えた。
+
+Consoleは元の固定manifestを、SHA確認時と同じ開いたhandleから読んで56件と照合する。
+表とcandidateだけを変更し元manifestからずらす実Redを確認し、照合で拒否した。
+最初の検査案はroot以外のcommitを拒否する既存検査で止まり、意図する差を通っていなかった。
+root commitを保つfixtureへ訂正した実Redを`todo3344-manifest-drift-real-red.private.json`に保持する。
+元のclient判定は旧pathの文字列照合でも保持する。旧sourceの実在や通常読取は要求しない。
+source/sourceInputsのハードリンクとjunctionの負例も追加した。
+
+常設sourceのGit検査はreplace objectと暗黙fetchを使わず、Windows改行を正規化した
+追跡差分を確認する。実assetのSHAは元の全バイトを要求する。session内の同じrootは
+最初と最後に検査し、最後には全ての原receipt/candidate/targetのhandleを保持する。
+この追加を含む最終A2/B2を生成し、必要な追加レビューとCIを確認してから配布する。
+
+実A2は固定00e47e1c、SHA a9213277d0d8f2c4dfdf9c9366cbc5caaa4252f97882d72aa997577111395623。
+その原build receiptはSHA50f9d8adc3eb8e4650f1462f88092a16d98846b9ae3ed7df93713ef69a6edb76。
+実B2は固定eeafa472から生成した別readerで、A2との差分はその資格pinだけ。
+A2の固定sourceを明記した関連guard全体は410合格・既存1省略、244.53秒、vet成功。
+元Tempや旧worktreeを実際に破壊して試していない。A2の実分類で56件を再受入し、
+旧画像と保留2fixtureが拒否のままであることも配布後に確認する。
+
+配布手順の既存copyは、同じ元byteであることを確認できた場合だけ再利用する。
+新guardで保持3実行物と新JPEGを通常分類する比較も配布前に実行する。
+旧backupは上書きせずに停止し、担当が既存の復旧記録と照合してから再実行する。
+この検証のみの実行は成功したが、Applyの実完了ではない。
+
+原captureのnativeファイルは当該実tool記録として配送・読み返しまで保持する。
+証拠JSONは常設mirrorの`.provenance-omb/record-3344.private.json`、SHAは
+e8cd963f4a766867314eb4c00d88de4b14380d96728cd69ee65c9b1838846352。
+新JPEGを今後再送する場合も、この原記録と元byteの検査が必要である。
+途中書込み失敗時の画像の自動復旧は未実装だが、今回の新規保存とSHA読返しは成功済み。
+この一般化を今回の正常配送の達成条件と混同しない。
+
+### PR377統合後の配布直前の照合
+
+PR377はa9100117の14成功・1中立と3357のMust0を確認し、8a4452d4へ通常mergeした。
+配布前のsource比較で、先行PR282のcapacity purposeがA2に含まれていないと確認した。
+現用guardもE99からPR282の3fa853b5へ更新済みであり、旧候補のApplyは実行していない。
+元の更新を保持するため、統合8a4452d4の別Git取得先から実A3を一度生成した。
+A3 SHAは8ad7256ecd0b443ea0d9f90a995dd2fe99d352e1504895072bcff0753f1208ac、
+原build receipt SHAは986e8a5960d7f56bddc33d9ce5f840d938abe6586ab47b92091426f0ec1a04df。
+B3は4fd59dccの別取得先から生成し、SHAは7a434bff4d7d11a8dd1c43f47bfd3384a8120a0811a11d9a888b033c74e2c7d0。
+変更はA3のpinと、実現用3faの独立証拠だけ。PR282のpublic入力表25blobと元25byte SHAを照合し、
+元build receiptと元artifactを同byteで常設コピーした。コピーを元の生成証拠へ書き換えていない。
+古いA2がcapacity目的を拒否する実Redに対し、A3は同じ現用ToDoをsoftware-onlyで受理した。
+統合CLIとmodel/permanent/captureの関連73件が成功した。保持3実行物に加え、PR282の
+todo/capacityの実byteと既存の目的別資格を配布前後に確認し、guard1本だけを置換する。
+A2/B2とその検査は履歴として保持し、A3へ成功を付け替えない。追加の固定差分を別モデルが読み、
+最新CIを確認して通常merge後にApplyする。Consoleは3351の元writerの終了後に旧refだけを送る。

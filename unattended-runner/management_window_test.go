@@ -50,6 +50,9 @@ func TestManagementReadAndCursorStayBoundToTheirWindow(t *testing.T) {
 	if p["todo_id"] != float64(3387) || len(p["messages"].([]any)) != 1 || p["next"] == nil {
 		t.Fatal("new read lost identity, message, or continuation")
 	}
+	if strings.Contains(out.String(), "synthetic new instruction") {
+		t.Fatal("successful inspection exposed selected content")
+	}
 	// Re-reading the same source uses GETs and a fresh private output only.
 	replayArgs, replayPath := monthlyTestArgs(t, s)
 	out.Reset()
@@ -59,6 +62,9 @@ func TestManagementReadAndCursorStayBoundToTheirWindow(t *testing.T) {
 	_, replay := monthlyTestReceipt(t, replayPath)
 	if !bytes.Equal(original, replay) {
 		t.Fatal("same source/version and acquisition time changed its receipt")
+	}
+	if strings.Contains(out.String(), "synthetic new instruction") {
+		t.Fatal("successful reinspection exposed selected content")
 	}
 	// Neither another period nor the original audit may adopt this cursor.
 	for _, replacement := range []map[string]any{
@@ -72,6 +78,9 @@ func TestManagementReadAndCursorStayBoundToTheirWindow(t *testing.T) {
 		out.Reset()
 		if monthlyReadCLIWith(changed, &out, f.load, monthlyPermit) == 0 || f.loads != loads {
 			t.Fatal("changed scope adopted another period's cursor")
+		}
+		if !strings.Contains(out.String(), `"stage":"cursor"`) {
+			t.Fatal("changed-scope fixture did not reach cursor validation", out.String())
 		}
 		if _, err := os.Stat(output); !os.IsNotExist(err) {
 			t.Fatal("rejected cursor published a receipt")
@@ -87,12 +96,14 @@ func TestManagementReadAndCursorStayBoundToTheirWindow(t *testing.T) {
 }
 
 func TestManagementInvalidWindowsStopBeforeCredentials(t *testing.T) {
+	future := time.Now().UTC().Add(time.Hour).Format(time.RFC3339Nano)
+	recent := time.Now().UTC().Add(-time.Hour).Format(time.RFC3339Nano)
 	for _, period := range []struct{ name, since, until string }{
 		{"before_owner_lower_bound", "2026-09-22T23:59:59+09:00", "2026-10-23T07:18:00+09:00"},
 		{"more_than_31_days", "2026-09-23T00:00:00+09:00", "2026-10-24T00:00:01+09:00"},
 		{"empty", monthlyUntil, monthlyUntil},
 		{"reversed", "2026-10-23T07:18:00+09:00", monthlyUntil},
-		{"future", monthlyUntil, "2999-01-01T00:00:00Z"},
+		{"future_within_31_days", recent, future},
 		{"malformed_since", "invalid", "2026-10-23T07:18:00+09:00"},
 		{"malformed_until", monthlyUntil, "invalid"},
 	} {
@@ -107,6 +118,31 @@ func TestManagementInvalidWindowsStopBeforeCredentials(t *testing.T) {
 			}
 			if _, err := os.Stat(output); !os.IsNotExist(err) {
 				t.Fatal("invalid management window published a receipt")
+			}
+		})
+	}
+}
+
+func TestManagementForeignAuthorityStopsBeforeCredentials(t *testing.T) {
+	for _, field := range []string{"todo_id", "guild_id", "owner_id", "domain"} {
+		t.Run(field, func(t *testing.T) {
+			f := newMonthlyFixture(t)
+			s := managementScope("discord-monthly-history-inventory-scope-v1", monthlyUntil, "2026-10-23T07:18:00+09:00")
+			s["mode"] = "channels"
+			if field == "todo_id" {
+				s[field] = 3388
+			} else if field == "domain" {
+				s[field] = "discord-monthly-history-read-scope-v1"
+			} else {
+				s[field] = "730822776147148836"
+			}
+			args, path := monthlyTestArgs(t, s)
+			var out bytes.Buffer
+			if monthlyInventoryCLIWith(args, &out, f.load, monthlyPermit) == 0 || f.loads != 0 || len(f.paths) != 0 {
+				t.Fatal("otherwise-valid new period accepted foreign authority")
+			}
+			if _, err := os.Stat(path); !os.IsNotExist(err) {
+				t.Fatal("foreign management authority published a receipt")
 			}
 		})
 	}
@@ -151,5 +187,14 @@ func TestManagementWindowDurationAndEquivalentOffset(t *testing.T) {
 	s.Since = "2026-09-22T14:59:59Z"
 	if s.validAt(s.Domain, now) {
 		t.Fatal("equivalent UTC offset bypassed the owner's lower bound")
+	}
+	s.Since = "2026-10-24T00:00:00Z"
+	s.Until = now.Format(time.RFC3339Nano)
+	if !s.validAt(s.Domain, now) {
+		t.Fatal("until equal to the current time must be readable")
+	}
+	s.Until = now.Add(time.Nanosecond).Format(time.RFC3339Nano)
+	if s.validAt(s.Domain, now) {
+		t.Fatal("future bound within 31 days must fail independently of duration")
 	}
 }

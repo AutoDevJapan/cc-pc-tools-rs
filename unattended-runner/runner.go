@@ -830,6 +830,12 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "monthly-history-inventory" {
+		os.Exit(monthlyInventoryCLI(os.Args[2:], os.Stdout))
+	}
+	if len(os.Args) > 1 && os.Args[1] == "monthly-history-read" {
+		os.Exit(monthlyReadCLI(os.Args[2:], os.Stdout))
+	}
 	if len(os.Args) > 1 && os.Args[1] == "history-attachment" {
 		os.Exit(historyAttachmentCLI(os.Args[2:], os.Stdout))
 	}

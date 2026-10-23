@@ -65,6 +65,13 @@ func startDetached(mk func() *exec.Cmd) (*exec.Cmd, bool, error) {
 
 func replaceFile(from, to string) error { return os.Rename(from, to) }
 
+func publishFile(from, to string) error {
+	if err := os.Link(from, to); err != nil {
+		return err
+	}
+	return os.Remove(from)
+}
+
 var errLockBusy = errors.New("lock busy")
 
 func tryLock(path string) (func(), error) {

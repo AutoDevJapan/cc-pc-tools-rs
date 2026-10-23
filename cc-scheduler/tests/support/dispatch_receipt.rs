@@ -453,7 +453,7 @@ fn ordinary_dispatch_recovery_allows_only_the_next_normal_owner_to_checkpoint() 
         cc_scheduler::workspace_checkpoint::checkpoint(&mut f.e, &mut runner, &request)
             .unwrap_err()
             .0,
-        "InputRejected"
+        "CheckpointCompetingWorker"
     );
     assert_eq!(bytes, fs::read(&f.e.todo_path).unwrap());
     assert_eq!(

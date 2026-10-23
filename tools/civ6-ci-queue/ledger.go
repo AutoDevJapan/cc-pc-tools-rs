@@ -86,6 +86,7 @@ type Entry struct {
 	Cleanup   CleanupRec    `json:"cleanup"`
 	Reason    string        `json:"reason,omitempty"`
 	Prestarts []PrestartRec `json:"prestarts,omitempty"`
+	Replaces  string        `json:"replaces_expired_entry,omitempty"`
 }
 
 type PrestartRec struct {
@@ -97,9 +98,18 @@ type PrestartRec struct {
 // Budget is the persistent, one-time reservation: a key is appended exactly
 // once, in the same atomic ledger write that creates its entry.
 type Budget struct {
-	Initial      []string `json:"initial"`
-	Normal       []string `json:"normal"`
-	Continuation []string `json:"continuation,omitempty"`
+	Initial      []string         `json:"initial"`
+	Normal       []string         `json:"normal"`
+	Continuation []string         `json:"continuation,omitempty"`
+	Replacements []ReplacementRec `json:"expired_replacements,omitempty"`
+}
+
+// A replacement binds one new official attempt to one existing initial slot.
+// Initial/Normal retain their original keys; no reservation is refunded.
+type ReplacementRec struct {
+	Original    string `json:"original"`
+	Replacement string `json:"replacement"`
+	ProofSHA256 string `json:"proof_sha256"`
 }
 
 type Fence struct {

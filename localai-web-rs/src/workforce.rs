@@ -1,7 +1,7 @@
 //! Counts jobs, task records and verified processing separately.
 //! Inputs must already be privacy-restricted projections; no source prose is read here.
 use chrono::DateTime;
-use serde_json::{json, Map, Value};
+use serde_json::{Map, Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 
 const STATES: [&str; 12] = [
@@ -212,6 +212,13 @@ fn state(worker: &Value, id: u64, processing: &BTreeSet<u64>, matched: bool) -> 
         _ if worker["waitingKind"] == "intake" => "intake_wait",
         _ if worker["waitingKind"] == "startup_error" => "startup_failure",
         _ if worker["jobStatus"] == "queued" => "job_queued",
+        _ if matches!(
+            worker["jobStatus"].as_str(),
+            Some("succeeded" | "failed" | "cancelled" | "lost")
+        ) =>
+        {
+            "not_started"
+        }
         _ if processing.contains(&id) && matched => "processing",
         Some("todo") => "not_started",
         _ => "execution_unverified",
@@ -423,6 +430,13 @@ pub fn generation(
     error: Option<&str>,
 ) -> Value {
     let mut value = project(board, active, completed);
+    value["processing"]["lastSuccessAt"] = if value["processing"]["state"] == "complete" {
+        value["processing"]["observedAt"].clone()
+    } else {
+        previous
+            .map(|old| old["processing"]["lastSuccessAt"].clone())
+            .unwrap_or(Value::Null)
+    };
     value["acquisition"] = json!({"startedAt":started,"completedAt":completed,"error":error});
     if value["state"] == "unavailable" {
         let previous = previous.and_then(|old| {
@@ -502,10 +516,12 @@ pub fn expire(value: &mut Value, now: u64) {
                 }
             }
             if moved > 0 {
-                value["states"]["processing"] = json!(value["states"]["processing"]
-                    .as_u64()
-                    .unwrap_or(0)
-                    .saturating_sub(moved));
+                value["states"]["processing"] = json!(
+                    value["states"]["processing"]
+                        .as_u64()
+                        .unwrap_or(0)
+                        .saturating_sub(moved)
+                );
                 value["states"]["execution_unverified"] = json!(
                     value["states"]["execution_unverified"]
                         .as_u64()
@@ -572,8 +588,8 @@ pub fn apply_to_board(board: &mut Value) {
 
 /// Join instrumented native receipts, without turning native UUIDs into CC jobs.
 pub fn merge_native(board: &mut Value, native: &Value, now: u64) {
-    board["nativeActivity"] = json!({"source":"native","state":native["state"],"complete":false,
-        "knownSources":native["knownSources"],"scope":native["scope"]});
+    board["nativeActivity"] = json!({"source":"native","state":native["state"],"complete":native["complete"],
+        "knownSources":native["knownSources"],"runtimeConnections":native["runtimeConnections"],"scope":native["scope"],"globalInventoryComplete":false});
     let eligible: BTreeSet<u64> = records(board)
         .filter(|row| row["recordedStatus"] == "doing")
         .filter_map(|row| row["id"].as_str()?.strip_prefix("todo-")?.parse().ok())
@@ -590,6 +606,25 @@ pub fn merge_native(board: &mut Value, native: &Value, now: u64) {
         .filter_map(|proof| proof["key"].as_str().map(str::to_owned))
         .collect();
     let cc_count = workforce["processing"]["verifiedCount"].as_u64();
+    let cc_state = workforce["processing"]["state"].clone();
+    let native_ok = native["complete"] == true;
+    let mut collection_issues = Vec::new();
+    if cc_state != "complete" {
+        collection_issues.push(json!({"kind":"cc_jobs","reason":if cc_state=="stale"{"stale"}else if cc_state=="partial"{"incomplete"}else{"read_failed"},"lastSuccessAt":workforce["processing"]["lastSuccessAt"]}));
+    }
+    if !native_ok {
+        if let Some(issues) = native["collectionIssues"]
+            .as_array()
+            .filter(|issues| !issues.is_empty())
+        {
+            for issue in issues {
+                collection_issues.push(json!({"kind":"native","reason":issue["reason"],"lastSuccessAt":issue["lastSuccessAt"]}));
+            }
+        } else {
+            collection_issues
+                .push(json!({"kind":"native","reason":"read_failed","lastSuccessAt":null}));
+        }
+    }
     let mut added = BTreeSet::new();
     for session in native["sessions"].as_array().into_iter().flatten() {
         let (Some(id), Some(key), Some(until)) = (
@@ -660,7 +695,9 @@ pub fn merge_native(board: &mut Value, native: &Value, now: u64) {
         Value::Null
     };
     workforce["processing"]["total"] = Value::Null;
-    if !added.is_empty()
+    if cc_state == "complete" && native_ok {
+        workforce["processing"]["state"] = json!("complete");
+    } else if !added.is_empty()
         || matches!(
             workforce["processing"]["state"].as_str(),
             Some("complete" | "partial")
@@ -685,6 +722,10 @@ pub fn merge_native(board: &mut Value, native: &Value, now: u64) {
     }
     workforce["processing"]["sessions"] = json!(proofs);
     workforce["processing"]["bySource"] = json!({"ccJobs":cc_count,"nativeToolReceipts":if native["state"]=="unavailable"{None}else{Some(added.len())}});
+    workforce["processing"]["scope"] = json!("connected_sessions");
+    workforce["processing"]["globalInventoryComplete"] = json!(false);
+    workforce["processing"]["ccJobsState"] = cc_state;
+    workforce["processing"]["collectionIssues"] = json!(collection_issues);
     let mut counts = BTreeMap::<String, u64>::new();
     for task in workforce["tasks"].as_array().into_iter().flatten() {
         if let Some(state) = task["state"].as_str() {
@@ -702,7 +743,7 @@ pub fn merge_native(board: &mut Value, native: &Value, now: u64) {
         for source in coverage {
             if source["kind"] == "native_codex" {
                 source["state"] = native["state"].clone();
-                source["complete"] = json!(false);
+                source["complete"] = native["complete"].clone();
             }
         }
     }

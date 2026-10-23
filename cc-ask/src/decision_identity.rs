@@ -367,7 +367,7 @@ pub(crate) fn reuse(
     redact(ctx, &out)
 }
 
-fn redact(ctx: &Context, out: &Value) -> Result<Value> {
+pub(crate) fn redact(ctx: &Context, out: &Value) -> Result<Value> {
     let names = crate::project::ProjectNames::load(&ctx.client_projects)?;
     serde_json::from_str(&names.redact(&safe_text(out.to_string())))
         .map_err(|_| "invalid redacted decision output".into())
@@ -561,6 +561,9 @@ pub(crate) fn preflight(
 
 /// Explicit bounded repair of reviewed duplicate threads. Never posts, launches or deletes replies.
 pub fn lookup(ctx: &mut Context, value: &Value) -> Result<Value> {
+    if crate::conversation_bridge::enabled(&ctx.here)? {
+        return crate::recovery_messages::lookup_decision(ctx, value);
+    }
     let _guard = ByteLock::acquire(
         &ctx.here.join("question-progress.lock"),
         Duration::from_secs(60),

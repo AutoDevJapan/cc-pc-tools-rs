@@ -1,0 +1,54 @@
+{
+  "job": "20261023-051942-todo-3080",
+  "before_files": [
+    {
+      "path": "SKILL.md",
+      "bytes": 3624,
+      "sha256": "fc3c21f3b4fa6b31ea92b7d364a7f9ba204f2819bcdde1b0fc4a46a322d0b892"
+    },
+    {
+      "path": "references/index.md",
+      "bytes": 4101,
+      "sha256": "6b7a866c4da6d0de0dbbc926a43bb44d4fe1cc9b272887361aa3b01c6635ea06"
+    },
+    {
+      "path": "references/gh-fix-ci/current-20261023.md",
+      "bytes": 4450,
+      "sha256": "88ff9004122d7b46a20935a3a5e041662113b7e23bc3aff846b59a6bb44d7da5"
+    },
+    {
+      "path": "references/gh-fix-ci/mizchi-20261020/upstream-original.txt",
+      "bytes": 3735,
+      "sha256": "9bb7f0a67de15a4b69ad793e8169cae34ae5e0ac76a9403a483bafd418233ea4"
+    },
+    {
+      "path": "references/gh-fix-ci/mizchi-20261020/LICENSE.txt",
+      "bytes": 10776,
+      "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+    },
+    {
+      "path": "references/gh-fix-ci/mizchi-20261020/source.json",
+      "bytes": 1382,
+      "sha256": "0c97cec00bc4d42c09eb2bb272ecda9ce942608074a5dcb1c4f8f8488bceac9c"
+    }
+  ],
+  "applied": false,
+  "preserved_files": [
+    "references/index.md",
+    "references/gh-fix-ci/mizchi-20261020/upstream-original.txt",
+    "references/gh-fix-ci/mizchi-20261020/LICENSE.txt"
+  ],
+  "todo": 3080,
+  "version": 2,
+  "review_pending": true,
+  "old_guide": "references/gh-fix-ci/GUIDE.md",
+  "bundle": "skills-3080-gh-ci-integration-v2-bundle.json",
+  "root": "D:/CC/Skills",
+  "old_guide_sha256": "3dfd88255505b512a71eaf5add3c6ec55ac57291839651ad45b2e190940a83d4",
+  "target": "github-actions-ci",
+  "changed_files": [
+    "SKILL.md",
+    "references/gh-fix-ci/current-20261023.md",
+    "references/gh-fix-ci/mizchi-20261020/source.json"
+  ]
+}

@@ -368,6 +368,62 @@ fn implementation_accepts_registered_sibling_worktree_but_rejects_nested_new_sto
     f.reject_unchanged(true);
 }
 
+// Existing affected-package CI executes this target. Bind its Go acceptance to
+// this exact Cargo-produced executable, never an optional installed binary.
+#[test]
+fn implementation_acceptance_runs_go_with_this_canonical_writer() {
+    let mut command = Command::new("go");
+    command
+        .args([
+            "test",
+            "-json",
+            "-race",
+            "-timeout",
+            "120s",
+            "-run",
+            "^TestImplementationNative|^TestDirectionActual",
+            ".",
+        ])
+        .current_dir(
+            std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                .parent()
+                .unwrap()
+                .join("unattended-runner"),
+        )
+        .env("CC_CONVERSATION_TODO_BINARY", env!("CARGO_BIN_EXE_todo"));
+    #[cfg(windows)]
+    {
+        use std::os::windows::process::CommandExt;
+        command.creation_flags(0x08000000);
+    }
+    let out = command.output().expect("Go acceptance must start");
+    assert!(
+        out.status.success(),
+        "Go acceptance failed:\n{}\n{}",
+        String::from_utf8_lossy(&out.stdout),
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let events: Vec<Value> = String::from_utf8(out.stdout)
+        .unwrap()
+        .lines()
+        .map(|s| serde_json::from_str(s).unwrap())
+        .collect();
+    for name in [
+        "TestImplementationNativeSavedSourceAndCancelledOriginRoundTrip",
+        "TestImplementationNativeRejectsVersionSourceAndActorMismatch",
+        "TestImplementationNativeLostWriteResponseReplaysAndNewReplyHoldsClose",
+        "TestImplementationNativeSourceGenerationRetainsMissingOrDifferentOriginal",
+        "TestImplementationNativeNewStopDefersExplicitCloseAndPreservesReceipt",
+    ] {
+        assert!(
+            events
+                .iter()
+                .any(|v| v["Action"] == "pass" && v["Test"] == name),
+            "native acceptance missing or skipped: {name}"
+        );
+    }
+}
+
 #[test]
 fn direction_rejects_changed_scope_snapshot_and_new_stops_even_with_same_note() {
     for change in [

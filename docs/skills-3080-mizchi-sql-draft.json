@@ -15,7 +15,7 @@
       "source_sha256": "d489485e3080f4bd6da8a05fb540203c1be9c20b8f2c7e559b7151da633fa071",
       "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/sql-lint/SKILL.md",
       "retrieved_at": "2026-10-20T08:41:08.9598987Z",
-      "status": "authored_draft_pending_source_scope_and_review",
+      "status": "authored_content_reviewed_pending_rights_support_and_deployment",
       "installed": false,
       "renderable_install_plan": false,
       "individual_license_review": "root READMEに個別優先/未記載MITの説明、root MIT本文notice無し。SQL4README/CLAUDEに追加個別表示は見つからない。補助の個別credit・取込み範囲の確認未完。利用可否の一律除外ではなく調査中。",
@@ -44,7 +44,7 @@
       "source_sha256": "070fbdf3fc66273a8765304a0f63fd9c58959f0d21903c16f9592c9fb0d77c59",
       "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/sql-plan-audit/SKILL.md",
       "retrieved_at": "2026-10-20T08:41:08.9619757Z",
-      "status": "authored_draft_pending_source_scope_and_review",
+      "status": "authored_content_reviewed_pending_rights_support_and_deployment",
       "installed": false,
       "renderable_install_plan": false,
       "individual_license_review": "root READMEに個別優先/未記載MITの説明、root MIT本文notice無し。SQL4README/CLAUDEに追加個別表示は見つからない。補助の個別credit・取込み範囲の確認未完。利用可否の一律除外ではなく調査中。",
@@ -72,8 +72,8 @@
   "renderable_plans_added": 0,
   "source_scripts_executed": false,
   "model_turn_tested": false,
-  "review_pending": true,
-  "next": "個別許諾/原文保全方式と補助コードの取得制約、既存原本との限定比較を確認後、必要な生成器のnotice形式だけを実証に応じて拡張する。未取得コードの取得拒否を迂回しない。",
+  "review_pending": false,
+  "next": "内容/表示の限定レビューは閉じた。SQL2は引き続き未導入/非renderable。個別許諾・未保存補助の問題・実利用との差分を解き、必要な適用テスト後に配置を検討する。",
   "static_cases": [
     {
       "reason": "名前付きcatalogの一意性",
@@ -175,18 +175,42 @@
     "sqlc_or_d1_catalog_in_this_repo": "review3313はskills文書以外で未発見。他repoは未調査。"
   },
   "reviewed_draft": {
-    "subsequent_text_changes": "779dd151後の草案は3368が全読したが、待機表示のMust1を修正中。今回の補正を独立確認するまでreview_pending=true。",
-    "todo": 3313,
-    "must": 0,
-    "head": "779dd15197d3a4547e6d6d8643e742bafe8c7643",
-    "latest_review": {
-      "raw_sha256": "c0f40d79b4386bd5ce7a7d11101e23dbd56d5013b6614d56bfd1caf756ada973",
-      "remaining_independent_confirmation": true,
-      "todo": 3368,
-      "head": "b0107b649d5f6a890742aaad926f1b0116018f58",
-      "must": 1,
-      "must_reason": "未受入の改訂草案のreview_pendingがfalseだった",
-      "local_resolution": "trueへ修正。次の固定差分確認前に受入済みとはしない。"
-    }
-  }
+    "content_identity_algorithm": "sql-authored-v1",
+    "authored_content_sha256": "119786b834b0114244e413de9633f49fbda9e66815c626831d0818b27f10beb2",
+    "content_identity_scope": "Go draftContent構造体の名前/固定出典/description/正負例/guidance/adaptations/既存との差分とdraftCaseのreason/input/skill/expectedをJSON MarshalしたSHA-256。配列順を保持し、review/installed/権利調査等の運用metadataとJSONの空白/キー順を含めない。",
+    "acceptance_basis": "親が3368の本文2/12例の全読と表示以外のMust無し、3378の表示補正Must0を組にして同じ内容を限定受入。3378単独での本文再受入や権利/実配置/実行成功ではない。新たに計算したdigestは親の版同一性確認で、レビュー応答にその値があったと偽らない。",
+    "latest_review_todo": 3378,
+    "reviews": [
+      {
+        "todo": 3313,
+        "head": "779dd15197d3a4547e6d6d8643e742bafe8c7643",
+        "must": 0,
+        "raw_sha256": "1f58a8bb4c42040c8d143979a99cacca21556c2c406c214542174c5b01ffc597",
+        "scope": "779dd151時点の初期本文のみ。後続の本文改訂や12例の受入へ流用しない。",
+        "remaining_independent_confirmation": false
+      },
+      {
+        "todo": 3368,
+        "head": "b0107b649d5f6a890742aaad926f1b0116018f58",
+        "must": 1,
+        "raw_sha256": "c0f40d79b4386bd5ce7a7d11101e23dbd56d5013b6614d56bfd1caf756ada973",
+        "scope": "改訂本文2案/12静的ケースを全読。唯一のMustはreview_pending=falseという表示。",
+        "parent_computed_authored_content_sha256": "119786b834b0114244e413de9633f49fbda9e66815c626831d0818b27f10beb2",
+        "remaining_independent_confirmation": true,
+        "resolution": "歴史上のMust1を保持し、表示補正は次の3378で確認。"
+      },
+      {
+        "todo": 3378,
+        "head": "f817c1841abffa97b9be8195c7eb3a5ffc151471",
+        "must": 0,
+        "raw_sha256": "f5925ada6f6042b1e6f16da5b711790310cdbd03f78240fd486367a902260298",
+        "scope": "3368の表示Must補正と固定差分の確認。本文2案/12例の新たな再受入ではない。",
+        "parent_computed_authored_content_sha256": "119786b834b0114244e413de9633f49fbda9e66815c626831d0818b27f10beb2",
+        "remaining_independent_confirmation": false,
+        "body_reaccepted": false,
+        "resolves_todo": 3368
+      }
+    ]
+  },
+  "review_pending_definition": "本文2案と12静的ケースの固定版に対する内容/表示の限定レビュー待ち。配置可能性、個別許諾、補助実装、実モデル適用の完了とは別。"
 }

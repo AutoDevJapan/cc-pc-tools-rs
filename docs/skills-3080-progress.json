@@ -1,7 +1,7 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-22T20:26:08.0683285Z",
+  "observed_at": "2026-10-23T03:08:37.8811343Z",
   "phase_a": "partial; 647 additional text shapes held by execution review",
   "phase_b": "3368のMust1はSQL草案の未受入表示を補正中。CI実統合の限定改善と一次資料訂正、新17入口の評価を保存。全16資料の残候補を継続。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
@@ -391,7 +391,7 @@
     },
     "limits": "91 source paths across7repos;AIS12 has7distinct full texts and5exacthash mirror paths;Tencent includes guides/stub.Not91independentadoptions;all support/inventory semantic review incomplete."
   },
-  "independent_acceptance_scope": "3296がlinkv2実5とSQL4前評価を確認してMust0。旧配置manifestは当時の歴史で、diagnosing-bugs1件の後続別改訂を別証拠に保持。",
+  "independent_acceptance_scope": "28新規とlinkv2の過去限定受入を保持。CI既存統合1のv2は3378Must0/同HEAD自動テスト成功/PR381mergeで親が限定受入。SQL2は3368本文と3378表示を分けて同一内容を限定受入。新10評価は未レビュー、許諾/配置/実ターンは別。旧配置のdiagnosing-bugs1件の後続別改訂も別証拠を保持。",
   "total_skill_named_body_read": 91,
   "obra_entrypoint_assessment": {
     "expected": 15,
@@ -405,8 +405,8 @@
     "diagnostic_support_read": 19,
     "diagnostic_workflow_blob_count": 20
   },
-  "current_guidance_delta_pending": 1,
-  "current_guidance_delta_pending_definition": "既存統合1のv2差分は実構造/発見済み、独立受入前。SQL2の待機表示Must1をtrueへ修正。28新規の過去受入は維持。",
+  "current_guidance_delta_pending": 0,
+  "current_guidance_delta_pending_definition": "実CI v2差分は3378Must0と同HEADのCI成功後、親が限定受入/PR381通常merge済み。SQL2は3368本文/3378表示を分けて同じ内容を限定受入したが、未配置/許諾/支持/実適用は未完。新10評価は別の未レビュー差分。",
   "ais_entrypoint_evaluation": {
     "source_paths": 12,
     "unique_contents": 7,
@@ -422,16 +422,16 @@
   },
   "mizchi_partial_entrypoint_evaluation": {
     "expected": 76,
-    "full_body_read": 35,
-    "unread": 41,
+    "full_body_read": 45,
+    "unread": 31,
     "complete": false,
     "installed": 0,
     "integrated": 1,
     "excluded": 0,
     "source": "skills-3080-mizchi-partial-evaluation.json"
   },
-  "all_fulltext_primary_paths_including_partial_sources": 126,
-  "primary_coverage_definition": "7資料91入口+部分mizchi35=126sourcepaths。mizchi残41未読、AIS mirror/Tencent guideを含み126独立Skillではない。",
+  "all_fulltext_primary_paths_including_partial_sources": 136,
+  "primary_coverage_definition": "7資料91入口+部分mizchi45=136sourcepaths。mizchi残31未読。AIS mirror/Tencent guideとecho fixtureを含み136独立Skillではない。",
   "external_revisions": {
     "count": 1,
     "target": "diagnosing-bugs",
@@ -443,7 +443,7 @@
     "discovery": "fresh Codex metadata325/対象1/enabled/説明一致/解析0",
     "evidence": "skills-3080-gh-ci-integration-v2-evidence.json",
     "new_skill_metadata": 0,
-    "independent_review_pending": true,
+    "independent_review_pending": false,
     "files_changed": 3,
     "model_turn_tested": false,
     "original_guide_unchanged": true,
@@ -451,6 +451,33 @@
     "structural_check": "既存3048 Go検査器で実1件6fileの構造/参照/hash/説明/正負例を確認",
     "target": "github-actions-ci",
     "integrated": 1,
-    "version": 2
+    "version": 2,
+    "independent_review": {
+      "todo": 3378,
+      "head": "f817c1841abffa97b9be8195c7eb3a5ffc151471",
+      "must": 0,
+      "raw_sha256": "f5925ada6f6042b1e6f16da5b711790310cdbd03f78240fd486367a902260298",
+      "scope": "旧35入口の評価差分/実CI v2/SQL表示補正が対象。今回の新10は未レビュー。SQL2/12例の新たな本文再受入という意味ではない。"
+    },
+    "merged_pr": {
+      "number": 381,
+      "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/381",
+      "head": "f817c1841abffa97b9be8195c7eb3a5ffc151471",
+      "merge": "6f3c62f59e0138825df434e6b132ab28c0590905",
+      "merged_at": "2026-10-23T02:52:28Z",
+      "checks": "6 SUCCESS, optional Cursor Bugbot NEUTRAL",
+      "central_redeployed_for_status_only": false
+    },
+    "evidence_snapshot_definition": "v2 evidence/plan/source.json内の受入前表示とapplied:falseは実配置前後の歴史的snapshot。このprogressが後続レビュー/mergeの受入記録。承認ラベルだけの中央再配備は行わない。"
+  },
+  "assessment_delta_pending": {
+    "source": "mizchi/skills",
+    "new_fulltext_entrypoints": 10,
+    "new_readme_fulltexts": 9,
+    "path_roster_and_review_identity_tests": true,
+    "installed": 0,
+    "integrated": 0,
+    "excluded": 0,
+    "review_pending": true
   }
 }

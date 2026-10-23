@@ -132,4 +132,14 @@ AWSの独立条件キーを不採用とした前回の根拠は訂正した。AW
 
 フロントエンド/Playwright/画像判定関連17入口を追加で全読し、mizchi76=35確認+41未読、全primary126pathとなった。上流の一律な依存/性能基準、人に技術判断を戻す条件、OpenRouter API経路、未確認のPlaywright設定はそのまま採らない。[Playwright一次資料](skills-3080-mizchi-frontend-primary-checks.json)も照合した。新17は未導入/未統合/未除外の評価候補で、個別支持/許諾/既存原本との差分を残す。前12のREADME11は親も全文/SHA確認し、追加noticeが無いという範囲だけを閉じた。
 
+## レビュー3378の受領と残候補の継続
+
+3378は固定f817c184/base b0107b64を読み、Must0を返した。親は原応答SHA `f5925ada6f6042b1e6f16da5b711790310cdbd03f78240fd486367a902260298` と実Sonnet5.5/maxを照合し、同HEADの6自動テスト成功後、[PR381](https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/381)を通常mergeした。mergeは6f3c62f59e0138825df434e6b132ab28c0590905。CI v2の実配置・構造・発見の限定受入を記録し、統合は1件のまま。履歴のplan/evidence/source.jsonにある受入前表示だけを更新する再配備は行わない。
+
+[SQL草案](skills-3080-mizchi-sql-draft.json)は、初期3313、改訂本文2案/12例を全読した3368、表示Must補正を確認した3378を別々の追記履歴へ分けた。親は現行の本文・例がb0107b64と同じことを比較し、3368の本文確認と3378の補正確認を組にして限定受入する。3378単独の本文再受入ではない。`sql-authored-v1` の指紋は親が後から計算した版照合で、レビュー応答に含まれていたとはしない。許諾・補助実装・実モデル適用は未完で、SQL2は未導入/非renderableを保つ。
+
+Skill管理/評価関連10入口とREADME9を保存済みgzipから全文/SHA確認し、mizchi76=45確認+31未読、全primary136pathとなった。新10は採否未確定であり、echoは評価器のデモという分類を残す。上流の少数選定・最初のfitで終了・毎回の本人確認・直接子起動・APIキー・mirror上書きを今回の方針へ移さない。第三者credit、個別support、既存本文との差分を次に確認する。[公式資料の照合](skills-3080-mizchi-meta-primary-checks.json)はdescriptionの発火と実出力の評価を分け、上流の数値を普遍的な合格基準へしない。
+
+[全76パスの固定索引](skills-3080-mizchi-fixed-entrypoints.json)と、順序を固定したUTF-8/LFのSHA-256を別に保存する。Goテストは読了/未読の合計だけでなく、この完全集合とprogressの45/31/136も照合する。同件数のパス取り違えを負例で検出する。SQLの版照合は記述/例/出典の変更を検出し、reviewやinstalled等の運用metadataの追記では指紋を変えない。欠落receipt・未解消Must・残る確認・不正なtodo/head/SHA・本文の別版を受入済みにする反例も確認する。
+
 部分評価の集合・固定commit・live採用台帳の対応をGoで検査する。失われた未読path、確認済みとの重複、重複ID、根拠の無い統合、source SHA不一致、未解消/欠落reviewをfalseの待機表示で閉じる変異を検出する。意味や許諾の承認ではない。導入28/統合1/除外0/未判定保留73191は不変で、全16資料の継続を保持する。

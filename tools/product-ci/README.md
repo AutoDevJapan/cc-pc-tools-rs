@@ -1,5 +1,15 @@
 # Fixed candidate product CI
 
+The finite PR3613 advanced-CodeQL command now pins candidate
+`f7edc78a637f752aa78b95b491323caa3dbc515f` and the delivered workflow digest.
+It requires the original branch and exact existing task-route lease while
+default setup remains unconfigured. Historical proposal/default-setup modes
+and other products keep their previous source pins. Normal-CI admission accepts
+the sixteen Windows Cargo commands only for workflow digest
+`fa5a017fca45710ebccae6a1ca7dfc70070199d9eacb8d94ddb6797d93320220`;
+other workflows retain the thirteen-command check. Digest verification precedes
+command counting. These admission updates do not certify a product test or CI run.
+
 This Go module is independent of `pc-ci` and `linux-runner-bridge`. It neither
 changes their admission policy nor registers old product directories. Four
 numeric repository IDs, PR numbers and source revisions are explicit. Before

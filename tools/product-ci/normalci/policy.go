@@ -84,6 +84,21 @@ func Field(n *yaml.Node, key string) *yaml.Node {
 }
 
 func CountWindowsCargo(root *yaml.Node) (int, error) {
+	return countWindowsCargo(root, 13)
+}
+
+// The new sixteen-command contract is admitted only for the explicitly
+// delivered workflow bytes. Plan verifies their digest before calling this.
+// Legacy proposals and fixtures retain their original thirteen-command check.
+func CountWindowsCargoForWorkflow(root *yaml.Node, workflowSHA string) (int, error) {
+	want := 13
+	if workflowSHA == "fa5a017fca45710ebccae6a1ca7dfc70070199d9eacb8d94ddb6797d93320220" {
+		want = 16
+	}
+	return countWindowsCargo(root, want)
+}
+
+func countWindowsCargo(root *yaml.Node, want int) (int, error) {
 	job := Field(Field(root, "jobs"), "windows-native-check")
 	steps := Field(job, "steps")
 	if steps == nil || steps.Kind != yaml.SequenceNode {
@@ -99,8 +114,8 @@ func CountWindowsCargo(root *yaml.Node) (int, error) {
 			}
 		}
 	}
-	if count != 13 {
-		return count, errors.New("fixed normal CI Windows thirteen commands changed")
+	if count != want {
+		return count, errors.New("fixed normal CI Windows command contract changed")
 	}
 	return count, nil
 }

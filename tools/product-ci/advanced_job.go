@@ -1,15 +1,27 @@
 package main
 
 import (
+	"cc/product-ci/normalci"
 	"context"
 	"errors"
 	"fmt"
 )
 
+const advanced2737Head = "f7edc78a637f752aa78b95b491323caa3dbc515f"
+
+// Only the advanced command moves to the explicitly delivered candidate.
+// Historical proposals, default setup and other products keep their pins.
+func advancedCandidate(c candidate) candidate {
+	if c.ID == normalci.RepoID && c.PR == 3613 {
+		c.SHA = advanced2737Head
+	}
+	return c
+}
+
 func advancedWorkflowDigest(id int64) string {
 	switch id {
 	case 1154066087:
-		return "35bd8ad84fe548c2ff0bddc7b23c0841cb2ee7061d5e8793ec4ffdceadc2d032"
+		return "5793b4e283395a4057234e68e0c9612cb399f8a37ca3bccb1500a4c90eb52ae6"
 	case 1386702183:
 		return "7962c1872f8bea8866ee4c49f146fd3d31af68c031f4f4008a980f5f5f6366b8"
 	}
@@ -47,6 +59,15 @@ func planAdvancedWithPolicy(ctx context.Context, c candidate, runID int64, read 
 	}
 	if pr.State != "open" || pr.Head.SHA != c.SHA || pr.Head.Ref == "" {
 		return codeQLPlan{}, errors.New("advanced original source changed")
+	}
+	if c.ID == normalci.RepoID {
+		if r.FullName != "AutoDevJapan/GoDD-MCP-Alpha" || pr.Head.Ref != "codex/todo2641-http-response-pseudo-20261015" {
+			return codeQLPlan{}, errors.New("advanced task route source rejected")
+		}
+		var route struct{ Name, Value string }
+		if e = read(ctx, "repos/"+r.FullName+"/actions/variables/"+normalci.RouteVariable, &route); e != nil || route.Name != normalci.RouteVariable || route.Value != normalci.LeaseValue("0b2414b10418d265c7823a4f87bb5881") {
+			return codeQLPlan{}, errors.New("advanced task route lease rejected")
+		}
 	}
 	var run codeQLRun
 	if e = read(ctx, fmt.Sprintf("repos/%s/actions/runs/%d", r.FullName, runID), &run); e != nil {

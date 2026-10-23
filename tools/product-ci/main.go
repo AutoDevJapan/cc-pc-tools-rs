@@ -666,7 +666,8 @@ func main() {
 				if os.Args[1] == "secret-job" {
 					e = executeProductJob(ctx, *chosen, runID, os.Args[4], os.Args[5], "secret", os.Args[6])
 				} else if os.Args[1] == "advanced-job" {
-					e = executeProductJob(ctx, *chosen, runID, os.Args[4], os.Args[5], "advanced", "")
+					fixed := advancedCandidate(*chosen)
+					e = executeProductJob(ctx, fixed, runID, os.Args[4], os.Args[5], "advanced", "")
 				} else {
 					e = executeCodeQL(ctx, *chosen, runID, os.Args[4], os.Args[5])
 				}

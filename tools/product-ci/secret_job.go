@@ -81,7 +81,7 @@ func verifyWorkflowBytes(ctx context.Context, repo, path, ref, expected string, 
 }
 
 func validGuestPlan(p codeQLPlan) bool {
-	known := false
+	known := p.Kind == "advanced" && p.RepoID == 1154066087 && p.PR == 3613 && p.Candidate == advanced2737Head
 	for _, c := range candidates {
 		if c.ID == p.RepoID && c.PR == p.PR && c.SHA == p.Candidate {
 			known = true

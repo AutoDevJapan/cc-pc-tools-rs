@@ -170,7 +170,7 @@ func Plan(ctx context.Context, p Pin, read API) (Binding, error) {
 	if b.Role == "" {
 		return bad()
 	}
-	if _, e = CountWindowsCargo(root); e != nil {
+	if _, e = CountWindowsCargoForWorkflow(root, p.WorkflowSHA); e != nil {
 		return bad()
 	}
 	js, e := ReadJobs(ctx, fmt.Sprintf("repos/%s/actions/runs/%d/attempts/%d/jobs?per_page=100", r.FullName, p.RunID, p.Attempt), read)

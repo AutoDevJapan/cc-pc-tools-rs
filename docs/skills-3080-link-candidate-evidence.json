@@ -113,6 +113,6 @@
     "manifest": "skills-3080-installed-link-manifest.json",
     "evidence": "skills-3080-link-installation-evidence.json",
     "live_ledger": "skills-3080-adoptions.json",
-    "history": "候補検査時点の配置0表示を保持。現在版は配置済みだがv2差分の独立確認前。"
+    "history": "3270時点の候補検査と配置0表示を保持。v2の配置差分は後に3296が確認しMust0。実配置証拠を参照。"
   }
 }

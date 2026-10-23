@@ -1,0 +1,24 @@
+{
+  "todo": 3080,
+  "source_path": "playwright-test/SKILL.md",
+  "deployment": "未導入の評価候補。上流API例をそのままCLI/自作toolへ持ち込んでいない。",
+  "code_or_browser_executed": false,
+  "checks": [
+    {
+      "claim": "expect.configure({flaky:true})でflaky設定",
+      "urls": [
+        "https://playwright.dev/docs/test-assertions#expectconfigure",
+        "https://playwright.dev/docs/api/class-testconfig#test-config-fail-on-flaky-tests"
+      ],
+      "finding": "公式expect.configureはtimeout/soft等のassertion設定を示す。flaky:trueをAPI保証として採らず、flaky時の終了判定は別のtestConfig.failOnFlakyTests等と区別し版を確認。"
+    },
+    {
+      "claim": "heavy loadでnetworkidleを待つ",
+      "urls": [
+        "https://playwright.dev/docs/api/class-page#page-wait-for-load-state"
+      ],
+      "finding": "公式Page APIはnetworkidleを検査の準備判定に非推奨とする。表示/操作/応答という具体条件へ対応づけ、traceやイベントの一回読みを実成功としない。"
+    }
+  ],
+  "observed_at": "2026-10-22T20:31:17.5411076Z"
+}

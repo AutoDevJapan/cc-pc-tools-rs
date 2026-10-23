@@ -300,3 +300,43 @@ fn normal_lookup_invalid_mode_fails_before_discord_without_legacy_fallback() {
     assert!(!f.home.join("question-progress.lock").exists());
     f.unchanged();
 }
+
+#[test]
+fn normal_lookup_redaction_cannot_change_protocol_keys_or_delivery_values() {
+    for name in ["found", "answered"] {
+        let (f, mut ctx, args, sent) = lookup_fixture();
+        let id = f.add_reply(core::s(&sent["thread_id"]), OWNER, "a", false);
+        fs::write(&ctx.client_projects, format!("{name}\n")).unwrap();
+        let before = fs::read(f.home.join(LEDGER)).unwrap();
+        let result = normal_lookup(&mut ctx, &args).unwrap();
+        assert_eq!(result["found"], true, "redaction changed a machine field");
+        assert_eq!(result["suppressed"], "already_answered");
+        assert_eq!(result["approval"], "not_inferred");
+        assert_eq!(result["url"], sent["url"]);
+        assert_eq!(result["owner_replies"][0]["message_id"], id);
+        assert_eq!(fs::read(f.home.join(LEDGER)).unwrap(), before);
+        f.unchanged();
+    }
+}
+
+#[test]
+fn normal_lookup_marks_display_redaction_and_does_not_call_pending_text_available() {
+    let (f, mut ctx, args, sent) = lookup_fixture();
+    fs::write(&ctx.client_projects, "ExampleClient3392\n").unwrap();
+    f.add_reply(
+        core::s(&sent["thread_id"]),
+        OWNER,
+        "ExampleClient3392 は保持してください",
+        false,
+    );
+    let result = normal_lookup(&mut ctx, &args).unwrap();
+    assert_eq!(result["text_redacted"], true);
+    assert_eq!(result["text_available"], true);
+    assert!(result["next_action"].as_str().unwrap().contains("私的原票"));
+    let mut changed = core::read_json(&args.decision_file).unwrap();
+    changed["resources"][0]["id"] = json!("unasked-resource");
+    let missing = crate::decision_identity::lookup(&mut ctx, &changed).unwrap();
+    assert_eq!(missing["found"], false);
+    assert_eq!(missing["text_available"], false);
+    f.unchanged();
+}

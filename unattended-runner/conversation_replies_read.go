@@ -39,6 +39,7 @@ func (r *Runner) conversationRepliesSnapshot(ctx context.Context, requestID, out
 		return nil, bad
 	}
 	versions := make([]map[string]any, 0, len(proof.Replies))
+	sources := make([]map[string]any, 0, len(proof.Replies))
 	ordinary, other, unknown := 0, 0, 0
 	for _, reply := range proof.Replies {
 		if safeText(reply.Body, r.Token) != reply.Body {
@@ -59,7 +60,15 @@ func (r *Runner) conversationRepliesSnapshot(ctx context.Context, requestID, out
 		} else {
 			other++
 		}
-		versions = append(versions, map[string]any{"message_id": reply.Message, "timestamp": live.Timestamp, "edited_timestamp": live.Edited, "message_type": live.Type, "content_sha256": bytesHash([]byte(live.Content))})
+		version := map[string]any{"message_id": reply.Message, "timestamp": live.Timestamp, "edited_timestamp": live.Edited, "message_type": live.Type, "content_sha256": bytesHash([]byte(live.Content))}
+		// An inspection file's SHA is never a canonical application source SHA.
+		// Expose the latter only when the actual delivered capture also matches
+		// this fresh question/reply/edit. An absent capture remains unverified.
+		if stamp, ready, err := r.conversationReplySourceMessage(ctx, q, proof, reply, &live.Message); err == nil && ready {
+			version["source_receipt_sha256"] = stamp.SourceSHA
+			sources = append(sources, map[string]any{"message_id": reply.Message, "reply_sha256": stamp.ReplySHA, "source_receipt_sha256": stamp.SourceSHA})
+		}
+		versions = append(versions, version)
 	}
 	current, err := r.loadConversations()
 	if err != nil || canonicalHash(current.Questions[requestID]) != questionSHA {
@@ -74,5 +83,5 @@ func (r *Runner) conversationRepliesSnapshot(ctx context.Context, requestID, out
 	if err != nil || len(b) > 4<<20 || safeText(string(b), r.Token) != string(b) || ctx.Err() != nil || writeHistoryReceipt(output, b) != nil {
 		return nil, bad
 	}
-	return map[string]any{"domain": conversationDomain, "source": "discord-api-v10", "read_only": true, "request_id": q.RequestID, "todo_id": q.Todo, "replies_verified": len(proof.Replies), "owner_messages": ordinary, "owner_other_types": other, "owner_unknown_types": unknown, "question_phase": q.Phase, "question_snapshot_sha256": questionSHA, "receipt_sha256": bytesHash(b), "delivery": "inspection_only", "application": "not_inferred"}, nil
+	return map[string]any{"domain": conversationDomain, "source": "discord-api-v10", "read_only": true, "request_id": q.RequestID, "todo_id": q.Todo, "replies_verified": len(proof.Replies), "owner_messages": ordinary, "owner_other_types": other, "owner_unknown_types": unknown, "question_phase": q.Phase, "question_snapshot_sha256": questionSHA, "receipt_sha256": bytesHash(b), "delivery": "inspection_only", "application": "not_inferred", "verified_source_receipts": sources}, nil
 }

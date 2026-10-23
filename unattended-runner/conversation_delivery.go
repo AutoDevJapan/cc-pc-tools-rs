@@ -543,6 +543,9 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 				health.Errors = append(health.Errors, "conversation_delivery_deferred")
 				return
 			}
+			if r.deliverOwnerReplyMediaObservation(ctx, q, reply, req) != nil {
+				health.Errors = append(health.Errors, "conversation_owner_media_deferred")
+			}
 			wasClosed := q.Phase == "closed"
 			if !wasClosed || req.Phase != "conversation_reply_applied" {
 				q.Phase = "answered"

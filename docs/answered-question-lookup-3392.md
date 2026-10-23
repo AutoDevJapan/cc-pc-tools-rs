@@ -46,3 +46,80 @@
 
 新しい履歴収集器や回答配送の並行修正はしない。3110/3153/3327/3387と
 2457→2467の既存工程・原票・待機を保持する。
+
+## ToDo3396による固定版のテスト結果（2026-10-23）
+
+指定されたRed/GreenテストとWindows用releaseビルドを完了した。
+これはレビュー3397のMust修正前の結果であり、配布を許可する結果ではない。
+
+- `tested_head=f80470bd6cd5d24e4e078ffdf9eab28d4980b917`
+- `release_eligible=false`
+- `must_remaining=2`
+- base: `17c62fa6fe628951152b8933512f6dfb04d7df45`
+- Red: `26ccd51bf733b76bb50ff7e14a12b911d40128b4`
+- Green tree: `1b2e0bbfb1fc3fb11369cad42191cc65610027d6`
+- 実行ジョブ: `20261023-091818-todo-3396`
+- 保存ブランチ: `scheduler/todo-3396-3392-check`
+
+親3392のworktreeと共有runtime/stateを編集せず、自分のworktree内で実行した。
+既存のCargoゲートとsccacheを使い、一つのtargetで以下を順に実行した。
+全工程の開始・終了時に、指定したHEADとtrackedファイルの変更なしを確認した。
+実装・テストの修正はない。この結果追記のコミットはビルド後の文書変更であり、
+候補実行物のソースHEADは上記の固定Greenである。
+
+| 工程 | 実コマンド | 実終了コード | 結果 | 全ログの接頭辞 |
+| --- | --- | --- | --- | --- |
+| Red | `cargo nextest run --locked -p cc-ask -E 'test(normal_lookup_finds_current_answer_without_writes_or_another_question)'` | 100 | 1件失敗、838件対象外 | `red` |
+| Green | `cargo nextest run --locked -p cc-ask -E 'test(recovery_messages::) \| binary(decision_identity) \| binary(conversation_bridge)'` | 0 | 141件成功、698件対象外 | `green-nextest` |
+| doctest | `cargo test --locked -p cc-ask --doc` | 0 | 対象0件 | `green-doctest` |
+| Clippy | `cargo clippy --locked -p cc-ask --all-targets -- -D warnings` | 0 | 成功 | `green-clippy` |
+| release | `cargo build --locked --release -p cc-ask --bin discord_ask` | 0 | 成功 | `green-release-build` |
+
+Redはコンパイル成功後、指定テストの`found`に対するassertionで失敗した。
+実際の値は`Bool(false)`、期待値は`true`、失敗文は
+`normal lookup lost the new conversation answer`であり、別のコンパイルエラーではない。
+Red起動前に記録スクリプトの空ブランチ名の扱いを修正したが、Cargo未起動のため
+テストの失敗やソース修正には数えない。
+
+原ログと候補は、次の所有記録付き領域に保持する。
+
+```text
+D:/CC/Work/unattended-operations-20261013-wt/todo-3396-rust/codex-owned-3c742e5e873a79d827750b0433bcd2ca/
+```
+
+各接頭辞の`.stdout.log`と`.stderr.log`が省略のない原出力で、対応する`.json`に
+実argv・開始終了時刻・HEAD・終了コード・出力byte数・SHA256を保存した。
+Redのstderrは6,595byte、Greenは19,999byte、doctestはstdout113byte/stderr93byte、
+Clippyはstderr4,318byte、releaseはstderr5,045byte。それ以外のstdoutは0byte。
+`test-results.json`は原ログから作った件別結果、`run-summary.json`は全工程の記録である。
+
+候補の絶対パスと識別情報は以下のとおり。共有ツールへの配布は実施していない。
+
+```text
+D:/CC/Work/unattended-operations-20261013-wt/todo-3396-rust/codex-owned-3c742e5e873a79d827750b0433bcd2ca/candidate/discord_ask.exe
+SHA256: 51e035867c447956db07c39028d057532399ec6643dcee47d25cfbe8a7736c59
+size: 11952640 byte
+```
+
+`release-input-before.json`と`release-input-after.json`は、Windows用Cargo metadataから
+normal/buildの推移的依存149件と、同worktree内の6クレートを選んだ入力記録である。
+6クレートはcc-ask、cc-chrome、cc-job-policy、cc-live、cc-local-llm、cc-task-title。
+各クレートのテスト専用ファイルも含む保守的な範囲で、tracked入力177ファイルの
+実bytesのSHA256、Cargo.lock、関連Cargo設定のfingerprintがビルド前後で一致した。
+registry依存はCargo.lockの版・source・checksumで固定し、cache内の全ソースを
+独立に再ハッシュしたとは主張しない。metadata、releaseのdep-info/fingerprint、
+名前を限定したコンパイル設定のfingerprintも原ログ領域に残した。
+実ツールはrustc/cargo 1.95.0、hostは`x86_64-pc-windows-msvc`だった。
+
+Mustは、本人返信・元質問・`original_decision`の出力に伏せ字処理がない点と、
+Verified未確認のPending/Postedを`delivery:not_sent`と返す点の2件である。
+親3392が修正後の新HEADで関連テスト、Clippy、ビルド、別モデルレビュー、CIを確認し、
+最終候補の入力を照合してから通常配布と実受入を行う。この固定版の成功を流用しない。
+
+不要な自分のtargetは8,364,717,124byte、4,349ファイルだった。清掃ツールのplanが
+容量を理由に退避を指定し、標準quarantineは`QUARANTINE_CROSS_DRIVE`で事前停止した。
+同ドライブ退避手順で祖先・配下のreparseなし、trackedなし、全Cargo終了を確認し、
+`D:/削除希望/20261023-todo-3396-cargo-target-8ab4cdc9/owned-target`へ通常移動した。
+元の場所の不在と移動後の件数・容量一致を確認した。`理由.txt`と保存一覧を残し、
+実削除・容量回復は未実施（0byte）として既存清掃へ引き継ぐ。本人判断は不要。
+所有記録を退避済み・削除済みへ偽装せず、候補とテスト原記録は別領域に保持した。

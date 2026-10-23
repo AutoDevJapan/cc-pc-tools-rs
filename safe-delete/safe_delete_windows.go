@@ -461,6 +461,13 @@ func driveSpace() []map[string]any {
 	return result
 }
 func (c config) quarantine(id, reason string) (result map[string]any, err error) {
+	if id == console3451ID && reason == "windows" {
+		scope, e := c.console3451Recovery(id)
+		if e != nil {
+			return nil, e
+		}
+		return c.quarantinePreserved(id, reason, nil, scope)
+	}
 	if id == ci3174ID && reason == "windows" {
 		scope, unlock, e := c.ci3174Recovery(id)
 		if e != nil {
@@ -691,6 +698,17 @@ func main() {
 		err = fail("INVALID_ARGUMENTS")
 	} else {
 		switch os.Args[1] {
+		case "inspect-console":
+			// A read-only candidate can verify the original producer record before
+			// distribution. No caller-supplied store or mutation is accepted.
+			c.Store = "D:/CC/Tools/safe-delete/receipts-go"
+			var scope *ci3174Scope
+			scope, err = c.console3451Recovery(*id)
+			if err == nil {
+				var measured measured
+				_, measured, err = scope.snapshot(console3451Root)
+				result = map[string]any{"id": *id, "state": "qualified_for_preservation", "bytes": measured.Bytes, "entries": measured.Entries, "changed": false}
+			}
 		case "create":
 			result, err = c.create(*root, *project, *content)
 		case "plan":

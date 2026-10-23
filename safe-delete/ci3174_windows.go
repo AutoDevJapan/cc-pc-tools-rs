@@ -57,6 +57,10 @@ type ci3174Scope struct {
 	volume            uint32
 	rootID, rootBirth uint64
 	originalReceipt   func() ([]byte, error)
+	// Only an independently bound, fixed producer may set these. Empty retains
+	// the original service-owned CI contract for every existing caller.
+	preservedGit string
+	createdOwner string
 }
 
 // OPEN_REPARSE_POINT is mandatory for every opaque entry. No
@@ -391,7 +395,15 @@ func (s *ci3174Scope) snapshot(root string) (map[string]ci3174Entry, measured, e
 		// This completed CI root contains its original Git administrative file.
 		// Its pinned metadata is preserved without opening its body. No other
 		// protected name, new entry or caller-supplied Git tree is admitted.
-		if protected(filepath.Base(p)) && !(strings.EqualFold(filepath.Base(p), ".git") && (recorded || (s.captureCollected && filepath.ToSlash(rel) == ci3250Git))) {
+		gitPath := ci3250Git
+		if s.preservedGit != "" {
+			gitPath = s.preservedGit
+		}
+		gitAllowed := strings.EqualFold(filepath.Base(p), ".git") && (recorded || (s.captureCollected && filepath.ToSlash(rel) == gitPath))
+		if s.preservedGit != "" {
+			gitAllowed = strings.EqualFold(filepath.Base(p), ".git") && filepath.ToSlash(rel) == gitPath && (recorded || s.captureCollected)
+		}
+		if protected(filepath.Base(p)) && !gitAllowed {
 			return nil, m, fail("PROTECTED_PATH")
 		}
 		if s.baseline != nil && !recorded {
@@ -404,7 +416,11 @@ func (s *ci3174Scope) snapshot(root string) (map[string]ci3174Entry, measured, e
 		if recorded && want != i {
 			return nil, m, fail("CI_INVENTORY_CHANGED")
 		}
-		if i.Owner != "S-1-5-32-544" || i.Volume != s.volume || i.Links < 1 || (!s.internalLinks && i.Links != 1) || i.Links > uint32(s.maxEntries+1) || (i.Attributes&(syscall.FILE_ATTRIBUTE_DIRECTORY|syscall.FILE_ATTRIBUTE_REPARSE_POINT) != 0 && i.Links != 1) {
+		owner := "S-1-5-32-544"
+		if s.createdOwner != "" {
+			owner = s.createdOwner
+		}
+		if i.Owner != owner || i.Volume != s.volume || i.Links < 1 || (!s.internalLinks && i.Links != 1) || i.Links > uint32(s.maxEntries+1) || (i.Attributes&(syscall.FILE_ATTRIBUTE_DIRECTORY|syscall.FILE_ATTRIBUTE_REPARSE_POINT) != 0 && i.Links != 1) {
 			return nil, m, fail("CI_OBJECT_CHANGED")
 		}
 		if rel == "." && (i.ID != s.rootID || ci3174Birth(i) != s.rootBirth || i.Attributes&syscall.FILE_ATTRIBUTE_DIRECTORY == 0) {

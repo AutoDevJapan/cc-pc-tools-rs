@@ -414,17 +414,28 @@ fn nominal_reason_tail(body: &str) -> bool {
 
 // Shared by clause classification and directive inspection. Ordinary replies
 // without an option still use asks_why(), without this predicate context.
+fn predicate_tail(predicate: &str) -> bool {
+    predicate.is_empty()
+        || predicate.ends_with([
+            'う', 'る', 'た', 'だ', 'い', 'く', 'ぐ', 'す', 'つ', 'ぬ', 'ぶ', 'む', 'な',
+        ])
+}
+
 fn reason_word_boundary(before: &str) -> bool {
     // A noun such as "同じもの" ends in の without being a nominalized
     // question. Keep an explicit particle or a completed predicate's の.
-    let nominal_no = before.strip_suffix('の').is_some_and(|predicate| {
-        predicate.is_empty()
-            || predicate.ends_with([
-                'る', 'た', 'だ', 'い', 'く', 'ぐ', 'す', 'つ', 'ぬ', 'ぶ', 'む', 'な',
-            ])
-    });
+    let nominal_no = before.strip_suffix('の').is_some_and(predicate_tail);
+    let particle = ["と", "も", "は", "が", "を", "に", "へ"]
+        .iter()
+        .any(|particle| {
+            before.strip_suffix(*particle).is_some_and(|predicate| {
+                predicate_tail(predicate)
+                    || predicate.strip_suffix('の').is_some_and(predicate_tail)
+            })
+        });
     before.is_empty()
         || nominal_no
+        || particle
         || ["のは", "のが", "のも"]
             .iter()
             .any(|ending| before.ends_with(ending))
@@ -446,7 +457,7 @@ fn colloquial_option_cause(body: &str) -> bool {
     }
     // "十分なんですか" / "なんでしょうか" are questions, unlike
     // "十分なんで、進めて" or the assertion "十分なんですよ".
-    let tail = tail.trim_end_matches(|c: char| c.is_whitespace() || "。?!？！".contains(c));
+    let tail = tail.trim_end_matches(|c: char| c.is_whitespace() || "。?!？！ー笑".contains(c));
     !["すか", "すかね", "しょうか", "しょうかね"].contains(&tail)
 }
 
@@ -477,7 +488,7 @@ fn directive_before_reason(body: &str, option: &str) -> bool {
     .unwrap_or(body.len());
     let prefix = &body[..cutoff];
     let joined = format!("{option}{}", &body[..assertion_cutoff]);
-    if regex::Regex::new(r"[るただい]が|けれど|(?:よ(?:ね)?|[oO][kK])\s*$")
+    if regex::Regex::new(r"[うくぐすつぬぶむるただい]が|けれど|(?:よ(?:ね)?|[oO][kK])\s*$")
         .unwrap()
         .is_match(&joined)
     {
@@ -771,6 +782,58 @@ mod intent_tests {
                     if requests_explanation(&reply) {
                         mismatches.push((reply, false));
                     }
+                }
+            }
+        }
+        assert!(mismatches.is_empty(), "{mismatches:?}");
+    }
+
+    #[test]
+    fn clarification_particle_questions_keep_conditional_and_nominal_forms() {
+        let mut mismatches = Vec::new();
+        for option in ["aで", "b で", "ｃで"] {
+            for verb in ["払う", "使う", "買う"] {
+                let committed = format!("{option}{verb}がなんで必要？");
+                if requests_explanation(&committed) {
+                    mismatches.push((committed, false));
+                }
+                for reason in ["なんで必要？", "どうして？"] {
+                    let reply = format!("{option}{verb}の{reason}");
+                    if !requests_explanation(&reply) {
+                        mismatches.push((reply, true));
+                    }
+                }
+            }
+            for predicate in ["同じもの", "同じこと", "決まり"] {
+                for tail in [
+                    "なんで、お願いします",
+                    "なんで。進めて",
+                    "なんですから、進めて",
+                ] {
+                    let reply = format!("{option}{predicate}{tail}");
+                    if requests_explanation(&reply) {
+                        mismatches.push((reply, false));
+                    }
+                }
+            }
+            for ornament in ["ー？", "笑"] {
+                let reply = format!("なぜ{option}十分なんですか{ornament}");
+                if !requests_explanation(&reply) {
+                    mismatches.push((reply, true));
+                }
+            }
+        }
+        for conditional in [
+            "aにすると",
+            "bでも",
+            "cにしても",
+            "dを採用すると",
+            "aで働くと",
+        ] {
+            for reason in ["なんでダメなの？", "なんで必要なの？"] {
+                let reply = format!("{conditional}{reason}");
+                if !requests_explanation(&reply) {
+                    mismatches.push((reply, true));
                 }
             }
         }

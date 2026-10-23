@@ -389,7 +389,10 @@ fn requests_explanation(body: &str) -> bool {
                 let tail_question = explanation_requested(&after)
                     || nominal_reason_tail(&after)
                         && explanation_requested(&sentence[span.start + phrase.end()..]);
-                let questioned = (prefix_question || tail_question)
+                // A predicate-attached causal "なんで" is a commitment even
+                // when the instruction continues in the next clause.
+                let questioned = !colloquial_option_cause(&after)
+                    && (prefix_question || tail_question)
                     && !directive_before_reason(&after, phrase.as_str());
                 if !questioned && !conditional_option_tail(&after) {
                     return false;
@@ -409,43 +412,78 @@ fn nominal_reason_tail(body: &str) -> bool {
         .is_match(body)
 }
 
+// Shared by clause classification and directive inspection. Ordinary replies
+// without an option still use asks_why(), without this predicate context.
+fn reason_word_boundary(before: &str) -> bool {
+    // A noun such as "同じもの" ends in の without being a nominalized
+    // question. Keep an explicit particle or a completed predicate's の.
+    let nominal_no = before.strip_suffix('の').is_some_and(|predicate| {
+        predicate.is_empty()
+            || predicate.ends_with([
+                'る', 'た', 'だ', 'い', 'く', 'ぐ', 'す', 'つ', 'ぬ', 'ぶ', 'む', 'な',
+            ])
+    });
+    before.is_empty()
+        || nominal_no
+        || ["のは", "のが", "のも"]
+            .iter()
+            .any(|ending| before.ends_with(ending))
+        || before
+            .chars()
+            .next_back()
+            .is_some_and(|c| c.is_whitespace() || "、，,".contains(c))
+}
+
+fn colloquial_option_cause(body: &str) -> bool {
+    let Some(start) = why_start(body) else {
+        return false;
+    };
+    let Some(tail) = body[start..].strip_prefix("なんで") else {
+        return false;
+    };
+    if reason_word_boundary(&body[..start]) {
+        return false;
+    }
+    // "十分なんですか" / "なんでしょうか" are questions, unlike
+    // "十分なんで、進めて" or the assertion "十分なんですよ".
+    let tail = tail.trim_end_matches(|c: char| c.is_whitespace() || "。?!？！".contains(c));
+    !["すか", "すかね", "しょうか", "しょうかね"].contains(&tail)
+}
+
 fn directive_before_reason(body: &str, option: &str) -> bool {
     let topic = regex::Regex::new(
         r"説明|理由|内訳|必要|ひつよう|費用|料金|経費|けいひ|用途|根拠|背景|意味|何のため",
     )
     .unwrap();
     let no_ka = regex::Regex::new(r"のか(?:を)?教えて").unwrap();
+    let topic_start = topic.find(body).map(|m| m.start());
+    let raw_why = why_start(body);
+    let no_ka_start = no_ka.find(body).map(|m| m.start());
+    // Confirmation endings remain assertions before any reason word, even
+    // when that word is not a grammatical boundary for the full predicate.
+    let assertion_cutoff = [topic_start, raw_why, no_ka_start]
+        .into_iter()
+        .flatten()
+        .min()
+        .unwrap_or(body.len());
     let cutoff = [
-        topic.find(body).map(|m| m.start()),
-        why_start(body).filter(|&start| {
-            let before = &body[..start];
-            // Colloquial causes such as "大丈夫なんで" / "十分なんです"
-            // must not hide a following instruction. A standalone reason word
-            // or nominal question can end the predicate before that word.
-            before.is_empty()
-                || ["の", "のは", "のが", "のって", "のも"]
-                    .iter()
-                    .any(|ending| before.ends_with(ending))
-                || before
-                    .chars()
-                    .next_back()
-                    .is_some_and(|c| c.is_whitespace() || "、，,".contains(c))
-        }),
-        no_ka.find(body).map(|m| m.start()),
+        topic_start,
+        raw_why.filter(|&start| reason_word_boundary(&body[..start])),
+        no_ka_start,
     ]
     .into_iter()
     .flatten()
     .min()
     .unwrap_or(body.len());
     let prefix = &body[..cutoff];
-    let joined = format!("{option}{prefix}");
+    let joined = format!("{option}{}", &body[..assertion_cutoff]);
     if regex::Regex::new(r"[るただい]が|けれど|(?:よ(?:ね)?|[oO][kK])\s*$")
         .unwrap()
         .is_match(&joined)
     {
         return true;
     }
-    regex::Regex::new(r"お願い|ます|です|て")
+    regex::Regex::new(r"てもらえますか|ていただけますか|お願い|ます|です|て")
         .unwrap()
         .find_iter(prefix)
         .any(|word| {
@@ -683,6 +721,55 @@ mod intent_tests {
                     let reply = format!("{why}{option}進めている{ending}");
                     if !requests_explanation(&reply) {
                         mismatches.push((reply, true));
+                    }
+                }
+            }
+        }
+        assert!(mismatches.is_empty(), "{mismatches:?}");
+    }
+
+    #[test]
+    fn clarification_reason_boundary_keeps_commitments_across_clauses() {
+        let mut mismatches = Vec::new();
+        for option in ["aで", "b で", "ｃで"] {
+            for marker in ["いいよ", "いいよね", "OK"] {
+                for reason in ["なんで？", "なぜ必要？", "どうして聞くの？"] {
+                    let reply = format!("{option}{marker}{reason}");
+                    if requests_explanation(&reply) {
+                        mismatches.push((reply, false));
+                    }
+                }
+            }
+            for predicate in ["大丈夫", "十分", "決まり", "同じもの", "別のもの"] {
+                for ending in ["なんですか", "なんでしょうか"] {
+                    for prefix in ["", "なぜ"] {
+                        let reply = format!("{prefix}{option}{predicate}{ending}");
+                        if !requests_explanation(&reply) {
+                            mismatches.push((reply, true));
+                        }
+                    }
+                }
+                for separator in [",", "、", " ", "　", "。", ";", "！"] {
+                    for instruction in ["お願いします", "進めて"] {
+                        let reply = format!("{option}{predicate}なんで{separator}{instruction}");
+                        if requests_explanation(&reply) {
+                            mismatches.push((reply, false));
+                        }
+                    }
+                }
+                for separator in ["", "、", " "] {
+                    let reply = format!("{option}{predicate}なのは{separator}なんで？");
+                    if !requests_explanation(&reply) {
+                        mismatches.push((reply, true));
+                    }
+                }
+            }
+            for ending in ["てもらえますか", "ていただけますか"] {
+                for punctuation in ["", "？"] {
+                    let reply =
+                        format!("どうして止まったか知らないが{option}進め{ending}{punctuation}");
+                    if requests_explanation(&reply) {
+                        mismatches.push((reply, false));
                     }
                 }
             }

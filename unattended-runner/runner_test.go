@@ -290,6 +290,7 @@ func TestEditedFirstRequestDoesNotStarveSecond(t *testing.T) {
 	r, c := fixture(t)
 	first := msg(c.Add(time.Second), "500", "300", "old")
 	second := msg(c.Add(2*time.Second), "501", "300", "new")
+	second.Channel = second.ID // A new owner forum starter, not an unbound followup.
 	for _, m := range []Message{first, second} {
 		r.State.Requests[m.ID] = &Request{Thread: m.Channel, Guild: "100", RecordVersion: 2, Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey(m.Channel, m.ID), Phase: "captured"}
 	}
@@ -302,10 +303,7 @@ func TestEditedFirstRequestDoesNotStarveSecond(t *testing.T) {
 				respond(w, second)
 			}
 		} else {
-			tid := "500"
-			if strings.HasSuffix(q.URL.Path, "501") {
-				tid = "501"
-			}
+			tid := strings.TrimPrefix(q.URL.Path, "/channels/")
 			respond(w, Thread{ID: tid, Type: 11, Guild: "100", Parent: requestForum, Owner: "300"})
 		}
 	})

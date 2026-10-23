@@ -6,23 +6,65 @@ use super::*;
 pub fn lookup_decision(ctx: &mut Context, value: &Value) -> Result<Value> {
     let proof = lookup_decision_inner(ctx, value)?;
     match crate::decision_identity::redact(ctx, &proof) {
-        Ok(mut redacted) => {
-            redacted["text_available"] = json!(true);
+        Ok(mut redacted) if protocol_preserved(&proof, &redacted) => {
+            let changed = redacted != proof;
+            redacted["text_available"] = json!(proof["original_question"].is_string());
+            redacted["text_redacted"] = json!(changed);
+            if changed {
+                redacted["next_action"] = json!(format!("{} 伏せ字を含む表示です。適用時は元ToDoの私的原票で原文と現在版を確認し、この表示を本人の原文やcanonicalな反映票に使わないでください。", core::s(&proof["next_action"])));
+            }
             Ok(redacted)
         }
+        Ok(_) => Ok(reference_only(&proof, "metadata_changed")),
         // The original name registry can be unavailable. Keep the positive
         // answer/intent reference, without exposing unredacted human text or
         // reconstructing an empty registry. The task's existing private reply
         // receipt remains the context source, not this metadata projection.
-        Err(_) => Ok(reference_only(&proof)),
+        Err(_) => Ok(reference_only(&proof, "unavailable")),
     }
 }
 
-fn reference_only(proof: &Value) -> Value {
+fn same_keys(a: &Value, b: &Value) -> bool {
+    a.as_object()
+        .zip(b.as_object())
+        .is_some_and(|(a, b)| a.len() == b.len() && a.keys().all(|key| b.contains_key(key)))
+}
+
+// The legacy display redactor works on JSON text. A matching name must never
+// rename protocol keys, change an enum, or damage an ID/version. In that case
+// use the existing typed reference projection, not the corrupted display.
+fn protocol_preserved(proof: &Value, redacted: &Value) -> bool {
+    if !same_keys(proof, redacted)
+        || !proof.as_object().unwrap().iter().all(|(key, value)| {
+            matches!(
+                key.as_str(),
+                "original_question" | "original_decision" | "decision_identity" | "owner_replies"
+            ) || redacted.get(key) == Some(value)
+        })
+    {
+        return false;
+    }
+    match (
+        proof["owner_replies"].as_array(),
+        redacted["owner_replies"].as_array(),
+    ) {
+        (None, None) => true,
+        (Some(a), Some(b)) if a.len() == b.len() => a.iter().zip(b).all(|(a, b)| {
+            same_keys(a, b)
+                && a.as_object().unwrap().iter().all(|(key, value)| {
+                    matches!(key.as_str(), "body" | "decision_identity")
+                        || b.get(key) == Some(value)
+                })
+        }),
+        _ => false,
+    }
+}
+
+fn reference_only(proof: &Value, reason: &str) -> Value {
     let mut result = json!({"domain":DOMAIN,"found":proof["found"],
         "read_only":true,"ledger_written":false,"legacy_state":"unchanged",
-        "legacy_searched":false,"text_available":false,"redaction":"registry_unavailable",
-        "approval":"not_inferred","next_action":"この照会は新方式の質問を対象にします。本文の伏せ字確認に必要な原名簿が利用できないため、本文は表示せず元URLと返信IDを返します。元ToDoに配送済みの私的返信原票を正規の保護判定で確認して読み、元質問と現在版を照合して続行してください。未読や未反映を理由に同じ質問を送らず、旧記録の回答も元ToDoで確認してください。画像は返されたSHAと今回の画像を照合し、異なる場合は旧回答を流用しないでください。"});
+        "legacy_searched":false,"text_available":false,"text_redacted":true,"redaction":reason,
+        "approval":"not_inferred","next_action":format!("{} 本文は保護確認のため表示していません。元ToDoの私的原票で原文と現在版を確認してください。まだ原票がなければ、通常conversation statusでthreadに対応するrequest_idを確認し、conversation replies --request-id <ID> --output <新しい絶対パス.private.json>で取得してください。添付はその返信のhistory-readでID・サイズ・本文SHAと編集版を取得してからhistory-attachmentへ渡してください。", core::s(&proof["next_action"]))});
     if proof["source"] == "discord-api-v10" {
         result["source"] = json!("discord-api-v10");
     }

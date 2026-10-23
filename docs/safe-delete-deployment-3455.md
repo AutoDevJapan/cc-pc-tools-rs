@@ -76,3 +76,36 @@ PR399のsafe-delete sourceと候補の最新mainは差分0で、正式CIの同so
 
 再開時は作業場所の `.ci-work/3455-resume.private.json` と原receiptを照合する。
 常設のsource、原receipt、reader、controller、backupは次回更新にも必要な証拠として保持する。
+
+## 原調査とレビューの受領後（2026-10-24）
+
+3466の実Sonnet5.5/maxによる有限checkは完了した。現在byteに結べる後続3451の
+原build/配置記録は、参照できた範囲では見つからなかった。存在しないとの断定ではない。
+元の実行担当から実在する原path/SHA・原コマンド・Go出力を正常配送してもらうよう、
+2962/3258の通常noteへ依頼した。同じ場所を再走査する担当は増やしていない。
+未知の現在値を認める受入条件の変更は採用していない。
+
+3469の実Opus5.5/maxは固定8fileを全文読み、SHAとbyte数が一致し、Must0だった。
+読取レビューの完了と実更新の完了は区別する。原応答はそのまま保持した。
+置換競合や中断後の確認に関するSuggestionを受け、元v1を保全したままv2を作成した。
+
+- 新byteがあるだけで再配布完了にせず、直前のcomplete記録、元backupとのACL、
+  配置先とbackupのNTFS identityを照合する。stoppedや記録欠落は拒否する。
+- 最後の照合後に旧streamが別名へ動かされた場合も成功扱いにしない。
+- security descriptorをpinned handleから読み、ネイティブ呼出し中のGCによる解放を防ぐ。
+- 一時名を実行されない拡張子にし、別directoryへのbackup移動と停止後の各拒否をテストした。
+
+v2の既存AdminBroker上の関連テストは12個、subtest込み33件成功、失敗0。
+vetも成功し、実際の公開sourceに対する昇格時のGit照合も確認した。
+readerの元49件は同じ入力として再利用し、overlay対応表が2fileだけであることと、
+初期化式が実行処理を含まないことの追加2件が成功した。原engineは変更していない。
+
+原build receiptの短縮したcommandにmoduleのcwdが無かった点は、新しい注記で
+実際のcwdと絶対出力pathを補った。原receiptのbyte/SHAは変更していない。
+この注記を過去の原buildや後続3451の原配置記録として使わない。
+readerのGoは1.27.0、safe-delete候補は1.27.1と実物のbuild情報から確認した。
+
+最新main `dbb1c79c30e16b3ef7a894bb16ccd3eacccf3471` に対しても候補0e16の
+safe-delete/reader/Go依存の差分は0だった。元buildのhead/hashを付け替えていない。
+v2の変更差分は追加の固定レビューへ回す。実物への適用は引き続き0で、
+原old証拠の受領と実qualifiedのGreenが必要である。

@@ -1,0 +1,220 @@
+{
+  "domain": "owner-department-classification-v1",
+  "source": "localai-web-rs/src/operations_catalog.rs",
+  "source_declaration_sha256": "ab5670a5a22a68a757b16130fe139f3d1b6095baec9b1eadd18437003f5b76a7",
+  "department_source": "localai-web-rs/src/operations.rs",
+  "department_declaration_sha256": "cb863376fbdc2401666ea40e477a65751b5ccb5ae5b4b48d19b6274c2d2c3a18",
+  "contract_department": 4,
+  "groups": [
+    {
+      "kind": "self",
+      "aliases": [
+        "2c93d8a4c0ae8e65b66d727513dc4c0eeb11c187d3494472fbb01a9134ecbb1d",
+        "809c9becbf00976a8994d3829af08b5625e0054a0c9159c3335be657a23a80ee"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "43326538e858c5871c842efbeebd2e10167acdfe060aa5332041da46e6cddcc5"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "2074d8a63aefe930e4741b9677b8f55a1776cf1e306c8a43c5f1d827dad3c741",
+        "a4f761847e622c192a2bbb177b2207bbc0069ce804cb51aa7db750322be01d8d",
+        "c672b078eecddbbcc348255c8b2f9777abdfb16c8e43a1896236553d6d620bf3"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "bf4d7a66e07219eb67d7cc6724990620e9d65a4c3018276538807d5ab4b57c0a"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "a5c66fb045e1970383f02a542178051e9ea2983d813fab199838a6565957c3c3",
+        "aeebad4a796fcc2e15dc4c6061b45ed9b373f26adfc798ca7d2d8cc58182718e"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "49734ead28003f469f7af9d6a8cc4d5d91a056953c761571ae986781f419f353",
+        "a6f1668c4a68efff6ba29807dc69f479764b405a25e3873c94925469f77a273d"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "6cbc38b24e26621dd34f465a272e2cf372fcb3ad75485824c1fd891bb00e34fb"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "aa6f81a2585f0d5aa39c8bb44c996b60a8507aca78a90e626aee2f238707cb9b",
+        "d97947b1bf1abbbf087cb8c08914a1663357a3a9ac817d838b1e1ea479190805"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "8047156f8ae1b4f6f120cd6d6a447a7175e3cb1ca966ccfe59dafbf1167da47f",
+        "d4c0f359eac589fc7c903f368ad23e6962b756f2c9ad039d0a8628dcb74fc1db"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "6cd7f7963f0da769fca032a421874d0ee7c9e216e4617eda6bd46a1e10dabc5f"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "0dd94d6a445e44a0f36823f8a4d732d135cb629f5e63f62fbfdfd95ea3780e8f"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "a17b81e7074449110580759f693d83ffab96407678bd88b9d6bd3ce3a6ff1309"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "48dd53631e73a3df7abcfb6ac8a8d49cbb42c7c7c1040c7b69d9f65cf2e132e1"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "9172e276315b88be3421b35e79e6ca24597fb70d78fef5f281986e08964b9849",
+        "ff68a81ef4afbff1b5a437bd2b76116a7c920d4ef1f0f292060059bc299c5f2f"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "8f2cc82d5659274b212116a686fc0ac2c608a691952dfa1906487b799fa6d59f"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "76a64b6cc42b26731c786548ad74955c180b4d1674f341b4279209372333a598"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "d7f86ace34a05deac98371c3229342ab915075e3ec57051e26c5b9a98f990c63"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "2e7441f38baa7ed109166964b340e40b5c5ca13c9bad0211fb532bda6e0a9ad5",
+        "c93eb3f482d2cca45c02ba7251c3c87f86a4216d3b05877eaa8aa679e374ab9e"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "3227fe6bde46249b0aae4b69ef6efd806422a46788e281d050d32d0d9fbde723",
+        "407c149d9c9e20a40ea74548b08dbdd51d68a2daabda73c380683d0c6b1fea8d",
+        "cf55f72da99e5dc79e5e363c654b5245c8c96a500ad0138d98b83621894a7dfc"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "151ae68906805aa6e3594ed2e33e53be1ced1a83faa8cef5b06124e1a6d21375",
+        "432257e22f812dd978ae34ea641a189197eabe8e549e24d6d3ef860f2c7dd6a5",
+        "491b2cab3c9dbb9702fe67edb010f4153ba2466e776ce8fcf485c3c33cdfec6c"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "7467b914d771fcfd9291894768fa54543b2f7c45265cddc8bb6a97168f214328"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "16510767b4f57110e2f870a28bbc9161177f9dddaacd9fedd01d7ee473d95c8c",
+        "c349f6ba8ac69dcbf338d91a6aa4a95ac0d33324982a6a71d291d1f9f3fa3790",
+        "ed40fa7bfb2c8eb54a45c04999d51ecfad1930c1569f7c237161ecebb673c9f7",
+        "f9d35d43770d39092a663e665e82ae1d84a9e0da3d0d10c407acada6a40cd281"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "2c6bcde9c408b188eff88743e9e1f5c4009e020a2e86da2e0fc606888dc23cc6",
+        "46f69732f7871aef9fe7d60db7fa1b3fba31c1f9c9dbc3f5be3915782d443f05",
+        "739f674bdd7019a9064b0f78f3db76524486beec0f41c335b3a43e360a230ab6",
+        "adba48111b2717c135e4d6b2beddcc5fc38e5a38b2b848ac3d7ea6ddc5342391"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "82d52541945b1ace3929b72132861321824ec9eb8ecdebc97c9c20e6ce4de4b0"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "32c1cf49a2feee269ed74dd860f72644ac71029839b21b1ce0c212efafa9ef07",
+        "9c53c074d7ac6a2728b638ac1f376c5fa9eb8f71603017c3ea638c2fd40548df"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "0d83f2331cc4795ec0ffd73ef85abb90319abdc5028150914ab9b9779e8affa3",
+        "556ef87a42924d67cc0ea146c9f3c7a74f247507c1588deb9c6ab697a2e38cdf",
+        "65d7963612cff58c2dcecc7af3f0f919e3193c45fac3bc49e2ce0448f2906206",
+        "8ea6fe30ead4deb7365d5316c15da1c7f9d23e97036d3a65455a0627d9eeec71",
+        "cd18cef9f9b254c21bbf8efdda783e4ad2ef868c5c7d887e5658216867ad68c7"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "3c75112d07fec6d89ff7ce9328d911b9bea33fcb809eb1e9ce547ed1313095d9"
+      ]
+    },
+    {
+      "kind": "client_project",
+      "aliases": [
+        "eca194cd88616b628d635f9ec7a9a40439fe5a01df6a8ab249db20724009564c"
+      ]
+    },
+    {
+      "kind": "self",
+      "aliases": [
+        "fb649ac3e2d0007b4b76edf2c0f80f23738855b3ebab569dae5a03c6edbc3b45"
+      ]
+    },
+    {
+      "kind": "client_project",
+      "aliases": [
+        "0a9d4ce4a27ee04539c8919e25f8c766b9a46d888edc119a2b8c0504e73e32a9"
+      ]
+    },
+    {
+      "kind": "client_project",
+      "aliases": [
+        "e41b6007fdba6520a7e5fc2a97beb9e085f9579a05bdaff8a4b2efd98824da11"
+      ]
+    }
+  ]
+}

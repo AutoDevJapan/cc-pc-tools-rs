@@ -33,7 +33,7 @@ func conversationPathAllowed(path string) bool {
 	return conversationAllowed(path, conversationAccess{
 		home: conversationHome, notify: conversationNotify, todo: productStore,
 		sender:      filepath.Join(filepath.Dir(conversationHome), "recovery-messages.json"),
-		rootAllowed: allowed, protected: legacyMatch, at: time.Now(),
+		rootAllowed: repairOnlyAllowed, protected: legacyMatch, at: time.Now(),
 	})
 }
 
@@ -199,7 +199,7 @@ func conversationDestination(m, cfg object) bool {
 }
 
 // Dependency paths and source qualification are injectable only in in-process tests.
-// Production always uses the fixed paths above and the existing allowed(root).
+// Production always uses the fixed paths above and repairOnlyAllowed(root).
 func conversationAllowed(path string, a conversationAccess) bool {
 	path, err := portable(path)
 	if err != nil || !filepath.IsAbs(path) {

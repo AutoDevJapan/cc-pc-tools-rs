@@ -3,6 +3,7 @@ mod command_capture;
 pub mod console_page;
 pub mod console_ui;
 pub mod native_activity;
+mod native_runtime;
 pub mod operations;
 pub mod owner_decisions;
 mod owner_followup;

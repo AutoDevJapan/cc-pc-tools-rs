@@ -65,3 +65,15 @@ PR148の通常CI4件が開始前のHosted予算制限で失敗している。Dra
 - merged=true / closed、merged_at=2026-10-23T03:04:39Z（12:04:39 JST）。実mergeは224b80173e5e6599bde92f2facba6631c165c3df。第1親1100676、第2親afabad、2親・tree f1dd8d999e76e269145627f921d2ddeff9d13bb9・main ref一致を実APIで確認した。
 - 独立工程の6条件は6/6達成。元の製品全体と回収工程の完了には拡大しない。既存CIへの運用反映は、mainへの通常pushで自動開始した4run（Rust39893051727/native39893051712/live39893051925/CodeQL39893051537）を確認中。手動rerunやPC側の重複ビルドは行っていない。
 - 本担当で新規作成した一時フォルダの所有IDは42a2934d2dabcd1da3f38a56785ed0c7。最終結果と再開情報を保存後に正規planの通常削除を行い、finishの結果を確認する。
+
+## マージ後CIの失敗とPR151による修復（2026-10-23）
+
+PR148のマージ前7check成功と実mergeは上記の事実として保持する。マージ後の通常CIで新たな失敗が発生したため、現時点では独立工程を終了しない。必要CIの条件を再確認するまで5/6・83%へ戻した。
+
+- mainのLinux job120217027335（run39893051727）は、scenario_pathsの既存2テストが31行のfs::hard_linkでOS error18 / CrossesDevices / Invalid cross-device linkとなりfailure。doctest/build/scenarioの後続stepはskip。Windowsは観測時点で実行中。CodeQL/native/liveはsuccess。
+- sourceは不変でも、compiled binaryと通常tempdirが別FSならhard linkは成立しない。test fixtureの設置場所の不備を原因として特定した。ログのUbuntu26移行通知だけを原因の証明とはしない。
+- 原job logは488252bytes/SHA256 D069541DFF681A9924D30991F634C23DC49CA13DC0357EFFA9000E6145CD4121。CLIの初回2取得は端末escape検出でexit1/0byte。エラーが案内する正規allow-escape-sequencesを指定し、端末へ出さずraw fileへ保存してexit0を確認。実行審査の拒否・権限変更・別認証はない。
+- Issue150にRed・仕様・受入を記録。PR151 https://github.com/AutoDevJapan/civ6-banseiki/pull/151 はdraft。base224b801、headcee678945825905c20fa606ff5ef71c434d9e8a5、treeb5680a158cfcad929e49e97702eec210cc82135d。実blob SHA 8d05c6238d8c8f5b1bc3058c903a327cb8716629を自計算と照合し、差分はtools/civ6-reports-rs/tests/cases/scenario_paths.rsの1fileだけとAPI確認した。
+- 新helperはtempfile::tempdir_inでcompiled binaryの親配下へfixtureを作る。Unixのimmutable hard linkとWindowsのcopy処理、既存2テストの全assertionを保持する。製品・SSOT・UI・workflowは変更しない。PCのCargo/GPU/Civ6は起動しない。
+- 読取レビューは通常ToDo3418、parent2640/currentjob、kind review、model claude-haiku-5-5 / effort max / needsなしで登録済み。単一パケットを読む範囲。packet SHA256 D30CE866527F4431DE811523FD15D4C24DAF497CC2F0AF04F3CB2EF7D33A0A39。受付だけをレビュー済みとしない。初回addはmodelにslashを含むためValueError、sourceのvalidationを確認し、同じモデルの正規CLI表記へ訂正して登録した。子ジョブの直接起動はない。
+- 再開は3418の実応答・モデル・読取範囲を受領し、PR151の同head CIを確認してMustを解消する。通常mergeとマージ後CIを確認後に最終結果を更新する。元880等の未完・2736/2381の回収待ちは不変。42a2934dの原ログ・候補・レビューpacketは未完成果であり、レビュー受領と恒久保存前に回収しない。

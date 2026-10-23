@@ -38,5 +38,19 @@
     3073
   ],
   "review_must_remaining": 0,
-  "doctest_cases_found": 0
+  "doctest_cases_found": 0,
+  "postmerge_ci_failure": {
+    "run": 39893051727,
+    "job": 120217027335,
+    "tests_failed": 2,
+    "error": "CrossesDevices / OS18 in scenario_paths.rs:31",
+    "raw_bytes": 488252,
+    "raw_sha256": "D069541DFF681A9924D30991F634C23DC49CA13DC0357EFFA9000E6145CD4121",
+    "recovery_issue": 150,
+    "recovery_pr": 151,
+    "recovery_head": "cee678945825905c20fa606ff5ef71c434d9e8a5",
+    "review_todo": 3418,
+    "recovery_complete": false
+  },
+  "independent_work_complete": false
 }

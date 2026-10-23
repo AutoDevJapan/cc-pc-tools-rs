@@ -37,6 +37,9 @@ type conversationCLIOptions struct {
 	ClarificationFile string
 	CheckOnly         bool
 	Output            string
+	Message           string
+	SourceSHA         string
+	Revision          string
 }
 
 // Diagnostics from flag must never repeat an argument, body path or secret.
@@ -103,6 +106,12 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 	case "replies":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "output", &opts.Output)
+	case "direction-record":
+		conversationStringFlag(fs, "request-id", &opts.RequestID)
+		conversationStringFlag(fs, "actor-todo-id", &todo)
+		conversationStringFlag(fs, "message-id", &opts.Message)
+		conversationStringFlag(fs, "source-sha256", &opts.SourceSHA)
+		conversationStringFlag(fs, "revision", &opts.Revision)
 	case "withdraw":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "reason-file", &opts.ReasonFile)
@@ -147,6 +156,12 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		}
 	case "withdraw":
 		if !conversationID.MatchString(opts.RequestID) || opts.ReasonFile == "" {
+			return opts, errConversationArguments
+		}
+	case "direction-record":
+		var ok bool
+		opts.Todo, ok = number(todo)
+		if _, messageOK := number(opts.Message); !ok || !messageOK || !conversationID.MatchString(opts.RequestID) || !shaPattern.MatchString(opts.SourceSHA) || !regexpRevision(opts.Revision) {
 			return opts, errConversationArguments
 		}
 	}
@@ -334,6 +349,14 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 				err = errConversationArguments
 			} else {
 				result, err = backend.conversationWithdraw(ctx, opts.RequestID, opts.ReasonFile)
+			}
+		case "direction-record":
+			if backend, ok := runner.(interface {
+				conversationDirectionRecord(context.Context, conversationCLIOptions) (map[string]any, error)
+			}); ok {
+				result, err = backend.conversationDirectionRecord(ctx, opts)
+			} else {
+				err = errConversationArguments
 			}
 		case "status":
 			result, err = runner.conversationStatus()

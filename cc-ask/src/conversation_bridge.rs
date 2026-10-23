@@ -22,6 +22,7 @@ const INVALID_MODE: &str = "新しい質問・報告の設定が不正です。�
 const INVALID_INPUT: &str = "新しい投稿の入力を読み取れないか、内容が不正です";
 const SAVE_FAILED: &str = "新しい投稿の入力を保存できません";
 const CHILD_FAILED: &str = "新しい質問・報告の処理が完了していません。同じ内容で再実行してください";
+const CLARIFICATION_FAILED: &str = "説明の送信を確認できませんでした。元の本文と要求を保持し、本人の現在の返信と配達記録を確認してください";
 const DECISION_REQUIRED: &str =
     "新しい質問には --decision-file で元ToDoと判断範囲を指定してください";
 const ORIGIN_REQUIRED: &str = "元スレッドの数値IDを --thread または判断範囲の origin_thread_id に指定し、両方の指定を一致させてください";
@@ -753,12 +754,14 @@ fn send_log(
             string_path(manifest)?,
             "--check-only".into(),
         ]);
-        let checked = execute(effects, &args, false, true)?.ok_or(CHILD_FAILED)?;
+        let checked = execute(effects, &args, false, true)
+            .map_err(|_| CLARIFICATION_FAILED)?
+            .ok_or(CLARIFICATION_FAILED)?;
         if checked["request_id"] != request
             || checked["body_sha256"] != sha(text.trim_start_matches('\u{feff}').as_bytes())
             || checked["binding_sha256"] != sha(proof.as_ref().ok_or(INVALID_INPUT)?)
         {
-            return Err(CHILD_FAILED.into());
+            return Err(CLARIFICATION_FAILED.into());
         }
         if check_only {
             return Ok(Some(checked));
@@ -788,7 +791,12 @@ fn send_log(
         argv.extend(["--clarification-file".into(), string_path(&path)?]);
     }
     append_attachments(&root, &directory, snapshots, &mut argv)?;
-    execute(effects, &argv, false, false)
+    let result = execute(effects, &argv, false, false);
+    if clarification.is_some() {
+        result.map_err(|_| CLARIFICATION_FAILED.to_owned())
+    } else {
+        result
+    }
 }
 
 fn append_attachments(

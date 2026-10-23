@@ -335,26 +335,47 @@ fn requests_explanation(body: &str) -> bool {
     {
         return false;
     }
-    if regex::Regex::new(
-        r"(?i)(?:^|[\s、。，,.!?！？:：])[abａｂ]\s*(?:で|を(?:選|採用|希望)|に(?:し|決め)|採用)",
+    // A commitment is different from asking about the consequences of an
+    // option. Inspect complete choice phrases before the explanatory clause.
+    let choice = regex::Regex::new(r"(?i)(?:^|[^a-z0-9ａ-ｚ０-９])[a-dａ-ｄ]\s*(?:で|を(?:選んだ|選ぶ|選びます|選びたい|選べ|選択|採用|希望)|に(?:する|し(?:ます|た|て|よう)|決め)|が(?:いい|良い)|採用)").unwrap();
+    for phrase in choice.find_iter(body) {
+        let remaining = &body[phrase.end()..];
+        if !["ら", "ば", "なら", "あれば", "あるなら", "したら", "すれば"]
+            .iter()
+            .any(|suffix| remaining.starts_with(suffix))
+        {
+            return false;
+        }
+    }
+    let explicit = regex::Regex::new(
+        r"(?i)説明(?:して|を(?:お願い|ください|聞きたい))|解説して|explain|clarif",
     )
     .unwrap()
-    .is_match(body)
-    {
-        return false;
-    }
-    let explicit = regex::Regex::new(r"(?i)説明(?:して|を)|詳しく|解説して|explain|clarif")
-        .unwrap()
-        .is_match(body)
-        || regex::Regex::new(r"教えて(?:ほしい|ください)?\s*[。！!]*\s*$")
-            .unwrap()
-            .is_match(body);
+    .is_match(body);
+    let topic = regex::Regex::new(
+        r"説明|理由|内訳|必要|ひつよう|費用|料金|経費|けいひ|用途|根拠|背景|意味|何のため",
+    )
+    .unwrap();
+    let teach = regex::Regex::new(r"教えて(?:ほしい(?:です)?|ください)?\s*$").unwrap();
+    let detail = body
+        .split(['。', '！', '!', '？', '?', '\n', ';', '；'])
+        .any(|sentence| {
+            let sentence = sentence.trim();
+            (topic.is_match(sentence) && teach.is_match(sentence))
+                || matches!(sentence, "詳しく" | "もっと詳しく" | "もう少し詳しく")
+        });
     let why = regex::Regex::new(r"なぜ|どうして|なんで")
         .unwrap()
-        .is_match(&body.replace("なぜなら", "").replace("なんでも", ""));
+        .is_match(
+            &body
+                .replace("なぜなら", "")
+                .replace("なぜか", "")
+                .replace("どうしても", "")
+                .replace("なんでも", ""),
+        );
     let question = body.contains(['?', '？'])
         || regex::Regex::new(r"(?:なの|ですか|ますか|どういう意味|何のため)\s*[。！!]*\s*$")
             .unwrap()
             .is_match(body);
-    explicit || why || question && regex::Regex::new(r"(?i)どういう|何の|何で|要る|いる|必要|ひつよう|理由|内訳|用途|根拠|経費|けいひ|費用|料金|why|what").unwrap().is_match(body)
+    explicit || detail || why || question && regex::Regex::new(r"(?i)どういう|何の|何で|要る|いる|必要|ひつよう|理由|内訳|用途|根拠|経費|けいひ|費用|料金|why|what").unwrap().is_match(body)
 }

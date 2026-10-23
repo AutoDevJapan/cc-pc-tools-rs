@@ -348,3 +348,70 @@ fn rejected_first_send_preserves_every_original_file_and_creates_no_reservation(
     );
     assert!(runner.sends.is_empty());
 }
+
+#[test]
+fn failed_clarification_reports_inspection_without_exposing_child_errors_or_retrying_blindly() {
+    const MESSAGE: &str = "説明の送信を確認できませんでした。元の本文と要求を保持し、本人の現在の返信と配達記録を確認してください";
+    struct SendFails(Runner);
+    impl Effects for SendFails {
+        fn http(&mut self, _: &str, _: &str, _: Option<&Value>, _: bool) -> Result<Value> {
+            Err("not used".into())
+        }
+        fn run(&mut self, args: &[String], timeout: u64) -> Result<Output> {
+            if args.iter().any(|arg| arg == "--check-only") {
+                self.0.run(args, timeout)
+            } else {
+                self.0.sends.push(args.to_vec());
+                Ok(Output {
+                    code: 1,
+                    stdout: "conversation unavailable\n".into(),
+                    stderr: "synthetic private child diagnostic".into(),
+                })
+            }
+        }
+    }
+    let f = Fixture::new();
+    let mut sender = SendFails(f.runner(false));
+    let error = bridge::try_post_clarification(
+        f.root.path(),
+        &mut sender,
+        "600",
+        &f.body,
+        false,
+        &[],
+        &f.binding,
+    )
+    .unwrap_err();
+    assert_eq!(error, MESSAGE);
+    assert_eq!(sender.0.checks.len(), 1);
+    assert_eq!(sender.0.sends.len(), 1);
+
+    let f = Fixture::new();
+    let before = f.snapshot();
+    let error = bridge::try_post_clarification(
+        f.root.path(),
+        &mut f.runner(true),
+        "600",
+        &f.body,
+        false,
+        &[],
+        &f.binding,
+    )
+    .unwrap_err();
+    assert_eq!(error, MESSAGE);
+    assert_eq!(f.snapshot(), before);
+
+    let error = bridge::try_post(
+        f.root.path(),
+        &mut f.runner(true),
+        "600",
+        &f.body,
+        false,
+        &[],
+    )
+    .unwrap_err();
+    assert_eq!(
+        error,
+        "新しい質問・報告の処理が完了していません。同じ内容で再実行してください"
+    );
+}

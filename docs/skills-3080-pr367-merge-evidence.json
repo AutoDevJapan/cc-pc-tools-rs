@@ -1,0 +1,13 @@
+{
+  "review_todo": 3313,
+  "limits": "SQL2本文案と前6本文/記録の受入。全16資料完了でも新12本文受入でもない。",
+  "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/367",
+  "merged_at": "2026-10-22T18:46:18Z",
+  "review_raw_sha256": "1f58a8bb4c42040c8d143979a99cacca21556c2c406c214542174c5b01ffc597",
+  "review_must": 0,
+  "required_checks": "documentation + all CodeQL successful; Cursor Bugbot neutral",
+  "pr": 367,
+  "head": "779dd15197d3a4547e6d6d8643e742bafe8c7643",
+  "merge": "dbe2702730279c6646d6548ee7cb040989ed88f6",
+  "todo": 3080
+}

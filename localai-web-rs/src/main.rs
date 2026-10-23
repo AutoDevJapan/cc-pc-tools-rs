@@ -143,6 +143,7 @@ fn app(state: AppState) -> Router {
         .route("/api/agent/native/register", post(native_activity_register))
         .route("/api/agent/native/activity", post(native_activity_record))
         .route("/api/agent/native/close", post(native_activity_close))
+        .route("/api/agent/native/connect", post(native_activity_connect))
         .route("/api/agent/display/:kind", get(shared_progress_display))
         .route("/api/agent/*path", axum::routing::any(agent::handle))
         .nest_service(
@@ -266,6 +267,18 @@ async fn native_activity_close(
         tokio::task::spawn_blocking(move || operations.close_native(request))
             .await
             .unwrap_or(Err("native_store_unavailable")),
+    )
+}
+
+async fn native_activity_connect(
+    State(state): State<AppState>,
+    Json(request): Json<localai_web_rs::native_activity::Connect>,
+) -> Response {
+    let operations = state.operations.clone();
+    native_activity_response(
+        tokio::task::spawn_blocking(move || operations.connect_native(request))
+            .await
+            .unwrap_or(Err("native_runtime_source_unavailable")),
     )
 }
 

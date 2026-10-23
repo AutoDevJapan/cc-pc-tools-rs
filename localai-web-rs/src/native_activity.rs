@@ -1,15 +1,15 @@
 //! Runtime-supplied native tool receipts, separate from managed CC jobs.
 //! This receiver never opens session transcripts or accepts message/status prose.
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 use std::{
     collections::BTreeMap,
     fs,
     io::{Read, Write},
     path::PathBuf,
     sync::{
-        atomic::{AtomicU64, Ordering},
         Mutex,
+        atomic::{AtomicU64, Ordering},
     },
 };
 
@@ -39,6 +39,8 @@ struct Entry {
     receipt: Option<Receipt>,
     closed_at_ms: Option<u64>,
     outcome: Option<String>,
+    #[serde(default)]
+    runtime: Option<crate::native_runtime::Cursor>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -96,10 +98,20 @@ pub struct Close {
     pub outcome: String,
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct Connect {
+    pub session_id: String,
+    pub generation: u64,
+    pub rollout_path: PathBuf,
+}
+
 pub struct Registry {
     path: PathBuf,
     ledger: Mutex<Result<Ledger, &'static str>>,
     writes: Mutex<()>,
+    runtime_cursor: AtomicU64,
+    runtime_error: Mutex<Option<&'static str>>,
 }
 
 fn session_id(value: &str) -> Result<String, &'static str> {
@@ -175,6 +187,8 @@ impl Registry {
             path,
             ledger: Mutex::new(ledger),
             writes: Mutex::new(()),
+            runtime_cursor: AtomicU64::new(0),
+            runtime_error: Mutex::new(None),
         }
     }
 
@@ -236,10 +250,10 @@ impl Registry {
         let directory = self.path.with_file_name("native-activity-closed");
         match fs::symlink_metadata(&directory) {
             Ok(meta) if !meta.is_dir() || meta.file_type().is_symlink() => {
-                return Err("native_store_unavailable")
+                return Err("native_store_unavailable");
             }
             Err(error) if error.kind() != std::io::ErrorKind::NotFound => {
-                return Err("native_store_unavailable")
+                return Err("native_store_unavailable");
             }
             _ => (),
         }
@@ -342,6 +356,7 @@ impl Registry {
                 receipt: None,
                 closed_at_ms: None,
                 outcome: None,
+                runtime: None,
             };
             let result = response(&id, &entry);
             ledger.entries.insert(id, entry);
@@ -441,6 +456,11 @@ impl Registry {
     }
 
     pub fn view(&self, now: u64) -> Value {
+        let runtime_failed = self
+            .runtime_error
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .is_some();
         let guard = self.ledger.lock().unwrap_or_else(|e| e.into_inner());
         let Ok(ledger) = guard.as_ref() else {
             return json!({"source":"native","state":"unavailable","complete":false,"sessions":[],"bindings":[]});
@@ -452,7 +472,14 @@ impl Registry {
             bindings.push(json!({"key":key,"generation":entry.generation,"todoId":entry.todo_id,"businessProject":entry.business_project,"role":entry.role,
                 "state":if entry.closed_at_ms.is_some(){"closed"}else if entry.receipt.is_none(){"unobserved"}else{"observed"},
                 "lastActualAt":entry.receipt.as_ref().map(|r|r.actual_at_ms),"endedAt":entry.closed_at_ms,"outcome":entry.outcome}));
-            if entry.closed_at_ms.is_some() || !matches!(entry.role.as_str(), "work" | "review") {
+            if entry.closed_at_ms.is_some()
+                || !matches!(entry.role.as_str(), "work" | "review")
+                || entry
+                    .runtime
+                    .as_ref()
+                    .is_some_and(|source| source.error.is_some())
+                || (runtime_failed && entry.runtime.is_some())
+            {
                 continue;
             }
             if let Some(receipt) = &entry.receipt {
@@ -463,8 +490,134 @@ impl Registry {
                 }
             }
         }
-        json!({"source":"native","state":if ledger.entries.is_empty(){"unobserved"}else{"partial"},"complete":false,
-            "verifiedCount":sessions.len(),"sessions":sessions,"bindings":bindings,"knownSources":ledger.entries.len(),"scope":"instrumented runtime receipts only; no transcript scan or global inventory"})
+        let mut issues: Vec<_> = ledger
+            .entries
+            .values()
+            .filter(|entry| {
+                entry.closed_at_ms.is_none() && matches!(entry.role.as_str(), "work" | "review")
+            })
+            .filter_map(|entry| entry.runtime.as_ref())
+            .filter_map(|source| {
+                source
+                    .error
+                    .as_ref()
+                    .map(|error| json!({"reason":error,"lastSuccessAt":source.last_success_at}))
+            })
+            .collect();
+        if self
+            .runtime_error
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .is_some()
+        {
+            issues.push(json!({"reason":"record_failed","lastSuccessAt":null}));
+        }
+        json!({"source":"native","state":if issues.is_empty(){"complete"}else{"partial"},"complete":issues.is_empty(),
+            "verifiedCount":sessions.len(),"sessions":sessions,"bindings":bindings,"knownSources":ledger.entries.len(),"scope":"connected_sessions",
+            "observedAt":now,"collectionIssues":issues,
+            "runtimeConnections":ledger.entries.values().filter(|entry|entry.closed_at_ms.is_none() && entry.runtime.is_some()).count(),
+            "globalInventoryComplete":false})
+    }
+
+    pub fn connect(&self, request: Connect, now: u64) -> Result<Value, &'static str> {
+        let profile = std::env::var_os("USERPROFILE")
+            .or_else(|| std::env::var_os("HOME"))
+            .ok_or("native_runtime_source_unavailable")?;
+        self.connect_at(
+            request,
+            &PathBuf::from(profile).join(".codex/sessions"),
+            now,
+        )
+    }
+
+    fn connect_at(
+        &self,
+        request: Connect,
+        root: &std::path::Path,
+        now: u64,
+    ) -> Result<Value, &'static str> {
+        let id = session_id(&request.session_id)?;
+        self.update(|ledger| {
+            let entry = ledger
+                .entries
+                .get_mut(&id)
+                .ok_or("native_binding_missing")?;
+            if entry.generation != request.generation || entry.closed_at_ms.is_some() {
+                return Err("native_binding_changed");
+            }
+            let source =
+                crate::native_runtime::Cursor::attach(&request.rollout_path, root, &id, now)
+                    .map_err(|_| "native_runtime_source_unavailable")?;
+            if entry
+                .runtime
+                .as_ref()
+                .is_some_and(|current| current.same_source(&source))
+            {
+                return Ok((response(&id, entry), false));
+            }
+            entry.runtime = Some(source);
+            entry.min_activity_at_ms = now;
+            entry.receipt = None;
+            Ok((response(&id, entry), true))
+        })
+    }
+
+    pub fn refresh_runtime(&self, now: u64) {
+        let start = self.runtime_cursor.fetch_add(8, Ordering::Relaxed) as usize;
+        let result = self.update(|ledger| {
+            let keys: Vec<_> = ledger
+                .entries
+                .iter()
+                .filter(|(_, entry)| entry.closed_at_ms.is_none() && entry.runtime.is_some())
+                .map(|(id, _)| id.clone())
+                .collect();
+            if keys.is_empty() {
+                return Ok((Value::Null, false));
+            }
+            let mut changed = false;
+            for key in keys
+                .iter()
+                .cycle()
+                .skip(start % keys.len())
+                .take(keys.len().min(8))
+            {
+                let entry = ledger.entries.get_mut(key).unwrap();
+                let runtime = entry.runtime.as_mut().unwrap();
+                match runtime.poll(entry.min_activity_at_ms, now) {
+                    Ok(observed) => {
+                        changed |= observed.changed;
+                        if let Some((at, call)) = observed.receipt.filter(|(at, _)| {
+                            entry
+                                .receipt
+                                .as_ref()
+                                .is_none_or(|old| *at >= old.actual_at_ms)
+                        }) {
+                            entry.receipt = Some(Receipt {
+                                actual_at_ms: at,
+                                event_id: format!("runtime:{call}"),
+                                tool: "runtime_tool_metadata".into(),
+                                kind: "inspect".into(),
+                                exit_code: None,
+                            });
+                            changed = true;
+                        }
+                        if let Some((at, outcome)) = observed.ended {
+                            entry.closed_at_ms = Some(at);
+                            entry.outcome = Some(outcome.into());
+                            changed = true;
+                        }
+                    }
+                    Err(error) => {
+                        if runtime.error.as_deref() != Some(error) {
+                            runtime.error = Some(error.into());
+                            changed = true;
+                        }
+                    }
+                }
+            }
+            Ok((Value::Null, changed))
+        });
+        *self.runtime_error.lock().unwrap_or_else(|e| e.into_inner()) = result.err();
     }
 }
 
@@ -472,6 +625,154 @@ impl Registry {
 mod tests {
     use super::*;
     const ID: &str = "00000000-0000-7000-8000-000000000001";
+    #[test]
+    fn connected_runtime_collects_one_real_result_then_terminal_zero_without_manual_activity() {
+        use std::io::Write;
+        let temp = tempfile::tempdir().unwrap();
+        let registry = Registry::new(temp.path());
+        let source_root = temp.path().join("sessions");
+        fs::create_dir(&source_root).unwrap();
+        let source = source_root.join(format!("rollout-{ID}.jsonl"));
+        fs::write(
+            &source,
+            format!("{{\"type\":\"session_meta\",\"payload\":{{\"id\":\"{ID}\"}}}}\n"),
+        )
+        .unwrap();
+        register(&registry, 100);
+        registry
+            .connect_at(
+                Connect {
+                    session_id: ID.into(),
+                    generation: 1,
+                    rollout_path: source.clone(),
+                },
+                &source_root,
+                101,
+            )
+            .unwrap();
+        assert_eq!(registry.view(101)["verifiedCount"], 0);
+        let append = |value: Value| {
+            writeln!(
+                fs::OpenOptions::new().append(true).open(&source).unwrap(),
+                "{value}"
+            )
+            .unwrap();
+        };
+        append(
+            json!({"timestamp":"1970-01-01T00:00:00.102Z","type":"response_item","payload":{"type":"custom_tool_call","name":"exec_command","call_id":"real_call"}}),
+        );
+        append(
+            json!({"timestamp":"1970-01-01T00:00:00.103Z","type":"response_item","payload":{"type":"custom_tool_call_output","call_id":"real_call","output":[{"type":"input_text","text":"Script completed"}]}}),
+        );
+        registry.refresh_runtime(104);
+        let live = registry.view(104);
+        assert_eq!(live["verifiedCount"], 1);
+        assert_eq!(live["runtimeConnections"], 1);
+        registry
+            .connect_at(
+                Connect {
+                    session_id: ID.into(),
+                    generation: 1,
+                    rollout_path: source.clone(),
+                },
+                &source_root,
+                105,
+            )
+            .unwrap();
+        assert_eq!(
+            registry.view(105)["verifiedCount"],
+            1,
+            "repeated connection cannot discard a real receipt"
+        );
+        registry.refresh_runtime(105);
+        assert_eq!(registry.view(105)["verifiedCount"], 1);
+        append(
+            json!({"timestamp":"1970-01-01T00:00:00.106Z","type":"event_msg","payload":{"type":"task_complete"}}),
+        );
+        registry.refresh_runtime(107);
+        assert_eq!(registry.view(107)["verifiedCount"], 0);
+        assert_eq!(registry.view(107)["bindings"][0]["state"], "closed");
+        assert!(!live.to_string().contains(source.to_str().unwrap()));
+    }
+    #[test]
+    fn connected_runtime_read_failure_is_not_reported_as_a_successful_zero() {
+        let temp = tempfile::tempdir().unwrap();
+        let registry = Registry::new(temp.path());
+        let source_root = temp.path().join("sessions");
+        fs::create_dir(&source_root).unwrap();
+        let source = source_root.join(format!("rollout-{ID}.jsonl"));
+        fs::write(
+            &source,
+            format!("{{\"type\":\"session_meta\",\"payload\":{{\"id\":\"{ID}\"}}}}\n"),
+        )
+        .unwrap();
+        register(&registry, 100);
+        registry
+            .connect_at(
+                Connect {
+                    session_id: ID.into(),
+                    generation: 1,
+                    rollout_path: source.clone(),
+                },
+                &source_root,
+                101,
+            )
+            .unwrap();
+        use std::io::Write;
+        writeln!(
+            fs::OpenOptions::new().append(true).open(&source).unwrap(),
+            "broken record"
+        )
+        .unwrap();
+        registry.refresh_runtime(102);
+        assert_eq!(
+            registry.view(102)["collectionIssues"][0]["reason"],
+            "source_record_invalid"
+        );
+        let backup = source_root.join("owned-fixture-paused");
+        fs::rename(&source, &backup).unwrap();
+        registry.refresh_runtime(102);
+        let failure = registry.view(102);
+        assert_eq!(failure["state"], "partial");
+        assert_eq!(failure["collectionIssues"][0]["reason"], "read_failed");
+        assert_eq!(failure["collectionIssues"][0]["lastSuccessAt"], 101);
+        fs::rename(&backup, &source).unwrap();
+        registry.refresh_runtime(103);
+        assert_eq!(
+            registry.view(103)["state"],
+            "partial",
+            "recovered I/O does not erase an earlier observation gap"
+        );
+        assert_eq!(
+            registry.view(103)["collectionIssues"][0]["reason"],
+            "source_record_invalid"
+        );
+    }
+    #[test]
+    fn healthy_empty_and_closed_native_collections_are_real_zero_with_bounded_scope() {
+        let temp = tempfile::tempdir().unwrap();
+        let registry = Registry::new(temp.path());
+        let empty = registry.view(100);
+        assert_eq!(empty["state"], "complete");
+        assert_eq!(empty["verifiedCount"], 0);
+        assert_eq!(empty["scope"], "connected_sessions");
+        register(&registry, 100);
+        registry.activity(result(1, 101), 101).unwrap();
+        assert_eq!(registry.view(101)["verifiedCount"], 1);
+        registry
+            .close(
+                Close {
+                    session_id: ID.into(),
+                    generation: 1,
+                    ended_at_ms: 102,
+                    outcome: "success".into(),
+                },
+                102,
+            )
+            .unwrap();
+        assert_eq!(registry.view(102)["state"], "complete");
+        assert_eq!(registry.view(102)["verifiedCount"], 0);
+    }
     fn register(registry: &Registry, now: u64) -> Value {
         registry
             .register(
@@ -548,17 +849,19 @@ mod tests {
         assert_eq!(next["generation"], 2);
         assert_eq!(registry.view(200)["sessions"], json!([]));
         assert!(registry.activity(result(1, 201), 201).is_err());
-        assert!(registry
-            .close(
-                Close {
-                    session_id: ID.into(),
-                    generation: 1,
-                    ended_at_ms: 201,
-                    outcome: "success".into()
-                },
-                201
-            )
-            .is_err());
+        assert!(
+            registry
+                .close(
+                    Close {
+                        session_id: ID.into(),
+                        generation: 1,
+                        ended_at_ms: 201,
+                        outcome: "success".into()
+                    },
+                    201
+                )
+                .is_err()
+        );
     }
     #[test]
     fn old_snapshot_and_supervision_never_become_current_work() {
@@ -588,25 +891,29 @@ mod tests {
         fs::create_dir_all(registry.path.parent().unwrap()).unwrap();
         fs::write(&registry.path, b"broken").unwrap();
         let broken = Registry::new(temp.path());
-        assert!(broken
-            .register(
-                Register {
-                    session_id: ID.into(),
-                    todo_id: 1,
-                    role: "work".into(),
-                    business_project: None
-                },
-                1
-            )
-            .is_err());
+        assert!(
+            broken
+                .register(
+                    Register {
+                        session_id: ID.into(),
+                        todo_id: 1,
+                        role: "work".into(),
+                        business_project: None
+                    },
+                    1
+                )
+                .is_err()
+        );
         assert_eq!(fs::read(&registry.path).unwrap(), b"broken");
     }
     #[test]
     fn status_only_or_rejected_operations_are_not_receipts() {
-        assert!(serde_json::from_value::<Activity>(
-            json!({"session_id":ID,"generation":1,"status":"working"})
-        )
-        .is_err());
+        assert!(
+            serde_json::from_value::<Activity>(
+                json!({"session_id":ID,"generation":1,"status":"working"})
+            )
+            .is_err()
+        );
         let temp = tempfile::tempdir().unwrap();
         let registry = Registry::new(temp.path());
         register(&registry, 100);
@@ -622,10 +929,12 @@ mod tests {
         let registry = Registry::new(temp.path());
         register(&registry, 200);
         assert!(registry.activity(result(1, 199), 200).is_err());
-        assert!(registry.view(200)["sessions"]
-            .as_array()
-            .unwrap()
-            .is_empty());
+        assert!(
+            registry.view(200)["sessions"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
     }
 
     #[test]
@@ -792,6 +1101,7 @@ mod tests {
                             receipt: None,
                             closed_at_ms: Some(20),
                             outcome: Some("success".into()),
+                            runtime: None,
                         },
                     );
                 }
@@ -819,10 +1129,12 @@ mod tests {
         assert_eq!(files.len(), 1);
         let archived: Ledger = serde_json::from_slice(&fs::read(files[0].path()).unwrap()).unwrap();
         assert_eq!(archived.entries.len(), 128);
-        assert!(archived
-            .entries
-            .values()
-            .all(|entry| entry.outcome.as_deref() == Some("success")));
+        assert!(
+            archived
+                .entries
+                .values()
+                .all(|entry| entry.outcome.as_deref() == Some("success"))
+        );
         let returned = registry
             .register(
                 Register {

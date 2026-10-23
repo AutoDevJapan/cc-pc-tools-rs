@@ -14,6 +14,22 @@ import (
 
 // Plan.source() in the reviewed Windows producer, not a caller-supplied tree.
 const ci3250Git = "runtime/runner/_work/civ6-banseiki/civ6-banseiki/.git"
+const ci3250Worktree = "D:/CC/Work/unattended-operations-20261013-wt/todo-2962-ci-pc-actions"
+
+func ci3250OwnedParent(root string) bool {
+	return same(root, `C:\Users\makhmeto\AppData\Local\Temp`) || same(root, ci3250Worktree)
+}
+
+func ci3250QuarantineParent(root, configured string) string {
+	if same(root, ci3250Worktree) && same(configured, `C:\Users\makhmeto\Downloads\削除希望`) {
+		return `D:\削除希望`
+	}
+	return configured
+}
+
+func ci3250PreservedReason(root, reason string) bool {
+	return reason == "windows" || same(root, ci3250Worktree) && (reason == "size" || reason == "attributes")
+}
 
 func ci3250WinPath(path string) string {
 	p, e := filepath.Abs(path)
@@ -54,7 +70,7 @@ func (c config) ci3250Candidate(id string) bool {
 		return false
 	}
 	r, e := c.load(id, true)
-	return e == nil && r.Project == "civ6-ci-queue" && strings.HasPrefix(r.Content, "job-") && same(r.Root, `C:\Users\makhmeto\AppData\Local\Temp`)
+	return e == nil && r.Project == "civ6-ci-queue" && strings.HasPrefix(r.Content, "job-") && ci3250OwnedParent(r.Root)
 }
 
 func (c config) ci3250Recovery(id string) (*ci3174Scope, func(), error) {

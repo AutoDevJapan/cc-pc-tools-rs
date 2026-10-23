@@ -25,7 +25,9 @@
     "model_called": false,
     "raw_sha256": "b901d6be8cbdc07360094ac82b53e26a5a5790b0ac6f89d4d34ef809ec6e6935"
   },
-  "postinstall_review": "未受入。今回のv2と実配置差分を次の限定レビューへ渡す。",
+  "postinstall_review": "3296が固定e127436の実link5・原文/MIT・記録・台帳一致を確認しMust0。既存diagnosing-bugs1件は配置後に別改訂があり、全28manifestは配置時の歴史として保持する。",
   "scope": "新規link1名のみ配置。既存27/managed/junction/guardは不変。実manual編集/モデルターン/private履歴は未実行。",
-  "recorded_at": "2026-10-21T05:39:42.9339436Z"
+  "recorded_at": "2026-10-21T05:39:42.9339436Z",
+  "external_revision_evidence": "skills-3080-external-revision-evidence.json",
+  "current28_snapshot_time_scope": "配置/検査当時14:39 JSTの履歴。3296時点では140記録中139一致と既存1ファイルの後続別改訂を観測。新参照も増えており、現在の全件ファイル集合を140と保証しない。"
 }

@@ -3,6 +3,7 @@ package main
 import (
 	contract "cc/civ6-ci-contract"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -156,6 +157,97 @@ func TestRetirement3250ScopeIsFiniteAndProvenanceBound(t *testing.T) {
 			}
 			if _, ok := retirement3250Binding(path, r, l, now); ok {
 				t.Fatal("out-of-scope input admitted")
+			}
+		})
+	}
+}
+
+func TestRetirement3250QualifiedWorktreeParent(t *testing.T) {
+	now := time.Date(2026, 10, 23, 0, 0, 0, 0, time.UTC)
+	for _, parent := range []string{civ6Source, civ6Source + "-other", filepath.Join(civ6Source, "nested"), filepath.Dir(civ6Source)} {
+		r, l := retirement3250Fixture(now)
+		r.Root, r.Path = parent, filepath.Join(parent, "codex-owned-"+r.ID)
+		l.Entries[owned3107Key].Cleanup.Root = r.Path
+		_, ok := retirement3250Binding(r.Path, r, l, now)
+		if ok != same(parent, civ6Source) {
+			t.Fatalf("worktree parent %s misclassified", parent)
+		}
+	}
+	volume, id, birth, ok := retirement3250Parent(civ6Source)
+	if !ok || volume != 1215965535 || id != 0x00a300000003a5c1 || birth != 134368742189204451 {
+		t.Fatal("independent immutable source parent anchor differs")
+	}
+}
+
+func retirement3250ReplacementFixture(t *testing.T, now time.Time) (retirement3250Record, retirement3250Ledger, []byte) {
+	t.Helper()
+	r, l := retirement3250Fixture(now)
+	old := l.Entries[owned3107Key]
+	old.Queued.At = now.Add(-27 * time.Hour).Format(time.RFC3339)
+	original := *old
+	old.State = "refused"
+	next := *old
+	next.Plan.Attempt, next.Plan.JobID = 2, old.Plan.JobID+1
+	next.Key = fmt.Sprintf("%d/2/%d", next.Plan.RunID, next.Plan.JobID)
+	next.Replaces, next.State = old.Key, "needs_recovery"
+	next.Queued.At = now.Add(-2 * time.Hour).Format(time.RFC3339)
+	next.Queued.Deferrals = 0
+	r.ID = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	r.Path = filepath.Join(r.Root, "codex-owned-"+r.ID)
+	r.Content = fmt.Sprintf("job-%d-2-%d", next.Plan.RunID, next.Plan.JobID)
+	next.Cleanup = retirement3250Cleanup{ID: r.ID, Instance: r.ID, Root: r.Path}
+	l.Entries[next.Key] = &next
+	proof := map[string]any{"original_entry": original, "replacement_plan": next.Plan, "cancelled_job": map[string]any{
+		"id": old.Plan.JobID, "run_id": old.Plan.RunID, "run_attempt": 1, "head_sha": old.Plan.Head, "name": old.Plan.JobName,
+		"status": "completed", "conclusion": "cancelled", "runner_id": 0, "runner_name": "", "steps": []any{},
+		"started_at": now.Add(-27 * time.Hour).Format(time.RFC3339), "completed_at": now.Add(-3 * time.Hour).Format(time.RFC3339)},
+		"process_census": map[string]int{"queryable_account_process_count": 0, "unreadable_process_count": 3}}
+	b, err := json.Marshal(proof)
+	if err != nil {
+		t.Fatal(err)
+	}
+	l.Budget.Replacements = []retirement3250Replacement{{Original: old.Key, Replacement: next.Key, ProofSHA256: hashBytes(b)}}
+	return r, l, b
+}
+
+func TestRetirement3250ReplacementKeepsOriginalFiniteSlots(t *testing.T) {
+	now := time.Date(2026, 10, 23, 0, 0, 0, 0, time.UTC)
+	r, l, b := retirement3250ReplacementFixture(t, now)
+	e, ok := retirement3250Binding(r.Path, r, l, now)
+	if !ok || !retirement3250ReplacementProofValid(e, l, b) {
+		t.Fatal("reviewed same-slot replacement rejected")
+	}
+	for _, bad := range []string{"no-link", "other-parent", "wrong-attempt", "wrong-source", "duplicate-original", "wrong-proof", "original-still-active", "unknown-original", "proof-assigned"} {
+		t.Run(bad, func(t *testing.T) {
+			r, l, b := retirement3250ReplacementFixture(t, now)
+			x := l.Entries[l.Budget.Replacements[0].Replacement]
+			switch bad {
+			case "no-link":
+				x.Replaces = ""
+			case "other-parent":
+				x.Replaces = "999/1/1"
+			case "wrong-attempt":
+				x.Plan.Attempt = 3
+			case "wrong-source":
+				x.Plan.Head = strings.Repeat("f", 40)
+			case "duplicate-original":
+				l.Budget.Replacements = append(l.Budget.Replacements, l.Budget.Replacements[0])
+			case "wrong-proof":
+				b = append(b, ' ')
+			case "original-still-active":
+				l.Entries[owned3107Key].State = "running"
+			case "unknown-original":
+				l.Budget.Initial = nil
+			case "proof-assigned":
+				var p map[string]any
+				_ = json.Unmarshal(b, &p)
+				p["cancelled_job"].(map[string]any)["runner_id"] = float64(42)
+				b, _ = json.Marshal(p)
+				l.Budget.Replacements[0].ProofSHA256 = hashBytes(b)
+			}
+			e, ok := retirement3250Binding(r.Path, r, l, now)
+			if ok && retirement3250ReplacementProofValid(e, l, b) {
+				t.Fatal("unbound replacement promoted")
 			}
 		})
 	}

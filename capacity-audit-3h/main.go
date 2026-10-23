@@ -73,6 +73,7 @@ type report struct {
 	EFilesTouched    bool               `json:"e_files_touched"`
 	EArchiveMarginOK *bool              `json:"e_at_least_500_gib_free"`
 	ElapsedMS        int64              `json:"elapsed_ms"`
+	Decision         *decisionReceipt   `json:"decision_queue,omitempty"`
 }
 
 func within(root, child string, allowRoot bool) bool {
@@ -363,6 +364,13 @@ func run() error {
 	if err := saveCheckpoint(statePath, state); err != nil {
 		return err
 	}
+	// Persist measurements first; queue failure cannot erase the scan. A retry
+	// uses the shared ToDo lock and reuses the same finite decision row.
+	r.Decision = queueDecision(r)
+	state.Last = &r
+	if err := saveCheckpoint(statePath, state); err != nil {
+		return err
+	}
 	log, err := os.OpenFile(filepath.Join(runtimeRoot, "runs.jsonl"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
@@ -381,6 +389,9 @@ func run() error {
 	// A GUI-subsystem scheduled process can have no stdout handle. Persisted
 	// and synced receipts are mandatory; the optional console copy is not.
 	_ = json.NewEncoder(os.Stdout).Encode(r)
+	if r.Decision.Status == "queue_unavailable" {
+		return errors.New("decision queue unavailable; measurements retained")
+	}
 	return nil
 }
 

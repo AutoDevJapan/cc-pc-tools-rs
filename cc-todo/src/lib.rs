@@ -30,6 +30,7 @@ pub use cc_job_policy::todo_store::{
 };
 pub use cc_job_policy::todo_wait::pending_on;
 pub mod answered_wait;
+pub mod capacity_cycle;
 pub mod conversation_wait;
 pub mod direction_record;
 pub mod product_resume;
@@ -60,6 +61,23 @@ pub struct SubworkOptions {
 }
 #[derive(Subcommand, Debug)]
 pub enum Command {
+    /// Queue or reuse the one finite capacity-decision worker; never launch it.
+    CapacityCycle {
+        #[arg(long)]
+        report_file: PathBuf,
+        #[arg(long)]
+        spec: PathBuf,
+        #[arg(long)]
+        project: String,
+    },
+    /// Record aggregate decisions for the exact active measurement generation.
+    CapacityResult {
+        id: i64,
+        #[arg(long)]
+        result_file: PathBuf,
+    },
+    /// Read only the new anonymous capacity decision record; never open old scan logs.
+    CapacityStatus,
     #[command(args_override_self = true, infer_long_args = true)]
     Project { name: String, path: String },
     /// Rename one project and its display text without changing paths or task state.
@@ -1040,6 +1058,18 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
     }
     let mut output = Vec::new();
     match cmd {
+        Command::CapacityStatus => output.push(capacity_cycle::status(db)?.to_string()),
+        Command::CapacityCycle {
+            report_file,
+            spec,
+            project,
+        } => output.push(
+            capacity_cycle::ingest(db, paths, project, report_file, spec, ready::now_epoch())?
+                .to_string(),
+        ),
+        Command::CapacityResult { id, result_file } => {
+            output.push(capacity_cycle::record_result(db, *id, result_file)?.to_string())
+        }
         Command::Project { name, path } => {
             db["projects"][cc_task_title::canonical_project(name)] = json!(path)
         }
@@ -1312,6 +1342,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
         }
         Command::Done { id, note } => {
             let i = find(db, *id)?;
+            capacity_cycle::validate_completion(i)?;
             i["status"] = json!("done");
             set_progress(i, 100)?;
             if !note.is_empty() {
@@ -1551,6 +1582,7 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
     if matches!(
         cli.command,
         Command::List { .. }
+            | Command::CapacityStatus
             | Command::RenameProject { dry_run: true, .. }
             | Command::History { .. }
             | Command::ArchiveHistory { apply: false, .. }

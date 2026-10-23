@@ -306,8 +306,11 @@ func (f *fixture) guard(args ...string) ([]byte, int, bool) {
 
 func (f *fixture) env() environment {
 	return environment{
-		guard:      f.guard,
-		git:        runGit,
+		guard: f.guard,
+		git: func(root string, args ...string) ([]byte, error) {
+			f.record("git:" + strings.Join(args, " "))
+			return runGit(root, args...)
+		},
 		beforeRead: func(path string) { f.record("read:" + key(path)) },
 		beforeRecheck: func() {
 			if f.onRecheck != nil {
@@ -415,6 +418,10 @@ func TestQualifiesFixedUpdate(t *testing.T) {
 	}
 	if f.index("guard-path:"+key(f.target)) >= 0 {
 		t.Errorf("the general classifier was used for the installed leaf")
+	}
+	// Git reads only refs, configuration and objects, never a working file.
+	if expectGitObjectOnly(t, f) == 0 {
+		t.Errorf("the source was verified without Git")
 	}
 }
 
@@ -575,26 +582,27 @@ func TestRejectsTamperedOrMissingEvidence(t *testing.T) {
 
 func TestRejectsSourceChanges(t *testing.T) {
 	cases := []struct {
-		name string
-		edit func(*fixture)
+		name, want string
+		edit       func(*fixture)
 	}{
-		{"another origin", func(f *fixture) {
+		{"another origin", "source_git", func(f *fixture) {
 			f.git("remote", "set-url", "origin", "https://github.com/someone-else/cc-pc-tools-rs.git")
 		}},
-		{"no origin", func(f *fixture) { f.git("remote", "remove", "origin") }},
-		{"HEAD moved after the build", func(f *fixture) {
+		{"no origin", "source_git", func(f *fixture) { f.git("remote", "remove", "origin") }},
+		{"HEAD moved after the build", "source_git", func(f *fixture) {
 			f.git("-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "--allow-empty", "-m", "later")
 		}},
-		{"tracked input edited", func(f *fixture) { f.write("lib-a/src/lib.rs", crlf("pub fn a() { panic!() }\n")) }},
-		{"tracked input deleted", func(f *fixture) { os.Remove(f.path("lib-a/src/lib.rs")) }},
-		{"another tree is pinned", func(f *fixture) { f.p.tree = strings.Repeat("6", 40) }},
-		{"head not merged into origin/main", func(f *fixture) { f.git("update-ref", "-d", "refs/remotes/origin/main") }},
+		// The reader compares inputs itself; Git never reads them.
+		{"tracked input edited", "input", func(f *fixture) { f.write("lib-a/src/lib.rs", crlf("pub fn a() { panic!() }\n")) }},
+		{"tracked input deleted", "input", func(f *fixture) { os.Remove(f.path("lib-a/src/lib.rs")) }},
+		{"another tree is pinned", "source_git", func(f *fixture) { f.p.tree = strings.Repeat("6", 40) }},
+		{"head not merged into origin/main", "source_git", func(f *fixture) { f.git("update-ref", "-d", "refs/remotes/origin/main") }},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newFixture(t, nil)
 			tc.edit(f)
-			expectReason(t, f, "source_git")
+			expectReason(t, f, tc.want)
 		})
 	}
 	t.Run("source root is a subdirectory of the worktree", func(t *testing.T) {
@@ -724,8 +732,9 @@ func TestPinnedFilesResistReplacement(t *testing.T) {
 }
 
 func TestRejectsChangesBeforeRecheck(t *testing.T) {
+	// Inputs stay pinned against writes and tracked files outside the inputs are
+	// never read (TestGitNeverReadsWorkingFiles), so the races left are Git's.
 	cases := map[string]func(*fixture){
-		"tracked non-input edited": func(f *fixture) { f.write("README.md", "changed during verification\n") },
 		"new commit": func(f *fixture) {
 			f.git("-c", "user.name=fixture", "-c", "user.email=fixture@example.invalid", "commit", "-q", "--allow-empty", "-m", "racing")
 		},
@@ -764,6 +773,10 @@ func TestRejectsProtectedResources(t *testing.T) {
 				f := newFixture(t, nil)
 				f.protected[key(f.path(rel))] = verdict
 				expectReason(t, f, "guard_classification")
+				if f.index("read:"+key(f.path(rel))) >= 0 {
+					t.Fatalf("%s was read although the guard refused it", rel)
+				}
+				expectGitObjectOnly(t, f)
 			})
 		}
 	}

@@ -58,6 +58,15 @@ fn main() {
         return;
     }
     if args.iter().any(|a| a == "logs") {
+        // Fault injection: collection can finish after the sampler's start time.
+        // This delay reproduces slow metadata I/O, rather than waiting for a child.
+        if std::env::var("CC_JOBS_FIXTURE_DIR").is_ok_and(|dir| {
+            std::path::Path::new(&dir)
+                .join("delay-capacity-observation")
+                .exists()
+        }) {
+            std::thread::sleep(Duration::from_millis(1500));
+        }
         let previous = std::env::var("CC_JOBS_FIXTURE_DIR")
             .ok()
             .and_then(|dir| {
@@ -84,10 +93,14 @@ fn main() {
             .find(|w| w[0] == "--model")
             .map(|w| w[1].as_str())
             .unwrap_or("gpt-6-luna");
+        // A log query reports the failed attempt's time, not the time spent
+        // collecting metadata. Otherwise a slow query invents a future event
+        // relative to the sampler and correctly fails attribution.
+        let timestamp = previous.as_ref().and_then(|call| call["timestamp"].as_i64());
         println!(
             "{}",
             json!({"logs":[{"model":model,"accountLogLabel":label,"status":503,
-            "timestamp":chrono::Local::now().timestamp_millis()}]})
+            "timestamp":timestamp}]})
         );
         return;
     }
@@ -423,6 +436,7 @@ fn main() {
             .and_then(|bytes| serde_json::from_slice::<Value>(&bytes).ok())
             .unwrap_or(Value::Null);
         writeln!(log, "{}", json!({"argv":args,"cwd":std::env::current_dir().unwrap().to_string_lossy(),
+            "timestamp":chrono::Local::now().timestamp_millis(),
             "prompt":String::from_utf8_lossy(&fs::read(root.join("stdin.bin")).unwrap()),
             "catalog_model":catalog["models"][0]["slug"],"catalog_context":catalog["models"][0]["context_window"]})).unwrap();
         let selected = args

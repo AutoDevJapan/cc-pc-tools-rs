@@ -133,9 +133,13 @@ type namedEntry struct {
 // opened.
 func (s *session) openObjects(src sourceObjects, limits objectLimits) (*objectStore, string) {
 	o := &objectStore{s: s, dir: src.dir, limits: limits, shallow: map[string]bool{}, kinds: map[string]string{}, cache: map[packedAt]packedObject{}}
+	// When Git first parses a commit it reads the shallow file and looks each
+	// name up as a commit (shallow.c, register_shallow), whether or not the
+	// history reaches it, so each name has the commit type from the start.
 	if text, ok := strings.CutSuffix(string(src.shallow), "\n"); ok {
 		for _, id := range strings.Split(text, "\n") {
 			o.shallow[id] = true
+			o.kinds[id] = "commit"
 		}
 	}
 	dir := filepath.Join(src.dir, "pack")

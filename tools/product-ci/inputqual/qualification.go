@@ -43,6 +43,7 @@ type Report struct {
 	ReviewSHA                         string `json:"review_sha256"`
 	AcceptanceSHA                     string `json:"acceptance_sha256"`
 	ScopeSHA                          string `json:"scope_sha256"`
+	OwnerScopeSHA                     string `json:"owner_scope_sha256,omitempty"`
 	IndependentReceiptSHA             string `json:"independent_receipt_sha256"`
 	OriginalRegistryRecovered         bool   `json:"original_registry_recovered"`
 	GeneralClassificationUnverified   bool   `json:"general_classification_unverified"`

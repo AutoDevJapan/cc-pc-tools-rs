@@ -105,3 +105,10 @@ that merged PR. Operational use and success through this route remain unverified
 It has no caller
 path argument and does not reuse the formerly rejected three inputs. Its input
 qualification and fixture checks are not a claim of new official job success.
+
+The separate [successor route](../../docs/product-ci-successor-3059.md) implements
+the subsequent owner answer for ordinary corrections from the same original
+product parent. It retains its verified answer and original3056 identity in each
+binding, while the old single995 and finite995/939 routes remain unchanged.
+It must still be deployed and prove a naturally required official successor job;
+earlier995 successes are not results of the new route.

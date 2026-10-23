@@ -469,22 +469,28 @@ func (c config) quarantine(id, reason string) (result map[string]any, err error)
 		defer unlock()
 		return c.quarantinePreserved(id, reason, nil, scope)
 	}
-	if reason == "windows" && c.ci3250Candidate(id) {
-		scope, unlock, e := c.ci3250Recovery(id)
-		if e != nil {
-			var refused *failure
-			if errors.As(e, &refused) && refused.Code == "CI_RETIREMENT_UNQUALIFIED" {
-				return c.quarantineScoped(id, reason, nil)
-			}
-			return nil, e
-		}
-		defer unlock()
+	if c.ci3250Candidate(id) {
 		r, e := c.load(id, true)
 		if e != nil {
 			return nil, e
 		}
-		c.Quarantine = ci3250QuarantineParent(r.Root, c.Quarantine)
-		return c.quarantinePreserved(id, reason, nil, scope)
+		if ci3250PreservedReason(r.Root, reason) {
+			scope, unlock, e := c.ci3250Recovery(id)
+			if e != nil {
+				var refused *failure
+				if errors.As(e, &refused) && refused.Code == "CI_RETIREMENT_UNQUALIFIED" {
+					return c.quarantineScoped(id, reason, nil)
+				}
+				return nil, e
+			}
+			defer unlock()
+			r, e := c.load(id, true)
+			if e != nil {
+				return nil, e
+			}
+			c.Quarantine = ci3250QuarantineParent(r.Root, c.Quarantine)
+			return c.quarantinePreserved(id, reason, nil, scope)
+		}
 	}
 	var scope *geminiScope
 	if reason == "hardlink" {

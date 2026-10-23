@@ -16,7 +16,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"unicode/utf8"
 )
 
 const base = "D:/CC/Work/runtime-recovery-20261012"
@@ -144,26 +143,16 @@ func boundedSchedulerTree(path string) bool {
 	return false
 }
 func legacyMatch(path string) bool {
-	// Never emit, copy, or return any line from the private registry.
-	file, err := os.Open("D:/CC/Tools/client-projects.txt")
-	if err != nil {
-		return !os.IsNotExist(err)
-	}
-	defer file.Close()
-	data, err := io.ReadAll(io.LimitReader(file, 1024*1024+1))
-	if err != nil || len(data) > 1024*1024 || !utf8.Valid(data) || len(strings.TrimSpace(string(data))) == 0 {
-		return true
-	}
-	normalized := strings.ToLower(strings.ReplaceAll(path, "\\", "/"))
-	for _, line := range strings.Split(strings.TrimPrefix(string(data), "\ufeff"), "\n") {
-		entry := strings.ToLower(strings.TrimSpace(line))
-		if entry != "" && !strings.HasPrefix(entry, "#") && strings.Contains(normalized, strings.ReplaceAll(entry, "\\", "/")) {
-			return true
-		}
-	}
-	return false
+	state := ownerLegacyProtection(path)
+	return state == ownerLegacyClient || state == ownerLegacyUnavailable
 }
 func allowed(path string) bool {
+	return classifyOwnerPath(path).AccessAllowed
+}
+
+// Existing, purpose-checked operational receipts remain supported. They do not
+// define the owner's protection categories or replace normal source identity.
+func repairPathAllowed(path string) bool {
 	path, e := portable(path)
 	if e != nil {
 		return false
@@ -243,12 +232,9 @@ func allowed(path string) bool {
 			return true
 		}
 	}
-	if !sourceVerified(base) {
-		return false
-	}
 	for _, receipt := range receipts {
 		resolved, e := physical(receipt)
-		if e == nil && same(absolute, receipt) && same(target, resolved) {
+		if e == nil && same(absolute, receipt) && same(target, resolved) && sourceVerified(base) {
 			return true
 		}
 	}
@@ -256,14 +242,18 @@ func allowed(path string) bool {
 }
 
 type guardArgs struct {
-	runtimeUpdate    string
-	runtimeUpdateSet bool
-	path, succession string
-	product          int
-	pathSet          bool
-	productSet       bool
-	successionSet    bool
-	remainingArgs    bool
+	path, succession  string
+	runtimeUpdate     string
+	runtimeUpdateSet  bool
+	refresh           string
+	refreshSet        bool
+	refreshRequest    string
+	refreshRequestSet bool
+	product           int
+	pathSet           bool
+	productSet        bool
+	successionSet     bool
+	remainingArgs     bool
 }
 
 func parseGuardArgs(args []string) (guardArgs, error) {
@@ -272,9 +262,11 @@ func parseGuardArgs(args []string) (guardArgs, error) {
 	path := flags.String("guard-path", "", "resource absolute path")
 	product := flags.Int("verify-product-resume", 0, "verify original ToDo 1626, 2407 or 2475; no launch or mutation")
 	succession := flags.String("verify-current-succession", "", "verify one declared current product successor; no launch or mutation")
+	refresh := flags.String("refresh-owner-source", "", "refresh one positively registered self-source identity; no source content read")
+	refreshRequest := flags.String("refresh-request", "", "owned finite refresh request identity")
 	runtimeUpdate := flags.String("verify-capacity-runtime-update", "", "qualify one exact ToDo3085 software update; grants no data access")
 	err := flags.Parse(args)
-	parsed := guardArgs{path: *path, succession: *succession, product: *product, remainingArgs: flags.NArg() != 0}
+	parsed := guardArgs{path: *path, succession: *succession, product: *product, refresh: *refresh, refreshRequest: *refreshRequest, remainingArgs: flags.NArg() != 0}
 	parsed.runtimeUpdate = *runtimeUpdate
 	flags.Visit(func(f *flag.Flag) {
 		switch f.Name {
@@ -286,6 +278,10 @@ func parseGuardArgs(args []string) (guardArgs, error) {
 			parsed.productSet = true
 		case "verify-current-succession":
 			parsed.successionSet = true
+		case "refresh-owner-source":
+			parsed.refreshSet = true
+		case "refresh-request":
+			parsed.refreshRequestSet = true
 		}
 	})
 	return parsed, err
@@ -314,6 +310,7 @@ func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "    \tverify original ToDo 1626, 2407 or 2475; no launch or mutation")
 	fmt.Fprintln(output, "  -verify-current-succession int")
 	fmt.Fprintln(output, "    \tverify one declared current product successor; no launch or mutation")
+	fmt.Fprintln(output, "  -refresh-owner-source string\n    \trefresh one positively registered self-source identity (bounded metadata only)")
 	fmt.Fprintln(output, "  -verify-capacity-runtime-update string")
 	fmt.Fprintln(output, "    \tqualify one exact ToDo3085 software update; grants no data access")
 	fmt.Fprintln(output, "  -verify-model-runtime-update string")
@@ -348,6 +345,14 @@ func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(i
 }
 
 func runGuardCLIWithRuntime(args []string, stdout, stderr io.Writer, currentVerifier func(int) object, runtimeVerifier func(string) object) int {
+	return runGuardCLIWithVerifiers(args, stdout, stderr, currentVerifier, runtimeVerifier, classifyOwnerPath)
+}
+
+func runGuardCLIWithPath(args []string, stdout, stderr io.Writer, currentVerifier func(int) object, pathVerifier func(string) ownerPathVerdict) int {
+	return runGuardCLIWithVerifiers(args, stdout, stderr, currentVerifier, capacity3085RuntimeReceipt, pathVerifier)
+}
+
+func runGuardCLIWithVerifiers(args []string, stdout, stderr io.Writer, currentVerifier func(int) object, runtimeVerifier func(string) object, pathVerifier func(string) ownerPathVerdict) int {
 	parsed, err := parseGuardArgs(args)
 	if err != nil {
 		if capacity3085FlagPresent(args) {
@@ -367,7 +372,7 @@ func runGuardCLIWithRuntime(args []string, stdout, stderr io.Writer, currentVeri
 		return 2
 	}
 	if capacity3085FlagPresent(args) {
-		if !parsed.runtimeUpdateSet || parsed.pathSet || parsed.productSet || parsed.successionSet || parsed.remainingArgs || !filepath.IsAbs(parsed.runtimeUpdate) {
+		if !parsed.runtimeUpdateSet || parsed.pathSet || parsed.productSet || parsed.successionSet || parsed.refreshSet || parsed.refreshRequestSet || parsed.remainingArgs || !filepath.IsAbs(parsed.runtimeUpdate) {
 			_ = json.NewEncoder(stdout).Encode(object{"qualified": false})
 			return 1
 		}
@@ -383,6 +388,22 @@ func runGuardCLIWithRuntime(args []string, stdout, stderr io.Writer, currentVeri
 	if currentSuccessionFlagPresent(args) && !parsed.successionSet {
 		_ = json.NewEncoder(stdout).Encode(object{"verified": false})
 		return 1
+	}
+	if parsed.refreshSet {
+		if parsed.pathSet || parsed.productSet || parsed.successionSet || parsed.remainingArgs || !filepath.IsAbs(parsed.refresh) {
+			_ = json.NewEncoder(stdout).Encode(object{"refreshed": false})
+			return 2
+		}
+		ok := ownerRefreshIdentityRequest(parsed.refresh, parsed.refreshRequest)
+		_ = json.NewEncoder(stdout).Encode(object{"refreshed": ok, "original_registry_recovered": false})
+		if !ok {
+			return 1
+		}
+		return 0
+	}
+	if parsed.refreshRequestSet {
+		_ = json.NewEncoder(stdout).Encode(object{"refreshed": false})
+		return 2
 	}
 	if parsed.successionSet {
 		if parsed.pathSet || parsed.productSet || parsed.remainingArgs {
@@ -417,10 +438,15 @@ func runGuardCLIWithRuntime(args []string, stdout, stderr io.Writer, currentVeri
 		return 0
 	}
 	ok := parsed.path != "" && filepath.IsAbs(parsed.path)
-	verified := ok && allowed(parsed.path)
+	verdict := ownerUnverified()
+	if ok {
+		verdict = pathVerifier(parsed.path)
+	}
 	retirement := ok && retirement3250PathAllowed(parsed.path)
-	verified = verified || retirement
-	result := map[string]any{"ok": ok, "client_resource": !verified, "classification_unverified": !verified, "ci_retirement_qualified": retirement, "original_registry_recovered": false, "scope": "verified repair source and explicitly supplied operational receipts only"}
+	if retirement && verdict.Status == "unverified" && !ownerCardPath(parsed.path) {
+		verdict = ownerPathVerdict{AccessAllowed: true, Status: "clear", Categories: []string{}}
+	}
+	result := map[string]any{"ok": ok, "client_resource": !verdict.AccessAllowed, "classification_unverified": verdict.Status == "unverified", "ci_retirement_qualified": retirement, "original_registry_recovered": false, "scope": "owner protection policy: client projects and owner card information; verified sources and purpose-checked receipts", "access_allowed": verdict.AccessAllowed, "protection_status": verdict.Status, "protection_categories": verdict.Categories}
 	_ = json.NewEncoder(stdout).Encode(result)
 	if !ok {
 		return 2

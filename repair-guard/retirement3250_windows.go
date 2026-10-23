@@ -128,6 +128,7 @@ type retirement3250Cleanup struct {
 }
 type retirement3250Entry struct {
 	Key, OS, Phase, State string
+	Replaces              string `json:"replaces_expired_entry"`
 	Plan                  contract.Plan
 	Cleanup               retirement3250Cleanup
 	Queued                struct {
@@ -137,7 +138,10 @@ type retirement3250Entry struct {
 }
 type retirement3250Ledger struct {
 	Version int
-	Budget  struct{ Initial, Normal, Continuation []string }
+	Budget  struct {
+		Initial, Normal, Continuation []string
+		Replacements                  []retirement3250Replacement `json:"expired_replacements"`
+	}
 	Entries map[string]*retirement3250Entry
 }
 
@@ -147,12 +151,16 @@ func retirement3250Binding(path string, r retirement3250Record, l retirement3250
 	if err != nil || created.Before(time.Date(2026, 10, 21, 0, 25, 0, 0, time.UTC)) || now.Before(created) || now.Sub(created) > 24*time.Hour ||
 		!parentOK || !retirement3250ID.MatchString(r.ID) || r.ID == owned3107ID || !same(path, filepath.Join(r.Root, "codex-owned-"+r.ID)) ||
 		!same(r.Path, path) || r.Version != 2 || r.State != "owned" || r.Destination != "" || r.Project != "civ6-ci-queue" || r.Volume == 0 || r.FileID == 0 ||
-		l.Version != 1 || len(l.Budget.Initial) > 3 || len(l.Budget.Normal) > 3 || len(l.Budget.Continuation) != 0 || len(l.Entries) > 6 {
+		l.Version != 1 || len(l.Budget.Initial) > 3 || len(l.Budget.Normal) > 3 || len(l.Budget.Continuation) != 0 || len(l.Entries) > 6+len(l.Budget.Replacements) {
+		return nil, false
+	}
+	keys, valid := retirement3250ReplacementKeys(l)
+	if !valid {
 		return nil, false
 	}
 	var found *retirement3250Entry
 	seen := map[string]bool{}
-	for _, key := range append(append([]string{}, l.Budget.Initial...), l.Budget.Normal...) {
+	for _, key := range keys {
 		if seen[key] {
 			return nil, false
 		}
@@ -180,6 +188,7 @@ func retirement3250Binding(path string, r retirement3250Record, l retirement3250
 		for _, k := range l.Budget.Initial {
 			initial = initial || k == key
 		}
+		initial = initial || e.Replaces != ""
 		if initial {
 			if e.Phase != "initial" || p.Event != "pull_request" || p.PR != 149 || p.Head != owned3107Head || p.Tree != owned3107Tree || p.Branch != "scheduler/actions-cost-pr-concurrency-20261019" {
 				return nil, false
@@ -270,6 +279,12 @@ func retirement3250Qualification(path string) string {
 	e, ok := retirement3250Binding(path, r, l, time.Now())
 	if !ok {
 		return "qualification-stage-5"
+	}
+	if e.Replaces != "" {
+		proof, ok := retirement3250RuntimeRead("state/entries/"+strings.ReplaceAll(e.Replaces, "/", "-")+"/replacement-2.json", 256<<10)
+		if !ok || !retirement3250ReplacementProofValid(e, l, proof) {
+			return "qualification-replacement-proof"
+		}
 	}
 	root, err := resourceIdentity(path, true)
 	created, _ := time.Parse(time.RFC3339Nano, r.Created)

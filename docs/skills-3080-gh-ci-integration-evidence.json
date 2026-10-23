@@ -1,0 +1,98 @@
+{
+  "todo": 3080,
+  "target": "github-actions-ci",
+  "inventory_id": "github:b42ae7debd7346ed232f75cdb212f9d8a9cb05bd347c93c8b7de82e8d5433fc8",
+  "disposition": "integrated_existing",
+  "new_skill_count": 0,
+  "integrated_occurrences": 1,
+  "created_files": 4,
+  "changed_existing_files": 2,
+  "preserved_old_guide": true,
+  "backup": "D:/CC/Skills/.trash/todo3080-gh-ci-20261023-034246",
+  "before_files": [
+    {
+      "path": "SKILL.md",
+      "bytes": 3593,
+      "sha256": "8e70684c4ac0d8b9e1cf3430277b341cba514faa283260f0910a9456f869bc7f"
+    },
+    {
+      "path": "references/gh-fix-ci/GUIDE.md",
+      "bytes": 3425,
+      "sha256": "3dfd88255505b512a71eaf5add3c6ec55ac57291839651ad45b2e190940a83d4"
+    },
+    {
+      "path": "references/index.md",
+      "bytes": 4078,
+      "sha256": "c5f4127250784bb277f5057f31aebc8677c15bba5cb459702cb7d520e73044fa"
+    }
+  ],
+  "manifest": "skills-3080-installed-gh-ci-integration-manifest.json",
+  "manifest_sha256": "0eaa8b88a518a3145fc40dce382a5602b6553bf0d2b5c4e5b086b69f0187aae8",
+  "bundle": "skills-3080-gh-ci-integration-bundle.json",
+  "bundle_sha256": "528baf616d9a08e5afdcc3e63f844478683a9827aaedf8a82e3bca248eca034f",
+  "applied_at": "2026-10-22T18:54:55.0761687Z",
+  "readback_verified_files": 6,
+  "source_sha256": "9bb7f0a67de15a4b69ad793e8169cae34ae5e0ac76a9403a483bafd418233ea4",
+  "individual_notice_sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+  "source_and_license_preserved": true,
+  "structure_and_reference_check": "tools/skills-3048-check: PASS実1 target/6 files、hash/日本語description/参照存在/正負例",
+  "discovery": {
+    "total_metadata": 325,
+    "limits": "metadataの発見を確認。実モデルturn、文脈予算警告評価、実失敗の修復動作は未実証。",
+    "method": "fresh official Codex app-server initialize + skills/list forceReload",
+    "description_unchanged_and_exact": true,
+    "enabled_count": 1,
+    "parse_errors": 0,
+    "target_matches": 1,
+    "new_metadata_added": 0,
+    "model_called": false
+  },
+  "verification_commands": [
+    "go run . -manifest ../../docs/skills-3080-gh-ci-integration-bundle.json -root D:/CC/Skills (cwd tools/skills-3048-check)",
+    "tools/skills-3080-catalog: go test -count=1 ./... and go vet ./..."
+  ],
+  "initial_invocation_error": "repo rootにはgo.modが無いため最初のgo runはmodule解決で終了。対象moduleをcwdにして修正しPASS。製品コードの失敗ではない。",
+  "review_pending": true,
+  "other_28_reinstalled": false,
+  "other_guidance_modified": false,
+  "junction_modified": false,
+  "managed_plugin_modified": false,
+  "source_helper_executed": false,
+  "source_installer_executed": false,
+  "static_cases": [
+    {
+      "input": "現在PRのHEADに対応するActions jobが失敗",
+      "decision": "調査して既存許可範囲で修正へ進む"
+    },
+    {
+      "input": "失敗runは古いHEAD、現在HEADは成功",
+      "decision": "古い失敗を現在結果へ混ぜずHEADを照合"
+    },
+    {
+      "input": "run進行中だが対象jobは完了",
+      "decision": "jobログだけ先に確認しrun完了とはしない"
+    },
+    {
+      "input": "gh pr checksの終了8でpending",
+      "decision": "成功にも修正失敗にもせず待機を記録"
+    },
+    {
+      "input": "gh run view --exit-statusは0、statusはin_progress",
+      "decision": "完了とは判定しない"
+    },
+    {
+      "input": "外部CIの赤チェックURLだけ判明",
+      "decision": "内部調査済みとせず元依頼に沿って別の対応を追う"
+    },
+    {
+      "input": "workflowを変更しないコードレビューのみ依頼",
+      "decision": "勝手にworkflowを変更しない"
+    },
+    {
+      "input": "チェック未出現、またはAPI読取失敗",
+      "decision": "合格としてmergeしない"
+    }
+  ],
+  "static_evaluation": "説明と手順を親が照合した8例。独立モデルの実ターン検査ではない。",
+  "client_or_secret_material_accessed": false
+}

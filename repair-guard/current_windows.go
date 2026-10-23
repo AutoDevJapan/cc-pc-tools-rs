@@ -194,6 +194,15 @@ func currentProductsScopePathAllowed(path string, products []currentProduct, at 
 		if (!within(product.root, path) && !within(product.root+"-wt", path)) || !currentProductTimeAllowed(product, at) {
 			continue
 		}
+		// An unrelated worktree cannot satisfy currentProductPath. Reject its
+		// lexical workspace before loading the full private task store or API
+		// qualification; the original physical/Git checks still run below.
+		if !within(product.root, path) {
+			task, ok := currentSubworkTaskInWorkspace(path, filepath.Clean(product.root+"-wt"))
+			if !ok || task != product.task {
+				continue
+			}
+		}
 		if qualifies(product) && currentProductPath(path, product.root, product.repository, strconv.Itoa(product.task), protected) {
 			return true
 		}

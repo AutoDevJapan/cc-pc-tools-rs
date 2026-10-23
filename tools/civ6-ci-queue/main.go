@@ -12,7 +12,7 @@ import (
 var keyPattern = regexp.MustCompile(`^[0-9]{1,18}/[0-9]{1,4}/[0-9]{1,18}$`)
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: civ6-ci-queue <tick|worker|status|resume-unassigned> --config <path> [--entry <run/attempt/job>]")
+	fmt.Fprintln(os.Stderr, "usage: civ6-ci-queue <tick|worker|status|resume-unassigned|replace-expired> --config <path> [--entry <run/attempt/job>] [--replacement <run/attempt/job>]")
 	os.Exit(2)
 }
 
@@ -21,7 +21,7 @@ func main() {
 		usage()
 	}
 	cmd := os.Args[1]
-	cfgPath, entry := "", ""
+	cfgPath, entry, replacement := "", "", ""
 	rest := os.Args[2:]
 	for len(rest) > 0 {
 		if len(rest) < 2 {
@@ -32,6 +32,8 @@ func main() {
 			cfgPath = rest[1]
 		case "--entry":
 			entry = rest[1]
+		case "--replacement":
+			replacement = rest[1]
 		default:
 			usage()
 		}
@@ -89,6 +91,17 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Println(`{"status":"reserved","official_success":false}`)
+	case "replace-expired":
+		if !keyPattern.MatchString(entry) || !keyPattern.MatchString(replacement) {
+			usage()
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+		defer cancel()
+		if err := d.ReplaceExpired(ctx, entry, replacement); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Println(`{"status":"replacement_reserved","official_success":false}`)
 	default:
 		usage()
 	}

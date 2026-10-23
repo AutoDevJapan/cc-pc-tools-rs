@@ -1,0 +1,60 @@
+{
+  "todo": 3080,
+  "root": "D:/CC/Skills",
+  "new_files": [
+    "references/gh-fix-ci/current-20261023.md",
+    "references/gh-fix-ci/mizchi-20261020/upstream-original.txt",
+    "references/gh-fix-ci/mizchi-20261020/LICENSE.txt",
+    "references/gh-fix-ci/mizchi-20261020/source.json"
+  ],
+  "inventory_id": "github:b42ae7debd7346ed232f75cdb212f9d8a9cb05bd347c93c8b7de82e8d5433fc8",
+  "job": "20261023-034246-todo-3080",
+  "backup_required": true,
+  "target": "github-actions-ci",
+  "after_manifest": "skills-3080-gh-ci-integration-bundle.json",
+  "source": {
+    "todo": 3080,
+    "source_repo": "mizchi/skills",
+    "source_commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+    "source_path": "gh-fix-ci/SKILL.md",
+    "source_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/gh-fix-ci/SKILL.md",
+    "source_sha256": "9bb7f0a67de15a4b69ad793e8169cae34ae5e0ac76a9403a483bafd418233ea4",
+    "retrieved_at": "2026-10-20T08:41:08.8526241Z",
+    "inventory_id": "github:b42ae7debd7346ed232f75cdb212f9d8a9cb05bd347c93c8b7de82e8d5433fc8",
+    "license_identifier": "Apache-2.0",
+    "license_path": "gh-fix-ci/LICENSE.txt",
+    "license_sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+    "license_scope": "取り込んだgh-fix-ci主本文と個別noticeのみ。未読helper/assets/全repoは含めない。",
+    "nested_notice_scan": "固定tree996件非truncated。gh-fix-ci配下のnoticeはLICENSE.txtだけ。root notice無し。READMEは追加著作権表示無し。",
+    "modifications": "日本語の現行手順へ書換え。既存許可の再質問/本人PCログイン要求を除き、HEAD/attempt/終端/外部CIの観測範囲を明示。上流原文は無改変txtで保持。",
+    "modified_at": "2026-10-22T18:54:02.1261166Z",
+    "source_code_executed": false,
+    "prior_guide_unchanged_sha256": "3dfd88255505b512a71eaf5add3c6ec55ac57291839651ad45b2e190940a83d4"
+  },
+  "disposition": "integrated_existing",
+  "unchanged_existing": [
+    "references/gh-fix-ci/GUIDE.md"
+  ],
+  "applied": false,
+  "before_files": [
+    {
+      "path": "SKILL.md",
+      "bytes": 3593,
+      "sha256": "8e70684c4ac0d8b9e1cf3430277b341cba514faa283260f0910a9456f869bc7f"
+    },
+    {
+      "path": "references/gh-fix-ci/GUIDE.md",
+      "bytes": 3425,
+      "sha256": "3dfd88255505b512a71eaf5add3c6ec55ac57291839651ad45b2e190940a83d4"
+    },
+    {
+      "path": "references/index.md",
+      "bytes": 4078,
+      "sha256": "c5f4127250784bb277f5057f31aebc8677c15bba5cb459702cb7d520e73044fa"
+    }
+  ],
+  "changed_existing": [
+    "SKILL.md",
+    "references/index.md"
+  ]
+}

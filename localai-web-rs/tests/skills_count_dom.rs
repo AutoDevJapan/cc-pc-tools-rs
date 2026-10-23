@@ -8,12 +8,20 @@ fn skills_summary_distinguishes_zero_errors_and_partial_results_beside_jobs() {
         ..html.find("function renderOperations(").unwrap()];
     let rendering = &html[html.find("const metric=data&&data.metrics||{};").unwrap()
         ..html.find("renderOpsQuestions(data);").unwrap()];
+    let helper_start = html.find("function opsProcessingSummary(").unwrap();
+    let helper = &html[helper_start
+        ..html[helper_start..]
+            .find("function renderProgress(")
+            .unwrap()
+            + helper_start];
     let script = format!(
         r#"
 const assert=require('node:assert/strict');
 const esc=value=>String(value).replace(/[&<>"']/g,c=>({{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}}[c]));
 const opsTime=at=>new Date(at).toISOString();
 const opsValue=value=>value===null||value===undefined?'—':String(value);
+const opsList=value=>Array.isArray(value)?value:[];
+{helper}
 {summary}
 assert.match(opsSkillsSummary({{state:'complete',count:0}}).value,/^0 /);
 assert.equal(opsSkillsSummary({{state:'partial',count:0}}).value,'一部未取得');

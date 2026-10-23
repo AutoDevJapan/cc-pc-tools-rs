@@ -20,5 +20,6 @@ cc-bookmark-queue/extension/config.js
 /.ci-work/
 /codex-owned-f1e920c7cd3e3adda394cf2c68a16769/
 /codex-owned-f350977e8ec393bff757d7284536725a/
+/codex-owned-*/
 /docs/linux-runner-*.private.md
 /docs/linux-runner-*.private.ps1

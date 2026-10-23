@@ -31,6 +31,27 @@ func TestCI3250WorktreeRetirementStaysOnSameDrive(t *testing.T) {
 	}
 }
 
+func TestCI3250PlanReasonsUseDRecoveryOnlyForItsOwnedParent(t *testing.T) {
+	for _, reason := range []string{"size", "attributes"} {
+		if !ci3250PreservedReason(ci3250Worktree, reason) {
+			t.Fatal("D plan quarantine bypassed the qualified same-drive lifecycle", reason)
+		}
+		for _, parent := range []string{`C:\Users\makhmeto\AppData\Local\Temp`, ci3250Worktree + "-other", filepath.Join(ci3250Worktree, "nested")} {
+			if ci3250PreservedReason(parent, reason) {
+				t.Fatal("unrelated plan quarantine changed", parent, reason)
+			}
+		}
+	}
+	for _, reason := range []string{"policy", "hardlink", "locked", "unknown"} {
+		if ci3250PreservedReason(ci3250Worktree, reason) {
+			t.Fatal("unrequested quarantine route changed", reason)
+		}
+	}
+	if !ci3250PreservedReason(`C:\Users\makhmeto\AppData\Local\Temp`, "windows") {
+		t.Fatal("existing Windows recovery changed")
+	}
+}
+
 func TestCI3250RequiresItsOwnQualificationResult(t *testing.T) {
 	for _, input := range []string{`{"client_resource":false,"classification_unverified":false}`, `{"client_resource":false,"classification_unverified":false,"ci_retirement_qualified":false}`, `{"client_resource":true,"classification_unverified":false,"ci_retirement_qualified":true}`} {
 		if ci3250QualifiedResponse([]byte(input)) {

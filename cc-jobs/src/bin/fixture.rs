@@ -58,6 +58,15 @@ fn main() {
         return;
     }
     if args.iter().any(|a| a == "logs") {
+        // Fault injection: collection can finish after the sampler's start time.
+        // This delay reproduces slow metadata I/O, rather than waiting for a child.
+        if std::env::var("CC_JOBS_FIXTURE_DIR").is_ok_and(|dir| {
+            std::path::Path::new(&dir)
+                .join("delay-capacity-observation")
+                .exists()
+        }) {
+            std::thread::sleep(Duration::from_millis(1500));
+        }
         let previous = std::env::var("CC_JOBS_FIXTURE_DIR")
             .ok()
             .and_then(|dir| {

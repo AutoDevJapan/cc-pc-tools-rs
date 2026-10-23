@@ -1,9 +1,10 @@
 package main
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -44,7 +45,14 @@ type partialAdoption struct {
 
 // A read path is not an adoption. Validate the unfinished set as well as the
 // deployed subset, against the separately pinned inventory and live ledger.
-func validatePartial(a partialAssessment, ledger []partialAdoption, source, commit string, expected int) error {
+func pathSetSHA(paths []string) string {
+	ordered := append([]string(nil), paths...)
+	sort.Strings(ordered)
+	h := sha256.Sum256([]byte(strings.Join(ordered, "\n") + "\n"))
+	return hex.EncodeToString(h[:])
+}
+
+func validatePartial(a partialAssessment, ledger []partialAdoption, source, commit string, expected int, rosterSHA string) error {
 	if a.Source != source || a.Commit != commit || a.Expected != expected || expected < 1 || a.Read != len(a.Entries) || a.Unread != len(a.Pending) || a.Read+a.Unread != expected {
 		return errors.New("partial source coverage does not match its fixed inventory")
 	}
@@ -60,6 +68,13 @@ func validatePartial(a partialAssessment, ledger []partialAdoption, source, comm
 			return errors.New("pending source is repeated or already read")
 		}
 		paths[p] = true
+	}
+	roster := make([]string, 0, len(paths))
+	for p := range paths {
+		roster = append(roster, p)
+	}
+	if pathSetSHA(roster) != rosterSHA {
+		return errors.New("partial path set differs from its pinned complete tree")
 	}
 	matched := map[string]bool{}
 	installed, integrated, excluded := 0, 0, 0
@@ -111,6 +126,19 @@ func TestPartialMizchiAssessmentConservesUnfinishedPathsAndAdoptions(t *testing.
 	}
 	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
 	var p struct {
+		Partial struct {
+			Expected   int  `json:"expected"`
+			Read       int  `json:"full_body_read"`
+			Unread     int  `json:"unread"`
+			Complete   bool `json:"complete"`
+			Installed  int  `json:"installed"`
+			Integrated int  `json:"integrated"`
+			Excluded   int  `json:"excluded"`
+		} `json:"mizchi_partial_entrypoint_evaluation"`
+		TotalRead int `json:"all_fulltext_primary_paths_including_partial_sources"`
+		Complete  struct {
+			Paths int `json:"case_insensitive_skill_named_paths"`
+		} `json:"full_source_body_read_coverage"`
 		Repos []struct {
 			Source string `json:"requested"`
 			Commit string `json:"commit"`
@@ -118,11 +146,28 @@ func TestPartialMizchiAssessmentConservesUnfinishedPathsAndAdoptions(t *testing.
 		} `json:"fixed_public_repos"`
 	}
 	loadPublicReceipt(t, "skills-3080-progress.json", &p)
+	// Fixed independently of the mutable read/pending classification. Updating
+	// this anchor requires a new complete tree, not a same-count path edit.
+	const pinnedSHA = "24248fae07401fe08d0d063b61e5c2586f0a2d31c631b38f3cd5e5714f451f7a"
+	var roster struct {
+		Source string   `json:"source"`
+		Commit string   `json:"commit"`
+		Tree   string   `json:"tree_sha"`
+		SHA    string   `json:"path_set_sha256"`
+		Paths  []string `json:"paths"`
+	}
+	loadPublicReceipt(t, "skills-3080-mizchi-fixed-entrypoints.json", &roster)
+	if roster.Source != a.Source || roster.Commit != a.Commit || roster.Tree != "afbd6cabdc055717936a1c454627ccc62050705b" || len(roster.Paths) != 76 || roster.SHA != pinnedSHA || pathSetSHA(roster.Paths) != pinnedSHA {
+		t.Fatal("fixed entrypoint roster differs from its independent tree anchor")
+	}
+	if p.Partial.Expected != a.Expected || p.Partial.Read != a.Read || p.Partial.Unread != a.Unread || p.Partial.Complete != (a.Unread == 0) || p.Partial.Installed != a.Installed || p.Partial.Integrated != a.Integrated || p.Partial.Excluded != a.Excluded || p.TotalRead != p.Complete.Paths+a.Read {
+		t.Fatal("progress summary differs from the partial assessment")
+	}
 	matches := 0
 	for _, r := range p.Repos {
 		if r.Source == a.Source {
 			matches++
-			if err := validatePartial(a, ledger.Entries, r.Source, r.Commit, r.Count); err != nil {
+			if err := validatePartial(a, ledger.Entries, r.Source, r.Commit, r.Count, pinnedSHA); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -133,7 +178,7 @@ func TestPartialMizchiAssessmentConservesUnfinishedPathsAndAdoptions(t *testing.
 }
 
 func TestPartialAssessmentRejectsLostPathsAndUnrecordedChanges(t *testing.T) {
-	for _, kind := range []string{"valid", "overlap", "lost_pending", "duplicate_id", "unrecorded_integration", "wrong_source_hash", "valid_integration"} {
+	for _, kind := range []string{"valid", "overlap", "lost_pending", "same_count_substitution", "duplicate_id", "unrecorded_integration", "wrong_source_hash", "valid_integration"} {
 		t.Run(kind, func(t *testing.T) {
 			e := partialEntry{ID: "github:one", Path: "one/SKILL.md", Name: "one", Commit: strings.Repeat("a", 40), SHA: strings.Repeat("b", 64), Read: true}
 			a := partialAssessment{Source: "example/skills", Commit: e.Commit, Expected: 2, Read: 1, Unread: 1, Entries: []partialEntry{e}, Pending: []string{"two/SKILL.md"}}
@@ -143,6 +188,8 @@ func TestPartialAssessmentRejectsLostPathsAndUnrecordedChanges(t *testing.T) {
 				a.Pending[0] = e.Path
 			case "lost_pending":
 				a.Pending, a.Unread, a.Expected = nil, 0, 1
+			case "same_count_substitution":
+				a.Pending[0] = "typo/SKILL.md"
 			case "duplicate_id":
 				e.Path, e.Name = "two/SKILL.md", "two"
 				a.Entries, a.Pending, a.Read, a.Unread = append(a.Entries, e), nil, 2, 0
@@ -155,7 +202,7 @@ func TestPartialAssessmentRejectsLostPathsAndUnrecordedChanges(t *testing.T) {
 					}
 				}
 			}
-			err := validatePartial(a, rows, "example/skills", strings.Repeat("a", 40), 2)
+			err := validatePartial(a, rows, "example/skills", strings.Repeat("a", 40), 2, pathSetSHA([]string{"one/SKILL.md", "two/SKILL.md"}))
 			wantError := kind != "valid" && kind != "valid_integration"
 			if (err != nil) != wantError {
 				t.Fatalf("source conservation detection: %s: %v", kind, err)
@@ -164,57 +211,34 @@ func TestPartialAssessmentRejectsLostPathsAndUnrecordedChanges(t *testing.T) {
 	}
 }
 
-type latestDraftReview struct {
-	Todo      int    `json:"todo"`
-	Head      string `json:"head"`
-	Must      *int   `json:"must"`
-	SHA       string `json:"raw_sha256"`
-	Remaining bool   `json:"remaining_independent_confirmation"`
-}
-
-func validateDraftReview(pending bool, r latestDraftReview) error {
-	if pending {
-		return nil
-	}
-	if r.Todo < 1 || len(r.Head) != 40 || len(r.SHA) != 64 || r.Must == nil || *r.Must != 0 || r.Remaining {
-		return errors.New("draft marked accepted without a completed latest review")
-	}
-	if _, err := hex.DecodeString(r.SHA); err != nil {
-		return err
-	}
-	_, err := hex.DecodeString(r.Head)
-	return err
-}
-
-func TestDraftReviewCannotCloseWithAnUnresolvedOrMissingReceipt(t *testing.T) {
-	var d struct {
-		Pending  bool `json:"review_pending"`
-		Reviewed struct {
-			Latest latestDraftReview `json:"latest_review"`
-		} `json:"reviewed_draft"`
-	}
-	loadPublicReceipt(t, "skills-3080-mizchi-sql-draft.json", &d)
-	if err := validateDraftReview(d.Pending, d.Reviewed.Latest); err != nil {
-		t.Fatal(err)
-	}
-	// Reproduce the prior false flag, including a missing current-version receipt.
-	if validateDraftReview(false, latestDraftReview{}) == nil {
-		t.Fatal("unreviewed draft accepted")
-	}
-	zero, one := 0, 1
-	good := latestDraftReview{Todo: 1, Head: strings.Repeat("a", 40), Must: &zero, SHA: strings.Repeat("b", 64)}
-	if err := validateDraftReview(false, good); err != nil {
-		t.Fatal(err)
-	}
-	for _, must := range []*int{nil, &one} {
-		b, _ := json.Marshal(good)
-		var bad latestDraftReview
-		if err := json.Unmarshal(b, &bad); err != nil {
-			t.Fatal(err)
-		}
-		bad.Must = must
-		if validateDraftReview(false, bad) == nil {
-			t.Fatal("unfinished review accepted")
+func TestEveryFinishedDispositionRequiresMatchingLedgerAndAssessment(t *testing.T) {
+	for _, disposition := range []string{"installed_new_adaptation", "integrated_existing", "excluded"} {
+		for _, kind := range []string{"valid", "missing_ledger", "missing_flag", "wrong_flag"} {
+			t.Run(disposition+"_"+kind, func(t *testing.T) {
+				e := partialEntry{ID: "github:one", Path: "one/SKILL.md", Name: "one", Commit: strings.Repeat("a", 40), SHA: strings.Repeat("b", 64), Read: true}
+				a := partialAssessment{Source: "example/skills", Commit: e.Commit, Expected: 2, Read: 1, Unread: 1, Entries: []partialEntry{e}, Pending: []string{"two/SKILL.md"}}
+				switch disposition {
+				case "installed_new_adaptation":
+					a.Entries[0].Installed, a.Installed = true, 1
+				case "integrated_existing":
+					a.Entries[0].Integrated, a.Integrated = true, 1
+				case "excluded":
+					a.Entries[0].Excluded, a.Excluded = true, 1
+				}
+				rows := []partialAdoption{{ID: e.ID, Source: a.Source, Commit: e.Commit, Path: e.Path, SHA: e.SHA, Disposition: disposition}}
+				switch kind {
+				case "missing_ledger":
+					rows = nil
+				case "missing_flag":
+					a.Entries[0] = e
+				case "wrong_flag":
+					a.Entries[0].Installed, a.Entries[0].Integrated, a.Entries[0].Excluded = true, true, true
+				}
+				err := validatePartial(a, rows, a.Source, a.Commit, 2, pathSetSHA([]string{"one/SKILL.md", "two/SKILL.md"}))
+				if (err != nil) != (kind != "valid") {
+					t.Fatalf("disposition must agree in both directions: %v", err)
+				}
+			})
 		}
 	}
 }

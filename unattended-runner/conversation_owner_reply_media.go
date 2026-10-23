@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -78,10 +79,21 @@ func (r *Runner) deliverOwnerReplyMediaObservation(ctx context.Context, q Conver
 		return err
 	}
 	dir := filepath.Join(r.Config.Home, "conversations", q.RequestID, "owner-media")
+	data, err := json.MarshalIndent(record, "", "  ")
+	if err != nil {
+		return err
+	}
+	sha := bytesHash(data)
+	marker := "conversation-owner-media:" + q.SenderID + ":" + req.Message + ":" + sha
 	latestPath := filepath.Join(dir, req.Message+".latest.private.json")
 	var previous ownerReplyMediaObservation
 	old, readErr := boundedRegular(latestPath)
 	if readErr == nil {
+		// This pointer is published only after successful original-note
+		// readback. A replaced note is not permission to replay old media.
+		if bytes.Equal(old, data) {
+			return nil
+		}
 		if json.Unmarshal(old, &previous) != nil || previous.Domain != record.Domain || previous.Request != record.Request || previous.Todo != record.Todo || previous.Message != record.Message || previous.Owner != record.Owner || previous.Thread != record.Thread {
 			return errors.New("owner media previous association differs")
 		}
@@ -95,21 +107,20 @@ func (r *Runner) deliverOwnerReplyMediaObservation(ctx context.Context, q Conver
 	if err != nil || row.Project != q.Project {
 		return errors.New("owner media original task unavailable")
 	}
+	if !hasNoteMarker(row.Note, marker) && !hasNoteMarker(row.Note, conversationReplyMarker(q, req)) {
+		// Preserve a later task/question hold even on the first deployment.
+		// A canonical intake phase alone does not authorize note backfill.
+		return nil
+	}
 	scopeFile, err := r.conversationScopeFile(row, q)
 	if err != nil {
 		return err
 	}
-	data, err := json.MarshalIndent(record, "", "  ")
-	if err != nil {
-		return err
-	}
-	sha := bytesHash(data)
-	marker := "conversation-owner-media:" + q.SenderID + ":" + req.Message + ":" + sha
 	path := filepath.Join(dir, req.Message+"-"+sha+".private.json")
 	if err := writeConversationOnce(path, data); err != nil {
 		return err
 	}
-	text := fmt.Sprintf("%s\n本人返信の添付情報: %s\n添付記録SHA=%s、本人=%s、元返信=%s、本文SHA=%s、作成時刻=%s、編集時刻=%s。\n", marker, path, sha, record.Owner, req.Message, record.ContentSHA, req.Created, req.Edited)
+	text := fmt.Sprintf("%s\n本人返信の添付情報: %s\n添付記録SHA=%s、本人=%s、元質問=%s、元返信=%s、本文SHA=%s、作成時刻=%s、編集時刻=%s。\n", marker, path, sha, record.Owner, q.Message, req.Message, record.ContentSHA, req.Created, req.Edited)
 	if len(record.Attachments) == 0 {
 		text += "現在の添付は0件です。以前の添付参照を現在の回答の画像として流用しないでください。\n"
 	} else {
@@ -152,8 +163,11 @@ func (r *Runner) deliverOwnerReplyMediaObservation(ctx context.Context, q Conver
 		if err := writeText(notePath, note); err != nil {
 			return err
 		}
-		expected, err := r.conversationSnapshotFile(row, q, req.Message)
-		if err != nil {
+		if len(row.conversationState) == 0 {
+			return errors.New("owner media guarded row unavailable")
+		}
+		expected := filepath.Join(dir, req.Message+"-"+sha+".expected.json")
+		if err := writeText(expected, string(row.conversationState)); err != nil {
 			return err
 		}
 		if _, err := r.Run(ctx, conversationTodo, "edit", fmt.Sprint(q.Todo), "--note-file", notePath, "--expected-note-sha256", bytesHash([]byte(row.Note)), "--scope-file", scopeFile, "--expected-state-file", expected); err != nil {

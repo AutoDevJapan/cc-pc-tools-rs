@@ -23,8 +23,19 @@ the task's status, worker, dependencies or owner stops. Retain old observations;
 retries must reuse matching bytes and avoid duplicate supplements. Update only
 the separate latest-observation pointer after successful readback. Recheck the
 live owner version and attachments before the note edit. API or note failure
-does not advance that pointer or claim delivery. Existing applied/closed records
-are never manufactured by this supplement.
+does not advance that pointer or claim delivery. A matching latest observation
+means its supplement was delivered; never replay it after the note is replaced.
+New supplements require the current reply's original delivery marker (or the
+same media marker) in the note. A replaced or unrelated hold is left intact.
+Media failures have their own health label and retry on a later normal tick;
+they do not prevent the already-delivered text's original application/close
+checks. Existing applied/closed records are never manufactured by this supplement.
+
+The supplement follows ordinary reply delivery. For a question that releases a
+worker wait, the worker may start before this supplemental note arrives. No claim
+is made that attachment metadata is present at worker launch. The existing
+private answer reference remains available; the handler must finish reading all
+answer material before recording application.
 
 Acceptance:
 

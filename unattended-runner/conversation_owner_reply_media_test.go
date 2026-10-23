@@ -1,18 +1,22 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
-func ownerReplyMediaFixture(t *testing.T) (*conversationFixture, conversationReply, *Request, *map[string]any) {
+func ownerReplyMediaFixture(t *testing.T, waiting ...bool) (*conversationFixture, conversationReply, *Request, *map[string]any) {
 	t.Helper()
-	f := conversationTest(t, false)
+	f := conversationTest(t, len(waiting) != 0 && waiting[0])
 	f.ask(t)
 	reply := f.reply(t, 3, "<@400>")
 	live := map[string]any{"id": reply.Message, "channel_id": reply.Thread, "author": map[string]any{"id": "300", "bot": false}, "timestamp": reply.Created, "edited_timestamp": "", "content": reply.Body, "type": 0, "attachments": []any{map[string]any{"id": "900", "size": 64, "filename": "private-name.png", "url": "https://cdn.discordapp.com/never-record-this?signature=private"}}}
@@ -96,7 +100,7 @@ func TestOwnerReplyMediaRejectsForeignOrChangedSource(t *testing.T) {
 			case "too_many":
 				var a []any
 				for i := 0; i < 11; i++ {
-					a = append(a, map[string]any{"id": "900", "size": 64})
+					a = append(a, map[string]any{"id": fmt.Sprint(900 + i), "size": 64})
 				}
 				(*live)["attachments"] = a
 			}
@@ -178,6 +182,24 @@ func TestOwnerReplyMediaNormalTickDeliversMetadata(t *testing.T) {
 	if f.close != 0 {
 		t.Fatal("media reference was treated as application/close")
 	}
+	index, err := f.r.loadConversations()
+	if err != nil || index.Questions[f.q.RequestID].Phase != "answered" || containsString(health.Errors, "conversation_owner_media_deferred") || containsString(health.Errors, "conversation_delivery_deferred") {
+		t.Fatalf("normal delivery phase/health differs: %v %v", err, health.Errors)
+	}
+}
+
+func TestOwnerReplyMediaNormalTickForWaitingAnswer(t *testing.T) {
+	f, _, _, _ := ownerReplyMediaFixture(t, true)
+	before, _ := f.r.todo(42)
+	if before.Status != "todo" {
+		t.Fatal("fixture did not exercise the canonical question-answer release")
+	}
+	health := &Health{}
+	f.r.processConversations(context.Background(), health)
+	after, _ := f.r.todo(42)
+	if after.Status != before.Status || !strings.HasPrefix(after.Note, before.Note) || !strings.Contains(after.Note, "conversation-owner-media:") || containsString(health.Errors, "conversation_owner_media_deferred") || containsString(health.Errors, "conversation_delivery_deferred") {
+		t.Fatalf("waiting-answer metadata path altered or lost canonical delivery: %v", health.Errors)
+	}
 }
 
 func TestOwnerReplyMediaEmptyWithoutPriorObservationDoesNotInventImage(t *testing.T) {
@@ -210,5 +232,150 @@ func TestOwnerReplyMediaSecondReadChangesDoNotDeliver(t *testing.T) {
 	after, _ := f.r.todo(42)
 	if before.Note != after.Note || calls != 2 {
 		t.Fatal("second read did not guard actual delivery")
+	}
+}
+
+func TestOwnerReplyMediaDeliveredObservationDoesNotReplayIntoReplacementHold(t *testing.T) {
+	f, reply, req, _ := ownerReplyMediaFixture(t)
+	if err := f.r.deliverOwnerReplyMediaObservation(context.Background(), f.q, reply, req); err != nil {
+		t.Fatal(err)
+	}
+	f.mutateTodo(t, func(row map[string]any) {
+		row["note"] = "ジョブの結果に判断が必要です。"
+		row["status"] = "block"
+	})
+	before, _ := f.r.todo(42)
+	if err := f.r.deliverOwnerReplyMediaObservation(context.Background(), f.q, reply, req); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := f.r.todo(42)
+	if after.Note != before.Note || after.Status != before.Status {
+		t.Fatal("delivered old media replayed into a different question hold")
+	}
+}
+
+func TestOwnerReplyMediaMissingBodyAnchorDoesNotBackfill(t *testing.T) {
+	f, reply, req, _ := ownerReplyMediaFixture(t)
+	f.mutateTodo(t, func(row map[string]any) { row["note"] = "元の回答とは別の依頼を維持" })
+	before, _ := f.r.todo(42)
+	if err := f.r.deliverOwnerReplyMediaObservation(context.Background(), f.q, reply, req); err != nil {
+		t.Fatal(err)
+	}
+	after, _ := f.r.todo(42)
+	if after.Note != before.Note {
+		t.Fatal("unrelated note received an old answer supplement")
+	}
+	latest := filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "owner-media", reply.Message+".latest.private.json")
+	if _, err := os.Stat(latest); !os.IsNotExist(err) {
+		t.Fatal("missing anchor created a delivery success pointer")
+	}
+}
+
+func TestOwnerReplyMediaPersistentFailureDoesNotStopCanonicalApplicationCheck(t *testing.T) {
+	f, _, req, _ := ownerReplyMediaFixture(t)
+	latest := filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "owner-media", req.Message+".latest.private.json")
+	if err := os.MkdirAll(filepath.Dir(latest), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(latest, []byte("invalid media receipt"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	// A malformed synthetic application input makes reaching the original
+	// application check observable without fabricating an applied success.
+	applied := filepath.Join(f.r.Config.Home, "applied", req.Message+".json")
+	if err := os.MkdirAll(filepath.Dir(applied), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(applied, []byte("invalid application receipt"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 2; i++ {
+		health := &Health{}
+		f.r.processConversations(context.Background(), health)
+		index, err := f.r.loadConversations()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if index.Questions[f.q.RequestID].Phase != "answered" || !containsString(health.Errors, "conversation_owner_media_deferred") || !containsString(health.Errors, "conversation_application_deferred") || containsString(health.Errors, "conversation_delivery_deferred") {
+			t.Fatalf("media failure stopped or misclassified canonical flow: phase=%s errors=%v", index.Questions[f.q.RequestID].Phase, health.Errors)
+		}
+	}
+}
+
+func containsString(values []string, target string) bool {
+	for _, v := range values {
+		if v == target {
+			return true
+		}
+	}
+	return false
+}
+
+func TestOwnerReplyMediaGeneratedScopeWorksThroughImageCLI(t *testing.T) {
+	f, reply, req, live := ownerReplyMediaFixture(t)
+	_, _, png := attachmentFixture(t, "ok")
+	a := (*live)["attachments"].([]any)[0].(map[string]any)
+	a["size"] = len(png)
+	a["url"] = fmt.Sprintf("https://cdn.discordapp.com/attachments/%s/900/image.png?signature=not-persisted", f.q.Thread)
+	a["content_type"] = "image/png"
+	if err := f.r.deliverOwnerReplyMediaObservation(context.Background(), f.q, reply, req); err != nil {
+		t.Fatal(err)
+	}
+	scopes, _ := filepath.Glob(filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "owner-media", "*.scope.private.json"))
+	if len(scopes) != 1 {
+		t.Fatal("missing generated scope")
+	}
+	server(t, f.r, func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/users/@me":
+			respond(w, map[string]any{"id": "400", "bot": true})
+		case "/channels/" + f.q.Thread:
+			respond(w, map[string]any{"id": f.q.Thread, "guild_id": "100", "parent_id": "200", "owner_id": "400", "type": 11})
+		case "/channels/" + f.q.Thread + "/messages/" + f.q.Thread:
+			stamp, _ := time.Parse(time.RFC3339Nano, f.created)
+			m := msg(stamp, f.q.Thread, "400", "synthetic image question")
+			m.ID = f.q.Thread
+			m.Author.Bot = true
+			respond(w, m)
+		case "/channels/" + f.q.Thread + "/messages/" + reply.Message:
+			respond(w, *live)
+		default:
+			t.Errorf("unexpected image CLI route %s", r.URL.Path)
+			w.WriteHeader(404)
+		}
+	})
+	mediaCalls, badAuth := 0, false
+	f.r.Client = &http.Client{Timeout: time.Second, Transport: attachmentTestTransport(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Host == "cdn.discordapp.com" {
+			mediaCalls++
+			badAuth = r.Header.Get("Authorization") != "" || r.Header.Get("Cookie") != ""
+			return &http.Response{StatusCode: 200, ContentLength: int64(len(png)), Header: http.Header{"Content-Type": []string{"image/png"}}, Body: io.NopCloser(bytes.NewReader(png)), Request: r}, nil
+		}
+		return http.DefaultTransport.RoundTrip(r)
+	})}
+	root, err := filepath.EvalSymlinks(f.r.Config.Home)
+	if err != nil {
+		t.Fatal(err)
+	}
+	scopePath, err := filepath.EvalSymlinks(scopes[0])
+	if err != nil {
+		t.Fatal(err)
+	}
+	output := filepath.Join(root, "cli-image.private.image")
+	guardCalls := 0
+	guard := func(_ context.Context, path string) bool {
+		guardCalls++
+		rel, err := filepath.Rel(root, path)
+		return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+	}
+	var receipt bytes.Buffer
+	loadMatches := false
+	code := historyAttachmentCLIWith([]string{"--scope", scopePath, "--output", output}, &receipt, func(_ context.Context, scope historyReadScope) (*Runner, error) {
+		loadMatches = scope.Todo == f.q.Todo && len(scope.Threads) == 1 && scope.Threads[0] == f.q.Thread
+		return f.r, nil
+	}, guard)
+	got, err := os.ReadFile(output)
+	if code != 0 || err != nil || !bytes.Equal(got, png) || !loadMatches || guardCalls < 2 || mediaCalls != 1 || badAuth {
+		t.Fatalf("generated scope failed actual image CLI path: code=%d err=%v receipt=%s", code, err, receipt.String())
 	}
 }

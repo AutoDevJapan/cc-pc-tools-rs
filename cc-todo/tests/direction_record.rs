@@ -89,6 +89,9 @@ impl Fixture {
         self.call_flags(verify, &[])
     }
     fn call_flags(&self, verify: bool, flags: &[&str]) -> Output {
+        self.call_with_holds(verify, true, flags)
+    }
+    fn call_with_holds(&self, verify: bool, check_holds: bool, flags: &[&str]) -> Output {
         let mut c = Command::new(env!("CARGO_BIN_EXE_todo"));
         c.arg("direction-record")
             .arg("--input-file")
@@ -100,7 +103,10 @@ impl Fixture {
                 .arg(self.temp.path().join(format!("{name}-expected.json")));
         }
         if verify {
-            c.arg("--verify-only").arg("--check-holds");
+            c.arg("--verify-only");
+            if check_holds {
+                c.arg("--check-holds");
+            }
         }
         c.args(flags);
         c.env("CC_TODO_HOME", self.temp.path())
@@ -643,4 +649,24 @@ fn actual_scheduler_finished_job_preserves_the_durable_direction_specification()
     );
     f.snapshot();
     assert_eq!(f.ok(true)["receipt_sha256"], saved["receipt_sha256"]);
+}
+
+#[test]
+fn plain_receipt_readback_preserves_fact_without_releasing_a_new_hold() {
+    let f = Fixture::new();
+    let saved = f.ok(false);
+    f.normal(&["block", "1", "later hold"]);
+    f.snapshot();
+    let before = f.db();
+    let out = f.call_with_holds(true, false, &[]);
+    assert!(
+        out.status.success(),
+        "{}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let witness: Value = serde_json::from_slice(&out.stdout).unwrap();
+    assert_eq!(witness["receipt_sha256"], saved["receipt_sha256"]);
+    assert_eq!(witness["changed"], false);
+    f.reject_unchanged(true);
+    assert_eq!(before, f.db());
 }

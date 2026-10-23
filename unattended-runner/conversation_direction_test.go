@@ -388,8 +388,90 @@ func TestDirectionVerifiedCloseSurvivesNormalDoneAndLaterBlockNotes(t *testing.T
 			if len(h.Errors) != 0 || f.close != 1 || !bytes.Equal(before, after) {
 				t.Fatalf("completed question was invalidated by ordinary note replacement: %v", h.Errors)
 			}
+			assertDirectionClosed(t, f)
 		})
 	}
+}
+
+func assertDirectionClosed(t *testing.T, f *conversationFixture) {
+	t.Helper()
+	index, err := f.r.loadConversations()
+	if err != nil || index.Questions[f.q.RequestID].Phase != "closed" {
+		t.Fatal("verified question was moved back to answered")
+	}
+	var state conversationCloseRecord
+	if readJSON(filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "close-state.json"), maxState, &state) != nil ||
+		state.Phase != "verified" || state.VerifiedAt == "" || !shaPattern.MatchString(state.VerifiedScope) {
+		t.Fatal("GET-verified close record was replaced by a pending phase")
+	}
+}
+
+func TestDirectionVerifiedCloseKeepsProofThroughTransientReadbackFailureAndLaterHold(t *testing.T) {
+	f, opts := directionNative(t)
+	if code, _ := directionCLI(t, f, opts); code != 0 {
+		t.Fatal("direction fixture did not close")
+	}
+	assertDirectionClosed(t, f)
+	backend := f.r.Run
+	checks := 0
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		if path == conversationTodo && args[0] == "direction-record" {
+			checks++
+			if checks == 3 {
+				return "", errors.New("transient selected-row readback failure")
+			}
+		}
+		return backend(ctx, path, args...)
+	}
+	h := Health{}
+	f.r.processConversations(context.Background(), &h)
+	if checks != 3 || len(h.Errors) != 1 || h.Errors[0] != "conversation_application_deferred" {
+		t.Fatal("transient verifier failure was not reported as a retryable observation error")
+	}
+	assertDirectionClosed(t, f)
+	f.r.Run = backend
+	if _, err := backend(context.Background(), conversationTodo, "block", "42", "later independent hold"); err != nil {
+		t.Fatal(err)
+	}
+	before, _ := os.ReadFile(f.r.TodoPath)
+	h = Health{}
+	f.r.processConversations(context.Background(), &h)
+	after, _ := os.ReadFile(f.r.TodoPath)
+	if len(h.Errors) != 0 || !bytes.Equal(before, after) || f.close != 1 {
+		t.Fatal("later hold invalidated the same previously verified answer version")
+	}
+	assertDirectionClosed(t, f)
+}
+
+func TestDirectionVerifiedScopeSurvivesPendingSourceRecoveryAndLaterHold(t *testing.T) {
+	f, opts := directionNative(t)
+	if code, _ := directionCLI(t, f, opts); code != 0 {
+		t.Fatal("direction fixture did not close")
+	}
+	source := filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", opts.Message+".json")
+	held := source + ".held-fixture"
+	if os.Rename(source, held) != nil {
+		t.Fatal("could not isolate temporarily unavailable fixture source")
+	}
+	h := Health{}
+	f.r.processConversations(context.Background(), &h)
+	var pending conversationCloseRecord
+	path := filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "close-state.json")
+	if readJSON(path, maxState, &pending) != nil || pending.Phase != "pending" || pending.VerifiedAt == "" {
+		t.Fatal("fixture did not retain prior verified evidence in a pending observation")
+	}
+	if os.Rename(held, source) != nil {
+		t.Fatal("could not recover the same fixture source bytes")
+	}
+	if _, err := f.r.Run(context.Background(), conversationTodo, "block", "42", "later hold while source was unavailable"); err != nil {
+		t.Fatal(err)
+	}
+	h = Health{}
+	f.r.processConversations(context.Background(), &h)
+	if len(h.Errors) != 0 || f.close != 1 {
+		t.Fatalf("same verified scope was treated as an initial close after recovery: %v", h.Errors)
+	}
+	assertDirectionClosed(t, f)
 }
 
 func TestDirectionLostWriteResponseRecoversAfterActualBlockAndStart(t *testing.T) {

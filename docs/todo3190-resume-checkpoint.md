@@ -2,6 +2,55 @@
 
 関連Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/325
 
+## 2026-10-23 14:43 JST：一時的な再確認失敗で終了済みの版を失わない
+
+3384の読取レビューは正常完了し、Must1件を返しました。実jobは
+`20261023-140846-todo-3384`、正常statusと対応するnative_turn_context観測で
+anthropic/claude-opus-5-5/maxを確認しました。自分の実job
+`20261023-143144-todo-3190` も同じ正常観測でgpt-6.1-sol/max、todo/cwd一致です。
+原応答と実観測は `todo3190-review3384-and-own-20261023-143144-todo-3190.private.json` に保持します。
+固定f2eb0c8aの主な変更ファイルは全文実読、engine/reconcile本体や既存close/native検査の
+大半は未読、テストや実APIは未実行との結果を保持しています。
+
+残ったMustは、終了済みの版の識別に予約phase=verifiedも求めていたため、
+一度のコマンド/CAS等の再確認失敗でpendingへ戻り、その後の別停止で同じ回答版を
+初回closeとして保留し続ける問題でした。既確認の判定は保存済みのVerifiedAtと
+proof/stampsを含むVerifiedScopeだけへ変更しました。既確認の方向票の再観測失敗は
+エラーとして返し、verifiedとclosedを残してhealthへ返します。初回のhold判定と
+実際のhash変化では従来どおりpendingを保持し、初回closeの条件は緩めていません。
+sourceが一時的に不在でpendingになった場合も、正常に同じbytesを確認し直した後は
+同一VerifiedScopeの実績を使い、後続の別停止を解除せずclosedへ戻せます。
+
+終了済みの巡回中に3回目のdirection読戻しを一度失敗させる実CLI結合検査を追加し、
+変更前には観測エラーの欠落/phase巻戻しでRedを確認しました。修正後はその時点の
+index.closedとclose-state.verified、後続の正常block後の再巡回、PATCH重複なしまで確認します。
+受領ファイルが一時不在のpendingから同じ版へ回復する検査も追加しました。
+既存のdone/block後の巡回検査にもindex/close-stateの直接照合を加えました。
+
+Rustは実装を変更せず、--verify-onlyだけで後続停止を保ったまま同じ票を読める検査を
+追加しました。実CLI18件が成功しました。Go全moduleのraceは最新の隔離Rust実行物を
+指定して115.373秒で成功し、vetと差分/書式も成功です。原出力は
+`todo3190-review3384-red.private.log`、`todo3190-review3384-rust.private.log`、
+`todo3190-review3384-go-race.private.log`、`todo3190-review3384-go-vet.private.log` です。
+Rust実装に変更がないため、前回成功したdoctest対象0件と関連95件は再実行せず、
+その版と今回の18件・Go検査を分けて記録します。
+
+SuggestionのCIにおけるnative結合検査のSkip条件は仕様とPRで明示します。現行CIは
+CC_CONVERSATION_TODO_BINARYを指定しないため、CI成功だけで実Rustとの結合検査も
+実行されたとは扱いません。このPCでbinaryを指定した実受入を別の根拠として保持します。
+差分外のconversation_waitの数値work_owner_wait_on判定は今回変更していません。
+方向記録側の数値対応は検査済みですが、それを通常配送全体の修復済みへ広げず、
+3153の未完了scopeを保持して親3110への未確認事項に残します。
+note_after_sha256は監査用であり、直後のreadback競合後も既存記録から復帰する点を仕様へ明記しました。
+
+f2eb0c8aのPR376はSUCCESS15/SKIPPED1、実所有者AutoDevJapan、source guardは
+client_resource=false/classification_unverified=falseでした。新候補に旧CIを流用しません。
+新しい差分をcommit/push/checkpointし、Max追加確認の正常spec付きToDoに依存待ちを登録します。
+実回答の書込み、質問終了、mergeと配布は依然未実施です。レビュー後に同headのCIを確認し、
+通常merge、最新共有版のsource/hashと並行変更照合、正常配布、2件の実記録/読戻し/終了GETを
+元3190で続行します。元3050/3084/3126/他停止・依存・未完コードPrd、原質問と回答を保持します。
+本人の対応・PC操作・新しい質問/メンションは不要です。
+
 ## 2026-10-23 06:32 JST：通常のメモ置換後も仕様記録を保持
 
 追加レビュー3370（job `20261023-055240-todo-3370`）は読取だけを正常完了しました。

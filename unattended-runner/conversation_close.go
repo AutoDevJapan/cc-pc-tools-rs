@@ -377,7 +377,7 @@ func (r *Runner) conversationClosePATCH(ctx context.Context, q ConversationQuest
 	return nil
 }
 
-func (r *Runner) conversationCloseFilesUnchanged(ctx context.Context, q ConversationQuestion, stamps map[string]conversationCloseStamp, checkHolds bool) bool {
+func (r *Runner) conversationCloseFilesUnchanged(ctx context.Context, q ConversationQuestion, stamps map[string]conversationCloseStamp, checkHolds bool) (bool, error) {
 	for id, stamp := range stamps {
 		if stamp.DirectionSHA != "" {
 			mode := directionVerify
@@ -385,21 +385,34 @@ func (r *Runner) conversationCloseFilesUnchanged(ctx context.Context, q Conversa
 				mode = directionCheckHolds
 			}
 			result, err := r.conversationDirectionCheck(ctx, q, id, stamp.DirectionInputSHA, mode)
-			if err != nil || result.ReceiptSHA != stamp.DirectionSHA {
-				return false
+			if err != nil {
+				if checkHolds {
+					return false, nil
+				} // First close remains pending, including a new hold.
+				// A failed observation does not revoke the same GET-verified scope.
+				return false, err
+			}
+			if result.ReceiptSHA != stamp.DirectionSHA {
+				return false, nil
 			}
 		} else {
 			applied, missing, err := conversationCloseRead(filepath.Join(r.Config.Home, "applied", id+".json"), 128<<10)
-			if err != nil || missing || bytesHash(applied) != stamp.AppliedSHA {
-				return false
+			if err != nil {
+				return false, errConversationCloseState
+			}
+			if missing || bytesHash(applied) != stamp.AppliedSHA {
+				return false, nil
 			}
 		}
 		source, missing, err := conversationCloseRead(filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", id+".json"), maxState)
-		if err != nil || missing || bytesHash(source) != stamp.SourceSHA {
-			return false
+		if err != nil {
+			return false, errConversationCloseState
+		}
+		if missing || bytesHash(source) != stamp.SourceSHA {
+			return false, nil
 		}
 	}
-	return true
+	return true, nil
 }
 
 // The caller holds runner.lock. Every reply is independently applied before an
@@ -469,8 +482,7 @@ func (r *Runner) closeConversation(ctx context.Context, q ConversationQuestion, 
 	// New holds govern first close of this exact proof/receipt set. Later work
 	// cannot undo an already verified archive; current replies/API/record hashes
 	// still have to match. A new or edited reply starts a new close verification.
-	checkHolds := record.Phase != "verified" || record.VerifiedAt == "" || record.ProofSHA != initialProof ||
-		record.VerifiedScope != scope || canonicalHash(record.Replies) != canonicalHash(stamps)
+	checkHolds := record.VerifiedAt == "" || record.VerifiedScope != scope
 	archived, err := worker.conversationCloseThreadGET(ctx, q)
 	if err != nil {
 		return false, err
@@ -480,7 +492,11 @@ func (r *Runner) closeConversation(ctx context.Context, q ConversationQuestion, 
 			return false, worker.conversationCloseSave(path, record, "reopened", initialProof, stamps)
 		}
 	}
-	if !worker.conversationCloseFilesUnchanged(ctx, q, stamps, checkHolds) {
+	unchanged, err := worker.conversationCloseFilesUnchanged(ctx, q, stamps, checkHolds)
+	if err != nil {
+		return false, err
+	}
+	if !unchanged {
 		return false, worker.conversationCloseSave(path, record, "pending", initialProof, stamps)
 	}
 	if !archived {
@@ -513,7 +529,14 @@ func (r *Runner) closeConversation(ctx context.Context, q ConversationQuestion, 
 	if err != nil {
 		return false, err
 	}
-	if !archived || !worker.conversationCloseFilesUnchanged(ctx, q, stamps, checkHolds) {
+	if !archived {
+		return false, worker.conversationCloseSave(path, record, "pending", initialProof, stamps)
+	}
+	unchanged, err = worker.conversationCloseFilesUnchanged(ctx, q, stamps, checkHolds)
+	if err != nil {
+		return false, err
+	}
+	if !unchanged {
 		return false, worker.conversationCloseSave(path, record, "pending", initialProof, stamps)
 	}
 	if record.VerifiedAt == "" {

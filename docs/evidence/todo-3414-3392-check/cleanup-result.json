@@ -1,0 +1,55 @@
+{
+  "schema": "todo3414-cleanup-result-v1",
+  "todo_id": 3414,
+  "job": "20261023-120331-todo-3414",
+  "owned_id": "9975d44bed860ed1b6bc8f25c81e902d",
+  "source": "D:\\OMB\\tmp\\codex-owned-9975d44bed860ed1b6bc8f25c81e902d",
+  "measured_bytes": 8366624188,
+  "entries": 5177,
+  "normal_plan_action": "quarantine",
+  "normal_plan_reason": "size",
+  "quarantine_attempted": true,
+  "quarantine_exit_code": 2,
+  "quarantine_result_code": "QUARANTINE_CROSS_DRIVE",
+  "failure_phase": "preflight",
+  "normal_guard": {
+    "ci_retirement_qualified": false,
+    "classification_unverified": true,
+    "client_resource": true,
+    "ok": true,
+    "original_registry_recovered": false,
+    "scope": "verified repair source and explicitly supplied operational receipts only"
+  },
+  "status": "deferred",
+  "source_exists": true,
+  "state_left": "Original owned scratch retained at source; no deletion, movement, or finish; candidate/raw logs/necessary receipts retained in own .ci-work",
+  "deleted_bytes": 0,
+  "moved_bytes": 0,
+  "original_ownership_state": "owned",
+  "approval_review_rejection": false,
+  "owner_decision_required": false,
+  "next_action": "Parent records this new target and exact hold; regular cleanup supervisor verifies original ownership and guard scope, then uses the normal same-drive cleanup route. Do not copy protected inputs or bypass guard. No repeated same-action retry.",
+  "candidate_preserved": true,
+  "raw_logs_preserved": true,
+  "drive_space_observed": [
+    {
+      "available": true,
+      "drive": "C:\\",
+      "free_bytes": 134883868672,
+      "total_bytes": 3999776370688
+    },
+    {
+      "available": true,
+      "drive": "D:\\",
+      "free_bytes": 2480963026944,
+      "total_bytes": 4000768323584
+    },
+    {
+      "available": true,
+      "drive": "E:\\",
+      "free_bytes": 858052489216,
+      "total_bytes": 2000395272192
+    }
+  ],
+  "created_utc": "2026-10-23T03:19:05.2283774Z"
+}

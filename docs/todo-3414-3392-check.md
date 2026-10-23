@@ -39,11 +39,22 @@ D:/CC/Work/unattended-operations-20261013-wt/todo-3414-rust/.ci-work/candidate-1
 12,027,392 bytes。コピー元と候補のSHA256は`dff5f38dd96740734d2290191f357aef598ca58a114b6b8a0b03fbb6a20a129b`で一致した。
 実ビルドtreeは`ed62c16d131f02ffcf36c5711d76484d50d4859d`。
 [入力閉包](evidence/todo-3414-3392-check/input-closure.json)は依存する6クレートの全追跡ファイル、全Cargo manifest/lock、追跡された設定を含む195入力のGit blob・実bytes・SHA256を記録する。195入力はビルド前後で不変で、release dep-infoの自作コード83入力をすべて含む。
-閉包JSONの全SHA256は`a8240f8936c61b03690d3d3f90eb36fce27dec84b9d4684d9c8aa4fd6a8e34dd`。
+閉包JSONはLF・BOMなしで保存し、全SHA256は`e19f373cbe7cdc092110e5da5ccf21462ec1364ad4f9024bc5063aa8e2a4aff7`。改行をそろえる前の取得記録も`.ci-work/input-closure.json`へ保持し、最終候補票から参照できる。
 registry依存の版とチェックサムはCargo.lockと`--locked`で固定した。registryキャッシュやOS全体を独立に再検証したという意味ではない。
 
 [候補票](evidence/todo-3414-3392-check/candidate.json)に全SHA、サイズ、実HEAD/tree、ツール版・hash、通常guardの成功を保存した。
 `release_eligible:false`、最新レビュー・CI未確認、未配布を維持する。親は3411のCI修復を別に受領し、差分と入力閉包を照合してからレビュー・必要CI・マージ・配布・配布後の実受入を完了する。この子は3411を統合していない。
 [ログ一覧](evidence/todo-3414-3392-check/evidence-index.json)には原ログ・必要receiptの絶対パス、サイズ、全SHA256を記録し、原ログとexeはGitへ入れない。
 
-所有scratch `9975d44bed860ed1b6bc8f25c81e902d`の不要生成物の清掃結果は、後続の同ブランチの記録へ追記する。候補・原ログ・必要receiptは配布まで保持する。
+清掃は次の1対象だけ保留した。[清掃結果](evidence/todo-3414-3392-check/cleanup-result.json)に根拠と次の手を保存した。
+
+```text
+D:/OMB/tmp/codex-owned-9975d44bed860ed1b6bc8f25c81e902d
+```
+
+通常planの実測は8,366,624,188 bytes・5,177項目で、容量を理由に退避を指定した。
+指定どおりの通常quarantineを1回実行したが、DからCへの移動は`QUARANTINE_CROSS_DRIVE`で事前拒否（exit2）となった。自動承認審査の拒否ではない。
+その後の通常guardは`classification_unverified:true / client_resource:true`を返したため、同じDドライブへの手動移動も行わず保持した。所有票は元のowned状態のままで、削除・移動・容量回収は0、成功したfinish票も作っていない。
+親はこの新しい保留対象も既存の話題へメンションなしで記録する。通常の清掃監督が作成時の所有票とguardの適用範囲を照合して回収する。本人の判断は不要。
+候補・原ログ・必要receiptはこのworktreeの`.ci-work/`へ配布まで保持する。
+最終commit/push・再開情報保存・親への結果受渡しのreceiptは、コミット後に`.ci-work/final-delivery.json`へ別記する。ブランチは`scheduler/todo-3414-3392-check`で、実装の追加差分はない。

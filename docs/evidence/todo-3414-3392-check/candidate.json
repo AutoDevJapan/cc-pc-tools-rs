@@ -13,8 +13,8 @@
   "candidate_path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3414-rust\\.ci-work\\candidate-138d2fd805447ff2e1285310aaf89ea39ba2b529-20261023-120331-todo-3414\\discord_ask.exe",
   "sha256": "dff5f38dd96740734d2290191f357aef598ca58a114b6b8a0b03fbb6a20a129b",
   "bytes": 12027392,
-  "input_closure_path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3414-rust\\.ci-work\\input-closure.json",
-  "input_closure_sha256": "a8240f8936c61b03690d3d3f90eb36fce27dec84b9d4684d9c8aa4fd6a8e34dd",
+  "input_closure_path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3414-rust\\.ci-work\\input-closure-lf.json",
+  "input_closure_sha256": "e19f373cbe7cdc092110e5da5ccf21462ec1364ad4f9024bc5063aa8e2a4aff7",
   "input_files_count": 195,
   "dep_info_input_count": 83,
   "all_dep_info_inputs_included": true,
@@ -65,5 +65,10 @@
     "distribution",
     "deployed acceptance"
   ],
-  "created_utc": "2026-10-23T03:15:34.7658062Z"
+  "created_utc": "2026-10-23T03:15:34.7658062Z",
+  "original_input_closure_record": {
+    "path": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3414-rust\\.ci-work\\input-closure.json",
+    "sha256": "a8240f8936c61b03690d3d3f90eb36fce27dec84b9d4684d9c8aa4fd6a8e34dd",
+    "normalization": "Final copy uses LF without BOM; original captured record retained"
+  }
 }

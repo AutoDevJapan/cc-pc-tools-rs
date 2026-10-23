@@ -72,11 +72,13 @@ type sourceObjects struct {
 type objectStore struct {
 	s       *session
 	dir     string
+	limits  objectLimits
 	packs   []*pack
 	shallow map[string]bool
 	reason  string
 	cache   map[packedAt]packedObject
 	cached  int
+	spent   int64
 }
 
 type packedAt struct {
@@ -151,8 +153,8 @@ func (q *commitQueue) Pop() any {
 // classifies the pack directory, then every index and pack, before any is
 // opened. An index without its pack is skipped, as Git skips it, and no other
 // file of the directory is opened.
-func (s *session) openObjects(src sourceObjects) (*objectStore, string) {
-	o := &objectStore{s: s, dir: src.dir, shallow: map[string]bool{}, cache: map[packedAt]packedObject{}}
+func (s *session) openObjects(src sourceObjects, limits objectLimits) (*objectStore, string) {
+	o := &objectStore{s: s, dir: src.dir, limits: limits, shallow: map[string]bool{}, cache: map[packedAt]packedObject{}}
 	if text, ok := strings.CutSuffix(string(src.shallow), "\n"); ok {
 		for _, id := range strings.Split(text, "\n") {
 			o.shallow[id] = true
@@ -169,6 +171,9 @@ func (s *session) openObjects(src sourceObjects) (*objectStore, string) {
 	}
 	if !s.pinDir(dir) {
 		return nil, "source_git"
+	}
+	if s.env.beforeList != nil {
+		s.env.beforeList(dir)
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {

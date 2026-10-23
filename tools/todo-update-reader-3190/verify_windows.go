@@ -21,10 +21,12 @@ import (
 
 // environment is the reader's only connection to the outside: the deployed
 // guard's CLI. The reader runs no Git; it reads the repository's files itself.
-// Tests replace the guard with a recorded fake and observe every read.
+// Tests replace the guard with a recorded fake and observe every read and
+// directory listing.
 type environment struct {
 	guard         func(args ...string) (stdout []byte, exitCode int, ran bool)
 	beforeRead    func(path string)
+	beforeList    func(dir string)
 	beforeRecheck func()
 }
 
@@ -293,7 +295,7 @@ func (s *session) checkSource(p profile) (map[string]treeEntry, string) {
 	if reason != "" {
 		return nil, reason
 	}
-	store, reason := s.openObjects(src)
+	store, reason := s.openObjects(src, p.limits)
 	if reason != "" {
 		return nil, reason
 	}

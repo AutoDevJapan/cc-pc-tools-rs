@@ -72,6 +72,7 @@ type fixture struct {
 	onCapacity   func()
 	onRecheck    func()
 	onRead       func(path string)
+	onList       func(dir string)
 }
 
 func sha(data []byte) string {
@@ -151,6 +152,7 @@ func newFixture(t *testing.T, edit func(map[string]string)) *fixture {
 		inputs:      len(names),
 		depEntries:  len(fixtureDeps),
 		localCrates: 2,
+		limits:      productionProfile.limits,
 	}
 	f.receipt = map[string]any{
 		"domain":                 f.p.receipt.domain,
@@ -326,6 +328,12 @@ func (f *fixture) env() environment {
 			f.record("read:" + key(path))
 			if f.onRead != nil {
 				f.onRead(key(path))
+			}
+		},
+		beforeList: func(dir string) {
+			f.record("list:" + key(dir))
+			if f.onList != nil {
+				f.onList(key(dir))
 			}
 		},
 		beforeRecheck: func() {
@@ -957,6 +965,7 @@ func TestProductionProfileBindsOneFixedUpdate(t *testing.T) {
 		"counts":        {fmt.Sprintf("%d %d %d", p.inputs, p.depEntries, p.localCrates), "126 116 8"},
 		"guard":         {guardExecutable, `D:\CC\Tools\client-records\scrub391.exe`},
 		"origins":       {strings.Join(p.origins, " "), "https://github.com/autodevjapan/cc-pc-tools-rs.git https://github.com/autodevjapan/cc-pc-tools-rs git@github.com:autodevjapan/cc-pc-tools-rs.git"},
+		"limits":        {fmt.Sprintf("%+v", p.limits), "{packs:64 packEntries:4096 indexBytes:268435456 readBytes:536870912 deltaDepth:4095 commits:65536 treeEntries:65536 pathBytes:16777216}"},
 	}
 	for name, pair := range checks {
 		if pair[0] != pair[1] {

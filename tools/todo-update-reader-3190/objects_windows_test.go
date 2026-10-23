@@ -311,7 +311,7 @@ func TestObjectStoreAgreesWithGit(t *testing.T) {
 			objects := filepath.Join(dir, ".git", "objects")
 			s := newSession(environment{guard: clearGuard})
 			defer s.close()
-			store, reason := s.openObjects(sourceObjects{dir: objects})
+			store, reason := s.openObjects(sourceObjects{dir: objects}, productionProfile.limits)
 			if reason != "" {
 				t.Fatalf("openObjects refused the store: %s", reason)
 			}
@@ -380,6 +380,42 @@ func TestQualifiesFromPacks(t *testing.T) {
 			t.Fatalf("the %s file %v was not read (%v)", ext, matches, err)
 		}
 	}
+}
+
+// The reader lists the pack directory through the handle that it verified. A
+// junction put in the directory's place after the pin leads the reader
+// nowhere: no name from the junction's target is listed, classified or read.
+func TestListsOnlyThePinnedPackDirectory(t *testing.T) {
+	f := newFixture(t, nil)
+	f.gitIn(f.repo, "repack", "-a", "-d", "-q")
+	dir := filepath.Join(f.common, "objects", "pack")
+	elsewhere := filepath.Join(f.base, "elsewhere")
+	unlisted := "pack-" + strings.Repeat("f", 40)
+	writeFile(t, filepath.Join(elsewhere, unlisted+".idx"), "an index that the guard never classified")
+	writeFile(t, filepath.Join(elsewhere, unlisted+".pack"), "a pack that the guard never classified")
+	swapped := false
+	f.onList = func(listed string) {
+		if listed != key(dir) || swapped {
+			return
+		}
+		if err := os.Rename(dir, dir+"-pinned"); err != nil {
+			t.Fatalf("the pinned pack directory could not be moved: %v", err)
+		}
+		junction(t, dir, elsewhere)
+		swapped = true
+	}
+	expectReason(t, f, "source_git")
+	if !swapped {
+		t.Fatal("the reader never listed the pack directory")
+	}
+	f.mu.Lock()
+	for _, event := range f.events {
+		if strings.Contains(event, unlisted) {
+			t.Errorf("a name from the junction's target reached the reader: %s", event)
+		}
+	}
+	f.mu.Unlock()
+	expectUntouchedBelow(t, f, elsewhere)
 }
 
 // The reader refuses objects that it cannot read as Git wrote them, and files

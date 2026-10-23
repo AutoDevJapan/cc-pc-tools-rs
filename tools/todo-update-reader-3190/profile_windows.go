@@ -60,6 +60,20 @@ type receiptExpectation struct {
 	baselineQualifiedBy string
 }
 
+// objectLimits bounds what the reader takes from the source's object store,
+// so that a store shaped to exhaust memory or time refuses the source. Every
+// bound is far above what the fixed source needs.
+type objectLimits struct {
+	packs       int   // index and pack pairs in the pack directory
+	packEntries int   // entries of the pack directory
+	indexBytes  int64 // the indexes' total size
+	readBytes   int64 // compressed bytes read, and bytes inflated or rebuilt from deltas
+	deltaDepth  int   // deltas between a pack entry and its whole base
+	commits     int   // commits that the ancestry walk reads
+	treeEntries int   // entries below the fixed tree, subtrees included
+	pathBytes   int64 // the listed paths' total length
+}
+
 // profile holds every compiled pin. Only tests construct other profiles; the
 // CLI always uses productionProfile and accepts no caller-supplied values.
 type profile struct {
@@ -84,6 +98,7 @@ type profile struct {
 	inputs         int
 	depEntries     int
 	localCrates    int
+	limits         objectLimits
 }
 
 var repositoryOrigins = []string{
@@ -128,4 +143,11 @@ var productionProfile = profile{
 	inputs:      126,
 	depEntries:  116,
 	localCrates: 8,
+	// Git writes at most 4095 deltas in a chain. The shared store holds 6
+	// packs with about 530 KB of index; the fixed tree has 1,657 entries,
+	// subtrees included, and 53,698 bytes of listed paths.
+	limits: objectLimits{
+		packs: 64, packEntries: 4096, indexBytes: 256 << 20, readBytes: 512 << 20,
+		deltaDepth: 4095, commits: 65536, treeEntries: 65536, pathBytes: 16 << 20,
+	},
 }

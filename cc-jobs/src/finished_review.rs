@@ -26,6 +26,23 @@ impl Context {
             if !queue::valid_job_id(id) {
                 return Err(Error::new("invalid fixed review history ID"));
             }
+            // Legacy ToDos also retain native Codex session UUIDs. They are
+            // not managed queue records and cannot carry this protocol. Only
+            // skip an absent UUID directory; an existing/unreadable record or
+            // a missing managed job must still fail the ordinary strict load.
+            if normalize_uuid(id).as_deref() == Some(id) {
+                match fs::symlink_metadata(self.job_dir(id)) {
+                    Err(error) if error.kind() == std::io::ErrorKind::NotFound => continue,
+                    Err(error) => {
+                        return Err(Error::file_io(
+                            "inspect review history",
+                            &self.job_dir(id),
+                            error,
+                        ));
+                    }
+                    Ok(_) => (),
+                }
+            }
             let source = self.load(id)?;
             if !source["fixed_read_only_review"].is_null()
                 || !source["fixed_review_requalification"].is_null()

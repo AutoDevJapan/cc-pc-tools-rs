@@ -8,9 +8,10 @@ pub fn lookup_decision(ctx: &mut Context, value: &Value) -> Result<Value> {
     match crate::decision_identity::redact(ctx, &proof) {
         Ok(mut redacted) if protocol_preserved(&proof, &redacted) => {
             let changed = redacted != proof;
-            redacted["text_available"] = json!(proof["original_question"].is_string());
-            redacted["text_redacted"] = json!(changed);
-            if changed {
+            let has_text = proof["original_question"].is_string();
+            redacted["text_available"] = json!(has_text);
+            redacted["text_redacted"] = json!(changed && has_text);
+            if changed && has_text {
                 redacted["next_action"] = json!(format!("{} 伏せ字を含む表示です。適用時は元ToDoの私的原票で原文と現在版を確認し、この表示を本人の原文やcanonicalな反映票に使わないでください。", core::s(&proof["next_action"])));
             }
             Ok(redacted)
@@ -30,11 +31,26 @@ fn same_keys(a: &Value, b: &Value) -> bool {
         .is_some_and(|(a, b)| a.len() == b.len() && a.keys().all(|key| b.contains_key(key)))
 }
 
+fn machine_identity_preserved(a: &Value, b: &Value) -> bool {
+    same_keys(a, b)
+        && [
+            "owner",
+            "guild",
+            "parent",
+            "todo_id",
+            "decision",
+            "resources",
+        ]
+        .iter()
+        .all(|key| a.get(key) == b.get(key))
+}
+
 // The legacy display redactor works on JSON text. A matching name must never
 // rename protocol keys, change an enum, or damage an ID/version. In that case
 // use the existing typed reference projection, not the corrupted display.
 fn protocol_preserved(proof: &Value, redacted: &Value) -> bool {
     if !same_keys(proof, redacted)
+        || !machine_identity_preserved(&proof["decision_identity"], &redacted["decision_identity"])
         || !proof.as_object().unwrap().iter().all(|(key, value)| {
             matches!(
                 key.as_str(),
@@ -51,6 +67,7 @@ fn protocol_preserved(proof: &Value, redacted: &Value) -> bool {
         (None, None) => true,
         (Some(a), Some(b)) if a.len() == b.len() => a.iter().zip(b).all(|(a, b)| {
             same_keys(a, b)
+                && machine_identity_preserved(&a["decision_identity"], &b["decision_identity"])
                 && a.as_object().unwrap().iter().all(|(key, value)| {
                     matches!(key.as_str(), "body" | "decision_identity")
                         || b.get(key) == Some(value)
@@ -61,10 +78,18 @@ fn protocol_preserved(proof: &Value, redacted: &Value) -> bool {
 }
 
 fn reference_only(proof: &Value, reason: &str) -> Value {
+    let has_context = proof["original_question"].is_string()
+        && proof["thread_id"].as_str().is_some_and(|id| !id.is_empty())
+        && proof["url"].as_str().is_some_and(|url| !url.is_empty());
+    let action = if has_context {
+        format!("{} 本文は保護確認のため表示していません。元ToDoの私的原票で原文と現在版を確認してください。まだ原票がなければ、通常conversation statusでthreadに対応するrequest_idを確認し、conversation replies --request-id <ID> --output <新しい絶対パス.private.json>で取得してください。添付はその返信のhistory-readでID・サイズ・本文SHAと編集版を取得してからhistory-attachmentへ渡してください。", core::s(&proof["next_action"]))
+    } else {
+        core::s(&proof["next_action"]).to_owned()
+    };
     let mut result = json!({"domain":DOMAIN,"found":proof["found"],
         "read_only":true,"ledger_written":false,"legacy_state":"unchanged",
-        "legacy_searched":false,"text_available":false,"text_redacted":true,"redaction":reason,
-        "approval":"not_inferred","next_action":format!("{} 本文は保護確認のため表示していません。元ToDoの私的原票で原文と現在版を確認してください。まだ原票がなければ、通常conversation statusでthreadに対応するrequest_idを確認し、conversation replies --request-id <ID> --output <新しい絶対パス.private.json>で取得してください。添付はその返信のhistory-readでID・サイズ・本文SHAと編集版を取得してからhistory-attachmentへ渡してください。", core::s(&proof["next_action"]))});
+        "legacy_searched":false,"text_available":false,"text_redacted":has_context,"redaction":reason,
+        "approval":"not_inferred","next_action":action});
     if proof["source"] == "discord-api-v10" {
         result["source"] = json!("discord-api-v10");
     }

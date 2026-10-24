@@ -147,6 +147,35 @@ func TestPublicSeedContainsOnlyBoundInstanceAndCertificateHash(t *testing.T) {
 	}
 }
 
+func TestCOMBootstrapRejectionDoesNotExposeFrame(t *testing.T) {
+	valid, err := json.Marshal(comReply{Kind: "sdk-ready", Instance: "nonce-2783", IPv4: "192.168.30.4", ServerSHA256: strings.Repeat("a", 64)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct{ name, frame, code string }{
+		{"blank", " \t", "BLANK"},
+		{"syntax", "sensitive-2737-marker", "JSON"},
+		{"unknown", strings.TrimSuffix(string(valid), "}") + `,"sensitive-2737-marker":1}`, "JSON"},
+		{"trailing", string(valid) + `{}`, "JSON"},
+		{"kind", strings.Replace(string(valid), "sdk-ready", "sensitive-2737-marker", 1), "KIND"},
+		{"instance", strings.Replace(string(valid), "nonce-2783", "sensitive-2737-marker", 1), "INSTANCE"},
+		{"digest", strings.Replace(string(valid), strings.Repeat("a", 64), "sensitive-2737-marker", 1), "DIGEST"},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			stream := bytes.NewBufferString(c.frame + "\n")
+			_, err := SendCOMBootstrap(stream, "nonce-2783")
+			diagnostic := COMBootstrapRejectionDiagnostic(err)
+			digest := sha256.Sum256(bytes.TrimSpace([]byte(c.frame)))
+			if err == nil || !strings.HasPrefix(diagnostic, "COM_BOOTSTRAP_"+c.code+"_REJECTED ") || !strings.Contains(diagnostic, hex.EncodeToString(digest[:])) || strings.Contains(diagnostic, "sensitive-2737-marker") || stream.Len() != 0 {
+				t.Fatalf("rejection metadata or refusal before probe write changed: %q", diagnostic)
+			}
+		})
+	}
+	if got := COMBootstrapRejectionDiagnostic(io.ErrUnexpectedEOF); got != "" {
+		t.Fatal("arbitrary transport error exposed as a frame diagnostic")
+	}
+}
+
 func TestCOMPipeNameIsInstanceScoped(t *testing.T) {
 	name, err := COMPipeName("fresh-nonce-2783")
 	if err != nil {

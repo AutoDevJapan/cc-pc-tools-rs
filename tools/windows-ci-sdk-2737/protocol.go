@@ -125,6 +125,32 @@ func PrepareGuestSDK(com io.ReadWriter, instance string, client Identity) (Prepa
 	return receipt, nil
 }
 
+type comBootstrapRejection struct {
+	code   string
+	bytes  int
+	digest string
+}
+
+func (e *comBootstrapRejection) Error() string {
+	return fmt.Sprintf("COM_BOOTSTRAP_%s_REJECTED trimmed_bytes=%d trimmed_sha256=%s", e.code, e.bytes, e.digest)
+}
+
+// COMBootstrapRejectionDiagnostic exposes a closed reason and the existing
+// line reader's whitespace-trimmed byte count and hash.
+// The rejected frame and arbitrary transport errors are never returned here.
+func COMBootstrapRejectionDiagnostic(err error) string {
+	var rejection *comBootstrapRejection
+	if errors.As(err, &rejection) {
+		return rejection.Error()
+	}
+	return ""
+}
+
+func rejectCOMBootstrap(code string, line []byte) error {
+	digest := sha256.Sum256(line)
+	return &comBootstrapRejection{code, len(line), hex.EncodeToString(digest[:])}
+}
+
 // SendCOMBootstrap receives only public identity metadata, then challenges the
 // bidirectional COM channel. The caller supplies the exact new VM's COM stream.
 func SendCOMBootstrap(stream io.ReadWriter, instance string) (BootstrapResult, error) {
@@ -138,8 +164,20 @@ func SendCOMBootstrap(stream io.ReadWriter, instance string) (BootstrapResult, e
 	dec := json.NewDecoder(bytes.NewReader(line))
 	dec.DisallowUnknownFields()
 	var reply comReply
-	if dec.Decode(&reply) != nil || dec.Decode(new(json.RawMessage)) != io.EOF || reply.Kind != "sdk-ready" || reply.Instance != instance || !validDigest(reply.ServerSHA256) {
-		return BootstrapResult{}, errors.New("COM bootstrap response rejected")
+	if len(bytes.TrimSpace(line)) == 0 {
+		return BootstrapResult{}, rejectCOMBootstrap("BLANK", line)
+	}
+	if dec.Decode(&reply) != nil || dec.Decode(new(json.RawMessage)) != io.EOF {
+		return BootstrapResult{}, rejectCOMBootstrap("JSON", line)
+	}
+	if reply.Kind != "sdk-ready" {
+		return BootstrapResult{}, rejectCOMBootstrap("KIND", line)
+	}
+	if reply.Instance != instance {
+		return BootstrapResult{}, rejectCOMBootstrap("INSTANCE", line)
+	}
+	if !validDigest(reply.ServerSHA256) {
+		return BootstrapResult{}, rejectCOMBootstrap("DIGEST", line)
 	}
 	ip := net.ParseIP(reply.IPv4)
 	if ip == nil || ip.To4() == nil || !ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() {

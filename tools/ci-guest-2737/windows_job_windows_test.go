@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	sourcepacket "cc/ci-source-2737"
 	"cc/product-ci/normalci"
 	"context"
@@ -8,12 +9,23 @@ import (
 	"errors"
 	"fmt"
 	wr "github.com/autodevjapan/cc-pc-tools-rs/tools/windows-ci-runner-2737"
+	sdk "github.com/autodevjapan/cc-pc-tools-rs/tools/windows-ci-sdk-2737"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestWindowsCOMRejectionKeepsOnlyTypedDiagnostic(t *testing.T) {
+	_, rejection := sdk.SendCOMBootstrap(bytes.NewBufferString("sensitive-2737-marker\n"), "nonce-2737")
+	if got := windowsCOMRejection(rejection).Error(); !strings.Contains(got, "COM_BOOTSTRAP_JSON_REJECTED") || strings.Contains(got, "sensitive-2737-marker") {
+		t.Fatal("typed diagnostic omitted or rejected frame exposed")
+	}
+	if got := windowsCOMRejection(errors.New("sensitive-2737-marker")).Error(); got != "Windows COM bootstrap rejected" {
+		t.Fatal("untyped transport error exposed")
+	}
+}
 
 func structProof(q linuxJobRequest) sourcepacket.Receipt {
 	return sourcepacket.Receipt{RepoID: 1154066087, PR: 3613, HeadSHA: q.Source.HeadSHA, TreeSHA: q.Source.TreeSHA, BlobCount: 1, PhysicalBlobsVerified: true}

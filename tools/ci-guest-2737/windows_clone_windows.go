@@ -313,7 +313,7 @@ func readWindowsSerial(ctx context.Context, instance, file string) error {
 			return writeNew(file, b)
 		}
 		if !strings.Contains(e.Error(), "COM bootstrap response unavailable") {
-			return errors.New("Windows COM bootstrap rejected")
+			return windowsCOMRejection(e)
 		}
 		select {
 		case <-ctx.Done():
@@ -322,4 +322,11 @@ func readWindowsSerial(ctx context.Context, instance, file string) error {
 		}
 	}
 	return ctx.Err()
+}
+
+func windowsCOMRejection(e error) error {
+	if diagnostic := sdk.COMBootstrapRejectionDiagnostic(e); diagnostic != "" {
+		return errors.New("Windows COM bootstrap rejected: " + diagnostic)
+	}
+	return errors.New("Windows COM bootstrap rejected")
 }

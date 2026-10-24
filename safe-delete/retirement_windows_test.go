@@ -451,3 +451,37 @@ func TestRetirementReadOnlyInspectionDoesNotCreateLocks(t *testing.T) {
 		t.Fatal("read-only inspection wrote a canonical lock")
 	}
 }
+
+func TestRetirementLiveSchedulerActorAncestry(t *testing.T) {
+	if os.Getenv("CC_RETIREMENT_LIVE_ACTOR_TEST") != "1" {
+		t.Skip("opt-in live actor check; canonical fixture tests run normally")
+	}
+	rt := defaultConfig().retirementRuntime()
+	j, je := rt.job(os.Getenv("CC_JOB_ID"))
+	row, te := rt.todo(j.Todo)
+	t.Logf("job_valid=%v ancestry=%v todo_valid=%v actor_linked=%v", je == nil, retirementProcessAncestor(j.CodexPID), te, retiredHas(row.Jobs, j.ID))
+	actor, e := rt.actor()
+	if e != nil {
+		t.Fatal(e)
+	}
+	if actor.ID != os.Getenv("CC_JOB_ID") || actor.Todo == 0 || actor.Status != "running" {
+		t.Fatal("current scheduler actor not verified")
+	}
+}
+
+func TestRetirementTodoDecodesOnlyTheOriginalOwnerRow(t *testing.T) {
+	c, _, _ := retirementFixture(t, false)
+	rt := c.retirementRuntime()
+	row, e := rt.todo(42)
+	if e != nil {
+		t.Fatal(e)
+	}
+	retirementPut(t, rt.Todo, map[string]any{"items": []any{map[string]any{"id": 7, "note": map[string]any{"legacy": true}, "jobs": "legacy-shape"}, row}})
+	selected, e := rt.todo(42)
+	if e != nil || selected.ID != 42 || selected.Note != row.Note {
+		t.Fatal(selected, e)
+	}
+	retirementPut(t, rt.Todo, map[string]any{"items": []any{map[string]any{"id": 42, "jobs": "broken-selected-owner"}}})
+	_, e = rt.todo(42)
+	code(t, e, "PRODUCER_TODO_UNVERIFIED")
+}

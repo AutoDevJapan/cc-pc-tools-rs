@@ -250,18 +250,28 @@ func (rt retirementRuntime) job(id string) (retirementJob, error) {
 }
 func (rt retirementRuntime) todo(id uint64) (retirementTodo, error) {
 	var db struct {
-		Items []retirementTodo `json:"items"`
+		Items []json.RawMessage `json:"items"`
 	}
 	if e := retiredRead(rt.Todo, 64<<20, &db, false); e != nil {
 		return retirementTodo{}, e
 	}
 	var found *retirementTodo
-	for i := range db.Items {
-		if db.Items[i].ID == id {
+	for _, raw := range db.Items {
+		var key struct {
+			ID uint64 `json:"id"`
+		}
+		if json.Unmarshal(raw, &key) != nil {
+			continue
+		}
+		if key.ID == id {
 			if found != nil {
 				return retirementTodo{}, fail("PRODUCER_TODO_UNVERIFIED")
 			}
-			found = &db.Items[i]
+			var selected retirementTodo
+			if json.Unmarshal(raw, &selected) != nil {
+				return retirementTodo{}, fail("PRODUCER_TODO_UNVERIFIED")
+			}
+			found = &selected
 		}
 	}
 	if found == nil {

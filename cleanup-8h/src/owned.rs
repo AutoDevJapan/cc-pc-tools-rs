@@ -580,6 +580,10 @@ mod tests {
             .arg("-c")
             .arg("-o")
             .arg(&exe)
+            // The shared Rust CI provisions the selector's older Go version
+            // with GOTOOLCHAIN=local. This module's own go.mod remains the
+            // source of the required producer toolchain, for this child only.
+            .env("GOTOOLCHAIN", "auto")
             .current_dir(
                 Path::new(env!("CARGO_MANIFEST_DIR"))
                     .parent()

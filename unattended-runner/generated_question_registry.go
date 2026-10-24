@@ -11,6 +11,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
@@ -97,7 +98,16 @@ func (r generatedQuestionRegistry) spec(b generatedQuestionBundle) (generatedQue
 			return s, errConversationMedia
 		}
 	}
-	if b.Domain != generatedEvidenceDomain || b.Scope.Todo == 0 || !shaPattern.MatchString(b.Scope.Body) || !shaPattern.MatchString(b.Scope.Decision) || !generatedUUID.MatchString(b.Session) || !b.Content.New || !b.Content.Fictional || !b.Content.NoConfidential || strings.TrimSpace(b.Content.Reference) == "" || !r.Destination(b.Scope) || !r.Task(b.Scope.Todo) || !shaPattern.MatchString(b.ProofSHA) || len(b.Images) == 0 || len(b.Images) > 10 || (len(b.Events) != 2 && len(b.Events) != 4) || b.Cell == "" {
+	if b.Domain != generatedEvidenceDomain || b.Scope.Todo == 0 || !shaPattern.MatchString(b.Scope.Body) || !shaPattern.MatchString(b.Scope.Decision) || !generatedUUID.MatchString(b.Session) {
+		return s, errConversationMedia
+	}
+	if !b.Content.New || !b.Content.NoConfidential || strings.TrimSpace(b.Content.Reference) == "" {
+		return s, generatedFailure("content_review", "content_review_incomplete")
+	}
+	if !b.Content.Fictional {
+		return s, generatedFailure("content_review", "fictional_data_required")
+	}
+	if !r.Destination(b.Scope) || !r.Task(b.Scope.Todo) || !shaPattern.MatchString(b.ProofSHA) || len(b.Images) == 0 || len(b.Images) > 10 || (len(b.Events) != 2 && len(b.Events) != 4) || b.Cell == "" {
 		return s, errConversationMedia
 	}
 	if !generatedWithin(r.Sessions, b.Rollout) || !strings.HasSuffix(filepath.Base(filepath.FromSlash(b.Rollout)), "-"+b.Session+".jsonl") {
@@ -206,24 +216,31 @@ func eraseGeneratedKey(key []byte) {
 func (r generatedQuestionRegistry) check(ctx context.Context, evidence string) (generatedQuestionBundle, error) {
 	empty := generatedQuestionBundle{}
 	allowed, err := r.Guard(ctx, evidence)
-	if err != nil || !allowed {
-		return empty, errConversationMedia
+	if err != nil {
+		return empty, generatedFailure("evidence_guard", "original_evidence_guard_failed")
+	}
+	if !allowed {
+		return empty, generatedFailure("evidence_guard", "original_evidence_not_qualified")
 	}
 	b, err := r.Read(evidence, 512<<10)
 	if err != nil {
-		return empty, errConversationMedia
+		return empty, generatedFailure("evidence_read", "original_evidence_read_failed")
 	}
 	var bundle generatedQuestionBundle
 	if generatedStrictJSON(b, &bundle) != nil {
-		return empty, errConversationMedia
+		return empty, generatedFailure("evidence_schema", "original_evidence_schema_invalid")
 	}
 	s, err := r.spec(bundle)
 	if err != nil {
-		return empty, errConversationMedia
+		var failure *generatedQuestionFailure
+		if errors.As(err, &failure) {
+			return empty, err
+		}
+		return empty, generatedFailure("bundle_contract", "original_scope_or_metadata_invalid")
 	}
 	for _, image := range bundle.Images {
 		if _, err = qualifyGeneratedQuestionImage(ctx, image.Path, bundle.Scope, s); err != nil {
-			return empty, errConversationMedia
+			return empty, generatedFailure("image_validation", "original_generation_or_image_not_qualified")
 		}
 	}
 	return bundle, nil

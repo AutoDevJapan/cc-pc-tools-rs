@@ -292,7 +292,8 @@ func (r *Runner) registerOrigin(ctx context.Context, request *Request, origin Pr
 		// Delivery only: never release an owner stop, launch the game, create a
 		// new product generation or mark an instruction applied from this scope.
 		copy.Phase = "product_reply_saved"
-		if err := publish(filepath.Join(r.Config.Home, "steering", fmt.Sprintf("%d-%s.json", origin.Todo, request.Message)), &copy); err != nil {
+		workerSource := ordinaryWorkerSource(&copy)
+		if err := publish(filepath.Join(r.Config.Home, "steering", fmt.Sprintf("%d-%s.json", origin.Todo, request.Message)), &workerSource); err != nil {
 			return err
 		}
 		*request = copy

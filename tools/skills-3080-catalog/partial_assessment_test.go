@@ -15,6 +15,8 @@ type partialEntry struct {
 	Name       string `json:"name"`
 	Commit     string `json:"commit"`
 	SHA        string `json:"source_sha256"`
+	Blob       string `json:"git_blob"`
+	Bytes      int    `json:"bytes"`
 	Read       bool   `json:"body_read_complete"`
 	Installed  bool   `json:"installed_by_todo3080"`
 	Integrated bool   `json:"integrated_by_todo3080"`
@@ -122,7 +124,8 @@ func TestPartialMizchiAssessmentConservesUnfinishedPathsAndAdoptions(t *testing.
 	var a partialAssessment
 	loadPublicReceipt(t, "skills-3080-mizchi-partial-evaluation.json", &a)
 	var ledger struct {
-		Entries []partialAdoption `json:"entries"`
+		Entries  []partialAdoption `json:"entries"`
+		Excluded []partialAdoption `json:"excluded_entries"`
 	}
 	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
 	var p struct {
@@ -135,6 +138,9 @@ func TestPartialMizchiAssessmentConservesUnfinishedPathsAndAdoptions(t *testing.
 			Integrated int  `json:"integrated"`
 			Excluded   int  `json:"excluded"`
 		} `json:"mizchi_partial_entrypoint_evaluation"`
+		Mengto struct {
+			Read int `json:"full_body_read"`
+		} `json:"mengto_partial_entrypoint_evaluation"`
 		TotalRead int `json:"all_fulltext_primary_paths_including_partial_sources"`
 		Complete  struct {
 			Paths int `json:"case_insensitive_skill_named_paths"`
@@ -160,14 +166,14 @@ func TestPartialMizchiAssessmentConservesUnfinishedPathsAndAdoptions(t *testing.
 	if roster.Source != a.Source || roster.Commit != a.Commit || roster.Tree != "afbd6cabdc055717936a1c454627ccc62050705b" || len(roster.Paths) != 76 || roster.SHA != pinnedSHA || pathSetSHA(roster.Paths) != pinnedSHA {
 		t.Fatal("fixed entrypoint roster differs from its independent tree anchor")
 	}
-	if p.Partial.Expected != a.Expected || p.Partial.Read != a.Read || p.Partial.Unread != a.Unread || p.Partial.Complete != (a.Unread == 0) || p.Partial.Installed != a.Installed || p.Partial.Integrated != a.Integrated || p.Partial.Excluded != a.Excluded || p.TotalRead != p.Complete.Paths+a.Read {
+	if p.Partial.Expected != a.Expected || p.Partial.Read != a.Read || p.Partial.Unread != a.Unread || p.Partial.Complete != (a.Unread == 0) || p.Partial.Installed != a.Installed || p.Partial.Integrated != a.Integrated || p.Partial.Excluded != a.Excluded || p.TotalRead != p.Complete.Paths+a.Read+p.Mengto.Read {
 		t.Fatal("progress summary differs from the partial assessment")
 	}
 	matches := 0
 	for _, r := range p.Repos {
 		if r.Source == a.Source {
 			matches++
-			if err := validatePartial(a, ledger.Entries, r.Source, r.Commit, r.Count, pinnedSHA); err != nil {
+			if err := validatePartial(a, append(ledger.Entries, ledger.Excluded...), r.Source, r.Commit, r.Count, pinnedSHA); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -178,7 +184,7 @@ func TestPartialMizchiAssessmentConservesUnfinishedPathsAndAdoptions(t *testing.
 }
 
 func TestPartialAssessmentRejectsLostPathsAndUnrecordedChanges(t *testing.T) {
-	for _, kind := range []string{"valid", "overlap", "lost_pending", "same_count_substitution", "duplicate_id", "unrecorded_integration", "wrong_source_hash", "valid_integration"} {
+	for _, kind := range []string{"valid", "overlap", "lost_pending", "same_count_substitution", "duplicate_id", "unrecorded_integration", "wrong_source_hash", "valid_integration", "unassessed_id", "duplicate_row", "wrong_path", "wrong_commit", "unknown_disposition", "other_repo"} {
 		t.Run(kind, func(t *testing.T) {
 			e := partialEntry{ID: "github:one", Path: "one/SKILL.md", Name: "one", Commit: strings.Repeat("a", 40), SHA: strings.Repeat("b", 64), Read: true}
 			a := partialAssessment{Source: "example/skills", Commit: e.Commit, Expected: 2, Read: 1, Unread: 1, Entries: []partialEntry{e}, Pending: []string{"two/SKILL.md"}}
@@ -193,17 +199,33 @@ func TestPartialAssessmentRejectsLostPathsAndUnrecordedChanges(t *testing.T) {
 			case "duplicate_id":
 				e.Path, e.Name = "two/SKILL.md", "two"
 				a.Entries, a.Pending, a.Read, a.Unread = append(a.Entries, e), nil, 2, 0
-			case "unrecorded_integration", "wrong_source_hash", "valid_integration":
+			case "unrecorded_integration", "wrong_source_hash", "valid_integration", "unassessed_id", "duplicate_row", "wrong_path", "wrong_commit", "unknown_disposition", "other_repo":
 				a.Entries[0].Integrated, a.Integrated = true, 1
 				if kind != "unrecorded_integration" {
 					rows = []partialAdoption{{ID: e.ID, Source: a.Source, Commit: e.Commit, Path: e.Path, SHA: e.SHA, Disposition: "integrated_existing"}}
 					if kind == "wrong_source_hash" {
 						rows[0].SHA = strings.Repeat("c", 64)
 					}
+					switch kind {
+					case "unassessed_id":
+						rows[0].ID = "github:unassessed"
+					case "duplicate_row":
+						rows = append(rows, rows[0])
+					case "wrong_path":
+						rows[0].Path = "wrong/SKILL.md"
+					case "wrong_commit":
+						rows[0].Commit = strings.Repeat("c", 40)
+					case "unknown_disposition":
+						rows[0].Disposition = "candidate"
+					case "other_repo":
+						other := rows[0]
+						other.Source, other.Path, other.Commit = "other/skills", "different/SKILL.md", "unrelated"
+						rows = append(rows, other)
+					}
 				}
 			}
 			err := validatePartial(a, rows, "example/skills", strings.Repeat("a", 40), 2, pathSetSHA([]string{"one/SKILL.md", "two/SKILL.md"}))
-			wantError := kind != "valid" && kind != "valid_integration"
+			wantError := kind != "valid" && kind != "valid_integration" && kind != "other_repo"
 			if (err != nil) != wantError {
 				t.Fatalf("source conservation detection: %s: %v", kind, err)
 			}

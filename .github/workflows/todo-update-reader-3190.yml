@@ -1,0 +1,44 @@
+name: ToDo3190 todo update reader
+on:
+  push:
+    branches: [main]
+    paths: ['tools/todo-update-reader-3190/**', '.github/workflows/todo-update-reader-3190.yml']
+  pull_request:
+    paths: ['tools/todo-update-reader-3190/**', '.github/workflows/todo-update-reader-3190.yml']
+permissions:
+  contents: read
+# Superseded PR heads need no second verification; preserve every main run.
+concurrency:
+  group: ${{ github.workflow }}-pr-head-v2-${{ github.event_name == 'pull_request' && github.run_attempt == 1 && github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' && github.run_attempt == 1 }}
+jobs:
+  windows:
+    if: github.repository == 'AutoDevJapan/cc-pc-tools-rs' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+    # The reader uses Windows handle, link and final-path semantics, and its
+    # synthetic Git repositories, hard links and junctions need the PC runner.
+    runs-on: [self-hosted, Windows, X64, cc-pc-tools-windows]
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: tools/todo-update-reader-3190
+    steps:
+      - name: Admit current Windows source before checkout
+        env:
+          CI_JOB_TOKEN: ${{ github.token }}
+        working-directory: ${{ runner.temp }}
+        shell: pwsh
+        run: |
+          & $env:PC_CI_ADMISSION admit
+          exit $LASTEXITCODE
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version: '1.27.x'
+          cache: false
+      - run: go test -race -timeout 900s ./...
+      - run: go vet ./...
+      - run: go build -trimpath .

@@ -15,7 +15,7 @@ type HistoryWatchInput struct {
 
 type HistoryWatch struct {
 	Scope      monthlyAuditScope `json:"scope"`
-	Receipt    string            `json:"receipt_file"`
+	Receipt    string            `json:"receipt_file,omitempty"`
 	ReceiptSHA string            `json:"receipt_sha256"`
 	ScopeSHA   string            `json:"scope_sha256"`
 }
@@ -30,6 +30,9 @@ func (r *Runner) watchHistory(ctx context.Context, in HistoryWatchInput, guard f
 	}
 	if old := r.State.Requests[in.Message]; old != nil {
 		if old.HistoryWatch != nil && old.HistoryWatch.Receipt == in.Receipt && old.HistoryWatch.ReceiptSHA == in.ReceiptSHA {
+			if !r.validHistoryWatch(old) {
+				return errors.New("saved historical watch outside accepted month")
+			}
 			return nil
 		}
 		return errors.New("existing intake route retained")
@@ -60,7 +63,7 @@ func (r *Runner) watchHistory(ctx context.Context, in HistoryWatchInput, guard f
 	if source == nil || source.Channel != page.Channel || source.Author.ID != page.Owner || source.Author.Bot || safeText(source.Content, r.Token) != source.Content {
 		return errors.New("historical owner source differs")
 	}
-	q := &Request{Thread: source.Channel, Guild: page.Guild, RecordVersion: 2, Message: source.ID, Author: source.Author.ID, Created: source.Timestamp, Edited: source.Edited, ReplyTo: source.Reference.Message, ReplyChannel: source.Reference.Channel, ReplyGuild: source.Reference.Guild, Acquired: r.Now().UTC().Format(time.RFC3339Nano), Source: "discord-api-v10", Text: source.Content, Key: requestKey(source.Channel, source.ID), MessageType: source.Type, Attachments: source.Attachments, Phase: "history_watch", PendingOwner: "OMB", NextAction: "watch_source_version_without_reinterpreting_original_answer", HistoryWatch: &HistoryWatch{Scope: scope, Receipt: in.Receipt, ReceiptSHA: in.ReceiptSHA, ScopeSHA: page.ScopeSHA}}
+	q := &Request{Thread: source.Channel, Guild: page.Guild, RecordVersion: 2, Message: source.ID, Author: source.Author.ID, Created: source.Timestamp, Edited: source.Edited, ReplyTo: source.Reference.Message, ReplyChannel: source.Reference.Channel, ReplyGuild: source.Reference.Guild, Acquired: r.Now().UTC().Format(time.RFC3339Nano), Source: "discord-api-v10", Text: source.Content, Key: requestKey(source.Channel, source.ID), MessageType: source.Type, Attachments: source.Attachments, Phase: "history_watch", NextAction: "watch_source_version_without_reinterpreting_original_answer", HistoryWatch: &HistoryWatch{Scope: scope, Receipt: in.Receipt, ReceiptSHA: in.ReceiptSHA, ScopeSHA: page.ScopeSHA}}
 	if !r.validHistoryWatch(q) {
 		return errors.New("historical source outside accepted month")
 	}
@@ -113,6 +116,7 @@ func (r *Runner) validHistoryWatch(q *Request) bool {
 		return false
 	}
 	stamp, err := time.Parse(time.RFC3339Nano, q.Created)
+	cutoff, cutoffErr := time.Parse(time.RFC3339Nano, r.State.Since)
 	lower := mustHistoryTime("2026-09-23T00:00:00+09:00")
-	return err == nil && !stamp.Before(lower) && !stamp.Before(mustHistoryTime(w.Scope.Since)) && stamp.Before(mustHistoryTime(w.Scope.Until))
+	return err == nil && cutoffErr == nil && stamp.Before(cutoff) && !stamp.Before(lower) && !stamp.Before(mustHistoryTime(w.Scope.Since)) && stamp.Before(mustHistoryTime(w.Scope.Until))
 }

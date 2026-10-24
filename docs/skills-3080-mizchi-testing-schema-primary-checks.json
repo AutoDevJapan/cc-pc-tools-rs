@@ -3,7 +3,6 @@
   "recorded_at": "2026-10-23T14:54:46.1642800Z",
   "source_commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
   "paths": [
-    "dep-lib-review/SKILL.md",
     "stryker-js/SKILL.md",
     "node-sqlite-vec/SKILL.md",
     "k8s-crd-from-typed-schema/SKILL.md"
@@ -37,5 +36,6 @@
   "installed": 0,
   "integrated": 0,
   "excluded": 0,
-  "review_pending": true
+  "review_pending": true,
+  "paths_definition": "この記録内で公式claimを照合した入口だけ。dep-lib-reviewの上流本文読取や評価は別の部分評価表にあり、公式claimを確認した意味ではない。"
 }

@@ -108,6 +108,20 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 		return nil, errors.New("conversation existing receipt association differs")
 	}
 	if old != nil && old.Conversation == q.RequestID && (old.Text != reply.Body || old.Edited != live.Edited) {
+		if old.ConversationSourceGeneration != "" || old.Phase == "conversation_implementation_recorded" {
+			return nil, errors.New("conversation source generation reacquisition required")
+		}
+		// A committed receipt can outlive a lost state-save response. Do not
+		// overwrite its canonical original while that response is reconciled.
+		row, err := r.todo(q.Todo)
+		if err != nil {
+			return nil, errors.New("conversation implementation state unavailable")
+		}
+		for _, receipt := range row.ImplementationRecords {
+			if receipt.Input.RequestID == q.RequestID && receipt.Input.Message == reply.Message {
+				return nil, errors.New("conversation source generation reacquisition required")
+			}
+		}
 		// Preserve the previous delivery, then hand the actual edited owner text
 		// to the same task. Edits never inherit a prior implementation receipt.
 		previous, _ := json.Marshal(old)
@@ -152,7 +166,7 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 }
 
 func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQuestion, reply conversationReply, req *Request) error {
-	if req.Phase == "conversation_reply_delivered" || req.Phase == "conversation_reply_applied" || req.Phase == "conversation_direction_recorded" {
+	if req.Phase == "conversation_reply_delivered" || req.Phase == "conversation_reply_applied" || req.Phase == "conversation_direction_recorded" || req.Phase == "conversation_implementation_recorded" || req.Phase == "conversation_source_verified" {
 		return nil
 	}
 	row, err := r.conversationTask(ctx, q.Todo)
@@ -550,7 +564,7 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 				health.Errors = append(health.Errors, "conversation_owner_media_deferred")
 			}
 			wasClosed := q.Phase == "closed"
-			if !wasClosed || (req.Phase != "conversation_reply_applied" && req.Phase != "conversation_direction_recorded") {
+			if !wasClosed || (req.Phase != "conversation_reply_applied" && req.Phase != "conversation_direction_recorded" && req.Phase != "conversation_implementation_recorded") {
 				q.Phase = "answered"
 			}
 			index.Questions[id] = q

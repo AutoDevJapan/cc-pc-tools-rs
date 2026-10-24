@@ -108,7 +108,7 @@ func intakeCLIWith(args []string, out io.Writer, load func(string, bool) (*Runne
 		for _, id := range ids[:min(len(ids), 50)] {
 			q := r.State.Requests[id]
 			owner, next := q.PendingOwner, q.NextAction
-			if q.Todo == 0 && owner == "" {
+			if q.Todo == 0 && owner == "" && q.Phase == "task_binding_pending" {
 				owner, next = "OMB", "read_source_and_bind_original_task"
 			}
 			items = append(items, map[string]any{"message_id": q.Message, "thread_id": q.Thread, "author_id": q.Author, "created_at": q.Created, "edited_at": q.Edited, "source_sha256": ordinaryVersion(q), "todo_id": q.Todo, "phase": q.Phase, "pending_owner": owner, "next_action": next, "delivery_version": q.DeliveryVersion, "message_type_known": q.MessageType != nil, "attachments_known": q.Attachments != nil})

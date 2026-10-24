@@ -4280,8 +4280,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -4289,7 +4287,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3417,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:55c9c49e81cdce26af64189a2e87c3ff0bdb86847e42ec44e145da2ac451a58f",
@@ -4354,8 +4354,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -4363,7 +4361,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3417,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:ae0d45677c10d87022cc4b58d2ed9af7550a8b3336d5c114a57822da2d1be790",
@@ -4411,8 +4411,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -4420,7 +4418,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3417,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:dd568d73da532f5ae91da2c4e7a41752a5d95680b2b38909f647aada4487d704",
@@ -4457,8 +4457,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -4466,7 +4464,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3417,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:096e1b5a18f9490a69c8d3b8b3ea5da6d4c8aa186ee832e0802b077a84c7a2fa",
@@ -4594,8 +4594,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -4603,7 +4601,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3417,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:c84bc26158effb0305a653dc2daf4de1904e76c359dc011e57880f35ee287e21",
@@ -4650,8 +4650,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -4659,7 +4657,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3417,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:d61f9fdf447c4f40649577b4d8aa6773c6b3d2d88f1a091871beaab4fac11c64",
@@ -4751,8 +4751,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -4760,7 +4758,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3417,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:b29eb098e41935578ea10c48d76dbbbc407affb54132051051912eb8a1801884",
@@ -4843,8 +4843,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -4852,7 +4850,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3417,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:53df4d8c6fc0ac5757eea64ffcb4a709182de800e483249373d27b94bfe94002",
@@ -4925,8 +4925,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "support_scope": "同じexample配下全blobをmetadata列挙。周辺README/.waxa.yaml/evalsは未読、tools/waxa本体も未読。未保存分は再取得していない。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
@@ -4935,7 +4933,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3417,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:6f428ead093cda43db5d2462a7c0700a7e14b33727ad98a83529e1c0bb902a8b",
@@ -4974,8 +4974,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3417,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -4983,7 +4981,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3417,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:c3c1612c465df67377d0493e3a58c849a981292c3dfd228eb136c0c1bdae68b2",
@@ -5193,8 +5193,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -5202,7 +5200,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3420,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:01f196f1d23d113931fd9f71e538607b88027ed81f94d6c271c074f85eb0d580",
@@ -5340,8 +5340,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -5349,7 +5347,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3420,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:cbf2aeb41f3c978c539f4b546b67fb30ae2b8c7de6b4042b246e4f2ece87a705",
@@ -5387,8 +5387,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -5396,7 +5394,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3420,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:50131ecbbad137be7c2eba0675c9f7c400cdb7606af2799b6251cbc9c3e7ee30",
@@ -5462,8 +5462,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -5471,7 +5469,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3420,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:00632081125d36d46714bf0195fbbd44e39d40b62941af1adbc4758363e2c539",
@@ -5519,8 +5519,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -5528,7 +5526,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3420,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:21c8a50a9702ddb435237a97daa689da4542f1c7530a22511cb26758385ba5b0",
@@ -5567,8 +5567,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -5576,7 +5574,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3420,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:ebc648c4dae246d9d559642f850424397b9b9dfed317e37b7df1607a37500604",
@@ -5615,8 +5615,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -5624,7 +5622,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3420,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:90363624c915dcdc4f83d4ac490e37002fa60f3be36439dffa90a51c0d24ca3e",
@@ -5662,8 +5662,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -5671,7 +5669,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3420,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:9f9e80dd48e449b2f0e064336fa704ea1fc6cd1b8330b005df91f5c385f5ef3a",
@@ -5746,8 +5746,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -5755,7 +5753,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3420,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:3c0d98cb9225a7bfe09217dc947987787627022228da57f7e6f2688b669ac12d",
@@ -5820,8 +5820,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -5829,7 +5827,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3420,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:a7974025818694cce586a0f1abaacec7f3468b1fc5b372b5a8b2319c439b622a",
@@ -5904,8 +5904,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -5913,7 +5911,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3420,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:9e4e6c20f466c5c0dc5b059f5c608da379a236da0255331aa57b713d899255a9",
@@ -5969,8 +5969,6 @@
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
-      "independent_review_todo": 3420,
-      "independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。",
       "historical_evaluation_review": {
         "scope": "旧22評価の補正差分。原本文の全読は3417/3420のscopeを参照。",
         "current_snapshot_reviewed": false,
@@ -5978,7 +5976,9 @@
         "todo": 3456,
         "raw_sha256": "4ac8ebd28e739bbc0b4971b1b745e8dd14a4b144d9570ac2236f8aca4f12583b"
       },
-      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved"
+      "evaluation_review_status": "current_metadata_revision_pending; reviewed_historical_snapshot_preserved",
+      "historical_independent_review_todo": 3420,
+      "historical_independent_review_scope": "固定差分時点の評価の読取確認のみ。今回の補足差分/支持本文/許諾/実配置/実適用は別。"
     },
     {
       "inventory_id": "github:55695478feafb25f7879473215bb7eb690bd323a3ca595537e0085371c406501",
@@ -6015,7 +6015,8 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": false,
+      "comparison_limit": "現役catalogの名前/descriptionによる用途比較。中央本文の差分は未確認で、実統合前に対象本文と比較する。"
     },
     {
       "inventory_id": "github:e67113fdc0cde6fdc3d8f929c5065c15b412651a569b1748b852b12dd975dd0f",
@@ -6178,7 +6179,8 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": false,
+      "comparison_limit": "現役catalogの名前/descriptionによる用途比較。中央本文の差分は未確認で、実統合前に対象本文と比較する。"
     },
     {
       "inventory_id": "github:b02180a77512d1003f8cf5ef426a6ab85ceecc28cd0b1b7f6fa383857e91f107",
@@ -6216,7 +6218,8 @@
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false
+      "independent_review_complete": false,
+      "comparison_limit": "現役catalogの名前/descriptionによる用途比較。中央本文の差分は未確認で、実統合前に対象本文と比較する。"
     },
     {
       "inventory_id": "github:12e7b56ce265a79cd58b74c2e9d757ef2245a1480856735a7172f9d5a4e04cf3",
@@ -6258,7 +6261,8 @@
         "path": "examples/adapter.ts",
         "disposition": "missing local reference; external k1c adapter not read/licensed/used",
         "fixed_tree_present": false
-      }
+      },
+      "comparison_limit": "現役catalogの名前/descriptionによる用途比較。中央本文の差分は未確認で、実統合前に対象本文と比較する。"
     },
     {
       "inventory_id": "github:af6f0ebed2c189724983918a2ddd99fb11539fc1be6d3507f4f1d2a7b9f0bf6f",
@@ -7316,7 +7320,7 @@
       "parent_evaluation_recorded_at": "2026-10-23T16:37:17.8639403Z",
       "candidate_disposition": "environment_reference_candidate_existing_nix_targets_pending_support_and_rights",
       "reason": "devbox(Nix基盤)または純flakeで再現できる開発環境を作る手引きで、devboxとflakeの選び方、言語別テンプレート(MoonBit、Rust、TS+pnpm、Python+uv、Haskell、OCaml、OxCaml)、direnv、home-manager、GitHub Actions、sandbox環境向けの導入、既存repoへの追加の落とし穴、direnv 2.37系の不具合事例を持つ。Nixは主にmacOSとLinux前提で、WindowsのPowerShell中心の本PCには直接載らない。LinuxのCIやコンテナで既にNixを使う案件に出会った時の参考として価値がある。",
-      "required_changes": "適用時の技術上の修正案。curlパイプ実行(devbox、Determinate nix-installer)、sandbox無効で/etcへ書くsetup_nix.sh、devShell起動時に走るopam initやpinの自動実行は、案件ごとに版と検証を固定した形に限る。DeterminateSystems/*@mainは可変参照なのでSHA固定が要り、magic-nix-cache-actionの現行性は未照合。『nodePackages.*は2025年に削除』と『24.11以降で削除』が食い違う。MoonBit節はmoon.mod.jsonの存在でmoon updateを走らせるが、moonbit-practice等はDSLのmoon.modを推す。全テンプレートに入るapmは中央Skills運用と衝突するため外す。assets 29件は未保存で、テンプレート自体は審査も採用もできない。",
+      "required_changes": "適用時の技術上の修正案。curlパイプ実行(devbox、Determinate nix-installer)、sandbox無効で/etcへ書くsetup_nix.sh、devShell起動時に走るopam initやpinの自動実行は、案件ごとに版と検証を固定した形に限る。DeterminateSystems/*@mainは可変参照なのでSHA固定が要り、magic-nix-cache-actionの現行性は未照合。『nodePackages.*は2025年に削除』と『24.11以降で削除』が食い違う。MoonBit節はmoon.mod.jsonの存在でmoon updateを走らせるが、moonbit-practice等はDSLのmoon.modを推す。全テンプレートに入るapmは中央Skills運用と衝突するため外す。assets 25件とevals 4件は未保存で、テンプレート自体は審査も採用もできない。",
       "compare_metadata": [
         "windows-shell",
         "docker-operations"
@@ -7875,7 +7879,7 @@
       "parent_evaluation_recorded_at": "2026-10-23T16:37:17.8639403Z",
       "candidate_disposition": "framework_reference_candidate_existing_void_targets_pending_deployment_policy_support_and_rights",
       "reason": "VoidZeroのVoidとVite+でReactとCloudflare D1の全体構成アプリを作る手引きで、本文は2026-10-18にVoid 1.1.11、Vite+ 1.3.0、Node 24.21、pnpm 12.14で確認したと記載するが、親は実在・再現を未照合。型付きloaderとaction、Drizzleスキーマから移行SQLの生成、void dbの破壊的コマンドの区別、Vite+のtest設定、Playwrightでの確認、ReactへのSolid埋込、Astro静的ページとVoid認証、デプロイ前の注意を扱う。Voidを使う案件が出た時の参照として有用で、移行SQLを実SQLで旧→新へ流して既存行の保存を確かめる手順はdatabase-migrationsにも流用できる。",
-      "required_changes": "適用時の技術上の修正案。void deploy --platform cloudflareは推論したリソースを自動作成して公開するため、新規Cloudflare資源・課金・Prd限定の方針に照らして実行前に確認し、本資料だけで配備の許可とはしない。本文は『デプロイは未実施』と明記しており、配備の成功根拠にしない。link_notesへの列追加『検証済み』は参照アプリが同梱されず再現できない。redirectの回避策は1.1.11固有なので版が変われば再確認する。pnpm approve-builds --yesは対象名を絞る書き方を保つ。認証の無いCRUD雛形を公開しない注意は残す。参照ブログ(azukiazusa.dev)は動機の記述で、API根拠にしない。",
+      "required_changes": "適用時の技術上の修正案。void deploy --platform cloudflareは推論したリソースを自動作成して公開するため、新規Cloudflare資源・課金の有無とPrd限定の方針を照合し、本資料だけで配備の許可とはしない。本文は『デプロイは未実施』と明記しており、配備の成功根拠にしない。link_notesへの列追加『検証済み』は参照アプリが同梱されず再現できない。redirectの回避策は1.1.11固有なので版が変われば再確認する。pnpm approve-builds --yesは対象名を絞る書き方を保つ。認証の無いCRUD雛形を公開しない注意は残す。参照ブログ(azukiazusa.dev)は動機の記述で、API根拠にしない。",
       "compare_metadata": [
         "frontend-node-engineering",
         "database-migrations",
@@ -7891,8 +7895,9 @@
           "body_saved": true,
           "source_sha256": "e922013b57a2a4b4b8e71e9c3fa6da022836a671081c0d35ef19265debe98d8c",
           "body_read": false,
-          "read_method": "reader_description_and_exact_template_comparison",
-          "executed": false
+          "read_method": "reader_description_template_plus_complete_cheat_sheet_difference",
+          "executed": false,
+          "read_limit": "説明/定型部分と追加Cheat sheet節を全差分照合。独立の全文出力読了ではない。"
         },
         {
           "path": "void-app/SKILL-ja.md",
@@ -8152,7 +8157,7 @@
   "review_history_definition": "scope付き追記履歴を正とする。prior/latestの旧値は当時のsnapshotであり、後続の本文や評価へ流用しない。",
   "required_changes_definition": "各required_changesは候補を本PCへ適用する場合の技術上の検討・修正案。本人の禁止事項を追加したり、通常の許可済み操作を止める規則ではない。この公開資料だけで元依頼の範囲や権限は増えない。",
   "new_assessment_review_pending": {
-    "scope": "前4と3458由来15を親が反映した新差分。固定b006レビューを新19へ流用しない。",
+    "scope": "新19の固定1088版は3473でMust0。今回の補正はその後の評価版で、過去のMust0を未確認の差分へ流用しない。",
     "central_write": 0,
     "paths": [
       "dep-lib-review/SKILL.md",
@@ -8175,9 +8180,28 @@
       "vlmkit/SKILL.md",
       "void-app/SKILL.md"
     ],
-    "count": 19
+    "count": 19,
+    "historical_3473_review": {
+      "receiver_job": "20261024-023253-todo-3080",
+      "preserved_at": "2026-10-23T17:34:41.9386838Z",
+      "todo": 3473,
+      "job": "20261024-014452-todo-3473",
+      "effort_origin": "owner_request",
+      "raw_sha256": "b5e73dc163b2d62fd59de7ee388ff942cd024e1a5af75d6161c6826e5f28d269",
+      "status": "succeeded",
+      "model_origin": "owner_request",
+      "job_model": "anthropic/claude-sonnet-5-5",
+      "requested_effort": "max",
+      "base": "856a33670626893f1d9190c07985adf07ea9c625",
+      "head": "1088a94e822fab5ce1a8b9dea42bb36c58e52c13",
+      "must": 0,
+      "suggestions": 6,
+      "nits": 9,
+      "recorded_at": "2026-10-23T17:47:33.4898996Z",
+      "scope": "固定11差分/Go2全文と新19評価・固定19本文/README/支持metadata。旧57本文/非README96本文の全読、実Goテスト、配置/許諾受入ではない。"
+    }
   },
-  "recorded_at": "2026-10-23T16:37:17.8639403Z",
+  "recorded_at": "2026-10-23T19:37:25.1602515Z",
   "observed_at_definition": "旧observed_atとbody_read_atは記録生成時刻で独立の取得/受領時刻ではない。今回recorded_atは親の更新時刻。source retrieved_atは取得索引由来。受領保存時刻はpreserved_atと区別する。",
   "independent_review_complete_definition": "trueは現行評価版の独立確認を示す。旧22のtrueを未束縛のまま持ち越さずfalseとし、固定head/raw付きhistorical_evaluation_reviewを保持。falseは原本文未読や過去レビュー未実施という意味ではない。",
   "reader3458": {
@@ -8199,8 +8223,11 @@
     "support_nonreadme_unread": 96,
     "preserved_at": "2026-10-23T16:26:27.3520370Z",
     "model_origin": "policy",
-    "support_nonreadme_unsaved": 60
+    "support_nonreadme_unsaved": 60,
+    "readme_exact_template_count": 5,
+    "readme_template_with_complete_difference_count": 1
   },
   "review_metadata_definition": "job_model/requested_effortはjob設定であり実効推論量の実測ではない。旧actual_model/effortを改名。旧received_atは文書生成時刻だったためrecorded_atへ訂正。preserved_atは原応答受領保存の実記録。",
-  "review_model_limit": "job_modelとrequested_effortは保存job設定。対応turn_contextによる実行モデル・実効推論量・Fastの独立実測をこのmetadataだけから断定しない。"
+  "review_model_limit": "job_modelとrequested_effortは保存job設定。対応turn_contextによる実行モデル・実効推論量・Fastの独立実測をこのmetadataだけから断定しない。",
+  "timestamp_definition": "recorded_atはこの文書の更新時刻。入れ子のreview recorded_at/preserved_atはその観測/受領時刻を保持する。"
 }

@@ -146,6 +146,7 @@ func TestHistoryFailuresDoNotStarveLaterThreads(t *testing.T) {
 	for i := 0; i < 12; i++ {
 		id := fmt.Sprint(7000 + i)
 		r.State.Threads[id] = Thread{ID: id, Type: 11, Guild: "100", Parent: "200", Owner: "400"}
+		r.State.Scans[id] = &Scan{After: snowflake(mustCutover(t, r))}
 	}
 	attempts := map[string]int{}
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {

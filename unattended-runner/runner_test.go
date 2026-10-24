@@ -103,6 +103,7 @@ func TestForeignReplyReferenceIsNotRoutedAsAnOwnerInstruction(t *testing.T) {
 }
 func TestForeignChannelDoesNotAdvanceCursor(t *testing.T) {
 	r, c := fixture(t)
+	r.State.Scans["500"] = &Scan{After: snowflake(c)}
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {
 		respond(w, []Message{msg(c.Add(time.Second), "999", "300", "wrong")})
 	})
@@ -113,6 +114,7 @@ func TestForeignChannelDoesNotAdvanceCursor(t *testing.T) {
 }
 func TestMultiPageHistoryKeepsHighWaterUntilCoverageComplete(t *testing.T) {
 	r, c := fixture(t)
+	r.State.Scans["500"] = &Scan{After: snowflake(c)}
 	var pages int
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {
 		pages++
@@ -127,7 +129,7 @@ func TestMultiPageHistoryKeepsHighWaterUntilCoverageComplete(t *testing.T) {
 		if q.URL.Query().Get("before") == "" {
 			t.Error("backfill cursor missing")
 		}
-		respond(w, []Message{msg(c, "500", "300", "old")})
+		respond(w, []Message{msg(c.Add(-time.Millisecond), "500", "300", "old")})
 	})
 	_, e := r.scan(context.Background(), Thread{ID: "500"})
 	if e != nil {

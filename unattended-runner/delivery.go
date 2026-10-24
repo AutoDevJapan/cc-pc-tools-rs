@@ -21,9 +21,9 @@ func (r *Runner) validateSource(ctx context.Context, request *Request, binding b
 	return r.validateSourceMode(ctx, request, binding, true)
 }
 func (r *Runner) validateSourceMode(ctx context.Context, request *Request, binding, admission bool) error {
-	cutoff, _ := time.Parse(time.RFC3339Nano, r.State.Since)
+	cutoff, cutoffErr := time.Parse(time.RFC3339Nano, r.State.Since)
 	stamp, err := time.Parse(time.RFC3339Nano, request.Created)
-	if err != nil || stamp.Before(cutoff) && !r.validHistoryWatch(request) || stamp.After(r.Now().Add(time.Minute)) || request.Source != "discord-api-v10" || request.Author != r.State.Destination.Owner || request.Key != requestKey(request.Thread, request.Message) {
+	if err != nil || cutoffErr != nil || (request.HistoryWatch != nil || stamp.Before(cutoff)) && !r.validHistoryWatch(request) || stamp.After(r.Now().Add(time.Minute)) || request.Source != "discord-api-v10" || request.Author != r.State.Destination.Owner || request.Key != requestKey(request.Thread, request.Message) {
 		return errors.New("owner receipt association differs")
 	}
 	if _, ok := number(request.Thread); !ok {
@@ -156,37 +156,39 @@ func (r *Runner) questionContext(ctx context.Context, request *Request) error {
 		// scope with this delivery rather than interpreting the answer in this runner.
 		request.Context = safeText(raw, r.Token)
 		request.QuestionContextVersion = ordinaryVersion(request)
-		request.Phase = "captured"
+		request.Phase, request.PendingOwner, request.NextAction = "captured", "", ""
 		return r.save()
 	}
 	return errors.New("original question association pending")
 }
 
 type TodoRow struct {
-	conversationState  json.RawMessage
-	conversationScope  conversationTodoScope
-	ID                 uint64                         `json:"id"`
-	Project            string                         `json:"project"`
-	Status             string                         `json:"status"`
-	Note               string                         `json:"note"`
-	Spec               json.RawMessage                `json:"spec"`
-	Jobs               []json.RawMessage              `json:"jobs"`
-	Progress           *uint8                         `json:"progress"`
-	WaitOn             []uint64                       `json:"wait_on"`
-	WaitReady          json.RawMessage                `json:"wait_ready"`
-	QuestionWait       json.RawMessage                `json:"owner_question_wait,omitempty"`
-	QuestionAnswers    []json.RawMessage              `json:"owner_question_answer_receipts,omitempty"`
-	QuestionDeliveries []json.RawMessage              `json:"owner_question_delivery_receipts,omitempty"`
-	DirectionRecords   []conversationDirectionReceipt `json:"owner_direction_records,omitempty"`
-	ResumeGeneration   json.RawMessage                `json:"resume_generation,omitempty"`
-	Qualification      struct {
+	conversationState     json.RawMessage
+	conversationScope     conversationTodoScope
+	ID                    uint64                              `json:"id"`
+	Project               string                              `json:"project"`
+	Status                string                              `json:"status"`
+	Note                  string                              `json:"note"`
+	Spec                  json.RawMessage                     `json:"spec"`
+	Jobs                  []json.RawMessage                   `json:"jobs"`
+	Progress              *uint8                              `json:"progress"`
+	WaitOn                []uint64                            `json:"wait_on"`
+	WaitReady             json.RawMessage                     `json:"wait_ready"`
+	QuestionWait          json.RawMessage                     `json:"owner_question_wait,omitempty"`
+	QuestionAnswers       []json.RawMessage                   `json:"owner_question_answer_receipts,omitempty"`
+	QuestionDeliveries    []json.RawMessage                   `json:"owner_question_delivery_receipts,omitempty"`
+	DirectionRecords      []conversationDirectionReceipt      `json:"owner_direction_records,omitempty"`
+	ImplementationRecords []conversationImplementationReceipt `json:"owner_implementation_records,omitempty"`
+	ResumeGeneration      json.RawMessage                     `json:"resume_generation,omitempty"`
+	Qualification         struct {
 		Receipt productRetryProof `json:"receipt"`
 	} `json:"product_resume_qualification"`
 	Worker struct {
 		Job string `json:"job"`
 	} `json:"worker_receipt"`
 	Scheduler struct {
-		Job string `json:"job"`
+		Job      string `json:"job"`
+		Worktree string `json:"worktree"`
 	} `json:"scheduler"`
 }
 
@@ -239,7 +241,7 @@ func (r *Runner) deliverSteering(ctx context.Context, request *Request, old *Req
 		return err
 	}
 	request.Todo = old.Todo
-	request.Phase = "steering_saved"
+	request.Phase, request.PendingOwner, request.NextAction = "steering_saved", "", ""
 	if err := publish(filepath.Join(r.Config.Home, "steering", fmt.Sprintf("%d-%s.json", old.Todo, request.Message)), request); err != nil {
 		return err
 	}

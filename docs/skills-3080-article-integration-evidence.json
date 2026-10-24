@@ -1,0 +1,303 @@
+{
+  "todo": 3080,
+  "source": "MengTo/Skills",
+  "inventory_id": "github:41f804392ff42c56ba7a05d1b269efdbb80f189a55b8979ccae5eb67771d05ed",
+  "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+  "source_path": "agent-skills/codex/article-prompts-to-skills/SKILL.md",
+  "source_sha256": "566c5bd361aa738d40843e647d73b8867dbc6825818b0ad9d67f7e5c23b8ee62",
+  "applied": true,
+  "central_files_written": 6,
+  "added": 3,
+  "replaced": 3,
+  "new_entrypoints": 0,
+  "applied_at": "2026-10-23T22:06:22.3144510+00:00",
+  "plan_sha256": "91db52921270a7f8bc8065df42447b62cc6ee8bed7d224ea31421ca9791fcedd",
+  "before": [
+    {
+      "bytes": 1041,
+      "sha256": "2ffb64a3f5d0d688b988782a6009a5723e25bb4bd2ecf149adc5aba0adc434ce",
+      "path": "SKILL.md"
+    },
+    {
+      "bytes": 1927,
+      "sha256": "e880a6d0b33f776e0225426d83606abb412c1b0aa82e20b602cc950143f5cf3c",
+      "path": "references/index.md"
+    },
+    {
+      "bytes": 6272,
+      "sha256": "f8b1c25bd0965c1a87b7fa1c86d81315871ef8fa1f611125d3ded8612d0e92ab",
+      "path": "references/article-prompts-to-skills/GUIDE.md"
+    }
+  ],
+  "append": {
+    "before_sha256": "2ffb64a3f5d0d688b988782a6009a5723e25bb4bd2ecf149adc5aba0adc434ce",
+    "sha256": "db6b27a23966815715dcacf75eaccab46093b6fc5f21fa8979deb475d6f3eac2",
+    "original_prefix_preserved": true,
+    "path": "SKILL.md",
+    "before_bytes": 1041,
+    "bytes": 1252,
+    "append_content": "\n記事の全候補を能力へ分ける具体手順は[記事からの抽出](references/article-prompts-to-skills/GUIDE.md)を参照する。台帳・移植可能な契約・3依頼例・正負例を含む。\n"
+  },
+  "index_replacement": {
+    "old_sentence": "記事のプロンプトは独立して再利用できる単位ごとに1スキルへ抽出し、ブランドや配色を除いた契約と動く実デモを付け、検証済みと言う前に実ブラウザで確認する。",
+    "path": "references/index.md",
+    "occurrences_replaced": 1,
+    "other_content_preserved": true,
+    "existing_last_CRLF_preserved": true,
+    "sha256": "9ee445757ffe0973d67efb7a9bf5aaff73b526aab5d769c465f26b3359dbcdd7",
+    "bytes": 2007,
+    "before_sha256": "e880a6d0b33f776e0225426d83606abb412c1b0aa82e20b602cc950143f5cf3c",
+    "new_sentence": "記事の全候補を独立能力へ分け、既存との差分・固定出典・許諾を台帳に残し、3依頼例と適用外の例を付ける。非UI手順へdemo/galleryを一律に求めず、実使用と読取を分ける。上流原文は[upstream.txt](article-prompts-to-skills/upstream.txt)。",
+    "before_bytes": 1927
+  },
+  "reference_texts": [
+    {
+      "bytes": 5680,
+      "sha256": "cfb878772efc6da204ad385d24eb16657aa160c2213b409f92e306b57dc1eeb2",
+      "content": "# 記事から再利用できる手順を抽出する\n\n使う場面: 記事・チュートリアル・プロンプト集を読み、独立して使える能力を既存Skillへ補うか、新しいSkillにするか決めるとき。\n\n適用外: 記事の要約だけ、ブランドや画面の複製、使う目的のない文の細分化。この手順は素材の利用許諾や実動作の確認を代行しない。\n\n1. 元依頼、保存先、作業場所の未保存の変更を確認し、無関係な変更を保つ。重複候補は利用できるSkill一覧の名前とdescriptionで絞り、元依頼で指定された範囲と現在の読取権限に沿い、必要な本文と参照を比較する。元が生のHTMLで手順をまだ抽出していなければ、$web-design-process で材料を整理してから戻る。\n2. 取得した原資料の全候補を台帳へ並べる。各行に固定URL/版/path/hash、実読範囲、能力、残す仕組み、外す題材、許諾の範囲、既存との違い（一覧だけの比較か、読んだ本文・参照の範囲も示す）、統合先または新Skill名、採否と、採用しない・保留する理由、確認方法を記す。未取得や未読を除外へ数えず、件数上限で打ち切らない。\n3. 単独で別の場面にも使える振る舞いを1単位にする。片方を分けると使えなくなる工程は一緒にする。既存の契約が同じなら差分を統合する。装飾や宣伝文だけで繰り返せる方法がなければ、理由を残して対象から外す。名前は成果や仕組みを示し、記事の題名をそのまま使わない。同名や正規化した行集合の一致だけで同一本文・重複と確定しない。\n4. 状態遷移、データ、パラメータの既定値と単位、必要な操作、失敗条件、該当するアクセシビリティや性能条件を残す。作者固有のブランド、数値、色、asset、配置、固有ディレクトリを能力の必須条件にしない。別の題材でも中心手順を保って使えるか確かめる。\n5. SkillはD:/CC/Skillsへ配置する。既存の管理元・同期経路とjunctionを確認し、旧版を.trashへ保全する。短い日本語の入口から必要な参照へ導く。原文と正確なnotice、固定出典、適応した点を残し、rootのlicenseを第三者素材へ広げない。上流のinstall・MCP・scriptを資料だけで実行しない。入口の作成・統合に必要な書式と検査は $skill-maintenance の手順を参照する。\n6. 最小の依頼、同じ振る舞いを再現する依頼、題材を変える依頼の3例を作る。適用外の例も付け、何を増やさないかを示す。非UI手順へデモ画面やpreviewを一律に要求しない。画像や画面を実装する場合は、同じ対象の具体画像への本人の明示回答を先に得る。\n7. 構造・相対リンク・出典hashを確認し、正負例で判断を試す。実行されるコードやデータを変えたら、利用側を含む影響範囲をテストする。ブラウザで確かめる際は本人のChromeを使い、自分が開いたタブを工程後に閉じる。見た目や操作の成功は実際に操作して確かめ、静的な読取だけで成功と書かない。Codexの発見、明示使用、暗黙選択、文脈予算も別の確認として残す。\n8. 元依頼の差分だけを保存し、必要な別モデルレビューとCIを確認する。新しいSkill数、既存統合、参考のみ、未判定/保留、除外を台帳と合わせて返す。保存・配置・実使用を混同しない。\n\n## 依頼例\n\n- 最小: 「$knowledge-to-skills を使い、この記事の全候補から、既存Skillへ補える独立した能力と、本文を比べる必要がある箇所を台帳にしてください。」\n- 再現: 「$knowledge-to-skills を使い、固定出典と許諾を確認し、入力・出力・状態・失敗条件を持つ移植可能な手順にしてください。正例と適用外、構造/参照/実使用の確認を分けてください。」\n- 題材変更: 「$knowledge-to-skills を使い、同じ方法を別の記事へ適用してください。ブランドや配色を引き継がず、能力の境界と確認条件を保ってください。」\n\n## 判断の例\n\n正例: CSV取込の記事に文字コード判定と取込後の件数照合がある。文字コード判定は別の入力にも使えるので独立した能力として台帳へ載せ、同用途の既存Skillがあれば差分を補う。この例で取込の成功判定と一体になった件数照合は取込手順へまとめる。別の入力でも単独で使える契約が示されていれば、独立した能力に分ける。\n\n負例: 記事の見出し・宣伝文・footerをそれぞれ新Skillにする。単なる文の分割にはせず、繰り返せる振る舞いがない理由を記録する。\n\n避ける失敗: 記事の画面を写す、独立能力を巨大な1本へまとめる、文ごとに細分化する、題材固有の値を固定する、未実行を検証済みと書く、無関係な差分を保存する。\n\n[固定出典と適応範囲](source.json)、[MIT全文](MIT.txt)、[原文保全](upstream.txt)を参照する。原文のrepo専用の配置・demo/gallery・tool手順は、この適応手順で読み替える。upstream.txt内のexample-packages.mdは同梱せず、この手順の「依頼例」で3例を示す。上流の $html-to-interaction-prompts は $web-design-process に読み替える。\n",
+      "path": "references/article-prompts-to-skills/GUIDE.md"
+    },
+    {
+      "bytes": 6434,
+      "sha256": "566c5bd361aa738d40843e647d73b8867dbc6825818b0ad9d67f7e5c23b8ee62",
+      "content": "---\nname: article-prompts-to-skills\ndescription: Convert an article, tutorial, or prompt pack into focused reusable AgentSkills, one independent capability per skill, with portable instructions, example prompts, working demos, preview screenshots, validation, gallery updates, and a narrow commit. Use when the user asks to turn an article's prompts, tutorial sections, design patterns, interactions, or workflow ideas into complete skills rather than leaving them as prose.\n---\n\n# Article Prompts to Skills\n\nTurn source prompts into small, demonstrable capability packages. Preserve the useful behavior, not the source page's brand or layout.\n\n## 1. Inspect Before Extracting\n\n1. Read the repository instructions and the complete source article.\n2. Run `git status --short`; preserve unrelated work.\n3. Inventory every explicit prompt, heading, example, asset, and acceptance criterion.\n4. Search existing `SKILL.md` files for overlapping capabilities before creating folders.\n5. If the source is raw HTML and the prompts do not exist yet, use `$html-to-interaction-prompts` first, then return here.\n\nDo not infer a family of skills from a title alone. Trace each proposed skill to source evidence.\n\n## 2. Build an Extraction Ledger\n\nCreate a working table before editing files:\n\n| Source prompt | Reusable capability | Keep | Remove | Skill name | Demo proof |\n| --- | --- | --- | --- | --- | --- |\n\nApply these boundaries:\n\n- Create one skill per independently reusable behavior.\n- Merge steps only when separating them would make either step unusable.\n- Update an existing skill when its contract already covers the capability.\n- Skip decorative or editorial fragments that do not create a repeatable method.\n- Name skills after the outcome or mechanism, never after the source article.\n\n## 3. Extract the Portable Contract\n\nKeep the source's successful mechanics:\n\n- behavior and state transitions;\n- data model and parameter defaults;\n- timing, easing, spacing, and responsive rules;\n- accessibility, reduced-motion, and keyboard behavior;\n- performance constraints and failure modes;\n- acceptance checks that prove the result.\n\nRemove source-specific packaging:\n\n- brand names, marketing copy, and proprietary content;\n- page layout that is unrelated to the capability;\n- hard-coded palettes, assets, and selectors;\n- incidental implementation choices that do not affect the outcome.\n\nThe result must transfer to a different subject, layout, and visual system without rewriting the core instructions.\n\n## 4. Package Every Skill\n\nInitialize every new folder with the installed `skill-creator` initializer, then complete this contract:\n\n```text\nagent-skills/<category>/<skill-name>/\n  SKILL.md\n  agents/openai.yaml\n  references/          # only when detailed reusable guidance is needed\n  assets/ or scripts/  # only when the workflow genuinely reuses them\n  demo/\n    index.html\n    PROMPT.md\n    preview.jpg\n    input.md            # required for workflow skills\n    expected-output.md  # required for workflow skills\n```\n\nWrite `SKILL.md` in imperative form. Keep only `name` and `description` in frontmatter. Put all trigger phrases in the description. Keep operational steps, constraints, pitfalls, and validation commands in the body.\n\nWrite `agents/openai.yaml` from the final skill:\n\n- use a human-readable display name;\n- keep the short description between 25 and 64 characters;\n- make the default prompt explicitly invoke `$skill-name`.\n\n## 5. Write Three Useful Example Prompts\n\nPut these headings in `demo/PROMPT.md`:\n\n### Minimal prompt\n\nInvoke the skill and ask for one clear outcome.\n\n```text\nUse $skill-name to add <capability> to <target>.\n```\n\n### Recreate the demo\n\nDescribe the reference experience, implementation contract, deliverables, and acceptance checks. Specify what must remain local and self-contained.\n\n### Remix prompt\n\nChange the subject, content, palette, and composition while preserving the mechanism, accessibility behavior, responsive rules, and performance contract.\n\nRead [references/example-packages.md](references/example-packages.md) for visual, mixed-source, and workflow examples.\n\n## 6. Build Proof, Not Decoration\n\nMake every demo original, self-contained, and inspectable:\n\n- demonstrate the core mechanism on the first screen;\n- use realistic content instead of labels such as “demo card”;\n- add controls only when they expose meaningful states;\n- support 390px through 1440px layouts;\n- use semantic HTML and visible focus states;\n- provide reduced-motion behavior for animated work;\n- keep dependencies local and avoid a build step unless the skill requires one;\n- use `input.md` and `expected-output.md` for nonvisual workflows.\n\nNever treat a screenshot as the implementation. The HTML demo must work.\n\n## 7. Validate the Complete Package\n\nRun validation in proportion to the artifact:\n\n1. Run the skill creator's `quick_validate.py` on every new or changed skill.\n2. Run repository demo validation and any targeted syntax checks.\n3. Open each demo in the permitted browser at desktop and mobile sizes.\n4. Exercise the primary interaction, keyboard focus, and reduced-motion path.\n5. Confirm the console is clean.\n6. Capture a real browser preview at the repository's shared dimensions.\n7. Rebuild the demo and screenshot galleries, then validate again.\n8. Scan changed files for secrets, tokens, private paths, and private client data.\n\nDo not claim visual or interaction verification from static file inspection alone.\n\n## 8. Commit Only the Task\n\nStage the new skill folders and the gallery files they require. Review `git diff --cached --stat` and `git diff --cached` before committing. Leave pre-existing dirty files untouched.\n\nReport:\n\n- the source-to-skill mapping;\n- the example prompt and demo paths;\n- validation and browser evidence;\n- the commit hash;\n- unrelated dirty files that remain outside the commit.\n\n## Failure Modes\n\n- **Page clone:** copying the source layout instead of extracting the mechanism.\n- **Mega-skill:** combining independent prompts into one vague skill.\n- **Micro-fragments:** turning every sentence into a skill without reusable behavior.\n- **Theme lock-in:** hard-coding the source's palette, assets, or copy.\n- **Prompt-only package:** omitting a functioning demo and preview.\n- **Fake proof:** claiming interaction verification without exercising it.\n- **Dirty-tree spillover:** staging unrelated modifications or generated files.\n",
+      "path": "references/article-prompts-to-skills/upstream.txt"
+    },
+    {
+      "bytes": 1064,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "content": "MIT License\n\nCopyright (c) 2026 Meng To\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n",
+      "path": "references/article-prompts-to-skills/MIT.txt"
+    },
+    {
+      "bytes": 5375,
+      "sha256": "2507cc39a359671aaa72e35440524747813b9c11538835c48465834fadd21af7",
+      "content": "{\n  \"source\": \"MengTo/Skills\",\n  \"commit\": \"398cd41c86ba42fbb30e944ae507f463648f08b7\",\n  \"tree\": \"8afedc8719f37d2026b55aef282ac27d8d873d76\",\n  \"path\": \"agent-skills/codex/article-prompts-to-skills/SKILL.md\",\n  \"url\": \"https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/codex/article-prompts-to-skills/SKILL.md\",\n  \"sha256\": \"566c5bd361aa738d40843e647d73b8867dbc6825818b0ad9d67f7e5c23b8ee62\",\n  \"git_blob\": \"68182c688d58e8422af2f262c78dd56d669f1c96\",\n  \"supporting_text\": {\n    \"path\": \"agent-skills/codex/article-prompts-to-skills/references/example-packages.md\",\n    \"sha256\": \"9ce59cc58ff094190677b04a0674687c9874cd2d82c56893e7f56050e062fa09\",\n    \"scope\": \"3501・3080・3511が全文読取。能力の境界と3依頼例の方法を参照し、原文の例題・画面・demoはコピーしない。\",\n    \"bytes\": 3603,\n    \"git_blob\": \"bccd323b09d1d7f9b514f813f4a256e48542f99e\",\n    \"retrieved_at\": \"2026-10-20T08:40:55.0962129Z\"\n  },\n  \"license\": {\n    \"identifier\": \"MIT\",\n    \"path\": \"LICENSE\",\n    \"sha256\": \"b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6\",\n    \"copyright\": \"Copyright (c) 2026 Meng To\",\n    \"scope\": \"作者の手順文の日本語適応と原文保全。第三者記事/画像/ソフトウェアの許諾を含まない。\",\n    \"selected_subtree_notices\": [],\n    \"other_tree_notice\": \"別範囲にTHREE-LICENSE.txtがある。本件の作者手順文とは分ける。\",\n    \"bytes\": 1064,\n    \"git_blob\": \"b3a5f823a69b4b010f92930ac09e8a776daf65c6\",\n    \"retrieved_at\": \"2026-10-20T08:40:54.6988485Z\"\n  },\n  \"adaptation\": \"既存knowledge-to-skillsの原則と比較し、能力単位の台帳・移植可能な契約・3依頼例・失敗例を具体化。中央保存/既存統合/影響範囲テスト/画像事前回答を維持し、作者repo専用demo/gallery/quick_validate.py/agents設定の一律必須化を外す。原文を実行権限へ昇格しない。\",\n  \"existing_comparison\": {\n    \"scope\": \"3080が既存SKILL.md・references/index.md・同名GUIDE.mdの3本文を正規の限定読取で全読し、固定上流と比較した。他の既存参照の本文は比較していない。\",\n    \"prior_guide_sha256\": \"f8b1c25bd0965c1a87b7fa1c86d81315871ef8fa1f611125d3ded8612d0e92ab\",\n    \"difference\": \"旧GUIDEは作者repo専用の配置/デモ/ギャラリー更新を含む。rootの中央方針へ合わせて能力の切分けと確認手順を具体化し、固定出典とMITを同じ参照に付ける。\",\n    \"other_reference_bodies_read\": false\n  },\n  \"not_copied\": [\n    \"agents/openai.yaml\",\n    \"demo/PROMPT.md\",\n    \"demo/input.md\",\n    \"demo/expected-output.md\",\n    \"demo/index.html\",\n    \"demo/preview.jpg\",\n    \"references/example-packages.md\"\n  ],\n  \"source_code_executed\": false,\n  \"original_link_scope\": \"upstream.txt内のreferences/example-packages.mdは上流の相対配置。本同梱には含めない。適応GUIDEの依頼例で置き換え、固定上流URLから出典として辿れる。\",\n  \"retrieved_at\": \"2026-10-20T08:40:55.0770606Z\",\n  \"retrieved_at_definition\": \"固定corpusのcontent-index.collected_at。適応作業をした時刻や上流更新時刻ではない。\",\n  \"inventory_id\": \"github:41f804392ff42c56ba7a05d1b269efdbb80f189a55b8979ccae5eb67771d05ed\",\n  \"bytes\": 6434,\n  \"read_scope\": {\n    \"full_body_read\": [\n      {\n        \"bytes\": 6434,\n        \"path\": \"agent-skills/codex/article-prompts-to-skills/SKILL.md\",\n        \"read_by\": [\n          {\n            \"todo\": 3501,\n            \"scope\": \"固定入口の全文読取\"\n          },\n          {\n            \"todo\": 3511,\n            \"scope\": \"v1の同一upstream本文の全文読取\"\n          }\n        ]\n      },\n      {\n        \"bytes\": 3603,\n        \"path\": \"agent-skills/codex/article-prompts-to-skills/references/example-packages.md\",\n        \"read_by\": [\n          {\n            \"todo\": 3501,\n            \"scope\": \"固定support全文\"\n          },\n          {\n            \"scope\": \"記事統合の準備で固定support全文\",\n            \"job\": \"20261024-054244-todo-3080\",\n            \"todo\": 3080\n          },\n          {\n            \"todo\": 3511,\n            \"scope\": \"固定support全文\"\n          }\n        ]\n      },\n      {\n        \"bytes\": 1064,\n        \"path\": \"LICENSE\",\n        \"read_by\": [\n          {\n            \"todo\": 3501,\n            \"scope\": \"root MIT全文\"\n          },\n          {\n            \"todo\": 3511,\n            \"scope\": \"v1と同一のMIT全文\"\n          }\n        ]\n      }\n    ],\n    \"method\": \"fullnameとread_byに実読の担当・範囲を記録した。SHA/bytes/Git blobの照合と本文の読了は別で、語句走査を全文読了には数えない。\",\n    \"scan_only\": [\n      \"agent-skills/codex/article-prompts-to-skills/demo/PROMPT.md\",\n      \"agent-skills/codex/article-prompts-to-skills/demo/input.md\",\n      \"agent-skills/codex/article-prompts-to-skills/demo/expected-output.md\"\n    ],\n    \"scan_only_method\": \"評価担当による語句走査。全文読了や実挙動確認ではない。\",\n    \"unread_or_unsaved\": [\n      \"agent-skills/codex/article-prompts-to-skills/agents/openai.yaml\",\n      \"agent-skills/codex/article-prompts-to-skills/demo/index.html\",\n      \"agent-skills/codex/article-prompts-to-skills/demo/preview.jpg\"\n    ],\n    \"source_code_or_demo_executed\": false\n  }\n}\n",
+      "path": "references/article-prompts-to-skills/source.json"
+    }
+  ],
+  "raw_source_and_MIT_exact": true,
+  "old_3048_manifest_retained_as_historical": true,
+  "backups": {
+    "location": "central .trash; exact path in private apply receipt",
+    "all_before_hashes_verified": true,
+    "files": 3,
+    "retained": true,
+    "replacement_snapshots": 3,
+    "replacement_snapshot_recheck": {
+      "not_historical_observation": true,
+      "before_sha256_matches": true,
+      "source": "private article-replacement-snapshots080546.json; exact owned backup files only",
+      "files": 3,
+      "recorded_at": "2026-10-23T23:19:20.4293866+00:00",
+      "observed_at_range": [
+        "2026-10-23T23:16:40.1638679+00:00",
+        "2026-10-23T23:16:40.1819158+00:00"
+      ]
+    }
+  },
+  "structure": {
+    "description_characters": 40,
+    "command_scope": "explicit one-target manifest against installed files; require-hash=true",
+    "actual_validator": "tools/skills-3048-check",
+    "all_six_hashes_and_bytes_read_back": true,
+    "exit_code": 0,
+    "stdout": "PASS: 1 explicit skills; structure, descriptions, references, hashes, scenario pairs; installed files",
+    "relative_links": 13,
+    "name_description_unchanged": true,
+    "new_entrypoint_created": false,
+    "entrypoint_bytes": 1252
+  },
+  "discovery": {
+    "model_called": false,
+    "enabled": true,
+    "target": "knowledge-to-skills",
+    "full_catalog_walk_proven": false,
+    "context_budget_proven": false,
+    "scan_traversal_limit_warnings": 2,
+    "found": 1,
+    "checked_at": "2026-10-23T22:09:35.1963477Z",
+    "metadata_total": 326,
+    "parse_errors": 0,
+    "method": "fresh official installed Codex app-server; initialize + skills/list forceReload"
+  },
+  "review": {
+    "v3_final_delta_review_pending": false,
+    "v1": {
+      "must": 2,
+      "plan_sha256": "c87258022da6ec0a3cb4c544f6336968dccee3e3d37d749e94a06dc567f8c2fd",
+      "todo": 3511,
+      "raw_sha256": "1a0103c40de693521231c9aef82cf1a29212ae147402a15a44360516d8c025f0"
+    },
+    "v2": {
+      "requested_effort": "max",
+      "todo": 3517,
+      "effective_reasoning_measured": false,
+      "plan_sha256": "abd2fcc665882d02829eeb152aa431df424c8a192939d2efb33b6ac8b95cb454",
+      "suggestions": 5,
+      "scope": "v1-v2 changed text/metadata; before/raw/MIT identity only; no actual Go/discovery/write/use",
+      "must": 0,
+      "raw_sha256": "038a9e1369f9c7066a1a761b14dd3acd95813b6dc1ed4e788ed2526bf2628b58",
+      "nits": 7,
+      "job_model": "anthropic/claude-sonnet-5-5"
+    },
+    "v2_review_reused_for_v3": false,
+    "v3": {
+      "raw_sha256": "d4182f1fce53ce00ce7218f863d2862ac56267a4e6feec8c7c31679de0765ac4",
+      "requested_effort": "max",
+      "native_observation": {
+        "effort": "max",
+        "model": "anthropic/claude-sonnet-5-5",
+        "source": "native_turn_context"
+      },
+      "head": "ab3446b619f6d47e10f4f08418dfb301f46b925f",
+      "scope": "固定8差分。最終GUIDE/source/upstream/MIT、6file plan/receipt/manifestのbyteと意味を確認。中央実ファイル/実Goは親の保存記録のみ。後続編集は対象外。",
+      "must": 0,
+      "nits": 7,
+      "suggestions": 6,
+      "todo": 3529,
+      "job_model": "anthropic/claude-sonnet-5-5",
+      "base": "853c240b6935b305fa70767bc3bc0db2d2a3c1d5"
+    }
+  },
+  "v3_changes": [
+    "read_byを根拠のある担当へ分離し、既存3比較は専用fieldへ。取得時刻の意味を明確化。",
+    "台帳の既存比較範囲、該当する品質条件、現在の読取権限、上流呼出名の読み替えを明記。",
+    "indexから上流原文への相対リンク、適用順/atomic byte書込/再開/台帳の保存則と未確認項目を明記。"
+  ],
+  "explicit_use": {
+    "external_actions": 0,
+    "pending": false,
+    "implicit_selection_proven": false,
+    "cases": [
+      {
+        "basis": "全a-eを台帳化し、独立encoding/既存取込契約/同じ仕組み/装飾/repo工程を分けた。権利未提供を採用済み件数にしない。",
+        "result": "core passed",
+        "id": "A"
+      },
+      {
+        "basis": "要約だけへSkill/demo/browser/gitを足さず、提供されていない記事を要約したと主張しない。",
+        "result": "passed",
+        "id": "B"
+      },
+      {
+        "basis": "root MITを写真へ広げず、helper必須化と本人方針、読取/候補/配置/発見/使用/暗黙選択/予算を分けた。",
+        "parent_limit": "架空ケースの未依頼の第三者素材公開を行わないという判断。既存に許可された通常公開や第三者素材一般へ新たな本人承認待ちを加える規則にはしない。",
+        "result": "core passed",
+        "id": "C"
+      }
+    ],
+    "kind": "explicit installed root/guide/source application to synthetic A/B/C",
+    "todo": 3527,
+    "raw_sha256": "e76b1c506b33e8dfe8418fb6063d9f3b5a8b878a0ee7ace275640435c9e24681",
+    "job": "20261024-072253-todo-3527",
+    "job_model": "anthropic/claude-sonnet-5-5",
+    "native_observation": {
+      "effort": "max",
+      "model": "anthropic/claude-sonnet-5-5",
+      "source": "native_turn_context"
+    },
+    "parent_full_response_read": true,
+    "actual_read": {
+      "total_central_bytes": 12307,
+      "case_input_bytes": 3484,
+      "root_in_context_also_observed": true,
+      "source_bytes": 5375,
+      "guide_bytes": 5680,
+      "raw_byte_hashes_match": true,
+      "root_bytes": 1252
+    },
+    "real_product_acceptance": false,
+    "other_root_linked_references_read_by_checker": false
+  },
+  "acceptance_fields": {
+    "discovery": "target-only done; scan warnings remain",
+    "merge": "PR417 mergedc6b5ceaa, 2026-10-23T23:12:30Z; read back verified",
+    "structure": "done",
+    "independent_final_delta_review": "done for fixed853..ab by3529; later changes require a new bounded review",
+    "ci": "PR417 exactab3446:6SUCCESS and optionalBugbotNEUTRAL; all complete",
+    "explicit_use": "synthetic A/B/C core passed using actual central root/guide/source; no real product execution",
+    "central_write": "done"
+  },
+  "counting": {
+    "catalog_total": 73220,
+    "installed_unchanged": 28,
+    "integrated_after": 3,
+    "excluded_unchanged": 7,
+    "integrated_before": 2,
+    "kind": "one substantive revision of an already present reference, not presence-only or a new root",
+    "pending_after": 73182,
+    "pending_before": 73183,
+    "pending_available_before": 72108,
+    "pending_available_after": 72107
+  },
+  "limits": [
+    "guard classification remains unverified; exact six-file write completed in preserved writer log; a separate approval decision ID was not preserved",
+    "plain central folder outside plugin/.system/synced; no full GTO registry ownership audit claimed",
+    "root-linked old summary contradiction detected; one-file correction not attempted after guard returned client_resource/classification_unverified; no owner decision requested",
+    "original three holds and fetch647 rejection unchanged; whole task continues",
+    "synthetic explicit use and fixed final review are received; implicit selection, full catalog/context budget and product rendering remain unproven",
+    "no upstream helper/demo/install/MCP action, no external fetch during apply, no product UI implementation"
+  ],
+  "recorded_at": "2026-10-24T00:40:30.7402093+00:00",
+  "related_go_checks": {
+    "fix": "compare adoption rows with installed_new+integrated; keep seven duplicate decisions/canonical identity checks",
+    "vet_exit": 0,
+    "vet_command": "go vet ./...",
+    "package": "tools/skills-3080-catalog",
+    "test_exit": 0,
+    "initial_test_failure": "fixed row-count30 assumption in duplicate-exclusion test",
+    "test_command": "go test -count=1 ./..."
+  },
+  "license_read_evidence": {
+    "limit": "3529は3501原応答を許可範囲外として未読だった。今回の親は保存済み原応答の該当宣言を照合。中央sourceの読了者表記は変更しない。",
+    "reader3501_original_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
+    "independent_3511": "v1 embedded MIT full read and exact corpus identity",
+    "pointer": "3501原応答のJSON summary.read.license_full=1、最上位sourceとnoticeがroot MITを指定",
+    "independent_3521": "root MIT bytes/SHA/content independently read and verified"
+  },
+  "execution_record": {
+    "exit": 0,
+    "completed_at": "2026-10-24T07:06:22+09:00",
+    "separate_approval_decision_id_available": false,
+    "source": "preserved job events.jsonl: exact apply command completed",
+    "limit": "writer tool callの正常終了を保存。審査サービスの独立decision ID/明示判定を別に保存した記録ではない。",
+    "event_item": "item_198",
+    "job": "20261024-054244-todo-3080"
+  },
+  "article_scope_additional_root_texts": [
+    {
+      "path": "README.md",
+      "scope": "3501部分読取/3512権利語句走査。本文全読ではない。"
+    },
+    {
+      "path": "CLAUDE.md",
+      "scope": "記事受入の旧3本文の範囲外。後続3512は全文読了を申告した。"
+    },
+    {
+      "path": "DEMOS.md",
+      "scope": "3512権利語句走査のみ。本文全読ではない。"
+    }
+  ],
+  "historical_go_input_limit": "旧test/vet保存JSONにコマンド/cwd/事前入力指紋はなく、入力97指紋は実行後。PR417の同head CI成功は別の最終版証拠。新35と今回修正は新しい事前指紋付きの関連Go結果で確認する。",
+  "root_linked_old_summary": {
+    "next": "既存の保護分類/目的確認の正規経路を照合する。拒否や保護設定を迂回せず、独立した候補評価を継続。",
+    "guard_result": {
+      "access_allowed": false,
+      "protection_status": "unverified",
+      "client_resource": true,
+      "classification_unverified": true
+    },
+    "current_bytes_after_guard_not_read": true,
+    "observed_before_guard_bytes": 4704,
+    "scope": "previous-guideのarticle要約1行が全demo/browser必須を残す",
+    "detected": true,
+    "new_write": 0,
+    "suggestion": "S6",
+    "status": "technical classification hold",
+    "review_todo": 3529,
+    "owner_action_required": false,
+    "applied_v3_six_files_unchanged": true
+  },
+  "go_checks_recorded_at": "2026-10-23T23:19:20.4293866+00:00"
+}

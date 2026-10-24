@@ -1,12 +1,44 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+func TestClarificationSuccessfulCheckThenFailedSendRetainsPrivateCLIErrorContract(t *testing.T) {
+	f := conversationTest(t, false)
+	body, proof := firstClarificationInput(t, f)
+	checks, sends := 0, 0
+	f.r.Run = func(_ context.Context, _ string, args ...string) (string, error) {
+		for _, arg := range args {
+			if arg == "--check-only" {
+				checks++
+				return firstCheckReport(args), nil
+			}
+		}
+		sends++
+		return "", errors.New("synthetic private child diagnostic")
+	}
+	_, err := f.r.conversationClarification(context.Background(), "fresh-log", "補足", body, "610", proof)
+	if err == nil || !strings.Contains(err.Error(), "inspect the current owner reply and saved delivery") || checks != 1 || sends != 1 {
+		t.Fatal("clarification failure must retain the inspection guidance after a successful check", err, checks, sends)
+	}
+	var out bytes.Buffer
+	args := []string{"--config", filepath.Join(f.r.Config.Home, "config.json"), "log", "--request-id", "fresh-log", "--title", "補足", "--body-file", body, "--thread", "610", "--clarification-file", proof}
+	code := conversationCLIWithLoader(args, &out, func(string) (conversationCLIBackend, func(), error) { return f.r, func() {}, nil })
+	if code != 1 || out.String() != "conversation unavailable\n" || checks != 2 || sends != 2 {
+		t.Fatal("public Go CLI must remain private; Rust bridge supplies its own clarification-specific guidance", code, out.String(), checks, sends)
+	}
+	_, err = f.r.conversationLog(context.Background(), "ordinary-log", "補足", body, "610", false, nil)
+	if err == nil || err.Error() != "conversation log pending; retry the same request" {
+		t.Fatal("ordinary log guidance changed", err)
+	}
+}
 
 func TestClarificationCLIRequiresSilentExistingThread(t *testing.T) {
 	base := append(conversationLogArgs(), "--thread=600", "--clarification-file=binding.json")
@@ -44,8 +76,17 @@ func TestClarificationResumesExactLogWithoutChangingOriginalReservation(t *testi
 	original := before.Logs["original-log"]
 	calls := 0
 	f.r.Run = func(_ context.Context, _ string, args ...string) (string, error) {
-		calls++
-		if args[0] != "recovery-log" || argValue(args, "--request-id") != "conversation-log-"+bytesHash([]byte("original-log"))[:32] || argValue(args, "--thread") != "610" || argValue(args, "--body-file") != original.BodyFile {
+		checking := false
+		for _, arg := range args {
+			checking = checking || arg == "--check-only"
+		}
+		if argValue(args, "--request-id") != "conversation-log-"+bytesHash([]byte("original-log"))[:32] {
+			return "", errors.New("binding rejects a different request")
+		}
+		if !checking {
+			calls++
+		}
+		if args[0] != "recovery-log" || argValue(args, "--thread") != "610" || !checking && argValue(args, "--body-file") != original.BodyFile {
 			t.Error("original sender input changed")
 		}
 		proof, err := os.ReadFile(argValue(args, "--clarification-file"))
@@ -54,7 +95,7 @@ func TestClarificationResumesExactLogWithoutChangingOriginalReservation(t *testi
 		}
 		for _, arg := range args {
 			if arg == "--check-only" {
-				return `{"domain":"new-owner-recovery-messages","request_id":"conversation-log-` + bytesHash([]byte("original-log"))[:32] + `","check_only":true,"delivery":"not_sent"}`, nil
+				return firstCheckReport(args), nil
 			}
 		}
 		return `{"domain":"new-owner-recovery-messages","delivery":"verified","thread_id":"610","message_id":"620","reused":true}`, nil
@@ -101,7 +142,7 @@ func TestClarificationResumesExactLogWithoutChangingOriginalReservation(t *testi
 	if _, err := f.r.conversationClarification(context.Background(), "original-log", "説明", body, "610", manifest); err == nil || correctedPath == "" {
 		t.Fatal("new proof did not reach authoritative sender validation")
 	}
-	if filepath.Base(correctedPath) != "original-log-"+bytesHash([]byte(`{"fixture":"changed"}`))+".json" {
-		t.Fatal("association snapshot is not content-addressed")
+	if correctedPath != manifest {
+		t.Fatal("invalid binding must be inspected before creating a snapshot")
 	}
 }

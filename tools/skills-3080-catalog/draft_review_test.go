@@ -100,6 +100,28 @@ var sqlDraftReviewAnchors = map[string]draftReviewAnchor{
 	},
 }
 
+var draftOperationalFields = []string{"inventory_id", "source_url", "retrieved_at", "status", "installed", "individual_license_review", "renderable_install_plan", "source_original"}
+
+func validateDistinctDraftAnchors(anchors map[string]draftReviewAnchor) error {
+	todos, responses := map[int]bool{}, map[string]bool{}
+	for _, a := range anchors {
+		for i, todo := range []int{a.BodyTodo, a.ResolutionTodo} {
+			if i == 1 && todo == 0 {
+				continue
+			}
+			response := a.BodySHA
+			if i == 1 {
+				response = a.ResolutionSHA
+			}
+			if todo < 1 || todos[todo] || !validHex(response, 64) || responses[response] {
+				return errors.New("a distinct body version reuses an independent review identity")
+			}
+			todos[todo], responses[response] = true, true
+		}
+	}
+	return nil
+}
+
 func validateDraftReviewHistory(pending bool, reviews []latestDraftReview, latest int, contentSHA string) error {
 	return validateAnchoredDraftReviewHistory(pending, reviews, latest, contentSHA, sqlDraftReviewAnchors)
 }
@@ -118,6 +140,9 @@ func validateAnchoredDraftReviewHistory(pending bool, reviews []latestDraftRevie
 	if pending {
 		return nil
 	}
+	if err := validateDistinctDraftAnchors(anchors); err != nil {
+		return err
+	}
 	anchor, ok := anchors[contentSHA]
 	if !ok {
 		return errors.New("authored content has no independently reviewed body anchor")
@@ -131,7 +156,7 @@ func validateAnchoredDraftReviewHistory(pending bool, reviews []latestDraftRevie
 		return errors.New("body-review identity differs from its independent anchor")
 	}
 	if anchor.ResolutionTodo == 0 {
-		if anchor.BodyMust != 0 || r.Todo != body.Todo || r.Resolves != 0 {
+		if r.Todo != body.Todo || r.Resolves != 0 {
 			return errors.New("accepted body lacks its anchored completed review")
 		}
 		return nil
@@ -313,7 +338,7 @@ func TestEveryAuthoredFieldAndArrayElementAffectsContentIdentity(t *testing.T) {
 	check("metadata_outside_authored_projection", func(m map[string]any) {
 		for _, v := range m["drafts"].([]any) {
 			d := v.(map[string]any)
-			for _, field := range []string{"inventory_id", "source_url", "retrieved_at", "status", "installed", "individual_license_review", "renderable_install_plan", "source_original"} {
+			for _, field := range draftOperationalFields {
 				d[field] = "metadata changed"
 			}
 		}
@@ -389,10 +414,21 @@ func TestNewBodyVersionCanUseItsOwnIndependentReviewAnchor(t *testing.T) {
 		anchors[sha] = a
 	}
 	anchors[contentSHA] = draftReviewAnchor{BodyTodo: response.Todo, BodyHead: response.Head, BodySHA: response.SHA}
-	for _, kind := range []string{"valid_new_version", "unanchored", "old_review_relabelled", "new_unresolved_must"} {
+	var historical struct {
+		Reviewed struct {
+			Latest  int                 `json:"latest_review_todo"`
+			Reviews []latestDraftReview `json:"reviews"`
+		} `json:"reviewed_draft"`
+	}
+	loadPublicReceipt(t, "skills-3080-mizchi-sql-draft.json", &historical)
+	if err := validateAnchoredDraftReviewHistory(false, historical.Reviewed.Reviews, historical.Reviewed.Latest, sqlReviewedAuthoredSHA, anchors); err != nil {
+		t.Fatal("new anchor invalidated the historical body/resolution pair", err)
+	}
+	for _, kind := range []string{"valid_new_version", "unanchored", "old_review_relabelled", "new_unresolved_must", "different_latest", "unexpected_resolves", "response_sha_changed", "copied_old_anchor"} {
 		t.Run(kind, func(t *testing.T) {
 			r := response
 			selected := anchors
+			reviews := []latestDraftReview{r}
 			switch kind {
 			case "unanchored":
 				selected = sqlDraftReviewAnchors
@@ -401,12 +437,105 @@ func TestNewBodyVersionCanUseItsOwnIndependentReviewAnchor(t *testing.T) {
 			case "new_unresolved_must":
 				one := 1
 				r.Must = &one
+			case "different_latest":
+				other := response
+				other.Todo = 9002
+				reviews = append(reviews, other)
+			case "unexpected_resolves":
+				r.Resolves = 3368
+			case "response_sha_changed":
+				r.SHA = strings.Repeat("e", 64)
+			case "copied_old_anchor":
+				selected = map[string]draftReviewAnchor{}
+				for sha, a := range anchors {
+					selected[sha] = a
+				}
+				selected[contentSHA] = selected[sqlReviewedAuthoredSHA]
+				reviews = append([]latestDraftReview(nil), historical.Reviewed.Reviews...)
+				for i := range reviews {
+					reviews[i].ContentSHA = contentSHA
+				}
 			}
-			err := validateAnchoredDraftReviewHistory(false, []latestDraftReview{r}, r.Todo, contentSHA, selected)
+			if kind != "copied_old_anchor" {
+				reviews[0] = r
+			}
+			err := validateAnchoredDraftReviewHistory(false, reviews, reviews[len(reviews)-1].Todo, contentSHA, selected)
 			if (err != nil) != (kind != "valid_new_version") {
 				t.Fatalf("new independent body review: %v", err)
 			}
 		})
+	}
+}
+
+func TestDistinctBodyVersionsCannotReuseReviewIdentities(t *testing.T) {
+	for _, kind := range []string{"valid", "body_todo", "resolution_todo", "body_sha", "resolution_sha", "cross_role_todo", "cross_role_sha", "zero_body_todo", "short_sha", "nonhex_sha"} {
+		t.Run(kind, func(t *testing.T) {
+			old := sqlDraftReviewAnchors[sqlReviewedAuthoredSHA]
+			fresh := draftReviewAnchor{BodyTodo: 9001, BodySHA: strings.Repeat("d", 64), ResolutionTodo: 9002, ResolutionSHA: strings.Repeat("e", 64)}
+			switch kind {
+			case "body_todo":
+				fresh.BodyTodo = old.BodyTodo
+			case "resolution_todo":
+				fresh.ResolutionTodo = old.ResolutionTodo
+			case "body_sha":
+				fresh.BodySHA = old.BodySHA
+			case "resolution_sha":
+				fresh.ResolutionSHA = old.ResolutionSHA
+			case "cross_role_todo":
+				fresh.BodyTodo = old.ResolutionTodo
+			case "cross_role_sha":
+				fresh.ResolutionSHA = old.BodySHA
+			case "zero_body_todo":
+				fresh.BodyTodo = 0
+			case "short_sha":
+				fresh.BodySHA = strings.Repeat("d", 63)
+			case "nonhex_sha":
+				fresh.BodySHA = strings.Repeat("z", 64)
+			}
+			err := validateDistinctDraftAnchors(map[string]draftReviewAnchor{sqlReviewedAuthoredSHA: old, strings.Repeat("f", 64): fresh})
+			if (err != nil) != (kind != "valid") {
+				t.Fatalf("independent body review identity: %v", err)
+			}
+		})
+	}
+}
+
+func TestPendingMutationDraftDoesNotClaimInstallationOrModelExecution(t *testing.T) {
+	var d struct {
+		Pending    bool   `json:"review_pending"`
+		Installed  bool   `json:"installed"`
+		Integrated bool   `json:"integrated"`
+		Renderable bool   `json:"renderable_install_plan"`
+		Writes     int    `json:"central_write"`
+		Comparison string `json:"comparison_limit"`
+		Distinct   string `json:"distinct_from_existing"`
+		Cases      []struct {
+			Kind     string `json:"kind"`
+			Input    string `json:"input"`
+			Expected string `json:"expected"`
+			Model    *bool  `json:"real_model_turn"`
+		} `json:"static_cases"`
+	}
+	loadPublicReceipt(t, "skills-3080-mizchi-mutation-draft.json", &d)
+	if !d.Pending || d.Installed || d.Integrated || d.Renderable || d.Writes != 0 || d.Comparison == "" || d.Distinct == "" || len(d.Cases) != 6 {
+		t.Fatal("pending integration draft claimed a later acceptance stage")
+	}
+	positive, negative := 0, 0
+	for _, c := range d.Cases {
+		if c.Input == "" || c.Expected == "" || c.Model == nil || *c.Model {
+			t.Fatal("static case claimed model execution or lost its expected behavior")
+		}
+		switch c.Kind {
+		case "positive":
+			positive++
+		case "negative":
+			negative++
+		default:
+			t.Fatal("unknown case kind")
+		}
+	}
+	if positive != 4 || negative != 2 {
+		t.Fatal("static case boundaries changed")
 	}
 }
 
@@ -435,7 +564,7 @@ func TestSQLDraftKeysAreExplicitlyAuthoredOrOperationalMetadata(t *testing.T) {
 	}
 	check("root", m, nil, []string{"todo", "source", "commit", "tree_sha", "status", "not_scope_limit", "drafts", "drafts_count", "installed", "integrated", "excluded", "renderable_plans_added", "source_scripts_executed", "model_turn_tested", "review_pending", "next", "static_cases", "static_evaluation", "usage_evidence", "reviewed_draft", "review_pending_definition"})
 	for _, d := range m["drafts"].([]any) {
-		check("draft", d.(map[string]any), reflect.TypeOf(draftContent{}), []string{"inventory_id", "source_url", "retrieved_at", "status", "installed", "renderable_install_plan", "individual_license_review", "source_original"})
+		check("draft", d.(map[string]any), reflect.TypeOf(draftContent{}), draftOperationalFields)
 	}
 	for _, c := range m["static_cases"].([]any) {
 		check("case", c.(map[string]any), reflect.TypeOf(draftCase{}), []string{"real_model_turn"})

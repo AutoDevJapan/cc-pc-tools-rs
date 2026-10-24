@@ -45,7 +45,11 @@ func conversationCloseTest(t *testing.T) *conversationCloseFixture {
 	f.q = ConversationQuestion{RequestID: "close-question", SenderID: "conversation-v1-close", Todo: 42, Project: "cc-pc-tools-rs", OriginThread: "510", Thread: question, Message: question, Progress: "610", Fingerprint: strings.Repeat("a", 64), ReceiptSHA: strings.Repeat("b", 64), DecisionSHA: canonicalHash(decision), QuestionSHA: bytesHash([]byte("aかbを選んでください。"))}
 	f.proof = conversationProof{Domain: "new-owner-recovery-messages", ReadOnly: true, Source: "discord-api-v10", RequestID: f.q.SenderID, Thread: question, Owner: r.State.Destination.Owner, Question: question, Created: start.Add(2 * time.Second).Format(time.RFC3339Nano), Progress: f.q.Progress, Body: "aかbを選んでください。", Decision: decision, Replies: []conversationReply{}}
 	f.thread = map[string]any{"id": question, "guild_id": r.State.Destination.Guild, "parent_id": r.State.Destination.Forum, "owner_id": r.State.Destination.Bot, "type": 11}
-	if publish(r.TodoPath, map[string]any{"items": []any{map[string]any{"id": 42, "project": "cc-pc-tools-rs", "status": "doing", "jobs": []string{"worker-42"}}}}) != nil {
+	r.JobsPath = filepath.Join(r.Config.Home, "test-jobs")
+	if publish(filepath.Join(r.JobsPath, "worker-42", "job.json"), map[string]any{"id": "worker-42", "todo_id": 42, "cwd": r.Config.Home}) != nil {
+		t.Fatal("job fixture unavailable")
+	}
+	if publish(r.TodoPath, map[string]any{"items": []any{map[string]any{"id": 42, "project": "cc-pc-tools-rs", "status": "doing", "jobs": []string{"worker-42"}, "scheduler": map[string]any{"worktree": r.Config.Home}}}}) != nil {
 		t.Fatal("could not create private task fixture")
 	}
 	for _, name := range []string{"state.json", "recovery-messages.json", "recovery-close.json"} {

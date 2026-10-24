@@ -106,15 +106,16 @@ type Request struct {
 	Origin                 *ProgressOrigin `json:"origin,omitempty"`
 	Conversation           string          `json:"conversation_request_id,omitempty"`
 	// An intake-index recovery never proves a delivery, including after restart.
-	ConversationSourceRecovered bool                     `json:"conversation_source_recovered,omitempty"`
-	ConversationRecoveryNote    string                   `json:"conversation_recovery_note,omitempty"`
-	MessageType                 *int                     `json:"message_type,omitempty"`
-	Attachments                 *[]historyReadAttachment `json:"attachments,omitempty"`
-	DeliveryVersion             string                   `json:"delivery_version,omitempty"`
-	Binding                     *IntakeBinding           `json:"task_binding,omitempty"`
-	PendingOwner                string                   `json:"pending_owner,omitempty"`
-	NextAction                  string                   `json:"next_action,omitempty"`
-	HistoryWatch                *HistoryWatch            `json:"history_watch,omitempty"`
+	ConversationSourceRecovered  bool                     `json:"conversation_source_recovered,omitempty"`
+	ConversationRecoveryNote     string                   `json:"conversation_recovery_note,omitempty"`
+	ConversationSourceGeneration string                   `json:"conversation_source_generation,omitempty"`
+	MessageType                  *int                     `json:"message_type,omitempty"`
+	Attachments                  *[]historyReadAttachment `json:"attachments,omitempty"`
+	DeliveryVersion              string                   `json:"delivery_version,omitempty"`
+	Binding                      *IntakeBinding           `json:"task_binding,omitempty"`
+	PendingOwner                 string                   `json:"pending_owner,omitempty"`
+	NextAction                   string                   `json:"next_action,omitempty"`
+	HistoryWatch                 *HistoryWatch            `json:"history_watch,omitempty"`
 }
 type State struct {
 	Domain                   string                         `json:"domain"`
@@ -418,9 +419,11 @@ func (r *Runner) scanPage(ctx context.Context, thread Thread, replay bool) (int,
 		return 0, conversationErr
 	}
 	cutoff, _ := time.Parse(time.RFC3339Nano, r.State.Since)
+	cutoverID, _ := number(snowflake(cutoff))
+	cutoverAfter := strconv.FormatUint(cutoverID-1, 10)
 	scan := r.State.Scans[thread.ID]
 	if scan == nil {
-		scan = &Scan{After: snowflake(cutoff)}
+		scan = &Scan{After: cutoverAfter}
 		r.State.Scans[thread.ID] = scan
 	}
 	after, ok := number(scan.After)
@@ -429,7 +432,7 @@ func (r *Runner) scanPage(ctx context.Context, thread Thread, replay bool) (int,
 	}
 	before := scan.Before
 	if replay {
-		after, _ = number(snowflake(cutoff))
+		after, _ = number(cutoverAfter)
 		before = scan.ReplayBefore
 	}
 	path := "/channels/" + thread.ID + "/messages?limit=100"
@@ -472,7 +475,7 @@ func (r *Runner) scanPage(ctx context.Context, thread Thread, replay bool) (int,
 		if err != nil {
 			return 0, errors.New("message timestamp invalid")
 		}
-		if message.Author.ID != r.State.Destination.Owner || message.Author.Bot || !stamp.After(cutoff) {
+		if message.Author.ID != r.State.Destination.Owner || message.Author.Bot || stamp.Before(cutoff) {
 			continue
 		}
 		if old := r.State.Requests[message.ID]; old != nil {
@@ -487,34 +490,10 @@ func (r *Runner) scanPage(ctx context.Context, thread Thread, replay bool) (int,
 		if len(text) > 32<<10 {
 			return 0, errors.New("owner message limit exceeded")
 		}
-		preceding := ""
-		phase := "captured"
-		if strings.TrimSpace(text) == "" {
-			phase = "empty"
-		}
-		// A short answer is never guessed into an old, unverified question generation.
-		answer := regexp.MustCompile(`<@!?[0-9]+>`).ReplaceAllString(text, "")
-		if regexp.MustCompile(`(?i)^\s*(?:[0-9]*[abcd][\s,、]*)+$`).MatchString(answer) {
-			phase = "context_pending"
-		}
-		if thread.Owner == r.State.Destination.Bot && r.ProgressLinks[thread.ID].Todo == 0 && phase != "empty" {
-			phase = "origin_pending"
-			if r.KnownQuestionThreads[thread.ID] {
-				phase = "context_pending"
-			}
-		}
-		if isPureStatusQuestion(text, r.State.Destination.Bot) {
-			phase = "status_query"
-		}
-		if message.Reference.Channel != "" && (message.Reference.Channel != thread.ID || (message.Reference.Guild != "" && message.Reference.Guild != r.State.Destination.Guild)) {
-			phase = "reference_mismatch"
-		}
-		r.State.Requests[message.ID] = &Request{Thread: thread.ID, Guild: r.State.Destination.Guild, RecordVersion: 2, Message: message.ID, Author: message.Author.ID, Created: message.Timestamp, Edited: message.Edited, ReplyTo: message.Reference.Message, ReplyChannel: message.Reference.Channel, ReplyGuild: message.Reference.Guild, Acquired: r.Now().UTC().Format(time.RFC3339Nano), Source: "discord-api-v10", Text: text, Context: preceding, Key: requestKey(thread.ID, message.ID), Phase: phase}
+		r.State.Requests[message.ID] = &Request{Thread: thread.ID, Guild: r.State.Destination.Guild, RecordVersion: 2, Message: message.ID, Author: message.Author.ID, Created: message.Timestamp, Edited: message.Edited, ReplyTo: message.Reference.Message, ReplyChannel: message.Reference.Channel, ReplyGuild: message.Reference.Guild, Acquired: r.Now().UTC().Format(time.RFC3339Nano), Source: "discord-api-v10", Text: text, Key: requestKey(thread.ID, message.ID)}
 		r.State.Requests[message.ID].MessageType = message.Type
 		r.State.Requests[message.ID].Attachments = message.Attachments
-		if thread.Managed && !r.KnownQuestionThreads[thread.ID] && phase != "empty" && phase != "reference_mismatch" && phase != "status_query" {
-			r.parkUnbound(r.State.Requests[message.ID])
-		}
+		r.classifyCaptured(r.State.Requests[message.ID], thread)
 		if conversation != "" {
 			r.State.Requests[message.ID].Conversation = conversation
 			r.State.Requests[message.ID].Phase = "conversation_capture_pending"
@@ -614,7 +593,7 @@ func (r *Runner) register(ctx context.Context, request *Request) error {
 		return err
 	} else if id != 0 {
 		request.Todo = id
-		request.Phase = "registered"
+		request.Phase, request.PendingOwner, request.NextAction = "registered", "", ""
 		return r.save()
 	}
 	// A reply/reference is not proof of a standalone new request. Unknown
@@ -653,7 +632,7 @@ func (r *Runner) register(ctx context.Context, request *Request) error {
 		return errors.New("todo receipt invalid")
 	}
 	request.Todo = id
-	request.Phase = "registered"
+	request.Phase, request.PendingOwner, request.NextAction = "registered", "", ""
 	return r.save()
 }
 func writeText(path, body string) error {
@@ -805,9 +784,13 @@ func (r *Runner) admit(ctx context.Context, health *Health) {
 	mids := make([]string, 0, len(r.State.Requests))
 	migrated := false
 	for id, req := range r.State.Requests {
+		if req.Conversation == "" && req.Todo == 0 && req.Phase == "task_binding_pending" && r.ordinaryContextAction(req) != "" {
+			r.parkUnbound(req)
+			migrated = true
+		}
 		if req.Conversation == "" && req.Todo == 0 && req.Phase == "origin_pending" && req.Origin == nil {
 			if r.KnownQuestionThreads[req.Thread] {
-				req.Phase = "context_pending"
+				req.Phase, req.PendingOwner, req.NextAction = "context_pending", "OMB", "verify_exact_original_question_generation"
 				migrated = true
 			} else if req.NextAction == "read_source_and_bind_original_task" {
 				r.parkUnbound(req)
@@ -842,11 +825,11 @@ func (r *Runner) admit(ctx context.Context, health *Health) {
 			if req.Origin == nil {
 				continue
 			}
-			req.Phase = "captured"
+			req.Phase, req.PendingOwner, req.NextAction = "captured", "", ""
 		}
 		if req.Phase == "context_pending" && req.Origin != nil {
 			req.Context = "This is a non-question progress thread. Preserve a short reply literally; do not infer an answer or decision."
-			req.Phase = "captured"
+			req.Phase, req.PendingOwner, req.NextAction = "captured", "", ""
 			if err := r.save(); err != nil {
 				health.Errors = append(health.Errors, "owner_reply_context_deferred")
 				continue

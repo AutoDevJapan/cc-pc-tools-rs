@@ -219,6 +219,9 @@ func TestIntakeReviewProductScopeCannotUseOrdinaryDelivery(t *testing.T) {
 	if err := r.deliverOrdinary(context.Background(), q); err == nil || *calls != 0 {
 		t.Fatal("product scope bypassed finite steering delivery")
 	}
+	if q.Phase != "source_context_pending" || q.NextAction != "verify_original_product_scope_and_use_finite_steering_delivery" {
+		t.Fatal("dedicated product disposition was not saved")
+	}
 }
 
 func TestIntakeReviewOrdinaryDeliveryReachesWorkerSteering(t *testing.T) {

@@ -1,0 +1,420 @@
+{
+  "todo": 3080,
+  "target": "webgl-effects",
+  "source": {
+    "repo": "MengTo/Skills",
+    "path": "agent-skills/3d/3d-retina-resolution/SKILL.md",
+    "sha256": "632232040749513e129f58b55ed3361378af9c6803dfd29f8ca596e273d55174",
+    "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+    "inventory_id": "github:8d45c064b59f58146ec2cd435cc55a71f835c1936934715b8b4a0cc231aac696"
+  },
+  "manifest": "skills-3080-installed-retina-integration-manifest.json",
+  "plan_sha256": "43d95f23efdd849de0683770e177d49e81080873ddbe9160cfc7b4b7494565e8",
+  "applied": true,
+  "central_files_written": 6,
+  "replaced": 2,
+  "added": 4,
+  "new_entrypoints": 0,
+  "before": [
+    {
+      "path": "SKILL.md",
+      "sha256": "056b3097ea93188a9d38ee4822ea1110768bb726e39b0314a31149b5a07a7bfb",
+      "bytes": 10927
+    },
+    {
+      "path": "references/index.md",
+      "sha256": "117e20fe3eafdb794df823497beddf80326f251229c91c6d263827458189e543",
+      "bytes": 6250
+    },
+    {
+      "path": "references/threejs/GUIDE.md",
+      "sha256": "ef214ca279a4976fafed23995e6887a7b0814467ae247bb5d0b096ab784a9285",
+      "bytes": 3433
+    }
+  ],
+  "appends": [
+    {
+      "path": "SKILL.md",
+      "before_sha256": "056b3097ea93188a9d38ee4822ea1110768bb726e39b0314a31149b5a07a7bfb",
+      "bytes": 11129,
+      "sha256": "347c6eabe30cf3d4d4d52b711bedff193b706a8d8f6c04bbb0f24e0e85d163c4",
+      "before_bytes": 10927,
+      "append_content": "- 3d-retina-resolution — 固定200%とAuto、論理寸法と描画バッファ、composerの寸法とポインタ座標を分ける。[具体手順](references/retina-resolution.md)を参照する。\n",
+      "original_prefix_preserved": true
+    },
+    {
+      "path": "references/index.md",
+      "before_sha256": "117e20fe3eafdb794df823497beddf80326f251229c91c6d263827458189e543",
+      "bytes": 6441,
+      "sha256": "010dd81db21484babf74dc88961417f2908e59f9022108fff0f963468ed9310f",
+      "before_bytes": 6250,
+      "append_content": "- [3D解像度の規約](retina-resolution.md): 固定2倍とAuto、composerの二重拡大、CSSポインタ、DPR変化を確かめる。（reference、MengTo固定版の日本語適応）\n",
+      "original_prefix_preserved": true
+    }
+  ],
+  "reference_texts": [
+    {
+      "path": "references/retina-resolution.md",
+      "sha256": "7fe261f29c5dfd0397d19e705c0e974e7c47218ecdee876b06bafcd0788c30a4",
+      "bytes": 5872,
+      "scope": "central reference text; not a repository skill entrypoint",
+      "content": "# 3D描画の論理寸法と描画バッファを分ける\n\n使う場面: Three.jsの画面がぼやける、指定した解像度と実バッファが合わない、後処理や選択位置だけがずれるとき。\n\n1. CSSの幅・高さ、canvasの描画バッファ、rendererとcomposerのpixel ratio、独自targetの寸法を分けて記録する。「200%」が各辺2倍なら1200×800 CSSに対して2400×1600、画素数は4倍。面積200%なら画素数2倍、各辺は約√2倍。native DPRへさらに2を掛ける仕様とも区別する（DPR2ならratio 4、CSS面積あたり画素数16倍）。元依頼・仕様・既存UIを先に調べる。技術試作で手掛かりが無ければ採った解釈を仮定と明記し、実scaleを報告する。仮定で進めるのは内部の技術検証までとし、利用者に見せる画面・出荷物の見た目に関わる実装は、同対象の具体画像への明示回答後に進める。本人が決める未指定の見た目や製品要件は既存の画像確認・質問の経路へ戻す。「不明なら常にratio 2」という共通規則にはしない。\n2. 固定2倍とAutoを別の設定として扱う。固定2倍はnative DPR1でも2でもratio 2。nativeへ追従して上限2ならDPR1でratio 1となるため、固定200%と表示しない。明示設定を負荷だけで黙って変更しない。上限・確保失敗で実現できないときは実scaleと理由を示す。\n3. 実プロジェクトのThree.js版と論理寸法+pixel ratioの規約を確認する。WebGLRenderer.setSizeとEffectComposer.setSizeは論理pxを受け、pixel ratioを反映する。両者へ論理1200×800とratio 2を渡す方式で、composerへ既に倍の2400×1600を渡さない。透視カメラのaspectはCSSの比率を保つ。正射影カメラは既存の表示範囲（bounds）の方針に従い、CSSの縦横比が変わればboundsとprojection matrixを更新する。ratioだけの変化で表示範囲（bounds）を変えない。\n4. 独自の深度・法線・反射targetとsampling uniformは、実際に使うtextureの物理寸法へ合わせる。composerが管理するpassへ重ねてresizeしない。低解像度bloom等は意図した比率を残し、getDrawingBufferSizeで実バッファを確認する。上流例のcomposerとresizeCustomTargetsは実プロジェクトに定義があるか確かめてから使う。targetの生成者・共有参照・破棄責任を確認し、自分が所有する旧targetだけを参照終了後にdisposeする。\n5. ポインタの正規化はcanvas.getBoundingClientRectのCSS座標を使う。物理pxが必要なreadbackとは分ける。ResizeObserverでCSS寸法を監視し、寸法か有効ratioが変わったときだけ更新する。CSS寸法が同じままのDPR変化は、現在のdevicePixelRatioに対応するmatchMediaのresolution queryのchangeで検知する。変化ごとに旧listenerを外し、新DPRのqueryとlistenerを張り直す。終了時にはlistenerとobserverを解放する。device-pixel-content-boxは対応と観測可否を機能検出し、これだけに依存しない。0サイズでは割り算・確保をせず、表示復帰時に寸法とratioを再評価する。\n6. 確保前にGPUのMAX_TEXTURE_SIZE、MAX_RENDERBUFFER_SIZE、MAX_VIEWPORT_DIMSと必要なtargetを照合する。上限超過・確保失敗なら寸法を縮め、実際に適用したscaleと理由を報告する。面積・メモリ予算も見て、API上限内だから確保できるとは扱わない。同じカメラで1倍/2倍のフレーム時間、target寸法、総passを比較する。画像自体の細部、shadow/reflectionの解像度は別に調べる。静止画は要求時に描画し、非表示時の不要処理を止める。reduced-motionは解像度を下げる理由ではない。\n\n適用例: canvasだけ2倍にして後処理がぼやけ、クリック位置もずれる。CSS座標・物理バッファ・composerの規約を分けて直す。\n\n適用外: 元画像にない撮影ディテールを生成する依頼。描画バッファの拡大だけで元画像の情報が増えたとは扱わない。\n\n固定2倍/Auto、DPR1/2、縦横画面、hide/show、zoom/画面移動、ポインタの一致を必要な範囲で確認する。見た目の実装は同対象の具体画像と本人の明示回答後。以下の出典確認は実ブラウザ・GPU描画の成功証明ではない。\n\n固定出典: MengTo/Skills、commit 398cd41c86ba42fbb30e944ae507f463648f08b7、agent-skills/3d/3d-retina-resolution/SKILL.md（SHA-256 632232040749513e129f58b55ed3361378af9c6803dfd29f8ca596e273d55174）。MIT License、Copyright (c) 2026 Meng To。\n[上流原文](retina-resolution-upstream.txt)、[上流MIT全文](retina-resolution-mit.txt)、[採用範囲と変更点](retina-resolution-source.json)を保持する。上流原文は出典保全用で、適用手順は本書を優先する。原文中の相対リンクREFERENCES.mdは原位置を示すもので、このフォルダでは解決しない。SeijakuとEffectComposer.jsの外部ソースは未読で、独立した動作の根拠にしない。\n\n2026-10-24 JSTまでに[WebGLRenderer](https://threejs.org/docs/pages/WebGLRenderer.html)のsetSize/getDrawingBufferSize、[EffectComposer](https://threejs.org/docs/pages/EffectComposer.html)のsetPixelRatio/setSize、[MDN devicePixelRatio](https://developer.mozilla.org/en-US/docs/Web/API/Window/devicePixelRatio)のresolution queryの張り直し例を本文で照合した。現行文書の確認であり、特定のThree.jsリリースへの固定照合や旧全版の互換性確認ではない。ResizeObserverの完成版仕様は確認していない。Seijakuや上流のデモ・コード・画像は取り込まない。\n"
+    },
+    {
+      "path": "references/retina-resolution-upstream.txt",
+      "sha256": "632232040749513e129f58b55ed3361378af9c6803dfd29f8ca596e273d55174",
+      "bytes": 6282,
+      "scope": "central reference text; not a repository skill entrypoint",
+      "content": "---\nname: 3d-retina-resolution\ndescription: Render a 3D canvas sharply on Retina and HiDPI displays, including explicit 200 percent resolution, synchronized renderer and post-processing sizes, correct pointer coordinates, and measured quality fallbacks. Use for blurry WebGL output, 2x rendering, high-resolution previews, and display-density changes.\n---\n\n# 3D Retina Resolution\n\nTreat an explicit **200% rendering** request as two drawing-buffer pixels per CSS pixel in each dimension. A 1200 × 800 CSS canvas therefore uses a 2400 × 1600 drawing buffer, or four times the pixels of 100%. Layout and camera framing stay unchanged.\n\n## Choose the scale deliberately\n\n- **Fixed 200%:** effective pixel ratio is `2`, independent of device pixel ratio. This is the default when the user explicitly requests 200%.\n- **Automatic Retina, capped at 2×:** effective ratio is `Math.min(window.devicePixelRatio || 1, 2)`. This can render at 1× on an ordinary display; label it Auto rather than claiming it always renders at 200%.\n- **Relative to native resolution:** multiply native DPR only when the user explicitly wants that meaning. Native 2× multiplied by another 2 becomes 4× per dimension, or sixteen times the CSS pixel count.\n\nKeep an explicit quality selection distinct from automatic adaptation. Inspect the project's renderer and post-processing architecture before changing sizing.\n\n## Synchronize the rendering pipeline\n\nUse CSS to size the canvas and its container, then measure the container in CSS pixels. In Three.js WebGL, one consistent convention is logical sizes plus pixel ratio:\n\n```js\nfunction resize3D(width, height, ratio = 2) {\n  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0) return;\n  if (!Number.isFinite(ratio) || ratio <= 0) throw new RangeError('Invalid render ratio');\n  renderer.setPixelRatio(ratio);\n  renderer.setSize(width, height, false); // CSS owns displayed dimensions\n  camera.aspect = width / height;        // perspective camera\n  camera.updateProjectionMatrix();\n  if (composer) {\n    composer.setPixelRatio(ratio);\n    composer.setSize(width, height);     // logical pixels; do not multiply again\n  }\n  const physicalWidth = renderer.domElement.width;\n  const physicalHeight = renderer.domElement.height;\n  resizeCustomTargets(physicalWidth, physicalHeight);\n}\n```\n\nThe snippet assumes an existing `renderer`, perspective `camera`, optional `composer` (or `null`), and a `resizeCustomTargets` adapter supplied by the app. For an orthographic camera, update its bounds according to the existing framing policy instead of setting `aspect`.\n\nThe adapter updates only app-owned targets and uniforms; composer-managed passes already receive sizing through the composer. Set full-resolution depth/normal targets to physical dimensions. Size lower-resolution AO, bloom, or ray targets by their deliberate scale factors. Set sampling-resolution uniforms to the dimensions of the texture actually sampled, including reciprocal resolution where the shader expects it.\n\nThe renderer and composer each maintain their own pixel ratio. Updating only the canvas can leave a lower-resolution intermediate image stretched to a Retina output. Conversely, passing already doubled dimensions into a composer that also has DPR 2 allocates 4× dimensions. See the [renderer](https://threejs.org/docs/pages/WebGLRenderer.html) and [composer](https://threejs.org/docs/pages/EffectComposer.html) sizing APIs.\n\n## Handle layout and display changes\n\nObserve the canvas container with `ResizeObserver`, coalesce notifications, and resize only when dimensions or effective ratio change. Skip zero-sized hidden views and retry when they become visible. Re-evaluate native DPR on browser zoom or display changes in Auto mode, including when CSS dimensions remain unchanged. Recreate a resolution media-query listener after each DPR change if using that approach.\n\nUse `canvas.getBoundingClientRect()` for pointer normalization: `(clientX - rect.left) / rect.width`, and likewise for Y. Raycasting uses normalized coordinates derived from CSS space, not drawing-buffer pixels. Convert to physical pixels separately only for APIs such as a pixel readback.\n\nRetina output does not automatically improve a blurry texture, coarse model, shadow map, or low-resolution reflection. Check those sources independently. Avoid CSS scaling or `image-rendering: pixelated` as a substitute for the correct drawing buffer. Higher resolution and antialiasing solve related but different artifacts.\n\n## Budget and fallback\n\nMeasure the scene at 1× and 2× with the same camera. Track frame time, target dimensions, allocation failures, and total passes. Check GPU limits before allocating exceptionally large targets, including maximum texture/renderbuffer dimensions and viewport limits.\n\nReduce optional post-effect resolution or samples before compromising a requested crisp main view. Auto mode may step down after sustained poor frame time and recover with hysteresis; do not resize every few frames. A fixed 200% selection should stay fixed unless a concrete hardware/allocation failure requires a visible fallback. Report the actual effective scale rather than displaying 200% while silently rendering lower.\n\nPause hidden views and render static scenes on demand. Under reduced motion, keep the sharp still image; reducing animation does not require reducing resolution. Dispose replaced render targets.\n\n## Verify\n\n- At fixed 200%, compare canvas CSS size with `canvas.width`/`canvas.height` and `renderer.getDrawingBufferSize()`; expect approximately 2× on each axis with integer rounding.\n- Confirm full-resolution composer buffers match and any reduced-size passes are intentional.\n- Resize wide ↔ narrow, hide/show the view, and test browser zoom or display changes in Auto mode.\n- Check thin edges and detailed materials at the same apparent size; pointer selection and UI alignment must remain correct.\n- Test on a DPR 1 display and a Retina display: Fixed 200% remains 2×; Auto follows its cap.\n\nRead [REFERENCES.md](REFERENCES.md) for APIs and the reference project. Seijaku has several renderer quality caps and an adaptive main path; those values are context, not evidence that its main view already renders at fixed 200%.\n"
+    },
+    {
+      "path": "references/retina-resolution-mit.txt",
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "bytes": 1064,
+      "scope": "central reference text; not a repository skill entrypoint",
+      "content": "MIT License\n\nCopyright (c) 2026 Meng To\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
+    },
+    {
+      "path": "references/retina-resolution-source.json",
+      "sha256": "7f10b53e62338e25f08046b7df47cbdc7c53df795262afc62e6c77dbb8350261",
+      "bytes": 4132,
+      "scope": "central reference text; not a repository skill entrypoint",
+      "content": "{\n  \"todo\": 3080,\n  \"source\": \"MengTo/Skills\",\n  \"commit\": \"398cd41c86ba42fbb30e944ae507f463648f08b7\",\n  \"tree\": \"8afedc8719f37d2026b55aef282ac27d8d873d76\",\n  \"path\": \"agent-skills/3d/3d-retina-resolution/SKILL.md\",\n  \"source_sha256\": \"632232040749513e129f58b55ed3361378af9c6803dfd29f8ca596e273d55174\",\n  \"source_url\": \"https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-retina-resolution/SKILL.md\",\n  \"license\": {\n    \"identifier\": \"MIT\",\n    \"path\": \"LICENSE\",\n    \"sha256\": \"b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6\",\n    \"exact_copyright\": \"Copyright (c) 2026 Meng To\",\n    \"scope\": \"作者の既読手順文の日本語適応とその原文保全。第三者コード/画像/モデル、REFERENCESのリンク先実装、agents/openai.yamlは取り込まない。\",\n    \"selected_scope_notice_paths\": [\n      \"LICENSE\"\n    ],\n    \"repo_tree_additional_notice_paths\": [\n      \"agent-skills/web-design/scroll-world-storytelling/demo/threejs/assets/THREE-LICENSE.txt\"\n    ],\n    \"repo_tree_notice_scope\": \"リポジトリ全体にはroot LICENSEのほか、repo_tree_additional_notice_pathsのTHREE-LICENSE.txtがある。本文は未読。今回選択した手順文と原文保全の範囲外。\"\n  },\n  \"invocation\": {\n    \"integration_into_existing_entrypoint\": true,\n    \"new_skill_created\": false,\n    \"upstream_agent_policy_body_saved\": false,\n    \"upstream_agent_policy_body_read\": false,\n    \"upstream_policy_inferred\": false,\n    \"upstream_config_copied\": false,\n    \"existing_skill_description_changed\": false,\n    \"automatic_install_or_side_effects_added\": false\n  },\n  \"comparison\": {\n    \"existing_skill_sha256\": \"056b3097ea93188a9d38ee4822ea1110768bb726e39b0314a31149b5a07a7bfb\",\n    \"existing_index_sha256\": \"117e20fe3eafdb794df823497beddf80326f251229c91c6d263827458189e543\",\n    \"existing_threejs_guide_sha256\": \"ef214ca279a4976fafed23995e6887a7b0814467ae247bb5d0b096ab784a9285\",\n    \"method\": \"既存SKILL.md、references/index.md、references/threejs/GUIDE.mdの3本文を全読し、内容とSHAを比較した。\",\n    \"difference\": \"旧threejsはnative DPR上限とrenderer resizeを説明する。固定200%/Auto区別、composer二重拡大、custom target/物理px、CSS pointer、zoomのみのDPR変化を具体的に補う。\",\n    \"unread_other_guides\": true,\n    \"not_compared\": [\n      \"other webgl-effects reference GUIDE bodies\",\n      \"flex-shrunk-child-percent-height body\",\n      \"ui-accessibility body\"\n    ]\n  },\n  \"adaptations\": \"原文の規約を絶対的な200%仕様へ昇格せず、元依頼の意味を照合する。既存のrendererを保ち、実版/所有target/未宣言snippetを確認。上流環境の再現や画像の承認を主張せず、必要な実表示だけを検証する。各辺/面積/native DPR倍を分離し、解釈不明時の固定ratio規則は加えない。DPR検知のlistener張替え/終了時解放、GPU確保前確認と縮小理由、target所有を補う。MIT License / Copyright (c) 2026 Meng To。原文は出典保全用で適応文を優先する。Seijakuは未読。\",\n  \"source_body_read\": true,\n  \"reference_roster_read\": true,\n  \"official_api_current_docs_checked\": true,\n  \"external_project_source_read\": false,\n  \"code_or_demo_executed\": false,\n  \"official_api_evidence\": {\n    \"documents\": [\n      \"https://threejs.org/docs/pages/WebGLRenderer.html\",\n      \"https://threejs.org/docs/pages/EffectComposer.html\",\n      \"https://developer.mozilla.org/en-US/docs/Web/API/Window/devicePixelRatio\"\n    ],\n    \"editor_draft_read\": false,\n    \"checked_through_date_jst\": \"2026-10-24\",\n    \"checked_by\": \"公式文書の該当箇所を個別に読んで確認した。\",\n    \"resize_observer_tr_returned\": \"2020-02-11 First Public Working Draft\",\n    \"three_release_pinned\": false\n  },\n  \"reference_limits\": {\n    \"upstream_reference_file_copied\": false,\n    \"upstream_relative_link\": \"REFERENCES.md resolves only in original upstream directory; retained verbatim\",\n    \"unread_external_sources\": [\n      \"Seijaku index.html#L8112\",\n      \"EffectComposer.js\"\n    ]\n  }\n}\n"
+    }
+  ],
+  "raw_source_and_mit_preserved_exact": true,
+  "original_threejs_guide_unchanged": true,
+  "backups": {
+    "verified_sha_match": true,
+    "location": "central .trash, private exact path retained in apply receipt",
+    "before_files": 3,
+    "retained": true
+  },
+  "applied_at": "2026-10-23T19:52:25.1055467Z",
+  "review": {
+    "scope": "3499: v1-to-v2 review and static13. 3504: fixed PR412 final v3 text and deployment evidence review; no v2-v3 verbatim comparison.",
+    "effective_reasoning_measured": false,
+    "fixed_review_plan_sha256": "93ce59c6ca6e17bd5dfcc8b1d46acc660e080c4ff1397c2eb9bfe9993ced12d6",
+    "raw_sha256": "04265e8cb507a92b8240643677fda15e2ca62586e220ffa240a55b52f042b6fd",
+    "job": "20261024-043341-todo-3499",
+    "requested_effort": "max",
+    "job_model": "anthropic/claude-sonnet-5-5",
+    "v3_new_independent_review_pending": false,
+    "todo": 3499,
+    "must": 0,
+    "v3_fixed_pr_review": {
+      "todo": 3504,
+      "job": "20261024-050056-todo-3504",
+      "status": "succeeded",
+      "base": "3b6efbae8f3ffdb57c8c097c592cf929710a1d28",
+      "head": "f61f0ec2f36858ef52915017335baba7953f7487",
+      "must": 0,
+      "suggestions": 8,
+      "nits": 6,
+      "job_model": "anthropic/claude-sonnet-5-5",
+      "requested_effort": "max",
+      "model_origin": "owner_request",
+      "effort_origin": "owner_request",
+      "effective_reasoning_measured": false,
+      "raw_sha256": "a4e6922570790783503877e89a90be203c1f1f1de7cfde84e32ab81c58d1ad32",
+      "preserved_at": "2026-10-23T20:44:06.5415235Z",
+      "receiver_job": "20261024-054244-todo-3080",
+      "recorded_at": "2026-10-23T20:55:13.1528116+00:00",
+      "scope": "Fixed 17-file PR412 delta. Go5 and MengTo45/177 roster/retina manifest/evidence fully read; other changed context read. Support132 and pending132 mechanically verified. v3 final text read, but no v2-v3 verbatim comparison, real Go execution or whole catalog/context budget proof."
+    }
+  },
+  "v3_changes": [
+    "source provenance wording and two-path fixed notice metadata verified; remove uncorroborated MDN page-update date",
+    "explicit existing image-approval scope for internal technical prototype",
+    "orthographic bounds wording; explicit arithmetic native DPR2 times2; no renderer/composer behavior change"
+  ],
+  "static_cases": [
+    {
+      "input": "CSS 1200x800 / native DPR 1 / fixed each-edge 200%",
+      "real_model_turn": false,
+      "kind": "positive",
+      "expected": "buffer 2400x1600; composer logical 1200x800 plus ratio 2; pixel count 4x"
+    },
+    {
+      "input": "CSS 1200x800 / native DPR 2 / fixed each-edge 200%",
+      "real_model_turn": false,
+      "kind": "positive",
+      "expected": "buffer 2400x1600, not 4800x3200"
+    },
+    {
+      "input": "CSS 1200x800 / native DPR 1 / Auto cap 2",
+      "real_model_turn": false,
+      "kind": "positive",
+      "expected": "buffer 1200x800; label Auto, not fixed 200%"
+    },
+    {
+      "input": "unchanged CSS / Auto DPR 1 to 2 on display move",
+      "real_model_turn": false,
+      "kind": "positive",
+      "expected": "resolution query change detects; remove old listener and re-arm query; resize renderer/composer/owned targets; CSS pointer unchanged; cleanup on stop"
+    },
+    {
+      "input": "source image lacks detail",
+      "real_model_turn": false,
+      "kind": "negative",
+      "expected": "larger framebuffer does not invent source detail"
+    },
+    {
+      "input": "hidden container 0x0",
+      "real_model_turn": false,
+      "kind": "negative",
+      "expected": "skip division/allocation; re-evaluate on show"
+    },
+    {
+      "input": "ResizeObserver alone; unchanged CSS and DPR changed",
+      "real_model_turn": false,
+      "kind": "negative",
+      "expected": "CSS observer alone insufficient; add DPR detection"
+    },
+    {
+      "input": "orthographic camera; aspect changes then only ratio changes",
+      "real_model_turn": false,
+      "kind": "positive",
+      "expected": "bounds/projection follow CSS aspect policy; ratio-only change preserves display bounds"
+    },
+    {
+      "input": "200% unspecified: no specification or existing UI clue",
+      "real_model_turn": false,
+      "kind": "positive",
+      "expected": "distinguish each-edge/area/native multiplier; report technical prototype assumption or use existing owner requirement path; no universal ratio-2 default"
+    },
+    {
+      "input": "composer-owned/shared target and replaced owned target",
+      "real_model_turn": false,
+      "kind": "negative",
+      "expected": "avoid duplicate resize/dispose for composer/shared owner; dispose own old target after last reference"
+    },
+    {
+      "input": "requested fixed 2x exceeds GPU viewport limit or allocation fails",
+      "real_model_turn": false,
+      "kind": "positive",
+      "expected": "check before allocation; reduce if necessary and report actual scale/reason; API limits do not guarantee memory"
+    },
+    {
+      "input": "fixed 200%; mobile load high but no demonstrated allocation limit",
+      "real_model_turn": false,
+      "kind": "negative",
+      "expected": "do not silently lower fixed scale or retain misleading 200% label"
+    },
+    {
+      "input": "area 200% versus native DPR 2 times 2",
+      "real_model_turn": false,
+      "kind": "positive",
+      "expected": "area: each-edge sqrt(2), pixel count 2x; native multiplier: ratio 4, separate from fixed each-edge ratio 2"
+    }
+  ],
+  "static_case_review": {
+    "todo": 3499,
+    "real_model_application": false,
+    "pass": 13,
+    "total": 13,
+    "judged_plan_sha256": "93ce59c6ca6e17bd5dfcc8b1d46acc660e080c4ff1397c2eb9bfe9993ced12d6",
+    "v3_cases_rejudged": false,
+    "definition": "13/13 is3499 against v2. v3 final text review3504 and explicit installed-use3502 are separate evidence."
+  },
+  "structure": {
+    "description_changed": false,
+    "preexisting_entrypoint_bytes": 10927,
+    "name_and_description_verified": true,
+    "hashes_read_back": 6,
+    "new_skill_short_entrypoint_validator_claimed": false,
+    "valid_relative_links": 30,
+    "current_entrypoint_bytes": 11129
+  },
+  "discovery": {
+    "parse_errors": 0,
+    "targets_found": 1,
+    "metadata_returned": 326,
+    "model_called": false,
+    "context_budget_proven": false,
+    "diagnostic": {
+      "context_budget_marker_count": 0,
+      "scan_traversal_limit_count": 2,
+      "other_stderr_present": true,
+      "raw_stderr_not_saved": true,
+      "stderr_fully_drained": true
+    },
+    "full_catalog_walk_proven": false,
+    "enabled": 1,
+    "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+    "scan_traversal_limit_warnings": 2
+  },
+  "application": {
+    "todo": 3502,
+    "job": "20261024-045449-todo-3502",
+    "job_model": "anthropic/claude-sonnet-5-5",
+    "requested_effort": "max",
+    "model_origin": "owner_request",
+    "effort_origin": "owner_request",
+    "effective_reasoning_measured": false,
+    "raw_sha256": "472a2db6c9d077a7affd9c9a039b33989437f47dfea0c24c1f114622e28da84a",
+    "receiver_job": "20261024-054244-todo-3080",
+    "parent_full_read": true,
+    "explicit_use_check_pending": false,
+    "kind": "explicit installed skill application to three independent requests",
+    "input_method": "SKILL.md body expanded in initial skill context; real central bytes hashed. Guide/source real files fully read.",
+    "central_file_identities": [
+      {
+        "path": "SKILL.md",
+        "bytes": 11129,
+        "sha256": "347c6eabe30cf3d4d4d52b711bedff193b706a8d8f6c04bbb0f24e0e85d163c4"
+      },
+      {
+        "path": "references/retina-resolution.md",
+        "bytes": 5872,
+        "sha256": "7fe261f29c5dfd0397d19e705c0e974e7c47218ecdee876b06bafcd0788c30a4"
+      },
+      {
+        "path": "references/retina-resolution-source.json",
+        "bytes": 4132,
+        "sha256": "7f10b53e62338e25f08046b7df47cbdc7c53df795262afc62e6c77dbb8350261"
+      }
+    ],
+    "cases": [
+      {
+        "id": "A",
+        "assessment": "pass",
+        "expected": "CSS900x600, renderer/composer logical900x600 with ratio2, buffer1800x1200, pointer NDC(-1/3,+1/3)"
+      },
+      {
+        "id": "B",
+        "assessment": "core pass with parent correction",
+        "expected": "Auto1.25 to2; buffer1125x750 to1800x1200; re-arm resolution query; unchanged CSS; target-owner-specific resize/dispose",
+        "correction": "GPU/viewport/target constraints must be checked before renderer/composer/target allocation or resize, not after the answer steps1-4."
+      },
+      {
+        "id": "C",
+        "assessment": "core pass with parent correction",
+        "expected": "Distinguish each-edge200%, area200%, native multiplier; state assumption; handle allocation failure and missing source detail",
+        "correction": "For the answer256px basis, native ratio2*DPR gives edge512*DPR. Native DPR is unspecified, so1024x1024 is only the DPR2 example, not an upper bound. Hardware limits alone do not establish available memory."
+      }
+    ],
+    "correction_note": "Original reply described native-multiplier example with DPR2 as 1024x1024 maximum. Parent preserves the original and corrects the dimensions explicitly; no unconditional 3/3 perfect-pass claim.",
+    "gpu_or_browser_rendering_tested": false,
+    "implicit_selection_proven": false,
+    "whole_catalog_proven": false,
+    "context_budget_proven": false,
+    "recorded_at": "2026-10-23T20:55:13.1528116+00:00",
+    "preserved_at": "2026-10-23T20:44:06.5397296Z"
+  },
+  "initial_write_failure": {
+    "cause": "PowerShell File.Replace null backup argument became empty path",
+    "remaining_replacements_recovered": 2,
+    "existing_originals_unchanged": 3,
+    "new_references_recreated_on_recovery": 0,
+    "current_status": "recovered; all six readback hashes match",
+    "new_references_created": 4
+  },
+  "scope_limits": [
+    "GTO binary exists outside PATH; official doctor exposes no skill-registry view. No whole-server ownership audit claimed. Target is plain central folder outside plugin/.system/synced; no local management marker present.",
+    "原の中央3対象の分類保留と647取得拒否を解除するものではない。guard/配布設定/junctionは未変更。",
+    "今回の更新は既存の入口を保存した限定統合。全16資料の評価・個別許諾・実導入完了ではない。"
+  ],
+  "recorded_at": "2026-10-23T23:19:20.4293866+00:00",
+  "state_definitions": {
+    "applied": "central six-file write completed",
+    "explicit_use_check_pending": "installed-text use assessment has not yet been received and judged; false after3502 with retained parent corrections"
+  },
+  "v2_to_v3_verbatim_diff_verified": false,
+  "v2_to_v3_verbatim_diff_definition": "独立レビューでの逐語差分の照合。3504はv3最終文を読んだがv2との差分は未照合。親の機械差分は別に記録する。",
+  "parent_v2_to_v3_mechanical_diff": {
+    "method": "Parent mechanical byte/SHA/declared-size and complete git no-index text comparison; no central writes",
+    "parent_job": "20261024-054244-todo-3080",
+    "before_plan_sha256": "93ce59c6ca6e17bd5dfcc8b1d46acc660e080c4ff1397c2eb9bfe9993ced12d6",
+    "after_plan_sha256": "43d95f23efdd849de0683770e177d49e81080873ddbe9160cfc7b4b7494565e8",
+    "fixed_plans_unchanged": true,
+    "payloads": [
+      {
+        "before_sha256": "347c6eabe30cf3d4d4d52b711bedff193b706a8d8f6c04bbb0f24e0e85d163c4",
+        "after_sha256": "347c6eabe30cf3d4d4d52b711bedff193b706a8d8f6c04bbb0f24e0e85d163c4",
+        "byte_identical": true,
+        "after_bytes": 11129,
+        "before_bytes": 11129,
+        "text_diff_hunks": 0,
+        "path": "SKILL.md",
+        "text_diff_sha256": null
+      },
+      {
+        "before_sha256": "010dd81db21484babf74dc88961417f2908e59f9022108fff0f963468ed9310f",
+        "after_sha256": "010dd81db21484babf74dc88961417f2908e59f9022108fff0f963468ed9310f",
+        "byte_identical": true,
+        "after_bytes": 6441,
+        "before_bytes": 6441,
+        "text_diff_hunks": 0,
+        "path": "references/index.md",
+        "text_diff_sha256": null
+      },
+      {
+        "before_sha256": "6baf641e64aa6bc45367ccc8a30c424c54da217af4789d979b049edb8368b30b",
+        "after_sha256": "7fe261f29c5dfd0397d19e705c0e974e7c47218ecdee876b06bafcd0788c30a4",
+        "byte_identical": false,
+        "after_bytes": 5872,
+        "before_bytes": 5647,
+        "text_diff_hunks": 2,
+        "path": "references/retina-resolution.md",
+        "text_diff_sha256": "6ffc366dc15d9643d43ddc76f9a9c9133deb90a8a4d858fe34185b472f1283d4"
+      },
+      {
+        "before_sha256": "632232040749513e129f58b55ed3361378af9c6803dfd29f8ca596e273d55174",
+        "after_sha256": "632232040749513e129f58b55ed3361378af9c6803dfd29f8ca596e273d55174",
+        "byte_identical": true,
+        "after_bytes": 6282,
+        "before_bytes": 6282,
+        "text_diff_hunks": 0,
+        "path": "references/retina-resolution-upstream.txt",
+        "text_diff_sha256": null
+      },
+      {
+        "before_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "after_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "byte_identical": true,
+        "after_bytes": 1064,
+        "before_bytes": 1064,
+        "text_diff_hunks": 0,
+        "path": "references/retina-resolution-mit.txt",
+        "text_diff_sha256": null
+      },
+      {
+        "before_sha256": "8f3557e2ee0443603a2a36fcadcbd0df3e5ff003fe7e711a5653a4c121a2d1a9",
+        "after_sha256": "7f10b53e62338e25f08046b7df47cbdc7c53df795262afc62e6c77dbb8350261",
+        "byte_identical": false,
+        "after_bytes": 4132,
+        "before_bytes": 4115,
+        "text_diff_hunks": 4,
+        "path": "references/retina-resolution-source.json",
+        "text_diff_sha256": "ce89ca2731e34bb04a6268f16b61906273839c48b2ec54514caf5ccfabaa73cc"
+      }
+    ],
+    "payloads_changed": 2,
+    "payloads_unchanged": 4,
+    "top_level_changed_fields": [
+      "changes_since_review",
+      "files",
+      "review_resolution",
+      "revision",
+      "static_cases",
+      "supersedes_plan_sha256"
+    ],
+    "static_case_count": 13,
+    "static_case_changed_indices": [
+      7
+    ],
+    "full_plan_text_diff_sha256": "dec875321f2ac45f94b099c25f49b2682839daf1ad017ee08b422a6246f6645d",
+    "full_plan_text_diff_hunks": 5,
+    "independent_review": false,
+    "v3_static_cases_rejudged": false,
+    "diff_sha256_scope": "保存したgit diff(stdout UTF8)の指紋。headerはこの作業場所のpathを含み、移植可能な固定基準ではない。固定基準は計画SHAと各本文SHA/bytes。",
+    "declared_changes_cover_all_hunks": true,
+    "additional_change_summary": [
+      "GUIDEの来歴を、特定の初回草案を取得したという表現から完成版仕様は未確認という表現へ訂正",
+      "source.checked_byを保存済み観測の継承から公式文書の該当箇所を個別に読んだ記録へ訂正",
+      "source.adaptationsの句点後の空白1つを除去"
+    ],
+    "computed_at": "2026-10-23T21:46:32.4414931Z"
+  }
+}

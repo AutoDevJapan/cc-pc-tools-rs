@@ -22,11 +22,13 @@ var errConversationCloseSource = errors.New("conversation close source associati
 var errConversationCloseApplied = errors.New("conversation implementation receipt invalid or unavailable")
 
 type conversationCloseStamp struct {
-	ReplySHA          string `json:"reply_sha256"`
-	SourceSHA         string `json:"source_receipt_sha256,omitempty"`
-	AppliedSHA        string `json:"applied_receipt_sha256,omitempty"`
-	DirectionSHA      string `json:"direction_receipt_sha256,omitempty"`
-	DirectionInputSHA string `json:"direction_input_sha256,omitempty"`
+	ReplySHA               string `json:"reply_sha256"`
+	SourceSHA              string `json:"source_receipt_sha256,omitempty"`
+	AppliedSHA             string `json:"applied_receipt_sha256,omitempty"`
+	DirectionSHA           string `json:"direction_receipt_sha256,omitempty"`
+	DirectionInputSHA      string `json:"direction_input_sha256,omitempty"`
+	ImplementationSHA      string `json:"implementation_receipt_sha256,omitempty"`
+	ImplementationInputSHA string `json:"implementation_input_sha256,omitempty"`
 }
 
 type conversationCloseHistory struct {
@@ -174,6 +176,9 @@ func (r *Runner) conversationCloseLoad(q ConversationQuestion, path string) (*co
 		return nil, errConversationCloseState
 	}
 	for id, stamp := range record.Replies {
+		if (stamp.ImplementationSHA != "" || stamp.ImplementationInputSHA != "") && (!shaPattern.MatchString(stamp.ImplementationSHA) || !shaPattern.MatchString(stamp.ImplementationInputSHA)) {
+			return nil, errConversationCloseState
+		}
 		if _, ok := number(id); !ok || !shaPattern.MatchString(stamp.ReplySHA) || (stamp.SourceSHA != "" && !shaPattern.MatchString(stamp.SourceSHA)) || (stamp.AppliedSHA != "" && !shaPattern.MatchString(stamp.AppliedSHA)) || (stamp.DirectionSHA != "" && (!shaPattern.MatchString(stamp.DirectionSHA) || !shaPattern.MatchString(stamp.DirectionInputSHA))) {
 			return nil, errConversationCloseState
 		}
@@ -200,13 +205,13 @@ func (r *Runner) conversationReplySource(ctx context.Context, q ConversationQues
 func (r *Runner) conversationReplySourceMessage(ctx context.Context, q ConversationQuestion, current *conversationProof, reply conversationReply, observed *Message) (conversationCloseStamp, bool, error) {
 	stamp := conversationCloseStamp{ReplySHA: canonicalHash(reply)}
 	req := r.State.Requests[reply.Message]
-	if req == nil || req.Phase == "conversation_reply_saved" || req.Todo == 0 {
+	if req == nil {
 		return stamp, false, nil
 	}
-	if req.Phase != "conversation_reply_delivered" && req.Phase != "conversation_reply_applied" && req.Phase != "conversation_direction_recorded" {
+	if req.Phase != "conversation_reply_saved" && req.Phase != "conversation_reply_delivered" && req.Phase != "conversation_reply_applied" && req.Phase != "conversation_direction_recorded" && req.Phase != "conversation_implementation_recorded" && req.Phase != "conversation_source_verified" {
 		return stamp, false, nil
 	}
-	if req.Conversation != q.RequestID || req.Todo != q.Todo || req.Source != "discord-api-v10" || req.RecordVersion != 2 || req.Guild != r.State.Destination.Guild || req.Thread != q.Thread || req.Message != reply.Message || req.Author != r.State.Destination.Owner || req.Created != reply.Created || req.Key != requestKey(q.Thread, reply.Message) {
+	if req.Conversation != q.RequestID || (req.Todo != 0 && req.Todo != q.Todo) || req.Source != "discord-api-v10" || req.RecordVersion != 2 || req.Guild != r.State.Destination.Guild || req.Thread != q.Thread || req.Message != reply.Message || req.Author != r.State.Destination.Owner || req.Created != reply.Created || req.Key != requestKey(q.Thread, reply.Message) {
 		return stamp, false, errConversationCloseSource
 	}
 	if req.Text != reply.Body {
@@ -223,7 +228,10 @@ func (r *Runner) conversationReplySourceMessage(ctx context.Context, q Conversat
 			return stamp, false, errConversationCloseSource
 		}
 	}
-	sourcePath := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".json")
+	sourcePath, err := r.conversationSourcePath(q, reply.Message)
+	if err != nil {
+		return stamp, false, err
+	}
 	source, missing, err := conversationCloseRead(sourcePath, maxState)
 	if missing {
 		return stamp, false, nil
@@ -232,6 +240,9 @@ func (r *Runner) conversationReplySourceMessage(ctx context.Context, q Conversat
 		return stamp, false, errConversationCloseSource
 	}
 	stamp.SourceSHA = bytesHash(source)
+	if req.ConversationSourceGeneration != "" && req.ConversationSourceGeneration != stamp.SourceSHA {
+		return stamp, false, errConversationCloseSource
+	}
 	var saved Request
 	if json.Unmarshal(source, &saved) != nil || saved.Conversation != req.Conversation || (saved.Todo != 0 && saved.Todo != q.Todo) || saved.Source != req.Source || saved.RecordVersion != req.RecordVersion || saved.Guild != req.Guild || saved.Thread != req.Thread || saved.Message != req.Message || saved.Author != req.Author || saved.Created != req.Created || saved.Edited != req.Edited || saved.Text != req.Text || saved.Acquired != req.Acquired || saved.Key != req.Key || saved.Context != req.Context || saved.ReplyTo != req.ReplyTo || saved.ReplyChannel != req.ReplyChannel || saved.ReplyGuild != req.ReplyGuild {
 		return stamp, false, errConversationCloseSource
@@ -276,6 +287,15 @@ func (r *Runner) conversationCloseReply(ctx context.Context, q ConversationQuest
 		return stamp, false, err
 	}
 	req := r.State.Requests[reply.Message]
+	if found, err := findImplementation(row, q, reply.Message, stamp.SourceSHA); err != nil {
+		return stamp, false, err
+	} else if found != nil {
+		return r.conversationImplementationApplied(ctx, q, current, reply, found, stamp)
+	}
+	// Saved sources are verifiable, but never stand for delivery or application.
+	if req.Phase == "conversation_reply_saved" || req.Phase == "conversation_source_verified" || req.Todo == 0 {
+		return stamp, false, nil
+	}
 	b, missing, err := conversationCloseRead(filepath.Join(r.Config.Home, "applied", reply.Message+".json"), 128<<10)
 	if missing {
 		return r.conversationDirectionApplied(ctx, q, current, reply, row, stamp)
@@ -300,6 +320,9 @@ func (r *Runner) conversationCloseReply(ctx context.Context, q ConversationQuest
 	for _, raw := range row.Jobs {
 		var job string
 		if json.Unmarshal(raw, &job) == nil && job == applied.Job && validJob(job) {
+			if !r.legacyImplementationJob(row, applied) {
+				return stamp, false, errConversationCloseApplied
+			}
 			return stamp, true, nil
 		}
 	}
@@ -325,7 +348,9 @@ func (r *Runner) conversationCloseSnapshot(ctx context.Context, q ConversationQu
 			all = false
 		} else if mark {
 			phase := "conversation_reply_applied"
-			if stamp.DirectionSHA != "" {
+			if stamp.ImplementationSHA != "" {
+				phase = "conversation_implementation_recorded"
+			} else if stamp.DirectionSHA != "" {
 				phase = "conversation_direction_recorded"
 			}
 			if r.State.Requests[reply.Message].Phase == phase {
@@ -379,7 +404,22 @@ func (r *Runner) conversationClosePATCH(ctx context.Context, q ConversationQuest
 
 func (r *Runner) conversationCloseFilesUnchanged(ctx context.Context, q ConversationQuestion, stamps map[string]conversationCloseStamp, checkHolds bool) (bool, error) {
 	for id, stamp := range stamps {
-		if stamp.DirectionSHA != "" {
+		if stamp.ImplementationSHA != "" {
+			mode := directionVerify
+			if checkHolds {
+				mode = directionCheckHolds
+			}
+			result, err := r.implementationCheck(ctx, q, id, stamp.ImplementationInputSHA, mode)
+			if err != nil {
+				if checkHolds {
+					return false, nil
+				}
+				return false, err
+			}
+			if result.ReceiptSHA != stamp.ImplementationSHA {
+				return false, nil
+			}
+		} else if stamp.DirectionSHA != "" {
 			mode := directionVerify
 			if checkHolds {
 				mode = directionCheckHolds
@@ -404,7 +444,11 @@ func (r *Runner) conversationCloseFilesUnchanged(ctx context.Context, q Conversa
 				return false, nil
 			}
 		}
-		source, missing, err := conversationCloseRead(filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", id+".json"), maxState)
+		path, err := r.conversationSourcePath(q, id)
+		if err != nil {
+			return false, err
+		}
+		source, missing, err := conversationCloseRead(path, maxState)
 		if err != nil {
 			return false, errConversationCloseState
 		}
@@ -418,6 +462,10 @@ func (r *Runner) conversationCloseFilesUnchanged(ctx context.Context, q Conversa
 // The caller holds runner.lock. Every reply is independently applied before an
 // archive intent is saved; only a GET-confirmed unchanged archive returns true.
 func (r *Runner) closeConversation(ctx context.Context, q ConversationQuestion, proof *conversationProof) (bool, error) {
+	return r.closeConversationAuthorized(ctx, q, proof, false)
+}
+
+func (r *Runner) closeConversationAuthorized(ctx context.Context, q ConversationQuestion, proof *conversationProof, implementationClose bool) (bool, error) {
 	if r.State == nil || r.Now == nil || !filepath.IsAbs(r.Config.Home) || !conversationID.MatchString(q.RequestID) || !conversationID.MatchString(q.SenderID) || q.Todo == 0 || q.Thread != q.Message {
 		return false, errConversationCloseSource
 	}
@@ -476,6 +524,13 @@ func (r *Runner) closeConversation(ctx context.Context, q ConversationQuestion, 
 		return false, err
 	}
 	scope := canonicalHash([]any{initialProof, stamps})
+	// The actor explicitly closes after its own explanation/readback. A normal
+	// tick must not turn merely recording a separate implementation into close.
+	for _, stamp := range stamps {
+		if stamp.ImplementationSHA != "" && !implementationClose && record.VerifiedScope != scope {
+			return false, worker.conversationCloseSave(path, record, "pending", initialProof, stamps)
+		}
+	}
 	if !all || freshProof != initialProof || canonicalHash(freshStamps) != canonicalHash(stamps) {
 		return false, worker.conversationCloseSave(path, record, "pending", freshProof, freshStamps)
 	}

@@ -40,6 +40,7 @@ type conversationCLIOptions struct {
 	Message           string
 	SourceSHA         string
 	Revision          string
+	EvidenceFile      string
 }
 
 // Diagnostics from flag must never repeat an argument, body path or secret.
@@ -106,12 +107,20 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 	case "replies":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "output", &opts.Output)
-	case "direction-record":
+	case "direction-record", "implementation-record":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "actor-todo-id", &todo)
 		conversationStringFlag(fs, "message-id", &opts.Message)
 		conversationStringFlag(fs, "source-sha256", &opts.SourceSHA)
 		conversationStringFlag(fs, "revision", &opts.Revision)
+		if opts.Command == "implementation-record" {
+			conversationStringFlag(fs, "evidence-file", &opts.EvidenceFile)
+		}
+	case "source-verify", "source-reacquire":
+		conversationStringFlag(fs, "request-id", &opts.RequestID)
+		conversationStringFlag(fs, "message-id", &opts.Message)
+	case "close":
+		conversationStringFlag(fs, "request-id", &opts.RequestID)
 	case "withdraw":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "reason-file", &opts.ReasonFile)
@@ -158,10 +167,21 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		if !conversationID.MatchString(opts.RequestID) || opts.ReasonFile == "" {
 			return opts, errConversationArguments
 		}
-	case "direction-record":
+	case "direction-record", "implementation-record":
 		var ok bool
 		opts.Todo, ok = number(todo)
 		if _, messageOK := number(opts.Message); !ok || !messageOK || !conversationID.MatchString(opts.RequestID) || !shaPattern.MatchString(opts.SourceSHA) || !regexpRevision(opts.Revision) {
+			return opts, errConversationArguments
+		}
+		if opts.Command == "implementation-record" && opts.EvidenceFile == "" {
+			return opts, errConversationArguments
+		}
+	case "source-verify", "source-reacquire":
+		if _, ok := number(opts.Message); !ok || !conversationID.MatchString(opts.RequestID) {
+			return opts, errConversationArguments
+		}
+	case "close":
+		if !conversationID.MatchString(opts.RequestID) {
 			return opts, errConversationArguments
 		}
 	}
@@ -269,7 +289,7 @@ func conversationCLI(args []string, out io.Writer) int {
 		if opts.Command == "status" {
 			return conversationCLIWithLoader(args, out, loadConversationStatusRunner)
 		}
-		if opts.Command == "replies" && opts.Output != "" {
+		if (opts.Command == "replies" && opts.Output != "") || (opts.Command == "log" && opts.CheckOnly) {
 			return conversationCLIWithLoader(args, out, loadConversationRepliesRunner)
 		}
 	}
@@ -349,6 +369,14 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 				err = errConversationArguments
 			} else {
 				result, err = backend.conversationWithdraw(ctx, opts.RequestID, opts.ReasonFile)
+			}
+		case "source-verify", "source-reacquire", "implementation-record", "close":
+			if backend, ok := runner.(interface {
+				conversationImplementationCommand(context.Context, conversationCLIOptions) (map[string]any, error)
+			}); ok {
+				result, err = backend.conversationImplementationCommand(ctx, opts)
+			} else {
+				err = errConversationArguments
 			}
 		case "direction-record":
 			if backend, ok := runner.(interface {

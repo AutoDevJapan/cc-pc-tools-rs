@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"testing"
 )
 
@@ -23,6 +24,7 @@ func TestActualAdoptionsConserveCatalogAndManifestIdentities(t *testing.T) {
 			SHA         string `json:"entrypoint_sha256"`
 			Disposition string `json:"disposition"`
 		} `json:"entries"`
+		ExcludedRows []json.RawMessage `json:"excluded_entries"`
 	}
 	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
 	var p struct {
@@ -32,7 +34,7 @@ func TestActualAdoptionsConserveCatalogAndManifestIdentities(t *testing.T) {
 		Total      int `json:"catalog_records"`
 	}
 	loadPublicReceipt(t, "skills-3080-progress.json", &p)
-	if ledger.Installed+ledger.Integrated != len(ledger.Rows) || ledger.Installed != p.Installed || ledger.Integrated != p.Integrated || ledger.Excluded != p.Excluded || ledger.Total != p.Total || ledger.Installed+ledger.Integrated+ledger.Excluded+ledger.Pending != ledger.Total || ledger.Available+ledger.Unavailable+ledger.Held != ledger.Pending {
+	if ledger.Installed+ledger.Integrated != len(ledger.Rows) || ledger.Excluded != len(ledger.ExcludedRows) || ledger.Installed != p.Installed || ledger.Integrated != p.Integrated || ledger.Excluded != p.Excluded || ledger.Total != p.Total || ledger.Installed+ledger.Integrated+ledger.Excluded+ledger.Pending != ledger.Total || ledger.Available+ledger.Unavailable+ledger.Held != ledger.Pending {
 		t.Fatal("actual adoption counters do not conserve source occurrences")
 	}
 	ids, names := map[string]bool{}, map[string]bool{}

@@ -252,6 +252,24 @@ func requested1626OriginalWorkspace(db object, path string) bool {
 	return err == nil && within(gameTree, target) && currentNoReparse(path)
 }
 
+// A missing leaf must not conceal a junction or a different physical ancestor.
+// Verify the first existing parent and its complete ancestry without creating
+// anything or opening directory contents. All callers already bind the exact
+// dedicated workspace to its original root/task/spec.
+func requestedPlannedWorkspaceAllowed(workspace string) bool {
+	return requestedPlannedWorkspaceAllowedWith(workspace, legacyMatch)
+}
+
+func requestedPlannedWorkspaceAllowedWith(workspace string, protected func(string) bool) bool {
+	for parent := filepath.Dir(workspace); ; parent = filepath.Dir(parent) {
+		if _, err := os.Lstat(parent); err == nil {
+			return !protected(parent) && currentPlain(parent, true)
+		} else if !os.IsNotExist(err) || filepath.Dir(parent) == parent {
+			return false
+		}
+	}
+}
+
 func requestedResumePathAllowed(path string) bool {
 	if ownerNonSourcePath(path) {
 		return false
@@ -286,7 +304,7 @@ func requestedResumePathAllowed(path string) bool {
 		if same(path, workspace) {
 			container := filepath.Dir(workspace)
 			if _, e := os.Lstat(container); os.IsNotExist(e) {
-				return currentPlain(filepath.Dir(container), true) && !legacyMatch(container)
+				return requestedPlannedWorkspaceAllowed(workspace)
 			}
 		}
 		return currentProductPath(path, p.root, p.repository, strconv.Itoa(p.task), legacyMatch)
@@ -302,7 +320,7 @@ func requestedResumePathAllowed(path string) bool {
 		return false
 	}
 	if _, e := os.Lstat(workspace); os.IsNotExist(e) {
-		return same(path, workspace) && currentPlain(filepath.Dir(p.root), true)
+		return same(path, workspace) && requestedPlannedWorkspaceAllowed(workspace)
 	}
 	return currentNoReparse(path) && exactPhysical(path)
 }

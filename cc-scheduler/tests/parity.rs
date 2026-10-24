@@ -1673,6 +1673,8 @@ struct Fake {
     prepare_registry: Option<PathBuf>,
     current_product: Option<(Value, String)>,
     current_checkpoint: Option<Value>,
+    checkpoint_edit: Option<(PathBuf, Value)>,
+    checkpoint_edit_after: usize,
     action_path: Option<PathBuf>,
     cancel_edit: Option<(PathBuf, Value)>,
     repair_allowed: bool,
@@ -1720,6 +1722,8 @@ impl Default for Fake {
             prepare_registry: None,
             current_product: None,
             current_checkpoint: None,
+            checkpoint_edit: None,
+            checkpoint_edit_after: 0,
             action_path: None,
             cancel_edit: None,
             repair_allowed: false,
@@ -1764,6 +1768,9 @@ impl Default for Fake {
 }
 impl Backend for Fake {
     fn current_workspace_checkpoint(&mut self, _item: &Value, _root: &str) -> Option<Value> {
+        if self.checkpoint_edit_after==0 {
+            if let Some((path,value))=self.checkpoint_edit.take() {write_json(&path,&value,1).unwrap();}
+        } else {self.checkpoint_edit_after-=1;}
         self.current_checkpoint.clone()
     }
     fn current_product_allowed(&mut self, item: &Value, root: &str) -> bool {

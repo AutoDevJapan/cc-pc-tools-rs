@@ -53,7 +53,15 @@ fn checkpoint_restores_only_verified_branch_record_and_keeps_original_work() {
 #[test]
 fn checkpoint_keeps_stops_dependencies_active_owners_and_missing_proof() {
     for gate in [
-        "stop", "wait", "question", "active", "actor", "proof", "history",
+        "stop",
+        "wait",
+        "question",
+        "active",
+        "actor",
+        "actor_stop",
+        "actor_question",
+        "proof",
+        "history",
     ] {
         let (mut f, mut request) = setup();
         match gate {
@@ -76,6 +84,14 @@ fn checkpoint_keeps_stops_dependencies_active_owners_and_missing_proof() {
                     .push(json!({"id":"active","todo_id":1626,"status":"queued"}))
             }
             "actor" => request["actor_job"] = json!("other-job"),
+            "actor_stop" => {
+                f.e.edit(&json!(3650), |r| r["owner_stopped"] = json!(true))
+                    .unwrap();
+            }
+            "actor_question" => {
+                f.e.edit(&json!(3650), |r| r["owner_question_wait"] = json!({"id":1}))
+                    .unwrap();
+            }
             "proof" => f.e.backend.current_checkpoint = None,
             "history" => {
                 f.e.edit(&json!(1626), |r| {
@@ -92,6 +108,38 @@ fn checkpoint_keeps_stops_dependencies_active_owners_and_missing_proof() {
             resume_checkpoint::run(&mut f.e, &request, preview["state_sha256"].as_str()).unwrap();
         assert_eq!(applied["saved"], false, "{gate}");
         assert_eq!(f.get(1626), before);
+    }
+}
+
+#[test]
+fn checkpoint_preserves_an_actor_stop_or_replacement_during_proof_recheck() {
+    for replacement in [false, true] {
+        let (mut f, request) = setup();
+        let preview = resume_checkpoint::run(&mut f.e, &request, None).unwrap();
+        let before = f.get(1626);
+        let mut changed = f.e.todo().unwrap();
+        let actor = changed["items"]
+            .as_array_mut()
+            .unwrap()
+            .iter_mut()
+            .find(|row| row["id"] == 3650)
+            .unwrap();
+        if replacement {
+            actor["scheduler"]["job"] = json!("new-job");
+        } else {
+            actor["owner_stopped"] = json!(true);
+        }
+        let stopped_actor = actor.clone();
+        f.e.backend.checkpoint_edit = Some((f.e.todo_path.clone(), changed));
+        f.e.backend.checkpoint_edit_after = 1;
+        assert_eq!(
+            resume_checkpoint::run(&mut f.e, &request, preview["state_sha256"].as_str())
+                .unwrap_err()
+                .0,
+            "InputChanged"
+        );
+        assert_eq!(f.get(1626), before);
+        assert_eq!(f.get(3650), stopped_actor);
     }
 }
 

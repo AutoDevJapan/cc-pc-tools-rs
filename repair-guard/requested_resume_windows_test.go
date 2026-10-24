@@ -3,11 +3,50 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
+
+func TestRequestedResumePlannedWorkspaceRejectsJunctionParents(t *testing.T) {
+	root := t.TempDir()
+	allowed := func(path string) bool {
+		return requestedPlannedWorkspaceAllowedWith(path, func(string) bool { return false })
+	}
+	ordinary := filepath.Join(root, "ordinary", "new-workspace")
+	if os.Mkdir(filepath.Dir(ordinary), 0700) != nil {
+		t.Fatal("ordinary parent fixture failed")
+	}
+	if !allowed(ordinary) || !allowed(filepath.Join(root, "new-container", "new-workspace")) {
+		t.Fatal("plain existing ancestors rejected")
+	}
+	target := t.TempDir()
+	junction := filepath.Join(root, "redirected")
+	cmd := exec.Command("cmd", "/d", "/c", "mklink", "/J", junction, target)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("junction fixture unavailable: %v %s", err, output)
+	}
+	defer os.Remove(junction)
+	for _, path := range []string{filepath.Join(junction, "missing"), filepath.Join(junction, "missing-parent", "missing-workspace")} {
+		if allowed(path) {
+			t.Fatal("missing workspace below a junction was admitted")
+		}
+	}
+	file := filepath.Join(root, "regular-file")
+	if os.WriteFile(file, nil, 0600) != nil {
+		t.Fatal("file fixture failed")
+	}
+	if allowed(filepath.Join(file, "missing")) {
+		t.Fatal("non-directory ancestor was admitted")
+	}
+	if requestedPlannedWorkspaceAllowedWith(ordinary, func(string) bool { return true }) {
+		t.Fatal("original protection denied ancestor was admitted")
+	}
+}
 
 func resumeNativeFixture() (resumeNativeSource, string) {
 	header := `{"type":"session_meta","payload":{"id":"original-session","source":"vscode","cwd":"D:/original-owner-work"}}`

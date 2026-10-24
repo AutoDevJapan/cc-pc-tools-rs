@@ -100,16 +100,13 @@ pub fn run<B: Backend>(
     });
     let checks = json!({"original_status":item["status"]=="todo", "ordinary":item["subwork"].is_null(),
         "actor":actor["status"]=="doing" && actor["scheduler"]["phase"]=="running" && actor["scheduler"]["job"]==request["actor_job"],
+        "actor_not_held":!targeted_dispatch::held(&actor) && actor["stopped"]!=true && !cc_job_policy::todo_wait::waiting(&db,&actor),
         "no_stop":!targeted_dispatch::held(&item) && item["stopped"]!=true,
         "dependencies":!cc_job_policy::todo_wait::waiting(&db,&item), "no_active_worker":!active,
         "source":proof.is_some(), "history":item["workspace_checkpoint_history"].is_null()||item["workspace_checkpoint_history"].is_array()});
     let eligible = checks.as_object().unwrap().values().all(|v| *v == true);
-    let state = digest(
-        &serde_json::to_vec(
-            &json!({"item":item,"proof":proof,"actor_job":actor["scheduler"]["job"]}),
-        )
-        .unwrap(),
-    );
+    let state =
+        digest(&serde_json::to_vec(&json!({"item":item,"proof":proof,"actor":actor})).unwrap());
     let mut report = json!({"id":1626,"eligible":eligible,"checks":checks,"state_sha256":state,"saved":false,"launched":0});
     let Some(expected) = expected else {
         return Ok(report);
@@ -129,18 +126,49 @@ pub fn run<B: Backend>(
     {
         return Err(Error("InputChanged"));
     }
-    let mut saved = false;
-    engine.edit_in_project(&json!(1626), Some(root), |row| {
-        if *row!=item { return }
-        if row["workspace_checkpoint_history"].is_null() {row["workspace_checkpoint_history"]=json!([])}
-        let receipt = json!({"before_branch":row["scheduler"]["branch"],"proof":proof,"actor_todo_id":3650,"actor_job":request["actor_job"],"recorded_at":at});
-        row["workspace_checkpoint_history"].as_array_mut().unwrap().push(receipt);
-        row["scheduler"]["branch"]=proof["after_branch"].clone();
-        saved=true;
-    })?;
-    if !saved {
+    // Compare the actor and target under the same normal store lock. A stop
+    // arriving during the native/Git recheck cannot be overwritten or ignored.
+    let Some(_todo_lock) = ByteLock::acquire(
+        &engine.todo_path.with_file_name("todo.lock"),
+        Duration::from_secs(2),
+    )?
+    else {
+        return Err(Error("TimeoutError"));
+    };
+    let mut fresh = engine.todo()?;
+    let actor_now = arr(&fresh["items"])
+        .into_iter()
+        .find(|row| row["id"] == 3650);
+    let item_now = arr(&fresh["items"])
+        .into_iter()
+        .find(|row| row["id"] == 1626);
+    if actor_now.as_ref() != Some(&actor)
+        || item_now.as_ref() != Some(&item)
+        || fresh["projects"][s(&item["project"])] != root
+        || cc_job_policy::todo_wait::waiting(&fresh, &actor)
+        || cc_job_policy::todo_wait::waiting(&fresh, &item)
+    {
         return Err(Error("InputChanged"));
     }
+    let row = fresh["items"]
+        .as_array_mut()
+        .ok_or(Error("InputRejected"))?
+        .iter_mut()
+        .find(|row| row["id"] == 1626)
+        .ok_or(Error("InputChanged"))?;
+    if row["workspace_checkpoint_history"].is_null() {
+        row["workspace_checkpoint_history"] = json!([])
+    }
+    let receipt = json!({"before_branch":row["scheduler"]["branch"],"proof":proof,"actor_todo_id":3650,"actor_job":request["actor_job"],"recorded_at":at});
+    row["workspace_checkpoint_history"]
+        .as_array_mut()
+        .unwrap()
+        .push(receipt);
+    row["scheduler"]["branch"] = proof["after_branch"].clone();
+    row["updated"] = json!(chrono::Local::now().format("%Y-%m-%d %H:%M").to_string());
+    cc_job_policy::todo_store::check_size(encode(&fresh, 1).len())
+        .map_err(|_| Error("InputRejected"))?;
+    write_json(&engine.todo_path, &fresh, 1)?;
     report["saved"] = json!(true);
     Ok(report)
 }

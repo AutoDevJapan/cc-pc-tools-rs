@@ -297,6 +297,7 @@ func TestEditedFirstRequestDoesNotStarveSecond(t *testing.T) {
 	second := msg(c.Add(2*time.Second), "501", "300", "new")
 	second.Channel = second.ID // A new owner forum starter, not an unbound followup.
 	for _, m := range []Message{first, second} {
+		r.State.Threads[m.Channel] = Thread{ID: m.Channel, Type: 11, Guild: "100", Parent: requestForum, Owner: "300"}
 		r.State.Requests[m.ID] = &Request{Thread: m.Channel, Guild: "100", RecordVersion: 2, Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey(m.Channel, m.ID), Phase: "captured"}
 	}
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {

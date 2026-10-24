@@ -32,11 +32,13 @@ func TestIntake3561RetiresPostCutoverWatchWithoutLosingBinding(t *testing.T) {
 			var h Health
 			r.refreshOrdinary(context.Background(), &h)
 			expectedPhase := phase
+			expectedAction := "preserve_existing_delivery"
 			if phase == "source_context_pending" {
 				// The separate context migration may now correct a stale disposition.
 				expectedPhase = "task_binding_pending"
+				expectedAction = "verify_thread_discovery_and_bind_original_task"
 			}
-			if q.HistoryWatch != nil || q.Phase != expectedPhase || q.Binding != binding || len(h.Errors) != 0 {
+			if q.HistoryWatch != nil || q.Phase != expectedPhase || q.NextAction != expectedAction || q.Binding != binding || len(h.Errors) != 0 {
 				t.Fatal("watch migration stranded an existing edit or binding", q.Phase, h.Errors)
 			}
 			var saved State

@@ -43,13 +43,17 @@ func TestIntake3572UnknownStarterStaysHeldAfterEmptyOrStatusEdit(t *testing.T) {
 			}
 			var h Health
 			r.refreshOrdinary(context.Background(), &h)
-			initialHeld := q.Phase == "task_binding_pending"
+			initialPhase := "empty"
+			if original != "" {
+				initialPhase = "status_query"
+			}
+			initialSafe := q.Phase == initialPhase
 			_ = r.results(context.Background())
 			m.Content, m.Edited = "元の依頼への具体的な訂正", r.Now().Add(-time.Second).Format(time.RFC3339Nano)
 			r.refreshOrdinary(context.Background(), &h)
 			r.admit(context.Background(), &h)
-			if !initialHeld || q.HistoryWatch != nil || q.Phase != "task_binding_pending" || q.Todo != 0 || adds != 0 || sends != 0 {
-				t.Fatal("unknown starter escaped its hold", initialHeld, q.Phase, adds, sends)
+			if !initialSafe || q.HistoryWatch != nil || q.Phase != "task_binding_pending" || q.Todo != 0 || adds != 0 || sends != 0 {
+				t.Fatal("unknown starter escaped its hold", initialSafe, q.Phase, adds, sends)
 			}
 			// The add spy must be reachable when discovery supplies a known legacy
 			// thread; the zero-call assertion above is not a disconnected mock.

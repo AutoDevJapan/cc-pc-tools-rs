@@ -74,7 +74,9 @@ func (r *Runner) classifyCaptured(q *Request, thread Thread, conversation string
 	if q.ReplyChannel != "" && (q.ReplyChannel != q.Thread || q.ReplyGuild != "" && q.ReplyGuild != r.State.Destination.Guild) {
 		q.Phase = "reference_mismatch"
 	}
-	if !known && q.Phase != "reference_mismatch" || thread.Managed && !r.KnownQuestionThreads[q.Thread] && q.Phase != "empty" && q.Phase != "reference_mismatch" && q.Phase != "status_query" {
+	// Empty messages are not unresolved work. Status questions must reach the
+	// existing-answer proof before the separate gate on any new status send.
+	if q.Phase != "empty" && q.Phase != "status_query" && q.Phase != "reference_mismatch" && (!known || thread.Managed && !r.KnownQuestionThreads[q.Thread]) {
 		r.parkUnbound(q)
 	}
 	if conversation != "" {

@@ -31,6 +31,8 @@ func TestIntakeFollowupQuestionEditParksExactGenerationOnce(t *testing.T) {
 
 func TestIntakeFollowupLegacyQuestionPendingUsesCanonicalContext(t *testing.T) {
 	r, c := fixture(t)
+	// This positive legacy case has the same discovery metadata as its live API.
+	r.State.Threads["500"] = Thread{ID: "500", Parent: "200", Guild: "100", Type: 11, Owner: "400"}
 	m := msg(c.Add(time.Second), "500", "300", "a")
 	q := captured(m, "origin_pending", c)
 	q.PendingOwner, q.NextAction = "OMB", "read_source_and_bind_original_task"

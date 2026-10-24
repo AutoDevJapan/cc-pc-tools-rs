@@ -145,7 +145,7 @@ func TestConversationRecoveredAttemptSurvivesFailedEditAndRestart(t *testing.T) 
 			run := f.r.Run
 			edits := 0
 			f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
-				if len(args) > 0 && args[0] == "edit" {
+				if len(args) > 0 && (args[0] == "edit" || (wait && args[0] == "question-answer" && argValue(args, "--delivery-note-file") != "")) {
 					edits++
 					if edits == 1 {
 						return "", errors.New("conversation_note_changed")

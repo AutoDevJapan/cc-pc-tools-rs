@@ -125,6 +125,9 @@ func (r *Runner) conversationCloseProofHash(q ConversationQuestion, proof *conve
 	seen := make(map[string]bool)
 	question, _ := number(q.Message)
 	copy := *proof
+	// Optional polling metadata is not part of the original close-proof identity.
+	// Edit/source hashes and exact live posts are verified independently below.
+	copy.ReplyVersions = nil
 	copy.Replies = append([]conversationReply{}, proof.Replies...)
 	for _, reply := range copy.Replies {
 		id, valid := number(reply.Message)

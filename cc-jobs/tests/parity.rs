@@ -11,6 +11,9 @@ mod finished_work_handoff;
 mod finite_owner_wait_repair;
 #[path = "support/no_action.rs"]
 mod no_action;
+#[cfg(windows)]
+#[path = "support/snapshot_persistence.rs"]
+mod snapshot_persistence;
 #[path = "support/product_retry.rs"]
 mod original_product_retry;
 #[path = "../../cc-job-policy/tests/support/mod.rs"]
@@ -6392,6 +6395,7 @@ type LoadFn = Box<dyn Fn(&Path, usize) + Send + Sync>;
 type SpawnHook = Box<dyn Fn() -> Box<dyn Running> + Send + Sync>;
 type SleepHook = Box<dyn Fn(f64) + Send + Sync>;
 type KillHook = Box<dyn Fn(u32) + Send + Sync>;
+type SaveValueHook = Box<dyn Fn(&Path, &Value) -> io::Result<()> + Send + Sync>;
 
 #[test]
 fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_win() {
@@ -6461,6 +6465,7 @@ struct Fake {
     load_count: AtomicUsize,
     load_hook: Mutex<Option<LoadFn>>,
     save_hook: Mutex<Option<LoadFn>>,
+    save_value_hook: Mutex<Option<SaveValueHook>>,
     load_error_path: Arc<Mutex<Option<PathBuf>>>,
     save_failure: AtomicBool,
     replace_failures: AtomicUsize,
@@ -6521,6 +6526,7 @@ impl Fake {
             load_count: AtomicUsize::new(0),
             load_hook: Mutex::new(None),
             save_hook: Mutex::new(None),
+            save_value_hook: Mutex::new(None),
             load_error_path: Arc::new(Mutex::new(None)),
             save_failure: AtomicBool::new(false),
             replace_failures: AtomicUsize::new(0),
@@ -6876,6 +6882,9 @@ impl Runtime for Fake {
         Ok(())
     }
     fn before_save(&self, _path: &Path, j: &Value) -> io::Result<()> {
+        if let Some(h) = self.save_value_hook.lock().unwrap().as_ref() {
+            h(_path, j)?;
+        }
         if let Some(h) = self.save_hook.lock().unwrap().as_ref() {
             h(_path, 0);
         }

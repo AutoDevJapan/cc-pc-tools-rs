@@ -144,7 +144,8 @@
         "source": "skills-3080-adoptions.json",
         "review_pending": true,
         "recorded_at": "2026-10-24T10:39:47.2605445Z"
-      }
+      },
+      "package_blob_paths_definition": "Primary SKILL.md 1 + supporting paths 8 + publication identity 1 = package blob paths 10; the missing individual notice adds zero."
     }
   ],
   "official_metadata_support_proof": {
@@ -221,7 +222,8 @@
     ],
     "support_fingerprint": "484bdc219079d5764d67e22bee92807b0c49da6889c439fbb3ed03e534874448",
     "support_paths": 8,
-    "todo": 3080
+    "todo": 3080,
+    "support_fingerprint_definition": "Sort support entries by relative path bytes; concatenate UTF-8 mode + space + type + space + git_blob_sha1 + space + relative_path + LF; SHA-256 of the concatenation. Size is metadata verified by the preserved official tree proof, outside this fingerprint."
   },
   "scope": "Only the two listed exact primary occurrences are excluded. One is in next45 and one is separately registered as comparison-only, not falsely added to direct-reading cohorts. Complete sibling proofs preserve publication/notice differences and show no added/changed supporting blob. Official metadata additionally binds the canonical eight support entries. No helper safety, source execution, missing notice grant or all-byte package equality is inferred.",
   "new_sibling_copy_grants": 0,

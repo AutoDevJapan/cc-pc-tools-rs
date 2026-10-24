@@ -164,5 +164,6 @@
   "todo": 3080,
   "scope_at_original_single_entry": "固定個別licenseの書面許諾要求と証拠不在だけ。本文やlicense全文を再配布せず、指紋と判定理由のみ保持。他の6mile候補へ一括適用しない。",
   "original_first_entry_canonical_sha256": "e422a04f065da493f0117dc9a54af735fb4d7e180cddfd119148609d438c7a04",
-  "amended_at": "2026-10-24T10:39:47.2605445Z"
+  "amended_at": "2026-10-24T10:39:47.2605445Z",
+  "notice_reader_attribution_definition": "The parent read one exact 1467-byte notice body once; the same SHA-256 and Git blob cover the four listed notice paths. Original child notice/support reading actors remain unchanged in their source cohorts, and the separate parent notice reading is not attributed to those children."
 }

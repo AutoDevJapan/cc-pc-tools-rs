@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-24T08:15:09.0197014+00:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "PR430受入済みの32配置と454/455読取を保持し、新20評価を別差分へ反映。source86候補をraw84/伏字付き1/許諾文のみ1へ分け、全体474/475へ投影する。最終採否と中央配置は増やしていない。全16資料の残評価/個別許諾/実導入は継続。",
+  "phase_b": "有用候補の実配置・統合と個別評価を継続する。読取の最新値は本記録の構造化coverageとskills-3080-sixmile-evaluation-index.json、採否はskills-3080-adoptions.jsonを正本とし、説明文へ可変の件数を複写しない。全16資料の評価・個別許諾・必要な実導入は未完。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -652,40 +652,21 @@
     "definition_of_legacy_latest_name": "Historical PR406 accepted-delta snapshot. Later accepted merges/reviews are in merged_pr_history/latest_merged_pr/received_review_history/latest_received_review; this field is not current queue status."
   },
   "latest_received_review": {
-    "todo": 3617,
-    "job": "20261024-180736-todo-3617",
-    "status": "succeeded",
-    "exit_code": 0,
-    "model": "anthropic/claude-sonnet-5-5",
-    "effort": "max",
-    "model_origin": "owner_request",
-    "effort_origin": "owner_request",
-    "thread_id": "01a16d2a-eb1f-79f2-b6a8-aeaf8c8f9fb0",
-    "raw_file": "review3617-original123649.md",
-    "raw_bytes": 6332,
-    "raw_sha256": "03fe183f097ad68e4a656b919cce6622cc05fe1f995b09e3e30284ed3fb47c08",
-    "received_at": "2026-10-24T09:34:47.3132337Z",
-    "parent_read_pending": false,
-    "native_match_pending": false,
-    "parent_full_read": true,
-    "native_matched": true,
+    "todo": 3634,
+    "job": "20261024-201735-todo-3634",
+    "base": "ad8151c101a0820cbc365455ecfb85caef1d697a",
+    "head": "d5e2d13a08406eb8cb714b264143ada71d856b78",
+    "raw_sha256": "c662ed165681f770f92c6170c6b9d2764998bb4bbefe39483d0072f025d16af5",
+    "raw_bytes": 6946,
+    "must": 1,
+    "suggestions": 5,
+    "nits": 3,
+    "parent_full_response_read": true,
+    "native_model": "anthropic/claude-sonnet-5-5",
+    "native_effort": "max",
     "effective_reasoning_measured": false,
-    "base": "534d2cd08822febf015617b3ca94e63697cfd5c1",
-    "head": "b9a9694478812df3d215022008df2fb6a9c79b4f",
-    "must": 0,
-    "suggestions": 4,
-    "nits": 5,
-    "scope": "All7files/all64U3hunks plus relevant code/data context; independently reconstructed3anchors; source/cache body and tests/CI/central execution not performed.",
-    "nonblocking_resolution": {
-      "S1": "At fixedb9 the474/475 value is correct. Remove mutable current numeric prose in the already-needed next parent-cohort publication before those values change; do not carry it into a new stale snapshot.",
-      "S2": "Add coupled namespace mutation and ledger flag/counter/unknown-disposition negatives alongside the next required source-index extension.",
-      "S3": "Isolate non-valid fixture ledger rows and reset target state so a future real adoption of entry0 does not invalidate the synthetic tests.",
-      "S4": "Require the full negative no-commercial-licence-contact-or-rights-question phrase and add an inversion negative.",
-      "nits": "Clarify reported-vs-unsaved script claims, cache private-receipt note, anonymous hold provenance/next/owner-input, UTC observation labels and historical-vs-current definitions in next delta."
-    },
-    "owner_action_required": false,
-    "resolution_pending": true,
-    "parent_followup": "S1 numeric prose guard; S2 coupled namespace and ledger negatives; S3 isolated mutation fixtures for future real adoptions; S4 full negative rights-question phrase/inversion cases, plus documentation nits. This new supplement needs its own bounded review/CI; old b9 acceptance remains exactly scoped."
+    "correction_pending_independent_confirmation": true,
+    "scope": "Fixed26-file delta only. Source/notice/anchor reading and old-ledger preservation are distinguished from tests, CI, central writes and whole16 acceptance."
   },
   "latest_merged_pr": {
     "number": 431,
@@ -1092,6 +1073,42 @@
       "resolution_pending_at_original_receipt": true,
       "resolved_by_review": 3617,
       "resolved_at_head": "b9a9694478812df3d215022008df2fb6a9c79b4f"
+    },
+    {
+      "todo": 3617,
+      "job": "20261024-180736-todo-3617",
+      "status": "succeeded",
+      "exit_code": 0,
+      "model": "anthropic/claude-sonnet-5-5",
+      "effort": "max",
+      "model_origin": "owner_request",
+      "effort_origin": "owner_request",
+      "thread_id": "01a16d2a-eb1f-79f2-b6a8-aeaf8c8f9fb0",
+      "raw_file": "review3617-original123649.md",
+      "raw_bytes": 6332,
+      "raw_sha256": "03fe183f097ad68e4a656b919cce6622cc05fe1f995b09e3e30284ed3fb47c08",
+      "received_at": "2026-10-24T09:34:47.3132337Z",
+      "parent_read_pending": false,
+      "native_match_pending": false,
+      "parent_full_read": true,
+      "native_matched": true,
+      "effective_reasoning_measured": false,
+      "base": "534d2cd08822febf015617b3ca94e63697cfd5c1",
+      "head": "b9a9694478812df3d215022008df2fb6a9c79b4f",
+      "must": 0,
+      "suggestions": 4,
+      "nits": 5,
+      "scope": "All7files/all64U3hunks plus relevant code/data context; independently reconstructed3anchors; source/cache body and tests/CI/central execution not performed.",
+      "nonblocking_resolution": {
+        "S1": "At fixedb9 the474/475 value is correct. Remove mutable current numeric prose in the already-needed next parent-cohort publication before those values change; do not carry it into a new stale snapshot.",
+        "S2": "Add coupled namespace mutation and ledger flag/counter/unknown-disposition negatives alongside the next required source-index extension.",
+        "S3": "Isolate non-valid fixture ledger rows and reset target state so a future real adoption of entry0 does not invalidate the synthetic tests.",
+        "S4": "Require the full negative no-commercial-licence-contact-or-rights-question phrase and add an inversion negative.",
+        "nits": "Clarify reported-vs-unsaved script claims, cache private-receipt note, anonymous hold provenance/next/owner-input, UTC observation labels and historical-vs-current definitions in next delta."
+      },
+      "owner_action_required": false,
+      "resolution_pending": true,
+      "parent_followup": "S1 numeric prose guard; S2 coupled namespace and ledger negatives; S3 isolated mutation fixtures for future real adoptions; S4 full negative rights-question phrase/inversion cases, plus documentation nits. This new supplement needs its own bounded review/CI; old b9 acceptance remains exactly scoped."
     }
   ],
   "merged_pr_history": [
@@ -1460,8 +1477,8 @@
     "owner_action_required": false
   },
   "central_target_holds_current": {
-    "count": 7,
-    "definition": "Original4 comparison holds plus earlier1 candidate and later2 distinct candidate holds. Historical snapshots retain their original counts. No target names/leafpaths are disclosed.",
+    "count": 8,
+    "definition": "Five earlier holds plus the distinct later observations listed here. Classification is unverified; existence and size were not queried, and target bodies were neither read nor written. No target names or leaf paths are disclosed.",
     "todo": 3080,
     "job": "20261024-123649-todo-3080",
     "observations": [
@@ -1474,6 +1491,11 @@
         "case": "later_candidate_B",
         "observed_at": "2026-10-24T09:21:13.0657691Z",
         "receipt": "parent-large1-target-preflight123649.json"
+      },
+      {
+        "case": "later_comparison_C",
+        "observed_at": "2026-10-24T11:38:20.8766644Z",
+        "receipt": "git-comparison-target-preflight123649.json"
       }
     ],
     "receipt_reference_definition": "Private parent records, not repository links.",
@@ -1483,7 +1505,9 @@
     "post_guard_target_read_write": 0,
     "configuration_or_exception_changes": 0,
     "owner_action_required": false,
-    "next": "Keep exact targets unchanged and continue permitted evaluation. Existing normal classification prerequisites remain unresolved; no same refresh or alternate-path retry."
+    "next": "Keep exact targets unchanged and continue permitted evaluation. Existing normal classification prerequisites remain unresolved; no same refresh or alternate-path retry.",
+    "baseline_count": 5,
+    "baseline_definition": "Original four comparison holds plus one earlier candidate hold. Later distinct observations below add one case each; historical snapshots retain their original scope."
   },
   "sixmile_parent6_entrypoint_evaluation": {
     "source": "skills-3080-sixmile-parent6-evaluation.json",

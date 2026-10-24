@@ -4115,9 +4115,7 @@
     "recorded_at": "2026-10-24T10:39:47.2605445Z",
     "job": "20261024-123649-todo-3080",
     "added_exclusions": 0,
-    "inventory_ids": [
-      null
-    ],
+    "inventory_ids": [],
     "scope": "Only parent final flags/counters and decisions changed. Original primary/support reading states, actors, hashes, notices and historical proposals stay fixed.",
     "review_pending": true
   },

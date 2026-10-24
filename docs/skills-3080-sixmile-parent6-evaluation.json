@@ -1313,5 +1313,6 @@
   },
   "public_reflected_at": "2026-10-24T10:00:58.5074984Z",
   "public_delta_review_pending": true,
-  "private_evidence_reference_definition": "Original-parent/read-receipt/fixed-proof filenames identify private preserved parent records, not repository links. Public fixed source URLs/commit/path/SHA/blob, complete support metadata and independent test anchors preserve the scope. Reading is not final adoption, safety, whole-package rights, or current central availability."
+  "private_evidence_reference_definition": "Original-parent/read-receipt/fixed-proof filenames identify private preserved parent records, not repository links. Public fixed source URLs/commit/path/SHA/blob, complete support metadata and independent test anchors preserve the scope. Reading is not final adoption, safety, whole-package rights, or current central availability.",
+  "anonymous_central_holds_scope": "Historical snapshot at parent6 preparation only. The current anonymous hold count and normal recovery prerequisites are in skills-3080-progress.json central_target_holds_current."
 }

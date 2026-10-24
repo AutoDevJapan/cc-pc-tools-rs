@@ -11053,5 +11053,6 @@
     ],
     "scope": "Only parent final flags/counters and decisions changed. Original primary/support reading states, actors, hashes, notices and historical proposals stay fixed.",
     "review_pending": true
-  }
+  },
+  "new_final_dispositions_definition": "Later parent exclusion delta only, equal to parent_decision_updates.added_exclusions. The earlier intake decision count is preserved separately at new_final_dispositions_at_intake. Cumulative cohort final decisions are installed + integrated + excluded; do not sum the delta again."
 }

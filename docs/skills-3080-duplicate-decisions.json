@@ -194,9 +194,10 @@
   "proposed_excluded": 7,
   "public_excluded": 7,
   "review_pending": true,
-  "amended_at": "2026-10-24T02:15:45.2234244+00:00",
+  "amended_at": "2026-10-24T03:03:56.0866038+00:00",
   "amendment_job": "20261024-093456-todo-3080",
   "historical_snapshot_definition": "job/recorded_at/public_pending/proposed_pending_if_reviewed preserve the original duplicate receipt: installed28 + integrated1 + excluded7 + pending73184 = 73220. They are not current live-ledger counts.",
-  "live_pending": 73181,
-  "public_excluded_definition": "This receipt contains the original seven duplicate exclusions. The live total eight additionally includes one separate individual-rights exclusion."
+  "public_excluded_definition": "This receipt contains the original seven duplicate exclusions. The live total eight additionally includes one separate individual-rights exclusion.",
+  "live_ledger": "skills-3080-adoptions.json",
+  "live_ledger_definition": "Read current pending from the adoption ledger. This historical duplicate receipt deliberately contains no duplicated current pending scalar."
 }

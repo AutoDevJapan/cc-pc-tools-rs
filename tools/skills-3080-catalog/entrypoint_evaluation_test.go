@@ -6,11 +6,68 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 )
+
+var primaryCoverageProjection = regexp.MustCompile(`固定([0-9]+)\+別枠mizchi([0-9]+)\+MengTo全入口([0-9]+)\+6mile部分([0-9]+)=([0-9]+)source paths`)
+
+func validatePrimaryCoverageProjection(definition string, components []int) error {
+	matches := primaryCoverageProjection.FindAllStringSubmatch(definition, -1)
+	if len(matches) != 1 || len(components) != 5 {
+		return errors.New("primary coverage projection is missing or ambiguous")
+	}
+	for i, want := range components {
+		got, err := strconv.Atoi(matches[0][i+1])
+		if err != nil || got != want {
+			return fmt.Errorf("primary coverage projection differs at component %d", i)
+		}
+	}
+	return nil
+}
+
+func TestPrimaryCoverageDescriptionMatchesCanonicalComponentCounts(t *testing.T) {
+	var p struct {
+		Definition string `json:"primary_coverage_definition"`
+		Total      int    `json:"all_fulltext_primary_paths_including_partial_sources"`
+		Complete   struct {
+			Paths int `json:"case_insensitive_skill_named_paths"`
+		} `json:"full_source_body_read_coverage"`
+		Mizchi struct {
+			Read int `json:"full_body_read"`
+		} `json:"mizchi_partial_entrypoint_evaluation"`
+		Mengto struct {
+			Read int `json:"full_body_read"`
+		} `json:"mengto_partial_entrypoint_evaluation"`
+		Sixmile struct {
+			Read int `json:"full_body_read"`
+		} `json:"sixmile_partial_entrypoint_evaluation"`
+	}
+	loadPublicReceipt(t, "skills-3080-progress.json", &p)
+	want := []int{p.Complete.Paths, p.Mizchi.Read, p.Mengto.Read, p.Sixmile.Read, p.Total}
+	for _, kind := range []string{"valid", "stale_sixmile", "stale_total", "missing", "ambiguous"} {
+		t.Run(kind, func(t *testing.T) {
+			reported := p.Definition
+			switch kind {
+			case "stale_sixmile":
+				reported = strings.Replace(reported, "6mile部分"+strconv.Itoa(p.Sixmile.Read), "6mile部分"+strconv.Itoa(p.Sixmile.Read-10), 1)
+			case "stale_total":
+				reported = strings.Replace(reported, "="+strconv.Itoa(p.Total)+"source paths", "="+strconv.Itoa(p.Total-10)+"source paths", 1)
+			case "missing":
+				reported = ""
+			case "ambiguous":
+				reported += reported
+			}
+			if err := validatePrimaryCoverageProjection(reported, want); (err != nil) != (kind != "valid") {
+				t.Fatalf("%s: %v", kind, err)
+			}
+		})
+	}
+}
 
 type evaluatedResource struct {
 	Path     string `json:"path"`

@@ -1,11 +1,11 @@
 {
-  "scope": "既保存の11本文/個別notice10/追加参照2を前担当が全読。今回の親は全評価を読み受領。既実行の固定照合を再実行せず原証拠を保持。残55612は未読。",
+  "scope": "固定完全treeの既読11入口に、研究3554の新10入口を追加する部分評価案。21/55623本文と個別noticeの読取を記録し、全候補の採否/全支持/実導入の完了にはしない。新規の最終採否と中央書込は0。",
   "source": "6mile/skills",
-  "entrypoints_fulltext_read": 11,
+  "entrypoints_fulltext_read": 21,
   "tree_sha": "5782ae7deffe5024e15b6e090327385c10f76273",
   "installed": 0,
-  "pending_definition": "全固定treeのSkill入口55623から今回の実読11を引いた未読55612。全pathの意味読了や採否を示さない。完全path一覧は固定収集原本に保持し、この部分評価へ全文を複製しない。",
-  "entrypoints_unread": 55612,
+  "pending_definition": "固定treeのSkill入口55623から既読21を引いた未読55602。旧11と新10の固定rosterを保持する。未読を除外へ移さず、全path一覧は固定原本に保持する。",
+  "entrypoints_unread": 55602,
   "entrypoints_expected": 55623,
   "pending_paths_list_published": false,
   "excluded": 2,
@@ -20,7 +20,7 @@
     "reexecuted": false,
     "support_path_blob_complete": true
   },
-  "recorded_at": "2026-10-24T01:12:56.3802446+00:00",
+  "recorded_at": "2026-10-24T02:57:08.8435119+00:00",
   "central_write": 0,
   "selected_identities": [
     {
@@ -99,6 +99,76 @@
       "source_sha256": "b54257cdc0e5d04488b35b0c797bfe427b24359f0848d3c73924dcacf8da6358",
       "path": "skills/hoyaryyj/kepano-obsidian-cli/SKILL.md",
       "inventory_id": "github:94699dba5282f10171d8005a1371aa5eedab8ace92676691940e8c745887f36f"
+    },
+    {
+      "path": "skills/0xastraea/opencog/SKILL.md",
+      "inventory_id": "github:a11b51082969e7c05112d0596bd0f340c261e6e30ea063d11cf08fcc702da22a",
+      "source_sha256": "436fddeff1c8a7fe83e18abde38fb0a5567f2e8477027a15ebc9c8c02fef55fc",
+      "git_blob": "578b8144a52bbac3b9162c0876120ecf3ffa1340",
+      "bytes": 17153
+    },
+    {
+      "path": "skills/0xfratex/virtualboxmanager/SKILL.md",
+      "inventory_id": "github:c275ffd86468486b48d0bbd5b6e2f0bab6767e771b92f6d2645c8d96dedf23cd",
+      "source_sha256": "4845b586e6b46d43054d6ad195f5bfb5c4bc0aa58801e16f5c442bd4ac580c99",
+      "git_blob": "cab2ab8af9fe9344cca7da6ddc82f2ea917a52a2",
+      "bytes": 15311
+    },
+    {
+      "path": "skills/0xjordansg-yolo/openclaw-aisa-youtube/SKILL.md",
+      "inventory_id": "github:1ae9082de734e82714d4b3b0c5db8b51186677537bc0ccb521fd3554bab7022d",
+      "source_sha256": "e63e02ab8f1e62e5269fa39b9518535c3eac7ce031f50d3e3393a8e44a51e71e",
+      "git_blob": "1f8cf85b6cef446609703351f881ab1a65211674",
+      "bytes": 13335
+    },
+    {
+      "path": "skills/0xspeter/klaviyo-1-0-4/SKILL.md",
+      "inventory_id": "github:e07aebbf0c8348fac2a4622d80b150e09e60e0691f2a2a84eef69e1707d236ec",
+      "source_sha256": "c655611b4780d5b42e99ce3e6862602eb6d1fb644e61e1d0d0ee16e18da23092",
+      "git_blob": "95502010cc121906f53d0fbc7000135c79abd2f6",
+      "bytes": 36754
+    },
+    {
+      "path": "skills/86293073/skill-creator-0-1-0/SKILL.md",
+      "inventory_id": "github:a658a5c34b9cbed24bdb13c3497659c8c851d9148cbd03ba7f5084eaee6e3a77",
+      "source_sha256": "b2e3d83f60425c2d0b9d4162efb8f9aa322b45843497340f2289f42be422801c",
+      "git_blob": "b7f86598b002c99a6be96026443217b6af3c561d",
+      "bytes": 17837
+    },
+    {
+      "path": "skills/aabbcc456aa/hxl-code-reviewer/SKILL.md",
+      "inventory_id": "github:e4ade76a7932447efe3dd6e777ab300a5a9a6f1cf13a392614b31c621906a016",
+      "source_sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
+      "git_blob": "8a1a77a47d141967b246adb4da4f91037578ff7d",
+      "bytes": 9092
+    },
+    {
+      "path": "skills/aamish99/fundraiseup/SKILL.md",
+      "inventory_id": "github:4d7c0231d9e5f3a91a7c3838ffbd074c36f1a53cc0d892d68d30a6806f6e9b38",
+      "source_sha256": "851846e1d512abcaf67af51b5f6e03835715ba2213a10652576a9df68fecc759",
+      "git_blob": "951e3361e9d5856590987f886cf674bc3e474ee2",
+      "bytes": 22976
+    },
+    {
+      "path": "skills/aduo6668/amazon-review-workbook/SKILL.md",
+      "inventory_id": "github:a0320f328c387995024e4c6114b0899181d65515877a2893b7978fa5a1a9625b",
+      "source_sha256": "09835c3a514604d7a050c7e7c911c34b94e8a7c4730879dc038b69d3be3be3dd",
+      "git_blob": "f381193f8069ad211f0a72adf1af7ec7ddef0da7",
+      "bytes": 9935
+    },
+    {
+      "path": "skills/ai-chen2050/moltrade/binance/spot/SKILL.md",
+      "inventory_id": "github:7e90ed8b70bcbb162585cbb01ce13600b426ac1fad7735d38b86946baf298951",
+      "source_sha256": "f1381711f8283954ba4072097dfc5fbb3cd1ee00e8d89f3d26dbcc999eac11d0",
+      "git_blob": "5bad710443d8a6298a15ab68ad538e3d54f08b51",
+      "bytes": 24593
+    },
+    {
+      "path": "skills/ai-headhunter/pinch/SKILL.md",
+      "inventory_id": "github:3f82ed95faf19be4e4c742a6962c950cbafc306ea45c7bf41a1424a5e6625c60",
+      "source_sha256": "ece62aee1f1fb9a8c8eaf31cc7509e089a222eddbc463f4132ef4618659a4681",
+      "git_blob": "b5a7759e6e1615f5964af2282faccf369a4f0665",
+      "bytes": 17713
     }
   ],
   "new_central_write": 0,
@@ -109,7 +179,7 @@
     "full_read_by": "20261024-080546-todo-3080"
   },
   "metadata_is_not_semantic_coverage": true,
-  "notice_scope": "各入口の同directoryに保存された個別noticeを先に確認した有限10件と、コピー0の重複判定1件。rootMITを第三者素材やサービス/依存へ広げない。",
+  "notice_scope": "旧10件と3554の新10件の個別noticeを全文読取した評価と、追加コピー0の重複判定1件を区別する。計21本文の評価で、20件全ての複製許諾を受け入れた意味ではない。rootMITを個別制限・第三者素材・サービス/依存へ広げない。",
   "source_readme": {
     "no_blanket_accept_or_exclude": true,
     "historical_archive_may_contain_malicious_skills": true,
@@ -118,15 +188,16 @@
   },
   "review_pending": true,
   "classification_is_not_installation": true,
-  "selected_identity_fingerprint": "b9f44d4ff6da925b75d3b2b63cfa581869bac6a04e8b62ca65a9c1466fe01621",
+  "selected_identity_fingerprint": "8df3778373dc174ea9e634d601ecdfcf9d02a29703dea8f9070250f4c7342854",
   "counts": {
     "unsaved_bytes_unknown": true,
-    "support_unsaved": 62,
-    "support_saved": 40,
+    "support_unsaved": 90,
+    "support_saved": 75,
     "raw_source_commands_executed": 0,
-    "support": 102,
-    "support_full_read": 12,
-    "primary": 11
+    "support": 165,
+    "support_full_read": 42,
+    "primary": 21,
+    "support_scan_only": 5
   },
   "entries": [
     {
@@ -157,7 +228,6 @@
       "path": "skills/1146345502/reddit-skills/SKILL.md",
       "reason": "作者専用Python CLIとChrome拡張に依存。拡張の権限・通信先の自己申告は実装未読で未検証。",
       "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
-      "public_reflected": true,
       "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
       "negative_candidate": "提供記事の要約まで新しいReddit拡張とbridgeの導入へ広げる。",
       "individual_rights_review": {
@@ -509,7 +579,8 @@
         "original_fixed_verification_reused": true
       },
       "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
-      "use": "Redditの投稿検索と、明示された投稿/返信の実行範囲を分けて手順を整理する。"
+      "use": "Redditの投稿検索と、明示された投稿/返信の実行範囲を分けて手順を整理する。",
+      "assessment_public_reflected": true
     },
     {
       "repo": "6mile/skills",
@@ -540,7 +611,6 @@
       "path": "skills/1215656/1215656-clawdbot-filesystem-1-0-2/SKILL.md",
       "reason": "主にCLI広告と使用例で、path検証/エラー回復/安全性の実装根拠は無い。既存のファイル操作Skillとの差は本文比較前。",
       "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
-      "public_reflected": true,
       "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
       "negative_candidate": "調査対象を指定せずPC全体を再帰検索し、dry-runだけで回収成功とする。",
       "individual_rights_review": {
@@ -643,7 +713,8 @@
         "original_fixed_verification_reused": true
       },
       "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
-      "use": "指定フォルダのコピー計画を、対象・上書き条件・予定件数で確認する。"
+      "use": "指定フォルダのコピー計画を、対象・上書き条件・予定件数で確認する。",
+      "assessment_public_reflected": true
     },
     {
       "repo": "6mile/skills",
@@ -674,7 +745,6 @@
       "path": "skills/529279917/memory-persistence/SKILL.md",
       "reason": "Python実装群/embedding自動download/モデル自動検出/リモートstorageを前提にする。書かれたprivateディレクトリ名だけではアクセス隔離を証明しない。",
       "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
-      "public_reflected": true,
       "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
       "negative_candidate": "要約が作れただけで全記憶を正しいとし、非公開会話を共有repositoryへ同期する。",
       "individual_rights_review": {
@@ -937,7 +1007,8 @@
         "original_fixed_verification_reused": true
       },
       "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
-      "use": "会話の既存指示と確認済み成果を、公開/共有の範囲を保って別セッションへ引き継ぐ。"
+      "use": "会話の既存指示と確認済み成果を、公開/共有の範囲を保って別セッションへ引き継ぐ。",
+      "assessment_public_reflected": true
     },
     {
       "repo": "6mile/skills",
@@ -967,7 +1038,6 @@
       "path": "skills/abyousef739/clawskillshield/SKILL.md",
       "reason": "例はthreatsへ戻り値を代入するだけでrisk_scoreを定義せず、risk_score<4をHIGH RISKとする閾値の向きも説明と整合しない。open/os/subprocessだけでは悪意を証明しない。",
       "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
-      "public_reflected": true,
       "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
       "negative_candidate": "open()という文字列か定義の無いスコアだけで、既存Skillを自動隔離する。",
       "individual_rights_review": {
@@ -1090,7 +1160,8 @@
         "original_fixed_verification_reused": true
       },
       "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
-      "use": "提供Skillの静的な疑わしい箇所を、行番号と未確認を付けて人が判断できる形に整理する。"
+      "use": "提供Skillの静的な疑わしい箇所を、行番号と未確認を付けて人が判断できる形に整理する。",
+      "assessment_public_reflected": true
     },
     {
       "repo": "6mile/skills",
@@ -1120,7 +1191,6 @@
       "path": "skills/ahump20/frontend-design-2/SKILL.md",
       "reason": "実装前の方向設計は既存web-design-process/ui-design-stylesと重なる。差分はmetadataだけで確定しない。全作品の新奇性やフォントの一律禁止は本人方針ではない。",
       "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
-      "public_reflected": true,
       "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
       "negative_candidate": "表示の不具合を直す依頼で、同じ文字体を使わない規則を理由に製品全体を作り直す。",
       "individual_rights_review": {
@@ -1183,7 +1253,8 @@
         "original_fixed_verification_reused": true
       },
       "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
-      "use": "新しい画面の目的・読み手・制約に基づく画像案を作り、回答後に実装方針を決める。"
+      "use": "新しい画面の目的・読み手・制約に基づく画像案を作り、回答後に実装方針を決める。",
+      "assessment_public_reflected": true
     },
     {
       "repo": "6mile/skills",
@@ -1214,7 +1285,6 @@
       "path": "skills/aleksandrkrivolap/openclaw-agent-compute/SKILL.md",
       "reason": "未知のprivate Compute GatewayとAPI keyを前提にするclientで、依頼されたPC基盤の実提供者/費用/認証/実装の根拠が無い。",
       "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
-      "public_reflected": true,
       "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
       "negative_candidate": "ファイルのhash確認だけの依頼から未知の有料compute gatewayへ接続する。",
       "individual_rights_review": {
@@ -1366,7 +1436,8 @@
         "original_fixed_verification_reused": true
       },
       "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
-      "use": "既存に依頼済みのcompute gatewayを使う設計で、sessionとartifactの識別子・回収・終了を比較する。"
+      "use": "既存に依頼済みのcompute gatewayを使う設計で、sessionとartifactの識別子・回収・終了を比較する。",
+      "assessment_public_reflected": true
     },
     {
       "repo": "6mile/skills",
@@ -1396,7 +1467,6 @@
       "path": "skills/aliyun-ai-sec/aliyun-ai-guardrail/SKILL.md",
       "reason": "AK/SKを求め、LLM requestをcloud検査hookへ流す運用。既存のOAuth枠、用途、請求、送信範囲の根拠が無く、そのまま導入できない。",
       "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
-      "public_reflected": true,
       "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
       "negative_candidate": "Skillを読んだだけで秘密鍵を尋ね、全LLM requestを新しいcloudへ送信するhookを登録する。",
       "individual_rights_review": {
@@ -1499,7 +1569,8 @@
         "original_fixed_verification_reused": true
       },
       "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
-      "use": "既存設定を壊さず拡張する方法と、cloudへの送信範囲/実動作の確認を整理する。"
+      "use": "既存設定を壊さず拡張する方法と、cloudへの送信範囲/実動作の確認を整理する。",
+      "assessment_public_reflected": true
     },
     {
       "repo": "6mile/skills",
@@ -1529,7 +1600,6 @@
       "path": "skills/aliyun-ai-sec/aliyun-clawscan/SKILL.md",
       "reason": "設定/Skill静的検査と根拠付き報告は有用。2参照を追加で全読し、作者の単純判定をそのまま採らず、具体的な誤検出と構文不備を補正する必要を確認した。",
       "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
-      "public_reflected": true,
       "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
       "negative_candidate": "任意のimport名が見つからなかっただけで全環境を安全とし、未知Skillを自動installする。",
       "individual_rights_review": {
@@ -1624,7 +1694,8 @@
         "original_fixed_verification_reused": true
       },
       "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
-      "use": "提供されたSkillの危険な通信/権限/永続化を静的に見て、根拠の行と未検証範囲で報告する。"
+      "use": "提供されたSkillの危険な通信/権限/永続化を静的に見て、根拠の行と未検証範囲で報告する。",
+      "assessment_public_reflected": true
     },
     {
       "repo": "6mile/skills",
@@ -1655,7 +1726,6 @@
       "path": "skills/aloth/overleaf-skill/SKILL.md",
       "reason": "olcliへsessioncookieをCLI引数で渡す例とglobalinstallに依存。arXivはbblだけという一律主張は対象時点の公式要件をまだ照合していない。",
       "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
-      "public_reflected": true,
       "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
       "negative_candidate": "PDFの内容を読む依頼だけで、sessioncookieを抽出し全projectを強制同期する。",
       "individual_rights_review": {
@@ -1758,7 +1828,8 @@
         "original_fixed_verification_reused": true
       },
       "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
-      "use": "既存のLaTeX案件で、編集元とcompile成果と提出に必要な依存を確認する。"
+      "use": "既存のLaTeX案件で、編集元とcompile成果と提出に必要な依存を確認する。",
+      "assessment_public_reflected": true
     },
     {
       "repo": "6mile/skills",
@@ -1787,7 +1858,6 @@
       "path": "skills/asazhangyongchao/asiasea-bi/SKILL.md",
       "reason": "同ディレクトリのLICENSEはProprietary and Confidential/NOT Open Sourceと明記し、書面許諾を要するとする。publicarchiveやrootMITだけではこの候補を複製/適応/利用できる根拠にならない。",
       "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
-      "public_reflected": true,
       "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
       "negative_candidate": "publicrepositoryにあることとrootMITだけで、この独占的許諾文を無視して中央へ再配布する。",
       "individual_rights_review": {
@@ -1880,7 +1950,8 @@
       },
       "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
       "decision_scope": "同梱の個別Proprietary/Confidential/書面許諾要求と許諾根拠不在に限る。この候補の本文や実装を中央へ複製せず、固定出典・指紋と判定理由だけを残す。他の6mile候補へ一括適用しない。",
-      "use": "この個別候補を使う前に、同梱の制限と許諾根拠の有無を確認する。"
+      "use": "この個別候補を使う前に、同梱の制限と許諾根拠の有無を確認する。",
+      "assessment_public_reflected": true
     },
     {
       "name": "kepano-obsidian-cli",
@@ -1912,7 +1983,6 @@
       "required_changes": [
         "元採用とmanifestを維持する。この複製のライセンスや_meta本文を受入済みとしない。"
       ],
-      "public_reflected": true,
       "bytes": 3183,
       "integrated_by_todo3080": false,
       "use": "同一内容の別出現の重複判定",
@@ -1943,7 +2013,1983 @@
           "path": "skills/hoyaryyj/kepano-obsidian-cli/_meta.json",
           "source_sha256": "cbb770e2af5373e1478c78ce90d80314e57c3f5175f3c33450eedb0fc3bb6108"
         }
-      ]
+      ],
+      "assessment_public_reflected": true
+    },
+    {
+      "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
+      "support_read_complete": false,
+      "individual_rights_review": {
+        "notice_path": "skills/0xastraea/opencog/LICENSE.md",
+        "notice_git_blob": "9dc9e8ead623fdd4b3bdc194efae7df90400d2ce",
+        "notice_sha256": "0637874758b9b20b1fa9f74422d36740a163a57d5db5e77ae2d349b12b7bc694",
+        "notice_bytes": 1069,
+        "notice_gz_sha256": "5da145d25e352c59d012313e938988a52503348420b55a880bed35b5a4051755",
+        "notice_read_complete": true,
+        "kind": "MIT許諾文（題名行なし、CRLF）",
+        "holder": "0xAstraea.",
+        "grant_express": true,
+        "restrictive_or_proprietary_terms": false,
+        "body_reading_stopped_for_rights": false,
+        "scope": "同パッケージのソフトウェアと関連文書（ディレクトリの近さで読む）",
+        "not_covered": "Precogの名称、コントラクト、サービス、MATEトークン",
+        "caveat": "本文のhomepageはopenclaw/precog-skill、READMEのclone元は0xAstraea/opencog-basicで、スクリプトとPRECOG.mdの真の著作者は未確定",
+        "license_path": "skills/0xastraea/opencog/LICENSE.md",
+        "license_sha256": "0637874758b9b20b1fa9f74422d36740a163a57d5db5e77ae2d349b12b7bc694",
+        "license_bytes": 1069,
+        "full_license_read": true,
+        "full_license_read_definition": "Child3554 read the individual archival notice. parent_notice_full_read separately states parent reading; this is not permission for services, software or all support."
+      },
+      "body_read_complete": true,
+      "reason": "秘密鍵を平文の.envへ保管し、mainnetでは実資金の売買になり、npm installと同梱.mjsの実行が前提。ガードレール（初期設定はsepolia、見積必須、バッチ禁止、mainnetは明示指定）は良いが、取引は取り消せない金銭操作で、導入する理由が弱い。公開名OpenCogと本文名precogが食い違い、権利者・出所も二重になっている。",
+      "repo": "6mile/skills",
+      "required_changes": [
+        "名称をprecogに統一する（OpenCogと混同させない）",
+        "導入するなら読取専用（markets・market・positions）と取引（buy・sell・ウォレット生成）を分け、取引側は本人の明示指示がある場合だけにする",
+        "~/.openclaw/.envとchmod前提をWindowsとCodexの実環境へ置換し、秘密鍵の平文保存をやめる",
+        "未保存のscripts10本・package.json・ABIを読んでから判断する",
+        "README.md L18のnpm installをcd precogの後へ移す"
+      ],
+      "individual_notice_read_by": "20261024-095453-todo-3554",
+      "bytes": 17153,
+      "independent_review_complete": false,
+      "use": "Base上の予測市場Precogで、PC内ウォレットを作り、市場一覧・価格・見積・売買・ポジション照会をnodeスクリプトで行う手順（CRLF改行）。",
+      "findings": [
+        {
+          "line": "L2・_meta.json",
+          "kind": "inconsistency",
+          "issue": "本文名precogに対し公開名はOpenCog。検索・重複判定・出所確認を誤らせる",
+          "fix": "表と判定のキーはpathとblobにし、導入するなら名称をprecogに統一",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L24・L376-379",
+          "kind": "inconsistency",
+          "issue": "『no custody, no central party』と書く一方、市場の公開には運営の承認と3,000 Precog Pointsが要る",
+          "fix": "署名は自分で行うが市場公開は運営承認、と書き直す",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L34・L384-391",
+          "kind": "promo",
+          "issue": "『Coming soon』とRoadmapは未実装の機能",
+          "fix": "機能として数えず、導入文から外す",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L55",
+          "kind": "spec_error",
+          "issue": "chmod 600はPOSIX前提でWindowsでは働かず、鍵が平文のまま残る",
+          "fix": "Windowsの権限設定にするか、鍵を保存しない運用にする",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L66",
+          "kind": "unverified",
+          "issue": "『scripts are audited as a unit』の根拠が同梱されていない",
+          "fix": "監査主体・版・結果を添えるか削除",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "README.md L16-18",
+          "kind": "spec_error",
+          "issue": "git clone後にcdせずnpm installを実行し、依存が別の場所に入る",
+          "fix": "npm installの前にcd precogを入れる",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        }
+      ],
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "name": "opencog",
+      "body_read_method": "child full primary/notice read; parent all semantic assessments/rights/limits/prose read; independently fixed roster/tree/index/catalog/gzip verified",
+      "installed_by_todo3080": false,
+      "supporting_resources": [
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1069,
+          "executed": false,
+          "git_blob": "9dc9e8ead623fdd4b3bdc194efae7df90400d2ce",
+          "path": "skills/0xastraea/opencog/LICENSE.md",
+          "scan_only": false,
+          "scope": "individual notice, separated from reader's53 support rows",
+          "source_sha256": "0637874758b9b20b1fa9f74422d36740a163a57d5db5e77ae2d349b12b7bc694",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 55507,
+          "executed": false,
+          "git_blob": "a504fdb91222754f03a6761f091a0f186c2d5592",
+          "path": "skills/0xastraea/opencog/PRECOG.md",
+          "scan_only": true,
+          "source_sha256": "0070d9892285a202f71a1bf810af2ccdd1d75e5a7274e21a7a6d37569fe80848",
+          "scan_note": "phrase scan only; not full body reading",
+          "scan_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1765,
+          "executed": false,
+          "git_blob": "754d15692a068d315a7a075e9c60067a09102b93",
+          "path": "skills/0xastraea/opencog/README.md",
+          "scan_only": false,
+          "source_sha256": "5c9eeff9d4a70846a99c1b906ea4f67872ff836c6df34874b503c7c6d7a34b99",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 447,
+          "executed": false,
+          "git_blob": "5b247594c51f4e647c4b79ea5116312cee086249",
+          "path": "skills/0xastraea/opencog/_meta.json",
+          "scan_only": false,
+          "source_sha256": "5812a1d9cf44b0b353a4a6dae33dd4c1e3d070a70569baf4eb2a35b5d6085722",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "02e29d07748f9da5256891dee7023063105b178a",
+          "path": "skills/0xastraea/opencog/abi/PrecogMasterV8.json",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "557628dff4eb925003f7f09a6f1bf4859bc51047",
+          "path": "skills/0xastraea/opencog/package-lock.json",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "6f964de7472ceccbdc6ee5406011ad4779dca746",
+          "path": "skills/0xastraea/opencog/package.json",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "9723efc080237a4f90af104815cc73c01b0f6e27",
+          "path": "skills/0xastraea/opencog/scripts/buy.mjs",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "5be6f34876ae04ae9c83c8c06fcbfc1f85f8fb85",
+          "path": "skills/0xastraea/opencog/scripts/lib/args.mjs",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "35b43fd416ab4ecaef5f7530709b7ce10a8e9fdf",
+          "path": "skills/0xastraea/opencog/scripts/lib/client.mjs",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "bd13a1b9d8cec21fefdab56f0d9eccd5f4212d8e",
+          "path": "skills/0xastraea/opencog/scripts/lib/helper.mjs",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "0fdd6115563ebc5c24dbb0b60bf48115dc21bf58",
+          "path": "skills/0xastraea/opencog/scripts/market.mjs",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "4a91b46bd9dcc602adcbf9e827c94a442f9c7a13",
+          "path": "skills/0xastraea/opencog/scripts/markets.mjs",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "cf1308fadb2e2c46e47c5fb802a4ec4a25c4385a",
+          "path": "skills/0xastraea/opencog/scripts/positions.mjs",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "c763b98960629ca40a69d508b85876ec2d7d5948",
+          "path": "skills/0xastraea/opencog/scripts/quote.mjs",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "e0a75cff9a77f1684fa2939c6f1461feea85dddd",
+          "path": "skills/0xastraea/opencog/scripts/sell.mjs",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "cffd01d51b6f75cbb7450ea911e267c27c7fd019",
+          "path": "skills/0xastraea/opencog/scripts/setup.mjs",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "7cd74efb9e82beced7914478ea859c378714b37a",
+          "path": "skills/0xastraea/opencog/vitest.config.mjs",
+          "scan_only": false,
+          "source_sha256": null
+        }
+      ],
+      "source_sha256": "436fddeff1c8a7fe83e18abde38fb0a5567f2e8477027a15ebc9c8c02fef55fc",
+      "git_blob": "578b8144a52bbac3b9162c0876120ecf3ffa1340",
+      "negative_candidate": "mainnetで実資金を使って買う／秘密鍵を生成して保管する／自動で繰り返し売買する",
+      "positive_candidate": "Base Sepolia（テスト用）の予測市場一覧と確率を、読取だけで説明してほしい",
+      "value": "低。本人に予測市場取引の用途が見当たらず、公開情報の調査は既存のpublic-data-researchで足りる。",
+      "excluded_by_todo3080": false,
+      "source_listing_description": "OpenCog（slug opencog、最新0.1.4）",
+      "path": "skills/0xastraea/opencog/SKILL.md",
+      "license_paths": [
+        "skills/0xastraea/opencog/LICENSE.md"
+      ],
+      "historical_reader_proposal": {
+        "raw_sha256": "a09f81dc5ecbc38a5213c478c627e8ea04ed996e94473cb81741f773621717b1",
+        "not_final_disposition": true,
+        "not_owner_policy": true,
+        "todo": 3554,
+        "candidate_disposition": "not_recommended_now"
+      },
+      "gzip_sha256": "8b59347ef678f8056d22e7d54883da7724fcf56aa1cb0047caa02524717997a4",
+      "candidate_disposition": "reference_or_adaptation_candidate_pending_readonly_scope_security_and_provenance",
+      "inventory_id": "github:a11b51082969e7c05112d0596bd0f340c261e6e30ea063d11cf08fcc702da22a",
+      "body_read_by": "20261024-095453-todo-3554",
+      "source_declared_name": "precog",
+      "parent_notice_full_read": false,
+      "compare_metadata": [],
+      "support_path_blob_inventory_complete": true,
+      "integrated_by_todo3080": false,
+      "third_party_assets_or_support_rights_accepted": false,
+      "copy_license_accepted": false,
+      "parent_policy_correction": "現時点の本人用途が不明なことだけでは除外しない。調査/参照/必要な原則の抽出と、実資金取引や鍵生成を分ける。取引をこのSkill調査から実行せず、本文名と掲載名は両方保持しpath/blobで識別する。",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/0xastraea/opencog/SKILL.md",
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
+    },
+    {
+      "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
+      "support_read_complete": false,
+      "individual_rights_review": {
+        "notice_path": "skills/0xfratex/virtualboxmanager/LICENSE.txt",
+        "notice_git_blob": "c13f99117e366fd54b4c097b67ca34dfb1fb8ba1",
+        "notice_sha256": "75486ea0af9309140ca6e2c401d7e67bea8f4892344e5707f6394dc5e83dfc44",
+        "notice_bytes": 1056,
+        "notice_gz_sha256": "dba470ae0402d11b86c80ece2d9fa546fdc1f278d3029f4570cc40eb5440fb85",
+        "notice_read_complete": true,
+        "kind": "MIT License",
+        "holder": "記載なし（Copyright (c) 2024 のみ）",
+        "grant_express": true,
+        "restrictive_or_proprietary_terms": false,
+        "body_reading_stopped_for_rights": false,
+        "scope": "同パッケージのソフトウェアと関連文書（ディレクトリの近さで読む）",
+        "not_covered": "VirtualBoxとOracleの名称・ソフトウェア",
+        "caveat": "著作権者が空欄で、帰属先を通知文のまま保持する以外に特定できない",
+        "license_path": "skills/0xfratex/virtualboxmanager/LICENSE.txt",
+        "license_sha256": "75486ea0af9309140ca6e2c401d7e67bea8f4892344e5707f6394dc5e83dfc44",
+        "license_bytes": 1056,
+        "full_license_read": true,
+        "full_license_read_definition": "Child3554 read the individual archival notice. parent_notice_full_read separately states parent reading; this is not permission for services, software or all support."
+      },
+      "body_read_complete": true,
+      "reason": "外部送信や認証が無く、読取だけなら無難。ただし破壊的操作（poweroff、unregistervm --delete、compact）に確認が無く、guestcontrolにパスワードをコマンドラインで書く例がある。コマンドはbash前提でPowerShellでは動かず、誤りの疑いが複数ある。",
+      "repo": "6mile/skills",
+      "required_changes": [
+        "PowerShell版の手順に書き換える",
+        "破壊的操作（poweroff・unregistervm --delete・compact・snapshot delete）の前に対象と状態の確認を入れる",
+        "--password passの例をpasswordfileにする",
+        "L347-348・L432・L445・L583-584を実機で検証して直す",
+        "本文が参照しないscripts/virtualbox-utils.ts（未保存）の扱いを決める"
+      ],
+      "individual_notice_read_by": "20261024-095453-todo-3554",
+      "bytes": 15311,
+      "independent_review_complete": false,
+      "use": "VBoxManage CLIでVirtualBoxのVMを作成・起動停止・スナップショット・複製・ネットワーク・共有フォルダ・USB・エクスポート・メトリクス・guestcontrolする手順集。",
+      "findings": [
+        {
+          "line": "L191・L234・L379・L398・L401・L430-433ほか",
+          "kind": "inconsistency",
+          "issue": "grepとbash構文が前提で、L27にWindowsのパスを書きながらPowerShellでは動かない",
+          "fix": "Select-String版を併記する",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L347-348",
+          "kind": "unverified",
+          "issue": "guestcontrol runの『--』直後は実行名として扱われるため、『-la』が実行名になる疑い（未確認）",
+          "fix": "『-- ls -la /home』の形を実機で確認",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L345-373",
+          "kind": "risk",
+          "issue": "--password passがコマンドラインに残る",
+          "fix": "--passwordfileを使う",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L432",
+          "kind": "unverified",
+          "issue": "cutの区切りと列番号（-f4）が誤りの疑い（名前は2列目のはず）。grepはCurrentSnapshotNameも数える",
+          "fix": "実機で出力形式を確認して直す",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L445",
+          "kind": "risk",
+          "issue": "『Ensure source is stopped』の意図でpoweroff（強制切断）しており、データ破損の恐れ",
+          "fix": "acpipowerbuttonで停止し、状態を待つ",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L583-584",
+          "kind": "unverified",
+          "issue": "macOS_ARM64とmacOS_128のOS type IDは存在しない疑い",
+          "fix": "VBoxManage list ostypesで確認",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        }
+      ],
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "name": "virtualboxmanager",
+      "body_read_method": "child full primary/notice read; parent all semantic assessments/rights/limits/prose read; independently fixed roster/tree/index/catalog/gzip verified",
+      "installed_by_todo3080": false,
+      "supporting_resources": [
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1056,
+          "executed": false,
+          "git_blob": "c13f99117e366fd54b4c097b67ca34dfb1fb8ba1",
+          "path": "skills/0xfratex/virtualboxmanager/LICENSE.txt",
+          "scan_only": false,
+          "scope": "individual notice, separated from reader's53 support rows",
+          "source_sha256": "75486ea0af9309140ca6e2c401d7e67bea8f4892344e5707f6394dc5e83dfc44",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 290,
+          "executed": false,
+          "git_blob": "6746a84f29c28a9b31c1f076b9ca1a2809644062",
+          "path": "skills/0xfratex/virtualboxmanager/_meta.json",
+          "scan_only": false,
+          "source_sha256": "c398fbdc547bf12f1b0af8a72cdc3460ebf763e869138b1ba02395600e234292",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "1c7eef8e7abffec8c77d989730774e157ef7479d",
+          "path": "skills/0xfratex/virtualboxmanager/scripts/virtualbox-utils.ts",
+          "scan_only": false,
+          "source_sha256": null
+        }
+      ],
+      "source_sha256": "4845b586e6b46d43054d6ad195f5bfb5c4bc0aa58801e16f5c442bd4ac580c99",
+      "git_blob": "cab2ab8af9fe9344cca7da6ddc82f2ea917a52a2",
+      "negative_candidate": "本番VMの強制停止や削除／VM内でパスワード付きのコマンドを実行する",
+      "positive_candidate": "VBoxManageでVMの一覧・状態・スナップショットを確認したい（読取）",
+      "value": "低〜中。網羅的だが一般知識で再現でき、このPCでVirtualBoxを使う記録は確認していない。",
+      "excluded_by_todo3080": false,
+      "source_listing_description": "Virtual Box Manager（slug virtualboxmanager、0.0.1）",
+      "path": "skills/0xfratex/virtualboxmanager/SKILL.md",
+      "license_paths": [
+        "skills/0xfratex/virtualboxmanager/LICENSE.txt"
+      ],
+      "historical_reader_proposal": {
+        "raw_sha256": "a09f81dc5ecbc38a5213c478c627e8ea04ed996e94473cb81741f773621717b1",
+        "not_final_disposition": true,
+        "not_owner_policy": true,
+        "todo": 3554,
+        "candidate_disposition": "reference_only"
+      },
+      "gzip_sha256": "5af990c0cc5e7d0da2d58cc19be624eee31d644d47cc2e23715c1dc1172d5392",
+      "candidate_disposition": "virtualbox_workflow_candidate_pending_windows_validation_and_existing_comparison",
+      "inventory_id": "github:c275ffd86468486b48d0bbd5b6e2f0bab6767e771b92f6d2645c8d96dedf23cd",
+      "body_read_by": "20261024-095453-todo-3554",
+      "source_declared_name": "virtualbox",
+      "parent_notice_full_read": false,
+      "compare_metadata": [],
+      "support_path_blob_inventory_complete": true,
+      "integrated_by_todo3080": false,
+      "third_party_assets_or_support_rights_accepted": false,
+      "copy_license_accepted": false,
+      "parent_policy_correction": "VM利用が未確認でも一般的な状態確認/停止/複製の手順の有用性は別に評価する。未使用helperの移植や全面読取を必須にしない。実際の破壊操作は元依頼の対象/保持/既存許可を確認し、同じ許可済み操作を再質問しない。",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/0xfratex/virtualboxmanager/SKILL.md",
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
+    },
+    {
+      "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
+      "support_read_complete": true,
+      "individual_rights_review": {
+        "notice_path": "skills/0xjordansg-yolo/openclaw-aisa-youtube/LICENSE.txt",
+        "notice_git_blob": "1501f6c5181b904462f16b452e8a0c56a9fe9fe0",
+        "notice_sha256": "98d2baaef2a69c59ce60f51a180e59b2984cd73de3988da5c8c03d3b6d4e6574",
+        "notice_bytes": 1072,
+        "notice_gz_sha256": "45b9676a754f8620cc98b13fb1c1ee33b2d4b186f85eac72f7c920deed0d803b",
+        "notice_read_complete": true,
+        "kind": "MIT License",
+        "holder": "AIsa (aisa.one)",
+        "grant_express": true,
+        "restrictive_or_proprietary_terms": false,
+        "body_reading_stopped_for_rights": false,
+        "scope": "同パッケージのソフトウェアと関連文書（ディレクトリの近さで読む）",
+        "not_covered": "AIsaのAPIサービスと残高課金、YouTube由来のデータと規約",
+        "caveat": "ライセンサーは著者のAIsa社で、公開者アカウント0xjordansg-yoloとは別",
+        "license_path": "skills/0xjordansg-yolo/openclaw-aisa-youtube/LICENSE.txt",
+        "license_sha256": "98d2baaef2a69c59ce60f51a180e59b2984cd73de3988da5c8c03d3b6d4e6574",
+        "license_bytes": 1072,
+        "full_license_read": true,
+        "full_license_read_definition": "Child3554 read the individual archival notice. parent_notice_full_read separately states parent reading; this is not permission for services, software or all support."
+      },
+      "body_read_complete": true,
+      "reason": "AIsaのAPIキーと『AIsa残高の従量課金』（L359）が前提。本人の既存規則『APIキーを明示的に使う呼び出しをしない』と、禁止3件目『増額につながる新しい支出』に触れうる（AIsa残高の新規購入が要る場合）。例は実行時にPythonを書かせる形で、新規にPythonを書かない方針とも合わない。",
+      "repo": "6mile/skills",
+      "required_changes": [
+        "APIキー不要の経路に置換するか、導入しない",
+        "python heredocをPowerShellかGoの例にする",
+        "外部LLMの例（L310-338）を削除する",
+        "aisa-core依存の扱いを決める"
+      ],
+      "individual_notice_read_by": "20261024-095453-todo-3554",
+      "bytes": 13335,
+      "independent_review_complete": false,
+      "use": "AIsa統合APIの/apis/v1/youtube/searchで、YouTubeの動画・チャンネル・プレイリストを検索する手順（AISA_API_KEYが必要）。",
+      "findings": [
+        {
+          "line": "L2・L8・_meta.json",
+          "kind": "inconsistency",
+          "issue": "本文名youtube-search、版1.0.1（_metaは1.0.0）、公開名は別の文",
+          "fix": "名称と版を揃える",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L4",
+          "kind": "gap",
+          "issue": "別Skill『aisa-core』に依存するが同梱されていない",
+          "fix": "依存を明記するか削除",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L24-33・L391-403",
+          "kind": "spec_error",
+          "issue": "python <<'EOF'はbash専用で、実行時にPythonを書かせる。PowerShellで動かず、新規Pythonを書かない方針とも合わない",
+          "fix": "PowerShellかGoの例に置換",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L182-183",
+          "kind": "unverified",
+          "issue": "『YouTube検索窓と同じ構文』としてchannel:や『long』のヒントを挙げるが根拠が無い",
+          "fix": "公式で確認するか削除",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L330・L359",
+          "kind": "risk",
+          "issue": "モデル名qwen3-flash固定の例はすぐ古くなり、AIsa残高の従量課金を生む",
+          "fix": "例を削除し、課金の注意を冒頭に置く",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        }
+      ],
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "name": "openclaw-aisa-youtube",
+      "body_read_method": "child full primary/notice read; parent all semantic assessments/rights/limits/prose read; independently fixed roster/tree/index/catalog/gzip verified",
+      "installed_by_todo3080": false,
+      "supporting_resources": [
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1072,
+          "executed": false,
+          "git_blob": "1501f6c5181b904462f16b452e8a0c56a9fe9fe0",
+          "path": "skills/0xjordansg-yolo/openclaw-aisa-youtube/LICENSE.txt",
+          "scan_only": false,
+          "scope": "individual notice, separated from reader's53 support rows",
+          "source_sha256": "98d2baaef2a69c59ce60f51a180e59b2984cd73de3988da5c8c03d3b6d4e6574",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 328,
+          "executed": false,
+          "git_blob": "3c56b4c1d72922875708464001e6f326b4cbad5f",
+          "path": "skills/0xjordansg-yolo/openclaw-aisa-youtube/_meta.json",
+          "scan_only": false,
+          "source_sha256": "b325ed28bf6632af791dd986e03f89a7088af23c311fa7ec9c23386743fd5b7d",
+          "read_by": "20261024-095453-todo-3554"
+        }
+      ],
+      "source_sha256": "e63e02ab8f1e62e5269fa39b9518535c3eac7ce031f50d3e3393a8e44a51e71e",
+      "git_blob": "1f8cf85b6cef446609703351f881ab1a65211674",
+      "negative_candidate": "キー無しで検索したい／字幕や本文の取得／LLM要約まで課金APIで実行する",
+      "positive_candidate": "この資料のYouTube検索条件と返却項目を、AIsaへ接続せず説明して。従量課金APIキーを使う例は実行せず、既存の無料検索で代替できる範囲を整理して。",
+      "value": "低。検索だけなら既存のWeb検索や公式サイトで足りる。",
+      "excluded_by_todo3080": false,
+      "source_listing_description": "Search YouTube videos, channels, and playlists（slug openclaw-aisa-youtube、1.0.0）",
+      "path": "skills/0xjordansg-yolo/openclaw-aisa-youtube/SKILL.md",
+      "license_paths": [
+        "skills/0xjordansg-yolo/openclaw-aisa-youtube/LICENSE.txt"
+      ],
+      "historical_reader_proposal": {
+        "raw_sha256": "a09f81dc5ecbc38a5213c478c627e8ea04ed996e94473cb81741f773621717b1",
+        "not_final_disposition": true,
+        "not_owner_policy": true,
+        "todo": 3554,
+        "candidate_disposition": "not_recommended_now"
+      },
+      "gzip_sha256": "3143f2a16a1fedeeb5d7fb14b414182427ffdad28f6e9ecfbbb63d37aad4b016",
+      "candidate_disposition": "service_specific_reference_with_current_metered_ai_key_policy_conflict",
+      "inventory_id": "github:1ae9082de734e82714d4b3b0c5db8b51186677537bc0ccb521fd3554bab7022d",
+      "body_read_by": "20261024-095453-todo-3554",
+      "source_declared_name": "youtube-search",
+      "parent_notice_full_read": false,
+      "compare_metadata": [],
+      "support_path_blob_inventory_complete": true,
+      "integrated_by_todo3080": false,
+      "third_party_assets_or_support_rights_accepted": false,
+      "copy_license_accepted": false,
+      "parent_policy_correction": "従量課金AI/APIキーの実利用と既存OAuth枠を区別する。このサービスを接続/購入せず、無通信の評価や一般原則の部分利用まで新禁止へ広げない。",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/0xjordansg-yolo/openclaw-aisa-youtube/SKILL.md",
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
+    },
+    {
+      "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
+      "support_read_complete": true,
+      "individual_rights_review": {
+        "notice_path": "skills/0xspeter/klaviyo-1-0-4/LICENSE.txt",
+        "notice_git_blob": "4813de20b72e365983fe0370d79d7cac6ea21d9b",
+        "notice_sha256": "ec9e952fec4d029fab649746d033bf91802b15f59ffa40a0d3a3a0e1a1587802",
+        "notice_bytes": 1072,
+        "notice_gz_sha256": "4b2fab09a44ea220f4b9c72b9387665246f17dd87e2a1048e3de96bd40424028",
+        "notice_read_complete": true,
+        "kind": "The MIT License (MIT)",
+        "holder": "Maton",
+        "grant_express": true,
+        "restrictive_or_proprietary_terms": false,
+        "body_reading_stopped_for_rights": false,
+        "scope": "同パッケージのソフトウェアと関連文書（ディレクトリの近さで読む）",
+        "not_covered": "Matonゲートウェイの契約と利用枠、Klaviyoの商標とAPI規約",
+        "caveat": "ライセンサー（Maton）と公開者アカウント（0xspeter）が別。Matonの料金は本文に無く未確認",
+        "license_path": "skills/0xspeter/klaviyo-1-0-4/LICENSE.txt",
+        "license_sha256": "ec9e952fec4d029fab649746d033bf91802b15f59ffa40a0d3a3a0e1a1587802",
+        "license_bytes": 1072,
+        "full_license_read": true,
+        "full_license_read_definition": "Child3554 read the individual archival notice. parent_notice_full_read separately states parent reading; this is not permission for services, software or all support."
+      },
+      "body_read_complete": true,
+      "reason": "MATON_API_KEYが必要で、顧客の個人情報とOAuthトークンが第三者のMatonを経由する設計。キャンペーン送信、購読の一括登録・抑止、各種削除に確認手順が無く、外部送信にあたる。例のほぼ全部が実行時にPythonを書かせる形（42箇所）。",
+      "repo": "6mile/skills",
+      "required_changes": [
+        "送信/削除/一括操作の実際の対象・件数・保持条件と既存本人指示を照合し、未指定の発信や顧客との新しい約束へ広げない。同じ許可を再質問しない。",
+        "Maton経由で個人情報とOAuthを渡すことを冒頭に明記するか、Klaviyo公式APIの直接利用にする",
+        "python heredoc 42箇所をPowerShellかGoの例にする",
+        "revisionヘッダ、版表記、期限切れサンプルを揃える"
+      ],
+      "individual_notice_read_by": "20261024-095453-todo-3554",
+      "bytes": 36754,
+      "independent_review_complete": false,
+      "use": "Maton管理OAuthの中継（gateway.maton.ai/klaviyo）経由でKlaviyo APIを操作する手順。プロファイル、リスト、セグメント、キャンペーン、フロー、イベント、メトリクス、テンプレート、カタログ、クーポン、Webhookなどを扱う。",
+      "findings": [
+        {
+          "line": "L8・_meta.json・ディレクトリ名",
+          "kind": "inconsistency",
+          "issue": "版が1.0（本文）、1.0.0（_meta）、1-0-4（名称）の3通り",
+          "fix": "版表記を一つにする",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L28・L66・L1539 と L1509・L1526",
+          "kind": "inconsistency",
+          "issue": "revisionヘッダが2026-01-15と2024-10-15で食い違い、後者の例はそのまま使うと古い版を指す",
+          "fix": "2026-01-15に統一し公式で確認",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L1100",
+          "kind": "stale",
+          "issue": "expires_atが2025-12-31で、例がすでに期限切れ",
+          "fix": "将来の日付にする",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L368-372・L548-552・L634-638・L1357-1412",
+          "kind": "risk",
+          "issue": "リスト削除、キャンペーン送信、購読の一括登録・抑止に確認手順が無く、誤送信や顧客データの破壊につながる",
+          "fix": "元の発信/削除指示と対象/件数/保持を照合し、許可済みの同じ操作を再質問しない。",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L39・L116・L123",
+          "kind": "risk",
+          "issue": "Matonが顧客のOAuthトークンを保持して中継し、接続URLにsession_tokenが入る。顧客の個人情報が第三者を経由する",
+          "fix": "冒頭に明記するか、Klaviyo公式APIの直接利用にする",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L24ほか42箇所",
+          "kind": "spec_error",
+          "issue": "python <<'EOF'が42箇所。bash専用で、実行時にPythonを書かせる",
+          "fix": "PowerShellかGoの例に置換",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        }
+      ],
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "name": "klaviyo-1-0-4",
+      "body_read_method": "child full primary/notice read; parent all semantic assessments/rights/limits/prose read; independently fixed roster/tree/index/catalog/gzip verified",
+      "installed_by_todo3080": false,
+      "supporting_resources": [
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1072,
+          "executed": false,
+          "git_blob": "4813de20b72e365983fe0370d79d7cac6ea21d9b",
+          "path": "skills/0xspeter/klaviyo-1-0-4/LICENSE.txt",
+          "scan_only": false,
+          "scope": "individual notice, separated from reader's53 support rows",
+          "source_sha256": "ec9e952fec4d029fab649746d033bf91802b15f59ffa40a0d3a3a0e1a1587802",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 280,
+          "executed": false,
+          "git_blob": "4b23f038b28520fb0d694b8b4d0be5c2a9d7ada2",
+          "path": "skills/0xspeter/klaviyo-1-0-4/_meta.json",
+          "scan_only": false,
+          "source_sha256": "9a8dafd94500c2fec929a016a6443eab6bba15f356b2fd217c42c0a5a08f414c",
+          "read_by": "20261024-095453-todo-3554"
+        }
+      ],
+      "source_sha256": "c655611b4780d5b42e99ce3e6862602eb6d1fb644e61e1d0d0ee16e18da23092",
+      "git_blob": "95502010cc121906f53d0fbc7000135c79abd2f6",
+      "negative_candidate": "キャンペーン送信・一括購読・削除を確認なしで行う／顧客データを第三者に渡さない前提の作業",
+      "positive_candidate": "Klaviyo契約済みの利用者が、Maton連携を承知のうえで、リストやメトリクスを読み取って参照する",
+      "value": "低。Klaviyoの利用記録が見当たらない。",
+      "excluded_by_todo3080": false,
+      "source_listing_description": "Klaviyo 1.0.4（slug klaviyo-1-0-4、1.0.0）",
+      "path": "skills/0xspeter/klaviyo-1-0-4/SKILL.md",
+      "license_paths": [
+        "skills/0xspeter/klaviyo-1-0-4/LICENSE.txt"
+      ],
+      "historical_reader_proposal": {
+        "raw_sha256": "a09f81dc5ecbc38a5213c478c627e8ea04ed996e94473cb81741f773621717b1",
+        "not_final_disposition": true,
+        "not_owner_policy": true,
+        "todo": 3554,
+        "candidate_disposition": "not_recommended_now"
+      },
+      "gzip_sha256": "9b6d013ddfa81f08e2b88d8decf648bbf54ad7a1f05242047b6f4006479c86ee",
+      "candidate_disposition": "service_specific_candidate_pending_direct_integration_terms_and_authorized_scope",
+      "inventory_id": "github:e07aebbf0c8348fac2a4622d80b150e09e60e0691f2a2a84eef69e1707d236ec",
+      "body_read_by": "20261024-095453-todo-3554",
+      "source_declared_name": "klaviyo",
+      "parent_notice_full_read": false,
+      "compare_metadata": [],
+      "support_path_blob_inventory_complete": true,
+      "integrated_by_todo3080": false,
+      "third_party_assets_or_support_rights_accepted": false,
+      "copy_license_accepted": false,
+      "parent_policy_correction": "第三者の中継/OAuthという方式だけで禁止や毎回の本人確認へしない。顧客データの実際の宛先/目的/既存契約/元依頼の発信範囲を照合し、メッセージ送信は明示された対象と内容だけ。同じ許可を聞き直さない。",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/0xspeter/klaviyo-1-0-4/SKILL.md",
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
+    },
+    {
+      "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
+      "support_read_complete": false,
+      "individual_rights_review": {
+        "notice_path": "skills/86293073/skill-creator-0-1-0/LICENSE.txt",
+        "notice_git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+        "notice_sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+        "notice_bytes": 11357,
+        "notice_gz_sha256": "b5a993346ecc77a0c0984986a176361b226799edeb35eca0c84093a5fc89e8d3",
+        "notice_read_complete": true,
+        "kind": "Apache License 2.0 全文（付録の著作権欄が未記入）",
+        "holder": "未記入（Copyright [yyyy] [name of copyright owner]のまま）",
+        "grant_express": true,
+        "restrictive_or_proprietary_terms": false,
+        "body_reading_stopped_for_rights": false,
+        "scope": "同パッケージのソフトウェアと関連文書（ディレクトリの近さで読む）。NOTICEファイルなし",
+        "not_covered": "商標（Apache §6）",
+        "caveat": "ライセンサー不明。再配布時は許諾全文の同梱と変更表示が要る（§4）。本文は公開済みの著名なSkill作成ガイドに近い可能性があり（推定・外部照合なし）、公開者86293073が権利者とは限らない。hxl-code-reviewerのnoticeと同一bytes",
+        "license_path": "skills/86293073/skill-creator-0-1-0/LICENSE.txt",
+        "license_sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+        "license_bytes": 11357,
+        "full_license_read": true,
+        "full_license_read_definition": "Child3554 read the individual archival notice. parent_notice_full_read separately states parent reading; this is not permission for services, software or all support."
+      },
+      "body_read_complete": true,
+      "reason": "公開名skill-creatorが起動catalogの2件（.systemとsynced）と衝突する。Pythonスクリプト3本（未保存）が前提で、.skill(zip)配布は本人のSkill置き場の規則（D:/CC/Skills配下に<名前>/SKILL.md）と手順が異なる。frontmatterの規則に自己矛盾がある。",
+      "repo": "6mile/skills",
+      "required_changes": [
+        "既存2候補の本文/配布経路を限定比較し、追加価値がある差分だけを抽出する。名称だけで除外しない。",
+        "Python helper未保存は必要な実行を採る際の条件で、未使用helperの全移植を前提にしない。"
+      ],
+      "individual_notice_read_by": "20261024-095453-todo-3554",
+      "bytes": 17837,
+      "independent_review_complete": false,
+      "use": "Skill作成ガイド。構造、段階的開示、init_skill.pyとpackage_skill.pyによる初期化と.skill(zip)化の手順。",
+      "findings": [
+        {
+          "line": "L4 と L68-69・L314",
+          "kind": "inconsistency",
+          "issue": "frontmatterはnameとdescriptionだけと書きながら、自身はlicense欄を持つ",
+          "fix": "licenseも許す記述に直す",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L112",
+          "kind": "spec_error",
+          "issue": "綴り誤り（auxilary）",
+          "fix": "auxiliaryへ",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L208・L262-268・L322-345",
+          "kind": "gap",
+          "issue": "Pythonスクリプト3本（未保存）が前提で、本文だけでは再現できない。quick_validate.pyは本文に出てこない",
+          "fix": "スクリプトの意味審査後に判断",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L322-343",
+          "kind": "gap",
+          "issue": ".skill(zip)配布が前提で、本人のSkill置き場（D:/CC/Skills配下）の規則と手順が異なる",
+          "fix": "置き場の規則に合わせて書き換える",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        }
+      ],
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "name": "skill-creator-0-1-0",
+      "body_read_method": "child full primary/notice read; parent all semantic assessments/rights/limits/prose read; independently fixed roster/tree/index/catalog/gzip verified",
+      "installed_by_todo3080": false,
+      "supporting_resources": [
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 11357,
+          "executed": false,
+          "git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+          "path": "skills/86293073/skill-creator-0-1-0/LICENSE.txt",
+          "scan_only": false,
+          "scope": "individual notice, separated from reader's53 support rows",
+          "source_sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 292,
+          "executed": false,
+          "git_blob": "c040b4d9b0a5a1a327c4771b09ac7fa5eae3c5fa",
+          "path": "skills/86293073/skill-creator-0-1-0/_meta.json",
+          "scan_only": false,
+          "source_sha256": "c354ca54dd8d32ab8d8703f45ef89e156b61156aec89e5cd8cf9e771a2e778d0",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1813,
+          "executed": false,
+          "git_blob": "073ddda5f03989b1731ad29b9df7248279e9eef0",
+          "path": "skills/86293073/skill-creator-0-1-0/references/output-patterns.md",
+          "scan_only": false,
+          "source_sha256": "d6027800b9d8c26589edba85b42901a41ac36d753b4e9cebc7f4cbb03cdcf0a4",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 818,
+          "executed": false,
+          "git_blob": "a350c3cc81367fda7acfea9084aaa13a5d83c054",
+          "path": "skills/86293073/skill-creator-0-1-0/references/workflows.md",
+          "scan_only": false,
+          "source_sha256": "ef4846877d5dab47511a01a6cf31476ad64f5bc5945635459295794575338980",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "329ad4e5a71546b2c455f8e08c98b32ecdd3c1e3",
+          "path": "skills/86293073/skill-creator-0-1-0/scripts/init_skill.py",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "5cd36cb16e1314f2ab87d50aaedbc9f26925dac1",
+          "path": "skills/86293073/skill-creator-0-1-0/scripts/package_skill.py",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "d9fbeb75ee10bd8f89c0ee9b6716867125820c7e",
+          "path": "skills/86293073/skill-creator-0-1-0/scripts/quick_validate.py",
+          "scan_only": false,
+          "source_sha256": null
+        }
+      ],
+      "source_sha256": "b2e3d83f60425c2d0b9d4162efb8f9aa322b45843497340f2289f42be422801c",
+      "git_blob": "b7f86598b002c99a6be96026443217b6af3c561d",
+      "negative_candidate": "Pythonスクリプトを使わずに作る／Skillの採否評価や許諾審査",
+      "positive_candidate": "新しいSkillを作りたい（ただし既存のskill-creatorを優先）",
+      "value": "低。旧版相当で、起動catalogに同名が2件ある。",
+      "excluded_by_todo3080": false,
+      "source_listing_description": "Skill Creator 0.1.0（slug skill-creator-0-1-0、1.0.0）",
+      "path": "skills/86293073/skill-creator-0-1-0/SKILL.md",
+      "license_paths": [
+        "skills/86293073/skill-creator-0-1-0/LICENSE.txt"
+      ],
+      "historical_reader_proposal": {
+        "raw_sha256": "a09f81dc5ecbc38a5213c478c627e8ea04ed996e94473cb81741f773621717b1",
+        "not_final_disposition": true,
+        "not_owner_policy": true,
+        "todo": 3554,
+        "candidate_disposition": "duplicate_existing"
+      },
+      "gzip_sha256": "be29b236215e889490b547d887dbe57905529391d316693af09555d344a3746a",
+      "candidate_disposition": "existing_comparison_candidate_pending_body_delta_and_provenance",
+      "inventory_id": "github:a658a5c34b9cbed24bdb13c3497659c8c851d9148cbd03ba7f5084eaee6e3a77",
+      "body_read_by": "20261024-095453-todo-3554",
+      "source_declared_name": "skill-creator",
+      "parent_notice_full_read": false,
+      "compare_metadata": [],
+      "support_path_blob_inventory_complete": true,
+      "integrated_by_todo3080": false,
+      "third_party_assets_or_support_rights_accepted": false,
+      "copy_license_accepted": false,
+      "parent_policy_correction": "同名2件は重複の候補根拠だけで、本文同一や不要の確定ではない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。管理配布物やjunctionを上書きしない。",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/86293073/skill-creator-0-1-0/SKILL.md",
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
+    },
+    {
+      "copy_license_accepted": true,
+      "negative_candidate": "コードレビューを頼む（公開名に反して該当しない）／MCPサーバーを勝手に導入する",
+      "copy_license_scope": "official fixed primary text only, Apache2.0 copyright2026AnthropicPBC; preserve official license and modification attribution; no upstream helper/SDK/software copied",
+      "value": "中〜高。MCPサーバーを自作する作業の設計観点として有用。ただし言語別ガイドはTypeScriptとPythonで、本人の言語方針とは異なる。",
+      "support_read_complete": false,
+      "body_read_by": "20261024-095453-todo-3554",
+      "name": "hxl-code-reviewer",
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "use": "MCPサーバーの設計・実装・評価を4段階で進める手順。ツール命名、注釈、ページング、エラー、評価10問、TypeScriptとPythonの実装ガイドへの参照を含む。",
+      "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
+      "historical_reader_proposal": {
+        "raw_sha256": "a09f81dc5ecbc38a5213c478c627e8ea04ed996e94473cb81741f773621717b1",
+        "not_final_disposition": true,
+        "not_owner_policy": true,
+        "todo": 3554,
+        "candidate_disposition": "adopt_with_required_changes"
+      },
+      "parent_notice_full_read": false,
+      "body_read_method": "child full primary/notice read; parent all semantic assessments/rights/limits/prose read; independently fixed roster/tree/index/catalog/gzip verified",
+      "source_listing_description": "hxl-code-reviewer（slug同名、1.0.1）",
+      "integrated_by_todo3080": false,
+      "parent_policy_correction": "公式anthropics/skillsの固定dbd4588でprimary9092BのSHA256とblobが一致し、個別Apache2.0のcopyright2026AnthropicPBCを全文確認した。このprimary手順文の帰属/許諾根拠に限り、他のsupportやSDK/サービスの権利・動作へ広げない。Go/GoDD Rust、既存契約内の評価、必要時の公式資料照合へ合わせる。",
+      "official_root_third_party_notice": {
+        "full_text_cached": true,
+        "component_declarations_read": true,
+        "listed_software_or_fonts_copied": 0,
+        "all_boilerplate_full_read": false,
+        "identity": {
+          "path": "THIRD_PARTY_NOTICES.md",
+          "fixed_commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+          "sha256": "a8ff7a84dee9dfb42ab448de281784387ceafdf63881b7c070ee2de7f6ed865c",
+          "bytes": 46162,
+          "git_blob": "ffef92c48b351a3ed036556ed32dda934e8cf41a",
+          "observed_at": "2026-10-24T10:45:50.2525882+09:00",
+          "fixed_url": "https://github.com/anthropics/skills/blob/dbd4588f9e1033efb41dad4bef2f7947c8993d44/THIRD_PARTY_NOTICES.md"
+        },
+        "not_a_blanket_permission": true
+      },
+      "positive_candidate": "MCPサーバーを自作する設計・実装・評価／MCPツールの命名・注釈・ページングの見直し",
+      "source_declared_name": "mcp-builder",
+      "repo": "6mile/skills",
+      "body_read_complete": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "excluded_by_todo3080": false,
+      "bytes": 9092,
+      "path": "skills/aabbcc456aa/hxl-code-reviewer/SKILL.md",
+      "candidate_disposition": "adapt_or_integrate_candidate_with_official_primary_apache_evidence_pending_comparison",
+      "compare_metadata": [],
+      "license_paths": [
+        "skills/aabbcc456aa/hxl-code-reviewer/LICENSE.txt"
+      ],
+      "official_upstream_provenance": {
+        "script_or_held647_fetch": 0,
+        "archived_mcp_primary_byte_identical": true,
+        "fixed_commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+        "official_license_blob": "4f881c52d1f72f4cfb720e339e2d35c3058d01a9",
+        "repository_id": 1061953414,
+        "repo": "anthropics/skills",
+        "job": "20261024-093456-todo-3080",
+        "archive_license_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+        "observed_at": "2026-10-24T10:44:13.9196911+09:00",
+        "files": [
+          {
+            "git_blob": "8a1a77a47d141967b246adb4da4f91037578ff7d",
+            "fixed_url": "https://github.com/anthropics/skills/blob/dbd4588f9e1033efb41dad4bef2f7947c8993d44/skills/mcp-builder/SKILL.md",
+            "path": "skills/mcp-builder/SKILL.md",
+            "cache_file": "upstream-mcp-primary093456.txt",
+            "sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
+            "bytes": 9092
+          },
+          {
+            "git_blob": "4f881c52d1f72f4cfb720e339e2d35c3058d01a9",
+            "fixed_url": "https://github.com/anthropics/skills/blob/dbd4588f9e1033efb41dad4bef2f7947c8993d44/skills/mcp-builder/LICENSE.txt",
+            "path": "skills/mcp-builder/LICENSE.txt",
+            "cache_file": "upstream-mcp-license093456.txt",
+            "sha256": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362",
+            "bytes": 11345
+          },
+          {
+            "git_blob": "eb54ee8b92f2d40b4b26569be0772be3c1e23156",
+            "fixed_url": "https://github.com/anthropics/skills/blob/dbd4588f9e1033efb41dad4bef2f7947c8993d44/README.md",
+            "path": "README.md",
+            "cache_file": "upstream-anthropic-readme093456.txt",
+            "sha256": "2fb9c4cc026366ea6e21c60cb23c908a4d27c62071819cc06beffaac102d0694",
+            "bytes": 5552
+          }
+        ],
+        "new_central_writes": 0
+      },
+      "individual_notice_read_by": "20261024-095453-todo-3554",
+      "source_sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
+      "git_blob": "8a1a77a47d141967b246adb4da4f91037578ff7d",
+      "installed_by_todo3080": false,
+      "gzip_sha256": "537c82ae874fab9159446197dec1542f8636e168d521b5a518b8f38a3979632d",
+      "findings": [
+        {
+          "line": "L2・_meta.json",
+          "kind": "inconsistency",
+          "issue": "公開名hxl-code-reviewerなのに本文はmcp-builderで、コードレビューの内容は無い。名前で探すと誤導される",
+          "fix": "mcp-builderとして扱う",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L41・L43・L61・L65・L203・L212-213",
+          "kind": "gap",
+          "issue": "使用時にWebFetchでmodelcontextprotocol.ioとraw.githubusercontent.comを取りに行く指示。内容は時点で変わる",
+          "fix": "調査時のみと明記",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L53・L64-66",
+          "kind": "gap",
+          "issue": "推奨言語がTypeScriptとPythonで、新規ツールはGo（GoDD系はRust）という本人方針と合わない",
+          "fix": "Go・Rustの指針を足す",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L141",
+          "kind": "risk",
+          "issue": "npxで外部パッケージ（inspector）を実行する手順",
+          "fix": "導入時に検証済みの手順にする",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "scripts/requirements.txt L1-2",
+          "kind": "risk",
+          "issue": "anthropic SDKとmcpに依存。評価スクリプト（未保存）はAPIキー前提の疑い",
+          "fix": "スクリプトは取り込まず、評価手順は本人の枠内の方法に置換",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        }
+      ],
+      "supporting_resources": [
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "d0345048f783591fd1f87e0b15bd55610e15eb78",
+          "path": "skills/aabbcc456aa/hxl-code-reviewer/.openskills.json",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 11357,
+          "executed": false,
+          "git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+          "path": "skills/aabbcc456aa/hxl-code-reviewer/LICENSE.txt",
+          "scan_only": false,
+          "scope": "individual notice, separated from reader's53 support rows",
+          "source_sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 291,
+          "executed": false,
+          "git_blob": "673aeaa08c294fcc4f48e7e93d48305e8c2237b6",
+          "path": "skills/aabbcc456aa/hxl-code-reviewer/_meta.json",
+          "scan_only": false,
+          "source_sha256": "c73344fda9c8863b8915ce5e0f68588654be077891c94f46795d26184e12090c",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 21663,
+          "executed": false,
+          "git_blob": "87e9bb78840fac113d93b4a27ab5b229a18cf226",
+          "path": "skills/aabbcc456aa/hxl-code-reviewer/reference/evaluation.md",
+          "scan_only": true,
+          "source_sha256": "8c99479f8a2d22a636c38e274537aac3610879e26f34e0709825077c4576f427",
+          "scan_note": "phrase scan only; not full body reading",
+          "scan_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 7330,
+          "executed": false,
+          "git_blob": "b9d343cc3ae89b1fc139dae96bdb2b7e29ba3648",
+          "path": "skills/aabbcc456aa/hxl-code-reviewer/reference/mcp_best_practices.md",
+          "scan_only": false,
+          "source_sha256": "80fb4369a349447cf18ecdd7494fe7938b6065377e9f08c077cec411093a3007",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 28550,
+          "executed": false,
+          "git_blob": "f6e5df982adc0848bf261c47ab8d65a1e0469391",
+          "path": "skills/aabbcc456aa/hxl-code-reviewer/reference/node_mcp_server.md",
+          "scan_only": true,
+          "source_sha256": "c3ba35a4f599dd53be9c6555ae72c19a7bf412cd5426576c2c08d42755482c66",
+          "scan_note": "phrase scan only; not full body reading",
+          "scan_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 25099,
+          "executed": false,
+          "git_blob": "cf7ec996d2e6e3655bc75ff6902738d03a37334e",
+          "path": "skills/aabbcc456aa/hxl-code-reviewer/reference/python_mcp_server.md",
+          "scan_only": true,
+          "source_sha256": "2da52f77e675191014ca2e146a4b95aa04d0ca7dd7e2b100322df15ade685e80",
+          "scan_note": "phrase scan only; not full body reading",
+          "scan_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "ffcd0da3fbe1539320d022017ae83b61a9587a5c",
+          "path": "skills/aabbcc456aa/hxl-code-reviewer/scripts/connections.py",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "41778569c45a458e0eea839b8917692ad65be2d5",
+          "path": "skills/aabbcc456aa/hxl-code-reviewer/scripts/evaluation.py",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "41e4459b5af861e61f1ca87d2f8f5ab5543dc054",
+          "path": "skills/aabbcc456aa/hxl-code-reviewer/scripts/example_evaluation.xml",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 29,
+          "executed": false,
+          "git_blob": "e73e5d1e356edafadb9dc9243e6f300f2c5529b3",
+          "path": "skills/aabbcc456aa/hxl-code-reviewer/scripts/requirements.txt",
+          "scan_only": false,
+          "source_sha256": "d5d7558b2368ecea9dfeed7d1fbc71ee9e0750bebd1282faa527d528a344c3c7",
+          "read_by": "20261024-095453-todo-3554"
+        }
+      ],
+      "inventory_id": "github:e4ade76a7932447efe3dd6e777ab300a5a9a6f1cf13a392614b31c621906a016",
+      "support_path_blob_inventory_complete": true,
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/aabbcc456aa/hxl-code-reviewer/SKILL.md",
+      "reason": "内容はMCP開発ガイドで、公開名hxl-code-reviewerとは一致しない（コードレビューの内容は無い）。設計原則（命名、注釈、ページング、セキュリティ、評価）は言語によらず使える。一方、推奨言語がTypeScriptとPython、評価スクリプトがanthropic SDK依存でAPIキー前提の疑い、使用時にWebFetchで外部を取りに行く指示がある。10件の中で、直せば導入価値が最も高い。",
+      "required_changes": [
+        "掲載名hxl-code-reviewerと宣言名mcp-builderの両方を出典識別へ保持する。既存Skill比較と正式な配置案が未完の段階で中央配置済みとしない。",
+        "固定公式本文と個別Apache-2.0 LICENSEは親が全文読了し、archive本文との一致も確認済み。同じ個別表示を保持し、変更を明示する。SDK・支持ソフト・サービス全体の許諾へは広げない。",
+        "言語の推奨にGo（GoDD系はRust）の指針を足し、Pythonは参考例の扱いにする（SDKの調査は外部取得が要るため未実施）",
+        "WebFetch先（L41・L43・L61・L65・L203・L212-213）は調査時だけと明記する",
+        "Phase4の評価はAPIキー不要の手順に限り、scripts/evaluation.py（未保存）は取り込まない",
+        "reference/のうちmcp_best_practices.mdは全文読了で問題なし。evaluation・node・pythonは未読（語句走査のみ）なので、導入前に必要分を読む"
+      ],
+      "independent_review_complete": false,
+      "individual_rights_review": {
+        "notice_path": "skills/aabbcc456aa/hxl-code-reviewer/LICENSE.txt",
+        "notice_git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+        "notice_sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+        "notice_bytes": 11357,
+        "notice_gz_sha256": "b5a993346ecc77a0c0984986a176361b226799edeb35eca0c84093a5fc89e8d3",
+        "notice_read_complete": true,
+        "kind": "Apache License 2.0 全文（付録の著作権欄が未記入）",
+        "holder": "未記入",
+        "grant_express": true,
+        "restrictive_or_proprietary_terms": false,
+        "body_reading_stopped_for_rights": false,
+        "scope": "同パッケージのソフトウェアと関連文書（ディレクトリの近さで読む）。NOTICEファイルなし",
+        "not_covered": "商標（Apache §6）",
+        "caveat": "child3554読取時点: ライセンサー不明。ファイル構成が公開済みの著名なMCP構築ガイド（anthropics/skills由来の可能性）と一致するように見えるが、推定で外部照合は未実施。公開者aabbcc456aaが権利者とは限らない。skill-creatorのnoticeと同一bytes",
+        "license_path": "skills/aabbcc456aa/hxl-code-reviewer/LICENSE.txt",
+        "license_sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+        "license_bytes": 11357,
+        "full_license_read": true,
+        "full_license_read_definition": "Child3554 read the archival11357B notice. parent_notice_full_read refers only to this archival notice and is false. parent_official_notice_full_read separately records the official11345B notice. Reading does not itself accept support or service rights."
+      },
+      "canonical_author_license": {
+        "license": "Apache-2.0",
+        "archive_placeholder_notice_not_used_as_canonical_grant": true,
+        "url": "https://github.com/anthropics/skills/blob/dbd4588f9e1033efb41dad4bef2f7947c8993d44/skills/mcp-builder/LICENSE.txt",
+        "parent_full_text_read": true,
+        "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+        "git_blob": "4f881c52d1f72f4cfb720e339e2d35c3058d01a9",
+        "sha256": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362",
+        "bytes": 11345,
+        "required_for_primary_adaptation": true,
+        "copyright": "Copyright 2026 Anthropic, PBC.",
+        "path": "skills/mcp-builder/LICENSE.txt",
+        "repo": "anthropics/skills"
+      },
+      "selected_scope_notice_verified": true,
+      "actual_existing_target_comparison": {
+        "next": "normal qualification; no alternate path access",
+        "state": "classification_unverified",
+        "owner_action_required": false,
+        "read_write": 0,
+        "current_body_compared": false
+      },
+      "parent_archival_notice_full_read": false,
+      "parent_official_notice_full_read": true,
+      "parent_official_notice_bytes": 11345,
+      "parent_official_notice_sha256": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362",
+      "copy_license_accepted_scope": "Only the byte-identical9092B primary, corroborated against official fixed Anthropicsource and its individual Apache license. Archival11357B notice was read by child3554, not reread by parent. SDK/support software/services are not accepted.",
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights.",
+      "parent_official_mcp_primary_reread": true,
+      "parent_official_mcp_primary_reread_evidence": {
+        "bytes": 9092,
+        "source_sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
+        "job": "20261024-093456-todo-3080",
+        "definition": "Earlier private next10 preparation records parent full reread of official fixed primary. This is separate from child3554 archival notice reading."
+      }
+    },
+    {
+      "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
+      "support_read_complete": true,
+      "individual_rights_review": {
+        "notice_path": "skills/aamish99/fundraiseup/LICENSE.txt",
+        "notice_git_blob": "8ff411ee65ceddc0faf013fd20dd4de5487ffb41",
+        "notice_sha256": "a88f2886d6cf080f6986d8b95b97a86c7f0aab34d76943aa994bd3e73e3c9cff",
+        "notice_bytes": 1071,
+        "notice_gz_sha256": "c60516b0940c212da52b239c66a3124da09acc0f25798960ce9fb987acfdb5d7",
+        "notice_read_complete": true,
+        "kind": "The MIT License (MIT)",
+        "holder": "Amish",
+        "grant_express": true,
+        "restrictive_or_proprietary_terms": false,
+        "body_reading_stopped_for_rights": false,
+        "scope": "同パッケージのソフトウェアと関連文書（ディレクトリの近さで読む）",
+        "not_covered": "FundraiseUpの公式文書・商標・API利用契約",
+        "caveat": "著者Amishによる非公式のAPI概要で、FundraiseUp本体の文書の再許諾ではない。実利用にはFundraiseUpとの契約が要る",
+        "license_path": "skills/aamish99/fundraiseup/LICENSE.txt",
+        "license_sha256": "a88f2886d6cf080f6986d8b95b97a86c7f0aab34d76943aa994bd3e73e3c9cff",
+        "license_bytes": 1071,
+        "full_license_read": true,
+        "full_license_read_definition": "Child3554 read the individual archival notice. parent_notice_full_read separately states parent reading; this is not permission for services, software or all support."
+      },
+      "body_read_complete": true,
+      "reason": "APIキーが必須。寄付の作成（L140-243）はStripeの支払い手段を使う実決済で、サポーターの個人情報とDonor Portalのログイン相当リンクも扱う。確認の手順と、テストモードを先に使う指示が弱い。",
+      "repo": "6mile/skills",
+      "required_changes": [
+        "導入しない場合は変更不要",
+        "導入するなら、test_接頭辞のキー（L45）を最初に使う規則、live作成前の確認、鍵表記の統一、Python・Node例のPowerShellまたはGoへの置換、L30の削除"
+      ],
+      "individual_notice_read_by": "20261024-095453-todo-3554",
+      "bytes": 22976,
+      "independent_review_complete": false,
+      "use": "FundraiseUp REST APIで寄付、定期寄付、サポーター、キャンペーン、Donor Portalリンクを一覧・作成する手順。",
+      "findings": [
+        {
+          "line": "L30",
+          "kind": "spec_error",
+          "issue": "三連バッククォートの崩れと、鍵に見えるサンプル文字列（転載しない）。本物の鍵が混入した疑い",
+          "fix": "削除する。本物なら公開者側で失効が必要",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L4-7",
+          "kind": "inconsistency",
+          "issue": "compatibilityがtool名の配列（bash_toolなど）で、他のSkillの書式と異なる",
+          "fix": "書式を揃える",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L99ほか と L657",
+          "kind": "inconsistency",
+          "issue": "鍵の表記が{{FUNDRAISEUP_API_KEY}}と$FUNDRAISEUP_API_KEYの2種で、前者はシェルで展開されず401になる",
+          "fix": "一つに統一",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L140-243",
+          "kind": "risk",
+          "issue": "寄付作成は実決済で、確認とテストモード優先の指示が無い",
+          "fix": "test_接頭辞のキー（L45）を最初に使い、live作成は確認を挟む",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L695・L714・L767・L783・L835",
+          "kind": "unverified",
+          "issue": "fundraiseupLivemode=no、webhook非対応、PCI SAQ Dの記述は公式未照合。最終更新は2026年2月",
+          "fix": "公式で確認",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        }
+      ],
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "name": "fundraiseup",
+      "body_read_method": "child full primary/notice read; parent all semantic assessments/rights/limits/prose read; independently fixed roster/tree/index/catalog/gzip verified",
+      "installed_by_todo3080": false,
+      "supporting_resources": [
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1071,
+          "executed": false,
+          "git_blob": "8ff411ee65ceddc0faf013fd20dd4de5487ffb41",
+          "path": "skills/aamish99/fundraiseup/LICENSE.txt",
+          "scan_only": false,
+          "scope": "individual notice, separated from reader's53 support rows",
+          "source_sha256": "a88f2886d6cf080f6986d8b95b97a86c7f0aab34d76943aa994bd3e73e3c9cff",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 277,
+          "executed": false,
+          "git_blob": "bf982ea8dab2f5614b053c872a91f58fec66e4cd",
+          "path": "skills/aamish99/fundraiseup/_meta.json",
+          "scan_only": false,
+          "source_sha256": "0b576b0842a8c96e8c658819fc85ba14739ec652f1348ad263d2d18bb011c36b",
+          "read_by": "20261024-095453-todo-3554"
+        }
+      ],
+      "source_sha256": "851846e1d512abcaf67af51b5f6e03835715ba2213a10652576a9df68fecc759",
+      "git_blob": "951e3361e9d5856590987f886cf674bc3e474ee2",
+      "negative_candidate": "本番キーで寄付を作成する／寄付者の個人情報を外部へ出す",
+      "positive_candidate": "FundraiseUp契約済みの組織で、テストキーを使って寄付一覧を読み取る",
+      "value": "低。非営利向けの寄付プラットフォーム専用で、本人の利用記録が無い。",
+      "excluded_by_todo3080": false,
+      "source_listing_description": "Fundraise Up（slug fundraiseup、1.0.1）",
+      "path": "skills/aamish99/fundraiseup/SKILL.md",
+      "license_paths": [
+        "skills/aamish99/fundraiseup/LICENSE.txt"
+      ],
+      "historical_reader_proposal": {
+        "raw_sha256": "a09f81dc5ecbc38a5213c478c627e8ea04ed996e94473cb81741f773621717b1",
+        "not_final_disposition": true,
+        "not_owner_policy": true,
+        "todo": 3554,
+        "candidate_disposition": "not_recommended_now"
+      },
+      "gzip_sha256": "4ab580c19c694f9969afadf20967ba8bd1f33b720fbb339ba2e804c3b6829b7f",
+      "candidate_disposition": "reference_candidate_with_suspected_secret_and_live_payment_flow_not_executed",
+      "inventory_id": "github:4d7c0231d9e5f3a91a7c3838ffbd074c36f1a53cc0d892d68d30a6806f6e9b38",
+      "body_read_by": "20261024-095453-todo-3554",
+      "source_declared_name": "fundraiseup",
+      "parent_notice_full_read": false,
+      "compare_metadata": [],
+      "support_path_blob_inventory_complete": true,
+      "integrated_by_todo3080": false,
+      "third_party_assets_or_support_rights_accepted": false,
+      "copy_license_accepted": false,
+      "parent_policy_correction": "疑わしいキー風文字列の実在は未確認。値を再掲/検査接続せず、転載する素材から取り除く。本文の作者のtest_接頭辞の宣言だけで実テストモード成功とせず、実サービスのモードと対象で確認する。既に許可された決済サンドボックスの通常テストを再承認待ちにしない。",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/aamish99/fundraiseup/SKILL.md",
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
+    },
+    {
+      "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
+      "support_read_complete": false,
+      "individual_rights_review": {
+        "notice_path": "skills/aduo6668/amazon-review-workbook/LICENSE.zh-CN.md",
+        "notice_git_blob": "d79a4c0958af4957d394ba9388540c2883e31409",
+        "notice_sha256": "8b381c37841da566fc8d48cc975ff253f5cdff12c191e5f4f62c435a9f30b22d",
+        "notice_bytes": 1090,
+        "notice_gz_sha256": "2fdb71bad807e9a43580548cf5ef1bcd93ed5bed519368599012a3f767442b00",
+        "notice_read_complete": true,
+        "kind": "MIT許諾の中国語参考訳",
+        "holder": "aduo6668（版权所有 (c) 2026）",
+        "grant_express": true,
+        "restrictive_or_proprietary_terms": false,
+        "body_reading_stopped_for_rights": false,
+        "scope": "同パッケージのソフトウェアと関連文書（ディレクトリの近さで読む）",
+        "not_covered": "Amazon・DeepLXなどのサービス規約、レビュー本文の権利",
+        "caveat": "冒頭で『英文原本(./LICENSE)が優先』と明記するが、このパッケージにLICENSEは無い。許諾の意図は読めるが、拘束力のある英文が欠けているため原本確認が要る",
+        "license_path": "skills/aduo6668/amazon-review-workbook/LICENSE.zh-CN.md",
+        "license_sha256": "8b381c37841da566fc8d48cc975ff253f5cdff12c191e5f4f62c435a9f30b22d",
+        "license_bytes": 1090,
+        "full_license_read": true,
+        "full_license_read_definition": "Child3554 read the individual archival notice. parent_notice_full_read separately states parent reading; this is not permission for services, software or all support.",
+        "binding_text_present": false,
+        "binding_text_limitation": "Saved notice is a Chinese reference translation. The stated binding English text is not bundled or accepted; grant_express is the historical reader classification, not an accepted copy grant."
+      },
+      "body_read_complete": true,
+      "reason": "個人のログイン済みAmazonをリモートデバッグで操作して大量取得する設計で、利用規約違反やアカウント凍結の恐れがある（規約本文は未確認）。setup.mdは『既存のChromeを閉じ、標準プロファイルでポート9222を開く』手順で、本人のChromeとタブに触れない方針と衝突する。スクリプト5本（Python）は未保存で、動作は未評価。配布済みPythonの無改変試用は本人方針の範囲内だが、改造や自作追加はGoかRustで行う。",
+      "repo": "6mile/skills",
+      "required_changes": [
+        "本人のログイン済みChromeと既存の正規操作経路へ合わせ、所有tabだけを記録して終了する。別profile/全Chrome終了/強制debug再起動の案は採らない。",
+        "配布Pythonの無改変試用にとどめるか、Go化するかを決める",
+        "列名と分類を日本語化し、dashcam固有の部分を外す",
+        "DeepLX（非公式の翻訳中継）を使うか決め、使わないならモデル翻訳に一本化する",
+        "L123のdeepモード定義、L148の履歴風の文、setup.md L72の.env.exampleを直す"
+      ],
+      "individual_notice_read_by": "20261024-095453-todo-3554",
+      "bytes": 9935,
+      "independent_review_complete": false,
+      "use": "Amazonのレビューを、ログイン済みChrome（ポート9222）からPythonで全件収集し、14列の事実Excel、DeepLX翻訳、モデルによるタグ付け、納品用xlsxまで作る手順。",
+      "findings": [
+        {
+          "line": "setup.md L36-41",
+          "kind": "risk",
+          "issue": "既存のChromeを閉じ、標準プロファイルでポート9222のデバッグ接続を開く手順。本人のウィンドウを閉じ、ログイン済みの全セッションをデバッグポートに出す。最近のChromeでは標準プロファイルでの有効化が拒否される可能性（未確認）",
+          "fix": "本人Chromeの正規操作経路と所有tabへ限定し、全終了/新しい別profile/debug再起動をしない。",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L123・L126-136",
+          "kind": "gap",
+          "issue": "deepモードと18 combo passが未定義で、手順を再現できない",
+          "fix": "定義を足す",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L148",
+          "kind": "spec_error",
+          "issue": "13列から14列への変更履歴のような文が失敗条件に混在している",
+          "fix": "削除",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "setup.md L72",
+          "kind": "stale",
+          "issue": ".env.exampleはこのパッケージに無い",
+          "fix": "記述を直すか同梱",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L10・tagging-guidelines.md L19",
+          "kind": "gap",
+          "issue": "作者固有の前提（dashcamauto、ダッシュカム事業）と中国語の列名・分類",
+          "fix": "本人用途に合わせて汎用化・日本語化",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "output-schema.md L71-81 と tagging-guidelines.md L59-69",
+          "kind": "inconsistency",
+          "issue": "重点標記の語彙が英語snake_caseと中国語の2系統で、対応表が無い",
+          "fix": "対応表を足す",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        }
+      ],
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "name": "amazon-review-workbook",
+      "body_read_method": "child full primary/notice read; parent all semantic assessments/rights/limits/prose read; independently fixed roster/tree/index/catalog/gzip verified",
+      "installed_by_todo3080": false,
+      "supporting_resources": [
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1090,
+          "executed": false,
+          "git_blob": "d79a4c0958af4957d394ba9388540c2883e31409",
+          "path": "skills/aduo6668/amazon-review-workbook/LICENSE.zh-CN.md",
+          "scan_only": false,
+          "scope": "individual notice, separated from reader's53 support rows",
+          "source_sha256": "8b381c37841da566fc8d48cc975ff253f5cdff12c191e5f4f62c435a9f30b22d",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 6555,
+          "executed": false,
+          "git_blob": "940a192842b1797d7c39a2d04acdb9bcb6874180",
+          "path": "skills/aduo6668/amazon-review-workbook/README.md",
+          "scan_only": true,
+          "source_sha256": "1b04e645cde075dcd49a34f1a8253c2cca7eed4422f6a4ecb5cae6887b82a26f",
+          "scan_note": "phrase scan only; not full body reading",
+          "scan_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 298,
+          "executed": false,
+          "git_blob": "01de581552eef27013b8a1e37d79d901526fc4d6",
+          "path": "skills/aduo6668/amazon-review-workbook/_meta.json",
+          "scan_only": false,
+          "source_sha256": "c3df39e4f000eef544a36040e5a47b9efac4f23a0571cea9922817dd16017be3",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "0ba0f9bc47a501c926757f8893e58cd7581098e3",
+          "path": "skills/aduo6668/amazon-review-workbook/agents/openai.yaml",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 2446,
+          "executed": false,
+          "git_blob": "1a5b3cce28c4bbfe96339e72354a221801f89fa4",
+          "path": "skills/aduo6668/amazon-review-workbook/references/output-schema.md",
+          "scan_only": false,
+          "source_sha256": "7b489526c0d6d10369e3e190a187cae66b5e6b8858a48d28d185c98bda3debd0",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 3131,
+          "executed": false,
+          "git_blob": "a970d768344f500a30608323b3b062f0a985bae7",
+          "path": "skills/aduo6668/amazon-review-workbook/references/setup.md",
+          "scan_only": false,
+          "source_sha256": "985f84499dd023a3fa295070b5149a6ba688f2016468b8beb45581832ad026eb",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 4157,
+          "executed": false,
+          "git_blob": "676b60115a60190b9bcee3693bea6e08f14c8946",
+          "path": "skills/aduo6668/amazon-review-workbook/references/tagging-guidelines.md",
+          "scan_only": false,
+          "source_sha256": "d40cc9da0f41e538619d7cb4923687a638599aed1df671fa1cbd28a7cc911594",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "07fa71034b74bd1f61a98e9b481cf95f4b9c7007",
+          "path": "skills/aduo6668/amazon-review-workbook/scripts/amazon_review_workbook.py",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "988bac993f0b15d85c4d082ca6a108fcd1475355",
+          "path": "skills/aduo6668/amazon-review-workbook/scripts/deeplx_translate.py",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "623d4366e3d61ffbae127098277d9f39eb4da8d0",
+          "path": "skills/aduo6668/amazon-review-workbook/scripts/label_workflow.py",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "6dd8119be9843a4466fc9cf2807dda4ac3870a7d",
+          "path": "skills/aduo6668/amazon-review-workbook/scripts/review_cache.py",
+          "scan_only": false,
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "a290c8db5d9622778cf60597e8531b36e5519b06",
+          "path": "skills/aduo6668/amazon-review-workbook/scripts/review_delivery_schema.py",
+          "scan_only": false,
+          "source_sha256": null
+        }
+      ],
+      "source_sha256": "09835c3a514604d7a050c7e7c911c34b94e8a7c4730879dc038b69d3be3be3dd",
+      "git_blob": "f381193f8069ad211f0a72adf1af7ec7ddef0da7",
+      "negative_candidate": "本人のChromeを閉じて標準プロファイルで大量取得する／Amazonの規約が許さない範囲の取得・転載",
+      "positive_candidate": "元依頼で指定されたレビューを本人Chromeの正規経路で確認し、原文の事実列と生成された分類/翻訳を分けて整理する。",
+      "value": "低〜中。EC競合調査には使えるが、作者固有の事業（ダッシュカム）と中国語の列名・分類が前提。",
+      "excluded_by_todo3080": false,
+      "source_listing_description": "Amazon Review Workbook（slug同名、1.0.3）",
+      "path": "skills/aduo6668/amazon-review-workbook/SKILL.md",
+      "license_paths": [
+        "skills/aduo6668/amazon-review-workbook/LICENSE.zh-CN.md"
+      ],
+      "historical_reader_proposal": {
+        "raw_sha256": "a09f81dc5ecbc38a5213c478c627e8ea04ed996e94473cb81741f773621717b1",
+        "not_final_disposition": true,
+        "not_owner_policy": true,
+        "todo": 3554,
+        "candidate_disposition": "not_recommended_now"
+      },
+      "gzip_sha256": "d205fea541b9b9b3557f8b61788c84802416213b3c1c342fa3e80e01066f0544",
+      "candidate_disposition": "review_analysis_workflow_candidate_pending_license_original_and_browser_policy_correction",
+      "inventory_id": "github:a0320f328c387995024e4c6114b0899181d65515877a2893b7978fa5a1a9625b",
+      "body_read_by": "20261024-095453-todo-3554",
+      "source_declared_name": "amazon-review-workbook",
+      "parent_notice_full_read": false,
+      "compare_metadata": [],
+      "support_path_blob_inventory_complete": true,
+      "integrated_by_todo3080": false,
+      "third_party_assets_or_support_rights_accepted": false,
+      "copy_license_accepted": false,
+      "parent_policy_correction": "専用の別Chrome profileへ置き換える子の案は採らない。本人のログイン済みChromeと正規の利用可能な操作経路を使い、自分のtabだけを記録/終了する。既存Chromeを閉じたりデバッグ再起動しない。現行の規約/地域条件は未確認で、違反や凍結を確定しない。配布Pythonを全移植する義務は足さない。",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/aduo6668/amazon-review-workbook/SKILL.md",
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
+    },
+    {
+      "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
+      "support_read_complete": true,
+      "individual_rights_review": {
+        "notice_path": "skills/ai-chen2050/moltrade/binance/spot/LICENSE.md",
+        "notice_git_blob": "ab1a2c953d337a5240f84ef3f3d030f93db27044",
+        "notice_sha256": "f72b32bd41b493a04d1c4d6959639a0694991988f08b33d619e4133d37d1d3c7",
+        "notice_bytes": 1063,
+        "notice_gz_sha256": "10d9a0f4f8063dd87ac96d13a5546bff4236ff3c52b959c5177735fdef705335",
+        "notice_read_complete": true,
+        "kind": "MIT License",
+        "holder": "Binance",
+        "grant_express": true,
+        "restrictive_or_proprietary_terms": false,
+        "body_reading_stopped_for_rights": false,
+        "scope": "同パッケージのソフトウェアと関連文書（ディレクトリの近さで読む）",
+        "not_covered": "Binanceの商標、APIサービス、利用規約、地域制限",
+        "caveat": "本文frontmatterのauthor: Binance・license: MITと一致する。ただし公開者はai-chen2050で、moltrade内の転載",
+        "license_path": "skills/ai-chen2050/moltrade/binance/spot/LICENSE.md",
+        "license_sha256": "f72b32bd41b493a04d1c4d6959639a0694991988f08b33d619e4133d37d1d3c7",
+        "license_bytes": 1063,
+        "full_license_read": true,
+        "full_license_read_definition": "Child3554 read the individual archival notice. parent_notice_full_read separately states parent reading; this is not permission for services, software or all support."
+      },
+      "body_read_complete": true,
+      "reason": "取引・口座系（署名29行、書込み系15行）は取り消せない金銭操作で、本人の用途が確認できない。安全面（環境変数、マスク、mainnetのCONFIRM）は良い。ただしパラメータ表に重複と空欄があり、署名の例に誤りがある。提供地域・利用条件は本文に無い。",
+      "repo": "6mile/skills",
+      "required_changes": [
+        "導入するなら公開市場データ（認証不要15行）だけの読取専用Skillに絞る",
+        "署名・注文系は別Skillにし、テストネットと本人の明示指示に限る。CONFIRM規則は取消・注文変更にも適用する",
+        "L69-167の重複と文字消失、authentication.md L52-54の誤例、L237-238の秘密表示を直す",
+        "提供地域と利用条件を公式で確認する"
+      ],
+      "individual_notice_read_by": "20261024-095453-todo-3554",
+      "bytes": 24593,
+      "independent_review_complete": false,
+      "use": "Binance Spot REST APIの44エンドポイント（公開15、署名29）の一覧、パラメータ、署名方法、安全指針。",
+      "findings": [
+        {
+          "line": "L69/73・L77/167・L80/162・L81/98・L83/100・L87/105・L91/165",
+          "kind": "spec_error",
+          "issue": "パラメータの定義が重複し、説明が空欄のものがある。priceの例の値は400と1で不一致",
+          "fix": "重複を消し、公式表と突き合わせる",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L90",
+          "kind": "spec_error",
+          "issue": "Priceleveltopegthepriceto(max:100)のようにスペースが消えている",
+          "fix": "元の表から復元",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L237-238・L278",
+          "kind": "risk",
+          "issue": "秘密鍵の末尾5文字を見せる指示。秘密の一部が会話や記録に残る",
+          "fix": "秘密鍵は一切表示しない",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L286 と L289・authentication.md L3 と L36-55",
+          "kind": "inconsistency",
+          "issue": "『全てHMAC SHA256』と書きながらRSA・Ed25519も併記している",
+          "fix": "表現を揃える",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "authentication.md L52-54",
+          "kind": "spec_error",
+          "issue": "opensslのpkeyutlがpkeyutと誤記され、Ed25519署名にdgst -signを使う例も成り立たない",
+          "fix": "公式手順に基づいて書き直し、テストネットで検証",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L226 と authentication.md L7-10",
+          "kind": "inconsistency",
+          "issue": "Demo用URLが片方にしか無い",
+          "fix": "揃える",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "全体",
+          "kind": "unverified",
+          "issue": "提供地域と利用条件が本文に無い（Binanceの規約と地域制限はMITの外）",
+          "fix": "導入前に公式で確認",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        }
+      ],
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "name": "spot",
+      "body_read_method": "child full primary/notice read; parent all semantic assessments/rights/limits/prose read; independently fixed roster/tree/index/catalog/gzip verified",
+      "installed_by_todo3080": false,
+      "supporting_resources": [
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1063,
+          "executed": false,
+          "git_blob": "ab1a2c953d337a5240f84ef3f3d030f93db27044",
+          "path": "skills/ai-chen2050/moltrade/binance/spot/LICENSE.md",
+          "scan_only": false,
+          "scope": "individual notice, separated from reader's53 support rows",
+          "source_sha256": "f72b32bd41b493a04d1c4d6959639a0694991988f08b33d619e4133d37d1d3c7",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 3080,
+          "executed": false,
+          "git_blob": "25cadfdb0562ad74f16340333d28b2bd07130c47",
+          "path": "skills/ai-chen2050/moltrade/binance/spot/references/authentication.md",
+          "scan_only": false,
+          "source_sha256": "28aed92c997dd0cf65a2a35a5acdd629944eda6f1c93cd663fe567a7fa04da84",
+          "read_by": "20261024-095453-todo-3554"
+        }
+      ],
+      "source_sha256": "f1381711f8283954ba4072097dfc5fbb3cd1ee00e8d89f3d26dbcc999eac11d0",
+      "git_blob": "5bad710443d8a6298a15ab68ad538e3d54f08b51",
+      "negative_candidate": "注文・取消・口座情報の取得／秘密鍵の一部を表示する",
+      "positive_candidate": "Binanceの公開市場データ（認証不要の15行）の項目を調べたい",
+      "value": "低〜中。公開市場データの15行は調査に使えるが、公式文書の再整理で、public-data-researchでも補える。",
+      "excluded_by_todo3080": false,
+      "source_listing_description": "なし（当該ディレクトリに_meta.jsonとpackage-inventory行が無い。親パッケージmoltrade 1.0.9のnested）",
+      "path": "skills/ai-chen2050/moltrade/binance/spot/SKILL.md",
+      "license_paths": [
+        "skills/ai-chen2050/moltrade/binance/spot/LICENSE.md"
+      ],
+      "historical_reader_proposal": {
+        "raw_sha256": "a09f81dc5ecbc38a5213c478c627e8ea04ed996e94473cb81741f773621717b1",
+        "not_final_disposition": true,
+        "not_owner_policy": true,
+        "todo": 3554,
+        "candidate_disposition": "reference_only"
+      },
+      "gzip_sha256": "b9f5f1fc4d1c3d994091d8982ce0a7df2da68d131746f99be670354addc0e7fc",
+      "candidate_disposition": "public_market_data_reference_candidate_pending_official_api_terms_and_comparison",
+      "inventory_id": "github:7e90ed8b70bcbb162585cbb01ce13600b426ac1fad7735d38b86946baf298951",
+      "body_read_by": "20261024-095453-todo-3554",
+      "source_declared_name": "spot",
+      "parent_notice_full_read": false,
+      "compare_metadata": [],
+      "support_path_blob_inventory_complete": true,
+      "integrated_by_todo3080": false,
+      "third_party_assets_or_support_rights_accepted": false,
+      "copy_license_accepted": false,
+      "parent_policy_correction": "現在の仕様/地域/利用条件と署名例の正誤は独立未確認。公開市場データの参照と口座/注文/取消を分け、実取引はこの読取評価から行わない。暗号やOpenSSLに関する子の推定を実機成功・公式照合済みにしない。",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/ai-chen2050/moltrade/binance/spot/SKILL.md",
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
+    },
+    {
+      "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
+      "support_read_complete": true,
+      "individual_rights_review": {
+        "notice_path": "skills/ai-headhunter/pinch/LICENSE.txt",
+        "notice_git_blob": "29adcda24529e7c96c02567c033a4ed4f1fb0ec4",
+        "notice_sha256": "54f0394ac4ad5efde5bec4a6460e15470731c7fe4a7487e4b3b5a5b9467a6bda",
+        "notice_bytes": 10778,
+        "notice_gz_sha256": "2c9d1b62934313673719ab8c4b1dc28a3c7f218c3b43ac8cefb7180c6d95b22a",
+        "notice_read_complete": true,
+        "kind": "Apache License 2.0 全文（付録なし）",
+        "holder": "Pinch Protocol Contributors（Copyright 2025）",
+        "grant_express": true,
+        "restrictive_or_proprietary_terms": false,
+        "body_reading_stopped_for_rights": false,
+        "scope": "同パッケージのソフトウェアと関連文書（ディレクトリの近さで読む）。NOTICEファイルなし",
+        "not_covered": "npm配布物(@pinch-protocol/skill)、リレーの運営と利用条件、商標（Apache §6）",
+        "caveat": "本文L564-566もApache-2.0と明記し一致する。frontmatterにlicense欄は無い（catalogのdeclared_licenseは空）。公開者ai-headhunterと権利者は別",
+        "license_path": "skills/ai-headhunter/pinch/LICENSE.txt",
+        "license_sha256": "54f0394ac4ad5efde5bec4a6460e15470731c7fe4a7487e4b3b5a5b9467a6bda",
+        "license_bytes": 10778,
+        "full_license_read": true,
+        "full_license_read_definition": "Child3554 read the individual archival notice. parent_notice_full_read separately states parent reading; this is not permission for services, software or all support."
+      },
+      "body_read_complete": true,
+      "reason": "npm全域導入（@pinch-protocol/skill、L52）、第三者のリレー（relay.pinchprotocol.com）、claimページのTurnstile人間確認（L80）が要る。外部へメッセージを送る経路が増える。人の承認ゲートやサーキットブレーカーの設計は、agent-system-designの参考になる。ただし承認ゲートの一部は技術的な強制ではなく規則（RULES.md L19）で、SKILL.md本文には無い。",
+      "repo": "6mile/skills",
+      "required_changes": [
+        "既存承認のscope照合、サーキットブレーカー、停止/再開、監査を実際の実装と分けて要約する。人の確認を全操作へ必須化しない。",
+        "新しいrelayの導入や送信は原依頼の明示範囲に従う。利用条件と提供元は未確認。"
+      ],
+      "individual_notice_read_by": "20261024-095453-todo-3554",
+      "bytes": 17713,
+      "independent_review_complete": false,
+      "use": "Pinchプロトコルによるエージェント間のE2E暗号メッセージ。接続の承認、自律度、権限マニフェスト、サーキットブレーカー、ハッシュ連鎖の監査ログを扱う。",
+      "findings": [
+        {
+          "line": "L10-12 と L58-60・L98・L100",
+          "kind": "inconsistency",
+          "issue": "必須の環境変数が、frontmatterでは2つ、本文では1つ、手順ではさらにRELAY_HOSTと、記述が三通り",
+          "fix": "一つに揃える",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L95 と L45",
+          "kind": "inconsistency",
+          "issue": "例がws://（非暗号）で、公開リレーはwss://",
+          "fix": "wssに統一",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L80",
+          "kind": "gap",
+          "issue": "リレーのclaimページでTurnstile（人間確認）が要る。AIが突破する設計にはできず、本人にPC操作を求められない運用と衝突する",
+          "fix": "導入しない。人間確認を迂回しない",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L471 と RULES.md L19",
+          "kind": "gap",
+          "issue": "--confirmedはエージェントが自分で付けられるフラグ。『人の明示指示なしに付けない』はRULES.md側にしか無く、SKILL.mdからRULES.mdとHEARTBEAT.mdへの参照も無い",
+          "fix": "規則をSKILL.mdに移し、参照を足す",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "RULES.md L80",
+          "kind": "stale",
+          "issue": "skill/HEARTBEAT.mdと書くが、実際のパスはHEARTBEAT.md",
+          "fix": "パスを直す",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L430-431",
+          "kind": "inconsistency",
+          "issue": "/tmpの例はWindowsに無い",
+          "fix": "移植できるパスにする",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L43・L45",
+          "kind": "promo",
+          "issue": "『リレーは平文を見ない』はプロトコル設計上の主張で、実装と運営の検証は同梱されていない",
+          "fix": "未検証として扱う",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        },
+        {
+          "line": "L4 と _meta.json",
+          "kind": "inconsistency",
+          "issue": "版が0.2.1（本文）と1.0.0（_meta）",
+          "fix": "揃える",
+          "parent_verification": "reader findings; no independent runtime/API/terms verification"
+        }
+      ],
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "name": "pinch",
+      "body_read_method": "child full primary/notice read; parent all semantic assessments/rights/limits/prose read; independently fixed roster/tree/index/catalog/gzip verified",
+      "installed_by_todo3080": false,
+      "supporting_resources": [
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1965,
+          "executed": false,
+          "git_blob": "2728611b12bbfcfd9a29b93d168fa7c120e1654f",
+          "path": "skills/ai-headhunter/pinch/HEARTBEAT.md",
+          "scan_only": false,
+          "source_sha256": "fb80f27c1149a51af93ee57544973b1213b283f7a1656ca116973c79a56098ac",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 10778,
+          "executed": false,
+          "git_blob": "29adcda24529e7c96c02567c033a4ed4f1fb0ec4",
+          "path": "skills/ai-headhunter/pinch/LICENSE.txt",
+          "scan_only": false,
+          "scope": "individual notice, separated from reader's53 support rows",
+          "source_sha256": "54f0394ac4ad5efde5bec4a6460e15470731c7fe4a7487e4b3b5a5b9467a6bda",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 6887,
+          "executed": false,
+          "git_blob": "a1d7aa47b272fa8438a559dd55f80ddcbc73d9f6",
+          "path": "skills/ai-headhunter/pinch/RULES.md",
+          "scan_only": false,
+          "source_sha256": "45d9f070a63add616ebf32a70eba187cc8b133ac3e34c560ae45212f6eb80a66",
+          "read_by": "20261024-095453-todo-3554"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 303,
+          "executed": false,
+          "git_blob": "74f4a5bbe6aae499f58b9ec0a847b8a874183544",
+          "path": "skills/ai-headhunter/pinch/_meta.json",
+          "scan_only": false,
+          "source_sha256": "1be5367eba140b1885dd3d8b564b19084950de2cf062983dd9b51cdab4e44857",
+          "read_by": "20261024-095453-todo-3554"
+        }
+      ],
+      "source_sha256": "ece62aee1f1fb9a8c8eaf31cc7509e089a222eddbc463f4132ef4618659a4681",
+      "git_blob": "b5a7759e6e1615f5964af2282faccf369a4f0665",
+      "negative_candidate": "第三者のリレーへ接続して実際にメッセージを送る／--confirmedを自動で付けて全自動にする",
+      "positive_candidate": "エージェント間通信の設計で、人の承認ゲートや監査の考え方を参照する",
+      "value": "低〜中。設計の参考としては有用だが、導入して使う用途は見当たらない。",
+      "excluded_by_todo3080": false,
+      "source_listing_description": "Pinch: Claw to Claw Encrypted Messaging（slug pinch、1.0.0。本文は0.2.1）",
+      "path": "skills/ai-headhunter/pinch/SKILL.md",
+      "license_paths": [
+        "skills/ai-headhunter/pinch/LICENSE.txt"
+      ],
+      "historical_reader_proposal": {
+        "raw_sha256": "a09f81dc5ecbc38a5213c478c627e8ea04ed996e94473cb81741f773621717b1",
+        "not_final_disposition": true,
+        "not_owner_policy": true,
+        "todo": 3554,
+        "candidate_disposition": "reference_only"
+      },
+      "gzip_sha256": "f5ab4649b4991ba6efb7ff93eb7a505dc361b4ef83c1ee24f16905dc767da8f9",
+      "candidate_disposition": "agent_message_governance_reference_candidate_pending_implementation_and_comparison",
+      "inventory_id": "github:3f82ed95faf19be4e4c742a6962c950cbafc306ea45c7bf41a1424a5e6625c60",
+      "body_read_by": "20261024-095453-todo-3554",
+      "source_declared_name": "pinch",
+      "parent_notice_full_read": false,
+      "compare_metadata": [],
+      "support_path_blob_inventory_complete": true,
+      "integrated_by_todo3080": false,
+      "third_party_assets_or_support_rights_accepted": false,
+      "copy_license_accepted": false,
+      "parent_policy_correction": "人の承認フラグやdeny-by-defaultを本人の許可済み通常操作への新しい一律承認待ちにしない。設定済みscopeを実装で照合し、監査/停止/再開を区別する。Turnstileという記載だけでサービス利用が絶対不可能と断定せず、回避も試さない。未依頼のrelay導入や送信は行わない。",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/ai-headhunter/pinch/SKILL.md",
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
     }
   ],
   "license_batch": {
@@ -1954,7 +4000,9 @@
     "not_adoption_cap": true,
     "pool_definition": "旧担当が報告した選択pool348の履歴。正確な選択条件は未復元で、今回のrole-based個別notice metadata pool864とは同じ基準の増減として比較しない。",
     "new_notice_metadata_pool": 864,
-    "next_research_todo": 3554
+    "next_research_todo": 3554,
+    "historical": true,
+    "snapshot_scope": "初回080546の10件だけの履歴。next_research_todo3554は当時の後続で既に完了。現在の次作業はrootのnext_research_todosを参照。348と864は選択条件が異なる。"
   },
   "integrated": 0,
   "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
@@ -1963,5 +4011,64 @@
     "new_global_disposition_count": 0,
     "inventory_id": "github:94699dba5282f10171d8005a1371aa5eedab8ace92676691940e8c745887f36f",
     "source": "skills-3080-duplicate-decisions.json"
+  },
+  "support_identity_fingerprint": "e401127a4c64d35f7c2f4f19919d634a4c96c494ba57c630429827553aac983a",
+  "support_reading_fingerprint": "e41dd6445ad733c83ae15bf972fac95c530f32166943544e18282052ea08c299",
+  "new10_reader": {
+    "todo": 3554,
+    "job": "20261024-095453-todo-3554",
+    "raw_sha256": "a09f81dc5ecbc38a5213c478c627e8ea04ed996e94473cb81741f773621717b1",
+    "parent_full_assessment_read": true,
+    "parent_all_original_bodies_reread": false,
+    "primary": 10,
+    "primary_bytes": 184699,
+    "canonical_support": 63,
+    "saved": 35,
+    "full_read": 30,
+    "scan_only": 5,
+    "unsaved": 28,
+    "source_commands_executed": 0,
+    "central_writes": 0
+  },
+  "next21_definition": "Earlier eleven plus research3554 ten unique primary paths. Support102+63=165, saved40+35=75, full12+30=42, scan0+5=5, unsaved62+28=90. Metadata eligibility is not individual permission. No new adoption or exclusion is added.",
+  "amended_at": "2026-10-24T04:36:53.6527779+00:00",
+  "amendment_job": "20261024-123649-todo-3080",
+  "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts. 3571補正は担当表示と根拠の追補で、新しい本文/支持の読取や採用の加算ではない。",
+  "next_research_todos": [
+    3565,
+    3566
+  ],
+  "next10_fixed_verification": {
+    "reader_job": "20261024-095453-todo-3554",
+    "outside_package_context_count": 2,
+    "support_saved": 35,
+    "support_full_read": 30,
+    "outside_package_context_paths": [
+      "README.md",
+      "skills/ai-chen2050/moltrade/_meta.json"
+    ],
+    "definition": "47=10 primary paths +35 saved support paths(including notices) +2 outside-package context paths; not physical gzip count. All63 support identities were checked in complete tree/index; only saved35 support have gzip/UTF8/raw Gitblob checks. Context is not added to support counts.",
+    "support_scan_only": 5,
+    "individual_notices": 10,
+    "support_metadata": 63,
+    "saved_source_path_occurrences_verified": 47,
+    "primary_bytes": 184699,
+    "primary": 10,
+    "original_response_sha256": "a09f81dc5ecbc38a5213c478c627e8ea04ed996e94473cb81741f773621717b1",
+    "new_semantic_reads": 0,
+    "proof_sha256": "2a48a764c291db955df0c7f38c50e655d7e297adf9edd7a8d2f530a5d7965206",
+    "support_unsaved": 28,
+    "helper_reexecuted": false
+  },
+  "actor_attribution_correction": {
+    "old_ambiguous_read_by_removed": 33,
+    "legacy11_definition": "Old11 rows have historical reading states without per-support reader/scanner attribution; do not invent actors.",
+    "fixed_reader_scope": "20261024-095453-todo-3554",
+    "primary_path_reader_fingerprint": "6301d6942aea35a7738475d8db2870834fb0e06330f37c1e35f48dbf606ee80b",
+    "source_identity_and_reading_state_fingerprints_unchanged": true,
+    "unread_with_no_actor": 28,
+    "review_todo": 3571,
+    "scan_by": 5,
+    "full_read_by_preserved": 30
   }
 }

@@ -17,22 +17,26 @@ type resourceReview struct {
 	SHA     string `json:"source_sha256"`
 	Bytes   int    `json:"bytes"`
 	Support []struct {
-		Path     string `json:"path"`
-		Blob     string `json:"git_blob"`
-		SHA      string `json:"source_sha256"`
-		Bytes    *int   `json:"bytes"`
-		Saved    bool   `json:"body_saved"`
-		Read     bool   `json:"body_read"`
-		Scan     bool   `json:"scan_only"`
-		ScanNote string `json:"scan_note"`
-		Executed *bool  `json:"executed"`
+		Path     string  `json:"path"`
+		Blob     string  `json:"git_blob"`
+		SHA      string  `json:"source_sha256"`
+		Bytes    *int    `json:"bytes"`
+		Saved    bool    `json:"body_saved"`
+		Read     bool    `json:"body_read"`
+		Scan     bool    `json:"scan_only"`
+		ScanNote string  `json:"scan_note"`
+		ReadBy   *string `json:"read_by"`
+		ScanBy   *string `json:"scan_by"`
+		Executed *bool   `json:"executed"`
 	} `json:"supporting_resources"`
 }
 
 // Taken from the preserved final50-prepared093456.json, verified against the
 // fixed tree/index/catalog/gzip before publication; not derived from live JSON.
+// Prepared bytes SHA256: f8cbd859ab35afbd438111f3988a6bd26934083251d969071ba0eb50ba5610a3.
 const mengtoFinal50Bodies = "8c6ff5d718569088014390946db628878751e818727f1057260cfd8cb3a840ce"
 const mengtoFinal50Support = "5a3749b14285aa3dc84435cff8bc005a51246b3a8bc063a99ac551f6809699d4"
+const mengtoFinal50Actors = "81316015ba69e6f12f80442f1f184399dd7f0a03cc250366f660895eb9424b14"
 
 func validateMengtoFinal50Resources(entries []resourceReview) error {
 	var selected []resourceReview
@@ -42,6 +46,13 @@ func validateMengtoFinal50Resources(entries []resourceReview) error {
 		}
 	}
 	sort.Slice(selected, func(i, j int) bool { return selected[i].Path < selected[j].Path })
+	var actors []string
+	for _, e := range selected {
+		actors = append(actors, e.Path+"\t"+e.Reader+"\n")
+	}
+	if len(selected) != 50 || primaryReaderFingerprint(actors) != mengtoFinal50Actors {
+		return errors.New("final50 primary reader attribution differs from the independent prepared roster")
+	}
 	bodies := sha256.New()
 	var supportRows []string
 	seen := map[string]bool{}
@@ -51,6 +62,9 @@ func validateMengtoFinal50Resources(entries []resourceReview) error {
 		for _, s := range e.Support {
 			if !strings.HasPrefix(s.Path, strings.TrimSuffix(e.Path, "SKILL.md")) || seen[s.Path] || s.Executed == nil || *s.Executed || s.Bytes == nil || *s.Bytes < 1 || !validHex(s.Blob, 40) || (s.Saved && !validHex(s.SHA, 64)) || (!s.Saved && s.SHA != "") || (s.Read && !s.Saved) || s.Scan != (s.Saved && !s.Read) || (s.Scan && s.ScanNote == "") {
 				return errors.New("final50 support identity or reading scope is unverified")
+			}
+			if err := validateResourceActor(e.Reader, s.Saved, s.Read, s.Scan, s.ReadBy, s.ScanBy); err != nil {
+				return err
 			}
 			seen[s.Path] = true
 			supportRows = append(supportRows, fmt.Sprintf("%s\t%s\t%d\t%s\t%t\t%t\t%t\n", s.Path, s.Blob, *s.Bytes, s.SHA, s.Saved, s.Read, s.Scan))
@@ -71,6 +85,52 @@ func validateMengtoFinal50Resources(entries []resourceReview) error {
 		return errors.New("final50 identities or reading states differ from the independent saved anchor")
 	}
 	return nil
+}
+
+func TestMengtoFinal50ReadersAndScannersRemainDistinct(t *testing.T) {
+	for _, kind := range []string{"valid", "wrong_scanner", "scan_claims_reader", "read_loses_actor", "read_claims_scanner", "unsaved_claims_actor"} {
+		t.Run(kind, func(t *testing.T) {
+			var a struct {
+				Entries []resourceReview `json:"entries"`
+			}
+			loadPublicReceipt(t, "skills-3080-mengto-partial-evaluation.json", &a)
+			changed := kind == "valid"
+			for i := range a.Entries {
+				e := &a.Entries[i]
+				if changed || (e.Reader != "20261024-081950-todo-3535" && e.Reader != "20261024-082550-todo-3536") {
+					continue
+				}
+				for j := range e.Support {
+					s := &e.Support[j]
+					if ((kind == "wrong_scanner" || kind == "scan_claims_reader") && !s.Scan) || ((kind == "read_loses_actor" || kind == "read_claims_scanner") && !s.Read) || (kind == "unsaved_claims_actor" && s.Saved) {
+						continue
+					}
+					actor := e.Reader
+					switch kind {
+					case "wrong_scanner":
+						actor = "different-job"
+						s.ScanBy = &actor
+					case "scan_claims_reader", "unsaved_claims_actor":
+						s.ReadBy = &actor
+					case "read_loses_actor":
+						s.ReadBy = nil
+					case "read_claims_scanner":
+						s.ScanBy = &actor
+					}
+					changed = true
+					break
+				}
+			}
+			if !changed {
+				t.Fatal("fixture has no matching provenance to mutate")
+			}
+			if err := validateMengtoFinal50Resources(a.Entries); (err != nil) != (kind != "valid") {
+				t.Fatalf("%s: %v", kind, err)
+			} else if kind != "valid" && !strings.Contains(err.Error(), resourceActorError) {
+				t.Fatalf("%s failed for a different reason: %v", kind, err)
+			}
+		})
+	}
 }
 
 func TestMengtoFinal50ResourcesRemainBoundToThePreservedAssessment(t *testing.T) {

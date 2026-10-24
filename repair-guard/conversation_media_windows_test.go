@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
@@ -27,6 +29,241 @@ type mediaObservationFixture struct {
 	CanonicalSHA string                   `json:"canonical_source_receipt_sha256"`
 	Attachments  []mediaAttachmentFixture `json:"attachments"`
 }
+
+func TestConversationOwnerMediaProvenanceMismatch(t *testing.T) {
+	cases := []struct {
+		name   string
+		mutate func(*conversationMediaFixture)
+	}{
+		{"domain", func(m *conversationMediaFixture) { m.observation.Domain = "other" }},
+		{"source", func(m *conversationMediaFixture) { m.observation.Source = "html" }},
+		{"request-generation", func(m *conversationMediaFixture) { m.observation.Request = "another-generation" }},
+		{"sender-generation", func(m *conversationMediaFixture) { m.observation.Sender = "another-sender" }},
+		{"todo", func(m *conversationMediaFixture) { m.observation.Todo = 2 }},
+		{"guild", func(m *conversationMediaFixture) { m.observation.Guild = "999" }},
+		{"thread", func(m *conversationMediaFixture) { m.observation.Thread = "999" }},
+		{"question", func(m *conversationMediaFixture) { m.observation.Question = "999" }},
+		{"reply", func(m *conversationMediaFixture) { m.observation.Message = "999" }},
+		{"owner", func(m *conversationMediaFixture) { m.observation.Owner = "999" }},
+		{"created", func(m *conversationMediaFixture) { m.observation.Created = "2026-10-18T01:00:04Z" }},
+		{"edited", func(m *conversationMediaFixture) { m.observation.Edited = "2026-10-18T01:00:04Z" }},
+		{"content-sha", func(m *conversationMediaFixture) { m.observation.ContentSHA = strings.Repeat("a", 64) }},
+		{"question-sha", func(m *conversationMediaFixture) { m.observation.QuestionSHA = strings.Repeat("a", 64) }},
+		{"source-sha", func(m *conversationMediaFixture) { m.observation.CanonicalSHA = strings.Repeat("a", 64) }},
+		{"unknown-attachments", func(m *conversationMediaFixture) { m.observation.Attachments = nil }},
+		{"unknown-size", func(m *conversationMediaFixture) { m.observation.Attachments[0].Size = nil }},
+		{"negative-size", func(m *conversationMediaFixture) { *m.observation.Attachments[0].Size = -1 }},
+		{"attachment-id", func(m *conversationMediaFixture) { m.observation.Attachments[0].ID = "0900" }},
+		{"attachment-id-overflow", func(m *conversationMediaFixture) { m.observation.Attachments[0].ID = "18446744073709551616" }},
+		{"duplicate-attachment", func(m *conversationMediaFixture) {
+			m.observation.Attachments = append(m.observation.Attachments, m.observation.Attachments[0])
+		}},
+		{"attachment-order", func(m *conversationMediaFixture) {
+			m.observation.Attachments = append(m.observation.Attachments, mediaAttachmentFixture{ID: "800", Size: m.observation.Attachments[0].Size})
+		}},
+		{"too-many-attachments", func(m *conversationMediaFixture) {
+			for i := 0; i < 10; i++ {
+				m.observation.Attachments = append(m.observation.Attachments, mediaAttachmentFixture{ID: strings.Repeat("9", i+4), Size: m.observation.Attachments[0].Size})
+			}
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := newConversationMediaFixture(t)
+			tc.mutate(m)
+			m.publish()
+			for _, p := range []string{m.observationPath, m.scopePath} {
+				if conversationAllowed(p, m.f.a) {
+					t.Fatal("mismatched observation accepted")
+				}
+			}
+		})
+	}
+}
+
+func TestConversationOwnerMediaScopeMismatch(t *testing.T) {
+	cases := []struct {
+		name   string
+		mutate func(*mediaScopeFixture)
+	}{
+		{"domain", func(s *mediaScopeFixture) { s.Domain = "discord-history-read-scope-v1" }},
+		{"todo", func(s *mediaScopeFixture) { s.Todo = 2 }},
+		{"guild", func(s *mediaScopeFixture) { s.Guild = "999" }},
+		{"owner", func(s *mediaScopeFixture) { s.Owner = "999" }},
+		{"thread", func(s *mediaScopeFixture) { s.Threads = []string{"999"} }},
+		{"extra-thread", func(s *mediaScopeFixture) { s.Threads = append(s.Threads, "201") }},
+		{"message", func(s *mediaScopeFixture) { s.Message = "999" }},
+		{"attachment", func(s *mediaScopeFixture) { s.Attachment = "901" }},
+		{"content-sha", func(s *mediaScopeFixture) { s.ContentSHA = strings.Repeat("a", 64) }},
+		{"created", func(s *mediaScopeFixture) { s.Created = "2026-10-18T01:00:04Z" }},
+		{"edited", func(s *mediaScopeFixture) { s.Edited = "2026-10-18T01:00:04Z" }},
+		{"size", func(s *mediaScopeFixture) { s.Size++ }},
+		{"since", func(s *mediaScopeFixture) { s.Since = "2026-10-18T01:00:02Z" }},
+		{"until", func(s *mediaScopeFixture) { s.Until = "2026-10-18T01:00:04Z" }},
+		{"future", func(s *mediaScopeFixture) { s.Until = "2999-01-01T00:00:00Z" }},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := newConversationMediaFixture(t)
+			tc.mutate(&m.scope)
+			m.publish()
+			if conversationAllowed(m.scopePath, m.f.a) {
+				t.Fatal("mismatched scope accepted")
+			}
+		})
+	}
+}
+
+func TestConversationOwnerMediaKnownRemovalAndSizeContract(t *testing.T) {
+	for _, size := range []int64{0, 20<<20 + 1} {
+		t.Run(strconv.FormatInt(size, 10), func(t *testing.T) {
+			m := newConversationMediaFixture(t)
+			*m.observation.Attachments[0].Size = size
+			m.scope.Size = size
+			m.publish()
+			if !conversationAllowed(m.observationPath, m.f.a) || conversationAllowed(m.scopePath, m.f.a) {
+				t.Fatal("observation confused with eligible image scope")
+			}
+		})
+	}
+	m := newConversationMediaFixture(t)
+	m.observation.Attachments = []mediaAttachmentFixture{}
+	m.publish()
+	if !conversationAllowed(m.observationPath, m.f.a) || conversationAllowed(m.scopePath, m.f.a) {
+		t.Fatal("known removal invented an image")
+	}
+}
+
+func TestConversationOwnerMediaCanonicalAndProtectionStillRequired(t *testing.T) {
+	for _, which := range []string{"canonical-missing", "canonical-bytes", "pending-version", "reserved", "root", "observation", "scope", "canonical", "question", "notify", "sender", "state"} {
+		t.Run(which, func(t *testing.T) {
+			m := newConversationMediaFixture(t)
+			switch which {
+			case "canonical-missing":
+				if os.Rename(m.f.replyPath, m.f.replyPath+".retained") != nil {
+					t.Fatal("fixture rename failed")
+				}
+			case "canonical-bytes":
+				raw, _ := os.ReadFile(m.f.replyPath)
+				if os.WriteFile(m.f.replyPath, append(raw, '\n'), 0600) != nil {
+					t.Fatal("fixture write failed")
+				}
+			case "pending-version":
+				obj(obj(m.f.state["requests"])["202"])["text"] = "later owner version"
+				m.f.publish()
+			case "reserved":
+				m.f.q["phase"] = "reserved"
+				m.f.publish()
+			case "root":
+				m.f.a.rootAllowed = func(string) bool { return false }
+			default:
+				p := map[string]string{"observation": m.observationPath, "scope": m.scopePath, "canonical": m.f.replyPath, "question": filepath.Join(m.f.dir, "question.json"), "notify": m.f.a.notify, "sender": m.f.a.sender, "state": filepath.Join(m.f.a.home, "unattended-state.json")}[which]
+				// Represents both original client and owner-card exclusions; no real data.
+				m.f.a.protected = func(path string) bool { return same(path, p) }
+			}
+			if conversationAllowed(m.scopePath, m.f.a) {
+				t.Fatal("original source/protection requirement bypassed")
+			}
+		})
+	}
+}
+
+func TestConversationOwnerMediaUnknownAndLinkedFiles(t *testing.T) {
+	m := newConversationMediaFixture(t)
+	for _, name := range []string{"202.latest.private.json", "202.note.txt", "202.expected.json", "unknown.json", "202-" + strings.Repeat("a", 64) + ".private.json", "202-" + strings.Repeat("a", 64) + "-900.scope.private.json"} {
+		p := filepath.Join(filepath.Dir(m.scopePath), name)
+		m.f.put(p, m.scope)
+		if conversationAllowed(p, m.f.a) {
+			t.Fatal("unknown or unbound file accepted")
+		}
+	}
+	for _, which := range []string{"scope", "observation", "directory"} {
+		t.Run(which, func(t *testing.T) {
+			m := newConversationMediaFixture(t)
+			p := m.scopePath
+			if which == "observation" {
+				p = m.observationPath
+			}
+			if which == "directory" {
+				p = filepath.Dir(p)
+			}
+			retained := p + ".retained"
+			if os.Rename(p, retained) != nil || os.Symlink(retained, p) != nil {
+				t.Fatal("linked fixture unavailable")
+			}
+			if conversationAllowed(m.scopePath, m.f.a) {
+				t.Fatal("linked evidence accepted")
+			}
+		})
+	}
+}
+
+func TestConversationOwnerMediaOverwriteAndConcurrentChange(t *testing.T) {
+	for _, concurrent := range []bool{false, true} {
+		t.Run(map[bool]string{false: "overwrite", true: "concurrent"}[concurrent], func(t *testing.T) {
+			m := newConversationMediaFixture(t)
+			raw, _ := os.ReadFile(m.observationPath)
+			change := func() {
+				if os.WriteFile(m.observationPath, append(raw, '\n'), 0600) != nil {
+					t.Fatal("fixture change failed")
+				}
+			}
+			if concurrent {
+				changed := false
+				m.f.a.protected = func(path string) bool {
+					if !changed && same(path, m.scopePath) {
+						changed = true
+						change()
+					}
+					return false
+				}
+			} else {
+				change()
+			}
+			if conversationAllowed(m.scopePath, m.f.a) {
+				t.Fatal("overwritten observation accepted")
+			}
+		})
+	}
+}
+
+func TestConversationOwnerMediaStrictWireTypes(t *testing.T) {
+	for _, which := range []string{"unknown-field", "missing-field", "null-edit", "string-todo", "string-size", "duplicate-key", "trailing-json"} {
+		t.Run(which, func(t *testing.T) {
+			m := newConversationMediaFixture(t)
+			raw, _ := json.Marshal(m.observation)
+			v, _ := conversationJSON(raw)
+			switch which {
+			case "unknown-field":
+				v["url"] = "https://example.invalid"
+			case "missing-field":
+				delete(v, "edited_timestamp")
+			case "null-edit":
+				v["edited_timestamp"] = nil
+			case "string-todo":
+				v["todo_id"] = "1"
+			case "string-size":
+				obj(v["attachments"].([]any)[0])["size"] = "64"
+			}
+			raw, _ = json.Marshal(v)
+			if which == "duplicate-key" {
+				raw = append([]byte(`{"domain":"discord-owner-reply-media-v1",`), raw[1:]...)
+			}
+			if which == "trailing-json" {
+				raw = append(raw, []byte(" {}")...)
+			}
+			stem := "202-" + hashBytes(raw)
+			p := filepath.Join(filepath.Dir(m.observationPath), stem+".private.json")
+			if os.WriteFile(p, raw, 0600) != nil {
+				t.Fatal("fixture write failed")
+			}
+			if conversationAllowed(p, m.f.a) {
+				t.Fatal("ambiguous observation wire type accepted")
+			}
+		})
+	}
+}
+
 type mediaAttachmentFixture struct {
 	ID   string `json:"id"`
 	Size *int64 `json:"size"`

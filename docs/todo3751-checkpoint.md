@@ -12,3 +12,16 @@
 - 所有済み一時領域: a9123966bdd042a795ceabc93f16c41c（safe-delete）。
 - 固定要求: normal-ask-9620ba9f12adf45e1a01ee67010dafe616750231a1625ffcca0c7ed470a6a862。
 - 本文/decisionは依頼にある私的な原ファイルを使用し、公開repoへ複製しない。
+
+## 実装候補とテスト（2026-10-25）
+
+- Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/478 。
+- Red: TestConversationActorCLIRequiresCompletePairが、担当入力を受け付けない理由で失敗。
+- Green: Go会話テスト全件、go vet、正規ToDo CLIの新ビルドを使うactor結合テストが成功。
+- 結合テストで、元row不変更、依存待ち中の全文配送と重複抑止、依存完了後の質問待ちと回答解除、ロック前の元本人停止競合の拒否を確認。
+- 別project/actor/source/root/spec/job、本人停止、同要求の本文/decision変更を拒否。
+- 同actorの通常の次jobでも元の質問・元送信jobの証跡を保持。実反映の記録後だけ質問を閉じる。
+- Rust nextest（cc-ask/cc-todo、1171件）は実行中。doctest/Clippy、別モデルレビュー、CI、配布と実配送はこれから。
+- 初回Rustコンパイルはserdeの直接依存がないため失敗。既存の厳密な文字列envelope検証へ修正し、依存追加なしで再コンパイル成功。
+- Goの既存固定エラーテストは出力互換性の差で失敗。未知の失敗は従来出力を保ち、確認できる固定段階だけ追加する形へ直して該当テスト成功。
+- cargo fmtによる対象外ファイルの書式変更は除去した。

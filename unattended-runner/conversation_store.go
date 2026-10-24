@@ -26,6 +26,8 @@ const conversationTodo = "D:/CC/Tools/todo/todo.exe"
 type ConversationAskInput struct {
 	RequestID, OriginThread, BodyFile, DecisionFile, Title string
 	Todo                                                   uint64
+	ActorTodo                                              uint64
+	ActorJob                                               string
 	Wait                                                   bool
 	Attachments                                            []string
 }
@@ -33,30 +35,34 @@ type ConversationAskInput struct {
 // All public fields are receipt metadata. Question and answer text stays in the
 // private sender/receipt files, never in command output or health reports.
 type ConversationQuestion struct {
-	ExistingURL      string   `json:"-"`
-	RequestID        string   `json:"request_id"`
-	SenderID         string   `json:"sender_request_id"`
-	Todo             uint64   `json:"todo_id"`
-	Project          string   `json:"project"`
-	OriginThread     string   `json:"origin_thread_id"`
-	InputSHA         string   `json:"input_sha256"`
-	BodyFile         string   `json:"body_file"`
-	DecisionFile     string   `json:"decision_file"`
-	Title            string   `json:"title,omitempty"`
-	Wait             bool     `json:"wait_requested"`
-	Phase            string   `json:"phase"`
-	Created          string   `json:"created_at"`
-	Thread           string   `json:"thread_id,omitempty"`
-	Message          string   `json:"question_message_id,omitempty"`
-	Progress         string   `json:"progress_thread_id,omitempty"`
-	Fingerprint      string   `json:"question_fingerprint,omitempty"`
-	DecisionSHA      string   `json:"decision_identity_sha256,omitempty"`
-	QuestionSHA      string   `json:"question_body_sha256,omitempty"`
-	ReceiptFile      string   `json:"question_receipt_file,omitempty"`
-	ReceiptSHA       string   `json:"question_receipt_sha256,omitempty"`
-	ReplyCursor      string   `json:"reply_cursor,omitempty"`
-	Attachments      []string `json:"attachments,omitempty"`
-	AttachmentHashes []string `json:"attachment_sha256,omitempty"`
+	originTodo       uint64 // Only a transient projection for the recipient transaction.
+	deliveryActor    *conversationActor
+	Actor            *conversationActor `json:"actor,omitempty"`
+	WaitDeferred     bool               `json:"wait_deferred,omitempty"`
+	ExistingURL      string             `json:"-"`
+	RequestID        string             `json:"request_id"`
+	SenderID         string             `json:"sender_request_id"`
+	Todo             uint64             `json:"todo_id"`
+	Project          string             `json:"project"`
+	OriginThread     string             `json:"origin_thread_id"`
+	InputSHA         string             `json:"input_sha256"`
+	BodyFile         string             `json:"body_file"`
+	DecisionFile     string             `json:"decision_file"`
+	Title            string             `json:"title,omitempty"`
+	Wait             bool               `json:"wait_requested"`
+	Phase            string             `json:"phase"`
+	Created          string             `json:"created_at"`
+	Thread           string             `json:"thread_id,omitempty"`
+	Message          string             `json:"question_message_id,omitempty"`
+	Progress         string             `json:"progress_thread_id,omitempty"`
+	Fingerprint      string             `json:"question_fingerprint,omitempty"`
+	DecisionSHA      string             `json:"decision_identity_sha256,omitempty"`
+	QuestionSHA      string             `json:"question_body_sha256,omitempty"`
+	ReceiptFile      string             `json:"question_receipt_file,omitempty"`
+	ReceiptSHA       string             `json:"question_receipt_sha256,omitempty"`
+	ReplyCursor      string             `json:"reply_cursor,omitempty"`
+	Attachments      []string           `json:"attachments,omitempty"`
+	AttachmentHashes []string           `json:"attachment_sha256,omitempty"`
 }
 
 type conversationIndex struct {
@@ -239,6 +245,12 @@ func (r *Runner) loadConversations() (*conversationIndex, error) {
 		return nil, errors.New("conversation namespace differs")
 	}
 	for key, q := range index.Questions {
+		if q.Actor != nil && (q.Todo != 1171 || q.Project != "GitDo" || q.Actor.Todo != 3277 || !validJob(q.Actor.Job) || !shaPattern.MatchString(q.Actor.SpecSHA) || !shaPattern.MatchString(q.Actor.OriginSpecSHA) || !shaPattern.MatchString(q.Actor.RootSHA) || !shaPattern.MatchString(q.Actor.SourceSHA)) {
+			return nil, errors.New("conversation actor unverified")
+		}
+		if q.WaitDeferred && (q.Actor == nil || !q.Wait) {
+			return nil, errors.New("conversation actor unverified")
+		}
 		if key != q.RequestID || !conversationID.MatchString(key) || q.SenderID == "" || q.Todo == 0 || q.Project == "" || !shaPattern.MatchString(q.InputSHA) || q.Created == "" {
 			return nil, errors.New("conversation question invalid")
 		}
@@ -338,6 +350,7 @@ func (r *Runner) conversationTask(ctx context.Context, id uint64) (*TodoRow, err
 		return nil, errors.New("conversation task unavailable")
 	}
 	row.conversationState = selected
+	row.conversationRoot = root
 	row.conversationScope = conversationTodoScope{Domain: "discord-conversation-todo-scope-v1", Todo: fmt.Sprint(id), Project: project, RootSHA: bytesHash([]byte(root))}
 	return &row, nil
 }
@@ -351,7 +364,15 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		return zero, errors.New("conversation origin invalid")
 	}
 	row, err := r.conversationTask(ctx, input.Todo)
-	if err != nil || row.Status == "done" || row.Status == "recovery_unverified" {
+	if err != nil {
+		return zero, err
+	}
+	// Verify a separate recipient before reading the private question inputs.
+	actor, err := r.conversationActorForAsk(ctx, input, row)
+	if err != nil {
+		return zero, err
+	}
+	if row.Status == "done" || (row.Status == "recovery_unverified" && actor == nil) {
 		return zero, errors.New("conversation original task unavailable")
 	}
 	body, err := boundedRegular(input.BodyFile)
@@ -390,11 +411,17 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 	}
 	inputHash := canonicalHash(identity)
 	q, exists := index.Questions[input.RequestID]
+	if exists && !sameConversationActor(q.Actor, actor) {
+		return zero, errors.New("conversation actor differs")
+	}
 	if alias, exists := index.Aliases[input.RequestID]; exists {
 		if alias.InputSHA != inputHash {
 			return zero, errors.New("conversation alias retry input differs")
 		}
 		canonical := index.Questions[alias.Target]
+		if !sameConversationActor(canonical.Actor, actor) {
+			return zero, errors.New("conversation actor differs")
+		}
 		if canonical.Project != row.Project {
 			return zero, errors.New("conversation original project differs")
 		}
@@ -429,6 +456,9 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 	if !exists {
 		for _, old := range index.Questions {
 			if old.InputSHA == inputHash {
+				if !sameConversationActor(old.Actor, actor) {
+					return zero, errors.New("conversation actor differs")
+				}
 				q = old
 				exists = true
 				if old.RequestID != input.RequestID {
@@ -442,11 +472,12 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		}
 	}
 	if !exists {
-		if row.Status != "doing" && row.Status != "todo" {
+		if actor == nil && row.Status != "doing" && row.Status != "todo" {
 			return zero, errors.New("conversation task is already held")
 		}
 		dir := filepath.Join(r.Config.Home, "conversations", input.RequestID)
 		q = ConversationQuestion{RequestID: input.RequestID, SenderID: "conversation-v1-" + bytesHash([]byte(input.RequestID))[:32], Todo: input.Todo, Project: row.Project, OriginThread: input.OriginThread, InputSHA: inputHash, BodyFile: filepath.Join(dir, "question.txt"), DecisionFile: filepath.Join(dir, "decision.json"), Title: input.Title, Wait: input.Wait, Phase: "reserved", Created: r.Now().UTC().Format(time.RFC3339Nano)}
+		q.Actor = actor
 		q.Attachments, q.AttachmentHashes = paths, hashes
 		if err = writeConversationOnce(q.BodyFile, body); err != nil {
 			return zero, err
@@ -469,7 +500,12 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		return zero, errors.New("conversation original project differs")
 	}
 	if q.Phase == "reserved" {
-		if row.Status != "doing" && row.Status != "todo" {
+		if q.Actor != nil {
+			if _, err := r.conversationActorRow(ctx, q); err != nil {
+				return zero, err
+			}
+		}
+		if q.Actor == nil && row.Status != "doing" && row.Status != "todo" {
 			return zero, errors.New("conversation reserved task is held")
 		}
 		args := []string{"recovery-ask", "--request-id", q.SenderID, "--todo-id", fmt.Sprint(q.Todo), "--origin-thread", q.OriginThread, "--body-file", q.BodyFile, "--decision-file", q.DecisionFile}
@@ -583,6 +619,9 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		}
 	}
 	if q.Wait && q.Phase == "posted" {
+		if q.Actor != nil {
+			return r.conversationActorWait(ctx, index, q)
+		}
 		scopeFile, scopeErr := r.conversationScopeFile(row, q)
 		if scopeErr != nil {
 			return zero, scopeErr

@@ -354,6 +354,53 @@ fn row_index(db: &Value, id: i64) -> Result<usize> {
 /// A caller's guard result is not a Rust identity proof. Bind the exact project
 /// and registered path which that caller checked, under the canonical store lock.
 pub fn check_scope(db: &Value, id: i64, path: &Path) -> Result<()> {
+    // Recheck the retained original and both specs under the canonical lock.
+    if let Ok((scope, _)) = read(
+        path,
+        &[
+            "domain",
+            "todo_id",
+            "project",
+            "project_path_sha256",
+            "origin_state_file",
+            "actor_spec_sha256",
+            "origin_spec_sha256",
+        ],
+    ) {
+        let index = row_index(db, id)?;
+        let origin = row_index(db, 1171)?;
+        let row = &db["items"][index];
+        let original = &db["items"][origin];
+        let expected: Value = serde_json::from_slice(&snapshot_bytes(Path::new(text(
+            &scope,
+            "origin_state_file",
+        )))?)
+        .map_err(|_| "conversation_state_invalid")?;
+        if scope["domain"] != "discord-conversation-actor-todo-scope-v1"
+            || id != 3277
+            || text(&scope, "todo_id") != id.to_string()
+            || scope["project"] != "GitDo"
+            || row["project"] != scope["project"]
+            || original["project"] != scope["project"]
+            || *original != expected
+            || text(&scope, "project_path_sha256")
+                != digest(db["projects"]["GitDo"].as_str().unwrap().as_bytes())
+            || !hash(text(&scope, "actor_spec_sha256"))
+            || !hash(text(&scope, "origin_spec_sha256"))
+            || digest(&bytes(Path::new(text(row, "spec")))?) != text(&scope, "actor_spec_sha256")
+            || digest(&bytes(Path::new(text(original, "spec")))?)
+                != text(&scope, "origin_spec_sha256")
+            || !matches!(
+                text(original, "status"),
+                "recovery_unverified" | "todo" | "doing" | "wait"
+            )
+        {
+            return fail("scope_changed");
+        }
+        holds_clear_with(db, original, true)?;
+        holds_clear_with(db, row, true)?;
+        return Ok(());
+    }
     let (scope, _) = read(
         path,
         &["domain", "todo_id", "project", "project_path_sha256"],

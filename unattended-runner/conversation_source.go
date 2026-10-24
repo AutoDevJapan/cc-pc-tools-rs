@@ -39,7 +39,7 @@ func (r *Runner) conversationSourceReacquire(ctx context.Context, q Conversation
 		}
 	}
 	old := r.conversationRequest(reply.Message)
-	if old != nil && (old.Conversation != q.RequestID || old.Thread != q.Thread || old.Message != reply.Message || old.Author != reply.Author || (old.Todo != 0 && old.Todo != q.Todo)) {
+	if old != nil && (old.Conversation != q.RequestID || old.Thread != q.Thread || old.Message != reply.Message || old.Author != reply.Author || (old.Todo != 0 && old.Todo != conversationRecipient(q))) {
 		return nil, errImplementation
 	}
 	// Record the old intake separately; neither its hash nor an inspection hash

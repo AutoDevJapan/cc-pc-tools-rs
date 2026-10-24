@@ -34,7 +34,7 @@ type ownerReplyMediaObservation struct {
 func (r *Runner) ownerReplyMedia(ctx context.Context, q ConversationQuestion, reply conversationReply, req *Request) (ownerReplyMediaObservation, bool, error) {
 	var live historyReadMessage
 	var record ownerReplyMediaObservation
-	if req == nil || req.Todo != q.Todo || req.Source != "discord-api-v10" || req.Conversation != q.RequestID || req.Thread != q.Thread || req.Message != reply.Message || req.Author != r.State.Destination.Owner || reply.Author != req.Author || reply.Body != req.Text || reply.Created != req.Created {
+	if req == nil || req.Todo != conversationRecipient(q) || req.Source != "discord-api-v10" || req.Conversation != q.RequestID || req.Thread != q.Thread || req.Message != reply.Message || req.Author != r.State.Destination.Owner || reply.Author != req.Author || reply.Body != req.Text || reply.Created != req.Created {
 		return record, false, errors.New("owner media association differs")
 	}
 	if err := r.get(ctx, "/channels/"+q.Thread+"/messages/"+reply.Message, &live); err != nil {

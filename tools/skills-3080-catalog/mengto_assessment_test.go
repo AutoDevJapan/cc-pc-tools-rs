@@ -94,7 +94,7 @@ func TestMengtoPartialEvaluationPreservesCompleteTreeAndLiveLedger(t *testing.T)
 		} `json:"mengto_partial_entrypoint_evaluation"`
 	}
 	loadPublicReceipt(t, "skills-3080-progress.json", &p)
-	if a.Read < 68 || p.Partial.Read != a.Read || p.Partial.Unread != a.Unread || p.Partial.Expected != a.Expected || p.Partial.Installed != a.Installed || p.Partial.Integrated != a.Integrated || p.Partial.Excluded != a.Excluded || p.Partial.Complete != (a.Unread == 0) {
+	if a.Read < 92 || p.Partial.Read != a.Read || p.Partial.Unread != a.Unread || p.Partial.Expected != a.Expected || p.Partial.Installed != a.Installed || p.Partial.Integrated != a.Integrated || p.Partial.Excluded != a.Excluded || p.Partial.Complete != (a.Unread == 0) {
 		t.Fatal("partial progress lost an assessed or unfinished path")
 	}
 }

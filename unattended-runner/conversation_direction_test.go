@@ -111,6 +111,29 @@ func TestDirectionActualCLIRecordsActorAndArchivesAfterReadback(t *testing.T) {
 	}
 }
 
+func TestDirectionActualCLISavedSourceRemainsImplementationOnly(t *testing.T) {
+	for _, phase := range []string{"conversation_reply_saved", "conversation_source_verified"} {
+		t.Run(phase, func(t *testing.T) {
+			f, opts := directionNative(t)
+			req := f.r.State.Requests[opts.Message]
+			req.Todo = 0
+			req.Phase = phase
+			before, _ := os.ReadFile(f.r.TodoPath)
+			commands := len(f.commands)
+			code, _ := directionCLI(t, f, opts)
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if code == 0 || !bytes.Equal(before, after) || f.close != 0 {
+				t.Fatal("undelivered source became a direction record")
+			}
+			for _, cmd := range f.commands[commands:] {
+				if cmd == "direction-record" || cmd == "recovery-log" {
+					t.Fatal("undelivered direction was written or posted")
+				}
+			}
+		})
+	}
+}
+
 func TestDirectionActualCLINeverClosesStaleSourcesOrForeignActors(t *testing.T) {
 	for _, change := range []string{"sha", "edit", "body", "foreign-job", "unknown-scope", "new-hold", "same-note-project"} {
 		t.Run(change, func(t *testing.T) {

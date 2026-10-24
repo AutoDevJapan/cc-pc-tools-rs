@@ -1,0 +1,53 @@
+{
+  "todo": 3080,
+  "targets": [
+    {
+      "negative": "記事の見出しや宣伝文を一つずつ独立した新Skillとして増やす。",
+      "positive": "記事の全候補を能力ごとに台帳へ並べ、同用途の既存Skillへ必要な差分を補う。",
+      "before_sha256": "2ffb64a3f5d0d688b988782a6009a5723e25bb4bd2ecf149adc5aba0adc434ce",
+      "name": "knowledge-to-skills",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/codex/article-prompts-to-skills/SKILL.md"
+      ],
+      "files": [
+        {
+          "bytes": 1252,
+          "path": "SKILL.md",
+          "sha256": "db6b27a23966815715dcacf75eaccab46093b6fc5f21fa8979deb475d6f3eac2",
+          "mode": "append_exact"
+        },
+        {
+          "bytes": 2007,
+          "path": "references/index.md",
+          "sha256": "9ee445757ffe0973d67efb7a9bf5aaff73b526aab5d769c465f26b3359dbcdd7",
+          "mode": "replace_one_sentence"
+        },
+        {
+          "bytes": 5680,
+          "path": "references/article-prompts-to-skills/GUIDE.md",
+          "sha256": "cfb878772efc6da204ad385d24eb16657aa160c2213b409f92e306b57dc1eeb2",
+          "mode": "replace_exact_original"
+        },
+        {
+          "bytes": 6434,
+          "path": "references/article-prompts-to-skills/upstream.txt",
+          "sha256": "566c5bd361aa738d40843e647d73b8867dbc6825818b0ad9d67f7e5c23b8ee62",
+          "mode": "create_new"
+        },
+        {
+          "bytes": 1064,
+          "path": "references/article-prompts-to-skills/MIT.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "mode": "create_new"
+        },
+        {
+          "bytes": 5375,
+          "path": "references/article-prompts-to-skills/source.json",
+          "sha256": "2507cc39a359671aaa72e35440524747813b9c11538835c48465834fadd21af7",
+          "mode": "create_new"
+        }
+      ],
+      "new": false
+    }
+  ]
+}

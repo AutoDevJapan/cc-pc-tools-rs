@@ -1,0 +1,66 @@
+// Self-authored owned XML fixture only. No network, source execution or UI.
+package main
+
+import (
+	"bytes"
+	"encoding/xml"
+	"net/url"
+	"strings"
+	"testing"
+)
+
+func TestReviewedRSSFixtureKeepsDocumentBaseAndUnknownPublicationDate(t *testing.T) {
+	base, err := url.Parse("https://example.invalid/news/index.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	relative, err := url.Parse("article.html")
+	if err != nil {
+		t.Fatal(err)
+	}
+	resolved := base.ResolveReference(relative).String()
+	if resolved != "https://example.invalid/news/article.html" {
+		t.Fatalf("document path lost: %s", resolved)
+	}
+	type item struct {
+		Title   string `xml:"title"`
+		Link    string `xml:"link"`
+		PubDate string `xml:"pubDate,omitempty"`
+	}
+	type channel struct {
+		Title       string `xml:"title"`
+		Link        string `xml:"link"`
+		Description string `xml:"description"`
+		Item        item   `xml:"item"`
+	}
+	feed := struct {
+		XMLName xml.Name `xml:"rss"`
+		Version string   `xml:"version,attr"`
+		Channel channel  `xml:"channel"`
+	}{Version: "2.0", Channel: channel{Title: "Synthetic test", Link: base.String(), Description: "Owned fixture; no page fetched", Item: item{Title: "A&B 日本語 <tag>", Link: resolved}}}
+	encoded, err := xml.Marshal(feed)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bytes.Contains(encoded, []byte("<pubDate")) || !bytes.Contains(encoded, []byte("A&amp;B 日本語 &lt;tag&gt;")) {
+		t.Fatalf("unknown date invented or text not encoded: %s", encoded)
+	}
+	var decoded struct {
+		Version string  `xml:"version,attr"`
+		Channel channel `xml:"channel"`
+	}
+	if err = xml.Unmarshal(encoded, &decoded); err != nil {
+		t.Fatal(err)
+	}
+	if decoded.Version != "2.0" || decoded.Channel.Item.Title != "A&B 日本語 <tag>" || decoded.Channel.Item.Link != resolved || decoded.Channel.Item.PubDate != "" {
+		t.Fatal("fixture roundtrip lost document identity/date/text")
+	}
+	// The source's origin-only algorithm is an explicit negative comparator.
+	origin, err := url.Parse(base.Scheme + "://" + base.Host + "/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if wrong := origin.ResolveReference(relative).String(); wrong == resolved || !strings.HasSuffix(wrong, "/article.html") {
+		t.Fatal("negative URL comparator does not distinguish the former behavior")
+	}
+}

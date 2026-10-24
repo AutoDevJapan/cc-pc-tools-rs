@@ -7,11 +7,19 @@ fn acquisition_completion_and_worker_observation_use_their_distinct_clocks() {
     let start = html.find("if(data&&data.workforce){").unwrap();
     let end = html[start..].find("if(data&&data.previousDataAt)").unwrap() + start;
     let rendering = &html[start..end];
+    let helper_start = html.find("function opsProcessingSummary(").unwrap();
+    let helper_end = html[helper_start..]
+        .find("function renderProgress(")
+        .unwrap()
+        + helper_start;
+    let helper = &html[helper_start..helper_end];
     let script = format!(
         r#"
 const assert=require('node:assert/strict');
 const host={{textContent:''}},$=()=>host;
 const opsTime=value=>value==null?'未確認':String(value),opsValue=opsTime;
+const opsList=value=>Array.isArray(value)?value:[];
+{helper}
 const data={{workforce:{{acquisition:{{startedAt:1000,completedAt:3000}},processing:{{startedAt:1500,observedAt:2500,state:'complete'}},responsibility:{{productRoles:29}}}}}};
 {rendering}
 assert.match(host.textContent,/取得開始 1000/);

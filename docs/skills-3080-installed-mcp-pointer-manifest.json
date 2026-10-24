@@ -1,0 +1,96 @@
+{
+  "todo": 3080,
+  "job": "20261024-123649-todo-3080",
+  "applied_at": "2026-10-24T03:55:53.5112617Z",
+  "root": "D:/CC/Skills",
+  "bundle_sha256": "b1eb81bf6ee61c6f2d3bd5a3739c89d85d4141352702108282690e8af8e10dc9",
+  "journal_sha256": "bfec7d27db518408a096ad6f95e90feef6cec4f22af2da6612aae1016807d295",
+  "targets": [
+    {
+      "name": "mcp-builder",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "指定サービスの検索とページングをMCPとして公開する設計と受入を作る。",
+      "negative": "既存ツールを1回使うだけの依頼や、掲載名だけを根拠にしたコードレビュー。",
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/aabbcc456aa/hxl-code-reviewer/SKILL.md",
+        "https://github.com/anthropics/skills/blob/dbd4588f9e1033efb41dad4bef2f7947c8993d44/skills/mcp-builder/SKILL.md"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
+          "bytes": 9092,
+          "mode": "create_new"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362",
+          "bytes": 11345,
+          "mode": "create_new"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "d0fb402aed5be70a7e2d6013b183901be403719ea01f0aecd397fca21bee763d",
+          "bytes": 2053,
+          "mode": "create_new"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "ded1e0a06ea87905d22c0fd1d7fd8ab41fd7f676911184eff7c803533e01295b",
+          "bytes": 5928,
+          "mode": "create_new"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "0ae88aa71d14ac1aa2505bc1406f5e427cdc8882bf1f2ef67720a49c02f0fedc",
+          "bytes": 2299,
+          "mode": "create_new"
+        }
+      ]
+    },
+    {
+      "name": "pointer-trail-emitter",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "手の速さで密度が変わらない火花の軌跡を作り、急移動で負荷上限を守る。",
+      "negative": "普通のリンクに依頼されていない装飾を足す。画像を見せるマスクや静止情報表示。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/pointer-trail-emitter/SKILL.md"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "2cca505af09e4f34a96e1dd08b1d9bc1caca467dba3debfe62fce4756b2f2964",
+          "bytes": 10566,
+          "mode": "create_new"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "bytes": 1064,
+          "mode": "create_new"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "e6b72446d1d187cb46f097d2c393159880a77ce9bf3b167e3dc636bd138148a3",
+          "bytes": 1943,
+          "mode": "create_new"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "9fff573e92fa6226c3c24483dd2aa59c4f3a270164ebdd01eb061b5eb2bf655b",
+          "bytes": 4324,
+          "mode": "create_new"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "3e8e5b19aca6e33be1dea2485911554d790651cb6bf02e5d4ffe63563d2d9996",
+          "bytes": 1999,
+          "mode": "create_new"
+        }
+      ]
+    }
+  ],
+  "write_scope": "Only two absent new skill directories and ten CreateNew files. No existing skills or configuration modified."
+}

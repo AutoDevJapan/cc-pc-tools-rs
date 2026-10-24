@@ -1,0 +1,53 @@
+{
+  "todo": 3080,
+  "targets": [
+    {
+      "before_sha256": "056b3097ea93188a9d38ee4822ea1110768bb726e39b0314a31149b5a07a7bfb",
+      "name": "webgl-effects",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-retina-resolution/SKILL.md"
+      ],
+      "negative": "元画像の撮影ディテールを描画バッファだけで新しく生成する",
+      "new": false,
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "347c6eabe30cf3d4d4d52b711bedff193b706a8d8f6c04bbb0f24e0e85d163c4",
+          "bytes": 11129,
+          "mode": "replace_exact_original"
+        },
+        {
+          "path": "references/index.md",
+          "sha256": "010dd81db21484babf74dc88961417f2908e59f9022108fff0f963468ed9310f",
+          "bytes": 6441,
+          "mode": "replace_exact_original"
+        },
+        {
+          "path": "references/retina-resolution.md",
+          "sha256": "7fe261f29c5dfd0397d19e705c0e974e7c47218ecdee876b06bafcd0788c30a4",
+          "bytes": 5872,
+          "mode": "create_new"
+        },
+        {
+          "path": "references/retina-resolution-upstream.txt",
+          "sha256": "632232040749513e129f58b55ed3361378af9c6803dfd29f8ca596e273d55174",
+          "bytes": 6282,
+          "mode": "create_new"
+        },
+        {
+          "path": "references/retina-resolution-mit.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "bytes": 1064,
+          "mode": "create_new"
+        },
+        {
+          "path": "references/retina-resolution-source.json",
+          "sha256": "7f10b53e62338e25f08046b7df47cbdc7c53df795262afc62e6c77dbb8350261",
+          "bytes": 4132,
+          "mode": "create_new"
+        }
+      ],
+      "positive": "Three.jsで固定200%とAutoや後処理の寸法が食い違う"
+    }
+  ]
+}

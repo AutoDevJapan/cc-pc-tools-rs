@@ -111,6 +111,12 @@ impl Operations {
     ) -> Result<Value, &'static str> {
         self.native.close(request, now_ms())
     }
+    pub fn connect_native(
+        &self,
+        request: crate::native_activity::Connect,
+    ) -> Result<Value, &'static str> {
+        self.native.connect(request, now_ms())
+    }
     pub fn refresh(&self) {
         let live = self
             .questions
@@ -367,6 +373,17 @@ mod native_scope_regressions {
     }
 }
 pub async fn resident(board: Arc<Operations>) {
+    let native_observer = board.clone();
+    tokio::spawn(async move {
+        let mut tick = tokio::time::interval(Duration::from_secs(2));
+        tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+        loop {
+            tick.tick().await;
+            let board = native_observer.clone();
+            let _ =
+                tokio::task::spawn_blocking(move || board.native.refresh_runtime(now_ms())).await;
+        }
+    });
     let inspection = board.clone();
     tokio::spawn(async move {
         let mut tick = tokio::time::interval(Duration::from_secs(120));

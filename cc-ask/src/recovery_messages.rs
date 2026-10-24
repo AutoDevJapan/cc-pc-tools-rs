@@ -30,6 +30,9 @@ mod clarification;
 const LEDGER: &str = "recovery-messages.json";
 const LOCK: &str = "recovery-messages.lock";
 const DOMAIN: &str = "new-owner-recovery-messages";
+
+mod decision_lookup;
+pub use decision_lookup::lookup_decision;
 const EMBEDS: u64 = 4;
 const TEXT_BYTES: usize = 128 * 1024;
 const LEDGER_BYTES: usize = 32 * 1024 * 1024;
@@ -1899,6 +1902,19 @@ struct RecoveryApi<'a> {
 
 impl<'a> RecoveryApi<'a> {
     fn bind(ctx: &'a mut Context, ledger: &mut Ledger, request: &Request) -> Result<Self> {
+        Self::bind_inner(ctx, ledger, request, true)
+    }
+
+    fn inspect(ctx: &'a mut Context, ledger: &mut Ledger, request: &Request) -> Result<Self> {
+        Self::bind_inner(ctx, ledger, request, false)
+    }
+
+    fn bind_inner(
+        ctx: &'a mut Context,
+        ledger: &mut Ledger,
+        request: &Request,
+        persist: bool,
+    ) -> Result<Self> {
         if Destination::from_context(ctx)? != request.destination {
             return Err("recovery destination changed; original receipt scope retained".into());
         }
@@ -1914,7 +1930,7 @@ impl<'a> RecoveryApi<'a> {
         {
             return Err("authenticated recovery bot differs from saved author".into());
         }
-        if ledger.bot(&request.request_id).is_none() {
+        if persist && ledger.bot(&request.request_id).is_none() {
             ledger.append(
                 &ctx.here,
                 Event::Bot {
@@ -2491,6 +2507,20 @@ fn prepare_log(ctx: &mut Context, args: &LogArgs) -> Result<(Request, Vec<Image>
     request_key(&args.request_id)?;
     let secrets = SecretCheck::new();
     let body = text_input(&args.body_file, &secrets)?;
+    prepare_log_body(ctx, args, body)
+}
+
+fn prepare_log_body(
+    ctx: &mut Context,
+    args: &LogArgs,
+    body: String,
+) -> Result<(Request, Vec<Image>)> {
+    request_key(&args.request_id)?;
+    let secrets = SecretCheck::new();
+    secrets.text(&body)?;
+    if body.trim().is_empty() {
+        return Err("recovery body must be nonempty".into());
+    }
     no_mentions(&body)?;
     if args.notify {
         log_requires_owner_action(&body)?;
@@ -2616,9 +2646,24 @@ pub fn log_clarification(ctx: &mut Context, args: &LogArgs, manifest: &Path) -> 
         return Err("clarification requires the exact silent text-only destination".into());
     }
     let binding = clarification::Binding::read(manifest)?;
-    let (request, images) = prepare_log(ctx, args)?;
+    let (request, _) = prepare_clarification(ctx, args)?;
     binding.check_input(&request)?;
-    execute_inner(ctx, Some(request), None, &images, Some(&binding))
+    execute_inner(ctx, Some(request), None, &[], Some(&binding))
+}
+
+fn prepare_clarification(ctx: &mut Context, args: &LogArgs) -> Result<(Request, String)> {
+    let bytes = read_bounded(
+        fs::File::open(&args.body_file).map_err(|_| "cannot read clarification input")?,
+        TEXT_BYTES,
+    )?;
+    let raw_sha = format!("{:x}", Sha256::digest(&bytes));
+    let body = String::from_utf8(bytes)
+        .map_err(|_| "clarification input must be UTF-8")?
+        .trim_start_matches('\u{feff}')
+        .replace("\r\n", "\n")
+        .replace('\r', "\n");
+    let (request, _) = prepare_log_body(ctx, args, body)?;
+    Ok((request, raw_sha))
 }
 
 /// The same association checks, but no journal update and no send operation.
@@ -2626,22 +2671,27 @@ pub fn check_clarification(ctx: &mut Context, args: &LogArgs, manifest: &Path) -
     if args.notify || !args.attach.is_empty() || args.thread.is_none() {
         return Err("clarification check requires the exact silent text-only destination".into());
     }
-    let binding = clarification::Binding::read(manifest)?;
-    let (request, _) = prepare_log(ctx, args)?;
+    let (binding, binding_sha) = clarification::Binding::read_with_hash(manifest)?;
+    let (request, source_sha) = prepare_clarification(ctx, args)?;
     binding.check_input(&request)?;
     let home = ctx.here.clone();
+    ensure_storage(&home)?;
+    // A valid original question already owns this lock file. Do not create a
+    // file even for an invalid check directed to an empty home.
+    if !fs::symlink_metadata(home.join(LOCK))
+        .is_ok_and(|m| m.is_file() && !m.file_type().is_symlink())
+    {
+        return Err("clarification requires an existing original question lock".into());
+    }
     let _lock = ByteLock::acquire(&home.join(LOCK), Duration::ZERO)?;
     let mut ledger = Ledger::load(&home)?;
-    if ledger.request(&request.request_id) != Some(&request)
-        || ledger.bot(&request.request_id).is_none()
-    {
-        return Err("clarification check requires the unchanged saved intent and bot".into());
-    }
-    let mut api = RecoveryApi::bind(ctx, &mut ledger, &request)?;
-    clarification::authorize(&mut api, &ledger, &home, &request, &binding, false)?;
+    let mut api = RecoveryApi::inspect(ctx, &mut ledger, &request)?;
+    clarification::authorize(&mut api, &ledger, &home, &request, &binding, false, false)?;
     Ok(
         json!({"domain":DOMAIN,"request_id":request.request_id,"delivery":"not_sent",
-        "check_only":true,"original_intent_retained":true}),
+        "check_only":true,"original_intent_retained":true,
+        "body_sha256":format!("{:x}",Sha256::digest(request.body.as_bytes())),
+        "source_body_sha256":source_sha,"binding_sha256":binding_sha}),
     )
 }
 
@@ -3009,14 +3059,20 @@ fn execute_inner(
 ) -> Result<Value> {
     let home = ctx.here.clone();
     ensure_storage(&home)?;
+    if clarification.is_some()
+        && !fs::symlink_metadata(home.join(LOCK))
+            .is_ok_and(|m| m.is_file() && !m.file_type().is_symlink())
+    {
+        return Err("clarification requires an existing original question lock".into());
+    }
     let _lock = ByteLock::acquire(&home.join(LOCK), Duration::ZERO)?;
     let mut ledger = Ledger::load(&home)?;
-    if clarification.is_some()
-        && incoming
-            .as_ref()
-            .is_none_or(|request| ledger.request(&request.request_id) != Some(request))
-    {
-        return Err("clarification requires the unchanged existing unsent log intent".into());
+    if let (Some(binding), Some(request)) = (clarification, incoming.as_ref()) {
+        let mut api = RecoveryApi::inspect(ctx, &mut ledger, request)?;
+        // Authenticate against the independent question before creating the
+        // new intent/bot record. Pin the entire validated intent atomically in
+        // the purpose journal first, so a crash cannot permit rebinding.
+        clarification::authorize(&mut api, &ledger, &home, request, binding, true, false)?;
     }
     let incoming = match (incoming, saved) {
         (Some(request), None) => request,
@@ -3081,9 +3137,7 @@ fn execute_inner(
                 request.notify && log_requires_owner_action(&request.body)?
             };
             if let Some(thread) = thread {
-                if let Some(binding) = clarification {
-                    clarification::authorize(&mut api, &ledger, &home, &request, binding, true)?;
-                } else {
+                if clarification.is_none() {
                     let is_progress =
                         RecoveryApi::known_progress(&ledger, &api.destination, &api.bot, thread)
                             .ok_or(
@@ -3098,6 +3152,13 @@ fn execute_inner(
             let mut destination = thread.clone();
             for (index, body) in text.iter().enumerate() {
                 let phase = format!("log:{index}");
+                if ledger.effect(&request.request_id, &phase).is_none() {
+                    if let Some(binding) = clarification {
+                        clarification::authorize(
+                            &mut api, &ledger, &home, &request, binding, true, true,
+                        )?;
+                    }
+                }
                 let target = match &destination {
                     Some(thread) => Target::Thread {
                         thread: thread.clone(),
@@ -4120,6 +4181,10 @@ mod tests {
         }
     }
 
+    mod decision_lookup_tests {
+        include!("recovery_messages/decision_lookup_tests.rs");
+    }
+
     fn clarification_fixture(f: &Fixture, ctx: &mut Context) -> (LogArgs, PathBuf, Value) {
         clarification_fixture_body(f, ctx, "これは元の質問の背景を補う説明です。")
     }
@@ -4129,6 +4194,15 @@ mod tests {
         ctx: &mut Context,
         body: &str,
     ) -> (LogArgs, PathBuf, Value) {
+        clarification_case(f, ctx, body, true)
+    }
+
+    fn clarification_case(
+        f: &Fixture,
+        ctx: &mut Context,
+        body: &str,
+        resume: bool,
+    ) -> (LogArgs, PathBuf, Value) {
         let question = f.ask("clarification-question", "元の仕様を選んでください。");
         let sent = ask(ctx, &question).unwrap();
         let thread = core::s(&sent["thread_id"]);
@@ -4136,7 +4210,9 @@ mod tests {
         let mut args = f.log("clarification-log", body, false);
         args.thread = Some(thread.into());
         // The ordinary request already failed before reserving any POST.
-        assert!(log(ctx, &args).unwrap_err().contains("explicit log thread"));
+        if resume {
+            assert!(log(ctx, &args).unwrap_err().contains("explicit log thread"));
+        }
         let ledger = Ledger::load(&f.home).unwrap();
         let original = ledger.request(&question.request_id).unwrap();
         let hash = |body: &str| format!("{:x}", Sha256::digest(body.as_bytes()));
@@ -4152,6 +4228,576 @@ mod tests {
         let manifest = f.root.path().join("clarification.json");
         fs::write(&manifest, serde_json::to_vec(&binding).unwrap()).unwrap();
         (args, manifest, binding)
+    }
+
+    #[test]
+    fn first_clarification_checks_without_intent_then_delivers_once() {
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let (args, manifest, _) = clarification_case(&f, &mut ctx, "費用の内訳の説明です。", false);
+        let before = fs::read(f.home.join(LEDGER)).unwrap();
+        let posts = f.server.lock().unwrap().posts.len();
+        let check = check_clarification(&mut ctx, &args, &manifest).unwrap();
+        assert_eq!(check["delivery"], "not_sent");
+        assert_eq!(fs::read(f.home.join(LEDGER)).unwrap(), before);
+        assert!(!f.home.join("recovery-clarifications.json").exists());
+        let first = log_clarification(&mut ctx, &args, &manifest).unwrap();
+        let again = log_clarification(&mut ctx, &args, &manifest).unwrap();
+        assert_eq!(first["delivery"], "verified");
+        assert_eq!(first["message_id"], again["message_id"]);
+        assert_eq!(f.server.lock().unwrap().posts.len(), posts + 1);
+        let ledger = Ledger::load(&f.home).unwrap();
+        assert_eq!(
+            ledger.request(&args.request_id).unwrap().fingerprint,
+            first["original_fingerprint"]
+        );
+        f.unchanged();
+    }
+
+    #[test]
+    fn first_clarification_rejects_invalid_scope_before_any_journal_write() {
+        for field in [
+            "purpose",
+            "question_request_id",
+            "todo_id",
+            "question_fingerprint",
+            "question_body_sha256",
+            "bot_id",
+            "owner_id",
+            "reply_message_id",
+            "reply_body_sha256",
+            "reply_timestamp",
+            "reply_edited_timestamp",
+            "body_sha256",
+            "thread_id",
+            "question_message_id",
+        ] {
+            let f = Fixture::new();
+            let mut ctx = f.context();
+            let (args, manifest, mut proof) =
+                clarification_case(&f, &mut ctx, "元質問への説明です。", false);
+            proof[field] = if field == "todo_id" {
+                json!(999)
+            } else if field.ends_with("sha256") || field == "question_fingerprint" {
+                json!("c".repeat(64))
+            } else if field == "reply_edited_timestamp" {
+                json!("2026-10-12T00:00:02Z")
+            } else if field == "reply_timestamp" {
+                json!("2026-10-12T00:00:03Z")
+            } else if field.ends_with("_id") {
+                json!("999")
+            } else {
+                json!("wrong")
+            };
+            fs::write(&manifest, proof.to_string()).unwrap();
+            let before = fs::read(f.home.join(LEDGER)).unwrap();
+            let posts = f.server.lock().unwrap().posts.len();
+            assert!(
+                check_clarification(&mut ctx, &args, &manifest).is_err(),
+                "{field}"
+            );
+            assert!(
+                log_clarification(&mut ctx, &args, &manifest).is_err(),
+                "{field}"
+            );
+            assert_eq!(fs::read(f.home.join(LEDGER)).unwrap(), before, "{field}");
+            assert!(
+                !f.home.join("recovery-clarifications.json").exists(),
+                "{field}"
+            );
+            assert_eq!(f.server.lock().unwrap().posts.len(), posts);
+            f.unchanged();
+        }
+    }
+
+    #[test]
+    fn first_clarification_owner_edit_after_check_stops_first_send() {
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let (args, manifest, proof) =
+            clarification_case(&f, &mut ctx, "元質問への説明です。", false);
+        check_clarification(&mut ctx, &args, &manifest).unwrap();
+        let before = fs::read(f.home.join(LEDGER)).unwrap();
+        let posts = f.server.lock().unwrap().posts.len();
+        let mut server = f.server.lock().unwrap();
+        let row = server
+            .messages
+            .get_mut(proof["thread_id"].as_str().unwrap())
+            .unwrap()
+            .iter_mut()
+            .find(|v| v["id"] == proof["reply_message_id"])
+            .unwrap();
+        row["edited_timestamp"] = json!("2026-10-12T00:00:03Z");
+        drop(server);
+        assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
+        assert_eq!(fs::read(f.home.join(LEDGER)).unwrap(), before);
+        assert_eq!(f.server.lock().unwrap().posts.len(), posts);
+        assert!(!f.home.join("recovery-clarifications.json").exists());
+        f.unchanged();
+    }
+
+    #[test]
+    fn first_clarification_accepts_a_question_about_necessity_but_not_a_choice() {
+        let mut mismatches = Vec::new();
+        let issue_cases: Vec<(String, bool)> =
+            serde_json::from_str(include_str!("../tests/fixtures/clarification-414.json")).unwrap();
+        for (reply, accepted) in [
+            ("これでやって？", false),
+            ("作って？", false),
+            ("送って？", false),
+            ("使って？", false),
+            ("待って？", false),
+            ("作業領域ってなに？", true),
+            ("作業領域って何？", true),
+            ("作業領域とは何ですか", true),
+            (
+                "まず、作業領域ってなに？そして、作業領域を二種類に制限したい。",
+                true,
+            ),
+            ("作業領域とは？", true),
+            ("作業領域ってなにか変わったね。", false),
+            ("「作業領域ってなに？」という質問を保存して", false),
+            ("作業領域ってなに？ aで進めてください", false),
+            ("その費用は必要ではないの？", true),
+            ("なんで？", true),
+            ("どういうこと？", true),
+            ("これ要る？", true),
+            ("何の費用？", true),
+            ("なぜ必要なのか教えて", true),
+            ("どうして必要", true),
+            ("なんで", true),
+            ("内訳を教えて", true),
+            ("内訳を教えてほしいです", true),
+            ("もっと詳しく教えてください", true),
+            ("bを選んだら費用はいくら？", true),
+            ("bを選べば費用はどうなる？", true),
+            ("aにしたら何の機能が止まる？", true),
+            ("aであれば費用は必要なの？", true),
+            ("なんでaがいいの？", true),
+            ("aがいい理由は？", true),
+            ("aが良いのはなぜ？", true),
+            ("なぜaにしたの？", true),
+            ("cにした理由は？", true),
+            ("aにすると何の機能が止まる？", true),
+            ("aにすると、何の機能が止まる？", true),
+            ("なぜaにしたらいいの？", true),
+            ("なぜか教えて", true),
+            ("なぜかな？", true),
+            ("なぜ、aにしたの？", true),
+            ("aにするのはなぜ？", true),
+            ("aにする場合、費用は？", true),
+            ("aにするとき、費用は？", true),
+            ("aにする時、費用は？", true),
+            ("aが良いのはなぜか？", true),
+            ("なぜかを教えて", true),
+            ("aでも必要？", true),
+            ("aでの費用は？", true),
+            ("aで進めたら費用はいくら？", true),
+            ("aでいいのはなぜ？", true),
+            ("aがいいと思う理由は？", true),
+            ("aを採用すると費用は？", true),
+            ("aにしたらいい理由は？", true),
+            ("aにしたのはなぜか教えて", true),
+            ("なぜaにしたのか教えて？", true),
+            ("なんで、勝手にaにしたの？", true),
+            ("aにしたのは、なぜですか？", true),
+            ("なぜaにしたのでしょうか？", true),
+            ("なぜaで進めているのですか", true),
+            ("なんでaで固定しているんですか", true),
+            ("なぜaにしたのですか", true),
+            ("aで大丈夫なんでお願いします", false),
+            ("aで大丈夫なんですが、進めてください", false),
+            ("bで決まりなんで進めて", false),
+            ("aで十分なんですよ。進めて", false),
+            ("aでいいよなんで？", false),
+            ("bでOKなんで聞くの？", false),
+            ("aでいいよなんで必要？", false),
+            ("aで大丈夫なんで、お願いします", false),
+            ("bで決まりなんで 進めて", false),
+            ("aで十分なんで。進めて", false),
+            ("aでいいよなぜ必要？", false),
+            ("bでOKどうして聞くの？", false),
+            ("どうして止まったか知らないがaで進めてもらえますか", false),
+            ("なぜ止まったか知らないがbで進めていただけますか", false),
+            ("なぜaで十分なんですか", true),
+            ("bで大丈夫なんですか", true),
+            ("cで決まりなんでしょうか", true),
+            ("aで同じものなんで、お願いします", false),
+            ("bで別のものなんで 進めて", false),
+            ("aにするとなんでダメなの？", true),
+            ("aでもなんで必要なの？", true),
+            ("aにしてもなんで必要？", true),
+            ("aで払うのなんで必要？", true),
+            ("aで使うのなんで？", true),
+            ("aで買うのどうして？", true),
+            ("なぜaで十分なんですかー？", true),
+            ("なぜaで十分なんですか笑", true),
+            ("aで進めてもらえる理由は？", true),
+            ("aで進めていただける理由は？", true),
+            ("aで払うがなんで必要？", false),
+            ("なぜaにするほうが安いの？", true),
+            ("aにするほうが安い理由は？", true),
+            ("aを選ぶほうが良い理由は？", true),
+            ("aで多くが安いのはなぜ？", true),
+            ("aでひとつが高い理由は？", true),
+            ("aで費用はなんで必要？", true),
+            ("aで進めたら費用はなんで必要？", true),
+            ("aで進めてもなんで必要なの？", true),
+            ("aで進めてはなんで必要？", true),
+            ("aで月5ドルぐらいが必要な理由は？", true),
+            ("aでどれくらいが必要な理由は？", true),
+            ("aで少しぐらいが必要な理由は？", true),
+            ("aでくらいがそれはなんで必要？", false),
+            ("aでわたしがなんで払うの？", true),
+            ("aでまんがなんで、お願いします", false),
+            ("aでこれがなんで必要？", true),
+            ("aでStripeがなんで必要？", true),
+            ("aでAPIもなんで要るの？", true),
+            ("aで費用を確認して進めてもらえますか？", false),
+            ("aで必要な手続きを進めてもらえませんか？", false),
+            ("aで進めてはいけない理由は？", true),
+            ("aでこれってなんで必要なの？", true),
+            ("aで進めてはならない理由は？", true),
+            ("aで進めてはだめな理由は？", true),
+            ("aでいつもどうして必要？", true),
+            ("aで費用の理由を説明してもらえますか？", true),
+            ("aで費用の理由を教えてもらえませんか？", true),
+            ("aで費用の内訳を見せてもらえる？", true),
+            ("aで費用ってなんで必要？", true),
+            ("aでAPIってなんで必要？", true),
+            ("aでやってなんで必要？", false),
+            ("aで走ってなんで必要？", false),
+            ("aにしたら費用を確認して進めてもらえますか？", false),
+            ("aで進めてはいけない、理由も教えて", false),
+            ("なぜaで費用が必要か教えてもらえますか？", true),
+            ("どうして止まったか知らないがaで進めては？", false),
+            ("aでこれはどうして必要？", true),
+            ("aでシステムがなんで必要？", true),
+            ("aでプランもどうして必要？", true),
+            ("aでこれをなんで使うの？", true),
+            (
+                "どうして止まったか知らないがaで進めてもらえませんか？",
+                false,
+            ),
+            ("なぜ止まったか知らないがbで進めていただけませんか？", false),
+            ("どうして止まったか知らないがaで進めてもらえる？", false),
+            ("aで進めてもらえませんか理由も教えて", false),
+            ("aにしてもらえませんか", false),
+            ("aにしてもらえませんか理由も教えて", false),
+            ("どうして止まったか知らないがaにしてもらえますか", false),
+            ("aでしろうとなんで、お願いします", false),
+            ("aでいつもなんで、お願いします", false),
+            ("なぜなら安い", false),
+            ("どうしてもaにしたい", false),
+            ("どうしても必要", false),
+            ("なぜか止まった", false),
+            ("進捗を教えてください", false),
+            ("進捗を詳しく教えてください", false),
+            ("a", false),
+            ("bで進めて", false),
+            ("必要です", false),
+            ("aで。なぜなら安い", false),
+            ("aで、なんで？", false),
+            ("aで なんで？", false),
+            ("aで　なんで？", false),
+            ("aで…なんで？", false),
+            ("aにするけどなんで必要？", false),
+            ("aでお願いします 理由も教えて", false),
+            ("aにしたので費用は？", false),
+            ("aにしたらいい なんで迷うの？", false),
+            ("aにすればいい。なんで迷うの？", false),
+            ("aであればいい。理由を教えて", false),
+            ("aにすればよい。理由を教えて", false),
+            ("なぜaがいいの？ bにするけど費用は？", false),
+            ("aで、なぜbがいいの？", false),
+            ("なんで迷うの、aにしたらいいでしょ？", false),
+            ("なんで止まってるの、aで進めてって言ったよね？", false),
+            ("aにするのは確定、なんで聞くの？", false),
+            ("aで時間かかってもいいから進めて、理由も教えて", false),
+            ("aで決まっているよね？", false),
+            ("aにするが費用は？", false),
+            ("aで行くけれど費用は？", false),
+            ("aでいいよ理由も教えて", false),
+            ("bを選ぶ。理由を教えて", false),
+            ("今回はaで、なんで？", false),
+            ("cで、なんで？", false),
+            ("aにする。なんで必要？", false),
+            ("dがいい。理由を教えて", false),
+            ("aにしたらいい。なんで迷うの？", false),
+            ("bを選べばいい。理由を教えて", false),
+            ("aにすると決めた。なんで必要？", false),
+            ("必要じゃない。止めて", false),
+            ("説明は不要、aで", false),
+        ]
+        .into_iter()
+        .chain(
+            issue_cases
+                .iter()
+                .map(|(reply, accepted)| (reply.as_str(), *accepted)),
+        ) {
+            let f = Fixture::new();
+            let mut ctx = f.context();
+            let (args, manifest, mut proof) =
+                clarification_case(&f, &mut ctx, "内訳を説明します。", false);
+            let mut server = f.server.lock().unwrap();
+            server
+                .messages
+                .get_mut(proof["thread_id"].as_str().unwrap())
+                .unwrap()
+                .iter_mut()
+                .find(|v| v["id"] == proof["reply_message_id"])
+                .unwrap()["content"] = json!(reply);
+            drop(server);
+            proof["reply_body_sha256"] = json!(format!("{:x}", Sha256::digest(reply.as_bytes())));
+            fs::write(&manifest, proof.to_string()).unwrap();
+            let actual = check_clarification(&mut ctx, &args, &manifest).is_ok();
+            if actual != accepted {
+                mismatches.push((reply, accepted, actual));
+            }
+        }
+        assert!(mismatches.is_empty(), "{mismatches:?}");
+    }
+
+    #[test]
+    fn first_clarification_lost_response_and_edit_recovers_with_only_get() {
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let (args, manifest, _) = clarification_case(&f, &mut ctx, "初回の説明です。", false);
+        let posts = f.server.lock().unwrap().posts.len();
+        {
+            let mut server = f.server.lock().unwrap();
+            server.drop_response = true;
+            server.block_reads_after_post = true;
+        }
+        assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
+        {
+            let mut server = f.server.lock().unwrap();
+            server.blocked = false;
+            server
+                .messages
+                .get_mut(args.thread.as_ref().unwrap())
+                .unwrap()
+                .iter_mut()
+                .find(|v| v["author"]["id"] == OWNER)
+                .unwrap()["content"] = json!("編集済みです。");
+        }
+        assert_eq!(
+            log_clarification(&mut ctx, &args, &manifest).unwrap()["delivery"],
+            "verified"
+        );
+        assert_eq!(f.server.lock().unwrap().posts.len(), posts + 1);
+        f.unchanged();
+    }
+
+    #[test]
+    fn first_clarification_does_not_reopen_an_explicitly_closed_question() {
+        for (phase, outcome, attempted, accepted) in [
+            ("reply_pending", None, false, true),
+            ("reply_pending", Some("archived"), false, false),
+            ("reply_pending", None, true, false),
+            ("patch_pending", None, true, false),
+            ("patch_pending", None, false, false),
+            ("verified", None, false, false),
+            ("verified", Some("archived"), false, false),
+        ] {
+            let f = Fixture::new();
+            let mut ctx = f.context();
+            let (args, manifest, _) = clarification_case(&f, &mut ctx, "元の説明です。", false);
+            f.server
+                .lock()
+                .unwrap()
+                .channels
+                .get_mut(args.thread.as_ref().unwrap())
+                .unwrap()["thread_metadata"] = json!({"archived":true});
+            fs::write(f.home.join(CLOSE_LEDGER),json!({"domain":DOMAIN,"version":1,"records":{args.thread.as_ref().unwrap():{
+            "binding":{"request_id":"clarification-question","thread_id":args.thread,"question_message_id":args.thread,
+            "origin_todo_id":2472,"todo_id":2472,"message_id":"9999","author_id":OWNER,"job_id":"fixture-job","revision":"a".repeat(40),
+            "question_fingerprint":"a".repeat(64),"reply_sha256":"a".repeat(64),"receipt_sha256":"a".repeat(64),"verification_sha256":"a".repeat(64),"completion":"synthetic completion"},
+            "phase":phase,"outcome":outcome,"pending_reply_ids":[],"patch_attempted":attempted}}}).to_string()).unwrap();
+            let before = fs::read(f.home.join(LEDGER)).unwrap();
+            let posts = f.server.lock().unwrap().posts.len();
+            let result = log_clarification(&mut ctx, &args, &manifest);
+            if accepted {
+                assert_eq!(result.unwrap()["delivery"], "verified", "{phase}");
+            } else {
+                assert!(
+                    result.unwrap_err().contains("explicit close record"),
+                    "{phase}"
+                );
+                assert_eq!(fs::read(f.home.join(LEDGER)).unwrap(), before);
+            }
+            assert_eq!(
+                f.server.lock().unwrap().posts.len(),
+                posts + usize::from(accepted)
+            );
+            f.unchanged();
+        }
+    }
+
+    #[test]
+    fn first_clarification_accepts_discord_auto_archive_without_a_close_record() {
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let (args, manifest, _) = clarification_case(&f, &mut ctx, "元の説明です。", false);
+        f.server
+            .lock()
+            .unwrap()
+            .channels
+            .get_mut(args.thread.as_ref().unwrap())
+            .unwrap()["thread_metadata"] = json!({"archived":true});
+        let posts = f.server.lock().unwrap().posts.len();
+        assert_eq!(
+            log_clarification(&mut ctx, &args, &manifest).unwrap()["delivery"],
+            "verified"
+        );
+        assert_eq!(f.server.lock().unwrap().posts.len(), posts + 1);
+        assert!(!f.home.join(CLOSE_LEDGER).exists());
+        f.unchanged();
+    }
+
+    #[test]
+    fn first_clarification_partial_lost_response_recovers_before_rejecting_edited_remainder() {
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let (args, manifest, _) =
+            clarification_case(&f, &mut ctx, &"元の説明です。".repeat(500), false);
+        assert!(parts(&fs::read_to_string(&args.body_file).unwrap()).len() > 1);
+        let posts = f.server.lock().unwrap().posts.len();
+        {
+            let mut server = f.server.lock().unwrap();
+            server.drop_response = true;
+            server.block_reads_after_post = true;
+        }
+        assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
+        assert!(Ledger::load(&f.home)
+            .unwrap()
+            .receipt(&args.request_id, "log:0")
+            .is_none());
+        {
+            let mut server = f.server.lock().unwrap();
+            server.blocked = false;
+            server
+                .messages
+                .get_mut(args.thread.as_ref().unwrap())
+                .unwrap()
+                .iter_mut()
+                .find(|v| v["author"]["id"] == OWNER)
+                .unwrap()["edited_timestamp"] = json!("2026-10-12T00:00:03Z");
+        }
+        assert_eq!(
+            check_clarification(&mut ctx, &args, &manifest).unwrap()["delivery"],
+            "not_sent"
+        );
+        assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
+        let ledger = Ledger::load(&f.home).unwrap();
+        assert!(
+            ledger.receipt(&args.request_id, "log:0").is_some(),
+            "sent first part was not recovered"
+        );
+        assert!(ledger.effect(&args.request_id, "log:1").is_none());
+        assert_eq!(f.server.lock().unwrap().posts.len(), posts + 1);
+        f.unchanged();
+    }
+
+    #[test]
+    fn first_clarification_parallel_send_uses_the_existing_byte_lock() {
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let (args, manifest, _) = clarification_case(&f, &mut ctx, "初回の説明です。", false);
+        let home = f.home.clone();
+        let root = f.root.path().to_owned();
+        let server = f.server.clone();
+        let worker_args = LogArgs {
+            request_id: args.request_id.clone(),
+            title: args.title.clone(),
+            body_file: args.body_file.clone(),
+            thread: args.thread.clone(),
+            notify: false,
+            attach: vec![],
+        };
+        let worker_manifest = manifest.clone();
+        let (entered_tx, entered_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            let mut ctx = context(&home, &root, server, Some((entered_tx, release_rx)));
+            log_clarification(&mut ctx, &worker_args, &worker_manifest)
+        });
+        let entered = entered_rx.recv_timeout(Duration::from_secs(30));
+        let collision = log_clarification(&mut ctx, &args, &manifest);
+        let _ = release_tx.send(());
+        let first = worker.join().unwrap();
+        assert!(entered.is_ok());
+        assert!(collision.unwrap_err().contains("busy"));
+        assert_eq!(
+            first.unwrap()["message_id"],
+            log_clarification(&mut ctx, &args, &manifest).unwrap()["message_id"]
+        );
+        f.unchanged();
+    }
+
+    struct EditClarificationReply {
+        inner: Box<dyn Effects>,
+        server: Arc<Mutex<Server>>,
+        thread: String,
+        reply: String,
+    }
+    impl Effects for EditClarificationReply {
+        fn run(&mut self, args: &[String], timeout: u64) -> Result<Output> {
+            self.inner.run(args, timeout)
+        }
+        fn http(
+            &mut self,
+            method: &str,
+            url: &str,
+            body: Option<&Value>,
+            discord: bool,
+        ) -> Result<Value> {
+            let result = self.inner.http(method, url, body, discord);
+            if method == "POST" {
+                self.server
+                    .lock()
+                    .unwrap()
+                    .messages
+                    .get_mut(&self.thread)
+                    .unwrap()
+                    .iter_mut()
+                    .find(|v| v["id"] == self.reply)
+                    .unwrap()["edited_timestamp"] = json!("2026-10-12T00:00:03Z");
+            }
+            result
+        }
+    }
+
+    #[test]
+    fn first_clarification_rechecks_owner_before_reserving_each_remaining_part() {
+        let f = Fixture::new();
+        let mut ctx = f.context();
+        let (args, manifest, proof) =
+            clarification_case(&f, &mut ctx, &"説明の背景。".repeat(500), false);
+        assert!(parts(&fs::read_to_string(&args.body_file).unwrap()).len() > 1);
+        let posts = f.server.lock().unwrap().posts.len();
+        let inner = std::mem::replace(
+            &mut ctx.effects,
+            Box::new(Mock {
+                server: f.server.clone(),
+                home: f.home.clone(),
+                pause: None,
+            }),
+        );
+        ctx.effects = Box::new(EditClarificationReply {
+            inner,
+            server: f.server.clone(),
+            thread: proof["thread_id"].as_str().unwrap().into(),
+            reply: proof["reply_message_id"].as_str().unwrap().into(),
+        });
+        assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
+        let ledger = Ledger::load(&f.home).unwrap();
+        assert!(ledger.effect(&args.request_id, "log:0").is_some());
+        assert!(ledger.effect(&args.request_id, "log:1").is_none());
+        assert_eq!(f.server.lock().unwrap().posts.len(), posts + 1);
+        assert!(log_clarification(&mut ctx, &args, &manifest).is_err());
+        assert_eq!(f.server.lock().unwrap().posts.len(), posts + 1);
+        f.unchanged();
     }
 
     #[test]

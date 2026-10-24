@@ -21,3 +21,11 @@ sole-parent commitを作る。全recursive tree/path/mode/typeを比較した後
 既存gh_gate.exe/OAuthを利用。APIキー環境変数を除去し、secretやstderr本文を保存しない。
 実行はCREATE_NO_WINDOW。新tempはsafe-deleteの所有手順で保持・回収する。
 `go test -race ./...`、`go vet ./...`、`go build ./...`で関連検査を行う。
+
+## 固定mainの合流（ToDo3576）
+
+`prepare-main392 <owned-root>`は固定old tip/mainのGET照合と候補保存だけを行う。
+`publish-main392 <owned-root>`は、その追加世代のmanifestだけを受付し、固定順の
+2親・main全treeの3file限定・exclusive intent・非force PATCHと再読を要求する。
+従来のprepare/publishは元世代のまま。実publishは親2962だけが担当する。
+詳細は[移行手順](../../docs/todo3576-source-migration.md)を参照。

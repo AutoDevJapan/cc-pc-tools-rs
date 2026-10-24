@@ -10,13 +10,18 @@ import (
 // One archived page per forum per tick, with a durable continuation. Complete
 // means the end was reached in this pass, never that a bounded page was a scan.
 type DiscoveryPage struct {
-	Before   string `json:"before,omitempty"`
-	Next     string `json:"next,omitempty"`
-	Returned int    `json:"returned"`
-	HasMore  bool   `json:"has_more"`
-	Complete bool   `json:"complete"`
-	Pages    uint64 `json:"pages"`
-	Checked  string `json:"checked_at"`
+	Before             string `json:"before,omitempty"`
+	Next               string `json:"next,omitempty"`
+	Returned           int    `json:"returned"`
+	HasMore            bool   `json:"has_more"`
+	Complete           bool   `json:"complete"`
+	Pages              uint64 `json:"pages"`
+	Checked            string `json:"checked_at"`
+	BoundaryUnresolved bool   `json:"timestamp_boundary_unresolved,omitempty"`
+	FailureStage       string `json:"failure_stage,omitempty"`
+	HTTPStatus         int    `json:"http_status,omitempty"`
+	Coverage           string `json:"coverage,omitempty"`
+	LowerBound         string `json:"lower_bound,omitempty"`
 }
 
 func (r *Runner) eligibleThread(t Thread, known map[string]bool) bool {
@@ -114,5 +119,8 @@ func (r *Runner) discoverPages(ctx context.Context, known map[string]bool) {
 			r.DiscoveryErrors = append(r.DiscoveryErrors, "archive_cursor_deferred")
 			return
 		}
+	}
+	if r.Config.ManagementIntake {
+		r.discoverManagement(ctx, active.Threads)
 	}
 }

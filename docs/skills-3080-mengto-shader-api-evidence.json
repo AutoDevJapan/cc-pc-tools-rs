@@ -1,0 +1,15 @@
+{
+  "url": "https://registry.khronos.org/OpenGL-Refpages/es3.0/html/smoothstep.xhtml",
+  "status": 200,
+  "checked_at": "2026-10-23T21:26:24.8814479+00:00",
+  "source": "official Khronos OpenGL ES3 reference",
+  "conclusion": "smoothstep requires ascending edges; results undefined for edge0>=edge1",
+  "supports": "build-wireframe-scan-reveal reverse-edge trail correction",
+  "target_project_glsl_version_not_yet_selected": true,
+  "source_script_executed": false,
+  "page_saved": true,
+  "page_saved_sha256": "8256fe8604480b2e276d7dd2e98e5c0f09a41e50ec4ecb87c985c1e3383cae4f",
+  "page_saved_bytes": 7667,
+  "scope": "保存した公式ES3参照のbytes/hash。対象projectのGLSL版は未選択。JavaScriptの独自smoothstepへ組込みの規則を適用しない。",
+  "saved_page_identity_recorded_at": "2026-10-23T23:19:20.4293866+00:00"
+}

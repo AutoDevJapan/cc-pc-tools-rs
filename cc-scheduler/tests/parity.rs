@@ -17,6 +17,8 @@ mod dispatch_receipt_tests;
 mod review_workspace_tests;
 #[path = "support/targeted_dispatch.rs"]
 mod targeted_dispatch_tests;
+#[path = "support/workspace_checkpoint.rs"]
+mod workspace_checkpoint_tests;
 
 #[test]
 fn review_preparation_failures_stop_after_three_and_recover_on_new_evidence() {

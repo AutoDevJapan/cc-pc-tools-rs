@@ -14,6 +14,9 @@ import (
 // The additional source is the original, explicitly answered dependency scope.
 // Generic current-PR inputs and the original four candidates are unchanged.
 func finiteDependencyBinding(b currentPRBinding) bool {
+	if b.OriginTodo != 0 || b.OwnerScopeSHA256 != "" {
+		return false
+	}
 	standard := b
 	standard.PR = 995
 	return standard.valid() && b.PR == 939 && b.Head == "f1c6e235d93d0719532b592b03037edcbe7bffef" && b.Tree == "df13e3dd2d796812f922868578df2d0ef8beceb5" && b.Base == "41090d19329b81dd1bd076f3336d723823be4b82" && b.RunID == 39344575918 && b.Attempt == 2 && b.JobIDs == (currentPRJobIDs{118550301356}) && b.Kind == "secret" && b.Context == "de71ff5d9a1d5a61328cbcf054347f9686ad7b8e"
@@ -21,6 +24,9 @@ func finiteDependencyBinding(b currentPRBinding) bool {
 
 func validFiniteBindings(batch [2]currentPRBinding) bool {
 	b, d := batch[0], batch[1]
+	if b.OriginTodo != 0 || b.OwnerScopeSHA256 != "" {
+		return false
+	}
 	return b.valid() && b.PR == 995 && b.Head == "cbd688871651e46d4821a4535d57eaa408105ff2" && b.Tree == "73a5d39e6694be7e6e604003dcb4e7bdc087c1c5" && b.Base == "41090d19329b81dd1bd076f3336d723823be4b82" && b.RunID == 39384472279 && b.Attempt == 1 && b.JobIDs == (currentPRJobIDs{118500893552}) && b.Kind == "secret" && b.Context == "6e7ca682c861024b6f08f31382851dab4bceff35" && finiteDependencyBinding(d)
 }
 

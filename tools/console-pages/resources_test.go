@@ -10,7 +10,7 @@ const sample={schemaVersion:1,state:'ready',currentAvailable:true,sampledAt:1000
 
 func TestResourcesDistinguishVerifiedWorkAndMissingMetrics(t *testing.T) {
 	node(t, resourceFixture+`
-const result=ctx.resourceModel(sample,1100,'cpu');assert.equal(result.active,2);assert.match(result.html,/0\.0%/);assert.match(result.html,/待機 1/);assert.match(result.html,/未確認 1/);assert.match(result.html,/GoDD MCP α/);assert.match(result.html,/蓄積中/);assert.match(result.html,/私有メモリ/);assert.match(result.html,/合算しません/);
+const result=ctx.resourceModel(sample,1100,'cpu');assert.equal(result.active,2);assert.match(result.html,/0\.0%/);assert.match(result.html,/待機 1/);assert.match(result.html,/状態を確認できない処理 1/);assert.match(result.html,/GoDD MCP α/);assert.match(result.html,/蓄積中/);assert.match(result.html,/私有メモリ/);assert.match(result.html,/合算しません/);
 sample.host.cpuPercent=null;assert.match(ctx.resourceModel(sample,1100).html,/取得できません/);
 const stale=ctx.resourceModel(sample,47000);assert.equal(stale.active,null);assert(!stale.html.includes('0.0%'));assert.match(stale.html,/古い|取得できません/);
 `)

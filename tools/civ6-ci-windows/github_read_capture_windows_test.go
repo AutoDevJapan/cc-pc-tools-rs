@@ -27,6 +27,11 @@ func TestGitHubReadCaptureChild(t *testing.T) {
 			os.Exit(11)
 		}
 		fmt.Fprintf(os.Stdout, `{"pid":%d}`, c.Process.Pid)
+		if file := os.Getenv("CIW_DIAGNOSTIC_HOLDER_PID"); file != "" {
+			if err := os.WriteFile(file, []byte(fmt.Sprintf(`{"pid":%d}`, c.Process.Pid)), 0600); err != nil {
+				os.Exit(12)
+			}
+		}
 		os.Exit(0)
 	case "overflow":
 		for i := 0; i < 10000; i++ {

@@ -1,0 +1,78 @@
+{
+  "todo": 3080,
+  "source": "mizchi/skills",
+  "commit": "ab4eb2f7a92a13fb37c225ab427f2f492143ace1",
+  "source_path": "stryker-js/SKILL.md",
+  "source_sha256": "83c93a09550891503d8b6d511d326d4c2d02b77880b3ae6f5e9b9cc7e5d446c3",
+  "support_path": "stryker-js/references/evaluate-tests.md",
+  "support_sha256": "6009ce5dfd634025526258b06b9c65107983f2e29014fc0ee8616cea0b4ed830",
+  "purpose": "既存のテスト品質の手順へ、変異レポートの測定範囲・生存理由・結果状態を読む具体的な判断を補う候補。新しい独立入口はまだ決めない。",
+  "status": "authored_integration_guidance_pending_review_and_qualified_target",
+  "installed": false,
+  "integrated": false,
+  "renderable_install_plan": false,
+  "review_pending": true,
+  "central_write": 0,
+  "rights_evidence": {
+    "root_statement_url": "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/README.md#license",
+    "root_statement_sha256": "f6cf85dee46f1e10efb5efedf06cbfb46261f4927a41427c8b78c05980cafedb",
+    "root_statement_scope": "個別LICENSE.txt優先、未記載Skillは所有者の裁量でMITとする説明。固定treeにstryker-js配下の個別notice無し。",
+    "included_source_scope": "作者のSkill本文とevaluate-tests.mdを読む手順文の候補。assets/scripts/patch/shipping実装や別repoのworking templateは取り込まない。",
+    "unverified_scope": "未読支持コードと第三者配布物の個別許諾、中央に実配置する一式の通知/出典保存、対象既存Skillの正規保護分類。"
+  },
+  "guidance": [
+    "テストの欠陥検出力を評価するときは、契約上許される入力と観測できる結果を先に決める。通常テストの成功を確認し、必要なmodule・版・runner・除外範囲を記録して変異を調べる。単純な編集のたびに一律実行する規則にはしない。",
+    "実行したsource/config/testの版とレポートを結ぶ。差分CIがproduction変更なしで対象0となった結果は未測定であり、テストだけを改善した効果の証拠ではない。評価が必要なら影響するmoduleを対象にする。既存runnerを保ち、採用済みのテスト範囲の方針に沿う。",
+    "Survivedは元の実装と変異を区別する最小の合法入力を探す。入力、元の結果、変異後の結果、見逃した境界/状態/副作用を並べ、独立した期待値で回帰テストを補う。NoCoverageは到達不能と即断せず対象設定・関連テスト選択・入力を調べる。",
+    "Killedは選択したテストのどれかが失敗した証拠である。特定の新テストが目的の欠陥を捉えたと主張する場合は、失敗の原因と帰属を確認する。レポートに無いテスト名や全テストの順位を作らない。",
+    "Timeoutはscore上の検出とassertionの強さを分ける。無限ループの変異か、資源待ち・実行基盤の遅延かをログと原因で調べる。CompileError/RuntimeError/Ignoredを成功したassertionへ数えず、Pendingは未完とする。対象0/有効変異0に100%という値を与えない。",
+    "生存した変異が等価に見える場合は、入力制約と観測APIのどこが差を消すかを説明する。数値を上げるためだけに除外や無効化を増やさず、正当な除外は理由と分母の変化を記録する。ユーザーが指定していない合格閾値は作らない。",
+    "必要なテストを補ったら同じ対象とoperatorsで前後を比べる。実sourceの変更が必要なバグと、正しい実装に対するテストの穴を分ける。元の成果を保ち、手動で変異を試す場合は所有する隔離コピーを使う。原状への復帰と元テストの成功を確認する。",
+    "結果には版・範囲・ツール版・全状態の件数、実際に直した入力/期待値、残る生存例・等価性・timeout/未完と次の手を示す。レポート欠落や古い成功を今回の測定成功としない。Strykerの導入・新CI・未読helperの実行は、この資料の存在だけで決めない。"
+  ],
+  "static_cases": [
+    {
+      "kind": "positive",
+      "input": "テストだけを直したPRで、差分変異CIは対象0。品質が改善したと言えるか。",
+      "expected": "未測定と答え、必要な評価対象moduleを選ぶ。CIの成功や対象0を品質の実証へ流用しない。",
+      "real_model_turn": false
+    },
+    {
+      "kind": "positive",
+      "input": "入力長16以上を受理する契約。>=16を>16に変えた変異が生存した。",
+      "expected": "長さ16の合法入力を使い、元は受理/変異は拒否という観測差を期待値にする。元テストのpassと対象変異の失敗を確かめる。",
+      "real_model_turn": false
+    },
+    {
+      "kind": "positive",
+      "input": "変異がKilledになった。追加した新テストのおかげだと報告してよいか。",
+      "expected": "目的の欠陥を捉えたテストと失敗原因を確認し、他テストのkillだけから新テストの寄与を断定しない。",
+      "real_model_turn": false
+    },
+    {
+      "kind": "positive",
+      "input": "score100%だが、検出された変異はすべてTimeoutで、CPU資源待ちもあった。",
+      "expected": "score上の扱いを保持しつつ、timeoutの原因を調べる。強いassertionの証拠やバグ不在の保証にしない。",
+      "real_model_turn": false
+    },
+    {
+      "kind": "negative",
+      "input": "コメントの誤字だけ直してほしい。",
+      "expected": "通常の差分確認を進める。依頼と影響に不要な変異ツール導入や全module測定を追加しない。",
+      "real_model_turn": false
+    },
+    {
+      "kind": "negative",
+      "input": "別HEADの成功レポートだけがあるので、今の変更も測定成功として閉じたい。",
+      "expected": "対象版との対応が無いことを明記する。許可済みの次の確認へ進み、古いレポートを今回の成功としない。",
+      "real_model_turn": false
+    }
+  ],
+  "limitations": [
+    "静的な適用境界の草案であり、実Codexによる選択/本文読取/判断は未確認。",
+    "Stryker/Vitestや上流helperを実行していない。既存Goテストの成功とは別。",
+    "中央の書込先は保護分類未確認。秘密・保護対象の名前/パスを報告せず、正規の分類確認までその書込だけ保留する。"
+  ],
+  "comparison_limit": "現役catalogの名前/descriptionによる用途比較。中央本文の差分は未確認で、実統合前に対象本文と比較する。",
+  "distinct_from_existing": "テスト品質の既存catalog説明に対し、差分対象0/状態別件数/killの帰属/合法な識別入力/等価性と分母を扱う追加候補。中央本文との差分と実統合の価値は未確認。"
+}

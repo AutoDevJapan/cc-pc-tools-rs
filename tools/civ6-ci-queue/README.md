@@ -98,3 +98,12 @@ go build ./...
 正式job未開始の専用collectorが成功し、証拠保存とowned rootの回収が済んだ場合だけ、同じ予約を5〜40分のbackoffで再供給する。実行済みの正式jobは自動再実行しない。各未開始回の証拠は別ディレクトリへ保持し、予算キーを重複させない。
 
 未開始の延期は6回到達または予約から24時間で打ち切り、needs_recoveryとOS fenceを保存する。各回の理由・時刻・回収証拠を台帳へ追記する。未起動collectorの成功だけでは再供給しない。期限・queue busy・明示された一時的通信障害だけ再供給し、credential拒否/形不正、監査不一致、helper生成・pin検証の失敗はfailedとして保存する。正式jobの再実行には使わない。
+
+## 未実行sourceの移行（ToDo3576）
+
+`migrate-unexecuted-main392 --config <path> --entry <旧key> --replacement <新run/1/job>`
+は固定旧3枠から固定main合流世代へ一対一で受付する。旧予算・期限・履歴を保持し、
+`unexecuted_source_migrations`へ別のproof関係を記録する。
+旧replace-expiredを別headに流用しない。通常tickは移行やrerunを生成しない。
+実台帳操作は親2962だけが担当する。
+詳細は[移行手順とschema](../../docs/todo3576-source-migration.md)を参照。

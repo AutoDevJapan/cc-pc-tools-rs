@@ -696,6 +696,9 @@ func (r *Runner) conversationCheckClarification(ctx context.Context, requestID, 
 }
 
 func (r *Runner) conversationLogInner(ctx context.Context, requestID, title, bodyFile, thread string, notify bool, attachments []string, clarification string, checkOnly bool) (map[string]any, error) {
+	if checkOnly && clarification == "" {
+		return nil, errors.New("clarification purpose required for check-only")
+	}
 	if !conversationID.MatchString(requestID) || strings.TrimSpace(title) == "" {
 		return nil, errors.New("conversation log identity invalid")
 	}
@@ -738,10 +741,37 @@ func (r *Runner) conversationLogInner(ctx context.Context, requestID, title, bod
 	if exists && record.InputSHA != inputHash {
 		return nil, errors.New("conversation log retry input differs")
 	}
-	// A clarification only resumes the original failed request; its immutable
-	// input hash and sender ID do not include this new association evidence.
-	if clarification != "" && (!exists || record.Thread != thread) {
-		return nil, errors.New("clarification requires the existing exact log reservation")
+	// The sender authenticates the original question/current owner reply before
+	// this layer saves a new input. Keep original ID/hash semantics on retries.
+	var binding []byte
+	if clarification != "" {
+		if notify || len(attachments) != 0 || thread == "" || exists && record.Thread != thread {
+			return nil, errors.New("clarification requires the exact silent text-only destination")
+		}
+		if _, valid := number(thread); !valid {
+			return nil, errors.New("clarification destination invalid")
+		}
+		if exists {
+			saved, readErr := boundedRegular(record.BodyFile)
+			if readErr != nil || bytesHash(saved) != bytesHash(body) {
+				return nil, errors.New("saved clarification body differs")
+			}
+		}
+		binding, err = boundedRegular(clarification)
+		if err != nil || len(binding) > 16<<10 {
+			return nil, errors.New("clarification binding unavailable")
+		}
+		senderID := "conversation-log-" + bytesHash([]byte(requestID))[:32]
+		raw, checkErr := r.Run(ctx, conversationSender, "recovery-log", "--request-id", senderID, "--title", title,
+			"--body-file", bodyFile, "--thread", thread, "--clarification-file", clarification, "--check-only")
+		var checked map[string]any
+		if checkErr != nil || json.Unmarshal([]byte(raw), &checked) != nil || checked["domain"] != "new-owner-recovery-messages" || checked["check_only"] != true || checked["delivery"] != "not_sent" || checked["request_id"] != senderID || checked["source_body_sha256"] != bytesHash(body) || checked["binding_sha256"] != bytesHash(binding) {
+			return nil, errors.New("clarification verification pending")
+		}
+		if checkOnly {
+			return map[string]any{"domain": conversationDomain, "request_id": requestID, "delivery": "not_sent", "check_only": true,
+				"original_intent_retained": true, "source_body_sha256": checked["source_body_sha256"], "body_sha256": checked["body_sha256"], "binding_sha256": checked["binding_sha256"]}, nil
+		}
 	}
 	if !exists {
 		destination := thread
@@ -763,23 +793,11 @@ func (r *Runner) conversationLogInner(ctx context.Context, requestID, title, bod
 		if readErr != nil || bytesHash(saved) != bytesHash(body) {
 			return nil, errors.New("saved clarification body differs")
 		}
-		binding, readErr := boundedRegular(clarification)
-		if readErr != nil || len(binding) > 16<<10 {
-			return nil, errors.New("clarification binding unavailable")
-		}
-		path := clarification
-		if !checkOnly {
-			// Invalid association evidence must not permanently poison the fixed
-			// request. Only the sender's verified binding commits authority.
-			path = filepath.Join(r.Config.Home, "conversation-clarifications", requestID+"-"+bytesHash(binding)+".json")
-			if err = writeConversationOnce(path, binding); err != nil {
-				return nil, err
-			}
+		path := filepath.Join(r.Config.Home, "conversation-clarifications", requestID+"-"+bytesHash(binding)+".json")
+		if err = writeConversationOnce(path, binding); err != nil {
+			return nil, err
 		}
 		args = append(args, "--clarification-file", path)
-		if checkOnly {
-			args = append(args, "--check-only")
-		}
 	}
 	if record.Thread != "" {
 		if _, ok := number(record.Thread); !ok {
@@ -795,15 +813,12 @@ func (r *Runner) conversationLogInner(ctx context.Context, requestID, title, bod
 	}
 	raw, err := r.Run(ctx, conversationSender, args...)
 	if err != nil {
+		if clarification != "" {
+			return nil, errors.New("clarification delivery incomplete; inspect the current owner reply and saved delivery before retrying; keep the original request unchanged")
+		}
 		return nil, errors.New("conversation log pending; retry the same request")
 	}
 	var report map[string]any
-	if checkOnly {
-		if json.Unmarshal([]byte(raw), &report) != nil || report["domain"] != "new-owner-recovery-messages" || report["check_only"] != true || report["delivery"] != "not_sent" || report["request_id"] != "conversation-log-"+bytesHash([]byte(requestID))[:32] {
-			return nil, errors.New("clarification verification pending")
-		}
-		return map[string]any{"domain": conversationDomain, "request_id": requestID, "delivery": "not_sent", "check_only": true, "original_intent_retained": true}, nil
-	}
 	if json.Unmarshal([]byte(raw), &report) != nil || report["domain"] != "new-owner-recovery-messages" || report["delivery"] != "verified" {
 		return nil, errors.New("conversation log verification pending")
 	}
@@ -890,10 +905,10 @@ func (r *Runner) conversationStatus() (map[string]any, error) {
 			continue
 		}
 		q, ok := index.Questions[req.Conversation]
-		if !ok || req.Thread != q.Thread || req.Todo != q.Todo {
+		if !ok || req.Thread != q.Thread || (req.Todo != q.Todo && !(req.Todo == 0 && (req.Phase == "conversation_implementation_recorded" || req.Phase == "conversation_reply_applied" || req.Phase == "conversation_source_verified"))) {
 			continue
 		}
-		replies = append(replies, map[string]any{"message_id": req.Message, "thread_id": req.Thread, "author_id": req.Author, "todo_id": req.Todo, "request_id": req.Conversation, "phase": req.Phase, "source": req.Source, "created_at": req.Created, "edited_at": req.Edited, "acquired_at": req.Acquired})
+		replies = append(replies, map[string]any{"message_id": req.Message, "thread_id": req.Thread, "author_id": req.Author, "todo_id": req.Todo, "origin_todo_id": q.Todo, "request_id": req.Conversation, "phase": req.Phase, "source": req.Source, "created_at": req.Created, "edited_at": req.Edited, "acquired_at": req.Acquired})
 	}
 	return map[string]any{"domain": conversationDomain, "questions": len(index.Questions), "phases": phases, "items": questions, "reply_stages": replies, "intake_stages": intake, "stage_evidence": "saved_state_only", "snapshot_consistency": "independent_saved_files", "legacy_state": "unchanged", "original_registry_recovered": false}, nil
 }

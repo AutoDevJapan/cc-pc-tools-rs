@@ -719,7 +719,7 @@ func main() {
 		}
 		return
 	}
-	if len(os.Args) >= 2 && (os.Args[1] == "current-pr-inspect" || os.Args[1] == "current-pr-job" || os.Args[1] == "current-pr-qualify" || os.Args[1] == "current-pr-origin-qualify" || os.Args[1] == "current-pr-origin-inspect" || os.Args[1] == "current-pr-origin-job" || os.Args[1] == "current-pr-batch-qualify" || os.Args[1] == "current-pr-batch-inspect" || os.Args[1] == "current-pr-batch-job" || os.Args[1] == "current-pr-runtime-qualify" || os.Args[1] == "current-pr-runtime-inspect" || os.Args[1] == "current-pr-runtime-job") {
+	if len(os.Args) >= 2 && (os.Args[1] == "current-pr-inspect" || os.Args[1] == "current-pr-job" || os.Args[1] == "current-pr-qualify" || os.Args[1] == "current-pr-origin-qualify" || os.Args[1] == "current-pr-origin-inspect" || os.Args[1] == "current-pr-origin-job" || os.Args[1] == "current-pr-batch-qualify" || os.Args[1] == "current-pr-batch-inspect" || os.Args[1] == "current-pr-batch-job" || os.Args[1] == "current-pr-runtime-qualify" || os.Args[1] == "current-pr-runtime-inspect" || os.Args[1] == "current-pr-runtime-job" || strings.HasPrefix(os.Args[1], "current-pr-successor-")) {
 		e = currentPRCLI(ctx, os.Args[1:])
 	} else if len(os.Args) == 2 && os.Args[1] == "inspect" {
 		for _, c := range candidates {
@@ -791,7 +791,7 @@ func main() {
 			}
 		}
 	} else {
-		e = errors.New("usage: product-ci inspect | current-pr-runtime-qualify | current-pr-runtime-inspect | current-pr-runtime-job <new-owned-dir> <Linux-helper> [gitleaks-ELF] | current-pr-origin-qualify | current-pr-origin-inspect | current-pr-origin-job <new-owned-dir> <Linux-helper> <gitleaks-ELF> | release-build-preflight <new-owned-dir> | release-build-recover <same-owned-dir> | codeql-bootstrap/codeql-revalidate <id> <new-owned-dir> <Linux-helper> | codeql-recover/codeql-finalize/codeql-restore <id> <owned-dir> | codeql-job/advanced-job <id> <run-id> <new-owned-dir> <Linux-helper> | secret-job <id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF> | node-contracts <id> <new-owned-dir> <image> | node-retry <id> <new-owned-dir> <image> <previous-log> | lifecycle-smoke <owned-dir> <image>")
+		e = errors.New("usage: product-ci inspect | current-pr-successor-qualify/inspect | current-pr-successor-job <new-owned-dir> <Linux-helper> [gitleaks-ELF] | current-pr-batch-qualify/inspect | current-pr-batch-job <new-owned-dir> <Linux-helper> <gitleaks-ELF> | current-pr-runtime-qualify | current-pr-runtime-inspect | current-pr-runtime-job <new-owned-dir> <Linux-helper> [gitleaks-ELF] | current-pr-origin-qualify | current-pr-origin-inspect | current-pr-origin-job <new-owned-dir> <Linux-helper> <gitleaks-ELF> | release-build-preflight <new-owned-dir> | release-build-recover <same-owned-dir> | codeql-bootstrap/codeql-revalidate <id> <new-owned-dir> <Linux-helper> | codeql-recover/codeql-finalize/codeql-restore <id> <owned-dir> | codeql-job/advanced-job <id> <run-id> <new-owned-dir> <Linux-helper> | secret-job <id> <run-id> <new-owned-dir> <Linux-helper> <gitleaks-ELF> | node-contracts <id> <new-owned-dir> <image> | node-retry <id> <new-owned-dir> <image> <previous-log> | lifecycle-smoke <owned-dir> <image>")
 	}
 	if e != nil {
 		fmt.Fprintln(os.Stderr, e)

@@ -69,9 +69,9 @@ pub fn review_job(job: &Value) -> bool {
 pub fn candidates(job: &Value) -> Vec<&'static str> {
     if review_job(job)
         && s(job, "parent_job_id").is_empty()
-        && !job["review_excluded_models"]
+        && job["review_excluded_models"]
             .as_array()
-            .is_some_and(|v| !v.is_empty())
+            .is_none_or(|v| v.is_empty())
     {
         return Vec::new();
     }

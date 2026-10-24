@@ -1,5 +1,8 @@
 use cc_jobs::notify::*;
 use cc_jobs::*;
+#[cfg(windows)]
+#[path = "support/dependency_diagnostics.rs"]
+mod dependency_diagnostics;
 #[path = "support/finished_review.rs"]
 mod finished_review;
 #[path = "support/finished_work_handoff.rs"]
@@ -10633,12 +10636,37 @@ mod end_to_end {
         });
     }
     #[test]
+    fn capacity_metadata_collection_latency_does_not_become_a_technical_cooldown() {
+        let t = E2e::new();
+        t.diagnostic.store(true, Ordering::Relaxed);
+        fs::write(t.rec.join("delay-capacity-observation"), b"fixture only").unwrap();
+        let jid = t.start("capacity-once", &t.tmp.0, b"same capacity request");
+        // The old fixture stamps the event when metadata is collected >1 s
+        // after sampling began. Attribution correctly rejects that future
+        // event, queuing this job for a 900 s technical cooldown.
+        // Stop at that incorrect branch instead of waiting out the cooldown.
+        t.until_phase_for("delayed_capacity_observation", Duration::from_secs(120), || {
+            let job = t.job(&jid);
+            job["capacity_wait_pending"] == true || TERMINAL.contains(&s(&job, "status"))
+        });
+        let job = t.job(&jid);
+        assert_eq!(
+            job["status"], "succeeded", "{}",
+            t.phase_snapshot("delayed_capacity_observation", Duration::ZERO)
+        );
+        assert_eq!(job["capacity_same_model_retry_count"], 1);
+        assert_eq!(job["capacity_wait_count"].as_u64().unwrap_or(0), 0);
+        let calls = fs::read_to_string(t.rec.join("capacity-calls.jsonl")).unwrap();
+        assert_eq!(calls.lines().count(), 2);
+    }
+    #[test]
     fn real_capacity_retry_preserves_prompt_cwd_and_session_and_stops_at_limit() {
         for (mode, expected, count, switches) in [
             ("capacity-once", "succeeded", 1, 0),
             ("capacity-always", "failed", 3, 2),
         ] {
             let t = E2e::new();
+            t.diagnostic.store(true, Ordering::Relaxed);
             let jid = t.start(mode, &t.tmp.0, "再開する内容\nsecond line".as_bytes());
             t.until_phase_for("finite_capacity_retry", Duration::from_secs(120), || {
                 TERMINAL.contains(&s(&t.job(&jid), "status"))
@@ -11065,6 +11093,7 @@ mod end_to_end {
                 .env_remove("CC_JOB_ID")
                 .env_remove("CODEX_JOBS_DISCORD_WEBHOOK");
             if let Some(home) = &self.inherited_home {
+                // Model a caller's inherited home before applying isolation.
                 c.env("USERPROFILE", home).env("HOME", home);
             }
             // CODEX_HOME alone does not isolate native plugin initialization:
@@ -11222,6 +11251,10 @@ mod end_to_end {
                     json!({"pid":pid,"recorded_created":job[format!("{key}_created")],"current_created":current,"retained_handle_live":retained_live,"identity_matches":current.is_some_and(|value| job[format!("{key}_created")].as_u64() == Some(value))}) };
                 let error_kind = if s(job,"last_error").contains("plugin env_vars") { "plugin_metadata" } else if job["last_error"].is_null() { "none" } else { "other" };
                 json!({"role":alias(s(job,"id")),"status":job["status"],"error_kind":error_kind,"parent":alias(s(job,"parent_job_id")),"queue_sequence":job["queue_sequence"],
+                    "same_model_retries":job["capacity_same_model_retry_count"],"model_switches":job["capacity_retry_count"],
+                    "capacity_wait_pending":job["capacity_wait_pending"],"capacity_wait_count":job["capacity_wait_count"],
+                    "retry_not_before":job["retry_not_before"],"pool_at":job["capacity_inventory"]["pool"]["at"],"pool_verified":job["capacity_inventory"]["pool"]["verified"],
+                    "capacity_supervisor":if phase.contains("capacity") {super::dependency_diagnostics::log_state(&self.tmp.0.join("tool/jobs").join(s(job,"id")).join("supervisor.log"))} else {json!("")},
                     "wait_code":job["queue_wait_reason"]["code"],"wait_owner":alias(s(&job["queue_wait_reason"],"owner_job_id")),"max_running":job["queue_wait_reason"]["max_running"],
                     "admission_error":!job["queue_admission_error"].is_null(),"owner_hint":job["work_owner"].is_object(),"supervisor":process("pid"),"agent":process("codex_pid")})
             }).collect();
@@ -11231,6 +11264,19 @@ mod end_to_end {
                 .unwrap_or(Value::Null);
             json!({"phase":phase,"elapsed_ms":elapsed.as_millis() as u64,"jobs":rows,"sleep_marker":self.rec.join("sleep.pid").exists(),
                 "index_complete":index["scan_complete"],"scanned_at":index["scanned_at"],"index_ids":index["ids"].as_array().into_iter().flatten().map(|id|alias(id.as_str().unwrap_or(""))).collect::<Vec<_>>()})
+        }
+        fn timeout_snapshot(&self, phase: &str, elapsed: Duration) -> Value {
+            let mut snapshot = self.phase_snapshot(phase, elapsed);
+            let identities = self
+                .handles
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|owner| (owner.pid, owner.created))
+                .collect::<Vec<_>>();
+            snapshot["timeout_details"] =
+                super::dependency_diagnostics::capture(&self.tmp.0, &identities);
+            snapshot
         }
         fn until_phase(&self, phase: &str, mut condition: impl FnMut() -> bool) {
             self.until_phase_for(phase, Duration::from_secs(20), &mut condition);
@@ -11248,7 +11294,7 @@ mod end_to_end {
                     self.retain_fixture_processes();
                 }
                 if Instant::now() >= end {
-                    let snapshot = self.phase_snapshot(phase, started.elapsed());
+                    let snapshot = self.timeout_snapshot(phase, started.elapsed());
                     eprintln!("dependency fixture timeout: {snapshot}");
                     panic!("timed out in {phase}");
                 }
@@ -11448,6 +11494,169 @@ mod end_to_end {
         e.inherited_home = Some(home);
         dependency_contract(&e);
         assert_eq!(fs::read_to_string(file).unwrap(), sentinel);
+    }
+    #[test]
+    fn timeout_snapshot_has_scoped_runtime_evidence_without_prompt_or_log_text() {
+        let e = E2e::new();
+        fs::write(e.rec.join("stdin.bin"), b"other root private-fixture-token").unwrap();
+        fs::write(
+            e.rec.join("call.json"),
+            json!({"cwd": e.tmp.0.join("other-work")}).to_string(),
+        )
+        .unwrap();
+        let job = e.tmp.0.join("tool/jobs/diagnostic-private-job");
+        fs::create_dir_all(&job).unwrap();
+        fs::write(
+            job.join("job.json"),
+            json!({"id":"diagnostic-private-job", "name":"e2e", "created_at":"2026-01-01", "status":"running", "pid":"private-fixture-token", "codex_pid":123})
+                .to_string(),
+        )
+        .unwrap();
+        fs::write(job.join("events.jsonl"), b"event\n").unwrap();
+        fs::write(job.join("stderr.log"), "private-fixture-token panic").unwrap();
+        fs::write(job.join("supervisor.log"), "private-fixture-token panic").unwrap();
+        let snapshot = e.timeout_snapshot("controlled_capacity_timeout", Duration::ZERO);
+        let details = &snapshot["timeout_details"];
+        assert_eq!(details["stdin_role"], "other");
+        assert_eq!(details["call_cwd_role"], "other");
+        assert_eq!(details["jobs"][0]["events"]["bytes"], 6);
+        assert_eq!(details["jobs"][0]["stderr"]["markers"], json!(["panic"]));
+        assert!(details["jobs"][0]["pid"].is_null());
+        assert_eq!(details["jobs"][0]["agent_pid"], 123);
+        assert_eq!(details["samples"].as_array().unwrap().len(), 2);
+        let text = snapshot.to_string();
+        assert!(!text.contains("private-fixture-token"));
+        assert!(!text.contains("diagnostic-private-job"));
+        assert!(!text.contains("cc-jobs-rust-"));
+        assert!(!text.contains("other-work"));
+        assert_eq!(
+            snapshot["jobs"][0]["capacity_supervisor"]["markers"],
+            json!(["panic"])
+        );
+        let mut log = b"panic private-fixture-token".to_vec();
+        log.extend(std::iter::repeat_n(b'x', 4096));
+        log.extend_from_slice(b"warning");
+        fs::write(job.join("stderr.log"), log).unwrap();
+        let bounded = e.timeout_snapshot("controlled_timeout", Duration::ZERO);
+        assert_eq!(
+            bounded["timeout_details"]["jobs"][0]["stderr"]["tail_bytes"],
+            1024
+        );
+        assert_eq!(
+            bounded["timeout_details"]["jobs"][0]["stderr"]["markers"],
+            json!(["warning"])
+        );
+        fs::remove_file(e.rec.join("stdin.bin")).unwrap();
+        fs::remove_file(e.rec.join("call.json")).unwrap();
+        let missing = e.timeout_snapshot("controlled_timeout", Duration::ZERO);
+        assert_eq!(missing["timeout_details"]["stdin_role"], "missing");
+        assert_eq!(missing["timeout_details"]["call_cwd_role"], "missing");
+        assert_eq!(missing["timeout_details"]["call_read"]["missing"], true);
+        fs::create_dir(e.rec.join("stdin.bin")).unwrap();
+        let unreadable = e.timeout_snapshot("controlled_timeout", Duration::ZERO);
+        assert_eq!(unreadable["timeout_details"]["stdin_role"], "unreadable");
+        assert_eq!(
+            unreadable["timeout_details"]["stdin_read"]["unreadable"],
+            true
+        );
+        assert!(unreadable["timeout_details"]["stdin_read"]["io_error"].is_number());
+        assert_eq!(unreadable["timeout_details"]["sleep_read"]["missing"], true);
+    }
+    #[test]
+    fn timeout_probe_binds_both_cpu_samples_to_the_same_real_process() {
+        struct ChildGuard {
+            child: std::process::Child,
+            process: FixtureProcess,
+        }
+        impl Drop for ChildGuard {
+            fn drop(&mut self) {
+                let _ = self.process.stop();
+                let _ = self.child.wait();
+            }
+        }
+        let e = E2e::new();
+        e.diagnostic.store(true, Ordering::Relaxed);
+        let pid = std::process::id();
+        let created = proc_created(pid).unwrap();
+        fs::write(
+            e.rec.join("fixture-owner.json"),
+            pretty(&json!({"pid":pid,"created":created,"receipt_done":true})),
+        )
+        .unwrap();
+        let spawn = || {
+            let child = hidden_command(&e.tmp.0.join("bin/fixture.exe").to_string_lossy())
+                .env("CC_JOBS_FIXTURE_MODE", "dependency-parent")
+                .env("CC_JOBS_FIXTURE_DIR", &e.rec)
+                .stdin(std::process::Stdio::null())
+                .stdout(std::process::Stdio::null())
+                .stderr(std::process::Stdio::null())
+                .spawn()
+                .unwrap();
+            let child_pid = child.id();
+            let child_created = proc_created(child_pid).unwrap();
+            let guard = ChildGuard {
+                child,
+                process: FixtureProcess::retain(child_pid, child_created).unwrap(),
+            };
+            e.until_phase("probe_child_started", || {
+                fs::read_to_string(e.rec.join("sleep.pid"))
+                    .is_ok_and(|s| s.trim() == child_pid.to_string())
+            });
+            guard
+        };
+        let first = spawn();
+        let second = spawn();
+        let probe = super::dependency_diagnostics::capture(&e.tmp.0, &[(pid, created)]);
+        assert!(probe["sample_interval_ms"].as_u64().unwrap() >= 1000);
+        for sample in probe["samples"].as_array().unwrap() {
+            let rows = sample.as_array().unwrap();
+            let row = rows.iter().find(|row| row["pid"] == pid).unwrap();
+            assert_eq!(row["created"], created);
+            assert_eq!(row["live"], true);
+            assert!(row["threads"].as_u64().unwrap() > 0);
+            assert!(row["kernel_100ns"].is_u64());
+            assert!(row["user_100ns"].is_u64());
+            for child in [&first, &second] {
+                let row = rows
+                    .iter()
+                    .find(|row| row["pid"] == child.process.pid)
+                    .unwrap();
+                assert_eq!(row["ppid"], pid);
+                assert_eq!(row["image"], "fixture.exe");
+                assert_eq!(row["live"], true);
+            }
+        }
+        let stale = super::dependency_diagnostics::stale_parent_candidate(
+            (first.process.pid, first.process.created),
+            second.process.pid,
+        );
+        assert!(
+            !stale
+                .as_array()
+                .unwrap()
+                .contains(&json!(second.process.pid))
+        );
+        assert!(first.process.stop());
+        let exited = super::dependency_diagnostics::capture(
+            &e.tmp.0,
+            &[(first.process.pid, first.process.created)],
+        );
+        for sample in exited["samples"].as_array().unwrap() {
+            let row = sample
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|row| row["pid"] == first.process.pid)
+                .unwrap();
+            assert_eq!(row["live"], false);
+            assert!(row["exit_code"].is_u64());
+            assert!(row["exit_100ns"].as_u64().unwrap() > first.process.created);
+        }
+        let wrong = super::dependency_diagnostics::capture(&e.tmp.0, &[(pid, created + 1)]);
+        assert_eq!(wrong["unavailable_roots"], 1);
+        for sample in wrong["samples"].as_array().unwrap() {
+            assert!(sample.as_array().unwrap().is_empty());
+        }
     }
     #[test]
     fn fixture_process_handle_rejects_a_mismatched_creation_time() {

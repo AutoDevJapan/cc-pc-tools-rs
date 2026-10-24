@@ -106,6 +106,12 @@ func TestDeploymentCountersDoNotCountUninstalledPlansOrDuplicateDraft(t *testing
 			prepared[target.Name] = target.SHA
 		}
 	}
+	for _, target := range directAuthoredDesigns(t) {
+		if prepared[target.Name] != "" {
+			t.Fatal("direct individual-source design repeats a legacy target")
+		}
+		prepared[target.Name] = target.SHA
+	}
 	var draft struct {
 		Targets []struct {
 			Name string `json:"name"`

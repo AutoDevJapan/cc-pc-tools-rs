@@ -1,0 +1,40 @@
+{
+  "targets": [
+    {
+      "sources": [
+        "https://github.com/mizchi/skills/blob/ab4eb2f7a92a13fb37c225ab427f2f492143ace1/gh-fix-ci/SKILL.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "baaed00d82f19fd287e9dccf12e4960acd0371308e2456008cd53be5eb548574"
+        },
+        {
+          "path": "references/index.md",
+          "sha256": "6b7a866c4da6d0de0dbbc926a43bb44d4fe1cc9b272887361aa3b01c6635ea06"
+        },
+        {
+          "path": "references/gh-fix-ci/current-20261023.md",
+          "sha256": "6dd0d16eeef5471c66a6802a900f5354e22aca598ce1b5c620daf3add3661ff1"
+        },
+        {
+          "path": "references/gh-fix-ci/mizchi-20261020/upstream-original.txt",
+          "sha256": "9bb7f0a67de15a4b69ad793e8169cae34ae5e0ac76a9403a483bafd418233ea4"
+        },
+        {
+          "path": "references/gh-fix-ci/mizchi-20261020/LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9"
+        },
+        {
+          "path": "references/gh-fix-ci/mizchi-20261020/source.json",
+          "sha256": "23a70d7a429813ea6827ab13480d311cb282335c1791e8d49d8e899cc33ef7f2"
+        }
+      ],
+      "before_sha256": "fc3c21f3b4fa6b31ea92b7d364a7f9ba204f2819bcdde1b0fc4a46a322d0b892",
+      "new": false,
+      "positive": "現在のPR HEADで失敗したGitHub Actions jobを調べて修正する",
+      "negative": "外部CIの内部ログをGitHub Actionsから取得済みとする",
+      "name": "github-actions-ci"
+    }
+  ]
+}

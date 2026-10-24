@@ -108,6 +108,20 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 		return nil, errors.New("conversation existing receipt association differs")
 	}
 	if old != nil && old.Conversation == q.RequestID && (old.Text != reply.Body || old.Edited != live.Edited) {
+		if old.ConversationSourceGeneration != "" || old.Phase == "conversation_implementation_recorded" {
+			return nil, errors.New("conversation source generation reacquisition required")
+		}
+		// A committed receipt can outlive a lost state-save response. Do not
+		// overwrite its canonical original while that response is reconciled.
+		row, err := r.todo(q.Todo)
+		if err != nil {
+			return nil, errors.New("conversation implementation state unavailable")
+		}
+		for _, receipt := range row.ImplementationRecords {
+			if receipt.Input.RequestID == q.RequestID && receipt.Input.Message == reply.Message {
+				return nil, errors.New("conversation source generation reacquisition required")
+			}
+		}
 		// Preserve the previous delivery, then hand the actual edited owner text
 		// to the same task. Edits never inherit a prior implementation receipt.
 		previous, _ := json.Marshal(old)
@@ -152,7 +166,7 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 }
 
 func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQuestion, reply conversationReply, req *Request) error {
-	if req.Phase == "conversation_reply_delivered" || req.Phase == "conversation_reply_applied" {
+	if req.Phase == "conversation_reply_delivered" || req.Phase == "conversation_reply_applied" || req.Phase == "conversation_direction_recorded" || req.Phase == "conversation_implementation_recorded" || req.Phase == "conversation_source_verified" {
 		return nil
 	}
 	row, err := r.conversationTask(ctx, q.Todo)
@@ -461,6 +475,9 @@ func (r *Runner) conversationProgress(ctx context.Context, q ConversationQuestio
 	if phase == "conversation_applied" {
 		verb = "本人の回答を担当が反映し、検証結果を確認しました。元作業の残りは共有ToDoで継続します。"
 	}
+	if phase == "conversation_direction_recorded" {
+		verb = "本人の回答を元の作業の仕様へ記録、機能は未完了です。画像案の実装承認・配布・元作業全体の完了ではありません。停止と依存は共有ToDoに保持しています。"
+	}
 	body := fmt.Sprintf("状態: 継続中\n%s\n元の作業: https://discord.com/channels/%s/%s\n質問: https://discord.com/channels/%s/%s\n共有ToDo: %d", verb, r.State.Destination.Guild, q.OriginThread, r.State.Destination.Guild, q.Thread, q.Todo)
 	path := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", req.Message+"-"+phase+".txt")
 	if err := writeText(path, body); err != nil {
@@ -543,8 +560,11 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 				health.Errors = append(health.Errors, "conversation_delivery_deferred")
 				return
 			}
+			if r.deliverOwnerReplyMediaObservation(ctx, q, reply, req) != nil {
+				health.Errors = append(health.Errors, "conversation_owner_media_deferred")
+			}
 			wasClosed := q.Phase == "closed"
-			if !wasClosed || req.Phase != "conversation_reply_applied" {
+			if !wasClosed || (req.Phase != "conversation_reply_applied" && req.Phase != "conversation_direction_recorded" && req.Phase != "conversation_implementation_recorded") {
 				q.Phase = "answered"
 			}
 			index.Questions[id] = q
@@ -592,7 +612,7 @@ func (r *Runner) reportConversations(ctx context.Context, health *Health) {
 	}
 	ids := make([]string, 0)
 	for id, req := range r.State.Requests {
-		if req != nil && req.Conversation != "" && (req.Phase == "conversation_reply_delivered" || req.Phase == "conversation_reply_applied") {
+		if req != nil && req.Conversation != "" && (req.Phase == "conversation_reply_delivered" || req.Phase == "conversation_reply_applied" || req.Phase == "conversation_direction_recorded") {
 			ids = append(ids, id)
 		}
 	}
@@ -608,6 +628,9 @@ func (r *Runner) reportConversations(ctx context.Context, health *Health) {
 		stage := "conversation_delivered"
 		if req.Phase == "conversation_reply_applied" {
 			stage = "conversation_applied"
+		}
+		if req.Phase == "conversation_direction_recorded" {
+			stage = "conversation_direction_recorded"
 		}
 		if req.Reported == stage {
 			continue

@@ -12,6 +12,11 @@ ToDo2823で作成する新しい質問と本人回答を、元担当が読み取
 
 - `question.json`
 - `replies/<正の10進message_id>.json`
+- `owner-media/<message_id>-<observation_sha>.private.json`
+- `owner-media/<message_id>-<observation_sha>-<attachment_id>.scope.private.json`
+
+添付観測と画像scopeは同じ元質問と現在の返信原本を照合した上で、観測hashと1件の
+添付・固定期間を結ぶ。[添付記録の追加資格](owner-media-reader-qualification.md)に従う。
 
 `request_id` は先頭がASCII英数字で、全体が英数字・`_`・`-`の80文字以内。
 ディレクトリ自体、会話index、`question.txt`、`decision.json`、最新返信一覧、

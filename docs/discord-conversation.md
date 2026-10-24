@@ -100,6 +100,12 @@ Go側の失敗時は旧APIへ切り替えず、同じ入力での再試行を案
 標準出力にはGoが返した送信記録の確認結果だけを残し、本文と私的なファイルの場所は出さない。
 `replies/close/tick` など旧台帳を扱うコマンドは、この切り替えの対象に含めない。
 
+別担当の実反映と取消済み元作業を結ぶ場合は
+[実反映記録の仕様と利用順](delegated-implementation.md)の
+`source-verify`、必要時の`source-reacquire`、`implementation-record`、`close`を使う。
+新しい`conversation close`は旧台帳の`discord_ask close`とは別の入口である。
+実ジョブと現在のAPI版を照合し、元作業の取消・待ち・停止を解除しない。
+
 ## 新しい会話の画像を確認する
 
 画像はコピー前に1枚10MiB、合計23MiB、10枚までを検査する。

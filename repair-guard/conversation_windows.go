@@ -1,6 +1,6 @@
 package main
 
-// This is a reader for two exact new operational records, not a new resource registry.
+// This reads qualified operational records, not a new resource registry.
 import (
 	"bytes"
 	"encoding/json"
@@ -33,7 +33,7 @@ func conversationPathAllowed(path string) bool {
 	return conversationAllowed(path, conversationAccess{
 		home: conversationHome, notify: conversationNotify, todo: productStore,
 		sender:      filepath.Join(filepath.Dir(conversationHome), "recovery-messages.json"),
-		rootAllowed: allowed, protected: legacyMatch, at: time.Now(),
+		rootAllowed: repairOnlyAllowed, protected: legacyMatch, at: time.Now(),
 	})
 }
 
@@ -199,7 +199,7 @@ func conversationDestination(m, cfg object) bool {
 }
 
 // Dependency paths and source qualification are injectable only in in-process tests.
-// Production always uses the fixed paths above and the existing allowed(root).
+// Production always uses the fixed paths above and repairOnlyAllowed(root).
 func conversationAllowed(path string, a conversationAccess) bool {
 	path, err := portable(path)
 	if err != nil || !filepath.IsAbs(path) {
@@ -222,6 +222,10 @@ func conversationAllowed(path string, a conversationAccess) bool {
 	replyID := ""
 	if len(parts) == 3 && parts[1] == "replies" && strings.HasSuffix(parts[2], ".json") {
 		replyID = strings.TrimSuffix(parts[2], ".json")
+	}
+	media, mediaFile := conversationMediaPath(parts)
+	if mediaFile {
+		replyID = media.message
 	}
 	if !questionFile && !conversationID(replyID) {
 		return false
@@ -339,12 +343,19 @@ func conversationAllowed(path string, a conversationAccess) bool {
 		return false
 	}
 	if !questionFile {
-		record, _, ok := read(path, 1<<20)
+		replyPath := path
+		if mediaFile {
+			replyPath = filepath.Join(dir, "replies", replyID+".json")
+		}
+		record, sourceSHA, ok := read(replyPath, 1<<20)
 		if !ok {
 			return false
 		}
 		state, _, ok := read(filepath.Join(a.home, "unattended-state.json"), 8<<20)
 		if !ok || state["domain"] != "unattended-owner-v1" || !conversationDestination(obj(state["destination"]), cfg) || !conversationReply(record, obj(obj(state["requests"])[replyID]), q, cfg, question, replyID, a.at) {
+			return false
+		}
+		if mediaFile && !conversationMediaAllowed(media, dir, q, cfg, record, sourceSHA, a.at, read) {
 			return false
 		}
 	}

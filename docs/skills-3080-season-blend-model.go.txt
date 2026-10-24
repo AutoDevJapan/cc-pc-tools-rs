@@ -1,0 +1,122 @@
+// Self-authored numerical acceptance model, not upstream JavaScript or a
+// renderer. It models the documented four weights and interrupted targeting.
+package main
+
+import (
+	"math"
+	"testing"
+)
+
+type seasons123649 struct {
+	Weights [4]float64
+	Target  [4]float64
+}
+
+func (s *seasons123649) selectSeason(name string) bool {
+	keys := map[string]int{"spring": 0, "summer": 1, "fall": 2, "autumn": 2, "winter": 3}
+	index, ok := keys[name]
+	if !ok {
+		return false
+	}
+	var target [4]float64
+	target[index] = 1
+	s.Target = target
+	return true
+}
+func (s *seasons123649) step(dt float64, reduced bool) bool {
+	if math.IsNaN(dt) || math.IsInf(dt, 0) || dt < 0 {
+		return false
+	}
+	a := 1.0
+	if !reduced {
+		a = 1 - math.Exp(-1.4*math.Min(dt, 0.05))
+	}
+	for i := range s.Weights {
+		s.Weights[i] += (s.Target[i] - s.Weights[i]) * a
+	}
+	return true
+}
+func TestSeasonBlendInterruptedSelectionKeepsCurrentWeights(t *testing.T) {
+	s := seasons123649{Weights: [4]float64{0, 1, 0, 0}, Target: [4]float64{0, 1, 0, 0}}
+	if !s.selectSeason("winter") || !s.step(0.04, false) {
+		t.Fatal("fixture setup failed")
+	}
+	before := s.Weights
+	if !s.selectSeason("spring") || s.Weights != before {
+		t.Fatal("new target reset current blend")
+	}
+	if !s.step(0.02, false) {
+		t.Fatal("step rejected")
+	}
+	a := 1 - math.Exp(-1.4*0.02)
+	for i := range before {
+		want := before[i] + ([4]float64{1, 0, 0, 0}[i]-before[i])*a
+		if math.Abs(s.Weights[i]-want) > 1e-12 {
+			t.Fatalf("weight%d drifted across interrupt", i)
+		}
+	}
+	// A reset-to-summer implementation must be observably different at spring
+	// selection because the interrupted state already has nonzero winter weight.
+	if before[3] <= 0 || before[1] >= 1 {
+		t.Fatal("negative comparator would not differ")
+	}
+}
+func TestSeasonBlendRemainsNonnegativeNormalizedAndUsesBaseValues(t *testing.T) {
+	s := seasons123649{Weights: [4]float64{0, 1, 0, 0}, Target: [4]float64{0, 1, 0, 0}}
+	for i := 0; i < 1000; i++ {
+		if i%13 == 0 {
+			if !s.selectSeason([]string{"spring", "winter", "autumn", "summer"}[(i/13)%4]) {
+				t.Fatal("season")
+			}
+		}
+		s.step(float64(i%6)*0.01, false)
+		sum := 0.0
+		for _, w := range s.Weights {
+			if w < -1e-12 || w > 1+1e-12 || math.IsNaN(w) {
+				t.Fatal("invalid blend weight")
+			}
+			sum += w
+		}
+		if math.Abs(sum-1) > 1e-12 {
+			t.Fatal("blend lost normalization")
+		}
+	}
+	base := [4]float64{0.2, 0.5, 0.8, 0.1}
+	resolve := func(weights [4]float64) float64 {
+		v := 0.0
+		for i, w := range weights {
+			v += base[i] * w
+		}
+		return v
+	}
+	if got := resolve([4]float64{0.25, 0.25, 0.25, 0.25}); math.Abs(got-0.4) > 1e-12 {
+		t.Fatal("authored palette interpolation differs from its fixed expected value")
+	}
+	if !s.selectSeason("winter") || !s.step(0, true) || s.Weights != ([4]float64{0, 0, 0, 1}) || resolve(s.Weights) != base[3] {
+		t.Fatal("reduced-motion result differs from authored winter base")
+	}
+}
+func TestSeasonBlendUncappedTimePartitionHasTheSameState(t *testing.T) {
+	whole := seasons123649{Weights: [4]float64{0, 1, 0, 0}, Target: [4]float64{0, 0, 0, 1}}
+	split := whole
+	whole.step(0.04, false)
+	split.step(0.02, false)
+	split.step(0.02, false)
+	for i := range whole.Weights {
+		if math.Abs(whole.Weights[i]-split.Weights[i]) > 1e-12 {
+			t.Fatal("same uncapped duration depends on partition")
+		}
+	}
+}
+func TestSeasonBlendInvalidInputsLeaveStateUnchanged(t *testing.T) {
+	s := seasons123649{Weights: [4]float64{0, 1, 0, 0}, Target: [4]float64{0, 1, 0, 0}}
+	before := s
+	if s.selectSeason("unexpected") || s != before {
+		t.Fatal("invalid key mutated state")
+	}
+	for _, dt := range []float64{-1, math.NaN(), math.Inf(1), math.Inf(-1)} {
+		if s.step(dt, false) || s != before {
+			t.Fatal("invalid time mutated state")
+		}
+	}
+}

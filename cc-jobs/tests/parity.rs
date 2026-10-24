@@ -13,6 +13,9 @@ mod finite_owner_wait_repair;
 mod quota_recovery_tests;
 #[path = "support/no_action.rs"]
 mod no_action;
+#[cfg(windows)]
+#[path = "support/snapshot_persistence.rs"]
+mod snapshot_persistence;
 #[path = "support/product_retry.rs"]
 mod original_product_retry;
 #[path = "../../cc-job-policy/tests/support/mod.rs"]
@@ -6394,6 +6397,7 @@ type LoadFn = Box<dyn Fn(&Path, usize) + Send + Sync>;
 type SpawnHook = Box<dyn Fn() -> Box<dyn Running> + Send + Sync>;
 type SleepHook = Box<dyn Fn(f64) + Send + Sync>;
 type KillHook = Box<dyn Fn(u32) + Send + Sync>;
+type SaveValueHook = Box<dyn Fn(&Path, &Value) -> io::Result<()> + Send + Sync>;
 
 #[test]
 fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_win() {
@@ -6465,6 +6469,7 @@ struct Fake {
     load_count: AtomicUsize,
     load_hook: Mutex<Option<LoadFn>>,
     save_hook: Mutex<Option<LoadFn>>,
+    save_value_hook: Mutex<Option<SaveValueHook>>,
     load_error_path: Arc<Mutex<Option<PathBuf>>>,
     save_failure: AtomicBool,
     replace_failures: AtomicUsize,
@@ -6527,6 +6532,7 @@ impl Fake {
             load_count: AtomicUsize::new(0),
             load_hook: Mutex::new(None),
             save_hook: Mutex::new(None),
+            save_value_hook: Mutex::new(None),
             load_error_path: Arc::new(Mutex::new(None)),
             save_failure: AtomicBool::new(false),
             replace_failures: AtomicUsize::new(0),
@@ -6886,6 +6892,9 @@ impl Runtime for Fake {
         Ok(())
     }
     fn before_save(&self, _path: &Path, j: &Value) -> io::Result<()> {
+        if let Some(h) = self.save_value_hook.lock().unwrap().as_ref() {
+            h(_path, j)?;
+        }
         if let Some(h) = self.save_hook.lock().unwrap().as_ref() {
             h(_path, 0);
         }
@@ -10475,6 +10484,84 @@ mod task_notifier {
 }
 mod end_to_end {
     use super::*;
+    #[test]
+    fn windows_snapshot_sharing_keeps_the_native_child_alive_and_delivers_its_result() {
+        use std::os::windows::fs::OpenOptionsExt;
+        use windows_sys::Win32::Storage::FileSystem::{FILE_SHARE_READ, FILE_SHARE_WRITE};
+        let t = E2e::new();
+        // Optional finite acceptance probe of a caller-owned executable copy.
+        // Ordinary CI always tests CARGO_BIN_EXE_codex_jobs.
+        if let Ok(exe) = std::env::var("CC_JOBS_SNAPSHOT_PROBE_EXE") {
+            fs::copy(exe, &t.exe).unwrap();
+        }
+        t.diagnostic.store(true, Ordering::Relaxed);
+        let jid = t.start("snapshot-sharing", &t.tmp.0, b"synthetic snapshot work");
+        t.until_phase("snapshot_identity", || {
+            let snapshot = t.job(&jid);
+            t.rec.join("snapshot.ready").exists()
+                && truth(&snapshot["thread_id"])
+                && snapshot["activity"] == "thinking"
+        });
+        let path = t.tmp.0.join("tool/jobs").join(&jid).join("job.json");
+        let log = path.with_file_name("supervisor.log");
+        let held = fs::OpenOptions::new()
+            .read(true)
+            .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE)
+            .open(&path)
+            .unwrap();
+        let before = t.job(&jid);
+        let started = Instant::now();
+        fs::write(t.rec.join("snapshot.emit"), b"").unwrap();
+        t.until_phase("snapshot_deferred", || {
+            fs::read_to_string(&log)
+                .unwrap_or_default()
+                .contains("進捗の保存を延期")
+                || TERMINAL.contains(&s(&t.job(&jid), "status"))
+                || proc_created(before["pid"].as_u64().unwrap() as u32).is_none()
+        });
+        let running = t.job(&jid);
+        let log_text = fs::read_to_string(&log).unwrap_or_default();
+        let same_live_owners = ["pid", "codex_pid"].map(|key| {
+            running[key] == before[key]
+                && proc_created(running[key].as_u64().unwrap() as u32)
+                    == running[format!("{key}_created")].as_u64()
+        });
+        drop(held);
+        assert_eq!(running["status"], "running", "{log_text}");
+        assert!(log_text.contains("進捗の保存を延期"), "{log_text}");
+        assert!(started.elapsed() >= Duration::from_millis(900));
+        assert_eq!(same_live_owners, [true, true]);
+        // No new event or terminal write may hide a missing idle retry.
+        t.until_phase("snapshot_idle_recovery", || {
+            fs::read_to_string(&log)
+                .unwrap_or_default()
+                .contains("進捗の保存が復旧しました")
+                && t.job(&jid)["activity_detail"] == "fixture work"
+        });
+        let recovered = t.job(&jid);
+        assert_eq!(recovered["status"], "running");
+        assert_eq!(recovered["steps"], 0);
+        assert!(!truth(&recovered["turn_completed"]));
+        fs::write(t.rec.join("snapshot.finish"), b"").unwrap();
+        let result = t.cli(&["wait", &jid, "--timeout", "20"], "snapshot-sharing");
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        assert!(String::from_utf8_lossy(&result.stdout).contains("DONE"));
+        let final_job = t.job(&jid);
+        assert_eq!(final_job["status"], "succeeded");
+        assert_eq!(final_job["last_message"], "DONE");
+        assert_eq!(
+            fs::read_to_string(path.with_file_name("last_message.md")).unwrap(),
+            "DONE"
+        );
+        t.until_phase("snapshot_supervisor_exit", || {
+            proc_created(before["pid"].as_u64().unwrap() as u32).is_none()
+        });
+        assert!(proc_created(before["codex_pid"].as_u64().unwrap() as u32).is_none());
+    }
     #[test]
     fn terminal_supervisor_cleanup_preserves_its_independent_descendant() {
         let mut t = Test::new();

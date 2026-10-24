@@ -96,7 +96,9 @@ fn main() {
         // A log query reports the failed attempt's time, not the time spent
         // collecting metadata. Otherwise a slow query invents a future event
         // relative to the sampler and correctly fails attribution.
-        let timestamp = previous.as_ref().and_then(|call| call["timestamp"].as_i64());
+        let timestamp = previous
+            .as_ref()
+            .and_then(|call| call["timestamp"].as_i64());
         println!(
             "{}",
             json!({"logs":[{"model":model,"accountLogLabel":label,"status":503,
@@ -422,6 +424,47 @@ fn main() {
         pretty(&json!({"argv":args,"cwd":std::env::current_dir().unwrap().to_string_lossy()})),
     )
     .unwrap();
+    if mode == "snapshot-sharing" {
+        // The test controls both event boundaries. No fixed sleep decides when
+        // a reader is holding job.json or when the child may complete.
+        println!(
+            "{}",
+            json!({"type":"thread.started","thread_id":"01a0e883-7628-7121-9540-6780fd4cd6f4"})
+        );
+        println!("{}", json!({"type":"turn.started"}));
+        std::io::stdout().flush().unwrap();
+        fs::write(root.join("snapshot.ready"), std::process::id().to_string()).unwrap();
+        let wait = |name: &str| {
+            let deadline = std::time::Instant::now() + Duration::from_secs(30);
+            while !root.join(name).exists() {
+                assert!(
+                    std::time::Instant::now() < deadline,
+                    "snapshot barrier timeout: {name}"
+                );
+                std::thread::sleep(Duration::from_millis(5));
+            }
+        };
+        wait("snapshot.emit");
+        println!(
+            "{}",
+            json!({"type":"item.started","item":{"id":"snapshot-tool","type":"command_execution","command":"fixture work","status":"in_progress"}})
+        );
+        std::io::stdout().flush().unwrap();
+        wait("snapshot.finish");
+        println!(
+            "{}",
+            json!({"type":"item.completed","item":{"id":"snapshot-tool","type":"command_execution","command":"fixture work","status":"completed","exit_code":0}})
+        );
+        println!(
+            "{}",
+            json!({"type":"item.completed","item":{"id":"snapshot-reply","type":"agent_message","text":"DONE"}})
+        );
+        println!(
+            "{}",
+            json!({"type":"turn.completed","usage":{"input_tokens":1,"output_tokens":1}})
+        );
+        return;
+    }
     if mode == "capacity-once" || mode == "capacity-always" {
         let calls = root.join("capacity-calls.jsonl");
         let mut log = fs::OpenOptions::new()

@@ -20,6 +20,164 @@ pub struct Context {
     pub executable: PathBuf,
     pub rt: SharedRuntime,
 }
+
+/// Only known live projections may be deferred. Ownership, cancellation,
+/// session identity, unknown fields and terminal/handoff commits stay strict.
+struct ProgressPersistence {
+    durable: Value,
+    deferred: bool,
+    retry_at: f64,
+}
+impl ProgressPersistence {
+    fn new(job: &Value) -> Self {
+        Self {
+            durable: job.clone(),
+            deferred: false,
+            retry_at: 0.,
+        }
+    }
+    fn required(&self, job: &Value) -> bool {
+        fn control(mut job: Value) -> Value {
+            if let Some(fields) = job.as_object_mut() {
+                for key in [
+                    "activity",
+                    "activity_detail",
+                    "last_event_at",
+                    "steps",
+                    "tokens",
+                    "context_pct",
+                    "context_pct_exact",
+                    "rate_limit_pct",
+                    // Live event projections are committed strictly at the
+                    // terminal/handoff boundary. They must not turn an exited
+                    // successful child into a synthetic setup failure.
+                    "last_message",
+                    "turn_completed",
+                    "last_error",
+                    "last_failure_kind",
+                    "capacity_error",
+                    "rate_limit_times",
+                    "execution_observed",
+                ] {
+                    fields.remove(key);
+                }
+            }
+            job
+        }
+        control(self.durable.clone()) != control(job.clone())
+    }
+    fn save(&mut self, ctx: &Context, job: &mut Value) -> Result<()> {
+        self.save_impl(ctx, job, false)
+    }
+    fn save_required(&mut self, ctx: &Context, job: &mut Value) -> Result<()> {
+        self.save_impl(ctx, job, true)
+    }
+    fn owner_current(&self, fresh: &Value) -> bool {
+        crate::pool_retry::same_attempt(&self.durable, fresh)
+    }
+    fn resume_current(&self, job: &Value, fresh: &Value) -> bool {
+        ["thread_id", "resume_session"]
+            .iter()
+            .all(|key| fresh[*key] == self.durable[*key] || fresh[*key] == job[*key])
+    }
+    fn save_impl(&mut self, ctx: &Context, job: &mut Value, force: bool) -> Result<()> {
+        let required = force || self.required(job);
+        if !required && ctx.rt.mono() < self.retry_at {
+            return Ok(());
+        }
+        let result = (|| -> Result<Option<Value>> {
+            let _state = ctx.job_lock(s(job, "id"), "state.lock")?;
+            let fresh = ctx.load(s(job, "id"))?;
+            if !self.owner_current(&fresh) || !self.resume_current(job, &fresh) {
+                return Ok(None);
+            }
+            // Apply only this monitor's delta. A delayed flush must not undo
+            // fields saved by another writer while publication was deferred.
+            let mut merged = fresh.clone();
+            for (key, value) in job.as_object().unwrap() {
+                if self.durable.get(key) != Some(value) {
+                    if fresh.get(key) != self.durable.get(key) && fresh.get(key) != Some(value) {
+                        return Ok(None);
+                    }
+                    merged[key] = value.clone();
+                }
+            }
+            for key in self.durable.as_object().unwrap().keys() {
+                if job.get(key).is_none() {
+                    if fresh.get(key) != self.durable.get(key) && fresh.get(key).is_some() {
+                        return Ok(None);
+                    }
+                    merged.as_object_mut().unwrap().remove(key);
+                }
+            }
+            ctx.save(&merged)?;
+            Ok(Some(merged))
+        })();
+        match result {
+            Ok(Some(merged)) => {
+                *job = merged;
+                self.durable = job.clone();
+                if self.deferred {
+                    ctx.rt.diagnostic("進捗の保存が復旧しました");
+                }
+                self.deferred = false;
+                self.retry_at = 0.;
+                Ok(())
+            }
+            Ok(None) => Err(Error::new(
+                "保存済みの停止・実行状態が変わったため、古い進捗の保存を中止しました",
+            )),
+            Err(error) if !required => {
+                // Error 5 can also mean ACL denial. Do not reinterpret it as a
+                // sharing violation, change access rights, or bypass the writer.
+                if !self.deferred {
+                    ctx.rt.diagnostic(&format!(
+                        "進捗の保存を延期し、作業を続けます: {}",
+                        redact_local_log_secrets(&error.message, &ctx.rt.env())
+                    ));
+                }
+                self.deferred = true;
+                self.retry_at = ctx.rt.mono() + 3.;
+                Ok(())
+            }
+            Err(error) => Err(error),
+        }
+    }
+}
+#[cfg(test)]
+mod progress_persistence_tests {
+    use super::*;
+    #[test]
+    fn deferred_display_fields_cannot_hide_control_or_unknown_field_changes() {
+        let original = json!({"id":"fixture", "status":"running"});
+        let state = ProgressPersistence::new(&original);
+        let mut display = original.clone();
+        display["activity"] = json!("working");
+        display["steps"] = json!(3);
+        display["last_message"] = json!("completed reply");
+        display["turn_completed"] = json!(true);
+        display["execution_observed"] = json!({"model":"fixture"});
+        assert!(!state.required(&display));
+        for key in [
+            "id",
+            "status",
+            "pid",
+            "pid_created",
+            "codex_pid",
+            "codex_pid_created",
+            "thread_id",
+            "resume_session",
+            "cancel_requested",
+            "retry_count",
+            "context_phase",
+            "new_control_field",
+        ] {
+            let mut candidate = display.clone();
+            candidate[key] = json!("changed");
+            assert!(state.required(&candidate), "{key}");
+        }
+    }
+}
 impl Context {
     /// Load saved owner instructions and enforce the current site restriction,
     /// including old saved jobs and both kinds of continuation. Keep the
@@ -1113,6 +1271,7 @@ impl Context {
         let mut exit = None;
         let mut cleanup_failed = false;
         let mut tool_yielded = false;
+        let mut progress = None;
         #[cfg(windows)]
         let mut chrome_proxy = None;
         let work = (|| -> Result<()> {
@@ -1165,6 +1324,8 @@ impl Context {
             }
             job["codex_pid_created"] = json!(created);
             self.save(&job)?;
+            progress = Some(ProgressPersistence::new(&job));
+            let progress = progress.as_mut().unwrap();
             drop(lock);
             let mut n = TaskProgress::new(self.ao_executable(), self.jobs.clone(), self.rt.clone());
             n.start(&job);
@@ -1235,12 +1396,15 @@ impl Context {
                             || parse_iso(s(&job, "started_at"))
                                 .is_some_and(|at| self.rt.epoch() - at >= 7200.))
                     {
-                        self.save(&job)?;
                         let attempt = (|| -> Result<bool> {
                             // Skip the global gate unless a yield is plausible.
                             if !self.yield_may_be_due(&job) {
                                 return Ok(false);
                             }
+                            // Handoffs consume committed state. Display
+                            // publication can return to the normal retry;
+                            // resume/ownership changes remain mandatory there.
+                            progress.save_required(self, &mut job)?;
                             self.yield_running_tool_boundary(&job)
                         })();
                         match attempt {
@@ -1255,8 +1419,8 @@ impl Context {
                         }
                     }
                 }
-                if changed {
-                    self.save(&job)?;
+                if changed || progress.deferred {
+                    progress.save(self, &mut job)?;
                 }
                 if !had_event
                     && self.rt.mono() >= next_yield_check
@@ -1278,6 +1442,7 @@ impl Context {
                             self.recover_tool_yield(&self.load(jid)?)?;
                             return Ok(s(&self.load(jid)?, "status") == "queued");
                         }
+                        progress.save_required(self, &mut job)?;
                         self.yield_running_tool_boundary(&job)
                     })();
                     match attempt {
@@ -1316,7 +1481,7 @@ impl Context {
             }
             Ok(())
         })();
-        let setup_failed = work.is_err();
+        let attempt_failed = work.is_err();
         if tool_yielded {
             if let Some(n) = &mut notifier {
                 n.close();
@@ -1348,7 +1513,7 @@ impl Context {
             }
         }
         // A queued job cancelled before the second load must never be rewritten by this supervisor.
-        if !setup_failed && proc.is_none() && s(&job, "status") != "running" {
+        if !attempt_failed && proc.is_none() && s(&job, "status") != "running" {
             return Ok(false);
         }
         finish(
@@ -1369,7 +1534,7 @@ impl Context {
         {
             self.yield_diagnostic(&error);
         }
-        if s(&job, "last_failure_kind") == "capacity" && !cleanup_failed && !setup_failed {
+        if s(&job, "last_failure_kind") == "capacity" && !cleanup_failed && !attempt_failed {
             job["capacity_inventory"] = self.capacity_inventory(&job);
         }
         let gate = match self.queue_lock() {
@@ -1383,6 +1548,20 @@ impl Context {
         let fresh = self.load(jid)?;
         if fresh["cancel_requested"] == true || s(&fresh, "status") == "cancelled" {
             job = fresh;
+        } else if progress.as_ref().is_some_and(|state| {
+            !state.resume_current(&job, &fresh)
+                || (s(&job, "last_failure_kind") != "capacity" && !state.owner_current(&fresh))
+        }) {
+            self.rt.diagnostic(&format!(
+                "終了した実行の結果を保持し、変更後の実行状態を保護します (job={}, status={}, exit={})",
+                jid, s(&job, "status"), job["exit_code"]
+            ));
+            drop(state);
+            drop(gate);
+            #[cfg(windows)]
+            drop(chrome_proxy);
+            if let Some(n) = &mut notifier { n.close(); }
+            return Ok(false);
         } else if s(&job, "last_failure_kind") == "capacity"
             && !crate::pool_retry::same_attempt(&job, &fresh)
         {
@@ -1427,7 +1606,7 @@ impl Context {
         // Capacity switches have their own bound. A combined capacity/429
         // message must not escape that bound through the same-model retry.
         let retry = !cleanup_failed
-            && !setup_failed
+            && !attempt_failed
             && if s(&job, "last_failure_kind") == "capacity" {
                 if gate.is_none(){false}
                 else if todo_unavailable {self.defer_capacity_lock(&mut job)}
@@ -1445,7 +1624,7 @@ impl Context {
         let mut yielded = false;
         if gate.is_some()
             && !cleanup_failed
-            && !setup_failed
+            && !attempt_failed
             && !retry
             && s(&job, "last_failure_kind") != "capacity"
         {
@@ -1478,7 +1657,17 @@ impl Context {
                 }
             }
         }
-        self.save(&job)?;
+        if let Err(error) = self.save(&job) {
+            // Do not notify success or restart a queued attempt before this
+            // transition is durable. Preserve events/output and the failed
+            // snapshot for supervisor recovery, and report the actual failure.
+            self.rt.diagnostic(&format!(
+                "終了状態を保存できません (job={}, status={}); 記録を保持します: {}",
+                s(&job, "id"), s(&job, "status"),
+                redact_local_log_secrets(&error.message, &self.rt.env())
+            ));
+            return Err(error);
+        }
         drop(todo_guard);
         drop(state);
         drop(gate);

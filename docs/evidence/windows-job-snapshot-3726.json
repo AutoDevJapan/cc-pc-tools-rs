@@ -1,0 +1,139 @@
+{
+  "todo_id": 3726,
+  "red_source": "60e5bd4c",
+  "installed_sha256": "98e8279c8225e7fa553b5e1a182b4292003ff5a5793234f1e7bb963ed1c12084",
+  "related_total": 1694,
+  "initial_passed": 1688,
+  "initial_failed": 6,
+  "corrected_environment_rechecks_passed": 6,
+  "doc_exit": 0,
+  "clippy_exit": 0,
+  "files": [
+    {
+      "name": "red-confirmed.log",
+      "sha256": "5d1adf7f93acd1df211d098a533b87ee0385796f3ec92e11de159b2acfc14510"
+    },
+    {
+      "name": "installed-red.log",
+      "sha256": "856e9b04338505431b7686a1485aa148e79e1d8a5c6a469529e449bb16819f11"
+    },
+    {
+      "name": "green-native.log",
+      "sha256": "5e6d2bf86d00316d63eefcc76a8c0bf1a3466a31ca97b9e0921e01a4df2f50fc"
+    },
+    {
+      "name": "related-tests.log",
+      "sha256": "5f1eb6e5e55c928881f707c7e0fb61cb8329823deb0a7b86cc1ae777839d34ab"
+    },
+    {
+      "name": "fixture-environment-recheck.log",
+      "sha256": "a55e7a2c4e00c916f005983c2497bf4b24ea7d465bd19ce3bdefec859a9c9c3a"
+    },
+    {
+      "name": "short-path-fixture-recheck.log",
+      "sha256": "5ae0584f2c936e41849acc7876d4e3427f3dc979993733770e785f3340c164b0"
+    },
+    {
+      "name": "doc-tests.log",
+      "sha256": "9354343063d5e646df2f9dd2ed1550ea1dfccce20ec45189418620451fe304e8"
+    },
+    {
+      "name": "clippy.log",
+      "sha256": "05f74648a7faa37cfb9067931470f8ad9ee317e7a4335b2fbcf06fbc697fe628"
+    }
+  ],
+  "review_todo": 3729,
+  "review_job": "20261025-045233-todo-3729",
+  "review_native": {
+    "timestamp": "2026-10-24T19:53:25.31Z",
+    "thread_id": "01a16f79-5d70-7261-82f8-340628a5836d",
+    "model": "grok-4.6",
+    "effort": "xhigh",
+    "result_received": true
+  },
+  "temp_owner_ids": [
+    "9281a173abd026b4b8f04bda4a4c52f4",
+    "30f2784bcabdd0e88b60ecce41d05d01"
+  ],
+  "review_original_sha256": "f1dcca9794eb4806babdf062a61e0ce1f67a09962576d22e74b7d61d861622d5",
+  "review_finished_at": "2026-10-25T05:09:19+09:00",
+  "review_must_count": 1,
+  "followup_scope": "result-projection drain, current-state locked merge, mandatory resume/terminal persistence, idle handoff, regression tests",
+  "post_review": {
+    "cc_jobs_tests_total": 538,
+    "cc_jobs_passed": 538,
+    "cc_jobs_skipped": 1,
+    "latest_regression_tests": 9,
+    "latest_regression_passed": 9,
+    "additional_control_variants": [
+      "cancelled",
+      "succeeded",
+      "different running owner"
+    ],
+    "doc_exit": 0,
+    "clippy_exit": 0,
+    "proof_files": [
+      {
+        "name": "cancel-race-red.log",
+        "sha256": "092f63a4d56eeb41d3cbbe907f70b7e7284edaaff4b5b0307c4447a4d3cc1202"
+      },
+      {
+        "name": "result-race-red.log",
+        "sha256": "2972ca1a3a90a9811e242a06df46c3eee47a94a0bc5a73e38b6730b44cbc12e4"
+      },
+      {
+        "name": "cc-jobs-final-tests.log",
+        "sha256": "73b7722ef154ae84b75698c091799026e39e7f78e4a9c18778da39dd7f6827d1"
+      },
+      {
+        "name": "final-regressions.log",
+        "sha256": "17ac8a82e50f2ea910fbaad650d1c1f7fc7697301b3cad289d299d3a9549428a"
+      },
+      {
+        "name": "final-doc.log",
+        "sha256": "dfbeda70ac0b5c175f2299db9384d29c178996fb8dcae446d0c09403f36aa0fe"
+      },
+      {
+        "name": "final-clippy.log",
+        "sha256": "ebe07fecf66a2c382cc3e165403c8f5dddddacad07b86011d8b6ee759824c9b4"
+      }
+    ]
+  },
+  "initial_validation_source": "76fb8af0b414f15a577623dc52c10a1a540bfd9b",
+  "integrated_basis": "c7dbe4598d14b2eab92aad02b4be4a64a7481cd4",
+  "review_3733": {
+    "head": "293612d60cc0b1b9be324474553f3cbcbe79c3a6",
+    "scope": "native test delta only",
+    "model": "grok-4.6",
+    "effort": "xhigh",
+    "must": 0,
+    "sha256": "e42791afe2c120a1f7cbd1f4c07080252f6b56a8587bfc8b1a897f4015ece6da"
+  },
+  "review_3743": {
+    "head": "04a420200ad1e4dad6c7d416f60c8b0f9eea6361",
+    "model": "grok-4.6",
+    "effort": "xhigh",
+    "must": 1,
+    "sha256": "68929fe9031e08d256e21c9c88cedfbdbad68f4944fa50ef8f29374bb4bf1176",
+    "disposition": "resume compatibility shared between monitor and terminal; divergent and convergent ID regressions confirmed; next fixed-candidate review pending"
+  },
+  "resume_fix": {
+    "regressions": 10,
+    "control_variants": 5,
+    "convergent_id_case": true,
+    "proof_files": [
+      {
+        "sha256": "601043252271417db863e1df3368460bc065c4ea76dde7017b86c5cea7ea5ff6",
+        "name": "resume-id-red-confirmed.log"
+      },
+      {
+        "sha256": "f18e87bfb8fc7948168f07c8a9fa073474669ed46666f3c15c129bfa1e9a02dc",
+        "name": "resume-id-green.log"
+      },
+      {
+        "sha256": "025e5d9e9ecd32c62ee5556bde48c675427e61a4605a4f3c23ac36844458983e",
+        "name": "integrated-regressions.log"
+      }
+    ]
+  }
+}

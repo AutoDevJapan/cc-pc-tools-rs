@@ -75,18 +75,19 @@ type CleanupRec struct {
 }
 
 type Entry struct {
-	Key       string        `json:"key"`
-	Plan      Plan          `json:"plan"`
-	OS        string        `json:"os"`
-	Phase     string        `json:"phase"` // initial, normal, continuation
-	State     string        `json:"state"`
-	Queued    QueuedRec     `json:"queued"`
-	Started   StartRec      `json:"started"`
-	Official  OfficialRec   `json:"official"`
-	Cleanup   CleanupRec    `json:"cleanup"`
-	Reason    string        `json:"reason,omitempty"`
-	Prestarts []PrestartRec `json:"prestarts,omitempty"`
-	Replaces  string        `json:"replaces_expired_entry,omitempty"`
+	Key            string        `json:"key"`
+	Plan           Plan          `json:"plan"`
+	OS             string        `json:"os"`
+	Phase          string        `json:"phase"` // initial, normal, continuation
+	State          string        `json:"state"`
+	Queued         QueuedRec     `json:"queued"`
+	Started        StartRec      `json:"started"`
+	Official       OfficialRec   `json:"official"`
+	Cleanup        CleanupRec    `json:"cleanup"`
+	Reason         string        `json:"reason,omitempty"`
+	Prestarts      []PrestartRec `json:"prestarts,omitempty"`
+	Replaces       string        `json:"replaces_expired_entry,omitempty"`
+	SourceReplaces string        `json:"replaces_unexecuted_source_entry,omitempty"`
 }
 
 type PrestartRec struct {
@@ -98,10 +99,18 @@ type PrestartRec struct {
 // Budget is the persistent, one-time reservation: a key is appended exactly
 // once, in the same atomic ledger write that creates its entry.
 type Budget struct {
-	Initial      []string         `json:"initial"`
-	Normal       []string         `json:"normal"`
-	Continuation []string         `json:"continuation,omitempty"`
-	Replacements []ReplacementRec `json:"expired_replacements,omitempty"`
+	Initial          []string             `json:"initial"`
+	Normal           []string             `json:"normal"`
+	Continuation     []string             `json:"continuation,omitempty"`
+	Replacements     []ReplacementRec     `json:"expired_replacements,omitempty"`
+	SourceMigrations []SourceMigrationRec `json:"unexecuted_source_migrations,omitempty"`
+}
+
+type SourceMigrationRec struct {
+	Original    string `json:"original"`
+	Replacement string `json:"replacement"`
+	Generation  string `json:"generation"`
+	ProofSHA256 string `json:"proof_sha256"`
 }
 
 // A replacement binds one new official attempt to one existing initial slot.
@@ -165,7 +174,7 @@ func (s *Store) load() (*Ledger, error) {
 		return nil, errors.New("ledger unreadable or too large")
 	}
 	l := newLedger()
-	if e = json.Unmarshal(b, l); e != nil || l.Version != 1 {
+	if e = json.Unmarshal(b, l); e != nil || (l.Version != 1 && l.Version != 2) {
 		return nil, errors.New("ledger rejected")
 	}
 	if l.Entries == nil {
@@ -298,6 +307,9 @@ func (l *Ledger) reserve(p Plan, osName string, continuation bool, now time.Time
 		list, limit = &l.Budget.Normal, NormalBudget
 	}
 	if len(*list) >= limit {
+		if phase == "initial" && hasOriginalSourceSlots(l) {
+			return nil, "source_migration_required"
+		}
 		if !continuation {
 			return nil, "budget_exhausted"
 		}
@@ -308,6 +320,20 @@ func (l *Ledger) reserve(p Plan, osName string, continuation bool, now time.Time
 	l.Entries[key] = e
 	delete(l.Refusals, key)
 	return e, ""
+}
+
+func hasOriginalSourceSlots(l *Ledger) bool {
+	if len(l.Budget.Initial) != InitialBudget {
+		return false
+	}
+	seen := map[string]bool{}
+	for _, key := range l.Budget.Initial {
+		if _, ok := originalSourceSlots[key]; !ok || seen[key] {
+			return false
+		}
+		seen[key] = true
+	}
+	return true
 }
 
 func (l *Ledger) activeFor(osName string) *Entry {

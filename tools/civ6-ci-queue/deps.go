@@ -26,6 +26,7 @@ type Deps struct {
 	Admin         AdminFunc
 	SD            SafeDelete
 	Alive         func(ProcID) bool
+	VerifyStopped func(ProcID) error
 	Spawn         func(key string) (ProcID, bool, error)
 	Self          func() ProcID
 	LockOS        func(osName string) (func(), error)
@@ -57,6 +58,7 @@ func NewDeps(cfgPath string) (*Deps, error) {
 		return nil, e
 	}
 	d := &Deps{Cfg: cfg, CfgPath: cfgPath, Now: time.Now, C: activeContract, Exec: runPinned, Alive: procAlive}
+	d.VerifyStopped = verifySourceProcessStopped
 	if cfg.AdminBroker.Path != "" {
 		d.Admin = realAdmin(cfg.AdminBroker)
 	}

@@ -108,7 +108,7 @@ func verifyCurrent(ctx context.Context, p Plan, read ReadAPI) (bool, error) {
 	}
 	initial := p.PR == 149 && !original.Merged
 	if initial {
-		if original.State != "open" || original.Head.SHA != p.Head || original.Base.SHA != OriginalBase || p.Branch != OriginalBranch {
+		if original.State != "open" || original.Head.SHA != p.Head || (original.Base.SHA != OriginalBase && original.Base.SHA != MergeMain) || p.Branch != OriginalBranch {
 			return false, errors.New("current original PR source differs")
 		}
 	} else if !original.Merged || original.State != "closed" || !ValidSHA(original.MergeSHA) {
@@ -187,16 +187,66 @@ func Verify(ctx context.Context, p Plan, read ReadAPI) error {
 	if c.SHA != p.Head || c.Tree.SHA != p.Tree {
 		return errors.New("fixed source commit/tree differs")
 	}
-	if initial && (len(c.Parents) != 1 || c.Parents[0].SHA != OriginalHead) {
-		return errors.New("initial routing commit must retain sole original parent")
+	mergedSource := false
+	if initial {
+		mergedSource = len(c.Parents) == 2 && c.Parents[0].SHA == OldRoutedHead && c.Parents[1].SHA == MergeMain
+		if mergedSource {
+			if e = VerifyMergeSource(ctx, p.Head, p.Tree, read); e != nil {
+				return e
+			}
+			var ref struct{ Object struct{ SHA string } }
+			if e = read(ctx, "repos/"+Repository+"/git/ref/heads/main", &ref); e != nil {
+				return e
+			}
+			if ref.Object.SHA != MergeMain {
+				return errors.New("fixed merge main advanced; no automatic source following")
+			}
+		} else {
+			if len(c.Parents) != 1 || c.Parents[0].SHA != OriginalHead {
+				return errors.New("initial routing commit must retain sole original parent or exact fixed merge parents")
+			}
+			var pr pull
+			if e = read(ctx, "repos/"+Repository+"/pulls/149", &pr); e != nil {
+				return e
+			}
+			if pr.Base.SHA != OriginalBase {
+				return errors.New("original generation base differs")
+			}
+		}
+	} else {
+		// Select a continuation template from the actually merged PR149 source,
+		// never from a caller-supplied generation flag or the new commit's shape.
+		var pr pull
+		if e = read(ctx, "repos/"+Repository+"/pulls/149", &pr); e != nil {
+			return e
+		}
+		var source commit
+		if e = read(ctx, "repos/"+Repository+"/git/commits/"+pr.Head.SHA, &source); e != nil {
+			return e
+		}
+		mergedSource = len(source.Parents) == 2 && source.Parents[0].SHA == OldRoutedHead && source.Parents[1].SHA == MergeMain
+		if mergedSource {
+			if e = VerifyMergeSource(ctx, pr.Head.SHA, source.Tree.SHA, read); e != nil {
+				return e
+			}
+		}
 	}
 	expected := map[string]string{}
-	for _, w := range workflows {
-		original, e := contents(ctx, read, w.Path, OriginalHead)
+	templates, templateHead := Workflows(), OriginalHead
+	if mergedSource {
+		templates, templateHead = MainWorkflows(), MergeMain
+	}
+	for _, w := range templates {
+		original, e := contents(ctx, read, w.Path, templateHead)
 		if e != nil {
 			return e
 		}
-		want, e := Propose(original, w)
+		var want []byte
+		if mergedSource {
+			want, e = ProposeMain(original, w)
+		} else {
+			want, e = Propose(original, w)
+		}
 		if e != nil {
 			return e
 		}
@@ -221,7 +271,7 @@ func Verify(ctx context.Context, p Plan, read ReadAPI) error {
 			}
 		}
 	}
-	if initial {
+	if initial && !mergedSource {
 		var a, b treeReply
 		if e = read(ctx, "repos/"+Repository+"/git/trees/"+OriginalTree+"?recursive=1", &a); e != nil {
 			return e
@@ -391,7 +441,10 @@ func RequireSuccess(ctx context.Context, p Plan, runnerName string, read ReadAPI
 	return nil
 }
 func checkTree(a, b treeReply, wantTree string, expected map[string]string) error {
-	if a.Truncated || b.Truncated || a.SHA != OriginalTree || b.SHA != wantTree || len(a.Entries) != len(b.Entries) || len(expected) != 3 {
+	return checkTreeFrom(a, b, OriginalTree, wantTree, expected)
+}
+func checkTreeFrom(a, b treeReply, baseTree, wantTree string, expected map[string]string) error {
+	if a.Truncated || b.Truncated || a.SHA != baseTree || b.SHA != wantTree || len(a.Entries) != len(b.Entries) || len(expected) != 3 {
 		return errors.New("complete original source tree required")
 	}
 	old := map[string]treeEntry{}

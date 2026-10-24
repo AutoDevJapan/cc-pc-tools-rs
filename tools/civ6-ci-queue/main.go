@@ -12,7 +12,7 @@ import (
 var keyPattern = regexp.MustCompile(`^[0-9]{1,18}/[0-9]{1,4}/[0-9]{1,18}$`)
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "usage: civ6-ci-queue <tick|worker|status|resume-unassigned|replace-expired> --config <path> [--entry <run/attempt/job>] [--replacement <run/attempt/job>]")
+	fmt.Fprintln(os.Stderr, "usage: civ6-ci-queue <tick|worker|status|resume-unassigned|replace-expired|migrate-unexecuted-main392> --config <path> [--entry <run/attempt/job>] [--replacement <run/attempt/job>]")
 	os.Exit(2)
 }
 
@@ -102,6 +102,17 @@ func main() {
 			os.Exit(1)
 		}
 		fmt.Println(`{"status":"replacement_reserved","official_success":false}`)
+	case "migrate-unexecuted-main392":
+		if !keyPattern.MatchString(entry) || !keyPattern.MatchString(replacement) {
+			usage()
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		defer cancel()
+		if err := d.MigrateUnexecutedSource(ctx, entry, replacement); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		fmt.Println(`{"status":"source_migration_reserved","official_success":false}`)
 	default:
 		usage()
 	}

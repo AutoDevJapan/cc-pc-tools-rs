@@ -85,6 +85,45 @@ func TestSkills3080PersistedAdmissionBindsTheActualLaunchParent(t *testing.T) {
 	}
 }
 
+func TestSkills3080CompleteResultBindingUsesThePersistedAdmission(t *testing.T) {
+	reg, row, job, _ := skillsReviewGenerationFixture()
+	spec := []byte("SKILLS3080_IMPLEMENTATION_REVIEW " + strings.Repeat("a", 40))
+	r := skillsResultRequest{Task: 3740, Job: "20261025-053156-todo-3740", SpecSHA: hashBytes(spec)}
+	row.ID, row.Spec, row.Jobs = r.Task, "D:/CC/Tools/todo/specs/3740-a.md", []string{r.Job}
+	row.Scheduler.SubworkParent = ""
+	row.Scheduler.Worktree = "D:/CC/Work/review3740"
+	row.Scheduler.Admission = &skillsAdmission{Key: "real-admission", Spec: row.Spec, Worktree: row.Scheduler.Worktree, Subwork: row.Subwork}
+	reg.Tasks[r.Task] = row
+	job["id"], job["todo_id"], job["status"], job["exit_code"] = r.Job, json.Number("3740"), "succeeded", json.Number("0")
+	job["cwd"], job["sandbox"], job["launch_key"], job["subwork_validated"] = row.Scheduler.Worktree, "read-only", "real-admission", true
+	job["parent_job_id"] = row.Subwork.ParentJob
+	job["subwork"] = object{"parent_todo_id": json.Number("3686"), "origin_job_id": row.Subwork.ParentJob, "kind": "review", "owner": object{"worktree": row.Subwork.Owner.Worktree}}
+	job["finite_review"] = object{"spec": row.Spec}
+	if !skillsResultBindingWith(r, reg, job, spec, false, map[int]string{}) {
+		t.Fatal("actual receipt form failed the complete result binding")
+	}
+	job["parent_job_id"] = nil
+	if !skillsResultBindingWith(r, reg, job, spec, false, map[int]string{}) {
+		t.Fatal("normal departed launch parent failed the complete binding")
+	}
+	job["parent_job_id"] = "20261025-000000-todo-3686"
+	if skillsResultBindingWith(r, reg, job, spec, false, map[int]string{}) {
+		t.Fatal("an unregistered launch parent passed the complete binding")
+	}
+}
+
+func TestSkills3080ReplacementRequiresActualLunaMax(t *testing.T) {
+	good := []object{{"model": "openai/gpt-6-luna", "effort": "max"}}
+	if !skillsReplacementNativeBound(good) {
+		t.Fatal("actual designated native context rejected")
+	}
+	for _, bad := range [][]object{nil, {{"model": "gpt-6-astra", "effort": "max"}}, {{"model": "gpt-6-luna", "effort": "low"}}, {{"model": "gpt-6-luna"}}, {good[0], {"model": "gpt-6-astra", "effort": "max"}}} {
+		if skillsReplacementNativeBound(bad) {
+			t.Fatal("metadata-only designation accepted mismatched actual native model/effort")
+		}
+	}
+}
+
 func TestSkills3080ReviewRegisteredContinuation(t *testing.T) {
 	reg, row, child, origin := skillsReviewGenerationFixture()
 	if !skillsReviewParentBound(reg, row, false, row.Scheduler.SubworkParent) || !skillsReviewOriginBound(reg.Tasks[3686], row, child, origin) {

@@ -258,6 +258,18 @@ func skillsReplacementReviewBound(r skillsResultRequest, job object) bool {
 		job["model_origin"] == "owner_request" && job["effort_origin"] == "owner_request"
 }
 
+func skillsReplacementNativeBound(native []object) bool {
+	if len(native) == 0 {
+		return false
+	}
+	for _, observed := range native {
+		if skillsModel(str(observed["model"])) != "gpt-6-luna" || observed["effort"] != "max" {
+			return false
+		}
+	}
+	return true
+}
+
 type skillsReceived struct {
 	Body     []byte
 	Metadata object
@@ -429,7 +441,7 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 		return out, "result_unavailable"
 	}
 	native, ok := skillsNativeJob(s, job)
-	if !ok {
+	if !ok || (r.Task == 3709 && !skillsReplacementNativeBound(native)) {
 		return out, "native_context"
 	}
 	out = skillsReceived{Body: body, Spec: spec, Native: native, Metadata: object{"id": r.Job, "task": r.Task, "status": job["status"], "model": job["model"], "effort": job["effort"], "exit_code": job["exit_code"], "thread_id": job["thread_id"], "spec_sha256": r.SpecSHA, "final_sha256": hashBytes(body)}}

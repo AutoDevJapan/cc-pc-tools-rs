@@ -191,7 +191,10 @@ func TestSkills3080CompleteManifestReviewAndCreate(t *testing.T) {
 	}
 	manifestSHA := hashBytes(raw)
 	parsed, ok := skillsParseManifest(raw)
-	if !ok || !skillsSourcesBound(parsed) {
+	evidence := skillsAcquiredFixture(t, original, notice, true)
+	sourceFS := skillsFS{blocked: func(string) bool { return false }}
+	defer sourceFS.close()
+	if !ok || !skillsSourcesBoundAt(parsed, &sourceFS, evidence.root, evidence.catalogSHA, evidence.anchors) {
 		t.Fatal("complete positive manifest rejected")
 	}
 	review := skillsReceived{Spec: []byte("SKILLS3080_MANIFEST_SHA256 " + manifestSHA), Metadata: object{"model": "google-antigravity/gemini-3.1-pro", "effort": "high"}, Native: []object{{"model": "google-antigravity/gemini-3.1-pro", "effort": "high"}}, Body: []byte("SKILLS3080_ACCEPTANCE " + `{"domain":"skills-3080-review-v1","manifest_sha256":"` + manifestSHA + `","accepted":true,"must":0}`)}

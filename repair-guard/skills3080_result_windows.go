@@ -47,6 +47,9 @@ type skillsTask struct {
 type skillsRegistry struct {
 	Root  string
 	Tasks map[int]skillsTask
+	// Assigned only after the real current actor passed skillsActorCheck. The
+	// caller cannot supply a registry or substitute a past author for this actor.
+	writer skillsWriter
 }
 
 // Metadata projection: never retain titles, notes, history, unrelated rows or
@@ -191,7 +194,7 @@ func skillsReadJob(s *skillsFS, id string) (object, bool) {
 func skillsJobTask(job object, id int) bool { return conversationNumber(job["todo_id"]) == uint64(id) }
 func skillsWriterCheck(w skillsWriter, reg skillsRegistry, s *skillsFS, caller string) bool {
 	row, ok := reg.Tasks[3080]
-	if !ok || skillsHeld(row) || !skillsWriterValid(w) || w.Job != caller || row.Project != "cc-pc-tools-rs" || row.Status != "doing" || row.Scheduler.Job != w.Job || !same(row.Scheduler.Worktree, w.Workspace) || !skillsHasJob(row, w.Job) || !skillsTaskSpec(s, row, w.SpecSHA) {
+	if !ok || skillsHeld(row) || !skillsWriterValid(w) || w.Job != caller || row.Project != "cc-pc-tools-rs" || row.Status != "doing" || row.Scheduler.Job != w.Job || !same(row.Scheduler.Worktree, w.Workspace) || !skillsHasJob(row, w.Job) || !skillsLatest(row, w.Job) || !skillsTaskSpec(s, row, w.SpecSHA) {
 		return false
 	}
 	job, ok := skillsReadJob(s, w.Job)
@@ -230,6 +233,19 @@ var skillsOriginalSpecs = map[int]string{
 	3669: "1db9502e1e8cd3793846368a89e4b9dcdba3674663ddf2a7659da5f79fe24d64",
 }
 
+// The owner-designated replacement of the old 3676 review is one already
+// completed root review, not a new exception for arbitrary root jobs. Its exact
+// saved spec, job and response were independently received by the parent.
+const skillsReplacementReviewJob = "20261025-025407-todo-3709"
+const skillsReplacementReviewSpec = "f019aa26622c8c2d72423945e88ebcfea492140869c905f4178d42ef1e90ae79"
+const skillsReplacementReviewFinal = "9e91a000cbb8fe65530bfee0f3a961e982e462736d65a5c06ac91f0b74869a3e"
+
+func skillsReplacementReviewBound(r skillsResultRequest, job object) bool {
+	return r.Task == 3709 && r.Job == skillsReplacementReviewJob && r.SpecSHA == skillsReplacementReviewSpec &&
+		skillsModel(str(job["model"])) == "gpt-6-luna" && job["effort"] == "max" &&
+		job["model_origin"] == "owner_request" && job["effort_origin"] == "owner_request"
+}
+
 type skillsReceived struct {
 	Body     []byte
 	Metadata object
@@ -249,20 +265,83 @@ func skillsResultBindingWith(r skillsResultRequest, reg skillsRegistry, job obje
 	if expected, ok := originals[r.Task]; ok && !forReview {
 		return expected == r.SpecSHA && strings.Contains(string(spec), skillsParentRoot)
 	}
+	if r.Task == 3709 && !forReview {
+		return skillsReplacementReviewBound(r, job)
+	}
 	if r.Task == 3676 && !forReview {
 		return job["sandbox"] == "read-only" && strings.Contains(string(spec), "3669") && same(str(obj(job["finite_review"])["spec"]), row.Spec)
 	}
 	// New acceptance reviewers must be real registered child reviews, not a
 	// caller-created result file or another public/private task with similar text.
-	parentJob := row.Scheduler.SubworkParent
-	if parentJob == "" {
-		parentJob = row.Subwork.ParentJob
-	}
 	return (forReview || (row.Subwork.Parent == 3686 && strings.Contains(string(spec), "SKILLS3080_IMPLEMENTATION_REVIEW "))) && row.Subwork.Kind == "review" && (row.Subwork.Parent == 3080 || row.Subwork.Parent == 3686) && job["sandbox"] == "read-only" &&
 		conversationNumber(obj(job["subwork"])["parent_todo_id"]) == uint64(row.Subwork.Parent) && str(job["parent_job_id"]) != "" &&
-		job["parent_job_id"] == parentJob && obj(job["subwork"])["origin_job_id"] == row.Subwork.ParentJob &&
+		job["parent_job_id"] == row.Subwork.ParentJob && obj(job["subwork"])["origin_job_id"] == row.Subwork.ParentJob &&
+		skillsReviewParentBound(reg, row, forReview) &&
 		same(str(obj(job["finite_review"])["spec"]), row.Spec)
 }
+
+// A review belongs to a registered author generation, not merely to matching
+// strings inside the child. A normally resumed actor may consume the same fixed
+// source review from an earlier registered author; it never impersonates it.
+func skillsReviewParentBound(reg skillsRegistry, row skillsTask, manifestReview bool) bool {
+	parent, ok := reg.Tasks[row.Subwork.Parent]
+	w := reg.writer
+	consumer, consumerOK := reg.Tasks[w.Task]
+	if !ok || !consumerOK || parent.ID != row.Subwork.Parent || parent.Project != "cc-pc-tools-rs" || skillsHeld(parent) ||
+		(w.Task != 3080 && w.Task != 3686) || consumer.Project != parent.Project || consumer.Scheduler.Job != w.Job ||
+		!same(consumer.Scheduler.Worktree, w.Workspace) || !skillsLatest(consumer, w.Job) ||
+		(manifestReview && (w.Task != 3080 || parent.ID != 3080)) ||
+		(!manifestReview && parent.ID != 3686) {
+		return false
+	}
+	origin := row.Subwork.ParentJob
+	parts := currentSubworkJobName.FindStringSubmatch(origin)
+	if len(parts) != 3 || parts[2] != strconv.Itoa(parent.ID) ||
+		(row.Scheduler.SubworkParent != "" && row.Scheduler.SubworkParent != origin) {
+		return false
+	}
+	latest := parent.Scheduler.Job
+	if latest == "" {
+		latest = parent.Scheduler.LastJob
+	}
+	if latest == "" && len(parent.Jobs) > 0 {
+		latest = parent.Jobs[len(parent.Jobs)-1]
+	}
+	if !skillsLatest(parent, latest) || (w.Task == parent.ID && latest != w.Job) {
+		return false
+	}
+	originAt, latestAt := -1, -1
+	for i, id := range parent.Jobs {
+		if id == origin {
+			if originAt >= 0 {
+				return false
+			}
+			originAt = i
+		}
+		if id == latest {
+			if latestAt >= 0 {
+				return false
+			}
+			latestAt = i
+		}
+	}
+	return originAt >= 0 && latestAt >= originAt
+}
+
+func skillsReviewOriginBound(parent skillsTask, row skillsTask, child, origin object) bool {
+	start, e := time.Parse(time.RFC3339Nano, str(origin["started_at"]))
+	reviewStart, e2 := time.Parse(time.RFC3339Nano, str(child["started_at"]))
+	if e != nil || e2 != nil || reviewStart.Before(start) || origin["id"] != row.Subwork.ParentJob ||
+		!skillsJobTask(origin, parent.ID) || !same(str(origin["cwd"]), parent.Scheduler.Worktree) {
+		return false
+	}
+	switch origin["status"] {
+	case "running", "succeeded", "failed", "cancelled", "canceled", "lost":
+		return true
+	}
+	return false
+}
+
 func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, review bool) (skillsReceived, string) {
 	var out skillsReceived
 	if r.Task < 1 || !skillsDigest(r.SpecSHA) || (r.FinalSHA != "" && !skillsDigest(r.FinalSHA)) {
@@ -281,6 +360,15 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 	if !ok || !skillsResultBinding(r, reg, job, spec, review) {
 		return out, "result_binding"
 	}
+	_, originalPublic := skillsOriginalSpecs[r.Task]
+	if !originalPublic && r.Task != 3676 && r.Task != 3709 && row.Subwork.Kind == "review" && (row.Subwork.Parent == 3080 || row.Subwork.Parent == 3686) {
+		// The earlier checks already restricted this to an actual parent's
+		// registered job history. Read only that exact author's job metadata.
+		origin, ok := skillsReadJob(s, row.Subwork.ParentJob)
+		if !ok || !skillsReviewOriginBound(reg.Tasks[row.Subwork.Parent], row, job, origin) {
+			return out, "result_binding"
+		}
+	}
 	if !skillsModelIdentifier(str(job["model"])) {
 		return out, "result_binding"
 	}
@@ -290,7 +378,7 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 		return out, "result_binding"
 	}
 	body, ok := s.read(filepath.Join(skillsJobsRoot, r.Job, "last_message.md"), 2<<20)
-	if !ok || !bytes.Equal(body, []byte(str(job["last_message"]))) || (r.FinalSHA != "" && hashBytes(body) != r.FinalSHA) {
+	if !ok || !bytes.Equal(body, []byte(str(job["last_message"]))) || (r.FinalSHA != "" && hashBytes(body) != r.FinalSHA) || (r.Task == 3709 && hashBytes(body) != skillsReplacementReviewFinal) {
 		return out, "result_unavailable"
 	}
 	native, ok := skillsNativeJob(s, job)

@@ -31,13 +31,13 @@ var skillsPublicSources = map[string]string{
 	"x1xhlol/system-prompts-and-models-of-ai-tools": "162db92f54d717d8ebd12292e155aeef32bb4b3c",
 }
 
-func skillsSourcesBound(m skillsManifest) bool {
+func skillsSourceClaimsPreserved(m skillsManifest) bool {
 	outputs := map[string]bool{}
 	for _, f := range m.Files {
 		outputs[f.SHA] = true
 	}
 	for _, source := range m.Sources {
-		if skillsPublicSources[source.Repository] != source.Commit || !outputs[source.SHA] || !outputs[source.License.SHA] {
+		if skillsPublicSources[source.Repository] != source.Commit || source.Acquisition != "already-acquired" || !source.License.Accepted || strings.TrimSpace(source.License.Scope) == "" || !outputs[source.SHA] || !outputs[source.License.SHA] {
 			return false
 		}
 	}
@@ -154,7 +154,7 @@ func skillsActorCheck(w skillsWriter, reg skillsRegistry, s *skillsFS, caller st
 		return skillsWriterCheck(w, reg, s, caller)
 	}
 	row, ok := reg.Tasks[3686]
-	if !ok || skillsHeld(row) || w.Task != 3686 || w.Job != caller || row.Project != "cc-pc-tools-rs" || row.Status != "doing" || row.Scheduler.Job != caller || !same(row.Scheduler.Worktree, w.Workspace) || !strings.HasPrefix(row.Scheduler.Branch, "scheduler/todo-3686-") || !skillsTaskSpec(s, row, w.SpecSHA) {
+	if !ok || skillsHeld(row) || w.Task != 3686 || w.Job != caller || row.Project != "cc-pc-tools-rs" || row.Status != "doing" || row.Scheduler.Job != caller || !skillsHasJob(row, caller) || !skillsLatest(row, caller) || !same(row.Scheduler.Worktree, w.Workspace) || !strings.HasPrefix(row.Scheduler.Branch, "scheduler/todo-3686-") || !skillsTaskSpec(s, row, w.SpecSHA) {
 		return false
 	}
 	job, ok := skillsReadJob(s, caller)
@@ -183,7 +183,7 @@ func skillsOperation(op, path string) object {
 	if !ok || !skillsScopeBytes(scope) {
 		return fail("scope")
 	}
-	ids := []int{3080, r.Writer.Task}
+	ids := []int{3080, 3686, r.Writer.Task}
 	if r.Result != nil {
 		ids = append(ids, r.Result.Task)
 	}
@@ -194,6 +194,7 @@ func skillsOperation(op, path string) object {
 	if !ok || !skillsActorCheck(r.Writer, reg, &fs, caller) {
 		return fail("writer")
 	}
+	reg.writer = r.Writer
 	result := object{"qualified": true, "domain": "skills-3080-purpose-v1", "todo_id": 3080, "general_access_granted": false, "original_registry_recovered": false, "request_sha256": hashBytes(raw)}
 	if op == "receive-skills3080-result" {
 		if r.Runtime != nil || r.Result == nil || r.Review != nil || r.ManifestCommit != "" || r.ManifestPath != "" || r.ManifestSHA != "" || !skillsResultID(*r.Result) {
@@ -220,7 +221,7 @@ func skillsOperation(op, path string) object {
 		return fail("manifest")
 	}
 	manifest, ok := skillsParseManifest(manifestRaw)
-	if !ok || manifest.Writer != r.Writer || !skillsSourcesBound(manifest) {
+	if !ok || manifest.Writer != r.Writer || !skillsSourcesBound(manifest, &fs) {
 		return fail("source")
 	}
 	review, reason := skillsReceive(*r.Review, reg, &fs, true)

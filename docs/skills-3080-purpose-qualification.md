@@ -49,6 +49,39 @@ ToDo/job/spec/元親・実作業場所を既存登録と照合してから、そ
 全履歴・prompt・秘密設定・顧客本文・無関係jobの出力は返さない。
 この入口は、別pathへコピーした拒否済み資料を読むhelperではない。
 
+レビューのoriginは、子の自己申告だけで受け入れない。正規の親3080/3686の
+登録済みjob履歴にoriginがあり、子の登録・実job・実親jobのToDo/cwd/開始時刻が
+一致することを確認する。現在の消費者は独立して、生存中の最新writerとして照合する。
+同じ固定source/head（または同じmanifest SHA）の受入済みレビューは、通常の
+継続で親のjobが進んでも再利用できる。過去のauthorを現在のwriterと偽らない。
+架空のorigin、他ToDo、未登録・未来の世代、現writerの古い世代は拒否する。
+native射影は厳密に `started_at <= timestamp <= finished_at` の範囲とする。
+
+本人指定の旧3676の代替3709は、既受領の1件だけを固定task/job/spec/final SHAで
+照合する。root登録のレビュー全体を認める変更ではない。原jobのLuna/maxと
+owner_requestの指定元、対応nativeの実値を保持する。
+
+## 既取得sourceの実bytes
+
+manifestに許可repo/commitとhashを書くだけでは出典の証明にしない。原Cの
+catalog SHAを `2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c`
+へ固定し、15 repoの原content index・commit記録・完全treeの独立ハッシュを
+コンパイル済みの [固定値](../repair-guard/skills3080_source_anchors_windows.go) と照合する。
+6mileのindexは本人から引き継いだ `799bd907...2219607` とも一致する。
+6mileの完全treeは原収集で保存したflat配列、他14 repoはtruncated=falseの
+recursive tree記録であり、これを同じ形式だったと扱わない。
+
+保持した同じstream bytesをハッシュ計算と対象metadataの選択に使い、EOFと
+全体ハッシュの一致後にだけ利用する。対象sourceがcatalog上で取得済みであり、
+固定commit/path、index、treeのGit blob、bytes数が一致することを求める。
+個別license/noticeも同じindex/treeの正確なpathとroleへ結ぶ。
+その2つの保存objectだけを展開し、SHA-256・Git blob・bytes数と、レビューした
+出力の保持bytesを一致させる。欠落、link/hardlink、変更された証拠、取得保留は拒否する。
+
+この照合は出典の実体を証明する。許諾の適用範囲は引き続き固定manifestの
+個別審査・別モデル受入を要し、root許諾を第三者素材へ包括適用しない。
+新規取得、647本文の取得、中央の既存本文の読取を行わない。
+
 ## 合成受入例
 
 正例は、受入済みmanifest・public sourceと個別許諾・出力hash・不在target・
@@ -130,6 +163,12 @@ SKILLS3080_CODE_ACCEPTANCE {"domain":"skills-3080-code-review-v1","head":"<固�
 照合する。旧版を保持した通常Windows更新の前後で同じ用途資格を確認する。
 本コマンドはファイルの置換・管理者権限の追加・一般guardの解除を実行しない。
 未review/未マージの候補はこの資格で実行・配置しない。
+
+置換後の照合に失敗した場合は、実target・backupのハッシュと使用可否を記録する。
+targetが既知の新SHA、backupが既知の旧SHAで、並行変更がないことを確認できた
+場合だけ、同じ通常Windows置換で新物を別のbackupへ保持しつつ旧版を復旧する。
+どちらかが未知なら自動で消去・force rollbackせず、用途操作を止め、正規の
+再照合と復旧手順へ進む。`installed:false` だけで旧版へ戻ったとは報告しない。
 
 実際のコマンド・requestとsource/evidence/EXEのhash、対象別の未達理由は
 担当の私的配布記録と元ToDoに保存する。原保護台帳は未復旧のまま保持する。

@@ -38,7 +38,7 @@
 - 3743のMustは、diskの再開IDだけ更新されると監視中の照合で停止するのに終端は再開IDを照合せずfailedを上書きする点。PID同一・thread_idだけ変更のRedと、自分と同じ新thread_idへdiskが先に更新された場合にfalse-failureとなるRedを実確認（resume-id-red-confirmed.log）。基準snapshotを終端まで保つProgressPersistenceへ照合を集約し、owner_current/resume_currentを両段階で使う形へ修正した。thread_id/resume_sessionはfresh==基準かfresh==自分なら受入、第三の値は上書きしない。新回帰10件成功（5制御対照と一致IDの陽性対照含む）、関連検査とClippyを実行中。
 - 作業中にmainへ入った既レビューのquota修復等を通常mergeし、c7dbe4598d14b2eab92aad02b4be4a64a7481cd4へ統合・pushした。jobs.rsの修復本体は04から変更0、共有依存に新quota moduleが追加されていたため、旧基盤で実行物を生成しない。統合後のquota/回帰141件は全成功。c7のcheckpointはTimeoutError、成果はGitHubと作業フォルダへ保持。最新再開JSONは所有フォルダのCURRENT-RESUME.json。新しい再開IDの修正候補は次のcommitと正規checkpointへ保存し、通常ToDoで追加差分だけを確認する。
 
-## 残り
+## 06:24時点の残り（下記で解消済み）
 
 1. 受入1/2は上記の関連テスト・Red/Greenで確認済み。追加変更が無ければ同じ全件を重ねない。原2件の実拒否元は未確定のまま保持する。
 2. 受領済み3729の対応を含む、新しい固定候補の追加レビュー3733を通常ToDoで実施する。元のLuna指定を拡大しない。
@@ -47,3 +47,19 @@
 6. 原3700/3686へ具体結果と残件を正規に返し、checkpointを保存。自分のToDo状態はschedulerが更新する。
 
 本人の判断・PC操作は不要。登録・テスト追加だけで完了にしない。
+
+## 最終成果（2026-10-25、再開job 20261025-064328-todo-3726）
+
+- 別モデルの最終3747は実Grok4.6/xhigh、固定c7dbe459→f35381eeを読了しMust0。jobとnative turn_contextを照合した。新回帰10件/制御5対照を含む関連142件とClippy、対象docが成功。旧時点の件数と最新結果を証拠JSONで分けた。
+- f35381eeのBuild speed40133965456/CodeQL40133965256全成功後、PR469を通常mergeした。実mainは2e173041612ec7ae4736ab3bd04293fa7bc27492。並行変更を含み、cc-jobsと本番依存はレビュー済み候補と同一。作業branchはscheduler/todo-3726-windows-3700-3686のまま維持した。
+- 最新merged source2eから通常Cargoゲートでcodex_jobsのみrelease生成。9,122,304 bytes、SHA256 2c79d836fb8bbe5c44ccee03a612059213dd23781f465de49cd952056fd0bd82。最初のACL復元はSeSecurityPrivilege不足で失敗したが、旧hash/ACLへ自動復帰を確認。既存CC-AdminBrokerで同じ更新を完了し、owner/group/DACLとsource/hashを照合した。原のexeはrollback用に保持した。
+- 配置済みバイナリの専用コピーを使う実Windows受入1件が成功。共有拒否が約1秒を超えても同じsupervisor/子が生存、解放後はイベント無しで再保存、その後waitのDONE返信、succeededと結果ファイルの保存、両プロセスの実終了まで確認した。正常ジョブの一斉停止、全体queue/model/auth/課金/保護原本の変更は無い。ロード済みの旧supervisorは自然終了まで継続する。
+- 元3700/3686と自分の結果をCASで追記し、状態を変えずmarkerと結果URLを読み返した。cc-pc-tools-rsの既存スレッドへ通知なしで配送し、CLIのdelivery=verifiedを確認。https://discord.com/channels/1552944707464597524/1561439141437251686/1563672217961889822
+- PRにも実配布結果を記録した。https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/469#issuecomment-6390028724
+- 必要なログ/原応答/ビルド/配置/受入の32ファイル383,492 bytesは .ci-work/todo3726/final/ へコピーしhash一致を確認。このフォルダが再開・最終証拠の正本。口座や利用枠の調査ファイルを成果へ含めていない。最新状態はCURRENT-RESUME.jsonに保持する。
+- Cの所有30f2784b…はplan→別呼出し削除→finishでsource_absentを確認。Dの所有9281a173…はplanがサイズ基準でquarantineを指示したため、D:/削除希望/20261025-todo3726-windows-snapshot-9281a173へ正規退避し元フォルダの不在を確認。11,171,540,168 bytes/6,517 entriesは未削除。通常の削除希望の清掃対象として保持し、本人判断は不要。物理回収量を断定しない。後片付けの既存スレッドへの配送もverified。
+- 旧98e8279cの正確な全source対応と、原2件の当時のreader対ACLは未確定のまま記録した。mtime/現checkoutから推測しない。原job本文と原資料は保持した。
+- 直前checkpointのTimeoutErrorは共有scheduler.lockの取得期限だった。削除/迂回せず、正規--checkを後で実行するとeligible=true/全checks=trueになった。最終成果commit後の正規保存結果は .ci-work/todo3726/final/checkpoint-final-result.json、最新の再開記録は同CURRENT-RESUME.jsonを正本とする。ToDoの状態更新はschedulerが行う。
+
+実装・レビュー・CI・マージ・現用反映・実受入・元項目への返却・無通知配送は完了した。
+上記Dの正規退避以外に清掃の保留はない。本人の判断・PC操作は不要。

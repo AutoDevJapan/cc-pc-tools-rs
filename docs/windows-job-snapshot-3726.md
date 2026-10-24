@@ -114,3 +114,45 @@ failedへするRedを確認した。
 異なる値を保存した制御者の状態は上書きしない。
 この修正後、5種類の制御更新と一致する再開IDを含む新回帰10件が成功した。
 追加差分は固定候補で再レビューし、最終HEADのCI成功までマージしない。
+
+## 実配布と最終確認（2026-10-25）
+
+最終レビュー3747は、実job/nativeのGrok4.6/xhighを照合し、固定c7dbe459から
+f35381eeの追加差分を読了した。Mustは0。
+原応答SHA256は`056f636b9a6aa51841925f6cab0dcc34759f7995952d188a90386afe6f54d068`。
+混雑時の既存stale_completionは今回変更せず、終了済み実行の記録方式と
+PID・作成時刻の照合を維持する。一致するresume_sessionの対称な陽性対照追加は任意と判断した。
+指摘対象の再開IDの不一致・一致の失敗再現は既存の新回帰に残っている。
+
+f35381eeのBuild speed40133965456とCodeQL PC40133965256は成功し、
+[PR469](https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/469)を通常マージした。
+実マージは`2e173041612ec7ae4736ab3bd04293fa7bc27492`。
+マージまでの並行変更を含み、レビュー済み候補との差は文書等だけで、
+cc-jobsと本番依存の内容は同じである。
+
+そのマージ済みソースから、割当済みCargoの通常ゲートでcodex_jobsだけをreleaseビルドした。
+実行物は9,122,304 bytes、SHA256は
+`2c79d836fb8bbe5c44ccee03a612059213dd23781f465de49cd952056fd0bd82`。
+旧版のSHA256は`98e8279c8225e7fa553b5e1a182b4292003ff5a5793234f1e7bb963ed1c12084`。
+旧バイナリとowner/group/DACLを保持して現用Windowsへ反映した。
+最初の通常権限によるACL復元はSeSecurityPrivilege不足で失敗したが、
+自動復帰後の旧hashとACL一致を確認し、既存CC-AdminBrokerで同じ更新を完了した。
+モデル・認証・課金・保護原本・全体queue設定は変更していない。
+正常ジョブを一斉停止していない。既にロード済みのsupervisorは元の実行物のまま終了まで継続する。
+
+配置済みの実行物のhashを前後で照合し、その専用コピーで実Windows受入1件が成功した。
+削除共有なしのreaderを保持し、約1秒の再試行期限を超えても同じsupervisorと子が生存した。
+reader解放後は新イベントも終了指示も与えず、idle再保存と復旧を確認した。
+その後waitの返信がDONE、job.jsonがsucceeded、last_message.mdがDONEとなり、
+supervisorと子の実終了を確認した。実顧客、実カード、AI API呼出しは使っていない。
+
+原2件の当時の拒否元と旧実行物の正確な全source対応は未確定のまま区別する。
+実測ログ・原レビュー・ビルド・配置・受入の必要な証拠は作業フォルダの
+`.ci-work/todo3726/final/`へ永続保存し、ハッシュを照合した。
+Cの一時領域は通常plan・別呼出し削除・finishを完了した。
+Dの生成物11,171,540,168 bytesはsafe-deleteがサイズ基準で退避を指定したため、
+正規quarantineで同ドライブの削除希望へ移動した。削除は未実行で、物理回収量は断定しない。
+本人の判断・PC操作は不要である。
+元3700/3686の状態を変えず結果を追記し、読み返した。製品別の無通知配送もverified。
+[製品別の結果](https://discord.com/channels/1552944707464597524/1561439141437251686/1563672217961889822)と
+[PRの配備結果](https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/469#issuecomment-6390028724)を記録した。

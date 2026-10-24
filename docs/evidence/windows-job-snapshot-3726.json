@@ -97,7 +97,9 @@
         "name": "final-clippy.log",
         "sha256": "ebe07fecf66a2c382cc3e165403c8f5dddddacad07b86011d8b6ee759824c9b4"
       }
-    ]
+    ],
+    "validation_source": "04a420200ad1e4dad6c7d416f60c8b0f9eea6361",
+    "count_scope": "historical 9 regressions and 3 control variants; final_validation is the current result"
   },
   "initial_validation_source": "76fb8af0b414f15a577623dc52c10a1a540bfd9b",
   "integrated_basis": "c7dbe4598d14b2eab92aad02b4be4a64a7481cd4",
@@ -115,7 +117,7 @@
     "effort": "xhigh",
     "must": 1,
     "sha256": "68929fe9031e08d256e21c9c88cedfbdbad68f4944fa50ef8f29374bb4bf1176",
-    "disposition": "resume compatibility shared between monitor and terminal; divergent and convergent ID regressions confirmed; next fixed-candidate review pending"
+    "disposition": "fixed in f35381ee; retained divergent/convergent ID regressions; final review3747 Must0"
   },
   "resume_fix": {
     "regressions": 10,
@@ -135,5 +137,234 @@
         "name": "integrated-regressions.log"
       }
     ]
+  },
+  "installed_sha256_scope": "initial diagnosis before repair; see deployment.sha256 for current deployed bytes",
+  "review_3747": {
+    "todo": 3747,
+    "job": "20261025-062521-todo-3747",
+    "status": "succeeded",
+    "base": "c7dbe4598d14b2eab92aad02b4be4a64a7481cd4",
+    "head": "f35381ee3adf21c3382bc260c87659edce080f0f",
+    "native_thread": "01a16fce-7d25-74a1-83ca-8cb90bfa63d4",
+    "native_timestamp": "2026-10-24T21:26:20.398Z",
+    "model": "grok-4.6",
+    "effort": "xhigh",
+    "raw_sha256": "056f636b9a6aa51841925f6cab0dcc34759f7995952d188a90386afe6f54d068",
+    "must": 0,
+    "disposition": [
+      "capacity stale_completion remains existing behavior; process drain occurs before terminal and exact process births protect replacement workers",
+      "convergent resume_session symmetric positive is optional: helper checks identical keys and both incompatible IDs have retained regression coverage",
+      "both reported defects are retained as deferred_progress control variants and convergent_resume_id_publication; Red logs are historical executions",
+      "historical test counts remain associated with their own commit; current final set is 10 regression tests with five control variants"
+    ]
+  },
+  "final_validation": {
+    "head": "f35381ee3adf21c3382bc260c87659edce080f0f",
+    "regressions": 10,
+    "control_variants": 5,
+    "related_passed": 142,
+    "clippy_exit": 0,
+    "doc_exit": 0,
+    "count_scope": "latest post-review source; older counts describe prior stages"
+  },
+  "final_ci": [
+    {
+      "conclusion": "skipped",
+      "head_sha": "f35381ee3adf21c3382bc260c87659edce080f0f",
+      "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40133965456/job/120992395768",
+      "name": "package-tools",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "head_sha": "f35381ee3adf21c3382bc260c87659edce080f0f",
+      "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/runs/120991841821",
+      "name": "CodeQL",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "head_sha": "f35381ee3adf21c3382bc260c87659edce080f0f",
+      "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40133965256/job/120991707975",
+      "name": "analyze (javascript-typescript, none)",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "head_sha": "f35381ee3adf21c3382bc260c87659edce080f0f",
+      "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40133965256/job/120991707870",
+      "name": "analyze (rust, none)",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "head_sha": "f35381ee3adf21c3382bc260c87659edce080f0f",
+      "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40133965256/job/120991707786",
+      "name": "analyze (actions, none)",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "head_sha": "f35381ee3adf21c3382bc260c87659edce080f0f",
+      "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40133965256/job/120991707640",
+      "name": "analyze (go, autobuild)",
+      "status": "completed"
+    },
+    {
+      "conclusion": "neutral",
+      "head_sha": "f35381ee3adf21c3382bc260c87659edce080f0f",
+      "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/runs/120991437676",
+      "name": "Cursor Bugbot",
+      "status": "completed"
+    },
+    {
+      "conclusion": "success",
+      "head_sha": "f35381ee3adf21c3382bc260c87659edce080f0f",
+      "html_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/actions/runs/40133965456/job/120991423052",
+      "name": "cc-jobs",
+      "status": "completed"
+    }
+  ],
+  "merge": {
+    "headRefOid": "f35381ee3adf21c3382bc260c87659edce080f0f",
+    "mergeCommit": {
+      "oid": "2e173041612ec7ae4736ab3bd04293fa7bc27492"
+    },
+    "mergedAt": "2026-10-24T21:46:40Z",
+    "state": "MERGED",
+    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/469"
+  },
+  "build": {
+    "todo_id": 3726,
+    "job": "20261025-064328-todo-3726",
+    "source": "2e173041612ec7ae4736ab3bd04293fa7bc27492",
+    "tree": "ff651fd20286f2d2b70ac4edb2141c0c6a667288",
+    "after_source": "2e173041612ec7ae4736ab3bd04293fa7bc27492",
+    "source_unchanged": true,
+    "started_at": "2026-10-24T21:47:33.1351796+00:00",
+    "finished_at": "2026-10-24T21:48:12.1925629+00:00",
+    "exit": 0,
+    "log": "release-build.log",
+    "command": "cargo build --locked --release -p cc-jobs --bin codex_jobs",
+    "resource": "cargo",
+    "target_owned_id": "9281a173abd026b4b8f04bda4a4c52f4",
+    "sha256": "2c79d836fb8bbe5c44ccee03a612059213dd23781f465de49cd952056fd0bd82",
+    "bytes": 9122304
+  },
+  "deployment": {
+    "todo_id": 3726,
+    "source": "2e173041612ec7ae4736ab3bd04293fa7bc27492",
+    "previous_sha256": "98e8279c8225e7fa553b5e1a182b4292003ff5a5793234f1e7bb963ed1c12084",
+    "sha256": "2c79d836fb8bbe5c44ccee03a612059213dd23781f465de49cd952056fd0bd82",
+    "backup": "D:/CC/Tools/codex-jobs/codex_jobs.before-todo3726-98e8279c8225.exe",
+    "installed_at": "2026-10-24T21:49:15.4631835+00:00",
+    "acl_owner_group_dacl_equal": true,
+    "healthy_jobs_stopped": 0,
+    "source_matches_build_receipt": true
+  },
+  "installed_acceptance": {
+    "todo_id": 3726,
+    "source": "2e173041612ec7ae4736ab3bd04293fa7bc27492",
+    "before_sha256": "2c79d836fb8bbe5c44ccee03a612059213dd23781f465de49cd952056fd0bd82",
+    "after_sha256": "2c79d836fb8bbe5c44ccee03a612059213dd23781f465de49cd952056fd0bd82",
+    "bytes_unchanged": true,
+    "exit": 0,
+    "tests": 1,
+    "started_at": "2026-10-24T21:49:33.6672486+00:00",
+    "finished_at": "2026-10-24T21:49:41.6403944+00:00",
+    "probe": "installed executable copied by isolated fixture, synthetic child, no OAuth/API/job body",
+    "validated": [
+      "actual no-delete-share handle",
+      "one-second writer retry exceeded",
+      "supervisor and child identities alive while blocked",
+      "idle retry after reader release before new event",
+      "wait response DONE",
+      "durable succeeded and last_message.md DONE",
+      "supervisor and child actually absent at end"
+    ],
+    "log": "installed-native-acceptance.log"
+  },
+  "cleanup": {
+    "todo_id": 3726,
+    "c": {
+      "state": "source_absent",
+      "logical_bytes": 131,
+      "id": "30f2784bcabdd0e88b60ecce41d05d01",
+      "plan": "ordinary PowerShell deletion submitted separately, exit0, finish confirmed"
+    },
+    "d": {
+      "logical_bytes": 11171540168,
+      "path": "D:/削除希望/20261025-todo3726-windows-snapshot-9281a173",
+      "entries": 6517,
+      "state": "quarantined",
+      "reason": "size",
+      "deletion_executed": false,
+      "id": "9281a173abd026b4b8f04bda4a4c52f4"
+    },
+    "permanent_evidence": "D:\\CC\\Work\\unattended-operations-20261013-wt\\todo-3726-windows-3700-3686\\.ci-work\\todo3726\\final",
+    "physical_reclaimed_bytes": null,
+    "owner_judgment_required": false,
+    "next": "D quarantine remains in the standard deletion-request cleanup route; no policy bypass, no owner operation requested"
+  },
+  "known_limits": [
+    "original historical denying reader vs ACL remains unknown",
+    "old installed exe exact full source correspondence remains unverified",
+    "existing loaded supervisors continue their original image until normal completion",
+    "quarantined D artifacts have not been deleted; no physical reclamation is asserted"
+  ],
+  "permanent_proof": ".ci-work/todo3726/final/files.json",
+  "delivery": {
+    "delivery": "verified",
+    "domain": "discord-conversation-v1",
+    "message_id": "1563672217961889822",
+    "request_id": "normal-log-4808fa1826f7e108027a078c3a1a275ec54261731b24c1905ae46fce1c277e87",
+    "reused": false,
+    "thread_id": "1561439141437251686",
+    "url": "https://discord.com/channels/1552944707464597524/1561439141437251686"
+  },
+  "cleanup_delivery": {
+    "delivery": "verified",
+    "domain": "discord-conversation-v1",
+    "message_id": "1563671858216444038",
+    "request_id": "normal-log-014ad6623d9b7af9f171e530fd1772f9eb166b15fb900e5c1c5225eb977033b6",
+    "reused": false,
+    "thread_id": "1561297764258807821",
+    "url": "https://discord.com/channels/1552944707464597524/1561297764258807821"
+  },
+  "parent_readback": [
+    {
+      "id": 3700,
+      "status_before": "done",
+      "status_after": "done",
+      "status_preserved": true,
+      "marker_found": true,
+      "delivery_url_found": true,
+      "expected_note_sha256": "12c28e7ad7d102cbb474ba6e0ad76410330372275aa9a6d32e55532f11bfbb6b",
+      "current_note_sha256": "408be71ed19ac62330f0f33a5a6e1b911a1dcc76feadd22336e0c57e97aa5f08"
+    },
+    {
+      "id": 3686,
+      "status_before": "done",
+      "status_after": "done",
+      "status_preserved": true,
+      "marker_found": true,
+      "delivery_url_found": true,
+      "expected_note_sha256": "3bc4afdb87f4b49f5b601a1b48b78e1460a279ed99faa064bec998215e889fa7",
+      "current_note_sha256": "2c769c2cf312ef8b86f09b36493cc3af65bdd0bc9120ed0d8c473685ad854991"
+    },
+    {
+      "id": 3726,
+      "status_before": "doing",
+      "status_after": "doing",
+      "status_preserved": true,
+      "marker_found": true,
+      "delivery_url_found": true,
+      "expected_note_sha256": "0145026a0781a5d4e813bcd03eaff4161e83aa5fef07ac41e6708c4901f394d4",
+      "current_note_sha256": "9fdb07a32701ee2d2efe6aeb350d75482e25fc5ed2fd03229814da67da10d45b"
+    }
+  ],
+  "pr_result": {
+    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/469#issuecomment-6390028724",
+    "posted": true
   }
 }

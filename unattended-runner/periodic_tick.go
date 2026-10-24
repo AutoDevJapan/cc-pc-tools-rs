@@ -27,6 +27,9 @@ func runPeriodicPhases(ctx context.Context, normalBudget time.Duration, normal f
 }
 
 func (r *Runner) periodicTick(ctx context.Context) Health {
+	previous := r.SeparatedScheduler
+	r.SeparatedScheduler = schedulerStageEnabled(r.Config.Home)
+	defer func() { r.SeparatedScheduler = previous }()
 	resultHealth := Health{}
 	resultCtx, cancelResults := context.WithTimeout(ctx, periodicAgentResultBudget)
 	r.agentResultPhase(resultCtx, &resultHealth)

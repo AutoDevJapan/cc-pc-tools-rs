@@ -10486,7 +10486,10 @@ mod end_to_end {
         t.diagnostic.store(true, Ordering::Relaxed);
         let jid = t.start("snapshot-sharing", &t.tmp.0, b"synthetic snapshot work");
         t.until_phase("snapshot_identity", || {
-            t.rec.join("snapshot.ready").exists() && truth(&t.job(&jid)["thread_id"])
+            let snapshot = t.job(&jid);
+            t.rec.join("snapshot.ready").exists()
+                && truth(&snapshot["thread_id"])
+                && snapshot["activity"] == "thinking"
         });
         let path = t.tmp.0.join("tool/jobs").join(&jid).join("job.json");
         let log = path.with_file_name("supervisor.log");
@@ -10513,11 +10516,22 @@ mod end_to_end {
                     == running[format!("{key}_created")].as_u64()
         });
         drop(held);
-        fs::write(t.rec.join("snapshot.finish"), b"").unwrap();
         assert_eq!(running["status"], "running", "{log_text}");
         assert!(log_text.contains("進捗の保存を延期"), "{log_text}");
         assert!(started.elapsed() >= Duration::from_millis(900));
         assert_eq!(same_live_owners, [true, true]);
+        // No new event or terminal write may hide a missing idle retry.
+        t.until_phase("snapshot_idle_recovery", || {
+            fs::read_to_string(&log)
+                .unwrap_or_default()
+                .contains("進捗の保存が復旧しました")
+                && t.job(&jid)["activity_detail"] == "fixture work"
+        });
+        let recovered = t.job(&jid);
+        assert_eq!(recovered["status"], "running");
+        assert_eq!(recovered["steps"], 0);
+        assert!(!truth(&recovered["turn_completed"]));
+        fs::write(t.rec.join("snapshot.finish"), b"").unwrap();
         let result = t.cli(&["wait", &jid, "--timeout", "20"], "snapshot-sharing");
         assert!(
             result.status.success(),
@@ -10535,6 +10549,7 @@ mod end_to_end {
         t.until_phase("snapshot_supervisor_exit", || {
             proc_created(before["pid"].as_u64().unwrap() as u32).is_none()
         });
+        assert!(proc_created(before["codex_pid"].as_u64().unwrap() as u32).is_none());
     }
     #[test]
     fn terminal_supervisor_cleanup_preserves_its_independent_descendant() {

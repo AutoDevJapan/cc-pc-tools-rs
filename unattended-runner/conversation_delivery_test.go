@@ -363,6 +363,11 @@ func TestConversationAppliedReceiptClosesOnlyAfterImplementationAndWorkerIdentit
 		t.Fatal("foreign worker inferred applied")
 	}
 	application["job_id"] = "worker-42"
+	f.r.JobsPath = filepath.Join(f.r.Config.Home, "test-jobs")
+	if publish(filepath.Join(f.r.JobsPath, "worker-42", "job.json"), map[string]any{"id": "worker-42", "todo_id": 42, "cwd": f.r.Config.Home}) != nil {
+		t.Fatal("job fixture")
+	}
+	f.mutateTodo(t, func(row map[string]any) { row["scheduler"] = map[string]any{"worktree": f.r.Config.Home} })
 	if err := publish(filepath.Join(f.r.Config.Home, "applied", reply.Message+".json"), application); err != nil {
 		t.Fatal(err)
 	}
@@ -621,6 +626,11 @@ func TestConversationClosedWithPendingNoticeStillDeliversAdditionalOwnerReply(t 
 	f.r.Now = func() time.Time { at, _ := time.Parse(time.RFC3339Nano, f.created); return at.Add(2 * time.Minute) }
 	source, _ := os.ReadFile(filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", first.Message+".json"))
 	application := map[string]any{"source": "discord-api-v10", "request_id": f.q.SenderID, "origin_todo_id": 42, "todo_id": 42, "thread_id": f.question, "question_message_id": f.question, "message_id": first.Message, "author_id": "300", "job_id": "worker-42", "revision": strings.Repeat("e", 40), "applied_at": f.r.Now().Format(time.RFC3339Nano), "completion": "実反映", "reply_sha256": canonicalHash(first), "source_receipt_sha256": bytesHash(source), "verification": map[string]string{"execution": "readback", "origin_saved": "original retained", "identity": "owner/API matched"}}
+	f.r.JobsPath = filepath.Join(f.r.Config.Home, "test-jobs")
+	if publish(filepath.Join(f.r.JobsPath, "worker-42", "job.json"), map[string]any{"id": "worker-42", "todo_id": 42, "cwd": f.r.Config.Home}) != nil {
+		t.Fatal("job fixture")
+	}
+	f.mutateTodo(t, func(row map[string]any) { row["scheduler"] = map[string]any{"worktree": f.r.Config.Home} })
 	if publish(filepath.Join(f.r.Config.Home, "applied", first.Message+".json"), application) != nil {
 		t.Fatal("fixture")
 	}

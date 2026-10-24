@@ -220,6 +220,12 @@ func (r *Runner) conversationDirectionRecord(ctx context.Context, opts conversat
 	if err != nil || !ready || stamp.SourceSHA != opts.SourceSHA {
 		return nil, errDirection
 	}
+	// Canonical saved sources are sufficient for separate implementations only.
+	// Preserve direction-record's original requirement of actual delivery.
+	req := r.State.Requests[opts.Message]
+	if req == nil || req.Todo != q.Todo || req.Phase == "conversation_reply_saved" || req.Phase == "conversation_source_verified" {
+		return nil, errDirection
+	}
 	row, err := r.conversationTask(ctx, q.Todo)
 	if err != nil || row.Project != q.Project {
 		return nil, errDirection
@@ -264,7 +270,7 @@ func (r *Runner) conversationDirectionRecord(ctx context.Context, opts conversat
 	if err != nil || !ready || again.SourceSHA != stamp.SourceSHA {
 		return nil, errDirection
 	}
-	req := r.State.Requests[opts.Message]
+	req = r.State.Requests[opts.Message]
 	previous := req.Phase
 	req.Phase = "conversation_direction_recorded"
 	if r.save() != nil {

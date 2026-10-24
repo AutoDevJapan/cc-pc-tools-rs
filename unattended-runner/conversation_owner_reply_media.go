@@ -74,6 +74,11 @@ func (r *Runner) ownerReplyMedia(ctx context.Context, q ConversationQuestion, re
 }
 
 func (r *Runner) deliverOwnerReplyMediaObservation(ctx context.Context, q ConversationQuestion, reply conversationReply, req *Request) error {
+	// A separate actor's source/application is not delivery to the cancelled
+	// original task. Do not turn its todo0 into a media-delivery error or claim.
+	if req != nil && req.Todo == 0 && req.Conversation == q.RequestID && (req.Phase == "conversation_implementation_recorded" || req.Phase == "conversation_source_verified") {
+		return nil
+	}
 	record, known, err := r.ownerReplyMedia(ctx, q, reply, req)
 	if err != nil || !known {
 		return err

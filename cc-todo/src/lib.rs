@@ -192,6 +192,25 @@ pub enum Command {
         #[arg(long, requires = "verify_only")]
         check_holds: bool,
     },
+    /// Record a separate actor's actual implementation without resuming the origin.
+    ImplementationRecord {
+        #[arg(long)]
+        input_file: PathBuf,
+        #[arg(long)]
+        origin_scope_file: PathBuf,
+        #[arg(long)]
+        origin_state_file: PathBuf,
+        #[arg(long)]
+        actor_scope_file: PathBuf,
+        #[arg(long)]
+        actor_state_file: PathBuf,
+        #[arg(long)]
+        verify_only: bool,
+        #[arg(long, requires = "verify_only")]
+        verify_note: bool,
+        #[arg(long, requires = "verify_only")]
+        check_holds: bool,
+    },
     /// Preserve selected old notes in immutable segments; preview unless --apply.
     ArchiveHistory {
         id: i64,
@@ -1287,6 +1306,32 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             }
             edit_item(db, *id, note_file.as_deref(), spec.as_deref(), paths)?;
         }
+        Command::ImplementationRecord {
+            input_file,
+            origin_scope_file,
+            origin_state_file,
+            actor_scope_file,
+            actor_state_file,
+            verify_only,
+            verify_note,
+            check_holds,
+        } => output.push(
+            direction_record::record_implementation(
+                db,
+                paths,
+                input_file,
+                origin_scope_file,
+                origin_state_file,
+                actor_scope_file,
+                actor_state_file,
+                direction_record::Readback {
+                    verify: *verify_only,
+                    note: *verify_note,
+                    holds: *check_holds,
+                },
+            )?
+            .to_string(),
+        ),
         Command::DirectionRecord {
             input_file,
             origin_scope_file,
@@ -1574,6 +1619,7 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
             | Command::QuestionWithdraw { .. }
             | Command::AnsweredWait { .. }
             | Command::DirectionRecord { .. }
+            | Command::ImplementationRecord { .. }
     ) && output
         .first()
         .and_then(|line| serde_json::from_str::<Value>(line).ok())

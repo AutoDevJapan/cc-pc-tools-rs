@@ -179,7 +179,7 @@ func TestSixmileNext10ReadersAndScannersRemainDistinct(t *testing.T) {
 }
 
 func TestPrimaryReadersRemainBoundToIndependentPathRosters(t *testing.T) {
-	for _, kind := range []string{"valid", "sixmile_missing", "sixmile_changed", "mengto_swapped"} {
+	for _, kind := range []string{"valid", "sixmile_missing", "sixmile_changed", "sixmile_same_count_other_path", "mengto_swapped"} {
 		t.Run(kind, func(t *testing.T) {
 			a, ledger := loadSixmileProvenanceFixture(t)
 			var m struct {
@@ -197,6 +197,23 @@ func TestPrimaryReadersRemainBoundToIndependentPathRosters(t *testing.T) {
 						changed = true
 						break
 					}
+				}
+			}
+			if kind == "sixmile_same_count_other_path" {
+				for i := range a.Entries {
+					if a.Entries[i].Reader != "20261024-095453-todo-3554" && a.Entries[i].Reader != "" {
+						a.Entries[i].Reader = "20261024-095453-todo-3554"
+						break
+					}
+				}
+				count := 0
+				for _, e := range a.Entries {
+					if e.Reader == "20261024-095453-todo-3554" {
+						count++
+					}
+				}
+				if count != 10 {
+					t.Fatal("mutation must preserve the ten-reader count")
 				}
 			}
 			if kind == "mengto_swapped" {

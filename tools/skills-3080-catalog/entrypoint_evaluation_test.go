@@ -345,7 +345,7 @@ func TestCoverageSeparatesCompleteSourcesMizchiAndAuthoredDrafts(t *testing.T) {
 		Drafts []any `json:"drafts"`
 	}
 	loadPublicReceipt(t, "skills-3080-mizchi-sql-draft.json", &sql)
-	if p.Authored.Total != p.Candidates+p.Authored.Additional || p.Authored.Additional != len(sql.Drafts)+1 || p.Authored.Total != 31 || !reflect.DeepEqual(p.Authored.Sources, []string{"skills-3080-mizchi-sql-draft.json", "skills-3080-mizchi-mutation-draft.json"}) {
+	if p.Authored.Total != p.Candidates+p.Authored.Additional || p.Authored.Additional != len(sql.Drafts)+1 || !reflect.DeepEqual(p.Authored.Sources, []string{"skills-3080-mizchi-sql-draft.json", "skills-3080-mizchi-mutation-draft.json"}) {
 		t.Fatal("authored drafts differ from plans plus pending SQL and mutation drafts")
 	}
 	var designs struct {

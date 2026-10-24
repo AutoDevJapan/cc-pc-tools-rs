@@ -95,7 +95,8 @@ const sixmileSelectedIdentity = "8df3778373dc174ea9e634d601ecdfcf9d02a29703dea8f
 const sixmileSelectedSupport = "e401127a4c64d35f7c2f4f19919d634a4c96c494ba57c630429827553aac983a"
 const sixmileSupportReading = "e41dd6445ad733c83ae15bf972fac95c530f32166943544e18282052ea08c299"
 
-// Earlier immutable roster SHA a9f9498b... binds these ten paths to reader3554.
+// Earlier immutable roster SHA a9f9498b... supplies the ten paths; original
+// response SHA a09f81dc... supplies their reader3554 attribution.
 const sixmileNext10Actors = "6301d6942aea35a7738475d8db2870834fb0e06330f37c1e35f48dbf606ee80b"
 
 func validateSixmileAssessment(a sixmileAssessment, ledger []partialAdoption) error {

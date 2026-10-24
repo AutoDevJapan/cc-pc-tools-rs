@@ -1,9 +1,9 @@
 {
-  "scope": "固定完全treeの既読11入口に、研究3554の新10入口を追加する部分評価案。21/55623本文と個別noticeの読取を記録し、全候補の採否/全支持/実導入の完了にはしない。新規の最終採否と中央書込は0。",
+  "scope": "固定treeの既読21入口の部分評価を保持し、うち1件のMCP手順を個別公式noticeとともに実配置。既存の除外2件は変わらない。新しい本文読了は加算せず、全55623候補や全支持の完了にはしない。",
   "source": "6mile/skills",
   "entrypoints_fulltext_read": 21,
   "tree_sha": "5782ae7deffe5024e15b6e090327385c10f76273",
-  "installed": 0,
+  "installed": 1,
   "pending_definition": "固定treeのSkill入口55623から既読21を引いた未読55602。旧11と新10の固定rosterを保持する。未読を除外へ移さず、全path一覧は固定原本に保持する。",
   "entrypoints_unread": 55602,
   "entrypoints_expected": 55623,
@@ -21,7 +21,7 @@
     "support_path_blob_complete": true
   },
   "recorded_at": "2026-10-24T02:57:08.8435119+00:00",
-  "central_write": 0,
+  "central_write": 5,
   "selected_identities": [
     {
       "git_blob": "0223b0aff77c17db1c324c3b8a8266f822cec0ca",
@@ -2992,7 +2992,7 @@
       "excluded_by_todo3080": false,
       "bytes": 9092,
       "path": "skills/aabbcc456aa/hxl-code-reviewer/SKILL.md",
-      "candidate_disposition": "adapt_or_integrate_candidate_with_official_primary_apache_evidence_pending_comparison",
+      "candidate_disposition": "installed_new_adaptation",
       "compare_metadata": [],
       "license_paths": [
         "skills/aabbcc456aa/hxl-code-reviewer/LICENSE.txt"
@@ -3038,7 +3038,7 @@
       "individual_notice_read_by": "20261024-095453-todo-3554",
       "source_sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
       "git_blob": "8a1a77a47d141967b246adb4da4f91037578ff7d",
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "gzip_sha256": "537c82ae874fab9159446197dec1542f8636e168d521b5a518b8f38a3979632d",
       "findings": [
         {
@@ -3212,7 +3212,7 @@
         "Phase4の評価はAPIキー不要の手順に限り、scripts/evaluation.py（未保存）は取り込まない",
         "reference/のうちmcp_best_practices.mdは全文読了で問題なし。evaluation・node・pythonは未読（語句走査のみ）なので、導入前に必要分を読む"
       ],
-      "independent_review_complete": false,
+      "independent_review_complete": true,
       "individual_rights_review": {
         "notice_path": "skills/aabbcc456aa/hxl-code-reviewer/LICENSE.txt",
         "notice_git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
@@ -3269,6 +3269,23 @@
         "source_sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
         "job": "20261024-093456-todo-3080",
         "definition": "Earlier private next10 preparation records parent full reread of official fixed primary. This is separate from child3554 archival notice reading."
+      },
+      "adoption_resolution": {
+        "public_delta_review_pending": true,
+        "fresh_discovery_enabled": true,
+        "support_or_service_rights_accepted": false,
+        "actual_structure_hash_passed": true,
+        "existing_comparison_holds_released": false,
+        "manifest": "skills-3080-installed-mcp-pointer-manifest.json",
+        "target": "mcp-builder",
+        "fixed_bundle_sha256": "b1eb81bf6ee61c6f2d3bd5a3739c89d85d4141352702108282690e8af8e10dc9",
+        "required_changes_history": "Earlier reader proposal retained. The authored reviewed bundle resolves adopted primary procedure scope; unrelated support/software/runtime gaps are not declared solved.",
+        "new_model_turn_tested": false,
+        "content_review_todos": [
+          3564,
+          3569
+        ],
+        "evidence": "skills-3080-mcp-pointer-installation-evidence.json"
       }
     },
     {
@@ -4031,7 +4048,7 @@
     "central_writes": 0
   },
   "next21_definition": "Earlier eleven plus research3554 ten unique primary paths. Support102+63=165, saved40+35=75, full12+30=42, scan0+5=5, unsaved62+28=90. Metadata eligibility is not individual permission. No new adoption or exclusion is added.",
-  "amended_at": "2026-10-24T04:36:53.6527779+00:00",
+  "amended_at": "2026-10-24T05:11:00.0131037+00:00",
   "amendment_job": "20261024-123649-todo-3080",
   "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts. 3571補正は担当表示と根拠の追補で、新しい本文/支持の読取や採用の加算ではない。",
   "next_research_todos": [
@@ -4070,5 +4087,8 @@
     "review_todo": 3571,
     "scan_by": 5,
     "full_read_by_preserved": 30
-  }
+  },
+  "next_research_todos_historical": true,
+  "next_research_todos_definition": "Snapshot of followup allocations at evaluation publication, not current queue status. Both3565/3566 later completed and their results are privately received; their new45 intake is not part of this public adoption delta.",
+  "new_central_write_definition": "Historical zero for the new10 evaluation-only publication, before subsequent new MCP adaptation. central_write is the later source-cohort cumulative created-file count; adoption_resolution and current ledger identify that later operation."
 }

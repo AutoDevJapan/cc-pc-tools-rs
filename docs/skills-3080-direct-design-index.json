@@ -1,0 +1,12 @@
+{
+  "todo": 3080,
+  "not_an_adoption_cap": true,
+  "scope": "Explicit independently sourced designs outside the legacy root-LICENSE batch schema; each referenced document is fixed and individually reviewed. Does not count pending drafts or catalog rows as installations.",
+  "documents": [
+    {
+      "file": "skills-3080-mcp-pointer-designs.json",
+      "sha256": "811de31b2672b2362d9eb1401d4387119b85db353ca1ac1bded96d9f331a7bd4",
+      "target_count": 2
+    }
+  ]
+}

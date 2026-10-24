@@ -480,6 +480,24 @@ gpt-6.1-sol・推論max（job `20261024-083553-todo-3545`、4分30秒、終了�
 - 照合の要所を壊した35の版を `go test -overlay` で当て、すべて対応するテストが失敗した。新しい1つの版は、
   shallowの名前に型を付けない。
 
+### 別モデルの再レビュー（ToDo3548）と提案の反映
+
+gpt-6.1-sol・推論max（job `20261024-090457-todo-3548`、5分25秒、終了コード0）が、base `4ed83158`・head `d30bc929` の
+変更5ファイルを差分と全文で読んだ。レビュー担当はテスト・ビルド・CIを実行していない。前回のMustは解消と判定された。
+新たな指摘は Suggestion 1件で、コードからの判断であり、再現テストは伴わない。MustとNitはない。
+
+- Suggestion: `gitmeta_windows_test.go` の `gitConfigList` は、Gitを `exec.Command` で直接起動していて、
+  `-c maintenance.auto=false` が付かない。「テストが起動するGitに付ける」という説明とずれる。設定の読取はfixtureを
+  変えないので、CIの失敗を再発させるものではない。
+
+`gitConfigList` も `gitCommand` からGitを起動するように直した（commit `3cd052b5`）。Gitにシステムとglobalの設定を
+読ませない環境変数（`GIT_CONFIG_NOSYSTEM=1`、`GIT_CONFIG_GLOBAL=/dev/null`）はそのまま付ける。readerは変えていない。
+
+- `go test -race -count=1 -run 'TestConfigParser|TestPackedRefs' ./...` は合格した（4.1秒）。`git config --file` は
+  指定したファイルだけを列挙するので、`TestConfigParserAgreesWithGit` が比べる内容は変わらない。`-c` で渡した値が
+  列挙に混ざれば、この比較が失敗する。`go vet ./...` とgofmtも差分なし。
+- テストの中でGitを直接起動する箇所は、`gitCommand` の1か所だけになった。
+
 ### 実物への事前の観測（merge前）
 
 最初の実装から生成した検査用readerで、実物に対して1回照合した。終了コード0、9.6秒で、
@@ -529,5 +547,6 @@ SHA256 `d4392e63…0718`、同じサイズと更新時刻で、`target/release/d
 4回目の修正のhead `b3c0b718` でも、専用workflow（windows、run 40034507365）とCodeQL（run 40034507248）が成功した。
 5回目の修正のhead `4ed83158` では、CodeQL（run 40040005526）が成功し、専用workflow（run 40040005613）は
 テストの合成repoで動いた自動maintenanceのために失敗した（前の節）。
-6回目の修正後のheadの正式CI、修正の別モデル再レビュー、通常merge、merge後のsourceから生成したreaderによる
+6回目の修正のhead `d30bc929` では、専用workflow（windows、run 40042426529）とCodeQL（run 40042426578）が成功した。
+提案を反映した後のheadの正式CI、追加した差分の別モデル再レビュー、通常merge、merge後のsourceから生成したreaderによる
 実物の照合、親3190への結果の返却が残る。

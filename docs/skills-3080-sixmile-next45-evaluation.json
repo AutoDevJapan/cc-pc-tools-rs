@@ -5753,7 +5753,7 @@
         "frontmatterにfork-of: https://github.com/anthropics/skills。row19と本文は同一でfrontmatterだけ違う。",
         "forms.md/reference.mdは走査のみ。8本のPythonスクリプトは未保存。本文のREFERENCE.md/FORMS.mdは実ファイル名と大文字小文字が不一致。"
       ],
-      "candidate_disposition": "assessed_pending_parent_final_disposition",
+      "candidate_disposition": "excluded_individual_reuse_restriction_permission_not_established",
       "required_changes": "See historical reader proposals plus parent policy corrections. Any adoption must use current authorized scope without adding generic owner approval gates, and preserve individual rights.",
       "positive_candidate": "PDFの結合・分割・表抽出の手順確認(実作業は既存のPDF系Skillで)。",
       "negative_candidate": "本packageの本文やスクリプトを中央Skillsへ写す/改変して配る場面。",
@@ -5993,7 +5993,7 @@
       "package_tree_fingerprint": "947ad5ecde2190d7db0a1cffcb00ef16a6aa671ea794e6e45371ddeb9407b0ac",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
-      "excluded_by_todo3080": false,
+      "excluded_by_todo3080": true,
       "source_code_executed": false,
       "independent_review_complete": false,
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
@@ -6002,7 +6002,16 @@
       "source_path": "skills/guohongbin-git/pdf-cn/SKILL.md",
       "reader_reference_namespace": "3566",
       "reader_reference_row_number": 8,
-      "reader_one_based_ordinal": 9
+      "reader_one_based_ordinal": 9,
+      "parent_final_decision": {
+        "disposition": "excluded",
+        "type": "individual_reuse_restriction_permission_not_established",
+        "reason": "個別noticeがサービス外の保持・複製・派生・再配布を明示して制限している。本文を中央Skillsへ複製する個別許諾は確認できず、6mile rootMITやOAuth契約から補わない。公開手順の評価と第三者サービスの通常利用は禁止へ変更しない。",
+        "decision_scope": "Only the listed fixed occurrence and its proposed central copying/adaptation. No claim that all Anthropic material is unavailable or that normal authorized service use is prohibited.",
+        "source": "skills-3080-adoptions.json",
+        "review_pending": true,
+        "recorded_at": "2026-10-24T10:39:47.2605445Z"
+      }
     },
     {
       "inventory_id": "github:4d5397795261226b7dc04bc139fb85372b63bac0adf38d4614fec23be31e5690",
@@ -8930,7 +8939,7 @@
         "scripts/requirements.txt(全文)は`anthropic>=0.39.0`,`mcp>=1.1.0`。評価スクリプト本体(evaluation.py)は未保存だが、APIキー課金呼び出しを前提と読める。npx @modelcontextprotocol/inspectorや外部文書の取得を前提にする(実行していない)。",
         "evaluation.md(21663B)はrow10とblob同一、mcp_best_practices.md(7330B)はrow10(28910B)より短い。scripts 3件は未保存。"
       ],
-      "candidate_disposition": "assessed_pending_parent_final_disposition",
+      "candidate_disposition": "excluded_exact_body_duplicate_of_existing_catalog_adoption",
       "required_changes": "See historical reader proposals plus parent policy corrections. Any adoption must use current authorized scope without adding generic owner approval gates, and preserve individual rights.",
       "positive_candidate": "自社製品のMCPサーバーのツール設計と評価質問(読み取り専用10問)を整える場面。",
       "negative_candidate": "本人承認なしでMCPを追加/インストールする、APIキーで評価スクリプトを回す場面。",
@@ -9141,7 +9150,7 @@
       "package_tree_fingerprint": "5a25a7970a879297e29908bb4fe59c9ae67dd81c530f80da62f53e95a9dc5e26",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
-      "excluded_by_todo3080": false,
+      "excluded_by_todo3080": true,
       "source_code_executed": false,
       "independent_review_complete": false,
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
@@ -9150,7 +9159,16 @@
       "source_path": "skills/pupuking723/mcp-builder-anthropic/SKILL.md",
       "reader_reference_namespace": "3566",
       "reader_reference_row_number": 18,
-      "reader_one_based_ordinal": 19
+      "reader_one_based_ordinal": 19,
+      "parent_final_decision": {
+        "disposition": "excluded",
+        "type": "exact_body_duplicate_of_existing_catalog_adoption",
+        "reason": "Verified primary matches the fully read official/canonical MCP procedure. Complete sibling packages add no changed or additional supporting blob; canonical .openskills.json is absent and independent _meta publication identities are preserved. Keep canonical adaptation once rather than add another identical procedure entrypoint.",
+        "decision_scope": "Duplicate disposition for this listed primary occurrence only, not a claim of all-byte package equality, copier authority, or software/service safety. Individual notice missing or placeholder differences remain recorded and no sibling is copied.",
+        "source": "skills-3080-adoptions.json",
+        "review_pending": true,
+        "recorded_at": "2026-10-24T10:39:47.2605445Z"
+      }
     },
     {
       "inventory_id": "github:26a03a3d50b59afbdef18bf936dffa118faeb3853c50b16f619a223b1acd70f8",
@@ -9174,7 +9192,7 @@
         "frontmatterは license: Proprietary。別アカウント(gitasura)の「test skill publish」名の試験公開で、再公開の権限は不明。",
         "forms.md/reference.md/scripts(8本)はrow8とblob同一(forms/referenceは走査のみ、scriptsは未保存)。大文字小文字の不一致もrow8と同じ。"
       ],
-      "candidate_disposition": "assessed_pending_parent_final_disposition",
+      "candidate_disposition": "excluded_individual_reuse_restriction_permission_not_established",
       "required_changes": "See historical reader proposals plus parent policy corrections. Any adoption must use current authorized scope without adding generic owner approval gates, and preserve individual rights.",
       "positive_candidate": "row8と同じ",
       "negative_candidate": "row8と同じ",
@@ -9413,7 +9431,7 @@
       "package_tree_fingerprint": "c885893ff1ed7149cbb2584fdbcb1bbda710b2caed853baefdb97d0bfe8f36ce",
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
-      "excluded_by_todo3080": false,
+      "excluded_by_todo3080": true,
       "source_code_executed": false,
       "independent_review_complete": false,
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
@@ -9422,7 +9440,16 @@
       "source_path": "skills/gitasura/pdf-test/SKILL.md",
       "reader_reference_namespace": "3566",
       "reader_reference_row_number": 19,
-      "reader_one_based_ordinal": 20
+      "reader_one_based_ordinal": 20,
+      "parent_final_decision": {
+        "disposition": "excluded",
+        "type": "individual_reuse_restriction_permission_not_established",
+        "reason": "個別noticeがサービス外の保持・複製・派生・再配布を明示して制限している。本文を中央Skillsへ複製する個別許諾は確認できず、6mile rootMITやOAuth契約から補わない。公開手順の評価と第三者サービスの通常利用は禁止へ変更しない。",
+        "decision_scope": "Only the listed fixed occurrence and its proposed central copying/adaptation. No claim that all Anthropic material is unavailable or that normal authorized service use is prohibited.",
+        "source": "skills-3080-adoptions.json",
+        "review_pending": true,
+        "recorded_at": "2026-10-24T10:39:47.2605445Z"
+      }
     },
     {
       "bytes": 4109,
@@ -10260,7 +10287,7 @@
           "workflow_read_by": null
         }
       ],
-      "excluded_by_todo3080": false,
+      "excluded_by_todo3080": true,
       "purpose": "pathと掲載名からPDF候補と分かる範囲。本文用途は未読。",
       "positive": "この固定資料を導入しない理由として、個別通知と未確認の許諾範囲を記録する。",
       "integrated_by_todo3080": false,
@@ -10286,7 +10313,7 @@
         "license_kind": "Proprietary / service-agreement restrictions",
         "third_party_support_or_service_rights_accepted": false
       },
-      "candidate_disposition": "rights_exclusion_candidate_metadata_only",
+      "candidate_disposition": "excluded_individual_reuse_restriction_permission_not_established",
       "negative": "6mile rootMITや本人の幅広い導入方針を、この個別制限の解除へ読み替える。",
       "required_changes": "本文・supportを新しくコピーしたり派生Skillを作らない。もし将来別の正規許諾を確認したなら、同じ固定本文との対応を再評価する。オーナーが第三者の権利を代わりに与えたとは扱わない。",
       "repo": "6mile/skills",
@@ -10298,7 +10325,16 @@
       "use": "pathと掲載名からPDF候補と分かる範囲。本文用途は未読。",
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
       "source_path": "skills/kidaiangel/document-pdf/SKILL.md",
-      "masked_value_count": null
+      "masked_value_count": null,
+      "parent_final_decision": {
+        "disposition": "excluded",
+        "type": "individual_reuse_restriction_permission_not_established",
+        "reason": "固定本文を今回親が全読し、Proprietaryの明示と個別noticeのサービス外保持・複製・派生・再配布制限を対応させた。中央への複製許諾は未成立としてこの固定複製案を除外する。公開内容の評価、別の許可済み手順や第三者サービスの通常利用は禁止へ変更しない。",
+        "decision_scope": "Only the listed fixed occurrence and its proposed central copying/adaptation. No claim that all Anthropic material is unavailable or that normal authorized service use is prohibited.",
+        "source": "skills-3080-adoptions.json",
+        "review_pending": true,
+        "recorded_at": "2026-10-24T10:39:47.2605445Z"
+      }
     },
     {
       "bytes": 1423,
@@ -10492,20 +10528,20 @@
     "A nested SKILL.md read as support can also be an independent catalog primary. Reconcile stable identities before adding primary coverage.",
     "No original-archive deletion, new rights outreach, repeated or alternate held647 retrieval. Unknown support bytes remain unknown. No source commands, permanent MCP connections or new fees were executed."
   ],
-  "new_final_dispositions": 1,
+  "new_final_dispositions": 4,
   "new_central_writes": 0,
   "public_reflected": true,
   "all16_complete": false,
   "limit": "This intake is reflected in this public delta; former preparation counter statements are historical snapshots. Current aggregate coverage is in the source index/progress. Raw full text, redacted workflow, phrase scans, notice-only reading, individual grants and final dispositions are separate. Source commands were not executed; all16 is unfinished.",
   "primary_actor_definition": "body_read_by only identifies a raw unmasked full-text reader; a masked full procedure uses body_workflow_read_by instead. A metadata-only notice assessment has neither primary actor. The individual notice has its own actor.",
-  "amended_at": "2026-10-24T08:15:09.0197014+00:00",
+  "amended_at": "2026-10-24T10:39:47.2605445Z",
   "cohort_definition": "Forty research candidates plus five parent candidates. Raw43, maskedworkflow1, metadata-only1; not a complete55623-source assessment.",
   "snapshot_status": "Actual next45 evaluation intake and one RSS author-procedure adaptation now reflected. Previous draft-only fields are historical preparation forecasts.",
   "preparation_revision": "v2 field aliases and metadata-only unknown mask clarified; same independently anchored reading identities/states/actors",
   "preparation_revision_at": "2026-10-24T05:33:26.3518620+00:00",
   "installed": 1,
   "integrated": 0,
-  "excluded": 0,
+  "excluded": 4,
   "reader_chains": [
     {
       "earlier_job": "20261024-115056-todo-3565",
@@ -11003,5 +11039,19 @@
   "source_workflow_primary_after_this_intake": 65,
   "metadata_only_primary_in_this_intake": 1,
   "preparation_limit_snapshot": "Private normalized intake only. No public counter or final exclusion changed. Full raw text, masked full workflow, phrase scans and metadata-only notice decisions are separate; original assessments and policy corrections are preserved.",
-  "new_central_writes_definition": "This intake normalization/public-record update did not repeat any central apply. The separate central_write5 field identifies the earlier actual RSS fivefile creation, whose fixed manifest/evidence are linked by its adoption_resolution. Other source candidates remain uninstalled."
+  "new_central_writes_definition": "This intake normalization/public-record update did not repeat any central apply. The separate central_write5 field identifies the earlier actual RSS fivefile creation, whose fixed manifest/evidence are linked by its adoption_resolution. Other source candidates remain uninstalled.",
+  "new_final_dispositions_at_intake": 1,
+  "parent_decision_updates": {
+    "recorded_at": "2026-10-24T10:39:47.2605445Z",
+    "job": "20261024-123649-todo-3080",
+    "added_exclusions": 4,
+    "inventory_ids": [
+      "github:80e883eeb6770b068abcf5bb5ef1410cb87ddd5e94ba52c2a55c06b6dea6a7df",
+      "github:26a03a3d50b59afbdef18bf936dffa118faeb3853c50b16f619a223b1acd70f8",
+      "github:2e24172100594e6036b2cc464d7bda679bf008c6bbb8cd128e5a92262c691339",
+      "github:e2d31692e49225ac37aa9b2eac4d04b4db6ed6da177cdea2c1d53c45b7516e32"
+    ],
+    "scope": "Only parent final flags/counters and decisions changed. Original primary/support reading states, actors, hashes, notices and historical proposals stay fixed.",
+    "review_pending": true
+  }
 }

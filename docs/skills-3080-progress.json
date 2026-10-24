@@ -290,7 +290,7 @@
   "independently_accepted": 32,
   "installed": 32,
   "integrated": 3,
-  "excluded": 8,
+  "excluded": 14,
   "units": {
     "github_agent_procedure": 483,
     "github_design_example": 199,
@@ -354,7 +354,7 @@
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "Legacy content acceptances plus individually scoped direct-design bundle reviews3564/3569/3584/3591. Actual creation and metadata are separately evidenced; this new public delta still requires review/CI/merge. No whole-catalog or full-context acceptance is implied.",
-    "not_semantically_disposed_occurrences": 73177,
+    "not_semantically_disposed_occurrences": 73171,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
@@ -437,8 +437,8 @@
     "source": "skills-3080-mizchi-partial-evaluation.json",
     "complete_definition": "本文の全path読取のみ。個別許諾・支持・採否・実導入は未完。"
   },
-  "all_fulltext_primary_paths_including_partial_sources": 474,
-  "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分84=474source paths。支持の全読/走査・伏字付き手順・個別許諾・最終採否は別。全16資料は未完。",
+  "all_fulltext_primary_paths_including_partial_sources": 480,
+  "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分90=480source paths。支持の全読/走査・伏字付き手順・個別許諾・最終採否は別。全16資料は未完。",
   "external_revisions": {
     "count": 1,
     "target": "diagnosing-bugs",
@@ -1325,7 +1325,7 @@
     "new_individual_rights_exclusions": 1,
     "existing_duplicate_receipts_reused": 1
   },
-  "amended_at": "2026-10-24T09:48:51.6367065Z",
+  "amended_at": "2026-10-24T10:39:47.2605445Z",
   "amendment_job": "20261024-123649-todo-3080",
   "mcp_pointer_installation": {
     "real_server_or_rendering_tested": false,
@@ -1370,23 +1370,24 @@
     "workflow_body_read": 44,
     "integrated": 0,
     "source": "skills-3080-sixmile-next45-evaluation.json",
-    "excluded": 0
+    "excluded": 4
   },
   "sixmile_body_read_coverage": {
-    "metadata_only_primary": 1,
-    "full_body_read": 84,
-    "workflow_body_read": 85,
-    "without_assessment": 55537,
-    "definition": "One source, disjoint first21+next45+next20. Raw primary84, redacted workflow1 and notice-only1 remain distinct. A path count is not unique content, source safety, permission or adoption.",
+    "metadata_only_primary": 0,
+    "full_body_read": 90,
+    "workflow_body_read": 92,
+    "without_assessment": 55530,
+    "definition": "Four direct-reading cohorts plus an explicit primary-reading amendment; one further exact-byte comparison-only occurrence is assessed without a new raw/workflow reading claim. Reading, comparison, permission, source safety and final adoption are separate units.",
     "expected": 55623,
     "complete": false,
-    "masked_workflow_body": 1,
-    "candidate_paths_assessed_or_notice_read": 86,
+    "masked_workflow_body": 2,
+    "candidate_paths_assessed_or_notice_read": 93,
     "source": "skills-3080-sixmile-evaluation-index.json",
-    "without_raw_full_read": 55539
+    "without_raw_full_read": 55533,
+    "comparison_only_primary": 1
   },
-  "all_workflow_primary_paths_including_partial_sources": 475,
-  "primary_coverage_definition_additional": "workflow集計475=raw474+伏字付き手順1。新20件は受領評価を固定原本へ照合し、全raw本文を親が再読した主張とは分ける。",
+  "all_workflow_primary_paths_including_partial_sources": 482,
+  "primary_coverage_definition_additional": "workflow集計はraw本文と伏字付き手順を区別した構造化件数に従う。原文/支持の受領評価と、親が全raw本文を再読した主張は別。旧notice-only本文の親全読は一度だけ別追補として加え、元childの状態と支持の担当は保持する。",
   "rss_season_installation": {
     "content_review": 3591,
     "full_context_budget_or_implicit_selection_proven": false,
@@ -1423,7 +1424,7 @@
     }
   },
   "sixmile_next20_entrypoint_evaluation": {
-    "excluded": 0,
+    "excluded": 1,
     "metadata_only_primary": 0,
     "full_body_read": 20,
     "definition": "This third cohort only; source aggregate and final decisions remain separate.",
@@ -1483,5 +1484,70 @@
     "configuration_or_exception_changes": 0,
     "owner_action_required": false,
     "next": "Keep exact targets unchanged and continue permitted evaluation. Existing normal classification prerequisites remain unresolved; no same refresh or alternate-path retry."
+  },
+  "sixmile_parent6_entrypoint_evaluation": {
+    "source": "skills-3080-sixmile-parent6-evaluation.json",
+    "candidate_paths": 6,
+    "full_body_read": 5,
+    "workflow_body_read": 6,
+    "masked_workflow_body": 1,
+    "metadata_only_primary": 0,
+    "installed": 0,
+    "integrated": 0,
+    "excluded": 0,
+    "definition": "This fourth cohort only; one additional historical primary reading is in the separate amendment."
+  },
+  "primary_reading_amendments_summary": {
+    "source": "skills-3080-primary-reading-amendments.json",
+    "amendments": 1,
+    "raw_primary_added": 1,
+    "workflow_primary_added": 1,
+    "new_candidate_paths": 0,
+    "new_support_paths": 0,
+    "original_child_and_support_actors_preserved": true
+  },
+  "parent6_reflection_delta": {
+    "current_branch_raw": 480,
+    "current_branch_workflow": 482,
+    "main_accepted_snapshot": {
+      "pr": 431,
+      "merge": "ad8151c101a0820cbc365455ecfb85caef1d697a",
+      "raw": 474,
+      "workflow": 475
+    },
+    "new_candidate_paths": 6,
+    "new_raw_readings": 6,
+    "new_workflow_readings": 7,
+    "existing_primary_amendments": 1,
+    "new_final_dispositions": 0,
+    "new_central_operations": 0,
+    "independent_review_pending": true,
+    "definition": "This reading projection is independent of final decisions. Six new paths and one existing-primary reading upgrade are reflected on the branch; main acceptance waits for the new delta. Separate individual_rights_and_mcp_duplicates_delta records later copy/duplicate decisions without changing reader attribution."
+  },
+  "sixmile_comparison_only_evaluation": {
+    "source": "skills-3080-mcp-sibling-duplicate-evidence.json",
+    "candidate_paths": 1,
+    "new_raw_readings": 0,
+    "new_workflow_readings": 0,
+    "excluded": 1,
+    "new_body_copied": false,
+    "source_scripts_executed": false
+  },
+  "individual_rights_and_mcp_duplicates_delta": {
+    "new_individual_rights_exclusions": 4,
+    "new_duplicate_exclusions": 2,
+    "total_new_exclusions": 6,
+    "original_duplicate_rows_preserved": 7,
+    "original_rights_row_preserved": 1,
+    "current_duplicate_entries": 9,
+    "current_individual_rights_entries": 5,
+    "main_accepted_excluded_before_this_delta": 8,
+    "branch_excluded": 14,
+    "branch_pending": 73171,
+    "primary_and_support_read_states_unchanged": true,
+    "existing_primary_amendment_separate": true,
+    "source_scripts_executed": false,
+    "central_operations": 0,
+    "review_pending": true
   }
 }

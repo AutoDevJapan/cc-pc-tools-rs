@@ -101,7 +101,7 @@ const sixmileNext10Actors = "6301d6942aea35a7738475d8db2870834fb0e06330f37c1e35f
 
 func validateSixmileAssessment(a sixmileAssessment, ledger []partialAdoption) error {
 	// This immutable evidence cohort owns only its selected21 identities.
-	// TestSixmileCohortIndexConservesReadingCategoriesAndAllLiveSourceRows
+	// TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce
 	// accounts for every6mile ledger row across all indexed cohorts, rejecting unknown
 	// and repeated rows. Do not mutate the caller's ledger backing array.
 	selectedIDs := map[string]bool{}
@@ -342,6 +342,15 @@ func TestIndividualRightsExclusionDoesNotBecomeADuplicateOrGrantPermission(t *te
 				Entries []individualRightsDecision `json:"entries"`
 			}
 			loadPublicReceipt(t, "skills-3080-rights-decisions.json", &d)
+			// This regression owns the original one-entry proprietary decision.
+			// The mandatory new restriction/whole-ledger tests cover later rows.
+			var original []individualRightsDecision
+			for _, row := range d.Entries {
+				if row.ID == "github:a43c08b1deba2610fe1f42e7fd4107452915e0b537210bc9c1caf435edfbbbbc" {
+					original = append(original, row)
+				}
+			}
+			d.Entries = original
 			switch kind {
 			case "duplicate_type":
 				d.Entries[0].Type = "exact_body_duplicate_of_existing_catalog_adoption"
@@ -376,7 +385,7 @@ func TestIndividualRightsReceiptMatchesTheSeparateLiveLedgerRow(t *testing.T) {
 	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
 	var rights []map[string]any
 	for _, d := range ledger.Excluded {
-		if d["exclusion_type"] == "individual_proprietary_permission_not_evidenced" {
+		if d["exclusion_type"] == "individual_proprietary_permission_not_evidenced" || d["exclusion_type"] == restrictionExclusionType {
 			rights = append(rights, d)
 		}
 	}

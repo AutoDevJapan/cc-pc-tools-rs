@@ -19,14 +19,21 @@ import (
 // Only device metadata is requested. Do not add labels, serial numbers,
 // mount-directory names, command lines or provider exception text.
 const deviceInventoryScript = `$ErrorActionPreference='Stop'
-$driveAudit=[ordered]@{volumes=@();logical=@();partitions=@();disks=@();errors=@()}
+$driveAudit=[ordered]@{volumes=@();logical=@();network=@();partitions=@();disks=@();errors=@()}
 try { $driveAudit.volumes=@(Get-Volume | ForEach-Object {
  $letter=''; if ($_.DriveLetter -and [int][char]$_.DriveLetter -ne 0) {$letter=[string]$_.DriveLetter}
  [ordered]@{id=[string]$_.UniqueId;drive=$letter;total=$_.Size;free=$_.SizeRemaining;health=[string]$_.HealthStatus}
 }) } catch { $driveAudit.errors+='volumes_unavailable' }
-try { $driveAudit.logical=@(Get-CimInstance Win32_LogicalDisk | ForEach-Object {
- [ordered]@{id=('logical:'+ [string]$_.DeviceID);drive=([string]$_.DeviceID).Substring(0,1);total=$_.Size;free=$_.FreeSpace;health='Unknown'}
-}) } catch { $driveAudit.errors+='logical_drives_unavailable' }
+try { $driveAudit.logical=@(Get-CimInstance Win32_Volume | ForEach-Object {
+ $letter=''; if ($_.DriveLetter) {$letter=([string]$_.DriveLetter).Substring(0,1)}
+ [ordered]@{id=[string]$_.DeviceID;drive=$letter;total=$_.Capacity;free=$_.FreeSpace;health='Unknown'}
+}) } catch { $driveAudit.errors+='volume_fallback_unavailable' }
+try { $driveAudit.network=@(Get-CimInstance Win32_LogicalDisk -Filter 'DriveType=4' | ForEach-Object {
+ $letter=([string]$_.DeviceID).Substring(0,1)
+ $identity=[string]$_.ProviderName;$unknown=[string]::IsNullOrWhiteSpace($identity)
+ if($unknown){$identity='unidentified:'+ $letter;$driveAudit.errors+='network_identity_unavailable'}
+ [ordered]@{id=('network:'+ $identity);drive=$letter;total=$_.Size;free=$_.FreeSpace;health='Unknown';identity_unverified=$unknown}
+}) } catch { $driveAudit.errors+='network_drives_unavailable' }
 try { $driveAudit.partitions=@(Get-Partition | ForEach-Object {
  $letter=''; if ($_.DriveLetter -and [int][char]$_.DriveLetter -ne 0) {$letter=[string]$_.DriveLetter}
  [ordered]@{disk=$_.DiskNumber;number=$_.PartitionNumber;drive=$letter;type=[string]$_.Type;bytes=$_.Size}

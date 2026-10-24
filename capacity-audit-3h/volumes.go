@@ -17,31 +17,32 @@ import (
 // This is an inventory, never deletion authority. Device IDs are hashed before
 // persistence; labels, mount directories, serials and file names are not logged.
 type volume struct {
-	ID          string  `json:"id"`
-	Drive       string  `json:"drive,omitempty"`
-	Total       *uint64 `json:"total_bytes"`
-	Free        *uint64 `json:"free_bytes"`
-	TotalChange *int64  `json:"total_change_bytes"`
-	FreeChange  *int64  `json:"free_change_bytes"`
-	Health      string  `json:"health"`
-	Status      string  `json:"status"`
-	Scan        string  `json:"scan_status"`
+	ID                 string  `json:"id"`
+	Drive              string  `json:"drive,omitempty"`
+	Total              *uint64 `json:"total_bytes"`
+	Free               *uint64 `json:"free_bytes"`
+	TotalChange        *int64  `json:"total_change_bytes"`
+	FreeChange         *int64  `json:"free_change_bytes"`
+	Health             string  `json:"health"`
+	Status             string  `json:"status"`
+	Scan               string  `json:"scan_status"`
+	IdentityUnverified bool    `json:"identity_unverified,omitempty"`
 }
 
 type partition struct {
-	Disk   uint32 `json:"disk"`
-	Number uint32 `json:"number"`
-	Type   string `json:"type"`
-	Bytes  uint64 `json:"bytes"`
-	Drive  string `json:"drive,omitempty"`
-	Keep   bool   `json:"retain_os_partition"`
+	Disk   uint32  `json:"disk"`
+	Number uint32  `json:"number"`
+	Type   string  `json:"type"`
+	Bytes  *uint64 `json:"bytes"`
+	Drive  string  `json:"drive,omitempty"`
+	Keep   bool    `json:"retain_os_partition"`
 }
 
 type disk struct {
-	Number uint32 `json:"number"`
-	Bytes  uint64 `json:"bytes"`
-	Health string `json:"health"`
-	Status string `json:"status"`
+	Number uint32  `json:"number"`
+	Bytes  *uint64 `json:"bytes"`
+	Health string  `json:"health"`
+	Status string  `json:"status"`
 }
 
 type volumeInventory struct {
@@ -55,16 +56,18 @@ type volumeInventory struct {
 }
 
 type rawVolume struct {
-	ID     string  `json:"id"`
-	Drive  string  `json:"drive"`
-	Total  *uint64 `json:"total"`
-	Free   *uint64 `json:"free"`
-	Health string  `json:"health"`
+	ID                 string  `json:"id"`
+	Drive              string  `json:"drive"`
+	Total              *uint64 `json:"total"`
+	Free               *uint64 `json:"free"`
+	Health             string  `json:"health"`
+	IdentityUnverified bool    `json:"identity_unverified,omitempty"`
 }
 
 type rawInventory struct {
 	Volumes    []rawVolume `json:"volumes"`
 	Logical    []rawVolume `json:"logical"`
+	Network    []rawVolume `json:"network"`
 	Partitions []partition `json:"partitions"`
 	Disks      []disk      `json:"disks"`
 	Errors     []string    `json:"errors"`
@@ -94,12 +97,12 @@ func health(value string) string {
 func normalizeInventory(data []byte, previous *volumeInventory, at time.Time) (volumeInventory, error) {
 	out := volumeInventory{Schema: 1, Time: at.UTC().Format(time.RFC3339), Status: "complete_device_inventory", Volumes: []volume{}, Partitions: []partition{}, Disks: []disk{}, Errors: []string{}}
 	var raw rawInventory
-	if len(data) > 1024*1024 || json.Unmarshal(data, &raw) != nil || raw.Volumes == nil || raw.Partitions == nil || raw.Logical == nil || raw.Disks == nil || len(raw.Volumes)+len(raw.Logical) > 256 || len(raw.Partitions) > 256 || len(raw.Disks) > 128 {
+	if len(data) > 1024*1024 || json.Unmarshal(data, &raw) != nil || raw.Volumes == nil || raw.Partitions == nil || raw.Logical == nil || raw.Disks == nil || len(raw.Volumes) > 256 || len(raw.Logical) > 256 || len(raw.Network) > 26 || len(raw.Partitions) > 256 || len(raw.Disks) > 128 {
 		return out, errors.New("invalid device inventory")
 	}
 	for _, code := range raw.Errors {
 		switch code {
-		case "volumes_unavailable", "partitions_unavailable", "disks_unavailable", "logical_drives_unavailable":
+		case "volumes_unavailable", "partitions_unavailable", "disks_unavailable", "volume_fallback_unavailable", "network_drives_unavailable", "network_identity_unavailable":
 			out.Errors = append(out.Errors, code)
 		default:
 			return out, errors.New("invalid inventory error")
@@ -114,13 +117,13 @@ func normalizeInventory(data []byte, previous *volumeInventory, at time.Time) (v
 		if v.Drive != "" && letter == "" {
 			return errors.New("invalid drive letter")
 		}
-		if logical && letters[letter] {
-			return nil
-		}
 		if v.ID == "" || len(v.ID) > 1024 {
 			return errors.New("invalid volume identity")
 		}
 		id := inventoryID(v.ID)
+		if logical && seen[id] {
+			return nil
+		}
 		if seen[id] || (letter != "" && letters[letter]) {
 			return errors.New("duplicate volume identity")
 		}
@@ -133,6 +136,13 @@ func normalizeInventory(data []byte, previous *volumeInventory, at time.Time) (v
 			row.Status = "capacity_unavailable"
 		} else {
 			row.Total, row.Free = v.Total, v.Free
+		}
+		if v.IdentityUnverified {
+			row.Status = "identity_unavailable"
+			row.IdentityUnverified = true
+			row.Total = nil
+			row.Free = nil
+			row.Scan = "not_scanned_identity_unavailable"
 		}
 		if letter == "" {
 			row.Scan = "not_scanned_no_drive_letter"
@@ -159,8 +169,16 @@ func normalizeInventory(data []byte, previous *volumeInventory, at time.Time) (v
 			return out, err
 		}
 	}
+	for _, v := range raw.Network {
+		if err := appendVolume(v, true); err != nil {
+			return out, err
+		}
+	}
 	if previous != nil {
 		for _, old := range previous.Volumes {
+			if old.IdentityUnverified && letters[old.Drive] {
+				continue
+			}
 			if !seen[old.ID] {
 				// Discovery errors do not prove physical disconnection.
 				status := "disconnected"
@@ -202,6 +220,7 @@ type driveCursor struct {
 }
 
 type driveScan struct {
+	Root        string        `json:"root"`
 	Pending     []driveCursor `json:"pending"`
 	Bytes       uint64        `json:"logical_bytes"`
 	Files       uint64        `json:"files"`
@@ -266,6 +285,9 @@ func saveAllDriveJSON(path string, value any) error {
 	if err != nil {
 		return err
 	}
+	if len(data) > 8*1024*1024 {
+		return errors.New("all-drive output exceeds checkpoint limit")
+	}
 	f, err := os.CreateTemp(filepath.Dir(path), "all-drive-stage-")
 	if err != nil {
 		return err
@@ -291,6 +313,33 @@ func saveAllDriveJSON(path string, value any) error {
 func scanDrive(ctx context.Context, root string, st *driveScan, max int, guard func(context.Context, string) string) driveResult {
 	visited := 0
 	guardUnavailable := false
+	// Keep a small invocation-local LRU so a wide parent is not re-read and
+	// sorted once per child after switching to a depth-first persistent cursor.
+	listings := map[string][]os.DirEntry{}
+	listingOrder := []string{}
+	list := func(path string) ([]os.DirEntry, error) {
+		entries, ok := listings[path]
+		if !ok {
+			var err error
+			entries, err = os.ReadDir(path)
+			if err != nil {
+				return nil, err
+			}
+			listings[path] = entries
+		}
+		for i, key := range listingOrder {
+			if key == path {
+				listingOrder = append(listingOrder[:i], listingOrder[i+1:]...)
+				break
+			}
+		}
+		listingOrder = append(listingOrder, path)
+		if len(listingOrder) > 16 {
+			delete(listings, listingOrder[0])
+			listingOrder = listingOrder[1:]
+		}
+		return entries, nil
+	}
 	for len(st.Pending) > 0 && visited < max && ctx.Err() == nil {
 		i := len(st.Pending) - 1
 		cur := st.Pending[i]
@@ -301,7 +350,7 @@ func scanDrive(ctx context.Context, root string, st *driveScan, max int, guard f
 		}
 		classification := guard(ctx, cur.Path)
 		if classification == "guard_unavailable" {
-			guardUnavailable = true
+			guardUnavailable = ctx.Err() == nil
 			break
 		}
 		if classification != "clear" {
@@ -309,7 +358,7 @@ func scanDrive(ctx context.Context, root string, st *driveScan, max int, guard f
 			st.Pending = st.Pending[:i]
 			continue
 		}
-		entries, err := os.ReadDir(cur.Path)
+		entries, err := list(cur.Path)
 		if err != nil {
 			st.Errors++
 			st.Pending = st.Pending[:i]
@@ -332,7 +381,7 @@ func scanDrive(ctx context.Context, root string, st *driveScan, max int, guard f
 			if classification == "guard_unavailable" {
 				// Revisit this same file after a transient guard failure.
 				st.Pending = append(st.Pending, driveCursor{Path: cur.Path, After: after})
-				guardUnavailable = true
+				guardUnavailable = ctx.Err() == nil
 				break
 			}
 			if classification != "clear" {
@@ -350,8 +399,11 @@ func scanDrive(ctx context.Context, root string, st *driveScan, max int, guard f
 			}
 			if info.IsDir() {
 				st.Directories++
+				// Descend immediately instead of accumulating a whole wide
+				// directory in the persistent pending stack.
+				st.Pending = append(st.Pending, cur)
 				st.Pending = append(st.Pending, driveCursor{Path: path})
-				continue
+				break
 			}
 			if info.Mode().IsRegular() {
 				st.Files++
@@ -387,6 +439,23 @@ func scanDrive(ctx context.Context, root string, st *driveScan, max int, guard f
 		r.Status = "partial_guard_unavailable"
 	}
 	return r
+}
+
+func scanAtMount(st *driveScan, root string) *driveScan {
+	if st == nil || len(st.Pending) == 0 || st.Root == "" {
+		return &driveScan{Root: root, Pending: []driveCursor{{Path: root}}, Started: time.Now().UTC().Format(time.RFC3339)}
+	}
+	if st.Root != root {
+		for i, cur := range st.Pending {
+			if !within(st.Root, cur.Path, true) {
+				return &driveScan{Root: root, Pending: []driveCursor{{Path: root}}, Started: time.Now().UTC().Format(time.RFC3339)}
+			}
+			rel, _ := filepath.Rel(st.Root, cur.Path)
+			st.Pending[i].Path = filepath.Join(root, rel)
+		}
+		st.Root = root
+	}
+	return st
 }
 
 // Reserve the first turn for the rotating cursor, then prioritize growth.
@@ -433,11 +502,8 @@ func collectAllDrives(ctx context.Context, home string) (allDriveReport, error) 
 			continue
 		}
 		root := v.Drive + `:\`
-		scan := st.Scans[v.ID]
-		if scan == nil || len(scan.Pending) == 0 {
-			scan = &driveScan{Pending: []driveCursor{{Path: root}}, Started: time.Now().UTC().Format(time.RFC3339)}
-			st.Scans[v.ID] = scan
-		}
+		scan := scanAtMount(st.Scans[v.ID], root)
+		st.Scans[v.ID] = scan
 		partCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		r := scanDrive(partCtx, root, scan, 20000, classifyPath)
 		cancel()

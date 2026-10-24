@@ -12,8 +12,10 @@ import (
 
 func deviceFixture() rawInventory {
 	total, free := uint64(100), uint64(30)
-	return rawInventory{Volumes: []rawVolume{{ID: "volume-1", Drive: "C", Total: &total, Free: &free, Health: "Healthy"}, {ID: "recovery", Total: &total, Free: &free, Health: "Warning"}}, Logical: []rawVolume{{ID: "logical:C:", Drive: "C", Total: &total, Free: &free}, {ID: "logical:F:", Drive: "F", Total: &total, Free: &free}}, Partitions: []partition{{Disk: 0, Number: 1, Type: "System", Bytes: 100}, {Disk: 0, Number: 2, Type: "Reserved", Bytes: 16}, {Disk: 0, Number: 4, Type: "Recovery", Bytes: 90}}, Disks: []disk{{Number: 0, Bytes: 1000, Health: "Healthy", Status: "Online"}}, Errors: []string{}}
+	return rawInventory{Volumes: []rawVolume{{ID: "volume-1", Drive: "C", Total: &total, Free: &free, Health: "Healthy"}, {ID: "recovery", Total: &total, Free: &free, Health: "Warning"}}, Logical: []rawVolume{{ID: "volume-1", Drive: "C", Total: &total, Free: &free}, {ID: "volume-F", Drive: "F", Total: &total, Free: &free}}, Partitions: []partition{{Disk: 0, Number: 1, Type: "System", Bytes: testBytes(100)}, {Disk: 0, Number: 2, Type: "Reserved", Bytes: testBytes(16)}, {Disk: 0, Number: 4, Type: "Recovery", Bytes: testBytes(90)}}, Disks: []disk{{Number: 0, Bytes: testBytes(1000), Health: "Healthy", Status: "Online"}}, Errors: []string{}}
 }
+
+func testBytes(n uint64) *uint64 { return &n }
 
 func normalizedFixture(t *testing.T, raw rawInventory, previous *volumeInventory) volumeInventory {
 	t.Helper()

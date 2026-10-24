@@ -54,20 +54,38 @@ jobs:
             # Windows Temp permits creation but not parent enumeration. PowerShell
             # Remove-Item requires a readable parent, even with LiteralPath.
             # Retain one ownership-checked empty parent for this runner's fixtures.
-            $parentRecord = Join-Path $helperRoot 'fixture-parent.json'
+            # A cancelled old job can retain a protected test checkout below
+            # its parent. Preserve its original receipt and do not reuse that
+            # tree for new tests. The current cache is separate from the old
+            # legacy record, which remains available for normal recovery.
+            $parentRecord = Join-Path $helperRoot 'fixture-parent-current.json'
+            $parent = $null
             if (Test-Path -LiteralPath $parentRecord) {
-              $parent = Get-Content -LiteralPath $parentRecord -Raw | ConvertFrom-Json
-              $expectedParent = Join-Path $env:TEMP "codex-owned-$($parent.id)"
-              if ($parent.id -notmatch '^[a-f0-9]{32}$' -or $parent.path -ne $expectedParent) { throw 'Unexpected fixture parent' }
-              $parentPlan = & $helper plan --id $parent.id
-              if ($LASTEXITCODE -ne 0) { throw 'Fixture parent ownership check failed; inspect the helper error above' }
-              $checkedParent = $parentPlan | ConvertFrom-Json
-              if ($checkedParent.action -ne 'submit_to_exec_tool' -or $checkedParent.path -ne $parent.path -or $checkedParent.entries -ne 0) { throw 'Fixture parent is not owned, empty and eligible for normal cleanup' }
-            } else {
+              $previous = Get-Content -LiteralPath $parentRecord -Raw | ConvertFrom-Json
+              $expectedParent = Join-Path $env:TEMP "codex-owned-$($previous.id)"
+              if ($previous.id -notmatch '^[a-f0-9]{32}$' -or $previous.path -ne $expectedParent) { throw 'Unexpected fixture parent' }
+              $parentPlan = & $helper plan --id $previous.id
+              $planExit = $LASTEXITCODE
+              if ($planExit -eq 0) {
+                $checkedParent = $parentPlan | ConvertFrom-Json
+                if ($checkedParent.action -eq 'submit_to_exec_tool' -and $checkedParent.path -eq $previous.path -and $checkedParent.entries -eq 0) { $parent = $previous }
+              }
+              if ($null -eq $parent) {
+                $heldRecord = Join-Path $helperRoot "fixture-parent-held-$($previous.id).json"
+                if (!(Test-Path -LiteralPath $heldRecord)) {
+                  @{ id = $previous.id; path = $previous.path; state = 'retained'; plan_exit = $planExit; plan = $parentPlan; run = $env:GITHUB_RUN_ID; attempt = $env:GITHUB_RUN_ATTEMPT } |
+                    ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $heldRecord -Encoding utf8 -ErrorAction Stop
+                }
+                Write-Output "Previous CI fixtures retained unchanged: id=$($previous.id); receipt=$heldRecord"
+              }
+            }
+            if ($null -eq $parent) {
               $parent = & $helper create --project pc-ci --content recovery-parent | ConvertFrom-Json
               if ($LASTEXITCODE -ne 0) { throw 'Could not create owned fixture parent' }
               try {
-                @{ id = $parent.id; path = $parent.path } | ConvertTo-Json | Set-Content -LiteralPath $parentRecord -Encoding utf8 -ErrorAction Stop
+                $pendingRecord = "$parentRecord.$env:GITHUB_RUN_ID.$env:GITHUB_RUN_ATTEMPT.pending"
+                @{ id = $parent.id; path = $parent.path } | ConvertTo-Json | Set-Content -LiteralPath $pendingRecord -Encoding utf8 -ErrorAction Stop
+                Move-Item -LiteralPath $pendingRecord -Destination $parentRecord -Force -ErrorAction Stop
               } catch {
                 Write-Output "Owned parent retained in helper receipts: id=$($parent.id); path=$($parent.path)"
                 throw

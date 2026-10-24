@@ -149,6 +149,9 @@ fn relocation_rejects_stops_dependencies_unknown_workers_and_changed_provenance(
     let (mut f, request, _) = fixture();
     let original = f.e.todo().unwrap();
     let jobs = f.e.backend.records.clone();
+    let valid = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
+    assert_eq!(valid["eligible"], true);
+    let expected = s(&valid["state_sha256"]).to_owned();
     for gate in [
         "stop",
         "dependency",
@@ -177,6 +180,8 @@ fn relocation_rejects_stops_dependencies_unknown_workers_and_changed_provenance(
         "shared_worker",
         "target_claim",
         "reservation",
+        "empty_old_branch",
+        "console",
     ] {
         write_json(&f.e.todo_path, &original, 1).unwrap();
         f.e.backend.records = jobs.clone();
@@ -223,7 +228,7 @@ fn relocation_rejects_stops_dependencies_unknown_workers_and_changed_provenance(
                     .unwrap();
             }
             "unknown_task_worker" | "unknown_target_worker" => {
-                f.e.backend.records.push(json!({"id":"unverified","status":"unknown","todo_id":if gate == "unknown_task_worker" {1} else {3},"cwd":request.worktree}));
+                f.e.backend.records.push(json!({"id":"unverified","status":"unknown","todo_id":if gate == "unknown_task_worker" {1} else {3},"cwd":if gate == "unknown_task_worker" {f.repo.to_str().unwrap()} else {&request.worktree}}));
             }
             "alive_terminal" => {
                 f.e.backend.records[0]["pid"] = json!(2);
@@ -254,13 +259,55 @@ fn relocation_rejects_stops_dependencies_unknown_workers_and_changed_provenance(
                     .unwrap();
                 f.e.backend.records[0]["launch_key"] = json!("a".repeat(32));
             }
+            "empty_old_branch" => {
+                f.e.edit(&json!(1), |r| r["scheduler"]["branch"] = json!(""))
+                    .unwrap();
+                f.e.backend.records[0]["work_owner"]["branch"] = json!("");
+            }
+            "console" => {
+                f.e.edit(&json!(1), |r| {
+                    r["scheduler"]["key"] = json!("a".repeat(32));
+                    r["scheduler"]["console_request"] =
+                        json!({"key":"intake","prompt":"preserve original request"});
+                    r["scheduler"]["console_receipts"] =
+                        json!({"intake":{"launch_key":"a".repeat(32)}});
+                })
+                .unwrap();
+            }
             _ => unreachable!(),
         }
         let before = fs::read(&f.e.todo_path).unwrap();
         let checked = relocate(&mut f.e, &mut SystemRunner, &req, None).unwrap();
         assert_eq!(checked["eligible"], false, "{gate}: {checked}");
-        assert!(
-            relocate(&mut f.e, &mut SystemRunner, &req, Some(&"a".repeat(64))).is_err(),
+        let reason = match gate {
+            "stop" | "dependency" | "block" | "cancel" | "project" | "phase" => {
+                "RelocationTaskHeld"
+            }
+            "job" => "RelocationSourceMissing",
+            "source_owner" | "source_result" | "alive_terminal" => "RelocationSourceOwnership",
+            "source_branch" | "empty_old_branch" => "RelocationWorkspaceIdentity",
+            "source_common" => "RelocationRepositoryIdentity",
+            "parent" => "RelocationSharedOwnerMissing",
+            "parent_branch" => "RelocationSharedOwnerIdentity",
+            "missing_history" => "RelocationWorkerUnknown",
+            "unknown_task_worker" | "unknown_target_worker" | "target_claim" => {
+                "RelocationCompetingWorker"
+            }
+            "shared_worker" => "RelocationSharedOwnerUnknown",
+            "scope" | "reference_scope" => "ClientResource",
+            "branch" | "spec_hash" => "RelocationSpecMismatch",
+            "head" | "shared_head" => "RelocationGitChanged",
+            "spec_path" => "RelocationSpecPath",
+            "reservation" => "RelocationReservationOwned",
+            "console" => "RelocationConsoleRequest",
+            _ => unreachable!(),
+        };
+        assert_eq!(checked["reason"], reason, "{gate}");
+        assert_eq!(
+            relocate(&mut f.e, &mut SystemRunner, &req, Some(&expected))
+                .unwrap_err()
+                .0,
+            reason,
             "{gate}"
         );
         assert_eq!(fs::read(&f.e.todo_path).unwrap(), before, "{gate}");
@@ -275,6 +322,72 @@ fn relocation_rejects_stops_dependencies_unknown_workers_and_changed_provenance(
                 "private output: {gate}"
             );
         }
+    }
+}
+
+#[test]
+fn relocation_scope_checks_leave_admission_free_and_final_cas_keeps_intervening_edits() {
+    struct LastReadEdit {
+        path: PathBuf,
+        changed: Value,
+        status_reads: usize,
+        fired: bool,
+    }
+    impl Runner for LastReadEdit {
+        fn run(&mut self, call: &Invocation) -> Result<Output> {
+            let output = SystemRunner.run(call)?;
+            if call.args.iter().any(|arg| arg == "--porcelain") {
+                self.status_reads += 1;
+                if self.status_reads == 2 {
+                    write_json(&self.path, &self.changed, 1)?;
+                    self.fired = true;
+                }
+            }
+            Ok(output)
+        }
+    }
+    let (mut f, request, _) = fixture();
+    let gate =
+        f.e.root
+            .parent()
+            .unwrap()
+            .join("codex-jobs/jobs/.queue.lock");
+    f.e.backend.repair_probe_queue = Some(gate);
+    let checked = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
+    assert_eq!(checked["eligible"], true, "{checked}");
+    assert_eq!(f.e.backend.repair_queue_available, vec![true; 4]);
+    for field in ["note", "needs", "status", "job", "project"] {
+        let mut changed = f.e.todo().unwrap();
+        match field {
+            "note" => changed["items"][0]["note"] = json!("new answer after the final read"),
+            "needs" => changed["items"][0]["needs"] = json!([]),
+            "status" => changed["items"][0]["status"] = json!("block"),
+            "job" => changed["items"][0]["scheduler"]["job"] = json!("new-assignment"),
+            "project" => changed["projects"]["cc-pc-tools-rs"] = json!("changed-registration"),
+            _ => unreachable!(),
+        }
+        let original = f.e.todo().unwrap();
+        let mut runner = LastReadEdit {
+            path: f.e.todo_path.clone(),
+            changed: changed.clone(),
+            status_reads: 0,
+            fired: false,
+        };
+        assert_eq!(
+            relocate(
+                &mut f.e,
+                &mut runner,
+                &request,
+                Some(s(&checked["state_sha256"]))
+            )
+            .unwrap_err()
+            .0,
+            "RelocationStateChanged",
+            "{field}"
+        );
+        assert!(runner.fired, "{field}");
+        assert_eq!(f.e.todo().unwrap(), changed, "{field}");
+        write_json(&f.e.todo_path, &original, 1).unwrap();
     }
 }
 
@@ -409,5 +522,308 @@ fn relocation_later_failed_worker_keeps_its_real_failure_and_new_workspace() {
     let launch = &f.e.backend.launched[0];
     assert_eq!(launch["item"]["scheduler"]["worktree"], request.worktree);
     assert!(s(&launch["text"]).contains("前回のジョブが止まった"));
+    assert_eq!(
+        launch["item"]["scheduler"]["workspace_relocation"]["request"]["source_job"],
+        "finished"
+    );
     assert!(!s(&launch["text"]).contains("前回の担当は正常終了しました"));
+}
+
+#[test]
+fn relocation_missing_latest_source_never_falls_back_to_the_shared_writer() {
+    for fallback in [false, true] {
+        let (mut f, request, _) = fixture();
+        let checked = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
+        relocate(
+            &mut f.e,
+            &mut SystemRunner,
+            &request,
+            Some(s(&checked["state_sha256"])),
+        )
+        .unwrap();
+        let mut old = f.e.backend.records.remove(0);
+        if fallback {
+            old["id"] = json!("older");
+            f.e.backend.records.push(old);
+            f.e.edit(&json!(1), |row| push(&mut row["jobs"], json!("older")))
+                .unwrap();
+        }
+        let row = f.get(1);
+        let result = cc_scheduler::preparation::recover_workspace(
+            &mut SystemRunner,
+            f.repo.to_str().unwrap(),
+            &row,
+            &f.e.backend.records,
+        );
+        assert!(result.is_err(), "fallback={fallback}: {result:?}");
+        assert_eq!(f.get(1), row);
+    }
+}
+
+#[test]
+fn relocation_unused_receipt_can_be_requalified_without_changing_its_destination() {
+    let (mut f, mut request, _) = fixture();
+    let checked = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
+    relocate(
+        &mut f.e,
+        &mut SystemRunner,
+        &request,
+        Some(s(&checked["state_sha256"])),
+    )
+    .unwrap();
+    let original = f.get(1);
+    run_git(
+        &mut SystemRunner,
+        Path::new(&request.worktree),
+        &[
+            "-c",
+            "user.name=fixture",
+            "-c",
+            "user.email=fixture@example.invalid",
+            "commit",
+            "--allow-empty",
+            "-m",
+            "continue preserved work",
+        ],
+    )
+    .unwrap();
+    request.head = run_git(
+        &mut SystemRunner,
+        Path::new(&request.worktree),
+        &["rev-parse", "HEAD"],
+    )
+    .unwrap();
+    let checked = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
+    assert_eq!(checked["eligible"], true, "{checked}");
+    assert_eq!(checked["already_recorded"], false);
+    assert_eq!(
+        relocate(
+            &mut f.e,
+            &mut SystemRunner,
+            &request,
+            Some(s(&checked["state_sha256"]))
+        )
+        .unwrap()["saved"],
+        true
+    );
+    let after = f.get(1);
+    assert_eq!(
+        after["scheduler"]["workspace_relocation_history"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    assert_eq!(
+        after["scheduler"]["workspace_relocation"]["previous_scheduler"],
+        original["scheduler"]["workspace_relocation"]["previous_scheduler"]
+    );
+    assert_eq!(after["note"], original["note"]);
+    let recovered = cc_scheduler::preparation::recover_workspace(
+        &mut SystemRunner,
+        f.repo.to_str().unwrap(),
+        &after,
+        &f.e.backend.records,
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(recovered["branch"], request.branch);
+    f.e.edit(&json!(1), |row| {
+        row["resume_generation"] = json!(99);
+        row["worker_receipt"] = json!({"job":"unknown-assigned","generation":99});
+    })
+    .unwrap();
+    let consumed = f.get(1);
+    assert_eq!(
+        relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap()["eligible"],
+        false
+    );
+    assert_eq!(f.get(1), consumed);
+}
+
+#[test]
+fn relocation_normal_owner_reconciliation_keeps_the_dedicated_reservation() {
+    let (mut f, request, _) = fixture();
+    let checked = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
+    relocate(
+        &mut f.e,
+        &mut SystemRunner,
+        &request,
+        Some(s(&checked["state_sha256"])),
+    )
+    .unwrap();
+    let mut db = f.e.todo().unwrap();
+    let before = db.clone();
+    let changed = cc_job_policy::work_owner::reconcile_todos(&mut db, &f.e.backend.records);
+    assert!(!changed.contains(&1), "{changed:?} {db}");
+    assert_eq!(db, before);
+}
+
+#[test]
+fn relocation_git_checks_do_not_refresh_the_shared_index() {
+    struct ReadOnlyGit {
+        shared: String,
+        status_calls: Vec<(String, bool)>,
+    }
+    impl Runner for ReadOnlyGit {
+        fn run(&mut self, call: &Invocation) -> Result<Output> {
+            if call.args.iter().any(|arg| arg == "status") {
+                let at = call.args.iter().position(|arg| arg == "-C").unwrap();
+                self.status_calls.push((
+                    call.args[at + 1].clone(),
+                    call.args.iter().any(|arg| arg == "--no-optional-locks"),
+                ));
+            }
+            SystemRunner.run(call)
+        }
+    }
+    let (mut f, request, shared) = fixture();
+    let mut runner = ReadOnlyGit {
+        shared: shared.to_str().unwrap().into(),
+        status_calls: Vec::new(),
+    };
+    assert_eq!(
+        relocate(&mut f.e, &mut runner, &request, None).unwrap()["eligible"],
+        true
+    );
+    assert!(!runner.status_calls.is_empty());
+    assert!(
+        runner
+            .status_calls
+            .iter()
+            .all(|(path, no_locks)| path != &runner.shared && *no_locks),
+        "{:?}",
+        runner.status_calls
+    );
+}
+
+#[test]
+fn relocation_requalifies_a_new_saved_spec_but_never_a_different_destination() {
+    let (mut f, mut request, _) = fixture();
+    let checked = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
+    relocate(
+        &mut f.e,
+        &mut SystemRunner,
+        &request,
+        Some(s(&checked["state_sha256"])),
+    )
+    .unwrap();
+    let old_path = PathBuf::from(s(&f.get(1)["spec"]));
+    let old_bytes = fs::read(&old_path).unwrap();
+    let new_text = format!(
+        "{}\nAdditional preserved continuation requirement.\n",
+        String::from_utf8(old_bytes.clone()).unwrap()
+    );
+    let new_path = old_path
+        .parent()
+        .unwrap()
+        .join(format!("1-{}.md", "b".repeat(32)));
+    fs::write(&new_path, &new_text).unwrap();
+    fs::write(&request.spec_reference, &new_text).unwrap();
+    f.e.edit(&json!(1), |row| {
+        push(&mut row["spec_history"], json!({"spec":old_path}));
+        row["spec"] = json!(new_path);
+    })
+    .unwrap();
+    request.spec_sha256 = cc_job_policy::product_retry::digest(new_text.as_bytes());
+    let checked = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
+    assert_eq!(checked["eligible"], true, "{checked}");
+    assert_eq!(
+        relocate(
+            &mut f.e,
+            &mut SystemRunner,
+            &request,
+            Some(s(&checked["state_sha256"]))
+        )
+        .unwrap()["saved"],
+        true
+    );
+    assert_eq!(fs::read(&old_path).unwrap(), old_bytes);
+    assert_eq!(f.get(1)["spec"], json!(new_path));
+    assert_eq!(
+        f.get(1)["scheduler"]["workspace_relocation_history"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
+    let before = f.get(1);
+    request.branch = "scheduler/todo-1-changed".into();
+    let denied = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
+    assert_eq!(denied["reason"], "RelocationWorkspaceIdentity");
+    assert_eq!(f.get(1), before);
+}
+
+#[test]
+fn relocation_keeps_working_when_the_shared_owner_writes_its_own_files() {
+    let (mut f, request, shared) = fixture();
+    let checked = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
+    fs::write(
+        shared.join("owner-unfinished.txt"),
+        "the shared writer keeps working",
+    )
+    .unwrap();
+    assert_eq!(
+        relocate(
+            &mut f.e,
+            &mut SystemRunner,
+            &request,
+            Some(s(&checked["state_sha256"]))
+        )
+        .unwrap()["saved"],
+        true
+    );
+    assert_eq!(
+        fs::read_to_string(shared.join("owner-unfinished.txt")).unwrap(),
+        "the shared writer keeps working"
+    );
+}
+
+#[test]
+fn relocation_explicitly_rechecks_terminal_metadata_without_replacing_original_ownership() {
+    let (mut f, request, _) = fixture();
+    let checked = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
+    relocate(
+        &mut f.e,
+        &mut SystemRunner,
+        &request,
+        Some(s(&checked["state_sha256"])),
+    )
+    .unwrap();
+    f.e.backend.records[0]["queue_unreadable"] = json!(false);
+    let row = f.get(1);
+    assert!(cc_scheduler::preparation::recover_workspace(
+        &mut SystemRunner,
+        f.repo.to_str().unwrap(),
+        &row,
+        &f.e.backend.records
+    )
+    .is_err());
+    let refreshed = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
+    assert_eq!(refreshed["eligible"], true, "{refreshed}");
+    assert_eq!(refreshed["already_recorded"], false);
+    assert_eq!(
+        relocate(
+            &mut f.e,
+            &mut SystemRunner,
+            &request,
+            Some(s(&refreshed["state_sha256"]))
+        )
+        .unwrap()["saved"],
+        true
+    );
+    let row = f.get(1);
+    assert!(cc_scheduler::preparation::recover_workspace(
+        &mut SystemRunner,
+        f.repo.to_str().unwrap(),
+        &row,
+        &f.e.backend.records
+    )
+    .unwrap()
+    .is_some());
+    f.e.backend.records[0]["work_owner"]["branch"] = json!("scheduler/todo-3-unknown");
+    assert_eq!(
+        relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap()["reason"],
+        "RelocationSourceOwnership"
+    );
 }

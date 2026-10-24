@@ -267,6 +267,73 @@ pub fn observed_jobs(db: &Value, jobs: &[Value]) -> Vec<Value> {
 pub fn reconcile_todos(db: &mut Value, jobs: &[Value]) -> Vec<i64> {
     reconcile_todos_if(db, jobs, |_| true)
 }
+
+// A qualified, not-yet-used scheduler relocation reserves its real target.
+// Missing or changed evidence is deferred to the scheduler's strict gate;
+// never turn the historical shared cwd into a new completion prerequisite.
+fn relocated_identity(item: &Value, jobs: &[Value]) -> Option<Value> {
+    let receipt = &item["scheduler"]["workspace_relocation"];
+    let request = &receipt["request"];
+    let prefix = format!("scheduler/todo-{}-", item["id"]);
+    if receipt["schema"] != "scheduler-workspace-relocation-v1"
+        || request["id"] != item["id"]
+        || item["jobs"] != receipt["original_jobs"]
+        || !s(request, "branch").starts_with(&prefix)
+        || item["scheduler"]["branch"] != request["branch"]
+        || norm(Path::new(s(&item["scheduler"], "worktree")))
+            != norm(Path::new(s(request, "worktree")))
+    {
+        return None;
+    }
+    let source = jobs.iter().find(|job| job["id"] == request["source_job"])?;
+    if source["todo_id"] != item["id"]
+        || source["status"] != "succeeded"
+        || source["exit_code"] != 0
+        || [
+            "id",
+            "todo_id",
+            "project",
+            "status",
+            "exit_code",
+            "cwd",
+            "work_owner",
+        ]
+        .iter()
+        .any(|key| source[*key] != receipt["source_identity"][*key])
+    {
+        return None;
+    }
+    let mut ids: Vec<_> = jobs
+        .iter()
+        .filter(|job| {
+            job["todo_id"] == item["id"]
+                || job["related_todo_ids"]
+                    .as_array()
+                    .is_some_and(|ids| ids.contains(&item["id"]))
+                || item["jobs"]
+                    .as_array()
+                    .is_some_and(|ids| ids.contains(&job["id"]))
+        })
+        .map(|job| s(job, "id").to_owned())
+        .collect();
+    ids.sort();
+    if json!(ids) != receipt["worker_ids"] {
+        return None;
+    }
+    let owner = checkout(s(&item["scheduler"], "worktree"));
+    if owner["repository"] != "autodevjapan/cc-pc-tools-rs"
+        || owner["worktree"] != norm(Path::new(s(&item["scheduler"], "worktree")))
+        || ["repository", "git_common", "worktree", "branch"]
+            .iter()
+            .any(|key| owner[*key] != receipt["target_owner"][*key])
+        || ["repository", "git_common"]
+            .iter()
+            .any(|key| owner[*key] != source["work_owner"][*key])
+    {
+        return None;
+    }
+    Some(owner)
+}
 pub fn reconcile_todos_if(
     db: &mut Value,
     jobs: &[Value],
@@ -299,15 +366,32 @@ pub fn reconcile_todos_if(
                         .is_some_and(|ids| ids.contains(&j["id"]))
             })
             .max_by_key(|j| (s(j, "created_at"), s(j, "id")));
-        let cwd = old
-            .map(|j| s(j, "cwd"))
-            .filter(|p| !p.is_empty())
-            .unwrap_or_else(|| s(&item["scheduler"], "worktree"));
+        let moved = item["scheduler"]["workspace_relocation"].is_object()
+            && old.is_none_or(|job| {
+                norm(Path::new(s(job, "cwd"))) != norm(Path::new(s(&item["scheduler"], "worktree")))
+            });
+        let relocation = if moved {
+            let Some(identity) = relocated_identity(item, jobs) else {
+                continue;
+            };
+            Some(identity)
+        } else {
+            None
+        };
+        let cwd = if moved {
+            s(&item["scheduler"], "worktree")
+        } else {
+            old.map(|j| s(j, "cwd"))
+                .filter(|p| !p.is_empty())
+                .unwrap_or_else(|| s(&item["scheduler"], "worktree"))
+        };
         let mut candidate = registered_job(
             db,
             &json!({"id":format!("todo-{}",item["id"]),"cwd":cwd,"project":item["project"],"task_title":item["title"],"todo_id":item["id"]}),
         );
-        if let Some(old) = old {
+        if let Some(identity) = relocation {
+            candidate["work_owner"] = identity;
+        } else if let Some(old) = old {
             if live(old) {
                 candidate = old.clone();
             }

@@ -11,6 +11,8 @@ mod finished_work_handoff;
 mod finite_owner_wait_repair;
 #[path = "support/quota_recovery.rs"]
 mod quota_recovery_tests;
+#[path = "support/pretool_failure.rs"]
+mod pretool_failure;
 #[path = "support/no_action.rs"]
 mod no_action;
 #[cfg(windows)]

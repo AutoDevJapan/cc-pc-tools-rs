@@ -235,6 +235,24 @@ func TestRequiredChecksMetadataCLIUsesValidInputAndRejectsArgumentsBeforeRead(t 
 	}
 }
 
+func TestRequiredChecksMetadataDoesNotForwardUnknownPhases(t *testing.T) {
+	for _, test := range []struct {
+		value any
+		state string
+	}{
+		{nil, "null"}, {12, "invalid"}, {checkMetadataSecret, "invalid"}, {"preparing", "recorded"},
+	} {
+		fixture := requiredChecksFixture()
+		fixture["items"].([]any)[2].(obj)["scheduler"].(obj)["phase"] = test.value
+		r := requiredChecksResult(t, fixture)
+		phase := r["records"].([]obj)[0]["scheduler"].(obj)["phase"].(obj)
+		if phase["state"] != test.state || strings.Contains(string(requiredChecksEncode(t, r)), checkMetadataSecret) {
+			t.Fatal("unknown phase was exposed or its state was lost")
+		}
+		assertRequiredChecksKeys(t, r)
+	}
+}
+
 func assertRequiredChecksKeys(t *testing.T, result obj) {
 	t.Helper()
 	allowed := map[string]string{
@@ -260,8 +278,12 @@ func assertRequiredChecksKeys(t *testing.T, result obj) {
 			if !ok {
 				t.Fatalf("unexpected output object at %s", path)
 			}
+			keySet := map[string]bool{}
+			for _, key := range strings.Fields(keys) {
+				keySet[key] = true
+			}
 			for key, child := range typed {
-				if !strings.Contains(" "+keys+" ", " "+key+" ") {
+				if !keySet[key] {
 					t.Fatalf("unexpected output key at %s", path)
 				}
 				walk(child, path+"/"+key)

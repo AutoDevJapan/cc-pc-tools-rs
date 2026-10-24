@@ -8,12 +8,12 @@
   "entrypoints_expected": 177,
   "entrypoints_fulltext_read": 177,
   "entrypoints_unread": 0,
-  "installed": 0,
+  "installed": 1,
   "integrated": 2,
   "excluded": 0,
-  "central_write": 12,
+  "central_write": 17,
   "classification_is_not_installation": true,
-  "scope": "固定177入口の全本文読取と評価受領を完了。今回50は子3535/3536の各25を親が全評価読了・原応答/固定tree/index/catalog/roster/gzipへ照合。全支持/第三者権利/全候補採否/実導入は未完。",
+  "scope": "177入口の本文評価を保持し、うちカーソル軌跡1件を新規実配置。既存統合2件と12fileの操作を保持し、新5fileを区別する。支持/第三者権利/全採否/全実導入は未完。",
   "entries": [
     {
       "inventory_id": "github:709d1f4fe1039448270b3f743f5432fbeb31d85416d441d4dba335b9e2df97eb",
@@ -18058,7 +18058,7 @@
       "use": "カーソル軌跡を移動距離ごとに放出し、速さによらず間隔を一定にする。",
       "value": "距離積算、区間内配置、リングバッファの罠、静止時の息、3D画面固定、惰性、タッチ/reduced-motion。",
       "reason": "独自性が高く概念は正しいが、配置式と上限処理に誤りがある。自作算術(上流コード不実行)で確認。",
-      "candidate_disposition": "new_pointer_emitter_candidate_pending_placement_formula_and_guard_corrections",
+      "candidate_disposition": "installed_new_adaptation",
       "required_changes": [
         "配置式t=min(1,guard*STEP/moved)は前フレームの端数accを無視。moved=0.02/フレームで間隔0.02〜0.04(STEP=0.03)、乱数movedで0.0012〜0.0587。t=(k*STEP-更新前acc)/movedで0.0300に揃う。『間隔は一定』を直す。",
         "guard(14)到達後もaccを捨てず、瞬間移動100単位で3333粒が約4秒(239フレーム)静止点から出続ける→上限後にaccをSTEP以下へ。",
@@ -18082,10 +18082,10 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false,
+      "independent_review_complete": true,
       "historical_reader_proposal": {
         "todo": 3535,
         "raw_sha256": "02b95987b47af3963bc30e3e83c8984ba5eee85d52ecfcd5e084233f62a4219d",
@@ -18142,7 +18142,24 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "adoption_resolution": {
+        "public_delta_review_pending": true,
+        "fresh_discovery_enabled": true,
+        "support_or_service_rights_accepted": false,
+        "actual_structure_hash_passed": true,
+        "existing_comparison_holds_released": false,
+        "manifest": "skills-3080-installed-mcp-pointer-manifest.json",
+        "target": "pointer-trail-emitter",
+        "fixed_bundle_sha256": "b1eb81bf6ee61c6f2d3bd5a3739c89d85d4141352702108282690e8af8e10dc9",
+        "required_changes_history": "Earlier reader proposal retained. The authored reviewed bundle resolves adopted primary procedure scope; unrelated support/software/runtime gaps are not declared solved.",
+        "new_model_turn_tested": false,
+        "content_review_todos": [
+          3564,
+          3569
+        ],
+        "evidence": "skills-3080-mcp-pointer-installation-evidence.json"
+      }
     },
     {
       "inventory_id": "github:9c6a936947bd96735fc78821b61854f74ceef411c91ed8d0447bfc4a528b30e6",
@@ -22087,7 +22104,7 @@
     "support": 349,
     "central_writes": 0
   },
-  "amended_at": "2026-10-24T03:03:56.0866038+00:00",
-  "amendment_job": "20261024-093456-todo-3080",
+  "amended_at": "2026-10-24T05:10:59.9611699+00:00",
+  "amendment_job": "20261024-123649-todo-3080",
   "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts."
 }

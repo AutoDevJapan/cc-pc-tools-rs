@@ -75,7 +75,14 @@ func TestProgressConservesObservedCatalogAndCandidateBatches(t *testing.T) {
 			count++
 		}
 	}
+	for _, target := range directAuthoredDesigns(t) {
+		if repos[strings.ToLower(target.Repo)] != target.Commit || seen[target.Name] {
+			t.Fatal("direct individual-source design repeats a name or loses the pinned commit")
+		}
+		seen[target.Name] = true
+		count++
+	}
 	if count != p.Candidates {
-		t.Fatal("published candidate count differs from all authored batches")
+		t.Fatal("published candidate count differs from legacy batches plus direct designs")
 	}
 }

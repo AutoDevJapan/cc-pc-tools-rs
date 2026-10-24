@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-24T02:57:08.8435119+00:00",
+  "observed_at": "2026-10-24T05:11:00.0188417+00:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "本文411/6mile21の評価反映と担当表示の補正の範囲。最終採否/中央書込の加算はこの公開差分では0。別の新規2件の実配置と発見の証拠は後続の公開範囲で反映し、全16資料の作業を継続する。",
+  "phase_b": "PR424の本文411/6mile21を保持し、新規MCP設計と距離による軌跡の2件を実配置・読戻し・Codex発見まで確認した。新規30/統合3/除外8、残73179。新規2件の公開差分のreview/CI/mergeは別に追い、全16資料を完了にしない。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -286,9 +286,9 @@
   "site_entries_with_body": 9862,
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
-  "candidate_designs": 28,
-  "independently_accepted": 28,
-  "installed": 28,
+  "candidate_designs": 30,
+  "independently_accepted": 30,
+  "installed": 30,
   "integrated": 3,
   "excluded": 8,
   "units": {
@@ -309,8 +309,8 @@
     "First14, Docker8 and latest3+revised3 bounded checks accepted;CLI/context beyond metadata not proven.",
     "Source archive warning59416 is not a per-record malicious verdict or blanket exclusion.",
     "6mile APItruncation repaired by matching fixedgit subtrees/ls-tree.",
-    "新規28配置と既存統合1は有限な作業単位で件数上限ではない。",
-    "最新診断1名はmetadata324中1発見/解析0。モデルの実ターンや文脈予算は未検証。"
+    "新規30配置と既存統合3は有限な作業単位で件数上限ではない。",
+    "過去の診断1名は当時metadata324中1発見/解析0。最新の新2件はmetadata328中2発見/enabled/解析0。モデル実ターンや全context予算は未検証。"
   ],
   "entrypoint_assessment": {
     "source": "mattpocock/skills",
@@ -346,15 +346,15 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "28設計/28配置。件数上限ではない。",
+    "candidate_designs": "旧batch7群の28設計と個別出典方式の2設計、計30配置。件数上限ではない。",
     "additional_authored_drafts_not_in_plans": 3,
-    "authored_total": 31,
-    "installed": 28,
+    "authored_total": 33,
+    "installed": 30,
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
-    "independently_accepted": "自分の28配置について限定受入済み。現在の全ディスクが配置時と同一という保証とは分ける。",
-    "not_semantically_disposed_occurrences": 73181,
+    "independently_accepted": "旧28配置の限定受入と、新2件の3564/3569による固定bundle内容の限定受入。今回の公開台帳差分のreview/CI/mergeは別。全ディスクや全候補の同一性・受入ではない。",
+    "not_semantically_disposed_occurrences": 73179,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
@@ -397,7 +397,7 @@
     },
     "limits": "旧7資料91+設計2+OpenAI44=137source paths。mizchi76は既存の別枠を維持し再加算しない。mirror/guideを含み独立Skill数/導入数ではない。全支持/全候補の意味・許諾監査は未完。 この137は既存の固定bucket。今回のMengTo177は別枠で数え二重加算しない。"
   },
-  "independent_acceptance_scope": "28新規とlinkv2の過去限定受入を保持。CI既存統合1のv2は3378Must0/同HEAD自動テスト成功/PR381mergeで親が限定受入。SQL2は3368本文と3378表示を分けて同一内容を限定受入。新22評価は3417/3420の固定差分読取Must0を受領。補足のb006版は3456、新19を含む1088版は3473でMust0。今回の追加差分は別確認、許諾/配置/実ターンは別。旧配置のdiagnosing-bugs1件の後続別改訂も別証拠を保持。",
+  "independent_acceptance_scope": "28新規とlinkv2の過去限定受入を保持。CI既存統合1のv2は3378Must0/同HEAD自動テスト成功/PR381mergeで親が限定受入。SQL2は3368本文と3378表示を分けて同一内容を限定受入。新22評価は3417/3420の固定差分読取Must0を受領。補足のb006版は3456、新19を含む1088版は3473でMust0。今回の追加差分は別確認、許諾/配置/実ターンは別。旧配置のdiagnosing-bugs1件の後続別改訂も別証拠を保持。 新2件は3564が全10file/明示A/B/C、3569がV2の6変更fileでMust0。親が両原応答を全読しjob/nativeSonnet5.5/maxを照合。実配置後の10file/hash/構造/metadataは親が確認。公開差分は別レビュー前で、全モデルターンの受入ではない。",
   "total_skill_named_body_read": 137,
   "obra_entrypoint_assessment": {
     "expected": 15,
@@ -650,53 +650,40 @@
     "number": 406
   },
   "latest_received_review": {
-    "effort_origin": "owner_request",
-    "raw_file": "review3553-original.md",
-    "effective_reasoning_measured": false,
-    "job": "20261024-094553-todo-3553",
-    "todo": 3553,
-    "exit_code": 0,
-    "model_origin": "owner_request",
-    "suggestions": 5,
-    "unread_scope": "複数の大きい文書は差分と前後だけ。101入力のraw SHA再計算はせずGit blobと親の記録を照合。",
+    "effort": "max",
+    "job": "20261024-134522-todo-3580",
+    "scope": "Elevenfile73hunk3571fixes, before the current deployment publicdelta",
+    "todo": 3580,
+    "model": "anthropic/claude-sonnet-5-5",
+    "head": "eb3a7f2ec0ff127e9c43d6dd58782419e7d45eea",
+    "raw_sha256": "87549b1f52f57f20382d03a3b8705d3b0e0e51e0a27b80d3828d49d34dbe9fbb",
+    "nits": 4,
+    "native_matched": true,
     "parent_full_read": true,
-    "nits": 7,
-    "job_model": "anthropic/claude-sonnet-5-5",
-    "parent_read_at": "2026-10-24T01:17:23.2692728+00:00",
-    "native_observation": {
-      "model": "anthropic/claude-sonnet-5-5",
-      "effort": "max",
-      "timestamp": "2026-10-24T00:46:33.257Z",
-      "service_tier": null
-    },
+    "model_origin": "owner_request",
+    "effort_origin": "owner_request",
+    "suggestions": 3,
+    "raw_bytes": 4042,
     "must": 0,
-    "raw_bytes": 10709,
-    "scope": "固定5175..f8cの10差分全hunk、保存公式sync_walk全関数、指定証拠の照合。本文127の意味再読/新61/実Go/中央読取/CIは範囲外。",
-    "raw_sha256": "f051cadf733fab74d3beea913ad0f8d8115f79b0c9fbcd1311baa46486e93733",
-    "requested_effort": "max",
-    "base": "5175e5534722d26d5037ad59fc93a4f84671b126",
-    "status": "succeeded",
-    "head": "f8c960c98dd225b0295b5e84dcead8a5abd2b6d9"
+    "base": "6e887da39ea3e37b3a8c9a0e0c7b0aa9a911b39d"
   },
   "latest_merged_pr": {
-    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/421",
-    "must": 0,
-    "merge": "347b951b07252dd0a18ddbc66bfa96b97aa1032d",
-    "head": "f8c960c98dd225b0295b5e84dcead8a5abd2b6d9",
-    "merged_at": "2026-10-24T01:17:26Z",
-    "checks": "same f8c:6 SUCCESS plus optional Bugbot NEUTRAL, all complete and CLEAN; raw premerge snapshot preserved",
+    "merged_at": "2026-10-24T05:10:12Z",
+    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/424",
+    "number": 424,
+    "merge": "6905b890d7b280c659e2073c6b561c903c1ed955",
+    "acceptance_scope": "ca1e..6e887の十一差分と6e887..eb3aの十一補正差分、次10本文評価/読取担当の整合。今回の実配置2件の公開差分は含まない。",
+    "head": "eb3a7f2ec0ff127e9c43d6dd58782419e7d45eea",
     "review_todos": [
-      3541,
-      3553
-    ],
-    "acceptance_scope": "c6b5..5175の3541指摘と5175..f8cの修正10差分。新61/個別権利1/補足は対象外。",
-    "number": 421
+      3571,
+      3580
+    ]
   },
   "mengto_partial_entrypoint_evaluation": {
     "fixed_roster": "skills-3080-mengto-fixed-entrypoints.json",
     "expected": 177,
     "complete": true,
-    "installed": 0,
+    "installed": 1,
     "complete_definition": "本文path読取と評価の受領。支持/第三者権利/実導入/実適用は未完。",
     "source": "skills-3080-mengto-partial-evaluation.json",
     "unread": 0,
@@ -932,6 +919,20 @@
       "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/417",
       "head": "ab3446b619f6d47e10f4f08418dfb301f46b925f",
       "acceptance_scope": "固定bf5..853の11差分と853..abの8差分。v3実反映と明示使用はそれぞれの範囲。今回35評価と補足、全3080は未受入。"
+    },
+    {
+      "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/422",
+      "merge": "ca1e891ffbc25a725cd7f5a6094ac6041c82c890",
+      "scope": "Original61 evaluation delta plus3557corrections;3563 fixed elevenfile review; not later new10 or new2 deployment",
+      "must": 0,
+      "head": "c109c100a5c7d4f7bdbc9a690913570eb3cffd84",
+      "checks": "samec109 all7 completed/no failures/CLEAN",
+      "number": 422,
+      "merged_at": "2026-10-24T02:56:34Z",
+      "review_todos": [
+        3557,
+        3563
+      ]
     }
   ],
   "current_mengto_delta": {
@@ -973,7 +974,7 @@
     "source": "skills-3080-sixmile-partial-evaluation.json",
     "full_body_read": 21,
     "complete_definition": "本文path読取と評価の受領だけ。個別支持/全採否/実導入の完了ではない。",
-    "installed": 0,
+    "installed": 1,
     "integrated": 0
   },
   "rights_exclusions": {
@@ -1047,5 +1048,21 @@
     "existing_duplicate_receipts_reused": 1
   },
   "amended_at": "2026-10-24T04:36:53.6878206+00:00",
-  "amendment_job": "20261024-123649-todo-3080"
+  "amendment_job": "20261024-123649-todo-3080",
+  "mcp_pointer_installation": {
+    "real_server_or_rendering_tested": false,
+    "parse_errors": 0,
+    "new_targets": 2,
+    "implicit_selection_proven": false,
+    "content_review_complete": true,
+    "discovery_found": 2,
+    "design": "skills-3080-mcp-pointer-designs.json",
+    "scan_traversal_warning_markers": 2,
+    "discovery_enabled": 2,
+    "warning_cause_linked": false,
+    "public_delta_review_pending": true,
+    "files": 10,
+    "full_context_budget_proven": false,
+    "source": "skills-3080-mcp-pointer-installation-evidence.json"
+  }
 }

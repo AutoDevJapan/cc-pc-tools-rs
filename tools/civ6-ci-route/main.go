@@ -25,10 +25,13 @@ const gh = `D:\CC\Tools\codex-jobs\gh_gate.exe`
 
 type api func(context.Context, string, string, any, any) error
 type manifest struct {
+	Generation        string    `json:"generation,omitempty"`
 	RepoID            int64     `json:"repo_id"`
 	Head              string    `json:"original_head"`
 	Tree              string    `json:"original_tree"`
 	Base              string    `json:"base"`
+	BaselineTree      string    `json:"baseline_tree,omitempty"`
+	Parents           []string  `json:"parents,omitempty"`
 	Files             []filePin `json:"files"`
 	OfficialCISuccess bool      `json:"official_ci_success"`
 }
@@ -129,7 +132,7 @@ func immutableRead(path string) bool {
 		}
 	}
 	for _, w := range contract.Workflows() {
-		if path == apiPrefix+"/contents/"+w.Path+"?ref="+contract.OriginalHead {
+		if path == apiPrefix+"/contents/"+w.Path+"?ref="+contract.OriginalHead || path == apiPrefix+"/contents/"+w.Path+"?ref="+contract.MergeMain || path == apiPrefix+"/contents/"+w.Path+"?ref="+contract.OldRoutedHead {
 			return true
 		}
 	}
@@ -258,7 +261,10 @@ func prepare(ctx context.Context, dir string, request api) error {
 	return save(filepath.Join(dir, "proposal.private.json"), m)
 }
 func compareTree(old, next tree, newSHA string, files []filePin) error {
-	if old.SHA != contract.OriginalTree || old.Truncated || next.SHA != newSHA || next.Truncated || len(old.Entries) != len(next.Entries) || len(files) != 3 {
+	return compareTreeFrom(old, next, contract.OriginalTree, newSHA, files)
+}
+func compareTreeFrom(old, next tree, baseline, newSHA string, files []filePin) error {
+	if old.SHA != baseline || old.Truncated || next.SHA != newSHA || next.Truncated || len(old.Entries) != len(next.Entries) || len(files) != 3 {
 		return errors.New("complete tree inventory required")
 	}
 	expected := map[string]string{}
@@ -297,9 +303,12 @@ func compareTree(old, next tree, newSHA string, files []filePin) error {
 	return nil
 }
 func publish(ctx context.Context, dir string, request api) error {
+	return publishUsing(ctx, dir, request, proposal, inspect)
+}
+func publishUsing(ctx context.Context, dir string, request api, generate func(context.Context, api) (manifest, map[string][]byte, error), recheck func(context.Context, api) error) error {
 	// Every mutation is single use. A lost result retains its journal and cannot
 	// trigger a second publication, a revert or an alternate transport.
-	m, files, e := proposal(ctx, request)
+	m, files, e := generate(ctx, request)
 	if e != nil {
 		return e
 	}
@@ -329,42 +338,51 @@ func publish(ctx context.Context, dir string, request api) error {
 	for _, f := range m.Files {
 		entries = append(entries, treeEntry{Path: f.Path, Mode: "100644", Type: "blob", Content: string(files[f.Path])})
 	}
+	baseline, parents := m.Tree, []string{m.Head}
+	if m.Generation == contract.MergeGeneration {
+		baseline, parents = m.BaselineTree, m.Parents
+	}
 	var t struct{ SHA string }
-	if e = request(ctx, "POST", apiPrefix+"/git/trees", map[string]any{"base_tree": contract.OriginalTree, "tree": entries}, &t); e != nil {
+	if e = request(ctx, "POST", apiPrefix+"/git/trees", map[string]any{"base_tree": baseline, "tree": entries}, &t); e != nil {
 		return e
 	}
-	if !contract.ValidSHA(t.SHA) || t.SHA == contract.OriginalTree {
+	if !contract.ValidSHA(t.SHA) || t.SHA == baseline {
 		return errors.New("new tree identity invalid")
 	}
 	var old, next tree
-	if e = request(ctx, "GET", apiPrefix+"/git/trees/"+contract.OriginalTree+"?recursive=1", nil, &old); e != nil {
+	if e = request(ctx, "GET", apiPrefix+"/git/trees/"+baseline+"?recursive=1", nil, &old); e != nil {
 		return e
 	}
 	if e = request(ctx, "GET", apiPrefix+"/git/trees/"+t.SHA+"?recursive=1", nil, &next); e != nil {
 		return e
 	}
-	if e = compareTree(old, next, t.SHA, m.Files); e != nil {
+	if e = compareTreeFrom(old, next, baseline, t.SHA, m.Files); e != nil {
 		return e
 	}
 	var c struct{ SHA string }
-	if e = request(ctx, "POST", apiPrefix+"/git/commits", map[string]any{"message": "ci: run checks on isolated repository runners and retain workspace doctests", "tree": t.SHA, "parents": []string{contract.OriginalHead}}, &c); e != nil {
+	if e = request(ctx, "POST", apiPrefix+"/git/commits", map[string]any{"message": "ci: run checks on isolated repository runners and retain workspace doctests", "tree": t.SHA, "parents": parents}, &c); e != nil {
 		return e
 	}
-	if !contract.ValidSHA(c.SHA) || c.SHA == contract.OriginalHead {
+	if !contract.ValidSHA(c.SHA) || c.SHA == m.Head {
 		return errors.New("new commit invalid")
 	}
 	var actual commit
 	if e = request(ctx, "GET", apiPrefix+"/git/commits/"+c.SHA, nil, &actual); e != nil {
 		return e
 	}
-	if actual.SHA != c.SHA || actual.Tree.SHA != t.SHA || len(actual.Parents) != 1 || actual.Parents[0].SHA != contract.OriginalHead {
+	if actual.SHA != c.SHA || actual.Tree.SHA != t.SHA || len(actual.Parents) != len(parents) {
 		return errors.New("new commit ancestry differs")
+	}
+	for i, parent := range parents {
+		if actual.Parents[i].SHA != parent {
+			return errors.New("new commit parent order differs")
+		}
 	}
 	rec := objects{Head: c.SHA, Tree: t.SHA, Files: m.Files}
 	if e = save(filepath.Join(dir, "objects.private.json"), rec); e != nil {
 		return e
 	}
-	if e = inspect(ctx, request); e != nil {
+	if e = recheck(ctx, request); e != nil {
 		return e
 	}
 	if e = save(filepath.Join(dir, "ref-attempt.private.json"), rec); e != nil {
@@ -402,15 +420,19 @@ func owned(ctx context.Context, dir string) error {
 	return nil
 }
 func main() {
-	if len(os.Args) != 3 || (os.Args[1] != "prepare" && os.Args[1] != "publish") {
-		fmt.Fprintln(os.Stderr, "usage: civ6-ci-route prepare|publish <safe-delete-owned-root>")
+	if len(os.Args) != 3 || (os.Args[1] != "prepare" && os.Args[1] != "publish" && os.Args[1] != "prepare-main392" && os.Args[1] != "publish-main392") {
+		fmt.Fprintln(os.Stderr, "usage: civ6-ci-route prepare|publish|prepare-main392|publish-main392 <safe-delete-owned-root>")
 		os.Exit(2)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 	err := owned(ctx, os.Args[2])
 	if err == nil {
-		if os.Args[1] == "prepare" {
+		if os.Args[1] == "prepare-main392" {
+			err = prepareMain(ctx, os.Args[2], call)
+		} else if os.Args[1] == "publish-main392" {
+			err = publishUsing(ctx, os.Args[2], call, proposalMain, inspectMain)
+		} else if os.Args[1] == "prepare" {
 			err = prepare(ctx, os.Args[2], call)
 		} else {
 			err = publish(ctx, os.Args[2], call)

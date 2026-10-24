@@ -256,6 +256,12 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 }
 
 func writeExecutionQueue(catalog, manifest, root, output string) error {
+	// The summary is the commit marker. Existing complete pairs are immutable.
+	if _, err := os.Lstat(output + ".summary.json"); err == nil {
+		return errors.New("execution summary already exists")
+	} else if !os.IsNotExist(err) {
+		return err
+	}
 	raw, err := os.ReadFile(manifest)
 	if err != nil {
 		return err
@@ -279,10 +285,12 @@ func writeExecutionQueue(catalog, manifest, root, output string) error {
 		return err
 	}
 	defer in.Close()
-	out, err := os.OpenFile(output, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	out, err := os.CreateTemp(filepath.Dir(output), "."+filepath.Base(output)+".pending-*")
 	if err != nil {
 		return err
 	}
+	defer os.Remove(out.Name())
+	defer out.Close()
 	hash := sha256.New()
 	w := bufio.NewWriter(io.MultiWriter(out, hash))
 	s, scanErr := executionQueue(in, w, m, evidence)
@@ -302,10 +310,12 @@ func writeExecutionQueue(catalog, manifest, root, output string) error {
 		return err
 	}
 	data = append(data, '\n')
-	summary, err := os.OpenFile(output+".summary.json", os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	summary, err := os.CreateTemp(filepath.Dir(output), "."+filepath.Base(output)+".summary-pending-*")
 	if err != nil {
 		return err
 	}
+	defer os.Remove(summary.Name())
+	defer summary.Close()
 	_, writeErr := summary.Write(data)
 	syncErr = summary.Sync()
 	closeErr = summary.Close()
@@ -314,6 +324,80 @@ func writeExecutionQueue(catalog, manifest, root, output string) error {
 			return e
 		}
 	}
+	if err = publishExecutionPair(out.Name(), summary.Name(), output, s.QueueSHA, os.Link); err != nil {
+		return err
+	}
 	fmt.Printf("execution_queue=%d assessment_records=%d recorded_final=%d; upstream_body_reads=0 new_decisions=0 installs=0\n", s.Records, s.Assessments, s.Final)
+	return nil
+}
+
+// Both staged files are complete, synced and closed before publishing either.
+// Hard links provide a no-replace publication on Windows and Unix. A process
+// stop between publications leaves a complete queue without a commit marker;
+// a retry may finish that exact pair after comparing the existing queue bytes.
+func publishExecutionPair(queue, summary, output, expectedSHA string, link func(string, string) error) error {
+	if _, err := os.Lstat(output + ".summary.json"); err == nil {
+		return errors.New("execution summary already exists")
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+	created := false
+	if err := link(queue, output); err == nil {
+		created = true
+	} else if !os.IsExist(err) {
+		return err
+	} else if err = matchInterruptedExecutionQueue(queue, output, expectedSHA); err != nil {
+		return err
+	}
+	if err := link(summary, output+".summary.json"); err != nil {
+		// Another writer may have completed the same queue while this call
+		// was preparing its marker. Its committed pair must remain intact.
+		if _, markerErr := os.Lstat(output + ".summary.json"); !os.IsNotExist(markerErr) {
+			return err
+		}
+		// Remove only the queue this call published, while the stage still pins
+		// its identity. Never remove a preexisting or concurrently replaced file.
+		if created {
+			staged, stageErr := os.Stat(queue)
+			published, publishedErr := os.Lstat(output)
+			if stageErr == nil && publishedErr == nil && os.SameFile(staged, published) {
+				if cleanupErr := os.Remove(output); cleanupErr != nil {
+					return errors.Join(err, cleanupErr)
+				}
+			}
+		}
+		return err
+	}
+	return nil
+}
+
+func matchInterruptedExecutionQueue(stage, output, expectedSHA string) error {
+	old, err := os.Lstat(output)
+	if err != nil {
+		return err
+	}
+	staged, err := os.Stat(stage)
+	if err != nil {
+		return err
+	}
+	if !old.Mode().IsRegular() || old.Size() != staged.Size() {
+		return errors.New("existing execution queue is not the complete expected output")
+	}
+	f, err := os.Open(output)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	opened, err := f.Stat()
+	if err != nil || !os.SameFile(old, opened) {
+		return errors.New("existing execution queue identity changed")
+	}
+	h := sha256.New()
+	if _, err = io.Copy(h, f); err != nil {
+		return err
+	}
+	if hex.EncodeToString(h.Sum(nil)) != expectedSHA {
+		return errors.New("existing execution queue bytes differ")
+	}
 	return nil
 }

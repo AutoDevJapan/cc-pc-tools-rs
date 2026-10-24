@@ -241,7 +241,7 @@ func validateNext75Reading(a next75Assessment) error {
 		noticeSeen := map[string]bool{}
 		for _, n := range e.Rights.Notices {
 			s, ok := supportByPath[n.Path]
-			if !ok || noticeSeen[n.Path] || !x45True(s.Saved) || !x45True(s.Workflow) || n.SHA != s.SHA || n.Blob != s.Blob || s.Bytes == nil || n.Bytes != *s.Bytes || n.Read == nil || *n.Read != *s.Read || !x45True(n.Workflow) || n.Method != s.State || n.Reader != e.Reader || n.MaskKnown == nil || *n.MaskKnown != *s.MaskKnown || (n.Mask == nil) != (s.Mask == nil) || n.Mask != nil && *n.Mask != *s.Mask || n.Kind == "" || n.Copy == nil || !x45False(n.Support) || !equalNoticeRepresentatives(n.Representative, s.Representative) {
+			if !ok || noticeSeen[n.Path] || !x45True(s.Saved) || !x45True(s.Workflow) || n.SHA != s.SHA || n.Blob != s.Blob || s.Bytes == nil || n.Bytes != *s.Bytes || n.Read == nil || *n.Read != *s.Read || !x45True(n.Workflow) || n.Method != s.State || n.Reader != e.Reader || n.MaskKnown == nil || *n.MaskKnown != *s.MaskKnown || (n.Mask == nil) != (s.Mask == nil) || n.Mask != nil && *n.Mask != *s.Mask || n.Kind == "" || !x45False(n.Copy) || !x45False(n.Support) || !equalNoticeRepresentatives(n.Representative, s.Representative) {
 				return bad("notice identity, method, mask knowledge or actor differs")
 			}
 			noticeSeen[n.Path] = true
@@ -531,5 +531,18 @@ func TestNext75DispositionRelationshipsAllowFutureDecisionsWithoutInventingPrese
 				t.Fatalf("%s accepted", name)
 			}
 		})
+	}
+}
+
+func TestNext75RejectsUnacceptedIndividualCopyGrant(t *testing.T) {
+	var a next75Assessment
+	loadPublicReceipt(t, "skills-3080-sixmile-next75-evaluation.json", &a)
+	if err := validateNext75Reading(a); err != nil {
+		t.Fatal(err)
+	}
+	yes := true
+	a.Entries[0].Rights.Notices[0].Copy = &yes
+	if err := validateNext75Reading(a); err == nil {
+		t.Fatal("individual copy grant invented while parent acceptance remains false")
 	}
 }

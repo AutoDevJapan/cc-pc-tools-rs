@@ -51,6 +51,9 @@ func validateCohortDecisionUpdate(a cohortDecisionUpdateReceipt, required, delta
 		if required {
 			return errors.New("required parent decision update missing")
 		}
+		if a.Delta != nil && *a.Delta != 0 {
+			return errors.New("nonzero parent decision delta lacks an update")
+		}
 		return nil
 	}
 	if deltaRequired && a.Delta == nil || a.Delta != nil && *a.Delta != a.Update.Added {
@@ -160,6 +163,20 @@ func validateParent6CopyScopes(a extra45Assessment) error {
 		return errors.New("parent6 accepted author-text scopes differ")
 	}
 	return nil
+}
+
+func TestOptionalParentDecisionUpdateCannotHideANonzeroDelta(t *testing.T) {
+	for _, delta := range []*int{nil, new(int), func() *int { n := 1; return &n }(), func() *int { n := -1; return &n }()} {
+		a := cohortDecisionUpdateReceipt{Delta: delta}
+		err := validateCohortDecisionUpdate(a, false, false, nil)
+		valid := delta == nil || *delta == 0
+		if valid && err != nil {
+			t.Fatalf("absent or zero update rejected: %v", err)
+		}
+		if !valid && err == nil {
+			t.Fatalf("nonzero delta %d accepted without an update", *delta)
+		}
+	}
 }
 
 func TestParent6CopyScopesStayBoundToEachIndividualNotice(t *testing.T) {

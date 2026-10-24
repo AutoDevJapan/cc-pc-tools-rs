@@ -164,7 +164,7 @@ func validateReceivedCohort(a ReceivedCohort, spec ReceivedSpec) ([]ReceivedEntr
 			supportByPath[s.Path] = s
 			counts["support"]++
 			if !*s.Saved {
-				if s.State != "U" && s.State != "UN" || s.Bytes != nil || s.SHA != "" || s.Reader != nil || s.Mask != nil || *s.Raw || *s.Workflow {
+				if s.State != "U" && s.State != "UN" || s.Bytes != nil || s.SHA != "" || s.Reader != nil || s.Mask != nil || *s.Raw || *s.Workflow || evidenceTrue(s.Partial) || evidenceTrue(s.Scan) {
 					return bad("unsaved support has invented bytes or reading")
 				}
 				counts["unsaved"]++

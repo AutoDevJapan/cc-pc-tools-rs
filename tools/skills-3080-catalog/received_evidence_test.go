@@ -96,7 +96,7 @@ func TestReceivedCohortBindsOriginalBytesAndRejectsCoupledClaimChanges(t *testin
 }
 
 func TestReceivedCohortStateRulesStillApplyToNewIndependentlyAnchoredInputs(t *testing.T) {
-	for _, name := range []string{"masked_zero", "raw_not_workflow", "unsaved_has_bytes", "reuse_unknown_actor", "notice_state_mismatch", "missing_boolean"} {
+	for _, name := range []string{"masked_zero", "raw_not_workflow", "unsaved_has_bytes", "unsaved_partial", "unsaved_scan", "reuse_unknown_actor", "notice_state_mismatch", "missing_boolean"} {
 		t.Run(name, func(t *testing.T) {
 			var a ReceivedCohort
 			loadPublicReceipt(t, "skills-3080-sixmile-received50-evaluation.json", &a)
@@ -118,6 +118,14 @@ func TestReceivedCohortStateRulesStillApplyToNewIndependentlyAnchoredInputs(t *t
 					}
 					if name == "unsaved_has_bytes" && s["state"] == "U" {
 						s["bytes"] = float64(0)
+						changed = true
+					}
+					if (name == "unsaved_partial" || name == "unsaved_scan") && s["state"] == "U" {
+						field := "partial_read"
+						if name == "unsaved_scan" {
+							field = "scan_only"
+						}
+						s[field] = true
 						changed = true
 					}
 					if name == "reuse_unknown_actor" && s["state"] == "I" {

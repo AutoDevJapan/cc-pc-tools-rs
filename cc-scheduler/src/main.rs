@@ -12,6 +12,45 @@ fn main() {
     }
     let args: Vec<String> = std::env::args().skip(1).collect();
     let command = args.first().map(String::as_str);
+    if command == Some("resume-registration") {
+        if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
+            println!("usage: scheduler resume-registration --id <ID> --request-file <JSON> [--apply --expected-state-sha256 <SHA256>]\n\nRecord an explicit request to resume one idle, qualified repair task. Restores only its dispatchable flag; preserves original work, stops, dependencies, waits and protection. Never launches. JSON: todo_id, intent=resume_registration_only, request, source_ref.");
+            return;
+        }
+        let result = (|| -> Result<serde_json::Value> {
+            if !matches!(args.len(), 5 | 8) || args[1] != "--id" || args[3] != "--request-file" {
+                return Err(Error("InputRejected"));
+            }
+            let id = args[2].parse().map_err(|_| Error("InputRejected"))?;
+            let expected = if args.len() == 8 {
+                if args[5] != "--apply" || args[6] != "--expected-state-sha256" {
+                    return Err(Error("InputRejected"));
+                }
+                Some(args[7].as_str())
+            } else {
+                None
+            };
+            let request = cc_scheduler::registration_resume::read_request(
+                std::path::Path::new(&args[4]),
+                id,
+            )?;
+            let root = PathBuf::from("D:/CC/Tools/scheduler");
+            let mut engine = Scheduler::new(
+                root.clone(),
+                PathBuf::from("D:/CC/Tools/todo/todo.json"),
+                RealBackend::new(root),
+            )?;
+            cc_scheduler::registration_resume::run(&mut engine, id, &request, expected)
+        })();
+        match result {
+            Ok(report) => println!("{}", encode(&report, 2)),
+            Err(error) => {
+                eprintln!("registration resume failed {}", error.0);
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
     if command == Some("dispatch-subwork") {
         if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
             println!(

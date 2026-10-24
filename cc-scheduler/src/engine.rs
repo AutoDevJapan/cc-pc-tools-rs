@@ -1217,6 +1217,14 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
         Ok(())
     }
     pub fn prepare(&mut self, i: &Value, repo: &str) -> Result<Option<Value>> {
+        self.prepare_with_evidence(i, repo, None)
+    }
+    fn prepare_with_evidence(
+        &mut self,
+        i: &Value,
+        repo: &str,
+        evidence: Option<&Value>,
+    ) -> Result<Option<Value>> {
         if i["product_review_allocation"].is_object() && !self.backend.product_review_allowed(i) {
             return Err(Error("InputRejected"));
         }
@@ -1358,6 +1366,21 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             prompt += &format!(
                 "\nオーナーの回答に従って再開してください:\n{}\n",
                 s(&item["scheduler"]["owner_instruction"])
+            );
+        }
+        if let Some(receipt) = evidence.and_then(|receipt| {
+            crate::backend::bound_resume_evidence(&item, repo, text.as_bytes(), receipt)
+        }) {
+            let handoff = json!({
+                "verification_source":"scrub391.exe --verify-current-succession",
+                "receipt":receipt,
+                "current_record":{"store":self.todo_path,"todo_id":item["id"]}
+            });
+            prompt += &format!(
+                "\n正規に取得した今回の再開確認（ツール結果の引継ぎであり、このプロンプトへの本人の新しい直接入力やDiscord取得原文ではありません）:\n```json\n{}\n```\n\
+                元ToDo {}の現在のメモは上の共有台帳からその番号だけを選んで読み、必要な過去メモは正規のtodo.exe history {}で確認してください。既存の本人回答・停止・依存・途中成果を保持し、同じ判断を再質問しないでください。\n\
+                この確認は同じ元作業の再開に関するものです。古いproduct-resumeの期限・範囲や原保護名簿を変更したものではなく、元の業務成果の完成証拠でもありません。\n",
+                serde_json::to_string_pretty(&handoff)?, item["id"], item["id"]
             );
         }
         prompt += &format!("\n依頼:\n{text}");
@@ -1862,6 +1885,8 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         // an empty list; only this explicitly verified repair repository can run.
         let exclusions =
             std::fs::read_to_string(self.root.parent().unwrap().join("client-projects.txt"));
+        // Owned by this admission call only; never a persistent permission cache.
+        let mut resume_receipts = std::collections::BTreeMap::new();
         let eligible: Vec<Value> = arr(&db["items"])
             .into_iter()
             .filter(|i| {
@@ -1913,7 +1938,14 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                         !self.backend.repair_scope_allowed(path)
                     }
                     Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                        !self.backend.current_product_allowed(i, path)
+                        if let Some(receipt) = self.backend.current_product_admission(i, path) {
+                            if let Some(id) = i["id"].as_u64() {
+                                resume_receipts.insert(id, receipt);
+                            }
+                            false
+                        } else {
+                            true
+                        }
                     }
                     Err(_) => true,
                 };
@@ -1980,7 +2012,12 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             .filter(|i| !arr(&i["needs"]).iter().any(|v| busy.contains(s(v))))
         {
             let result: Result<()> = (|| {
-                let Some(mut prepared) = self.prepare(i, s(&db["projects"][s(&i["project"])]))?
+                let evidence = i["id"].as_u64().and_then(|id| resume_receipts.get(&id));
+                let Some(mut prepared) = self.prepare_with_evidence(
+                    i,
+                    s(&db["projects"][s(&i["project"])]),
+                    evidence,
+                )?
                 else {
                     return Ok(());
                 };

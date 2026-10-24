@@ -212,7 +212,7 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 			return s, errors.New("available source lacks exact hash")
 		}
 		if a, ok := e.Assessments[r.ID]; ok {
-			if !r.BodyRead || a.SHA != r.SHA || r.Path != "" && a.Path != r.Path || r.Commit != "" && a.Commit != "" && a.Commit != r.Commit {
+			if !r.BodyRead || a.SHA != r.SHA || r.Path != "" && a.Path != r.Path || r.Commit != "" && a.Commit != r.Commit {
 				return s, errors.New("assessment does not match fixed catalog occurrence")
 			}
 			matchedAssessment[r.ID] = true
@@ -224,7 +224,7 @@ func executionQueue(input io.Reader, output io.Writer, m ExecutionManifest, e Ex
 			q.RelatedBody = bodyEvidence[r.SHA]
 		}
 		if d, ok := e.Decisions[r.ID]; ok {
-			if !r.BodyRead || d.SHA != r.SHA || r.Path != "" && d.Path != r.Path || r.Commit != "" && d.Commit != "" && d.Commit != r.Commit || r.Repo != "" && d.SourceRepo != "" && r.Unit != "site_index_entry" && d.SourceRepo != r.Repo {
+			if !r.BodyRead || d.SHA != r.SHA || r.Path != "" && d.Path != r.Path || r.Commit != "" && d.Commit != r.Commit || r.Repo != "" && d.SourceRepo != "" && r.Unit != "site_index_entry" && d.SourceRepo != r.Repo {
 				return s, errors.New("final decision does not match acquired catalog occurrence")
 			}
 			switch d.Disposition {

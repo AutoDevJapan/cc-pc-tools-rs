@@ -11,14 +11,14 @@ import (
 
 func executionFixture() (string, ExecutionManifest, ExecutionEvidence) {
 	hash := strings.Repeat("a", 64)
-	rows := []Record{{ID: "first", Unit: "github_skill_entry", SHA: hash, BodyRead: true, Path: "first/SKILL.md"}, {ID: "alias", Unit: "site_index_entry", SHA: hash, BodyRead: true}, {ID: "absent", Unit: "site_index_entry"}, {ID: "held", Unit: "unread_additional_text_support_shape"}}
+	rows := []Record{{ID: "first", Unit: "github_skill_entry", SHA: hash, BodyRead: true, Path: "first/SKILL.md", Commit: strings.Repeat("c", 40)}, {ID: "alias", Unit: "site_index_entry", SHA: hash, BodyRead: true}, {ID: "absent", Unit: "site_index_entry"}, {ID: "held", Unit: "unread_additional_text_support_shape"}}
 	var text bytes.Buffer
 	enc := json.NewEncoder(&text)
 	for _, r := range rows {
 		_ = enc.Encode(r)
 	}
 	h := sha256.Sum256(text.Bytes())
-	return text.String(), ExecutionManifest{CatalogSHA: hex.EncodeToString(h[:]), Records: 4}, ExecutionEvidence{Assessments: map[string]executionIdentity{"first": {ID: "first", SHA: hash, Path: "first/SKILL.md"}}, References: map[string][]ExecutionReference{"first": {{"assessment.json", 1}}}, Decisions: map[string]executionIdentity{}}
+	return text.String(), ExecutionManifest{CatalogSHA: hex.EncodeToString(h[:]), Records: 4}, ExecutionEvidence{Assessments: map[string]executionIdentity{"first": {ID: "first", SHA: hash, Path: "first/SKILL.md", Commit: strings.Repeat("c", 40)}}, References: map[string][]ExecutionReference{"first": {{"assessment.json", 1}}}, Decisions: map[string]executionIdentity{}}
 }
 
 func TestExecutionQueueKeepsAllOccurrencesAndDoesNotApproveEqualBodies(t *testing.T) {
@@ -45,7 +45,7 @@ func TestExecutionQueueKeepsAllOccurrencesAndDoesNotApproveEqualBodies(t *testin
 }
 
 func TestExecutionQueueRejectsStaleEvidenceAndUnmatchedFinals(t *testing.T) {
-	for _, name := range []string{"wrong_catalog", "wrong_count", "unknown_assessment", "wrong_source_hash", "wrong_source_path", "unknown_final", "held_final", "wrong_final_hash", "wrong_final_path", "unfinished_final"} {
+	for _, name := range []string{"wrong_catalog", "wrong_count", "unknown_assessment", "wrong_source_hash", "wrong_source_path", "unknown_final", "held_final", "wrong_final_hash", "wrong_final_path", "unfinished_final", "missing_assessment_commit", "missing_final_commit"} {
 		t.Run(name, func(t *testing.T) {
 			input, m, e := executionFixture()
 			switch name {
@@ -73,6 +73,15 @@ func TestExecutionQueueRejectsStaleEvidenceAndUnmatchedFinals(t *testing.T) {
 				e.Decisions["first"] = executionIdentity{ID: "first", SHA: strings.Repeat("a", 64), Path: "other/SKILL.md", Disposition: "excluded"}
 			case "unfinished_final":
 				e.Decisions["first"] = executionIdentity{ID: "first", SHA: strings.Repeat("a", 64), Path: "first/SKILL.md", Disposition: "pending"}
+			case "missing_assessment_commit":
+				x := e.Assessments["first"]
+				x.Commit = ""
+				e.Assessments["first"] = x
+			case "missing_final_commit":
+				x := e.Assessments["first"]
+				x.Commit = ""
+				x.Disposition = "excluded"
+				e.Decisions["first"] = x
 			}
 			if _, err := executionQueue(strings.NewReader(input), &bytes.Buffer{}, m, e); err == nil {
 				t.Fatal("invalid universe accepted")

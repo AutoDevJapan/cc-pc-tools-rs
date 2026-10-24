@@ -27,6 +27,7 @@ use std::{
 
 const API: &str = "https://discord.com/api/v10";
 mod clarification;
+mod program_question;
 const LEDGER: &str = "recovery-messages.json";
 const LOCK: &str = "recovery-messages.lock";
 const DOMAIN: &str = "new-owner-recovery-messages";
@@ -81,6 +82,9 @@ pub struct AskArgs {
     pub attach: Vec<PathBuf>,
     #[arg(long = "expected-image-sha256")]
     pub expected_image_sha256: Vec<String>,
+    /// Read-only native Go drawing evidence for this exact question only.
+    #[arg(long)]
+    pub program_evidence: Option<PathBuf>,
 }
 
 /// Rebind only a not-yet-sent ask to an exact previously verified progress post.
@@ -2702,6 +2706,10 @@ pub fn ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
     let images = if let Some(saved) = pending_question_image_receipts(ctx, args)? {
         incoming.images = saved;
         vec![]
+    } else if let Some(evidence) = args.program_evidence.as_deref() {
+        let images = program_question::images(ctx, &incoming, args, evidence)?;
+        incoming.images = images.iter().map(|image| image.receipt.clone()).collect();
+        images
     } else {
         let scope = question_image_scope(ctx, &incoming);
         let images = images(
@@ -4121,6 +4129,7 @@ mod tests {
                 origin_thread: None,
                 attach: vec![],
                 expected_image_sha256: vec![],
+                program_evidence: None,
             }
         }
         fn unchanged(&self) {
@@ -5123,6 +5132,120 @@ mod tests {
 
     fn media_proof(bytes: &[u8]) -> Value {
         json!({"domain":"discord-conversation-media-v1","verified":true,"sha256":format!("{:x}",Sha256::digest(bytes)),"size":bytes.len(),"mime":"image/png","extension":"png"})
+    }
+
+    struct ProgramVerifierMock {
+        inner: Mock,
+        output: Value,
+    }
+
+    impl Effects for ProgramVerifierMock {
+        fn run(&mut self, args: &[String], timeout: u64) -> Result<Output> {
+            assert_eq!(timeout, 25);
+            assert_eq!(args[1], "--check-program-question-evidence");
+            assert_eq!(args[2], "--evidence");
+            assert_eq!(args.len(), 4);
+            Ok(Output {
+                code: 0,
+                stdout: self.output.to_string(),
+                stderr: String::new(),
+            })
+        }
+        fn http(
+            &mut self,
+            method: &str,
+            url: &str,
+            body: Option<&Value>,
+            discord: bool,
+        ) -> Result<Value> {
+            self.inner.http(method, url, body, discord)
+        }
+        fn multipart(&mut self, url: &str, content_type: &str, body: &[u8]) -> Result<Value> {
+            self.inner.multipart(url, content_type, body)
+        }
+    }
+
+    #[test]
+    fn recovery_messages_program_drawing_binds_every_upload_and_question_field() {
+        for change in [
+            "none",
+            "domain",
+            "validated",
+            "send_allowed",
+            "request_id",
+            "origin_thread_id",
+            "todo_id",
+            "question_sha256",
+            "decision_sha256",
+            "owner_id",
+            "guild_id",
+            "forum_id",
+            "path",
+            "sha",
+            "size",
+            "order",
+            "count",
+        ] {
+            let fixture = Fixture::new();
+            let mut ctx = fixture.context();
+            fs::remove_file(&ctx.client_projects).unwrap();
+            let mut args = fixture.ask(
+                "program-original-question",
+                "画像案のaまたはbを選んでください。",
+            );
+            args.program_evidence = Some(fixture.root.path().join("evidence.json"));
+            let incoming = prepare_ask(&ctx, &args).unwrap();
+            let mut bound = Vec::new();
+            for i in 0..2 {
+                let bytes = [
+                    b"\x89PNG\r\n\x1a\n".as_slice(),
+                    format!("new-drawing-{i}").as_bytes(),
+                ]
+                .concat();
+                let path = fixture.root.path().join(format!("drawing-{i}.png"));
+                fs::write(&path, &bytes).unwrap();
+                let sha = format!("{:x}", Sha256::digest(&bytes));
+                args.attach.push(path.clone());
+                args.expected_image_sha256.push(sha.clone());
+                bound.push(json!({"path":path,"sha256":sha,"size":bytes.len()}));
+            }
+            let mut proof = json!({"domain":"owner-program-question-image-v1","validated":true,"send_allowed":true,
+                "request_id":args.request_id,"origin_thread_id":ORIGIN,"scope":question_image_scope(&ctx,&incoming).unwrap(),"images":bound});
+            match change {
+                "none" => {}
+                "validated" | "send_allowed" => proof[change] = json!(false),
+                "domain" | "request_id" | "origin_thread_id" => proof[change] = json!("different"),
+                "todo_id" => proof["scope"][change] = json!(999),
+                "path" => proof["images"][0]["path"] = json!(fixture.root.path().join("copy.png")),
+                "sha" => proof["images"][0]["sha256"] = json!("a".repeat(64)),
+                "size" => proof["images"][0]["size"] = json!(1),
+                "order" => proof["images"].as_array_mut().unwrap().reverse(),
+                "count" => {
+                    proof["images"].as_array_mut().unwrap().pop();
+                }
+                _ => proof["scope"][change] = json!("different"),
+            }
+            ctx.effects = Box::new(ProgramVerifierMock {
+                inner: Mock {
+                    server: fixture.server.clone(),
+                    home: fixture.home.clone(),
+                    pause: None,
+                },
+                output: proof,
+            });
+            let result = ask(&mut ctx, &args);
+            if change == "none" {
+                assert_eq!(result.unwrap()["delivery"], "verified");
+                assert_eq!(fixture.server.lock().unwrap().multipart_uploads, 1);
+                // A repeated exact request reads back the saved attachment receipt.
+                assert_eq!(ask(&mut ctx, &args).unwrap()["delivery"], "verified");
+                assert_eq!(fixture.server.lock().unwrap().multipart_uploads, 1);
+            } else {
+                assert!(result.is_err(), "{change}");
+                assert!(fixture.server.lock().unwrap().calls.is_empty(), "{change}");
+            }
+            fixture.unchanged();
+        }
     }
 
     #[test]

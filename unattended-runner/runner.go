@@ -912,6 +912,9 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "--check-program-question-evidence" {
+		os.Exit(programQuestionCLI(os.Args[2:], os.Stdout, programQuestionProduction()))
+	}
 	if len(os.Args) > 1 && os.Args[1] == "scheduler-tick" {
 		os.Exit(schedulerStageCLI(os.Args[2:], os.Stdout))
 	}

@@ -23,3 +23,25 @@ SHAとsizeを送信前に再確認する。資格はこの質問だけに使い�
 受入条件は、合成データの成功、改変画像/コード/監査、コピー、別job/ToDo、
 別質問/decision/本人/送信先/元スレッド、未知scope、停止/完了/依存waitでの送信拒否。
 check、実送信、回答反映、元の動画制作の完了はそれぞれ別の結果として記録する。
+
+証拠JSONのdomainは`owner-program-question-evidence-v1`。
+`scope`は既存質問と同じtodo_id・question_sha256・decision_sha256・owner_id・guild_id・forum_id。
+本文SHAはrecovery-askと同じBOM除去後の全バイト、decisionは同じcanonical JSONのSHAとする。
+`request_id`、`origin_thread_id`、`job_id`、`worktree`、`session`、`rollout_path`、
+`session_record_sha256`、`source_message_id`、`source_version_sha256`を指定する。
+元scopeは現在の正規受付と元ToDoのintake-owner-source、実jobのToDo/cwd/sessionと照合する。
+任意パスの本人原文や呼出し側の「承認済み」という文言は資格に使わない。
+
+`program_path`/`program_sha256`、`body_path`/`decision_path`と、順序付き`images`の
+path/sha256/sizeを指定する。`creation_events`、`execution_events`、`preview_events`は
+それぞれ原監査の実call/resultのline/sha256/kind/name/call_idの2件。
+許可するwrapperはソース追加の`text(await tools.apply_patch("…"));`、
+Go実行の`const r=await tools.exec_command({...});text(r);`、
+順番を保つ`Promise.allSettled`でview_imageの実戻り値をimageへ渡す形式だけ。
+生成コマンドは単独Goファイルの`go run <name>.go .`、必要なら直前の`go mod tidy`だけ。
+新規ファイルの排他作成、PNG保存とcloseの成功後の出力名、原表示バイトを照合する。
+7日を過ぎた生成、参照画像、任意JavaScript、別のtool応答は受け入れない。
+
+成功時の`validated=true`はこの用途の読取検証で、登録や送信を意味しない。
+`send_allowed=false`は依存wait等を保持した結果。`--diagnostic`は失敗した段階だけを返す。
+原監査と既存の本人ユーザー環境が信頼境界であり、環境侵害や画像の意味の自動判定は保証しない。

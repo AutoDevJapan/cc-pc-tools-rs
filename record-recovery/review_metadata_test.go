@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -67,6 +68,11 @@ func TestReviewMetadataCLIProjectsOneRecordWithoutReadingReferencesOrChangingSou
 	if object(recovery["source_job_sha256"])["sha256"] != strings.Repeat("a", 64) || object(recovery["request_source_job_id"])["state"] != "recorded" {
 		t.Fatal("recorded hash/reference was lost")
 	}
+	for _, reference := range []obj{object(recovery["request_source_job_id"]), object(recovery["preserved_worker_request"]), object(report["console_request_reference"])} {
+		if _, present := reference["sha256"]; present {
+			t.Fatal("a guessable reference value was disclosed as a digest")
+		}
+	}
 	for _, forbidden := range []string{"private-", "C:/private", "GoDD-Press", "unknown", "claims wait provenance"} {
 		if strings.Contains(out.String(), forbidden) {
 			t.Fatalf("non-metadata text leaked: %q", forbidden)
@@ -114,11 +120,12 @@ func TestReviewMetadataRejectsAmbiguityAndCorruptSources(t *testing.T) {
 		"wrongscope":   []byte(`{"items":[{"id":2191,"project":"private-secret"}]}`),
 		"itemsobject":  []byte(`{"items":{"id":2191}}`),
 		"stringid":     []byte(`{"items":[{"id":"2191","project":"GoDD-Press"}]}`),
+		"otherbadid":   []byte(`{"items":[{"id":2191,"project":"GoDD-Press"},{"id":"private-invalid-id"}]}`),
 		"fractionalid": []byte(`{"items":[{"id":2191.0,"project":"GoDD-Press"}]}`),
 		"secondjson":   append(reviewFixture(), []byte(` {"private-secret":true}`)...),
 		"broken":       []byte(`{"items":["private-secret`),
 		"invalidutf8":  append(reviewFixture(), 0xff),
-		"missingstore": nil,
+		"empty_source": nil,
 		"overlimit":    bytes.Repeat([]byte{' '}, reviewMetadataLimit+1),
 	}
 	for name, source := range cases {
@@ -176,7 +183,7 @@ func TestReviewMetadataUsesOneBoundedSnapshotAndAcceptsTheCanonicalSizeLimit(t *
 	source := append(reviewFixture(), bytes.Repeat([]byte{' '}, 41<<20)...)
 	r, err := projectReviewMetadata(source)
 	if err != nil || r["snapshot_sha256"] != digest(source) {
-		t.Fatal("a canonical snapshot above the historical40MiB limit was lost or rehashed after parsing")
+		t.Fatal("a canonical snapshot above the historical 40MiB limit was lost or rehashed after parsing")
 	}
 	if _, err := readReviewBytes(io.LimitReader(strings.NewReader(strings.Repeat(" ", reviewMetadataLimit+1)), reviewMetadataLimit+1)); err == nil {
 		t.Fatal("growing/oversize source was accepted")
@@ -189,10 +196,108 @@ func TestReviewMetadataUsesOneBoundedSnapshotAndAcceptsTheCanonicalSizeLimit(t *
 	if err := os.WriteFile(path, reviewFixture(), 0600); err != nil {
 		t.Fatal(err)
 	}
-	link := filepath.Join(root, "linked.json")
-	if err := os.Symlink(path, link); err == nil {
+	t.Run("leaf_symlink", func(t *testing.T) {
+		link := filepath.Join(root, "linked.json")
+		if err := os.Symlink(path, link); err != nil {
+			t.Skipf("symlink creation unavailable: %v", err)
+		}
 		if _, err := readReviewSnapshot(link); err == nil {
 			t.Fatal("linked source was followed")
 		}
+	})
+}
+
+func TestReviewMetadataContainerStatesDoNotBecomeEmptyRecords(t *testing.T) {
+	for _, field := range []string{"recovery", "scheduler"} {
+		for _, state := range []string{"absent", "null", "invalid"} {
+			t.Run(field+"_"+state, func(t *testing.T) {
+				var db obj
+				d := json.NewDecoder(bytes.NewReader(reviewFixture()))
+				d.UseNumber()
+				if err := d.Decode(&db); err != nil {
+					t.Fatal(err)
+				}
+				row := object(array(db["items"])[1])
+				switch state {
+				case "absent":
+					delete(row, field)
+				case "null":
+					row[field] = nil
+				case "invalid":
+					row[field] = "private-invalid-container"
+				}
+				b, _ := json.Marshal(db)
+				r, err := projectReviewMetadata(b)
+				if err != nil || object(r[field])["state"] != state {
+					t.Fatalf("container state lost: %v", err)
+				}
+				out, _ := json.Marshal(r)
+				if strings.Contains(string(out), "private-invalid-container") {
+					t.Fatal("invalid container leaked")
+				}
+			})
+		}
+	}
+}
+
+func TestReviewMetadataBOMAndExactFileSizeBoundary(t *testing.T) {
+	bom := append([]byte{239, 187, 191}, reviewFixture()...)
+	r, err := projectReviewMetadata(bom)
+	if err != nil || r["snapshot_sha256"] != digest(bom) {
+		t.Fatal("BOM was not accepted and hashed as originally read")
+	}
+	root := correlationTestRoot(t)
+	path := filepath.Join(root, "boundary.json")
+	b := bytes.Repeat([]byte{' '}, reviewMetadataLimit)
+	copy(b, reviewFixture())
+	if err := os.WriteFile(path, b, 0600); err != nil {
+		t.Fatal(err)
+	}
+	read, err := readReviewSnapshot(path)
+	if err != nil || len(read) != reviewMetadataLimit {
+		t.Fatal("exact canonical size limit was rejected")
+	}
+	if r, err := projectReviewMetadata(read); err != nil || r["snapshot_sha256"] != digest(b) {
+		t.Fatal("exact limit was not projected from the same bytes")
+	}
+	f, err := os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0600)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, writeErr := f.Write([]byte{' '})
+	closeErr := f.Close()
+	if writeErr != nil || closeErr != nil {
+		t.Fatal("fixture append failed")
+	}
+	if _, err := readReviewSnapshot(path); err == nil {
+		t.Fatal("file above the canonical limit was accepted")
+	}
+}
+
+func TestReviewMetadataMainHelper(t *testing.T) {
+	if os.Getenv("CC_REVIEW_METADATA_MAIN_HELPER") != "1" {
+		return
+	}
+	os.Args = []string{"record-recovery", "review-metadata", "--source=synthetic-forbidden-source"}
+	main()
+	t.Fatal("main did not exit")
+}
+
+func TestReviewMetadataMainDispatchRefusesScopeBeforeOpeningProductionSource(t *testing.T) {
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(executable, "-test.run=^TestReviewMetadataMainHelper$")
+	cmd.Env = append(os.Environ(), "CC_REVIEW_METADATA_MAIN_HELPER=1")
+	hideCommand(cmd)
+	output, err := cmd.CombinedOutput()
+	exit, ok := err.(*exec.ExitError)
+	if !ok || exit.ExitCode() != 2 {
+		t.Fatalf("unexpected main result: %v", err)
+	}
+	var response obj
+	if json.Unmarshal(output, &response) != nil || response["code"] != "review_metadata_invalid_arguments" {
+		t.Fatal("main did not select the metadata-only command")
 	}
 }

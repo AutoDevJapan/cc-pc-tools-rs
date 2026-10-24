@@ -43,16 +43,11 @@ func runReviewMetadataCLI(args []string, out io.Writer, read func() ([]byte, err
 }
 
 func readReviewSnapshot(path string) ([]byte, error) {
-	// Refuse links in the fixed source's ancestry. Bind the opened file to the
-	// leaf observed before opening; a replacement during that interval is unknown.
-	for p := filepath.Clean(path); ; p = filepath.Dir(p) {
-		info, err := os.Lstat(p)
-		if err != nil || info.Mode()&(os.ModeSymlink|os.ModeIrregular) != 0 {
-			return nil, errors.New("review_metadata_source_unavailable")
-		}
-		if filepath.Dir(p) == p {
-			break
-		}
+	// Reject statically visible links before and after opening. SameFile is a
+	// best-effort identity check, not an atomic guard against concurrent changes
+	// to ancestors, the leaf or hard-link aliases by the same local user.
+	if err := reviewPlainPath(path); err != nil {
+		return nil, err
 	}
 	before, err := os.Lstat(path)
 	if err != nil || !before.Mode().IsRegular() || before.Size() > reviewMetadataLimit {
@@ -64,10 +59,23 @@ func readReviewSnapshot(path string) ([]byte, error) {
 	}
 	defer f.Close()
 	opened, err := f.Stat()
-	if err != nil || !opened.Mode().IsRegular() || !os.SameFile(before, opened) {
+	if err != nil || !opened.Mode().IsRegular() || !os.SameFile(before, opened) || reviewPlainPath(path) != nil {
 		return nil, errors.New("review_metadata_source_unavailable")
 	}
 	return readReviewBytes(f)
+}
+
+func reviewPlainPath(path string) error {
+	for p := filepath.Clean(path); ; p = filepath.Dir(p) {
+		info, err := os.Lstat(p)
+		if err != nil || info.Mode()&(os.ModeSymlink|os.ModeIrregular) != 0 {
+			return errors.New("review_metadata_source_unavailable")
+		}
+		if filepath.Dir(p) == p {
+			break
+		}
+	}
+	return nil
 }
 
 func readReviewBytes(r io.Reader) ([]byte, error) {
@@ -148,7 +156,7 @@ func reviewField(m obj, key string, kind string) obj {
 		}
 	case "reference":
 		if s, ok := v.(string); ok && len(s) > 0 && len(s) <= 4096 {
-			return obj{"state": "recorded", "sha256": digest([]byte(s)), "reference_opened": false}
+			return obj{"state": "recorded", "reference_opened": false}
 		}
 	case "time":
 		if s, ok := v.(string); ok && len(s) <= 40 {
@@ -264,9 +272,18 @@ func projectReviewMetadata(b []byte) (obj, error) {
 	} else {
 		r["recovery"] = obj{"state": "invalid"}
 	}
-	if scheduler, ok := selected["scheduler"].(map[string]any); ok {
+	if value, exists := selected["scheduler"]; !exists || value == nil {
+		state := "absent"
+		if exists {
+			state = "null"
+		}
+		r["scheduler"] = obj{"state": state}
+	} else if scheduler, ok := value.(map[string]any); ok {
+		r["scheduler"] = obj{"state": "recorded"}
 		r["scheduler_job_reference"] = reviewField(scheduler, "job", "reference")
 		r["console_request_reference"] = reviewField(scheduler, "console_request", "reference")
+	} else {
+		r["scheduler"] = obj{"state": "invalid"}
 	}
 	return r, nil
 }

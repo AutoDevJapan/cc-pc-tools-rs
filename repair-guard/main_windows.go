@@ -164,6 +164,9 @@ func repairPathAllowed(path string) bool {
 	if owned2736PathAllowed(absolute) {
 		return true
 	}
+	if requestedResumePathAllowed(absolute) {
+		return true
+	}
 	if consoleImport3264Allowed(absolute) {
 		return true
 	}
@@ -324,6 +327,9 @@ func verifyCurrentSuccession(taskID int) object {
 	if err != nil {
 		return object{"verified": false}
 	}
+	if _, ok := requested3650Product(taskID); ok {
+		return requestedResumeReceipt(db, taskID)
+	}
 	if declared, ok := currentProductByTask(taskID); ok {
 		return currentSuccessionReceipt(db, declared)
 	}
@@ -442,7 +448,7 @@ func runGuardCLIWithVerifiers(args []string, stdout, stderr io.Writer, currentVe
 	if ok {
 		verdict = pathVerifier(parsed.path)
 	}
-	retirement := ok && retirement3250PathAllowed(parsed.path)
+	retirement := ok && (retirement3250PathAllowed(parsed.path) || ci3574RootAllowed(parsed.path))
 	if retirement && verdict.Status == "unverified" && !ownerCardPath(parsed.path) {
 		verdict = ownerPathVerdict{AccessAllowed: true, Status: "clear", Categories: []string{}}
 	}

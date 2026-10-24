@@ -478,6 +478,7 @@ func currentGit(root string, args ...string) (string, bool) {
 		cmd := exec.CommandContext(ctx, "git", append([]string{"-C", root}, args...)...)
 		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 		cmd.WaitDelay = time.Second
+		cmd.Env = civ6GitEnvironment(os.Environ())
 		b, err := cmd.Output()
 		return string(b), err, ctx.Err() == context.DeadlineExceeded
 	})

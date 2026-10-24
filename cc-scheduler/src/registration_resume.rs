@@ -21,6 +21,12 @@ pub fn read_request(path: &Path, id: i64) -> Result<Value> {
     Ok(request)
 }
 
+#[derive(Clone, Copy)]
+struct ResumeScope {
+    allowed: bool,
+    current_request: bool,
+}
+
 fn inspect(
     db: &Value,
     item: &Value,
@@ -28,7 +34,7 @@ fn inspect(
     jobs: &[Value],
     ps: &policy::Processes,
     at: f64,
-    source_allowed: bool,
+    scope: ResumeScope,
 ) -> Value {
     let cwd = s(&item["scheduler"]["worktree"]);
     let active = jobs.iter().any(|job| {
@@ -39,12 +45,12 @@ fn inspect(
             && (policy::live(job) || policy::alive(job, ps, at))
     });
     let checks = json!({
-        "repair_project":(["cc-pc-tools-rs","pc-capacity-audit","localai-web-rs"].contains(&s(&item["project"]))),
+        "repair_project":(["cc-pc-tools-rs","pc-capacity-audit","localai-web-rs"].contains(&s(&item["project"])) || scope.current_request),
         "status":item["status"] == "todo",
         "paused_registration":item["dispatchable"] == false,
         "ordinary":item["subwork"].is_null(),
         "spec_recorded":!s(&item["spec"]).is_empty(),
-        "source_scope":source_allowed,
+        "source_scope":scope.allowed,
         "no_stop":!targeted_dispatch::held(item) && item["stopped"] != true,
         "dependency_ready":!cc_job_policy::todo_wait::waiting(db,item),
         "unlinked":!truth(&item["scheduler"]["job"]) && !truth(&item["scheduler"]["key"]),
@@ -91,6 +97,8 @@ pub fn run<B: Backend>(
         .ok_or(Error("InputRejected"))?;
     let repo = s(&db["projects"][s(&item["project"])]);
     let cwd = s(&item["scheduler"]["worktree"]);
+    let current_request = [1626, 3277, 3549, 3623].contains(&id)
+        && engine.backend.current_product_allowed(&item, repo);
     let allowed = engine.backend.repair_scope_allowed(repo)
         && (cwd.is_empty() || engine.backend.repair_scope_allowed(cwd));
     let jobs = engine.backend.jobs()?;
@@ -102,7 +110,10 @@ pub fn run<B: Backend>(
         &jobs,
         &ps,
         engine.backend.clock(),
-        allowed,
+        ResumeScope {
+            allowed,
+            current_request,
+        },
     );
     let Some(expected) = expected else {
         return Ok(report);
@@ -157,7 +168,10 @@ mod tests {
             jobs,
             &policy::Processes::new(),
             100.,
-            allowed,
+            ResumeScope {
+                allowed,
+                current_request: false,
+            },
         )
     }
     #[test]
@@ -196,7 +210,10 @@ mod tests {
                 &[],
                 &policy::Processes::new(),
                 100.,
-                true
+                ResumeScope {
+                    allowed: true,
+                    current_request: false
+                },
             )["checks"]["dependency_ready"],
             false
         );
@@ -230,7 +247,10 @@ mod tests {
             &[],
             &ps,
             100.,
-            true,
+            ResumeScope {
+                allowed: true,
+                current_request: false,
+            },
         );
         let other = inspect(
             &db,
@@ -239,10 +259,39 @@ mod tests {
             &[],
             &ps,
             100.,
-            true,
+            ResumeScope {
+                allowed: true,
+                current_request: false,
+            },
         );
         assert_ne!(first["state_sha256"], other["state_sha256"]);
         assert!(!first.to_string().contains("original.md"));
         assert!(!first.to_string().contains("private one"));
+    }
+
+    #[test]
+    fn current_request_extends_only_project_eligibility_and_keeps_every_other_gate() {
+        let mut item = row();
+        item["id"] = json!(1626);
+        item["project"] = json!("original-product");
+        let inspect_request = |row: &Value, source, current| {
+            inspect(
+                &json!({"items":[row]}),
+                row,
+                &Value::Null,
+                &[],
+                &policy::Processes::new(),
+                100.,
+                ResumeScope {
+                    allowed: source,
+                    current_request: current,
+                },
+            )
+        };
+        assert_eq!(inspect_request(&item, true, false)["eligible"], false);
+        assert_eq!(inspect_request(&item, true, true)["eligible"], true);
+        assert_eq!(inspect_request(&item, false, true)["eligible"], false);
+        item["owner_stopped"] = json!(true);
+        assert_eq!(inspect_request(&item, true, true)["eligible"], false);
     }
 }

@@ -461,6 +461,13 @@ func driveSpace() []map[string]any {
 	return result
 }
 func (c config) quarantine(id, reason string) (result map[string]any, err error) {
+	if _, ok := ci3574ResourceByID(id); ok && reason == "windows" {
+		scope, e := c.ci3574Recovery(id)
+		if e != nil {
+			return nil, e
+		}
+		return c.quarantinePreserved(id, reason, nil, scope)
+	}
 	if id == console3451ID && reason == "windows" {
 		scope, e := c.console3451Recovery(id)
 		if e != nil {

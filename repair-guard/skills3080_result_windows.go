@@ -311,6 +311,10 @@ func skillsNativeJob(s *skillsFS, job object) ([]object, bool) {
 	if e != nil || !skillsUUID.MatchString(id) {
 		return nil, false
 	}
+	end, e := time.Parse(time.RFC3339Nano, str(job["finished_at"]))
+	if e != nil || end.Before(start) {
+		return nil, false
+	}
 	home, e := os.UserHomeDir()
 	if e != nil {
 		return nil, false
@@ -338,9 +342,12 @@ func skillsNativeJob(s *skillsFS, job object) ([]object, bool) {
 	if !ok {
 		return nil, false
 	}
-	return skillsNativeProjection(io.LimitReader(stream, (256<<20)+1), id, str(job["cwd"]), start)
+	return skillsNativeProjection(io.LimitReader(stream, (256<<20)+1), id, str(job["cwd"]), start, end)
 }
-func skillsNativeProjection(input io.Reader, id, cwd string, start time.Time) ([]object, bool) {
+func skillsNativeProjection(input io.Reader, id, cwd string, start, end time.Time) ([]object, bool) {
+	if end.Before(start) {
+		return nil, false
+	}
 	scanner := bufio.NewScanner(input)
 	scanner.Buffer(make([]byte, 64<<10), 16<<20)
 	out := []object{}
@@ -374,8 +381,11 @@ func skillsNativeProjection(input io.Reader, id, cwd string, start time.Time) ([
 		if e != nil {
 			return nil, false
 		}
-		if at.Before(start) {
+		if at.Before(start) || at.After(end) {
 			continue
+		}
+		if value, exists := p["cwd"]; exists && (!same(str(value), cwd) || str(value) == "") {
+			return nil, false
 		}
 		model := str(p["model"])
 		if !skillsModelIdentifier(model) {

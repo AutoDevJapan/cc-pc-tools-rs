@@ -79,7 +79,7 @@ func TestSkills3080NativeProjection(t *testing.T) {
 	cwd := "D:/CC/Work/public"
 	start, _ := time.Parse(time.RFC3339, "2026-10-24T23:00:00Z")
 	raw := fmt.Sprintf("{\"type\":\"session_meta\",\"payload\":{\"id\":%q,\"cwd\":%q,\"instructions\":\"never project\"}}\n", id, cwd) + `{"type":"response_item","payload":{"secret":"never project"}}` + "\n" + `{"type":"turn_context","timestamp":"2026-10-24T23:01:00Z","payload":{"model":"claude-sonnet-5-5","effort":"max","service_tier":"default","instructions":"never project"}}` + "\n"
-	out, ok := skillsNativeProjection(strings.NewReader(raw), id, cwd, start)
+	out, ok := skillsNativeProjection(strings.NewReader(raw), id, cwd, start, start.Add(time.Hour))
 	if !ok || len(out) != 1 || out[0]["effort"] != "max" {
 		t.Fatal("native projection failed")
 	}
@@ -88,9 +88,18 @@ func TestSkills3080NativeProjection(t *testing.T) {
 		t.Fatal("non-native-scope content returned")
 	}
 	for _, mutated := range []string{strings.Replace(raw, id, "00000000-0000-0000-0000-000000000000", 1), strings.Replace(raw, "23:01:00", "22:01:00", 1), strings.Replace(raw, `"model":"claude-sonnet-5-5"`, `"model":"claude-sonnet-5-5","model":"other"`, 1), raw + "not JSON"} {
-		if _, ok := skillsNativeProjection(strings.NewReader(mutated), id, cwd, start); ok {
+		if _, ok := skillsNativeProjection(strings.NewReader(mutated), id, cwd, start, start.Add(time.Hour)); ok {
 			t.Fatal("unbound native observation admitted")
 		}
+	}
+	future := raw + `{"type":"turn_context","timestamp":"2026-10-25T00:01:00Z","payload":{"model":"gpt-6-astra","effort":"low","service_tier":"default"}}` + "\n"
+	bounded, ok := skillsNativeProjection(strings.NewReader(future), id, cwd, start, start.Add(time.Hour))
+	if !ok || len(bounded) != 1 || bounded[0]["model"] != "claude-sonnet-5-5" {
+		t.Fatal("a later unrelated attempt leaked into this result")
+	}
+	wrongCWD := strings.Replace(raw, `"model":"claude-sonnet-5-5"`, `"cwd":"D:/unrelated","model":"claude-sonnet-5-5"`, 1)
+	if _, ok := skillsNativeProjection(strings.NewReader(wrongCWD), id, cwd, start, start.Add(time.Hour)); ok {
+		t.Fatal("unrelated turn working location admitted")
 	}
 }
 func TestSkills3080ReviewAcceptance(t *testing.T) {

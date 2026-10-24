@@ -6,11 +6,14 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 const rssSeasonBundleSHA = "97e3d3b442e14a093f75bdeecd81e55d0ba17f13428f53f3806c8bc85a998bfb"
+const rssSeasonManagedNamesSHA = "3eddb49df34088da3bd6c5feb64bab042f830a4406af9c4f492012cabedbd449"
 
 type rssSeasonReceipt struct {
+	ObservedAt  string `json:"observed_at"`
 	Done        *bool  `json:"overall_complete"`
 	Bundle      string `json:"bundle"`
 	BundleSHA   string `json:"bundle_sha256"`
@@ -23,6 +26,7 @@ type rssSeasonReceipt struct {
 	OldWrites   *int   `json:"old_target_writes"`
 	Changed     *bool  `json:"guard_or_registration_changed"`
 	Discovery   struct {
+		CheckedAt      string             `json:"checked_at"`
 		Total          int                `json:"total_discovered_metadata"`
 		Matches        int                `json:"target_matches"`
 		Enabled        int                `json:"enabled_count"`
@@ -39,17 +43,19 @@ type rssSeasonReceipt struct {
 		Found          []newSkillMetadata `json:"found"`
 	} `json:"discovery"`
 	Retained struct {
-		Expected     int    `json:"expected_count"`
-		Found        int    `json:"found_count"`
-		Enabled      int    `json:"enabled_count"`
-		Errors       *int   `json:"parse_errors"`
-		Descriptions int    `json:"new_description_match_count"`
-		NamesSHA     string `json:"known_target_names_sha256"`
-		Model        *bool  `json:"model_called"`
-		SavedNames   *bool  `json:"raw_existing_names_or_paths_saved"`
-		AllBytes     *bool  `json:"all_disk_hash_or_prechange_equality_proven"`
-		Exited       *bool  `json:"process_tree_exit_confirmed"`
-		Drained      *bool  `json:"pending_stdout_read_drained"`
+		CheckedAt    string   `json:"checked_at"`
+		IDs          []string `json:"managed_adoption_inventory_ids"`
+		Expected     int      `json:"expected_count"`
+		Found        int      `json:"found_count"`
+		Enabled      int      `json:"enabled_count"`
+		Errors       *int     `json:"parse_errors"`
+		Descriptions int      `json:"new_description_match_count"`
+		NamesSHA     string   `json:"known_target_names_sha256"`
+		Model        *bool    `json:"model_called"`
+		SavedNames   *bool    `json:"raw_existing_names_or_paths_saved"`
+		AllBytes     *bool    `json:"all_disk_hash_or_prechange_equality_proven"`
+		Exited       *bool    `json:"process_tree_exit_confirmed"`
+		Drained      *bool    `json:"pending_stdout_read_drained"`
 	} `json:"retained_known_metadata"`
 	Use struct {
 		Core     *bool `json:"core_passed"`
@@ -70,6 +76,16 @@ type rssSeasonReceipt struct {
 
 func validateRssSeasonReceipt(e rssSeasonReceipt) bool {
 	d, r, u := e.Discovery, e.Retained, e.Use
+	if validateLastVerification(e.ObservedAt, d.CheckedAt, r.CheckedAt) != nil || len(r.IDs) != 35 || r.NamesSHA != rssSeasonManagedNamesSHA {
+		return false
+	}
+	seenIDs := map[string]bool{}
+	for _, id := range r.IDs {
+		if id == "" || seenIDs[id] {
+			return false
+		}
+		seenIDs[id] = true
+	}
 	if e.OldWrites == nil || *e.OldWrites != 0 || d.Errors == nil || *d.Errors != 0 || d.SameNames == nil || *d.SameNames != 0 || d.ContextMarkers == nil || *d.ContextMarkers != 0 || r.Errors == nil || *r.Errors != 0 || u.HTTP == nil || *u.HTTP != 0 {
 		return false
 	}
@@ -90,6 +106,10 @@ func TestRssSeasonActualBundleManifestAndOwnedFixtureProofsRemainBound(t *testin
 	loadPublicReceipt(t, "skills-3080-rss-season-installation-evidence.json", &e)
 	if !validateRssSeasonReceipt(e) {
 		t.Fatal("RSS/season actual deployment, metadata retention or scope differs")
+	}
+	entries, original := managedMetadataSources(t)
+	if err := validateManagedMetadataSnapshot(e.Retained.IDs, e.Retained.Expected, e.Retained.NamesSHA, entries, original); err != nil {
+		t.Fatal(err)
 	}
 	if e.Bundle != "skills-3080-rss-season-reviewed-bundle.json" || e.Manifest != "skills-3080-installed-rss-season-manifest.json" || e.Design != "skills-3080-rss-season-designs.json" {
 		t.Fatal("unexpected public artifact")
@@ -188,8 +208,58 @@ func TestRssSeasonActualBundleManifestAndOwnedFixtureProofsRemainBound(t *testin
 		t.Fatal("owned fixture/model proof missing")
 	}
 }
+
+func TestManagedMetadataSnapshotsRejectUnboundHistoricalSets(t *testing.T) {
+	for _, tc := range []struct{ name, want string }{
+		{"valid", ""},
+		{"duplicate_id", "historical metadata identity is absent or repeated"},
+		{"unknown_id", "historical metadata identity is absent or repeated"},
+		{"wrong_hash", "managed metadata fingerprint differs from its public snapshot sources"},
+		{"renamed_target", "managed metadata fingerprint differs from its public snapshot sources"},
+		{"missing_original", "original3048 target count differs"},
+		{"duplicated_original", "original3048 target is absent or repeated"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var e rssSeasonReceipt
+			loadPublicReceipt(t, "skills-3080-rss-season-installation-evidence.json", &e)
+			entries, original := managedMetadataSources(t)
+			switch tc.name {
+			case "duplicate_id":
+				e.Retained.IDs[1] = e.Retained.IDs[0]
+			case "unknown_id":
+				e.Retained.IDs[0] = "unassessed"
+			case "wrong_hash":
+				e.Retained.NamesSHA = strings.Repeat("a", 64)
+			case "renamed_target":
+				changed := false
+				for i := range entries {
+					if entries[i].ID == e.Retained.IDs[0] {
+						entries[i].Target = "different-target"
+						changed = true
+						break
+					}
+				}
+				if !changed {
+					t.Fatal("no actual snapshot source to mutate")
+				}
+			case "missing_original":
+				original = original[:13]
+			case "duplicated_original":
+				original[1] = original[0]
+			}
+			err := validateManagedMetadataSnapshot(e.Retained.IDs, e.Retained.Expected, e.Retained.NamesSHA, entries, original)
+			if tc.want == "" {
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else if err == nil || err.Error() != tc.want {
+				t.Fatalf("%s reached another guard: %v", tc.name, err)
+			}
+		})
+	}
+}
 func TestRssSeasonDiscoveryAndScopeRejectMissingOrOverclaimedEvidence(t *testing.T) {
-	for _, kind := range []string{"valid", "disabled", "wrong_target", "parse_error", "old_name_lost", "same_name_elsewhere", "model_called", "cause_claimed", "context_claimed", "site_claimed", "UI_claimed", "postturn_claimed", "oldbytes_claimed", "overall_complete", "missing_old_writes", "missing_parse_errors", "missing_same_name_count", "missing_context_markers", "missing_retained_parse_errors", "missing_http_count"} {
+	for _, kind := range []string{"valid", "disabled", "wrong_target", "parse_error", "old_name_lost", "same_name_elsewhere", "model_called", "cause_claimed", "context_claimed", "site_claimed", "UI_claimed", "postturn_claimed", "oldbytes_claimed", "overall_complete", "missing_old_writes", "missing_parse_errors", "missing_same_name_count", "missing_context_markers", "missing_retained_parse_errors", "missing_http_count", "observation_missing", "observation_early", "observation_late", "discovery_time_missing", "retained_time_missing", "wrong_valid_hex_names_hash", "snapshot_ids_missing", "snapshot_ids_duplicated"} {
 		t.Run(kind, func(t *testing.T) {
 			var e rssSeasonReceipt
 			loadPublicReceipt(t, "skills-3080-rss-season-installation-evidence.json", &e)
@@ -233,6 +303,26 @@ func TestRssSeasonDiscoveryAndScopeRejectMissingOrOverclaimedEvidence(t *testing
 				e.Retained.Errors = nil
 			case "missing_http_count":
 				e.Use.HTTP = nil
+			case "observation_missing":
+				e.ObservedAt = ""
+			case "observation_early":
+				e.ObservedAt = e.Discovery.CheckedAt
+			case "observation_late":
+				at, err := time.Parse(time.RFC3339Nano, e.ObservedAt)
+				if err != nil {
+					t.Fatal(err)
+				}
+				e.ObservedAt = at.Add(time.Second).Format(time.RFC3339Nano)
+			case "discovery_time_missing":
+				e.Discovery.CheckedAt = ""
+			case "retained_time_missing":
+				e.Retained.CheckedAt = ""
+			case "wrong_valid_hex_names_hash":
+				e.Retained.NamesSHA = strings.Repeat("a", 64)
+			case "snapshot_ids_missing":
+				e.Retained.IDs = nil
+			case "snapshot_ids_duplicated":
+				e.Retained.IDs[1] = e.Retained.IDs[0]
 			}
 			if validateRssSeasonReceipt(e) != (kind == "valid") {
 				t.Fatalf("%s: scope/discovery acceptance differed", kind)

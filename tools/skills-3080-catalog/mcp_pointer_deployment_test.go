@@ -213,12 +213,19 @@ func validateMcpPointerDeployment(e mcpPointerDeployment) error {
 	if len(r.IDs) != 33 || r.Expected != 46 || r.Found != r.Expected || r.Enabled != r.Expected || r.Errors != 0 || r.DescriptionMatches == nil || *r.DescriptionMatches != 2 || r.NamesSHA != "1eae60ec3874c620b3460222562d644df98e5ac91664a0138ada98a89394da9c" || !recordedTrue(r.Exited) || !recordedTrue(r.Drained) || !recordedFalse(r.ModelCalled) || !recordedFalse(r.NamesSaved) || !recordedFalse(r.AllBytes) {
 		return errors.New("managed metadata retention missing or overclaimed")
 	}
-	observed, err := time.Parse(time.RFC3339Nano, e.ObservedAt)
+	return validateLastVerification(e.ObservedAt, d.CheckedAt, r.CheckedAt)
+}
+
+func validateLastVerification(observedAt string, checkedAt ...string) error {
+	observed, err := time.Parse(time.RFC3339Nano, observedAt)
 	if err != nil {
 		return errors.New("deployment observation timestamp is missing")
 	}
+	if len(checkedAt) == 0 {
+		return errors.New("deployment verification timestamp is missing")
+	}
 	var lastVerified time.Time
-	for _, checked := range []string{d.CheckedAt, r.CheckedAt} {
+	for _, checked := range checkedAt {
 		verified, err := time.Parse(time.RFC3339Nano, checked)
 		if err != nil {
 			return errors.New("deployment verification timestamp is missing")
@@ -233,41 +240,53 @@ func validateMcpPointerDeployment(e mcpPointerDeployment) error {
 	return nil
 }
 
-func TestRetainedKnownMetadataFingerprintsOnlyItsHistoricalManagedSubset(t *testing.T) {
-	var e mcpPointerDeployment
-	loadPublicReceipt(t, "skills-3080-mcp-pointer-installation-evidence.json", &e)
+type managedMetadataAdoption struct {
+	ID     string `json:"inventory_id"`
+	Target string `json:"target"`
+}
+
+type managedMetadataOriginal struct {
+	Name string `json:"name"`
+}
+
+func managedMetadataSources(t *testing.T) ([]managedMetadataAdoption, []managedMetadataOriginal) {
+	t.Helper()
 	var ledger struct {
-		Entries []struct {
-			ID     string `json:"inventory_id"`
-			Target string `json:"target"`
-		} `json:"entries"`
+		Entries []managedMetadataAdoption `json:"entries"`
 	}
 	var original struct {
-		Targets []struct {
-			Name string `json:"name"`
-		} `json:"targets"`
+		Targets []managedMetadataOriginal `json:"targets"`
 	}
 	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
 	loadPublicReceipt(t, "skills-3048-manifest.json", &original)
+	return ledger.Entries, original.Targets
+}
+
+func validateManagedMetadataSnapshot(ids []string, expected int, hash string, entries []managedMetadataAdoption, original []managedMetadataOriginal) error {
+	if len(original) != 14 {
+		return errors.New("original3048 target count differs")
+	}
 	byID := map[string]string{}
-	for _, r := range ledger.Entries {
-		if byID[r.ID] != "" {
-			t.Fatal("repeated adoption identity")
+	for _, r := range entries {
+		if r.ID == "" || r.Target == "" || byID[r.ID] != "" {
+			return errors.New("repeated or missing adoption identity")
 		}
 		byID[r.ID] = r.Target
 	}
 	seenIDs, known := map[string]bool{}, map[string]bool{}
-	for _, id := range e.Retained.IDs {
+	for _, id := range ids {
 		if seenIDs[id] || byID[id] == "" {
-			t.Fatal("historical metadata identity is absent or repeated")
+			return errors.New("historical metadata identity is absent or repeated")
 		}
 		seenIDs[id] = true
 		known[byID[id]] = true
 	}
-	for _, r := range original.Targets {
-		if r.Name == "" {
-			t.Fatal("original3048 target absent")
+	seenOriginal := map[string]bool{}
+	for _, r := range original {
+		if r.Name == "" || seenOriginal[r.Name] {
+			return errors.New("original3048 target is absent or repeated")
 		}
+		seenOriginal[r.Name] = true
 		known[r.Name] = true
 	}
 	var names []string
@@ -276,8 +295,18 @@ func TestRetainedKnownMetadataFingerprintsOnlyItsHistoricalManagedSubset(t *test
 	}
 	sort.Strings(names)
 	h := sha256.Sum256([]byte(strings.Join(names, "\n") + "\n"))
-	if len(original.Targets) != 14 || len(names) != e.Retained.Expected || hex.EncodeToString(h[:]) != e.Retained.NamesSHA {
-		t.Fatal("managed metadata fingerprint differs from its public snapshot sources")
+	if len(names) != expected || hex.EncodeToString(h[:]) != hash {
+		return errors.New("managed metadata fingerprint differs from its public snapshot sources")
+	}
+	return nil
+}
+
+func TestRetainedKnownMetadataFingerprintsOnlyItsHistoricalManagedSubset(t *testing.T) {
+	var e mcpPointerDeployment
+	loadPublicReceipt(t, "skills-3080-mcp-pointer-installation-evidence.json", &e)
+	entries, original := managedMetadataSources(t)
+	if err := validateManagedMetadataSnapshot(e.Retained.IDs, e.Retained.Expected, e.Retained.NamesSHA, entries, original); err != nil {
+		t.Fatal(err)
 	}
 }
 func TestMcpPointerInstalledBundleMatchesActualManifestAndIndividualSources(t *testing.T) {

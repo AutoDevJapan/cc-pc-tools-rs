@@ -36,7 +36,9 @@
       "model": "anthropic/claude-sonnet-5-5",
       "model_origin": "owner_request",
       "scope": "RSSV1 fivefiles/allRSSsupporttexts andexplicitA/B/C; no realGo/site/UI. LaterV2clarifications separately reviewed.",
-      "native_matched": true
+      "native_matched": true,
+      "suggestions": 6,
+      "nits": 6
     },
     {
       "todo": 3591,
@@ -96,7 +98,9 @@
     "parse_errors": 0,
     "pending_stdout_read_drained": true,
     "context_budget_marker_count": 0,
-    "warning_cause_linked": false
+    "warning_cause_linked": false,
+    "codex_version": null,
+    "codex_version_definition": "Not captured in this target-only probe; do not infer a version from another probe."
   },
   "retained_known_metadata": {
     "model_called": false,
@@ -111,7 +115,45 @@
     "all_disk_hash_or_prechange_equality_proven": false,
     "parse_errors": 0,
     "pending_stdout_read_drained": true,
-    "scope": "Original3048fourteen targets, current33adoptionIDs inPR428, plus the newlycreatedRSS/season2; unique48. An immutable retention snapshot, not future currentname count."
+    "scope": "Original3048fourteen targets, current33adoptionIDs inPR428, plus the newlycreatedRSS/season2; unique48. An immutable retention snapshot, not future currentname count.",
+    "managed_adoption_inventory_ids": [
+      "github:529ad226a165fa7c6a2e7a49959f227936408e7a349549b59ab0feeb437e27ce",
+      "github:faf798dc6ee8fc764680d048bc62d4579e6302a3f9cd28158b2229c8b39a46b2",
+      "github:d05f1de9d9c51e0126f79512bbfc6d0527d8b745994687686fc46328fbef8673",
+      "github:9572cbb50724f66e3a5165d06746747932d633b7507bb40f7401a980df082c60",
+      "github:1c650ad6db0ec99fae221dc302188220e7779742bd0471bc57a341d86ddf6196",
+      "github:7540b0b39f3053e2b24792a1be2c866c4b8e73bc7d3966642eb0a84c689252ea",
+      "github:467b9d6b107c183945edf987da7cdcb57b7311e42682b0ca0c3298807d36511f",
+      "github:9f2f48c4ee290e8d2aa53aa898d06e5665f4d956f35e5c495d00b972f7508879",
+      "github:902f0416f0d0bd4c4c62f6958623724e2ecd0024e6f7fb622818ef36712ebfcd",
+      "github:7aa67de263443f985337da44fa80d97db729d4b3ff6dfe3bc5e4e658f592822b",
+      "github:0a69193f05dcc27d1a0e6570aa2acf7389e9660a285f84510c39ce6f63197295",
+      "github:0c110b40278d18a05355221f5505335ab64ad88d32f402ac9ba46f8d2ab06de1",
+      "github:23cb6568e92b712b4a7ecd01a85999035e136f9cb66d75b0ef8f64bf5327819a",
+      "github:5ae150da91ada2aa1a46b553cc1d0e202c2cde7cb57304964377e160c7de4174",
+      "github:4d5592e0e8885ed948a2992604dcec1ba0e512816c263f8a6141666db8109622",
+      "github:5c561a5104441099f2de518551220c75fae0eeba9258abcebee533ec1f2ca0e7",
+      "github:055377d432d81b61af7a26c72df64895140fe57bac284e3bd67477a98afb2985",
+      "github:dfab8775869cc3ca898f53f46ba8a0855f19e61ec42d0619cca10ed988aeb5f5",
+      "github:0318ced22de8614c2913d996e59f02d18f4d42e60e9563c5bd983c01cd9518a4",
+      "github:62290525adf92ac2240a5d6de474b1454f578202d9fa92461dc79a6626e35402",
+      "github:ae8b453f96182867da017a74e12349c4e2000d2a5ef32705f3cc844c338d7adc",
+      "github:71a2f82b34ce70331fc531106c143b0e3332e22251017f377e63d072a6cb36ec",
+      "github:a3e5cb3352130bff6eb6d6320eea2ac71359fdb1cc36b580f6b882f4208924ec",
+      "github:c5ac6bf37010d859d7525686efd5a92d5df2de3c04d0ca63f06f8fe34b90a746",
+      "github:af8a59781a3ab4b96f7c7fe7ebb2a838dfa65293acf99f8ed7201cf53c38e4fc",
+      "github:ce166d7ba811d5f7f8ae37063d187dffc5a356a77738a09d0e83cf29c64d5328",
+      "github:1530721e547a0bef7412ef600719470cb5237407bdf7996c9a80b80a2ef2a439",
+      "github:b3f606e5e0512d2540f66637133b3d5f5d8ee7a563d99c99c5259a660ec1bd05",
+      "github:b42ae7debd7346ed232f75cdb212f9d8a9cb05bd347c93c8b7de82e8d5433fc8",
+      "github:8d45c064b59f58146ec2cd435cc55a71f835c1936934715b8b4a0cc231aac696",
+      "github:41f804392ff42c56ba7a05d1b269efdbb80f189a55b8979ccae5eb67771d05ed",
+      "github:e4ade76a7932447efe3dd6e777ab300a5a9a6f1cf13a392614b31c621906a016",
+      "github:a89e967becb119a2e1fde4392aaeb0c034ff9c683290947db8c690624fc9887e",
+      "github:89360b4dedcdf7fceccbef746956ad5f50a6c50126946fb12731aff46af0851b",
+      "github:29a0ba0843498fe31de765752ffa07dfd7835d47f3ac062d641e41169e601167"
+    ],
+    "snapshot_source_definition": "The immutable original3048fourteen plus these35adoptionIDs reconstruct the already-observed48-name set. IDs added for public verification, not a new discovery. Later ledger additions are outside this historical set."
   },
   "explicit_application": {
     "season": "3591A/B/C with interruptedblend,exposure,scope checks plus parent four-stateGo numericalmodel",
@@ -130,21 +172,55 @@
       "scope": "Ownedliteral documentbase/relativeURL,Japanese/textescape,unknownpubDate; realGoXMLserialize/parse; no website or savedfeed.",
       "source": "skills-3080-rss-fixture.go.txt",
       "sha256": "1dad2882d15f5df761749f42b82052e6babd0be44c59bce95a7f70ff68070678",
-      "tests": 1
+      "tests": 1,
+      "recorded_result": {
+        "exit": 0,
+        "timed_out": false,
+        "stdout": "=== RUN   TestReviewedRSSFixtureKeepsDocumentBaseAndUnknownPublicationDate\n--- PASS: TestReviewedRSSFixtureKeepsDocumentBaseAndUnknownPublicationDate (0.00s)\nPASS\nok  \tcommand-line-arguments\t0.014s\n",
+        "stderr": ""
+      },
+      "result_receipt": "rss-fixture-result123649.json",
+      "go_version": null,
+      "go_version_definition": "Not captured with the original successful execution; no current version is backdated.",
+      "execution_time": null,
+      "execution_time_definition": "Exact process execution time was not captured; checked_at, where present, is the receipt verification time.",
+      "receipt_checked_at": "2026-10-24T05:09:24.5933319+00:00"
     },
     {
       "passed": true,
       "scope": "XML1.0literalrejectionbeforemarshal andrealparserpositive/negative. Encoder replacement semantics not separately proven.",
       "source": "skills-3080-rss-xml-chars.go.txt",
       "sha256": "b62c30299956661dfe396c98d85e62a585464748cd63cf39b694e794ffd6f36b",
-      "tests": 2
+      "tests": 2,
+      "recorded_result": {
+        "exit": 0,
+        "timed_out": false,
+        "stdout": "=== RUN   TestXMLLiteralFixtureRejectsInvalidControlsWithoutSilentReplacement\n--- PASS: TestXMLLiteralFixtureRejectsInvalidControlsWithoutSilentReplacement (0.00s)\n=== RUN   TestActualXMLParserSeparatesInvalidControlFixtureFromValidBaseline\n--- PASS: TestActualXMLParserSeparatesInvalidControlFixtureFromValidBaseline (0.00s)\nPASS\nok  \tcommand-line-arguments\t0.010s\n",
+        "stderr": ""
+      },
+      "result_receipt": "rss-xml-chars-result123649.json",
+      "go_version": null,
+      "go_version_definition": "Not captured with the original successful execution; no current version is backdated.",
+      "execution_time": null,
+      "execution_time_definition": "Exact process execution time was not captured; checked_at, where present, is the receipt verification time."
     },
     {
       "passed": true,
       "scope": "Four-weight numericalmodel; interruptedtarget/normalization/basepalette/uncappedtimepartition/invalidtime; no renderer/shader/snow/performance proof.",
       "source": "skills-3080-season-blend-model.go.txt",
       "sha256": "837b7cf5c160fde5f68c083608be30613c61c0bc5cde54f305dfc4ff90e5d579",
-      "tests": 4
+      "tests": 4,
+      "recorded_result": {
+        "exit": 0,
+        "timed_out": false,
+        "stdout": "=== RUN   TestSeasonBlendInterruptedSelectionKeepsCurrentWeights\n--- PASS: TestSeasonBlendInterruptedSelectionKeepsCurrentWeights (0.00s)\n=== RUN   TestSeasonBlendRemainsNonnegativeNormalizedAndUsesBaseValues\n--- PASS: TestSeasonBlendRemainsNonnegativeNormalizedAndUsesBaseValues (0.00s)\n=== RUN   TestSeasonBlendUncappedTimePartitionHasTheSameState\n--- PASS: TestSeasonBlendUncappedTimePartitionHasTheSameState (0.00s)\n=== RUN   TestSeasonBlendInvalidInputsLeaveStateUnchanged\n--- PASS: TestSeasonBlendInvalidInputsLeaveStateUnchanged (0.00s)\nPASS\nok  \tcommand-line-arguments\t0.012s\n",
+        "stderr": ""
+      },
+      "result_receipt": "season-blend-result123649.json",
+      "go_version": null,
+      "go_version_definition": "Not captured with the original successful execution; no current version is backdated.",
+      "execution_time": null,
+      "execution_time_definition": "Exact process execution time was not captured; checked_at, where present, is the receipt verification time."
     }
   ],
   "preserved_scope": {
@@ -160,5 +236,7 @@
     "new_fees": 0
   },
   "publication_scope": "This evidence follows already completed new-only central operations; public adoption/coverage flags must be reconciled with the actual fixed receipts before counting it. No source code or UI was run by installing these instructions.",
-  "self_authored_model_and_fixture_execution_definition": "The separate owned Go numerical/XML fixtures ran successfully as recorded below. Installation/discovery did not execute upstream code, a renderer, a real website or an AI model turn."
+  "self_authored_model_and_fixture_execution_definition": "The separate owned Go numerical/XML fixtures ran successfully as recorded above. Installation/discovery did not execute upstream code, a renderer, a real website or an AI model turn.",
+  "amended_at": "2026-10-24T07:16:19.7577795+00:00",
+  "amendment_definition": "Verification metadata/recording only. No new source execution, fixture rerun, central read/write or discovery. Original observed/checked timestamps, source hashes and reviewed Skill bytes remain unchanged."
 }

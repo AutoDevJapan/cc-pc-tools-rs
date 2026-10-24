@@ -332,7 +332,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/clawtrustmolts/clawtrust/SKILL.md"
+      "source_path": "skills/clawtrustmolts/clawtrust/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 1,
+      "reader_one_based_ordinal": 1
     },
     {
       "inventory_id": "github:6ce5ad5e81614342dd0c9060f77b866d6c03a60d941d6b4ce6641a7a7b64996b",
@@ -382,14 +385,25 @@
         "holder": "Maton(2026)",
         "historical_reader_scope": "#2/#9/#14/#19が同一blobを共有。ファイル別の範囲指定なし",
         "not_covered": [
-          "top.shared_rights.maton_mit"
+          "Matonゲートウェイの利用条件・料金",
+          "GitHub/Google/Microsoft/PDF.coの規約・商標",
+          "各社の公式文書に由来する説明文"
         ],
         "unconfirmed": [
-          "top.shared_rights.maton_mit"
+          "公開者byungkyuがMatonの権利を公開する権限を持つか",
+          "API説明文の出典の権利"
         ],
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "not_covered": [
+            "top.shared_rights.maton_mit"
+          ],
+          "unconfirmed": [
+            "top.shared_rights.maton_mit"
+          ]
+        }
       },
       "supporting_resources": [
         {
@@ -437,7 +451,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/byungkyu/github-api/SKILL.md"
+      "source_path": "skills/byungkyu/github-api/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 2,
+      "reader_one_based_ordinal": 2
     },
     {
       "inventory_id": "github:9774d7ec76e09acba531fe4e32639d963db674ec32d29672750b010a3818b81b",
@@ -487,16 +504,28 @@
         "holder": "notice上は不明",
         "historical_reader_scope": "標準テキストのみ。frontmatterは「Complete terms in LICENSE.txt」",
         "not_covered": [
-          "top.shared_rights.apache_unfilled",
+          "原著作物が別にある場合の原著作者の権利",
+          "各package内の未保存スクリプト",
           "未保存scripts 3件"
         ],
         "unconfirmed": [
-          "top.shared_rights.apache_unfilled",
+          "各公開者が権利者か(テンプレート流用の可能性)",
+          "Apache-2.0第4条の表示義務が誰に生じるか",
           "bowen31337が権利者か"
         ],
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "not_covered": [
+            "top.shared_rights.apache_unfilled",
+            "未保存scripts 3件"
+          ],
+          "unconfirmed": [
+            "top.shared_rights.apache_unfilled",
+            "bowen31337が権利者か"
+          ]
+        }
       },
       "supporting_resources": [
         {
@@ -646,7 +675,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/bowen31337/create-agent-skills/SKILL.md"
+      "source_path": "skills/bowen31337/create-agent-skills/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 3,
+      "reader_one_based_ordinal": 3
     },
     {
       "inventory_id": "github:cf59e23cfffc83d6e7b526bcdd8e663e28dbc0a98906b79f5230ce8d5eba0988",
@@ -696,17 +728,30 @@
         "holder": "notice上は不明",
         "historical_reader_scope": "標準テキストのみ。frontmatterにlicense記載なし",
         "not_covered": [
-          "top.shared_rights.apache_unfilled",
+          "原著作物が別にある場合の原著作者の権利",
+          "各package内の未保存スクリプト",
           "ByteDance/Volcengineの規約・料金と生成物の権利",
           "seedance.py(未保存)"
         ],
         "unconfirmed": [
-          "top.shared_rights.apache_unfilled",
+          "各公開者が権利者か(テンプレート流用の可能性)",
+          "Apache-2.0第4条の表示義務が誰に生じるか",
           "asikochenが権利者か"
         ],
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "not_covered": [
+            "top.shared_rights.apache_unfilled",
+            "ByteDance/Volcengineの規約・料金と生成物の権利",
+            "seedance.py(未保存)"
+          ],
+          "unconfirmed": [
+            "top.shared_rights.apache_unfilled",
+            "asikochenが権利者か"
+          ]
+        }
       },
       "supporting_resources": [
         {
@@ -805,7 +850,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/asikochen/seedance-video-creation/SKILL.md"
+      "source_path": "skills/asikochen/seedance-video-creation/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 4,
+      "reader_one_based_ordinal": 4
     },
     {
       "inventory_id": "github:04259fb642778488fdd93c5d638569520e07f842b0e610bb8067f7d48515b934",
@@ -979,7 +1027,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/ai-plusplus/family-partner/SKILL.md"
+      "source_path": "skills/ai-plusplus/family-partner/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 5,
+      "reader_one_based_ordinal": 5
     },
     {
       "inventory_id": "github:8ce459bbacdeb56349eb3103520bd12ade7a0ccd11939c94b6a5a223a5272879",
@@ -1116,7 +1167,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/dexhunter/parameter-golf-monitor/SKILL.md"
+      "source_path": "skills/dexhunter/parameter-golf-monitor/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 6,
+      "reader_one_based_ordinal": 6
     },
     {
       "inventory_id": "github:d0eb7db3e02764dd5937915d50b62ba773df3877af673fa52a121520855687c8",
@@ -1360,7 +1414,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/choichuncj/clawdbot-filesystem-bak/SKILL.md"
+      "source_path": "skills/choichuncj/clawdbot-filesystem-bak/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 7,
+      "reader_one_based_ordinal": 7
     },
     {
       "inventory_id": "github:1a832243b927edbd5dafaf12de144656e705a5cf6b845cf46d07154e6b6c53d9",
@@ -1408,7 +1465,7 @@
         "notice_read_complete": true,
         "notice_read_by": "20261024-124353-todo-3565",
         "license_kind": "CC BY-NC-SA 4.0の見出し+非逐語とみられる本文+商用ライセンスの連絡先",
-        "holder": "杨卫薪律师(微信ywxlaw)(2026)",
+        "holder": "杨卫薪律师（連絡先は省略）(2026)",
         "historical_reader_scope": "「This work」全体と読めるが範囲指定なし。frontmatterはMITと宣言(矛盾)",
         "not_covered": [
           "商用利用(別契約が必要)",
@@ -1742,7 +1799,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/cat-xierluo/repo-research/SKILL.md"
+      "source_path": "skills/cat-xierluo/repo-research/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 8,
+      "reader_one_based_ordinal": 8
     },
     {
       "inventory_id": "github:c4a840d19936af4976ca2a3d09ab8cbd28584eb556b923985ce36ef3ac695422",
@@ -1790,14 +1850,25 @@
         "holder": "Maton(2026)。#2と同一blob",
         "historical_reader_scope": "frontmatterにlicense記載なし。ファイル別の範囲指定なし",
         "not_covered": [
-          "top.shared_rights.maton_mit"
+          "Matonゲートウェイの利用条件・料金",
+          "GitHub/Google/Microsoft/PDF.coの規約・商標",
+          "各社の公式文書に由来する説明文"
         ],
         "unconfirmed": [
-          "top.shared_rights.maton_mit"
+          "公開者byungkyuがMatonの権利を公開する権限を持つか",
+          "API説明文の出典の権利"
         ],
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "not_covered": [
+            "top.shared_rights.maton_mit"
+          ],
+          "unconfirmed": [
+            "top.shared_rights.maton_mit"
+          ]
+        }
       },
       "supporting_resources": [
         {
@@ -1845,7 +1916,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/byungkyu/google-slides/SKILL.md"
+      "source_path": "skills/byungkyu/google-slides/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 9,
+      "reader_one_based_ordinal": 9
     },
     {
       "inventory_id": "github:201218faac4b0b00fcafac2d02f99301d1da212f3d8a40e6ea3d0b099c60d205",
@@ -1983,7 +2057,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/aigamatrix/notebook-builder/SKILL.md"
+      "source_path": "skills/aigamatrix/notebook-builder/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 10,
+      "reader_one_based_ordinal": 10
     },
     {
       "inventory_id": "github:ad6d80233b55db6f7c5b1b8541e69c745cc337128520418215d15f0c4fc8b0ca",
@@ -2329,7 +2406,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/neabigmo/decklingo-pptx/SKILL.md"
+      "source_path": "skills/neabigmo/decklingo-pptx/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 11,
+      "reader_one_based_ordinal": 11
     },
     {
       "inventory_id": "github:453656856a8db0ef6add9b22b5eb2b42fc8575106afc4b44135aa87990223715",
@@ -2554,7 +2634,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": "20261024-124353-todo-3565",
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/chunhualiao/openclaw-docker-setup/SKILL.md"
+      "source_path": "skills/chunhualiao/openclaw-docker-setup/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 12,
+      "reader_one_based_ordinal": 12
     },
     {
       "inventory_id": "github:f475fc51375a660a158501f4788ab2d574c336b4b8c2787ef1e9689c58ca374f",
@@ -2602,16 +2685,28 @@
         "holder": "notice上は不明",
         "historical_reader_scope": "標準テキストのみ。frontmatterは「Complete terms in LICENSE.txt」",
         "not_covered": [
-          "top.shared_rights.apache_unfilled",
+          "原著作物が別にある場合の原著作者の権利",
+          "各package内の未保存スクリプト",
           "未保存scripts 3件"
         ],
         "unconfirmed": [
-          "top.shared_rights.apache_unfilled",
+          "各公開者が権利者か(テンプレート流用の可能性)",
+          "Apache-2.0第4条の表示義務が誰に生じるか",
           "chenscgitが権利者か"
         ],
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "not_covered": [
+            "top.shared_rights.apache_unfilled",
+            "未保存scripts 3件"
+          ],
+          "unconfirmed": [
+            "top.shared_rights.apache_unfilled",
+            "chenscgitが権利者か"
+          ]
+        }
       },
       "supporting_resources": [
         {
@@ -2744,7 +2839,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/chenscgit/csctest1/SKILL.md"
+      "source_path": "skills/chenscgit/csctest1/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 13,
+      "reader_one_based_ordinal": 13
     },
     {
       "inventory_id": "github:89e357503e96595598caa416ecfa0a3a7351c472f0276b55510850603f088c18",
@@ -2792,14 +2890,25 @@
         "holder": "Maton(2026)。#2と同一blob",
         "historical_reader_scope": "frontmatterにlicense記載なし。ファイル別の範囲指定なし",
         "not_covered": [
-          "top.shared_rights.maton_mit"
+          "Matonゲートウェイの利用条件・料金",
+          "GitHub/Google/Microsoft/PDF.coの規約・商標",
+          "各社の公式文書に由来する説明文"
         ],
         "unconfirmed": [
-          "top.shared_rights.maton_mit"
+          "公開者byungkyuがMatonの権利を公開する権限を持つか",
+          "API説明文の出典の権利"
         ],
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "not_covered": [
+            "top.shared_rights.maton_mit"
+          ],
+          "unconfirmed": [
+            "top.shared_rights.maton_mit"
+          ]
+        }
       },
       "supporting_resources": [
         {
@@ -2847,7 +2956,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/byungkyu/microsoft-excel/SKILL.md"
+      "source_path": "skills/byungkyu/microsoft-excel/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 14,
+      "reader_one_based_ordinal": 14
     },
     {
       "inventory_id": "github:b1752b2b192b75bed71ddff83b08ec4a4630d49f49776c9b9b9b00fe93e05d62",
@@ -3039,7 +3151,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/apscrapes/zyte-ecommerce-products-compare-skill/SKILL.md"
+      "source_path": "skills/apscrapes/zyte-ecommerce-products-compare-skill/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 15,
+      "reader_one_based_ordinal": 15
     },
     {
       "inventory_id": "github:cce61019c28ec788a32062ef536001f0501f10636b463e7efde9e8f8d2f9d0a8",
@@ -3402,7 +3517,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/silentcool/crusty-security/SKILL.md"
+      "source_path": "skills/silentcool/crusty-security/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 16,
+      "reader_one_based_ordinal": 16
     },
     {
       "inventory_id": "github:76eeba391a3a7fca4f6bde1c26a016041f16a187602f1f0fc8305999029f6ac1",
@@ -3595,7 +3713,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/davinwang/github-memory-sync/SKILL.md"
+      "source_path": "skills/davinwang/github-memory-sync/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 17,
+      "reader_one_based_ordinal": 17
     },
     {
       "inventory_id": "github:d20b5ecb67b0bb453978a85c6a5ce92fd9f6b06eddb72c45c18e1282d199b108",
@@ -3750,7 +3871,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/dantunes-github/agentbus-relay-chat/SKILL.md"
+      "source_path": "skills/dantunes-github/agentbus-relay-chat/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 18,
+      "reader_one_based_ordinal": 18
     },
     {
       "inventory_id": "github:ff8d79cce2e29d44801187731e749950480b4364b9d9d6fe1722eb0d362fbc73",
@@ -3798,15 +3922,27 @@
         "holder": "Maton(2026)。#2と同一blob",
         "historical_reader_scope": "frontmatterにlicense記載なし。ファイル別の範囲指定なし",
         "not_covered": [
-          "top.shared_rights.maton_mit",
+          "Matonゲートウェイの利用条件・料金",
+          "GitHub/Google/Microsoft/PDF.coの規約・商標",
+          "各社の公式文書に由来する説明文",
           "PDF.coの利用条件と料金"
         ],
         "unconfirmed": [
-          "top.shared_rights.maton_mit"
+          "公開者byungkyuがMatonの権利を公開する権限を持つか",
+          "API説明文の出典の権利"
         ],
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "not_covered": [
+            "top.shared_rights.maton_mit",
+            "PDF.coの利用条件と料金"
+          ],
+          "unconfirmed": [
+            "top.shared_rights.maton_mit"
+          ]
+        }
       },
       "supporting_resources": [
         {
@@ -3854,7 +3990,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/byungkyu/pdf-co/SKILL.md"
+      "source_path": "skills/byungkyu/pdf-co/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 19,
+      "reader_one_based_ordinal": 19
     },
     {
       "inventory_id": "github:4fb232e72908988daaa683f19de9fa2514cf64d9321a9e652be6432df38215f6",
@@ -4096,7 +4235,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/aryanj-nyc/weave/SKILL.md"
+      "source_path": "skills/aryanj-nyc/weave/SKILL.md",
+      "reader_reference_namespace": "3565",
+      "reader_reference_row_number": 20,
+      "reader_one_based_ordinal": 20
     },
     {
       "inventory_id": "github:6b69192e9571de7d4334c4f42ae94fc09a454f1bd66c60ac2928b8fa9cbda818",
@@ -4144,12 +4286,17 @@
         "notice_read_by": "20261024-124751-todo-3566",
         "license_kind": "MIT",
         "holder": "Shadow Rose(Copyright (c) 2026)",
-        "historical_reader_scope": "S1",
-        "not_covered": "N1。Ollama/OpenClawの商標",
-        "unconfirmed": "U1。「Shadow Rose」=公開元theshadowroseの確認",
+        "historical_reader_scope": "(文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない)",
+        "not_covered": "(対象外: 第三者の著作物・商標・依存package・外部サービス規約・package外のファイル)。Ollama/OpenClawの商標",
+        "unconfirmed": "(未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件)。「Shadow Rose」=公開元theshadowroseの確認",
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "historical_reader_scope": "S1",
+          "not_covered": "N1。Ollama/OpenClawの商標",
+          "unconfirmed": "U1。「Shadow Rose」=公開元theshadowroseの確認"
+        }
       },
       "supporting_resources": [
         {
@@ -4214,7 +4361,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/theshadowrose/ollama-windows-guide/SKILL.md"
+      "source_path": "skills/theshadowrose/ollama-windows-guide/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 0,
+      "reader_one_based_ordinal": 1
     },
     {
       "inventory_id": "github:665c14476af10c52e48840d2a09460033da91558c7182865a78fcf99b68f9318",
@@ -4259,12 +4409,17 @@
         "notice_read_by": "20261024-124751-todo-3566",
         "license_kind": "MIT",
         "holder": "Clawdbot Community(団体名のみ)",
-        "historical_reader_scope": "S1",
-        "not_covered": "N1",
-        "unconfirmed": "U1。同一許諾文が3公開者(fresh3/gtrusler/lucky-2968)に出現し、元の権利者は不明",
+        "historical_reader_scope": "(文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない)",
+        "not_covered": "(対象外: 第三者の著作物・商標・依存package・外部サービス規約・package外のファイル)",
+        "unconfirmed": "(未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件)。同一許諾文が3公開者(fresh3/gtrusler/lucky-2968)に出現し、元の権利者は不明",
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "historical_reader_scope": "S1",
+          "not_covered": "N1",
+          "unconfirmed": "U1。同一許諾文が3公開者(fresh3/gtrusler/lucky-2968)に出現し、元の権利者は不明"
+        }
       },
       "supporting_resources": [
         {
@@ -4363,7 +4518,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/fresh3/taizi-filesystem/SKILL.md"
+      "source_path": "skills/fresh3/taizi-filesystem/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 1,
+      "reader_one_based_ordinal": 2
     },
     {
       "inventory_id": "github:018b27e17fd0050a6cf4ee3d938c4fbc2dd6db591fc99b4fe9811954489b54aa",
@@ -4822,7 +4980,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/dda-oo/sap-journal-auditor/SKILL.md"
+      "source_path": "skills/dda-oo/sap-journal-auditor/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 2,
+      "reader_one_based_ordinal": 3
     },
     {
       "inventory_id": "github:002a0d99cd76d005ba38589cb14d4adf8716c6d10416267979670f4ccd48a250",
@@ -4870,12 +5031,16 @@
         "notice_read_by": "20261024-124751-todo-3566",
         "license_kind": "Apache-2.0(全文)",
         "holder": "Anthropic PBC(末尾に「Copyright 2024 Anthropic PBC」と標準の適用文)",
-        "historical_reader_scope": "S1",
+        "historical_reader_scope": "(文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない)",
         "not_covered": "商標(第6条)、第三者素材、書体の別許諾",
-        "unconfirmed": "U1。dc-acronymの公開物がAnthropic公開物の無改変な再配布か。再配布時は第4条(許諾文の写し・変更表示・表示保持)が条件",
+        "unconfirmed": "(未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件)。dc-acronymの公開物がAnthropic公開物の無改変な再配布か。再配布時は第4条(許諾文の写し・変更表示・表示保持)が条件",
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "historical_reader_scope": "S1",
+          "unconfirmed": "U1。dc-acronymの公開物がAnthropic公開物の無改変な再配布か。再配布時は第4条(許諾文の写し・変更表示・表示保持)が条件"
+        }
       },
       "supporting_resources": [
         {
@@ -4923,7 +5088,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/dc-acronym/frontend-design-1-0-0/SKILL.md"
+      "source_path": "skills/dc-acronym/frontend-design-1-0-0/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 3,
+      "reader_one_based_ordinal": 4
     },
     {
       "inventory_id": "github:962a7a1f4d4b45d265c47de0f8ff99b817c0014db323ffb36c2653b5ec253b41",
@@ -4971,12 +5139,17 @@
         "notice_read_by": "20261024-124751-todo-3566",
         "license_kind": "MIT",
         "holder": "M Asif Rahman(github.com/Asif2BD, Copyright (c) 2026)",
-        "historical_reader_scope": "S1。スクリプトは未保存で適用を照合できない",
-        "not_covered": "N1。whisper.cpp/Piper/ffmpeg/音声モデル(.onnx)の各許諾",
-        "unconfirmed": "U1。音声モデルの利用条件",
+        "historical_reader_scope": "(文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない)。スクリプトは未保存で適用を照合できない",
+        "not_covered": "(対象外: 第三者の著作物・商標・依存package・外部サービス規約・package外のファイル)。whisper.cpp/Piper/ffmpeg/音声モデル(.onnx)の各許諾",
+        "unconfirmed": "(未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件)。音声モデルの利用条件",
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "historical_reader_scope": "S1。スクリプトは未保存で適用を照合できない",
+          "not_covered": "N1。whisper.cpp/Piper/ffmpeg/音声モデル(.onnx)の各許諾",
+          "unconfirmed": "U1。音声モデルの利用条件"
+        }
       },
       "supporting_resources": [
         {
@@ -5109,7 +5282,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/asif2bd/voiceclaw/SKILL.md"
+      "source_path": "skills/asif2bd/voiceclaw/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 4,
+      "reader_one_based_ordinal": 5
     },
     {
       "inventory_id": "github:620b7c4d60040ccaf487f50b5a2426b0dab6dfb8451bc137650e05c58a80d5d3",
@@ -5158,12 +5334,17 @@
         "notice_read_by": "20261024-124751-todo-3566",
         "license_kind": "MIT",
         "holder": "Shadow Rose(Copyright (c) 2026。row0と同一blob)",
-        "historical_reader_scope": "S1",
-        "not_covered": "N1。OpenClaw商標",
-        "unconfirmed": "U1",
+        "historical_reader_scope": "(文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない)",
+        "not_covered": "(対象外: 第三者の著作物・商標・依存package・外部サービス規約・package外のファイル)。OpenClaw商標",
+        "unconfirmed": "(未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件)",
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "historical_reader_scope": "S1",
+          "not_covered": "N1。OpenClaw商標",
+          "unconfirmed": "U1"
+        }
       },
       "supporting_resources": [
         {
@@ -5228,7 +5409,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/theshadowrose/openclaw-windows-fix/SKILL.md"
+      "source_path": "skills/theshadowrose/openclaw-windows-fix/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 5,
+      "reader_one_based_ordinal": 6
     },
     {
       "inventory_id": "github:314da5c9646b8aaca1ed9a9cfb76a9a32fa779e1164596bbb065db7cce00c59e",
@@ -5274,12 +5458,17 @@
         "notice_read_by": "20261024-124751-todo-3566",
         "license_kind": "MIT",
         "holder": "Clawdbot Community(団体名のみ)",
-        "historical_reader_scope": "S1",
-        "not_covered": "N1",
-        "unconfirmed": "U1(row1と同じ)",
+        "historical_reader_scope": "(文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない)",
+        "not_covered": "(対象外: 第三者の著作物・商標・依存package・外部サービス規約・package外のファイル)",
+        "unconfirmed": "(未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件)(row1と同じ)",
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "historical_reader_scope": "S1",
+          "not_covered": "N1",
+          "unconfirmed": "U1(row1と同じ)"
+        }
       },
       "supporting_resources": [
         {
@@ -5378,7 +5567,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/gtrusler/clawdbot-filesystem/SKILL.md"
+      "source_path": "skills/gtrusler/clawdbot-filesystem/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 6,
+      "reader_one_based_ordinal": 7
     },
     {
       "inventory_id": "github:75a3208c351614c00a56980cb49a93164fa7fd2b4b718d7581bb6a2b945531c4",
@@ -5424,12 +5616,17 @@
         "notice_read_by": "20261024-124751-todo-3566",
         "license_kind": "MIT",
         "holder": "Nation of Agents(団体/プロジェクト名のみ)",
-        "historical_reader_scope": "S1",
-        "not_covered": "N1。@nationofagents/sdk(別package)、abliterate.ai/Matrixの利用条件、コントラクト",
-        "unconfirmed": "U1。「Nation of Agents」と公開元george3d6の関係",
+        "historical_reader_scope": "(文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない)",
+        "not_covered": "(対象外: 第三者の著作物・商標・依存package・外部サービス規約・package外のファイル)。@nationofagents/sdk(別package)、abliterate.ai/Matrixの利用条件、コントラクト",
+        "unconfirmed": "(未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件)。「Nation of Agents」と公開元george3d6の関係",
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "historical_reader_scope": "S1",
+          "not_covered": "N1。@nationofagents/sdk(別package)、abliterate.ai/Matrixの利用条件、コントラクト",
+          "unconfirmed": "U1。「Nation of Agents」と公開元george3d6の関係"
+        }
       },
       "supporting_resources": [
         {
@@ -5528,7 +5725,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/george3d6/nation-of-agents/SKILL.md"
+      "source_path": "skills/george3d6/nation-of-agents/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 7,
+      "reader_one_based_ordinal": 8
     },
     {
       "inventory_id": "github:80e883eeb6770b068abcf5bb5ef1410cb87ddd5e94ba52c2a55c06b6dea6a7df",
@@ -5799,7 +5999,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/guohongbin-git/pdf-cn/SKILL.md"
+      "source_path": "skills/guohongbin-git/pdf-cn/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 8,
+      "reader_one_based_ordinal": 9
     },
     {
       "inventory_id": "github:4d5397795261226b7dc04bc139fb85372b63bac0adf38d4614fec23be31e5690",
@@ -5845,12 +6048,17 @@
         "notice_read_by": "20261024-124751-todo-3566",
         "license_kind": "MIT",
         "holder": "AppDeploy(Copyright (c) 2026)",
-        "historical_reader_scope": "S1",
-        "not_covered": "N1。AppDeployの規約/料金/API利用条件",
-        "unconfirmed": "U1。公開元avimakとAppDeployの関係(metadata.authorはappdeploy)",
+        "historical_reader_scope": "(文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない)",
+        "not_covered": "(対象外: 第三者の著作物・商標・依存package・外部サービス規約・package外のファイル)。AppDeployの規約/料金/API利用条件",
+        "unconfirmed": "(未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件)。公開元avimakとAppDeployの関係(metadata.authorはappdeploy)",
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "historical_reader_scope": "S1",
+          "not_covered": "N1。AppDeployの規約/料金/API利用条件",
+          "unconfirmed": "U1。公開元avimakとAppDeployの関係(metadata.authorはappdeploy)"
+        }
       },
       "supporting_resources": [
         {
@@ -5898,7 +6106,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/avimak/appdeploy/SKILL.md"
+      "source_path": "skills/avimak/appdeploy/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 9,
+      "reader_one_based_ordinal": 10
     },
     {
       "inventory_id": "github:c24411f46cf2a043c915c7ae084f2aa7cbae899fdc7a9a464397130f8dfd3fcc",
@@ -5944,12 +6155,16 @@
         "notice_read_by": "20261024-124751-todo-3566",
         "license_kind": "Apache-2.0(全文。末尾の適用文は雛形「Copyright [yyyy] [name of copyright owner]」のまま)",
         "holder": "記載なし(未記入の雛形)",
-        "historical_reader_scope": "S1",
+        "historical_reader_scope": "(文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない)",
         "not_covered": "商標、取得する外部文書",
-        "unconfirmed": "U1。licensorが誰か、出所。row16・row18と同一blob(7a4a3ea2)",
+        "unconfirmed": "(未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件)。licensorが誰か、出所。row16・row18と同一blob(7a4a3ea2)",
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "historical_reader_scope": "S1",
+          "unconfirmed": "U1。licensorが誰か、出所。row16・row18と同一blob(7a4a3ea2)"
+        }
       },
       "supporting_resources": [
         {
@@ -6133,7 +6348,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/imbeasting/imbeasting-mcp-builder/SKILL.md"
+      "source_path": "skills/imbeasting/imbeasting-mcp-builder/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 10,
+      "reader_one_based_ordinal": 11
     },
     {
       "inventory_id": "github:f6e43bbfe1b96a4926285c60b31b30471460580b53092cfe8c886f0af60a1151",
@@ -6182,12 +6400,17 @@
         "notice_read_by": "20261024-124751-todo-3566",
         "license_kind": "MIT",
         "holder": "Georges Andronescu (Wesley Armando)(Copyright (c) 2026)",
-        "historical_reader_scope": "S1。SKILL.md内にも穴あきのMIT記載",
-        "not_covered": "N1。引用した研究/攻撃文面",
-        "unconfirmed": "U1。2つの名前の同一性、統計/引用の出典",
+        "historical_reader_scope": "(文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない)。SKILL.md内にも穴あきのMIT記載",
+        "not_covered": "(対象外: 第三者の著作物・商標・依存package・外部サービス規約・package外のファイル)。引用した研究/攻撃文面",
+        "unconfirmed": "(未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件)。2つの名前の同一性、統計/引用の出典",
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "historical_reader_scope": "S1。SKILL.md内にも穴あきのMIT記載",
+          "not_covered": "N1。引用した研究/攻撃文面",
+          "unconfirmed": "U1。2つの名前の同一性、統計/引用の出典"
+        }
       },
       "supporting_resources": [
         {
@@ -6456,7 +6679,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/georges91560/security-sentinel-skill/SKILL.md"
+      "source_path": "skills/georges91560/security-sentinel-skill/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 11,
+      "reader_one_based_ordinal": 12
     },
     {
       "inventory_id": "github:dd66de47785ffe58a788becd5f44c800716b5f3bf4a9ba90cfcbb5daa5cbc2ff",
@@ -6501,12 +6727,16 @@
         "notice_read_by": "20261024-124751-todo-3566",
         "license_kind": "Apache-2.0(全文のみ。著作権者名/適用文なし)",
         "holder": "記載なし",
-        "historical_reader_scope": "S1",
+        "historical_reader_scope": "(文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない)",
         "not_covered": "商標、第三者素材",
-        "unconfirmed": "U1。licensorが誰か。row3のAnthropic表示は本件に無い",
+        "unconfirmed": "(未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件)。licensorが誰か。row3のAnthropic表示は本件に無い",
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "historical_reader_scope": "S1",
+          "unconfirmed": "U1。licensorが誰か。row3のAnthropic表示は本件に無い"
+        }
       },
       "supporting_resources": [
         {
@@ -6554,7 +6784,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/hexiaochun/sutui-frontend-design/SKILL.md"
+      "source_path": "skills/hexiaochun/sutui-frontend-design/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 12,
+      "reader_one_based_ordinal": 13
     },
     {
       "inventory_id": "github:7c1f6125d1393856caf620c01c775119a699933716e59b6b7785d3446f42f243",
@@ -6602,12 +6835,17 @@
         "notice_read_by": "20261024-124751-todo-3566",
         "license_kind": "MIT",
         "holder": "OpenClaw Contributors(Copyright (c) 2026。団体名で個人名なし)",
-        "historical_reader_scope": "S1。スクリプトは未保存で適用を照合できない",
-        "not_covered": "N1。WordPress/WooCommerce/ACF/Elementor/Rank Math/Yoast/JetEngineの各許諾",
-        "unconfirmed": "U1。「OpenClaw Contributors」とDigitizers/benkalskyの関係。row17と同一blob(4f927586)",
+        "historical_reader_scope": "(文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない)。スクリプトは未保存で適用を照合できない",
+        "not_covered": "(対象外: 第三者の著作物・商標・依存package・外部サービス規約・package外のファイル)。WordPress/WooCommerce/ACF/Elementor/Rank Math/Yoast/JetEngineの各許諾",
+        "unconfirmed": "(未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件)。「OpenClaw Contributors」とDigitizers/benkalskyの関係。row17と同一blob(4f927586)",
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "historical_reader_scope": "S1。スクリプトは未保存で適用を照合できない",
+          "not_covered": "N1。WordPress/WooCommerce/ACF/Elementor/Rank Math/Yoast/JetEngineの各許諾",
+          "unconfirmed": "U1。「OpenClaw Contributors」とDigitizers/benkalskyの関係。row17と同一blob(4f927586)"
+        }
       },
       "supporting_resources": [
         {
@@ -7012,7 +7250,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/benkalsky/wordpress-api-pro/SKILL.md"
+      "source_path": "skills/benkalsky/wordpress-api-pro/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 13,
+      "reader_one_based_ordinal": 14
     },
     {
       "inventory_id": "github:6b60e4a7e65495a08bbc1d2d3ba05ff792df6962caf2c3cb14abe3b488e3d43f",
@@ -7057,12 +7298,17 @@
         "notice_read_by": "20261024-124751-todo-3566",
         "license_kind": "MIT",
         "holder": "Clawdbot Community(団体名のみ)",
-        "historical_reader_scope": "S1",
-        "not_covered": "N1",
-        "unconfirmed": "U1(row1と同じ)",
+        "historical_reader_scope": "(文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない)",
+        "not_covered": "(対象外: 第三者の著作物・商標・依存package・外部サービス規約・package外のファイル)",
+        "unconfirmed": "(未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件)(row1と同じ)",
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "historical_reader_scope": "S1",
+          "not_covered": "N1",
+          "unconfirmed": "U1(row1と同じ)"
+        }
       },
       "supporting_resources": [
         {
@@ -7195,7 +7441,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/lucky-2968/clawdbot-filesystem-1-0-2/SKILL.md"
+      "source_path": "skills/lucky-2968/clawdbot-filesystem-1-0-2/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 14,
+      "reader_one_based_ordinal": 15
     },
     {
       "inventory_id": "github:c918a01788792913c245eb2a91d777a45eb58ff7b19e7695b06bc51628622527",
@@ -7242,12 +7491,17 @@
         "notice_read_by": "20261024-124751-todo-3566",
         "license_kind": "MIT",
         "holder": "geoshan(Copyright (c) 2026)",
-        "historical_reader_scope": "S1。実装は未保存で適用を照合できない",
-        "not_covered": "N1。Flask等の依存",
-        "unconfirmed": "U1",
+        "historical_reader_scope": "(文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない)。実装は未保存で適用を照合できない",
+        "not_covered": "(対象外: 第三者の著作物・商標・依存package・外部サービス規約・package外のファイル)。Flask等の依存",
+        "unconfirmed": "(未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件)",
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "historical_reader_scope": "S1。実装は未保存で適用を照合できない",
+          "not_covered": "N1。Flask等の依存",
+          "unconfirmed": "U1"
+        }
       },
       "supporting_resources": [
         {
@@ -7686,7 +7940,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/geoshan/subagent-context-compactor/SKILL.md"
+      "source_path": "skills/geoshan/subagent-context-compactor/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 15,
+      "reader_one_based_ordinal": 16
     },
     {
       "inventory_id": "github:464267910d3117eb5b1fdaf59855a3a214b1a3f7bcdaec8c235334f73fd1cb3a",
@@ -7734,12 +7991,16 @@
         "notice_read_by": "20261024-124751-todo-3566",
         "license_kind": "Apache-2.0(全文。末尾は未記入の雛形)+書体ごとのSIL OFL 1.1×27(走査)",
         "holder": "Apache側は記載なし。OFL側は書体ごとの権利者",
-        "historical_reader_scope": "S1。OFLは各書体にのみ適用。書体の実体はpackageに無い",
+        "historical_reader_scope": "(文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない)。OFLは各書体にのみ適用。書体の実体はpackageに無い",
         "not_covered": "商標、書体の実体(不在)",
-        "unconfirmed": "U1。licensor。notice blobはrow10・row18と同一",
+        "unconfirmed": "(未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件)。licensor。notice blobはrow10・row18と同一",
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "historical_reader_scope": "S1。OFLは各書体にのみ適用。書体の実体はpackageに無い",
+          "unconfirmed": "U1。licensor。notice blobはrow10・row18と同一"
+        }
       },
       "supporting_resources": [
         {
@@ -8246,7 +8507,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/hsuyungfeng/canvas-design-pro/SKILL.md"
+      "source_path": "skills/hsuyungfeng/canvas-design-pro/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 16,
+      "reader_one_based_ordinal": 17
     },
     {
       "inventory_id": "github:00b7d2680c0f48317bd8e6cdc0457e430b2cfecd8d0caa1d3a2dfe1acb082b05",
@@ -8291,12 +8555,17 @@
         "notice_read_by": "20261024-124751-todo-3566",
         "license_kind": "MIT",
         "holder": "OpenClaw Contributors(団体名のみ)",
-        "historical_reader_scope": "S1。スクリプトは未保存で適用を照合できない",
-        "not_covered": "N1",
-        "unconfirmed": "U1。row13と同一blob(4f927586)",
+        "historical_reader_scope": "(文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない)。スクリプトは未保存で適用を照合できない",
+        "not_covered": "(対象外: 第三者の著作物・商標・依存package・外部サービス規約・package外のファイル)",
+        "unconfirmed": "(未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件)。row13と同一blob(4f927586)",
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "historical_reader_scope": "S1。スクリプトは未保存で適用を照合できない",
+          "not_covered": "N1",
+          "unconfirmed": "U1。row13と同一blob(4f927586)"
+        }
       },
       "supporting_resources": [
         {
@@ -8633,7 +8902,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/benkalsky/wordpress-api-skill/SKILL.md"
+      "source_path": "skills/benkalsky/wordpress-api-skill/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 17,
+      "reader_one_based_ordinal": 18
     },
     {
       "inventory_id": "github:e2d31692e49225ac37aa9b2eac4d04b4db6ed6da177cdea2c1d53c45b7516e32",
@@ -8682,12 +8954,16 @@
         "notice_read_by": "20261024-124751-todo-3566",
         "license_kind": "Apache-2.0(全文。末尾は雛形のまま)",
         "holder": "記載なし(未記入の雛形)",
-        "historical_reader_scope": "S1",
+        "historical_reader_scope": "(文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない)",
         "not_covered": "商標、取得する外部文書",
-        "unconfirmed": "U1。licensor・出所。row10・row16と同一blob(7a4a3ea2)",
+        "unconfirmed": "(未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件)。licensor・出所。row10・row16と同一blob(7a4a3ea2)",
         "copy_license_accepted": false,
         "third_party_support_or_service_rights_accepted": false,
-        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions."
+        "definition": "Individual notice reading is received, not a blanket acceptance. Historical S1/N1/U1 or shared_rights references are preserved with each source report and definitions.",
+        "historical_reader_shorthand": {
+          "historical_reader_scope": "S1",
+          "unconfirmed": "U1。licensor・出所。row10・row16と同一blob(7a4a3ea2)"
+        }
       },
       "supporting_resources": [
         {
@@ -8871,7 +9147,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/pupuking723/mcp-builder-anthropic/SKILL.md"
+      "source_path": "skills/pupuking723/mcp-builder-anthropic/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 18,
+      "reader_one_based_ordinal": 19
     },
     {
       "inventory_id": "github:26a03a3d50b59afbdef18bf936dffa118faeb3853c50b16f619a223b1acd70f8",
@@ -9140,7 +9419,10 @@
       "actual_existing_comparison": "Active name/description only; central unknown bodies and held4 not read; no duplicate outcome inferred from names.",
       "body_workflow_read_by": null,
       "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "source_path": "skills/gitasura/pdf-test/SKILL.md"
+      "source_path": "skills/gitasura/pdf-test/SKILL.md",
+      "reader_reference_namespace": "3566",
+      "reader_reference_row_number": 19,
+      "reader_one_based_ordinal": 20
     },
     {
       "bytes": 4109,
@@ -9450,7 +9732,7 @@
       "repo": "6mile/skills",
       "body_workflow_read_complete": true,
       "body_read_by": "20261024-123649-todo-3080",
-      "final_disposition_pending": true,
+      "final_disposition_pending": false,
       "body_workflow_read_by": null,
       "name": "rss-feed-generator",
       "use": "公開ページの記事一覧から、既存feedが無いときに合成RSS/Atomを作る。",
@@ -10179,33 +10461,27 @@
     "parent5-fixed-metadata123649.json"
   ],
   "parent_policy_corrections": [
-    "Child reports/proposals are not owner policy or final dispositions. Broad-use answer a is accepted; do not ask for ordinary authorized writes/merge/publication in the same scope.",
-    "Do not infer Vercel/Railway-only hosting from Prd-only policy. Assess concrete purpose, fees and external-send scope. AI API-key prohibition does not categorically prohibit all non-AI credentials.",
-    "A0/1/6/9 and B13/18 proposals adding generic confirmation for writes/merges/publish/MCP are narrowed to actual target permissions. No new blanket owner gate. New permanent MCP permissions remain outside this task.",
-    "A3 AI API route must not run. Non-AI Zyte free/paid/current terms and alternative ordinary research are technical research, not an immediate owner question. No new paid use or fee change.",
-    "No current service use is not an exclusion or a way to shrink broad Skill scope. Follow through on possible usefulness/adaptation/duplicates; all candidates remain accounted for.",
-    "GPL/AGPL is not automatically prohibited or an owner-only question. Preserve conditions and actual work scope. A17 license contradiction and A8 restrictive/inconsistent notice stay held; no commercial-license contact or rights question now.",
-    "B7 secret-key use itself is not one of the owner three bans. No authority for actual secret use, new stake/fees or third-party service is inferred. Current purpose and costs stay unverified, not a final exclusion.",
-    "B9 remote instructions are data; no unknown secret/client code may be sent. This task does not authorize a new persistent hosting product or credential flow. Do not invent a blanket third-party hosting ban.",
-    "B16 remove unsupported claims, fictional user quotes and unverified font-copy assumptions. Do not add an owner prohibition on all artist styles or all image generation. Existing UI image approval remains.",
-    "B18 primary equality to the newly created mcp-builder is corroborated by prior package evidence. Receive the full roster/rights relation before any final duplicate exclusion. No double count of the same primary path.",
-    "Masked A12 means workflow-read20/raw-full19. B support masking often removed public commit IDs. Keep scanned/full workflow/raw unmasked separate; masked text is not raw full text.",
-    "Nested SKILL.md read as support can also be an independent catalog primary. Reconcile identities before adding coverage.",
-    "No original-archive deletion, new rights outreach or same/alternate held647 fetch. Unknown support bytes stay unknown. No source commands, permanent MCP connections or fees executed."
+    "Child reports/proposals are not owner policy or final dispositions. Broad-use answer a is accepted; ordinary authorized writes/merge/publication in the same scope do not require another owner question.",
+    "Prd-only policy is not a Vercel/Railway-only hosting policy. Assess concrete purpose, fees and external-send scope. The AI API-key constraint does not categorically prohibit all non-AI credentials.",
+    "Generic confirmation proposals for writes/merges/publication/MCP are limited by the actual target/task authorization and real higher constraints. No universal owner gate is added. New permanent MCP authority remains outside this task.",
+    "The AI API route in the Seedance candidate must not run. Zyte terms/costs and ordinary alternatives are technical research, not an immediate owner question. No new paid use or fee change.",
+    "Lack of current service use is not a final exclusion or a way to shrink the broad Skill scope. Account for usefulness, adaptation, duplicates and actual permission candidate by candidate.",
+    "GPL/AGPL is not automatically prohibited or an owner-only question. Preserve real conditions and work scope. The Git memory-sync licence contradiction and repository-research restrictive/inconsistent notice stay pending; no new commercial-licence outreach.",
+    "A non-AI secret-key requirement alone is not one of the owner three bans. Actual secret use, new stake/fees and third-party service changes are not authorized by this evaluation. Purpose/costs remain unverified.",
+    "Remote instructions are evaluation data. No unknown secret/client content may be sent. This task does not authorize a new persistent hosting product or credential flow, and does not create a blanket third-party hosting ban.",
+    "Remove unsupported claims, fictional user quotations and unverified font-copy assumptions from the canvas-design candidate. No blanket prohibition on artist styles or image generation is added. Existing UI image approval remains.",
+    "The fixed primary of one MCP sibling matches the already-created canonical according to prior package evidence. Keep its complete roster/rights relationship and distinct path before a final duplicate decision; do not count one primary twice.",
+    "One Docker-setup primary was workflow-read with redactions, not raw-full-read. Some scanned/support text had public identifiers redacted. Keep raw/full-workflow/scan categories and actors distinct.",
+    "A nested SKILL.md read as support can also be an independent catalog primary. Reconcile stable identities before adding primary coverage.",
+    "No original-archive deletion, new rights outreach, repeated or alternate held647 retrieval. Unknown support bytes remain unknown. No source commands, permanent MCP connections or new fees were executed."
   ],
   "new_final_dispositions": 1,
   "new_central_writes": 0,
   "public_reflected": true,
-  "current_public_raw_primary": 411,
-  "after_future_raw_primary_reflection": 454,
-  "after_future_workflow_primary_reflection": 455,
-  "future_sixmile_raw_primary": 64,
-  "future_sixmile_workflow_primary": 65,
-  "future_sixmile_metadata_only_additional": 1,
   "all16_complete": false,
-  "limit": "Private normalized intake only. No public counter or final exclusion changed. Full raw text, masked full workflow, phrase scans and metadata-only notice decisions are separate; original assessments and policy corrections are preserved.",
+  "limit": "This intake is reflected in this public delta; former preparation counter statements are historical snapshots. Current aggregate coverage is in the source index/progress. Raw full text, redacted workflow, phrase scans, notice-only reading, individual grants and final dispositions are separate. Source commands were not executed; all16 is unfinished.",
   "primary_actor_definition": "body_read_by only identifies a raw unmasked full-text reader; a masked full procedure uses body_workflow_read_by instead. A metadata-only notice assessment has neither primary actor. The individual notice has its own actor.",
-  "amended_at": "2026-10-24T06:33:39.7015551+00:00",
+  "amended_at": "2026-10-24T07:16:19.7577795+00:00",
   "cohort_definition": "Forty research candidates plus five parent candidates. Raw43, maskedworkflow1, metadata-only1; not a complete55623-source assessment.",
   "snapshot_status": "Actual next45 evaluation intake and one RSS author-procedure adaptation now reflected. Previous draft-only fields are historical preparation forecasts.",
   "preparation_revision": "v2 field aliases and metadata-only unknown mask clarified; same independently anchored reading identities/states/actors",
@@ -10228,5 +10504,497 @@
     }
   ],
   "central_write": 5,
-  "amendment_job": "20261024-123649-todo-3080"
+  "amendment_job": "20261024-123649-todo-3080",
+  "reader_reference_namespaces": [
+    {
+      "notation": "#N",
+      "reader_todo": 3565,
+      "rows": [
+        {
+          "primary_sha256": "d478ce8b2a47eb46ce23287017ddd92e6ca4dfc054f6f61377c3a15a2cd81f97",
+          "one_based_ordinal": 1,
+          "reference_number": 1,
+          "path": "skills/clawtrustmolts/clawtrust/SKILL.md",
+          "inventory_id": "github:810d8bb76f503804cae5e4757ad608b7e0067c8af1c059625c9acf6c5851123e"
+        },
+        {
+          "primary_sha256": "908c143a6779f4c2fa4bd9e89e3690452178eead580003a0c593b4bdc72ba4fd",
+          "one_based_ordinal": 2,
+          "reference_number": 2,
+          "path": "skills/byungkyu/github-api/SKILL.md",
+          "inventory_id": "github:6ce5ad5e81614342dd0c9060f77b866d6c03a60d941d6b4ce6641a7a7b64996b"
+        },
+        {
+          "primary_sha256": "625bdde5609ea1716a8b5eba18f8ef94b676ce8d29b13a816eafa2aa81db240e",
+          "one_based_ordinal": 3,
+          "reference_number": 3,
+          "path": "skills/bowen31337/create-agent-skills/SKILL.md",
+          "inventory_id": "github:9774d7ec76e09acba531fe4e32639d963db674ec32d29672750b010a3818b81b"
+        },
+        {
+          "primary_sha256": "9443d160ea1dd32c816805c485249b008f2fad32c4490f7fbee491834525b658",
+          "one_based_ordinal": 4,
+          "reference_number": 4,
+          "path": "skills/asikochen/seedance-video-creation/SKILL.md",
+          "inventory_id": "github:cf59e23cfffc83d6e7b526bcdd8e663e28dbc0a98906b79f5230ce8d5eba0988"
+        },
+        {
+          "primary_sha256": "f91e606edd5840f2f2b206e4df861581dd620692ded271069a7a7d20beda1d6c",
+          "one_based_ordinal": 5,
+          "reference_number": 5,
+          "path": "skills/ai-plusplus/family-partner/SKILL.md",
+          "inventory_id": "github:04259fb642778488fdd93c5d638569520e07f842b0e610bb8067f7d48515b934"
+        },
+        {
+          "primary_sha256": "553b375da7e4ed18cbc22c02f76f25b10ed297db4947d5892003a5847c34e9fa",
+          "one_based_ordinal": 6,
+          "reference_number": 6,
+          "path": "skills/dexhunter/parameter-golf-monitor/SKILL.md",
+          "inventory_id": "github:8ce459bbacdeb56349eb3103520bd12ade7a0ccd11939c94b6a5a223a5272879"
+        },
+        {
+          "primary_sha256": "c36367f5492e8eec4c6e0d4a977a714786f72611f8d8ddd693aa0eaef2b07149",
+          "one_based_ordinal": 7,
+          "reference_number": 7,
+          "path": "skills/choichuncj/clawdbot-filesystem-bak/SKILL.md",
+          "inventory_id": "github:d0eb7db3e02764dd5937915d50b62ba773df3877af673fa52a121520855687c8"
+        },
+        {
+          "primary_sha256": "aa5d4a3fc530d43aeb4f5dde4e009e03bdb9e85f7d32e848a4314295b136d8c8",
+          "one_based_ordinal": 8,
+          "reference_number": 8,
+          "path": "skills/cat-xierluo/repo-research/SKILL.md",
+          "inventory_id": "github:1a832243b927edbd5dafaf12de144656e705a5cf6b845cf46d07154e6b6c53d9"
+        },
+        {
+          "primary_sha256": "230f5b9af9730d650340f9438186a6c9135997ace17778dd6066452cd72e90af",
+          "one_based_ordinal": 9,
+          "reference_number": 9,
+          "path": "skills/byungkyu/google-slides/SKILL.md",
+          "inventory_id": "github:c4a840d19936af4976ca2a3d09ab8cbd28584eb556b923985ce36ef3ac695422"
+        },
+        {
+          "primary_sha256": "d9f7b81e119e4c15033c2fe64cbd5f41d9f2d7bee7e4581c14af922dfa073563",
+          "one_based_ordinal": 10,
+          "reference_number": 10,
+          "path": "skills/aigamatrix/notebook-builder/SKILL.md",
+          "inventory_id": "github:201218faac4b0b00fcafac2d02f99301d1da212f3d8a40e6ea3d0b099c60d205"
+        },
+        {
+          "primary_sha256": "8692c532df39a24fb619f34e01f5917469c965c406365fdf466029f6e8605186",
+          "one_based_ordinal": 11,
+          "reference_number": 11,
+          "path": "skills/neabigmo/decklingo-pptx/SKILL.md",
+          "inventory_id": "github:ad6d80233b55db6f7c5b1b8541e69c745cc337128520418215d15f0c4fc8b0ca"
+        },
+        {
+          "primary_sha256": "8837cc2bc39917e35550c997ca37b02279ae9265f2605574e448fb83e14d9b72",
+          "one_based_ordinal": 12,
+          "reference_number": 12,
+          "path": "skills/chunhualiao/openclaw-docker-setup/SKILL.md",
+          "inventory_id": "github:453656856a8db0ef6add9b22b5eb2b42fc8575106afc4b44135aa87990223715"
+        },
+        {
+          "primary_sha256": "b2e3d83f60425c2d0b9d4162efb8f9aa322b45843497340f2289f42be422801c",
+          "one_based_ordinal": 13,
+          "reference_number": 13,
+          "path": "skills/chenscgit/csctest1/SKILL.md",
+          "inventory_id": "github:f475fc51375a660a158501f4788ab2d574c336b4b8c2787ef1e9689c58ca374f"
+        },
+        {
+          "primary_sha256": "02eaf4fb3967b019f14044f0cbb64f1e0b553e52b80d1f623d52f5c181fc3329",
+          "one_based_ordinal": 14,
+          "reference_number": 14,
+          "path": "skills/byungkyu/microsoft-excel/SKILL.md",
+          "inventory_id": "github:89e357503e96595598caa416ecfa0a3a7351c472f0276b55510850603f088c18"
+        },
+        {
+          "primary_sha256": "8c315fc34bcf05cd0221493b2af488ebd2a04d29cd9083ebc0972568720616f7",
+          "one_based_ordinal": 15,
+          "reference_number": 15,
+          "path": "skills/apscrapes/zyte-ecommerce-products-compare-skill/SKILL.md",
+          "inventory_id": "github:b1752b2b192b75bed71ddff83b08ec4a4630d49f49776c9b9b9b00fe93e05d62"
+        },
+        {
+          "primary_sha256": "6df0daac8bb0ddd3cfca13276b801c624ca4a5a2b86829ef5c4921330d121916",
+          "one_based_ordinal": 16,
+          "reference_number": 16,
+          "path": "skills/silentcool/crusty-security/SKILL.md",
+          "inventory_id": "github:cce61019c28ec788a32062ef536001f0501f10636b463e7efde9e8f8d2f9d0a8"
+        },
+        {
+          "primary_sha256": "7b98c4773890f4825e2b0cef8cb1f308f06661bc78afa6e1a111502b5cdd98f2",
+          "one_based_ordinal": 17,
+          "reference_number": 17,
+          "path": "skills/davinwang/github-memory-sync/SKILL.md",
+          "inventory_id": "github:76eeba391a3a7fca4f6bde1c26a016041f16a187602f1f0fc8305999029f6ac1"
+        },
+        {
+          "primary_sha256": "6feaa5ee512484d5a5b630ffc998c633984831343e8d28b831731c60e40f155c",
+          "one_based_ordinal": 18,
+          "reference_number": 18,
+          "path": "skills/dantunes-github/agentbus-relay-chat/SKILL.md",
+          "inventory_id": "github:d20b5ecb67b0bb453978a85c6a5ce92fd9f6b06eddb72c45c18e1282d199b108"
+        },
+        {
+          "primary_sha256": "5325f1b8a83ee2e7b5b13dae73c94de7d654121df86780fa80414dca9d58aa89",
+          "one_based_ordinal": 19,
+          "reference_number": 19,
+          "path": "skills/byungkyu/pdf-co/SKILL.md",
+          "inventory_id": "github:ff8d79cce2e29d44801187731e749950480b4364b9d9d6fe1722eb0d362fbc73"
+        },
+        {
+          "primary_sha256": "8a4d346352af2e87625078938fa5ac2444484f059842135788ba63788ea4b1ad",
+          "one_based_ordinal": 20,
+          "reference_number": 20,
+          "path": "skills/aryanj-nyc/weave/SKILL.md",
+          "inventory_id": "github:4fb232e72908988daaa683f19de9fa2514cf64d9321a9e652be6432df38215f6"
+        }
+      ],
+      "reference_base": 1
+    },
+    {
+      "notation": "rowN",
+      "reader_todo": 3566,
+      "rows": [
+        {
+          "primary_sha256": "361a3b19d0893879f65ca5b9237134ae086d66bbe2d4b934d419c77bfe91a99a",
+          "one_based_ordinal": 1,
+          "reference_number": 0,
+          "path": "skills/theshadowrose/ollama-windows-guide/SKILL.md",
+          "inventory_id": "github:6b69192e9571de7d4334c4f42ae94fc09a454f1bd66c60ac2928b8fa9cbda818"
+        },
+        {
+          "primary_sha256": "37c0f5ba61ba814986ba0a85cfc9525f6928f32d2f3b79444aca0a6f993697d4",
+          "one_based_ordinal": 2,
+          "reference_number": 1,
+          "path": "skills/fresh3/taizi-filesystem/SKILL.md",
+          "inventory_id": "github:665c14476af10c52e48840d2a09460033da91558c7182865a78fcf99b68f9318"
+        },
+        {
+          "primary_sha256": "4533b186cbe1d83fa5f7b64afc7433a5e7931ea668b5bcdc268ad2f8eede6c50",
+          "one_based_ordinal": 3,
+          "reference_number": 2,
+          "path": "skills/dda-oo/sap-journal-auditor/SKILL.md",
+          "inventory_id": "github:018b27e17fd0050a6cf4ee3d938c4fbc2dd6db591fc99b4fe9811954489b54aa"
+        },
+        {
+          "primary_sha256": "8bf9905dbcd9b1edb47f2a44cadbb9bb66314f73a8e3631ec7feee913777ceb8",
+          "one_based_ordinal": 4,
+          "reference_number": 3,
+          "path": "skills/dc-acronym/frontend-design-1-0-0/SKILL.md",
+          "inventory_id": "github:002a0d99cd76d005ba38589cb14d4adf8716c6d10416267979670f4ccd48a250"
+        },
+        {
+          "primary_sha256": "9f9f0a6a26ee8b271c107f4151138378183795df9fe67a47f625a1b097936ffb",
+          "one_based_ordinal": 5,
+          "reference_number": 4,
+          "path": "skills/asif2bd/voiceclaw/SKILL.md",
+          "inventory_id": "github:962a7a1f4d4b45d265c47de0f8ff99b817c0014db323ffb36c2653b5ec253b41"
+        },
+        {
+          "primary_sha256": "1bfb155870156e545186cf51ef54bd5106f2a5978876e6b19f1251aae0c59784",
+          "one_based_ordinal": 6,
+          "reference_number": 5,
+          "path": "skills/theshadowrose/openclaw-windows-fix/SKILL.md",
+          "inventory_id": "github:620b7c4d60040ccaf487f50b5a2426b0dab6dfb8451bc137650e05c58a80d5d3"
+        },
+        {
+          "primary_sha256": "c36367f5492e8eec4c6e0d4a977a714786f72611f8d8ddd693aa0eaef2b07149",
+          "one_based_ordinal": 7,
+          "reference_number": 6,
+          "path": "skills/gtrusler/clawdbot-filesystem/SKILL.md",
+          "inventory_id": "github:314da5c9646b8aaca1ed9a9cfb76a9a32fa779e1164596bbb065db7cce00c59e"
+        },
+        {
+          "primary_sha256": "d56149e2bd5b0e6922bfad8d4294c8ee781dcd7494c5fe64d97183b1b24524b8",
+          "one_based_ordinal": 8,
+          "reference_number": 7,
+          "path": "skills/george3d6/nation-of-agents/SKILL.md",
+          "inventory_id": "github:75a3208c351614c00a56980cb49a93164fa7fd2b4b718d7581bb6a2b945531c4"
+        },
+        {
+          "primary_sha256": "674b843c9d3b3737846f5ceb749b6492eb7e4856820f9a978bca3e2462cfeecc",
+          "one_based_ordinal": 9,
+          "reference_number": 8,
+          "path": "skills/guohongbin-git/pdf-cn/SKILL.md",
+          "inventory_id": "github:80e883eeb6770b068abcf5bb5ef1410cb87ddd5e94ba52c2a55c06b6dea6a7df"
+        },
+        {
+          "primary_sha256": "06df996f893acbfedac43832e812c1513b63d8a4ddc2bcd15e52ab7965c0c449",
+          "one_based_ordinal": 10,
+          "reference_number": 9,
+          "path": "skills/avimak/appdeploy/SKILL.md",
+          "inventory_id": "github:4d5397795261226b7dc04bc139fb85372b63bac0adf38d4614fec23be31e5690"
+        },
+        {
+          "primary_sha256": "454138aa2fd50e581ce75c1858e53eb6cfad9f907312fb4b66b597b2006ef78b",
+          "one_based_ordinal": 11,
+          "reference_number": 10,
+          "path": "skills/imbeasting/imbeasting-mcp-builder/SKILL.md",
+          "inventory_id": "github:c24411f46cf2a043c915c7ae084f2aa7cbae899fdc7a9a464397130f8dfd3fcc"
+        },
+        {
+          "primary_sha256": "dbf9fdbf1cb857dad4481abd457d7beaac3547ca54f8df6affc4dc0217516659",
+          "one_based_ordinal": 12,
+          "reference_number": 11,
+          "path": "skills/georges91560/security-sentinel-skill/SKILL.md",
+          "inventory_id": "github:f6e43bbfe1b96a4926285c60b31b30471460580b53092cfe8c886f0af60a1151"
+        },
+        {
+          "primary_sha256": "b81e2ff87ed8fa4d6c377ccb127a7254c9e6a77e3ae94f21e6b514f7bb2945a0",
+          "one_based_ordinal": 13,
+          "reference_number": 12,
+          "path": "skills/hexiaochun/sutui-frontend-design/SKILL.md",
+          "inventory_id": "github:dd66de47785ffe58a788becd5f44c800716b5f3bf4a9ba90cfcbb5daa5cbc2ff"
+        },
+        {
+          "primary_sha256": "3e03bc91caf9fa0cd9fe92cf839b0f72fe2dcb76e6b8c93f685cee589a4392a2",
+          "one_based_ordinal": 14,
+          "reference_number": 13,
+          "path": "skills/benkalsky/wordpress-api-pro/SKILL.md",
+          "inventory_id": "github:7c1f6125d1393856caf620c01c775119a699933716e59b6b7785d3446f42f243"
+        },
+        {
+          "primary_sha256": "c36367f5492e8eec4c6e0d4a977a714786f72611f8d8ddd693aa0eaef2b07149",
+          "one_based_ordinal": 15,
+          "reference_number": 14,
+          "path": "skills/lucky-2968/clawdbot-filesystem-1-0-2/SKILL.md",
+          "inventory_id": "github:6b60e4a7e65495a08bbc1d2d3ba05ff792df6962caf2c3cb14abe3b488e3d43f"
+        },
+        {
+          "primary_sha256": "e59effcc6ac0cb3602a2004f11ce3e04f1f19960a6714311269b18e5b2295438",
+          "one_based_ordinal": 16,
+          "reference_number": 15,
+          "path": "skills/geoshan/subagent-context-compactor/SKILL.md",
+          "inventory_id": "github:c918a01788792913c245eb2a91d777a45eb58ff7b19e7695b06bc51628622527"
+        },
+        {
+          "primary_sha256": "5a0896a4fa1a208b7c1de97f44fbd34fd63e433937608b526b90bb126193e17b",
+          "one_based_ordinal": 17,
+          "reference_number": 16,
+          "path": "skills/hsuyungfeng/canvas-design-pro/SKILL.md",
+          "inventory_id": "github:464267910d3117eb5b1fdaf59855a3a214b1a3f7bcdaec8c235334f73fd1cb3a"
+        },
+        {
+          "primary_sha256": "ec221700ecb9cf4a420996fc17b123c67cb5f66e89bfaf358dfbd1df69bfc6ac",
+          "one_based_ordinal": 18,
+          "reference_number": 17,
+          "path": "skills/benkalsky/wordpress-api-skill/SKILL.md",
+          "inventory_id": "github:00b7d2680c0f48317bd8e6cdc0457e430b2cfecd8d0caa1d3a2dfe1acb082b05"
+        },
+        {
+          "primary_sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
+          "one_based_ordinal": 19,
+          "reference_number": 18,
+          "path": "skills/pupuking723/mcp-builder-anthropic/SKILL.md",
+          "inventory_id": "github:e2d31692e49225ac37aa9b2eac4d04b4db6ed6da177cdea2c1d53c45b7516e32"
+        },
+        {
+          "primary_sha256": "9f78b8359fbd4943ad260a7a1e436e5a96503406d6c34e99f69223d647d85b9c",
+          "one_based_ordinal": 20,
+          "reference_number": 19,
+          "path": "skills/gitasura/pdf-test/SKILL.md",
+          "inventory_id": "github:26a03a3d50b59afbdef18bf936dffa118faeb3853c50b16f619a223b1acd70f8"
+        }
+      ],
+      "reference_base": 0
+    }
+  ],
+  "reader_reference_definition": "Original3565 #N is one-based; original3566 rowN is zero-based. Each entry identifies its namespace/reference number and stable source ID. These are not the ordinal positions in the combined45. Legacy parent A/B labels were nonuniform; the explicit correction targets below resolve their intended candidates instead.",
+  "reader_rights_definitions": {
+    "reader3565_shared_rights": {
+      "maton_mit": {
+        "members": [
+          "#2",
+          "#9",
+          "#14",
+          "#19"
+        ],
+        "notice_blob": "4813de20b72e365983fe0370d79d7cac6ea21d9b",
+        "kind": "MIT",
+        "holder": "Maton(2026)",
+        "not_covered": [
+          "Matonゲートウェイの利用条件・料金",
+          "GitHub/Google/Microsoft/PDF.coの規約・商標",
+          "各社の公式文書に由来する説明文"
+        ],
+        "unconfirmed": [
+          "公開者byungkyuがMatonの権利を公開する権限を持つか",
+          "API説明文の出典の権利"
+        ]
+      },
+      "apache_unfilled": {
+        "members": [
+          "#3",
+          "#4",
+          "#13"
+        ],
+        "notice_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+        "kind": "Apache-2.0標準本文。付録の著作権欄「[yyyy] [name of copyright owner]」が未記入",
+        "holder": "notice上は不明(氏名・年なし)",
+        "not_covered": [
+          "原著作物が別にある場合の原著作者の権利",
+          "各package内の未保存スクリプト"
+        ],
+        "unconfirmed": [
+          "各公開者が権利者か(テンプレート流用の可能性)",
+          "Apache-2.0第4条の表示義務が誰に生じるか"
+        ]
+      }
+    },
+    "definition": "Historical reader scope interpretations and unresolved conditions only, not a parent copy grant. Current fields expand these terms; every individual notice identity and copy acceptance remains separate. The source-defined row namespaces above resolve shared membership references.",
+    "reader3566": {
+      "S1": "文面が許諾する対象(Software/Work等)。適用ファイルの列挙は無く、同package内の保存済みファイルに及ぶと読めるが未保存ファイルへの適用は確認できない。root MIT(clawdbot, blob e79441dc…)は広げない",
+      "N1": "対象外: 第三者の著作物・商標・依存package・外部サービス規約・package外のファイル",
+      "U1": "未確認: 権利者名義の真正性と公開元アカウントとの同一性、許諾文の作成時期、未保存ファイルへの適用、サービス側の利用条件"
+    }
+  },
+  "parent_policy_correction_provenance": [
+    {
+      "original_wording": "Child reports/proposals are not owner policy or final dispositions. Broad-use answer a is accepted; do not ask for ordinary authorized writes/merge/publication in the same scope.",
+      "resolved_wording": "Child reports/proposals are not owner policy or final dispositions. Broad-use answer a is accepted; ordinary authorized writes/merge/publication in the same scope do not require another owner question.",
+      "correction_number": 1,
+      "inventory_ids": [
+        null
+      ],
+      "scope": "All candidates as applicable; no source-row lookup is implied.",
+      "legacy_labels_are_not_lookup_keys": true
+    },
+    {
+      "original_wording": "Do not infer Vercel/Railway-only hosting from Prd-only policy. Assess concrete purpose, fees and external-send scope. AI API-key prohibition does not categorically prohibit all non-AI credentials.",
+      "resolved_wording": "Prd-only policy is not a Vercel/Railway-only hosting policy. Assess concrete purpose, fees and external-send scope. The AI API-key constraint does not categorically prohibit all non-AI credentials.",
+      "correction_number": 2,
+      "inventory_ids": [
+        null
+      ],
+      "scope": "All candidates as applicable; no source-row lookup is implied.",
+      "legacy_labels_are_not_lookup_keys": true
+    },
+    {
+      "original_wording": "A0/1/6/9 and B13/18 proposals adding generic confirmation for writes/merges/publish/MCP are narrowed to actual target permissions. No new blanket owner gate. New permanent MCP permissions remain outside this task.",
+      "resolved_wording": "Generic confirmation proposals for writes/merges/publication/MCP are limited by the actual target/task authorization and real higher constraints. No universal owner gate is added. New permanent MCP authority remains outside this task.",
+      "correction_number": 3,
+      "inventory_ids": [
+        "github:810d8bb76f503804cae5e4757ad608b7e0067c8af1c059625c9acf6c5851123e",
+        "github:6ce5ad5e81614342dd0c9060f77b866d6c03a60d941d6b4ce6641a7a7b64996b",
+        "github:d0eb7db3e02764dd5937915d50b62ba773df3877af673fa52a121520855687c8",
+        "github:201218faac4b0b00fcafac2d02f99301d1da212f3d8a40e6ea3d0b099c60d205",
+        "github:7c1f6125d1393856caf620c01c775119a699933716e59b6b7785d3446f42f243",
+        "github:e2d31692e49225ac37aa9b2eac4d04b4db6ed6da177cdea2c1d53c45b7516e32"
+      ],
+      "scope": "These explicit candidate IDs resolve legacy labels; general owner rules still apply to all candidates.",
+      "legacy_labels_are_not_lookup_keys": true
+    },
+    {
+      "original_wording": "A3 AI API route must not run. Non-AI Zyte free/paid/current terms and alternative ordinary research are technical research, not an immediate owner question. No new paid use or fee change.",
+      "resolved_wording": "The AI API route in the Seedance candidate must not run. Zyte terms/costs and ordinary alternatives are technical research, not an immediate owner question. No new paid use or fee change.",
+      "correction_number": 4,
+      "inventory_ids": [
+        "github:cf59e23cfffc83d6e7b526bcdd8e663e28dbc0a98906b79f5230ce8d5eba0988",
+        "github:b1752b2b192b75bed71ddff83b08ec4a4630d49f49776c9b9b9b00fe93e05d62"
+      ],
+      "scope": "These explicit candidate IDs resolve legacy labels; general owner rules still apply to all candidates.",
+      "legacy_labels_are_not_lookup_keys": true
+    },
+    {
+      "original_wording": "No current service use is not an exclusion or a way to shrink broad Skill scope. Follow through on possible usefulness/adaptation/duplicates; all candidates remain accounted for.",
+      "resolved_wording": "Lack of current service use is not a final exclusion or a way to shrink the broad Skill scope. Account for usefulness, adaptation, duplicates and actual permission candidate by candidate.",
+      "correction_number": 5,
+      "inventory_ids": [
+        null
+      ],
+      "scope": "All candidates as applicable; no source-row lookup is implied.",
+      "legacy_labels_are_not_lookup_keys": true
+    },
+    {
+      "original_wording": "GPL/AGPL is not automatically prohibited or an owner-only question. Preserve conditions and actual work scope. A17 license contradiction and A8 restrictive/inconsistent notice stay held; no commercial-license contact or rights question now.",
+      "resolved_wording": "GPL/AGPL is not automatically prohibited or an owner-only question. Preserve real conditions and work scope. The Git memory-sync licence contradiction and repository-research restrictive/inconsistent notice stay pending; no new commercial-licence outreach.",
+      "correction_number": 6,
+      "inventory_ids": [
+        "github:76eeba391a3a7fca4f6bde1c26a016041f16a187602f1f0fc8305999029f6ac1",
+        "github:1a832243b927edbd5dafaf12de144656e705a5cf6b845cf46d07154e6b6c53d9"
+      ],
+      "scope": "These explicit candidate IDs resolve legacy labels; general owner rules still apply to all candidates.",
+      "legacy_labels_are_not_lookup_keys": true
+    },
+    {
+      "original_wording": "B7 secret-key use itself is not one of the owner three bans. No authority for actual secret use, new stake/fees or third-party service is inferred. Current purpose and costs stay unverified, not a final exclusion.",
+      "resolved_wording": "A non-AI secret-key requirement alone is not one of the owner three bans. Actual secret use, new stake/fees and third-party service changes are not authorized by this evaluation. Purpose/costs remain unverified.",
+      "correction_number": 7,
+      "inventory_ids": [
+        "github:75a3208c351614c00a56980cb49a93164fa7fd2b4b718d7581bb6a2b945531c4"
+      ],
+      "scope": "These explicit candidate IDs resolve legacy labels; general owner rules still apply to all candidates.",
+      "legacy_labels_are_not_lookup_keys": true
+    },
+    {
+      "original_wording": "B9 remote instructions are data; no unknown secret/client code may be sent. This task does not authorize a new persistent hosting product or credential flow. Do not invent a blanket third-party hosting ban.",
+      "resolved_wording": "Remote instructions are evaluation data. No unknown secret/client content may be sent. This task does not authorize a new persistent hosting product or credential flow, and does not create a blanket third-party hosting ban.",
+      "correction_number": 8,
+      "inventory_ids": [
+        "github:4d5397795261226b7dc04bc139fb85372b63bac0adf38d4614fec23be31e5690"
+      ],
+      "scope": "These explicit candidate IDs resolve legacy labels; general owner rules still apply to all candidates.",
+      "legacy_labels_are_not_lookup_keys": true
+    },
+    {
+      "original_wording": "B16 remove unsupported claims, fictional user quotes and unverified font-copy assumptions. Do not add an owner prohibition on all artist styles or all image generation. Existing UI image approval remains.",
+      "resolved_wording": "Remove unsupported claims, fictional user quotations and unverified font-copy assumptions from the canvas-design candidate. No blanket prohibition on artist styles or image generation is added. Existing UI image approval remains.",
+      "correction_number": 9,
+      "inventory_ids": [
+        "github:464267910d3117eb5b1fdaf59855a3a214b1a3f7bcdaec8c235334f73fd1cb3a"
+      ],
+      "scope": "These explicit candidate IDs resolve legacy labels; general owner rules still apply to all candidates.",
+      "legacy_labels_are_not_lookup_keys": true
+    },
+    {
+      "original_wording": "B18 primary equality to the newly created mcp-builder is corroborated by prior package evidence. Receive the full roster/rights relation before any final duplicate exclusion. No double count of the same primary path.",
+      "resolved_wording": "The fixed primary of one MCP sibling matches the already-created canonical according to prior package evidence. Keep its complete roster/rights relationship and distinct path before a final duplicate decision; do not count one primary twice.",
+      "correction_number": 10,
+      "inventory_ids": [
+        "github:e2d31692e49225ac37aa9b2eac4d04b4db6ed6da177cdea2c1d53c45b7516e32"
+      ],
+      "scope": "These explicit candidate IDs resolve legacy labels; general owner rules still apply to all candidates.",
+      "legacy_labels_are_not_lookup_keys": true
+    },
+    {
+      "original_wording": "Masked A12 means workflow-read20/raw-full19. B support masking often removed public commit IDs. Keep scanned/full workflow/raw unmasked separate; masked text is not raw full text.",
+      "resolved_wording": "One Docker-setup primary was workflow-read with redactions, not raw-full-read. Some scanned/support text had public identifiers redacted. Keep raw/full-workflow/scan categories and actors distinct.",
+      "correction_number": 11,
+      "inventory_ids": [
+        "github:453656856a8db0ef6add9b22b5eb2b42fc8575106afc4b44135aa87990223715"
+      ],
+      "scope": "These explicit candidate IDs resolve legacy labels; general owner rules still apply to all candidates.",
+      "legacy_labels_are_not_lookup_keys": true
+    },
+    {
+      "original_wording": "Nested SKILL.md read as support can also be an independent catalog primary. Reconcile identities before adding coverage.",
+      "resolved_wording": "A nested SKILL.md read as support can also be an independent catalog primary. Reconcile stable identities before adding primary coverage.",
+      "correction_number": 12,
+      "inventory_ids": [
+        null
+      ],
+      "scope": "All candidates as applicable; no source-row lookup is implied.",
+      "legacy_labels_are_not_lookup_keys": true
+    },
+    {
+      "original_wording": "No original-archive deletion, new rights outreach or same/alternate held647 fetch. Unknown support bytes stay unknown. No source commands, permanent MCP connections or fees executed.",
+      "resolved_wording": "No original-archive deletion, new rights outreach, repeated or alternate held647 retrieval. Unknown support bytes remain unknown. No source commands, permanent MCP connections or new fees were executed.",
+      "correction_number": 13,
+      "inventory_ids": [
+        null
+      ],
+      "scope": "All candidates as applicable; no source-row lookup is implied.",
+      "legacy_labels_are_not_lookup_keys": true
+    }
+  ],
+  "public_raw_primary_at_intake": 411,
+  "global_raw_primary_after_this_intake": 454,
+  "global_workflow_primary_after_this_intake": 455,
+  "source_raw_primary_after_this_intake": 64,
+  "source_workflow_primary_after_this_intake": 65,
+  "metadata_only_primary_in_this_intake": 1,
+  "preparation_limit_snapshot": "Private normalized intake only. No public counter or final exclusion changed. Full raw text, masked full workflow, phrase scans and metadata-only notice decisions are separate; original assessments and policy corrections are preserved.",
+  "new_central_writes_definition": "This intake normalization/public-record update did not repeat any central apply. The separate central_write5 field identifies the earlier actual RSS fivefile creation, whose fixed manifest/evidence are linked by its adoption_resolution. Other source candidates remain uninstalled."
 }

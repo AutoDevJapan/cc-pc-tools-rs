@@ -478,12 +478,21 @@
       "upstream_original_preserved": true,
       "source_notice_preserved": true,
       "independent_review_pending": false,
-      "public_delta_review_pending": true,
+      "public_delta_review_pending": false,
       "explicit_use_check_pending": false,
       "explicit_use_assessment": "3564 A/B/C explicit design/numerical core passed; no real server/rendering or implicit-selection proof",
       "evidence": "skills-3080-mcp-pointer-installation-evidence.json",
       "existing_body_comparison_complete": false,
-      "third_party_support_or_service_rights_accepted": false
+      "third_party_support_or_service_rights_accepted": false,
+      "public_delta_acceptance": {
+        "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
+        "review_todos": [
+          3590,
+          3599
+        ],
+        "merge": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
+        "pr": 428
+      }
     },
     {
       "inventory_id": "github:a89e967becb119a2e1fde4392aaeb0c034ff9c683290947db8c690624fc9887e",
@@ -499,12 +508,21 @@
       "upstream_original_preserved": true,
       "source_notice_preserved": true,
       "independent_review_pending": false,
-      "public_delta_review_pending": true,
+      "public_delta_review_pending": false,
       "explicit_use_check_pending": false,
       "explicit_use_assessment": "3564 A/B/C explicit design/numerical core passed; no real server/rendering or implicit-selection proof",
       "evidence": "skills-3080-mcp-pointer-installation-evidence.json",
       "existing_body_comparison_complete": false,
-      "third_party_support_or_service_rights_accepted": false
+      "third_party_support_or_service_rights_accepted": false,
+      "public_delta_acceptance": {
+        "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
+        "review_todos": [
+          3590,
+          3599
+        ],
+        "merge": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
+        "pr": 428
+      }
     },
     {
       "inventory_id": "github:89360b4dedcdf7fceccbef746956ad5f50a6c50126946fb12731aff46af0851b",
@@ -522,7 +540,7 @@
       "independent_review_pending": false,
       "public_delta_review_pending": true,
       "explicit_use_check_pending": false,
-      "explicit_use_assessment": "3591seasonA/B/C and3584RSSA/B/C plusparentownGoXML/numericalfixtures; no realwebsite/render/performance proof",
+      "explicit_use_assessment": "3584 RSS A/B/C plus owned literal Go XML serialize/parse and invalid-character tests; actual placement/discovery confirmed; no real website or hosted feed proof.",
       "evidence": "skills-3080-rss-season-installation-evidence.json",
       "existing_body_comparison_complete": false,
       "third_party_support_or_service_rights_accepted": false
@@ -543,7 +561,7 @@
       "independent_review_pending": false,
       "public_delta_review_pending": true,
       "explicit_use_check_pending": false,
-      "explicit_use_assessment": "3591seasonA/B/C and3584RSSA/B/C plusparentownGoXML/numericalfixtures; no realwebsite/render/performance proof",
+      "explicit_use_assessment": "3591 season A/B/C plus owned interrupted four-state numerical model tests; actual placement/discovery confirmed; no renderer/shader/performance proof.",
       "evidence": "skills-3080-rss-season-installation-evidence.json",
       "existing_body_comparison_complete": false,
       "third_party_support_or_service_rights_accepted": false

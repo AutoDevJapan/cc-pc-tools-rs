@@ -3271,7 +3271,7 @@
         "definition": "Earlier private next10 preparation records parent full reread of official fixed primary. This is separate from child3554 archival notice reading."
       },
       "adoption_resolution": {
-        "public_delta_review_pending": true,
+        "public_delta_review_pending": false,
         "fresh_discovery_enabled": true,
         "support_or_service_rights_accepted": false,
         "actual_structure_hash_passed": true,
@@ -3285,7 +3285,16 @@
           3564,
           3569
         ],
-        "evidence": "skills-3080-mcp-pointer-installation-evidence.json"
+        "evidence": "skills-3080-mcp-pointer-installation-evidence.json",
+        "public_delta_acceptance": {
+          "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
+          "review_todos": [
+            3590,
+            3599
+          ],
+          "merge": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
+          "pr": 428
+        }
       }
     },
     {
@@ -4048,7 +4057,7 @@
     "central_writes": 0
   },
   "next21_definition": "Earlier eleven plus research3554 ten unique primary paths. Support102+63=165, saved40+35=75, full12+30=42, scan0+5=5, unsaved62+28=90. Metadata eligibility is not individual permission. No new adoption or exclusion is added.",
-  "amended_at": "2026-10-24T06:34:55.2016131+00:00",
+  "amended_at": "2026-10-24T07:16:19.7577795+00:00",
   "amendment_job": "20261024-123649-todo-3080",
   "amendment_definition": "Document amendment time only. Historical first21 reading/adoption snapshots and identities are preserved. This followup incorporates3590/3599 scope explanations and an additional45 aggregate-index link; it is not a new reading of the historical21.",
   "next_research_todos": [

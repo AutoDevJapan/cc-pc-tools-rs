@@ -652,42 +652,33 @@
     "definition_of_legacy_latest_name": "Historical PR406 accepted-delta snapshot. Later accepted merges/reviews are in merged_pr_history/latest_merged_pr/received_review_history/latest_received_review; this field is not current queue status."
   },
   "latest_received_review": {
-    "todo": 3599,
-    "job": "20261024-151052-todo-3599",
+    "todo": 3602,
+    "job": "20261024-153854-todo-3602",
     "status": "succeeded",
     "exit_code": 0,
     "model": "anthropic/claude-sonnet-5-5",
     "effort": "max",
     "model_origin": "owner_request",
     "effort_origin": "owner_request",
-    "effective_reasoning_measured": false,
     "native_matched": true,
     "parent_full_read": true,
-    "raw_file": "review3599-original123649.md",
-    "raw_bytes": 4786,
-    "raw_sha256": "a620a963b4e5e9800a15cf1854387ad9916cd89b2ac342db4e2f4ae3a742e1ce",
-    "base": "ebb023f2b04f4551037fd5bf746819466e96a4b4",
-    "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
+    "raw_file": "review3602-original123649.md",
+    "raw_bytes": 7150,
+    "raw_sha256": "dc124ce210d9203473be211682b4817a7daca7e2f6bd5ff08c92e886b0a6ff09",
+    "base": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
+    "head": "50ab02f3420dbe0c34458708dd82adf482c0f763",
     "must": 0,
-    "suggestions": 4,
-    "nits": 5,
-    "scope": "All nine correction files/all28hunks (+246/-52), fixedgit/jq/openssl/stdin-node plus limited parentproof; no Go/Cargo/central/networkexecution. Old content reviews and other19file baseline reused.",
-    "received_at": "2026-10-24T06:33:04.6266430+00:00",
-    "resolution_pending": false,
-    "nonblocking_resolution": {
-      "suggestions": "Additional missingzero/entrydescription negatives, chronologicalhistory and historical latest_merged_delta labeling will be incorporated into the already-required next45 publication delta; existing validator rejects invalid data, current actual values/records are correct.",
-      "nits": "Legacy amendmenttime/currentwording and reader subject clarify in next delta. Exact observedmax comparison optional: current receipt equals checkedmax; no incorrect accepted snapshot."
-    },
+    "suggestions": 6,
+    "nits": 6,
+    "scope": "All24file differences, elevenJSON strictparse/no duplicatekeys/UTF8/LF, all45semantic assessments, support422 state/fingerprint mechanical check, source/bundle/manifest/design/model hashes and25mutation paths; no Go/central/network/CI execution.",
+    "received_at": "2026-10-24T07:09:02.4159729+00:00",
+    "resolution_pending": true,
+    "planned_corrections": "One limitedfollowup: common observedmax and snapshot48fingerprint, exactnegativeguards/aggregatefields, publicrights legend and stable readerrowmapping, historical/current flags and scope, acceptance links and privacy/receipt wording; sourcebytes/adoptioncounts/rawcoverage unchanged.",
     "owner_action_required": false,
-    "subsequent_followup_in_this_delta": {
-      "new_central_writes": 0,
-      "suggestions": "All four: nil evidence and actual entry-description mutations, chronological merge history and historical latest_merged_delta labeling.",
-      "original_scope_and_raw_response_unchanged": true,
-      "nits": "Historical cohort amendment provenance, latest-review link, dated-prose tense, explicit3590 reader subject and exactlastverification comparison. The lateobservation case reproduced Red; fixed-input test receipts and CI record subsequent executable validation separately."
-    }
+    "parent_followup": "Public rights definitions and source-based row namespaces, accepted-vs-pending snapshots, privacy removal, common last-verification/name-fingerprint tests and precise mutation guards. This new correction delta awaits its own review/CI/merge."
   },
   "latest_merged_pr": {
-    "scope": "MCP/pointer2 actualdeployment publicevidence and3590fixedninehunks; not the present new45/RSSseason publication.",
+    "scope": "MCP/pointer2 actualdeployment publicevidence and3590fixedninefiles28hunks; not the present new45/RSSseason publication.",
     "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/428",
     "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
     "merge": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
@@ -951,13 +942,49 @@
       "nits": 5,
       "scope": "All19files/42hunks, fixedhashes/counters127 andGo logic checked; rawbundle semanticacceptance3564/3569 reused; no Go/central/network execution",
       "received_at": "2026-10-24T06:01:47.9786976+00:00",
-      "resolution_pending": true,
+      "resolution_pending": false,
       "next": "Remove mutablelatest-count prosecopy and link canonicalledger/progress; add missingdiscoveryfield/overclaim tests, restore prior structuredhistory and correct snapshot timestamp/definitions; review fixedimpactdelta beforemerge",
       "parent_resolution": {
         "scope": "Original Must count remains historical; correction accepted separately.",
         "confirmation_todo": 3599,
         "confirmation_must": 0,
         "fixed_head": "bca16b76c51b68223f84a31aaa9a960ca15f5787"
+      },
+      "resolution_pending_at_original_receipt": true
+    },
+    {
+      "todo": 3599,
+      "job": "20261024-151052-todo-3599",
+      "status": "succeeded",
+      "exit_code": 0,
+      "model": "anthropic/claude-sonnet-5-5",
+      "effort": "max",
+      "model_origin": "owner_request",
+      "effort_origin": "owner_request",
+      "effective_reasoning_measured": false,
+      "native_matched": true,
+      "parent_full_read": true,
+      "raw_file": "review3599-original123649.md",
+      "raw_bytes": 4786,
+      "raw_sha256": "a620a963b4e5e9800a15cf1854387ad9916cd89b2ac342db4e2f4ae3a742e1ce",
+      "base": "ebb023f2b04f4551037fd5bf746819466e96a4b4",
+      "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
+      "must": 0,
+      "suggestions": 4,
+      "nits": 5,
+      "scope": "All nine correction files/all28hunks (+246/-52), fixedgit/jq/openssl/stdin-node plus limited parentproof; no Go/Cargo/central/networkexecution. Old content reviews and other19file baseline reused.",
+      "received_at": "2026-10-24T06:33:04.6266430+00:00",
+      "resolution_pending": false,
+      "nonblocking_resolution": {
+        "suggestions": "Additional missingzero/entrydescription negatives, chronologicalhistory and historical latest_merged_delta labeling will be incorporated into the already-required next45 publication delta; existing validator rejects invalid data, current actual values/records are correct.",
+        "nits": "Legacy amendmenttime/currentwording and reader subject clarify in next delta. Exact observedmax comparison optional: current receipt equals checkedmax; no incorrect accepted snapshot."
+      },
+      "owner_action_required": false,
+      "subsequent_followup_in_this_delta": {
+        "new_central_writes": 0,
+        "suggestions": "All four: nil evidence and actual entry-description mutations, chronological merge history and historical latest_merged_delta labeling.",
+        "original_scope_and_raw_response_unchanged": true,
+        "nits": "Historical cohort amendment provenance, latest-review link, dated-prose tense, explicit3590 reader subject and exactlastverification comparison. The lateobservation case reproduced Red; fixed-input test receipts and CI record subsequent executable validation separately."
       }
     }
   ],
@@ -1172,7 +1199,7 @@
     "new_individual_rights_exclusions": 1,
     "existing_duplicate_receipts_reused": 1
   },
-  "amended_at": "2026-10-24T06:34:55.2016131+00:00",
+  "amended_at": "2026-10-24T07:16:19.7577795+00:00",
   "amendment_job": "20261024-123649-todo-3080",
   "mcp_pointer_installation": {
     "real_server_or_rendering_tested": false,
@@ -1185,10 +1212,19 @@
     "scan_traversal_warning_markers": 2,
     "discovery_enabled": 2,
     "warning_cause_linked": false,
-    "public_delta_review_pending": true,
+    "public_delta_review_pending": false,
     "files": 10,
     "full_context_budget_proven": false,
-    "source": "skills-3080-mcp-pointer-installation-evidence.json"
+    "source": "skills-3080-mcp-pointer-installation-evidence.json",
+    "public_delta_acceptance": {
+      "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
+      "review_todos": [
+        3590,
+        3599
+      ],
+      "merge": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
+      "pr": 428
+    }
   },
   "sixmile_additional_entrypoint_evaluation": {
     "metadata_only_primary": 1,
@@ -1228,6 +1264,11 @@
     "public_delta_review_pending": true,
     "discovery_found_enabled": 2,
     "real_website_or_renderer_tested": false,
-    "content_review_must": 0
+    "content_review_must": 0,
+    "content_review_todos": [
+      3584,
+      3591
+    ],
+    "content_review_definition": "3584 reviewed RSS initial five files;3591 reviewed RSS three-file amendment and seasonfive. The legacy single content_review field identifies the last content review only."
   }
 }

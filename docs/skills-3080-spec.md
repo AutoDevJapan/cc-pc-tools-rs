@@ -260,10 +260,16 @@ PR417は固定bf5..853を3521、固定853..abを3529が読み、いずれもMust
 
 ## 6mileの次10評価を追加した範囲
 
-本文評価は旧11と新10の計21入口で、全体は137+76+177+21=411。次10の出典、個別通知、読取/未読、支持165と47の単位、既存比較4件の経緯は[固定事実と限界](skills-3080-review-resolution.md#sixmile-next10-facts)に集約する。評価の公開と、後続の実配置の証拠は別の作業範囲として保持する。
+本文評価は旧11と新10の計21入口で、この節の時点の全体は137+76+177+21=411。次10の出典、個別通知、読取/未読、支持165と47の単位、既存比較4件の経緯は[固定事実と限界](skills-3080-review-resolution.md#sixmile-next10-facts)に集約する。評価の公開と、後続の実配置の証拠は別の作業範囲として保持する。
 
 ## 2026-10-24・新規2件の実配置
 
 MCP設計と距離ごとのカーソル軌跡を、固定V2のreview3564/3569（Must0まで解消）後に新規配置した。新2directory/10fileの実作成・読戻し、構造/参照/hash/正負例、新Codex0.163.0で2件/enabled/説明一致/解析0を確認。この節の時点の採否は新規30/統合3/除外8/残73179、本文評価411は不変。設計30は旧7batchの28と、公式の個別Apache通知を確認したMCP設計と、作者のroot MITを確認したMengTo設計を合算する。固定bundleのJSONはLFでbyte保持する。
 
 実結果と検証限界は[2件の受入記録](skills-3080-mcp-pointer-acceptance.md)と[機械可読証拠](skills-3080-mcp-pointer-installation-evidence.json)を正本とする。明示の設計/数値例は確認したが、実サーバー/実描画/暗黙選択/全context予算は未確認。探索上限警告2件と原因未確定を保持する。既存4比較や647取得保留を解除せず、本人判断待ちは増やさない。新しい公開差分の別モデルreview/CI/mergeは別工程で、元3080/Issue283は未完のまま継続する。
+
+## 2026-10-24 RSS生成・季節切替と追加45評価
+
+[RSS生成・季節切替の受入記録](skills-3080-rss-season-acceptance.md)、[固定2設計](skills-3080-rss-season-designs.json)、[配置と発見の証拠](skills-3080-rss-season-installation-evidence.json)、[6mileの読取索引](skills-3080-sixmile-evaluation-index.json)を対応付ける。全体の最新採否は[台帳](skills-3080-adoptions.json)、読取の現在値と受入履歴は[進行記録](skills-3080-progress.json)へ集約する。
+
+3602は固定0801af4a..50ab02f3の24差分と45評価の意味を読み、Must0/Suggestion6/Nit6を返した。原応答7150B/SHAdc124ce210d9203473be211682b4817a7daca7e2f6bd5ff08c92e886b0a6ff09を親が保存・全文読了し、job/nativeのSonnet5.5/maxを照合。422支持は状態/指紋の機械照合で、全支持の意味や全16資料の受入ではない。この補正は、公開する個別許諾の説明と出典行の対応、受入済みと未了の表示、時刻/保持対象/負例の確認を整える。原文・notice・Skill bundle・配置fileと既存の読取件数/最終採否は変更しない。この補正時点の新headに対するreview/CI/mergeは、以後の履歴で別に確認する。

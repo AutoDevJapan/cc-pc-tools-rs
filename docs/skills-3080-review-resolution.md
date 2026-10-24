@@ -415,3 +415,9 @@ Suggestionは、既存の発見証拠の同名別path/全metadata件数/探索�
 Nitは、総合観測時刻を既に記録した最後の確認時刻へ合わせ、追補時刻と分けた。新たな発見操作をした意味ではない。2015/2000は探索根拠へリンクし、6mileのnew_central_write0は評価差分の歴史値と定義した。boolの明示記録の判定は既存関数へ統合し、design/bundle/manifestの正負例と入口descriptionも照合する。MCP公式個別ApacheとMengTo作者rootMITの2つの根拠を区別し、実効の推論量を測定したとは扱わない。
 
 固定Skill bundleと中央の実ファイルは変更しない。新しい候補の採否/本文読了や中央書込をこの補正へ加算せず、追加RSS/季節の別の実結果と全16資料の継続を保持する。
+
+## 2026-10-24 RSS生成・季節切替と追加45評価
+
+[RSS生成・季節切替の受入記録](skills-3080-rss-season-acceptance.md)、[固定2設計](skills-3080-rss-season-designs.json)、[配置と発見の証拠](skills-3080-rss-season-installation-evidence.json)、[6mileの読取索引](skills-3080-sixmile-evaluation-index.json)を対応付ける。全体の最新採否は[台帳](skills-3080-adoptions.json)、読取の現在値と受入履歴は[進行記録](skills-3080-progress.json)へ集約する。
+
+3602は固定0801af4a..50ab02f3の24差分と45評価の意味を読み、Must0/Suggestion6/Nit6を返した。原応答7150B/SHAdc124ce210d9203473be211682b4817a7daca7e2f6bd5ff08c92e886b0a6ff09を親が保存・全文読了し、job/nativeのSonnet5.5/maxを照合。422支持は状態/指紋の機械照合で、全支持の意味や全16資料の受入ではない。この補正は、公開する個別許諾の説明と出典行の対応、受入済みと未了の表示、時刻/保持対象/負例の確認を整える。原文・notice・Skill bundle・配置fileと既存の読取件数/最終採否は変更しない。この補正時点の新headに対するreview/CI/mergeは、以後の履歴で別に確認する。

@@ -226,6 +226,19 @@ func validateExtra45Reading(a extra45Assessment) error {
 }
 
 func TestAdditionalSixmile45RejectsRawMaskedScanAndMetadataConflation(t *testing.T) {
+	wanted := map[string]string{
+		"masked_primary_claims_raw":      "extra45 reading: raw primary acquired masking or lost its reader",
+		"workflow_primary_loses_actor":   "extra45 reading: masked workflow primary was claimed as raw or lost its actor",
+		"metadata_primary_claims_reader": "extra45 reading: metadata-only primary acquired a text reading claim",
+		"raw_support_claims_scan_actor":  "extra45 reading: raw support acquired masking/scanning or a wrong reader",
+		"masked_support_claims_raw":      "extra45 reading: raw support acquired masking/scanning or a wrong reader",
+		"scan_claims_full":               "extra45 reading: raw support acquired masking/scanning or a wrong reader",
+		"unsaved_claims_workflow":        "extra45 reading: unknown support bytes or reading were invented",
+		"missing_execution":              "extra45 reading: support identity or explicit state is missing",
+		"unknown_bytes_became_zero":      "extra45 reading: unknown support bytes or reading were invented",
+		"body_hash_changed":              "extra45 reading: fixed independent identities or reading actors changed",
+		"source_url_changed":             "extra45 reading: primary identity/state is absent or conflated",
+	}
 	for _, kind := range []string{"valid", "masked_primary_claims_raw", "workflow_primary_loses_actor", "metadata_primary_claims_reader", "raw_support_claims_scan_actor", "masked_support_claims_raw", "scan_claims_full", "unsaved_claims_workflow", "missing_execution", "unknown_bytes_became_zero", "body_hash_changed", "source_url_changed"} {
 		t.Run(kind, func(t *testing.T) {
 			var a extra45Assessment
@@ -310,33 +323,35 @@ func TestAdditionalSixmile45RejectsRawMaskedScanAndMetadataConflation(t *testing
 			if (err != nil) != (kind != "valid") {
 				t.Fatalf("%s: %v", kind, err)
 			}
-			if kind != "valid" && !strings.HasPrefix(err.Error(), "extra45 reading:") {
-				t.Fatalf("mutation failed for another reason: %v", err)
+			if kind != "valid" && (wanted[kind] == "" || err.Error() != wanted[kind]) {
+				t.Fatalf("%s reached another guard: got %v, want %q", kind, err, wanted[kind])
 			}
 		})
 	}
 }
 
 type sixmileCohortIndex struct {
-	Source        string `json:"source"`
-	Commit        string `json:"commit"`
-	Tree          string `json:"tree_sha"`
-	Expected      int    `json:"entrypoints_expected"`
-	Paths         int    `json:"candidate_paths_assessed_or_notice_read"`
-	Raw           int    `json:"raw_unmasked_primary_full_read"`
-	Workflow      int    `json:"workflow_primary_full_read"`
-	Masked        int    `json:"masked_workflow_primary"`
-	Metadata      int    `json:"metadata_only_primary"`
-	NotRaw        int    `json:"primary_not_raw_full_read"`
-	NotCap        *bool  `json:"no_adoption_cap"`
-	Support       int    `json:"support"`
-	Saved         int    `json:"support_saved"`
-	Read          int    `json:"support_raw_unmasked_full_read"`
-	MaskedSupport int    `json:"support_masked_workflow_full_read"`
-	Scan          int    `json:"support_scan_only"`
-	SavedUnread   int    `json:"support_saved_unread"`
-	Unsaved       int    `json:"support_unsaved"`
-	Cohorts       []struct {
+	Source          string `json:"source"`
+	Commit          string `json:"commit"`
+	Tree            string `json:"tree_sha"`
+	Expected        int    `json:"entrypoints_expected"`
+	Paths           int    `json:"candidate_paths_assessed_or_notice_read"`
+	Raw             int    `json:"raw_unmasked_primary_full_read"`
+	Workflow        int    `json:"workflow_primary_full_read"`
+	Masked          int    `json:"masked_workflow_primary"`
+	Metadata        int    `json:"metadata_only_primary"`
+	NotRaw          int    `json:"primary_not_raw_full_read"`
+	NotCap          *bool  `json:"no_adoption_cap"`
+	Support         int    `json:"support"`
+	Saved           int    `json:"support_saved"`
+	Read            int    `json:"support_raw_unmasked_full_read"`
+	MaskedSupport   int    `json:"support_masked_workflow_full_read"`
+	Scan            int    `json:"support_scan_only"`
+	SavedUnread     int    `json:"support_saved_unread"`
+	Unsaved         int    `json:"support_unsaved"`
+	WorkflowSupport int    `json:"support_workflow_full_read"`
+	Unassessed      int    `json:"candidate_paths_without_assessment"`
+	Cohorts         []struct {
 		ID            string `json:"id"`
 		Artifact      string `json:"artifact"`
 		Paths         int    `json:"candidate_paths"`
@@ -445,7 +460,7 @@ func validateSixmileCohortIndex(index sixmileCohortIndex, old legacy21Projection
 			return errors.New("sixmile cohorts: per-cohort raw/masked/support projection differs")
 		}
 	}
-	if allPaths != 66 || raw != 64 || workflow != 65 || masked != 1 || metadata != 1 || index.Paths != allPaths || index.Raw != raw || index.Workflow != workflow || index.Masked != masked || index.Metadata != metadata || index.NotRaw != index.Expected-raw || index.Support != support || index.Saved != saved || index.Read != read || index.MaskedSupport != maskedSupport || index.Scan != scan || index.Unsaved != unsaved || index.SavedUnread != savedUnread {
+	if allPaths != 66 || raw != 64 || workflow != 65 || masked != 1 || metadata != 1 || index.Paths != allPaths || index.Raw != raw || index.Workflow != workflow || index.Masked != masked || index.Metadata != metadata || index.NotRaw != index.Expected-raw || index.Support != support || index.Saved != saved || index.Read != read || index.MaskedSupport != maskedSupport || index.Scan != scan || index.Unsaved != unsaved || index.SavedUnread != savedUnread || index.WorkflowSupport != read+maskedSupport || index.Unassessed != index.Expected-allPaths {
 		return errors.New("sixmile cohorts: aggregate coverage double-counted or conflated a reading category")
 	}
 	matched := map[string]bool{}
@@ -507,7 +522,18 @@ func validateSixmileCohortIndex(index sixmileCohortIndex, old legacy21Projection
 }
 
 func TestSixmileCohortIndexConservesReadingCategoriesAndAllLiveSourceRows(t *testing.T) {
-	for _, kind := range []string{"valid", "raw_includes_masked", "workflow_count", "unknown_size_count", "cohort_overlap", "unknown_adoption", "duplicate_source_row", "extra_source_flag"} {
+	wanted := map[string]string{
+		"raw_includes_masked":      "sixmile cohorts: aggregate coverage double-counted or conflated a reading category",
+		"workflow_count":           "sixmile cohorts: aggregate coverage double-counted or conflated a reading category",
+		"unknown_size_count":       "sixmile cohorts: aggregate coverage double-counted or conflated a reading category",
+		"workflow_support_missing": "sixmile cohorts: aggregate coverage double-counted or conflated a reading category",
+		"unassessed_count":         "sixmile cohorts: aggregate coverage double-counted or conflated a reading category",
+		"cohort_overlap":           "sixmile cohorts: repeated or conflicting assessed identity",
+		"unknown_adoption":         "sixmile cohorts: live source disposition is outside all assessed cohorts or repeated",
+		"duplicate_source_row":     "sixmile cohorts: live source disposition is outside all assessed cohorts or repeated",
+		"extra_source_flag":        "sixmile cohorts: source flag has no corresponding live disposition",
+	}
+	for _, kind := range []string{"valid", "raw_includes_masked", "workflow_count", "unknown_size_count", "workflow_support_missing", "unassessed_count", "cohort_overlap", "unknown_adoption", "duplicate_source_row", "extra_source_flag"} {
 		t.Run(kind, func(t *testing.T) {
 			var index sixmileCohortIndex
 			var old legacy21Projection
@@ -528,6 +554,10 @@ func TestSixmileCohortIndexConservesReadingCategoriesAndAllLiveSourceRows(t *tes
 				index.Workflow--
 			case "unknown_size_count":
 				index.Unsaved--
+			case "workflow_support_missing":
+				index.WorkflowSupport = 0
+			case "unassessed_count":
+				index.Unassessed++
 			case "cohort_overlap":
 				// Keep the independently validated new45 intact, so this reaches
 				// the union collision check rather than its URL/hash validation.
@@ -554,11 +584,8 @@ func TestSixmileCohortIndexConservesReadingCategoriesAndAllLiveSourceRows(t *tes
 			if (err != nil) != (kind != "valid") {
 				t.Fatalf("%s: %v", kind, err)
 			}
-			if kind != "valid" && !strings.HasPrefix(err.Error(), "sixmile cohorts:") && !strings.HasPrefix(err.Error(), "extra45 reading:") {
-				t.Fatalf("mutation failed for another reason: %v", err)
-			}
-			if kind == "cohort_overlap" && !strings.Contains(err.Error(), "repeated or conflicting assessed identity") {
-				t.Fatalf("overlap did not reach the cohort union guard: %v", err)
+			if kind != "valid" && (wanted[kind] == "" || err.Error() != wanted[kind]) {
+				t.Fatalf("%s reached another guard: got %v, want %q", kind, err, wanted[kind])
 			}
 		})
 	}

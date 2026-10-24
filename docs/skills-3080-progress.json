@@ -437,8 +437,8 @@
     "source": "skills-3080-mizchi-partial-evaluation.json",
     "complete_definition": "本文の全path読取のみ。個別許諾・支持・採否・実導入は未完。"
   },
-  "all_fulltext_primary_paths_including_partial_sources": 569,
-  "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分179=569source paths。支持の全読/走査/部分読取・伏字付き手順・個別許諾・最終採否は別。全16資料は未完。",
+  "all_fulltext_primary_paths_including_partial_sources": 583,
+  "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分193=583source paths。支持の全読/走査/部分読取・伏字付き手順・個別許諾・最終採否は別。全16資料は未完。",
   "external_revisions": {
     "count": 1,
     "target": "diagnosing-bugs",
@@ -652,51 +652,45 @@
     "definition_of_legacy_latest_name": "Historical PR406 accepted-delta snapshot. Later accepted merges/reviews are in merged_pr_history/latest_merged_pr/received_review_history/latest_received_review; this field is not current queue status."
   },
   "latest_received_review": {
-    "todo": 3644,
-    "job": "20261024-205930-todo-3644",
+    "todo": 3722,
+    "job": "20261025-042850-todo-3722",
     "status": "succeeded",
     "exit_code": 0,
-    "model": "anthropic/claude-sonnet-5-5",
+    "model": "gpt-6-luna",
     "effort": "max",
     "model_origin": "owner_request",
     "effort_origin": "owner_request",
-    "thread_id": "01a16dc8-2eaa-70b1-85eb-2337cd6c67e4",
-    "raw_file": "review3644-original123649.md",
-    "raw_bytes": 12013,
-    "raw_sha256": "65a3e9f15dc8df773bef8deb2fe3715428046664fcdc7c4e0b95a2c32a36c563",
-    "received_at": "2026-10-24T12:32:28.3145098Z",
-    "base": "d5e2d13a08406eb8cb714b264143ada71d856b78",
-    "head": "38f15c30731a4de10bccca6c94ac81defb953882",
+    "thread_id": "01a16f63-7185-70d0-a5f5-2e44963da0e8",
+    "raw_file": "review3722-original235901.md",
+    "raw_bytes": 1843,
+    "raw_sha256": "6add565efed2988c474245c6433b30a283b85ad5788f9adf93e09818015e07ed",
+    "base": "f24f8531bbd6114d50b8a1c47e694909bc040925",
+    "head": "9c291b253b67c18a3ea11280f5b9256ffe1c6b93",
     "must": 0,
-    "suggestions": 3,
-    "nits": 4,
+    "suggestions": 0,
+    "nits": 0,
     "parent_full_read": true,
     "native_matched": true,
     "effective_reasoning_measured": false,
-    "scope": "Fixed11-file correction review only; original Must resolved and newMust0. Parent received the full result and native settings. New75 and whole16 acceptance remain separate.",
-    "nonblocking_resolution": {
-      "S1": "Current prose uses canonical references. Numeric boundaries, standalone stale terms, second acceptance document and exact file/location/text-SHA historical allowances are checked in the new75 delta.",
-      "S2": "Parent6 acceptance distinguishes preparation-time hold observations from the current structured record.",
-      "S3": "Mandatory cohort updates, own-cohort/delta/ID relations, numeric presence, unique observation receipts and all accepted-display pending mutations are checked in the new75 delta.",
-      "nits": "Package equations and review history scopes clarified. The invalid-zero receipt retains its failure and now links to the final preserved success."
-    },
-    "scope_limitations": "Reviewer reported one unread unknown-class private receipt, one existence query before its guard, and two out-of-list metadata lookups without body reads. These limits are retained; classification unverified is not a confirmed client classification."
+    "scope": "Final4-file concurrent-publication correction only. Prior31-file and8-file reviews retained; no source-body/permission/central/whole16 completion."
   },
   "latest_merged_pr": {
-    "number": 440,
-    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/440",
-    "head": "38f15c30731a4de10bccca6c94ac81defb953882",
-    "merge": "5aa94ad00b990e4374fc62923564a7e55377838e",
-    "merged_at": "2026-10-24T12:35:46Z",
+    "number": 459,
+    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/459",
+    "head": "9c291b253b67c18a3ea11280f5b9256ffe1c6b93",
+    "merge": "d2f26986cbc2b3c7fe18a4ad2cc1093131d62716",
+    "merged_at": "2026-10-24T19:44:35Z",
     "review_todos": [
-      3634,
-      3644
+      3708,
+      3717,
+      3722
     ],
     "final_review_must": 0,
-    "checks": "Exact accepted head: all7completed,6SUCCESS and1NEUTRAL; REST clean after transient GraphQL UNKNOWN",
+    "checks": "Exact9c291 head: all7completed,6SUCCESS and1NEUTRAL; CLEAN",
     "normal_merge": true,
     "readback_confirmed": true,
-    "main_fetch_ff_confirmed": true
+    "main_fetch_ff_confirmed": true,
+    "supersedes_unaccepted_pr447": true
   },
   "mengto_partial_entrypoint_evaluation": {
     "fixed_roster": "skills-3080-mengto-fixed-entrypoints.json",
@@ -1156,6 +1150,29 @@
       "original_must_resolved_by_review": 3644,
       "resolved_at_head": "38f15c30731a4de10bccca6c94ac81defb953882",
       "scope": "Original fixed26delta review; original Must remains recorded, with its correction accepted separately by3644. New75 is outside both scopes."
+    },
+    {
+      "todo": 3722,
+      "job": "20261025-042850-todo-3722",
+      "status": "succeeded",
+      "exit_code": 0,
+      "model": "gpt-6-luna",
+      "effort": "max",
+      "model_origin": "owner_request",
+      "effort_origin": "owner_request",
+      "thread_id": "01a16f63-7185-70d0-a5f5-2e44963da0e8",
+      "raw_file": "review3722-original235901.md",
+      "raw_bytes": 1843,
+      "raw_sha256": "6add565efed2988c474245c6433b30a283b85ad5788f9adf93e09818015e07ed",
+      "base": "f24f8531bbd6114d50b8a1c47e694909bc040925",
+      "head": "9c291b253b67c18a3ea11280f5b9256ffe1c6b93",
+      "must": 0,
+      "suggestions": 0,
+      "nits": 0,
+      "parent_full_read": true,
+      "native_matched": true,
+      "effective_reasoning_measured": false,
+      "scope": "Final4-file concurrent-publication correction only. Prior31-file and8-file reviews retained; no source-body/permission/central/whole16 completion."
     }
   ],
   "merged_pr_history": [
@@ -1285,6 +1302,24 @@
       "normal_merge": true,
       "readback_confirmed": true,
       "main_fetch_ff_confirmed": true
+    },
+    {
+      "number": 459,
+      "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/459",
+      "head": "9c291b253b67c18a3ea11280f5b9256ffe1c6b93",
+      "merge": "d2f26986cbc2b3c7fe18a4ad2cc1093131d62716",
+      "merged_at": "2026-10-24T19:44:35Z",
+      "review_todos": [
+        3708,
+        3717,
+        3722
+      ],
+      "final_review_must": 0,
+      "checks": "Exact9c291 head: all7completed,6SUCCESS and1NEUTRAL; CLEAN",
+      "normal_merge": true,
+      "readback_confirmed": true,
+      "main_fetch_ff_confirmed": true,
+      "supersedes_unaccepted_pr447": true
     }
   ],
   "current_mengto_delta": {
@@ -1405,7 +1440,7 @@
     "new_individual_rights_exclusions": 1,
     "existing_duplicate_receipts_reused": 1
   },
-  "amended_at": "2026-10-24T16:16:41.9322475Z",
+  "amended_at": "2026-10-24T19:53:56.0331731+00:00",
   "amendment_job": "20261024-235901-todo-3080",
   "mcp_pointer_installation": {
     "real_server_or_rendering_tested": false,
@@ -1454,19 +1489,19 @@
   },
   "sixmile_body_read_coverage": {
     "metadata_only_primary": 0,
-    "full_body_read": 179,
-    "workflow_body_read": 217,
-    "without_assessment": 55405,
-    "definition": "Five direct-reading cohorts plus an explicit primary-reading amendment; one exact-byte comparison-only occurrence adds no new raw/workflow reading. Reading, comparison, permission, safety and final adoption are separate units.",
+    "full_body_read": 193,
+    "workflow_body_read": 267,
+    "without_assessment": 55355,
+    "definition": "Registered disjoint direct-reading cohorts, explicit reading amendments and separate comparison-only occurrences. Known saved bytes do not imply a reader or full reading; reuse/workflow, permission and current adoption stay separate.",
     "expected": 55623,
     "complete": false,
-    "masked_workflow_body": 38,
-    "candidate_paths_assessed_or_notice_read": 218,
+    "masked_workflow_body": 74,
+    "candidate_paths_assessed_or_notice_read": 268,
     "source": "skills-3080-sixmile-evaluation-index.json",
-    "without_raw_full_read": 55444,
+    "without_raw_full_read": 55430,
     "comparison_only_primary": 1
   },
-  "all_workflow_primary_paths_including_partial_sources": 607,
+  "all_workflow_primary_paths_including_partial_sources": 657,
   "primary_coverage_definition_additional": "workflow集計はraw本文と伏字付き手順を区別した構造化件数に従う。原文/支持の受領評価と、親が全raw本文を再読した主張は別。旧notice-only本文の親全読は一度だけ別追補として加え、元childの状態と支持の担当は保持する。",
   "rss_season_installation": {
     "content_review": 3591,
@@ -1599,8 +1634,8 @@
     "original_child_and_support_actors_preserved": true
   },
   "parent6_reflection_delta": {
-    "current_branch_raw": 569,
-    "current_branch_workflow": 607,
+    "current_branch_raw": 583,
+    "current_branch_workflow": 657,
     "main_accepted_snapshot": {
       "pr": 431,
       "merge": "ad8151c101a0820cbc365455ecfb85caef1d697a",
@@ -1665,7 +1700,8 @@
     "independent_review_pending": true,
     "ci_and_merge_pending": true,
     "new_central_operations": 0,
-    "all16_complete": false
+    "all16_complete": false,
+    "final_candidate_accepted_with_pr": 459
   },
   "sixmile_received50_entrypoint_evaluation": {
     "source": "skills-3080-sixmile-received50-evaluation.json",
@@ -1683,10 +1719,11 @@
   "received50_publication_status": {
     "receipt": "skills-3080-sixmile-received50-evaluation.json",
     "acceptance": "skills-3080-received-evidence-acceptance.md",
-    "independent_review_pending": true,
-    "ci_and_merge_pending": true,
+    "independent_review_pending": false,
+    "ci_and_merge_pending": false,
     "new_central_operations": 0,
-    "all16_complete": false
+    "all16_complete": false,
+    "accepted_with_pr": 459
   },
   "current_execution_plan": {
     "source": "skills-3080-continuation-execution.md",
@@ -1698,18 +1735,45 @@
     "queue_generation_is_not_semantic_completion": true
   },
   "current_scope_qualification_repair": {
-    "owner_scope_choice": "a",
-    "owner_scope_verified": true,
-    "original_general_guard_exclusion_amended_only_for_this_repair": true,
-    "implementation_todo": 3686,
-    "actual_job": "20261025-004702-todo-3686",
-    "state": "implementation_started_not_accepted_or_deployed",
-    "source": "skills-3080-continuation-execution.md",
-    "general_classification_bypass": false,
-    "existing_unknown_content_access": false,
+    "todo": 3686,
+    "implementation_pr": 456,
+    "merge": "8ed37bbecc70ef87f8d55955f7a690f36101bfdd",
+    "source_merged": true,
+    "formal_luna_review_todo": 3712,
+    "formal_luna_must": 3,
+    "formal_luna_accepted": false,
+    "new_runtime_deployed": false,
+    "observed_runtime_sha256": "0abb667593f4694ac98dca40a9e386de25fe52363d9b6d32699d840b04ab5b9a",
+    "observed_runtime_source": "775e6f308341475a54686ec7912b5fe6f98a8aa0",
+    "observed_at": "2026-10-24T19:00:05.2013584Z",
+    "state": "Required fixed-source/registered-parent Must followup remains in same3686 before distribution or actual create qualification.",
+    "general_access_granted": false,
     "original_registry_recovered": false,
-    "held647_retrieval": 0,
-    "central_new_operations": 0,
-    "owner_action_required": false
+    "unknown_existing_target_body_reads": 0,
+    "new_central_operations": 0,
+    "owner_input_needed": false
+  },
+  "sixmile_received_next50_entrypoint_evaluation": {
+    "source": "skills-3080-sixmile-received-next50-evaluation.json",
+    "candidate_paths": 50,
+    "full_body_read": 14,
+    "workflow_body_read": 50,
+    "masked_workflow_body": 36,
+    "notice_paths": 51,
+    "support": 449,
+    "support_saved_unread": 207,
+    "support_unsaved": 165,
+    "installed": 0,
+    "integrated": 0,
+    "excluded": 0,
+    "definition": "Parent received all50 semantic assessments and fixed proof; source primaries were read by3674. Publication is not new permission or disposition."
+  },
+  "received_next50_publication_status": {
+    "receipt": "skills-3080-sixmile-received-next50-evaluation.json",
+    "acceptance": "skills-3080-received-evidence-acceptance.md",
+    "independent_review_pending": true,
+    "ci_and_merge_pending": true,
+    "new_central_operations": 0,
+    "all16_complete": false
   }
 }

@@ -82,6 +82,11 @@
       "file": "skills-3080-sixmile-received50-evaluation.json",
       "sha256": "861364dff7db4773b697e1ded48033a3b9f8ebfaf9d8cab064772a0776ea3196",
       "rows": 50
+    },
+    {
+      "file": "skills-3080-sixmile-received-next50-evaluation.json",
+      "sha256": "2ccaa01ecbd197b1400201e751165f7eb3013389af75c5be806dd863fb839257",
+      "rows": 50
     }
   ],
   "adoption_ledger": {

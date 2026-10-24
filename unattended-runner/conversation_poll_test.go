@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -167,5 +168,68 @@ func TestConversationPeriodicBudgetLeavesTheNextMinuteStartAvailable(t *testing.
 	}
 	if periodicTickBudget-periodicNormalBudget-periodicAgentResultBudget < civ6QueueMinRemaining || conversationPollStageBudget > periodicNormalBudget || conversationPollStageBudget < conversationPollTimeout {
 		t.Fatal("periodic phases have no usable bounded time")
+	}
+}
+
+type conversationReadCounter struct {
+	base  http.RoundTripper
+	reads map[string]int
+}
+
+func (c *conversationReadCounter) RoundTrip(req *http.Request) (*http.Response, error) {
+	c.reads[req.URL.Path]++
+	return c.base.RoundTrip(req)
+}
+
+func TestConversationNewReplyIsDeliveredBeforeAnAlreadyDeliveredHistory(t *testing.T) {
+	f := conversationTest(t, false)
+	f.ask(t)
+	at := f.r.Now().Add(5 * time.Minute)
+	f.r.Now = func() time.Time { return at }
+	var old []conversationReply
+	for i := 0; i < 100; i++ {
+		reply := f.reply(t, i+3, fmt.Sprintf("過去の回答-%d", i))
+		old = append(old, reply)
+		f.r.State.Requests[reply.Message] = &Request{Thread: f.question, Guild: "100", RecordVersion: 2, Message: reply.Message, Author: "300", Created: reply.Created, Text: reply.Body, Key: requestKey(f.question, reply.Message), Conversation: f.q.RequestID, Todo: 42, Phase: "conversation_reply_delivered"}
+	}
+	latest := f.reply(t, 110, "この新しい回答をすぐ届ける")
+	reads := &conversationReadCounter{base: http.DefaultTransport, reads: map[string]int{}}
+	f.r.Client.Transport = reads
+	h := Health{}
+	f.r.processConversations(context.Background(), &h)
+	if f.r.State.Requests[latest.Message] == nil || f.r.State.Requests[latest.Message].Phase != "conversation_reply_delivered" {
+		t.Fatal("old delivered text starved a newly observed answer", h.Errors)
+	}
+	for _, reply := range old {
+		if reads.reads["/channels/"+f.question+"/messages/"+reply.Message] != 0 {
+			t.Fatal("a delivered history was re-read before the new answer")
+		}
+	}
+}
+
+func TestConversationFailedDeliveryDoesNotAdvanceItsReplyCursor(t *testing.T) {
+	f := conversationTest(t, false)
+	f.ask(t)
+	a, b := f.reply(t, 8, "先に配送すべき回答"), f.reply(t, 9, "後から届いた補足")
+	run := f.r.Run
+	failed := false
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		if len(args) > 0 && args[0] == "edit" && !failed {
+			failed = true
+			return "", errors.New("temporary task lock")
+		}
+		return run(ctx, path, args...)
+	}
+	f.r.processConversations(context.Background(), &Health{})
+	index, err := f.r.loadConversations()
+	if err != nil || index.Questions[f.q.RequestID].ReplyCursor != "" {
+		t.Fatal("failed answer was skipped by a persisted cursor")
+	}
+	h := Health{}
+	f.r.processConversations(context.Background(), &h)
+	for _, reply := range []conversationReply{a, b} {
+		if f.r.State.Requests[reply.Message] == nil || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
+			t.Fatal("delivery retry lost a reply", h.Errors)
+		}
 	}
 }

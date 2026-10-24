@@ -102,19 +102,24 @@ type conversationQuestionReceipt struct {
 }
 
 type conversationProof struct {
-	Domain           string              `json:"domain"`
-	ReadOnly         bool                `json:"read_only"`
-	Source           string              `json:"source"`
-	RequestID        string              `json:"request_id"`
-	Thread           string              `json:"thread_id"`
-	Owner            string              `json:"owner_id"`
-	Question         string              `json:"question_message_id"`
-	Created          string              `json:"question_timestamp"`
-	Progress         string              `json:"progress_thread_id"`
-	Body             string              `json:"original_question"`
-	Decision         json.RawMessage     `json:"decision_identity"`
-	OriginalDecision json.RawMessage     `json:"original_decision"`
-	Replies          []conversationReply `json:"owner_replies"`
+	Domain           string                              `json:"domain"`
+	ReadOnly         bool                                `json:"read_only"`
+	Source           string                              `json:"source"`
+	RequestID        string                              `json:"request_id"`
+	Thread           string                              `json:"thread_id"`
+	Owner            string                              `json:"owner_id"`
+	Question         string                              `json:"question_message_id"`
+	Created          string                              `json:"question_timestamp"`
+	Progress         string                              `json:"progress_thread_id"`
+	Body             string                              `json:"original_question"`
+	Decision         json.RawMessage                     `json:"decision_identity"`
+	OriginalDecision json.RawMessage                     `json:"original_decision"`
+	Replies          []conversationReply                 `json:"owner_replies"`
+	ReplyVersions    map[string]conversationReplyVersion `json:"reply_versions,omitempty"`
+}
+
+type conversationReplyVersion struct {
+	Edited *string `json:"edited_timestamp"`
 }
 
 type conversationReply struct {

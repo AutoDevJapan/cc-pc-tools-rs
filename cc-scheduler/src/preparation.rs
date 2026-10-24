@@ -88,7 +88,12 @@ fn answered_conversation_session<'a>(
         && item["scheduler"]["last_job"] == job["id"]
         && truth(&item["scheduler"]["resume"])
         && !s(&item["scheduler"]["owner_instruction"]).trim().is_empty()
-        && item["processed_results"][s(&job["id"])].is_object()
+        // The ToDo layer records "conversation_answer"; a result the scheduler had
+        // already imported as a decision is recorded as "block".
+        && matches!(
+            s(&item["processed_results"][s(&job["id"])]["reason"]),
+            "conversation_answer" | "block"
+        )
         && s(&job["status"]) == "succeeded"
         && cc_ask::core::result_state(s(&job["last_message"])) == "状態: 要判断"
         && !cc_job_policy::cancellation::blocks_recovery(item, job)

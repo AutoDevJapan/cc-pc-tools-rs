@@ -24,8 +24,9 @@ type conversationPollResult struct {
 }
 
 type conversationPollCheck struct {
-	CheckedAt string `json:"checked_at"`
-	OK        bool   `json:"verified"`
+	CheckedAt  string `json:"checked_at"`
+	OK         bool   `json:"verified"`
+	DeliveryAt string `json:"delivery_checked_at,omitempty"`
 }
 
 type conversationPollSnapshot struct {
@@ -101,6 +102,28 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 	}
 	close(work)
 	workers.Wait()
+	// Newly received/edited text is delivered before old application audits.
+	// API-read fairness and delivery fairness have separate clocks.
+	sort.SliceStable(results, func(i, j int) bool {
+		pending := func(result conversationPollResult) bool {
+			if result.err != nil || result.proof == nil {
+				return false
+			}
+			for _, reply := range result.proof.Replies {
+				if r.conversationReplyNeedsDelivery(result.question, result.proof, reply) {
+					return true
+				}
+			}
+			return false
+		}
+		a, b := pending(results[i]), pending(results[j])
+		if a != b {
+			return a
+		}
+		x, _ := time.Parse(time.RFC3339Nano, snapshot.Checks[results[i].id].DeliveryAt)
+		y, _ := time.Parse(time.RFC3339Nano, snapshot.Checks[results[j].id].DeliveryAt)
+		return x.Before(y)
+	})
 	checked := make(map[string]bool, len(waiting))
 	for _, result := range results {
 		checked[result.id] = true
@@ -110,14 +133,22 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 		}
 		health.ConversationChecked++
 		q := result.question
-		snapshot.Checks[result.id] = conversationPollCheck{CheckedAt: result.checked, OK: result.err == nil}
+		check := snapshot.Checks[result.id]
+		check.CheckedAt, check.OK = result.checked, result.err == nil
+		snapshot.Checks[result.id] = check
 		if result.err != nil {
 			health.ConversationPollDeferred++
 			continue
 		}
 		// Captures and delivery remain sequential. An exhausted delivery budget
 		// is visible and retried from the same question and source version.
-		r.processConversationReplies(ctx, index, result.id, q, result.proof, health)
+		if ctx.Err() == nil {
+			r.processConversationReplies(ctx, index, result.id, q, result.proof, health)
+			check.DeliveryAt = r.Now().UTC().Format(time.RFC3339Nano)
+			snapshot.Checks[result.id] = check
+		} else {
+			health.Errors = append(health.Errors, "conversation_delivery_budget_deferred")
+		}
 	}
 	if len(waiting) != 0 {
 		snapshot.Updated = r.Now().UTC().Format(time.RFC3339Nano)

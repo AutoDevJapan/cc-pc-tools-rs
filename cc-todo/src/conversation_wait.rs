@@ -399,7 +399,28 @@ fn dependencies_clear(db: &Value, row: &Value, key: &str) -> bool {
         })
     })
 }
+/// A dependency list that names real, other ToDos. Whether they are finished is
+/// a separate question; a malformed list is never accepted.
+fn dependencies_wellformed(row: &Value, key: &str) -> bool {
+    row[key].is_null()
+        || row[key].as_array().is_some_and(|on| {
+            on.iter()
+                .all(|id| id.as_i64().is_some_and(|id| id > 0) && *id != row["id"])
+        })
+}
 fn holds_clear(db: &Value, row: &Value) -> Result<()> {
+    holds_clear_with(db, row, false)
+}
+/// With keep_dependencies, a metadata-only delivery may pass an unfinished but
+/// well-formed dependency wait. It never releases or edits the dependency; every
+/// other hold (stop, postponement, readiness or decision wait, ...) still blocks.
+fn holds_clear_with(db: &Value, row: &Value, keep_dependencies: bool) -> Result<()> {
+    let dependencies_ok = if keep_dependencies {
+        dependencies_wellformed(row, "wait_on")
+            && dependencies_wellformed(row, "work_owner_wait_on")
+    } else {
+        dependencies_clear(db, row, "wait_on") && dependencies_clear(db, row, "work_owner_wait_on")
+    };
     if cc_job_policy::cancellation::owner_stopped(row, &Value::Null)
         || [
             "stopped",
@@ -419,8 +440,7 @@ fn holds_clear(db: &Value, row: &Value) -> Result<()> {
         ]
         .iter()
         .any(|k| !row[*k].is_null())
-        || !dependencies_clear(db, row, "wait_on")
-        || !dependencies_clear(db, row, "work_owner_wait_on")
+        || !dependencies_ok
         || (!row["scheduler"].is_null() && !row["scheduler"].is_object())
         || (!row["stall_recovery"].is_null() && !row["stall_recovery"].is_object())
         || [
@@ -1048,8 +1068,8 @@ pub fn answer(
     clear(db, row, at)?;
     let owner = owner_record(paths, row)?;
     // No worker id at all: nothing can be taken over, so the answer is stored
-    // for the first launch. A recorded but unreadable or still-live owner keeps
-    // the note-only behaviour and is never claimed by this path.
+    // for the first launch. A recorded but unreadable owner keeps the note-only
+    // behaviour and is never claimed by this path.
     let no_worker = owner.is_none()
         && text(&row["scheduler"], "job").is_empty()
         && text(&row["worker_receipt"], "job").is_empty();
@@ -1068,7 +1088,13 @@ pub fn answer(
     // A finished launch key is an immutable receipt for the old turn. Retire
     // only that verified current owner, preserving workspace and job history.
     // The replay branch above must never rotate a later worker or release a stop.
-    let resume_instruction = if retire || no_worker {
+    // A readable owner that is not retired (still live or not this launch's
+    // finished owner) is never claimed, retired or restarted. The full answer
+    // is only parked as the pending instruction. It is consumed when the
+    // scheduler prepares this ToDo's next regular launch; nothing is injected
+    // into a running worker.
+    let pending_only = owner.is_some() && !retire;
+    let resume_instruction = if retire || no_worker || pending_only {
         if !row["scheduler"]["owner_instruction"].is_null()
             && !row["scheduler"]["owner_instruction"].is_string()
         {
@@ -1078,6 +1104,9 @@ pub fn answer(
             "{}\n元ToDo {id}の質問への本人回答を正規経路で適用しました。次の私的参照から回答原文と元質問・判断範囲を読み、元の履行を続けてください。同じ判断を再質問しないでください。\n{note}",
             text(&row["scheduler"], "owner_instruction")
         );
+        // The note keeps every version of an edited reply as history; the
+        // prompt carries only the newest block of each reply.
+        let instruction = continued::latest_blocks_only(&instruction);
         if instruction.len() as u64 > MAX_BYTES {
             return fail("file_too_large");
         }
@@ -1095,11 +1124,7 @@ pub fn answer(
         .filter(|job| {
             retire
                 && text(job, "status") == "succeeded"
-                && !text(job, "launch_key").is_empty()
-                && job["launch_key"] == row["scheduler"]["key"]
-                && (delivery.is_some()
-                    || (wait["origin"]["job"] == job["id"]
-                        && wait["origin"]["key"] == job["launch_key"]))
+                && proves_asking_launch(row, &wait, job, delivery.is_some())
                 && job_predates_question(job, &wait, at)
         })
         .map(|job| {
@@ -1126,13 +1151,15 @@ pub fn answer(
     row["status"] = json!("todo");
     row["updated"] = json!(applied_at);
     if let Some(instruction) = resume_instruction {
+        // A new answer supersedes any earlier session proof, whichever way this
+        // one is stored (retired owner, no worker, or pending behind a live owner).
+        if let Some(scheduler) = row["scheduler"].as_object_mut() {
+            scheduler.remove(SESSION_PROOF_KEY);
+        }
         if retire {
             let job = owner.as_ref().unwrap()["id"].clone();
             cc_scheduler::common::record_result(row, &job, "conversation_answer");
             cc_scheduler::common::resume_without_worker(row);
-            if let Some(scheduler) = row["scheduler"].as_object_mut() {
-                scheduler.remove(SESSION_PROOF_KEY);
-            }
         }
         row["scheduler"]["owner_instruction"] = json!(instruction);
         if let Some(proof) = session_proof {
@@ -1147,6 +1174,39 @@ pub fn answer(
         true,
         true,
     ))
+}
+
+/// Proof that `job` is the exact launch which asked this question.
+///
+/// With a launch key on the scheduler row and in the wait origin, all three
+/// (row, origin, job) must be the same key. A normal wait registered while the
+/// row had no key (both null) is accepted only for the exact current owner:
+/// same job, same resume generation and worker receipt, and no result already
+/// processed for another generation. A key on only one side never matches.
+fn proves_asking_launch(row: &Value, wait: &Value, job: &Value, delivery: bool) -> bool {
+    let launch = text(job, "launch_key");
+    let key = text(&row["scheduler"], "key");
+    if launch.is_empty() || text(job, "id").is_empty() {
+        return false;
+    }
+    if delivery {
+        // finished_question_owner already bound the key, job, receipt and generation.
+        return key == launch;
+    }
+    let origin = &wait["origin"];
+    if !origin.is_object() || origin["job"] != job["id"] {
+        return false;
+    }
+    let origin_key = text(origin, "key");
+    if key.is_empty() && origin_key.is_empty() {
+        let processed = &row["processed_results"][text(job, "id")];
+        return row["resume_generation"].is_u64()
+            && origin["resume_generation"] == row["resume_generation"]
+            && row["worker_receipt"]["generation"] == row["resume_generation"]
+            && row["worker_receipt"]["job"] == job["id"]
+            && (processed.is_null() || processed["generation"] == row["resume_generation"]);
+    }
+    key == launch && origin_key == launch
 }
 
 /// The job that asked cannot have started after the question was created.
@@ -1186,5 +1246,134 @@ mod tests {
         ] {
             assert!(configured(&q, &cfg).is_err());
         }
+    }
+
+    fn row(key: Value) -> Value {
+        json!({"resume_generation":1, "worker_receipt":{"job":"job-1","generation":1},
+            "scheduler":{"job":"job-1","key":key}})
+    }
+    fn wait(key: Value) -> Value {
+        json!({"origin":{"resume_generation":1,"job":"job-1","key":key,
+            "worker_receipt":{"job":"job-1","generation":1}}})
+    }
+    fn job(launch: &str) -> Value {
+        json!({"id":"job-1","launch_key":launch})
+    }
+
+    #[test]
+    fn the_asking_launch_is_proven_by_equal_keys_or_by_the_exact_keyless_owner() {
+        // Keyed: row, origin and job must be the same key.
+        assert!(proves_asking_launch(
+            &row(json!("k")),
+            &wait(json!("k")),
+            &job("k"),
+            false
+        ));
+        for (row_key, wait_key, launch) in [
+            ("k", "other", "k"),
+            ("other", "k", "k"),
+            ("k", "k", "other"),
+        ] {
+            assert!(
+                !proves_asking_launch(
+                    &row(json!(row_key)),
+                    &wait(json!(wait_key)),
+                    &job(launch),
+                    false
+                ),
+                "{row_key}/{wait_key}/{launch}"
+            );
+        }
+        // A key on only one side never matches, even if it equals the job's launch key.
+        assert!(!proves_asking_launch(
+            &row(json!("k")),
+            &wait(Value::Null),
+            &job("k"),
+            false
+        ));
+        assert!(!proves_asking_launch(
+            &row(Value::Null),
+            &wait(json!("k")),
+            &job("k"),
+            false
+        ));
+        // Legacy normal wait: no key anywhere, accepted only for the exact current owner.
+        assert!(proves_asking_launch(
+            &row(Value::Null),
+            &wait(Value::Null),
+            &job("L"),
+            false
+        ));
+        assert!(!proves_asking_launch(
+            &row(Value::Null),
+            &wait(Value::Null),
+            &job(""),
+            false
+        ));
+        let mut other_job = wait(Value::Null);
+        other_job["origin"]["job"] = json!("job-2");
+        assert!(!proves_asking_launch(
+            &row(Value::Null),
+            &other_job,
+            &job("L"),
+            false
+        ));
+        let mut moved = row(Value::Null);
+        moved["resume_generation"] = json!(2);
+        assert!(!proves_asking_launch(
+            &moved,
+            &wait(Value::Null),
+            &job("L"),
+            false
+        ));
+        let mut other_receipt = row(Value::Null);
+        other_receipt["worker_receipt"]["job"] = json!("job-2");
+        assert!(!proves_asking_launch(
+            &other_receipt,
+            &wait(Value::Null),
+            &job("L"),
+            false
+        ));
+        let mut processed = row(Value::Null);
+        processed["processed_results"] = json!({"job-1":{"generation":0,"reason":"block"}});
+        assert!(!proves_asking_launch(
+            &processed,
+            &wait(Value::Null),
+            &job("L"),
+            false
+        ));
+        processed["processed_results"]["job-1"]["generation"] = json!(1);
+        assert!(proves_asking_launch(
+            &processed,
+            &wait(Value::Null),
+            &job("L"),
+            false
+        ));
+        // A wait without an origin cannot be proven by the normal path.
+        assert!(!proves_asking_launch(
+            &row(json!("k")),
+            &json!({}),
+            &job("k"),
+            false
+        ));
+        // The imported-delivery path already bound the key: it must equal the launch key.
+        assert!(proves_asking_launch(
+            &row(json!("k")),
+            &json!({}),
+            &job("k"),
+            true
+        ));
+        assert!(!proves_asking_launch(
+            &row(json!("k")),
+            &json!({}),
+            &job("other"),
+            true
+        ));
+        assert!(!proves_asking_launch(
+            &row(Value::Null),
+            &json!({}),
+            &job("L"),
+            true
+        ));
     }
 }

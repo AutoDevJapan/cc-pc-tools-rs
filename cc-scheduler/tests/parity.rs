@@ -4016,6 +4016,7 @@ fn preparation3637_answered_question_returns_only_to_the_asking_session() {
         "other_work",
         "retired_session",
         "missing_launch_key",
+        "other_reason",
     ] {
         let (mut row, mut job) = answered_question_pair();
         match case {
@@ -4027,6 +4028,7 @@ fn preparation3637_answered_question_returns_only_to_the_asking_session() {
             "no_pending_answer" => row["scheduler"]["owner_instruction"] = json!("  "),
             "no_resume" => row["scheduler"]["resume"] = json!(false),
             "unprocessed_result" => row["processed_results"] = json!({}),
+            "other_reason" => row["processed_results"]["asked"]["reason"] = json!("done"),
             "owner_stop" => row["stopped"] = json!(true),
             "job_stop" => job["cancel_reason"] = json!("person"),
             "finished_not_question" => job["last_message"] = json!("状態: 完了\n完了しました。"),
@@ -4044,6 +4046,13 @@ fn preparation3637_answered_question_returns_only_to_the_asking_session() {
         );
     }
     let (row, job) = answered_question_pair();
+    // A decision the scheduler had already imported before the answer is the same proof.
+    let mut imported = row.clone();
+    imported["processed_results"]["asked"]["reason"] = json!("block");
+    assert_eq!(
+        recovery_session(&imported, &job, cwd, &[]),
+        job["thread_id"].as_str()
+    );
     let live = json!({"id":"live","status":"running","thread_id":job["thread_id"]});
     assert!(recovery_session(&row, &job, cwd, &[live]).is_none());
     assert!(recovery_session(&row, &job, "D:/elsewhere", &[]).is_none());

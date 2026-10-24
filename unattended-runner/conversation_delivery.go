@@ -199,7 +199,7 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 			// source SHA, even if a canonical answer was already committed.
 			req.ConversationRecoveryNote = "再取得で受領元が置換済み。メモの旧受領SHAを現在版の反映証拠にしない。実反映と質問の締めは未確認。現在のsource_receipt_sha256=" + bytesHash(receipt)
 		}
-		if conversationDeliveryRecorded(row, q, answer, b) || conversationAnswerRecorded(row, q, answer, b) || (reacquired && conversationQuestionAnswered(row, q) && hasNoteMarker(row.Note, marker)) {
+		if conversationDeliveryRecorded(row, q, answer, b) || conversationAnswerRecorded(row, q, answer, b) {
 			req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
 			return r.save()
 		}
@@ -222,6 +222,12 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	}
 	if req.ConversationSourceRecovered && !hasNoteMarker(row.Note, marker) && (!q.Wait || conversationQuestionAnswered(row, q)) {
 		return errors.New("conversation recovered source delivery proof unavailable")
+	}
+	// Later replies and edits remain bound to the already answered question.
+	// The canonical delivery-only operation updates the pending prompt without
+	// releasing another wait or taking ownership from a live worker.
+	if q.Wait && conversationQuestionAnswered(row, q) {
+		return r.deliverContinuedConversationReply(ctx, row, q, reply, req, receipt, marker)
 	}
 	if q.Wait && conversationContinuedWait(row, q) {
 		return r.deliverContinuedConversationReply(ctx, row, q, reply, req, receipt, marker)
@@ -317,6 +323,7 @@ func (r *Runner) conversationReplyInstructions(q ConversationQuestion, reply con
 	instructions += fmt.Sprintf("返信版の照合: reply_sha256=%s, source_receipt_sha256=%s を反映記録へ含めてください。現在の私的原文を読み返してから記録し、編集前の証跡を新しい本文の反映証拠にしないでください。\n", canonicalHash(reply), bytesHash(receipt))
 	instructions += fmt.Sprintf("元回答時刻=%s、編集時刻=%s、取得時刻=%s。現在の直接指示・停止・依存・元仕様と許可範囲を保持し、古い回答で新しい指示を上書きしないでください。\n", req.Created, req.Edited, req.Acquired)
 	instructions += "以下は、上の本人IDと元質問に対応するDiscord回答の全文です。要約や省略はしていません。\n<discord-owner-answer>\n" + reply.Body + "\n</discord-owner-answer>\n"
+	instructions += "conversation-owner-reply-end:" + strings.TrimPrefix(marker, "conversation-owner-reply:") + "\n"
 	return instructions
 }
 
@@ -542,24 +549,48 @@ func (r *Runner) processConversationMaintenance(ctx context.Context, health *Hea
 	}
 }
 
+func (r *Runner) conversationReplyNeedsDelivery(q ConversationQuestion, proof *conversationProof, reply conversationReply) bool {
+	req := r.State.Requests[reply.Message]
+	if req == nil || req.Conversation != q.RequestID || req.Text != reply.Body {
+		return true
+	}
+	switch req.Phase {
+	case "conversation_reply_delivered", "conversation_reply_applied", "conversation_direction_recorded", "conversation_implementation_recorded", "conversation_source_verified":
+	default:
+		return true
+	}
+	if version, ok := proof.ReplyVersions[reply.Message]; ok {
+		edited := ""
+		if version.Edited != nil {
+			edited = *version.Edited
+		}
+		return req.Edited != edited
+	}
+	return false
+}
+
 func (r *Runner) processConversationReplies(ctx context.Context, index *conversationIndex, id string, q ConversationQuestion, proof *conversationProof, health *Health) {
 	sort.Slice(proof.Replies, func(i, j int) bool {
 		a, _ := number(proof.Replies[i].Message)
 		b, _ := number(proof.Replies[j].Message)
 		return a < b
 	})
-	replyCursor, _ := number(q.ReplyCursor)
-	replyStart := sort.Search(len(proof.Replies), func(i int) bool { n, _ := number(proof.Replies[i].Message); return n > replyCursor })
-	for replyIndex := 0; replyIndex < len(proof.Replies); replyIndex++ {
-		reply := proof.Replies[(replyStart+replyIndex)%len(proof.Replies)]
+	var selected []conversationReply
+	for _, reply := range proof.Replies {
+		if r.conversationReplyNeedsDelivery(q, proof, reply) {
+			selected = append(selected, reply)
+		}
+	}
+	if len(selected) == 0 && len(proof.Replies) != 0 {
+		// A single rotating audit catches source-only edits on old senders and
+		// observes application. Never re-fetch the whole delivered history.
+		cursor, _ := number(q.ReplyCursor)
+		next := sort.Search(len(proof.Replies), func(i int) bool { n, _ := number(proof.Replies[i].Message); return n > cursor })
+		selected = append(selected, proof.Replies[next%len(proof.Replies)])
+	}
+	for _, reply := range selected {
 		if ctx.Err() != nil {
 			health.Errors = append(health.Errors, "conversation_budget_deferred")
-			return
-		}
-		q.ReplyCursor = reply.Message
-		index.Questions[id] = q
-		if publish(r.conversationPath(), index) != nil {
-			health.Errors = append(health.Errors, "conversation_cursor_deferred")
 			return
 		}
 		req, err := r.captureConversationReply(ctx, q, proof, reply)
@@ -570,6 +601,7 @@ func (r *Runner) processConversationReplies(ctx context.Context, index *conversa
 			health.Errors = append(health.Errors, "conversation_delivery_deferred")
 			return
 		}
+		q.ReplyCursor = reply.Message
 		if r.deliverOwnerReplyMediaObservation(ctx, q, reply, req) != nil {
 			health.Errors = append(health.Errors, "conversation_owner_media_deferred")
 		}
@@ -581,6 +613,13 @@ func (r *Runner) processConversationReplies(ctx context.Context, index *conversa
 		if publish(r.conversationPath(), index) != nil {
 			health.Errors = append(health.Errors, "conversation_stage_deferred")
 			return
+		}
+		// Full close verification reads every reply's source. Do that only when
+		// all replies have potential application evidence, never on each newly
+		// delivered answer or on each minute's audit of a long unpaid history.
+		if !r.conversationApplicationMayBeReady(proof) {
+			health.ConversationReplies++
+			continue
 		}
 		applied, err := r.conversationApplied(ctx, q, proof, reply, req)
 		if err != nil {
@@ -606,6 +645,28 @@ func (r *Runner) processConversationReplies(ctx context.Context, index *conversa
 		// Deliver all replies already observed for this question while the
 		// caller has budget. No old delivered answer masks a newer message.
 	}
+}
+
+func (r *Runner) conversationApplicationMayBeReady(proof *conversationProof) bool {
+	if len(proof.Replies) == 0 {
+		return false
+	}
+	for _, reply := range proof.Replies {
+		req := r.State.Requests[reply.Message]
+		if req == nil {
+			return false
+		}
+		switch req.Phase {
+		case "conversation_reply_applied", "conversation_direction_recorded", "conversation_implementation_recorded":
+			continue
+		}
+		// Existence is only a scheduling hint. closeConversation still validates
+		// the exact application, source, identity and current API before closing.
+		if _, err := os.Stat(filepath.Join(r.Config.Home, "applied", reply.Message+".json")); err != nil {
+			return false
+		}
+	}
+	return true
 }
 
 func (r *Runner) reportConversations(ctx context.Context, health *Health) {

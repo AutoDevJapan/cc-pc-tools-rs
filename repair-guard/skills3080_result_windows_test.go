@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -242,5 +243,27 @@ func TestSkills3080AlternativeOAuthReviewKeepsActualEffort(t *testing.T) {
 	}
 	if !skillsModelIdentifier("google-antigravity/gemini-3.8-flash") || skillsReviewEffort("gemini-3.8-flash") != "high" {
 		t.Fatal("observed alternate catalogue model lost its highest actual setting")
+	}
+}
+
+func TestSkills3080CurrentSoftwareBaselineIsOneExactReviewedDigest(t *testing.T) {
+	raw, e := os.ReadFile("../docs/evidence/skills-3080-guard-baseline.json")
+	if e != nil {
+		t.Fatal(e)
+	}
+	evidence, ok := conversationJSON(raw)
+	if !ok {
+		t.Fatal("invalid baseline evidence")
+	}
+	digest := str(evidence["observed_installed_sha256"])
+	revision := str(evidence["public_source_commit"])
+	if !skillsDigest(digest) || !civ6Commit.MatchString(revision) || skillsGuardBaselines[digest] != revision || evidence["full_binary_byte_identical"] != false || evidence["go_main_and_executable_content_ids_equal"] != true || evidence["qualified_data_access"] != false {
+		t.Fatal("software evidence or its limited claim drifted")
+	}
+	if _, ok := skillsGuardBaselines[str(evidence["independent_reference_sha256"])]; ok {
+		t.Fatal("reference artifact became an installed baseline or wildcard")
+	}
+	if _, ok := skillsGuardBaselines[strings.Repeat("f", 64)]; ok {
+		t.Fatal("unknown software digest admitted")
 	}
 }

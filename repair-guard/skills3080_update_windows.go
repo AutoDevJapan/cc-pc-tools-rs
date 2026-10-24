@@ -20,6 +20,12 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously published distribution facts (3258), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// Independent public 775e6f30 rebuild: every byte matches this installed
+	// artifact except the two declared Go cache action IDs (40 bytes). Both
+	// content IDs and all remaining 6,225,368 bytes match; neither PE was changed.
+	// This admits one exact old software digest, never arbitrary build-ID edits.
+	// Evidence: docs/evidence/skills-3080-guard-baseline.json.
+	"0abb667593f4694ac98dca40a9e386de25fe52363d9b6d32699d840b04ab5b9a": "775e6f308341475a54686ec7912b5fe6f98a8aa0",
 	"04cb7fc34e3e08e8b88166f0d9a6d53f20f90b7aac89c8317f3afebaaf253363": "e8cf0e2d9adb231ef1636c907edfec2b50a2886c",
 	"8ad7256ecd0b443ea0d9f90a995dd2fe99d352e1504895072bcff0753f1208ac": "8a4452d47a01895eee6701dd9f153585869e17f8",
 }

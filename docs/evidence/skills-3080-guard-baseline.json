@@ -1,0 +1,33 @@
+{
+  "domain": "skills-3080-guard-baseline-v1",
+  "purpose": "one exact current guard software baseline for the owner-authorized ToDo3686 update; no general data access",
+  "repository": "AutoDevJapan/cc-pc-tools-rs",
+  "repository_id": 1406818713,
+  "public_source_commit": "775e6f308341475a54686ec7912b5fe6f98a8aa0",
+  "independent_clean_public_clone": true,
+  "go_version": "go1.27.0",
+  "build_flags": ["-trimpath", "-buildvcs=true"],
+  "observed_installed_sha256": "0abb667593f4694ac98dca40a9e386de25fe52363d9b6d32699d840b04ab5b9a",
+  "independent_reference_sha256": "65657b0b1a4b0b038b99b554b40a5cc16e06d715a4aba0c19cd357b43fb71388",
+  "full_binary_byte_identical": false,
+  "file_bytes": 6225408,
+  "only_declared_variance": "two Go cache action-ID fields; input-cache identity is not claimed to match",
+  "different_ranges": [
+    {"offset": 1552, "bytes": 20},
+    {"offset": 1573, "bytes": 20}
+  ],
+  "go_main_and_executable_content_ids_equal": true,
+  "all_other_byte_segments": [
+    {"offset": 0, "bytes": 1552, "sha256": "e15ff0b5a33ece49875f5ce6933f3531ff8bce13712c7ae664f5f6544c30bebe", "equal": true},
+    {"offset": 1572, "bytes": 1, "sha256": "8a5edab282632443219e051e4ade2d1d5bbc671c781051bf1437897cbdfea0f1", "equal": true},
+    {"offset": 1593, "bytes": 6223815, "sha256": "fcfabb31048f4b313071df284b4193ffb51e4713f7e36508626bd28e99c25aac", "equal": true}
+  ],
+  "go_build_id_definition": "https://go.dev/src/cmd/go/internal/work/buildid.go",
+  "comparison_method": "SHA256.ComputeHash(byte[], offset, length), after unique matching Go build-ID placement and equal content-ID validation",
+  "executables_modified_or_run": false,
+  "prior_nonterminating_ReadOnlySpan_attempt_is_evidence": false,
+  "raw_source_buildinfo_input_and_comparison_receipts": "retained in the original ToDo3686 workspace; not replaced by this summary",
+  "admission_requires_independent_review_and_normal_merge": true,
+  "qualified_data_access": false,
+  "original_registry_recovered": false
+}

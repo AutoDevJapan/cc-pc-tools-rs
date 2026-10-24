@@ -374,19 +374,24 @@ type sixmileCohortIndex struct {
 	SavedUnread     int    `json:"support_saved_unread"`
 	Unsaved         int    `json:"support_unsaved"`
 	WorkflowSupport int    `json:"support_workflow_full_read"`
+	Partial         int    `json:"support_partial_read"`
+	Reused          int    `json:"support_unmasked_full_via_comparison_or_reuse"`
 	Unassessed      int    `json:"candidate_paths_without_assessment"`
 	Cohorts         []struct {
-		ID            string `json:"id"`
-		Artifact      string `json:"artifact"`
-		Paths         int    `json:"candidate_paths"`
-		Raw           int    `json:"raw_unmasked_primary_full_read"`
-		Workflow      int    `json:"workflow_primary_full_read"`
-		Support       int    `json:"support"`
-		Saved         int    `json:"support_saved"`
-		Read          int    `json:"support_raw_unmasked_full_read"`
-		MaskedSupport int    `json:"support_masked_workflow_full_read"`
-		Scan          int    `json:"support_scan_only"`
-		Unsaved       int    `json:"support_unsaved"`
+		ID              string `json:"id"`
+		Artifact        string `json:"artifact"`
+		Paths           int    `json:"candidate_paths"`
+		Raw             int    `json:"raw_unmasked_primary_full_read"`
+		Workflow        int    `json:"workflow_primary_full_read"`
+		Support         int    `json:"support"`
+		Saved           int    `json:"support_saved"`
+		Read            int    `json:"support_raw_unmasked_full_read"`
+		MaskedSupport   int    `json:"support_masked_workflow_full_read"`
+		Scan            int    `json:"support_scan_only"`
+		Unsaved         int    `json:"support_unsaved"`
+		Partial         int    `json:"support_partial_read"`
+		Reused          int    `json:"support_unmasked_full_via_comparison_or_reuse"`
+		WorkflowSupport int    `json:"support_workflow_full_read"`
 	} `json:"cohorts"`
 }
 type legacy21Projection struct {

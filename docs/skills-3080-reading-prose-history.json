@@ -1,0 +1,42 @@
+{
+  "source_accepted_head": "38f15c30731a4de10bccca6c94ac81defb953882",
+  "definition": "Exact file/location/text-SHA allowances frozen from accepted historical records and one fixed source line comparison. Runtime tests may not infer exemption from a field name or arbitrary history/time words.",
+  "entries": [
+    {
+      "file": "skills-3080-progress.json",
+      "location": "/received_review_history/8/scope",
+      "sha256": "a464b0344f9aa4581c869aff2ee2fad12f27e3457fa92399b7aabd2dae23d7ce",
+      "kind": "accepted_historical_record"
+    },
+    {
+      "file": "skills-3080-progress.json",
+      "location": "/received_review_history/12/parent_followup",
+      "sha256": "e6f549a28188a773e093309e21f4a0978bb03af0426dad9adfd108eb401427d2",
+      "kind": "accepted_historical_record"
+    },
+    {
+      "file": "skills-3080-progress.json",
+      "location": "/received_review_history/13/nonblocking_resolution/S1",
+      "sha256": "668f88609e5526c71cf8c983687f4ba029d4cd968fe49fbfe69f14273e9960de",
+      "kind": "accepted_historical_record"
+    },
+    {
+      "file": "skills-3080-sixmile-next45-evaluation.json",
+      "location": "/entries/12/findings/0",
+      "sha256": "0b57f92a4cda59b9cb5894100e45f9b0880089c44e92c4f34a40c566247089aa",
+      "kind": "fixed_source_line_comparison"
+    },
+    {
+      "file": "skills-3080-sixmile-next20-evaluation.json",
+      "location": "/definition_at_preparation",
+      "sha256": "db62ff764d15dedeaba29c45605fa4b3faab6d070f04230bd715ea66930e2629",
+      "kind": "accepted_historical_record"
+    },
+    {
+      "file": "skills-3080-sixmile-next45-evaluation.json",
+      "location": "/entries/35/findings/0",
+      "sha256": "c7aed188759a6e299b49136de6c0deed4a7281b3711e3424c5b202b7e8b50418",
+      "kind": "fixed_source_network_ports"
+    }
+  ]
+}

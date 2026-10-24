@@ -74,7 +74,8 @@
       "source_scripts_executed": false,
       "final_ledger_applied": true,
       "condition": "Canonical real adoption/public acceptance is now established; current branch records the occurrence exclusion. New delta review/CI/merge remains pending.",
-      "condition_at_preparation": "Only after the canonical real adoption is in the public ledger and reviewed; preserve source flags/rights separately."
+      "condition_at_preparation": "Only after the canonical real adoption is in the public ledger and reviewed; preserve source flags/rights separately.",
+      "sibling_package_blobs_definition": "Primary1 + individual notice1 + support8 + publication identity1 =11 blob paths."
     },
     {
       "inventory_id": "github:9a4792733ddd9ccbd3883f80adaa44d2f3214af2c971850d106896cf0238c55f",
@@ -106,7 +107,8 @@
       "source_scripts_executed": false,
       "final_ledger_applied": true,
       "condition": "Canonical real adoption/public acceptance is now established; current branch records the occurrence exclusion. New delta review/CI/merge remains pending.",
-      "condition_at_preparation": "Only after the canonical real adoption is in the public ledger and reviewed; preserve source flags/rights separately."
+      "condition_at_preparation": "Only after the canonical real adoption is in the public ledger and reviewed; preserve source flags/rights separately.",
+      "sibling_package_blobs_definition": "Primary1 + support8 + publication identity1 + individual notice0 =10 blob paths."
     }
   ],
   "comparison_only_occurrences": [
@@ -223,7 +225,8 @@
     "support_fingerprint": "484bdc219079d5764d67e22bee92807b0c49da6889c439fbb3ed03e534874448",
     "support_paths": 8,
     "todo": 3080,
-    "support_fingerprint_definition": "Sort support entries by relative path bytes; concatenate UTF-8 mode + space + type + space + git_blob_sha1 + space + relative_path + LF; SHA-256 of the concatenation. Size is metadata verified by the preserved official tree proof, outside this fingerprint."
+    "support_fingerprint_definition": "Sort support entries by relative path bytes; concatenate UTF-8 mode + space + type + space + git_blob_sha1 + space + relative_path + LF; SHA-256 of the concatenation. Size is metadata verified by the preserved official tree proof, outside this fingerprint.",
+    "package_blob_paths_definition": "Primary SKILL.md1 + official individual LICENSE.txt1 + support8 = package blob paths10; there is no publication identity entry in this official package."
   },
   "scope": "Only the two listed exact primary occurrences are excluded. One is in next45 and one is separately registered as comparison-only, not falsely added to direct-reading cohorts. Complete sibling proofs preserve publication/notice differences and show no added/changed supporting blob. Official metadata additionally binds the canonical eight support entries. No helper safety, source execution, missing notice grant or all-byte package equality is inferred.",
   "new_sibling_copy_grants": 0,

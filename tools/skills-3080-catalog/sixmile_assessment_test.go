@@ -12,18 +12,48 @@ import (
 )
 
 type sixmileSupport struct {
-	Path     string `json:"path"`
-	Blob     string `json:"git_blob"`
-	SHA      string `json:"source_sha256"`
-	Bytes    *int   `json:"bytes"`
-	Saved    bool   `json:"body_saved"`
-	Read     bool   `json:"body_read"`
-	Scan     bool   `json:"scan_only"`
-	Executed *bool  `json:"executed"`
+	Path     string  `json:"path"`
+	Blob     string  `json:"git_blob"`
+	SHA      string  `json:"source_sha256"`
+	Bytes    *int    `json:"bytes"`
+	Saved    bool    `json:"body_saved"`
+	Read     bool    `json:"body_read"`
+	Scan     bool    `json:"scan_only"`
+	ReadBy   *string `json:"read_by"`
+	ScanBy   *string `json:"scan_by"`
+	Executed *bool   `json:"executed"`
 }
 
 type sixmileEntry struct {
 	partialEntry
+	Reader                string `json:"body_read_by"`
+	CopyRights            *bool  `json:"copy_license_accepted"`
+	ParentArchiveRead     *bool  `json:"parent_notice_full_read"`
+	ParentArchiveAlias    *bool  `json:"parent_archival_notice_full_read"`
+	ParentOfficialRead    *bool  `json:"parent_official_notice_full_read"`
+	ParentOfficialPrimary *bool  `json:"parent_official_mcp_primary_reread"`
+	SupportRights         *bool  `json:"third_party_assets_or_support_rights_accepted"`
+	NoticeVerified        *bool  `json:"selected_scope_notice_verified"`
+	Grant                 struct {
+		ID     string `json:"license"`
+		Repo   string `json:"repo"`
+		Commit string `json:"commit"`
+		Path   string `json:"path"`
+		SHA    string `json:"sha256"`
+		Blob   string `json:"git_blob"`
+		Bytes  int    `json:"bytes"`
+		Read   *bool  `json:"parent_full_text_read"`
+	} `json:"canonical_author_license"`
+	Official struct {
+		Commit    string `json:"fixed_commit"`
+		Identical *bool  `json:"archived_mcp_primary_byte_identical"`
+		Files     []struct {
+			Path  string `json:"path"`
+			SHA   string `json:"sha256"`
+			Blob  string `json:"git_blob"`
+			Bytes int    `json:"bytes"`
+		} `json:"files"`
+	} `json:"official_upstream_provenance"`
 	Use     string           `json:"use"`
 	Reason  string           `json:"reason"`
 	Support []sixmileSupport `json:"supporting_resources"`
@@ -59,10 +89,14 @@ type sixmileAssessment struct {
 }
 
 // Anchored in the earlier fixed tree/index/catalog verification and saved
-// eleven-entry reading roster plus the independently verified ten-entry3554 scope; not a digest derived from the live ledger.
+// eleven-entry reading roster plus the independently verified ten-entry 3554 scope;
+// not a digest derived from the live ledger.
 const sixmileSelectedIdentity = "8df3778373dc174ea9e634d601ecdfcf9d02a29703dea8f9070250f4c7342854"
 const sixmileSelectedSupport = "e401127a4c64d35f7c2f4f19919d634a4c96c494ba57c630429827553aac983a"
 const sixmileSupportReading = "e41dd6445ad733c83ae15bf972fac95c530f32166943544e18282052ea08c299"
+
+// Earlier immutable roster SHA a9f9498b... binds these ten paths to reader3554.
+const sixmileNext10Actors = "6301d6942aea35a7738475d8db2870834fb0e06330f37c1e35f48dbf606ee80b"
 
 func validateSixmileAssessment(a sixmileAssessment, ledger []partialAdoption) error {
 	if a.Source != "6mile/skills" || a.Commit != "920714f17d81e0a95c7a9bc51faf0a7921cd982d" || a.Tree != "5782ae7deffe5024e15b6e090327385c10f76273" || a.Expected != 55623 || a.Read != 21 || a.Read != len(a.Entries) || a.Read+a.Unread != a.Expected || len(a.Fixed) != 21 {
@@ -82,6 +116,18 @@ func validateSixmileAssessment(a sixmileAssessment, ledger []partialAdoption) er
 	if a.Fingerprint != sixmileSelectedIdentity || hex.EncodeToString(h.Sum(nil)) != sixmileSelectedIdentity {
 		return errors.New("sixmile selected identities differ from the independent anchor")
 	}
+	var actors []string
+	for _, e := range a.Entries {
+		if e.Reader == "20261024-095453-todo-3554" {
+			actors = append(actors, e.Path+"\t"+e.Reader+"\n")
+		}
+	}
+	if len(actors) != 10 || primaryReaderFingerprint(actors) != sixmileNext10Actors {
+		return errors.New("next10 primary reader attribution differs from the independent fixed roster")
+	}
+	if err := validateSixmileNext10Rights(a); err != nil {
+		return err
+	}
 	entries := map[string]partialEntry{}
 	paths := map[string]bool{}
 	var supports []sixmileSupport
@@ -95,6 +141,11 @@ func validateSixmileAssessment(a sixmileAssessment, ledger []partialAdoption) er
 		for _, s := range e.Support {
 			if !strings.HasPrefix(s.Path, prefix) || !validHex(s.Blob, 40) || s.Executed == nil || *s.Executed || (s.Read && !s.Saved) || (s.Scan && (!s.Saved || s.Read)) || (s.Saved && (!validHex(s.SHA, 64) || s.Bytes == nil || *s.Bytes < 1)) || (!s.Saved && (s.SHA != "" || s.Bytes != nil)) {
 				return errors.New("sixmile support conflated unknown bytes, saved content, reading or execution")
+			}
+			if e.Reader == "20261024-095453-todo-3554" {
+				if err := validateResourceActor(e.Reader, s.Saved, s.Read, s.Scan, s.ReadBy, s.ScanBy); err != nil {
+					return err
+				}
 			}
 		}
 		supports = append(supports, e.Support...)

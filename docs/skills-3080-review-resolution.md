@@ -354,6 +354,8 @@ Nitは方針タグ4種を公開側で定義し、走査だけの支持30件はre
 
 関連テストと新しい固定差分のレビュー、CI、mergeの結果は別に確認する。この対応による新しい本文評価・採否・中央配置の加算は0で、全16資料は未完のまま保持する。
 
+<a id="sixmile-next10-facts"></a>
+
 ## 6mileの次10評価を追加した範囲
 
 3554の固定10本文184699Bと個別notice10件の評価を親が全件受領し、原応答71871B/SHAa09f81dc5ecbc38a5213c478c627e8ea04ed996e94473cb81741f773621717b1、job/nativeのSonnet5.5/max（model_origin policy、effort_origin owner_request）を照合した。親が10の原本文・archival noticeを全部再読したとはしない。MCPについてだけ公式の同一9092B本文と個別Apache11345Bを親が全文読み、出典を補強した。childが読んだarchive notice11357Bとは別で、parent_notice_full_readはarchiveについてfalse、officialは別項目でtrueとする。copy_license_acceptedは同一primaryだけに限定し、SDK・support software・サービスへ広げない。
@@ -363,6 +365,9 @@ Nitは方針タグ4種を公開側で定義し、走査だけの支持30件はre
 本文評価は137+76+177+21=411。864は同directoryにnotice保存metadataがある候補群で、許諾済み864件ではない。旧348とは直接比較しない。20件の評価済みと、新40件の研究予約と、未予約804件を区別する。有限batchを全体の打切り上限にしない。
 
 通常分類の調査3559は完了し、中央rootのGit印がないためowner refreshへ到達しないことを確認した。既存4比較は本文読書き0/容量不明で保持する。guard・登録・Gitを作り替えてclearにする作業は行っていない。2つの新規Skill案の通常の具体的preflightは未作成確認だけを行い、既存保留やroot全体の分類復旧とは分けて記録する。
+既存の比較は当初3件にMCP候補の比較先1件を加えた4件で、名前/leaf pathは公開しない。本文読書き0、容量不明を維持する。この章の採否/中央書込0は評価反映差分の範囲であり、後続の別の実配置記録と混同しない。
+
+数値モデルは[公開した自作Goの5テスト](skills-3080-pointer-emitter-model.go.txt)（4964B、SHA256 8fd48a4354f90ed6816b81f47f7101cba228ae57bc4a180331029edfc1e89042）を参照する。整数間隔の直線経路と斜め1例、先頭c個の位置、静止240回、reset/不正値を確認した記録である。非整数間隔、実描画、CPU/GPU負荷、上流JS実行の成功ではない。txtは同一byteで保持し、今回モデルを再実行/改変していない。
 
 ## 3563の受入と次の差分での改善
 
@@ -371,3 +376,15 @@ Nitは方針タグ4種を公開側で定義し、走査だけの支持30件はre
 Suggestion1は、重複receiptに増えたlive_pendingの数値コピーを削除し、現在値の正本adoptions.jsonへの参照にした。新しい投影値を増やして同じ更新漏れを繰り返す設計を避ける。Suggestion2は新50のread_byとscan_byを検査し、走査は入口担当のscan_byだけ、全文読取はread_byだけ、未保存は両方なしとする。担当の取り違え・走査を全文読取へ見せる変更・未保存への担当付与を負例で区別する。
 
 Nitは準備版自体のSHAと世代更新時の旧証拠の保持を公開した。MengToと6mileにはamended_at/amendment_jobを足し、取得・読取時刻と文書の追補時刻を分けた。weatherで新規コードの提案をGo/説明用擬似コードにしたのは本人の言語方針に合わせた変更であり、意図せずJSを落としたものではない。配布原文のJavaScriptは保存資料として保持し、無改変の配布ツールまで一律に禁止しない。
+
+## 3571の指摘と担当表示の共通化
+
+3571は固定ca1e891f..6e887da3の11差分を完了し、Must2/Suggestion3/Nit7を返した。親は原応答7228B/SHA b41f532e42e593aadce70de937d96eedd55c99f6c9dfcc2335a6ecc2ddf33587を保存・全文読了し、job/nativeのSonnet5.5/maxを照合した。本文10/notice10の展開後の再読は含まず、Gitの遅延取得の試行は接続拒否で成立していない。親は同じ取得を再試行しない。
+
+Must1は新10支持63の担当の誤表示を訂正した。全文30のread_byを保持し、走査5はscan_byだけ、未保存28は両方なしとした。本文/支持のidentity・保存・全文/走査数の3指紋は変わらない。同種の漏れをMengToだけで直して6mileへ適用し損ねていたため、役割判定を共通関数にし、両資料で同じ条件を使う。入口の担当自体も独立した既存rosterのpath/reader指紋へ結び、headerを欠落/差替えして検査を外せないようにした。5種類の担当の負例は、意図した担当エラーで落ちることも確認する。
+
+Must2はprimary_coverage_definitionの古い「6mile部分11=401」を構造化された各読了数から「21=411」へ訂正した。件数は正本の各source欄と合計へ投影照合し、旧component/旧合計・欠落・複数式を負例にする。担当と集計の両方で、修正前の実データからRedを再現した。
+
+Suggestionは公式MCP本文/個別notice/親の読了範囲だけを守る型と負例を加え、copy受入は新10内の同一primary1件のみ、archive親読取false・official true・support権利falseを検査する。初回license batchは履歴と明記し、現在の次研究3565/3566と分けた。公開側にも47の定義と保存35の範囲を追補し、model参照と限界を加えた。
+
+Nitは誤った別理由でテストが落ちる偽陽性を防ぎ、notice verifiedはidentity/読取であって許諾受入ではないと新10で明示した。MCPの未外部照合caveatはchild読取時点、amazonの通知は英文binding text不在と記録した。重複する説明は仕様からこの根拠へ参照し、public_reflectedの改名も評価公開と実採用の区別として記録する。新しい本文・最終採否・中央書込の加算はこの補正差分では0。

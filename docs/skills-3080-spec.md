@@ -260,10 +260,4 @@ PR417は固定bf5..853を3521、固定853..abを3529が読み、いずれもMust
 
 ## 6mileの次10評価を追加した範囲
 
-3554の固定10本文184699Bと個別notice10件の評価を親が全件受領し、原応答71871B/SHAa09f81dc5ecbc38a5213c478c627e8ea04ed996e94473cb81741f773621717b1、job/nativeのSonnet5.5/max（model_origin policy、effort_origin owner_request）を照合した。親が10の原本文・archival noticeを全部再読したとはしない。MCPについてだけ公式の同一9092B本文と個別Apache11345Bを親が全文読み、出典を補強した。childが読んだarchive notice11357Bとは別で、parent_notice_full_readはarchiveについてfalse、officialは別項目でtrueとする。copy_license_acceptedは同一primaryだけに限定し、SDK・support software・サービスへ広げない。
-
-旧11と新10の入口pathは重複0。支持102+63=165、保存40+35=75、全文12+30=42、走査0+5=5、未保存62+28=90。47は新しい保存source-pathの照合出現数で、物理gzip個数ではない。package外の文脈2件は支持へ加算しない。新規の最終採否は0で、除外8（既存重複7+個別権利1）とそのIDを保持する。
-
-本文評価は137+76+177+21=411。864は同directoryにnotice保存metadataがある候補群で、許諾済み864件ではない。旧348とは直接比較しない。20件の評価済みと、新40件の研究予約と、未予約804件を区別する。有限batchを全体の打切り上限にしない。
-
-通常分類の調査3559は完了し、中央rootのGit印がないためowner refreshへ到達しないことを確認した。既存4比較は本文読書き0/容量不明で保持する。guard・登録・Gitを作り替えてclearにする作業は行っていない。2つの新規Skill案の通常の具体的preflightは未作成確認だけを行い、既存保留やroot全体の分類復旧とは分けて記録する。
+本文評価は旧11と新10の計21入口で、全体は137+76+177+21=411。次10の出典、個別通知、読取/未読、支持165と47の単位、既存比較4件の経緯は[固定事実と限界](skills-3080-review-resolution.md#sixmile-next10-facts)に集約する。評価の公開と、後続の実配置の証拠は別の作業範囲として保持する。

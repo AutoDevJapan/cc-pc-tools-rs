@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-24T02:57:08.8435119+00:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "PR422まで通常merge済み。次10の評価を公開へ反映して本文411/6mile21とする。新しい最終採否は0。本文評価と実導入を分け、2件のSkill案は内容レビュー/具体的な新規配置/発見/実使用の確認を別に追う。全16資料は未完。",
+  "phase_b": "本文411/6mile21の評価反映と担当表示の補正の範囲。最終採否/中央書込の加算はこの公開差分では0。別の新規2件の実配置と発見の証拠は後続の公開範囲で反映し、全16資料の作業を継続する。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -438,7 +438,7 @@
     "complete_definition": "本文の全path読取のみ。個別許諾・支持・採否・実導入は未完。"
   },
   "all_fulltext_primary_paths_including_partial_sources": 411,
-  "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分11=401source paths。支持読了と導入/統合/除外件数は別。全16資料の意味/権利/採否/実導入は未完。",
+  "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分21=411source paths。支持読了と導入/統合/除外件数は別。全16資料の意味/権利/採否/実導入は未完。",
   "external_revisions": {
     "count": 1,
     "target": "diagnosing-bugs",
@@ -1045,5 +1045,7 @@
     "next_research_todo": 3554,
     "new_individual_rights_exclusions": 1,
     "existing_duplicate_receipts_reused": 1
-  }
+  },
+  "amended_at": "2026-10-24T04:36:53.6878206+00:00",
+  "amendment_job": "20261024-123649-todo-3080"
 }

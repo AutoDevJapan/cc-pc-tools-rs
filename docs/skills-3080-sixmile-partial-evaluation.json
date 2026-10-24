@@ -179,7 +179,7 @@
     "full_read_by": "20261024-080546-todo-3080"
   },
   "metadata_is_not_semantic_coverage": true,
-  "notice_scope": "各入口の同directoryに保存された個別noticeを先に確認した有限10件と、コピー0の重複判定1件。rootMITを第三者素材やサービス/依存へ広げない。",
+  "notice_scope": "旧10件と3554の新10件の個別noticeを全文読取した評価と、追加コピー0の重複判定1件を区別する。計21本文の評価で、20件全ての複製許諾を受け入れた意味ではない。rootMITを個別制限・第三者素材・サービス/依存へ広げない。",
   "source_readme": {
     "no_blanket_accept_or_exclude": true,
     "historical_archive_may_contain_malicious_skills": true,
@@ -2124,8 +2124,8 @@
           "path": "skills/0xastraea/opencog/PRECOG.md",
           "scan_only": true,
           "source_sha256": "0070d9892285a202f71a1bf810af2ccdd1d75e5a7274e21a7a6d37569fe80848",
-          "read_by": "20261024-095453-todo-3554",
-          "scan_note": "phrase scan only; not full body reading"
+          "scan_note": "phrase scan only; not full body reading",
+          "scan_by": "20261024-095453-todo-3554"
         },
         {
           "body_read": true,
@@ -2157,8 +2157,7 @@
           "git_blob": "02e29d07748f9da5256891dee7023063105b178a",
           "path": "skills/0xastraea/opencog/abi/PrecogMasterV8.json",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -2168,8 +2167,7 @@
           "git_blob": "557628dff4eb925003f7f09a6f1bf4859bc51047",
           "path": "skills/0xastraea/opencog/package-lock.json",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -2179,8 +2177,7 @@
           "git_blob": "6f964de7472ceccbdc6ee5406011ad4779dca746",
           "path": "skills/0xastraea/opencog/package.json",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -2190,8 +2187,7 @@
           "git_blob": "9723efc080237a4f90af104815cc73c01b0f6e27",
           "path": "skills/0xastraea/opencog/scripts/buy.mjs",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -2201,8 +2197,7 @@
           "git_blob": "5be6f34876ae04ae9c83c8c06fcbfc1f85f8fb85",
           "path": "skills/0xastraea/opencog/scripts/lib/args.mjs",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -2212,8 +2207,7 @@
           "git_blob": "35b43fd416ab4ecaef5f7530709b7ce10a8e9fdf",
           "path": "skills/0xastraea/opencog/scripts/lib/client.mjs",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -2223,8 +2217,7 @@
           "git_blob": "bd13a1b9d8cec21fefdab56f0d9eccd5f4212d8e",
           "path": "skills/0xastraea/opencog/scripts/lib/helper.mjs",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -2234,8 +2227,7 @@
           "git_blob": "0fdd6115563ebc5c24dbb0b60bf48115dc21bf58",
           "path": "skills/0xastraea/opencog/scripts/market.mjs",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -2245,8 +2237,7 @@
           "git_blob": "4a91b46bd9dcc602adcbf9e827c94a442f9c7a13",
           "path": "skills/0xastraea/opencog/scripts/markets.mjs",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -2256,8 +2247,7 @@
           "git_blob": "cf1308fadb2e2c46e47c5fb802a4ec4a25c4385a",
           "path": "skills/0xastraea/opencog/scripts/positions.mjs",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -2267,8 +2257,7 @@
           "git_blob": "c763b98960629ca40a69d508b85876ec2d7d5948",
           "path": "skills/0xastraea/opencog/scripts/quote.mjs",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -2278,8 +2267,7 @@
           "git_blob": "e0a75cff9a77f1684fa2939c6f1461feea85dddd",
           "path": "skills/0xastraea/opencog/scripts/sell.mjs",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -2289,8 +2277,7 @@
           "git_blob": "cffd01d51b6f75cbb7450ea911e267c27c7fd019",
           "path": "skills/0xastraea/opencog/scripts/setup.mjs",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -2300,8 +2287,7 @@
           "git_blob": "7cd74efb9e82beced7914478ea859c378714b37a",
           "path": "skills/0xastraea/opencog/vitest.config.mjs",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         }
       ],
       "source_sha256": "436fddeff1c8a7fe83e18abde38fb0a5567f2e8477027a15ebc9c8c02fef55fc",
@@ -2335,7 +2321,9 @@
       "copy_license_accepted": false,
       "parent_policy_correction": "現時点の本人用途が不明なことだけでは除外しない。調査/参照/必要な原則の抽出と、実資金取引や鍵生成を分ける。取引をこのSkill調査から実行せず、本文名と掲載名は両方保持しpath/blobで識別する。",
       "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/0xastraea/opencog/SKILL.md",
-      "assessment_public_reflected": true
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
     },
     {
       "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
@@ -2455,8 +2443,7 @@
           "git_blob": "1c7eef8e7abffec8c77d989730774e157ef7479d",
           "path": "skills/0xfratex/virtualboxmanager/scripts/virtualbox-utils.ts",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         }
       ],
       "source_sha256": "4845b586e6b46d43054d6ad195f5bfb5c4bc0aa58801e16f5c442bd4ac580c99",
@@ -2490,7 +2477,9 @@
       "copy_license_accepted": false,
       "parent_policy_correction": "VM利用が未確認でも一般的な状態確認/停止/複製の手順の有用性は別に評価する。未使用helperの移植や全面読取を必須にしない。実際の破壊操作は元依頼の対象/保持/既存許可を確認し、同じ許可済み操作を再質問しない。",
       "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/0xfratex/virtualboxmanager/SKILL.md",
-      "assessment_public_reflected": true
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
     },
     {
       "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
@@ -2626,7 +2615,9 @@
       "copy_license_accepted": false,
       "parent_policy_correction": "従量課金AI/APIキーの実利用と既存OAuth枠を区別する。このサービスを接続/購入せず、無通信の評価や一般原則の部分利用まで新禁止へ広げない。",
       "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/0xjordansg-yolo/openclaw-aisa-youtube/SKILL.md",
-      "assessment_public_reflected": true
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
     },
     {
       "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
@@ -2769,7 +2760,9 @@
       "copy_license_accepted": false,
       "parent_policy_correction": "第三者の中継/OAuthという方式だけで禁止や毎回の本人確認へしない。顧客データの実際の宛先/目的/既存契約/元依頼の発信範囲を照合し、メッセージ送信は明示された対象と内容だけ。同じ許可を聞き直さない。",
       "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/0xspeter/klaviyo-1-0-4/SKILL.md",
-      "assessment_public_reflected": true
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
     },
     {
       "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
@@ -2894,8 +2887,7 @@
           "git_blob": "329ad4e5a71546b2c455f8e08c98b32ecdd3c1e3",
           "path": "skills/86293073/skill-creator-0-1-0/scripts/init_skill.py",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -2905,8 +2897,7 @@
           "git_blob": "5cd36cb16e1314f2ab87d50aaedbc9f26925dac1",
           "path": "skills/86293073/skill-creator-0-1-0/scripts/package_skill.py",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -2916,8 +2907,7 @@
           "git_blob": "d9fbeb75ee10bd8f89c0ee9b6716867125820c7e",
           "path": "skills/86293073/skill-creator-0-1-0/scripts/quick_validate.py",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         }
       ],
       "source_sha256": "b2e3d83f60425c2d0b9d4162efb8f9aa322b45843497340f2289f42be422801c",
@@ -2951,7 +2941,9 @@
       "copy_license_accepted": false,
       "parent_policy_correction": "同名2件は重複の候補根拠だけで、本文同一や不要の確定ではない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。管理配布物やjunctionを上書きしない。",
       "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/86293073/skill-creator-0-1-0/SKILL.md",
-      "assessment_public_reflected": true
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
     },
     {
       "copy_license_accepted": true,
@@ -3094,8 +3086,7 @@
           "git_blob": "d0345048f783591fd1f87e0b15bd55610e15eb78",
           "path": "skills/aabbcc456aa/hxl-code-reviewer/.openskills.json",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": true,
@@ -3129,8 +3120,8 @@
           "path": "skills/aabbcc456aa/hxl-code-reviewer/reference/evaluation.md",
           "scan_only": true,
           "source_sha256": "8c99479f8a2d22a636c38e274537aac3610879e26f34e0709825077c4576f427",
-          "read_by": "20261024-095453-todo-3554",
-          "scan_note": "phrase scan only; not full body reading"
+          "scan_note": "phrase scan only; not full body reading",
+          "scan_by": "20261024-095453-todo-3554"
         },
         {
           "body_read": true,
@@ -3152,8 +3143,8 @@
           "path": "skills/aabbcc456aa/hxl-code-reviewer/reference/node_mcp_server.md",
           "scan_only": true,
           "source_sha256": "c3ba35a4f599dd53be9c6555ae72c19a7bf412cd5426576c2c08d42755482c66",
-          "read_by": "20261024-095453-todo-3554",
-          "scan_note": "phrase scan only; not full body reading"
+          "scan_note": "phrase scan only; not full body reading",
+          "scan_by": "20261024-095453-todo-3554"
         },
         {
           "body_read": false,
@@ -3164,8 +3155,8 @@
           "path": "skills/aabbcc456aa/hxl-code-reviewer/reference/python_mcp_server.md",
           "scan_only": true,
           "source_sha256": "2da52f77e675191014ca2e146a4b95aa04d0ca7dd7e2b100322df15ade685e80",
-          "read_by": "20261024-095453-todo-3554",
-          "scan_note": "phrase scan only; not full body reading"
+          "scan_note": "phrase scan only; not full body reading",
+          "scan_by": "20261024-095453-todo-3554"
         },
         {
           "body_read": false,
@@ -3175,8 +3166,7 @@
           "git_blob": "ffcd0da3fbe1539320d022017ae83b61a9587a5c",
           "path": "skills/aabbcc456aa/hxl-code-reviewer/scripts/connections.py",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -3186,8 +3176,7 @@
           "git_blob": "41778569c45a458e0eea839b8917692ad65be2d5",
           "path": "skills/aabbcc456aa/hxl-code-reviewer/scripts/evaluation.py",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -3197,8 +3186,7 @@
           "git_blob": "41e4459b5af861e61f1ca87d2f8f5ab5543dc054",
           "path": "skills/aabbcc456aa/hxl-code-reviewer/scripts/example_evaluation.xml",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": true,
@@ -3239,7 +3227,7 @@
         "body_reading_stopped_for_rights": false,
         "scope": "同パッケージのソフトウェアと関連文書（ディレクトリの近さで読む）。NOTICEファイルなし",
         "not_covered": "商標（Apache §6）",
-        "caveat": "ライセンサー不明。ファイル構成が公開済みの著名なMCP構築ガイド（anthropics/skills由来の可能性）と一致するように見えるが、推定で外部照合は未実施。公開者aabbcc456aaが権利者とは限らない。skill-creatorのnoticeと同一bytes",
+        "caveat": "child3554読取時点: ライセンサー不明。ファイル構成が公開済みの著名なMCP構築ガイド（anthropics/skills由来の可能性）と一致するように見えるが、推定で外部照合は未実施。公開者aabbcc456aaが権利者とは限らない。skill-creatorのnoticeと同一bytes",
         "license_path": "skills/aabbcc456aa/hxl-code-reviewer/LICENSE.txt",
         "license_sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
         "license_bytes": 11357,
@@ -3273,7 +3261,15 @@
       "parent_official_notice_bytes": 11345,
       "parent_official_notice_sha256": "bc6b3af2f331cbc7fb0da1344efb2cbe5877a31498b4d70dbc7000f3405a1362",
       "copy_license_accepted_scope": "Only the byte-identical9092B primary, corroborated against official fixed Anthropicsource and its individual Apache license. Archival11357B notice was read by child3554, not reread by parent. SDK/support software/services are not accepted.",
-      "assessment_public_reflected": true
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights.",
+      "parent_official_mcp_primary_reread": true,
+      "parent_official_mcp_primary_reread_evidence": {
+        "bytes": 9092,
+        "source_sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
+        "job": "20261024-093456-todo-3080",
+        "definition": "Earlier private next10 preparation records parent full reread of official fixed primary. This is separate from child3554 archival notice reading."
+      }
     },
     {
       "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
@@ -3407,7 +3403,9 @@
       "copy_license_accepted": false,
       "parent_policy_correction": "疑わしいキー風文字列の実在は未確認。値を再掲/検査接続せず、転載する素材から取り除く。本文の作者のtest_接頭辞の宣言だけで実テストモード成功とせず、実サービスのモードと対象で確認する。既に許可された決済サンドボックスの通常テストを再承認待ちにしない。",
       "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/aamish99/fundraiseup/SKILL.md",
-      "assessment_public_reflected": true
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
     },
     {
       "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
@@ -3431,7 +3429,9 @@
         "license_sha256": "8b381c37841da566fc8d48cc975ff253f5cdff12c191e5f4f62c435a9f30b22d",
         "license_bytes": 1090,
         "full_license_read": true,
-        "full_license_read_definition": "Child3554 read the individual archival notice. parent_notice_full_read separately states parent reading; this is not permission for services, software or all support."
+        "full_license_read_definition": "Child3554 read the individual archival notice. parent_notice_full_read separately states parent reading; this is not permission for services, software or all support.",
+        "binding_text_present": false,
+        "binding_text_limitation": "Saved notice is a Chinese reference translation. The stated binding English text is not bundled or accepted; grant_express is the historical reader classification, not an accepted copy grant."
       },
       "body_read_complete": true,
       "reason": "個人のログイン済みAmazonをリモートデバッグで操作して大量取得する設計で、利用規約違反やアカウント凍結の恐れがある（規約本文は未確認）。setup.mdは『既存のChromeを閉じ、標準プロファイルでポート9222を開く』手順で、本人のChromeとタブに触れない方針と衝突する。スクリプト5本（Python）は未保存で、動作は未評価。配布済みPythonの無改変試用は本人方針の範囲内だが、改造や自作追加はGoかRustで行う。",
@@ -3517,8 +3517,8 @@
           "path": "skills/aduo6668/amazon-review-workbook/README.md",
           "scan_only": true,
           "source_sha256": "1b04e645cde075dcd49a34f1a8253c2cca7eed4422f6a4ecb5cae6887b82a26f",
-          "read_by": "20261024-095453-todo-3554",
-          "scan_note": "phrase scan only; not full body reading"
+          "scan_note": "phrase scan only; not full body reading",
+          "scan_by": "20261024-095453-todo-3554"
         },
         {
           "body_read": true,
@@ -3539,8 +3539,7 @@
           "git_blob": "0ba0f9bc47a501c926757f8893e58cd7581098e3",
           "path": "skills/aduo6668/amazon-review-workbook/agents/openai.yaml",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": true,
@@ -3583,8 +3582,7 @@
           "git_blob": "07fa71034b74bd1f61a98e9b481cf95f4b9c7007",
           "path": "skills/aduo6668/amazon-review-workbook/scripts/amazon_review_workbook.py",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -3594,8 +3592,7 @@
           "git_blob": "988bac993f0b15d85c4d082ca6a108fcd1475355",
           "path": "skills/aduo6668/amazon-review-workbook/scripts/deeplx_translate.py",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -3605,8 +3602,7 @@
           "git_blob": "623d4366e3d61ffbae127098277d9f39eb4da8d0",
           "path": "skills/aduo6668/amazon-review-workbook/scripts/label_workflow.py",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -3616,8 +3612,7 @@
           "git_blob": "6dd8119be9843a4466fc9cf2807dda4ac3870a7d",
           "path": "skills/aduo6668/amazon-review-workbook/scripts/review_cache.py",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         },
         {
           "body_read": false,
@@ -3627,8 +3622,7 @@
           "git_blob": "a290c8db5d9622778cf60597e8531b36e5519b06",
           "path": "skills/aduo6668/amazon-review-workbook/scripts/review_delivery_schema.py",
           "scan_only": false,
-          "source_sha256": null,
-          "read_by": "20261024-095453-todo-3554"
+          "source_sha256": null
         }
       ],
       "source_sha256": "09835c3a514604d7a050c7e7c911c34b94e8a7c4730879dc038b69d3be3be3dd",
@@ -3662,7 +3656,9 @@
       "copy_license_accepted": false,
       "parent_policy_correction": "専用の別Chrome profileへ置き換える子の案は採らない。本人のログイン済みChromeと正規の利用可能な操作経路を使い、自分のtabだけを記録/終了する。既存Chromeを閉じたりデバッグ再起動しない。現行の規約/地域条件は未確認で、違反や凍結を確定しない。配布Pythonを全移植する義務は足さない。",
       "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/aduo6668/amazon-review-workbook/SKILL.md",
-      "assessment_public_reflected": true
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
     },
     {
       "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
@@ -3812,7 +3808,9 @@
       "copy_license_accepted": false,
       "parent_policy_correction": "現在の仕様/地域/利用条件と署名例の正誤は独立未確認。公開市場データの参照と口座/注文/取消を分け、実取引はこの読取評価から行わない。暗号やOpenSSLに関する子の推定を実機成功・公式照合済みにしない。",
       "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/ai-chen2050/moltrade/binance/spot/SKILL.md",
-      "assessment_public_reflected": true
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
     },
     {
       "comparison_limit": "Startup public name/description comparison only; central bodies are unread. Classification holds are tracked separately without target names. No final duplicate or non-necessity decision.",
@@ -3989,7 +3987,9 @@
       "copy_license_accepted": false,
       "parent_policy_correction": "人の承認フラグやdeny-by-defaultを本人の許可済み通常操作への新しい一律承認待ちにしない。設定済みscopeを実装で照合し、監査/停止/再開を区別する。Turnstileという記載だけでサービス利用が絶対不可能と断定せず、回避も試さない。未依頼のrelay導入や送信は行わない。",
       "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/ai-headhunter/pinch/SKILL.md",
-      "assessment_public_reflected": true
+      "assessment_public_reflected": true,
+      "selected_scope_notice_verified": true,
+      "selected_scope_notice_verified_definition": "Saved individual notice path/hash and the child full-notice reading are verified; this boolean does not accept copy, support, software or service rights."
     }
   ],
   "license_batch": {
@@ -4000,7 +4000,9 @@
     "not_adoption_cap": true,
     "pool_definition": "旧担当が報告した選択pool348の履歴。正確な選択条件は未復元で、今回のrole-based個別notice metadata pool864とは同じ基準の増減として比較しない。",
     "new_notice_metadata_pool": 864,
-    "next_research_todo": 3554
+    "next_research_todo": 3554,
+    "historical": true,
+    "snapshot_scope": "初回080546の10件だけの履歴。next_research_todo3554は当時の後続で既に完了。現在の次作業はrootのnext_research_todosを参照。348と864は選択条件が異なる。"
   },
   "integrated": 0,
   "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
@@ -4029,7 +4031,44 @@
     "central_writes": 0
   },
   "next21_definition": "Earlier eleven plus research3554 ten unique primary paths. Support102+63=165, saved40+35=75, full12+30=42, scan0+5=5, unsaved62+28=90. Metadata eligibility is not individual permission. No new adoption or exclusion is added.",
-  "amended_at": "2026-10-24T03:03:56.0866038+00:00",
-  "amendment_job": "20261024-093456-todo-3080",
-  "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts."
+  "amended_at": "2026-10-24T04:36:53.6527779+00:00",
+  "amendment_job": "20261024-123649-todo-3080",
+  "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts. 3571補正は担当表示と根拠の追補で、新しい本文/支持の読取や採用の加算ではない。",
+  "next_research_todos": [
+    3565,
+    3566
+  ],
+  "next10_fixed_verification": {
+    "reader_job": "20261024-095453-todo-3554",
+    "outside_package_context_count": 2,
+    "support_saved": 35,
+    "support_full_read": 30,
+    "outside_package_context_paths": [
+      "README.md",
+      "skills/ai-chen2050/moltrade/_meta.json"
+    ],
+    "definition": "47=10 primary paths +35 saved support paths(including notices) +2 outside-package context paths; not physical gzip count. All63 support identities were checked in complete tree/index; only saved35 support have gzip/UTF8/raw Gitblob checks. Context is not added to support counts.",
+    "support_scan_only": 5,
+    "individual_notices": 10,
+    "support_metadata": 63,
+    "saved_source_path_occurrences_verified": 47,
+    "primary_bytes": 184699,
+    "primary": 10,
+    "original_response_sha256": "a09f81dc5ecbc38a5213c478c627e8ea04ed996e94473cb81741f773621717b1",
+    "new_semantic_reads": 0,
+    "proof_sha256": "2a48a764c291db955df0c7f38c50e655d7e297adf9edd7a8d2f530a5d7965206",
+    "support_unsaved": 28,
+    "helper_reexecuted": false
+  },
+  "actor_attribution_correction": {
+    "old_ambiguous_read_by_removed": 33,
+    "legacy11_definition": "Old11 rows have historical reading states without per-support reader/scanner attribution; do not invent actors.",
+    "fixed_reader_scope": "20261024-095453-todo-3554",
+    "primary_path_reader_fingerprint": "6301d6942aea35a7738475d8db2870834fb0e06330f37c1e35f48dbf606ee80b",
+    "source_identity_and_reading_state_fingerprints_unchanged": true,
+    "unread_with_no_actor": 28,
+    "review_todo": 3571,
+    "scan_by": 5,
+    "full_read_by_preserved": 30
+  }
 }

@@ -456,10 +456,18 @@ func TestModelUpdateKeepsLegacyCLIErrorAndClassification(t *testing.T) {
 		}
 	}
 	f := newModelUpdateFixture(t)
+	// Owned temporary data may be under an independently qualified scheduler
+	// source. Preserve that pre-existing classification, rather than assuming
+	// every caller's TEMP is outside a repair checkout.
+	beforeTarget, beforeRoot := allowed(f.leaf.target), allowed(f.root)
 	if f.result(f.leaf.target)["qualified"] != true {
 		t.Fatal("purpose positive control rejected")
 	}
-	if allowed(f.leaf.target) || allowed(f.root) {
+	if allowed(f.leaf.target) != beforeTarget || allowed(f.root) != beforeRoot {
 		t.Fatal("update purpose changed general data classification")
+	}
+	unknown := filepath.Join(filepath.VolumeName(f.root)+string(os.PathSeparator), "unknown-guard-"+hashBytes([]byte(f.root)))
+	if allowed(unknown) {
+		t.Fatal("software qualification granted unrelated data access")
 	}
 }

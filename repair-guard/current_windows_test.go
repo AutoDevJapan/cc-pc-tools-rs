@@ -24,6 +24,22 @@ func currentFixtureGit(t *testing.T, root string, args ...string) {
 	}
 }
 
+// The owned D: test root can itself be long. Keep these nested Git fixtures
+// short instead of overflowing Git for Windows' GIT_DIR buffer with test names.
+func currentShortFixture(t *testing.T) string {
+	t.Helper()
+	path, err := os.MkdirTemp(os.TempDir(), "guard-")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		if err := os.RemoveAll(path); err != nil {
+			t.Error(err)
+		}
+	})
+	return path
+}
+
 func TestCurrentGitProbeRetriesOnlyOneTransportDeadline(t *testing.T) {
 	type result struct {
 		output   string
@@ -546,7 +562,7 @@ func TestOngoingBusinessDirectChildPreservesStopAndPhysicalScopeAfterRecoveryDea
 
 func testOngoingBusinessDirectChild(t *testing.T, task int) {
 	t.Helper()
-	base, err := physical(t.TempDir())
+	base, err := physical(currentShortFixture(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -899,7 +915,7 @@ func TestCurrentSubworkReceiptIsBoundToDirectCurrentParent(t *testing.T) {
 // origins and common directories. Admission must still reject a failed live
 // identity lookup even when the same local file classification succeeds.
 func TestCurrentSubworkOfflinePathUsesRealGitAndPreservesAdmission(t *testing.T) {
-	base, err := physical(t.TempDir())
+	base, err := physical(currentShortFixture(t))
 	if err != nil {
 		t.Fatal(err)
 	}

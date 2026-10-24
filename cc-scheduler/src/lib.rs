@@ -15,6 +15,7 @@ pub mod product_review;
 pub mod registration_resume;
 pub mod targeted_dispatch;
 pub mod workspace_checkpoint;
+pub mod workspace_relocation;
 pub use cc_ask::recovery_failure;
 pub use cc_job_policy::priority;
 pub use cc_job_policy::product_identity;

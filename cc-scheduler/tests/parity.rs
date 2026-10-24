@@ -21,6 +21,8 @@ mod targeted_dispatch_tests;
 mod registration_resume_tests;
 #[path = "support/workspace_checkpoint.rs"]
 mod workspace_checkpoint_tests;
+#[path = "support/workspace_relocation.rs"]
+mod workspace_relocation_tests;
 
 #[test]
 fn review_preparation_failures_stop_after_three_and_recover_on_new_evidence() {
@@ -1718,6 +1720,8 @@ struct Fake {
     repair_allowed: bool,
     repair_denied: Option<String>,
     repair_calls: Vec<String>,
+    repair_probe_queue: Option<PathBuf>,
+    repair_queue_available: Vec<bool>,
     repair_edit: Option<(PathBuf, Value)>,
     repair_edit_after: usize,
     repair_lock_on_call: Option<(usize, PathBuf)>,
@@ -1764,6 +1768,8 @@ impl Default for Fake {
             repair_allowed: false,
             repair_denied: None,
             repair_calls: vec![],
+            repair_probe_queue: None,
+            repair_queue_available: vec![],
             repair_edit: None,
             repair_edit_after: 0,
             repair_lock_on_call: None,
@@ -1839,6 +1845,10 @@ impl Backend for Fake {
     }
     fn repair_scope_allowed(&mut self, repo: &str) -> bool {
         self.repair_calls.push(repo.into());
+        if let Some(path) = &self.repair_probe_queue {
+            self.repair_queue_available
+                .push(ByteLock::acquire(path, Duration::ZERO).unwrap().is_some());
+        }
         if self
             .repair_lock_on_call
             .as_ref()

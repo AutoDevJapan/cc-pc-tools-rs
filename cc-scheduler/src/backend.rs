@@ -840,7 +840,9 @@ impl Backend for RealBackend {
         jobs: &[Value],
     ) -> Result<Option<Value>> {
         self.guard_workspace_path(repo)?;
-        if let Some(job) = crate::preparation::workspace_source(item, jobs) {
+        if item["scheduler"]["workspace_relocation"].is_object() {
+            self.guard_workspace_path(s(&item["scheduler"]["worktree"]))?;
+        } else if let Some(job) = crate::preparation::workspace_source(item, jobs) {
             self.guard_workspace_path(s(&job["cwd"]))?;
         }
         crate::preparation::recover_workspace(self.runner.as_mut(), repo, item, jobs)

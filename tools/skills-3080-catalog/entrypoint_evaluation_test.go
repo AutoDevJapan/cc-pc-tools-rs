@@ -45,7 +45,7 @@ func TestPrimaryCoverageDescriptionMatchesCanonicalComponentCounts(t *testing.T)
 		} `json:"mengto_partial_entrypoint_evaluation"`
 		Sixmile struct {
 			Read int `json:"full_body_read"`
-		} `json:"sixmile_partial_entrypoint_evaluation"`
+		} `json:"sixmile_body_read_coverage"`
 	}
 	loadPublicReceipt(t, "skills-3080-progress.json", &p)
 	want := []int{p.Complete.Paths, p.Mizchi.Read, p.Mengto.Read, p.Sixmile.Read, p.Total}
@@ -323,7 +323,7 @@ func TestCoverageSeparatesCompleteSourcesMizchiAndAuthoredDrafts(t *testing.T) {
 		} `json:"mengto_partial_entrypoint_evaluation"`
 		Sixmile struct {
 			Read int `json:"full_body_read"`
-		} `json:"sixmile_partial_entrypoint_evaluation"`
+		} `json:"sixmile_body_read_coverage"`
 		Authored struct {
 			Additional int      `json:"additional_authored_drafts_not_in_plans"`
 			Total      int      `json:"authored_total"`

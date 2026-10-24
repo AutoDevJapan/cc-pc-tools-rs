@@ -1,0 +1,95 @@
+{
+  "todo": 3080,
+  "job": "20261024-123649-todo-3080",
+  "applied_at": "2026-10-24T05:53:43.8670309Z",
+  "root": "D:/CC/Skills",
+  "bundle_sha256": "97e3d3b442e14a093f75bdeecd81e55d0ba17f13428f53f3806c8bc85a998bfb",
+  "journal_sha256": "401fa95c18ae56cdfc8062f91240953ffc44238f24f199425c8a5d11892edec2",
+  "targets": [
+    {
+      "name": "rss-feed-generator",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "feedの無い指定の公開記事一覧から、URLと日時の根拠を保った合成RSSを作る。",
+      "negative": "既存feedの1回読取へ新しいfeed生成を追加する。記事の日付不明を取得日へ置き換える。",
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kidehen/rss-generator-skill/SKILL.md"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "ac4596e3710e45feb5056190934ffafc60d4226a9b8b8975d27c44653f7b5def",
+          "bytes": 8132,
+          "mode": "create_new"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "86fe9e21807d53a58fd97e61b070101241425b83ac9825686a09eb1894a797fc",
+          "bytes": 1074,
+          "mode": "create_new"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "f0f5584c4a93e5c8ca8ef72617733699b257ccc5e63534b1fda8dc1c54debc3c",
+          "bytes": 5456,
+          "mode": "create_new"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "308acb9e882a520867cc2d31ac31e77ac4461bd70d98250316e23f152c451a1f",
+          "bytes": 7323,
+          "mode": "create_new"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "d04bb1a754e1670c8b869b065aca9b121bcb065a47d4b900f3edd9372c862977",
+          "bytes": 2957,
+          "mode": "create_new"
+        }
+      ]
+    },
+    {
+      "name": "3d-four-seasons",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "季節を連続で切り替えると色が漂い、葉のない冬にも夏の影が残る。",
+      "negative": "日付文字列だけを春夏秋冬のラベルへ変える。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/3d/3d-four-seasons/SKILL.md"
+      ],
+      "files": [
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "2696252a795b1c234d4b06a1091418e68ae305f4d773e9b69e941392fa7286c7",
+          "bytes": 5028,
+          "mode": "create_new"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "bytes": 1064,
+          "mode": "create_new"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "2e572d05ee0a2b63349a0e6aa6c3ad4953e763d1558b0b66476e101602e99d43",
+          "bytes": 2750,
+          "mode": "create_new"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "2dde0d2937b793299742bcaab148c86483552dffe4d4796a077549c7b396283f",
+          "bytes": 3825,
+          "mode": "create_new"
+        },
+        {
+          "path": "SKILL.md",
+          "sha256": "1f280cad10159df4c654c380358e8efe2fa8d7d7b4c4f9de9a6c7ad6e385000f",
+          "bytes": 2492,
+          "mode": "create_new"
+        }
+      ]
+    }
+  ],
+  "write_scope": "Only two absent new target directories/ten CreateNew files, no other root/config/held target modification."
+}

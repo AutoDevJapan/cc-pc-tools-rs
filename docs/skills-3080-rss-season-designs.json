@@ -1,0 +1,50 @@
+{
+  "todo": 3080,
+  "phase": "B",
+  "status": "reviewed_fixed_designs_with_new_only_deployment",
+  "batch_is_not_total_scope_or_count_cap": true,
+  "design_count": 2,
+  "not_legacy_batch_schema": true,
+  "basis": "Two author procedures from the listed 6mile and MengTo repositories, each with its scoped MIT notice, fixed source and changes. This adds neither a catalog source nor an adoption cap.",
+  "bundle_sha256": "97e3d3b442e14a093f75bdeecd81e55d0ba17f13428f53f3806c8bc85a998bfb",
+  "targets": [
+    {
+      "name": "rss-feed-generator",
+      "inventory_id": "github:89360b4dedcdf7fceccbef746956ad5f50a6c50126946fb12731aff46af0851b",
+      "source_repo": "6mile/skills",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_path": "skills/kidehen/rss-generator-skill/SKILL.md",
+      "source_sha256": "ac4596e3710e45feb5056190934ffafc60d4226a9b8b8975d27c44653f7b5def",
+      "description": "既存feedのない公開記事一覧から合成RSS・Atomを作り、日時・URL・XMLを検証するときに使う。",
+      "positive": "feedの無い指定の公開記事一覧から、URLと日時の根拠を保った合成RSSを作る。",
+      "negative": "既存feedの1回読取へ新しいfeed生成を追加する。記事の日付不明を取得日へ置き換える。",
+      "entrypoint_sha256": "d04bb1a754e1670c8b869b065aca9b121bcb065a47d4b900f3edd9372c862977",
+      "primary_license": "MIT",
+      "individual_notice_sha256": "86fe9e21807d53a58fd97e61b070101241425b83ac9825686a09eb1894a797fc",
+      "rights_scope": "Only the author procedure text with exact OpenLinkSoftware2024 individualMIT1074B. No service/article/support/external-code grant.",
+      "comparison": "Active public descriptions only; no unknown central body or held4 access. Narrow feed-generation / coordinated-season-state tasks distinct from generic reading/rendering.",
+      "existing_body_comparison_complete": false,
+      "reviewed_bundle": "skills-3080-rss-season-reviewed-bundle.json",
+      "actual_manifest": "skills-3080-installed-rss-season-manifest.json"
+    },
+    {
+      "name": "3d-four-seasons",
+      "inventory_id": "github:29a0ba0843498fe31de765752ffa07dfd7835d47f3ac062d641e41169e601167",
+      "source_repo": "MengTo/Skills",
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_path": "agent-skills/3d/3d-four-seasons/SKILL.md",
+      "source_sha256": "2696252a795b1c234d4b06a1091418e68ae305f4d773e9b69e941392fa7286c7",
+      "description": "3Dシーンの季節を連続で切り替え、色・葉・影・雪を同じ状態にそろえるときに使う。",
+      "positive": "季節を連続で切り替えると色が漂い、葉のない冬にも夏の影が残る。",
+      "negative": "日付文字列だけを春夏秋冬のラベルへ変える。",
+      "entrypoint_sha256": "1f280cad10159df4c654c380358e8efe2fa8d7d7b4c4f9de9a6c7ad6e385000f",
+      "primary_license": "MIT",
+      "individual_notice_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "rights_scope": "Only the MengTo author procedure text with exact rootMIT1064B. No Seijaku/Three/font/demo/module/assets copied or accepted.",
+      "comparison": "Active public descriptions only; no unknown central body or held4 access. Narrow feed-generation / coordinated-season-state tasks distinct from generic reading/rendering.",
+      "existing_body_comparison_complete": false,
+      "reviewed_bundle": "skills-3080-rss-season-reviewed-bundle.json",
+      "actual_manifest": "skills-3080-installed-rss-season-manifest.json"
+    }
+  ]
+}

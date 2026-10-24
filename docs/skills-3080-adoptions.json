@@ -2,11 +2,11 @@
   "todo": 3080,
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "catalog_occurrences": 73220,
-  "installed_new": 30,
+  "installed_new": 32,
   "integrated": 3,
   "excluded": 8,
-  "pending_occurrences": 73179,
-  "pending_available_body_occurrences": 72104,
+  "pending_occurrences": 73177,
+  "pending_available_body_occurrences": 72102,
   "unavailable_site_occurrences": 428,
   "execution_held_occurrences": 647,
   "duplicate_policy": "One installed occurrence does not implicitly approve other copies, URLs or licenses",
@@ -478,12 +478,21 @@
       "upstream_original_preserved": true,
       "source_notice_preserved": true,
       "independent_review_pending": false,
-      "public_delta_review_pending": true,
+      "public_delta_review_pending": false,
       "explicit_use_check_pending": false,
       "explicit_use_assessment": "3564 A/B/C explicit design/numerical core passed; no real server/rendering or implicit-selection proof",
       "evidence": "skills-3080-mcp-pointer-installation-evidence.json",
       "existing_body_comparison_complete": false,
-      "third_party_support_or_service_rights_accepted": false
+      "third_party_support_or_service_rights_accepted": false,
+      "public_delta_acceptance": {
+        "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
+        "review_todos": [
+          3590,
+          3599
+        ],
+        "merge": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
+        "pr": 428
+      }
     },
     {
       "inventory_id": "github:a89e967becb119a2e1fde4392aaeb0c034ff9c683290947db8c690624fc9887e",
@@ -499,10 +508,61 @@
       "upstream_original_preserved": true,
       "source_notice_preserved": true,
       "independent_review_pending": false,
-      "public_delta_review_pending": true,
+      "public_delta_review_pending": false,
       "explicit_use_check_pending": false,
       "explicit_use_assessment": "3564 A/B/C explicit design/numerical core passed; no real server/rendering or implicit-selection proof",
       "evidence": "skills-3080-mcp-pointer-installation-evidence.json",
+      "existing_body_comparison_complete": false,
+      "third_party_support_or_service_rights_accepted": false,
+      "public_delta_acceptance": {
+        "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
+        "review_todos": [
+          3590,
+          3599
+        ],
+        "merge": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
+        "pr": 428
+      }
+    },
+    {
+      "inventory_id": "github:89360b4dedcdf7fceccbef746956ad5f50a6c50126946fb12731aff46af0851b",
+      "source_repo": "6mile/skills",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "source_path": "skills/kidehen/rss-generator-skill/SKILL.md",
+      "source_sha256": "ac4596e3710e45feb5056190934ffafc60d4226a9b8b8975d27c44653f7b5def",
+      "target": "rss-feed-generator",
+      "disposition": "installed_new_adaptation",
+      "manifest": "skills-3080-installed-rss-season-manifest.json",
+      "entrypoint_sha256": "d04bb1a754e1670c8b869b065aca9b121bcb065a47d4b900f3edd9372c862977",
+      "reason": "指定の公開一覧から合成feedを作る範囲。個別MIT、URI/日時/Atom/XMLの訂正、実Go fixture、固定bundle reviewと実配置/発見を保持。",
+      "upstream_original_preserved": true,
+      "source_notice_preserved": true,
+      "independent_review_pending": false,
+      "public_delta_review_pending": true,
+      "explicit_use_check_pending": false,
+      "explicit_use_assessment": "3584 RSS A/B/C plus owned literal Go XML serialize/parse and invalid-character tests; actual placement/discovery confirmed; no real website or hosted feed proof.",
+      "evidence": "skills-3080-rss-season-installation-evidence.json",
+      "existing_body_comparison_complete": false,
+      "third_party_support_or_service_rights_accepted": false
+    },
+    {
+      "inventory_id": "github:29a0ba0843498fe31de765752ffa07dfd7835d47f3ac062d641e41169e601167",
+      "source_repo": "MengTo/Skills",
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_path": "agent-skills/3d/3d-four-seasons/SKILL.md",
+      "source_sha256": "2696252a795b1c234d4b06a1091418e68ae305f4d773e9b69e941392fa7286c7",
+      "target": "3d-four-seasons",
+      "disposition": "installed_new_adaptation",
+      "manifest": "skills-3080-installed-rss-season-manifest.json",
+      "entrypoint_sha256": "1f280cad10159df4c654c380358e8efe2fa8d7d7b4c4f9de9a6c7ad6e385000f",
+      "reason": "同じsceneの季節を共有4weightsで扱う範囲。作者MIT、途中切替・雪/影/資源・画像回答の境界、自作数値4test、固定reviewと実配置/発見を保持。",
+      "upstream_original_preserved": true,
+      "source_notice_preserved": true,
+      "independent_review_pending": false,
+      "public_delta_review_pending": true,
+      "explicit_use_check_pending": false,
+      "explicit_use_assessment": "3591 season A/B/C plus owned interrupted four-state numerical model tests; actual placement/discovery confirmed; no renderer/shader/performance proof.",
+      "evidence": "skills-3080-rss-season-installation-evidence.json",
       "existing_body_comparison_complete": false,
       "third_party_support_or_service_rights_accepted": false
     }

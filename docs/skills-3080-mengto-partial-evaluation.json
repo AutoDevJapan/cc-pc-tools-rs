@@ -8,12 +8,12 @@
   "entrypoints_expected": 177,
   "entrypoints_fulltext_read": 177,
   "entrypoints_unread": 0,
-  "installed": 1,
+  "installed": 2,
   "integrated": 2,
   "excluded": 0,
-  "central_write": 17,
+  "central_write": 22,
   "classification_is_not_installation": true,
-  "scope": "177入口の本文評価を保持し、うちカーソル軌跡1件を新規実配置。既存統合2件と12fileの操作を保持し、新5fileを区別する。支持/第三者権利/全採否/全実導入は未完。",
+  "scope": "177入口の本文評価を保持し、カーソル軌跡と季節切替の作者手順2件を新規実配置。既存統合2件/12file、軌跡5fileを含む過去17fileと季節の新5fileを区別する。原文・個別MITの範囲を保持し、全支持/第三者権利/全採否/全実導入は未完。",
   "entries": [
     {
       "inventory_id": "github:709d1f4fe1039448270b3f743f5432fbeb31d85416d441d4dba335b9e2df97eb",
@@ -175,7 +175,7 @@
       "body_read_by": "parent023253",
       "body_read_method": "full_output_read_after_SHA_bytes_strict_UTF8_validation",
       "parent_evaluation_recorded_at": "2026-10-23T18:03:09.6932242Z",
-      "candidate_disposition": "new_scene_state_workflow_candidate_pending_reference_and_target",
+      "candidate_disposition": "installed_new_adaptation",
       "reason": "四季を4要素の重みで表し、葉/空/日光/地面/雪/粒子へ同じ状態を渡す。途中切替は現在の重みから新目標へ進め、前フレームの色を再着色して漂う問題を避ける。常緑樹と落葉樹、露出と屋内、積雪と降雪を分ける。",
       "required_changes": [
         "温帯の色表を全地域/樹種へ一般化しない。法線だけで屋内へ雪を載せず露出maskを対象に合わせる。各materialのshader hooksとshadow/depthの同一状態は未読の参照実装から独立して検証する。 見た目の実装は同対象の具体画像と本人の明示回答後。本文の定数・品質点・Apple GPU/headlessの測定を本PCの合格値や実成功へ流用しない。既存renderer/版/色空間/所有する資源/停止と破棄を照合し、必要な対象だけテストする。未読デモ/モジュールのコピーやnpm導入を読取だけで実行しない。"
@@ -205,8 +205,10 @@
           "git_blob": "619917a54b6766e29d9da28f8ebe96c2348090a9",
           "body_saved": true,
           "source_sha256": "8f5d9301cc22fc166057b55b26f7a9af8d7c717d9a58a828b714c2bbb6c1b220",
-          "body_read": false,
-          "executed": false
+          "body_read": true,
+          "executed": false,
+          "read_by": "20261024-123649-todo-3080",
+          "scan_only": false
         },
         {
           "path": "agent-skills/3d/3d-four-seasons/agents/openai.yaml",
@@ -218,12 +220,26 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
-      "independent_review_complete": false,
+      "independent_review_complete": true,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "23f00630a55a6589e911426d2fa250070ff1f2dd"
+      "git_blob": "23f00630a55a6589e911426d2fa250070ff1f2dd",
+      "adoption_resolution": {
+        "manifest": "skills-3080-installed-rss-season-manifest.json",
+        "content_review_todo": 3591,
+        "bundle_sha256": "97e3d3b442e14a093f75bdeecd81e55d0ba17f13428f53f3806c8bc85a998bfb",
+        "new_model_turn_tested": false,
+        "public_delta_review_pending": true,
+        "fresh_metadata_enabled": true,
+        "old_held_comparison_released": false,
+        "actual_file_structure_hash_passed": true,
+        "target": "3d-four-seasons",
+        "real_site_or_renderer_executed": false,
+        "evidence": "skills-3080-rss-season-installation-evidence.json",
+        "content_review_must": 0
+      }
     },
     {
       "inventory_id": "github:70122bd962c6e17475151962141da342b373dc115a4383be3a7f50d6f4ad2216",
@@ -18144,7 +18160,7 @@
       ],
       "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
       "adoption_resolution": {
-        "public_delta_review_pending": true,
+        "public_delta_review_pending": false,
         "fresh_discovery_enabled": true,
         "support_or_service_rights_accepted": false,
         "actual_structure_hash_passed": true,
@@ -18158,7 +18174,16 @@
           3564,
           3569
         ],
-        "evidence": "skills-3080-mcp-pointer-installation-evidence.json"
+        "evidence": "skills-3080-mcp-pointer-installation-evidence.json",
+        "public_delta_acceptance": {
+          "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
+          "review_todos": [
+            3590,
+            3599
+          ],
+          "merge": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
+          "pr": 428
+        }
       }
     },
     {
@@ -21723,7 +21748,7 @@
   ],
   "pending_entrypoint_paths": [],
   "counts": {
-    "support_read": 103,
+    "support_read": 104,
     "parent_read": 81,
     "reader9_support": 37,
     "reader9_support_unsaved": 27,
@@ -22104,7 +22129,7 @@
     "support": 349,
     "central_writes": 0
   },
-  "amended_at": "2026-10-24T05:10:59.9611699+00:00",
+  "amended_at": "2026-10-24T07:16:19.7577795+00:00",
   "amendment_job": "20261024-123649-todo-3080",
   "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts."
 }

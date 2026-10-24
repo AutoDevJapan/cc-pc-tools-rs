@@ -168,7 +168,7 @@ S4をAWS IAM公式まで追うと、現在の条件キー表にjob_workflow_ref�
 
 新10入口はSkill管理/評価の候補として追加。親は10本文とREADME9を全文確認したが、新しい独立レビューは未実施。mizchi45/76、残31を保持し、全73,220記録の導入28/統合1/除外0/残73,191は変わらない。
 
-後続12入口とREADME12を追加で全読。現在はmizchi57/76、残19、全primary148path。新22を2つの固定差分でレビューへ渡し、先の10のレビューを後の12の受入に流用しない。OTelの非同期寿命/親context/HeadersとESM、D1の精度、dotenvxの上書き順を個別の修正候補にした。Just dry-runのbacktickについて親の最初の推測は公式実装で反証されたため、候補を理由なく排除せず訂正を残した。新規配置や秘密の参照/設定変更は無い。
+後続12入口とREADME12を追加で全読。この節の時点ではmizchi57/76、残19、全primary148path。新22を2つの固定差分でレビューへ渡し、先の10のレビューを後の12の受入に流用しない。OTelの非同期寿命/親context/HeadersとESM、D1の精度、dotenvxの上書き順を個別の修正候補にした。Just dry-runのbacktickについて親の最初の推測は公式実装で反証されたため、候補を理由なく排除せず訂正を残した。新規配置や秘密の参照/設定変更は無い。
 
 ## 3417/3420: 固定差分の読取完了と補足
 
@@ -392,7 +392,7 @@ Nitは誤った別理由でテストが落ちる偽陽性を防ぎ、notice veri
 
 ## 2026-10-24・新規2件の実配置
 
-MCP設計と距離ごとのカーソル軌跡を、固定V2のreview3564/3569（Must0まで解消）後に新規配置した。新2directory/10fileの実作成・読戻し、構造/参照/hash/正負例、新Codex0.163.0で2件/enabled/説明一致/解析0を確認。全体の採否は新規30/統合3/除外8/残73179、本文評価411は不変。設計30は旧7batchの28と、公式の個別Apache通知を確認したMCP設計と、作者のroot MITを確認したMengTo設計を合算する。固定bundleのJSONはLFでbyte保持する。
+MCP設計と距離ごとのカーソル軌跡を、固定V2のreview3564/3569（Must0まで解消）後に新規配置した。新2directory/10fileの実作成・読戻し、構造/参照/hash/正負例、新Codex0.163.0で2件/enabled/説明一致/解析0を確認。この節の時点の採否は新規30/統合3/除外8/残73179、本文評価411は不変。設計30は旧7batchの28と、公式の個別Apache通知を確認したMCP設計と、作者のroot MITを確認したMengTo設計を合算する。固定bundleのJSONはLFでbyte保持する。
 
 実結果と検証限界は[2件の受入記録](skills-3080-mcp-pointer-acceptance.md)と[機械可読証拠](skills-3080-mcp-pointer-installation-evidence.json)を正本とする。明示の設計/数値例は確認したが、実サーバー/実描画/暗黙選択/全context予算は未確認。探索上限警告2件と原因未確定を保持する。既存4比較や647取得保留を解除せず、本人判断待ちは増やさない。新しい公開差分の別モデルreview/CI/mergeは別工程で、元3080/Issue283は未完のまま継続する。
 
@@ -406,7 +406,7 @@ Nitは段落・当時値の表示・rosterのpathと原応答のreaderという�
 
 ## 3590の公開差分レビューと正本への参照
 
-3590は固定6905b890..ebb023f2の19file/42hunkを完了し、Must1/Suggestion2/Nit5を返した。親は原応答7593B/SHA00ccd6e12b27e54f3a1d853a8df38b122ab6f06ba16e4cfa821dbefd6fa10dc4を保存・全文読了し、job/nativeのSonnet5.5/maxを照合した。bundle本文の意味は3564/3569の限定受入を再利用し、今回のハッシュ・127入力・件数・Go論理を確認した。Go/中央/外部取得は実行していない。
+3590は固定6905b890..ebb023f2の19file/42hunkを完了し、Must1/Suggestion2/Nit5を返した。親は原応答7593B/SHA00ccd6e12b27e54f3a1d853a8df38b122ab6f06ba16e4cfa821dbefd6fa10dc4を保存・全文読了し、job/nativeのSonnet5.5/maxを照合した。bundle本文の意味は3564/3569の限定受入を再利用し、今回のハッシュ・127入力・件数・Go論理を確認した。3590はGo/中央/外部取得を実行していない。
 
 Mustは仕様冒頭の「最新件数」に旧28/73181とPR422の記述が残っていたもの。同じ可変値の更新漏れが続いたため、新しい数字への置換を繰り返さず、冒頭から件数コピーを削除し、採用台帳と進行記録を正本として直接参照する形へ変えた。過去の数値を記録した節は当時値として保持する。
 
@@ -415,3 +415,9 @@ Suggestionは、既存の発見証拠の同名別path/全metadata件数/探索�
 Nitは、総合観測時刻を既に記録した最後の確認時刻へ合わせ、追補時刻と分けた。新たな発見操作をした意味ではない。2015/2000は探索根拠へリンクし、6mileのnew_central_write0は評価差分の歴史値と定義した。boolの明示記録の判定は既存関数へ統合し、design/bundle/manifestの正負例と入口descriptionも照合する。MCP公式個別ApacheとMengTo作者rootMITの2つの根拠を区別し、実効の推論量を測定したとは扱わない。
 
 固定Skill bundleと中央の実ファイルは変更しない。新しい候補の採否/本文読了や中央書込をこの補正へ加算せず、追加RSS/季節の別の実結果と全16資料の継続を保持する。
+
+## 2026-10-24 RSS生成・季節切替と追加45評価
+
+[RSS生成・季節切替の受入記録](skills-3080-rss-season-acceptance.md)、[固定2設計](skills-3080-rss-season-designs.json)、[配置と発見の証拠](skills-3080-rss-season-installation-evidence.json)、[6mileの読取索引](skills-3080-sixmile-evaluation-index.json)を対応付ける。全体の最新採否は[台帳](skills-3080-adoptions.json)、読取の現在値と受入履歴は[進行記録](skills-3080-progress.json)へ集約する。
+
+3602は固定0801af4a..50ab02f3の24差分と45評価の意味を読み、Must0/Suggestion6/Nit6を返した。原応答7150B/SHAdc124ce210d9203473be211682b4817a7daca7e2f6bd5ff08c92e886b0a6ff09を親が保存・全文読了し、job/nativeのSonnet5.5/maxを照合。422支持は状態/指紋の機械照合で、全支持の意味や全16資料の受入ではない。この補正は、公開する個別許諾の説明と出典行の対応、受入済みと未了の表示、時刻/保持対象/負例の確認を整える。原文・notice・Skill bundle・配置fileと既存の読取件数/最終採否は変更しない。この補正時点の新headに対するreview/CI/mergeは、以後の履歴で別に確認する。

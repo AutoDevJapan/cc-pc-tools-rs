@@ -829,6 +829,9 @@ func conversationNativeTest(t *testing.T) *conversationFixture {
 		command.Env = append(os.Environ(), "CC_TODO_HOME="+f.r.Config.Home, "CC_TODO_JOBS="+filepath.Join(f.r.Config.Home, "isolated-jobs"), "CC_ASK_CONFIG="+filepath.Join(f.r.Config.Home, "isolated-notify.json"))
 		out, err := command.Output()
 		if err != nil {
+			if exit, ok := err.(*exec.ExitError); ok {
+				t.Logf("synthetic canonical %s rejection: %s", args[0], strings.TrimSpace(string(exit.Stderr)))
+			}
 			return "", errors.New("isolated canonical command rejected")
 		}
 		return string(out), nil

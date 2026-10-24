@@ -81,6 +81,10 @@ fn answered_generations(wait: &Value, recipient: &Value) -> Result<()> {
         recipient["resume_generation"].as_u64(),
     ) {
         (Some(original), Some(current)) if current >= original => Ok(()),
+        // A first-launch task can have no numeric generation yet. Its exact
+        // original owner tuple must still match; missing on only one side or
+        // a changed worker/key cannot stand in for a known generation.
+        (None, None) if wait["origin"].is_object() && wait["origin"] == *recipient => Ok(()),
         // A legacy wait has no origin; its stored answer receipt is the proof.
         (None, _) if wait["origin"].is_null() => Ok(()),
         _ => fail("delivery_generation_mismatch"),

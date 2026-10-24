@@ -34,24 +34,13 @@ struct Proof {
     images: Vec<BoundImage>,
 }
 
-pub(super) fn images(
-    ctx: &mut Context,
-    request: &Request,
-    args: &AskArgs,
-    evidence: &Path,
-) -> Result<Vec<Image>> {
+fn qualify(ctx: &mut Context, request: &Request, evidence: &Path) -> Result<Proof> {
     const FAILED: &str =
         "Go drawing evidence does not qualify this exact question; no image is sent";
     let Kind::Ask { origin_thread, .. } = &request.operation else {
         return Err(FAILED.into());
     };
     let scope = question_image_scope(ctx, request).ok_or(FAILED)?;
-    if args.attach.is_empty()
-        || args.attach.len() > 10
-        || args.expected_image_sha256.len() != args.attach.len()
-    {
-        return Err(FAILED.into());
-    }
     let output = ctx
         .effects
         .run(
@@ -74,8 +63,46 @@ pub(super) fn images(
         || proof.request_id != request.request_id
         || proof.origin_thread_id != *origin_thread
         || proof.scope != scope
-        || proof.images.len() != args.attach.len()
+        || proof.images.is_empty()
+        || proof.images.len() > 10
     {
+        return Err(FAILED.into());
+    }
+    Ok(proof)
+}
+
+/// Every new or resumed delivery rechecks the canonical saved question under
+/// the todo writer lock. Its image receipts must be those currently qualified.
+pub(super) fn revalidate(ctx: &mut Context, request: &Request, evidence: &Path) -> Result<()> {
+    let proof = qualify(ctx, request, evidence)?;
+    if request.images.len() != proof.images.len()
+        || request
+            .images
+            .iter()
+            .zip(&proof.images)
+            .any(|(saved, current)| saved.sha256 != current.sha256 || saved.size != current.size)
+    {
+        return Err("current drawing evidence differs from the saved image receipts".into());
+    }
+    Ok(())
+}
+
+pub(super) fn images(
+    ctx: &mut Context,
+    request: &Request,
+    args: &AskArgs,
+    evidence: &Path,
+) -> Result<Vec<Image>> {
+    const FAILED: &str =
+        "Go drawing evidence does not qualify this exact question; no image is sent";
+    if args.attach.is_empty()
+        || args.attach.len() > 10
+        || args.expected_image_sha256.len() != args.attach.len()
+    {
+        return Err(FAILED.into());
+    }
+    let proof = qualify(ctx, request, evidence)?;
+    if proof.images.len() != args.attach.len() {
         return Err(FAILED.into());
     }
     let secrets = SecretCheck::new();

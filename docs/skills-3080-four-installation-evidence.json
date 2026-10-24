@@ -454,5 +454,25 @@
     "Discovery metadata finds4 and retains52 managed names. Two traversal warnings are observed; their cause, all-skill coverage and full-context budget are unproved.",
     "Explicit current-worker application is separate from a new model turn or implicit selection. No upstream scripts, production API, UI, game renderer, GPU or added charges.",
     "4new dispositions do not add unique source reading coverage; original raw583/workflow657 and all16 remaining work are retained."
-  ]
+  ],
+  "readback_receipt": "skills-3080-four-readback-receipt.json",
+  "creation_wrapper": "skills-3080-four-create-receipt.json",
+  "review3768_resolution": {
+    "todo": 3768,
+    "fixed_head": "806728a9fb2200dd9e5490a83b2e027b12862990",
+    "raw_sha256": "c4e4d2ba4a1e7f0f2a09c5d023e4b526727ef077fd97bd0f95d848398111c2ae",
+    "actual_model": "gpt-6-luna",
+    "actual_effort": "max",
+    "must": 1,
+    "suggestion": 1,
+    "original_files_currently_match": true,
+    "changes": [
+      "Verify each of24readback rows against exact reviewed output path/hash/size/nonreparse/single-link/equality state",
+      "Bind original CreateNew wrapper and independent readback raw SHA to separate fixed public receipts",
+      "Check CreateNew domain/operation/main-source-commit/filecount and exact embedded original result before constructing accepted map",
+      "Check reviewer exactjob and both owner_request origins"
+    ],
+    "new_central_operations": 0,
+    "followup_review_pending": true
+  }
 }

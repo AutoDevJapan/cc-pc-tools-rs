@@ -5,48 +5,75 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
 
 const purposeFourSHA = "3e86571b6f2081f83e0820d7fe4215b3d3193f40d5173164c5511e02153074ef"
 const purposeFourRequestSHA = "4566059d407bfcbdf89d55ff4a2624ac9de0d321b8ee904a466d2fc6a4d82d0f"
+const purposeFourReadbackSHA = "4837df32d58eb92591dc5ab843ba061ce792f7bcc6510ffec87c5bf1f92eea74"
+const purposeFourCreateWrapperSHA = "b315aaeb5c6cbfeb0d4af84982102fb86f5e375a4a82e7dbdc9d49008f012aac"
+
+type purposeFourFile struct {
+	Target  string `json:"target"`
+	Bytes   int    `json:"bytes"`
+	SHA     string `json:"sha256"`
+	Regular *bool  `json:"regular_non_reparse_single_link"`
+	Equal   *bool  `json:"reviewed_bytes_equal"`
+}
+
+type purposeFourCreate struct {
+	Todo      int    `json:"todo_id"`
+	Domain    string `json:"domain"`
+	Operation string `json:"operation"`
+	Commit    string `json:"source_commit"`
+	Files     int    `json:"file_count"`
+	Qualified *bool  `json:"qualified"`
+	Count     int    `json:"created_files"`
+	SHA       string `json:"manifest_sha256"`
+	Request   string `json:"request_sha256"`
+	General   *bool  `json:"general_access_granted"`
+	Registry  *bool  `json:"original_registry_recovered"`
+}
 
 type purposeFourReceipt struct {
-	Done         *bool  `json:"overall_complete"`
-	Created      int    `json:"new_targets_created"`
-	Files        int    `json:"files_readback_verified"`
-	OldWrites    *int   `json:"old_target_writes"`
-	OldReads     *int   `json:"unknown_existing_body_reads"`
-	General      *bool  `json:"general_access_granted"`
-	Registry     *bool  `json:"original_registry_recovered"`
-	Manifest     string `json:"operation_manifest"`
-	SHA          string `json:"operation_manifest_sha256"`
-	Commit       string `json:"operation_manifest_main_commit"`
-	Installed    string `json:"installed_manifest"`
-	InstalledSHA string `json:"installed_manifest_sha256"`
-	Designs      string `json:"designs"`
-	DesignSHA    string `json:"designs_sha256"`
-	Create       struct {
-		Qualified *bool  `json:"qualified"`
-		Count     int    `json:"created_files"`
-		SHA       string `json:"manifest_sha256"`
-		Request   string `json:"request_sha256"`
-		General   *bool  `json:"general_access_granted"`
-		Registry  *bool  `json:"original_registry_recovered"`
-	} `json:"creation_result"`
-	Acceptance struct {
-		Task       int    `json:"todo"`
-		Model      string `json:"model"`
-		Effort     string `json:"effort"`
-		Native     *bool  `json:"native_verified"`
-		ParentRead *bool  `json:"parent_original_full_read"`
-		Spec       string `json:"spec_sha256"`
-		Raw        string `json:"raw_sha256"`
-		Manifest   string `json:"manifest_sha256"`
-		Must       *int   `json:"must"`
+	Done         *bool             `json:"overall_complete"`
+	Created      int               `json:"new_targets_created"`
+	Files        int               `json:"files_readback_verified"`
+	OldWrites    *int              `json:"old_target_writes"`
+	OldReads     *int              `json:"unknown_existing_body_reads"`
+	General      *bool             `json:"general_access_granted"`
+	Registry     *bool             `json:"original_registry_recovered"`
+	Manifest     string            `json:"operation_manifest"`
+	SHA          string            `json:"operation_manifest_sha256"`
+	Commit       string            `json:"operation_manifest_main_commit"`
+	Installed    string            `json:"installed_manifest"`
+	InstalledSHA string            `json:"installed_manifest_sha256"`
+	Designs      string            `json:"designs"`
+	DesignSHA    string            `json:"designs_sha256"`
+	FileRows     []purposeFourFile `json:"files"`
+	ReadbackSHA  string            `json:"readback_receipt_sha256"`
+	ReadbackFile string            `json:"readback_receipt"`
+	CreateFile   string            `json:"creation_wrapper"`
+	CreateSHA    string            `json:"creation_wrapper_sha256"`
+	Create       purposeFourCreate `json:"creation_result"`
+	Acceptance   struct {
+		Task         int    `json:"todo"`
+		Job          string `json:"job"`
+		ModelOrigin  string `json:"model_origin"`
+		EffortOrigin string `json:"effort_origin"`
+		Model        string `json:"model"`
+		Effort       string `json:"effort"`
+		Native       *bool  `json:"native_verified"`
+		ParentRead   *bool  `json:"parent_original_full_read"`
+		Spec         string `json:"spec_sha256"`
+		Raw          string `json:"raw_sha256"`
+		Manifest     string `json:"manifest_sha256"`
+		Must         *int   `json:"must"`
 	} `json:"acceptance_review"`
 	Rejected struct {
 		Task     int    `json:"todo"`
@@ -103,8 +130,11 @@ func validatePurposeFour(e purposeFourReceipt) error {
 	if !recordedFalse(e.Done) || e.Created != 4 || e.Files != 24 || !zero(e.OldWrites) || !zero(e.OldReads) || !recordedFalse(e.General) || !recordedFalse(e.Registry) || e.SHA != purposeFourSHA || e.Commit != "67e7e9c9dc41b5afd0c0e62ba1e476f44f5f477e" || !recordedTrue(e.Create.Qualified) || e.Create.Count != 24 || e.Create.SHA != e.SHA || e.Create.Request != purposeFourRequestSHA || !recordedFalse(e.Create.General) || !recordedFalse(e.Create.Registry) {
 		return errors.New("exact new-only creation boundary differs")
 	}
+	if e.Create.Todo != 3080 || e.Create.Domain != "skills-3080-purpose-v1" || e.Create.Operation != "CreateNew" || e.Create.Commit != e.Commit || e.Create.Files != 24 || e.ReadbackSHA != purposeFourReadbackSHA || e.CreateSHA != purposeFourCreateWrapperSHA {
+		return errors.New("original create/readback receipt identity differs")
+	}
 	a := e.Acceptance
-	if a.Task != 3761 || a.Model != "gpt-6-luna" || a.Effort != "max" || !recordedTrue(a.Native) || !recordedTrue(a.ParentRead) || a.Spec != "079e07c498bb590e0a8f04fe1e54198280668c269c61abd3ac146c1858abb7b8" || a.Raw != "60727648f488c7e4b56f8dc2bccaf1b537fdbd57db97a5a88cedbf15de357ee3" || a.Manifest != purposeFourSHA || !zero(a.Must) || e.Rejected.Task != 3756 || len(e.Rejected.SHA) != 63 || !recordedFalse(e.Rejected.Accepted) {
+	if a.Task != 3761 || a.Job != "20261025-080256-todo-3761" || a.ModelOrigin != "owner_request" || a.EffortOrigin != "owner_request" || a.Model != "gpt-6-luna" || a.Effort != "max" || !recordedTrue(a.Native) || !recordedTrue(a.ParentRead) || a.Spec != "079e07c498bb590e0a8f04fe1e54198280668c269c61abd3ac146c1858abb7b8" || a.Raw != "60727648f488c7e4b56f8dc2bccaf1b537fdbd57db97a5a88cedbf15de357ee3" || a.Manifest != purposeFourSHA || !zero(a.Must) || e.Rejected.Task != 3756 || len(e.Rejected.SHA) != 63 || !recordedFalse(e.Rejected.Accepted) {
 		return errors.New("actual acceptance and rejected transcription receipt conflated")
 	}
 	d := e.Discovery
@@ -127,6 +157,21 @@ func validatePurposeFour(e purposeFourReceipt) error {
 	}
 	if e.Retained.Expected != 52 || e.Retained.Found != 52 || e.Retained.Enabled != 52 || len(e.Retained.IDs) != 39 || e.Retained.NamesSHA != "ef74467e2c3ca5ed9a39f83c6ff3b84eddf500e8cb3545e979233e4abd763e9c" {
 		return errors.New("managed retention snapshot differs")
+	}
+	return nil
+}
+
+func validatePurposeFourFiles(rows []purposeFourFile, wanted map[string]purposeFourFile) error {
+	if len(rows) != 24 || len(wanted) != 24 {
+		return errors.New("readback does not contain24 explicit outputs")
+	}
+	seen := map[string]bool{}
+	for _, r := range rows {
+		w, ok := wanted[r.Target]
+		if !ok || seen[r.Target] || r.Bytes != w.Bytes || r.SHA != w.SHA || !recordedTrue(r.Regular) || !recordedTrue(r.Equal) {
+			return errors.New("readback target/path/SHA/bytes/state differs from reviewed output")
+		}
+		seen[r.Target] = true
 	}
 	return nil
 }
@@ -163,6 +208,7 @@ func validatedPurposeFourDispositions(t *testing.T) map[string]cohortLedgerRow {
 		t.Fatal("independent fixed operation anchor differs")
 	}
 	actual := map[string]string{}
+	expectedFiles := map[string]purposeFourFile{}
 	preserved := map[string]bool{}
 	for _, f := range operation.Files {
 		b, err := base64.StdEncoding.DecodeString(f.Base64)
@@ -174,7 +220,53 @@ func validatedPurposeFourDispositions(t *testing.T) map[string]cohortLedgerRow {
 			t.Fatal("reviewed output mismatch/duplicate")
 		}
 		actual[f.Target] = f.SHA
+		expectedFiles[f.Target] = purposeFourFile{Target: f.Target, Bytes: len(b), SHA: f.SHA}
 		preserved[f.SHA] = true
+	}
+	if err := validatePurposeFourFiles(e.FileRows, expectedFiles); err != nil {
+		t.Fatal(err)
+	}
+	if e.ReadbackFile != "skills-3080-four-readback-receipt.json" || e.CreateFile != "skills-3080-four-create-receipt.json" {
+		t.Fatal("unexpected original receipt path")
+	}
+	var readback struct {
+		Job       string            `json:"job"`
+		SHA       string            `json:"manifest_sha256"`
+		Request   string            `json:"creation_request_sha256"`
+		CreateSHA string            `json:"creation_receipt_sha256"`
+		Created   int               `json:"new_targets_created"`
+		Files     int               `json:"files_readback_verified"`
+		OldWrites *int              `json:"old_target_writes"`
+		OldReads  *int              `json:"old_unknown_body_reads"`
+		General   *bool             `json:"general_access_granted"`
+		Registry  *bool             `json:"original_registry_recovered"`
+		Rows      []purposeFourFile `json:"files"`
+	}
+	rb := loadPublicReceipt(t, e.ReadbackFile, &readback)
+	rh := sha256.Sum256(rb)
+	if hex.EncodeToString(rh[:]) != purposeFourReadbackSHA || readback.Job != "20261025-074042-todo-3080" || readback.SHA != purposeFourSHA || readback.Request != purposeFourRequestSHA || readback.CreateSHA != purposeFourCreateWrapperSHA || readback.Created != 4 || readback.Files != 24 || readback.OldWrites == nil || *readback.OldWrites != 0 || readback.OldReads == nil || *readback.OldReads != 0 || !recordedFalse(readback.General) || !recordedFalse(readback.Registry) {
+		t.Fatal("original readback identity/boundary differs")
+	}
+	if err := validatePurposeFourFiles(readback.Rows, expectedFiles); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(readback.Rows, e.FileRows) {
+		t.Fatal("published file rows differ from independent original readback")
+	}
+	var wrapper struct {
+		Exit   *int   `json:"exit"`
+		Timed  *bool  `json:"timed_out"`
+		Stdout string `json:"stdout"`
+		Stderr string `json:"stderr"`
+	}
+	cb := loadPublicReceipt(t, e.CreateFile, &wrapper)
+	ch := sha256.Sum256(cb)
+	if hex.EncodeToString(ch[:]) != purposeFourCreateWrapperSHA || wrapper.Exit == nil || *wrapper.Exit != 0 || !recordedFalse(wrapper.Timed) || wrapper.Stderr != "" {
+		t.Fatal("original CreateNew command did not complete")
+	}
+	var command purposeFourCreate
+	if json.Unmarshal([]byte(wrapper.Stdout), &command) != nil || !reflect.DeepEqual(command, e.Create) {
+		t.Fatal("published creation result differs from exact original command")
 	}
 	var manifest struct {
 		Targets []struct {
@@ -270,7 +362,7 @@ func TestPurposeQualifiedFourActualDeploymentAndSourceBytes(t *testing.T) {
 }
 
 func TestPurposeQualifiedFourRejectsCounterAndEvidenceInflation(t *testing.T) {
-	for _, kind := range []string{"valid", "missing_creation", "old_target_write", "general_access", "wrong_review_hash", "old_63_digit_accepted", "unverified_native", "missing_discovery", "context_overclaim", "upstream_execution", "render_overclaim", "lost_save_failure"} {
+	for _, kind := range []string{"valid", "missing_creation", "old_target_write", "general_access", "wrong_review_hash", "old_63_digit_accepted", "unverified_native", "missing_discovery", "context_overclaim", "upstream_execution", "render_overclaim", "lost_save_failure", "wrong_create_domain", "wrong_create_operation", "wrong_create_source", "wrong_create_todo", "wrong_create_count", "wrong_readback_sha", "wrong_wrapper_sha", "wrong_reviewer_job", "wrong_model_origin", "wrong_effort_origin"} {
 		t.Run(kind, func(t *testing.T) {
 			var e purposeFourReceipt
 			loadPublicReceipt(t, "skills-3080-four-installation-evidence.json", &e)
@@ -299,8 +391,62 @@ func TestPurposeQualifiedFourRejectsCounterAndEvidenceInflation(t *testing.T) {
 				e.Use.Fog.Renderer = &yes
 			case "lost_save_failure":
 				e.Use.Inventory.SaveFailure = nil
+			case "wrong_create_domain":
+				e.Create.Domain = "other"
+			case "wrong_create_operation":
+				e.Create.Operation = "qualify-only"
+			case "wrong_create_source":
+				e.Create.Commit = strings.Repeat("0", 40)
+			case "wrong_create_todo":
+				e.Create.Todo = 3686
+			case "wrong_create_count":
+				e.Create.Files = 23
+			case "wrong_readback_sha":
+				e.ReadbackSHA = strings.Repeat("0", 64)
+			case "wrong_wrapper_sha":
+				e.CreateSHA = strings.Repeat("0", 64)
+			case "wrong_reviewer_job":
+				e.Acceptance.Job = "20261025-075031-todo-3756"
+			case "wrong_model_origin":
+				e.Acceptance.ModelOrigin = "policy"
+			case "wrong_effort_origin":
+				e.Acceptance.EffortOrigin = "policy"
 			}
 			if err := validatePurposeFour(e); (err != nil) != (kind != "valid") {
+				t.Fatalf("%s: %v", kind, err)
+			}
+		})
+	}
+}
+
+func TestPurposeFourRejectsChangedReadbackRowsEvenWhenCountIs24(t *testing.T) {
+	var e purposeFourReceipt
+	loadPublicReceipt(t, "skills-3080-four-installation-evidence.json", &e)
+	wanted := map[string]purposeFourFile{}
+	for _, r := range e.FileRows {
+		wanted[r.Target] = r
+	}
+	for _, kind := range []string{"valid", "hash", "path", "size", "duplicate", "missing", "regular_false", "readback_false"} {
+		t.Run(kind, func(t *testing.T) {
+			rows := append([]purposeFourFile(nil), e.FileRows...)
+			no := false
+			switch kind {
+			case "hash":
+				rows[0].SHA = strings.Repeat("0", 64)
+			case "path":
+				rows[0].Target = "other/SKILL.md"
+			case "size":
+				rows[0].Bytes++
+			case "duplicate":
+				rows[1] = rows[0]
+			case "missing":
+				rows = rows[:23]
+			case "regular_false":
+				rows[0].Regular = &no
+			case "readback_false":
+				rows[0].Equal = &no
+			}
+			if err := validatePurposeFourFiles(rows, wanted); (err != nil) != (kind != "valid") {
 				t.Fatalf("%s: %v", kind, err)
 			}
 		})

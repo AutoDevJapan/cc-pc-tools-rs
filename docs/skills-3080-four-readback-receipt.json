@@ -1,0 +1,186 @@
+{
+  "creation_receipt_sha256": "b315aaeb5c6cbfeb0d4af84982102fb86f5e375a4a82e7dbdc9d49008f012aac",
+  "creation_request_sha256": "4566059d407bfcbdf89d55ff4a2624ac9de0d321b8ee904a466d2fc6a4d82d0f",
+  "files": [
+    {
+      "bytes": 1318,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "37d39d42082edd6ba79e277d2379a8fd966bdbf73c9c2db1d2e4e4aa3bbee17d",
+      "target": "timezone-helper/SKILL.md"
+    },
+    {
+      "bytes": 2787,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "ebe0acb69d07d0d52597075ed8d18c0dfec5da305361b37329a5b41fb2576ecd",
+      "target": "timezone-helper/references/guide.md"
+    },
+    {
+      "bytes": 6701,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "00450b770985f6503277cb66c618c8d87895e25deb990361245e880f42f21531",
+      "target": "timezone-helper/references/upstream-original.txt"
+    },
+    {
+      "bytes": 533,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "075d3caa6b49b892db8b162e58589649c501c6866066d4c1d8832eafb3242fa7",
+      "target": "timezone-helper/references/LICENSE.txt"
+    },
+    {
+      "bytes": 2678,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "d2c436214cbd30f5a8a5d33df9ddce2e792a40eaabd440770d40179104f23619",
+      "target": "timezone-helper/references/source.json"
+    },
+    {
+      "bytes": 1368,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "594a12ec0d1dd6f13cf98c0713c08fbce04f0a0a3526cbb860ae92b951a90b90",
+      "target": "timezone-helper/references/sources.md"
+    },
+    {
+      "bytes": 1532,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b70bb3d0c778b725da3bc8dc10827e62db47e054266809b4b3ef2655a3588724",
+      "target": "exam-generator/SKILL.md"
+    },
+    {
+      "bytes": 2133,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "3ee35861f7056e425682fc33f49fa61199aa9309fd73d6dba96b24d858a15c28",
+      "target": "exam-generator/references/guide.md"
+    },
+    {
+      "bytes": 12594,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0d318602a4340f22b09035567cb2ea480513a40cccd43e112c6eb177b361c826",
+      "target": "exam-generator/references/upstream-original.txt"
+    },
+    {
+      "bytes": 901,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "e17c2ebfc6fd181e3a81514592e597ac7c753c3494ea40482ae7e21c3c3322df",
+      "target": "exam-generator/references/LICENSE.txt"
+    },
+    {
+      "bytes": 2042,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b0ad22a1535ef7b1eb19b805b1a32c021d7a587b09d16d11e849b76e984adb06",
+      "target": "exam-generator/references/source.json"
+    },
+    {
+      "bytes": 1588,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "6438cb90e0955835b648a381eeca13cd19ed659b56e9dcd437a638545003f83e",
+      "target": "exam-generator/references/sources.md"
+    },
+    {
+      "bytes": 1577,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "9e7052ec20bfae22acd05f256b2356d16d95010e17db309ac0e8d5e2a977426f",
+      "target": "build-game-inventory/SKILL.md"
+    },
+    {
+      "bytes": 2625,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "639c5205998af68ab387b9bbe2cd27b8a558b9fb9437693997299fc7453e5b35",
+      "target": "build-game-inventory/references/guide.md"
+    },
+    {
+      "bytes": 1669,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "361fed9d464173899301651ea3e1313ce17f28472a236edcb0e022763bb945ee",
+      "target": "build-game-inventory/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "build-game-inventory/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1710,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "f86ce95547447bcbd6496230a510c8c372a0ffbc50b8e5f81265d5871d82a29c",
+      "target": "build-game-inventory/references/source.json"
+    },
+    {
+      "bytes": 1036,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "3e32c86c68d39f93b016ffbe95f4a6d32d6fb425c5a095bf434f1b7416aed405",
+      "target": "build-game-inventory/references/sources.md"
+    },
+    {
+      "bytes": 1756,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "07bc49f78ede5b35b2f14239d0efecd620017e4b3218fedb8ca1eb5467e2c5ef",
+      "target": "implement-fog-of-war/SKILL.md"
+    },
+    {
+      "bytes": 3798,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "4b78bddfa66748530d1dbf6918f474372adcf428519b5acda1be32f6d281769c",
+      "target": "implement-fog-of-war/references/guide.md"
+    },
+    {
+      "bytes": 6668,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "9b425e603f3328877c38649645052f4a13222f350796d329b59bb8804a4e6965",
+      "target": "implement-fog-of-war/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "implement-fog-of-war/references/LICENSE.txt"
+    },
+    {
+      "bytes": 2208,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "43fcf5ec912381033a4650bebb654f0524043507cbd8966766ed96f7aa8acb44",
+      "target": "implement-fog-of-war/references/source.json"
+    },
+    {
+      "bytes": 1025,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "081448529ea450cb6acd2d13a7edca30a63117fd60a3385b41fcccd14acabafe",
+      "target": "implement-fog-of-war/references/sources.md"
+    }
+  ],
+  "files_readback_verified": 24,
+  "general_access_granted": false,
+  "job": "20261025-074042-todo-3080",
+  "manifest_sha256": "3e86571b6f2081f83e0820d7fe4215b3d3193f40d5173164c5511e02153074ef",
+  "new_central_writes_by_verifier": 0,
+  "new_targets_created": 4,
+  "old_target_writes": 0,
+  "old_unknown_body_reads": 0,
+  "original_registry_recovered": false,
+  "overall16_complete": false,
+  "source_execution": false,
+  "verified_at": "2026-10-24T23:09:57.2889024Z"
+}

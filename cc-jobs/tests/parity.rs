@@ -6460,6 +6460,8 @@ struct Fake {
     pause_allowed: AtomicBool,
     pause_calls: AtomicUsize,
     paused_stop_failure: Arc<AtomicBool>,
+    kept_failed_pause: Arc<AtomicUsize>,
+    resumed_failed_pause: Arc<AtomicUsize>,
     paused_stop_failure_pid: Arc<AtomicU32>,
     pause_recoveries: Mutex<Vec<String>>,
     fail_queued_save: AtomicBool,
@@ -6523,6 +6525,8 @@ impl Fake {
             pause_allowed: AtomicBool::new(false),
             pause_calls: AtomicUsize::new(0),
             paused_stop_failure: Arc::new(AtomicBool::new(false)),
+            kept_failed_pause: Arc::new(AtomicUsize::new(0)),
+            resumed_failed_pause: Arc::new(AtomicUsize::new(0)),
             paused_stop_failure_pid: Arc::new(AtomicU32::new(0)),
             pause_recoveries: Mutex::new(Vec::new()),
             fail_queued_save: AtomicBool::new(false),
@@ -6719,9 +6723,23 @@ impl Runtime for Fake {
             alive: Arc<AtomicBool>,
             fail: Arc<AtomicBool>,
             fail_pid: Arc<AtomicU32>,
+            kept: Arc<AtomicUsize>,
+            resumed: Arc<AtomicUsize>,
+            failed: bool,
+            keep: bool,
+        }
+        impl Drop for Guard {
+            fn drop(&mut self) {
+                if self.failed && !self.keep {
+                    self.resumed.fetch_add(1, Ordering::Relaxed);
+                }
+            }
         }
         impl Paused for Guard {
-            fn keep_paused(&mut self) {}
+            fn keep_paused(&mut self) {
+                self.keep = true;
+                if self.failed { self.kept.fetch_add(1, Ordering::Relaxed); }
+            }
             fn arm_process(&mut self, _: u32, _: u64) -> io::Result<()> {
                 Ok(())
             }
@@ -6733,6 +6751,7 @@ impl Runtime for Fake {
                     || self.fail_pid.load(Ordering::Relaxed) == self.pid)
                     && self.fail.swap(false, Ordering::Relaxed)
                 {
+                    self.failed = true;
                     return Err(io::Error::other("fixture stop failed"));
                 }
                 self.kills.lock().unwrap().push(self.pid);
@@ -6750,6 +6769,10 @@ impl Runtime for Fake {
             alive: self.child_alive.clone(),
             fail: self.paused_stop_failure.clone(),
             fail_pid: self.paused_stop_failure_pid.clone(),
+            kept: self.kept_failed_pause.clone(),
+            resumed: self.resumed_failed_pause.clone(),
+            failed: false,
+            keep: false,
         }))
     }
     fn diagnostic(&self, message: &str) {

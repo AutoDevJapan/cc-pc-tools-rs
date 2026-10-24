@@ -194,6 +194,8 @@ pub fn todo_owns_attempt(db: &Value, job: &Value) -> bool {
     if !["todo", "doing"].contains(&s(row, "status"))
         || cc_job_policy::cancellation::owner_stopped(row, job)
         || row["owner_stopped"] == true
+        || !row["owner_question_wait"].is_null()
+        || !row["decision_wait"].is_null()
         || row["wait_on"].as_array().is_some_and(|v| !v.is_empty())
         || (job["todo_resume_generation"].is_u64()
             && row["resume_generation"] != job["todo_resume_generation"])

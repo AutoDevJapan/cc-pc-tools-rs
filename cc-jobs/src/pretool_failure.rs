@@ -29,7 +29,9 @@ impl PretoolFailure {
             self.failure = None;
         } else if t == "turn.started" {
             self.failure = None;
-        } else if t.starts_with("item.") && s(&ev["item"], "type") != "error" {
+        } else if (t.starts_with("item.") && s(&ev["item"], "type") != "error")
+            || (!t.starts_with("item.") && t.ends_with(".started") && t != "thread.started")
+        {
             // Also protect unknown future tool kinds and tool completions that
             // arrived without a start. Completed-step/token counters cannot
             // establish that no operation has begun.
@@ -96,7 +98,7 @@ impl Context {
             let Ok(ev) = serde_json::from_slice::<Value>(&line) else {
                 return Ok(false);
             };
-            if !ev.is_object() {
+            if !ev.is_object() || s(&ev, "type").is_empty() {
                 return Ok(false);
             }
             evidence.event(&ev, 0.);
@@ -108,16 +110,16 @@ impl Context {
 
     pub(crate) fn reap_pretool_failure(
         &self,
-        snapshot: &Value,
+        snapshot: &mut Value,
         failure: &Failure,
-    ) -> Result<Option<Value>> {
-        let jid = s(snapshot, "id");
-        let Some(_reservation) = self.yield_reservation(jid) else {
-            return Ok(None);
+    ) -> Result<bool> {
+        let jid = s(snapshot, "id").to_owned();
+        let Some(_reservation) = self.yield_reservation(&jid) else {
+            return Ok(false);
         };
         let pid = number(snapshot, "codex_pid") as u32;
         let Some(created) = snapshot["codex_pid_created"].as_u64() else {
-            return Ok(None);
+            return Ok(false);
         };
         // No baseline exemption: every descendant must be an idle controller.
         // The existing retained-handle guard rejects racing/new tool workers.
@@ -127,14 +129,14 @@ impl Context {
             None,
             // The existing refresh/admission paths recover this marker if
             // the owning supervisor crashes while controllers are frozen.
-            Some(&self.job_dir(jid).join("yield-paused.json")),
+            Some(&self.job_dir(&jid).join("yield-paused.json")),
         )?
         else {
-            return Ok(None);
+            return Ok(false);
         };
         // Use the same bounded pump settling window as the existing handoff.
         // The native controllers remain frozen throughout this revalidation.
-        let path = self.job_dir(jid).join("events.jsonl");
+        let path = self.job_dir(&jid).join("events.jsonl");
         let mut length = fs::metadata(&path)?.len();
         let mut stable = 0;
         for _ in 0..20 {
@@ -147,16 +149,18 @@ impl Context {
             }
         }
         if stable < 4 || !self.pretool_evidence(snapshot, failure)? {
-            return Ok(None);
+            return Ok(false);
         }
-        let _state = self.job_lock(jid, "state.lock")?;
-        let mut fresh = self.load(jid)?;
+        let state_path = self.job_dir(&jid).join("state.lock");
+        let _state = FileLock::try_acquire(&state_path)
+            .map_err(|e| Error::file_io("acquire state after pause", &state_path, e))?;
+        let mut fresh = self.load(&jid)?;
         if !crate::pool_retry::same_attempt(snapshot, &fresh)
             || ["thread_id", "resume_session"]
                 .iter()
                 .any(|k| snapshot[*k] != fresh[*k])
         {
-            return Ok(None);
+            return Ok(false);
         }
         let _todo = if fresh["todo_id"].is_number() {
             Some(FileLock::acquire(
@@ -168,7 +172,7 @@ impl Context {
         if _todo.is_some()
             && !crate::pool_retry::todo_owns_attempt(&self.read_json(&self.todo_store())?, &fresh)
         {
-            return Ok(None);
+            return Ok(false);
         }
         fresh["protocol_stall"] = json!({"version":1,"stage":"stopping","failure_kind":failure.kind,
             "started_at":fresh["started_at"],"child_pid":pid,"child_created":created,
@@ -178,11 +182,17 @@ impl Context {
         // Strict durable intent before stopping; Paused::stop waits for the
         // retained tree, including descendants, before reporting success.
         self.save(&fresh)?;
-        child.stop()?;
+        // The caller must retain the durable intent even if a partial stop
+        // fails or the root exits before another monitor iteration.
+        *snapshot = fresh;
+        if let Err(error) = child.stop() {
+            child.keep_paused();
+            return Err(error.into());
+        }
         // Keep the durable stopping intent until the supervisor has also
         // drained the event readers. Publish drained with the strict terminal
         // transition, so a failed intermediate save cannot enable retry_429.
-        Ok(Some(fresh))
+        Ok(true)
     }
 }
 
@@ -208,6 +218,7 @@ mod tests {
             json!({"type":"turn.failed","error":{"code":"cancelled","message":"429 Too Many Requests"}}),
             json!({"type":"item.started","item":{"id":"t","type":"mcp_tool_call"}}),
             json!({"type":"item.completed","item":{"id":"t","type":"future_tool"}}),
+            json!({"type":"future_operation.started"}),
         ] {
             let mut guard = PretoolFailure::default();
             guard.event(&quota, 0.);

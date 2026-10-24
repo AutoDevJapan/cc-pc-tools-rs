@@ -1433,20 +1433,25 @@ impl Context {
                     && p.poll()?.is_none()
                 {
                     next_protocol_check = self.rt.mono() + 3.;
-                    let reaped = progress
-                        .save_required(self, &mut job)
-                        .and_then(|()| self.reap_pretool_failure(&job, failure));
-                    match reaped {
-                        Ok(Some(reaped)) => {
-                            reclaimed_failure = Some((
-                                reaped["last_failure_kind"].clone(),
-                                reaped["last_error"].clone(),
-                            ));
-                            job = reaped;
+                    let reaped = match progress.save_required(self, &mut job) {
+                        Ok(()) => {
+                            let result = self.reap_pretool_failure(&mut job, failure);
+                            // reap mutates job only after its intent is saved.
+                            // A failed prefix save must not advance this baseline.
                             progress.durable = job.clone();
+                            result
+                        }
+                        Err(error) => Err(error),
+                    };
+                    match reaped {
+                        Ok(true) => {
+                            reclaimed_failure = Some((
+                                job["last_failure_kind"].clone(),
+                                job["last_error"].clone(),
+                            ));
                             protocol_reclaimed = true;
                         }
-                        Ok(None) => (),
+                        Ok(false) => (),
                         Err(error) => self.yield_diagnostic(&error),
                     }
                 }
@@ -1510,6 +1515,8 @@ impl Context {
             Ok(())
         })();
         let attempt_failed = work.is_err();
+        let protocol_attempted = protocol_reclaimed
+            || cc_job_policy::quota_recovery::collection_pending(&job);
         if protocol_reclaimed {
             job["protocol_stall"]["stage"] = json!("drained");
         }
@@ -1572,7 +1579,8 @@ impl Context {
         {
             self.yield_diagnostic(&error);
         }
-        if s(&job, "last_failure_kind") == "capacity" && !cleanup_failed && !attempt_failed {
+        if s(&job, "last_failure_kind") == "capacity" && !cleanup_failed && !attempt_failed
+            && (!protocol_attempted || protocol_reclaimed) {
             job["capacity_inventory"] = self.capacity_inventory(&job);
         }
         let gate = match self.queue_lock() {
@@ -1645,6 +1653,7 @@ impl Context {
         // message must not escape that bound through the same-model retry.
         let retry = !cleanup_failed
             && !attempt_failed
+            && (!protocol_attempted || protocol_reclaimed)
             && if s(&job, "last_failure_kind") == "capacity" {
                 if gate.is_none(){false}
                 else if todo_unavailable {self.defer_capacity_lock(&mut job)}
@@ -1655,7 +1664,7 @@ impl Context {
                     false
                 }
             } else if ["cancel", "auth", "request_failed"].contains(&s(&job, "last_failure_kind"))
-                || (protocol_reclaimed && s(&job, "last_failure_kind") == "quota")
+                || (protocol_attempted && s(&job, "last_failure_kind") == "quota")
             {
                 // Return the real cause to the existing scheduler. It verifies
                 // exhaustion, scope and healthy OAuth before another model is

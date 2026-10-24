@@ -227,7 +227,24 @@ fn source_binding(source: &Value) -> Value {
     ] {
         v[k] = source[k].clone();
     }
+    // Preserve previously issued legacy capsules byte-for-byte when the new
+    // optional collection record is absent (or explicitly null).
+    if !source["protocol_stall"].is_null() {
+        v["protocol_stall"] = source["protocol_stall"].clone();
+    }
     v
+}
+
+/// A retained stop intent belongs only to its exact native attempt. Legacy
+/// sources and receipts from older attempts remain compatible.
+pub fn collection_pending(source: &Value) -> bool {
+    let intent = &source["protocol_stall"];
+    intent["child_pid"].as_u64().is_some_and(|pid| pid > 0)
+        && intent["child_created"].is_u64()
+        && intent["stage"] != "drained"
+        && [("child_pid", "codex_pid"), ("child_created", "codex_pid_created"),
+            ("started_at", "started_at"), ("attempt_events_offset", "attempt_events_offset")]
+            .iter().all(|(saved, current)| intent[*saved] == source[*current])
 }
 
 pub fn eligible_source(item: &Value, source: &Value) -> bool {
@@ -250,6 +267,9 @@ pub fn eligible_source(item: &Value, source: &Value) -> bool {
                 && crate::cancellation::recovery_cancel(item, source)))
         && !crate::cancellation::owner_stopped(item, source)
         && item["owner_stopped"] != true
+        && item["owner_question_wait"].is_null()
+        && item["decision_wait"].is_null()
+        && !collection_pending(source)
         && s(&item["scheduler"], "owner_stop_job").is_empty()
         && source["last_failure_kind"] == "quota"
         && source["model_origin"] != "owner_request"

@@ -147,7 +147,10 @@ fn a_new_job_generation_or_owner_cancel_is_not_overwritten_or_stopped() {
 fn a_new_dependency_or_question_wait_keeps_the_original_todo_unchanged() {
     for wait in [
         json!({"status":"waiting","wait_on":[9],"dependency_generation":2}),
-        json!({"status":"blocked","question_wait":{"id":"pending-question"}}),
+        json!({"status":"doing","owner_question_wait":{"id":"pending-question"}}),
+        json!({"status":"block","owner_question_wait":{"id":"pending-question"}}),
+        json!({"status":"doing","decision_wait":{"id":"pending-decision"}}),
+        json!({"status":"block","decision_wait":{"id":"pending-decision"}}),
         json!({"status":"doing","resume_generation":2}),
         json!({"status":"doing","wait_on":[9]}),
     ] {
@@ -302,6 +305,26 @@ fn collected_quota_review_reenters_the_existing_verified_oauth_route_with_the_sa
     let mut target = json!({"model":"gpt-6-luna","model_origin":"policy","effort":"max","cwd":t.ctx.root,
         "launch_key":row["scheduler"]["key"],"task_type":"review","sandbox":"read-only","network":false,
         "mcp_profile":"minimal","approval_policy":"never","approvals_reviewer":"user","add_dirs":[]});
+    for key in ["owner_question_wait", "decision_wait"] {
+        for status in ["todo", "doing", "block"] {
+            let mut waiting = row.clone();
+            waiting["status"] = json!(status);
+            waiting[key] = json!({"id":"actual-pending-wait"});
+            assert!(
+                cc_job_policy::quota_recovery::receipt(&waiting, &source, &target, &health, at)
+                    .is_none(),
+                "{key}/{status}"
+            );
+        }
+    }
+    let mut incomplete = source.clone();
+    incomplete["protocol_stall"]["stage"] = json!("stopping");
+    assert!(cc_job_policy::quota_recovery::collection_pending(
+        &incomplete
+    ));
+    assert!(
+        cc_job_policy::quota_recovery::receipt(&row, &incomplete, &target, &health, at).is_none()
+    );
     target["quota_recovery"] =
         cc_job_policy::quota_recovery::receipt(&row, &source, &target, &health, at).unwrap();
     target["finite_review_spec_sha256"] = json!(spec_hash);
@@ -412,6 +435,13 @@ fn stopping_intent_must_be_durable_and_a_failed_stop_never_counts_as_drain() {
         assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 1);
         if fault == "intent" {
             assert!(denied.load(Ordering::Relaxed));
+        } else {
+            assert_eq!(t.rt.kept_failed_pause.load(Ordering::Relaxed), 1);
+            assert_eq!(
+                t.rt.resumed_failed_pause.load(Ordering::Relaxed),
+                0,
+                "a partially stopped tree must remain frozen after stop failure"
+            );
         }
     }
 }
@@ -438,4 +468,44 @@ fn a_terminal_save_failure_retains_intent_and_cannot_retry_or_publish_success() 
     assert_ne!(durable["status"], "succeeded");
     assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 1);
     assert_eq!(*t.rt.kills.lock().unwrap(), [321]);
+}
+
+#[test]
+fn an_exit_racing_a_failed_stop_keeps_the_intent_and_cannot_blindly_retry() {
+    let (t, j, escaped) = fixture(
+        vec![
+            json!({"type":"error","message":QUOTA}),
+            json!({"type":"thread.started","thread_id":"01a0e883-7628-7121-9540-6780fd4cd6f4"}),
+        ],
+        json!({}),
+    );
+    t.rt.paused_stop_failure.store(true, Ordering::Relaxed);
+    let saved_intent = Arc::new(AtomicBool::new(false));
+    let signal = saved_intent.clone();
+    *t.rt.save_value_hook.lock().unwrap() = Some(Box::new(move |_, job| {
+        if job["protocol_stall"]["stage"] == "stopping" {
+            signal.store(true, Ordering::Relaxed);
+        }
+        Ok(())
+    }));
+    let alive = t.rt.child_alive.clone();
+    let procs = t.rt.procs.clone();
+    *t.rt.sleep_hook.lock().unwrap() = Some(Box::new(move |_| {
+        if saved_intent.load(Ordering::Relaxed) {
+            alive.store(false, Ordering::Relaxed);
+            procs.lock().unwrap().remove(&321);
+        }
+    }));
+    t.ctx.supervise(s(&j, "id")).unwrap();
+    let result = t.ctx.load(s(&j, "id")).unwrap();
+    assert!(!escaped.load(Ordering::Relaxed));
+    assert_eq!(result["status"], "failed");
+    assert_eq!(
+        result["protocol_stall"]["stage"], "stopping",
+        "root exit is not a confirmed tree drain"
+    );
+    assert!(cc_job_policy::quota_recovery::collection_pending(&result));
+    assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 1);
+    assert!(result["retry_count"].as_u64().unwrap_or(0) == 0);
+    assert_eq!(t.rt.kept_failed_pause.load(Ordering::Relaxed), 1);
 }

@@ -22,6 +22,12 @@ Issue481/PR484。別モデルの固定読取3762はbase177385c8/head788fd233、�
 
 元ToDoと親への候補記録は[3755:protocol-stall-candidate:788fd233]。完全ログ、再開JSON、正規checkpoint saved=trueと全checks=trueは.ci-work/3755へ保持する。現用codex_jobsは3726の独立build/deployment receiptでsource2e173041/sha2c79d836と照合できる。通常guardは未分類、古いmodel資格はfalseのまま保持する。旧容量raw state/logや認証を読まない。変更後artifactは未配布。
 
-残る工程: 関連nextest完了/doctest/Clippy、固定候補の別モデルレビュー、必要CI、通常merge、現用ソースとの差分確認、CAS配布、配布版の有限回収と実OAuth応答の確認、親/元ToDo/Discordへの通知なし結果保存。
+3762原応答を受領: SHA256 0acc750fe8ed58f03e9625bda9dbefd04df9cdbb9c8c989b9a8fd9ac7724e85b。指定9対象と必要周辺を読了、未変更parity全件/任意scheduler詳細は未読、テスト未実行を区別した読取完了。元3762のみdone。Must2はstop失敗後の凍結維持と実owner_question_wait/decision_waitの保護。Fakeのkeep_paused空実装を補い、実キー/doingを使うテストへ直すと両件のRedを確認した。
+
+Must対応: stop失敗時はkeep_paused、停止意図を呼出側のdurable baselineにも保持し、根の終了だけでdrained/再試行にしない。既存quota資格でも同世代の未完collectionと実質問/判断待ちを拒否。古いreceiptはnull fieldでdigestを変えない。凍結後のlockはtry取得にした。fd14f5eeでは32関連テスト全成功、Windows実ツリーも32.356秒で終了した。基盤563件は変更が無い部分を再利用し、全workspaceは重ねない。reviewの未知開始イベントのSuggestionも保護へ加える。
+
+追加差分レビュー3767は登録済み、まだ実job無し。準備のtool_failedを正規に記録して有限期限後に再確認中。新しい固定headに仕様を更新してから同じ項目で再開する。元のterminal差分(f6421e2e)のCIはcc-jobs成功/Rust解析中で、最新Must対応のCI成功とはしない。
+
+残る工程: Must対応のClippy/doctestと追加差分レビュー3767、最新候補の必要CI、通常merge、現用ソースとの差分確認、CAS配布、配布版の有限回収と実OAuth応答の確認、親/元ToDo/Discordへの通知なし結果保存。
 
 一時所有: 129a07b50c418d82809693dd1dc27887。safe-deleteのplan/別呼出し削除/finishで閉じる。新しいbranchへ変更していない。

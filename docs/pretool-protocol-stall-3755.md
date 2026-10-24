@@ -16,6 +16,12 @@
 - 既存pause_idle_agentでcontrollerを凍結し、未知の実行子がいないこと、現在の試行の
   完全なevents、元job/作成時刻/所有/仕様/世代とToDoの停止・待ちを再確認する。
   凍結記録は既存yield-paused.jsonを使い、監督消失時も既存の回復処理へつなぐ。
+- stop失敗では既存keep_pausedを使い、部分停止したcontrollerをDropで再開しない。
+  停止意図は呼出側にも保存し、根だけが終了してもdrainedにしない。未確認の同世代の
+  collectionは既存quota資格でも拒否し、原失敗と保留を保持する。凍結後のstate lockは
+  即時取得を使う。
+- 実際のowner_question_wait/decision_waitはstatusがdoingのままでも拒否する。
+  正常なnull/未設定や、過去世代のcollection記録は互換を保つ。
 - 排出前にprotocol_stallのstoppingを厳密保存し、既存の保持ハンドルで子ツリーの
   終了を確認する。readerを排出し、最終状態と同じ厳密保存でdrainedを確定する。
   停止後の中間保存失敗で回収の印を失ったり再試行へ流れたりしない。失敗や不明を

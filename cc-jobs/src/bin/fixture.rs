@@ -465,6 +465,19 @@ fn main() {
         );
         return;
     }
+    if mode == "pretool-429-hold" {
+        println!("{}", json!({"type":"thread.started","thread_id":"01a0e883-7628-7121-9540-6780fd4cd6f4"}));
+        println!("{}", json!({"type":"error","message":"Reconnecting... 1/5 (exceeded retry limit, last status: 429 Too Many Requests)"}));
+        std::io::stdout().flush().unwrap();
+        fs::write(root.join("pretool.identity.json"), json!({"pid":std::process::id(),
+            "created":proc_created(std::process::id())}).to_string()).unwrap();
+        // Controlled barrier, not a delayed successful exit. The real
+        // supervisor must drain this controller; E2e owns the cleanup handles.
+        while !root.join("pretool.release").exists() {
+            std::thread::park_timeout(Duration::from_millis(20));
+        }
+        return;
+    }
     if mode == "capacity-once" || mode == "capacity-always" {
         let calls = root.join("capacity-calls.jsonl");
         let mut log = fs::OpenOptions::new()

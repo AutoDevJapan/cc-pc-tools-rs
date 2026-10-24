@@ -162,6 +162,7 @@ pub fn same_attempt(source: &Value, fresh: &Value) -> bool {
             "retry_not_before",
             "finite_review",
             "todo_dependency_generation",
+            "todo_resume_generation",
         ]
         .iter()
         .all(|field| source[field] == fresh[field])
@@ -193,6 +194,9 @@ pub fn todo_owns_attempt(db: &Value, job: &Value) -> bool {
     if !["todo", "doing"].contains(&s(row, "status"))
         || cc_job_policy::cancellation::owner_stopped(row, job)
         || row["owner_stopped"] == true
+        || row["wait_on"].as_array().is_some_and(|v| !v.is_empty())
+        || (job["todo_resume_generation"].is_u64()
+            && row["resume_generation"] != job["todo_resume_generation"])
         || !s(&row["scheduler"], "owner_stop_job").is_empty()
         || row["dependency_generation"].as_u64().unwrap_or(0)
             != job["todo_dependency_generation"].as_u64().unwrap_or(0)

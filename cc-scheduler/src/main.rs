@@ -83,19 +83,28 @@ fn main() {
     if command == Some("dispatch-one") {
         if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
             println!(
-                "usage: scheduler dispatch-one --id <ID>\n\nAllocate only this existing ToDo through ordinary priority, ownership and capacity gates. Keeps global settings, stops, dependencies and the saved launch scope. Does not run a global tick.\n"
+                "usage: scheduler dispatch-one --id <ID> [--wait]\n\nAllocate only this existing ToDo through ordinary priority, ownership and capacity gates. Keeps global settings, stops, dependencies and the saved launch scope. Does not run a global tick. --wait waits up to30 seconds for the current scheduler operation.\n"
             );
             return;
         }
         let result = (|| -> Result<serde_json::Value> {
-            let id = cc_scheduler::targeted_dispatch::parse_id(&args[1..])?;
+            let wait = args.len() == 4 && args[3] == "--wait";
+            let id = cc_scheduler::targeted_dispatch::parse_id(if wait {
+                &args[1..3]
+            } else {
+                &args[1..]
+            })?;
             let root = PathBuf::from("D:/CC/Tools/scheduler");
             let mut engine = Scheduler::new(
                 root.clone(),
                 PathBuf::from("D:/CC/Tools/todo/todo.json"),
                 RealBackend::new(root),
             )?;
-            cc_scheduler::targeted_dispatch::run(&mut engine, id)
+            if wait {
+                cc_scheduler::targeted_dispatch::run_waiting(&mut engine, id)
+            } else {
+                cc_scheduler::targeted_dispatch::run(&mut engine, id)
+            }
         })();
         match result {
             Ok(report) => println!("{}", encode(&report, 2)),

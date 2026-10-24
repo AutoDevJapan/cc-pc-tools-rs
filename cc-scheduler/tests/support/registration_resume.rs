@@ -60,7 +60,7 @@ fn registration_resume_restores_only_registration_and_normal_dispatch_still_runs
     assert!(f.e.backend.launched.is_empty());
     write_json(&f.e.root.join("config.json"), &f.cfg, 1).unwrap();
     write_json(&f.e.root.join("priorities.json"), &f.pri, 1).unwrap();
-    let result = cc_scheduler::targeted_dispatch::run(&mut f.e, 2467).unwrap();
+    let result = cc_scheduler::targeted_dispatch::run_waiting(&mut f.e, 2467).unwrap();
     assert_eq!(result["launched"], "launched1");
     assert_eq!(f.e.backend.launched[0]["item"]["id"], 2467);
     assert!(f.e.backend.cancelled.is_empty());
@@ -140,4 +140,29 @@ fn registration_resume_checks_the_saved_workspace_without_changing_it() {
             .unwrap();
     assert_eq!(result["saved"], false);
     assert_eq!(f.get(2467), before);
+}
+
+#[test]
+fn registration_resume_targeted_diagnostics_keep_unknown_preparation_text_private() {
+    for (reason, expected) in [
+        ("tool_failed", json!("tool_failed")),
+        ("private path and body", Value::Null),
+    ] {
+        let (mut f, _) = setup();
+        f.cfg["dispatch_enabled"] = json!(false);
+        write_json(&f.e.root.join("config.json"), &f.cfg, 1).unwrap();
+        write_json(&f.e.root.join("priorities.json"), &f.pri, 1).unwrap();
+        f.e.edit(&json!(2467), |row| {
+            row["scheduler"]["not_before"] = json!(T + 300.);
+            row["scheduler"]["preparation_failure"] = json!({"reason":reason});
+        })
+        .unwrap();
+        let before = f.get(2467);
+        let result = cc_scheduler::targeted_dispatch::run_waiting(&mut f.e, 2467).unwrap();
+        assert_eq!(result["not_before"], T + 300.);
+        assert_eq!(result["preparation_reason"], expected);
+        assert!(!result.to_string().contains("private path and body"));
+        assert_eq!(f.get(2467), before);
+        assert!(f.e.backend.launched.is_empty());
+    }
 }

@@ -112,7 +112,17 @@ func conversationMediaAllowed(target conversationMediaTarget, dir string, q, cfg
 	}
 	var previous uint64
 	var selected *conversationMediaAttachment
+	rawAttachments, ok := m["attachments"].([]any)
+	if !ok || len(rawAttachments) != len(observation.Attachments) {
+		return false
+	}
 	for i := range observation.Attachments {
+		// encoding/json matches struct fields without case sensitivity; the
+		// producer's nested wire keys are exactly id and size as well.
+		fields := obj(rawAttachments[i])
+		if len(fields) != 2 || !conversationKnown(fields, "id size") {
+			return false
+		}
 		a := &observation.Attachments[i]
 		id, err := strconv.ParseUint(a.ID, 10, 64)
 		if err != nil || !conversationID(a.ID) || id <= previous || a.Size == nil || *a.Size < 0 {

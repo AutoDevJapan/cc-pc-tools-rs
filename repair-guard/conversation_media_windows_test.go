@@ -71,7 +71,9 @@ func TestConversationOwnerMediaProvenanceMismatch(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			m := newConversationMediaFixture(t)
 			tc.mutate(m)
-			m.publish()
+			// Keep the original filename/reply present so this case reaches the
+			// observation's message binding, rather than a missing 999.json.
+			m.publishNamed("202", m.scope.Attachment)
 			for _, p := range []string{m.observationPath, m.scopePath} {
 				if conversationAllowed(p, m.f.a) {
 					t.Fatal("mismatched observation accepted")
@@ -106,7 +108,11 @@ func TestConversationOwnerMediaScopeMismatch(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			m := newConversationMediaFixture(t)
 			tc.mutate(&m.scope)
-			m.publish()
+			if tc.name == "attachment" {
+				m.observation.Attachments = append(m.observation.Attachments, mediaAttachmentFixture{ID: "901", Size: m.observation.Attachments[0].Size})
+			}
+			// Both attachments exist: select 900 by filename but put 901 inside.
+			m.publishNamed(m.observation.Message, "900")
 			if conversationAllowed(m.scopePath, m.f.a) {
 				t.Fatal("mismatched scope accepted")
 			}
@@ -170,7 +176,8 @@ func TestConversationOwnerMediaCanonicalAndProtectionStillRequired(t *testing.T)
 
 func TestConversationOwnerMediaUnknownAndLinkedFiles(t *testing.T) {
 	m := newConversationMediaFixture(t)
-	for _, name := range []string{"202.latest.private.json", "202.note.txt", "202.expected.json", "unknown.json", "202-" + strings.Repeat("a", 64) + ".private.json", "202-" + strings.Repeat("a", 64) + "-900.scope.private.json"} {
+	stem := strings.TrimSuffix(filepath.Base(m.observationPath), ".private.json")
+	for _, name := range []string{"202.latest.private.json", stem + ".note.txt", stem + ".expected.json", "unknown.json", "202-" + strings.Repeat("a", 64) + ".private.json", "202-" + strings.Repeat("a", 64) + "-900.scope.private.json"} {
 		p := filepath.Join(filepath.Dir(m.scopePath), name)
 		m.f.put(p, m.scope)
 		if conversationAllowed(p, m.f.a) {
@@ -210,8 +217,14 @@ func TestConversationOwnerMediaOverwriteAndConcurrentChange(t *testing.T) {
 			}
 			if concurrent {
 				changed := false
+				scopeChecks := 0
 				m.f.a.protected = func(path string) bool {
-					if !changed && same(path, m.scopePath) {
+					if same(path, m.scopePath) {
+						scopeChecks++
+					}
+					// First check is fast membership, before any read. The
+					// second is scope read, after the observation was parsed.
+					if !changed && scopeChecks == 2 {
 						changed = true
 						change()
 					}
@@ -228,7 +241,7 @@ func TestConversationOwnerMediaOverwriteAndConcurrentChange(t *testing.T) {
 }
 
 func TestConversationOwnerMediaStrictWireTypes(t *testing.T) {
-	for _, which := range []string{"unknown-field", "missing-field", "null-edit", "string-todo", "string-size", "duplicate-key", "trailing-json"} {
+	for _, which := range []string{"unknown-field", "missing-field", "null-edit", "string-todo", "string-size", "attachment-id-case", "attachment-size-case", "duplicate-key", "trailing-json"} {
 		t.Run(which, func(t *testing.T) {
 			m := newConversationMediaFixture(t)
 			raw, _ := json.Marshal(m.observation)
@@ -244,6 +257,14 @@ func TestConversationOwnerMediaStrictWireTypes(t *testing.T) {
 				v["todo_id"] = "1"
 			case "string-size":
 				obj(v["attachments"].([]any)[0])["size"] = "64"
+			case "attachment-id-case":
+				a := obj(v["attachments"].([]any)[0])
+				a["ID"] = a["id"]
+				delete(a, "id")
+			case "attachment-size-case":
+				a := obj(v["attachments"].([]any)[0])
+				a["Size"] = a["size"]
+				delete(a, "size")
 			}
 			raw, _ = json.Marshal(v)
 			if which == "duplicate-key" {
@@ -306,6 +327,9 @@ func newConversationMediaFixture(t *testing.T) *conversationMediaFixture {
 	return m
 }
 func (m *conversationMediaFixture) publish() {
+	m.publishNamed(m.observation.Message, m.scope.Attachment)
+}
+func (m *conversationMediaFixture) publishNamed(message, attachment string) {
 	m.f.t.Helper()
 	raw, err := json.MarshalIndent(m.observation, "", "  ")
 	if err != nil {
@@ -315,13 +339,60 @@ func (m *conversationMediaFixture) publish() {
 	if os.MkdirAll(dir, 0700) != nil {
 		m.f.t.Fatal("media fixture directory unavailable")
 	}
-	stem := m.observation.Message + "-" + hashBytes(raw)
+	stem := message + "-" + hashBytes(raw)
 	m.observationPath = filepath.Join(dir, stem+".private.json")
-	m.scopePath = filepath.Join(dir, stem+"-"+m.scope.Attachment+".scope.private.json")
+	m.scopePath = filepath.Join(dir, stem+"-"+attachment+".scope.private.json")
 	if os.WriteFile(m.observationPath, raw, 0600) != nil {
 		m.f.t.Fatal("observation fixture write failed")
 	}
 	m.f.put(m.scopePath, m.scope)
+}
+
+func TestConversationOwnerMediaEditedDiscordTimestamp(t *testing.T) {
+	m := newConversationMediaFixture(t)
+	created := "2026-10-18T01:00:03.123000+00:00"
+	edited := "2026-10-18T01:00:05.456000+00:00"
+	m.f.record["created_at"] = created
+	m.f.record["edited_at"] = edited
+	m.f.record["acquired_at"] = "2026-10-18T01:00:06.123000+00:00"
+	m.f.contextEdit(func(c object) { obj(c["owner_replies"].([]any)[0])["timestamp"] = created })
+	m.f.stateMatch()
+	m.f.publish()
+	raw, _ := os.ReadFile(m.f.replyPath)
+	m.observation.Created = created
+	m.observation.Edited = edited
+	m.observation.CanonicalSHA = hashBytes(raw)
+	at, _ := time.Parse(time.RFC3339Nano, created)
+	m.scope.Created = created
+	m.scope.Edited = edited
+	m.scope.Since = at.UTC().Format(time.RFC3339Nano)
+	m.scope.Until = at.Add(time.Millisecond).UTC().Format(time.RFC3339Nano)
+	m.publish()
+	if !conversationAllowed(m.observationPath, m.f.a) || !conversationAllowed(m.scopePath, m.f.a) {
+		t.Fatal("current edited Discord-format version rejected")
+	}
+	after, _ := os.ReadFile(m.f.replyPath)
+	if string(after) != string(raw) {
+		t.Fatal("canonical source changed")
+	}
+}
+
+func TestConversationOwnerMediaExclusiveBoundMustAlreadyBePast(t *testing.T) {
+	m := newConversationMediaFixture(t)
+	created, _ := time.Parse(time.RFC3339Nano, m.observation.Created)
+	m.f.a.at = created.Add(500 * time.Microsecond)
+	m.f.record["acquired_at"] = m.f.a.at.Format(time.RFC3339Nano)
+	m.f.stateMatch()
+	m.f.publish()
+	raw, _ := os.ReadFile(m.f.replyPath)
+	m.observation.CanonicalSHA = hashBytes(raw)
+	m.publish()
+	if !conversationAllowed(m.observationPath, m.f.a) {
+		t.Fatal("positive observation version did not qualify")
+	}
+	if conversationAllowed(m.scopePath, m.f.a) {
+		t.Fatal("not-yet-past exclusive bound accepted")
+	}
 }
 func TestConversationOwnerMediaQualifiedOriginalAndScope(t *testing.T) {
 	m := newConversationMediaFixture(t)

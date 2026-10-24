@@ -16,6 +16,21 @@ import (
 
 const skillsJobsRoot = "D:/CC/Tools/codex-jobs/jobs"
 
+type skillsSubwork struct {
+	Parent    int    `json:"parent_todo_id"`
+	ParentJob string `json:"origin_job_id"`
+	Kind      string `json:"kind"`
+	Owner     struct {
+		Worktree string `json:"worktree"`
+	} `json:"owner"`
+}
+type skillsAdmission struct {
+	Key      string        `json:"key"`
+	Spec     string        `json:"spec"`
+	Worktree string        `json:"worktree"`
+	Subwork  skillsSubwork `json:"subwork"`
+}
+
 type skillsTask struct {
 	ID            int      `json:"id"`
 	Project       string   `json:"project"`
@@ -29,20 +44,17 @@ type skillsTask struct {
 	DecisionWait  any      `json:"decision_wait"`
 	WaitReady     any      `json:"wait_ready"`
 	Scheduler     struct {
-		Job           string `json:"job"`
-		LastJob       string `json:"last_job"`
-		Worktree      string `json:"worktree"`
-		Branch        string `json:"branch"`
-		Key           string `json:"key"`
-		SubworkParent string `json:"subwork_parent_job"`
-		PendingCancel any    `json:"pending_cancel"`
-		OwnerStop     any    `json:"owner_stop_job"`
+		Job           string           `json:"job"`
+		LastJob       string           `json:"last_job"`
+		Worktree      string           `json:"worktree"`
+		Branch        string           `json:"branch"`
+		Key           string           `json:"key"`
+		SubworkParent string           `json:"subwork_parent_job"`
+		PendingCancel any              `json:"pending_cancel"`
+		OwnerStop     any              `json:"owner_stop_job"`
+		Admission     *skillsAdmission `json:"subwork_admission"`
 	} `json:"scheduler"`
-	Subwork struct {
-		Parent    int    `json:"parent_todo_id"`
-		ParentJob string `json:"origin_job_id"`
-		Kind      string `json:"kind"`
-	} `json:"subwork"`
+	Subwork skillsSubwork `json:"subwork"`
 }
 type skillsRegistry struct {
 	Root  string
@@ -275,15 +287,22 @@ func skillsResultBindingWith(r skillsResultRequest, reg skillsRegistry, job obje
 	// caller-created result file or another public/private task with similar text.
 	return (forReview || (row.Subwork.Parent == 3686 && strings.Contains(string(spec), "SKILLS3080_IMPLEMENTATION_REVIEW "))) && row.Subwork.Kind == "review" && (row.Subwork.Parent == 3080 || row.Subwork.Parent == 3686) && job["sandbox"] == "read-only" &&
 		conversationNumber(obj(job["subwork"])["parent_todo_id"]) == uint64(row.Subwork.Parent) &&
-		str(job["parent_job_id"]) == row.Scheduler.SubworkParent && obj(job["subwork"])["origin_job_id"] == row.Subwork.ParentJob &&
-		skillsReviewParentBound(reg, row, forReview) &&
+		obj(job["subwork"])["origin_job_id"] == row.Subwork.ParentJob &&
+		skillsReviewAdmissionBound(row, job) && skillsReviewParentBound(reg, row, forReview, str(job["parent_job_id"])) &&
 		same(str(obj(job["finite_review"])["spec"]), row.Spec)
+}
+
+func skillsReviewAdmissionBound(row skillsTask, job object) bool {
+	a := row.Scheduler.Admission
+	return a != nil && a.Key != "" && job["launch_key"] == a.Key && same(a.Spec, row.Spec) && same(a.Worktree, row.Scheduler.Worktree) &&
+		a.Subwork == row.Subwork && job["subwork_validated"] == true && obj(job["subwork"])["kind"] == row.Subwork.Kind &&
+		same(str(obj(obj(job["subwork"])["owner"])["worktree"]), row.Subwork.Owner.Worktree)
 }
 
 // A review belongs to a registered author generation, not merely to matching
 // strings inside the child. A normally resumed actor may consume the same fixed
 // source review from an earlier registered author; it never impersonates it.
-func skillsReviewParentBound(reg skillsRegistry, row skillsTask, manifestReview bool) bool {
+func skillsReviewParentBound(reg skillsRegistry, row skillsTask, manifestReview bool, launch string) bool {
 	parent, ok := reg.Tasks[row.Subwork.Parent]
 	w := reg.writer
 	consumer, consumerOK := reg.Tasks[w.Task]
@@ -294,12 +313,16 @@ func skillsReviewParentBound(reg skillsRegistry, row skillsTask, manifestReview 
 		(!manifestReview && parent.ID != 3686) {
 		return false
 	}
+	if (row.Scheduler.SubworkParent != "" && row.Scheduler.SubworkParent != launch) ||
+		!same(row.Subwork.Owner.Worktree, parent.Scheduler.Worktree) {
+		return false
+	}
 	origin := row.Subwork.ParentJob
 	parts := currentSubworkJobName.FindStringSubmatch(origin)
 	if len(parts) != 3 || parts[2] != strconv.Itoa(parent.ID) {
 		return false
 	}
-	if launch := row.Scheduler.SubworkParent; launch != "" {
+	if launch != "" {
 		parts := currentSubworkJobName.FindStringSubmatch(launch)
 		if len(parts) != 3 || parts[2] != strconv.Itoa(parent.ID) {
 			return false
@@ -329,7 +352,7 @@ func skillsReviewParentBound(reg skillsRegistry, row skillsTask, manifestReview 
 			}
 			latestAt = i
 		}
-		if id == row.Scheduler.SubworkParent {
+		if id == launch {
 			if launchAt >= 0 {
 				return false
 			}
@@ -339,7 +362,7 @@ func skillsReviewParentBound(reg skillsRegistry, row skillsTask, manifestReview 
 	// The normal scheduler can bind a queued review to a resumed real parent,
 	// or remove a no-longer-live launch parent. Keep that launch generation
 	// separate from the immutable author/origin and from the current consumer.
-	return originAt >= 0 && latestAt >= originAt && (row.Scheduler.SubworkParent == "" || (launchAt >= originAt && launchAt <= latestAt))
+	return originAt >= 0 && latestAt >= originAt && (launch == "" || (launchAt >= originAt && launchAt <= latestAt))
 }
 
 func skillsReviewOriginBound(parent skillsTask, row skillsTask, child, origin object) bool {
@@ -386,7 +409,7 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 		if !ok || !skillsReviewOriginBound(reg.Tasks[row.Subwork.Parent], row, job, origin) {
 			return out, "result_binding"
 		}
-		if launch := row.Scheduler.SubworkParent; launch != "" && launch != row.Subwork.ParentJob {
+		if launch := str(job["parent_job_id"]); launch != "" && launch != row.Subwork.ParentJob {
 			actual, ok := skillsReadJob(s, launch)
 			if !ok || !skillsReviewAuthorBound(reg.Tasks[row.Subwork.Parent], launch, job, actual) {
 				return out, "result_binding"

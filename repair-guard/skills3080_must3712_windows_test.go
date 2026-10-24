@@ -34,6 +34,7 @@ func skillsReviewGenerationFixture() (skillsRegistry, skillsTask, object, object
 	parent.Scheduler.Job, parent.Scheduler.Worktree = current, w.Workspace
 	row := skillsTask{ID: 3718, Project: "cc-pc-tools-rs"}
 	row.Subwork.Parent, row.Subwork.Kind, row.Subwork.ParentJob = 3686, "review", old
+	row.Subwork.Owner.Worktree = w.Workspace
 	row.Scheduler.SubworkParent = old
 	reg := skillsRegistry{Tasks: map[int]skillsTask{3080: {ID: 3080, Project: "cc-pc-tools-rs"}, 3686: parent}, writer: w}
 	child := object{"started_at": "2026-10-24T18:33:55Z"}
@@ -41,13 +42,56 @@ func skillsReviewGenerationFixture() (skillsRegistry, skillsTask, object, object
 	return reg, row, child, origin
 }
 
+func TestSkills3080PersistedAdmissionBindsTheActualLaunchParent(t *testing.T) {
+	reg, row, child, _ := skillsReviewGenerationFixture()
+	row.Scheduler.SubworkParent = "" // Normal scheduler persists admission, not this preparation-only field.
+	row.Spec = "D:/CC/Tools/todo/specs/3740-a.md"
+	row.Scheduler.Worktree = "D:/CC/Work/independent-review"
+	row.Scheduler.Admission = &skillsAdmission{Key: "one-real-admitted-launch", Spec: row.Spec, Worktree: row.Scheduler.Worktree, Subwork: row.Subwork}
+	child["launch_key"], child["subwork_validated"] = "one-real-admitted-launch", true
+	child["subwork"] = object{"kind": "review", "owner": object{"worktree": row.Subwork.Owner.Worktree}}
+	if !skillsReviewAdmissionBound(row, child) || !skillsReviewParentBound(reg, row, false, row.Subwork.ParentJob) {
+		t.Fatal("normal persisted receipt could not bind the real registered parent")
+	}
+	if !skillsReviewParentBound(reg, row, false, "") {
+		t.Fatal("normal departed launch parent invalidated the registered origin")
+	}
+	for _, kind := range []string{"missing", "key", "spec", "worktree", "origin", "owner", "validation"} {
+		t.Run(kind, func(t *testing.T) {
+			copy := row
+			a := *row.Scheduler.Admission
+			copy.Scheduler.Admission = &a
+			j := objClone(child)
+			switch kind {
+			case "missing":
+				copy.Scheduler.Admission = nil
+			case "key":
+				a.Key = "other-launch"
+			case "spec":
+				a.Spec = "D:/other-spec"
+			case "worktree":
+				a.Worktree = "D:/other-worker"
+			case "origin":
+				a.Subwork.ParentJob = "20261025-000000-todo-3686"
+			case "owner":
+				a.Subwork.Owner.Worktree = "D:/other-parent"
+			case "validation":
+				j["subwork_validated"] = false
+			}
+			if skillsReviewAdmissionBound(copy, j) {
+				t.Fatal("another preparation or scope became the admitted review")
+			}
+		})
+	}
+}
+
 func TestSkills3080ReviewRegisteredContinuation(t *testing.T) {
 	reg, row, child, origin := skillsReviewGenerationFixture()
-	if !skillsReviewParentBound(reg, row, false) || !skillsReviewOriginBound(reg.Tasks[3686], row, child, origin) {
+	if !skillsReviewParentBound(reg, row, false, row.Scheduler.SubworkParent) || !skillsReviewOriginBound(reg.Tasks[3686], row, child, origin) {
 		t.Fatal("a genuine prior author and the registered resumed actor were conflated")
 	}
 	row.Scheduler.SubworkParent = reg.writer.Job
-	if !skillsReviewParentBound(reg, row, false) {
+	if !skillsReviewParentBound(reg, row, false, row.Scheduler.SubworkParent) {
 		t.Fatal("normal scheduler rebinding erased the registered original author")
 	}
 	launch := objClone(origin)
@@ -57,14 +101,14 @@ func TestSkills3080ReviewRegisteredContinuation(t *testing.T) {
 		t.Fatal("a real resumed launch parent was confused with the original author")
 	}
 	row.Scheduler.SubworkParent = ""
-	if !skillsReviewParentBound(reg, row, false) {
+	if !skillsReviewParentBound(reg, row, false, row.Scheduler.SubworkParent) {
 		t.Fatal("removing a departed launch parent erased the registered author")
 	}
 	// A review requested by this current author is also valid. Source/head and
 	// exact response checks remain separate mandatory gates at the consumer.
 	row.Subwork.ParentJob, row.Scheduler.SubworkParent = reg.writer.Job, reg.writer.Job
 	origin["id"], origin["status"] = reg.writer.Job, "running"
-	if !skillsReviewParentBound(reg, row, false) || !skillsReviewOriginBound(reg.Tasks[3686], row, child, origin) {
+	if !skillsReviewParentBound(reg, row, false, row.Scheduler.SubworkParent) || !skillsReviewOriginBound(reg.Tasks[3686], row, child, origin) {
 		t.Fatal("current registered author rejected")
 	}
 	for _, kind := range []string{"fictional", "wrong-parent-task", "stale-writer", "future-generation", "duplicate-origin", "disagreeing-parent", "wrong-origin-task", "wrong-origin-workspace", "wrong-origin-time"} {
@@ -93,7 +137,7 @@ func TestSkills3080ReviewRegisteredContinuation(t *testing.T) {
 				origin["started_at"] = "2026-10-25T00:00:00Z"
 			}
 			reg.Tasks[3686] = parent
-			if skillsReviewParentBound(reg, row, false) && skillsReviewOriginBound(parent, row, child, origin) {
+			if skillsReviewParentBound(reg, row, false, row.Scheduler.SubworkParent) && skillsReviewOriginBound(parent, row, child, origin) {
 				t.Fatal("unregistered or mismatched author generation admitted")
 			}
 		})

@@ -2731,44 +2731,56 @@ pub fn check_clarification(ctx: &mut Context, args: &LogArgs, manifest: &Path) -
 /// title/request ID is a semantic duplicate. Question text stays in its thread.
 pub fn ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
     let mut incoming = prepare_ask(ctx, args)?;
-    let images = if let Some(saved) = pending_question_image_receipts(ctx, args)? {
-        incoming.images = saved;
-        vec![]
-    } else if let Some(evidence) = args.program_evidence.as_deref() {
-        let images = program_question::images(ctx, &incoming, args, evidence)?;
-        incoming.images = images.iter().map(|image| image.receipt.clone()).collect();
-        images
-    } else {
-        let scope = question_image_scope(ctx, &incoming);
-        let images = images(
-            ctx,
-            &args.request_id,
-            &args.attach,
-            &SecretCheck::new(),
-            scope.as_ref(),
-        )?;
-        if !args.expected_image_sha256.is_empty()
-            && images
-                .iter()
-                .map(|image| &image.receipt.sha256)
-                .collect::<Vec<_>>()
-                != args.expected_image_sha256.iter().collect::<Vec<_>>()
-        {
-            return Err("question images changed before upload; no message is sent".into());
-        }
-        incoming.images = images.iter().map(|image| image.receipt.clone()).collect();
-        images
-    };
+    let images =
+        if let Some((saved, recovering)) = saved_question_image_input(ctx, args, &incoming)? {
+            if recovering {
+                incoming.images = saved.images;
+                vec![]
+            } else {
+                let evidence = saved
+                    .program_evidence
+                    .as_deref()
+                    .ok_or("saved drawing evidence missing")?;
+                let images = program_question::images(ctx, &saved, args, evidence)?;
+                incoming.images = images.iter().map(|image| image.receipt.clone()).collect();
+                images
+            }
+        } else if let Some(evidence) = args.program_evidence.as_deref() {
+            let images = program_question::images(ctx, &incoming, args, evidence)?;
+            incoming.images = images.iter().map(|image| image.receipt.clone()).collect();
+            images
+        } else {
+            let scope = question_image_scope(ctx, &incoming);
+            let images = images(
+                ctx,
+                &args.request_id,
+                &args.attach,
+                &SecretCheck::new(),
+                scope.as_ref(),
+            )?;
+            if !args.expected_image_sha256.is_empty()
+                && images
+                    .iter()
+                    .map(|image| &image.receipt.sha256)
+                    .collect::<Vec<_>>()
+                    != args.expected_image_sha256.iter().collect::<Vec<_>>()
+            {
+                return Err("question images changed before upload; no message is sent".into());
+            }
+            incoming.images = images.iter().map(|image| image.receipt.clone()).collect();
+            images
+        };
     incoming.fingerprint = incoming.fingerprint()?;
     execute(ctx, incoming, &images)
 }
 
-// A durable question:0 reservation can only be inspected with GET by ensure;
-// it can never grant another upload. Recovery therefore needs no source bytes.
-fn pending_question_image_receipts(
+// A durable question:0 effect grants GET recovery only. Before its first
+// reservation, a retained program intent must qualify original bytes again.
+fn saved_question_image_input(
     ctx: &Context,
     args: &AskArgs,
-) -> Result<Option<Vec<ImageReceipt>>> {
+    incoming: &Request,
+) -> Result<Option<(Request, bool)>> {
     if args.expected_image_sha256.is_empty() {
         return Ok(None);
     }
@@ -2783,10 +2795,28 @@ fn pending_question_image_receipts(
     let home = ctx.here.clone();
     let _lock = ByteLock::acquire(&home.join(LOCK), Duration::ZERO)?;
     let ledger = Ledger::load(&home)?;
-    let Some(request) = ledger.request(&args.request_id) else {
+    // Conversation registration has its own retry ID. Only an exact copy of
+    // the already reserved program question can recover its receipts before
+    // normal canonical deduplication; it gains no new image authority.
+    let request = ledger.request(&args.request_id).or_else(|| {
+        ledger.events.iter().find_map(|event| match event {
+            Event::Intent { request }
+                if request.program_evidence.is_some()
+                    && request.operation == incoming.operation
+                    && request.destination == incoming.destination
+                    && request.title == incoming.title
+                    && request.body == incoming.body =>
+            {
+                Some(request.as_ref())
+            }
+            _ => None,
+        })
+    });
+    let Some(request) = request else {
         return Ok(None);
     };
-    if ledger.effect(&request.request_id, "question:0").is_none() {
+    let recovering = ledger.effect(&request.request_id, "question:0").is_some();
+    if !recovering && request.program_evidence.is_none() {
         return Ok(None);
     }
     if request
@@ -2798,7 +2828,7 @@ fn pending_question_image_receipts(
     {
         return Err("saved question image SHA differs; original request retained".into());
     }
-    Ok(Some(request.images.clone()))
+    Ok(Some((request.clone(), recovering)))
 }
 
 pub fn resume_ask(ctx: &mut Context, args: &ResumeAskArgs) -> Result<Value> {
@@ -5182,6 +5212,8 @@ mod tests {
         output: Value,
         task_lock: PathBuf,
         wait_commit_attempt: Arc<Mutex<Option<bool>>>,
+        checks: usize,
+        deny_after_first: bool,
     }
 
     impl Effects for ProgramVerifierMock {
@@ -5190,9 +5222,14 @@ mod tests {
             assert_eq!(args[1], "--check-program-question-evidence");
             assert_eq!(args[2], "--evidence");
             assert_eq!(args.len(), 4);
+            self.checks += 1;
+            let mut proof = self.output.clone();
+            if self.deny_after_first && self.checks > 1 {
+                proof["send_allowed"] = json!(false);
+            }
             Ok(Output {
                 code: 0,
-                stdout: self.output.to_string(),
+                stdout: proof.to_string(),
                 stderr: String::new(),
             })
         }
@@ -5288,6 +5325,8 @@ mod tests {
                 output: proof,
                 task_lock: task_lock.clone(),
                 wait_commit_attempt: wait_commit_attempt.clone(),
+                checks: 0,
+                deny_after_first: false,
             });
             let result = ask(&mut ctx, &args);
             if change == "none" {
@@ -5308,12 +5347,16 @@ mod tests {
 
     #[test]
     fn recovery_messages_program_drawing_retry_rechecks_before_any_new_post() {
-        for (change, omit_flag) in [
-            ("none", false),
-            ("wait", false),
-            ("new-owner-instruction", false),
-            ("wait", true),
-            ("new-owner-instruction", true),
+        for (change, retry_kind) in [
+            ("none", "flag"),
+            ("wait", "flag"),
+            ("new-owner-instruction", "flag"),
+            ("wait", "omitted"),
+            ("new-owner-instruction", "omitted"),
+            ("none", "conversation-alias"),
+            ("wait", "conversation-alias"),
+            ("new-owner-instruction", "conversation-alias"),
+            ("none", "intent-only"),
         ] {
             let fixture = Fixture::new();
             let mut ctx = fixture.context();
@@ -5335,7 +5378,7 @@ mod tests {
             let mut proof = json!({"domain":"owner-program-question-image-v1","validated":true,"send_allowed":true,
                 "request_id":args.request_id,"origin_thread_id":ORIGIN,"scope":question_image_scope(&ctx,&incoming).unwrap(),
                 "images":[{"path":image,"sha256":sha,"size":bytes.len()}]});
-            let install = |ctx: &mut Context, output: Value| {
+            let install = |ctx: &mut Context, output: Value, deny_after_first: bool| {
                 ctx.effects = Box::new(ProgramVerifierMock {
                     inner: Mock {
                         server: fixture.server.clone(),
@@ -5345,29 +5388,41 @@ mod tests {
                     output,
                     task_lock: ctx.todo.parent().unwrap().join("todo.lock"),
                     wait_commit_attempt: Arc::new(Mutex::new(None)),
+                    checks: 0,
+                    deny_after_first,
                 });
             };
-            install(&mut ctx, proof.clone());
+            let intent_only = retry_kind == "intent-only";
+            install(&mut ctx, proof.clone(), intent_only);
             {
                 let mut state = fixture.server.lock().unwrap();
-                state.drop_response = true;
-                state.block_reads_after_post = true;
+                state.drop_response = !intent_only;
+                state.block_reads_after_post = !intent_only;
             }
             assert!(ask(&mut ctx, &args).is_err());
-            assert_eq!(fixture.server.lock().unwrap().posts.len(), 1);
-            assert!(Ledger::load(&fixture.home)
-                .unwrap()
-                .effect(&args.request_id, "question:0")
-                .is_some());
+            assert_eq!(
+                fixture.server.lock().unwrap().posts.len(),
+                usize::from(!intent_only)
+            );
+            assert_eq!(
+                Ledger::load(&fixture.home)
+                    .unwrap()
+                    .effect(&args.request_id, "question:0")
+                    .is_some(),
+                !intent_only
+            );
             if change == "wait" {
                 proof["send_allowed"] = json!(false);
             }
             if change == "new-owner-instruction" {
                 proof["validated"] = json!(false);
             }
-            install(&mut ctx, proof);
-            if omit_flag {
+            install(&mut ctx, proof, false);
+            if retry_kind != "flag" {
                 args.program_evidence = None;
+            }
+            if retry_kind == "conversation-alias" {
+                args.request_id = format!("conversation-v1-{}", "f".repeat(32));
             }
             let call_start = {
                 let mut state = fixture.server.lock().unwrap();
@@ -5381,15 +5436,15 @@ mod tests {
                 assert_eq!(result.unwrap()["delivery"], "verified");
                 assert!(state.posts.len() > 1);
             } else {
-                assert!(result.is_err(), "{change}/{omit_flag}");
-                assert_eq!(state.posts.len(), 1, "{change}/{omit_flag}");
+                assert!(result.is_err(), "{change}/{retry_kind}");
+                assert_eq!(state.posts.len(), 1, "{change}/{retry_kind}");
                 assert!(!state.calls[call_start..].is_empty());
                 assert!(state.calls[call_start..]
                     .iter()
                     .all(|(method, _, _)| method == "GET"));
                 assert!(Ledger::load(&fixture.home)
                     .unwrap()
-                    .receipt(&args.request_id, "question:0")
+                    .receipt("program-question-retry", "question:0")
                     .is_some());
             }
             assert_eq!(state.multipart_uploads, 1);

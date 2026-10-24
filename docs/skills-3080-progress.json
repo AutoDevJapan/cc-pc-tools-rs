@@ -690,7 +690,11 @@
     "normal_merge": true,
     "readback_confirmed": true,
     "main_fetch_ff_confirmed": true,
-    "supersedes_unaccepted_pr447": true
+    "supersedes_unaccepted_pr447": true,
+    "covered_assessment_artifacts": [
+      "skills-3080-sixmile-next75-evaluation.json",
+      "skills-3080-sixmile-received50-evaluation.json"
+    ]
   },
   "mengto_partial_entrypoint_evaluation": {
     "fixed_roster": "skills-3080-mengto-fixed-entrypoints.json",
@@ -1319,7 +1323,11 @@
       "normal_merge": true,
       "readback_confirmed": true,
       "main_fetch_ff_confirmed": true,
-      "supersedes_unaccepted_pr447": true
+      "supersedes_unaccepted_pr447": true,
+      "covered_assessment_artifacts": [
+        "skills-3080-sixmile-next75-evaluation.json",
+        "skills-3080-sixmile-received50-evaluation.json"
+      ]
     }
   ],
   "current_mengto_delta": {
@@ -1697,11 +1705,13 @@
     "base_merge": "5aa94ad00b990e4374fc62923564a7e55377838e",
     "receipt": "skills-3080-sixmile-next75-evaluation.json",
     "acceptance": "skills-3080-next75-acceptance.md",
-    "independent_review_pending": true,
-    "ci_and_merge_pending": true,
+    "independent_review_pending": false,
+    "ci_and_merge_pending": false,
     "new_central_operations": 0,
     "all16_complete": false,
-    "final_candidate_accepted_with_pr": 459
+    "final_candidate_accepted_with_pr": 459,
+    "independent_review_pending_at_preparation": true,
+    "ci_and_merge_pending_at_preparation": true
   },
   "sixmile_received50_entrypoint_evaluation": {
     "source": "skills-3080-sixmile-received50-evaluation.json",

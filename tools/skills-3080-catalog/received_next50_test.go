@@ -143,3 +143,49 @@ func TestReceivedProjectionPublishesCompleteBytesWithoutReplacingExistingData(t 
 		t.Fatal("owned stage remained after completed calls")
 	}
 }
+
+type publicationDisplay struct {
+	Receipt string `json:"receipt"`
+	Review  *bool  `json:"independent_review_pending"`
+	CI      *bool  `json:"ci_and_merge_pending"`
+}
+
+func validatePublicationDisplay(p publicationDisplay, covered map[string]bool) bool {
+	if covered[p.Receipt] {
+		return evidenceFalse(p.Review) && evidenceFalse(p.CI)
+	}
+	return evidenceTrue(p.Review) && evidenceTrue(p.CI)
+}
+
+func TestPublicationDisplaysFollowTheActualAcceptedAssessmentScopes(t *testing.T) {
+	var p struct {
+		Next75     publicationDisplay `json:"next75_publication_status"`
+		Received50 publicationDisplay `json:"received50_publication_status"`
+		Next50     publicationDisplay `json:"received_next50_publication_status"`
+		Merges     []struct {
+			Artifacts []string `json:"covered_assessment_artifacts"`
+		} `json:"merged_pr_history"`
+	}
+	loadPublicReceipt(t, "skills-3080-progress.json", &p)
+	covered := map[string]bool{}
+	for _, merge := range p.Merges {
+		for _, artifact := range merge.Artifacts {
+			covered[artifact] = true
+		}
+	}
+	for _, display := range []publicationDisplay{p.Next75, p.Received50, p.Next50} {
+		if !validatePublicationDisplay(display, covered) {
+			t.Fatalf("accepted/pending publication scope differs for%s", display.Receipt)
+		}
+		wrong := display
+		yes, no := true, false
+		if covered[display.Receipt] {
+			wrong.Review = &yes
+		} else {
+			wrong.Review, wrong.CI = &no, &no
+		}
+		if validatePublicationDisplay(wrong, covered) {
+			t.Fatal("earlier acceptance or pending state was applied to a different scope")
+		}
+	}
+}

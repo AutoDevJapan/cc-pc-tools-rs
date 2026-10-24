@@ -1281,8 +1281,21 @@ impl Context {
                 .filter(|row| row["spec"].as_str().is_some_and(|spec| !spec.is_empty()))
             {
                 job["finite_review"] = json!({"todo_id":job["todo_id"],"spec":row["spec"],"launch_key":job["launch_key"]});
-                if quota_choice {
-                    job["finite_review"]["spec_sha256"]=job["quota_recovery"]["spec_sha256"].clone();
+                if let Some(expected) = row["scheduler"]["selection"]["finite_review_spec_sha256"].as_str() {
+                    let spec = self.read_file(Path::new(s(row, "spec")))?;
+                    let spec_text = std::str::from_utf8(&spec)
+                        .map_err(|_| Error::new("finite review specification is not UTF-8"))?;
+                    if spec.is_empty() || spec.len() > 1024 * 1024
+                        || cc_job_policy::product_retry::digest(&spec) != expected
+                        || !std::str::from_utf8(&bytes).unwrap()
+                            .contains(&format!("\n依頼:\n{spec_text}"))
+                        || (quota_choice && job["quota_recovery"]["spec_sha256"] != expected)
+                    {
+                        return Err(Error::new("finite review specification changed before registration"));
+                    }
+                    job["finite_review"]["spec_sha256"] = json!(expected);
+                } else if quota_choice {
+                    return Err(Error::new("quota recovery has no prepared specification binding"));
                 }
             }
         }

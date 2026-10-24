@@ -103,24 +103,39 @@ fn missing_quota_timestamp_is_only_a_fresh_openai_observation() {
     }
     let row = json!({"type":"codex","health":"Healthy","creditsAfterLimit":false,
         "quota":{"weeklyPercent":3.,"weeklyResetAt":2000.}});
-    assert_eq!(aggregate(&json!({"accounts":[row]}), "openai", 1000.)["available"], true);
+    assert_eq!(
+        aggregate(&json!({"accounts":[row]}), "openai", 1000.)["available"],
+        true
+    );
 }
 
 #[test]
 fn a_reset_short_window_is_not_current_oauth_exhaustion() {
-    for (percent, reset) in [("fiveHourPercent", "fiveHourResetAt"), ("shortPercent", "shortResetAt")] {
+    for (percent, reset) in [
+        ("fiveHourPercent", "fiveHourResetAt"),
+        ("shortPercent", "shortResetAt"),
+    ] {
         for reset_at in [json!(999.), json!(1000.), json!("1970-01-01T00:16:39Z")] {
             let mut row = json!({"type":"codex","health":"Healthy","creditsAfterLimit":false,
                 "quota":{"weeklyPercent":3.,"weeklyResetAt":2000.,"updatedAt":1000.}});
             row["quota"][percent] = json!(100.);
             row["quota"][reset] = reset_at.clone();
             let observed = aggregate(&json!({"accounts":[row.clone()]}), "openai", 1000.);
-            assert_eq!(observed["available"], true, "{reset}: {reset_at}: {observed}");
+            assert_eq!(
+                observed["available"], true,
+                "{reset}: {reset_at}: {observed}"
+            );
             row["quota"][reset] = json!(1001.);
-            assert_eq!(aggregate(&json!({"accounts":[row.clone()]}), "openai", 1000.)["exhausted"], true);
+            assert_eq!(
+                aggregate(&json!({"accounts":[row.clone()]}), "openai", 1000.)["exhausted"],
+                true
+            );
             row["quota"]["weeklyPercent"] = json!(100.);
             row["quota"][reset] = json!(999.);
-            assert_eq!(aggregate(&json!({"accounts":[row]}), "openai", 1000.)["exhausted"], true);
+            assert_eq!(
+                aggregate(&json!({"accounts":[row]}), "openai", 1000.)["exhausted"],
+                true
+            );
         }
     }
 }

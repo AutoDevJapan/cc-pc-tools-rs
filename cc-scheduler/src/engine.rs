@@ -1660,6 +1660,14 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 }
             }
         }
+        if cc_job_policy::review_task(s(&item["title"]), s(&selection["task_type"]))
+            || item["subwork"]["kind"] == "review"
+        {
+            // Bind the same bytes embedded above, before the launch CLI can
+            // observe a later edit at the saved specification's path.
+            selection["finite_review_spec_sha256"] =
+                json!(cc_job_policy::product_retry::digest(text.as_bytes()));
+        }
         let folder = self.root.join("prompts");
         fs::create_dir_all(&folder)?;
         let target = folder.join(format!(

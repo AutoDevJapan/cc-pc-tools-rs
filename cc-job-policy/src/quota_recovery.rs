@@ -74,7 +74,7 @@ pub fn aggregate(raw: &Value, provider: &str, now: f64) -> Value {
             // OpenAI's successful --quota --refresh reply omits updatedAt.
             // Its collection time is an observation; a supplied stale time or
             // explicit refresh failure is never replaced with the current time.
-            .or_else(|| q["updatedAt"].is_null().then_some(now))
+            .or_else(|| (provider == "openai" && q["updatedAt"].is_null()).then_some(now))
             .filter(|v| *v <= now + 1. && now - *v <= QUOTA_METADATA_MAX_AGE);
         let refreshed = row["quotaRefresh"]["status"]
             .as_str()
@@ -108,7 +108,11 @@ pub fn aggregate(raw: &Value, provider: &str, now: f64) -> Value {
             reason = "short_window_invalid";
             continue;
         }
-        let exhausted = used.unwrap() >= 100. || short.is_some_and(|v| v >= 100.);
+        let short_reset =
+            timestamp(&q["fiveHourResetAt"]).or_else(|| timestamp(&q["shortResetAt"]));
+        let short_exhausted =
+            short.is_some_and(|v| v >= 100.) && short_reset.is_none_or(|at| at > now);
+        let exhausted = used.unwrap() >= 100. || short_exhausted;
         // Ineligibility for paid overage cannot establish an available free
         // route. It may still prove that the subscription itself is exhausted.
         if !exhausted {
@@ -305,10 +309,9 @@ pub fn receipt(
         .ok()
         .filter(|b| b.len() <= 1024 * 1024)?;
     let spec_sha256 = crate::product_retry::digest(&spec);
-    if source["finite_review"]["spec_sha256"]
-        .as_str()
-        .is_some_and(|old| old != spec_sha256)
-    {
+    // A legacy path alone cannot prove which body the original reader ran.
+    // Never manufacture that missing evidence from the current file.
+    if source["finite_review"]["spec_sha256"] != spec_sha256 {
         return None;
     }
     let mut safe_health = json!({"at":health["at"]});

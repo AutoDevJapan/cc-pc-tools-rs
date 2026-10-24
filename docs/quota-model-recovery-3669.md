@@ -48,7 +48,19 @@ Luna/policy/maxが通常レビューのOpusへ戻り、同じ枯渇枠で停止�
   38851A68725CE51FD1D34D05C5C1B384DDD9AFC6C8CE3EDF2B18691AA31F61BA。
 - 対象4ライブラリのdoctestは各0件、Clippyは4クレートのall-targetsで警告0。
   Goは変更していない。workspace全件やreleaseビルドは追加していない。
-- 別モデルレビュー、正式CI、マージ、Windows更新、実復旧は未実施。
+- 上記62件の検証ソースは9c02e93c0a3c291af96be0197e5414338634be6e。
+  開始時のmainとは区別する。その後main 3da96aee91e0c621fb4fc24a59c52bd0b303bac0を
+  f65619abe6387d51f6a015fca744a8db64a29a61へ統合し、関連4クレート1,218件/1skip、
+  Clippy、doctestと同headの正式CI3実行が成功した。詳細は証拠JSONの
+  `integrated_candidate_validation`に保存する。
+- 別モデルレビュー3709は上記base3da96aee..headf65619abの21ファイルを読了した。
+  原応答3088bytes/SHA256 9e91a000cbb8fe65530bfee0f3a961e982e462736d65a5c06ac91f0b74869a3e。
+  本人の限定モデル指定に従うLuna/maxと作者Sol/maxをjob/nativeで照合し、
+  Must3件を受領した。読取完了は指摘解消・マージの完了ではない。
+- 3709の修正Redは535592672c2f53df99093d906f1c2a90f94c4f02で4件が失敗した。
+  完全ログSHA256: AF47FE28D07FF8FDFC5E5810A8BDAE27BE009B514B1C830E21D4E689F4F79E8E。
+  後続の修正差分は別にレビューし、同じ最終headのCIを確認する。
+- マージ、Windows更新、実復旧は未実施。
 - 自分のブランチはscheduler/todo-3669-oauth-3080のまま。変更していない。
 
 ## 実装の境界
@@ -59,12 +71,21 @@ Luna/policy/maxが通常レビューのOpusへ戻り、同じ枯渇枠で停止�
 OAuth集約観測を登録時とqueueの最終受付で再照合する。通常のToDo担当割当による
 1世代の更新は、そのjobとworker receiptが一致するときだけ対応する。
 
+通常のレビュー準備でも、schedulerが実際に起動本文へ埋め込んだ仕様のSHA256を
+準備済みのselectionへ結ぶ。jobsは同じlaunch keyの下で、そのSHA・保存仕様・
+実際にコピーするprompt内の仕様本文を照合し、元jobのfinite_reviewへSHAを保存する。
+復旧時に元jobのSHAが無ければ現在のファイルから補完せず、復旧を受け付けない。
+古いjobの記録を変更したり、復旧先にだけSHAを作って原本文の証明としない。
+
 作者との独立性は既存のreview sourceから別に照合する。枯渇したproviderを
 review_author_models / review_excluded_modelsへ追加しない。capacity/429の
 検出・切替回数・同モデルの再試行処理は変更しない。
 
 メタデータの元の更新時刻がある場合は既存quota samplerと同じ360秒以内を使う。
 正常なOpenAIの更新応答で時刻が省略される場合は、更新応答の採取時刻を使う。
+Anthropicの更新時刻欠落は未確認とし、採取時刻へ置き換えない。
+5時間枠の100%は、リセット時刻が現在以前なら現在の枯渇に数えない。
+週間枠が100%なら引き続き枯渇とし、短時間枠のリセットで週間枠を回復扱いしない。
 起動受付へ渡す観測の期限は別に60秒とし、登録と実行前に新たに観測する。
 利用可能性は確認済みの1枠で足りる。全枠の枯渇には未確認の枠を含めない。
 queueの再確認は15分間隔・最大3回で、通常の429/capacity予算とは別に記録する。

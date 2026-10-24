@@ -49,8 +49,10 @@ fn verified_quota_review_keeps_policy_luna_in_scheduler_preparation() {
     );
     assert_eq!(selected["model_origin"], "policy");
     assert_eq!(selected["effort"], "max");
-    assert_eq!(selected["finite_review_spec_sha256"],
-        cc_job_policy::product_retry::digest(&std::fs::read(s(&prepared["spec"])).unwrap()));
+    assert_eq!(
+        selected["finite_review_spec_sha256"],
+        cc_job_policy::product_retry::digest(&std::fs::read(s(&prepared["spec"])).unwrap())
+    );
     assert_eq!(selected["review_excluded_models"], json!(["gpt-6.1-sol"]));
     assert!(selected["quota_recovery"].is_object());
     assert!(prepared["scheduler"]["resume_session"].is_null());
@@ -102,8 +104,17 @@ fn quota_selection_requires_current_drained_scope_and_fresh_oauth() {
             "changed_spec" => {
                 f.e.backend.records[1]["finite_review"]["spec"] = json!("different.md")
             }
-            "unbound_spec" => { f.e.backend.records[1]["finite_review"].as_object_mut().unwrap().remove("spec_sha256"); }
-            "rewritten_spec" => std::fs::write(s(&sub.db["items"][1]["spec"]), "Different instructions before recovery").unwrap(),
+            "unbound_spec" => {
+                f.e.backend.records[1]["finite_review"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("spec_sha256");
+            }
+            "rewritten_spec" => std::fs::write(
+                s(&sub.db["items"][1]["spec"]),
+                "Different instructions before recovery",
+            )
+            .unwrap(),
             "wrong_worktree" => f.e.backend.records[1]["cwd"] = json!(sub.repo),
             "wider_scope" => sub.db["items"][1]["add_dirs"] = json!([sub.repo]),
             "not_drained" => {
@@ -155,11 +166,11 @@ fn selected_review_default_waits_on_verified_exhaustion_before_registration() {
     sub.db["items"][1]["scheduler"]["last_job"] = Value::Null;
     f.e.backend.m["quota_block_model"] = json!("anthropic/claude-opus-5-5");
     write_json(&f.e.todo_path, &sub.db, 1).unwrap();
-    assert!(f
-        .e
-        .prepare(&sub.db["items"][1], sub.repo.to_str().unwrap())
-        .unwrap()
-        .is_none());
+    assert!(
+        f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap())
+            .unwrap()
+            .is_none()
+    );
     assert_eq!(
         f.get(2)["scheduler"]["resource_wait"]["reason"],
         "quota_exhausted"
@@ -187,9 +198,9 @@ fn quota_preparation_rejects_a_spec_changed_during_metadata_collection() {
         PathBuf::from(s(&sub.db["items"][1]["spec"])),
         "Another fixed head".into(),
     ));
-    assert!(f
-        .e
-        .prepare(&sub.db["items"][1], sub.repo.to_str().unwrap())
-        .is_err());
+    assert!(
+        f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap())
+            .is_err()
+    );
     assert!(f.e.backend.launched.is_empty());
 }

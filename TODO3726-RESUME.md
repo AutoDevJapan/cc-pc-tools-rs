@@ -33,6 +33,10 @@
 - 自己点検で、3秒待ち中のキャンセルを古い進捗がfailedへ戻すRedも実確認。state.lock下で最新世代と再開IDを照合し、最新snapshotへ自分のdeltaだけを適用する修正を追加した。キャンセル/既存終端/所有者変更を保存後に上書きしない3対照も成功。完了結果のlive保存失敗でsucceededをfailedへするRedも解消。sourceはcc-jobs内だけ。無イベント交代も必須保存へ統一した。
 - 変更後のcc-jobs関連538件は全合格/1skip。最新のWindows/新回帰9件（上の3対照を含む）、cc-jobs doc0件、Clippy全targetも成功。cc-ask/cc-schedulerの旧成功はAPI/schema/CLI変更がないため再利用し、全workspaceは回さない。証拠はvalidation JSONと所有フォルダのcc-jobs-final-tests.log/final-regressions.log/final-doc.log/final-clippy.log。
 - 追加差分レビュー3733は通常subwork登録済みで、未起動のため修正後の固定候補へspecを更新する。古い293612d6だけのreadbackを最新修正の承認へ使わない。実job/prompt/nativeと実際の読取HEADを照合してからMustを解消する。新HEADの正式CI/merge/実配布は未完。
+- この行以降が上記予告の訂正。3733のspec更新は起動と競合し、実job20261025-052517-todo-3733は旧293612d6のnativeだけを読んだ。prompt SHA170c8cad…とGrok4.6/xhigh/nativeを照合、原scopeを保持して正常完了。原応答SHAe42791af…、旧native追加だけMust0。3739へ新04差分を登録したが、実job20261025-054857-todo-3739はOpus/maxとなりquota/429、0steps/0tokens。正規cancel --recoveryで05:57:27にjob_object終了、cancel_requested=null/recovery_cancel保存を確認。本人停止としていない。
+- 3739の同じ読取は代替3743（job20261025-060006-todo-3743、実Grok4.6/xhigh、prompt SHAe99e06cb…、head04受領確認）が06:16:01に完了した。原応答SHA68929fe9031e08d256e21c9c88cedfbdbad68f4944fa50ef8f29374bb4bf1176、Must1。原3739は読んだとせず、3743の実読を紐付けて完了した。原本は各jobのlast_message.md、所有フォルダにもreview-3733-original.md / review-3743-original.md。
+- 3743のMustは、diskの再開IDだけ更新されると監視中の照合で停止するのに終端は再開IDを照合せずfailedを上書きする点。PID同一・thread_idだけ変更のRedと、自分と同じ新thread_idへdiskが先に更新された場合にfalse-failureとなるRedを実確認（resume-id-red-confirmed.log）。基準snapshotを終端まで保つProgressPersistenceへ照合を集約し、owner_current/resume_currentを両段階で使う形へ修正した。thread_id/resume_sessionはfresh==基準かfresh==自分なら受入、第三の値は上書きしない。新回帰10件成功（5制御対照と一致IDの陽性対照含む）、関連検査とClippyを実行中。
+- 作業中にmainへ入った既レビューのquota修復等を通常mergeし、c7dbe4598d14b2eab92aad02b4be4a64a7481cd4へ統合・pushした。jobs.rsの修復本体は04から変更0、共有依存に新quota moduleが追加されていたため、旧基盤で実行物を生成しない。統合後のquota/回帰141件は全成功。c7のcheckpointはTimeoutError、成果はGitHubと作業フォルダへ保持。最新再開JSONは所有フォルダのCURRENT-RESUME.json。新しい再開IDの修正候補は次のcommitと正規checkpointへ保存し、通常ToDoで追加差分だけを確認する。
 
 ## 残り
 

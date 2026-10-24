@@ -231,7 +231,13 @@ fn mandatory_resume_identity_and_terminal_saves_are_never_reported_as_success() 
 
 #[test]
 fn deferred_progress_cannot_undo_stop_terminal_or_owner_saved_during_backoff() {
-    for state in ["cancelled", "succeeded", "running"] {
+    for state in [
+        "cancelled",
+        "succeeded",
+        "running",
+        "thread_id",
+        "resume_session",
+    ] {
         let t = Test::new();
         let j = t.put(job(json!({"codex":"codex.CMD","cwd":t.ctx.root})));
         let path = t.ctx.job_dir(s(&j, "id")).join("job.json");
@@ -268,7 +274,11 @@ fn deferred_progress_cannot_undo_stop_terminal_or_owner_saved_during_backoff() {
                     let _state = FileLock::try_acquire(&path.with_file_name("state.lock")).unwrap();
                     let mut fresh: Value =
                         serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
-                    fresh["status"] = json!(state);
+                    fresh["status"] = json!(if ["thread_id", "resume_session"].contains(&state) {
+                        "running"
+                    } else {
+                        state
+                    });
                     fresh["preserved_control_record"] = json!("fixture controller update");
                     if state == "cancelled" {
                         fresh["cancel_requested"] = json!(true);
@@ -276,6 +286,8 @@ fn deferred_progress_cannot_undo_stop_terminal_or_owner_saved_during_backoff() {
                     } else if state == "running" {
                         fresh["pid"] = json!(555);
                         fresh["pid_created"] = json!(777);
+                    } else if ["thread_id", "resume_session"].contains(&state) {
+                        fresh[state] = json!("01a11111-2222-7333-8444-555555555555");
                     }
                     fs::write(&path, pretty(&fresh)).unwrap();
                 } else if tick >= 7 {
@@ -286,7 +298,14 @@ fn deferred_progress_cannot_undo_stop_terminal_or_owner_saved_during_backoff() {
         t.ctx.supervise(s(&j, "id")).unwrap();
         assert!(ticks.load(Ordering::SeqCst) >= 6);
         let saved = t.ctx.load(s(&j, "id")).unwrap();
-        assert_eq!(saved["status"], state);
+        assert_eq!(
+            saved["status"],
+            if ["thread_id", "resume_session"].contains(&state) {
+                "running"
+            } else {
+                state
+            }
+        );
         assert_eq!(
             saved["preserved_control_record"],
             "fixture controller update"
@@ -297,10 +316,44 @@ fn deferred_progress_cannot_undo_stop_terminal_or_owner_saved_during_backoff() {
         } else if state == "running" {
             assert_eq!(saved["pid"], 555);
             assert_eq!(saved["pid_created"], 777);
+        } else if ["thread_id", "resume_session"].contains(&state) {
+            assert_eq!(saved[state], "01a11111-2222-7333-8444-555555555555");
+            assert_eq!(saved["pid"], std::process::id());
+            assert_eq!(saved["codex_pid"], 321);
         }
         assert_eq!(t.rt.spawns.load(Ordering::SeqCst), 1);
         assert!(!t.rt.kills.lock().unwrap().contains(&555));
     }
+}
+
+#[test]
+fn convergent_resume_id_publication_keeps_the_successful_attempt() {
+    let t = Test::new();
+    let j = t.put(job(json!({"codex":"codex.CMD","cwd":t.ctx.root})));
+    t.rt.procs.lock().unwrap().insert(321, 456);
+    let applied = Arc::new(AtomicUsize::new(0));
+    let record = applied.clone();
+    let job_path = t.ctx.job_dir(s(&j, "id")).join("job.json");
+    *t.rt.load_hook.lock().unwrap() = Some(Box::new(move |path, _| {
+        if path != job_path {
+            return;
+        }
+        let mut fresh: Value = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+        if fresh["codex_pid"] == 321
+            && fresh["thread_id"].is_null()
+            && record.fetch_add(1, Ordering::SeqCst) == 0
+        {
+            fresh["thread_id"] = json!("01a0e883-7628-7121-9540-6780fd4cd6f4");
+            fs::write(path, pretty(&fresh)).unwrap();
+        }
+    }));
+    t.ctx.supervise(s(&j, "id")).unwrap();
+    assert!(applied.load(Ordering::SeqCst) > 0);
+    let saved = t.ctx.load(s(&j, "id")).unwrap();
+    assert_eq!(saved["status"], "succeeded");
+    assert_eq!(saved["thread_id"], "01a0e883-7628-7121-9540-6780fd4cd6f4");
+    assert_eq!(saved["last_message"], "DONE");
+    assert!(t.rt.kills.lock().unwrap().is_empty());
 }
 
 #[test]

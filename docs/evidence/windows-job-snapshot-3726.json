@@ -1,6 +1,5 @@
 {
   "todo_id": 3726,
-  "source": "76fb8af0b414f15a577623dc52c10a1a540bfd9b",
   "red_source": "60e5bd4c",
   "installed_sha256": "98e8279c8225e7fa553b5e1a182b4292003ff5a5793234f1e7bb963ed1c12084",
   "related_total": 1694,
@@ -59,7 +58,6 @@
   "review_original_sha256": "f1dcca9794eb4806babdf062a61e0ce1f67a09962576d22e74b7d61d861622d5",
   "review_finished_at": "2026-10-25T05:09:19+09:00",
   "review_must_count": 1,
-  "followup_review_todo": 3733,
   "followup_scope": "result-projection drain, current-state locked merge, mandatory resume/terminal persistence, idle handoff, regression tests",
   "post_review": {
     "cc_jobs_tests_total": 538,
@@ -98,6 +96,43 @@
       {
         "name": "final-clippy.log",
         "sha256": "ebe07fecf66a2c382cc3e165403c8f5dddddacad07b86011d8b6ee759824c9b4"
+      }
+    ]
+  },
+  "initial_validation_source": "76fb8af0b414f15a577623dc52c10a1a540bfd9b",
+  "integrated_basis": "c7dbe4598d14b2eab92aad02b4be4a64a7481cd4",
+  "review_3733": {
+    "head": "293612d60cc0b1b9be324474553f3cbcbe79c3a6",
+    "scope": "native test delta only",
+    "model": "grok-4.6",
+    "effort": "xhigh",
+    "must": 0,
+    "sha256": "e42791afe2c120a1f7cbd1f4c07080252f6b56a8587bfc8b1a897f4015ece6da"
+  },
+  "review_3743": {
+    "head": "04a420200ad1e4dad6c7d416f60c8b0f9eea6361",
+    "model": "grok-4.6",
+    "effort": "xhigh",
+    "must": 1,
+    "sha256": "68929fe9031e08d256e21c9c88cedfbdbad68f4944fa50ef8f29374bb4bf1176",
+    "disposition": "resume compatibility shared between monitor and terminal; divergent and convergent ID regressions confirmed; next fixed-candidate review pending"
+  },
+  "resume_fix": {
+    "regressions": 10,
+    "control_variants": 5,
+    "convergent_id_case": true,
+    "proof_files": [
+      {
+        "sha256": "601043252271417db863e1df3368460bc065c4ea76dde7017b86c5cea7ea5ff6",
+        "name": "resume-id-red-confirmed.log"
+      },
+      {
+        "sha256": "f18e87bfb8fc7948168f07c8a9fa073474669ed46666f3c15c129bfa1e9a02dc",
+        "name": "resume-id-green.log"
+      },
+      {
+        "sha256": "025e5d9e9ecd32c62ee5556bde48c675427e61a4605a4f3c23ac36844458983e",
+        "name": "integrated-regressions.log"
       }
     ]
   }

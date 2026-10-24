@@ -72,6 +72,14 @@ impl ProgressPersistence {
     fn save_required(&mut self, ctx: &Context, job: &mut Value) -> Result<()> {
         self.save_impl(ctx, job, true)
     }
+    fn owner_current(&self, fresh: &Value) -> bool {
+        crate::pool_retry::same_attempt(&self.durable, fresh)
+    }
+    fn resume_current(&self, job: &Value, fresh: &Value) -> bool {
+        ["thread_id", "resume_session"]
+            .iter()
+            .all(|key| fresh[*key] == self.durable[*key] || fresh[*key] == job[*key])
+    }
     fn save_impl(&mut self, ctx: &Context, job: &mut Value, force: bool) -> Result<()> {
         let required = force || self.required(job);
         if !required && ctx.rt.mono() < self.retry_at {
@@ -80,11 +88,7 @@ impl ProgressPersistence {
         let result = (|| -> Result<Option<Value>> {
             let _state = ctx.job_lock(s(job, "id"), "state.lock")?;
             let fresh = ctx.load(s(job, "id"))?;
-            if !crate::pool_retry::same_attempt(&self.durable, &fresh)
-                || ["thread_id", "resume_session"]
-                    .iter()
-                    .any(|key| self.durable[*key] != fresh[*key])
-            {
+            if !self.owner_current(&fresh) || !self.resume_current(job, &fresh) {
                 return Ok(None);
             }
             // Apply only this monitor's delta. A delayed flush must not undo
@@ -1267,7 +1271,7 @@ impl Context {
         let mut exit = None;
         let mut cleanup_failed = false;
         let mut tool_yielded = false;
-        let mut monitoring_started = false;
+        let mut progress = None;
         #[cfg(windows)]
         let mut chrome_proxy = None;
         let work = (|| -> Result<()> {
@@ -1320,8 +1324,8 @@ impl Context {
             }
             job["codex_pid_created"] = json!(created);
             self.save(&job)?;
-            let mut progress = ProgressPersistence::new(&job);
-            monitoring_started = true;
+            progress = Some(ProgressPersistence::new(&job));
+            let progress = progress.as_mut().unwrap();
             drop(lock);
             let mut n = TaskProgress::new(self.ao_executable(), self.jobs.clone(), self.rt.clone());
             n.start(&job);
@@ -1544,8 +1548,10 @@ impl Context {
         let fresh = self.load(jid)?;
         if fresh["cancel_requested"] == true || s(&fresh, "status") == "cancelled" {
             job = fresh;
-        } else if monitoring_started && s(&job, "last_failure_kind") != "capacity"
-            && !crate::pool_retry::same_attempt(&job, &fresh) {
+        } else if progress.as_ref().is_some_and(|state| {
+            !state.resume_current(&job, &fresh)
+                || (s(&job, "last_failure_kind") != "capacity" && !state.owner_current(&fresh))
+        }) {
             self.rt.diagnostic(&format!(
                 "終了した実行の結果を保持し、変更後の実行状態を保護します (job={}, status={}, exit={})",
                 jid, s(&job, "status"), job["exit_code"]

@@ -364,15 +364,23 @@ pub(super) fn clean_candidate(
     match plan.validate(&plan.payload, budget, stats, 0) {
         Ok(count) if count == plan.entries.len() => (),
         _ => {
-            retain(stats, "PHYSICAL_CONTENTS_CHANGED", Some(plan.bytes));
+            retain(stats, "PHYSICAL_CONTENTS_CHANGED", None);
             return Ok(true);
         }
     }
     if !apply {
         return Ok(true);
     }
+    let removed_before = stats.logical_bytes;
     if plan.remove(&plan.payload, budget, stats, 0).is_err() {
-        retain(stats, "DELETE_INCOMPLETE", Some(plan.bytes));
+        retain(
+            stats,
+            "DELETE_INCOMPLETE",
+            Some(
+                plan.bytes
+                    .saturating_sub(stats.logical_bytes.saturating_sub(removed_before)),
+            ),
+        );
         stats.failures += 1;
         return Ok(true);
     }

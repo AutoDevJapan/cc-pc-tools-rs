@@ -983,6 +983,24 @@ func (c config) finishRetirement(p retiredCandidate) error {
 	r.State = "quarantine_removed"
 	return c.save(r, false)
 }
+
+func (c config) openRetiredPlan(id string, readOnly bool) (retiredCandidate, func(), error) {
+	unlock := func() {}
+	if !readOnly {
+		var e error
+		unlock, e = c.retirementLock(id)
+		if e != nil {
+			return retiredCandidate{}, func() {}, e
+		}
+	}
+	p, e := c.retiredPlan(id)
+	if e != nil {
+		unlock()
+		return p, func() {}, e
+	}
+	return p, unlock, nil
+}
+
 func retirementMain(args []string) bool {
 	if len(args) == 0 || (args[0] != "release" && args[0] != "cleanup-lease" && args[0] != "inspect-retired") {
 		return false
@@ -1012,12 +1030,11 @@ func retirementMain(args []string) bool {
 		}
 		if err == nil {
 			var unlock func()
-			unlock, err = c.retirementLock(*id)
+			var p retiredCandidate
+			p, unlock, err = c.openRetiredPlan(*id, args[0] == "inspect-retired")
 			if err == nil {
 				defer unlock()
-				var p retiredCandidate
-				p, err = c.retiredPlan(*id)
-				if err == nil && *path != "" && !same(filepath.Dir(p.Path), *path) {
+				if p.Action != "completed" && *path != "" && !same(filepath.Dir(p.Path), *path) {
 					err = fail("QUARANTINE_BOUNDARY_MISMATCH")
 				}
 				if err == nil {

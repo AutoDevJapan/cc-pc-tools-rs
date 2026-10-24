@@ -676,7 +676,7 @@ pub fn run() -> i32 {
         "owned_candidates":stats.owned_candidates,"owned_candidate_logical_bytes":stats.owned_candidate_bytes,
         "owned_completed":stats.owned_completed,"owned_retained":stats.owned_retained,
         "owned_finish_failed":stats.owned_finish_failed,"owned_retention_reasons":stats.owned_reasons,
-        "owned_retained_logical_bytes":stats.owned_retained_bytes,"owned_retained_bytes_unmeasured":stats.owned_retained_unmeasured,
+        "owned_retained_plan_remaining_bytes":stats.owned_retained_bytes,"owned_retained_bytes_unmeasured":stats.owned_retained_unmeasured,
         "partial":stats.expired || stats.retained_unknown > 0 || stats.failures > 0 || stats.retained_links_or_busy > 0 || stats.owned_retained > 0 || stats.owned_finish_failed > 0,
         "elapsed_ms": start.elapsed().as_millis(), "workspace_scan": "not_performed", "e_files_touched":false,
     });

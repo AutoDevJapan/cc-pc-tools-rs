@@ -437,3 +437,17 @@ func TestRetirementFinishRetainsCanonicalStateOnPartialDeletionOrChangedReceipt(
 		t.Fatal(current, e)
 	}
 }
+
+func TestRetirementReadOnlyInspectionDoesNotCreateLocks(t *testing.T) {
+	c, r, _ := retirementFixture(t, false)
+	p, _ := c.retirementPath(r.ID, ".lock")
+	if exists(p) {
+		t.Fatal("fixture already has a lock")
+	}
+	_, close, e := c.openRetiredPlan(r.ID, true)
+	close()
+	code(t, e, "ORIGINAL_CREATE_UNVERIFIED")
+	if exists(p) {
+		t.Fatal("read-only inspection wrote a canonical lock")
+	}
+}

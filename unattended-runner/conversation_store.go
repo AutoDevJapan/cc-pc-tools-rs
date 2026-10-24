@@ -102,19 +102,24 @@ type conversationQuestionReceipt struct {
 }
 
 type conversationProof struct {
-	Domain           string              `json:"domain"`
-	ReadOnly         bool                `json:"read_only"`
-	Source           string              `json:"source"`
-	RequestID        string              `json:"request_id"`
-	Thread           string              `json:"thread_id"`
-	Owner            string              `json:"owner_id"`
-	Question         string              `json:"question_message_id"`
-	Created          string              `json:"question_timestamp"`
-	Progress         string              `json:"progress_thread_id"`
-	Body             string              `json:"original_question"`
-	Decision         json.RawMessage     `json:"decision_identity"`
-	OriginalDecision json.RawMessage     `json:"original_decision"`
-	Replies          []conversationReply `json:"owner_replies"`
+	Domain           string                              `json:"domain"`
+	ReadOnly         bool                                `json:"read_only"`
+	Source           string                              `json:"source"`
+	RequestID        string                              `json:"request_id"`
+	Thread           string                              `json:"thread_id"`
+	Owner            string                              `json:"owner_id"`
+	Question         string                              `json:"question_message_id"`
+	Created          string                              `json:"question_timestamp"`
+	Progress         string                              `json:"progress_thread_id"`
+	Body             string                              `json:"original_question"`
+	Decision         json.RawMessage                     `json:"decision_identity"`
+	OriginalDecision json.RawMessage                     `json:"original_decision"`
+	Replies          []conversationReply                 `json:"owner_replies"`
+	ReplyVersions    map[string]conversationReplyVersion `json:"reply_versions,omitempty"`
+}
+
+type conversationReplyVersion struct {
+	Edited *string `json:"edited_timestamp"`
 }
 
 type conversationReply struct {
@@ -673,6 +678,27 @@ func (r *Runner) conversationProof(ctx context.Context, q ConversationQuestion) 
 			return nil, errors.New("conversation owner reply association differs")
 		}
 		seen[reply.Message] = true
+		if _, ok := proof.ReplyVersions[reply.Message]; !ok {
+			// Older senders return the original scope and full body but omit edit
+			// metadata. Complete it by the same exact owner-post GET instead of
+			// silently treating an unknown version as an unchanged answer.
+			var live Message
+			if err := r.get(ctx, "/channels/"+q.Thread+"/messages/"+reply.Message, &live); err != nil || live.ID != reply.Message || live.Channel != q.Thread || live.Author.ID != proof.Owner || live.Author.Bot || live.Content != reply.Body || live.Timestamp != reply.Created {
+				return nil, errors.New("conversation reply version verification deferred")
+			}
+			version := conversationReplyVersion{}
+			if live.Edited != "" {
+				stamp, err := time.Parse(time.RFC3339Nano, live.Edited)
+				if err != nil || stamp.Before(at) || stamp.After(r.Now().Add(time.Minute)) {
+					return nil, errors.New("conversation reply edit time invalid")
+				}
+				version.Edited = &live.Edited
+			}
+			if proof.ReplyVersions == nil {
+				proof.ReplyVersions = map[string]conversationReplyVersion{}
+			}
+			proof.ReplyVersions[reply.Message] = version
+		}
 	}
 	return &proof, nil
 }

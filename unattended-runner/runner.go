@@ -145,22 +145,26 @@ type State struct {
 	ReplayCursor             string                         `json:"replay_cursor,omitempty"`
 }
 type Health struct {
-	Mode                string                   `json:"mode"`
-	Started             string                   `json:"started_at"`
-	Finished            string                   `json:"finished_at"`
-	API                 bool                     `json:"api_verified"`
-	Scanned             int                      `json:"threads_scanned"`
-	Captured            int                      `json:"owner_messages_captured"`
-	Registered          int                      `json:"todos_registered"`
-	Retried             int                      `json:"technical_waits_released"`
-	Pending             int                      `json:"pending_requests"`
-	Scheduler           bool                     `json:"scheduler_ok"`
-	Errors              []string                 `json:"errors"`
-	Discovery           map[string]DiscoveryPage `json:"discovery,omitempty"`
-	ProductReports      int                      `json:"product_reports_verified"`
-	SteeringSaved       int                      `json:"steering_saved"`
-	ConversationReplies int                      `json:"conversation_replies_processed,omitempty"`
-	Civ6Queue           *Civ6QueueHealth         `json:"civ6_ci_queue,omitempty"`
+	Mode                     string                   `json:"mode"`
+	Started                  string                   `json:"started_at"`
+	Finished                 string                   `json:"finished_at"`
+	API                      bool                     `json:"api_verified"`
+	Scanned                  int                      `json:"threads_scanned"`
+	Captured                 int                      `json:"owner_messages_captured"`
+	Registered               int                      `json:"todos_registered"`
+	Retried                  int                      `json:"technical_waits_released"`
+	Pending                  int                      `json:"pending_requests"`
+	Scheduler                bool                     `json:"scheduler_ok"`
+	Errors                   []string                 `json:"errors"`
+	Discovery                map[string]DiscoveryPage `json:"discovery,omitempty"`
+	ProductReports           int                      `json:"product_reports_verified"`
+	SteeringSaved            int                      `json:"steering_saved"`
+	ConversationReplies      int                      `json:"conversation_replies_processed,omitempty"`
+	ConversationWaiting      int                      `json:"conversation_waiting,omitempty"`
+	ConversationChecked      int                      `json:"conversation_waiting_checked,omitempty"`
+	ConversationPollDeferred int                      `json:"conversation_poll_deferred,omitempty"`
+	ConversationPollSeconds  int                      `json:"conversation_poll_interval_seconds,omitempty"`
+	Civ6Queue                *Civ6QueueHealth         `json:"civ6_ci_queue,omitempty"`
 }
 type Runner struct {
 	Config                      Config
@@ -714,7 +718,7 @@ func (r *Runner) tick(ctx context.Context) Health {
 func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
 	r.NoticeAttempted = false
 	health := Health{Mode: "new-owner-intake-and-repair-scheduler", Started: r.Now().UTC().Format(time.RFC3339Nano), Errors: []string{}}
-	conversationCtx, cancelConversations := context.WithTimeout(intakeCtx, 12*time.Second)
+	conversationCtx, cancelConversations := context.WithTimeout(intakeCtx, conversationPollStageBudget)
 	r.processConversations(conversationCtx, &health)
 	cancelConversations()
 	if err := r.discover(intakeCtx); err != nil {

@@ -4,8 +4,47 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"testing"
 )
+
+func validateSemanticPending(expected int, reported *int) error {
+	if reported == nil || *reported != expected {
+		return fmt.Errorf("semantic pending projection differs from ledger pending %d", expected)
+	}
+	return nil
+}
+
+func TestSemanticPendingProjectionRejectsStaleOrMissingCounts(t *testing.T) {
+	var ledger struct {
+		Pending int `json:"pending_occurrences"`
+	}
+	var progress struct {
+		Candidates struct {
+			Pending *int `json:"not_semantically_disposed_occurrences"`
+		} `json:"candidate_count_definitions"`
+	}
+	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
+	loadPublicReceipt(t, "skills-3080-progress.json", &progress)
+	for _, kind := range []string{"valid", "previous_pending", "one_too_few", "missing"} {
+		t.Run(kind, func(t *testing.T) {
+			reported := progress.Candidates.Pending
+			switch kind {
+			case "previous_pending":
+				v := ledger.Pending + 1
+				reported = &v
+			case "one_too_few":
+				v := ledger.Pending - 1
+				reported = &v
+			case "missing":
+				reported = nil
+			}
+			if err := validateSemanticPending(ledger.Pending, reported); (err != nil) != (kind != "valid") {
+				t.Fatalf("%s: %v", kind, err)
+			}
+		})
+	}
+}
 
 func TestActualAdoptionsConserveCatalogAndManifestIdentities(t *testing.T) {
 	var ledger struct {

@@ -74,6 +74,7 @@ type report struct {
 	EArchiveMarginOK *bool              `json:"e_at_least_500_gib_free"`
 	ElapsedMS        int64              `json:"elapsed_ms"`
 	Decision         *decisionReceipt   `json:"decision_queue,omitempty"`
+	AllDrives        *allDriveReport    `json:"all_drives,omitempty"`
 }
 
 func within(root, child string, allowRoot bool) bool {
@@ -111,6 +112,10 @@ func safeStateFile(path string) bool {
 }
 
 func privateAllowed(ctx context.Context, path string) bool {
+	return classifyPath(ctx, path) == "clear"
+}
+
+func classifyPath(ctx context.Context, path string) string {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, guardExe, "--guard-path", path)
@@ -120,13 +125,22 @@ func privateAllowed(ctx context.Context, path string) bool {
 	cmd.Stderr = io.Discard
 	output, err := cmd.Output()
 	if err != nil || len(output) > 4096 {
-		return false
+		return "guard_unavailable"
 	}
 	var result struct {
 		Client     *bool `json:"client_resource"`
 		Unverified bool  `json:"classification_unverified"`
 	}
-	return json.Unmarshal(output, &result) == nil && result.Client != nil && !*result.Client && !result.Unverified
+	if json.Unmarshal(output, &result) != nil || result.Client == nil {
+		return "guard_unavailable"
+	}
+	if result.Unverified {
+		return "protected_unclassified"
+	}
+	if *result.Client {
+		return "protected"
+	}
+	return "clear"
 }
 
 func scan(ctx context.Context, spec rootSpec, state *scanState, maxEntries int) categoryResult {
@@ -272,6 +286,36 @@ func knownRootFiles() map[string]*uint64 {
 }
 
 func run() error {
+	if len(os.Args) == 2 && os.Args[1] == "--inventory" {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		data, err := discoverDevices(ctx)
+		if err != nil {
+			return err
+		}
+		inv, err := normalizeInventory(data, nil, time.Now())
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(os.Stdout).Encode(inv)
+	}
+	if len(os.Args) == 2 && os.Args[1] == "--all-drives-status" {
+		path := filepath.Join(runtimeRoot, "all-drive-latest-v1.json")
+		if !safePath(runtimeRoot) || !safeStateFile(path) {
+			return errors.New("all-drive status boundary")
+		}
+		f, err := os.Open(path)
+		if err != nil {
+			return errors.New("all-drive status unavailable")
+		}
+		defer f.Close()
+		data, err := io.ReadAll(io.LimitReader(f, 1024*1024+1))
+		var r allDriveReport
+		if err != nil || len(data) > 1024*1024 || json.Unmarshal(data, &r) != nil || r.Inventory.Schema != 1 {
+			return errors.New("invalid all-drive status")
+		}
+		return json.NewEncoder(os.Stdout).Encode(r)
+	}
 	if len(os.Args) != 1 {
 		return errors.New("unsupported arguments")
 	}
@@ -287,7 +331,7 @@ func run() error {
 	}
 	defer unlock()
 	start := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 165*time.Second)
 	defer cancel()
 	statePath := filepath.Join(runtimeRoot, "state.json")
 	if !safeStateFile(statePath) || !safeStateFile(filepath.Join(runtimeRoot, "runs.jsonl")) {
@@ -298,6 +342,13 @@ func run() error {
 		return err
 	}
 	r := report{Schema: 1, Time: start.UTC().Format(time.RFC3339), Scope: "C/D volume measurements and bounded classified metadata; logical sizes can include hard links", Free: make(map[string]*uint64), Used: make(map[string]*uint64), Increase: make(map[string]*int64), RootFiles: knownRootFiles()}
+	allCtx, allCancel := context.WithTimeout(ctx, 45*time.Second)
+	all, allErr := collectAllDrives(allCtx, runtimeRoot)
+	allCancel()
+	if allErr != nil {
+		return allErr
+	}
+	r.AllDrives = &all
 	for _, drive := range []string{"C", "D", "E"} {
 		free, total, err := space(drive + `:\`)
 		if err != nil {

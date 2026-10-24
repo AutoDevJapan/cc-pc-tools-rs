@@ -9,6 +9,8 @@ type capacityUpdateLeaf struct{ kind, target, source, oldSHA, newSHA string }
 type capacityUpdateProfile struct {
 	root, evidence, evidenceSHA string
 	leaves                      []capacityUpdateLeaf
+	domain                      string
+	todo                        int64
 }
 
 const capacity3085Source = "D:/CC/Work/unattended-operations-20261013-wt/todo-3085-capacity-decision"
@@ -37,6 +39,9 @@ func capacity3085FlagPresent(args []string) bool {
 }
 
 func capacity3085RuntimeReceipt(path string) object {
+	if receipt := capacity3085RuntimeWith(path, capacity3628UpdateProfile, legacyMatch, consoleSourceVerified); receipt["qualified"] == true {
+		return receipt
+	}
 	return capacity3085RuntimeWith(path, capacity3085UpdateProfile, legacyMatch, consoleSourceVerified)
 }
 
@@ -51,7 +56,12 @@ func capacity3085RuntimeWith(path string, profile capacityUpdateProfile, protect
 		if !consoleRuntimeWith(path, pins, protected, source) || !within(profile.root, leaf.source) || !runtimeLeaf(leaf.source, filepath.Dir(leaf.source), protected, true) || !consolePinnedFile(leaf.source, leaf.newSHA) {
 			return failure
 		}
-		return object{"qualified": true, "domain": "capacity-runtime-update-3085", "todo_id": 3085, "target_kind": leaf.kind, "old_sha256": leaf.oldSHA, "new_sha256": leaf.newSHA, "source_receipt_sha256": profile.evidenceSHA, "data_access_granted": false, "original_registry_recovered": false}
+		domain, todo := profile.domain, profile.todo
+		if domain == "" {
+			domain = "capacity-runtime-update-3085"
+			todo = 3085
+		}
+		return object{"qualified": true, "domain": domain, "todo_id": todo, "target_kind": leaf.kind, "old_sha256": leaf.oldSHA, "new_sha256": leaf.newSHA, "source_receipt_sha256": profile.evidenceSHA, "data_access_granted": false, "original_registry_recovered": false}
 	}
 	return failure
 }

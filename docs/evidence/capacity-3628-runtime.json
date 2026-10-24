@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "origin_todo_id": 3628,
+  "domain": "capacity-runtime-update-3628",
+  "build_base_commit": "f14136d514dbd4a7d0bd0eaea76ed211f7cc9c9e",
+  "build_worktree_was_modified": true,
+  "source_files": {
+    "capacity-audit-3h/decision.go": "bd1049487a98a9c42a8478d41c4cc20edcdb3fd5727ae465fbedbe7aed3649c0",
+    "capacity-audit-3h/main.go": "f08953cf2954d7723750f692ea4e003a0cbdcd1c3329cf33148928fa19b1f9d8",
+    "capacity-audit-3h/platform_windows.go": "b6ed4bf64d34e9c0b473f8b56a7840e042d7a1f1908e20d182cc1abc684a21c1",
+    "capacity-audit-3h/volumes.go": "da7f1c8e9c8dff82ded764b0cfd77abd58b9423033fedb27b954b24a1adeea53",
+    "capacity-audit-3h/decision-worker.md": "4e38c7fbec6b013688a746af811053688f45794a58c6f6f46a5fda306c0f8488",
+    "capacity-audit-3h/go.mod": "8fafd401e23ace4eb97a8a6fe1f030f7b69687f4fbff2b84d93ac17ed0f819ba"
+  },
+  "old_sha256": "43d2e177ec55a1f3f0a281063105d5bd0ad2c6be89f1ab1f14a078773d724a3d",
+  "new_sha256": "236da824e3be28b10efa093c30df0cf4972a455e593c3301f1602c6f5a9cec5d",
+  "data_access_granted": false,
+  "original_registry_recovered": false,
+  "task_name": "CC-CapacityAudit-3h",
+  "interval": "PT6H",
+  "tests": [
+    "go test -race -count=1 -timeout 120s ./... (CAPACITY_DEVICE_ACCEPTANCE=1)",
+    "go vet ./..."
+  ],
+  "real_device_counts": {
+    "volumes": 4,
+    "disks": 3,
+    "partitions": 7
+  }
+}

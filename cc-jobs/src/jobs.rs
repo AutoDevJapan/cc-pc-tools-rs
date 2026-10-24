@@ -20,6 +20,108 @@ pub struct Context {
     pub executable: PathBuf,
     pub rt: SharedRuntime,
 }
+
+/// Only a known display-only delta may be deferred. New fields, ownership,
+/// cancellation, session identity, results and state transitions stay strict.
+struct ProgressPersistence {
+    durable: Value,
+    deferred: bool,
+    retry_at: f64,
+}
+impl ProgressPersistence {
+    fn new(job: &Value) -> Self {
+        Self {
+            durable: job.clone(),
+            deferred: false,
+            retry_at: 0.,
+        }
+    }
+    fn required(&self, job: &Value) -> bool {
+        fn control(mut job: Value) -> Value {
+            if let Some(fields) = job.as_object_mut() {
+                for key in [
+                    "activity",
+                    "activity_detail",
+                    "last_event_at",
+                    "steps",
+                    "tokens",
+                    "context_pct",
+                    "context_pct_exact",
+                    "rate_limit_pct",
+                ] {
+                    fields.remove(key);
+                }
+            }
+            job
+        }
+        control(self.durable.clone()) != control(job.clone())
+    }
+    fn save(&mut self, ctx: &Context, job: &Value) -> Result<()> {
+        let required = self.required(job);
+        if !required && ctx.rt.mono() < self.retry_at {
+            return Ok(());
+        }
+        match ctx.save(job) {
+            Ok(()) => {
+                self.durable = job.clone();
+                if self.deferred {
+                    ctx.rt.diagnostic("進捗の保存が復旧しました");
+                }
+                self.deferred = false;
+                self.retry_at = 0.;
+                Ok(())
+            }
+            Err(error) if !required => {
+                // Error 5 can also mean ACL denial. Do not reinterpret it as a
+                // sharing violation, change access rights, or bypass the writer.
+                if !self.deferred {
+                    ctx.rt.diagnostic(&format!(
+                        "進捗の保存を延期し、作業を続けます: {}",
+                        redact_local_log_secrets(&error.message, &ctx.rt.env())
+                    ));
+                }
+                self.deferred = true;
+                self.retry_at = ctx.rt.mono() + 3.;
+                Ok(())
+            }
+            Err(error) => Err(error),
+        }
+    }
+}
+#[cfg(test)]
+mod progress_persistence_tests {
+    use super::*;
+    #[test]
+    fn deferred_display_fields_cannot_hide_control_or_unknown_field_changes() {
+        let original = json!({"id":"fixture", "status":"running"});
+        let state = ProgressPersistence::new(&original);
+        let mut display = original.clone();
+        display["activity"] = json!("working");
+        display["steps"] = json!(3);
+        assert!(!state.required(&display));
+        for key in [
+            "id",
+            "status",
+            "pid",
+            "pid_created",
+            "codex_pid",
+            "codex_pid_created",
+            "thread_id",
+            "resume_session",
+            "cancel_requested",
+            "turn_completed",
+            "last_message",
+            "last_failure_kind",
+            "retry_count",
+            "context_phase",
+            "new_control_field",
+        ] {
+            let mut candidate = display.clone();
+            candidate[key] = json!("changed");
+            assert!(state.required(&candidate), "{key}");
+        }
+    }
+}
 impl Context {
     /// Load saved owner instructions and enforce the current site restriction,
     /// including old saved jobs and both kinds of continuation. Keep the
@@ -1165,6 +1267,7 @@ impl Context {
             }
             job["codex_pid_created"] = json!(created);
             self.save(&job)?;
+            let mut progress = ProgressPersistence::new(&job);
             drop(lock);
             let mut n = TaskProgress::new(self.ao_executable(), self.jobs.clone(), self.rt.clone());
             n.start(&job);
@@ -1235,12 +1338,16 @@ impl Context {
                             || parse_iso(s(&job, "started_at"))
                                 .is_some_and(|at| self.rt.epoch() - at >= 7200.))
                     {
-                        self.save(&job)?;
                         let attempt = (|| -> Result<bool> {
                             // Skip the global gate unless a yield is plausible.
                             if !self.yield_may_be_due(&job) {
                                 return Ok(false);
                             }
+                            // Handoff decisions consume persisted state. A
+                            // failed mandatory save prevents the handoff, not
+                            // the already-running child or its event drain.
+                            self.save(&job)?;
+                            progress.durable = job.clone();
                             self.yield_running_tool_boundary(&job)
                         })();
                         match attempt {
@@ -1255,8 +1362,8 @@ impl Context {
                         }
                     }
                 }
-                if changed {
-                    self.save(&job)?;
+                if changed || progress.deferred {
+                    progress.save(self, &job)?;
                 }
                 if !had_event
                     && self.rt.mono() >= next_yield_check
@@ -1478,7 +1585,17 @@ impl Context {
                 }
             }
         }
-        self.save(&job)?;
+        if let Err(error) = self.save(&job) {
+            // Do not notify success or restart a queued attempt before this
+            // transition is durable. Preserve events/output and the failed
+            // snapshot for supervisor recovery, and report the actual failure.
+            self.rt.diagnostic(&format!(
+                "終了状態を保存できません (job={}, status={}); 記録を保持します: {}",
+                s(&job, "id"), s(&job, "status"),
+                redact_local_log_secrets(&error.message, &self.rt.env())
+            ));
+            return Err(error);
+        }
         drop(todo_guard);
         drop(state);
         drop(gate);

@@ -10,7 +10,7 @@ import (
 )
 
 func programQuestionProduction() programQuestionDeps {
-	return programQuestionDeps{Sessions: "C:/Users/makhmeto/.codex/sessions", Read: generatedQuestionRead, Guard: conversationMediaLiveGuard, Clear: generatedQuestionSourceClear, Now: time.Now, Bind: func(ctx context.Context, e programQuestionEvidence) (bool, error) {
+	return programQuestionDeps{Sessions: "C:/Users/makhmeto/.codex/sessions", Read: generatedQuestionRead, Guard: conversationMediaLiveGuard, Clear: generatedQuestionSourceClear, Now: time.Now, Replay: programReplayProduction().check, Bind: func(ctx context.Context, e programQuestionEvidence) (bool, error) {
 		// The existing configuration/credential loader stays internal. Only an
 		// exact already-bound API receipt is read; no raw receipt is exported.
 		var cfg Config
@@ -112,6 +112,55 @@ func programQuestionBinding(ctx context.Context, r *Runner, jobs string, e progr
 	b, err := generatedQuestionRead(path, 1<<20)
 	var source Request
 	if err != nil || json.Unmarshal(b, &source) != nil || ordinaryVersion(&source) != e.SourceVersion || source.Key != q.Key || !r.verifyReportRequest(ctx, &source) {
+		return bad()
+	}
+	// An append-only note does not establish which instruction is current.
+	// Reject any later bound owner instruction, including another message in
+	// the same origin that has not yet been assigned a ToDo by intake.
+	if e.created.IsZero() {
+		return bad()
+	}
+	for _, current := range r.State.Requests {
+		if current.Author != dst.Owner || current.Source != "discord-api-v10" || (current.Todo != e.Scope.Todo && current.Thread != e.Origin) {
+			continue
+		}
+		for _, value := range []string{current.Created, current.Edited} {
+			if value == "" {
+				continue
+			}
+			at, err := time.Parse(time.RFC3339Nano, value)
+			if err != nil || at.After(e.created) {
+				return bad()
+			}
+		}
+	}
+	var latest []Message
+	if r.get(ctx, "/channels/"+e.Origin+"/messages?limit=100", &latest) != nil {
+		return bad()
+	}
+	boundary := len(latest) < 100
+	for _, message := range latest {
+		at, err := time.Parse(time.RFC3339Nano, message.Timestamp)
+		if err != nil {
+			return bad()
+		}
+		if !at.After(e.created) {
+			boundary = true
+		}
+		if message.Author.ID != dst.Owner || message.Author.Bot {
+			continue
+		}
+		if message.Channel != e.Origin || at.After(e.created) {
+			return bad()
+		}
+		if message.Edited != "" {
+			edited, err := time.Parse(time.RFC3339Nano, message.Edited)
+			if err != nil || edited.After(e.created) {
+				return bad()
+			}
+		}
+	}
+	if !boundary {
 		return bad()
 	}
 	// The GETs above take time. Re-observe task controls afterward; a wait or

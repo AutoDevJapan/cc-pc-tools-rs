@@ -2703,6 +2703,14 @@ pub fn check_clarification(ctx: &mut Context, args: &LogArgs, manifest: &Path) -
 /// title/request ID is a semantic duplicate. Question text stays in its thread.
 pub fn ask(ctx: &mut Context, args: &AskArgs) -> Result<Value> {
     let mut incoming = prepare_ask(ctx, args)?;
+    // Normal todo wait/stop writes use this same OS lock. Keep it through
+    // qualification and delivery so a formerly sendable snapshot cannot
+    // cross a newly committed dependency wait.
+    let _task_control = if args.program_evidence.is_some() {
+        Some(program_question::task_lock(ctx)?)
+    } else {
+        None
+    };
     let images = if let Some(saved) = pending_question_image_receipts(ctx, args)? {
         incoming.images = saved;
         vec![]
@@ -5137,6 +5145,8 @@ mod tests {
     struct ProgramVerifierMock {
         inner: Mock,
         output: Value,
+        task_lock: PathBuf,
+        wait_commit_attempt: Arc<Mutex<Option<bool>>>,
     }
 
     impl Effects for ProgramVerifierMock {
@@ -5161,6 +5171,10 @@ mod tests {
             self.inner.http(method, url, body, discord)
         }
         fn multipart(&mut self, url: &str, content_type: &str, body: &[u8]) -> Result<Value> {
+            // This is the same byte-lock protocol used by todo wait. Observe
+            // its result outside the callback, including after the POST.
+            *self.wait_commit_attempt.lock().unwrap() =
+                Some(ByteLock::acquire(&self.task_lock, Duration::ZERO).is_ok());
             self.inner.multipart(url, content_type, body)
         }
     }
@@ -5228,6 +5242,8 @@ mod tests {
                 }
                 _ => proof["scope"][change] = json!("different"),
             }
+            let task_lock = ctx.todo.parent().unwrap().join("todo.lock");
+            let wait_commit_attempt = Arc::new(Mutex::new(None));
             ctx.effects = Box::new(ProgramVerifierMock {
                 inner: Mock {
                     server: fixture.server.clone(),
@@ -5235,11 +5251,15 @@ mod tests {
                     pause: None,
                 },
                 output: proof,
+                task_lock: task_lock.clone(),
+                wait_commit_attempt: wait_commit_attempt.clone(),
             });
             let result = ask(&mut ctx, &args);
             if change == "none" {
                 assert_eq!(result.unwrap()["delivery"], "verified");
                 assert_eq!(fixture.server.lock().unwrap().multipart_uploads, 1);
+                assert_eq!(*wait_commit_attempt.lock().unwrap(), Some(false));
+                assert!(ByteLock::acquire(&task_lock, Duration::ZERO).is_ok());
                 // A repeated exact request reads back the saved attachment receipt.
                 assert_eq!(ask(&mut ctx, &args).unwrap()["delivery"], "verified");
                 assert_eq!(fixture.server.lock().unwrap().multipart_uploads, 1);

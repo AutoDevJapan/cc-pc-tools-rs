@@ -28,6 +28,7 @@ const programQuestionDomain = "owner-program-question-image-v1"
 const programEvidenceDomain = "owner-program-question-evidence-v1"
 
 type programQuestionEvidence struct {
+	created       time.Time
 	Domain        string                 `json:"domain"`
 	Request       string                 `json:"request_id"`
 	Origin        string                 `json:"origin_thread_id"`
@@ -69,6 +70,8 @@ type programQuestionDeps struct {
 	Bind     func(context.Context, programQuestionEvidence) (bool, error)
 	Clear    func(string) bool
 	Now      func() time.Time
+	Replay   func(context.Context, programQuestionEvidence, []byte, []byte) error
+	Budget   time.Duration
 }
 type programNative struct {
 	Timestamp time.Time `json:"timestamp"`
@@ -100,7 +103,7 @@ func programPair(e programQuestionEvidence, bound []generatedEventBound, now tim
 	return pair, nil
 }
 
-func programPatchSource(code, path string) ([]byte, error) {
+func programPatchFiles(code, path string) (map[string][]byte, error) {
 	tokens, err := generatedJSTokens(code)
 	if err != nil {
 		return nil, errConversationMedia
@@ -117,25 +120,79 @@ func programPatchSource(code, path string) ([]byte, error) {
 	if len(lines) < 4 || lines[0] != "*** Begin Patch" || lines[len(lines)-1] != "*** End Patch" {
 		return nil, errConversationMedia
 	}
-	var source []byte
-	current, found := "", false
+	files := map[string][]byte{}
+	module := filepath.Join(filepath.Dir(filepath.FromSlash(path)), "go.mod")
+	current := ""
 	for _, line := range lines[1 : len(lines)-1] {
 		if strings.HasPrefix(line, "*** Add File: ") {
-			current = strings.TrimPrefix(line, "*** Add File: ")
+			name := filepath.FromSlash(strings.TrimPrefix(line, "*** Add File: "))
+			switch {
+			case conversationMediaSamePath(name, filepath.FromSlash(path)):
+				current = "program"
+			case conversationMediaSamePath(name, module):
+				current = "module"
+			default:
+				return nil, errConversationMedia
+			}
+			if _, exists := files[current]; exists {
+				return nil, errConversationMedia
+			}
+			files[current] = nil
 			continue
 		}
 		if !strings.HasPrefix(line, "+") {
 			return nil, errConversationMedia
 		}
-		if conversationMediaSamePath(filepath.FromSlash(current), filepath.FromSlash(path)) {
-			found = true
-			source = append(source, []byte(line[1:]+"\n")...)
+		if current == "" {
+			return nil, errConversationMedia
 		}
+		files[current] = append(files[current], []byte(line[1:]+"\n")...)
 	}
-	if !found {
+	if len(files) != 2 || len(files["program"]) == 0 || len(files["module"]) == 0 {
 		return nil, errConversationMedia
 	}
-	return source, nil
+	return files, nil
+}
+func programPatchSource(code, path string) ([]byte, error) {
+	files, err := programPatchFiles(code, path)
+	if err != nil {
+		return nil, err
+	}
+	return files["program"], nil
+}
+func programPatchModule(code, path string) ([]byte, error) {
+	files, err := programPatchFiles(code, path)
+	if err != nil {
+		return nil, err
+	}
+	if !programModule(files["module"]) {
+		return nil, errConversationMedia
+	}
+	return files["module"], nil
+}
+
+// A deliberately small pinned public dependency contract. Local replacements,
+// workspace files, tools and additional packages are not replay inputs.
+func programModule(b []byte) bool {
+	lines := strings.Split(strings.TrimSpace(string(b)), "\n")
+	module, version, require := 0, 0, 0
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		switch {
+		case regexp.MustCompile(`^module [A-Za-z0-9._/-]+$`).MatchString(line):
+			module++
+		case regexp.MustCompile(`^go 1\.[0-9]+(?:\.[0-9]+)?$`).MatchString(line):
+			version++
+		case regexp.MustCompile(`^require golang\.org/x/image v[0-9]+\.[0-9]+\.[0-9]+$`).MatchString(line):
+			require++
+		default:
+			return false
+		}
+	}
+	return module == 1 && version == 1 && require == 1
 }
 
 // Restricted protocol: a single command result, printed directly. No dynamic
@@ -250,6 +307,7 @@ func checkProgramQuestion(ctx context.Context, path string, d programQuestionDep
 	if err != nil || !bytes.Equal(program, original) {
 		return bad()
 	}
+	e.created = creation[0].Timestamp
 	// apply_patch's native completed output is required, not just its call.
 	var patchResult []struct{ Type, Text string }
 	if json.Unmarshal(creation[1].Payload.Raw, &patchResult) != nil || len(patchResult) != 2 || patchResult[1].Type != "input_text" || patchResult[1].Text != "{}" {
@@ -348,6 +406,11 @@ func checkProgramQuestion(ctx context.Context, path string, d programQuestionDep
 	stage = "current_task_and_owner_source"
 	send, err := d.Bind(ctx, e)
 	if err != nil || ctx.Err() != nil {
+		return bad()
+	}
+	stage = "closed_drawing_replay"
+	module, err := programPatchModule(creation[0].Payload.Input, e.Program)
+	if err != nil || d.Replay == nil || d.Replay(ctx, e, program, module) != nil {
 		return bad()
 	}
 	return programQuestionProof{Domain: programQuestionDomain, Validated: true, SendAllowed: send, Request: e.Request, Origin: e.Origin, Scope: e.Scope, Images: e.Images}, nil
@@ -598,7 +661,11 @@ func programQuestionCLI(args []string, out io.Writer, d programQuestionDeps) int
 	if f.Parse(args) != nil || f.NArg() != 0 || path == "" {
 		return fail()
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	budget := d.Budget
+	if budget == 0 {
+		budget = 20 * time.Second
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), budget)
 	defer cancel()
 	proof, err := checkProgramQuestion(ctx, path, d)
 	if err != nil {

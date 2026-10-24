@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -26,11 +27,13 @@ f,e:=os.OpenFile(file,os.O_CREATE|os.O_EXCL|os.O_WRONLY,0600);must(e);must(png.E
 `
 
 type programFixture struct {
-	f        *progressFixture
-	e        programQuestionEvidence
-	d        programQuestionDeps
-	manifest string
-	lines    [][]byte
+	f           *progressFixture
+	e           programQuestionEvidence
+	d           programQuestionDeps
+	manifest    string
+	lines       [][]byte
+	live        []Message
+	replayCalls int
 }
 
 func newProgramFixture(t *testing.T) *programFixture {
@@ -113,7 +116,8 @@ func newProgramFixture(t *testing.T) *programFixture {
 		}
 		return result
 	}
-	patch := "*** Begin Patch\n*** Add File: " + e.Program + "\n+" + strings.ReplaceAll(strings.TrimSuffix(programTestSource, "\n"), "\n", "\n+") + "\n*** End Patch"
+	module := "module local/synthetic-drawing\n\ngo 1.27.0\n\nrequire golang.org/x/image v0.31.0\n"
+	patch := "*** Begin Patch\n*** Add File: " + e.Program + "\n+" + strings.ReplaceAll(strings.TrimSuffix(programTestSource, "\n"), "\n", "\n+") + "\n*** Add File: " + filepath.Join(work, "go.mod") + "\n+" + strings.ReplaceAll(strings.TrimSuffix(module, "\n"), "\n", "\n+") + "\n*** End Patch"
 	patchJSON, _ := json.Marshal(patch)
 	p.e.Creation = pair("text(await tools.apply_patch("+string(patchJSON)+"));", []map[string]any{{"type": "input_text", "text": "Script completed\n"}, {"type": "input_text", "text": "{}"}})
 	runArgs, _ := json.Marshal(map[string]any{"cmd": "go mod tidy\ngo run drawing.go .", "workdir": work, "yield_time_ms": 10000, "max_output_tokens": 1500})
@@ -130,7 +134,24 @@ func newProgramFixture(t *testing.T) *programFixture {
 	}
 	p.d = programQuestionDeps{Sessions: root, Read: generatedQuestionRead, Guard: func(context.Context, string) (bool, error) { return true, nil }, Clear: func(string) bool { return true }, Now: f.r.Now, Bind: func(ctx context.Context, e programQuestionEvidence) (bool, error) {
 		return programQuestionBinding(ctx, f.r, f.r.JobsPath, e)
+	}, Replay: func(_ context.Context, e programQuestionEvidence, source, module []byte) error {
+		p.replayCalls++
+		if bytesHash(source) != e.ProgramSHA || !programModule(module) {
+			return errConversationMedia
+		}
+		return nil
 	}}
+	server(t, f.r, func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/channels/501/messages" {
+			messages := p.live
+			if messages == nil {
+				messages = []Message{f.source}
+			}
+			respond(w, messages)
+			return
+		}
+		f.serve(w, r)
+	})
 	p.save(t)
 	return p
 }
@@ -155,6 +176,9 @@ func TestProgramQuestionExactNativeDrawingAndTaskQualification(t *testing.T) {
 	after, _ := os.ReadFile(p.f.r.TodoPath)
 	if string(before) != string(after) || p.f.sends != 0 {
 		t.Fatal("read-only qualification mutated/sent")
+	}
+	if p.replayCalls != 1 {
+		t.Fatal("closed drawing replay was not consulted")
 	}
 }
 
@@ -267,5 +291,43 @@ func TestProgramQuestionRequiresExclusivePNGCreationNotPrintedOldNames(t *testin
 		if _, err := programDrawingOutputs([]byte(source), 2); err == nil {
 			t.Fatal("printed/copied/pre-existing output gained qualification")
 		}
+	}
+}
+
+func TestProgramQuestionLaterOwnerInstructionInvalidatesOldNoteMarker(t *testing.T) {
+	for _, kind := range []string{"bound-message", "pending-origin-message", "edited-source", "unknown-live-window"} {
+		t.Run(kind, func(t *testing.T) {
+			p := newProgramFixture(t)
+			if _, err := checkProgramQuestion(context.Background(), p.manifest, p.d); err != nil {
+				t.Fatal(err)
+			}
+			later := p.f.source
+			later.ID = "9901"
+			later.Timestamp = p.f.now.Format(time.RFC3339Nano)
+			later.Content = "A later owner direction."
+			switch kind {
+			case "bound-message":
+				q := *p.f.r.State.Requests[p.f.source.ID]
+				q.Message = later.ID
+				q.Created = later.Timestamp
+				p.f.r.State.Requests[q.Message] = &q
+			case "pending-origin-message":
+				p.live = []Message{later, p.f.source}
+			case "edited-source":
+				later = p.f.source
+				later.Edited = p.f.now.Format(time.RFC3339Nano)
+				p.live = []Message{later}
+			case "unknown-live-window":
+				p.live = make([]Message, 100)
+				for i := range p.live {
+					p.live[i] = later
+					p.live[i].Author.ID = "400"
+					p.live[i].Author.Bot = true
+				}
+			}
+			if _, err := checkProgramQuestion(context.Background(), p.manifest, p.d); err == nil {
+				t.Fatal("old append-only marker qualified an outdated instruction scope")
+			}
+		})
 	}
 }

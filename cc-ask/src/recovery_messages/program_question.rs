@@ -2,6 +2,18 @@
 //! the general classifier are neither rewritten nor reused as authority.
 use super::*;
 
+pub(super) fn task_lock(ctx: &Context) -> Result<ByteLock> {
+    #[cfg(not(test))]
+    if image_path_key(&ctx.todo) != image_path_key(Path::new("D:/CC/Tools/todo/todo.json")) {
+        return Err("program question task store differs from its verifier".into());
+    }
+    let root = ctx
+        .todo
+        .parent()
+        .ok_or("program question task store unavailable")?;
+    ByteLock::acquire(&root.join("todo.lock"), Duration::ZERO)
+}
+
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 struct BoundImage {

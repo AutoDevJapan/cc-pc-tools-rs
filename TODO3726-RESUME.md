@@ -28,11 +28,16 @@
 - Issue468/PR469を作成。レビュー固定base8ed37bbe/head76fb8af0。正式CI40127100169はWindows順番待ち、CodeQLは一部成功/一部待ち。実配布は未実施。
 - 元3700/3686へ候補/テスト/限界と残件をCAS追補し、同じmarker `[3726:windows-snapshot-candidate:76fb8af0]` を読み返し済み。両元項目の状態は保持した。
 - checkpointはGUI subsystemのexeなので直接`&`呼出しだけで成功としない。CreateNoWindow/redirectしたSystem.Diagnostics.Processで終了とstdoutを待って確認した正式inspectは `eligible=false/reason=TimeoutError/saved=false/input_valid=true`。共有scheduler.lock取得期限で保存できていない。排他を削除/迂回しない。branchは最初から同じなので成果と再開手順はGitにも残る。
+- その後293612d6の正式checkpointはsaved=true/全checks=trueで成功した。所有フォルダのcheckpoint-current-result.json。これ以降のHEADについても同じ正規保存を行う。
+- 3729は実Grok4.6/xhighで76fb8af0を読了し、実jobは05:09:19 JST succeeded。原応答SHA256 `f1dcca9794eb4806babdf062a61e0ce1f67a09962576d22e74b7d61d861622d5`、原本は同jobのlast_message.md、所有フォルダにもreview-3729-original.md。Must1を受領した。全監視中の必須失敗を無視する提案のうち、実結果/エラー等のlive射影は延期して実exitとturn.completedをdrainし、終端へ厳格保存する形へ修正。再開ID/所有/停止/未知項目の永続化は依頼どおり必須のまま。この根拠も追加レビュー3733で確認する。
+- 自己点検で、3秒待ち中のキャンセルを古い進捗がfailedへ戻すRedも実確認。state.lock下で最新世代と再開IDを照合し、最新snapshotへ自分のdeltaだけを適用する修正を追加した。キャンセル/既存終端/所有者変更を保存後に上書きしない3対照も成功。完了結果のlive保存失敗でsucceededをfailedへするRedも解消。sourceはcc-jobs内だけ。無イベント交代も必須保存へ統一した。
+- 変更後のcc-jobs関連538件は全合格/1skip。最新のWindows/新回帰9件（上の3対照を含む）、cc-jobs doc0件、Clippy全targetも成功。cc-ask/cc-schedulerの旧成功はAPI/schema/CLI変更がないため再利用し、全workspaceは回さない。証拠はvalidation JSONと所有フォルダのcc-jobs-final-tests.log/final-regressions.log/final-doc.log/final-clippy.log。
+- 追加差分レビュー3733は通常subwork登録済みで、未起動のため修正後の固定候補へspecを更新する。古い293612d6だけのreadbackを最新修正の承認へ使わない。実job/prompt/nativeと実際の読取HEADを照合してからMustを解消する。新HEADの正式CI/merge/実配布は未完。
 
 ## 残り
 
 1. 受入1/2は上記の関連テスト・Red/Greenで確認済み。追加変更が無ければ同じ全件を重ねない。原2件の実拒否元は未確定のまま保持する。
-2. 3729の固定head76fb8af0の原応答を受領し、実job/native、読取範囲、Mustを確認する。Must修正と必要な固定候補の追加確認を通常ToDoで行う。native試験の後続差分も必要な範囲だけ確認する。元のLuna指定を拡大しない。
+2. 受領済み3729の対応を含む、新しい固定候補の追加レビュー3733を通常ToDoで実施する。元のLuna指定を拡大しない。
 3. CIと別モデルレビューは登録だけで成功扱いしない。最新版の正式CI成功を確認する。受入1/2の達成としてprogress40を記録した。
 5. 固定HEADの正式CI成功後PRを通常merge。並行変更を取り込み、現用のsource/hashと比較して最新merged sourceを正規配布。実Windowsの継続・結果返信・終了を確認。
 6. 原3700/3686へ具体結果と残件を正規に返し、checkpointを保存。自分のToDo状態はschedulerが更新する。

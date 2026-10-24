@@ -24,16 +24,22 @@ supervisorはexit75、子も終了し、job.jsonはrunningのまま残った。
 ## 修正の契約
 
 - 保存済みsnapshotと比較し、activity/activity_detail/last_event_at/steps/tokens/
-  context_pct/context_pct_exact/rate_limit_pctだけが変わった更新を延期可能とする。
+  context_pct/context_pct_exact/rate_limit_pctと、実行中の結果・エラー・使用量の
+  射影（last_message/turn_completed/last_error/last_failure_kind/capacity_error/
+  rate_limit_times/execution_observed）だけが変わった更新を延期可能とする。
   新しい未知の項目は必須保存側になる。
 - 表示更新の失敗はマスクした診断に記録し、子の監視とイベント回収を続ける。
   最新のメモリ上の値を保ち、3秒後以降にイベントが無くても再保存する。
   復旧も診断する。同じ失敗をイベントごとに連続出力しない。
-- 起動・所有・キャンセル・再開ID・結果・終了状態の保存失敗は無視しない。
+- 起動・所有・キャンセル・再開ID・終了状態と、交代/終端での結果の保存失敗は無視しない。
   終端の保存が失敗したら、終了状態と具体エラーを診断し、非成功を返す。
   元job.json、一時snapshot、イベントと結果本文を保持し、成功通知や再起動へ進まない。
 - 交代の可能性がないtool完了で不要な必須saveを行わない。
-  実際の交代は従来の必須保存・排他を通す。
+  イベント有無にかかわらず、実際の交代は必須保存・排他を通す。
+- 進捗を書き直す前にstate.lockを取り、現在の所有・実行世代と再開IDを照合する。
+  最新snapshotへ自分の変更だけを合わせ、待ち時間中のキャンセルや他writerの
+  記録を古い値へ戻さない。所有/停止/終端が更新されていれば古い書込を中止し、
+  自分の子を後始末して、更新後の世代を保護する。
 - error5やPermissionDeniedを共有違反と決めつけない。ACL変更、権限昇格、
   非原子的な上書き、削除後再作成などの別経路は追加しない。
 
@@ -74,3 +80,23 @@ CLI利用側のcc-scheduler/cc-askの関連テストを含め、doc/Clippyも確
 テストのアサーションや製品コードを変更せず、実行環境を訂正した。
 対象3ライブラリのdoc（各0件）とClippyは成功した。
 結果のハッシュは[検証記録](evidence/windows-job-snapshot-3726.json)に保持する。
+
+## 最初のレビューと追加のRed
+
+3729は固定76fb8af0を読了し、Must1、Suggestion3、Nitを返した。
+実jobと対応nativeはGrok4.6/xhigh、原応答SHA256は
+`f1dcca9794eb4806babdf062a61e0ce1f67a09962576d22e74b7d61d861622d5`。
+これはAIのレビュー意見であり、本人の方針変更ではない。
+
+Mustのうち、実行中のlast_message等の保存失敗が正常終了をfailedへ変える点は
+追加テストでRedを確認して修正した。既知の実行中の結果射影は延期し、drainして
+実exitとturn.completedを確認してから、終端を必須保存する。
+再開IDまで保存失敗を無視する提案は、依頼の「再開IDの永続化を無視しない」に
+従い採用しない。再開IDと未知の制御項目は必須のままで、追加レビューへ根拠を渡す。
+
+また、待ち時間中のcancelledを古い進捗でfailedへ戻すRedを独立に確認した。
+排他・最新状態確認・差分の適用で修正した。元の停止・終端・別の所有者を
+保存後に上書きしない対照も確認した。
+無イベント交代の保存、無イベント復旧の実テスト、ACL復元の明示確認、
+共有モードの定数名を追加した。未計測のclone最適化は今回の修復へ追加しない。
+3733で、これらの追加差分とMustの対応を確認する。

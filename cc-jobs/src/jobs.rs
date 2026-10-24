@@ -21,8 +21,8 @@ pub struct Context {
     pub rt: SharedRuntime,
 }
 
-/// Only a known display-only delta may be deferred. New fields, ownership,
-/// cancellation, session identity, results and state transitions stay strict.
+/// Only known live projections may be deferred. Ownership, cancellation,
+/// session identity, unknown fields and terminal/handoff commits stay strict.
 struct ProgressPersistence {
     durable: Value,
     deferred: bool,
@@ -48,6 +48,16 @@ impl ProgressPersistence {
                     "context_pct",
                     "context_pct_exact",
                     "rate_limit_pct",
+                    // Live event projections are committed strictly at the
+                    // terminal/handoff boundary. They must not turn an exited
+                    // successful child into a synthetic setup failure.
+                    "last_message",
+                    "turn_completed",
+                    "last_error",
+                    "last_failure_kind",
+                    "capacity_error",
+                    "rate_limit_times",
+                    "execution_observed",
                 ] {
                     fields.remove(key);
                 }
@@ -56,13 +66,52 @@ impl ProgressPersistence {
         }
         control(self.durable.clone()) != control(job.clone())
     }
-    fn save(&mut self, ctx: &Context, job: &Value) -> Result<()> {
-        let required = self.required(job);
+    fn save(&mut self, ctx: &Context, job: &mut Value) -> Result<()> {
+        self.save_impl(ctx, job, false)
+    }
+    fn save_required(&mut self, ctx: &Context, job: &mut Value) -> Result<()> {
+        self.save_impl(ctx, job, true)
+    }
+    fn save_impl(&mut self, ctx: &Context, job: &mut Value, force: bool) -> Result<()> {
+        let required = force || self.required(job);
         if !required && ctx.rt.mono() < self.retry_at {
             return Ok(());
         }
-        match ctx.save(job) {
-            Ok(()) => {
+        let result = (|| -> Result<Option<Value>> {
+            let _state = ctx.job_lock(s(job, "id"), "state.lock")?;
+            let fresh = ctx.load(s(job, "id"))?;
+            if !crate::pool_retry::same_attempt(&self.durable, &fresh)
+                || ["thread_id", "resume_session"]
+                    .iter()
+                    .any(|key| self.durable[*key] != fresh[*key])
+            {
+                return Ok(None);
+            }
+            // Apply only this monitor's delta. A delayed flush must not undo
+            // fields saved by another writer while publication was deferred.
+            let mut merged = fresh.clone();
+            for (key, value) in job.as_object().unwrap() {
+                if self.durable.get(key) != Some(value) {
+                    if fresh.get(key) != self.durable.get(key) && fresh.get(key) != Some(value) {
+                        return Ok(None);
+                    }
+                    merged[key] = value.clone();
+                }
+            }
+            for key in self.durable.as_object().unwrap().keys() {
+                if job.get(key).is_none() {
+                    if fresh.get(key) != self.durable.get(key) && fresh.get(key).is_some() {
+                        return Ok(None);
+                    }
+                    merged.as_object_mut().unwrap().remove(key);
+                }
+            }
+            ctx.save(&merged)?;
+            Ok(Some(merged))
+        })();
+        match result {
+            Ok(Some(merged)) => {
+                *job = merged;
                 self.durable = job.clone();
                 if self.deferred {
                     ctx.rt.diagnostic("進捗の保存が復旧しました");
@@ -71,6 +120,9 @@ impl ProgressPersistence {
                 self.retry_at = 0.;
                 Ok(())
             }
+            Ok(None) => Err(Error::new(
+                "保存済みの停止・実行状態が変わったため、古い進捗の保存を中止しました",
+            )),
             Err(error) if !required => {
                 // Error 5 can also mean ACL denial. Do not reinterpret it as a
                 // sharing violation, change access rights, or bypass the writer.
@@ -98,6 +150,9 @@ mod progress_persistence_tests {
         let mut display = original.clone();
         display["activity"] = json!("working");
         display["steps"] = json!(3);
+        display["last_message"] = json!("completed reply");
+        display["turn_completed"] = json!(true);
+        display["execution_observed"] = json!({"model":"fixture"});
         assert!(!state.required(&display));
         for key in [
             "id",
@@ -109,9 +164,6 @@ mod progress_persistence_tests {
             "thread_id",
             "resume_session",
             "cancel_requested",
-            "turn_completed",
-            "last_message",
-            "last_failure_kind",
             "retry_count",
             "context_phase",
             "new_control_field",
@@ -1215,6 +1267,7 @@ impl Context {
         let mut exit = None;
         let mut cleanup_failed = false;
         let mut tool_yielded = false;
+        let mut monitoring_started = false;
         #[cfg(windows)]
         let mut chrome_proxy = None;
         let work = (|| -> Result<()> {
@@ -1268,6 +1321,7 @@ impl Context {
             job["codex_pid_created"] = json!(created);
             self.save(&job)?;
             let mut progress = ProgressPersistence::new(&job);
+            monitoring_started = true;
             drop(lock);
             let mut n = TaskProgress::new(self.ao_executable(), self.jobs.clone(), self.rt.clone());
             n.start(&job);
@@ -1343,11 +1397,10 @@ impl Context {
                             if !self.yield_may_be_due(&job) {
                                 return Ok(false);
                             }
-                            // Handoff decisions consume persisted state. A
-                            // failed mandatory save prevents the handoff, not
-                            // the already-running child or its event drain.
-                            self.save(&job)?;
-                            progress.durable = job.clone();
+                            // Handoffs consume committed state. Display
+                            // publication can return to the normal retry;
+                            // resume/ownership changes remain mandatory there.
+                            progress.save_required(self, &mut job)?;
                             self.yield_running_tool_boundary(&job)
                         })();
                         match attempt {
@@ -1363,7 +1416,7 @@ impl Context {
                     }
                 }
                 if changed || progress.deferred {
-                    progress.save(self, &job)?;
+                    progress.save(self, &mut job)?;
                 }
                 if !had_event
                     && self.rt.mono() >= next_yield_check
@@ -1385,6 +1438,7 @@ impl Context {
                             self.recover_tool_yield(&self.load(jid)?)?;
                             return Ok(s(&self.load(jid)?, "status") == "queued");
                         }
+                        progress.save_required(self, &mut job)?;
                         self.yield_running_tool_boundary(&job)
                     })();
                     match attempt {
@@ -1423,7 +1477,7 @@ impl Context {
             }
             Ok(())
         })();
-        let setup_failed = work.is_err();
+        let attempt_failed = work.is_err();
         if tool_yielded {
             if let Some(n) = &mut notifier {
                 n.close();
@@ -1455,7 +1509,7 @@ impl Context {
             }
         }
         // A queued job cancelled before the second load must never be rewritten by this supervisor.
-        if !setup_failed && proc.is_none() && s(&job, "status") != "running" {
+        if !attempt_failed && proc.is_none() && s(&job, "status") != "running" {
             return Ok(false);
         }
         finish(
@@ -1476,7 +1530,7 @@ impl Context {
         {
             self.yield_diagnostic(&error);
         }
-        if s(&job, "last_failure_kind") == "capacity" && !cleanup_failed && !setup_failed {
+        if s(&job, "last_failure_kind") == "capacity" && !cleanup_failed && !attempt_failed {
             job["capacity_inventory"] = self.capacity_inventory(&job);
         }
         let gate = match self.queue_lock() {
@@ -1490,6 +1544,18 @@ impl Context {
         let fresh = self.load(jid)?;
         if fresh["cancel_requested"] == true || s(&fresh, "status") == "cancelled" {
             job = fresh;
+        } else if monitoring_started && s(&job, "last_failure_kind") != "capacity"
+            && !crate::pool_retry::same_attempt(&job, &fresh) {
+            self.rt.diagnostic(&format!(
+                "終了した実行の結果を保持し、変更後の実行状態を保護します (job={}, status={}, exit={})",
+                jid, s(&job, "status"), job["exit_code"]
+            ));
+            drop(state);
+            drop(gate);
+            #[cfg(windows)]
+            drop(chrome_proxy);
+            if let Some(n) = &mut notifier { n.close(); }
+            return Ok(false);
         } else if s(&job, "last_failure_kind") == "capacity"
             && !crate::pool_retry::same_attempt(&job, &fresh)
         {
@@ -1534,7 +1600,7 @@ impl Context {
         // Capacity switches have their own bound. A combined capacity/429
         // message must not escape that bound through the same-model retry.
         let retry = !cleanup_failed
-            && !setup_failed
+            && !attempt_failed
             && if s(&job, "last_failure_kind") == "capacity" {
                 if gate.is_none(){false}
                 else if todo_unavailable {self.defer_capacity_lock(&mut job)}
@@ -1552,7 +1618,7 @@ impl Context {
         let mut yielded = false;
         if gate.is_some()
             && !cleanup_failed
-            && !setup_failed
+            && !attempt_failed
             && !retry
             && s(&job, "last_failure_kind") != "capacity"
         {

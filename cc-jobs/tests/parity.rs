@@ -10477,6 +10477,7 @@ mod end_to_end {
     #[test]
     fn windows_snapshot_sharing_keeps_the_native_child_alive_and_delivers_its_result() {
         use std::os::windows::fs::OpenOptionsExt;
+        use windows_sys::Win32::Storage::FileSystem::{FILE_SHARE_READ, FILE_SHARE_WRITE};
         let t = E2e::new();
         // Optional finite acceptance probe of a caller-owned executable copy.
         // Ordinary CI always tests CARGO_BIN_EXE_codex_jobs.
@@ -10495,7 +10496,7 @@ mod end_to_end {
         let log = path.with_file_name("supervisor.log");
         let held = fs::OpenOptions::new()
             .read(true)
-            .share_mode(3)
+            .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE)
             .open(&path)
             .unwrap();
         let before = t.job(&jid);

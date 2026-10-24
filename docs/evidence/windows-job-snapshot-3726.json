@@ -50,10 +50,55 @@
     "thread_id": "01a16f79-5d70-7261-82f8-340628a5836d",
     "model": "grok-4.6",
     "effort": "xhigh",
-    "result_received": false
+    "result_received": true
   },
   "temp_owner_ids": [
     "9281a173abd026b4b8f04bda4a4c52f4",
     "30f2784bcabdd0e88b60ecce41d05d01"
-  ]
+  ],
+  "review_original_sha256": "f1dcca9794eb4806babdf062a61e0ce1f67a09962576d22e74b7d61d861622d5",
+  "review_finished_at": "2026-10-25T05:09:19+09:00",
+  "review_must_count": 1,
+  "followup_review_todo": 3733,
+  "followup_scope": "result-projection drain, current-state locked merge, mandatory resume/terminal persistence, idle handoff, regression tests",
+  "post_review": {
+    "cc_jobs_tests_total": 538,
+    "cc_jobs_passed": 538,
+    "cc_jobs_skipped": 1,
+    "latest_regression_tests": 9,
+    "latest_regression_passed": 9,
+    "additional_control_variants": [
+      "cancelled",
+      "succeeded",
+      "different running owner"
+    ],
+    "doc_exit": 0,
+    "clippy_exit": 0,
+    "proof_files": [
+      {
+        "name": "cancel-race-red.log",
+        "sha256": "092f63a4d56eeb41d3cbbe907f70b7e7284edaaff4b5b0307c4447a4d3cc1202"
+      },
+      {
+        "name": "result-race-red.log",
+        "sha256": "2972ca1a3a90a9811e242a06df46c3eee47a94a0bc5a73e38b6730b44cbc12e4"
+      },
+      {
+        "name": "cc-jobs-final-tests.log",
+        "sha256": "73b7722ef154ae84b75698c091799026e39e7f78e4a9c18778da39dd7f6827d1"
+      },
+      {
+        "name": "final-regressions.log",
+        "sha256": "17ac8a82e50f2ea910fbaad650d1c1f7fc7697301b3cad289d299d3a9549428a"
+      },
+      {
+        "name": "final-doc.log",
+        "sha256": "dfbeda70ac0b5c175f2299db9384d29c178996fb8dcae446d0c09403f36aa0fe"
+      },
+      {
+        "name": "final-clippy.log",
+        "sha256": "ebe07fecf66a2c382cc3e165403c8f5dddddacad07b86011d8b6ee759824c9b4"
+      }
+    ]
+  }
 }

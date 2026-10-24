@@ -31,7 +31,7 @@ func (r *Runner) periodicTick(ctx context.Context) Health {
 	resultCtx, cancelResults := context.WithTimeout(ctx, periodicAgentResultBudget)
 	r.agentResultPhase(resultCtx, &resultHealth)
 	cancelResults()
-	h := runPeriodicPhases(ctx, periodicNormalBudget, r.tickWithConcurrentScheduling, r.civ6CIQueue)
+	h := runPeriodicPhases(ctx, periodicNormalBudget, r.tick, r.civ6CIQueue)
 	h.Errors = append(h.Errors, resultHealth.Errors...)
 	h.Finished = r.Now().UTC().Format(time.RFC3339Nano)
 	return h

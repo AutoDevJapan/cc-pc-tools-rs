@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"net/http"
 	"testing"
 	"time"
 )
@@ -33,49 +32,6 @@ func TestPeriodicPhasesPreserveQueueBudgetAfterNormalDeadline(t *testing.T) {
 	}, r.civ6CIQueue)
 	if !called || h.Civ6Queue == nil || len(h.Errors) != 1 || h.Errors[0] != "existing_normal_failure" {
 		t.Fatal("queue skipped or normal result lost")
-	}
-}
-
-type periodicConcurrentTransport struct {
-	schedulerStarted <-chan struct{}
-	intakeStarted    chan<- struct{}
-}
-
-func (p periodicConcurrentTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	select {
-	case <-p.schedulerStarted:
-	case <-req.Context().Done():
-		return nil, req.Context().Err()
-	}
-	select {
-	case p.intakeStarted <- struct{}{}:
-	default:
-	}
-	return nil, context.Canceled
-}
-
-func TestPeriodicReplyIntakeAndOriginalSchedulerBothGetTheirTurnWithoutSerialBudgetLoss(t *testing.T) {
-	r, _ := fixture(t)
-	schedulerStarted := make(chan struct{})
-	intakeStarted := make(chan struct{}, 1)
-	r.Client.Transport = periodicConcurrentTransport{schedulerStarted, intakeStarted}
-	r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
-		if path == "D:/CC/Tools/scheduler/scheduler.exe" && len(args) == 1 && args[0] == "repair-step" {
-			close(schedulerStarted)
-			select {
-			case <-intakeStarted:
-			case <-ctx.Done():
-				return "", ctx.Err()
-			}
-			return `{"repair_mode":true,"error":null}`, nil
-		}
-		return "", context.Canceled
-	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	h := r.periodicTick(ctx)
-	if !h.Scheduler || ctx.Err() != nil {
-		t.Fatal("intake and scheduling still waited for each other", h.Errors)
 	}
 }
 

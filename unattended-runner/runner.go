@@ -716,36 +716,8 @@ func (r *Runner) tick(ctx context.Context) Health {
 }
 
 func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
-	return r.tickWithIntakeMode(ctx, intakeCtx, false)
-}
-
-func (r *Runner) tickWithConcurrentScheduling(ctx context.Context) Health {
-	intake, cancel := context.WithTimeout(ctx, 20*time.Second)
-	defer cancel()
-	return r.tickWithIntakeMode(ctx, intake, true)
-}
-
-func (r *Runner) scheduleExistingWork(ctx context.Context) bool {
-	if ctx.Err() != nil {
-		return false
-	}
-	schedulerCtx, cancel := context.WithTimeout(ctx, 35*time.Second)
-	defer cancel()
-	result, err := r.Run(schedulerCtx, "D:/CC/Tools/scheduler/scheduler.exe", "repair-step")
-	return ctx.Err() == nil && schedulerCtx.Err() == nil && err == nil && schedulerOK(result)
-}
-
-func (r *Runner) tickWithIntakeMode(ctx, intakeCtx context.Context, concurrentScheduler bool) Health {
 	r.NoticeAttempted = false
 	health := Health{Mode: "new-owner-intake-and-repair-scheduler", Started: r.Now().UTC().Format(time.RFC3339Nano), Errors: []string{}}
-	var scheduled chan bool
-	if concurrentScheduler {
-		scheduled = make(chan bool, 1)
-		// This native command has no Runner state. Its normal canonical store
-		// locks/CAS coordinate with answer delivery. Only the joined result is
-		// merged into Go health; no State or error slice is shared by the worker.
-		go func() { scheduled <- r.scheduleExistingWork(ctx) }()
-	}
 	conversationCtx, cancelConversations := context.WithTimeout(intakeCtx, conversationPollStageBudget)
 	r.processConversations(conversationCtx, &health)
 	cancelConversations()
@@ -785,10 +757,14 @@ func (r *Runner) tickWithIntakeMode(ctx, intakeCtx context.Context, concurrentSc
 	}
 	// Reports can require further API reads. Give the existing dispatcher its
 	// turn first, without detaching it from the caller's remaining deadline.
-	if scheduled != nil {
-		health.Scheduler = <-scheduled
-	} else {
-		health.Scheduler = r.scheduleExistingWork(ctx)
+	if ctx.Err() == nil {
+		// Native process inspection plus a fresh pre-commit check can exceed
+		// twenty seconds. Retain a finite stage limit and the caller's original
+		// deadline, while allowing that measured repair to complete.
+		schedulerCtx, cancelScheduler := context.WithTimeout(ctx, 35*time.Second)
+		schedulerReport, err := r.Run(schedulerCtx, "D:/CC/Tools/scheduler/scheduler.exe", "repair-step")
+		health.Scheduler = ctx.Err() == nil && schedulerCtx.Err() == nil && err == nil && schedulerOK(schedulerReport)
+		cancelScheduler()
 	}
 	if !health.Scheduler {
 		health.Errors = append(health.Errors, "scheduler_deferred")

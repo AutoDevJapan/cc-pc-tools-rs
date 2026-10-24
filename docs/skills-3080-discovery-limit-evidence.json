@@ -1,6 +1,6 @@
 {
   "todo": 3080,
-  "recorded_at": "2026-10-23T21:09:52.7884865+00:00",
+  "recorded_at": "2026-10-24T00:40:30.7402093+00:00",
   "installed_cli_version": "0.163.0",
   "official_source_commit": "83086188ae0614bd882818ff1aa23f3194962012",
   "official_tag": "rust-v0.163.0",
@@ -40,7 +40,18 @@
     "host_hidden_directories": "skip",
     "warning_condition": "walk.truncated",
     "depth": 6,
-    "user_directory_symlinks": "follow"
+    "user_directory_symlinks": "follow",
+    "directory_count_semantics": {
+      "source_binary_equivalence_proven": false,
+      "line_scope": [
+        "742-744 root queue and directory_count=1",
+        "826 condition uses the current parent directory depth",
+        "852-857 child directory counter and queue depth+1"
+      ],
+      "method": "root is depth0 and counted once; sync_walk counts/enqueues child directories while parent depth < max_depth, thus child depths1..6 are counted. A depth7 directory is only returned as an entry.",
+      "source_path": "codex-rs/exec-server/src/local_file_system.rs",
+      "function": "sync_walk"
+    }
   },
   "metadata_measurement": {
     "root": "central Skills",
@@ -64,11 +75,13 @@
     "bounded_scan_complete": true,
     "remaining_queue": 0,
     "elapsed_ms": 464,
-    "scope_limits": "Not an exact executor walk reproduction: aliases not followed and entry ordering not matched. No private directory names saved."
+    "scope_limits": "Not an exact executor walk reproduction: aliases not followed and entry ordering not matched. No private directory names saved.",
+    "unclassified_difference_from_files_plus_directories": 72,
+    "entry_breakdown_limit": "旧entriesとfiles+directoriesの差72の内訳は未保存。rootを含むdirectoryとreparse9を区別した厳密なentry集計とはしない。新しい測定を別に残す。"
   },
   "non_dot_directory_count": 2015,
   "measurement_timestamp_limit": "metadata walk was observed in this job before the direct-coverage RPC; exact metadata-walk UTC time was not separately saved. recorded_at is artifact creation time.",
-  "diagnosis": "同版公式sourceはroot当たり2000directoryでtruncatedを返す。本文を読まないdepth6計数はdot配下を除いて2015directoryとなり、この制限に達する条件を満たす。nested reparse pointsは未追跡で、実walkerのcanonicalization/順序/応答byte上限を完全再現したとはしない。",
+  "diagnosis": "保存した公式sync_walkはrootと深さ1〜max_depthの子directoryを数える。max_depth6に対応する非dotの計測は2015で、2000上限を15超えるためtruncatedになる条件と整合する。深さ6を除いた1980を比較値とした親の訂正は誤りだった。alias追跡/実binaryとの一致/応答byte上限と、警告2件のroot対応は未確認なので原因確定ではない。",
   "direct_entrypoint_discovery": {
     "known_direct_entrypoint_paths": 297,
     "returned_matching_direct_paths": 297,
@@ -81,23 +94,75 @@
     "model_invoked": false,
     "context_budget_proven": false,
     "scope": "Immediate non-dot non-reparse skill folders only. No unknown skill body read or private names/paths saved.",
-    "checked_at": "2026-10-23T21:08:28.0149034+00:00"
+    "checked_at": "2026-10-23T21:08:28.0149034+00:00",
+    "warning_kind": "skills scan reached its traversal limit",
+    "warning_root_count": null,
+    "warning_root_count_limit": "保存helperは一致回数2だけを保持し、stderrのroot名/種類別個数は保存していない。原因やroot数を推定しない。"
   },
   "resolved": {
     "explanation_of_scan_limit_supported": true,
-    "active_direct_entrypoints_missing": 0
+    "active_direct_entrypoints_missing": 0,
+    "warning_cause_linked": false,
+    "explanation_support_scope": "公式sourceのcounter条件と計測2015>2000の整合に限る。実際の2警告の因果root対応を確認した意味ではない。"
   },
   "not_proven": [
     "complete recursive catalog walk",
     "metadata for every nested or managed skill root",
     "implicit skill selection",
     "model turn context budget",
-    "hardware/browser rendering"
+    "hardware/browser rendering",
+    "which roots produced the two traversal warnings and which limit or alias caused them"
   ],
   "changes_made": {
     "codex_config_or_binary": 0,
     "guard_or_junctions": 0,
     "central_files": 0
   },
-  "next": "warningは保持し、現在の直下297入口のmetadata発見成功と区別する。必要な候補を既存入口へ統合しながら、追加の管理/入れ子rootも実測に基づき扱う。全体の導入をこの警告だけの待ちにしない。"
+  "next": "warningは保持し、現在の直下297入口のmetadata発見成功と区別する。必要な候補を既存入口へ統合しながら、追加の管理/入れ子rootも実測に基づき扱う。全体の導入をこの警告だけの待ちにしない。",
+  "metadata_remeasurement": {
+    "elapsed_ms": 3225,
+    "non_dot_directories_by_depth": {
+      "6": 35,
+      "5": 152,
+      "2": 112,
+      "0": 1,
+      "4": 466,
+      "3": 951,
+      "1": 298
+    },
+    "observed_at": "2026-10-23T23:17:18.2494556+00:00",
+    "directories": 4666.0,
+    "directories_by_depth": {
+      "6": 207,
+      "5": 616,
+      "2": 178,
+      "0": 1,
+      "4": 2354,
+      "3": 1008,
+      "1": 302
+    },
+    "reparse_entries": 9,
+    "entries": 11968,
+    "files": 7294,
+    "directory_count_comparable_to_source": 2015,
+    "method": "metadata only; root depth0, enumerate through depth6; nested reparse entries counted but never followed; names not saved",
+    "errors": 0,
+    "source_reproduction": false,
+    "other_entries": 0,
+    "entry_conservation": "entries = directories - root1 + regular files + reparse entries + other entries",
+    "root": "central Skills",
+    "non_dot_directories": 2015.0,
+    "previously_reported_count_excluding_max_depth": 1980,
+    "directory_comparison_scope": "root is depth0 and counted once; sync_walk counts/enqueues child directories while parent depth < max_depth, thus child depths1..6 are counted. A depth7 directory is only returned as an entry."
+  },
+  "measurement_comparison_limit": "旧entries12930/files8193と新entries11968/files7294は、深さ境界の列挙方法が同じと確認していないため直接比較しない。directoryの深さ別計数は別に残す。時点の差もあり、全walkの再現とはしない。",
+  "correction3541": {
+    "new_independent_review_pending": true,
+    "source_scope": "saved official sync_walk full function and skills discovery options read",
+    "finding": "Must1",
+    "fixed_by_parent": true,
+    "reviewed_head": "5175e5534722d26d5037ad59fc93a4f84671b126",
+    "todo": 3541,
+    "parent_job": "20261024-093456-todo-3080"
+  }
 }

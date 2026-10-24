@@ -55,8 +55,7 @@ pub fn recovery_session<'a>(
                 && norm(s(&job["cwd"])) == norm(cwd)
                 && !jobs.iter().any(|j| {
                     crate::policy::live(j)
-                        && (s(&j["thread_id"]) == session
-                            || s(&j["resume_session"]) == session)
+                        && (s(&j["thread_id"]) == session || s(&j["resume_session"]) == session)
                 }))
             .then_some(session)
         })

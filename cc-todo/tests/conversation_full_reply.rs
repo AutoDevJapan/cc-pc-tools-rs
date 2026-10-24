@@ -96,7 +96,9 @@ impl Fixture {
         self.run("question-wait", "--question-file", &q_file);
         let mut db = self.read();
         let note = db["items"][0]["note"].as_str().unwrap().to_owned();
-        db["items"][0]["note"] = json!(format!("{note}\nconversation-owner-reply:synthetic\n{reply}"));
+        db["items"][0]["note"] = json!(format!(
+            "{note}\nconversation-owner-reply:synthetic\n{reply}"
+        ));
         self.write(&db);
         self.file(
             "answer.json",
@@ -115,7 +117,10 @@ impl Fixture {
 
 fn long_reply() -> String {
     // Far beyond the 8000 character cap applied to the previous result.
-    format!("先頭の回答。{}末尾の回答。", "長い回答の本文。".repeat(10_000))
+    format!(
+        "先頭の回答。{}末尾の回答。",
+        "長い回答の本文。".repeat(10_000)
+    )
 }
 
 fn asked_job(extra: Value) -> Value {
@@ -133,19 +138,31 @@ fn full_reply_and_proof_reach_the_next_launch_of_the_asking_conversation() {
     let reply = long_reply();
     let answer = f.park(&reply);
     f.job(&asked_job(json!({})));
-    assert_eq!(f.run("question-answer", "--answer-file", &answer)["resumed"], true);
+    assert_eq!(
+        f.run("question-answer", "--answer-file", &answer)["resumed"],
+        true
+    );
     let row = f.read()["items"][0].clone();
     assert_eq!(row["status"], "todo");
     let instruction = row["scheduler"]["owner_instruction"].as_str().unwrap();
-    assert!(instruction.starts_with(&format!("{PRIOR}\n")), "prior direction was overwritten");
-    assert!(instruction.contains(&reply), "the owner reply was cut or altered");
+    assert!(
+        instruction.starts_with(&format!("{PRIOR}\n")),
+        "prior direction was overwritten"
+    );
+    assert!(
+        instruction.contains(&reply),
+        "the owner reply was cut or altered"
+    );
     assert!(instruction.chars().count() > 40_000);
     assert_eq!(row["scheduler"]["last_job"], "original-worker");
     assert_eq!(row["scheduler"]["resume"], true);
     let proof = &row["scheduler"]["conversation_answer"];
     assert_eq!(proof["job"], "original-worker");
     assert_eq!(proof["launch_key"], "original-key");
-    assert_eq!(proof["request_id"], "conversation-v1-0123456789abcdef0123456789abcdef");
+    assert_eq!(
+        proof["request_id"],
+        "conversation-v1-0123456789abcdef0123456789abcdef"
+    );
     assert_eq!(proof["message_id"], "202");
     assert_eq!(proof["question_receipt_sha256"].as_str().unwrap().len(), 64);
 }
@@ -153,7 +170,10 @@ fn full_reply_and_proof_reach_the_next_launch_of_the_asking_conversation() {
 #[test]
 fn only_the_verified_asking_launch_gets_a_session_proof() {
     for (case, extra) in [
-        ("job created after the question", json!({"created_at":"2026-10-13T01:00:05Z"})),
+        (
+            "job created after the question",
+            json!({"created_at":"2026-10-13T01:00:05Z"}),
+        ),
         ("another launch key", json!({"launch_key":"other-key"})),
         ("failed owner", json!({"status":"failed"})),
     ] {
@@ -163,9 +183,18 @@ fn only_the_verified_asking_launch_gets_a_session_proof() {
         f.run("question-answer", "--answer-file", &answer);
         let row = f.read()["items"][0].clone();
         // The answer is still delivered to the retired owner's next launch.
-        assert!(row["scheduler"]["owner_instruction"].as_str().unwrap().contains("回答"), "{case}");
+        assert!(
+            row["scheduler"]["owner_instruction"]
+                .as_str()
+                .unwrap()
+                .contains("回答"),
+            "{case}"
+        );
         assert_eq!(row["scheduler"]["last_job"], "original-worker", "{case}");
-        assert!(row["scheduler"]["conversation_answer"].is_null(), "{case} got a proof");
+        assert!(
+            row["scheduler"]["conversation_answer"].is_null(),
+            "{case} got a proof"
+        );
     }
 }
 
@@ -198,7 +227,10 @@ fn a_todo_without_any_worker_stores_the_reply_for_its_first_launch() {
     let instruction = row["scheduler"]["owner_instruction"].as_str().unwrap();
     assert!(instruction.starts_with(&format!("{PRIOR}\n")));
     assert!(instruction.contains(&reply));
-    assert_eq!(row["resume_generation"], 7, "no worker may be advanced or retired");
+    assert_eq!(
+        row["resume_generation"], 7,
+        "no worker may be advanced or retired"
+    );
     assert!(row["scheduler"]["last_job"].is_null());
     assert!(row["scheduler"]["conversation_answer"].is_null());
     assert!(row["processed_results"].is_null());

@@ -9,6 +9,8 @@ mod finished_review;
 mod finished_work_handoff;
 #[path = "support/owner_wait_repair.rs"]
 mod finite_owner_wait_repair;
+#[path = "support/quota_recovery.rs"]
+mod quota_recovery_tests;
 #[path = "support/no_action.rs"]
 mod no_action;
 #[cfg(windows)]
@@ -6431,6 +6433,8 @@ fn saved_discord_settings_are_given_only_to_the_notifier_and_inherited_values_wi
     );
 }
 struct Fake {
+    quota_recovery_samples: AtomicUsize,
+    quota_recovery_inventory: Mutex<Value>,
     epoch_base: Mutex<Option<f64>>,
     quota_samples: Mutex<HashMap<String, cc_jobs::adaptive::QuotaSnapshot>>,
     boot: Mutex<Option<f64>>,
@@ -6485,6 +6489,8 @@ struct Fake {
 impl Fake {
     fn new() -> Self {
         Self {
+            quota_recovery_samples: AtomicUsize::new(0),
+            quota_recovery_inventory: Mutex::new(Value::Null),
             epoch_base: Mutex::new(None),
             quota_samples: Mutex::new(HashMap::new()),
             boot: Mutex::new(None),
@@ -6591,6 +6597,10 @@ impl Read for BadReader {
     }
 }
 impl Runtime for Fake {
+    fn quota_recovery_inventory(&self) -> Value {
+        self.quota_recovery_samples.fetch_add(1,Ordering::Relaxed);
+        self.quota_recovery_inventory.lock().unwrap().clone()
+    }
     fn capacity_pool_sample(&self, _job: &Value, at: f64) -> Value {
         // The legacy fixture has exactly one eligible account, already failed.
         // Tests of multiple slots provide their own explicit inventory snapshot.

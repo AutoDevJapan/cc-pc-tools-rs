@@ -1217,6 +1217,14 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
         Ok(())
     }
     pub fn prepare(&mut self, i: &Value, repo: &str) -> Result<Option<Value>> {
+        self.prepare_with_evidence(i, repo, None)
+    }
+    fn prepare_with_evidence(
+        &mut self,
+        i: &Value,
+        repo: &str,
+        evidence: Option<&Value>,
+    ) -> Result<Option<Value>> {
         if i["product_review_allocation"].is_object() && !self.backend.product_review_allowed(i) {
             return Err(Error("InputRejected"));
         }
@@ -1358,6 +1366,21 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             prompt += &format!(
                 "\nオーナーの回答に従って再開してください:\n{}\n",
                 s(&item["scheduler"]["owner_instruction"])
+            );
+        }
+        if let Some(receipt) = evidence.and_then(|receipt| {
+            crate::backend::bound_resume_evidence(&item, repo, text.as_bytes(), receipt)
+        }) {
+            let handoff = json!({
+                "verification_source":"scrub391.exe --verify-current-succession",
+                "receipt":receipt,
+                "current_record":{"store":self.todo_path,"todo_id":item["id"]}
+            });
+            prompt += &format!(
+                "\n正規に取得した今回の再開確認（ツール結果の引継ぎであり、このプロンプトへの本人の新しい直接入力やDiscord取得原文ではありません）:\n```json\n{}\n```\n\
+                元ToDo {}の現在のメモは上の共有台帳からその番号だけを選んで読み、必要な過去メモは正規のtodo.exe history {}で確認してください。既存の本人回答・停止・依存・途中成果を保持し、同じ判断を再質問しないでください。\n\
+                この確認は同じ元作業の再開に関するものです。古いproduct-resumeの期限・範囲や原保護名簿を変更したものではなく、元の業務成果の完成証拠でもありません。\n",
+                serde_json::to_string_pretty(&handoff)?, item["id"], item["id"]
             );
         }
         prompt += &format!("\n依頼:\n{text}");
@@ -1515,6 +1538,11 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 .iter()
                 .any(|author| cc_ask::job_policy::same_model(author, s(&selection["model"])));
             let owner_choice = selection["model_origin"] == "owner_request";
+            let quota_choice=crate::quota_recovery::prepare(&mut self.backend,&item,source,&jobs,&mut selection,
+                &cc_job_policy::product_retry::digest(text.as_bytes()))?;
+            if quota_choice && conflict {
+                return Err(Error("ReviewModelConflict"));
+            }
             if explicit && owner_choice && conflict {
                 return Err(Error("ReviewModelConflict"));
             }
@@ -1522,7 +1550,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 && ["gpt-6.1-sol", "gpt-6-luna", "gpt-6-astra"]
                     .iter()
                     .any(|model| cc_ask::job_policy::same_model(s(&selection["model"]), model));
-            if !explicit || conflict || ai_writer_default {
+            if !quota_choice && (!explicit || conflict || ai_writer_default) {
                 let profile=cc_ask::job_policy::review_profile(&excluded).ok_or(Error("ReviewModelUnavailable"))?;
                 selection["model"]=json!(profile.model);
                 selection["model_origin"] = json!("policy");
@@ -1534,6 +1562,18 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             selection["review_source_jobs"] = json!(sources);
             selection["review_excluded_models"] = json!(excluded);
             selection["task_type"] = json!("review");
+            // Check the selected review provider too: a legacy GPT hint can
+            // route to a depleted default before the CLI ever sees it.
+            if let Some(until)=self.backend.resource_until(&selection)? {
+                self.edit(&item["id"],|row| {
+                    if row["status"] == "todo" && row["scheduler"]["key"] == item["scheduler"]["key"]
+                        && launch_inputs(row) == launch_inputs(&item) {
+                        row["scheduler"]["not_before"]=json!(until);
+                        row["scheduler"]["resource_wait"]=json!({"reason":"quota_exhausted","until":until});
+                    }
+                })?;
+                return Ok(None);
+            }
         }
         if !valid_model(s(&selection["model"])) {
             return Err(Error("ValueError"));
@@ -1642,6 +1682,14 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     selection[field] = value.clone();
                 }
             }
+        }
+        if cc_job_policy::review_task(s(&item["title"]), s(&selection["task_type"]))
+            || item["subwork"]["kind"] == "review"
+        {
+            // Bind the same bytes embedded above, before the launch CLI can
+            // observe a later edit at the saved specification's path.
+            selection["finite_review_spec_sha256"] =
+                json!(cc_job_policy::product_retry::digest(text.as_bytes()));
         }
         let folder = self.root.join("prompts");
         fs::create_dir_all(&folder)?;
@@ -1862,6 +1910,8 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         // an empty list; only this explicitly verified repair repository can run.
         let exclusions =
             std::fs::read_to_string(self.root.parent().unwrap().join("client-projects.txt"));
+        // Owned by this admission call only; never a persistent permission cache.
+        let mut resume_receipts = std::collections::BTreeMap::new();
         let eligible: Vec<Value> = arr(&db["items"])
             .into_iter()
             .filter(|i| {
@@ -1913,7 +1963,14 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                         !self.backend.repair_scope_allowed(path)
                     }
                     Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
-                        !self.backend.current_product_allowed(i, path)
+                        if let Some(receipt) = self.backend.current_product_admission(i, path) {
+                            if let Some(id) = i["id"].as_u64() {
+                                resume_receipts.insert(id, receipt);
+                            }
+                            false
+                        } else {
+                            true
+                        }
                     }
                     Err(_) => true,
                 };
@@ -1980,7 +2037,12 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             .filter(|i| !arr(&i["needs"]).iter().any(|v| busy.contains(s(v))))
         {
             let result: Result<()> = (|| {
-                let Some(mut prepared) = self.prepare(i, s(&db["projects"][s(&i["project"])]))?
+                let evidence = i["id"].as_u64().and_then(|id| resume_receipts.get(&id));
+                let Some(mut prepared) = self.prepare_with_evidence(
+                    i,
+                    s(&db["projects"][s(&i["project"])]),
+                    evidence,
+                )?
                 else {
                     return Ok(());
                 };

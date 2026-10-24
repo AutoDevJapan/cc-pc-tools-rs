@@ -9,12 +9,16 @@ use std::{
 
 #[path = "current_succession.rs"]
 mod current_succession;
+pub(crate) use current_succession::bound_resume_evidence;
 #[path = "process_birth_fallback.rs"]
 mod process_birth_fallback;
 pub(crate) const BIRTH_FALLBACK_MARGIN: u64 = 10_000_000;
 pub(crate) const BIRTH_FALLBACK_MAX_SPAN: u64 = BIRTH_FALLBACK_MARGIN * 2;
 
 pub trait Backend {
+    fn quota_recovery_inventory(&mut self) -> Result<Value> {
+        Ok(Value::Null)
+    }
     fn action_progress(
         &mut self,
         _job: &Value,
@@ -45,6 +49,12 @@ pub trait Backend {
     /// A finite current succession receipt, never a general root exemption.
     fn current_product_allowed(&mut self, _item: &Value, _registered_root: &str) -> bool {
         false
+    }
+    /// Return the existing admission decision and any verified source data in
+    /// one operation. Null preserves implementations that only return a bool.
+    fn current_product_admission(&mut self, item: &Value, root: &str) -> Option<Value> {
+        self.current_product_allowed(item, root)
+            .then_some(Value::Null)
     }
     fn current_workspace_checkpoint(
         &mut self,
@@ -507,6 +517,24 @@ impl RealBackend {
     }
 }
 impl Backend for RealBackend {
+    fn quota_recovery_inventory(&mut self) -> Result<Value> {
+        let mut inventory=json!({});
+        let Some(appdata)=std::env::var_os("APPDATA") else { return Ok(inventory); };
+        let package=PathBuf::from(appdata).join("npm/node_modules/@bitkyc08/opencodex");
+        for provider in ["openai","anthropic"] {
+            let mut command=invocation(&[
+                package.join("node_modules/bun/bin/bun.exe").to_str().ok_or(Error("InputRejected"))?,
+                package.join("bin/ocx.mjs").to_str().ok_or(Error("InputRejected"))?,
+                "account","list",provider,"--quota","--refresh","--json"
+            ],Some(15));
+            command.git_prompt_off=true;
+            let raw=self.runner.run(&command).ok().filter(|r| r.code == 0 && r.stdout.len() <= 2_000_000)
+                .and_then(|r| serde_json::from_str::<Value>(&r.stdout).ok()).unwrap_or(Value::Null);
+            inventory[provider]=cc_job_policy::quota_recovery::aggregate(&raw,provider,self.clock());
+        }
+        inventory["at"]=json!(self.clock());
+        Ok(inventory)
+    }
     fn action_progress(
         &mut self,
         job: &Value,
@@ -610,6 +638,9 @@ impl Backend for RealBackend {
     }
     fn current_product_allowed(&mut self, item: &Value, registered_root: &str) -> bool {
         self.verify_current_product(item, registered_root)
+    }
+    fn current_product_admission(&mut self, item: &Value, root: &str) -> Option<Value> {
+        self.current_product_receipt(item, root)
     }
     fn current_workspace_checkpoint(
         &mut self,

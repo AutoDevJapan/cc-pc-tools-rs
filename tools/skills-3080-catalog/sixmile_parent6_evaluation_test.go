@@ -187,19 +187,27 @@ func validateParent6Dispositions(a extra45Assessment, rows []cohortLedgerRow) er
 	return nil
 }
 
-func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old legacy21Projection, extra, next20, parent extra45Assessment, amendment primaryReadingAmendments, comparison mcpComparisonOnly, rows []cohortLedgerRow) error {
+func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old legacy21Projection, extra, next20, parent extra45Assessment, next75 next75Assessment, amendment primaryReadingAmendments, comparison mcpComparisonOnly, rows []cohortLedgerRow, received []ReceivedCohort) error {
+	base, receivedEntries, err := withoutReceivedIndex(current, received)
+	if err != nil {
+		return err
+	}
+	current = base
+	if err := validateNext75Reading(next75); err != nil {
+		return err
+	}
 	if err := validateReceivedReading(parent, parent6ReadingSpec); err != nil {
 		return err
 	}
 	if err := validateMCPComparisonOnly(comparison, old); err != nil {
 		return err
 	}
-	if len(current.Cohorts) != 4 || len(snapshot.Cohorts) != 3 || current.Cohorts[3].ID != "parent6" || current.Cohorts[3].Artifact != "skills-3080-sixmile-parent6-evaluation.json" || !reflect.DeepEqual(current.Cohorts[:3], snapshot.Cohorts) {
-		return errors.New("expanded sixmile index: current cohorts do not include the exact parent6 extension")
+	if len(current.Cohorts) != 5 || len(snapshot.Cohorts) != 3 || current.Cohorts[3].ID != "parent6" || current.Cohorts[3].Artifact != "skills-3080-sixmile-parent6-evaluation.json" || current.Cohorts[4].ID != "next75" || current.Cohorts[4].Artifact != "skills-3080-sixmile-next75-evaluation.json" || !reflect.DeepEqual(current.Cohorts[:3], snapshot.Cohorts) {
+		return errors.New("expanded sixmile index: current cohorts do not include exact parent6 and next75 extensions")
 	}
 	known := map[string]extra45Entry{}
 	paths := map[string]bool{}
-	for _, group := range [][]extra45Entry{old.Entries, extra.Entries, next20.Entries, parent.Entries, comparisonEntriesForUnion(comparison)} {
+	for _, group := range [][]extra45Entry{old.Entries, extra.Entries, next20.Entries, parent.Entries, next75PrimaryProjection(next75), comparisonEntriesForUnion(comparison)} {
 		for _, e := range group {
 			if e.ID == "" || known[e.ID].ID != "" || paths[e.Path] {
 				return errors.New("expanded sixmile index: assessed identity crosses cohorts")
@@ -209,6 +217,16 @@ func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old lega
 		}
 	}
 	matched := map[string]bool{}
+	for _, e := range receivedEntries {
+		if known[e.ID].ID != "" || paths[e.Path] {
+			return errors.New("expanded sixmile index: received identity crosses cohorts")
+		}
+		for _, r := range rows {
+			if r.ID == e.ID {
+				return errors.New("expanded sixmile index: immutable received reading lacks a current final acceptance")
+			}
+		}
+	}
 	for _, r := range rows {
 		e, ok := known[r.ID]
 		if r.Source != "6mile/skills" {
@@ -228,6 +246,9 @@ func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old lega
 	if err := validateParent6Dispositions(parent, rows); err != nil {
 		return err
 	}
+	if err := validateNext75Dispositions(next75, rows); err != nil {
+		return err
+	}
 	if err := validatePrimaryReadingAmendment(amendment, old, extra); err != nil {
 		return err
 	}
@@ -244,10 +265,15 @@ func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old lega
 	c := current.Cohorts[3]
 	p := parent.Counts
 	m := amendment.Counts
+	n := next75.Counts
+	nc := current.Cohorts[4]
+	if nc.Paths != n.Candidates || nc.Raw != n.Raw || nc.Workflow != n.Workflow || nc.Support != n.Support || nc.Saved != n.Saved || nc.Read != n.RawSupport || nc.MaskedSupport != n.MaskedSupport || nc.Scan != n.Scan || nc.Unsaved != n.Unsaved || nc.Partial != n.Partial || nc.Reused != n.SameNotices+n.DiffNotices || nc.WorkflowSupport != n.WorkflowSupport {
+		return errors.New("expanded sixmile index: next75 cohort counters differ")
+	}
 	if c.Paths != p.Candidates || c.Raw != p.Raw || c.Workflow != p.Workflow || c.Support != p.Support || c.Saved != p.Saved || c.Read != p.Read || c.MaskedSupport != p.MaskedSupport || c.Scan != p.Scan || c.Unsaved != p.Unsaved {
 		return errors.New("expanded sixmile index: parent6 cohort counters differ")
 	}
-	if current.Source != snapshot.Source || current.Source != parent.Source || current.Commit != snapshot.Commit || current.Commit != parent.Commit || current.Tree != snapshot.Tree || current.Tree != parent.Tree || current.Expected != snapshot.Expected || !x45True(current.NotCap) || current.Comparison != len(comparison.Entries) || current.Paths != snapshot.Paths+p.Candidates+current.Comparison || current.Paths != current.Raw+current.Masked+current.Metadata+current.Comparison || current.Raw != snapshot.Raw+p.Raw+m.Raw || current.Workflow != snapshot.Workflow+p.Workflow+m.Workflow || current.Masked != snapshot.Masked+p.Masked-m.Masked || current.Metadata != snapshot.Metadata+p.Metadata-m.Metadata || current.NotRaw != current.Expected-current.Raw || current.Unassessed != current.Expected-current.Paths || current.Support != snapshot.Support+p.Support || current.Saved != snapshot.Saved+p.Saved || current.Read != snapshot.Read+p.Read || current.MaskedSupport != snapshot.MaskedSupport+p.MaskedSupport || current.WorkflowSupport != current.Read+current.MaskedSupport || current.Scan != snapshot.Scan+p.Scan || current.Unsaved != snapshot.Unsaved+p.Unsaved || current.SavedUnread != snapshot.SavedUnread+p.Saved-p.Read-p.MaskedSupport-p.Scan {
+	if current.Source != snapshot.Source || current.Source != parent.Source || current.Commit != snapshot.Commit || current.Commit != parent.Commit || current.Tree != snapshot.Tree || current.Tree != parent.Tree || current.Expected != snapshot.Expected || !x45True(current.NotCap) || current.Comparison != len(comparison.Entries) || current.Paths != snapshot.Paths+p.Candidates+n.Candidates+current.Comparison || current.Paths != current.Raw+current.Masked+current.Metadata+current.Comparison || current.Raw != snapshot.Raw+p.Raw+m.Raw+n.Raw || current.Workflow != snapshot.Workflow+p.Workflow+m.Workflow+n.Workflow || current.Masked != snapshot.Masked+p.Masked-m.Masked+n.Masked || current.Metadata != snapshot.Metadata+p.Metadata-m.Metadata || current.NotRaw != current.Expected-current.Raw || current.Unassessed != current.Expected-current.Paths || current.Support != snapshot.Support+p.Support+n.Support || current.Saved != snapshot.Saved+p.Saved+n.Saved || current.Read != snapshot.Read+p.Read+n.RawSupport || current.MaskedSupport != snapshot.MaskedSupport+p.MaskedSupport+n.MaskedSupport || current.WorkflowSupport != current.Read+current.MaskedSupport+current.Reused || current.Scan != snapshot.Scan+p.Scan+n.Scan || current.Unsaved != snapshot.Unsaved+p.Unsaved+n.Unsaved || current.SavedUnread != snapshot.SavedUnread+p.Saved-p.Read-p.MaskedSupport-p.Scan+n.Saved-n.WorkflowSupport-n.Scan-n.Partial || current.Partial != n.Partial || current.Reused != n.SameNotices+n.DiffNotices {
 		return errors.New("expanded sixmile index: amendment was omitted, duplicated or conflated with a new candidate")
 	}
 	return nil
@@ -260,6 +286,7 @@ func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *test
 			snapshot := loadThreeCohortSnapshot(t)
 			var old legacy21Projection
 			var extra, next20, parent extra45Assessment
+			var next75 next75Assessment
 			var amendment primaryReadingAmendments
 			var comparison mcpComparisonOnly
 			var ledger struct {
@@ -271,6 +298,7 @@ func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *test
 			loadPublicReceipt(t, "skills-3080-sixmile-next45-evaluation.json", &extra)
 			loadPublicReceipt(t, "skills-3080-sixmile-next20-evaluation.json", &next20)
 			loadPublicReceipt(t, "skills-3080-sixmile-parent6-evaluation.json", &parent)
+			loadPublicReceipt(t, "skills-3080-sixmile-next75-evaluation.json", &next75)
 			loadPublicReceipt(t, "skills-3080-primary-reading-amendments.json", &amendment)
 			loadPublicReceipt(t, "skills-3080-mcp-sibling-duplicate-evidence.json", &comparison)
 			loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
@@ -306,7 +334,7 @@ func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *test
 				rows = append(rows, r)
 			case "missing_parent_cohort":
 				current.Cohorts = current.Cohorts[:3]
-				want = "expanded sixmile index: current cohorts do not include the exact parent6 extension"
+				want = "received index: missing or inconsistent extension"
 			case "cross_cohort_identity":
 				for i := range old.Entries {
 					if old.Entries[i].ID != "github:e4ade76a7932447efe3dd6e777ab300a5a9a6f1cf13a392614b31c621906a016" {
@@ -372,7 +400,8 @@ func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *test
 				current.NotRaw--
 				want = "expanded sixmile index: amendment was omitted, duplicated or conflated with a new candidate"
 			}
-			err := validateExpandedSixmileIndex(current, snapshot, old, extra, next20, parent, amendment, comparison, rows)
+			received := loadRegisteredReceivedIndex(t)
+			err := validateExpandedSixmileIndex(current, snapshot, old, extra, next20, parent, next75, amendment, comparison, rows, received)
 			if want == "" {
 				if err != nil {
 					t.Fatal(err)

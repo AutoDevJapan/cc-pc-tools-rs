@@ -158,16 +158,16 @@ func TestSkills3080SourcesAndCodeAcceptance(t *testing.T) {
 	m.Sources[0].SHA = hashBytes(source)
 	m.Sources[0].License.SHA = hashBytes(license)
 	m.Files = append(m.Files, skillsOutput{Target: "sample/references/upstream.txt", SHA: hashBytes(source)}, skillsOutput{Target: "sample/references/LICENSE.txt", SHA: hashBytes(license)})
-	if !skillsSourcesBound(m) {
+	if !skillsSourceClaimsPreserved(m) {
 		t.Fatal("source preservation positive rejected")
 	}
 	m.Sources[0].Repository = "other/department"
-	if skillsSourcesBound(m) {
+	if skillsSourceClaimsPreserved(m) {
 		t.Fatal("different source scope admitted")
 	}
 	m.Sources[0].Repository = "6mile/skills"
 	m.Files = m.Files[:len(m.Files)-1]
-	if skillsSourcesBound(m) {
+	if skillsSourceClaimsPreserved(m) {
 		t.Fatal("missing preserved license accepted")
 	}
 	head := strings.Repeat("b", 40)

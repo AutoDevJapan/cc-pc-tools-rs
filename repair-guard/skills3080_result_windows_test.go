@@ -231,4 +231,7 @@ func TestSkills3080AlternativeOAuthReviewKeepsActualEffort(t *testing.T) {
 	if skillsReviewEffort("claude-sonnet-5-5") != "max" || skillsReviewEffort("gpt-6-astra") != "max" {
 		t.Fatal("owner max requirement changed")
 	}
+	if !skillsModelIdentifier("google-antigravity/gemini-3.8-flash") || skillsReviewEffort("gemini-3.8-flash") != "high" {
+		t.Fatal("observed alternate catalogue model lost its highest actual setting")
+	}
 }

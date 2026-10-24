@@ -77,7 +77,7 @@ func skillsModel(model string) string {
 	parts := strings.Split(model, "/")
 	last := parts[len(parts)-1]
 	switch last {
-	case "gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna", "claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5", "gemini-3.1-pro":
+	case "gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna", "claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5", "gemini-3.1-pro", "gemini-3.8-flash":
 		return last
 	}
 	return ""
@@ -104,7 +104,7 @@ func skillsModelIdentifier(model string) bool {
 // Antigravity catalogue offers Gemini 3.1 Pro only low/high; high is its actual
 // highest advertised setting, and is never reported as max.
 func skillsReviewEffort(model string) string {
-	if skillsModel(model) == "gemini-3.1-pro" {
+	if skillsModel(model) == "gemini-3.1-pro" || skillsModel(model) == "gemini-3.8-flash" {
 		return "high"
 	}
 	if skillsModel(model) != "" {

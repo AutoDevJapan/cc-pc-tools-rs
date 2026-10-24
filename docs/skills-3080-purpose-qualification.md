@@ -118,7 +118,8 @@ source_headとreviewed_headが公開mainの祖先で、reviewされたguardの�
 コードレビューの登録specは `SKILLS3080_IMPLEMENTATION_REVIEW <固定head>`、
 最終応答は次の1行を含む。actual native modelはauthorと別にする。
 GPT/Claudeにはmaxを要求する。既存OAuthのGoogle Antigravityが返した実catalogでは
-Gemini 3.1 Proはlow/highだけを提供しており、このモデルにはhighを要求する。
+Gemini 3.1 Proはlow/high、Gemini 3.8 Flashはlow/medium/highを提供しており、
+この2モデルにはhighを要求する。
 指定・jobの記録・対応native contextの実値を一致させ、highをmaxだったと報告しない。
 
 ```text

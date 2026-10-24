@@ -46,6 +46,20 @@ func TestSkills3080ReviewRegisteredContinuation(t *testing.T) {
 	if !skillsReviewParentBound(reg, row, false) || !skillsReviewOriginBound(reg.Tasks[3686], row, child, origin) {
 		t.Fatal("a genuine prior author and the registered resumed actor were conflated")
 	}
+	row.Scheduler.SubworkParent = reg.writer.Job
+	if !skillsReviewParentBound(reg, row, false) {
+		t.Fatal("normal scheduler rebinding erased the registered original author")
+	}
+	launch := objClone(origin)
+	launch["id"], launch["started_at"], launch["status"] = reg.writer.Job, "2026-10-24T20:10:06Z", "running"
+	child["started_at"] = "2026-10-24T20:11:00Z"
+	if !skillsReviewAuthorBound(reg.Tasks[3686], row.Scheduler.SubworkParent, child, launch) {
+		t.Fatal("a real resumed launch parent was confused with the original author")
+	}
+	row.Scheduler.SubworkParent = ""
+	if !skillsReviewParentBound(reg, row, false) {
+		t.Fatal("removing a departed launch parent erased the registered author")
+	}
 	// A review requested by this current author is also valid. Source/head and
 	// exact response checks remain separate mandatory gates at the consumer.
 	row.Subwork.ParentJob, row.Scheduler.SubworkParent = reg.writer.Job, reg.writer.Job
@@ -70,7 +84,7 @@ func TestSkills3080ReviewRegisteredContinuation(t *testing.T) {
 			case "duplicate-origin":
 				parent.Jobs = []string{row.Subwork.ParentJob, row.Subwork.ParentJob, reg.writer.Job}
 			case "disagreeing-parent":
-				row.Scheduler.SubworkParent = reg.writer.Job
+				row.Scheduler.SubworkParent = "20261025-000000-todo-3686"
 			case "wrong-origin-task":
 				origin["todo_id"] = json.Number("3080")
 			case "wrong-origin-workspace":

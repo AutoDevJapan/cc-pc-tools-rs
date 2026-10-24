@@ -274,8 +274,8 @@ func skillsResultBindingWith(r skillsResultRequest, reg skillsRegistry, job obje
 	// New acceptance reviewers must be real registered child reviews, not a
 	// caller-created result file or another public/private task with similar text.
 	return (forReview || (row.Subwork.Parent == 3686 && strings.Contains(string(spec), "SKILLS3080_IMPLEMENTATION_REVIEW "))) && row.Subwork.Kind == "review" && (row.Subwork.Parent == 3080 || row.Subwork.Parent == 3686) && job["sandbox"] == "read-only" &&
-		conversationNumber(obj(job["subwork"])["parent_todo_id"]) == uint64(row.Subwork.Parent) && str(job["parent_job_id"]) != "" &&
-		job["parent_job_id"] == row.Subwork.ParentJob && obj(job["subwork"])["origin_job_id"] == row.Subwork.ParentJob &&
+		conversationNumber(obj(job["subwork"])["parent_todo_id"]) == uint64(row.Subwork.Parent) &&
+		str(job["parent_job_id"]) == row.Scheduler.SubworkParent && obj(job["subwork"])["origin_job_id"] == row.Subwork.ParentJob &&
 		skillsReviewParentBound(reg, row, forReview) &&
 		same(str(obj(job["finite_review"])["spec"]), row.Spec)
 }
@@ -296,9 +296,14 @@ func skillsReviewParentBound(reg skillsRegistry, row skillsTask, manifestReview 
 	}
 	origin := row.Subwork.ParentJob
 	parts := currentSubworkJobName.FindStringSubmatch(origin)
-	if len(parts) != 3 || parts[2] != strconv.Itoa(parent.ID) ||
-		(row.Scheduler.SubworkParent != "" && row.Scheduler.SubworkParent != origin) {
+	if len(parts) != 3 || parts[2] != strconv.Itoa(parent.ID) {
 		return false
+	}
+	if launch := row.Scheduler.SubworkParent; launch != "" {
+		parts := currentSubworkJobName.FindStringSubmatch(launch)
+		if len(parts) != 3 || parts[2] != strconv.Itoa(parent.ID) {
+			return false
+		}
 	}
 	latest := parent.Scheduler.Job
 	if latest == "" {
@@ -310,7 +315,7 @@ func skillsReviewParentBound(reg skillsRegistry, row skillsTask, manifestReview 
 	if !skillsLatest(parent, latest) || (w.Task == parent.ID && latest != w.Job) {
 		return false
 	}
-	originAt, latestAt := -1, -1
+	originAt, latestAt, launchAt := -1, -1, -1
 	for i, id := range parent.Jobs {
 		if id == origin {
 			if originAt >= 0 {
@@ -324,14 +329,27 @@ func skillsReviewParentBound(reg skillsRegistry, row skillsTask, manifestReview 
 			}
 			latestAt = i
 		}
+		if id == row.Scheduler.SubworkParent {
+			if launchAt >= 0 {
+				return false
+			}
+			launchAt = i
+		}
 	}
-	return originAt >= 0 && latestAt >= originAt
+	// The normal scheduler can bind a queued review to a resumed real parent,
+	// or remove a no-longer-live launch parent. Keep that launch generation
+	// separate from the immutable author/origin and from the current consumer.
+	return originAt >= 0 && latestAt >= originAt && (row.Scheduler.SubworkParent == "" || (launchAt >= originAt && launchAt <= latestAt))
 }
 
 func skillsReviewOriginBound(parent skillsTask, row skillsTask, child, origin object) bool {
+	return skillsReviewAuthorBound(parent, row.Subwork.ParentJob, child, origin)
+}
+
+func skillsReviewAuthorBound(parent skillsTask, expected string, child, origin object) bool {
 	start, e := time.Parse(time.RFC3339Nano, str(origin["started_at"]))
 	reviewStart, e2 := time.Parse(time.RFC3339Nano, str(child["started_at"]))
-	if e != nil || e2 != nil || reviewStart.Before(start) || origin["id"] != row.Subwork.ParentJob ||
+	if e != nil || e2 != nil || reviewStart.Before(start) || origin["id"] != expected ||
 		!skillsJobTask(origin, parent.ID) || !same(str(origin["cwd"]), parent.Scheduler.Worktree) {
 		return false
 	}
@@ -367,6 +385,12 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 		origin, ok := skillsReadJob(s, row.Subwork.ParentJob)
 		if !ok || !skillsReviewOriginBound(reg.Tasks[row.Subwork.Parent], row, job, origin) {
 			return out, "result_binding"
+		}
+		if launch := row.Scheduler.SubworkParent; launch != "" && launch != row.Subwork.ParentJob {
+			actual, ok := skillsReadJob(s, launch)
+			if !ok || !skillsReviewAuthorBound(reg.Tasks[row.Subwork.Parent], launch, job, actual) {
+				return out, "result_binding"
+			}
 		}
 	}
 	if !skillsModelIdentifier(str(job["model"])) {

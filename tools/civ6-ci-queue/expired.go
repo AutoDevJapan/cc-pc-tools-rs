@@ -80,7 +80,7 @@ func (d *Deps) ReplaceExpired(ctx context.Context, key, replacementKey string) e
 	}
 	ent := l.Entries[key]
 	if ent == nil || ent.Key != key || ent.Plan.Key() != key || ent.OS != "Windows" || ent.Phase != "initial" || ent.Plan.PR != OriginalPR ||
-		ent.Plan.Event != "pull_request" || ent.Plan.Attempt != 1 || ent.Replaces != "" ||
+		ent.Plan.Event != "pull_request" || ent.Plan.Attempt != 1 || ent.Replaces != "" || ent.SourceReplaces != "" ||
 		(ent.State != StateNeedsRecovery && ent.State != StateReserved) || ent.Official.Success ||
 		d.Alive(ent.Started.Supervisor) || d.Alive(ent.Started.Helper) ||
 		!slices.Contains(l.Budget.Initial, key) || len(l.Budget.Initial) > InitialBudget || len(l.Budget.Replacements) >= InitialBudget {
@@ -92,6 +92,11 @@ func (d *Deps) ReplaceExpired(ctx context.Context, key, replacementKey string) e
 	for _, r := range l.Budget.Replacements {
 		if r.Original == key || r.Replacement == replacementKey {
 			return errors.New("original slot already has a replacement")
+		}
+	}
+	for _, r := range l.Budget.SourceMigrations {
+		if r.Original == key || r.Replacement == replacementKey {
+			return errors.New("source-migrated slot cannot be replaced as expired")
 		}
 	}
 	if l.Entries[replacementKey] != nil {

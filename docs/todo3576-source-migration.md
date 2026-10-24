@@ -44,9 +44,37 @@ Red: `go -C tools/civ6-ci-contract test -run TestFixedMainMergeAdmission -count=
 `go -C tools/civ6-ci-queue test -run TestExpiredReplacementRejectsUnsafeOrUnboundedRecovery -count=1`
 は成功し、別head/attempt等を拒否する既存境界を確認した。
 追加世代実装後のcontract / routeの通常Goテストは成功。
-残るGreen・CLI・証拠schema・レビュー・CI・CC側merge・親への返却は実施後に追記する。
+contract / route / queue / Windows helper / Linux helperの5moduleについて
+`go test -race -timeout 180s ./...`、`go vet ./...`、`go build`が成功。
+Windows上の既存Goインターフェースの検査であり、Linux利用者向けの新受入ではない。
+Rust/Cargo/GPU/Civ6の実行は0。
+
+2026-10-24、生成したroute候補の `prepare-main392 <新owned root>` を実行し、
+正規APIの固定old/main/全tree照合と候補保存が成功した。
+返値は `operation_complete:true, official_ci_success:false`。
+この工程でpublish・rerun・登録・サービス・配布・既存実台帳操作は0。
+ローカル検査の実行物を配布済みとはしない。
+
+関連テストは正規main合流、旧世代の維持、実mainの全コマンド/checkout保持、
+同名別repo/fork/owner/base/親順/追加親/全tree追加file/command/checkout拒否、
+旧manifest流用拒否、非force publishと未知応答観測を確認する。
+queueは3枠一対一、旧履歴とraw result保持、二重/別phase/実行済み/不明cleanup拒否、
+前後のcollection/census、foreign fence保持、通常tickとの排他、全台帳CAS拒否、
+同期proof保存後の中断/原At/Census再利用を確認する。
+レビュー・CI・CC側merge・親への返却は実施後に追記する。
 製品全体のPR149完了とは区別する。旧PC実行0/過去CodeQL2success、
 新source Windows3+CodeQL2、merge後Windows3+CodeQL2を分け、計12実行上限を保つ。
+
+| 区分 | 作成/取消の実績 | 実行の実績・予定 |
+|---|---|---|
+| 旧Windows | 公式job3件作成、3件取消、全runner_id0/steps0 | PC開始0 |
+| 旧CodeQL | run39423558012のAnalyze(actions/rust)2件 | 2件success（実API再確認） |
+| 新source | この工程では未作成 | Windows3+CodeQL2の予定 |
+| 製品merge後 | この工程では未作成 | Windows3+CodeQL2の予定 |
+
+旧Windowsの取消3件を実行と数えず、元作成数も消さない。
+旧Rust資源1件の作成/回収済みと未作成live/native2件は元2962の記録を保持し、
+本工程のfixture検査を製品資源の実操作へ読み替えない。
 
 ## 再開
 
@@ -54,3 +82,53 @@ branch `scheduler/todo-3576-pr149-2962`、初期HEAD `d234d3144c26973bd35d44c518
 新しい所有領域 `codex-owned-c11fcf9d7457219759180aaa506cce2c` はguard clear。
 最初に作ったTemp ID `092593cc32622e6903dc831cf4ca6d68` はguard unverifiedで空のまま使用しない。
 親の旧Temp c297...は参照していない。原sourceは正規APIから再取得した。
+空のTempは正規quarantineにより退避済み（entries 0 / bytes 0）。
+
+## 新CLIと親2962の移行順
+
+これは親が統合後に実行する手順。この工程では製品実操作を行っていない。
+
+1. このCC側PRのmerge commitと、common guard/safe-deleteの最新source・資格・
+   単一writerを照合する。旧候補で共通2本を置換しない。
+   新schemaの資格を旧expired_replacementsの意味へ読み替えず、製品実操作の前に
+   親が必要な共通側の統合を行う。このソース工程は3455/3258等をwaitしない。
+2. 親が新しくsafe-delete createした領域で、レビュー済みsourceからビルドした
+   `civ6-ci-route prepare-main392 <owned-root>` を実行する。
+   `proposal.private.json` はgeneration、old head/tree、main/base、baseline_tree、
+   固定順のparents、3fileの原/候補digestとblobを記録する。
+   既存の `prepare` のmanifest・candidateを流用しない。
+3. 親が同じ候補に対して `civ6-ci-route publish-main392 <owned-root>` を1回だけ実行。
+   intentはexclusive、全treeはmain比較、commit親は `[2bd3...,392e...]`。
+   PATCHは非force。未知応答ならjournalと実refを観測し、同コマンドや別経路で再送しない。
+   mainやold tipが進んでいれば記録を親へ返し、追従しない。
+4. 親が公式APIと最新の予算記録を再照合し、新sourceのWindows3jobを特定する。
+   旧24h取消/未割当、元result/閉じた資源/SCM/登録不在/privileged markerと、
+   新jobのqueued/未割当/stepsなし/attempt1/同workflow/jobを維持する。
+5. `civ6-ci-queue migrate-unexecuted-main392 --config <正規設定> --entry <旧key> --replacement <新run/1/job>`。
+   未作成live/nativeを先に受け付け、Rustのforeign fenceを残す。その後Rustの
+   前後のcollection確認を通し、自分のfenceだけを解除する。
+   元の旧3keyは本書の元依頼どおり固定され、SHA/plan/manifestをCLIで与える入口はない。
+6. 通常tickが新entryを1件ずつ供給する。既存Windows1/Cargo gateと24h/6延期を維持。
+   新entryは原proofのverified_atを期限起点にし、延期回数を引き継ぐ。
+   中断しても新entryの期限を後ろへずらさない。
+7. 正式Windows受入・hash・回収→PR149通常merge→通常main eventの受入・回収は
+   親2962が続ける。公式成功の確認は既存RequireSuccessで別に行う。
+
+## 証拠schemaと互換境界
+
+`Budget.initial/normal/continuation/expired_replacements`の原記録を保持する。
+追加は `budget.unexecuted_source_migrations[]` の
+`original/replacement/generation/proof_sha256` と、新entryの
+`replaces_unexecuted_source_entry`。旧entryはstateだけrefusedへ閉じ、
+期限/延期/開始履歴/result/cleanup/reasonを保持する。
+旧replace-expiredは同run attempt2だけで、新sourceを扱わない。
+元固定3枠があるとき、continuation設定でも通常reserveで移行を迂回できない。
+
+旧entry配下の `source-main392.json` はversion/generation、原entryとfence、
+replacement plan/job、旧取消API、retirement、前後のcensus（Unreadableを含む）、
+元resultの原バイト（JSONではbase64）、never_created、verified_atを保持する。
+一時fileをSyncしてno-overwrite公開後、そのハッシュと一対一関係を全台帳CASで
+atomic保存する。保存中断後は外部/collectionを再検査し、原At/Censusを変えない。
+原proofと異なるsource/取消/割当/結果/ledger変化は拒否し、証拠は消さない。
+未作成はcleanup none/helperなし/過去資源なしを要求し、終了supervisorの履歴は残す。
+created資源はverify-collectedの既存独立cleanup契約を使用し、旧branchの現在性を要求しない。

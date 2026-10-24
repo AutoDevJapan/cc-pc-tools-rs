@@ -42,3 +42,12 @@ branchが進んだ/閉じた後も回収を止めない。回収はfreshnessを�
 
 検証: `go test -race ./...`、`go vet ./...`、`go build ./...`。
 fixture検証と公式Actionsによる実受入は別に記録する。
+
+## 固定mainの追加世代（ToDo3576）
+
+元のOriginalHead/Tree/BaseとProposeは維持する。追加世代は固定old tip
+2bd3a366...を第一親、固定main392e7f9...を第二親とし、mainの実workflowと
+全treeから3fileだけを変更する。`MainWorkflows/ProposeMain/VerifyMergeSource`を
+使い、既存`Verify`も実親/merged PR149から世代を選ぶ。
+`VerifyHistoricalInitial`は古い取消sourceの観測専用であり、実行を許可しない。
+CLIとschemaは[移行手順](../../docs/todo3576-source-migration.md)を参照。

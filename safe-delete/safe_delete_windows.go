@@ -33,21 +33,26 @@ func (e *failure) Error() string { return e.Code }
 func fail(code string) error     { return &failure{Code: code} }
 
 type identityRecord struct {
-	Version int    `json:"version"`
-	ID      string `json:"id"`
-	Root    string `json:"root"`
-	Path    string `json:"path"`
-	Volume  uint32 `json:"volume"`
-	FileID  uint64 `json:"file_id"`
-	Created string `json:"created_at"`
-	Project string `json:"project"`
-	Content string `json:"content"`
+	Version      int               `json:"version"`
+	ID           string            `json:"id"`
+	Root         string            `json:"root"`
+	Path         string            `json:"path"`
+	Volume       uint32            `json:"volume"`
+	FileID       uint64            `json:"file_id"`
+	Birth        uint64            `json:"birth,omitempty"`
+	Created      string            `json:"created_at"`
+	Project      string            `json:"project"`
+	Content      string            `json:"content"`
+	ProducerJob  string            `json:"producer_job,omitempty"`
+	ProducerTodo uint64            `json:"producer_todo,omitempty"`
+	Ancestors    []retiredAncestor `json:"ancestors,omitempty"`
 }
 type receipt struct {
 	identityRecord
 	Integrity   string `json:"integrity"`
 	State       string `json:"state"`
 	Destination string `json:"destination,omitempty"`
+	MoveJob     string `json:"move_job,omitempty"`
 }
 type config struct {
 	Store, Quarantine, Temp string
@@ -55,6 +60,7 @@ type config struct {
 	MaxBytes                int64
 	WriteReason             func(string, []byte) error
 	FindShell               func() (string, error)
+	Retirement              *retirementRuntime
 }
 type measured struct {
 	Entries    int                               `json:"entries"`
@@ -270,6 +276,7 @@ func (c config) create(root, project, content string) (receipt, error) {
 	if err == nil {
 		r.Volume = i.VolumeSerialNumber
 		r.FileID = fileID(i)
+		c.captureProducer(&r)
 		r.Integrity = digest(r)
 		err = c.save(r, true)
 	}
@@ -301,7 +308,7 @@ func (c config) load(id string, requireTarget bool) (receipt, error) {
 	if decoder.Decode(&r) != nil {
 		return r, fail("INVALID_RECEIPT_FILE")
 	}
-	if r.Version != 2 || r.ID != id || r.State != "owned" {
+	if (r.Version != 2 && r.Version != 3) || r.ID != id || r.State != "owned" {
 		return r, fail("RECEIPT_NOT_OWNED")
 	}
 	if digest(r) != r.Integrity {
@@ -461,6 +468,11 @@ func driveSpace() []map[string]any {
 	return result
 }
 func (c config) quarantine(id, reason string) (result map[string]any, err error) {
+	unlock, lockErr := c.retirementLock(id)
+	if lockErr != nil {
+		return nil, lockErr
+	}
+	defer unlock()
 	if _, ok := ci3574ResourceByID(id); ok && reason == "windows" {
 		scope, e := c.ci3574Recovery(id)
 		if e != nil {
@@ -593,6 +605,11 @@ func (c config) quarantinePreserved(id, reason string, scope *geminiScope, ci *c
 	if os.Mkdir(dest, 0700) != nil {
 		return nil, fail("QUARANTINE_DESTINATION_CREATE_FAILED")
 	}
+	// The index is only a lookup hint. Cleanup revalidates the original producer,
+	// release and move outputs and never treats this file as ownership proof.
+	if err = c.indexRetirement(r.ID, dest); err != nil {
+		return nil, err
+	}
 	phase = "reason"
 	why := fmt.Sprintf("退避状態: 未完了（理由を保存したが、移動前）。\n元の場所: %s\n大きさ: %d byte (%.3f MiB)\n削除できなかった理由: %s\n作成記録: %s\n記録時刻: %s\n退避方法: PowerShell の Move-Item。強制削除・別の削除 API は使用しない。\n", r.Path, m.Bytes, float64(m.Bytes)/1048576, text, id, time.Now().Format(time.RFC3339Nano))
 	write := c.WriteReason
@@ -664,6 +681,9 @@ func (c config) quarantinePreserved(id, reason string, scope *geminiScope, ci *c
 	phase = "record"
 	r.State = "quarantined"
 	r.Destination = dest
+	if actor, e := c.retirementRuntime().actor(); e == nil {
+		r.MoveJob = actor.ID
+	}
 	if err = c.save(r, false); err != nil {
 		return nil, err
 	}
@@ -688,6 +708,9 @@ func appendReason(path, text string) error {
 	return closeErr
 }
 func main() {
+	if retirementMain(os.Args[1:]) {
+		return
+	}
 	if len(os.Args) < 2 || os.Args[1] == "--help" {
 		fmt.Println("safe-delete create --project NAME [--content NAME] [--root PATH]\nsafe-delete plan|finish --id ID\nsafe-delete quarantine --id ID --reason policy|windows|locked|attributes|size|hardlink\nhardlink is restricted to ToDo2307's fixed receipt and media.\nToDo3174's fixed collected CI receipt uses windows quarantine only, with root client guard and opaque preservation.\nDeletion plans must be submitted separately to the caller's ordinary exec tool.")
 		return

@@ -19,6 +19,9 @@ const REPARSE: u32 = 0x400;
 const DIRECTORY: u32 = 0x10;
 const NO_WINDOW: u32 = 0x08000000;
 
+#[path = "owned.rs"]
+mod owned;
+
 #[repr(C)]
 #[derive(Default)]
 struct FileTime {
@@ -235,6 +238,14 @@ struct Stats {
     failures: u64,
     expired: bool,
     visited: u64,
+    owned_candidates: u64,
+    owned_candidate_bytes: u64,
+    owned_completed: u64,
+    owned_retained: u64,
+    owned_finish_failed: u64,
+    owned_retained_unmeasured: u64,
+    owned_retained_bytes: u64,
+    owned_reasons: std::collections::BTreeMap<String, u64>,
 }
 struct Budget {
     until: Instant,
@@ -383,17 +394,18 @@ fn guard_unknown(path: &Path) -> io::Result<bool> {
         return Err(invalid());
     }
     let value: Value = serde_json::from_slice(&bytes).map_err(|_| invalid())?;
-    if value
-        .get("classification_unverified")
-        .and_then(Value::as_bool)
-        == Some(true)
-    {
-        return Ok(true);
-    }
-    value
-        .get("client_resource")
-        .and_then(Value::as_bool)
-        .ok_or_else(invalid)
+    Ok(!guard_clear(&value))
+}
+
+fn guard_clear(value: &Value) -> bool {
+    value.get("ok").and_then(Value::as_bool) == Some(true)
+        && value.get("access_allowed").and_then(Value::as_bool) == Some(true)
+        && value
+            .get("classification_unverified")
+            .and_then(Value::as_bool)
+            == Some(false)
+        && value.get("client_resource").and_then(Value::as_bool) == Some(false)
+        && value.get("protection_status").and_then(Value::as_str) == Some("clear")
 }
 
 fn clean_deletion_root(
@@ -431,6 +443,9 @@ fn clean_deletion_root(
                 continue;
             }
             Ok(false) => (),
+        }
+        if owned::clean_candidate(&path, apply, budget, stats)? {
+            continue;
         }
         match retention_tree(&path, budget, stats, 0) {
             Ok(true) => {
@@ -658,7 +673,11 @@ pub fn run() -> i32 {
         "logical_bytes_removed":stats.logical_bytes,"retained_recovery_or_source":stats.retained_recovery_or_source,
         "retained_unknown":stats.retained_unknown,"retained_links_or_busy":stats.retained_links_or_busy,
         "recycle_metadata_retained":stats.recycle_metadata_retained,"failures":stats.failures,"deadline_reached":stats.expired,
-        "partial":stats.expired || stats.retained_unknown > 0 || stats.failures > 0 || stats.retained_links_or_busy > 0,
+        "owned_candidates":stats.owned_candidates,"owned_candidate_logical_bytes":stats.owned_candidate_bytes,
+        "owned_completed":stats.owned_completed,"owned_retained":stats.owned_retained,
+        "owned_finish_failed":stats.owned_finish_failed,"owned_retention_reasons":stats.owned_reasons,
+        "owned_retained_logical_bytes":stats.owned_retained_bytes,"owned_retained_bytes_unmeasured":stats.owned_retained_unmeasured,
+        "partial":stats.expired || stats.retained_unknown > 0 || stats.failures > 0 || stats.retained_links_or_busy > 0 || stats.owned_retained > 0 || stats.owned_finish_failed > 0,
         "elapsed_ms": start.elapsed().as_millis(), "workspace_scan": "not_performed", "e_files_touched":false,
     });
     let log = Path::new(RUNTIME).join("owned-target-runs.jsonl");

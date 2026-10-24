@@ -1,0 +1,72 @@
+{
+  "todo": 3080,
+  "job": "20261024-123649-todo-3080",
+  "source": "6mile/skills",
+  "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+  "tree_sha": "5782ae7deffe5024e15b6e090327385c10f76273",
+  "entries": [
+    {
+      "inventory_id": "github:2e24172100594e6036b2cc464d7bda679bf008c6bbb8cd128e5a92262c691339",
+      "source": "6mile/skills",
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "path": "skills/kidaiangel/document-pdf/SKILL.md",
+      "source_sha256": "38d8559d4899602f82f3560052132aa0c40cfca80203037729756bdb4fb8e0cb",
+      "git_blob": "f6a22ddf88fdc7e7b7603f4c9064cc51bd930ad9",
+      "bytes": 7068,
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/kidaiangel/document-pdf/SKILL.md",
+      "original_reading": {
+        "cohort": "next45",
+        "artifact": "skills-3080-sixmile-next45-evaluation.json",
+        "body_read_complete": false,
+        "body_workflow_read_complete": false,
+        "body_read_by": null,
+        "body_workflow_read_by": null,
+        "masked_value_count": null
+      },
+      "new_reading": {
+        "body_read_complete": true,
+        "body_workflow_read_complete": true,
+        "masked_value_count": 0,
+        "body_read_by": "20261024-123649-todo-3080",
+        "body_workflow_read_by": null,
+        "read_observed_at": "2026-10-24T09:10:10.1525114Z",
+        "time_definition": "Timestamp of the validated source-text observation prepared by the read tool and then displayed to the parent, not an exact model reading start/completion or duration."
+      },
+      "notice_sha256": "79f6d8f5b427252fa3b1c11ecdbdb6bf610b944f7530b4de78f770f38741cfaa",
+      "notice_bytes": 1467,
+      "copy_license_accepted": false,
+      "source_code_executed": false,
+      "central_operations": 0,
+      "use": "PDFの抽出・結合・分割・作成・OCR・フォーム処理を用途別に選ぶ手順",
+      "value": "処理単位とCLI/libraryの選択表は参考になる。権利条件が許す別手順や既存機能の利用自体は除外しない。",
+      "findings": [
+        "frontmatterも個別noticeもProprietaryと明記するため、rootMITから中央への複製許可を補わない。",
+        "例は新規Pythonコード作成を前提にする。新自作はGo/Rustの本人方針を保持し、配布済みPythonの使用一般を禁止しない。",
+        "フォーム/高度機能はforms.md/reference.mdへ委ね、今回それらの実動作は未検証。",
+        "OCRは外部binary/language/data条件、表抽出は認識精度、暗号化/復号は実対象の権限とsecret扱いが別途必要。例示パスワードを実カード/認証情報とみなして参照せず、例を運用値に使わない。"
+      ],
+      "positive_candidate": "具体的なPDF操作を抽出/結合/フォーム等へ分解し、保存済み出典と実結果に沿って条件を決める",
+      "negative_candidate": "コード例やQuick Referenceだけで精度・フォーム互換性・ライセンス受入や実成功を保証する",
+      "original_reading_unchanged": true,
+      "new_candidate_path": false,
+      "support_reading_actors_unchanged": true,
+      "source_reading_receipt": "parent-metadataonly-primary-reading123649.json",
+      "assessment_receipt": "parent-metadataonly-primary-assessment123649.json",
+      "definition": "The parent newly read this exact formerly notice-only primary. Historical child/source/support reading states and actors remain unchanged; this amendment adds a reading state, not a candidate, adoption, grant or execution."
+    }
+  ],
+  "counts": {
+    "amendments": 1,
+    "new_candidate_paths": 0,
+    "raw_primary_added": 1,
+    "workflow_primary_added": 1,
+    "metadata_only_resolved": 1,
+    "masked_workflow_resolved": 0,
+    "new_support_paths": 0
+  },
+  "public_reflected": true,
+  "public_delta_review_pending": true,
+  "new_final_dispositions": 0,
+  "central_operations": 0,
+  "private_evidence_reference_definition": "Receipt names are private parent records, not repository links. No original proprietary body or notice text is reproduced here."
+}

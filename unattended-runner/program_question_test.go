@@ -138,7 +138,7 @@ func TestProgramQuestionExactNativeDrawingAndTaskQualification(t *testing.T) {
 	before, _ := os.ReadFile(p.f.r.TodoPath)
 	proof, err := checkProgramQuestion(context.Background(), p.manifest, p.d)
 	if err != nil || !proof.Validated || !proof.SendAllowed || len(proof.Images) != 2 {
-		t.Fatal("exact native drawing not qualified", err)
+		t.Fatalf("exact native drawing not qualified: %#v", err)
 	}
 	after, _ := os.ReadFile(p.f.r.TodoPath)
 	if string(before) != string(after) || p.f.sends != 0 {
@@ -152,7 +152,7 @@ func TestProgramQuestionRejectsChangedScopeSourceAndEvidence(t *testing.T) {
 			p := newProgramFixture(t)
 			// The successful control exercises the same dependency before mutation.
 			if _, err := checkProgramQuestion(context.Background(), p.manifest, p.d); err != nil {
-				t.Fatal(err)
+				t.Fatalf("positive control: %#v", err)
 			}
 			switch change {
 			case "image":
@@ -227,7 +227,7 @@ func TestProgramQuestionDependencyWaitPreservesReadQualificationAndForbidsSend(t
 	before, _ := os.ReadFile(p.f.r.TodoPath)
 	proof, err := checkProgramQuestion(context.Background(), p.manifest, p.d)
 	if err != nil || !proof.Validated || proof.SendAllowed {
-		t.Fatal("dependency boundary lost", err)
+		t.Fatalf("dependency boundary lost: %#v", err)
 	}
 	after, _ := os.ReadFile(p.f.r.TodoPath)
 	if string(before) != string(after) {

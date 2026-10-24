@@ -15127,7 +15127,8 @@
       },
       "supporting_resources": [
         {
-          "read_by": "20261024-081950-todo-3535",
+          "read_by": null,
+          "scan_by": "20261024-081950-todo-3535",
           "git_blob": "b4acc606f3fa4b36bcfa6d706bcbf9d7378935e2",
           "body_saved": true,
           "path": "agent-skills/web-design/gooey-blob-system/demo/PROMPT.md",
@@ -15288,7 +15289,8 @@
       },
       "supporting_resources": [
         {
-          "read_by": "20261024-081950-todo-3535",
+          "read_by": null,
+          "scan_by": "20261024-081950-todo-3535",
           "git_blob": "410911598dd69ef7d9d3b50073bdcfe2e39d2ef7",
           "body_saved": true,
           "path": "agent-skills/web-design/gsap-scrolltrigger-storytelling/demo/PROMPT.md",
@@ -15574,7 +15576,8 @@
       },
       "supporting_resources": [
         {
-          "read_by": "20261024-081950-todo-3535",
+          "read_by": null,
+          "scan_by": "20261024-081950-todo-3535",
           "git_blob": "0018d15a34a0c63407c0f5d53b017ffc272d81ee",
           "body_saved": true,
           "path": "agent-skills/web-design/high-contrast-skeuomorphic-clean/demo/PROMPT.md",
@@ -15823,7 +15826,7 @@
         "StepWindow.jsx/step-window.js・css/example-steps.jsx/preview-plugin.mjs/shoot.mjsに依存(全て未保存)。取得は拒否済み647件の再取得を認めない。保存済みreferences(全読)から契約を起こす案を先に。未使用helperの移植・削除は義務にしない。",
         "Mac風の窓とmacOSカーソルが固定→対象製品の実OS(Windows優先)で切替。",
         "補助エージェントの直接起動の節→共有ToDoに--spec付きで登録へ。撮影はPlaywright前提→本人Chrome方針。[P-CHR]",
-        "『費用が要るなら本人に確認』→既存契約内の通常利用のみへ。Fil固有の文言/画像は複製しない。description(863字)を短縮。[P-IMG]"
+        "新費用は禁止し、許可済みの無料利用・自作・既存契約内の通常利用は元依頼の範囲で進める。Fil固有の文言/画像は複製しない。description(863字)を短縮。[P-IMG]"
       ],
       "individual_rights_review": {
         "third_party_assets_or_support_rights_accepted": false,
@@ -16390,7 +16393,8 @@
       },
       "supporting_resources": [
         {
-          "read_by": "20261024-081950-todo-3535",
+          "read_by": null,
+          "scan_by": "20261024-081950-todo-3535",
           "git_blob": "72bd0a681c023100d0dd2184a6243f2642c105d4",
           "body_saved": true,
           "path": "agent-skills/web-design/light-mode-paper-technical/demo/PROMPT.md",
@@ -16633,7 +16637,8 @@
       },
       "supporting_resources": [
         {
-          "read_by": "20261024-081950-todo-3535",
+          "read_by": null,
+          "scan_by": "20261024-081950-todo-3535",
           "git_blob": "eb062cde353dbda144f6cd2edda3d690483a4c59",
           "body_saved": true,
           "path": "agent-skills/web-design/marquee-loop/demo/PROMPT.md",
@@ -16831,7 +16836,8 @@
       },
       "supporting_resources": [
         {
-          "read_by": "20261024-081950-todo-3535",
+          "read_by": null,
+          "scan_by": "20261024-081950-todo-3535",
           "git_blob": "7b78ad44268a24cc3247d9f27d875e4c563d1e34",
           "body_saved": true,
           "path": "agent-skills/web-design/masked-reveal/demo/PROMPT.md",
@@ -17107,7 +17113,8 @@
       },
       "supporting_resources": [
         {
-          "read_by": "20261024-081950-todo-3535",
+          "read_by": null,
+          "scan_by": "20261024-081950-todo-3535",
           "git_blob": "65b0ab1c36b9a14cd2963858aca646b36fde0ffc",
           "body_saved": true,
           "path": "agent-skills/web-design/mesh-gradient-dark-blue-clean/demo/PROMPT.md",
@@ -17220,7 +17227,8 @@
       },
       "supporting_resources": [
         {
-          "read_by": "20261024-081950-todo-3535",
+          "read_by": null,
+          "scan_by": "20261024-081950-todo-3535",
           "git_blob": "f0fa0fcb59d2954d70187b50f13ab757333e55b5",
           "body_saved": true,
           "path": "agent-skills/web-design/nested-container-clean-agency/demo/PROMPT.md",
@@ -17381,7 +17389,8 @@
       },
       "supporting_resources": [
         {
-          "read_by": "20261024-081950-todo-3535",
+          "read_by": null,
+          "scan_by": "20261024-081950-todo-3535",
           "git_blob": "49526aa912b8e326c85bf0be31cfb183297cdeea",
           "body_saved": true,
           "path": "agent-skills/web-design/nested-container-frames/demo/PROMPT.md",
@@ -17865,7 +17874,8 @@
       },
       "supporting_resources": [
         {
-          "read_by": "20261024-081950-todo-3535",
+          "read_by": null,
+          "scan_by": "20261024-081950-todo-3535",
           "git_blob": "e5e30de6daa6f7dc8282cf8303655ae30eafd293",
           "body_saved": true,
           "path": "agent-skills/web-design/orange-clean-paper-saas/demo/PROMPT.md",
@@ -18318,7 +18328,8 @@
           "body_read": false
         },
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "bee822e438964903b4a741a56d2488ca8cf7f89c",
           "body_saved": true,
           "path": "agent-skills/web-design/product-proof-saas/demo/PROMPT.md",
@@ -18381,7 +18392,7 @@
       ],
       "individual_rights_review": {
         "third_party_assets_or_support_rights_accepted": false,
-        "unconfirmed": "demo/PROMPT.md (phrase scan) recreates Neuform page GOLABS; assets 16 images (11 blobs shared with other entries), source-preview.jpg, index.html, source.json unsaved, third-party rights unconfirmed"
+        "unconfirmed": "demo/PROMPT.md (phrase scan) recreates Neuform page GOLABS; assets 16 images (13 image occurrences share blobs with other entries in the fixed final50 scope), source-preview.jpg, index.html, source.json unsaved, third-party rights unconfirmed"
       },
       "positive_candidate": "固定ヘッダー背後に高さ12%の上端ぼかしを置く",
       "negative_candidate": "単色背景に適用/低性能端末へ常時64px8層",
@@ -18409,7 +18420,8 @@
       },
       "supporting_resources": [
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "974eb856507664e2684e93318453ac1f35f17020",
           "body_saved": true,
           "path": "agent-skills/web-design/progressive-blur/demo/PROMPT.md",
@@ -18892,7 +18904,8 @@
           "body_read": false
         },
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "e29d8057be1a8fab1bef1f3525d0f1ca8586b5c8",
           "body_saved": true,
           "path": "agent-skills/web-design/scroll-progress-timeline/demo/PROMPT.md",
@@ -19007,7 +19020,8 @@
           "body_read": false
         },
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "e1ef1c81bf65c4b2e5a67ad8c9846b7a66bb6140",
           "body_saved": true,
           "path": "agent-skills/web-design/scroll-scrubbed-visual-sequence/demo/PROMPT.md",
@@ -19121,7 +19135,8 @@
           "body_read": false
         },
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "e365ab693c5a14b0d083270d7a6b98bc637e5068",
           "body_saved": true,
           "path": "agent-skills/web-design/scroll-scrubbed-word-reveal/demo/PROMPT.md",
@@ -19179,7 +19194,7 @@
       "candidate_disposition": "adapt_with_corrections_pending_rights_and_target",
       "required_changes": [
         "Replace L33 gate with: new-spend ban + existing-contract use + Prd deploy by the agent",
-        "Video generation: no API/new contract; existing contracted web tools only",
+        "動画は元依頼の範囲で許諾済み素材・自作・利用可能な既存サービスから選ぶ。新費用とAI APIキー利用は禁止し、既存契約だけに手法を限定しない。通常の許可済み送信を一律に禁止しない。",
         "Replace L52 archive and upload-approval with: no secrets/customer data sent externally",
         "PowerShell-form ffmpeg; check demo html/mp4/svg/webp before import (unsaved)"
       ],
@@ -19240,7 +19255,8 @@
           "body_read": false
         },
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "4aa554d461dd2755ac101f156bd9b238ae19fe05",
           "body_saved": true,
           "path": "agent-skills/web-design/scroll-world-storytelling/demo/PROMPT.md",
@@ -19777,7 +19793,8 @@
       },
       "supporting_resources": [
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "d98b66a0ecb328c2b21a15223f0549e2cece9970",
           "body_saved": true,
           "path": "agent-skills/web-design/solar-duotone-bold/demo/PROMPT.md",
@@ -19940,7 +19957,8 @@
       },
       "supporting_resources": [
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "e859de5c442cb4e84d842899cef4beab53c989e6",
           "body_saved": true,
           "path": "agent-skills/web-design/split-layout-technical/demo/PROMPT.md",
@@ -20128,7 +20146,8 @@
       },
       "supporting_resources": [
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "14b3ef298297e72ba7abcc5884044a08f13ca2a4",
           "body_saved": true,
           "path": "agent-skills/web-design/staggered-word-reveal/demo/PROMPT.md",
@@ -20231,7 +20250,8 @@
           "body_read": true
         },
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "6e75b48b6614e82d990c7311e2491a40b30b9236",
           "body_saved": true,
           "path": "agent-skills/web-design/tailwindcss/demo/PROMPT.md",
@@ -20321,7 +20341,8 @@
       },
       "supporting_resources": [
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "ad26b4a5c12170ec3f2dc19f35c1126a8ebe2650",
           "body_saved": true,
           "path": "agent-skills/web-design/tech-green-dark-mode-modern/demo/PROMPT.md",
@@ -20412,7 +20433,8 @@
       },
       "supporting_resources": [
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "a9796cf8bb8926e98b735e71058f89c70ba47db7",
           "body_saved": true,
           "path": "agent-skills/web-design/technical-wireframe-info-layout/demo/PROMPT.md",
@@ -20631,7 +20653,8 @@
           "body_read": false
         },
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "3b90ba55f3d47a6bd1b4f4c541291230a4dd99e0",
           "body_saved": true,
           "path": "agent-skills/web-design/threejs-landscape/demo/PROMPT.md",
@@ -20747,7 +20770,8 @@
           "body_read": false
         },
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "7ff0414ad5bd3a5fd4b1d856e463834d945aed4d",
           "body_saved": true,
           "path": "agent-skills/web-design/threejs-towers/demo/PROMPT.md",
@@ -20819,7 +20843,7 @@
         "Set age=0 at strike and age+=dt in step; cap the flash with Math.min(0.18,...)",
         "Schedule thunder and flash on one clock (AudioContext time)",
         "Clamp dt or use 1-exp(-dt/tau); define TOTAL and the interpolation",
-        "Replace Python with Go/JS/pseudocode; audio generation only via existing contracts"
+        "新規PythonはGoまたは説明用の擬似コードへ。音は許諾済み素材・自作・既存契約内の生成から選び、新費用は禁止。素材や手法を既存契約だけへ一律限定しない。"
       ],
       "individual_rights_review": {
         "third_party_assets_or_support_rights_accepted": false,
@@ -20863,7 +20887,8 @@
           "body_read": false
         },
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "ea2a06e2deb6a12d176452cdbbfb8d33735090bf",
           "body_saved": true,
           "path": "agent-skills/web-design/threejs-weather/demo/PROMPT.md",
@@ -20977,7 +21002,8 @@
           "body_read": true
         },
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "8ce29cffb35c999970cfc1b1e297f32ec10aaf47",
           "body_saved": true,
           "path": "agent-skills/web-design/threejs/demo/PROMPT.md",
@@ -21079,7 +21105,8 @@
           "body_read": true
         },
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "94e87f9026d4e2cc917a5bc28922df81eeab1f0a",
           "body_saved": true,
           "path": "agent-skills/web-design/unicorn-studio/demo/PROMPT.md",
@@ -21181,7 +21208,8 @@
           "body_read": true
         },
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "5221033fc2bfc48e2d251a1bdaaf17566f633c39",
           "body_saved": true,
           "path": "agent-skills/web-design/vantajs/demo/PROMPT.md",
@@ -21273,7 +21301,8 @@
       },
       "supporting_resources": [
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "2ec197f2b5eecedd74339486af81f5830444421b",
           "body_saved": true,
           "path": "agent-skills/web-design/webgl-3d-object/demo/PROMPT.md",
@@ -21471,7 +21500,8 @@
           "body_read": true
         },
         {
-          "read_by": "20261024-082550-todo-3536",
+          "read_by": null,
+          "scan_by": "20261024-082550-todo-3536",
           "git_blob": "586fcf79cc4c6ec7983b2463919d81ad9150faf2",
           "body_saved": true,
           "path": "agent-skills/web-design/webgl-landing-steering/demo/PROMPT.md",
@@ -21744,7 +21774,18 @@
     "receiver_job": "20261024-041741-todo-3080",
     "preserved_at": "2026-10-23T19:19:14.7922032Z"
   },
+  "policy_tags": {
+    "P-IMG": "UI・見た目の実装は、同じ対象の具体画像に本人が明示回答した後。内部レビューや採点を画像回答の代用にしない。",
+    "P-CHR": "ブラウザの確認・撮影は本人のログイン済みChromeを使い、自分のタブを工程後に閉じる。使い捨てプロフィール等の例外を足さない。",
+    "P-ASK": "既存の依頼・回答・資料で分かることを聞き直さず、本人だけが決める未指定要件・費用・権利・顧客との約束だけを質問する。",
+    "P-VER": "版の互換性・実描画は未確認。作者環境の測定を、この機器の成功や本人の方針と扱わない。"
+  },
   "parent_policy_corrections": {
+    "pricing-page": "子の追加支出禁止を価格設計や許可済みの決済操作全体の禁止へ広げた文言を親が訂正した。実値と元の依頼範囲を保持する。",
+    "threejs-towers": "子の既存契約だけという制限を訂正。許諾済み素材・自作・既存契約内の生成を選べ、新費用の禁止を保持する。",
+    "threejs-weather": "towersと同じ契約限定を訂正。新規Pythonは禁止だが、音の手法を既存契約だけに制限しない。",
+    "scroll-world-storytelling": "新費用とAI APIキーの禁止を、無料利用・自作・許可済み送信全体の禁止へ広げない。元の対象と画像回答・Prd条件を保持する。",
+    "html-demo": "既存契約内だけという親未訂正の限定も修正し、無料利用と自作を一律に除外しない。",
     "workflow-progress-screenshots": "ログイン不要ならheadless自由というChrome例外は加えない。既存のChrome利用とタブ後片付けを保持。実装中画像は事前の画像回答の代用にしない。未使用helperの全面監査は必須化しない。",
     "workflow-score-to-target": "内部の比較・採点や品質保証の別モデルレビューを本人の明示依頼時だけに制限する新禁止は加えない。採点を本人の同対象画像回答や品質/AI判定の証明にしない。追加テストは実害と影響範囲で選ぶ。",
     "workflow-threads-manager": "ホスト固有tool不在だけで有用な担当/依存/状態/再開の原則を全除外しない。AI提案を本人承認へ昇格しない一方、正規APIで照合した本人返信は担当/履歴を経由しても対象・出所とともに引き継ぐ。",

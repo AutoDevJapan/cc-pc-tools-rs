@@ -199,12 +199,12 @@ func TestDuplicateExclusionsKeepCanonicalAdoptionsAndSeparateLedgerRows(t *testi
 		case "exact_body_duplicate_of_existing_catalog_adoption":
 			ledgerDuplicates = append(ledgerDuplicates, row)
 		case "individual_proprietary_permission_not_evidenced":
-			// Validated against its own notice and receipt, separately below.
+			// Validated against its notice in sixmile_assessment_test.go.
 		default:
 			t.Fatal("unknown exclusion type must not be treated as a duplicate")
 		}
 	}
-	if len(ledger.Entries) != ledger.Installed+ledger.Integrated || ledger.Count != len(ledger.Excluded) || len(decisions.Entries) < 7 || !reflect.DeepEqual(decisions.Entries, ledgerDuplicates) {
+	if len(ledger.Entries) != ledger.Installed+ledger.Integrated || ledger.Count != 8 || ledger.Count != len(ledger.Excluded) || len(decisions.Entries) != 7 || !reflect.DeepEqual(decisions.Entries, ledgerDuplicates) {
 		t.Fatal("exclusion receipt differs from ledger or was counted as an adoption")
 	}
 	if err := validateDuplicateDecisions(decisions.Entries, ledger.Entries); err != nil {

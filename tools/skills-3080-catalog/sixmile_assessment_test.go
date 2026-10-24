@@ -193,7 +193,7 @@ func validateIndividualRights(rows []individualRightsDecision, a sixmileAssessme
 }
 
 func TestSixmilePartialAssessmentKeepsFixedReadingAndUnknownSupportDistinct(t *testing.T) {
-	for _, kind := range []string{"valid", "wrong_body", "unread_body", "unknown_bytes", "missing_execution", "forged_support", "adoption_flag", "unfinished_count"} {
+	for _, kind := range []string{"valid", "wrong_body", "unread_body", "unknown_bytes", "missing_execution", "forged_support", "adoption_flag", "unfinished_count", "duplicate_ledger_row", "excluded_too_many", "excluded_too_few"} {
 		t.Run(kind, func(t *testing.T) {
 			var a sixmileAssessment
 			loadPublicReceipt(t, "skills-3080-sixmile-partial-evaluation.json", &a)
@@ -217,6 +217,22 @@ func TestSixmilePartialAssessmentKeepsFixedReadingAndUnknownSupportDistinct(t *t
 				a.Entries[0].Installed = true
 			case "unfinished_count":
 				a.Unread--
+			case "duplicate_ledger_row":
+				found := false
+				for _, row := range l.Excluded {
+					if row.Source == a.Source {
+						l.Excluded = append(l.Excluded, row)
+						found = true
+						break
+					}
+				}
+				if !found {
+					t.Fatal("fixture has no sixmile exclusion to duplicate")
+				}
+			case "excluded_too_many":
+				a.Excluded++
+			case "excluded_too_few":
+				a.Excluded--
 			}
 			if err := validateSixmileAssessment(a, append(l.Entries, l.Excluded...)); (err != nil) != (kind != "valid") {
 				t.Fatalf("%s: %v", kind, err)
@@ -226,7 +242,7 @@ func TestSixmilePartialAssessmentKeepsFixedReadingAndUnknownSupportDistinct(t *t
 }
 
 func TestIndividualRightsExclusionDoesNotBecomeADuplicateOrGrantPermission(t *testing.T) {
-	for _, kind := range []string{"valid", "duplicate_type", "forged_notice", "unread_notice", "claimed_copy", "missing_copy_status"} {
+	for _, kind := range []string{"valid", "duplicate_type", "forged_notice", "unread_notice", "claimed_copy", "missing_copy_status", "claimed_copy_license"} {
 		t.Run(kind, func(t *testing.T) {
 			var a sixmileAssessment
 			loadPublicReceipt(t, "skills-3080-sixmile-partial-evaluation.json", &a)
@@ -246,6 +262,9 @@ func TestIndividualRightsExclusionDoesNotBecomeADuplicateOrGrantPermission(t *te
 				d.Entries[0].Copied = &v
 			case "missing_copy_status":
 				d.Entries[0].CopyRights = nil
+			case "claimed_copy_license":
+				v := true
+				d.Entries[0].CopyRights = &v
 			}
 			if err := validateIndividualRights(d.Entries, a); (err != nil) != (kind != "valid") {
 				t.Fatalf("%s: %v", kind, err)
@@ -256,16 +275,16 @@ func TestIndividualRightsExclusionDoesNotBecomeADuplicateOrGrantPermission(t *te
 
 func TestIndividualRightsReceiptMatchesTheSeparateLiveLedgerRow(t *testing.T) {
 	var decisions struct {
-		Entries []individualRightsDecision `json:"entries"`
+		Entries []map[string]any `json:"entries"`
 	}
 	var ledger struct {
-		Excluded []individualRightsDecision `json:"excluded_entries"`
+		Excluded []map[string]any `json:"excluded_entries"`
 	}
 	loadPublicReceipt(t, "skills-3080-rights-decisions.json", &decisions)
 	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
-	var rights []individualRightsDecision
+	var rights []map[string]any
 	for _, d := range ledger.Excluded {
-		if d.Type == "individual_proprietary_permission_not_evidenced" {
+		if d["exclusion_type"] == "individual_proprietary_permission_not_evidenced" {
 			rights = append(rights, d)
 		}
 	}

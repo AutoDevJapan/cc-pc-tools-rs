@@ -1,7 +1,7 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-23T23:16:22.5972549+00:00",
+  "observed_at": "2026-10-24T02:15:45.2234244+00:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
   "phase_b": "全16資料を継続。PR421は3553Must0と同f8cの全CI終了/CLEAN後に通常merge済み。新61評価と補足はPR421の受入外の追加差分。6mile重複1は旧7に既記録なので再加算せず、新しい個別権利除外1のみ追加。関連Go test/vetは成功し、今回の独立レビュー/CI/mergeと有用候補の実配置を追う。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
@@ -354,7 +354,7 @@
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "自分の28配置について限定受入済み。現在の全ディスクが配置時と同一という保証とは分ける。",
-    "not_semantically_disposed_occurrences": 73182,
+    "not_semantically_disposed_occurrences": 73181,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
@@ -612,7 +612,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-24T01:19:12.4283789+00:00",
+  "recorded_at": "2026-10-24T02:16:44.1521756+00:00",
   "total_skill_named_body_read_definition": "歴史上の10資料固定137pathは変更せず、別枠mizchi76/MengTo177/6mile11を含む総401をall_fulltext_primary_paths_including_partial_sourcesで数える。本文pathの読了と実導入を分ける。",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -980,7 +980,7 @@
     "new_body_copied": 0,
     "count": 1,
     "review_pending": true,
-    "definition": "重複8と区別した、個別許諾根拠不在の除外1",
+    "definition": "重複7と区別した、個別許諾根拠不在の除外1",
     "source": "skills-3080-rights-decisions.json"
   },
   "current_sixmile_delta": {
@@ -989,6 +989,7 @@
     "independent_review_pending": true,
     "central_writes": 0,
     "new_pool_remaining_after_selection": 844,
+    "new_pool_remaining_definition": "864 metadata candidates minus the first ten notice-selected bodies minus ten reserved for 3554; the earlier duplicate body is outside this notice-selected pool. This is not 864 individually accepted licenses.",
     "reported_original_pool_unselected": 338,
     "original_pool_predicate_unreconstructed": true,
     "not_adoption_cap": true,

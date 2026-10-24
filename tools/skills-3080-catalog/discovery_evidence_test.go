@@ -12,7 +12,7 @@ type discoveryEvidence struct {
 		Depth       int `json:"depth"`
 		Directories int `json:"directories"`
 		Semantics   struct {
-			Binary bool `json:"source_binary_equivalence_proven"`
+			Binary *bool `json:"source_binary_equivalence_proven"`
 		} `json:"directory_count_semantics"`
 	} `json:"source_limits"`
 	NonDot      float64 `json:"non_dot_directory_count"`
@@ -25,7 +25,7 @@ type discoveryEvidence struct {
 	Resolved struct {
 		Supported     bool   `json:"explanation_of_scan_limit_supported"`
 		Scope         string `json:"explanation_support_scope"`
-		WarningLinked bool   `json:"warning_cause_linked"`
+		WarningLinked *bool  `json:"warning_cause_linked"`
 	} `json:"resolved"`
 }
 
@@ -45,14 +45,14 @@ func validateDiscoveryProjection(e discoveryEvidence) error {
 	if boundary <= 0 || e.Measurement.Comparable != sum || e.Measurement.NonDot != sum || e.NonDot != sum || e.Measurement.Former+boundary != sum || sum <= float64(e.Source.Directories) {
 		return errors.New("parent depth boundary was excluded from the counted child directories")
 	}
-	if !e.Resolved.Supported || e.Resolved.Scope == "" || e.Resolved.WarningLinked || e.Source.Semantics.Binary {
+	if !e.Resolved.Supported || e.Resolved.Scope == "" || e.Resolved.WarningLinked == nil || *e.Resolved.WarningLinked || e.Source.Semantics.Binary == nil || *e.Source.Semantics.Binary {
 		return errors.New("source/count consistency was promoted into unproven warning or binary causation")
 	}
 	return nil
 }
 
 func TestDiscoveryDepthProjectionKeepsBoundaryAndUnprovenCauseSeparate(t *testing.T) {
-	for _, kind := range []string{"valid", "exclude_boundary", "drop_root", "binary_equivalence", "warning_cause"} {
+	for _, kind := range []string{"valid", "exclude_boundary", "drop_root", "binary_equivalence", "warning_cause", "missing_binary_status", "missing_warning_status"} {
 		t.Run(kind, func(t *testing.T) {
 			var e discoveryEvidence
 			loadPublicReceipt(t, "skills-3080-discovery-limit-evidence.json", &e)
@@ -62,9 +62,15 @@ func TestDiscoveryDepthProjectionKeepsBoundaryAndUnprovenCauseSeparate(t *testin
 			case "drop_root":
 				e.Measurement.ByDepth["0"] = 0
 			case "binary_equivalence":
-				e.Source.Semantics.Binary = true
+				v := true
+				e.Source.Semantics.Binary = &v
 			case "warning_cause":
-				e.Resolved.WarningLinked = true
+				v := true
+				e.Resolved.WarningLinked = &v
+			case "missing_binary_status":
+				e.Source.Semantics.Binary = nil
+			case "missing_warning_status":
+				e.Resolved.WarningLinked = nil
 			}
 			if err := validateDiscoveryProjection(e); (err != nil) != (kind != "valid") {
 				t.Fatalf("%s: %v", kind, err)

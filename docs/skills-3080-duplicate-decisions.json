@@ -1,7 +1,7 @@
 {
   "scope": "旧7重複の全行を不変保持。6mileの今回の同一本文1出現はこの既存7に含まれ、再加算しない。新しい個別権利除外1は別receipt。5405 metadata重複全体の判定ではない。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
-  "proposed_pending_if_reviewed": 73181,
+  "proposed_pending_if_reviewed": 73184,
   "entries": [
     {
       "source_path": "skills/obsidian-cli/SKILL.md",
@@ -186,13 +186,17 @@
       "decision_scope": "本文SHA/bytesが既存採用の元本文と一致する別出現だけを対象から外す親の判定。元の採用と出典を保持し、この複製の許諾や新規配置を承認しない。"
     }
   ],
-  "job": "20261024-093456-todo-3080",
-  "public_pending": 73181,
+  "job": "20261024-012344-todo-3080",
+  "public_pending": 73184,
   "no_source_code_executed": true,
   "todo": 3080,
-  "recorded_at": "2026-10-24T01:12:56.3802446+00:00",
+  "recorded_at": "2026-10-23T17:38:36.7953115Z",
   "proposed_excluded": 7,
   "public_excluded": 7,
   "review_pending": true,
+  "amended_at": "2026-10-24T02:15:45.2234244+00:00",
+  "amendment_job": "20261024-093456-todo-3080",
+  "historical_snapshot_definition": "job/recorded_at/public_pending/proposed_pending_if_reviewed preserve the original duplicate receipt: installed28 + integrated1 + excluded7 + pending73184 = 73220. They are not current live-ledger counts.",
+  "live_pending": 73181,
   "public_excluded_definition": "This receipt contains the original seven duplicate exclusions. The live total eight additionally includes one separate individual-rights exclusion."
 }

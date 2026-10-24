@@ -77,7 +77,7 @@ func skillsModel(model string) string {
 	parts := strings.Split(model, "/")
 	last := parts[len(parts)-1]
 	switch last {
-	case "gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna", "claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5":
+	case "gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna", "claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5", "gemini-3.1-pro":
 		return last
 	}
 	return ""
@@ -97,7 +97,20 @@ func skillsModelIdentifier(model string) bool {
 		return false
 	}
 	prefix := parts[0]
-	return prefix == "openai" || prefix == "anthropic" || prefix == "main" || (len(prefix) == 7 && prefix[0] == 'p' && skillsAccountIdentifier.MatchString(prefix[1:]))
+	return prefix == "openai" || prefix == "anthropic" || prefix == "google-antigravity" || prefix == "main" || (len(prefix) == 7 && prefix[0] == 'p' && skillsAccountIdentifier.MatchString(prefix[1:]))
+}
+
+// Keep the owner's max requirement for GPT/Claude. The observed existing
+// Antigravity catalogue offers Gemini 3.1 Pro only low/high; high is its actual
+// highest advertised setting, and is never reported as max.
+func skillsReviewEffort(model string) string {
+	if skillsModel(model) == "gemini-3.1-pro" {
+		return "high"
+	}
+	if skillsModel(model) != "" {
+		return "max"
+	}
+	return ""
 }
 func skillsReviewAccepted(received skillsReceived, manifestSHA, writerModel string) bool {
 	if !strings.Contains(string(received.Spec), "SKILLS3080_MANIFEST_SHA256 "+manifestSHA) || skillsModel(writerModel) == "" || len(received.Native) == 0 {
@@ -107,8 +120,12 @@ func skillsReviewAccepted(received skillsReceived, manifestSHA, writerModel stri
 	if requested == "" || requested == skillsModel(writerModel) {
 		return false
 	}
+	wantEffort := skillsReviewEffort(requested)
+	if received.Metadata["effort"] != wantEffort {
+		return false
+	}
 	for _, native := range received.Native {
-		if skillsModel(str(native["model"])) != requested || native["effort"] != "max" {
+		if skillsModel(str(native["model"])) != requested || native["effort"] != wantEffort {
 			return false
 		}
 	}

@@ -46,8 +46,12 @@ func skillsCodeReviewAccepted(received skillsReceived, head string) bool {
 	if model == "" || model == "gpt-6.1-sol" {
 		return false
 	}
+	wantEffort := skillsReviewEffort(model)
+	if received.Metadata["effort"] != wantEffort {
+		return false
+	}
 	for _, native := range received.Native {
-		if skillsModel(str(native["model"])) != model || native["effort"] != "max" {
+		if skillsModel(str(native["model"])) != model || native["effort"] != wantEffort {
 			return false
 		}
 	}

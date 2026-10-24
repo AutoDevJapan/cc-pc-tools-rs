@@ -116,7 +116,10 @@ source_headとreviewed_headが公開mainの祖先で、reviewされたguardの�
 かつmodified=falseであることを確認する。
 
 コードレビューの登録specは `SKILLS3080_IMPLEMENTATION_REVIEW <固定head>`、
-最終応答は次の1行を含む。actual native modelはauthorと別で、effortはmaxを要求する。
+最終応答は次の1行を含む。actual native modelはauthorと別にする。
+GPT/Claudeにはmaxを要求する。既存OAuthのGoogle Antigravityが返した実catalogでは
+Gemini 3.1 Proはlow/highだけを提供しており、このモデルにはhighを要求する。
+指定・jobの記録・対応native contextの実値を一致させ、highをmaxだったと報告しない。
 
 ```text
 SKILLS3080_CODE_ACCEPTANCE {"domain":"skills-3080-code-review-v1","head":"<固定head>","accepted":true,"must":0}

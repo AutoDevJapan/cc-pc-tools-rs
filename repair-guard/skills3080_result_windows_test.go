@@ -95,7 +95,7 @@ func TestSkills3080NativeProjection(t *testing.T) {
 }
 func TestSkills3080ReviewAcceptance(t *testing.T) {
 	sha := strings.Repeat("a", 64)
-	accepted := skillsReceived{Spec: []byte("SKILLS3080_MANIFEST_SHA256 " + sha), Metadata: object{"model": "anthropic/claude-sonnet-5-5"}, Native: []object{{"model": "claude-sonnet-5-5", "effort": "max"}}, Body: []byte(`状態: 完了` + "\nSKILLS3080_ACCEPTANCE " + `{"domain":"skills-3080-review-v1","manifest_sha256":"` + sha + `","accepted":true,"must":0}`)}
+	accepted := skillsReceived{Spec: []byte("SKILLS3080_MANIFEST_SHA256 " + sha), Metadata: object{"model": "anthropic/claude-sonnet-5-5", "effort": "max"}, Native: []object{{"model": "claude-sonnet-5-5", "effort": "max"}}, Body: []byte(`状態: 完了` + "\nSKILLS3080_ACCEPTANCE " + `{"domain":"skills-3080-review-v1","manifest_sha256":"` + sha + `","accepted":true,"must":0}`)}
 	if !skillsReviewAccepted(accepted, sha, "gpt-6.1-sol") {
 		t.Fatal("accepted exact review rejected")
 	}
@@ -161,7 +161,7 @@ func TestSkills3080SourcesAndCodeAcceptance(t *testing.T) {
 		t.Fatal("missing preserved license accepted")
 	}
 	head := strings.Repeat("b", 40)
-	review := skillsReceived{Spec: []byte("SKILLS3080_IMPLEMENTATION_REVIEW " + head), Metadata: object{"model": "anthropic/claude-sonnet-5-5"}, Native: []object{{"model": "claude-sonnet-5-5", "effort": "max"}}, Body: []byte("SKILLS3080_CODE_ACCEPTANCE " + `{"domain":"skills-3080-code-review-v1","head":"` + head + `","accepted":true,"must":0}`)}
+	review := skillsReceived{Spec: []byte("SKILLS3080_IMPLEMENTATION_REVIEW " + head), Metadata: object{"model": "anthropic/claude-sonnet-5-5", "effort": "max"}, Native: []object{{"model": "claude-sonnet-5-5", "effort": "max"}}, Body: []byte("SKILLS3080_CODE_ACCEPTANCE " + `{"domain":"skills-3080-code-review-v1","head":"` + head + `","accepted":true,"must":0}`)}
 	if !skillsCodeReviewAccepted(review, head) {
 		t.Fatal("code acceptance positive rejected")
 	}
@@ -210,5 +210,25 @@ func TestSkills3080RetainsOwnerStopsAndBoundedIdentifiers(t *testing.T) {
 		if skillsModelIdentifier(model) {
 			t.Fatal("unbounded metadata admitted")
 		}
+	}
+}
+
+func TestSkills3080AlternativeOAuthReviewKeepsActualEffort(t *testing.T) {
+	head := strings.Repeat("c", 40)
+	r := skillsReceived{Spec: []byte("SKILLS3080_IMPLEMENTATION_REVIEW " + head), Metadata: object{"model": "google-antigravity/gemini-3.1-pro", "effort": "high"}, Native: []object{{"model": "google-antigravity/gemini-3.1-pro", "effort": "high"}}, Body: []byte("SKILLS3080_CODE_ACCEPTANCE " + `{"domain":"skills-3080-code-review-v1","head":"` + head + `","accepted":true,"must":0}`)}
+	if !skillsModelIdentifier(str(r.Metadata["model"])) || !skillsCodeReviewAccepted(r, head) {
+		t.Fatal("existing OAuth model's highest actual effort rejected")
+	}
+	r.Metadata["effort"] = "max"
+	if skillsCodeReviewAccepted(r, head) {
+		t.Fatal("high misreported as max")
+	}
+	r.Metadata["effort"] = "high"
+	r.Native = []object{{"model": "google-antigravity/gemini-3.1-pro", "effort": "low"}}
+	if skillsCodeReviewAccepted(r, head) {
+		t.Fatal("lower effort accepted")
+	}
+	if skillsReviewEffort("claude-sonnet-5-5") != "max" || skillsReviewEffort("gpt-6-astra") != "max" {
+		t.Fatal("owner max requirement changed")
 	}
 }

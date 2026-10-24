@@ -154,6 +154,9 @@ func requested3650Access(liveIdentity bool) requestedResumeAccess {
 			if err != nil || job["id"] != originalJob || num(job["todo_id"]) != 3549 || job["project"] != "x-bookmarks" || !hasJob(row, originalJob) {
 				return false
 			}
+			if _, err := os.Lstat("D:/CC/Tools/x-bookmarks/.git"); !os.IsNotExist(err) {
+				return false
+			}
 			path := "D:/CC/Tools/x-bookmarks/x-bookmarks-daily.exe"
 			if legacyMatch(path) || !currentPlain(path, false) {
 				return false
@@ -201,12 +204,47 @@ func requestedResumeReceipt(db object, task int) object {
 	if !ok {
 		return failure
 	}
-	return object{"domain": "current-product-succession-v1", "verified": true,
+	receipt := object{"domain": "current-product-succession-v1", "verified": true,
 		"origin_todo_id": 3638, "actor_todo_id": 3650, "todo_id": task, "project": p.project,
 		"registered_path_sha256": rootSHA, "spec_path_sha256": specSHA, "spec_sha256": p.specSHA,
 		"source_kind": "native_user", "source_session": resume3650Native.Session,
 		"source_event_sha256": resume3650Native.MessageSHA, "source_at": resume3650Native.At,
 		"original_registry_recovered": false}
+	if task == 1626 {
+		if checkpoint := requested1626Checkpoint(db); checkpoint != nil {
+			receipt["workspace_checkpoint"] = checkpoint
+		}
+	}
+	return receipt
+}
+
+func requested1626OriginalWorkspace(db object, path string) bool {
+	if !within(gameTree, path) || legacyMatch(path) || !currentPlain(gameTree, true) || !sourceOriginVerified(gameTree, "autodevjapan/phosgaea-vol1") {
+		return false
+	}
+	row := itemAt(db, 1626)
+	saved := obj(row["scheduler"])
+	if workspace := str(saved["worktree"]); workspace != "" && !same(workspace, gameTree) {
+		return false
+	}
+	job, err := readObject("D:/CC/Tools/codex-jobs/jobs/"+gameJob+"/job.json", 4<<20)
+	if err != nil {
+		return false
+	}
+	common, ok := currentGit(gameTree, "rev-parse", "--path-format=absolute", "--git-common-dir")
+	baseCommon, baseOK := currentGit(gameRoot, "rev-parse", "--path-format=absolute", "--git-common-dir")
+	branch, branchOK := currentGit(gameTree, "branch", "--show-current")
+	if !ok || !baseOK || !branchOK || branch == "" || !same(common, baseCommon) || !same(common, str(obj(job["work_owner"])["git_common"])) {
+		return false
+	}
+	// The original work predates scheduler branch naming. Retain its actual
+	// branch rather than switching it. Any already-saved branch remains an
+	// explicit prerequisite; normal workspace preparation records/checks it.
+	if expected := str(saved["branch"]); expected != "" && expected != branch {
+		return false
+	}
+	target, err := physical(path)
+	return err == nil && within(gameTree, target) && currentNoReparse(path)
 }
 
 func requestedResumePathAllowed(path string) bool {
@@ -215,7 +253,7 @@ func requestedResumePathAllowed(path string) bool {
 	var candidate *currentProduct
 	for _, p := range requested3650Products {
 		workspaceTask, workspace := currentSubworkTaskInWorkspace(path, p.root+"-wt")
-		if same(path, p.spec) || same(path, p.root) || (p.task != 3549 && within(p.root, path)) || (workspace && workspaceTask == p.task) {
+		if same(path, p.spec) || (p.task != 3623 && same(path, p.root)) || (p.task != 3549 && p.task != 3623 && within(p.root, path)) || (workspace && workspaceTask == p.task) {
 			copy := p
 			candidate = &copy
 			break
@@ -232,7 +270,17 @@ func requestedResumePathAllowed(path string) bool {
 	if same(path, p.spec) || same(path, p.root) {
 		return true
 	}
+	if p.task == 1626 && within(gameTree, path) {
+		return requested1626OriginalWorkspace(db, path)
+	}
 	if p.task != 3549 {
+		workspace := currentSubworkWorkspacePath(p.root, p.task, str(itemAt(db, p.task)["title"]))
+		if same(path, workspace) {
+			container := filepath.Dir(workspace)
+			if _, e := os.Lstat(container); os.IsNotExist(e) {
+				return currentPlain(filepath.Dir(container), true) && !legacyMatch(container)
+			}
+		}
 		return currentProductPath(path, p.root, p.repository, strconv.Itoa(p.task), legacyMatch)
 	}
 	// Only the normal independent non-Git scheduler workspace. Operational

@@ -1,5 +1,5 @@
 use crate::{common::*, native, policy::*};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{
     collections::BTreeMap,
     fs,
@@ -7,10 +7,10 @@ use std::{
     time::Duration,
 };
 
-#[path = "process_birth_fallback.rs"]
-mod process_birth_fallback;
 #[path = "current_succession.rs"]
 mod current_succession;
+#[path = "process_birth_fallback.rs"]
+mod process_birth_fallback;
 pub(crate) const BIRTH_FALLBACK_MARGIN: u64 = 10_000_000;
 pub(crate) const BIRTH_FALLBACK_MAX_SPAN: u64 = BIRTH_FALLBACK_MARGIN * 2;
 
@@ -45,6 +45,13 @@ pub trait Backend {
     /// A finite current succession receipt, never a general root exemption.
     fn current_product_allowed(&mut self, _item: &Value, _registered_root: &str) -> bool {
         false
+    }
+    fn current_workspace_checkpoint(
+        &mut self,
+        _item: &Value,
+        _registered_root: &str,
+    ) -> Option<Value> {
+        None
     }
     fn clock(&self) -> f64;
     fn resource_until(&mut self, job: &Value) -> Result<Option<f64>> {
@@ -95,7 +102,7 @@ pub struct Network;
 pub fn token() -> Result<String> {
     let mut value = std::env::var("GODD_DISCORD_BOT_TOKEN").unwrap_or_default();
     if value.is_empty() {
-        use winreg::{RegKey, enums::HKEY_CURRENT_USER};
+        use winreg::{enums::HKEY_CURRENT_USER, RegKey};
         value = RegKey::predef(HKEY_CURRENT_USER)
             .open_subkey("Environment")
             .and_then(|k| k.get_value("GODD_DISCORD_BOT_TOKEN"))
@@ -450,8 +457,18 @@ impl RealBackend {
                     .extend(["--parent-job-id".into(), parent.into()]);
             }
         }
-        if let Some(sources)=selection["review_source_jobs"].as_array().filter(|ids|!ids.is_empty()) {
-            invocation.args.extend(["--review-source-jobs".into(),sources.iter().filter_map(Value::as_str).collect::<Vec<_>>().join(",")]);
+        if let Some(sources) = selection["review_source_jobs"]
+            .as_array()
+            .filter(|ids| !ids.is_empty())
+        {
+            invocation.args.extend([
+                "--review-source-jobs".into(),
+                sources
+                    .iter()
+                    .filter_map(Value::as_str)
+                    .collect::<Vec<_>>()
+                    .join(","),
+            ]);
         }
         invocation.args.extend([
             "--effort-origin".into(),
@@ -593,6 +610,17 @@ impl Backend for RealBackend {
     }
     fn current_product_allowed(&mut self, item: &Value, registered_root: &str) -> bool {
         self.verify_current_product(item, registered_root)
+    }
+    fn current_workspace_checkpoint(
+        &mut self,
+        item: &Value,
+        registered_root: &str,
+    ) -> Option<Value> {
+        let receipt = self.current_product_receipt(item, registered_root)?;
+        let proof = &receipt["workspace_checkpoint"];
+        (receipt["origin_todo_id"] == 3638
+            && crate::resume_checkpoint::qualified_proof(item, proof))
+        .then(|| proof.clone())
     }
     fn clock(&self) -> f64 {
         now()
@@ -841,7 +869,9 @@ impl Backend for RealBackend {
     ) -> Result<Option<Value>> {
         self.guard_workspace_path(repo)?;
         if let Some(job) = crate::preparation::workspace_source(item, jobs) {
-            self.guard_workspace_path(s(&job["cwd"]))?;
+            if crate::preparation::recovery_uses_checkout(self.runner.as_mut(), repo)? {
+                self.guard_workspace_path(s(&job["cwd"]))?;
+            }
         }
         crate::preparation::recover_workspace(self.runner.as_mut(), repo, item, jobs)
     }
@@ -884,4 +914,55 @@ pub fn run_git(runner: &mut dyn Runner, repo: &Path, args: &[&str]) -> Result<St
 }
 pub fn ensure_worktree(runner: &mut dyn Runner, repo: &str, i: &Value) -> Result<()> {
     crate::preparation::ensure_workspace(runner, repo, i, &[])
+}
+
+#[cfg(test)]
+mod non_git_recovery_tests {
+    use super::*;
+    use std::sync::{Arc, Mutex};
+
+    struct NonGit {
+        calls: Arc<Mutex<Vec<Invocation>>>,
+    }
+    impl Runner for NonGit {
+        fn run(&mut self, command: &Invocation) -> Result<Output> {
+            assert!(!command.args.iter().any(|arg| arg.contains("untrusted-old")));
+            self.calls.lock().unwrap().push(command.clone());
+            if command.args.iter().any(|arg| arg == "--guard-path") {
+                return Ok(Output {
+                    code: 0,
+                    stdout: json!({"client_resource":false}).to_string(),
+                    stderr: String::new(),
+                });
+            }
+            assert_eq!(command.program, "git");
+            Ok(Output {
+                code: 128,
+                stdout: String::new(),
+                stderr: "not a git repository".into(),
+            })
+        }
+    }
+    #[test]
+    fn non_git_recovery_does_not_open_or_guard_the_historical_shared_cwd() {
+        let temp = tempfile::tempdir().unwrap();
+        let root = temp.path().join("project");
+        fs::create_dir(&root).unwrap();
+        let calls = Arc::new(Mutex::new(Vec::new()));
+        let mut backend = RealBackend::new(temp.path().join("scheduler"));
+        backend.runner = Box::new(NonGit {
+            calls: calls.clone(),
+        });
+        let item = json!({"id":3549,"jobs":["old"],"worker_receipt":{"job":"old","generation":1},"resume_generation":1});
+        let jobs = vec![
+            json!({"id":"old","todo_id":3549,"cwd":"C:/untrusted-old/\u{0000}","status":"lost"}),
+        ];
+        assert!(backend
+            .workspace_recovery(root.to_str().unwrap(), &item, &jobs)
+            .unwrap()
+            .is_none());
+        let calls = calls.lock().unwrap();
+        assert_eq!(calls.len(), 3);
+        assert_eq!(calls.iter().filter(|c| c.program == "git").count(), 2);
+    }
 }

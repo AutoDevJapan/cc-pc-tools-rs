@@ -21,6 +21,12 @@ pub fn read_request(path: &Path, id: i64) -> Result<Value> {
     Ok(request)
 }
 
+#[derive(Clone, Copy)]
+struct ResumeScope {
+    allowed: bool,
+    current_request: bool,
+}
+
 fn inspect(
     db: &Value,
     item: &Value,
@@ -28,8 +34,7 @@ fn inspect(
     jobs: &[Value],
     ps: &policy::Processes,
     at: f64,
-    source_allowed: bool,
-    current_request: bool,
+    scope: ResumeScope,
 ) -> Value {
     let cwd = s(&item["scheduler"]["worktree"]);
     let active = jobs.iter().any(|job| {
@@ -40,12 +45,12 @@ fn inspect(
             && (policy::live(job) || policy::alive(job, ps, at))
     });
     let checks = json!({
-        "repair_project":(["cc-pc-tools-rs","pc-capacity-audit","localai-web-rs"].contains(&s(&item["project"])) || current_request),
+        "repair_project":(["cc-pc-tools-rs","pc-capacity-audit","localai-web-rs"].contains(&s(&item["project"])) || scope.current_request),
         "status":item["status"] == "todo",
         "paused_registration":item["dispatchable"] == false,
         "ordinary":item["subwork"].is_null(),
         "spec_recorded":!s(&item["spec"]).is_empty(),
-        "source_scope":source_allowed,
+        "source_scope":scope.allowed,
         "no_stop":!targeted_dispatch::held(item) && item["stopped"] != true,
         "dependency_ready":!cc_job_policy::todo_wait::waiting(db,item),
         "unlinked":!truth(&item["scheduler"]["job"]) && !truth(&item["scheduler"]["key"]),
@@ -105,8 +110,10 @@ pub fn run<B: Backend>(
         &jobs,
         &ps,
         engine.backend.clock(),
-        allowed,
-        current_request,
+        ResumeScope {
+            allowed,
+            current_request,
+        },
     );
     let Some(expected) = expected else {
         return Ok(report);
@@ -161,8 +168,10 @@ mod tests {
             jobs,
             &policy::Processes::new(),
             100.,
-            allowed,
-            false,
+            ResumeScope {
+                allowed,
+                current_request: false,
+            },
         )
     }
     #[test]
@@ -201,8 +210,10 @@ mod tests {
                 &[],
                 &policy::Processes::new(),
                 100.,
-                true,
-                false,
+                ResumeScope {
+                    allowed: true,
+                    current_request: false
+                },
             )["checks"]["dependency_ready"],
             false
         );
@@ -236,8 +247,10 @@ mod tests {
             &[],
             &ps,
             100.,
-            true,
-            false,
+            ResumeScope {
+                allowed: true,
+                current_request: false,
+            },
         );
         let other = inspect(
             &db,
@@ -246,8 +259,10 @@ mod tests {
             &[],
             &ps,
             100.,
-            true,
-            false,
+            ResumeScope {
+                allowed: true,
+                current_request: false,
+            },
         );
         assert_ne!(first["state_sha256"], other["state_sha256"]);
         assert!(!first.to_string().contains("original.md"));
@@ -267,8 +282,10 @@ mod tests {
                 &[],
                 &policy::Processes::new(),
                 100.,
-                source,
-                current,
+                ResumeScope {
+                    allowed: source,
+                    current_request: current,
+                },
             )
         };
         assert_eq!(inspect_request(&item, true, false)["eligible"], false);

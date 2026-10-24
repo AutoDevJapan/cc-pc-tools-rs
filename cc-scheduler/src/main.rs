@@ -12,6 +12,45 @@ fn main() {
     }
     let args: Vec<String> = std::env::args().skip(1).collect();
     let command = args.first().map(String::as_str);
+    if command == Some("reconcile-resume-checkpoint") {
+        if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
+            println!("usage: scheduler reconcile-resume-checkpoint --request-file <JSON> [--apply --expected-state-sha256 <SHA256>]\n\nRepair one original worker's stale branch record from its verified successful native transition and the new owner request. Never changes Git, task status, stops, dependencies or registration. JSON: todo_id=1626, actor_todo_id=3650, actor_job");
+            return;
+        }
+        let result = (|| -> Result<serde_json::Value> {
+            if !(args.len() == 3 || args.len() == 6) || args[1] != "--request-file" {
+                return Err(Error("InputRejected"));
+            }
+            let expected = if args.len() == 6 {
+                if args[3] != "--apply" || args[4] != "--expected-state-sha256" {
+                    return Err(Error("InputRejected"));
+                }
+                Some(args[5].as_str())
+            } else {
+                None
+            };
+            let request =
+                cc_scheduler::resume_checkpoint::read_request(std::path::Path::new(&args[2]))?;
+            if s(&request["actor_job"]) != std::env::var("CC_JOB_ID").unwrap_or_default() {
+                return Err(Error("InputRejected"));
+            }
+            let root = PathBuf::from("D:/CC/Tools/scheduler");
+            let mut engine = Scheduler::new(
+                root.clone(),
+                PathBuf::from("D:/CC/Tools/todo/todo.json"),
+                RealBackend::new(root),
+            )?;
+            cc_scheduler::resume_checkpoint::run(&mut engine, &request, expected)
+        })();
+        match result {
+            Ok(report) => println!("{}", encode(&report, 2)),
+            Err(error) => {
+                eprintln!("resume checkpoint failed {}", error.0);
+                std::process::exit(1)
+            }
+        }
+        return;
+    }
     if command == Some("resume-registration") {
         if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
             println!("usage: scheduler resume-registration --id <ID> --request-file <JSON> [--apply --expected-state-sha256 <SHA256>]\n\nRecord an explicit request to resume one idle, qualified repair task. Restores only its dispatchable flag; preserves original work, stops, dependencies, waits and protection. Never launches. JSON: todo_id, intent=resume_registration_only, request, source_ref.");

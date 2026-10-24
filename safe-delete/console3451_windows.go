@@ -6,6 +6,7 @@ package main
 // deletion grant: the original producer receipt, Git data and every object move
 // together through quarantinePreserved's existing same-volume verification.
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -20,6 +21,17 @@ import (
 	"time"
 	"unsafe"
 )
+
+func consoleCIGitEnvironment(environ []string) []string {
+	filtered := make([]string, 0, len(environ))
+	for _, entry := range environ {
+		name, _, _ := strings.Cut(entry, "=")
+		if !strings.HasPrefix(strings.ToUpper(name), "GIT_") {
+			filtered = append(filtered, entry)
+		}
+	}
+	return append(filtered, "GIT_NO_LAZY_FETCH=1")
+}
 
 const console3451ID = "8810a8e6743a392c14257036d9e13619"
 const console3451Root = `C:\Users\makhmeto\AppData\Local\Temp\codex-owned-` + console3451ID
@@ -192,10 +204,20 @@ func console3451ApplyOfficial(summary console3451Acceptance, raw map[string][]by
 	return official, nil
 }
 func console3451GitSaved(root string, proof console3451Acceptance) error {
-	repo := filepath.Join(root, filepath.FromSlash(filepath.Dir(console3451Git)))
+	return consoleCIGitSaved(root, console3451Git, proof)
+}
+
+func consoleCIGitSaved(root, gitPath string, proof console3451Acceptance) error {
+	repo := filepath.Join(root, filepath.FromSlash(filepath.Dir(gitPath)))
 	read := func(args ...string) (string, error) {
 		common := []string{"--no-optional-locks", "-C", repo, "-c", "core.fsmonitor=false", "-c", "core.hooksPath=NUL"}
-		b, e := runHidden(10*time.Second, "git", append(common, args...)...)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, "git", append(common, args...)...)
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+		cmd.Env = consoleCIGitEnvironment(os.Environ())
+		cmd.WaitDelay = time.Second
+		b, e := cmd.Output()
 		return strings.TrimSpace(string(b)), e
 	}
 	origin, e := read("remote", "get-url", "origin")
@@ -228,7 +250,7 @@ func console3451GitSaved(root string, proof console3451Acceptance) error {
 		}
 	}
 	// actions/checkout must have removed its temporary credential header.
-	headers, headerErr := read("config", "--local", "--get-regexp", `^http\..*\.extraheader$`)
+	headers, headerErr := read("config", "--local", "--name-only", "--get-regexp", `^http\..*\.extraheader$`)
 	var missing *exec.ExitError
 	if headers != "" || (headerErr != nil && !(errors.As(headerErr, &missing) && missing.ExitCode() == 1)) {
 		return fail("CONSOLE_RUNNER_NOT_COLLECTED")

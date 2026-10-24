@@ -18,28 +18,32 @@ fn path_digest(path: &str) -> String {
 
 impl RealBackend {
     pub(super) fn verify_current_product(&mut self, item: &Value, root: &str) -> bool {
+        self.current_product_receipt(item, root).is_some()
+    }
+
+    pub(super) fn current_product_receipt(&mut self, item: &Value, root: &str) -> Option<Value> {
         let Some(id) = item["id"].as_u64().filter(|id| *id > 0) else {
-            return false;
+            return None;
         };
         let spec = s(&item["spec"]);
         if root.is_empty() || spec.is_empty() || s(&item["project"]).is_empty() {
-            return false;
+            return None;
         }
         let guard = self.tools.join("client-records/scrub391.exe");
         let Some(guard) = guard.to_str() else {
-            return false;
+            return None;
         };
         let Ok(output) = self.runner.run(&invocation(
             &[guard, "--verify-current-succession", &id.to_string()],
             Some(40),
         )) else {
-            return false;
+            return None;
         };
         if output.code != 0 {
-            return false;
+            return None;
         }
         let Ok(receipt) = serde_json::from_str::<Value>(&output.stdout) else {
-            return false;
+            return None;
         };
         let original_source = receipt["origin_todo_id"] == 2834;
         let current_request = receipt["origin_todo_id"] == 3638
@@ -59,27 +63,28 @@ impl RealBackend {
             || receipt["registered_path_sha256"] != path_digest(root)
             || receipt["spec_path_sha256"] != path_digest(spec)
         {
-            return false;
+            return None;
         }
         // No spec body is read before the official verifier succeeds. Bound both
         // the initial file and growth during reading; errors never become empty data.
         let Ok(file) = File::open(spec) else {
-            return false;
+            return None;
         };
         if !file
             .metadata()
             .is_ok_and(|m| m.is_file() && m.len() <= MAX_SPEC)
         {
-            return false;
+            return None;
         }
         let mut bytes = Vec::new();
         if file.take(MAX_SPEC + 1).read_to_end(&mut bytes).is_err()
             || bytes.len() as u64 > MAX_SPEC
             || receipt["spec_sha256"] != digest(&bytes)
         {
-            return false;
+            return None;
         }
-        self.guard_workspace_path(root).is_ok()
+        self.guard_workspace_path(root).ok()?;
+        Some(receipt)
     }
 }
 

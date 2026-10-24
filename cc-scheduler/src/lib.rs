@@ -13,6 +13,7 @@ pub mod policy;
 pub mod preparation;
 pub mod product_review;
 pub mod registration_resume;
+pub mod resume_checkpoint;
 pub mod targeted_dispatch;
 pub mod workspace_checkpoint;
 pub use cc_ask::recovery_failure;

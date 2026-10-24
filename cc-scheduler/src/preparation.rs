@@ -1,6 +1,6 @@
 //! Bounded workspace preparation. No resets, checkouts, deletion or repository publication.
 use crate::{backend::run_git, common::*};
-use serde_json::{Value, json};
+use serde_json::{json, Value};
 use std::{fs, path::Path};
 
 /// Identity comes from exact persisted receipts or job metadata, never prompt text or a PID.
@@ -144,11 +144,11 @@ pub fn recover_workspace(
         return Ok(None);
     };
     let base = resolve(Path::new(repo))?;
-    let target = resolve(Path::new(s(&job["cwd"])))?;
     if git_root(runner, &base)?.is_none() {
         // Non-Git projects always use the bounded dedicated workspace; source files stay in place.
         return Ok(None);
     }
+    let target = resolve(Path::new(s(&job["cwd"])))?;
     let root = git_root(runner, &target)?.ok_or(Error("NonGit"))?;
     if norm(&root) != norm(target.to_str().unwrap()) {
         return Err(Error("RepositoryMismatch"));
@@ -200,6 +200,13 @@ pub fn recover_workspace(
     }
     Ok(Some(json!({"worktree":target,"branch":branch,
         "workspace_receipt":{"job":job["id"],"todo_id":item["id"],"cwd":job["cwd"]}})))
+}
+
+/// Whether recovery will consume an old checkout. Non-Git projects never read
+/// their historical shared cwd; ordinary preparation uses their dedicated root.
+pub fn recovery_uses_checkout(runner: &mut dyn Runner, repo: &str) -> Result<bool> {
+    let base = resolve(Path::new(repo))?;
+    Ok(git_root(runner, &base)?.is_some())
 }
 
 pub fn ensure_workspace(

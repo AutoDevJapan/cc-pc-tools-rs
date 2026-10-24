@@ -19,6 +19,8 @@ mod review_workspace_tests;
 mod targeted_dispatch_tests;
 #[path = "support/registration_resume.rs"]
 mod registration_resume_tests;
+#[path = "support/resume_checkpoint.rs"]
+mod resume_checkpoint_tests;
 #[path = "support/workspace_checkpoint.rs"]
 mod workspace_checkpoint_tests;
 
@@ -1670,6 +1672,7 @@ struct Fake {
     real_workspaces: bool,
     prepare_registry: Option<PathBuf>,
     current_product: Option<(Value, String)>,
+    current_checkpoint: Option<Value>,
     action_path: Option<PathBuf>,
     cancel_edit: Option<(PathBuf, Value)>,
     repair_allowed: bool,
@@ -1716,6 +1719,7 @@ impl Default for Fake {
             real_workspaces: false,
             prepare_registry: None,
             current_product: None,
+            current_checkpoint: None,
             action_path: None,
             cancel_edit: None,
             repair_allowed: false,
@@ -1759,6 +1763,9 @@ impl Default for Fake {
     }
 }
 impl Backend for Fake {
+    fn current_workspace_checkpoint(&mut self, _item: &Value, _root: &str) -> Option<Value> {
+        self.current_checkpoint.clone()
+    }
     fn current_product_allowed(&mut self, item: &Value, root: &str) -> bool {
         self.current_product.as_ref().is_some_and(|(verified, registered)|
             registered == root && ["id", "project", "spec"].iter().all(|k| verified[*k] == item[*k]))

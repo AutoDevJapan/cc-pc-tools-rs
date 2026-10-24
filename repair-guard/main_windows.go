@@ -448,7 +448,7 @@ func runGuardCLIWithVerifiers(args []string, stdout, stderr io.Writer, currentVe
 	if ok {
 		verdict = pathVerifier(parsed.path)
 	}
-	retirement := ok && retirement3250PathAllowed(parsed.path)
+	retirement := ok && (retirement3250PathAllowed(parsed.path) || ci3574RootAllowed(parsed.path))
 	if retirement && verdict.Status == "unverified" && !ownerCardPath(parsed.path) {
 		verdict = ownerPathVerdict{AccessAllowed: true, Status: "clear", Categories: []string{}}
 	}

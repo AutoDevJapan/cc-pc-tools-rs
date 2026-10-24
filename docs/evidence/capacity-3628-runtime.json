@@ -2,29 +2,35 @@
   "schema": 1,
   "origin_todo_id": 3628,
   "domain": "capacity-runtime-update-3628",
-  "build_base_commit": "f14136d514dbd4a7d0bd0eaea76ed211f7cc9c9e",
-  "build_worktree_was_modified": true,
+  "source_commit": "dc96faedc81333bfb3bca3862195057799323b75",
+  "build_vcs_modified": false,
+  "go_version": "go1.27.0",
+  "build_flags": [
+    "-trimpath",
+    "-ldflags=-s -w -H=windowsgui"
+  ],
   "source_files": {
-    "capacity-audit-3h/decision.go": "bd1049487a98a9c42a8478d41c4cc20edcdb3fd5727ae465fbedbe7aed3649c0",
-    "capacity-audit-3h/main.go": "f08953cf2954d7723750f692ea4e003a0cbdcd1c3329cf33148928fa19b1f9d8",
-    "capacity-audit-3h/platform_windows.go": "b6ed4bf64d34e9c0b473f8b56a7840e042d7a1f1908e20d182cc1abc684a21c1",
-    "capacity-audit-3h/volumes.go": "da7f1c8e9c8dff82ded764b0cfd77abd58b9423033fedb27b954b24a1adeea53",
-    "capacity-audit-3h/decision-worker.md": "4e38c7fbec6b013688a746af811053688f45794a58c6f6f46a5fda306c0f8488",
+    "capacity-audit-3h/decision.go": "b8bfbef958ef8fe84e7b1754a0e095c22321589f067d39a8a59c54f3da2f0045",
+    "capacity-audit-3h/main.go": "f5de6328d9bca78d779216751291bee79f7043ccf3ba1d21f6323dba04fac2cf",
+    "capacity-audit-3h/platform_windows.go": "c2ec0c000d8ed5ad3ce6612eb70f14279f87a731c95fa56d862b35a51941aedd",
+    "capacity-audit-3h/volumes.go": "fc46adea1bd209e253511e21d5fb798d4415ecb58bbd3be1fbff5ea2f53d061a",
+    "capacity-audit-3h/decision-worker.md": "477eeff8bf073f847ff18cafc1c08900bad38ef6a76c5f70833342d87b5cc0be",
     "capacity-audit-3h/go.mod": "8fafd401e23ace4eb97a8a6fe1f030f7b69687f4fbff2b84d93ac17ed0f819ba"
   },
   "old_sha256": "43d2e177ec55a1f3f0a281063105d5bd0ad2c6be89f1ab1f14a078773d724a3d",
-  "new_sha256": "236da824e3be28b10efa093c30df0cf4972a455e593c3301f1602c6f5a9cec5d",
+  "new_sha256": "1d08c63f7f58c64ba67563260c3a6d24b028a715ccc812e96b87207416e8d45d",
   "data_access_granted": false,
   "original_registry_recovered": false,
   "task_name": "CC-CapacityAudit-3h",
   "interval": "PT6H",
   "tests": [
-    "go test -race -count=1 -timeout 120s ./... (CAPACITY_DEVICE_ACCEPTANCE=1)",
+    "go test -race -count=1 -timeout 120s ./... (CAPACITY_DEVICE_ACCEPTANCE=1, CAPACITY_TODO_TEST_EXE=current installed CLI)",
     "go vet ./..."
   ],
   "real_device_counts": {
-    "volumes": 4,
-    "disks": 3,
-    "partitions": 7
-  }
+    "partitions": 7,
+    "volumes": 5,
+    "disks": 3
+  },
+  "test_result_sha256": "48aad01e3891ea5fe29ae2ab7eef5820d89de1092a2343141cb9c45c6d462a90"
 }

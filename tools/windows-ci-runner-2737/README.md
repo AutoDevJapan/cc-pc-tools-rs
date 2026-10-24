@@ -153,13 +153,15 @@ the secure executable resolver cannot admit that location. The new layout's
 resolution of all ten failures remains a guest acceptance requirement.
 
 Only the fixed guest SYSTEM agent now stages the received SDK Git tree into
-the fresh sibling `C:\ProgramData\AutoDevJapan\windows-ci-git-2737` before
+the fresh `C:\Program Files\Git` directory before
 starting any worker. It is outside the worker-writable runner root. Before
 copying bytes, its inherited ACL is removed and replaced with SYSTEM and
 Administrators full control and LocalService read/execute only; children
 inherit those rules. SDK/private permissions are unchanged. The service keeps
 its original SDK Git for SYSTEM-only source proof, and only the copied worker
-environment uses the new Git cmd/bin paths. No product security check is
+environment uses the new Git cmd/bin paths. This location also satisfies the
+product's fixed `C:/Program Files/Git/cmd/git.exe` committed-pin verifier.
+No product security check is
 relaxed, no request chooses the copy paths, and no host Git installation or
 retained SDK is modified.
 
@@ -393,7 +395,7 @@ actual stock `GITHUB_WORKSPACE`; it is not beneath the SDK's private ancestor.
 Its `_temp`, `_profile` (including appdata) and `_target` children are the worker's
 temporary, home/profile and Cargo-output directories, with no owner environment.
 The worker's Git cmd/bin paths instead use the separate read-only
-`C:\ProgramData\AutoDevJapan\windows-ci-git-2737` installation described above.
+`C:\Program Files\Git` installation described above.
 
 The child environment is an allowlist; Jobs/Threads from seed become
 CARGO_BUILD_JOBS/RUST_TEST_THREADS. Explicit original workflow serial flags

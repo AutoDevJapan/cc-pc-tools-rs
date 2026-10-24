@@ -109,13 +109,15 @@ func gitCopyJunction(t *testing.T, link, target string) {
 func TestWorkerGitRejectsParentAndChildJunctions(t *testing.T) {
 	for _, mode := range []string{"source-parent", "source-child", "destination-parent"} {
 		source, destination := gitCopyFixture(t)
+		var destinationParent string
 		if mode == "source-parent" {
 			alias := filepath.Join(filepath.Dir(source), "external-alias")
 			gitCopyJunction(t, alias, filepath.Dir(source))
 			source = filepath.Join(alias, filepath.Base(source))
 		} else if mode == "destination-parent" {
 			alias := filepath.Join(filepath.Dir(source), "destination-alias")
-			gitCopyJunction(t, alias, t.TempDir())
+			destinationParent = t.TempDir()
+			gitCopyJunction(t, alias, destinationParent)
 			destination = filepath.Join(alias, "fresh-git")
 		} else {
 			external := t.TempDir()
@@ -125,7 +127,13 @@ func TestWorkerGitRejectsParentAndChildJunctions(t *testing.T) {
 			gitCopyJunction(t, filepath.Join(source, "external-alias"), external)
 		}
 		if e := copyWorkerGitTree(context.Background(), source, destination, func() error { return nil }); e == nil {
-			t.Fatal("external identical tool bytes admitted through a junction")
+			t.Fatalf("%s: external identical tool bytes admitted through a junction", mode)
+		}
+		if destinationParent != "" {
+			children, e := os.ReadDir(destinationParent)
+			if e != nil || len(children) != 0 {
+				t.Fatal("destination-parent: rejected copy changed the junction target", e)
+			}
 		}
 	}
 }

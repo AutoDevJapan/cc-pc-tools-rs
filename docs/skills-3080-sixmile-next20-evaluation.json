@@ -4396,7 +4396,7 @@
       "excluded_by_todo3080": false,
       "findings": [
         "Reference-file similarity and size differences were reported by the reader; equality of selected guide text is not whole-package equality or chronological proof.",
-        "Unretrieved scripts reference SDK requirements; no API-key runner was executed.",
+        "SKILL.md/README says the unsaved scripts need the SDKs; the scripts were not read and no API-key runner was executed.",
         "This variant includes llms-full.txt references and different transport guidance. PublishedAt/length/version alone do not establish an older/newer relation."
       ],
       "git_blob": "c9ef8a261f80e0c37dc73300ce90679e946c4407",
@@ -4804,8 +4804,8 @@
   "todo": 3080,
   "tree_sha": "5782ae7deffe5024e15b6e090327385c10f76273",
   "previous_normalization": "sixmile-next20-normalized123649.json",
-  "normalization_amendment": "Neutralized unsupported relative-newness/superseded claims in current value fields13/20; exact historical reader wording is preserved. Source hashes/reader actors/states and all three independent anchors unchanged. Public primary/workflow totals are now474/475 in the canonical progress index; this cohort is20 rawprimary paths and no new final decisions.",
-  "amended_at": "2026-10-24T08:58:26.6672769+00:00",
+  "normalization_amendment": "Neutralized unsupported relative-newness/superseded claims in current value fields13/20; exact historical reader wording is preserved. Source hashes/reader actors/states and the independent anchors are unchanged. Current global coverage is defined only in the canonical source index/progress. This historical amendment covers the received20 paths and no new final decisions.",
+  "amended_at": "2026-10-24T09:48:51.6367065Z",
   "reflection_definition": "This new20 cohort is now reflected in the public source index/progress. Its original private preparation notes are historical; no final adoption/exclusion, central operation or new source execution follows from reception.",
   "definition_at_preparation": "Twenty newly received assessments with explicit raw/scan/unknown states and individual notice scopes. All received claims reconciled with fixed source metadata; helper is not a semantic primary reread. Parent read all20 evaluation/rights/examples/limits. Candidate proposals are not final adoption/exclusion or owner-policy changes. Current published454/455 is not incremented by this private normalization.",
   "reader_scope_definitions": {
@@ -4820,5 +4820,18 @@
     "The report-writing skill was not opened because reading central Skills is excluded here; its rules were applied from the AGENTS.md summary.",
     "No new blanket prohibition or re-approval rule is proposed; conditions are per candidate. Model and job identity are not self-reported."
   ],
-  "receipt_reference_definition": "source_report/fixed_verification/parent_semantic_receipt/previous_normalization names identify private preserved parent records, not repository links. Fixed public upstream URLs, source identities, reader namespace and independent test anchors carry the public evidence scope."
+  "receipt_reference_definition": "source_report/fixed_verification/parent_semantic_receipt/previous_normalization names identify private preserved parent records, not repository links. Fixed public upstream URLs, source identities, reader namespace and independent test anchors carry the public evidence scope.",
+  "reader_original_limitations_definition": "Verbatim original reader limitations are preserved as history. The current limitations and explicit parent corrections govern this normalized artifact; neither becomes new owner policy or an individual copy grant.",
+  "public_delta_acceptance": {
+    "number": 431,
+    "head": "b9a9694478812df3d215022008df2fb6a9c79b4f",
+    "merge": "ad8151c101a0820cbc365455ecfb85caef1d697a",
+    "merged_at": "2026-10-24T09:35:56Z",
+    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/431",
+    "review_todos": [
+      3612,
+      3617
+    ],
+    "acceptance_scope": "Original16file intake delta reviewed3612 Must1, correction7file/64hunk reviewed3617 Must0; exactb9 all7CIcomplete6SUCCESS1NEUTRAL/CLEAN, normal merge/readback/mainff. Artifact/read-state acceptance only, not source execution, whole-package rights or all16 completion."
+  }
 }

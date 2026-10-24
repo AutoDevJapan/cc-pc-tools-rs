@@ -417,14 +417,24 @@
       "reason": "既存の同用途を維持し、毎回の承認/本人PC操作待ちを現行の指示に合わせて改訂。新metadataを増やさず、原文と個別noticeを保全。",
       "upstream_original_preserved": true,
       "source_notice_preserved": true,
-      "independent_review_pending": true,
+      "independent_review_pending": false,
       "prior_revisions": [
         {
           "scope": "実配置v1の歴史。3368が読了、SQL草案待機表示Must1を補正。v2は限定差分の受入前。",
           "entrypoint_sha256": "fc3c21f3b4fa6b31ea92b7d364a7f9ba204f2819bcdde1b0fc4a46a322d0b892",
           "manifest": "skills-3080-installed-gh-ci-integration-manifest.json"
         }
-      ]
+      ],
+      "independent_review_pending_at_application": true,
+      "independent_review_acceptance": {
+        "raw_file": "review3378-original.md",
+        "raw_sha256": "f5925ada6f6042b1e6f16da5b711790310cdbd03f78240fd486367a902260298",
+        "must": 0,
+        "accepted_pr": 381,
+        "merge": "6f3c62f59e0138825df434e6b132ab28c0590905",
+        "scope": "v2 instruction content/actual six deployed file SHA/old-guide+backups/structure+discovery, within old fixed delta; upstream original/Apache reused by SHA and old_GUIDE body not reread"
+      },
+      "acceptance_reconciliation_definition": "The original3378/PR381 limited v2 content/installation acceptance is reused; current public bundle strings match that reviewed snapshot exactly. Historical source.json/plan pending labels are not redeployed. No new central byte verification is claimed."
     },
     {
       "reason": "既存入口を維持し固定200%/Auto、renderer/composer/targetとCSS pointer、DPR検知・解放、GPU失敗時の実scaleを参照へ補う。",

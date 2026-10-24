@@ -409,5 +409,6 @@
   "external_fetches": 0,
   "held647_fetches": 0,
   "completed_at": "2026-10-24T08:05:48.594192Z",
-  "raw_source_bodies_in_this_public_artifact": 0
+  "raw_source_bodies_in_this_public_artifact": 0,
+  "cache_reference_definition": "cache_files names identify private preserved parent receipts, not repository links. Public hash/byte/record counts and the fixed catalog identify the scope; source bodies and full caches are not embedded or claimed semantically read."
 }

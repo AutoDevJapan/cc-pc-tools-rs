@@ -652,43 +652,52 @@
     "definition_of_legacy_latest_name": "Historical PR406 accepted-delta snapshot. Later accepted merges/reviews are in merged_pr_history/latest_merged_pr/received_review_history/latest_received_review; this field is not current queue status."
   },
   "latest_received_review": {
-    "todo": 3612,
-    "job": "20261024-172729-todo-3612",
+    "todo": 3617,
+    "job": "20261024-180736-todo-3617",
     "status": "succeeded",
     "exit_code": 0,
     "model": "anthropic/claude-sonnet-5-5",
     "effort": "max",
     "model_origin": "owner_request",
     "effort_origin": "owner_request",
-    "native_matched": true,
+    "thread_id": "01a16d2a-eb1f-79f2-b6a8-aeaf8c8f9fb0",
+    "raw_file": "review3617-original123649.md",
+    "raw_bytes": 6332,
+    "raw_sha256": "03fe183f097ad68e4a656b919cce6622cc05fe1f995b09e3e30284ed3fb47c08",
+    "received_at": "2026-10-24T09:34:47.3132337Z",
+    "parent_read_pending": false,
+    "native_match_pending": false,
     "parent_full_read": true,
+    "native_matched": true,
     "effective_reasoning_measured": false,
-    "raw_file": "review3612-original123649.md",
-    "raw_bytes": 7064,
-    "raw_sha256": "d8dee23f79c6ca4ef27041a30f5317d9a3982a04d5e865e31e0cd19cf161aa34",
-    "base": "36722b7b45f227b662843bb515b0e7aff766dba5",
-    "head": "534d2cd08822febf015617b3ca94e63697cfd5c1",
-    "must": 1,
+    "base": "534d2cd08822febf015617b3ca94e63697cfd5c1",
+    "head": "b9a9694478812df3d215022008df2fb6a9c79b4f",
+    "must": 0,
     "suggestions": 4,
     "nits": 5,
-    "scope": "All16file/allhunks,20semantic records,178support metadata/state,66740cache hash/bytes/line/failurecounts; no Go/central/network/CI. Raw74410report first/legend only, cache bodymetadata aggregate only.",
-    "received_at": "2026-10-24T08:57:03.3110134+00:00",
-    "resolution_pending": true,
-    "next": "Remove mutable currentcount prose, clarify default rights/newness/policy constraints, strengthen next20 relations and futureledger alignment, boundedfixreview/exactCI/merge",
+    "scope": "All7files/all64U3hunks plus relevant code/data context; independently reconstructed3anchors; source/cache body and tests/CI/central execution not performed.",
+    "nonblocking_resolution": {
+      "S1": "At fixedb9 the474/475 value is correct. Remove mutable current numeric prose in the already-needed next parent-cohort publication before those values change; do not carry it into a new stale snapshot.",
+      "S2": "Add coupled namespace mutation and ledger flag/counter/unknown-disposition negatives alongside the next required source-index extension.",
+      "S3": "Isolate non-valid fixture ledger rows and reset target state so a future real adoption of entry0 does not invalidate the synthetic tests.",
+      "S4": "Require the full negative no-commercial-licence-contact-or-rights-question phrase and add an inversion negative.",
+      "nits": "Clarify reported-vs-unsaved script claims, cache private-receipt note, anonymous hold provenance/next/owner-input, UTC observation labels and historical-vs-current definitions in next delta."
+    },
     "owner_action_required": false,
-    "parent_followup": "Historical mutable count prose removed, default rights and source/version proposals made explicit, next20/provenance/cache relationships and ledger-aligned future decisions tested. Source bytes and474/475/32/3/8 counters unchanged; this fix needs bounded review/exactCI."
+    "resolution_pending": true,
+    "parent_followup": "S1 numeric prose guard; S2 coupled namespace and ledger negatives; S3 isolated mutation fixtures for future real adoptions; S4 full negative rights-question phrase/inversion cases, plus documentation nits. This new supplement needs its own bounded review/CI; old b9 acceptance remains exactly scoped."
   },
   "latest_merged_pr": {
-    "head": "00c87391a57467ab3373316229d5ef33e8b8f361",
-    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/430",
-    "number": 430,
-    "acceptance_scope": "Original24 difference and12 correction; new20 and body-alias machine triage are separate current pending publicdelta.",
-    "merge": "36722b7b45f227b662843bb515b0e7aff766dba5",
+    "number": 431,
+    "head": "b9a9694478812df3d215022008df2fb6a9c79b4f",
+    "merge": "ad8151c101a0820cbc365455ecfb85caef1d697a",
+    "merged_at": "2026-10-24T09:35:56Z",
+    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/431",
     "review_todos": [
-      3602,
-      3605
+      3612,
+      3617
     ],
-    "merged_at": "2026-10-24T08:06:59Z"
+    "acceptance_scope": "Original16file intake delta reviewed3612 Must1, correction7file/64hunk reviewed3617 Must0; exactb9 all7CIcomplete6SUCCESS1NEUTRAL/CLEAN, normal merge/readback/mainff. Artifact/read-state acceptance only, not source execution, whole-package rights or all16 completion."
   },
   "mengto_partial_entrypoint_evaluation": {
     "fixed_roster": "skills-3080-mengto-fixed-entrypoints.json",
@@ -1051,8 +1060,38 @@
       },
       "owner_action_required": false,
       "followup_in_this_delta": "Empty globalID arrays/strong owner constraints, public namespace consistency tests, amendment labels and explicit original-vs-correction review chronology are handled alongside the new20 intake; no new central apply or final disposition.",
-      "parent_read_time_definition": "received_at is the receipt persistence time, not the reading start or an exact completion timestamp. Parent observed/read the fullresponse before this receipt; reading duration and exact completion were not captured.",
-      "parent_read_observed_response_at": "2026-10-24T17:04:41.9920154+09:00"
+      "parent_read_time_definition": "received_at is receipt persistence. parent_read_observed_response_at is the first full-response tool observation recorded by the parent, normalized to UTC; it is not an exact reading start/completion or duration.",
+      "parent_read_observed_response_at": "2026-10-24T08:04:41.9920154+00:00"
+    },
+    {
+      "todo": 3612,
+      "job": "20261024-172729-todo-3612",
+      "status": "succeeded",
+      "exit_code": 0,
+      "model": "anthropic/claude-sonnet-5-5",
+      "effort": "max",
+      "model_origin": "owner_request",
+      "effort_origin": "owner_request",
+      "native_matched": true,
+      "parent_full_read": true,
+      "effective_reasoning_measured": false,
+      "raw_file": "review3612-original123649.md",
+      "raw_bytes": 7064,
+      "raw_sha256": "d8dee23f79c6ca4ef27041a30f5317d9a3982a04d5e865e31e0cd19cf161aa34",
+      "base": "36722b7b45f227b662843bb515b0e7aff766dba5",
+      "head": "534d2cd08822febf015617b3ca94e63697cfd5c1",
+      "must": 1,
+      "suggestions": 4,
+      "nits": 5,
+      "scope": "All16file/allhunks,20semantic records,178support metadata/state,66740cache hash/bytes/line/failurecounts; no Go/central/network/CI. Raw74410report first/legend only, cache bodymetadata aggregate only.",
+      "received_at": "2026-10-24T08:57:03.3110134+00:00",
+      "resolution_pending": false,
+      "next": "Remove mutable currentcount prose, clarify default rights/newness/policy constraints, strengthen next20 relations and futureledger alignment, boundedfixreview/exactCI/merge",
+      "owner_action_required": false,
+      "parent_followup": "Historical mutable count prose removed, default rights and source/version proposals made explicit, next20/provenance/cache relationships and ledger-aligned future decisions tested. Source bytes and474/475/32/3/8 counters unchanged; this fix needs bounded review/exactCI.",
+      "resolution_pending_at_original_receipt": true,
+      "resolved_by_review": 3617,
+      "resolved_at_head": "b9a9694478812df3d215022008df2fb6a9c79b4f"
     }
   ],
   "merged_pr_history": [
@@ -1154,6 +1193,18 @@
       "merge": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
       "merged_at": "2026-10-24T06:33:08Z",
       "number": 428
+    },
+    {
+      "head": "00c87391a57467ab3373316229d5ef33e8b8f361",
+      "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/430",
+      "number": 430,
+      "acceptance_scope": "Original24 difference and12 correction; new20 and body-alias machine triage are separate current pending publicdelta.",
+      "merge": "36722b7b45f227b662843bb515b0e7aff766dba5",
+      "review_todos": [
+        3602,
+        3605
+      ],
+      "merged_at": "2026-10-24T08:06:59Z"
     }
   ],
   "current_mengto_delta": {
@@ -1274,7 +1325,7 @@
     "new_individual_rights_exclusions": 1,
     "existing_duplicate_receipts_reused": 1
   },
-  "amended_at": "2026-10-24T08:58:26.6672769+00:00",
+  "amended_at": "2026-10-24T09:48:51.6367065Z",
   "amendment_job": "20261024-123649-todo-3080",
   "mcp_pointer_installation": {
     "real_server_or_rendering_tested": false,
@@ -1399,6 +1450,38 @@
     "existence_checked": false,
     "size_bytes": null,
     "central_post_guard_read_write": 0,
-    "count": 1
+    "count": 1,
+    "todo": 3080,
+    "job": "20261024-123649-todo-3080",
+    "observed_at": null,
+    "observed_at_definition": "The original exact observation time was not recorded in this snapshot; this amendment does not substitute its own time.",
+    "next": "Preserve this exact hold; use only an existing normal qualified classification path and continue independent work. No repeated refresh, alternate target, registry/guard/exception/Git bootstrap.",
+    "owner_action_required": false
+  },
+  "central_target_holds_current": {
+    "count": 7,
+    "definition": "Original4 comparison holds plus earlier1 candidate and later2 distinct candidate holds. Historical snapshots retain their original counts. No target names/leafpaths are disclosed.",
+    "todo": 3080,
+    "job": "20261024-123649-todo-3080",
+    "observations": [
+      {
+        "case": "later_candidate_A",
+        "observed_at": "2026-10-24T09:13:50.3731513Z",
+        "receipt": "intake-audit-target-preflight123649.json"
+      },
+      {
+        "case": "later_candidate_B",
+        "observed_at": "2026-10-24T09:21:13.0657691Z",
+        "receipt": "parent-large1-target-preflight123649.json"
+      }
+    ],
+    "receipt_reference_definition": "Private parent records, not repository links.",
+    "classification_unverified": true,
+    "existence_checked": false,
+    "size_bytes": null,
+    "post_guard_target_read_write": 0,
+    "configuration_or_exception_changes": 0,
+    "owner_action_required": false,
+    "next": "Keep exact targets unchanged and continue permitted evaluation. Existing normal classification prerequisites remain unresolved; no same refresh or alternate-path retry."
   }
 }

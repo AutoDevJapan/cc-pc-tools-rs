@@ -79,7 +79,8 @@ pub fn run<B: Backend>(
     {
         return Err(Error("InputRejected"));
     }
-    let Some(_lock) = ByteLock::acquire(&engine.root.join("scheduler.lock"), Duration::ZERO)?
+    let Some(_lock) =
+        ByteLock::acquire(&engine.root.join("scheduler.lock"), Duration::from_secs(30))?
     else {
         return Ok(json!({"id":id,"busy":true,"saved":false,"launched":0}));
     };

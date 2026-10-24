@@ -90,8 +90,14 @@ func TestOMB3255BindsIndependentProofsAndAllFourFiles(t *testing.T) {
 		}
 	}
 	var fields map[string]any
-	if json.Unmarshal(raw, &fields) != nil || len(fields) != 14 {
-		t.Fatal("software-only result gained unknown fields")
+	wantJSON := map[string]any{
+		"domain": "omb-producer-software-v1", "todo_id": float64(3255), "status": "matched", "software_matches": true, "evidence_verified": true,
+		"reference_version": "0.1.121", "reference_source_commit": "97a4a1cab96ab3d07b0c7dac275f69afc6e7a8dc",
+		"data_access_granted": false, "software_access_granted": false, "source_access_granted": false,
+		"source_worktree_verified": false, "execution4559_verified": false, "original_registry_recovered": false, "state_changed": false,
+	}
+	if json.Unmarshal(raw, &fields) != nil || !reflect.DeepEqual(fields, wantJSON) {
+		t.Fatal("software-only JSON field names or values changed")
 	}
 }
 
@@ -116,9 +122,42 @@ func TestOMB3255RejectsChangedMissingAndSharedInputs(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				requireOMB3255Unavailable(t, f.verify())
+				result := f.verify()
+				if kind == "component" && mutation == "changed" {
+					if result.Status != "mismatched" || result.SoftwareMatches == nil || *result.SoftwareMatches || !result.EvidenceVerified {
+						t.Fatal("a complete and stable actual mismatch became unavailable")
+					}
+				} else {
+					requireOMB3255Unavailable(t, result)
+				}
 			})
 		}
+	}
+}
+
+func TestOMB3255MismatchStillRequiresAllFourAndFinalEvidence(t *testing.T) {
+	for _, failure := range []string{"missing component", "protected component", "proof permission changed"} {
+		t.Run(failure, func(t *testing.T) {
+			f := newOMB3255Fixture(t)
+			if err := os.WriteFile(f.spec.components[0].path, []byte("actual mismatch not disclosed"), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if failure == "missing component" {
+				if err := os.Remove(f.spec.components[3].path); err != nil {
+					t.Fatal(err)
+				}
+			}
+			revoked := false
+			protected := func(path string) bool {
+				if same(path, f.spec.components[3].path) {
+					revoked = true
+					return failure == "protected component"
+				}
+				return false
+			}
+			requireOMB3255Unavailable(t, omb3255SoftwareWith(f.spec, protected, func(string) bool { return true },
+				func(string) bool { return !(revoked && failure == "proof permission changed") }))
+		})
 	}
 }
 

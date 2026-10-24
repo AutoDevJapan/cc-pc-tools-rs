@@ -1,10 +1,14 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 // This is one software-only comparison, not an allowed(path) branch. Its
@@ -120,10 +124,12 @@ func omb3255SoftwareWith(spec omb3255Spec, protected, source, evidenceAllowed fu
 	if !session.evidence(spec.evidence) {
 		return result
 	}
+	matched := true
 	for _, leaf := range spec.components {
-		if !session.match(leaf.path, []string{leaf.sha256}) {
+		if !omb3255Observe(&session, leaf.path) {
 			return result
 		}
+		matched = matched && session.files[len(session.files)-1].sha256 == leaf.sha256
 	}
 	// Reuse the existing same-handle, no-write/no-delete-sharing checks. A
 	// successful comparison grants neither data access nor source ownership,
@@ -131,7 +137,64 @@ func omb3255SoftwareWith(spec omb3255Spec, protected, source, evidenceAllowed fu
 	if !session.recheck() {
 		return result
 	}
-	matched := true
-	result.Status, result.SoftwareMatches, result.EvidenceVerified = "matched", &matched, true
+	for _, proof := range spec.evidence {
+		if !evidenceAllowed(proof.path) {
+			return result
+		}
+	}
+	result.Status = "matched"
+	if !matched {
+		result.Status = "mismatched"
+	}
+	result.SoftwareMatches, result.EvidenceVerified = &matched, true
 	return result
+}
+
+// Unlike match, this retains a completely observed regular file even when its
+// digest differs. Only the aggregate boolean is returned after all four files
+// and the independently pinned evidence pass the final same-handle recheck.
+// It does not change match's rejection contract for any existing consumer.
+func omb3255Observe(session *modelPinSession, path string) bool {
+	if !runtimeLeaf(path, filepath.Dir(path), session.protected, true) {
+		return false
+	}
+	name, err := syscall.UTF16PtrFromString(path)
+	if err != nil {
+		return false
+	}
+	h, err := syscall.CreateFile(name, syscall.GENERIC_READ, syscall.FILE_SHARE_READ, nil, syscall.OPEN_EXISTING, 0x00200000|0x08000000, 0)
+	if err != nil {
+		return false
+	}
+	f := os.NewFile(uintptr(h), path)
+	pinned := modelPinnedFile{file: f, path: path}
+	kept := false
+	defer func() {
+		if !kept {
+			f.Close()
+		}
+	}()
+	if syscall.GetFileInformationByHandle(h, &pinned.info) != nil || !modelFileInfoValid(pinned.info) {
+		return false
+	}
+	actual, ok := modelHandlePath(h)
+	if !ok || !same(actual, path) {
+		return false
+	}
+	info, err := f.Stat()
+	if err != nil || !info.Mode().IsRegular() || info.Size() < 1 || info.Size() > 64<<20 {
+		return false
+	}
+	digest := sha256.New()
+	n, err := io.Copy(digest, io.LimitReader(f, (64<<20)+1))
+	if err != nil || n != info.Size() {
+		return false
+	}
+	pinned.sha256 = hex.EncodeToString(digest.Sum(nil))
+	if !session.fileUnchanged(pinned) {
+		return false
+	}
+	session.files = append(session.files, pinned)
+	kept = true
+	return true
 }

@@ -25,9 +25,11 @@ ToDo番号、許可指定を受け付けず、追加・併用引数は入力を�
 handleを最後の再確認まで保持し、途中で保護判定や元の所有確認が変われば拒否する。
 
 返すのは固定の用途・ToDo番号、公開比較基準、証拠照合の成否と四件全ての一致だけ。
-確認成功は `status=matched`、`software_matches=true`、終了0。それ以外は
-`status=unavailable`、`software_matches=null`、終了1とする。取得不能を不一致の
-観測へ書き換えない。読取対象の内容、未知の実Hash、パス、認証情報は返さない。
+四件全てを読み最後の再確認も通ったとき、一致は `status=matched`、
+`software_matches=true`、終了0。不一致は `status=mismatched`、
+`software_matches=false`、終了1とする。欠落や読取・保護・再確認の失敗は
+`status=unavailable`、`software_matches=null`、終了1にする。取得不能と実際に比較した
+不一致を分ける。読取対象の内容、未知の実Hash、パス、認証情報は返さない。
 
 この入口は一般の `--guard-path` を変更しない。データ閲覧、software本文の閲覧、
 元sourceの閲覧・編集、台帳の復旧、状態変更、モデルや実行の証明を全てfalseで返す。

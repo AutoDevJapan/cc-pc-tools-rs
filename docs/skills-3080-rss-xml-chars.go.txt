@@ -1,0 +1,45 @@
+package main
+
+import (
+	"encoding/xml"
+	"testing"
+	"unicode/utf8"
+)
+
+// W3C XML1.0 Fifth Edition 2.2, Char production. This is a standalone
+// acceptance fixture, not a deployed feed generator or an HTML sanitizer.
+func xml10LiteralValid123649(s string) bool {
+	if !utf8.ValidString(s) {
+		return false
+	}
+	for _, r := range s {
+		if r == 0x9 || r == 0xa || r == 0xd || (r >= 0x20 && r <= 0xd7ff) || (r >= 0xe000 && r <= 0xfffd) || (r >= 0x10000 && r <= 0x10ffff) {
+			continue
+		}
+		return false
+	}
+	return true
+}
+func TestXMLLiteralFixtureRejectsInvalidControlsWithoutSilentReplacement(t *testing.T) {
+	for _, value := range []string{"A\x00B", "A\x01B", "A\x08B", "A\x0bB", "A\x0cB", "A\x1fB", "A\ufffeB", "A\uffffB", string([]byte{0xed, 0xa0, 0x80})} {
+		if xml10LiteralValid123649(value) {
+			t.Fatal("invalid XML literal was accepted")
+		}
+	}
+	for _, value := range []string{"A&B <tag>", "日本語🙂", "tab\tnewline\nreturn\r", ""} {
+		if !xml10LiteralValid123649(value) {
+			t.Fatal("valid XML literal was rejected")
+		}
+	}
+}
+func TestActualXMLParserSeparatesInvalidControlFixtureFromValidBaseline(t *testing.T) {
+	var value struct {
+		Title string `xml:"title"`
+	}
+	if err := xml.Unmarshal([]byte("<rss><title>A&amp;B 日本語</title></rss>"), &value); err != nil || value.Title != "A&B 日本語" {
+		t.Fatalf("valid baseline failed: %v", err)
+	}
+	if err := xml.Unmarshal([]byte("<rss><title>A\x01B</title></rss>"), &value); err == nil {
+		t.Fatal("parser accepted the deliberately invalid control fixture")
+	}
+}

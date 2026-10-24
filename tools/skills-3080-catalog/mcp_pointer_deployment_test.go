@@ -217,11 +217,18 @@ func validateMcpPointerDeployment(e mcpPointerDeployment) error {
 	if err != nil {
 		return errors.New("deployment observation timestamp is missing")
 	}
+	var lastVerified time.Time
 	for _, checked := range []string{d.CheckedAt, r.CheckedAt} {
 		verified, err := time.Parse(time.RFC3339Nano, checked)
-		if err != nil || observed.Before(verified) {
-			return errors.New("deployment observation timestamp precedes verification")
+		if err != nil {
+			return errors.New("deployment verification timestamp is missing")
 		}
+		if verified.After(lastVerified) {
+			lastVerified = verified
+		}
+	}
+	if !observed.Equal(lastVerified) {
+		return errors.New("deployment observation differs from last verification timestamp")
 	}
 	return nil
 }
@@ -381,9 +388,14 @@ func TestScenarioReceiptRejectsChangedDescriptionOrScenarioPair(t *testing.T) {
 			entry = f.Content
 		}
 	}
-	for _, kind := range []string{"valid", "description", "bundle_positive", "manifest_negative", "name", "missing_description"} {
+	descriptionLine := "description: " + d.Targets[0].Description + "\n"
+	if strings.Count(entry, descriptionLine) != 1 {
+		t.Fatal("expected one actual description line for negative mutations")
+	}
+	for _, kind := range []string{"valid", "description", "bundle_positive", "manifest_negative", "name", "missing_description", "entry_description_missing", "entry_description_duplicated"} {
 		t.Run(kind, func(t *testing.T) {
 			plan, bundle, manifest := d.Targets[0], b.Targets[0].scenarioReceipt, m.Targets[0]
+			candidateEntry := entry
 			switch kind {
 			case "description":
 				plan.Description = "different"
@@ -395,15 +407,19 @@ func TestScenarioReceiptRejectsChangedDescriptionOrScenarioPair(t *testing.T) {
 				manifest.Name = "different"
 			case "missing_description":
 				plan.Description = ""
+			case "entry_description_missing":
+				candidateEntry = strings.Replace(entry, descriptionLine, "", 1)
+			case "entry_description_duplicated":
+				candidateEntry = strings.Replace(entry, descriptionLine, descriptionLine+descriptionLine, 1)
 			}
-			if err := validateScenarioReceipt(plan, bundle, manifest, entry); (err != nil) != (kind != "valid") {
+			if err := validateScenarioReceipt(plan, bundle, manifest, candidateEntry); (err != nil) != (kind != "valid") {
 				t.Fatalf("%s: %v", kind, err)
 			}
 		})
 	}
 }
 func TestMcpPointerDiscoveryRejectsDisabledMissingAndOverclaimedEvidence(t *testing.T) {
-	for _, kind := range []string{"valid", "disabled", "enabled_missing", "wrong_path", "one_missing", "duplicated", "model_called", "server_claim", "budget_claim", "warning_cause_missing", "incomplete_write", "same_name_elsewhere", "same_name_missing", "total_changed", "traversal_warning_changed", "budget_marker_changed", "retained_description_changed", "implicit_claim", "rendering_claim", "post_turn_claim", "overall_complete_claim", "retained_model_called", "retained_names_saved", "retained_all_bytes_claim", "observation_too_early", "verification_time_missing"} {
+	for _, kind := range []string{"valid", "disabled", "enabled_missing", "wrong_path", "one_missing", "duplicated", "model_called", "server_claim", "budget_claim", "warning_cause_missing", "incomplete_write", "same_name_elsewhere", "same_name_missing", "total_changed", "traversal_warning_changed", "traversal_warning_missing", "budget_marker_changed", "budget_marker_missing", "retained_description_changed", "retained_description_missing", "implicit_claim", "rendering_claim", "post_turn_claim", "overall_complete_claim", "retained_model_called", "retained_names_saved", "retained_all_bytes_claim", "observation_too_early", "observation_missing", "observation_later_than_last_verification", "verification_time_missing"} {
 		t.Run(kind, func(t *testing.T) {
 			var e mcpPointerDeployment
 			loadPublicReceipt(t, "skills-3080-mcp-pointer-installation-evidence.json", &e)
@@ -438,10 +454,16 @@ func TestMcpPointerDiscoveryRejectsDisabledMissingAndOverclaimedEvidence(t *test
 				e.Discovery.Total--
 			case "traversal_warning_changed":
 				e.Discovery.TraversalWarnings = &zero
+			case "traversal_warning_missing":
+				e.Discovery.TraversalWarnings = nil
 			case "budget_marker_changed":
 				e.Discovery.BudgetMarkers = &one
+			case "budget_marker_missing":
+				e.Discovery.BudgetMarkers = nil
 			case "retained_description_changed":
 				e.Retained.DescriptionMatches = &one
+			case "retained_description_missing":
+				e.Retained.DescriptionMatches = nil
 			case "implicit_claim":
 				e.Discovery.Implicit = &yes
 			case "rendering_claim":
@@ -458,6 +480,14 @@ func TestMcpPointerDiscoveryRejectsDisabledMissingAndOverclaimedEvidence(t *test
 				e.Retained.AllBytes = &yes
 			case "observation_too_early":
 				e.ObservedAt = e.Discovery.CheckedAt
+			case "observation_missing":
+				e.ObservedAt = ""
+			case "observation_later_than_last_verification":
+				at, err := time.Parse(time.RFC3339Nano, e.ObservedAt)
+				if err != nil {
+					t.Fatal(err)
+				}
+				e.ObservedAt = at.Add(time.Second).Format(time.RFC3339Nano)
 			case "verification_time_missing":
 				e.Discovery.CheckedAt = ""
 			}

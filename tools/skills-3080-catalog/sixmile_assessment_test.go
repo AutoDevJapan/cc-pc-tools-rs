@@ -100,6 +100,21 @@ const sixmileSupportReading = "e41dd6445ad733c83ae15bf972fac95c530f32166943544e1
 const sixmileNext10Actors = "6301d6942aea35a7738475d8db2870834fb0e06330f37c1e35f48dbf606ee80b"
 
 func validateSixmileAssessment(a sixmileAssessment, ledger []partialAdoption) error {
+	// This immutable evidence cohort owns only its selected21 identities.
+	// TestSixmileCohortIndexConservesReadingCategoriesAndAllLiveSourceRows
+	// accounts for every6mile ledger row across both cohorts, rejecting unknown
+	// and repeated rows. Do not mutate the caller's ledger backing array.
+	selectedIDs := map[string]bool{}
+	for _, entry := range a.Fixed {
+		selectedIDs[entry.ID] = true
+	}
+	boundedLedger := make([]partialAdoption, 0, len(ledger))
+	for _, row := range ledger {
+		if row.Source != a.Source || selectedIDs[row.ID] {
+			boundedLedger = append(boundedLedger, row)
+		}
+	}
+	ledger = boundedLedger
 	if a.Source != "6mile/skills" || a.Commit != "920714f17d81e0a95c7a9bc51faf0a7921cd982d" || a.Tree != "5782ae7deffe5024e15b6e090327385c10f76273" || a.Expected != 55623 || a.Read != 21 || a.Read != len(a.Entries) || a.Read+a.Unread != a.Expected || len(a.Fixed) != 21 {
 		return errors.New("sixmile partial coverage differs from the fixed selected scope")
 	}

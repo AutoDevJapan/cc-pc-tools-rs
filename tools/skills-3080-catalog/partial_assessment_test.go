@@ -143,7 +143,7 @@ func TestPartialMizchiAssessmentConservesUnfinishedPathsAndAdoptions(t *testing.
 		} `json:"mengto_partial_entrypoint_evaluation"`
 		Sixmile struct {
 			Read int `json:"full_body_read"`
-		} `json:"sixmile_partial_entrypoint_evaluation"`
+		} `json:"sixmile_body_read_coverage"`
 		TotalRead int `json:"all_fulltext_primary_paths_including_partial_sources"`
 		Complete  struct {
 			Paths int `json:"case_insensitive_skill_named_paths"`

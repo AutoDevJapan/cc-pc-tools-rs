@@ -1,0 +1,164 @@
+{
+  "todo": 3080,
+  "job": "20261024-123649-todo-3080",
+  "observed_at": "2026-10-24T05:56:05.0781012+00:00",
+  "prepared_at": "2026-10-24T06:13:45.0328907+00:00",
+  "overall_complete": false,
+  "bundle": "skills-3080-rss-season-reviewed-bundle.json",
+  "bundle_sha256": "97e3d3b442e14a093f75bdeecd81e55d0ba17f13428f53f3806c8bc85a998bfb",
+  "manifest": "skills-3080-installed-rss-season-manifest.json",
+  "manifest_sha256": "566d3df1b8373822c65c28b67252322da36d4761d317ac28573d399c083f5a76",
+  "designs": "skills-3080-rss-season-designs.json",
+  "design_sha256": "5728557c6eadf8e346a289445cfeda0541251b84f421c6cbc592d284b79a0035",
+  "journal_sha256": "401fa95c18ae56cdfc8062f91240953ffc44238f24f199425c8a5d11892edec2",
+  "new_targets_created": 2,
+  "files_readback_verified": 10,
+  "old_target_writes": 0,
+  "guard_or_registration_changed": false,
+  "installed_check": {
+    "passed": true,
+    "scope": "Actual two explicit created targets; structure/links/tenSHA/descriptions/positive-negative pairs",
+    "tool": "tools/skills-3048-check",
+    "upstream_code_executed": false,
+    "ai_model_turn_called_by_installation": false
+  },
+  "reviews": [
+    {
+      "todo": 3584,
+      "effort_origin": "owner_request",
+      "raw_sha256": "bb59556e295b8a0ca85c308d1548e876ad3defc1dca8adcae79a84ce208e1689",
+      "raw_bytes": 6593,
+      "effective_reasoning_measured": false,
+      "effort": "max",
+      "parent_full_read": true,
+      "job": "20261024-135446-todo-3584",
+      "must": 0,
+      "model": "anthropic/claude-sonnet-5-5",
+      "model_origin": "owner_request",
+      "scope": "RSSV1 fivefiles/allRSSsupporttexts andexplicitA/B/C; no realGo/site/UI. LaterV2clarifications separately reviewed.",
+      "native_matched": true
+    },
+    {
+      "todo": 3591,
+      "effort_origin": "owner_request",
+      "raw_sha256": "5d71a4b6ca2297cf73bdb50cb489cdb589973980a1477304202bdd23ea449155",
+      "raw_bytes": 7198,
+      "suggestions": 6,
+      "effective_reasoning_measured": false,
+      "effort": "max",
+      "parent_full_read": true,
+      "nonblocking_resolution": {
+        "nits": "Formatting/editorial/reference-blob additions deferred to preserve exactly reviewed bytes. Parent recordcontainsReferenceblob619917a5. XML fixture validates pre-serialization rejection and realparserpositive/negative; it does not claim encoderinvalid-character behavior.",
+        "rss_order": "Target-specific order remains explicit; no unknown dates invented. Current guideline permits stable source order and does not require new owner questions.",
+        "rss_existing_feed": "Nonblocking clarification deferred. Intro/description limit generation to no native feed and negative excludes existing-feed one-time reading. Parent follows that boundary and will not generate merely because a feed exists.",
+        "season_completion": "Exponentialapproach is numericaldesign, not a completecontroller. Actualrenderer/use requiring completion will choose/test a target tolerance and rapid-switch checks after same-image approval. No finitecompletion/performanceproof claimed.",
+        "season_attribution": "ExactMIT andsourceJSON held; MITdoesnotrequireApache-stylemodifiednoticeineachfile. Optionalrootattribution can be added in a separatelyreviewedmaintenancechange.",
+        "season_baseline": "Interpret base values as authored for the target scene/species/climate, not universalMengTo constants, as step1 andguide require. No UI implementation now.",
+        "rss_atom_oneoff": "No fabricated author/date. Verified generator/author can be stated; otherwise RSS fallback or explicitly missing required metadata. One-off Atom timestamp persistence remains an implementation decision, not a false claim of article modification."
+      },
+      "job": "20261024-143148-todo-3591",
+      "must": 0,
+      "nits": 5,
+      "model": "anthropic/claude-sonnet-5-5",
+      "model_origin": "owner_request",
+      "scope": "RSSV1→V2 three authored file differences plus first semantic read of seasonfivefiles; tenfilehashes andcomponentidentity confirmed; A/B/C seasonal explicit use",
+      "native_matched": true
+    }
+  ],
+  "discovery": {
+    "implicit_selection_proven": false,
+    "model_called": false,
+    "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+    "same_names_other_paths": 0,
+    "process_tree_exit_confirmed": true,
+    "found": [
+      {
+        "name": "3d-four-seasons",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "rss-feed-generator",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      }
+    ],
+    "scan_traversal_warning_markers": 2,
+    "checked_at": "2026-10-24T05:55:08.4701977+00:00",
+    "target_matches": 2,
+    "enabled_count": 2,
+    "full_context_budget_proven": false,
+    "total_discovered_metadata": 330,
+    "parse_errors": 0,
+    "pending_stdout_read_drained": true,
+    "context_budget_marker_count": 0,
+    "warning_cause_linked": false
+  },
+  "retained_known_metadata": {
+    "model_called": false,
+    "known_target_names_sha256": "3eddb49df34088da3bd6c5feb64bab042f830a4406af9c4f492012cabedbd449",
+    "found_count": 48,
+    "process_tree_exit_confirmed": true,
+    "raw_existing_names_or_paths_saved": false,
+    "new_description_match_count": 2,
+    "expected_count": 48,
+    "checked_at": "2026-10-24T05:56:05.0781012+00:00",
+    "enabled_count": 48,
+    "all_disk_hash_or_prechange_equality_proven": false,
+    "parse_errors": 0,
+    "pending_stdout_read_drained": true,
+    "scope": "Original3048fourteen targets, current33adoptionIDs inPR428, plus the newlycreatedRSS/season2; unique48. An immutable retention snapshot, not future currentname count."
+  },
+  "explicit_application": {
+    "season": "3591A/B/C with interruptedblend,exposure,scope checks plus parent four-stateGo numericalmodel",
+    "UI_implemented": false,
+    "RSS": "3584A/B/Cdesignapplication plus parent literalGoXMLserialize/parse andinvalid-control/parserfixtures",
+    "postdeployment_model_turn_executed": false,
+    "http_requests": 0,
+    "real_renderer_executed": false,
+    "feed_hosted": false,
+    "core_passed": true,
+    "real_site_extracted": false
+  },
+  "self_authored_checks": [
+    {
+      "passed": true,
+      "scope": "Ownedliteral documentbase/relativeURL,Japanese/textescape,unknownpubDate; realGoXMLserialize/parse; no website or savedfeed.",
+      "source": "skills-3080-rss-fixture.go.txt",
+      "sha256": "1dad2882d15f5df761749f42b82052e6babd0be44c59bce95a7f70ff68070678",
+      "tests": 1
+    },
+    {
+      "passed": true,
+      "scope": "XML1.0literalrejectionbeforemarshal andrealparserpositive/negative. Encoder replacement semantics not separately proven.",
+      "source": "skills-3080-rss-xml-chars.go.txt",
+      "sha256": "b62c30299956661dfe396c98d85e62a585464748cd63cf39b694e794ffd6f36b",
+      "tests": 2
+    },
+    {
+      "passed": true,
+      "scope": "Four-weight numericalmodel; interruptedtarget/normalization/basepalette/uncappedtimepartition/invalidtime; no renderer/shader/snow/performance proof.",
+      "source": "skills-3080-season-blend-model.go.txt",
+      "sha256": "837b7cf5c160fde5f68c083608be30613c61c0bc5cde54f305dfc4ff90e5d579",
+      "tests": 4
+    }
+  ],
+  "preserved_scope": {
+    "original3048_and_backups_retained": true,
+    "new_permanent_MCP_connections": 0,
+    "held647_fetches": 0,
+    "all16_complete": false,
+    "held_existing_read_write": 0,
+    "third_party_asset_or_service_rights_accepted": false,
+    "owner_action_required": false,
+    "existing_comparison_holds": 4,
+    "held_existing_size_bytes": null,
+    "new_fees": 0
+  },
+  "publication_scope": "This evidence follows already completed new-only central operations; public adoption/coverage flags must be reconciled with the actual fixed receipts before counting it. No source code or UI was run by installing these instructions.",
+  "self_authored_model_and_fixture_execution_definition": "The separate owned Go numerical/XML fixtures ran successfully as recorded below. Installation/discovery did not execute upstream code, a renderer, a real website or an AI model turn."
+}

@@ -1,10 +1,10 @@
 {
-  "scope": "固定treeの既読21入口の部分評価を保持し、うち1件のMCP手順を個別公式noticeとともに実配置。既存の除外2件は変わらない。新しい本文読了は加算せず、全55623候補や全支持の完了にはしない。",
+  "scope": "Historical first21 evidence cohort, with its prior raw/object/read/actor anchors and one MCP adaptation retained. Additional45 assessment and one RSS adaptation are separate disjoint evidence. Aggregate source coverage is indexed; this cohort is not a current full-source total.",
   "source": "6mile/skills",
   "entrypoints_fulltext_read": 21,
   "tree_sha": "5782ae7deffe5024e15b6e090327385c10f76273",
   "installed": 1,
-  "pending_definition": "固定treeのSkill入口55623から既読21を引いた未読55602。旧11と新10の固定rosterを保持する。未読を除外へ移さず、全path一覧は固定原本に保持する。",
+  "pending_definition": "This evidence artifact selects the first21 of the fixed55623 source paths. Its nonselected55602 is a cohort boundary, not current full-source unread coverage. Additional45 is separately indexed; current raw64/workflow65/notice-only1 is in the source evaluation index.",
   "entrypoints_unread": 55602,
   "entrypoints_expected": 55623,
   "pending_paths_list_published": false,
@@ -4048,9 +4048,9 @@
     "central_writes": 0
   },
   "next21_definition": "Earlier eleven plus research3554 ten unique primary paths. Support102+63=165, saved40+35=75, full12+30=42, scan0+5=5, unsaved62+28=90. Metadata eligibility is not individual permission. No new adoption or exclusion is added.",
-  "amended_at": "2026-10-24T05:11:00.0131037+00:00",
+  "amended_at": "2026-10-24T06:34:55.2016131+00:00",
   "amendment_job": "20261024-123649-todo-3080",
-  "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts. 3571補正は担当表示と根拠の追補で、新しい本文/支持の読取や採用の加算ではない。",
+  "amendment_definition": "Document amendment time only. Historical first21 reading/adoption snapshots and identities are preserved. This followup incorporates3590/3599 scope explanations and an additional45 aggregate-index link; it is not a new reading of the historical21.",
   "next_research_todos": [
     3565,
     3566
@@ -4090,5 +4090,8 @@
   },
   "next_research_todos_historical": true,
   "next_research_todos_definition": "Snapshot of followup allocations at evaluation publication, not current queue status. Both3565/3566 later completed and their results are privately received; their new45 intake is not part of this public adoption delta.",
-  "new_central_write_definition": "Historical zero for the new10 evaluation-only publication, before subsequent new MCP adaptation. central_write is the later source-cohort cumulative created-file count; adoption_resolution and current ledger identify that later operation."
+  "new_central_write_definition": "Historical zero for the new10 evaluation-only publication, before subsequent new MCP adaptation. central_write is the later source-cohort cumulative created-file count; adoption_resolution and current ledger identify that later operation.",
+  "historical_cohort_only": true,
+  "current_source_aggregate": "skills-3080-sixmile-evaluation-index.json",
+  "previous_amended_at_before_cohort_index": "2026-10-24T05:11:00.0131037+00:00"
 }

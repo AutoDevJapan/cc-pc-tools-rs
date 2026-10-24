@@ -185,6 +185,7 @@ type Runner struct {
 	ProcessAlive                func(uint32, uint64) bool
 	Civ6Verify                  func(path, sha256 string) error
 	AgentResultGuard            func(context.Context, string) bool
+	SeparatedScheduler          bool
 }
 
 func readJSON(path string, ceiling int64, value any) error {
@@ -759,7 +760,11 @@ func (r *Runner) tickWithIntakeContext(ctx, intakeParent context.Context) Health
 	}
 	// Reports can require further API reads. Give the existing dispatcher its
 	// turn first, without detaching it from the caller's remaining deadline.
-	if ctx.Err() == nil {
+	if r.SeparatedScheduler {
+		// A cached result is observation only; it never admits a job. Reject
+		// stale, future, failed or absent results instead of claiming startup.
+		health.Scheduler = schedulerStageHealthy(r.Config.Home, r.Now())
+	} else if ctx.Err() == nil {
 		// Native process inspection plus a fresh pre-commit check can exceed
 		// twenty seconds. Retain a finite stage limit and the caller's original
 		// deadline, while allowing that measured repair to complete.
@@ -907,6 +912,9 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "scheduler-tick" {
+		os.Exit(schedulerStageCLI(os.Args[2:], os.Stdout))
+	}
 	if len(os.Args) > 1 && os.Args[1] == "intake" {
 		os.Exit(intakeCLI(os.Args[2:], os.Stdout))
 	}

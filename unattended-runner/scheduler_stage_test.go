@@ -133,6 +133,26 @@ func TestSeparatedTickObservesActualResultWithoutStartingASecondDispatcher(t *te
 	if !schedulerStageEnabled(r.Config.Home) {
 		t.Fatal("explicit separation mode not recognized")
 	}
+	if !schedulerStageActive(r.Config.Home, r.Now()) {
+		t.Fatal("actual fresh successful stage did not activate separation")
+	}
+	for _, proof := range []schedulerStageReport{
+		{Domain: "scheduler-stage-result-v1", Mode: "repair-step", OK: false, Started: r.Now().Format(time.RFC3339Nano), Finished: r.Now().Format(time.RFC3339Nano)},
+		{Domain: "scheduler-stage-result-v1", Mode: "repair-step", OK: true, Started: r.Now().Add(-5 * time.Minute).Format(time.RFC3339Nano), Finished: r.Now().Add(-4 * time.Minute).Format(time.RFC3339Nano)},
+	} {
+		if publish(filepath.Join(r.Config.Home, "scheduler-stage-health.json"), proof) != nil {
+			t.Fatal("fixture write")
+		}
+		if schedulerStageActive(r.Config.Home, r.Now()) {
+			t.Fatal("armed marker removed inline dispatcher without an actual usable result")
+		}
+	}
+	if os.Remove(filepath.Join(r.Config.Home, "scheduler-stage-health.json")) != nil {
+		t.Fatal("fixture removal")
+	}
+	if schedulerStageActive(r.Config.Home, r.Now()) {
+		t.Fatal("missing result removed original dispatcher")
+	}
 	var output bytes.Buffer
 	if schedulerStageCLI([]string{"--command", "other"}, &output) != 2 {
 		t.Fatal("arbitrary caller operation accepted")

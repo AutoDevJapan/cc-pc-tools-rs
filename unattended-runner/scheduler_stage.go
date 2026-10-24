@@ -36,6 +36,13 @@ func schedulerStageEnabled(home string) bool {
 		mode.Domain == "separated-repair-dispatcher-v1" && mode.Enabled
 }
 
+func schedulerStageActive(home string, now time.Time) bool {
+	// Arming the new scheduled invocation alone cannot remove the old one.
+	// Missing, failed, future or stale results automatically restore inline
+	// compatibility; scheduler.lock still serializes the actual dispatcher.
+	return schedulerStageEnabled(home) && schedulerStageHealthy(home, now)
+}
+
 func schedulerStageHealthy(home string, now time.Time) bool {
 	var report schedulerStageReport
 	if readJSON(filepath.Join(home, "scheduler-stage-health.json"), 4096, &report) != nil ||

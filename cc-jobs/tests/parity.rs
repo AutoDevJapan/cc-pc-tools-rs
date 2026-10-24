@@ -11254,7 +11254,7 @@ mod end_to_end {
                     "same_model_retries":job["capacity_same_model_retry_count"],"model_switches":job["capacity_retry_count"],
                     "capacity_wait_pending":job["capacity_wait_pending"],"capacity_wait_count":job["capacity_wait_count"],
                     "retry_not_before":job["retry_not_before"],"pool_at":job["capacity_inventory"]["pool"]["at"],"pool_verified":job["capacity_inventory"]["pool"]["verified"],
-                    "capacity_supervisor":if phase.contains("capacity") {fs::read_to_string(self.tmp.0.join("tool/jobs").join(s(job,"id")).join("supervisor.log")).unwrap_or_default()} else {String::new()},
+                    "capacity_supervisor":if phase.contains("capacity") {super::dependency_diagnostics::log_state(&self.tmp.0.join("tool/jobs").join(s(job,"id")).join("supervisor.log"))} else {json!("")},
                     "wait_code":job["queue_wait_reason"]["code"],"wait_owner":alias(s(&job["queue_wait_reason"],"owner_job_id")),"max_running":job["queue_wait_reason"]["max_running"],
                     "admission_error":!job["queue_admission_error"].is_null(),"owner_hint":job["work_owner"].is_object(),"supervisor":process("pid"),"agent":process("codex_pid")})
             }).collect();
@@ -11508,13 +11508,14 @@ mod end_to_end {
         fs::create_dir_all(&job).unwrap();
         fs::write(
             job.join("job.json"),
-            json!({"name":"e2e", "created_at":"2026-01-01", "status":"running", "pid":"private-fixture-token", "codex_pid":123})
+            json!({"id":"diagnostic-private-job", "name":"e2e", "created_at":"2026-01-01", "status":"running", "pid":"private-fixture-token", "codex_pid":123})
                 .to_string(),
         )
         .unwrap();
         fs::write(job.join("events.jsonl"), b"event\n").unwrap();
         fs::write(job.join("stderr.log"), "private-fixture-token panic").unwrap();
-        let snapshot = e.timeout_snapshot("controlled_timeout", Duration::ZERO);
+        fs::write(job.join("supervisor.log"), "private-fixture-token panic").unwrap();
+        let snapshot = e.timeout_snapshot("controlled_capacity_timeout", Duration::ZERO);
         let details = &snapshot["timeout_details"];
         assert_eq!(details["stdin_role"], "other");
         assert_eq!(details["call_cwd_role"], "other");
@@ -11528,18 +11529,36 @@ mod end_to_end {
         assert!(!text.contains("diagnostic-private-job"));
         assert!(!text.contains("cc-jobs-rust-"));
         assert!(!text.contains("other-work"));
+        assert_eq!(
+            snapshot["jobs"][0]["capacity_supervisor"]["markers"],
+            json!(["panic"])
+        );
         let mut log = b"panic private-fixture-token".to_vec();
         log.extend(std::iter::repeat_n(b'x', 4096));
         log.extend_from_slice(b"warning");
         fs::write(job.join("stderr.log"), log).unwrap();
         let bounded = e.timeout_snapshot("controlled_timeout", Duration::ZERO);
-        assert_eq!(bounded["timeout_details"]["jobs"][0]["stderr"]["tail_bytes"], 1024);
-        assert_eq!(bounded["timeout_details"]["jobs"][0]["stderr"]["markers"], json!(["warning"]));
+        assert_eq!(
+            bounded["timeout_details"]["jobs"][0]["stderr"]["tail_bytes"],
+            1024
+        );
+        assert_eq!(
+            bounded["timeout_details"]["jobs"][0]["stderr"]["markers"],
+            json!(["warning"])
+        );
         fs::remove_file(e.rec.join("stdin.bin")).unwrap();
+        fs::remove_file(e.rec.join("call.json")).unwrap();
+        let missing = e.timeout_snapshot("controlled_timeout", Duration::ZERO);
+        assert_eq!(missing["timeout_details"]["stdin_role"], "missing");
+        assert_eq!(missing["timeout_details"]["call_cwd_role"], "missing");
+        assert_eq!(missing["timeout_details"]["call_read"]["missing"], true);
         fs::create_dir(e.rec.join("stdin.bin")).unwrap();
         let unreadable = e.timeout_snapshot("controlled_timeout", Duration::ZERO);
         assert_eq!(unreadable["timeout_details"]["stdin_role"], "unreadable");
-        assert_eq!(unreadable["timeout_details"]["stdin_read"]["unreadable"], true);
+        assert_eq!(
+            unreadable["timeout_details"]["stdin_read"]["unreadable"],
+            true
+        );
         assert!(unreadable["timeout_details"]["stdin_read"]["io_error"].is_number());
         assert_eq!(unreadable["timeout_details"]["sleep_read"]["missing"], true);
     }
@@ -11617,6 +11636,22 @@ mod end_to_end {
                 .unwrap()
                 .contains(&json!(second.process.pid))
         );
+        assert!(first.process.stop());
+        let exited = super::dependency_diagnostics::capture(
+            &e.tmp.0,
+            &[(first.process.pid, first.process.created)],
+        );
+        for sample in exited["samples"].as_array().unwrap() {
+            let row = sample
+                .as_array()
+                .unwrap()
+                .iter()
+                .find(|row| row["pid"] == first.process.pid)
+                .unwrap();
+            assert_eq!(row["live"], false);
+            assert!(row["exit_code"].is_u64());
+            assert!(row["exit_100ns"].as_u64().unwrap() > first.process.created);
+        }
         let wrong = super::dependency_diagnostics::capture(&e.tmp.0, &[(pid, created + 1)]);
         assert_eq!(wrong["unavailable_roots"], 1);
         for sample in wrong["samples"].as_array().unwrap() {

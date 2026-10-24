@@ -97,6 +97,13 @@ impl Probe {
     }
     fn sample(&self) -> Value {
         unsafe {
+            let wait = WaitForSingleObject(self.handle, 0);
+            let wait_error = (wait == WAIT_FAILED).then(|| GetLastError());
+            let live = match wait {
+                WAIT_TIMEOUT => Some(true),
+                WAIT_OBJECT_0 => Some(false),
+                _ => None,
+            };
             let mut times = [std::mem::zeroed::<FILETIME>(); 4];
             if GetProcessTimes(
                 self.handle,
@@ -108,13 +115,6 @@ impl Probe {
             {
                 return json!({"pid":self.pid,"created":self.created,"io_error":GetLastError()});
             }
-            let wait = WaitForSingleObject(self.handle, 0);
-            let wait_error = (wait == WAIT_FAILED).then(|| GetLastError());
-            let live = match wait {
-                WAIT_TIMEOUT => Some(true),
-                WAIT_OBJECT_0 => Some(false),
-                _ => None,
-            };
             let mut exit = 0;
             let exit_ok = GetExitCodeProcess(self.handle, &mut exit) != 0;
             let exit_error = (!exit_ok).then(|| GetLastError());
@@ -244,7 +244,7 @@ fn file_state(path: &Path) -> Value {
         Err(error) => json!({"io_error":error.raw_os_error()}),
     }
 }
-fn log_state(path: &Path) -> Value {
+pub(super) fn log_state(path: &Path) -> Value {
     let result = (|| -> io::Result<Value> {
         let mut file = File::open(path)?;
         let length = file.metadata()?.len();
@@ -321,6 +321,11 @@ pub(super) fn capture(root: &Path, identities: &[(u32, u64)]) -> Value {
         "child"
     } else if input.starts_with(b"hi") {
         "parent"
+    } else if input_read
+        .as_ref()
+        .is_err_and(|e| e.kind() == io::ErrorKind::NotFound)
+    {
+        "missing"
     } else if input_read.is_err() {
         "unreadable"
     } else {
@@ -340,6 +345,11 @@ pub(super) fn capture(root: &Path, identities: &[(u32, u64)]) -> Value {
         "other"
     } else if cwd_role("parent-work") {
         "parent"
+    } else if call_read
+        .as_ref()
+        .is_err_and(|e| e.kind() == io::ErrorKind::NotFound)
+    {
+        "missing"
     } else if call_read.is_err() {
         "unreadable"
     } else {

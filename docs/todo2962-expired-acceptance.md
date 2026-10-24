@@ -86,3 +86,31 @@ Sonnet5.5/maxによるMust 0と、同じ最終HEAD `aa7a95e6381c86af997859954184
 親2962のWindows helper・queueの候補は未配布で、製品PR149は未マージ。
 Windows 3件の次attempt、正式なテスト成功、成果物のハッシュ、通常イベントでの再供給と
 終了回収はまだ確認していない。解析2件の成功をWindowsテストの成功として扱わない。
+
+## 2026-10-24の再開確認
+
+共通guardの配布段階は3258の原配布票で受領した。safe-delete 1本の更新は
+既存3455が保持している。3258全体への待機を続けず、この実際の前提を追う。
+3455は元3451の原ビルド・配布証拠の確認と既存レビュー3570を進めており、
+現在値の直接取得や原記録の作り直しで更新資格を作らない。
+
+PR149は同じ `2bd3a366f8974ba54df83927102aa5bdad3983e5` のままだが、APIは
+`mergeable:false / mergeable_state:dirty` を返した。実mainは
+`392e7f9bbcea6ee5867b78da37de1efd9f9fec48`。runner供給の修復だけではマージできない。
+現在の3workflowを固定SHAで取得し、PR149の既存ルートを重ねる未公開候補を作った。
+YAMLの構造比較で、mainのイベント・権限・job名・コマンド・doctestを保ち、変更を
+既存concurrency、Windows限定、runner割当、固定head checkout、ハッシュ記録に絞った。
+これは競合解消済みcommit、別モデル確認、正式CI、製品への反映ではない。
+
+候補と元blob/SHAは、この作業場所の `.ci-work/2962-current-proposal.private.json` と
+`2962-workflows-125949.private.json` に保存した。共通契約はまだ元source/treeと
+sole-parentを要求するため、新しいmainを含むcommitをそのまま受け付けない。
+同じ旧runのattempt 2に限定したreplace-expiredも、別headへの移行には使えない。
+旧取消結果・回収記録・有限予算を保持する、明示的なsource移行の実装とレビューを先に行う。
+供給とこの移行が整う前に、旧headのrerunや未供給候補のpushを行わない。
+
+親のqueueとWindows helperは、読取許可を確認した新しい所有領域で通常ビルドした。
+実sourceは `ebc728198203b2bf6e354f52aa9dfe5ff36773a4`、VCS変更なし。
+各moduleと共通依存はレビュー済みaa7/660および取得済みmainと同一だった。
+旧Tempの候補をコピーしたものではなく、新sourceの生成物と原ビルド情報を別記録にした。
+未配布であり、後続のsource移行が変える範囲の再ビルドは必要に応じて行う。

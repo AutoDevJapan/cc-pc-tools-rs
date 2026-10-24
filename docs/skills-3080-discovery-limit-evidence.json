@@ -1,6 +1,6 @@
 {
   "todo": 3080,
-  "recorded_at": "2026-10-24T00:40:30.7402093+00:00",
+  "recorded_at": "2026-10-24T01:20:57.7903559+00:00",
   "installed_cli_version": "0.163.0",
   "official_source_commit": "83086188ae0614bd882818ff1aa23f3194962012",
   "official_tag": "rust-v0.163.0",
@@ -46,7 +46,9 @@
       "line_scope": [
         "742-744 root queue and directory_count=1",
         "826 condition uses the current parent directory depth",
-        "852-857 child directory counter and queue depth+1"
+        "852-857 child directory counter and queue depth+1",
+        "827-829 dot names are skipped before counting",
+        "849-851 already visited directory identities are not counted again"
       ],
       "method": "root is depth0 and counted once; sync_walk counts/enqueues child directories while parent depth < max_depth, thus child depths1..6 are counted. A depth7 directory is only returned as an entry.",
       "source_path": "codex-rs/exec-server/src/local_file_system.rs",
@@ -80,7 +82,7 @@
     "entry_breakdown_limit": "旧entriesとfiles+directoriesの差72の内訳は未保存。rootを含むdirectoryとreparse9を区別した厳密なentry集計とはしない。新しい測定を別に残す。"
   },
   "non_dot_directory_count": 2015,
-  "measurement_timestamp_limit": "metadata walk was observed in this job before the direct-coverage RPC; exact metadata-walk UTC time was not separately saved. recorded_at is artifact creation time.",
+  "measurement_timestamp_limit": "metadata walk was observed in the original job before the direct-coverage RPC; exact metadata-walk UTC time was not separately saved. created_at is first saved artifact creation; recorded_at is most recent document update.",
   "diagnosis": "保存した公式sync_walkはrootと深さ1〜max_depthの子directoryを数える。max_depth6に対応する非dotの計測は2015で、2000上限を15超えるためtruncatedになる条件と整合する。深さ6を除いた1980を比較値とした親の訂正は誤りだった。alias追跡/実binaryとの一致/応答byte上限と、警告2件のroot対応は未確認なので原因確定ではない。",
   "direct_entrypoint_discovery": {
     "known_direct_entrypoint_paths": 297,
@@ -157,12 +159,20 @@
   },
   "measurement_comparison_limit": "旧entries12930/files8193と新entries11968/files7294は、深さ境界の列挙方法が同じと確認していないため直接比較しない。directoryの深さ別計数は別に残す。時点の差もあり、全walkの再現とはしない。",
   "correction3541": {
-    "new_independent_review_pending": true,
+    "new_independent_review_pending": false,
     "source_scope": "saved official sync_walk full function and skills discovery options read",
     "finding": "Must1",
     "fixed_by_parent": true,
     "reviewed_head": "5175e5534722d26d5037ad59fc93a4f84671b126",
     "todo": 3541,
-    "parent_job": "20261024-093456-todo-3080"
-  }
+    "parent_job": "20261024-093456-todo-3080",
+    "fixed_scope_confirmation": {
+      "head": "f8c960c98dd225b0295b5e84dcead8a5abd2b6d9",
+      "todo": 3553,
+      "base": "5175e5534722d26d5037ad59fc93a4f84671b126",
+      "must": 0,
+      "scope": "2015の数え方の修正だけ。今回のcreated_at/注記/回帰テストは別の確認対象。"
+    }
+  },
+  "created_at": "2026-10-23T21:09:52.7884865+00:00"
 }

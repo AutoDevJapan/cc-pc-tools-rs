@@ -1,0 +1,1967 @@
+{
+  "scope": "既保存の11本文/個別notice10/追加参照2を前担当が全読。今回の親は全評価を読み受領。既実行の固定照合を再実行せず原証拠を保持。残55612は未読。",
+  "source": "6mile/skills",
+  "entrypoints_fulltext_read": 11,
+  "tree_sha": "5782ae7deffe5024e15b6e090327385c10f76273",
+  "installed": 0,
+  "pending_definition": "全固定treeのSkill入口55623から今回の実読11を引いた未読55612。全pathの意味読了や採否を示さない。完全path一覧は固定収集原本に保持し、この部分評価へ全文を複製しない。",
+  "entrypoints_unread": 55612,
+  "entrypoints_expected": 55623,
+  "pending_paths_list_published": false,
+  "excluded": 2,
+  "todo": 3080,
+  "unique_sha256_in_original_metadata": 51841,
+  "tree_complete": true,
+  "prior_fixed_verification": {
+    "not_semantic_reread": true,
+    "catalog": 11,
+    "full_read_object_occurrences": 23,
+    "primary": 11,
+    "reexecuted": false,
+    "support_path_blob_complete": true
+  },
+  "recorded_at": "2026-10-24T01:12:56.3802446+00:00",
+  "central_write": 0,
+  "selected_identities": [
+    {
+      "git_blob": "0223b0aff77c17db1c324c3b8a8266f822cec0ca",
+      "bytes": 6001,
+      "source_sha256": "4cae686ea4cd13d88ad9ae4160b0940ccc1397b48a1b0bdbcdc55eb9a6043176",
+      "path": "skills/1146345502/reddit-skills/SKILL.md",
+      "inventory_id": "github:1e78c664d0333ab5cae0b4eab8974bfd5c726f95d2d2151348379f1cc9ad2028"
+    },
+    {
+      "git_blob": "46ee7930fba0eb96f76fe511dcd0f2433c15050a",
+      "bytes": 6302,
+      "source_sha256": "c36367f5492e8eec4c6e0d4a977a714786f72611f8d8ddd693aa0eaef2b07149",
+      "path": "skills/1215656/1215656-clawdbot-filesystem-1-0-2/SKILL.md",
+      "inventory_id": "github:d09e8e8b14e4c2d99a4fb07634aea469974b7afc898be49216a9edb0d91f9734"
+    },
+    {
+      "git_blob": "a724128ff52ec54b0bcf41bd0b93fe3b2a3e8079",
+      "bytes": 7243,
+      "source_sha256": "ba6108d5858bb8045da0e4bacbfee21d5b0f4b6e151cc5f5919e3e7c3c4059ee",
+      "path": "skills/529279917/memory-persistence/SKILL.md",
+      "inventory_id": "github:c6986850eb1e49ea211effb7fe606d23eb8106c4a9ef156da1b5cabcfb171e21"
+    },
+    {
+      "git_blob": "61d02c0eebd3b3a227cdb639c93c251a320e0d06",
+      "bytes": 1583,
+      "source_sha256": "4077756e494f71f8506b8358a28cc1e10ab4e90673de2319681ab2eafd753973",
+      "path": "skills/abyousef739/clawskillshield/SKILL.md",
+      "inventory_id": "github:bbabfe70916857eeef0632439322f39607f7eafb30f5cec6b2d25b9795043c03"
+    },
+    {
+      "git_blob": "5be498e2585843c7137bf9a74e262f57415de5ce",
+      "bytes": 4440,
+      "source_sha256": "b81e2ff87ed8fa4d6c377ccb127a7254c9e6a77e3ae94f21e6b514f7bb2945a0",
+      "path": "skills/ahump20/frontend-design-2/SKILL.md",
+      "inventory_id": "github:8f9957dbe08a48fff38e7fc0ab658b34875f9e721e1ef302196c047282d7733c"
+    },
+    {
+      "git_blob": "131ee83b2eafea3676b57b4e349d45f51b3616b8",
+      "bytes": 1701,
+      "source_sha256": "a3bcd2d8b01186b2e89d30ef71ab7be075a4e54e8e0159c8a2e5aaaab70dd5b0",
+      "path": "skills/aleksandrkrivolap/openclaw-agent-compute/SKILL.md",
+      "inventory_id": "github:28f63deb53ff32f29572fd5ee5c57f3c05f777703454e62b598532fc0664e069"
+    },
+    {
+      "git_blob": "447c26412bfadb655067492d27994f615241346c",
+      "bytes": 1797,
+      "source_sha256": "11ab9214d7f7de9ea00f827e5f40478c279f5fcbd41fbee666bc04249df27752",
+      "path": "skills/aliyun-ai-sec/aliyun-ai-guardrail/SKILL.md",
+      "inventory_id": "github:e831f8fa823c744a8f9722808d615f9d97f532dc1600be77e3e7d29b0a0a4f33"
+    },
+    {
+      "git_blob": "001e0eeccd6273cae2fde0db2d444c9355132cf9",
+      "bytes": 6154,
+      "source_sha256": "9881ceeae221912631494715939a8f0d949c4ac6f4768efe81479849ee297664",
+      "path": "skills/aliyun-ai-sec/aliyun-clawscan/SKILL.md",
+      "inventory_id": "github:25fb0a2c7fdf8d33b6813b39ed21c9064f2878a87dcaf3660c34f4b0876b829d"
+    },
+    {
+      "git_blob": "a13be29faa93a4d9e3a75e2f5c17e80292e5a21a",
+      "bytes": 3975,
+      "source_sha256": "4455f7291180a6ab4de92ae71fa8c2f5275fbd89d53f3cdf1aaad0a711de10bb",
+      "path": "skills/aloth/overleaf-skill/SKILL.md",
+      "inventory_id": "github:fb4ad70b1b0b8897e78121a77bcafa0ddbbbd5d3538c744744761aaac1d0f09e"
+    },
+    {
+      "git_blob": "39681a67c6bfe401b7b2692bbe9d52462cef99df",
+      "bytes": 1654,
+      "source_sha256": "4226f982091425a4e0cb6edbac2f9e84789f6b2a3845b0b9fb29a4dd27a779f9",
+      "path": "skills/asazhangyongchao/asiasea-bi/SKILL.md",
+      "inventory_id": "github:a43c08b1deba2610fe1f42e7fd4107452915e0b537210bc9c1caf435edfbbbbc"
+    },
+    {
+      "git_blob": "0046c45abc11cbba48cee538e9cce9993a62747b",
+      "bytes": 3183,
+      "source_sha256": "b54257cdc0e5d04488b35b0c797bfe427b24359f0848d3c73924dcacf8da6358",
+      "path": "skills/hoyaryyj/kepano-obsidian-cli/SKILL.md",
+      "inventory_id": "github:94699dba5282f10171d8005a1371aa5eedab8ace92676691940e8c745887f36f"
+    }
+  ],
+  "new_central_write": 0,
+  "root_license": {
+    "not_blanket_permission": true,
+    "individual_licenses_take_precedence": true,
+    "sha256": "bbad531d4d937825bc35c9363e3cba1283084bb8b2f3158e17f382ba4fb7b2d4",
+    "full_read_by": "20261024-080546-todo-3080"
+  },
+  "metadata_is_not_semantic_coverage": true,
+  "notice_scope": "各入口の同directoryに保存された個別noticeを先に確認した有限10件と、コピー0の重複判定1件。rootMITを第三者素材やサービス/依存へ広げない。",
+  "source_readme": {
+    "no_blanket_accept_or_exclude": true,
+    "historical_archive_may_contain_malicious_skills": true,
+    "sha256": "2512e6c3524c2a06034544010cf2dafce52f1338ebd477b5722aa1c478398ccc",
+    "full_read_by": "20261024-080546-todo-3080"
+  },
+  "review_pending": true,
+  "classification_is_not_installation": true,
+  "selected_identity_fingerprint": "b9f44d4ff6da925b75d3b2b63cfa581869bac6a04e8b62ca65a9c1466fe01621",
+  "counts": {
+    "unsaved_bytes_unknown": true,
+    "support_unsaved": 62,
+    "support_saved": 40,
+    "raw_source_commands_executed": 0,
+    "support": 102,
+    "support_full_read": 12,
+    "primary": 11
+  },
+  "entries": [
+    {
+      "repo": "6mile/skills",
+      "body_read_complete": true,
+      "candidate_disposition": "adapt_or_integrate_candidate_pending_implementation_and_existing_comparison",
+      "integrated_by_todo3080": false,
+      "all_support_inventory_complete": false,
+      "inventory_id": "github:1e78c664d0333ab5cae0b4eab8974bfd5c726f95d2d2151348379f1cc9ad2028",
+      "source_sha256": "4cae686ea4cd13d88ad9ae4160b0940ccc1397b48a1b0bdbcdc55eb9a6043176",
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "retrieved_at": "2026-10-20T08:40:55.3924289Z",
+      "independent_review_complete": false,
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/1146345502/reddit-skills/SKILL.md",
+      "excluded_by_todo3080": false,
+      "body_read_by": "parent3080 job080546",
+      "installed_by_todo3080": false,
+      "positive_candidate": "Redditで指定した公開トピックを検索して。投稿や返信はせず、検索結果の根拠と取得できなかった範囲を示して。",
+      "bytes": 6001,
+      "git_blob": "0223b0aff77c17db1c324c3b8a8266f822cec0ca",
+      "value": "中。認証/探索/発信/反応/複合操作を意図で分ける導線は有用。",
+      "compare_metadata": [
+        "social-media-research",
+        "browser-automation",
+        "no-credential-entry-by-agent"
+      ],
+      "read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "path": "skills/1146345502/reddit-skills/SKILL.md",
+      "reason": "作者専用Python CLIとChrome拡張に依存。拡張の権限・通信先の自己申告は実装未読で未検証。",
+      "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
+      "public_reflected": true,
+      "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
+      "negative_candidate": "提供記事の要約まで新しいReddit拡張とbridgeの導入へ広げる。",
+      "individual_rights_review": {
+        "full_license_read": true,
+        "license_path": "skills/1146345502/reddit-skills/LICENSE.md",
+        "license_bytes": 1075,
+        "license_sha256": "4fa78e9aee5ad85e5761f103bed02360b7fb561868638ef5d859a2ccec1cb318",
+        "license_declared": "MIT / Copyright2025-2026QingyuanYang",
+        "scope": "同梱個別MITを読了。公開archiveの再配布者のrootMITを拡張や第三者画像へ広げない。",
+        "third_party_assets_or_support_rights_accepted": false
+      },
+      "required_changes": [
+        "他のMCP/実装を全て無視する作者の囲い込みは採らず、既存の本人Chromeと利用可能な正規経路へ合わせる",
+        "自動Chrome起動/拡張導入/常設bridgeを自動実行しない",
+        "明示済み発信範囲と単なる閲覧を分け、許可済みの同じ送信を再質問しない",
+        "配布Pythonの無改変試用と新規自作Goを区別。darwin/linux宣言からWindows成功を推定しない"
+      ],
+      "supporting_resources": [
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 3572,
+          "executed": false,
+          "git_blob": "096102c488f57cc3a456eeb6973de8778067afe3",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/skills/reddit-explore/SKILL.md",
+          "source_sha256": "d602223ccb08475b0f23d65446529093153c88a40b24700e4a03a31955368ad2"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "1db8c5260b7580554f478949da0c306a9d53ff13",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/pyproject.toml",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "3932f0a203040999a20a750f50164a114c6a5121",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/reddit/post_detail.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "1f28c1a9d0301e9310fcf7d1b7a2122766e5b13b",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/reddit/search.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "8e8e0fd656f5ec30848a74324853c4791be1ee3f",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/bridge_server.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "cdddbdf48e28660f9613a00230dd1477ce3a03da",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/reddit/human.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "67ff283d8dc1aa6d51e661c9c8dc65f6df29dc30",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/cli.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 2440,
+          "executed": false,
+          "git_blob": "07594a6a4c7e8242bcf97ada2e015ac3d905fce2",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/skills/reddit-auth/SKILL.md",
+          "source_sha256": "2a58c887955aaa5480aa0ba2b95ddd99794e5a5588eb0c840bcb995e5f4ab824"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "275ed0c67309684e55c5729e3fea1dbf8e259a9b",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/reddit/bridge.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "cd15b3237266d07ba19ad27883bdc0d41b9de604",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/reddit/comment.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "89d6e0b8fd2eced5fcbb9d37075fa95205f2df49",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/reddit/feeds.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 3400,
+          "executed": false,
+          "git_blob": "e96411a9b8d4c56c83f7953de8379c020fca285c",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/skills/reddit-interact/SKILL.md",
+          "source_sha256": "ae802130b68e96422031f77a78b255422445e1e3c1cae54b96ea142495a14ff8"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "60148a0e190244c64e34fecbee9ad0b4d4aa4d7a",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/reddit/publish.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "52bf59c89de9d312f2049e22fc685d7a26e543ca",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/reddit/types.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "6a2c5aaefcea930e1e5ba5931de2268f8304280b",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/reddit/errors.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "24507be6aabb21c4112560c5fa81908170eb7740",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/reddit/vote.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 4569,
+          "executed": false,
+          "git_blob": "4c511782f9f584d4adc2810e6233b1ce73e4db12",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/skills/reddit-publish/SKILL.md",
+          "source_sha256": "66a0b2908b73b9659d495c0b7c8e090f948104a56f2812f4a9190fe8facd408e"
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 1769,
+          "executed": false,
+          "git_blob": "ea3c8e51f1654a6be75a9808a66b90f2582754f4",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/CONTRIBUTING.md",
+          "source_sha256": "276810a4ddbd4a5b8db851d763cd9c292998e83ec89e2f099b1fbf0aeedba028"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1075,
+          "executed": false,
+          "git_blob": "13c8997ef8d7046b887652c3d517207a71faeae6",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/LICENSE.md",
+          "source_sha256": "4fa78e9aee5ad85e5761f103bed02360b7fb561868638ef5d859a2ccec1cb318"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "b4486444913b318d8b53e79b7bdbbede622613b9",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/reddit/login.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/reddit/__init__.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "0ed7df904f2585f8b375d90d4ea3a87a9d2f813c",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/extension/dom_commands.js",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "f577b6dee4b546bb77616b7c6fb7420315ff8929",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/extension/background.js",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 5318,
+          "executed": false,
+          "git_blob": "596d3d57b0c87bb8e21e03cc23d06b566eb2b6b6",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/skills/reddit-content-ops/SKILL.md",
+          "source_sha256": "3536c3a8973241f1410973de218ea7e98499e94dfe2a2e5ad8a37ef150cf388c"
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 282,
+          "executed": false,
+          "git_blob": "4de6c55ea2f07a9aaf4aa0a34d0ac2cf520b0f4c",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/_meta.json",
+          "source_sha256": "472f447978eec69a7b56e8255daf46534537fe890ea70407dc4d84b17377501f"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "4db5b7eecb4f0b87ef713c1a70360a45482ccf0a",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/image_downloader.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "8df6000237fab115d9c3ebb1be5ad0d03259ef35",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/reddit/selectors.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 7557,
+          "executed": false,
+          "git_blob": "648e80846867259aadddf84b6cf594b57f5a6843",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/README.md",
+          "source_sha256": "4f312dc8eaa0fa96a7df6e83a528887a9563a9dd54f12275d2000dcb74344151"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "cf9c3ab7184a30916223a9b8e83217388707a952",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/reddit/urls.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "efdf458490e0f05713f1d7864f3b501ee6e9549a",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/extension/manifest.json",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "3aad374ac34449bfc0a6de6890facd6c7b24ce46",
+          "mode": "100644",
+          "path": "skills/1146345502/reddit-skills/scripts/reddit/user_profile.py",
+          "source_sha256": null
+        }
+      ],
+      "support_path_blob_inventory_complete": true,
+      "support_counts": {
+        "full_read": 1,
+        "saved": 9,
+        "all": 31
+      },
+      "name": "reddit-skills",
+      "body_read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "license_paths": [
+        "skills/1146345502/reddit-skills/LICENSE.md"
+      ],
+      "parent_current_assessment_received": {
+        "not_a_new_original_body_read": true,
+        "semantic_assessment_read": true,
+        "job": "20261024-093456-todo-3080",
+        "verification_reexecuted": false,
+        "original_primary_read_by": "20261024-080546-todo-3080",
+        "original_fixed_verification_reused": true
+      },
+      "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
+      "use": "Redditの投稿検索と、明示された投稿/返信の実行範囲を分けて手順を整理する。"
+    },
+    {
+      "repo": "6mile/skills",
+      "body_read_complete": true,
+      "candidate_disposition": "reference_candidate_pending_tool_claims_and_existing_delta",
+      "integrated_by_todo3080": false,
+      "all_support_inventory_complete": false,
+      "inventory_id": "github:d09e8e8b14e4c2d99a4fb07634aea469974b7afc898be49216a9edb0d91f9734",
+      "source_sha256": "c36367f5492e8eec4c6e0d4a977a714786f72611f8d8ddd693aa0eaef2b07149",
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "retrieved_at": "2026-10-20T08:40:55.4109593Z",
+      "independent_review_complete": false,
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/1215656/1215656-clawdbot-filesystem-1-0-2/SKILL.md",
+      "excluded_by_todo3080": false,
+      "body_read_by": "parent3080 job080546",
+      "installed_by_todo3080": false,
+      "positive_candidate": "指定した検証フォルダの画像だけを別フォルダへコピーする前に、対象一覧・上書き条件・予定件数を示して。",
+      "bytes": 6302,
+      "git_blob": "46ee7930fba0eb96f76fe511dcd0f2433c15050a",
+      "value": "低〜中。ファイル列挙/検索/安全なコピー計画のAPI一覧。",
+      "compare_metadata": [
+        "filesystem-error-semantics",
+        "filesystem-timestamp-trust",
+        "codex-safe-owned-temp-cleanup",
+        "rclone-rc-safe-copy"
+      ],
+      "read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "path": "skills/1215656/1215656-clawdbot-filesystem-1-0-2/SKILL.md",
+      "reason": "主にCLI広告と使用例で、path検証/エラー回復/安全性の実装根拠は無い。既存のファイル操作Skillとの差は本文比較前。",
+      "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
+      "public_reflected": true,
+      "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
+      "negative_candidate": "調査対象を指定せずPC全体を再帰検索し、dry-runだけで回収成功とする。",
+      "individual_rights_review": {
+        "full_license_read": true,
+        "license_path": "skills/1215656/1215656-clawdbot-filesystem-1-0-2/LICENSE.md",
+        "license_bytes": 1074,
+        "license_sha256": "ecab1e261aab2aa4dfa4d562c8e16b0be2ae34faea72d553a8980eb0b4ae9fef",
+        "license_declared": "MIT / Copyright2026ClawdbotCommunity",
+        "scope": "同ディレクトリMIT読了。元repositoryと再配布者の対応、実行物や参照する他toolの権利/実装は未確認。",
+        "third_party_assets_or_support_rights_accepted": false
+      },
+      "required_changes": [
+        "未読のfilesystem実行物/Node依存を自動導入しない",
+        "相対path/既定cwd/広い再帰走査の例を、元依頼の具体的な対象へ限定する",
+        "dry-runを成功や実コピーと混同せず、上書き/部分失敗/リンク/再試行の意味を確認",
+        "older-thanは列挙されたcommand optionsに無く、version確認前に利用可能としない",
+        "タイムスタンプ保持を同一内容や証跡の保証としない。宣伝/フォロー要求は移植しない"
+      ],
+      "supporting_resources": [
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1074,
+          "executed": false,
+          "git_blob": "900cd17a4a8e865b427b04366e4c534493dc0d27",
+          "mode": "100644",
+          "path": "skills/1215656/1215656-clawdbot-filesystem-1-0-2/LICENSE.md",
+          "source_sha256": "ecab1e261aab2aa4dfa4d562c8e16b0be2ae34faea72d553a8980eb0b4ae9fef"
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 319,
+          "executed": false,
+          "git_blob": "f2b0ce39553f0f4d3cf373835b7f803249a74871",
+          "mode": "100644",
+          "path": "skills/1215656/1215656-clawdbot-filesystem-1-0-2/_meta.json",
+          "source_sha256": "ddeb8abc0d345c02117db2d168e18f5406b4ac1bec5bfc0b4e51524452a543b9"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "5115ea367a19bc7a2d992d5c0cc0ea61d080cf3a",
+          "mode": "100644",
+          "path": "skills/1215656/1215656-clawdbot-filesystem-1-0-2/config.json",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "72282aaab41fc2c3df22f4218e24bed6fa9d2b69",
+          "mode": "100644",
+          "path": "skills/1215656/1215656-clawdbot-filesystem-1-0-2/package.json",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "9fcebe7af180406e818d427db8d218fdde081c2d",
+          "mode": "100644",
+          "path": "skills/1215656/1215656-clawdbot-filesystem-1-0-2/skill.json",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 9056,
+          "executed": false,
+          "git_blob": "3ac8c79db2ea31871e2c36ca57df92c24f8711e9",
+          "mode": "100644",
+          "path": "skills/1215656/1215656-clawdbot-filesystem-1-0-2/README.md",
+          "source_sha256": "bd14e682785513a895cea184d12e75bdecbeb1d11d3b58742f6dfd73fe577349"
+        }
+      ],
+      "support_path_blob_inventory_complete": true,
+      "support_counts": {
+        "full_read": 1,
+        "saved": 3,
+        "all": 6
+      },
+      "name": "1215656-clawdbot-filesystem-1-0-2",
+      "body_read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "license_paths": [
+        "skills/1215656/1215656-clawdbot-filesystem-1-0-2/LICENSE.md"
+      ],
+      "parent_current_assessment_received": {
+        "not_a_new_original_body_read": true,
+        "semantic_assessment_read": true,
+        "job": "20261024-093456-todo-3080",
+        "verification_reexecuted": false,
+        "original_primary_read_by": "20261024-080546-todo-3080",
+        "original_fixed_verification_reused": true
+      },
+      "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
+      "use": "指定フォルダのコピー計画を、対象・上書き条件・予定件数で確認する。"
+    },
+    {
+      "repo": "6mile/skills",
+      "body_read_complete": true,
+      "candidate_disposition": "adapt_or_integrate_principles_candidate_pending_support_and_existing_comparison",
+      "integrated_by_todo3080": false,
+      "all_support_inventory_complete": false,
+      "inventory_id": "github:c6986850eb1e49ea211effb7fe606d23eb8106c4a9ef156da1b5cabcfb171e21",
+      "source_sha256": "ba6108d5858bb8045da0e4bacbfee21d5b0f4b6e151cc5f5919e3e7c3c4059ee",
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "retrieved_at": "2026-10-20T08:40:56.7610761Z",
+      "independent_review_complete": false,
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/529279917/memory-persistence/SKILL.md",
+      "excluded_by_todo3080": false,
+      "body_read_by": "parent3080 job080546",
+      "installed_by_todo3080": false,
+      "positive_candidate": "この作業を次のセッションへ引き継いで。本人の指示、確認済み成果、未完了、再実行しない操作を分けて残して。",
+      "bytes": 7243,
+      "git_blob": "a724128ff52ec54b0bcf41bd0b93fe3b2a3e8079",
+      "value": "中。private/shared、保管先、要約と保守を分ける概念は有用。",
+      "compare_metadata": [
+        "safe-session-handoff",
+        "durable-task-handoff",
+        "import-memory",
+        "agent-job-management"
+      ],
+      "read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "path": "skills/529279917/memory-persistence/SKILL.md",
+      "reason": "Python実装群/embedding自動download/モデル自動検出/リモートstorageを前提にする。書かれたprivateディレクトリ名だけではアクセス隔離を証明しない。",
+      "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
+      "public_reflected": true,
+      "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
+      "negative_candidate": "要約が作れただけで全記憶を正しいとし、非公開会話を共有repositoryへ同期する。",
+      "individual_rights_review": {
+        "full_license_read": true,
+        "license_path": "skills/529279917/memory-persistence/LICENSE.md",
+        "license_bytes": 1070,
+        "license_sha256": "115ba4091df77efce1a8aaac51e4c701a2aa41444619fd4573d59c5a659d6a4c",
+        "license_declared": "MIT / Copyright2026MemorySystem",
+        "scope": "個別MIT読了。未読のstorage/embedding/LLM実装や依存モデルの許諾は包括受入しない。",
+        "third_party_assets_or_support_rights_accepted": false
+      },
+      "required_changes": [
+        "記憶の主張/本人原文/取得元/時刻/修正と未確認を分け、自動要約だけを事実へ昇格しない",
+        "private/sharedは実権限と配布先で確認し、会話をGitHub/Giteeや未知LLMへ自動送信しない",
+        "embeddingの初回自動download/既存資源との競合/モデルの実利用枠を確認してから個別に判断",
+        "source配布Pythonの無改変試用は一律禁止しない。新規自作はGo/GoDD Rust、未使用helperの全面移植は求めない",
+        "batch-delete --forceの例を本人の必要データ削除の許可にしない"
+      ],
+      "supporting_resources": [
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "3231c2eb21c56fab437f98a0a53f3583ec96ab3e",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/config.yaml",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "8d62b2b57b637b35b877cf811ac7d4bc2ea9278e",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/shared_memory.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "858dfaee919138f582e7f850d9007848da96eae8",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/__init__.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "b738e74e19f006823d3ca7b481419a8a2502e7f5",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/config.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "ade882aa060abaf4fbde4626049a2d1cca8aae14",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/exceptions.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "3dcbfaab4f1b4ef928281dc9ad299b2ee0fd6324",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/storage/__init__.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "29e48aa16379813e00a76933d1ad88a6687f22e7",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/storage/local.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "4bf0d612940e3622243fdaff7c7ac5bd1ac8a043",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/maintenance.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "686a0e56f2b6da00837c26b1cd34b105a9e5fba0",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/memory_manager.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "2a1a4667f84d4bd04c91c49f51d1dd27af2b8143",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/cli.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "8f0739b896f221e5ea5b47b91661a84f91e12dcb",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/summarizer.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "f96e3826aca97e0abe4349f6b7e4f70b42c9c003",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/.gitignore",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "0fbc0d4130414a6de68a8a55a274932f16b26c0e",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/storage/base.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "447f76e1c0052805f0d966a7788ed1dc2d48dcaa",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/storage/github.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "b070adf62ac89ba634bf1a50a3137e3d7324897f",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/templates.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1070,
+          "executed": false,
+          "git_blob": "600a62fdfe737bd2c46bb3fb00cedbf79792c286",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/LICENSE.md",
+          "source_sha256": "115ba4091df77efce1a8aaac51e4c701a2aa41444619fd4573d59c5a659d6a4c"
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 13511,
+          "executed": false,
+          "git_blob": "603d36dff70bd5bd647d10a746b139cc5f4c8ba1",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/README.md",
+          "source_sha256": "8a85448c22586c916de583ea8c917d1d83293d198c28d07cb676dc4ff94d15a4"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "b5999db8681db57b006bfe3ad8e6cc231a7867a9",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/embedding.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "3ab288febd2059f41b87ac72efe0561c542aaa91",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/memory_cli.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "9b29bff45c5f39daa32a3c86d15dcf19a8546a38",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/storage/gitee.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 291,
+          "executed": false,
+          "git_blob": "208f8ed088014ea7dbe725e1beb56291148e38c8",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/_meta.json",
+          "source_sha256": "809a69980a634947999358ae973388a49da4480cd7e5c389b2f5920afbd999ae"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "9276393271f32bcb22be44dfe40a4fae2bb7be4e",
+          "mode": "100644",
+          "path": "skills/529279917/memory-persistence/storage/sqlite.py",
+          "source_sha256": null
+        }
+      ],
+      "support_path_blob_inventory_complete": true,
+      "support_counts": {
+        "full_read": 1,
+        "saved": 3,
+        "all": 22
+      },
+      "name": "memory-persistence",
+      "body_read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "license_paths": [
+        "skills/529279917/memory-persistence/LICENSE.md"
+      ],
+      "parent_current_assessment_received": {
+        "not_a_new_original_body_read": true,
+        "semantic_assessment_read": true,
+        "job": "20261024-093456-todo-3080",
+        "verification_reexecuted": false,
+        "original_primary_read_by": "20261024-080546-todo-3080",
+        "original_fixed_verification_reused": true
+      },
+      "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
+      "use": "会話の既存指示と確認済み成果を、公開/共有の範囲を保って別セッションへ引き継ぐ。"
+    },
+    {
+      "repo": "6mile/skills",
+      "body_read_complete": true,
+      "candidate_disposition": "reference_candidate_with_specific_unsafe_example_corrections",
+      "integrated_by_todo3080": false,
+      "all_support_inventory_complete": false,
+      "inventory_id": "github:bbabfe70916857eeef0632439322f39607f7eafb30f5cec6b2d25b9795043c03",
+      "source_sha256": "4077756e494f71f8506b8358a28cc1e10ab4e90673de2319681ab2eafd753973",
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "retrieved_at": "2026-10-20T08:41:07.1665292Z",
+      "independent_review_complete": false,
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/abyousef739/clawskillshield/SKILL.md",
+      "excluded_by_todo3080": false,
+      "body_read_by": "parent3080 job080546",
+      "installed_by_todo3080": false,
+      "positive_candidate": "添付されたSkillを実行せずに確認し、不審な通信や権限要求を行番号と根拠付きで報告して。静的確認で分からない挙動は未確認にして。",
+      "bytes": 1583,
+      "git_blob": "61d02c0eebd3b3a227cdb639c93c251a320e0d06",
+      "value": "低〜中。検査候補の列挙として有用だが、そのままのscanner手順は不備。",
+      "compare_metadata": [
+        "security-review",
+        "safe-tool-evaluation",
+        "skill-maintenance"
+      ],
+      "read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "path": "skills/abyousef739/clawskillshield/SKILL.md",
+      "reason": "例はthreatsへ戻り値を代入するだけでrisk_scoreを定義せず、risk_score<4をHIGH RISKとする閾値の向きも説明と整合しない。open/os/subprocessだけでは悪意を証明しない。",
+      "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
+      "public_reflected": true,
+      "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
+      "negative_candidate": "open()という文字列か定義の無いスコアだけで、既存Skillを自動隔離する。",
+      "individual_rights_review": {
+        "full_license_read": true,
+        "license_path": "skills/abyousef739/clawskillshield/LICENSE.txt",
+        "license_bytes": 1085,
+        "license_sha256": "20232090a8ba0ca5e685d3d8a6652de23abfbf414bb08ca27e4e2426debbbb37",
+        "license_declared": "MIT / Copyright2026AbYousef",
+        "scope": "個別MIT読了。scannerコード、依存の実体と広告の安全性は未検証。",
+        "third_party_assets_or_support_rights_accepted": false
+      },
+      "required_changes": [
+        "API例の未定義値とスコア尺度を実装確認前に使わない",
+        "実際のデータフロー/権限/宛先と実害を根拠にし、単語だけで誤検出して自動隔離しない",
+        "自動quarantine/移動/削除を作者の広告から採用しない",
+        "PurePython/無通信/zero dependenciesは未読codeについての作者申告として扱う",
+        "本人の既存の検査・清掃許可へ新しい一律承認待ちを足さない"
+      ],
+      "supporting_resources": [
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 287,
+          "executed": false,
+          "git_blob": "463d1f70de4936799c01c0d54d0bac1f877b86ca",
+          "mode": "100644",
+          "path": "skills/abyousef739/clawskillshield/_meta.json",
+          "source_sha256": "e2fdd5c55109277190b651fd882c94e90654858eba24262cc9f9a97b99634f01"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "f937095d531b57b5339cdc1f381b1f306c6e6783",
+          "mode": "100644",
+          "path": "skills/abyousef739/clawskillshield/clawskillshield/analyzer.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1085,
+          "executed": false,
+          "git_blob": "82e334696e2f6dfb59de36c36e019bc25265c8d1",
+          "mode": "100644",
+          "path": "skills/abyousef739/clawskillshield/LICENSE.txt",
+          "source_sha256": "20232090a8ba0ca5e685d3d8a6652de23abfbf414bb08ca27e4e2426debbbb37"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "97682379a68195efaab445372eef5dd12e623ffb",
+          "mode": "100644",
+          "path": "skills/abyousef739/clawskillshield/clawskillshield/skill.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "48a0d706a99368e488d2a8a2fd16fbb1f47145e8",
+          "mode": "100644",
+          "path": "skills/abyousef739/clawskillshield/.gitignore",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "226548fde2875cfed2b1f9c3b1c9fb227cf47af2",
+          "mode": "100644",
+          "path": "skills/abyousef739/clawskillshield/pyproject.toml",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 3659,
+          "executed": false,
+          "git_blob": "fc545db2ed4cb14e7a48a656040a136261ce5cee",
+          "mode": "100644",
+          "path": "skills/abyousef739/clawskillshield/README.md",
+          "source_sha256": "982bc6fa9db12ff79536854a1d120f4cda5de73aa3049aacdbcd111175b7334f"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "ca8a10274dfbab47f21f356adab7123b2e38023c",
+          "mode": "100644",
+          "path": "skills/abyousef739/clawskillshield/clawskillshield/__init__.py",
+          "source_sha256": null
+        }
+      ],
+      "support_path_blob_inventory_complete": true,
+      "support_counts": {
+        "full_read": 1,
+        "saved": 3,
+        "all": 8
+      },
+      "name": "clawskillshield",
+      "body_read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "license_paths": [
+        "skills/abyousef739/clawskillshield/LICENSE.txt"
+      ],
+      "parent_current_assessment_received": {
+        "not_a_new_original_body_read": true,
+        "semantic_assessment_read": true,
+        "job": "20261024-093456-todo-3080",
+        "verification_reexecuted": false,
+        "original_primary_read_by": "20261024-080546-todo-3080",
+        "original_fixed_verification_reused": true
+      },
+      "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
+      "use": "提供Skillの静的な疑わしい箇所を、行番号と未確認を付けて人が判断できる形に整理する。"
+    },
+    {
+      "repo": "6mile/skills",
+      "body_read_complete": true,
+      "candidate_disposition": "existing_integration_candidate_pending_provenance_and_target_body_comparison",
+      "integrated_by_todo3080": false,
+      "all_support_inventory_complete": false,
+      "inventory_id": "github:8f9957dbe08a48fff38e7fc0ab658b34875f9e721e1ef302196c047282d7733c",
+      "source_sha256": "b81e2ff87ed8fa4d6c377ccb127a7254c9e6a77e3ae94f21e6b514f7bb2945a0",
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "retrieved_at": "2026-10-20T08:41:08.9697944Z",
+      "independent_review_complete": false,
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/ahump20/frontend-design-2/SKILL.md",
+      "excluded_by_todo3080": false,
+      "body_read_by": "parent3080 job080546",
+      "installed_by_todo3080": false,
+      "positive_candidate": "指定した利用者向け画面の画像案を作って。目的と制約を反映し、同じ画像への本人回答を得てから実装へ進めて。",
+      "bytes": 4440,
+      "git_blob": "5be498e2585843c7137bf9a74e262f57415de5ce",
+      "value": "中〜高。目的/読み手/制約/視覚方向を先に整理し、方向と複雑さを合わせる。",
+      "compare_metadata": [
+        "web-design-process",
+        "ui-design-styles",
+        "ui-accessibility"
+      ],
+      "read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "path": "skills/ahump20/frontend-design-2/SKILL.md",
+      "reason": "実装前の方向設計は既存web-design-process/ui-design-stylesと重なる。差分はmetadataだけで確定しない。全作品の新奇性やフォントの一律禁止は本人方針ではない。",
+      "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
+      "public_reflected": true,
+      "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
+      "negative_candidate": "表示の不具合を直す依頼で、同じ文字体を使わない規則を理由に製品全体を作り直す。",
+      "individual_rights_review": {
+        "full_license_read": true,
+        "license_path": "skills/ahump20/frontend-design-2/LICENSE.txt",
+        "license_bytes": 10174,
+        "license_sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594",
+        "license_declared": "Apache-2.0 text in LICENSE.txt; package author/copyright/NOTICE provenance not yet confirmed",
+        "scope": "LICENSE.txt全文を読了。6mile rootMITでは扱わない。個別notice/元作者との対応と、同梱の追加素材は未確認。",
+        "third_party_assets_or_support_rights_accepted": false
+      },
+      "required_changes": [
+        "同対象の具体画像と本人の明示回答を実装より先に置く",
+        "Arial/Inter/system fonts/紫などの禁止は作者の美術上の好みとして限定し、可読性/日本語/既存製品の指定を優先する",
+        "毎回違う見た目を作る要求を既存UIの小修正へ持ち込まない",
+        "作者のproduction-gradeという表現を未テストの成果の品質保証にしない",
+        "同梱Apache2.0の条件を個別に保持し、元作者/NOTICE/改変表記の所在を確認"
+      ],
+      "supporting_resources": [
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 10174,
+          "executed": false,
+          "git_blob": "f433b1a53f5b830a205fd2df78e2b34974656c7b",
+          "mode": "100644",
+          "path": "skills/ahump20/frontend-design-2/LICENSE.txt",
+          "source_sha256": "0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594"
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 285,
+          "executed": false,
+          "git_blob": "7e908a722b71aec1bfc612c7bbe3ec4582cc9722",
+          "mode": "100644",
+          "path": "skills/ahump20/frontend-design-2/_meta.json",
+          "source_sha256": "ec69abdfad24c2a245c80911cdf34e4467530dc22bfcc4a41ba30d3a5db46a2c"
+        }
+      ],
+      "support_path_blob_inventory_complete": true,
+      "support_counts": {
+        "full_read": 1,
+        "saved": 2,
+        "all": 2
+      },
+      "name": "frontend-design-2",
+      "body_read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "license_paths": [
+        "skills/ahump20/frontend-design-2/LICENSE.txt"
+      ],
+      "parent_current_assessment_received": {
+        "not_a_new_original_body_read": true,
+        "semantic_assessment_read": true,
+        "job": "20261024-093456-todo-3080",
+        "verification_reexecuted": false,
+        "original_primary_read_by": "20261024-080546-todo-3080",
+        "original_fixed_verification_reused": true
+      },
+      "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
+      "use": "新しい画面の目的・読み手・制約に基づく画像案を作り、回答後に実装方針を決める。"
+    },
+    {
+      "repo": "6mile/skills",
+      "body_read_complete": true,
+      "candidate_disposition": "reference_candidate_pending_private_gateway_and_existing_delta",
+      "integrated_by_todo3080": false,
+      "all_support_inventory_complete": false,
+      "inventory_id": "github:28f63deb53ff32f29572fd5ee5c57f3c05f777703454e62b598532fc0664e069",
+      "source_sha256": "a3bcd2d8b01186b2e89d30ef71ab7be075a4e54e8e0159c8a2e5aaaab70dd5b0",
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "retrieved_at": "2026-10-20T08:41:10.6586416Z",
+      "independent_review_complete": false,
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/aleksandrkrivolap/openclaw-agent-compute/SKILL.md",
+      "excluded_by_todo3080": false,
+      "body_read_by": "parent3080 job080546",
+      "installed_by_todo3080": false,
+      "positive_candidate": "既に指定したcompute gatewayで、セッションと成果物の識別、回収、終了を追えるか設計を比較して。新しい常駐先や有料枠は作らないで。",
+      "bytes": 1701,
+      "git_blob": "131ee83b2eafea3676b57b4e349d45f51b3616b8",
+      "value": "低〜中。session/exec/usage/artifact APIの契約例。",
+      "compare_metadata": [
+        "opaque-key-url-encoding",
+        "opaque-url-path-keys",
+        "process-lifecycle",
+        "agent-system-design"
+      ],
+      "read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "path": "skills/aleksandrkrivolap/openclaw-agent-compute/SKILL.md",
+      "reason": "未知のprivate Compute GatewayとAPI keyを前提にするclientで、依頼されたPC基盤の実提供者/費用/認証/実装の根拠が無い。",
+      "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
+      "public_reflected": true,
+      "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
+      "negative_candidate": "ファイルのhash確認だけの依頼から未知の有料compute gatewayへ接続する。",
+      "individual_rights_review": {
+        "full_license_read": true,
+        "license_path": "skills/aleksandrkrivolap/openclaw-agent-compute/LICENSE",
+        "license_bytes": 1075,
+        "license_sha256": "5b4ff6a03dd0f43bd05bbce3d1836fbce03214713f0b7888ccd66dc5c1b27316",
+        "license_declared": "MIT / Copyright2026AleksandrKrivolap",
+        "scope": "個別MIT読了。privategatewayのサービス許諾/費用/API権限/未読clientは未受入。",
+        "third_party_assets_or_support_rights_accepted": false
+      },
+      "required_changes": [
+        "未知gatewayへの接続、APIkey設定、新費用、starterの常設導入を行わない",
+        "artifact識別子のURL encodingだけでpath安全性を保証しない。opaque keyの正規化/スラッシュ/削除対象を確認する",
+        "session終了と成果回収、usage実測を呼出成功/設定と分ける",
+        "公開手順と通常開発の許可を新製品の常設公開へ拡大しない"
+      ],
+      "supporting_resources": [
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "3186b093fe279953210af6b58b2f7c750928075c",
+          "mode": "100644",
+          "path": "skills/aleksandrkrivolap/openclaw-agent-compute/starter-kit/openclaw.config.yml",
+          "source_sha256": null
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1075,
+          "executed": false,
+          "git_blob": "6e290becb9ddc365f53d4c4a2685eb8e850095a8",
+          "mode": "100644",
+          "path": "skills/aleksandrkrivolap/openclaw-agent-compute/LICENSE",
+          "source_sha256": "5b4ff6a03dd0f43bd05bbce3d1836fbce03214713f0b7888ccd66dc5c1b27316"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "cba678928e171fa520c1e3266c3ddc7a52bc4c43",
+          "mode": "100644",
+          "path": "skills/aleksandrkrivolap/openclaw-agent-compute/starter-kit/.env.example",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "f8b1b565cc4d54508464f4deaa2db689e462e615",
+          "mode": "100644",
+          "path": "skills/aleksandrkrivolap/openclaw-agent-compute/starter-kit/docker-compose.yml",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 661,
+          "executed": false,
+          "git_blob": "425a8763972da32679956c56ad0e13b13bcfc778",
+          "mode": "100644",
+          "path": "skills/aleksandrkrivolap/openclaw-agent-compute/_meta.json",
+          "source_sha256": "a060add686590f02f860f8fe0ea71c235a8e4b679008560c42204ccdf942e972"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "9629258e4d4c23475ec5c94a3b2bec72f1d81af7",
+          "mode": "100644",
+          "path": "skills/aleksandrkrivolap/openclaw-agent-compute/package.json",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "568cdce532a188f746782458d91ecff94296f310",
+          "mode": "100644",
+          "path": "skills/aleksandrkrivolap/openclaw-agent-compute/.env.example",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 1138,
+          "executed": false,
+          "git_blob": "aca4c916eaecb192afc4f3c09b2802fb5ac0136d",
+          "mode": "100644",
+          "path": "skills/aleksandrkrivolap/openclaw-agent-compute/README.md",
+          "source_sha256": "c7b109c976d89346a4aad8eee8c519ac421d8462f37a0680e1e71283888f970a"
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 645,
+          "executed": false,
+          "git_blob": "120a5588dd418bbf1444c7c919e2382dccb626ad",
+          "mode": "100644",
+          "path": "skills/aleksandrkrivolap/openclaw-agent-compute/starter-kit/README.md",
+          "source_sha256": "679d5cc518954ccc38c4935d0822c8dd83b2a793c60f4a460a4a1ed1c615c92d"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "40dfae7a8be667f2f5c4ba0e62948de80ca525f1",
+          "mode": "100644",
+          "path": "skills/aleksandrkrivolap/openclaw-agent-compute/scripts/example_exec.js",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "4b24ef1107086040d469776b32bf34ba0408c85e",
+          "mode": "100644",
+          "path": "skills/aleksandrkrivolap/openclaw-agent-compute/scripts/client.js",
+          "source_sha256": null
+        }
+      ],
+      "support_path_blob_inventory_complete": true,
+      "support_counts": {
+        "full_read": 1,
+        "saved": 4,
+        "all": 11
+      },
+      "name": "openclaw-agent-compute",
+      "body_read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "license_paths": [
+        "skills/aleksandrkrivolap/openclaw-agent-compute/LICENSE"
+      ],
+      "parent_current_assessment_received": {
+        "not_a_new_original_body_read": true,
+        "semantic_assessment_read": true,
+        "job": "20261024-093456-todo-3080",
+        "verification_reexecuted": false,
+        "original_primary_read_by": "20261024-080546-todo-3080",
+        "original_fixed_verification_reused": true
+      },
+      "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
+      "use": "既存に依頼済みのcompute gatewayを使う設計で、sessionとartifactの識別子・回収・終了を比較する。"
+    },
+    {
+      "repo": "6mile/skills",
+      "body_read_complete": true,
+      "candidate_disposition": "operational_hold_under_existing_no_api_key_no_new_spend_policy",
+      "integrated_by_todo3080": false,
+      "all_support_inventory_complete": false,
+      "inventory_id": "github:e831f8fa823c744a8f9722808d615f9d97f532dc1600be77e3e7d29b0a0a4f33",
+      "source_sha256": "11ab9214d7f7de9ea00f827e5f40478c279f5fcbd41fbee666bc04249df27752",
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "retrieved_at": "2026-10-20T08:41:12.3746829Z",
+      "independent_review_complete": false,
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/aliyun-ai-sec/aliyun-ai-guardrail/SKILL.md",
+      "excluded_by_todo3080": false,
+      "body_read_by": "parent3080 job080546",
+      "installed_by_todo3080": false,
+      "positive_candidate": "指定した既存設定へ機能を足す案を確認して。上書きされる値、外部へ送る内容、実動作で確かめる点を列挙して。",
+      "bytes": 1797,
+      "git_blob": "447c26412bfadb655067492d27994f615241346c",
+      "value": "限定的。既存設定へ項目をmergeして保持する点以外はcloud hookの導入専用。",
+      "compare_metadata": [
+        "security-review",
+        "oauth-least-privilege",
+        "powershell-json-roundtrip"
+      ],
+      "read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "path": "skills/aliyun-ai-sec/aliyun-ai-guardrail/SKILL.md",
+      "reason": "AK/SKを求め、LLM requestをcloud検査hookへ流す運用。既存のOAuth枠、用途、請求、送信範囲の根拠が無く、そのまま導入できない。",
+      "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
+      "public_reflected": true,
+      "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
+      "negative_candidate": "Skillを読んだだけで秘密鍵を尋ね、全LLM requestを新しいcloudへ送信するhookを登録する。",
+      "individual_rights_review": {
+        "full_license_read": true,
+        "license_path": "skills/aliyun-ai-sec/aliyun-ai-guardrail/LICENSE.txt",
+        "license_bytes": 1077,
+        "license_sha256": "5d905cedb5139bf70cd7e1c211479513655553271a0663a9d6c02e4fd0c60f65",
+        "license_declared": "MIT / Copyright2026AliyunSecAI",
+        "scope": "同ディレクトリMIT読了。外部サービスの権限/費用や同梱hookの動作許諾は別。",
+        "third_party_assets_or_support_rights_accepted": false
+      },
+      "required_changes": [
+        "本人からAPIkey/secretを集めたり、チャット/設定記録へ書かない",
+        "未読hookのinstall/常設登録/依存取得/外部送信を自動実行しない",
+        "設定完了を検査の実動作成功としない。restartと実受付/排出を分ける",
+        "同名のstatic clawscanとは別候補として扱い、APIkey必須を静的手順へ誤適用しない",
+        "既存JSONを保持する一般原則の部分利用を、cloudサービスへの新規接続と分ける"
+      ],
+      "supporting_resources": [
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 1057,
+          "executed": false,
+          "git_blob": "d676cebf50ffa86458d79a5d3c5fd524aa191243",
+          "mode": "100644",
+          "path": "skills/aliyun-ai-sec/aliyun-ai-guardrail/README.md",
+          "source_sha256": "b4d3037e49832b40b9078fa6e1a55378fa755b77c61acf7083c1f239ae6676fe"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "a598942b846db58d46c0d56531a5c6117cdc65ad",
+          "mode": "100644",
+          "path": "skills/aliyun-ai-sec/aliyun-ai-guardrail/assets/aliyun-ai-guardrail/hooks/aliyun-ai-guardrail/handler.ts",
+          "source_sha256": null
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1077,
+          "executed": false,
+          "git_blob": "10363f833b3be46e8a8c14d51553c5529ffa6749",
+          "mode": "100644",
+          "path": "skills/aliyun-ai-sec/aliyun-ai-guardrail/LICENSE.txt",
+          "source_sha256": "5d905cedb5139bf70cd7e1c211479513655553271a0663a9d6c02e4fd0c60f65"
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 330,
+          "executed": false,
+          "git_blob": "1551b0c40274186db8af6944a5165cbb6af201f7",
+          "mode": "100644",
+          "path": "skills/aliyun-ai-sec/aliyun-ai-guardrail/assets/aliyun-ai-guardrail/hooks/aliyun-ai-guardrail/HOOK.md",
+          "source_sha256": "4bcfce79e51bf6fde2199ba1c7eb413dd15540f29a9d42f9883e44865f4d85f5"
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 297,
+          "executed": false,
+          "git_blob": "deb63e6b7f49d25a18c4970bffc6396e46a7993a",
+          "mode": "100644",
+          "path": "skills/aliyun-ai-sec/aliyun-ai-guardrail/_meta.json",
+          "source_sha256": "70ae9cc0b6dc033dec2cc52ebb8244187642b565dee5cc69161aeba1b84d6595"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "41a39aa219de2edf4bfb9ff1cd5674598a6d0a93",
+          "mode": "100644",
+          "path": "skills/aliyun-ai-sec/aliyun-ai-guardrail/assets/aliyun-ai-guardrail/package.json",
+          "source_sha256": null
+        }
+      ],
+      "support_path_blob_inventory_complete": true,
+      "support_counts": {
+        "full_read": 1,
+        "saved": 4,
+        "all": 6
+      },
+      "name": "aliyun-ai-guardrail",
+      "body_read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "license_paths": [
+        "skills/aliyun-ai-sec/aliyun-ai-guardrail/LICENSE.txt"
+      ],
+      "parent_current_assessment_received": {
+        "not_a_new_original_body_read": true,
+        "semantic_assessment_read": true,
+        "job": "20261024-093456-todo-3080",
+        "verification_reexecuted": false,
+        "original_primary_read_by": "20261024-080546-todo-3080",
+        "original_fixed_verification_reused": true
+      },
+      "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
+      "use": "既存設定を壊さず拡張する方法と、cloudへの送信範囲/実動作の確認を整理する。"
+    },
+    {
+      "repo": "6mile/skills",
+      "body_read_complete": true,
+      "candidate_disposition": "adapt_or_integrate_candidate_pending_references_and_existing_comparison",
+      "integrated_by_todo3080": false,
+      "all_support_inventory_complete": false,
+      "inventory_id": "github:25fb0a2c7fdf8d33b6813b39ed21c9064f2878a87dcaf3660c34f4b0876b829d",
+      "source_sha256": "9881ceeae221912631494715939a8f0d949c4ac6f4768efe81479849ee297664",
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "retrieved_at": "2026-10-20T08:41:12.3762639Z",
+      "independent_review_complete": false,
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/aliyun-ai-sec/aliyun-clawscan/SKILL.md",
+      "excluded_by_todo3080": false,
+      "body_read_by": "parent3080 job080546",
+      "installed_by_todo3080": false,
+      "positive_candidate": "提供されたSkillの通信・権限・永続化の記述を静的に調べて。スキャナの判定だけで安全とは断定せず、根拠の行と未検証範囲を示して。",
+      "bytes": 6154,
+      "git_blob": "001e0eeccd6273cae2fde0db2d444c9355132cf9",
+      "value": "中〜高。設定とSkill静的検査を分け、根拠付きの具体所見へまとめる方法。",
+      "compare_metadata": [
+        "security-review",
+        "skill-maintenance",
+        "safe-tool-evaluation"
+      ],
+      "read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "path": "skills/aliyun-ai-sec/aliyun-clawscan/SKILL.md",
+      "reason": "設定/Skill静的検査と根拠付き報告は有用。2参照を追加で全読し、作者の単純判定をそのまま採らず、具体的な誤検出と構文不備を補正する必要を確認した。",
+      "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
+      "public_reflected": true,
+      "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
+      "negative_candidate": "任意のimport名が見つからなかっただけで全環境を安全とし、未知Skillを自動installする。",
+      "individual_rights_review": {
+        "full_license_read": true,
+        "license_path": "skills/aliyun-ai-sec/aliyun-clawscan/LICENSE.txt",
+        "license_bytes": 1077,
+        "license_sha256": "5d905cedb5139bf70cd7e1c211479513655553271a0663a9d6c02e4fd0c60f65",
+        "license_declared": "MIT / Copyright2026AliyunSecAI",
+        "scope": "個別MIT読了。同梱2参照・検査対象code・製品の商標/公式性へ包括拡張しない。",
+        "third_party_assets_or_support_rights_accepted": false
+      },
+      "required_changes": [
+        "baselineの全tool承認必須/ブラウザ無効化を安全という表へそのまま従わず、本人の許可済み自律操作と実際の到達範囲/漏えい/権限を確認する",
+        "静的な初期調査の範囲指定を、許可済みの動作テストやPCファイル調査の新しい一般禁止へ拡大しない",
+        "疑わしい単語だけで悪意や安全を断定せず、実害と到達先を確認する",
+        "無所見を全件安全や導入成功とせず、未読/走査だけ/実行していない範囲を残す",
+        "作者/サービスが提供したという自己申告を公式認証済みと書かない"
+      ],
+      "supporting_resources": [
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 2567,
+          "executed": false,
+          "git_blob": "1804ac63728957a0bf9d26744beb17d25522d5a3",
+          "mode": "100644",
+          "path": "skills/aliyun-ai-sec/aliyun-clawscan/reference/baseline.md",
+          "source_sha256": "7b29768bd4b91b092a3fb4eca8dbf793a0d3cd45612c45749da9ca4363908ac3"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 13784,
+          "executed": false,
+          "git_blob": "3c5e48a36de72a9f68e42d21b1ba28478ed0c687",
+          "mode": "100644",
+          "path": "skills/aliyun-ai-sec/aliyun-clawscan/reference/skillaudit.md",
+          "source_sha256": "18a22e1e1d73395e141561d9662bbe7b82419e850ff781c6265077e04f751b83"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1077,
+          "executed": false,
+          "git_blob": "10363f833b3be46e8a8c14d51553c5529ffa6749",
+          "mode": "100644",
+          "path": "skills/aliyun-ai-sec/aliyun-clawscan/LICENSE.txt",
+          "source_sha256": "5d905cedb5139bf70cd7e1c211479513655553271a0663a9d6c02e4fd0c60f65"
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 467,
+          "executed": false,
+          "git_blob": "8d342ef6a752df9b1a3ffe1e29b172f6b01fd487",
+          "mode": "100644",
+          "path": "skills/aliyun-ai-sec/aliyun-clawscan/_meta.json",
+          "source_sha256": "48bd20ac375b6346b3e0b325ab25d7fb40e6ae182d9d6b13e4449dfbdf214bc8"
+        }
+      ],
+      "support_path_blob_inventory_complete": true,
+      "support_counts": {
+        "full_read": 3,
+        "saved": 4,
+        "all": 4
+      },
+      "specific_support_findings": [
+        "credential accessをSkill本文に宣言しただけでlowとする表は、利用者の実承認や宛先/権限の照合ではない",
+        "正規表現String\\\\.fromCharCode.*{50,}の連続量指定はGo標準regexpでcompile error。上流の実engineは未指定で、他engineの結果へ一般化しない",
+        "ncの[e|l]はliteral pipeも許す。無害な文字列nc -| 1.2.3.4へのGo照合はtrueで、意図したe/l選択と異なる",
+        "POST/直接IP/80以外port/高entropy/短い変数名/新しいpackageだけで悪意を確定しない。実際の処理・宛先・権限と根拠を示す",
+        "publicなscanner文書内の攻撃例を、実際に導入されたmalwareとして数えない。作者のIPや広告を現在の脅威情報として再利用しない"
+      ],
+      "extra_support_read": [
+        "reference/baseline.md full2567B",
+        "reference/skillaudit.md full13784B"
+      ],
+      "regex_check": "clawscan-regex-check080546.json",
+      "name": "aliyun-clawscan",
+      "body_read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "license_paths": [
+        "skills/aliyun-ai-sec/aliyun-clawscan/LICENSE.txt"
+      ],
+      "parent_current_assessment_received": {
+        "not_a_new_original_body_read": true,
+        "semantic_assessment_read": true,
+        "job": "20261024-093456-todo-3080",
+        "verification_reexecuted": false,
+        "original_primary_read_by": "20261024-080546-todo-3080",
+        "original_fixed_verification_reused": true
+      },
+      "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
+      "use": "提供されたSkillの危険な通信/権限/永続化を静的に見て、根拠の行と未検証範囲で報告する。"
+    },
+    {
+      "repo": "6mile/skills",
+      "body_read_complete": true,
+      "candidate_disposition": "adapt_or_integrate_candidate_pending_cli_auth_and_requirements",
+      "integrated_by_todo3080": false,
+      "all_support_inventory_complete": false,
+      "inventory_id": "github:fb4ad70b1b0b8897e78121a77bcafa0ddbbbd5d3538c744744761aaac1d0f09e",
+      "source_sha256": "4455f7291180a6ab4de92ae71fa8c2f5275fbd89d53f3cdf1aaad0a711de10bb",
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "retrieved_at": "2026-10-20T08:41:12.6269226Z",
+      "independent_review_complete": false,
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/aloth/overleaf-skill/SKILL.md",
+      "excluded_by_todo3080": false,
+      "body_read_by": "parent3080 job080546",
+      "installed_by_todo3080": false,
+      "positive_candidate": "指定したLaTeX資料を提出する前に、編集元・コンパイル成果・必要な依存ファイルがそろっているか確認して。公開設定は変えないで。",
+      "bytes": 3975,
+      "git_blob": "a13be29faa93a4d9e3a75e2f5c17e80292e5a21a",
+      "value": "中。LaTeXの同期、コンパイル成果、提出bundleを分ける手順。",
+      "compare_metadata": [
+        "documents-slides-data",
+        "pdf:pdf",
+        "browser-automation",
+        "rclone-rc-safe-copy"
+      ],
+      "read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "path": "skills/aloth/overleaf-skill/SKILL.md",
+      "reason": "olcliへsessioncookieをCLI引数で渡す例とglobalinstallに依存。arXivはbblだけという一律主張は対象時点の公式要件をまだ照合していない。",
+      "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
+      "public_reflected": true,
+      "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
+      "negative_candidate": "PDFの内容を読む依頼だけで、sessioncookieを抽出し全projectを強制同期する。",
+      "individual_rights_review": {
+        "full_license_read": true,
+        "license_path": "skills/aloth/overleaf-skill/LICENSE.md",
+        "license_bytes": 1071,
+        "license_sha256": "6e4b613ab5e69e11d015591ae24eb8c4358df1afc32645f1eb9db251951c9780",
+        "license_declared": "MIT / Copyright2026AlexanderLoth",
+        "scope": "個別MIT読了。Overleaf/CLI/arXivの契約や第三者projectの権利は別で、このpublic複製から推定しない。",
+        "third_party_assets_or_support_rights_accepted": false
+      },
+      "required_changes": [
+        "cookieを取り出してチャット/ログ/CLI履歴へ出す経路をそのまま採用しない。既存の本人Chromeと正規認証を優先する",
+        "project名の自動検出だけで同期先を決めず、projectIDと既存差分/保持対象を確認する",
+        "pull --force、双方向sync、uploadを閲覧だけの依頼で実行しない",
+        "必要なtex/bibliography/figure/class/style等を対象の提出要件と実compileで確認し、zip作成だけを提出成功としない",
+        "第三者tool/サービスの現仕様、Windows対応、保持/費用は未確認。新しい有料契約は行わない"
+      ],
+      "supporting_resources": [
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 1217,
+          "executed": false,
+          "git_blob": "33e9e5c2589b3b025f60b897de736e6f000a84cd",
+          "mode": "100644",
+          "path": "skills/aloth/overleaf-skill/references/API.md",
+          "source_sha256": "d90bad61fdd74c07d5f80756e4f2ba87770a5bbfc529942dda2cf783fca92a3a"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "6030b90d4664c12b182ba449272bbad48f34506b",
+          "mode": "100644",
+          "path": "skills/aloth/overleaf-skill/package.json",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 2257,
+          "executed": false,
+          "git_blob": "283876e68287aeaa8b9d13ff166853f46a8f5ef2",
+          "mode": "100644",
+          "path": "skills/aloth/overleaf-skill/README.md",
+          "source_sha256": "35be5ad474956287285b1cbeddfb51164d62cbbae6370f10f4200f3e8858cc23"
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 273,
+          "executed": false,
+          "git_blob": "26e450c513832b004c81eec727a0dfd1f4b4374a",
+          "mode": "100644",
+          "path": "skills/aloth/overleaf-skill/_meta.json",
+          "source_sha256": "a357da4c681ff7627060fb23d4616106d26cb3bc7aaa1358ad52d01cf615e6d4"
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 1071,
+          "executed": false,
+          "git_blob": "8f850a8a33bca625ac9fe5dc1bcb7ee70377af82",
+          "mode": "100644",
+          "path": "skills/aloth/overleaf-skill/LICENSE.md",
+          "source_sha256": "6e4b613ab5e69e11d015591ae24eb8c4358df1afc32645f1eb9db251951c9780"
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "a4021333beafb905e3f93759b7c75e69a7fe5a8d",
+          "mode": "100644",
+          "path": "skills/aloth/overleaf-skill/scripts/install.sh",
+          "source_sha256": null
+        }
+      ],
+      "support_path_blob_inventory_complete": true,
+      "support_counts": {
+        "full_read": 1,
+        "saved": 4,
+        "all": 6
+      },
+      "name": "overleaf-skill",
+      "body_read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "license_paths": [
+        "skills/aloth/overleaf-skill/LICENSE.md"
+      ],
+      "parent_current_assessment_received": {
+        "not_a_new_original_body_read": true,
+        "semantic_assessment_read": true,
+        "job": "20261024-093456-todo-3080",
+        "verification_reexecuted": false,
+        "original_primary_read_by": "20261024-080546-todo-3080",
+        "original_fixed_verification_reused": true
+      },
+      "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
+      "use": "既存のLaTeX案件で、編集元とcompile成果と提出に必要な依存を確認する。"
+    },
+    {
+      "repo": "6mile/skills",
+      "body_read_complete": true,
+      "candidate_disposition": "excluded_individual_proprietary_permission_not_evidenced",
+      "integrated_by_todo3080": false,
+      "all_support_inventory_complete": false,
+      "inventory_id": "github:a43c08b1deba2610fe1f42e7fd4107452915e0b537210bc9c1caf435edfbbbbc",
+      "source_sha256": "4226f982091425a4e0cb6edbac2f9e84789f6b2a3845b0b9fb29a4dd27a779f9",
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "retrieved_at": "2026-10-20T08:41:16.8865852Z",
+      "independent_review_complete": false,
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/asazhangyongchao/asiasea-bi/SKILL.md",
+      "excluded_by_todo3080": true,
+      "body_read_by": "parent3080 job080546",
+      "installed_by_todo3080": false,
+      "positive_candidate": "この候補をコピーせず、同梱のProprietary条項が求める書面許諾の根拠を確認して。根拠がなければ今回の導入から除外して。",
+      "bytes": 1654,
+      "git_blob": "39681a67c6bfe401b7b2692bbe9d52462cef99df",
+      "value": "範囲内での導入対象にはしない。",
+      "compare_metadata": [
+        "skill-maintenance",
+        "source-grounded-content-review"
+      ],
+      "read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "path": "skills/asazhangyongchao/asiasea-bi/SKILL.md",
+      "reason": "同ディレクトリのLICENSEはProprietary and Confidential/NOT Open Sourceと明記し、書面許諾を要するとする。publicarchiveやrootMITだけではこの候補を複製/適応/利用できる根拠にならない。",
+      "comparison_limit": "起動catalogの名前/descriptionだけ。中央の未知本文は比較していない。",
+      "public_reflected": true,
+      "support_inventory_limit": "固定complete treeの選択package全path/blobと保存indexを照合。未保存supportのbytes/body/権利は不明のまま。",
+      "negative_candidate": "publicrepositoryにあることとrootMITだけで、この独占的許諾文を無視して中央へ再配布する。",
+      "individual_rights_review": {
+        "full_license_read": true,
+        "license_path": "skills/asazhangyongchao/asiasea-bi/LICENSE.md",
+        "license_bytes": 3156,
+        "license_sha256": "602b1b4ea796fe8c69240c9d95a9a77fb2eb5f7495ff3293b7d758b415c66a41",
+        "license_declared": "Proprietary and Confidential; written authorization required; not accepted",
+        "scope": "同梱個別license全文を確認。許諾の証拠なし。本文/noticeの再配布はせず、この判定理由とhash/固定出典だけを将来の採否表へ記録する候補。",
+        "third_party_assets_or_support_rights_accepted": false
+      },
+      "required_changes": [
+        "本文・設定・backend API・支持codeを中央へコピーしない",
+        "後続package本文をさらに読まず、権利の明示根拠と固定identityのみを残す",
+        "100%幻覚拒否/絶対安全などの作者広告を事実として転用しない",
+        "本人が第三者の権利を持つと推定せず、今回の判断を全6mileの一括除外へ広げない"
+      ],
+      "supporting_resources": [
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "d6372ae98029a5e009c48c7160e8b379edec7af8",
+          "mode": "100644",
+          "path": "skills/asazhangyongchao/asiasea-bi/skill.json",
+          "source_sha256": null
+        },
+        {
+          "body_read": false,
+          "body_saved": false,
+          "bytes": null,
+          "executed": false,
+          "git_blob": "ea6679e763023582a4dcaf4b4e6dfcb609be22a9",
+          "mode": "100644",
+          "path": "skills/asazhangyongchao/asiasea-bi/main.py",
+          "source_sha256": null
+        },
+        {
+          "body_read": true,
+          "body_saved": true,
+          "bytes": 3156,
+          "executed": false,
+          "git_blob": "c2ea789ad60fbb1d51dc5d0bb8f2daaff9ed9f39",
+          "mode": "100644",
+          "path": "skills/asazhangyongchao/asiasea-bi/LICENSE.md",
+          "source_sha256": "602b1b4ea796fe8c69240c9d95a9a77fb2eb5f7495ff3293b7d758b415c66a41"
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 2872,
+          "executed": false,
+          "git_blob": "61e11f7c3af8eb672c28854f1b1dac73904ffb24",
+          "mode": "100644",
+          "path": "skills/asazhangyongchao/asiasea-bi/README.md",
+          "source_sha256": "3d28b9493ef0743c1be76c7cc0af9e2da7b66bb05b268e5a8e5c3e9bdc40c378"
+        },
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 282,
+          "executed": false,
+          "git_blob": "77409622867d7d4f6d9dea017b9adf1e762bb0c0",
+          "mode": "100644",
+          "path": "skills/asazhangyongchao/asiasea-bi/_meta.json",
+          "source_sha256": "cf70dad77aba0ec9a7f5b6b740988ae5384710992272c4c9012e076be215b4b9"
+        }
+      ],
+      "support_path_blob_inventory_complete": true,
+      "support_counts": {
+        "full_read": 1,
+        "saved": 3,
+        "all": 5
+      },
+      "name": "asiasea-bi",
+      "body_read_method": "strict UTF8/gzip bytes/SHA matched; complete BEGIN/END output for body and individual license",
+      "selected_scope_notice_verified": true,
+      "third_party_assets_or_support_rights_accepted": false,
+      "license_paths": [
+        "skills/asazhangyongchao/asiasea-bi/LICENSE.md"
+      ],
+      "parent_current_assessment_received": {
+        "not_a_new_original_body_read": true,
+        "semantic_assessment_read": true,
+        "job": "20261024-093456-todo-3080",
+        "verification_reexecuted": false,
+        "original_primary_read_by": "20261024-080546-todo-3080",
+        "original_fixed_verification_reused": true
+      },
+      "parent_policy_correction": "公開archiveの自己申告と、作者/権利/実装/安全性を区別する。既存の本人承認と通常操作を再承認待ちにしない。配布Pythonの無改変利用と新規自作Go/GoDD Rustを区別。未読支持の全移植や一括取得を新義務にしない。",
+      "decision_scope": "同梱の個別Proprietary/Confidential/書面許諾要求と許諾根拠不在に限る。この候補の本文や実装を中央へ複製せず、固定出典・指紋と判定理由だけを残す。他の6mile候補へ一括適用しない。",
+      "use": "この個別候補を使う前に、同梱の制限と許諾根拠の有無を確認する。"
+    },
+    {
+      "name": "kepano-obsidian-cli",
+      "positive_candidate": "固定元SHA/bytesの一致を根拠に同じ本文を二重導入しない",
+      "copy_license_accepted": false,
+      "inventory_id": "github:94699dba5282f10171d8005a1371aa5eedab8ace92676691940e8c745887f36f",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/hoyaryyj/kepano-obsidian-cli/SKILL.md",
+      "body_read_method": "Prior parent full original3183B read and fixed identity verification; accepted without replay",
+      "compare_metadata": [
+        "obsidian-cli"
+      ],
+      "all_support_inventory_complete": false,
+      "support_path_blob_inventory_complete": true,
+      "license_paths": [
+        "LICENSE"
+      ],
+      "support_counts": {
+        "all": 1,
+        "saved": 1,
+        "full_read": 0
+      },
+      "source_sha256": "b54257cdc0e5d04488b35b0c797bfe427b24359f0848d3c73924dcacf8da6358",
+      "candidate_disposition": "excluded_exact_body_duplicate_of_existing_catalog_adoption",
+      "reason": "固定SHA256/bytesが既存採用obsidian-cliの元本文と一致する別出現。元の採用と既存配置を保持し、新規コピー0でこの出現だけを除外する。",
+      "independent_review_complete": false,
+      "installed_by_todo3080": false,
+      "comparison_limit": "既存採用の保存済み元本文とのSHA/bytes同一。中央実ディスクの再読はしていない。",
+      "body_read_by": "20261024-080546-todo-3080",
+      "required_changes": [
+        "元採用とmanifestを維持する。この複製のライセンスや_meta本文を受入済みとしない。"
+      ],
+      "public_reflected": true,
+      "bytes": 3183,
+      "integrated_by_todo3080": false,
+      "use": "同一内容の別出現の重複判定",
+      "repo": "6mile/skills",
+      "negative_candidate": "名前だけで別実装を同一と判断する",
+      "individual_rights_review": {
+        "copy_license_accepted": false,
+        "root_license_sha256": "bbad531d4d937825bc35c9363e3cba1283084bb8b2f3158e17f382ba4fb7b2d4",
+        "no_new_body_copied": true,
+        "scope": "6mile rootMIT(Copyright2026clawdbot)と歴史アーカイブ/悪意あるSkill混在のREADMEを全文読了。転載の権限をrootMITから推定せず、本文/notice/codeを新規コピーしない重複候補の判定のみ。"
+      },
+      "excluded_by_todo3080": true,
+      "path": "skills/hoyaryyj/kepano-obsidian-cli/SKILL.md",
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "value": "追加コピーを省きcanonical出典を保つ",
+      "body_read_complete": true,
+      "git_blob": "0046c45abc11cbba48cee538e9cce9993a62747b",
+      "third_party_assets_or_support_rights_accepted": false,
+      "retrieved_at": "2026-10-20T08:41:53.0904206Z",
+      "supporting_resources": [
+        {
+          "body_read": false,
+          "body_saved": true,
+          "bytes": 294,
+          "executed": false,
+          "git_blob": "a42461c5f89a723c0307a385b4649ade8ce9e5a3",
+          "mode": "100644",
+          "path": "skills/hoyaryyj/kepano-obsidian-cli/_meta.json",
+          "source_sha256": "cbb770e2af5373e1478c78ce90d80314e57c3f5175f3c33450eedb0fc3bb6108"
+        }
+      ]
+    }
+  ],
+  "license_batch": {
+    "selected": 10,
+    "eligible_remaining": 338,
+    "all_other_candidates_unmodified": true,
+    "eligible_saved_same_directory": 348,
+    "not_adoption_cap": true,
+    "pool_definition": "旧担当が報告した選択pool348の履歴。正確な選択条件は未復元で、今回のrole-based個別notice metadata pool864とは同じ基準の増減として比較しない。",
+    "new_notice_metadata_pool": 864,
+    "next_research_todo": 3554
+  },
+  "integrated": 0,
+  "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+  "preexisting_duplicate_receipt": {
+    "already_counted_in_original_seven": true,
+    "new_global_disposition_count": 0,
+    "inventory_id": "github:94699dba5282f10171d8005a1371aa5eedab8ace92676691940e8c745887f36f",
+    "source": "skills-3080-duplicate-decisions.json"
+  }
+}

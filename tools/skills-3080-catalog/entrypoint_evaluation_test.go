@@ -193,7 +193,18 @@ func TestDuplicateExclusionsKeepCanonicalAdoptionsAndSeparateLedgerRows(t *testi
 	if ledger.Installed != progress.Installed || ledger.Integrated != progress.Integrated {
 		t.Fatal("adoption rows differ from independently published progress counts")
 	}
-	if len(ledger.Entries) != ledger.Installed+ledger.Integrated || ledger.Count != 7 || len(decisions.Entries) != ledger.Count || !reflect.DeepEqual(decisions.Entries, ledger.Excluded) {
+	var ledgerDuplicates []duplicateDecision
+	for _, row := range ledger.Excluded {
+		switch row.Type {
+		case "exact_body_duplicate_of_existing_catalog_adoption":
+			ledgerDuplicates = append(ledgerDuplicates, row)
+		case "individual_proprietary_permission_not_evidenced":
+			// Validated against its notice in sixmile_assessment_test.go.
+		default:
+			t.Fatal("unknown exclusion type must not be treated as a duplicate")
+		}
+	}
+	if len(ledger.Entries) != ledger.Installed+ledger.Integrated || ledger.Count != 8 || ledger.Count != len(ledger.Excluded) || len(decisions.Entries) != 7 || !reflect.DeepEqual(decisions.Entries, ledgerDuplicates) {
 		t.Fatal("exclusion receipt differs from ledger or was counted as an adoption")
 	}
 	if err := validateDuplicateDecisions(decisions.Entries, ledger.Entries); err != nil {
@@ -253,6 +264,9 @@ func TestCoverageSeparatesCompleteSourcesMizchiAndAuthoredDrafts(t *testing.T) {
 		Mengto struct {
 			Read int `json:"full_body_read"`
 		} `json:"mengto_partial_entrypoint_evaluation"`
+		Sixmile struct {
+			Read int `json:"full_body_read"`
+		} `json:"sixmile_partial_entrypoint_evaluation"`
 		Authored struct {
 			Additional int      `json:"additional_authored_drafts_not_in_plans"`
 			Total      int      `json:"authored_total"`
@@ -267,7 +281,7 @@ func TestCoverageSeparatesCompleteSourcesMizchiAndAuthoredDrafts(t *testing.T) {
 		}
 		sum += n
 	}
-	if sum != 137 || len(p.Coverage.ByRepo) != p.Coverage.Repos || p.SkillRead != sum || p.Coverage.Paths != sum || p.Mizchi.Read != 76 || p.Mengto.Read < 127 || p.TotalRead != sum+p.Mizchi.Read+p.Mengto.Read {
+	if sum != 137 || len(p.Coverage.ByRepo) != p.Coverage.Repos || p.SkillRead != sum || p.Coverage.Paths != sum || p.Mizchi.Read != 76 || p.Mengto.Read < 127 || p.TotalRead != sum+p.Mizchi.Read+p.Mengto.Read+p.Sixmile.Read {
 		t.Fatal("body read coverage does not conserve source paths")
 	}
 	var sql struct {

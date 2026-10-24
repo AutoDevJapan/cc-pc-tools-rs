@@ -57,7 +57,7 @@ func (r *Runner) classifyCaptured(q *Request, thread Thread, conversation string
 	managed, known := r.ordinaryThreadRouting(q.Thread)
 	thread.Managed = thread.Managed || managed
 	q.Phase, q.PendingOwner, q.NextAction = "captured", "", ""
-	if strings.TrimSpace(q.Text) == "" {
+	if strings.TrimSpace(q.Text) == "" && (q.Attachments == nil || len(*q.Attachments) == 0) {
 		q.Phase = "empty"
 	} else if ordinaryShortAnswer(q.Text) {
 		q.Phase = "context_pending"
@@ -74,8 +74,8 @@ func (r *Runner) classifyCaptured(q *Request, thread Thread, conversation string
 	if q.ReplyChannel != "" && (q.ReplyChannel != q.Thread || q.ReplyGuild != "" && q.ReplyGuild != r.State.Destination.Guild) {
 		q.Phase = "reference_mismatch"
 	}
-	// Empty messages are not unresolved work. Status questions must reach the
-	// existing-answer proof before the separate gate on any new status send.
+	// An empty body without observed attachments is not unresolved work. Status
+	// questions reach existing-answer proof before answerStatusQuery's send gate.
 	if q.Phase != "empty" && q.Phase != "status_query" && q.Phase != "reference_mismatch" && (!known || thread.Managed && !r.KnownQuestionThreads[q.Thread]) {
 		r.parkUnbound(q)
 	}

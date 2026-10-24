@@ -17,6 +17,7 @@ import (
 const reviewMetadataStore = "D:/CC/Tools/todo/todo.json"
 const reviewMetadataLimit = 64 << 20
 const reviewMetadataID = int64(2191)
+const reviewMetadataRequest = "todo29-db-count-review-52aaffb-20261010"
 
 // This is one metadata-only case, not a general store reader or a qualification.
 // The production command has no source, target, output or authentication options.
@@ -188,6 +189,47 @@ func reviewField(m obj, key string, kind string) obj {
 	return r
 }
 
+// These are string facts about one fixed case, not a source identity receipt.
+// No label, path, reference digest, or referenced content is returned or opened.
+func reviewSourceReference(m obj, key string) obj {
+	r := reviewField(m, key, "reference")
+	if r["state"] != "recorded" {
+		return r
+	}
+	s := m[key].(string)
+	exact := s == reviewMetadataRequest || s == "manual:"+reviewMetadataRequest
+	r["original_request_text_present"] = strings.Contains(s, reviewMetadataRequest)
+	r["exact_original_request_text"] = exact
+	r["reference_identity_verified"] = false
+	r["reference_format"] = "other"
+	switch {
+	case exact:
+		r["reference_format"] = "known_request_text"
+	case s == "queue" || s == "queued":
+		r["reference_format"] = "queue_marker"
+	case strings.HasPrefix(s, "queue:") || strings.HasPrefix(s, "queued:"):
+		r["reference_format"] = "queue_prefix"
+	default:
+		if len(s) < 17 || s[15] != '-' {
+			return r
+		}
+		for _, c := range s[16:] {
+			if !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || c == '-' || c == '_') {
+				return r
+			}
+		}
+		stamp, err := time.Parse("20060102-150405", s[:15])
+		if err != nil {
+			return r
+		}
+		r["reference_format"] = "job_name"
+		r["job_name_time"] = stamp.Format("2006-01-02 15:04:05")
+		r["job_name_time_zone"] = "unspecified"
+		r["job_existence_verified"] = false
+	}
+	return r
+}
+
 func projectReviewMetadata(b []byte) (obj, error) {
 	fail := func(code string) (obj, error) { return nil, errors.New("review_metadata_" + code) }
 	if len(b) > reviewMetadataLimit || !utf8.Valid(b) {
@@ -260,7 +302,7 @@ func projectReviewMetadata(b []byte) (obj, error) {
 			"state":                           "recorded",
 			"original_id":                     reviewField(recovery, "original_id", "id"),
 			"verified_status":                 reviewField(recovery, "verified_status", "status"),
-			"request_source_job_id":           reviewField(recovery, "request_source_job_id", "reference"),
+			"request_source_job_id":           reviewSourceReference(recovery, "request_source_job_id"),
 			"source_job_sha256":               reviewField(recovery, "source_job_sha256", "sha256"),
 			"preserved_worker_request":        reviewField(recovery, "preserved_worker_request", "reference"),
 			"preserved_worker_request_sha256": reviewField(recovery, "preserved_worker_request_sha256", "sha256"),

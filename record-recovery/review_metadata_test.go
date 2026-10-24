@@ -283,7 +283,7 @@ func TestReviewMetadataMainHelper(t *testing.T) {
 	t.Fatal("main did not exit")
 }
 
-func TestReviewMetadataMainDispatchRefusesScopeBeforeOpeningProductionSource(t *testing.T) {
+func TestReviewMetadataMainDispatchRefusesArguments(t *testing.T) {
 	executable, err := os.Executable()
 	if err != nil {
 		t.Fatal(err)
@@ -291,10 +291,15 @@ func TestReviewMetadataMainDispatchRefusesScopeBeforeOpeningProductionSource(t *
 	cmd := exec.Command(executable, "-test.run=^TestReviewMetadataMainHelper$")
 	cmd.Env = append(os.Environ(), "CC_REVIEW_METADATA_MAIN_HELPER=1")
 	hideCommand(cmd)
-	output, err := cmd.CombinedOutput()
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	output, err := cmd.Output()
 	exit, ok := err.(*exec.ExitError)
 	if !ok || exit.ExitCode() != 2 {
 		t.Fatalf("unexpected main result: %v", err)
+	}
+	if stderr.Len() != 0 {
+		t.Fatal("main returned unexpected standard error")
 	}
 	var response obj
 	if json.Unmarshal(output, &response) != nil || response["code"] != "review_metadata_invalid_arguments" {

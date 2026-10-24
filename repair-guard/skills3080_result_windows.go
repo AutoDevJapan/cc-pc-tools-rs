@@ -17,26 +17,26 @@ import (
 const skillsJobsRoot = "D:/CC/Tools/codex-jobs/jobs"
 
 type skillsTask struct {
-	ID        int      `json:"id"`
-	Project   string   `json:"project"`
-	Status    string   `json:"status"`
-	Spec      string   `json:"spec"`
-	Jobs      []string `json:"jobs"`
-	OwnerStopped bool `json:"owner_stopped"`
-	Postponed bool `json:"owner_postponement_recorded"`
-	StopKind string `json:"stop_kind"`
-	OwnerQuestion any `json:"owner_question_wait"`
-	DecisionWait any `json:"decision_wait"`
-	WaitReady any `json:"wait_ready"`
-	Scheduler struct {
+	ID            int      `json:"id"`
+	Project       string   `json:"project"`
+	Status        string   `json:"status"`
+	Spec          string   `json:"spec"`
+	Jobs          []string `json:"jobs"`
+	OwnerStopped  bool     `json:"owner_stopped"`
+	Postponed     bool     `json:"owner_postponement_recorded"`
+	StopKind      string   `json:"stop_kind"`
+	OwnerQuestion any      `json:"owner_question_wait"`
+	DecisionWait  any      `json:"decision_wait"`
+	WaitReady     any      `json:"wait_ready"`
+	Scheduler     struct {
 		Job           string `json:"job"`
 		LastJob       string `json:"last_job"`
 		Worktree      string `json:"worktree"`
 		Branch        string `json:"branch"`
 		Key           string `json:"key"`
 		SubworkParent string `json:"subwork_parent_job"`
-		PendingCancel any `json:"pending_cancel"`
-		OwnerStop any `json:"owner_stop_job"`
+		PendingCancel any    `json:"pending_cancel"`
+		OwnerStop     any    `json:"owner_stop_job"`
 	} `json:"scheduler"`
 	Subwork struct {
 		Parent    int    `json:"parent_todo_id"`
@@ -164,7 +164,9 @@ func skillsHasJob(row skillsTask, job string) bool {
 	return false
 }
 
-func skillsHeld(row skillsTask)bool{return row.OwnerStopped||row.Postponed||row.StopKind!=""||row.OwnerQuestion!=nil||row.DecisionWait!=nil||row.WaitReady!=nil||row.Scheduler.PendingCancel!=nil||row.Scheduler.OwnerStop!=nil}
+func skillsHeld(row skillsTask) bool {
+	return row.OwnerStopped || row.Postponed || row.StopKind != "" || row.OwnerQuestion != nil || row.DecisionWait != nil || row.WaitReady != nil || row.Scheduler.PendingCancel != nil || row.Scheduler.OwnerStop != nil
+}
 func skillsLatest(row skillsTask, job string) bool {
 	return len(row.Jobs) > 0 && row.Jobs[len(row.Jobs)-1] == job && (row.Scheduler.Job == "" || row.Scheduler.Job == job) && (row.Scheduler.LastJob == "" || row.Scheduler.Job == job || row.Scheduler.LastJob == job)
 }
@@ -279,8 +281,14 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 	if !ok || !skillsResultBinding(r, reg, job, spec, review) {
 		return out, "result_binding"
 	}
-	if !skillsModelIdentifier(str(job["model"])) {return out,"result_binding"}
-	switch str(job["effort"]){case "none","minimal","low","medium","high","xhigh","max":default:return out,"result_binding"}
+	if !skillsModelIdentifier(str(job["model"])) {
+		return out, "result_binding"
+	}
+	switch str(job["effort"]) {
+	case "none", "minimal", "low", "medium", "high", "xhigh", "max":
+	default:
+		return out, "result_binding"
+	}
 	body, ok := s.read(filepath.Join(skillsJobsRoot, r.Job, "last_message.md"), 2<<20)
 	if !ok || !bytes.Equal(body, []byte(str(job["last_message"]))) || (r.FinalSHA != "" && hashBytes(body) != r.FinalSHA) {
 		return out, "result_unavailable"

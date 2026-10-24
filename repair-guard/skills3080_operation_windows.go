@@ -83,11 +83,21 @@ func skillsModel(model string) string {
 	return ""
 }
 
-var skillsAccountIdentifier=regexp.MustCompile(`^[0-9a-f]{6}$`)
-func skillsModelIdentifier(model string)bool{
- if skillsModel(model)==""{return false};parts:=strings.Split(model,"/")
- if len(parts)==1{return true};if len(parts)!=2{return false}
- prefix:=parts[0];return prefix=="openai"||prefix=="anthropic"||prefix=="main"||(len(prefix)==7&&prefix[0]=='p'&&skillsAccountIdentifier.MatchString(prefix[1:]))
+var skillsAccountIdentifier = regexp.MustCompile(`^[0-9a-f]{6}$`)
+
+func skillsModelIdentifier(model string) bool {
+	if skillsModel(model) == "" {
+		return false
+	}
+	parts := strings.Split(model, "/")
+	if len(parts) == 1 {
+		return true
+	}
+	if len(parts) != 2 {
+		return false
+	}
+	prefix := parts[0]
+	return prefix == "openai" || prefix == "anthropic" || prefix == "main" || (len(prefix) == 7 && prefix[0] == 'p' && skillsAccountIdentifier.MatchString(prefix[1:]))
 }
 func skillsReviewAccepted(received skillsReceived, manifestSHA, writerModel string) bool {
 	if !strings.Contains(string(received.Spec), "SKILLS3080_MANIFEST_SHA256 "+manifestSHA) || skillsModel(writerModel) == "" || len(received.Native) == 0 {

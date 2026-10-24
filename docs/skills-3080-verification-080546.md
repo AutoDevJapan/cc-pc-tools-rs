@@ -6,8 +6,8 @@
 - 新35のpath/commit/catalog inventory_id/tree blob/保存index/SHA256/bytes/gzip/厳密UTF-8を照合。支持333件のtree/index metadataも一致。全MengTo支持773は保存186・全文60・語句走査40で、全文60には同一craft本文として扱った13追加pathを含む。物理的な全文出力回数とは分ける。
 - 3521は固定bf5fa8d8..853c240bをMust0/S3/N8、3529は固定853c240b..ab3446b6をMust0/S6/N7。原応答を保存し親が全文読了。job/nativeともSonnet5.5/max、owner_request、succeeded/exit0。今回の追加差分は旧レビュー対象外。
 - 3527は実中央root/guide/sourceの3本文計12307bytesとケース入力3484bytesを読み、hash一致を確認して架空A/B/Cへ明示使用。中心判断は満たすが、実製品実行、暗黙選択、全catalogの文脈予算は未証明。
-- PR417は同ab3446のCI6SUCCESS/任意BugbotNEUTRAL・全完了・CLEAN後に通常merge。MERGED、merge c6b5ceaa100814d9f6ce54e24eeba7825a6286e6、2026-10-23T23:12:30Zを読戻し、mainをff取込み済み。
-- 旧2015directoryは深さ6を含むので2000上限への到達証拠から外した。新測定の非dot depth<6はroot込み1980。直接297入口発見と警告2を保持し、警告root数と原因は未確認。
+- PR417は同ab3446のCI6SUCCESS/任意BugbotNEUTRAL・全完了後に通常merge（CLEANのraw snapshotは別保存していない）。MERGED、merge c6b5ceaa100814d9f6ce54e24eeba7825a6286e6、2026-10-23T23:12:30Zを読戻し、mainをff取込み済み。
+- 発見上限の説明は3541M1で訂正。公式sourceはrootと深さ1〜6を数え、比較値は2015。2000を超える条件と整合する。1980は深さ6を誤って外した過去の計算値。直接297入口発見と警告2を保持し、警告root対応と原因は未確認。
 - 記事Skillのrootが案内する旧要約1行にdemo/browser一律要求が残る。限定読取で検出した後、guardはclient_resource/classification_unverified/access_allowed=falseを返したため書込を保留。実測は判定前の4704bytes、判定後の再読/変更0。旧v3の6ファイルは再配置せず保持。保護分類の正規照合を追い、本人判断待ちにせず独立作業を続ける。元3保留/取得647拒否も解除しない。
 
 ## 変更範囲の確認

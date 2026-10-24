@@ -88,8 +88,12 @@
       "not_historical_observation": true,
       "before_sha256_matches": true,
       "source": "private article-replacement-snapshots080546.json; exact owned backup files only",
-      "observed_at": "2026-10-23T23:19:20.4293866+00:00",
-      "files": 3
+      "files": 3,
+      "recorded_at": "2026-10-23T23:19:20.4293866+00:00",
+      "observed_at_range": [
+        "2026-10-23T23:16:40.1638679+00:00",
+        "2026-10-23T23:16:40.1819158+00:00"
+      ]
     }
   },
   "structure": {
@@ -235,7 +239,7 @@
     "synthetic explicit use and fixed final review are received; implicit selection, full catalog/context budget and product rendering remain unproven",
     "no upstream helper/demo/install/MCP action, no external fetch during apply, no product UI implementation"
   ],
-  "recorded_at": "2026-10-23T23:19:20.4293866+00:00",
+  "recorded_at": "2026-10-24T00:40:30.7402093+00:00",
   "related_go_checks": {
     "fix": "compare adoption rows with installed_new+integrated; keep seven duplicate decisions/canonical identity checks",
     "vet_exit": 0,

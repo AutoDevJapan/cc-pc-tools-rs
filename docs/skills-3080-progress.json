@@ -612,8 +612,8 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-23T23:19:30.4616809+00:00",
-  "total_skill_named_body_read_definition": "完全読取10資料137path。別枠mizchi76とMengTo92を含む総数305。全候補の意味/個別許諾/実導入完了数ではない。",
+  "recorded_at": "2026-10-24T00:40:30.7402093+00:00",
+  "total_skill_named_body_read_definition": "10完全読取資料のSkill名本文137。別枠mizchi76とMengTo127を含む総数340はall_fulltext_primary_paths_including_partial_sources。本文path読了と導入件数を分ける。",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
     "support_unread": 690,
@@ -650,29 +650,33 @@
     "number": 406
   },
   "latest_received_review": {
-    "todo": 3529,
-    "status": "succeeded",
-    "job": "20261024-074043-todo-3529",
     "model_origin": "owner_request",
-    "parent_full_read": true,
+    "base": "c6b5ceaa100814d9f6ce54e24eeba7825a6286e6",
+    "todo": 3541,
     "requested_effort": "max",
-    "must": 0,
-    "raw_sha256": "d4182f1fce53ce00ce7218f863d2862ac56267a4e6feec8c7c31679de0765ac4",
-    "scope": "固定853c240b..ab3446b6、8差分。最終v3/原文/notice/実反映の機械照合と全文/変更文読了。中央実ファイル/実Goは未実行。",
-    "effort_origin": "owner_request",
-    "job_model": "anthropic/claude-sonnet-5-5",
-    "effective_reasoning_measured": false,
-    "suggestions": 6,
+    "parent_fix_pending_independent_confirmation": true,
+    "preserved_at": "2026-10-24T00:21:03.4012516+00:00",
     "native_observation": {
+      "source": "native_turn_context",
       "effort": "max",
-      "model": "anthropic/claude-sonnet-5-5",
-      "source": "native_turn_context"
+      "model": "anthropic/claude-sonnet-5-5"
     },
-    "nits": 7
+    "scope": "固定c6b5..5175の12差分。35/333のidentity/127支持集合/99入力を機械照合し、sourceの深さ解釈を指摘。新50/6mile11は範囲外。",
+    "status": "succeeded",
+    "raw_sha256": "1f6bcb3f28a90f149adfe6182a4f56328b2244eaadae4e69038fd8c2f652a47e",
+    "job_model": "anthropic/claude-sonnet-5-5",
+    "must": 1,
+    "job": "20261024-083143-todo-3541",
+    "parent_full_response_read": true,
+    "effort_origin": "owner_request",
+    "nits": 8,
+    "head": "5175e5534722d26d5037ad59fc93a4f84671b126",
+    "suggestions": 4,
+    "effective_reasoning_measured": false
   },
   "latest_merged_pr": {
     "additional_delta_accepted": true,
-    "checks": "6SUCCESS and optional BugbotNEUTRAL; all complete; CLEAN; normal fixed-head merge",
+    "checks": "6SUCCESS and optionalBugbotNEUTRAL; all complete; normal fixed-head merge; raw CLEAN snapshot not separately preserved",
     "must": 0,
     "merged_at": "2026-10-23T23:12:30Z",
     "merge": "c6b5ceaa100814d9f6ce54e24eeba7825a6286e6",
@@ -813,7 +817,30 @@
         "model": "anthropic/claude-sonnet-5-5",
         "source": "native_turn_context"
       },
-      "nits": 8
+      "nits": 8,
+      "base": "bf5fa8d8a0ba8a782eac5c13c04a28dc4a318719",
+      "head": "853c240b6935b305fa70767bc3bc0db2d2a3c1d5"
+    },
+    {
+      "todo": 3529,
+      "status": "succeeded",
+      "job": "20261024-074043-todo-3529",
+      "model_origin": "owner_request",
+      "parent_full_read": true,
+      "requested_effort": "max",
+      "must": 0,
+      "raw_sha256": "d4182f1fce53ce00ce7218f863d2862ac56267a4e6feec8c7c31679de0765ac4",
+      "scope": "固定853c240b..ab3446b6、8差分。最終v3/原文/notice/実反映の機械照合と全文/変更文読了。中央実ファイル/実Goは未実行。",
+      "effort_origin": "owner_request",
+      "job_model": "anthropic/claude-sonnet-5-5",
+      "effective_reasoning_measured": false,
+      "suggestions": 6,
+      "native_observation": {
+        "effort": "max",
+        "model": "anthropic/claude-sonnet-5-5",
+        "source": "native_turn_context"
+      },
+      "nits": 7
     }
   ],
   "merged_pr_history": [

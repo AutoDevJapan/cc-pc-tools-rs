@@ -14,17 +14,17 @@ type resourceReview struct {
 		Read     bool   `json:"body_read"`
 		Scan     bool   `json:"scan_only"`
 		ScanNote string `json:"scan_note"`
-		Executed bool   `json:"executed"`
+		Executed *bool  `json:"executed"`
 	} `json:"supporting_resources"`
 }
 
-func validateCodex20ResourceReview(entries []resourceReview) error {
+func validateMengtoResourceReview(entries []resourceReview) error {
 	primary, total, saved, read, scan := 0, 0, 0, 0, 0
 	seen := map[string]bool{}
 	for _, e := range entries {
 		for _, s := range e.Support {
-			if s.Executed {
-				return errors.New("source execution was claimed in a read-only resource assessment")
+			if s.Executed == nil || *s.Executed {
+				return errors.New("source execution was claimed or left unverified in a read-only resource assessment")
 			}
 		}
 		if !strings.HasPrefix(e.Path, "agent-skills/codex/") {
@@ -55,8 +55,8 @@ func validateCodex20ResourceReview(entries []resourceReview) error {
 	return nil
 }
 
-func TestCodex20ResourcesKeepScanOnlyDistinctFromFullRead(t *testing.T) {
-	for _, kind := range []string{"valid", "missing_scan_flag", "claimed_full_read", "unsaved_scan", "missing_scan_note", "claimed_execution", "non_codex_execution"} {
+func TestMengtoResourcesKeepReadScanAndExecutionClaimsDistinct(t *testing.T) {
+	for _, kind := range []string{"valid", "missing_scan_flag", "claimed_full_read", "unsaved_scan", "missing_scan_note", "claimed_execution", "non_codex_execution", "missing_execution_flag"} {
 		t.Run(kind, func(t *testing.T) {
 			var a struct {
 				Entries  []resourceReview `json:"entries"`
@@ -87,7 +87,10 @@ func TestCodex20ResourcesKeepScanOnlyDistinctFromFullRead(t *testing.T) {
 					case "missing_scan_note":
 						s.ScanNote = ""
 					case "claimed_execution", "non_codex_execution":
-						s.Executed = true
+						claimed := true
+						s.Executed = &claimed
+					case "missing_execution_flag":
+						s.Executed = nil
 					}
 					changed = true
 				}
@@ -95,7 +98,7 @@ func TestCodex20ResourcesKeepScanOnlyDistinctFromFullRead(t *testing.T) {
 			if !changed {
 				t.Fatal("fixture has no scan-only resource to mutate")
 			}
-			if err := validateCodex20ResourceReview(a.Entries); (err != nil) != (kind != "valid") {
+			if err := validateMengtoResourceReview(a.Entries); (err != nil) != (kind != "valid") {
 				t.Fatalf("%s: %v", kind, err)
 			}
 		})

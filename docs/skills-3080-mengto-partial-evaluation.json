@@ -4,7 +4,7 @@
   "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
   "tree_sha": "8afedc8719f37d2026b55aef282ac27d8d873d76",
   "tree_complete": true,
-  "recorded_at": "2026-10-23T23:19:20.4293866+00:00",
+  "recorded_at": "2026-10-24T00:40:30.7402093+00:00",
   "entrypoints_expected": 177,
   "entrypoints_fulltext_read": 127,
   "entrypoints_unread": 50,
@@ -4162,7 +4162,7 @@
       "body_read_complete": true,
       "body_read_by": "20261024-044343-todo-3501",
       "body_read_method": "child full visible read; parent full assessment read and independent fixed-byte identity verification",
-      "candidate_disposition": "integrated_existing_with_final_review_and_use_checks_pending",
+      "candidate_disposition": "integrated_existing_with_fixed_final_review_and_synthetic_use_received",
       "reason": "1資料→1能力の境界（統合・省略・既存更新の基準）と失敗例（ページ複製・巨大Skill・断片化・テーマ固定・証拠なしの検証）が具体的で、knowledge-to-skillsの判断基準になる",
       "required_changes": [
         "能力の境界と失敗例を抽出し、既存と用途を比較して中央Skillsへ統合する。上流repo専用のdemo/gallery/previewを全件必須にしない。",
@@ -12797,7 +12797,8 @@
           "executed": false
         }
       ],
-      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。"
+      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。",
+      "parent_edit_note": "親が3512提案を訂正。grainy-gouacheの人物用案内から人物を扱わないink-sketchを外し、halftone-lineには未読compilerの範囲限定を補った。原応答は不変で保存。"
     },
     {
       "inventory_id": "github:6e1e746d90363c856f80d7a70a5c4b151b5a3ca66ef3f07fb970c82b51e69150",
@@ -13009,7 +13010,8 @@
           "executed": false
         }
       ],
-      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。"
+      "parent_policy_correction": "本文のパレット・被写体・機器・採点は作者スタイルの条件であり本人の一般禁止ではない。未保存kitを待たず有用な原則の統合は検討できる。新規自作Go/GoDD Rust、配布Python無改変利用、本人Chromeと同対象画像回答を保持。",
+      "parent_edit_note": "親が3512提案を訂正。grainy-gouacheの人物用案内から人物を扱わないink-sketchを外し、halftone-lineには未読compilerの範囲限定を補った。原応答は不変で保存。"
     },
     {
       "inventory_id": "github:a333f95893e8ccc3a7723aa610cd1c604b713eab9496767b9d04aa22e655d732",
@@ -14926,7 +14928,10 @@
     "independent_review_pending": true,
     "support_full_read": 0,
     "new_central_write": 0,
-    "job": "20261024-080546-todo-3080"
+    "job": "20261024-080546-todo-3080",
+    "reflected_by_job": "20261024-080546-todo-3080",
+    "body_read_by_job": "20261024-054244-todo-3080",
+    "job_field_definition": "legacy alias of reflected_by_job; actual18 body reader is body_read_by_job"
   },
   "reader3512": {
     "todo": 3512,

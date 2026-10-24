@@ -1323,7 +1323,14 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             "\n元の登録作業場所: {repo}\n資料は元の登録範囲内で参照し、原資料を保持してください。専用作業場所の作成は依頼の範囲を広げる許可ではありません。\n"
         );
         if truth(&item["scheduler"]["resume"]) {
-            prompt += &format!("{RESUME_INSTRUCTION}\n");
+            let completed_relocation = crate::preparation::workspace_source(&item, &jobs)
+                .is_some_and(|source| source["status"] == "succeeded"
+                    && item["scheduler"]["workspace_relocation"]["request"]["source_job"] == source["id"]);
+            if completed_relocation {
+                prompt += &format!("前回の担当は正常終了しました。完了した成果を保持し、保存された継続仕様だけを同じ元番号で進めてください。最初に todo.exe history {} --limit 100 を正規CLIで読み、正常完了後の未完了の追記・元の許可・停止・依存も引き継いでください。履歴の続きがあれば next_offset から読み、旧成果の重複実装や元の依頼全体の完了扱いをしないでください。\n",item["id"]);
+            } else {
+                prompt += &format!("{RESUME_INSTRUCTION}\n");
+            }
         }
         let jobs = self.backend.jobs()?;
         let source = jobs.iter().find(|j| {

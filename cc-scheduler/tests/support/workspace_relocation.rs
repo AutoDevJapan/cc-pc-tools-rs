@@ -374,7 +374,40 @@ fn relocation_ordinary_dispatch_uses_the_continuation_and_never_relaunches_twice
     assert_eq!(launch["item"]["id"], 1);
     assert_eq!(launch["item"]["scheduler"]["worktree"], request.worktree);
     assert!(s(&launch["text"]).contains("Continue original work."));
-    assert!(s(&launch["text"]).contains("Keep") || s(&launch["text"]).contains("元の"));
+    assert!(s(&launch["text"]).contains("todo.exe history 1"));
+    assert!(!s(&launch["text"]).contains("前回のジョブが止まった"));
     f.dispatch();
     assert_eq!(f.e.backend.launched.len(), 1);
+}
+
+#[test]
+fn relocation_later_failed_worker_keeps_its_real_failure_and_new_workspace() {
+    let (mut f, request, _) = fixture();
+    let checked = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
+    relocate(
+        &mut f.e,
+        &mut SystemRunner,
+        &request,
+        Some(s(&checked["state_sha256"])),
+    )
+    .unwrap();
+    f.e.edit(&json!(1), |row| {
+        push(&mut row["jobs"], json!("later-failed"));
+        row["scheduler"]["last_job"] = json!("later-failed");
+    })
+    .unwrap();
+    f.e.backend.records.push(json!({"id":"later-failed","todo_id":1,"project":"cc-pc-tools-rs","status":"failed","cwd":request.worktree}));
+    f.e.backend.real_workspaces = true;
+    f.dispatch();
+    assert_eq!(
+        f.e.backend.launched.len(),
+        1,
+        "{} {:?}",
+        f.e.report,
+        f.e.failures
+    );
+    let launch = &f.e.backend.launched[0];
+    assert_eq!(launch["item"]["scheduler"]["worktree"], request.worktree);
+    assert!(s(&launch["text"]).contains("前回のジョブが止まった"));
+    assert!(!s(&launch["text"]).contains("前回の担当は正常終了しました"));
 }

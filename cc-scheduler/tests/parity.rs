@@ -19,6 +19,8 @@ mod subwork_support;
 mod targeted_dispatch_tests;
 #[path = "support/registration_resume.rs"]
 mod registration_resume_tests;
+#[path = "support/resume_checkpoint.rs"]
+mod resume_checkpoint_tests;
 #[path = "support/workspace_checkpoint.rs"]
 mod workspace_checkpoint_tests;
 #[path = "support/workspace_relocation.rs"]
@@ -1719,6 +1721,9 @@ struct Fake {
     real_workspaces: bool,
     prepare_registry: Option<PathBuf>,
     current_product: Option<(Value, String)>,
+    current_checkpoint: Option<Value>,
+    checkpoint_edit: Option<(PathBuf, Value)>,
+    checkpoint_edit_after: usize,
     action_path: Option<PathBuf>,
     cancel_edit: Option<(PathBuf, Value)>,
     repair_allowed: bool,
@@ -1769,6 +1774,9 @@ impl Default for Fake {
             real_workspaces: false,
             prepare_registry: None,
             current_product: None,
+            current_checkpoint: None,
+            checkpoint_edit: None,
+            checkpoint_edit_after: 0,
             action_path: None,
             cancel_edit: None,
             repair_allowed: false,
@@ -1822,6 +1830,12 @@ impl Backend for Fake {
     fn quota_recovery_inventory(&mut self) -> Result<Value> {
         if let Some((path,text))=self.quota_spec_edit.take() { fs::write(path,text)?; }
         Ok(self.quota_inventory.clone())
+    }
+    fn current_workspace_checkpoint(&mut self, _item: &Value, _root: &str) -> Option<Value> {
+        if self.checkpoint_edit_after==0 {
+            if let Some((path,value))=self.checkpoint_edit.take() {write_json(&path,&value,1).unwrap();}
+        } else {self.checkpoint_edit_after-=1;}
+        self.current_checkpoint.clone()
     }
     fn current_product_allowed(&mut self, item: &Value, root: &str) -> bool {
         self.current_product

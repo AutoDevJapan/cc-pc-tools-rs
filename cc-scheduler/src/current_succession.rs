@@ -18,59 +18,69 @@ fn path_digest(path: &str) -> String {
 
 impl RealBackend {
     pub(super) fn verify_current_product(&mut self, item: &Value, root: &str) -> bool {
-        let Some(id) = item["id"].as_u64().filter(|id| *id > 0) else {
-            return false;
-        };
+        self.current_product_receipt(item, root).is_some()
+    }
+
+    pub(super) fn current_product_receipt(&mut self, item: &Value, root: &str) -> Option<Value> {
+        let id = item["id"].as_u64().filter(|id| *id > 0)?;
         let spec = s(&item["spec"]);
         if root.is_empty() || spec.is_empty() || s(&item["project"]).is_empty() {
-            return false;
+            return None;
         }
         let guard = self.tools.join("client-records/scrub391.exe");
-        let Some(guard) = guard.to_str() else {
-            return false;
-        };
+        let guard = guard.to_str()?;
         let Ok(output) = self.runner.run(&invocation(
             &[guard, "--verify-current-succession", &id.to_string()],
             Some(40),
         )) else {
-            return false;
+            return None;
         };
         if output.code != 0 {
-            return false;
+            return None;
         }
         let Ok(receipt) = serde_json::from_str::<Value>(&output.stdout) else {
-            return false;
+            return None;
         };
+        let original_source = receipt["origin_todo_id"] == 2834;
+        let current_request = receipt["origin_todo_id"] == 3638
+            && receipt["actor_todo_id"] == 3650
+            && [1626, 3277, 3549, 3623].contains(&id)
+            && receipt["source_kind"] == "native_user"
+            && receipt["source_session"] == "01a16c0c-18a9-7570-ab4e-9522ffa8d6d0"
+            && receipt["source_event_sha256"]
+                == "e0cff4ef85745ffb93ddcc36d1fb9626c4c098967406d8875a672d58c1684465"
+            && receipt["source_at"] == "2026-10-24T11:26:20.672Z";
         if receipt["domain"] != "current-product-succession-v1"
             || receipt["verified"] != true
-            || receipt["origin_todo_id"] != 2834
+            || !(original_source || current_request)
             || receipt["todo_id"] != item["id"]
             || receipt["project"] != item["project"]
             || receipt["original_registry_recovered"] != false
             || receipt["registered_path_sha256"] != path_digest(root)
             || receipt["spec_path_sha256"] != path_digest(spec)
         {
-            return false;
+            return None;
         }
         // No spec body is read before the official verifier succeeds. Bound both
         // the initial file and growth during reading; errors never become empty data.
         let Ok(file) = File::open(spec) else {
-            return false;
+            return None;
         };
         if !file
             .metadata()
             .is_ok_and(|m| m.is_file() && m.len() <= MAX_SPEC)
         {
-            return false;
+            return None;
         }
         let mut bytes = Vec::new();
         if file.take(MAX_SPEC + 1).read_to_end(&mut bytes).is_err()
             || bytes.len() as u64 > MAX_SPEC
             || receipt["spec_sha256"] != digest(&bytes)
         {
-            return false;
+            return None;
         }
-        self.guard_workspace_path(root).is_ok()
+        self.guard_workspace_path(root).ok()?;
+        Some(receipt)
     }
 }
 
@@ -108,6 +118,51 @@ mod tests {
                 },
                 stderr: String::new(),
             })
+        }
+    }
+    #[test]
+    fn current_owner_request_binds_its_own_source_without_relabeling_the_old_origin() {
+        for gate in [
+            "pass", "actor", "kind", "session", "event", "at", "unknown", "spec", "root",
+        ] {
+            let temp = tempfile::tempdir().unwrap();
+            let spec = temp.path().join("original.md");
+            std::fs::write(&spec, b"original unchanged work").unwrap();
+            let mut item = json!({"id":3277,"project":"original","spec":spec});
+            let root = "D:/original";
+            let mut receipt = json!({"domain":"current-product-succession-v1","verified":true,
+                "origin_todo_id":3638,"actor_todo_id":3650,"todo_id":3277,"project":"original",
+                "registered_path_sha256":path_digest(root),"spec_path_sha256":path_digest(spec.to_str().unwrap()),
+                "spec_sha256":digest(b"original unchanged work"),"original_registry_recovered":false,
+                "source_kind":"native_user","source_session":"01a16c0c-18a9-7570-ab4e-9522ffa8d6d0",
+                "source_event_sha256":"e0cff4ef85745ffb93ddcc36d1fb9626c4c098967406d8875a672d58c1684465",
+                "source_at":"2026-10-24T11:26:20.672Z"});
+            match gate {
+                "actor" => receipt["actor_todo_id"] = json!(999),
+                "kind" => receipt["source_kind"] = json!("assistant_quote"),
+                "session" => receipt["source_session"] = json!("another-session"),
+                "event" => receipt["source_event_sha256"] = json!("other"),
+                "at" => receipt["source_at"] = json!("2026-10-13T00:00:00Z"),
+                "unknown" => {
+                    item["id"] = json!(2467);
+                    receipt["todo_id"] = json!(2467);
+                }
+                "spec" => std::fs::write(&spec, b"changed after qualification").unwrap(),
+                "root" => receipt["registered_path_sha256"] = json!(path_digest("D:/other")),
+                _ => (),
+            }
+            let mut backend = RealBackend::new(temp.path().join("scheduler"));
+            backend.runner = Box::new(Guard {
+                text: receipt.to_string(),
+                code: 0,
+                root_allowed: true,
+                calls: Arc::new(Mutex::new(vec![])),
+            });
+            assert_eq!(
+                backend.current_product_allowed(&item, root),
+                gate == "pass",
+                "{gate}"
+            );
         }
     }
     #[test]

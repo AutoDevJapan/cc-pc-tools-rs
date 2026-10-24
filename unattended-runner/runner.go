@@ -185,6 +185,7 @@ type Runner struct {
 	ProcessAlive                func(uint32, uint64) bool
 	Civ6Verify                  func(path, sha256 string) error
 	AgentResultGuard            func(context.Context, string) bool
+	SeparatedScheduler          bool
 }
 
 func readJSON(path string, ceiling int64, value any) error {
@@ -708,19 +709,21 @@ func (b *limitedBuffer) Write(p []byte) (int, error) {
 }
 
 func (r *Runner) tick(ctx context.Context) Health {
-	// Intake must not consume the whole fifty-second tick before scheduling.
-	// Keep the caller's deadline/cancellation as the outer execution boundary.
-	intakeCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
-	defer cancel()
-	return r.tickWithIntakeContext(ctx, intakeCtx)
+	return r.tickWithIntakeContext(ctx, ctx)
 }
 
-func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
+func (r *Runner) tickWithIntakeContext(ctx, intakeParent context.Context) Health {
 	r.NoticeAttempted = false
 	health := Health{Mode: "new-owner-intake-and-repair-scheduler", Started: r.Now().UTC().Format(time.RFC3339Nano), Errors: []string{}}
-	conversationCtx, cancelConversations := context.WithTimeout(intakeCtx, conversationPollStageBudget)
+	conversationCtx, cancelConversations := context.WithTimeout(ctx, conversationPollStageBudget)
 	r.processConversations(conversationCtx, &health)
 	cancelConversations()
+	// Start discovery's allowance when discovery actually begins. Reply polling,
+	// delivery and application checks must not consume this stage's own timer.
+	// The existing normal/periodic caller still bounds the combined serial work;
+	// no fresh stage may outlive its parent or overlap delivery with dispatch.
+	intakeCtx, cancelIntake := context.WithTimeout(intakeParent, 20*time.Second)
+	defer cancelIntake()
 	if err := r.discover(intakeCtx); err != nil {
 		health.Errors = append(health.Errors, "discord_discovery_failed")
 	} else {
@@ -757,7 +760,11 @@ func (r *Runner) tickWithIntakeContext(ctx, intakeCtx context.Context) Health {
 	}
 	// Reports can require further API reads. Give the existing dispatcher its
 	// turn first, without detaching it from the caller's remaining deadline.
-	if ctx.Err() == nil {
+	if r.SeparatedScheduler {
+		// A cached result is observation only; it never admits a job. Reject
+		// stale, future, failed or absent results instead of claiming startup.
+		health.Scheduler = schedulerStageHealthy(r.Config.Home, r.Now())
+	} else if ctx.Err() == nil {
 		// Native process inspection plus a fresh pre-commit check can exceed
 		// twenty seconds. Retain a finite stage limit and the caller's original
 		// deadline, while allowing that measured repair to complete.
@@ -905,6 +912,9 @@ func (r *Runner) recheckOriginBlocked(ctx context.Context, health *Health) {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "scheduler-tick" {
+		os.Exit(schedulerStageCLI(os.Args[2:], os.Stdout))
+	}
 	if len(os.Args) > 1 && os.Args[1] == "intake" {
 		os.Exit(intakeCLI(os.Args[2:], os.Stdout))
 	}

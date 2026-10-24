@@ -18,6 +18,11 @@ RealBackendは正式exeを40秒の期限で呼び、exit0のJSONだけを使う�
 - original_registry_recoveredがboolのfalse。
 - 登録rootとspecのパス、および保存されたspec本文のSHA256が一致。
 
+元3638の新しい本人指示に結ぶ元4件だけは、origin_todo_id=3638、actor_todo_id=3650と、
+そのnativeユーザー発言のsession・原行SHA・日時を別に照合する。元2834の出所へ
+付け替えず、旧product-resumeの期限も維持する。元の登録と本人の新しい指示を
+結ぶ方法は[有限な再開確認の仕様](requested-resume-3650.md)を参照する。
+
 パスはbackslashをslashへ置換し、末尾slashを除去、小文字化したUTF-8を
 ハッシュする。specは正式APIの成功後に読み、1MiBを超えるファイルと読取失敗を拒否する。
 実体・Git所有者・現在の有限宣言の検証はGo guardが担当する。

@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-24T06:33:39.7015551+00:00",
+  "observed_at": "2026-10-24T08:15:09.0197014+00:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "PR428までの受入を保持し、追加45候補はraw全読43/伏字付き手順1/許諾文のみ確認1を分けて公開へ反映。RSS生成/季節切替の新2件の実作成・読戻し・metadataも反映した。全16資料の採否/全支持/必要な実使用は継続。",
+  "phase_b": "PR430受入済みの32配置と454/455読取を保持し、新20評価を別差分へ反映。source86候補をraw84/伏字付き1/許諾文のみ1へ分け、全体474/475へ投影する。最終採否と中央配置は増やしていない。全16資料の残評価/個別許諾/実導入は継続。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -437,8 +437,8 @@
     "source": "skills-3080-mizchi-partial-evaluation.json",
     "complete_definition": "本文の全path読取のみ。個別許諾・支持・採否・実導入は未完。"
   },
-  "all_fulltext_primary_paths_including_partial_sources": 454,
-  "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分64=454source paths。raw全文の集計。6mileは旧21+追加43で、別に伏字付き手順1件と通知だけの評価1件を保持。全16資料の採否/実導入は未完。",
+  "all_fulltext_primary_paths_including_partial_sources": 474,
+  "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分84=474source paths。支持の全読/走査・伏字付き手順・個別許諾・最終採否は別。全16資料は未完。",
   "external_revisions": {
     "count": 1,
     "target": "diagnosing-bugs",
@@ -652,8 +652,8 @@
     "definition_of_legacy_latest_name": "Historical PR406 accepted-delta snapshot. Later accepted merges/reviews are in merged_pr_history/latest_merged_pr/received_review_history/latest_received_review; this field is not current queue status."
   },
   "latest_received_review": {
-    "todo": 3602,
-    "job": "20261024-153854-todo-3602",
+    "todo": 3612,
+    "job": "20261024-172729-todo-3612",
     "status": "succeeded",
     "exit_code": 0,
     "model": "anthropic/claude-sonnet-5-5",
@@ -662,28 +662,33 @@
     "effort_origin": "owner_request",
     "native_matched": true,
     "parent_full_read": true,
-    "raw_file": "review3602-original123649.md",
-    "raw_bytes": 7150,
-    "raw_sha256": "dc124ce210d9203473be211682b4817a7daca7e2f6bd5ff08c92e886b0a6ff09",
-    "base": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
-    "head": "50ab02f3420dbe0c34458708dd82adf482c0f763",
-    "must": 0,
-    "suggestions": 6,
-    "nits": 6,
-    "scope": "All24file differences, elevenJSON strictparse/no duplicatekeys/UTF8/LF, all45semantic assessments, support422 state/fingerprint mechanical check, source/bundle/manifest/design/model hashes and25mutation paths; no Go/central/network/CI execution.",
-    "received_at": "2026-10-24T07:09:02.4159729+00:00",
+    "effective_reasoning_measured": false,
+    "raw_file": "review3612-original123649.md",
+    "raw_bytes": 7064,
+    "raw_sha256": "d8dee23f79c6ca4ef27041a30f5317d9a3982a04d5e865e31e0cd19cf161aa34",
+    "base": "36722b7b45f227b662843bb515b0e7aff766dba5",
+    "head": "534d2cd08822febf015617b3ca94e63697cfd5c1",
+    "must": 1,
+    "suggestions": 4,
+    "nits": 5,
+    "scope": "All16file/allhunks,20semantic records,178support metadata/state,66740cache hash/bytes/line/failurecounts; no Go/central/network/CI. Raw74410report first/legend only, cache bodymetadata aggregate only.",
+    "received_at": "2026-10-24T08:57:03.3110134+00:00",
     "resolution_pending": true,
-    "planned_corrections": "One limitedfollowup: common observedmax and snapshot48fingerprint, exactnegativeguards/aggregatefields, publicrights legend and stable readerrowmapping, historical/current flags and scope, acceptance links and privacy/receipt wording; sourcebytes/adoptioncounts/rawcoverage unchanged.",
+    "next": "Remove mutable currentcount prose, clarify default rights/newness/policy constraints, strengthen next20 relations and futureledger alignment, boundedfixreview/exactCI/merge",
     "owner_action_required": false,
-    "parent_followup": "Public rights definitions and source-based row namespaces, accepted-vs-pending snapshots, privacy removal, common last-verification/name-fingerprint tests and precise mutation guards. This new correction delta awaits its own review/CI/merge."
+    "parent_followup": "Historical mutable count prose removed, default rights and source/version proposals made explicit, next20/provenance/cache relationships and ledger-aligned future decisions tested. Source bytes and474/475/32/3/8 counters unchanged; this fix needs bounded review/exactCI."
   },
   "latest_merged_pr": {
-    "scope": "MCP/pointer2 actualdeployment publicevidence and3590fixedninefiles28hunks; not the present new45/RSSseason publication.",
-    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/428",
-    "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
-    "merge": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
-    "merged_at": "2026-10-24T06:33:08Z",
-    "number": 428
+    "head": "00c87391a57467ab3373316229d5ef33e8b8f361",
+    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/430",
+    "number": 430,
+    "acceptance_scope": "Original24 difference and12 correction; new20 and body-alias machine triage are separate current pending publicdelta.",
+    "merge": "36722b7b45f227b662843bb515b0e7aff766dba5",
+    "review_todos": [
+      3602,
+      3605
+    ],
+    "merged_at": "2026-10-24T08:06:59Z"
   },
   "mengto_partial_entrypoint_evaluation": {
     "fixed_roster": "skills-3080-mengto-fixed-entrypoints.json",
@@ -986,6 +991,68 @@
         "original_scope_and_raw_response_unchanged": true,
         "nits": "Historical cohort amendment provenance, latest-review link, dated-prose tense, explicit3590 reader subject and exactlastverification comparison. The lateobservation case reproduced Red; fixed-input test receipts and CI record subsequent executable validation separately."
       }
+    },
+    {
+      "todo": 3602,
+      "job": "20261024-153854-todo-3602",
+      "status": "succeeded",
+      "exit_code": 0,
+      "model": "anthropic/claude-sonnet-5-5",
+      "effort": "max",
+      "model_origin": "owner_request",
+      "effort_origin": "owner_request",
+      "native_matched": true,
+      "parent_full_read": true,
+      "raw_file": "review3602-original123649.md",
+      "raw_bytes": 7150,
+      "raw_sha256": "dc124ce210d9203473be211682b4817a7daca7e2f6bd5ff08c92e886b0a6ff09",
+      "base": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
+      "head": "50ab02f3420dbe0c34458708dd82adf482c0f763",
+      "must": 0,
+      "suggestions": 6,
+      "nits": 6,
+      "scope": "All24file differences, elevenJSON strictparse/no duplicatekeys/UTF8/LF, all45semantic assessments, support422 state/fingerprint mechanical check, source/bundle/manifest/design/model hashes and25mutation paths; no Go/central/network/CI execution.",
+      "received_at": "2026-10-24T07:09:02.4159729+00:00",
+      "resolution_pending": false,
+      "planned_corrections": "One limitedfollowup: common observedmax and snapshot48fingerprint, exactnegativeguards/aggregatefields, publicrights legend and stable readerrowmapping, historical/current flags and scope, acceptance links and privacy/receipt wording; sourcebytes/adoptioncounts/rawcoverage unchanged.",
+      "owner_action_required": false,
+      "parent_followup": "Public rights definitions and source-based row namespaces, accepted-vs-pending snapshots, privacy removal, common last-verification/name-fingerprint tests and precise mutation guards. This new correction delta awaits its own review/CI/merge.",
+      "resolution_pending_at_original_receipt": true,
+      "effective_reasoning_measured": false
+    },
+    {
+      "todo": 3605,
+      "job": "20261024-162643-todo-3605",
+      "status": "succeeded",
+      "exit_code": 0,
+      "model": "anthropic/claude-sonnet-5-5",
+      "effort": "max",
+      "model_origin": "owner_request",
+      "effort_origin": "owner_request",
+      "effective_reasoning_measured": false,
+      "parent_full_read": true,
+      "native_matched": true,
+      "raw_file": "review3605-original123649.md",
+      "raw_bytes": 6102,
+      "raw_sha256": "cfa5bb631d2512a62f410c6adc52f3aee870780fc2c9b8b965bb5b0bee19ee1b",
+      "base": "50ab02f3420dbe0c34458708dd82adf482c0f763",
+      "head": "00c87391a57467ab3373316229d5ef33e8b8f361",
+      "must": 0,
+      "suggestions": 3,
+      "nits": 6,
+      "received_at": "2026-10-24T08:06:56.4177861+00:00",
+      "scope": "Elevenfiles allhunks; next45JSON allleaf comparisons/representativehunks. Rights24 exactexpansion,40sourceIDs/rows,retention46/48,mutationguards/index191/55557,sourcebytes/139commit checked. No Go/central/network/CI execution.",
+      "resolution_pending": false,
+      "nonblocking_resolution": {
+        "S2": "Reinstate exact not-an-exclusion/all-candidates-accounted/no-new-rights-question wording in next delta. Operationally no provisional exclusion, scope shrink or new owner/rights question is adopted; original owner scope remains authoritative and all candidates are preserved.",
+        "S1": "Normalize global-scope inventory_ids [null] to [] in next already-needed20-entry publication; current scope explicitly says all candidates, no source ID or adopted count is added.",
+        "nits": "Amendment labels, individual review base/head/Must chronology, historical411, forty-only reader annotation scope, effectiveReasoningNotMeasured, exact receipt_checked_at terminology carried to next delta. No original execution/version/time will be fabricated.",
+        "S3": "Add one meaningful public namespace/rights-expansion/provenance consistency test with the next20 schema evolution; current all40/all24 were independently checked by3605."
+      },
+      "owner_action_required": false,
+      "followup_in_this_delta": "Empty globalID arrays/strong owner constraints, public namespace consistency tests, amendment labels and explicit original-vs-correction review chronology are handled alongside the new20 intake; no new central apply or final disposition.",
+      "parent_read_time_definition": "received_at is the receipt persistence time, not the reading start or an exact completion timestamp. Parent observed/read the fullresponse before this receipt; reading duration and exact completion were not captured.",
+      "parent_read_observed_response_at": "2026-10-24T17:04:41.9920154+09:00"
     }
   ],
   "merged_pr_history": [
@@ -1079,6 +1146,14 @@
         3571,
         3580
       ]
+    },
+    {
+      "scope": "MCP/pointer2 actualdeployment publicevidence and3590fixedninefiles28hunks; not the present new45/RSSseason publication.",
+      "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/428",
+      "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
+      "merge": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
+      "merged_at": "2026-10-24T06:33:08Z",
+      "number": 428
     }
   ],
   "current_mengto_delta": {
@@ -1199,7 +1274,7 @@
     "new_individual_rights_exclusions": 1,
     "existing_duplicate_receipts_reused": 1
   },
-  "amended_at": "2026-10-24T07:16:19.7577795+00:00",
+  "amended_at": "2026-10-24T08:58:26.6672769+00:00",
   "amendment_job": "20261024-123649-todo-3080",
   "mcp_pointer_installation": {
     "real_server_or_rendering_tested": false,
@@ -1217,13 +1292,21 @@
     "full_context_budget_proven": false,
     "source": "skills-3080-mcp-pointer-installation-evidence.json",
     "public_delta_acceptance": {
-      "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
-      "review_todos": [
-        3590,
-        3599
-      ],
+      "accepted_head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
       "merge": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
-      "pr": 428
+      "original_review": {
+        "todo": 3590,
+        "head": "ebb023f2b04f4551037fd5bf746819466e96a4b4",
+        "base": "6905b890d7b280c659e2073c6b561c903c1ed955",
+        "must": 1
+      },
+      "pr": 428,
+      "correction_review": {
+        "todo": 3599,
+        "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
+        "base": "ebb023f2b04f4551037fd5bf746819466e96a4b4",
+        "must": 0
+      }
     }
   },
   "sixmile_additional_entrypoint_evaluation": {
@@ -1240,19 +1323,19 @@
   },
   "sixmile_body_read_coverage": {
     "metadata_only_primary": 1,
-    "full_body_read": 64,
-    "workflow_body_read": 65,
-    "without_assessment": 55557,
-    "definition": "One source, disjoint first21+next45 cohorts. Full_body_read means raw unmasked primary paths; redacted workflow and notice-only paths are separate, and are not new unique content or final adoption counts.",
+    "full_body_read": 84,
+    "workflow_body_read": 85,
+    "without_assessment": 55537,
+    "definition": "One source, disjoint first21+next45+next20. Raw primary84, redacted workflow1 and notice-only1 remain distinct. A path count is not unique content, source safety, permission or adoption.",
     "expected": 55623,
     "complete": false,
     "masked_workflow_body": 1,
-    "candidate_paths_assessed_or_notice_read": 66,
+    "candidate_paths_assessed_or_notice_read": 86,
     "source": "skills-3080-sixmile-evaluation-index.json",
-    "without_raw_full_read": 55559
+    "without_raw_full_read": 55539
   },
-  "all_workflow_primary_paths_including_partial_sources": 455,
-  "primary_coverage_definition_additional": "workflow集計455=raw454+伏字付き手順1。未読を除外や読了へ移さず、同一本文の別path/差分再利用の方法を保持する。",
+  "all_workflow_primary_paths_including_partial_sources": 475,
+  "primary_coverage_definition_additional": "workflow集計475=raw474+伏字付き手順1。新20件は受領評価を固定原本へ照合し、全raw本文を親が再読した主張とは分ける。",
   "rss_season_installation": {
     "content_review": 3591,
     "full_context_budget_or_implicit_selection_proven": false,
@@ -1261,7 +1344,7 @@
     "files": 10,
     "source": "skills-3080-rss-season-installation-evidence.json",
     "managed_retention_found_enabled": 48,
-    "public_delta_review_pending": true,
+    "public_delta_review_pending": false,
     "discovery_found_enabled": 2,
     "real_website_or_renderer_tested": false,
     "content_review_must": 0,
@@ -1269,6 +1352,53 @@
       3584,
       3591
     ],
-    "content_review_definition": "3584 reviewed RSS initial five files;3591 reviewed RSS three-file amendment and seasonfive. The legacy single content_review field identifies the last content review only."
+    "content_review_definition": "3584 reviewed RSS initial five files;3591 reviewed RSS three-file amendment and seasonfive. The legacy single content_review field identifies the last content review only.",
+    "public_delta_acceptance": {
+      "accepted_head": "00c87391a57467ab3373316229d5ef33e8b8f361",
+      "merge": "36722b7b45f227b662843bb515b0e7aff766dba5",
+      "original_review": {
+        "todo": 3602,
+        "head": "50ab02f3420dbe0c34458708dd82adf482c0f763",
+        "base": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
+        "must": 0
+      },
+      "pr": 430,
+      "correction_review": {
+        "todo": 3605,
+        "head": "00c87391a57467ab3373316229d5ef33e8b8f361",
+        "base": "50ab02f3420dbe0c34458708dd82adf482c0f763",
+        "must": 0
+      }
+    }
+  },
+  "sixmile_next20_entrypoint_evaluation": {
+    "excluded": 0,
+    "metadata_only_primary": 0,
+    "full_body_read": 20,
+    "definition": "This third cohort only; source aggregate and final decisions remain separate.",
+    "candidate_paths": 20,
+    "installed": 0,
+    "workflow_body_read": 20,
+    "integrated": 0,
+    "source": "skills-3080-sixmile-next20-evaluation.json",
+    "masked_workflow_body": 0
+  },
+  "body_alias_triage": {
+    "mapped_saved_occurrences": 72145,
+    "encoding_pending": 27,
+    "source": "skills-3080-body-alias-scan.json",
+    "valid_normalized": 72118,
+    "final_disposition_delta": 0,
+    "semantic_read_delta": 0,
+    "candidate_alias_leads": 8
+  },
+  "additional_candidate_hold_snapshot": {
+    "definition": "Later candidate observation separate from earlier4 comparison snapshot. No names/leafpaths disclosed and no classification recovery is asserted.",
+    "classification_unverified": true,
+    "total_with_previous_comparison_holds": 5,
+    "existence_checked": false,
+    "size_bytes": null,
+    "central_post_guard_read_write": 0,
+    "count": 1
   }
 }

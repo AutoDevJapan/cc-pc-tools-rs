@@ -24,6 +24,8 @@ immutableセグメントの同一性を照合する。実ストアのコピー�
 
 ## 原因と対象
 
+Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/457
+
 - cc-job-policy/src/todo_store.rsは整形後の上限チェックだけで書込みを拒否していた。
 - cc-todoとcc-jobsの一部はこの共通writerを使う。
 - schedulerの4経路は独立した事前チェックとwrite_jsonを使う。
@@ -44,3 +46,15 @@ immutableセグメントの同一性を照合する。実ストアのコピー�
 - 未完: Red/Green、関連writer回帰、レビュー、CI/merge、PC実行版反映と通常edit、元2641配送。
 
 実測・変更版・テスト・PR・配布の結果を以下へ追記する。記録だけで実反映済みとしない。
+
+### 実装と最初のテスト
+
+- d93ae92aで通常更新が小さい上限を超えてTooLargeになるRedを確認（exit100）。
+- 同じ再現は修正後に成功。関連する共通writerの単体テスト10件も成功。
+- 自動保管の計画中はファイルを作らない。上限内へ収まる計画だけ公開する。
+- スナップショット保存前の失敗・再試行、全履歴の順序/重複/未知フィールド、
+  複数セグメントのページ取得と明示復元、壊れた参照、ID重複を小さい上限で確認した。
+- 6クレート（cc-job-policy/cc-todo/cc-ask/cc-scheduler/cc-jobs/localai-web-rs）の
+  関連テスト2561件を実行中。共有writerとエラー型の利用側を含むためこの範囲を選んだ。
+- CLIの64MiB境界と並行CASのテストは合成データだけを使う。実ストアのコピーはない。
+- 全件ログは一時所有領域のrelated-nextest.logへ保持。通常の終了記録で結果を追記する。

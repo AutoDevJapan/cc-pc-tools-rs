@@ -8,7 +8,7 @@ use std::{
     time::Duration,
 };
 
-/// Four times the former console ceiling; history remains in the canonical store.
+/// Hard ceiling for the hot snapshot and each immutable history segment.
 pub const MAX_BYTES: usize = 64 * 1024 * 1024;
 
 #[derive(Debug)]
@@ -16,6 +16,7 @@ pub enum Error {
     TooLarge,
     Io(io::Error),
     InvalidJson(serde_json::Error),
+    History(String),
 }
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -26,6 +27,7 @@ impl fmt::Display for Error {
             ),
             Self::Io(e) => write!(f, "todo_store_io: {e}"),
             Self::InvalidJson(e) => write!(f, "todo_store_invalid_json: {e}"),
+            Self::History(e) => write!(f, "todo_store_archive_failed: {e}"),
         }
     }
 }
@@ -45,17 +47,88 @@ pub fn write(path: &Path, db: &Value) -> Result<(), Error> {
     write_with_limit(path, db, MAX_BYTES)
 }
 
-fn write_with_limit(path: &Path, db: &Value, limit: usize) -> Result<(), Error> {
-    // Match todo.exe's UTF-8, LF, one-space indent and lack of a final newline.
-    // Check the actual saved bytes before touching the original, backup or temp.
+fn encode(db: &Value) -> Result<Vec<u8>, Error> {
     let mut bytes = Vec::new();
     let formatter = serde_json::ser::PrettyFormatter::with_indent(b" ");
     let mut serializer = serde_json::Serializer::with_formatter(&mut bytes, formatter);
     serde::Serialize::serialize(db, &mut serializer).map_err(Error::InvalidJson)?;
+    Ok(bytes)
+}
+
+/// Explicit restoration must fit in full, without immediately archiving it again.
+pub fn write_exact(path: &Path, db: &Value) -> Result<(), Error> {
+    let bytes = encode(db)?;
+    check_size(bytes.len())?;
+    write_encoded(path, &bytes)
+}
+
+fn write_with_limit(path: &Path, db: &Value, limit: usize) -> Result<(), Error> {
+    // Match todo.exe's UTF-8, LF, one-space indent and lack of a final newline.
+    let mut bytes = encode(db)?;
+    if bytes.len() <= limit {
+        return write_encoded(path, &bytes);
+    }
+    // Clone only at the ceiling. The caller's canonical input is never truncated.
+    let mut compacted = db.clone();
+    let mut candidates = Vec::new();
+    if let Some(items) = db["items"].as_array() {
+        for (index, item) in items.iter().enumerate() {
+            match item.get("note_history") {
+                None => (),
+                Some(Value::Array(entries)) if entries.is_empty() => (),
+                Some(Value::Array(entries)) => candidates.push((
+                    index,
+                    serde_json::to_vec(entries)
+                        .map_err(Error::InvalidJson)?
+                        .len(),
+                )),
+                _ => return Err(Error::History("todo_history: invalid note history".into())),
+            }
+        }
+    }
+    // Stable ties preserve the original row order. Prefer fewer, larger segments.
+    candidates.sort_by_key(|(_, size)| std::cmp::Reverse(*size));
+    let goal = limit - limit / 16;
+    let mut pending = Vec::new();
+    for (index, _) in candidates {
+        let item = &compacted["items"][index];
+        if db["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|i| i["id"] == item["id"])
+            .count()
+            != 1
+        {
+            return Err(Error::History("todo_history: ambiguous item id".into()));
+        }
+        let Some(plan) = crate::todo_history::prepare(path, item).map_err(Error::History)? else {
+            continue;
+        };
+        let original = std::mem::replace(&mut compacted["items"][index], plan.item.clone());
+        let next = encode(&compacted)?;
+        if next.len() >= bytes.len() {
+            compacted["items"][index] = original;
+            continue;
+        }
+        bytes = next;
+        pending.push(plan);
+        if bytes.len() <= goal {
+            break;
+        }
+    }
     if bytes.len() > limit {
         return Err(Error::TooLarge);
     }
+    // No archives are published for an irreducibly oversized active snapshot.
+    // A crash after publication leaves reusable, unreferenced immutable segments.
+    for plan in pending {
+        plan.publish(path).map_err(Error::History)?;
+    }
+    write_encoded(path, &bytes)
+}
 
+fn write_encoded(path: &Path, bytes: &[u8]) -> Result<(), Error> {
     let mut backup = path.as_os_str().to_os_string();
     backup.push(".bak-20260930d");
     let backup = Path::new(&backup);
@@ -75,7 +148,7 @@ fn write_with_limit(path: &Path, db: &Value, limit: usize) -> Result<(), Error> 
         std::process::id()
     ));
     let mut file = File::create(&tmp).map_err(Error::Io)?;
-    file.write_all(&bytes).map_err(Error::Io)?;
+    file.write_all(bytes).map_err(Error::Io)?;
     file.flush().map_err(Error::Io)?;
     file.sync_all().map_err(Error::Io)?;
     drop(file);
@@ -179,10 +252,216 @@ mod tests {
         let saved = read(&path).unwrap();
         assert!(fs::metadata(&path).unwrap().len() as usize <= limit);
         assert!(saved["items"][0]["note_history_archives"].is_array());
-        assert_eq!(crate::todo_history::materialized(&path, &saved["items"][0]).unwrap(), changed["items"][0]);
+        assert_eq!(
+            crate::todo_history::materialized(&path, &saved["items"][0]).unwrap(),
+            changed["items"][0]
+        );
         assert_eq!(saved["items"][1], changed["items"][1]);
         assert_eq!(saved["unknown_root"], changed["unknown_root"]);
-        assert_eq!(changed["items"][0]["note_history"], before["items"][0]["note_history"]);
+        assert_eq!(
+            changed["items"][0]["note_history"],
+            before["items"][0]["note_history"]
+        );
+    }
+
+    #[test]
+    fn repeated_overflow_pages_and_explicit_restore_keep_order_duplicates_and_unknowns() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("todo.json");
+        let mut expected = capacity_fixture();
+        write_with_limit(&path, &expected, 4096).unwrap();
+        for cycle in 0..3 {
+            let mut saved = read(&path).unwrap();
+            let more = json!({"note":format!("{cycle} {}", "匿名🦀\n".repeat(400)),"unknown":[null,cycle]});
+            saved["items"][0]["note_history"] = json!([more.clone()]);
+            expected["items"][0]["note_history"]
+                .as_array_mut()
+                .unwrap()
+                .push(more);
+            write_with_limit(&path, &saved, 4096).unwrap();
+            let saved = read(&path).unwrap();
+            // Retry of the committed snapshot adds no segment or duplicate entry.
+            write_with_limit(&path, &saved, 4096).unwrap();
+        }
+        let saved = read(&path).unwrap();
+        assert_eq!(
+            saved["items"][0]["note_history_archives"]
+                .as_array()
+                .unwrap()
+                .len(),
+            4
+        );
+        let mut all = Vec::new();
+        for offset in (0..6).step_by(2) {
+            all.extend(
+                crate::todo_history::page(&path, &saved["items"][0], offset, 2).unwrap()["entries"]
+                    .as_array()
+                    .unwrap()
+                    .clone(),
+            );
+        }
+        assert_eq!(Value::Array(all), expected["items"][0]["note_history"]);
+        let mut restored = saved;
+        crate::todo_history::restore(&path, &mut restored, 1, true).unwrap();
+        assert_eq!(restored, expected);
+        write_exact(&path, &restored).unwrap();
+        assert_eq!(read(&path).unwrap(), expected);
+        assert_eq!(
+            fs::read_dir(temp.path().join("note-history-v1"))
+                .unwrap()
+                .count(),
+            4
+        );
+    }
+
+    #[test]
+    fn largest_history_is_selected_and_small_histories_and_unneeded_segments_stay_untouched() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("todo.json");
+        let mut db = capacity_fixture();
+        db["items"][1]["note_history"] = json!(["small"]);
+        write_with_limit(&path, &db, 4096).unwrap();
+        let saved = read(&path).unwrap();
+        assert!(
+            saved["items"][0]["note_history"]
+                .as_array()
+                .unwrap()
+                .is_empty()
+        );
+        assert_eq!(saved["items"][1], db["items"][1]);
+        let file = saved["items"][0]["note_history_archives"][0]["file"]
+            .as_str()
+            .unwrap();
+        fs::remove_file(temp.path().join("note-history-v1").join(file)).unwrap();
+        // An ordinary under-limit save does not hydrate unrelated history.
+        write_with_limit(&path, &saved, 4096).unwrap();
+        assert_eq!(read(&path).unwrap(), saved);
+        assert!(crate::todo_history::page(&path, &saved["items"][0], 0, 1).is_err());
+    }
+
+    #[test]
+    fn irreducible_active_data_and_expanding_tiny_archives_publish_nothing() {
+        for large_history in [false, true] {
+            let temp = tempfile::tempdir().unwrap();
+            let path = temp.path().join("todo.json");
+            let mut db = capacity_fixture();
+            db["items"][0]["note"] = json!("current".repeat(2000));
+            if !large_history {
+                db["items"][0]["note_history"] = json!(["x"]);
+            }
+            write_exact(&path, &db).unwrap();
+            let before = fs::read(&path).unwrap();
+            let limit = if large_history {
+                4096
+            } else {
+                before.len() - 1
+            };
+            assert!(matches!(
+                write_with_limit(&path, &db, limit),
+                Err(Error::TooLarge)
+            ));
+            assert_eq!(fs::read(&path).unwrap(), before);
+            assert_eq!(fs::read_dir(temp.path()).unwrap().count(), 1);
+        }
+    }
+
+    #[test]
+    fn failed_publication_keeps_original_and_retry_reuses_the_same_history() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("todo.json");
+        let db = capacity_fixture();
+        write_exact(&path, &db).unwrap();
+        let before = fs::read(&path).unwrap();
+        let folder = temp.path().join("note-history-v1");
+        fs::write(&folder, b"obstruction").unwrap();
+        let error = write_with_limit(&path, &db, 4096).unwrap_err();
+        assert!(matches!(error, Error::History(_)));
+        assert!(
+            error
+                .to_string()
+                .starts_with("todo_store_archive_failed: todo_history:")
+        );
+        assert_eq!(fs::read(&path).unwrap(), before);
+        fs::remove_file(&folder).unwrap();
+        write_with_limit(&path, &db, 4096).unwrap();
+        assert_eq!(fs::read_dir(folder).unwrap().count(), 1);
+        let saved = read(&path).unwrap();
+        assert_eq!(
+            crate::todo_history::materialized(&path, &saved["items"][0]).unwrap(),
+            db["items"][0]
+        );
+    }
+
+    #[test]
+    fn failed_snapshot_after_publication_keeps_original_and_retry_has_no_double_write() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("todo.json");
+        let db = capacity_fixture();
+        write_exact(&path, &db).unwrap();
+        let before = fs::read(&path).unwrap();
+        let pending = path.with_file_name(format!("todo.json.{}.tmp", std::process::id()));
+        fs::create_dir(&pending).unwrap();
+        assert!(matches!(
+            write_with_limit(&path, &db, 4096),
+            Err(Error::Io(_))
+        ));
+        assert_eq!(fs::read(&path).unwrap(), before);
+        let folder = temp.path().join("note-history-v1");
+        assert_eq!(fs::read_dir(&folder).unwrap().count(), 1);
+        fs::remove_dir(pending).unwrap();
+        write_with_limit(&path, &db, 4096).unwrap();
+        assert_eq!(fs::read_dir(folder).unwrap().count(), 1);
+        let saved = read(&path).unwrap();
+        assert_eq!(
+            saved["items"][0]["note_history_archives"]
+                .as_array()
+                .unwrap()
+                .len(),
+            1
+        );
+        assert_eq!(
+            crate::todo_history::materialized(&path, &saved["items"][0]).unwrap(),
+            db["items"][0]
+        );
+        assert_eq!(
+            fs::read(path.with_file_name("todo.json.bak-20260930d")).unwrap(),
+            before
+        );
+    }
+
+    #[test]
+    fn corrupted_existing_segment_or_duplicate_id_does_not_commit_new_references() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("todo.json");
+        let db = capacity_fixture();
+        write_with_limit(&path, &db, 4096).unwrap();
+        let mut saved = read(&path).unwrap();
+        let file = saved["items"][0]["note_history_archives"][0]["file"]
+            .as_str()
+            .unwrap();
+        let segment = temp.path().join("note-history-v1").join(file);
+        let original_segment = fs::read(&segment).unwrap();
+        saved["items"][0]["note_history"] = db["items"][0]["note_history"].clone();
+        let before = fs::read(&path).unwrap();
+        fs::write(&segment, b"{}").unwrap();
+        let error = write_with_limit(&path, &saved, 4096).unwrap_err();
+        assert!(error.to_string().contains("archive bytes differ"));
+        assert_eq!(fs::read(&path).unwrap(), before);
+        assert_eq!(
+            fs::read_dir(temp.path().join("note-history-v1"))
+                .unwrap()
+                .count(),
+            1
+        );
+        fs::write(segment, original_segment).unwrap();
+        saved["items"].as_array_mut().unwrap().push(json!({"id":1}));
+        assert!(
+            write_with_limit(&path, &saved, 4096)
+                .unwrap_err()
+                .to_string()
+                .contains("ambiguous item id")
+        );
+        assert_eq!(fs::read(&path).unwrap(), before);
     }
 
     #[test]

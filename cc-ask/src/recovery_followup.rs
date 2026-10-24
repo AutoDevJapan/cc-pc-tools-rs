@@ -101,12 +101,7 @@ fn read(path: &Path) -> Result<Value> {
 }
 fn publish(path: &Path, value: &impl Serialize) -> Result<()> {
     let bytes = serde_json::to_vec_pretty(value).map_err(|_| "followup encoding failed")?;
-    let ceiling = if path.file_name().is_some_and(|n| n == "todo.json") {
-        cc_job_policy::todo_store::MAX_BYTES
-    } else {
-        LIMIT
-    };
-    if bytes.len() > ceiling {
+    if bytes.len() > LIMIT {
         return Err("followup storage limit exceeded; evidence retained".into());
     }
     let mut temp = tempfile::Builder::new()
@@ -391,7 +386,7 @@ fn annotate(ctx: &Context, state: &State, mid: &str) -> Result<()> {
         return Ok(());
     }
     item["recovery_owner_replies"][&record.key] = receipt;
-    publish(&ctx.todo, &db)
+    cc_job_policy::todo_store::write(&ctx.todo, &db).map_err(|e| e.to_string())
 }
 fn parent_active(ctx: &Context, state: &State) -> Result<bool> {
     match fs::metadata(&state.watch.parent_lock) {

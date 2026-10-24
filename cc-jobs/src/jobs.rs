@@ -145,6 +145,10 @@ impl Context {
         self.rt
             .before_save(path, v)
             .map_err(|e| Error::file_io("prepare write", path, e))?;
+        if path == self.todo_store() {
+            return cc_job_policy::todo_store::write(path, v)
+                .map_err(|e| Error::new(e.to_string()));
+        }
         // Every persisted record (job.json, journals) is masked before serialization.
         let v = &LogRedactor::new(&self.rt.env()).event(v);
         self.write_snapshot(path, pretty(v).replace("\n", "\r\n").as_bytes())

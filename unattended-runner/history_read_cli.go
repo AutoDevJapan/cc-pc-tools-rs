@@ -45,25 +45,28 @@ type historyReadCursor struct {
 }
 
 type historyReadPage struct {
-	Domain   string               `json:"domain"`
-	Source   string               `json:"source"`
-	Todo     uint64               `json:"todo_id"`
-	Guild    string               `json:"guild_id"`
-	Owner    string               `json:"owner_id"`
-	Bot      string               `json:"bot_id"`
-	ScopeSHA string               `json:"scope_sha256"`
-	Since    string               `json:"since"`
-	Until    string               `json:"until"`
-	Acquired string               `json:"acquired_at"`
-	Cursor   historyReadCursor    `json:"cursor"`
-	Thread   string               `json:"thread_id"`
-	Starter  historyReadMessage   `json:"starter"`
-	Scanned  int                  `json:"scanned_messages"`
-	LastID   string               `json:"last_scanned_id,omitempty"`
-	LastTime string               `json:"last_scanned_timestamp,omitempty"`
-	Messages []historyReadMessage `json:"messages"`
-	Complete bool                 `json:"complete"`
-	Next     *historyReadCursor   `json:"next"`
+	Domain   string            `json:"domain"`
+	Source   string            `json:"source"`
+	Todo     uint64            `json:"todo_id"`
+	Guild    string            `json:"guild_id"`
+	Owner    string            `json:"owner_id"`
+	Bot      string            `json:"bot_id"`
+	ScopeSHA string            `json:"scope_sha256"`
+	Since    string            `json:"since"`
+	Until    string            `json:"until"`
+	Acquired string            `json:"acquired_at"`
+	Cursor   historyReadCursor `json:"cursor"`
+	Thread   string            `json:"thread_id"`
+	// Absent structural fields identify an original two-forum v1 receipt.
+	ChannelType *int                 `json:"channel_type,omitempty"`
+	Parent      string               `json:"parent_id,omitempty"`
+	Starter     *historyReadMessage  `json:"starter"`
+	Scanned     int                  `json:"scanned_messages"`
+	LastID      string               `json:"last_scanned_id,omitempty"`
+	LastTime    string               `json:"last_scanned_timestamp,omitempty"`
+	Messages    []historyReadMessage `json:"messages"`
+	Complete    bool                 `json:"complete"`
+	Next        *historyReadCursor   `json:"next"`
 }
 
 // This command uses the ordinary credential loader, but never opens live intake,
@@ -272,12 +275,12 @@ func historyReadCLIWith(args []string, out io.Writer, load func(context.Context,
 	}
 	hash := bytesHash(raw)
 	cursor := historyReadCursor{ScopeSHA: hash, Before: historyHighBefore(mustHistoryTime(scope.Until))}
+	var prior historyReadPage
 	if cursorPath != "" {
 		priorRaw, err := historyPrivateInput(ctx, cursorPath, guard)
 		if err != nil {
 			return fail()
 		}
-		var prior historyReadPage
 		if historyStrictJSON(priorRaw, &prior) != nil || !historyContinuationValid(prior, scope, hash) {
 			return fail()
 		}
@@ -292,7 +295,14 @@ func historyReadCLIWith(args []string, out io.Writer, load func(context.Context,
 	if err != nil || runner == nil || runner.State == nil || runner.State.Destination.Guild != scope.Guild || runner.State.Destination.Owner != scope.Owner {
 		return fail()
 	}
-	page, err := readHistoryPage(ctx, runner, scope, cursor)
+	if cursorPath != "" && prior.Bot != runner.State.Destination.Bot {
+		return fail()
+	}
+	var previous *historyReadPage
+	if cursorPath != "" {
+		previous = &prior
+	}
+	page, err := readHistoryPage(ctx, runner, scope, cursor, previous)
 	if err != nil || ctx.Err() != nil {
 		return fail()
 	}
@@ -330,6 +340,9 @@ func historyContinuationValid(prior historyReadPage, scope historyReadScope, has
 	if prior.Domain != "discord-history-read-page-v1" || prior.Source != "discord-api-v10" || prior.ScopeSHA != hash || prior.Next == nil || prior.Complete || prior.Todo != scope.Todo || prior.Guild != scope.Guild || prior.Owner != scope.Owner || prior.Since != scope.Since || prior.Until != scope.Until || prior.Cursor.ScopeSHA != hash || prior.Cursor.ThreadIndex < 0 || prior.Cursor.ThreadIndex >= len(scope.Threads) || prior.Thread != scope.Threads[prior.Cursor.ThreadIndex] || prior.Scanned < 0 || prior.Scanned > 100 || len(prior.Messages) > prior.Scanned {
 		return false
 	}
+	if !historyReceiptChannelValid(prior) {
+		return false
+	}
 	before, ok := number(prior.Cursor.Before)
 	high, _ := number(historyHighBefore(mustHistoryTime(scope.Until)))
 	thread, _ := number(prior.Thread)
@@ -359,13 +372,27 @@ func historyContinuationValid(prior historyReadPage, scope historyReadScope, has
 	return next.ThreadIndex < len(scope.Threads) && *prior.Next == next
 }
 
+func historyReceiptChannelValid(p historyReadPage) bool {
+	// Old receipts retain their original starter shape and cursor semantics.
+	if p.ChannelType == nil {
+		return p.Parent == "" && p.Starter != nil && p.Starter.ID == p.Thread
+	}
+	switch *p.ChannelType {
+	case 0, 2, 5, 13:
+		return p.Starter == nil && (p.Parent == "" || monthlyID(p.Parent))
+	case 10, 11, 12:
+		return monthlyID(p.Parent) && (p.Starter == nil || (*p.ChannelType == 11 && p.Starter.ID == p.Thread))
+	}
+	return false
+}
+
 func mustHistoryTime(value string) time.Time { t, _ := time.Parse(time.RFC3339Nano, value); return t }
 
 func historyHighBefore(until time.Time) string {
 	return snowflake(until.Truncate(time.Millisecond).Add(time.Millisecond))
 }
 
-func readHistoryPage(ctx context.Context, r *Runner, scope historyReadScope, cursor historyReadCursor) (historyReadPage, error) {
+func readHistoryPage(ctx context.Context, r *Runner, scope historyReadScope, cursor historyReadCursor, prior *historyReadPage) (historyReadPage, error) {
 	page := historyReadPage{Domain: "discord-history-read-page-v1", Source: "discord-api-v10", Todo: scope.Todo, Guild: scope.Guild, Owner: scope.Owner, Bot: r.State.Destination.Bot, ScopeSHA: cursor.ScopeSHA, Since: scope.Since, Until: scope.Until, Cursor: cursor, Thread: scope.Threads[cursor.ThreadIndex], Messages: []historyReadMessage{}}
 	bad := errors.New("history source differs or unavailable")
 	var bot struct {
@@ -375,13 +402,45 @@ func readHistoryPage(ctx context.Context, r *Runner, scope historyReadScope, cur
 	if r.get(ctx, "/users/@me", &bot) != nil || !bot.Bot || bot.ID != page.Bot {
 		return page, bad
 	}
-	var thread Thread
-	if r.get(ctx, "/channels/"+page.Thread, &thread) != nil || thread.ID != page.Thread || thread.Guild != scope.Guild || thread.Type != 11 || (thread.Parent != r.State.Destination.Forum && thread.Parent != requestForum) || (thread.Owner != page.Bot && thread.Owner != scope.Owner) {
+	channel, err := monthlyReadable(ctx, r, page.Thread)
+	if err != nil {
 		return page, bad
 	}
-	// Unlike a 200 [] history response, this proves READ_MESSAGE_HISTORY access.
-	if r.get(ctx, "/channels/"+page.Thread+"/messages/"+page.Thread, &page.Starter) != nil || !historyMessageValid(page.Starter.Message, page.Thread, r) || !historyAttachmentsValid(page.Starter) || page.Starter.ID != page.Thread || (page.Starter.Author.ID != scope.Owner && page.Starter.Author.ID != page.Bot) {
+	page.ChannelType, page.Parent = channel.Type, channel.Parent
+	thread := *channel.Type == 10 || *channel.Type == 11 || *channel.Type == 12
+	forumPost := *channel.Type == 11 && channel.ParentType != nil && (*channel.ParentType == 15 || *channel.ParentType == 16)
+	legacy := thread && (channel.Parent == r.State.Destination.Forum || channel.Parent == requestForum)
+	if legacy && (!forumPost || (channel.Owner != page.Bot && channel.Owner != scope.Owner)) {
 		return page, bad
+	}
+	if prior != nil && prior.Thread == page.Thread {
+		if prior.ChannelType == nil {
+			// Genuine old v1 pages could only originate in the two legacy forums.
+			if !legacy {
+				return page, bad
+			}
+		} else if *prior.ChannelType != *page.ChannelType || prior.Parent != page.Parent {
+			return page, bad
+		}
+	}
+	// Forum/media posts have a same-ID starter. Private threads and ordinary
+	// channels need no such message; their access was proved before any body GET.
+	// For other public threads, the page preserves actual reply references.
+	if forumPost {
+		var starter historyReadMessage
+		if r.get(ctx, "/channels/"+page.Thread+"/messages/"+page.Thread, &starter) != nil || !historyMessageMetadataValid(starter.Message, page.Thread, r) || starter.ID != page.Thread {
+			return page, bad
+		}
+		selected := starter.Author.ID == scope.Owner || starter.Author.ID == page.Bot
+		if legacy && !selected {
+			return page, bad
+		}
+		if selected {
+			if !historyMessageValid(starter.Message, page.Thread, r) || !historyAttachmentsValid(starter) {
+				return page, bad
+			}
+			page.Starter = &starter
+		}
 	}
 	var messages []historyReadMessage
 	if r.get(ctx, "/channels/"+page.Thread+"/messages?limit=100&before="+cursor.Before, &messages) != nil || messages == nil || len(messages) > 100 {

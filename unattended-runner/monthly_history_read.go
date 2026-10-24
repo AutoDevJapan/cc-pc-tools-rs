@@ -128,9 +128,10 @@ func monthlyReadable(ctx context.Context, r *Runner, id string) (monthlyChannel,
 		if err := monthlyGet(ctx, r, "/channels/"+c.Parent, "thread_parent", &parent); err != nil {
 			return c, err
 		}
-		if !parent.valid(r.State.Destination.Guild, true) || parent.ID != c.Parent || (*parent.Type != 0 && *parent.Type != 5 && *parent.Type != 15 && *parent.Type != 16) {
+		if !parent.valid(r.State.Destination.Guild, true) || parent.ID != c.Parent || !monthlyThreadParentType(*c.Type, *parent.Type) {
 			return c, monthlyInvalid("thread_parent")
 		}
+		c.ParentType = parent.Type
 	}
 	permissions, err := monthlyPermissions(ctx, r, parent)
 	if err != nil {
@@ -154,6 +155,18 @@ func monthlyReadable(ctx context.Context, r *Runner, id string) (monthlyChannel,
 		}
 	}
 	return c, nil
+}
+
+func monthlyThreadParentType(thread, parent int) bool {
+	switch thread {
+	case 10:
+		return parent == 5
+	case 11:
+		return parent == 0 || parent == 15 || parent == 16
+	case 12:
+		return parent == 0
+	}
+	return false
 }
 
 type monthlyReadScope struct {

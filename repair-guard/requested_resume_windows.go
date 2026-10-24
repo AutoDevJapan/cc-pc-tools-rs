@@ -131,6 +131,7 @@ type requestedResumeAccess struct {
 	denied   func(string) bool
 	identity func(currentProduct) bool
 	origin   func(string, string) bool
+	member   func(string, string) string
 	spec     func(object, string, int, string, string, string, func(string) bool) bool
 	original func(object) bool
 	x        func(object) bool
@@ -143,7 +144,7 @@ func requested3650Access(liveIdentity bool) requestedResumeAccess {
 		identity = currentGitHubIdentityVerified
 	}
 	return requestedResumeAccess{source: resume3650SourceQualified, plain: currentPlain, denied: legacyMatch, identity: identity,
-		origin: sourceOriginVerified, spec: currentQualification, now: time.Now(),
+		origin: sourceOriginVerified, member: ownerDepartmentMembership, spec: currentQualification, now: time.Now(),
 		original: func(db object) bool {
 			return verifyOriginalProductRecords(db, 1626, productIO{readObject, readBounded, exactPhysical, sourceOriginVerified, requested3650OriginalSessions, time.Now()}, object{"verified": false})["verified"] == true
 		},
@@ -174,6 +175,10 @@ func requestedResumeQualified(db object, p currentProduct, a requestedResumeAcce
 	row := itemAt(db, p.task)
 	if row == nil || row["stopped"] == true || row["owner_stopped"] == true || (row["status"] != "todo" && row["status"] != "doing" && row["status"] != "wait") ||
 		a.denied(p.root) || !a.plain(p.root, true) {
+		return false
+	}
+	membership := a.member(p.project, p.repository)
+	if membership == "client_project" || (p.task == 3277 && membership != "self") {
 		return false
 	}
 	// Establish ownership before opening the saved original instructions.
@@ -248,6 +253,9 @@ func requested1626OriginalWorkspace(db object, path string) bool {
 }
 
 func requestedResumePathAllowed(path string) bool {
+	if ownerNonSourcePath(path) {
+		return false
+	}
 	// Select only the exact saved spec, source/workspace or operational working
 	// location before any native or private record read. No X data grant.
 	var candidate *currentProduct

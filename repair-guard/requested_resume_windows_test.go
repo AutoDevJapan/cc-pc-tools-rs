@@ -39,7 +39,7 @@ func TestRequestedResumeKeepsOriginalRegistrationAndStops(t *testing.T) {
 		t.Fatal("spec fixture write failed")
 	}
 	p := currentProduct{task: 3277, project: "original", root: root, spec: spec, specSHA: hashBytes([]byte("original task bytes")), repository: "autodevjapan/original", repositoryID: 100, owner: "AutoDevJapan"}
-	for _, kind := range []string{"pass", "source", "identity", "origin", "protected", "physical", "body", "project", "root", "spec", "stop", "owner_stop", "done", "recovery", "original"} {
+	for _, kind := range []string{"pass", "source", "identity", "origin", "catalog_client", "catalog_unknown", "protected", "physical", "body", "project", "root", "spec", "stop", "owner_stop", "done", "recovery", "original"} {
 		t.Run(kind, func(t *testing.T) {
 			row := object{"id": float64(p.task), "project": p.project, "spec": spec, "status": "todo", "dispatchable": true}
 			db := object{"projects": object{p.project: root}, "items": []any{row}}
@@ -49,6 +49,15 @@ func TestRequestedResumeKeepsOriginalRegistrationAndStops(t *testing.T) {
 				denied:   func(string) bool { return kind == "protected" },
 				identity: func(currentProduct) bool { return kind != "identity" },
 				origin:   func(string, string) bool { return kind != "origin" }, spec: currentQualification,
+				member: func(string, string) string {
+					if kind == "catalog_client" {
+						return "client_project"
+					}
+					if kind == "catalog_unknown" {
+						return ""
+					}
+					return "self"
+				},
 				original: func(object) bool { return kind != "original" }, now: time.Date(2026, 10, 24, 12, 0, 0, 0, time.UTC),
 			}
 			q := p

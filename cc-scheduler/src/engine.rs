@@ -1515,6 +1515,11 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 .iter()
                 .any(|author| cc_ask::job_policy::same_model(author, s(&selection["model"])));
             let owner_choice = selection["model_origin"] == "owner_request";
+            let quota_choice=crate::quota_recovery::prepare(&mut self.backend,&item,source,&jobs,&mut selection,
+                &cc_job_policy::product_retry::digest(text.as_bytes()))?;
+            if quota_choice && conflict {
+                return Err(Error("ReviewModelConflict"));
+            }
             if explicit && owner_choice && conflict {
                 return Err(Error("ReviewModelConflict"));
             }
@@ -1522,7 +1527,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 && ["gpt-6.1-sol", "gpt-6-luna", "gpt-6-astra"]
                     .iter()
                     .any(|model| cc_ask::job_policy::same_model(s(&selection["model"]), model));
-            if !explicit || conflict || ai_writer_default {
+            if !quota_choice && (!explicit || conflict || ai_writer_default) {
                 let profile=cc_ask::job_policy::review_profile(&excluded).ok_or(Error("ReviewModelUnavailable"))?;
                 selection["model"]=json!(profile.model);
                 selection["model_origin"] = json!("policy");
@@ -1534,6 +1539,18 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             selection["review_source_jobs"] = json!(sources);
             selection["review_excluded_models"] = json!(excluded);
             selection["task_type"] = json!("review");
+            // Check the selected review provider too: a legacy GPT hint can
+            // route to a depleted default before the CLI ever sees it.
+            if let Some(until)=self.backend.resource_until(&selection)? {
+                self.edit(&item["id"],|row| {
+                    if row["status"] == "todo" && row["scheduler"]["key"] == item["scheduler"]["key"]
+                        && launch_inputs(row) == launch_inputs(&item) {
+                        row["scheduler"]["not_before"]=json!(until);
+                        row["scheduler"]["resource_wait"]=json!({"reason":"quota_exhausted","until":until});
+                    }
+                })?;
+                return Ok(None);
+            }
         }
         if !valid_model(s(&selection["model"])) {
             return Err(Error("ValueError"));
@@ -1642,6 +1659,14 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                     selection[field] = value.clone();
                 }
             }
+        }
+        if cc_job_policy::review_task(s(&item["title"]), s(&selection["task_type"]))
+            || item["subwork"]["kind"] == "review"
+        {
+            // Bind the same bytes embedded above, before the launch CLI can
+            // observe a later edit at the saved specification's path.
+            selection["finite_review_spec_sha256"] =
+                json!(cc_job_policy::product_retry::digest(text.as_bytes()));
         }
         let folder = self.root.join("prompts");
         fs::create_dir_all(&folder)?;

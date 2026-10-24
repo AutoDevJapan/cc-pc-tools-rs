@@ -294,7 +294,7 @@ impl Context {
         Ok((sources, authors))
     }
     /// Durable source metadata survives the end of the live parent relationship.
-    pub(crate) fn validate_review_launch(&self, job: &mut Value) -> Result<()> {
+    pub(crate) fn validate_review_launch(&self, job: &mut Value, verified_quota: bool) -> Result<()> {
         if !review_job(job) {
             return Ok(());
         }
@@ -345,7 +345,10 @@ impl Context {
         let default_writer = ["gpt-6.1-sol", "gpt-6-luna", "gpt-6-astra"]
             .iter()
             .any(|model| same_model(s(job, "model"), model));
-        if !owner_choice && (author_conflict || routing_conflict || default_writer) {
+        if verified_quota && (author_conflict || routing_conflict) {
+            return Err(Error::new("quota recovery requires an independent available review model"));
+        }
+        if !owner_choice && !verified_quota && (author_conflict || routing_conflict || default_writer) {
             let profile = cc_job_policy::review_profile(&excluded_models)
                 .ok_or_else(|| Error::new("no independent review model is available"))?;
             job["model"] = json!(profile.model);

@@ -401,7 +401,7 @@ pub fn snapshot(accounts: &Value, namespaces: &Value, logs: &Value, job: &Value,
     result
 }
 
-fn query(rt: &(impl Runtime + ?Sized), args: &[&str]) -> Option<Value> {
+pub(crate) fn query(rt: &(impl Runtime + ?Sized), args: &[&str]) -> Option<Value> {
     let env = rt.env();
     let appdata = env.get("APPDATA")?;
     let package = std::path::Path::new(appdata).join("npm/node_modules/@bitkyc08/opencodex");

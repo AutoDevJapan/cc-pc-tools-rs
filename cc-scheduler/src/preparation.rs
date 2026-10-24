@@ -41,22 +41,65 @@ pub fn recovery_session<'a>(
     if !owns_workspace(item, job) {
         return None;
     }
-    crate::policy::continuation_session(job, cwd, jobs).or_else(|| {
-        let session = cc_ask::job_policy::launch_context::usable_thread_session(job)?;
-        (truth(&item["scheduler"]["resume"])
-            && owns_workspace(item, job)
-            && matches!(
-                s(&job["status"]),
-                "failed" | "lost" | "cancelled" | "canceled"
-            )
-            && crate::policy::valid_session(session)
-            && norm(s(&job["cwd"])) == norm(cwd)
-            && !jobs.iter().any(|j| {
-                crate::policy::live(j)
-                    && (s(&j["thread_id"]) == session || s(&j["resume_session"]) == session)
-            }))
-        .then_some(session)
-    })
+    crate::policy::continuation_session(job, cwd, jobs)
+        .or_else(|| answered_conversation_session(item, job, cwd, jobs))
+        .or_else(|| {
+            let session = cc_ask::job_policy::launch_context::usable_thread_session(job)?;
+            (truth(&item["scheduler"]["resume"])
+                && owns_workspace(item, job)
+                && matches!(
+                    s(&job["status"]),
+                    "failed" | "lost" | "cancelled" | "canceled"
+                )
+                && crate::policy::valid_session(session)
+                && norm(s(&job["cwd"])) == norm(cwd)
+                && !jobs.iter().any(|j| {
+                    crate::policy::live(j)
+                        && (s(&j["thread_id"]) == session
+                            || s(&j["resume_session"]) == session)
+                }))
+            .then_some(session)
+        })
+}
+
+/// Written by cc-todo's verified `question-answer` for the exact launch that
+/// asked the question (see cc-todo conversation_wait SESSION_PROOF_KEY).
+const CONVERSATION_ANSWER: &str = "conversation_answer";
+
+/// A job that ended with a concrete "状態: 要判断" question is not a continuation
+/// by itself. Its own conversation may continue only for the owner answer that
+/// the ToDo layer proved for that same job and launch key, while the answer
+/// text is still the pending instruction. Any later job, another launch, a stop
+/// or a live user of the session never matches.
+fn answered_conversation_session<'a>(
+    item: &Value,
+    job: &'a Value,
+    cwd: &str,
+    jobs: &[Value],
+) -> Option<&'a str> {
+    let proof = &item["scheduler"][CONVERSATION_ANSWER];
+    let session = cc_ask::job_policy::launch_context::usable_thread_session(job)?;
+    (proof.is_object()
+        && !s(&job["id"]).is_empty()
+        && proof["job"] == job["id"]
+        && !s(&job["launch_key"]).is_empty()
+        && proof["launch_key"] == job["launch_key"]
+        && !s(&proof["request_id"]).is_empty()
+        && !s(&proof["question_receipt_sha256"]).is_empty()
+        && item["scheduler"]["last_job"] == job["id"]
+        && truth(&item["scheduler"]["resume"])
+        && !s(&item["scheduler"]["owner_instruction"]).trim().is_empty()
+        && item["processed_results"][s(&job["id"])].is_object()
+        && s(&job["status"]) == "succeeded"
+        && cc_ask::core::result_state(s(&job["last_message"])) == "状態: 要判断"
+        && !cc_job_policy::cancellation::blocks_recovery(item, job)
+        && crate::policy::valid_session(session)
+        && norm(s(&job["cwd"])) == norm(cwd)
+        && !jobs.iter().any(|j| {
+            crate::policy::live(j)
+                && (s(&j["thread_id"]) == session || s(&j["resume_session"]) == session)
+        }))
+    .then_some(session)
 }
 
 /// A historical manual review's read source is not its independent execution checkout.

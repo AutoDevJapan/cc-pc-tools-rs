@@ -1,0 +1,134 @@
+package main
+
+import (
+	"context"
+	"errors"
+	"os"
+	"path/filepath"
+	"sort"
+	"sync"
+	"time"
+)
+
+const conversationPollInterval = time.Minute
+const conversationPollParallelism = 4
+const conversationPollTimeout = 6 * time.Second
+const conversationPollStageBudget = 20 * time.Second
+
+type conversationPollResult struct {
+	id       string
+	question ConversationQuestion
+	proof    *conversationProof
+	err      error
+	checked  string
+}
+
+type conversationPollCheck struct {
+	CheckedAt string `json:"checked_at"`
+	OK        bool   `json:"verified"`
+}
+
+type conversationPollSnapshot struct {
+	Domain  string                           `json:"domain"`
+	Updated string                           `json:"updated_at"`
+	Checks  map[string]conversationPollCheck `json:"checks"`
+}
+
+func (r *Runner) conversationPollSnapshot() (conversationPollSnapshot, error) {
+	snapshot := conversationPollSnapshot{Domain: "discord-conversation-poll-v1", Checks: map[string]conversationPollCheck{}}
+	err := readJSON(filepath.Join(r.Config.Home, "conversation-poll-health.json"), maxState, &snapshot)
+	if os.IsNotExist(err) {
+		return snapshot, nil
+	}
+	if err != nil || snapshot.Domain != "discord-conversation-poll-v1" || snapshot.Checks == nil {
+		return conversationPollSnapshot{Domain: "discord-conversation-poll-v1", Checks: map[string]conversationPollCheck{}}, errors.New("poll history unavailable")
+	}
+	return snapshot, nil
+}
+
+// Each waiting question gets a read-only turn on each existing minute tick.
+// Only read-only sender calls run concurrently; captures, ToDo changes and all
+// publication still run sequentially under the original runner lock.
+func (r *Runner) processConversations(ctx context.Context, health *Health) {
+	index, err := r.loadConversations()
+	if err != nil {
+		health.Errors = append(health.Errors, "conversation_index_deferred")
+		return
+	}
+	snapshot, snapshotErr := r.conversationPollSnapshot()
+	if snapshotErr != nil {
+		health.Errors = append(health.Errors, "conversation_poll_history_deferred")
+	}
+	var waiting []ConversationQuestion
+	for _, id := range orderedConversationKeys(index) {
+		q := index.Questions[id]
+		if q.Wait && (q.Phase == "waiting" || q.Phase == "answered") {
+			waiting = append(waiting, q)
+		}
+	}
+	// Oldest checked first if an API outage consumes this finite tick. Healthy
+	// later questions do not repeatedly lose their turn to the same failed one.
+	sort.SliceStable(waiting, func(i, j int) bool {
+		a, _ := time.Parse(time.RFC3339Nano, snapshot.Checks[waiting[i].RequestID].CheckedAt)
+		b, _ := time.Parse(time.RFC3339Nano, snapshot.Checks[waiting[j].RequestID].CheckedAt)
+		return a.Before(b)
+	})
+	health.ConversationWaiting = len(waiting)
+	health.ConversationPollSeconds = int(conversationPollInterval / time.Second)
+	results := make([]conversationPollResult, len(waiting))
+	work := make(chan int)
+	var workers sync.WaitGroup
+	for worker := 0; worker < min(conversationPollParallelism, len(waiting)); worker++ {
+		workers.Go(func() {
+			for i := range work {
+				q := waiting[i]
+				result := conversationPollResult{id: q.RequestID, question: q}
+				if ctx.Err() != nil {
+					result.err = ctx.Err()
+					results[i] = result
+					continue
+				}
+				poll, cancel := context.WithTimeout(ctx, conversationPollTimeout)
+				result.proof, result.err = r.conversationProof(poll, q)
+				cancel()
+				result.checked = r.Now().UTC().Format(time.RFC3339Nano)
+				results[i] = result
+			}
+		})
+	}
+	for i := range waiting {
+		work <- i
+	}
+	close(work)
+	workers.Wait()
+	checked := make(map[string]bool, len(waiting))
+	for _, result := range results {
+		checked[result.id] = true
+		if result.checked == "" {
+			health.ConversationPollDeferred++
+			continue
+		}
+		health.ConversationChecked++
+		q := result.question
+		snapshot.Checks[result.id] = conversationPollCheck{CheckedAt: result.checked, OK: result.err == nil}
+		if result.err != nil {
+			health.ConversationPollDeferred++
+			continue
+		}
+		// Captures and delivery remain sequential. An exhausted delivery budget
+		// is visible and retried from the same question and source version.
+		r.processConversationReplies(ctx, index, result.id, q, result.proof, health)
+	}
+	if len(waiting) != 0 {
+		snapshot.Updated = r.Now().UTC().Format(time.RFC3339Nano)
+		if publish(filepath.Join(r.Config.Home, "conversation-poll-health.json"), snapshot) != nil {
+			health.Errors = append(health.Errors, "conversation_poll_record_deferred")
+		}
+	}
+	if health.ConversationPollDeferred != 0 {
+		health.Errors = append(health.Errors, "conversation_poll_deferred")
+	}
+	if ctx.Err() == nil {
+		r.processConversationMaintenance(ctx, health, checked)
+	}
+}

@@ -3725,6 +3725,136 @@ fn preparation2164_reuses_owned_terminal_session_only_without_other_worker() {
     assert!(recovery_session(&row, &job, "D:/fixture-original", &[concurrent]).is_none());
 }
 
+fn answered_question_pair() -> (Value, Value) {
+    let row = json!({"id":1,"jobs":["asked"],
+        "scheduler":{"resume":true,"last_job":"asked","job":null,"key":null,
+            "owner_instruction":"原因を調べてから元の依頼を再開してください。\nオーナーの回答: a",
+            "conversation_answer":{"job":"asked","launch_key":"asked-key",
+                "request_id":"conversation-v1-0123456789abcdef0123456789abcdef",
+                "message_id":"202","question_receipt_sha256":"a".repeat(64),
+                "answer_file_sha256":"b".repeat(64)}},
+        "processed_results":{"asked":{"generation":7,"reason":"conversation_answer"}}});
+    let job = json!({"id":"asked","todo_id":1,"status":"succeeded","launch_key":"asked-key",
+        "cwd":"D:/fixture-original","thread_id":"12345678-1234-4321-9234-123456789abc",
+        "last_message":"状態: 要判断\n公開してよいですか。\na. 公開\nb. 中止"});
+    (row, job)
+}
+
+#[test]
+fn preparation3637_answered_question_returns_only_to_the_asking_session() {
+    use cc_scheduler::preparation::*;
+    let cwd = "D:/fixture-original";
+    let (row, job) = answered_question_pair();
+    assert_eq!(recovery_session(&row, &job, cwd, &[]), job["thread_id"].as_str());
+    // The same finished question without the verified answer proof is not a
+    // continuation: it is a question waiting for the owner.
+    let mut unproven = row.clone();
+    unproven["scheduler"].as_object_mut().unwrap().remove("conversation_answer");
+    assert!(recovery_session(&unproven, &job, cwd, &[]).is_none());
+    for case in [
+        "other_job", "other_launch", "later_job", "no_pending_answer", "no_resume",
+        "unprocessed_result", "owner_stop", "job_stop", "finished_not_question",
+        "other_work", "retired_session", "missing_launch_key",
+    ] {
+        let (mut row, mut job) = answered_question_pair();
+        match case {
+            "other_job" => row["scheduler"]["conversation_answer"]["job"] = json!("another"),
+            "other_launch" => row["scheduler"]["conversation_answer"]["launch_key"] = json!("new-key"),
+            "later_job" => row["scheduler"]["last_job"] = json!("later"),
+            "no_pending_answer" => row["scheduler"]["owner_instruction"] = json!("  "),
+            "no_resume" => row["scheduler"]["resume"] = json!(false),
+            "unprocessed_result" => row["processed_results"] = json!({}),
+            "owner_stop" => row["stopped"] = json!(true),
+            "job_stop" => job["cancel_reason"] = json!("person"),
+            "finished_not_question" => job["last_message"] = json!("状態: 完了\n完了しました。"),
+            "other_work" => job["cwd"] = json!("D:/elsewhere"),
+            "retired_session" => job["policy_resume_reset"] = json!({"session":job["thread_id"]}),
+            "missing_launch_key" => {
+                job["launch_key"] = json!("");
+                row["scheduler"]["conversation_answer"]["launch_key"] = json!("");
+            }
+            _ => unreachable!(),
+        }
+        assert!(
+            recovery_session(&row, &job, cwd, &[]).is_none(),
+            "{case} returned the asking session"
+        );
+    }
+    let (row, job) = answered_question_pair();
+    let live = json!({"id":"live","status":"running","thread_id":job["thread_id"]});
+    assert!(recovery_session(&row, &job, cwd, &[live]).is_none());
+    assert!(recovery_session(&row, &job, "D:/elsewhere", &[]).is_none());
+}
+
+/// A prepared relaunch after the owner's answer, using the real prompt writer.
+fn prepare_after_owner_answer(proven: bool, reply: &str) -> (Value, String) {
+    let mut f = Fixture::new();
+    f.managed(1, 1, "civ6", 0);
+    let cwd = s(&f.get(1)["scheduler"]["worktree"]).to_owned();
+    let key = s(&f.get(1)["scheduler"]["key"]).to_owned();
+    f.e.backend.records[0]["status"] = json!("lost");
+    f.e.backend.ps.clear();
+    f.reconcile();
+    f.e.backend.clock += 3600.;
+    // The asking launch ended successfully with a concrete owner question.
+    let asked = &mut f.e.backend.records[0];
+    asked["status"] = json!("succeeded");
+    asked["todo_id"] = json!(1);
+    asked["launch_key"] = json!(key);
+    asked["cwd"] = json!(cwd);
+    asked["thread_id"] = json!("12345678-1234-4321-9234-123456789abc");
+    asked["last_message"] = json!("状態: 要判断\n公開してよいですか。\na. 公開\nb. 中止");
+    let reply = reply.to_owned();
+    f.e.edit(&json!(1), |row| {
+        row["scheduler"]["last_job"] = json!("j1");
+        row["scheduler"]["resume"] = json!(true);
+        row["scheduler"]["owner_instruction"] =
+            json!(format!("元ToDo 1の質問への本人回答を適用しました。\n{reply}"));
+        row["processed_results"] = json!({"j1":{"generation":0,"reason":"conversation_answer"}});
+        if proven {
+            row["scheduler"]["conversation_answer"] = json!({"job":"j1","launch_key":key,
+                "request_id":"conversation-v1-0123456789abcdef0123456789abcdef",
+                "message_id":"202","question_receipt_sha256":"a".repeat(64),
+                "answer_file_sha256":"b".repeat(64)});
+        }
+    })
+    .unwrap();
+    let prepared =
+        f.e.prepare(&f.get(1), &f.repo.to_string_lossy())
+            .unwrap()
+            .unwrap();
+    let prompt = fs::read_to_string(s(&prepared["scheduler"]["prompt"])).unwrap();
+    (prepared, prompt)
+}
+
+#[test]
+fn preparation3637_full_owner_reply_reaches_the_asking_session_prompt_without_truncation() {
+    // Longer than the 8000 character cap that applies to the previous result.
+    let reply = format!("先頭の回答。{}末尾の回答。", "長い回答の本文。".repeat(5000));
+    assert!(reply.chars().count() > 40_000);
+    let (prepared, prompt) = prepare_after_owner_answer(true, &reply);
+    assert_eq!(
+        prepared["scheduler"]["resume_session"],
+        "12345678-1234-4321-9234-123456789abc"
+    );
+    assert!(prompt.contains(&reply), "the owner reply was cut or altered");
+    assert!(prompt.contains("オーナーの回答に従って再開してください"));
+    let command = RealBackend::new(std::env::temp_dir()).launch_command(
+        &prepared,
+        Path::new("prompt.md"),
+        &json!({"model":"gpt-6.1-sol","effort":"high"}),
+    );
+    assert!(command.args.windows(2).any(|pair| {
+        pair[0] == "--resume-session" && pair[1] == "12345678-1234-4321-9234-123456789abc"
+    }));
+
+    // The same finished question without the verified proof starts fresh work
+    // (the answer text is still delivered, but the old conversation is not reused).
+    let (unproven, prompt) = prepare_after_owner_answer(false, &reply);
+    assert!(unproven["scheduler"]["resume_session"].is_null());
+    assert!(prompt.contains(&reply));
+}
+
 #[test]
 fn retired_native_conversation_cannot_cross_a_cancelled_prestart_handoff() {
     let mut f = Fixture::new();

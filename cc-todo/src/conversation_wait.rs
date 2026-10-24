@@ -15,6 +15,9 @@ const ANSWER: &str = "discord-conversation-answer-v1";
 const WAIT: &str = "todo-owner-question-wait-v1";
 const RECEIPT: &str = "todo-owner-question-answer-receipt-v1";
 const WAIT_KEY: &str = "owner_question_wait";
+/// Scheduler-side proof that a succeeded owner's question was answered; consumed
+/// by cc-scheduler's session recovery. Keep both names in sync.
+const SESSION_PROOF_KEY: &str = "conversation_answer";
 const ANSWERS_KEY: &str = "owner_question_answer_receipts";
 const WITHDRAWALS_KEY: &str = "owner_question_withdrawal_receipts";
 const WITHDRAWAL: &str = "todo-question-withdrawal-receipt-v1";
@@ -1044,6 +1047,12 @@ pub fn answer(
     };
     clear(db, row, at)?;
     let owner = owner_record(paths, row)?;
+    // No worker id at all: nothing can be taken over, so the answer is stored
+    // for the first launch. A recorded but unreadable or still-live owner keeps
+    // the note-only behaviour and is never claimed by this path.
+    let no_worker = owner.is_none()
+        && text(&row["scheduler"], "job").is_empty()
+        && text(&row["worker_receipt"], "job").is_empty();
     let retire = owner.as_ref().is_some_and(|job| {
         matches!(
             text(job, "status"),
@@ -1059,7 +1068,7 @@ pub fn answer(
     // A finished launch key is an immutable receipt for the old turn. Retire
     // only that verified current owner, preserving workspace and job history.
     // The replay branch above must never rotate a later worker or release a stop.
-    let resume_instruction = if retire {
+    let resume_instruction = if retire || no_worker {
         if !row["scheduler"]["owner_instruction"].is_null()
             && !row["scheduler"]["owner_instruction"].is_string()
         {
@@ -1076,6 +1085,29 @@ pub fn answer(
     } else {
         None
     };
+    // A successful "needs decision" job may return to its own conversation only
+    // with proof that this exact question generation, asked by this exact launch
+    // of this ToDo, was answered by the verified owner. Both the modern wait
+    // origin and the proven scheduler-imported delivery bind the launch; a
+    // later or unrelated job never matches.
+    let session_proof = owner
+        .as_ref()
+        .filter(|job| {
+            retire
+                && text(job, "status") == "succeeded"
+                && !text(job, "launch_key").is_empty()
+                && job["launch_key"] == row["scheduler"]["key"]
+                && (delivery.is_some()
+                    || (wait["origin"]["job"] == job["id"]
+                        && wait["origin"]["key"] == job["launch_key"]))
+                && job_predates_question(job, &wait, at)
+        })
+        .map(|job| {
+            json!({"job":job["id"], "launch_key":job["launch_key"],
+                "request_id":answer["request_id"], "message_id":answer["message_id"],
+                "question_receipt_sha256":text(&wait, "question_receipt_sha256"),
+                "answer_file_sha256":sha})
+        });
     let applied_at = at.to_rfc3339_opts(SecondsFormat::Micros, true);
     let receipt = json!({"domain":RECEIPT, "wait":wait, "answer":answer,
         "answer_file_sha256":sha, "applied_at":applied_at});
@@ -1094,10 +1126,18 @@ pub fn answer(
     row["status"] = json!("todo");
     row["updated"] = json!(applied_at);
     if let Some(instruction) = resume_instruction {
-        let job = owner.as_ref().unwrap()["id"].clone();
-        cc_scheduler::common::record_result(row, &job, "conversation_answer");
-        cc_scheduler::common::resume_without_worker(row);
+        if retire {
+            let job = owner.as_ref().unwrap()["id"].clone();
+            cc_scheduler::common::record_result(row, &job, "conversation_answer");
+            cc_scheduler::common::resume_without_worker(row);
+            if let Some(scheduler) = row["scheduler"].as_object_mut() {
+                scheduler.remove(SESSION_PROOF_KEY);
+            }
+        }
         row["scheduler"]["owner_instruction"] = json!(instruction);
+        if let Some(proof) = session_proof {
+            row["scheduler"][SESSION_PROOF_KEY] = proof;
+        }
     }
     Ok(metadata(
         id,
@@ -1107,6 +1147,21 @@ pub fn answer(
         true,
         true,
     ))
+}
+
+/// The job that asked cannot have started after the question was created.
+fn job_predates_question(job: &Value, wait: &Value, at: DateTime<Utc>) -> bool {
+    let Ok(question_created) = timestamp(&wait["question"], "created_at", at) else {
+        return false;
+    };
+    if job["created_at"].is_string() {
+        timestamp(job, "created_at", at).is_ok_and(|created| created <= question_created)
+    } else {
+        job["created_at"]
+            .as_f64()
+            .filter(|n| n.is_finite() && *n > 0.)
+            .is_some_and(|n| n <= question_created.timestamp_micros() as f64 / 1_000_000.)
+    }
 }
 
 #[cfg(test)]

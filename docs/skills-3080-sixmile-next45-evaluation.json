@@ -11052,7 +11052,11 @@
       "github:e2d31692e49225ac37aa9b2eac4d04b4db6ed6da177cdea2c1d53c45b7516e32"
     ],
     "scope": "Only parent final flags/counters and decisions changed. Original primary/support reading states, actors, hashes, notices and historical proposals stay fixed.",
-    "review_pending": true
+    "review_pending": false,
+    "review_pending_at_reflection": true,
+    "accepted_at_pr": 440,
+    "accepted_head": "38f15c30731a4de10bccca6c94ac81defb953882",
+    "acceptance_scope": "Parent final-decision metadata only, with original child reading/actors preserved; this is not a new source or whole-package safety acceptance."
   },
   "new_final_dispositions_definition": "Later parent exclusion delta only, equal to parent_decision_updates.added_exclusions. The earlier intake decision count is preserved separately at new_final_dispositions_at_intake. Cumulative cohort final decisions are installed + integrated + excluded; do not sum the delta again."
 }

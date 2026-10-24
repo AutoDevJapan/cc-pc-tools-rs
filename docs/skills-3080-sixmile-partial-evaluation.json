@@ -4106,7 +4106,7 @@
     "full_read_by_preserved": 30
   },
   "next_research_todos_historical": true,
-  "next_research_todos_definition": "Snapshot of followup allocations at evaluation publication, not current queue status. Both3565/3566 later completed and their results are privately received; their new45 intake is not part of this public adoption delta.",
+  "next_research_todos_definition": "Snapshot of followup allocations at evaluation publication, not current queue status. Both3565 and3566 later completed and their results are privately received; their new45 intake is not part of this public adoption delta.",
   "new_central_write_definition": "Historical zero for the new10 evaluation-only publication, before subsequent new MCP adaptation. central_write is the later source-cohort cumulative created-file count; adoption_resolution and current ledger identify that later operation.",
   "historical_cohort_only": true,
   "current_source_aggregate": "skills-3080-sixmile-evaluation-index.json",
@@ -4117,7 +4117,11 @@
     "added_exclusions": 0,
     "inventory_ids": [],
     "scope": "Only parent final flags/counters and decisions changed. Original primary/support reading states, actors, hashes, notices and historical proposals stay fixed.",
-    "review_pending": true
+    "review_pending": false,
+    "review_pending_at_reflection": true,
+    "accepted_at_pr": 440,
+    "accepted_head": "38f15c30731a4de10bccca6c94ac81defb953882",
+    "acceptance_scope": "Parent final-decision metadata only, with original child reading/actors preserved; this is not a new source or whole-package safety acceptance."
   },
   "next21_definition_scope": "Historical old11+new10 intake only. Later parent decisions are in parent_decision_updates/the live ledger; this does not reread any historical primary or support."
 }

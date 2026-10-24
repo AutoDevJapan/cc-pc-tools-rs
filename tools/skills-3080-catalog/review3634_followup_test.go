@@ -34,23 +34,55 @@ func validateParentDecisionUpdate(added int, ids []*string, excluded []cohortLed
 	return nil
 }
 
+type parentDecisionUpdate struct {
+	Added int       `json:"added_exclusions"`
+	IDs   []*string `json:"inventory_ids"`
+}
+type cohortDecisionUpdateReceipt struct {
+	Update  *parentDecisionUpdate `json:"parent_decision_updates"`
+	Entries []struct {
+		ID string `json:"inventory_id"`
+	} `json:"entries"`
+	Delta *int `json:"new_final_dispositions"`
+}
+
+func validateCohortDecisionUpdate(a cohortDecisionUpdateReceipt, required, deltaRequired bool, excluded []cohortLedgerRow) error {
+	if a.Update == nil {
+		if required {
+			return errors.New("required parent decision update missing")
+		}
+		if a.Delta != nil && *a.Delta != 0 {
+			return errors.New("nonzero parent decision delta lacks an update")
+		}
+		return nil
+	}
+	if deltaRequired && a.Delta == nil || a.Delta != nil && *a.Delta != a.Update.Added {
+		return errors.New("parent decision delta differs from exclusion update")
+	}
+	if err := validateParentDecisionUpdate(a.Update.Added, a.Update.IDs, excluded); err != nil {
+		return err
+	}
+	own := map[string]bool{}
+	for _, e := range a.Entries {
+		own[e.ID] = true
+	}
+	for _, id := range a.Update.IDs {
+		if !own[*id] {
+			return errors.New("parent update exclusion belongs to another cohort")
+		}
+	}
+	return nil
+}
 func TestParentDecisionUpdatesAreRealExclusionsWithoutNullSentinels(t *testing.T) {
 	var ledger struct {
 		Excluded []cohortLedgerRow `json:"excluded_entries"`
 	}
 	loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
-	for _, file := range []string{"skills-3080-sixmile-partial-evaluation.json", "skills-3080-sixmile-next45-evaluation.json", "skills-3080-sixmile-next20-evaluation.json", "skills-3080-sixmile-parent6-evaluation.json"} {
-		var a struct {
-			Update *struct {
-				Added int       `json:"added_exclusions"`
-				IDs   []*string `json:"inventory_ids"`
-			} `json:"parent_decision_updates"`
-		}
+	for i, file := range []string{"skills-3080-sixmile-partial-evaluation.json", "skills-3080-sixmile-next45-evaluation.json", "skills-3080-sixmile-next20-evaluation.json", "skills-3080-sixmile-parent6-evaluation.json", "skills-3080-sixmile-next75-evaluation.json"} {
+		var a cohortDecisionUpdateReceipt
 		loadPublicReceipt(t, file, &a)
-		if a.Update != nil {
-			if err := validateParentDecisionUpdate(a.Update.Added, a.Update.IDs, ledger.Excluded); err != nil {
-				t.Errorf("%s: %v", file, err)
-			}
+		if err := validateCohortDecisionUpdate(a, i < 3, i == 1 || i == 2, ledger.Excluded); err != nil {
+			t.Errorf("%s: %v", file, err)
 		}
 	}
 	unknown := "not-in-ledger"
@@ -62,6 +94,45 @@ func TestParentDecisionUpdatesAreRealExclusionsWithoutNullSentinels(t *testing.T
 		t.Run(tc.name, func(t *testing.T) {
 			if validateParentDecisionUpdate(tc.count, tc.ids, ledger.Excluded) == nil {
 				t.Fatal("invalid parent decision accepted")
+			}
+		})
+	}
+	for _, name := range []string{"valid", "missing_update", "missing_delta", "wrong_delta", "empty_id", "repeated_id", "active_id", "foreign_cohort"} {
+		t.Run(name, func(t *testing.T) {
+			own, active, foreign := "own-excluded", "own-active", "other-cohort-excluded"
+			one, two := 1, 2
+			a := cohortDecisionUpdateReceipt{Update: &parentDecisionUpdate{1, []*string{&own}}, Delta: &one}
+			a.Entries = append(a.Entries, struct {
+				ID string `json:"inventory_id"`
+			}{own}, struct {
+				ID string `json:"inventory_id"`
+			}{active})
+			rows := []cohortLedgerRow{{ID: own, Disposition: "excluded"}, {ID: active, Disposition: "installed_new_adaptation"}, {ID: foreign, Disposition: "excluded"}}
+			switch name {
+			case "missing_update":
+				a.Update = nil
+			case "missing_delta":
+				a.Delta = nil
+			case "wrong_delta":
+				a.Delta = &two
+			case "empty_id":
+				empty := ""
+				a.Update.IDs = []*string{&empty}
+			case "repeated_id":
+				a.Update.Added = 2
+				a.Delta = &two
+				a.Update.IDs = append(a.Update.IDs, &own)
+			case "active_id":
+				a.Update.IDs = []*string{&active}
+			case "foreign_cohort":
+				a.Update.IDs = []*string{&foreign}
+			}
+			err := validateCohortDecisionUpdate(a, true, true, rows)
+			if name == "valid" && err != nil {
+				t.Fatal(err)
+			}
+			if name != "valid" && err == nil {
+				t.Fatalf("%s accepted", name)
 			}
 		})
 	}
@@ -92,6 +163,20 @@ func validateParent6CopyScopes(a extra45Assessment) error {
 		return errors.New("parent6 accepted author-text scopes differ")
 	}
 	return nil
+}
+
+func TestOptionalParentDecisionUpdateCannotHideANonzeroDelta(t *testing.T) {
+	for _, delta := range []*int{nil, new(int), func() *int { n := 1; return &n }(), func() *int { n := -1; return &n }()} {
+		a := cohortDecisionUpdateReceipt{Delta: delta}
+		err := validateCohortDecisionUpdate(a, false, false, nil)
+		valid := delta == nil || *delta == 0
+		if valid && err != nil {
+			t.Fatalf("absent or zero update rejected: %v", err)
+		}
+		if !valid && err == nil {
+			t.Fatalf("nonzero delta %d accepted without an update", *delta)
+		}
+	}
 }
 
 func TestParent6CopyScopesStayBoundToEachIndividualNotice(t *testing.T) {
@@ -197,7 +282,7 @@ func collectReadingProse(v any, location string, out *[]readingProseLeaf) {
 	}
 }
 
-var globalReadingRatio = regexp.MustCompile(`(?i)\b(?:raw)?([0-9]{2,3})/(?:workflow)?([0-9]{2,3})\b`)
+var globalReadingRatio = regexp.MustCompile(`(?i)(?:^|[^0-9])(?:raw)?([0-9]{2,6})/(?:workflow)?([0-9]{2,6})(?:[^0-9]|$)`)
 
 func hasGlobalReadingRatio(s string) bool {
 	for _, m := range globalReadingRatio.FindAllStringSubmatch(s, -1) {
@@ -207,18 +292,53 @@ func hasGlobalReadingRatio(s string) bool {
 			return true
 		}
 	}
-	return false
-}
-func historicalReadingLocation(location string) bool {
-	for _, part := range strings.Split(location, "/") {
-		if strings.Contains(part, "historical") || strings.Contains(part, "snapshot") || strings.Contains(part, "at_preparation") || strings.Contains(part, "at_intake") || part == "review_history" || part == "received_review_history" || part == "review_receptions" {
+	for _, stale := range []string{"55539/55537", "除外8のまま", "新規30配置", "source86候補"} {
+		if strings.Contains(s, stale) {
 			return true
 		}
 	}
 	return false
 }
+func loadExactHistoricalProse(t *testing.T) map[string]string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("..", "..", "docs", "skills-3080-reading-prose-history.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fmt.Sprintf("%x", sha256.Sum256(data)) != "2b37b559308e73cb8dd3e84165884b3a4f04a19e0d8c7cb3dcde1cf4de6bb331" {
+		t.Fatal("exact historical prose allowlist differs from accepted source snapshot")
+	}
+	var raw struct {
+		Source  string `json:"source_accepted_head"`
+		Entries []struct {
+			File     string `json:"file"`
+			Location string `json:"location"`
+			SHA      string `json:"sha256"`
+			Kind     string `json:"kind"`
+		} `json:"entries"`
+	}
+	if err = json.Unmarshal(data, &raw); err != nil {
+		t.Fatal(err)
+	}
+	if raw.Source != "38f15c30731a4de10bccca6c94ac81defb953882" || len(raw.Entries) != 6 {
+		t.Fatal("historical prose source/count differs")
+	}
+	result := map[string]string{}
+	for _, r := range raw.Entries {
+		key := r.File + "\x00" + r.Location
+		if result[key] != "" || r.Location == "" || !x45Hex(r.SHA, 64) {
+			t.Fatal("ambiguous historical prose allowance")
+		}
+		result[key] = r.SHA
+	}
+	return result
+}
+func exactHistoricalProse(allowed map[string]string, file, location, text string) bool {
+	return allowed[file+"\x00"+location] == fmt.Sprintf("%x", sha256.Sum256([]byte(text)))
+}
 func TestAllReadingProseKeepsMutableGlobalRatiosOutOfCurrentNarrative(t *testing.T) {
-	for _, file := range []string{"skills-3080-progress.json", "skills-3080-sixmile-partial-evaluation.json", "skills-3080-sixmile-next45-evaluation.json", "skills-3080-sixmile-next20-evaluation.json", "skills-3080-sixmile-parent6-evaluation.json", "skills-3080-sixmile-evaluation-index.json"} {
+	allowed := loadExactHistoricalProse(t)
+	for _, file := range []string{"skills-3080-progress.json", "skills-3080-sixmile-partial-evaluation.json", "skills-3080-sixmile-next45-evaluation.json", "skills-3080-sixmile-next20-evaluation.json", "skills-3080-sixmile-parent6-evaluation.json", "skills-3080-sixmile-evaluation-index.json", "skills-3080-sixmile-next75-evaluation.json", "skills-3080-sixmile-received50-evaluation.json"} {
 		data, err := os.ReadFile(filepath.Join("..", "..", "docs", file))
 		if err != nil {
 			t.Fatal(err)
@@ -230,30 +350,32 @@ func TestAllReadingProseKeepsMutableGlobalRatiosOutOfCurrentNarrative(t *testing
 		var leaves []readingProseLeaf
 		collectReadingProse(value, "", &leaves)
 		for _, leaf := range leaves {
-			// A preserved line-set comparison is a fixed source finding, not a global
-			// reading count. Only these exact bytes at this exact location are exempt.
-			fixedLineFinding := file == "skills-3080-sixmile-next45-evaluation.json" && leaf.Location == "/entries/12/findings/0" && leaf.Text == "#3との差はfrontmatterのname・versionの有無だけ(空でない行は225/226が同一)"
-			if hasGlobalReadingRatio(leaf.Text) && !historicalReadingLocation(leaf.Location) && !fixedLineFinding {
+			if hasGlobalReadingRatio(leaf.Text) && !exactHistoricalProse(allowed, file, leaf.Location, leaf.Text) {
 				t.Errorf("mutable global reading ratio in %s%s", file, leaf.Location)
 			}
 		}
 	}
-	data, err := os.ReadFile(filepath.Join("..", "..", "docs", "skills-3080-next20-acceptance.md"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	for i, paragraph := range strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n\n") {
-		if hasGlobalReadingRatio(paragraph) && !strings.Contains(paragraph, "履歴") && !strings.Contains(paragraph, "時点") {
-			t.Errorf("mutable global reading ratio in next20 acceptance paragraph%d", i+1)
+	for _, file := range []string{"skills-3080-next20-acceptance.md", "skills-3080-parent6-reading-verification.md", "skills-3080-next75-acceptance.md", "skills-3080-received-evidence-acceptance.md"} {
+		data, err := os.ReadFile(filepath.Join("..", "..", "docs", file))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for i, paragraph := range strings.Split(strings.ReplaceAll(string(data), "\r\n", "\n"), "\n\n") {
+			if hasGlobalReadingRatio(paragraph) && !exactHistoricalProse(allowed, file, fmt.Sprintf("/paragraph/%d", i+1), paragraph) {
+				t.Errorf("mutable global reading ratio in %s paragraph%d", file, i+1)
+			}
 		}
 	}
-	for _, text := range []string{"全体474/475へ投影する。", "Published raw474/workflow475.", "現在480/482です。"} {
+	for _, text := range []string{"全体474/475へ投影する。", "Published raw474/workflow475.", "現在480/482です。", "published454/455", "the474/475", "and474/475/32/3/8", "新規30配置", "除外8のまま", "raw1543/workflow1557"} {
 		if !hasGlobalReadingRatio(text) {
 			t.Fatalf("missed mutable ratio: %s", text)
 		}
 	}
 	if hasGlobalReadingRatio("本文20/25の固定群") {
 		t.Fatal("fixed small cohort mistaken for global aggregate")
+	}
+	if exactHistoricalProse(allowed, "skills-3080-progress.json", "/current_snapshot", "履歴の時点と書いても474/475を隠さない") {
+		t.Fatal("history words created a prose exemption")
 	}
 }
 
@@ -270,6 +392,22 @@ func followupValue(m map[string]any, keys ...string) any {
 }
 func followupInt(v any) int { n, _ := v.(float64); return int(n) }
 func validateFollowupDisplayRelations(p, ledger, evidence, index, duplicates, rights map[string]any) error {
+	// Missing/null values must not be equated with two zero defaults.
+	for _, keys := range [][]string{{"all_fulltext_primary_paths_including_partial_sources"}, {"all_workflow_primary_paths_including_partial_sources"}, {"parent6_reflection_delta", "current_branch_raw"}, {"parent6_reflection_delta", "current_branch_workflow"}, {"sixmile_body_read_coverage", "full_body_read"}, {"sixmile_body_read_coverage", "workflow_body_read"}, {"central_target_holds_current", "baseline_count"}, {"central_target_holds_current", "count"}} {
+		if v, ok := followupValue(p, keys...).(float64); !ok || v != float64(int(v)) {
+			return errors.New("required current display counter missing or not an integer")
+		}
+	}
+	for _, key := range []string{"new_individual_rights_exclusions", "new_duplicate_exclusions", "total_new_exclusions", "branch_excluded", "branch_pending", "main_accepted_excluded_before_this_delta", "current_duplicate_entries", "current_individual_rights_entries"} {
+		if v, ok := followupValue(p, "individual_rights_and_mcp_duplicates_delta", key).(float64); !ok || v != float64(int(v)) {
+			return errors.New("required decision display counter missing or not an integer")
+		}
+	}
+	for _, v := range []any{ledger["excluded"], ledger["pending_occurrences"], index["raw_unmasked_primary_full_read"], index["workflow_primary_full_read"]} {
+		if n, ok := v.(float64); !ok || n != float64(int(n)) {
+			return errors.New("required canonical display counter missing or not an integer")
+		}
+	}
 	var source map[string]any
 	for _, v := range ledger["entries"].([]any) {
 		r := v.(map[string]any)
@@ -307,19 +445,21 @@ func validateFollowupDisplayRelations(p, ledger, evidence, index, duplicates, ri
 	if !ok || followupInt(held["baseline_count"]) != 5 || followupInt(held["count"]) != 5+len(observations) || held["classification_unverified"] != true || held["existence_checked"] != false || held["size_bytes"] != nil || held["post_guard_target_read_write"] != float64(0) || held["configuration_or_exception_changes"] != float64(0) || held["owner_action_required"] != false {
 		return errors.New("anonymous hold display invents clearance, size or count")
 	}
-	seen := map[any]bool{}
+	seen, seenReceipt := map[string]bool{}, map[string]bool{}
 	for _, v := range observations {
 		r, ok := v.(map[string]any)
-		if !ok || r["case"] == nil || seen[r["case"]] {
+		caseID, caseOK := r["case"].(string)
+		receipt, receiptOK := r["receipt"].(string)
+		if !ok || !caseOK || caseID == "" || !receiptOK || receipt == "" || seen[caseID] || seenReceipt[receipt] {
 			return errors.New("anonymous hold observation repeated")
 		}
-		seen[r["case"]] = true
+		seen[caseID], seenReceipt[receipt] = true, true
 	}
 	return nil
 }
 
 func TestAcceptedReviewReadingDecisionAndAnonymousHoldDisplaysAgree(t *testing.T) {
-	for _, name := range []string{"valid", "v2_pending", "v2_history_lost", "v2_wrong_receipt", "branch_read_count", "delta_sum", "duplicate_count", "hold_count", "hold_size"} {
+	for _, name := range []string{"valid", "v2_pending", "v2_ledger_pending", "v2_progress_pending", "v2_history_lost", "v2_wrong_receipt", "branch_read_count", "missing_both_workflow", "missing_both_raw", "delta_sum", "duplicate_count", "hold_count", "hold_size", "duplicate_hold_receipt"} {
 		t.Run(name, func(t *testing.T) {
 			var p, l, e, i, d, r map[string]any
 			loadPublicReceipt(t, "skills-3080-progress.json", &p)
@@ -331,12 +471,27 @@ func TestAcceptedReviewReadingDecisionAndAnonymousHoldDisplaysAgree(t *testing.T
 			switch name {
 			case "v2_pending":
 				e["independent_review_pending"] = true
+			case "v2_ledger_pending":
+				for _, v := range l["entries"].([]any) {
+					row := v.(map[string]any)
+					if row["inventory_id"] == "github:b42ae7debd7346ed232f75cdb212f9d8a9cb05bd347c93c8b7de82e8d5433fc8" {
+						row["independent_review_pending"] = true
+					}
+				}
+			case "v2_progress_pending":
+				p["integration_acceptance"].(map[string]any)["independent_review_pending"] = true
 			case "v2_history_lost":
 				e["independent_review_pending_at_application"] = false
 			case "v2_wrong_receipt":
 				e["public_content_acceptance"].(map[string]any)["raw_sha256"] = "forged"
 			case "branch_read_count":
 				p["parent6_reflection_delta"].(map[string]any)["current_branch_raw"] = float64(1)
+			case "missing_both_workflow":
+				delete(p, "all_workflow_primary_paths_including_partial_sources")
+				delete(p["parent6_reflection_delta"].(map[string]any), "current_branch_workflow")
+			case "missing_both_raw":
+				delete(p, "all_fulltext_primary_paths_including_partial_sources")
+				delete(p["parent6_reflection_delta"].(map[string]any), "current_branch_raw")
 			case "delta_sum":
 				p["individual_rights_and_mcp_duplicates_delta"].(map[string]any)["total_new_exclusions"] = float64(1)
 			case "duplicate_count":
@@ -345,6 +500,9 @@ func TestAcceptedReviewReadingDecisionAndAnonymousHoldDisplaysAgree(t *testing.T
 				p["central_target_holds_current"].(map[string]any)["count"] = float64(1)
 			case "hold_size":
 				p["central_target_holds_current"].(map[string]any)["size_bytes"] = float64(0)
+			case "duplicate_hold_receipt":
+				rows := p["central_target_holds_current"].(map[string]any)["observations"].([]any)
+				rows[1].(map[string]any)["receipt"] = rows[0].(map[string]any)["receipt"]
 			}
 			err := validateFollowupDisplayRelations(p, l, e, i, d, r)
 			if name == "valid" && err != nil {

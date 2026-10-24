@@ -32,3 +32,22 @@ docs/skills-3080-sixmile-three-cohort-snapshot.json text eol=lf
 docs/skills-3080-sixmile-parent6-evaluation.json text eol=lf
 docs/skills-3080-primary-reading-amendments.json text eol=lf
 docs/skills-3080-mcp-sibling-duplicate-evidence.json text eol=lf
+
+docs/skills-3080-sixmile-next75-evaluation.json text eol=lf
+docs/skills-3080-reading-prose-history.json text eol=lf
+docs/skills-3080-sixmile-received50-evaluation.json text eol=lf
+docs/skills-3080-execution-evidence.json text eol=lf
+docs/skills-3080-execution-queue-summary.json text eol=lf
+# Pinned execution inputs must have identical checkout bytes on Windows and CI.
+/docs/skills-3080-ais-evaluation.json text eol=lf
+/docs/skills-3080-design-entrypoint-evaluation.json text eol=lf
+/docs/skills-3080-mengto-partial-evaluation.json text eol=lf
+/docs/skills-3080-mizchi-partial-evaluation.json text eol=lf
+/docs/skills-3080-openai-entrypoint-evaluation.json text eol=lf
+/docs/skills-3080-docker-assessment.json text eol=lf
+/docs/skills-3080-kepano-assessment.json text eol=lf
+/docs/skills-3080-mattpocock-assessment.json text eol=lf
+/docs/skills-3080-obra-assessment.json text eol=lf
+/docs/skills-3080-tencent-assessment.json text eol=lf
+/docs/skills-3080-sixmile-partial-evaluation.json text eol=lf
+/docs/skills-3080-adoptions.json text eol=lf

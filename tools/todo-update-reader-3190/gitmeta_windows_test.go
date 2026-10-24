@@ -2,11 +2,9 @@ package main
 
 import (
 	"os"
-	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
-	"syscall"
 	"testing"
 )
 
@@ -18,9 +16,8 @@ func gitConfigList(t *testing.T, config string) []string {
 	if err := os.WriteFile(name, []byte(config), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.Command("git", "config", "--file", name, "--null", "--list")
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: createNoWindow}
-	cmd.Env = append(childEnvironment(os.Environ()), "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null")
+	cmd := gitCommand(filepath.Dir(name), "config", "--file", name, "--null", "--list")
+	cmd.Env = append(cmd.Env, "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null")
 	out, err := cmd.Output()
 	if err != nil {
 		t.Fatalf("git config --list: %v", err)

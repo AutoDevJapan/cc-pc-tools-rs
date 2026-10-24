@@ -37,3 +37,21 @@ Redの固定ソースは `45f9eb96`（テスト追加のみ）。
 通常ロック内の並行メモ変更は古いプレビューを拒否し、
 Windowsの実共有違反による原子的保存失敗では元ファイルと待機を保持した。
 共通の待機解除も同じ本人停止・依存検証を使い、短縮後に追加された別条件を保持する。
+
+`0a7b54c3` の変更と推移的な利用側（cc-todo、cc-scheduler、cc-jobs、localai-web-rs）
+では1,579件成功、既存の6件skip。`f87babd4` で未知型の独立条件を保持する補足後は、
+cc-todo全件と影響する利用側の301件が成功した（範囲外809件は選択しない）。
+cc-todo・cc-scheduler・cc-jobsのdoctestはそれぞれ対象0件で成功。
+4クレートのall-targets Clippyは `-D warnings` で成功した。
+
+原ログのSHA256:
+
+| 記録 | SHA256 |
+| --- | --- |
+| 1,579件 | `68689a8610a660a4c9c6fbd0e2f98dde3ba19efdc0851de9814cfe5bd4916561` |
+| 301件 | `adea0d7ee00dc617ead108bff75c70c6813c83eb0bd0633abbecba0c1501eaed` |
+| Clippy | `ae1878af77d3b399b75c3fac77f995d003c81b571566dabef40cb1968fa7d2c2` |
+
+並行してmainへ入ったPR465のcc-ask修正を保持して統合する。
+正式CI、別モデルレビュー、通常マージ、配布と元3669での実確認は、
+上のソース単体のテスト成功とは別の完了条件として追う。

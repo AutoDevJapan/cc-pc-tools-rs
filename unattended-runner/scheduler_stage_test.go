@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
@@ -156,5 +157,47 @@ func TestSeparatedTickObservesActualResultWithoutStartingASecondDispatcher(t *te
 	var output bytes.Buffer
 	if schedulerStageCLI([]string{"--command", "other"}, &output) != 2 {
 		t.Fatal("arbitrary caller operation accepted")
+	}
+}
+
+func TestPeriodicTickOnlySkipsInlineAfterAnActualHealthyStage(t *testing.T) {
+	for _, kind := range []string{"healthy", "missing", "failed", "stale"} {
+		t.Run(kind, func(t *testing.T) {
+			r, _ := fixture(t)
+			if publish(filepath.Join(r.Config.Home, "scheduler-stage-mode.json"), map[string]any{"domain": "separated-repair-dispatcher-v1", "enabled": true}) != nil {
+				t.Fatal("fixture mode")
+			}
+			proof := schedulerStageReport{Domain: "scheduler-stage-result-v1", Mode: "repair-step", Started: r.Now().Add(-time.Second).Format(time.RFC3339Nano), Finished: r.Now().Format(time.RFC3339Nano), OK: true}
+			if kind == "failed" {
+				proof.OK = false
+			}
+			if kind == "stale" {
+				proof.Started = r.Now().Add(-5 * time.Minute).Format(time.RFC3339Nano)
+				proof.Finished = r.Now().Add(-4 * time.Minute).Format(time.RFC3339Nano)
+			}
+			if kind != "missing" && publish(filepath.Join(r.Config.Home, "scheduler-stage-health.json"), proof) != nil {
+				t.Fatal("fixture proof")
+			}
+			server(t, r, func(w http.ResponseWriter, q *http.Request) { w.WriteHeader(http.StatusServiceUnavailable) })
+			calls := 0
+			r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+				if path != schedulerStageProgram || len(args) != 1 || args[0] != "repair-step" {
+					t.Fatal("unexpected side effect")
+				}
+				calls++
+				return `{"repair_mode":true}`, nil
+			}
+			h := r.periodicTick(context.Background())
+			want := 1
+			if kind == "healthy" {
+				want = 0
+			}
+			if calls != want || !h.Scheduler {
+				t.Fatalf("%s inline calls=%d health=%v", kind, calls, h.Scheduler)
+			}
+			if r.SeparatedScheduler {
+				t.Fatal("periodic mode leaked to standalone CLI")
+			}
+		})
 	}
 }

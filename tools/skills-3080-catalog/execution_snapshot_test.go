@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"os"
@@ -19,6 +20,12 @@ func TestPublishedExecutionSnapshotMatchesPinnedEvidenceAndOccurrenceUnits(t *te
 		t.Fatal(err)
 	}
 	mh := sha256.Sum256(raw)
+	if bytes.Contains(raw, []byte("\r")) {
+		t.Fatal("pinned execution manifest must use canonical LF checkout bytes")
+	}
+	if s.ManifestSHA != hex.EncodeToString(mh[:]) {
+		t.Fatal("queue summary was generated from different manifest bytes; do not mix working CRLF and committed LF")
+	}
 	if s.State != "complete" || s.CatalogSHA != m.CatalogSHA || s.CatalogSHA != "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c" || m.Records != 73220 || s.Records != m.Records || s.ManifestSHA != hex.EncodeToString(mh[:]) || !evidenceHex(s.QueueSHA, 64) || s.Assessments != len(e.Assessments) || s.Final != len(e.Decisions) {
 		t.Fatal("snapshot input or occurrence universe differs")
 	}

@@ -123,6 +123,7 @@ func TestPureNewStatusQuestionBypassesProductGuardAndUsesSilentIdempotentSender(
 	s := f.source
 	req := &Request{Thread: s.Channel, Guild: "100", RecordVersion: 2, Message: s.ID, Author: "300", Created: s.Timestamp, Source: "discord-api-v10", Text: s.Content, Key: requestKey(s.Channel, s.ID), Phase: "status_query"}
 	f.r.State.Requests[req.Message] = req
+	f.r.State.Threads[req.Thread] = Thread{ID: req.Thread, Parent: requestForum, Guild: "100", Owner: "300", Type: 11}
 	f.loseResponse = true
 	if err := f.r.answerStatusQuery(context.Background(), req); err != nil {
 		t.Fatal(err)

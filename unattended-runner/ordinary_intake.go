@@ -40,15 +40,22 @@ func (r *Runner) parkUnbound(q *Request) {
 		return
 	}
 	q.Phase, q.PendingOwner, q.NextAction = "task_binding_pending", "OMB", "read_source_and_bind_original_task"
+	if _, known := r.ordinaryThreadRouting(q.Thread); !known {
+		q.NextAction = "verify_thread_discovery_and_bind_original_task"
+	}
+}
+
+// Missing discovery data is a routing hold, never proof of a legacy thread.
+func (r *Runner) ordinaryThreadRouting(id string) (managed, known bool) {
+	thread, known := r.State.Threads[id]
+	return !known || thread.Managed, known
 }
 
 // Initial observation and a retired passive watch enter the same admission
 // rules. Admission still verifies the current source before any task mutation.
 func (r *Runner) classifyCaptured(q *Request, thread Thread, conversation string) {
-	if thread.ID == "" {
-		// Missing discovery metadata cannot authorize a new task.
-		thread.Managed = true
-	}
+	managed, known := r.ordinaryThreadRouting(q.Thread)
+	thread.Managed = thread.Managed || managed
 	q.Phase, q.PendingOwner, q.NextAction = "captured", "", ""
 	if strings.TrimSpace(q.Text) == "" {
 		q.Phase = "empty"
@@ -67,7 +74,7 @@ func (r *Runner) classifyCaptured(q *Request, thread Thread, conversation string
 	if q.ReplyChannel != "" && (q.ReplyChannel != q.Thread || q.ReplyGuild != "" && q.ReplyGuild != r.State.Destination.Guild) {
 		q.Phase = "reference_mismatch"
 	}
-	if thread.Managed && !r.KnownQuestionThreads[q.Thread] && q.Phase != "empty" && q.Phase != "reference_mismatch" && q.Phase != "status_query" {
+	if !known && q.Phase != "reference_mismatch" || thread.Managed && !r.KnownQuestionThreads[q.Thread] && q.Phase != "empty" && q.Phase != "reference_mismatch" && q.Phase != "status_query" {
 		r.parkUnbound(q)
 	}
 	if conversation != "" {
@@ -214,34 +221,25 @@ func (r *Runner) observeOrdinary(q *Request, live historyReadMessage) (bool, err
 	next.QuestionContextVersion = ""
 	if q.Todo != 0 {
 		next.Phase, next.PendingOwner, next.NextAction = "source_edit_saved", "OMB", "deliver_current_version_to_original_task"
-		if q.Origin != nil && q.Origin.Scope == productReportScope {
+		if q.Origin != nil && q.Origin.Scope == productReportScope && (q.Phase == "product_reply_saved" || q.Phase == "product_reply_delivered" || q.Phase == "product_reply_applied") {
 			next.Phase = "product_reply_saved"
 			next.Context = q.Context
 			next.NextAction = "verify_original_product_scope_and_use_finite_steering_delivery"
 		} else if action := r.ordinaryContextAction(&next); action != "" {
 			r.parkOrdinaryContext(&next, action)
 		}
-	} else if q.Phase == "captured" || q.Phase == "context_pending" {
-		// An actual pre-registration edit keeps its place in admission. Question
-		// provenance is rechecked against the new source before registration.
-		next.Phase = "captured"
-		next.PendingOwner, next.NextAction = "", ""
-		if ordinaryShortAnswer(next.Text) || r.KnownQuestionThreads[q.Thread] {
-			next.Phase, next.PendingOwner, next.NextAction = "context_pending", "OMB", "verify_exact_original_question_generation"
-		}
 	} else if q.Phase == "history_watch" || q.Phase == "task_binding_pending" || q.Phase == "source_context_pending" {
 		r.parkUnbound(&next)
-	} else if q.Phase == "empty" || q.Phase == "status_answered" || q.Phase == "status_query" {
-		next.PendingOwner, next.NextAction = "", ""
-		if strings.TrimSpace(next.Text) == "" {
-			next.Phase = "empty"
-		} else if isPureStatusQuestion(next.Text, r.State.Destination.Bot) {
-			next.Phase = "status_query"
-		} else if r.KnownQuestionThreads[q.Thread] || ordinaryShortAnswer(next.Text) {
-			next.Phase, next.PendingOwner, next.NextAction = "context_pending", "OMB", "verify_exact_original_question_generation"
-		} else if next.Message == next.Thread && next.ReplyTo == "" && !r.State.Threads[next.Thread].Managed {
-			next.Phase = "captured"
-		} else {
+	} else if q.Phase == "captured" || q.Phase == "context_pending" || q.Phase == "empty" || q.Phase == "status_answered" || q.Phase == "status_query" {
+		conversation, err := r.conversationForThread(q.Thread)
+		if err != nil {
+			return false, err
+		}
+		r.classifyCaptured(&next, r.State.Threads[q.Thread], conversation)
+		if next.Phase == "context_pending" {
+			next.PendingOwner, next.NextAction = "OMB", "verify_exact_original_question_generation"
+		}
+		if (q.Phase == "empty" || q.Phase == "status_answered" || q.Phase == "status_query") && next.Phase == "captured" && (next.Message != next.Thread || next.ReplyTo != "") {
 			r.parkUnbound(&next)
 		}
 	}
@@ -285,6 +283,11 @@ func (r *Runner) ordinarySourceFile(q *Request) (string, error) {
 
 func (r *Runner) bindOrdinary(ctx context.Context, message string, binding IntakeBinding) error {
 	q := r.State.Requests[message]
+	if q != nil && q.Conversation == "" {
+		if err := r.retireOrdinaryWatch(q); err != nil {
+			return err
+		}
+	}
 	if q == nil || q.Phase == "history_watch" || q.Conversation != "" || r.ordinaryProductScope(q) || r.isConfiguredRequestReport(binding.Todo) || binding.Todo == 0 || binding.Project == "" || !shaPattern.MatchString(binding.SourceSHA) ||
 		strings.TrimSpace(binding.Evidence) == "" || len(binding.Evidence) > 4096 || safeText(binding.Evidence, r.Token) != binding.Evidence {
 		return errors.New("ordinary binding input invalid")
@@ -344,6 +347,9 @@ func (r *Runner) deliverOrdinary(ctx context.Context, q *Request) error {
 // Shared delivery mechanics. Dedicated callers must first verify their exact
 // source scope; this does not release waits, launch workers or change controls.
 func (r *Runner) deliverOrdinaryTask(ctx context.Context, q *Request, verifiedOriginal bool) error {
+	if err := r.retireOrdinaryWatch(q); err != nil {
+		return err
+	}
 	if err := r.validateSource(ctx, q, q.Binding != nil || verifiedOriginal); err != nil {
 		return err
 	}
@@ -470,6 +476,19 @@ func (r *Runner) refreshOrdinary(ctx context.Context, health *Health) {
 		if err := r.validateSourceMode(ctx, q, q.Binding != nil, false); err != nil {
 			health.Errors = append(health.Errors, "ordinary_source_recheck_deferred")
 			continue
+		}
+		if q.Phase == "source_context_pending" {
+			previous := *q
+			if q.Todo == 0 {
+				r.parkUnbound(q)
+			} else if action := r.ordinaryContextAction(q); action != "" {
+				r.parkOrdinaryContext(q, action)
+			}
+			if (q.Phase != previous.Phase || q.PendingOwner != previous.PendingOwner || q.NextAction != previous.NextAction) && r.save() != nil {
+				*q = previous
+				health.Errors = append(health.Errors, "ordinary_context_migration_deferred")
+				continue
+			}
 		}
 		if err := r.recoverOrdinaryProductReply(ctx, q); err != nil {
 			health.Errors = append(health.Errors, "ordinary_product_context_deferred")

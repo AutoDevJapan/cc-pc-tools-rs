@@ -31,6 +31,9 @@ func msg(t time.Time, thread, author, text string) Message {
 	m.Author.ID = author
 	return m
 }
+func knownLegacyThreadForTest(r *Runner, id string) {
+	r.State.Threads[id] = Thread{ID: id, Guild: r.State.Destination.Guild, Parent: requestForum, Owner: r.State.Destination.Owner, Type: 11}
+}
 func server(t *testing.T, r *Runner, handler http.HandlerFunc) {
 	t.Helper()
 	s := httptest.NewServer(handler)
@@ -585,6 +588,8 @@ func TestIntakeCursorAdvancesPastBlockedOrigins(t *testing.T) {
 				r.BlockedProgressThreads = map[string]bool{}
 			}
 			r.BlockedProgressThreads[thread] = true
+		} else {
+			knownLegacyThreadForTest(r, thread)
 		}
 	}
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {

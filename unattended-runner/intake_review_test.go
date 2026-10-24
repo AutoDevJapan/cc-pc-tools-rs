@@ -34,6 +34,7 @@ func TestIntakeReviewEditBeforeRegistrationKeepsStarterAdmissible(t *testing.T) 
 	m := msg(c.Add(time.Second), "500", "300", "old")
 	m.Channel = m.ID
 	q := captured(m, "captured", c)
+	knownLegacyThreadForTest(r, q.Thread)
 	r.State.Requests[m.ID] = q
 	m.Content, m.Edited = "corrected original request", c.Add(2*time.Second).Format(time.RFC3339Nano)
 	changed, err := r.observeOrdinary(q, historyReadMessage{Message: m})
@@ -48,6 +49,7 @@ func TestIntakeReviewExactQuestionReachesRegistrationOnce(t *testing.T) {
 	q := captured(m, "context_pending", c)
 	r.State.Requests[m.ID] = q
 	r.KnownQuestionThreads = map[string]bool{"500": true}
+	r.State.Threads["500"] = Thread{ID: "500", Guild: "100", Parent: requestForum, Owner: "400", Type: 11}
 	ledger := map[string]any{"domain": "new-owner-recovery-messages", "events": []any{map[string]any{"event": "verified", "request_id": "original-question", "phase": "question:0", "receipt": map[string]any{"thread_id": "500", "message_id": "600", "author_id": "400", "timestamp": c.Format(time.RFC3339Nano)}}}}
 	if err := publish(filepath.Join(filepath.Dir(r.Config.Home), "recovery-messages.json"), ledger); err != nil {
 		t.Fatal(err)
@@ -89,6 +91,7 @@ func TestIntakeReviewParkedBindingsDoNotConsumeAdmission(t *testing.T) {
 	m := msg(c.Add(time.Second), "500", "300", "new original request")
 	m.Channel = m.ID
 	q := captured(m, "captured", c)
+	knownLegacyThreadForTest(r, q.Thread)
 	r.State.Requests[m.ID] = q
 	server(t, r, func(w http.ResponseWriter, req *http.Request) {
 		if strings.Contains(req.URL.Path, "/messages/") {

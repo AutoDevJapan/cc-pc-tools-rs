@@ -414,6 +414,11 @@ func (r *Runner) scanPage(ctx context.Context, thread Thread, replay bool) (int,
 			return 0, err
 		}
 	}
+	// Callers supply a discovered thread. Retain that routing metadata together
+	// with observations, including when a scan resumes before the next inventory.
+	if _, known := r.State.Threads[thread.ID]; !known {
+		r.State.Threads[thread.ID] = thread
+	}
 	conversation, conversationErr := r.conversationForThread(thread.ID)
 	if conversationErr != nil {
 		return 0, conversationErr
@@ -599,7 +604,8 @@ func (r *Runner) register(ctx context.Context, request *Request) error {
 			return err
 		}
 	}
-	if !exactQuestion && (request.ReplyTo != "" || request.Message != request.Thread || r.State.Threads[request.Thread].Managed) {
+	managed, known := r.ordinaryThreadRouting(request.Thread)
+	if !known || !exactQuestion && (request.ReplyTo != "" || request.Message != request.Thread || managed) {
 		r.parkUnbound(request)
 		return r.save()
 	}

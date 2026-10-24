@@ -67,7 +67,7 @@ func TestIntake3493PendingEditsReclassifyInBothDirections(t *testing.T) {
 			if _, err := r.observeOrdinary(q, historyReadMessage{Message: *m}); err != nil {
 				t.Fatal(err)
 			}
-			if q.Phase != "task_binding_pending" || q.NextAction != "read_source_and_bind_original_task" {
+			if q.Phase != "task_binding_pending" || q.NextAction != "verify_thread_discovery_and_bind_original_task" {
 				t.Fatal("ordinary correction retains question advice", q.Phase, q.NextAction)
 			}
 		})

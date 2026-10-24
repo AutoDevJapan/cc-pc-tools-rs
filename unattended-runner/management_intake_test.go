@@ -116,6 +116,7 @@ func TestManagementNewOwnerStarterRegistersOneTask(t *testing.T) {
 	m := msg(c.Add(time.Second), "500", "300", "新しい依頼を実装して")
 	m.Channel = m.ID
 	q := captured(m, "captured", c)
+	knownLegacyThreadForTest(r, q.Thread)
 	r.State.Requests[m.ID] = q
 	server(t, r, func(w http.ResponseWriter, req *http.Request) {
 		if strings.Contains(req.URL.Path, "/messages/") {

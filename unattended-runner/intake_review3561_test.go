@@ -26,9 +26,17 @@ func TestIntake3561RetiresPostCutoverWatchWithoutLosingBinding(t *testing.T) {
 				q.Binding = &IntakeBinding{Todo: 42, Project: r.Config.Project, SourceSHA: ordinaryVersion(q), Evidence: "existing binding"}
 			}
 			binding := q.Binding
+			if err := r.retireOrdinaryWatch(q); err != nil || q.HistoryWatch != nil || q.Phase != phase || q.Binding != binding || q.NextAction != "preserve_existing_delivery" {
+				t.Fatal("watch retirement changed an existing edit or binding", err)
+			}
 			var h Health
 			r.refreshOrdinary(context.Background(), &h)
-			if q.HistoryWatch != nil || q.Phase != phase || q.Binding != binding || q.NextAction != "preserve_existing_delivery" || len(h.Errors) != 0 {
+			expectedPhase := phase
+			if phase == "source_context_pending" {
+				// The separate context migration may now correct a stale disposition.
+				expectedPhase = "task_binding_pending"
+			}
+			if q.HistoryWatch != nil || q.Phase != expectedPhase || q.Binding != binding || len(h.Errors) != 0 {
 				t.Fatal("watch migration stranded an existing edit or binding", q.Phase, h.Errors)
 			}
 			var saved State
@@ -159,7 +167,7 @@ func TestIntake3561ForeignProductLinkReceivesAssociationAdvice(t *testing.T) {
 	}
 }
 
-func TestIntake3561ManagedScanDoesNotSkipExactCutoverLast(t *testing.T) {
+func TestIntake3561DiscoveryScanDoesNotSkipExactCutoverLast(t *testing.T) {
 	r, c := fixture(t)
 	m := msg(c, "500", "300", "exact first timestamp")
 	r.State.Threads["500"] = Thread{ID: "500", Last: m.ID}

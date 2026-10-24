@@ -242,7 +242,7 @@ func (r *Runner) deliverSteering(ctx context.Context, request *Request, old *Req
 	}
 	request.Todo = old.Todo
 	request.Phase, request.PendingOwner, request.NextAction = "steering_saved", "", ""
-	if err := publish(filepath.Join(r.Config.Home, "steering", fmt.Sprintf("%d-%s.json", old.Todo, request.Message)), request); err != nil {
+	if err := r.publishSteeringSource(request); err != nil {
 		return err
 	}
 	// This is durable delivery, not a claim that the live worker already applied it.

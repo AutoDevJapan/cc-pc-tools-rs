@@ -144,6 +144,7 @@ func TestIntakeFollowupEmptyStarterEditKeepsAdmission(t *testing.T) {
 			m := msg(c.Add(time.Second), "500", "300", "")
 			m.Channel = m.ID
 			q := captured(m, "empty", c)
+			knownLegacyThreadForTest(r, q.Thread)
 			m.Content, m.Edited = text, c.Add(2*time.Second).Format(time.RFC3339Nano)
 			if _, err := r.observeOrdinary(q, historyReadMessage{Message: m}); err != nil {
 				t.Fatal(err)

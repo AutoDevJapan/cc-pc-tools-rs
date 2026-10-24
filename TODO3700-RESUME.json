@@ -1,0 +1,44 @@
+{
+  "todo_id": 3700,
+  "scope": "既存のモデル指定への対応と、その質問の正規な反映記録・終了確認",
+  "state": "complete",
+  "implementation_pr": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/473",
+  "reviewed_head": "7f0cfd873053ddf65ce8666e9c56492e407debc5",
+  "merged_and_deployed_revision": "f7d3ad0cc0e1dbc56652407465f0d707a251d190",
+  "deployed_binary_sha256": "2fbbbe103c8abf2e5b6c9f711b49aba681b5b8c6496881a6e78da07f957a9684",
+  "validation": {
+    "independent_review_model": "grok-4.6",
+    "independent_review_effort": "xhigh",
+    "must": 0,
+    "pr_ci_successful_checks": 14,
+    "merged_source_related_tests_seconds": 22.493,
+    "merged_source_vet": "passed",
+    "post_merge_same_module_ci_run": 40132464650,
+    "post_merge_same_module_ci_head": "a5da2f694ab70589fb1dd29ed874d06df56bc579",
+    "module_git_tree": "2ad727df5492ee2f7fe6291344fc8a2b22a9d45d",
+    "post_merge_same_module_ci": "success",
+    "obsolete_run": 40131804922,
+    "obsolete_run_resolution": "mainの更新後に旧revisionを拒否した記録を保持し、同一のGo treeを検査した現行revisionの成功結果と照合した"
+  },
+  "verified_results": {
+    "ordinary_intake_and_original_source_retained": true,
+    "canonical_source_current": true,
+    "normal_implementation_record_and_readback": true,
+    "question_closed_get_verified": true,
+    "applied_audit_saved_after_canonical_close": true,
+    "progress_delivery_verified_without_notification": true,
+    "original_product_work_and_review_findings_retained": true
+  },
+  "cleanup": {
+    "owned_temporary_folders_deleted": 1,
+    "entries": 4,
+    "logical_bytes": 38824420,
+    "safe_delete_finish_verified": true,
+    "staging_absent": true,
+    "browser_tabs_created": 0,
+    "docker_resources_created": 0
+  },
+  "private_recovery_evidence": ".ci-work/todo3700",
+  "remaining_for_this_question": [],
+  "retained_work": "元の開発・修復項目と指摘は、それぞれの担当・条件・状態のまま保持する。今回の完了はその全体の完了を意味しない。"
+}

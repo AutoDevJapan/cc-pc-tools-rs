@@ -4065,9 +4065,9 @@
     "central_writes": 0
   },
   "next21_definition": "Earlier eleven plus research3554 ten unique primary paths. Support102+63=165, saved40+35=75, full12+30=42, scan0+5=5, unsaved62+28=90. Metadata eligibility is not individual permission. No new adoption or exclusion is added.",
-  "amended_at": "2026-10-24T08:58:26.6672769+00:00",
+  "amended_at": "2026-10-24T10:39:47.2605445Z",
   "amendment_job": "20261024-123649-todo-3080",
-  "amendment_definition": "Document amendment and historical-scope clarification only. Original first21/source/support/actor anchors remain unchanged. Current aggregate counts live only in the source index/progress; later batches do not require rewriting historical numeric prose.",
+  "amendment_definition": "Reading anchors and actors remain unchanged. Current final flags/counters and parent decisions are bound to the live adoption ledger; original intake facts and preparation boundaries remain historical.",
   "next_research_todos": [
     3565,
     3566
@@ -4110,5 +4110,14 @@
   "new_central_write_definition": "Historical zero for the new10 evaluation-only publication, before subsequent new MCP adaptation. central_write is the later source-cohort cumulative created-file count; adoption_resolution and current ledger identify that later operation.",
   "historical_cohort_only": true,
   "current_source_aggregate": "skills-3080-sixmile-evaluation-index.json",
-  "previous_amended_at_before_cohort_index": "2026-10-24T05:11:00.0131037+00:00"
+  "previous_amended_at_before_cohort_index": "2026-10-24T05:11:00.0131037+00:00",
+  "parent_decision_updates": {
+    "recorded_at": "2026-10-24T10:39:47.2605445Z",
+    "job": "20261024-123649-todo-3080",
+    "added_exclusions": 0,
+    "inventory_ids": [],
+    "scope": "Only parent final flags/counters and decisions changed. Original primary/support reading states, actors, hashes, notices and historical proposals stay fixed.",
+    "review_pending": true
+  },
+  "next21_definition_scope": "Historical old11+new10 intake only. Later parent decisions are in parent_decision_updates/the live ledger; this does not reread any historical primary or support."
 }

@@ -3974,9 +3974,9 @@
       "body_workflow_read_by": null,
       "body_workflow_read_complete": true,
       "bytes": 10150,
-      "candidate_disposition": "assessed_pending_parent_final_disposition",
+      "candidate_disposition": "excluded_individual_reuse_restriction_permission_not_established",
       "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
-      "excluded_by_todo3080": false,
+      "excluded_by_todo3080": true,
       "findings": [
         "LICENSE.txt: '(c) 2025 Anthropic, PBC. All rights reserved' with additional restrictions: no extracting or retaining copies outside the Services, no reproduction, no derivative works, no distribution/sublicense/transfer, no reverse engineering; possession conveys no licence.",
         "Frontmatter says 'Proprietary. LICENSE.txt has complete terms'; the root MIT and any registry-wide MIT-0 statement cannot override this file-level notice.",
@@ -4381,7 +4381,16 @@
         }
       ],
       "use": "DOCX create/edit/redline workflow: pandoc extraction, docx-js for new files, a Python OOXML Document library (unpack/pack/validate) for tracked changes, batch redlining, DOCX to PDF to JPEG check.",
-      "value": "High content value but unusable: the notice forbids copying and derivatives, and the owner already has docx capability (public catalog metadata)."
+      "value": "High content value but unusable: the notice forbids copying and derivatives, and the owner already has docx capability (public catalog metadata).",
+      "parent_final_decision": {
+        "disposition": "excluded",
+        "type": "individual_reuse_restriction_permission_not_established",
+        "reason": "個別noticeがサービス外の保持・複製・派生・再配布を明示して制限している。本文を中央Skillsへ複製する個別許諾は確認できず、6mile rootMITやOAuth契約から補わない。公開手順の評価と第三者サービスの通常利用は禁止へ変更しない。",
+        "decision_scope": "Only the listed fixed occurrence and its proposed central copying/adaptation. No claim that all Anthropic material is unavailable or that normal authorized service use is prohibited.",
+        "source": "skills-3080-adoptions.json",
+        "review_pending": true,
+        "recorded_at": "2026-10-24T10:39:47.2605445Z"
+      }
     },
     {
       "actual_existing_comparison": "Public active metadata only; no guarded central body read, package duplicate or new version established.",
@@ -4396,7 +4405,7 @@
       "excluded_by_todo3080": false,
       "findings": [
         "Reference-file similarity and size differences were reported by the reader; equality of selected guide text is not whole-package equality or chronological proof.",
-        "Unretrieved scripts reference SDK requirements; no API-key runner was executed.",
+        "SKILL.md/README says the unsaved scripts need the SDKs; the scripts were not read and no API-key runner was executed.",
         "This variant includes llms-full.txt references and different transport guidance. PublishedAt/length/version alone do not establish an older/newer relation."
       ],
       "git_blob": "c9ef8a261f80e0c37dc73300ce90679e946c4407",
@@ -4638,7 +4647,7 @@
       "value": "MCP設計手順の別variantとして、応答長・長寿命テスト・原則の違いを保持する候補。公開日と版番号だけでは新版/旧版/完全重複を確定しない。"
     }
   ],
-  "excluded": 0,
+  "excluded": 1,
   "fixed_verification": "next20-fixed-source-verification123649.json",
   "installed": 0,
   "integrated": 0,
@@ -4651,7 +4660,7 @@
     "The report-writing skill was not opened because reading central Skills is excluded here; its rules were applied from the AGENTS.md summary.",
     "No new blanket prohibition or re-approval rule is proposed; conditions are per candidate. Model and job identity are not self-reported."
   ],
-  "new_final_dispositions": 0,
+  "new_final_dispositions": 1,
   "no_adoption_cap": true,
   "parent_policy_corrections": [
     "The reader shortlist of2 is not an adoption cap. Lack of current service use is not an exclusion or a reason to shrink the broad Skill scope. All candidates remain accounted for; assess each concrete usefulness/condition before final decisions.",
@@ -4804,8 +4813,8 @@
   "todo": 3080,
   "tree_sha": "5782ae7deffe5024e15b6e090327385c10f76273",
   "previous_normalization": "sixmile-next20-normalized123649.json",
-  "normalization_amendment": "Neutralized unsupported relative-newness/superseded claims in current value fields13/20; exact historical reader wording is preserved. Source hashes/reader actors/states and all three independent anchors unchanged. Public primary/workflow totals are now474/475 in the canonical progress index; this cohort is20 rawprimary paths and no new final decisions.",
-  "amended_at": "2026-10-24T08:58:26.6672769+00:00",
+  "normalization_amendment": "Neutralized unsupported relative-newness/superseded claims in current value fields13/20; exact historical reader wording is preserved. Source hashes/reader actors/states and the independent anchors are unchanged. Current global coverage is defined only in the canonical source index/progress. This historical amendment covers the received20 paths and no new final decisions.",
+  "amended_at": "2026-10-24T10:39:47.2605445Z",
   "reflection_definition": "This new20 cohort is now reflected in the public source index/progress. Its original private preparation notes are historical; no final adoption/exclusion, central operation or new source execution follows from reception.",
   "definition_at_preparation": "Twenty newly received assessments with explicit raw/scan/unknown states and individual notice scopes. All received claims reconciled with fixed source metadata; helper is not a semantic primary reread. Parent read all20 evaluation/rights/examples/limits. Candidate proposals are not final adoption/exclusion or owner-policy changes. Current published454/455 is not incremented by this private normalization.",
   "reader_scope_definitions": {
@@ -4820,5 +4829,30 @@
     "The report-writing skill was not opened because reading central Skills is excluded here; its rules were applied from the AGENTS.md summary.",
     "No new blanket prohibition or re-approval rule is proposed; conditions are per candidate. Model and job identity are not self-reported."
   ],
-  "receipt_reference_definition": "source_report/fixed_verification/parent_semantic_receipt/previous_normalization names identify private preserved parent records, not repository links. Fixed public upstream URLs, source identities, reader namespace and independent test anchors carry the public evidence scope."
+  "receipt_reference_definition": "source_report/fixed_verification/parent_semantic_receipt/previous_normalization names identify private preserved parent records, not repository links. Fixed public upstream URLs, source identities, reader namespace and independent test anchors carry the public evidence scope.",
+  "reader_original_limitations_definition": "Verbatim original reader limitations are preserved as history. The current limitations and explicit parent corrections govern this normalized artifact; neither becomes new owner policy or an individual copy grant.",
+  "public_delta_acceptance": {
+    "number": 431,
+    "head": "b9a9694478812df3d215022008df2fb6a9c79b4f",
+    "merge": "ad8151c101a0820cbc365455ecfb85caef1d697a",
+    "merged_at": "2026-10-24T09:35:56Z",
+    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/431",
+    "review_todos": [
+      3612,
+      3617
+    ],
+    "acceptance_scope": "Original16file intake delta reviewed3612 Must1, correction7file/64hunk reviewed3617 Must0; exactb9 all7CIcomplete6SUCCESS1NEUTRAL/CLEAN, normal merge/readback/mainff. Artifact/read-state acceptance only, not source execution, whole-package rights or all16 completion."
+  },
+  "new_final_dispositions_at_intake": 0,
+  "parent_decision_updates": {
+    "recorded_at": "2026-10-24T10:39:47.2605445Z",
+    "job": "20261024-123649-todo-3080",
+    "added_exclusions": 1,
+    "inventory_ids": [
+      "github:741cc025c76afb1abd990520f1cc34337bd14258cd765a44ee3bc43a6256abc2"
+    ],
+    "scope": "Only parent final flags/counters and decisions changed. Original primary/support reading states, actors, hashes, notices and historical proposals stay fixed.",
+    "review_pending": true
+  },
+  "new_final_dispositions_definition": "Later parent exclusion delta only, equal to parent_decision_updates.added_exclusions. The earlier intake decision count is preserved separately at new_final_dispositions_at_intake. Cumulative cohort final decisions are installed + integrated + excluded; do not sum the delta again."
 }

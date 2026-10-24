@@ -245,23 +245,31 @@ func TestDuplicateExclusionsKeepCanonicalAdoptionsAndSeparateLedgerRows(t *testi
 	var progress struct {
 		Installed  int `json:"installed"`
 		Integrated int `json:"integrated"`
+		Excluded   int `json:"excluded"`
 	}
 	loadPublicReceipt(t, "skills-3080-progress.json", &progress)
 	if ledger.Installed != progress.Installed || ledger.Integrated != progress.Integrated {
 		t.Fatal("adoption rows differ from independently published progress counts")
 	}
 	var ledgerDuplicates []duplicateDecision
+	var rightsReceipt struct {
+		Entries []individualRightsDecision `json:"entries"`
+		Count   int                        `json:"count"`
+	}
+	loadPublicReceipt(t, "skills-3080-rights-decisions.json", &rightsReceipt)
+	rightsRows := 0
 	for _, row := range ledger.Excluded {
 		switch row.Type {
 		case "exact_body_duplicate_of_existing_catalog_adoption":
 			ledgerDuplicates = append(ledgerDuplicates, row)
-		case "individual_proprietary_permission_not_evidenced":
-			// Validated against its notice in sixmile_assessment_test.go.
+		case "individual_proprietary_permission_not_evidenced", restrictionExclusionType:
+			// Validated against fixed notices and original/amended reader evidence.
+			rightsRows++
 		default:
 			t.Fatal("unknown exclusion type must not be treated as a duplicate")
 		}
 	}
-	if len(ledger.Entries) != ledger.Installed+ledger.Integrated || ledger.Count != 8 || ledger.Count != len(ledger.Excluded) || len(decisions.Entries) != 7 || !reflect.DeepEqual(decisions.Entries, ledgerDuplicates) {
+	if len(ledger.Entries) != ledger.Installed+ledger.Integrated || ledger.Count != progress.Excluded || ledger.Count != len(ledger.Excluded) || ledger.Count != len(decisions.Entries)+rightsReceipt.Count || rightsRows != rightsReceipt.Count || rightsReceipt.Count != len(rightsReceipt.Entries) || !reflect.DeepEqual(decisions.Entries, ledgerDuplicates) {
 		t.Fatal("exclusion receipt differs from ledger or was counted as an adoption")
 	}
 	if err := validateDuplicateDecisions(decisions.Entries, ledger.Entries); err != nil {

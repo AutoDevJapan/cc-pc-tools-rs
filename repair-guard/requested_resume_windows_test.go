@@ -12,7 +12,10 @@ import (
 )
 
 func TestRequestedResumePlannedWorkspaceRejectsJunctionParents(t *testing.T) {
-	root := t.TempDir()
+	root, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	allowed := func(path string) bool {
 		return requestedPlannedWorkspaceAllowedWith(path, func(string) bool { return false })
 	}
@@ -23,7 +26,10 @@ func TestRequestedResumePlannedWorkspaceRejectsJunctionParents(t *testing.T) {
 	if !allowed(ordinary) || !allowed(filepath.Join(root, "new-container", "new-workspace")) {
 		t.Fatal("plain existing ancestors rejected")
 	}
-	target := t.TempDir()
+	target, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	junction := filepath.Join(root, "redirected")
 	cmd := exec.Command("cmd", "/d", "/c", "mklink", "/J", junction, target)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
@@ -72,7 +78,10 @@ func TestRequestedResumeLiveOriginalRecordDiagnostic(t *testing.T) {
 }
 
 func TestRequestedResumeKeepsOriginalRegistrationAndStops(t *testing.T) {
-	root := t.TempDir()
+	root, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	spec := filepath.Join(root, "original.md")
 	if os.WriteFile(spec, []byte("original task bytes"), 0600) != nil {
 		t.Fatal("spec fixture write failed")

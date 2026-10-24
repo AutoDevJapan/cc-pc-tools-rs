@@ -68,6 +68,9 @@ func questionImageFixture(t *testing.T, mode string) ([]string, string, func(con
 	if mode == "owner_impersonation" {
 		s["owner_id"] = monthlyTestBot
 	}
+	if mode == "foreign_todo" {
+		s["todo_id"] = 3387
+	}
 	if mode == "missing_reply_version" {
 		delete(s, "expected_owner_reply_content_sha256")
 	}
@@ -128,7 +131,7 @@ func TestHistoryAttachmentExactBotQuestionAndReply(t *testing.T) {
 }
 
 func TestHistoryAttachmentBotQuestionRejectsActorsVersionsAndRecheck(t *testing.T) {
-	for _, mode := range []string{"foreign_actor", "spoof", "late_edit", "wrong_reply", "different_question", "owner_impersonation", "missing_reply_version", "wrong_question_version", "changed_question", "changed_reply"} {
+	for _, mode := range []string{"foreign_actor", "spoof", "late_edit", "wrong_reply", "different_question", "owner_impersonation", "foreign_todo", "missing_reply_version", "wrong_question_version", "changed_question", "changed_reply"} {
 		t.Run(mode, func(t *testing.T) {
 			args, path, load, media := questionImageFixture(t, mode)
 			var out bytes.Buffer

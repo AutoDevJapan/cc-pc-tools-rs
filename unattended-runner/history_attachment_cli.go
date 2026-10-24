@@ -224,7 +224,7 @@ func historyAttachmentScopeValid(scope historyAttachmentScope, now time.Time) bo
 	}
 	if scope.botQuestion() {
 		fixed := monthlyAuditScope{Domain: "discord-monthly-history-read-scope-v1", Todo: scope.Todo, Guild: scope.Guild, Owner: scope.Owner, Since: scope.Since, Until: scope.Until}
-		if !fixed.valid(fixed.Domain) || !monthlyID(scope.OwnerReply) || len(scope.ReplySHA) != 64 || strings.ToLower(scope.ReplySHA) != scope.ReplySHA {
+		if scope.Todo != 3327 || !fixed.valid(fixed.Domain) || !monthlyID(scope.OwnerReply) || len(scope.ReplySHA) != 64 || strings.ToLower(scope.ReplySHA) != scope.ReplySHA {
 			return false
 		}
 		if b, e := hex.DecodeString(scope.ReplySHA); e != nil || len(b) != 32 {

@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"io"
 	"os"
 	"os/exec"
@@ -168,5 +169,51 @@ func TestSkills3080JunctionParent(t *testing.T) {
 	}
 	if n, reason := skillsCreate(skillsParsedFixture(t), alias, &fs); n != 0 || reason != "physical_parent" {
 		t.Fatal("junction write admitted")
+	}
+}
+
+func TestSkills3080CompleteManifestReviewAndCreate(t *testing.T) {
+	m := skillsTestManifest()
+	original, notice := []byte("fixed synthetic public source\n"), []byte("fixed individual grant\n")
+	m.Sources[0].Repository = "6mile/skills"
+	m.Sources[0].Commit = skillsPublicSources["6mile/skills"]
+	m.Sources[0].SHA = hashBytes(original)
+	m.Sources[0].License.SHA = hashBytes(notice)
+	for _, file := range []struct {
+		path string
+		body []byte
+	}{{"sample/references/upstream.txt", original}, {"sample/references/LICENSE.txt", notice}} {
+		m.Files = append(m.Files, skillsOutput{Target: file.path, SHA: hashBytes(file.body), Content: base64.StdEncoding.EncodeToString(file.body)})
+	}
+	raw, e := json.Marshal(m)
+	if e != nil {
+		t.Fatal(e)
+	}
+	manifestSHA := hashBytes(raw)
+	parsed, ok := skillsParseManifest(raw)
+	if !ok || !skillsSourcesBound(parsed) {
+		t.Fatal("complete positive manifest rejected")
+	}
+	review := skillsReceived{Spec: []byte("SKILLS3080_MANIFEST_SHA256 " + manifestSHA), Metadata: object{"model": "google-antigravity/gemini-3.1-pro", "effort": "high"}, Native: []object{{"model": "google-antigravity/gemini-3.1-pro", "effort": "high"}}, Body: []byte("SKILLS3080_ACCEPTANCE " + `{"domain":"skills-3080-review-v1","manifest_sha256":"` + manifestSHA + `","accepted":true,"must":0}`)}
+	if !skillsReviewAccepted(review, manifestSHA, "gpt-6.1-sol") {
+		t.Fatal("review did not bind same manifest")
+	}
+	// Replacing the caller's raw buffer cannot replace the already verified and
+	// parsed output bytes actually consumed by the creation boundary.
+	for i := range raw {
+		raw[i] = ' '
+	}
+	root := skillsFixtureRoot(t)
+	fs := skillsFS{blocked: func(string) bool { return false }}
+	count, reason := skillsCreate(parsed, root, &fs)
+	fs.close()
+	if reason != "" || count != 3 {
+		t.Fatalf("complete operation failed: %s/%d", reason, count)
+	}
+	for _, file := range parsed.Files {
+		actual, e := os.ReadFile(filepath.Join(root, filepath.FromSlash(file.Target)))
+		if e != nil || hashBytes(actual) != file.SHA {
+			t.Fatal("consumed bytes were not the reviewed output")
+		}
 	}
 }

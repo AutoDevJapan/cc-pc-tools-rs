@@ -321,7 +321,7 @@ func exactHistoricalProse(allowed map[string]string, file, location, text string
 }
 func TestAllReadingProseKeepsMutableGlobalRatiosOutOfCurrentNarrative(t *testing.T) {
 	allowed := loadExactHistoricalProse(t)
-	for _, file := range []string{"skills-3080-progress.json", "skills-3080-sixmile-partial-evaluation.json", "skills-3080-sixmile-next45-evaluation.json", "skills-3080-sixmile-next20-evaluation.json", "skills-3080-sixmile-parent6-evaluation.json", "skills-3080-sixmile-evaluation-index.json", "skills-3080-sixmile-next75-evaluation.json"} {
+	for _, file := range []string{"skills-3080-progress.json", "skills-3080-sixmile-partial-evaluation.json", "skills-3080-sixmile-next45-evaluation.json", "skills-3080-sixmile-next20-evaluation.json", "skills-3080-sixmile-parent6-evaluation.json", "skills-3080-sixmile-evaluation-index.json", "skills-3080-sixmile-next75-evaluation.json", "skills-3080-sixmile-received50-evaluation.json"} {
 		data, err := os.ReadFile(filepath.Join("..", "..", "docs", file))
 		if err != nil {
 			t.Fatal(err)
@@ -338,7 +338,7 @@ func TestAllReadingProseKeepsMutableGlobalRatiosOutOfCurrentNarrative(t *testing
 			}
 		}
 	}
-	for _, file := range []string{"skills-3080-next20-acceptance.md", "skills-3080-parent6-reading-verification.md", "skills-3080-next75-acceptance.md"} {
+	for _, file := range []string{"skills-3080-next20-acceptance.md", "skills-3080-parent6-reading-verification.md", "skills-3080-next75-acceptance.md", "skills-3080-received-evidence-acceptance.md"} {
 		data, err := os.ReadFile(filepath.Join("..", "..", "docs", file))
 		if err != nil {
 			t.Fatal(err)

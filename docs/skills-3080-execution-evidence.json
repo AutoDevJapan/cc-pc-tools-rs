@@ -1,0 +1,93 @@
+{
+  "todo": 3080,
+  "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+  "catalog_records": 73220,
+  "assessment_artifacts": [
+    {
+      "file": "skills-3080-ais-evaluation.json",
+      "sha256": "25e7709c3c573e82ce60e8d1a9194f887e5bb5715fd8a637ec21b9e0c912dc6b",
+      "rows": 12
+    },
+    {
+      "file": "skills-3080-design-entrypoint-evaluation.json",
+      "sha256": "bf63cc366b9cf441c96ca8df5bfb06854610f851b90ff4b0257dc755e7ed7695",
+      "rows": 2
+    },
+    {
+      "file": "skills-3080-mengto-partial-evaluation.json",
+      "sha256": "68b0eefb50760f952ea86ac738ce0cab2d183500076515f9f186bc2e539af232",
+      "rows": 177
+    },
+    {
+      "file": "skills-3080-mizchi-partial-evaluation.json",
+      "sha256": "60817102881f350ba487f7e3dedb6730a2e79672dc7b9058a6a25483dbce8f33",
+      "rows": 76
+    },
+    {
+      "file": "skills-3080-openai-entrypoint-evaluation.json",
+      "sha256": "932de98560ad26253e3e57b9748366aa1d749c51f2679f9faca272402033507d",
+      "rows": 44
+    },
+    {
+      "file": "skills-3080-docker-assessment.json",
+      "sha256": "7702ff6c485e995b73c008492ef8b5a9da65c64f973ee0bc28a92595e38f3eee",
+      "rows": 12
+    },
+    {
+      "file": "skills-3080-kepano-assessment.json",
+      "sha256": "959cfa33ed068390a208e771a96cb9dd87b0f741c0ba3a670c3be9dba68e4d72",
+      "rows": 6
+    },
+    {
+      "file": "skills-3080-mattpocock-assessment.json",
+      "sha256": "85e043d9fff6dbaeee05b647c351231f6424da97b66e060ba82fc82283729851",
+      "rows": 38
+    },
+    {
+      "file": "skills-3080-obra-assessment.json",
+      "sha256": "e8f25aaef87c6660356a87b47754c7dd14f9aeaf66c8315d9f64f76575abbabe",
+      "rows": 15
+    },
+    {
+      "file": "skills-3080-tencent-assessment.json",
+      "sha256": "cc4730fcba13283ae9bb24add6be748a3248a221c94a6033a2eaa792fd6a2993",
+      "rows": 7
+    },
+    {
+      "file": "skills-3080-sixmile-partial-evaluation.json",
+      "sha256": "27bca26d4b8401b8984ad41cbe13bbb8fdc58a1ac7145bf7c640305bbc9e5de2",
+      "rows": 21
+    },
+    {
+      "file": "skills-3080-sixmile-next45-evaluation.json",
+      "sha256": "23c8dee4959cafaf6d4410e8ea430e439d7e101f3137e097ba4bb9234514a7e1",
+      "rows": 45
+    },
+    {
+      "file": "skills-3080-sixmile-next20-evaluation.json",
+      "sha256": "01af4493fcd2e6d2fc323764cd626a42802fe9ffea4a027f6d0f99fa115f5f89",
+      "rows": 20
+    },
+    {
+      "file": "skills-3080-sixmile-parent6-evaluation.json",
+      "sha256": "b1f25c47d319a1b7671ef0ad503306de3803ac4286079da7819b39cd24506a3d",
+      "rows": 6
+    },
+    {
+      "file": "skills-3080-sixmile-next75-evaluation.json",
+      "sha256": "8c4fb2fdd5b763bc1d7a3c990a29e3df6ec8d907ab093f012cba183bcec89cfa",
+      "rows": 75
+    },
+    {
+      "file": "skills-3080-sixmile-received50-evaluation.json",
+      "sha256": "861364dff7db4773b697e1ded48033a3b9f8ebfaf9d8cab064772a0776ea3196",
+      "rows": 50
+    }
+  ],
+  "adoption_ledger": {
+    "file": "skills-3080-adoptions.json",
+    "sha256": "55344b7ccbc11ce113bd697441f7d5e943a7525c5215de7e0e784275405a4b12",
+    "rows": 49
+  },
+  "definition": "Assessment record references and existing final decisions only. No semantic/individual licence approval is inherited through equal bytes. The fixed catalog remains the complete occurrence universe; all holds are retained."
+}

@@ -187,7 +187,12 @@ func validateParent6Dispositions(a extra45Assessment, rows []cohortLedgerRow) er
 	return nil
 }
 
-func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old legacy21Projection, extra, next20, parent extra45Assessment, next75 next75Assessment, amendment primaryReadingAmendments, comparison mcpComparisonOnly, rows []cohortLedgerRow) error {
+func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old legacy21Projection, extra, next20, parent extra45Assessment, next75 next75Assessment, amendment primaryReadingAmendments, comparison mcpComparisonOnly, rows []cohortLedgerRow, received ReceivedCohort) error {
+	base, receivedEntries, err := withoutReceived50Index(current, received)
+	if err != nil {
+		return err
+	}
+	current = base
 	if err := validateNext75Reading(next75); err != nil {
 		return err
 	}
@@ -212,6 +217,16 @@ func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old lega
 		}
 	}
 	matched := map[string]bool{}
+	for _, e := range receivedEntries {
+		if known[e.ID].ID != "" || paths[e.Path] {
+			return errors.New("expanded sixmile index: received identity crosses cohorts")
+		}
+		for _, r := range rows {
+			if r.ID == e.ID {
+				return errors.New("expanded sixmile index: immutable received reading lacks a current final acceptance")
+			}
+		}
+	}
 	for _, r := range rows {
 		e, ok := known[r.ID]
 		if r.Source != "6mile/skills" {
@@ -319,7 +334,7 @@ func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *test
 				rows = append(rows, r)
 			case "missing_parent_cohort":
 				current.Cohorts = current.Cohorts[:3]
-				want = "expanded sixmile index: current cohorts do not include exact parent6 and next75 extensions"
+				want = "received index: missing or inconsistent extension"
 			case "cross_cohort_identity":
 				for i := range old.Entries {
 					if old.Entries[i].ID != "github:e4ade76a7932447efe3dd6e777ab300a5a9a6f1cf13a392614b31c621906a016" {
@@ -385,7 +400,9 @@ func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *test
 				current.NotRaw--
 				want = "expanded sixmile index: amendment was omitted, duplicated or conflated with a new candidate"
 			}
-			err := validateExpandedSixmileIndex(current, snapshot, old, extra, next20, parent, next75, amendment, comparison, rows)
+			var received ReceivedCohort
+			loadPublicReceipt(t, "skills-3080-sixmile-received50-evaluation.json", &received)
+			err := validateExpandedSixmileIndex(current, snapshot, old, extra, next20, parent, next75, amendment, comparison, rows, received)
 			if want == "" {
 				if err != nil {
 					t.Fatal(err)

@@ -158,7 +158,24 @@ func scan(input io.Reader, output io.Writer) (Summary, error) {
 func run() error {
 	catalog := flag.String("catalog", "", "already saved public phase-a-catalog.jsonl")
 	out := flag.String("out", "", "new directory for persistent triage artifacts")
+	received := flag.String("received-evidence", "", "immutable received cohort JSON; validate without opening upstream bodies")
+	projection := flag.String("projection-out", "", "new file for the validated cohort projection")
+	execution := flag.String("execution-evidence", "", "pinned assessment and final-ledger manifest for every catalog occurrence")
+	evidenceRoot := flag.String("evidence-root", "", "qualified public evidence directory")
+	executionOut := flag.String("execution-out", "", "new persistent queue file; completion requires its separate matching summary")
 	flag.Parse()
+	if *execution != "" || *evidenceRoot != "" || *executionOut != "" {
+		if *execution == "" || *evidenceRoot == "" || *executionOut == "" || *catalog == "" || *out != "" || *received != "" || *projection != "" {
+			return fmt.Errorf("execution mode needs -catalog, -execution-evidence, -evidence-root and -execution-out only")
+		}
+		return writeExecutionQueue(*catalog, *execution, *evidenceRoot, *executionOut)
+	}
+	if *received != "" || *projection != "" {
+		if *received == "" || *projection == "" || *catalog != "" || *out != "" {
+			return fmt.Errorf("use -received-evidence and -projection-out without catalog mode")
+		}
+		return writeReceivedProjection(*received, *projection)
+	}
 	if *catalog == "" || *out == "" {
 		return fmt.Errorf("-catalog and -out are required")
 	}

@@ -437,8 +437,8 @@
     "source": "skills-3080-mizchi-partial-evaluation.json",
     "complete_definition": "本文の全path読取のみ。個別許諾・支持・採否・実導入は未完。"
   },
-  "all_fulltext_primary_paths_including_partial_sources": 543,
-  "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分153=543source paths。支持の全読/走査/部分読取・伏字付き手順・個別許諾・最終採否は別。全16資料は未完。",
+  "all_fulltext_primary_paths_including_partial_sources": 569,
+  "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分179=569source paths。支持の全読/走査/部分読取・伏字付き手順・個別許諾・最終採否は別。全16資料は未完。",
   "external_revisions": {
     "count": 1,
     "target": "diagnosing-bugs",
@@ -1405,8 +1405,8 @@
     "new_individual_rights_exclusions": 1,
     "existing_duplicate_receipts_reused": 1
   },
-  "amended_at": "2026-10-24T10:39:47.2605445Z",
-  "amendment_job": "20261024-123649-todo-3080",
+  "amended_at": "2026-10-24T16:16:41.9322475Z",
+  "amendment_job": "20261024-235901-todo-3080",
   "mcp_pointer_installation": {
     "real_server_or_rendering_tested": false,
     "parse_errors": 0,
@@ -1454,19 +1454,19 @@
   },
   "sixmile_body_read_coverage": {
     "metadata_only_primary": 0,
-    "full_body_read": 153,
-    "workflow_body_read": 167,
-    "without_assessment": 55455,
+    "full_body_read": 179,
+    "workflow_body_read": 217,
+    "without_assessment": 55405,
     "definition": "Five direct-reading cohorts plus an explicit primary-reading amendment; one exact-byte comparison-only occurrence adds no new raw/workflow reading. Reading, comparison, permission, safety and final adoption are separate units.",
     "expected": 55623,
     "complete": false,
-    "masked_workflow_body": 14,
-    "candidate_paths_assessed_or_notice_read": 168,
+    "masked_workflow_body": 38,
+    "candidate_paths_assessed_or_notice_read": 218,
     "source": "skills-3080-sixmile-evaluation-index.json",
-    "without_raw_full_read": 55470,
+    "without_raw_full_read": 55444,
     "comparison_only_primary": 1
   },
-  "all_workflow_primary_paths_including_partial_sources": 557,
+  "all_workflow_primary_paths_including_partial_sources": 607,
   "primary_coverage_definition_additional": "workflow集計はraw本文と伏字付き手順を区別した構造化件数に従う。原文/支持の受領評価と、親が全raw本文を再読した主張は別。旧notice-only本文の親全読は一度だけ別追補として加え、元childの状態と支持の担当は保持する。",
   "rss_season_installation": {
     "content_review": 3591,
@@ -1540,10 +1540,10 @@
     "owner_action_required": false
   },
   "central_target_holds_current": {
-    "count": 8,
+    "count": 9,
     "definition": "Five earlier holds plus the distinct later observations listed here. Classification is unverified; existence and size were not queried, and target bodies were neither read nor written. No target names or leaf paths are disclosed.",
     "todo": 3080,
-    "job": "20261024-123649-todo-3080",
+    "job": "20261024-235901-todo-3080",
     "observations": [
       {
         "case": "later_candidate_A",
@@ -1559,6 +1559,11 @@
         "case": "later_comparison_C",
         "observed_at": "2026-10-24T11:38:20.8766644Z",
         "receipt": "git-comparison-target-preflight123649.json"
+      },
+      {
+        "case": "later_candidate_D",
+        "observed_at": "2026-10-24T15:37:00.8373341Z",
+        "receipt": "central-hold-addition235901.json"
       }
     ],
     "receipt_reference_definition": "Private parent records, not repository links.",
@@ -1568,7 +1573,7 @@
     "post_guard_target_read_write": 0,
     "configuration_or_exception_changes": 0,
     "owner_action_required": false,
-    "next": "Keep exact targets unchanged and continue permitted evaluation. Existing normal classification prerequisites remain unresolved; no same refresh or alternate-path retry.",
+    "next": "Owner scope a was received through the normal API and bound to the exact new question/version. Isolated repair3686 is actually started. Preserve all exact targets and unknown contents; use only reviewed, merged, deployed purpose qualification after its actual acceptance.",
     "baseline_count": 5,
     "baseline_definition": "Original four comparison holds plus one earlier candidate hold. Later distinct observations below add one case each; historical snapshots retain their original scope."
   },
@@ -1594,8 +1599,8 @@
     "original_child_and_support_actors_preserved": true
   },
   "parent6_reflection_delta": {
-    "current_branch_raw": 543,
-    "current_branch_workflow": 557,
+    "current_branch_raw": 569,
+    "current_branch_workflow": 607,
     "main_accepted_snapshot": {
       "pr": 431,
       "merge": "ad8151c101a0820cbc365455ecfb85caef1d697a",
@@ -1661,5 +1666,50 @@
     "ci_and_merge_pending": true,
     "new_central_operations": 0,
     "all16_complete": false
+  },
+  "sixmile_received50_entrypoint_evaluation": {
+    "source": "skills-3080-sixmile-received50-evaluation.json",
+    "candidate_paths": 50,
+    "full_body_read": 26,
+    "workflow_body_read": 50,
+    "masked_workflow_body": 24,
+    "metadata_only_primary": 0,
+    "notice_paths": 51,
+    "installed": 0,
+    "integrated": 0,
+    "excluded": 0,
+    "definition": "Immutable received evidence; no new grant, final disposition, source execution or central operation. See source index for the current disjoint union."
+  },
+  "received50_publication_status": {
+    "receipt": "skills-3080-sixmile-received50-evaluation.json",
+    "acceptance": "skills-3080-received-evidence-acceptance.md",
+    "independent_review_pending": true,
+    "ci_and_merge_pending": true,
+    "new_central_operations": 0,
+    "all16_complete": false
+  },
+  "current_execution_plan": {
+    "source": "skills-3080-continuation-execution.md",
+    "evidence": "skills-3080-execution-evidence.json",
+    "summary": "skills-3080-execution-queue-summary.json",
+    "all_occurrences_retained": true,
+    "per_candidate_workers_created": 0,
+    "equal_body_is_not_permission": true,
+    "queue_generation_is_not_semantic_completion": true
+  },
+  "current_scope_qualification_repair": {
+    "owner_scope_choice": "a",
+    "owner_scope_verified": true,
+    "original_general_guard_exclusion_amended_only_for_this_repair": true,
+    "implementation_todo": 3686,
+    "actual_job": "20261025-004702-todo-3686",
+    "state": "implementation_started_not_accepted_or_deployed",
+    "source": "skills-3080-continuation-execution.md",
+    "general_classification_bypass": false,
+    "existing_unknown_content_access": false,
+    "original_registry_recovered": false,
+    "held647_retrieval": 0,
+    "central_new_operations": 0,
+    "owner_action_required": false
   }
 }

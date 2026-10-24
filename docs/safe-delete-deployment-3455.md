@@ -40,8 +40,9 @@ safe-deleteの別writerは一覧にない。GitHub OAuthの復旧3454は既存�
 候補SHAは `d5be8270541c177ee811dc5ecee2f1c117590e6aa132e942598eb096596286ef`、
 実VCS revisionは上記main、`vcs.modified=false`。原build receiptを常設source内に保存した。
 検証専用readerは既存関数を変更せず、2つの固定データ表だけをGo overlayで結合した。
-source、原旧receipt、候補receipt、候補byte、元client境界、物理pathの照合は成立したが、
-現物は元PR351の期待旧SHAにも新候補SHAにも一致せず、正常用途は `qualified:false`。
+readerはsource、原旧receipt、候補receipt、候補byte、元client境界、物理pathを照合する構成にした。
+正常用途の実測はexit 1、`qualified:false` だった。この単一の拒否値からは、各照合の
+成功、現物と期待旧SHA・新候補SHAの一致／不一致、正確な失敗段階を判定できない。
 未知の現在SHAを出力したり、対象をコピーして読む操作は行っていない。
 
 現物metadataは5,077,504 byte、更新UTC `2026-10-23T14:44:11Z`。

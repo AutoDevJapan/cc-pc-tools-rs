@@ -16,6 +16,17 @@ fn path_digest(path: &str) -> String {
     )
 }
 
+fn current_request(receipt: &Value, id: u64) -> bool {
+    receipt["origin_todo_id"] == 3638
+        && receipt["actor_todo_id"] == 3650
+        && [1626, 3277, 3549, 3623].contains(&id)
+        && receipt["source_kind"] == "native_user"
+        && receipt["source_session"] == "01a16c0c-18a9-7570-ab4e-9522ffa8d6d0"
+        && receipt["source_event_sha256"]
+            == "e0cff4ef85745ffb93ddcc36d1fb9626c4c098967406d8875a672d58c1684465"
+        && receipt["source_at"] == "2026-10-24T11:26:20.672Z"
+}
+
 impl RealBackend {
     pub(super) fn verify_current_product(&mut self, item: &Value, root: &str) -> bool {
         self.current_product_receipt(item, root).is_some()
@@ -42,14 +53,7 @@ impl RealBackend {
             return None;
         };
         let original_source = receipt["origin_todo_id"] == 2834;
-        let current_request = receipt["origin_todo_id"] == 3638
-            && receipt["actor_todo_id"] == 3650
-            && [1626, 3277, 3549, 3623].contains(&id)
-            && receipt["source_kind"] == "native_user"
-            && receipt["source_session"] == "01a16c0c-18a9-7570-ab4e-9522ffa8d6d0"
-            && receipt["source_event_sha256"]
-                == "e0cff4ef85745ffb93ddcc36d1fb9626c4c098967406d8875a672d58c1684465"
-            && receipt["source_at"] == "2026-10-24T11:26:20.672Z";
+        let current_request = current_request(&receipt, id);
         if receipt["domain"] != "current-product-succession-v1"
             || receipt["verified"] != true
             || !(original_source || current_request)
@@ -82,6 +86,51 @@ impl RealBackend {
         self.guard_workspace_path(root).ok()?;
         Some(receipt)
     }
+}
+
+/// Project only the already verified source fields, after binding prepared bytes.
+/// No IO or admission decision is made here. The caller owns this one-use data.
+pub(crate) fn bound_resume_evidence(
+    item: &Value,
+    root: &str,
+    spec: &[u8],
+    receipt: &Value,
+) -> Option<Value> {
+    let id = item["id"].as_u64()?;
+    if !current_request(receipt, id)
+        || receipt["domain"] != "current-product-succession-v1"
+        || receipt["verified"] != true
+        || receipt["original_registry_recovered"] != false
+        || receipt["todo_id"] != item["id"]
+        || receipt["project"] != item["project"]
+        || receipt["registered_path_sha256"] != path_digest(root)
+        || receipt["spec_path_sha256"] != path_digest(s(&item["spec"]))
+        || receipt["spec_sha256"] != digest(spec)
+    {
+        return None;
+    }
+    let fields = [
+        "domain",
+        "verified",
+        "origin_todo_id",
+        "actor_todo_id",
+        "todo_id",
+        "project",
+        "registered_path_sha256",
+        "spec_path_sha256",
+        "spec_sha256",
+        "source_kind",
+        "source_session",
+        "source_event_sha256",
+        "source_at",
+        "original_registry_recovered",
+    ];
+    Some(Value::Object(
+        fields
+            .into_iter()
+            .map(|k| (k.to_owned(), receipt[k].clone()))
+            .collect(),
+    ))
 }
 
 #[cfg(test)]
@@ -137,6 +186,8 @@ mod tests {
                 "source_kind":"native_user","source_session":"01a16c0c-18a9-7570-ab4e-9522ffa8d6d0",
                 "source_event_sha256":"e0cff4ef85745ffb93ddcc36d1fb9626c4c098967406d8875a672d58c1684465",
                 "source_at":"2026-10-24T11:26:20.672Z"});
+            receipt["arbitrary_note"] = json!("not verified owner input");
+            receipt["workspace_checkpoint"] = json!({"private":"not part of this handoff"});
             match gate {
                 "actor" => receipt["actor_todo_id"] = json!(999),
                 "kind" => receipt["source_kind"] = json!("assistant_quote"),
@@ -152,17 +203,63 @@ mod tests {
                 _ => (),
             }
             let mut backend = RealBackend::new(temp.path().join("scheduler"));
+            let calls = Arc::new(Mutex::new(vec![]));
             backend.runner = Box::new(Guard {
                 text: receipt.to_string(),
                 code: 0,
                 root_allowed: true,
-                calls: Arc::new(Mutex::new(vec![])),
+                calls: calls.clone(),
+            });
+            let admission = backend.current_product_admission(&item, root);
+            assert_eq!(admission.is_some(), gate == "pass", "{gate}");
+            let before = calls.lock().unwrap().len();
+            let evidence = admission.as_ref().and_then(|receipt| {
+                bound_resume_evidence(&item, root, b"original unchanged work", receipt)
             });
             assert_eq!(
-                backend.current_product_allowed(&item, root),
-                gate == "pass",
-                "{gate}"
+                calls.lock().unwrap().len(),
+                before,
+                "handoff must reuse verified evidence"
             );
+            assert_eq!(evidence.is_some(), gate == "pass", "{gate}");
+            if let (Some(evidence), Some(receipt)) = (evidence, admission.as_ref()) {
+                assert_eq!(evidence["source_kind"], "native_user");
+                assert!(evidence.get("arbitrary_note").is_none());
+                assert!(evidence.get("workspace_checkpoint").is_none());
+                for (field, value) in [
+                    ("id", json!(2467)),
+                    ("project", json!("changed")),
+                    ("spec", json!("changed.md")),
+                ] {
+                    let mut changed = item.clone();
+                    changed[field] = value;
+                    assert!(bound_resume_evidence(
+                        &changed,
+                        root,
+                        b"original unchanged work",
+                        receipt
+                    )
+                    .is_none());
+                }
+                assert!(bound_resume_evidence(
+                    &item,
+                    "D:/elsewhere",
+                    b"original unchanged work",
+                    receipt
+                )
+                .is_none());
+                assert!(
+                    bound_resume_evidence(&item, root, b"changed after admission", receipt)
+                        .is_none()
+                );
+                backend.runner = Box::new(Guard {
+                    text: String::new(),
+                    code: 1,
+                    root_allowed: true,
+                    calls: Arc::new(Mutex::new(vec![])),
+                });
+                assert!(backend.current_product_admission(&item, root).is_none());
+            }
         }
     }
     #[test]
@@ -246,11 +343,21 @@ mod tests {
                 root_allowed: gate != "protected_root",
                 calls: calls.clone(),
             });
+            let admission = backend.current_product_admission(&item, root);
             assert_eq!(
-                backend.current_product_allowed(&item, root),
+                admission.is_some(),
                 matches!(gate, "pass" | "normalized"),
                 "{gate}"
             );
+            assert!(admission
+                .as_ref()
+                .and_then(|receipt| bound_resume_evidence(
+                    &item,
+                    root,
+                    b"exact saved spec\r\n",
+                    receipt
+                ))
+                .is_none());
             let calls = calls.lock().unwrap();
             assert_eq!(
                 calls[0].args[calls[0].args.len() - 2..],

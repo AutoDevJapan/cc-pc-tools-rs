@@ -9,6 +9,7 @@ use std::{
 
 #[path = "current_succession.rs"]
 mod current_succession;
+pub(crate) use current_succession::bound_resume_evidence;
 #[path = "process_birth_fallback.rs"]
 mod process_birth_fallback;
 pub(crate) const BIRTH_FALLBACK_MARGIN: u64 = 10_000_000;
@@ -45,6 +46,12 @@ pub trait Backend {
     /// A finite current succession receipt, never a general root exemption.
     fn current_product_allowed(&mut self, _item: &Value, _registered_root: &str) -> bool {
         false
+    }
+    /// Return the existing admission decision and any verified source data in
+    /// one operation. Null preserves implementations that only return a bool.
+    fn current_product_admission(&mut self, item: &Value, root: &str) -> Option<Value> {
+        self.current_product_allowed(item, root)
+            .then_some(Value::Null)
     }
     fn current_workspace_checkpoint(
         &mut self,
@@ -610,6 +617,9 @@ impl Backend for RealBackend {
     }
     fn current_product_allowed(&mut self, item: &Value, registered_root: &str) -> bool {
         self.verify_current_product(item, registered_root)
+    }
+    fn current_product_admission(&mut self, item: &Value, root: &str) -> Option<Value> {
+        self.current_product_receipt(item, root)
     }
     fn current_workspace_checkpoint(
         &mut self,

@@ -1717,6 +1717,7 @@ struct Fake {
     real_workspaces: bool,
     prepare_registry: Option<PathBuf>,
     current_product: Option<(Value, String)>,
+    resume_evidence: Option<Value>,
     current_checkpoint: Option<Value>,
     checkpoint_edit: Option<(PathBuf, Value)>,
     checkpoint_edit_after: usize,
@@ -1768,6 +1769,7 @@ impl Default for Fake {
             real_workspaces: false,
             prepare_registry: None,
             current_product: None,
+            resume_evidence: None,
             current_checkpoint: None,
             checkpoint_edit: None,
             checkpoint_edit_after: 0,
@@ -1831,6 +1833,10 @@ impl Backend for Fake {
                         .iter()
                         .all(|k| verified[*k] == item[*k])
             })
+    }
+    fn current_product_admission(&mut self, item: &Value, root: &str) -> Option<Value> {
+        self.current_product_allowed(item, root)
+            .then(|| self.resume_evidence.clone().unwrap_or(Value::Null))
     }
     fn action_progress(
         &mut self,
@@ -2630,6 +2636,58 @@ fn test_dispatch_uses_priority_and_marks_doing() {
     assert_eq!(f.get(3)["jobs"], json!(["launched1"]));
     assert_eq!(n(&f.e.report["allowance_now"]), 0.);
     assert_eq!(f.e.backend.pick_count, 1);
+}
+#[test]
+fn dispatch_carries_verified_resume_source_and_a_selected_current_record_reference() {
+    let mut f = Fixture::new();
+    let mut row = item(3277, "other", "todo", &[]);
+    row["note"] = json!("UNVERIFIED_NOTE_MUST_NOT_BECOME_OWNER_AUTHORITY");
+    f.put(row);
+    let original = f.get(3277);
+    let spec = Path::new(s(&original["spec"]));
+    let bytes = fs::read(spec).unwrap();
+    let path_hash = |path: &str| cc_job_policy::product_retry::digest(path.replace('\\', "/").trim_end_matches('/').to_lowercase().as_bytes());
+    let receipt = json!({"domain":"current-product-succession-v1","verified":true,
+        "todo_id":3277,"origin_todo_id":3638,"actor_todo_id":3650,
+        "project":"other","registered_path_sha256":path_hash(f.repo.to_str().unwrap()),
+        "spec_path_sha256":path_hash(s(&original["spec"])),"spec_sha256":cc_job_policy::product_retry::digest(&bytes),
+        "original_registry_recovered":false,
+        "source_kind":"native_user","source_session":"01a16c0c-18a9-7570-ab4e-9522ffa8d6d0",
+        "source_event_sha256":"e0cff4ef85745ffb93ddcc36d1fb9626c4c098967406d8875a672d58c1684465","source_at":"2026-10-24T11:26:20.672Z"});
+    f.e.backend.resume_evidence = Some(receipt.clone());
+    f.e.backend.current_product = Some((original.clone(), f.repo.to_str().unwrap().into()));
+    fs::remove_file(f.e.root.parent().unwrap().join("client-projects.txt")).unwrap();
+    f.dispatch();
+    assert_eq!(f.e.backend.launched.len(), 1);
+    let text = s(&f.e.backend.launched[0]["text"]);
+    assert!(
+        text.contains("正規に取得した今回の再開確認"),
+        "verified resume evidence missing from prepared original prompt"
+    );
+    let section = text.split_once("正規に取得した今回の再開確認").unwrap().1;
+    let encoded = section
+        .split_once("```json\n")
+        .unwrap()
+        .1
+        .split_once("\n```")
+        .unwrap()
+        .0;
+    let handoff: Value = serde_json::from_str(encoded).unwrap();
+    assert_eq!(handoff["receipt"], receipt);
+    assert_eq!(handoff["current_record"]["todo_id"], 3277);
+    assert_eq!(handoff["current_record"]["store"], json!(f.e.todo_path));
+    assert_eq!(
+        handoff["verification_source"],
+        "scrub391.exe --verify-current-succession"
+    );
+    assert!(section.contains("本人の新しい直接入力やDiscord取得原文ではありません"));
+    assert!(section.contains("todo.exe history 3277"));
+    assert!(!text.contains("UNVERIFIED_NOTE_MUST_NOT_BECOME_OWNER_AUTHORITY"));
+    assert!(text.contains(&format!(
+        "\n依頼:\n{}",
+        String::from_utf8(bytes.clone()).unwrap()
+    )));
+    assert_eq!(fs::read(spec).unwrap(), bytes);
 }
 #[test]
 fn rotation_never_overtakes_higher_priority_products() {

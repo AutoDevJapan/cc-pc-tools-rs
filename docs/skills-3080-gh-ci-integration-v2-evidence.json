@@ -45,7 +45,8 @@
     "independent_v2_acceptance_pending": true,
     "raw_sha256": "c0f40d79b4386bd5ce7a7d11101e23dbd56d5013b6614d56bfd1caf756ada973",
     "head": "b0107b649d5f6a890742aaad926f1b0116018f58",
-    "must": 1
+    "must": 1,
+    "definition_historical": "Original Must1-era receipt and then-pending v2 status; retain it as history. Later limited acceptance is public_content_acceptance, not a rewrite of the original response."
   },
   "static_cases": [
     {
@@ -78,8 +79,19 @@
     }
   ],
   "static_evaluation": "親の文面照合。実モデルturn/実失敗修復の試験ではない。",
-  "independent_review_pending": true,
+  "independent_review_pending": false,
   "context_budget_evaluated": false,
   "legacy_helper_changed_or_executed": false,
-  "other_guidance_or_junction_modified": false
+  "other_guidance_or_junction_modified": false,
+  "independent_review_pending_at_application": true,
+  "public_content_acceptance": {
+    "raw_file": "review3378-original.md",
+    "raw_sha256": "f5925ada6f6042b1e6f16da5b711790310cdbd03f78240fd486367a902260298",
+    "must": 0,
+    "accepted_pr": 381,
+    "merge": "6f3c62f59e0138825df434e6b132ab28c0590905",
+    "scope": "v2 instruction content/actual six deployed file SHA/old-guide+backups/structure+discovery, within old fixed delta; upstream original/Apache reused by SHA and old_GUIDE body not reread"
+  },
+  "acceptance_reconciliation_definition": "The original3378/PR381 limited v2 content/installation acceptance is reused; current public bundle strings match that reviewed snapshot exactly. Historical source.json/plan pending labels are not redeployed. No new central byte verification is claimed.",
+  "amended_at": "2026-10-24T09:48:51.6367065Z"
 }

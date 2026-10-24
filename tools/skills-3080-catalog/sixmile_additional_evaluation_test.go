@@ -363,6 +363,7 @@ type sixmileCohortIndex struct {
 	Workflow        int    `json:"workflow_primary_full_read"`
 	Masked          int    `json:"masked_workflow_primary"`
 	Metadata        int    `json:"metadata_only_primary"`
+	Comparison      int    `json:"comparison_only_primary"`
 	NotRaw          int    `json:"primary_not_raw_full_read"`
 	NotCap          *bool  `json:"no_adoption_cap"`
 	Support         int    `json:"support"`
@@ -488,7 +489,7 @@ func validateSixmileCohortIndex(index sixmileCohortIndex, old legacy21Projection
 			return errors.New("sixmile cohorts: per-cohort raw/masked/support projection differs")
 		}
 	}
-	if allPaths != 86 || raw != 84 || workflow != 85 || masked != 1 || metadata != 1 || index.Paths != allPaths || index.Raw != raw || index.Workflow != workflow || index.Masked != masked || index.Metadata != metadata || index.NotRaw != index.Expected-raw || index.Support != support || index.Saved != saved || index.Read != read || index.MaskedSupport != maskedSupport || index.Scan != scan || index.Unsaved != unsaved || index.SavedUnread != savedUnread || index.WorkflowSupport != read+maskedSupport || index.Unassessed != index.Expected-allPaths {
+	if allPaths != 86 || raw != 84 || workflow != 85 || masked != 1 || metadata != 1 || index.Comparison != 0 || index.Paths != allPaths || index.Raw != raw || index.Workflow != workflow || index.Masked != masked || index.Metadata != metadata || index.NotRaw != index.Expected-raw || index.Support != support || index.Saved != saved || index.Read != read || index.MaskedSupport != maskedSupport || index.Scan != scan || index.Unsaved != unsaved || index.SavedUnread != savedUnread || index.WorkflowSupport != read+maskedSupport || index.Unassessed != index.Expected-allPaths {
 		return errors.New("sixmile cohorts: aggregate coverage double-counted or conflated a reading category")
 	}
 	matched := map[string]bool{}
@@ -534,7 +535,7 @@ func validateSixmileCohortIndex(index sixmileCohortIndex, old legacy21Projection
 	return nil
 }
 
-func TestSixmileCohortIndexConservesReadingCategoriesAndAllLiveSourceRows(t *testing.T) {
+func TestHistoricalThreeCohortIndexPreservesItsReadingCategoriesAndBoundedSourceRows(t *testing.T) {
 	wanted := map[string]string{
 		"raw_includes_masked":      "sixmile cohorts: aggregate coverage double-counted or conflated a reading category",
 		"workflow_count":           "sixmile cohorts: aggregate coverage double-counted or conflated a reading category",
@@ -557,12 +558,14 @@ func TestSixmileCohortIndexConservesReadingCategoriesAndAllLiveSourceRows(t *tes
 				Entries  []cohortLedgerRow `json:"entries"`
 				Excluded []cohortLedgerRow `json:"excluded_entries"`
 			}
-			loadPublicReceipt(t, "skills-3080-sixmile-evaluation-index.json", &index)
+			index = loadThreeCohortSnapshot(t)
 			loadPublicReceipt(t, "skills-3080-sixmile-partial-evaluation.json", &old)
 			loadPublicReceipt(t, "skills-3080-sixmile-next45-evaluation.json", &extra)
 			loadPublicReceipt(t, "skills-3080-sixmile-next20-evaluation.json", &next20)
 			loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
-			rows := append(ledger.Entries, ledger.Excluded...)
+			// The expanded current-source test checks the entire ledger before
+			// filtering. This immutable snapshot only owns its original cohorts.
+			rows := oldThreeCohortRows(old, extra, next20, append(ledger.Entries, ledger.Excluded...))
 			switch kind {
 			case "raw_includes_masked":
 				index.Raw++
@@ -649,6 +652,7 @@ type sixmileReadProjection struct {
 		Workflow    int    `json:"workflow_body_read"`
 		Masked      int    `json:"masked_workflow_body"`
 		Metadata    int    `json:"metadata_only_primary"`
+		Comparison  int    `json:"comparison_only_primary"`
 		NotRaw      int    `json:"without_raw_full_read"`
 		NotAssessed int    `json:"without_assessment"`
 		Complete    *bool  `json:"complete"`
@@ -657,7 +661,7 @@ type sixmileReadProjection struct {
 
 func validateSixmileReadProjection(p sixmileReadProjection, index sixmileCohortIndex, old legacy21Projection, extra, next20 extra45Assessment) error {
 	a := p.Aggregate
-	if a.Source != "skills-3080-sixmile-evaluation-index.json" || a.Expected != index.Expected || a.Paths != index.Paths || a.Read != index.Raw || a.Workflow != index.Workflow || a.Masked != index.Masked || a.Metadata != index.Metadata || a.NotRaw != index.NotRaw || a.NotAssessed != index.Expected-index.Paths || !x45False(a.Complete) {
+	if a.Source != "skills-3080-sixmile-evaluation-index.json" || a.Expected != index.Expected || a.Paths != index.Paths || a.Read != index.Raw || a.Workflow != index.Workflow || a.Masked != index.Masked || a.Metadata != index.Metadata || a.Comparison != index.Comparison || a.NotRaw != index.NotRaw || a.NotAssessed != index.Expected-index.Paths || !x45False(a.Complete) {
 		return errors.New("sixmile read projection: aggregate is not the disjoint source index")
 	}
 	if p.Legacy.Source != "skills-3080-sixmile-partial-evaluation.json" || p.Legacy.Read != old.Read || !x45True(p.Legacy.Historical) || p.Extra.Source != "skills-3080-sixmile-next45-evaluation.json" || p.Extra.Read != extra.Counts.Raw || p.Extra.Workflow != extra.Counts.Workflow || p.Extra.Masked != extra.Counts.Masked || p.Extra.Metadata != extra.Counts.Metadata {

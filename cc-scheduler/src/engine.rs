@@ -1515,6 +1515,10 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 .iter()
                 .any(|author| cc_ask::job_policy::same_model(author, s(&selection["model"])));
             let owner_choice = selection["model_origin"] == "owner_request";
+            let quota_choice=crate::quota_recovery::prepare(&mut self.backend,&item,source,&jobs,&mut selection)?;
+            if quota_choice && conflict {
+                return Err(Error("ReviewModelConflict"));
+            }
             if explicit && owner_choice && conflict {
                 return Err(Error("ReviewModelConflict"));
             }
@@ -1522,7 +1526,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 && ["gpt-6.1-sol", "gpt-6-luna", "gpt-6-astra"]
                     .iter()
                     .any(|model| cc_ask::job_policy::same_model(s(&selection["model"]), model));
-            if !explicit || conflict || ai_writer_default {
+            if !quota_choice && (!explicit || conflict || ai_writer_default) {
                 let profile=cc_ask::job_policy::review_profile(&excluded).ok_or(Error("ReviewModelUnavailable"))?;
                 selection["model"]=json!(profile.model);
                 selection["model_origin"] = json!("policy");

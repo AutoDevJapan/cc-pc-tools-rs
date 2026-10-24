@@ -913,6 +913,7 @@ impl Context {
                 std::str::from_utf8(&bytes).unwrap()
             ));
         }
+        let quota_inventory=self.prepared_quota_inventory(a)?;
         // Intake uses the short publication gate; history reconciliation remains outside it.
         let _queue = self.queue_lock_for("registration", std::time::Duration::from_secs(60))?;
         // Shared lock order: queue -> job state (when present) -> ToDo. Hold through registration.
@@ -1121,6 +1122,7 @@ impl Context {
             if let Some(item) = item {
                 job["todo_dependency_generation"] =
                     json!(item["dependency_generation"].as_u64().unwrap_or(0));
+                job["todo_resume_generation"] = json!(item["resume_generation"].as_u64().unwrap_or(0).checked_add(1));
             }
             if a.value("subwork-of").is_some() || item.is_some_and(|i| i["subwork"].is_object()) {
                 let item = item.ok_or_else(|| Error::new("subwork ToDo is missing"))?;
@@ -1259,7 +1261,8 @@ impl Context {
             }
         }
         let conversation_source = json!({"model":job["model"],"effort":job["effort"]});
-        self.validate_review_launch(&mut job)?;
+        let quota_choice=self.inherit_quota_recovery(&mut job,&quota_inventory)?;
+        self.validate_review_launch(&mut job,quota_choice)?;
         cc_job_policy::apply_managed_launch_policy(&mut job);
         cc_job_policy::launch_context::reconcile_resume(&mut job, &conversation_source);
         if crate::capacity::review_job(&job)
@@ -1278,6 +1281,9 @@ impl Context {
                 .filter(|row| row["spec"].as_str().is_some_and(|spec| !spec.is_empty()))
             {
                 job["finite_review"] = json!({"todo_id":job["todo_id"],"spec":row["spec"],"launch_key":job["launch_key"]});
+                if quota_choice {
+                    job["finite_review"]["spec_sha256"]=job["quota_recovery"]["spec_sha256"].clone();
+                }
             }
         }
         let bad = codex_args(&job)

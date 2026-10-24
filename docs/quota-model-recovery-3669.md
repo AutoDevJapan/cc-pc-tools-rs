@@ -1,5 +1,6 @@
 # OAuth枠不足後の独立レビューの継続（ToDo3669）
 
+対応Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/453 。
 元3080 / Issue283 / PR447の独立レビューで、利用可能性を確認して選んだ
 Luna/policy/maxが通常レビューのOpusへ戻り、同じ枯渇枠で停止した。
 通常レビューの既定は維持し、確認済みのquota復旧だけを保持する。
@@ -30,6 +31,29 @@ Luna/policy/maxが通常レビューのOpusへ戻り、同じ枯渇枠で停止�
 - 原todo.jsonと原3661/job.jsonはguardがunverifiedとして読取りを許可しなかった。
   別パスやファイル属性による探索はしない。許可された親の集約証拠では、
   原3661はcancelled・旧process不在・レビュー未完と記録されている。
-- 現在: 受入固定と再現テストの追加。修復、Green、別モデルレビュー、CI、
+- Red: c4aadd85でschedulerのprepareがLunaをOpusへ戻すassertに失敗した。
+  完全ログSHA256: C16B9E3A7812FBDFD4244AE844EFF77D05F20B09BE7E139021A85D71CA5AF551。
+- 最初のGreen: `cargo nextest run --locked -p cc-job-policy -p cc-scheduler -p cc-jobs
+  -E 'test(quota_)'` は11件成功。保存したToDo行からのprepare、CLI登録、通常の
+  ToDo担当割当を通すqueue admissionをテスト用runtimeで確認した。
+  生のモデル実行・native観測・上流Fastの実効値はこのテストの対象外。
+  完全ログSHA256: 5D63E4F239272BCD624A3CEA1C847482E57CAC6EAFA951437A01F7442D0727DD。
+- 関連する4クレートの既存回帰テストを実行中。別モデルレビュー、CI、
   マージ、Windows更新、実復旧は未実施。
 - 自分のブランチはscheduler/todo-3669-oauth-3080のまま。変更していない。
+
+## 実装の境界
+
+新しいCLIの許可フラグは作らない。schedulerが元レビューのquota分類、固定仕様、
+所有世代、旧process不在、同じ権限とworktree、通常のOAuth quota更新を照合して
+今回のlaunch keyに結ぶ。jobsは準備済みの行からだけ受け取り、元ジョブと新しい
+OAuth集約観測を登録時とqueueの最終受付で再照合する。通常のToDo担当割当による
+1世代の更新は、そのjobとworker receiptが一致するときだけ対応する。
+
+作者との独立性は既存のreview sourceから別に照合する。枯渇したproviderを
+review_author_models / review_excluded_modelsへ追加しない。capacity/429の
+検出・切替回数・同モデルの再試行処理は変更しない。
+
+最終的なWindows配布はjobs/schedulerの通常の更新経路を使う。
+並行変更・実source/head・実行物を照合し、別モデルレビューとCIの完了後に行う。
+原3661の現在の待機や親PR447を、今回のテスト成功だけで解除・完了にはしない。

@@ -1812,6 +1812,7 @@ impl Default for Fake {
     }
 }
 impl Backend for Fake {
+    fn quota_recovery_inventory(&mut self) -> Result<Value> { Ok(self.quota_inventory.clone()) }
     fn current_product_allowed(&mut self, item: &Value, root: &str) -> bool {
         self.current_product
             .as_ref()

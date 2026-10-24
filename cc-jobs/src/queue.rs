@@ -1134,6 +1134,9 @@ impl Context {
             message: "queue history changed after admission preparation; retry".into(),
         })?;
         self.maintain_tool_yields(&snapshot);
+        let quota_inventory=if self.load(jid)?["quota_recovery"].is_object() {
+            self.rt.quota_recovery_inventory()
+        } else { Value::Null };
         let _gate = self.queue_lock_for("admit_configured", std::time::Duration::from_secs(60))?;
         cfg.max_running = self.effective_limit(&cfg)?;
         cfg.admission_limits = None;
@@ -1284,6 +1287,10 @@ impl Context {
         // Lock order remains queue -> job state -> ToDo, and the slow preparation
         // above does not hold the shared ToDo lock for ordinary jobs.
         let store = self.todo_store();
+        if job["quota_recovery"].is_object() && !store.exists() {
+            self.save_admission_wait(&mut job,&json!({"code":"quota_recovery_recheck","text":"元のToDoの再確認待ち"}))?;
+            return Ok(None);
+        }
         let _ready_store_lock = if _subwork_store_lock.is_none() {
             // The lock also serializes first creation of the store with running publication.
             if let Some(parent) = store.parent() {
@@ -1304,6 +1311,15 @@ impl Context {
         };
         if store.exists() {
             let db = self.read_json(&store)?;
+            if job["quota_recovery"].is_object() {
+                let row=db["items"].as_array().into_iter().flatten().find(|r| r["id"] == job["todo_id"]);
+                let result=row.ok_or_else(|| Error::new("quota recovery ToDo is missing"))
+                    .and_then(|row| self.recheck_quota_recovery(row,&mut job,&quota_inventory));
+                if result.is_err() {
+                    self.save_admission_wait(&mut job,&json!({"code":"quota_recovery_recheck","text":"元の実行とOAuth枠の再確認待ち"}))?;
+                    return Ok(None);
+                }
+            }
             let reason = self.dependency_reason(&db, &job, &jobs);
             if let Some(reason) = reason {
                 self.save_admission_wait(&mut job, &reason)?;

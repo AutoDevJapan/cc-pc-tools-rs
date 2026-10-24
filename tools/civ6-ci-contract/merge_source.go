@@ -129,18 +129,15 @@ func VerifyHistoricalInitial(ctx context.Context, p Plan, read ReadAPI) error {
 	if err := VerifyOldRoutedSource(ctx, read); err != nil {
 		return err
 	}
-	for _, w := range Workflows() {
-		want, err := contents(ctx, read, w.Path, OldRoutedHead)
-		if err != nil {
-			return err
-		}
-		got, err := contents(ctx, read, w.Path, p.WorkflowSHA)
-		if err != nil {
-			return err
-		}
-		if !bytes.Equal(want, got) || (w.Path == p.Workflow && Digest(got) != p.WorkflowDigest) {
-			return errors.New("historical executable workflow differs")
-		}
+	// The original admission already pinned the SDK merge context's digest.
+	// Recheck that stored digest against the verified old head; an orphaned
+	// synthetic merge commit need not remain publicly addressable for cleanup.
+	want, err := contents(ctx, read, p.Workflow, OldRoutedHead)
+	if err != nil {
+		return err
+	}
+	if Digest(want) != p.WorkflowDigest {
+		return errors.New("historical executable workflow digest differs")
 	}
 	var run Run
 	if err := read(ctx, fmt.Sprintf("repos/%s/actions/runs/%d/attempts/1", Repository, p.RunID), &run); err != nil {

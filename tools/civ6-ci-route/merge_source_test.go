@@ -94,6 +94,9 @@ func (f *mainFixture) call(ctx context.Context, method, path string, input, out 
 		return put(map[string]string{"sha": b.SHA})
 	case "POST " + apiPrefix + "/git/commits":
 		parents := append([]string(nil), m["parents"].([]string)...)
+		if m["message"] != "Merge fixed main 392e7f9 into PR149 and retain Windows CI routing" {
+			return errors.New("fixed merge purpose missing from commit message")
+		}
 		if len(parents) != 2 || parents[0] != contract.OldRoutedHead || parents[1] != contract.MergeMain {
 			return errors.New("not a normal ordered old-tip/main merge")
 		}

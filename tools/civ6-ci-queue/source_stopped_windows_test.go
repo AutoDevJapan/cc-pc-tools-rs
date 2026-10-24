@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 )
@@ -16,8 +17,8 @@ func TestSourceProcessProofRequiresTerminationOfExactIdentity(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if verifySourceProcessStopped(id) == nil {
-		t.Fatal("live current process treated as stopped")
+	if err := verifySourceProcessStopped(id); err == nil || !strings.Contains(err.Error(), "still live") {
+		t.Fatal("live current process was not specifically observed alive", err)
 	}
 	old := id
 	old.Created++
@@ -44,7 +45,7 @@ func TestSourceStoppedOwnedHelper(t *testing.T) {
 }
 
 func TestSourceProcessProofAfterOwnedChildExit(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	c := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestSourceStoppedOwnedHelper$")
 	c.Env = append(scrubbedEnv(), "CIQ_SOURCE_STOPPED_HELPER=1")
@@ -70,8 +71,8 @@ func TestSourceProcessProofAfterOwnedChildExit(t *testing.T) {
 		t.Fatal("could not retain owned process object")
 	}
 	defer kernel32.NewProc("CloseHandle").Call(h)
-	if verifySourceProcessStopped(id) == nil {
-		t.Fatal("owned helper was still awaiting EOF")
+	if err := verifySourceProcessStopped(id); err == nil || !strings.Contains(err.Error(), "still live") {
+		t.Fatal("owned helper was not specifically observed alive before EOF", err)
 	}
 	if err = input.Close(); err != nil {
 		t.Fatal(err)

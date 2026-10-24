@@ -212,3 +212,43 @@ func TestMergedMainContinuationUsesActualMergedGeneration(t *testing.T) {
 		t.Fatal("continuation fixture lost merged original source")
 	}
 }
+
+func TestHistoricalInitialUsesStoredOriginalDigestWithoutOrphanMergeRead(t *testing.T) {
+	for _, kind := range []string{"valid", "digest", "head", "attempt", "phase", "run", "repository"} {
+		t.Run(kind, func(t *testing.T) {
+			p, f := mergeFixture(t)
+			p.Head, p.Tree = OldRoutedHead, OldRoutedTree
+			prefix := "repos/" + Repository + "/"
+			v := f[prefix+"contents/"+p.Workflow+"?ref="+OldRoutedHead].(map[string]string)
+			body, _ := base64.StdEncoding.DecodeString(v["content"])
+			p.WorkflowDigest = Digest(body)
+			repo := f["repositories/1392152644"]
+			run := map[string]any{"id": p.RunID, "run_attempt": 1, "head_sha": p.Head, "head_branch": p.Branch, "event": "pull_request", "path": p.Workflow, "status": "completed", "repository": repo, "head_repository": repo, "pull_requests": []map[string]int{{"number": 149}}}
+			f[prefix+"actions/runs/7/attempts/1"] = run
+			switch kind {
+			case "digest":
+				p.WorkflowDigest = strings.Repeat("0", 64)
+			case "head":
+				p.Head = MergeMain
+			case "attempt":
+				p.Attempt = 2
+			case "phase":
+				p.Event = "workflow_dispatch"
+			case "run":
+				run["status"] = "in_progress"
+			case "repository":
+				run["head_repository"] = map[string]any{"id": int64(1), "full_name": Repository}
+			}
+			read := fixtureRead(f)
+			err := VerifyHistoricalInitial(context.Background(), p, func(ctx context.Context, path string, out any) error {
+				if strings.Contains(path, "/contents/") && strings.HasSuffix(path, "?ref="+p.ContextSHA) {
+					t.Fatal("historical cleanup depended on orphan merge commit")
+				}
+				return read(ctx, path, out)
+			})
+			if (err == nil) != (kind == "valid") {
+				t.Fatal("historical immutable source result differs", err)
+			}
+		})
+	}
+}

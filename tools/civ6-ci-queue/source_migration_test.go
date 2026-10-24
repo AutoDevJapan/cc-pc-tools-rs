@@ -173,6 +173,16 @@ func TestThreeUnexecutedSourceMigrationsPreserveBudgetAndOriginalEvidence(t *tes
 	if len(l.Budget.Initial) != 3 || len(l.Budget.Normal) != 0 || len(l.Budget.Continuation) != 0 || len(l.Budget.Replacements) != 0 || len(l.Budget.SourceMigrations) != 3 || len(l.Entries) != 6 || h.sd.n != creates || h.win.names() != calls || len(l.Fences) != 0 {
 		t.Fatal("migration changed budget or executed effects", l.Budget)
 	}
+	if l.Version != 2 {
+		t.Fatal("old version1 writer could erase the migration relations")
+	}
+	var oldWriter struct {
+		Version int `json:"version"`
+	}
+	wire, _ := os.ReadFile(h.d.Store.Path)
+	if json.Unmarshal(wire, &oldWriter) != nil || oldWriter.Version == 1 {
+		t.Fatal("original writer would accept new schema")
+	}
 	for i := range keys {
 		if h.d.MigrateUnexecutedSource(context.Background(), keys[i], next[i]) == nil || h.d.ReplaceExpired(context.Background(), keys[i], fmt.Sprintf("%d/2/9", before.Entries[keys[i]].Plan.RunID)) == nil {
 			t.Fatal("slot migrated twice or reinterpreted as expired")
@@ -482,23 +492,115 @@ func TestSourceMigrationRejectsUnverifiableSupervisorIdentity(t *testing.T) {
 }
 
 func TestSourceMigrationRejectsUnreadableProcessObservationBeforeAndAfterProof(t *testing.T) {
-	for _, later := range []bool{false, true} {
+	for _, completedChecks := range []int{0, 1, 2, 3} {
 		h, keys, next := migrationHarness(t)
 		calls := 0
 		h.d.VerifyStopped = func(ProcID) error {
 			calls++
-			if !later || calls > 2 {
+			if calls > 2*completedChecks {
 				return errors.New("access denied; process state unknown")
 			}
 			return nil
 		}
 		before, _ := json.Marshal(h.ledger())
+		censusCalls := 0
+		h.d.VerifyRetired = func(context.Context, *Entry, string) (CollectionObservation, error) {
+			censusCalls++
+			return CollectionObservation{}, nil
+		}
 		if h.d.MigrateUnexecutedSource(context.Background(), keys[0], next[0]) == nil {
 			t.Fatal("unreadable process treated as stopped")
 		}
 		after, _ := json.Marshal(h.ledger())
 		if !bytes.Equal(before, after) {
 			t.Fatal("unreadable process cleared fence or changed budget")
+		}
+		expectedCensus := completedChecks - 1
+		if expectedCensus < 0 {
+			expectedCensus = 0
+		}
+		if censusCalls != expectedCensus {
+			t.Fatal("failure did not reach the requested process checkpoint", completedChecks, censusCalls)
+		}
+		if _, err := os.Stat(h.d.home("entries", safeKey(keys[0]), "source-main392.json")); !os.IsNotExist(err) {
+			t.Fatal("process proof failure published source migration evidence")
+		}
+	}
+}
+
+func TestSourceMigrationResumesUncreatedProofAfterForeignFenceRetires(t *testing.T) {
+	h, keys, next := migrationHarness(t)
+	before := h.ledger()
+	if err := h.d.MigrateUnexecutedSource(context.Background(), keys[1], next[1]); err != nil {
+		t.Fatal(err)
+	}
+	path := h.d.home("entries", safeKey(keys[1]), "source-main392.json")
+	original, _ := os.ReadFile(path)
+	var p sourceMigrationProof
+	if json.Unmarshal(original, &p) != nil || p.OriginalFence != nil {
+		t.Fatal("foreign fence became immutable authority for another slot")
+	}
+	if err := h.d.Store.Update(func(l *Ledger) error { *l = *before; return nil }); err != nil {
+		t.Fatal(err)
+	}
+	if err := h.d.MigrateUnexecutedSource(context.Background(), keys[0], next[0]); err != nil {
+		t.Fatal(err)
+	}
+	if len(h.ledger().Fences) != 0 {
+		t.Fatal("Rust's own fence did not retire")
+	}
+	h.now = h.now.Add(time.Minute)
+	if err := h.d.MigrateUnexecutedSource(context.Background(), keys[1], next[1]); err != nil {
+		t.Fatal("unrelated retired fence made original proof unusable", err)
+	}
+	after, _ := os.ReadFile(path)
+	if !bytes.Equal(original, after) || len(h.ledger().Budget.SourceMigrations) != 2 {
+		t.Fatal("reused proof bytes or one-time slot relation changed")
+	}
+}
+
+func TestSourceMigrationKeepsBothCollectionObservationOutputs(t *testing.T) {
+	h, keys, next := migrationHarness(t)
+	var paths []string
+	h.d.VerifyRetired = func(_ context.Context, _ *Entry, dir string) (CollectionObservation, error) {
+		paths = append(paths, dir)
+		if err := os.MkdirAll(dir, 0700); err != nil {
+			return CollectionObservation{}, err
+		}
+		if err := os.WriteFile(filepath.Join(dir, "verification-output.json"), []byte(filepath.Base(dir)), 0600); err != nil {
+			return CollectionObservation{}, err
+		}
+		return CollectionObservation{Unreadable: len(paths)}, nil
+	}
+	if err := h.d.MigrateUnexecutedSource(context.Background(), keys[0], next[0]); err != nil {
+		t.Fatal(err)
+	}
+	if len(paths) != 2 || paths[0] == paths[1] {
+		t.Fatal("before and after outputs share one path")
+	}
+	for _, path := range paths {
+		b, err := os.ReadFile(filepath.Join(path, "verification-output.json"))
+		if err != nil || string(b) != filepath.Base(path) {
+			t.Fatal("collection observation overwritten")
+		}
+	}
+}
+
+func TestSourceMigrationRejectsCrossWorkflowAndExhaustedDeferrals(t *testing.T) {
+	for _, kind := range []string{"cross-workflow", "deferrals"} {
+		h, keys, next := migrationHarness(t)
+		if kind == "cross-workflow" {
+			next[0] = next[1]
+		} else {
+			_ = h.d.mutate(keys[0], func(_ *Ledger, e *Entry) { e.Queued.Deferrals = maxPrestartDeferrals })
+		}
+		before, _ := json.Marshal(h.ledger())
+		if h.d.MigrateUnexecutedSource(context.Background(), keys[0], next[0]) == nil {
+			t.Fatal("cross-workflow or exhausted deferral slot migrated")
+		}
+		after, _ := json.Marshal(h.ledger())
+		if !bytes.Equal(before, after) {
+			t.Fatal("refused migration changed ledger")
 		}
 	}
 }
@@ -518,8 +620,35 @@ func TestOrdinaryTickRecordsSourceMigrationRequirementWithoutConsumingBudget(t *
 		t.Fatal("tick admitted migration without proof")
 	}
 	for _, key := range next {
-		if l.Refusals[key].Reason != "source_migration_required" || l.Refusals[key].Next == "" {
+		if l.Refusals[key].Reason != "source_migration_required" || l.Refusals[key].Next != stamp(h.now.Add(5*time.Minute)) {
 			t.Fatal("migration wait or bounded backoff missing")
 		}
+	}
+	if again := h.tick(); again.Admitted != 0 || again.Scan.Skipped != 3 {
+		t.Fatal("same-time tick did not honor bounded refusal", again)
+	}
+	for _, key := range next {
+		if h.ledger().Refusals[key].Count != l.Refusals[key].Count {
+			t.Fatal("backoff repeated the same refusal")
+		}
+	}
+}
+
+func TestNewDepsWiresSourceProcessAbsenceVerifier(t *testing.T) {
+	root := t.TempDir()
+	path := filepath.Join(root, "config.json")
+	c := Config{Version: 1, Home: root, GH: writePinned(t, "gh", "fixed"), SafeDelete: writePinned(t, "safe-delete", "fixed")}
+	if err := writeAtomic(path, c); err != nil {
+		t.Fatal(err)
+	}
+	d, err := NewDeps(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if d.VerifyStopped == nil {
+		t.Fatal("normal CLI omitted source process verifier")
+	}
+	if err := d.VerifyStopped(ProcID{}); err != nil {
+		t.Fatal(err)
 	}
 }

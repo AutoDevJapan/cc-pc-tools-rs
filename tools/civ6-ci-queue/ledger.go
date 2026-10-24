@@ -174,7 +174,7 @@ func (s *Store) load() (*Ledger, error) {
 		return nil, errors.New("ledger unreadable or too large")
 	}
 	l := newLedger()
-	if e = json.Unmarshal(b, l); e != nil || l.Version != 1 {
+	if e = json.Unmarshal(b, l); e != nil || (l.Version != 1 && l.Version != 2) {
 		return nil, errors.New("ledger rejected")
 	}
 	if l.Entries == nil {

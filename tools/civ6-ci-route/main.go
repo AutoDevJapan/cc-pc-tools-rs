@@ -360,7 +360,11 @@ func publishUsing(ctx context.Context, dir string, request api, generate func(co
 		return e
 	}
 	var c struct{ SHA string }
-	if e = request(ctx, "POST", apiPrefix+"/git/commits", map[string]any{"message": "ci: run checks on isolated repository runners and retain workspace doctests", "tree": t.SHA, "parents": parents}, &c); e != nil {
+	message := "ci: run checks on isolated repository runners and retain workspace doctests"
+	if m.Generation == contract.MergeGeneration {
+		message = "Merge fixed main 392e7f9 into PR149 and retain Windows CI routing"
+	}
+	if e = request(ctx, "POST", apiPrefix+"/git/commits", map[string]any{"message": message, "tree": t.SHA, "parents": parents}, &c); e != nil {
 		return e
 	}
 	if !contract.ValidSHA(c.SHA) || c.SHA == m.Head {

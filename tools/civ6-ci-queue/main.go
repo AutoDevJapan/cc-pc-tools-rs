@@ -106,7 +106,7 @@ func main() {
 		if !keyPattern.MatchString(entry) || !keyPattern.MatchString(replacement) {
 			usage()
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 		defer cancel()
 		if err := d.MigrateUnexecutedSource(ctx, entry, replacement); err != nil {
 			fmt.Fprintln(os.Stderr, err)

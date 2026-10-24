@@ -60,25 +60,41 @@ func (d *Deps) MigrateUnexecutedSource(ctx context.Context, key, replacementKey 
 	}
 	ent := l.Entries[key]
 	wpath, fixed := originalSourceSlots[key]
-	if !fixed || ent == nil || ent.Key != key || ent.Plan.Key() != key || ent.OS != "Windows" || ent.Phase != "initial" ||
-		ent.Plan.Workflow != wpath || ent.Plan.PR != OriginalPR || ent.Plan.Event != "pull_request" || ent.Plan.Attempt != 1 ||
-		ent.Replaces != "" || ent.SourceReplaces != "" || ent.Official.Success ||
-		(ent.State != StateReserved && ent.State != StateNeedsRecovery) ||
-		d.Alive(ent.Started.Supervisor) || d.Alive(ent.Started.Helper) ||
-		len(l.Budget.Initial) != InitialBudget || len(l.Budget.SourceMigrations) >= InitialBudget ||
-		ent.Queued.Deferrals < 0 || ent.Queued.Deferrals >= maxPrestartDeferrals {
-		return errors.New("not one of the finite unexecuted original source slots")
+	if !fixed || ent == nil || ent.Key != key || ent.Plan.Key() != key {
+		return errors.New("original fixed source slot identity differs")
+	}
+	if ent.OS != "Windows" || ent.Phase != "initial" || ent.Plan.Workflow != wpath || ent.Plan.PR != OriginalPR || ent.Plan.Event != "pull_request" || ent.Plan.Attempt != 1 {
+		return errors.New("original source phase, workflow or Windows job differs")
+	}
+	if ent.Replaces != "" || ent.SourceReplaces != "" {
+		return errors.New("replacement entries cannot migrate again")
+	}
+	if ent.Official.Success || (ent.State != StateReserved && ent.State != StateNeedsRecovery) {
+		return errors.New("original source is successful, executed or no longer recoverable")
+	}
+	if d.Alive(ent.Started.Supervisor) || d.Alive(ent.Started.Helper) {
+		return errors.New("original source process is live")
+	}
+	if len(l.Budget.Initial) != InitialBudget || len(l.Budget.SourceMigrations) >= InitialBudget {
+		return errors.New("initial migration budget differs or is exhausted")
+	}
+	if ent.Queued.Deferrals < 0 || ent.Queued.Deferrals >= maxPrestartDeferrals {
+		return errors.New("original source deferral budget is exhausted or invalid")
 	}
 	checkStopped := func() error {
 		if d.VerifyStopped == nil {
 			return errors.New("source process absence verifier unavailable")
 		}
-		for _, id := range []ProcID{ent.Started.Supervisor, ent.Started.Helper} {
+		for _, process := range []struct {
+			name string
+			id   ProcID
+		}{{"supervisor", ent.Started.Supervisor}, {"helper", ent.Started.Helper}} {
+			id := process.id
 			if (id.PID == 0) != (id.Created == 0) {
-				return errors.New("source process identity incomplete")
+				return fmt.Errorf("source %s pid %d identity incomplete", process.name, id.PID)
 			}
 			if err := d.VerifyStopped(id); err != nil {
-				return err
+				return fmt.Errorf("source %s pid %d: %w", process.name, id.PID, err)
 			}
 		}
 		return nil
@@ -200,7 +216,7 @@ func (d *Deps) MigrateUnexecutedSource(ctx context.Context, key, replacementKey 
 		return err
 	}
 	proof := sourceMigrationProof{Version: 1, Generation: contract.MergeGeneration, Original: ent, Replacement: next, Cancelled: cancelled, ReplacementJob: replacementJob, NeverCreated: neverCreatedSource(ent), At: stamp(d.Now())}
-	if f, ok := l.Fences["Windows"]; ok {
+	if f, ok := l.Fences["Windows"]; ok && f.Key == key {
 		proof.OriginalFence = &f
 	}
 	// Keep any original result bytes, including a supervisor that stopped before
@@ -219,7 +235,7 @@ func (d *Deps) MigrateUnexecutedSource(ctx context.Context, key, replacementKey 
 	} else if !os.IsNotExist(se) || !proof.NeverCreated {
 		return errors.New("original source failure result unavailable")
 	}
-	verifyLocal := func() (CollectionObservation, error) {
+	verifyLocal := func(observationDir string) (CollectionObservation, error) {
 		if err := checkStopped(); err != nil {
 			return CollectionObservation{}, err
 		}
@@ -237,7 +253,7 @@ func (d *Deps) MigrateUnexecutedSource(ctx context.Context, key, replacementKey 
 		if err != nil {
 			return CollectionObservation{}, err
 		}
-		obs, err := d.VerifyRetired(ctx, ent, dir)
+		obs, err := d.VerifyRetired(ctx, ent, observationDir)
 		if err != nil {
 			return obs, err
 		}
@@ -254,13 +270,13 @@ func (d *Deps) MigrateUnexecutedSource(ctx context.Context, key, replacementKey 
 		proof.Retired = &retired
 		return obs, nil
 	}
-	if proof.Census, err = verifyLocal(); err != nil {
+	if proof.Census, err = verifyLocal(filepath.Join(dir, "source-before")); err != nil {
 		return err
 	}
 	if err = check(); err != nil {
 		return err
 	}
-	if proof.CensusAfter, err = verifyLocal(); err != nil {
+	if proof.CensusAfter, err = verifyLocal(filepath.Join(dir, "source-after")); err != nil {
 		return err
 	}
 	if err = check(); err != nil {
@@ -280,12 +296,17 @@ func (d *Deps) MigrateUnexecutedSource(ctx context.Context, key, replacementKey 
 	if err = ctx.Err(); err != nil {
 		return err
 	}
-	body, err := saveSourceMigrationProof(filepath.Join(dir, "source-main392.json"), proof)
+	proofPath := filepath.Join(dir, "source-main392.json")
+	body, err := saveSourceMigrationProof(proofPath, proof)
 	if err != nil {
 		return err
 	}
+	readback, err := boundedRegular(proofPath, 512<<10)
+	if err != nil || !bytes.Equal(body, readback) {
+		return errors.New("published source proof readback differs")
+	}
 	var durable sourceMigrationProof
-	if json.Unmarshal(body, &durable) != nil {
+	if json.Unmarshal(readback, &durable) != nil {
 		return errors.New("durable source proof cannot be read")
 	}
 	return d.Store.Update(func(current *Ledger) error {
@@ -297,6 +318,9 @@ func (d *Deps) MigrateUnexecutedSource(ctx context.Context, key, replacementKey 
 		if !bytes.Equal(before, after) {
 			return errors.New("acceptance ledger changed during source proof")
 		}
+		// Version 2 prevents an older writer (which rejects !=1) from silently
+		// dropping the new migration relation during a subsequent tick/save.
+		current.Version = 2
 		current.Budget.SourceMigrations = append(current.Budget.SourceMigrations, SourceMigrationRec{key, replacementKey, contract.MergeGeneration, digestHexBytes(body)})
 		current.Entries[key].State = StateRefused
 		current.Entries[replacementKey] = &Entry{Key: replacementKey, Plan: next, OS: "Windows", Phase: "initial", State: StateReserved,

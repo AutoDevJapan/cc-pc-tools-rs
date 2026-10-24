@@ -23,6 +23,8 @@ mod registration_resume_tests;
 mod workspace_checkpoint_tests;
 #[path = "support/workspace_relocation.rs"]
 mod workspace_relocation_tests;
+#[path = "support/quota_recovery.rs"]
+mod quota_recovery_tests;
 
 #[test]
 fn review_preparation_failures_stop_after_three_and_recover_on_new_evidence() {
@@ -1712,6 +1714,7 @@ fn test_orphan_minimum_age_and_missing_job() {
 }
 
 struct Fake {
+    quota_inventory: Value,
     real_workspaces: bool,
     prepare_registry: Option<PathBuf>,
     current_product: Option<(Value, String)>,
@@ -1760,6 +1763,7 @@ struct Fake {
 impl Default for Fake {
     fn default() -> Self {
         Self {
+            quota_inventory: Value::Null,
             real_workspaces: false,
             prepare_registry: None,
             current_product: None,

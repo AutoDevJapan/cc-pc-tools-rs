@@ -79,7 +79,15 @@ func conversationTest(t *testing.T, wait bool) *conversationFixture {
 					sender = args[i+1]
 				}
 			}
-			b, _ := json.Marshal(conversationProof{Domain: "new-owner-recovery-messages", ReadOnly: true, Source: "discord-api-v10", RequestID: sender, Thread: f.question, Owner: r.State.Destination.Owner, Question: f.question, Created: f.created, Progress: "610", Body: "aかbを選んでください。", Decision: f.decision, Replies: f.replies})
+			versions := map[string]conversationReplyVersion{}
+			for _, reply := range f.replies {
+				v := conversationReplyVersion{}
+				if edited, ok := f.edited[reply.Message]; ok {
+					v.Edited = &edited
+				}
+				versions[reply.Message] = v
+			}
+			b, _ := json.Marshal(conversationProof{Domain: "new-owner-recovery-messages", ReadOnly: true, Source: "discord-api-v10", RequestID: sender, Thread: f.question, Owner: r.State.Destination.Owner, Question: f.question, Created: f.created, Progress: "610", Body: "aかbを選んでください。", Decision: f.decision, Replies: f.replies, ReplyVersions: versions})
 			return string(b), nil
 		case "question-wait":
 			if f.waitFailure {
@@ -120,6 +128,42 @@ func conversationTest(t *testing.T, wait bool) *conversationFixture {
 			if readJSON(args[3], 1<<20, &proof) != nil || proof.Todo != "42" || proof.Message == "" || proof.Author != r.State.Destination.Owner || proof.QuestionSHA != f.q.ReceiptSHA {
 				return "", errors.New("wrong answer association")
 			}
+			if argValue(args, "--delivery-note-file") != "" {
+				data, err := os.ReadFile(argValue(args, "--delivery-note-file"))
+				if err != nil {
+					return "", err
+				}
+				var expected map[string]any
+				if readJSON(argValue(args, "--expected-state-file"), maxTodo, &expected) != nil {
+					return "", errors.New("missing delivery snapshot")
+				}
+				var db map[string]any
+				if readJSON(r.TodoPath, maxTodo, &db) != nil {
+					return "", errors.New("missing fixture task")
+				}
+				current := db["items"].([]any)[0].(map[string]any)
+				if canonicalHash(current) != canonicalHash(expected) || !strings.HasPrefix(string(data), current["note"].(string)+"\n\n") {
+					return "", errors.New("conversation_note_changed")
+				}
+				f.mutateTodo(t, func(row map[string]any) {
+					wait := row["owner_question_wait"]
+					if wait == nil {
+						wait = row["owner_question_answer_receipts"].([]any)[0].(map[string]any)["wait"]
+					}
+					var saved []any
+					if row["owner_question_delivery_receipts"] != nil {
+						saved = row["owner_question_delivery_receipts"].([]any)
+					}
+					b, _ := os.ReadFile(args[3])
+					row["owner_question_delivery_receipts"] = append(saved, map[string]any{"domain": "todo-owner-question-delivery-receipt-v1", "answer": proof, "answer_file_sha256": bytesHash(b), "wait": wait})
+					row["note"] = string(data)
+					if row["scheduler"] == nil {
+						row["scheduler"] = map[string]any{}
+					}
+					row["scheduler"].(map[string]any)["owner_instruction"] = string(data)
+				})
+				return "", nil
+			}
 			f.mutateTodo(t, func(row map[string]any) {
 				wait := row["owner_question_wait"]
 				marker := fmt.Sprintf("\n[discord-conversation-question-v1 request_id=%s sha256=%s]", proof.RequestID, proof.QuestionSHA)
@@ -128,6 +172,10 @@ func conversationTest(t *testing.T, wait bool) *conversationFixture {
 				delete(row, "owner_question_wait")
 				b, _ := os.ReadFile(args[3])
 				row["owner_question_answer_receipts"] = []any{map[string]any{"answer": proof, "answer_file_sha256": bytesHash(b), "wait": wait}}
+				if row["scheduler"] == nil {
+					row["scheduler"] = map[string]any{}
+				}
+				row["scheduler"].(map[string]any)["owner_instruction"] = row["note"]
 			})
 			return "", nil
 		case "recovery-log":

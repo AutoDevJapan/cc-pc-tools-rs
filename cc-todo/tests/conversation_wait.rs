@@ -899,7 +899,20 @@ fn current_owner_job_stops_are_preserved_before_wait_and_before_answer() {
     )
     .unwrap();
     f.ok("question-answer", "--answer-file", &a_file);
-    assert_work_preserved(&base, &f.read());
+    // A live owner is never claimed or restarted: the full answer is only parked
+    // as the pending instruction for the next regular launch.
+    let mut after = f.read();
+    assert!(
+        after["items"][0]["scheduler"]["owner_instruction"]
+            .as_str()
+            .is_some_and(|text| text.contains("元ToDo 1の質問への本人回答")),
+        "the live owner's answer was not parked for the next launch"
+    );
+    after["items"][0]["scheduler"]
+        .as_object_mut()
+        .unwrap()
+        .remove("owner_instruction");
+    assert_work_preserved(&base, &after);
 }
 
 #[test]

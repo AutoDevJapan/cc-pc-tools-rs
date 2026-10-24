@@ -187,7 +187,7 @@ func TestHistoryReadAdditionalContinuation(t *testing.T) {
 	raw, _ := os.ReadFile(first)
 	var original map[string]any
 	_ = json.Unmarshal(raw, &original)
-	for _, mode := range []string{"valid", "type", "supported_type", "starter", "parent", "next", "scope", "bot"} {
+	for _, mode := range []string{"valid", "type", "supported_type", "starter", "parent", "next", "scope", "bot", "legacy_downgrade"} {
 		t.Run(mode, func(t *testing.T) {
 			var prior map[string]any
 			_ = json.Unmarshal(raw, &prior)
@@ -206,6 +206,10 @@ func TestHistoryReadAdditionalContinuation(t *testing.T) {
 				prior["scope_sha256"] = "changed"
 			case "bot":
 				prior["bot_id"] = "999"
+			case "legacy_downgrade":
+				delete(prior, "channel_type")
+				delete(prior, "parent_id")
+				prior["starter"] = f.responses["/channels/100/messages/100"]
 			}
 			b, _ := json.Marshal(prior)
 			cursor := filepath.Join(filepath.Dir(first), mode+"-cursor.private.json")
@@ -239,10 +243,10 @@ func TestHistoryReadAdditionalContinuation(t *testing.T) {
 }
 
 func TestHistoryReadAdditionalAPIFailuresAndIdentity(t *testing.T) {
-	for _, mode := range []string{"empty", "history_403", "starter_403", "foreign_starter", "owner_as_bot", "configured_bot_as_human"} {
+	for _, mode := range []string{"empty", "history_403", "starter_403", "starter_404", "foreign_starter", "owner_as_bot", "configured_bot_as_human"} {
 		t.Run(mode, func(t *testing.T) {
 			kind, parent := 0, 0
-			if mode == "starter_403" || mode == "foreign_starter" {
+			if mode == "starter_403" || mode == "starter_404" || mode == "foreign_starter" {
 				kind, parent = 11, 15
 			}
 			f := historyChannelFixture(t, kind, parent)
@@ -253,6 +257,8 @@ func TestHistoryReadAdditionalAPIFailuresAndIdentity(t *testing.T) {
 				f.status["/channels/100/messages"] = 403
 			case "starter_403":
 				f.status["/channels/100/messages/100"] = 403
+			case "starter_404":
+				f.status["/channels/100/messages/100"] = 404
 			case "foreign_starter":
 				m := f.responses["/channels/100/messages/100"].(map[string]any)
 				m["author"] = map[string]any{"id": "997", "bot": false}
@@ -328,7 +334,7 @@ func TestHistoryReadAdditionalScopeBoundsBeforeLoad(t *testing.T) {
 
 func TestHistoryReadLegacyForumQualification(t *testing.T) {
 	for _, parent := range []string{"40", requestForum} {
-		for _, mode := range []string{"valid", "creator", "permissions"} {
+		for _, mode := range []string{"valid", "creator", "permissions", "parent_type", "starter_author"} {
 			t.Run(parent+"/"+mode, func(t *testing.T) {
 				load, paths := historyFixture(t, func(path string, value any) any {
 					if path == "/channels/100" {
@@ -340,6 +346,12 @@ func TestHistoryReadLegacyForumQualification(t *testing.T) {
 					}
 					if path == "/guilds/10/roles" && mode == "permissions" {
 						return []any{}
+					}
+					if path == "/channels/"+parent && mode == "parent_type" {
+						value.(map[string]any)["type"] = 0
+					}
+					if path == "/channels/100/messages/100" && mode == "starter_author" {
+						value.(map[string]any)["author"] = map[string]any{"id": "99", "bot": false}
 					}
 					return value
 				})
@@ -367,7 +379,7 @@ func TestHistoryReadLegacyForumQualification(t *testing.T) {
 						t.Fatal("legacy constraint relaxed")
 					}
 					for _, path := range *paths {
-						if strings.Contains(path, "/messages") {
+						if strings.Contains(path, "/messages?") || (mode != "starter_author" && strings.Contains(path, "/messages/")) {
 							t.Fatal("legacy denial read a body")
 						}
 					}

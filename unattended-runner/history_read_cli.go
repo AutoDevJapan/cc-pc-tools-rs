@@ -407,18 +407,26 @@ func readHistoryPage(ctx context.Context, r *Runner, scope historyReadScope, cur
 		return page, bad
 	}
 	page.ChannelType, page.Parent = channel.Type, channel.Parent
-	if prior != nil && prior.Thread == page.Thread && prior.ChannelType != nil && (*prior.ChannelType != *page.ChannelType || prior.Parent != page.Parent) {
+	thread := *channel.Type == 10 || *channel.Type == 11 || *channel.Type == 12
+	forumPost := *channel.Type == 11 && channel.ParentType != nil && (*channel.ParentType == 15 || *channel.ParentType == 16)
+	legacy := thread && (channel.Parent == r.State.Destination.Forum || channel.Parent == requestForum)
+	if legacy && (!forumPost || (channel.Owner != page.Bot && channel.Owner != scope.Owner)) {
 		return page, bad
 	}
-	thread := *channel.Type == 10 || *channel.Type == 11 || *channel.Type == 12
-	legacy := thread && (channel.Parent == r.State.Destination.Forum || channel.Parent == requestForum)
-	if legacy && (*channel.Type != 11 || (channel.Owner != page.Bot && channel.Owner != scope.Owner)) {
-		return page, bad
+	if prior != nil && prior.Thread == page.Thread {
+		if prior.ChannelType == nil {
+			// Genuine old v1 pages could only originate in the two legacy forums.
+			if !legacy {
+				return page, bad
+			}
+		} else if *prior.ChannelType != *page.ChannelType || prior.Parent != page.Parent {
+			return page, bad
+		}
 	}
 	// Forum/media posts have a same-ID starter. Private threads and ordinary
 	// channels need no such message; their access was proved before any body GET.
 	// For other public threads, the page preserves actual reply references.
-	if *channel.Type == 11 && channel.ParentType != nil && (*channel.ParentType == 15 || *channel.ParentType == 16) {
+	if forumPost {
 		var starter historyReadMessage
 		if r.get(ctx, "/channels/"+page.Thread+"/messages/"+page.Thread, &starter) != nil || !historyMessageMetadataValid(starter.Message, page.Thread, r) || starter.ID != page.Thread {
 			return page, bad

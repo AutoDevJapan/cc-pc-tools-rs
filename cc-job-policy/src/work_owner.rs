@@ -268,6 +268,26 @@ pub fn reconcile_todos(db: &mut Value, jobs: &[Value]) -> Vec<i64> {
     reconcile_todos_if(db, jobs, |_| true)
 }
 
+/// The exact recorded worker set of an original relocation; shared by its
+/// admission proof and ordinary ownership reconciliation.
+pub fn relocation_worker_ids(item: &Value, jobs: &[Value]) -> Value {
+    let mut ids: Vec<_> = jobs
+        .iter()
+        .filter(|job| {
+            job["todo_id"] == item["id"]
+                || job["related_todo_ids"]
+                    .as_array()
+                    .is_some_and(|ids| ids.contains(&item["id"]))
+                || item["jobs"]
+                    .as_array()
+                    .is_some_and(|ids| ids.contains(&job["id"]))
+        })
+        .map(|job| s(job, "id").to_owned())
+        .collect();
+    ids.sort();
+    json!(ids)
+}
+
 // A qualified, not-yet-used scheduler relocation reserves its real target.
 // Missing or changed evidence is deferred to the scheduler's strict gate;
 // never turn the historical shared cwd into a new completion prerequisite.
@@ -303,21 +323,7 @@ fn relocated_identity(item: &Value, jobs: &[Value]) -> Option<Value> {
     {
         return None;
     }
-    let mut ids: Vec<_> = jobs
-        .iter()
-        .filter(|job| {
-            job["todo_id"] == item["id"]
-                || job["related_todo_ids"]
-                    .as_array()
-                    .is_some_and(|ids| ids.contains(&item["id"]))
-                || item["jobs"]
-                    .as_array()
-                    .is_some_and(|ids| ids.contains(&job["id"]))
-        })
-        .map(|job| s(job, "id").to_owned())
-        .collect();
-    ids.sort();
-    if json!(ids) != receipt["worker_ids"] {
+    if relocation_worker_ids(item, jobs) != receipt["worker_ids"] {
         return None;
     }
     let owner = checkout(s(&item["scheduler"], "worktree"));

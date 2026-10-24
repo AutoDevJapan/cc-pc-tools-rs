@@ -555,7 +555,11 @@ fn relocation_missing_latest_source_never_falls_back_to_the_shared_writer() {
             &row,
             &f.e.backend.records,
         );
-        assert!(result.is_err(), "fallback={fallback}: {result:?}");
+        assert_eq!(
+            result.unwrap_err().0,
+            "RelocationSourceMissing",
+            "fallback={fallback}"
+        );
         assert_eq!(f.get(1), row);
     }
 }
@@ -657,6 +661,17 @@ fn relocation_normal_owner_reconciliation_keeps_the_dedicated_reservation() {
     let changed = cc_job_policy::work_owner::reconcile_todos(&mut db, &f.e.backend.records);
     assert!(!changed.contains(&1), "{changed:?} {db}");
     assert_eq!(db, before);
+    let mut contender = job("dedicated-owner", 3, "running");
+    contender["todo_id"] = json!(3);
+    contender["project"] = json!("cc-pc-tools-rs");
+    contender["cwd"] = json!(request.worktree);
+    contender["work_owner"] = cc_job_policy::work_owner::checkout(&request.worktree);
+    let mut owner_row = item(3, "cc-pc-tools-rs", "doing", &[]);
+    owner_row["jobs"] = json!(["dedicated-owner"]);
+    push(&mut db["items"], owner_row);
+    f.e.backend.records.push(contender);
+    assert!(cc_job_policy::work_owner::reconcile_todos(&mut db, &f.e.backend.records).contains(&1));
+    assert_eq!(db["items"][0]["wait_on"], json!([3]));
 }
 
 #[test]
@@ -792,13 +807,17 @@ fn relocation_explicitly_rechecks_terminal_metadata_without_replacing_original_o
     .unwrap();
     f.e.backend.records[0]["queue_unreadable"] = json!(false);
     let row = f.get(1);
-    assert!(cc_scheduler::preparation::recover_workspace(
-        &mut SystemRunner,
-        f.repo.to_str().unwrap(),
-        &row,
-        &f.e.backend.records
-    )
-    .is_err());
+    assert_eq!(
+        cc_scheduler::preparation::recover_workspace(
+            &mut SystemRunner,
+            f.repo.to_str().unwrap(),
+            &row,
+            &f.e.backend.records
+        )
+        .unwrap_err()
+        .0,
+        "RelocationReceiptMismatch"
+    );
     let refreshed = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
     assert_eq!(refreshed["eligible"], true, "{refreshed}");
     assert_eq!(refreshed["already_recorded"], false);
@@ -826,4 +845,172 @@ fn relocation_explicitly_rechecks_terminal_metadata_without_replacing_original_o
         relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap()["reason"],
         "RelocationSourceOwnership"
     );
+}
+
+#[test]
+fn relocation_successor_checkpoint_and_retry_use_the_successors_branch() {
+    let (mut f, request, _) = fixture();
+    let checked = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
+    relocate(
+        &mut f.e,
+        &mut SystemRunner,
+        &request,
+        Some(s(&checked["state_sha256"])),
+    )
+    .unwrap();
+    f.e.backend.real_workspaces = true;
+    f.dispatch();
+    assert_eq!(f.e.backend.launched.len(), 1);
+    let worker = s(&f.get(1)["scheduler"]["job"]).to_owned();
+    let target = Path::new(&request.worktree);
+    let assigned_owner = cc_job_policy::work_owner::checkout(&request.worktree);
+    let record =
+        f.e.backend
+            .records
+            .iter_mut()
+            .find(|job| job["id"] == worker)
+            .unwrap();
+    record["cwd"] = json!(request.worktree);
+    record["project"] = json!("cc-pc-tools-rs");
+    record["work_owner"] = assigned_owner;
+    let next = "scheduler/todo-1-successor-followup";
+    run_git(&mut SystemRunner, target, &["switch", "-c", next]).unwrap();
+    let checkpoint = cc_scheduler::workspace_checkpoint::Request {
+        id: 1,
+        job: worker.clone(),
+        expected_branch: request.branch.clone(),
+        branch: next.into(),
+        head: request.head.clone(),
+    };
+    assert_eq!(
+        cc_scheduler::workspace_checkpoint::checkpoint(&mut f.e, &mut SystemRunner, &checkpoint)
+            .unwrap()["saved"],
+        true
+    );
+    f.e.backend
+        .records
+        .iter_mut()
+        .find(|job| job["id"] == worker)
+        .unwrap()["status"] = json!("failed");
+    f.reconcile();
+    let row = f.get(1);
+    let recovered = cc_scheduler::preparation::recover_workspace(
+        &mut SystemRunner,
+        f.repo.to_str().unwrap(),
+        &row,
+        &f.e.backend.records,
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(recovered["branch"], next);
+    f.e.backend.clock = T + 601.;
+    f.dispatch();
+    assert_eq!(
+        f.e.backend.launched.len(),
+        2,
+        "{} {:?}",
+        f.e.report,
+        f.e.failures
+    );
+    assert_eq!(f.e.backend.launched[1]["item"]["scheduler"]["branch"], next);
+}
+
+#[test]
+fn relocation_requalification_no_longer_needs_the_finished_parent_or_shared_checkout() {
+    let (mut f, mut request, shared) = fixture();
+    let checked = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
+    relocate(
+        &mut f.e,
+        &mut SystemRunner,
+        &request,
+        Some(s(&checked["state_sha256"])),
+    )
+    .unwrap();
+    let old_spec = PathBuf::from(s(&f.get(1)["spec"]));
+    let text = format!(
+        "{}\nContinue after the shared owner finished.\n",
+        fs::read_to_string(&old_spec).unwrap()
+    );
+    let reference = f.repo.join("retained-continuation.md");
+    fs::write(&reference, &text).unwrap();
+    let new_spec = old_spec
+        .parent()
+        .unwrap()
+        .join(format!("1-{}.md", "c".repeat(32)));
+    fs::write(&new_spec, &text).unwrap();
+    f.e.edit(&json!(1), |row| {
+        push(&mut row["spec_history"], json!({"spec":old_spec}));
+        row["spec"] = json!(new_spec);
+    })
+    .unwrap();
+    f.e.edit(&json!(2), |row| {
+        row["status"] = json!("done");
+        row["scheduler"]["job"] = Value::Null;
+        row["scheduler"]["last_job"] = json!("parent");
+    })
+    .unwrap();
+    f.e.backend.records.retain(|job| job["id"] != "parent");
+    f.e.backend.ps.remove(&2);
+    // This is an isolated synthetic checkout, never a production task's files.
+    run_git(
+        &mut SystemRunner,
+        &f.repo,
+        &["worktree", "remove", "--force", shared.to_str().unwrap()],
+    )
+    .unwrap();
+    request.spec_reference = reference.to_str().unwrap().into();
+    request.spec_sha256 = cc_job_policy::product_retry::digest(text.as_bytes());
+    let checked = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
+    assert_eq!(checked["eligible"], true, "{checked}");
+    assert_eq!(
+        relocate(
+            &mut f.e,
+            &mut SystemRunner,
+            &request,
+            Some(s(&checked["state_sha256"]))
+        )
+        .unwrap()["saved"],
+        true
+    );
+    let row = f.get(1);
+    let recovered = cc_scheduler::preparation::recover_workspace(
+        &mut SystemRunner,
+        f.repo.to_str().unwrap(),
+        &row,
+        &f.e.backend.records,
+    )
+    .unwrap()
+    .unwrap();
+    assert_eq!(recovered["branch"], request.branch);
+    assert_eq!(row["spec"], json!(new_spec));
+    struct ScopeProbe {
+        blocked: String,
+        seen: std::sync::Arc<std::sync::Mutex<Vec<String>>>,
+    }
+    impl Runner for ScopeProbe {
+        fn run(&mut self, call: &Invocation) -> Result<Output> {
+            if let Some(at) = call.args.iter().position(|arg| arg == "--guard-path") {
+                let path = call.args[at + 1].clone();
+                self.seen.lock().unwrap().push(path.clone());
+                return Ok(Output{code:0,stdout:json!({"client_resource":path==self.blocked,"classification_unverified":false,"access_allowed":path!=self.blocked}).to_string(),stderr:String::new()});
+            }
+            SystemRunner.run(call)
+        }
+    }
+    let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let mut backend = RealBackend::new(f.e.root.clone());
+    backend.runner = Box::new(ScopeProbe {
+        blocked: shared.to_str().unwrap().into(),
+        seen: seen.clone(),
+    });
+    let recovered = backend
+        .workspace_recovery(f.repo.to_str().unwrap(), &row, &f.e.backend.records)
+        .unwrap()
+        .unwrap();
+    assert_eq!(recovered["branch"], request.branch);
+    let seen = seen.lock().unwrap();
+    assert!(seen
+        .iter()
+        .any(|path| Path::new(path) == Path::new(&request.worktree)));
+    assert!(!seen.iter().any(|path| Path::new(path) == shared));
 }

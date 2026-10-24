@@ -1,5 +1,6 @@
 //! Explicit, provenance-checked relocation of one formerly shared repair task.
 use crate::{backend::Backend, common::*, engine::Scheduler};
+use cc_job_policy::work_owner::relocation_worker_ids as worker_ids;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::{
@@ -78,20 +79,6 @@ fn normalized_row(row: &Value) -> Value {
     row
 }
 
-fn worker_ids(item: &Value, jobs: &[Value]) -> Value {
-    let mut ids: Vec<_> = jobs
-        .iter()
-        .filter(|job| {
-            job["todo_id"] == item["id"]
-                || arr(&job["related_todo_ids"]).contains(&item["id"])
-                || arr(&item["jobs"]).contains(&job["id"])
-        })
-        .map(|job| s(&job["id"]).to_owned())
-        .collect();
-    ids.sort();
-    json!(ids)
-}
-
 fn unused(item: &Value, jobs: &[Value]) -> bool {
     let receipt = &item["scheduler"]["workspace_relocation"];
     item["jobs"] == receipt["original_jobs"]
@@ -166,6 +153,7 @@ struct Proof {
     target: PathBuf,
     target_owner: Value,
     worker_ids: Value,
+    shared_proof: Value,
     _files: (File, File),
 }
 
@@ -240,18 +228,25 @@ fn verify<B: Backend>(
         .iter()
         .find(|j| j["id"] == request.source_job)
         .ok_or(Error("RelocationSourceMissing"))?;
-    let owner = jobs
-        .iter()
-        .find(|j| j["id"] == request.shared_owner_job)
-        .ok_or(Error("RelocationSharedOwnerMissing"))?;
+    let receipt = &item["scheduler"]["workspace_relocation"];
+    let relocated = receipt.is_object();
+    let owner = if relocated {
+        None
+    } else {
+        Some(
+            jobs.iter()
+                .find(|j| j["id"] == request.shared_owner_job)
+                .ok_or(Error("RelocationSharedOwnerMissing"))?,
+        )
+    };
+    let shared_owner = owner
+        .map(identity)
+        .unwrap_or_else(|| receipt["shared_proof"]["job"].clone());
     if qualified.is_some_and(|proof| {
-        proof.binding["source"] != identity(source)
-            || proof.binding["shared_owner"] != identity(owner)
+        proof.binding["source"] != identity(source) || proof.binding["shared_owner"] != shared_owner
     }) {
         return Err(Error("RelocationStateChanged"));
     }
-    let receipt = &item["scheduler"]["workspace_relocation"];
-    let relocated = receipt.is_object();
     if relocated
         && (receipt["schema"] != "scheduler-workspace-relocation-v1"
             || receipt["request"]["source_job"] != request.source_job
@@ -261,6 +256,16 @@ fn verify<B: Backend>(
     }
     if relocated && stable_identity(source) != stable_identity(&receipt["source_identity"]) {
         return Err(Error("RelocationSourceOwnership"));
+    }
+    if relocated
+        && (["shared_owner_job", "source_branch", "source_head"]
+            .iter()
+            .any(|field| receipt["request"][*field] != json!(request)[*field])
+            || receipt["shared_proof"]["job"]["id"] != request.shared_owner_job
+            || receipt["shared_proof"]["git"]["branch"] != request.source_branch
+            || receipt["shared_proof"]["git"]["head"] != request.source_head)
+    {
+        return Err(Error("RelocationReceiptMismatch"));
     }
     if source["todo_id"] != item["id"]
         || source["project"] != item["project"]
@@ -279,7 +284,11 @@ fn verify<B: Backend>(
     } else {
         &item["scheduler"]
     };
-    let shared = resolve(Path::new(s(&source["cwd"])))?;
+    let shared = if relocated {
+        PathBuf::from(s(&receipt["shared_proof"]["path"]))
+    } else {
+        resolve(Path::new(s(&source["cwd"])))?
+    };
     let target = resolve(Path::new(&request.worktree))?;
     let base = resolve(Path::new(&repo))?;
     let paths = json!({"base":base,"shared":shared,"target":target,"reference":resolve(Path::new(&request.spec_reference))?});
@@ -302,7 +311,7 @@ fn verify<B: Backend>(
             .is_some_and(|n| n.starts_with(&format!("todo-{}-", request.id)))
         || target == shared
         || !target.is_dir()
-        || resolve(Path::new(s(&old["worktree"])))? != shared
+        || (!relocated && resolve(Path::new(s(&old["worktree"])))? != shared)
         || s(&old["branch"]).starts_with(&prefix)
         || s(&old["branch"]).is_empty()
         || source["work_owner"]["branch"] != old["branch"]
@@ -310,25 +319,36 @@ fn verify<B: Backend>(
         return Err(Error("RelocationWorkspaceIdentity"));
     }
     if qualified.is_none() {
-        for path in [
-            &repo,
-            s(&source["cwd"]),
-            &request.worktree,
-            &request.spec_reference,
-        ] {
+        let mut guarded = vec![
+            repo.as_str(),
+            request.worktree.as_str(),
+            request.spec_reference.as_str(),
+        ];
+        if !relocated {
+            guarded.insert(1, s(&source["cwd"]));
+        }
+        for path in guarded {
             if path.is_empty() || !engine.backend.repair_scope_allowed(path) {
                 return Err(Error("ClientResource"));
             }
         }
     }
-    for path in [&base, &shared, &target] {
+    let mut git_paths = vec![&base, &target];
+    if !relocated {
+        git_paths.insert(1, &shared);
+    }
+    for path in git_paths {
         if crate::preparation::git_root(runner, path)?.is_none() {
             return Err(Error("NonGit"));
         }
         crate::preparation::same_common(runner, &base, path)?;
     }
     let base_owner = cc_job_policy::work_owner::checkout(&repo);
-    let current = cc_job_policy::work_owner::checkout(s(&source["cwd"]));
+    let current = if relocated {
+        source["work_owner"].clone()
+    } else {
+        cc_job_policy::work_owner::checkout(s(&source["cwd"]))
+    };
     let target_owner = cc_job_policy::work_owner::checkout(&request.worktree);
     if base_owner["repository"] != "autodevjapan/cc-pc-tools-rs"
         || ["repository", "git_common"].iter().any(|key| {
@@ -337,27 +357,31 @@ fn verify<B: Backend>(
                 || base_owner[*key] != source["work_owner"][*key]
         })
         || current["worktree"] != source["work_owner"]["worktree"]
+        || (relocated
+            && norm(s(&source["work_owner"]["worktree"])) != norm(shared.to_str().unwrap_or("")))
     {
         return Err(Error("RelocationRepositoryIdentity"));
     }
-    let owner_rows: Vec<_> = rows
-        .iter()
-        .filter(|r| r["id"] == owner["todo_id"])
-        .collect();
-    if owner["todo_id"] == item["id"]
-        || owner["project"] != item["project"]
-        || owner_rows.len() != 1
-        || owner_rows[0]["project"] != item["project"]
-        || owner_rows[0]["scheduler"]["job"] != owner["id"]
-        || resolve(Path::new(s(&owner_rows[0]["scheduler"]["worktree"])))? != shared
-        || owner_rows[0]["scheduler"]["branch"] != request.source_branch
-        || !arr(&owner_rows[0]["jobs"]).contains(&owner["id"])
-        || resolve(Path::new(s(&owner["cwd"])))? != shared
-        || owner["work_owner"] != current
-        || !matches!(s(&owner["status"]), "running" | "succeeded")
-        || (owner["status"] == "running" && !crate::policy::alive(owner, &ps, at))
-    {
-        return Err(Error("RelocationSharedOwnerIdentity"));
+    if let Some(owner) = owner {
+        let owner_rows: Vec<_> = rows
+            .iter()
+            .filter(|r| r["id"] == owner["todo_id"])
+            .collect();
+        if owner["todo_id"] == item["id"]
+            || owner["project"] != item["project"]
+            || owner_rows.len() != 1
+            || owner_rows[0]["project"] != item["project"]
+            || owner_rows[0]["scheduler"]["job"] != owner["id"]
+            || resolve(Path::new(s(&owner_rows[0]["scheduler"]["worktree"])))? != shared
+            || owner_rows[0]["scheduler"]["branch"] != request.source_branch
+            || !arr(&owner_rows[0]["jobs"]).contains(&owner["id"])
+            || resolve(Path::new(s(&owner["cwd"])))? != shared
+            || owner["work_owner"] != current
+            || !matches!(s(&owner["status"]), "running" | "succeeded")
+            || (owner["status"] == "running" && !crate::policy::alive(owner, &ps, at))
+        {
+            return Err(Error("RelocationSharedOwnerIdentity"));
+        }
     }
     for id in arr(&item["jobs"]) {
         if !jobs.iter().any(|j| j["id"] == id) {
@@ -376,7 +400,8 @@ fn verify<B: Backend>(
         if (belongs || touches_target) && (!terminal(job) || crate::policy::alive(job, &ps, at)) {
             return Err(Error("RelocationCompetingWorker"));
         }
-        let shared_competitor = job["id"] != owner["id"]
+        let shared_competitor = !relocated
+            && job["id"] != shared_owner["id"]
             && job["id"] != source["id"]
             && ((!s(&job["cwd"]).is_empty()
                 && resolve(Path::new(s(&job["cwd"]))).is_ok_and(|p| p == shared))
@@ -409,7 +434,11 @@ fn verify<B: Backend>(
     {
         return Err(Error("RelocationSpecMismatch"));
     }
-    let shared_state = git_state(runner, &shared, false)?;
+    let shared_state = if relocated {
+        receipt["shared_proof"]["git"].clone()
+    } else {
+        git_state(runner, &shared, false)?
+    };
     let target_state = git_state(runner, &target, true)?;
     if shared_state["branch"] != request.source_branch
         || shared_state["head"] != request.source_head
@@ -422,8 +451,9 @@ fn verify<B: Backend>(
         && receipt["request"] == json!(request)
         && identity(source) == receipt["source_identity"]
         && digest(&normalized_row(&item)) == receipt["post_state_sha256"];
-    let binding = json!({"item":if repeated {normalized_row(&item)} else {item.clone()},"repo":repo,"source":identity(source),"shared_owner":identity(owner),
-        "shared_owner_assignment":owner_rows[0]["scheduler"]["job"],"shared":shared_state,"target":target_state,"spec_sha256":request.spec_sha256,"paths":paths});
+    let shared_proof = json!({"path":shared,"job":shared_owner,"git":shared_state});
+    let binding = json!({"item":if repeated {normalized_row(&item)} else {item.clone()},"repo":repo,"source":identity(source),"shared_owner":shared_owner,
+        "shared":shared_state,"target":target_state,"spec_sha256":request.spec_sha256,"paths":paths});
     let ids = worker_ids(&item, &jobs);
     Ok(Proof {
         item,
@@ -433,6 +463,7 @@ fn verify<B: Backend>(
         target,
         target_owner,
         worker_ids: ids,
+        shared_proof,
         _files: (spec_file, reference_file),
     })
 }
@@ -495,7 +526,7 @@ pub fn relocate<B: Backend>(
             let post = digest(&normalized_row(row));
             row["scheduler"]["workspace_relocation"] = json!({"schema":"scheduler-workspace-relocation-v1","request":request,"previous_scheduler":previous,
                 "source_state_sha256":state,"post_state_sha256":post,"source_identity":proof.binding["source"],
-                "target_owner":proof.target_owner,"worker_ids":proof.worker_ids,"original_jobs":row["jobs"],
+                "target_owner":proof.target_owner,"worker_ids":proof.worker_ids,"original_jobs":row["jobs"],"shared_proof":proof.shared_proof,
                 "spec_sha256":request.spec_sha256,"at":at,"launched":0});
             applied = true;
         }).map_err(|error| if error.0 == "InputRejected" {Error("RelocationStateChanged")} else {error})?;
@@ -551,24 +582,29 @@ pub(crate) fn recovered(
     }
     if receipt["schema"] != "scheduler-workspace-relocation-v1"
         || resolve(Path::new(s(&item["scheduler"]["worktree"])))? != target
-        || item["scheduler"]["branch"] != request.branch
     {
         return Err(Error("RelocationReceiptMismatch"));
     }
     if source["id"] != request.source_job {
-        if resolve(Path::new(s(&source["cwd"])))? == target {
+        if source["todo_id"] == item["id"]
+            && arr(&item["jobs"]).contains(&source["id"])
+            && !arr(&receipt["worker_ids"]).contains(&source["id"])
+            && resolve(Path::new(s(&source["cwd"])))? == target
+        {
             return Ok(None);
         }
         return Err(Error("RelocationReceiptMismatch"));
     }
-    if identity(source) != receipt["source_identity"] {
+    if item["scheduler"]["branch"] != request.branch
+        || identity(source) != receipt["source_identity"]
+    {
         return Err(Error("RelocationReceiptMismatch"));
     }
     let (_file, spec) = pinned_text(Path::new(s(&item["spec"])))?;
     if cc_job_policy::product_retry::digest(spec.as_bytes()) != receipt["spec_sha256"] {
         return Err(Error("RelocationSpecMismatch"));
     }
-    let actual = git_state(runner, Path::new(&request.worktree), true)?;
+    let actual = git_state(runner, Path::new(&request.worktree), false)?;
     if actual["branch"] != request.branch || actual["head"] != request.head {
         return Err(Error("RelocationGitChanged"));
     }

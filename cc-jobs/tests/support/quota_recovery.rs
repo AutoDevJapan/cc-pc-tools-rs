@@ -19,7 +19,8 @@ fn setup() -> (Test, Value, Value) {
         "approval_policy":"never","approvals_reviewer":"user","add_dirs":[],"network":false,
         "started_at":"2026-09-28T12:00:00Z","finished_at":"2026-09-28T12:01:00Z",
         "todo_resume_generation":0,"todo_dependency_generation":0,
-        "finite_review":{"todo_id":2,"spec":spec,"launch_key":"11111111111111111111111111111111"}}));
+        "finite_review":{"todo_id":2,"spec":spec,"launch_key":"11111111111111111111111111111111",
+            "spec_sha256":cc_job_policy::product_retry::digest(&fs::read(&spec).unwrap())}}));
     t.put(json!({"id":"author","status":"succeeded","model":"gpt-6.1-sol","cwd":t.ctx.root.join("author")}));
     let target = json!({"model":"gpt-6-luna","model_origin":"policy","effort":"max","cwd":t.ctx.root,
         "launch_key":row["scheduler"]["key"],"task_type":"review","sandbox":"read-only","network":false,
@@ -27,6 +28,8 @@ fn setup() -> (Test, Value, Value) {
     let proof =
         cc_job_policy::quota_recovery::receipt(&row, &source, &target, &health, at).unwrap();
     row["scheduler"]["selection"] = target;
+    row["scheduler"]["selection"]["finite_review_spec_sha256"] =
+        json!(cc_job_policy::product_retry::digest(&fs::read(&spec).unwrap()));
     row["scheduler"]["selection"]["quota_recovery"] = proof;
     save(&t, &row);
     (t, row, source)
@@ -39,6 +42,7 @@ fn save(t: &Test, row: &Value) {
     .unwrap();
 }
 fn register(t: &Test) -> Result<i32> {
+    let prompt = format!("Scheduler prompt\n依頼:\n{}", fs::read_to_string(t.ctx.root.join("review-spec.md")).unwrap());
     t.run(
         &[
             "--todo-id",
@@ -60,8 +64,30 @@ fn register(t: &Test) -> Result<i32> {
             "--mcp-profile",
             "minimal",
         ],
-        b"Review the fixed head",
+        prompt.as_bytes(),
     )
+}
+
+#[test]
+fn ordinary_review_registration_binds_the_executed_spec_before_any_recovery() {
+    let (t, mut row, _) = setup();
+    row["scheduler"]["selection"].as_object_mut().unwrap().remove("quota_recovery");
+    save(&t, &row);
+    register(&t).unwrap();
+    let registered = child(&t);
+    assert!(registered["quota_recovery"].is_null());
+    assert_eq!(registered["finite_review"]["spec_sha256"],
+        cc_job_policy::product_retry::digest(&fs::read(row["spec"].as_str().unwrap()).unwrap()));
+}
+
+#[test]
+fn changed_spec_between_scheduler_prompt_and_registration_is_rejected() {
+    let (t, mut row, _) = setup();
+    row["scheduler"]["selection"].as_object_mut().unwrap().remove("quota_recovery");
+    fs::write(row["spec"].as_str().unwrap(), "Changed before ordinary registration").unwrap();
+    save(&t, &row);
+    assert!(register(&t).is_err());
+    assert_eq!(t.ctx.list_jobs(&HashSet::new()).iter().filter(|j| j["todo_id"] == 2).count(), 1);
 }
 fn child(t: &Test) -> Value {
     t.ctx

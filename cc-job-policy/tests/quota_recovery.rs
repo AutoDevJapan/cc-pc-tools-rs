@@ -89,3 +89,38 @@ fn healthy_transition_rejects_stale_unknown_exhausted_and_same_provider() {
     assert!(!healthy_transition(&good, "opus", "sonnet", 1000.));
     assert!(!healthy_transition(&good, "opus", "gpt-6-luna", f64::NAN));
 }
+
+#[test]
+fn missing_quota_timestamp_is_only_a_fresh_openai_observation() {
+    for used in [3., 100.] {
+        let row = json!({"type":"oauth","health":if used == 100. { "Rate limited" } else { "Healthy" },
+            "creditsAfterLimit":false,"quotaRefresh":{"status":"ok"},
+            "quota":{"weeklyPercent":used,"weeklyResetAt":2000.}});
+        let observed = aggregate(&json!({"accounts":[row]}), "anthropic", 1000.);
+        assert_eq!(observed["verified"], false, "{used}: {observed}");
+        assert_eq!(observed["available"], false);
+        assert_eq!(observed["exhausted"], false);
+    }
+    let row = json!({"type":"codex","health":"Healthy","creditsAfterLimit":false,
+        "quota":{"weeklyPercent":3.,"weeklyResetAt":2000.}});
+    assert_eq!(aggregate(&json!({"accounts":[row]}), "openai", 1000.)["available"], true);
+}
+
+#[test]
+fn a_reset_short_window_is_not_current_oauth_exhaustion() {
+    for (percent, reset) in [("fiveHourPercent", "fiveHourResetAt"), ("shortPercent", "shortResetAt")] {
+        for reset_at in [json!(999.), json!(1000.), json!("1970-01-01T00:16:39Z")] {
+            let mut row = json!({"type":"codex","health":"Healthy","creditsAfterLimit":false,
+                "quota":{"weeklyPercent":3.,"weeklyResetAt":2000.,"updatedAt":1000.}});
+            row["quota"][percent] = json!(100.);
+            row["quota"][reset] = reset_at.clone();
+            let observed = aggregate(&json!({"accounts":[row.clone()]}), "openai", 1000.);
+            assert_eq!(observed["available"], true, "{reset}: {reset_at}: {observed}");
+            row["quota"][reset] = json!(1001.);
+            assert_eq!(aggregate(&json!({"accounts":[row.clone()]}), "openai", 1000.)["exhausted"], true);
+            row["quota"]["weeklyPercent"] = json!(100.);
+            row["quota"][reset] = json!(999.);
+            assert_eq!(aggregate(&json!({"accounts":[row]}), "openai", 1000.)["exhausted"], true);
+        }
+    }
+}

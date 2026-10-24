@@ -23,7 +23,8 @@ fn fixture() -> (Fixture, subwork_support::Fixture) {
         "approval_policy":"never","approvals_reviewer":"user",
         "launch_key":"11111111111111111111111111111111",
         "started_at":iso(T-120.),"finished_at":iso(T-60.),
-        "finite_review":{"todo_id":2,"spec":row["spec"],"launch_key":"11111111111111111111111111111111"},
+        "finite_review":{"todo_id":2,"spec":row["spec"],"launch_key":"11111111111111111111111111111111",
+            "spec_sha256":cc_job_policy::product_retry::digest(&std::fs::read(s(&row["spec"])).unwrap())},
         "review_source_jobs":["parent"],"review_author_models":["gpt-6.1-sol"],
         "todo_dependency_generation":0,"todo_resume_generation":0}));
     let mut f = Fixture::new();
@@ -48,6 +49,8 @@ fn verified_quota_review_keeps_policy_luna_in_scheduler_preparation() {
     );
     assert_eq!(selected["model_origin"], "policy");
     assert_eq!(selected["effort"], "max");
+    assert_eq!(selected["finite_review_spec_sha256"],
+        cc_job_policy::product_retry::digest(&std::fs::read(s(&prepared["spec"])).unwrap()));
     assert_eq!(selected["review_excluded_models"], json!(["gpt-6.1-sol"]));
     assert!(selected["quota_recovery"].is_object());
     assert!(prepared["scheduler"]["resume_session"].is_null());
@@ -79,6 +82,8 @@ fn quota_selection_requires_current_drained_scope_and_fresh_oauth() {
         "wrong_job",
         "wrong_generation",
         "changed_spec",
+        "unbound_spec",
+        "rewritten_spec",
         "wrong_worktree",
         "wider_scope",
         "not_drained",
@@ -97,6 +102,8 @@ fn quota_selection_requires_current_drained_scope_and_fresh_oauth() {
             "changed_spec" => {
                 f.e.backend.records[1]["finite_review"]["spec"] = json!("different.md")
             }
+            "unbound_spec" => { f.e.backend.records[1]["finite_review"].as_object_mut().unwrap().remove("spec_sha256"); }
+            "rewritten_spec" => std::fs::write(s(&sub.db["items"][1]["spec"]), "Different instructions before recovery").unwrap(),
             "wrong_worktree" => f.e.backend.records[1]["cwd"] = json!(sub.repo),
             "wider_scope" => sub.db["items"][1]["add_dirs"] = json!([sub.repo]),
             "not_drained" => {

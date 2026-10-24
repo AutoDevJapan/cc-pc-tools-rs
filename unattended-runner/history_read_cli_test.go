@@ -29,6 +29,14 @@ func historyFixture(t *testing.T, change func(string, any) any) (func(context.Co
 			response = map[string]any{"id": "30", "bot": true}
 		case "/channels/100":
 			response = map[string]any{"id": "100", "guild_id": "10", "parent_id": "40", "owner_id": "30", "type": 11}
+		case "/channels/40", "/channels/" + requestForum:
+			response = map[string]any{"id": strings.TrimPrefix(req.URL.Path, "/channels/"), "guild_id": "10", "type": 15, "permission_overwrites": []any{}}
+		case "/channels/41":
+			response = map[string]any{"id": "41", "guild_id": "10", "type": 2, "permission_overwrites": []any{}}
+		case "/guilds/10/roles":
+			response = []any{map[string]any{"id": "10", "permissions": "66560"}}
+		case "/guilds/10/members/30":
+			response = map[string]any{"user": map[string]any{"id": "30", "bot": true}, "roles": []any{}}
 		case "/channels/100/messages/100":
 			response = historyMessage("100", "30", "original question")
 		case "/channels/100/messages":
@@ -182,7 +190,7 @@ func TestHistoryReadAttachmentObservations(t *testing.T) {
 					t.Fatal("attachment labels or URLs were exposed")
 				}
 			}
-			if len(*paths) != 4 {
+			if len(*paths) != 7 {
 				t.Fatalf("history unexpectedly performed extra requests: %v", *paths)
 			}
 		})
@@ -306,8 +314,8 @@ func TestHistoryReadCursorRetrievesExactOwnerAndContext(t *testing.T) {
 			args = []string{"--scope", args[1], "--output", output, "--cursor", prior}
 		}
 	}
-	if len(*paths) != 12 {
-		t.Fatalf("expected one identity, thread, starter, page GET per call: %v", *paths)
+	if len(*paths) != 21 {
+		t.Fatalf("expected identity, channel, parent, roles, member, starter, page GET per call: %v", *paths)
 	}
 }
 

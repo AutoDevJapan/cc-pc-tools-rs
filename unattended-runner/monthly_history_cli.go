@@ -148,12 +148,14 @@ func monthlyPublish(out io.Writer, path string, page any, summary map[string]any
 
 // Names and topics have no decoding field and can never enter a receipt.
 type monthlyChannel struct {
-	ID       string `json:"id"`
-	Type     *int   `json:"type"`
-	Guild    string `json:"guild_id"`
-	Parent   string `json:"parent_id"`
-	Last     string `json:"last_message_id"`
-	Metadata *struct {
+	ID         string `json:"id"`
+	Type       *int   `json:"type"`
+	Guild      string `json:"guild_id"`
+	Parent     string `json:"parent_id"`
+	Owner      string `json:"owner_id"`
+	ParentType *int   `json:"-"`
+	Last       string `json:"last_message_id"`
+	Metadata   *struct {
 		ArchiveTimestamp string `json:"archive_timestamp"`
 	} `json:"thread_metadata"`
 	Overwrites *[]monthlyOverwrite `json:"permission_overwrites"`

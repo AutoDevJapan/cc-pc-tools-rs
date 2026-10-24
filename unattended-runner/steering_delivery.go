@@ -46,6 +46,10 @@ func bytesHash(b []byte) string { sum := sha256.Sum256(b); return hex.EncodeToSt
 func (r *Runner) steeringReceiptPath(todo uint64, message string) string {
 	return filepath.Join(r.Config.Home, "steering", fmt.Sprintf("%d-%s.json", todo, message))
 }
+func (r *Runner) publishSteeringSource(q *Request) error {
+	workerSource := ordinaryWorkerSource(q)
+	return publish(r.steeringReceiptPath(q.Todo, q.Message), &workerSource)
+}
 func (r *Runner) steeringPlanPath(message string) string {
 	return filepath.Join(r.Config.Home, "deliveries", message+".json")
 }
@@ -54,6 +58,11 @@ func (r *Runner) deliveryRequest(ctx context.Context, message string) (*Request,
 		return nil, nil, "", errors.New("steering message identity invalid")
 	}
 	req := r.State.Requests[message]
+	if req != nil && req.Conversation == "" {
+		if err := r.retireOrdinaryWatch(req); err != nil {
+			return nil, nil, "", err
+		}
+	}
 	if req == nil || req.Message != message || req.Origin == nil || req.Origin.Scope != productReportScope || req.Todo == 0 || req.Todo != req.Origin.Todo || (req.Phase != "product_reply_saved" && req.Phase != "product_reply_delivered" && req.Phase != "product_reply_applied") {
 		return nil, nil, "", errors.New("saved steering association unavailable")
 	}
@@ -81,18 +90,18 @@ func (r *Runner) deliveryRequest(ctx context.Context, message string) (*Request,
 	if json.Unmarshal(bytes, &saved) != nil || saved.Key != req.Key || saved.Todo != req.Todo || saved.Message != req.Message || saved.Author != req.Author || saved.Origin == nil || *saved.Origin != *req.Origin {
 		return nil, nil, "", errors.New("private steering receipt differs")
 	}
-	if saved.Text != req.Text || saved.Edited != req.Edited {
+	if saved.Text != req.Text || saved.Edited != req.Edited || saved.HistoryWatch != nil && saved.HistoryWatch.Receipt != "" {
 		// validateRequest already retained every previous owner edit. Refresh the
 		// private delivery receipt, invalidate the old plan by its byte hash, and
 		// require a fresh normal delivery without releasing a wait or owner stop.
 		req.Phase = "product_reply_saved"
-		if err := publish(r.steeringReceiptPath(req.Todo, message), req); err != nil {
+		if err := r.publishSteeringSource(req); err != nil {
 			return nil, nil, "", err
 		}
 		if err := r.save(); err != nil {
 			return nil, nil, "", err
 		}
-		return nil, nil, "", errors.New("owner edit preserved; prepare a new delivery")
+		return nil, nil, "", errors.New("current source receipt refreshed; prepare a new delivery")
 	}
 	return req, row, bytesHash(bytes), nil
 }

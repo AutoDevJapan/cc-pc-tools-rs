@@ -31,6 +31,9 @@ func msg(t time.Time, thread, author, text string) Message {
 	m.Author.ID = author
 	return m
 }
+func knownLegacyThreadForTest(r *Runner, id string) {
+	r.State.Threads[id] = Thread{ID: id, Guild: r.State.Destination.Guild, Parent: requestForum, Owner: r.State.Destination.Owner, Type: 11}
+}
 func server(t *testing.T, r *Runner, handler http.HandlerFunc) {
 	t.Helper()
 	s := httptest.NewServer(handler)
@@ -103,6 +106,7 @@ func TestForeignReplyReferenceIsNotRoutedAsAnOwnerInstruction(t *testing.T) {
 }
 func TestForeignChannelDoesNotAdvanceCursor(t *testing.T) {
 	r, c := fixture(t)
+	r.State.Scans["500"] = &Scan{After: snowflake(c)}
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {
 		respond(w, []Message{msg(c.Add(time.Second), "999", "300", "wrong")})
 	})
@@ -113,6 +117,7 @@ func TestForeignChannelDoesNotAdvanceCursor(t *testing.T) {
 }
 func TestMultiPageHistoryKeepsHighWaterUntilCoverageComplete(t *testing.T) {
 	r, c := fixture(t)
+	r.State.Scans["500"] = &Scan{After: snowflake(c)}
 	var pages int
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {
 		pages++
@@ -127,7 +132,7 @@ func TestMultiPageHistoryKeepsHighWaterUntilCoverageComplete(t *testing.T) {
 		if q.URL.Query().Get("before") == "" {
 			t.Error("backfill cursor missing")
 		}
-		respond(w, []Message{msg(c, "500", "300", "old")})
+		respond(w, []Message{msg(c.Add(-time.Millisecond), "500", "300", "old")})
 	})
 	_, e := r.scan(context.Background(), Thread{ID: "500"})
 	if e != nil {
@@ -290,7 +295,9 @@ func TestEditedFirstRequestDoesNotStarveSecond(t *testing.T) {
 	r, c := fixture(t)
 	first := msg(c.Add(time.Second), "500", "300", "old")
 	second := msg(c.Add(2*time.Second), "501", "300", "new")
+	second.Channel = second.ID // A new owner forum starter, not an unbound followup.
 	for _, m := range []Message{first, second} {
+		r.State.Threads[m.Channel] = Thread{ID: m.Channel, Type: 11, Guild: "100", Parent: requestForum, Owner: "300"}
 		r.State.Requests[m.ID] = &Request{Thread: m.Channel, Guild: "100", RecordVersion: 2, Message: m.ID, Author: "300", Created: m.Timestamp, Source: "discord-api-v10", Text: m.Content, Key: requestKey(m.Channel, m.ID), Phase: "captured"}
 	}
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {
@@ -302,10 +309,7 @@ func TestEditedFirstRequestDoesNotStarveSecond(t *testing.T) {
 				respond(w, second)
 			}
 		} else {
-			tid := "500"
-			if strings.HasSuffix(q.URL.Path, "501") {
-				tid = "501"
-			}
+			tid := strings.TrimPrefix(q.URL.Path, "/channels/")
 			respond(w, Thread{ID: tid, Type: 11, Guild: "100", Parent: requestForum, Owner: "300"})
 		}
 	})
@@ -576,7 +580,7 @@ func TestIntakeCursorAdvancesPastBlockedOrigins(t *testing.T) {
 	for i := range messages {
 		thread := fmt.Sprintf("blocked-%d", i+1)
 		if i == 4 {
-			thread = "500"
+			thread = snowflake(c.Add(time.Duration(i+1) * time.Second))
 		}
 		messages[i] = msg(c.Add(time.Duration(i+1)*time.Second), thread, "300", fmt.Sprintf("request %d", i+1))
 		r.State.Requests[messages[i].ID] = &Request{Thread: thread, Guild: "100", RecordVersion: 2, Message: messages[i].ID, Author: "300", Created: messages[i].Timestamp, Source: "discord-api-v10", Text: messages[i].Content, Key: requestKey(thread, messages[i].ID), Phase: "captured"}
@@ -585,13 +589,15 @@ func TestIntakeCursorAdvancesPastBlockedOrigins(t *testing.T) {
 				r.BlockedProgressThreads = map[string]bool{}
 			}
 			r.BlockedProgressThreads[thread] = true
+		} else {
+			knownLegacyThreadForTest(r, thread)
 		}
 	}
 	server(t, r, func(w http.ResponseWriter, q *http.Request) {
 		if strings.Contains(q.URL.Path, "/messages/") {
 			respond(w, messages[4])
 		} else {
-			respond(w, Thread{ID: "500", Type: 11, Guild: "100", Parent: requestForum, Owner: "300"})
+			respond(w, Thread{ID: messages[4].Channel, Type: 11, Guild: "100", Parent: requestForum, Owner: "300"})
 		}
 	})
 	adds := 0
@@ -676,7 +682,7 @@ func TestOwnerEditTimestampChangeIsSavedWithOriginalIdentity(t *testing.T) {
 		t.Fatal("owner edit timestamp was not preserved as a deferred update")
 	}
 }
-func TestBlockedThreadCreatesNewTaskRatherThanUnclaimedSteering(t *testing.T) {
+func TestBlockedThreadPreservesOriginalTaskForFollowup(t *testing.T) {
 	r, c := fixture(t)
 	old := &Request{Thread: "500", Message: "600", Todo: 10, Phase: "registered"}
 	r.State.Requests[old.Message] = old
@@ -691,11 +697,11 @@ func TestBlockedThreadCreatesNewTaskRatherThanUnclaimedSteering(t *testing.T) {
 		}
 	})
 	r.Run = func(context.Context, string, ...string) (string, error) { return "added 11", nil }
-	if e := r.register(context.Background(), req); e != nil || req.Todo != 11 || req.Phase != "registered" {
+	if e := r.register(context.Background(), req); e != nil || req.Todo != 10 || req.Phase != "steering_saved" {
 		t.Fatalf("blocked delivery %v", e)
 	}
 }
-func TestUnappliedSteeringResumesWhenPriorTaskBlocked(t *testing.T) {
+func TestUnappliedSteeringRetainsBlockedOriginalForVersionedDelivery(t *testing.T) {
 	r, _ := fixture(t)
 	req := &Request{Thread: "500", Message: "600", Todo: 10, Phase: "steering_saved"}
 	r.State.Requests[req.Message] = req
@@ -703,8 +709,8 @@ func TestUnappliedSteeringResumesWhenPriorTaskBlocked(t *testing.T) {
 	if e := r.results(context.Background()); e != nil {
 		t.Fatal(e)
 	}
-	if req.Todo != 0 || req.Phase != "captured" {
-		t.Fatal("unapplied steering stranded")
+	if req.Todo != 10 || req.Phase != "steering_saved" || req.PendingOwner != "OMB" {
+		t.Fatal("unapplied steering lost its original task or recovery owner")
 	}
 }
 func TestLostSenderResponseRequiresExactSilentReceipt(t *testing.T) {

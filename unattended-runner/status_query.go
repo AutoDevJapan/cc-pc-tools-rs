@@ -114,6 +114,10 @@ func (r *Runner) answerStatusQuery(ctx context.Context, req *Request) error {
 		req.Phase = "status_answered"
 		return r.save()
 	}
+	if _, known := r.ordinaryThreadRouting(req.Thread); !known {
+		r.parkUnbound(req)
+		return r.save()
+	}
 	id := "status-query-" + req.Key
 	path := filepath.Join(r.Config.Home, "notices", id+".json")
 	var o statusQueryObservation

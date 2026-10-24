@@ -72,7 +72,7 @@ fn child(t: &Test) -> Value {
 }
 
 #[test]
-fn verified_quota_review_keeps_luna_max_fast_through_cli_and_actual_admission() {
+fn verified_quota_review_keeps_luna_max_fast_through_cli_and_queue_admission() {
     let (t, row, _) = setup();
     register(&t).unwrap();
     let j = child(&t);
@@ -113,6 +113,34 @@ fn verified_quota_review_keeps_luna_max_fast_through_cli_and_actual_admission() 
     assert_eq!(running["model"], "gpt-6-luna");
     assert!(running["execution_observed"].is_null()); // a launch request is not a native observation
     assert_eq!(row["model_origin"], "policy");
+}
+
+#[test]
+fn quota_metadata_rechecks_are_paced_and_finite_without_rewriting_the_original_failure() {
+    let (t, row, source) = setup();
+    register(&t).unwrap();
+    let j = child(&t);
+    t.rt.quota_recovery_inventory.lock().unwrap()["openai"]["available"] = json!(false);
+    for check in 1..=3 {
+        assert!(t.ctx.admit(s(&j, "id")).unwrap().is_none());
+        let waiting = t.ctx.load(s(&j, "id")).unwrap();
+        assert_eq!(waiting["quota_recovery_recheck_count"], check);
+        if check < 3 {
+            let queries = t.rt.quota_recovery_samples.load(Ordering::Relaxed);
+            assert!(t.ctx.admit(s(&j, "id")).unwrap().is_none());
+            assert_eq!(t.rt.quota_recovery_samples.load(Ordering::Relaxed), queries);
+            let next = t.rt.epoch() + 901.;
+            *t.rt.epoch_base.lock().unwrap() = Some(next);
+        } else {
+            assert_eq!(waiting["status"], "failed");
+            assert_eq!(waiting["last_failure_kind"], "quota_recovery");
+        }
+    }
+    assert_eq!(t.ctx.load("quota-reader").unwrap(), source);
+    assert_eq!(
+        cc_todo::load(&t.ctx.root.join("todo.json")).unwrap()["items"][0],
+        row
+    );
 }
 
 #[test]

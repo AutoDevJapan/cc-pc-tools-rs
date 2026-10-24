@@ -1714,6 +1714,7 @@ fn test_orphan_minimum_age_and_missing_job() {
 }
 
 struct Fake {
+    quota_spec_edit: Option<(PathBuf,String)>,
     quota_inventory: Value,
     real_workspaces: bool,
     prepare_registry: Option<PathBuf>,
@@ -1763,6 +1764,7 @@ struct Fake {
 impl Default for Fake {
     fn default() -> Self {
         Self {
+            quota_spec_edit: None,
             quota_inventory: Value::Null,
             real_workspaces: false,
             prepare_registry: None,
@@ -1812,7 +1814,15 @@ impl Default for Fake {
     }
 }
 impl Backend for Fake {
-    fn quota_recovery_inventory(&mut self) -> Result<Value> { Ok(self.quota_inventory.clone()) }
+    fn resource_until(&mut self, job: &Value) -> Result<Option<f64>> {
+        Ok(if self.m["quota_block_model"].is_string() && self.m["quota_block_model"] == job["model"] {
+            Some(self.clock+900.)
+        } else { cc_scheduler::preparation::resource_deadline(job,self.clock) })
+    }
+    fn quota_recovery_inventory(&mut self) -> Result<Value> {
+        if let Some((path,text))=self.quota_spec_edit.take() { fs::write(path,text)?; }
+        Ok(self.quota_inventory.clone())
+    }
     fn current_product_allowed(&mut self, item: &Value, root: &str) -> bool {
         self.current_product
             .as_ref()

@@ -1,6 +1,9 @@
 //! One prepared review transition after verified OAuth exhaustion. No user flag
 //! grants this route; launchers must reload the source and prove process exit.
 use serde_json::{Value, json};
+// The existing adaptive quota sampler accepts its 300s interval plus 60s.
+// A freshly collected launch capsule below has a separate 60s handoff lifetime.
+const QUOTA_METADATA_MAX_AGE: f64 = 360.;
 
 fn s<'a>(v: &'a Value, k: &str) -> &'a str {
     v[k].as_str().unwrap_or("")
@@ -43,8 +46,9 @@ pub fn aggregate(raw: &Value, provider: &str, now: f64) -> Value {
     let mut known = true;
     let mut count = 0;
     let mut available = false;
+    let mut reason = "no_eligible_oauth";
     let Some(rows) = raw["accounts"].as_array() else {
-        return json!({"at":now,"verified":false,"exhausted":false,"available":false});
+        return json!({"at":now,"verified":false,"exhausted":false,"available":false,"reason":"metadata_missing"});
     };
     for row in rows {
         if !["oauth", "codex"].contains(&s(row, "type")) {
@@ -67,10 +71,11 @@ pub fn aggregate(raw: &Value, provider: &str, now: f64) -> Value {
             .filter(|v| (0. ..=100.).contains(v));
         let reset = timestamp(&q["weeklyResetAt"]).filter(|v| *v > now);
         let updated = timestamp(&q["updatedAt"])
-            .or_else(|| {
-                (q["updatedAt"].is_null() && row["quotaRefresh"]["status"] == "ok").then_some(now)
-            })
-            .filter(|v| *v <= now + 1. && now - *v <= 60.);
+            // OpenAI's successful --quota --refresh reply omits updatedAt.
+            // Its collection time is an observation; a supplied stale time or
+            // explicit refresh failure is never replaced with the current time.
+            .or_else(|| q["updatedAt"].is_null().then_some(now))
+            .filter(|v| *v <= now + 1. && now - *v <= QUOTA_METADATA_MAX_AGE);
         let refreshed = row["quotaRefresh"]["status"]
             .as_str()
             .is_none_or(|v| v == "ok");
@@ -83,11 +88,24 @@ pub fn aggregate(raw: &Value, provider: &str, now: f64) -> Value {
             || (!healthy && !limited)
         {
             known = false;
+            reason = if used.is_none() || reset.is_none() {
+                "quota_window_unknown"
+            } else if updated.is_none() {
+                "quota_time_stale"
+            } else if !refreshed
+                || row["quotaUnavailable"] == true
+                || !row["quotaFailure"].is_null()
+            {
+                "quota_refresh_failed"
+            } else {
+                "health_unknown"
+            };
             continue;
         }
         let short = q["fiveHourPercent"].as_f64().or(q["shortPercent"].as_f64());
         if short.is_some_and(|v| !(0. ..=100.).contains(&v)) {
             known = false;
+            reason = "short_window_invalid";
             continue;
         }
         let exhausted = used.unwrap() >= 100. || short.is_some_and(|v| v >= 100.);
@@ -102,12 +120,18 @@ pub fn aggregate(raw: &Value, provider: &str, now: f64) -> Value {
                 || (provider == "openai" && row["type"] != "codex")
             {
                 known = false;
+                reason = "oauth_selection_unverified";
                 continue;
             }
             available = true;
         }
     }
-    json!({"at":now,"verified":known && count > 0,"exhausted":known && count > 0 && !available,"available":available})
+    if available {
+        reason = "available_oauth";
+    } else if known && count > 0 {
+        reason = "exhausted_oauth";
+    }
+    json!({"at":now,"verified":available || (known && count > 0),"exhausted":known && count > 0 && !available,"available":available,"reason":reason})
 }
 
 pub fn healthy_transition(inventory: &Value, from: &str, to: &str, now: f64) -> bool {
@@ -260,7 +284,20 @@ pub fn receipt(
         || scope(source) != scope(target)
         || s(target, "launch_key").is_empty()
         || target["launch_key"] == source["launch_key"]
+        || timestamp(&source["finished_at"]).is_none_or(|at| at > now + 1.)
+        || (source["recovery_cancel"].is_object()
+            && timestamp(&source["recovery_cancel"]["committed_at"])
+                .is_some_and(|at| at > now + 1.))
         || !healthy_transition(health, s(source, "model"), s(target, "model"), now)
+    {
+        return None;
+    }
+    if provider(s(target, "model")) == Some("openai")
+        && !["gpt-6.1-sol", "gpt-6-luna", "gpt-6-astra"].contains(
+            &s(target, "model")
+                .strip_prefix("openai/")
+                .unwrap_or(s(target, "model")),
+        )
     {
         return None;
     }

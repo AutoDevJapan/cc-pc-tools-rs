@@ -1,0 +1,51 @@
+{
+  "todo": 3669,
+  "parent_todo": 3080,
+  "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/453",
+  "base": "76bc178702511ddea00f8136730eec31056252c5",
+  "red": {
+    "commit": "c4aadd85",
+    "result": "assertion_failed_expected_luna_actual_opus",
+    "log_sha256": "C16B9E3A7812FBDFD4244AE844EFF77D05F20B09BE7E139021A85D71CA5AF551"
+  },
+  "related_regressions": {
+    "source_commit": "166054de",
+    "packages": ["cc-job-policy", "cc-jobs", "cc-scheduler", "cc-todo"],
+    "passed": 1194,
+    "skipped": 12,
+    "earlier_quota_tests_reused": true,
+    "log_sha256": "B254FE1D742A939CE2CA4F5B0D9160D71AF886651343F77759EC6ADF23C0A212"
+  },
+  "final_affected_tests": {
+    "selection": "binary(quota_recovery) | test(quota_recovery_tests::) | (package(cc-scheduler) & (test(review) | test(preparation) | test(model) | test(todo1842)))",
+    "passed": 62,
+    "log_sha256": "38851A68725CE51FD1D34D05C5C1B384DDD9AFC6C8CE3EDF2B18691AA31F61BA",
+    "execution": "offline_test_runtime_and_normal_intake_admission_APIs"
+  },
+  "doctests": {
+    "packages": ["cc-job-policy", "cc-jobs", "cc-scheduler", "cc-todo"],
+    "tests_per_package": 0,
+    "success": true,
+    "log_sha256": "291C1D63C9F4C4020691CECCEA03E780E6D2CEE891CE678BF10A0EE216D13C34"
+  },
+  "clippy": {
+    "all_targets": true,
+    "deny_warnings": true,
+    "success": true,
+    "log_sha256": "22BBD6BD152F38FF2916C3C8E4FA3EC410284BF0C6CEB83A5156168DC07A447A"
+  },
+  "real_metadata": {
+    "openai_available_verified": true,
+    "anthropic_available_verified": false,
+    "anthropic_reason": "quota_refresh_failed",
+    "model_execution_performed": false,
+    "log_sha256": "D127E6251B798B3ADE26BFCF3EFC6B54FAAAB3D399B1CEBB13B4A09EE39C90EC"
+  },
+  "independent_review_complete": false,
+  "formal_ci_complete": false,
+  "merged": false,
+  "windows_distribution_updated": false,
+  "original_3661_recovered": false,
+  "native_model_effort_tier_observed": false,
+  "parent_skills_complete": false
+}

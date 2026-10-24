@@ -9,7 +9,7 @@ fn refreshed_oauth_aggregates_exhaustion_and_eligibility_without_private_fields(
         "quota":{"weeklyPercent":3.,"weeklyResetAt":2000.,"updatedAt":1000.}});
     assert_eq!(
         aggregate(&json!({"accounts":[row.clone()]}), "openai", now),
-        json!({"at":1000.,"verified":true,"available":true,"exhausted":false})
+        json!({"at":1000.,"verified":true,"available":true,"exhausted":false,"reason":"available_oauth"})
     );
     for field in [
         "type",
@@ -33,7 +33,7 @@ fn refreshed_oauth_aggregates_exhaustion_and_eligibility_without_private_fields(
             "{field}"
         );
     }
-    for update in [json!(900.), json!(1002.), Value::Null] {
+    for update in [json!(500.), json!(1002.)] {
         let mut bad = row.clone();
         bad["quota"]["updatedAt"] = update;
         bad["quotaRefresh"] = Value::Null;
@@ -42,6 +42,23 @@ fn refreshed_oauth_aggregates_exhaustion_and_eligibility_without_private_fields(
             false
         );
     }
+    let mut openai = row.clone();
+    openai["quota"]["updatedAt"] = Value::Null;
+    openai["quotaRefresh"] = Value::Null;
+    let mut unknown = openai.clone();
+    unknown["quota"] = Value::Null;
+    assert_eq!(
+        aggregate(&json!({"accounts":[unknown,openai]}), "openai", now)["available"],
+        true
+    );
+    assert_eq!(
+        aggregate(
+            &json!({"accounts":[row.clone(),{"type":"codex","health":"Healthy"}]}),
+            "openai",
+            now
+        )["verified"],
+        true
+    );
     let mut depleted = row;
     depleted["type"] = json!("oauth");
     depleted["health"] = json!("Rate limited");
@@ -50,7 +67,7 @@ fn refreshed_oauth_aggregates_exhaustion_and_eligibility_without_private_fields(
     depleted["selectionExcludedReason"] = json!("weekly limit");
     assert_eq!(
         aggregate(&json!({"accounts":[depleted]}), "anthropic", now),
-        json!({"at":1000.,"verified":true,"available":false,"exhausted":true})
+        json!({"at":1000.,"verified":true,"available":false,"exhausted":true,"reason":"exhausted_oauth"})
     );
 }
 

@@ -1515,7 +1515,8 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 .iter()
                 .any(|author| cc_ask::job_policy::same_model(author, s(&selection["model"])));
             let owner_choice = selection["model_origin"] == "owner_request";
-            let quota_choice=crate::quota_recovery::prepare(&mut self.backend,&item,source,&jobs,&mut selection)?;
+            let quota_choice=crate::quota_recovery::prepare(&mut self.backend,&item,source,&jobs,&mut selection,
+                &cc_job_policy::product_retry::digest(text.as_bytes()))?;
             if quota_choice && conflict {
                 return Err(Error("ReviewModelConflict"));
             }
@@ -1538,6 +1539,18 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             selection["review_source_jobs"] = json!(sources);
             selection["review_excluded_models"] = json!(excluded);
             selection["task_type"] = json!("review");
+            // Check the selected review provider too: a legacy GPT hint can
+            // route to a depleted default before the CLI ever sees it.
+            if let Some(until)=self.backend.resource_until(&selection)? {
+                self.edit(&item["id"],|row| {
+                    if row["status"] == "todo" && row["scheduler"]["key"] == item["scheduler"]["key"]
+                        && launch_inputs(row) == launch_inputs(&item) {
+                        row["scheduler"]["not_before"]=json!(until);
+                        row["scheduler"]["resource_wait"]=json!({"reason":"quota_exhausted","until":until});
+                    }
+                })?;
+                return Ok(None);
+            }
         }
         if !valid_model(s(&selection["model"])) {
             return Err(Error("ValueError"));

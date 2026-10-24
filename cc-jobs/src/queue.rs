@@ -1134,7 +1134,9 @@ impl Context {
             message: "queue history changed after admission preparation; retry".into(),
         })?;
         self.maintain_tool_yields(&snapshot);
-        let quota_inventory=if self.load(jid)?["quota_recovery"].is_object() {
+        let quota_snapshot=self.load(jid)?;
+        let quota_inventory=if quota_snapshot["quota_recovery"].is_object()
+            && quota_snapshot["quota_recovery_recheck_after"].as_f64().unwrap_or(0.) <= self.rt.epoch() {
             self.rt.quota_recovery_inventory()
         } else { Value::Null };
         let _gate = self.queue_lock_for("admit_configured", std::time::Duration::from_secs(60))?;
@@ -1159,6 +1161,10 @@ impl Context {
         };
         let mut job = self.load(jid)?;
         if s(&job, "status") != "queued" || job["cancel_requested"] == true {
+            return Ok(None);
+        }
+        if job["quota_recovery"].is_object()
+            && job["quota_recovery_recheck_after"].as_f64().unwrap_or(0.) > self.rt.epoch() {
             return Ok(None);
         }
         let _subwork_store_lock = if job.get("original_product_retry").is_some() {
@@ -1316,7 +1322,17 @@ impl Context {
                 let result=row.ok_or_else(|| Error::new("quota recovery ToDo is missing"))
                     .and_then(|row| self.recheck_quota_recovery(row,&mut job,&quota_inventory));
                 if result.is_err() {
-                    self.save_admission_wait(&mut job,&json!({"code":"quota_recovery_recheck","text":"元の実行とOAuth枠の再確認待ち"}))?;
+                    let checks=job["quota_recovery_recheck_count"].as_u64().unwrap_or(0)+1;
+                    job["quota_recovery_recheck_count"]=json!(checks);
+                    let exhausted=checks >= 3;
+                    if exhausted {
+                        job["last_failure_kind"]=json!("quota_recovery");
+                        job["last_error"]=json!("quota recovery verification did not succeed within the finite metadata check budget");
+                        finish(&mut job,Some(1),0,&self.rt.now());
+                    } else {
+                        job["quota_recovery_recheck_after"]=json!(self.rt.epoch()+900.);
+                    }
+                    self.save_admission_wait(&mut job,&json!({"code":"quota_recovery_recheck","text":"元の実行とOAuth枠の再確認待ち","terminal":exhausted}))?;
                     return Ok(None);
                 }
             }

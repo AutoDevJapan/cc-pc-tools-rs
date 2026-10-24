@@ -22,7 +22,7 @@ fn fixture() -> (Fixture, subwork_support::Fixture) {
         "sandbox":"read-only","mcp_profile":"minimal","network":false,"add_dirs":[],
         "approval_policy":"never","approvals_reviewer":"user",
         "launch_key":"11111111111111111111111111111111",
-        "started_at":"2026-10-24T12:00:00Z","finished_at":"2026-10-24T12:01:00Z",
+        "started_at":iso(T-120.),"finished_at":iso(T-60.),
         "finite_review":{"todo_id":2,"spec":row["spec"],"launch_key":"11111111111111111111111111111111"},
         "review_source_jobs":["parent"],"review_author_models":["gpt-6.1-sol"],
         "todo_dependency_generation":0,"todo_resume_generation":0}));
@@ -85,6 +85,7 @@ fn quota_selection_requires_current_drained_scope_and_fresh_oauth() {
         "owner_stop",
         "cancel_without_intent",
         "same_author",
+        "future_finish",
     ] {
         let (mut f, mut sub) = fixture();
         match case {
@@ -108,6 +109,7 @@ fn quota_selection_requires_current_drained_scope_and_fresh_oauth() {
             "owner_stop" => sub.db["items"][1]["stopped"] = json!(true),
             "cancel_without_intent" => f.e.backend.records[1]["status"] = json!("cancelled"),
             "same_author" => f.e.backend.records[0]["model"] = json!("gpt-6-luna"),
+            "future_finish" => f.e.backend.records[1]["finished_at"] = json!(iso(T + 60.)),
             _ => unreachable!(),
         }
         write_json(&f.e.todo_path, &sub.db, 1).unwrap();
@@ -138,4 +140,49 @@ fn ordinary_policy_review_keeps_its_default_and_owner_choice_remains_distinct() 
         );
         assert!(p["scheduler"]["selection"]["quota_recovery"].is_null());
     }
+}
+
+#[test]
+fn selected_review_default_waits_on_verified_exhaustion_before_registration() {
+    let (mut f, mut sub) = fixture();
+    sub.db["items"][1]["scheduler"]["last_job"] = Value::Null;
+    f.e.backend.m["quota_block_model"] = json!("anthropic/claude-opus-5-5");
+    write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+    assert!(f
+        .e
+        .prepare(&sub.db["items"][1], sub.repo.to_str().unwrap())
+        .unwrap()
+        .is_none());
+    assert_eq!(
+        f.get(2)["scheduler"]["resource_wait"]["reason"],
+        "quota_exhausted"
+    );
+    assert!(f.e.backend.launched.is_empty());
+}
+
+#[test]
+fn recovery_cancel_keeps_the_quota_classification_and_policy_choice() {
+    let (mut f, sub) = fixture();
+    f.e.backend.records[1]["status"] = json!("cancelled");
+    f.e.backend.records[1]["recovery_cancel"] = json!({"key":"drain","committed_at":iso(T-50.)});
+    let p =
+        f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap())
+            .unwrap()
+            .unwrap();
+    assert_eq!(p["scheduler"]["selection"]["model"], "gpt-6-luna");
+    assert_eq!(f.e.backend.records[1]["last_failure_kind"], "quota");
+}
+
+#[test]
+fn quota_preparation_rejects_a_spec_changed_during_metadata_collection() {
+    let (mut f, sub) = fixture();
+    f.e.backend.quota_spec_edit = Some((
+        PathBuf::from(s(&sub.db["items"][1]["spec"])),
+        "Another fixed head".into(),
+    ));
+    assert!(f
+        .e
+        .prepare(&sub.db["items"][1], sub.repo.to_str().unwrap())
+        .is_err());
+    assert!(f.e.backend.launched.is_empty());
 }

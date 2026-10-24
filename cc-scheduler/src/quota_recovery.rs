@@ -7,6 +7,7 @@ pub(crate) fn prepare(
     source: Option<&Value>,
     jobs: &[Value],
     selection: &mut Value,
+    spec_sha256: &str,
 ) -> Result<bool> {
     // A cached capsule is not authority for a new launch generation.
     selection.as_object_mut().unwrap().remove("quota_recovery");
@@ -51,6 +52,9 @@ pub(crate) fn prepare(
     let proof =
         cc_job_policy::quota_recovery::receipt(item, source, &target, &health, backend.clock())
             .ok_or(Error("ResourceWait"))?;
+    if proof["spec_sha256"] != spec_sha256 {
+        return Err(Error("InputRejected"));
+    }
     selection["quota_recovery"] = proof;
     Ok(true)
 }

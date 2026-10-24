@@ -88,11 +88,18 @@ fn todo_store_fault(error: cc_todo::StoreError) -> Fault {
         ),
         cc_todo::StoreError::InvalidJson(_) => todo_invalid(),
         cc_todo::StoreError::Io(_) => io_fault(),
+        cc_todo::StoreError::History(_) => fault(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "todo_store_archive_failed",
+            "共有ToDoの旧履歴を保管できなかったため、保存を中止しました。",
+        ),
     }
 }
 fn todo_write_fault(error: String) -> Fault {
     if error.starts_with("todo_store_too_large:") {
         todo_store_fault(cc_todo::StoreError::TooLarge)
+    } else if error.starts_with("todo_store_archive_failed:") {
+        todo_store_fault(cc_todo::StoreError::History(error))
     } else {
         io_fault()
     }

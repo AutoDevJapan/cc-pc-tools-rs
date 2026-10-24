@@ -1654,7 +1654,11 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
             .map_err(err)?;
         file.sync_all().map_err(err)?;
     }
-    save(&paths.store, &db)?;
+    if matches!(cli.command, Command::RestoreHistory { apply: true, .. }) {
+        cc_job_policy::todo_store::write_exact(&paths.store, &db).map_err(err)?;
+    } else {
+        save(&paths.store, &db)?;
+    }
     for line in output {
         println!("{line}");
     }

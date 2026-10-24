@@ -26,6 +26,17 @@ $manifest=Get-Content -LiteralPath $manifestPath -Raw|ConvertFrom-Json
 $guardManifest=Get-Content -LiteralPath $guardPath -Raw|ConvertFrom-Json
 if($manifest.origin_todo_id -ne 3628 -or $manifest.domain -ne 'capacity-runtime-update-3628' -or $manifest.data_access_granted -ne $false -or $manifest.original_registry_recovered -ne $false){throw 'Invalid capacity scope'}
 if($guardManifest.origin_todo_id -ne 3628 -or $guardManifest.domain -ne $manifest.domain -or $guardManifest.data_access_granted -ne $false -or $guardManifest.runtime_receipt_sha256 -ne (Hash $manifestPath)){throw 'Invalid guard scope'}
+function Check-BuildSource([string]$Candidate,$Evidence) {
+ if($Evidence.source_commit -notmatch '^[a-f0-9]{40}$' -or $Evidence.build_vcs_modified -ne $false){throw 'Build is not from a clean fixed source'}
+ git merge-base --is-ancestor $Evidence.source_commit $ReviewedCommit
+ if($LASTEXITCODE -ne 0){throw 'Build source is outside the reviewed history'}
+ foreach($entry in $Evidence.source_files.PSObject.Properties){
+  git diff --quiet $Evidence.source_commit $ReviewedCommit -- $entry.Name
+  if($LASTEXITCODE -ne 0){throw 'Reviewed production input differs from compiled source'}
+ }
+ $buildInfo=& go version -m $Candidate
+ if($LASTEXITCODE -ne 0 -or -not($buildInfo -match ('vcs.revision='+$Evidence.source_commit+'$')) -or -not($buildInfo -match 'vcs.modified=false$') -or -not($buildInfo[0].EndsWith($Evidence.go_version))){throw 'Artifact build identity differs'}
+}
 foreach($table in @($manifest.source_files,$guardManifest.source_files)){
  foreach($entry in $table.PSObject.Properties){
   if($entry.Name -match '[\\:]' -or $entry.Name -match '(^|/)\.\.(/|$)'){throw 'Invalid input boundary'}
@@ -42,6 +53,15 @@ $guardTarget='D:\CC\Tools\client-records\scrub391.exe'
 foreach($path in @($release,$capacitySource,$guardSource,$capacityTarget,$guardTarget)){Assert-Plain $path}
 if((Hash $capacitySource) -ne $manifest.new_sha256 -or (Hash $capacityTarget) -notin @($manifest.old_sha256,$manifest.new_sha256)){throw 'Concurrent capacity release retained'}
 if((Hash $guardSource) -ne $guardManifest.new_sha256 -or (Hash $guardTarget) -notin @($guardManifest.old_sha256,$guardManifest.new_sha256)){throw 'Concurrent classifier release retained'}
+Check-BuildSource $capacitySource $manifest
+Check-BuildSource $guardSource $guardManifest
+if($guardManifest.baseline_source_commit -notmatch '^[a-f0-9]{40}$'){throw 'Classifier baseline source unavailable'}
+git merge-base --is-ancestor $guardManifest.baseline_source_commit $guardManifest.source_commit
+if($LASTEXITCODE -ne 0){throw 'Classifier baseline history not retained'}
+if((Hash $guardTarget) -eq $guardManifest.old_sha256){
+ $baselineInfo=& go version -m $guardTarget
+ if($LASTEXITCODE -ne 0 -or -not($baselineInfo -match ('vcs.revision='+$guardManifest.baseline_source_commit+'$')) -or -not($baselineInfo -match 'vcs.modified=false$')){throw 'Current classifier build source differs'}
+}
 
 function Maintenance-State {
  $audit=Get-ScheduledTask -TaskName 'CC-CapacityAudit-3h'

@@ -4,9 +4,9 @@ env:
 on:
   push:
     branches: [main]
-    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'localai-web-rs/src/operations_catalog.rs', 'localai-web-rs/src/operations.rs', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
+    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/civ6-ci-contract/**', 'localai-web-rs/src/operations_catalog.rs', 'localai-web-rs/src/operations.rs', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
   pull_request:
-    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'localai-web-rs/src/operations_catalog.rs', 'localai-web-rs/src/operations.rs', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
+    paths: ['resident-guard/**', 'capacity-audit-3h/**', 'unattended-runner/**', 'repair-guard/**', 'tools/civ6-ci-contract/**', 'localai-web-rs/src/operations_catalog.rs', 'localai-web-rs/src/operations.rs', 'tools/linux-runner-bridge/**', '.github/workflows/unattended-readiness.yml']
 permissions:
   contents: read
 concurrency:

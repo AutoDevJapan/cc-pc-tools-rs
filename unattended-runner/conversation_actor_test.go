@@ -100,7 +100,9 @@ func actorTest(t *testing.T, native bool) *actorFixture {
 		if err != nil {
 			return "", err
 		}
-		rows[1].(map[string]any)["note"] = string(body)
+		row := rows[1].(map[string]any)
+		row["scheduler"].(map[string]any)["owner_instruction"] = strings.TrimPrefix(string(body), row["note"].(string)+"\n\n")
+		row["note"] = string(body)
 		return "{}", publish(f.r.TodoPath, db)
 	}
 	return a
@@ -148,7 +150,7 @@ func TestConversationActorPreservesOriginDependencyAndFullReply(t *testing.T) {
 			if canonicalHash(origin) != canonicalHash(before) || actor.Status != "wait" || canonicalHash(actor.WaitOn) != canonicalHash([]uint64{3751}) || len(actor.QuestionWait) != 0 {
 				t.Fatal("original or dependency was changed")
 			}
-			if !strings.Contains(actor.Note, "<discord-owner-answer>\n"+reply.Body+"\n</discord-owner-answer>") || !strings.Contains(actor.Note, "origin_todo_id=1171, todo_id=3277") || f.r.State.Requests[reply.Message].Todo != 3277 {
+			if !strings.Contains(actor.Note, "<discord-owner-answer>\n"+reply.Body+"\n</discord-owner-answer>") || !strings.Contains(actor.Scheduler.OwnerInstruction, "<discord-owner-answer>\n"+reply.Body+"\n</discord-owner-answer>") || !strings.Contains(actor.Note, "origin_todo_id=1171, todo_id=3277") || f.r.State.Requests[reply.Message].Todo != 3277 {
 				t.Fatal("full reply did not reach the actual actor")
 			}
 			f.r.NoticeAttempted = false
@@ -291,5 +293,29 @@ func TestConversationActorApplicationKeepsOriginalIdentityAndCloses(t *testing.T
 	actor, _ := f.r.todo(3277)
 	if origin.Status != "recovery_unverified" || actor.Status != "wait" || canonicalHash(actor.WaitOn) != canonicalHash([]uint64{3751}) {
 		t.Fatal("closing changed original work or dependency")
+	}
+}
+
+func TestConversationActorCanonicalEditedReplyReplacesPendingPrompt(t *testing.T) {
+	f := actorTest(t, true)
+	f.ask(t)
+	reply := f.reply(t, 8, "編集前の固有回答です。")
+	f.replies[0].Todo = 1171
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	if len(health.Errors) != 0 {
+		t.Fatal(health.Errors)
+	}
+	f.replies[0].Body = "編集後の固有回答です。\nこちらの全文を使ってください。"
+	f.edited = map[string]string{reply.Message: f.r.Now().Format(time.RFC3339Nano)}
+	f.r.NoticeAttempted = false
+	health = Health{}
+	f.r.processConversations(context.Background(), &health)
+	row, _ := f.r.todo(3277)
+	if len(health.Errors) != 0 || !strings.Contains(row.Scheduler.OwnerInstruction, f.replies[0].Body) || strings.Contains(row.Scheduler.OwnerInstruction, reply.Body) || row.Status != "wait" || canonicalHash(row.WaitOn) != canonicalHash([]uint64{3751}) {
+		t.Fatalf("edited answer did not replace the exact pending prompt: %v", health.Errors)
+	}
+	if !strings.Contains(row.Note, reply.Body) || !strings.Contains(row.Note, f.replies[0].Body) {
+		t.Fatal("note lost answer history")
 	}
 }

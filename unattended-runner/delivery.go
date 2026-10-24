@@ -190,8 +190,9 @@ type TodoRow struct {
 		Job string `json:"job"`
 	} `json:"worker_receipt"`
 	Scheduler struct {
-		Job      string `json:"job"`
-		Worktree string `json:"worktree"`
+		Job              string `json:"job"`
+		Worktree         string `json:"worktree"`
+		OwnerInstruction string `json:"owner_instruction"`
 	} `json:"scheduler"`
 }
 

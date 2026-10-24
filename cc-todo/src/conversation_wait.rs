@@ -419,6 +419,52 @@ pub fn check_scope(db: &Value, id: i64, path: &Path) -> Result<()> {
     Ok(())
 }
 
+/// Only the new finite actor scope turns a metadata delivery into pending prompt
+/// input. Normal edits keep their historical behavior. The caller holds todo.lock.
+pub fn actor_note_instruction(
+    db: &Value,
+    id: i64,
+    scope_file: &Path,
+    note_file: Option<&Path>,
+    changes_spec: bool,
+) -> Result<Option<String>> {
+    let Ok((scope, _)) = read(
+        scope_file,
+        &[
+            "domain",
+            "todo_id",
+            "project",
+            "project_path_sha256",
+            "origin_state_file",
+            "actor_spec_sha256",
+            "origin_spec_sha256",
+        ],
+    ) else {
+        return Ok(None);
+    };
+    if scope["domain"] != "discord-conversation-actor-todo-scope-v1" {
+        return Ok(None);
+    }
+    check_scope(db, id, scope_file)?;
+    if changes_spec {
+        return fail("note_invalid");
+    }
+    let data = bytes(note_file.ok_or("conversation_note_invalid")?)?;
+    let note = std::str::from_utf8(&data).map_err(|_| "conversation_note_invalid")?;
+    let row = &db["items"][row_index(db, id)?];
+    let suffix = note
+        .strip_prefix(text(row, "note"))
+        .and_then(|s| s.strip_prefix("\n\n"))
+        .filter(|s| s.starts_with("conversation-owner-reply:") && !s.contains('\0'))
+        .ok_or("conversation_note_invalid")?;
+    let (instruction, _) =
+        continued::merge_instruction(&row["scheduler"]["owner_instruction"], suffix)?;
+    if instruction.len() as u64 > MAX_BYTES {
+        return fail("file_too_large");
+    }
+    Ok(Some(instruction))
+}
+
 pub fn check_snapshot(db: &Value, id: i64, path: &Path) -> Result<()> {
     let expected: Value =
         serde_json::from_slice(&snapshot_bytes(path)?).map_err(|_| "conversation_state_invalid")?;

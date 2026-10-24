@@ -261,7 +261,11 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	}
 	if !hasNoteMarker(row.Note, marker) {
 		instructions := r.conversationReplyInstructions(q, reply, req, receipt, marker)
-		note := strings.TrimRight(row.Note, "\r\n") + "\n\n" + instructions
+		previous := strings.TrimRight(row.Note, "\r\n")
+		if q.deliveryActor != nil {
+			previous = row.Note
+		}
+		note := previous + "\n\n" + instructions
 		if len(note) > 1<<20 {
 			return errors.New("conversation delivery note limit exceeded")
 		}

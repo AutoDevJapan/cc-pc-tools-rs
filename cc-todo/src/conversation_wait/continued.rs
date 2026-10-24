@@ -222,7 +222,7 @@ pub(super) fn latest_blocks_only(text: &str) -> String {
 /// sender and message already in the instruction are replaced, so a stale
 /// earlier answer never reaches the next prompt. Returns the new instruction
 /// and the number of replaced blocks.
-fn merge_instruction(previous: &Value, suffix: &str) -> Result<(String, usize)> {
+pub(super) fn merge_instruction(previous: &Value, suffix: &str) -> Result<(String, usize)> {
     let Value::String(previous) = previous else {
         return if previous.is_null() {
             Ok((suffix.to_owned(), 0))

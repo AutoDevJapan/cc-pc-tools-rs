@@ -291,7 +291,7 @@ func (r *Runner) deliverConversationActorReply(ctx context.Context, q Conversati
 		if err != nil {
 			return err
 		}
-		note := strings.TrimRight(row.Note, "\r\n") + "\n\n" + r.conversationReplyInstructions(q, reply, req, b, marker)
+		note := row.Note + "\n\n" + r.conversationReplyInstructions(q, reply, req, b, marker)
 		if len(note) > 1<<20 {
 			return errors.New("conversation delivery note limit exceeded")
 		}
@@ -311,9 +311,12 @@ func (r *Runner) deliverConversationActorReply(ctx context.Context, q Conversati
 			return errors.New("conversation normal task delivery deferred")
 		}
 		row, err = r.todo(delivery.Todo)
-		if err != nil || !hasNoteMarker(row.Note, marker) {
+		if err != nil || !hasNoteMarker(row.Note, marker) || !hasNoteMarker(row.Scheduler.OwnerInstruction, marker) {
 			return errors.New("conversation task delivery readback deferred")
 		}
+	}
+	if !hasNoteMarker(row.Scheduler.OwnerInstruction, marker) {
+		return errors.New("conversation task prompt delivery unverified")
 	}
 	req.Todo, req.Phase = delivery.Todo, "conversation_reply_delivered"
 	return r.save()

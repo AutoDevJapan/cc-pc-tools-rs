@@ -19,6 +19,8 @@ mod review_workspace_tests;
 mod targeted_dispatch_tests;
 #[path = "support/workspace_checkpoint.rs"]
 mod workspace_checkpoint_tests;
+#[path = "support/workspace_relocation.rs"]
+mod workspace_relocation_tests;
 
 #[test]
 fn review_preparation_failures_stop_after_three_and_recover_on_new_evidence() {

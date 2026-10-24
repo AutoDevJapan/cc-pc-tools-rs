@@ -227,11 +227,9 @@ fn source_binding(source: &Value) -> Value {
     ] {
         v[k] = source[k].clone();
     }
-    // Preserve previously issued legacy capsules byte-for-byte when the new
-    // optional collection record is absent (or explicitly null).
-    if !source["protocol_stall"].is_null() {
-        v["protocol_stall"] = source["protocol_stall"].clone();
-    }
+    // Do not change this v1 digest: a still-running installed scheduler can
+    // prepare the capsule with the previous policy. eligible_source rechecks
+    // the current collection record before any consumer accepts that capsule.
     v
 }
 

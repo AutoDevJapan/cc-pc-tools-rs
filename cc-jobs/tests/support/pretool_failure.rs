@@ -325,8 +325,34 @@ fn collected_quota_review_reenters_the_existing_verified_oauth_route_with_the_sa
     assert!(
         cc_job_policy::quota_recovery::receipt(&row, &incomplete, &target, &health, at).is_none()
     );
-    target["quota_recovery"] =
+    let proof =
         cc_job_policy::quota_recovery::receipt(&row, &source, &target, &health, at).unwrap();
+    let mut legacy_source = source.clone();
+    legacy_source
+        .as_object_mut()
+        .unwrap()
+        .remove("protocol_stall");
+    let legacy_scheduler_proof =
+        cc_job_policy::quota_recovery::receipt(&row, &legacy_source, &target, &health, at).unwrap();
+    assert_eq!(
+        proof, legacy_scheduler_proof,
+        "old installed scheduler capsule remains compatible"
+    );
+    assert!(cc_job_policy::quota_recovery::verify(
+        &legacy_scheduler_proof,
+        &row,
+        &source,
+        &target,
+        at
+    ));
+    assert!(!cc_job_policy::quota_recovery::verify(
+        &legacy_scheduler_proof,
+        &row,
+        &incomplete,
+        &target,
+        at
+    ));
+    target["quota_recovery"] = proof;
     target["finite_review_spec_sha256"] = json!(spec_hash);
     row["scheduler"]["selection"] = target;
     fs::write(

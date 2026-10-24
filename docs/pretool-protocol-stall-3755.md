@@ -22,6 +22,9 @@
   即時取得を使う。
 - 実際のowner_question_wait/decision_waitはstatusがdoingのままでも拒否する。
   正常なnull/未設定や、過去世代のcollection記録は互換を保つ。
+- 配布中の旧schedulerが作るv1の復旧票の指紋は変更しない。collection記録は票の
+  指紋へ追加せず、受信時のeligible_sourceが現在の実sourceを読み直して未完collectionを
+  拒否する。旧票との一致、drainedの受入、stoppingへ変わった場合の拒否を同じ結合テストで確認する。
 - 排出前にprotocol_stallのstoppingを厳密保存し、既存の保持ハンドルで子ツリーの
   終了を確認する。readerを排出し、最終状態と同じ厳密保存でdrainedを確定する。
   停止後の中間保存失敗で回収の印を失ったり再試行へ流れたりしない。失敗や不明を

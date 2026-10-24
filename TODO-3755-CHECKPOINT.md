@@ -28,6 +28,12 @@ Must対応: stop失敗時はkeep_paused、停止意図を呼出側のdurable bas
 
 追加差分レビュー3767は登録済み、まだ実job無し。準備のtool_failedを正規に記録して有限期限後に再確認中。新しい固定headに仕様を更新してから同じ項目で再開する。元のterminal差分(f6421e2e)のCIはcc-jobs成功/Rust解析中で、最新Must対応のCI成功とはしない。
 
-残る工程: Must対応のClippy/doctestと追加差分レビュー3767、最新候補の必要CI、通常merge、現用ソースとの差分確認、CAS配布、配布版の有限回収と実OAuth応答の確認、親/元ToDo/Discordへの通知なし結果保存。
+Must対応の3クレートClippy/doctestと未知開始2unitは成功。固定839da6e9を3767が実job20261025-084729-todo-3767で読取中、thread01a17050-7973-77f0-bfd0-9bab88c638e0。準備のtool_failedは既存期限後の再試行で復旧し、直接子job起動なし。現839のrelease候補はd8bfaabd…/9,181,696bytesを1回生成したが未配布。
+
+追加の並行版確認: 839のsource digestへprotocol_stallを加えると、旧schedulerが作るv1復旧票と一致しないRedを取得。指紋自体は変更せず、受信時のeligible_sourceで現在の未完collectionを拒否する形へ訂正した。988d98beでquota/CLI/schedulerの19関連テスト全成功、legacy票一致とstopping拒否を確認。先のGreenとRed採取の呼出し回収が重なったため、最終Greenはすべての先行command終了後に固定ソースで取り直した。この新差分は3767の固定839レビューへ混ぜず、別に追加確認する。
+
+最新839のcheckpointは共有scheduler.lockでTimeoutError。先の788はsaved=true。ブランチは一度も変更せず、成果はcommit/pushと.ci-work/3755の完全ログ/再開情報へ保持する。同じロック失敗を無限再試行しない。
+
+残る工程: 3767のMust対応レビュー受領、v1互換の小差分の追加確認、最新候補の必要CI、通常merge、現用ソースとの差分確認、最終ソースの実行物生成とCAS配布、配布版の有限回収と実OAuth応答、親/元ToDo/Discordへの通知なし結果保存。
 
 一時所有: 129a07b50c418d82809693dd1dc27887。safe-deleteのplan/別呼出し削除/finishで閉じる。新しいbranchへ変更していない。

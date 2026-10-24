@@ -143,6 +143,9 @@ pub fn recover_workspace(
     let Some(job) = workspace_source(item, jobs) else {
         return Ok(None);
     };
+    if let Some(relocated) = crate::workspace_relocation::recovered(runner, repo, item, job)? {
+        return Ok(Some(relocated));
+    }
     let base = resolve(Path::new(repo))?;
     let target = resolve(Path::new(s(&job["cwd"])))?;
     if git_root(runner, &base)?.is_none() {

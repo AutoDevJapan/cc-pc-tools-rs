@@ -12,6 +12,44 @@ fn main() {
     }
     let args: Vec<String> = std::env::args().skip(1).collect();
     let command = args.first().map(String::as_str);
+    if command == Some("relocate-workspace") {
+        if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
+            println!("usage: scheduler relocate-workspace --request-file <JSON> [--apply --expected-state-sha256 <SHA256>]\n\nVerify one original repair task's shared-source provenance and saved continuation. Without --apply nothing is changed. Never launches or changes Git files.");
+            return;
+        }
+        let result = (|| -> Result<serde_json::Value> {
+            let apply =
+                args.len() == 6 && args[3] == "--apply" && args[4] == "--expected-state-sha256";
+            if !(args.len() == 3 || apply) || args[1] != "--request-file" {
+                return Err(Error("InputRejected"));
+            }
+            let path = std::path::Path::new(&args[2]);
+            if std::fs::metadata(path)?.len() > 1024 * 1024 {
+                return Err(Error("InputRejected"));
+            }
+            let request = serde_json::from_slice(&std::fs::read(path)?)?;
+            let root = PathBuf::from("D:/CC/Tools/scheduler");
+            let mut engine = Scheduler::new(
+                root.clone(),
+                PathBuf::from("D:/CC/Tools/todo/todo.json"),
+                RealBackend::new(root),
+            )?;
+            cc_scheduler::workspace_relocation::relocate(
+                &mut engine,
+                &mut SystemRunner,
+                &request,
+                apply.then(|| args[5].as_str()),
+            )
+        })();
+        match result {
+            Ok(report) => println!("{}", encode(&report, 2)),
+            Err(error) => {
+                eprintln!("workspace relocation failed {}", error.0);
+                std::process::exit(1);
+            }
+        }
+        return;
+    }
     if command == Some("dispatch-subwork") {
         if args.len() == 2 && matches!(args[1].as_str(), "-h" | "--help") {
             println!(

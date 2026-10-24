@@ -19,6 +19,12 @@ ToDo3633 / [Issue441](https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/441)
 現在の別担当の受付時所有記録と通常ToDoの割当の両方に一致する必要がある。
 単に他番号のbranchを許可する処理へ変更しない。
 
+JSONの必須項目は `id`、`source_job`、`shared_owner_job`、`source_branch`、
+`source_head`、`worktree`、`branch`、`head`、`spec_reference`、`spec_sha256`。
+未知の項目は拒否する。確認結果は `eligible`、`saved`、`already_recorded`、
+`state_sha256`、`spec_sha256` と固定の失敗理由だけを返す。
+旧specの本文・原行・予約鍵・他担当の本文を出力しない。
+
 保存specは選択した元ToDoの正規specs内の一件だけを用途付きで読み、
 guard済み参照元の原byteとSHAが一致し、元番号と専用worktree/branchの指定が
 含まれることを照合する。一般guardの例外・旧台帳復元・別コピーは作らない。
@@ -52,3 +58,13 @@ branch/HEAD差・確認後のnote/資源/停止/所有/project/spec変更を拒�
 分類未確認で本文を開いていない。元3327の正規継続参照元はguard clearを確認し
 読了した。実3331専用worktreeとbranchは残り、HEADはPR388のmergeである。
 親3110の実行中worktree/branchは変更していない。次はRed/Greenと資格付き移行。
+
+Redは5265b98dの受入テストで移行未実装による実失敗を確認した。
+Greenはcc-scheduler 248件、追加の通常dispatch受入1件、最終移行5件、
+追加した停止/競合の対照1件で成功。対象doctestとClippyも成功した。
+他クレートが使うモデル判定・結果判定の公開APIは変更していない。
+通常CIでは既存の影響範囲選択による利用側のテストも確認する。
+
+候補による実3331の無変更確認では、現在の保存継続specがguard済み元参照と
+byte一致し、資格を確認できた。実保存・実再開・レビュー・CI・配布は未実施。
+原specの一般guard判定を変更した事実ではない。

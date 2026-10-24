@@ -1510,6 +1510,9 @@ impl Context {
             Ok(())
         })();
         let attempt_failed = work.is_err();
+        if protocol_reclaimed {
+            job["protocol_stall"]["stage"] = json!("drained");
+        }
         if !truth(&job["turn_completed"])
             && !["auth", "cancel"].contains(&s(&job, "last_failure_kind"))
             && let Some((kind, message)) = reclaimed_failure

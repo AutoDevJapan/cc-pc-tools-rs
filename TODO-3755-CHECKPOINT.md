@@ -12,7 +12,15 @@ Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/481 。
 
 確認済み: Red commit 6a156575（nextest 6d2e1239、停止回収のassertで失敗）。最初の9テストは132e76f3で全成功。Windowsの実controllerツリー回収と、同じspecを保つ既存quota証明/CLI/通常ToDo割当/再応答はa4d6a4dcで2/2成功。実プロセスは31.594秒でfailed/quota/drained、元の子と監督の終了を確認。旧監督を生存のままにした初回のquota結合fixtureは「source has not drained」で正しく拒否された。監督終了をcreation timeの交代で正しく表すfixtureへ直し成功し、拒否を製品成功へ書き換えていない。
 
-現在: 変更の影響があるcc-jobs全体と、既存quotaのcc-scheduler/cc-job-policyの関連テスト563件を実行中。workspace全体は実行していない。
+確認済み: cc-jobs全体と、既存quotaのcc-scheduler/cc-job-policy関連563件は全成功。cc-jobsのdoctestは0件成功、全target Clippy成功。workspace全体は実行していない。
+
+追加の自己点検: 子停止直後のdrained保存が失敗すると監督が通常終了し、回収の印を失うRedをe3a9f286で確認。stoppingを保持し、readerを排出してから厳密な終端保存でdrainedを確定する修正を加えた。停止前保存/停止失敗/最終保存失敗の対照を追加し、b6eb169eで13件全成功。Windows実プロセスは32.227秒で終了した。旧563件の全部は重ねず、この影響範囲を確認した。
+
+Issue481/PR484。別モデルの固定読取3762はbase177385c8/head788fd233、実job20261025-080957-todo-3762。実turn_contextはgrok-4.6/xhigh、2026-10-24T23:10:35.09Z。原応答はまだ受領していない。実装モデルSolとは別。xai/grok-4.7の最初の登録は既存ToDo CLIのslash制限でValueError/行未作成。登録CLIの試案はRed/Greenを確認した後取り下げ、既存の成功実績があるgrok-4.6を使った。ToDo本体は変更・配布していない。
+
+共有ToDoの64MiB書込上限で親3628の結果追記が失敗した。既存archive-historyで3628の2履歴45,506bytesを不変segment（SHA6ca94fb1…）へ保管し、元のnote/状態/待ちを保持して追記を再実行、読返し成功。親のwait_onは3757/3758で、この修復待ちは追加していない。容量修復の既存担当3651があるため複製しない。
+
+元ToDoと親への候補記録は[3755:protocol-stall-candidate:788fd233]。完全ログ、再開JSON、正規checkpoint saved=trueと全checks=trueは.ci-work/3755へ保持する。現用codex_jobsは3726の独立build/deployment receiptでsource2e173041/sha2c79d836と照合できる。通常guardは未分類、古いmodel資格はfalseのまま保持する。旧容量raw state/logや認証を読まない。変更後artifactは未配布。
 
 残る工程: 関連nextest完了/doctest/Clippy、固定候補の別モデルレビュー、必要CI、通常merge、現用ソースとの差分確認、CAS配布、配布版の有限回収と実OAuth応答の確認、親/元ToDo/Discordへの通知なし結果保存。
 

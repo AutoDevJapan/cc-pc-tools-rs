@@ -378,3 +378,64 @@ fn collected_quota_review_reenters_the_existing_verified_oauth_route_with_the_sa
         "original error remains intact"
     );
 }
+
+#[test]
+fn stopping_intent_must_be_durable_and_a_failed_stop_never_counts_as_drain() {
+    for fault in ["intent", "stop"] {
+        let (t, j, escaped) = fixture(vec![json!({"type":"error","message":QUOTA})], json!({}));
+        let denied = Arc::new(AtomicBool::new(false));
+        if fault == "intent" {
+            let denied = denied.clone();
+            let kills = t.rt.kills.clone();
+            *t.rt.save_value_hook.lock().unwrap() = Some(Box::new(move |_, job| {
+                if job["protocol_stall"]["stage"] == "stopping"
+                    && !denied.swap(true, Ordering::Relaxed)
+                {
+                    assert!(
+                        kills.lock().unwrap().is_empty(),
+                        "nothing stops before durable intent"
+                    );
+                    return Err(io::Error::other("fixture intent unavailable"));
+                }
+                Ok(())
+            }));
+        } else {
+            t.rt.paused_stop_failure.store(true, Ordering::Relaxed);
+        }
+        t.ctx.supervise(s(&j, "id")).unwrap();
+        assert!(!escaped.load(Ordering::Relaxed));
+        let result = t.ctx.load(s(&j, "id")).unwrap();
+        assert_eq!(result["status"], "failed");
+        assert_eq!(result["last_failure_kind"], "quota");
+        assert_eq!(result["protocol_stall"]["stage"], "drained");
+        assert_eq!(*t.rt.kills.lock().unwrap(), [321]);
+        assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 1);
+        if fault == "intent" {
+            assert!(denied.load(Ordering::Relaxed));
+        }
+    }
+}
+
+#[test]
+fn a_terminal_save_failure_retains_intent_and_cannot_retry_or_publish_success() {
+    let (t, j, escaped) = fixture(vec![json!({"type":"error","message":QUOTA})], json!({}));
+    let denied = Arc::new(AtomicBool::new(false));
+    let seen = denied.clone();
+    *t.rt.save_value_hook.lock().unwrap() = Some(Box::new(move |_, job| {
+        if job["protocol_stall"]["stage"] == "drained" {
+            seen.store(true, Ordering::Relaxed);
+            return Err(io::Error::other("fixture final save unavailable"));
+        }
+        Ok(())
+    }));
+    assert!(t.ctx.supervise(s(&j, "id")).is_err());
+    assert!(denied.load(Ordering::Relaxed));
+    assert!(!escaped.load(Ordering::Relaxed));
+    let durable = t.ctx.load(s(&j, "id")).unwrap();
+    assert_eq!(durable["protocol_stall"]["stage"], "stopping");
+    assert_eq!(durable["last_failure_kind"], "quota");
+    assert_eq!(durable["last_error"], QUOTA);
+    assert_ne!(durable["status"], "succeeded");
+    assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 1);
+    assert_eq!(*t.rt.kills.lock().unwrap(), [321]);
+}

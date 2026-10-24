@@ -179,8 +179,9 @@ impl Context {
         // retained tree, including descendants, before reporting success.
         self.save(&fresh)?;
         child.stop()?;
-        fresh["protocol_stall"]["stage"] = json!("drained");
-        self.save(&fresh)?;
+        // Keep the durable stopping intent until the supervisor has also
+        // drained the event readers. Publish drained with the strict terminal
+        // transition, so a failed intermediate save cannot enable retry_429.
         Ok(Some(fresh))
     }
 }

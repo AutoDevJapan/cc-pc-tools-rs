@@ -40,9 +40,10 @@ safe-deleteの別writerは一覧にない。GitHub OAuthの復旧3454は既存�
 候補SHAは `d5be8270541c177ee811dc5ecee2f1c117590e6aa132e942598eb096596286ef`、
 実VCS revisionは上記main、`vcs.modified=false`。原build receiptを常設source内に保存した。
 検証専用readerは既存関数を変更せず、2つの固定データ表だけをGo overlayで結合した。
-source、原旧receipt、候補receipt、候補byte、元client境界、物理pathの照合は成立したが、
-現物は元PR351の期待旧SHAにも新候補SHAにも一致せず、正常用途は `qualified:false`。
-未知の現在SHAを出力したり、対象をコピーして読む操作は行っていない。
+readerはsource、原旧receipt、候補receipt、候補byte、元client境界、物理pathを照合する構成にした。
+正常用途の実測はexit 1、`qualified:false` だった。この単一の拒否値からは、各照合の
+成功、現物と期待旧SHA・新候補SHAの一致／不一致、正確な失敗段階を判定できない。
+未知の現在SHAの直接計算・出力、対象のコピー、新baselineへの採用は行っていない。
 
 現物metadataは5,077,504 byte、更新UTC `2026-10-23T14:44:11Z`。
 元3369の観測（5,009,920 byte、PR351原記録）とは変化している。
@@ -70,7 +71,7 @@ Windowsの[handleを使うACL API](https://learn.microsoft.com/en-us/windows/win
 [handleによるrename](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_rename_info)を使う。
 原byteのdeny-write handleとbyte排他を保ち、現物へ適用する前に別モデルmaxで確認する。
 
-現在の既定validateは正常にexit 1で止まり、実物の置換は0。
+実物に対するinstallerのvalidateはexit 1で拒否し、実物の置換は0。
 後続の独立原証拠が未結合なので、実配置や用途資格のGreenはまだ達成していない。
 PR399のsafe-delete sourceと候補の最新mainは差分0で、正式CIの同source結果を照合する。
 
@@ -140,3 +141,6 @@ v1/v2は過去の証拠として保持し、今後のapplyには使わない。�
 元3451の原配布証拠、追加dataの固定レビュー、実Green、実配布と受入が引き続き必要である。
 同一SIDの最後のnamespace競合では、競合fileを上書きした後に失敗を検出し得る限界も
 明記した。これを攻撃者へのセキュリティ境界や、失われた別fileを復元する機能とは主張しない。
+この限界は、正常な用途資格のGreenとは別に、指定1本だけを更新する受入条件に関わる
+未充足事項である。競合時に別fileを上書きしないことを確認できるまでは、v3の成功テストや
+用途資格を実更新の根拠にしない。実更新は引き続き0で、この文書の訂正も配布完了ではない。

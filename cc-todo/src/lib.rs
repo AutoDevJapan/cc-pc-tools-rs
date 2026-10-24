@@ -323,6 +323,19 @@ pub enum Command {
         #[arg(long, value_parser=clap::value_parser!(u8).range(0..=100))]
         progress: Option<u8>,
     },
+    /// Preview or save an earlier technical recheck after an explicit condition change.
+    RetrySooner {
+        #[arg(value_parser=clap::value_parser!(i64).range(1..))]
+        id: i64,
+        #[arg(long, default_value_t=60, value_parser=clap::value_parser!(u64).range(60..=86400))]
+        after: u64,
+        #[arg(long)]
+        reason: String,
+        #[arg(long, requires = "expected_state_sha256")]
+        apply: bool,
+        #[arg(long, requires = "apply")]
+        expected_state_sha256: Option<String>,
+    },
     /// Release only this recorded wait after a fresh readiness check succeeds.
     ResumeReady {
         id: i64,
@@ -1497,6 +1510,34 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             }
             output.push(json!({"id":id,"wait_ready":item["wait_ready"]}).to_string());
         }
+        Command::RetrySooner {
+            id,
+            after,
+            reason,
+            apply,
+            expected_state_sha256,
+        } => {
+            output.push(
+                ready::retry_sooner(
+                    db,
+                    paths,
+                    *id,
+                    *after,
+                    reason,
+                    if *apply {
+                        Some(
+                            expected_state_sha256
+                                .as_deref()
+                                .ok_or("retry_snapshot_required")?,
+                        )
+                    } else {
+                        None
+                    },
+                    ready::now_epoch(),
+                )?
+                .to_string(),
+            );
+        }
         Command::Wait { id, on, progress } => {
             cc_job_policy::todo_wait::validate(db, *id, on)?;
             let i = find(db, *id)?;
@@ -1633,6 +1674,7 @@ pub fn run(cli: Cli, paths: &Paths, notifier: &mut dyn Notifier) -> Result<()> {
             | Command::History { .. }
             | Command::ArchiveHistory { apply: false, .. }
             | Command::RestoreHistory { apply: false, .. }
+            | Command::RetrySooner { apply: false, .. }
     ) || unchanged_history
         || unchanged_conversation
     {

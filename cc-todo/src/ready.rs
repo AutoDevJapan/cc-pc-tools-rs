@@ -3,6 +3,9 @@ use crate::{Result, find, now};
 use serde_json::{Value, json};
 use std::{fs, path::Path};
 
+mod sooner;
+pub use sooner::retry_sooner;
+
 pub const STATE: &str = "D:/CC/Apps/chatgpt-web/state.json";
 
 pub fn read_state(path: &Path) -> Result<Value> {
@@ -97,7 +100,7 @@ pub fn resume(db: &mut Value, id: i64, condition: &str, state: &Value, at: u64) 
     if row["status"] != "wait"
         || row["wait_ready"]["condition"] != condition
         || !confirmed(&row["wait_ready"], state, at)
-        || cc_job_policy::todo_wait::waiting(db, &row)
+        || !sooner::holds_clear(db, &row)
     {
         return Ok(false);
     }

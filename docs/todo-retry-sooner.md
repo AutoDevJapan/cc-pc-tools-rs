@@ -21,3 +21,19 @@
 
 受入は `cc-todo/tests/retry_sooner.rs` と既存 `ready.rs`、利用側の待機・割当テストで確認する。
 元3669への適用は配布後の状態を読み直し、同じ旧技術待機かつ全依存完了の場合に限る。
+
+## 実装とテストの記録
+
+Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/472 。
+Redの固定ソースは `45f9eb96`（テスト追加のみ）。
+`cargo nextest run --locked -p cc-todo --test retry_sooner --no-fail-fast` は
+新CLI未実装で2件とも失敗した（終了100）。原ログSHA256:
+`aaa72dfbe8b4d291565328383e38b6407f556fc7fc086301521a16b89d1a5f1a`。
+
+実装後の `--test retry_sooner --test ready` は15件成功。
+短縮後も期限到達前はwaitのままで、到達時に元の項目だけを1回解除する。
+停止・延期・未回答質問・Plus・別外部条件・不明/未完/不正依存と、
+元メモ・仕様・世代・担当・待機・プロジェクト・台帳の変更を対照として確認した。
+通常ロック内の並行メモ変更は古いプレビューを拒否し、
+Windowsの実共有違反による原子的保存失敗では元ファイルと待機を保持した。
+共通の待機解除も同じ本人停止・依存検証を使い、短縮後に追加された別条件を保持する。

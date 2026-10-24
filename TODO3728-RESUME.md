@@ -7,7 +7,11 @@
 元3669はwait_on3720、retry-timeの旧期限1792947550、3720はdoneであることを開始時点に確認した。
 状態変化を明示し、通常ロック内で照合して期限だけを早めるCLIを設計した。
 
-次: 回帰テストのRed、実装とGreen、cc-todoと利用側のテスト/doc/Clippy、固定headの別モデルレビューとCI、通常merge、todo.exe配布とハッシュ確認、元3669の保存・解除・通常継続を実確認する。
+完了: Redは45f9eb96の新CLI未実装で2件失敗、実装後のready/retry_soonerは15件成功。期限短縮・古い状態/別台帳/別世代拒否・所有保持・本人条件・保存失敗を確認。
+
+実行中: cc-todo、cc-scheduler、cc-jobs、localai-web-rs（変更と推移的な利用側だけ）のnextest。原ログは所有付き一時フォルダに保存。
+
+次: 関連テスト完了、doc/Clippy、固定headの別モデルレビューとCI、通常merge、todo.exe配布とハッシュ確認、元3669の保存・解除・通常継続を実確認する。
 元3700/3669へ結果を返す。本人入力は不要。
 
 一時データ所有ID: c966c77efd12b0e5eb5a6c270cb5813c（safe-deleteのcreateで作成）。終了時にplan、通常削除、finishで回収する。

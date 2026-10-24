@@ -1328,6 +1328,25 @@
         "skills-3080-sixmile-next75-evaluation.json",
         "skills-3080-sixmile-received50-evaluation.json"
       ]
+    },
+    {
+      "number": 470,
+      "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/470",
+      "head": "fd5eedc74eb149fe996c499b7539619d1310b30e",
+      "merge": "172543794886744e998bd6d53bbce701e36d835a",
+      "merged_at": "2026-10-24T20:33:30Z",
+      "review_todos": [
+        3732
+      ],
+      "final_review_must": 0,
+      "checks": "Exact fd5eedc7: all7 complete, SUCCESS6 and NEUTRAL1; CLEAN",
+      "normal_merge": true,
+      "readback_confirmed": true,
+      "main_fetch_ff_confirmed": true,
+      "covered_assessment_artifacts": [
+        "skills-3080-sixmile-received-next50-evaluation.json"
+      ],
+      "acceptance_scope": "Fixed13-file public delta and50 semantic assessments/51 notice definitions; does not establish new permission, adoption or source execution."
     }
   ],
   "current_mengto_delta": {
@@ -1448,7 +1467,7 @@
     "new_individual_rights_exclusions": 1,
     "existing_duplicate_receipts_reused": 1
   },
-  "amended_at": "2026-10-24T19:53:56.0331731+00:00",
+  "amended_at": "2026-10-24T20:55:00.8847686+00:00",
   "amendment_job": "20261024-235901-todo-3080",
   "mcp_pointer_installation": {
     "real_server_or_rendering_tested": false,
@@ -1781,9 +1800,29 @@
   "received_next50_publication_status": {
     "receipt": "skills-3080-sixmile-received-next50-evaluation.json",
     "acceptance": "skills-3080-received-evidence-acceptance.md",
-    "independent_review_pending": true,
-    "ci_and_merge_pending": true,
+    "independent_review_pending": false,
+    "ci_and_merge_pending": false,
     "new_central_operations": 0,
-    "all16_complete": false
+    "all16_complete": false,
+    "independent_review_pending_at_preparation": true,
+    "ci_and_merge_pending_at_preparation": true,
+    "accepted_with_pr": 470
+  },
+  "new2_manifest_preparation": {
+    "manifest": "skills-3080-operations/create-timezone-exam-235901.json",
+    "manifest_sha256": "3e89f08525ba8354f0beb3453d467125c342dd5592bc12bc9ca3e31d980845cc",
+    "source_count": 2,
+    "output_files": 12,
+    "content_review": 3737,
+    "actual_review_model": "gpt-6-luna",
+    "actual_review_effort": "max",
+    "content_review_must": 0,
+    "content_review_raw_sha256": "f36f8efe66e25231d5e620357d2de70efe32021445fc07f338d88eff2ea461f4",
+    "public_manifest_merge_pending": true,
+    "target_existence_checked": false,
+    "purpose_qualification_complete": false,
+    "central_operations": 0,
+    "new_final_dispositions": 0,
+    "definition": "Reviewed output bytes only. The manifest still needs normal PR acceptance and main merge; current runtime and owner-wait prerequisites are separate. No placement, discovery or real use is implied."
   }
 }

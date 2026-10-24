@@ -52,3 +52,6 @@ docs/skills-3080-execution-queue-summary.json text eol=lf
 /docs/skills-3080-sixmile-partial-evaluation.json text eol=lf
 /docs/skills-3080-adoptions.json text eol=lf
 docs/skills-3080-sixmile-received-next50-evaluation.json text eol=lf
+
+# Preserve exact reviewed operation bytes, including intentional JSON CRLF.
+/docs/skills-3080-operations/*.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

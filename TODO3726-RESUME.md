@@ -18,7 +18,11 @@
 - 元3700の指定2identityファイルは双方failed、pid/codex_pid不在、Archive、os error5。原job本文は読んでいない。
 - 現用exe SHA256 `98e8279c8225e7fa553b5e1a182b4292003ff5a5793234f1e7bb963ed1c12084`。mtime/現checkoutからソース一致を推測しない。旧2458のsidecarは別hashで、現用の証明に使えない。
 - 現sourceはtmp書込・renameを各1秒/50回再試行する。`supervise_attempt`の進捗saveが失敗するとwork全体のErrとなり、生存中の子を停止してfailedへ進む。
-- 新規Windowsテストを追加中。初回compileのimport漏れを修正。実挙動のRedはこれから。
+- Red commit `60e5bd4c`。実共有保持の進捗テストだけが失敗し、正常reader/解除/期限超過/ACL/必須保存の5対照は成功。初回のimport漏れと、ACL保持中のreadを求めたfixture不備は訂正済み。
+- 表示だけの差分を延期して3秒後から再保存する修正後、6件と実プロセスの継続・wait返信・終了の計7件が成功。必須保存は厳格なまま。未知の項目も必須とする対照を追加した。
+- 現用exeのコピーを同じ実プロセス試験へ入れたRedは、supervisor exit75、子終了、元snapshotはrunningを観測。完全sourceの対応は未確定。
+- cc-jobs/cc-scheduler/cc-askの関連テストを実行中。完全ログは所有フォルダ内related-tests.log。Clippy/doc/レビュー/CI/配布は未実施。
+- Anthropic OAuthはweekly100%でRate limited。既存xai OAuthはHealthy/weekly34%、現catalogのgrok-4.6はxhighまで対応。これを通常ToDoの別モデルレビューへ使う予定。Gemini OAuthもHealthy。API keyは使わない。
 
 ## 残り
 

@@ -10475,6 +10475,68 @@ mod task_notifier {
 mod end_to_end {
     use super::*;
     #[test]
+    fn windows_snapshot_sharing_keeps_the_native_child_alive_and_delivers_its_result() {
+        use std::os::windows::fs::OpenOptionsExt;
+        let t = E2e::new();
+        // Optional finite acceptance probe of a caller-owned executable copy.
+        // Ordinary CI always tests CARGO_BIN_EXE_codex_jobs.
+        if let Ok(exe) = std::env::var("CC_JOBS_SNAPSHOT_PROBE_EXE") {
+            fs::copy(exe, &t.exe).unwrap();
+        }
+        t.diagnostic.store(true, Ordering::Relaxed);
+        let jid = t.start("snapshot-sharing", &t.tmp.0, b"synthetic snapshot work");
+        t.until_phase("snapshot_identity", || {
+            t.rec.join("snapshot.ready").exists() && truth(&t.job(&jid)["thread_id"])
+        });
+        let path = t.tmp.0.join("tool/jobs").join(&jid).join("job.json");
+        let log = path.with_file_name("supervisor.log");
+        let held = fs::OpenOptions::new()
+            .read(true)
+            .share_mode(3)
+            .open(&path)
+            .unwrap();
+        let before = t.job(&jid);
+        let started = Instant::now();
+        fs::write(t.rec.join("snapshot.emit"), b"").unwrap();
+        t.until_phase("snapshot_deferred", || {
+            fs::read_to_string(&log)
+                .unwrap_or_default()
+                .contains("進捗の保存を延期")
+                || TERMINAL.contains(&s(&t.job(&jid), "status"))
+                || proc_created(before["pid"].as_u64().unwrap() as u32).is_none()
+        });
+        let running = t.job(&jid);
+        let log_text = fs::read_to_string(&log).unwrap_or_default();
+        let same_live_owners = ["pid", "codex_pid"].map(|key| {
+            running[key] == before[key]
+                && proc_created(running[key].as_u64().unwrap() as u32)
+                    == running[format!("{key}_created")].as_u64()
+        });
+        drop(held);
+        fs::write(t.rec.join("snapshot.finish"), b"").unwrap();
+        assert_eq!(running["status"], "running", "{log_text}");
+        assert!(log_text.contains("進捗の保存を延期"), "{log_text}");
+        assert!(started.elapsed() >= Duration::from_millis(900));
+        assert_eq!(same_live_owners, [true, true]);
+        let result = t.cli(&["wait", &jid, "--timeout", "20"], "snapshot-sharing");
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        assert!(String::from_utf8_lossy(&result.stdout).contains("DONE"));
+        let final_job = t.job(&jid);
+        assert_eq!(final_job["status"], "succeeded");
+        assert_eq!(final_job["last_message"], "DONE");
+        assert_eq!(
+            fs::read_to_string(path.with_file_name("last_message.md")).unwrap(),
+            "DONE"
+        );
+        t.until_phase("snapshot_supervisor_exit", || {
+            proc_created(before["pid"].as_u64().unwrap() as u32).is_none()
+        });
+    }
+    #[test]
     fn terminal_supervisor_cleanup_preserves_its_independent_descendant() {
         let mut t = Test::new();
         t.ctx.rt = Arc::new(System::default());

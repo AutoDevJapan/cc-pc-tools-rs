@@ -1,7 +1,7 @@
 //! All paths and handles belong to the fixture. No production jobs or ACLs.
 use super::*;
-use std::thread;
 use std::os::windows::{fs::OpenOptionsExt, process::CommandExt};
+use std::thread;
 use windows_sys::Win32::Storage::FileSystem::{FILE_SHARE_READ, FILE_SHARE_WRITE};
 
 fn reader(path: &Path) -> fs::File {
@@ -87,7 +87,10 @@ impl DeniedDelete {
                 .args(["/deny", &format!("*S-1-1-0:{rights}")])
                 .output()
                 .unwrap();
-            assert!(result.status.success(), "fixture ACL deny failed: {result:?}");
+            assert!(
+                result.status.success(),
+                "fixture ACL deny failed: {result:?}"
+            );
             guard.paths.push(path.into());
         }
         guard
@@ -137,7 +140,9 @@ fn windows_progress_sharing_failure_does_not_end_the_attempt_or_lose_its_reply()
     let release = held.clone();
     let arm = armed.clone();
     *t.rt.save_value_hook.lock().unwrap() = Some(Box::new(move |file, candidate| {
-        if file != path { return Ok(()); }
+        if file != path {
+            return Ok(());
+        }
         if candidate["last_message"] == "DONE" {
             release.lock().unwrap().take();
         } else if number(candidate, "steps") > 0 && !arm.swap(true, Ordering::SeqCst) {
@@ -160,8 +165,17 @@ fn windows_progress_sharing_failure_does_not_end_the_attempt_or_lose_its_reply()
     assert_eq!(saved["status"], "succeeded");
     assert_eq!(saved["steps"], 2);
     assert_eq!(saved["last_message"], "DONE");
-    assert_eq!(fs::read_to_string(t.ctx.job_dir(s(&j,"id")).join("last_message.md")).unwrap(), "DONE");
-    assert!(t.rt.diagnostics.lock().unwrap().iter().any(|s| s.contains("進捗")));
+    assert_eq!(
+        fs::read_to_string(t.ctx.job_dir(s(&j, "id")).join("last_message.md")).unwrap(),
+        "DONE"
+    );
+    assert!(
+        t.rt.diagnostics
+            .lock()
+            .unwrap()
+            .iter()
+            .any(|s| s.contains("進捗"))
+    );
 }
 
 #[test]
@@ -171,14 +185,30 @@ fn mandatory_resume_identity_and_terminal_saves_are_never_reported_as_success() 
         let j = t.put(job(json!({"codex":"codex.CMD","cwd":t.ctx.root})));
         *t.rt.save_value_hook.lock().unwrap() = Some(Box::new(move |_, candidate| {
             if (field == "thread_id" && truth(&candidate[field]))
-                || (field == "status" && s(candidate, "status") == "succeeded") {
+                || (field == "status" && s(candidate, "status") == "succeeded")
+            {
                 Err(io::Error::from_raw_os_error(5))
-            } else { Ok(()) }
+            } else {
+                Ok(())
+            }
         }));
         let result = t.ctx.supervise(s(&j, "id"));
         assert!(result.is_err(), "{field} must not produce false success");
         let saved = t.ctx.load(s(&j, "id")).unwrap();
         assert_ne!(saved["status"], "succeeded");
         assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 1);
+        if field == "status" {
+            assert_eq!(
+                fs::read_to_string(t.ctx.job_dir(s(&j, "id")).join("last_message.md")).unwrap(),
+                "DONE"
+            );
+            assert!(
+                t.rt.diagnostics
+                    .lock()
+                    .unwrap()
+                    .iter()
+                    .any(|s| s.contains("終了状態を保存できません"))
+            );
+        }
     }
 }

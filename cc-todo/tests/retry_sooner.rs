@@ -202,6 +202,9 @@ fn owner_holds_other_conditions_and_unknown_dependencies_survive_both_operations
         "self",
         "owner_dependency",
         "duplicate_dependency",
+        "malformed_decision",
+        "malformed_postponement",
+        "unknown_external",
     ] {
         let folder = tempfile::tempdir().unwrap();
         let home = folder.path();
@@ -230,6 +233,9 @@ fn owner_holds_other_conditions_and_unknown_dependencies_survive_both_operations
                 .as_array_mut()
                 .unwrap()
                 .push(json!({"id":2,"status":"done"})),
+            "malformed_decision" => db["items"][0]["decision_wait"] = json!(false),
+            "malformed_postponement" => db["items"][0]["owner_postponement_recorded"] = json!(""),
+            "unknown_external" => db["items"][0]["external_resume_condition"] = json!(""),
             _ => unreachable!(),
         }
         fs::write(home.join("todo.json"), serde_json::to_vec(&db).unwrap()).unwrap();

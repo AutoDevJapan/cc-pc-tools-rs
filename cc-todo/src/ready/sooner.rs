@@ -17,19 +17,22 @@ fn dependency_done(db: &Value, row: &Value, id: &Value) -> bool {
 
 pub(super) fn holds_clear(db: &Value, row: &Value) -> bool {
     let active = |v: &Value| !v.is_null() && *v != false && *v != "";
-    let holds = [
+    let flags = [
         "stopped",
         "cancel_requested",
         "owner_stopped",
         "paused",
         "owner_postponement_recorded",
-        "stop_kind",
+    ];
+    let conditions = [
         "decision_wait",
         "owner_question_wait",
         "resume_condition",
         "external_resume_condition",
     ];
-    if holds.iter().any(|k| active(&row[*k]))
+    if flags.iter().any(|k| !row[*k].is_null() && row[*k] != false)
+        || active(&row["stop_kind"])
+        || conditions.iter().any(|k| !row[*k].is_null())
         || [
             "owner_stop_job",
             "question",

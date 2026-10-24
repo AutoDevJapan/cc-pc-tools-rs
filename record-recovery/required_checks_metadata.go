@@ -39,8 +39,8 @@ func requiredChecksContainer(parent obj, key string) (obj, obj) {
 	if value == nil {
 		return obj{"state": "null"}, nil
 	}
-	if object, ok := value.(map[string]any); ok {
-		return obj{"state": "recorded"}, object
+	if container, ok := value.(map[string]any); ok {
+		return obj{"state": "recorded"}, container
 	}
 	return obj{"state": "invalid"}, nil
 }
@@ -102,7 +102,7 @@ func requiredChecksScheduler(row obj, root obj, rootText string, leaf string) ob
 		if text, ok := scheduler["phase"].(string); ok && allowed[text] {
 			phase = obj{"state": "recorded", "value": text}
 		} else {
-			phase = obj{"state": "invalid"}
+			phase = obj{"state": "unlisted"}
 		}
 	}
 	result["phase"] = phase

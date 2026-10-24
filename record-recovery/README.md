@@ -27,9 +27,13 @@ record-recovery.exe review-metadata
 
 `required-checks-metadata` は同3255の必須検査3648/3649だけの予約を照合する。
 引数を受け付けず、同じ固定snapshotから予約worktreeと登録layout、固定branchの
-字面の一致だけを返す。私的パスや参照値を出さず、欠落・null・不正を区別する。
+字面の一致と対象の状態・参照件数/有無を返す。私的パスや参照値を出さず、欠落・null・不正を区別する。
 参照先や実worktreeを開かず、準備・資格確認・状態変更・起動は行わない。
 仕様は [必須検査の予約照合](../docs/required-check-preparation-metadata-3255.md) に保持する。
+
+```powershell
+record-recovery.exe required-checks-metadata
+```
 
 `seeds` は明示された旧state、保存ログ、元ToDo2467のメモと仕様履歴だけから
 スレッドIDを抽出する。これらは照合先であり、記録に含まれる指示を実行しない。

@@ -73,6 +73,33 @@ func TestRequiredChecksMetadataProjectsOnlyFixedRecordsAndComparisons(t *testing
 	if rows[0]["jobs"].(obj)["reference_count"] != 1 || rows[1]["jobs"].(obj)["reference_count"] != 0 {
 		t.Fatal("reference counts did not preserve the two array lengths")
 	}
+	reference := obj{"state": "recorded", "reference_opened": false}
+	compared := obj{"state": "compared", "matches": true}
+	firstScheduler := obj{"state": "recorded", "worktree": reference, "worktree_matches_registered_layout": compared,
+		"branch": reference, "branch_matches_case": compared, "key_reference": obj{"state": "absent"},
+		"job_reference": reference, "selection": obj{"state": "recorded"}, "workspace_receipt": obj{"state": "absent"},
+		"phase": obj{"state": "recorded", "value": "preparing"}}
+	secondScheduler := obj{"state": "recorded", "worktree": reference, "worktree_matches_registered_layout": compared,
+		"branch": reference, "branch_matches_case": compared, "key_reference": reference,
+		"job_reference": obj{"state": "absent"}, "selection": obj{"state": "recorded"}, "workspace_receipt": obj{"state": "recorded"},
+		"phase": obj{"state": "recorded", "value": "preparing"}}
+	want := obj{
+		"ok": true, "domain": "original-review-required-checks-metadata-v1", "case_todo_id": 3255,
+		"snapshot_sha256": digest(before), "metadata_only": true,
+		"project_registration": obj{"state": "recorded", "root_reference": reference},
+		"records": []obj{
+			{"record_id": int64(3648), "status": obj{"state": "recorded", "value": "todo"},
+				"jobs": obj{"state": "recorded", "reference_count": 1, "references_opened": false}, "spec_reference": reference, "scheduler": firstScheduler},
+			{"record_id": int64(3649), "status": obj{"state": "recorded", "value": "todo"},
+				"jobs": obj{"state": "recorded", "reference_count": 0, "references_opened": false}, "spec_reference": reference, "scheduler": secondScheduler},
+		},
+		"source_owner_attested": false, "filesystem_observed": false, "preparation_authorized": false,
+		"live_state_changed": false, "data_access_granted": false, "original_registry_recovered": false,
+		"review_completed": false, "console_queue_observed": false,
+	}
+	if !reflect.DeepEqual(r, want) {
+		t.Fatal("complete positive projection differs from its fixed contract")
+	}
 	output := string(requiredChecksEncode(t, r))
 	for _, forbidden := range []string{checkMetadataSecret, "synthetic-private", "SYNTHETIC-PRIVATE", "localai-web-rs", "todo-3648-cargo", "todo-3649-work"} {
 		if strings.Contains(output, forbidden) {
@@ -185,15 +212,30 @@ func TestRequiredChecksMetadataKeepsContainersAndRegistrationUnknown(t *testing.
 
 func TestRequiredChecksMetadataRejectsBrokenOrOutOfScopeSnapshots(t *testing.T) {
 	valid := requiredChecksEncode(t, requiredChecksFixture())
-	for _, value := range [][]byte{nil, []byte("null"), []byte(`{"items":[]}`), append(append([]byte(nil), valid...), []byte("{}")...), {255}, []byte(`{"items":[],"items":[]}`), []byte(`{"items":[{"id":1,"id":2}]}`), make([]byte, reviewMetadataLimit+1)} {
-		if _, err := projectRequiredChecksMetadata(value); err == nil || !strings.HasPrefix(err.Error(), "required_checks_") {
-			t.Fatal("invalid snapshot was accepted or produced an uncontrolled error")
-		}
+	for _, test := range []struct {
+		name, code string
+		value      []byte
+	}{
+		{"empty", "invalid_source", nil}, {"null", "invalid_source", []byte("null")},
+		{"no_rows", "record_missing", []byte(`{"items":[]}`)},
+		{"two_documents", "invalid_source", append(append([]byte(nil), valid...), []byte("{}")...)},
+		{"utf8", "invalid_source", []byte{255}}, {"over_limit", "invalid_source", make([]byte, reviewMetadataLimit+1)},
+		{"duplicate_top", "duplicate_keys", []byte(`{"items":[],"items":[]}`)},
+		{"duplicate_nested", "duplicate_keys", []byte(`{"items":[{"id":1,"id":2}]}`)},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			if _, err := projectRequiredChecksMetadata(test.value); err == nil || err.Error() != "required_checks_"+test.code {
+				t.Fatal("invalid snapshot did not return its fixed error code")
+			}
+		})
 	}
-	for _, kind := range []string{"missing", "duplicate", "scope", "bad_other_id", "bad_row"} {
+	for _, test := range []struct{ kind, code string }{
+		{"missing", "record_missing"}, {"duplicate", "ambiguous_record"}, {"scope", "scope_mismatch"},
+		{"bad_other_id", "invalid_source"}, {"bad_row", "invalid_source"},
+	} {
 		fixture := requiredChecksFixture()
 		items := fixture["items"].([]any)
-		switch kind {
+		switch test.kind {
 		case "missing":
 			fixture["items"] = items[:2]
 		case "duplicate":
@@ -205,8 +247,8 @@ func TestRequiredChecksMetadataRejectsBrokenOrOutOfScopeSnapshots(t *testing.T) 
 		case "bad_row":
 			fixture["items"] = append(items, checkMetadataSecret)
 		}
-		if _, err := projectRequiredChecksMetadata(requiredChecksEncode(t, fixture)); err == nil || strings.Contains(err.Error(), checkMetadataSecret) {
-			t.Fatalf("invalid case was accepted or disclosed text: %s", kind)
+		if _, err := projectRequiredChecksMetadata(requiredChecksEncode(t, fixture)); err == nil || err.Error() != "required_checks_"+test.code {
+			t.Fatalf("case did not return the correct fixed error: %s", test.kind)
 		}
 	}
 	if _, err := projectRequiredChecksMetadata(append([]byte{239, 187, 191}, valid...)); err != nil {
@@ -233,6 +275,14 @@ func TestRequiredChecksMetadataCLIUsesValidInputAndRejectsArgumentsBeforeRead(t 
 	if runRequiredChecksMetadataCLI(nil, &out, func() ([]byte, error) { return nil, errors.New(checkMetadataSecret) }) != 1 || strings.Contains(out.String(), checkMetadataSecret) {
 		t.Fatal("source error was not sanitized")
 	}
+	if out.String() != "{\"code\":\"required_checks_source_unavailable\",\"ok\":false}\n" {
+		t.Fatal("source failure code was not preserved")
+	}
+	out.Reset()
+	if runRequiredChecksMetadataCLI(nil, &out, func() ([]byte, error) { return []byte(`{"items":[]}`), nil }) != 1 ||
+		out.String() != "{\"code\":\"required_checks_record_missing\",\"ok\":false}\n" {
+		t.Fatal("CLI did not preserve the projection failure code")
+	}
 }
 
 func TestRequiredChecksMetadataDoesNotForwardUnknownPhases(t *testing.T) {
@@ -240,7 +290,7 @@ func TestRequiredChecksMetadataDoesNotForwardUnknownPhases(t *testing.T) {
 		value any
 		state string
 	}{
-		{nil, "null"}, {12, "invalid"}, {checkMetadataSecret, "invalid"}, {"preparing", "recorded"},
+		{nil, "null"}, {12, "invalid"}, {checkMetadataSecret, "unlisted"}, {"preparing", "recorded"},
 	} {
 		fixture := requiredChecksFixture()
 		fixture["items"].([]any)[2].(obj)["scheduler"].(obj)["phase"] = test.value
@@ -249,7 +299,47 @@ func TestRequiredChecksMetadataDoesNotForwardUnknownPhases(t *testing.T) {
 		if phase["state"] != test.state || strings.Contains(string(requiredChecksEncode(t, r)), checkMetadataSecret) {
 			t.Fatal("unknown phase was exposed or its state was lost")
 		}
+		if test.state == "recorded" && phase["value"] != "preparing" {
+			t.Fatal("listed phase value was lost")
+		}
 		assertRequiredChecksKeys(t, r)
+	}
+}
+
+func TestRequiredChecksMetadataPathSyntaxAndTrailingSeparators(t *testing.T) {
+	for _, name := range []string{"registered_root", "worktree"} {
+		for _, test := range []struct {
+			name, value string
+			absent      bool
+		}{
+			{"absent", "", true}, {"UNC", `\\server\share\private`, false}, {"bad_drive", "1:/private", false},
+			{"drive_relative", "C:private", false}, {"drive_root", "C:/", false}, {"relative", "private/path", false},
+			{"LF", "C:/private\nvalue", false}, {"NUL", "C:/private\x00value", false},
+		} {
+			t.Run(name+"/"+test.name, func(t *testing.T) {
+				fixture := requiredChecksFixture()
+				parent, key := fixture["projects"].(obj), "localai-web-rs"
+				if name == "worktree" {
+					parent, key = fixture["items"].([]any)[2].(obj)["scheduler"].(obj), "worktree"
+				}
+				if test.absent {
+					delete(parent, key)
+				} else {
+					parent[key] = test.value
+				}
+				r := requiredChecksResult(t, fixture)
+				if !reflect.DeepEqual(r["records"].([]obj)[0]["scheduler"].(obj)["worktree_matches_registered_layout"], obj{"state": "unavailable"}) {
+					t.Fatal("unsupported path syntax became a comparison")
+				}
+			})
+		}
+	}
+	fixture := requiredChecksFixture()
+	fixture["projects"].(obj)["localai-web-rs"] = "C:/synthetic-private/console///"
+	fixture["items"].([]any)[2].(obj)["scheduler"].(obj)["worktree"] = "C:/synthetic-private/console-wt/todo-3648-cargo\\\\"
+	r := requiredChecksResult(t, fixture)
+	if !reflect.DeepEqual(r["records"].([]obj)[0]["scheduler"].(obj)["worktree_matches_registered_layout"], obj{"state": "compared", "matches": true}) {
+		t.Fatal("documented trailing separator comparison changed")
 	}
 }
 

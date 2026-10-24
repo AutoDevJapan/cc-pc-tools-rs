@@ -39,7 +39,19 @@ func newProgramFixture(t *testing.T) *programFixture {
 	f.source.Content = "An original owner illustration request."
 	configureStateRequestForTest(f, 2639)
 	f.r.Config.Project = "fixture-project"
-	root := t.TempDir()
+	// Windows CI exposes TEMP through an 8.3 alias. Evidence must use the
+	// original physical spelling; keep production's alias rejection intact.
+	physical := func(path string) string {
+		t.Helper()
+		value, err := filepath.EvalSymlinks(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return value
+	}
+	f.r.Config.Home = physical(f.r.Config.Home)
+	f.r.JobsPath = physical(f.r.JobsPath)
+	root := physical(t.TempDir())
 	work := filepath.Join(root, "worktree")
 	if err := os.Mkdir(work, 0700); err != nil {
 		t.Fatal(err)

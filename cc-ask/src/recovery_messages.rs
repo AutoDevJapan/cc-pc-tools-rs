@@ -5196,13 +5196,16 @@ mod tests {
             args.program_evidence = Some(fixture.root.path().join("evidence.json"));
             let incoming = prepare_ask(&ctx, &args).unwrap();
             let mut bound = Vec::new();
+            // CI's TEMP can be an 8.3 alias. Qualify the physical original
+            // spelling rather than relaxing the sender's alias checks.
+            let image_root = fs::canonicalize(fixture.root.path()).unwrap();
             for i in 0..2 {
                 let bytes = [
                     b"\x89PNG\r\n\x1a\n".as_slice(),
                     format!("new-drawing-{i}").as_bytes(),
                 ]
                 .concat();
-                let path = fixture.root.path().join(format!("drawing-{i}.png"));
+                let path = image_root.join(format!("drawing-{i}.png"));
                 fs::write(&path, &bytes).unwrap();
                 let sha = format!("{:x}", Sha256::digest(&bytes));
                 args.attach.push(path.clone());

@@ -207,6 +207,26 @@ func TestConversationActualCanonicalRecapturedSecondReplyWithoutProofStaysPendin
 		row["status"] = "block"
 		row["owner_stopped"] = true
 		row["note"] = "新しい直接停止"
+		// This case is specifically missing delivery proof. Removing only the
+		// note leaves the canonical second-reply receipt available for recovery.
+		deliveries, ok := row["owner_question_delivery_receipts"].([]any)
+		if !ok {
+			t.Fatal("second reply fixture has no canonical delivery proof")
+		}
+		kept := make([]any, 0, len(deliveries))
+		removed := 0
+		for _, item := range deliveries {
+			record := item.(map[string]any)
+			if record["answer"].(map[string]any)["message_id"] == reply.Message {
+				removed++
+				continue
+			}
+			kept = append(kept, item)
+		}
+		if removed != 1 {
+			t.Fatal("did not remove exactly the second reply proof")
+		}
+		row["owner_question_delivery_receipts"] = kept
 	})
 	before, _ := os.ReadFile(f.r.TodoPath)
 	health = Health{}

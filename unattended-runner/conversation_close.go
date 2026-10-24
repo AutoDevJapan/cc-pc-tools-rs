@@ -207,9 +207,12 @@ func (r *Runner) conversationReplySource(ctx context.Context, q ConversationQues
 
 func (r *Runner) conversationReplySourceMessage(ctx context.Context, q ConversationQuestion, current *conversationProof, reply conversationReply, observed *Message) (conversationCloseStamp, bool, error) {
 	stamp := conversationCloseStamp{ReplySHA: canonicalHash(reply)}
-	req := r.State.Requests[reply.Message]
+	req := r.conversationRequest(reply.Message)
 	if req == nil {
 		return stamp, false, nil
+	}
+	if !r.conversationIntakeRetained(q, req) {
+		return stamp, false, errConversationCloseSource
 	}
 	if req.Phase != "conversation_reply_saved" && req.Phase != "conversation_reply_delivered" && req.Phase != "conversation_reply_applied" && req.Phase != "conversation_direction_recorded" && req.Phase != "conversation_implementation_recorded" && req.Phase != "conversation_source_verified" {
 		return stamp, false, nil
@@ -289,7 +292,7 @@ func (r *Runner) conversationCloseReply(ctx context.Context, q ConversationQuest
 	if err != nil || !ready {
 		return stamp, false, err
 	}
-	req := r.State.Requests[reply.Message]
+	req := r.conversationRequest(reply.Message)
 	if found, err := findImplementation(row, q, reply.Message, stamp.SourceSHA); err != nil {
 		return stamp, false, err
 	} else if found != nil {
@@ -356,17 +359,17 @@ func (r *Runner) conversationCloseSnapshot(ctx context.Context, q ConversationQu
 			} else if stamp.DirectionSHA != "" {
 				phase = "conversation_direction_recorded"
 			}
-			if r.State.Requests[reply.Message].Phase == phase {
+			if r.conversationRequest(reply.Message).Phase == phase {
 				continue
 			}
-			previous[reply.Message] = r.State.Requests[reply.Message].Phase
-			r.State.Requests[reply.Message].Phase = phase
+			previous[reply.Message] = r.conversationRequest(reply.Message).Phase
+			r.conversationRequest(reply.Message).Phase = phase
 			dirty = true
 		}
 	}
 	if dirty && r.save() != nil {
 		for id, phase := range previous {
-			r.State.Requests[id].Phase = phase
+			r.conversationRequest(id).Phase = phase
 		}
 		return stamps, false, errConversationCloseState
 	}

@@ -118,7 +118,7 @@ func (r *Runner) implementationCheck(ctx context.Context, q ConversationQuestion
 func (r *Runner) conversationImplementationApplied(ctx context.Context, q ConversationQuestion, proof *conversationProof, reply conversationReply, receipt *conversationImplementationReceipt, stamp conversationCloseStamp) (conversationCloseStamp, bool, error) {
 	input, b, err := readImplementation(implementationFile(r, q, reply.Message, receipt.InputSHA))
 	actor, ok := number(input.ActorTodo)
-	req := r.State.Requests[reply.Message]
+	req := r.conversationRequest(reply.Message)
 	if err != nil || !ok || req == nil || input != receipt.Input || bytesHash(b) != receipt.InputSHA {
 		return stamp, false, errImplementation
 	}
@@ -164,6 +164,9 @@ func (r *Runner) conversationImplementationCommand(ctx context.Context, opts con
 	q, proof, reply, err := r.implementationQuestion(ctx, opts)
 	if err != nil {
 		return nil, err
+	}
+	if opts.Command == "source-link" {
+		return r.conversationIntakeLink(ctx, opts, q, proof, *reply)
 	}
 	if opts.Command == "source-reacquire" {
 		return r.conversationSourceReacquire(ctx, q, proof, *reply)
@@ -238,7 +241,7 @@ func (r *Runner) conversationImplementationCommand(ctx context.Context, opts con
 	if !validJob(job) {
 		return nil, errImplementation
 	}
-	input.conversationDirectionInput = directionInput(q, proof, *reply, r.State.Requests[reply.Message], stamp.SourceSHA, opts.Todo, job, opts.Revision)
+	input.conversationDirectionInput = directionInput(q, proof, *reply, r.conversationRequest(reply.Message), stamp.SourceSHA, opts.Todo, job, opts.Revision)
 	input.Domain, input.Kind = "discord-conversation-implementation-v1", "implementation"
 	b, _ = json.Marshal(input)
 	if existing != nil && (input != existing.Input || bytesHash(b) != existing.InputSHA) {
@@ -272,7 +275,7 @@ func (r *Runner) conversationImplementationCommand(ctx context.Context, opts con
 	if err != nil || !ready || again != stamp {
 		return nil, errImplementation
 	}
-	req := r.State.Requests[reply.Message]
+	req := r.conversationRequest(reply.Message)
 	prior := req.Phase
 	req.Phase = "conversation_implementation_recorded"
 	if r.save() != nil {

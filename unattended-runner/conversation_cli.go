@@ -25,6 +25,7 @@ type conversationCLIOptions struct {
 	Command           string
 	RequestID         string
 	Todo              uint64
+	IntakeTodo        uint64
 	OriginThread      string
 	BodyFile          string
 	DecisionFile      string
@@ -85,6 +86,7 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 	fs := flag.NewFlagSet("conversation "+opts.Command, flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	var todo string
+	var intakeTodo string
 	switch opts.Command {
 	case "ask":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
@@ -107,12 +109,15 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 	case "replies":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "output", &opts.Output)
-	case "direction-record", "implementation-record":
+	case "source-link", "direction-record", "implementation-record":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "actor-todo-id", &todo)
 		conversationStringFlag(fs, "message-id", &opts.Message)
 		conversationStringFlag(fs, "source-sha256", &opts.SourceSHA)
 		conversationStringFlag(fs, "revision", &opts.Revision)
+		if opts.Command == "source-link" {
+			conversationStringFlag(fs, "intake-todo-id", &intakeTodo)
+		}
 		if opts.Command == "implementation-record" {
 			conversationStringFlag(fs, "evidence-file", &opts.EvidenceFile)
 		}
@@ -167,7 +172,7 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		if !conversationID.MatchString(opts.RequestID) || opts.ReasonFile == "" {
 			return opts, errConversationArguments
 		}
-	case "direction-record", "implementation-record":
+	case "source-link", "direction-record", "implementation-record":
 		var ok bool
 		opts.Todo, ok = number(todo)
 		if _, messageOK := number(opts.Message); !ok || !messageOK || !conversationID.MatchString(opts.RequestID) || !shaPattern.MatchString(opts.SourceSHA) || !regexpRevision(opts.Revision) {
@@ -175,6 +180,12 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		}
 		if opts.Command == "implementation-record" && opts.EvidenceFile == "" {
 			return opts, errConversationArguments
+		}
+		if opts.Command == "source-link" {
+			opts.IntakeTodo, ok = number(intakeTodo)
+			if !ok || opts.IntakeTodo == opts.Todo {
+				return opts, errConversationArguments
+			}
 		}
 	case "source-verify", "source-reacquire":
 		if _, ok := number(opts.Message); !ok || !conversationID.MatchString(opts.RequestID) {
@@ -370,7 +381,7 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 			} else {
 				result, err = backend.conversationWithdraw(ctx, opts.RequestID, opts.ReasonFile)
 			}
-		case "source-verify", "source-reacquire", "implementation-record", "close":
+		case "source-link", "source-verify", "source-reacquire", "implementation-record", "close":
 			if backend, ok := runner.(interface {
 				conversationImplementationCommand(context.Context, conversationCLIOptions) (map[string]any, error)
 			}); ok {

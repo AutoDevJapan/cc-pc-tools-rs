@@ -320,6 +320,10 @@ func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "    \tqualify one exact ToDo3081 software update; grants no data access")
 	fmt.Fprintln(output, "  -export-omb-runtime-capture")
 	fmt.Fprintln(output, "    \tmaterialize the one independently verified new OMB report capture; no UI approval")
+	fmt.Fprintln(output, "  -qualify-skills3080 string\n    \tcheck one manifest-bound CreateNew request; no general classification change")
+	fmt.Fprintln(output, "  -create-skills3080 string\n    \tconsume the same reviewed bytes through exclusive new creation")
+	fmt.Fprintln(output, "  -receive-skills3080-result string\n    \treceive one registered public final response and bounded native model projection")
+	fmt.Fprintln(output, "  -verify-skills3080-update string\n    \tqualify the reviewed merged Windows guard update only; no data access")
 }
 
 func verifyCurrentSuccession(taskID int) object {
@@ -341,6 +345,9 @@ func verifyCurrentSuccession(taskID int) object {
 }
 
 func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(int) object) int {
+	if skillsFlag(args) {
+		return runSkillsCLI(args, stdout, skillsOperation)
+	}
 	if ombCaptureFlagPresent(args) {
 		return runOMBCaptureCLI(args, stdout, exportOMBCapture)
 	}

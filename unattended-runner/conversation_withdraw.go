@@ -129,7 +129,7 @@ func (r *Runner) withdrawalProof(ctx context.Context, q ConversationQuestion) (s
 	if len(proof.Replies) != 0 {
 		return "", true, nil
 	}
-	for _, req := range r.State.Requests {
+	for _, req := range r.conversationRequests() {
 		if req != nil && (req.Conversation == q.RequestID || (req.Thread == q.Thread && req.Author == r.State.Destination.Owner)) {
 			// Even an already captured or edited reply cannot be reclassified as
 			// an unanswered question if it disappeared from the current projection.

@@ -7,6 +7,18 @@ import (
 	"testing"
 )
 
+func assertReviewReferenceKeys(t *testing.T, value obj, allowed ...string) {
+	t.Helper()
+	if len(value) != len(allowed) {
+		t.Fatal("reference output differs from its permitted key set")
+	}
+	for _, key := range allowed {
+		if _, exists := value[key]; !exists {
+			t.Fatal("reference output is missing a permitted key")
+		}
+	}
+}
+
 func TestReviewSourceReferenceDistinguishesTextAndJobSyntaxWithoutIdentityClaims(t *testing.T) {
 	const request = "todo29-db-count-review-52aaffb-20261010"
 	cases := []struct {
@@ -18,14 +30,23 @@ func TestReviewSourceReferenceDistinguishesTextAndJobSyntaxWithoutIdentityClaims
 		{"wrapped_request", "queued:manual:" + request, "queue_prefix", "", true, false},
 		{"other_queue", "queue:private-other-reference", "queue_prefix", "", false, false},
 		{"queue_marker", "queued", "queue_marker", "", false, false},
+		{"other_queue_marker", "queue", "queue_marker", "", false, false},
+		{"empty_queue_suffix", "queue:", "queue_prefix", "", false, false},
+		{"other_manual_id", "manual:private-other-reference", "other", "", false, false},
 		{"path_containing_request", "C:/private/" + request + ".md", "other", "", true, false},
 		{"job_name", "20261012-131423-private-job-label", "job_name", "2026-10-12 13:14:23", false, false},
 		{"leap_day", "20240229-000000-todo-2191", "job_name", "2024-02-29 00:00:00", false, false},
+		{"shortest_job_label", "20261012-131423-x", "job_name", "2026-10-12 13:14:23", false, false},
+		{"request_in_job_label", "20261012-131423-" + request, "job_name", "2026-10-12 13:14:23", true, false},
 		{"invalid_month", "20261312-131423-private-label", "other", "", false, false},
+		{"non_leap_day", "20250229-000000-x", "other", "", false, false},
+		{"hour_24", "20261012-240000-x", "other", "", false, false},
 		{"invalid_time", "20261012-257070-private-label", "other", "", false, false},
+		{"wrong_stamp_separator", "20261012-131423_x", "other", "", false, false},
 		{"path_after_stamp", "20261012-131423-private/label", "other", "", false, false},
 		{"non_ascii_label", "20261012-131423-私的な名前", "other", "", false, false},
 		{"missing_label", "20261012-131423-", "other", "", false, false},
+		{"maximum_reference", strings.Repeat("x", 4096), "other", "", false, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -35,8 +56,13 @@ func TestReviewSourceReferenceDistinguishesTextAndJobSyntaxWithoutIdentityClaims
 			if err := d.Decode(&db); err != nil {
 				t.Fatal(err)
 			}
-			recovery := object(object(array(db["items"])[1])["recovery"])
+			row := object(array(db["items"])[1])
+			recovery := object(row["recovery"])
 			recovery["request_source_job_id"] = tc.reference
+			row["agent"] = "20261012-131423-private-agent-label"
+			scheduler := object(row["scheduler"])
+			scheduler["job"] = "20261012-131423-private-scheduler-label"
+			scheduler["console_request"] = "queued:manual:" + request
 			source, err := json.Marshal(db)
 			if err != nil {
 				t.Fatal(err)
@@ -50,6 +76,20 @@ func TestReviewSourceReferenceDistinguishesTextAndJobSyntaxWithoutIdentityClaims
 				t.Fatal(err)
 			}
 			ref := object(object(report["recovery"])["request_source_job_id"])
+			keys := []string{"state", "reference_opened", "reference_format", "original_request_text_present", "exact_original_request_text", "reference_identity_verified"}
+			if tc.stamp != "" {
+				keys = append(keys, "job_name_time", "job_name_time_zone", "job_existence_verified")
+			}
+			assertReviewReferenceKeys(t, ref, keys...)
+			for _, other := range []obj{object(object(report["recovery"])["preserved_worker_request"]), object(report["console_request_reference"]), object(report["agent_reference"]), object(report["scheduler_job_reference"])} {
+				assertReviewReferenceKeys(t, other, "state", "reference_opened")
+				if other["state"] != "recorded" || other["reference_opened"] != false {
+					t.Fatal("another recorded reference was lost, opened, or reclassified")
+				}
+			}
+			if ref["state"] != "recorded" {
+				t.Fatal("a valid source reference was lost")
+			}
 			if ref["reference_format"] != tc.format || ref["original_request_text_present"] != tc.present || ref["exact_original_request_text"] != tc.exact {
 				t.Fatal("reference text or syntax facts were lost or conflated")
 			}
@@ -115,6 +155,7 @@ func TestReviewSourceReferenceKeepsMissingAndInvalidValuesUnclassified(t *testin
 				t.Fatal(err)
 			}
 			ref := object(object(report["recovery"])["request_source_job_id"])
+			assertReviewReferenceKeys(t, ref, "state")
 			if ref["state"] != tc.want {
 				t.Fatal("invalid reference became a recorded reference")
 			}

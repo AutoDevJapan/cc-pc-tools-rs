@@ -196,7 +196,10 @@ func reviewSourceReference(m obj, key string) obj {
 	if r["state"] != "recorded" {
 		return r
 	}
-	s := m[key].(string)
+	s, ok := m[key].(string)
+	if !ok {
+		return obj{"state": "invalid"}
+	}
 	exact := s == reviewMetadataRequest || s == "manual:"+reviewMetadataRequest
 	r["original_request_text_present"] = strings.Contains(s, reviewMetadataRequest)
 	r["exact_original_request_text"] = exact

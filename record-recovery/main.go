@@ -845,6 +845,11 @@ func main() {
 		fmt.Println(`{"ok":false,"code":"command_required"}`)
 		os.Exit(2)
 	}
+	if os.Args[1] == "review-metadata" {
+		os.Exit(runReviewMetadataCLI(os.Args[2:], os.Stdout, func() ([]byte, error) {
+			return readReviewSnapshot(reviewMetadataStore)
+		}))
+	}
 	f := flag.NewFlagSet("recovery", flag.ContinueOnError)
 	f.SetOutput(io.Discard)
 	home := f.String("home", "D:/CC/Tools/discord-ask", "")

@@ -62,6 +62,18 @@ queueは3枠一対一、旧履歴とraw result保持、二重/別phase/実行済
 前後のcollection/census、foreign fence保持、通常tickとの排他、全台帳CAS拒否、
 同期proof保存後の中断/原At/Census再利用を確認する。
 レビュー・CI・CC側merge・親への返却は実施後に追記する。
+
+自己点検で、既存Aliveのfalseだけでは作成時刻欠落/照会不能を停止と区別できない点を
+再現した（新テストが `missing process creation time was treated as stopped` でRed）。
+新しい移行の入口だけに、記録されたsupervisor/helperのPIDと誕生時刻・同一handleの
+終了signalを確認するVerifierを追加。照会不能/欠落/生存は拒否し、元の通常処理は変えない。
+同一実processの生存、PID再利用、不存在、欠落、前後の照会不能をGoテストで確認した。
+stdinのEOFで終了させる自分の有限な子processを使い、handleを保持した終了signalも確認。
+この追補後のqueue全race（18.758秒）とvetは成功した。
+Windows APIの扱いは[OpenProcess](https://learn.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-openprocess)、
+[WaitForSingleObject](https://learn.microsoft.com/en-us/windows/win32/api/synchapi/nf-synchapi-waitforsingleobject)、
+[MicrosoftのProcessManager](https://github.com/dotnet/runtime/blob/main/src/libraries/System.Diagnostics.Process/src/System/Diagnostics/ProcessManager.Windows.cs)
+を照合した。source_migration_requiredは通常tickの拒否理由/有限backoffにも残す。
 製品全体のPR149完了とは区別する。旧PC実行0/過去CodeQL2success、
 新source Windows3+CodeQL2、merge後Windows3+CodeQL2を分け、計12実行上限を保つ。
 

@@ -69,6 +69,23 @@ func (d *Deps) MigrateUnexecutedSource(ctx context.Context, key, replacementKey 
 		ent.Queued.Deferrals < 0 || ent.Queued.Deferrals >= maxPrestartDeferrals {
 		return errors.New("not one of the finite unexecuted original source slots")
 	}
+	checkStopped := func() error {
+		if d.VerifyStopped == nil {
+			return errors.New("source process absence verifier unavailable")
+		}
+		for _, id := range []ProcID{ent.Started.Supervisor, ent.Started.Helper} {
+			if (id.PID == 0) != (id.Created == 0) {
+				return errors.New("source process identity incomplete")
+			}
+			if err := d.VerifyStopped(id); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+	if err = checkStopped(); err != nil {
+		return err
+	}
 	seen := map[string]bool{}
 	for _, k := range l.Budget.Initial {
 		path, ok := originalSourceSlots[k]
@@ -203,6 +220,9 @@ func (d *Deps) MigrateUnexecutedSource(ctx context.Context, key, replacementKey 
 		return errors.New("original source failure result unavailable")
 	}
 	verifyLocal := func() (CollectionObservation, error) {
+		if err := checkStopped(); err != nil {
+			return CollectionObservation{}, err
+		}
 		if d.Alive(ent.Started.Supervisor) || d.Alive(ent.Started.Helper) {
 			return CollectionObservation{}, errors.New("old source process is live or uncertain")
 		}
@@ -244,6 +264,9 @@ func (d *Deps) MigrateUnexecutedSource(ctx context.Context, key, replacementKey 
 		return err
 	}
 	if err = check(); err != nil {
+		return err
+	}
+	if err = checkStopped(); err != nil {
 		return err
 	}
 	if proof.OriginalResult != nil {

@@ -19,6 +19,12 @@ import (
 func migrationHarness(t *testing.T) (*harness, []string, []string) {
 	t.Helper()
 	h := newHarness(t)
+	h.d.VerifyStopped = func(id ProcID) error {
+		if (id.PID == 0) != (id.Created == 0) || h.d.Alive(id) {
+			return errors.New("not provably stopped")
+		}
+		return nil
+	}
 	oldKeys := []string{
 		h.seed("Windows", 39423559387, 118630300541, "test (windows-latest)", true),
 		h.seed("Windows", 39423559434, 118630300375, "live-chain", false),
@@ -463,6 +469,57 @@ func TestSourceProofPublicationSurvivesPartialTemporaryWrite(t *testing.T) {
 		b, _ := os.ReadFile(filepath.Join(dir, name))
 		if string(b) != "{" {
 			t.Fatal("interrupted evidence overwritten")
+		}
+	}
+}
+
+func TestSourceMigrationRejectsUnverifiableSupervisorIdentity(t *testing.T) {
+	h, keys, next := migrationHarness(t)
+	_ = h.d.mutate(keys[1], func(_ *Ledger, e *Entry) { e.Started.Supervisor = ProcID{PID: 9000} })
+	if err := h.d.MigrateUnexecutedSource(context.Background(), keys[1], next[1]); err == nil {
+		t.Fatal("missing process creation time was treated as stopped")
+	}
+}
+
+func TestSourceMigrationRejectsUnreadableProcessObservationBeforeAndAfterProof(t *testing.T) {
+	for _, later := range []bool{false, true} {
+		h, keys, next := migrationHarness(t)
+		calls := 0
+		h.d.VerifyStopped = func(ProcID) error {
+			calls++
+			if !later || calls > 2 {
+				return errors.New("access denied; process state unknown")
+			}
+			return nil
+		}
+		before, _ := json.Marshal(h.ledger())
+		if h.d.MigrateUnexecutedSource(context.Background(), keys[0], next[0]) == nil {
+			t.Fatal("unreadable process treated as stopped")
+		}
+		after, _ := json.Marshal(h.ledger())
+		if !bytes.Equal(before, after) {
+			t.Fatal("unreadable process cleared fence or changed budget")
+		}
+	}
+}
+
+func TestOrdinaryTickRecordsSourceMigrationRequirementWithoutConsumingBudget(t *testing.T) {
+	h, _, next := migrationHarness(t)
+	prefix := "repos/" + Repository + "/"
+	runs := h.gh.data[prefix+"actions/runs?status=queued&per_page=100&page=1"].(obj)["workflow_runs"]
+	h.gh.data[prefix+"actions/runs?status=queued&per_page=30"] = obj{"workflow_runs": runs}
+	h.d.Cfg.Continuation.Enabled = true
+	rep := h.tick()
+	if rep.BudgetBlocked != 3 || rep.Admitted != 0 || rep.Launched != 0 {
+		t.Fatal("tick did not report explicit source migration wait", rep)
+	}
+	l := h.ledger()
+	if len(l.Entries) != 3 || len(l.Budget.SourceMigrations) != 0 || len(l.Budget.Continuation) != 0 {
+		t.Fatal("tick admitted migration without proof")
+	}
+	for _, key := range next {
+		if l.Refusals[key].Reason != "source_migration_required" || l.Refusals[key].Next == "" {
+			t.Fatal("migration wait or bounded backoff missing")
 		}
 	}
 }

@@ -143,7 +143,7 @@ func (d *Deps) scanAndAdmit(ctx context.Context, rep *TickReport) {
 			}
 			if _, why := l.reserve(c.Plan, c.OS, d.Cfg.Continuation.Enabled, now); why == "" {
 				rep.Admitted++
-			} else if why == "budget_exhausted" {
+			} else if why == "budget_exhausted" || why == "source_migration_required" {
 				rep.BudgetBlocked++
 				r := l.Refusals[c.Plan.Key()]
 				r.Count++

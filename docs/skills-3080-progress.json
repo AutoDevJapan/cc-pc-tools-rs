@@ -652,36 +652,31 @@
     "definition_of_legacy_latest_name": "Historical PR406 accepted-delta snapshot. Later accepted merges/reviews are in merged_pr_history/latest_merged_pr/received_review_history/latest_received_review; this field is not current queue status."
   },
   "latest_received_review": {
-    "todo": 3605,
-    "job": "20261024-162643-todo-3605",
+    "todo": 3612,
+    "job": "20261024-172729-todo-3612",
     "status": "succeeded",
     "exit_code": 0,
     "model": "anthropic/claude-sonnet-5-5",
     "effort": "max",
     "model_origin": "owner_request",
     "effort_origin": "owner_request",
-    "effective_reasoning_measured": false,
-    "parent_full_read": true,
     "native_matched": true,
-    "raw_file": "review3605-original123649.md",
-    "raw_bytes": 6102,
-    "raw_sha256": "cfa5bb631d2512a62f410c6adc52f3aee870780fc2c9b8b965bb5b0bee19ee1b",
-    "base": "50ab02f3420dbe0c34458708dd82adf482c0f763",
-    "head": "00c87391a57467ab3373316229d5ef33e8b8f361",
-    "must": 0,
-    "suggestions": 3,
-    "nits": 6,
-    "received_at": "2026-10-24T08:06:56.4177861+00:00",
-    "scope": "Elevenfiles allhunks; next45JSON allleaf comparisons/representativehunks. Rights24 exactexpansion,40sourceIDs/rows,retention46/48,mutationguards/index191/55557,sourcebytes/139commit checked. No Go/central/network/CI execution.",
-    "resolution_pending": false,
-    "nonblocking_resolution": {
-      "S2": "Reinstate exact not-an-exclusion/all-candidates-accounted/no-new-rights-question wording in next delta. Operationally no provisional exclusion, scope shrink or new owner/rights question is adopted; original owner scope remains authoritative and all candidates are preserved.",
-      "S1": "Normalize global-scope inventory_ids [null] to [] in next already-needed20-entry publication; current scope explicitly says all candidates, no source ID or adopted count is added.",
-      "nits": "Amendment labels, individual review base/head/Must chronology, historical411, forty-only reader annotation scope, effectiveReasoningNotMeasured, exact receipt_checked_at terminology carried to next delta. No original execution/version/time will be fabricated.",
-      "S3": "Add one meaningful public namespace/rights-expansion/provenance consistency test with the next20 schema evolution; current all40/all24 were independently checked by3605."
-    },
+    "parent_full_read": true,
+    "effective_reasoning_measured": false,
+    "raw_file": "review3612-original123649.md",
+    "raw_bytes": 7064,
+    "raw_sha256": "d8dee23f79c6ca4ef27041a30f5317d9a3982a04d5e865e31e0cd19cf161aa34",
+    "base": "36722b7b45f227b662843bb515b0e7aff766dba5",
+    "head": "534d2cd08822febf015617b3ca94e63697cfd5c1",
+    "must": 1,
+    "suggestions": 4,
+    "nits": 5,
+    "scope": "All16file/allhunks,20semantic records,178support metadata/state,66740cache hash/bytes/line/failurecounts; no Go/central/network/CI. Raw74410report first/legend only, cache bodymetadata aggregate only.",
+    "received_at": "2026-10-24T08:57:03.3110134+00:00",
+    "resolution_pending": true,
+    "next": "Remove mutable currentcount prose, clarify default rights/newness/policy constraints, strengthen next20 relations and futureledger alignment, boundedfixreview/exactCI/merge",
     "owner_action_required": false,
-    "followup_in_this_delta": "Empty globalID arrays/strong owner constraints, public namespace consistency tests, amendment labels and explicit original-vs-correction review chronology are handled alongside the new20 intake; no new central apply or final disposition."
+    "parent_followup": "Historical mutable count prose removed, default rights and source/version proposals made explicit, next20/provenance/cache relationships and ledger-aligned future decisions tested. Source bytes and474/475/32/3/8 counters unchanged; this fix needs bounded review/exactCI."
   },
   "latest_merged_pr": {
     "head": "00c87391a57467ab3373316229d5ef33e8b8f361",
@@ -1024,6 +1019,40 @@
       "parent_followup": "Public rights definitions and source-based row namespaces, accepted-vs-pending snapshots, privacy removal, common last-verification/name-fingerprint tests and precise mutation guards. This new correction delta awaits its own review/CI/merge.",
       "resolution_pending_at_original_receipt": true,
       "effective_reasoning_measured": false
+    },
+    {
+      "todo": 3605,
+      "job": "20261024-162643-todo-3605",
+      "status": "succeeded",
+      "exit_code": 0,
+      "model": "anthropic/claude-sonnet-5-5",
+      "effort": "max",
+      "model_origin": "owner_request",
+      "effort_origin": "owner_request",
+      "effective_reasoning_measured": false,
+      "parent_full_read": true,
+      "native_matched": true,
+      "raw_file": "review3605-original123649.md",
+      "raw_bytes": 6102,
+      "raw_sha256": "cfa5bb631d2512a62f410c6adc52f3aee870780fc2c9b8b965bb5b0bee19ee1b",
+      "base": "50ab02f3420dbe0c34458708dd82adf482c0f763",
+      "head": "00c87391a57467ab3373316229d5ef33e8b8f361",
+      "must": 0,
+      "suggestions": 3,
+      "nits": 6,
+      "received_at": "2026-10-24T08:06:56.4177861+00:00",
+      "scope": "Elevenfiles allhunks; next45JSON allleaf comparisons/representativehunks. Rights24 exactexpansion,40sourceIDs/rows,retention46/48,mutationguards/index191/55557,sourcebytes/139commit checked. No Go/central/network/CI execution.",
+      "resolution_pending": false,
+      "nonblocking_resolution": {
+        "S2": "Reinstate exact not-an-exclusion/all-candidates-accounted/no-new-rights-question wording in next delta. Operationally no provisional exclusion, scope shrink or new owner/rights question is adopted; original owner scope remains authoritative and all candidates are preserved.",
+        "S1": "Normalize global-scope inventory_ids [null] to [] in next already-needed20-entry publication; current scope explicitly says all candidates, no source ID or adopted count is added.",
+        "nits": "Amendment labels, individual review base/head/Must chronology, historical411, forty-only reader annotation scope, effectiveReasoningNotMeasured, exact receipt_checked_at terminology carried to next delta. No original execution/version/time will be fabricated.",
+        "S3": "Add one meaningful public namespace/rights-expansion/provenance consistency test with the next20 schema evolution; current all40/all24 were independently checked by3605."
+      },
+      "owner_action_required": false,
+      "followup_in_this_delta": "Empty globalID arrays/strong owner constraints, public namespace consistency tests, amendment labels and explicit original-vs-correction review chronology are handled alongside the new20 intake; no new central apply or final disposition.",
+      "parent_read_time_definition": "received_at is the receipt persistence time, not the reading start or an exact completion timestamp. Parent observed/read the fullresponse before this receipt; reading duration and exact completion were not captured.",
+      "parent_read_observed_response_at": "2026-10-24T17:04:41.9920154+09:00"
     }
   ],
   "merged_pr_history": [
@@ -1245,7 +1274,7 @@
     "new_individual_rights_exclusions": 1,
     "existing_duplicate_receipts_reused": 1
   },
-  "amended_at": "2026-10-24T08:15:09.0197014+00:00",
+  "amended_at": "2026-10-24T08:58:26.6672769+00:00",
   "amendment_job": "20261024-123649-todo-3080",
   "mcp_pointer_installation": {
     "real_server_or_rendering_tested": false,
@@ -1362,5 +1391,14 @@
     "final_disposition_delta": 0,
     "semantic_read_delta": 0,
     "candidate_alias_leads": 8
+  },
+  "additional_candidate_hold_snapshot": {
+    "definition": "Later candidate observation separate from earlier4 comparison snapshot. No names/leafpaths disclosed and no classification recovery is asserted.",
+    "classification_unverified": true,
+    "total_with_previous_comparison_holds": 5,
+    "existence_checked": false,
+    "size_bytes": null,
+    "central_post_guard_read_write": 0,
+    "count": 1
   }
 }

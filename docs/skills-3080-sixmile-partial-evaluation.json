@@ -4,7 +4,7 @@
   "entrypoints_fulltext_read": 21,
   "tree_sha": "5782ae7deffe5024e15b6e090327385c10f76273",
   "installed": 1,
-  "pending_definition": "This evidence artifact selects the first21 of the fixed55623 source paths. Its nonselected55602 is a cohort boundary, not current full-source unread coverage. Additional45 is separately indexed; current raw64/workflow65/notice-only1 is in the source evaluation index.",
+  "pending_definition": "This immutable first21 evidence cohort has a historical nonselected boundary, not current unread coverage. Current raw/workflow/notice-only and unassessed totals are in skills-3080-sixmile-evaluation-index.json and skills-3080-progress.json; no current aggregate numbers are copied into this historical prose.",
   "entrypoints_unread": 55602,
   "entrypoints_expected": 55623,
   "pending_paths_list_published": false,
@@ -4065,9 +4065,9 @@
     "central_writes": 0
   },
   "next21_definition": "Earlier eleven plus research3554 ten unique primary paths. Support102+63=165, saved40+35=75, full12+30=42, scan0+5=5, unsaved62+28=90. Metadata eligibility is not individual permission. No new adoption or exclusion is added.",
-  "amended_at": "2026-10-24T08:15:09.0197014+00:00",
+  "amended_at": "2026-10-24T08:58:26.6672769+00:00",
   "amendment_job": "20261024-123649-todo-3080",
-  "amendment_definition": "Document amendment time only. Historical first21 reading/adoption snapshots and identities are preserved. This followup incorporates3590/3599 scope explanations and an additional45 aggregate-index link; it is not a new reading of the historical21.",
+  "amendment_definition": "Document amendment and historical-scope clarification only. Original first21/source/support/actor anchors remain unchanged. Current aggregate counts live only in the source index/progress; later batches do not require rewriting historical numeric prose.",
   "next_research_todos": [
     3565,
     3566

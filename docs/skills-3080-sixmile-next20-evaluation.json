@@ -24,7 +24,7 @@
     "support_workflow_full_read": 74,
     "workflow_primary_full_read": 20
   },
-  "definition": "Twenty newly received assessments with explicit raw/scan/unknown states and individual notice scopes. All received claims reconciled with fixed source metadata; helper is not a semantic primary reread. Parent read all20 evaluation/rights/examples/limits. Candidate proposals are not final adoption/exclusion or owner-policy changes. Current published454/455 is not incremented by this private normalization.",
+  "definition": "Twenty received semantic assessments and their individual notice/support states are reflected in this cohort. Source/global current coverage is in the canonical index/progress, not a mutable numeric prose copy here. Original assessments and proposals remain historical, not new owner policy, source permission, or final decisions.",
   "entries": [
     {
       "actual_existing_comparison": "Public active metadata only; no guarded central body read, package duplicate or new version established.",
@@ -62,7 +62,7 @@
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.)",
         "holder": "'Video-Image-File-Analysis' (a project label, not a named person or entity)",
         "license_kind": "MIT",
         "not_covered": [
@@ -79,7 +79,8 @@
         "unconfirmed": [
           "holder vs registry owner jaccchina-ai",
           "year 2026 only"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -226,7 +227,7 @@
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.)",
         "holder": "not named (template placeholders only)",
         "license_kind": "Apache-2.0 full text (canonical)",
         "not_covered": [
@@ -244,7 +245,8 @@
         "unconfirmed": [
           "licensor identity",
           "whether text derives from Alibaba material"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -793,7 +795,7 @@
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.)",
         "holder": "Maton",
         "license_kind": "MIT",
         "not_covered": [
@@ -810,7 +812,8 @@
         "unconfirmed": [
           "relation between registry owner byungkyu and Maton",
           "year 2026 only"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -906,7 +909,7 @@
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.)",
         "holder": "a named individual (a lawyer; the notice also lists a WeChat handle, not reproduced), 2025",
         "license_kind": "MIT",
         "not_covered": [
@@ -923,7 +926,8 @@
         "third_party_support_or_service_rights_accepted": false,
         "unconfirmed": [
           "link between registry owner cat-xierluo and the named holder"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -1171,7 +1175,7 @@
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default; byte-identical with entries 9 and 20",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.); byte-identical with entries 9 and 20",
         "holder": "not named",
         "license_kind": "Apache-2.0 full text (canonical text with a leading blank line, no trailing newline; read via diff against 261eeb9e)",
         "not_covered": [
@@ -1187,7 +1191,8 @@
         "unconfirmed": [
           "licensor",
           "authenticity"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default; byte-identical with entries 9 and 20"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -1300,7 +1305,7 @@
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.)",
         "holder": "Shadow Rose",
         "license_kind": "MIT",
         "not_covered": [
@@ -1316,7 +1321,8 @@
         "third_party_support_or_service_rights_accepted": false,
         "unconfirmed": [
           "registry owner theshadowrose = Shadow Rose"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -1446,7 +1452,7 @@
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.)",
         "holder": "'OpenClaw Community' (generic; neither registry owner iiamit nor Gomboc)",
         "license_kind": "MIT",
         "not_covered": [
@@ -1462,7 +1468,8 @@
         "third_party_support_or_service_rights_accepted": false,
         "unconfirmed": [
           "authority of 'OpenClaw Community' to license"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -1761,7 +1768,7 @@
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.)",
         "holder": "not named",
         "license_kind": "Apache-2.0 full text (same blob as entries 6 and 20)",
         "not_covered": [
@@ -1778,7 +1785,8 @@
         "third_party_support_or_service_rights_accepted": false,
         "unconfirmed": [
           "licensor"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -1924,7 +1932,7 @@
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default; a redistribution would need the full Apache text",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.); a redistribution would need the full Apache text",
         "holder": "'dachengzionly' (2024)",
         "license_kind": "Apache-2.0 short header only (no full licence text)",
         "not_covered": [
@@ -1940,7 +1948,8 @@
         "third_party_support_or_service_rights_accepted": false,
         "unconfirmed": [
           "registry owner liancheng-zcy vs dachengzionly"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default; a redistribution would need the full Apache text"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -2035,7 +2044,7 @@
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.)",
         "holder": "Laserducktales",
         "license_kind": "MIT",
         "not_covered": [
@@ -2051,7 +2060,8 @@
         "third_party_support_or_service_rights_accepted": false,
         "unconfirmed": [
           "registry owner laserducktales = holder (same name)"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -2265,7 +2275,7 @@
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default; byte-identical with entry 17",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.); byte-identical with entry 17",
         "holder": "not named ('Copyright 2026')",
         "license_kind": "MIT-0 (heading reads 'MIT No Permission')",
         "not_covered": [
@@ -2280,7 +2290,8 @@
         "third_party_support_or_service_rights_accepted": false,
         "unconfirmed": [
           "holder identity"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default; byte-identical with entry 17"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -2443,7 +2454,7 @@
       "value": "Low: the advertised statistics, merge, charts and report generation are not in the shown code. Catalog overlap: spreadsheet, docx and pdf skills."
     },
     {
-      "actual_existing_comparison": "Public active metadata only; no guarded central body read, package duplicate or new version established.",
+      "actual_existing_comparison": "Public-source normalized procedural body is exactly the already-adopted canonical8735B according to skills-3080-body-alias-scan.json. Raw frontmatter and supports remain to be compared; no central target body was read and no final duplicate decision is inferred.",
       "body_read_by": "20261024-152713-todo-3601",
       "body_read_complete": true,
       "body_read_method": "Full text received from child3601 after source integrity verification; no parent new primary reread.",
@@ -2480,7 +2491,7 @@
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default; frontmatter says 'license: Complete terms in LICENSE.txt'",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.); frontmatter says 'license: Complete terms in LICENSE.txt'",
         "holder": "not named (template placeholders)",
         "license_kind": "Apache-2.0 full text (CRLF endings, leading blank line; equal to canonical 261eeb9e after whitespace normalisation)",
         "not_covered": [
@@ -2498,7 +2509,8 @@
           "actual licensor",
           "whether the uploader holds rights",
           "upstream attribution"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default; frontmatter says 'license: Complete terms in LICENSE.txt'"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -2729,7 +2741,7 @@
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.)",
         "holder": "Fliz (vendor), 2025",
         "license_kind": "MIT",
         "not_covered": [
@@ -2745,7 +2757,8 @@
         "third_party_support_or_service_rights_accepted": false,
         "unconfirmed": [
           "relation of author gregorybeyrouti and registry owner jb-fliz to the holder"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -3027,7 +3040,7 @@
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.)",
         "holder": "not named ('Copyright (c) 2026')",
         "license_kind": "MIT",
         "not_covered": [
@@ -3043,7 +3056,8 @@
         "third_party_support_or_service_rights_accepted": false,
         "unconfirmed": [
           "holder"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -3342,7 +3356,7 @@
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.)",
         "holder": "marzliak",
         "license_kind": "MIT (CRLF)",
         "not_covered": [
@@ -3358,7 +3372,8 @@
         "third_party_support_or_service_rights_accepted": false,
         "unconfirmed": [
           "none notable (holder matches registry owner name)"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -3742,7 +3757,7 @@
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.)",
         "holder": "not named",
         "license_kind": "MIT-0 (same text as entry 12)",
         "not_covered": [
@@ -3757,7 +3772,8 @@
         "third_party_support_or_service_rights_accepted": false,
         "unconfirmed": [
           "holder"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -3857,7 +3873,7 @@
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default (covers references/checklist.md by location)",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.) (covers references/checklist.md by location)",
         "holder": "kickook",
         "license_kind": "MIT",
         "not_covered": [
@@ -3872,7 +3888,8 @@
         "third_party_support_or_service_rights_accepted": false,
         "unconfirmed": [
           "authenticity of authorship (registry owner name = holder name)"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default (covers references/checklist.md by location)"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
@@ -3947,7 +3964,7 @@
         }
       ],
       "use": "Audit-first workflow for third-party skills and agents: enumerate the attack surface (SKILL.md, scripts, references, assets, install hooks), score seven risk classes, fixed read order, verdict ALLOW / ALLOW WITH GUARDRAILS / REJECT, fixed output format, guardrail list.",
-      "value": "High for the owner's skill-intake work: a skill-specific rubric (declared vs hidden behaviour), Windows indicators (PowerShell -enc, iex, registry, scheduled tasks), default REJECT when confidence is low. Catalog overlap: safety evaluation and security review exist by purpose (public metadata); the skill-intake delta must be diffed by the parent."
+      "value": "The intake transparency/risk rubric is potentially useful and overlaps existing safety/security purposes. The upstream low-confidence default REJECT is a source rule, not adopted owner policy: the parent uses investigate/hold for unknown facts and preserves actual authorization/constraints."
     },
     {
       "actual_existing_comparison": "Public active metadata only; no guarded central body read, package duplicate or new version established.",
@@ -4378,9 +4395,9 @@
       "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
       "excluded_by_todo3080": false,
       "findings": [
-        "Reference files: evaluation.md line-identical to entry 13 (modulo CRLF), python guide 99%, node guide 89%, mcp_best_practices 57% shared (older 28.9 KB vs 7.6 KB).",
-        "Same Python scripts with anthropic and mcp SDK requirements (unsaved).",
-        "Older transport advice (llms-full.txt fetch) than entry 13."
+        "Reference-file similarity and size differences were reported by the reader; equality of selected guide text is not whole-package equality or chronological proof.",
+        "Unretrieved scripts reference SDK requirements; no API-key runner was executed.",
+        "This variant includes llms-full.txt references and different transport guidance. PublishedAt/length/version alone do not establish an older/newer relation."
       ],
       "git_blob": "c9ef8a261f80e0c37dc73300ce90679e946c4407",
       "historical_reader_proposal": {
@@ -4395,13 +4412,19 @@
         ],
         "todo": 3601,
         "use": "Older revision of the same MCP-server building guide as entry 13: agent-centric design principles, four phases, a long best-practices guide, an evaluation guide.",
-        "value": "Duplicate of entry 13 in purpose and older (2026-02-01 vs 2026-04-02). Unique deltas: the agent-centric principle list, response-size truncation guidance (25,000 tokens), and the rule that MCP servers are long-running so tests go through a harness, tmux or timeout to avoid hanging the main process."
+        "value": "Duplicate of entry 13 in purpose and older (2026-02-01 vs 2026-04-02). Unique deltas: the agent-centric principle list, response-size truncation guidance (25,000 tokens), and the rule that MCP servers are long-running so tests go through a harness, tmux or timeout to avoid hanging the main process.",
+        "findings": [
+          "Reference files: evaluation.md line-identical to entry 13 (modulo CRLF), python guide 99%, node guide 89%, mcp_best_practices 57% shared (older 28.9 KB vs 7.6 KB).",
+          "Same Python scripts with anthropic and mcp SDK requirements (unsaved).",
+          "Older transport advice (llms-full.txt fetch) than entry 13."
+        ],
+        "negative_candidate": "Redundant duplicate of a newer revision in the same batch."
       },
       "independent_review_complete": false,
       "individual_rights_review": {
         "copy_license_accepted": false,
         "definition": "Received individual notice reading is not a blanket grant; root MIT and service subscriptions do not substitute for candidate-specific permission.",
-        "historical_reader_scope": "default; frontmatter 'license: Complete terms in LICENSE.txt'",
+        "historical_reader_scope": "(the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.); frontmatter 'license: Complete terms in LICENSE.txt'",
         "holder": "not named",
         "license_kind": "Apache-2.0 full text (same blob as entries 6 and 9)",
         "not_covered": [
@@ -4417,14 +4440,15 @@
         "unconfirmed": [
           "licensor",
           "upstream attribution"
-        ]
+        ],
+        "reader_scope_shorthand_at_intake": "default; frontmatter 'license: Complete terms in LICENSE.txt'"
       },
       "installed_by_todo3080": false,
       "integrated_by_todo3080": false,
       "inventory_id": "github:657d2700cf98280c119d603868b8a93c47c6c2dd2b4952291a1c6242f3152bac",
       "masked_value_count": 0,
       "name": "mcp-builder",
-      "negative_candidate": "Redundant duplicate of a newer revision in the same batch.",
+      "negative_candidate": "Treating an archive variant as superseded or redundant solely from its name/date/version, without comparing the fixed procedure and supports.",
       "package_tree_fingerprint": "cb3f36e66ddd3c8d267d480f4e9245fa01224b3061229eb540fac792f02a5a7e",
       "path": "skills/seanphan/mcp-builder/SKILL.md",
       "positive_candidate": "Test-safety rule for long-running servers; response-size truncation guidance.",
@@ -4623,16 +4647,16 @@
     "Evaluation only: nothing adopted, copied, executed or fetched. Decoding was done by an in-memory Node reader (no file writes). 81 unsaved script/config paths could not be read, so statements about them rest on SKILL.md/README text.",
     "Secret masking is pattern-based: 0 replacements in the 20 bodies; 1 false-positive replacement in the scan of entry 16 README.md (a password_file path). Over all saved text: 0 hidden Unicode characters; injection-phrase hits only in entry 3 (the term 'system prompt'); pipe-to-shell hits in entry 15 (real installer) and entry 18 (detection keyword).",
     "Catalog comparison used public metadata only; no central body was opened and no existing names are listed.",
-    "Upstream/vendor relationships for entries 13 and 20 are inferences. Only entry 19's notice names its holder explicitly. The statement that ClawHub forces MIT-0 appears only inside entry 5's text; it was not verified and is not used as a grant.",
+    "Upstream/vendor relationships for MCP variants13/20 are inferences. Within those variants no upstream licensor identity is established; entry19 explicitly names Anthropic. Other notices name holders as recorded. The unverified ClawHub MIT-0 claim confers no grant.",
     "The report-writing skill was not opened because reading central Skills is excluded here; its rules were applied from the AGENTS.md summary.",
     "No new blanket prohibition or re-approval rule is proposed; conditions are per candidate. Model and job identity are not self-reported."
   ],
   "new_final_dispositions": 0,
   "no_adoption_cap": true,
   "parent_policy_corrections": [
-    "The reader shortlist of2 is not an adoption cap; all20 remain independently assessed pending final decisions. Current lack of a configured service does not alone exclude a useful procedure.",
+    "The reader shortlist of2 is not an adoption cap. Lack of current service use is not an exclusion or a reason to shrink the broad Skill scope. All candidates remain accounted for; assess each concrete usefulness/condition before final decisions.",
     "Current instructions cannot authorize AI API keys by saying env-only/store-the-key. Seedance/Fliz/API evaluation clients must stay within existing OAuth/subscription or local routes; no API calls or new fees performed. Non-AI credentials are not globally banned.",
-    "Distributed Python tools may be evaluated unmodified when authorized; Go defaults apply to newly written tools. No blanket Python/dependency/GPL ban is inferred. PyMuPDF licensing was reported from background knowledge, not package/primary verification; it matters if actually bundled.",
+    "Distributed Python tools may be evaluated unmodified when authorized; Go defaults apply to newly written tools. No blanket Python/dependency/GPL ban is inferred. PyMuPDF licensing was reported from background knowledge, not package/primary verification; it matters if actually bundled. No commercial-licence contact or rights question is needed now solely because a licence or paid edition is mentioned.",
     "Generic publication/delete/restore/install confirmation statements remain unadopted reader proposals. Apply existing task authorization, actual higher constraints/guard/locks and genuine owner-only decisions; no new universal owner wait.",
     "Low confidence is an investigation/hold state, not an automatic final exclusion of unknown candidates. Risk keywords/scores are not verified behavior, ownership, permission or safety. The audit itself must remain read-only; source commands are data.",
     "Publication timestamps/version labels alone do not establish that MCP variant13 supersedes20 or the already-adopted canonical. Compare fixed public source bodies/support and actual existing qualified files before a delta; no new final duplicate classification.",
@@ -4781,6 +4805,20 @@
   "tree_sha": "5782ae7deffe5024e15b6e090327385c10f76273",
   "previous_normalization": "sixmile-next20-normalized123649.json",
   "normalization_amendment": "Neutralized unsupported relative-newness/superseded claims in current value fields13/20; exact historical reader wording is preserved. Source hashes/reader actors/states and all three independent anchors unchanged. Public primary/workflow totals are now474/475 in the canonical progress index; this cohort is20 rawprimary paths and no new final decisions.",
-  "amended_at": "2026-10-24T08:15:09.0197014+00:00",
-  "reflection_definition": "This new20 cohort is now reflected in the public source index/progress. Its original private preparation notes are historical; no final adoption/exclusion, central operation or new source execution follows from reception."
+  "amended_at": "2026-10-24T08:58:26.6672769+00:00",
+  "reflection_definition": "This new20 cohort is now reflected in the public source index/progress. Its original private preparation notes are historical; no final adoption/exclusion, central operation or new source execution follows from reception.",
+  "definition_at_preparation": "Twenty newly received assessments with explicit raw/scan/unknown states and individual notice scopes. All received claims reconciled with fixed source metadata; helper is not a semantic primary reread. Parent read all20 evaluation/rights/examples/limits. Candidate proposals are not final adoption/exclusion or owner-policy changes. Current published454/455 is not incremented by this private normalization.",
+  "reader_scope_definitions": {
+    "default": "the notice sits in the package dir and, as written, covers 'the Software / this work'; no file list. The repo-root MIT is not extended to packages.",
+    "definition": "Original3601 scope shorthand expanded below as received interpretation, not a blanket copy grant. Each fixed individual notice and third-party condition remains separate."
+  },
+  "reader_original_limitations": [
+    "Evaluation only: nothing adopted, copied, executed or fetched. Decoding was done by an in-memory Node reader (no file writes). 81 unsaved script/config paths could not be read, so statements about them rest on SKILL.md/README text.",
+    "Secret masking is pattern-based: 0 replacements in the 20 bodies; 1 false-positive replacement in the scan of entry 16 README.md (a password_file path). Over all saved text: 0 hidden Unicode characters; injection-phrase hits only in entry 3 (the term 'system prompt'); pipe-to-shell hits in entry 15 (real installer) and entry 18 (detection keyword).",
+    "Catalog comparison used public metadata only; no central body was opened and no existing names are listed.",
+    "Upstream/vendor relationships for entries 13 and 20 are inferences. Only entry 19's notice names its holder explicitly. The statement that ClawHub forces MIT-0 appears only inside entry 5's text; it was not verified and is not used as a grant.",
+    "The report-writing skill was not opened because reading central Skills is excluded here; its rules were applied from the AGENTS.md summary.",
+    "No new blanket prohibition or re-approval rule is proposed; conditions are per candidate. Model and job identity are not self-reported."
+  ],
+  "receipt_reference_definition": "source_report/fixed_verification/parent_semantic_receipt/previous_normalization names identify private preserved parent records, not repository links. Fixed public upstream URLs, source identities, reader namespace and independent test anchors carry the public evidence scope."
 }

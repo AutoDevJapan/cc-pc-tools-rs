@@ -1,2 +1,4 @@
 capacity-3085-runtime.json -text whitespace=cr-at-eol
 capacity-3085-guard.json -text whitespace=cr-at-eol
+capacity-3628-runtime.json -text whitespace=cr-at-eol
+capacity-3628-guard.json -text whitespace=cr-at-eol

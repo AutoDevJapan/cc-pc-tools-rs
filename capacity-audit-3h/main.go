@@ -74,6 +74,8 @@ type report struct {
 	EArchiveMarginOK *bool              `json:"e_at_least_500_gib_free"`
 	ElapsedMS        int64              `json:"elapsed_ms"`
 	Decision         *decisionReceipt   `json:"decision_queue,omitempty"`
+	AllDrives        *allDriveReport    `json:"all_drives,omitempty"`
+	AllDrivesFailed  bool               `json:"all_drive_collection_failed,omitempty"`
 }
 
 func within(root, child string, allowRoot bool) bool {
@@ -111,6 +113,10 @@ func safeStateFile(path string) bool {
 }
 
 func privateAllowed(ctx context.Context, path string) bool {
+	return classifyPath(ctx, path) == "clear"
+}
+
+func classifyPath(ctx context.Context, path string) string {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, guardExe, "--guard-path", path)
@@ -120,13 +126,22 @@ func privateAllowed(ctx context.Context, path string) bool {
 	cmd.Stderr = io.Discard
 	output, err := cmd.Output()
 	if err != nil || len(output) > 4096 {
-		return false
+		return "guard_unavailable"
 	}
 	var result struct {
 		Client     *bool `json:"client_resource"`
 		Unverified bool  `json:"classification_unverified"`
 	}
-	return json.Unmarshal(output, &result) == nil && result.Client != nil && !*result.Client && !result.Unverified
+	if json.Unmarshal(output, &result) != nil || result.Client == nil {
+		return "guard_unavailable"
+	}
+	if result.Unverified {
+		return "protected_unclassified"
+	}
+	if *result.Client {
+		return "protected"
+	}
+	return "clear"
 }
 
 func scan(ctx context.Context, spec rootSpec, state *scanState, maxEntries int) categoryResult {
@@ -272,13 +287,55 @@ func knownRootFiles() map[string]*uint64 {
 }
 
 func run() error {
+	if len(os.Args) == 2 && os.Args[1] == "--inventory" {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+		data, err := discoverDevices(ctx)
+		if err != nil {
+			return err
+		}
+		inv, err := normalizeInventory(data, nil, time.Now())
+		if err != nil {
+			return err
+		}
+		return json.NewEncoder(os.Stdout).Encode(inv)
+	}
+	if len(os.Args) == 2 && os.Args[1] == "--all-drives-status" {
+		path := filepath.Join(runtimeRoot, "all-drive-latest-v1.json")
+		if !safePath(runtimeRoot) || !safeStateFile(path) {
+			return errors.New("all-drive status boundary")
+		}
+		f, err := os.Open(path)
+		if err != nil {
+			return errors.New("all-drive status unavailable")
+		}
+		defer f.Close()
+		data, err := io.ReadAll(io.LimitReader(f, 1024*1024+1))
+		var r allDriveReport
+		if err != nil || len(data) > 1024*1024 || json.Unmarshal(data, &r) != nil || r.Inventory.Schema != 1 {
+			return errors.New("invalid all-drive status")
+		}
+		return json.NewEncoder(os.Stdout).Encode(r)
+	}
 	if len(os.Args) != 1 {
 		return errors.New("unsupported arguments")
 	}
-	if !safePath(runtimeRoot) {
+	return runAudit(runtimeRoot, roots, auditDependencies{Collect: collectAllDrives, Space: space, Queue: queueDecision, RootFiles: knownRootFiles, Emit: func(r report) { _ = json.NewEncoder(os.Stdout).Encode(r) }})
+}
+
+type auditDependencies struct {
+	Collect   func(context.Context, string) (allDriveReport, error)
+	Space     func(string) (uint64, uint64, error)
+	Queue     func(report) *decisionReceipt
+	RootFiles func() map[string]*uint64
+	Emit      func(report)
+}
+
+func runAudit(home string, specs []rootSpec, deps auditDependencies) error {
+	if !safePath(home) {
 		return errors.New("runtime boundary")
 	}
-	unlock, err := lock(filepath.Join(runtimeRoot, "run.lock"))
+	unlock, err := lock(filepath.Join(home, "run.lock"))
 	if errors.Is(err, errLocked) {
 		return nil
 	}
@@ -287,19 +344,33 @@ func run() error {
 	}
 	defer unlock()
 	start := time.Now()
-	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 165*time.Second)
 	defer cancel()
-	statePath := filepath.Join(runtimeRoot, "state.json")
-	if !safeStateFile(statePath) || !safeStateFile(filepath.Join(runtimeRoot, "runs.jsonl")) {
+	statePath := filepath.Join(home, "state.json")
+	if !safeStateFile(statePath) || !safeStateFile(filepath.Join(home, "runs.jsonl")) {
 		return errors.New("linked state or log")
 	}
 	state, err := readCheckpoint(statePath)
 	if err != nil {
 		return err
 	}
-	r := report{Schema: 1, Time: start.UTC().Format(time.RFC3339), Scope: "C/D volume measurements and bounded classified metadata; logical sizes can include hard links", Free: make(map[string]*uint64), Used: make(map[string]*uint64), Increase: make(map[string]*int64), RootFiles: knownRootFiles()}
+	r := report{Schema: 1, Time: start.UTC().Format(time.RFC3339), Scope: "C/D volume measurements and bounded classified metadata; logical sizes can include hard links", Free: make(map[string]*uint64), Used: make(map[string]*uint64), Increase: make(map[string]*int64), RootFiles: deps.RootFiles()}
+	allCtx, allCancel := context.WithTimeout(ctx, 45*time.Second)
+	all, allErr := deps.Collect(allCtx, home)
+	allCancel()
+	if allErr != nil {
+		// Preserve the failed cursor and still measure the independent legacy
+		// categories and queue their worker. Unknown device data is never zero.
+		all = allDriveReport{Inventory: volumeInventory{Schema: 1, Time: time.Now().UTC().Format(time.RFC3339), Status: "collection_unavailable", Errors: []string{"all_drive_collection_unavailable"}}}
+		r.AllDrivesFailed = true
+		latest := filepath.Join(home, "all-drive-latest-v1.json")
+		if safeStateFile(latest) {
+			_ = saveAllDriveJSON(latest, all)
+		}
+	}
+	r.AllDrives = &all
 	for _, drive := range []string{"C", "D", "E"} {
-		free, total, err := space(drive + `:\`)
+		free, total, err := deps.Space(drive + `:\`)
 		if err != nil {
 			r.Free[drive] = nil
 			r.Used[drive] = nil
@@ -321,8 +392,8 @@ func run() error {
 		r.EArchiveMarginOK = &ok
 	}
 	byCategory := make(map[string]categoryResult)
-	for _, index := range rootOrder(state.NextRoot, len(roots)) {
-		spec := roots[index]
+	for _, index := range rootOrder(state.NextRoot, len(specs)) {
+		spec := specs[index]
 		if ctx.Err() != nil {
 			byCategory[spec.Category] = categoryResult{Category: spec.Category, Status: "not_scanned_deadline"}
 			continue
@@ -355,23 +426,25 @@ func run() error {
 		}
 		byCategory[spec.Category] = result
 	}
-	for _, spec := range roots {
+	for _, spec := range specs {
 		r.Categories = append(r.Categories, byCategory[spec.Category])
 	}
 	r.ElapsedMS = time.Since(start).Milliseconds()
-	state.NextRoot = (state.NextRoot + 1) % len(roots)
+	if len(specs) > 0 {
+		state.NextRoot = (state.NextRoot + 1) % len(specs)
+	}
 	state.Last = &r
 	if err := saveCheckpoint(statePath, state); err != nil {
 		return err
 	}
 	// Persist measurements first; queue failure cannot erase the scan. A retry
 	// uses the shared ToDo lock and reuses the same finite decision row.
-	r.Decision = queueDecision(r)
+	r.Decision = deps.Queue(r)
 	state.Last = &r
 	if err := saveCheckpoint(statePath, state); err != nil {
 		return err
 	}
-	log, err := os.OpenFile(filepath.Join(runtimeRoot, "runs.jsonl"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	log, err := os.OpenFile(filepath.Join(home, "runs.jsonl"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
 	if err != nil {
 		return err
 	}
@@ -388,11 +461,13 @@ func run() error {
 	}
 	// A GUI-subsystem scheduled process can have no stdout handle. Persisted
 	// and synced receipts are mandatory; the optional console copy is not.
-	_ = json.NewEncoder(os.Stdout).Encode(r)
+	if deps.Emit != nil {
+		deps.Emit(r)
+	}
 	if r.Decision.Status == "queue_unavailable" {
 		return errors.New("decision queue unavailable; measurements retained")
 	}
-	return nil
+	return allErr
 }
 
 func main() {

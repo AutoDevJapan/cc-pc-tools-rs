@@ -3,10 +3,13 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"os"
 	"os/exec"
 )
+
+func discoverDevices(context.Context) ([]byte, error) { return nil, errors.New("Windows only") }
 
 var errLocked = errors.New("another audit is running")
 

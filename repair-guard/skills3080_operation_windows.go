@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"syscall"
 	"time"
@@ -81,6 +82,13 @@ func skillsModel(model string) string {
 	}
 	return ""
 }
+
+var skillsAccountIdentifier=regexp.MustCompile(`^[0-9a-f]{6}$`)
+func skillsModelIdentifier(model string)bool{
+ if skillsModel(model)==""{return false};parts:=strings.Split(model,"/")
+ if len(parts)==1{return true};if len(parts)!=2{return false}
+ prefix:=parts[0];return prefix=="openai"||prefix=="anthropic"||prefix=="main"||(len(prefix)==7&&prefix[0]=='p'&&skillsAccountIdentifier.MatchString(prefix[1:]))
+}
 func skillsReviewAccepted(received skillsReceived, manifestSHA, writerModel string) bool {
 	if !strings.Contains(string(received.Spec), "SKILLS3080_MANIFEST_SHA256 "+manifestSHA) || skillsModel(writerModel) == "" || len(received.Native) == 0 {
 		return false
@@ -119,7 +127,7 @@ func skillsActorCheck(w skillsWriter, reg skillsRegistry, s *skillsFS, caller st
 		return skillsWriterCheck(w, reg, s, caller)
 	}
 	row, ok := reg.Tasks[3686]
-	if !ok || w.Task != 3686 || w.Job != caller || row.Project != "cc-pc-tools-rs" || row.Status != "doing" || row.Scheduler.Job != caller || !same(row.Scheduler.Worktree, w.Workspace) || !strings.HasPrefix(row.Scheduler.Branch, "scheduler/todo-3686-") || !skillsTaskSpec(s, row, w.SpecSHA) {
+	if !ok || skillsHeld(row) || w.Task != 3686 || w.Job != caller || row.Project != "cc-pc-tools-rs" || row.Status != "doing" || row.Scheduler.Job != caller || !same(row.Scheduler.Worktree, w.Workspace) || !strings.HasPrefix(row.Scheduler.Branch, "scheduler/todo-3686-") || !skillsTaskSpec(s, row, w.SpecSHA) {
 		return false
 	}
 	job, ok := skillsReadJob(s, caller)

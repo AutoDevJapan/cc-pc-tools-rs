@@ -22,6 +22,12 @@ type skillsTask struct {
 	Status    string   `json:"status"`
 	Spec      string   `json:"spec"`
 	Jobs      []string `json:"jobs"`
+	OwnerStopped bool `json:"owner_stopped"`
+	Postponed bool `json:"owner_postponement_recorded"`
+	StopKind string `json:"stop_kind"`
+	OwnerQuestion any `json:"owner_question_wait"`
+	DecisionWait any `json:"decision_wait"`
+	WaitReady any `json:"wait_ready"`
 	Scheduler struct {
 		Job           string `json:"job"`
 		LastJob       string `json:"last_job"`
@@ -29,6 +35,8 @@ type skillsTask struct {
 		Branch        string `json:"branch"`
 		Key           string `json:"key"`
 		SubworkParent string `json:"subwork_parent_job"`
+		PendingCancel any `json:"pending_cancel"`
+		OwnerStop any `json:"owner_stop_job"`
 	} `json:"scheduler"`
 	Subwork struct {
 		Parent    int    `json:"parent_todo_id"`
@@ -155,6 +163,8 @@ func skillsHasJob(row skillsTask, job string) bool {
 	}
 	return false
 }
+
+func skillsHeld(row skillsTask)bool{return row.OwnerStopped||row.Postponed||row.StopKind!=""||row.OwnerQuestion!=nil||row.DecisionWait!=nil||row.WaitReady!=nil||row.Scheduler.PendingCancel!=nil||row.Scheduler.OwnerStop!=nil}
 func skillsLatest(row skillsTask, job string) bool {
 	return len(row.Jobs) > 0 && row.Jobs[len(row.Jobs)-1] == job && (row.Scheduler.Job == "" || row.Scheduler.Job == job) && (row.Scheduler.LastJob == "" || row.Scheduler.Job == job || row.Scheduler.LastJob == job)
 }
@@ -179,7 +189,7 @@ func skillsReadJob(s *skillsFS, id string) (object, bool) {
 func skillsJobTask(job object, id int) bool { return conversationNumber(job["todo_id"]) == uint64(id) }
 func skillsWriterCheck(w skillsWriter, reg skillsRegistry, s *skillsFS, caller string) bool {
 	row, ok := reg.Tasks[3080]
-	if !ok || !skillsWriterValid(w) || w.Job != caller || row.Project != "cc-pc-tools-rs" || row.Status != "doing" || row.Scheduler.Job != w.Job || !same(row.Scheduler.Worktree, w.Workspace) || !skillsHasJob(row, w.Job) || !skillsTaskSpec(s, row, w.SpecSHA) {
+	if !ok || skillsHeld(row) || !skillsWriterValid(w) || w.Job != caller || row.Project != "cc-pc-tools-rs" || row.Status != "doing" || row.Scheduler.Job != w.Job || !same(row.Scheduler.Worktree, w.Workspace) || !skillsHasJob(row, w.Job) || !skillsTaskSpec(s, row, w.SpecSHA) {
 		return false
 	}
 	job, ok := skillsReadJob(s, w.Job)
@@ -269,6 +279,8 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 	if !ok || !skillsResultBinding(r, reg, job, spec, review) {
 		return out, "result_binding"
 	}
+	if !skillsModelIdentifier(str(job["model"])) {return out,"result_binding"}
+	switch str(job["effort"]){case "none","minimal","low","medium","high","xhigh","max":default:return out,"result_binding"}
 	body, ok := s.read(filepath.Join(skillsJobsRoot, r.Job, "last_message.md"), 2<<20)
 	if !ok || !bytes.Equal(body, []byte(str(job["last_message"]))) || (r.FinalSHA != "" && hashBytes(body) != r.FinalSHA) {
 		return out, "result_unavailable"
@@ -358,7 +370,7 @@ func skillsNativeProjection(input io.Reader, id, cwd string, start time.Time) ([
 			continue
 		}
 		model := str(p["model"])
-		if model == "" || len(model) > 160 || strings.ContainsAny(model, "\r\n\x00") {
+		if !skillsModelIdentifier(model) {
 			return nil, false
 		}
 		projected := object{"model": model, "source": "native_turn_context"}

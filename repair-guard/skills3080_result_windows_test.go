@@ -187,3 +187,12 @@ func TestSkills3080RuntimeInputRefusesUnacceptedCandidate(t *testing.T) {
 		t.Fatal("empty replacement scope accepted")
 	}
 }
+
+func TestSkills3080RetainsOwnerStopsAndBoundedIdentifiers(t *testing.T){
+ if skillsHeld(skillsTask{}){t.Fatal("empty optional stop fields treated as owner stop")}
+ for _,mutate:=range []func(*skillsTask){
+  func(r *skillsTask){r.OwnerStopped=true},func(r *skillsTask){r.Postponed=true},func(r *skillsTask){r.StopKind="owner"},func(r *skillsTask){r.OwnerQuestion=object{"waiting":true}},func(r *skillsTask){r.DecisionWait=object{"pending":true}},func(r *skillsTask){r.WaitReady=object{"condition":"ready"}},func(r *skillsTask){r.Scheduler.PendingCancel=object{"job":"original"}},func(r *skillsTask){r.Scheduler.OwnerStop="original"},
+ }{var row skillsTask;mutate(&row);if !skillsHeld(row){t.Fatal("explicit stop lost")}}
+ for _,model:=range []string{"gpt-6.1-sol","openai/gpt-6.1-sol","anthropic/claude-sonnet-5-5","p12ab3f/gpt-6-luna"}{if !skillsModelIdentifier(model){t.Fatal("known identifier rejected")}}
+ for _,model:=range []string{"","secret-value","private-account/claude-sonnet-5-5","anything\n/gpt-6.1-sol","openai/other/gpt-6.1-sol"}{if skillsModelIdentifier(model){t.Fatal("unbounded metadata admitted")}}
+}

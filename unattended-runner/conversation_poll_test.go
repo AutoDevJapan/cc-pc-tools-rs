@@ -233,3 +233,31 @@ func TestConversationFailedDeliveryDoesNotAdvanceItsReplyCursor(t *testing.T) {
 		}
 	}
 }
+
+func TestConversationOlderSenderStillDetectsATextPreservingEdit(t *testing.T) {
+	f := conversationTest(t, false)
+	f.ask(t)
+	reply := f.reply(t, 8, "同じ本文の編集版")
+	f.r.processConversations(context.Background(), &Health{})
+	edited := f.r.Now().UTC().Format(time.RFC3339Nano)
+	f.edited = map[string]string{reply.Message: edited}
+	run := f.r.Run
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		raw, err := run(ctx, path, args...)
+		if err != nil || len(args) == 0 || args[0] != "recovery-replies" {
+			return raw, err
+		}
+		var proof map[string]json.RawMessage
+		if json.Unmarshal([]byte(raw), &proof) != nil {
+			t.Fatal("fixture proof malformed")
+		}
+		delete(proof, "reply_versions")
+		body, _ := json.Marshal(proof)
+		return string(body), nil
+	}
+	h := Health{}
+	f.r.processConversations(context.Background(), &h)
+	if len(h.Errors) != 0 || f.r.State.Requests[reply.Message].Edited != edited || f.r.State.Requests[reply.Message].Phase != "conversation_reply_delivered" {
+		t.Fatal("missing sender edit metadata hid the new version", h.Errors)
+	}
+}

@@ -566,7 +566,9 @@ func (r *Runner) conversationReplyNeedsDelivery(q ConversationQuestion, proof *c
 		}
 		return req.Edited != edited
 	}
-	return false
+	// Unknown edit metadata is not proof that a delivered answer is unchanged.
+	// conversationProof fills this from the exact live post for older senders.
+	return true
 }
 
 func (r *Runner) processConversationReplies(ctx context.Context, index *conversationIndex, id string, q ConversationQuestion, proof *conversationProof, health *Health) {

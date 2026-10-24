@@ -385,6 +385,35 @@ fn an_edited_reply_after_the_answer_replaces_the_old_block_in_the_next_prompt() 
 }
 
 #[test]
+fn a_new_answer_preserves_marker_examples_in_prior_owner_instructions() {
+    let f = Fixture::new();
+    let quoted = format!(
+        "以前の指示にある引用を保持。\n{}\n{}",
+        block("202", V1, "引用の古い例"),
+        block("202", V2, "引用の新しい例")
+    );
+    let mut db = f.read();
+    db["items"][0]["scheduler"]["owner_instruction"] = json!(quoted);
+    f.write(&db);
+    let answer = f.park(&block("202", V1, "今回の本人回答を全文で渡す"));
+    f.job(&asked_job(json!({})));
+    f.run("question-answer", "--answer-file", &answer);
+    let row = f.read()["items"][0].clone();
+    assert!(
+        row["scheduler"]["owner_instruction"]
+            .as_str()
+            .unwrap()
+            .starts_with(&format!("{quoted}\n"))
+    );
+    assert!(
+        row["scheduler"]["owner_instruction"]
+            .as_str()
+            .unwrap()
+            .contains("今回の本人回答を全文で渡す")
+    );
+}
+
+#[test]
 fn delivery_after_the_answer_never_crosses_questions_stops_stale_state_or_generations() {
     for case in [
         "other_question",

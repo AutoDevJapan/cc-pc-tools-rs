@@ -1100,13 +1100,15 @@ pub fn answer(
         {
             return fail("owner_record_invalid");
         }
+        // Only the incoming note is producer-formatted reply history. Do not
+        // scan or rewrite earlier owner instructions, which can quote markers.
+        let latest_note = continued::latest_blocks_only(&note);
         let instruction = format!(
-            "{}\n元ToDo {id}の質問への本人回答を正規経路で適用しました。次の私的参照から回答原文と元質問・判断範囲を読み、元の履行を続けてください。同じ判断を再質問しないでください。\n{note}",
+            "{}\n元ToDo {id}の質問への本人回答を正規経路で適用しました。次の私的参照から回答原文と元質問・判断範囲を読み、元の履行を続けてください。同じ判断を再質問しないでください。\n{latest_note}",
             text(&row["scheduler"], "owner_instruction")
         );
         // The note keeps every version of an edited reply as history; the
         // prompt carries only the newest block of each reply.
-        let instruction = continued::latest_blocks_only(&instruction);
         if instruction.len() as u64 > MAX_BYTES {
             return fail("file_too_large");
         }

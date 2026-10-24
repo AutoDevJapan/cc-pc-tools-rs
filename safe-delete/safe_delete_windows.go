@@ -82,7 +82,7 @@ var reasons = map[string]string{
 
 func defaultConfig() config {
 	exe, _ := os.Executable()
-	return config{Store: filepath.Join(filepath.Dir(exe), "receipts-go"), Quarantine: `C:\Users\makhmeto\Downloads\削除希望`,
+	return config{Store: filepath.Join(filepath.Dir(exe), "receipts-go"), Quarantine: defaultQuarantinePath,
 		Temp: os.TempDir(), MaxEntries: 10000, MaxBytes: 512 * 1024 * 1024}
 }
 func label(s string) bool {
@@ -547,7 +547,8 @@ func (c config) quarantinePreserved(id, reason string, scope *geminiScope, ci *c
 			return nil, err
 		}
 	}
-	dest := filepath.Join(c.Quarantine, time.Now().Format("20060102")+"-"+r.Project+"-"+r.Content+"-"+id[:8])
+	parent := ownedQuarantineParent(r.Path, c.Quarantine)
+	dest := filepath.Join(parent, time.Now().Format("20060102")+"-"+r.Project+"-"+r.Content+"-"+id[:8])
 	phase := "preflight"
 	reasonWritten, moveConfirmed, recordConfirmed := false, false, false
 	whyPath := filepath.Join(dest, "理由.txt")
@@ -586,7 +587,7 @@ func (c config) quarantinePreserved(id, reason string, scope *geminiScope, ci *c
 	if e != nil {
 		return nil, fail("POWERSHELL_NOT_FOUND")
 	}
-	if os.MkdirAll(c.Quarantine, 0700) != nil {
+	if os.MkdirAll(parent, 0700) != nil {
 		return nil, fail("QUARANTINE_PARENT_CREATE_FAILED")
 	}
 	if os.Mkdir(dest, 0700) != nil {

@@ -3,7 +3,7 @@
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
   "observed_at": "2026-10-23T23:16:22.5972549+00:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "有用候補の評価と実統合を継続。原3048新規4/既存10を保持。PR417まで通常merge済み、追加35評価と補足は別のレビュー/CI対象。全16資料は未完。",
+  "phase_b": "全16資料を継続。PR421は3553Must0と同f8cの全CI終了/CLEAN後に通常merge済み。新61評価と補足はPR421の受入外の追加差分。6mile重複1は旧7に既記録なので再加算せず、新しい個別権利除外1のみ追加。関連Go test/vetは成功し、今回の独立レビュー/CI/mergeと有用候補の実配置を追う。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -290,7 +290,7 @@
   "independently_accepted": 28,
   "installed": 28,
   "integrated": 3,
-  "excluded": 7,
+  "excluded": 8,
   "units": {
     "github_agent_procedure": 483,
     "github_design_example": 199,
@@ -395,7 +395,7 @@
       "hirokaji": 1,
       "openai": 44
     },
-    "limits": "旧7資料91+設計2+OpenAI44=137source paths。mizchi76は既存の別枠を維持し再加算しない。mirror/guideを含み独立Skill数/導入数ではない。全支持/全候補の意味・許諾監査は未完。"
+    "limits": "旧7資料91+設計2+OpenAI44=137source paths。mizchi76は既存の別枠を維持し再加算しない。mirror/guideを含み独立Skill数/導入数ではない。全支持/全候補の意味・許諾監査は未完。 この137は既存の固定bucket。今回のMengTo177は別枠で数え二重加算しない。"
   },
   "independent_acceptance_scope": "28新規とlinkv2の過去限定受入を保持。CI既存統合1のv2は3378Must0/同HEAD自動テスト成功/PR381mergeで親が限定受入。SQL2は3368本文と3378表示を分けて同一内容を限定受入。新22評価は3417/3420の固定差分読取Must0を受領。補足のb006版は3456、新19を含む1088版は3473でMust0。今回の追加差分は別確認、許諾/配置/実ターンは別。旧配置のdiagnosing-bugs1件の後続別改訂も別証拠を保持。",
   "total_skill_named_body_read": 137,
@@ -437,8 +437,8 @@
     "source": "skills-3080-mizchi-partial-evaluation.json",
     "complete_definition": "本文の全path読取のみ。個別許諾・支持・採否・実導入は未完。"
   },
-  "all_fulltext_primary_paths_including_partial_sources": 340,
-  "primary_coverage_definition": "完全読取10資料137+別枠mizchi76+部分MengTo127=340source paths。MengTo残50はweb-design、3535/3536が固定25ずつを担当。支持や候補評価を導入/統合/除外へ加算しない。",
+  "all_fulltext_primary_paths_including_partial_sources": 401,
+  "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分11=401source paths。支持読了と導入/統合/除外件数は別。全16資料の意味/権利/採否/実導入は未完。",
   "external_revisions": {
     "count": 1,
     "target": "diagnosing-bugs",
@@ -612,8 +612,8 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-24T00:40:30.7402093+00:00",
-  "total_skill_named_body_read_definition": "10完全読取資料のSkill名本文137。別枠mizchi76とMengTo127を含む総数340はall_fulltext_primary_paths_including_partial_sources。本文path読了と導入件数を分ける。",
+  "recorded_at": "2026-10-24T01:19:12.4283789+00:00",
+  "total_skill_named_body_read_definition": "歴史上の10資料固定137pathは変更せず、別枠mizchi76/MengTo177/6mile11を含む総401をall_fulltext_primary_paths_including_partial_sourcesで数える。本文pathの読了と実導入を分ける。",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
     "support_unread": 690,
@@ -650,56 +650,59 @@
     "number": 406
   },
   "latest_received_review": {
-    "model_origin": "owner_request",
-    "base": "c6b5ceaa100814d9f6ce54e24eeba7825a6286e6",
-    "todo": 3541,
-    "requested_effort": "max",
-    "parent_fix_pending_independent_confirmation": true,
-    "preserved_at": "2026-10-24T00:21:03.4012516+00:00",
-    "native_observation": {
-      "source": "native_turn_context",
-      "effort": "max",
-      "model": "anthropic/claude-sonnet-5-5"
-    },
-    "scope": "固定c6b5..5175の12差分。35/333のidentity/127支持集合/99入力を機械照合し、sourceの深さ解釈を指摘。新50/6mile11は範囲外。",
-    "status": "succeeded",
-    "raw_sha256": "1f6bcb3f28a90f149adfe6182a4f56328b2244eaadae4e69038fd8c2f652a47e",
-    "job_model": "anthropic/claude-sonnet-5-5",
-    "must": 1,
-    "job": "20261024-083143-todo-3541",
-    "parent_full_response_read": true,
     "effort_origin": "owner_request",
-    "nits": 8,
-    "head": "5175e5534722d26d5037ad59fc93a4f84671b126",
-    "suggestions": 4,
-    "effective_reasoning_measured": false
+    "raw_file": "review3553-original.md",
+    "effective_reasoning_measured": false,
+    "job": "20261024-094553-todo-3553",
+    "todo": 3553,
+    "exit_code": 0,
+    "model_origin": "owner_request",
+    "suggestions": 5,
+    "unread_scope": "複数の大きい文書は差分と前後だけ。101入力のraw SHA再計算はせずGit blobと親の記録を照合。",
+    "parent_full_read": true,
+    "nits": 7,
+    "job_model": "anthropic/claude-sonnet-5-5",
+    "parent_read_at": "2026-10-24T01:17:23.2692728+00:00",
+    "native_observation": {
+      "model": "anthropic/claude-sonnet-5-5",
+      "effort": "max",
+      "timestamp": "2026-10-24T00:46:33.257Z",
+      "service_tier": null
+    },
+    "must": 0,
+    "raw_bytes": 10709,
+    "scope": "固定5175..f8cの10差分全hunk、保存公式sync_walk全関数、指定証拠の照合。本文127の意味再読/新61/実Go/中央読取/CIは範囲外。",
+    "raw_sha256": "f051cadf733fab74d3beea913ad0f8d8115f79b0c9fbcd1311baa46486e93733",
+    "requested_effort": "max",
+    "base": "5175e5534722d26d5037ad59fc93a4f84671b126",
+    "status": "succeeded",
+    "head": "f8c960c98dd225b0295b5e84dcead8a5abd2b6d9"
   },
   "latest_merged_pr": {
-    "additional_delta_accepted": true,
-    "checks": "6SUCCESS and optionalBugbotNEUTRAL; all complete; normal fixed-head merge; raw CLEAN snapshot not separately preserved",
+    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/421",
     "must": 0,
-    "merged_at": "2026-10-23T23:12:30Z",
-    "merge": "c6b5ceaa100814d9f6ce54e24eeba7825a6286e6",
+    "merge": "347b951b07252dd0a18ddbc66bfa96b97aa1032d",
+    "head": "f8c960c98dd225b0295b5e84dcead8a5abd2b6d9",
+    "merged_at": "2026-10-24T01:17:26Z",
+    "checks": "same f8c:6 SUCCESS plus optional Bugbot NEUTRAL, all complete and CLEAN; raw premerge snapshot preserved",
     "review_todos": [
-      3521,
-      3529
+      3541,
+      3553
     ],
-    "number": 417,
-    "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/417",
-    "head": "ab3446b619f6d47e10f4f08418dfb301f46b925f",
-    "acceptance_scope": "固定bf5..853の11差分と853..abの8差分。v3実反映と明示使用はそれぞれの範囲。今回35評価と補足、全3080は未受入。"
+    "acceptance_scope": "c6b5..5175の3541指摘と5175..f8cの修正10差分。新61/個別権利1/補足は対象外。",
+    "number": 421
   },
   "mengto_partial_entrypoint_evaluation": {
     "fixed_roster": "skills-3080-mengto-fixed-entrypoints.json",
     "expected": 177,
-    "complete": false,
+    "complete": true,
     "installed": 0,
     "complete_definition": "本文path読取と評価の受領。支持/第三者権利/実導入/実適用は未完。",
     "source": "skills-3080-mengto-partial-evaluation.json",
-    "unread": 50,
+    "unread": 0,
     "excluded": 0,
     "integrated": 2,
-    "full_body_read": 127
+    "full_body_read": 177
   },
   "review_attempt_failure": {
     "error": "Incomplete response returned, reason: max_output_tokens",
@@ -840,7 +843,42 @@
         "model": "anthropic/claude-sonnet-5-5",
         "source": "native_turn_context"
       },
-      "nits": 7
+      "nits": 7,
+      "base": "853c240b6935b305fa70767bc3bc0db2d2a3c1d5",
+      "head": "ab3446b619f6d47e10f4f08418dfb301f46b925f"
+    },
+    {
+      "model_origin": "owner_request",
+      "base": "c6b5ceaa100814d9f6ce54e24eeba7825a6286e6",
+      "todo": 3541,
+      "requested_effort": "max",
+      "parent_fix_pending_independent_confirmation": false,
+      "preserved_at": "2026-10-24T00:21:03.4012516+00:00",
+      "native_observation": {
+        "source": "native_turn_context",
+        "effort": "max",
+        "model": "anthropic/claude-sonnet-5-5"
+      },
+      "scope": "固定c6b5..5175の12差分。35/333のidentity/127支持集合/99入力を機械照合し、sourceの深さ解釈を指摘。新50/6mile11は範囲外。",
+      "status": "succeeded",
+      "raw_sha256": "1f6bcb3f28a90f149adfe6182a4f56328b2244eaadae4e69038fd8c2f652a47e",
+      "job_model": "anthropic/claude-sonnet-5-5",
+      "must": 1,
+      "job": "20261024-083143-todo-3541",
+      "parent_full_response_read": true,
+      "effort_origin": "owner_request",
+      "nits": 8,
+      "head": "5175e5534722d26d5037ad59fc93a4f84671b126",
+      "suggestions": 4,
+      "effective_reasoning_measured": false,
+      "parent_full_read": true,
+      "fixed_scope_confirmation": {
+        "head": "f8c960c98dd225b0295b5e84dcead8a5abd2b6d9",
+        "todo": 3553,
+        "base": "5175e5534722d26d5037ad59fc93a4f84671b126",
+        "must": 0,
+        "scope": "元のMust1への固定修正だけ。新61/後続文書/Goは別。"
+      }
     }
   ],
   "merged_pr_history": [
@@ -879,17 +917,32 @@
       "checks": "6 SUCCESS; optional Bugbot NEUTRAL; all complete; CLEAN before normal merge",
       "additional_delta_accepted": true,
       "acceptance_scope": "PR413ee..ca2の固定11差分のみ。この後の24評価と修正、記事統合v2、元3080全体の受入ではない。"
+    },
+    {
+      "additional_delta_accepted": true,
+      "checks": "6SUCCESS and optionalBugbotNEUTRAL; all complete; normal fixed-head merge; raw CLEAN snapshot not separately preserved",
+      "must": 0,
+      "merged_at": "2026-10-23T23:12:30Z",
+      "merge": "c6b5ceaa100814d9f6ce54e24eeba7825a6286e6",
+      "review_todos": [
+        3521,
+        3529
+      ],
+      "number": 417,
+      "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/417",
+      "head": "ab3446b619f6d47e10f4f08418dfb301f46b925f",
+      "acceptance_scope": "固定bf5..853の11差分と853..abの8差分。v3実反映と明示使用はそれぞれの範囲。今回35評価と補足、全3080は未受入。"
     }
   ],
   "current_mengto_delta": {
-    "source": "parent prepared18 plus received child3512 seventeen",
     "independent_review_pending": true,
-    "unread": 50,
-    "current_read": 127,
-    "new_primary_paths": 35,
+    "central_writes": 0,
+    "current_read": 177,
+    "unread": 0,
     "owner_action_required": false,
     "new_finished_dispositions": 0,
-    "central_writes": 0
+    "new_primary_paths": 50,
+    "source": "received3535/3536, parent full semantic assessment and fixed identity verification"
   },
   "discovery_diagnostics": "skills-3080-discovery-limit-evidence.json",
   "article_integration": {
@@ -911,5 +964,48 @@
     "root_linked_summary_correction_held": true,
     "owner_action_required": false
   },
-  "discovery_warning_cause_linked": false
+  "discovery_warning_cause_linked": false,
+  "sixmile_partial_entrypoint_evaluation": {
+    "excluded": 2,
+    "expected": 55623,
+    "complete": false,
+    "unread": 55612,
+    "source": "skills-3080-sixmile-partial-evaluation.json",
+    "full_body_read": 11,
+    "complete_definition": "本文path読取と評価の受領だけ。個別支持/全採否/実導入の完了ではない。",
+    "installed": 0,
+    "integrated": 0
+  },
+  "rights_exclusions": {
+    "new_body_copied": 0,
+    "count": 1,
+    "review_pending": true,
+    "definition": "重複8と区別した、個別許諾根拠不在の除外1",
+    "source": "skills-3080-rights-decisions.json"
+  },
+  "current_sixmile_delta": {
+    "new_duplicate_exclusions": 0,
+    "remaining_primary": 55612,
+    "independent_review_pending": true,
+    "central_writes": 0,
+    "new_pool_remaining_after_selection": 844,
+    "reported_original_pool_unselected": 338,
+    "original_pool_predicate_unreconstructed": true,
+    "not_adoption_cap": true,
+    "new_primary_paths": 11,
+    "new_notice_metadata_pool": 864,
+    "next_research_todo": 3554,
+    "new_individual_rights_exclusions": 1,
+    "existing_duplicate_receipts_reused": 1
+  },
+  "existing_target_comparison_hold": {
+    "left_unchanged": true,
+    "next": "normal classification reconciliation; continue independent fixed-source evaluation; no alternate-path read/write",
+    "post_guard_read_or_write": 0,
+    "access_allowed": false,
+    "count": 3,
+    "state": "classification_unverified",
+    "bytes": null,
+    "owner_action_required": false
+  }
 }

@@ -4,9 +4,9 @@
   "catalog_occurrences": 73220,
   "installed_new": 28,
   "integrated": 3,
-  "excluded": 7,
-  "pending_occurrences": 73182,
-  "pending_available_body_occurrences": 72107,
+  "excluded": 8,
+  "pending_occurrences": 73181,
+  "pending_available_body_occurrences": 72106,
   "unavailable_site_occurrences": 428,
   "execution_held_occurrences": 647,
   "duplicate_policy": "One installed occurrence does not implicitly approve other copies, URLs or licenses",
@@ -647,8 +647,36 @@
       "canonical_existing_manifest": "skills-3080-owned3-revision-manifest.json",
       "disposition": "excluded",
       "decision_scope": "本文SHA/bytesが既存採用の元本文と一致する別出現だけを対象から外す親の判定。元の採用と出典を保持し、この複製の許諾や新規配置を承認しない。"
+    },
+    {
+      "source_sha256": "4226f982091425a4e0cb6edbac2f9e84789f6b2a3845b0b9fb29a4dd27a779f9",
+      "source_scripts_executed": false,
+      "source_repo": "6mile/skills",
+      "individual_notice_full_read": true,
+      "inventory_id": "github:a43c08b1deba2610fe1f42e7fd4107452915e0b537210bc9c1caf435edfbbbbc",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/asazhangyongchao/asiasea-bi/SKILL.md",
+      "disposition": "excluded",
+      "decision_scope": "同梱の個別Proprietary/Confidential/書面許諾要求と許諾根拠不在に限る。この候補の本文や実装を中央へ複製せず、固定出典・指紋と判定理由だけを残す。他の6mile候補へ一括適用しない。",
+      "license_sha256": "602b1b4ea796fe8c69240c9d95a9a77fb2eb5f7495ff3293b7d758b415c66a41",
+      "source_commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "reason": "同ディレクトリのLICENSEはProprietary and Confidential/NOT Open Sourceと明記し、書面許諾を要するとする。publicarchiveやrootMITだけではこの候補を複製/適応/利用できる根拠にならない。",
+      "not_a_duplicate_decision": true,
+      "review_pending": true,
+      "license_path": "skills/asazhangyongchao/asiasea-bi/LICENSE.md",
+      "exclusion_type": "individual_proprietary_permission_not_evidenced",
+      "copy_license_accepted": false,
+      "license_bytes": 3156,
+      "not_all_source_excluded": true,
+      "source_body_bytes": 1654,
+      "source_path": "skills/asazhangyongchao/asiasea-bi/SKILL.md",
+      "new_body_copied": false
     }
   ],
   "exclusion_review_pending": true,
-  "exclusion_receipt": "skills-3080-duplicate-decisions.json"
+  "exclusion_receipt": "skills-3080-duplicate-decisions.json",
+  "exclusion_receipts": [
+    "skills-3080-duplicate-decisions.json",
+    "skills-3080-rights-decisions.json"
+  ],
+  "exclusion_receipt_definition": "Legacy exclusion_receipt points to duplicate-only decisions. exclusion_receipts covers all eight: seven pre-existing duplicates and one individual-rights exclusion."
 }

@@ -1,9 +1,9 @@
 {
   "todo": 3080,
   "issue": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/283",
-  "observed_at": "2026-10-24T02:15:45.2234244+00:00",
+  "observed_at": "2026-10-24T02:57:08.8435119+00:00",
   "phase_a": "partial; 647 additional text shapes held by execution review",
-  "phase_b": "全16資料を継続。PR421は3553Must0と同f8cの全CI終了/CLEAN後に通常merge済み。新61評価と補足はPR421の受入外の追加差分。6mile重複1は旧7に既記録なので再加算せず、新しい個別権利除外1のみ追加。関連Go test/vetは成功し、今回の独立レビュー/CI/mergeと有用候補の実配置を追う。",
+  "phase_b": "PR422まで通常merge済み。次10の評価を公開へ反映して本文411/6mile21とする。新しい最終採否は0。本文評価と実導入を分け、2件のSkill案は内容レビュー/具体的な新規配置/発見/実使用の確認を別に追う。全16資料は未完。",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "source_count": 16,
   "fixed_public_repos": [
@@ -437,7 +437,7 @@
     "source": "skills-3080-mizchi-partial-evaluation.json",
     "complete_definition": "本文の全path読取のみ。個別許諾・支持・採否・実導入は未完。"
   },
-  "all_fulltext_primary_paths_including_partial_sources": 401,
+  "all_fulltext_primary_paths_including_partial_sources": 411,
   "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分11=401source paths。支持読了と導入/統合/除外件数は別。全16資料の意味/権利/採否/実導入は未完。",
   "external_revisions": {
     "count": 1,
@@ -612,8 +612,8 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-24T02:16:44.1521756+00:00",
-  "total_skill_named_body_read_definition": "歴史上の10資料固定137pathは変更せず、別枠mizchi76/MengTo177/6mile11を含む総401をall_fulltext_primary_paths_including_partial_sourcesで数える。本文pathの読了と実導入を分ける。",
+  "recorded_at": "2026-10-24T02:57:08.8435119+00:00",
+  "total_skill_named_body_read_definition": "歴史上の10資料固定137pathは不変。mizchi76/MengTo177/6mile21を含む総411。本文の読了・支持の読取・個別許諾・実導入を区別する。",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
     "support_unread": 690,
@@ -969,9 +969,9 @@
     "excluded": 2,
     "expected": 55623,
     "complete": false,
-    "unread": 55612,
+    "unread": 55602,
     "source": "skills-3080-sixmile-partial-evaluation.json",
-    "full_body_read": 11,
+    "full_body_read": 21,
     "complete_definition": "本文path読取と評価の受領だけ。個別支持/全採否/実導入の完了ではない。",
     "installed": 0,
     "integrated": 0
@@ -984,6 +984,53 @@
     "source": "skills-3080-rights-decisions.json"
   },
   "current_sixmile_delta": {
+    "new_primary_paths": 10,
+    "current_primary": 21,
+    "remaining_primary": 55602,
+    "new_global_dispositions": 0,
+    "new_duplicate_exclusions": 0,
+    "new_individual_rights_exclusions": 0,
+    "central_writes": 0,
+    "independent_review_pending": true,
+    "new_notice_metadata_pool": 864,
+    "assessed_from_notice_pool": 20,
+    "unassessed_notice_pool": 844,
+    "next_reserved_metadata": 40,
+    "unreserved_notice_metadata": 804,
+    "next_research_todos": [
+      3565,
+      3566
+    ],
+    "pool_definition": "864 saved case-insensitive entry+same-directory notice metadata;20 assessed from that pool,40 newly reserved for research,804 unreserved. None of these counts is individual permission or an adoption cap.",
+    "reader_todo": 3554,
+    "reader_job": "20261024-095453-todo-3554",
+    "canonical_support_added": 63,
+    "support_saved_added": 35,
+    "support_full_read_added": 30,
+    "support_scan_only_added": 5,
+    "support_unsaved_added": 28,
+    "outside_package_contexts": 2,
+    "not_adoption_cap": true
+  },
+  "existing_target_comparison_hold": {
+    "left_unchanged": true,
+    "next": "normal classification reconciliation; continue independent fixed-source evaluation; no alternate-path read/write",
+    "post_guard_read_or_write": 0,
+    "access_allowed": false,
+    "count": 4,
+    "state": "classification_unverified",
+    "bytes": null,
+    "owner_action_required": false,
+    "qualification_research": {
+      "todo": 3559,
+      "complete": true,
+      "scope": "general guard functions and root metadata, not held bodies or original registry",
+      "reason": "central root has no Git marker; ordinary owner refresh is not reached",
+      "classification_restored": false,
+      "git_or_guard_or_registration_changed": false
+    }
+  },
+  "sixmile_delta_at_pr422": {
     "new_duplicate_exclusions": 0,
     "remaining_primary": 55612,
     "independent_review_pending": true,
@@ -998,15 +1045,5 @@
     "next_research_todo": 3554,
     "new_individual_rights_exclusions": 1,
     "existing_duplicate_receipts_reused": 1
-  },
-  "existing_target_comparison_hold": {
-    "left_unchanged": true,
-    "next": "normal classification reconciliation; continue independent fixed-source evaluation; no alternate-path read/write",
-    "post_guard_read_or_write": 0,
-    "access_allowed": false,
-    "count": 3,
-    "state": "classification_unverified",
-    "bytes": null,
-    "owner_action_required": false
   }
 }

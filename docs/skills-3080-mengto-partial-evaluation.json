@@ -22086,5 +22086,8 @@
     "primary_bytes": 282082,
     "support": 349,
     "central_writes": 0
-  }
+  },
+  "amended_at": "2026-10-24T03:03:56.0866038+00:00",
+  "amendment_job": "20261024-093456-todo-3080",
+  "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts."
 }

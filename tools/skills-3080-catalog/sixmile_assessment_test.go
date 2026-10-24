@@ -18,6 +18,7 @@ type sixmileSupport struct {
 	Bytes    *int   `json:"bytes"`
 	Saved    bool   `json:"body_saved"`
 	Read     bool   `json:"body_read"`
+	Scan     bool   `json:"scan_only"`
 	Executed *bool  `json:"executed"`
 }
 
@@ -52,17 +53,19 @@ type sixmileAssessment struct {
 		Saved        int  `json:"support_saved"`
 		Read         int  `json:"support_full_read"`
 		Unsaved      int  `json:"support_unsaved"`
+		Scan         int  `json:"support_scan_only"`
 		BytesUnknown bool `json:"unsaved_bytes_unknown"`
 	} `json:"counts"`
 }
 
 // Anchored in the earlier fixed tree/index/catalog verification and saved
-// eleven-entry reading roster; not a digest derived from the live ledger.
-const sixmile11Identity = "b9f44d4ff6da925b75d3b2b63cfa581869bac6a04e8b62ca65a9c1466fe01621"
-const sixmile102Support = "4f4d54e634fa76485c799b9c2d01eca3409d1466dfdd26bca8c39719004e6733"
+// eleven-entry reading roster plus the independently verified ten-entry3554 scope; not a digest derived from the live ledger.
+const sixmileSelectedIdentity = "8df3778373dc174ea9e634d601ecdfcf9d02a29703dea8f9070250f4c7342854"
+const sixmileSelectedSupport = "e401127a4c64d35f7c2f4f19919d634a4c96c494ba57c630429827553aac983a"
+const sixmileSupportReading = "e41dd6445ad733c83ae15bf972fac95c530f32166943544e18282052ea08c299"
 
 func validateSixmileAssessment(a sixmileAssessment, ledger []partialAdoption) error {
-	if a.Source != "6mile/skills" || a.Commit != "920714f17d81e0a95c7a9bc51faf0a7921cd982d" || a.Tree != "5782ae7deffe5024e15b6e090327385c10f76273" || a.Expected != 55623 || a.Read != 11 || a.Read != len(a.Entries) || a.Read+a.Unread != a.Expected || len(a.Fixed) != 11 {
+	if a.Source != "6mile/skills" || a.Commit != "920714f17d81e0a95c7a9bc51faf0a7921cd982d" || a.Tree != "5782ae7deffe5024e15b6e090327385c10f76273" || a.Expected != 55623 || a.Read != 21 || a.Read != len(a.Entries) || a.Read+a.Unread != a.Expected || len(a.Fixed) != 21 {
 		return errors.New("sixmile partial coverage differs from the fixed selected scope")
 	}
 	fixed := append([]partialEntry(nil), a.Fixed...)
@@ -76,7 +79,7 @@ func validateSixmileAssessment(a sixmileAssessment, ledger []partialAdoption) er
 		fmt.Fprintf(h, "%s\t%s\t%s\t%s\t%d\n", e.Path, e.ID, e.SHA, e.Blob, e.Bytes)
 		byPath[e.Path] = e
 	}
-	if a.Fingerprint != sixmile11Identity || hex.EncodeToString(h.Sum(nil)) != sixmile11Identity {
+	if a.Fingerprint != sixmileSelectedIdentity || hex.EncodeToString(h.Sum(nil)) != sixmileSelectedIdentity {
 		return errors.New("sixmile selected identities differ from the independent anchor")
 	}
 	entries := map[string]partialEntry{}
@@ -90,7 +93,7 @@ func validateSixmileAssessment(a sixmileAssessment, ledger []partialAdoption) er
 		paths[e.Path], entries[e.ID] = true, e.partialEntry
 		prefix := strings.TrimSuffix(e.Path, "SKILL.md")
 		for _, s := range e.Support {
-			if !strings.HasPrefix(s.Path, prefix) || !validHex(s.Blob, 40) || s.Executed == nil || *s.Executed || (s.Read && !s.Saved) || (s.Saved && (!validHex(s.SHA, 64) || s.Bytes == nil || *s.Bytes < 1)) || (!s.Saved && (s.SHA != "" || s.Bytes != nil)) {
+			if !strings.HasPrefix(s.Path, prefix) || !validHex(s.Blob, 40) || s.Executed == nil || *s.Executed || (s.Read && !s.Saved) || (s.Scan && (!s.Saved || s.Read)) || (s.Saved && (!validHex(s.SHA, 64) || s.Bytes == nil || *s.Bytes < 1)) || (!s.Saved && (s.SHA != "" || s.Bytes != nil)) {
 				return errors.New("sixmile support conflated unknown bytes, saved content, reading or execution")
 			}
 		}
@@ -98,7 +101,8 @@ func validateSixmileAssessment(a sixmileAssessment, ledger []partialAdoption) er
 	}
 	sort.Slice(supports, func(i, j int) bool { return supports[i].Path < supports[j].Path })
 	h = sha256.New()
-	saved, read := 0, 0
+	saved, read, scan := 0, 0, 0
+	reading := sha256.New()
 	seen := map[string]bool{}
 	for _, s := range supports {
 		if seen[s.Path] {
@@ -110,6 +114,10 @@ func validateSixmileAssessment(a sixmileAssessment, ledger []partialAdoption) er
 			b = fmt.Sprint(*s.Bytes)
 		}
 		fmt.Fprintf(h, "%s\t%s\t%s\t%s\n", s.Path, s.Blob, b, s.SHA)
+		fmt.Fprintf(reading, "%s\t%s\t%s\t%s\t%t\t%t\t%t\n", s.Path, s.Blob, b, s.SHA, s.Saved, s.Read, s.Scan)
+		if s.Scan {
+			scan++
+		}
 		if s.Saved {
 			saved++
 		}
@@ -117,7 +125,7 @@ func validateSixmileAssessment(a sixmileAssessment, ledger []partialAdoption) er
 			read++
 		}
 	}
-	if len(supports) != 102 || saved != 40 || read != 12 || a.Counts.Support != len(supports) || a.Counts.Saved != saved || a.Counts.Read != read || a.Counts.Unsaved != len(supports)-saved || !a.Counts.BytesUnknown || hex.EncodeToString(h.Sum(nil)) != sixmile102Support {
+	if len(supports) != 165 || saved != 75 || read != 42 || scan != 5 || a.Counts.Scan != scan || a.Counts.Support != len(supports) || a.Counts.Saved != saved || a.Counts.Read != read || a.Counts.Unsaved != len(supports)-saved || !a.Counts.BytesUnknown || hex.EncodeToString(h.Sum(nil)) != sixmileSelectedSupport || hex.EncodeToString(reading.Sum(nil)) != sixmileSupportReading {
 		return errors.New("sixmile support inventory differs from the earlier fixed verification")
 	}
 	matched := map[string]bool{}
@@ -193,7 +201,7 @@ func validateIndividualRights(rows []individualRightsDecision, a sixmileAssessme
 }
 
 func TestSixmilePartialAssessmentKeepsFixedReadingAndUnknownSupportDistinct(t *testing.T) {
-	for _, kind := range []string{"valid", "wrong_body", "unread_body", "unknown_bytes", "missing_execution", "forged_support", "adoption_flag", "unfinished_count", "duplicate_ledger_row", "excluded_too_many", "excluded_too_few"} {
+	for _, kind := range []string{"valid", "wrong_body", "unread_body", "unknown_bytes", "missing_execution", "forged_support", "adoption_flag", "unfinished_count", "duplicate_ledger_row", "excluded_too_many", "excluded_too_few", "reading_scope_swap"} {
 		t.Run(kind, func(t *testing.T) {
 			var a sixmileAssessment
 			loadPublicReceipt(t, "skills-3080-sixmile-partial-evaluation.json", &a)
@@ -233,6 +241,23 @@ func TestSixmilePartialAssessmentKeepsFixedReadingAndUnknownSupportDistinct(t *t
 				a.Excluded++
 			case "excluded_too_few":
 				a.Excluded--
+			case "reading_scope_swap":
+				firstEntry, firstSupport, secondEntry, secondSupport := -1, -1, -1, -1
+				for i := range a.Entries {
+					for j, s := range a.Entries[i].Support {
+						if s.Saved && s.Read && !s.Scan && firstEntry < 0 {
+							firstEntry, firstSupport = i, j
+						}
+						if s.Saved && !s.Read && !s.Scan && secondEntry < 0 {
+							secondEntry, secondSupport = i, j
+						}
+					}
+				}
+				if firstEntry < 0 || secondEntry < 0 {
+					t.Fatal("fixture has no saved read/unread pair to swap")
+				}
+				a.Entries[firstEntry].Support[firstSupport].Read = false
+				a.Entries[secondEntry].Support[secondSupport].Read = true
 			}
 			if err := validateSixmileAssessment(a, append(l.Entries, l.Excluded...)); (err != nil) != (kind != "valid") {
 				t.Fatalf("%s: %v", kind, err)

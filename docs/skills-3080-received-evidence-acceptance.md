@@ -53,3 +53,22 @@ go run . -catalog <固定catalog> -execution-evidence <固定入力表> -evidenc
 
 今回の反映で、新しい中央配置と最終採否は増えていない。
 全16資料の残候補、中央分類、未受領結果、PRの受入は引き続き未完である。
+
+## 次50件の公開受入と新規配置の準備
+
+次50件は [PR470](https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/470) の固定13ファイルを
+3732が実Luna/maxで確認し、Must 0で受け入れた。親は原応答と保存spec、同じjobのnativeを
+照合した。正確なheadの7チェック終了・失敗なし・CLEANを保存し、通常マージ後の
+MERGEDを読み返した。支持449件の一行ずつの再照合をレビューの読了範囲へ加えていない。
+
+[新規2件の操作manifest](skills-3080-operations/create-timezone-exam-235901.json) は、
+固定出典・個別通知・保持原文・改変した12出力を持つ。3737が全12ファイルを読み、
+同じmanifest SHA256に対する静的な受入票を返した。Gitの改行変換を止め、reviewした
+JSON bytesとcommit内のbytesを一致させる。CRLFは意図したJSONの改行として扱い、
+既存の末尾空白・末尾空行・空白とtabの検査は維持する。
+
+このmanifestの公開は中央配置ではない。実writer、mainに受け入れたmanifest、
+実モデルと別のreview、固定取得済みsourceと個別許諾を正規用途CLIで再照合してから進める。
+分類修復3686の未解消指摘、正常Windows配布、元3080の回答反映待機は独立した前提である。
+既存未知9対象、追加取得647件の審査保留、元の原本とjunctionを保持する。
+配置後のhash・参照・正負例・Codex発見と必要な実使用を確認するまで導入数へ加算しない。

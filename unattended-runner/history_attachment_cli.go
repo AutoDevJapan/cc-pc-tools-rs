@@ -17,12 +17,16 @@ import (
 
 type historyAttachmentScope struct {
 	historyReadScope
-	Message    string `json:"message_id"`
-	Attachment string `json:"attachment_id"`
-	ContentSHA string `json:"expected_content_sha256"`
-	Created    string `json:"expected_created_at"`
-	Edited     string `json:"expected_edited_timestamp"`
-	Size       int64  `json:"expected_size"`
+	Message      string `json:"message_id"`
+	Attachment   string `json:"attachment_id"`
+	ContentSHA   string `json:"expected_content_sha256"`
+	Created      string `json:"expected_created_at"`
+	Edited       string `json:"expected_edited_timestamp"`
+	Size         int64  `json:"expected_size"`
+	OwnerReply   string `json:"owner_reply_id,omitempty"`
+	ReplySHA     string `json:"expected_owner_reply_content_sha256,omitempty"`
+	ReplyCreated string `json:"expected_owner_reply_created_at,omitempty"`
+	ReplyEdited  string `json:"expected_owner_reply_edited_timestamp,omitempty"`
 }
 
 type historyOwnerImage struct {
@@ -92,6 +96,9 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 	if runner.get(ctx, "/users/@me", &bot) != nil || !bot.Bot || bot.ID != runner.State.Destination.Bot {
 		return fail()
 	}
+	if scope.botQuestion() && bot.ID != monthlyContextBot {
+		return fail()
+	}
 	stage = "thread_identity"
 	threadID := scope.Threads[0]
 	var thread Thread
@@ -114,6 +121,12 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 	if !ok {
 		stage = reason
 		return fail()
+	}
+	if scope.botQuestion() {
+		stage = "owner_reply_version_or_question_generation"
+		if !historyQuestionReplyValid(ctx, scope, message, runner) {
+			return fail()
+		}
 	}
 	stage = "cdn_url"
 	imageURL, ok := historyAttachmentURL(attachment.URL, threadID, scope.Attachment)
@@ -157,6 +170,12 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 	if !ok || ctx.Err() != nil {
 		return fail()
 	}
+	if scope.botQuestion() {
+		stage = "owner_reply_version_recheck"
+		if !historyQuestionReplyValid(ctx, scope, current, runner) || ctx.Err() != nil {
+			return fail()
+		}
+	}
 	stage = "private_publication"
 	if writeHistoryReceipt(output, data) != nil {
 		return fail()
@@ -166,6 +185,12 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 		sourceType = declared
 	}
 	result := map[string]any{"domain": "discord-owner-image-read-receipt-v1", "source": "discord-api-v10", "todo_id": scope.Todo, "guild_id": scope.Guild, "owner_id": scope.Owner, "thread_id": threadID, "message_id": scope.Message, "attachment_id": scope.Attachment, "content_sha256": scope.ContentSHA, "created_at": scope.Created, "edited_timestamp": scope.Edited, "source_size": scope.Size, "source_media_type": sourceType, "size": len(data), "representation": "cdn_response_bytes", "media_type": mediaType, "image_sha256": bytesHash(data), "scope_sha256": bytesHash(raw), "acquired_at": runner.Now().UTC().Format(time.RFC3339Nano), "delivery": "inspection_only", "application": "not_inferred"}
+	if scope.botQuestion() {
+		result["domain"] = "discord-bot-question-image-read-receipt-v1"
+		result["author_id"], result["owner_reply_id"] = bot.ID, scope.OwnerReply
+		result["owner_reply_content_sha256"], result["owner_reply_created_at"], result["owner_reply_edited_timestamp"] = scope.ReplySHA, scope.ReplyCreated, scope.ReplyEdited
+		result["question_edit_after_reply"] = false
+	}
 	if json.NewEncoder(out).Encode(result) != nil {
 		return 1
 	}
@@ -175,7 +200,7 @@ func historyAttachmentCLIWith(args []string, out io.Writer, load func(context.Co
 func historyAttachmentScopeValid(scope historyAttachmentScope, now time.Time) bool {
 	window := scope.historyReadScope
 	window.Domain = "discord-history-read-scope-v1"
-	if scope.Domain != "discord-owner-image-read-scope-v1" || len(scope.Threads) != 1 || !historyScopeValid(window, now) || scope.Size <= 0 || scope.Size > 20<<20 || len(scope.ContentSHA) != 64 || strings.ToLower(scope.ContentSHA) != scope.ContentSHA {
+	if (scope.Domain != "discord-owner-image-read-scope-v1" && !scope.botQuestion()) || len(scope.Threads) != 1 || !historyScopeValid(window, now) || scope.Size <= 0 || scope.Size > 20<<20 || len(scope.ContentSHA) != 64 || strings.ToLower(scope.ContentSHA) != scope.ContentSHA {
 		return false
 	}
 	if b, err := hex.DecodeString(scope.ContentSHA); err != nil || len(b) != 32 {
@@ -197,11 +222,58 @@ func historyAttachmentScopeValid(scope historyAttachmentScope, now time.Time) bo
 			return false
 		}
 	}
+	if scope.botQuestion() {
+		fixed := monthlyAuditScope{Domain: "discord-monthly-history-read-scope-v1", Todo: scope.Todo, Guild: scope.Guild, Owner: scope.Owner, Since: scope.Since, Until: scope.Until}
+		if !fixed.valid(fixed.Domain) || !monthlyID(scope.OwnerReply) || len(scope.ReplySHA) != 64 || strings.ToLower(scope.ReplySHA) != scope.ReplySHA {
+			return false
+		}
+		if b, e := hex.DecodeString(scope.ReplySHA); e != nil || len(b) != 32 {
+			return false
+		}
+		replyID, _ := number(scope.OwnerReply)
+		replyTime, e := time.Parse(time.RFC3339Nano, scope.ReplyCreated)
+		if e != nil || replyID <= message || replyID >= high || !replyTime.After(created) || !replyTime.Before(mustHistoryTime(scope.Until)) {
+			return false
+		}
+		if scope.ReplyEdited != "" {
+			edited, e := time.Parse(time.RFC3339Nano, scope.ReplyEdited)
+			if e != nil || edited.Before(replyTime) || edited.After(now) {
+				return false
+			}
+		}
+	} else if scope.OwnerReply != "" || scope.ReplySHA != "" || scope.ReplyCreated != "" || scope.ReplyEdited != "" {
+		return false
+	}
 	return true
 }
 
+func (s historyAttachmentScope) botQuestion() bool {
+	return s.Domain == "discord-bot-question-image-read-scope-v1"
+}
+
+// The caller supplies the already-read exact association; an unreferenced reply
+// is not interpreted here. In particular, later question edits cannot prove the
+// original options or image generation seen by the owner.
+func historyQuestionReplyValid(ctx context.Context, scope historyAttachmentScope, question historyOwnerImageMessage, r *Runner) bool {
+	var reply historyReadMessage
+	if r.get(ctx, "/channels/"+scope.Threads[0]+"/messages/"+scope.OwnerReply, &reply) != nil || reply.ID != scope.OwnerReply || reply.Author.ID != scope.Owner || !historyMessageValid(reply.Message, scope.Threads[0], r) || reply.Type == nil || (*reply.Type != 0 && *reply.Type != 19) || !historyAttachmentsValid(reply) {
+		return false
+	}
+	if reply.Timestamp != scope.ReplyCreated || reply.Edited != scope.ReplyEdited || bytesHash([]byte(reply.Content)) != scope.ReplySHA {
+		return false
+	}
+	if (reply.Reference.Message != "" && reply.Reference.Message != scope.Message) || (reply.Reference.Channel != "" && reply.Reference.Channel != scope.Threads[0]) || (reply.Reference.Guild != "" && reply.Reference.Guild != scope.Guild) {
+		return false
+	}
+	return question.Edited == "" || !mustHistoryTime(question.Edited).After(mustHistoryTime(reply.Timestamp))
+}
+
 func historySelectedOwnerImage(scope historyAttachmentScope, message historyOwnerImageMessage, runner *Runner) (historyOwnerImage, bool, string) {
-	if message.ID != scope.Message || message.Author.ID != scope.Owner || message.Type == nil || (*message.Type != 0 && *message.Type != 19) || !historyMessageValid(message.Message, scope.Threads[0], runner) {
+	author := scope.Owner
+	if scope.botQuestion() {
+		author = runner.State.Destination.Bot
+	}
+	if message.ID != scope.Message || message.Author.ID != author || message.Type == nil || (*message.Type != 0 && *message.Type != 19) || !historyMessageValid(message.Message, scope.Threads[0], runner) {
 		return historyOwnerImage{}, false, "owner_message_identity"
 	}
 	if message.Timestamp != scope.Created || message.Edited != scope.Edited || bytesHash([]byte(message.Content)) != scope.ContentSHA {

@@ -171,7 +171,8 @@ func monthlyThreadParentType(thread, parent int) bool {
 
 type monthlyReadScope struct {
 	monthlyAuditScope
-	Channels []string `json:"channel_ids"`
+	Channels   []string `json:"channel_ids"`
+	BotContext bool     `json:"include_bot_context,omitempty"`
 }
 type monthlyReadCursor struct {
 	ScopeSHA string `json:"scope_sha256"`
@@ -194,11 +195,16 @@ type monthlyReadPage struct {
 	Next       *monthlyReadCursor   `json:"next"`
 	Acquired   string               `json:"acquired_at"`
 	Permission string               `json:"permission_evidence"`
+	BotContext bool                 `json:"include_bot_context,omitempty"`
+	Starter    *historyReadMessage  `json:"starter,omitempty"`
 }
 
 func monthlyReadCursorValid(p monthlyReadPage, s monthlyReadScope, hash string) bool {
 	want := s.monthlyAuditScope
 	want.Domain = "discord-monthly-history-read-page-v1"
+	if p.BotContext != s.BotContext || (!s.BotContext && p.Starter != nil) {
+		return false
+	}
 	if p.monthlyAuditScope != want || p.Source != "discord-api-v10" || p.ScopeSHA != hash || p.Cursor.ScopeSHA != hash || p.Complete || p.Next == nil || p.Cursor.Index < 0 || p.Cursor.Index >= len(s.Channels) || p.Channel != s.Channels[p.Cursor.Index] || p.Scanned < 0 || p.Scanned > 100 || len(p.Messages) > p.Scanned || !monthlyID(p.Bot) || p.Permission != "effective_parent_permissions_verified" {
 		return false
 	}
@@ -267,6 +273,9 @@ func monthlyReadCLIWith(args []string, out io.Writer, load func(context.Context,
 	if err = monthlyIdentity(ctx, r, s.monthlyAuditScope); err != nil {
 		return monthlyFail(out, err)
 	}
+	if s.BotContext && r.State.Destination.Bot != monthlyContextBot {
+		return monthlyFail(out, monthlyInvalid("context_bot_identity"))
+	}
 	if i.Cursor != nil && prior.Bot != r.State.Destination.Bot {
 		return monthlyFail(out, monthlyInvalid("cursor_identity"))
 	}
@@ -277,8 +286,12 @@ func monthlyReadCLIWith(args []string, out io.Writer, load func(context.Context,
 	if ctx.Err() != nil {
 		return monthlyFail(out, monthlyInvalid("deadline"))
 	}
-	count, other, unknown := 0, 0, 0
+	count, other, unknown, bots := 0, 0, 0, 0
 	for _, m := range p.Messages {
+		if m.Author.ID == p.Bot {
+			bots++
+			continue
+		}
 		if m.Type == nil {
 			unknown++
 		} else if *m.Type == 0 || *m.Type == 19 {
@@ -287,12 +300,32 @@ func monthlyReadCLIWith(args []string, out io.Writer, load func(context.Context,
 			other++
 		}
 	}
-	return monthlyPublish(out, i.Output, p, map[string]any{"domain": p.Domain, "channel_id": p.Channel, "scanned_messages": p.Scanned, "owner_messages": count, "owner_other_types": other, "owner_unknown_types": unknown, "complete": p.Complete, "next": p.Next})
+	return monthlyPublish(out, i.Output, p, map[string]any{"domain": p.Domain, "channel_id": p.Channel, "scanned_messages": p.Scanned, "owner_messages": count, "owner_other_types": other, "owner_unknown_types": unknown, "bot_messages": bots, "complete": p.Complete, "next": p.Next})
 }
+
+const monthlyContextBot = "1554269962229649478"
 
 func readMonthlyPage(ctx context.Context, r *Runner, s monthlyReadScope, cursor monthlyReadCursor) (monthlyReadPage, error) {
 	p := monthlyReadPage{monthlyAuditScope: s.monthlyAuditScope, Source: "discord-api-v10", ScopeSHA: cursor.ScopeSHA, Bot: r.State.Destination.Bot, Channel: s.Channels[cursor.Index], Cursor: cursor, Messages: []historyReadMessage{}}
 	p.Domain = "discord-monthly-history-read-page-v1"
+	if s.BotContext {
+		// Reuse the established permissions, actor checks, starter rules and
+		// all-message pagination; preserve the monthly receipt/cursor contract.
+		window := s.loaderScope()
+		window.Threads = s.Channels
+		h, err := readHistoryPage(ctx, r, window, historyReadCursor{ScopeSHA: cursor.ScopeSHA, ThreadIndex: cursor.Index, Before: cursor.Before}, nil)
+		if err != nil {
+			return p, monthlyInvalid("conversation_context")
+		}
+		p.BotContext, p.Starter = true, h.Starter
+		p.Type, p.Permission = *h.ChannelType, "effective_parent_permissions_verified"
+		p.Messages, p.Scanned, p.LastID, p.LastTime = h.Messages, h.Scanned, h.LastID, h.LastTime
+		p.Complete, p.Acquired = h.Complete, h.Acquired
+		if h.Next != nil {
+			p.Next = &monthlyReadCursor{ScopeSHA: h.Next.ScopeSHA, Index: h.Next.ThreadIndex, Before: h.Next.Before}
+		}
+		return p, nil
+	}
 	c, err := monthlyReadable(ctx, r, p.Channel)
 	if err != nil {
 		return p, err

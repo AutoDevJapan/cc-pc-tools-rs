@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 )
 
 const mcpPointerReviewedBundleSHA = "b1eb81bf6ee61c6f2d3bd5a3739c89d85d4141352702108282690e8af8e10dc9"
@@ -113,7 +114,30 @@ type newSkillMetadata struct {
 	Enabled        *bool  `json:"enabled"`
 	Description    *bool  `json:"description_matches"`
 }
+
+type scenarioReceipt struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Positive    string `json:"positive"`
+	Negative    string `json:"negative"`
+}
+
+func validateScenarioReceipt(plan, bundle, manifest scenarioReceipt, entry string) error {
+	description, count := "", 0
+	for _, line := range strings.Split(entry, "\n") {
+		if strings.HasPrefix(line, "description: ") {
+			description = strings.TrimPrefix(line, "description: ")
+			count++
+		}
+	}
+	if count != 1 || description == "" || plan.Description != description || plan.Name == "" || plan.Name != bundle.Name || plan.Name != manifest.Name || plan.Positive == "" || plan.Negative == "" || plan.Positive != bundle.Positive || plan.Positive != manifest.Positive || plan.Negative != bundle.Negative || plan.Negative != manifest.Negative {
+		return errors.New("scenario receipt differs from fixed bundle, manifest or entrypoint description")
+	}
+	return nil
+}
+
 type mcpPointerDeployment struct {
+	ObservedAt  string `json:"observed_at"`
 	Done        *bool  `json:"overall_complete"`
 	Created     int    `json:"new_targets_created"`
 	Files       int    `json:"files_readback_verified"`
@@ -127,17 +151,22 @@ type mcpPointerDeployment struct {
 	DesignSHA   string `json:"design_sha256"`
 	JournalSHA  string `json:"apply_journal_sha256"`
 	Discovery   struct {
-		Version      string             `json:"codex_version"`
-		ModelCalled  *bool              `json:"model_called"`
-		Matches      int                `json:"target_matches"`
-		Enabled      int                `json:"enabled_count"`
-		Errors       int                `json:"parse_errors"`
-		Exited       *bool              `json:"process_tree_exit_confirmed"`
-		Drained      *bool              `json:"pending_stdout_read_drained"`
-		WarningCause *bool              `json:"warning_cause_linked"`
-		FullBudget   *bool              `json:"full_context_budget_proven"`
-		Implicit     *bool              `json:"implicit_selection_proven"`
-		Found        []newSkillMetadata `json:"found"`
+		CheckedAt         string             `json:"checked_at"`
+		Total             int                `json:"total_discovered_metadata"`
+		SameNames         *int               `json:"same_names_other_paths"`
+		TraversalWarnings *int               `json:"scan_traversal_warning_markers"`
+		BudgetMarkers     *int               `json:"context_budget_marker_count"`
+		Version           string             `json:"codex_version"`
+		ModelCalled       *bool              `json:"model_called"`
+		Matches           int                `json:"target_matches"`
+		Enabled           int                `json:"enabled_count"`
+		Errors            int                `json:"parse_errors"`
+		Exited            *bool              `json:"process_tree_exit_confirmed"`
+		Drained           *bool              `json:"pending_stdout_read_drained"`
+		WarningCause      *bool              `json:"warning_cause_linked"`
+		FullBudget        *bool              `json:"full_context_budget_proven"`
+		Implicit          *bool              `json:"implicit_selection_proven"`
+		Found             []newSkillMetadata `json:"found"`
 	} `json:"discovery"`
 	Use struct {
 		Core      *bool `json:"core_passed"`
@@ -146,43 +175,53 @@ type mcpPointerDeployment struct {
 		PostTurn  *bool `json:"postdeployment_model_turn_executed"`
 	} `json:"explicit_application"`
 	Retained struct {
-		IDs         []string `json:"adoption_identity_snapshot"`
-		Expected    int      `json:"expected_count"`
-		Found       int      `json:"found_count"`
-		Enabled     int      `json:"enabled_count"`
-		Errors      int      `json:"parse_errors"`
-		NamesSHA    string   `json:"known_target_names_sha256"`
-		Exited      *bool    `json:"process_tree_exit_confirmed"`
-		Drained     *bool    `json:"pending_stdout_read_drained"`
-		ModelCalled *bool    `json:"model_called"`
-		NamesSaved  *bool    `json:"raw_existing_names_or_paths_saved"`
-		AllBytes    *bool    `json:"all_disk_hash_or_prechange_equality_proven"`
+		CheckedAt          string   `json:"checked_at"`
+		DescriptionMatches *int     `json:"new_description_match_count"`
+		IDs                []string `json:"adoption_identity_snapshot"`
+		Expected           int      `json:"expected_count"`
+		Found              int      `json:"found_count"`
+		Enabled            int      `json:"enabled_count"`
+		Errors             int      `json:"parse_errors"`
+		NamesSHA           string   `json:"known_target_names_sha256"`
+		Exited             *bool    `json:"process_tree_exit_confirmed"`
+		Drained            *bool    `json:"pending_stdout_read_drained"`
+		ModelCalled        *bool    `json:"model_called"`
+		NamesSaved         *bool    `json:"raw_existing_names_or_paths_saved"`
+		AllBytes           *bool    `json:"all_disk_hash_or_prechange_equality_proven"`
 	} `json:"retained_known_metadata"`
 }
 
-func trueReceipt(v *bool) bool  { return v != nil && *v }
-func falseReceipt(v *bool) bool { return v != nil && !*v }
 func validateMcpPointerDeployment(e mcpPointerDeployment) error {
-	if !falseReceipt(e.Done) || e.Created != 2 || e.Files != 10 || !falseReceipt(e.Changed) || e.OldWrites != 0 || e.BundleSHA != mcpPointerReviewedBundleSHA || !validHex(e.ManifestSHA, 64) || !validHex(e.DesignSHA, 64) || !validHex(e.JournalSHA, 64) {
+	if !recordedFalse(e.Done) || e.Created != 2 || e.Files != 10 || !recordedFalse(e.Changed) || e.OldWrites != 0 || e.BundleSHA != mcpPointerReviewedBundleSHA || !validHex(e.ManifestSHA, 64) || !validHex(e.DesignSHA, 64) || !validHex(e.JournalSHA, 64) {
 		return errors.New("new-only deployment identity/count/scope differs")
 	}
 	d := e.Discovery
-	if d.Version != "0.163.0" || d.Matches != 2 || d.Enabled != 2 || d.Errors != 0 || !trueReceipt(d.Exited) || !trueReceipt(d.Drained) || !falseReceipt(d.ModelCalled) || !falseReceipt(d.WarningCause) || !falseReceipt(d.FullBudget) || !falseReceipt(d.Implicit) {
+	if d.Version != "0.163.0" || d.Total != 328 || d.SameNames == nil || *d.SameNames != 0 || d.TraversalWarnings == nil || *d.TraversalWarnings != 2 || d.BudgetMarkers == nil || *d.BudgetMarkers != 0 || d.Matches != 2 || d.Enabled != 2 || d.Errors != 0 || !recordedTrue(d.Exited) || !recordedTrue(d.Drained) || !recordedFalse(d.ModelCalled) || !recordedFalse(d.WarningCause) || !recordedFalse(d.FullBudget) || !recordedFalse(d.Implicit) {
 		return errors.New("metadata discovery was absent or overclaimed")
 	}
 	seen := map[string]bool{}
 	for _, r := range d.Found {
-		if (r.Name != "mcp-builder" && r.Name != "pointer-trail-emitter") || seen[r.Name] || !trueReceipt(r.Central) || !trueReceipt(r.EnabledPresent) || !trueReceipt(r.Enabled) || !trueReceipt(r.Description) {
+		if (r.Name != "mcp-builder" && r.Name != "pointer-trail-emitter") || seen[r.Name] || !recordedTrue(r.Central) || !recordedTrue(r.EnabledPresent) || !recordedTrue(r.Enabled) || !recordedTrue(r.Description) {
 			return errors.New("requested metadata disabled, repeated, missing or mismatched")
 		}
 		seen[r.Name] = true
 	}
-	if len(seen) != 2 || !trueReceipt(e.Use.Core) || !falseReceipt(e.Use.Server) || !falseReceipt(e.Use.Rendering) || !falseReceipt(e.Use.PostTurn) {
+	if len(seen) != 2 || !recordedTrue(e.Use.Core) || !recordedFalse(e.Use.Server) || !recordedFalse(e.Use.Rendering) || !recordedFalse(e.Use.PostTurn) {
 		return errors.New("explicit design use or runtime limit differs")
 	}
 	r := e.Retained
-	if len(r.IDs) != 33 || r.Expected != 46 || r.Found != r.Expected || r.Enabled != r.Expected || r.Errors != 0 || r.NamesSHA != "1eae60ec3874c620b3460222562d644df98e5ac91664a0138ada98a89394da9c" || !trueReceipt(r.Exited) || !trueReceipt(r.Drained) || !falseReceipt(r.ModelCalled) || !falseReceipt(r.NamesSaved) || !falseReceipt(r.AllBytes) {
+	if len(r.IDs) != 33 || r.Expected != 46 || r.Found != r.Expected || r.Enabled != r.Expected || r.Errors != 0 || r.DescriptionMatches == nil || *r.DescriptionMatches != 2 || r.NamesSHA != "1eae60ec3874c620b3460222562d644df98e5ac91664a0138ada98a89394da9c" || !recordedTrue(r.Exited) || !recordedTrue(r.Drained) || !recordedFalse(r.ModelCalled) || !recordedFalse(r.NamesSaved) || !recordedFalse(r.AllBytes) {
 		return errors.New("managed metadata retention missing or overclaimed")
+	}
+	observed, err := time.Parse(time.RFC3339Nano, e.ObservedAt)
+	if err != nil {
+		return errors.New("deployment observation timestamp is missing")
+	}
+	for _, checked := range []string{d.CheckedAt, r.CheckedAt} {
+		verified, err := time.Parse(time.RFC3339Nano, checked)
+		if err != nil || observed.Before(verified) {
+			return errors.New("deployment observation timestamp precedes verification")
+		}
 	}
 	return nil
 }
@@ -250,10 +289,12 @@ func TestMcpPointerInstalledBundleMatchesActualManifestAndIndividualSources(t *t
 		Bytes   int    `json:"bytes"`
 	}
 	type target struct {
-		Name   string `json:"name"`
-		New    bool   `json:"new"`
-		Before string `json:"before_sha256"`
-		Files  []file `json:"files"`
+		Name     string `json:"name"`
+		Positive string `json:"positive"`
+		Negative string `json:"negative"`
+		New      bool   `json:"new"`
+		Before   string `json:"before_sha256"`
+		Files    []file `json:"files"`
 	}
 	var b struct {
 		Root    string   `json:"root"`
@@ -273,18 +314,26 @@ func TestMcpPointerInstalledBundleMatchesActualManifestAndIndividualSources(t *t
 	if hex.EncodeToString(h[:]) != e.ManifestSHA || m.SHA != mcpPointerReviewedBundleSHA || len(m.Targets) != 2 {
 		t.Fatal("actual manifest hash/bundle differs")
 	}
-	var designs any
+	var designs struct {
+		Targets []scenarioReceipt `json:"targets"`
+	}
 	raw = loadPublicReceipt(t, e.Design, &designs)
 	h = sha256.Sum256(raw)
 	if hex.EncodeToString(h[:]) != e.DesignSHA {
 		t.Fatal("direct design bytes differ")
 	}
 	d := directMcpPointerDesigns(t)
+	if len(designs.Targets) != len(d) {
+		t.Fatal("scenario design count differs from fixed sources")
+	}
 	order := []string{"references/upstream-original.txt", "references/LICENSE.txt", "references/source.json", "references/sources.md", "SKILL.md"}
 	for i, r := range d {
 		bt, mt := b.Targets[i], m.Targets[i]
 		if bt.Name != r.Name || mt.Name != r.Name || !mt.New || mt.Before != "absent" || len(bt.Files) != 5 || len(mt.Files) != 5 {
 			t.Fatal("new target identity/order/absence differs")
+		}
+		if err := validateScenarioReceipt(designs.Targets[i], scenarioReceipt{Name: bt.Name, Positive: bt.Positive, Negative: bt.Negative}, scenarioReceipt{Name: mt.Name, Positive: mt.Positive, Negative: mt.Negative}, bt.Files[4].Content); err != nil {
+			t.Fatal(err)
 		}
 		for j, bf := range bt.Files {
 			mf := mt.Files[j]
@@ -306,12 +355,60 @@ func TestMcpPointerInstalledBundleMatchesActualManifestAndIndividualSources(t *t
 		t.Fatal("documented self-authored numerical model changed")
 	}
 }
+
+func TestScenarioReceiptRejectsChangedDescriptionOrScenarioPair(t *testing.T) {
+	var d struct {
+		Targets []scenarioReceipt `json:"targets"`
+	}
+	var b struct {
+		Targets []struct {
+			scenarioReceipt
+			Files []struct {
+				Path    string `json:"path"`
+				Content string `json:"content"`
+			} `json:"files"`
+		} `json:"targets"`
+	}
+	var m struct {
+		Targets []scenarioReceipt `json:"targets"`
+	}
+	loadPublicReceipt(t, "skills-3080-mcp-pointer-designs.json", &d)
+	loadPublicReceipt(t, "skills-3080-mcp-pointer-reviewed-bundle.json", &b)
+	loadPublicReceipt(t, "skills-3080-installed-mcp-pointer-manifest.json", &m)
+	entry := ""
+	for _, f := range b.Targets[0].Files {
+		if f.Path == "SKILL.md" {
+			entry = f.Content
+		}
+	}
+	for _, kind := range []string{"valid", "description", "bundle_positive", "manifest_negative", "name", "missing_description"} {
+		t.Run(kind, func(t *testing.T) {
+			plan, bundle, manifest := d.Targets[0], b.Targets[0].scenarioReceipt, m.Targets[0]
+			switch kind {
+			case "description":
+				plan.Description = "different"
+			case "bundle_positive":
+				bundle.Positive = "different"
+			case "manifest_negative":
+				manifest.Negative = "different"
+			case "name":
+				manifest.Name = "different"
+			case "missing_description":
+				plan.Description = ""
+			}
+			if err := validateScenarioReceipt(plan, bundle, manifest, entry); (err != nil) != (kind != "valid") {
+				t.Fatalf("%s: %v", kind, err)
+			}
+		})
+	}
+}
 func TestMcpPointerDiscoveryRejectsDisabledMissingAndOverclaimedEvidence(t *testing.T) {
-	for _, kind := range []string{"valid", "disabled", "enabled_missing", "wrong_path", "one_missing", "duplicated", "model_called", "server_claim", "budget_claim", "warning_cause_missing", "incomplete_write"} {
+	for _, kind := range []string{"valid", "disabled", "enabled_missing", "wrong_path", "one_missing", "duplicated", "model_called", "server_claim", "budget_claim", "warning_cause_missing", "incomplete_write", "same_name_elsewhere", "same_name_missing", "total_changed", "traversal_warning_changed", "budget_marker_changed", "retained_description_changed", "implicit_claim", "rendering_claim", "post_turn_claim", "overall_complete_claim", "retained_model_called", "retained_names_saved", "retained_all_bytes_claim", "observation_too_early", "verification_time_missing"} {
 		t.Run(kind, func(t *testing.T) {
 			var e mcpPointerDeployment
 			loadPublicReceipt(t, "skills-3080-mcp-pointer-installation-evidence.json", &e)
 			yes, no := true, false
+			zero, one := 0, 1
 			switch kind {
 			case "disabled":
 				e.Discovery.Found[0].Enabled = &no
@@ -333,6 +430,36 @@ func TestMcpPointerDiscoveryRejectsDisabledMissingAndOverclaimedEvidence(t *test
 				e.Discovery.WarningCause = nil
 			case "incomplete_write":
 				e.Files = 9
+			case "same_name_elsewhere":
+				e.Discovery.SameNames = &one
+			case "same_name_missing":
+				e.Discovery.SameNames = nil
+			case "total_changed":
+				e.Discovery.Total--
+			case "traversal_warning_changed":
+				e.Discovery.TraversalWarnings = &zero
+			case "budget_marker_changed":
+				e.Discovery.BudgetMarkers = &one
+			case "retained_description_changed":
+				e.Retained.DescriptionMatches = &one
+			case "implicit_claim":
+				e.Discovery.Implicit = &yes
+			case "rendering_claim":
+				e.Use.Rendering = &yes
+			case "post_turn_claim":
+				e.Use.PostTurn = &yes
+			case "overall_complete_claim":
+				e.Done = &yes
+			case "retained_model_called":
+				e.Retained.ModelCalled = &yes
+			case "retained_names_saved":
+				e.Retained.NamesSaved = &yes
+			case "retained_all_bytes_claim":
+				e.Retained.AllBytes = &yes
+			case "observation_too_early":
+				e.ObservedAt = e.Discovery.CheckedAt
+			case "verification_time_missing":
+				e.Discovery.CheckedAt = ""
 			}
 			if err := validateMcpPointerDeployment(e); (err != nil) != (kind != "valid") {
 				t.Fatalf("%s: %v", kind, err)
@@ -425,7 +552,7 @@ func validateNext10Projection(a sixmileAssessment, p next10Projection) error {
 		}
 	}
 	f := p.Proof
-	if !falseReceipt(f.Reran) || !trueReceipt(p.Batch.Historical) || !trueReceipt(p.NextHistorical) || !reflect.DeepEqual(p.Next, []int{3565, 3566}) || f.Primary != primary || f.Bytes != bodyBytes || f.Notices != notices || f.Support != support || f.Saved != saved || f.Read != read || f.Scan != scan || f.Unsaved != unread || f.ContextCount != len(f.Context) || !reflect.DeepEqual(f.Context, []string{"README.md", "skills/ai-chen2050/moltrade/_meta.json"}) || f.Verified != primary+saved+len(f.Context) {
+	if !recordedFalse(f.Reran) || !recordedTrue(p.Batch.Historical) || !recordedTrue(p.NextHistorical) || !reflect.DeepEqual(p.Next, []int{3565, 3566}) || f.Primary != primary || f.Bytes != bodyBytes || f.Notices != notices || f.Support != support || f.Saved != saved || f.Read != read || f.Scan != scan || f.Unsaved != unread || f.ContextCount != len(f.Context) || !reflect.DeepEqual(f.Context, []string{"README.md", "skills/ai-chen2050/moltrade/_meta.json"}) || f.Verified != primary+saved+len(f.Context) {
 		return errors.New("next10 projection: fixed source-path and read-scope counters differ")
 	}
 	r := p.Actors

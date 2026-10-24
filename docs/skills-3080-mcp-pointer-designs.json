@@ -5,7 +5,7 @@
   "batch_is_not_total_scope_or_count_cap": true,
   "design_count": 2,
   "not_legacy_batch_schema": true,
-  "basis": "One individually licensed6mile primary corroborated to official author and one MengTo primary; not a seventeenth catalog source",
+  "basis": "One individually reviewed 6mile primary with its official author Apache grant, and one MengTo author procedure with root MIT; this is not a seventeenth catalog source.",
   "bundle_sha256": "b1eb81bf6ee61c6f2d3bd5a3739c89d85d4141352702108282690e8af8e10dc9",
   "targets": [
     {

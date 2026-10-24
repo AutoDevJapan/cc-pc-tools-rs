@@ -665,7 +665,8 @@
     "suggestions": 3,
     "raw_bytes": 4042,
     "must": 0,
-    "base": "6e887da39ea3e37b3a8c9a0e0c7b0aa9a911b39d"
+    "base": "6e887da39ea3e37b3a8c9a0e0c7b0aa9a911b39d",
+    "effective_reasoning_measured": false
   },
   "latest_merged_pr": {
     "merged_at": "2026-10-24T05:10:12Z",
@@ -866,6 +867,35 @@
         "must": 0,
         "scope": "元のMust1への固定修正だけ。新61/後続文書/Goは別。"
       }
+    },
+    {
+      "effort_origin": "owner_request",
+      "raw_file": "review3553-original.md",
+      "effective_reasoning_measured": false,
+      "job": "20261024-094553-todo-3553",
+      "todo": 3553,
+      "exit_code": 0,
+      "model_origin": "owner_request",
+      "suggestions": 5,
+      "unread_scope": "複数の大きい文書は差分と前後だけ。101入力のraw SHA再計算はせずGit blobと親の記録を照合。",
+      "parent_full_read": true,
+      "nits": 7,
+      "job_model": "anthropic/claude-sonnet-5-5",
+      "parent_read_at": "2026-10-24T01:17:23.2692728+00:00",
+      "native_observation": {
+        "model": "anthropic/claude-sonnet-5-5",
+        "effort": "max",
+        "timestamp": "2026-10-24T00:46:33.257Z",
+        "service_tier": null
+      },
+      "must": 0,
+      "raw_bytes": 10709,
+      "scope": "固定5175..f8cの10差分全hunk、保存公式sync_walk全関数、指定証拠の照合。本文127の意味再読/新61/実Go/中央読取/CIは範囲外。",
+      "raw_sha256": "f051cadf733fab74d3beea913ad0f8d8115f79b0c9fbcd1311baa46486e93733",
+      "requested_effort": "max",
+      "base": "5175e5534722d26d5037ad59fc93a4f84671b126",
+      "status": "succeeded",
+      "head": "f8c960c98dd225b0295b5e84dcead8a5abd2b6d9"
     }
   ],
   "merged_pr_history": [
@@ -933,6 +963,20 @@
         3557,
         3563
       ]
+    },
+    {
+      "url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/421",
+      "must": 0,
+      "merge": "347b951b07252dd0a18ddbc66bfa96b97aa1032d",
+      "head": "f8c960c98dd225b0295b5e84dcead8a5abd2b6d9",
+      "merged_at": "2026-10-24T01:17:26Z",
+      "checks": "same f8c:6 SUCCESS plus optional Bugbot NEUTRAL, all complete and CLEAN; raw premerge snapshot preserved",
+      "review_todos": [
+        3541,
+        3553
+      ],
+      "acceptance_scope": "c6b5..5175の3541指摘と5175..f8cの修正10差分。新61/個別権利1/補足は対象外。",
+      "number": 421
     }
   ],
   "current_mengto_delta": {
@@ -943,7 +987,9 @@
     "owner_action_required": false,
     "new_finished_dispositions": 0,
     "new_primary_paths": 50,
-    "source": "received3535/3536, parent full semantic assessment and fixed identity verification"
+    "source": "received3535/3536, parent full semantic assessment and fixed identity verification",
+    "historical_snapshot": true,
+    "definition_of_legacy_current_name": "The legacy current_ key is a snapshot of that reading/evaluation delta before its later acceptance, not current queue or merge status. Use latest_merged_pr, received_review_history and adoption ledger for later acceptance."
   },
   "discovery_diagnostics": "skills-3080-discovery-limit-evidence.json",
   "article_integration": {
@@ -1011,7 +1057,9 @@
     "support_scan_only_added": 5,
     "support_unsaved_added": 28,
     "outside_package_contexts": 2,
-    "not_adoption_cap": true
+    "not_adoption_cap": true,
+    "historical_snapshot": true,
+    "definition_of_legacy_current_name": "The legacy current_ key is a snapshot of that reading/evaluation delta before its later acceptance, not current queue or merge status. Use latest_merged_pr, received_review_history and adoption ledger for later acceptance."
   },
   "existing_target_comparison_hold": {
     "left_unchanged": true,
@@ -1047,7 +1095,7 @@
     "new_individual_rights_exclusions": 1,
     "existing_duplicate_receipts_reused": 1
   },
-  "amended_at": "2026-10-24T04:36:53.6878206+00:00",
+  "amended_at": "2026-10-24T06:05:05.5169666+00:00",
   "amendment_job": "20261024-123649-todo-3080",
   "mcp_pointer_installation": {
     "real_server_or_rendering_tested": false,

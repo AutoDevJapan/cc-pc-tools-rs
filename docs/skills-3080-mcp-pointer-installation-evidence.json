@@ -1,7 +1,7 @@
 {
   "todo": 3080,
   "job": "20261024-123649-todo-3080",
-  "observed_at": "2026-10-24T04:00:37.3777305+00:00",
+  "observed_at": "2026-10-24T04:09:38.0560844+00:00",
   "overall_complete": false,
   "new_targets_created": 2,
   "files_readback_verified": 10,
@@ -14,7 +14,7 @@
   "original_private_manifest_sha256": "426daef83541f08853a6aa67090ac73e37e556832938a62b36c1b91c8c1cbf96",
   "public_manifest_serialization": "Normalized JSON whitespace to LF; same fields and file identities as actual private manifest. Fixed reviewed bundle is preserved verbatim.",
   "design": "skills-3080-mcp-pointer-designs.json",
-  "design_sha256": "3991debf6a93adf29e8895494ff83a4ac89f1b77e091641f6b05f1652259335d",
+  "design_sha256": "811de31b2672b2362d9eb1401d4387119b85db353ca1ac1bded96d9f331a7bd4",
   "apply_journal_sha256": "bfec7d27db518408a096ad6f95e90feef6cec4f22af2da6612aae1016807d295",
   "installed_check": {
     "target_count": 2,
@@ -39,7 +39,8 @@
       "effort": "max",
       "bundle_sha256": "c5413abcda5b25f3eef81a08a071f2597e199168b34ebeb0fae47a58032ff2bc",
       "model": "anthropic/claude-sonnet-5-5",
-      "parent_full_read": true
+      "parent_full_read": true,
+      "effective_reasoning_measured": false
     },
     {
       "todo": 3569,
@@ -61,7 +62,8 @@
       "effort": "max",
       "bundle_sha256": "b1eb81bf6ee61c6f2d3bd5a3739c89d85d4141352702108282690e8af8e10dc9",
       "model": "anthropic/claude-sonnet-5-5",
-      "parent_full_read": true
+      "parent_full_read": true,
+      "effective_reasoning_measured": false
     }
   ],
   "discovery": {
@@ -184,5 +186,9 @@
     "scan_traversal_warning_markers": 2,
     "warning_cause_linked": false,
     "limit": "Point-in-time metadata retention for managed public targets only. No protected or unknown names/paths/bodies retained; no physical byte comparison for all old targets, and no all-context or model-turn proof."
-  }
+  },
+  "pre_retention_evidence_observed_at": "2026-10-24T04:00:37.3777305+00:00",
+  "observation_time_definition": "The latest completed verification already recorded inside this evidence; amended_at is the later publication correction. No new discovery or model operation is claimed by this timestamp correction.",
+  "amended_at": "2026-10-24T06:05:05.5169666+00:00",
+  "amendment_job": "20261024-123649-todo-3080"
 }

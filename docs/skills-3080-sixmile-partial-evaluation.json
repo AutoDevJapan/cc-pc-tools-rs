@@ -4089,5 +4089,6 @@
     "full_read_by_preserved": 30
   },
   "next_research_todos_historical": true,
-  "next_research_todos_definition": "Snapshot of followup allocations at evaluation publication, not current queue status. Both3565/3566 later completed and their results are privately received; their new45 intake is not part of this public adoption delta."
+  "next_research_todos_definition": "Snapshot of followup allocations at evaluation publication, not current queue status. Both3565/3566 later completed and their results are privately received; their new45 intake is not part of this public adoption delta.",
+  "new_central_write_definition": "Historical zero for the new10 evaluation-only publication, before subsequent new MCP adaptation. central_write is the later source-cohort cumulative created-file count; adoption_resolution and current ledger identify that later operation."
 }

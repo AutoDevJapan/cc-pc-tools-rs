@@ -22,7 +22,7 @@ Sonnet5.5/maxの3564は10fileと明示A/B/Cを確認し、Must2件を返した�
 
 実Codex0.163.0の新しいapp-serverでskills/list(forceReload)を実行した。匿名のmetadata328中、対象2件の中央path・description一致・enabled=trueを確認し、解析エラーは0。プロセス終了と出力回収も確認した。
 
-scan traversal警告のmarkerは2件残る。context-budget markerが0でも、全context予算や暗黙のモデル選択を確認したことにはしない。2015と2000の比較や、この警告の実原因との対応も未確定のまま保持する。配置後の新しいモデルターンは実施していない。
+scan traversal警告のmarkerは2件残る。context-budget markerが0でも、全context予算や暗黙のモデル選択を確認したことにはしない。[探索上限の根拠](skills-3080-discovery-limit-evidence.json)に記録した、非dot directory2015と上限2000の比較や、この警告の実原因との対応も未確定のまま保持する。配置後の新しいモデルターンは実施していない。
 
 既存4件の比較は分類未確認で保持し、本文読書き0・容量不明。今回の新規2件の具体操作の通常審査を、中央全体の保護分類の復旧へ読み替えない。647件の取得拒否も維持し、同じ取得や別経路を試していない。
 

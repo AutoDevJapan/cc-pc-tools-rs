@@ -22,17 +22,13 @@ impl RealBackend {
     }
 
     pub(super) fn current_product_receipt(&mut self, item: &Value, root: &str) -> Option<Value> {
-        let Some(id) = item["id"].as_u64().filter(|id| *id > 0) else {
-            return None;
-        };
+        let id = item["id"].as_u64().filter(|id| *id > 0)?;
         let spec = s(&item["spec"]);
         if root.is_empty() || spec.is_empty() || s(&item["project"]).is_empty() {
             return None;
         }
         let guard = self.tools.join("client-records/scrub391.exe");
-        let Some(guard) = guard.to_str() else {
-            return None;
-        };
+        let guard = guard.to_str()?;
         let Ok(output) = self.runner.run(&invocation(
             &[guard, "--verify-current-succession", &id.to_string()],
             Some(40),

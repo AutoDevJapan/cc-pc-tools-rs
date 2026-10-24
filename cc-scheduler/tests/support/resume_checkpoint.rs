@@ -59,7 +59,7 @@ fn checkpoint_keeps_stops_dependencies_active_owners_and_missing_proof() {
         match gate {
             "stop" => {
                 f.e.edit(&json!(1626), |r| r["owner_stopped"] = json!(true))
-                    .unwrap()
+                    .unwrap();
             }
             "wait" => {
                 f.put(item(99, "other", "todo", &[]));
@@ -68,7 +68,7 @@ fn checkpoint_keeps_stops_dependencies_active_owners_and_missing_proof() {
             }
             "question" => {
                 f.e.edit(&json!(1626), |r| r["owner_question_wait"] = json!({"id":1}))
-                    .unwrap()
+                    .unwrap();
             }
             "active" => {
                 f.e.backend
@@ -81,7 +81,7 @@ fn checkpoint_keeps_stops_dependencies_active_owners_and_missing_proof() {
                 f.e.edit(&json!(1626), |r| {
                     r["workspace_checkpoint_history"] = json!("bad")
                 })
-                .unwrap()
+                .unwrap();
             }
             _ => (),
         }

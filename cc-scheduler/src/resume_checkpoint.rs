@@ -45,63 +45,6 @@ fn qualified_proof_with_branches(item: &Value, proof: &Value, before: &str, afte
         && s(&proof["head"]).bytes().all(|b| b.is_ascii_hexdigit())
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn checkpoint_proof_binds_original_worker_and_each_current_value() {
-        let job = "20261020-170947-original-product-retry-1626";
-        let item = json!({"id":1626,"worker_receipt":{"job":job},"jobs":[job],"scheduler":{"branch":"before","worktree":"D:/original"}});
-        let proof = json!({"domain":"original-worker-checkpoint-v1","todo_id":1626,"source_job":job,"source_session":"01a134e8-aac0-7942-8996-a0fc69357a3d",
-            "transition_call_sha256":"a056c317bdd2ffed329931a23bf5e163ecacff46e2d037d8f8fe097af8f43d5f",
-            "transition_result_sha256":"1ec01c00fce7a03c6a6b76a6452872c8a29ddea43cca1377bcafd605b7848a88",
-            "worktree_sha256":path_digest("D:/original"),"before_branch_sha256":digest(b"before"),"after_branch_sha256":digest(b"after"),"after_branch":"after","head":"a".repeat(40)});
-        assert!(qualified_proof_with_branches(
-            &item,
-            &proof,
-            &digest(b"before"),
-            &digest(b"after")
-        ));
-        for key in [
-            "domain",
-            "todo_id",
-            "source_job",
-            "source_session",
-            "transition_call_sha256",
-            "transition_result_sha256",
-            "worktree_sha256",
-            "before_branch_sha256",
-            "after_branch_sha256",
-            "after_branch",
-            "head",
-        ] {
-            let mut changed = proof.clone();
-            changed[key] = Value::Null;
-            assert!(
-                !qualified_proof_with_branches(
-                    &item,
-                    &changed,
-                    &digest(b"before"),
-                    &digest(b"after")
-                ),
-                "{key}"
-            );
-        }
-        for changed in [
-            json!({"id":1626}),
-            json!({"id":3277,"jobs":[job],"worker_receipt":{"job":job}}),
-        ] {
-            assert!(!qualified_proof_with_branches(
-                &changed,
-                &proof,
-                &digest(b"before"),
-                &digest(b"after")
-            ));
-        }
-    }
-}
-
 pub fn read_request(path: &Path) -> Result<Value> {
     let mut bytes = Vec::new();
     File::open(path)?.take(8193).read_to_end(&mut bytes)?;
@@ -200,4 +143,61 @@ pub fn run<B: Backend>(
     }
     report["saved"] = json!(true);
     Ok(report)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn checkpoint_proof_binds_original_worker_and_each_current_value() {
+        let job = "20261020-170947-original-product-retry-1626";
+        let item = json!({"id":1626,"worker_receipt":{"job":job},"jobs":[job],"scheduler":{"branch":"before","worktree":"D:/original"}});
+        let proof = json!({"domain":"original-worker-checkpoint-v1","todo_id":1626,"source_job":job,"source_session":"01a134e8-aac0-7942-8996-a0fc69357a3d",
+            "transition_call_sha256":"a056c317bdd2ffed329931a23bf5e163ecacff46e2d037d8f8fe097af8f43d5f",
+            "transition_result_sha256":"1ec01c00fce7a03c6a6b76a6452872c8a29ddea43cca1377bcafd605b7848a88",
+            "worktree_sha256":path_digest("D:/original"),"before_branch_sha256":digest(b"before"),"after_branch_sha256":digest(b"after"),"after_branch":"after","head":"a".repeat(40)});
+        assert!(qualified_proof_with_branches(
+            &item,
+            &proof,
+            &digest(b"before"),
+            &digest(b"after")
+        ));
+        for key in [
+            "domain",
+            "todo_id",
+            "source_job",
+            "source_session",
+            "transition_call_sha256",
+            "transition_result_sha256",
+            "worktree_sha256",
+            "before_branch_sha256",
+            "after_branch_sha256",
+            "after_branch",
+            "head",
+        ] {
+            let mut changed = proof.clone();
+            changed[key] = Value::Null;
+            assert!(
+                !qualified_proof_with_branches(
+                    &item,
+                    &changed,
+                    &digest(b"before"),
+                    &digest(b"after")
+                ),
+                "{key}"
+            );
+        }
+        for changed in [
+            json!({"id":1626}),
+            json!({"id":3277,"jobs":[job],"worker_receipt":{"job":job}}),
+        ] {
+            assert!(!qualified_proof_with_branches(
+                &changed,
+                &proof,
+                &digest(b"before"),
+                &digest(b"after")
+            ));
+        }
+    }
 }

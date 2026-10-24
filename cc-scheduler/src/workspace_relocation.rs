@@ -568,6 +568,11 @@ pub(crate) fn recovered(
     }
     let base = resolve(Path::new(repo))?;
     let target = resolve(Path::new(&request.worktree))?;
+    if receipt["schema"] != "scheduler-workspace-relocation-v1"
+        || resolve(Path::new(s(&item["scheduler"]["worktree"])))? != target
+    {
+        return Err(Error("RelocationReceiptMismatch"));
+    }
     if crate::preparation::git_root(runner, &target)?.is_none() {
         return Err(Error("NonGit"));
     }
@@ -579,11 +584,6 @@ pub(crate) fn recovered(
     };
     if truth(expected) && *expected != source["id"] {
         return Err(Error("RelocationSourceMissing"));
-    }
-    if receipt["schema"] != "scheduler-workspace-relocation-v1"
-        || resolve(Path::new(s(&item["scheduler"]["worktree"])))? != target
-    {
-        return Err(Error("RelocationReceiptMismatch"));
     }
     if source["id"] != request.source_job {
         if source["todo_id"] == item["id"]

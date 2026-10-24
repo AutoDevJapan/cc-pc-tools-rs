@@ -1014,3 +1014,37 @@ fn relocation_requalification_no_longer_needs_the_finished_parent_or_shared_chec
         .any(|path| Path::new(path) == Path::new(&request.worktree)));
     assert!(!seen.iter().any(|path| Path::new(path) == shared));
 }
+
+#[test]
+fn relocation_rejects_a_changed_request_target_before_any_git_read() {
+    struct GitProbe {
+        calls: usize,
+    }
+    impl Runner for GitProbe {
+        fn run(&mut self, call: &Invocation) -> Result<Output> {
+            self.calls += 1;
+            SystemRunner.run(call)
+        }
+    }
+    let (mut f, request, _) = fixture();
+    let checked = relocate(&mut f.e, &mut SystemRunner, &request, None).unwrap();
+    relocate(
+        &mut f.e,
+        &mut SystemRunner,
+        &request,
+        Some(s(&checked["state_sha256"])),
+    )
+    .unwrap();
+    let mut row = f.get(1);
+    row["scheduler"]["workspace_relocation"]["request"]["worktree"] = json!(f.repo);
+    let mut probe = GitProbe { calls: 0 };
+    let error = cc_scheduler::preparation::recover_workspace(
+        &mut probe,
+        f.repo.to_str().unwrap(),
+        &row,
+        &f.e.backend.records,
+    )
+    .unwrap_err();
+    assert_eq!(error.0, "RelocationReceiptMismatch");
+    assert_eq!(probe.calls, 0, "an unqualified request path was inspected");
+}

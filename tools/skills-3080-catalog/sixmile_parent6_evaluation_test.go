@@ -187,7 +187,7 @@ func validateParent6Dispositions(a extra45Assessment, rows []cohortLedgerRow) er
 	return nil
 }
 
-func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old legacy21Projection, extra, next20, parent extra45Assessment, next75 next75Assessment, amendment primaryReadingAmendments, comparison mcpComparisonOnly, rows []cohortLedgerRow, received []ReceivedCohort) error {
+func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old legacy21Projection, extra, next20, parent extra45Assessment, next75 next75Assessment, amendment primaryReadingAmendments, comparison mcpComparisonOnly, rows []cohortLedgerRow, received []ReceivedCohort, accepted map[string]cohortLedgerRow) error {
 	base, receivedEntries, err := withoutReceivedIndex(current, received)
 	if err != nil {
 		return err
@@ -223,7 +223,16 @@ func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old lega
 		}
 		for _, r := range rows {
 			if r.ID == e.ID {
-				return errors.New("expanded sixmile index: immutable received reading lacks a current final acceptance")
+				// The received record remains immutable and does not acquire a
+				// permission or final flag. A separately validated actual creation,
+				// scoped notice, review, discovery and use receipt supplies this
+				// exact current decision, never all equal-body siblings.
+				a, ok := accepted[e.ID]
+				if !ok || a != r || r.Source != e.Source || r.Commit != e.Commit || r.Path != e.Path || r.SHA != e.SHA || r.Disposition != "installed_new_adaptation" {
+					return errors.New("expanded sixmile index: immutable received reading lacks a current final acceptance")
+				}
+				known[e.ID] = extra45Entry{ID: e.ID, Commit: e.Commit, Path: e.Path, SHA: e.SHA}
+				paths[e.Path] = true
 			}
 		}
 	}
@@ -280,7 +289,7 @@ func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old lega
 }
 
 func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *testing.T) {
-	for _, name := range []string{"valid", "synthetic_future_parent_adoption", "missing_parent_cohort", "cross_cohort_identity", "unknown_live_row", "repeated_live_row", "parent_final_without_row", "parent_unknown_disposition", "comparison_row_missing", "comparison_became_adoption", "duplicate_amendment", "amendment_forged_actor", "amendment_rewrites_history", "amendment_wrong_identity", "omitted_amendment", "double_amendment"} {
+	for _, name := range []string{"valid", "synthetic_future_parent_adoption", "missing_parent_cohort", "cross_cohort_identity", "unknown_live_row", "repeated_live_row", "parent_final_without_row", "parent_unknown_disposition", "comparison_row_missing", "comparison_became_adoption", "duplicate_amendment", "amendment_forged_actor", "amendment_rewrites_history", "amendment_wrong_identity", "omitted_amendment", "double_amendment", "received_without_current_acceptance", "received_wrong_acceptance_identity"} {
 		t.Run(name, func(t *testing.T) {
 			var current sixmileCohortIndex
 			snapshot := loadThreeCohortSnapshot(t)
@@ -401,7 +410,19 @@ func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *test
 				want = "expanded sixmile index: amendment was omitted, duplicated or conflated with a new candidate"
 			}
 			received := loadRegisteredReceivedIndex(t)
-			err := validateExpandedSixmileIndex(current, snapshot, old, extra, next20, parent, next75, amendment, comparison, rows, received)
+			accepted := validatedPurposeFourDispositions(t)
+			switch name {
+			case "received_without_current_acceptance":
+				accepted = nil
+				want = "expanded sixmile index: immutable received reading lacks a current final acceptance"
+			case "received_wrong_acceptance_identity":
+				for id, r := range accepted {
+					r.SHA = "wrong"
+					accepted[id] = r
+				}
+				want = "expanded sixmile index: immutable received reading lacks a current final acceptance"
+			}
+			err := validateExpandedSixmileIndex(current, snapshot, old, extra, next20, parent, next75, amendment, comparison, rows, received, accepted)
 			if want == "" {
 				if err != nil {
 					t.Fatal(err)

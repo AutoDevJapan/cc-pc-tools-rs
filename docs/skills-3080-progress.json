@@ -286,9 +286,9 @@
   "site_entries_with_body": 9862,
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
-  "candidate_designs": 32,
-  "independently_accepted": 32,
-  "installed": 32,
+  "candidate_designs": 36,
+  "independently_accepted": 36,
+  "installed": 36,
   "integrated": 3,
   "excluded": 14,
   "units": {
@@ -346,15 +346,15 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "Legacy28 plus individually scoped direct designs4, actualcreated32. This is not an adoption cap.",
+    "candidate_designs": "Legacy28 plus individually scoped direct designs8, actualcreated36. This is not an adoption cap.",
     "additional_authored_drafts_not_in_plans": 3,
-    "authored_total": 35,
-    "installed": 32,
+    "authored_total": 39,
+    "installed": 36,
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
-    "independently_accepted": "Legacy content acceptances plus individually scoped direct-design bundle reviews3564,3569,3584,3591. Actual creation and metadata are separately evidenced; this new public delta still requires review/CI/merge. No whole-catalog or full-context acceptance is implied.",
-    "not_semantically_disposed_occurrences": 73171,
+    "independently_accepted": "Legacy content acceptances plus exact individually scoped direct designs, including unchanged24 outputs/content reviews3737・3741,3756 and corrected real64-character receipt3761. Actual creation/discovery/use are separately evidenced. Public result delta still requires review/CI/merge.",
+    "not_semantically_disposed_occurrences": 73167,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
@@ -612,7 +612,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-24T02:57:08.8435119+00:00",
+  "recorded_at": "2026-10-24T23:16:20.1017650+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -700,7 +700,7 @@
     "fixed_roster": "skills-3080-mengto-fixed-entrypoints.json",
     "expected": 177,
     "complete": true,
-    "installed": 2,
+    "installed": 4,
     "complete_definition": "本文path読取と評価の受領。支持/第三者権利/実導入/実適用は未完。",
     "source": "skills-3080-mengto-partial-evaluation.json",
     "unread": 0,
@@ -1468,7 +1468,7 @@
     "existing_duplicate_receipts_reused": 1
   },
   "amended_at": "2026-10-24T20:55:00.8847686+00:00",
-  "amendment_job": "20261024-235901-todo-3080",
+  "amendment_job": "20261025-074042-todo-3080",
   "mcp_pointer_installation": {
     "real_server_or_rendering_tested": false,
     "parse_errors": 0,
@@ -1697,7 +1697,7 @@
     "current_individual_rights_entries": 5,
     "main_accepted_excluded_before_this_delta": 8,
     "branch_excluded": 14,
-    "branch_pending": 73171,
+    "branch_pending": 73167,
     "primary_and_support_read_states_unchanged": true,
     "existing_primary_amendment_separate": true,
     "source_scripts_executed": false,
@@ -1765,21 +1765,27 @@
   },
   "current_scope_qualification_repair": {
     "todo": 3686,
-    "implementation_pr": 456,
-    "merge": "8ed37bbecc70ef87f8d55955f7a690f36101bfdd",
+    "original_implementation_pr": 456,
+    "forward_fix_pr": 476,
+    "merge": "a5da2f694ab70589fb1dd29ed874d06df56bc579",
     "source_merged": true,
-    "formal_luna_review_todo": 3712,
-    "formal_luna_must": 3,
-    "formal_luna_accepted": false,
-    "new_runtime_deployed": false,
-    "observed_runtime_sha256": "0abb667593f4694ac98dca40a9e386de25fe52363d9b6d32699d840b04ab5b9a",
-    "observed_runtime_source": "775e6f308341475a54686ec7912b5fe6f98a8aa0",
-    "observed_at": "2026-10-24T19:00:05.2013584Z",
-    "state": "Required fixed-source/registered-parent Must followup remains in same3686 before distribution or actual create qualification.",
+    "original_luna_review": 3712,
+    "original_must": 3,
+    "resolved_by": [
+      3740,
+      3742
+    ],
+    "formal_luna_accepted": true,
+    "new_runtime_deployed": true,
+    "observed_runtime_sha256": "ba35332c45b5bb9f35c4465ee209c123be1309ec554ef0976c8240d232c451c1",
+    "observed_runtime_source": "a5da2f694ab70589fb1dd29ed874d06df56bc579",
+    "parent_independent_accepted": true,
+    "owner_group_dacl_matches_backup": true,
+    "sacl_verified": false,
     "general_access_granted": false,
     "original_registry_recovered": false,
     "unknown_existing_target_body_reads": 0,
-    "new_central_operations": 0,
+    "new_central_operations_by_repair": 0,
     "owner_input_needed": false
   },
   "sixmile_received_next50_entrypoint_evaluation": {
@@ -1823,6 +1829,19 @@
     "purpose_qualification_complete": false,
     "central_operations": 0,
     "new_final_dispositions": 0,
-    "definition": "Reviewed output bytes only. The manifest still needs normal PR acceptance and main merge; current runtime and owner-wait prerequisites are separate. No placement, discovery or real use is implied."
+    "definition": "Historical preparation snapshot retained. PR477 accepted its old writer manifest; the actual current writer operation is the four-manifest with real creation/discovery/use evidence.",
+    "superseded_for_execution_by": "skills-3080-operations/create-four-074042.json"
+  },
+  "four_installation": {
+    "evidence": "skills-3080-four-installation-evidence.json",
+    "created": 4,
+    "files": 24,
+    "readback_verified": true,
+    "structure_pass": true,
+    "discovery_found": 4,
+    "explicit_core_examples_passed": true,
+    "new_unique_source_readings": 0,
+    "public_result_delta_review_pending_at_recording": true,
+    "overall_complete": false
   }
 }

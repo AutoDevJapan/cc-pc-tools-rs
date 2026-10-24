@@ -927,7 +927,16 @@ func (r *Runner) conversationStatus() (map[string]any, error) {
 			continue
 		}
 		intake = append(intake, map[string]any{"message_id": req.Message, "thread_id": req.Thread, "author_id": req.Author, "todo_id": req.Todo, "request_id": req.Conversation, "phase": req.Phase, "source": req.Source, "created_at": req.Created, "edited_at": req.Edited, "acquired_at": req.Acquired, "content_sha256": bytesHash([]byte(req.Text)), "progress_thread_id": req.ProgressThread})
-		if req.Conversation == "" {
+	}
+	ids = ids[:0]
+	all := r.conversationRequests()
+	for id := range all {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		req := all[id]
+		if req == nil || req.Author != r.State.Destination.Owner || req.Conversation == "" {
 			continue
 		}
 		q, ok := index.Questions[req.Conversation]

@@ -109,6 +109,7 @@ type Request struct {
 	ConversationSourceRecovered  bool                     `json:"conversation_source_recovered,omitempty"`
 	ConversationRecoveryNote     string                   `json:"conversation_recovery_note,omitempty"`
 	ConversationSourceGeneration string                   `json:"conversation_source_generation,omitempty"`
+	ConversationIntakeLinkSHA    string                   `json:"conversation_intake_link_sha256,omitempty"`
 	MessageType                  *int                     `json:"message_type,omitempty"`
 	Attachments                  *[]historyReadAttachment `json:"attachments,omitempty"`
 	DeliveryVersion              string                   `json:"delivery_version,omitempty"`
@@ -118,15 +119,17 @@ type Request struct {
 	HistoryWatch                 *HistoryWatch            `json:"history_watch,omitempty"`
 }
 type State struct {
-	Domain                   string                         `json:"domain"`
-	Since                    string                         `json:"since"`
-	Destination              Destination                    `json:"destination"`
-	Cursor                   string                         `json:"scan_cursor"`
-	IntakeCursor             string                         `json:"intake_cursor,omitempty"`
-	RetryCursor              uint64                         `json:"retry_cursor,omitempty"`
-	Threads                  map[string]Thread              `json:"threads"`
-	Scans                    map[string]*Scan               `json:"scans"`
-	Requests                 map[string]*Request            `json:"requests"`
+	Domain       string              `json:"domain"`
+	Since        string              `json:"since"`
+	Destination  Destination         `json:"destination"`
+	Cursor       string              `json:"scan_cursor"`
+	IntakeCursor string              `json:"intake_cursor,omitempty"`
+	RetryCursor  uint64              `json:"retry_cursor,omitempty"`
+	Threads      map[string]Thread   `json:"threads"`
+	Scans        map[string]*Scan    `json:"scans"`
+	Requests     map[string]*Request `json:"requests"`
+	// Purpose-bound captures never replace a prior ordinary intake/its ToDo.
+	ConversationCaptures     map[string]*Request            `json:"conversation_captures,omitempty"`
 	ProgressLinks            map[string]ProgressLink        `json:"progress_links,omitempty"`
 	Discovery                map[string]DiscoveryPage       `json:"discovery,omitempty"`
 	ResultCursor             string                         `json:"result_cursor,omitempty"`

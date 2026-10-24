@@ -32,6 +32,18 @@ type conversationAnswerReceipt struct {
 // Publish a captured value to state only after its source file is durable.
 // A failed state save must leave the previous in-memory capture intact too.
 func (r *Runner) saveConversationCapture(req *Request) error {
+	if r.State.ConversationCaptures[req.Message] != nil {
+		previous := r.State.ConversationCaptures[req.Message]
+		if previous.Conversation != req.Conversation {
+			return errImplementation
+		}
+		r.State.ConversationCaptures[req.Message] = req
+		if err := r.save(); err != nil {
+			r.State.ConversationCaptures[req.Message] = previous
+			return err
+		}
+		return nil
+	}
 	previous, existed := r.State.Requests[req.Message]
 	r.State.Requests[req.Message] = req
 	if err := r.save(); err != nil {
@@ -46,6 +58,9 @@ func (r *Runner) saveConversationCapture(req *Request) error {
 }
 
 func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQuestion, proof *conversationProof, reply conversationReply) (*Request, error) {
+	if linked := r.State.ConversationCaptures[reply.Message]; linked != nil && !r.conversationIntakeRetained(q, linked) {
+		return nil, errConversationCloseSource
+	}
 	// Read the exact live owner post as well as the sender's question proof. This
 	// preserves edit/reference metadata which the sender's reply projection omits.
 	var live Message
@@ -71,7 +86,7 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 			return nil, errors.New("conversation owner edit clock deferred")
 		}
 	}
-	old := r.State.Requests[reply.Message]
+	old := r.conversationRequest(reply.Message)
 	if old == nil || (old.Conversation == q.RequestID && old.Todo == 0 && old.Phase == "conversation_capture_pending") {
 		path := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".json")
 		if _, statErr := os.Lstat(path); !os.IsNotExist(statErr) {
@@ -550,7 +565,7 @@ func (r *Runner) processConversationMaintenance(ctx context.Context, health *Hea
 }
 
 func (r *Runner) conversationReplyNeedsDelivery(q ConversationQuestion, proof *conversationProof, reply conversationReply) bool {
-	req := r.State.Requests[reply.Message]
+	req := r.conversationRequest(reply.Message)
 	if req == nil || req.Conversation != q.RequestID || req.Text != reply.Body {
 		return true
 	}
@@ -654,7 +669,7 @@ func (r *Runner) conversationApplicationMayBeReady(proof *conversationProof) boo
 		return false
 	}
 	for _, reply := range proof.Replies {
-		req := r.State.Requests[reply.Message]
+		req := r.conversationRequest(reply.Message)
 		if req == nil {
 			return false
 		}
@@ -681,7 +696,8 @@ func (r *Runner) reportConversations(ctx context.Context, health *Health) {
 		return
 	}
 	ids := make([]string, 0)
-	for id, req := range r.State.Requests {
+	all := r.conversationRequests()
+	for id, req := range all {
 		if req != nil && req.Conversation != "" && (req.Phase == "conversation_reply_delivered" || req.Phase == "conversation_reply_applied" || req.Phase == "conversation_direction_recorded") {
 			ids = append(ids, id)
 		}
@@ -690,7 +706,7 @@ func (r *Runner) reportConversations(ctx context.Context, health *Health) {
 	start := sort.Search(len(ids), func(i int) bool { return ids[i] > r.State.ConversationReportCursor })
 	for i := 0; i < len(ids); i++ {
 		id := ids[(start+i)%len(ids)]
-		req := r.State.Requests[id]
+		req := all[id]
 		q, ok := index.Questions[req.Conversation]
 		if !ok {
 			continue

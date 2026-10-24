@@ -202,6 +202,12 @@ Discord公式仕様: [forum thread creation](https://docs.discord.com/developers
 
 ## 新しい会話のアーカイブ
 
+通常受付が同じ返信を別ToDoへ先に登録していた場合は、
+[通常受付との対応付け](conversation-intake-link.md)の `source-link` を使う。
+元受付・原source・元ToDoを保持し、正規質問と現在のAPI・実担当の割当を検証する。
+この関連記録だけでは実反映や担当の実読にならず、その後の正規source検証・
+仕様記録・全返信確認・GETによる終了確認を引き続き必要とする。
+
 新しい会話はGoの閉鎖処理で確認し、旧送信側の `recovery-close` は呼ばない。
 複数の本人返信と編集後の返信も、それぞれの最新版が実作業へ反映された場合に閉じられる。
 受領、担当への配送、元ToDoの完了、古いコミット番号だけでは反映済みとしない。

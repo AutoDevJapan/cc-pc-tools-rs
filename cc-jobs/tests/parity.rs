@@ -1,5 +1,8 @@
 use cc_jobs::notify::*;
 use cc_jobs::*;
+#[cfg(windows)]
+#[path = "support/dependency_diagnostics.rs"]
+mod dependency_diagnostics;
 #[path = "support/finished_review.rs"]
 mod finished_review;
 #[path = "support/finished_work_handoff.rs"]
@@ -11090,6 +11093,7 @@ mod end_to_end {
                 .env_remove("CC_JOB_ID")
                 .env_remove("CODEX_JOBS_DISCORD_WEBHOOK");
             if let Some(home) = &self.inherited_home {
+                // Model a caller's inherited home before applying isolation.
                 c.env("USERPROFILE", home).env("HOME", home);
             }
             // CODEX_HOME alone does not isolate native plugin initialization:
@@ -11261,6 +11265,19 @@ mod end_to_end {
             json!({"phase":phase,"elapsed_ms":elapsed.as_millis() as u64,"jobs":rows,"sleep_marker":self.rec.join("sleep.pid").exists(),
                 "index_complete":index["scan_complete"],"scanned_at":index["scanned_at"],"index_ids":index["ids"].as_array().into_iter().flatten().map(|id|alias(id.as_str().unwrap_or(""))).collect::<Vec<_>>()})
         }
+        fn timeout_snapshot(&self, phase: &str, elapsed: Duration) -> Value {
+            let mut snapshot = self.phase_snapshot(phase, elapsed);
+            let identities = self
+                .handles
+                .lock()
+                .unwrap()
+                .iter()
+                .map(|owner| (owner.pid, owner.created))
+                .collect::<Vec<_>>();
+            snapshot["timeout_details"] =
+                super::dependency_diagnostics::capture(&self.tmp.0, &identities);
+            snapshot
+        }
         fn until_phase(&self, phase: &str, mut condition: impl FnMut() -> bool) {
             self.until_phase_for(phase, Duration::from_secs(20), &mut condition);
         }
@@ -11277,7 +11294,7 @@ mod end_to_end {
                     self.retain_fixture_processes();
                 }
                 if Instant::now() >= end {
-                    let snapshot = self.phase_snapshot(phase, started.elapsed());
+                    let snapshot = self.timeout_snapshot(phase, started.elapsed());
                     eprintln!("dependency fixture timeout: {snapshot}");
                     panic!("timed out in {phase}");
                 }
@@ -11477,6 +11494,66 @@ mod end_to_end {
         e.inherited_home = Some(home);
         dependency_contract(&e);
         assert_eq!(fs::read_to_string(file).unwrap(), sentinel);
+    }
+    #[test]
+    fn timeout_snapshot_has_scoped_runtime_evidence_without_prompt_or_log_text() {
+        let e = E2e::new();
+        fs::write(e.rec.join("stdin.bin"), b"other root private-fixture-token").unwrap();
+        fs::write(
+            e.rec.join("call.json"),
+            json!({"cwd": e.tmp.0.join("other-work")}).to_string(),
+        )
+        .unwrap();
+        let job = e.tmp.0.join("tool/jobs/diagnostic-private-job");
+        fs::create_dir_all(&job).unwrap();
+        fs::write(
+            job.join("job.json"),
+            json!({"name":"e2e", "created_at":"2026-01-01", "status":"running"})
+                .to_string(),
+        )
+        .unwrap();
+        fs::write(job.join("events.jsonl"), b"event\n").unwrap();
+        fs::write(job.join("stderr.log"), "private-fixture-token panic").unwrap();
+        let snapshot = e.timeout_snapshot("controlled_timeout", Duration::ZERO);
+        let details = &snapshot["timeout_details"];
+        assert_eq!(details["stdin_role"], "other");
+        assert_eq!(details["call_cwd_role"], "other");
+        assert_eq!(details["jobs"][0]["events"]["bytes"], 6);
+        assert_eq!(details["jobs"][0]["stderr"]["markers"], json!(["panic"]));
+        assert_eq!(details["samples"].as_array().unwrap().len(), 2);
+        let text = snapshot.to_string();
+        assert!(!text.contains("private-fixture-token"));
+        assert!(!text.contains("diagnostic-private-job"));
+        assert!(!text.contains(&e.tmp.0.to_string_lossy().to_string()));
+        let mut log = b"panic private-fixture-token".to_vec();
+        log.extend(std::iter::repeat_n(b'x', 4096));
+        log.extend_from_slice(b"warning");
+        fs::write(job.join("stderr.log"), log).unwrap();
+        let bounded = e.timeout_snapshot("controlled_timeout", Duration::ZERO);
+        assert_eq!(bounded["timeout_details"]["jobs"][0]["stderr"]["tail_bytes"], 1024);
+        assert_eq!(bounded["timeout_details"]["jobs"][0]["stderr"]["markers"], json!(["warning"]));
+    }
+    #[test]
+    fn timeout_probe_binds_both_cpu_samples_to_the_same_real_process() {
+        let tmp = Temp::new();
+        let pid = std::process::id();
+        let created = proc_created(pid).unwrap();
+        let probe = super::dependency_diagnostics::capture(&tmp.0, &[(pid, created)]);
+        assert!(probe["sample_interval_ms"].as_u64().unwrap() >= 1000);
+        for sample in probe["samples"].as_array().unwrap() {
+            let rows = sample.as_array().unwrap();
+            let row = rows.iter().find(|row| row["pid"] == pid).unwrap();
+            assert_eq!(row["created"], created);
+            assert_eq!(row["live"], true);
+            assert!(row["threads"].as_u64().unwrap() > 0);
+            assert!(row["kernel_100ns"].is_u64());
+            assert!(row["user_100ns"].is_u64());
+        }
+        let wrong = super::dependency_diagnostics::capture(&tmp.0, &[(pid, created + 1)]);
+        assert_eq!(wrong["unavailable_roots"], 1);
+        for sample in wrong["samples"].as_array().unwrap() {
+            assert!(sample.as_array().unwrap().is_empty());
+        }
     }
     #[test]
     fn fixture_process_handle_rejects_a_mismatched_creation_time() {

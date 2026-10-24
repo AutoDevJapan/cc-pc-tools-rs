@@ -41,9 +41,18 @@ impl RealBackend {
         let Ok(receipt) = serde_json::from_str::<Value>(&output.stdout) else {
             return false;
         };
+        let original_source = receipt["origin_todo_id"] == 2834;
+        let current_request = receipt["origin_todo_id"] == 3638
+            && receipt["actor_todo_id"] == 3650
+            && [1626, 3277, 3549, 3623].contains(&id)
+            && receipt["source_kind"] == "native_user"
+            && receipt["source_session"] == "01a16c0c-18a9-7570-ab4e-9522ffa8d6d0"
+            && receipt["source_event_sha256"]
+                == "e0cff4ef85745ffb93ddcc36d1fb9626c4c098967406d8875a672d58c1684465"
+            && receipt["source_at"] == "2026-10-24T11:26:20.672Z";
         if receipt["domain"] != "current-product-succession-v1"
             || receipt["verified"] != true
-            || receipt["origin_todo_id"] != 2834
+            || !(original_source || current_request)
             || receipt["todo_id"] != item["id"]
             || receipt["project"] != item["project"]
             || receipt["original_registry_recovered"] != false
@@ -108,6 +117,51 @@ mod tests {
                 },
                 stderr: String::new(),
             })
+        }
+    }
+    #[test]
+    fn current_owner_request_binds_its_own_source_without_relabeling_the_old_origin() {
+        for gate in [
+            "pass", "actor", "kind", "session", "event", "at", "unknown", "spec", "root",
+        ] {
+            let temp = tempfile::tempdir().unwrap();
+            let spec = temp.path().join("original.md");
+            std::fs::write(&spec, b"original unchanged work").unwrap();
+            let mut item = json!({"id":3277,"project":"original","spec":spec});
+            let root = "D:/original";
+            let mut receipt = json!({"domain":"current-product-succession-v1","verified":true,
+                "origin_todo_id":3638,"actor_todo_id":3650,"todo_id":3277,"project":"original",
+                "registered_path_sha256":path_digest(root),"spec_path_sha256":path_digest(spec.to_str().unwrap()),
+                "spec_sha256":digest(b"original unchanged work"),"original_registry_recovered":false,
+                "source_kind":"native_user","source_session":"01a16c0c-18a9-7570-ab4e-9522ffa8d6d0",
+                "source_event_sha256":"e0cff4ef85745ffb93ddcc36d1fb9626c4c098967406d8875a672d58c1684465",
+                "source_at":"2026-10-24T11:26:20.672Z"});
+            match gate {
+                "actor" => receipt["actor_todo_id"] = json!(999),
+                "kind" => receipt["source_kind"] = json!("assistant_quote"),
+                "session" => receipt["source_session"] = json!("another-session"),
+                "event" => receipt["source_event_sha256"] = json!("other"),
+                "at" => receipt["source_at"] = json!("2026-10-13T00:00:00Z"),
+                "unknown" => {
+                    item["id"] = json!(2467);
+                    receipt["todo_id"] = json!(2467);
+                }
+                "spec" => std::fs::write(&spec, b"changed after qualification").unwrap(),
+                "root" => receipt["registered_path_sha256"] = json!(path_digest("D:/other")),
+                _ => (),
+            }
+            let mut backend = RealBackend::new(temp.path().join("scheduler"));
+            backend.runner = Box::new(Guard {
+                text: receipt.to_string(),
+                code: 0,
+                root_allowed: true,
+                calls: Arc::new(Mutex::new(vec![])),
+            });
+            assert_eq!(
+                backend.current_product_allowed(&item, root),
+                gate == "pass",
+                "{gate}"
+            );
         }
     }
     #[test]

@@ -164,6 +164,9 @@ func repairPathAllowed(path string) bool {
 	if owned2736PathAllowed(absolute) {
 		return true
 	}
+	if requestedResumePathAllowed(absolute) {
+		return true
+	}
 	if consoleImport3264Allowed(absolute) {
 		return true
 	}
@@ -323,6 +326,9 @@ func verifyCurrentSuccession(taskID int) object {
 	db, err := readObject(productStore, 64<<20)
 	if err != nil {
 		return object{"verified": false}
+	}
+	if _, ok := requested3650Product(taskID); ok {
+		return requestedResumeReceipt(db, taskID)
 	}
 	if declared, ok := currentProductByTask(taskID); ok {
 		return currentSuccessionReceipt(db, declared)

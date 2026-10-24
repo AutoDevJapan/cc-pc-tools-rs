@@ -119,6 +119,13 @@ func verifyProductWith(db object, id int, access productIO) object {
 		r["reason"] = "scope_expired"
 		return r
 	}
+	return verifyOriginalProductRecords(db, id, access, r)
+}
+
+// Record identity has no clock override. A new request must independently
+// qualify its own source before reusing these original record comparisons.
+// The old public API still expires above, before any record access.
+func verifyOriginalProductRecords(db object, id int, access productIO, r object) object {
 	if id != 1626 && id != 2407 && id != 2475 {
 		return r
 	}

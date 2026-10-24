@@ -143,6 +143,34 @@ fn registration_resume_checks_the_saved_workspace_without_changing_it() {
 }
 
 #[test]
+fn registration_resume_requires_the_current_receipt_for_one_original_product() {
+    let (mut f, mut request) = setup();
+    let mut original = f.get(2467);
+    original["id"] = json!(1626);
+    original["project"] = json!("original-product");
+    let mut db = f.e.todo().unwrap();
+    db["projects"]["original-product"] = json!(f.repo);
+    write_json(&f.e.todo_path, &db, 1).unwrap();
+    f.put(original);
+    request["todo_id"] = json!(1626);
+    assert_eq!(
+        registration_resume::run(&mut f.e, 1626, &request, None).unwrap()["eligible"],
+        false
+    );
+    f.e.backend.current_product = Some((f.get(1626), f.repo.to_str().unwrap().into()));
+    let before = f.get(1626);
+    let preview = registration_resume::run(&mut f.e, 1626, &request, None).unwrap();
+    assert_eq!(preview["eligible"], true);
+    let applied =
+        registration_resume::run(&mut f.e, 1626, &request, preview["state_sha256"].as_str())
+            .unwrap();
+    assert_eq!(applied["saved"], true);
+    assert_eq!(f.get(1626)["spec"], before["spec"]);
+    assert_eq!(f.get(1626)["jobs"], before["jobs"]);
+    assert!(f.e.backend.launched.is_empty());
+}
+
+#[test]
 fn registration_resume_targeted_diagnostics_keep_unknown_preparation_text_private() {
     for (reason, expected) in [
         ("tool_failed", json!("tool_failed")),

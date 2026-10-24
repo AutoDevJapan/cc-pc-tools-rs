@@ -29,6 +29,7 @@ fn inspect(
     ps: &policy::Processes,
     at: f64,
     source_allowed: bool,
+    current_request: bool,
 ) -> Value {
     let cwd = s(&item["scheduler"]["worktree"]);
     let active = jobs.iter().any(|job| {
@@ -39,7 +40,7 @@ fn inspect(
             && (policy::live(job) || policy::alive(job, ps, at))
     });
     let checks = json!({
-        "repair_project":(["cc-pc-tools-rs","pc-capacity-audit","localai-web-rs"].contains(&s(&item["project"]))),
+        "repair_project":(["cc-pc-tools-rs","pc-capacity-audit","localai-web-rs"].contains(&s(&item["project"])) || current_request),
         "status":item["status"] == "todo",
         "paused_registration":item["dispatchable"] == false,
         "ordinary":item["subwork"].is_null(),
@@ -91,6 +92,8 @@ pub fn run<B: Backend>(
         .ok_or(Error("InputRejected"))?;
     let repo = s(&db["projects"][s(&item["project"])]);
     let cwd = s(&item["scheduler"]["worktree"]);
+    let current_request = [1626, 3277, 3549, 3623].contains(&id)
+        && engine.backend.current_product_allowed(&item, repo);
     let allowed = engine.backend.repair_scope_allowed(repo)
         && (cwd.is_empty() || engine.backend.repair_scope_allowed(cwd));
     let jobs = engine.backend.jobs()?;
@@ -103,6 +106,7 @@ pub fn run<B: Backend>(
         &ps,
         engine.backend.clock(),
         allowed,
+        current_request,
     );
     let Some(expected) = expected else {
         return Ok(report);
@@ -158,6 +162,7 @@ mod tests {
             &policy::Processes::new(),
             100.,
             allowed,
+            false,
         )
     }
     #[test]
@@ -196,7 +201,8 @@ mod tests {
                 &[],
                 &policy::Processes::new(),
                 100.,
-                true
+                true,
+                false,
             )["checks"]["dependency_ready"],
             false
         );
@@ -231,6 +237,7 @@ mod tests {
             &ps,
             100.,
             true,
+            false,
         );
         let other = inspect(
             &db,
@@ -240,9 +247,34 @@ mod tests {
             &ps,
             100.,
             true,
+            false,
         );
         assert_ne!(first["state_sha256"], other["state_sha256"]);
         assert!(!first.to_string().contains("original.md"));
         assert!(!first.to_string().contains("private one"));
+    }
+
+    #[test]
+    fn current_request_extends_only_project_eligibility_and_keeps_every_other_gate() {
+        let mut item = row();
+        item["id"] = json!(1626);
+        item["project"] = json!("original-product");
+        let inspect_request = |row: &Value, source, current| {
+            inspect(
+                &json!({"items":[row]}),
+                row,
+                &Value::Null,
+                &[],
+                &policy::Processes::new(),
+                100.,
+                source,
+                current,
+            )
+        };
+        assert_eq!(inspect_request(&item, true, false)["eligible"], false);
+        assert_eq!(inspect_request(&item, true, true)["eligible"], true);
+        assert_eq!(inspect_request(&item, false, true)["eligible"], false);
+        item["owner_stopped"] = json!(true);
+        assert_eq!(inspect_request(&item, true, true)["eligible"], false);
     }
 }

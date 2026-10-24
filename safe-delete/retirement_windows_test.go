@@ -485,3 +485,32 @@ func TestRetirementTodoDecodesOnlyTheOriginalOwnerRow(t *testing.T) {
 	_, e = rt.todo(42)
 	code(t, e, "PRODUCER_TODO_UNVERIFIED")
 }
+
+func TestRetirementActorRejectsReusedOrMissingProcessBirth(t *testing.T) {
+	c, _, _ := retirementFixture(t, false)
+	rt := c.retirementRuntime()
+	rt.Actor = nil
+	j, e := rt.job("producer-job")
+	if e != nil {
+		t.Fatal(e)
+	}
+	j.CodexPID = uint32(os.Getpid())
+	j.CodexCreated = retirementProcessBirth(j.CodexPID)
+	if j.CodexCreated == 0 {
+		t.Fatal("process identity unavailable")
+	}
+	path := filepath.Join(rt.Jobs, j.ID, "job.json")
+	retirementPut(t, path, j)
+	t.Setenv("CC_JOB_ID", j.ID)
+	if _, e = rt.actor(); e != nil {
+		t.Fatal(e)
+	}
+	j.CodexCreated++
+	retirementPut(t, path, j)
+	_, e = rt.actor()
+	code(t, e, "PRODUCER_ACTOR_UNVERIFIED")
+	j.CodexCreated = 0
+	retirementPut(t, path, j)
+	_, e = rt.actor()
+	code(t, e, "PRODUCER_ACTOR_UNVERIFIED")
+}

@@ -47,12 +47,13 @@ type retiredEntry struct {
 	retiredIdentity
 }
 type retirementJob struct {
-	ID       string `json:"id"`
-	Todo     uint64 `json:"todo_id"`
-	CWD      string `json:"cwd"`
-	Status   string `json:"status"`
-	PID      uint32 `json:"pid"`
-	CodexPID uint32 `json:"codex_pid"`
+	ID           string `json:"id"`
+	Todo         uint64 `json:"todo_id"`
+	CWD          string `json:"cwd"`
+	Status       string `json:"status"`
+	PID          uint32 `json:"pid"`
+	CodexPID     uint32 `json:"codex_pid"`
+	CodexCreated uint64 `json:"codex_pid_created"`
 }
 type retirementTodo struct {
 	ID          uint64   `json:"id"`
@@ -220,6 +221,12 @@ func retiredRead(path string, limit int64, target any, strict bool) error {
 	if e != nil || int64(len(b)) > limit {
 		return fail("PROOF_READ_FAILED")
 	}
+	// Decode the same captured bytes after releasing the short physical read
+	// pin. In particular, parsing a large ToDo snapshot must not prevent other
+	// workers from atomically publishing their unrelated updates.
+	if f.Close() != nil {
+		return fail("PROOF_READ_FAILED")
+	}
 	if e = retiredUniqueJSON(b); e != nil {
 		return e
 	}
@@ -295,7 +302,7 @@ func (rt retirementRuntime) actor() (retirementJob, error) {
 	if e != nil {
 		return j, e
 	}
-	if j.Status != "running" || !retirementProcessAncestor(j.CodexPID) {
+	if j.Status != "running" || j.CodexCreated == 0 || retirementProcessBirth(j.CodexPID) != j.CodexCreated || !retirementProcessAncestor(j.CodexPID) {
 		return j, fail("PRODUCER_ACTOR_UNVERIFIED")
 	}
 	t, e := rt.todo(j.Todo)
@@ -303,6 +310,18 @@ func (rt retirementRuntime) actor() (retirementJob, error) {
 		return j, fail("PRODUCER_ACTOR_UNVERIFIED")
 	}
 	return j, nil
+}
+func retirementProcessBirth(pid uint32) uint64 {
+	h, e := syscall.OpenProcess(0x1000, false, pid)
+	if e != nil {
+		return 0
+	}
+	defer syscall.CloseHandle(h)
+	var created, exited, kernel, user syscall.Filetime
+	if syscall.GetProcessTimes(h, &created, &exited, &kernel, &user) != nil {
+		return 0
+	}
+	return uint64(created.HighDateTime)<<32 | uint64(created.LowDateTime)
 }
 func retirementProcessAncestor(want uint32) bool {
 	if want == 0 {

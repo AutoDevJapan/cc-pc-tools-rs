@@ -2,9 +2,23 @@
   "schema": 1,
   "origin_todo_id": 3628,
   "domain": "capacity-runtime-update-3628",
+  "source_commit": "7ca22f081fb2b6211d75344ec5e91c7f6f3f5912",
+  "build_vcs_modified": false,
+  "go_version": "go1.27.0",
+  "build_flags": [
+    "-trimpath",
+    "-ldflags=-s -w -H=windowsgui"
+  ],
   "source_files": {
+    "tools/civ6-ci-contract/merge_source.go": "667af1e06cbc8a9ad95889403f3916d7f6facf4df83abeaa8bc031e4a8c9cdc2",
+    "tools/civ6-ci-contract/plan.go": "5a819399b2ecc0a32a385a3ba04a1b24f989b38c3c46b4c460288ed9fe63ade1",
+    "tools/civ6-ci-contract/registration.go": "0861ffd93443ede934f1d3cd0bfe6812c0548c791a73a860f62531b143f3d89b",
+    "tools/civ6-ci-contract/verify.go": "5ea09e566d68545de386eaccb723d88587608250654027a7f8ccf8193f476ba8",
+    "tools/civ6-ci-contract/workflow.go": "eb751fcb05235d28bf04ec6a4f9d0f24b5b24a35787db735de82d93e50c7463a",
+    "tools/civ6-ci-contract/go.mod": "eaf8b1fd529cb0315bd28086db24e2b2667ec99359d673a48de6b80a48210fc2",
+    "tools/civ6-ci-contract/go.sum": "173fcf5b95672f732e382372d5391ce203dd020260215001391df13314b5d312",
     "repair-guard/audio2906_windows.go": "297ff1c95dacdd3007a669021731338c8e9825cc8d4ef4c771415b09437898d1",
-    "repair-guard/capacity_update_3628_windows.go": "152e8d3474a42e77cffc0a466c0e25296c241336515c780300fa1a1aaccbe7c8",
+    "repair-guard/capacity_update_3628_windows.go": "6e4e408c42ee4558cd0e93f3fca06988083f6653b4509a87663aca6104d4bbe8",
     "repair-guard/capacity_update_windows.go": "309f3715025bd85950ca98d0bfb4b671ab8e578241d0ef6323e29cc110a795ce",
     "repair-guard/civ6ci_windows.go": "1367d22db17802dc991c48bc0200e03fcf757cbf2c62b75237502f66731cb6c0",
     "repair-guard/collected3174_windows.go": "8879f14baf7fe7d9bf8fafd1c58b6aae6a037ed4276985464231f43101cca83b",
@@ -33,11 +47,17 @@
     "repair-guard/runtime_windows.go": "dc781e1f1aa911fb493515afed0a1cf49f884ed3070cb875128dbc9a8a6ad563",
     "repair-guard/civ6-ci-2962-contract.json": "aa1c4d4f8cb323ade30675ab3034f88ec3e40281ec269bc799a9b530b7ad171c",
     "repair-guard/owner_catalog.json": "891b63f921d0c448423803c07006af3264f7c6cb7dbfac29b75c3fd7766fae79",
-    "repair-guard/go.mod": "e58f22b5eb7da920472fb83755f233b49005e5bc03e343f8c21a253814e77492"
+    "repair-guard/go.mod": "e58f22b5eb7da920472fb83755f233b49005e5bc03e343f8c21a253814e77492",
+    "repair-guard/go.sum": "173fcf5b95672f732e382372d5391ce203dd020260215001391df13314b5d312"
   },
-  "runtime_receipt_sha256": "9596797a126ebfc9d6f64db18f049c0ac59d6b498ec0f46956681ecfed7faf91",
+  "runtime_receipt_sha256": "b7b83fc4b29d8f00f84cdce49bf25a09066e7b01f2742cb51398a1e2ab48b4b2",
+  "baseline_source_commit": "2fd15553159726d8f446b6c1fef6eeeb3ad74a8b",
+  "baseline_build_vcs_modified": false,
+  "baseline_source_equal_to_prechange_base": "f14136d514dbd4a7d0bd0eaea76ed211f7cc9c9e",
+  "baseline_production_changes_to_prechange_base": 0,
   "old_sha256": "2971c1d61e8e004e4a772015eed3b51e3ef5147a0d046bb41d7cc7a72af0c37e",
-  "new_sha256": "2a28baf30ec1abb64d94f81dcd74a9b3ae54713fc9ff660203a13f3e07dc43c0",
+  "new_sha256": "d851a46ee72603e5589b88d314492fdbfb7036c9e3e22a77e6e6ab2b965578ce",
   "data_access_granted": false,
-  "original_registry_recovered": false
+  "original_registry_recovered": false,
+  "test_result_sha256": "c33a8c84d762404ae3eaa2d2c922b3ecb6b5051fc7b6063ffd5c431b38772a2d"
 }

@@ -173,6 +173,16 @@ mod notifier_config_tests {
 /// All network-facing programs (OpenCodex, Docker/Jev and GTO) and process actions
 /// cross this boundary. Tests substitute fakes and never call Discord.
 pub trait Runtime: Send + Sync {
+    fn quota_recovery_inventory(&self) -> Value {
+        let mut inventory=json!({});
+        for provider in ["openai","anthropic"] {
+            let raw=crate::pool_retry::query(self,&["account","list",provider,"--quota","--refresh","--json"])
+                .unwrap_or(Value::Null);
+            inventory[provider]=cc_job_policy::quota_recovery::aggregate(&raw,provider,self.epoch());
+        }
+        inventory["at"]=json!(self.epoch());
+        inventory
+    }
     fn supports_process_tree_job(&self) -> bool {
         false
     }

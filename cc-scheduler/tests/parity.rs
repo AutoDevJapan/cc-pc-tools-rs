@@ -25,6 +25,8 @@ mod resume_checkpoint_tests;
 mod workspace_checkpoint_tests;
 #[path = "support/workspace_relocation.rs"]
 mod workspace_relocation_tests;
+#[path = "support/quota_recovery.rs"]
+mod quota_recovery_tests;
 
 #[test]
 fn review_preparation_failures_stop_after_three_and_recover_on_new_evidence() {
@@ -1714,6 +1716,8 @@ fn test_orphan_minimum_age_and_missing_job() {
 }
 
 struct Fake {
+    quota_spec_edit: Option<(PathBuf,String)>,
+    quota_inventory: Value,
     real_workspaces: bool,
     prepare_registry: Option<PathBuf>,
     current_product: Option<(Value, String)>,
@@ -1766,6 +1770,8 @@ struct Fake {
 impl Default for Fake {
     fn default() -> Self {
         Self {
+            quota_spec_edit: None,
+            quota_inventory: Value::Null,
             real_workspaces: false,
             prepare_registry: None,
             current_product: None,
@@ -1818,6 +1824,15 @@ impl Default for Fake {
     }
 }
 impl Backend for Fake {
+    fn resource_until(&mut self, job: &Value) -> Result<Option<f64>> {
+        Ok(if self.m["quota_block_model"].is_string() && self.m["quota_block_model"] == job["model"] {
+            Some(self.clock+900.)
+        } else { cc_scheduler::preparation::resource_deadline(job,self.clock) })
+    }
+    fn quota_recovery_inventory(&mut self) -> Result<Value> {
+        if let Some((path,text))=self.quota_spec_edit.take() { fs::write(path,text)?; }
+        Ok(self.quota_inventory.clone())
+    }
     fn current_workspace_checkpoint(&mut self, _item: &Value, _root: &str) -> Option<Value> {
         if self.checkpoint_edit_after==0 {
             if let Some((path,value))=self.checkpoint_edit.take() {write_json(&path,&value,1).unwrap();}

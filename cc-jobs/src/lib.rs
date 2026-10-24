@@ -23,6 +23,7 @@ pub mod platform;
 pub mod pool_retry;
 pub mod queue;
 pub mod queue_status;
+mod quota_recovery;
 pub mod reboot;
 pub mod recovery;
 pub use events::*;

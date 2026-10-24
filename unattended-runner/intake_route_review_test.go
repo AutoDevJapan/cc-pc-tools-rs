@@ -114,7 +114,7 @@ func TestIntake3485ProductLinkEditAlsoParksWithoutRetry(t *testing.T) {
 	var h Health
 	r.processOrdinaryPending(context.Background(), &h)
 	r.processOrdinaryPending(context.Background(), &h)
-	if q.Phase != "source_context_pending" || q.NextAction != "verify_original_product_scope_and_use_finite_steering_delivery" || len(h.Errors) != 0 || *calls != 0 {
+	if q.Phase != "source_context_pending" || q.NextAction != "review_original_product_link_and_task_association" || len(h.Errors) != 0 || *calls != 0 {
 		t.Fatal("product progress link entered generic delivery", q.Phase, q.NextAction, h.Errors)
 	}
 }

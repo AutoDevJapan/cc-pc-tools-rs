@@ -480,6 +480,9 @@ func (r *Runner) scanPage(ctx context.Context, thread Thread, replay bool) (int,
 		}
 		if old := r.State.Requests[message.ID]; old != nil {
 			if old.Conversation == "" && old.RecordVersion == 2 {
+				if err := r.retireOrdinaryWatch(old); err != nil {
+					return captured, err
+				}
 				if _, err := r.observeOrdinary(old, message); err != nil {
 					return captured, err
 				}
@@ -493,15 +496,7 @@ func (r *Runner) scanPage(ctx context.Context, thread Thread, replay bool) (int,
 		r.State.Requests[message.ID] = &Request{Thread: thread.ID, Guild: r.State.Destination.Guild, RecordVersion: 2, Message: message.ID, Author: message.Author.ID, Created: message.Timestamp, Edited: message.Edited, ReplyTo: message.Reference.Message, ReplyChannel: message.Reference.Channel, ReplyGuild: message.Reference.Guild, Acquired: r.Now().UTC().Format(time.RFC3339Nano), Source: "discord-api-v10", Text: text, Key: requestKey(thread.ID, message.ID)}
 		r.State.Requests[message.ID].MessageType = message.Type
 		r.State.Requests[message.ID].Attachments = message.Attachments
-		r.classifyCaptured(r.State.Requests[message.ID], thread)
-		if conversation != "" {
-			r.State.Requests[message.ID].Conversation = conversation
-			r.State.Requests[message.ID].Phase = "conversation_capture_pending"
-		}
-		if link, ok := r.ProgressLinks[thread.ID]; ok && conversation == "" {
-			r.State.Requests[message.ID].Origin = &ProgressOrigin{RequestID: link.RequestID, Guild: link.Guild, Thread: link.Thread, Message: link.Message, Todo: link.Todo, Job: link.Job}
-			r.State.Requests[message.ID].ProgressThread = link.Thread
-		}
+		r.classifyCaptured(r.State.Requests[message.ID], thread, conversation)
 		captured++
 	}
 	if replay {

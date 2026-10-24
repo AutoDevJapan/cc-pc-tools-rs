@@ -289,11 +289,11 @@ func (r *Runner) registerOrigin(ctx context.Context, request *Request, origin Pr
 		}
 		copy := *request
 		copy.Todo = origin.Todo
+		copy.Origin, copy.ProgressThread = &origin, origin.Thread
 		// Delivery only: never release an owner stop, launch the game, create a
 		// new product generation or mark an instruction applied from this scope.
 		copy.Phase = "product_reply_saved"
-		workerSource := ordinaryWorkerSource(&copy)
-		if err := publish(filepath.Join(r.Config.Home, "steering", fmt.Sprintf("%d-%s.json", origin.Todo, request.Message)), &workerSource); err != nil {
+		if err := r.publishSteeringSource(&copy); err != nil {
 			return err
 		}
 		*request = copy

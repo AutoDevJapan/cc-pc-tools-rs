@@ -108,13 +108,6 @@ func TestIntake3493NormalScanIncludesCutoverTimestamp(t *testing.T) {
 	r, c := fixture(t)
 	m := msg(c, "500", "300", "受信開始と同時刻の元依頼")
 	server(t, r, func(w http.ResponseWriter, req *http.Request) {
-		if after, ok := number(req.URL.Query().Get("after")); ok {
-			mid, _ := number(m.ID)
-			if after >= mid {
-				respond(w, []Message{})
-				return
-			}
-		}
 		respond(w, []Message{m})
 	})
 	if n, err := r.scan(context.Background(), Thread{ID: "500"}); err != nil || n != 1 || r.State.Requests[m.ID] == nil {
@@ -197,13 +190,15 @@ func TestIntake3493ConfiguredSourceCannotDeliverDifferentOrStaleContext(t *testi
 }
 
 func TestIntake3493ProductRecoveryDoesNotTrustUnverifiedOrForeignLinks(t *testing.T) {
-	for _, kind := range []string{"unverified", "foreign-todo"} {
+	for _, kind := range []string{"unverified", "foreign-todo", "blocked"} {
 		t.Run(kind, func(t *testing.T) {
 			f, q := savedReplyFixture(t)
 			q.Origin = nil
 			q.Phase = "source_context_pending"
 			if kind == "unverified" {
 				delete(f.r.ProgressLinks, q.Thread)
+			} else if kind == "blocked" {
+				f.r.BlockedProgressThreads[q.Thread] = true
 			} else {
 				q.Todo = 999
 			}

@@ -44,7 +44,11 @@ func (r *Runner) parkUnbound(q *Request) {
 
 // Initial observation and a retired passive watch enter the same admission
 // rules. Admission still verifies the current source before any task mutation.
-func (r *Runner) classifyCaptured(q *Request, thread Thread) {
+func (r *Runner) classifyCaptured(q *Request, thread Thread, conversation string) {
+	if thread.ID == "" {
+		// Missing discovery metadata cannot authorize a new task.
+		thread.Managed = true
+	}
 	q.Phase, q.PendingOwner, q.NextAction = "captured", "", ""
 	if strings.TrimSpace(q.Text) == "" {
 		q.Phase = "empty"
@@ -66,16 +70,42 @@ func (r *Runner) classifyCaptured(q *Request, thread Thread) {
 	if thread.Managed && !r.KnownQuestionThreads[q.Thread] && q.Phase != "empty" && q.Phase != "reference_mismatch" && q.Phase != "status_query" {
 		r.parkUnbound(q)
 	}
+	if conversation != "" {
+		q.Conversation, q.Phase = conversation, "conversation_capture_pending"
+		q.PendingOwner, q.NextAction = "", ""
+	} else if link, ok := r.ProgressLinks[q.Thread]; ok {
+		origin := link.ProgressOrigin
+		q.Origin, q.ProgressThread = &origin, link.Thread
+	}
 }
 
 func (r *Runner) retireOrdinaryWatch(q *Request) error {
-	if q.HistoryWatch == nil || q.Phase != "history_watch" || q.Todo != 0 || q.Binding != nil {
+	if q.HistoryWatch == nil {
 		return nil
 	}
+	passive := q.Phase == "history_watch" && q.Todo == 0 && q.Binding == nil
 	created, err := time.Parse(time.RFC3339Nano, q.Created)
 	cutoff, cutoffErr := time.Parse(time.RFC3339Nano, r.State.Since)
-	if err != nil || cutoffErr != nil || created.Before(cutoff) || !monthlyID(q.Message) {
+	if err != nil || cutoffErr != nil || !monthlyID(q.Message) {
 		return nil
+	}
+	if created.Before(cutoff) {
+		if passive && q.PendingOwner == "OMB" {
+			q.PendingOwner = ""
+			if err := r.save(); err != nil {
+				q.PendingOwner = "OMB"
+				return err
+			}
+		}
+		return nil
+	}
+	conversation := ""
+	if passive {
+		var err error
+		conversation, err = r.conversationForThread(q.Thread)
+		if err != nil {
+			return err
+		}
 	}
 	// Keep the old routing evidence, without changing the frozen monthly page.
 	b, err := json.Marshal(q)
@@ -87,7 +117,9 @@ func (r *Runner) retireOrdinaryWatch(q *Request) error {
 	}
 	previous := *q
 	q.HistoryWatch = nil
-	r.classifyCaptured(q, r.State.Threads[q.Thread])
+	if passive {
+		r.classifyCaptured(q, r.State.Threads[q.Thread], conversation)
+	}
 	if err := r.save(); err != nil {
 		*q = previous
 		return err
@@ -100,6 +132,9 @@ func (r *Runner) retireOrdinaryWatch(q *Request) error {
 // returning an error alone leaves it in the delivery queue forever.
 func (r *Runner) ordinaryContextAction(q *Request) string {
 	if r.ordinaryProductScope(q) {
+		if _, ok := r.ordinaryProductRecoveryLink(q); !ok {
+			return "review_original_product_link_and_task_association"
+		}
 		return "verify_original_product_scope_and_use_finite_steering_delivery"
 	}
 	if r.KnownQuestionThreads[q.Thread] || ordinaryShortAnswer(q.Text) {
@@ -109,6 +144,9 @@ func (r *Runner) ordinaryContextAction(q *Request) string {
 		return "read_message_type_and_original_context"
 	}
 	if q.Todo != 0 && r.isConfiguredRequestReport(q.Todo) {
+		if _, ok := r.configuredOriginalSource(q); !ok {
+			return "review_configured_request_message_and_purpose"
+		}
 		return "verify_configured_request_source_and_deliver_original_task"
 	}
 	return ""
@@ -300,13 +338,13 @@ func (r *Runner) deliverOrdinary(ctx context.Context, q *Request) error {
 		}
 		return errOrdinaryDedicatedContext
 	}
-	return r.deliverOrdinaryTask(ctx, q)
+	return r.deliverOrdinaryTask(ctx, q, false)
 }
 
 // Shared delivery mechanics. Dedicated callers must first verify their exact
 // source scope; this does not release waits, launch workers or change controls.
-func (r *Runner) deliverOrdinaryTask(ctx context.Context, q *Request) error {
-	if err := r.validateSource(ctx, q, q.Binding != nil); err != nil {
+func (r *Runner) deliverOrdinaryTask(ctx context.Context, q *Request, verifiedOriginal bool) error {
+	if err := r.validateSource(ctx, q, q.Binding != nil || verifiedOriginal); err != nil {
 		return err
 	}
 	row, err := r.conversationTask(ctx, q.Todo)
@@ -323,8 +361,7 @@ func (r *Runner) deliverOrdinaryTask(ctx context.Context, q *Request) error {
 	version := ordinaryVersion(q)
 	// Existing workers are instructed to read this directory at safe boundaries.
 	// Publish the current source there as well as the durable normal ToDo note.
-	workerSource := ordinaryWorkerSource(q)
-	if err := publish(r.steeringReceiptPath(q.Todo, q.Message), &workerSource); err != nil {
+	if err := r.publishSteeringSource(q); err != nil {
 		return err
 	}
 	marker := "intake-owner-source:" + q.Message + ":" + version
@@ -369,32 +406,39 @@ func (r *Runner) ordinaryProductScope(q *Request) bool {
 	return q.Origin != nil && q.Origin.Scope == productReportScope || r.State.ProgressLinks[q.Thread].Scope == productReportScope || r.ProgressLinks[q.Thread].Scope == productReportScope
 }
 
-func (r *Runner) recoverOrdinaryProductReply(ctx context.Context, q *Request) error {
-	if q.Phase != "source_context_pending" || !r.ordinaryProductScope(q) || r.BlockedProgressThreads[q.Thread] {
-		return nil
-	}
+func (r *Runner) ordinaryProductRecoveryLink(q *Request) (ProgressLink, bool) {
 	link, ok := r.ProgressLinks[q.Thread]
 	saved, exists := r.State.ProgressLinks[q.Thread]
-	if !ok || !exists || link.Scope != productReportScope || link.ProgressOrigin != saved.ProgressOrigin || q.Todo != 0 && q.Todo != link.Todo {
+	return link, ok && exists && !r.BlockedProgressThreads[q.Thread] && link.Scope == productReportScope && link.ProgressOrigin == saved.ProgressOrigin && (q.Todo == 0 || q.Todo == link.Todo)
+}
+
+func (r *Runner) recoverOrdinaryProductReply(ctx context.Context, q *Request) error {
+	link, ok := r.ordinaryProductRecoveryLink(q)
+	if q.Phase != "source_context_pending" || !r.ordinaryProductScope(q) || !ok {
 		return nil
 	}
 	if _, verified := r.verifyProgressLink(ctx, link); !verified {
 		return nil
 	}
-	origin := link.ProgressOrigin
-	q.Origin, q.ProgressThread = &origin, link.Thread
-	return r.registerOrigin(ctx, q, origin)
+	// registerOrigin commits the association only after its live checks and
+	// worker receipt succeed. A failed or edited source stays retryable.
+	return r.registerOrigin(ctx, q, link.ProgressOrigin)
+}
+
+func (r *Runner) configuredOriginalSource(q *Request) (ProductReportConfig, bool) {
+	if r.ordinaryProductScope(q) || q.Todo == 0 || q.Conversation != "" || ordinaryShortAnswer(q.Text) || r.KnownQuestionThreads[q.Thread] || q.MessageType != nil && *q.MessageType != 0 && *q.MessageType != 19 {
+		return ProductReportConfig{}, false
+	}
+	c, ok := r.productConfig(q.Todo)
+	return c, ok && c.Source.Kind == stateRequestSource && c.Source.Message == q.Message && c.Source.Purpose == ""
 }
 
 func (r *Runner) recoverConfiguredRequestSource(ctx context.Context, q *Request) error {
-	if q.Phase != "source_context_pending" || r.ordinaryProductScope(q) || q.Todo == 0 || q.Conversation != "" || ordinaryShortAnswer(q.Text) || r.KnownQuestionThreads[q.Thread] || q.MessageType != nil && *q.MessageType != 0 && *q.MessageType != 19 {
+	c, ok := r.configuredOriginalSource(q)
+	if q.Phase != "source_context_pending" || !ok || !r.verifyOwnerSource(ctx, c) {
 		return nil
 	}
-	c, ok := r.productConfig(q.Todo)
-	if !ok || c.Source.Kind != stateRequestSource || c.Source.Message != q.Message || c.Source.Purpose != "" || !r.verifyOwnerSource(ctx, c) {
-		return nil
-	}
-	return r.deliverOrdinaryTask(ctx, q)
+	return r.deliverOrdinaryTask(ctx, q, true)
 }
 
 // Independent of message Last/After, with an attempted cursor saved before I/O.

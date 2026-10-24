@@ -152,6 +152,9 @@ func (r *Runner) scanIntakeThreads(ctx context.Context, health *Health, managed 
 		id := ids[(start+i)%len(ids)]
 		thread := r.State.Threads[id]
 		after, _ := number(snowflake(cutoff))
+		if after > 0 {
+			after--
+		}
 		scan := r.State.Scans[id]
 		if scan != nil {
 			after, _ = number(scan.After)

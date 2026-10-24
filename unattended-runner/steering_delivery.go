@@ -46,6 +46,10 @@ func bytesHash(b []byte) string { sum := sha256.Sum256(b); return hex.EncodeToSt
 func (r *Runner) steeringReceiptPath(todo uint64, message string) string {
 	return filepath.Join(r.Config.Home, "steering", fmt.Sprintf("%d-%s.json", todo, message))
 }
+func (r *Runner) publishSteeringSource(q *Request) error {
+	workerSource := ordinaryWorkerSource(q)
+	return publish(r.steeringReceiptPath(q.Todo, q.Message), &workerSource)
+}
 func (r *Runner) steeringPlanPath(message string) string {
 	return filepath.Join(r.Config.Home, "deliveries", message+".json")
 }
@@ -86,7 +90,7 @@ func (r *Runner) deliveryRequest(ctx context.Context, message string) (*Request,
 		// private delivery receipt, invalidate the old plan by its byte hash, and
 		// require a fresh normal delivery without releasing a wait or owner stop.
 		req.Phase = "product_reply_saved"
-		if err := publish(r.steeringReceiptPath(req.Todo, message), req); err != nil {
+		if err := r.publishSteeringSource(req); err != nil {
 			return nil, nil, "", err
 		}
 		if err := r.save(); err != nil {

@@ -183,7 +183,7 @@
       "go_version": null,
       "go_version_definition": "Not captured with the original successful execution; no current version is backdated.",
       "execution_time": null,
-      "execution_time_definition": "Exact process execution time was not captured; checked_at, where present, is the receipt verification time.",
+      "execution_time_definition": "Exact process execution time was not captured. receipt_checked_at, when present, is the original receipt verification time. result_receipt names the private preserved parent receipt; recorded_result here carries its copied outcome for public inspection.",
       "receipt_checked_at": "2026-10-24T05:09:24.5933319+00:00"
     },
     {
@@ -202,7 +202,7 @@
       "go_version": null,
       "go_version_definition": "Not captured with the original successful execution; no current version is backdated.",
       "execution_time": null,
-      "execution_time_definition": "Exact process execution time was not captured; checked_at, where present, is the receipt verification time."
+      "execution_time_definition": "Exact process execution time was not captured. receipt_checked_at, when present, is the original receipt verification time. result_receipt names the private preserved parent receipt; recorded_result here carries its copied outcome for public inspection."
     },
     {
       "passed": true,
@@ -220,7 +220,7 @@
       "go_version": null,
       "go_version_definition": "Not captured with the original successful execution; no current version is backdated.",
       "execution_time": null,
-      "execution_time_definition": "Exact process execution time was not captured; checked_at, where present, is the receipt verification time."
+      "execution_time_definition": "Exact process execution time was not captured. receipt_checked_at, when present, is the original receipt verification time. result_receipt names the private preserved parent receipt; recorded_result here carries its copied outcome for public inspection."
     }
   ],
   "preserved_scope": {
@@ -237,6 +237,6 @@
   },
   "publication_scope": "This evidence follows already completed new-only central operations; public adoption/coverage flags must be reconciled with the actual fixed receipts before counting it. No source code or UI was run by installing these instructions.",
   "self_authored_model_and_fixture_execution_definition": "The separate owned Go numerical/XML fixtures ran successfully as recorded above. Installation/discovery did not execute upstream code, a renderer, a real website or an AI model turn.",
-  "amended_at": "2026-10-24T07:16:19.7577795+00:00",
+  "amended_at": "2026-10-24T08:15:09.0197014+00:00",
   "amendment_definition": "Verification metadata/recording only. No new source execution, fixture rerun, central read/write or discovery. Original observed/checked timestamps, source hashes and reviewed Skill bytes remain unchanged."
 }

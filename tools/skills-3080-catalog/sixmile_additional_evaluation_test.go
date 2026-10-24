@@ -14,6 +14,24 @@ import (
 const extra45Bodies = "d41a412c5b6e0f6d38004a09ef57611fb917379afbb3bc31039e06c100ce0e9c"
 const extra45Supports = "f928e93fb320780912880304bae59c4ad704a6f5c5579e381ce25df07cf06e38"
 const extra45PrimaryActors = "d61534da6c644463e66fdebc4f6badd821c9fb889bfa0a9ed8f9ff4012f35bc7"
+const next20Bodies = "c6a69b6cc0771ae23c52085772addb8d937b1a1567001e374cdaaa83407f8ecf"
+const next20Supports = "77d8f6f7322344c81b3a9b430d2fdde8e82d82a682dddbe3c97a578d7340918f"
+const next20PrimaryActors = "c7651ac3298c91b98ba06f186b50022e238afc23ee9ec780d4d3a9083a487de4"
+
+type receivedReadingSpec struct {
+	Label, Bodies, Supports, Actors                                     string
+	Candidates, Raw, Workflow, Masked, Metadata                         int
+	Support, Saved, Read, WorkflowSupport, MaskedSupport, Scan, Unsaved int
+}
+
+var extra45ReadingSpec = receivedReadingSpec{
+	"extra45", extra45Bodies, extra45Supports, extra45PrimaryActors,
+	45, 43, 44, 1, 1, 422, 246, 126, 149, 23, 85, 176,
+}
+var next20ReadingSpec = receivedReadingSpec{
+	"next20", next20Bodies, next20Supports, next20PrimaryActors,
+	20, 20, 20, 0, 0, 178, 97, 74, 74, 0, 23, 81,
+}
 
 // These anchors preserve the private normalization after the independent
 // fixed-tree/index/catalog/raw-object checks, not digests derived from the
@@ -111,15 +129,20 @@ func x45Digest(rows []string) string {
 }
 
 func validateExtra45Reading(a extra45Assessment) error {
-	if a.Source != "6mile/skills" || a.Commit != "920714f17d81e0a95c7a9bc51faf0a7921cd982d" || a.Tree != "5782ae7deffe5024e15b6e090327385c10f76273" || len(a.Entries) != 45 {
-		return errors.New("extra45 reading: fixed cohort identity differs")
+	return validateReceivedReading(a, extra45ReadingSpec)
+}
+
+func validateReceivedReading(a extra45Assessment, expected receivedReadingSpec) error {
+	bad := func(message string) error { return errors.New(expected.Label + " reading: " + message) }
+	if a.Source != "6mile/skills" || a.Commit != "920714f17d81e0a95c7a9bc51faf0a7921cd982d" || a.Tree != "5782ae7deffe5024e15b6e090327385c10f76273" || len(a.Entries) != expected.Candidates {
+		return bad("fixed cohort identity differs")
 	}
 	ids, paths, supportPaths := map[string]bool{}, map[string]bool{}, map[string]bool{}
 	var bodyRows, actorRows, supportRows []string
 	raw, workflow, masked, metadata, notices, support, saved, read, workflowSupport, maskedSupport, scan, unsaved := 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 	for _, e := range a.Entries {
 		if e.ID == "" || ids[e.ID] || paths[e.Path] || !strings.HasPrefix(e.Path, "skills/") || path.Clean(e.Path) != e.Path || strings.ContainsAny(e.Path, "\\:") || !strings.HasSuffix(e.Path, "/SKILL.md") || !x45Hex(e.SHA, 64) || !x45Hex(e.Blob, 40) || e.Bytes < 1 || e.Commit != a.Commit || e.URL != "https://github.com/"+a.Source+"/blob/"+a.Commit+"/"+e.Path || e.Name == "" || e.Use == "" || e.Reason == "" || e.Read == nil || e.Workflow == nil || !x45False(e.Executed) {
-			return errors.New("extra45 reading: primary identity/state is absent or conflated")
+			return bad("primary identity/state is absent or conflated")
 		}
 		ids[e.ID], paths[e.Path] = true, true
 		full, wf := *e.Read, *e.Workflow
@@ -127,32 +150,32 @@ func validateExtra45Reading(a extra45Assessment) error {
 		switch {
 		case full:
 			if !wf || e.Mask == nil || *e.Mask != 0 || x45String(e.ReadBy) == "" || e.WorkflowBy != nil {
-				return errors.New("extra45 reading: raw primary acquired masking or lost its reader")
+				return bad("raw primary acquired masking or lost its reader")
 			}
 			raw++
 			workflow++
 			actor = *e.ReadBy
 		case wf:
 			if e.Mask == nil || *e.Mask < 1 || e.ReadBy != nil || x45String(e.WorkflowBy) == "" {
-				return errors.New("extra45 reading: masked workflow primary was claimed as raw or lost its actor")
+				return bad("masked workflow primary was claimed as raw or lost its actor")
 			}
 			workflow++
 			masked++
 			actor = *e.WorkflowBy
 		default:
 			if e.ReadBy != nil || e.WorkflowBy != nil || e.Mask != nil {
-				return errors.New("extra45 reading: metadata-only primary acquired a text reading claim")
+				return bad("metadata-only primary acquired a text reading claim")
 			}
 			metadata++
 		}
 		r := e.Rights
 		if !x45True(r.Read) || x45String(r.ReadBy) == "" || r.Kind == "" || r.Copy == nil || !x45False(r.Support) || !strings.HasPrefix(r.Path, path.Dir(e.Path)+"/") || !x45Hex(r.SHA, 64) || !x45Hex(r.Blob, 40) || r.Bytes < 1 {
-			return errors.New("extra45 reading: individual notice reading or rights scope is missing")
+			return bad("individual notice reading or rights scope is missing")
 		}
 		if actor == "" {
 			actor = *r.ReadBy
 		} else if *r.ReadBy != actor {
-			return errors.New("extra45 reading: notice actor differs from this received reading cohort")
+			return bad("notice actor differs from this received reading cohort")
 		}
 		notices++
 		bodyRows = append(bodyRows, fmt.Sprintf("%s\t%s\t%s\t%s\t%d\t%t\t%t\n", e.Path, e.ID, e.SHA, e.Blob, e.Bytes, full, wf))
@@ -160,48 +183,48 @@ func validateExtra45Reading(a extra45Assessment) error {
 		noticeMatches := 0
 		for _, s := range e.Support {
 			if !strings.HasPrefix(s.Path, path.Dir(e.Path)+"/") || s.Path == e.Path || supportPaths[s.Path] || !x45Hex(s.Blob, 40) || s.Saved == nil || s.Read == nil || s.Workflow == nil || s.Scan == nil || s.Mask == nil || *s.Mask < 0 || !x45False(s.Executed) {
-				return errors.New("extra45 reading: support identity or explicit state is missing")
+				return bad("support identity or explicit state is missing")
 			}
 			supportPaths[s.Path] = true
 			support++
 			stored, fullSupport, wfSupport, scanned := *s.Saved, *s.Read, *s.Workflow, *s.Scan
 			if stored {
 				if s.Bytes == nil || *s.Bytes < 1 || !x45Hex(s.SHA, 64) {
-					return errors.New("extra45 reading: saved support identity is incomplete")
+					return bad("saved support identity is incomplete")
 				}
 				saved++
 			} else {
 				if s.Bytes != nil || s.SHA != "" || fullSupport || wfSupport || scanned || *s.Mask != 0 {
-					return errors.New("extra45 reading: unknown support bytes or reading were invented")
+					return bad("unknown support bytes or reading were invented")
 				}
 				unsaved++
 			}
 			switch {
 			case fullSupport:
 				if !wfSupport || scanned || *s.Mask != 0 || x45String(s.ReadBy) != actor || s.WorkflowBy != nil || s.ScanBy != nil {
-					return errors.New("extra45 reading: raw support acquired masking/scanning or a wrong reader")
+					return bad("raw support acquired masking/scanning or a wrong reader")
 				}
 				read++
 				workflowSupport++
 			case wfSupport:
 				if !stored || scanned || *s.Mask < 1 || s.ReadBy != nil || x45String(s.WorkflowBy) != actor || s.ScanBy != nil {
-					return errors.New("extra45 reading: masked workflow support was claimed as raw or lost its actor")
+					return bad("masked workflow support was claimed as raw or lost its actor")
 				}
 				workflowSupport++
 				maskedSupport++
 			case scanned:
 				if !stored || s.ReadBy != nil || s.WorkflowBy != nil || x45String(s.ScanBy) != actor {
-					return errors.New("extra45 reading: scan-only support acquired a full reader")
+					return bad("scan-only support acquired a full reader")
 				}
 				scan++
 			default:
 				if *s.Mask != 0 || s.ReadBy != nil || s.WorkflowBy != nil || s.ScanBy != nil {
-					return errors.New("extra45 reading: unread support acquired a reader/scanner")
+					return bad("unread support acquired a reader/scanner")
 				}
 			}
 			if s.Path == r.Path {
 				if !stored || !fullSupport || s.SHA != r.SHA || s.Blob != r.Blob || s.Bytes == nil || *s.Bytes != r.Bytes {
-					return errors.New("extra45 reading: notice does not match its independently verified package support")
+					return bad("notice does not match its independently verified package support")
 				}
 				noticeMatches++
 			}
@@ -212,15 +235,15 @@ func validateExtra45Reading(a extra45Assessment) error {
 			supportRows = append(supportRows, fmt.Sprintf("%s\t%s\t%s\t%s\t%t\t%t\t%t\t%d\t%t\t%s\t%s\t%s\n", s.Path, s.Blob, size, s.SHA, stored, fullSupport, wfSupport, *s.Mask, scanned, x45String(s.ReadBy), x45String(s.WorkflowBy), x45String(s.ScanBy)))
 		}
 		if noticeMatches != 1 {
-			return errors.New("extra45 reading: individual notice missing or repeated")
+			return bad("individual notice missing or repeated")
 		}
 	}
 	c := a.Counts
-	if raw != 43 || workflow != 44 || masked != 1 || metadata != 1 || notices != 45 || support != 422 || saved != 246 || read != 126 || workflowSupport != 149 || maskedSupport != 23 || scan != 85 || unsaved != 176 || c.Candidates != 45 || c.Raw != raw || c.Workflow != workflow || c.Masked != masked || c.Metadata != metadata || c.Notices != notices || c.Support != support || c.Saved != saved || c.Read != read || c.WorkflowSupport != workflowSupport || c.MaskedSupport != maskedSupport || c.Scan != scan || c.Unsaved != unsaved {
-		return errors.New("extra45 reading: raw/masked/metadata/scan cohort counters differ")
+	if raw != expected.Raw || workflow != expected.Workflow || masked != expected.Masked || metadata != expected.Metadata || notices != expected.Candidates || support != expected.Support || saved != expected.Saved || read != expected.Read || workflowSupport != expected.WorkflowSupport || maskedSupport != expected.MaskedSupport || scan != expected.Scan || unsaved != expected.Unsaved || c.Candidates != expected.Candidates || c.Raw != raw || c.Workflow != workflow || c.Masked != masked || c.Metadata != metadata || c.Notices != notices || c.Support != support || c.Saved != saved || c.Read != read || c.WorkflowSupport != workflowSupport || c.MaskedSupport != maskedSupport || c.Scan != scan || c.Unsaved != unsaved {
+		return bad("raw/masked/metadata/scan cohort counters differ")
 	}
-	if x45Digest(bodyRows) != extra45Bodies || x45Digest(actorRows) != extra45PrimaryActors || x45Digest(supportRows) != extra45Supports {
-		return errors.New("extra45 reading: fixed independent identities or reading actors changed")
+	if x45Digest(bodyRows) != expected.Bodies || x45Digest(actorRows) != expected.Actors || x45Digest(supportRows) != expected.Supports {
+		return bad("fixed independent identities or reading actors changed")
 	}
 	return nil
 }
@@ -384,20 +407,24 @@ type cohortLedgerRow struct {
 	Disposition string `json:"disposition"`
 }
 
-func validateSixmileCohortIndex(index sixmileCohortIndex, old legacy21Projection, extra extra45Assessment, ledger []cohortLedgerRow) error {
+func validateSixmileCohortIndex(index sixmileCohortIndex, old legacy21Projection, extra, next20 extra45Assessment, ledger []cohortLedgerRow) error {
 	if err := validateExtra45Reading(extra); err != nil {
 		return err
 	}
-	if index.Source != old.Source || index.Source != extra.Source || index.Commit != old.Commit || index.Commit != extra.Commit || index.Tree != old.Tree || index.Tree != extra.Tree || index.Expected != 55623 || !x45True(index.NotCap) || len(index.Cohorts) != 2 || len(old.Entries) != 21 || old.Read != 21 {
+	if err := validateReceivedReading(next20, next20ReadingSpec); err != nil {
+		return err
+	}
+	if index.Source != old.Source || index.Source != extra.Source || index.Source != next20.Source || index.Commit != old.Commit || index.Commit != extra.Commit || index.Commit != next20.Commit || index.Tree != old.Tree || index.Tree != extra.Tree || index.Tree != next20.Tree || index.Expected != 55623 || !x45True(index.NotCap) || len(index.Cohorts) != 3 || len(old.Entries) != 21 || old.Read != 21 {
 		return errors.New("sixmile cohorts: source or historical boundary differs")
 	}
-	if index.Cohorts[0].ID != "first21" || index.Cohorts[0].Artifact != "skills-3080-sixmile-partial-evaluation.json" || index.Cohorts[1].ID != "next45" || index.Cohorts[1].Artifact != "skills-3080-sixmile-next45-evaluation.json" {
+	if index.Cohorts[0].ID != "first21" || index.Cohorts[0].Artifact != "skills-3080-sixmile-partial-evaluation.json" || index.Cohorts[1].ID != "next45" || index.Cohorts[1].Artifact != "skills-3080-sixmile-next45-evaluation.json" || index.Cohorts[2].ID != "next20" || index.Cohorts[2].Artifact != "skills-3080-sixmile-next20-evaluation.json" {
 		return errors.New("sixmile cohorts: missing/repeated/unbound evidence cohort")
 	}
 	known := map[string]extra45Entry{}
+	cohortByID := map[string]int{}
 	paths := map[string]bool{}
 	allPaths, raw, workflow, masked, metadata, support, saved, read, maskedSupport, scan, unsaved, savedUnread := 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-	for i, entries := range [][]extra45Entry{old.Entries, extra.Entries} {
+	for i, entries := range [][]extra45Entry{old.Entries, extra.Entries, next20.Entries} {
 		c := index.Cohorts[i]
 		cRaw, cWorkflow, cSupport, cSaved, cRead, cMasked, cScan, cUnsaved := 0, 0, 0, 0, 0, 0, 0, 0
 		for _, e := range entries {
@@ -405,6 +432,7 @@ func validateSixmileCohortIndex(index sixmileCohortIndex, old legacy21Projection
 				return errors.New("sixmile cohorts: repeated or conflicting assessed identity")
 			}
 			known[e.ID] = e
+			cohortByID[e.ID] = i
 			paths[e.Path] = true
 			allPaths++
 			full := x45True(e.Read)
@@ -460,15 +488,11 @@ func validateSixmileCohortIndex(index sixmileCohortIndex, old legacy21Projection
 			return errors.New("sixmile cohorts: per-cohort raw/masked/support projection differs")
 		}
 	}
-	if allPaths != 66 || raw != 64 || workflow != 65 || masked != 1 || metadata != 1 || index.Paths != allPaths || index.Raw != raw || index.Workflow != workflow || index.Masked != masked || index.Metadata != metadata || index.NotRaw != index.Expected-raw || index.Support != support || index.Saved != saved || index.Read != read || index.MaskedSupport != maskedSupport || index.Scan != scan || index.Unsaved != unsaved || index.SavedUnread != savedUnread || index.WorkflowSupport != read+maskedSupport || index.Unassessed != index.Expected-allPaths {
+	if allPaths != 86 || raw != 84 || workflow != 85 || masked != 1 || metadata != 1 || index.Paths != allPaths || index.Raw != raw || index.Workflow != workflow || index.Masked != masked || index.Metadata != metadata || index.NotRaw != index.Expected-raw || index.Support != support || index.Saved != saved || index.Read != read || index.MaskedSupport != maskedSupport || index.Scan != scan || index.Unsaved != unsaved || index.SavedUnread != savedUnread || index.WorkflowSupport != read+maskedSupport || index.Unassessed != index.Expected-allPaths {
 		return errors.New("sixmile cohorts: aggregate coverage double-counted or conflated a reading category")
 	}
 	matched := map[string]bool{}
-	oldInstalled, oldIntegrated, oldExcluded, newInstalled, newIntegrated, newExcluded := 0, 0, 0, 0, 0, 0
-	oldIDs := map[string]bool{}
-	for _, e := range old.Entries {
-		oldIDs[e.ID] = true
-	}
+	var installed, integrated, excluded [3]int
 	for _, row := range ledger {
 		if row.Source != index.Source {
 			continue
@@ -478,34 +502,23 @@ func validateSixmileCohortIndex(index sixmileCohortIndex, old legacy21Projection
 			return errors.New("sixmile cohorts: live source disposition is outside all assessed cohorts or repeated")
 		}
 		matched[row.ID] = true
+		cohort := cohortByID[row.ID]
 		switch row.Disposition {
 		case "installed_new_adaptation":
 			if !e.Installed || e.Integrated || e.Excluded {
 				return errors.New("sixmile cohorts: installation flag differs")
 			}
-			if oldIDs[e.ID] {
-				oldInstalled++
-			} else {
-				newInstalled++
-			}
+			installed[cohort]++
 		case "integrated_existing":
 			if !e.Integrated || e.Installed || e.Excluded {
 				return errors.New("sixmile cohorts: integration flag differs")
 			}
-			if oldIDs[e.ID] {
-				oldIntegrated++
-			} else {
-				newIntegrated++
-			}
+			integrated[cohort]++
 		case "excluded":
 			if !e.Excluded || e.Installed || e.Integrated {
 				return errors.New("sixmile cohorts: exclusion flag differs")
 			}
-			if oldIDs[e.ID] {
-				oldExcluded++
-			} else {
-				newExcluded++
-			}
+			excluded[cohort]++
 		default:
 			return errors.New("sixmile cohorts: unfinished disposition counted as final")
 		}
@@ -515,7 +528,7 @@ func validateSixmileCohortIndex(index sixmileCohortIndex, old legacy21Projection
 			return errors.New("sixmile cohorts: source flag has no corresponding live disposition")
 		}
 	}
-	if oldInstalled != old.Installed || oldIntegrated != old.Integrated || oldExcluded != old.Excluded || newInstalled != extra.Installed || newIntegrated != extra.Integrated || newExcluded != extra.Excluded {
+	if installed != [3]int{old.Installed, extra.Installed, next20.Installed} || integrated != [3]int{old.Integrated, extra.Integrated, next20.Integrated} || excluded != [3]int{old.Excluded, extra.Excluded, next20.Excluded} {
 		return errors.New("sixmile cohorts: bounded cohort disposition counters differ from union ledger")
 	}
 	return nil
@@ -529,15 +542,17 @@ func TestSixmileCohortIndexConservesReadingCategoriesAndAllLiveSourceRows(t *tes
 		"workflow_support_missing": "sixmile cohorts: aggregate coverage double-counted or conflated a reading category",
 		"unassessed_count":         "sixmile cohorts: aggregate coverage double-counted or conflated a reading category",
 		"cohort_overlap":           "sixmile cohorts: repeated or conflicting assessed identity",
+		"next20_overlap":           "sixmile cohorts: repeated or conflicting assessed identity",
 		"unknown_adoption":         "sixmile cohorts: live source disposition is outside all assessed cohorts or repeated",
 		"duplicate_source_row":     "sixmile cohorts: live source disposition is outside all assessed cohorts or repeated",
 		"extra_source_flag":        "sixmile cohorts: source flag has no corresponding live disposition",
 	}
-	for _, kind := range []string{"valid", "raw_includes_masked", "workflow_count", "unknown_size_count", "workflow_support_missing", "unassessed_count", "cohort_overlap", "unknown_adoption", "duplicate_source_row", "extra_source_flag"} {
+	for _, kind := range []string{"valid", "raw_includes_masked", "workflow_count", "unknown_size_count", "workflow_support_missing", "unassessed_count", "cohort_overlap", "next20_overlap", "unknown_adoption", "duplicate_source_row", "extra_source_flag"} {
 		t.Run(kind, func(t *testing.T) {
 			var index sixmileCohortIndex
 			var old legacy21Projection
 			var extra extra45Assessment
+			var next20 extra45Assessment
 			var ledger struct {
 				Entries  []cohortLedgerRow `json:"entries"`
 				Excluded []cohortLedgerRow `json:"excluded_entries"`
@@ -545,6 +560,7 @@ func TestSixmileCohortIndexConservesReadingCategoriesAndAllLiveSourceRows(t *tes
 			loadPublicReceipt(t, "skills-3080-sixmile-evaluation-index.json", &index)
 			loadPublicReceipt(t, "skills-3080-sixmile-partial-evaluation.json", &old)
 			loadPublicReceipt(t, "skills-3080-sixmile-next45-evaluation.json", &extra)
+			loadPublicReceipt(t, "skills-3080-sixmile-next20-evaluation.json", &next20)
 			loadPublicReceipt(t, "skills-3080-adoptions.json", &ledger)
 			rows := append(ledger.Entries, ledger.Excluded...)
 			switch kind {
@@ -563,6 +579,9 @@ func TestSixmileCohortIndexConservesReadingCategoriesAndAllLiveSourceRows(t *tes
 				// the union collision check rather than its URL/hash validation.
 				old.Entries[0].ID = extra.Entries[0].ID
 				old.Entries[0].Path = extra.Entries[0].Path
+			case "next20_overlap":
+				old.Entries[0].ID = next20.Entries[0].ID
+				old.Entries[0].Path = next20.Entries[0].Path
 			case "unknown_adoption":
 				rows = append(rows, cohortLedgerRow{ID: "unassessed", Source: "6mile/skills", Disposition: "installed_new_adaptation"})
 			case "duplicate_source_row":
@@ -580,7 +599,7 @@ func TestSixmileCohortIndexConservesReadingCategoriesAndAllLiveSourceRows(t *tes
 			case "extra_source_flag":
 				extra.Entries[0].Installed = true
 			}
-			err := validateSixmileCohortIndex(index, old, extra, rows)
+			err := validateSixmileCohortIndex(index, old, extra, next20, rows)
 			if (err != nil) != (kind != "valid") {
 				t.Fatalf("%s: %v", kind, err)
 			}
@@ -615,6 +634,13 @@ type sixmileReadProjection struct {
 		Masked   int    `json:"masked_workflow_body"`
 		Metadata int    `json:"metadata_only_primary"`
 	} `json:"sixmile_additional_entrypoint_evaluation"`
+	Next20 struct {
+		Source   string `json:"source"`
+		Read     int    `json:"full_body_read"`
+		Workflow int    `json:"workflow_body_read"`
+		Masked   int    `json:"masked_workflow_body"`
+		Metadata int    `json:"metadata_only_primary"`
+	} `json:"sixmile_next20_entrypoint_evaluation"`
 	Aggregate struct {
 		Source      string `json:"source"`
 		Expected    int    `json:"expected"`
@@ -629,13 +655,16 @@ type sixmileReadProjection struct {
 	} `json:"sixmile_body_read_coverage"`
 }
 
-func validateSixmileReadProjection(p sixmileReadProjection, index sixmileCohortIndex, old legacy21Projection, extra extra45Assessment) error {
+func validateSixmileReadProjection(p sixmileReadProjection, index sixmileCohortIndex, old legacy21Projection, extra, next20 extra45Assessment) error {
 	a := p.Aggregate
 	if a.Source != "skills-3080-sixmile-evaluation-index.json" || a.Expected != index.Expected || a.Paths != index.Paths || a.Read != index.Raw || a.Workflow != index.Workflow || a.Masked != index.Masked || a.Metadata != index.Metadata || a.NotRaw != index.NotRaw || a.NotAssessed != index.Expected-index.Paths || !x45False(a.Complete) {
 		return errors.New("sixmile read projection: aggregate is not the disjoint source index")
 	}
 	if p.Legacy.Source != "skills-3080-sixmile-partial-evaluation.json" || p.Legacy.Read != old.Read || !x45True(p.Legacy.Historical) || p.Extra.Source != "skills-3080-sixmile-next45-evaluation.json" || p.Extra.Read != extra.Counts.Raw || p.Extra.Workflow != extra.Counts.Workflow || p.Extra.Masked != extra.Counts.Masked || p.Extra.Metadata != extra.Counts.Metadata {
 		return errors.New("sixmile read projection: current source aggregate was confused with one evidence cohort")
+	}
+	if p.Next20.Source != "skills-3080-sixmile-next20-evaluation.json" || p.Next20.Read != next20.Counts.Raw || p.Next20.Workflow != next20.Counts.Workflow || p.Next20.Masked != next20.Counts.Masked || p.Next20.Metadata != next20.Counts.Metadata {
+		return errors.New("sixmile read projection: next20 is missing or conflated with another cohort")
 	}
 	other := p.Complete.Read + p.Mizchi.Read + p.Mengto.Read
 	if p.Raw != other+index.Raw || p.Workflow != other+index.Workflow {
@@ -644,16 +673,18 @@ func validateSixmileReadProjection(p sixmileReadProjection, index sixmileCohortI
 	return nil
 }
 func TestSixmileGlobalReadProjectionUsesRawCoverageAndPreservesHistoricalCohorts(t *testing.T) {
-	for _, kind := range []string{"valid", "raw_includes_masked", "all_raw_total", "all_workflow_total", "lost_legacy_scope", "extra_raw_total", "wrong_index", "wrong_unassessed"} {
+	for _, kind := range []string{"valid", "raw_includes_masked", "all_raw_total", "all_workflow_total", "lost_legacy_scope", "extra_raw_total", "next20_raw_total", "next20_source", "wrong_index", "wrong_unassessed"} {
 		t.Run(kind, func(t *testing.T) {
 			var p sixmileReadProjection
 			var index sixmileCohortIndex
 			var old legacy21Projection
 			var extra extra45Assessment
+			var next20 extra45Assessment
 			loadPublicReceipt(t, "skills-3080-progress.json", &p)
 			loadPublicReceipt(t, "skills-3080-sixmile-evaluation-index.json", &index)
 			loadPublicReceipt(t, "skills-3080-sixmile-partial-evaluation.json", &old)
 			loadPublicReceipt(t, "skills-3080-sixmile-next45-evaluation.json", &extra)
+			loadPublicReceipt(t, "skills-3080-sixmile-next20-evaluation.json", &next20)
 			switch kind {
 			case "raw_includes_masked":
 				p.Aggregate.Read++
@@ -665,12 +696,16 @@ func TestSixmileGlobalReadProjectionUsesRawCoverageAndPreservesHistoricalCohorts
 				p.Legacy.Historical = nil
 			case "extra_raw_total":
 				p.Extra.Read++
+			case "next20_raw_total":
+				p.Next20.Read++
+			case "next20_source":
+				p.Next20.Source = p.Extra.Source
 			case "wrong_index":
 				p.Aggregate.Source = "skills-3080-sixmile-partial-evaluation.json"
 			case "wrong_unassessed":
 				p.Aggregate.NotAssessed = p.Aggregate.NotRaw
 			}
-			err := validateSixmileReadProjection(p, index, old, extra)
+			err := validateSixmileReadProjection(p, index, old, extra, next20)
 			if (err != nil) != (kind != "valid") {
 				t.Fatalf("%s: %v", kind, err)
 			}

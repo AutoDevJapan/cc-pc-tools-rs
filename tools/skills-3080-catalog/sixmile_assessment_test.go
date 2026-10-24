@@ -102,7 +102,7 @@ const sixmileNext10Actors = "6301d6942aea35a7738475d8db2870834fb0e06330f37c1e35f
 func validateSixmileAssessment(a sixmileAssessment, ledger []partialAdoption) error {
 	// This immutable evidence cohort owns only its selected21 identities.
 	// TestSixmileCohortIndexConservesReadingCategoriesAndAllLiveSourceRows
-	// accounts for every6mile ledger row across both cohorts, rejecting unknown
+	// accounts for every6mile ledger row across all indexed cohorts, rejecting unknown
 	// and repeated rows. Do not mutate the caller's ledger backing array.
 	selectedIDs := map[string]bool{}
 	for _, entry := range a.Fixed {

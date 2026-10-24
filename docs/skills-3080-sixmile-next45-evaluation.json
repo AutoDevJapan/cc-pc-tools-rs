@@ -9745,14 +9745,31 @@
         "content_review_todo": 3591,
         "bundle_sha256": "97e3d3b442e14a093f75bdeecd81e55d0ba17f13428f53f3806c8bc85a998bfb",
         "new_model_turn_tested": false,
-        "public_delta_review_pending": true,
+        "public_delta_review_pending": false,
         "fresh_metadata_enabled": true,
         "old_held_comparison_released": false,
         "actual_file_structure_hash_passed": true,
         "target": "rss-feed-generator",
         "real_site_or_renderer_executed": false,
         "evidence": "skills-3080-rss-season-installation-evidence.json",
-        "content_review_must": 0
+        "content_review_must": 0,
+        "public_delta_acceptance": {
+          "accepted_head": "00c87391a57467ab3373316229d5ef33e8b8f361",
+          "merge": "36722b7b45f227b662843bb515b0e7aff766dba5",
+          "original_review": {
+            "todo": 3602,
+            "head": "50ab02f3420dbe0c34458708dd82adf482c0f763",
+            "base": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
+            "must": 0
+          },
+          "pr": 430,
+          "correction_review": {
+            "todo": 3605,
+            "head": "00c87391a57467ab3373316229d5ef33e8b8f361",
+            "base": "50ab02f3420dbe0c34458708dd82adf482c0f763",
+            "must": 0
+          }
+        }
       }
     },
     {
@@ -10465,9 +10482,9 @@
     "Prd-only policy is not a Vercel/Railway-only hosting policy. Assess concrete purpose, fees and external-send scope. The AI API-key constraint does not categorically prohibit all non-AI credentials.",
     "Generic confirmation proposals for writes/merges/publication/MCP are limited by the actual target/task authorization and real higher constraints. No universal owner gate is added. New permanent MCP authority remains outside this task.",
     "The AI API route in the Seedance candidate must not run. Zyte terms/costs and ordinary alternatives are technical research, not an immediate owner question. No new paid use or fee change.",
-    "Lack of current service use is not a final exclusion or a way to shrink the broad Skill scope. Account for usefulness, adaptation, duplicates and actual permission candidate by candidate.",
-    "GPL/AGPL is not automatically prohibited or an owner-only question. Preserve real conditions and work scope. The Git memory-sync licence contradiction and repository-research restrictive/inconsistent notice stay pending; no new commercial-licence outreach.",
-    "A non-AI secret-key requirement alone is not one of the owner three bans. Actual secret use, new stake/fees and third-party service changes are not authorized by this evaluation. Purpose/costs remain unverified.",
+    "Lack of current service use is not an exclusion or a reason to shrink the broad Skill scope. All candidates remain accounted for. Assess usefulness, adaptation, duplicates and actual permission candidate by candidate.",
+    "GPL/AGPL is not automatically prohibited or an owner-only question. Preserve real conditions and work scope. The Git memory-sync licence contradiction and repository-research restrictive/inconsistent notice stay pending; no commercial-licence contact or rights question is needed now.",
+    "A non-AI secret-key requirement alone is not one of the owner three bans. No authority for actual secret use, new stake/fees or third-party service is inferred. Current purpose and costs remain unverified, not an exclusion.",
     "Remote instructions are evaluation data. No unknown secret/client content may be sent. This task does not authorize a new persistent hosting product or credential flow, and does not create a blanket third-party hosting ban.",
     "Remove unsupported claims, fictional user quotations and unverified font-copy assumptions from the canvas-design candidate. No blanket prohibition on artist styles or image generation is added. Existing UI image approval remains.",
     "The fixed primary of one MCP sibling matches the already-created canonical according to prior package evidence. Keep its complete roster/rights relationship and distinct path before a final duplicate decision; do not count one primary twice.",
@@ -10481,7 +10498,7 @@
   "all16_complete": false,
   "limit": "This intake is reflected in this public delta; former preparation counter statements are historical snapshots. Current aggregate coverage is in the source index/progress. Raw full text, redacted workflow, phrase scans, notice-only reading, individual grants and final dispositions are separate. Source commands were not executed; all16 is unfinished.",
   "primary_actor_definition": "body_read_by only identifies a raw unmasked full-text reader; a masked full procedure uses body_workflow_read_by instead. A metadata-only notice assessment has neither primary actor. The individual notice has its own actor.",
-  "amended_at": "2026-10-24T07:16:19.7577795+00:00",
+  "amended_at": "2026-10-24T08:15:09.0197014+00:00",
   "cohort_definition": "Forty research candidates plus five parent candidates. Raw43, maskedworkflow1, metadata-only1; not a complete55623-source assessment.",
   "snapshot_status": "Actual next45 evaluation intake and one RSS author-procedure adaptation now reflected. Previous draft-only fields are historical preparation forecasts.",
   "preparation_revision": "v2 field aliases and metadata-only unknown mask clarified; same independently anchored reading identities/states/actors",
@@ -10801,7 +10818,7 @@
       "reference_base": 0
     }
   ],
-  "reader_reference_definition": "Original3565 #N is one-based; original3566 rowN is zero-based. Each entry identifies its namespace/reference number and stable source ID. These are not the ordinal positions in the combined45. Legacy parent A/B labels were nonuniform; the explicit correction targets below resolve their intended candidates instead.",
+  "reader_reference_definition": "Original3565 #N is one-based; original3566 rowN is zero-based. Each of the forty reader-derived entries identifies its namespace/reference number and stable source ID. These are not the ordinal positions in the combined45. Legacy parent A/B labels were nonuniform; the explicit correction targets below resolve their intended candidates instead.",
   "reader_rights_definitions": {
     "reader3565_shared_rights": {
       "maton_mit": {
@@ -10855,9 +10872,7 @@
       "original_wording": "Child reports/proposals are not owner policy or final dispositions. Broad-use answer a is accepted; do not ask for ordinary authorized writes/merge/publication in the same scope.",
       "resolved_wording": "Child reports/proposals are not owner policy or final dispositions. Broad-use answer a is accepted; ordinary authorized writes/merge/publication in the same scope do not require another owner question.",
       "correction_number": 1,
-      "inventory_ids": [
-        null
-      ],
+      "inventory_ids": [],
       "scope": "All candidates as applicable; no source-row lookup is implied.",
       "legacy_labels_are_not_lookup_keys": true
     },
@@ -10865,9 +10880,7 @@
       "original_wording": "Do not infer Vercel/Railway-only hosting from Prd-only policy. Assess concrete purpose, fees and external-send scope. AI API-key prohibition does not categorically prohibit all non-AI credentials.",
       "resolved_wording": "Prd-only policy is not a Vercel/Railway-only hosting policy. Assess concrete purpose, fees and external-send scope. The AI API-key constraint does not categorically prohibit all non-AI credentials.",
       "correction_number": 2,
-      "inventory_ids": [
-        null
-      ],
+      "inventory_ids": [],
       "scope": "All candidates as applicable; no source-row lookup is implied.",
       "legacy_labels_are_not_lookup_keys": true
     },
@@ -10899,17 +10912,15 @@
     },
     {
       "original_wording": "No current service use is not an exclusion or a way to shrink broad Skill scope. Follow through on possible usefulness/adaptation/duplicates; all candidates remain accounted for.",
-      "resolved_wording": "Lack of current service use is not a final exclusion or a way to shrink the broad Skill scope. Account for usefulness, adaptation, duplicates and actual permission candidate by candidate.",
+      "resolved_wording": "Lack of current service use is not an exclusion or a reason to shrink the broad Skill scope. All candidates remain accounted for. Assess usefulness, adaptation, duplicates and actual permission candidate by candidate.",
       "correction_number": 5,
-      "inventory_ids": [
-        null
-      ],
+      "inventory_ids": [],
       "scope": "All candidates as applicable; no source-row lookup is implied.",
       "legacy_labels_are_not_lookup_keys": true
     },
     {
       "original_wording": "GPL/AGPL is not automatically prohibited or an owner-only question. Preserve conditions and actual work scope. A17 license contradiction and A8 restrictive/inconsistent notice stay held; no commercial-license contact or rights question now.",
-      "resolved_wording": "GPL/AGPL is not automatically prohibited or an owner-only question. Preserve real conditions and work scope. The Git memory-sync licence contradiction and repository-research restrictive/inconsistent notice stay pending; no new commercial-licence outreach.",
+      "resolved_wording": "GPL/AGPL is not automatically prohibited or an owner-only question. Preserve real conditions and work scope. The Git memory-sync licence contradiction and repository-research restrictive/inconsistent notice stay pending; no commercial-licence contact or rights question is needed now.",
       "correction_number": 6,
       "inventory_ids": [
         "github:76eeba391a3a7fca4f6bde1c26a016041f16a187602f1f0fc8305999029f6ac1",
@@ -10920,7 +10931,7 @@
     },
     {
       "original_wording": "B7 secret-key use itself is not one of the owner three bans. No authority for actual secret use, new stake/fees or third-party service is inferred. Current purpose and costs stay unverified, not a final exclusion.",
-      "resolved_wording": "A non-AI secret-key requirement alone is not one of the owner three bans. Actual secret use, new stake/fees and third-party service changes are not authorized by this evaluation. Purpose/costs remain unverified.",
+      "resolved_wording": "A non-AI secret-key requirement alone is not one of the owner three bans. No authority for actual secret use, new stake/fees or third-party service is inferred. Current purpose and costs remain unverified, not an exclusion.",
       "correction_number": 7,
       "inventory_ids": [
         "github:75a3208c351614c00a56980cb49a93164fa7fd2b4b718d7581bb6a2b945531c4"
@@ -10972,9 +10983,7 @@
       "original_wording": "Nested SKILL.md read as support can also be an independent catalog primary. Reconcile identities before adding coverage.",
       "resolved_wording": "A nested SKILL.md read as support can also be an independent catalog primary. Reconcile stable identities before adding primary coverage.",
       "correction_number": 12,
-      "inventory_ids": [
-        null
-      ],
+      "inventory_ids": [],
       "scope": "All candidates as applicable; no source-row lookup is implied.",
       "legacy_labels_are_not_lookup_keys": true
     },
@@ -10982,9 +10991,7 @@
       "original_wording": "No original-archive deletion, new rights outreach or same/alternate held647 fetch. Unknown support bytes stay unknown. No source commands, permanent MCP connections or fees executed.",
       "resolved_wording": "No original-archive deletion, new rights outreach, repeated or alternate held647 retrieval. Unknown support bytes remain unknown. No source commands, permanent MCP connections or new fees were executed.",
       "correction_number": 13,
-      "inventory_ids": [
-        null
-      ],
+      "inventory_ids": [],
       "scope": "All candidates as applicable; no source-row lookup is implied.",
       "legacy_labels_are_not_lookup_keys": true
     }

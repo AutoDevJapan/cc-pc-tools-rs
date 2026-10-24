@@ -1,0 +1,413 @@
+{
+  "todo": 3080,
+  "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
+  "catalog_occurrences": 73220,
+  "available_body_occurrences": 72145,
+  "unique_raw_bodies": 66740,
+  "valid_normalized_raw_bodies": 66713,
+  "non_utf8_raw_bodies": 27,
+  "valid_normalized_occurrences": 72118,
+  "non_utf8_occurrences": 27,
+  "unavailable_or_held_occurrences": 1075,
+  "remaining_unmapped_occurrences": 0,
+  "all_available_occurrences_mapped": true,
+  "all_available_bodies_normalized": false,
+  "canonical_source_head": "00c87391a57467ab3373316229d5ef33e8b8f361",
+  "canonical_ledger_sha256": "4b001139318f7c1bc365737a2c0e48424770fb927d7a429bfcf35c84d4277405",
+  "canonical_adopted_or_integrated": 35,
+  "cache_files": [
+    {
+      "name": "catalog-body-digest-cache123649.jsonl",
+      "sha256": "2f42ed5598c61103dc245f48c7ad38e61006264c8ce0c6f79a532cd0ffa066f5",
+      "bytes": 11523029,
+      "records": 28870
+    },
+    {
+      "name": "catalog-body-segment2-cache123649.jsonl",
+      "sha256": "6a74e50d4b7efb49c3ea085b03d79005638aab48f18e73863a46094df2a72c7c",
+      "bytes": 8584912,
+      "records": 20012
+    },
+    {
+      "name": "catalog-body-segment3-cache123649.jsonl",
+      "sha256": "9cfe970f019294197383953d7ca154f0de897e0bbea9bb549f5896b0284ab367",
+      "bytes": 7662902,
+      "records": 17858
+    }
+  ],
+  "failure_categories": {
+    "non_utf8_body_pending": 27
+  },
+  "failed_rows": [
+    {
+      "inventory_id": "github:bd196bb476f7583f9f70590e095761f1f370ef2d8b99f5d14bde08e8ac80b232",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:cc8a5fee41ef5610104c7145ca50bbb3b8aa795771c3875d423daf79d9bd2b82",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:293ece5a8e5d56ffa6436df5b560237539589e4b3407f49eb15a93db92c13974",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:e9e2f12976e836e0d6b0327b1d23acbddcfab2b3276505390375dc68955730be",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:b778cb8228ce4736cf4e85eeaf0d955ea42852d268830241164e303894174903",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:ffebf892f6455f21a8c7e4817531f28daf8026cc41bef43298564176e4b46ac7",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:46be0aa3878182172b360bddcb526015981079563e6832d984f7db0cbfe95d4d",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:3cbfa8a5804192bf16618778a3e98f19c41d5d9ed87f48e3abdb0a8de35a0857",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:853adecb00ff7842484abf8e73a337b7d6ec7147fbec9170f2a2e91e9f8bfbdf",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:6b8980b902962f375e5e14ac84d6719a62dc01621467e90c1b2c53f3bdf51a0e",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:08c0a08dbd27ad3ff1fabf105a82b08eb13c0c423dd8f8c8385a375cd45f753a",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:414b0a821606b9ec1dacc9ade90d176a3f41e009d6cb7d697e9d2f40a44b5a1a",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:21dbaed7cf3cab6ead6b1d6aaf45aad6a6fc6fd3372ddb8aa228782e460b8f74",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:8db47b3c93dbebc4bf2eb702311e33f1f0cbc73b337aab1f7c7a17262ff0d336",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:1686964bab1f18cb959aafa7b7e7a08915d9ec01b8833e0c3c8bcde5027569ab",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:c5709160cd6a648fff294e5878739df5014996eb5daa4b720f14905483c5fabb",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:844de14c50ea2d10951b3e536c78c6e989750b5dd7d706f71b9966f21e069b3f",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:5916e37d883cb561cd563363d2a12d9ef22dc734a28462e080d499e820920f42",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:bb83a91700fa11d1d9ded6a3413c374fe7cd7e5db9618ac29366ce22c4cd77fc",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:686f8d1d4f049d66787a99d907c059b700d0613de5465f1780662c5f6a43e797",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:c00a2c9907bb41c53d634e8518ff3c3a2ba6a3c68ef6f956e364fbc377768419",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:5cbf50a4f5f0af31f5b3bfd331111d2fbdd2a200bc23fa2758b8eccc3f0a5f41",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:ba153680a85ae1bbde5f6ed49a43f3cb362bd72cca0c50a96ab3f2d96d613203",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:dc0baee421719c7f90a87953f760c30f245889bcf9e4c156580219b214524b60",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:9c8605a3e488493bf67ed5690b3f33df8746781d31975e8f7058cb1def36b58c",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "github:595707b13eb5f2edfbf6c31a7736f9644bb464703b2016d67f0e92b6d8c5085a",
+      "reason": "non_utf8_body_pending"
+    },
+    {
+      "inventory_id": "supplement:aa958a3e87f3ee6360d625680285a86bc79b364c3594bcde3222d1736d1a4df0",
+      "reason": "non_utf8_body_pending"
+    }
+  ],
+  "pending_alias_leads": 8,
+  "matches": [
+    {
+      "body": {
+        "raw_sha256": "7b326b4a2f0f5f85122144628ec02077e48841e0e0e82efce88b3415bcfb7c26",
+        "raw_bytes": 3651,
+        "normalized_body_sha256": "71839b20716b65aade278a3f7845aba2a0b1688304ea4bd94187045cfc183f0d",
+        "normalized_body_bytes": 3294,
+        "removed_metadata_header_sha256": "b98c6f6bf608e33fdd2f5f2b97566d856bd971fd028e4c882d53e8fd41c06922",
+        "removed_metadata_header_bytes": 355,
+        "known_skill_metadata_header_removed": true,
+        "raw_integrity_verified": true
+      },
+      "canonical_adoptions": [
+        {
+          "inventory_id": "github:b42ae7debd7346ed232f75cdb212f9d8a9cb05bd347c93c8b7de82e8d5433fc8",
+          "target": "github-actions-ci"
+        }
+      ],
+      "commit": "49f948faa9258a0c61caceaf225e179651397431",
+      "effective_source_method": "",
+      "final_disposition_applied": false,
+      "header_and_support_comparison_pending": true,
+      "individual_rights_not_accepted": true,
+      "inventory_id": "github:471d53b2b5f0b28cfe5fe2356ebb4b6b0785fe09cdd7fac023231665d668a37a",
+      "inventory_unit": "github_skill_entry",
+      "kind": "skill_entry",
+      "listing_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/gh-fix-ci/SKILL.md",
+      "path": "skills/.curated/gh-fix-ci/SKILL.md",
+      "raw_sha_matches_a_canonical": false,
+      "repo": "openai/skills",
+      "source_url": "https://github.com/openai/skills/blob/49f948faa9258a0c61caceaf225e179651397431/skills/.curated/gh-fix-ci/SKILL.md"
+    },
+    {
+      "body": {
+        "raw_sha256": "2fa48863482975454f82db41137a1d60e5b367a76593bdb403f724107e202b44",
+        "raw_bytes": 1043,
+        "normalized_body_sha256": "6d00875461cdc9d9b20c06f09b7c12f0ed02f1717243fa51c7edec4896bfb561",
+        "normalized_body_bytes": 736,
+        "removed_metadata_header_sha256": "273e5aac59e2080d9da83089677b9143b9f9af871095c643184e785527ae903c",
+        "removed_metadata_header_bytes": 306,
+        "known_skill_metadata_header_removed": true,
+        "raw_integrity_verified": true
+      },
+      "canonical_adoptions": [
+        {
+          "inventory_id": "github:a3e5cb3352130bff6eb6d6320eea2ac71359fdb1cc36b580f6b882f4208924ec",
+          "target": "defuddle"
+        }
+      ],
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "effective_source_method": "",
+      "final_disposition_applied": false,
+      "header_and_support_comparison_pending": true,
+      "individual_rights_not_accepted": true,
+      "inventory_id": "github:7f51d6a3826023c4744fe7d176acba37f58e6ab8bea26741a02413709a036f3a",
+      "inventory_unit": "github_skill_entry",
+      "kind": "skill_entry",
+      "listing_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/sadlay/defuddle-obsidian/SKILL.md",
+      "path": "skills/sadlay/defuddle-obsidian/SKILL.md",
+      "raw_sha_matches_a_canonical": false,
+      "repo": "6mile/skills",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/sadlay/defuddle-obsidian/SKILL.md"
+    },
+    {
+      "body": {
+        "raw_sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
+        "raw_bytes": 9092,
+        "normalized_body_sha256": "6eaabfcf59c08178e7c6a7ac2ec217db2eaeda157962f8f32b7a18ea3ef3d4d9",
+        "normalized_body_bytes": 8735,
+        "removed_metadata_header_sha256": "710b053b4e4463f5c07ade806c4259376d3222515c826f32183089b38053e1af",
+        "removed_metadata_header_bytes": 356,
+        "known_skill_metadata_header_removed": true,
+        "raw_integrity_verified": true
+      },
+      "canonical_adoptions": [
+        {
+          "inventory_id": "github:e4ade76a7932447efe3dd6e777ab300a5a9a6f1cf13a392614b31c621906a016",
+          "target": "mcp-builder"
+        }
+      ],
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "effective_source_method": "",
+      "final_disposition_applied": false,
+      "header_and_support_comparison_pending": true,
+      "individual_rights_not_accepted": true,
+      "inventory_id": "github:9a4792733ddd9ccbd3883f80adaa44d2f3214af2c971850d106896cf0238c55f",
+      "inventory_unit": "github_skill_entry",
+      "kind": "skill_entry",
+      "listing_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/uniquevme/unique-mcp-builder-test/SKILL.md",
+      "path": "skills/uniquevme/unique-mcp-builder-test/SKILL.md",
+      "raw_sha_matches_a_canonical": true,
+      "repo": "6mile/skills",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/uniquevme/unique-mcp-builder-test/SKILL.md"
+    },
+    {
+      "body": {
+        "raw_sha256": "57231330040e18e033dad8b2fdc0340a6185034c32b42b7d3448f444a6af6cf2",
+        "raw_bytes": 9328,
+        "normalized_body_sha256": "6eaabfcf59c08178e7c6a7ac2ec217db2eaeda157962f8f32b7a18ea3ef3d4d9",
+        "normalized_body_bytes": 8735,
+        "removed_metadata_header_sha256": "710b053b4e4463f5c07ade806c4259376d3222515c826f32183089b38053e1af",
+        "removed_metadata_header_bytes": 356,
+        "known_skill_metadata_header_removed": true,
+        "raw_integrity_verified": true
+      },
+      "canonical_adoptions": [
+        {
+          "inventory_id": "github:e4ade76a7932447efe3dd6e777ab300a5a9a6f1cf13a392614b31c621906a016",
+          "target": "mcp-builder"
+        }
+      ],
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "effective_source_method": "",
+      "final_disposition_applied": false,
+      "header_and_support_comparison_pending": true,
+      "individual_rights_not_accepted": true,
+      "inventory_id": "github:c619834fa98a6aa7f3e0fd750f679c28c3889e0e77c9fba499ef12dab832fe44",
+      "inventory_unit": "github_skill_entry",
+      "kind": "skill_entry",
+      "listing_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/jarrett817/test-11/SKILL.md",
+      "path": "skills/jarrett817/test-11/SKILL.md",
+      "raw_sha_matches_a_canonical": false,
+      "repo": "6mile/skills",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/jarrett817/test-11/SKILL.md"
+    },
+    {
+      "body": {
+        "raw_sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
+        "raw_bytes": 9092,
+        "normalized_body_sha256": "6eaabfcf59c08178e7c6a7ac2ec217db2eaeda157962f8f32b7a18ea3ef3d4d9",
+        "normalized_body_bytes": 8735,
+        "removed_metadata_header_sha256": "710b053b4e4463f5c07ade806c4259376d3222515c826f32183089b38053e1af",
+        "removed_metadata_header_bytes": 356,
+        "known_skill_metadata_header_removed": true,
+        "raw_integrity_verified": true
+      },
+      "canonical_adoptions": [
+        {
+          "inventory_id": "github:e4ade76a7932447efe3dd6e777ab300a5a9a6f1cf13a392614b31c621906a016",
+          "target": "mcp-builder"
+        }
+      ],
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "effective_source_method": "",
+      "final_disposition_applied": false,
+      "header_and_support_comparison_pending": true,
+      "individual_rights_not_accepted": true,
+      "inventory_id": "github:e2d31692e49225ac37aa9b2eac4d04b4db6ed6da177cdea2c1d53c45b7516e32",
+      "inventory_unit": "github_skill_entry",
+      "kind": "skill_entry",
+      "listing_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/mcp-builder-anthropic/SKILL.md",
+      "path": "skills/pupuking723/mcp-builder-anthropic/SKILL.md",
+      "raw_sha_matches_a_canonical": true,
+      "repo": "6mile/skills",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/pupuking723/mcp-builder-anthropic/SKILL.md"
+    },
+    {
+      "body": {
+        "raw_sha256": "cb702b754dd340ad7c7db4f34e1953277eb64601201ce96515b00786a1088a26",
+        "raw_bytes": 1034,
+        "normalized_body_sha256": "6d00875461cdc9d9b20c06f09b7c12f0ed02f1717243fa51c7edec4896bfb561",
+        "normalized_body_bytes": 736,
+        "removed_metadata_header_sha256": "4a1f574d2b2e95f0d0366e6708b09ca46c0a5823968fd7e9ae4385e15bddaf1e",
+        "removed_metadata_header_bytes": 297,
+        "known_skill_metadata_header_removed": true,
+        "raw_integrity_verified": true
+      },
+      "canonical_adoptions": [
+        {
+          "inventory_id": "github:a3e5cb3352130bff6eb6d6320eea2ac71359fdb1cc36b580f6b882f4208924ec",
+          "target": "defuddle"
+        }
+      ],
+      "commit": "920714f17d81e0a95c7a9bc51faf0a7921cd982d",
+      "effective_source_method": "",
+      "final_disposition_applied": false,
+      "header_and_support_comparison_pending": true,
+      "individual_rights_not_accepted": true,
+      "inventory_id": "github:e7da9a8f579234773e94a21103ea6f2e4e2e91d7c75aa71d14b389c01d1bcaaf",
+      "inventory_unit": "github_skill_entry",
+      "kind": "skill_entry",
+      "listing_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/hoyaryyj/kepano-defuddle/SKILL.md",
+      "path": "skills/hoyaryyj/kepano-defuddle/SKILL.md",
+      "raw_sha_matches_a_canonical": false,
+      "repo": "6mile/skills",
+      "source_url": "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/hoyaryyj/kepano-defuddle/SKILL.md"
+    },
+    {
+      "body": {
+        "raw_sha256": "10673a4dc70a0a057612d443243ab7a5aa4abdd4a0fadc3f6eec5fd71ad5a971",
+        "raw_bytes": 1123,
+        "normalized_body_sha256": "6d00875461cdc9d9b20c06f09b7c12f0ed02f1717243fa51c7edec4896bfb561",
+        "normalized_body_bytes": 736,
+        "removed_metadata_header_sha256": "dc2be51922bdecf8db2e738cf3810d1617b809cbcd287bb4d5410c933523e818",
+        "removed_metadata_header_bytes": 386,
+        "known_skill_metadata_header_removed": true,
+        "raw_integrity_verified": true
+      },
+      "canonical_adoptions": [
+        {
+          "inventory_id": "github:a3e5cb3352130bff6eb6d6320eea2ac71359fdb1cc36b580f6b882f4208924ec",
+          "target": "defuddle"
+        }
+      ],
+      "commit": "240a65fc58027ecf4f84c828faa8e64156a68407",
+      "effective_source_method": "listed_source",
+      "final_disposition_applied": false,
+      "header_and_support_comparison_pending": true,
+      "individual_rights_not_accepted": true,
+      "inventory_id": "site:defuddle",
+      "inventory_unit": "site_index_entry",
+      "kind": "",
+      "listing_url": "https://agent-skills.jp/skill/defuddle",
+      "path": "claude-skills/defuddle/SKILL.md",
+      "raw_sha_matches_a_canonical": false,
+      "repo": "Nero-kk/claude-agent-skills",
+      "source_url": "https://agent-skills.jp/skill/defuddle"
+    },
+    {
+      "body": {
+        "raw_sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
+        "raw_bytes": 9092,
+        "normalized_body_sha256": "6eaabfcf59c08178e7c6a7ac2ec217db2eaeda157962f8f32b7a18ea3ef3d4d9",
+        "normalized_body_bytes": 8735,
+        "removed_metadata_header_sha256": "710b053b4e4463f5c07ade806c4259376d3222515c826f32183089b38053e1af",
+        "removed_metadata_header_bytes": 356,
+        "known_skill_metadata_header_removed": true,
+        "raw_integrity_verified": true
+      },
+      "canonical_adoptions": [
+        {
+          "inventory_id": "github:e4ade76a7932447efe3dd6e777ab300a5a9a6f1cf13a392614b31c621906a016",
+          "target": "mcp-builder"
+        }
+      ],
+      "commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+      "effective_source_method": "listed_source",
+      "final_disposition_applied": false,
+      "header_and_support_comparison_pending": true,
+      "individual_rights_not_accepted": true,
+      "inventory_id": "site:mcp-builder-6a45e1",
+      "inventory_unit": "site_index_entry",
+      "kind": "",
+      "listing_url": "https://agent-skills.jp/skill/mcp-builder-6a45e1",
+      "path": "skills/mcp-builder/SKILL.md",
+      "raw_sha_matches_a_canonical": true,
+      "repo": "anthropics/skills",
+      "source_url": "https://agent-skills.jp/skill/mcp-builder-6a45e1"
+    }
+  ],
+  "normalization": "CRLF to LF; remove only a complete leading YAML block containing name/description keys; trim outer body whitespace; append LF. This is an intentionally narrow procedure-body comparison, not whole-file/package equality.",
+  "method": "One interrupted180s run retained complete28870cache records. Two bounded segments reused those records, recorded prior UTF8 failures without re-reading them, and read fresh20000 then17858 unique raw bodies. Both top-level direct and nested site effective-attempt schemas are included; known0-byte bodies differ from unknownbytes.",
+  "definition": "Machine triage only. Mapped occurrences may reuse an exact cached digest; this is not a fresh physical read of every alias file. No semantic full-read count, copying grant, real safety result or final duplicate disposition is established. Header/support differences and per-occurrence source/rights still need comparison.",
+  "semantic_primary_read_delta": 0,
+  "final_disposition_delta": 0,
+  "central_read_write": 0,
+  "source_code_executed": false,
+  "external_fetches": 0,
+  "held647_fetches": 0,
+  "completed_at": "2026-10-24T08:05:48.594192Z",
+  "raw_source_bodies_in_this_public_artifact": 0
+}

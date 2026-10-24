@@ -485,13 +485,21 @@
       "existing_body_comparison_complete": false,
       "third_party_support_or_service_rights_accepted": false,
       "public_delta_acceptance": {
-        "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
-        "review_todos": [
-          3590,
-          3599
-        ],
+        "accepted_head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
         "merge": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
-        "pr": 428
+        "original_review": {
+          "todo": 3590,
+          "head": "ebb023f2b04f4551037fd5bf746819466e96a4b4",
+          "base": "6905b890d7b280c659e2073c6b561c903c1ed955",
+          "must": 1
+        },
+        "pr": 428,
+        "correction_review": {
+          "todo": 3599,
+          "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
+          "base": "ebb023f2b04f4551037fd5bf746819466e96a4b4",
+          "must": 0
+        }
       }
     },
     {
@@ -515,13 +523,21 @@
       "existing_body_comparison_complete": false,
       "third_party_support_or_service_rights_accepted": false,
       "public_delta_acceptance": {
-        "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
-        "review_todos": [
-          3590,
-          3599
-        ],
+        "accepted_head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
         "merge": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
-        "pr": 428
+        "original_review": {
+          "todo": 3590,
+          "head": "ebb023f2b04f4551037fd5bf746819466e96a4b4",
+          "base": "6905b890d7b280c659e2073c6b561c903c1ed955",
+          "must": 1
+        },
+        "pr": 428,
+        "correction_review": {
+          "todo": 3599,
+          "head": "bca16b76c51b68223f84a31aaa9a960ca15f5787",
+          "base": "ebb023f2b04f4551037fd5bf746819466e96a4b4",
+          "must": 0
+        }
       }
     },
     {
@@ -538,12 +554,29 @@
       "upstream_original_preserved": true,
       "source_notice_preserved": true,
       "independent_review_pending": false,
-      "public_delta_review_pending": true,
+      "public_delta_review_pending": false,
       "explicit_use_check_pending": false,
       "explicit_use_assessment": "3584 RSS A/B/C plus owned literal Go XML serialize/parse and invalid-character tests; actual placement/discovery confirmed; no real website or hosted feed proof.",
       "evidence": "skills-3080-rss-season-installation-evidence.json",
       "existing_body_comparison_complete": false,
-      "third_party_support_or_service_rights_accepted": false
+      "third_party_support_or_service_rights_accepted": false,
+      "public_delta_acceptance": {
+        "accepted_head": "00c87391a57467ab3373316229d5ef33e8b8f361",
+        "merge": "36722b7b45f227b662843bb515b0e7aff766dba5",
+        "original_review": {
+          "todo": 3602,
+          "head": "50ab02f3420dbe0c34458708dd82adf482c0f763",
+          "base": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
+          "must": 0
+        },
+        "pr": 430,
+        "correction_review": {
+          "todo": 3605,
+          "head": "00c87391a57467ab3373316229d5ef33e8b8f361",
+          "base": "50ab02f3420dbe0c34458708dd82adf482c0f763",
+          "must": 0
+        }
+      }
     },
     {
       "inventory_id": "github:29a0ba0843498fe31de765752ffa07dfd7835d47f3ac062d641e41169e601167",
@@ -559,12 +592,29 @@
       "upstream_original_preserved": true,
       "source_notice_preserved": true,
       "independent_review_pending": false,
-      "public_delta_review_pending": true,
+      "public_delta_review_pending": false,
       "explicit_use_check_pending": false,
       "explicit_use_assessment": "3591 season A/B/C plus owned interrupted four-state numerical model tests; actual placement/discovery confirmed; no renderer/shader/performance proof.",
       "evidence": "skills-3080-rss-season-installation-evidence.json",
       "existing_body_comparison_complete": false,
-      "third_party_support_or_service_rights_accepted": false
+      "third_party_support_or_service_rights_accepted": false,
+      "public_delta_acceptance": {
+        "accepted_head": "00c87391a57467ab3373316229d5ef33e8b8f361",
+        "merge": "36722b7b45f227b662843bb515b0e7aff766dba5",
+        "original_review": {
+          "todo": 3602,
+          "head": "50ab02f3420dbe0c34458708dd82adf482c0f763",
+          "base": "0801af4a04d9fb15b2772a5336f84f66ca2fd175",
+          "must": 0
+        },
+        "pr": 430,
+        "correction_review": {
+          "todo": 3605,
+          "head": "00c87391a57467ab3373316229d5ef33e8b8f361",
+          "base": "50ab02f3420dbe0c34458708dd82adf482c0f763",
+          "must": 0
+        }
+      }
     }
   ],
   "excluded_entries": [

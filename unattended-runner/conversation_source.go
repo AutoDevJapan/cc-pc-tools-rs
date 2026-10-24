@@ -10,7 +10,7 @@ import (
 // Generations belong to the same canonical source namespace. The original
 // message.json is never overwritten by this purpose-bound acquisition.
 func (r *Runner) conversationSourcePath(q ConversationQuestion, id string) (string, error) {
-	req := r.State.Requests[id]
+	req := r.conversationRequest(id)
 	if req != nil && req.ConversationSourceGeneration != "" {
 		if !shaPattern.MatchString(req.ConversationSourceGeneration) {
 			return "", errConversationCloseSource
@@ -38,7 +38,7 @@ func (r *Runner) conversationSourceReacquire(ctx context.Context, q Conversation
 			return nil, errImplementation
 		}
 	}
-	old := r.State.Requests[reply.Message]
+	old := r.conversationRequest(reply.Message)
 	if old != nil && (old.Conversation != q.RequestID || old.Thread != q.Thread || old.Message != reply.Message || old.Author != reply.Author || (old.Todo != 0 && old.Todo != q.Todo)) {
 		return nil, errImplementation
 	}
@@ -59,6 +59,9 @@ func (r *Runner) conversationSourceReacquire(ctx context.Context, q Conversation
 	}
 	body, _ := json.Marshal(proof)
 	req := &Request{Thread: q.Thread, Guild: r.State.Destination.Guild, RecordVersion: 2, Message: reply.Message, Author: reply.Author, Created: reply.Created, Edited: live.Edited, ReplyTo: live.Reference.Message, ReplyChannel: live.Reference.Channel, ReplyGuild: live.Reference.Guild, Acquired: now.UTC().Format(time.RFC3339Nano), Source: "discord-api-v10", Text: reply.Body, Context: string(body), Key: requestKey(q.Thread, reply.Message), Phase: "conversation_source_verified", ProgressThread: q.Progress, Conversation: q.RequestID}
+	if old != nil {
+		req.ConversationIntakeLinkSHA = old.ConversationIntakeLinkSHA
+	}
 	b, _ := json.Marshal(req)
 	if safeText(string(b), r.Token) != string(b) {
 		return nil, errImplementation

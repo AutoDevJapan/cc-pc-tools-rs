@@ -178,7 +178,7 @@ func (r *Runner) conversationDirectionApplied(ctx context.Context, q Conversatio
 	}
 	input, b, err := readDirection(directionFile(r, q, reply.Message, record.InputSHA))
 	actor, ok := number(input.ActorTodo)
-	req := r.State.Requests[reply.Message]
+	req := r.conversationRequest(reply.Message)
 	if err != nil || !ok || req == nil || input != record.Input || bytesHash(b) != record.InputSHA ||
 		input != directionInput(q, proof, reply, req, stamp.SourceSHA, actor, input.Job, input.Revision) {
 		return stamp, false, errDirection
@@ -222,7 +222,7 @@ func (r *Runner) conversationDirectionRecord(ctx context.Context, opts conversat
 	}
 	// Canonical saved sources are sufficient for separate implementations only.
 	// Preserve direction-record's original requirement of actual delivery.
-	req := r.State.Requests[opts.Message]
+	req := r.conversationRequest(opts.Message)
 	if req == nil || req.Todo != q.Todo || req.Phase == "conversation_reply_saved" || req.Phase == "conversation_source_verified" {
 		return nil, errDirection
 	}
@@ -250,7 +250,7 @@ func (r *Runner) conversationDirectionRecord(ctx context.Context, opts conversat
 		if !validJob(job) {
 			return nil, errDirection
 		}
-		input := directionInput(q, proof, *selected, r.State.Requests[opts.Message], stamp.SourceSHA, opts.Todo, job, opts.Revision)
+		input := directionInput(q, proof, *selected, r.conversationRequest(opts.Message), stamp.SourceSHA, opts.Todo, job, opts.Revision)
 		b, _ := json.Marshal(input)
 		if safeText(string(b), r.Token) != string(b) || writeConversationOnce(directionFile(r, q, opts.Message, bytesHash(b)), b) != nil {
 			return nil, errDirection
@@ -270,7 +270,7 @@ func (r *Runner) conversationDirectionRecord(ctx context.Context, opts conversat
 	if err != nil || !ready || again.SourceSHA != stamp.SourceSHA {
 		return nil, errDirection
 	}
-	req = r.State.Requests[opts.Message]
+	req = r.conversationRequest(opts.Message)
 	previous := req.Phase
 	req.Phase = "conversation_direction_recorded"
 	if r.save() != nil {

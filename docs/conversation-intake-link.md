@@ -16,6 +16,11 @@ SHAは先行した `requests/<message>.json` の生bytes SHA256。
 現在のCC_JOB_ID、実ジョブ、保存済み仕様と実行promptにある元ToDo・質問・返信を照合する。
 元ToDo、受付ToDo、担当の登録プロジェクトとguardをそれぞれ確認する。
 
+受付ToDoの実担当自身も `actor-todo-id` と `intake-todo-id` に同じ番号を指定できる。
+元ToDoは受付・担当とは別でなければならない。同じ番号の場合も、稼働中の実ジョブ、
+保存済み仕様、実際の起動prompt、本人停止、現在APIと原sourceの検証をすべて行う。
+受付の担当・所有・依存を付け替えず、原sourceと通常受付は保持する。
+
 正規senderの現在API証拠と、質問・decision・本人・thread・返信の最新版を照合する。
 先行受付は同じ本人・投稿・本文・編集版・参照・ordinary source版でなければ拒否する。
 別質問への結合済み受付、別担当、本人停止、登録範囲の不一致も拒否する。
@@ -35,6 +40,7 @@ SHAは先行した `requests/<message>.json` の生bytes SHA256。
 4. 再起動後のsource-verify、direction-record、closeが同じ関連を使う。
 5. 元受付/原sourceの全bytesと元ToDoの所有/停止/依存を保持する。
 6. 実対象では現在APIを再照合し、方向仕様だけを記録する。制作・画像確認・公開は未完了のまま。
+7. 受付担当自身による同一返信の対応付けでも、取得元・担当の検証と再実行・再起動後の照合を保つ。
 
 実対象: request `todo3684-album-release-format-v1`、元ToDo3684、受付ToDo3693、
 質問1563590474374320440、返信1563590672487817279。

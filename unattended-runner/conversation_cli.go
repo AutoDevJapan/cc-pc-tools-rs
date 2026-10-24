@@ -183,7 +183,9 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		}
 		if opts.Command == "source-link" {
 			opts.IntakeTodo, ok = number(intakeTodo)
-			if !ok || opts.IntakeTodo == opts.Todo {
+			// The assigned intake worker may link its own reply. The backend
+			// still verifies that worker and keeps it separate from the origin.
+			if !ok {
 				return opts, errConversationArguments
 			}
 		}

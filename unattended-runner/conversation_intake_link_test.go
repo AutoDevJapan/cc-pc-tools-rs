@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func intakeLinkFixture(t *testing.T) (*conversationFixture, []string, []byte) {
@@ -65,6 +66,149 @@ func intakeLinkCLI(t *testing.T, f *conversationFixture, args []string) (int, ma
 		t.Fatal("private text leaked")
 	}
 	return code, result
+}
+
+func sameActorIntakeLinkFixture(t *testing.T) (*conversationFixture, []string, []byte) {
+	t.Helper()
+	f, args, source := intakeLinkFixture(t)
+	f.r.State.Requests[f.replies[0].Message].Todo = 43
+	for i, arg := range args {
+		if arg == "--intake-todo-id" {
+			args[i+1] = "43"
+		}
+	}
+	if err := f.r.save(); err != nil {
+		t.Fatal(err)
+	}
+	return f, args, source
+}
+
+func TestConversationIntakeLinkSameActorPreservesSourceAndAssignment(t *testing.T) {
+	f, args, original := sameActorIntakeLinkFixture(t)
+	message := f.replies[0].Message
+	ordinary, _ := json.Marshal(f.r.State.Requests[message])
+	actorBefore, _ := f.r.todo(43)
+	if code, result := intakeLinkCLI(t, f, args); code != 0 || result["linked"] != true || result["ordinary_intake_retained"] != true || result["actor_todo_id"] != float64(43) || result["intake_todo_id"] != float64(43) {
+		t.Fatal("assigned intake worker could not link its own current reply", code, result)
+	}
+	after, _ := json.Marshal(f.r.State.Requests[message])
+	saved, _ := os.ReadFile(filepath.Join(f.r.Config.Home, "requests", message+".json"))
+	actorAfter, _ := f.r.todo(43)
+	if !bytes.Equal(ordinary, after) || !bytes.Equal(original, saved) || canonicalHash(actorBefore) != canonicalHash(actorAfter) || f.close != 0 {
+		t.Fatal("link changed ordinary intake, original source, assignment or question state")
+	}
+	var restarted State
+	if readJSON(filepath.Join(f.r.Config.Home, "unattended-state.json"), maxState, &restarted) != nil {
+		t.Fatal("restart fixture")
+	}
+	f.r.State = &restarted
+	if code, result := intakeLinkCLI(t, f, []string{"source-verify", "--request-id", f.q.RequestID, "--message-id", message}); code != 0 || result["canonical_current"] != true {
+		t.Fatal("same-worker capture did not survive restart", code, result)
+	}
+	beforeReplay, _ := os.ReadFile(f.r.TodoPath)
+	if code, _ := intakeLinkCLI(t, f, args); code != 0 {
+		t.Fatal("same-worker replay failed")
+	}
+	afterReplay, _ := os.ReadFile(f.r.TodoPath)
+	if !bytes.Equal(beforeReplay, afterReplay) {
+		t.Fatal("same-worker replay duplicated delivery")
+	}
+}
+
+func TestConversationIntakeLinkSameActorStillRequiresCurrentAssignment(t *testing.T) {
+	for _, change := range []string{"stopped", "foreign-job", "spec", "prompt", "origin-as-actor", "origin-as-intake"} {
+		t.Run(change, func(t *testing.T) {
+			f, args, _ := sameActorIntakeLinkFixture(t)
+			message := f.replies[0].Message
+			switch change {
+			case "foreign-job":
+				t.Setenv("CC_JOB_ID", "not-the-assigned-job")
+			case "spec":
+				if os.WriteFile(filepath.Join(f.r.Config.Home, "link-spec.md"), []byte("unrelated assignment"), 0600) != nil {
+					t.Fatal("fixture")
+				}
+			case "prompt":
+				if os.WriteFile(filepath.Join(f.r.JobsPath, "link-worker", "prompt.md"), []byte("unrelated assignment"), 0600) != nil {
+					t.Fatal("fixture")
+				}
+			case "origin-as-actor", "origin-as-intake":
+				flag := "--actor-todo-id"
+				if change == "origin-as-intake" {
+					flag = "--intake-todo-id"
+					f.r.State.Requests[message].Todo = f.q.Todo
+				}
+				for i, arg := range args {
+					if arg == flag {
+						args[i+1] = "42"
+					}
+				}
+			case "stopped":
+				var db map[string]any
+				if readJSON(f.r.TodoPath, maxTodo, &db) != nil {
+					t.Fatal("fixture")
+				}
+				for _, item := range db["items"].([]any) {
+					row := item.(map[string]any)
+					if row["id"] == float64(43) {
+						row["owner_stopped"] = true
+					}
+				}
+				if publish(f.r.TodoPath, db) != nil {
+					t.Fatal("fixture")
+				}
+			}
+			before, _ := os.ReadFile(f.r.TodoPath)
+			ordinary, _ := json.Marshal(f.r.State.Requests[message])
+			if code, _ := intakeLinkCLI(t, f, args); code == 0 {
+				t.Fatal("same-worker link ignored assignment or origin separation")
+			}
+			after, _ := os.ReadFile(f.r.TodoPath)
+			current, _ := json.Marshal(f.r.State.Requests[message])
+			if !bytes.Equal(before, after) || !bytes.Equal(ordinary, current) || len(f.r.State.ConversationCaptures) != 0 || f.close != 0 {
+				t.Fatal("rejected same-worker link changed original records")
+			}
+		})
+	}
+}
+
+func TestConversationIntakeLinkSameActorNativeImplementationAndClose(t *testing.T) {
+	f := conversationNativeTest(t)
+	f.input.Wait = false
+	f, args, original := prepareIntakeLinkFixture(t, f)
+	message := f.replies[0].Message
+	f.r.State.Requests[message].Todo = 43
+	for i, arg := range args {
+		if arg == "--intake-todo-id" {
+			args[i+1] = "43"
+		}
+	}
+	if err := f.r.save(); err != nil {
+		t.Fatal(err)
+	}
+	originBefore, _ := f.r.todo(42)
+	actorBefore, _ := f.r.todo(43)
+	if code, _ := intakeLinkCLI(t, f, args); code != 0 {
+		t.Fatal("native same-worker source link failed")
+	}
+	source, _ := os.ReadFile(filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", message+".json"))
+	evidence := filepath.Join(f.r.Config.Home, "same-worker-execution.json")
+	if publish(evidence, conversationImplementationEvidence{Completion: "The assigned model was applied to the limited review scope.", Execution: "Fixed review input and actual model verified.", Origin: "Original work and Must findings remain unfinished.", Identity: "Current question and owner reply verified.", AppliedAt: f.r.Now().UTC().Format(time.RFC3339Nano)}) != nil {
+		t.Fatal("evidence fixture")
+	}
+	opts := conversationCLIOptions{Command: "implementation-record", RequestID: f.q.RequestID, Message: message, SourceSHA: bytesHash(source), Revision: strings.Repeat("b", 40), EvidenceFile: evidence}
+	if code, result := implementationCLI(t, f, opts); code != 0 || result["recorded"] != true || f.close != 0 {
+		t.Fatal("same-worker implementation was not recorded separately from close", code, result)
+	}
+	opts.Command = "close"
+	if code, result := implementationCLI(t, f, opts); code != 0 || result["question_closed_get_verified"] != true || f.close != 1 || !f.archived {
+		t.Fatal("same-worker implementation could not close with GET verification", code, result)
+	}
+	originAfter, _ := f.r.todo(42)
+	actorAfter, _ := f.r.todo(43)
+	saved, _ := os.ReadFile(filepath.Join(f.r.Config.Home, "requests", message+".json"))
+	if originAfter.Status != originBefore.Status || canonicalHash(originAfter.Jobs) != canonicalHash(originBefore.Jobs) || canonicalHash(originAfter.WaitOn) != canonicalHash(originBefore.WaitOn) || len(originAfter.ImplementationRecords) != 1 || canonicalHash(actorBefore) != canonicalHash(actorAfter) || f.r.State.Requests[message].Todo != 43 || !bytes.Equal(saved, original) {
+		t.Fatal("same-worker record/close changed original work, intake or raw source")
+	}
 }
 
 func TestConversationIntakeLinkPreservesOrdinaryAndSurvivesRestart(t *testing.T) {

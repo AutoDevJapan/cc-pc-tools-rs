@@ -341,34 +341,18 @@ func publishExecutionPair(queue, summary, output, expectedSHA string, link func(
 	} else if !os.IsNotExist(err) {
 		return err
 	}
-	created := false
-	if err := link(queue, output); err == nil {
-		created = true
-	} else if !os.IsExist(err) {
-		return err
-	} else if err = matchInterruptedExecutionQueue(queue, output, expectedSHA); err != nil {
-		return err
-	}
-	if err := link(summary, output+".summary.json"); err != nil {
-		// Another writer may have completed the same queue while this call
-		// was preparing its marker. Its committed pair must remain intact.
-		if _, markerErr := os.Lstat(output + ".summary.json"); !os.IsNotExist(markerErr) {
+	if err := link(queue, output); err != nil {
+		if !os.IsExist(err) {
 			return err
 		}
-		// Remove only the queue this call published, while the stage still pins
-		// its identity. Never remove a preexisting or concurrently replaced file.
-		if created {
-			staged, stageErr := os.Stat(queue)
-			published, publishedErr := os.Lstat(output)
-			if stageErr == nil && publishedErr == nil && os.SameFile(staged, published) {
-				if cleanupErr := os.Remove(output); cleanupErr != nil {
-					return errors.Join(err, cleanupErr)
-				}
-			}
+		if err = matchInterruptedExecutionQueue(queue, output, expectedSHA); err != nil {
+			return err
 		}
-		return err
 	}
-	return nil
+	// A published queue is always complete. Retain it on any marker failure:
+	// another writer may already have validated it or committed its marker.
+	// A later attempt can recover the exact queue using the same SHA check.
+	return link(summary, output+".summary.json")
 }
 
 func matchInterruptedExecutionQueue(stage, output, expectedSHA string) error {

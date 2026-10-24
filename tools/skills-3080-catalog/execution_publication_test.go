@@ -112,7 +112,7 @@ func TestExecutionPublicationRecoversOnlyTheExactQueueBeforeItsSummary(t *testin
 	}
 }
 
-func TestExecutionPublicationFailureBetweenNamesPreservesExistingFiles(t *testing.T) {
+func TestExecutionPublicationFailureRetainsACompleteQueueForRecovery(t *testing.T) {
 	for _, reused := range []bool{false, true} {
 		t.Run(map[bool]string{false: "new_queue", true: "existing_exact_queue"}[reused], func(t *testing.T) {
 			root := t.TempDir()
@@ -142,15 +142,85 @@ func TestExecutionPublicationFailureBetweenNamesPreservesExistingFiles(t *testin
 				t.Fatalf("failure was not exercised: %v calls=%d", err, calls)
 			}
 			got, err := os.ReadFile(output)
-			if reused && (err != nil || string(got) != string(body)) {
-				t.Fatal("existing queue removed on later failure")
-			}
-			if !reused && !os.IsNotExist(err) {
-				t.Fatal("new final queue remained after failed summary publication")
+			if err != nil || string(got) != string(body) {
+				t.Fatal("complete queue removed on later failure")
 			}
 			if _, err = os.Lstat(output + ".summary.json"); !os.IsNotExist(err) {
 				t.Fatal("failed publication left completion marker")
 			}
 		})
+	}
+}
+
+func TestExecutionPublicationConcurrentFailureCannotRemoveTheOtherWritersQueue(t *testing.T) {
+	root := t.TempDir()
+	output := filepath.Join(root, "queue.jsonl")
+	body := []byte("the same complete queue\n")
+	h := sha256.Sum256(body)
+	wantSHA := hex.EncodeToString(h[:])
+	marker, err := json.Marshal(ExecutionSummary{State: "complete", QueueSHA: wantSHA})
+	if err != nil {
+		t.Fatal(err)
+	}
+	stages := make([][2]string, 2)
+	for i, label := range []string{"first", "second"} {
+		stages[i] = [2]string{filepath.Join(root, label+"-queue"), filepath.Join(root, label+"-summary")}
+		for file, data := range map[string][]byte{stages[i][0]: body, stages[i][1]: marker} {
+			if err := os.WriteFile(file, data, 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	firstReady, secondReady := make(chan struct{}), make(chan struct{})
+	failFirst, publishSecond := make(chan struct{}), make(chan struct{})
+	firstDone, secondDone := make(chan error, 1), make(chan error, 1)
+	injected := errors.New("first writer marker publication failed")
+	go func() {
+		firstDone <- publishExecutionPair(stages[0][0], stages[0][1], output, wantSHA, func(from, to string) error {
+			if to == output+".summary.json" {
+				close(firstReady)
+				<-failFirst
+				return injected
+			}
+			return os.Link(from, to)
+		})
+	}()
+	select {
+	case <-firstReady:
+	case err := <-firstDone:
+		t.Fatalf("first writer did not publish its complete queue: %v", err)
+	}
+	go func() {
+		secondDone <- publishExecutionPair(stages[1][0], stages[1][1], output, wantSHA, func(from, to string) error {
+			if to == output+".summary.json" {
+				close(secondReady) // Existing complete queue was already matched.
+				<-publishSecond
+			}
+			return os.Link(from, to)
+		})
+	}()
+	select {
+	case <-secondReady:
+	case err := <-secondDone:
+		close(failFirst)
+		<-firstDone
+		t.Fatalf("second writer could not match the queue: %v", err)
+	}
+	// First fails while the second has validated the queue but has not yet
+	// published its marker. Cleanup must not invalidate the second's result.
+	close(failFirst)
+	firstErr := <-firstDone
+	close(publishSecond)
+	secondErr := <-secondDone
+	if !errors.Is(firstErr, injected) || secondErr != nil {
+		t.Fatalf("incorrect writer results: first=%v second=%v", firstErr, secondErr)
+	}
+	got, err := os.ReadFile(output)
+	if err != nil || string(got) != string(body) {
+		t.Fatal("successful marker lost its complete queue")
+	}
+	got, err = os.ReadFile(output + ".summary.json")
+	if err != nil || string(got) != string(marker) {
+		t.Fatal("successful marker changed or missing")
 	}
 }

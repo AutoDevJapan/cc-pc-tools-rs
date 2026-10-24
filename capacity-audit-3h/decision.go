@@ -61,6 +61,10 @@ func queueDecisionWith(r report, home string, call func(context.Context, ...stri
 		return name, nil
 	}
 	r.Decision = nil
+	// The canonical queue accepts at most 64 KiB and projects only the legacy
+	// seven categories. Full device/scan results already have their independent
+	// anonymous sidecar; duplicating them here could stop a large-device cycle.
+	r.AllDrives = nil
 	data, err := json.Marshal(r)
 	if err != nil {
 		return failure

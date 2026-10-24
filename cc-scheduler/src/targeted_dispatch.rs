@@ -37,11 +37,19 @@ pub(crate) fn held(item: &Value) -> bool {
 }
 
 pub fn run<B: Backend>(engine: &mut Scheduler<B>, id: i64) -> Result<Value> {
+    run_with_wait(engine, id, Duration::ZERO)
+}
+
+/// Explicit operator requests may wait for the ongoing tick; automated callers keep the immediate path.
+pub fn run_waiting<B: Backend>(engine: &mut Scheduler<B>, id: i64) -> Result<Value> {
+    run_with_wait(engine, id, Duration::from_secs(30))
+}
+
+fn run_with_wait<B: Backend>(engine: &mut Scheduler<B>, id: i64, wait: Duration) -> Result<Value> {
     if id <= 0 {
         return Err(Error("InputRejected"));
     }
-    let Some(_lock) = ByteLock::acquire(&engine.root.join("scheduler.lock"), Duration::ZERO)?
-    else {
+    let Some(_lock) = ByteLock::acquire(&engine.root.join("scheduler.lock"), wait)? else {
         return Ok(json!({"id":id,"busy":true,"launched":null}));
     };
     engine.state = read_json(&engine.root.join("state.json"), json!({}))?;
@@ -65,12 +73,34 @@ pub fn run<B: Backend>(engine: &mut Scheduler<B>, id: i64) -> Result<Value> {
     let result = engine.dispatch_for(&cfg, &pri, Some(id));
     engine.persist()?;
     result?;
+    let current = engine
+        .todo()
+        .ok()
+        .and_then(|db| arr(&db["items"]).into_iter().find(|row| row["id"] == id))
+        .unwrap_or(Value::Null);
+    let reason = s(&current["scheduler"]["preparation_failure"]["reason"]);
+    let preparation_reason = [
+        "cwd_missing",
+        "non_git",
+        "origin_missing",
+        "branch_mismatch",
+        "repository_mismatch",
+        "tool_missing",
+        "resource_wait",
+        "input_rejected",
+        "excluded_resource",
+        "tool_failed",
+    ]
+    .contains(&reason)
+    .then_some(reason);
     // Do not return the sampled jobs, other task bodies or private source paths.
     Ok(
         json!({"id":id,"busy":false,"launched":engine.report["launched"]["job"],
         "dispatch_enabled":cfg["dispatch_enabled"],
         "priority_wait":engine.report["priority_wait"] == id,
-        "allowance_now":engine.report["allowance_now"]}),
+        "allowance_now":engine.report["allowance_now"],
+        "not_before":current["scheduler"]["not_before"].as_f64(),
+        "preparation_reason":preparation_reason}),
     )
 }
 

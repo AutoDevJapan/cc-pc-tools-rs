@@ -12,6 +12,7 @@ pub mod no_action;
 pub mod policy;
 pub mod preparation;
 pub mod product_review;
+pub mod registration_resume;
 pub mod targeted_dispatch;
 pub mod workspace_checkpoint;
 pub mod workspace_relocation;

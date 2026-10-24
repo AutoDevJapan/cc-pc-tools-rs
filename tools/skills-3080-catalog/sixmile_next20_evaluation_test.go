@@ -67,6 +67,9 @@ func TestNext20ReceptionKeepsRawActorsAndMaskedScansDistinct(t *testing.T) {
 		{"valid", ""},
 		{"synthetic_aligned_future_adoption", ""},
 		{"synthetic_wrong_adoption", "next20 reception: live source disposition identity differs"},
+		{"ledger_row_without_flag", "next20 reception: final flag differs from the live ledger"},
+		{"ledger_row_without_count", "next20 reception: decision counts differ from the live ledger"},
+		{"ledger_row_unknown_disposition", "next20 reception: unfinished decision counted as final"},
 		{"raw_loses_workflow", "next20 reading: raw primary acquired masking or lost its reader"},
 		{"masked_scan_claims_full", "next20 reading: raw support acquired masking/scanning or a wrong reader"},
 		{"forged_consistent_actor", "next20 reading: fixed independent identities or reading actors changed"},
@@ -78,18 +81,25 @@ func TestNext20ReceptionKeepsRawActorsAndMaskedScansDistinct(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var a extra45Assessment
 			loadPublicReceipt(t, "skills-3080-sixmile-next20-evaluation.json", &a)
-			var current struct{ Entries, Excluded []cohortLedgerRow }
-			// Explicit tags are needed for the separate excluded_entries property.
 			var all struct {
 				Entries  []cohortLedgerRow `json:"entries"`
 				Excluded []cohortLedgerRow `json:"excluded_entries"`
 			}
 			loadPublicReceipt(t, "skills-3080-adoptions.json", &all)
-			current.Entries, current.Excluded = all.Entries, all.Excluded
-			rows := append(append([]cohortLedgerRow(nil), current.Entries...), current.Excluded...)
+			rows := append(append([]cohortLedgerRow(nil), all.Entries...), all.Excluded...)
+			if tc.name != "valid" {
+				// Isolate mutations from future real adoptions in the public ledger.
+				rows = nil
+				a.Installed, a.Integrated, a.Excluded = 0, 0, 0
+				for i := range a.Entries {
+					a.Entries[i].Installed, a.Entries[i].Integrated, a.Entries[i].Excluded = false, false, false
+					noGrant := false
+					a.Entries[i].Rights.Copy = &noGrant
+				}
+			}
 			yes, no, actor := true, false, "forged-reader"
 			switch tc.name {
-			case "synthetic_aligned_future_adoption", "synthetic_wrong_adoption":
+			case "synthetic_aligned_future_adoption", "synthetic_wrong_adoption", "ledger_row_without_flag", "ledger_row_without_count", "ledger_row_unknown_disposition":
 				// Relationship fixture only, never permission or an actual adoption.
 				e := &a.Entries[0]
 				e.Installed = true
@@ -98,6 +108,16 @@ func TestNext20ReceptionKeepsRawActorsAndMaskedScansDistinct(t *testing.T) {
 				row := cohortLedgerRow{ID: e.ID, Source: a.Source, Commit: e.Commit, Path: e.Path, SHA: e.SHA, Disposition: "installed_new_adaptation"}
 				if tc.name == "synthetic_wrong_adoption" {
 					row.Path = "wrong/SKILL.md"
+				}
+				if tc.name == "ledger_row_without_flag" {
+					e.Installed = false
+					a.Installed = 0
+				}
+				if tc.name == "ledger_row_without_count" {
+					a.Installed = 0
+				}
+				if tc.name == "ledger_row_unknown_disposition" {
+					row.Disposition = "pending"
 				}
 				rows = append(rows, row)
 			case "raw_loses_workflow":
@@ -292,7 +312,7 @@ func validatePublicReadingRelations(a publicReadingRelations) error {
 	if x45Digest(targetLines) != receivedCorrectionTargets {
 		return errors.New("public relations: correction targets differ from received mapping")
 	}
-	if !strings.Contains(a.Corrections[4], "is not an exclusion") || !strings.Contains(a.Corrections[4], "All candidates remain accounted for") || !strings.Contains(a.Corrections[5], "rights question is needed now") || !strings.Contains(a.Corrections[6], "not an exclusion") {
+	if !strings.Contains(a.Corrections[4], "is not an exclusion") || !strings.Contains(a.Corrections[4], "All candidates remain accounted for") || !strings.Contains(strings.ToLower(a.Corrections[5]), "no commercial-licence contact or rights question is needed now") || !strings.Contains(a.Corrections[6], "not an exclusion") {
 		return errors.New("public relations: original owner-scope constraints were weakened")
 	}
 	return nil
@@ -311,6 +331,7 @@ func TestPublicReadingRelationsPreserveSourceOrderRightsAndTargets(t *testing.T)
 		{"known_target_swap", "public relations: correction targets differ from received mapping"},
 		{"global_target_added", "public relations: correction targets differ from received mapping"},
 		{"scope_weakened", "public relations: original owner-scope constraints were weakened"},
+		{"rights_question_inverted", "public relations: original owner-scope constraints were weakened"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var a publicReadingRelations
@@ -349,6 +370,9 @@ func TestPublicReadingRelationsPreserveSourceOrderRightsAndTargets(t *testing.T)
 			case "scope_weakened":
 				a.Corrections[4] = "No current use alone does not final-exclude."
 				a.Provenance[4].Resolved = a.Corrections[4]
+			case "rights_question_inverted":
+				a.Corrections[5] = "Commercial-licence contact or rights question is needed now."
+				a.Provenance[5].Resolved = a.Corrections[5]
 			}
 			err := validatePublicReadingRelations(a)
 			if tc.want == "" {
@@ -441,7 +465,7 @@ func validateNext20Relations(a next20Relations) error {
 	if x45Digest(lines) != receivedNext20Namespace {
 		return errors.New("next20 relations: namespace differs from original reader order")
 	}
-	if !strings.Contains(a.Corrections[0], "is not an exclusion") || !strings.Contains(a.Corrections[0], "All candidates remain accounted for") || !strings.Contains(a.Corrections[2], "rights question is needed now") {
+	if !strings.Contains(a.Corrections[0], "is not an exclusion") || !strings.Contains(a.Corrections[0], "All candidates remain accounted for") || !strings.Contains(strings.ToLower(a.Corrections[2]), "no commercial-licence contact or rights question is needed now") {
 		return errors.New("next20 relations: original owner-scope constraints were weakened")
 	}
 	return nil
@@ -450,6 +474,8 @@ func validateNext20Relations(a next20Relations) error {
 func TestNext20PublicRelationsAreStandaloneAndKeepReaderProposalsSeparate(t *testing.T) {
 	for _, tc := range []struct{ name, want string }{
 		{"valid", ""}, {"wrong_row", "next20 relations: entry and source row disagree"}, {"scope_unresolved", "next20 relations: current scope shorthand is unresolved"}, {"definition_changed", "next20 relations: original default scope definition differs"}, {"policy_flag_missing", "next20 relations: reader proposal was promoted to owner policy or final decision"}, {"final_label", "next20 relations: unfinished candidate was relabelled as a final disposition"}, {"scope_weakened", "next20 relations: original owner-scope constraints were weakened"},
+		{"coupled_namespace_path", "next20 relations: namespace differs from original reader order"},
+		{"rights_question_inverted", "next20 relations: original owner-scope constraints were weakened"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var a next20Relations
@@ -465,9 +491,15 @@ func TestNext20PublicRelationsAreStandaloneAndKeepReaderProposalsSeparate(t *tes
 			case "policy_flag_missing":
 				a.Entries[0].Historical.NotOwner = nil
 			case "final_label":
+				a.Entries[0].Installed, a.Entries[0].Integrated, a.Entries[0].Excluded = false, false, false
 				a.Entries[0].Disposition = "excluded"
 			case "scope_weakened":
 				a.Corrections[0] = "No current use alone is not enough."
+			case "coupled_namespace_path":
+				a.Namespaces[0].Rows[0].Path = "skills/changed/changed/SKILL.md"
+				a.Entries[0].Path = a.Namespaces[0].Rows[0].Path
+			case "rights_question_inverted":
+				a.Corrections[2] = "Commercial-licence contact or rights question is needed now."
 			}
 			err := validateNext20Relations(a)
 			if tc.want == "" {
@@ -476,6 +508,52 @@ func TestNext20PublicRelationsAreStandaloneAndKeepReaderProposalsSeparate(t *tes
 				}
 			} else if err == nil || err.Error() != tc.want {
 				t.Fatalf("%s reached another guard: %v", tc.name, err)
+			}
+		})
+	}
+}
+
+func validateCurrentReadingProse(texts []string) error {
+	stale := regexp.MustCompile(`(?i)\b(?:now|current)\s*(?:published|raw)?\s*\d+/(?:workflow)?\d+`)
+	for _, text := range texts {
+		if stale.MatchString(text) {
+			return errors.New("current reading prose copies a mutable aggregate")
+		}
+	}
+	return nil
+}
+
+func TestHistoricalReadingArtifactsKeepCurrentAggregatesInCanonicalIndex(t *testing.T) {
+	for _, name := range []string{"valid", "preparation_snapshot", "stale_current_definition", "stale_now_amendment", "stale_raw_workflow"} {
+		t.Run(name, func(t *testing.T) {
+			var next struct {
+				Definition  string `json:"definition"`
+				Amendment   string `json:"normalization_amendment"`
+				Preparation string `json:"definition_at_preparation"`
+			}
+			var old struct {
+				Pending   string `json:"pending_definition"`
+				Amendment string `json:"amendment_definition"`
+			}
+			loadPublicReceipt(t, "skills-3080-sixmile-next20-evaluation.json", &next)
+			loadPublicReceipt(t, "skills-3080-sixmile-partial-evaluation.json", &old)
+			switch name {
+			case "preparation_snapshot":
+				next.Preparation = "Current published454/455 at the explicitly preserved preparation snapshot."
+			case "stale_current_definition":
+				next.Definition = "Current published454/455."
+			case "stale_now_amendment":
+				next.Amendment = "Totals are now474/475."
+			case "stale_raw_workflow":
+				old.Pending = "current raw64/workflow65."
+			}
+			err := validateCurrentReadingProse([]string{next.Definition, next.Amendment, old.Pending, old.Amendment})
+			valid := name == "valid" || name == "preparation_snapshot"
+			if valid && err != nil {
+				t.Fatal(err)
+			}
+			if !valid && (err == nil || err.Error() != "current reading prose copies a mutable aggregate") {
+				t.Fatalf("%s reached another guard: %v", name, err)
 			}
 		})
 	}

@@ -136,14 +136,18 @@ pub fn run<B: Backend>(
         return Err(Error("TimeoutError"));
     };
     let mut fresh = engine.todo()?;
-    let actor_now = arr(&fresh["items"])
+    let actors_now: Vec<_> = arr(&fresh["items"])
         .into_iter()
-        .find(|row| row["id"] == 3650);
-    let item_now = arr(&fresh["items"])
+        .filter(|row| row["id"] == 3650)
+        .collect();
+    let items_now: Vec<_> = arr(&fresh["items"])
         .into_iter()
-        .find(|row| row["id"] == 1626);
-    if actor_now.as_ref() != Some(&actor)
-        || item_now.as_ref() != Some(&item)
+        .filter(|row| row["id"] == 1626)
+        .collect();
+    if actors_now.len() != 1
+        || items_now.len() != 1
+        || actors_now.first() != Some(&actor)
+        || items_now.first() != Some(&item)
         || fresh["projects"][s(&item["project"])] != root
         || cc_job_policy::todo_wait::waiting(&fresh, &actor)
         || cc_job_policy::todo_wait::waiting(&fresh, &item)

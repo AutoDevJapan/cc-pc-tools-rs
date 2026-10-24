@@ -113,7 +113,7 @@ fn checkpoint_keeps_stops_dependencies_active_owners_and_missing_proof() {
 
 #[test]
 fn checkpoint_preserves_an_actor_stop_or_replacement_during_proof_recheck() {
-    for replacement in [false, true] {
+    for mutation in ["stop", "replacement", "duplicate_actor", "duplicate_target"] {
         let (mut f, request) = setup();
         let preview = resume_checkpoint::run(&mut f.e, &request, None).unwrap();
         let before = f.get(1626);
@@ -124,12 +124,24 @@ fn checkpoint_preserves_an_actor_stop_or_replacement_during_proof_recheck() {
             .iter_mut()
             .find(|row| row["id"] == 3650)
             .unwrap();
-        if replacement {
+        if mutation == "replacement" {
             actor["scheduler"]["job"] = json!("new-job");
-        } else {
+        } else if mutation == "stop" {
             actor["owner_stopped"] = json!(true);
         }
         let stopped_actor = actor.clone();
+        if mutation == "duplicate_actor" {
+            changed["items"]
+                .as_array_mut()
+                .unwrap()
+                .push(stopped_actor.clone());
+        }
+        if mutation == "duplicate_target" {
+            changed["items"]
+                .as_array_mut()
+                .unwrap()
+                .push(before.clone());
+        }
         f.e.backend.checkpoint_edit = Some((f.e.todo_path.clone(), changed));
         f.e.backend.checkpoint_edit_after = 1;
         assert_eq!(

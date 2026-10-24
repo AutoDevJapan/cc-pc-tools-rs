@@ -24,6 +24,31 @@ history-read/history-inventoryの資格条件は変えない。
 本人本文だけを私的な原票へ残し、他者の本文・名前は保存しない。
 本文の解釈・元担当への配送・全月の照合は元3327が行う。
 
+## 正常完了後の文脈補完（同じToDo3331）
+
+PR388の正常配布・原票を保持する。新しいscopeの `include_bot_context:true`
+を明示した場合だけ、既存history-readの権限確認と対話選択を再利用し、
+本人と設定済みbot `1554269962229649478` の本文・版・参照・添付metadataを
+保存する。forum/mediaの同ID starterも同じ作者条件で保存する。
+通常text/private/public text threadに同ID starterを仮定しない。
+設定にないbot・他者の本文・表示名は保存しない。owner件数へbotを加算しない。
+原scopeとcursorは編集せず、新scopeのhashを使う。旧scopeのcursorは流用できない。
+
+同じ `history-attachment` の新しいdomain
+`discord-bot-question-image-read-scope-v1` は、元3327の固定guild/owner/期間だけで
+使う。既存のmessage_id等は設定botの質問版を指定し、`owner_reply_id`、
+`expected_owner_reply_content_sha256`、`expected_owner_reply_created_at`、
+`expected_owner_reply_edited_timestamp` で同threadの本人返信版を指定する。
+本人返信は質問より後、質問の最終編集は本人返信より前（同時刻を含む）を要求する。
+返信に明示的な参照があれば同じ質問・thread・guildと一致させる。
+参照がない返信の選択肢の意味は担当がqualifiedな対話で照合し、readerは推定しない。
+ダウンロード前後で質問と本人返信を再照合し、変更・別actor・別画像は公開しない。
+既存の本人画像domainと条件は保持し、質問画像の取得を新しいUI承認にしない。
+
+実受入は追加19件の対話と指定2画像だけ。既に拒否された参照先GETや未資格旧台帳を
+別経路で読まない。旧質問のcaller/送信receipt/適用票は既存正規入口で確認できた
+範囲だけ返し、保存記録にない値を生成しない。旧添付の非画像文書を画像として扱わない。
+
 既存credential loader、既存guard、GETのみ、flush済み非上書きreceiptを使う。
 権限をrole/member/overwriteから照合し、必要なprivate membershipも通常GETで確認する。
 403/404、壊れた応答、選択本文のsecret、scope/cursor不一致は成功原票を作らず、

@@ -42,13 +42,19 @@ pub fn check_size(bytes: usize) -> Result<(), Error> {
 /// Save the complete canonical store without presentation redaction.
 /// Callers hold the shared ToDo lock across their read, mutation and this write.
 pub fn write(path: &Path, db: &Value) -> Result<(), Error> {
+    write_with_limit(path, db, MAX_BYTES)
+}
+
+fn write_with_limit(path: &Path, db: &Value, limit: usize) -> Result<(), Error> {
     // Match todo.exe's UTF-8, LF, one-space indent and lack of a final newline.
     // Check the actual saved bytes before touching the original, backup or temp.
     let mut bytes = Vec::new();
     let formatter = serde_json::ser::PrettyFormatter::with_indent(b" ");
     let mut serializer = serde_json::Serializer::with_formatter(&mut bytes, formatter);
     serde::Serialize::serialize(db, &mut serializer).map_err(Error::InvalidJson)?;
-    check_size(bytes.len())?;
+    if bytes.len() > limit {
+        return Err(Error::TooLarge);
+    }
 
     let mut backup = path.as_os_str().to_os_string();
     backup.push(".bak-20260930d");
@@ -149,6 +155,35 @@ fn read_from_limit(reader: impl Read, limit: usize) -> Result<Value, Error> {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    fn capacity_fixture() -> Value {
+        json!({"items":[{"id":1,"note":"current","spec":"request.md","status":"wait",
+            "jobs":["original"],"wait_on":[2],"owner_reply_id":"original-answer",
+            "unknown":{"Key":1,"key":2},"note_history":[
+                {"note":"匿名の原文🦀\n".repeat(300),"at":"old","extra":[1,null]},
+                "duplicate", "duplicate"]},
+            {"id":2,"status":"doing","note":"other"}],"next_id":3,"unknown_root":true})
+    }
+
+    #[test]
+    fn oversized_write_archives_history_and_keeps_every_current_field() {
+        let temp = tempfile::tempdir().unwrap();
+        let path = temp.path().join("todo.json");
+        let before = capacity_fixture();
+        // An ordinary mutation crosses the small test-only threshold.
+        write(&path, &before).unwrap();
+        let limit = fs::metadata(&path).unwrap().len() as usize;
+        let mut changed = before.clone();
+        changed["items"][0]["note"] = json!("new current");
+        write_with_limit(&path, &changed, limit).unwrap();
+        let saved = read(&path).unwrap();
+        assert!(fs::metadata(&path).unwrap().len() as usize <= limit);
+        assert!(saved["items"][0]["note_history_archives"].is_array());
+        assert_eq!(crate::todo_history::materialized(&path, &saved["items"][0]).unwrap(), changed["items"][0]);
+        assert_eq!(saved["items"][1], changed["items"][1]);
+        assert_eq!(saved["unknown_root"], changed["unknown_root"]);
+        assert_eq!(changed["items"][0]["note_history"], before["items"][0]["note_history"]);
+    }
 
     #[test]
     fn complete_json_above_old_ceiling_keeps_every_field() {

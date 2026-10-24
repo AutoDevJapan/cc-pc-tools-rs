@@ -387,6 +387,7 @@ type sixmileCohortIndex struct {
 		Saved           int    `json:"support_saved"`
 		Read            int    `json:"support_raw_unmasked_full_read"`
 		MaskedSupport   int    `json:"support_masked_workflow_full_read"`
+		SavedUnread     int    `json:"support_saved_unread"`
 		Scan            int    `json:"support_scan_only"`
 		Unsaved         int    `json:"support_unsaved"`
 		Partial         int    `json:"support_partial_read"`

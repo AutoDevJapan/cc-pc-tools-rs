@@ -187,8 +187,8 @@ func validateParent6Dispositions(a extra45Assessment, rows []cohortLedgerRow) er
 	return nil
 }
 
-func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old legacy21Projection, extra, next20, parent extra45Assessment, next75 next75Assessment, amendment primaryReadingAmendments, comparison mcpComparisonOnly, rows []cohortLedgerRow, received ReceivedCohort) error {
-	base, receivedEntries, err := withoutReceived50Index(current, received)
+func validateExpandedSixmileIndex(current, snapshot sixmileCohortIndex, old legacy21Projection, extra, next20, parent extra45Assessment, next75 next75Assessment, amendment primaryReadingAmendments, comparison mcpComparisonOnly, rows []cohortLedgerRow, received []ReceivedCohort) error {
+	base, receivedEntries, err := withoutReceivedIndex(current, received)
 	if err != nil {
 		return err
 	}
@@ -400,8 +400,7 @@ func TestExpandedSixmileIndexAddsNewCohortAndReadingAmendmentExactlyOnce(t *test
 				current.NotRaw--
 				want = "expanded sixmile index: amendment was omitted, duplicated or conflated with a new candidate"
 			}
-			var received ReceivedCohort
-			loadPublicReceipt(t, "skills-3080-sixmile-received50-evaluation.json", &received)
+			received := loadRegisteredReceivedIndex(t)
 			err := validateExpandedSixmileIndex(current, snapshot, old, extra, next20, parent, next75, amendment, comparison, rows, received)
 			if want == "" {
 				if err != nil {

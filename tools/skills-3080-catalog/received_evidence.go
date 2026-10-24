@@ -97,6 +97,34 @@ var received50Spec = ReceivedSpec{
 	Counts:   map[string]int{"candidates": 50, "primary_raw": 26, "primary_masked": 24, "primary_workflow": 50, "primary_ordered_differences_reported": 5, "notices": 51, "notice_content_definitions_by_actor": 33, "support": 261, "saved": 175, "direct_raw_support": 106, "direct_masked_support": 47, "same_byte_notice_reuse": 18, "ordered_notice_difference": 1, "full_workflow_support": 172, "partial": 3, "scan": 0, "saved_unread": 0, "unsaved": 86},
 }
 
+var received3674Spec = ReceivedSpec{
+	Source: "6mile/skills", Commit: "920714f17d81e0a95c7a9bc51faf0a7921cd982d", Tree: "5782ae7deffe5024e15b6e090327385c10f76273",
+	EntrySHA: "79fef1a1db9c714643dd47b4c6f73ecd416191a5bda412738ae3659919f0ef59",
+	InputSHA: "93ffb14c7401daeb9cc7ba3f655a879935003b0ab4065667ee41492fc2f9cda7",
+	Readers:  map[int]string{3674: "20261024-231416-todo-3674"},
+	Counts:   map[string]int{"candidates": 50, "primary_raw": 14, "primary_masked": 36, "primary_workflow": 50, "primary_ordered_differences_reported": 0, "notices": 51, "notice_content_definitions_by_actor": 33, "support": 449, "saved": 284, "direct_raw_support": 47, "direct_masked_support": 12, "same_byte_notice_reuse": 18, "ordered_notice_difference": 0, "full_workflow_support": 77, "partial": 0, "scan": 0, "saved_unread": 207, "unsaved": 165},
+}
+
+type ReceivedRegistration struct {
+	ID       string
+	Artifact string
+	Spec     ReceivedSpec
+}
+
+var receivedRegistrations = []ReceivedRegistration{
+	{"received50", "skills-3080-sixmile-received50-evaluation.json", received50Spec},
+	{"received3674", "skills-3080-sixmile-received-next50-evaluation.json", received3674Spec},
+}
+
+func registeredReceivedSpec(a ReceivedCohort) (ReceivedSpec, error) {
+	for _, r := range receivedRegistrations {
+		if a.InputSHA == r.Spec.InputSHA && a.EntrySHA == r.Spec.EntrySHA {
+			return r.Spec, nil
+		}
+	}
+	return ReceivedSpec{}, errors.New("unregistered independent reading evidence")
+}
+
 func validateReceivedCohort(a ReceivedCohort, spec ReceivedSpec) ([]ReceivedEntry, error) {
 	bad := func(reason string) ([]ReceivedEntry, error) { return nil, errors.New("received cohort: " + reason) }
 	if a.Source != spec.Source || a.Commit != spec.Commit || a.Tree != spec.Tree || a.EntrySHA != spec.EntrySHA || a.InputSHA != spec.InputSHA {
@@ -170,10 +198,20 @@ func validateReceivedCohort(a ReceivedCohort, spec ReceivedSpec) ([]ReceivedEntr
 				counts["unsaved"]++
 				continue
 			}
-			if s.Bytes == nil || *s.Bytes < 0 || !evidenceHex(s.SHA, 64) || s.Reader == nil || *s.Reader != e.Reader {
+			if s.Bytes == nil || *s.Bytes < 0 || !evidenceHex(s.SHA, 64) {
 				return bad("saved support lacks byte identity or actor")
 			}
 			counts["saved"]++
+			if s.State == "NR" {
+				if s.Reader != nil || s.Mask != nil || *s.Raw || *s.Workflow || evidenceTrue(s.Partial) || evidenceTrue(s.Scan) {
+					return bad("unread support has invented reader, masks or reading")
+				}
+				counts["saved_unread"]++
+				continue
+			}
+			if s.Reader == nil || *s.Reader != e.Reader {
+				return bad("read support lacks the actual reader")
+			}
 			key := fmt.Sprint(e.Reader, "|", s.SHA, "|", s.Blob, "|", *s.Bytes)
 			switch s.State {
 			case "FR", "R":
@@ -207,11 +245,6 @@ func validateReceivedCohort(a ReceivedCohort, spec ReceivedSpec) ([]ReceivedEntr
 					return bad("scan promoted to full")
 				}
 				counts["scan"]++
-			case "NR":
-				if *s.Raw || *s.Workflow || evidenceTrue(s.Partial) || evidenceTrue(s.Scan) {
-					return bad("unread support promoted to reading")
-				}
-				counts["saved_unread"]++
 			default:
 				return bad("unknown support state")
 			}
@@ -403,7 +436,18 @@ func writeReceivedProjection(input, output string) error {
 	if err != nil {
 		return err
 	}
-	p, err := projectReceivedEvidence(raw, filepath.Base(input), received50Spec)
+	var a ReceivedCohort
+	if _, err = uniqueEvidenceJSON(raw); err != nil {
+		return err
+	}
+	if err = json.Unmarshal(raw, &a); err != nil {
+		return err
+	}
+	spec, err := registeredReceivedSpec(a)
+	if err != nil {
+		return err
+	}
+	p, err := projectReceivedEvidence(raw, filepath.Base(input), spec)
 	if err != nil {
 		return err
 	}
@@ -412,10 +456,11 @@ func writeReceivedProjection(input, output string) error {
 		return err
 	}
 	encoded = append(encoded, '\n')
-	f, err := os.OpenFile(output, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
+	f, err := os.CreateTemp(filepath.Dir(output), ".received-projection-*")
 	if err != nil {
 		return err
 	}
+	defer os.Remove(f.Name())
 	_, writeErr := f.Write(encoded)
 	syncErr := f.Sync()
 	closeErr := f.Close()
@@ -427,6 +472,9 @@ func writeReceivedProjection(input, output string) error {
 	}
 	if closeErr != nil {
 		return closeErr
+	}
+	if err = os.Link(f.Name(), output); err != nil {
+		return err
 	}
 	fmt.Printf("validated_received=%d raw=%d workflow=%d; upstream_reads=0 new_decisions=0 central_writes=0\n", p.Counters["candidate_paths"], p.Counters["raw_unmasked_primary_full_read"], p.Counters["workflow_primary_full_read"])
 	return nil

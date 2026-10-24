@@ -63,7 +63,6 @@ func programQuestionBinding(ctx context.Context, r *Runner, jobs string, e progr
 	}
 	send, found := false, 0
 	nonnull := func(b json.RawMessage) bool { return len(b) > 0 && strings.TrimSpace(string(b)) != "null" }
-	found = 0
 	for _, task := range db.Items {
 		if task.ID != e.Scope.Todo {
 			continue
@@ -72,7 +71,6 @@ func programQuestionBinding(ctx context.Context, r *Runner, jobs string, e progr
 		if task.Status != "todo" && task.Status != "doing" && task.Status != "wait" {
 			return bad()
 		}
-		found++
 		if task.Stopped || task.OwnerStopped || task.Cancel || task.Postponed || task.StopKind != "" || nonnull(task.Scheduler.OwnerStop) || nonnull(task.Decision) || task.Status == "done" {
 			return bad()
 		}
@@ -121,11 +119,16 @@ func programQuestionBinding(ctx context.Context, r *Runner, jobs string, e progr
 	if readJSON(r.TodoPath, maxTodo, &db) != nil {
 		return bad()
 	}
+	found = 0
 	for _, task := range db.Items {
 		if task.ID != e.Scope.Todo {
 			continue
 		}
-		if task.Status != "todo" && task.Status != "doing" {
+		found++
+		if task.Status != "todo" && task.Status != "doing" && task.Status != "wait" {
+			return bad()
+		}
+		if task.Status == "wait" {
 			send = false
 		}
 		if task.Stopped || task.OwnerStopped || task.Cancel || task.Postponed || task.StopKind != "" || nonnull(task.Decision) || nonnull(task.Scheduler.OwnerStop) {

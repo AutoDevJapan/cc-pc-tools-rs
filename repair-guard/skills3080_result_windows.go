@@ -468,19 +468,22 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 	// before opening the result. Creation retains its separate merge/notice
 	// and acceptance checks.
 	publicScope, publicInput := skillsPublicReviewScopeFor(r, spec)
+	var native []object
 	if publicInput {
 		if !skillsPublicReviewAuthor(publicScope, reg, row, job, s) || !skillsPublicReviewInputs(publicScope, reg.writer.Workspace, s) {
 			return out, "result_binding"
+		}
+		// Detect a scope/spec added after launch before reading its raw result.
+		native, ok = skillsPublicReviewNative(s, job, spec, r.FinalSHA)
+		if !ok {
+			return out, "native_context"
 		}
 	}
 	body, ok := s.read(filepath.Join(skillsJobsRoot, r.Job, "last_message.md"), 2<<20)
 	if !ok || !bytes.Equal(body, []byte(str(job["last_message"]))) || (r.FinalSHA != "" && hashBytes(body) != r.FinalSHA) || (r.Task == 3709 && hashBytes(body) != skillsReplacementReviewFinal) || (r == skillsPublicReview3850 && len(body) != 4020) {
 		return out, "result_unavailable"
 	}
-	var native []object
-	if publicInput {
-		native, ok = skillsPublicReviewNative(s, job, spec, body)
-	} else {
+	if !publicInput {
 		native, ok = skillsNativeJob(s, job)
 	}
 	if !ok || (r.Task == 3709 && !skillsReplacementNativeBound(native)) {
@@ -565,6 +568,19 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 		if envelope.Type != "session_meta" && envelope.Type != "turn_context" && (proof == nil || envelope.Type != "response_item") {
 			continue
 		}
+		if envelope.Type == "response_item" {
+			at, e := time.Parse(time.RFC3339Nano, envelope.Timestamp)
+			if e != nil {
+				return nil, false
+			}
+			if at.Before(start) || at.After(end) {
+				continue
+			}
+			if !session || !proof.observe(raw, at) {
+				return nil, false
+			}
+			continue
+		}
 		m, ok := conversationJSON(raw)
 		if !ok {
 			return nil, false
@@ -582,12 +598,6 @@ func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end tim
 			return nil, false
 		}
 		if at.Before(start) || at.After(end) {
-			continue
-		}
-		if envelope.Type == "response_item" {
-			if !session || !proof.observe(raw, at) {
-				return nil, false
-			}
 			continue
 		}
 		if value, exists := p["cwd"]; exists && (!same(str(value), cwd) || str(value) == "") {

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 func skillsPublicScopeFixture() skillsPublicReviewScope {
@@ -262,6 +263,62 @@ func TestSkills3080PublicReview3850KeepsItsActualNativeGeneration(t *testing.T) 
 		if skillsPublicReview3850Metadata(copy) {
 			t.Fatalf("altered %s accepted", key)
 		}
+	}
+}
+
+func TestSkills3080PublicReviewPreflightProvesInputBeforeTerminalPayload(t *testing.T) {
+	for _, kind := range []string{"valid", "posthoc_scope", "terminal_before_input", "unknown_later_user", "partial", "wrong_final_digest", "outside_window"} {
+		t.Run(kind, func(t *testing.T) {
+			c := skillsPublicScopeFixture()
+			spec, _ := json.Marshal(c)
+			prompt := []byte("registered\n依頼:\n" + string(spec) + "\nrunner")
+			body := []byte("public terminal")
+			start := time.Date(2026, 10, 26, 1, 0, 0, 0, time.UTC)
+			end := start.Add(time.Minute)
+			id := "01234567-1234-1234-1234-0123456789ab"
+			line := func(kind string, at time.Time, payload object) string {
+				b, _ := json.Marshal(object{"type": kind, "timestamp": at.Format(time.RFC3339Nano), "payload": payload})
+				return string(b) + "\n"
+			}
+			message := func(role, phase, text string) object {
+				return object{"type": "message", "role": role, "phase": phase, "content": []object{{"type": "output_text", "text": text}}}
+			}
+			input := string(prompt)
+			if kind == "posthoc_scope" {
+				input = "original private prelaunch specification"
+			}
+			user := line("response_item", start.Add(2*time.Second), message("user", "", input))
+			phase := "final_answer"
+			if kind == "partial" {
+				phase = "partial_answer"
+			}
+			at := end.Add(-time.Second)
+			if kind == "outside_window" {
+				at = end.Add(time.Nanosecond)
+			}
+			final := line("response_item", at, message("assistant", phase, string(body)))
+			raw := line("session_meta", start, object{"id": id, "cwd": c.Author.Workspace}) + line("turn_context", start.Add(time.Second), object{"model": "gpt-6-luna", "effort": "max", "cwd": c.Author.Workspace})
+			if kind == "terminal_before_input" {
+				raw += line("response_item", start.Add(time.Second), message("assistant", "final_answer", string(body))) + user
+			} else {
+				raw += user
+				if kind == "unknown_later_user" {
+					raw += line("response_item", start.Add(3*time.Second), message("user", "", "read another private source"))
+				}
+				raw += final
+			}
+			p := &skillsNativeResultProof{prompt: prompt, finalSHA: hashBytes(body)}
+			if kind == "wrong_final_digest" {
+				p.finalSHA = hashBytes([]byte("different original final"))
+			}
+			_, ok := skillsNativeProjectionBound(strings.NewReader(raw), id, c.Author.Workspace, start, end, p)
+			if ok != (kind == "valid") {
+				t.Fatalf("preflight %s: accepted=%v", kind, ok)
+			}
+			if (kind == "posthoc_scope" || kind == "terminal_before_input" || kind == "unknown_later_user") && len(p.lastFinal) != 0 {
+				t.Fatal("unclassified terminal text materialized")
+			}
+		})
 	}
 }
 

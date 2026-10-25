@@ -181,13 +181,14 @@ func skillsHistoricalNative(s *skillsFS, job object, proof *skillsNativeResultPr
 type skillsNativeResultProof struct {
 	prompt, body, lastFinal []byte
 	promptAt, finalAt       time.Time
+	finalSHA                string
 }
 
 func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 	var envelope struct {
 		Payload struct {
 			Type, Role, Phase string
-			Content           []struct{ Type, Text string }
+			Content           json.RawMessage
 		}
 	}
 	if json.Unmarshal(raw, &envelope) != nil {
@@ -200,17 +201,30 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 	if v.Type != "message" || (v.Role != "user" && (v.Role != "assistant" || v.Phase != "final_answer")) {
 		return true
 	}
+	// A terminal payload is relevant only after the exact prelaunch input has
+	// classified this turn. Do not materialize an unbound assistant's text.
+	if v.Role == "assistant" && (p.promptAt.IsZero() || at.Before(p.promptAt)) {
+		return true
+	}
 	if _, ok := conversationJSON(raw); !ok {
 		return false
 	}
+	var blocks []struct{ Type, Text string }
+	if json.Unmarshal(v.Content, &blocks) != nil {
+		return false
+	}
 	var text strings.Builder
-	for _, block := range v.Content {
+	for _, block := range blocks {
 		if block.Type == "input_text" || block.Type == "output_text" {
 			text.WriteString(block.Text)
 		}
 	}
 	if v.Role == "user" && strings.Contains(text.String(), string(p.prompt)) {
 		p.promptAt = at
+	} else if v.Role == "user" && p.finalSHA != "" && !p.promptAt.IsZero() {
+		// The typed contract fixes the review's complete user input. An unknown
+		// later user message cannot silently expand that public classification.
+		return false
 	}
 	if v.Role == "assistant" {
 		p.lastFinal = []byte(text.String())
@@ -220,5 +234,14 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 }
 
 func (p *skillsNativeResultProof) bound() bool {
-	return len(p.prompt) > 0 && len(p.body) > 0 && !p.promptAt.IsZero() && !p.finalAt.Before(p.promptAt) && bytes.Equal(p.lastFinal, p.body)
+	if len(p.prompt) == 0 || p.promptAt.IsZero() || p.finalAt.IsZero() || p.finalAt.Before(p.promptAt) {
+		return false
+	}
+	if len(p.body) > 0 {
+		return bytes.Equal(p.lastFinal, p.body)
+	}
+	// Public review preflight proves the immutable prompt and the expected
+	// native digest before opening last_message.md. Its same-buffer digest and
+	// job metadata are then checked independently by skillsReceive.
+	return skillsDigest(p.finalSHA) && hashBytes(p.lastFinal) == p.finalSHA
 }

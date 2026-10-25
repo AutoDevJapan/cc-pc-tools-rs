@@ -242,12 +242,15 @@ func skillsPublicReviewAuthor(c skillsPublicReviewScope, reg skillsRegistry, row
 
 // Keep metadata/final/prompt/native on the real admitted child. The consumer is
 // validated separately and never impersonates the historical author.
-func skillsPublicReviewNative(s *skillsFS, job object, spec, body []byte) ([]object, bool) {
+func skillsPublicReviewNative(s *skillsFS, job object, spec []byte, finalSHA string) ([]object, bool) {
+	if !skillsDigest(finalSHA) {
+		return nil, false
+	}
 	prompt, ok := skillsReviewLaunchPromptAt(s, skillsJobsRoot, job, spec)
 	if !ok {
 		return nil, false
 	}
-	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, body: body})
+	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA})
 	if !ok {
 		return nil, false
 	}

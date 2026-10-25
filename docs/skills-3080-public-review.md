@@ -46,9 +46,10 @@ filesはmanifestを必ず含み、`.gitattributes`または既存のSkills3080�
 3. GitHubの実repo ID/owner/PUBLIC、固定commitのtreeを照合する。宣言した各fileを
    そのtreeのregular blobへ結び、GitHubのblob ID/sizeと保持するGitの生bytesの
    Git object hash/SHA256/sizeを照合する。既存保護を優先し、linkを拒否する。
-4. その後だけ原応答を読み、正確なfinal digest・job metadataと一致させる。
-   native sessionの実ID/cwd/厳密な開始終了窓で、同じlaunch promptと
-   `final_answer`の原応答、実model/effortを照合する。
+4. 原応答ファイルを開く前に、native sessionの実ID/cwd/厳密な開始終了窓で、
+   同じlaunch promptと`final_answer`の期待digest、実model/effortを照合する。
+   合うuser入力がないassistant本文は射影へ取り込まない。その後だけ原応答を
+   読み、同bufferのfinal digest・job metadataと一致させる。
 5. 返却直前にも実consumerを再確認する。返すのはexact原応答と限定metadataだけ。
 
 公開済みの固定入力は未mergeでもこのread-only経路で確認できる。`main`との

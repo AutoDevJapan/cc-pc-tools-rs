@@ -66,6 +66,23 @@ func fixture(t *testing.T) leaf {
 	if e := os.WriteFile(l.Target, []byte("old"), 0600); e != nil {
 		t.Fatal(e)
 	}
+	// Give old software a security state different from a newly inherited
+	// stage. Omitting copySecurity must fail this fixture, not pass by default.
+	p, e := openPin(l.Target, syscall.GENERIC_READ|0x20000|0x40000, 7, 3)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer p.close()
+	var dacl, sd unsafe.Pointer
+	code, _, _ := advapi.NewProc("GetSecurityInfo").Call(p.f.Fd(), 1, 4, 0, 0, uintptr(unsafe.Pointer(&dacl)), 0, uintptr(unsafe.Pointer(&sd)))
+	if code != 0 {
+		t.Fatal("fixture original ACL read")
+	}
+	defer kernel.NewProc("LocalFree").Call(uintptr(sd))
+	code, _, _ = advapi.NewProc("SetSecurityInfo").Call(p.f.Fd(), 1, 0x80000004, 0, 0, uintptr(dacl), 0)
+	if code != 0 {
+		t.Fatal("fixture protected ACL setup")
+	}
 	return l
 }
 func content(t *testing.T, path, want string) {
@@ -129,6 +146,9 @@ func TestPinnedSoftwareUpdatePreservesOldObjectSecurityAndSource(t *testing.T) {
 	}
 	defer p.close()
 	before := descriptor(t, p.old)
+	if !before.Protected {
+		t.Fatal("old fixture must differ from inherited stage")
+	}
 	id := p.old.id()
 	if e = p.install(hooks{}); e != nil {
 		t.Fatal(e)

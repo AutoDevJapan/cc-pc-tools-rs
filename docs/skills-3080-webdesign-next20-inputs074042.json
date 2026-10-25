@@ -1099,5 +1099,8 @@
   "actual_source_scripts_executed": false,
   "previous_illustration14_holds_released": false,
   "unknown_existing9_or_held_fetch647_accessed": false,
-  "whole16_complete": false
+  "whole16_complete": false,
+  "integration_comparison_definition": "Source procedure bodies are parent-read. Comparisons use known public metadata only; comparison-target central bodies are unread and current presence/equality and final adoption are unresolved.",
+  "notice_path_map": "skills-3080-webdesign-next20-notice-map074042.json",
+  "notice_path_map_sha256": "212490e54a8a97bd86d1893f4666165e0e7e17c090bbf9e9ec68a6a12e5b04e0"
 }

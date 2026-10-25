@@ -256,3 +256,11 @@ Suggestion1の予約二重実行対策は、統合候補の実適用時に、既
 範囲41〜91から新規20案と統合比較31件を整理した。`skills-3080-webdesign-next20-inputs074042.json` と `skills-3080-operations/create-webdesign-next20-074042.json` は、作者20原文と適用noticeを含む120出力の固定入力である。構造・参照・hash・正負例20件はin-memoryでPASS。画像・font・実行用script・softwareをコピーせず、任意参照のARTICLE本文も未読・未コピー。先の11件の実配置と次14件の固定入力を保持する。
 
 中央の不在や現在の本文は未確認で、作成・発見・別担当の通常利用・実使用もこの20案については未実施。導入75・統合3・除外14・未判定／保留73,128という作業版の採否値は変わらない。75は物理配置の台帳値であり、別担当が通常利用できる件数ではない。独立レビュー・CI・通常merge後に、出典・個別許諾・固定bytes・writerと結ぶ正規CreateNewへ進む。既存保留・647件の取得審査・本人の具体画像回答という前提を保持する。
+
+### 3866・3867の補足指摘の反映
+
+固定14案と20案の原文・出典・通知を対象とする正式Luna/maxレビューは、いずれもMust0。20案の「統合候補31件」は、出典本文を親が読了し、比較先の中央本文は未読で採否未確定という意味である。既存中央の本文まで比較済みとはしない。
+
+`skills-3080-webdesign-next20-notice-map074042.json`へ、20出典pathと完全tree、適用した祖先noticeのSHA/Git blob/bytesを保存した。全件で適用noticeは同固定版root LICENSE。別directoryのTHREE通知や外部素材の権利を含めていない。
+
+補助技術資料の可変リンクは、`skills-3080-webdesign-external-reference-pins074042.json`で新たに取得した固定commitと同bytesのGit blob/SHA/bytesへ結んだ。Khronos smoothstepとMatter.js Mouseの公式repositoryを使い、以前の未固定リンクの読取を今回の取得へ置き換えていない。この照合でソース全体を新たに読了したとはせず、SDKの互換性・第三者素材の権利・実行成功を追加主張しない。14案・20案のCreateNew用manifestのbytesと正式な内容受入は保持した。

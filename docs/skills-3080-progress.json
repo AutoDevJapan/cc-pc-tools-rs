@@ -2034,7 +2034,7 @@
     "proposed_new": 20,
     "proposed_existing_integration": 31,
     "design": "skills-3080-webdesign-next20-inputs074042.json",
-    "design_sha256": "b7cfde3b25e531cfc01cfec3491ea0d04692602e4f13c4ec1c6352e6a6b109ff",
+    "design_sha256": "934c9ce5edfe95036c400bc9874de997ddf22cfa4024e196015d8feb3087a512",
     "operation": "skills-3080-operations/create-webdesign-next20-074042.json",
     "operation_sha256": "df3a781e73580f2fb5e7a00cba71d18d6aec889277d4713ab5d5d61d8d2d0ad7",
     "in_memory_bundle_sha256": "5bad464060c248d95b5b6ce6888884375db01a3fb61ae270a64e2540c25d0e0b",
@@ -2047,6 +2047,9 @@
     "central_operations": 0,
     "current_target_absence_or_body_not_checked": true,
     "previous_illustration14_and_unknown9_and647_preserved": true,
-    "stage": "additional authoring inputs only; no actual placement"
+    "stage": "additional authoring inputs only; no actual placement",
+    "integration_comparison_definition": "Source procedure bodies are parent-read. Comparisons use known public metadata only; comparison-target central bodies are unread and current presence/equality and final adoption are unresolved.",
+    "notice_path_map": "skills-3080-webdesign-next20-notice-map074042.json",
+    "notice_path_map_sha256": "212490e54a8a97bd86d1893f4666165e0e7e17c090bbf9e9ec68a6a12e5b04e0"
   }
 }

@@ -71,6 +71,16 @@ func skillsRegisteredGeneration(row skillsTask, author, consumer string) bool {
 func skillsReceiveOriginalRepair(r skillsResultRequest, reg skillsRegistry, s *skillsFS) (skillsReceived, string) {
 	var out skillsReceived
 	a := skillsOriginalRepair
+	if r.Job != a.Job {
+		if r == skillsLegacyPublicRepair003920 {
+			a = skillsRepair003920
+		} else {
+			return skillsReceiveTypedRepair(r, reg, s)
+		}
+	}
+	if r.SpecPath != "" {
+		return out, "result_binding"
+	}
 	// No caller-supplied historical path, spec snapshot, receipt or author.
 	if r.Task != 3686 || r.Job != a.Job || r.SpecSHA != a.SpecSHA || !skillsDigest(r.FinalSHA) {
 		return out, "result_binding"
@@ -94,7 +104,13 @@ func skillsReceiveOriginalRepair(r skillsResultRequest, reg skillsRegistry, s *s
 	if reason != "" {
 		return out, reason
 	}
+	if r == skillsLegacyPublicRepair003920 && len(body) != 310 {
+		return out, "result_unavailable"
+	}
 	out = skillsReceived{Body: body, Spec: spec, Native: native, Metadata: object{"id": a.Job, "task": 3686, "status": job["status"], "model": a.Model, "effort": a.Effort, "exit_code": job["exit_code"], "thread_id": a.Thread, "spec_sha256": a.SpecSHA, "final_sha256": hashBytes(body), "spec_binding": "original_registered_author", "consumer_job": reg.writer.Job}}
+	if r == skillsLegacyPublicRepair003920 {
+		out.Metadata["spec_binding"] = "fixed_legacy_public_repair_003920"
+	}
 	return out, ""
 }
 
@@ -132,10 +148,42 @@ func skillsHistoricalFilesAt(s *skillsFS, root string, a skillsHistoricalResult,
 // Read only this exact native session at its initial length. Do not infer
 // continuity with another job's thread; preserve the original strict window.
 func skillsHistoricalNative(s *skillsFS, job object, proof *skillsNativeResultProof) ([]object, bool) {
+	end, e := time.Parse(time.RFC3339Nano, str(job["finished_at"]))
+	if e != nil {
+		return nil, false
+	}
+	return skillsNativeWindow(s, job, proof, end)
+}
+
+// A live consumer has no finished_at. Its immutable input is checked only up
+// to an actual observation time, without inventing or changing job metadata.
+func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof, end time.Time) ([]object, bool) {
 	id := str(job["thread_id"])
 	start, e := time.Parse(time.RFC3339Nano, str(job["started_at"]))
-	end, e2 := time.Parse(time.RFC3339Nano, str(job["finished_at"]))
-	if e != nil || e2 != nil || end.Before(start) || !skillsUUID.MatchString(id) {
+	if e != nil || end.Before(start) || !skillsUUID.MatchString(id) {
+		return nil, false
+	}
+	input, ok := skillsNativeSnapshot(s, job)
+	if !ok {
+		return nil, false
+	}
+	if proof != nil && (proof.inputOnly || proof.exactInput) {
+		// Session bootstrap is independent of the job's task-input window.
+		bootstrap, valid := skillsBootstrapForJob(s, job)
+		if !valid || !skillsDigest(proof.bootstrapSHA) || bootstrap != proof.bootstrapSHA {
+			return nil, false
+		}
+		proof.bootstrapBound = true
+	}
+	return skillsNativeProjectionBound(input, id, str(job["cwd"]), start, end, proof)
+}
+
+// One exact append-log snapshot. Bootstrap identity is separate session
+// metadata; task input/final projection still uses the original job window.
+func skillsNativeSnapshot(s *skillsFS, job object) (io.Reader, bool) {
+	id := str(job["thread_id"])
+	start, e := time.Parse(time.RFC3339Nano, str(job["started_at"]))
+	if e != nil || !skillsUUID.MatchString(id) {
 		return nil, false
 	}
 	home, e := os.UserHomeDir()
@@ -177,13 +225,18 @@ func skillsHistoricalNative(s *skillsFS, job object, proof *skillsNativeResultPr
 	if e != nil || e2 != nil || !same(actual, p) || !info.Mode().IsRegular() || info.Size() < 1 || info.Size() > 256<<20 {
 		return nil, false
 	}
-	return skillsNativeProjectionBound(io.LimitReader(f, info.Size()), id, str(job["cwd"]), start, end, proof)
+	return io.LimitReader(f, info.Size()), true
 }
 
 type skillsNativeResultProof struct {
-	prompt, body, lastFinal []byte
-	promptAt, finalAt       time.Time
-	finalSHA                string
+	prompt, body, lastFinal       []byte
+	promptAt, finalAt             time.Time
+	finalSHA                      string
+	inputOnly                     bool
+	exactInput                    bool
+	bootstrapSHA, cwd             string
+	userSeen                      bool
+	bootstrapSeen, bootstrapBound bool
 }
 
 func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
@@ -197,6 +250,9 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 		return false
 	}
 	v := envelope.Payload
+	if p.inputOnly && v.Role == "assistant" {
+		return true
+	}
 	// codex-cli 0.163.0's generated MessagePhase schema and the original
 	// job's native metadata both use final_answer. Unknown/partial/commentary
 	// phases cannot prove a terminal response. No timestamp tolerance is added.
@@ -217,13 +273,30 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 	}
 	var text strings.Builder
 	for _, block := range blocks {
+		if v.Role == "user" && (p.exactInput || p.inputOnly) && block.Type != "input_text" {
+			return false
+		}
 		if block.Type == "input_text" || block.Type == "output_text" {
 			text.WriteString(block.Text)
 		}
 	}
-	if v.Role == "user" && strings.Contains(text.String(), string(p.prompt)) {
+	if v.Role == "user" && (p.exactInput || p.inputOnly) {
+		first := !p.userSeen
+		p.userSeen = true
+		if first && skillsDigest(p.bootstrapSHA) {
+			if sha, ok := skillsBootstrapIdentity(text.String(), p.cwd); ok && sha == p.bootstrapSHA {
+				p.bootstrapSeen = true
+				return true
+			}
+		}
+	}
+	matched := text.String() == string(p.prompt)
+	if !p.exactInput {
+		matched = strings.Contains(text.String(), string(p.prompt))
+	}
+	if v.Role == "user" && matched {
 		p.promptAt = at
-	} else if v.Role == "user" && p.finalSHA != "" && !p.promptAt.IsZero() {
+	} else if v.Role == "user" && ((p.finalSHA != "" && !p.promptAt.IsZero()) || p.inputOnly || p.exactInput) {
 		// The typed contract fixes the review's complete user input. An unknown
 		// later user message cannot silently expand that public classification.
 		return false
@@ -236,6 +309,12 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 }
 
 func (p *skillsNativeResultProof) bound() bool {
+	if (p.inputOnly || p.exactInput) && !p.bootstrapBound && !p.bootstrapSeen {
+		return false
+	}
+	if p.inputOnly {
+		return len(p.prompt) > 0 && !p.promptAt.IsZero()
+	}
 	if len(p.prompt) == 0 || p.promptAt.IsZero() || p.finalAt.IsZero() || p.finalAt.Before(p.promptAt) {
 		return false
 	}

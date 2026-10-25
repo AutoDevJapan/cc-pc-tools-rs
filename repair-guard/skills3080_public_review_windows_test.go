@@ -24,9 +24,13 @@ func skillsPublicScopeFixture() skillsPublicReviewScope {
 }
 
 func TestSkills3080PublicReviewInputsUsePublicCommitBeforeLocalBytes(t *testing.T) {
-	for _, kind := range []string{"valid_unmerged", "private", "owner", "repository_id", "api_failed", "other_commit", "other_tree", "truncated", "missing_file", "other_blob", "git_symlink", "parent_symlink", "other_size", "other_sha", "changed_bytes", "coaltered_local_sha", "wrong_manifest_author", "protected"} {
+	for _, kind := range []string{"valid_unmerged", "valid_repair_unmerged", "private", "owner", "repository_id", "api_failed", "other_commit", "other_tree", "truncated", "missing_file", "other_blob", "git_symlink", "parent_symlink", "other_size", "other_sha", "changed_bytes", "coaltered_local_sha", "wrong_manifest_author", "protected"} {
 		t.Run(kind, func(t *testing.T) {
 			c := skillsPublicScopeFixture()
+			if kind == "valid_repair_unmerged" {
+				c.Domain = "skills-3080-public-repair-v1"
+				c.Instructions = skillsPublicRepairInstructions
+			}
 			m := skillsTestManifest()
 			m.Writer = c.Author
 			if kind == "wrong_manifest_author" {
@@ -104,17 +108,17 @@ func TestSkills3080PublicReviewInputsUsePublicCommitBeforeLocalBytes(t *testing.
 				return b, true
 			}
 			fs := skillsFS{blocked: func(string) bool { return kind == "protected" }}
-			ok := skillsPublicReviewInputsWith(c, &fs, gh, func(id string) ([]byte, bool) {
+			ok := skillsPublicInputsWith(c, &fs, gh, func(id string) ([]byte, bool) {
 				reads++
 				if id != f.Blob {
 					t.Fatal("unrequested blob")
 				}
 				return body, true
-			})
-			if ok != (kind == "valid_unmerged") {
+			}, kind == "valid_repair_unmerged")
+			if ok != (kind == "valid_unmerged" || kind == "valid_repair_unmerged") {
 				t.Fatalf("public input %s: accepted=%v", kind, ok)
 			}
-			if kind == "valid_unmerged" && (calls != 3 || reads != 1) {
+			if (kind == "valid_unmerged" || kind == "valid_repair_unmerged") && (calls != 3 || reads != 1) {
 				t.Fatal("positive did not prove and read its input")
 			}
 			switch kind {

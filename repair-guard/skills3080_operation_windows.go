@@ -113,6 +113,14 @@ func skillsReviewEffort(model string) string {
 	return ""
 }
 func skillsReviewAccepted(received skillsReceived, manifestSHA, writerModel string) bool {
+	// A comparison-only review or an actual-use check is a public raw result,
+	// never a fresh assertion that every creation output was content-reviewed.
+	if c, ok := skillsParsePublicReview(received.Spec); ok && c.Comparison != nil {
+		return false
+	}
+	if _, ok := skillsParseConsumer(received.Spec); ok {
+		return false
+	}
 	if !strings.Contains(string(received.Spec), "SKILLS3080_MANIFEST_SHA256 "+manifestSHA) || skillsModel(writerModel) == "" || len(received.Native) == 0 {
 		return false
 	}
@@ -161,6 +169,9 @@ func skillsActorCheck(w skillsWriter, reg skillsRegistry, s *skillsFS, caller st
 	return ok && skillsJobTask(job, 3686) && job["status"] == "running" && skillsActorLive(job) && skillsActorSource(w.Workspace, row.Scheduler.Branch) && same(str(job["cwd"]), w.Workspace) && job["launch_key"] == row.Scheduler.Key
 }
 func skillsOperation(op, path string) object {
+	if op == "consume-skills3080-admitted" {
+		return skillsFreshConsumerOperation()
+	}
 	fail := func(reason string) object { return object{"qualified": false, "reason": reason} }
 	// Caller request must be in the original parent or this repair's assigned
 	// workspace. Qualification of one source root never qualifies central data.

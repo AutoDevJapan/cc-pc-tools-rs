@@ -20,6 +20,14 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// PR517's accepted Windows runtime and original backup were independently
+	// read back before the disconnected-reader regression was repaired.
+	// Evidence: docs/evidence/skills-3080-guard-installed-3154.json.
+	"03a2e0f115c8435b1a876eda3efba75ba6120a668bfed39539f6ef2503c5f165": "3154c8ac9135424e2caf2034dc24d4e7406d6368",
+	// PR514's independently completed Windows update. This software baseline
+	// neither classifies central data nor retrofits any historical creation ID.
+	// Evidence: docs/evidence/skills-3080-guard-installed-987f.json.
+	"aa3fdfe3e1c64262b224b4beb76e3d81f95dd5dca0bbc405927223691aa41a02": "987fe2459f33711bcfcfefd8ccb70eb4129fe768",
 	// PR510's already accepted Windows distribution, reobserved before this
 	// repair. This exact software pair grants no access to review/data paths.
 	// Evidence: docs/evidence/skills-3080-guard-installed-e1a4.json.

@@ -1289,7 +1289,9 @@ impl Context {
                         || cc_job_policy::product_retry::digest(&spec) != expected
                         || !std::str::from_utf8(&bytes).unwrap()
                             .contains(&format!("\n依頼:\n{spec_text}"))
-                        || (quota_choice && job["quota_recovery"]["spec_sha256"] != expected)
+                        || (quota_choice && if job["unstarted_review"].is_object() {
+                            job["unstarted_review"]["spec_sha256"] != expected
+                        } else { job["quota_recovery"]["spec_sha256"] != expected })
                     {
                         return Err(Error::new("finite review specification changed before registration"));
                     }

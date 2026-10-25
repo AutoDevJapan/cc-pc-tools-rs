@@ -866,6 +866,9 @@ func main() {
 	if os.Args[1] == "review-admission-runtime-metadata" {
 		os.Exit(runOMB3255RuntimeCLI(os.Args[2:], os.Stdout, omb3255AcquireAdmissionRuntime))
 	}
+	if os.Args[1] == "review-registration-metadata" {
+		os.Exit(runReviewRegistrationCLI(os.Args[2:], os.Stdout, acquireReviewRegistration))
+	}
 	f := flag.NewFlagSet("recovery", flag.ContinueOnError)
 	f.SetOutput(io.Discard)
 	home := f.String("home", "D:/CC/Tools/discord-ask", "")

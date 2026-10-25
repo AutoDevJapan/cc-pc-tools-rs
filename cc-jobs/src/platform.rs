@@ -173,6 +173,7 @@ mod notifier_config_tests {
 /// All network-facing programs (OpenCodex, Docker/Jev and GTO) and process actions
 /// cross this boundary. Tests substitute fakes and never call Discord.
 pub trait Runtime: Send + Sync {
+    fn unstarted_review_registration(&self) -> Value { Value::Null }
     fn quota_recovery_inventory(&self) -> Value {
         let mut inventory=json!({});
         for provider in ["openai","anthropic"] {
@@ -512,6 +513,14 @@ impl Running for Child {
     }
 }
 impl Runtime for System {
+    fn unstarted_review_registration(&self) -> Value {
+        let producer = "D:/CC/Tools/record-recovery/record-recovery.exe";
+        if self.recovery_protected(producer).unwrap_or(true) { return Value::Null; }
+        let mut call = Call::new(vec![producer.into(), "review-registration-metadata".into()], vec![], 50.);
+        call.cwd = Some(PathBuf::from("D:/CC/Work/unattended-operations-20261013-wt/todo-3255-godd"));
+        self.call(call).ok().filter(|r| r.code == 0 && r.stdout.len() <= 8192)
+            .and_then(|r| serde_json::from_slice(&r.stdout).ok()).unwrap_or(Value::Null)
+    }
     fn proc_created_checked(&self, pid: u32) -> io::Result<Option<u64>> {
         proc_created_checked(pid)
     }

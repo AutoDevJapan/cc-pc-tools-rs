@@ -33,7 +33,7 @@ typedな入力がそろわない場合は固定の理由だけを返す。
 停止、未完依存、起動済みjobは切替計画へ含めない。本人固有指定は保持する。
 入力状態SHAが変わった場合は再計画を要し、期限やoriginを推測で書き換えない。
 
-## 通常schedulerへの残る接続
+## 通常schedulerへの接続
 
 1. 正常な元job/commandの固定証拠を検証し、現在の登録・spec・固定173c・予約を
    検証する。自作receiptやrequest引数だけを検証済み出所へ昇格させない。
@@ -46,7 +46,40 @@ typedな入力がそろわない場合は固定の理由だけを返す。
 5. 差分の関連Cargoテスト/doctest/Clippy、別モデルレビュー、同head CI、通常merge、
    実行版のsource/並行変更/Hash対応後に反映し、実3649の開始と原結果を確認する。
 
-現在の割当資源はなし。重いCargoは実行しない。判定規則のRustソースと回帰試験を
-準備し、rustfmtまでを行う。Cargo割当の正規変更口不足を親へ返し、既済3648の
-資源を流用しない。判定規則を保存した段階で接続・配布・実起動を完成扱いにしない。
+現在の割当資源はなし。PCから重いCargoは実行しない。既存PRのCIは専用の通常受付と
+資源ゲートで実行されるため、その受付・開始・終了をこの担当へのCargo割当と区別する。
+既済3648の資源を流用しない。未確認のCIを成功扱いにせず、ソースを保存しただけで
+コンパイル・配布・実起動を完成扱いにしない。
 元private PR17のCI供給・元2191要求Hashと原レビューは別の未完として保持する。
+
+## 固定の正常入力と一件のCAS
+
+`record-recovery review-registration-metadata` は追加引数を拒否する。
+読取資格がある固定Codex実行物を保持し、通常のthread/read、turns/list、items/listだけを
+使う。元3387の固定thread/turn、開始終了時刻、cwd、commandExecutionのID、正常終了と
+原command/stdoutの全byte SHAを照合する。itemsは最大4ページ、各100件までで、
+カーソルはAPIの返却値だけを使う。原command/stdout・他の本文・pathは出力しない。
+保存済み調査票を入力にしない。source/binary guard、実行物の同handle SHAと前後同一性、
+通常RPC終了に失敗したらunavailableとし、部分的な成功を返さない。元nativeは開かない。
+この結果は原操作との一致であり、全上流の本人発言を読んだ証明や切替許可ではない。
+
+`scheduler prepare-unstarted-review --id 3649` は検証だけを行う。
+`--apply --expected-state-sha256 <SHA256>` を付けた場合も起動はしない。
+正常producer、現在のGit共通領域/branch/clean/fixed173c、固定spec SHA、元作者2件、
+現在のOAuth集約、既存3649のjob/process不在を確認する。scheduler.lockとtodo.lockを使い、
+行全体が一致する場合だけ切替capsuleを保存し、quota専用の期限/理由をcapsule内へ移す。
+元のmodel/effort/originの欠落、予約key/branch/worktree、依存、仕様、noteは書き換えない。
+公開APIは任意JSON patchや任意producer pathを受け取らない。
+
+通常prepareはこのcapsuleを再検証してから元Opusのquota早期returnを通り、Luna/maxを
+新しい選択として保存する。元要求のoriginをpolicyへ補完する操作ではない。
+既存のモデルカタログ・優先度・資源・source guard・別モデル条件は維持する。
+jobs側も、登録前と最終queue→state→todoの受付で、元正常登録、現在spec、同予約、
+scope、元作者2件とfresh OAuthを再照合する。Lunaをreview既定へ戻さない条件は、この
+capsuleを独立に再検証した場合だけである。実行済みjobのquota復旧には偽装しない。
+失敗時は既存の有限な技術再確認へ戻し、本人指定や別の待機を解除しない。
+
+Goの合成テストは正常API対応・変更/失敗/重複・カーソル循環・ページ上限・非出力を扱う。
+Rustの回帰は行全体のCAS、欠落/nullの区別、元指定とquota履歴の保持、停止/依存、
+新job登録前後、scope/作者/予約/現期限の変更を扱う。実normal APIでの受入、Rustの
+関連テスト・Clippy・別モデルレビュー・同head CI・配布と実3649はそれぞれ別に確認する。

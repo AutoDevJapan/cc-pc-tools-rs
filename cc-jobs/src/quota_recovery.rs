@@ -10,17 +10,48 @@ impl Context {
             return Ok(Value::Null);
         }
         let db = self.read_json(&self.todo_store())?;
-        let prepared = db["items"]
+        let row = db["items"]
             .as_array()
             .into_iter()
             .flatten()
-            .find(|row| row["id"] == id)
-            .is_some_and(|row| row["scheduler"]["selection"]["quota_recovery"].is_object());
+            .find(|row| row["id"] == id);
+        let unstarted = row.is_some_and(|row| row["scheduler"]["selection"]["unstarted_review"].is_object());
+        let prepared = unstarted || row.is_some_and(|row| row["scheduler"]["selection"]["quota_recovery"].is_object());
         Ok(if prepared {
-            self.rt.quota_recovery_inventory()
+            self.review_recovery_inventory(unstarted)
         } else {
             Value::Null
         })
+    }
+
+    pub(crate) fn review_recovery_inventory(&self, unstarted: bool) -> Value {
+        // Normal provenance reads precede the quota refresh, outside locks.
+        let normal = if unstarted { self.rt.unstarted_review_registration() } else { Value::Null };
+        let mut inventory = self.rt.quota_recovery_inventory();
+        if unstarted { inventory["unstarted_registration"] = normal; }
+        inventory
+    }
+
+    fn verify_unstarted_review(&self, row: &Value, job: &Value, inventory: &Value) -> Result<()> {
+        let mut authors = Vec::new();
+        for (id, todo) in cc_job_policy::unstarted_review_state::WRITERS.iter().zip([3387,3648]) {
+            let author = self.load(id)?;
+            if author["id"] != *id || author["todo_id"] != todo || author["status"] != "succeeded" {
+                return Err(Error::new("unstarted review author provenance changed"));
+            }
+            let models = cc_job_policy::author_models(&author);
+            if models.is_empty() { return Err(Error::new("unstarted review author model is unavailable")); }
+            authors.extend(models);
+        }
+        authors.sort(); authors.dedup();
+        let bytes = self.read_file(Path::new(s(row,"spec")))?;
+        if bytes.is_empty() || bytes.len() > 1024*1024
+            || !cc_job_policy::unstarted_review_state::admission(row, job,
+                &inventory["unstarted_registration"], inventory, &authors,
+                &cc_job_policy::product_retry::digest(&bytes), self.rt.epoch()) {
+            return Err(Error::new("unstarted review registration, scope, generation or OAuth availability changed"));
+        }
+        Ok(())
     }
 
     pub(crate) fn inherit_quota_recovery(
@@ -40,6 +71,15 @@ impl Context {
         else {
             return Ok(false);
         };
+        let unstarted = &row["scheduler"]["selection"]["unstarted_review"];
+        if unstarted.is_object() {
+            if row["scheduler"]["phase"] != "prepared" || row["scheduler"]["key"] != job["launch_key"] {
+                return Err(Error::new("unstarted review preparation generation changed"));
+            }
+            job["unstarted_review"] = unstarted.clone();
+            self.verify_unstarted_review(row,job,inventory)?;
+            return Ok(true);
+        }
         let proof = &row["scheduler"]["selection"]["quota_recovery"];
         if !proof.is_object() {
             return Ok(false);
@@ -104,6 +144,11 @@ impl Context {
         job: &mut Value,
         inventory: &Value,
     ) -> Result<()> {
+        if job["unstarted_review"].is_object() {
+            self.verify_unstarted_review(row,job,inventory)?;
+            job["review_source_verified"] = json!(false);
+            return self.validate_review_launch(job,true);
+        }
         if !job["quota_recovery"].is_object() {
             return Ok(());
         }

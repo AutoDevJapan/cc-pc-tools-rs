@@ -16,6 +16,8 @@ pub(crate) const BIRTH_FALLBACK_MARGIN: u64 = 10_000_000;
 pub(crate) const BIRTH_FALLBACK_MAX_SPAN: u64 = BIRTH_FALLBACK_MARGIN * 2;
 
 pub trait Backend {
+    fn unstarted_review_registration(&mut self) -> Result<Value> { Ok(Value::Null) }
+    fn unstarted_review_workspace(&mut self, _repo: &str, _item: &Value) -> Result<bool> { Ok(false) }
     fn quota_recovery_inventory(&mut self) -> Result<Value> {
         Ok(Value::Null)
     }
@@ -517,6 +519,31 @@ impl RealBackend {
     }
 }
 impl Backend for RealBackend {
+    fn unstarted_review_registration(&mut self) -> Result<Value> {
+        let producer = self.tools.join("record-recovery/record-recovery.exe");
+        self.guard_workspace_path(producer.to_str().ok_or(Error("InputRejected"))?)?;
+        let mut command = invocation(&[producer.to_str().ok_or(Error("InputRejected"))?, "review-registration-metadata"], Some(50));
+        command.cwd = Some(PathBuf::from("D:/CC/Work/unattended-operations-20261013-wt/todo-3255-godd"));
+        let result = self.runner.run(&command)?;
+        if result.code != 0 || result.stdout.len() > 8192 { return Err(Error("RegistrationUnavailable")); }
+        serde_json::from_str(&result.stdout).map_err(|_| Error("RegistrationUnavailable"))
+    }
+    fn unstarted_review_workspace(&mut self, repo: &str, item: &Value) -> Result<bool> {
+        let cwd = s(&item["scheduler"]["worktree"]);
+        if item["id"] != 3649 || item["project"] != "localai-web-rs"
+            || norm(repo) != norm("D:/CC/Work/local-ai-console-3339")
+            || norm(cwd) != norm("D:/CC/Work/local-ai-console-3339-wt/todo-3649-work") {
+            return Ok(false);
+        }
+        self.guard_workspace_path(repo)?;
+        self.guard_workspace_path(cwd)?;
+        let common = run_git(self.runner.as_mut(), Path::new(cwd), &["rev-parse", "--path-format=absolute", "--git-common-dir"])?;
+        let branch = run_git(self.runner.as_mut(), Path::new(cwd), &["branch", "--show-current"])?;
+        let clean = run_git(self.runner.as_mut(), Path::new(cwd), &["status", "--porcelain"])?;
+        let head = format!("{}^{{commit}}", cc_job_policy::unstarted_review_state::SOURCE_HEAD);
+        run_git(self.runner.as_mut(), Path::new(cwd), &["cat-file", "-e", &head])?;
+        Ok(norm(&common) == norm(&format!("{repo}/.git")) && branch == s(&item["scheduler"]["branch"]) && clean.is_empty())
+    }
     fn quota_recovery_inventory(&mut self) -> Result<Value> {
         let mut inventory=json!({});
         let Some(appdata)=std::env::var_os("APPDATA") else { return Ok(inventory); };

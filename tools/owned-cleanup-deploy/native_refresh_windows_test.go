@@ -80,7 +80,7 @@ func TestNativeRefreshKeepsBothPreviousGenerations(t *testing.T) {
 	}
 	defer p.close()
 	if e = p.install(hooks{}); e != nil {
-		t.Fatal(e)
+		t.Fatalf("%v state=%+v original_id=%s", e, p.state, p.old.id())
 	}
 	content(t, l.Target, "new verified bytes")
 	content(t, l.Target+".before-todo3757-native-proof", "old")

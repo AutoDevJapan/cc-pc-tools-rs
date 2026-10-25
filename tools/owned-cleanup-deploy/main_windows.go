@@ -516,20 +516,21 @@ func (p *prepared) install(test hooks) error {
 		test.beforePublish()
 	}
 	if e = rename(stage, p.leaf.Target); e != nil {
+		publishErr := e
 		// Restore only this original object into an absent public name, never
 		// overwrite a concurrent writer or erase evidence after a partial step.
 		if missing(p.leaf.Target) {
 			p.state.RestoreAttempted = true
 			if restoreErr := rename(p.old, p.leaf.Target); restoreErr != nil {
-				return errCode("PUBLISH_FAILED_RESTORE_FAILED")
+				return fmt.Errorf("PUBLISH_FAILED_RESTORE_FAILED:%w (publish:%v)", restoreErr, publishErr)
 			}
 			p.state.Restored = true
-			if !p.old.namedAs(p.leaf.Target) {
-				return errCode("PUBLISH_FAILED_RESTORE_UNVERIFIED")
+			if readbackErr := p.old.verifyName(p.leaf.Target); readbackErr != nil {
+				return fmt.Errorf("PUBLISH_FAILED_RESTORE_UNVERIFIED:%w (publish:%v)", readbackErr, publishErr)
 			}
-			return errCode("PUBLISH_FAILED_RESTORED")
+			return fmt.Errorf("PUBLISH_FAILED_RESTORED:%w", publishErr)
 		}
-		return errCode("PUBLISH_FAILED_TARGET_PRESENT_OR_UNVERIFIED")
+		return fmt.Errorf("PUBLISH_FAILED_TARGET_PRESENT_OR_UNVERIFIED:%w", publishErr)
 	}
 	p.state.Published = true
 	if test.afterPublish != nil {

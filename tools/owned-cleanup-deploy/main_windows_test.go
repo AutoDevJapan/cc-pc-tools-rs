@@ -283,7 +283,7 @@ func TestSoftwarePublishFailureReportsRestoreAndActualNamespaces(t *testing.T) {
 			if restoreFails {
 				want = "PUBLISH_FAILED_RESTORE_FAILED"
 			}
-			if e == nil || e.Error() != want || !p.state.RestoreAttempted || p.state.Restored == restoreFails || p.state.Published || p.state.Verified {
+			if e == nil || !strings.HasPrefix(e.Error(), want+":") || !p.state.RestoreAttempted || p.state.Restored == restoreFails || p.state.Published || p.state.Verified {
 				t.Fatalf("wrong restore outcome: %v %+v", e, p.state)
 			}
 			content(t, l.Source, "new verified bytes")

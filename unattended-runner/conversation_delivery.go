@@ -185,7 +185,9 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 
 func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQuestion, reply conversationReply, req *Request) error {
 	if req.Phase == "conversation_reply_delivered" || req.Phase == "conversation_reply_applied" || req.Phase == "conversation_direction_recorded" || req.Phase == "conversation_implementation_recorded" || req.Phase == "conversation_source_verified" {
-		return nil
+		if len(req.ConversationAttachmentMetadata) == 0 {
+			return nil
+		}
 	}
 	row, err := r.conversationTask(ctx, q.Todo)
 	if err != nil {
@@ -218,17 +220,21 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 			req.ConversationRecoveryNote = "再取得で受領元が置換済み。メモの旧受領SHAを現在版の反映証拠にしない。実反映と質問の締めは未確認。現在のsource_receipt_sha256=" + bytesHash(receipt)
 		}
 		preserve := len(req.ConversationAttachmentMetadata) != 0
-		if conversationDeliveryRecordedWithMode(row, q, answer, b, preserve) || (!preserve && conversationAnswerRecorded(row, q, answer, b)) {
+		if preserve {
+			ready, err := conversationPreservedReplyReady(row, q, answer, b)
+			if err != nil {
+				return err
+			}
+			if ready {
+				req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
+				return r.save()
+			}
+			// This path is shared by the finite repair and the ordinary tick.
+			return r.deliverConversationReplyKeepingWait(ctx, row, q, reply, req, receipt, marker, true)
+		}
+		if conversationDeliveryRecorded(row, q, answer, b) || conversationAnswerRecorded(row, q, answer, b) {
 			req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
 			return r.save()
-		}
-		if preserve {
-			if conversationDeliveryRecorded(row, q, answer, b) || conversationAnswerRecorded(row, q, answer, b) {
-				return errors.New("conversation non-preserving delivery evidence differs")
-			}
-			// The explicit repair never retires or resumes the product owner,
-			// including when that owner exits while capture is being repaired.
-			return r.deliverConversationReplyKeepingWait(ctx, row, q, reply, req, receipt, marker, true)
 		}
 		if reacquired {
 			if !hasNoteMarker(row.Note, marker) || !conversationWaitUnchanged(row, q) || !conversationWaitOwnerUnchanged(row) {
@@ -393,6 +399,23 @@ func conversationDeliveryRecorded(row *TodoRow, q ConversationQuestion, answer c
 	return conversationDeliveryRecordedWithMode(row, q, answer, b, false)
 }
 
+// The repair promises an intact original wait, rather than merely a historical
+// receipt. An ordinary answer for this question disproves that promise even if
+// a prior preserving delivery is also present. Check the invariant before either
+// accepting a receipt or making a new canonical delivery.
+func conversationPreservedReplyReady(row *TodoRow, q ConversationQuestion, answer conversationAnswerReceipt, b []byte) (bool, error) {
+	if row.Status != "block" || conversationQuestionAnswered(row, q) || !conversationWaitRecorded(row, q) || !conversationWaitOwnerUnchanged(row) {
+		return false, errors.New("conversation repaired question wait differs")
+	}
+	if conversationDeliveryRecordedWithMode(row, q, answer, b, true) {
+		return true, nil
+	}
+	if conversationDeliveryRecorded(row, q, answer, b) {
+		return false, errors.New("conversation non-preserving delivery evidence differs")
+	}
+	return false, nil
+}
+
 func conversationDeliveryRecordedWithMode(row *TodoRow, q ConversationQuestion, answer conversationAnswerReceipt, b []byte, preserve bool) bool {
 	matched := 0
 	for _, raw := range row.QuestionDeliveries {
@@ -452,8 +475,17 @@ func (r *Runner) deliverConversationReplyKeepingWait(ctx context.Context, row *T
 		return errors.New("conversation continued answer delivery deferred")
 	}
 	current, err := r.todo(q.Todo)
+	if preserve {
+		current, err = r.conversationTask(ctx, q.Todo)
+	}
 	if err != nil || current.Project != q.Project || !conversationDeliveryRecordedWithMode(current, q, answer, b, preserve) {
 		return errors.New("conversation continued answer readback deferred")
+	}
+	if preserve {
+		ready, err := conversationPreservedReplyReady(current, q, answer, b)
+		if err != nil || !ready {
+			return errors.New("conversation preserved answer readback deferred")
+		}
 	}
 	req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
 	return r.save()

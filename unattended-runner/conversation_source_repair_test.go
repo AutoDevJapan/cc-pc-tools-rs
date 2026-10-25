@@ -572,7 +572,7 @@ func TestConversationSourceRepairNativeFinishedOriginNeverResumes(t *testing.T) 
 }
 
 func TestConversationSourceRepairNeverAcceptsNonPreservingEvidence(t *testing.T) {
-	for _, kind := range []string{"legacy-delivery", "answer"} {
+	for _, kind := range []string{"legacy-delivery", "answer", "mixed"} {
 		t.Run(kind, func(t *testing.T) {
 			f, args, _ := sourceRepairFixture(t)
 			if code, _ := intakeLinkCLI(t, f, args); code != 0 {
@@ -580,10 +580,14 @@ func TestConversationSourceRepairNeverAcceptsNonPreservingEvidence(t *testing.T)
 			}
 			repairMutateRow(t, f, 42, func(row map[string]any) {
 				record := row["owner_question_delivery_receipts"].([]any)[0].(map[string]any)
-				delete(record, "preserved_wait")
-				if kind == "answer" {
+				if kind != "mixed" {
+					delete(record, "preserved_wait")
+				}
+				if kind == "answer" || kind == "mixed" {
 					row["owner_question_answer_receipts"] = []any{record}
-					delete(row, "owner_question_delivery_receipts")
+					if kind == "answer" {
+						delete(row, "owner_question_delivery_receipts")
+					}
 				}
 			})
 			req := f.r.State.ConversationCaptures[f.replies[0].Message]

@@ -132,14 +132,17 @@ func normalizeStreamTransport(raw []byte) ([]byte, *StreamTransportNormalization
 }
 
 func verifyStreamNormalization(r StreamReceipt) error {
-	if r.Normalization==nil{return nil}
+	// Only historical receipts with neither retained original nor normalization
+	// use the older externally recovered origin. Every new original must bind
+	// the canonical chunk even when no transport replacement was needed.
+	if r.Original=="" && r.Normalization==nil{return nil}
 	original:=[]byte(r.Original)
 	if streamHash(original)!=r.OriginalSHA{return errors.New("normalization original differs")}
 	begin,end:=bytes.IndexByte(original,'{'),bytes.LastIndexByte(original,'}')
 	if begin<0||end<=begin{return errors.New("normalization origin envelope missing")}
 	normalized,proof:=normalizeStreamTransport(original[begin:end+1])
 	want,_:=json.Marshal(proof);got,_:=json.Marshal(r.Normalization)
-	if proof==nil||!bytes.Equal(want,got){return errors.New("normalization provenance differs")}
+	if !bytes.Equal(want,got){return errors.New("normalization provenance differs")}
 	v,e:=streamJSON(normalized);if e!=nil{return e};canonical,e:=json.Marshal(v);if e!=nil{return e}
 	storedValue,e:=streamJSON(r.Chunk);if e!=nil{return e};storedCanonical,e:=json.Marshal(storedValue);if e!=nil{return e}
 	if !bytes.Equal(canonical,storedCanonical)||streamHash(canonical)!=r.SHA{return errors.New("normalization changed canonical meaning")}

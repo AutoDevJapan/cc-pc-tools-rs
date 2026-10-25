@@ -43,9 +43,20 @@ func TestOther373TransportUnknownValuesPreserveQuotedTextAndProvenance(t *testin
  wire,err:=json.MarshalIndent(r,"","  ");if err!=nil{t.Fatal(err)}
  var roundtrip StreamReceipt;if err=json.Unmarshal(wire,&roundtrip);err!=nil{t.Fatal(err)}
  if err=verifyStreamNormalization(roundtrip);err!=nil{t.Fatalf("saved indented receipt must retain canonical meaning: %v",err)}
+ dropped:=roundtrip;dropped.Normalization=nil
+ if verifyStreamNormalization(dropped)==nil{t.Fatal("dropping normalization must not sever original/canonical provenance")}
  r.Normalization.Offsets[0]++
  if verifyStreamNormalization(r)==nil{t.Fatal("forged transform offset accepted")}
  for _,invalid:=range []string{`{"x":[REDACTED]true}`,`{"x":true,"x":[REDACTED]}`,`{"x":[OTHER]}`} {
   b,_:=normalizeStreamTransport([]byte(invalid));if _,e:=streamJSON(b);e==nil{t.Fatal("non-transport syntax/duplicate accepted")}
  }
+}
+
+func TestOther373UnmaskedOriginalAlsoBindsCanonicalMeaning(t *testing.T){
+ original:="OTHER373_CHUNK_V1\n"+`{"read":[3,1,0,false,true,20]}`+"\n"
+ canonical:=[]byte(`{"read":[3,1,0,false,true,20]}`)
+ r:=StreamReceipt{Original:original,OriginalSHA:streamHash([]byte(original)),Chunk:canonical,SHA:streamHash(canonical)}
+ if e:=verifyStreamNormalization(r);e!=nil{t.Fatal(e)}
+ r.Chunk=[]byte(`{"read":[2,0,0,true,true,20]}`);r.SHA=streamHash(r.Chunk)
+ if verifyStreamNormalization(r)==nil{t.Fatal("rehashed canonical read promotion severed unchanged original")}
 }

@@ -473,6 +473,26 @@
       "Check reviewer exactjob and both owner_request origins"
     ],
     "new_central_operations": 0,
-    "followup_review_pending": true
+    "followup_review_pending": false,
+    "followup_review_pending_at_recording": true,
+    "accepted_review": {
+      "todo": 3773,
+      "raw_sha256": "faaabd40f892a4b2a6aeaa8f1cfa6fcbf4520a6624c8f66cd894a69223655b90",
+      "spec_sha256": "b78e6779199c6ab02b83d07f89276c4689de4a0cd0178abbc43ece1d1909f839",
+      "actual_model": "gpt-6-luna",
+      "actual_effort": "max",
+      "must": 0,
+      "suggestion_prior_deferral_at_pr485": "Add an explicit created_files mutation; both existing count guards were already present.",
+      "suggestion_currently_implemented": true,
+      "suggestion_resolution": "Common header regression mutates created_files and file_count separately for both observed deployment sets."
+    }
+  },
+  "public_result_delta_currently_pending": false,
+  "public_result_delta_acceptance": {
+    "pr": 485,
+    "head": "85f0d5bb4ec5ace4c7534c21a7f2172235c260ea",
+    "merge": "affcc70d2d9a329128120402c6500409b3d81abf",
+    "all7_ci_complete": true,
+    "failed": 0
   }
 }

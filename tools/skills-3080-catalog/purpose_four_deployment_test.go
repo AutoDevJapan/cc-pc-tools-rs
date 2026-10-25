@@ -97,12 +97,15 @@ type purposeFourReceipt struct {
 		NamesSHA string   `json:"known_target_names_sha256"`
 	} `json:"retained_known_metadata"`
 	Use struct {
-		Stable   *bool `json:"active_bytes_stable_before_after"`
-		External *int  `json:"external_api_calls"`
-		Executed *bool `json:"source_scripts_executed"`
-		Implicit *bool `json:"implicit_skill_selection_proven"`
-		Separate *bool `json:"fresh_separate_model_turn_executed"`
-		Exam     struct {
+		Core         *bool           `json:"core_passed"`
+		KindCount    int             `json:"example_kind_count"`
+		GameExamples json.RawMessage `json:"game_examples"`
+		Stable       *bool           `json:"active_bytes_stable_before_after"`
+		External     *int            `json:"external_api_calls"`
+		Executed     *bool           `json:"source_scripts_executed"`
+		Implicit     *bool           `json:"implicit_skill_selection_proven"`
+		Separate     *bool           `json:"fresh_separate_model_turn_executed"`
+		Exam         struct {
 			Questions, Answers, Total int
 			Independent               *bool `json:"independent_arithmetic_passed"`
 			IDs                       *bool `json:"question_answer_ids_match"`
@@ -162,8 +165,12 @@ func validatePurposeFour(e purposeFourReceipt) error {
 }
 
 func validatePurposeFourFiles(rows []purposeFourFile, wanted map[string]purposeFourFile) error {
-	if len(rows) != 24 || len(wanted) != 24 {
-		return errors.New("readback does not contain24 explicit outputs")
+	return validatePurposeFileRows(rows, wanted, 24)
+}
+
+func validatePurposeFileRows(rows []purposeFourFile, wanted map[string]purposeFourFile, count int) error {
+	if len(rows) != count || len(wanted) != count {
+		return errors.New("readback explicit output count differs")
 	}
 	seen := map[string]bool{}
 	for _, r := range rows {
@@ -176,11 +183,17 @@ func validatePurposeFourFiles(rows []purposeFourFile, wanted map[string]purposeF
 	return nil
 }
 
-func validatedPurposeFourDispositions(t *testing.T) map[string]cohortLedgerRow {
+func validatedPurposeDeployment(t *testing.T, s purposeDeploymentSpec, validate func(purposeFourReceipt) error) map[string]cohortLedgerRow {
 	t.Helper()
 	var e purposeFourReceipt
-	loadPublicReceipt(t, "skills-3080-four-installation-evidence.json", &e)
-	if err := validatePurposeFour(e); err != nil {
+	receipt := loadPublicReceipt(t, s.ReceiptFile, &e)
+	if _, err := uniqueEvidenceJSON(receipt); err != nil {
+		t.Fatal(err)
+	}
+	if e.Manifest != s.ManifestFile || e.Installed != s.InstalledFile || e.Designs != s.DesignFile || e.CreateFile != s.CreateFile || e.ReadbackFile != s.ReadbackFile || e.UseSource != s.UseSource {
+		t.Fatal("unexpected purpose artifact path")
+	}
+	if err := validate(e); err != nil {
 		t.Fatal(err)
 	}
 	var operation struct {
@@ -204,7 +217,7 @@ func validatedPurposeFourDispositions(t *testing.T) map[string]cohortLedgerRow {
 	}
 	raw := loadPublicReceipt(t, e.Manifest, &operation)
 	h := sha256.Sum256(raw)
-	if hex.EncodeToString(h[:]) != purposeFourSHA || len(operation.Sources) != 4 || len(operation.Files) != 24 {
+	if hex.EncodeToString(h[:]) != s.ManifestSHA || len(operation.Sources) != s.SourceCount || len(operation.Files) != s.FileCount {
 		t.Fatal("independent fixed operation anchor differs")
 	}
 	actual := map[string]string{}
@@ -223,10 +236,10 @@ func validatedPurposeFourDispositions(t *testing.T) map[string]cohortLedgerRow {
 		expectedFiles[f.Target] = purposeFourFile{Target: f.Target, Bytes: len(b), SHA: f.SHA}
 		preserved[f.SHA] = true
 	}
-	if err := validatePurposeFourFiles(e.FileRows, expectedFiles); err != nil {
+	if err := validatePurposeFileRows(e.FileRows, expectedFiles, s.FileCount); err != nil {
 		t.Fatal(err)
 	}
-	if e.ReadbackFile != "skills-3080-four-readback-receipt.json" || e.CreateFile != "skills-3080-four-create-receipt.json" {
+	if e.ReadbackFile != s.ReadbackFile || e.CreateFile != s.CreateFile {
 		t.Fatal("unexpected original receipt path")
 	}
 	var readback struct {
@@ -244,10 +257,10 @@ func validatedPurposeFourDispositions(t *testing.T) map[string]cohortLedgerRow {
 	}
 	rb := loadPublicReceipt(t, e.ReadbackFile, &readback)
 	rh := sha256.Sum256(rb)
-	if hex.EncodeToString(rh[:]) != purposeFourReadbackSHA || readback.Job != "20261025-074042-todo-3080" || readback.SHA != purposeFourSHA || readback.Request != purposeFourRequestSHA || readback.CreateSHA != purposeFourCreateWrapperSHA || readback.Created != 4 || readback.Files != 24 || readback.OldWrites == nil || *readback.OldWrites != 0 || readback.OldReads == nil || *readback.OldReads != 0 || !recordedFalse(readback.General) || !recordedFalse(readback.Registry) {
+	if hex.EncodeToString(rh[:]) != s.ReadbackSHA || readback.Job != s.ActorJob || readback.SHA != s.ManifestSHA || readback.Request != s.RequestSHA || readback.CreateSHA != s.CreateSHA || readback.Created != s.TargetCount || readback.Files != s.FileCount || readback.OldWrites == nil || *readback.OldWrites != 0 || readback.OldReads == nil || *readback.OldReads != 0 || !recordedFalse(readback.General) || !recordedFalse(readback.Registry) {
 		t.Fatal("original readback identity/boundary differs")
 	}
-	if err := validatePurposeFourFiles(readback.Rows, expectedFiles); err != nil {
+	if err := validatePurposeFileRows(readback.Rows, expectedFiles, s.FileCount); err != nil {
 		t.Fatal(err)
 	}
 	if !reflect.DeepEqual(readback.Rows, e.FileRows) {
@@ -261,7 +274,7 @@ func validatedPurposeFourDispositions(t *testing.T) map[string]cohortLedgerRow {
 	}
 	cb := loadPublicReceipt(t, e.CreateFile, &wrapper)
 	ch := sha256.Sum256(cb)
-	if hex.EncodeToString(ch[:]) != purposeFourCreateWrapperSHA || wrapper.Exit == nil || *wrapper.Exit != 0 || !recordedFalse(wrapper.Timed) || wrapper.Stderr != "" {
+	if hex.EncodeToString(ch[:]) != s.CreateSHA || wrapper.Exit == nil || *wrapper.Exit != 0 || !recordedFalse(wrapper.Timed) || wrapper.Stderr != "" {
 		t.Fatal("original CreateNew command did not complete")
 	}
 	var command purposeFourCreate
@@ -281,7 +294,7 @@ func validatedPurposeFourDispositions(t *testing.T) map[string]cohortLedgerRow {
 	}
 	installed := loadPublicReceipt(t, e.Installed, &manifest)
 	h = sha256.Sum256(installed)
-	if hex.EncodeToString(h[:]) != e.InstalledSHA || len(manifest.Targets) != 4 {
+	if hex.EncodeToString(h[:]) != e.InstalledSHA || len(manifest.Targets) != s.TargetCount {
 		t.Fatal("installed manifest not fixed")
 	}
 	fileCount := 0
@@ -298,7 +311,7 @@ func validatedPurposeFourDispositions(t *testing.T) map[string]cohortLedgerRow {
 			fileCount++
 		}
 	}
-	if fileCount != 24 {
+	if fileCount != s.FileCount {
 		t.Fatal("installed output omitted")
 	}
 	var designs struct {
@@ -306,15 +319,10 @@ func validatedPurposeFourDispositions(t *testing.T) map[string]cohortLedgerRow {
 	}
 	db := loadPublicReceipt(t, e.Designs, &designs)
 	h = sha256.Sum256(db)
-	if hex.EncodeToString(h[:]) != e.DesignSHA || len(designs.Targets) != 4 {
+	if hex.EncodeToString(h[:]) != e.DesignSHA || len(designs.Targets) != s.TargetCount {
 		t.Fatal("source design identity missing")
 	}
-	wantedIDs := map[string]string{
-		"timezone-helper":      "github:ac72b94f8ac90a84d51a96b3d16e288d93b11f455d2b33aa50d0d320af2029e1",
-		"exam-generator":       "github:0c071dac30d780613fbf2bbb1e5d81e62d028883da584cf9fa9bd68ca33a838b",
-		"build-game-inventory": "github:dcfad5899bfe731a670bd01b4cfafa5a4aa3d03303f40df2b562279b41baf405",
-		"implement-fog-of-war": "github:c51dc53e6bbbd50fb36e0dc24236e430698fe779352ac996e34115a0cbc5c882",
-	}
+	wantedIDs := s.WantedIDs
 	accepted := map[string]cohortLedgerRow{}
 	for _, d := range designs.Targets {
 		if wantedIDs[d.Name] != d.ID || accepted[d.ID].ID != "" {
@@ -351,10 +359,14 @@ func validatedPurposeFourDispositions(t *testing.T) map[string]cohortLedgerRow {
 		t.Fatal(err)
 	}
 	h = sha256.Sum256(source)
-	if hex.EncodeToString(h[:]) != e.UseSHA || !bytes.Contains(source, []byte("TestInstalledFourExplicitApplication")) {
+	if hex.EncodeToString(h[:]) != e.UseSHA || !bytes.Contains(source, []byte(s.ApplicationMarker)) {
 		t.Fatal("executed application source hash differs")
 	}
 	return accepted
+}
+
+func validatedPurposeFourDispositions(t *testing.T) map[string]cohortLedgerRow {
+	return validatedPurposeDeployment(t, fourPurposeSpec(), validatePurposeFour)
 }
 
 func TestPurposeQualifiedFourActualDeploymentAndSourceBytes(t *testing.T) {

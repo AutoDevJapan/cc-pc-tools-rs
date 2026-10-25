@@ -8,7 +8,7 @@
   "entrypoints_expected": 177,
   "entrypoints_fulltext_read": 177,
   "entrypoints_unread": 0,
-  "installed": 4,
+  "installed": 10,
   "integrated": 2,
   "excluded": 0,
   "central_write": 22,
@@ -1458,13 +1458,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "72f8da8da8b980e3e4768fd4264c9c2b34015257",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "affcc70d2d9a329128120402c6500409b3d81abf",
+        "historical_evaluation_sha256": "5b84006c1d653f41e97e28e1cf849112ed3ce9f3cbf41a127bef1c1238c0afa7"
+      },
+      "current_installation_evidence": "skills-3080-game6-installation-evidence.json"
     },
     {
       "inventory_id": "github:423793c2062917a1dadbabd18843c3a0d29c2f91f6465b953dcce98fb680dceb",
@@ -2108,13 +2114,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "313552370f071d00326ff2e7ef5273009e006c84",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "affcc70d2d9a329128120402c6500409b3d81abf",
+        "historical_evaluation_sha256": "5b84006c1d653f41e97e28e1cf849112ed3ce9f3cbf41a127bef1c1238c0afa7"
+      },
+      "current_installation_evidence": "skills-3080-game6-installation-evidence.json"
     },
     {
       "inventory_id": "github:264a83ece383f6be22f64bba371a4c31a1234b1035722320cfdff4ce4c02a62a",
@@ -2282,13 +2294,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "dffd12790216e2739728e270753ba8b60d85ce04",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "affcc70d2d9a329128120402c6500409b3d81abf",
+        "historical_evaluation_sha256": "5b84006c1d653f41e97e28e1cf849112ed3ce9f3cbf41a127bef1c1238c0afa7"
+      },
+      "current_installation_evidence": "skills-3080-game6-installation-evidence.json"
     },
     {
       "inventory_id": "github:382998d3830f6337c6f2838a64421601e482aaf2ac3cb66841051d81e443cf6b",
@@ -2334,13 +2352,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "5b2c61192a885acb3f1d822561fb23b4985e99e3",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "affcc70d2d9a329128120402c6500409b3d81abf",
+        "historical_evaluation_sha256": "5b84006c1d653f41e97e28e1cf849112ed3ce9f3cbf41a127bef1c1238c0afa7"
+      },
+      "current_installation_evidence": "skills-3080-game6-installation-evidence.json"
     },
     {
       "inventory_id": "github:153988a15c1b7cf16741074f845ee57b203ee0315654f9f5d76196982b339d0e",
@@ -2386,13 +2410,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "52ee36731d7aa820658b15a6f0783b80227ad446",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "affcc70d2d9a329128120402c6500409b3d81abf",
+        "historical_evaluation_sha256": "5b84006c1d653f41e97e28e1cf849112ed3ce9f3cbf41a127bef1c1238c0afa7"
+      },
+      "current_installation_evidence": "skills-3080-game6-installation-evidence.json"
     },
     {
       "inventory_id": "github:7bcda1fac6b466079da1784e652e600a58437fe518711d1b3f9fc706d912edc6",
@@ -2542,13 +2572,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "bc4e1b97ee46b2b3cf71e7f02d64ed8673155e1e",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "affcc70d2d9a329128120402c6500409b3d81abf",
+        "historical_evaluation_sha256": "5b84006c1d653f41e97e28e1cf849112ed3ce9f3cbf41a127bef1c1238c0afa7"
+      },
+      "current_installation_evidence": "skills-3080-game6-installation-evidence.json"
     },
     {
       "inventory_id": "github:342ad2a939322fb3fc06620b83e8472b22e8bef2cd8e40584dcd3b05b7079060",
@@ -22170,9 +22206,18 @@
   "amendment_job": "20261024-123649-todo-3080",
   "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts.",
   "current_installation_update": {
-    "evidence": "skills-3080-four-installation-evidence.json",
-    "added": 2,
+    "evidence": "skills-3080-game6-installation-evidence.json",
+    "added": 6,
+    "current_installed": 10,
     "source_body_reading_and_notice_support_states_unchanged": true,
-    "definition": "Only the current installation projection changed. Earlier proposal, raw source identities, actors, rights/support limitations and original Git snapshot are retained."
-  }
+    "definition": "Current installation flags only. The previous current projection and original readers/identities/support/rights limitations remain retained."
+  },
+  "previous_installation_updates": [
+    {
+      "evidence": "skills-3080-four-installation-evidence.json",
+      "added": 2,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Only the current installation projection changed. Earlier proposal, raw source identities, actors, rights/support limitations and original Git snapshot are retained."
+    }
+  ]
 }

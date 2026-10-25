@@ -33,7 +33,7 @@ func omb3255RuntimeTestRoot(t *testing.T) string {
 
 func TestOMB3255RuntimeMetadataPurposeKeepsProtection(t *testing.T) {
 	clear := omb3255GuardVerdict{Access: true, Status: "clear"}
-	unknown := omb3255GuardVerdict{Unverified: true, Client: true, Status: "unverified"}
+	unknown := omb3255GuardVerdict{Unverified: true, Blocked: true, Status: "unverified"}
 	if !omb3255MetadataPurpose(clear, clear, unknown, true) {
 		t.Fatal("independently bound metadata purpose unavailable")
 	}
@@ -42,16 +42,39 @@ func TestOMB3255RuntimeMetadataPurposeKeepsProtection(t *testing.T) {
 		bound   bool
 	}{
 		{clear, clear, unknown, false}, {unknown, clear, unknown, true}, {clear, unknown, unknown, true},
-		{clear, clear, omb3255GuardVerdict{Status: "protected", Client: true, Categories: 1}, true},
+		{clear, clear, omb3255GuardVerdict{Status: "protected", Blocked: true, Categories: 1}, true},
 		{clear, clear, omb3255GuardVerdict{Status: "unverified", Unverified: true, Categories: 1}, true},
 		{clear, clear, omb3255GuardVerdict{Status: "unverified"}, true},
+		{clear, clear, omb3255GuardVerdict{Status: "unverified", Unverified: true}, true},
+		{clear, clear, omb3255GuardVerdict{Status: "unverified", Unverified: true, Access: true, Blocked: true}, true},
 	} {
 		if omb3255MetadataPurpose(c.s, c.b, c.n, c.bound) {
 			t.Fatal("protection or source uncertainty overridden")
 		}
 	}
-	if unknown.Access || !unknown.Unverified || !unknown.Client {
+	if unknown.Access || !unknown.Unverified || !unknown.Blocked {
 		t.Fatal("purpose qualification changed general guard input")
+	}
+}
+
+func TestOMB3255RuntimeGuardUsesProtectedStateNotOverloadedWireName(t *testing.T) {
+	clear := omb3255GuardVerdict{Access: true, Status: "clear"}
+	for _, state := range []string{"clear", "unverified", "protected"} {
+		wire := obj{"ok": true, "access_allowed": state == "clear", "client_resource": state != "clear", "classification_unverified": state == "unverified", "protection_status": state, "protection_categories": []any{}}
+		if state == "protected" {
+			wire["protection_categories"] = []any{"client_project"}
+		}
+		verdict, err := omb3255ParseGuard(wire)
+		if err != nil || omb3255MetadataPurpose(clear, clear, verdict, true) != (state != "protected") {
+			t.Fatalf("guard tri-state misclassified: %s", state)
+		}
+		for _, field := range []string{"access_allowed", "client_resource", "classification_unverified"} {
+			wire[field] = !wire[field].(bool)
+			if _, err := omb3255ParseGuard(wire); err == nil {
+				t.Fatalf("inconsistent guard field accepted: %s/%s", state, field)
+			}
+			wire[field] = !wire[field].(bool)
+		}
 	}
 }
 

@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -135,6 +136,46 @@ func TestOMB3255RuntimeMetadataRejectsShadowedAndMalformedJSON(t *testing.T) {
 	for _, value := range []any{nil, "1", true, json.Number("1e2"), json.Number("-1")} {
 		if omb3255Int(value) != -1 {
 			t.Fatal("non-integral protocol number admitted")
+		}
+	}
+}
+
+func TestOMB3255RuntimeReferenceRejectsOverflowedTurnTimes(t *testing.T) {
+	for _, field := range []string{"startedAt", "completedAt", "both"} {
+		t.Run(field, func(t *testing.T) {
+			get, call, wanted := omb3255ReferenceFixture()
+			turn := omb3255Object(omb3255Array(call["thread/turns/list"]["data"])[0])
+			// Adding 2^61 seconds wraps a 1000x int64 multiplication to the
+			// same valid millisecond value. This must never qualify the turn.
+			if field != "completedAt" {
+				turn["startedAt"] = json.Number(strconv.FormatInt((1<<61)+1792848641, 10))
+			}
+			if field != "startedAt" {
+				turn["completedAt"] = json.Number(strconv.FormatInt((1<<61)+1792848928, 10))
+			}
+			refs, path, err := omb3255CollectRefsFrom(func(endpoint string) (obj, error) {
+				return get[endpoint], nil
+			}, func(method string, _ obj) (obj, error) {
+				return call[method], nil
+			}, "", 0, wanted)
+			if err == nil || refs != nil || path != "" {
+				t.Fatal("overflowed timestamps qualified a different turn")
+			}
+		})
+	}
+}
+
+func TestOMB3255RuntimeSecondConversionBounds(t *testing.T) {
+	const largest = (1<<63 - 1) / 1000
+	for _, value := range []int64{0, 1792848641, largest} {
+		got, ok := omb3255SecondsMS(json.Number(strconv.FormatInt(value, 10)))
+		if !ok || got != value*1000 {
+			t.Fatal("representable seconds rejected")
+		}
+	}
+	for _, value := range []any{nil, "1792848641", json.Number("-1"), json.Number("1e3"), json.Number(strconv.FormatInt(largest+1, 10)), json.Number("9223372036854775807")} {
+		if _, ok := omb3255SecondsMS(value); ok {
+			t.Fatal("invalid or overflowing seconds accepted")
 		}
 	}
 }

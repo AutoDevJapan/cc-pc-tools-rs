@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -67,6 +68,14 @@ func omb3255Int(v any) int64 {
 		return -1
 	}
 	return i
+}
+
+func omb3255SecondsMS(value any) (int64, bool) {
+	seconds := omb3255Int(value)
+	if seconds < 0 || seconds > math.MaxInt64/1000 {
+		return 0, false
+	}
+	return seconds * 1000, true
 }
 
 func omb3255Decode(data []byte) (obj, error) {
@@ -322,8 +331,9 @@ func omb3255CollectRefsFrom(get func(string) (obj, error), call func(string, obj
 		var candidates []obj
 		for _, v := range omb3255Array(turns["data"]) {
 			turn := omb3255Object(v)
-			start, end := omb3255Int(turn["startedAt"])*1000, omb3255Int(turn["completedAt"])*1000
-			if start >= expected.Start-999 && end <= expected.Finish+999 && end >= start && omb3255Text(turn["status"]) == "completed" && omb3255Text(turn["itemsView"]) == "notLoaded" && len(omb3255Array(turn["items"])) == 0 && turn["error"] == nil {
+			start, startOK := omb3255SecondsMS(turn["startedAt"])
+			end, endOK := omb3255SecondsMS(turn["completedAt"])
+			if startOK && endOK && start >= expected.Start-999 && end <= expected.Finish+999 && end >= start && omb3255Text(turn["status"]) == "completed" && omb3255Text(turn["itemsView"]) == "notLoaded" && len(omb3255Array(turn["items"])) == 0 && turn["error"] == nil {
 				candidates = append(candidates, turn)
 			}
 		}

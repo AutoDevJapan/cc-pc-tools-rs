@@ -21,7 +21,7 @@ import (
 type omb3255GuardVerdict struct {
 	Access     bool
 	Unverified bool
-	Client     bool
+	Blocked    bool
 	Status     string
 	Categories int
 }
@@ -38,22 +38,48 @@ func omb3255Guard(ctx context.Context, path string) (omb3255GuardVerdict, error)
 	if err != nil {
 		return omb3255GuardVerdict{}, err
 	}
+	return omb3255ParseGuard(value)
+}
+
+func omb3255ParseGuard(value obj) (omb3255GuardVerdict, error) {
 	if value["ok"] != true {
 		return omb3255GuardVerdict{}, omb3255RuntimeUnavailable
 	}
 	access, a := value["access_allowed"].(bool)
 	unknown, b := value["classification_unverified"].(bool)
-	client, c := value["client_resource"].(bool)
+	blocked, c := value["client_resource"].(bool)
 	status := omb3255Text(value["protection_status"])
 	categories, ok := value["protection_categories"].([]any)
 	if !a || !b || !c || !ok || (status != "clear" && status != "unverified" && status != "protected") {
 		return omb3255GuardVerdict{}, omb3255RuntimeUnavailable
 	}
-	return omb3255GuardVerdict{access, unknown, client, status, len(categories)}, nil
+	verdict := omb3255GuardVerdict{access, unknown, blocked, status, len(categories)}
+	if !verdict.valid() {
+		return omb3255GuardVerdict{}, omb3255RuntimeUnavailable
+	}
+	return verdict, nil
+}
+
+func (g omb3255GuardVerdict) valid() bool {
+	// The existing guard wire field client_resource is !access_allowed,
+	// including an unknown classification. It is not a confirmed-client bit.
+	// Confirmed matches are protected/category-bearing and always denied.
+	if g.Blocked == g.Access || g.Categories < 0 {
+		return false
+	}
+	switch g.Status {
+	case "clear":
+		return g.Access && !g.Unverified && g.Categories == 0
+	case "unverified":
+		return !g.Access && g.Unverified && g.Categories == 0
+	case "protected":
+		return !g.Access && !g.Unverified && g.Categories > 0
+	}
+	return false
 }
 
 func (g omb3255GuardVerdict) codeClear() bool {
-	return g.Access && !g.Unverified && !g.Client && g.Status == "clear" && g.Categories == 0
+	return g.valid() && g.Access && g.Status == "clear"
 }
 
 // This is admission to a fixed, independently bound metadata projection only.
@@ -61,7 +87,7 @@ func (g omb3255GuardVerdict) codeClear() bool {
 // A clear source anchor also requires the canonical legacy check to be readable
 // (or recorded absent); a known client hit can never be overridden here.
 func omb3255MetadataPurpose(source, binary, native omb3255GuardVerdict, normalBinding bool) bool {
-	return normalBinding && source.codeClear() && binary.codeClear() && native.Categories == 0 && native.Status != "protected" &&
+	return normalBinding && source.codeClear() && binary.codeClear() && native.valid() && native.Categories == 0 && native.Status != "protected" &&
 		(native.codeClear() || (native.Status == "unverified" && native.Unverified))
 }
 

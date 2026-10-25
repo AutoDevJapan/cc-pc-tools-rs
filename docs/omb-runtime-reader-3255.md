@@ -19,6 +19,12 @@ PR495の内部coreへ実データを渡すための専用reader。元PR448とPR4
 一般guardのnative判定は変更せず、通常APIで元応答・実行・固定pathが一致した場合だけ、
 このmetadata射影の用途を認める。自作票・callerのtrue・要求modelだけでは認めない。
 
+既存guardの`client_resource`は`!access_allowed`であり、分類未確認にもtrueを返す
+（`repair-guard/main_windows.go`のCLI出力契約）。確認済みclientの実判定は
+`ownerPolicyClassify`の`protected`/`client_project`カテゴリで、必ず拒否する。
+readerはclear/unverified/protectedと各boolean・カテゴリの整合を検証し、矛盾も拒否する。
+分類未確認の許可をclient-freeの判定へ変えず、固定用途と正常API照合に限る。
+
 ## 原本の読取と出力
 
 sourceは正常APIが同じ固定会話の原本と示した、ユーザープロファイル内の固定JSONL一件。

@@ -148,6 +148,59 @@ func TestSkills3080HistoricalSpecificationStaysWithItsActualAuthor(t *testing.T)
 	}
 }
 
+func TestSkills3080RegisteredParentReviewCanReturnItsOriginalResponse(t *testing.T) {
+	// The parent's 3847 template omitted the acceptance marker. Returning its
+	// actual review result must remain separate from accepting it for creation.
+	spec := []byte("Read only the parent's fixed public files; return findings")
+	r := skillsResultRequest{Task: 3847, Job: "20261025-215831-todo-3847", SpecSHA: hashBytes(spec), FinalSHA: hashBytes([]byte("findings"))}
+	parent := skillsTask{ID: 3080, Project: "cc-pc-tools-rs", Jobs: []string{"20261025-074042-todo-3080"}}
+	parent.Scheduler.Job, parent.Scheduler.Worktree = parent.Jobs[0], skillsParentRoot
+	w := skillsWriter{Task: 3080, Job: parent.Jobs[0], Workspace: skillsParentRoot}
+	row := skillsTask{ID: r.Task, Project: parent.Project, Spec: "D:/CC/Tools/todo/specs/3847-fixed.md", Jobs: []string{r.Job}}
+	row.Scheduler.Job, row.Scheduler.Worktree = r.Job, "D:/CC/Work/public-review3847"
+	row.Subwork.Parent, row.Subwork.ParentJob, row.Subwork.Kind = 3080, parent.Jobs[0], "review"
+	row.Subwork.Owner.Worktree = skillsParentRoot
+	row.Scheduler.Admission = &skillsAdmission{Key: "real-admission", Spec: row.Spec, Worktree: row.Scheduler.Worktree, Subwork: row.Subwork}
+	job := object{"id": r.Job, "todo_id": json.Number("3847"), "status": "succeeded", "exit_code": json.Number("0"), "cwd": row.Scheduler.Worktree, "sandbox": "read-only", "parent_job_id": nil, "launch_key": "real-admission", "subwork_validated": true, "subwork": object{"parent_todo_id": json.Number("3080"), "origin_job_id": parent.Jobs[0], "kind": "review", "owner": object{"worktree": skillsParentRoot}}, "finite_review": object{"spec": row.Spec}}
+	check := func(row skillsTask, w skillsWriter) bool {
+		reg := skillsRegistry{Tasks: map[int]skillsTask{3080: parent, 3847: row}, writer: w}
+		return skillsResultBindingWith(r, reg, job, spec, false, map[int]string{})
+	}
+	if !check(row, w) {
+		t.Fatal("registered public parent review could not return its original response")
+	}
+	received := skillsReceived{Spec: spec, Body: []byte("findings"), Metadata: object{"model": "gpt-6-luna", "effort": "max"}, Native: []object{{"model": "gpt-6-luna", "effort": "max"}}}
+	if skillsReviewAccepted(received, strings.Repeat("a", 64), "gpt-6.1-sol") {
+		t.Fatal("raw response became creation acceptance without the correct protocol")
+	}
+	for _, kind := range []string{"other_parent", "unregistered", "admission", "research", "held", "other_consumer", "no_digest"} {
+		t.Run(kind, func(t *testing.T) {
+			copy, writer := row, w
+			switch kind {
+			case "other_parent":
+				copy.Subwork.Parent = 3686
+			case "unregistered":
+				copy.Jobs = nil
+			case "admission":
+				copy.Scheduler.Admission = nil
+			case "research":
+				copy.Subwork.Kind = "research"
+			case "held":
+				parent.OwnerStopped = true
+				defer func() { parent.OwnerStopped = false }()
+			case "other_consumer":
+				writer.Task = 3686
+			case "no_digest":
+				r.FinalSHA = ""
+				defer func() { r.FinalSHA = hashBytes([]byte("findings")) }()
+			}
+			if check(copy, writer) {
+				t.Fatal("unbound review result accepted")
+			}
+		})
+	}
+}
+
 func TestSkills3080HistoricalBindingRejectsSubstitution(t *testing.T) {
 	for _, kind := range []string{"current_spec", "other_job", "future_job", "unregistered_author", "duplicate_author", "parent", "consumer", "stale_consumer", "held_parent", "held_repair", "cwd", "thread", "start", "finish", "model", "effort", "launch", "runner_parent", "unsucceeded", "no_final_digest", "altered_spec"} {
 		t.Run(kind, func(t *testing.T) {

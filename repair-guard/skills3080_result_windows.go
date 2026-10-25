@@ -297,10 +297,14 @@ func skillsResultBindingWith(r skillsResultRequest, reg skillsRegistry, job obje
 	}
 	// New acceptance reviewers must be real registered child reviews, not a
 	// caller-created result file or another public/private task with similar text.
-	return (forReview || (row.Subwork.Parent == 3686 && strings.Contains(string(spec), "SKILLS3080_IMPLEMENTATION_REVIEW "))) && row.Subwork.Kind == "review" && (row.Subwork.Parent == 3080 || row.Subwork.Parent == 3686) && job["sandbox"] == "read-only" &&
+	// The real public parent may receive its registered review's raw response
+	// before accepting a manifest or merging. A missing acceptance marker is
+	// still rejected by skillsReviewAccepted, never rewritten here.
+	publicParentResult := !forReview && row.Subwork.Parent == 3080 && reg.writer.Task == 3080 && skillsDigest(r.FinalSHA)
+	return (forReview || publicParentResult || (row.Subwork.Parent == 3686 && strings.Contains(string(spec), "SKILLS3080_IMPLEMENTATION_REVIEW "))) && row.Subwork.Kind == "review" && (row.Subwork.Parent == 3080 || row.Subwork.Parent == 3686) && job["sandbox"] == "read-only" &&
 		conversationNumber(obj(job["subwork"])["parent_todo_id"]) == uint64(row.Subwork.Parent) &&
 		obj(job["subwork"])["origin_job_id"] == row.Subwork.ParentJob &&
-		skillsReviewAdmissionBound(row, job) && skillsReviewParentBound(reg, row, forReview, str(job["parent_job_id"])) &&
+		skillsReviewAdmissionBound(row, job) && skillsReviewParentBound(reg, row, forReview || publicParentResult, str(job["parent_job_id"])) &&
 		same(str(obj(job["finite_review"])["spec"]), row.Spec)
 }
 

@@ -150,6 +150,11 @@ fileは `target`（中央rootからの相対path）、`sha256`、`content_base64
 修復3686の新しいコードレビューは正規subwork関係と固定headのmarkerを要求する。
 依頼・結果・モデル情報を別jobに流用しない。
 
+現在の3080担当は、自分の正規登録済みpublic reviewの原応答も受領できる。
+現spec/job、永続admission、元author、read-only実行、必須final digest、対応nativeと
+現在consumerの条件は維持する。応答の受領と、manifestの内容受入は別であり、
+正しいacceptance markerがない原応答はCreateNewの承認には使えない。
+
 通常の継続で仕様が進んだ元3686の既知public結果は、現在specの代用にしない。
 対象は実登録済み `20261025-211205-todo-3686` の原602f仕様に限定する。
 独立に保持した原specとsaved promptのdigest、実launch receipt、原3080担当、登録世代、

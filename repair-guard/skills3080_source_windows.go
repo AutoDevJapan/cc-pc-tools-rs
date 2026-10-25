@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -98,7 +99,7 @@ func skillsSourcesBoundAt(m skillsManifest, fs *skillsFS, corpus, catalogSHA str
 		found[key] = row.skillsSavedSource
 		return true
 	})
-	if !ok || len(found) != len(wanted) {
+	if !ok {
 		return false
 	}
 	byRepo := map[string][]skillsSource{}
@@ -118,8 +119,12 @@ func skillsSourcesBoundAt(m skillsManifest, fs *skillsFS, corpus, catalogSHA str
 			return false
 		}
 		paths := map[string]bool{}
+		missing := []skillsSource{}
 		for _, source := range sources {
 			paths[source.Path], paths[source.License.Path] = true, true
+			if _, candidate := found[skillsSourceKey(repo, source.Commit, source.Path)]; !candidate {
+				missing = append(missing, source)
+			}
 		}
 		index, ok := fs.open(filepath.Join(root, "content-index.jsonl"), 128<<20)
 		if !ok {
@@ -131,7 +136,11 @@ func skillsSourcesBoundAt(m skillsManifest, fs *skillsFS, corpus, catalogSHA str
 			if json.Unmarshal(raw, &row) != nil {
 				return false
 			}
-			if !paths[row.Path] {
+			applicable := false
+			for _, support := range missing {
+				applicable = applicable || (row.Role == "license_or_notice" && skillsSupportNotice(row.Path, support.Path))
+			}
+			if !paths[row.Path] && !applicable {
 				return true
 			}
 			if _, duplicate := selected[row.Path]; duplicate || row.Repo != repo || row.Commit != skillsPublicSources[repo] || !skillsDigest(row.SHA) || !civ6Commit.MatchString(row.Blob) || row.Bytes < 1 || row.Bytes > 2<<20 || row.Content != "objects/"+row.SHA+".gz" {
@@ -140,16 +149,55 @@ func skillsSourcesBoundAt(m skillsManifest, fs *skillsFS, corpus, catalogSHA str
 			selected[row.Path] = row
 			return true
 		})
-		if !ok || len(selected) != len(paths) || !skillsSourceTree(root, anchor, treeSHA, selected, fs) {
+		if !ok {
 			return false
 		}
+		for p := range paths {
+			if _, exists := selected[p]; !exists {
+				return false
+			}
+		}
+		// First validate actual catalog candidates. A support row cannot make
+		// itself a primary merely by claiming acquisition or a favorable role.
+		primaries := map[string]skillsSource{}
 		for _, source := range sources {
 			original, notice := selected[source.Path], selected[source.License.Path]
-			cat := found[skillsSourceKey(repo, source.Commit, source.Path)]
-			if original.SHA != source.SHA || original.Blob != cat.Blob || original.Bytes != cat.Bytes ||
-				cat.Content != "github/"+strings.ReplaceAll(repo, "/", "__")+"/"+original.Content ||
-				notice.SHA != source.License.SHA || notice.Role != "license_or_notice" ||
-				!skillsSourceObject(root, original, m.Files, fs) || !skillsSourceObject(root, notice, m.Files, fs) {
+			if original.SHA != source.SHA || notice.SHA != source.License.SHA || notice.Role != "license_or_notice" {
+				return false
+			}
+			if cat, candidate := found[skillsSourceKey(repo, source.Commit, source.Path)]; candidate {
+				if original.Blob != cat.Blob || original.Bytes != cat.Bytes || cat.Content != "github/"+strings.ReplaceAll(repo, "/", "__")+"/"+original.Content {
+					return false
+				}
+				if original.Role == "skill_entry" && path.Base(source.Path) == "SKILL.md" {
+					primaries[source.Path] = source
+				}
+			}
+		}
+		packages := map[string]string{}
+		for _, support := range missing {
+			if selected[support.Path].Role != "support_text" || !strings.HasSuffix(support.Path, ".md") {
+				return false
+			}
+			primary := ""
+			for p, candidate := range primaries {
+				if skillsSupportUnder(path.Dir(p), support.Path) && p != support.Path &&
+					candidate.License.Path == support.License.Path && candidate.License.SHA == support.License.SHA && len(p) > len(primary) {
+					primary = p
+				}
+			}
+			if primary == "" {
+				return false
+			}
+			packages[support.Path] = primary
+		}
+		if !skillsSourceTree(root, anchor, treeSHA, selected, packages, fs) {
+			return false
+		}
+		// The complete tree may contain additional applicable root/package
+		// notices. They too must be acquired and retained byte-for-byte.
+		for _, retained := range selected {
+			if !skillsSourceObject(root, retained, m.Files, fs) {
 				return false
 			}
 		}
@@ -157,7 +205,19 @@ func skillsSourcesBoundAt(m skillsManifest, fs *skillsFS, corpus, catalogSHA str
 	return true
 }
 
-func skillsSourceTree(root string, a skillsSourceAnchor, rootSHA string, selected map[string]skillsSavedSource, fs *skillsFS) bool {
+func skillsSupportUnder(dir, file string) bool { return dir == "." || strings.HasPrefix(file, dir+"/") }
+
+func skillsSupportNotice(notice, source string) bool {
+	base := strings.ToUpper(path.Base(notice))
+	for _, prefix := range []string{"LICENSE", "LICENCE", "NOTICE", "COPYING", "COPYRIGHT"} {
+		if strings.HasPrefix(base, prefix) && skillsSupportUnder(path.Dir(notice), source) {
+			return true
+		}
+	}
+	return false
+}
+
+func skillsSourceTree(root string, a skillsSourceAnchor, rootSHA string, selected map[string]skillsSavedSource, packages map[string]string, fs *skillsFS) bool {
 	name := "tree-recursive.json"
 	if a.FlatTree {
 		name = "tree-complete.json"
@@ -177,6 +237,20 @@ func skillsSourceTree(root string, a skillsSourceAnchor, rootSHA string, selecte
 			var entry struct{ Path, SHA, Type, Mode string }
 			if d.Decode(&entry) != nil {
 				return false
+			}
+			for support, primary := range packages {
+				// An unselected nested SKILL.md is a different package, even if
+				// an ancestor primary was selected in the same repository.
+				if path.Base(entry.Path) == "SKILL.md" && entry.Path != primary &&
+					skillsSupportUnder(path.Dir(primary), entry.Path) && skillsSupportUnder(path.Dir(entry.Path), support) {
+					return false
+				}
+				if skillsSupportNotice(entry.Path, support) && entry.Type != "tree" {
+					row, retained := selected[entry.Path]
+					if !retained || row.Role != "license_or_notice" {
+						return false
+					}
+				}
 			}
 			if row, exists := selected[entry.Path]; exists {
 				if seen[entry.Path] || entry.SHA != row.Blob || entry.Type != "blob" || (entry.Mode != "100644" && entry.Mode != "100755") {

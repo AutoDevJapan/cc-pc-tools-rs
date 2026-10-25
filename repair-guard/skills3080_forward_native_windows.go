@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -82,6 +83,34 @@ func skillsCreationAuthorBound(creator, consumer skillsWriter, reg skillsRegistr
 }
 
 var skillsCallID = regexp.MustCompile(`^call_[A-Za-z0-9_-]{1,160}$`)
+
+func skillsCreationSessionDays(thread string, start time.Time) []string {
+	days := []string{}
+	add := func(at time.Time) {
+		day := at.Format("2006/01/02")
+		for _, old := range days {
+			if old == day {
+				return
+			}
+		}
+		days = append(days, day)
+	}
+	add(start)
+	add(start.AddDate(0, 0, 1))
+	// A normal resumed job retains the original UUIDv7 session, which may
+	// predate this actor by days. Its embedded birth time selects only three
+	// exact directories (UTC +/- one day for local date layout), never a scan.
+	if skillsUUID.MatchString(thread) && thread[14] == '7' {
+		ms, err := strconv.ParseUint(thread[:8]+thread[9:13], 16, 48)
+		birth := time.UnixMilli(int64(ms)).UTC()
+		if err == nil && !birth.After(start.Add(5*time.Minute)) {
+			for _, day := range []int{-1, 0, 1} {
+				add(birth.AddDate(0, 0, day))
+			}
+		}
+	}
+	return days
+}
 
 // Only tool response records are examined. Messages/user text, arbitrary
 // embedded JSON, and result copies are never receipt issuers. The canonical
@@ -199,8 +228,8 @@ func skillsReadCreationNative(s *skillsFS, job object, c skillsConsumeRequest) (
 		return empty, false
 	}
 	paths := []string{}
-	for _, day := range []int{0, 1} {
-		dir := filepath.Join(home, ".codex/sessions", start.AddDate(0, 0, day).Format("2006/01/02"))
+	for _, day := range skillsCreationSessionDays(id, start) {
+		dir := filepath.Join(home, ".codex/sessions", day)
 		if _, ok := s.directory(dir); !ok {
 			continue
 		}

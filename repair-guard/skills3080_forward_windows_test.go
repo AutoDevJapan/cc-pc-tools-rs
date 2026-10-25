@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -360,5 +361,26 @@ func TestSkills3080ForwardCannotChangeOrdinaryClassification(t *testing.T) {
 		if v.AccessAllowed {
 			t.Fatal("new purpose route changed an ordinary unknown/protected verdict")
 		}
+	}
+}
+
+func TestSkills3080ForwardFindsResumedOriginalSession(t *testing.T) {
+	// Synthetic UUIDv7/date reproducing the observed prior-day resume layout.
+	start, _ := time.Parse(time.RFC3339, "2026-10-25T07:41:05+09:00")
+	birth := time.Date(2026, 10, 24, 10, 0, 0, 0, time.UTC)
+	hex := fmt.Sprintf("%012x", birth.UnixMilli())
+	thread := hex[:8] + "-" + hex[8:] + "-7000-8000-000000000001"
+	days := skillsCreationSessionDays(thread, start)
+	found := false
+	for _, day := range days {
+		if day == "2026/10/24" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatal("a legitimate resumed writer's original canonical session is not searched")
+	}
+	if len(days) > 5 {
+		t.Fatal("session lookup widened into a history scan")
 	}
 }

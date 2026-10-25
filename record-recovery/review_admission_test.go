@@ -124,6 +124,10 @@ func TestReviewAdmissionSeparatesCurrentRequestedAndCachedValues(t *testing.T) {
 	scheduler["selection_input"] = obj{"model": "anthropic/claude-sonnet-5-5"}
 	scheduler["console_request"] = obj{"key": "private-value", "prompt": "private-value", "options": obj{"model": "gpt-6-astra"}}
 	scheduler["preparation_failure"] = obj{"reason": "excluded_resource", "at": 1700000000}
+	inputBytes, err := json.Marshal(fixture)
+	if err != nil {
+		t.Fatal(err)
+	}
 	r := reviewAdmissionProject(t, fixture)
 	record := r["record"].(obj)
 	if record["requested"].(obj)["model"].(obj)["value"] != "anthropic/claude-opus-5-5" {
@@ -156,7 +160,7 @@ func TestReviewAdmissionSeparatesCurrentRequestedAndCachedValues(t *testing.T) {
 	}
 	want := obj{
 		"ok": true, "domain": "unstarted-review-admission-metadata-v1", "case_todo_id": 3255,
-		"snapshot_sha256": r["snapshot_sha256"], "metadata_only": true,
+		"snapshot_sha256": digest(inputBytes), "metadata_only": true,
 		"record": obj{
 			"record_id": int64(3649), "status": obj{"state": "recorded", "value": "todo"},
 			"dispatchable":          obj{"state": "recorded", "value": true},

@@ -210,6 +210,11 @@ pub struct Proposed {
     original: Value,
     capsule: Value,
 }
+#[derive(Clone, Copy)]
+pub struct Checked {
+    pub source_verified: bool,
+    pub live_worker_absent: bool,
+}
 
 impl Proposed {
     pub fn state_sha256(&self) -> &str {
@@ -223,14 +228,13 @@ pub fn proposal(
     health: &Value,
     authors: &[String],
     spec_sha: &str,
-    source_verified: bool,
-    live_worker_absent: bool,
+    checked: Checked,
     now: f64,
 ) -> Result<Proposed, rule::Reason> {
     let registration = registration(normal).ok_or(rule::Reason::RegistrationUnverified)?;
     let author_refs: Vec<&str> = authors.iter().map(String::as_str).collect();
-    let mut pending = pending(row, spec_sha, source_verified);
-    pending.live_worker_absent = live_worker_absent;
+    let mut pending = pending(row, spec_sha, checked.source_verified);
+    pending.live_worker_absent = checked.live_worker_absent;
     let plan = rule::plan(
         pending,
         registration,
@@ -399,6 +403,12 @@ pub fn admission(
 #[cfg(test)]
 mod tests {
     use super::*;
+    fn checked(source_verified: bool, live_worker_absent: bool) -> Checked {
+        Checked {
+            source_verified,
+            live_worker_absent,
+        }
+    }
 
     fn fixture() -> (Value, Value, Value, Vec<String>) {
         let row = json!({"id":3649,"project":"localai-web-rs","status":"todo","dispatchable":true,
@@ -423,7 +433,13 @@ mod tests {
     fn state_cas_retains_original_request_reservation_and_quota_history() {
         let (original, normal, health, authors) = fixture();
         let proposed = proposal(
-            &original, &normal, &health, &authors, SPEC_SHA, true, true, 1000.,
+            &original,
+            &normal,
+            &health,
+            &authors,
+            SPEC_SHA,
+            checked(true, true),
+            1000.,
         )
         .unwrap();
         let mut row = original.clone();
@@ -473,7 +489,16 @@ mod tests {
             let mut row = original.clone();
             row[field] = value;
             assert!(
-                proposal(&row, &normal, &health, &authors, SPEC_SHA, true, true, 1000.).is_err(),
+                proposal(
+                    &row,
+                    &normal,
+                    &health,
+                    &authors,
+                    SPEC_SHA,
+                    checked(true, true),
+                    1000.
+                )
+                .is_err(),
                 "{field}"
             );
         }
@@ -481,19 +506,49 @@ mod tests {
             let mut row = original.clone();
             row["scheduler"][field] = json!("new request");
             assert!(
-                proposal(&row, &normal, &health, &authors, SPEC_SHA, true, true, 1000.).is_err(),
+                proposal(
+                    &row,
+                    &normal,
+                    &health,
+                    &authors,
+                    SPEC_SHA,
+                    checked(true, true),
+                    1000.
+                )
+                .is_err(),
                 "{field}"
             );
         }
-        assert!(
-            proposal(&original, &normal, &health, &authors, SPEC_SHA, false, true, 1000.).is_err()
-        );
-        assert!(
-            proposal(&original, &normal, &health, &authors, SPEC_SHA, true, false, 1000.).is_err()
-        );
-        assert!(
-            proposal(&original, &normal, &health, &authors, "changed", true, true, 1000.).is_err()
-        );
+        assert!(proposal(
+            &original,
+            &normal,
+            &health,
+            &authors,
+            SPEC_SHA,
+            checked(false, true),
+            1000.
+        )
+        .is_err());
+        assert!(proposal(
+            &original,
+            &normal,
+            &health,
+            &authors,
+            SPEC_SHA,
+            checked(true, false),
+            1000.
+        )
+        .is_err());
+        assert!(proposal(
+            &original,
+            &normal,
+            &health,
+            &authors,
+            "changed",
+            checked(true, true),
+            1000.
+        )
+        .is_err());
     }
 
     #[test]
@@ -503,16 +558,43 @@ mod tests {
             let mut changed = normal.clone();
             changed["registration"][field] = json!("other");
             assert!(
-                proposal(&row, &changed, &health, &authors, SPEC_SHA, true, true, 1000.).is_err(),
+                proposal(
+                    &row,
+                    &changed,
+                    &health,
+                    &authors,
+                    SPEC_SHA,
+                    checked(true, true),
+                    1000.
+                )
+                .is_err(),
                 "{field}"
             );
         }
         let mut absent = normal.clone();
         absent["state"] = json!("unavailable");
-        assert!(proposal(&row, &absent, &health, &authors, SPEC_SHA, true, true, 1000.).is_err());
+        assert!(proposal(
+            &row,
+            &absent,
+            &health,
+            &authors,
+            SPEC_SHA,
+            checked(true, true),
+            1000.
+        )
+        .is_err());
         let mut stale = health.clone();
         stale["openai"]["at"] = json!(939.);
-        assert!(proposal(&row, &normal, &stale, &authors, SPEC_SHA, true, true, 1000.).is_err());
+        assert!(proposal(
+            &row,
+            &normal,
+            &stale,
+            &authors,
+            SPEC_SHA,
+            checked(true, true),
+            1000.
+        )
+        .is_err());
         let mut unavailable = health.clone();
         unavailable["anthropic"]["verified"] = json!(false);
         assert!(proposal(
@@ -521,8 +603,7 @@ mod tests {
             &unavailable,
             &authors,
             SPEC_SHA,
-            true,
-            true,
+            checked(true, true),
             1000.
         )
         .is_err());
@@ -532,8 +613,7 @@ mod tests {
             &health,
             &["openai/gpt-6-luna".into()],
             SPEC_SHA,
-            true,
-            true,
+            checked(true, true),
             1000.
         )
         .is_err());
@@ -543,7 +623,13 @@ mod tests {
     fn admission_preserves_the_verified_selection_across_registration_and_link() {
         let (mut row, normal, health, authors) = fixture();
         let proposed = proposal(
-            &row, &normal, &health, &authors, SPEC_SHA, true, true, 1000.,
+            &row,
+            &normal,
+            &health,
+            &authors,
+            SPEC_SHA,
+            checked(true, true),
+            1000.,
         )
         .unwrap();
         assert!(apply(&mut row, &proposed));

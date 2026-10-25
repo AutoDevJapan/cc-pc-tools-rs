@@ -146,8 +146,10 @@ pub fn run<B: Backend>(engine: &mut Scheduler<B>, expected: Option<&str>) -> Res
         &evidence.health,
         &evidence.authors,
         &evidence.spec_sha,
-        true,
-        true,
+        state::Checked {
+            source_verified: true,
+            live_worker_absent: true,
+        },
         engine.backend.clock(),
     )
     .map_err(|_| Error("UnstartedReviewIneligible"))?;

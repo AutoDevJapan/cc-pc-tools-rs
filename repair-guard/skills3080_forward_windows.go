@@ -257,6 +257,17 @@ func skillsConsumeCurrent(m skillsManifest, e skillsCreatedEvidence, root string
 		"general_access_granted": false, "original_registry_recovered": false}, ""
 }
 
+func skillsConsumeCreatedCurrent(m skillsManifest, creation skillsRequest, requestSHA string, evidence skillsCreatedEvidence, root string, s *skillsFS, indices []int, current skillsProducer) (object, string) {
+	// The native issuer and the current consuming runtime are distinct. Keep
+	// their exact accepted identities rather than rewriting the old issuance.
+	// This is reached only after skillsReadCreationNative, never from a caller
+	// supplied receipt; the complete manifest/notice/review checks stay above it.
+	if !skillsCreationHeaderBound(evidence, creation, requestSHA, current) || !skillsCreatedBound(evidence, creation, requestSHA, m, evidence.Producer) {
+		return nil, "creation_evidence"
+	}
+	return skillsConsumeAcceptedCurrent(m, evidence, root, s, indices, current)
+}
+
 func skillsConsumeOperation(r skillsRequest, reg skillsRegistry, s *skillsFS) object {
 	fail := func(reason string) object { return object{"qualified": false, "reason": reason} }
 	c := r.Consume
@@ -293,10 +304,10 @@ func skillsConsumeOperation(r skillsRequest, reg skillsRegistry, s *skillsFS) ob
 		return fail("source")
 	}
 	evidence, ok := skillsReadCreationNative(s, creator, *c)
-	if !ok || !skillsCreatedBound(evidence, creation, c.RequestSHA, m, producer) {
+	if !ok {
 		return fail("creation_evidence")
 	}
-	result, reason := skillsConsumeCurrent(m, evidence, skillsCentralRoot, s, c.Indices)
+	result, reason := skillsConsumeCreatedCurrent(m, creation, c.RequestSHA, evidence, skillsCentralRoot, s, c.Indices, producer)
 	if reason != "" {
 		return fail(reason)
 	}
@@ -307,5 +318,6 @@ func skillsConsumeOperation(r skillsRequest, reg skillsRegistry, s *skillsFS) ob
 	}
 	result["manifest_sha256"] = r.ManifestSHA
 	result["native_call_id"] = c.CallID
+	result["runtime_producer"], result["original_producer_revalidated"] = producer, true
 	return result
 }

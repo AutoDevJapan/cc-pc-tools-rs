@@ -60,9 +60,12 @@ PowerShellのprofile・環境上書き・script file・echo・任意JS・別EXE�
 
 信頼境界は既存の正規job登録、canonical native記録、review/CI/通常更新済みの
 既設CLIである。これら自体の改ざんへ対する署名・秘密鍵・恒久権限は追加しない。
-この最小版は発行時と消費時の既設runtime SHA/revisionが同じことを要求する。
-将来のソフト更新後に古い証拠を使う移行は、この版では未実装。任意producer hashの
-自己申告を受け入れる代わりにはしない。これは全出力への本人の禁止ではない。
+発行時と消費時のruntimeは区別する。現在のwriterによる消費でも、登録済みの
+read-only consumerと同じ検証を使い、原native発行元のSHA/revisionが現在の実行物と
+一致するか、独立に受入済みの厳密なsoftware baselineの1組に一致することを要求する。
+原request・writer・manifest・reviewと全作成時IDも引き続き照合し、発行記録のproducerを
+現在値へ書き換えない。未登録SHA、別revision、旧v1/未発行receiptは対象外である。
+これはソフト更新後の正規作成済み出力の消費であり、新しい作成や一般分類へは使わない。
 
 ## 消費requestと実消費
 
@@ -98,6 +101,8 @@ bufferを`files[].content_utf8`として返す。manifestの別copyを使用し�
 
 消費結果は`same_read_buffer_consumed:true`、`creation_id_matches_current:true`、
 `historical_physical_continuity_proven:false`、`current_os_writer:unproved`を区別する。
+`producer`は原native発行元、`runtime_producer`は今回の実行物であり、
+`original_producer_revalidated:true`はその厳密な再照合を示す。単独のboolは資格にならない。
 通常guardのboolや後続の別openの許可票には転用しない。使用者は返却したbufferを
 そのまま用い、pathを再度開いて利用したとは報告しない。
 

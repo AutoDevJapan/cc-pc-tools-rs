@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -47,14 +48,61 @@ func TestPublishedExecutionSnapshotMatchesPinnedEvidenceAndOccurrenceUnits(t *te
 	if !reflect.DeepEqual(s.Stages, expected) || s.Decisions["installed_new_adaptation"] != p.Installed || s.Decisions["integrated_existing"] != p.Integrated || s.Decisions["excluded"] != p.Excluded {
 		t.Fatal("current decisions or hold categories were conflated")
 	}
-	found := false
-	for _, a := range m.Artifacts {
-		if a.File == "skills-3080-sixmile-received50-evaluation.json" {
-			found = a.Rows == 50
+	if err := publishedReceivedCursorCoverage(m.Artifacts); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Every independently registered cohort must participate in the occurrence
+// cursor, even if someone also regenerates a self-consistent smaller summary.
+func publishedReceivedCursorCoverage(artifacts []ExecutionArtifact) error {
+	for _, r := range receivedRegistrations {
+		found := 0
+		for _, a := range artifacts {
+			if a.File == r.Artifact {
+				if a.Rows != r.Spec.Counts["candidates"] {
+					return fmt.Errorf("received cohort cursor count differs: %s", r.ID)
+				}
+				found++
+			}
+		}
+		if found != 1 {
+			return fmt.Errorf("received cohort absent/repeated in cursor: %s", r.ID)
 		}
 	}
-	if !found {
-		t.Fatal("received cohort missing from the whole-catalog cursor")
+	return nil
+}
+
+func TestPublishedCursorCannotOmitAnyRegisteredReceivedCohort(t *testing.T) {
+	var m ExecutionManifest
+	loadPublicReceipt(t, "skills-3080-execution-evidence.json", &m)
+	for _, registration := range receivedRegistrations {
+		for _, kind := range []string{"missing", "wrong_rows", "duplicate"} {
+			t.Run(registration.ID+"/"+kind, func(t *testing.T) {
+				rows := append([]ExecutionArtifact(nil), m.Artifacts...)
+				i := -1
+				for k, r := range rows {
+					if r.File == registration.Artifact {
+						i = k
+						break
+					}
+				}
+				if i < 0 {
+					t.Fatal("registered fixture absent")
+				}
+				switch kind {
+				case "missing":
+					rows = append(rows[:i], rows[i+1:]...)
+				case "wrong_rows":
+					rows[i].Rows--
+				case "duplicate":
+					rows = append(rows, rows[i])
+				}
+				if publishedReceivedCursorCoverage(rows) == nil {
+					t.Fatal("received cursor omission accepted")
+				}
+			})
+		}
 	}
 }
 

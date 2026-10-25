@@ -15,7 +15,7 @@
     },
     {
       "file": "skills-3080-mengto-partial-evaluation.json",
-      "sha256": "2404589f8671c9620faf2801bdf7975a847c8f90c46260ad01da64ac1ddc3265",
+      "sha256": "976b2fb45de5eddffebd54e1f7a340653e943c1dd75445be9987f35a28b181f8",
       "rows": 177
     },
     {
@@ -101,8 +101,8 @@
   ],
   "adoption_ledger": {
     "file": "skills-3080-adoptions.json",
-    "sha256": "33334b999de8e2eef012ba4549da09787e5eb32797f71957aa938eff93bb7753",
-    "rows": 106
+    "sha256": "e0614a2d226d5a487a6e9a2aaad52c4ed3831b0fbeb4a6f5ea9df9af069efd3e",
+    "rows": 126
   },
   "definition": "Assessment record references and existing final decisions only. No semantic/individual licence approval is inherited through equal bytes. The fixed catalog remains the complete occurrence universe; all holds are retained."
 }

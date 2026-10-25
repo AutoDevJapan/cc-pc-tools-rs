@@ -202,7 +202,11 @@ func originalProofs() error {
 	if e != nil || cleanupReference(b) != nil {
 		return errCode("ORIGINAL_CLEANUP_REFERENCE_MISSING")
 	}
-	for _, args := range [][]string{{"remote", "get-url", "origin"}, {"merge-base", "--is-ancestor", sourceHead, "origin/main"}, {"diff", "--quiet", sourceHead, "HEAD", "--", "safe-delete", "cleanup-8h", "Cargo.toml", "Cargo.lock"}, {"diff", "--quiet", "HEAD", "--", "safe-delete", "cleanup-8h", "Cargo.toml", "Cargo.lock"}} {
+	return verifySource(sourceHead, leaves[0].Source)
+}
+
+func verifySource(head, artifact string) error {
+	for _, args := range [][]string{{"remote", "get-url", "origin"}, {"merge-base", "--is-ancestor", head, "origin/main"}, {"diff", "--quiet", head, "HEAD", "--", "safe-delete", "cleanup-8h", "Cargo.toml", "Cargo.lock"}, {"diff", "--quiet", "HEAD", "--", "safe-delete", "cleanup-8h", "Cargo.toml", "Cargo.lock"}} {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		c := exec.CommandContext(ctx, "git", append([]string{"-C", sourceRoot}, args...)...)
 		c.WaitDelay = 2 * time.Second
@@ -216,7 +220,7 @@ func originalProofs() error {
 			return errCode("SOURCE_OWNER_CHANGED")
 		}
 	}
-	i, e := buildinfo.ReadFile(leaves[0].Source)
+	i, e := buildinfo.ReadFile(artifact)
 	if e != nil {
 		return errCode("BUILD_INFO_MISSING")
 	}
@@ -229,7 +233,7 @@ func originalProofs() error {
 			modified = s.Value
 		}
 	}
-	if revision != sourceHead || modified != "false" {
+	if revision != head || modified != "false" {
 		return errCode("BUILD_SOURCE_CHANGED")
 	}
 	return nil
@@ -290,12 +294,31 @@ func renameNoReplace(p *pin, destination string) error {
 		buf[20+i*2] = byte(w)
 		buf[21+i*2] = byte(w >> 8)
 	}
-	ok, _, _ := kernel.NewProc("SetFileInformationByHandle").Call(p.f.Fd(), 3, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+	e = retrySharing(func() error {
+		ok, _, callErr := kernel.NewProc("SetFileInformationByHandle").Call(p.f.Fd(), 3, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+		if ok != 0 {
+			return nil
+		}
+		return callErr
+	}, func() { time.Sleep(25 * time.Millisecond) })
 	runtime.KeepAlive(buf)
-	if ok == 0 {
-		return errCode("RENAME_COLLISION_OR_BUSY")
+	if e != nil {
+		return fmt.Errorf("RENAME_COLLISION_OR_BUSY:%w", e)
 	}
 	return nil
+}
+
+// Windows may briefly hold a reader while scanning a just-written file. Keep
+// the same pinned object and no-replace destination. Only sharing violation
+// gets four finite attempts; collision/permission errors retain immediately.
+func retrySharing(operation func() error, pause func()) error {
+	for attempt := 0; ; attempt++ {
+		e := operation()
+		if !errors.Is(e, syscall.Errno(32)) || attempt == 3 {
+			return e
+		}
+		pause()
+	}
 }
 func copySecurity(from, to *pin) error {
 	var owner, group, dacl, sd uintptr
@@ -326,6 +349,7 @@ type prepared struct {
 	old, new *pin
 	parents  []*pin
 	state    installState
+	suffix   string
 }
 
 type installState struct {
@@ -350,6 +374,12 @@ func namespaceState(path string) string {
 }
 
 func prepare(l leaf) (*prepared, error) {
+	return prepareAt(l, "todo3757")
+}
+func prepareAt(l leaf, suffix string) (*prepared, error) {
+	if suffix != "todo3757" && suffix != "todo3757-native-proof" {
+		return nil, errCode("INVALID_UPDATE_GENERATION")
+	}
 	ps, e := parents(l.Target)
 	if e != nil {
 		return nil, e
@@ -374,20 +404,25 @@ func prepare(l leaf) (*prepared, error) {
 		closePins(ps)
 		return nil, e
 	}
-	p := &prepared{leaf: l, old: old, new: n, parents: ps}
+	p := &prepared{leaf: l, old: old, new: n, parents: ps, suffix: suffix}
 	a, e := old.hash()
 	b, be := n.hash()
 	if e != nil || be != nil || a != l.Old || b != l.New || old.info.FileAttributes&0x10 != 0 || n.info.FileAttributes&0x10 != 0 || old.info.FileSizeHigh != 0 || n.info.FileSizeHigh != 0 {
 		p.close()
 		return nil, errCode("PINNED_BYTES_DIFFER")
 	}
-	if !missing(l.Target+".before-todo3757") || !missing(l.Target+".stage-todo3757") {
+	if !missing(p.backupPath()) || !missing(p.stagePath()) {
 		p.close()
 		return nil, errCode("PREVIOUS_STAGE_RETAINED")
 	}
 	return p, nil
 }
-func (p *prepared) close() { p.old.close(); p.new.close(); closePins(p.parents) }
+func (p *prepared) close()             { p.old.close(); p.new.close(); closePins(p.parents) }
+func (p *prepared) backupPath() string { return p.leaf.Target + ".before-" + p.suffix }
+func (p *prepared) stagePath() string  { return p.leaf.Target + ".stage-" + p.suffix }
+func (p *prepared) result() map[string]any {
+	return map[string]any{"kind": p.leaf.Kind, "updated": p.state.Published, "verified": p.state.Verified, "steps": p.state, "old_sha256": p.leaf.Old, "new_sha256": p.leaf.New, "original_file_id": p.old.id()}
+}
 
 type hooks struct {
 	beforeRetire, beforeRename, beforePublish func()
@@ -401,8 +436,8 @@ func (p *prepared) install(test hooks) error {
 	if test.rename != nil {
 		rename = test.rename
 	}
-	stagePath := p.leaf.Target + ".stage-todo3757"
-	backup := p.leaf.Target + ".before-todo3757"
+	stagePath := p.stagePath()
+	backup := p.backupPath()
 	stage, e := openPin(stagePath, syscall.GENERIC_READ|syscall.GENERIC_WRITE|0x10000|0x40000|0x80000, 1, 1)
 	if e != nil {
 		return e
@@ -514,7 +549,7 @@ func run(apply bool) ([]map[string]any, error) {
 	for _, index := range []int{1, 0} {
 		p := ps[index]
 		e := p.install(hooks{})
-		row := map[string]any{"kind": p.leaf.Kind, "updated": p.state.Published, "verified": p.state.Verified, "steps": p.state, "old_sha256": p.leaf.Old, "new_sha256": p.leaf.New, "original_file_id": p.old.id()}
+		row := p.result()
 		if e != nil {
 			row["retained_reason"] = e.Error()
 			rows = append(rows, row)
@@ -525,12 +560,20 @@ func run(apply bool) ([]map[string]any, error) {
 	return rows, nil
 }
 func main() {
-	if len(os.Args) != 2 || (os.Args[1] != "--check" && os.Args[1] != "--apply") {
+	if len(os.Args) != 2 || (os.Args[1] != "--check" && os.Args[1] != "--apply" && os.Args[1] != "--native-proof-check" && os.Args[1] != "--native-proof-apply") {
 		fmt.Println(`{"qualified":false,"reason":"INVALID_ARGUMENTS"}`)
 		os.Exit(2)
 	}
-	rows, e := run(os.Args[1] == "--apply")
-	r := map[string]any{"domain": "owned-cleanup-software-3757", "source_head": sourceHead, "qualified": e == nil, "results": rows, "data_access_granted": false, "general_guard_changed": false, "at": time.Now().UTC().Format(time.RFC3339Nano)}
+	var rows []map[string]any
+	var e error
+	head := sourceHead
+	if strings.HasPrefix(os.Args[1], "--native-proof-") {
+		head = nativeSourceHead
+		rows, e = refreshNativeProof(os.Args[1] == "--native-proof-apply")
+	} else {
+		rows, e = run(os.Args[1] == "--apply")
+	}
+	r := map[string]any{"domain": "owned-cleanup-software-3757", "source_head": head, "qualified": e == nil, "results": rows, "data_access_granted": false, "general_guard_changed": false, "at": time.Now().UTC().Format(time.RFC3339Nano)}
 	if e != nil {
 		r["reason"] = e.Error()
 	}

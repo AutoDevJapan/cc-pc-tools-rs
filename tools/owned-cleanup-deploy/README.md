@@ -54,3 +54,29 @@ Windowsのfixtureは新旧SHA、元inode/ACL保持、候補/旧版差替え、ha
 前向きslashの本番と同じパス表記、復元成功/失敗の実物配置、公開後の確認失敗を
 fixtureで確認する。Hostedの生security descriptor比較は、内部offset/paddingを除き
 owner/groupのSID・ACL本体・protected状態を厳密に比較するよう修正した。
+
+## 正規実行記録の引用符対応を反映する追加更新
+
+PR496の通常merge後、既存CC-AdminBroker経由で2本を16:54:28 JSTに実更新した。
+旧object/新旧SHA、owner/group/DACL一致とstage不在を読み返し、既存1h清掃も
+16:58:44に実発火して終了0を確認した。データの実回収はこの配布に含めない。
+
+新しいsafe-deleteで作った自分の4096Bの受入データは、元createの正規記録が
+二重引用符の`-Command`形式だったためreleaseがORIGINAL_CREATE_UNVERIFIEDを
+返して保持された。引用符の両形式を受理し、echo/未知shell/複合実行を拒否する
+8b65cb4fのclean buildだけを`--native-proof-check`/`--native-proof-apply`で反映する。
+callerからpath/hash/receiptは受け取らない。これはsoftware更新の追加世代であり、
+データの所有IDごとの例外ではない。
+
+追加世代の旧SHAは、3757自身の元broker成功イベントitem_18の原行と出力SHAに
+固定する。コピーしたreceiptや未知currentから作る基準は使わない。consumerは
+既に配布したSHA7fbc49...のまま保持し、変更されていれば止まる。旧版を
+`.before-todo3757-native-proof`へ別に保持し、最初の`.before-todo3757`を変更しない。
+原イベント・双方のソース・実体・同じ清掃ロックを確認する。元の2本更新の
+`--check`/`--apply`を繰り返したり、途中物を新しい既知値へ昇格させたりしない。
+
+merge後のHosted CIは1件のrenameでRENAME_COLLISION_OR_BUSYを返した。
+元の出力にはnative errorの詳細がなく、その実行のWin32番号は未確定のまま保持する。
+更新処理はWin32のエラー詳細を返し、共有違反32だけを同じ固定handleと宛先で
+最大4回・各25ms待ちで確認する。衝突183、権限5、その他の失敗は直ちに保持する。
+同じ対象の上書き・ハンドルの取り直し・権限緩和・審査拒否の再試行は行わない。

@@ -139,6 +139,16 @@ func reviewAdmissionProducer() obj {
 	return result
 }
 
+// These are exact completed normal API receipts, not requested models. The
+// existing collector independently binds each result SHA/time to its real turn.
+func reviewAdmissionExpectedRoots() []omb3255ExpectedRoot {
+	return []omb3255ExpectedRoot{
+		{"18354623-b5f5-4844-9cbd-7e195fb4e6c5", 1792934743070, 1792934894306, "573cbbd16d50f6923de53b2ba7cec4992687189791548d50bff989b668469135"},
+		{"f62d2ae2-ca93-4009-8ae7-6ce748d00960", 1792934991980, 1792935076088, "3dbbb1b568ad83e0cc30e5e3b75bf77e88199ce4248cd8e6e53c2541b12f478b"},
+		{"9fac998f-4bd0-463d-8916-31efadadeb9b", 1792935161876, 1792935212850, "96d42c846b7eb9828dcf41d44b3cf9955c125f518a713d48360d2c0c9b15f815"},
+	}
+}
+
 func projectReviewAdmission(b []byte) (obj, error) {
 	fail := func(code string) (obj, error) { return nil, errors.New("review_admission_" + code) }
 	if len(b) > reviewMetadataLimit || !utf8.Valid(b) {

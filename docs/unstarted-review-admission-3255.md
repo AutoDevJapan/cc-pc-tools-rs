@@ -26,3 +26,12 @@ producerの版は実際のビルド情報だけから返し、未取得ならuna
 秘密値の非出力、異常入力拒否、読取前の引数拒否を確認すること。
 レビュー・同sourceのCI・通常マージ・生成物と実sourceの照合後にだけ実取得する。
 この読取段階を未起動caseのfallback実装や3649起動の完了にはしない。
+
+## 本差分レビューの実モデル照合
+
+`review-admission-runtime-metadata` は、本機能の完了済みレビュー3実行の固定ID・
+時刻・最終応答SHAと、現在のビルドを読んだ一意な追加レビューだけを対象とする。
+元PR495で受け入れた正常OMB/Codex API対応・同handleのmetadata限定readerを再利用する。
+原17実行の証拠は再取得せず、元のreader入口・固定対象を変更しない。
+本文・path・認証値・未知model値を返さず、設定値をactualmodelへ使わない。
+新しい引数・原nativeの直接読取・一般guard変更・原review再起動は追加しない。

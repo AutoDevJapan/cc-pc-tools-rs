@@ -174,3 +174,38 @@ build or formal CI run is claimed.
 All original 2191/3387/2467 work, holds, prohibitions and dependencies remain with
 their original owners. No new task, AI child/reviewer, Discord message, owner
 question, API key use or new spending is part of this check.
+
+## Owned cleanup and resume handoff
+
+The one safe-delete fixture ownership ID is
+`a660f4360ee6f0dd489d62879d7ccd9f`. All tests and their native processes finished;
+the fixture contains only this check's synthetic files/logs and three synthetic
+junctions. No SDK, original data, or another actor's work is in it. Normal `plan`
+and the prescribed `quarantine --reason windows` both returned exit 2,
+`LINK_OR_REPARSE_POINT`, before a command/move was produced. This is the cleanup
+helper's metadata refusal, not an automatic approval rejection or an OS denial.
+No alternate delete path, registry exemption or guard alteration was attempted.
+
+Metadata measurement without following those junctions found 241 ordinary file
+names, 599 directories, and three reparse entries. Default stream logical bytes
+are 261,917; including file and directory ADS gives **262,013 bytes**. Hardlink
+names are counted separately; this is logical content size, not allocated disk
+space or a promised recovery amount. Recovered bytes are zero. The original owned
+folder remains in place; `finish` was not called because the source still exists.
+
+Parent must retain this one cleanup hold with the original ownership receipt:
+use the existing cleanup/source owner to obtain a normal identity-bound,
+non-following plan for these self-created reparse entries, perform only the
+resulting authorized owned cleanup, then finish that same receipt. Do not delete
+or adopt another root, widen general guard policy, or ask the owner to clean it.
+Owner judgment is not required. The parent quiet-delivers this new hold once as
+part of the requested check result; no Discord message was sent by this check.
+
+The first normal checkpoint call returned `TimeoutError`. Source inspection
+locates this error at scheduler/todo lock acquisition; the response does not
+identify which lock/holder caused it. No shared lock or raw store was opened or
+changed. A later normal `--check` returned `eligible=true`, all eleven checks
+true, no competing worker, and no launch. The final committed HEAD is passed to
+the normal saving call again, with the initial branch kept unchanged. Exact
+requests/results and the final outcome are in this worktree's private
+`todo3893` resume receipt. No task status or permission is changed by this check.

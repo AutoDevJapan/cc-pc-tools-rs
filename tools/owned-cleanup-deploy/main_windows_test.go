@@ -53,7 +53,12 @@ func TestOriginalCleanupReferenceRejectsNewOrAmbiguousEvidence(t *testing.T) {
 
 func fixture(t *testing.T) leaf {
 	t.Helper()
-	root := t.TempDir()
+	// Hosted Windows may expose TEMP through RUNNER~1. Select the canonical
+	// path of our own fixture; production must still reject a physical alias.
+	root, e := filepath.EvalSymlinks(t.TempDir())
+	if e != nil {
+		t.Fatal(e)
+	}
 	l := leaf{"fixture", filepath.Join(root, "candidate.bin"), filepath.Join(root, "current.bin"), sha([]byte("old")), sha([]byte("new verified bytes"))}
 	if e := os.WriteFile(l.Source, []byte("new verified bytes"), 0600); e != nil {
 		t.Fatal(e)

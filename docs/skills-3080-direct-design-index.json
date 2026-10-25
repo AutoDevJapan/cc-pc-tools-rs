@@ -37,6 +37,11 @@
       "file": "skills-3080-remaining3d6-designs.json",
       "sha256": "d2a44bbe5dbcdbf61c4b3d897c1dd9e8efdab6d715a2178b8bb54e2c8072f5d6",
       "target_count": 6
+    },
+    {
+      "file": "skills-3080-webdesign11-designs.json",
+      "sha256": "275703bd7cefa93c6e0e18c87c1a2e1800503861870d0dc906b15f148059250c",
+      "target_count": 11
     }
   ]
 }

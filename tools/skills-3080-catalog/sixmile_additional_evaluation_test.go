@@ -363,6 +363,7 @@ type sixmileCohortIndex struct {
 	Workflow        int    `json:"workflow_primary_full_read"`
 	Masked          int    `json:"masked_workflow_primary"`
 	Metadata        int    `json:"metadata_only_primary"`
+	PrimaryPartial  int    `json:"partial_primary"`
 	Comparison      int    `json:"comparison_only_primary"`
 	NotRaw          int    `json:"primary_not_raw_full_read"`
 	NotCap          *bool  `json:"no_adoption_cap"`
@@ -383,6 +384,8 @@ type sixmileCohortIndex struct {
 		Paths           int    `json:"candidate_paths"`
 		Raw             int    `json:"raw_unmasked_primary_full_read"`
 		Workflow        int    `json:"workflow_primary_full_read"`
+		Metadata        int    `json:"metadata_only_primary"`
+		PrimaryPartial  int    `json:"partial_primary"`
 		Support         int    `json:"support"`
 		Saved           int    `json:"support_saved"`
 		Read            int    `json:"support_raw_unmasked_full_read"`

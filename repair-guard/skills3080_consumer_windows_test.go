@@ -61,6 +61,7 @@ func TestSkills3080LiveConsumerNativeInputPrecedesUse(t *testing.T) {
 			user := func(text string, when time.Time) object {
 				return object{"type": "response_item", "timestamp": when.Format(time.RFC3339Nano), "payload": object{"type": "message", "role": "user", "content": []object{{"type": "input_text", "text": text}}}}
 			}
+			records = append(records, user(skillsBootstrapFixture(cwd, "fixed operating instructions", true), start))
 			if kind == "posthoc_scope" {
 				records = append(records, user("original\n依頼:\nprivate scope", start.Add(time.Millisecond)))
 			}
@@ -78,7 +79,7 @@ func TestSkills3080LiveConsumerNativeInputPrecedesUse(t *testing.T) {
 				stream.Write(b)
 				stream.WriteByte('\n')
 			}
-			p := &skillsNativeResultProof{prompt: []byte(prompt), inputOnly: true, exactInput: true}
+			p := &skillsNativeResultProof{prompt: []byte(prompt), inputOnly: true, exactInput: true, bootstrapSHA: hashBytes([]byte("fixed operating instructions")), cwd: cwd}
 			_, ok := skillsNativeProjectionBound(&stream, id, cwd, start, end, p)
 			if ok != (kind == "valid_without_final") {
 				t.Fatalf("live native %s accepted=%v", kind, ok)

@@ -117,6 +117,7 @@ func skillsBootstrapEnvironment(raw, cwd string) bool {
 	decoder := xml.NewDecoder(strings.NewReader(raw))
 	stack := []string{}
 	counts := map[string]int{}
+	values := map[string]int{}
 	roots := 0
 	parents := map[string]string{"environment_context": "", "cwd": "environment_context", "shell": "environment_context", "current_date": "environment_context", "timezone": "environment_context", "filesystem": "environment_context", "workspace_roots": "filesystem", "root": "workspace_roots", "permission_profile": "filesystem", "file_system": "permission_profile", "entry": "file_system", "special": "entry"}
 	profile, mode := "", ""
@@ -175,6 +176,11 @@ func skillsBootstrapEnvironment(raw, cwd string) bool {
 			if len(stack) == 0 {
 				return false
 			}
+			name := stack[len(stack)-1]
+			values[name]++
+			if name != "root" && values[name] != 1 {
+				return false
+			}
 			switch stack[len(stack)-1] {
 			case "cwd":
 				if !same(value, cwd) {
@@ -213,8 +219,8 @@ func skillsBootstrapEnvironment(raw, cwd string) bool {
 			return false
 		}
 	}
-	fsMode := (profile == "disabled" && mode == "unrestricted" && counts["entry"] == 0 && counts["special"] == 0) || (profile == "managed" && mode == "restricted" && counts["entry"] == 1 && counts["special"] == 1)
-	return len(stack) == 0 && counts["environment_context"] == 1 && counts["cwd"] == 1 && counts["shell"] == 1 && counts["current_date"] == 1 && counts["timezone"] == 1 && roots == 2 && fsMode
+	fsMode := (profile == "disabled" && mode == "unrestricted" && counts["entry"] == 0 && counts["special"] == 0) || (profile == "managed" && mode == "restricted" && counts["entry"] == 1 && counts["special"] == 1 && values["special"] == 1)
+	return len(stack) == 0 && counts["environment_context"] == 1 && counts["cwd"] == 1 && counts["shell"] == 1 && counts["current_date"] == 1 && counts["timezone"] == 1 && values["cwd"] == 1 && values["shell"] == 1 && values["current_date"] == 1 && values["timezone"] == 1 && roots == 2 && fsMode
 }
 
 func skillsBootstrapProjection(input io.Reader, id, cwd string) (string, bool) {

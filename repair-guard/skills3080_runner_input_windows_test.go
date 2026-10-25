@@ -72,7 +72,7 @@ func TestSkills3080StoredScopeAcceptsOnlyNormalRelationAndGuidance(t *testing.T)
 }
 
 func TestSkills3080BootstrapIdentityBindsInstructionsAndEnvironment(t *testing.T) {
-	for _, kind := range []string{"readonly", "implementation", "changed_body", "wrong_cwd", "wrong_header", "extra_text", "private_element", "extra_attribute", "write_grant", "duplicate_cwd", "other_root", "malformed"} {
+	for _, kind := range []string{"readonly", "implementation", "changed_body", "wrong_cwd", "wrong_header", "extra_text", "private_element", "extra_attribute", "write_grant", "duplicate_cwd", "other_root", "malformed", "empty_cwd", "empty_special"} {
 		t.Run(kind, func(t *testing.T) {
 			cwd, body := "D:/CC/Work/synthetic", "fixed owner and project operating instructions"
 			text := skillsBootstrapFixture(cwd, body, kind != "implementation")
@@ -97,6 +97,10 @@ func TestSkills3080BootstrapIdentityBindsInstructionsAndEnvironment(t *testing.T
 				text = strings.Replace(text, "<root>D:/CC</root>", "<root>D:/other</root>", 1)
 			case "malformed":
 				text += "<"
+			case "empty_cwd":
+				text = strings.Replace(text, "<cwd>"+cwd+"</cwd>", "<cwd/>", 1)
+			case "empty_special":
+				text = strings.Replace(text, "<special>:root</special>", "<special/>", 1)
 			}
 			sha, ok := skillsBootstrapIdentity(text, cwd)
 			accepted := ok && sha == hashBytes([]byte(body))
@@ -108,7 +112,7 @@ func TestSkills3080BootstrapIdentityBindsInstructionsAndEnvironment(t *testing.T
 }
 
 func TestSkills3080TypedNativeRejectsEveryUnknownEarlierUser(t *testing.T) {
-	for _, kind := range []string{"valid", "known_origin_bootstrap", "plain_prior_user", "fake_bootstrap", "private_bootstrap_tail", "prior_with_delimiter", "later_user", "unsupported_user_block"} {
+	for _, kind := range []string{"missing_bootstrap", "known_origin_bootstrap", "plain_prior_user", "fake_bootstrap", "private_bootstrap_tail", "prior_with_delimiter", "later_user", "unsupported_user_block"} {
 		t.Run(kind, func(t *testing.T) {
 			start := time.Date(2026, 10, 26, 1, 0, 0, 0, time.UTC)
 			id := "11111111-1111-7111-8111-111111111111"
@@ -148,8 +152,44 @@ func TestSkills3080TypedNativeRejectsEveryUnknownEarlierUser(t *testing.T) {
 			}
 			p := &skillsNativeResultProof{prompt: []byte(prompt), inputOnly: true, exactInput: true, bootstrapSHA: hashBytes([]byte(body)), cwd: cwd}
 			_, ok := skillsNativeProjectionBound(&stream, id, cwd, start, start.Add(time.Minute), p)
-			if ok != (kind == "valid" || kind == "known_origin_bootstrap") {
+			if ok != (kind == "known_origin_bootstrap") {
 				t.Fatalf("typed prior input %s accepted=%v", kind, ok)
+			}
+		})
+	}
+}
+
+func TestSkills3080CallerBootstrapIsIndependentOfTaskWindow(t *testing.T) {
+	for _, kind := range []string{"valid_before_job", "missing_bootstrap", "task_input_only", "changed_bootstrap", "other_session", "other_cwd"} {
+		t.Run(kind, func(t *testing.T) {
+			cwd, id, body := "D:/CC/Work/synthetic", "11111111-1111-7111-8111-111111111111", "fixed operating instructions"
+			metaID, metaCwd := id, cwd
+			if kind == "other_session" {
+				metaID = "22222222-2222-7222-8222-222222222222"
+			}
+			if kind == "other_cwd" {
+				metaCwd = "D:/other"
+			}
+			input := skillsBootstrapFixture(cwd, body, true)
+			if kind == "task_input_only" {
+				input = "exact task input"
+			}
+			if kind == "changed_bootstrap" {
+				input = skillsBootstrapFixture(cwd, "private", true)
+			}
+			records := []object{{"type": "session_meta", "timestamp": "2026-10-24T00:00:00Z", "payload": object{"id": metaID, "cwd": metaCwd}}}
+			if kind != "missing_bootstrap" {
+				records = append(records, object{"type": "response_item", "timestamp": "2026-10-24T00:00:01Z", "payload": object{"type": "message", "role": "user", "content": []object{{"type": "input_text", "text": input}}}})
+			}
+			var stream bytes.Buffer
+			for _, r := range records {
+				b, _ := json.Marshal(r)
+				stream.Write(b)
+				stream.WriteByte('\n')
+			}
+			sha, ok := skillsBootstrapProjection(&stream, id, cwd)
+			if (ok && sha == hashBytes([]byte(body))) != (kind == "valid_before_job") {
+				t.Fatalf("independent bootstrap %s not bound", kind)
 			}
 		})
 	}

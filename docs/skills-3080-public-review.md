@@ -87,6 +87,8 @@ baseでの不在を照合する。baseの宣言が別pathの読取範囲を増�
 ものではない。sessionの初期metadataは再開authorより前のことがあるが、作業の入力と
 finalの開始終了窓を広げる証拠には使わない。運用方針のsnapshotを現在の正本へ
 照合できない場合は保留し、元記録を現在版へ書き換えない。
+caller自身の初期指示は、作業入力の射影より前に独立した必須条件として照合する。
+bootstrapが欠落した記録を、完全一致する作業入力だけで代用することはできない。
 
 公開済みの固定入力は未mergeでもこのread-only経路で確認できる。`main`との
 compareを読取条件にしない。CreateNewは従来どおりmain merge、個別notice、内容review、

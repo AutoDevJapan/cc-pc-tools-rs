@@ -167,6 +167,14 @@ func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof,
 	if !ok {
 		return nil, false
 	}
+	if proof != nil && (proof.inputOnly || proof.exactInput) {
+		// Session bootstrap is independent of the job's task-input window.
+		bootstrap, valid := skillsBootstrapForJob(s, job)
+		if !valid || !skillsDigest(proof.bootstrapSHA) || bootstrap != proof.bootstrapSHA {
+			return nil, false
+		}
+		proof.bootstrapBound = true
+	}
 	return skillsNativeProjectionBound(input, id, str(job["cwd"]), start, end, proof)
 }
 
@@ -221,13 +229,14 @@ func skillsNativeSnapshot(s *skillsFS, job object) (io.Reader, bool) {
 }
 
 type skillsNativeResultProof struct {
-	prompt, body, lastFinal []byte
-	promptAt, finalAt       time.Time
-	finalSHA                string
-	inputOnly               bool
-	exactInput              bool
-	bootstrapSHA, cwd       string
-	userSeen                bool
+	prompt, body, lastFinal       []byte
+	promptAt, finalAt             time.Time
+	finalSHA                      string
+	inputOnly                     bool
+	exactInput                    bool
+	bootstrapSHA, cwd             string
+	userSeen                      bool
+	bootstrapSeen, bootstrapBound bool
 }
 
 func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
@@ -276,6 +285,7 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 		p.userSeen = true
 		if first && skillsDigest(p.bootstrapSHA) {
 			if sha, ok := skillsBootstrapIdentity(text.String(), p.cwd); ok && sha == p.bootstrapSHA {
+				p.bootstrapSeen = true
 				return true
 			}
 		}
@@ -299,6 +309,9 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 }
 
 func (p *skillsNativeResultProof) bound() bool {
+	if (p.inputOnly || p.exactInput) && !p.bootstrapBound && !p.bootstrapSeen {
+		return false
+	}
 	if p.inputOnly {
 		return len(p.prompt) > 0 && !p.promptAt.IsZero()
 	}

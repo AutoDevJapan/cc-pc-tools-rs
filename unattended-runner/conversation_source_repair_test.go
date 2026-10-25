@@ -465,6 +465,9 @@ func TestConversationSourceRepairResumeInNewQualifiedActorJob(t *testing.T) {
 			}
 			repairMutateJob(t, f, "link-worker", func(job map[string]any) {
 				job["status"], job["exit_code"], job["started_at"], job["finished_at"] = "failed", 1, f.r.Now().Add(-time.Minute).Format(time.RFC3339Nano), f.r.Now().Add(-time.Second).Format(time.RFC3339Nano)
+				if published {
+					job["status"], job["exit_code"], job["finished_at"] = "lost", nil, f.r.Now().Add(-time.Second).Format("2006-01-02T15:04:05-0700")
+				}
 			})
 			oldDir := filepath.Join(f.r.JobsPath, "link-worker")
 			newDir := filepath.Join(f.r.JobsPath, "resumed-worker")
@@ -498,7 +501,12 @@ func TestConversationSourceRepairResumeInNewQualifiedActorJob(t *testing.T) {
 			if !bytes.Equal(before, after) {
 				t.Fatal("active-writer rejection changed state")
 			}
-			repairMutateJob(t, f, "link-worker", func(job map[string]any) { job["status"] = "failed" })
+			repairMutateJob(t, f, "link-worker", func(job map[string]any) {
+				job["status"] = "failed"
+				if published {
+					job["status"] = "lost"
+				}
+			})
 			if code, _ := intakeLinkCLI(t, f, args); code != 0 {
 				t.Fatal("new qualified actor could not resume same repair input")
 			}

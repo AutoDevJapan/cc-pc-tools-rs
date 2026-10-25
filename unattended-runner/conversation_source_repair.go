@@ -391,6 +391,11 @@ func (r *Runner) repairPriorActor(ctx context.Context, row *TodoRow, first, curr
 	}
 	job, err := r.repairJob(ctx, row, first)
 	at, timeErr := time.Parse(time.RFC3339Nano, job.Finished)
+	if timeErr != nil && job.Status == "lost" {
+		// The normal scheduler's mark_lost writes a basic numeric UTC offset
+		// (%z), whereas the job runner writes RFC3339. Neither is a local time.
+		at, timeErr = time.Parse("2006-01-02T15:04:05-0700", job.Finished)
+	}
 	return err == nil && timeErr == nil && !at.After(r.Now()) && (job.Status == "succeeded" || job.Status == "failed" || job.Status == "lost" || job.Status == "cancelled")
 }
 

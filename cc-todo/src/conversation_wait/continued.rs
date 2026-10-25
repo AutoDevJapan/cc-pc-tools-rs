@@ -89,6 +89,56 @@ fn original_recipient(wait: &Value, recipient: &Value) -> Result<()> {
     Ok(())
 }
 
+// Metadata may be saved behind a normal finite retry timer. The real row and
+// timer remain untouched; all owner stops and other prerequisites still apply.
+pub(super) fn retry_wait_view(row: &Value, at: DateTime<Utc>) -> Option<Value> {
+    let wait = &row["wait_ready"];
+    let until = wait["not_before"].as_u64()?;
+    if wait["since"].as_u64()? > at.timestamp().try_into().ok()?
+        || !cc_job_policy::todo_wait::retry_due(wait, until)
+    {
+        return None;
+    }
+    let mut view = row.clone();
+    view.as_object_mut()?.remove("wait_ready");
+    Some(view)
+}
+
+/// A later, explicit normal answer may consume this exact parked delivery.
+/// Reuse its proven pending instruction instead of appending the full reply twice.
+pub(super) fn preserved_answer_instruction(
+    row: &Value,
+    id: i64,
+    wait: &Value,
+    answer: &Value,
+    sha: &str,
+    at: DateTime<Utc>,
+) -> Result<Option<String>> {
+    let mut pending = None;
+    for record in records(row)? {
+        if record["preserved_wait"] != true
+            || record["answer"]["request_id"] != answer["request_id"]
+        {
+            continue;
+        }
+        validate_record(record, id, at)?;
+        if record["answer"] != *answer || record["answer_file_sha256"] != sha {
+            return fail("answer_conflict");
+        }
+        if pending.is_some()
+            || record["wait"] != *wait
+            || record["recipient"] != origin_identity(row)
+            || digest(text(row, "note").as_bytes()) != text(record, "note_sha256")
+            || digest(text(&row["scheduler"], "owner_instruction").as_bytes())
+                != text(record, "instruction_sha256")
+        {
+            return fail("preserved_delivery_changed");
+        }
+        pending = Some(text(&row["scheduler"], "owner_instruction").to_owned());
+    }
+    Ok(pending)
+}
+
 /// A reply to a question that was already applied may arrive when no worker was
 /// retired, so the generation can be equal. It can never be older.
 fn answered_generations(wait: &Value, recipient: &Value) -> Result<()> {
@@ -402,7 +452,12 @@ fn deliver_inner(
     }
     // Delivery never releases a clock-based backoff. Preserve it while making
     // the answer reachable before the next worker starts.
-    holds_clear_with(db, row, after_answer || preserve_wait)?;
+    let retry_view = preserve_wait.then(|| retry_wait_view(row, at)).flatten();
+    holds_clear_with(
+        db,
+        retry_view.as_ref().unwrap_or(row),
+        after_answer || preserve_wait,
+    )?;
     owner_clear(paths, row)?;
     let previous = row["note"].as_str().ok_or("conversation_note_invalid")?;
     let data = bytes(note_file)?;

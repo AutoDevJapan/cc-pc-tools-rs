@@ -672,3 +672,142 @@ func TestConversationSourceRepairRejectsHistoricalWaitOrRecipient(t *testing.T) 
 		})
 	}
 }
+
+func TestConversationSourceRepairNativeNormalAnswerConsumesDeliveredTextOnce(t *testing.T) {
+	for _, retry := range []bool{false, true} {
+		t.Run(fmt.Sprint(retry), func(t *testing.T) { sourceRepairNativeNormalAnswer(t, retry) })
+	}
+}
+
+func sourceRepairNativeNormalAnswer(t *testing.T, retry bool) {
+	t.Helper()
+	f := conversationNativeTest(t)
+	f.mutateTodo(t, func(row map[string]any) {
+		row["resume_generation"] = 7
+		row["worker_receipt"] = map[string]any{"job": "worker-42", "generation": 7}
+		row["scheduler"] = map[string]any{"job": "worker-42", "key": "origin-key", "phase": "running"}
+	})
+	f, args, _ := prepareSourceRepairFixture(t, f)
+	var retryWait any
+	if retry {
+		retryWait = map[string]any{"condition": "retry-time", "since": f.r.Now().Add(-120 * time.Second).Unix(), "not_before": f.r.Now().Add(-60 * time.Second).Unix(), "reason": "synthetic finite retry"}
+		f.mutateTodo(t, func(row map[string]any) { row["wait_ready"] = retryWait })
+	}
+	workerPath := filepath.Join(f.r.JobsPath, "worker-42", "job.json")
+	if os.MkdirAll(filepath.Dir(workerPath), 0700) != nil || publish(workerPath, map[string]any{"id": "worker-42", "todo_id": 42, "launch_key": "origin-key", "status": "succeeded", "exit_code": 0}) != nil {
+		t.Fatal("finished original job")
+	}
+	if code, _ := intakeLinkCLI(t, f, args); code != 0 {
+		t.Fatal("initial preserving delivery")
+	}
+	reply := f.replies[0]
+	req := f.r.State.ConversationCaptures[reply.Message]
+	receipt, err := boundedRegular(filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", reply.Message+".json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, answerFile, err := f.r.prepareConversationAnswer(f.q, reply, req, receipt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	row, _ := f.r.conversationTask(context.Background(), 42)
+	scope, err := f.r.conversationScopeFile(row, f.q)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.r.Run(context.Background(), conversationTodo, "question-answer", "42", "--answer-file", answerFile, "--scope-file", scope); err != nil {
+		t.Fatal("normal answer failed", err)
+	}
+	row, _ = f.r.conversationTask(context.Background(), 42)
+	var raw map[string]any
+	if json.Unmarshal(row.conversationState, &raw) != nil {
+		t.Fatal("row")
+	}
+	instruction := raw["scheduler"].(map[string]any)["owner_instruction"].(string)
+	if strings.Count(instruction, "<discord-owner-answer>\n"+reply.Body+"\n</discord-owner-answer>") != 1 {
+		t.Fatal("normal answer duplicated delivered full text")
+	}
+	expectedStatus := "todo"
+	if retry {
+		expectedStatus = "wait"
+	}
+	if len(row.QuestionAnswers) != 1 || len(row.QuestionDeliveries) != 1 || row.Status != expectedStatus || string(row.ResumeGeneration) != "8" {
+		t.Fatal("normal answer did not consume exactly its own wait")
+	}
+	if retry {
+		if canonicalHash(raw["wait_ready"]) != canonicalHash(retryWait) {
+			t.Fatal("answer changed the independent timer")
+		}
+		if _, err := f.r.Run(context.Background(), conversationTodo, "resume-ready", "42", "--condition", "retry-time"); err != nil {
+			t.Fatal("normal due-retry release", err)
+		}
+		current, _ := f.r.todo(42)
+		if current.Status != "todo" {
+			t.Fatal("existing ready entry did not release the due timer")
+		}
+	}
+	before, _ := os.ReadFile(f.r.TodoPath)
+	if code, _ := intakeLinkCLI(t, f, args); code != 0 {
+		t.Fatal("normal answer was not distinguished from a preserving receipt")
+	}
+	f.mutateTodo(t, func(row map[string]any) { row["owner_stopped"] = true; row["status"] = "block" })
+	stopped, _ := os.ReadFile(f.r.TodoPath)
+	// The ordinary audit only observes the prior acceptance; it never answers again.
+	if err := f.r.deliverConversationReply(context.Background(), f.q, reply, req); err != nil {
+		t.Fatal("later stop hid already accepted answer", err)
+	}
+	after, _ := os.ReadFile(f.r.TodoPath)
+	if bytes.Equal(before, stopped) || !bytes.Equal(stopped, after) || req.Phase != "conversation_reply_delivered" {
+		t.Fatal("answer replay changed a later stop or claimed implementation")
+	}
+}
+
+func TestConversationSourceRepairNormalAnswerRequiresBothExactReceipts(t *testing.T) {
+	for _, kind := range []string{"valid", "still-waiting", "answer-domain", "answer-wait", "recipient", "missing-delivery", "answer-before-delivery", "future-answer"} {
+		t.Run(kind, func(t *testing.T) {
+			f, args, _ := sourceRepairFixture(t)
+			if code, _ := intakeLinkCLI(t, f, args); code != 0 {
+				t.Fatal("initial repair")
+			}
+			repairMutateRow(t, f, 42, func(row map[string]any) {
+				delivery := row["owner_question_delivery_receipts"].([]any)[0].(map[string]any)
+				delivery["delivered_at"] = f.r.Now().Format(time.RFC3339Nano)
+				var originalWait map[string]any
+				waitBytes, _ := json.Marshal(delivery["wait"])
+				if json.Unmarshal(waitBytes, &originalWait) != nil {
+					t.Fatal("wait clone")
+				}
+				applied := map[string]any{"domain": "todo-owner-question-answer-receipt-v1", "wait": originalWait, "answer": delivery["answer"], "answer_file_sha256": delivery["answer_file_sha256"], "applied_at": f.r.Now().Format(time.RFC3339Nano)}
+				row["owner_question_answer_receipts"] = []any{applied}
+				delete(row, "owner_question_wait")
+				row["status"] = "todo"
+				switch kind {
+				case "still-waiting":
+					row["owner_question_wait"], row["status"] = originalWait, "block"
+				case "answer-domain":
+					applied["domain"] = "another-receipt"
+				case "answer-wait":
+					originalWait["block_note"] = "another wait"
+				case "recipient":
+					delivery["recipient"] = map[string]any{"resume_generation": 9}
+				case "missing-delivery":
+					delete(row, "owner_question_delivery_receipts")
+				case "answer-before-delivery":
+					applied["applied_at"] = f.r.Now().Add(-time.Second).Format(time.RFC3339Nano)
+				case "future-answer":
+					applied["applied_at"] = f.r.Now().Add(time.Hour).Format(time.RFC3339Nano)
+				}
+			})
+			before, _ := os.ReadFile(f.r.TodoPath)
+			req := f.r.State.ConversationCaptures[f.replies[0].Message]
+			err := f.r.deliverConversationReply(context.Background(), f.q, f.replies[0], req)
+			if (err == nil) != (kind == "valid") {
+				t.Fatal("normal-answer acceptance", kind, err)
+			}
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if !bytes.Equal(before, after) {
+				t.Fatal("receipt observation changed the original task")
+			}
+		})
+	}
+}

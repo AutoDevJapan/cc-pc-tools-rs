@@ -414,6 +414,157 @@ fn original_delivery_rejects_changed_registered_scope_before_writing() {
 }
 
 #[test]
+fn normal_answer_consumes_only_the_exact_preserved_instruction_once() {
+    for change in ["none", "note", "instruction", "wait", "hold"] {
+        let f = Fixture::new();
+        let (_, answer_file, _) = f.park();
+        fs::create_dir(f.paths.jobs.join("original-worker")).unwrap();
+        fs::write(f.paths.jobs.join("original-worker/job.json"), serde_json::to_vec(&json!({"id":"original-worker", "todo_id":1, "launch_key":"original-key", "status":"succeeded"})).unwrap()).unwrap();
+        let before = f.read();
+        assert!(
+            deliver_preserving(&f, &answer_file, &before["items"][0])
+                .status
+                .success()
+        );
+        let mut db = f.read();
+        match change {
+            "note" => {
+                db["items"][0]["note"] = json!(format!(
+                    "{}\nlater note",
+                    db["items"][0]["note"].as_str().unwrap()
+                ))
+            }
+            "instruction" => {
+                db["items"][0]["scheduler"]["owner_instruction"] = json!("later instruction")
+            }
+            "wait" => db["items"][0][WAIT]["previous_note"] = json!("later wait"),
+            "hold" => db["items"][0]["owner_stopped"] = json!(true),
+            _ => (),
+        }
+        f.write(&db);
+        let before = f.raw();
+        let out = f
+            .command(&[
+                "question-answer",
+                "1",
+                "--answer-file",
+                answer_file.to_str().unwrap(),
+            ])
+            .output()
+            .unwrap();
+        if change != "none" {
+            assert!(!out.status.success(), "accepted changed {change}");
+            assert_eq!(f.raw(), before, "changed {change}");
+            continue;
+        }
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let after = f.read();
+        assert_eq!(
+            after["items"][0]["scheduler"]["owner_instruction"]
+                .as_str()
+                .unwrap()
+                .matches("private reply full instruction")
+                .count(),
+            1
+        );
+        assert_eq!(after["items"][0][ANSWERS].as_array().unwrap().len(), 1);
+        assert!(after["items"][0][WAIT].is_null());
+        let before = f.raw();
+        assert!(
+            f.command(&[
+                "question-answer",
+                "1",
+                "--answer-file",
+                answer_file.to_str().unwrap()
+            ])
+            .output()
+            .unwrap()
+            .status
+            .success()
+        );
+        assert_eq!(f.raw(), before, "normal answer replay changed state");
+    }
+}
+
+#[test]
+fn preserved_delivery_and_answer_keep_the_independent_retry_timer() {
+    for condition in ["due", "future", "malformed", "other", "stopped"] {
+        let f = Fixture::new();
+        let (_, answer_file, _) = f.park();
+        fs::create_dir(f.paths.jobs.join("original-worker")).unwrap();
+        fs::write(f.paths.jobs.join("original-worker/job.json"), serde_json::to_vec(&json!({"id":"original-worker", "todo_id":1, "launch_key":"original-key", "status":"succeeded"})).unwrap()).unwrap();
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let mut timer = json!({"condition":"retry-time", "since":now-120, "not_before":now-60,"reason":"synthetic retry"});
+        match condition {
+            "future" => timer["not_before"] = json!(now + 300),
+            "malformed" => timer["not_before"] = json!(now - 121),
+            "other" => timer["condition"] = json!("chatgpt-plus"),
+            _ => (),
+        }
+        let mut db = f.read();
+        db["items"][0]["wait_ready"] = timer.clone();
+        if condition == "stopped" {
+            db["items"][0]["owner_stopped"] = json!(true);
+        }
+        f.write(&db);
+        let before = f.raw();
+        let out = deliver_preserving(&f, &answer_file, &db["items"][0]);
+        if !matches!(condition, "due" | "future") {
+            assert!(!out.status.success(), "accepted {condition}");
+            assert_eq!(f.raw(), before);
+            continue;
+        }
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert_eq!(f.read()["items"][0]["wait_ready"], timer);
+        let out = f
+            .command(&[
+                "question-answer",
+                "1",
+                "--answer-file",
+                answer_file.to_str().unwrap(),
+            ])
+            .output()
+            .unwrap();
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let meta: Value = serde_json::from_slice(&out.stdout).unwrap();
+        assert_eq!(meta["answered"], true);
+        assert_eq!(meta["resumed"], false);
+        let after = f.read();
+        assert!(after["items"][0][WAIT].is_null());
+        assert_eq!(after["items"][0]["wait_ready"], timer);
+        assert_eq!(after["items"][0]["status"], "wait");
+        let out = f
+            .command(&["resume-ready", "1", "--condition", "retry-time"])
+            .output()
+            .unwrap();
+        assert!(out.status.success());
+        let after = f.read();
+        if condition == "due" {
+            assert!(after["items"][0]["wait_ready"].is_null());
+            assert_eq!(after["items"][0]["status"], "todo");
+        } else {
+            assert_eq!(after["items"][0]["wait_ready"], timer);
+            assert_eq!(after["items"][0]["status"], "wait");
+        }
+    }
+}
+
+#[test]
 fn continued_delivery_keeps_prior_instructions_and_future_time_holds_for_the_next_worker() {
     let f = Fixture::new();
     let (answer_file, _) = continued(&f);

@@ -221,7 +221,14 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 		}
 		preserve := len(req.ConversationAttachmentMetadata) != 0
 		if preserve {
-			ready, err := conversationPreservedReplyReady(row, q, answer, b)
+			// A separate explicit normal answer can consume a parked delivery.
+			// Observe both receipts, never issue another answer or call this an
+			// intact wait. A later hold/owner stays outside this historical proof.
+			ready := conversationRepairedAnswerRecorded(row, q, answer, b, r.Now())
+			var err error
+			if !ready {
+				ready, err = conversationPreservedReplyReady(row, q, answer, b)
+			}
 			if err != nil {
 				return err
 			}
@@ -401,6 +408,63 @@ func conversationWaitOwnerUnchanged(row *TodoRow) bool {
 
 func conversationDeliveryRecorded(row *TodoRow, q ConversationQuestion, answer conversationAnswerReceipt, b []byte) bool {
 	return conversationDeliveryRecordedWithMode(row, q, answer, b, false)
+}
+
+// A normal answer is a distinct later operation, proven by its complete canonical
+// receipt and the exact earlier preserved delivery. It cannot prove preservation
+// while that question's wait remains, nor stand for implementation or session read.
+func conversationRepairedAnswerRecorded(row *TodoRow, q ConversationQuestion, answer conversationAnswerReceipt, b []byte, now time.Time) bool {
+	if conversationWaitRecorded(row, q) {
+		return false
+	}
+	matched := 0
+	for _, raw := range row.QuestionAnswers {
+		var applied struct {
+			Domain string                    `json:"domain"`
+			Wait   json.RawMessage           `json:"wait"`
+			Answer conversationAnswerReceipt `json:"answer"`
+			SHA    string                    `json:"answer_file_sha256"`
+			At     string                    `json:"applied_at"`
+		}
+		if json.Unmarshal(raw, &applied) != nil || applied.Domain != "todo-owner-question-answer-receipt-v1" || applied.Answer != answer || applied.SHA != bytesHash(b) {
+			continue
+		}
+		var wait struct {
+			SHA      string          `json:"question_receipt_sha256"`
+			Origin   json.RawMessage `json:"origin"`
+			Question struct {
+				Request string `json:"request_id"`
+			} `json:"question"`
+		}
+		appliedAt, err := time.Parse(time.RFC3339Nano, applied.At)
+		if err != nil || appliedAt.After(now) || json.Unmarshal(applied.Wait, &wait) != nil || wait.SHA != q.ReceiptSHA || wait.Question.Request != q.SenderID || len(wait.Origin) == 0 || string(wait.Origin) == "null" {
+			continue
+		}
+		deliveries := 0
+		for _, saved := range row.QuestionDeliveries {
+			var delivery struct {
+				Domain    string                    `json:"domain"`
+				Preserved bool                      `json:"preserved_wait"`
+				Wait      json.RawMessage           `json:"wait"`
+				Recipient json.RawMessage           `json:"recipient"`
+				Answer    conversationAnswerReceipt `json:"answer"`
+				SHA       string                    `json:"answer_file_sha256"`
+				At        string                    `json:"delivered_at"`
+			}
+			if json.Unmarshal(saved, &delivery) != nil || !delivery.Preserved || delivery.Domain != "todo-owner-question-delivery-receipt-v1" || delivery.Answer != answer || delivery.SHA != bytesHash(b) || canonicalHash(delivery.Wait) != canonicalHash(applied.Wait) || canonicalHash(delivery.Recipient) != canonicalHash(wait.Origin) {
+				continue
+			}
+			deliveredAt, err := time.Parse(time.RFC3339Nano, delivery.At)
+			acquiredAt, acquiredErr := time.Parse(time.RFC3339Nano, answer.Acquired)
+			if err == nil && acquiredErr == nil && !deliveredAt.Before(acquiredAt) && !appliedAt.Before(deliveredAt) {
+				deliveries++
+			}
+		}
+		if deliveries == 1 {
+			matched++
+		}
+	}
+	return matched == 1
 }
 
 // The repair promises an intact original wait, rather than merely a historical

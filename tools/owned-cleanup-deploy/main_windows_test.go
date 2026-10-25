@@ -3,11 +3,11 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
 	"syscall"
 	"testing"
 	"unsafe"
@@ -80,19 +80,45 @@ func content(t *testing.T, path, want string) {
 		t.Fatalf("fixture content mismatch: %v", e)
 	}
 }
-func descriptor(t *testing.T, p *pin) []byte {
+
+type securityView struct {
+	Owner, Group, DACL []byte
+	Protected          bool
+}
+
+func descriptor(t *testing.T, p *pin) securityView {
 	t.Helper()
-	var sd unsafe.Pointer
-	code, _, _ := advapi.NewProc("GetSecurityInfo").Call(p.f.Fd(), 1, 7, 0, 0, 0, 0, uintptr(unsafe.Pointer(&sd)))
+	var owner, group, dacl, sd unsafe.Pointer
+	code, _, _ := advapi.NewProc("GetSecurityInfo").Call(p.f.Fd(), 1, 7, uintptr(unsafe.Pointer(&owner)), uintptr(unsafe.Pointer(&group)), uintptr(unsafe.Pointer(&dacl)), 0, uintptr(unsafe.Pointer(&sd)))
 	if code != 0 {
 		t.Fatal("fixture descriptor read")
 	}
 	defer kernel.NewProc("LocalFree").Call(uintptr(sd))
-	n, _, _ := advapi.NewProc("GetSecurityDescriptorLength").Call(uintptr(sd))
-	if n == 0 || n > 65536 {
-		t.Fatal("fixture descriptor size")
+	sid := func(p unsafe.Pointer) []byte {
+		n, _, _ := advapi.NewProc("GetLengthSid").Call(uintptr(p))
+		if n == 0 || n > 1024 {
+			t.Fatal("fixture SID size")
+		}
+		return append([]byte{}, unsafe.Slice((*byte)(p), int(n))...)
 	}
-	return append([]byte{}, unsafe.Slice((*byte)(sd), int(n))...)
+	var control uint16
+	var revision uint32
+	ok, _, _ := advapi.NewProc("GetSecurityDescriptorControl").Call(uintptr(sd), uintptr(unsafe.Pointer(&control)), uintptr(unsafe.Pointer(&revision)))
+	if ok == 0 {
+		t.Fatal("fixture descriptor control")
+	}
+	var acl []byte
+	if dacl != nil {
+		n := *(*uint16)(unsafe.Add(dacl, 2))
+		if n < 8 {
+			t.Fatal("fixture ACL size")
+		}
+		acl = append([]byte{}, unsafe.Slice((*byte)(dacl), int(n))...)
+	}
+	// Self-relative descriptor offsets/padding and the OS's auto-inherited bit
+	// are not access grants. Compare the exact owner/group SID, ACL and its
+	// protected state rather than unrelated descriptor layout bytes.
+	return securityView{sid(owner), sid(group), acl, control&0x1000 != 0}
 }
 
 func TestPinnedSoftwareUpdatePreservesOldObjectSecurityAndSource(t *testing.T) {
@@ -115,8 +141,9 @@ func TestPinnedSoftwareUpdatePreservesOldObjectSecurityAndSource(t *testing.T) {
 		t.Fatal(e)
 	}
 	defer installed.close()
-	if !bytes.Equal(before, descriptor(t, installed)) {
-		t.Fatal("software ACL/owner/group changed")
+	after := descriptor(t, installed)
+	if !reflect.DeepEqual(before, after) {
+		t.Fatalf("software security changed: owner=%v group=%v ACL=%v protected=%v", reflect.DeepEqual(before.Owner, after.Owner), reflect.DeepEqual(before.Group, after.Group), reflect.DeepEqual(before.DACL, after.DACL), before.Protected == after.Protected)
 	}
 	backup, e := openPin(l.Target+".before-todo3757", 0x80, 5, 3)
 	if e != nil {

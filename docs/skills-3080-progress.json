@@ -1963,5 +1963,33 @@
     "prior_review3839_raw_sha256": "403398e740c64622b5f137ed5ac65afc353a9e681033a0193cc84308d2cdb669",
     "changed_guides_after_review": 2,
     "unchanged_outputs_reused": 65
+  },
+  "webdesign91_next14_adaptation_inputs": {
+    "category_remaining": 91,
+    "parent_primary_full_reads": 40,
+    "parent_primary_bytes": 222238,
+    "parent_support_full_reads": 2,
+    "parent_support_bytes": 5909,
+    "source_slice_ordinal_range": [
+      17,
+      40
+    ],
+    "proposed_new": 14,
+    "proposed_existing_integration": 10,
+    "design": "skills-3080-webdesign-next14-inputs074042.json",
+    "design_sha256": "a2ea5376344db1a378d9de602b637e4c87a685f25ca33f25740f6ee07bec85dd",
+    "operation": "skills-3080-operations/create-webdesign-next14-074042.json",
+    "operation_sha256": "3dd611655a517ac4734c53cdea296cd0f84070c612f0a88ef376880b262df7b5",
+    "in_memory_bundle_sha256": "ece9910122fabb4cd20b003b258d38f0178339bf68f29c2ad0924b677633a960",
+    "in_memory_structure_passed": 14,
+    "copied_author_files": 14,
+    "copied_author_bytes": 86117,
+    "copied_support_files": 0,
+    "new_unique_primary_coverage": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "current_target_absence_or_body_not_checked": true,
+    "previous_illustration14_and_unknown9_and647_preserved": true,
+    "stage": "additional authoring inputs only; no actual placement"
   }
 }

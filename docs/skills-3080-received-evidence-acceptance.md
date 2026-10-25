@@ -229,3 +229,7 @@ PR504で受入済みのmanifest `0510c7e5…` と内容レビュー3843を使い
 実配置記録は `skills-3080-webdesign11-installation-evidence.json` とそのcreate/consume/application/discoveryの固定参照を正本にする。生のhost volume IDを公開せず、検証した実体の同一性hashと元の正規応答hashを保持する。過去からの物理連続性と現在のOS writerは未証明のまま、現在のID・bytesと保証を分ける。
 
 作業版の採否は導入75・統合3・除外14・未判定／保留73,128出現。既読本文の再利用なのでraw585/workflow744/評価746は増やさない。全73,220出現のqueueも更新し、最終採否92、評価済み未採否660、意味・個別許諾の評価待ち71,393、本文未取得428、取得審査保留647を分けた。これらの公開結果差分の別モデルレビュー・CI・mergeと、全16資料の残作業は継続する。
+
+## PR507の実配置11件のWindowsチェックアウトを固定する
+
+head c23781307b32501186bd29ec5882043181f4fcee のCIは、新しい8証拠文書に明示的な改行属性がなく、Windowsのcore.autocrlfでLFがCRLFへ変わり、原本SHAとの照合3テストが失敗した。原本のbytesとGit blobは一致しており、採否・配置・実用結果の変更ではない。対象8文書へtext eol=lfを指定した。core.autocrlf=trueの実checkout-indexで全8文書の原本SHA一致を確認し、失敗した採否・明示適用・進捗を含む関連Goテストは0.164秒で成功した。元CI失敗ログと最初の検証用引数構築失敗も私的記録へ保持した。全CIの最終成功と実配置結果の別モデルレビューは、修正後のheadで確認する。

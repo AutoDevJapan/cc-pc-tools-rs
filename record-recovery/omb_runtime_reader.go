@@ -33,13 +33,22 @@ type omb3255RuntimeDeps struct {
 	Recheck func([]omb3255RuntimeRef) bool
 }
 
+type omb3255RuntimeAcquisition struct {
+	records []omb3255RuntimeRecord
+	state   string
+}
+
 func omb3255InspectRuntime(deps omb3255RuntimeDeps) []omb3255RuntimeRecord {
+	return omb3255InspectRuntimeState(deps).records
+}
+
+func omb3255InspectRuntimeState(deps omb3255RuntimeDeps) omb3255RuntimeAcquisition {
 	if deps.Prepare == nil || deps.Open == nil || deps.Recheck == nil {
-		return nil
+		return omb3255RuntimeAcquisition{state: "dependency_unavailable"}
 	}
 	refs, err := deps.Prepare()
 	if err != nil || !omb3255RuntimeRefsValid(refs) {
-		return nil
+		return omb3255RuntimeAcquisition{state: "normal_binding_unavailable"}
 	}
 	unavailable := make([]omb3255RuntimeRecord, len(refs))
 	for i, ref := range refs {
@@ -47,18 +56,27 @@ func omb3255InspectRuntime(deps omb3255RuntimeDeps) []omb3255RuntimeRecord {
 	}
 	stream, err := deps.Open()
 	if stream == nil {
-		return unavailable
+		return omb3255RuntimeAcquisition{unavailable, "source_open_unavailable"}
 	}
 	if err != nil || !stream.Unchanged() {
 		_ = stream.Close()
-		return unavailable
+		return omb3255RuntimeAcquisition{unavailable, "source_identity_unavailable"}
 	}
 	data, readErr := io.ReadAll(io.LimitReader(stream, (64<<20)+1))
-	observations, valid := omb3255NativeMetadata(data, refs)
+	observations, valid, state := omb3255NativeMetadataState(data, refs)
 	stable := stream.Unchanged() && deps.Recheck(refs)
 	closeErr := stream.Close()
-	if readErr != nil || !valid || !stable || closeErr != nil {
-		return unavailable
+	if readErr != nil {
+		return omb3255RuntimeAcquisition{unavailable, "source_read_unavailable"}
+	}
+	if !valid {
+		return omb3255RuntimeAcquisition{unavailable, state}
+	}
+	if !stable {
+		return omb3255RuntimeAcquisition{unavailable, "source_recheck_unavailable"}
+	}
+	if closeErr != nil {
+		return omb3255RuntimeAcquisition{unavailable, "source_close_unavailable"}
 	}
 	for i, observation := range observations {
 		// Only the production factory's live normal-API admission and the pinned
@@ -69,7 +87,7 @@ func omb3255InspectRuntime(deps omb3255RuntimeDeps) []omb3255RuntimeRecord {
 		}
 		unavailable[i].Observation = observation
 	}
-	return unavailable
+	return omb3255RuntimeAcquisition{unavailable, state}
 }
 
 func omb3255RuntimeRefsValid(refs []omb3255RuntimeRef) bool {
@@ -94,11 +112,24 @@ func omb3255RuntimeRefsValid(refs []omb3255RuntimeRef) bool {
 // This receives one already admitted native handle's bytes, never OMB transport
 // or a caller's requested settings. No native body, file hash or path is emitted.
 func omb3255NativeMetadata(data []byte, refs []omb3255RuntimeRef) ([]omb3255ContextObservation, bool) {
-	if !omb3255RuntimeRefsValid(refs) || len(data) == 0 || len(data) > 64<<20 || data[len(data)-1] != '\n' || !utf8.Valid(data) {
-		return nil, false
+	result, valid, _ := omb3255NativeMetadataState(data, refs)
+	return result, valid
+}
+
+func omb3255NativeMetadataState(data []byte, refs []omb3255RuntimeRef) ([]omb3255ContextObservation, bool, string) {
+	fail := func(state string) ([]omb3255ContextObservation, bool, string) { return nil, false, state }
+	if !omb3255RuntimeRefsValid(refs) {
+		return fail("normal_binding_unavailable")
+	}
+	if len(data) == 0 || len(data) > 64<<20 {
+		return fail("native_size_unavailable")
+	}
+	if data[len(data)-1] != '\n' || !utf8.Valid(data) {
+		return fail("native_encoding_unavailable")
 	}
 	var header []byte
 	selected := make(map[string][]byte)
+	selectedFields := make(map[string]map[string]json.RawMessage)
 	wanted := make(map[string]bool)
 	for _, ref := range refs {
 		wanted[ref.TurnID] = true
@@ -106,7 +137,7 @@ func omb3255NativeMetadata(data []byte, refs []omb3255RuntimeRef) ([]omb3255Cont
 	for len(data) != 0 {
 		end := bytes.IndexByte(data, '\n')
 		if end < 0 || end > 4<<20 {
-			return nil, false
+			return fail("native_line_unavailable")
 		}
 		line := bytes.Trim(data[:end], " \t\r")
 		data = data[end+1:]
@@ -114,40 +145,40 @@ func omb3255NativeMetadata(data []byte, refs []omb3255RuntimeRef) ([]omb3255Cont
 			continue
 		}
 		if !omb3255UniqueContextJSON(line) {
-			return nil, false
+			return fail("native_json_unavailable")
 		}
 		var row map[string]json.RawMessage
 		if json.Unmarshal(line, &row) != nil || row == nil {
-			return nil, false
+			return fail("native_json_unavailable")
 		}
 		var kind string
 		if json.Unmarshal(row["type"], &kind) != nil || kind == "" {
-			return nil, false
+			return fail("native_row_unavailable")
 		}
 		if kind != "session_meta" && kind != "turn_context" {
 			continue
 		}
 		var payload map[string]json.RawMessage
 		if json.Unmarshal(row["payload"], &payload) != nil || payload == nil {
-			return nil, false
+			return fail("native_payload_unavailable")
 		}
 		if kind == "session_meta" {
 			var id string
 			if json.Unmarshal(payload["id"], &id) != nil || id != refs[0].ThreadID {
-				return nil, false
+				return fail("native_identity_unavailable")
 			}
 			header, _ = json.Marshal(map[string]any{"type": kind, "payload": map[string]json.RawMessage{"id": payload["id"]}})
 			continue
 		}
 		var turn string
 		if raw, exists := payload["turn_id"]; exists && json.Unmarshal(raw, &turn) != nil {
-			return nil, false
+			return fail("native_turn_unavailable")
 		}
 		if !wanted[turn] {
 			continue
 		}
-		if header == nil || selected[turn] != nil {
-			return nil, false
+		if header == nil {
+			return fail("native_header_unavailable")
 		}
 		fields := map[string]json.RawMessage{"turn_id": payload["turn_id"]}
 		for _, key := range []string{"model", "effort"} {
@@ -155,16 +186,27 @@ func omb3255NativeMetadata(data []byte, refs []omb3255RuntimeRef) ([]omb3255Cont
 				fields[key] = raw
 			}
 		}
+		if previous := selectedFields[turn]; previous != nil {
+			if bytes.Equal(previous["model"], fields["model"]) && bytes.Equal(previous["effort"], fields["effort"]) {
+				return fail("native_context_repeated")
+			}
+			return fail("native_context_conflicting")
+		}
+		selectedFields[turn] = fields
 		selected[turn], _ = json.Marshal(map[string]any{"type": kind, "timestamp": row["timestamp"], "payload": fields})
 	}
 	if header == nil {
-		return nil, false
+		return fail("native_header_unavailable")
 	}
 	results := make([]omb3255ContextObservation, len(refs))
+	state := "context_unavailable"
 	for i, ref := range refs {
 		metadata := append(append(append([]byte{}, header...), '\n'), selected[ref.TurnID]...)
 		metadata = append(metadata, '\n')
 		results[i] = omb3255ProjectContext(omb3255ContextScope{ref.ThreadID, ref.TurnID, time.UnixMilli(ref.StartedAt), time.UnixMilli(ref.FinishedAt)}, bytes.NewReader(metadata))
+		if results[i].ContextAt != nil {
+			state = "observed"
+		}
 	}
-	return results, true
+	return results, true, state
 }

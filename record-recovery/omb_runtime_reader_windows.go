@@ -201,53 +201,53 @@ func (source *omb3255PinnedRuntime) Unchanged() bool {
 	return before == after && after.NumberOfLinks == 1 && after.FileAttributes&(syscall.FILE_ATTRIBUTE_REPARSE_POINT|syscall.FILE_ATTRIBUTE_DIRECTORY) == 0 && ok && omb3255SamePath(actual, source.path) && omb3255PlainRuntimePath(source.path) && omb3255OwnedHandle(handle)
 }
 
-func omb3255AcquireRuntime() (records []omb3255RuntimeRecord) {
+func omb3255AcquireRuntime() (result omb3255RuntimeAcquisition) {
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
 	revision, commitMS := omb3255BuildIdentity()
 	location, err := os.Getwd()
 	if err != nil || revision == "" || !omb3255SamePath(location, omb3255SourceRoot) {
-		return nil
+		return omb3255RuntimeAcquisition{state: "source_identity_unavailable"}
 	}
 	git := exec.CommandContext(ctx, "git", "-C", omb3255SourceRoot, "rev-parse", "HEAD")
 	hideCommand(git)
 	git.WaitDelay = time.Second
 	head, err := git.Output()
 	if err != nil || strings.TrimSpace(string(head)) != revision {
-		return nil
+		return omb3255RuntimeAcquisition{state: "source_identity_unavailable"}
 	}
 	anchor := filepath.Join(omb3255SourceRoot, "record-recovery", "main.go")
 	sourceGuard, err := omb3255Guard(ctx, anchor)
 	if err != nil || !sourceGuard.codeClear() {
-		return nil
+		return omb3255RuntimeAcquisition{state: "source_guard_unavailable"}
 	}
 	binaryGuard, err := omb3255Guard(ctx, omb3255Codex)
 	if err != nil || !binaryGuard.codeClear() {
-		return nil
+		return omb3255RuntimeAcquisition{state: "binary_guard_unavailable"}
 	}
 	binary, err := omb3255OpenPinnedRuntime(omb3255Codex)
 	if err != nil {
-		return nil
+		return omb3255RuntimeAcquisition{state: "binary_open_unavailable"}
 	}
 	defer func() {
 		stable := binary.Unchanged()
 		closeErr := binary.Close()
 		if !stable || closeErr != nil {
-			records = nil
+			result = omb3255RuntimeAcquisition{state: "binary_identity_unavailable"}
 		}
 	}()
 	hash := sha256.New()
 	size, err := io.Copy(hash, io.LimitReader(binary, 512<<20+1))
 	if err != nil || size <= 0 || size > 512<<20 || hex.EncodeToString(hash.Sum(nil)) != omb3255CodexSHA || !binary.Unchanged() {
-		return nil
+		return omb3255RuntimeAcquisition{state: "binary_identity_unavailable"}
 	}
 	rpc, err := omb3255StartMetadataRPC(ctx)
 	if err != nil {
-		return nil
+		return omb3255RuntimeAcquisition{state: "metadata_reader_unavailable"}
 	}
 	defer func() {
 		if rpc.Close() != nil {
-			records = nil
+			result = omb3255RuntimeAcquisition{state: "metadata_reader_close_unavailable"}
 		}
 	}()
 	var admitted []omb3255RuntimeRef
@@ -267,7 +267,7 @@ func omb3255AcquireRuntime() (records []omb3255RuntimeRecord) {
 		}
 		return omb3255MetadataPurpose(source, tool, native, omb3255RuntimeRefsValid(admitted)) && binary.Unchanged()
 	}
-	return omb3255InspectRuntime(omb3255RuntimeDeps{
+	return omb3255InspectRuntimeState(omb3255RuntimeDeps{
 		Prepare: func() ([]omb3255RuntimeRef, error) {
 			refs, path, err := omb3255CollectRefs(ctx, rpc, revision, commitMS)
 			if err != nil {

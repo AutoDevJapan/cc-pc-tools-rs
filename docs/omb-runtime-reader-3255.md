@@ -6,7 +6,7 @@ PR495の内部coreへ実データを渡すための専用reader。元PR448とPR4
 ## 取得資格
 
 対象は元3255の監査役の固定会話と、元4559から同会話で実施した必要レビューに限る。
-元10実行とreaderの既済3レビュー、計13実行のID・時刻・結果SHAを通常job APIで照合する。
+元10実行とreaderの既済4レビュー、計14実行のID・時刻・結果SHAを通常job APIで照合する。
 最新reader自身の追加レビューは、
 同会話の正常終了結果に、専用markerとreaderの実Git revisionが両方ある一件だけを扱う。
 本文や設定値は取得資格やmodelの代用にしない。
@@ -44,6 +44,11 @@ contextを作らない。別turn・開始前・不明な値で補わず、欠落
 source_qualified/execution_verifiedは通常APIと実原本の照合後だけtrueにできる。
 access_grantedは常にfalseで、呼出側が一般の原本閲覧資格を得る意味ではない。
 取得不能はunavailable。現在設定や別runを過去の実行証明へ昇格させない。
+
+`acquisition_state`は取得・形式・再照合・closeの停止段階を固定enumで返す。
+元のpath/例外文字列/本文は含めず、状態不明はunavailableへ丸める。
+同じturnの重複contextは、model/effortの記録値が同じ場合も異なる場合も拒否したまま、
+理由だけをrepeated/conflictingとして区別する。診断状態で資格や観測値を補完しない。
 
 ## 受入条件
 

@@ -167,7 +167,7 @@ func TestOMB3255NativeMetadataActualFieldsAndBounds(t *testing.T) {
 
 func TestOMB3255RuntimeCLIRefusesArgumentsAndKeepsSchema(t *testing.T) {
 	calls := 0
-	acquire := func() []omb3255RuntimeRecord { calls++; return nil }
+	acquire := func() omb3255RuntimeAcquisition { calls++; return omb3255RuntimeAcquisition{} }
 	for _, args := range [][]string{{"--path"}, {"4559"}, {"--help"}, {"--output", "outside"}} {
 		var out bytes.Buffer
 		if code := runOMB3255RuntimeCLI(args, &out, acquire); code != 2 || out.String() != "{\"code\":\"omb_runtime_metadata_invalid_arguments\",\"ok\":false}\n" {
@@ -185,7 +185,7 @@ func TestOMB3255RuntimeCLIRefusesArgumentsAndKeepsSchema(t *testing.T) {
 	if json.Unmarshal(out.Bytes(), &got) != nil {
 		t.Fatal("bad result JSON")
 	}
-	want := map[string]any{"kind": "omb-review-runtime-metadata-3255", "status": "unavailable", "records": nil, "general_guard_changed": false, "data_access_granted": false}
+	want := map[string]any{"kind": "omb-review-runtime-metadata-3255", "status": "unavailable", "acquisition_state": "unavailable", "records": nil, "general_guard_changed": false, "data_access_granted": false}
 	if !reflect.DeepEqual(got, want) {
 		t.Fatalf("unknown/schema changed: %s", out.String())
 	}
@@ -207,5 +207,44 @@ func TestOMB3255RuntimeMainArguments(t *testing.T) {
 	exit, ok := err.(*exec.ExitError)
 	if !ok || exit.ExitCode() != 2 || string(output) != "{\"code\":\"omb_runtime_metadata_invalid_arguments\",\"ok\":false}\n" {
 		t.Fatalf("main dispatch did not refuse: %s %v", output, err)
+	}
+}
+
+func TestOMB3255RuntimeDiagnosticsAreBoundedAndDoNotGrantProof(t *testing.T) {
+	ref, data := omb3255ReaderFixture()
+	contextLine := strings.Split(data, "\n")[1] + "\n"
+	for _, tc := range []struct{ name, input, state string }{
+		{"positive", data, "observed"},
+		{"invalid json", data + "{private-invalid}\n", "native_json_unavailable"},
+		{"same context", data + contextLine, "native_context_repeated"},
+		{"changed context", data + strings.Replace(contextLine, "gpt-6-luna", "gpt-6.1-sol", 1), "native_context_conflicting"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			stream := &omb3255SyntheticRuntimeStream{Reader: strings.NewReader(tc.input)}
+			result := omb3255InspectRuntimeState(omb3255RuntimeDeps{
+				Prepare: func() ([]omb3255RuntimeRef, error) { return []omb3255RuntimeRef{ref}, nil },
+				Open:    func() (omb3255RuntimeStream, error) { return stream, nil },
+				Recheck: func([]omb3255RuntimeRef) bool { return true },
+			})
+			if result.state != tc.state || stream.closes != 1 || len(result.records) != 1 {
+				t.Fatalf("diagnosis/close mismatch: state=%s close=%d", result.state, stream.closes)
+			}
+			if tc.name != "positive" && result.records[0].Observation != omb3255ContextUnavailable() {
+				t.Fatal("diagnostic returned partial proof")
+			}
+			var out bytes.Buffer
+			runOMB3255RuntimeCLI(nil, &out, func() omb3255RuntimeAcquisition { return result })
+			if strings.Contains(out.String(), "private") || strings.Contains(out.String(), "synthetic-native") {
+				t.Fatal("diagnostic disclosed private source content or native identifiers")
+			}
+		})
+	}
+	var out bytes.Buffer
+	runOMB3255RuntimeCLI(nil, &out, func() omb3255RuntimeAcquisition {
+		return omb3255RuntimeAcquisition{state: "private-path-and-error"}
+	})
+	var decoded map[string]any
+	if json.Unmarshal(out.Bytes(), &decoded) != nil || decoded["acquisition_state"] != "unavailable" || strings.Contains(out.String(), "private") {
+		t.Fatal("unknown diagnostic text escaped")
 	}
 }

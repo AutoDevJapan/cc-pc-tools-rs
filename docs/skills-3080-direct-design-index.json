@@ -27,6 +27,11 @@
       "file": "skills-3080-utility8-designs.json",
       "sha256": "96818107c2c604c5298aeb86c1c7b23ee1b23eb593fcb0f7e4489793701c2951",
       "target_count": 8
+    },
+    {
+      "file": "skills-3080-material-camera8-designs.json",
+      "sha256": "8a9ced2e88f39f7f0c3b159e588eefd2d761fed84836028bac680f398de4b900",
+      "target_count": 8
     }
   ]
 }

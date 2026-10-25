@@ -915,7 +915,7 @@
   "warning_cause_linked": false,
   "new_unique_source_primary_readings": 0,
   "public_result_delta_review_pending_at_recording": true,
-  "public_result_delta_currently_pending": true,
+  "public_result_delta_currently_pending": false,
   "limits": [
     "The prior counts-only discovery did not retain individual new8 rows; the later detailed call proves66unique enabled identities and publishes actual8rows, duplicate0, matching descriptions8.",
     "Actual installed archives/notices and a synthetic2second 320x240/24fps video with two decoded samples accompany bounded data models. Real browser recording/play/full-page pixel content/CSS-RAF runtime/heap are unverified.",
@@ -958,5 +958,15 @@
     "followup_review_pending": true,
     "adoption_row_binding": "Validated source occurrence, source SHA/commit/path, target, entrypoint SHA, installed manifest and evidence; shared by all three purpose deployments.",
     "public_acceptance_test_seconds": 2.19
+  },
+  "public_result_delta_acceptance": {
+    "pr": 491,
+    "head": "2227ba6d69fdc57de6481ce5a6e5323137eeaf9b",
+    "merge": "91c795544b36e15b0cab9ce85d63aebea02f4eb8",
+    "review": 3797,
+    "actual_luna_max": true,
+    "must": 0,
+    "all7_ci_complete": true,
+    "failed": 0
   }
 }

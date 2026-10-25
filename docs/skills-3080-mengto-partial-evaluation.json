@@ -8,7 +8,7 @@
   "entrypoints_expected": 177,
   "entrypoints_fulltext_read": 177,
   "entrypoints_unread": 0,
-  "installed": 18,
+  "installed": 26,
   "integrated": 2,
   "excluded": 0,
   "central_write": 22,
@@ -90,12 +90,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "99f5f0fde214812e597b56671b529e7868d5e5ac"
+      "git_blob": "99f5f0fde214812e597b56671b529e7868d5e5ac",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "c397910d3fc560ca61a31c6382494ac43c866852",
+        "historical_evaluation_sha256": "f849ee0bfe0925532a0f40bd58393a916c403103b940d3d05beb9e03568b3fc2"
+      },
+      "current_installation_evidence": "skills-3080-material-camera8-installation-evidence.json"
     },
     {
       "inventory_id": "github:fab88427bee2bdceb455b105d4cc67286c5137688358e999728494f258e7bd3a",
@@ -315,12 +321,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "fe827ab0fb1ad78f5cfc86d57015212f0bc4145d"
+      "git_blob": "fe827ab0fb1ad78f5cfc86d57015212f0bc4145d",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "c397910d3fc560ca61a31c6382494ac43c866852",
+        "historical_evaluation_sha256": "f849ee0bfe0925532a0f40bd58393a916c403103b940d3d05beb9e03568b3fc2"
+      },
+      "current_installation_evidence": "skills-3080-material-camera8-installation-evidence.json"
     },
     {
       "inventory_id": "github:57934e4f29ef479db656c2b1371bde1c4bc66382e9920b868b0576badda6e0e5",
@@ -379,12 +391,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "fb1830c755d4a46e40067f815f4ff67284498a86"
+      "git_blob": "fb1830c755d4a46e40067f815f4ff67284498a86",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "c397910d3fc560ca61a31c6382494ac43c866852",
+        "historical_evaluation_sha256": "f849ee0bfe0925532a0f40bd58393a916c403103b940d3d05beb9e03568b3fc2"
+      },
+      "current_installation_evidence": "skills-3080-material-camera8-installation-evidence.json"
     },
     {
       "inventory_id": "github:31c71080ac741cb3feeaa3bb3dbb57ac6a76efc26ab8dc75ab5c62cf03075bb1",
@@ -461,12 +479,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "83ee5d94164b8ef13910195405890005e6036de9"
+      "git_blob": "83ee5d94164b8ef13910195405890005e6036de9",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "c397910d3fc560ca61a31c6382494ac43c866852",
+        "historical_evaluation_sha256": "f849ee0bfe0925532a0f40bd58393a916c403103b940d3d05beb9e03568b3fc2"
+      },
+      "current_installation_evidence": "skills-3080-material-camera8-installation-evidence.json"
     },
     {
       "inventory_id": "github:7954413ce35f01682a5e1d2323dbd97230efe385a21df4f86c7040bfa845485c",
@@ -635,7 +659,7 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -643,7 +667,13 @@
         0
       ],
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "a70f649db07daa376364eb273c184b343539667b"
+      "git_blob": "a70f649db07daa376364eb273c184b343539667b",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "c397910d3fc560ca61a31c6382494ac43c866852",
+        "historical_evaluation_sha256": "f849ee0bfe0925532a0f40bd58393a916c403103b940d3d05beb9e03568b3fc2"
+      },
+      "current_installation_evidence": "skills-3080-material-camera8-installation-evidence.json"
     },
     {
       "inventory_id": "github:8d45c064b59f58146ec2cd435cc55a71f835c1936934715b8b4a0cc231aac696",
@@ -802,12 +832,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "d36fb3d21af5f09ee4f8a8ef9892355eda99f45a"
+      "git_blob": "d36fb3d21af5f09ee4f8a8ef9892355eda99f45a",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "c397910d3fc560ca61a31c6382494ac43c866852",
+        "historical_evaluation_sha256": "f849ee0bfe0925532a0f40bd58393a916c403103b940d3d05beb9e03568b3fc2"
+      },
+      "current_installation_evidence": "skills-3080-material-camera8-installation-evidence.json"
     },
     {
       "inventory_id": "github:32b954e6fb09280ec5b99faf879afdbbfdd5c7ca20ccedc3d59ba01b5ad9c856",
@@ -1206,12 +1242,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "69a0d661c0ded474a0d35734e62270e726fbbb3c"
+      "git_blob": "69a0d661c0ded474a0d35734e62270e726fbbb3c",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "c397910d3fc560ca61a31c6382494ac43c866852",
+        "historical_evaluation_sha256": "f849ee0bfe0925532a0f40bd58393a916c403103b940d3d05beb9e03568b3fc2"
+      },
+      "current_installation_evidence": "skills-3080-material-camera8-installation-evidence.json"
     },
     {
       "inventory_id": "github:796ba2120ce77e2b5a8f6eeba65b7e3367cc775594bdb59dbf4cf527094c069a",
@@ -1407,12 +1449,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "7667ae5c0388465d6ca64273791f213f0a0592ee"
+      "git_blob": "7667ae5c0388465d6ca64273791f213f0a0592ee",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "c397910d3fc560ca61a31c6382494ac43c866852",
+        "historical_evaluation_sha256": "f849ee0bfe0925532a0f40bd58393a916c403103b940d3d05beb9e03568b3fc2"
+      },
+      "current_installation_evidence": "skills-3080-material-camera8-installation-evidence.json"
     },
     {
       "inventory_id": "github:77f491d4d72871f2c31152c773d92fe3ee2377d8a0993b9673d562a01250c8e2",
@@ -22254,11 +22302,11 @@
   "amendment_job": "20261024-123649-todo-3080",
   "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts.",
   "current_installation_update": {
-    "evidence": "skills-3080-utility8-installation-evidence.json",
+    "evidence": "skills-3080-material-camera8-installation-evidence.json",
     "added": 8,
-    "current_installed": 18,
+    "current_installed": 26,
     "source_body_reading_and_notice_support_states_unchanged": true,
-    "definition": "Only current installed projection changes; all previous installation updates and original reader/support/rights records are retained."
+    "definition": "Current installation projection only; all earlier source reading/support/rights/installation records retained"
   },
   "previous_installation_updates": [
     {
@@ -22273,6 +22321,13 @@
       "current_installed": 10,
       "source_body_reading_and_notice_support_states_unchanged": true,
       "definition": "Current installation flags only. The previous current projection and original readers/identities/support/rights limitations remain retained."
+    },
+    {
+      "evidence": "skills-3080-utility8-installation-evidence.json",
+      "added": 8,
+      "current_installed": 18,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Only current installed projection changes; all previous installation updates and original reader/support/rights records are retained."
     }
   ]
 }

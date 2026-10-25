@@ -154,7 +154,9 @@ func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	anchor := os.Getenv("CC_3893_FIXTURE_ROOT")
 	if anchor == "" {
-		t.Fatal("set CC_3893_FIXTURE_ROOT to this job's safe-delete-owned synthetic anchor")
+		// Formal CI uses its existing job-owned RUNNER_TEMP through testing.
+		// PC development supplies the normal safe-delete-owned outer anchor.
+		anchor = t.TempDir()
 	}
 	parent, err := os.MkdirTemp(anchor, "case-")
 	if err != nil {
@@ -380,7 +382,7 @@ func TestReceiptTamperPartialSaveExpiryAndResume(t *testing.T) {
 				r.State = Failed
 			case "future":
 				r.Created = f.now.Add(time.Second)
-				r.Expires = r.Created.Add(30 * time.Minute)
+				r.Expires = r.Created.Add(ReceiptLifetime)
 			case "expiry":
 				f.now = r.Expires
 				f.authority.evidence.Observed = f.now
@@ -456,6 +458,25 @@ func TestNativeReplacementLinksStreamsAndUnknownEntries(t *testing.T) {
 				err = os.Rename(f.path(r, "bin"), saved)
 				if err == nil {
 					err = fixtureJunction(f.path(r, "bin"), saved)
+					if err == nil {
+						junction := f.path(r, "bin")
+						t.Cleanup(func() {
+							p, e := syscall.UTF16PtrFromString(junction)
+							if e != nil {
+								t.Error(e)
+								return
+							}
+							attrs, e := syscall.GetFileAttributes(p)
+							if e != nil || attrs&syscall.FILE_ATTRIBUTE_REPARSE_POINT == 0 {
+								t.Error("owned fixture junction changed before unlink")
+								return
+							}
+							// Remove only this self-created link, never its target/tree.
+							if e = syscall.RemoveDirectory(p); e != nil {
+								t.Error(e)
+							}
+						})
+					}
 				}
 			}
 			if err != nil {

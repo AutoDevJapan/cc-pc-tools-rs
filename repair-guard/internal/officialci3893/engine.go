@@ -1,5 +1,6 @@
-// Package officialci3893 is an unconnected, purpose-specific candidate. None of
-// its methods changes the installed guard or qualifies arbitrary existing data.
+// Package officialci3893 is the purpose engine received from the finite check.
+// Live adapters are owned by ordinary implementation 3894. This package never
+// changes general classification or qualifies arbitrary existing data.
 package officialci3893
 
 import (
@@ -13,7 +14,11 @@ import (
 	"time"
 )
 
-const Domain = "todo3387-official-public-ci-3893-v1"
+const Domain = "todo3387-official-public-ci-3894-v1"
+
+// A time bound only limits reuse; current source/actor/CI authority is checked
+// on every operation. The existing provider may wait for a scheduler resource.
+const ReceiptLifetime = 24 * time.Hour
 
 var ErrDenied = errors.New("official CI purpose denied")
 
@@ -23,8 +28,8 @@ type Binding struct {
 	SourceHead, SourceRegistration, AnchorReceipt, CreatorJob string
 	SourceRepoID, RepoID, RunID, JobID                        int64
 	SourceOwner, SourceRepo, Owner                            string
-	ParentTodo, CreatorTodo, PR, Attempt                      int
-	ParentJob, OriginalCreatorJob                             string
+	ParentTodo, CreatorTodo, ProviderTodo, PR, Attempt        int
+	ParentJob, OriginalProviderJob                            string
 	Head, Tree, Labels                                        string
 	Private                                                   bool
 }
@@ -36,8 +41,8 @@ func FixedBinding(sourceHead, registration, anchorReceipt, creatorJob string) Bi
 		RepoID: 1429803672, Owner: "AutoDevJapan", Private: true, PR: 17,
 		Head: "97e157d8b12373bf4c209ce7a0324b4d432ff315", Tree: "2d724295a1a90122b0c69fa948bffc0464e4179a",
 		RunID: 40228177555, Attempt: 1, JobID: 121273999986,
-		Labels: "self-hosted,Windows,X64,todo3339", ParentTodo: 3387, CreatorTodo: 3888,
-		ParentJob: "20261026-040912-todo-3387", OriginalCreatorJob: "20261026-054854-todo-3888",
+		Labels: "self-hosted,Windows,X64,todo3339", ParentTodo: 3387, CreatorTodo: 3894, ProviderTodo: 3888,
+		ParentJob: "20261026-040912-todo-3387", OriginalProviderJob: "20261026-054854-todo-3888",
 	}
 }
 
@@ -57,7 +62,7 @@ func OfficialAsset() Asset {
 
 // Authority must obtain these facts independently from registered self-source,
 // normal ToDo/job lineage and GitHub metadata. A caller's JSON is not evidence.
-// No live implementation is installed by this candidate.
+// The ordinary implementation supplies the live adapter; tests inject fixtures.
 type Evidence struct {
 	Parent                                                   Identity
 	FreshOwnedAnchor                                         bool
@@ -148,7 +153,7 @@ func hexN(s string, n int) bool {
 	return e == nil && hex.EncodeToString(b) == s
 }
 
-// New has no CLI wiring and no default authority, downloader or receipt store.
+// New has no default authority, downloader or receipt store.
 // The only production asset is the fixed official pin. Tests substitute a tiny
 // archive through the unexported fixture constructor.
 func New(b Binding, a Authority, src ArchiveSource, j Journal, fs CreatedFS) (*Engine, error) {
@@ -169,8 +174,11 @@ func (e *Engine) authorize(ctx context.Context) error {
 		return err
 	}
 	o, err := e.authority.Observe(ctx)
+	if err != nil {
+		return err
+	}
 	age := e.now().Sub(o.Observed)
-	if err != nil || o.Binding != e.binding || o.Asset != e.asset || age < 0 || age > time.Minute ||
+	if o.Binding != e.binding || o.Asset != e.asset || age < 0 || age > time.Minute ||
 		!o.SourceVerified || !o.JobVerified || !o.Active || !o.OfficialPublicAsset ||
 		!o.FreshOwnedAnchor || o.Parent != e.fs.ParentIdentity() {
 		return ErrDenied
@@ -213,7 +221,7 @@ func (e *Engine) Construct(ctx context.Context) (Receipt, error) {
 	}
 	created := e.now().UTC()
 	r = Receipt{Domain: Domain, ID: hex.EncodeToString(random[:]), Binding: e.binding, Asset: e.asset,
-		Created: created, Expires: created.Add(30 * time.Minute), State: Pending, Parent: e.fs.ParentIdentity()}
+		Created: created, Expires: created.Add(ReceiptLifetime), State: Pending, Parent: e.fs.ParentIdentity()}
 	if err = e.journal.Reserve(r); err != nil {
 		return r, err
 	}
@@ -267,7 +275,7 @@ func (e *Engine) load(ctx context.Context, id string) (Receipt, error) {
 	now := e.now()
 	if err != nil || r.Domain != Domain || r.ID != id || r.Binding != e.binding || r.Asset != e.asset ||
 		r.State != Complete || r.Created.After(now) || !now.Before(r.Expires) ||
-		r.Expires.Sub(r.Created) != 30*time.Minute || len(r.Files) == 0 || r.Parent != e.fs.ParentIdentity() {
+		r.Expires.Sub(r.Created) != ReceiptLifetime || len(r.Files) == 0 || r.Parent != e.fs.ParentIdentity() {
 		return Receipt{}, ErrDenied
 	}
 	return r, nil

@@ -59,3 +59,34 @@ ToDo. Necessary same-head formal CI, merge, source/binary/hash/ACL comparison an
 normal distribution precede the single real fixed SDK preparation acceptance.
 That original receipt and exact entry point are returned to 3387 and 3888;
 neither the private PR nor the original whole task is completed here.
+
+## CLI and handoff
+
+`scrub391.exe --prepare-official-ci3387` accepts no input or overrides.
+`--verify-official-ci3387 <receipt-id>` rechecks purpose and every public object
+and returns metadata only. `--consume-official-ci3387 <receipt-id>` is restricted
+to the actual registered 3888 actor and returns one programmatic JSON response.
+Its `files` rows use `Name` and base64 `Bytes`; empty public directories use a
+trailing slash in `Name` and null `Bytes`. Never display this bulk response in
+the agent conversation. The provider retains its original normal ownership,
+execution and credential lifecycle. The original SDK root grants no access to
+new registration files or logs created later by a runner.
+
+The one fixed journal is `official-ci3387.creation-v1` in the existing guard's
+metadata directory. It contains authenticated append frames bound to that
+journal's original physical identity, the exact direct normal creator output,
+the original receipt's physical identity, source registration and the SDK
+manifest. Concurrent writers cannot open it. Torn frames are retained and
+refused. A separate exclusive CreateNew consuming marker prevents replay of a
+restored pre-consumption prefix; it is not an authorization grant. An interrupted
+creation is never retried with a second root. Failure metadata distinguishes a
+reserved creator request, returned issuer output, recorded ownership and the
+engine's pending/complete/consuming/consumed/failed states.
+
+Every verification also checks that the pinned run remains the newest run for
+this PR's original workflow. Expiry is fixed at creation plus 24 hours to allow
+normal resource waiting; time never establishes permission. The source, actual
+actor and current CI metadata are rechecked independently on every operation.
+
+Implementation evidence is attached to Issue 526 and its PR. At specification
+time no formal CI, merge, installed update or real SDK acceptance is claimed.

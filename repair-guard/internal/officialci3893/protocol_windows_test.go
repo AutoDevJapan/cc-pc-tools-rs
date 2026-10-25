@@ -136,7 +136,7 @@ func TestReceiptDeadlineUsesOneCreationClockSample(t *testing.T) {
 	var ticks int64
 	f.engine.now = func() time.Time { ticks++; return f.now.Add(time.Duration(ticks) * time.Nanosecond) }
 	r := f.create(t)
-	if r.Expires.Sub(r.Created) != 30*time.Minute {
+	if r.Expires.Sub(r.Created) != ReceiptLifetime {
 		t.Fatal("deadline sampled a second clock")
 	}
 	// A new engine may resume the same complete authenticated receipt. It cannot

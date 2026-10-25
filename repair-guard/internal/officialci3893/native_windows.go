@@ -12,8 +12,8 @@ import (
 	"unsafe"
 )
 
-// NativeFS is used here only beneath the owned synthetic fixture anchor. Live
-// wiring must independently qualify this exact parent identity before NewNativeFS.
+// Live wiring independently qualifies the exact freshly issued owned parent
+// identity before NewNativeFS. Tests use an isolated synthetic owned anchor.
 // It does not classify the parent, adopt an existing root, or issue a data grant.
 type NativeFS struct {
 	parent   string
@@ -38,6 +38,26 @@ func NewNativeFS(parent string, expected Identity) (*NativeFS, error) {
 }
 
 func (fs *NativeFS) ParentIdentity() Identity { return fs.identity }
+
+// Used only immediately after the normal creation issuer returns a new owned
+// anchor. Existing or nonempty anchors are never adopted by live wiring.
+func (fs *NativeFS) EmptyParent() error {
+	p, err := fs.parentPins()
+	if err != nil {
+		return err
+	}
+	defer p.close()
+	f, err := os.Open(fs.parent)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	entries, err := f.ReadDir(1)
+	if len(entries) != 0 || err != io.EOF {
+		return ErrDenied
+	}
+	return nil
+}
 
 type pins struct {
 	files []*os.File
@@ -169,6 +189,10 @@ var kernel32 = syscall.NewLazyDLL("kernel32.dll")
 var findFirstStream = kernel32.NewProc("FindFirstStreamW")
 var findNextStream = kernel32.NewProc("FindNextStreamW")
 
+// Metadata-only adjunct for the independently created receipt/journal files.
+// This is not a file-content or general path authorization API.
+func DefaultStreamOnly(path string) error { return onlyDefaultStream(path) }
+
 func onlyDefaultStream(path string) error {
 	name, err := syscall.UTF16PtrFromString(path)
 	if err != nil {
@@ -262,11 +286,17 @@ func (fs *NativeFS) Install(id string, expected Identity, files []Payload) ([]Fi
 	directories := map[string]*os.File{"": p.last}
 	var records []FileRecord
 	for _, file := range files {
-		if !safeName(file.Name) {
+		directory := strings.HasSuffix(file.Name, "/")
+		name := strings.TrimSuffix(file.Name, "/")
+		if !safeName(name) || (directory && len(file.Bytes) != 0) {
 			return nil, ErrDenied
 		}
-		parts := strings.Split(file.Name, "/")
-		for i := 1; i < len(parts); i++ {
+		parts := strings.Split(name, "/")
+		end := len(parts)
+		if directory {
+			end++
+		}
+		for i := 1; i < end; i++ {
 			name := strings.Join(parts[:i], "/")
 			if directories[name] != nil {
 				continue
@@ -283,6 +313,9 @@ func (fs *NativeFS) Install(id string, expected Identity, files []Payload) ([]Fi
 			}
 			directories[name] = f
 			records = append(records, FileRecord{Name: name, Identity: identity, Directory: true})
+		}
+		if directory {
+			continue
 		}
 		f, err := p.open(filepath.Join(root, filepath.FromSlash(file.Name)), false, true)
 		if err != nil {
@@ -415,6 +448,19 @@ func (fs *NativeFS) WithVerified(r Receipt, use func([]Payload) error) error {
 		opened = append(opened, openedFile{item, f})
 	}
 	var payloads []Payload
+	// Preserve public empty directories too. Nonempty parents are implicit in
+	// file names; an empty directory uses a trailing slash and a nil byte slice.
+	nonempty := map[string]bool{}
+	for _, item := range r.Files {
+		if at := strings.LastIndexByte(item.Name, '/'); at >= 0 {
+			nonempty[item.Name[:at]] = true
+		}
+	}
+	for _, dir := range directories[1:] {
+		if !nonempty[dir] {
+			payloads = append(payloads, Payload{dir + "/", nil})
+		}
+	}
 	for _, item := range opened {
 		b, err := io.ReadAll(io.LimitReader(item.file, item.record.Size+1))
 		if err != nil || int64(len(b)) != item.record.Size || digest(b) != item.record.SHA256 {

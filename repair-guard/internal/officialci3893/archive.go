@@ -82,10 +82,14 @@ func unpack(raw []byte) ([]Payload, error) {
 			}
 			kinds[parent] = true
 		}
+		if len(kinds) > maxEntries {
+			return nil, ErrDenied
+		}
 		if dir {
 			if f.UncompressedSize64 != 0 {
 				return nil, ErrDenied
 			}
+			files = append(files, Payload{name + "/", nil})
 			continue
 		}
 		if f.UncompressedSize64 > maxExpanded || total > maxExpanded-f.UncompressedSize64 {

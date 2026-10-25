@@ -307,6 +307,9 @@ func parseCurrentSuccessionTask(value string) (int, bool) {
 
 func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "Usage of scrub391:")
+	fmt.Fprintln(output, "  --prepare-official-ci3387\n    \tprepare the one fixed official public Windows SDK using normal new ownership")
+	fmt.Fprintln(output, "  --verify-official-ci3387 <receipt-id>\n    \tverify original purpose, identities and public bytes; metadata only")
+	fmt.Fprintln(output, "  --consume-official-ci3387 <receipt-id>\n    \treturn verified public software byte snapshots once to the existing CI provider; no launch")
 	fmt.Fprintln(output, "  -guard-path string")
 	fmt.Fprintln(output, "    \tresource absolute path")
 	fmt.Fprintln(output, "  -verify-product-resume int")
@@ -350,6 +353,9 @@ func verifyCurrentSuccession(taskID int) object {
 }
 
 func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(int) object) int {
+	if official3894Flag(args) {
+		return runOfficial3894CLI(args, stdout, official3894Operation)
+	}
 	if omb3255FlagPresent(args) {
 		return runOMB3255CLI(args, stdout, verifyOMB3255Software)
 	}

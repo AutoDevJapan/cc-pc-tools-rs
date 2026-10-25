@@ -1,0 +1,40 @@
+# 終了済み一般受付と質問回答の競合を1件だけ復旧する（ToDo3853）
+
+## 契約
+
+`conversation source-repair --request-id ID --message-id ID --actor-todo-id N
+--intake-todo-id N --source-sha256 SHA --body-sha256 SHA --revision HEAD`
+は通常runner lease内の有限な保守入口とする。自動探索・全件移管は行わない。
+通常captureのforeign-association拒否と既存source-linkの契約は保持する。
+
+正規senderの現在の質問、版、decision、元ToDoと、Discord APIから新たに取得した
+本人投稿のID/thread/author/作成/編集/本文hash/参照/添付を独立に照合する。
+先行する一般受付の原取得ファイルには通常の保護判定を行い、原bytesと状態内の
+投稿版を照合する。原文のコピーで新しい資格を作らない。
+
+保守担当の登録・実job・仕様・実行prompt・作業場所を確認する。元製品の登録先と
+保守担当の登録先は別でよいが、それぞれ通常の保護判定を通す。一般受付は保守基盤
+の登録先に属し、正常終了した実jobと起動キーを持ち、元ToDoだけへの依存待ちで
+なければならない。実行中・予約中・所有不明の受付は拒否する。
+
+一般受付、原ファイル、一般受付ToDoの仕様・履歴・wait・jobを保つ。専用captureと
+不変のauditを追加し、canonicalが永続化された後に状態を公開する。異なるcanonical
+は置換しない。元製品には既存question-answer/全文instructionだけを渡し、元質問
+以外の停止・依存・担当・世代を変更しない。同版の再呼出しは配送を重複させない。
+保存・配送・実セッションの読取・実反映・製品完成は別の事実とする。
+
+## 受入条件
+
+- 合成投稿で通常captureの拒否と新しい有限入口のRed/Greenを確認する。
+- 別受付、別質問、owner/thread/本文/編集の違い、実行中/予約中の一般受付、Source
+  不成立、canonical衝突では元データとToDoを変更しない。
+- 本文全文、message type、添付メタデータを保ち、メディア取得は既存経路へ任せる。
+- canonical/audit/state/配送の途中失敗と応答紛失後に同じ入力で再開できる。
+- 再起動後のsource-verifyと既に配送済みの再呼出しを確認する。
+- 無関係なforeign-association拒否を弱めず、製品担当を起動しない。
+
+## 今回の実対象
+
+request `normal-ask-841de42d0cb0c1a0bf2345d0e22f7a092097a055260a9d8c743b1f5a3b7e8d6f`、
+message `1563926324979175525`、元2913、一般受付3852、保守担当3853に限定する。
+実対象の本文・秘密・添付はこの文書や公開PRへ出さない。

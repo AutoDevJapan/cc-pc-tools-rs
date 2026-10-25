@@ -63,7 +63,7 @@ fn run() -> io::Result<()> {
             }
             println!(
                 "{}",
-                serde_json::to_string(&cc_chrome::native::open(&dir, &args[1], &args[2])?)?
+                serde_json::to_string(&cc_chrome::native::open_with_receipt(&dir, &args[1], &args[2])?)?
             );
         }
         _ => {

@@ -87,6 +87,6 @@ merge後のHosted CIは1件のrenameでRENAME_COLLISION_OR_BUSYを返した。
 bytes・公開名の実体に分けて記録し、元失敗でどの条件だったかは推測しない。
 追加の実PC診断では、同じvolume/file IDを保持したままrename後のCreationTimeだけが
 変わったことを記録した。公開名の照合は、新しく開いたhandleと保持中handleの
-現在のCreationTimeも一致させる。rename前の時刻を不変なidentityに含めない。
+volume/file IDを照合し、CreationTimeの異なるcacheをidentityに含めない。
 元pinは閉じずに同じfile IDを保持するため、別物への差替えやID再利用は受理しない。
 これは配布補助のstage/backupの照合であり、safe-deleteの原birth受領は変更しない。

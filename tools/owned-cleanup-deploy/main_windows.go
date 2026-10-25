@@ -72,25 +72,33 @@ func (p *pin) at(path string) bool {
 }
 
 func (p *pin) namedAs(path string) bool {
+	return p.verifyName(path) == nil
+}
+
+func (p *pin) verifyName(path string) error {
 	// Reopen the public name while our original pin still excludes writers
 	// and removers. A cached name associated with a renamed handle is not a
 	// namespace lookup; compare the freshly named object's complete identity.
 	named, e := openPin(path, 0x80, 7, 3)
 	if e != nil {
-		return false
+		return fmt.Errorf("NAME_PIN:%w", e)
 	}
 	defer named.close()
 	var current syscall.ByHandleFileInformation
 	if syscall.GetFileInformationByHandle(syscall.Handle(p.f.Fd()), &current) != nil {
-		return false
+		return errCode("HELD_METADATA_READ_FAILED")
 	}
 	physical := func(a, b syscall.ByHandleFileInformation) bool {
 		return a.VolumeSerialNumber == b.VolumeSerialNumber && a.FileIndexHigh == b.FileIndexHigh && a.FileIndexLow == b.FileIndexLow
 	}
 	// The OS can change creation time during rename of this same held file.
 	// The original pin prevents ID reuse; require its volume/file ID to stay
-	// fixed and compare the two current creation times, not a cached timestamp.
-	return physical(current, p.info) && physical(named.info, current) && named.info.CreationTime == current.CreationTime
+	// fixed. Creation time is diagnostic metadata, not additional evidence of
+	// sameness for our already-open object; different handles may cache it.
+	if !physical(current, p.info) || !physical(named.info, current) {
+		return errCode("PUBLIC_VOLUME_OR_FILE_ID_CHANGED")
+	}
+	return nil
 }
 func openPin(path string, access, share, disposition uint32) (*pin, error) {
 	if !filepath.IsAbs(path) || strings.ContainsAny(path, "\x00\r\n") {
@@ -534,12 +542,18 @@ func (p *prepared) install(test hooks) error {
 	if h != p.leaf.New {
 		return errCode("INSTALLED_READBACK_FAILED:BYTES_CHANGED")
 	}
-	if !stage.namedAs(p.leaf.Target) {
-		return errCode("INSTALLED_READBACK_FAILED:PUBLIC_IDENTITY_CHANGED")
+	if e = stage.verifyName(p.leaf.Target); e != nil {
+		return fmt.Errorf("INSTALLED_READBACK_FAILED:PUBLIC_IDENTITY:%w", e)
 	}
 	old, e := p.old.hash()
-	if e != nil || old != p.leaf.Old || !p.old.namedAs(backup) {
-		return errCode("BACKUP_CHANGED")
+	if e != nil {
+		return errCode("BACKUP_CHANGED:READ_ERROR")
+	}
+	if old != p.leaf.Old {
+		return errCode("BACKUP_CHANGED:BYTES_CHANGED")
+	}
+	if e = p.old.verifyName(backup); e != nil {
+		return fmt.Errorf("BACKUP_CHANGED:NAME:%w", e)
 	}
 	p.state.Verified = true
 	return nil

@@ -80,3 +80,13 @@ merge後のHosted CIは1件のrenameでRENAME_COLLISION_OR_BUSYを返した。
 更新処理はWin32のエラー詳細を返し、共有違反32だけを同じ固定handleと宛先で
 最大4回・各25ms待ちで確認する。衝突183、権限5、その他の失敗は直ちに保持する。
 同じ対象の上書き・ハンドルの取り直し・権限緩和・審査拒否の再試行は行わない。
+後のCIでは公開後の確認失敗も検出した。確認を省略せず、rename済みhandleの名前
+だけに依存しないようにした。元pinを保持したまま公開名・backup名を新しく
+メタデータ読取で開き、volume/file IDが保持中の元handleと同じ実体かを照合する。共有write/deleteを
+許可する新しい読取handleも、先に保持したpinの排他を解除しない。確認失敗はread・
+bytes・公開名の実体に分けて記録し、元失敗でどの条件だったかは推測しない。
+追加の実PC診断では、同じvolume/file IDを保持したままrename後のCreationTimeだけが
+変わったことを記録した。公開名の照合は、新しく開いたhandleと保持中handleの
+現在のCreationTimeも一致させる。rename前の時刻を不変なidentityに含めない。
+元pinは閉じずに同じfile IDを保持するため、別物への差替えやID再利用は受理しない。
+これは配布補助のstage/backupの照合であり、safe-deleteの原birth受領は変更しない。

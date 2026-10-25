@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"syscall"
 	"testing"
 	"unsafe"
@@ -310,7 +311,7 @@ func TestSoftwarePublishedButUnverifiedIsNotReportedAsUnchanged(t *testing.T) {
 	}
 	defer p.close()
 	e = p.install(hooks{afterPublish: func(stage *pin) { stage.close() }})
-	if e == nil || e.Error() != "INSTALLED_READBACK_FAILED" || !p.state.Published || p.state.Verified || p.state.PublicName != "present" {
+	if e == nil || !strings.HasPrefix(e.Error(), "INSTALLED_READBACK_FAILED:") || !p.state.Published || p.state.Verified || p.state.PublicName != "present" {
 		t.Fatalf("published result lost: %v %+v", e, p.state)
 	}
 	content(t, l.Target, "new verified bytes")
@@ -330,6 +331,35 @@ func TestSoftwareRenameUsesProductionForwardSlashSpelling(t *testing.T) {
 	}
 	if !p.state.Published || !p.state.Verified || p.state.PublicName != "present" {
 		t.Fatal("successful publication not verified")
+	}
+	if !p.old.namedAs(l.Target+".before-todo3757") || p.old.namedAs(l.Target) {
+		t.Fatal("renamed object/public name identity comparison lost")
+	}
+	content(t, l.Target, "new verified bytes")
+	content(t, l.Target+".before-todo3757", "old")
+}
+
+func TestPublishedIdentityUsesTheSamePinnedObjectAfterCreationTimeChanges(t *testing.T) {
+	l := fixture(t)
+	p, e := prepare(l)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer p.close()
+	changed := false
+	e = p.install(hooks{afterPublish: func(stage *pin) {
+		when := stage.info.CreationTime
+		when.LowDateTime ^= 1
+		if e := syscall.SetFileTime(syscall.Handle(stage.f.Fd()), &when, nil, nil); e != nil {
+			t.Fatal(e)
+		}
+		changed = true
+	}})
+	if e != nil || !changed || !p.state.Verified {
+		t.Fatalf("same published object rejected after timestamp change: %v", e)
+	}
+	if p.old.namedAs(l.Target) {
+		t.Fatal("different public object accepted as the preserved original")
 	}
 	content(t, l.Target, "new verified bytes")
 	content(t, l.Target+".before-todo3757", "old")

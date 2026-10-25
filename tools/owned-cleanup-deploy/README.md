@@ -1,0 +1,37 @@
+# 元3757の既存ソフト2本の配布
+
+既存のsafe-deleteとcleanup-8hだけを更新する有限なGo補助。
+引数は`--check`と`--apply`だけで、callerのpath・hash・manifestを受け付けない。
+一般guard、原保護台帳、清掃対象、既存タスクの設定は変更しない。
+
+原safe-deleteの根拠は元3650の正規成功イベントitem_174を、その原JSON行のSHAで
+固定したもの。Issue471→PR475→元3650をたどって取得し、旧byteの観測から原記録を
+生成していない。cleanupは元2491の原manifestを保持する。候補2本はreview/CI/merge
+済み89f2411のビルドbyteを固定し、Rust候補は自分のCargo出力から単一リンクの
+同byteコピーを用いる。コピーを再ビルドや元の配布証拠とは呼ばない。
+
+通常の検証CLIが当該ソフトを未分類にすることと、元依頼で指定された具体的な
+ソフト更新の審査を分ける。原証拠と対象を設定済みの自動審査へ提示し、受理された
+この用途だけを照合する。一般のデータへ許可を出さず、未分類をclearにしない。
+審査拒否があれば同じ操作を別経路で行わない。
+
+新旧byte、原証拠、ソース、リンク・実体を確認してから更新する。祖先を保持し、
+書込みを共有しない原実体handleを使う。stageとbackupの既存名を上書きせず、
+元実体のrenameと新stageの公開は両方ReplaceIfExists=falseで行う。owner/group/DACLを
+原handleからstageへコピーする。競合名は保持し、未知のcurrentをbackupへ昇格させない。
+旧実体は同じ場所の`.before-todo3757`へ保持する。
+
+既存1h清掃のrun.lockを保持し、cleanup consumer→safe-delete producerの順で更新する。
+2本とも事前照合に成功するまでどちらも変更しない。公開失敗時は元の実体を、名前が
+存在しない場合に限って上書きなしで戻す。途中のstage/backupを自動的に削除しない。
+片方だけ成功した場合もresultsの各状態と全体失敗を分ける。
+
+初回の実読取照合で、safe-deleteは元3650の旧SHAと一致したが、cleanup現用は
+元2491の古いmanifestのSHAに一致しなかった。`--apply`は未実行、実更新は0。
+cleanupの後続配布の原記録を照合し、資格が揃うまで古いpinを変更しない。
+この未一致を、この補助のfixture成功や実物清掃の成功へ読み替えない。
+
+Windowsのfixtureは新旧SHA、元inode/ACL保持、候補/旧版差替え、hardlink、stage/backup、
+退避直前・退避先・公開直前の競合を検証する。nativeの上書きを有効にしたRedで
+競合名を失う2ケースを実測し、上書きなしへ戻したGreenとrace/vetが成功した。
+最初のfixture読取共有modeとvetのpointer表現の誤りは原失敗logに保持した。

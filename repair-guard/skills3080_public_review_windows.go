@@ -380,7 +380,9 @@ func skillsPublicReviewNative(s *skillsFS, job object, spec []byte, finalSHA str
 	if !ok {
 		return nil, false
 	}
-	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA})
+	_, reviewTyped := skillsParsePublicReview(spec)
+	_, consumerTyped := skillsParseConsumer(spec)
+	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA, exactInput: reviewTyped || consumerTyped})
 	if !ok {
 		return nil, false
 	}

@@ -29,7 +29,7 @@ func skillsConsumerFixture() (skillsConsumerScope, skillsWriter, skillsRegistry,
 }
 
 func TestSkills3080LiveConsumerNativeInputPrecedesUse(t *testing.T) {
-	for _, kind := range []string{"valid_without_final", "missing_input", "wrong_input", "posthoc_scope", "later_user", "before_start", "after_observation", "wrong_cwd"} {
+	for _, kind := range []string{"valid_without_final", "missing_input", "wrong_input", "posthoc_scope", "later_user", "before_start", "after_observation", "wrong_cwd", "prefixed_prompt", "suffixed_prompt"} {
 		t.Run(kind, func(t *testing.T) {
 			start := time.Date(2026, 10, 26, 1, 0, 0, 0, time.UTC)
 			end := start.Add(time.Minute)
@@ -40,6 +40,12 @@ func TestSkills3080LiveConsumerNativeInputPrecedesUse(t *testing.T) {
 			at := start.Add(time.Second)
 			if kind == "wrong_input" {
 				input = "private input"
+			}
+			if kind == "prefixed_prompt" {
+				input = "private instruction\n" + prompt
+			}
+			if kind == "suffixed_prompt" {
+				input = prompt + "\nprivate instruction"
 			}
 			if kind == "before_start" {
 				at = start.Add(-time.Second)
@@ -72,7 +78,7 @@ func TestSkills3080LiveConsumerNativeInputPrecedesUse(t *testing.T) {
 				stream.Write(b)
 				stream.WriteByte('\n')
 			}
-			p := &skillsNativeResultProof{prompt: []byte(prompt), inputOnly: true}
+			p := &skillsNativeResultProof{prompt: []byte(prompt), inputOnly: true, exactInput: true}
 			_, ok := skillsNativeProjectionBound(&stream, id, cwd, start, end, p)
 			if ok != (kind == "valid_without_final") {
 				t.Fatalf("live native %s accepted=%v", kind, ok)

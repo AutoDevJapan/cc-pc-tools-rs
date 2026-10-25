@@ -83,7 +83,10 @@ func skillsReceiveTypedRepair(r skillsResultRequest, reg skillsRegistry, s *skil
 	}
 	a := skillsHistoricalResult{Job: r.Job, SpecPath: r.SpecPath, SpecSHA: r.SpecSHA, PromptSHA: hashBytes(prompt), ParentJob: c.Author.Job,
 		Workspace: str(job["cwd"]), LaunchKey: str(job["launch_key"]), Thread: str(job["thread_id"]), Started: str(job["started_at"]), Finished: str(job["finished_at"]), Model: str(job["model"]), Effort: str(job["effort"])}
-	body, native, reason := skillsHistoricalFilesAt(s, skillsJobsRoot, a, spec, job, r.FinalSHA, func(p *skillsNativeResultProof) ([]object, bool) { return skillsHistoricalNative(s, job, p) })
+	body, native, reason := skillsHistoricalFilesAt(s, skillsJobsRoot, a, spec, job, r.FinalSHA, func(p *skillsNativeResultProof) ([]object, bool) {
+		p.exactInput = true
+		return skillsHistoricalNative(s, job, p)
+	})
 	if reason != "" {
 		return out, reason
 	}

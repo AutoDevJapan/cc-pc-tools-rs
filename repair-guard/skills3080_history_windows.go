@@ -210,6 +210,7 @@ type skillsNativeResultProof struct {
 	promptAt, finalAt       time.Time
 	finalSHA                string
 	inputOnly               bool
+	exactInput              bool
 }
 
 func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
@@ -250,9 +251,13 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 			text.WriteString(block.Text)
 		}
 	}
-	if v.Role == "user" && strings.Contains(text.String(), string(p.prompt)) {
+	matched := text.String() == string(p.prompt)
+	if !p.exactInput {
+		matched = strings.Contains(text.String(), string(p.prompt))
+	}
+	if v.Role == "user" && matched {
 		p.promptAt = at
-	} else if v.Role == "user" && ((p.finalSHA != "" && !p.promptAt.IsZero()) || (p.inputOnly && (!p.promptAt.IsZero() || strings.Contains(text.String(), "\n依頼:\n")))) {
+	} else if v.Role == "user" && ((p.finalSHA != "" && !p.promptAt.IsZero()) || ((p.inputOnly || p.exactInput) && (!p.promptAt.IsZero() || strings.Contains(text.String(), "\n依頼:\n")))) {
 		// The typed contract fixes the review's complete user input. An unknown
 		// later user message cannot silently expand that public classification.
 		return false

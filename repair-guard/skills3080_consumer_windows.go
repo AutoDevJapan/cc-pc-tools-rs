@@ -103,7 +103,7 @@ func skillsConsumerNativeInput(s *skillsFS, job object, spec []byte) bool {
 	if !ok {
 		return false
 	}
-	native, ok := skillsNativeWindow(s, job, &skillsNativeResultProof{prompt: prompt, inputOnly: true}, time.Now())
+	native, ok := skillsNativeWindow(s, job, &skillsNativeResultProof{prompt: prompt, inputOnly: true, exactInput: true}, time.Now())
 	if !ok || len(native) == 0 {
 		return false
 	}

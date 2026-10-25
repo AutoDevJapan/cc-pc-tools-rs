@@ -19,9 +19,9 @@ fn hash(v: &Value) -> String {
     crate::product_retry::digest(&serde_json::to_vec(v).unwrap())
 }
 fn norm(v: &Value) -> String {
-    s(v).replace('\\', "/")
-        .trim_end_matches('/')
-        .to_ascii_lowercase()
+    // Registration canonicalizes an existing cwd. Compare the same qualified
+    // physical checkout, including a normal Windows 8.3/verbatim spelling.
+    crate::work_owner::norm(Path::new(s(v)))
 }
 fn empty(v: &Value) -> bool {
     v.is_null() || v.as_array().is_some_and(Vec::is_empty)

@@ -1,7 +1,56 @@
 use super::*;
 use cc_job_policy::initial_review as rule;
 fn setup() -> (Test, subwork_support::Fixture) {
-    let (mut f, _, workspace) = subwork_support::initial_review::planned();
+    setup_path(false)
+}
+fn setup_path(short_alias: bool) -> (Test, subwork_support::Fixture) {
+    let (mut f, source, workspace) = subwork_support::initial_review::fixture();
+    if short_alias {
+        use std::os::windows::ffi::OsStrExt;
+        let path = Path::new(s(&f.db["items"][1]["scheduler"], "worktree"));
+        let wide: Vec<_> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+        let mut buffer = vec![0u16; 32768];
+        let len = unsafe {
+            windows_sys::Win32::Storage::FileSystem::GetShortPathNameW(
+                wide.as_ptr(),
+                buffer.as_mut_ptr(),
+                buffer.len() as u32,
+            )
+        };
+        assert!(len > 0 && (len as usize) < buffer.len());
+        let mut short = String::from_utf16(&buffer[..len as usize]).unwrap();
+        if short.to_lowercase() == path.to_string_lossy().to_lowercase() {
+            // On volumes without new 8.3 names, use a real verbatim spelling.
+            short = fs::canonicalize(path)
+                .unwrap()
+                .to_string_lossy()
+                .into_owned();
+            if short.to_lowercase() == path.to_string_lossy().to_lowercase() {
+                short = short.strip_prefix(r"\\?\").unwrap().to_owned();
+            }
+        }
+        assert_ne!(
+            short.to_lowercase(),
+            path.to_string_lossy().to_lowercase(),
+            "fixture needs a real alternate Windows spelling"
+        );
+        f.db["items"][1]["scheduler"]["worktree"] = json!(short);
+        f.db["items"][1]["scheduler"]["subwork_admission"] =
+            cc_job_policy::subwork::admission(&f.db["items"][1]);
+    }
+    let digest =
+        cc_job_policy::product_retry::digest(&fs::read(s(&f.db["items"][1], "spec")).unwrap());
+    let p = rule::proposal(
+        &f.db["items"][1],
+        &source,
+        &workspace,
+        &digest,
+        &subwork_support::initial_review::health(),
+        true,
+        subwork_support::initial_review::AT,
+    )
+    .unwrap();
+    assert!(rule::apply(&mut f.db["items"][1], &p));
     let t = Test::new();
     *t.rt.epoch_base.lock().unwrap() = Some(subwork_support::initial_review::AT);
     *t.rt.quota_recovery_inventory.lock().unwrap() = subwork_support::initial_review::health();
@@ -20,6 +69,22 @@ fn setup() -> (Test, subwork_support::Fixture) {
     t.put(f.jobs[0].clone());
     save(&t, &f);
     (t, f)
+}
+
+#[test]
+fn normal_registration_accepts_the_same_physical_checkout_through_a_windows_short_alias() {
+    let (t, f) = setup_path(true);
+    register(&t, &f).unwrap();
+    let j = child(&t);
+    assert_eq!(
+        cc_job_policy::work_owner::norm(Path::new(s(&j, "cwd"))),
+        cc_job_policy::work_owner::norm(Path::new(s(&f.db["items"][1]["scheduler"], "worktree")))
+    );
+    assert_eq!(j["model"], "gpt-6-luna");
+    assert_eq!(
+        j["finite_review"]["spec_sha256"],
+        j["initial_review"]["spec_sha256"]
+    );
 }
 fn save(_t: &Test, f: &subwork_support::Fixture) {
     fs::write(f.dir.path().join("todo.json"), f.db.to_string()).unwrap();

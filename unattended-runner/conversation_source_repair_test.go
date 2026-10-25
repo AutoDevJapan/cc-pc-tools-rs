@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -435,5 +436,107 @@ func TestConversationSourceRepairCanonicalComesFromAPIAndKeepsFullMetadata(t *te
 	after, _ := os.ReadFile(filepath.Join(f.r.Config.Home, "unattended-state.json"))
 	if !bytes.Equal(before, after) {
 		t.Fatal("different version modified repaired state")
+	}
+}
+
+func TestConversationSourceRepairResumeInNewQualifiedActorJob(t *testing.T) {
+	for _, published := range []bool{false, true} {
+		t.Run(fmt.Sprint(published), func(t *testing.T) {
+			f, args, _ := sourceRepairFixture(t)
+			state := filepath.Join(f.r.Config.Home, "unattended-state.json")
+			if !published {
+				if os.Rename(state, state+".before") != nil || os.Mkdir(state, 0700) != nil {
+					t.Fatal("save failure")
+				}
+			}
+			code, _ := intakeLinkCLI(t, f, args)
+			if published && code != 0 || !published && code == 0 {
+				t.Fatal("initial call", code)
+			}
+			if !published {
+				if os.Remove(state) != nil || os.Rename(state+".before", state) != nil {
+					t.Fatal("restore")
+				}
+			}
+			linkPath := filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", f.replies[0].Message+".intake-link.json")
+			linkBefore, err := os.ReadFile(linkPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			repairMutateJob(t, f, "link-worker", func(job map[string]any) {
+				job["status"], job["exit_code"], job["started_at"], job["finished_at"] = "failed", 1, f.r.Now().Add(-time.Minute).Format(time.RFC3339Nano), f.r.Now().Add(-time.Second).Format(time.RFC3339Nano)
+			})
+			oldDir := filepath.Join(f.r.JobsPath, "link-worker")
+			newDir := filepath.Join(f.r.JobsPath, "resumed-worker")
+			if os.Mkdir(newDir, 0700) != nil {
+				t.Fatal("new job")
+			}
+			prompt, err := os.ReadFile(filepath.Join(oldDir, "prompt.md"))
+			if err != nil || os.WriteFile(filepath.Join(newDir, "prompt.md"), prompt, 0600) != nil {
+				t.Fatal("new prompt")
+			}
+			if publish(filepath.Join(newDir, "job.json"), map[string]any{"id": "resumed-worker", "todo_id": 43, "project": "cc-pc-tools-rs", "registered_cwd": f.r.Config.Home, "cwd": f.r.Config.Home, "launch_key": "resume-key", "status": "running"}) != nil {
+				t.Fatal("new job")
+			}
+			repairMutateRow(t, f, 43, func(row map[string]any) {
+				row["jobs"] = []string{"link-worker", "resumed-worker"}
+				row["scheduler"].(map[string]any)["job"] = "resumed-worker"
+				row["scheduler"].(map[string]any)["key"] = "resume-key"
+			})
+			t.Setenv("CC_JOB_ID", "resumed-worker")
+			var restarted State
+			if readJSON(state, maxState, &restarted) != nil {
+				t.Fatal("restart")
+			}
+			f.r.State = &restarted
+			repairMutateJob(t, f, "link-worker", func(job map[string]any) { job["status"] = "running" })
+			before, _ := os.ReadFile(state)
+			if code, _ := intakeLinkCLI(t, f, args); code == 0 {
+				t.Fatal("resumed actor borrowed a still-running first association writer")
+			}
+			after, _ := os.ReadFile(state)
+			if !bytes.Equal(before, after) {
+				t.Fatal("active-writer rejection changed state")
+			}
+			repairMutateJob(t, f, "link-worker", func(job map[string]any) { job["status"] = "failed" })
+			if code, _ := intakeLinkCLI(t, f, args); code != 0 {
+				t.Fatal("new qualified actor could not resume same repair input")
+			}
+			linkAfter, _ := os.ReadFile(linkPath)
+			if !bytes.Equal(linkBefore, linkAfter) {
+				t.Fatal("original audit writer was replaced")
+			}
+			row, _ := f.r.todo(42)
+			if len(row.QuestionAnswers) != 1 || strings.Count(row.Note, "<discord-owner-answer>") != 1 {
+				t.Fatal("new actor repeated delivery")
+			}
+		})
+	}
+}
+
+func TestConversationSourceRepairPollRejectsChangedAttachmentMetadata(t *testing.T) {
+	f, args, _ := sourceRepairFixture(t)
+	if code, _ := intakeLinkCLI(t, f, args); code != 0 {
+		t.Fatal("initial repair")
+	}
+	state, _ := os.ReadFile(filepath.Join(f.r.Config.Home, "unattended-state.json"))
+	todo, _ := os.ReadFile(f.r.TodoPath)
+	repairLiveFixture(t, f, func(post map[string]any) {
+		post["attachments"].([]any)[0].(map[string]any)["filename"] = "edited-with-same-body-and-time.png"
+	})
+	proof, err := f.r.conversationProof(context.Background(), f.q)
+	if err != nil {
+		t.Fatal(err)
+	}
+	index, err := f.r.loadConversations()
+	if err != nil {
+		t.Fatal(err)
+	}
+	health := Health{}
+	f.r.processConversationReplies(context.Background(), index, f.q.RequestID, f.q, proof, &health)
+	afterState, _ := os.ReadFile(filepath.Join(f.r.Config.Home, "unattended-state.json"))
+	afterTodo, _ := os.ReadFile(f.r.TodoPath)
+	if len(health.Errors) == 0 || !bytes.Equal(state, afterState) || !bytes.Equal(todo, afterTodo) {
+		t.Fatal("ordinary poll treated changed metadata as the old delivered version", health.Errors)
 	}
 }

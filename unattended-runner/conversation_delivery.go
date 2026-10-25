@@ -87,6 +87,9 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 		}
 	}
 	old := r.conversationRequest(reply.Message)
+	if old != nil && old.Conversation == q.RequestID && len(old.ConversationAttachmentMetadata) != 0 && !r.repairLiveMetadata(ctx, q, old) {
+		return nil, errors.New("conversation repaired source version differs")
+	}
 	if old == nil || (old.Conversation == q.RequestID && old.Todo == 0 && old.Phase == "conversation_capture_pending") {
 		path := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".json")
 		if _, statErr := os.Lstat(path); !os.IsNotExist(statErr) {
@@ -123,11 +126,6 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 		return nil, errors.New("conversation existing receipt association differs")
 	}
 	if old != nil && old.Conversation == q.RequestID && (old.Text != reply.Body || old.Edited != live.Edited) {
-		// The explicit finished-intake repair fixes one exact owner-post version.
-		// A later edit cannot replace its immutable API capture through polling.
-		if len(old.ConversationAttachmentMetadata) != 0 {
-			return nil, errors.New("conversation repaired source version differs")
-		}
 		if old.ConversationSourceGeneration != "" || old.Phase == "conversation_implementation_recorded" {
 			return nil, errors.New("conversation source generation reacquisition required")
 		}

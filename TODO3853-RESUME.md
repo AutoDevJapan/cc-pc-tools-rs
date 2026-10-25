@@ -29,3 +29,18 @@
   原bytesのhashを確認したと主張しない。既存source-linkのrawSHA契約は変更しない。
 - 共通Source資格は元製品の登録rootで通常refresh成功を確認した。作業場所のSource資格を
   コピーや例外登録で作らない。個別の非Source内部記録は一般guardの許可対象へ広げない。
+
+## 固定版レビューと追加修正
+
+- PR515。2fe29625に対する通常CIを開始済み。関連race 24.550sとvetが成功。
+- 最初のレビュー3855はAnthropic OAuthが100%のため未起動。OpenAI OAuthを正規refreshし、
+  健康な未消費4枠を確認。既存catalogの別モデルgpt-6-sol/maxで3856を通常登録した。
+  3855は3856への依存wait。直接の子ジョブ起動はしていない。
+- 3856はjob20261026-011308-todo-3856、read-only、実native turn_contextもgpt-6-sol/max。
+  2fe29625の指定11ファイルを読了し、Must1（別jobでの再開）とSuggestion1（通常巡回の
+  添付metadataだけの変化）を返した。実データ・配布・実反映を確認したレビューではない。
+- 別jobの再開は新たなRedで状態公開前/後とも失敗を確認して修正。最初の関連記録は
+  不変に保ち、現在の正規actorと古いactorの履歴・終了を独立に確認する。旧actorがまだ
+  runningなら拒否する。追加したraceテストは成功。通常巡回のmetadata照合も追加中。
+- 次はこの追加差分の読取レビュー、変更した最終候補のCI、既存手順のhash/原子更新。
+  実投稿のcanonical作成と配送はまだ行っていない。管理chatの同じ指定キーへmetadataを保存済み。

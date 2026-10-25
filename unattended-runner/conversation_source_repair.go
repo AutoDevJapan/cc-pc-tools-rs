@@ -303,6 +303,25 @@ func (r *Runner) conversationSourceRepair(ctx context.Context, opts conversation
 	snapshot, _ := json.Marshal(old)
 	link := conversationIntakeLinkReceipt{Domain: conversationRepairDomain, Request: q.RequestID, Origin: q.Todo, Intake: opts.IntakeTodo, Actor: opts.Todo, Job: job.ID, Revision: opts.Revision, Message: reply.Message, QuestionSHA: q.ReceiptSHA, OrdinarySHA: ordinaryVersion(old), IntakeSHA: bytesHash(snapshot), CaptureSHA: bytesHash(b), RepairSHA: bytesHash(auditBytes)}
 	linkBytes, _ := json.Marshal(link)
+	linkPath := filepath.Join(dir, reply.Message+".intake-link.json")
+	firstBytes, firstMissing, err := conversationCloseRead(linkPath, 1<<20)
+	if err != nil {
+		return nil, errImplementation
+	}
+	if !firstMissing {
+		var first conversationIntakeLinkReceipt
+		if json.Unmarshal(firstBytes, &first) != nil {
+			return nil, errImplementation
+		}
+		expected := link
+		expected.Job = first.Job
+		if canonicalHash(first) != canonicalHash(expected) || !r.repairPriorActor(ctx, actor, first.Job, job.ID) {
+			return nil, errImplementation
+		}
+		// The first writer's audit survives a crash. A newly qualified regular
+		// job may finish the same input, but cannot rewrite the first writer.
+		link, linkBytes = first, firstBytes
+	}
 	if previous := r.State.ConversationCaptures[reply.Message]; previous != nil && (previous.Conversation != q.RequestID || previous.ConversationIntakeLinkSHA != bytesHash(linkBytes) || ordinaryVersion(previous) != ordinaryVersion(capture) || previous.Context != capture.Context || previous.Acquired != capture.Acquired) {
 		return nil, errImplementation
 	}
@@ -325,7 +344,7 @@ func (r *Runner) conversationSourceRepair(ctx context.Context, opts conversation
 	for _, file := range []struct {
 		path string
 		data []byte
-	}{{path, b}, {auditPath, auditBytes}, {filepath.Join(dir, reply.Message+".intake-"+link.IntakeSHA+".json"), snapshot}, {filepath.Join(dir, reply.Message+".intake-capture-"+link.CaptureSHA+".json"), b}, {filepath.Join(dir, reply.Message+".intake-link.json"), linkBytes}} {
+	}{{path, b}, {auditPath, auditBytes}, {filepath.Join(dir, reply.Message+".intake-"+link.IntakeSHA+".json"), snapshot}, {filepath.Join(dir, reply.Message+".intake-capture-"+link.CaptureSHA+".json"), b}, {linkPath, linkBytes}} {
 		if safeText(string(file.data), r.Token) != string(file.data) || writeConversationOnce(file.path, file.data) != nil {
 			return nil, errImplementation
 		}
@@ -353,7 +372,26 @@ func (r *Runner) conversationSourceRepair(ctx context.Context, opts conversation
 	if err := r.deliverConversationReply(ctx, q, reply, capture); err != nil {
 		return nil, err
 	}
-	return map[string]any{"domain": conversationRepairDomain, "linked": true, "canonical_current": true, "request_id": q.RequestID, "message_id": reply.Message, "origin_todo_id": q.Todo, "intake_todo_id": opts.IntakeTodo, "actor_todo_id": opts.Todo, "ordinary_intake_retained": true, "source_receipt_sha256": stamp.SourceSHA, "reply_sha256": stamp.ReplySHA, "repair_audit_sha256": link.RepairSHA, "application_inferred": false}, nil
+	return map[string]any{"domain": conversationRepairDomain, "linked": true, "canonical_current": true, "request_id": q.RequestID, "message_id": reply.Message, "origin_todo_id": q.Todo, "intake_todo_id": opts.IntakeTodo, "actor_todo_id": opts.Todo, "actor_job_id": job.ID, "association_writer_job_id": link.Job, "ordinary_intake_retained": true, "source_receipt_sha256": stamp.SourceSHA, "reply_sha256": stamp.ReplySHA, "repair_audit_sha256": link.RepairSHA, "application_inferred": false}, nil
+}
+
+func (r *Runner) repairPriorActor(ctx context.Context, row *TodoRow, first, current string) bool {
+	if first == current {
+		return true
+	}
+	listed := false
+	for _, raw := range row.Jobs {
+		var id string
+		if json.Unmarshal(raw, &id) == nil && id == first {
+			listed = true
+		}
+	}
+	if !listed {
+		return false
+	}
+	job, err := r.repairJob(ctx, row, first)
+	at, timeErr := time.Parse(time.RFC3339Nano, job.Finished)
+	return err == nil && timeErr == nil && !at.After(r.Now()) && (job.Status == "succeeded" || job.Status == "failed" || job.Status == "lost" || job.Status == "cancelled")
 }
 
 func (r *Runner) conversationRepairRetained(q ConversationQuestion, req *Request, link conversationIntakeLinkReceipt) bool {

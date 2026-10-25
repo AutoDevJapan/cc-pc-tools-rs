@@ -26,6 +26,9 @@ Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/513
 は置換しない。元製品には既存question-answer/全文instructionだけを渡し、元質問
 以外の停止・依存・担当・世代を変更しない。同版の再呼出しは配送を重複させない。
 保存・配送・実セッションの読取・実反映・製品完成は別の事実とする。
+クラッシュ後に保守担当のjobが変わっても、同じToDoの新しい正規jobを独立に検証し、
+元の関連記録のjobが履歴にあり終了済みの場合だけ再開する。最初の関連記録は書き換えず、
+今回のcallerと最初の関連付け担当は別のmetadataとして返す。
 
 ## 受入条件
 
@@ -35,6 +38,7 @@ Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/513
 - 本文全文、message type、添付メタデータを保ち、メディア取得は既存経路へ任せる。
 - canonical/audit/state/配送の途中失敗と応答紛失後に同じ入力で再開できる。
 - 再起動後のsource-verifyと既に配送済みの再呼出しを確認する。
+- 本文・編集時刻が同じでも添付metadataが変われば、通常巡回でも元captureの再利用を拒否する。
 - 無関係なforeign-association拒否を弱めず、製品担当を起動しない。
 
 ## 今回の実対象

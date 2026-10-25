@@ -1,0 +1,620 @@
+package main
+
+import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
+	"syscall"
+	"time"
+	"unicode/utf8"
+)
+
+const streamP = "D:/CC/Work/unattended-operations-20261013-wt/todo-3080-16-skills-3048/.ci-work/todo3080"
+const streamRosterSHA = "460219790c088b33e6044c6a97c68a882549c608c3de46ea536aa990a2c1adac"
+const streamParent = "20261025-074042-todo-3080"
+const journalName = "other373-parent-journal074042.json"
+const streamSpecName = "other373-readonly-stream-spec074042.md"
+
+type StreamRow struct {
+	Unit string `json:"inventory_unit"`
+	Ordinal int    `json:"ordinal"`
+	ID      string `json:"inventory_id"`
+	Entry   struct {
+		Repo string `json:"repo"`
+        Commit string `json:"commit"`
+        Path  string `json:"path"`
+		SHA   string `json:"sha256"`
+		Blob  string `json:"git_blob"`
+		Bytes int    `json:"bytes"`
+	} `json:"entry"`
+}
+type StreamRecord struct {
+	Chunk              string `json:"chunk_id"`
+	Receipt            string `json:"receipt_file"`
+	SHA                string `json:"chunk_sha256"`
+	Job                string `json:"reader_job"`
+	First              int    `json:"first_ordinal"`
+	Last               int    `json:"last_ordinal"`
+	ParentSemanticRead bool   `json:"parent_semantic_assessments_read"`
+}
+type StreamJournal struct {
+	Generation        int            `json:"generation"`
+	Previous          string         `json:"previous_journal_sha256"`
+	Domain            string         `json:"domain"`
+	Roster            string         `json:"roster_sha256"`
+	Spec              string         `json:"spec_sha256"`
+	Parent            string         `json:"parent_job"`
+	Total             int            `json:"total"`
+	Through           int            `json:"acknowledged_through"`
+	Chunks            []StreamRecord `json:"chunks"`
+	Updated           string         `json:"updated_at"`
+	WholeTaskComplete bool           `json:"whole16_complete"`
+	Grants            int            `json:"new_copy_grants"`
+	Decisions         int            `json:"new_final_dispositions"`
+	Central           int            `json:"central_operations"`
+	ParentControl     map[string]any `json:"parent_control,omitempty"`
+}
+type StreamChunk struct {
+	Domain     string           `json:"domain"`
+	Roster     string           `json:"roster_sha256"`
+	ID         string           `json:"chunk_id"`
+	Job        string           `json:"reader_job"`
+	Todo       int              `json:"reader_todo"`
+	First      int              `json:"first_ordinal"`
+	Entries    []map[string]any `json:"entries"`
+	Boundaries struct {
+		Executed  *bool `json:"source_executed"`
+		Grants    *bool `json:"copy_license_accepted"`
+		Decisions *int  `json:"new_final_dispositions"`
+		Central   *int  `json:"central_operations"`
+	} `json:"boundaries"`
+}
+type StreamReceipt struct {
+	Domain         string          `json:"domain"`
+	OriginalSHA    string          `json:"original_message_sha256"`
+	Original       string          `json:"original_message,omitempty"`
+	SHA            string          `json:"chunk_sha256"`
+	Job            string          `json:"reader_job"`
+	Model          string          `json:"requested_model"`
+	Effort         string          `json:"requested_effort"`
+	NativeVerified bool            `json:"native_model_verified"`
+	Received       string          `json:"received_at"`
+	Chunk          json.RawMessage `json:"chunk"`
+	Normalization *StreamTransportNormalization `json:"transport_unknown_value_normalization,omitempty"`
+}
+
+type StreamTransportNormalization struct {
+	Domain string `json:"domain"`
+	InputSHA string `json:"input_payload_sha256"`
+	NormalizedSHA string `json:"normalized_payload_sha256"`
+	Offsets []int `json:"original_payload_byte_offsets"`
+	UnknownValues int `json:"unknown_values"`
+}
+
+// The transport may replace an entire JSON scalar by the non-JSON sentinel
+// [REDACTED]. Preserve that value as null, never infer the hidden scalar. Quoted
+// text and every other byte stay unchanged. Strict parsing/duplicate checks and
+// all mandatory source/reading/boundary checks still run afterwards.
+func normalizeStreamTransport(raw []byte) ([]byte, *StreamTransportNormalization) {
+	const sentinel="[REDACTED]"
+	var out []byte
+	var offsets []int
+	inString, escaped:=false,false
+	last:=0
+	for i:=0;i<len(raw);i++ {
+		c:=raw[i]
+		if inString {
+			if escaped { escaped=false;continue }
+			if c=='\\' { escaped=true;continue }
+			if c=='"' { inString=false }
+			continue
+		}
+		if c=='"' { inString=true;continue }
+		if !bytes.HasPrefix(raw[i:],[]byte(sentinel)){continue}
+		before:=i-1;for before>=0 && (raw[before]==' '||raw[before]=='\t'||raw[before]=='\n'||raw[before]=='\r'){before--}
+		after:=i+len(sentinel);for after<len(raw)&&(raw[after]==' '||raw[after]=='\t'||raw[after]=='\n'||raw[after]=='\r'){after++}
+		if before<0 || !strings.ContainsRune(":[,",rune(raw[before])) || (after<len(raw)&&!strings.ContainsRune(",]}",rune(raw[after]))){continue}
+		out=append(out,raw[last:i]...);out=append(out,"null"...)
+		offsets=append(offsets,i);i+=len(sentinel)-1;last=i+1
+	}
+	if len(offsets)==0{return raw,nil}
+	out=append(out,raw[last:]...)
+	return out,&StreamTransportNormalization{Domain:"transport-redacted-value-to-unknown-null-v1",InputSHA:streamHash(raw),NormalizedSHA:streamHash(out),Offsets:offsets,UnknownValues:len(offsets)}
+}
+
+func verifyStreamNormalization(r StreamReceipt) error {
+	if r.Normalization==nil{return nil}
+	original:=[]byte(r.Original)
+	if streamHash(original)!=r.OriginalSHA{return errors.New("normalization original differs")}
+	begin,end:=bytes.IndexByte(original,'{'),bytes.LastIndexByte(original,'}')
+	if begin<0||end<=begin{return errors.New("normalization origin envelope missing")}
+	normalized,proof:=normalizeStreamTransport(original[begin:end+1])
+	want,_:=json.Marshal(proof);got,_:=json.Marshal(r.Normalization)
+	if proof==nil||!bytes.Equal(want,got){return errors.New("normalization provenance differs")}
+	v,e:=streamJSON(normalized);if e!=nil{return e};canonical,e:=json.Marshal(v);if e!=nil{return e}
+	storedValue,e:=streamJSON(r.Chunk);if e!=nil{return e};storedCanonical,e:=json.Marshal(storedValue);if e!=nil{return e}
+	if !bytes.Equal(canonical,storedCanonical)||streamHash(canonical)!=r.SHA{return errors.New("normalization changed canonical meaning")}
+	return nil
+}
+
+func streamHash(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
+func streamRead(path string) ([]byte, error) {
+	s, e := os.Lstat(path)
+	if e != nil {
+		return nil, e
+	}
+	if !s.Mode().IsRegular() || s.Size() > 2<<20 {
+		return nil, errors.New("bounded regular metadata required")
+	}
+	wide, e := syscall.UTF16PtrFromString(path)
+	if e != nil {
+		return nil, e
+	}
+	handle, e := syscall.CreateFile(wide, syscall.GENERIC_READ, syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE|syscall.FILE_SHARE_DELETE, nil, syscall.OPEN_EXISTING, syscall.FILE_ATTRIBUTE_NORMAL|syscall.FILE_FLAG_OPEN_REPARSE_POINT, 0)
+	if e != nil {
+		return nil, e
+	}
+	f := os.NewFile(uintptr(handle), path)
+	if f == nil {
+		syscall.CloseHandle(handle)
+		return nil, errors.New("metadata handle unavailable")
+	}
+	defer f.Close()
+	opened, e := f.Stat()
+	if e != nil || !opened.Mode().IsRegular() || !os.SameFile(s, opened) {
+		return nil, errors.New("metadata changed during open; retry")
+	}
+	b, e := io.ReadAll(io.LimitReader(f, (2<<20)+1))
+	if e != nil || len(b) > 2<<20 {
+		return nil, errors.New("metadata read failed or exceeded bound")
+	}
+	return b, nil
+}
+func streamNew(path string, b []byte) error {
+	if _, e := os.Lstat(path); e == nil {
+		old, re := streamRead(path)
+		if re == nil && bytes.Equal(old, b) {
+			return nil
+		}
+		return errors.New("different existing receipt retained")
+	}
+	f, e := os.CreateTemp(filepath.Dir(path), ".other373-receipt-*")
+	if e != nil {
+		return e
+	}
+	defer os.Remove(f.Name())
+	_, we := f.Write(b)
+	se := f.Sync()
+	ce := f.Close()
+	if e := errors.Join(we, se, ce); e != nil {
+		return e
+	}
+	return os.Link(f.Name(), path)
+}
+func streamEncode(v any) ([]byte, error) {
+	b, e := json.MarshalIndent(v, "", "  ")
+	return append(b, '\n'), e
+}
+func streamJSON(raw []byte) (any, error) {
+	if !utf8.Valid(raw) {
+		return nil, errors.New("non-UTF8 evidence")
+	}
+	d := json.NewDecoder(bytes.NewReader(raw))
+	d.UseNumber()
+	var read func(int) (any, error)
+	read = func(depth int) (any, error) {
+		if depth > 80 {
+			return nil, errors.New("metadata depth")
+		}
+		t, e := d.Token()
+		if e != nil {
+			return nil, e
+		}
+		switch t {
+		case json.Delim('{'):
+			m := map[string]any{}
+			for d.More() {
+				k, e := d.Token()
+				if e != nil {
+					return nil, e
+				}
+				s := k.(string)
+				if _, ok := m[s]; ok {
+					return nil, errors.New("duplicate JSON key")
+				}
+				v, e := read(depth + 1)
+				if e != nil {
+					return nil, e
+				}
+				m[s] = v
+			}
+			_, e = d.Token()
+			return m, e
+		case json.Delim('['):
+			a := []any{}
+			for d.More() {
+				v, e := read(depth + 1)
+				if e != nil {
+					return nil, e
+				}
+				a = append(a, v)
+			}
+			_, e = d.Token()
+			return a, e
+		default:
+			return t, nil
+		}
+	}
+	v, e := read(0)
+	if e != nil {
+		return nil, e
+	}
+	_, e = d.Token()
+	if e != io.EOF {
+		return nil, errors.New("trailing metadata")
+	}
+	return v, nil
+}
+func streamInt(v any) (int, bool) {
+	n, ok := v.(json.Number)
+	if !ok {
+		return 0, false
+	}
+	i, e := n.Int64()
+	return int(i), e == nil
+}
+func streamString(v any) string { s, _ := v.(string); return s }
+func loadStream() (StreamJournal, []StreamRow, []byte, error) {
+	return loadStreamAt(streamP)
+}
+
+func loadStreamAt(root string) (StreamJournal, []StreamRow, []byte, error) {
+	var j StreamJournal
+	var r struct {
+		Rows []StreamRow `json:"rows"`
+	}
+	b, e := streamRead(filepath.Join(root, "othergit-all373-roster-v2074042.json"))
+	if e != nil {
+		return j, nil, nil, e
+	}
+	if streamHash(b) != streamRosterSHA {
+		return j, nil, nil, errors.New("fixed roster changed")
+	}
+	if e = json.Unmarshal(b, &r); e != nil || len(r.Rows) != 373 {
+		return j, nil, nil, errors.New("incomplete roster")
+	}
+	b, e = streamRead(filepath.Join(root, journalName))
+	if e != nil {
+		return j, nil, nil, e
+	}
+	if _, e = streamJSON(b); e != nil {
+		return j, nil, nil, e
+	}
+	if e = json.Unmarshal(b, &j); e != nil {
+		return j, nil, nil, e
+	}
+	if j.Domain != "other373-parent-journal-v1" || j.Roster != streamRosterSHA || j.Parent != streamParent || j.Total != 373 || j.Grants != 0 || j.Decisions != 0 || j.Central != 0 || j.WholeTaskComplete {
+		return j, nil, nil, errors.New("journal scope differs")
+	}
+	if j.Generation != 0 || j.Previous != "" || j.Through != 0 || len(j.Chunks) != 0 {
+		return j, nil, nil, errors.New("initial journal changed")
+	}
+	files, e := filepath.Glob(filepath.Join(root, "other373-journal-*-074042.json"))
+	if e != nil {
+		return j, nil, nil, e
+	}
+	sort.Strings(files)
+	for {
+		var next *StreamJournal
+		var nextRaw []byte
+		for _, file := range files {
+			raw, re := streamRead(file)
+			if re != nil {
+				return j, nil, nil, re
+			}
+			var candidate StreamJournal
+			if _, re = streamJSON(raw); re != nil || json.Unmarshal(raw, &candidate) != nil {
+				return j, nil, nil, errors.New("invalid journal generation retained")
+			}
+			if candidate.Generation != j.Generation+1 || candidate.Previous != streamHash(b) {
+				continue
+			}
+			if next != nil {
+				return j, nil, nil, errors.New("journal fork retained; parent must reconcile")
+			}
+			next, nextRaw = &candidate, raw
+		}
+		if next == nil {
+			break
+		}
+		if next.Domain != j.Domain || next.Roster != j.Roster || next.Spec != j.Spec || next.Parent != j.Parent || next.Total != j.Total || next.Grants != 0 || next.Decisions != 0 || next.Central != 0 || next.WholeTaskComplete || len(next.Chunks) != len(j.Chunks)+1 {
+			return j, nil, nil, errors.New("journal generation scope changed")
+		}
+		prior, _ := json.Marshal(j.Chunks)
+		retained, _ := json.Marshal(next.Chunks[:len(j.Chunks)])
+		if !bytes.Equal(prior, retained) {
+			return j, nil, nil, errors.New("earlier acknowledged evidence changed")
+		}
+		j, b = *next, nextRaw
+	}
+	n := 0
+	ids := map[string]bool{}
+	for _, c := range j.Chunks {
+		if !c.ParentSemanticRead || c.First != n+1 || c.Last < c.First || ids[c.Chunk] {
+			return j, nil, nil, errors.New("journal sequence differs")
+		}
+		ids[c.Chunk] = true
+		n = c.Last
+	}
+	if n != j.Through || n > 373 {
+		return j, nil, nil, errors.New("journal cursor differs")
+	}
+	return j, r.Rows, b, nil
+}
+func validateStreamChunk(raw []byte, j StreamJournal, roster []StreamRow) (StreamChunk, []byte, error) {
+	var c StreamChunk
+	if len(roster) != 373 {
+		return c, nil, errors.New("complete immutable roster required")
+	}
+	normalized,_:=normalizeStreamTransport(raw)
+	v, e := streamJSON(normalized)
+	if e != nil {
+		return c, nil, e
+	}
+	canonical, e := json.Marshal(v)
+	if e != nil {
+		return c, nil, e
+	}
+	decoder := json.NewDecoder(bytes.NewReader(canonical))
+	decoder.UseNumber()
+	if e = decoder.Decode(&c); e != nil {
+		return c, nil, e
+	}
+	if c.Domain != "othergit373-chunk-v1" || c.Roster != streamRosterSHA || !regexp.MustCompile(`^[0-9a-f]{32}$`).MatchString(c.ID) || !regexp.MustCompile(`^\d{8}-\d{6}-todo-3778$`).MatchString(c.Job) || c.Todo != 3778 || c.First < 1 || len(c.Entries) == 0 || c.First+len(c.Entries)-1 > 373 {
+		return c, nil, errors.New("chunk binding differs")
+	}
+	if c.Boundaries.Executed == nil || *c.Boundaries.Executed || c.Boundaries.Grants == nil || *c.Boundaries.Grants || c.Boundaries.Decisions == nil || *c.Boundaries.Decisions != 0 || c.Boundaries.Central == nil || *c.Boundaries.Central != 0 {
+		return c, nil, errors.New("reading promoted to execution/grants/decisions")
+	}
+	for i, e := range c.Entries {
+		ordinal, ok := streamInt(e["row"])
+		if !ok || ordinal != c.First+i {
+			return c, nil, errors.New("noncontiguous source rows")
+		}
+		src, ok := e["source"].([]any)
+		if !ok || len(src) != 7 {
+			return c, nil, errors.New("source tuple absent")
+		}
+		r := roster[ordinal-1]
+		if r.Unit=="" || streamString(e["unit"])!=r.Unit { return c,nil,errors.New("source occurrence unit changed") }
+		size, ok := streamInt(src[6])
+		if !ok || streamString(src[0]) != r.ID || streamString(src[1]) != r.Entry.Repo || streamString(src[2]) != r.Entry.Commit || streamString(src[3]) != r.Entry.Path || streamString(src[4]) != r.Entry.SHA || streamString(src[5]) != r.Entry.Blob || size != r.Entry.Bytes {
+			return c, nil, errors.New("primary identity differs from immutable roster")
+		}
+		for _, key := range []string{"use", "value", "reason", "positive", "negative", "candidate_disposition"} {
+			if streamString(e[key]) == "" {
+				return c, nil, errors.New("semantic assessment missing")
+			}
+		}
+		read, ok := e["read"].([]any)
+		if !ok || len(read) != 6 {
+			return c, nil, errors.New("reading tuple absent")
+		}
+		state, ok := streamInt(read[0])
+		mask, mok := streamInt(read[1])
+		actor, aok := streamInt(read[2])
+		last, lok := streamInt(read[5])
+        if !ok || !lok { return c,nil,errors.New("reading state missing") }
+        switch state {
+        case 1:
+            if read[1]!=nil || read[2]!=nil || read[3]!=false || read[4]!=false || last!=0 || streamString(e["block_reason"])=="" { return c,nil,errors.New("unread input gained a reader or completion") }
+        case 6,7:
+            if !mok || !aok || actor!=0 || mask<0 || last<1 || read[3]!=false || read[4]!=false || streamString(e["block_reason"])=="" { return c,nil,errors.New("partial/scan input promoted to full") }
+            if _,ok:=e["unread_line_ranges"].([]any);!ok { return c,nil,errors.New("partial/scan unread ranges absent") }
+        case 2,3:
+            if !mok || !aok || actor!=0 || last<1 || read[4]!=true || read[3]!=(state==2) || state==2 && mask!=0 || state==3 && mask<1 { return c,nil,errors.New("raw/masked reading state differs") }
+        default:
+            return c,nil,errors.New("unknown primary reading state")
+        }
+		if _, ok := e["findings"].([]any); !ok {
+			return c, nil, errors.New("findings absent")
+		}
+		if _, ok := e["required_changes"].([]any); !ok {
+			return c, nil, errors.New("required changes absent")
+		}
+		if _, ok := e["notices"].([]any); !ok {
+			return c, nil, errors.New("individual notices absent")
+		}
+		if _, ok := e["support"].([]any); !ok {
+			return c, nil, errors.New("support states absent")
+		}
+	}
+	return c, canonical, nil
+}
+func streamRun() error {
+	if len(os.Args) != 3 {
+		return errors.New("receive <exact3719-job> OR accept <32hex chunk-id>")
+	}
+	journal, roster, old, e := loadStream()
+	if e != nil {
+		return e
+	}
+	mode, id := os.Args[1], os.Args[2]
+	if mode == "receive" {
+		if !regexp.MustCompile(`^\d{8}-\d{6}-todo-3778$`).MatchString(id) {
+			return errors.New("exact public3719 job required")
+		}
+		root := filepath.Join("D:/CC/Tools/codex-jobs/jobs", id)
+		jb, e := streamRead(filepath.Join(root, "job.json"))
+		if e != nil {
+			return e
+		}
+		var job struct {
+			ID      string `json:"id"`
+			Todo    int    `json:"todo_id"`
+			Parent  string `json:"parent_job_id"`
+            Subwork struct { Parent int `json:"parent_todo_id"`; Origin string `json:"origin_job_id"` } `json:"subwork"`
+			Spec    string `json:"subwork_spec"`
+			Sandbox string `json:"sandbox"`
+			Model   string `json:"model"`
+			Effort  string `json:"effort"`
+			Message string `json:"last_message"`
+		}
+		if e = json.Unmarshal(jb, &job); e != nil {
+			return e
+		}
+		if job.ID != id || job.Todo != 3778 || (job.Subwork.Parent!=3080 || job.Subwork.Origin!=streamParent || (job.Parent!="" && !regexp.MustCompile(`^\d{8}-\d{6}-todo-3080$`).MatchString(job.Parent))) || job.Sandbox != "read-only" {
+			return errors.New("registered read-only source/parent differs")
+		}
+		if !regexp.MustCompile(`(?i)^d:/cc/tools/todo/specs/3778-[0-9a-f]{32}\.md$`).MatchString(filepath.ToSlash(filepath.Clean(job.Spec))) {
+			return errors.New("unexpected registered3719 specification path")
+		}
+		spec, e := streamRead(job.Spec)
+		if e != nil || streamHash(spec) != journal.Spec {
+			return errors.New("worker has not received current stream specification")
+		}
+		raw, e := streamRead(filepath.Join(root, "last_message.md"))
+		if e != nil {
+			return e
+		}
+		if string(raw) != job.Message {
+			return errors.New("message changed during receipt; retry without acknowledging")
+		}
+		if !strings.HasPrefix(string(raw), "OTHER373_CHUNK_V1\n") {
+			fmt.Println("no complete pending semantic chunk yet")
+			return nil
+		}
+		begin, end := bytes.IndexByte(raw, '{'), bytes.LastIndexByte(raw, '}')
+		if begin < 0 || end <= begin {
+			return errors.New("incomplete chunk envelope")
+		}
+		c, canonical, e := validateStreamChunk(raw[begin:end+1], journal, roster)
+		if e != nil {
+			return e
+		}
+		if c.Job != id {
+			return errors.New("declared reader differs from exact job")
+		}
+		for _, done := range journal.Chunks {
+			if done.Chunk == c.ID {
+				fmt.Printf("already acknowledged through%d\n", done.Last)
+				return nil
+			}
+		}
+		if c.First != journal.Through+1 {
+			return errors.New("chunk cursor is not next unreceived range")
+		}
+		_,normalization:=normalizeStreamTransport(raw[begin:end+1])
+		r := StreamReceipt{Domain: "other373-unaccepted-receipt-v1", OriginalSHA: streamHash(raw), Original:string(raw), SHA: streamHash(canonical), Job: id, Model: job.Model, Effort: job.Effort, Received: time.Now().UTC().Format(time.RFC3339Nano), Chunk: canonical,Normalization:normalization}
+		if e=verifyStreamNormalization(r);e!=nil{return e}
+		encoded, e := streamEncode(r)
+		if e != nil {
+			return e
+		}
+		file := filepath.Join(streamP, "other373-chunk-"+c.ID+".json")
+		if prior, e := streamRead(file); e == nil {
+			var saved StreamReceipt
+			if json.Unmarshal(prior, &saved) != nil || saved.SHA != r.SHA || saved.Job != r.Job {
+				return errors.New("changed chunk identifier retained")
+			}
+		} else if !os.IsNotExist(e) {
+			return e
+		} else if e = streamNew(file, encoded); e != nil {
+			return e
+		}
+		fmt.Printf("UNACCEPTED chunk=%s rows=%d..%d receipt=%s\n%s\n", c.ID, c.First, c.First+len(c.Entries)-1, filepath.Base(file), canonical)
+		return nil
+	}
+	yieldReview := 0
+	if mode == "accept-yield-review3781" { yieldReview=3781 }
+	if mode == "accept-yield-review3789" { yieldReview=3789 }
+	if mode == "accept-yield-review3790" { yieldReview=3790 }
+	if mode == "accept-yield-review3793" { yieldReview=3793 }
+	if mode == "accept-yield-review3797" { yieldReview=3797 }
+	if mode == "accept-yield-review3809" { yieldReview=3809 }
+	if (mode != "accept" && yieldReview==0) || !regexp.MustCompile(`^[0-9a-f]{32}$`).MatchString(id) {
+		return errors.New("unknown mode/chunk id")
+	}
+	file := filepath.Join(streamP, "other373-chunk-"+id+".json")
+	raw, e := streamRead(file)
+	if e != nil {
+		return e
+	}
+	var r StreamReceipt
+	if e = json.Unmarshal(raw, &r); e != nil {
+		return e
+	}
+	// New receipts retain the exact original protocol message as well as its
+	// canonical chunk. Historical receipts stay immutable and use the separately
+	// recovered, independently hash-matched original messages.
+	if r.Original!="" && (streamHash([]byte(r.Original))!=r.OriginalSHA || !strings.HasPrefix(r.Original,"OTHER373_CHUNK_V1\n")) {
+		return errors.New("retained original protocol message changed")
+	}
+	if e=verifyStreamNormalization(r);e!=nil{return e}
+	c, canonical, e := validateStreamChunk(r.Chunk, journal, roster)
+	if e != nil {
+		return e
+	}
+	if c.ID != id || c.Job != r.Job || r.SHA != streamHash(canonical) {
+		return errors.New("received evidence changed")
+	}
+	for _, done := range journal.Chunks {
+		if done.Chunk == id {
+			fmt.Printf("already acknowledged through%d\n", done.Last)
+			return nil
+		}
+	}
+	if c.First != journal.Through+1 {
+		return errors.New("acceptance cursor differs")
+	}
+	journal.Previous = streamHash(old)
+	journal.Generation++
+	journal.Through = c.First + len(c.Entries) - 1
+	journal.Chunks = append(journal.Chunks, StreamRecord{Chunk: id, Receipt: filepath.Base(file), SHA: r.SHA, Job: r.Job, First: c.First, Last: journal.Through, ParentSemanticRead: true})
+	journal.Updated = time.Now().UTC().Format(time.RFC3339Nano)
+	journal.ParentControl = nil
+	if r.Normalization!=nil {
+		journal.ParentControl=map[string]any{
+			"domain":"parent3080-transport-unknown-value-accepted-v1",
+			"consumer_job":os.Getenv("CC_JOB_ID"),"applies_only_to_reader_job":c.Job,
+			"acknowledged_through":journal.Through,"unknown_value_count":r.Normalization.UnknownValues,
+			"instruction":"親はこの範囲の意味評価を読了し受領した。原応答は不変で保存し、文字列外の[REDACTED]だけをunknownのJSON nullへ正規化した。伏せられた値・真偽・認証分類を復元/確定していない。旧syntax再送依頼は不要となった。同じ担当が次ordinalから続け、JSONをserialize/strict parseし、伏字はquoted stringまたは明示unknown nullで表す。原source/reader/mask数や権利・採否・中央を変更せず、過去本文を再表示しない。",
+		}
+	}
+	if yieldReview!=0 {
+		journal.ParentControl = map[string]any{
+			"domain":"parent3080-resource-yield-v1",
+			"consumer_job":os.Getenv("CC_JOB_ID"),
+			"applies_only_to_reader_job":c.Job,
+			"acknowledged_through":journal.Through,
+			"await_review_todo":yieldReview,
+			"whole_research_complete":false,
+			"instruction":fmt.Sprintf("同じ親の子ジョブ上限2件で必須レビュー%dが待機している。親はこのchunkを全文受領済み。現在の実readerだけは、このACK境界で次の本文を始めず、未完373・保存済みcursor・原receipt・未送信補足の有無を最終応答へ返して正常に今回のread-only実行を終了する。ToDo doneや新ToDo登録をしない。親が同じ3778を%d完了待ちに記録し、review完了後に同じ正規ToDoをこの次のordinalから再開する。過去ACKを再読了・新許諾・全体完了へしない。これは資源を譲るための親の技術指示で、本人停止や審査迂回ではない。将来の異なる実readerにはこの終了指示を再適用しない。",yieldReview,yieldReview),
+		}
+	}
+	updated, e := streamEncode(journal)
+	if e != nil {
+		return e
+	}
+	if e = streamNew(filepath.Join(streamP, fmt.Sprintf("other373-journal-%04d-%s-074042.json", journal.Generation, c.ID)), updated); e != nil {
+		return e
+	}
+	fmt.Printf("ACKNOWLEDGED semantic assessments through%d/373; grants0/decisions0/central0; supporting proof verification remains separate\n", journal.Through)
+	return nil
+}
+
+func main() {
+	if e := streamRun(); e != nil {
+		fmt.Fprintln(os.Stderr, e)
+		os.Exit(1)
+	}
+}

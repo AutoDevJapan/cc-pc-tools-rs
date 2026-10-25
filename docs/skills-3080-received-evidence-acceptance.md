@@ -209,3 +209,11 @@ SACLは未確認である。モデル回答の正式反映と質問closeも既�
 `skills-3080-webdesign-next14-inputs074042.json` と `skills-3080-operations/create-webdesign-next14-074042.json` は84出力の固定入力で、作者14本文86,117Bと個別に適用を確認したroot MITを保持する。外部assets・font・実行用script・softwareは含めず、任意参照のARTICLE本文は未読・未コピー。構造・参照・hash・正負例14件はin-memoryで確認した。
 
 中央の不在、実作成、発見、実使用は未実施で、導入64・統合3・除外14・未判定／保留73,139と原の評価件数を増やさない。独立レビュー・正確headのCI・通常mergeに加え、用途限定の正規forward作成・消費の経路を確認してから進める。過去の新14件、匿名旧9件、647件の取得審査保留は解除・迂回しない。
+
+### 調査応答の伏字とJSON値の不明扱い
+
+別の公開資料の調査55〜58番では、応答のメタデータ値1個が文字列外の `[REDACTED]` に置換され、strict JSONで受け取れなかった。原応答19,805BとSHA `f741d15f6ec101f3629f4eec816e3a30e0dcbba7e1c7cff81e857d9a309410dd` を不変で保持し、その値だけを不明のJSON nullへ正規化した。隠れた元の真偽・認証分類を補完していない。
+
+[実際の受領helper](evidence/skills-3080-transport-unknown074042.go.txt) と [対応する回帰テスト](evidence/skills-3080-transport-unknown074042-test.go.txt) は、文字列内の同じ表記を変えず、元payloadのbyte位置・入力/出力hashを記録する。必須の実行/許諾/読取/出典値が不明なら従来どおり拒否し、重複keyや別の構文不備も拒否する。保存時のindentによらずcanonical JSONの意味とhashを照合する。
+
+元の失敗を再現して修正後のテストとvetが成功し、親は4件の意味評価・個別notice・支持と限界を読んで58までACKした。これは私的な受領範囲で、公開評価の件数、許諾、最終採否や中央操作の追加ではない。元workerが58の受領を実際に確認して次へ進んだことも別に確認した。

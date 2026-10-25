@@ -8,7 +8,7 @@
   "entrypoints_expected": 177,
   "entrypoints_fulltext_read": 177,
   "entrypoints_unread": 0,
-  "installed": 26,
+  "installed": 32,
   "integrated": 2,
   "excluded": 0,
   "central_write": 22,
@@ -160,12 +160,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "db90d0355b97254de7997fd295dd0f05ba62508b"
+      "git_blob": "db90d0355b97254de7997fd295dd0f05ba62508b",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+        "historical_evaluation_sha256": "46d84980dec41c58f087967df59dc16171e2e2de79f51c3d7c9deb31de41d759"
+      },
+      "current_installation_evidence": "skills-3080-remaining3d6-installation-evidence.json"
     },
     {
       "inventory_id": "github:29a0ba0843498fe31de765752ffa07dfd7835d47f3ac062d641e41169e601167",
@@ -577,12 +583,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "e56030894f5a7ec438a89675610b6b22e162847d"
+      "git_blob": "e56030894f5a7ec438a89675610b6b22e162847d",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+        "historical_evaluation_sha256": "46d84980dec41c58f087967df59dc16171e2e2de79f51c3d7c9deb31de41d759"
+      },
+      "current_installation_evidence": "skills-3080-remaining3d6-installation-evidence.json"
     },
     {
       "inventory_id": "github:3d98ac5b5f881acf71e673a93b79049d696259c36a80fd92a25d8f8a2ee24489",
@@ -902,12 +914,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "ff55d90a82645808eb97280495c348777da75f1b"
+      "git_blob": "ff55d90a82645808eb97280495c348777da75f1b",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+        "historical_evaluation_sha256": "46d84980dec41c58f087967df59dc16171e2e2de79f51c3d7c9deb31de41d759"
+      },
+      "current_installation_evidence": "skills-3080-remaining3d6-installation-evidence.json"
     },
     {
       "inventory_id": "github:896c34ba4a99ae3711407ba96fda39996823607f6a3b2e6ddd456f62af1b19a6",
@@ -1038,7 +1056,7 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -1046,7 +1064,13 @@
         0
       ],
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "4c11350bd80c7db6e89140e6f1e2425eebc58257"
+      "git_blob": "4c11350bd80c7db6e89140e6f1e2425eebc58257",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+        "historical_evaluation_sha256": "46d84980dec41c58f087967df59dc16171e2e2de79f51c3d7c9deb31de41d759"
+      },
+      "current_installation_evidence": "skills-3080-remaining3d6-installation-evidence.json"
     },
     {
       "inventory_id": "github:902a0a522b75574bc5a87780cf16f5ea986493124e4bdb578182b36bf6f21df5",
@@ -1177,12 +1201,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "fb61f257950a9499c2861c1e30403eae9ffeab5a"
+      "git_blob": "fb61f257950a9499c2861c1e30403eae9ffeab5a",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+        "historical_evaluation_sha256": "46d84980dec41c58f087967df59dc16171e2e2de79f51c3d7c9deb31de41d759"
+      },
+      "current_installation_evidence": "skills-3080-remaining3d6-installation-evidence.json"
     },
     {
       "inventory_id": "github:4626a28f6ca9f66b3a74b43507b256211a1cf0fae273355b0cbb4f7ec2ea0e69",
@@ -1367,12 +1397,18 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
-      "git_blob": "a394a37904a9691d9acbede0fa11bc461ac14d38"
+      "git_blob": "a394a37904a9691d9acbede0fa11bc461ac14d38",
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+        "historical_evaluation_sha256": "46d84980dec41c58f087967df59dc16171e2e2de79f51c3d7c9deb31de41d759"
+      },
+      "current_installation_evidence": "skills-3080-remaining3d6-installation-evidence.json"
     },
     {
       "inventory_id": "github:2f1222d0143baefe038638b6325bac4b1aa4a9c9989daa3ffcaf655e7f050715",
@@ -22302,9 +22338,9 @@
   "amendment_job": "20261024-123649-todo-3080",
   "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts.",
   "current_installation_update": {
-    "evidence": "skills-3080-material-camera8-installation-evidence.json",
-    "added": 8,
-    "current_installed": 26,
+    "evidence": "skills-3080-remaining3d6-installation-evidence.json",
+    "added": 6,
+    "current_installed": 32,
     "source_body_reading_and_notice_support_states_unchanged": true,
     "definition": "Current installation projection only; all earlier source reading/support/rights/installation records retained"
   },
@@ -22328,6 +22364,13 @@
       "current_installed": 18,
       "source_body_reading_and_notice_support_states_unchanged": true,
       "definition": "Only current installed projection changes; all previous installation updates and original reader/support/rights records are retained."
+    },
+    {
+      "evidence": "skills-3080-material-camera8-installation-evidence.json",
+      "added": 8,
+      "current_installed": 26,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Current installation projection only; all earlier source reading/support/rights/installation records retained"
     }
   ]
 }

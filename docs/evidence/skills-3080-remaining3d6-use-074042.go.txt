@@ -1,0 +1,310 @@
+package main
+
+// Prepared before placement; the pin constants remain explicitly unqualified
+// until actual CreateNew and discovery receipts exist. Never runs an installer.
+import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"io"
+	"os"
+	"path/filepath"
+	"strings"
+	"syscall"
+	"testing"
+)
+
+const r6Root = "D:/CC/Work/unattended-operations-20261013-wt/todo-3080-16-skills-3048"
+const r6ManifestSHA = "12d0b617a97c9a11eadc815628c55982442e828f4817fdf8a09e604b4ce9dc34"
+const r6NamesSHA = "2d9ef027e7cd7116531371e6818bba86334296db558ca9726f16e2fa3799844a"
+const r6CreateWrapperSHA = "7715f1af242ed065fc47d3df31d5ca23b3f3010f05cd538740d47f83521970fd"
+const r6DiscoverySHA = "1ca2fc38f15a81be692c2d20f5e1363a26ba2fcfb097db30fc44b81a55dbe248"
+const r6RequestSHA = "6f569c8f3ce8cc7b5015a7bcaebf5e7148c9866271fac3a995905ec79186e6c8"
+const r6MainCommit = "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50"
+
+func r6Hash(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
+func r6Read(path string) ([]byte, error) {
+	i, e := os.Lstat(path)
+	if e != nil {
+		return nil, e
+	}
+	if !i.Mode().IsRegular() || i.Size() > 2<<20 {
+		return nil, errors.New("bounded regular file required")
+	}
+	w, e := syscall.UTF16PtrFromString(path)
+	if e != nil {
+		return nil, e
+	}
+	h, e := syscall.CreateFile(w, syscall.GENERIC_READ, syscall.FILE_SHARE_READ|syscall.FILE_SHARE_WRITE|syscall.FILE_SHARE_DELETE, nil, syscall.OPEN_EXISTING, syscall.FILE_FLAG_OPEN_REPARSE_POINT, 0)
+	if e != nil {
+		return nil, e
+	}
+	f := os.NewFile(uintptr(h), path)
+	defer f.Close()
+	st, e := f.Stat()
+	var info syscall.ByHandleFileInformation
+	if e != nil || !os.SameFile(i, st) || syscall.GetFileInformationByHandle(h, &info) != nil || info.FileAttributes&syscall.FILE_ATTRIBUTE_REPARSE_POINT != 0 || info.NumberOfLinks != 1 {
+		return nil, errors.New("physical identity/link boundary differs")
+	}
+	b, e := io.ReadAll(io.LimitReader(f, 2<<20+1))
+	if e != nil || len(b) > 2<<20 {
+		return nil, errors.New("bounded read failed")
+	}
+	return b, nil
+}
+
+// Validate original token spelling before typed JSON decoding. No case alias or
+// duplicate member is allowed; user-controlled map data is not present here.
+func r6UniqueJSON(d *json.Decoder, depth int) error {
+	if depth > 80 {
+		return errors.New("receipt depth exceeds boundary")
+	}
+	tok, e := d.Token()
+	if e != nil {
+		return e
+	}
+	switch tok {
+	case json.Delim('{'):
+		seen := map[string]bool{}
+		for d.More() {
+			k, e := d.Token()
+			if e != nil {
+				return e
+			}
+			s, ok := k.(string)
+			if !ok || seen[s] {
+				return errors.New("duplicate receipt key")
+			}
+			seen[s] = true
+			if e = r6UniqueJSON(d, depth+1); e != nil {
+				return e
+			}
+		}
+		_, e = d.Token()
+		return e
+	case json.Delim('['):
+		for d.More() {
+			if e = r6UniqueJSON(d, depth+1); e != nil {
+				return e
+			}
+		}
+		_, e = d.Token()
+		return e
+	}
+	return nil
+}
+func r6DecodeExact(b []byte, allowed []string, dst any) error {
+	d := json.NewDecoder(bytes.NewReader(b))
+	if e := r6UniqueJSON(d, 0); e != nil {
+		return e
+	}
+	if _, e := d.Token(); e != io.EOF {
+		return errors.New("trailing JSON receipt")
+	}
+	var keys map[string]json.RawMessage
+	if json.Unmarshal(b, &keys) != nil {
+		return errors.New("receipt object required")
+	}
+	known := map[string]bool{}
+	for _, k := range allowed {
+		known[k] = true
+	}
+	for k := range keys {
+		if !known[k] {
+			return errors.New("unknown/case-aliased receipt field")
+		}
+	}
+	// The exact allowed key set has already rejected unknown spellings. A
+	// projection may intentionally omit allowed diagnostic fields below.
+	return json.Unmarshal(b, dst)
+}
+func r6Command(b []byte, expected string) ([]byte, error) {
+	if len(expected) != 64 || r6Hash(b) != expected {
+		return nil, errors.New("authentic original wrapper differs")
+	}
+	var v struct {
+		Exit  *int    `json:"exit"`
+		Timed *bool   `json:"timed_out"`
+		Out   *string `json:"stdout"`
+		Err   *string `json:"stderr"`
+	}
+	if r6DecodeExact(b, []string{"exit", "timed_out", "stdout", "stderr"}, &v) != nil || v.Exit == nil || *v.Exit != 0 || v.Timed == nil || *v.Timed || v.Out == nil || *v.Out == "" || v.Err == nil || *v.Err != "" {
+		return nil, errors.New("required process observation missing/failed")
+	}
+	return []byte(*v.Out), nil
+}
+func r6UseGate(t *testing.T, requireDiscovery bool) map[string]string {
+	t.Helper()
+	r6Need(t, os.Getenv("CC_JOB_ID") == "20261025-074042-todo-3080", "actual caller differs")
+	b, e := r6Read(filepath.Join(r6Root, ".ci-work/todo3080/remaining3d6-purpose-create074042.json"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	created, e := r6Command(b, r6CreateWrapperSHA)
+	if e != nil {
+		t.Fatal(e)
+	}
+	var c struct {
+		Domain, Operation string
+		Todo              *int `json:"todo_id"`
+		Qualified         *bool
+		Files             *int   `json:"file_count"`
+		Created           *int   `json:"created_files"`
+		Manifest          string `json:"manifest_sha256"`
+		Request           string `json:"request_sha256"`
+		Commit            string `json:"source_commit"`
+		General           *bool  `json:"general_access_granted"`
+		Registry          *bool  `json:"original_registry_recovered"`
+	}
+	r6Need(t, r6DecodeExact(created, []string{"domain", "operation", "todo_id", "qualified", "file_count", "created_files", "manifest_sha256", "request_sha256", "source_commit", "general_access_granted", "original_registry_recovered"}, &c) == nil && c.Domain == "skills-3080-purpose-v1" && c.Operation == "CreateNew" && c.Todo != nil && *c.Todo == 3080 && c.Qualified != nil && *c.Qualified && c.Files != nil && *c.Files == 36 && c.Created != nil && *c.Created == 36 && c.Manifest == r6ManifestSHA && c.Request == r6RequestSHA && c.Commit == r6MainCommit && c.General != nil && !*c.General && c.Registry != nil && !*c.Registry, "required creation identity or false boundary differs")
+	newNames := map[string]bool{}
+	if requireDiscovery {
+		b, e = r6Read(filepath.Join(r6Root, ".ci-work/todo3080/discovery-retained-remaining3d6-detailed-074042.json"))
+		if e != nil {
+			t.Fatal(e)
+		}
+		r6Need(t, len(r6DiscoverySHA) == 64 && r6Hash(b) == r6DiscoverySHA, "authentic detailed discovery receipt differs")
+		var discovery struct {
+			ModelCalled     *bool             `json:"model_called"`
+			TreeExited      *bool             `json:"process_tree_exit_confirmed"`
+			Drained         *bool             `json:"pending_stdout_read_drained"`
+			Targets         *int              `json:"targets"`
+			Found           *int              `json:"found_count"`
+			Rows            *int              `json:"observed_row_count"`
+			Enabled         *int              `json:"enabled_count"`
+			AllEnabled      *bool             `json:"all_requested_enabled"`
+			ParseErrors     *int              `json:"parse_error_count"`
+			Duplicates      *int              `json:"duplicate_observed_names"`
+			OtherPaths      *int              `json:"same_names_other_paths"`
+			NewDescriptions *int              `json:"new_description_match_count"`
+			KnownNames      string            `json:"known_target_names_sha256"`
+			ObservedNames   string            `json:"observed_unique_names_sha256"`
+			Failure         json.RawMessage   `json:"failure"`
+			New             []json.RawMessage `json:"new_target_rows"`
+		}
+		keys := []string{"checked_at", "method", "model_called", "label", "targets", "total_discovered_metadata", "found_count", "parse_error_count", "notification_count", "same_names_other_paths", "known_target_names_sha256", "enabled_count", "new_description_match_count", "found_rows_omitted_to_avoid_existing_names", "observed_row_count", "observed_unique_names_sha256", "duplicate_observed_names", "all_requested_enabled", "new_target_rows", "process_tree_exit_confirmed", "pending_stdout_read_drained", "failure", "diagnostic", "limit"}
+		r6Need(t, r6DecodeExact(b, keys, &discovery) == nil && discovery.ModelCalled != nil && !*discovery.ModelCalled && discovery.TreeExited != nil && *discovery.TreeExited && discovery.Drained != nil && *discovery.Drained && bytes.Equal(bytes.TrimSpace(discovery.Failure), []byte("null")), "fresh discovery process did not finish/drain")
+		for _, n := range []*int{discovery.Targets, discovery.Found, discovery.Rows, discovery.Enabled} {
+			r6Need(t, n != nil && *n == 80, "retained/current target discovery count differs")
+		}
+		for _, n := range []*int{discovery.ParseErrors, discovery.Duplicates, discovery.OtherPaths} {
+			r6Need(t, n != nil && *n == 0, "discovery has parse errors or ambiguous target identity")
+		}
+		r6Need(t, discovery.AllEnabled != nil && *discovery.AllEnabled && discovery.NewDescriptions != nil && *discovery.NewDescriptions == 6 && len(discovery.New) == 6 && discovery.KnownNames == r6NamesSHA && discovery.ObservedNames == r6NamesSHA, "enabled names or description correspondence differs")
+		for _, raw := range discovery.New {
+			var row struct {
+				Name        string `json:"name"`
+				Central     *bool  `json:"selected_central_path"`
+				Present     *bool  `json:"enabled_present"`
+				Enabled     *bool  `json:"enabled"`
+				Description *bool  `json:"description_matches"`
+			}
+			r6Need(t, r6DecodeExact(raw, []string{"name", "selected_central_path", "enabled_present", "enabled", "description_matches"}, &row) == nil && row.Central != nil && *row.Central && row.Present != nil && *row.Present && row.Enabled != nil && *row.Enabled && row.Description != nil && *row.Description && !newNames[row.Name], "new target discovery row differs")
+			newNames[row.Name] = true
+		}
+	}
+	b, e = r6Read(filepath.Join(r6Root, "docs/skills-3080-operations/create-remaining3d6-074042.json"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	r6Need(t, r6Hash(b) == r6ManifestSHA, "fixed manifest differs")
+	var m struct {
+		Files []struct {
+			Target  string
+			SHA     string `json:"sha256"`
+			Content string `json:"content_base64"`
+		}
+	}
+	r6Need(t, json.Unmarshal(b, &m) == nil && len(m.Files) == 36, "manifest file count differs")
+	allowed := map[string]bool{"3d-falling-leaves": true, "3d-orbit-inspect-demo": true, "3d-sky-rays": true, "3d-ultra-realistic-water": true, "3d-underwater-god-rays": true, "3d-wood-lighting-scorecard": true}
+	for name := range newNames {
+		r6Need(t, allowed[name], "unexpected discovered target name")
+	}
+	files := map[string]string{}
+	central := filepath.Clean("D:/CC/Skills")
+	for _, row := range m.Files {
+		parts := strings.SplitN(row.Target, "/", 2)
+		r6Need(t, len(parts) == 2 && allowed[parts[0]] && !strings.ContainsAny(row.Target, "\\:") && files[row.Target] == "", "unexpected/duplicate target")
+		path := filepath.Join(central, filepath.FromSlash(row.Target))
+		rel, e := filepath.Rel(central, path)
+		r6Need(t, e == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)), "outside central")
+		for dir := filepath.Dir(path); ; dir = filepath.Dir(dir) {
+			st, e := os.Lstat(dir)
+			r6Need(t, e == nil && st.IsDir() && st.Mode()&os.ModeSymlink == 0, "physical ancestor differs")
+			if strings.EqualFold(dir, central) {
+				break
+			}
+			r6Need(t, filepath.Dir(dir) != dir, "root not reached")
+		}
+		got, e := r6Read(path)
+		if e != nil {
+			t.Fatal(e)
+		}
+		want, e := base64.StdEncoding.DecodeString(row.Content)
+		r6Need(t, e == nil && bytes.Equal(got, want) && r6Hash(got) == row.SHA, "installed bytes differ")
+		files[row.Target] = row.SHA
+	}
+	return files
+}
+func TestRemaining3D6ActualExplicitUse(t *testing.T) {
+	files := r6UseGate(t, true)
+	// The models are evaluated only after reading all36 installed outputs and
+	// authentic completed creation/discovery receipts. They do not simulate GPU.
+	TestRemaining3DBoundedPlanning(t)
+	result := map[string]any{"domain": "skills-3080-remaining3d6-explicit-use-v1", "job": os.Getenv("CC_JOB_ID"), "manifest_sha256": r6ManifestSHA, "source_commit": r6MainCommit, "installed_files": files, "explicit_skill_read": 6, "bounded_planning_cases": 6, "positive_and_negative_examples_passed": true, "fresh_discovery_completed_before_use": true, "central_writes": 0, "source_scripts_executed": 0, "real_browser_game_scene_GPU_executed": false, "implicit_skill_selection_proved": false, "warning_cause_proved": false, "whole16_complete": false, "limits": []string{"Examples cover finite drift, click ownership, weighted light, inverse residual, coordinate transforms and score comparison only.", "No shader compilation, material appearance, physical cloth or full-scene path safety result is established.", "Fresh skills/list discovery and explicit application are distinct from automatic model selection and full-context measurements."}}
+	out, e := json.MarshalIndent(result, "", "  ")
+	if e != nil {
+		t.Fatal(e)
+	}
+	p := filepath.Join(r6Root, ".ci-work/todo3080/remaining3d6-explicit-use074042.json")
+	f, e := os.OpenFile(p, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if e != nil {
+		t.Fatal(e)
+	}
+	_, w := f.Write(append(out, '\n'))
+	s := f.Sync()
+	c := f.Close()
+	if e = errors.Join(w, s, c); e != nil {
+		t.Fatal(e)
+	}
+}
+
+func TestRemaining3D6CreatedReadback(t *testing.T) {
+	files := r6UseGate(t, false)
+	manifest, e := r6Read(filepath.Join(r6Root, "docs/skills-3080-operations/create-remaining3d6-074042.json"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	var m struct {
+		Files []struct {
+			Target  string
+			Content string `json:"content_base64"`
+		}
+	}
+	r6Need(t, json.Unmarshal(manifest, &m) == nil && len(files) == 36, "readback manifest differs")
+	rows := []map[string]any{}
+	for _, f := range m.Files {
+		b, e := base64.StdEncoding.DecodeString(f.Content)
+		r6Need(t, e == nil && r6Hash(b) == files[f.Target], "readback output differs")
+		rows = append(rows, map[string]any{"target": f.Target, "bytes": len(b), "sha256": files[f.Target], "regular_non_reparse_single_link": true, "reviewed_bytes_equal": true})
+	}
+	r := map[string]any{"domain": "skills-3080-created-readback-v2", "job": os.Getenv("CC_JOB_ID"), "manifest_sha256": r6ManifestSHA, "creation_request_sha256": r6RequestSHA, "creation_receipt_sha256": r6CreateWrapperSHA, "source_commit": r6MainCommit, "new_targets_created": 6, "files_readback_verified": 36, "old_target_writes": 0, "old_unknown_body_reads": 0, "new_central_writes_by_verifier": 0, "source_execution": false, "general_access_granted": false, "original_registry_recovered": false, "discovery_checked": false, "use_checked": false, "overall16_complete": false, "files": rows}
+	b, e := json.MarshalIndent(r, "", "  ")
+	if e != nil {
+		t.Fatal(e)
+	}
+	p := filepath.Join(r6Root, ".ci-work/todo3080/remaining3d6-created-readback074042.json")
+	f, e := os.OpenFile(p, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0600)
+	if e != nil {
+		t.Fatal(e)
+	}
+	_, w := f.Write(append(b, '\n'))
+	s := f.Sync()
+	c := f.Close()
+	if e = errors.Join(w, s, c); e != nil {
+		t.Fatal(e)
+	}
+}

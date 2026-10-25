@@ -8,25 +8,30 @@ import (
 )
 
 type receivedLiteralSupport struct {
-	Row     int
-	Support ReceivedSupport
+	Row       int
+	Support   ReceivedSupport
+	CohortSHA string
 }
 
 func validateRichSupportReuse(s ReceivedSupport, actor string, row int, prior map[string]receivedLiteralSupport) bool {
 	var r struct {
-		Path   string `json:"path"`
-		Reader string `json:"reader_job"`
-		Row    int    `json:"reader_row"`
-		SHA    string `json:"source_sha256"`
-		Blob   string `json:"git_blob"`
-		Bytes  int    `json:"bytes"`
-		Method string `json:"method"`
+		Path      string `json:"path"`
+		Reader    string `json:"reader_job"`
+		Row       int    `json:"reader_row"`
+		SHA       string `json:"source_sha256"`
+		Blob      string `json:"git_blob"`
+		Bytes     int    `json:"bytes"`
+		Method    string `json:"method"`
+		CohortSHA string `json:"prior_cohort_entry_sha256"`
 	}
 	if json.Unmarshal(s.Representative, &r) != nil || r.Reader != actor || r.Row <= 0 || r.Row >= row || r.Method != "earlier_same_reader_raw_full" {
 		return false
 	}
 	p, ok := prior[actor+"|"+r.Path]
 	if !ok || p.Row != r.Row || p.Support.SHA != r.SHA || p.Support.Blob != r.Blob || p.Support.Bytes == nil || *p.Support.Bytes != r.Bytes || !evidenceTrue(p.Support.Raw) || !evidenceTrue(p.Support.Workflow) {
+		return false
+	}
+	if p.CohortSHA != "" && r.CohortSHA != p.CohortSHA {
 		return false
 	}
 	return s.SHA == r.SHA && s.Blob == r.Blob && s.Bytes != nil && *s.Bytes == r.Bytes

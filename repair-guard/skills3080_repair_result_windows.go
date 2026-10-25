@@ -81,9 +81,20 @@ func skillsReceiveTypedRepair(r skillsResultRequest, reg skillsRegistry, s *skil
 	if !ok {
 		return out, "result_binding"
 	}
+	execution, ok := skillsTypedLaunchInputAt(s, skillsJobsRoot, job, spec)
+	if !ok {
+		return out, "result_binding"
+	}
+	bootstrap, ok := skillsBootstrapForJob(s, origin)
+	if !ok {
+		return out, "native_context"
+	}
 	a := skillsHistoricalResult{Job: r.Job, SpecPath: r.SpecPath, SpecSHA: r.SpecSHA, PromptSHA: hashBytes(prompt), ParentJob: c.Author.Job,
 		Workspace: str(job["cwd"]), LaunchKey: str(job["launch_key"]), Thread: str(job["thread_id"]), Started: str(job["started_at"]), Finished: str(job["finished_at"]), Model: str(job["model"]), Effort: str(job["effort"])}
 	body, native, reason := skillsHistoricalFilesAt(s, skillsJobsRoot, a, spec, job, r.FinalSHA, func(p *skillsNativeResultProof) ([]object, bool) {
+		p.prompt = execution
+		p.bootstrapSHA = bootstrap
+		p.cwd = str(job["cwd"])
 		p.exactInput = true
 		return skillsHistoricalNative(s, job, p)
 	})

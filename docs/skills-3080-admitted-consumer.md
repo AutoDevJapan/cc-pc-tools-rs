@@ -35,6 +35,9 @@
 実nativeのsession/cwd/開始から実観測時刻までの入力・model/effortへ結ぶ。
 後付けの別依頼や未知の追加user入力を拒否し、返却前にも同じ照合を行う。
 running jobへ架空の終了時刻を保存せず、assistant本文も入力証明には使わない。
+共通の起動指示は、元authorのsessionから得る指示digestと厳密なcwd/環境形式で
+識別する。任意の先行userを共通指示扱いにしない。正規scheduler prompt・固定の
+担当関係文/guidance・実execution-promptも照合し、仕様後の自由文を認めない。
 正規登録は元3080の実authorから`--subwork-of 3080 --parent-job-id <実author>
 --subwork-kind review --spec <JSON>`を使う。Luna/maxの指定は元の本人回答の範囲を
 保持する。読み取り専用の担当はrequestファイルの作成やToDo更新をしない。

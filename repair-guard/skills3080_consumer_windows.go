@@ -95,15 +95,23 @@ func skillsAcceptedProducer(p, current skillsProducer) bool {
 	return skillsDigest(p.SHA) && skillsGitObjectID(p.Revision) && (p == current || skillsGuardBaselines[p.SHA] == p.Revision)
 }
 
-func skillsConsumerNativeInput(s *skillsFS, job object, spec []byte) bool {
+func skillsConsumerNativeInput(s *skillsFS, job object, spec []byte, author skillsWriter) bool {
 	if job["status"] != "running" {
 		return false
 	}
-	prompt, ok := skillsReviewLaunchPromptAt(s, skillsJobsRoot, job, spec)
+	prompt, ok := skillsTypedLaunchInputAt(s, skillsJobsRoot, job, spec)
 	if !ok {
 		return false
 	}
-	native, ok := skillsNativeWindow(s, job, &skillsNativeResultProof{prompt: prompt, inputOnly: true, exactInput: true}, time.Now())
+	origin, ok := skillsReadJob(s, author.Job)
+	if !ok {
+		return false
+	}
+	bootstrap, ok := skillsBootstrapForJob(s, origin)
+	if !ok {
+		return false
+	}
+	native, ok := skillsNativeWindow(s, job, &skillsNativeResultProof{prompt: prompt, inputOnly: true, exactInput: true, bootstrapSHA: bootstrap, cwd: str(job["cwd"])}, time.Now())
 	if !ok || len(native) == 0 {
 		return false
 	}
@@ -211,7 +219,7 @@ func skillsFreshConsumerOperation() object {
 	if !ok || !skillsConsumerActorBound(w, reg, job, c) || !skillsActorLive(job) || !skillsActorSource(w.Workspace, row.Scheduler.Branch) || !skillsConsumerAuthor(c, reg, job, &fs) {
 		return fail("writer")
 	}
-	if !skillsConsumerNativeInput(&fs, job, spec) {
+	if !skillsConsumerNativeInput(&fs, job, spec, c.Author) {
 		return fail("native_context")
 	}
 	scope, ok := fs.read(skillsScopePath, 1<<20)
@@ -231,7 +239,7 @@ func skillsFreshConsumerOperation() object {
 	if !ok || !jobOK || !skillsConsumerActorBound(w, fresh, actual, c) || !skillsActorLive(actual) {
 		return fail("writer")
 	}
-	if !skillsConsumerNativeInput(&fs, actual, spec) {
+	if !skillsConsumerNativeInput(&fs, actual, spec, c.Author) {
 		return fail("native_context")
 	}
 	result["consumer"], result["runtime_producer"], result["manifest_sha256"], result["native_call_id"] = w, current, c.ManifestSHA, c.Consume.CallID

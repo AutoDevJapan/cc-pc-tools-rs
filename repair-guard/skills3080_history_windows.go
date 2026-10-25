@@ -163,6 +163,21 @@ func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof,
 	if e != nil || end.Before(start) || !skillsUUID.MatchString(id) {
 		return nil, false
 	}
+	input, ok := skillsNativeSnapshot(s, job)
+	if !ok {
+		return nil, false
+	}
+	return skillsNativeProjectionBound(input, id, str(job["cwd"]), start, end, proof)
+}
+
+// One exact append-log snapshot. Bootstrap identity is separate session
+// metadata; task input/final projection still uses the original job window.
+func skillsNativeSnapshot(s *skillsFS, job object) (io.Reader, bool) {
+	id := str(job["thread_id"])
+	start, e := time.Parse(time.RFC3339Nano, str(job["started_at"]))
+	if e != nil || !skillsUUID.MatchString(id) {
+		return nil, false
+	}
 	home, e := os.UserHomeDir()
 	if e != nil {
 		return nil, false
@@ -202,7 +217,7 @@ func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof,
 	if e != nil || e2 != nil || !same(actual, p) || !info.Mode().IsRegular() || info.Size() < 1 || info.Size() > 256<<20 {
 		return nil, false
 	}
-	return skillsNativeProjectionBound(io.LimitReader(f, info.Size()), id, str(job["cwd"]), start, end, proof)
+	return io.LimitReader(f, info.Size()), true
 }
 
 type skillsNativeResultProof struct {
@@ -211,6 +226,8 @@ type skillsNativeResultProof struct {
 	finalSHA                string
 	inputOnly               bool
 	exactInput              bool
+	bootstrapSHA, cwd       string
+	userSeen                bool
 }
 
 func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
@@ -247,8 +264,20 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 	}
 	var text strings.Builder
 	for _, block := range blocks {
+		if v.Role == "user" && (p.exactInput || p.inputOnly) && block.Type != "input_text" {
+			return false
+		}
 		if block.Type == "input_text" || block.Type == "output_text" {
 			text.WriteString(block.Text)
+		}
+	}
+	if v.Role == "user" && (p.exactInput || p.inputOnly) {
+		first := !p.userSeen
+		p.userSeen = true
+		if first && skillsDigest(p.bootstrapSHA) {
+			if sha, ok := skillsBootstrapIdentity(text.String(), p.cwd); ok && sha == p.bootstrapSHA {
+				return true
+			}
 		}
 	}
 	matched := text.String() == string(p.prompt)
@@ -257,7 +286,7 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 	}
 	if v.Role == "user" && matched {
 		p.promptAt = at
-	} else if v.Role == "user" && ((p.finalSHA != "" && !p.promptAt.IsZero()) || ((p.inputOnly || p.exactInput) && (!p.promptAt.IsZero() || strings.Contains(text.String(), "\n依頼:\n")))) {
+	} else if v.Role == "user" && ((p.finalSHA != "" && !p.promptAt.IsZero()) || p.inputOnly || p.exactInput) {
 		// The typed contract fixes the review's complete user input. An unknown
 		// later user message cannot silently expand that public classification.
 		return false

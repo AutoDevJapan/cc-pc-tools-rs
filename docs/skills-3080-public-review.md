@@ -75,6 +75,19 @@ baseでの不在を照合する。baseの宣言が別pathの読取範囲を増�
    読み、同bufferのfinal digest・job metadataと一致させる。
 5. 返却直前にも実consumerを再確認する。返すのはexact原応答と限定metadataだけ。
 
+型付き仕様の実入力は`prompt.md`だけとはしない。正規schedulerの登録promptと
+実specの境界、実subworkの番号/kindから作る固定文、実sandboxの固定guidanceを
+照合する。その上で、正常ランナーが保存する`execution-prompt.md`が、同じpromptと
+正規の運用方針・固定site文だけからできていることを確認し、nativeへ完全一致させる。
+任意の先行user・仕様後の自由文・追加画像・別の後続userを拒否する。
+
+起動時のAGENTS/環境の構造化メッセージは作業のuser入力と分ける。元の登録authorの
+同じrepository/cwdに属する正規sessionの初期指示digestと、callerの厳密な環境形式を
+照合し、最初の1件だけを認める。本文を返したり、元のAGENTSファイルの分類を解除する
+ものではない。sessionの初期metadataは再開authorより前のことがあるが、作業の入力と
+finalの開始終了窓を広げる証拠には使わない。運用方針のsnapshotを現在の正本へ
+照合できない場合は保留し、元記録を現在版へ書き換えない。
+
 公開済みの固定入力は未mergeでもこのread-only経路で確認できる。`main`との
 compareを読取条件にしない。CreateNewは従来どおりmain merge、個別notice、内容review、
 正確なmanifest、現在writer、不在target等を別途要求する。raw受領だけで配置受入に

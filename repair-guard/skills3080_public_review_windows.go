@@ -381,8 +381,28 @@ func skillsPublicReviewNative(s *skillsFS, job object, spec []byte, finalSHA str
 		return nil, false
 	}
 	_, reviewTyped := skillsParsePublicReview(spec)
-	_, consumerTyped := skillsParseConsumer(spec)
-	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA, exactInput: reviewTyped || consumerTyped})
+	consumer, consumerTyped := skillsParseConsumer(spec)
+	bootstrap := ""
+	if reviewTyped || consumerTyped {
+		prompt, ok = skillsTypedLaunchInputAt(s, skillsJobsRoot, job, spec)
+		if !ok {
+			return nil, false
+		}
+		author := consumer.Author
+		if reviewTyped {
+			scope, _ := skillsParsePublicReview(spec)
+			author = scope.Author
+		}
+		origin, valid := skillsReadJob(s, author.Job)
+		if !valid {
+			return nil, false
+		}
+		bootstrap, ok = skillsBootstrapForJob(s, origin)
+		if !ok {
+			return nil, false
+		}
+	}
+	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA, exactInput: reviewTyped || consumerTyped, bootstrapSHA: bootstrap, cwd: str(job["cwd"])})
 	if !ok {
 		return nil, false
 	}

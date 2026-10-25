@@ -1,9 +1,49 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"os"
 	"testing"
 )
+
+func TestPurposeReceiptLoaderRejectsDuplicateKeysBeforeProjection(t *testing.T) {
+	raw, err := os.ReadFile("../../docs/skills-3080-adoptions.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := utilityEightPurposeSpec().WantedIDs["build-game-changelog"]
+	needle, _ := json.Marshal(id)
+	if bytes.Count(raw, needle) != 1 {
+		t.Fatal("fixed mutation occurrence not unique")
+	}
+	for _, kind := range []string{"valid", "conflicting_inventory_id", "same_value_inventory_id", "conflicting_count", "trailing_value"} {
+		t.Run(kind, func(t *testing.T) {
+			fixture := append([]byte(nil), raw...)
+			switch kind {
+			case "conflicting_inventory_id":
+				fixture = bytes.Replace(fixture, needle, append([]byte(`"foreign-occurrence", "inventory_id":`), needle...), 1)
+			case "same_value_inventory_id":
+				fixture = bytes.Replace(fixture, needle, append(append(append([]byte(nil), needle...), []byte(`, "inventory_id":`)...), needle...), 1)
+			case "conflicting_count":
+				fixture = append([]byte(`{"installed_new":999,`), bytes.TrimSpace(fixture)[1:]...)
+			case "trailing_value":
+				fixture = append(fixture, []byte(` {"ignored":true}`)...)
+			}
+			var projection struct {
+				Rows []purposeAdoptionRow `json:"entries"`
+			}
+			err := decodePublicReceipt(fixture, &projection)
+			if (err != nil) != (kind != "valid") {
+				t.Fatalf("%s accepted=%v: %v", kind, err == nil, err)
+			}
+			if kind != "valid" && len(projection.Rows) != 0 {
+				t.Fatal("ambiguous input was projected before rejection")
+			}
+		})
+	}
+}
 
 type purposeAdoptionRow struct {
 	cohortLedgerRow

@@ -9,6 +9,11 @@ JSONは`repair-guard/skills3080_public_review_windows.go`の
 `skillsPublicReviewInstructions`と完全一致させる。任意の追加指示、未知field、
 JSON後の文章、重複keyは拒否する。実データとGitHubの証明が必要なため、以下の
 説明用placeholderをそのまま登録しても資格は得られない。
+keyはjson tagで定めた綴り・大文字小文字へ再帰的に完全一致させる。
+Go標準decoderのcase-insensitive照合だけには依存せず、`instructions`と
+`Instructions`のような別名や、nested author/filesの大小文字違いも拒否する。
+受入markerのaccepted/must/headにも同じ厳密さを適用する。原記録のkeyを書き換えて
+資格を作らず、正常な起動前入力をそのまま保つ。
 
 ```json
 {

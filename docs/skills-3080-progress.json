@@ -2020,5 +2020,33 @@
     "fresh_other_job_use_verified": false,
     "current_creator_qualified_use_and_discovery_not_retracted": true,
     "whole16_complete": false
+  },
+  "webdesign91_next20_adaptation_inputs": {
+    "category_remaining": 91,
+    "parent_primary_full_reads": 91,
+    "parent_primary_bytes": 502356,
+    "parent_support_full_reads": 2,
+    "parent_support_bytes": 5909,
+    "source_slice_ordinal_range": [
+      41,
+      91
+    ],
+    "proposed_new": 20,
+    "proposed_existing_integration": 31,
+    "design": "skills-3080-webdesign-next20-inputs074042.json",
+    "design_sha256": "b7cfde3b25e531cfc01cfec3491ea0d04692602e4f13c4ec1c6352e6a6b109ff",
+    "operation": "skills-3080-operations/create-webdesign-next20-074042.json",
+    "operation_sha256": "df3a781e73580f2fb5e7a00cba71d18d6aec889277d4713ab5d5d61d8d2d0ad7",
+    "in_memory_bundle_sha256": "5bad464060c248d95b5b6ce6888884375db01a3fb61ae270a64e2540c25d0e0b",
+    "in_memory_structure_passed": 20,
+    "copied_author_files": 20,
+    "copied_author_bytes": 142425,
+    "copied_support_files": 0,
+    "new_unique_primary_coverage": 0,
+    "new_final_dispositions": 0,
+    "central_operations": 0,
+    "current_target_absence_or_body_not_checked": true,
+    "previous_illustration14_and_unknown9_and647_preserved": true,
+    "stage": "additional authoring inputs only; no actual placement"
   }
 }

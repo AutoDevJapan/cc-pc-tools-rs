@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"io"
+	"strings"
 )
 
 const reviewRegistrationThread = "01a169de-626d-7270-9de7-362e2cc8af25"
@@ -11,6 +12,19 @@ const reviewRegistrationItem = "exec-27beecc5-8f7a-47c3-927f-9f0a7208a390"
 const reviewRegistrationCommandSHA = "31ad65c65a2f203326add7cd2b1feb438034671fa12255603abdd40312976deb"
 const reviewRegistrationOutputSHA = "9eec3fe88e851eaaf196a27033696cee8a5e34bbae59d222c7fa3778c0a0d992"
 const reviewRegistrationCWD = "D:/CC/Work/unattended-operations-20261013-wt/todo-3387-discord"
+
+func reviewRegistrationModuleMatch(gitOutput []byte) bool {
+	parts := strings.Fields(string(gitOutput))
+	if len(parts) != 2 || parts[0] != parts[1] || len(parts[0]) != 40 {
+		return false
+	}
+	for _, c := range parts[0] {
+		if !(c >= '0' && c <= '9') && !(c >= 'a' && c <= 'f') {
+			return false
+		}
+	}
+	return true
+}
 
 // The normal API is the source. The saved investigation receipt is not read or
 // accepted as an attestation. Only this one command's fixed hashes are returned;

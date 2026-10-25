@@ -324,7 +324,10 @@ fn current_for(
     let Some(fields) = original["scheduler"].as_object_mut() else {
         return false;
     };
-    if fields.get("phase").is_some_and(|p| p == "prepared") {
+    if fields
+        .get("phase")
+        .is_some_and(|p| p == "prepared" || (p == "running" && job.is_some()))
+    {
         fields.insert("phase".into(), json!("preparing"));
         fields.remove("selection");
         fields.remove("selection_input");
@@ -646,6 +649,7 @@ mod tests {
         row["status"] = json!("doing");
         row["jobs"] = json!(["new-review"]);
         row["scheduler"]["job"] = json!("new-review");
+        row["scheduler"]["phase"] = json!("running");
         assert!(admission(
             &row, &job, &normal, &health, &authors, SPEC_SHA, 1000.
         ));

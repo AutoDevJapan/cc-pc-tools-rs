@@ -156,3 +156,15 @@ func TestReviewRegistrationCLIRefusesArgumentsAndEmitsOnlyFixedMetadata(t *testi
 		t.Fatal("arguments accepted")
 	}
 }
+
+func TestReviewRegistrationModuleIdentityDoesNotUseWholeRepositoryHEAD(t *testing.T) {
+	hash := strings.Repeat("a", 40)
+	if !reviewRegistrationModuleMatch([]byte(hash + "\n" + hash + "\n")) {
+		t.Fatal("identical module identities were refused")
+	}
+	for _, raw := range []string{hash, hash + "\n" + strings.Repeat("b", 40), hash + "\n" + hash + "\n" + hash, "unknown\nunknown", strings.Repeat("z", 40) + "\n" + strings.Repeat("z", 40)} {
+		if reviewRegistrationModuleMatch([]byte(raw)) {
+			t.Fatal("missing, changed or invalid module identity accepted")
+		}
+	}
+}

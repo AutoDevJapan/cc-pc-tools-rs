@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
@@ -24,11 +23,22 @@ func acquireReviewRegistration() (observed bool) {
 	if err != nil || revision == "" || !omb3255SamePath(location, omb3255SourceRoot) {
 		return false
 	}
-	git := exec.CommandContext(ctx, "git", "-C", omb3255SourceRoot, "rev-parse", "HEAD")
-	hideCommand(git)
-	git.WaitDelay = time.Second
-	head, err := git.Output()
-	if err != nil || strings.TrimSpace(string(head)) != revision {
+	moduleStable := func() bool {
+		git := exec.CommandContext(ctx, "git", "-C", omb3255SourceRoot, "rev-parse", revision+":record-recovery", "HEAD:record-recovery")
+		hideCommand(git)
+		git.WaitDelay = time.Second
+		modules, err := git.Output()
+		if err != nil || !reviewRegistrationModuleMatch(modules) {
+			return false
+		}
+		// This Go module has no local replacements. Compare its tracked
+		// working inputs too; a later unrelated documentation commit is fine.
+		git = exec.CommandContext(ctx, "git", "-C", omb3255SourceRoot, "diff", "--quiet", revision, "--", "record-recovery")
+		hideCommand(git)
+		git.WaitDelay = time.Second
+		return git.Run() == nil
+	}
+	if !moduleStable() {
 		return false
 	}
 	anchor := filepath.Join(omb3255SourceRoot, "record-recovery", "main.go")
@@ -65,5 +75,5 @@ func acquireReviewRegistration() (observed bool) {
 			observed = false
 		}
 	}()
-	return inspectReviewRegistration(rpc.Call) && protection() && binary.Unchanged()
+	return inspectReviewRegistration(rpc.Call) && protection() && moduleStable() && binary.Unchanged()
 }

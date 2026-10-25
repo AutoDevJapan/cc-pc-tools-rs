@@ -59,7 +59,10 @@ func newOMB3255Fixture(t *testing.T) omb3255Fixture {
 }
 
 func TestOMB3255FixtureWithServiceShortTemp(t *testing.T) {
-	root := t.TempDir()
+	root, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	name, err := syscall.UTF16PtrFromString(root)
 	if err != nil {
 		t.Fatal(err)

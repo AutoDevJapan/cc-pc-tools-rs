@@ -368,39 +368,38 @@ fn current_for(
         return false;
     };
     let mut original = row.clone();
-    if let Some(job) = job {
-        if row["status"] == "doing"
-            && row["scheduler"]["job"] == job["id"]
-            && row["jobs"]
-                .as_array()
-                .is_some_and(|ids| ids.as_slice() == [job["id"].clone()])
-        {
-            if !row["worker_receipt"].is_null() {
-                let before = proof["generation_before"].as_u64();
-                if row["worker_receipt"]["job"] != job["id"]
-                    || row["worker_receipt"]["generation"] != row["resume_generation"]
-                    || before.and_then(|g| g.checked_add(1)) != row["resume_generation"].as_u64()
-                    || job["todo_resume_generation"] != row["resume_generation"]
-                {
-                    return false;
-                }
-                original.as_object_mut().unwrap().remove("worker_receipt");
-                if proof["generation_present"] == true {
-                    original["resume_generation"] = proof["generation_before"].clone();
-                } else {
-                    original
-                        .as_object_mut()
-                        .unwrap()
-                        .remove("resume_generation");
-                }
-                if row["scheduler"]["key"].is_null() {
-                    original["scheduler"]["key"] = proof["launch_key"].clone();
-                }
+    if let Some(job) = job
+        && row["status"] == "doing"
+        && row["scheduler"]["job"] == job["id"]
+        && row["jobs"]
+            .as_array()
+            .is_some_and(|ids| ids.as_slice() == [job["id"].clone()])
+    {
+        if !row["worker_receipt"].is_null() {
+            let before = proof["generation_before"].as_u64();
+            if row["worker_receipt"]["job"] != job["id"]
+                || row["worker_receipt"]["generation"] != row["resume_generation"]
+                || before.and_then(|g| g.checked_add(1)) != row["resume_generation"].as_u64()
+                || job["todo_resume_generation"] != row["resume_generation"]
+            {
+                return false;
             }
-            original["status"] = json!("todo");
-            original["jobs"] = json!([]);
-            original["scheduler"].as_object_mut().unwrap().remove("job");
+            original.as_object_mut().unwrap().remove("worker_receipt");
+            if proof["generation_present"] == true {
+                original["resume_generation"] = proof["generation_before"].clone();
+            } else {
+                original
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("resume_generation");
+            }
+            if row["scheduler"]["key"].is_null() {
+                original["scheduler"]["key"] = proof["launch_key"].clone();
+            }
         }
+        original["status"] = json!("todo");
+        original["jobs"] = json!([]);
+        original["scheduler"].as_object_mut().unwrap().remove("job");
     }
     let Some(fields) = original["scheduler"].as_object_mut() else {
         return false;
@@ -742,94 +741,100 @@ mod tests {
 
     #[test]
     fn admission_preserves_the_verified_selection_across_registration_and_link() {
-        let (mut row, normal, health, authors) = fixture();
-        let proposed = proposal(
-            &row,
-            &normal,
-            &health,
-            &authors,
-            SPEC_SHA,
-            checked(true, true),
-            1000.,
-        )
-        .unwrap();
-        assert!(apply(&mut row, &proposed));
-        let proof = row["scheduler"]["unstarted_review"].clone();
-        row["scheduler"]["phase"] = json!("prepared");
-        row["scheduler"]["selection"] = json!({"unstarted_review":proof,"model":"gpt-6-luna","effort":"max",
+        for before in [None, Some(4u64)] {
+            let (mut row, normal, health, authors) = fixture();
+            if let Some(generation) = before {
+                row["resume_generation"] = json!(generation);
+            }
+            let proposed = proposal(
+                &row,
+                &normal,
+                &health,
+                &authors,
+                SPEC_SHA,
+                checked(true, true),
+                1000.,
+            )
+            .unwrap();
+            assert!(apply(&mut row, &proposed));
+            let proof = row["scheduler"]["unstarted_review"].clone();
+            row["scheduler"]["phase"] = json!("prepared");
+            row["scheduler"]["selection"] = json!({"unstarted_review":proof,"model":"gpt-6-luna","effort":"max",
             "sandbox":"read-only","network":false,"mcp_profile":"minimal","add_dirs":["D:/CC"]});
-        let job = json!({"id":"new-review","todo_id":3649,"launch_key":"same-reservation","cwd":"D:/CC/example/todo-3649-work",
+            let job = json!({"id":"new-review","todo_id":3649,"launch_key":"same-reservation","cwd":"D:/CC/example/todo-3649-work",
             "model":"gpt-6-luna","effort":"max","model_origin":"policy","effort_origin":"policy","task_type":"review","sandbox":"read-only","capacity_account_selector":"pabcdef",
             "network":false,"mcp_profile":"minimal","add_dirs":["D:/CC"],"unstarted_review":proof,"review_source_jobs":WRITERS});
-        assert!(admission(
-            &row, &job, &normal, &health, &authors, SPEC_SHA, 1000.
-        ));
-        row["status"] = json!("doing");
-        row["jobs"] = json!(["new-review"]);
-        row["scheduler"]["job"] = json!("new-review");
-        row["scheduler"]["phase"] = json!("running");
-        assert!(admission(
-            &row, &job, &normal, &health, &authors, SPEC_SHA, 1000.
-        ));
-        for field in ["unlinked", "wrong_job", "missing_jobs", "wrong_status"] {
-            let mut changed = row.clone();
-            match field {
-                "unlinked" => changed["scheduler"]["job"] = Value::Null,
-                "wrong_job" => changed["scheduler"]["job"] = json!("other"),
-                "missing_jobs" => changed["jobs"] = json!([]),
-                _ => changed["status"] = json!("todo"),
+            assert!(admission(
+                &row, &job, &normal, &health, &authors, SPEC_SHA, 1000.
+            ));
+            row["status"] = json!("doing");
+            row["jobs"] = json!(["new-review"]);
+            row["scheduler"]["job"] = json!("new-review");
+            row["scheduler"]["phase"] = json!("running");
+            assert!(admission(
+                &row, &job, &normal, &health, &authors, SPEC_SHA, 1000.
+            ));
+            for field in ["unlinked", "wrong_job", "missing_jobs", "wrong_status"] {
+                let mut changed = row.clone();
+                match field {
+                    "unlinked" => changed["scheduler"]["job"] = Value::Null,
+                    "wrong_job" => changed["scheduler"]["job"] = json!("other"),
+                    "missing_jobs" => changed["jobs"] = json!([]),
+                    _ => changed["status"] = json!("todo"),
+                }
+                assert!(
+                    !admission(&changed, &job, &normal, &health, &authors, SPEC_SHA, 1000.),
+                    "{field}"
+                );
             }
-            assert!(
-                !admission(&changed, &job, &normal, &health, &authors, SPEC_SHA, 1000.),
-                "{field}"
-            );
+            let mut assigned = row.clone();
+            let mut assigned_job = job.clone();
+            let next = before.unwrap_or(0) + 1;
+            assigned["resume_generation"] = json!(next);
+            assigned["worker_receipt"] = json!({"job":"new-review","generation":next});
+            assigned["scheduler"]["key"] = Value::Null;
+            assigned_job["todo_resume_generation"] = json!(next);
+            assert!(admission(
+                &assigned,
+                &assigned_job,
+                &normal,
+                &health,
+                &authors,
+                SPEC_SHA,
+                1000.
+            ));
+            assigned["worker_receipt"]["job"] = json!("other");
+            assert!(!admission(
+                &assigned,
+                &assigned_job,
+                &normal,
+                &health,
+                &authors,
+                SPEC_SHA,
+                1000.
+            ));
+            for (field, value) in [
+                ("model", json!("gpt-6.1-sol")),
+                ("effort_origin", json!("owner_request")),
+                ("capacity_account_selector", json!("p000000")),
+                ("sandbox", json!("danger-full-access")),
+                ("network", json!(true)),
+                ("launch_key", json!("other")),
+                ("review_source_jobs", json!([])),
+                ("add_dirs", json!([])),
+            ] {
+                let mut changed = job.clone();
+                changed[field] = value;
+                assert!(
+                    !admission(&row, &changed, &normal, &health, &authors, SPEC_SHA, 1000.),
+                    "{field}"
+                );
+            }
+            row["scheduler"]["not_before"] = json!(2000.);
+            assert!(!admission(
+                &row, &job, &normal, &health, &authors, SPEC_SHA, 1000.
+            ));
         }
-        let mut assigned = row.clone();
-        let mut assigned_job = job.clone();
-        assigned["resume_generation"] = json!(1);
-        assigned["worker_receipt"] = json!({"job":"new-review","generation":1});
-        assigned["scheduler"]["key"] = Value::Null;
-        assigned_job["todo_resume_generation"] = json!(1);
-        assert!(admission(
-            &assigned,
-            &assigned_job,
-            &normal,
-            &health,
-            &authors,
-            SPEC_SHA,
-            1000.
-        ));
-        assigned["worker_receipt"]["job"] = json!("other");
-        assert!(!admission(
-            &assigned,
-            &assigned_job,
-            &normal,
-            &health,
-            &authors,
-            SPEC_SHA,
-            1000.
-        ));
-        for (field, value) in [
-            ("model", json!("gpt-6.1-sol")),
-            ("effort_origin", json!("owner_request")),
-            ("capacity_account_selector", json!("p000000")),
-            ("sandbox", json!("danger-full-access")),
-            ("network", json!(true)),
-            ("launch_key", json!("other")),
-            ("review_source_jobs", json!([])),
-            ("add_dirs", json!([])),
-        ] {
-            let mut changed = job.clone();
-            changed[field] = value;
-            assert!(
-                !admission(&row, &changed, &normal, &health, &authors, SPEC_SHA, 1000.),
-                "{field}"
-            );
-        }
-        row["scheduler"]["not_before"] = json!(2000.);
-        assert!(!admission(
-            &row, &job, &normal, &health, &authors, SPEC_SHA, 1000.
-        ));
     }
 
     #[test]

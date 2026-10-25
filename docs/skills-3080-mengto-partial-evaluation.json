@@ -8,7 +8,7 @@
   "entrypoints_expected": 177,
   "entrypoints_fulltext_read": 177,
   "entrypoints_unread": 0,
-  "installed": 2,
+  "installed": 4,
   "integrated": 2,
   "excluded": 0,
   "central_write": 22,
@@ -1675,13 +1675,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "f37702249f566e84486aef54ffb5a36a81624a9f",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "67e7e9c9dc41b5afd0c0e62ba1e476f44f5f477e",
+        "historical_evaluation_sha256": "68b0eefb50760f952ea86ac738ce0cab2d183500076515f9f186bc2e539af232"
+      },
+      "current_installation_evidence": "skills-3080-four-installation-evidence.json"
     },
     {
       "inventory_id": "github:8566a813be1a3b67e72e430142ee4dc7c6dd89426f30e08be72396659bb93d74",
@@ -5499,7 +5505,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -5519,7 +5525,13 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "67e7e9c9dc41b5afd0c0e62ba1e476f44f5f477e",
+        "historical_evaluation_sha256": "68b0eefb50760f952ea86ac738ce0cab2d183500076515f9f186bc2e539af232"
+      },
+      "current_installation_evidence": "skills-3080-four-installation-evidence.json"
     },
     {
       "inventory_id": "github:768b376fa6ffcb2f3a96fa46ac10d3684ba464e41742059ae48386e1a24a684c",
@@ -22156,5 +22168,11 @@
   },
   "amended_at": "2026-10-24T08:15:09.0197014+00:00",
   "amendment_job": "20261024-123649-todo-3080",
-  "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts."
+  "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts.",
+  "current_installation_update": {
+    "evidence": "skills-3080-four-installation-evidence.json",
+    "added": 2,
+    "source_body_reading_and_notice_support_states_unchanged": true,
+    "definition": "Only the current installation projection changed. Earlier proposal, raw source identities, actors, rights/support limitations and original Git snapshot are retained."
+  }
 }

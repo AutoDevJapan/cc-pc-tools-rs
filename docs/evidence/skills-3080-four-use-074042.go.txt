@@ -1,0 +1,139 @@
+package main
+
+// Post-deployment examples authored after explicitly reading all four installed
+// entrypoints and guides. No upstream script, API, game, UI or renderer runs.
+import (
+	"archive/zip"
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"math"
+	"math/big"
+	"os"
+	"path/filepath"
+	"reflect"
+	"regexp"
+	"runtime"
+	"sort"
+	"strconv"
+	"strings"
+	"testing"
+	"time"
+)
+
+const useP = "D:/CC/Work/unattended-operations-20261013-wt/todo-3080-16-skills-3048/.ci-work/todo3080"
+func useHash(b []byte) string { h:=sha256.Sum256(b);return hex.EncodeToString(h[:]) }
+func useSave(t *testing.T,name string,b []byte){t.Helper();f,e:=os.OpenFile(filepath.Join(useP,name),os.O_CREATE|os.O_EXCL|os.O_WRONLY,0600);if e!=nil{t.Fatal(e)};_,w:=f.Write(b);s:=f.Sync();c:=f.Close();if e=errors.Join(w,s,c);e!=nil{t.Fatal(e)}}
+func useJSON(t *testing.T,v any)[]byte{t.Helper();b,e:=json.MarshalIndent(v,"","  ");if e!=nil{t.Fatal(e)};return append(b,'\n')}
+func useNeed(t *testing.T,ok bool,why string){t.Helper();if !ok{t.Fatal(why)}}
+
+func useTimezones(t *testing.T) map[string]any {
+	zb,e:=os.ReadFile(filepath.Join(runtime.GOROOT(),"lib","time","zoneinfo.zip"));if e!=nil{t.Fatal(e)}
+	useNeed(t,useHash(zb)=="b2d18a7c8fa8142097a48c99609fb3c92db5ee98bc740294e57eab8ae9f94779","fixed tzdata changed; do not call it current by assumption")
+	zr,e:=zip.NewReader(bytes.NewReader(zb),int64(len(zb)));if e!=nil{t.Fatal(e)}
+	load:=func(name string)*time.Location{for _,f:=range zr.File{if f.Name!=name{continue};r,e:=f.Open();if e!=nil{t.Fatal(e)};b,e:=io.ReadAll(r);r.Close();if e!=nil{t.Fatal(e)};l,e:=time.LoadLocationFromTZData(name,b);if e!=nil{t.Fatal(e)};return l};t.Fatal("explicit zone missing");return nil}
+	instant,e:=time.Parse(time.RFC3339,"2026-10-25T14:45:00Z");if e!=nil{t.Fatal(e)}
+	want:=map[string]string{"Asia/Tokyo":"2026-10-25T23:45:00+09:00","Asia/Kathmandu":"2026-10-25T20:30:00+05:45","Australia/Adelaide":"2026-10-26T01:15:00+10:30"}
+	converted:=map[string]string{};for name,expected:=range want{actual:=instant.In(load(name)).Format(time.RFC3339);useNeed(t,actual==expected,"explicit instant/date/offset conversion differs");converted[name]=actual}
+	// Enumerate this bounded example's inverse mapping. Date/ParseInLocation on
+	// an ambiguous local clock is deliberately not used to select an offset.
+	inverse:=func(local string)[]string{anchor,e:=time.Parse("2006-01-02 15:04",local);if e!=nil{t.Fatal(e)};loc:=load("Australia/Lord_Howe");out:=[]string{};for at:=anchor.Add(-26*time.Hour);!at.After(anchor.Add(26*time.Hour));at=at.Add(time.Minute){if at.In(loc).Format("2006-01-02 15:04")==local{out=append(out,at.UTC().Format(time.RFC3339))}};return out}
+	fold:=inverse("2026-04-05 01:45");gap:=inverse("2026-10-04 02:15")
+	useNeed(t,reflect.DeepEqual(fold,[]string{"2026-04-04T14:45:00Z","2026-04-04T15:15:00Z"}),"half-hour fold must retain both UTC candidates")
+	useNeed(t,len(gap)==0,"gap must not be silently normalized")
+	return map[string]any{"input_utc":instant.Format(time.RFC3339),"converted":converted,"fold_local":"Australia/Lord_Howe 2026-04-05 01:45","fold_utc_candidates":fold,"gap_local":"Australia/Lord_Howe 2026-10-04 02:15","gap_utc_candidates":gap,"negative_manual_decision":"CSTの明日9時は地域と年月日が不足するため換算しない。これは実行した数値テストとは別の適用判断。","tzdata_source":"exact GOROOT/lib/time/zoneinfo.zip bytes loaded via LoadLocationFromTZData","tzdata_sha256":useHash(zb),"go_version":runtime.Version(),"cases":5,"limits":"Five bounded examples; inverse search is minute-resolution for the declared dates, not a universal resolver or current worldwide-rule guarantee. No calendar registration or messages."}
+}
+
+type useQuestion struct{ ID string `json:"id"`; Points int `json:"points"`; Prompt string `json:"prompt"`; Options []string `json:"options,omitempty"` }
+type useAnswer struct{ ID string `json:"id"`; Answer string `json:"answer"`; Choice string `json:"choice,omitempty"`; Rubric string `json:"rubric"` }
+func useExam(t *testing.T)([]useQuestion,[]useAnswer,string,string){
+	q:=[]useQuestion{
+		{"Q1",3,"2x + 5 = 13 を満たすxを選べ。",[]string{"A: 2","B: 3","C: 4","D: 5"}},
+		{"Q2",3,"12の平方根をすべて表すものを選べ。",[]string{"A: 2√3だけ","B: ±2√3","C: 6だけ","D: ±6"}},
+		{"Q3",3,"この問題では自然数を0,1,2,…と定義する。その最小の数を選べ。",[]string{"A: -1","B: 0","C: 1","D: 最小の数はない"}},
+		{"Q4",3,"3/4 + 1/8 を計算した結果を選べ。",[]string{"A: 5/12","B: 4/12","C: 7/8","D: 1"}},
+		{"Q5",3,"縦8cm、横3cmの長方形の面積を選べ。",[]string{"A: 11cm²","B: 22cm²","C: 24cm²","D: 48cm²"}},
+		{"Q6",10,"定額料金300円と1個120円の商品x個で合計900円になった。方程式を作り、xを求めよ（xは0以上の整数）。",nil},
+		{"Q7",10,"直角三角形の直角を挟む2辺が6cmと8cmである。三平方の定理を用い、斜辺の長さと根拠を示せ。",nil},
+	}
+	a:=[]useAnswer{{"Q1","x=4","C","2×4+5=13。3点。"},{"Q2","±2√3","B","正負の両方が12を平方とする。3点。"},{"Q3","0","B","問題で0を含む定義を明示した。3点。"},{"Q4","7/8","C","6/8+1/8=7/8。3点。"},{"Q5","24cm²","C","8×3=24。3点。"},{"Q6","5個","","300+120x=900の式4点、x=5の計算4点、個数として0以上の整数・単位の確認2点。"},{"Q7","10cm","","斜辺cについてc²=6²+8²の関係4点、c²=100からの計算4点、長さなので正の値とcmの確認2点。"}}
+	seen:=map[string]bool{};total:=0;for i,x:=range q{useNeed(t,x.ID==fmt.Sprintf("Q%d",i+1)&&!seen[x.ID],"question IDs repeated/missing");seen[x.ID]=true;total+=x.Points;useNeed(t,a[i].ID==x.ID&&a[i].Rubric!="","answer/rubric mismatch")};useNeed(t,total==35&&len(a)==7,"exam total/answer count differs")
+	// Independently solve the authored questions instead of trusting answer text.
+	useNeed(t,2*4+5==13&&2*3+5!=13&&2*5+5!=13,"linear answer/distractors differ")
+	root:=2*math.Sqrt(3);useNeed(t,math.Abs(root*root-12)<1e-12&&math.Abs((-root)*(-root)-12)<1e-12&&6*6!=12,"two square roots/distractors differ")
+	f:=new(big.Rat).Add(big.NewRat(3,4),big.NewRat(1,8));useNeed(t,f.RatString()=="7/8"&&8*3==24&&300+120*5==900&&6*6+8*8==10*10,"independent arithmetic differs")
+	expectedAnswers:=[]string{fmt.Sprintf("x=%d",(13-5)/2),"±2√3","0",f.RatString(),fmt.Sprintf("%dcm²",8*3),fmt.Sprintf("%d個",(900-300)/120),fmt.Sprintf("%.0fcm",math.Sqrt(6*6+8*8))}
+	for i,want:=range expectedAnswers{useNeed(t,a[i].Answer==want,"authored answer text differs from independent solution");if i<5{selected:="";for _,option:=range q[i].Options{if strings.HasPrefix(option,a[i].Choice+": "){useNeed(t,selected=="","multiple selected options");selected=strings.TrimPrefix(option,a[i].Choice+": ")}};value:=want;if i==0{value=strings.TrimPrefix(want,"x=")};useNeed(t,selected==value,"selected option differs from independently checked answer")}}
+	useNeed(t,strings.Contains(q[2].Prompt,"自然数を0,1,2"),"natural-number answer lost its explicit problem definition")
+	questions:="# 指定単元の練習問題\n\n対象: 一次方程式・平方根・有理数・面積・三平方の定理。公式課程や学年対応は主張しない。\n制限時間25分、満点35点。\n\n"
+	answers:="# 答案と採点基準\n\n満点35点。各IDは問題紙に対応する。\n\n"
+	for i,x:=range q{questions+=fmt.Sprintf("%s（%d点） %s\n",x.ID,x.Points,x.Prompt);for _,s:=range x.Options{questions+="  "+s+"\n"};questions+="\n";answers+=fmt.Sprintf("%s: %s %s\n%s\n\n",a[i].ID,a[i].Choice,a[i].Answer,a[i].Rubric)}
+	cover:=regexp.MustCompile(`満点([0-9]+)点`).FindAllStringSubmatch(questions,-1);useNeed(t,len(cover)==1,"cover total absent or ambiguous");coverTotal,e:=strconv.Atoi(cover[0][1]);useNeed(t,e==nil&&coverTotal==total,"rendered question cover differs from actual summed points")
+	useNeed(t,!strings.Contains(questions,"正解:")&&!strings.Contains(questions,"採点基準"),"answer annotations leaked into questions")
+	return q,a,questions,answers
+}
+
+type useItem struct{ Instance string `json:"instance"`; Definition string `json:"definition"`; Owner string `json:"owner"` }
+type useInventory struct{ Version int `json:"version"`; Bag useItem `json:"bag"`; Head useItem `json:"head"`; Applied map[string]int `json:"applied_ops"` }
+func useClone(s useInventory)useInventory{m:=map[string]int{};for k,v:=range s.Applied{m[k]=v};s.Applied=m;return s}
+func useEffect(s useInventory)int{if s.Head.Definition=="helmet"{return 10};return 0}
+func useSwap(s useInventory,op string,expected int,saveFail bool)(useInventory,int,error){
+	if version,ok:=s.Applied[op];ok{return s,version,nil}
+	if s.Version!=expected{return s,0,errors.New("stale version")}
+	if s.Bag.Instance==""||s.Head.Instance==""||s.Bag.Instance==s.Head.Instance||s.Bag.Owner!=s.Head.Owner||s.Bag.Definition!="helmet"{return s,0,errors.New("ownership or incompatible head slot")}
+	next:=useClone(s);next.Bag,next.Head=next.Head,next.Bag;next.Version++;next.Applied[op]=next.Version
+	if saveFail{return s,0,errors.New("save failed before commit")}
+	return next,next.Version,nil
+}
+func useInventoryCases(t *testing.T)(useInventory,useInventory,map[string]any){
+	before:=useInventory{1,useItem{"item-B","helmet","player-test"},useItem{"item-A","helmet","player-test"},map[string]int{}}
+	after,version,e:=useSwap(before,"op-7",1,false);useNeed(t,e==nil&&version==2&&after.Bag.Instance=="item-A"&&after.Head.Instance=="item-B","full bag swap failed")
+	ids:=func(s useInventory)[]string{v:=[]string{s.Bag.Instance,s.Head.Instance};sort.Strings(v);return v};useNeed(t,reflect.DeepEqual(ids(before),ids(after))&&useEffect(before)==10&&useEffect(after)==10,"instances lost or effect duplicated")
+	replay,replayed,e:=useSwap(after,"op-7",1,false);useNeed(t,e==nil&&replayed==2&&reflect.DeepEqual(replay,after),"lost-response replay changed inventory/effects")
+	bad:=useClone(after);bad.Bag.Definition="boots";unchanged,_,e:=useSwap(bad,"op-bad",2,false);useNeed(t,e!=nil&&reflect.DeepEqual(unchanged,bad),"incompatible slot changed either side")
+	unchanged,_,e=useSwap(after,"op-save-fail",2,true);useNeed(t,e!=nil&&reflect.DeepEqual(unchanged,after)&&unchanged.Applied["op-save-fail"]==0,"save failure reported completion or changed state")
+	unchanged,_,e=useSwap(after,"op-stale",1,false);useNeed(t,e!=nil&&reflect.DeepEqual(unchanged,after),"stale version changed state")
+	return before,after,map[string]any{"bag_capacity":1,"instances_conserved":ids(after),"equipped_effect_before":useEffect(before),"equipped_effect_after":useEffect(after),"successful_operation":"op-7","replay_result_version":replayed,"incompatible_slot_preserves_both":true,"injected_save_failure_preserves_committed_state":true,"stale_version_rejected":true,"cases_before_disk_reload":5,"limits":"Reference state transitions and an injected pre-commit save failure, not a multi-process DB transaction or production game implementation."}
+}
+
+type useV3 struct{ X,Y,Z float64 }
+type useWall struct{ X,Z,Radius,Low,High float64; Enabled bool }
+func useCylinder(a,b useV3,w useWall)bool{
+	if !w.Enabled{return false};lo,hi:=0.0,1.0;dx,dz:=b.X-a.X,b.Z-a.Z;ox,oz:=a.X-w.X,a.Z-w.Z;qa:=dx*dx+dz*dz;qc:=ox*ox+oz*oz-w.Radius*w.Radius
+	if qa==0{if qc>0{return false}}else{qb:=2*(ox*dx+oz*dz);disc:=qb*qb-4*qa*qc;if disc<0{return false};r:=math.Sqrt(disc);lo=math.Max(lo,(-qb-r)/(2*qa));hi=math.Min(hi,(-qb+r)/(2*qa))}
+	dy:=b.Y-a.Y;if dy==0{if a.Y<w.Low||a.Y>w.High{return false}}else{one,two:=(w.Low-a.Y)/dy,(w.High-a.Y)/dy;if one>two{one,two=two,one};lo=math.Max(lo,one);hi=math.Min(hi,two)}
+	return lo<=hi
+}
+func useFog(t *testing.T)map[string]any{
+	a,b:=useV3{0,0,0},useV3{10,10,0};wall:=useWall{5,0,2,4,6,true}
+	useNeed(t,useCylinder(a,b,wall),"interior height overlap was missed by horizontal-boundary-only check")
+	open:=wall;open.Enabled=false;useNeed(t,!useCylinder(a,b,open),"open gate still blocks")
+	low:=wall;low.Low=0;low.High=2;useNeed(t,!useCylinder(a,b,low),"low box incorrectly blocks elevated sight")
+	inside:=useV3{5,5,0};useNeed(t,useCylinder(inside,inside,wall),"declared closed-volume/zero-length inside case differs")
+	distance:=math.Sqrt(200);within20:=distance<=20;within10:=distance<=10;useNeed(t,within20&&!within10,"range not separated from line of sight")
+	// Selection consumes the same current CPU predicate; simulation/lifetime is
+	// advanced separately and must remain active when the enemy is hidden.
+	selected:="enemy-test";ticks:=0;alive:=true;for _,w:=range []useWall{open,wall}{visible:=within20&&!useCylinder(a,b,w);ticks++;if !visible{selected=""}}
+	useNeed(t,selected==""&&ticks==2&&alive,"visibility stopped simulation/lifetime or retained an invalid target")
+	return map[string]any{"crossing_horizontal_interval":"[0.3,0.7]","crossing_height_interval":"[0.4,0.6]","closed_wall_blocks":true,"open_gate_clear_same_state":true,"low_box_clear":true,"zero_length_inside_closed_volume_blocks":true,"range20_contains_range10_excludes":true,"invalid_target_cleared":true,"hidden_enemy_simulation_ticks":ticks,"hidden_enemy_alive":alive,"cases":6,"fixture_boundary_rule":"Closed solid volume includes its boundary; zero-length inside blocks in this declared fixture.","renderer_executed":false,"actual_game_executed":false,"ui_changed":false,"performance_measured":false,"limits":"Pure CPU geometry and state-consumer example only; no terrain reconstruction, GPU, browser, production AI or rendering acceptance."}
+}
+
+func TestInstalledFourExplicitApplication(t *testing.T){
+	useNeed(t,os.Getenv("CC_JOB_ID")=="20261025-074042-todo-3080","actual application job differs")
+	raw,e:=os.ReadFile(filepath.Join(useP,"four-created-readback074042.json"));if e!=nil{t.Fatal(e)}
+	var installed struct{Files []struct{Target string `json:"target"`;SHA string `json:"sha256"`} `json:"files"`};if json.Unmarshal(raw,&installed)!=nil||len(installed.Files)!=24{t.Fatal("exact installed proof missing")}
+	activeHashes:=map[string]string{};for _,f:=range installed.Files{if !strings.HasSuffix(f.Target,"/SKILL.md")&&!strings.HasSuffix(f.Target,"/references/guide.md"){continue};b,e:=os.ReadFile(filepath.Join("D:/CC/Skills",filepath.FromSlash(f.Target)));if e!=nil{t.Fatal(e)};useNeed(t,useHash(b)==f.SHA,"active instruction changed before use");activeHashes[f.Target]=f.SHA};useNeed(t,len(activeHashes)==8,"explicit four active entries/guides missing")
+	zones:=useTimezones(t);q,a,questions,answers:=useExam(t);before,after,inventory:=useInventoryCases(t);fog:=useFog(t)
+	useSave(t,"exam-questions-use074042.md",[]byte(questions));useSave(t,"exam-answers-use074042.md",[]byte(answers));useSave(t,"exam-structured-use074042.json",useJSON(t,map[string]any{"time_minutes":25,"total_points":35,"questions":q,"answers":a,"official_curriculum_claimed":false,"rendered_or_print_verified":false}))
+	useSave(t,"inventory-use074042-v1.json",useJSON(t,before));useSave(t,"inventory-use074042-v2.json",useJSON(t,after))
+	saved,e:=os.ReadFile(filepath.Join(useP,"inventory-use074042-v2.json"));if e!=nil{t.Fatal(e)};var reloaded useInventory;if e=json.Unmarshal(saved,&reloaded);e!=nil{t.Fatal(e)};useNeed(t,reflect.DeepEqual(reloaded,after)&&useEffect(reloaded)==10,"actual saved-state reload lost IDs/effect/op receipt");inventory["actual_v2_file_reload_matches"]=true
+	replay,version,e:=useSwap(reloaded,"op-7",1,false);useNeed(t,e==nil&&version==2&&reflect.DeepEqual(replay,reloaded),"reloaded op receipt did not prevent replay")
+	for target,want:=range activeHashes{b,e:=os.ReadFile(filepath.Join("D:/CC/Skills",filepath.FromSlash(target)));if e!=nil{t.Fatal(e)};useNeed(t,useHash(b)==want,"active instruction changed during use")}
+	result:=map[string]any{"applied_at":time.Now().UTC().Format(time.RFC3339Nano),"job":os.Getenv("CC_JOB_ID"),"method":"Current Codex worker explicitly read the newly created four active entries and four guides, then authored and ran these bounded examples.","installed_source_receipt_sha256":useHash(raw),"active_entry_and_guide_sha256":activeHashes,"active_bytes_stable_before_after":true,"timezone":zones,"exam":map[string]any{"questions":7,"answers":7,"choice_points":15,"written_points":20,"total":35,"time_minutes":25,"independent_arithmetic_passed":true,"question_answer_ids_match":true,"separate_question_answer_artifacts":true,"official_curriculum_claimed":false,"word_or_print_rendered":false,"negative_manual_decision":"単なる採点や読書メモに問題生成を過剰適用せず、課程・配点・時間を推定して固定しない。"},"inventory":inventory,"fog":fog,"source_scripts_executed":false,"central_writes_by_application":0,"external_api_calls":0,"new_charges":0,"implicit_skill_selection_proven":false,"fresh_separate_model_turn_executed":false,"whole16_complete":false}
+	useSave(t,"four-explicit-application074042.json",useJSON(t,result))
+	t.Log("Applied installed four Skills: timezone5, exam7 with7answers/35points, inventory transitions plus actual save/reload, fog6. No upstream scripts, external APIs, UI or game renderer executed.")
+}

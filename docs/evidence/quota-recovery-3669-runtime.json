@@ -1,0 +1,105 @@
+{
+  "todo": 3669,
+  "status": "implementation_deployed_live_automatic_recovery_not_verified",
+  "implementation": {
+    "pr": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/454",
+    "reviewed_head": "a35c7aaba7ad47dc8d4d14f776d411c8ee84eb85",
+    "merge": "87c25c0b2556956775fa3ee9ad41348af4a8ed88",
+    "review_model": "gpt-6-luna",
+    "review_effort": "max",
+    "review_model_origin": "owner_request",
+    "author_model": "gpt-6.1-sol",
+    "followup_review": 3720,
+    "must_count": 0,
+    "review_original_sha256": "aa085f6e3e669088843d4f403c31f1b4fe10aa5d95b6fa0468fffb0946f2cf5d",
+    "native_and_saved_prompt_correspondence": true,
+    "related_tests": 173,
+    "related_clippy_success": true,
+    "related_doctests_success": true,
+    "exact_head_ci_success": true,
+    "ci_runs": [
+      40122109793,
+      40122109799,
+      40122109921
+    ]
+  },
+  "windows": {
+    "source_head": "e1a4c21dc6241c140d4d7364d34f42b16d7005be",
+    "source_tree": "98ca902c96c71e60bb09bbbb199232d61886b594",
+    "build_exit": 0,
+    "normal_shared_cargo_gate": true,
+    "sccache": true,
+    "scoped_integrated_tests_passed": 18,
+    "scoped_integrated_tests_log_sha256": "f5993a7419ffc1a2987f1464e38fa74f2611b1360a46e0ee250e5d789af7184e",
+    "source_build_log_sha256": "7798ee7221fffeef32e4af5f37b10a370afde9f0a180f38bb94dd5f344ce9511",
+    "installed": [
+      {
+        "binary": "codex_jobs.exe",
+        "sha256": "bd55ca4637ef3cd5bc66f7bee86f0c66d8e168fec46d3f562be86564e315ca37",
+        "read_back": true,
+        "owner_group_dacl_unchanged": true
+      },
+      {
+        "binary": "scheduler.exe",
+        "sha256": "2c8023016ae5c8984a0f99fa81df843a3977d0545471b8433c44abe23c30533c",
+        "read_back": true,
+        "owner_group_dacl_unchanged": true
+      }
+    ],
+    "post_update_scheduler_command_exit": 0
+  },
+  "oauth_observation": {
+    "model_execution_performed": false,
+    "openai_available_verified": true,
+    "anthropic_exhausted_verified": true,
+    "aggregate_log_sha256": "adb58f9e26205da00647b5f9bb825da19e24d566333355291981ca482f567519",
+    "raw_reply_or_account_identifiers_retained": false
+  },
+  "original_review": {
+    "todo": 3661,
+    "old_model": "anthropic/claude-opus-5-5",
+    "old_failure_kind": "quota",
+    "old_steps": 0,
+    "old_total_tokens": 0,
+    "regular_recovery_cancel_exit": 0,
+    "old_owned_processes_present": false,
+    "process_identity_unknown": false,
+    "old_original_response_modified": false,
+    "old_spec_sha_backfilled": false,
+    "original_fixed_base": "5aa94ad00b990e4374fc62923564a7e55377838e",
+    "original_fixed_head": "b249caaf63e02611d2895fa5ad558d28c8d3e2d0",
+    "original_files": 19,
+    "accepted_successor_review_chain": [
+      3708,
+      3717,
+      3722
+    ],
+    "successor_review_model": "gpt-6-luna",
+    "successor_review_origin": "owner_request",
+    "successor_native_and_prompt_correspondence": true,
+    "successor_final_head": "9c291b253b67c18a3ea11280f5b9256ffe1c6b93",
+    "successor_pr": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/459",
+    "successor_merge": "d2f26986cbc2b3c7fe18a4ad2cc1093131d62716",
+    "uncovered_original_files": 0,
+    "old_todo_closed_as_already_accepted": true,
+    "new_duplicate_review_started": false,
+    "old_job_automatically_switched_to_luna": false,
+    "live_policy_recovery_observed": false
+  },
+  "cleanup": {
+    "owned_build_id": "d4af3e7a8b160ff8c54d4395abfd0918",
+    "bytes": 2277679675,
+    "plan_action": "quarantine",
+    "plan_reason": "size",
+    "quarantine_state": "quarantined",
+    "actual_space_reclaimed_verified": false,
+    "evidence_logs_preserved_with_matching_sha256": true,
+    "old_runtime_backups_retained_bytes": 22177280,
+    "old_runtime_backups_reason": "Rollback for the two runtime files; no global process termination or unverified removal."
+  },
+  "remaining_acceptance": [
+    "Observe a genuine eligible same-scope quota transition through normal preparation, CLI, admission and native execution. Existing accepted owner-request reviews are separate evidence and are not relabelled as a policy recovery."
+  ],
+  "parent_skills_complete": false,
+  "guard_settings_queue_accounts_credentials_changed": false
+}

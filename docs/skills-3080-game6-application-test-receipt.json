@@ -1,0 +1,6 @@
+{
+  "exit": 0,
+  "timed_out": false,
+  "stdout": "=== RUN   TestInstalledGameSixExplicitApplication\n    game_next6_use074042_test.go:146: Explicit applications passed for12 installed entries/guides; synthetic state/data/statistical examples only; no game/renderer/GPU/API\n--- PASS: TestInstalledGameSixExplicitApplication (0.00s)\nPASS\nok  \tcommand-line-arguments\t0.016s\n",
+  "stderr": ""
+}

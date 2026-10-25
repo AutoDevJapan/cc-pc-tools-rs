@@ -17,6 +17,11 @@
       "file": "skills-3080-four-designs.json",
       "sha256": "2b757dc85534c7cfc007583e8524df9171c5d31b3ccbdaf4825ec6a524403cf6",
       "target_count": 4
+    },
+    {
+      "file": "skills-3080-game6-designs.json",
+      "sha256": "a13525c510e92f10dd5d7bb5daf6e06f6f0096113bb45c1b23e2fdfae2ea7fe8",
+      "target_count": 6
     }
   ]
 }

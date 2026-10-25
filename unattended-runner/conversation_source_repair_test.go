@@ -292,7 +292,7 @@ func TestConversationSourceRepairFailureAndLostResponseResume(t *testing.T) {
 				}
 			} else {
 				f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
-					if path == conversationTodo && args[0] == "edit" && failure == "delivery" {
+					if path == conversationTodo && args[0] == "question-answer" && failure == "delivery" {
 						return "", errors.New("synthetic save failure")
 					}
 					out, err := backend(ctx, path, args...)
@@ -327,7 +327,7 @@ func TestConversationSourceRepairFailureAndLostResponseResume(t *testing.T) {
 			}
 			original, _ := os.ReadFile(filepath.Join(f.r.Config.Home, "requests", message+".json"))
 			row, _ := f.r.todo(42)
-			if !bytes.Equal(source, original) || len(row.QuestionAnswers) != 1 || strings.Count(row.Note, "<discord-owner-answer>") != 1 || !bytes.Contains(f.r.State.ConversationCaptures[message].ConversationAttachmentMetadata, []byte("synthetic.png")) {
+			if !bytes.Equal(source, original) || len(row.QuestionDeliveries) != 1 || len(row.QuestionAnswers) != 0 || row.Status != "block" || strings.Count(row.Note, "<discord-owner-answer>") != 1 || !bytes.Contains(f.r.State.ConversationCaptures[message].ConversationAttachmentMetadata, []byte("synthetic.png")) {
 				t.Fatal("source/metadata lost or answer repeated")
 			}
 		})
@@ -352,7 +352,7 @@ func TestConversationSourceRepairNativePreservesRunningOriginAndLaterStop(t *tes
 		t.Fatal("native delivery failed")
 	}
 	after, _ := f.r.conversationTask(context.Background(), 42)
-	if after.Status != "todo" || string(before.ResumeGeneration) != string(after.ResumeGeneration) || before.Worker.Job != after.Worker.Job || before.Scheduler.Job != after.Scheduler.Job || len(after.QuestionAnswers) != 1 {
+	if after.Status != "block" || canonicalHash(after.QuestionWait) != canonicalHash(before.QuestionWait) || string(before.ResumeGeneration) != string(after.ResumeGeneration) || before.Worker.Job != after.Worker.Job || before.Scheduler.Job != after.Scheduler.Job || len(after.QuestionAnswers) != 0 || len(after.QuestionDeliveries) != 1 {
 		t.Fatalf("origin preservation: status=%s generation=%s/%s worker=%s/%s scheduler=%s/%s deliveries=%d answers=%d", after.Status, before.ResumeGeneration, after.ResumeGeneration, before.Worker.Job, after.Worker.Job, before.Scheduler.Job, after.Scheduler.Job, len(after.QuestionDeliveries), len(after.QuestionAnswers))
 	}
 	workerAfter, _ := os.ReadFile(workerPath)
@@ -515,7 +515,7 @@ func TestConversationSourceRepairResumeInNewQualifiedActorJob(t *testing.T) {
 				t.Fatal("original audit writer was replaced")
 			}
 			row, _ := f.r.todo(42)
-			if len(row.QuestionAnswers) != 1 || strings.Count(row.Note, "<discord-owner-answer>") != 1 {
+			if len(row.QuestionAnswers) != 0 || len(row.QuestionDeliveries) != 1 || strings.Count(row.Note, "<discord-owner-answer>") != 1 {
 				t.Fatal("new actor repeated delivery")
 			}
 		})
@@ -546,5 +546,27 @@ func TestConversationSourceRepairPollRejectsChangedAttachmentMetadata(t *testing
 	afterTodo, _ := os.ReadFile(f.r.TodoPath)
 	if len(health.Errors) == 0 || !bytes.Equal(state, afterState) || !bytes.Equal(todo, afterTodo) {
 		t.Fatal("ordinary poll treated changed metadata as the old delivered version", health.Errors)
+	}
+}
+
+func TestConversationSourceRepairNativeFinishedOriginNeverResumes(t *testing.T) {
+	f := conversationNativeTest(t)
+	f.mutateTodo(t, func(row map[string]any) {
+		row["resume_generation"] = 7
+		row["worker_receipt"] = map[string]any{"job": "worker-42", "generation": 7}
+		row["scheduler"] = map[string]any{"job": "worker-42", "key": "origin-key", "phase": "running"}
+	})
+	f, args, _ := prepareSourceRepairFixture(t, f)
+	workerPath := filepath.Join(f.r.JobsPath, "worker-42", "job.json")
+	if os.MkdirAll(filepath.Dir(workerPath), 0700) != nil || publish(workerPath, map[string]any{"id": "worker-42", "todo_id": 42, "launch_key": "origin-key", "status": "succeeded", "exit_code": 0}) != nil {
+		t.Fatal("finished original job")
+	}
+	before, _ := f.r.conversationTask(context.Background(), 42)
+	if code, _ := intakeLinkCLI(t, f, args); code != 0 {
+		t.Fatal("finished original delivery unavailable")
+	}
+	after, _ := f.r.conversationTask(context.Background(), 42)
+	if after.Status != before.Status || string(after.ResumeGeneration) != string(before.ResumeGeneration) || after.Scheduler.Job != before.Scheduler.Job || after.Worker.Job != before.Worker.Job || canonicalHash(after.QuestionWait) != canonicalHash(before.QuestionWait) || len(after.QuestionAnswers) != 0 || len(after.QuestionDeliveries) != 1 {
+		t.Fatal("finished original was retired, released or made runnable")
 	}
 }

@@ -254,6 +254,135 @@ fn continued_delivery_preserves_everything_except_its_note_time_and_receipt() {
     );
 }
 
+fn deliver_preserving(f: &Fixture, answer: &Path, expected: &Value) -> Output {
+    let expected_file = f.file("parked-delivery-expected.json", expected);
+    let note_file = f.temp.path().join("parked-delivery-note.txt");
+    fs::write(
+        &note_file,
+        format!(
+            "{}\n\nprivate reply full instruction",
+            expected["note"].as_str().unwrap()
+        ),
+    )
+    .unwrap();
+    f.command(&[
+        "question-answer",
+        "1",
+        "--delivery-only",
+        "--preserve-question-wait",
+        "--answer-file",
+        answer.to_str().unwrap(),
+        "--delivery-note-file",
+        note_file.to_str().unwrap(),
+        "--expected-state-file",
+        expected_file.to_str().unwrap(),
+    ])
+    .output()
+    .unwrap()
+}
+
+#[test]
+fn original_delivery_keeps_wait_owner_generation_and_finished_worker() {
+    for status in ["running", "succeeded"] {
+        let f = Fixture::new();
+        let (_, answer_file, _) = f.park();
+        fs::create_dir(f.paths.jobs.join("original-worker")).unwrap();
+        let job = f.paths.jobs.join("original-worker/job.json");
+        fs::write(&job, serde_json::to_vec(&json!({"id":"original-worker", "todo_id":1, "launch_key":"original-key", "status":status})).unwrap()).unwrap();
+        let job_before = fs::read(&job).unwrap();
+        let before = f.read();
+        let out = deliver_preserving(&f, &answer_file, &before["items"][0]);
+        assert!(
+            out.status.success(),
+            "{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        let meta: Value = serde_json::from_slice(&out.stdout).unwrap();
+        assert_eq!(meta["wait_preserved"], true);
+        assert_eq!(meta["resumed"], false);
+        assert_eq!(meta["answered"], false);
+        let mut after = f.read();
+        assert_eq!(after["items"][0][DELIVERIES][0]["preserved_wait"], true);
+        assert_eq!(after["items"][0][DELIVERIES].as_array().unwrap().len(), 1);
+        assert!(after["items"][0][ANSWERS].is_null());
+        assert_eq!(fs::read(&job).unwrap(), job_before);
+        let replay_before = f.raw();
+        let replay = deliver_preserving(&f, &answer_file, &after["items"][0]);
+        assert!(
+            replay.status.success(),
+            "{}",
+            String::from_utf8_lossy(&replay.stderr)
+        );
+        assert_eq!(f.raw(), replay_before);
+        after["items"][0]["scheduler"]
+            .as_object_mut()
+            .unwrap()
+            .remove("owner_instruction");
+        for key in ["note", "updated", DELIVERIES] {
+            let row = after["items"][0].as_object_mut().unwrap();
+            match before["items"][0].get(key) {
+                Some(value) => {
+                    row.insert(key.into(), value.clone());
+                }
+                None => {
+                    row.remove(key);
+                }
+            }
+        }
+        assert_eq!(
+            after, before,
+            "delivery released the wait, retired its worker or changed unrelated state"
+        );
+    }
+}
+
+#[test]
+fn original_delivery_rejects_other_generations_waits_and_holds() {
+    for change in [
+        "generation",
+        "worker",
+        "question",
+        "scope",
+        "stop",
+        "stale",
+        "status",
+        "legacy",
+    ] {
+        let f = Fixture::new();
+        let (_, answer_file, _) = f.park();
+        let mut db = f.read();
+        let expected = db["items"][0].clone();
+        match change {
+            "generation" => db["items"][0]["resume_generation"] = json!(8),
+            "worker" => db["items"][0]["worker_receipt"] = json!({"job":"another-worker"}),
+            "question" => {
+                db["items"][0][WAIT]["question"]["request_id"] = json!("another-question")
+            }
+            "scope" => db["items"][0]["project"] = json!("owner"),
+            "stop" => db["items"][0]["owner_stopped"] = json!(true),
+            "stale" => db["items"][0]["note"] = json!("a later direct instruction"),
+            "status" => db["items"][0]["status"] = json!("doing"),
+            "legacy" => {
+                db["items"][0][WAIT]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("origin");
+            }
+            _ => unreachable!(),
+        }
+        f.write(&db);
+        let before = f.raw();
+        let snapshot = if change == "stale" {
+            &expected
+        } else {
+            &db["items"][0]
+        };
+        let out = deliver_preserving(&f, &answer_file, snapshot);
+        assert!(!out.status.success(), "accepted {change}");
+        assert_eq!(f.raw(), before, "changed {change}");
+    }
+}
+
 #[test]
 fn continued_delivery_keeps_prior_instructions_and_future_time_holds_for_the_next_worker() {
     let f = Fixture::new();

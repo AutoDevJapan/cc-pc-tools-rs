@@ -44,3 +44,18 @@
   runningなら拒否する。追加したraceテストは成功。通常巡回のmetadata照合も追加中。
 - 次はこの追加差分の読取レビュー、変更した最終候補のCI、既存手順のhash/原子更新。
   実投稿のcanonical作成と配送はまだ行っていない。管理chatの同じ指定キーへmetadataを保存済み。
+
+## 元担当の終了を受けた配送専用モード
+
+- fbac342dまでのレビューは3856→3858→3860でMust0を確認した。親のcheckpointも
+  正規CLIでsaved=true、実HEADと所有の全照合が成功。PR515はまだ未マージ。
+- 本番変更前の最新metadataで、元2913 job20261025-101415-todo-2913が00:39に
+  succeededで終了したと確認。質問waitと世代5、元jobを保持。3852は2913依存wait。
+- その状態で通常answerを使うと元workerを退役することを、隔離native consumerの
+  新しいRedで確認。実投稿ではこの操作をしていない。
+- cc-todoの既存delivery-onlyへpreserve-question-waitを追加中。正確な元wait/ownerの
+  CASを要求し、待機・job・世代・依存を保ったまま全文instructionだけ登録する。
+  新契約のGo配送と毎分処理もこの経路を使い、途中失敗後に普通のanswerへ落とさない。
+- Cargoは親に割当なし。Rustのテスト/配布ビルドは--needs cargoの独立checkへ渡す。
+  追加native差分の別モデルレビュー、最新CI、todo.exeとrunnerのhash更新が必要。
+  fbac候補の実行物は本番反映していない。実投稿復旧・実読・実反映も未確認。

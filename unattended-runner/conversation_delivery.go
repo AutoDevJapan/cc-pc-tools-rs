@@ -221,6 +221,11 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 			req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
 			return r.save()
 		}
+		if len(req.ConversationAttachmentMetadata) != 0 {
+			// The explicit repair never retires or resumes the product owner,
+			// including when that owner exits while capture is being repaired.
+			return r.deliverConversationReplyKeepingWait(ctx, row, q, reply, req, receipt, marker, true)
+		}
 		if reacquired {
 			if !hasNoteMarker(row.Note, marker) || !conversationWaitUnchanged(row, q) || !conversationWaitOwnerUnchanged(row) {
 				return errors.New("conversation reacquisition delivery proof unavailable")
@@ -402,6 +407,10 @@ func conversationDeliveryRecorded(row *TodoRow, q ConversationQuestion, answer c
 }
 
 func (r *Runner) deliverContinuedConversationReply(ctx context.Context, row *TodoRow, q ConversationQuestion, reply conversationReply, req *Request, receipt []byte, marker string) error {
+	return r.deliverConversationReplyKeepingWait(ctx, row, q, reply, req, receipt, marker, false)
+}
+
+func (r *Runner) deliverConversationReplyKeepingWait(ctx context.Context, row *TodoRow, q ConversationQuestion, reply conversationReply, req *Request, receipt []byte, marker string, preserve bool) error {
 	note := row.Note + "\n\n" + r.conversationReplyInstructions(q, reply, req, receipt, marker)
 	if len(note) > 1<<20 {
 		return errors.New("conversation delivery note limit exceeded")
@@ -423,7 +432,11 @@ func (r *Runner) deliverContinuedConversationReply(ctx context.Context, row *Tod
 	if err != nil {
 		return err
 	}
-	if _, err := r.Run(ctx, conversationTodo, "question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile, "--delivery-only", "--delivery-note-file", noteFile, "--expected-state-file", expectedFile, "--scope-file", scopeFile); err != nil {
+	args := []string{"question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile, "--delivery-only", "--delivery-note-file", noteFile, "--expected-state-file", expectedFile, "--scope-file", scopeFile}
+	if preserve {
+		args = append(args, "--preserve-question-wait")
+	}
+	if _, err := r.Run(ctx, conversationTodo, args...); err != nil {
 		return errors.New("conversation continued answer delivery deferred")
 	}
 	current, err := r.todo(q.Todo)

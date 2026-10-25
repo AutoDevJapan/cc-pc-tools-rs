@@ -27,6 +27,7 @@ fn validate_record(record: &Value, id: i64, at: DateTime<Utc>) -> Result<()> {
     // A delivery to an already answered question carries one extra marker. Older
     // records keep their exact shape and the strict generation rule.
     let after_answer = record.get("after_answer").is_some();
+    let preserved_wait = record.get("preserved_wait").is_some();
     let mut fields = vec![
         "domain",
         "wait",
@@ -41,6 +42,9 @@ fn validate_record(record: &Value, id: i64, at: DateTime<Utc>) -> Result<()> {
     if after_answer {
         fields.push("after_answer");
     }
+    if preserved_wait {
+        fields.push("preserved_wait");
+    }
     shape(record, &fields)?;
     validate_wait(&record["wait"], id, at)?;
     validate(&record["answer"], id, true, at)?;
@@ -49,7 +53,12 @@ fn validate_record(record: &Value, id: i64, at: DateTime<Utc>) -> Result<()> {
         &record["recipient"],
         &["resume_generation", "worker_receipt", "job", "key"],
     )?;
-    if after_answer {
+    if preserved_wait {
+        if after_answer || record["preserved_wait"] != true {
+            return fail("delivery_receipt_invalid");
+        }
+        original_recipient(&record["wait"], &record["recipient"])?;
+    } else if after_answer {
         if record["after_answer"] != true {
             return fail("delivery_receipt_invalid");
         }
@@ -69,6 +78,13 @@ fn validate_record(record: &Value, id: i64, at: DateTime<Utc>) -> Result<()> {
         || timestamp(record, "delivered_at", at)? < timestamp(&record["answer"], "acquired_at", at)?
     {
         return fail("delivery_receipt_invalid");
+    }
+    Ok(())
+}
+
+fn original_recipient(wait: &Value, recipient: &Value) -> Result<()> {
+    if !wait["origin"].is_object() || wait["origin"] != *recipient {
+        return fail("delivery_generation_mismatch");
     }
     Ok(())
 }
@@ -266,6 +282,33 @@ pub fn deliver(
     note_file: &Path,
     expected_file: &Path,
 ) -> Result<Value> {
+    deliver_inner(db, paths, id, answer_file, note_file, expected_file, false)
+}
+
+/// Keep the original question and its owner tuple even if the worker has exited.
+/// This operation can never make the original task runnable or resume a session.
+pub fn deliver_preserving_wait(
+    db: &mut Value,
+    paths: &Paths,
+    id: i64,
+    answer_file: &Path,
+    note_file: &Path,
+    expected_file: &Path,
+) -> Result<Value> {
+    let mut value = deliver_inner(db, paths, id, answer_file, note_file, expected_file, true)?;
+    value["wait_preserved"] = json!(true);
+    Ok(value)
+}
+
+fn deliver_inner(
+    db: &mut Value,
+    paths: &Paths,
+    id: i64,
+    answer_file: &Path,
+    note_file: &Path,
+    expected_file: &Path,
+    preserve_wait: bool,
+) -> Result<Value> {
     let (answer, sha) = read(answer_file, ANSWER_FIELDS)?;
     let at = clock()?;
     validate(&answer, id, true, at)?;
@@ -280,6 +323,9 @@ pub fn deliver(
             && record["answer"]["reply_sha256"] == answer["reply_sha256"]
             && record["answer"]["receipt_file_sha256"] == answer["receipt_file_sha256"]
         {
+            if preserve_wait && record["preserved_wait"] != true {
+                return fail("preserved_delivery_conflict");
+            }
             if record["answer"] != answer || record["answer_file_sha256"] != sha {
                 return fail("answer_conflict");
             }
@@ -297,6 +343,9 @@ pub fn deliver(
     for receipt in receipts(row)? {
         validate_receipt(receipt, id, at)?;
         if receipt["answer"] == answer && receipt["answer_file_sha256"] == sha {
+            if preserve_wait {
+                return fail("question_already_answered");
+            }
             check_config(paths, &receipt["wait"]["question"])?;
             return Ok(result(id, &receipt["wait"], false, true, 0));
         }
@@ -336,18 +385,24 @@ pub fn deliver(
     let dependency_wait = after_answer
         && text(row, "status") == "wait"
         && row["wait_on"].as_array().is_some_and(|on| !on.is_empty());
-    if !(matches!(text(row, "status"), "todo" | "doing") || dependency_wait) {
+    if preserve_wait {
+        if after_answer || text(row, "status") != "block" || row[WAIT_KEY].is_null() {
+            return fail("status_not_eligible");
+        }
+    } else if !(matches!(text(row, "status"), "todo" | "doing") || dependency_wait) {
         return fail("status_not_eligible");
     }
     let recipient = origin_identity(row);
-    if after_answer {
+    if preserve_wait {
+        original_recipient(&wait, &recipient)?;
+    } else if after_answer {
         answered_generations(&wait, &recipient)?;
     } else {
         generations(&wait, &recipient)?;
     }
     // Delivery never releases a clock-based backoff. Preserve it while making
     // the answer reachable before the next worker starts.
-    holds_clear_with(db, row, after_answer)?;
+    holds_clear_with(db, row, after_answer || preserve_wait)?;
     owner_clear(paths, row)?;
     let previous = row["note"].as_str().ok_or("conversation_note_invalid")?;
     let data = bytes(note_file)?;
@@ -371,6 +426,9 @@ pub fn deliver(
         "note_sha256":digest(&data), "instruction_sha256":digest(instruction.as_bytes()), "delivered_at":delivered_at});
     if after_answer {
         record["after_answer"] = json!(true);
+    }
+    if preserve_wait {
+        record["preserved_wait"] = json!(true);
     }
     let mut saved = records(row)?.to_vec();
     saved.push(record);

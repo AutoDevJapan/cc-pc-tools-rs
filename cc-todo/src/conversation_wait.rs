@@ -7,7 +7,7 @@ use sha2::{Digest, Sha256};
 use std::{fs, io::Read, path::Path};
 
 mod continued;
-pub use continued::deliver;
+pub use continued::{deliver, deliver_preserving_wait};
 
 const MAX_BYTES: u64 = 1024 * 1024;
 const QUESTION: &str = "discord-conversation-question-v1";

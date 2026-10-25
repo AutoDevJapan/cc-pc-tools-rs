@@ -23,8 +23,10 @@ Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/513
 
 一般受付、原ファイル、一般受付ToDoの仕様・履歴・wait・jobを保つ。専用captureと
 不変のauditを追加し、canonicalが永続化された後に状態を公開する。異なるcanonical
-は置換しない。元製品には既存question-answer/全文instructionだけを渡し、元質問
-以外の停止・依存・担当・世代を変更しない。同版の再呼出しは配送を重複させない。
+は置換しない。元製品には既存question-answer/全文instructionの配送専用経路を使う。
+`question-answer --delivery-only --preserve-question-wait` は元の質問待ちを保ち、
+担当が終了済みでもjob・世代・停止・依存を変更せず、作業を実行可能にしない。
+受領記録に`preserved_wait=true`を保持する。同版の再呼出しは配送を重複させない。
 保存・配送・実セッションの読取・実反映・製品完成は別の事実とする。
 クラッシュ後に保守担当のjobが変わっても、同じToDoの新しい正規jobを独立に検証し、
 元の関連記録のjobが履歴にあり終了済みの場合だけ再開する。最初の関連記録は書き換えず、
@@ -40,6 +42,16 @@ Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/513
 - 再起動後のsource-verifyと既に配送済みの再呼出しを確認する。
 - 本文・編集時刻が同じでも添付metadataが変われば、通常巡回でも元captureの再利用を拒否する。
 - 無関係なforeign-association拒否を弱めず、製品担当を起動しない。
+- 元担当が作業中でも終了済みでも、元の待機・担当・世代を保ち、再起動しない。
+
+## 実行中に変わった元担当の状態
+
+実データの変更前に読み返したところ、元2913のjobは00:39にsucceededで終了していた。
+既存の通常answerは終了済みownerを退役させるため、そのまま実行していない。
+隔離した実ToDo CLIで終了済みownerが退役するRedを確認し、上の配送専用モードを
+追加した。Cargoを割り当てた独立した確認担当でRustの関連テストと配布用ビルド、
+新しい実ToDo CLIを使ったGoの隔離テストを確認する。原質問の待機が残っても、
+本人未回答として質問を再送しない。実セッションの読取と実反映は別に追う。
 
 ## 今回の実対象
 

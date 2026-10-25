@@ -80,7 +80,7 @@ recursive tree記録であり、これを同じ形式だったと扱わない。
 全体ハッシュの一致後にだけ利用する。Skill primaryがcatalog上で取得済みであり、
 固定commit/path、index、treeのGit blob、bytes数が一致することを求める。
 個別license/noticeも同じindex/treeの正確なpathとroleへ結ぶ。
-その2つの保存objectだけを展開し、SHA-256・Git blob・bytes数と、レビューした
+対象sourceと適用noticeの保存objectだけを展開し、SHA-256・Git blob・bytes数と、レビューした
 出力の保持bytesを一致させる。欠落、link/hardlink、変更された証拠、取得保留は拒否する。
 
 catalogに列挙されない取得済み支持文は、固定indexの `support_text` とMarkdown拡張子を
@@ -150,7 +150,8 @@ fileは `target`（中央rootからの相対path）、`sha256`、`content_base64
 修復3686の新しいコードレビューは正規subwork関係と固定headのmarkerを要求する。
 依頼・結果・モデル情報を別jobに流用しない。
 
-現在の3080担当は、自分の正規登録済みpublic reviewの原応答も受領できる。
+現在の3080担当は、親が独立に特定した既知public review3847の原応答も受領できる。
+対象task/job/spec/final digestの4つを固定し、同じ親配下でも別の非公開reviewは受け付けない。
 現spec/job、永続admission、元author、read-only実行、必須final digest、対応nativeと
 現在consumerの条件は維持する。応答の受領と、manifestの内容受入は別であり、
 正しいacceptance markerがない原応答はCreateNewの承認には使えない。

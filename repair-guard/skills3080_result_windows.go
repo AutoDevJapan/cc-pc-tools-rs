@@ -281,6 +281,19 @@ func skillsResultBinding(r skillsResultRequest, reg skillsRegistry, job object, 
 	return skillsResultBindingWith(r, reg, job, spec, forReview, skillsOriginalSpecs)
 }
 func skillsResultBindingWith(r skillsResultRequest, reg skillsRegistry, job object, spec []byte, forReview bool, originals map[int]string) bool {
+	return skillsResultBindingKnown(r, reg, job, spec, forReview, originals, skillsOriginalParentReview)
+}
+
+// The parent independently identified this exact public response before this
+// repair. Parentage alone does not classify every child review as public.
+var skillsOriginalParentReview = skillsResultRequest{
+	Task: 3847, Job: "20261025-215831-todo-3847",
+	SpecSHA:  "902cb85702fff34a93089c65504f14ba636d92070d2d7a735577618cf5af4dda",
+	FinalSHA: "3a69abde4602353425769ad988a82f38d124afe56c3371a96102f284c607cbb4",
+}
+
+// Alternative identities are a unit-test seam, never request fields.
+func skillsResultBindingKnown(r skillsResultRequest, reg skillsRegistry, job object, spec []byte, forReview bool, originals map[int]string, publicResult skillsResultRequest) bool {
 	row, ok := reg.Tasks[r.Task]
 	parent, hasParent := reg.Tasks[3080]
 	if !ok || !hasParent || parent.Project != "cc-pc-tools-rs" || row.Project != parent.Project || !skillsHasJob(row, r.Job) || !skillsLatest(row, r.Job) || !skillsJobTask(job, r.Task) || job["id"] != r.Job || job["status"] != "succeeded" || job["exit_code"] != json.Number("0") || !same(str(job["cwd"]), row.Scheduler.Worktree) || hashBytes(spec) != r.SpecSHA {
@@ -300,7 +313,7 @@ func skillsResultBindingWith(r skillsResultRequest, reg skillsRegistry, job obje
 	// The real public parent may receive its registered review's raw response
 	// before accepting a manifest or merging. A missing acceptance marker is
 	// still rejected by skillsReviewAccepted, never rewritten here.
-	publicParentResult := !forReview && row.Subwork.Parent == 3080 && reg.writer.Task == 3080 && skillsDigest(r.FinalSHA)
+	publicParentResult := !forReview && r == publicResult && row.Subwork.Parent == 3080 && reg.writer.Task == 3080 && skillsDigest(r.FinalSHA)
 	return (forReview || publicParentResult || (row.Subwork.Parent == 3686 && strings.Contains(string(spec), "SKILLS3080_IMPLEMENTATION_REVIEW "))) && row.Subwork.Kind == "review" && (row.Subwork.Parent == 3080 || row.Subwork.Parent == 3686) && job["sandbox"] == "read-only" &&
 		conversationNumber(obj(job["subwork"])["parent_todo_id"]) == uint64(row.Subwork.Parent) &&
 		obj(job["subwork"])["origin_job_id"] == row.Subwork.ParentJob &&

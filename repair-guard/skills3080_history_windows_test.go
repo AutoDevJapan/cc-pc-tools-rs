@@ -162,9 +162,10 @@ func TestSkills3080RegisteredParentReviewCanReturnItsOriginalResponse(t *testing
 	row.Subwork.Owner.Worktree = skillsParentRoot
 	row.Scheduler.Admission = &skillsAdmission{Key: "real-admission", Spec: row.Spec, Worktree: row.Scheduler.Worktree, Subwork: row.Subwork}
 	job := object{"id": r.Job, "todo_id": json.Number("3847"), "status": "succeeded", "exit_code": json.Number("0"), "cwd": row.Scheduler.Worktree, "sandbox": "read-only", "parent_job_id": nil, "launch_key": "real-admission", "subwork_validated": true, "subwork": object{"parent_todo_id": json.Number("3080"), "origin_job_id": parent.Jobs[0], "kind": "review", "owner": object{"worktree": skillsParentRoot}}, "finite_review": object{"spec": row.Spec}}
+	expected := r
 	check := func(row skillsTask, w skillsWriter) bool {
-		reg := skillsRegistry{Tasks: map[int]skillsTask{3080: parent, 3847: row}, writer: w}
-		return skillsResultBindingWith(r, reg, job, spec, false, map[int]string{})
+		reg := skillsRegistry{Tasks: map[int]skillsTask{3080: parent, row.ID: row}, writer: w}
+		return skillsResultBindingKnown(r, reg, job, spec, false, map[int]string{}, expected)
 	}
 	if !check(row, w) {
 		t.Fatal("registered public parent review could not return its original response")
@@ -173,10 +174,30 @@ func TestSkills3080RegisteredParentReviewCanReturnItsOriginalResponse(t *testing
 	if skillsReviewAccepted(received, strings.Repeat("a", 64), "gpt-6.1-sol") {
 		t.Fatal("raw response became creation acceptance without the correct protocol")
 	}
-	for _, kind := range []string{"other_parent", "unregistered", "admission", "research", "held", "other_consumer", "no_digest"} {
+	for _, kind := range []string{"other_parent", "unregistered", "admission", "research", "held", "other_consumer", "no_digest", "private_review", "other_final"} {
 		t.Run(kind, func(t *testing.T) {
+			beforeR, beforeJob, beforeSpec := r, job, spec
+			defer func() { r, job, spec = beforeR, beforeJob, beforeSpec }()
 			copy, writer := row, w
 			switch kind {
+			case "private_review":
+				// A perfectly real, independently admitted review of private
+				// material under the same parent must still be unreceivable.
+				copy.ID = 3850
+				copy.Spec = "D:/CC/Tools/todo/specs/3850-private.md"
+				copy.Jobs = []string{"20261025-220000-todo-3850"}
+				copy.Scheduler.Job = copy.Jobs[0]
+				a := *copy.Scheduler.Admission
+				copy.Scheduler.Admission = &a
+				a.Spec = copy.Spec
+				a.Key = "real-private-admission"
+				r.Task, r.Job = copy.ID, copy.Jobs[0]
+				spec = []byte("private review scope")
+				r.SpecSHA = hashBytes(spec)
+				job = objClone(job)
+				job["id"], job["todo_id"], job["launch_key"], job["finite_review"] = r.Job, json.Number("3850"), a.Key, object{"spec": copy.Spec}
+			case "other_final":
+				r.FinalSHA = hashBytes([]byte("unclassified response"))
 			case "other_parent":
 				copy.Subwork.Parent = 3686
 			case "unregistered":

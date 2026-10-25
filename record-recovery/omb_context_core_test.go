@@ -113,6 +113,7 @@ func TestOMB3255ContextDoesNotReturnPartialReadOrAmbiguity(t *testing.T) {
 		"duplicate session": strings.NewReader(good + omb3255SyntheticHeader()),
 		"truncated tail":    strings.NewReader(good + `{"type":`),
 		"no newline":        strings.NewReader(strings.TrimSuffix(good, "\n")),
+		"malformed newline": strings.NewReader(good + "{\n"),
 		"duplicate key":     strings.NewReader(strings.Replace(good, `"model":"gpt-6-luna","effort":"max"`, `"model":"gpt-6-luna","model":"gpt-6.1-sol","effort":"max"`, 1)),
 		"invalid utf8":      bytes.NewReader(append([]byte(good), 0xff, '\n')),
 		"line limit":        strings.NewReader(good + strings.Repeat(" ", (64<<10)+1) + "\n"),

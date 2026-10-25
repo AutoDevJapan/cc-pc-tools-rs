@@ -2,6 +2,28 @@ use cc_job_policy::quota_recovery::*;
 use serde_json::{Value, json};
 
 #[test]
+fn stop_intent_is_bound_to_the_same_native_attempt_and_requires_confirmed_drain() {
+    let mut source = json!({"codex_pid":7,"codex_pid_created":8,"started_at":"attempt-A","attempt_events_offset":20,
+        "protocol_stall":{"stage":"stopping","child_pid":7,"child_created":8,"started_at":"attempt-A","attempt_events_offset":20}});
+    assert!(collection_pending(&source));
+    source["protocol_stall"]["stage"] = json!("drained");
+    assert!(!collection_pending(&source));
+    source["protocol_stall"]["stage"] = json!("stopping");
+    for key in [
+        "codex_pid",
+        "codex_pid_created",
+        "started_at",
+        "attempt_events_offset",
+    ] {
+        let mut next = source.clone();
+        next[key] = json!("new generation");
+        assert!(!collection_pending(&next), "{key}");
+    }
+    source["protocol_stall"] = Value::Null;
+    assert!(!collection_pending(&source));
+}
+
+#[test]
 fn refreshed_oauth_aggregates_exhaustion_and_eligibility_without_private_fields() {
     let now = 1000.;
     let row = json!({"id":"private-id","email":"private@example.invalid","type":"codex",

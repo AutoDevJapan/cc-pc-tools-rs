@@ -33,30 +33,31 @@ type ConversationAskInput struct {
 // All public fields are receipt metadata. Question and answer text stays in the
 // private sender/receipt files, never in command output or health reports.
 type ConversationQuestion struct {
-	ExistingURL      string   `json:"-"`
-	RequestID        string   `json:"request_id"`
-	SenderID         string   `json:"sender_request_id"`
-	Todo             uint64   `json:"todo_id"`
-	Project          string   `json:"project"`
-	OriginThread     string   `json:"origin_thread_id"`
-	InputSHA         string   `json:"input_sha256"`
-	BodyFile         string   `json:"body_file"`
-	DecisionFile     string   `json:"decision_file"`
-	Title            string   `json:"title,omitempty"`
-	Wait             bool     `json:"wait_requested"`
-	Phase            string   `json:"phase"`
-	Created          string   `json:"created_at"`
-	Thread           string   `json:"thread_id,omitempty"`
-	Message          string   `json:"question_message_id,omitempty"`
-	Progress         string   `json:"progress_thread_id,omitempty"`
-	Fingerprint      string   `json:"question_fingerprint,omitempty"`
-	DecisionSHA      string   `json:"decision_identity_sha256,omitempty"`
-	QuestionSHA      string   `json:"question_body_sha256,omitempty"`
-	ReceiptFile      string   `json:"question_receipt_file,omitempty"`
-	ReceiptSHA       string   `json:"question_receipt_sha256,omitempty"`
-	ReplyCursor      string   `json:"reply_cursor,omitempty"`
-	Attachments      []string `json:"attachments,omitempty"`
-	AttachmentHashes []string `json:"attachment_sha256,omitempty"`
+	ExistingURL      string                        `json:"-"`
+	RequestID        string                        `json:"request_id"`
+	SenderID         string                        `json:"sender_request_id"`
+	Todo             uint64                        `json:"todo_id"`
+	Project          string                        `json:"project"`
+	OriginThread     string                        `json:"origin_thread_id"`
+	InputSHA         string                        `json:"input_sha256"`
+	BodyFile         string                        `json:"body_file"`
+	DecisionFile     string                        `json:"decision_file"`
+	Title            string                        `json:"title,omitempty"`
+	Wait             bool                          `json:"wait_requested"`
+	Phase            string                        `json:"phase"`
+	Created          string                        `json:"created_at"`
+	Thread           string                        `json:"thread_id,omitempty"`
+	Message          string                        `json:"question_message_id,omitempty"`
+	Progress         string                        `json:"progress_thread_id,omitempty"`
+	Fingerprint      string                        `json:"question_fingerprint,omitempty"`
+	DecisionSHA      string                        `json:"decision_identity_sha256,omitempty"`
+	QuestionSHA      string                        `json:"question_body_sha256,omitempty"`
+	ReceiptFile      string                        `json:"question_receipt_file,omitempty"`
+	ReceiptSHA       string                        `json:"question_receipt_sha256,omitempty"`
+	ReplyCursor      string                        `json:"reply_cursor,omitempty"`
+	Attachments      []string                      `json:"attachments,omitempty"`
+	AttachmentHashes []string                      `json:"attachment_sha256,omitempty"`
+	AnsweredRecovery *conversationAnsweredRecovery `json:"answered_link_recovery,omitempty"`
 }
 
 type conversationIndex struct {
@@ -116,6 +117,12 @@ type conversationProof struct {
 	OriginalDecision json.RawMessage                     `json:"original_decision"`
 	Replies          []conversationReply                 `json:"owner_replies"`
 	ReplyVersions    map[string]conversationReplyVersion `json:"reply_versions,omitempty"`
+	QuestionDelivery bool                                `json:"question_delivery_verified,omitempty"`
+	UnconfirmedLinks []string                            `json:"auxiliary_links_unconfirmed,omitempty"`
+	SenderComplete   bool                                `json:"sender_delivery_complete,omitempty"`
+	Fingerprint      string                              `json:"question_fingerprint,omitempty"`
+	Origin           string                              `json:"origin_thread_id,omitempty"`
+	Images           []string                            `json:"image_sha256,omitempty"`
 }
 
 type conversationReplyVersion struct {
@@ -263,9 +270,12 @@ func (r *Runner) loadConversations() (*conversationIndex, error) {
 			}
 		}
 		switch q.Phase {
-		case "reserved", "posted", "waiting", "answered", "applied", "closed", "withdrawn":
+		case "reserved", "posted", "waiting", "answered", "applied", "closed", "withdrawn", "link_recovery":
 		default:
 			return nil, errors.New("conversation phase invalid")
+		}
+		if !validAnsweredRecovery(q) {
+			return nil, errImplementation
 		}
 	}
 	if index.Aliases == nil {

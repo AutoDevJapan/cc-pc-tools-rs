@@ -26,6 +26,7 @@ use std::{
 };
 
 const API: &str = "https://discord.com/api/v10";
+mod answered_links;
 mod clarification;
 mod program_question;
 const LEDGER: &str = "recovery-messages.json";
@@ -3633,6 +3634,7 @@ pub fn replies(ctx: &mut Context, args: &RepliesArgs) -> Result<Value> {
         }
         reply_versions.insert(reply.message_id.clone(), json!({"edited_timestamp":edited}));
     }
+    let question_delivery = answered_links::inspect(&mut api, &ledger, request).ok();
     Ok(
         json!({"domain":DOMAIN,"read_only":true,"ledger_written":false,"legacy_state":"unchanged",
         "thread_id":thread,"request_id":request.request_id,"original_question":request.body,
@@ -3643,7 +3645,12 @@ pub fn replies(ctx: &mut Context, args: &RepliesArgs) -> Result<Value> {
         "decision_identity":match &request.operation {Kind::Ask{decision_identity,..}=>Some(decision_identity),_=>None},
         "progress_thread_id":ledger.receipt(&request.request_id,"progress").map(|r|&r.thread_id),
         "original_decision":match &request.operation {Kind::Ask {decision_original,..}=>Some(decision_original),_=>None},
-        "owner_replies":evidence,"reply_versions":reply_versions,"delivery":"inspection_only","approval":"not_inferred"}),
+        "owner_replies":evidence,"reply_versions":reply_versions,"delivery":"inspection_only","approval":"not_inferred",
+        "question_delivery_verified":question_delivery.is_some(),
+        "auxiliary_links_unconfirmed":question_delivery,
+        "sender_delivery_complete":ledger.complete(&request.request_id),
+        "origin_thread_id":match &request.operation {Kind::Ask {origin_thread,..}=>Some(origin_thread),_=>None},
+        "image_sha256":request.images.iter().map(|image|&image.sha256).collect::<Vec<_>>() }),
     )
 }
 
@@ -3829,6 +3836,7 @@ mod tests {
         drop_response: bool,
         reject_post: bool,
         reject_progress: bool,
+        reject_auxiliary_links: bool,
         block_reads_after_post: bool,
         fail_forum_once: bool,
         archive_cursor_page: bool,
@@ -4029,6 +4037,11 @@ mod tests {
             if method == "POST" && segments.len() == 3 && segments[0] == "channels" {
                 let body = body.ok_or("POST body missing")?.clone();
                 state.posts.push((path.into(), body.clone()));
+                if state.reject_auxiliary_links
+                    && core::s(&body["content"]).ends_with(":question-links")
+                {
+                    return Err("simulated uncertain auxiliary link POST".into());
+                }
                 if state.reject_progress && core::s(&body["name"]).starts_with("進捗 ") {
                     return Err("simulated progress failure".into());
                 }
@@ -4265,6 +4278,10 @@ mod tests {
 
     mod decision_lookup_tests {
         include!("recovery_messages/decision_lookup_tests.rs");
+    }
+
+    mod answered_links_tests {
+        include!("recovery_messages/answered_links_tests.rs");
     }
 
     fn clarification_fixture(f: &Fixture, ctx: &mut Context) -> (LogArgs, PathBuf, Value) {

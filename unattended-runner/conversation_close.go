@@ -111,11 +111,18 @@ func conversationCloseRead(path string, ceiling int64) ([]byte, bool, error) {
 }
 
 func (r *Runner) conversationCloseIdentity(q ConversationQuestion) string {
-	return canonicalHash([]any{q.RequestID, q.SenderID, q.Todo, q.Project, q.Thread, q.Message, q.Progress, q.OriginThread, q.Fingerprint, q.DecisionSHA, q.QuestionSHA, q.ReceiptSHA, r.State.Destination})
+	identity := []any{q.RequestID, q.SenderID, q.Todo, q.Project, q.Thread, q.Message, q.Progress, q.OriginThread, q.Fingerprint, q.DecisionSHA, q.QuestionSHA, q.ReceiptSHA, r.State.Destination}
+	if q.AnsweredRecovery != nil {
+		identity = append(identity, q.AnsweredRecovery)
+	}
+	return canonicalHash(identity)
 }
 
 func (r *Runner) conversationCloseProofHash(q ConversationQuestion, proof *conversationProof) (string, error) {
 	if proof == nil || proof.Domain != "new-owner-recovery-messages" || !proof.ReadOnly || proof.Source != "discord-api-v10" || proof.RequestID != q.SenderID || proof.Thread != q.Thread || proof.Question != q.Message || proof.Progress != q.Progress || proof.Owner != r.State.Destination.Owner || canonicalHash(proof.Decision) != q.DecisionSHA || bytesHash([]byte(proof.Body)) != q.QuestionSHA {
+		return "", errConversationCloseSource
+	}
+	if q.AnsweredRecovery != nil && !answeredRecoveryProof(q, proof) {
 		return "", errConversationCloseSource
 	}
 	created, err := time.Parse(time.RFC3339Nano, proof.Created)
@@ -128,6 +135,10 @@ func (r *Runner) conversationCloseProofHash(q ConversationQuestion, proof *conve
 	// Optional polling metadata is not part of the original close-proof identity.
 	// Edit/source hashes and exact live posts are verified independently below.
 	copy.ReplyVersions = nil
+	// Added inspection metadata must not invalidate historical close identities.
+	copy.QuestionDelivery, copy.SenderComplete = false, false
+	copy.UnconfirmedLinks, copy.Images = nil, nil
+	copy.Fingerprint, copy.Origin = "", ""
 	copy.Replies = append([]conversationReply{}, proof.Replies...)
 	for _, reply := range copy.Replies {
 		id, valid := number(reply.Message)

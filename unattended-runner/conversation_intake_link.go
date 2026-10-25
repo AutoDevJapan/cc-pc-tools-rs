@@ -142,6 +142,21 @@ func (r *Runner) conversationIntakeLink(ctx context.Context, opts conversationCL
 	if !r.linkActor(rows[2], q, opts) {
 		return nil, errImplementation
 	}
+	if recovery := q.AnsweredRecovery; recovery != nil {
+		if recovery.Actor != opts.Todo || recovery.Intake != opts.IntakeTodo || recovery.RawSHA != opts.SourceSHA || recovery.Message != reply.Message || !answeredRecoveryProof(q, proof) {
+			return nil, errImplementation
+		}
+		// A crashed call may have durably captured the exact original source.
+		// Its historical link keeps its real job/revision; a new assigned actor
+		// verifies it without overwriting that provenance or borrowing the job.
+		if prior := r.State.ConversationCaptures[reply.Message]; prior != nil {
+			stamp, ready, err := r.conversationReplySource(ctx, q, proof, reply)
+			if err != nil || !ready {
+				return nil, errImplementation
+			}
+			return map[string]any{"linked": true, "ordinary_intake_retained": true, "source_receipt_sha256": stamp.SourceSHA, "application_inferred": false}, nil
+		}
+	}
 	var live struct {
 		Message
 		Type        *int                     `json:"type"`
@@ -213,8 +228,10 @@ func (r *Runner) conversationIntakeLink(ctx context.Context, opts conversationCL
 	if err != nil || !ready {
 		return nil, errImplementation
 	}
-	if err := r.deliverConversationReply(ctx, q, reply, capture); err != nil {
-		return nil, err
+	if q.AnsweredRecovery == nil {
+		if err := r.deliverConversationReply(ctx, q, reply, capture); err != nil {
+			return nil, err
+		}
 	}
 	return map[string]any{"domain": link.Domain, "linked": true, "request_id": q.RequestID, "ordinary_intake_retained": true, "original_source_sha256": link.RawSHA, "ordinary_source_sha256": link.OrdinarySHA, "source_receipt_sha256": stamp.SourceSHA, "intake_todo_id": opts.IntakeTodo, "origin_todo_id": q.Todo, "actor_todo_id": opts.Todo, "application_inferred": false}, nil
 }

@@ -1,0 +1,147 @@
+package main
+
+// Bounded application examples prepared while normal model allocation waits.
+// Run only after the exact reviewed six Skills exist and have been explicitly
+// read by the current worker. These are not a Three.js game or GPU benchmark.
+import (
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"reflect"
+	"sort"
+	"strings"
+	"testing"
+	"time"
+)
+const game6P="D:/CC/Work/unattended-operations-20261013-wt/todo-3080-16-skills-3048/.ci-work/todo3080"
+func game6Need(t *testing.T,ok bool,why string){t.Helper();if !ok{t.Fatal(why)}}
+func game6Hash(b []byte)string{h:=sha256.Sum256(b);return hex.EncodeToString(h[:])}
+func game6Save(t *testing.T,name string,v any){t.Helper();b,e:=json.MarshalIndent(v,"","  ");if e!=nil{t.Fatal(e)};f,e:=os.OpenFile(filepath.Join(game6P,name),os.O_CREATE|os.O_EXCL|os.O_WRONLY,0600);if e!=nil{t.Fatal(e)};_,w:=f.Write(append(b,'\n'));s:=f.Sync();c:=f.Close();if e=errors.Join(w,s,c);e!=nil{t.Fatal(e)}}
+
+type combatExample struct{Hits map[string]bool; Health map[string]int; Events []string}
+func combatResolve(s *combatExample,action,target string,tick int,inRange,facing,clear,interrupted bool)bool{
+	_,known:=s.Health[target]
+	if action==""||!known||tick<20||tick>=30||!inRange||!facing||!clear||interrupted{return false}
+	key:=action+"|"+target+"|hit1";if s.Hits[key]{return false};s.Hits[key]=true;s.Health[target]-=7;s.Events=append(s.Events,key);return true
+}
+func game6Combat(t *testing.T)map[string]any{
+	s:=combatExample{map[string]bool{},map[string]int{"enemy-A":100,"enemy-B":100},nil}
+	game6Need(t,!combatResolve(&s,"swing-A","enemy-A",19,true,true,true,false),"startup contact resolved")
+	game6Need(t,combatResolve(&s,"swing-A","enemy-A",20,true,true,true,false),"inclusive active boundary missed")
+	game6Need(t,!combatResolve(&s,"swing-A","enemy-A",25,true,true,true,false)&&s.Health["enemy-A"]==93,"same action/target applied twice")
+	game6Need(t,combatResolve(&s,"swing-A","enemy-B",25,true,true,true,false),"independent target lost its valid hit")
+	game6Need(t,!combatResolve(&s,"swing-B","enemy-A",30,true,true,true,false),"exclusive recovery boundary resolved")
+	for _,flags:=range [][4]bool{{false,true,true,false},{true,false,true,false},{true,true,false,false},{true,true,true,true}}{game6Need(t,!combatResolve(&s,"swing-rejected","enemy-A",25,flags[0],flags[1],flags[2],flags[3]),"invalid range/direction/visibility/interruption resolved")}
+	game6Need(t,!combatResolve(&s,"swing-rejected","unknown-target",25,true,true,true,false),"unknown target state accepted")
+	game6Need(t,len(s.Events)==2&&s.Health["enemy-A"]==93&&s.Health["enemy-B"]==93,"resolved outcomes and feedback event count differ")
+	return map[string]any{"active_interval_ticks":"[20,30)","resolved_events":s.Events,"health":s.Health,"duplicate_hit_rejected":true,"distinct_target_preserved":true,"startup_recovery_invalid_conditions_rejected":true,"limits":"Discrete declared contact events only. Does not prove continuous-collision/frame-skip handling or animation readability."}
+}
+
+type aiExample struct{State,Target string;Since,PathGeneration int}
+type aiInput struct{Tick int;Alive,Visible,Interrupt,AtTarget bool;PathFailed bool;PathGeneration int}
+func aiStep(s aiExample,in aiInput)aiExample{
+	if !in.Alive{return aiExample{"defeated","",in.Tick,s.PathGeneration}}
+	if in.Interrupt{return aiExample{"stagger",s.Target,in.Tick,s.PathGeneration}}
+	if !in.Visible{return aiExample{"investigate","",in.Tick,s.PathGeneration+1}}
+	if in.PathGeneration!=s.PathGeneration{return s}
+	if in.PathFailed{return aiExample{"reposition",s.Target,in.Tick,s.PathGeneration+1}}
+	if in.Tick-s.Since<5{return s}
+	if in.AtTarget{return aiExample{"windup",s.Target,in.Tick,s.PathGeneration}}
+	return s
+}
+func game6AI(t *testing.T)map[string]any{
+	start:=aiExample{"pursue","enemy-test",10,4}
+	lost:=aiStep(start,aiInput{Tick:11,Alive:true,Visible:false,PathGeneration:4})
+	game6Need(t,lost.State=="investigate"&&lost.Target==""&&lost.PathGeneration==5,"minimum dwell prevented required target-loss response")
+	stale:=aiStep(lost,aiInput{Tick:20,Alive:true,Visible:true,AtTarget:true,PathGeneration:4})
+	game6Need(t,reflect.DeepEqual(stale,lost),"late old path result overwrote current generation")
+	failed:=aiStep(start,aiInput{Tick:16,Alive:true,Visible:true,PathFailed:true,PathGeneration:4})
+	game6Need(t,failed.State=="reposition"&&failed.PathGeneration==5,"path failure was treated as arrival")
+	interrupted:=aiStep(start,aiInput{Tick:11,Alive:true,Visible:true,Interrupt:true,PathGeneration:4})
+	dead:=aiStep(start,aiInput{Tick:11,Alive:false,Visible:true,PathGeneration:4})
+	game6Need(t,interrupted.State=="stagger"&&dead.State=="defeated"&&dead.Target=="","dwell swallowed interrupt/death")
+	return map[string]any{"start":start,"target_loss":lost,"stale_result_ignored":true,"path_failure":failed,"interrupt":interrupted.State,"death":dead.State,"limits":"Declared deterministic state fixture; not a production AI, navigation solver, fairness or game-quality measurement."}
+}
+
+type enemyDefinition struct{ID string;Health int;MoveIDs []string;ContactIDs []string}
+type enemyInstance struct{ID string;Definition *enemyDefinition;Health,Cooldown int;LOD int}
+func game6EnemyContract(t *testing.T)map[string]any{
+	definition:=enemyDefinition{"guard-type",100,[]string{"strike"},[]string{"hand"}}
+	before,_:=json.Marshal(definition)
+	a:=enemyInstance{"instance-A",&definition,definition.Health,0,0};b:=enemyInstance{"instance-B",&definition,definition.Health,0,0}
+	a.Health-=20;a.Cooldown=12;a.LOD=2
+	after,_:=json.Marshal(definition)
+	game6Need(t,b.Health==100&&b.Cooldown==0&&string(before)==string(after),"shared authored definition or other instance mutated")
+	validate:=func(d enemyDefinition,knownMoves,knownContacts map[string]bool)error{seen:=map[string]bool{};for _,id:=range d.MoveIDs{if !knownMoves[id]||seen[id]{return errors.New("missing or duplicate move")};seen[id]=true};for _,id:=range d.ContactIDs{if !knownContacts[id]{return errors.New("missing contact socket")}};return nil}
+	moves,contacts:=map[string]bool{"strike":true},map[string]bool{"hand":true}
+	game6Need(t,validate(definition,moves,contacts)==nil,"valid authored contract rejected")
+	bad:=enemyDefinition{"guard-type",100,[]string{"strike","strike"},[]string{"hand"}}
+	game6Need(t,validate(bad,moves,contacts)!=nil,"duplicate move reference accepted")
+	delete(contacts,"hand");game6Need(t,validate(definition,moves,contacts)!=nil,"missing socket accepted")
+	game6Need(t,a.Definition.ID==b.Definition.ID&&a.Definition.ContactIDs[0]=="hand","LOD altered authoritative contract")
+	return map[string]any{"definition_id":definition.ID,"instance_A_health":a.Health,"instance_B_health":b.Health,"definition_unchanged":true,"missing_socket_and_duplicate_move_rejected":true,"lod_preserves_contract":true,"limits":"Simple shared immutable data and validation only; real rig normalization, placeholder rendering and gameplay LOD were not executed."}
+}
+
+type encounterExample struct{Slots map[string]bool;Waiting []string;Rewarded map[string]bool;Balance int}
+func encounterAcquire(s *encounterExample,enemy string)bool{if s.Slots[enemy]{return true};if len(s.Slots)>=1{for _,queued:=range s.Waiting{if queued==enemy{return false}};s.Waiting=append(s.Waiting,enemy);return false};s.Slots[enemy]=true;return true}
+func encounterRelease(s *encounterExample,enemy string){if !s.Slots[enemy]{return};delete(s.Slots,enemy);if len(s.Waiting)>0{next:=s.Waiting[0];s.Waiting=s.Waiting[1:];s.Slots[next]=true}}
+func encounterReward(s *encounterExample,entitlement string)bool{if s.Rewarded[entitlement]{return false};s.Rewarded[entitlement]=true;s.Balance+=50;return true}
+func game6Encounters(t *testing.T)map[string]any{
+	s:=encounterExample{map[string]bool{},nil,map[string]bool{},0}
+	game6Need(t,encounterAcquire(&s,"enemy-A")&&!encounterAcquire(&s,"enemy-B"),"declared attack capacity not enforced")
+	game6Need(t,!encounterAcquire(&s,"enemy-B")&&len(s.Waiting)==1,"repeated wait request duplicated attack queue")
+	encounterRelease(&s,"unknown-owner");game6Need(t,s.Slots["enemy-A"]&&len(s.Slots)==1&&len(s.Waiting)==1,"non-owner release promoted a second attacker")
+	encounterRelease(&s,"enemy-A");game6Need(t,s.Slots["enemy-B"]&&len(s.Slots)==1,"cancel/death release stranded waiting enemy")
+	game6Need(t,encounterReward(&s,"zone-one-reward")&&!encounterReward(&s,"zone-one-reward")&&s.Balance==50,"same reward entitlement applied twice")
+	// A different attempt does not invent a new entitlement for the same
+	// declared one-time reward. Repeatable rewards need a different game rule.
+	attempt:="retry-2";game6Need(t,attempt!=""&&!encounterReward(&s,"zone-one-reward")&&s.Balance==50,"retry invented repeated entitlement")
+	return map[string]any{"declared_attack_capacity":1,"released_slot_reassigned":true,"reward_balance":s.Balance,"same_entitlement_deduplicated_across_retry":true,"limits":"Minimal fixed-state capacity and entitlement example, not production durable rewards, camera visibility or encounter-quality acceptance."}
+}
+
+type levelNode struct{ID string;Y float64;Walkable bool}
+type levelEdge struct{From,To string}
+func validateLevel(nodes []levelNode,edges []levelEdge,reset string,flat bool)error{known:=map[string]levelNode{};for _,n:=range nodes{if n.ID==""{return errors.New("missing ID")};if _,ok:=known[n.ID];ok{return errors.New("duplicate ID")};if flat&&n.Walkable&&n.Y!=0{return errors.New("declared flat-world constraint")};known[n.ID]=n};if n,ok:=known[reset];!ok||!n.Walkable{return errors.New("invalid reset anchor")};for _,e:=range edges{a,ok:=known[e.From];b,bok:=known[e.To];if !ok||!bok||!a.Walkable||!b.Walkable{return errors.New("missing traversable edge anchor")}};return nil}
+func game6Levels(t *testing.T)map[string]any{
+	nodes:=[]levelNode{{"start",0,true},{"exit",3,true}}
+	edges:=[]levelEdge{{"start","exit"}}
+	game6Need(t,validateLevel(nodes,edges,"start",false)==nil,"requested vertical movement forbidden by copied source's flat-world policy")
+	game6Need(t,validateLevel(nodes,edges,"start",true)!=nil,"declared actual flat-world constraint ignored")
+	game6Need(t,validateLevel(nodes,[]levelEdge{{"start","missing"}},"start",false)!=nil,"broken nav reference silently accepted")
+	game6Need(t,validateLevel(nodes,edges,"missing",false)!=nil,"unknown retry anchor silently accepted")
+	duplicated:=append(append([]levelNode(nil),nodes...),nodes[0]);game6Need(t,validateLevel(duplicated,edges,"start",false)!=nil,"duplicate stable ID accepted")
+	lights:=map[string]string{"torch-light":"torch-owner","world-ambient":"world-owner"};for light,owner:=range lights{if owner=="torch-owner"{delete(lights,light)}}
+	game6Need(t,len(lights)==1&&lights["world-ambient"]=="world-owner","emitter cleanup removed shared world light")
+	return map[string]any{"vertical_allowed_when_spec_allows":true,"flat_requirement_conditional":true,"missing_nav_reset_and_duplicate_ID_rejected":true,"local_light_cleanup_preserves_world_owner":true,"limits":"Data-contract example only. No collision geometry, actual traversal, lighting renderer or device performance was executed."}
+}
+
+type profileExample struct{Device,Scene,Seed,Quality,Viewport string;WarmupSeconds,DurationSeconds int;Build string;FrameMS []float64;Contacts int;RealGPU bool}
+func profileComparable(a,b profileExample)bool{return a.Device==b.Device&&a.Scene==b.Scene&&a.Seed==b.Seed&&a.Quality==b.Quality&&a.Viewport==b.Viewport&&a.WarmupSeconds==b.WarmupSeconds&&a.DurationSeconds==b.DurationSeconds&&len(a.FrameMS)>0&&len(b.FrameMS)>0}
+func percentile(x []float64,q float64)float64{v:=append([]float64(nil),x...);sort.Float64s(v);index:=int(float64(len(v)-1)*q+0.5);return v[index]}
+func game6Profiles(t *testing.T)map[string]any{
+	a:=profileExample{"fixture-device","arena-A","seed-9","medium","1280x720",5,60,"before",[]float64{20,21,22,23,24,25,26,100},2,false}
+	b:=a;b.Build="after";b.FrameMS=[]float64{15,16,17,18,19,20,21,90}
+	game6Need(t,profileComparable(a,b),"same-workload comparison with recorded different builds rejected")
+	game6Need(t,percentile(a.FrameMS,0.5)==24&&percentile(b.FrameMS,0.5)==19&&percentile(a.FrameMS,0.95)==100&&percentile(b.FrameMS,0.95)==90,"declared nearest-index percentile differs")
+	bad:=b;bad.Quality="low";game6Need(t,!profileComparable(a,bad),"changed-quality samples called like-for-like")
+	bad=b;bad.WarmupSeconds=0;game6Need(t,!profileComparable(a,bad),"changed warmup ignored")
+	bad=b;bad.Contacts=0;game6Need(t,profileComparable(a,bad)&&a.Contacts!=bad.Contacts,"faster frames with disabled contacts failed to expose gameplay regression")
+	return map[string]any{"source":"explicit synthetic input traces, not observed real frame timing","comparison_method":"Recorded same workload fields; different before/after source builds allowed and stated","before_median_ms":24,"after_median_ms":19,"before_p95_ms":100,"after_p95_ms":90,"sample_count_each":8,"changed_quality_and_warmup_rejected":true,"gameplay_contact_regression_detected_separately":true,"actual_gpu_benchmark":false,"cpu_or_gpu_bottleneck_proved":false,"limits":"These synthetic statistics exercise the comparison method only, not a real renderer, device speedup or GPU profiling."}
+}
+
+func TestInstalledGameSixExplicitApplication(t *testing.T){
+	game6Need(t,os.Getenv("CC_JOB_ID")=="20261025-074042-todo-3080","current actual worker changed")
+	readRecord,e:=os.ReadFile(filepath.Join(game6P,"game-next6-active-read074042.json"));if e!=nil{t.Fatal("post-deployment explicit reading record missing:",e)}
+	var read struct{Job string `json:"job"`;Complete bool `json:"all6_entries_and_guides_explicitly_read"`;SHA string `json:"manifest_sha256"`};if json.Unmarshal(readRecord,&read)!=nil||read.Job!=os.Getenv("CC_JOB_ID")||!read.Complete||read.SHA!="2141bfa3a4d04fd62398741f5e80627e8cb0ef36815ccec6643711540d8bc924"{t.Fatal("explicit reading belongs to another scope")}
+	manifest,e:=os.ReadFile(filepath.Join(game6P,"..","..","docs","skills-3080-operations","create-game6-074042.json"));if e!=nil{t.Fatal(e)};game6Need(t,game6Hash(manifest)==read.SHA,"reviewed operation changed")
+	var m struct{Files []struct{Target string `json:"target"`;SHA string `json:"sha256"`;Base64 string `json:"content_base64"`} `json:"files"`};if json.Unmarshal(manifest,&m)!=nil||len(m.Files)!=36{t.Fatal("six output manifest differs")}
+	active:=map[string]string{};for _,f:=range m.Files{if !strings.HasSuffix(f.Target,"/SKILL.md")&&!strings.HasSuffix(f.Target,"/references/guide.md"){continue};b,e:=os.ReadFile(filepath.Join("D:/CC/Skills",filepath.FromSlash(f.Target)));if e!=nil{t.Fatal(e)};expected,e:=base64.StdEncoding.DecodeString(f.Base64);game6Need(t,e==nil&&game6Hash(b)==f.SHA&&reflect.DeepEqual(b,expected),"installed active bytes differ from exact reviewed output");active[f.Target]=f.SHA};game6Need(t,len(active)==12,"six explicit active entries/guides missing")
+	result:=map[string]any{"job":os.Getenv("CC_JOB_ID"),"applied_at":time.Now().UTC().Format(time.RFC3339Nano),"manifest_sha256":read.SHA,"active_hashes":active,"design_action_combat":game6Combat(t),"tune_enemy_ai":game6AI(t),"build_enemy_systems":game6EnemyContract(t),"design_encounters":game6Encounters(t),"author_levels":game6Levels(t),"optimize_games":game6Profiles(t),"upstream_scripts_executed":false,"external_apis":0,"actual_game_executed":false,"renderer_executed":false,"ui_changed":false,"actual_gpu_benchmark":false,"new_charges":0,"implicit_skill_selection_proven":false,"new_separate_model_turn_executed":false,"whole16_complete":false}
+	game6Save(t,"game-next6-explicit-use074042.json",result)
+	t.Log(fmt.Sprintf("Explicit applications passed for%d installed entries/guides; synthetic state/data/statistical examples only; no game/renderer/GPU/API",len(active)))
+}

@@ -1944,7 +1944,7 @@
     "category_remaining": 91,
     "operation": "skills-3080-operations/create-webdesign11-074042.json",
     "current_parent_support_bytes": 5909,
-    "operation_sha256": "6bcea4c447e537fe5aab3856bf1372d6fdfd98eb8c65d08b0b0e03a5c1d9ffe7",
+    "operation_sha256": "0510c7e5d90934f87c8ec97cdf408d923b2e4cab622c144852e61d62821a509b",
     "stage": "authoring input snapshot; no actual placement",
     "ordinary_new14_holds_preserved": true,
     "central_operations": 0,
@@ -1957,8 +1957,11 @@
     "proposed_existing_integration": 5,
     "in_memory_structure_passed": 11,
     "new_unique_primary_coverage": 0,
-    "design_sha256": "30234d45a6bc111f40877890cf0c15fae987000bf0f1a2dfb9a2031e95562420",
+    "design_sha256": "04d6fef44ef76cbd9ccb9f78cf4fc1e6947f76281d49cffc4341238c727698f4",
     "design": "skills-3080-webdesign11-inputs074042.json",
-    "new_final_dispositions": 0
+    "new_final_dispositions": 0,
+    "prior_review3839_raw_sha256": "403398e740c64622b5f137ed5ac65afc353a9e681033a0193cc84308d2cdb669",
+    "changed_guides_after_review": 2,
+    "unchanged_outputs_reused": 65
   }
 }

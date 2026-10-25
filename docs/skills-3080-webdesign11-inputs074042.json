@@ -31,8 +31,8 @@
   "copied_upstream_author_bytes": 58499,
   "copied_assets_or_source_scripts": 0,
   "operation_file": "skills-3080-operations/create-webdesign11-074042.json",
-  "operation_sha256": "6bcea4c447e537fe5aab3856bf1372d6fdfd98eb8c65d08b0b0e03a5c1d9ffe7",
-  "in_memory_bundle_sha256": "03829e04e16872ad74322668cf4a306682afb14b7044fc7ef9fec8f47a2eb55e",
+  "operation_sha256": "0510c7e5d90934f87c8ec97cdf408d923b2e4cab622c144852e61d62821a509b",
+  "in_memory_bundle_sha256": "fdb19edc9e03f883d6fb72fb0499d19c668388849629f733382ff8f31fe5dcd1",
   "structure_scenarios_references_hashes_checked": 11,
   "structure_mode": "in-memory explicit bundle only; central operations0",
   "external_technical_validation_urls": [
@@ -441,5 +441,31 @@
   "actual_source_scripts_executed": false,
   "new14_previous_holds_released": false,
   "unknown_existing9_or_held_fetch647_accessed": false,
-  "whole16_complete": false
+  "whole16_complete": false,
+  "review3839_resolution": {
+    "changed_guides": [
+      {
+        "target": "add-mouse-driven-orbit/references/guide.md",
+        "old_sha256": "9373eebb11756857162290bb911b597b0051435da691ef34bcdcbb02fce8e011",
+        "new_sha256": "9c1c4df0b81248ff23aa61a6644f7b63c309d3e3ead7a2fd763dd8527531f1e1",
+        "new_bytes": 2113
+      },
+      {
+        "target": "add-shader-cursor-trail/references/guide.md",
+        "old_sha256": "beec0feb4af6b5d0b11ff8e033c815c63acc74341efc2fd664fc8394c47ea5d8",
+        "new_sha256": "541f9c659652681e7bb036aba522b91fae2bc3380f0f72b5efe177d7b24303ec",
+        "new_bytes": 2901
+      }
+    ],
+    "parent_full_original_and_native_Luna_max_verified": true,
+    "new_manifest_requires_delta_review": true,
+    "prior_nits": 1,
+    "prior_must": 0,
+    "design_outer_line_endings_now_LF": true,
+    "prior_suggestions": 2,
+    "review_raw_sha256": "403398e740c64622b5f137ed5ac65afc353a9e681033a0193cc84308d2cdb669",
+    "reviewed_head": "da8113f2ec5b77d7b96903286ddcbe4df29fb37f",
+    "source_originals_and_notices_unchanged": true,
+    "unchanged_outputs": 65
+  }
 }

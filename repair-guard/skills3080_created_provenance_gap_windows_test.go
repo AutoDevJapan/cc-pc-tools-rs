@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -10,7 +11,9 @@ import (
 
 // These are counterexamples for the proposed post-creation qualification,
 // not an implementation of that qualification. Only synthetic fixtures are
-// opened. The existing successful CreateNew contract remains unchanged.
+// opened. The existing successful CreateNew contract remains unchanged. The
+// 64-bit fixture identity only distinguishes the two simultaneously retained
+// local objects; it is NOT a historical, deletion-safe or ReFS qualification.
 type skillsFixtureIdentity struct {
 	volume uint32
 	index  uint64
@@ -108,8 +111,8 @@ func TestSkills3080CreationIdentityIsAvailableBeforeHandlesClose(t *testing.T) {
 		if id != (skillsFixtureIdentity{created.VolumeSerialNumber, uint64(created.FileIndexHigh)<<32 | uint64(created.FileIndexLow)}) {
 			t.Fatal("same still-held creation handle did not identify its current object")
 		}
-		if err := os.Rename(file.Name(), filepath.Join(root, "substitution.txt")); err == nil {
-			t.Fatal("exclusive creation handle allowed replacement before proof could be captured")
+		if err := os.Rename(file.Name(), filepath.Join(root, "substitution.txt")); !errors.Is(err, syscall.Errno(32) /* ERROR_SHARING_VIOLATION */) {
+			t.Fatalf("expected the held handle's sharing violation, got %v", err)
 		}
 	}
 }

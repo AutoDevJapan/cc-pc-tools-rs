@@ -37,6 +37,12 @@ CreateNewする。size/hashに加え、creation/last-writeの時刻も同じに�
 `FSCTL_QUERY_USN_JOURNAL`を実行した。Dの変更ジャーナルはinactiveだった。
 対象ファイルのopen・本文read・容量測定に進む前に終了した。
 ジャーナルの新規作成・有効化・広域走査はしていない。
+このprobeは自worktreeの公開manifest全体のbytesを読み込んでからTargetだけを
+解析した。`content_base64`をdecode・利用したわけではないが、そのbytesを
+読み込まなかった証拠ではない。「metadataだけ」は中央対象へのアクセスについての
+範囲である。journal有効時の枝には通常guardを通さない対象openが残るため、
+この診断probeは再実行しない。結果fileの後の通常guardも分類未確認だったので、
+そのfileは開かずコピーせず、既に受領した実tool応答と区別して保持した。
 
 `FSCTL_READ_FILE_USN_DATA`が仮に成功しても、返るTimeStamp/Reasonは有効ではない。
 最後のUSNだけを作成時刻の証明へ読み替えない。
@@ -51,18 +57,40 @@ CreateNewする。size/hashに加え、creation/last-writeの時刻も同じに�
 1. 正規CreateNewの全出力成功後、まだ保持中の作成handleから各実体のvolume/file ID、
    実path、bytes/hashを取得する。rootと物理親の同一性も同時に保持する。
    `TestSkills3080CreationIdentityIsAvailableBeforeHandlesClose` は、この時点なら
-   ID取得と置換排他が可能なことを合成fixtureで示す。
+   ID取得と置換排他が可能なことだけを合成fixtureで示す。テストの64-bit IDを
+   時間をまたぐ一意性の証明にはしない。削除後のID再利用や、ReFSの64-bit IDの
+   非一意性を考慮する必要がある。[Microsoftのfile IDの制限](https://learn.microsoft.com/en-us/windows/win32/api/fileapi/ns-fileapi-by_handle_file_information)
 2. その証拠を、元3080・実writer/job/保存spec、固定公開manifest/source/license、
    内容レビュー、実行した正規ソフトのsource/hash、CreateNewの全件完了と結ぶ。
    任意JSONの自己申告や、後から作ったcopyの`accepted:true`を信頼しない。
    canonicalな実実行記録と照合できる発行先・形式まで実装/レビューが必要である。
-3. 消費側は現在の正規actorと承認された操作を再照合し、固定manifestのexact対象だけを
-   非reparse/singlelinkで開き、実体IDとbytes/hashを同じ保持handleで検証・消費する。
+3. 発行時から消費時まで削除・再作成がなかったことを、信頼できる変更世代と履歴で
+   別に証明する。例はjournal ID、作成USN、消費時USN、必要な区間全体の履歴である。
+   変更ジャーナルの無効化・再作成・必要な履歴の欠落や、未対応filesystemでは
+   資格を発行しない。ID一致だけを世代証拠にしない。ReFSを扱う場合は
+   `FILE_ID_INFO`の128-bit IDとそのfilesystemで検証した履歴が必要で、未対応の
+   64-bit値へ戻さない。[FILE_ID_INFOの仕様](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_id_info)
+4. 消費側は現在の正規actorと承認された操作を再照合し、固定manifestのexact対象だけを
+   非reparse/singlelinkで開く。作成時に証明したrootと全物理親のID・世代も再照合し、
+   実体ID・世代・bytes/hashを同じ保持handleで検証・消費する。
    検証結果を後続の別openの許可票にしない。元client設定・カード/秘密・旧protectedを
    常に優先し、通常guardのunknownを解除しない。
-4. 既存unknown、未実作成、他writer/job/spec、変わったmanifest/receipt/current bytes、
+5. 既存unknown、未実作成、他writer/job/spec、変わったmanifest/receipt/current bytes、
    他path、reparse/hardlink、コピーされた受入票、旧protectedの負例を実証する。
    この案の正例は作成時証拠がある新規出力だけ。旧14への後付け発行は正例にしない。
+
+将来の実装に必要な追加の負例は以下である。表は受入仕様であり、実装・自動テストの
+成功記録ではない。現在の合成テストは、保持した元物と通常の別実体の区別と、作成中の
+共有違反だけを確認する。ID再利用と履歴検証の実装・実テストはまだない。
+
+|入力|必要な結果|不足した証拠|
+|---|---|---|
+|削除・再作成後に同じvolume/file IDが再利用された|拒否|作成からの連続した世代|
+|journal IDが変わる、またはjournalが無効|拒否|同じ変更履歴の継続|
+|作成以後の必要な履歴が切り捨てられた|拒否|削除・書換えがなかったこと|
+|ReFSで64-bit IDだけが一致する|拒否|128-bit IDと対応する世代証拠|
+|rootまたは途中の物理親の実体・世代が変わる|拒否|同じphysical pathの連続性|
+|現在のIDから作成receiptを後付け・自己申告する|拒否|真正な作成時の発行|
 
 現在の84出力については、独立した作成時IDの証拠がまだない。元のunknownを新規出力へ
 成り代わらせる反例を排除できないため、新たな正規読取CLIを配布して利用成功とはしない。

@@ -17,6 +17,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"syscall"
 	"time"
@@ -45,6 +46,7 @@ type identityRecord struct {
 	Content      string            `json:"content"`
 	ProducerJob  string            `json:"producer_job,omitempty"`
 	ProducerTodo uint64            `json:"producer_todo,omitempty"`
+	ProducerKind string            `json:"producer_kind,omitempty"`
 	Ancestors    []retiredAncestor `json:"ancestors,omitempty"`
 }
 type receipt struct {
@@ -61,6 +63,7 @@ type config struct {
 	WriteReason             func(string, []byte) error
 	FindShell               func() (string, error)
 	Retirement              *retirementRuntime
+	ordinaryFixture         bool // package tests only; no production flag/env override
 }
 type measured struct {
 	Entries    int                               `json:"entries"`
@@ -268,17 +271,25 @@ func (c config) create(root, project, content string) (receipt, error) {
 	}
 	id := hex.EncodeToString(random[:])
 	target := filepath.Join(p, "codex-owned-"+id)
+	r = receipt{identityRecord: identityRecord{Version: 3, ID: id, Root: p, Path: target, Created: time.Now().Format(time.RFC3339Nano), Project: project, Content: content}, State: "owned"}
+	if err = c.captureProducer(&r); err != nil {
+		return r, err
+	}
 	if err = os.Mkdir(target, 0700); err != nil {
 		return r, fail("FOLDER_CREATE_FAILED")
 	}
-	r = receipt{identityRecord: identityRecord{Version: 2, ID: id, Root: p, Path: target, Created: time.Now().Format(time.RFC3339Nano), Project: project, Content: content}, State: "owned"}
 	i, err := fileIdentity(target)
 	if err == nil {
 		r.Volume = i.VolumeSerialNumber
 		r.FileID = fileID(i)
-		c.captureProducer(&r)
-		r.Integrity = digest(r)
-		err = c.save(r, true)
+		r.Birth = retiredMeta(i).Birth
+		ancestors, e := retiredAncestors(p)
+		if e != nil || r.Birth == 0 || i.VolumeSerialNumber != r.Ancestors[0].Volume || !reflect.DeepEqual(ancestors, r.Ancestors) {
+			err = fail("ORIGINAL_ANCESTOR_CHANGED")
+		} else {
+			r.Integrity = digest(r)
+			err = c.save(r, true)
+		}
 	}
 	if err != nil {
 		return r, &failure{Code: "OWNERSHIP_RECORD_WRITE_FAILED", Details: map[string]any{"id": id, "path": target, "root": p, "ownership_record_complete": false}}
@@ -604,6 +615,9 @@ func (c config) quarantinePreserved(id, reason string, scope *geminiScope, ci *c
 	}
 	if os.Mkdir(dest, 0700) != nil {
 		return nil, fail("QUARANTINE_DESTINATION_CREATE_FAILED")
+	}
+	if err = retiredWriteNew(filepath.Join(dest, ".safe-delete-owned.json"), map[string]any{"schema": 1, "id": id}); err != nil {
+		return nil, err
 	}
 	// The index is only a lookup hint. Cleanup revalidates the original producer,
 	// release and move outputs and never treats this file as ownership proof.

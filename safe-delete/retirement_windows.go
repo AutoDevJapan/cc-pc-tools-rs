@@ -351,28 +351,27 @@ func retirementProcessAncestor(want uint32) bool {
 	}
 	return false
 }
-func (c config) captureProducer(r *receipt) {
-	if c.Retirement == nil && !same(c.Store, retirementStore) {
-		return
-	}
-	rt := c.retirementRuntime()
-	j, e := rt.actor()
-	if e != nil {
-		return
-	}
+func (c config) captureProducer(r *receipt) error {
 	a, e := retiredAncestors(r.Root)
 	if e != nil {
-		return
+		return e
 	}
-	r.Version = 3
-	if info, e := fileIdentity(r.Path); e == nil {
-		r.Birth = retiredMeta(info).Birth
-	} else {
-		return
+	r.Ancestors = a
+	// Standalone/CI create still supports ordinary plan/finish, but cannot
+	// acquire scheduler retirement authority. A managed actor capture failure
+	// never silently becomes this mode, even in a candidate build elsewhere.
+	if c.Retirement == nil && (c.ordinaryFixture || os.Getenv("CC_JOB_ID") == "") {
+		r.ProducerKind = "ordinary-only"
+		return nil
 	}
+	j, e := c.retirementRuntime().actor()
+	if e != nil {
+		return e
+	}
+	r.ProducerKind = "scheduler"
 	r.ProducerJob = j.ID
 	r.ProducerTodo = j.Todo
-	r.Ancestors = a
+	return nil
 }
 func retirementGuard(path string) error {
 	b, e := runHidden(10*time.Second, "D:/CC/Tools/client-records/scrub391.exe", "--guard-path", path)
@@ -540,7 +539,7 @@ func (c config) original(r receipt, job string) (retirementJob, error) {
 	if e != nil || !retiredHas(t.Jobs, job) {
 		return j, fail("ORIGINAL_CREATE_UNVERIFIED")
 	}
-	if r.Version == 3 && (r.ProducerJob != job || r.ProducerTodo != j.Todo || len(r.Ancestors) == 0) {
+	if r.Version == 3 && (r.ProducerKind != "scheduler" || r.ProducerJob != job || r.ProducerTodo != j.Todo || len(r.Ancestors) == 0) {
 		return j, fail("ORIGINAL_CREATE_UNVERIFIED")
 	}
 	e = rt.event(job, "create", func(b []byte) bool {
@@ -680,7 +679,10 @@ func (rt retirementRuntime) liveState(r receipt, rel retiredRelease) error {
 		case "succeeded", "failed", "cancelled", "canceled", "done":
 			continue
 		case "running", "queued", "starting", "cancelling", "canceling":
-			if retiredInside(r.Path, j.CWD) || r.Destination != "" && retiredInside(r.Destination, j.CWD) {
+			// The exact releasing job may continue unrelated work after its
+			// resource-scoped declaration. Another live job has not released
+			// this resource, even when its cwd is elsewhere.
+			if id != rel.ReleaseJob || retiredInside(r.Path, j.CWD) || r.Destination != "" && retiredInside(r.Destination, j.CWD) {
 				return fail("RESOURCE_STILL_ACTIVE")
 			}
 		default:
@@ -949,11 +951,19 @@ func (c config) retiredPlan(id string) (retiredCandidate, error) {
 	}
 	if e = rt.event(moveJob, "quarantine", func(b []byte) bool {
 		var v struct {
-			ID          string `json:"id"`
-			State       string `json:"state"`
-			Destination string `json:"destination"`
+			ID          string  `json:"id"`
+			State       string  `json:"state"`
+			Destination string  `json:"destination"`
+			Bytes       *uint64 `json:"bytes"`
+			Entries     *int    `json:"entries"`
 		}
-		return json.Unmarshal(b, &v) == nil && v.ID == id && v.State == "quarantined" && same(v.Destination, r.Destination)
+		var bytes uint64
+		for _, x := range rel.Entries {
+			if x.Attributes&syscall.FILE_ATTRIBUTE_DIRECTORY == 0 {
+				bytes += x.Size
+			}
+		}
+		return json.Unmarshal(b, &v) == nil && v.ID == id && v.State == "quarantined" && same(v.Destination, r.Destination) && v.Bytes != nil && *v.Bytes == bytes && v.Entries != nil && *v.Entries == len(rel.Entries)-1
 	}); e != nil {
 		return candidate, fail("QUARANTINE_PROVENANCE_MISSING")
 	}
@@ -1034,6 +1044,27 @@ func retirementMain(args []string) bool {
 	if len(args) == 0 || (args[0] != "release" && args[0] != "cleanup-lease" && args[0] != "inspect-retired") {
 		return false
 	}
+	c := defaultConfig()
+	runtime := c.retirementRuntime()
+	c.Retirement = &runtime
+	if args[0] == "inspect-retired" {
+		c.Store = retirementStore
+	}
+	if err := c.retirementCommand(args, os.Stdin, os.Stdout); err != nil {
+		var e *failure
+		if !errors.As(err, &e) {
+			e = &failure{Code: "RETIREMENT_IO_FAILED"}
+		}
+		json.NewEncoder(os.Stdout).Encode(map[string]any{"action": "retain", "code": e.Code})
+		os.Exit(1)
+	}
+	return true
+}
+
+func (c config) retirementCommand(args []string, input io.Reader, output io.Writer) error {
+	if len(args) == 0 {
+		return fail("INVALID_ARGUMENTS")
+	}
 	fs := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	id := fs.String("id", "", "")
@@ -1041,19 +1072,13 @@ func retirementMain(args []string) bool {
 	producer := fs.String("producer-job", "", "")
 	moveJob := fs.String("move-job", "", "")
 	disposable := fs.Bool("disposable", false, "")
-	c := defaultConfig()
-	runtime := c.retirementRuntime()
-	c.Retirement = &runtime
-	if args[0] == "inspect-retired" {
-		c.Store = retirementStore
-	}
 	var result any
 	var err error
 	if fs.Parse(args[1:]) != nil || fs.NArg() != 0 {
 		err = fail("INVALID_ARGUMENTS")
 	} else if args[0] == "release" {
 		result, err = c.releaseRetirement(*id, *producer, *moveJob, *disposable)
-	} else {
+	} else if args[0] == "cleanup-lease" || args[0] == "inspect-retired" {
 		if *id == "" {
 			*id, err = c.retirementID(*path)
 		}
@@ -1072,10 +1097,13 @@ func retirementMain(args []string) bool {
 					} else if args[0] == "inspect-retired" {
 						result = map[string]any{"action": "candidate", "id": p.ID, "bytes": p.Bytes, "entries": len(p.Entries), "changed": false}
 					} else {
-						json.NewEncoder(os.Stdout).Encode(p)
+						if err = json.NewEncoder(output).Encode(p); err != nil {
+							return fail("PLAN_OUTPUT_FAILED")
+						}
 						// A finite lease dies even if the consumer crashes or keeps stdin open.
-						time.AfterFunc(120*time.Second, func() { os.Exit(1) })
-						line, e := bufio.NewReader(io.LimitReader(os.Stdin, 64)).ReadString('\n')
+						timer := time.AfterFunc(120*time.Second, func() { os.Exit(1) })
+						defer timer.Stop()
+						line, e := bufio.NewReader(io.LimitReader(input, 64)).ReadString('\n')
 						if e != nil || line != "finish\n" {
 							err = fail("CLEANUP_NOT_FINISHED")
 						} else {
@@ -1086,18 +1114,16 @@ func retirementMain(args []string) bool {
 				}
 			}
 		}
+	} else {
+		err = fail("INVALID_ARGUMENTS")
 	}
 	if err != nil {
-		var e *failure
-		if !errors.As(err, &e) {
-			e = &failure{Code: "RETIREMENT_IO_FAILED"}
-		}
-		json.NewEncoder(os.Stdout).Encode(map[string]any{"action": "retain", "code": e.Code})
-		os.Exit(1)
-	} else {
-		json.NewEncoder(os.Stdout).Encode(result)
+		return err
 	}
-	return true
+	if err = json.NewEncoder(output).Encode(result); err != nil {
+		return fail("PLAN_OUTPUT_FAILED")
+	}
+	return nil
 }
 
 // Kept separate so the process snapshot's ABI size always matches this build.

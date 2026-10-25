@@ -5,6 +5,34 @@ use std::{collections::BTreeMap, process::Child};
 
 const SAFE_DELETE: &str = r"D:\CC\Tools\safe-delete\safe-delete.exe";
 const MAX_PLAN: u64 = 4 * 1024 * 1024;
+const OWNED_MARKER: &str = ".safe-delete-owned.json";
+
+// Routing hints can only retain or ask for proof, never authorize deletion.
+// A reason file is also used by ordinary deletion requests. Require the
+// safe-delete wrapper layout/name or its dedicated marker before invoking Go.
+fn quarantine_hint(path: &Path) -> bool {
+    if fs::symlink_metadata(path.join(OWNED_MARKER)).is_ok() {
+        return true;
+    }
+    let Some(name) = path.file_name().and_then(|x| x.to_str()) else {
+        return false;
+    };
+    let parts: Vec<_> = name.split('-').collect();
+    parts.len() >= 4
+        && parts[0].len() == 8
+        && parts[0].bytes().all(|b| b.is_ascii_digit())
+        && parts.last().is_some_and(|id| {
+            id.len() == 8
+                && id
+                    .bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        })
+        && parts[1..parts.len() - 1]
+            .iter()
+            .all(|s| !s.is_empty() && s.chars().all(|c| c.is_alphanumeric() || c == '_'))
+        && (fs::symlink_metadata(path.join("files")).is_ok()
+            || fs::symlink_metadata(path.join("理由.txt")).is_ok())
+}
 
 #[derive(Clone, Debug)]
 struct Expected {
@@ -179,6 +207,7 @@ impl Plan {
         }
         let bytes = deleting.remove()?;
         stats.logical_bytes = stats.logical_bytes.saturating_add(bytes);
+        stats.owned_removed_bytes = stats.owned_removed_bytes.saturating_add(bytes);
         if directory {
             stats.removed_directories += 1;
         } else {
@@ -320,6 +349,9 @@ pub(super) fn clean_candidate(
     budget: &Budget,
     stats: &mut Stats,
 ) -> io::Result<bool> {
+    if !quarantine_hint(path) {
+        return Ok(false);
+    }
     let (mut lease, value) = match Lease::open(path, budget) {
         Ok(v) => v,
         Err(_) => {
@@ -334,14 +366,9 @@ pub(super) fn clean_candidate(
                 .get("code")
                 .and_then(Value::as_str)
                 .unwrap_or("QUALIFICATION_FAILED");
-            // An old quarantine wrapper without an index is retained as well.
-            // It must not fall through to the generic cleanup after proof loss.
-            if reason == "NOT_REGISTERED"
-                && !path.join("理由.txt").exists()
-                && !path.join("files").exists()
-            {
-                return Ok(false);
-            }
+            // Only a positively hinted quarantine reaches the producer. An
+            // absent index cannot turn that owned/legacy wrapper into ordinary
+            // deletion. Ordinary reason files never enter this branch.
             retain(stats, reason, None);
             return Ok(true);
         }
@@ -441,6 +468,40 @@ mod tests {
             until: Instant::now() + Duration::from_secs(10),
             max_entries: 1000,
         }
+    }
+
+    #[test]
+    fn ordinary_requests_do_not_depend_on_a_working_go_helper() {
+        let root = fixture();
+        let ordinary = root.join("ordinary-request");
+        fs::create_dir(&ordinary).unwrap();
+        fs::write(ordinary.join("理由.txt"), b"ordinary deletion request").unwrap();
+        fs::create_dir(ordinary.join("files")).unwrap();
+        assert!(!quarantine_hint(&ordinary));
+        let mut stats = Stats::default();
+        assert!(!clean_candidate(&ordinary, false, &budget(), &mut stats).unwrap());
+        assert_eq!(stats.owned_retained, 0);
+        fs::remove_dir(ordinary.join("files")).unwrap();
+        fs::remove_file(ordinary.join("理由.txt")).unwrap();
+        fs::remove_dir(ordinary).unwrap();
+        fs::remove_dir(root).unwrap();
+    }
+    #[test]
+    fn owned_marker_and_legacy_wrapper_retain_when_proof_is_missing() {
+        let root = fixture();
+        let legacy = root.join("20261025-fixture-cache-aabb1234");
+        fs::create_dir(&legacy).unwrap();
+        fs::write(legacy.join("理由.txt"), b"legacy").unwrap();
+        assert!(quarantine_hint(&legacy));
+        let renamed = root.join("renamed-owned");
+        fs::create_dir(&renamed).unwrap();
+        fs::write(renamed.join(OWNED_MARKER), b"malformed retains").unwrap();
+        assert!(quarantine_hint(&renamed));
+        fs::remove_file(legacy.join("理由.txt")).unwrap();
+        fs::remove_dir(legacy).unwrap();
+        fs::remove_file(renamed.join(OWNED_MARKER)).unwrap();
+        fs::remove_dir(renamed).unwrap();
+        fs::remove_dir(root).unwrap();
     }
 
     #[test]

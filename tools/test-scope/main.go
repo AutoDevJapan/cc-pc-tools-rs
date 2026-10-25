@@ -94,6 +94,10 @@ func selectPlan(m metadata, changed []string, fullReason string) (plan, error) {
 			return p, errors.New("changed path is invalid")
 		}
 		switch {
+		case strings.HasPrefix(file, "safe-delete/") && (strings.HasSuffix(file, ".go") || path.Base(file) == "go.mod" || path.Base(file) == "go.sum"):
+			if _, ok := packages["cleanup-8h"]; ok {
+				selected["cleanup-8h"] = true
+			}
 		case file == "Cargo.toml", file == "Cargo.lock", file == "rust-toolchain", file == "rust-toolchain.toml", strings.HasPrefix(file, ".cargo/"), file == ".config/nextest.toml":
 			reasons["shared_cargo_configuration"] = true
 		case file == ".github/workflows/build-speed.yml", strings.HasPrefix(file, "tools/test-scope/"):

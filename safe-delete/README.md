@@ -2,8 +2,11 @@
 
 ## 元担当の利用解除を既存の清掃へ渡す
 
-新規createは、正規の実行中ジョブを確認できた場合にv3で元ジョブ・元ToDoと
-祖先のvolume/file IDを残す。通常planの512MiB上限と別execへの提出は従来どおり。
+新規createはすべてv3で、祖先と作成物のvolume/file ID・birthを残す。
+schedulerの担当は元ジョブ・元ToDoの捕捉が必須で、失敗時はフォルダーを作らない。
+CI等のscheduler外はordinary-onlyと明示し、通常plan/finishだけを使う。
+このmodeを後からschedulerの所有へ付け替えることはできない。通常planの
+512MiB上限と別execへの提出は従来どおり。
 
 元担当だけが、特定IDの作業終了・不要・保持なし・依存なし・再生成可を
 `safe-delete.exe release --id <ID> --disposable`で記録する。旧v2の原受領を検証する

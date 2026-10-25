@@ -3,7 +3,7 @@
 package main
 
 import (
-	"bufio"
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -37,6 +37,16 @@ func retirementFixtureAt(t *testing.T, c config, root string, legacy bool) (conf
 		c.Retirement = rt
 	}
 	r := owned(t, c, root)
+	if legacy {
+		r.Version = 2
+		r.Birth = 0
+		r.Ancestors = nil
+		r.ProducerKind = ""
+		r.ProducerJob = ""
+		r.ProducerTodo = 0
+		r.Integrity = digest(r)
+		modify(t, c, r)
+	}
 	c.Retirement = rt
 	spec := filepath.Join(root, "spec.md")
 	write(t, spec, "specific disposable fixture, source preserved")
@@ -58,27 +68,33 @@ func TestRetirementLeaseProcess(t *testing.T) {
 	c, r, _ := retirementFixtureAt(t, c, root, false)
 	retirementReleased(t, c, r)
 	r = retirementQuarantined(t, c, r)
-	unlock, e := c.retirementLock(r.ID)
-	if e != nil {
+	// Use the same parser, root boundary, lease, two-message protocol and finish
+	// path as the production CLI; only the test producer's fixed paths differ.
+	if e := c.retirementCommand([]string{"cleanup-lease", "--path", r.Destination}, os.Stdin, os.Stdout); e != nil {
 		t.Fatal(e)
 	}
-	defer unlock()
-	p, e := c.retiredPlan(r.ID)
-	if e != nil {
-		t.Fatal(e)
-	}
-	if e = json.NewEncoder(os.Stdout).Encode(p); e != nil {
-		t.Fatal(e)
-	}
-	line, e := bufio.NewReader(os.Stdin).ReadString('\n')
-	if e != nil || line != "finish\n" {
-		os.Exit(3)
-	}
-	if e = c.finishRetirement(p); e != nil {
-		t.Fatal(e)
-	}
-	json.NewEncoder(os.Stdout).Encode(map[string]any{"id": r.ID, "state": "quarantine_removed"})
 	os.Exit(0)
+}
+
+func TestRetirementCommandDoesNotFinishMissingPayloadOrMismatchedBoundary(t *testing.T) {
+	c, r, _ := retirementFixture(t, false)
+	retirementReleased(t, c, r)
+	r = retirementQuarantined(t, c, r)
+	var out bytes.Buffer
+	e := c.retirementCommand([]string{"cleanup-lease", "--id", r.ID, "--path", r.Root}, strings.NewReader("finish\n"), &out)
+	code(t, e, "QUARANTINE_BOUNDARY_MISMATCH")
+	if out.Len() != 0 {
+		t.Fatal("mismatched boundary emitted a candidate")
+	}
+	e = c.retirementCommand([]string{"cleanup-lease", "--path", r.Destination}, strings.NewReader("finish\n"), &out)
+	code(t, e, "TARGET_STILL_EXISTS")
+	var row map[string]any
+	if json.Unmarshal(bytes.TrimSpace(out.Bytes()), &row) != nil || row["action"] != "candidate" {
+		t.Fatal("production parser did not emit exactly one initial candidate")
+	}
+	if !exists(filepath.Join(r.Destination, "files", "cache.bin")) {
+		t.Fatal("producer deleted fixture")
+	}
 }
 func retirementPut(t *testing.T, path string, v any) {
 	t.Helper()
@@ -327,7 +343,7 @@ func TestRetirementCurrentStateChangesAndAmbiguousReleaseRetain(t *testing.T) {
 			p := filepath.Join(c.retirementRuntime().Jobs, "producer-job", "events.jsonl")
 			lines := strings.Split(strings.TrimSpace(string(mustRetirementBytes(t, p))), "\n")
 			write(t, p, strings.Join(lines[:2], "\n")+"\n")
-			retirementEvent(t, c, "producer-job", "quarantine --id "+r.ID+" --reason size", map[string]any{"id": r.ID, "state": "quarantined", "destination": r.Destination}, 0)
+			retirementEvent(t, c, "producer-job", "quarantine --id "+r.ID+" --reason size", map[string]any{"id": r.ID, "state": "quarantined", "destination": r.Destination, "bytes": len("disposable fixture"), "entries": 1}, 0)
 		}},
 	}
 	for _, tc := range cases {
@@ -484,6 +500,54 @@ func TestRetirementTodoDecodesOnlyTheOriginalOwnerRow(t *testing.T) {
 	retirementPut(t, rt.Todo, map[string]any{"items": []any{map[string]any{"id": 42, "jobs": "broken-selected-owner"}}})
 	_, e = rt.todo(42)
 	code(t, e, "PRODUCER_TODO_UNVERIFIED")
+}
+
+func TestManagedCreateCaptureFailureNeverCreatesAnOwnedV2(t *testing.T) {
+	c, root := fixture(t)
+	c.Retirement = &retirementRuntime{Actor: func() (retirementJob, error) { return retirementJob{}, fail("PRODUCER_ACTOR_UNVERIFIED") }}
+	_, e := c.create(root, "test", "scratch")
+	code(t, e, "PRODUCER_ACTOR_UNVERIFIED")
+	children, e := os.ReadDir(root)
+	if e != nil {
+		t.Fatal(e)
+	}
+	for _, x := range children {
+		if strings.HasPrefix(x.Name(), "codex-owned-") {
+			t.Fatal("failed capture created unowned folder")
+		}
+	}
+}
+
+func TestRetirementOtherLiveJobOutsideResourceStillRetains(t *testing.T) {
+	c, r, _ := retirementFixture(t, false)
+	retirementReleased(t, c, r)
+	retirementQuarantined(t, c, r)
+	rt := c.retirementRuntime()
+	row, e := rt.todo(42)
+	if e != nil {
+		t.Fatal(e)
+	}
+	row.Jobs = append(row.Jobs, "other-active")
+	retirementPut(t, rt.Todo, map[string]any{"items": []retirementTodo{row}})
+	retirementPut(t, filepath.Join(rt.Jobs, "other-active", "job.json"), retirementJob{ID: "other-active", Todo: 42, CWD: r.Root, Status: "running"})
+	_, e = c.retiredPlan(r.ID)
+	code(t, e, "RESOURCE_STILL_ACTIVE")
+}
+func TestStandaloneCreateUsesV3ButCannotBecomeSchedulerRetirement(t *testing.T) {
+	c, root := fixture(t)
+	r := owned(t, c, root)
+	if r.Version != 3 || r.Birth == 0 || len(r.Ancestors) == 0 || r.ProducerKind != "ordinary-only" {
+		t.Fatal("physical create evidence missing")
+	}
+	if _, e := c.load(r.ID, true); e != nil {
+		t.Fatal(e)
+	}
+	c, r, _ = retirementFixture(t, false)
+	r.ProducerKind = "ordinary-only"
+	r.Integrity = digest(r)
+	modify(t, c, r)
+	_, e := c.original(r, "producer-job")
+	code(t, e, "ORIGINAL_CREATE_UNVERIFIED")
 }
 
 func TestRetirementActorRejectsReusedOrMissingProcessBirth(t *testing.T) {

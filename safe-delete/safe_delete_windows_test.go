@@ -16,7 +16,7 @@ import (
 func fixture(t *testing.T) (config, string) {
 	t.Helper()
 	root := t.TempDir()
-	return config{Store: filepath.Join(root, "receipts"), Quarantine: filepath.Join(root, "quarantine"), Temp: root, MaxEntries: 10000, MaxBytes: 512 * 1024 * 1024}, root
+	return config{Store: filepath.Join(root, "receipts"), Quarantine: filepath.Join(root, "quarantine"), Temp: root, MaxEntries: 10000, MaxBytes: 512 * 1024 * 1024, ordinaryFixture: true}, root
 }
 func owned(t *testing.T, c config, root string) receipt {
 	t.Helper()

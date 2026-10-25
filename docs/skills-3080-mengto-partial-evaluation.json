@@ -8,7 +8,7 @@
   "entrypoints_expected": 177,
   "entrypoints_fulltext_read": 177,
   "entrypoints_unread": 0,
-  "installed": 10,
+  "installed": 18,
   "integrated": 2,
   "excluded": 0,
   "central_write": 22,
@@ -1629,13 +1629,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "8623d997621ba31235563d2d8b36e5637ab404ce",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
+        "historical_evaluation_sha256": "abefee8bcb0da8a91f22505a02feb68880c015f57d16001ef523bd951c9c954b"
+      },
+      "current_installation_evidence": "skills-3080-utility8-installation-evidence.json"
     },
     {
       "inventory_id": "github:dcfad5899bfe731a670bd01b4cfafa5a4aa3d03303f40df2b562279b41baf405",
@@ -2520,13 +2526,19 @@
           "executed": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
       "source_notice_scope_correction": "全treeには別範囲のTHREE-LICENSE.txtもある。選択した手順文と未使用の第三者デモ/素材を分ける。",
       "git_blob": "49b7ac030d822ae4543e8f022882415119b4cc24",
-      "third_party_assets_or_support_rights_accepted": false
+      "third_party_assets_or_support_rights_accepted": false,
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
+        "historical_evaluation_sha256": "abefee8bcb0da8a91f22505a02feb68880c015f57d16001ef523bd951c9c954b"
+      },
+      "current_installation_evidence": "skills-3080-utility8-installation-evidence.json"
     },
     {
       "inventory_id": "github:7e7b86ab5a899b4639cffd87d65ca9184dedb899d1ba98d46b6a74f2a49860ca",
@@ -4456,7 +4468,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -4476,7 +4488,13 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
+        "historical_evaluation_sha256": "abefee8bcb0da8a91f22505a02feb68880c015f57d16001ef523bd951c9c954b"
+      },
+      "current_installation_evidence": "skills-3080-utility8-installation-evidence.json"
     },
     {
       "inventory_id": "github:458307c33cb5b98f8ad6c9340ad5f1668ffb3c0683daf715a34277712ef6b177",
@@ -4719,7 +4737,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -4739,7 +4757,13 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
+        "historical_evaluation_sha256": "abefee8bcb0da8a91f22505a02feb68880c015f57d16001ef523bd951c9c954b"
+      },
+      "current_installation_evidence": "skills-3080-utility8-installation-evidence.json"
     },
     {
       "inventory_id": "github:c87324cb088076b4914c3d5b89f3bcaea02a41d1f3e52302444ab262a4023097",
@@ -5444,7 +5468,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -5464,7 +5488,13 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
+        "historical_evaluation_sha256": "abefee8bcb0da8a91f22505a02feb68880c015f57d16001ef523bd951c9c954b"
+      },
+      "current_installation_evidence": "skills-3080-utility8-installation-evidence.json"
     },
     {
       "inventory_id": "github:c51dc53e6bbbd50fb36e0dc24236e430698fe779352ac996e34115a0cbc5c882",
@@ -5777,7 +5807,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -5797,7 +5827,13 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
+        "historical_evaluation_sha256": "abefee8bcb0da8a91f22505a02feb68880c015f57d16001ef523bd951c9c954b"
+      },
+      "current_installation_evidence": "skills-3080-utility8-installation-evidence.json"
     },
     {
       "inventory_id": "github:208c134d07c6432f69318e9a83f9b745af5ed0476e4c2f81f12eead9598ca6db",
@@ -6209,7 +6245,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -6229,7 +6265,13 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
+        "historical_evaluation_sha256": "abefee8bcb0da8a91f22505a02feb68880c015f57d16001ef523bd951c9c954b"
+      },
+      "current_installation_evidence": "skills-3080-utility8-installation-evidence.json"
     },
     {
       "inventory_id": "github:47eaf17ef451cbe3e1435dce403be55f89a48c416b943671e48541380b005028",
@@ -6353,7 +6395,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -6373,7 +6415,13 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "installation_before_this_delta": {
+        "installed_by_todo3080": false,
+        "baseline_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
+        "historical_evaluation_sha256": "abefee8bcb0da8a91f22505a02feb68880c015f57d16001ef523bd951c9c954b"
+      },
+      "current_installation_evidence": "skills-3080-utility8-installation-evidence.json"
     },
     {
       "inventory_id": "github:e356efe1da77694b896e38273195eb56a9308917ceee70da0e8f0e8f251bb5d9",
@@ -22206,11 +22254,11 @@
   "amendment_job": "20261024-123649-todo-3080",
   "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts.",
   "current_installation_update": {
-    "evidence": "skills-3080-game6-installation-evidence.json",
-    "added": 6,
-    "current_installed": 10,
+    "evidence": "skills-3080-utility8-installation-evidence.json",
+    "added": 8,
+    "current_installed": 18,
     "source_body_reading_and_notice_support_states_unchanged": true,
-    "definition": "Current installation flags only. The previous current projection and original readers/identities/support/rights limitations remain retained."
+    "definition": "Only current installed projection changes; all previous installation updates and original reader/support/rights records are retained."
   },
   "previous_installation_updates": [
     {
@@ -22218,6 +22266,13 @@
       "added": 2,
       "source_body_reading_and_notice_support_states_unchanged": true,
       "definition": "Only the current installation projection changed. Earlier proposal, raw source identities, actors, rights/support limitations and original Git snapshot are retained."
+    },
+    {
+      "evidence": "skills-3080-game6-installation-evidence.json",
+      "added": 6,
+      "current_installed": 10,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Current installation flags only. The previous current projection and original readers/identities/support/rights limitations remain retained."
     }
   ]
 }

@@ -100,6 +100,7 @@ type purposeFourReceipt struct {
 		Core         *bool           `json:"core_passed"`
 		KindCount    int             `json:"example_kind_count"`
 		GameExamples json.RawMessage `json:"game_examples"`
+		Applications json.RawMessage `json:"applications"`
 		Stable       *bool           `json:"active_bytes_stable_before_after"`
 		External     *int            `json:"external_api_calls"`
 		Executed     *bool           `json:"source_scripts_executed"`

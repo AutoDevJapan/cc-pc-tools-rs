@@ -264,3 +264,10 @@ Suggestion1の予約二重実行対策は、統合候補の実適用時に、既
 `skills-3080-webdesign-next20-notice-map074042.json`へ、20出典pathと完全tree、適用した祖先noticeのSHA/Git blob/bytesを保存した。全件で適用noticeは同固定版root LICENSE。別directoryのTHREE通知や外部素材の権利を含めていない。
 
 補助技術資料の可変リンクは、`skills-3080-webdesign-external-reference-pins074042.json`で新たに取得した固定commitと同bytesのGit blob/SHA/bytesへ結んだ。Khronos smoothstepとMatter.js Mouseの公式repositoryを使い、以前の未固定リンクの読取を今回の取得へ置き換えていない。この照合でソース全体を新たに読了したとはせず、SDKの互換性・第三者素材の権利・実行成功を追加主張しない。14案・20案のCreateNew用manifestのbytesと正式な内容受入は保持した。
+# 継続する同じ読取担当の91〜132観測
+
+`skills-3080-sixmile-next42-evaluation.json` は、既存の担当3719が返した42観測の原状態を保持する。本文は元文の全文読取0、伏字を含む手順の読取39、未読2、部分読取1である。後から得た匿名表示や支持資料の読取は別の追補として残し、原状態を全読へ変更しない。親は意味評価・限界を受領した担当であり、上流本文を新しく読んだ担当として数えない。
+
+許諾文40出現の再利用は、受入済み90観測の10番で同じ担当が元文を読んだ1072バイトの通知へ結ぶ。前の集合の固定ハッシュ、実読者、元の行番号、パス、本文ハッシュ、Git blob、bytesを検査する。現在の集合の読取数には加えず、個別候補への利用許可にも変換しない。原の行番号を91から始めることは、件数上限や未調査の除外を意味しない。
+
+この追加は採否・導入・権利許可・中央への書込みを増やさない。作成済み20件の監査読取失敗は、別の具体的な再現資料 `evidence/skills-3080-next20-current-creator-case074042.json` に記録した。WindowsのJSON別名修正と、この読取修復の受入を混同しない。

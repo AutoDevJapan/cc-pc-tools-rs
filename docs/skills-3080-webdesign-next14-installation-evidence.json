@@ -1102,11 +1102,41 @@
   "warning_cause_linked": false,
   "new_unique_source_primary_readings": 0,
   "public_result_delta_review_pending_at_recording": true,
-  "public_result_delta_currently_pending": true,
+  "public_result_delta_currently_pending": false,
   "limits": [
     "Exact current-handle snapshots and explicit live-parent planning examples, not a real rendered scene or third-party SDK compatibility guarantee.",
     "Fresh discovery returns selected metadata only; no full-context or implicit model routing claim. Existing traversal warnings have unproved cause.",
     "Historical physical continuity/current OS writer remain unproved; current identity and returned-byte verification do not grant general filesystem access.",
     "Old anonymous9/held14/647 and original3048/junctions/backups remain."
-  ]
+  ],
+  "public_result_acceptance": {
+    "todo": 3889,
+    "job": "20261026-062616-todo-3889",
+    "model": "gpt-6-luna",
+    "effort": "max",
+    "model_origin": "owner_request",
+    "effort_origin": "owner_request",
+    "spec_sha256": "7b1a16144cc041a3c3975693d029e57fd8b6403b8f137c51c86fab2698a27df3",
+    "raw_sha256": "96d62d0b5d6cc12a13224562fbb28192a96d0f7a6333040c9d1fe60f1844c110",
+    "raw_bytes": 1794,
+    "parent_full_original_read": true,
+    "independent_native_model_cwd_time_verified": true,
+    "Must": 0,
+    "Suggestion": 1,
+    "Nit": 0,
+    "head": "f34462dcd270df2ed79cc36fa8f4685819b0dfb6",
+    "base": "5d4a05597944d2db355fa09262051d551be8645a",
+    "accepted_pr": 523,
+    "merge": "329dbd43ab84bdf0894bb6e1df2ade1be67eb335",
+    "MERGED_readback": true,
+    "main_integrated": true,
+    "scope": "33 head/base files,20 changed; reviewed operation outputs151 and25 source procedures per original response; no tests rerun by reviewer"
+  },
+  "review_suggestion_response": {
+    "kind": "Suggestion",
+    "topic": "MDN reference traceability",
+    "resolution": "The input-level MDN reference list is shared technical context. An empty per-target source.json external_technical_validation_urls is not a claim of target-level verification. Original installed source files remain immutable; any future source mapping change requires its own ordinary update.",
+    "original_input_or_installed_files_rewritten": false,
+    "actual_rendering_or_current_API_compatibility_claimed": false
+  }
 }

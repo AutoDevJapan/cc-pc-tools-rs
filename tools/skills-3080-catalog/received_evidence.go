@@ -88,14 +88,18 @@ type ReceivedNotice struct {
 	RightsRef    string           `json:"rights_ref"`
 }
 type ReceivedSpec struct {
-	Source        string
-	Commit        string
-	Tree          string
-	EntrySHA      string
-	InputSHA      string
-	Readers       map[int]string
-	Counts        map[string]int
-	RichPrimaries bool
+	Source         string
+	Commit         string
+	Tree           string
+	EntrySHA       string
+	InputSHA       string
+	Readers        map[int]string
+	Counts         map[string]int
+	RichPrimaries  bool
+	FirstReaderRow map[int]int
+	// These anchors are fixed accepted literal observations, not caller fields.
+	// They seed provenance only and never add a new reading to this cohort.
+	PriorLiteralSupports []receivedLiteralSupport
 }
 
 var received50Spec = ReceivedSpec{
@@ -123,6 +127,19 @@ var receivedStream90Spec = ReceivedSpec{
 	Counts:        map[string]int{"candidates": 90, "primary_raw": 2, "primary_masked": 85, "primary_direct_masked": 84, "primary_exact_reuse": 1, "primary_workflow": 87, "primary_saved_unread": 1, "primary_partial": 2, "primary_ordered_differences_reported": 0, "notices": 90, "notice_content_definitions_by_actor": 4, "support": 445, "saved": 328, "direct_raw_support": 17, "direct_masked_support": 99, "same_byte_notice_reuse": 86, "same_byte_support_reuse": 3, "ordered_notice_difference": 0, "full_workflow_support": 205, "partial": 0, "scan": 0, "saved_unread": 123, "unsaved": 117},
 }
 
+var receivedNext42Spec = ReceivedSpec{
+	Source: "6mile/skills", Commit: "920714f17d81e0a95c7a9bc51faf0a7921cd982d", Tree: "5782ae7deffe5024e15b6e090327385c10f76273",
+	EntrySHA: "1750eea9807800038ebf87239cd622b2ba14d9d1aecbe7e6390e51dccdb0e152", InputSHA: "0d9fa38449f2f89af5c4d3146aea5f9028812b52329cb9ac87e030ba3900817b",
+	Readers: map[int]string{3719: "20261025-041905-todo-3719"}, RichPrimaries: true, FirstReaderRow: map[int]int{3719: 91},
+	Counts:               map[string]int{"candidates": 42, "primary_raw": 0, "primary_masked": 39, "primary_direct_masked": 39, "primary_exact_reuse": 0, "primary_workflow": 39, "primary_saved_unread": 2, "primary_partial": 1, "primary_ordered_differences_reported": 0, "notices": 42, "notice_content_definitions_by_actor": 3, "support": 151, "saved": 96, "direct_raw_support": 5, "direct_masked_support": 45, "same_byte_notice_reuse": 40, "same_byte_support_reuse": 0, "ordered_notice_difference": 0, "full_workflow_support": 90, "partial": 0, "scan": 0, "saved_unread": 6, "unsaved": 55},
+	PriorLiteralSupports: []receivedLiteralSupport{acceptedStream90NoticeLiteral()},
+}
+
+func acceptedStream90NoticeLiteral() receivedLiteralSupport {
+	yes, no, n, mask, reader := true, false, 1072, 0, "20261025-041905-todo-3719"
+	return receivedLiteralSupport{Row: 10, CohortSHA: "ed467d85e91aeddc3f0495df0b9cc5c4f574d5f5bb8a66a3b00e9d37d98884a4", Support: ReceivedSupport{Path: "skills/bobbyzzhao/gmail-1-0-6/LICENSE.txt", SHA: "ec9e952fec4d029fab649746d033bf91802b15f59ffa40a0d3a3a0e1a1587802", Blob: "4813de20b72e365983fe0370d79d7cac6ea21d9b", Bytes: &n, Reader: &reader, State: "R", Saved: &yes, Raw: &yes, Workflow: &yes, Partial: &no, Scan: &no, Executed: &no, Mask: &mask}}
+}
+
 type ReceivedRegistration struct {
 	ID       string
 	Artifact string
@@ -133,6 +150,7 @@ var receivedRegistrations = []ReceivedRegistration{
 	{"received50", "skills-3080-sixmile-received50-evaluation.json", received50Spec},
 	{"received3674", "skills-3080-sixmile-received-next50-evaluation.json", received3674Spec},
 	{"stream90", "skills-3080-sixmile-stream90-evaluation.json", receivedStream90Spec},
+	{"next42", "skills-3080-sixmile-next42-evaluation.json", receivedNext42Spec},
 }
 
 func registeredReceivedSpec(a ReceivedCohort) (ReceivedSpec, error) {
@@ -172,6 +190,14 @@ func validateReceivedCohort(a ReceivedCohort, spec ReceivedSpec) ([]ReceivedEntr
 	ids, paths, rows := map[string]bool{}, map[string]bool{}, map[string]bool{}
 	priorRaw := map[string]bool{}
 	priorLiteralSupports := map[string]receivedLiteralSupport{}
+	for _, anchor := range spec.PriorLiteralSupports {
+		s := anchor.Support
+		if !spec.RichPrimaries || !evidenceHex(anchor.CohortSHA, 64) || anchor.Row < 1 || s.Reader == nil || s.Bytes == nil || !evidenceTrue(s.Raw) || !evidenceTrue(s.Workflow) || !evidenceTrue(s.Saved) || !evidencePath(s.Path) || !evidenceHex(s.SHA, 64) || !evidenceHex(s.Blob, 40) {
+			return bad("invalid fixed prior literal anchor")
+		}
+		priorRaw[fmt.Sprint(*s.Reader, "|", s.SHA, "|", s.Blob, "|", *s.Bytes)] = true
+		priorLiteralSupports[*s.Reader+"|"+s.Path] = anchor
+	}
 	priorPrimaries := map[int]ReceivedEntry{}
 	noticeDefinitions := map[string]bool{}
 	readers := map[int]int{}
@@ -331,7 +357,11 @@ func validateReceivedCohort(a ReceivedCohort, spec ReceivedSpec) ([]ReceivedEntr
 	}
 	counts["notice_content_definitions_by_actor"] = len(noticeDefinitions)
 	for todo, n := range readers {
-		for row := 1; row <= n; row++ {
+		first := spec.FirstReaderRow[todo]
+		if first == 0 {
+			first = 1
+		}
+		for row := first; row < first+n; row++ {
 			if !rows[fmt.Sprint(todo, ":", row)] {
 				return bad("noncontiguous original reader rows")
 			}

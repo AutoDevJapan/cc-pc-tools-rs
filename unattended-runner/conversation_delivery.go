@@ -224,7 +224,7 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 			// A separate explicit normal answer can consume a parked delivery.
 			// Observe both receipts, never issue another answer or call this an
 			// intact wait. A later hold/owner stays outside this historical proof.
-			ready := conversationRepairedAnswerRecorded(row, q, answer, b, r.Now())
+			ready := conversationRepairedDeliveryAfterAnswer(row, q, answer, b, r.Now())
 			var err error
 			if !ready {
 				ready, err = conversationPreservedReplyReady(row, q, answer, b)
@@ -410,10 +410,11 @@ func conversationDeliveryRecorded(row *TodoRow, q ConversationQuestion, answer c
 	return conversationDeliveryRecordedWithMode(row, q, answer, b, false)
 }
 
-// A normal answer is a distinct later operation, proven by its complete canonical
-// receipt and the exact earlier preserved delivery. It cannot prove preservation
-// while that question's wait remains, nor stand for implementation or session read.
-func conversationRepairedAnswerRecorded(row *TodoRow, q ConversationQuestion, answer conversationAnswerReceipt, b []byte, now time.Time) bool {
+// A normal answer is a distinct later operation. Its exact original wait can
+// consume either this reply or a later post to the same question. The prior
+// preserved receipt still proves only this reply's historical delivery, never
+// that this version was applied, that the wait remains, or that a session read it.
+func conversationRepairedDeliveryAfterAnswer(row *TodoRow, q ConversationQuestion, answer conversationAnswerReceipt, b []byte, now time.Time) bool {
 	if conversationWaitRecorded(row, q) {
 		return false
 	}
@@ -426,8 +427,23 @@ func conversationRepairedAnswerRecorded(row *TodoRow, q ConversationQuestion, an
 			SHA    string                    `json:"answer_file_sha256"`
 			At     string                    `json:"applied_at"`
 		}
-		if json.Unmarshal(raw, &applied) != nil || applied.Domain != "todo-owner-question-answer-receipt-v1" || applied.Answer != answer || applied.SHA != bytesHash(b) {
+		if json.Unmarshal(raw, &applied) != nil || applied.Domain != "todo-owner-question-answer-receipt-v1" {
 			continue
+		}
+		if applied.Answer == answer {
+			if applied.SHA != bytesHash(b) {
+				continue
+			}
+		} else {
+			// A different version of the same post never inherits this proof. A
+			// later message may consume the question, retaining the earlier source.
+			next, e1 := number(applied.Answer.Message)
+			previous, e2 := number(answer.Message)
+			expected := answer
+			expected.Message, expected.ReplySHA, expected.Acquired, expected.ReceiptSHA = applied.Answer.Message, applied.Answer.ReplySHA, applied.Answer.Acquired, applied.Answer.ReceiptSHA
+			if !e1 || !e2 || next <= previous || expected != applied.Answer || !shaPattern.MatchString(applied.SHA) || !shaPattern.MatchString(applied.Answer.ReplySHA) || !shaPattern.MatchString(applied.Answer.ReceiptSHA) {
+				continue
+			}
 		}
 		var wait struct {
 			SHA      string          `json:"question_receipt_sha256"`
@@ -437,7 +453,8 @@ func conversationRepairedAnswerRecorded(row *TodoRow, q ConversationQuestion, an
 			} `json:"question"`
 		}
 		appliedAt, err := time.Parse(time.RFC3339Nano, applied.At)
-		if err != nil || appliedAt.After(now) || json.Unmarshal(applied.Wait, &wait) != nil || wait.SHA != q.ReceiptSHA || wait.Question.Request != q.SenderID || len(wait.Origin) == 0 || string(wait.Origin) == "null" {
+		acceptedAt, acquiredErr := time.Parse(time.RFC3339Nano, applied.Answer.Acquired)
+		if err != nil || acquiredErr != nil || appliedAt.Before(acceptedAt) || appliedAt.After(now) || json.Unmarshal(applied.Wait, &wait) != nil || wait.SHA != q.ReceiptSHA || wait.Question.Request != q.SenderID || len(wait.Origin) == 0 || string(wait.Origin) == "null" {
 			continue
 		}
 		deliveries := 0

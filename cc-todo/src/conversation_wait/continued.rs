@@ -114,7 +114,9 @@ pub(super) fn preserved_answer_instruction(
     sha: &str,
     at: DateTime<Utc>,
 ) -> Result<Option<String>> {
-    let mut pending = None;
+    let instruction = text(&row["scheduler"], "owner_instruction");
+    let instruction_sha = digest(instruction.as_bytes());
+    let mut anchor = None;
     for record in records(row)? {
         if record["preserved_wait"] != true
             || record["answer"]["request_id"] != answer["request_id"]
@@ -122,21 +124,66 @@ pub(super) fn preserved_answer_instruction(
             continue;
         }
         validate_record(record, id, at)?;
-        if record["answer"] != *answer || record["answer_file_sha256"] != sha {
-            return fail("answer_conflict");
+        if record["wait"] != *wait || record["recipient"] != origin_identity(row) {
+            return fail("preserved_delivery_changed");
         }
-        if pending.is_some()
-            || record["wait"] != *wait
-            || record["recipient"] != origin_identity(row)
-            || digest(text(row, "note").as_bytes()) != text(record, "note_sha256")
-            || digest(text(&row["scheduler"], "owner_instruction").as_bytes())
-                != text(record, "instruction_sha256")
+        if instruction_sha == text(record, "instruction_sha256") && anchor.replace(record).is_some()
         {
             return fail("preserved_delivery_changed");
         }
-        pending = Some(text(&row["scheduler"], "owner_instruction").to_owned());
     }
-    Ok(pending)
+    let Some(record) = anchor else {
+        // An unrelated question's old deliveries never change normal answering.
+        return if records(row)?.iter().any(|record| {
+            record["preserved_wait"] == true
+                && record["answer"]["request_id"] == answer["request_id"]
+        }) {
+            fail("preserved_delivery_changed")
+        } else {
+            Ok(None)
+        };
+    };
+    let note = text(row, "note");
+    if record["answer"] == *answer && record["answer_file_sha256"] == sha {
+        if digest(note.as_bytes()) != text(record, "note_sha256") {
+            return fail("preserved_delivery_changed");
+        }
+        return Ok(Some(instruction.to_owned()));
+    }
+    // A normal later reply may already have appended its note when answering
+    // failed. Prove the unchanged old prefix before merging only the new suffix;
+    // do not duplicate old replies or rewrite an independently replaced note.
+    let suffix = preserved_note_suffix(note, text(record, "note_sha256"))
+        .ok_or("preserved_delivery_changed")?;
+    let suffix = latest_blocks_only(suffix);
+    if !complete_blocks(&suffix.split('\n').collect::<Vec<_>>())
+        .iter()
+        .any(|(_, _, id)| {
+            id.sender == text(answer, "request_id") && id.message == text(answer, "message_id")
+        })
+    {
+        return fail("preserved_delivery_changed");
+    }
+    merge_instruction(&row["scheduler"]["owner_instruction"], &suffix)
+        .map(|(instruction, _)| Some(instruction))
+}
+
+fn preserved_note_suffix<'a>(note: &'a str, prefix_sha: &str) -> Option<&'a str> {
+    // Include overlapping separators: the saved note can itself end in '\n'.
+    // The running digest bounds the scan to linear input, even for many blanks.
+    let bytes = note.as_bytes();
+    let mut digest = Sha256::new();
+    let mut hashed = 0;
+    for (offset, pair) in bytes.windows(2).enumerate() {
+        if pair == b"\n\n" {
+            digest.update(&bytes[hashed..offset]);
+            hashed = offset;
+            if format!("{:x}", digest.clone().finalize()) == prefix_sha {
+                return Some(&note[offset + 2..]);
+            }
+        }
+    }
+    None
 }
 
 /// A reply to a question that was already applied may arrive when no worker was

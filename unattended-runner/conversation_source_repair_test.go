@@ -811,3 +811,99 @@ func TestConversationSourceRepairNormalAnswerRequiresBothExactReceipts(t *testin
 		})
 	}
 }
+
+func TestConversationSourceRepairNativeSecondReplySurvivesPartialNoteAndRetry(t *testing.T) {
+	f := conversationNativeTest(t)
+	f.mutateTodo(t, func(row map[string]any) {
+		row["resume_generation"] = 7
+		row["worker_receipt"] = map[string]any{"job": "worker-42", "generation": 7}
+		row["scheduler"] = map[string]any{"job": "worker-42", "key": "origin-key", "phase": "running"}
+	})
+	f, args, original := prepareSourceRepairFixture(t, f)
+	workerPath := filepath.Join(f.r.JobsPath, "worker-42", "job.json")
+	if os.MkdirAll(filepath.Dir(workerPath), 0700) != nil || publish(workerPath, map[string]any{"id": "worker-42", "todo_id": 42, "launch_key": "origin-key", "status": "succeeded", "exit_code": 0}) != nil {
+		t.Fatal("finished original job")
+	}
+	if code, _ := intakeLinkCLI(t, f, args); code != 0 {
+		t.Fatal("first preserving delivery")
+	}
+	second := f.reply(t, 9, "a later synthetic direction")
+	server(t, f.r, func(w http.ResponseWriter, req *http.Request) {
+		for _, reply := range f.replies {
+			if req.URL.Path == "/channels/"+f.q.Thread+"/messages/"+reply.Message {
+				attachments := []any{}
+				if reply.Message == f.replies[0].Message {
+					attachments = []any{map[string]any{"id": "501", "size": 123, "filename": "synthetic.png", "content_type": "image/png"}}
+				}
+				respond(w, map[string]any{"id": reply.Message, "channel_id": f.q.Thread, "author": map[string]any{"id": reply.Author}, "content": reply.Body, "timestamp": reply.Created, "edited_timestamp": nil, "type": 0, "attachments": attachments})
+				return
+			}
+		}
+		t.Errorf("unexpected API %s", req.URL.Path)
+		w.WriteHeader(404)
+	})
+	proof, err := f.r.conversationProof(context.Background(), f.q)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req, err := f.r.captureConversationReply(context.Background(), f.q, proof, second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	backend, fail := f.r.Run, true
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		if fail && path == conversationTodo && len(args) != 0 && args[0] == "question-answer" {
+			fail = false
+			return "", errors.New("synthetic answer failure after note publication")
+		}
+		return backend(ctx, path, args...)
+	}
+	if err := f.r.deliverConversationReply(context.Background(), f.q, second, req); err == nil || fail {
+		t.Fatal("did not reach the intended partial-note failure")
+	}
+	if err := f.r.deliverConversationReply(context.Background(), f.q, second, req); err != nil {
+		t.Fatal("second reply stuck behind the first preserving receipt", err)
+	}
+	row, _ := f.r.conversationTask(context.Background(), 42)
+	var raw map[string]any
+	if json.Unmarshal(row.conversationState, &raw) != nil {
+		t.Fatal("row")
+	}
+	instruction := raw["scheduler"].(map[string]any)["owner_instruction"].(string)
+	for _, reply := range f.replies {
+		if strings.Count(instruction, "<discord-owner-answer>\n"+reply.Body+"\n</discord-owner-answer>") != 1 {
+			t.Fatal("pending answer text was lost or duplicated", reply.Message)
+		}
+	}
+	if row.Status != "todo" || len(row.QuestionAnswers) != 1 || len(row.QuestionDeliveries) != 1 {
+		t.Fatal("normal answer did not release exactly this question")
+	}
+	// Ordinary audits can still observe the earlier source after the later reply
+	// consumed the wait. They must not answer again or claim this version applied.
+	first := f.r.State.ConversationCaptures[f.replies[0].Message]
+	if err := f.r.deliverConversationReply(context.Background(), f.q, f.replies[0], first); err != nil || first.Phase != "conversation_reply_delivered" {
+		t.Fatal("later normal answer hid the first historical delivery", err)
+	}
+	valid, _ := os.ReadFile(f.r.TodoPath)
+	for _, field := range []string{"author_id", "thread_id", "question_receipt_sha256", "request_id"} {
+		repairMutateRow(t, f, 42, func(row map[string]any) {
+			applied := row["owner_question_answer_receipts"].([]any)[0].(map[string]any)
+			applied["answer"].(map[string]any)[field] = "another-identity"
+		})
+		if err := f.r.deliverConversationReply(context.Background(), f.q, f.replies[0], first); err == nil {
+			t.Fatal("unrelated later answer proved this question's consumption", field)
+		}
+		if os.WriteFile(f.r.TodoPath, valid, 0600) != nil {
+			t.Fatal("restore synthetic answer")
+		}
+	}
+	before, _ := os.ReadFile(f.r.TodoPath)
+	if err := f.r.deliverConversationReply(context.Background(), f.q, second, req); err != nil {
+		t.Fatal("second delivery replay", err)
+	}
+	after, _ := os.ReadFile(f.r.TodoPath)
+	retained, _ := os.ReadFile(filepath.Join(f.r.Config.Home, "requests", f.replies[0].Message+".json"))
+	if !bytes.Equal(before, after) || !bytes.Equal(original, retained) || f.r.State.ConversationCaptures[f.replies[0].Message].Phase != "conversation_reply_delivered" {
+		t.Fatal("retry rewrote the completed answer or original intake")
+	}
+}

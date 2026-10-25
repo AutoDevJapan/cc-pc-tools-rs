@@ -620,19 +620,10 @@
     "applications": {
       "actual_job": "20261025-074042-todo-3080",
       "all_bounded_cases_passed": true,
+      "application_source_sha256": "fde8faed362addae8fbc4d5a36701e7286ded4f2a20e5cc31c06dfd38ffdef6d",
       "cases": {
         "audit-reference-originality": {
           "actual_installed_archive_comparisons": [
-            {
-              "active_is_not_identical": true,
-              "current_evidence": "audit-reference-originality/references/upstream-original.txt",
-              "exact_author_notice_retained": true,
-              "exact_bytes": true,
-              "legal_conclusion": false,
-              "reference_evidence": "fixed manifest source SHA256 8b8b5e6c6174ff790f08541e444fe64b48f8d078b1f5783b36c3204a690616b6",
-              "role": "retained upstream procedure for audit",
-              "target": "audit-reference-originality"
-            },
             {
               "active_is_not_identical": true,
               "current_evidence": "browser-video-recording/references/upstream-original.txt",
@@ -702,6 +693,16 @@
               "reference_evidence": "fixed manifest source SHA256 4e22866b1eae238420d48de06ba1df11e70e033a02097575acde827a94d25f9a",
               "role": "retained upstream procedure for audit",
               "target": "test-playable-web-games"
+            },
+            {
+              "active_is_not_identical": true,
+              "current_evidence": "audit-reference-originality/references/upstream-original.txt",
+              "exact_author_notice_retained": true,
+              "exact_bytes": true,
+              "legal_conclusion": false,
+              "reference_evidence": "fixed manifest source SHA256 8b8b5e6c6174ff790f08541e444fe64b48f8d078b1f5783b36c3204a690616b6",
+              "role": "retained upstream procedure for audit",
+              "target": "audit-reference-originality"
             }
           ],
           "legal_verdict_or_automatic_deletion": false,
@@ -832,6 +833,7 @@
           "width": 320
         }
       },
+      "creation_wrapper_sha256": "405af6d191692d68855cfb43cfa4e261cf0bb916518d186cb50372509cd55e5b",
       "domain": "skills3080-utility8-explicit-use-v1",
       "explicit_current_worker_application": true,
       "installed_output_hashes": {
@@ -890,17 +892,19 @@
       "new_central_writes": 0,
       "new_separate_model_turn_or_implicit_selection": false,
       "overall16_complete": false,
+      "probe_receipt_sha256": "6c1badd61cf0ac18cf422fec3300d7382bdc6905a5605576d529cf0351b0b9b2",
       "real_browser_game_UI_or_GPU_execution": false,
+      "revalidates_original_result_after_review3789": true,
       "source_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
       "source_scripts_executed": false
     }
   },
-  "application_result": "skills-3080-utility8-application-result.json",
-  "application_result_sha256": "6e2c16098bd8389c1bb77670d0abfc7dc50ebcece8075ae7c69b5caf1aa4be84",
-  "application_test_receipt": "skills-3080-utility8-application-test-receipt.json",
-  "application_test_receipt_sha256": "b4814c7b420de721d3aedb38bb8dfe0ca327c659fff2bf83968571dac63fb8ee",
-  "application_source": "evidence/skills-3080-utility8-use-074042.go.txt",
-  "application_source_sha256": "204ab636d690b63837960c6306d6bf08ea42b77291f181a257b0419116094344",
+  "application_result": "skills-3080-utility8-application-v2-result.json",
+  "application_result_sha256": "0de6775d229644205cc051e0861a9c7a716e23ee8be284c4bfd6c74dfba34615",
+  "application_test_receipt": "skills-3080-utility8-application-v2-test-receipt.json",
+  "application_test_receipt_sha256": "8cc97e0a67630a17fafe74f824e9a1d43f1e19b7888482b7bc0037a016a85a92",
+  "application_source": "evidence/skills-3080-utility8-use-v2-074042.go.txt",
+  "application_source_sha256": "fde8faed362addae8fbc4d5a36701e7286ded4f2a20e5cc31c06dfd38ffdef6d",
   "discovery_receipt": "skills-3080-utility8-discovery-receipt.json",
   "discovery_receipt_sha256": "fb01164c58fab7c1bcd3259f19585971464fcacdc90807965eb1394a4e2195b0",
   "fixture_preparation_snapshot": "skills-3080-utility8-fixture-preparation.json",
@@ -915,8 +919,44 @@
   "limits": [
     "The prior counts-only discovery did not retain individual new8 rows; the later detailed call proves66unique enabled identities and publishes actual8rows, duplicate0, matching descriptions8.",
     "Actual installed archives/notices and a synthetic2second 320x240/24fps video with two decoded samples accompany bounded data models. Real browser recording/play/full-page pixel content/CSS-RAF runtime/heap are unverified.",
-    "Fixture preparation records skill_use_executed:false at preparation time; actual later use is in the separate original result and successful0.033s test receipt.",
+    "Fixture preparation records skill_use_executed:false at preparation time. The first0.033s use is preserved as weak history; current strict revalidation uses the v2 source/result and0.191s receipt.",
     "Current worker explicitly read16installed entry/guide files; no implicit choice or fresh separate model turn is claimed.",
     "Traversal warnings2 do not prove their cause/full context. Original primary totals, all16remainder, anonymous9/647denied holds and3048originals/junctions/backups persist."
-  ]
+  ],
+  "prior_weak_application": {
+    "application_result": "skills-3080-utility8-application-result.json",
+    "application_result_sha256": "6e2c16098bd8389c1bb77670d0abfc7dc50ebcece8075ae7c69b5caf1aa4be84",
+    "application_test_receipt": "skills-3080-utility8-application-test-receipt.json",
+    "application_test_receipt_sha256": "b4814c7b420de721d3aedb38bb8dfe0ca327c659fff2bf83968571dac63fb8ee",
+    "application_source": "evidence/skills-3080-utility8-use-074042.go.txt",
+    "application_source_sha256": "204ab636d690b63837960c6306d6bf08ea42b77291f181a257b0419116094344",
+    "original_success_kept": true,
+    "accepted_as_current_proof": false,
+    "reason": "Review3789 Must1: absent required receipt fields could be interpreted as zero success/false; original records preserved, followed by strict revalidation."
+  },
+  "probe_receipt": "skills-3080-utility8-probe-receipt.json",
+  "probe_receipt_sha256": "6c1badd61cf0ac18cf422fec3300d7382bdc6905a5605576d529cf0351b0b9b2",
+  "review3789_resolution": {
+    "original_review_raw_sha256": "cf5a2ee9b600b1842739a6865436e2867cb2746d8f1db214620c46c5f62702e5",
+    "original_review_spec_sha256": "12ed9ca7f9197934c6f57e452663c24f2d01c3feaae505172d2193d76c30555c",
+    "actual_model": "gpt-6-luna",
+    "actual_effort": "max",
+    "must": 1,
+    "required_values_now_pointer_decoded": true,
+    "missing_timeout_and_false_flags_rejected": true,
+    "authentic_create_and_probe_hashes_bound": true,
+    "original48_unchanged": true,
+    "new_central_writes": 0,
+    "original_red": "skills-3080-utility8-receipt-regression-red.json",
+    "original_red_sha256": "2b46a146472556cfa75deee79d8ec55d4b8442ab9785031b049108dff74b787d",
+    "green": "skills-3080-utility8-receipt-regression-green.json",
+    "green_sha256": "54de5f6bbc2cc65a2615a6c337fdeedef14094dfa8730793063ef8321317b36f",
+    "regression_source": "evidence/skills-3080-utility8-receipt-contract-v2-074042.go.txt",
+    "regression_source_sha256": "342a71c96161271b5dfc2798a6a44a7de5d4e80e476598a0e06a41335134a9ab",
+    "executed_source_before_after_sha256": "fde8faed362addae8fbc4d5a36701e7286ded4f2a20e5cc31c06dfd38ffdef6d",
+    "actual_use_revalidation_seconds": 0.191,
+    "followup_review_pending": true,
+    "adoption_row_binding": "Validated source occurrence, source SHA/commit/path, target, entrypoint SHA, installed manifest and evidence; shared by all three purpose deployments.",
+    "public_acceptance_test_seconds": 2.19
+  }
 }

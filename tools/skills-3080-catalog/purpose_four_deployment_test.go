@@ -363,6 +363,7 @@ func validatedPurposeDeployment(t *testing.T, s purposeDeploymentSpec, validate 
 	if hex.EncodeToString(h[:]) != e.UseSHA || !bytes.Contains(source, []byte(s.ApplicationMarker)) {
 		t.Fatal("executed application source hash differs")
 	}
+	checkPurposeAdoptionRows(t, s, accepted, actual)
 	return accepted
 }
 

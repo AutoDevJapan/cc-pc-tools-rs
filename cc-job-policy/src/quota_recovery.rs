@@ -185,7 +185,14 @@ pub fn safe_openai_routes(raw: &Value, namespaces: &Value, now: f64) -> Value {
         if rows.len() != 1
             || rows[0]["type"] != "codex"
             || rows[0]["creditsAfterLimit"] != false
-            || rows[0]["hasCredential"] != true
+            || !match rows[0].get("hasCredential") {
+                Some(Value::Bool(true)) => true,
+                // The normal refreshed OpenCodex account-list schema omits
+                // hasCredential. Its explicit needsReauth=false, Healthy and
+                // successfully refreshed quota together establish the route.
+                None => rows[0]["needsReauth"] == false,
+                _ => false,
+            }
         {
             continue;
         }
@@ -470,6 +477,18 @@ mod unstarted_routes_tests {
         assert_eq!(
             safe_openai_selector(&health, Some("pabcdef"), 1000.),
             Some("pabcdef")
+        );
+        let mut normal_cli = raw.clone();
+        normal_cli["accounts"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("hasCredential");
+        normal_cli["accounts"][0]["needsReauth"] = json!(false);
+        assert_eq!(safe_openai_routes(&normal_cli, &namespaces, 1000.), routes);
+        normal_cli["accounts"][0]["hasCredential"] = Value::Null;
+        assert_eq!(
+            safe_openai_routes(&normal_cli, &namespaces, 1000.),
+            json!([])
         );
         assert_eq!(
             safe_openai_selector(&health, Some("p000000"), 1000.),

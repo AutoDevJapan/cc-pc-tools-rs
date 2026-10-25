@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"reflect"
 	"testing"
@@ -230,5 +231,82 @@ func TestForward11ExplicitApplicationsAndDiscoveryDoNotClaimRenderingOrFullBudge
 	}
 	if len(names) != 0 {
 		t.Fatal("discovery name missing")
+	}
+}
+
+type forward11OrdinaryUse struct {
+	Domain   string `json:"domain"`
+	Manifest string `json:"manifest_sha256"`
+	Index    int    `json:"manifest_file_index"`
+	Tested   int    `json:"tested_files"`
+	Guard    struct {
+		Client  *bool `json:"client_resource"`
+		Unknown *bool `json:"classification_unverified"`
+		Allowed *bool `json:"access_allowed"`
+	} `json:"ordinary_guard"`
+	Reads    *int  `json:"parent_direct_target_body_read_after_observation"`
+	PriorUse *bool `json:"prior_qualified_current_creator_consumption_and_use_completed"`
+	Metadata *bool `json:"fresh_Codex_metadata_discovery11_still_valid"`
+	FreshUse *bool `json:"fresh_other_job_ordinary_use_completed"`
+	All      *bool `json:"all_new11_normally_available_proven"`
+	Other    *bool `json:"other10_ordinary_read_qualification_not_probed"`
+	General  *bool `json:"general_guard_access_granted"`
+	Done     *bool `json:"whole16_complete"`
+}
+
+func validateForward11OrdinaryUse(o forward11OrdinaryUse) bool {
+	return o.Domain == "skills-3080-known-new-ordinary-use-observation-v1" && o.Manifest == forward11ManifestSHA && o.Index == 0 && o.Tested == 1 &&
+		recordedTrue(o.Guard.Client) && recordedTrue(o.Guard.Unknown) && recordedFalse(o.Guard.Allowed) && o.Reads != nil && *o.Reads == 0 &&
+		recordedTrue(o.PriorUse) && recordedTrue(o.Metadata) && recordedFalse(o.FreshUse) && recordedFalse(o.All) && recordedTrue(o.Other) && recordedFalse(o.General) && recordedFalse(o.Done)
+}
+
+func TestForward11MetadataAndCreatorUseDoNotProveOrdinaryAvailability(t *testing.T) {
+	var o forward11OrdinaryUse
+	raw := loadPublicReceipt(t, "skills-3080-webdesign11-ordinary-use-hold.json", &o)
+	if !validateForward11OrdinaryUse(o) {
+		t.Fatal("known-new ordinary-use observation lost its distinct hold or scope")
+	}
+	want := sha256.Sum256(raw)
+	for _, file := range []struct{ name, field string }{
+		{"skills-3080-webdesign11-installation-evidence.json", "ordinary_use_acceptance"},
+		{"skills-3080-progress.json", "webdesign11_normal_use_observation"},
+	} {
+		var v map[string]json.RawMessage
+		loadPublicReceipt(t, file.name, &v)
+		var p struct {
+			SHA   string `json:"observation_sha256"`
+			All   *bool  `json:"all_new11_normally_available_proven"`
+			Fresh *bool  `json:"fresh_other_job_use_verified"`
+		}
+		if err := decodePublicReceipt(v[file.field], &p); err != nil || p.SHA != hex.EncodeToString(want[:]) || !recordedFalse(p.All) || !recordedFalse(p.Fresh) {
+			t.Fatal("discovery or creator use was promoted to fresh ordinary availability")
+		}
+	}
+	for _, mutation := range []string{"all_available", "fresh_use", "unknown_missing", "broad_guard", "unprobed_count_promoted", "target_body_read"} {
+		t.Run(mutation, func(t *testing.T) {
+			var changed forward11OrdinaryUse
+			if err := decodePublicReceipt(raw, &changed); err != nil {
+				t.Fatal(err)
+			}
+			yes := true
+			one := 1
+			switch mutation {
+			case "all_available":
+				changed.All = &yes
+			case "fresh_use":
+				changed.FreshUse = &yes
+			case "unknown_missing":
+				changed.Guard.Unknown = nil
+			case "broad_guard":
+				changed.General = &yes
+			case "unprobed_count_promoted":
+				changed.Tested = 11
+			case "target_body_read":
+				changed.Reads = &one
+			}
+			if validateForward11OrdinaryUse(changed) {
+				t.Fatal("availability overclaim accepted")
+			}
+		})
 	}
 }

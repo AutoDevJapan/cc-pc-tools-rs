@@ -2008,5 +2008,17 @@
     "full_context_budget_proven": false,
     "warning_cause_linked": false,
     "overall_complete": false
+  },
+  "webdesign11_normal_use_observation": {
+    "observation": "skills-3080-webdesign11-ordinary-use-hold.json",
+    "observation_sha256": "523d81d44e11c287d217b6d5e0ac94770f552ae16aae90d99a713763be15d2fd",
+    "tested_files": 1,
+    "manifest_file_index": 0,
+    "ordinary_read_qualified": false,
+    "other10_not_probed": true,
+    "all_new11_normally_available_proven": false,
+    "fresh_other_job_use_verified": false,
+    "current_creator_qualified_use_and_discovery_not_retracted": true,
+    "whole16_complete": false
   }
 }

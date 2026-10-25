@@ -710,7 +710,7 @@
   "warning_cause_linked": false,
   "new_unique_source_primary_readings": 0,
   "public_result_delta_review_pending_at_recording": true,
-  "public_result_delta_currently_pending": true,
+  "public_result_delta_currently_pending": false,
   "purpose_software_correction": {
     "pr": 497,
     "review": 3805,
@@ -726,5 +726,15 @@
     "No shader compilation, browser scene, GPU performance, physical cloth, material realism or full-scene path acceptance is established.",
     "Creation/readback and fresh74 target discovery are authentic required gates. Explicit current-worker use does not prove implicit model selection or full-context budget.",
     "Traversal warnings remain observed with unproved cause. Original primary reading totals, all16 remainder, anonymous9/647holds and3048originals/junctions/backups remain."
-  ]
+  ],
+  "public_result_delta_acceptance": {
+    "pr": 498,
+    "head": "f37ad5aef35bfb6d0de38ab8c96bde4002993161",
+    "merge": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+    "review": 3809,
+    "actual_luna_max": true,
+    "must": 0,
+    "all7_ci_complete": true,
+    "failed": 0
+  }
 }

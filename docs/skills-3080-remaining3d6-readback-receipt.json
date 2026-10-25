@@ -1,0 +1,273 @@
+{
+  "creation_receipt_sha256": "7715f1af242ed065fc47d3df31d5ca23b3f3010f05cd538740d47f83521970fd",
+  "creation_request_sha256": "6f569c8f3ce8cc7b5015a7bcaebf5e7148c9866271fac3a995905ec79186e6c8",
+  "discovery_checked": false,
+  "domain": "skills-3080-created-readback-v2",
+  "files": [
+    {
+      "bytes": 1568,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "ee49fbe2adf5e702f36b54ccf9ef752f2cf92332ff1dd1fdd4a531265c860716",
+      "target": "3d-falling-leaves/SKILL.md"
+    },
+    {
+      "bytes": 1541,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "d011960b8e6805996de19d0d38faf58233cc004fa960a28ed0736e8ec3a4db70",
+      "target": "3d-falling-leaves/references/guide.md"
+    },
+    {
+      "bytes": 5214,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "63adf8b5ec0d96d397f56ff09facd9f68248f6ed881a2e05427f1c4e3ccf1d11",
+      "target": "3d-falling-leaves/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-falling-leaves/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1939,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0ac215201214d1fe1031e6dd04dc69a71ebf754f769f9d7ffcf037a9cc8eb4d6",
+      "target": "3d-falling-leaves/references/source.json"
+    },
+    {
+      "bytes": 1692,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "9b99c878a6d6ff57c51d34b7adf878bf12b86f71c475a99e5c539431130fe938",
+      "target": "3d-falling-leaves/references/sources.md"
+    },
+    {
+      "bytes": 1523,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "1e22d5ef696f295501974f4cdebdf170a7d17295a6611d60491b7d953e6bc1f6",
+      "target": "3d-orbit-inspect-demo/SKILL.md"
+    },
+    {
+      "bytes": 1067,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "da005bb0a5e330b0c321ca55cf3f0ad4fdc6e9193f499a30a00833d9666c979f",
+      "target": "3d-orbit-inspect-demo/references/guide.md"
+    },
+    {
+      "bytes": 9908,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "70011ca8c3c67185088f3171f94fb55dbbcd6a79e46fe4e0fc90b2d0b7317240",
+      "target": "3d-orbit-inspect-demo/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-orbit-inspect-demo/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1781,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "640dc6b9dd63b01c62c425e77519fd8d6b9be5a64eb82481e5b30c0c3ca20434",
+      "target": "3d-orbit-inspect-demo/references/source.json"
+    },
+    {
+      "bytes": 1439,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "c115acdac235a3d57630dd903824853defe55e464126c961322add012cb04fc8",
+      "target": "3d-orbit-inspect-demo/references/sources.md"
+    },
+    {
+      "bytes": 1428,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "974f2f4b24aca3d79926669eb63d00442fba28290f648b6f471f9786679f7b37",
+      "target": "3d-sky-rays/SKILL.md"
+    },
+    {
+      "bytes": 1000,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "4d76b46ae77780185c94847e8d4108dd431d8eb6ce1d45bac2058958cbb70abc",
+      "target": "3d-sky-rays/references/guide.md"
+    },
+    {
+      "bytes": 4918,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "1b70c0cf1cdb44769f56f429016904e39cef5f85d3832412dd3eb8dbfda94c97",
+      "target": "3d-sky-rays/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-sky-rays/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1787,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0b9fba79241ca3909d424f7823bad7d360a0d9cd7942699076e0c0dcd42dab8e",
+      "target": "3d-sky-rays/references/source.json"
+    },
+    {
+      "bytes": 1445,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "ab8a430debc1ae086faba60fddb9a3bf7238d9572c0beb50e04f2ea8ded5ed63",
+      "target": "3d-sky-rays/references/sources.md"
+    },
+    {
+      "bytes": 1465,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "36591a8f48e3305d31bb2fc2494beb8f6fe471ef9ce8e1263287b5a642cfb4e7",
+      "target": "3d-ultra-realistic-water/SKILL.md"
+    },
+    {
+      "bytes": 1429,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "2d0684f3a8b7c4bad62afc646a53d3951a9f5edc01069bcfb3758a03e9778c29",
+      "target": "3d-ultra-realistic-water/references/guide.md"
+    },
+    {
+      "bytes": 10833,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "54e31ca705a4fbac10a93f1a4b9297be35e8eec798bb64eedb6f38ef65246a30",
+      "target": "3d-ultra-realistic-water/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-ultra-realistic-water/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1817,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "a75ca3001c5c5e753ec27ebed6249f517d01ec222781aa683204730111c6aa17",
+      "target": "3d-ultra-realistic-water/references/source.json"
+    },
+    {
+      "bytes": 1474,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "e649c3d0e6d4d2e20df4e0d3e7e139286871cae7ccd628cffea7a7c2fec025bf",
+      "target": "3d-ultra-realistic-water/references/sources.md"
+    },
+    {
+      "bytes": 1500,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2ab205f408c994f5fd4226fea6035562c6ff854715bdeaa10cd4e02713947b1",
+      "target": "3d-underwater-god-rays/SKILL.md"
+    },
+    {
+      "bytes": 1335,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "ef1f589cd3192c46c30a7beda2cfa9815ceafed9abf2f45982f7286ff8e57d55",
+      "target": "3d-underwater-god-rays/references/guide.md"
+    },
+    {
+      "bytes": 9994,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "1ddd8ac574ddf6545a16008d7531f95cd4c707e0ffa977e987715b3b456c4f21",
+      "target": "3d-underwater-god-rays/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-underwater-god-rays/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1824,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "945f2cc1c2325c099ff1ec484fba80c9bc55c50cdae9661027b776ddc4d9887b",
+      "target": "3d-underwater-god-rays/references/source.json"
+    },
+    {
+      "bytes": 1482,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "ca9a86933c48a0c2b92f97842cc30ce5d7ff54792d5963bfbf4d2404590945aa",
+      "target": "3d-underwater-god-rays/references/sources.md"
+    },
+    {
+      "bytes": 1454,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0f581b374683edc71fa3a3afe1bfeed1446181bcf69d65c9ab2e453807b7bf5b",
+      "target": "3d-wood-lighting-scorecard/SKILL.md"
+    },
+    {
+      "bytes": 1347,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "36663e316490d40a064e9074b617cad7b3bb5428fcb6e64b5496b0c2de0f7621",
+      "target": "3d-wood-lighting-scorecard/references/guide.md"
+    },
+    {
+      "bytes": 11318,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "9c2594010aab8cf2bde1ab862fa336187e8220fd1b9c27a005a4ef83fd2d8809",
+      "target": "3d-wood-lighting-scorecard/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-wood-lighting-scorecard/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1822,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "3994129a2d43e3ca53d9b3dc0052b13b5cc533b8e893569956eb2ae68b182050",
+      "target": "3d-wood-lighting-scorecard/references/source.json"
+    },
+    {
+      "bytes": 1479,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "964fda32f25acc5023d496639ba3a4771278a30753a7232c3cb400d932823f44",
+      "target": "3d-wood-lighting-scorecard/references/sources.md"
+    }
+  ],
+  "files_readback_verified": 36,
+  "general_access_granted": false,
+  "job": "20261025-074042-todo-3080",
+  "manifest_sha256": "12d0b617a97c9a11eadc815628c55982442e828f4817fdf8a09e604b4ce9dc34",
+  "new_central_writes_by_verifier": 0,
+  "new_targets_created": 6,
+  "old_target_writes": 0,
+  "old_unknown_body_reads": 0,
+  "original_registry_recovered": false,
+  "overall16_complete": false,
+  "source_commit": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+  "source_execution": false,
+  "use_checked": false
+}

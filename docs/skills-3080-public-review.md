@@ -34,9 +34,31 @@ JSON後の文章、重複keyは拒否する。実データとGitHubの証明が�
 }
 ```
 
-filesはmanifestを必ず含み、`.gitattributes`または既存のSkills3080文書・公開証拠の
-名前空間に限定する。各fileの相対path、Git blob ID、SHA256、byte数を宣言する。
+filesはmanifestを必ず含み、`.gitattributes`、既存のSkills3080文書・公開証拠、
+または元3080の検査器`tools/skills-3080-catalog`直下のGo source/testと`go.mod`に
+限定する。検査器の子directory、他のtool、実行物、設定秘密は含めない。
+各fileの相対path、Git blob ID、SHA256、byte数を宣言する。
 最大128file、各16MiB、合計32MiB。一般の公開repo・他製品・私的scopeには流用しない。
+
+変更前後の比較が必要なら、同じ起動前JSONに任意の`comparison`を1つ含める。
+`instructions`は`skillsPublicReviewComparisonInstructions`と完全一致させる。
+
+```json
+"comparison": {
+  "commit": "固定baseの40桁commit",
+  "files": [
+    {"path":"head filesと同じ選択path","blob":"baseのblob ID","sha256":"baseのSHA256","bytes":123},
+    {"path":"head filesにある新しい選択path","absent":true}
+  ]
+}
+```
+
+base filesはheadで選択した全pathを、同じ綴りで1回ずつ宣言する。新規pathだけを
+`absent:true`とし、その場合blob/SHA/bytesは指定しない。公開GitHubの比較metadataで
+baseがheadの正規祖先であること、両固定treeのregular blobと正確なbytes、又は
+baseでの不在を照合する。baseの宣言が別pathの読取範囲を増やすことはない。
+合計32MiBにはbaseも含める。変更と必要な支持を読む範囲を分けて報告し、変更が
+ない部分を全読したとはしない。受領条件は未mergeでも同じで、配置受入には使わない。
 
 照合は次の順で行う。
 

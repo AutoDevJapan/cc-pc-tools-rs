@@ -5,6 +5,7 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -17,22 +18,37 @@ type skillsPublicReviewFile struct {
 	SHA   string `json:"sha256"`
 	Bytes int64  `json:"bytes"`
 }
+type skillsPublicReviewBaseFile struct {
+	Path   string `json:"path"`
+	Blob   string `json:"blob,omitempty"`
+	SHA    string `json:"sha256,omitempty"`
+	Bytes  int64  `json:"bytes,omitempty"`
+	Absent bool   `json:"absent,omitempty"`
+}
+type skillsPublicReviewComparison struct {
+	Commit string                       `json:"commit"`
+	Files  []skillsPublicReviewBaseFile `json:"files"`
+}
 type skillsPublicReviewScope struct {
-	Domain              string                   `json:"domain"`
-	Instructions        string                   `json:"instructions"`
-	Todo                int                      `json:"todo_id"`
-	Repository          string                   `json:"repository"`
-	RepositoryID        uint64                   `json:"repository_id"`
-	Commit              string                   `json:"commit"`
-	Author              skillsWriter             `json:"author"`
-	AuthorSpecPath      string                   `json:"author_spec_path"`
-	ManifestPath        string                   `json:"manifest_path"`
-	ManifestSHA         string                   `json:"manifest_sha256"`
-	ManifestDeclaration string                   `json:"manifest_declaration"`
-	Files               []skillsPublicReviewFile `json:"files"`
+	Domain              string                        `json:"domain"`
+	Instructions        string                        `json:"instructions"`
+	Todo                int                           `json:"todo_id"`
+	Repository          string                        `json:"repository"`
+	RepositoryID        uint64                        `json:"repository_id"`
+	Commit              string                        `json:"commit"`
+	Author              skillsWriter                  `json:"author"`
+	AuthorSpecPath      string                        `json:"author_spec_path"`
+	ManifestPath        string                        `json:"manifest_path"`
+	ManifestSHA         string                        `json:"manifest_sha256"`
+	ManifestDeclaration string                        `json:"manifest_declaration"`
+	Files               []skillsPublicReviewFile      `json:"files"`
+	Comparison          *skillsPublicReviewComparison `json:"comparison,omitempty"`
 }
 
 const skillsPublicReviewInstructions = "固定したPUBLIC Gitのfilesとmanifest内の出力だけを読み取り専用でレビューする。別path・私的資料・追加取得・実配置・実行・ファイル保存はしない。出典と個別notice、内容、採用条件、過大な成功主張を確認し、固定commit・読了範囲・Must/Suggestion/Nitを日本語の最終返信へ返す。レビュー読了時は先頭を状態: 完了とし、全読了かつMust0の時だけ SKILLS3080_ACCEPTANCE {\"domain\":\"skills-3080-review-v1\",\"manifest_sha256\":\"manifest_sha256の値\",\"accepted\":true,\"must\":0} を独立行で返す。Mustがあればaccepted:falseと実数を返す。"
+const skillsPublicReviewComparisonInstructions = skillsPublicReviewInstructions + "comparisonがある場合は、選択した同じpathの固定baseとheadだけを比較する。宣言したbaseで存在しないpathは追加として扱う。変更と必要な支持の読了範囲を区別し、変更のない範囲を全読したとは報告しない。"
+
+var skillsPublicValidatorGo = regexp.MustCompile(`^[a-z0-9_]+\.go$`)
 
 func skillsParsePublicReview(raw []byte) (skillsPublicReviewScope, bool) {
 	var c skillsPublicReviewScope
@@ -41,11 +57,16 @@ func skillsParsePublicReview(raw []byte) (skillsPublicReviewScope, bool) {
 }
 
 func skillsPublicReviewPath(path string) bool {
-	return skillsRelative(path) && (path == ".gitattributes" || strings.HasPrefix(path, "docs/skills-3080-") || strings.HasPrefix(path, "docs/evidence/skills-3080-")) && !ownerCardPath(path) && !ownerNonSourcePath(path)
+	validator := filepath.ToSlash(filepath.Dir(path)) == "tools/skills-3080-catalog" && (filepath.Base(path) == "go.mod" || skillsPublicValidatorGo.MatchString(filepath.Base(path)))
+	return skillsRelative(path) && (validator || path == ".gitattributes" || strings.HasPrefix(path, "docs/skills-3080-") || strings.HasPrefix(path, "docs/evidence/skills-3080-")) && !ownerCardPath(path) && !ownerNonSourcePath(path)
 }
 
 func skillsPublicReviewShape(c skillsPublicReviewScope) bool {
-	if c.Domain != "skills-3080-public-review-v1" || c.Instructions != skillsPublicReviewInstructions || c.Todo != 3080 || c.Repository != "AutoDevJapan/cc-pc-tools-rs" || c.RepositoryID != 1406818713 || !skillsGitObjectID(c.Commit) || !skillsWriterValid(c.Author) ||
+	wantInstructions := skillsPublicReviewInstructions
+	if c.Comparison != nil {
+		wantInstructions = skillsPublicReviewComparisonInstructions
+	}
+	if c.Domain != "skills-3080-public-review-v1" || c.Instructions != wantInstructions || c.Todo != 3080 || c.Repository != "AutoDevJapan/cc-pc-tools-rs" || c.RepositoryID != 1406818713 || !skillsGitObjectID(c.Commit) || !skillsWriterValid(c.Author) ||
 		!within(currentTodoSpecsRoot, c.AuthorSpecPath) || !strings.HasPrefix(filepath.Base(c.AuthorSpecPath), "3080-") || !currentSubworkSpecName.MatchString(filepath.Base(c.AuthorSpecPath)) ||
 		!strings.HasPrefix(c.ManifestPath, "docs/skills-3080-operations/") || !strings.HasSuffix(c.ManifestPath, ".json") || !skillsDigest(c.ManifestSHA) || c.ManifestDeclaration != "SKILLS3080_MANIFEST_SHA256 "+c.ManifestSHA || len(c.Files) < 1 || len(c.Files) > 128 {
 		return false
@@ -62,6 +83,36 @@ func skillsPublicReviewShape(c skillsPublicReviewScope) bool {
 		total += f.Bytes
 		if f.Path == c.ManifestPath && f.SHA == c.ManifestSHA {
 			manifest = true
+		}
+	}
+	if comparison := c.Comparison; comparison != nil {
+		if !skillsGitObjectID(comparison.Commit) || comparison.Commit == c.Commit || len(comparison.Files) != len(c.Files) {
+			return false
+		}
+		before := map[string]bool{}
+		for _, f := range comparison.Files {
+			// Exact same selected spelling and namespace; no new historical path.
+			found := false
+			for _, head := range c.Files {
+				if head.Path == f.Path {
+					found = true
+					break
+				}
+			}
+			if !found || before[f.Path] {
+				return false
+			}
+			before[f.Path] = true
+			if f.Absent {
+				if f.Blob != "" || f.SHA != "" || f.Bytes != 0 {
+					return false
+				}
+			} else {
+				if !skillsGitObjectID(f.Blob) || !skillsDigest(f.SHA) || f.Bytes < 1 || f.Bytes > 16<<20 {
+					return false
+				}
+				total += f.Bytes
+			}
 		}
 	}
 	return manifest && total <= 32<<20
@@ -147,29 +198,49 @@ func skillsPublicReviewInputsWith(c skillsPublicReviewScope, s *skillsFS, gh fun
 	if !ok || conversationNumber(repo["id"]) != c.RepositoryID || repo["full_name"] != c.Repository || repo["private"] != false || obj(repo["owner"])["login"] != "AutoDevJapan" {
 		return false
 	}
-	commit, ok := get(base + "/git/commits/" + c.Commit)
-	treeID := str(obj(commit["tree"])["sha"])
-	if !ok || commit["sha"] != c.Commit || !skillsGitObjectID(treeID) {
-		return false
+	getTree := func(id string) (map[string]object, bool) {
+		commit, ok := get(base + "/git/commits/" + id)
+		treeID := str(obj(commit["tree"])["sha"])
+		if !ok || commit["sha"] != id || !skillsGitObjectID(treeID) {
+			return nil, false
+		}
+		tree, ok := get(base + "/git/trees/" + treeID + "?recursive=1")
+		if !ok || tree["sha"] != treeID || tree["truncated"] != false {
+			return nil, false
+		}
+		entries, ok := tree["tree"].([]any)
+		if !ok {
+			return nil, false
+		}
+		paths := map[string]object{}
+		for _, v := range entries {
+			e := obj(v)
+			p := str(e["path"])
+			if _, dup := paths[p]; dup {
+				return nil, false
+			}
+			paths[p] = e
+		}
+		return paths, true
 	}
-	tree, ok := get(base + "/git/trees/" + treeID + "?recursive=1")
-	if !ok || tree["sha"] != treeID || tree["truncated"] != false {
-		return false
-	}
-	entries, ok := tree["tree"].([]any)
+	paths, ok := getTree(c.Commit)
 	if !ok {
 		return false
 	}
-	paths := map[string]object{}
-	for _, v := range entries {
-		e := obj(v)
-		p := str(e["path"])
-		if _, dup := paths[p]; dup {
+	var before map[string]object
+	if comparison := c.Comparison; comparison != nil {
+		// Project only ancestry metadata, never unselected patch bodies.
+		b, ok := gh("api", "--hostname", "github.com", base+"/compare/"+comparison.Commit+"..."+c.Commit, "--jq", "{status,base:.base_commit.sha,merge_base:.merge_base_commit.sha}")
+		a, valid := conversationJSON(b)
+		if !ok || !valid || a["status"] != "ahead" || a["base"] != comparison.Commit || a["merge_base"] != comparison.Commit {
 			return false
 		}
-		paths[p] = e
+		before, ok = getTree(comparison.Commit)
+		if !ok {
+			return false
+		}
 	}
-	for _, f := range c.Files {
+	check := func(f skillsPublicReviewFile, paths map[string]object, manifest bool) bool {
 		if s.blocked(filepath.Join(c.Author.Workspace, filepath.FromSlash(f.Path))) {
 			return false
 		}
@@ -186,9 +257,34 @@ func skillsPublicReviewInputsWith(c skillsPublicReviewScope, s *skillsFS, gh fun
 		if !ok || int64(len(b)) != f.Bytes || hashBytes(b) != f.SHA || skillsGitBlobID(b) != f.Blob {
 			return false
 		}
-		if f.Path == c.ManifestPath {
+		if manifest && f.Path == c.ManifestPath {
 			m, ok := skillsParseManifest(b)
 			if !ok || !skillsSameWriter(m.Writer, c.Author) {
+				return false
+			}
+		}
+		return true
+	}
+	for _, f := range c.Files {
+		if !check(f, paths, true) {
+			return false
+		}
+	}
+	if comparison := c.Comparison; comparison != nil {
+		for _, f := range comparison.Files {
+			if f.Absent {
+				if _, exists := before[f.Path]; exists {
+					return false
+				}
+				// Absence under a symlink/blob is not a proven ordinary absent path.
+				for p := filepath.ToSlash(filepath.Dir(f.Path)); p != "."; p = filepath.ToSlash(filepath.Dir(p)) {
+					if a, exists := before[p]; exists && (a["type"] != "tree" || a["mode"] != "040000") {
+						return false
+					}
+				}
+				continue
+			}
+			if !check(skillsPublicReviewFile{f.Path, f.Blob, f.SHA, f.Bytes}, before, false) {
 				return false
 			}
 		}

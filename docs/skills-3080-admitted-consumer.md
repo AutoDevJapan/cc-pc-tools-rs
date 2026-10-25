@@ -49,6 +49,15 @@ running jobへ架空の終了時刻を保存せず、assistant本文も入力証
 元の正規producerが作成時にレビュー受入を確認した事実をnativeで照合し、
 新callerを原creatorへ偽装してrawレビューを読み直すことはしない。
 
+読み取り専用でnetwork=falseだった実3880は、旧経路の公開main再照会が含まれる
+manifest段階で止まり、本文を受け取れなかった。この原結果を保持する。
+修復後の消費は、新規作成時に受入済みproducerが確認してnativeへ発行した
+PUBLIC/main/notice/reviewの証拠を再利用する。exact request・原call・元の時間窓・
+producer・manifest tupleを先に一致させ、その後だけ同じ物理Git sourceの保存objectを
+SHA256へ照合する。取得や新しいnetwork許可は行わない。
+現在のインストール済みソフトの観測と、公開性を発行した過去producerの証明を分ける。
+新しいCreateNewの公開main照会は従来どおり必要で、通常guardは変更しない。
+
 その後だけ、元のdirectory/作成IDと現在の非link・single-link handleを照合し、
 期待する公開bytesと実際の同handleのread bufferを比較する。全選択分の照合後、
 現在callerと停止状態を再確認して本文を返す。最大32index・64KiB。

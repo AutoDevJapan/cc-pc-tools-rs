@@ -22,6 +22,9 @@ policyへ補わず、本人指定は保持する。元のmodel/effort、履歴�
 具体的な公開namespace自身に対応するOpenAIの健康な既存codex OAuth・追加課金無効を
 照合する。未確認・古い・未来のhealth、全枠枯渇、API-keyだけ、namespace不明は拒否する。
 モデルは元policy指定Luna/maxを、全作者と異なる場合だけ選ぶ。
+固定した元作者3894の実観測はSolであることを再確認する。別のOpenAIモデルという
+だけではこの固定候補の作者確認に使わない。実行時には既存の読取隔離を適用し、
+ブラウザー接続を除去し、列挙した外部ツールを無効にする。列挙の失敗時は起動しない。
 
 通常prepare、jobs登録、最終queue→state→todo admissionで同じ仕様・元行の入力・世代・
 停止依存・元作者・scope・現在checkout・公開namespaceを再照合する。通常の既定選択で

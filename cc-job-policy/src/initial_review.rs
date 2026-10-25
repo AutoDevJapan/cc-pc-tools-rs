@@ -146,7 +146,7 @@ pub fn author(jobs: &[Value]) -> Option<Value> {
     if j["todo_id"] != 3894
         || !["running", "succeeded"].contains(&s(&j["status"]))
         || j["execution_observed"]["source"] != "native_turn_context"
-        || crate::quota_recovery::provider(s(&j["execution_observed"]["model"])).is_none()
+        || !crate::same_model(s(&j["execution_observed"]["model"]), "gpt-6.1-sol")
         || j["subwork"].is_object()
         || j["work_owner"]["repository"] != "autodevjapan/cc-pc-tools-rs"
         || j["work_owner"]["branch"] != "scheduler/todo-3894-ci"

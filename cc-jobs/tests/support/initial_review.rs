@@ -259,3 +259,86 @@ fn same_launch_key_never_publishes_a_second_worker() {
     assert_eq!(jobs.len(), 1);
     assert_eq!(jobs[0]["id"], first["id"]);
 }
+
+fn prepare_spawn_catalog(t: &Test) {
+    t.rt.env
+        .lock()
+        .unwrap()
+        .insert("APPDATA".into(), "synthetic".into());
+    t.rt.replies.lock().unwrap().push_back(Ok(Reply {
+        code: 0,
+        stdout: json!({"models":[{
+            "slug":"gpt-6-luna","context_window":200000,"supported_reasoning_levels":["max"]
+        }]})
+        .to_string()
+        .into_bytes(),
+        stderr: vec![],
+    }));
+}
+
+#[test]
+fn initial_review_actual_spawn_removes_host_browser_and_disables_external_tools() {
+    let (t, f) = setup();
+    register(&t, &f).unwrap();
+    let mut j = child(&t);
+    j["chrome_pipe"] = json!("legacy-host-browser-pipe");
+    for key in [
+        "cdp_browser_backend_pipe_path",
+        "BROWSER_AUTH_EVAL_EXACT_CDP_BACKEND_SOCKET",
+        "BROWSER_USE_AVAILABLE_BACKENDS",
+    ] {
+        t.rt.env
+            .lock()
+            .unwrap()
+            .insert(key.into(), "inherited-browser".into());
+    }
+    prepare_spawn_catalog(&t);
+    let before = j.clone();
+    let spawn = t.ctx.execution_spawn(&j).unwrap();
+    assert!(!spawn.env.keys().any(|key| {
+        [
+            "CDP_BROWSER_BACKEND_PIPE_PATH",
+            "BROWSER_AUTH_EVAL_EXACT_CDP_BACKEND_SOCKET",
+            "BROWSER_USE_AVAILABLE_BACKENDS",
+        ]
+        .iter()
+        .any(|name| key.eq_ignore_ascii_case(name))
+    }));
+    let configs: Vec<_> = spawn
+        .argv
+        .windows(2)
+        .filter(|a| a[0] == "-c")
+        .map(|a| a[1].as_str())
+        .collect();
+    for flag in [
+        "features.plugins=false",
+        "features.apps=false",
+        "web_search=disabled",
+        "mcp_servers.stripe.enabled=false",
+        "mcp_servers.unseen-server.enabled=false",
+        "mcp_servers.node_repl.enabled=false",
+    ] {
+        assert!(configs.contains(&flag), "{flag}");
+    }
+    assert!(spawn.argv.windows(2).any(|a| a == ["-s", "read-only"]));
+    assert!(
+        !spawn
+            .argv
+            .iter()
+            .any(|a| a == "--add-dir" || a.contains("legacy-host-browser-pipe"))
+    );
+    assert_eq!(spawn.flags, NO_WINDOW);
+    assert_eq!(j, before);
+}
+
+#[test]
+fn initial_review_missing_tool_inventory_never_uses_the_legacy_browser() {
+    let (t, f) = setup();
+    register(&t, &f).unwrap();
+    let mut j = child(&t);
+    j["chrome_pipe"] = json!("legacy-host-browser-pipe");
+    t.rt.summary_fail.store(true, Ordering::Relaxed);
+    prepare_spawn_catalog(&t);
+    assert!(t.ctx.execution_spawn(&j).is_err());
+    assert_eq!(t.rt.spawns.load(Ordering::Relaxed), 0);
+}

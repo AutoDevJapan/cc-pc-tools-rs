@@ -48,6 +48,16 @@ fn cli_accepts_only_the_fixed_typed_preview_or_cas() {
         );
     }
 }
+
+#[test]
+fn original_author_requires_the_observed_sol_model_not_only_an_openai_provider() {
+    let (mut f, _, _) = fixture();
+    assert!(rule::author(&f.jobs).is_some());
+    f.jobs[0]["execution_observed"]["model"] = json!("gpt-6-astra");
+    assert!(rule::author(&f.jobs).is_none());
+    f.jobs[0]["execution_observed"]["model"] = json!("openai/gpt-6.1-sol");
+    assert!(rule::author(&f.jobs).is_some());
+}
 #[test]
 fn exact_policy_registration_preserves_request_history_and_rejects_duplicate_cas() {
     let (f, source, workspace) = fixture();

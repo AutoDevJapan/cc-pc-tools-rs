@@ -12,7 +12,8 @@ impl Profile {
         Self {
             summary: s(job, "context_phase") == "summarize",
             fixed_review: !job["fixed_read_only_review"].is_null()
-                || !job["fixed_review_requalification"].is_null(),
+                || !job["fixed_review_requalification"].is_null()
+                || job["initial_review"].is_object(),
         }
     }
     pub(crate) fn isolated(self) -> bool {

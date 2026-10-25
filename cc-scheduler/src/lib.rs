@@ -16,6 +16,8 @@ mod quota_recovery;
 pub mod registration_resume;
 pub mod resume_checkpoint;
 pub mod targeted_dispatch;
+pub mod unstarted_review;
+pub mod unstarted_review_runtime;
 pub mod workspace_checkpoint;
 pub mod workspace_relocation;
 pub use cc_ask::recovery_failure;

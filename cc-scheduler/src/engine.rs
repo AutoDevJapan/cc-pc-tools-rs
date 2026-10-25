@@ -51,6 +51,7 @@ fn launch_inputs(item: &Value) -> Value {
         "resume_generation":item["resume_generation"],"worker_receipt":item["worker_receipt"],
         "console_request":item["scheduler"]["console_request"],
         "console_fresh_request":item["scheduler"]["console_fresh_request"],
+        "unstarted_review":item["scheduler"]["unstarted_review"],
         "targeted_hold":crate::targeted_dispatch::held(item)})
 }
 
@@ -1231,15 +1232,16 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
         if n(&i["scheduler"]["not_before"]) > self.backend.clock() {
             return Ok(None);
         }
+        let unstarted = crate::unstarted_review_runtime::prepare(self, i, repo)?;
         let requested_model = if truth(&i["model"]) {
             &i["model"]
         } else {
             &i["scheduler"]["console_request"]["options"]["model"]
         };
-        if let Some(until) = self
+        if let Some(until) = if unstarted.is_none() { self
             .backend
             .resource_until(&json!({"model":requested_model}))?
-        {
+        } else { None } {
             self.edit(&i["id"], |row| {
                 if row["status"] == "todo" && launch_inputs(row) == launch_inputs(i) {
                     if !row["scheduler"].is_object() {
@@ -1520,8 +1522,11 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }
         if cc_ask::job_policy::review_task("", s(&selection["task_type"]))
             || s(&item["subwork"]["kind"]) == "review"
+            || unstarted.is_some()
         {
-            let sources = cc_ask::job_policy::review_source_jobs(&item, &self.todo()?);
+            let sources = if unstarted.is_some() {
+                cc_job_policy::unstarted_review_state::WRITERS.iter().map(|id| id.to_string()).collect()
+            } else { cc_ask::job_policy::review_source_jobs(&item, &self.todo()?) };
             let mut excluded = Vec::<String>::new();
             for id in &sources {
                 let author=jobs.iter().find(|job|s(&job["id"])==id)
@@ -1534,12 +1539,18 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 || truth(&accepted_options["model"])
                 || selection["model_explicit"] == true
                 || selection["model_origin"] == "owner_request";
+            if let Some(evidence) = &unstarted {
+                crate::unstarted_review_runtime::select(&item, &mut selection, evidence,
+                    &cc_job_policy::product_retry::digest(text.as_bytes()), self.backend.clock())?;
+            }
             let conflict = excluded
                 .iter()
                 .any(|author| cc_ask::job_policy::same_model(author, s(&selection["model"])));
             let owner_choice = selection["model_origin"] == "owner_request";
-            let quota_choice=crate::quota_recovery::prepare(&mut self.backend,&item,source,&jobs,&mut selection,
-                &cc_job_policy::product_retry::digest(text.as_bytes()))?;
+            let quota_choice= if unstarted.is_some() { true } else {
+                crate::quota_recovery::prepare(&mut self.backend,&item,source,&jobs,&mut selection,
+                    &cc_job_policy::product_retry::digest(text.as_bytes()))?
+            };
             if quota_choice && conflict {
                 return Err(Error("ReviewModelConflict"));
             }

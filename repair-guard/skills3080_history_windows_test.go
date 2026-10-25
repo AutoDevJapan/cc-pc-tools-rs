@@ -71,13 +71,87 @@ func TestSkills3080HistoricalSavedFilesAndLaunchReceipt(t *testing.T) {
 			}
 			fs := skillsFS{blocked: func(p string) bool { return kind == "protected" && filepath.Base(p) == "last_message.md" }}
 			defer fs.close()
-			_, got, reason := skillsHistoricalFilesAt(&fs, root, a, spec, job, r.FinalSHA)
+			got, _, reason := skillsHistoricalFilesAt(&fs, root, a, spec, job, r.FinalSHA, func(*skillsNativeResultProof) ([]object, bool) {
+				return []object{{"model": a.Model, "effort": a.Effort}}, true
+			})
 			if kind == "valid" {
 				if reason != "" || string(got) != string(body) {
 					t.Fatal("bound original files rejected")
 				}
 			} else if reason == "" {
 				t.Fatal("unbound original files accepted")
+			}
+		})
+	}
+}
+
+func TestSkills3080HistoricalRejectsNativeBeforeOpeningResult(t *testing.T) {
+	for _, kind := range []string{"valid", "native_prompt", "native_final", "native_window", "native_phase", "native_model", "native_effort", "coaltered_job_and_result"} {
+		t.Run(kind, func(t *testing.T) {
+			r, _, job, spec, a := skillsHistoryFixture()
+			root := skillsFixtureRoot(t)
+			dir := filepath.Join(root, a.Job)
+			if e := os.MkdirAll(dir, 0700); e != nil {
+				t.Fatal(e)
+			}
+			prompt := []byte("saved immutable launch\n依頼:\n" + string(spec) + "\nrunner")
+			a.PromptSHA = hashBytes(prompt)
+			body := []byte("public final")
+			job["last_message"] = string(body)
+			if kind == "coaltered_job_and_result" {
+				body = []byte("changed private result")
+				job["last_message"] = string(body)
+				r.FinalSHA = hashBytes(body)
+			}
+			receipt, _ := json.Marshal(object{"id": a.Job})
+			for p, b := range map[string][]byte{filepath.Join(dir, "prompt.md"): prompt, filepath.Join(dir, "last_message.md"): body, filepath.Join(root, ".launch-"+a.LaunchKey+".json"): receipt} {
+				if e := os.WriteFile(p, b, 0600); e != nil {
+					t.Fatal(e)
+				}
+			}
+			start, _ := time.Parse(time.RFC3339Nano, a.Started)
+			end, _ := time.Parse(time.RFC3339Nano, a.Finished)
+			line := func(kind string, at time.Time, payload object) string {
+				b, _ := json.Marshal(object{"type": kind, "timestamp": at.Format(time.RFC3339Nano), "payload": payload})
+				return string(b) + "\n"
+			}
+			message := func(role, phase, text string) object {
+				return object{"type": "message", "role": role, "phase": phase, "content": []object{{"type": "output_text", "text": text}}}
+			}
+			input, terminal, phase, model, effort := string(prompt), "public final", "final_answer", a.Model, a.Effort
+			at := end.Add(-time.Second)
+			switch kind {
+			case "native_prompt":
+				input = "different original input"
+			case "native_final":
+				terminal = "different terminal"
+			case "native_window":
+				at = end.Add(time.Nanosecond)
+			case "native_phase":
+				phase = "partial_answer"
+			case "native_model":
+				model = "gpt-6-luna"
+			case "native_effort":
+				effort = "low"
+			}
+			raw := line("session_meta", start, object{"id": a.Thread, "cwd": a.Workspace}) + line("turn_context", start.Add(time.Second), object{"model": model, "effort": effort, "cwd": a.Workspace}) + line("response_item", start.Add(2*time.Second), message("user", "", input)) + line("response_item", at, message("assistant", phase, terminal))
+			resultOpens := 0
+			fs := skillsFS{blocked: func(p string) bool {
+				if filepath.Base(p) == "last_message.md" {
+					resultOpens++
+				}
+				return false
+			}}
+			defer fs.close()
+			got, _, reason := skillsHistoricalFilesAt(&fs, root, a, spec, job, r.FinalSHA, func(proof *skillsNativeResultProof) ([]object, bool) {
+				return skillsNativeProjectionBound(strings.NewReader(raw), a.Thread, a.Workspace, start, end, proof)
+			})
+			if kind == "valid" {
+				if reason != "" || string(got) != "public final" || resultOpens < 1 {
+					t.Fatal("positive did not consume its verified result")
+				}
+			} else if reason != "native_context" || resultOpens != 0 || len(got) != 0 {
+				t.Fatalf("native rejection opened result: kind=%s reason=%s opens=%d", kind, reason, resultOpens)
 			}
 		})
 	}
@@ -98,14 +172,14 @@ func TestSkills3080HistoricalNativeBindsPromptFinalAndTime(t *testing.T) {
 	base := line("session_meta", start, object{"id": a.Thread, "cwd": a.Workspace}) +
 		line("turn_context", start.Add(time.Second), object{"cwd": a.Workspace, "model": "openai/" + a.Model, "effort": a.Effort}) +
 		line("response_item", start.Add(2*time.Second), message("user", "", string(prompt)+"\ncurrent saved owner instructions")) +
-		line("response_item", end.Add(-time.Second), message("assistant", "final", string(body)))
-	for _, kind := range []string{"valid", "later_unrelated_final", "changed_prompt", "changed_native_final", "coaltered_result", "out_of_window", "missing_prompt", "missing_final", "wrong_cwd", "truncated"} {
+		line("response_item", end.Add(-time.Second), message("assistant", "final_answer", string(body)))
+	for _, kind := range []string{"valid", "later_unrelated_final", "changed_prompt", "changed_native_final", "coaltered_result", "out_of_window", "missing_prompt", "missing_final", "unknown_phase", "partial_answer", "wrong_cwd", "truncated"} {
 		t.Run(kind, func(t *testing.T) {
 			raw := base
 			p := &skillsNativeResultProof{prompt: prompt, body: body}
 			switch kind {
 			case "later_unrelated_final":
-				raw += line("response_item", end.Add(time.Second), message("assistant", "final", "other job"))
+				raw += line("response_item", end.Add(time.Second), message("assistant", "final_answer", "other job"))
 			case "changed_prompt":
 				p.prompt = []byte("invented saved prompt")
 			case "changed_native_final":
@@ -117,7 +191,11 @@ func TestSkills3080HistoricalNativeBindsPromptFinalAndTime(t *testing.T) {
 			case "missing_prompt":
 				raw = strings.Replace(raw, `"role":"user"`, `"role":"other"`, 1)
 			case "missing_final":
-				raw = strings.Replace(raw, `"phase":"final"`, `"phase":"commentary"`, 1)
+				raw = strings.Replace(raw, `"phase":"final_answer"`, `"phase":"commentary"`, 1)
+			case "unknown_phase":
+				raw = strings.Replace(raw, `"phase":"final_answer"`, `"phase":null`, 1)
+			case "partial_answer":
+				raw = strings.Replace(raw, `"phase":"final_answer"`, `"phase":"partial_answer"`, 1)
 			case "wrong_cwd":
 				raw = strings.ReplaceAll(raw, a.Workspace, "D:/other")
 			case "truncated":

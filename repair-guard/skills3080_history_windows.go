@@ -90,25 +90,16 @@ func skillsReceiveOriginalRepair(r skillsResultRequest, reg skillsRegistry, s *s
 	// The actual saved launch prompt contains the byte-identical original
 	// spec. Both independent digests predate the new implementation. The
 	// immutable launch receipt also binds the actual registered job ID.
-	prompt, body, reason := skillsHistoricalFilesAt(s, skillsJobsRoot, a, spec, job, r.FinalSHA)
+	body, native, reason := skillsHistoricalFilesAt(s, skillsJobsRoot, a, spec, job, r.FinalSHA, func(proof *skillsNativeResultProof) ([]object, bool) { return skillsHistoricalNative(s, job, proof) })
 	if reason != "" {
 		return out, reason
-	}
-	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, body: body})
-	if !ok {
-		return out, "native_context"
-	}
-	for _, n := range native {
-		if skillsModel(str(n["model"])) != skillsModel(a.Model) || n["effort"] != a.Effort {
-			return out, "native_context"
-		}
 	}
 	out = skillsReceived{Body: body, Spec: spec, Native: native, Metadata: object{"id": a.Job, "task": 3686, "status": job["status"], "model": a.Model, "effort": a.Effort, "exit_code": job["exit_code"], "thread_id": a.Thread, "spec_sha256": a.SpecSHA, "final_sha256": hashBytes(body), "spec_binding": "original_registered_author", "consumer_job": reg.writer.Job}}
 	return out, ""
 }
 
 // The alternate root is a synthetic-test seam, never a request field.
-func skillsHistoricalFilesAt(s *skillsFS, root string, a skillsHistoricalResult, spec []byte, job object, finalSHA string) ([]byte, []byte, string) {
+func skillsHistoricalFilesAt(s *skillsFS, root string, a skillsHistoricalResult, spec []byte, job object, finalSHA string, nativeProof func(*skillsNativeResultProof) ([]object, bool)) ([]byte, []object, string) {
 	prompt, ok := s.read(filepath.Join(root, a.Job, "prompt.md"), 4<<20)
 	if !ok || hashBytes(prompt) != a.PromptSHA || !bytes.Contains(prompt, append([]byte("\n依頼:\n"), spec...)) {
 		return nil, nil, "result_binding"
@@ -120,16 +111,26 @@ func skillsHistoricalFilesAt(s *skillsFS, root string, a skillsHistoricalResult,
 	if !ok || !skillsStrict(receipt, &launch) || launch.ID != a.Job {
 		return nil, nil, "result_binding"
 	}
+	// The fixed historical route follows the same pre-body order as typed
+	// reviews. A wrong native input/digest/model/window must not open its result.
+	native, ok := nativeProof(&skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA})
+	if !ok || len(native) == 0 {
+		return nil, nil, "native_context"
+	}
+	for _, n := range native {
+		if skillsModel(str(n["model"])) != skillsModel(a.Model) || n["effort"] != a.Effort {
+			return nil, nil, "native_context"
+		}
+	}
 	body, ok := s.read(filepath.Join(root, a.Job, "last_message.md"), 2<<20)
 	if !ok || hashBytes(body) != finalSHA || !bytes.Equal(body, []byte(str(job["last_message"]))) {
 		return nil, nil, "result_unavailable"
 	}
-	return prompt, body, ""
+	return body, native, ""
 }
 
-// Read only this exact native session, at its initial length. A normally
-// resumed current repair may append to the same log; historical timestamps
-// still restrict the prompt/final/model observations to the original job.
+// Read only this exact native session at its initial length. Do not infer
+// continuity with another job's thread; preserve the original strict window.
 func skillsHistoricalNative(s *skillsFS, job object, proof *skillsNativeResultProof) ([]object, bool) {
 	id := str(job["thread_id"])
 	start, e := time.Parse(time.RFC3339Nano, str(job["started_at"]))
@@ -182,33 +183,50 @@ func skillsHistoricalNative(s *skillsFS, job object, proof *skillsNativeResultPr
 type skillsNativeResultProof struct {
 	prompt, body, lastFinal []byte
 	promptAt, finalAt       time.Time
+	finalSHA                string
 }
 
 func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 	var envelope struct {
 		Payload struct {
 			Type, Role, Phase string
-			Content           []struct{ Type, Text string }
+			Content           json.RawMessage
 		}
 	}
 	if json.Unmarshal(raw, &envelope) != nil {
 		return false
 	}
 	v := envelope.Payload
-	if v.Type != "message" || (v.Role != "user" && (v.Role != "assistant" || v.Phase != "final")) {
+	// codex-cli 0.163.0's generated MessagePhase schema and the original
+	// job's native metadata both use final_answer. Unknown/partial/commentary
+	// phases cannot prove a terminal response. No timestamp tolerance is added.
+	if v.Type != "message" || (v.Role != "user" && (v.Role != "assistant" || v.Phase != "final_answer")) {
+		return true
+	}
+	// A terminal payload is relevant only after the exact prelaunch input has
+	// classified this turn. Do not materialize an unbound assistant's text.
+	if v.Role == "assistant" && (p.promptAt.IsZero() || at.Before(p.promptAt)) {
 		return true
 	}
 	if _, ok := conversationJSON(raw); !ok {
 		return false
 	}
+	var blocks []struct{ Type, Text string }
+	if json.Unmarshal(v.Content, &blocks) != nil {
+		return false
+	}
 	var text strings.Builder
-	for _, block := range v.Content {
+	for _, block := range blocks {
 		if block.Type == "input_text" || block.Type == "output_text" {
 			text.WriteString(block.Text)
 		}
 	}
 	if v.Role == "user" && strings.Contains(text.String(), string(p.prompt)) {
 		p.promptAt = at
+	} else if v.Role == "user" && p.finalSHA != "" && !p.promptAt.IsZero() {
+		// The typed contract fixes the review's complete user input. An unknown
+		// later user message cannot silently expand that public classification.
+		return false
 	}
 	if v.Role == "assistant" {
 		p.lastFinal = []byte(text.String())
@@ -218,5 +236,14 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 }
 
 func (p *skillsNativeResultProof) bound() bool {
-	return len(p.prompt) > 0 && len(p.body) > 0 && !p.promptAt.IsZero() && !p.finalAt.Before(p.promptAt) && bytes.Equal(p.lastFinal, p.body)
+	if len(p.prompt) == 0 || p.promptAt.IsZero() || p.finalAt.IsZero() || p.finalAt.Before(p.promptAt) {
+		return false
+	}
+	if len(p.body) > 0 {
+		return bytes.Equal(p.lastFinal, p.body)
+	}
+	// Public review preflight proves the immutable prompt and the expected
+	// native digest before opening last_message.md. Its same-buffer digest and
+	// job metadata are then checked independently by skillsReceive.
+	return skillsDigest(p.finalSHA) && hashBytes(p.lastFinal) == p.finalSHA
 }

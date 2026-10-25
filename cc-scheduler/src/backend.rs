@@ -16,6 +16,9 @@ pub(crate) const BIRTH_FALLBACK_MARGIN: u64 = 10_000_000;
 pub(crate) const BIRTH_FALLBACK_MAX_SPAN: u64 = BIRTH_FALLBACK_MARGIN * 2;
 
 pub trait Backend {
+    fn unstarted_review_inventory(&mut self) -> Result<Value> {Ok(Value::Null)}
+    fn unstarted_review_registration(&mut self) -> Result<Value> { Ok(Value::Null) }
+    fn unstarted_review_workspace(&mut self, _repo: &str, _item: &Value) -> Result<bool> { Ok(false) }
     fn quota_recovery_inventory(&mut self) -> Result<Value> {
         Ok(Value::Null)
     }
@@ -313,6 +316,28 @@ pub struct RealBackend {
     pub config_path: PathBuf,
 }
 impl RealBackend {
+    fn collected_quota_inventory(&mut self, unstarted: bool) -> Result<Value> {
+        let mut inventory=json!({});
+        let Some(appdata)=std::env::var_os("APPDATA") else { return Ok(inventory); };
+        let package=PathBuf::from(appdata).join("npm/node_modules/@bitkyc08/opencodex");
+        for provider in ["openai","anthropic"] {
+            let mut command=invocation(&[
+                package.join("node_modules/bun/bin/bun.exe").to_str().ok_or(Error("InputRejected"))?,
+                package.join("bin/ocx.mjs").to_str().ok_or(Error("InputRejected"))?,
+                "account","list",provider,"--quota","--refresh","--json"
+            ],Some(15));command.git_prompt_off=true;
+            let raw=self.runner.run(&command).ok().filter(|r|r.code==0 && r.stdout.len()<=2_000_000)
+                .and_then(|r|serde_json::from_str::<Value>(&r.stdout).ok()).unwrap_or(Value::Null);
+            inventory[provider]=cc_job_policy::quota_recovery::aggregate(&raw,provider,self.clock());
+            if unstarted && provider=="openai" {
+                command.args=vec![package.join("bin/ocx.mjs").to_string_lossy().into_owned(),"config".into(),"get".into(),"codexAccountNamespaces".into(),"--json".into()];
+                let namespaces=self.runner.run(&command).ok().filter(|r|r.code==0 && r.stdout.len()<=2_000_000)
+                    .and_then(|r|serde_json::from_str::<Value>(&r.stdout).ok()).unwrap_or(Value::Null);
+                inventory[provider]["safe_routes"]=cc_job_policy::quota_recovery::safe_openai_routes(&raw,&namespaces,self.clock());
+            }
+        }
+        inventory["at"]=json!(self.clock());Ok(inventory)
+    }
     fn guard_workspace_path(&mut self, path: &str) -> Result<()> {
         self.guard_workspace_timeout(path, 40)
     }
@@ -517,23 +542,37 @@ impl RealBackend {
     }
 }
 impl Backend for RealBackend {
-    fn quota_recovery_inventory(&mut self) -> Result<Value> {
-        let mut inventory=json!({});
-        let Some(appdata)=std::env::var_os("APPDATA") else { return Ok(inventory); };
-        let package=PathBuf::from(appdata).join("npm/node_modules/@bitkyc08/opencodex");
-        for provider in ["openai","anthropic"] {
-            let mut command=invocation(&[
-                package.join("node_modules/bun/bin/bun.exe").to_str().ok_or(Error("InputRejected"))?,
-                package.join("bin/ocx.mjs").to_str().ok_or(Error("InputRejected"))?,
-                "account","list",provider,"--quota","--refresh","--json"
-            ],Some(15));
-            command.git_prompt_off=true;
-            let raw=self.runner.run(&command).ok().filter(|r| r.code == 0 && r.stdout.len() <= 2_000_000)
-                .and_then(|r| serde_json::from_str::<Value>(&r.stdout).ok()).unwrap_or(Value::Null);
-            inventory[provider]=cc_job_policy::quota_recovery::aggregate(&raw,provider,self.clock());
+    fn unstarted_review_inventory(&mut self) -> Result<Value> {self.collected_quota_inventory(true)}
+    fn unstarted_review_registration(&mut self) -> Result<Value> {
+        let producer = PathBuf::from(cc_job_policy::unstarted_review_state::PRODUCER);
+        self.guard_workspace_path(producer.to_str().ok_or(Error("InputRejected"))?)?;
+        let mut command = invocation(&[producer.to_str().ok_or(Error("InputRejected"))?, "review-registration-metadata"], Some(50));
+        command.cwd = Some("D:/CC/Work/unattended-operations-20261013-wt/todo-3255-godd".into());
+        let result = self.runner.run(&command)?;
+        if result.code != 0 || result.stdout.len() > 8192 { return Err(Error("RegistrationUnavailable")); }
+        serde_json::from_str(&result.stdout).map_err(|_| Error("RegistrationUnavailable"))
+    }
+    fn unstarted_review_workspace(&mut self, repo: &str, item: &Value) -> Result<bool> {
+        let cwd = s(&item["scheduler"]["worktree"]);
+        if item["id"] != 3649 || item["project"] != "localai-web-rs"
+            || norm(repo) != norm("D:/CC/Work/local-ai-console-3339")
+            || norm(cwd) != norm("D:/CC/Work/local-ai-console-3339-wt/todo-3649-work") {
+            return Ok(false);
         }
-        inventory["at"]=json!(self.clock());
-        Ok(inventory)
+        self.guard_workspace_path(repo)?;
+        self.guard_workspace_path(cwd)?;
+        if cc_job_policy::work_owner::checkout(cwd)["repository"]!="autodevjapan/local-ai-console" {return Ok(false);}
+        let common = run_git(self.runner.as_mut(), Path::new(cwd), &["rev-parse", "--path-format=absolute", "--git-common-dir"])?;
+        let branch = run_git(self.runner.as_mut(), Path::new(cwd), &["branch", "--show-current"])?;
+        let clean = run_git(self.runner.as_mut(), Path::new(cwd), &["status", "--porcelain"])?;
+        let review_tree = format!("{}^{{tree}}", cc_job_policy::unstarted_review_state::SOURCE_HEAD);
+        let heads=run_git(self.runner.as_mut(), Path::new(cwd), &["--no-replace-objects","rev-parse","HEAD",&review_tree])?;
+        let heads:Vec<_>=heads.lines().collect();
+        Ok(norm(&common) == norm(&format!("{repo}/.git")) && branch == s(&item["scheduler"]["branch"]) && clean.is_empty()
+            && heads==[cc_job_policy::unstarted_review_state::CHECKOUT_HEAD,cc_job_policy::unstarted_review_state::REVIEW_TREE])
+    }
+    fn quota_recovery_inventory(&mut self) -> Result<Value> {
+        self.collected_quota_inventory(false)
     }
     fn action_progress(
         &mut self,

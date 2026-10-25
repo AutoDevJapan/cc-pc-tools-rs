@@ -204,6 +204,10 @@ func skillsOperation(op, path string) object {
 		if reason != "" {
 			return fail(reason)
 		}
+		fresh, ok := skillsRegistryRead(ids)
+		if !ok || !skillsActorCheck(r.Writer, fresh, &fs, caller) {
+			return fail("writer")
+		}
 		result["operation"] = "receive_exact_public_result"
 		result["final_response"] = string(received.Body)
 		result["metadata"] = received.Metadata

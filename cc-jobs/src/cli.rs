@@ -907,13 +907,17 @@ impl Context {
         job["sandbox"] = json!(policy.sandbox);
         job["approval_policy"] = json!(policy.approval);
         job["approvals_reviewer"] = json!(policy.reviewer);
-        if retry_key.is_none() {
+        let quota_inventory=self.prepared_quota_inventory(a)?;
+        // This fixed prepared review has an explicit minimal profile. The
+        // injected unattended instructions mention Chrome; that generic text
+        // must not widen its scope before the independent admission check.
+        let unstarted_review = quota_inventory["unstarted_registration"]["state"] == "observed";
+        if retry_key.is_none() && !unstarted_review {
             job["mcp_profile"] = json!(cc_chrome::profile(
                 s(&job, "mcp_profile"),
                 std::str::from_utf8(&bytes).unwrap()
             ));
         }
-        let quota_inventory=self.prepared_quota_inventory(a)?;
         // Intake uses the short publication gate; history reconciliation remains outside it.
         let _queue = self.queue_lock_for("registration", std::time::Duration::from_secs(60))?;
         // Shared lock order: queue -> job state (when present) -> ToDo. Hold through registration.
@@ -1289,7 +1293,9 @@ impl Context {
                         || cc_job_policy::product_retry::digest(&spec) != expected
                         || !std::str::from_utf8(&bytes).unwrap()
                             .contains(&format!("\n依頼:\n{spec_text}"))
-                        || (quota_choice && job["quota_recovery"]["spec_sha256"] != expected)
+                        || (quota_choice && if job["unstarted_review"].is_object() {
+                            job["unstarted_review"]["spec_sha256"] != expected
+                        } else { job["quota_recovery"]["spec_sha256"] != expected })
                     {
                         return Err(Error::new("finite review specification changed before registration"));
                     }

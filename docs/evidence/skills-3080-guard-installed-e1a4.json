@@ -1,0 +1,33 @@
+{
+  "domain": "skills-3080-guard-installed-baseline-v1",
+  "purpose": "one independently accepted existing Windows software baseline; no data access",
+  "repository": "AutoDevJapan/cc-pc-tools-rs",
+  "repository_id": 1406818713,
+  "source_pr": 510,
+  "source_pr_state": "MERGED",
+  "public_source_commit": "e1a4c21dc6241c140d4d7364d34f42b16d7005be",
+  "reviewed_head": "be027549ba38575cbf37792741a4d984149d8ea1",
+  "observed_installed_sha256": "29118cd151cc9ccec8bb6a371382e2a3cc2507d5b36e3837f6cc87793b5b21fb",
+  "observed_buildinfo": {
+    "GOOS": "windows",
+    "GOARCH": "amd64",
+    "module": "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard",
+    "go_version": "go1.27.0",
+    "trimpath": true,
+    "vcs_revision": "e1a4c21dc6241c140d4d7364d34f42b16d7005be",
+    "vcs_modified": false
+  },
+  "prior_accepted_distribution_receipt_sha256": "96ad25fdb7a928dc0c615774220f94d8027d3a5a0fcef7ae4222faf11c6c539f",
+  "prior_ci_all16_completed": true,
+  "prior_ci_failures": 0,
+  "prior_ci_record_sha256": "8fa9cd04238c449c791eeec5149f81dd213e8153adc9a26ca0c65af849ca05e5",
+  "prior_review_task": 3851,
+  "prior_review_Must": 0,
+  "prior_review_record_sha256": "20d1a5effb25ee3cdd4c1c9765b9305db039e2d33cb98da7508c44c3bfa95cbb",
+  "backup_sha256": "f487106ad65a261fd0938fb8fd78e092388f7b76beebb12089d3f20e72730b51",
+  "previous_owner_group_DACL_equality_verified": true,
+  "SACL_verified": false,
+  "original_registry_recovered": false,
+  "general_access_granted": false,
+  "executables_modified_by_this_observation": false
+}

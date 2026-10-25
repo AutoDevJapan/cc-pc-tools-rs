@@ -1,21 +1,21 @@
 {
   "state": "complete",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
-  "manifest_sha256": "4795760506e4dba48ffcddbe6be35fa29ac79c37328eaf1ae039dec44753d383",
-  "queue_sha256": "c016d9ade882c46dc81db2c6a544ef7515cf0df0d12ea1ea1fc9d000766cef67",
+  "manifest_sha256": "c0474587af265e2787b2bca63f62dba70bb7b80bd4e4ec31a5878eb9e3bd58cd",
+  "queue_sha256": "17d04d1ed6236ba80ec4e38cd38b4ac0593f0f0f33c912ecf9a895dcdd011a0d",
   "occurrences": 73220,
   "occurrences_with_assessment_records": 746,
-  "recorded_final_occurrences": 92,
+  "recorded_final_occurrences": 106,
   "stages": {
-    "assessed_needs_current_disposition": 660,
+    "assessed_needs_current_disposition": 646,
     "held_body_unavailable": 428,
     "held_execution_review": 647,
     "needs_semantic_and_individual_rights_review": 71393,
-    "recorded_final_disposition": 92
+    "recorded_final_disposition": 106
   },
   "recorded_final_dispositions": {
     "excluded": 14,
-    "installed_new_adaptation": 75,
+    "installed_new_adaptation": 89,
     "integrated_existing": 3
   },
   "limits": [

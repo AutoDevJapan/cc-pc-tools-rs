@@ -858,6 +858,14 @@ func main() {
 			return readReviewSnapshot(reviewMetadataStore)
 		}))
 	}
+	if os.Args[1] == "review-admission-metadata" {
+		os.Exit(runReviewAdmissionCLI(os.Args[2:], os.Stdout, func() ([]byte, error) {
+			return readReviewSnapshot(reviewMetadataStore)
+		}))
+	}
+	if os.Args[1] == "review-admission-runtime-metadata" {
+		os.Exit(runOMB3255RuntimeCLI(os.Args[2:], os.Stdout, omb3255AcquireAdmissionRuntime))
+	}
 	f := flag.NewFlagSet("recovery", flag.ContinueOnError)
 	f.SetOutput(io.Discard)
 	home := f.String("home", "D:/CC/Tools/discord-ask", "")

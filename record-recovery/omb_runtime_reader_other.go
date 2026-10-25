@@ -5,3 +5,7 @@ package main
 func omb3255AcquireRuntime() omb3255RuntimeAcquisition {
 	return omb3255RuntimeAcquisition{state: "platform_unavailable"}
 }
+
+func omb3255AcquireAdmissionRuntime() omb3255RuntimeAcquisition {
+	return omb3255RuntimeAcquisition{state: "platform_unavailable"}
+}

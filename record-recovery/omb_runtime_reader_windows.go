@@ -202,6 +202,14 @@ func (source *omb3255PinnedRuntime) Unchanged() bool {
 }
 
 func omb3255AcquireRuntime() (result omb3255RuntimeAcquisition) {
+	return omb3255AcquireRuntimeFor(omb3255ExpectedRoots())
+}
+
+func omb3255AcquireAdmissionRuntime() omb3255RuntimeAcquisition {
+	return omb3255AcquireRuntimeFor(reviewAdmissionExpectedRoots())
+}
+
+func omb3255AcquireRuntimeFor(expected []omb3255ExpectedRoot) (result omb3255RuntimeAcquisition) {
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
 	revision, commitMS := omb3255BuildIdentity()
@@ -252,6 +260,11 @@ func omb3255AcquireRuntime() (result omb3255RuntimeAcquisition) {
 	}()
 	var admitted []omb3255RuntimeRef
 	var nativePath string
+	collect := func() ([]omb3255RuntimeRef, string, error) {
+		return omb3255CollectRefsFrom(func(endpoint string) (obj, error) {
+			return omb3255NormalGET(ctx, endpoint)
+		}, rpc.Call, revision, commitMS, expected)
+	}
 	recheckProtection := func() bool {
 		source, err := omb3255Guard(ctx, anchor)
 		if err != nil {
@@ -269,7 +282,7 @@ func omb3255AcquireRuntime() (result omb3255RuntimeAcquisition) {
 	}
 	return omb3255InspectRuntimeState(omb3255RuntimeDeps{
 		Prepare: func() ([]omb3255RuntimeRef, error) {
-			refs, path, err := omb3255CollectRefs(ctx, rpc, revision, commitMS)
+			refs, path, err := collect()
 			if err != nil {
 				return nil, err
 			}
@@ -290,7 +303,7 @@ func omb3255AcquireRuntime() (result omb3255RuntimeAcquisition) {
 			return stream, nil
 		},
 		Recheck: func(before []omb3255RuntimeRef) bool {
-			after, path, err := omb3255CollectRefs(ctx, rpc, revision, commitMS)
+			after, path, err := collect()
 			return err == nil && reflect.DeepEqual(before, after) && omb3255SamePath(path, nativePath) && recheckProtection()
 		},
 	})

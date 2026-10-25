@@ -98,14 +98,14 @@ func TestSkills3080HistoricalNativeBindsPromptFinalAndTime(t *testing.T) {
 	base := line("session_meta", start, object{"id": a.Thread, "cwd": a.Workspace}) +
 		line("turn_context", start.Add(time.Second), object{"cwd": a.Workspace, "model": "openai/" + a.Model, "effort": a.Effort}) +
 		line("response_item", start.Add(2*time.Second), message("user", "", string(prompt)+"\ncurrent saved owner instructions")) +
-		line("response_item", end.Add(-time.Second), message("assistant", "final", string(body)))
-	for _, kind := range []string{"valid", "later_unrelated_final", "changed_prompt", "changed_native_final", "coaltered_result", "out_of_window", "missing_prompt", "missing_final", "wrong_cwd", "truncated"} {
+		line("response_item", end.Add(-time.Second), message("assistant", "final_answer", string(body)))
+	for _, kind := range []string{"valid", "later_unrelated_final", "changed_prompt", "changed_native_final", "coaltered_result", "out_of_window", "missing_prompt", "missing_final", "unknown_phase", "partial_answer", "wrong_cwd", "truncated"} {
 		t.Run(kind, func(t *testing.T) {
 			raw := base
 			p := &skillsNativeResultProof{prompt: prompt, body: body}
 			switch kind {
 			case "later_unrelated_final":
-				raw += line("response_item", end.Add(time.Second), message("assistant", "final", "other job"))
+				raw += line("response_item", end.Add(time.Second), message("assistant", "final_answer", "other job"))
 			case "changed_prompt":
 				p.prompt = []byte("invented saved prompt")
 			case "changed_native_final":
@@ -117,7 +117,11 @@ func TestSkills3080HistoricalNativeBindsPromptFinalAndTime(t *testing.T) {
 			case "missing_prompt":
 				raw = strings.Replace(raw, `"role":"user"`, `"role":"other"`, 1)
 			case "missing_final":
-				raw = strings.Replace(raw, `"phase":"final"`, `"phase":"commentary"`, 1)
+				raw = strings.Replace(raw, `"phase":"final_answer"`, `"phase":"commentary"`, 1)
+			case "unknown_phase":
+				raw = strings.Replace(raw, `"phase":"final_answer"`, `"phase":null`, 1)
+			case "partial_answer":
+				raw = strings.Replace(raw, `"phase":"final_answer"`, `"phase":"partial_answer"`, 1)
 			case "wrong_cwd":
 				raw = strings.ReplaceAll(raw, a.Workspace, "D:/other")
 			case "truncated":

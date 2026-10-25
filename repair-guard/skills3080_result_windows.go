@@ -281,7 +281,14 @@ func skillsResultBinding(r skillsResultRequest, reg skillsRegistry, job object, 
 	return skillsResultBindingWith(r, reg, job, spec, forReview, skillsOriginalSpecs)
 }
 func skillsResultBindingWith(r skillsResultRequest, reg skillsRegistry, job object, spec []byte, forReview bool, originals map[int]string) bool {
-	return skillsResultBindingKnown(r, reg, job, spec, forReview, originals, skillsOriginalParentReview)
+	if r == skillsPublicReview3850 && !skillsPublicReview3850Metadata(job) {
+		return false
+	}
+	publicResult := skillsOriginalParentReview
+	if skillsPublicReviewCandidate(r, reg, spec) {
+		publicResult = r
+	}
+	return skillsResultBindingKnown(r, reg, job, spec, forReview, originals, publicResult)
 }
 
 // The parent independently identified this exact public response before this
@@ -456,15 +463,38 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 	default:
 		return out, "result_binding"
 	}
+	// A typed scope or this exact legacy migration establishes a candidate,
+	// never permission by itself. Verify public source and original author
+	// before opening the result. Creation retains its separate merge/notice
+	// and acceptance checks.
+	publicScope, publicInput := skillsPublicReviewScopeFor(r, spec)
+	if publicInput {
+		if !skillsPublicReviewAuthor(publicScope, reg, row, job, s) || !skillsPublicReviewInputs(publicScope, reg.writer.Workspace, s) {
+			return out, "result_binding"
+		}
+	}
 	body, ok := s.read(filepath.Join(skillsJobsRoot, r.Job, "last_message.md"), 2<<20)
-	if !ok || !bytes.Equal(body, []byte(str(job["last_message"]))) || (r.FinalSHA != "" && hashBytes(body) != r.FinalSHA) || (r.Task == 3709 && hashBytes(body) != skillsReplacementReviewFinal) {
+	if !ok || !bytes.Equal(body, []byte(str(job["last_message"]))) || (r.FinalSHA != "" && hashBytes(body) != r.FinalSHA) || (r.Task == 3709 && hashBytes(body) != skillsReplacementReviewFinal) || (r == skillsPublicReview3850 && len(body) != 4020) {
 		return out, "result_unavailable"
 	}
-	native, ok := skillsNativeJob(s, job)
+	var native []object
+	if publicInput {
+		native, ok = skillsPublicReviewNative(s, job, spec, body)
+	} else {
+		native, ok = skillsNativeJob(s, job)
+	}
 	if !ok || (r.Task == 3709 && !skillsReplacementNativeBound(native)) {
 		return out, "native_context"
 	}
 	out = skillsReceived{Body: body, Spec: spec, Native: native, Metadata: object{"id": r.Job, "task": r.Task, "status": job["status"], "model": job["model"], "effort": job["effort"], "exit_code": job["exit_code"], "thread_id": job["thread_id"], "spec_sha256": r.SpecSHA, "final_sha256": hashBytes(body)}}
+	if publicInput {
+		out.Metadata["public_input_commit"] = publicScope.Commit
+		out.Metadata["public_input_file_count"] = len(publicScope.Files)
+		out.Metadata["public_input_scope"] = "immutable_typed_prelaunch_spec"
+		if r == skillsPublicReview3850 {
+			out.Metadata["public_input_scope"] = "fixed_legacy_migration_3850"
+		}
+	}
 	return out, ""
 }
 

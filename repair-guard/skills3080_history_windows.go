@@ -127,9 +127,8 @@ func skillsHistoricalFilesAt(s *skillsFS, root string, a skillsHistoricalResult,
 	return prompt, body, ""
 }
 
-// Read only this exact native session, at its initial length. A normally
-// resumed current repair may append to the same log; historical timestamps
-// still restrict the prompt/final/model observations to the original job.
+// Read only this exact native session at its initial length. Do not infer
+// continuity with another job's thread; preserve the original strict window.
 func skillsHistoricalNative(s *skillsFS, job object, proof *skillsNativeResultProof) ([]object, bool) {
 	id := str(job["thread_id"])
 	start, e := time.Parse(time.RFC3339Nano, str(job["started_at"]))
@@ -195,7 +194,10 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 		return false
 	}
 	v := envelope.Payload
-	if v.Type != "message" || (v.Role != "user" && (v.Role != "assistant" || v.Phase != "final")) {
+	// codex-cli 0.163.0's generated MessagePhase schema and the original
+	// job's native metadata both use final_answer. Unknown/partial/commentary
+	// phases cannot prove a terminal response. No timestamp tolerance is added.
+	if v.Type != "message" || (v.Role != "user" && (v.Role != "assistant" || v.Phase != "final_answer")) {
 		return true
 	}
 	if _, ok := conversationJSON(raw); !ok {

@@ -570,3 +570,35 @@ func TestConversationSourceRepairNativeFinishedOriginNeverResumes(t *testing.T) 
 		t.Fatal("finished original was retired, released or made runnable")
 	}
 }
+
+func TestConversationSourceRepairNeverAcceptsNonPreservingEvidence(t *testing.T) {
+	for _, kind := range []string{"legacy-delivery", "answer"} {
+		t.Run(kind, func(t *testing.T) {
+			f, args, _ := sourceRepairFixture(t)
+			if code, _ := intakeLinkCLI(t, f, args); code != 0 {
+				t.Fatal("initial preserving delivery")
+			}
+			repairMutateRow(t, f, 42, func(row map[string]any) {
+				record := row["owner_question_delivery_receipts"].([]any)[0].(map[string]any)
+				delete(record, "preserved_wait")
+				if kind == "answer" {
+					row["owner_question_answer_receipts"] = []any{record}
+					delete(row, "owner_question_delivery_receipts")
+				}
+			})
+			req := f.r.State.ConversationCaptures[f.replies[0].Message]
+			req.Phase, req.Todo = "conversation_reply_saved", 0
+			if f.r.save() != nil {
+				t.Fatal("interrupted state")
+			}
+			before, _ := os.ReadFile(f.r.TodoPath)
+			if code, _ := intakeLinkCLI(t, f, args); code == 0 {
+				t.Fatal("non-preserving receipt counted as wait-preserving delivery")
+			}
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if !bytes.Equal(before, after) || req.Phase == "conversation_reply_delivered" {
+				t.Fatal("conflicting receipt changed task or claimed delivery")
+			}
+		})
+	}
+}

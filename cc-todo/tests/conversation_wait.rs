@@ -255,6 +255,15 @@ fn continued_delivery_preserves_everything_except_its_note_time_and_receipt() {
 }
 
 fn deliver_preserving(f: &Fixture, answer: &Path, expected: &Value) -> Output {
+    deliver_preserving_scoped(f, answer, expected, None)
+}
+
+fn deliver_preserving_scoped(
+    f: &Fixture,
+    answer: &Path,
+    expected: &Value,
+    scope: Option<&Path>,
+) -> Output {
     let expected_file = f.file("parked-delivery-expected.json", expected);
     let note_file = f.temp.path().join("parked-delivery-note.txt");
     fs::write(
@@ -265,7 +274,7 @@ fn deliver_preserving(f: &Fixture, answer: &Path, expected: &Value) -> Output {
         ),
     )
     .unwrap();
-    f.command(&[
+    let mut command = f.command(&[
         "question-answer",
         "1",
         "--delivery-only",
@@ -276,9 +285,11 @@ fn deliver_preserving(f: &Fixture, answer: &Path, expected: &Value) -> Output {
         note_file.to_str().unwrap(),
         "--expected-state-file",
         expected_file.to_str().unwrap(),
-    ])
-    .output()
-    .unwrap()
+    ]);
+    if let Some(scope) = scope {
+        command.args(["--scope-file", scope.to_str().unwrap()]);
+    }
+    command.output().unwrap()
 }
 
 #[test]
@@ -381,6 +392,25 @@ fn original_delivery_rejects_other_generations_waits_and_holds() {
         assert!(!out.status.success(), "accepted {change}");
         assert_eq!(f.raw(), before, "changed {change}");
     }
+}
+
+#[test]
+fn original_delivery_rejects_changed_registered_scope_before_writing() {
+    let f = Fixture::new();
+    let (_, answer_file, _) = f.park();
+    let scope=f.file("original-delivery-scope.json",&json!({"domain":"discord-conversation-todo-scope-v1","todo_id":"1","project":"cc-pc-tools-rs","project_path_sha256":sha(f.temp.path().to_str().unwrap().as_bytes())}));
+    let mut db = f.read();
+    db["projects"]["synthetic-other"] = db["projects"]["cc-pc-tools-rs"].clone();
+    db["items"][0]["project"] = json!("synthetic-other");
+    f.write(&db);
+    let before = f.raw();
+    let out = deliver_preserving_scoped(&f, &answer_file, &db["items"][0], Some(&scope));
+    assert!(!out.status.success());
+    assert_eq!(
+        String::from_utf8_lossy(&out.stderr).trim(),
+        "conversation_scope_changed"
+    );
+    assert_eq!(f.raw(), before);
 }
 
 #[test]

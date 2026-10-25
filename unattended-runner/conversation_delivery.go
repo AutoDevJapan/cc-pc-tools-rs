@@ -217,11 +217,15 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 			// source SHA, even if a canonical answer was already committed.
 			req.ConversationRecoveryNote = "再取得で受領元が置換済み。メモの旧受領SHAを現在版の反映証拠にしない。実反映と質問の締めは未確認。現在のsource_receipt_sha256=" + bytesHash(receipt)
 		}
-		if conversationDeliveryRecorded(row, q, answer, b) || conversationAnswerRecorded(row, q, answer, b) {
+		preserve := len(req.ConversationAttachmentMetadata) != 0
+		if conversationDeliveryRecordedWithMode(row, q, answer, b, preserve) || (!preserve && conversationAnswerRecorded(row, q, answer, b)) {
 			req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
 			return r.save()
 		}
-		if len(req.ConversationAttachmentMetadata) != 0 {
+		if preserve {
+			if conversationDeliveryRecorded(row, q, answer, b) || conversationAnswerRecorded(row, q, answer, b) {
+				return errors.New("conversation non-preserving delivery evidence differs")
+			}
 			// The explicit repair never retires or resumes the product owner,
 			// including when that owner exits while capture is being repaired.
 			return r.deliverConversationReplyKeepingWait(ctx, row, q, reply, req, receipt, marker, true)
@@ -386,13 +390,18 @@ func conversationWaitOwnerUnchanged(row *TodoRow) bool {
 }
 
 func conversationDeliveryRecorded(row *TodoRow, q ConversationQuestion, answer conversationAnswerReceipt, b []byte) bool {
+	return conversationDeliveryRecordedWithMode(row, q, answer, b, false)
+}
+
+func conversationDeliveryRecordedWithMode(row *TodoRow, q ConversationQuestion, answer conversationAnswerReceipt, b []byte, preserve bool) bool {
 	matched := 0
 	for _, raw := range row.QuestionDeliveries {
 		var record struct {
-			Domain string                    `json:"domain"`
-			SHA    string                    `json:"answer_file_sha256"`
-			Answer conversationAnswerReceipt `json:"answer"`
-			Wait   struct {
+			Preserved *bool                     `json:"preserved_wait"`
+			Domain    string                    `json:"domain"`
+			SHA       string                    `json:"answer_file_sha256"`
+			Answer    conversationAnswerReceipt `json:"answer"`
+			Wait      struct {
 				SHA      string `json:"question_receipt_sha256"`
 				Question struct {
 					Request string `json:"request_id"`
@@ -400,6 +409,9 @@ func conversationDeliveryRecorded(row *TodoRow, q ConversationQuestion, answer c
 			} `json:"wait"`
 		}
 		if json.Unmarshal(raw, &record) == nil && record.Domain == "todo-owner-question-delivery-receipt-v1" && record.SHA == bytesHash(b) && record.Answer == answer && record.Wait.SHA == q.ReceiptSHA && record.Wait.Question.Request == q.SenderID {
+			if preserve && (record.Preserved == nil || !*record.Preserved) {
+				return false
+			}
 			matched++
 		}
 	}
@@ -440,7 +452,7 @@ func (r *Runner) deliverConversationReplyKeepingWait(ctx context.Context, row *T
 		return errors.New("conversation continued answer delivery deferred")
 	}
 	current, err := r.todo(q.Todo)
-	if err != nil || current.Project != q.Project || !conversationDeliveryRecorded(current, q, answer, b) {
+	if err != nil || current.Project != q.Project || !conversationDeliveryRecordedWithMode(current, q, answer, b, preserve) {
 		return errors.New("conversation continued answer readback deferred")
 	}
 	req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"

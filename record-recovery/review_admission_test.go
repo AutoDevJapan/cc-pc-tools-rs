@@ -143,6 +143,49 @@ func TestReviewAdmissionSeparatesCurrentRequestedAndCachedValues(t *testing.T) {
 	if strings.Contains(string(b), "private-value") {
 		t.Fatal("unlisted input escaped projection")
 	}
+	selected := func(model string, origin string, effort string) obj {
+		r := obj{"model": obj{"state": "recorded", "value": model}, "effort": obj{"state": "absent"},
+			"model_origin": obj{"state": "absent"}, "effort_origin": obj{"state": "absent"}}
+		if origin != "" {
+			r["model_origin"] = obj{"state": "recorded", "value": origin}
+		}
+		if effort != "" {
+			r["effort"] = obj{"state": "recorded", "value": effort}
+		}
+		return obj{"state": "recorded", "recorded_values": r}
+	}
+	want := obj{
+		"ok": true, "domain": "unstarted-review-admission-metadata-v1", "case_todo_id": 3255,
+		"snapshot_sha256": r["snapshot_sha256"], "metadata_only": true,
+		"record": obj{
+			"record_id": int64(3649), "status": obj{"state": "recorded", "value": "todo"},
+			"dispatchable":          obj{"state": "recorded", "value": true},
+			"jobs":                  obj{"state": "recorded", "reference_count": 0, "references_opened": false},
+			"dependency_references": obj{"state": "absent"},
+			"stops": obj{"stopped": obj{"state": "absent"}, "owner_stopped": obj{"state": "absent"},
+				"owner_postponement_recorded": obj{"state": "absent"}, "wait_ready": obj{"state": "absent"},
+				"owner_question_wait": obj{"state": "absent"}, "decision_wait": obj{"state": "absent"},
+				"stop_kind": obj{"state": "absent"}},
+			"requested": obj{"model": obj{"state": "recorded", "value": "anthropic/claude-opus-5-5"},
+				"model_origin": obj{"state": "recorded", "value": "owner_request"},
+				"effort":       obj{"state": "recorded", "value": "max"}, "effort_origin": obj{"state": "absent"}},
+			"scheduler": obj{"state": "recorded", "phase": obj{"state": "recorded", "value": "preparing"},
+				"not_before":      obj{"state": "recorded", "epoch_seconds": json.Number("1793030399.891")},
+				"selection":       selected("gpt-6-luna", "policy", "max"),
+				"selection_input": selected("anthropic/claude-sonnet-5-5", "", ""),
+				"console_request": obj{"state": "recorded", "options": selected("gpt-6-astra", "", "")},
+				"resource_wait": obj{"state": "recorded", "reason": obj{"state": "recorded", "value": "quota_exhausted"},
+					"until": obj{"state": "recorded", "epoch_seconds": json.Number("1793030399.891")}},
+				"preparation_failure": obj{"state": "recorded", "reason": obj{"state": "recorded", "value": "excluded_resource"},
+					"at": obj{"state": "recorded", "epoch_seconds": json.Number("1700000000")}}}},
+		"model_execution_observed": false, "origin_independently_verified": false, "quota_currently_observed": false,
+		"launch_performed": false, "fallback_authorized": false, "execution_verified": false,
+		"data_access_granted": false, "live_state_changed": false,
+		"source": "persisted_todo_snapshot", "source_scheduler_version": obj{"state": "unavailable"},
+	}
+	if !reflect.DeepEqual(r, want) {
+		t.Fatal("complete nested projection differs from fixed contract")
+	}
 }
 
 func TestReviewAdmissionKeepsContainerAndTimestampStates(t *testing.T) {
@@ -256,5 +299,27 @@ func TestReviewAdmissionMainDispatchRefusesArguments(t *testing.T) {
 	exit, ok := err.(*exec.ExitError)
 	if !ok || exit.ExitCode() != 2 || stderr.Len() != 0 || string(output) != "{\"code\":\"review_admission_invalid_arguments\",\"ok\":false}\n" {
 		t.Fatalf("main did not dispatch fixed admission refusal: %v", err)
+	}
+}
+
+func TestReviewAdmissionProducerUsesOnlyBuildMetadata(t *testing.T) {
+	result := reviewAdmissionProducer()
+	allowed := map[string]bool{"state": true, "runtime_scheduler_version_verified": true,
+		"compiled_revision": true, "compiled_source_modified": true}
+	for key := range result {
+		if !allowed[key] {
+			t.Fatal("producer exposed an unexpected build field")
+		}
+	}
+	if result["runtime_scheduler_version_verified"] != false {
+		t.Fatal("own build became runtime scheduler attestation")
+	}
+	if revision, exists := result["compiled_revision"]; exists {
+		value, ok := revision.(string)
+		if !ok || len(value) != 40 || result["state"] != "recorded" {
+			t.Fatal("invalid compiled revision")
+		}
+	} else if result["state"] != "unavailable" {
+		t.Fatal("missing build metadata became recorded")
 	}
 }

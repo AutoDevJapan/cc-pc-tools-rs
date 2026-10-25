@@ -166,7 +166,15 @@ func skillsConsumerProvenance(c skillsConsumerScope, reg skillsRegistry, s *skil
 	if !ok || hashBytes(raw) != c.Consume.RequestSHA || !skillsStrict(raw, &creation) || creation.Domain != "skills-3080-operation-v1" || creation.Writer != c.Consume.Creator || creation.Consume != nil || creation.Result != nil || creation.Runtime != nil || creation.Review == nil || *creation.Review != c.Review || creation.ManifestCommit != c.ManifestCommit || creation.ManifestPath != c.ManifestPath || creation.ManifestSHA != c.ManifestSHA {
 		return m, e, current, "creation_evidence"
 	}
-	manifestRaw, ok := skillsManifestBytes(creation)
+	current, ok = skillsInstalledProducer(s)
+	if !ok {
+		return m, e, current, "source"
+	}
+	e, ok = skillsReadCreationNative(s, creator, c.Consume)
+	if !ok || !skillsCreationHeaderBound(e, creation, c.Consume.RequestSHA, current) {
+		return m, e, current, "creation_evidence"
+	}
+	manifestRaw, ok := skillsCreatedPublicManifest(e, creation, c.Consume.RequestSHA, current)
 	if !ok {
 		return m, e, current, "manifest"
 	}
@@ -174,12 +182,7 @@ func skillsConsumerProvenance(c skillsConsumerScope, reg skillsRegistry, s *skil
 	if !ok || m.Writer != c.Consume.Creator || !skillsSourcesBound(m, s) {
 		return m, e, current, "source"
 	}
-	current, ok = skillsProducerObservation(s)
-	if !ok {
-		return m, e, current, "source"
-	}
-	e, ok = skillsReadCreationNative(s, creator, c.Consume)
-	if !ok || !skillsAcceptedProducer(e.Producer, current) || !skillsCreatedBound(e, creation, c.Consume.RequestSHA, m, e.Producer) {
+	if !skillsCreatedBound(e, creation, c.Consume.RequestSHA, m, e.Producer) {
 		return m, e, current, "creation_evidence"
 	}
 	return m, e, current, ""
@@ -244,6 +247,7 @@ func skillsFreshConsumerOperation() object {
 	}
 	result["consumer"], result["runtime_producer"], result["manifest_sha256"], result["native_call_id"] = w, current, c.ManifestSHA, c.Consume.CallID
 	result["original_creator_need_not_be_running"], result["original_producer_revalidated"] = true, true
+	result["public_merge_proven_by_original_creation"], result["network_access_required"] = true, false
 	return result
 }
 

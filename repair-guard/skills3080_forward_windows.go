@@ -73,6 +73,14 @@ type skillsConsumeRequest struct {
 // installed, merged runtime. A software update needs an explicit reviewed
 // migration; it cannot accept an arbitrary producer hash supplied in a receipt.
 func skillsProducerObservation(s *skillsFS) (skillsProducer, bool) {
+	p, ok := skillsInstalledProducer(s)
+	return p, ok && skillsMerged(p.Revision)
+}
+
+// Current trusted installed code may observe itself without granting network
+// access to a readonly caller. Historical data provenance still needs its
+// accepted issuing producer and the original canonical CreateNew native call.
+func skillsInstalledProducer(s *skillsFS) (skillsProducer, bool) {
 	path, e := os.Executable()
 	if e != nil || !same(path, skillsRuntimeTarget) {
 		return skillsProducer{}, false
@@ -82,7 +90,7 @@ func skillsProducerObservation(s *skillsFS) (skillsProducer, bool) {
 		return skillsProducer{}, false
 	}
 	rev, ok := skillsBuildRevision(b)
-	return skillsProducer{hashBytes(b), rev}, ok && skillsMerged(rev)
+	return skillsProducer{hashBytes(b), rev}, ok
 }
 
 func skillsManifestDirectories(m skillsManifest) []string {

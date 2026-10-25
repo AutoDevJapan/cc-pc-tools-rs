@@ -6,6 +6,8 @@ use serde_json::{Value, json};
 pub const SOURCE_HEAD: &str = "173c3a4aa925bb03c8e1c109ea598e05f7d0dc9a";
 pub const SPEC_SHA: &str = "0699a3aa47d93e2cc1014964f4f913bbb6f1d986bb9fb3fa52159453bebd441e";
 pub const WRITERS: [&str; 2] = ["20261024-201241-todo-3387", "20261024-220456-todo-3648"];
+pub const PRODUCER: &str =
+    "D:/CC/Work/unattended-operations-20261013-wt/todo-3255-godd/record-recovery-3255.exe";
 pub const REVIEW_TREE: &str = "cad96a1891817f8c0a0b08d82c89dba2567ee2d4";
 pub const CHECKOUT_HEAD: &str = "1497a9326e4c579699f9eb55e5a74b86f530c993";
 
@@ -156,6 +158,8 @@ fn pending<'a>(row: &'a Value, spec_sha: &'a str, source_verified: bool) -> Pend
         dependencies_ready: empty_array(&row["wait_on"]),
         other_waits_absent: scheduler["not_before"].is_number(),
         reservation_unchanged: source_verified
+            && row["worker_receipt"].is_null()
+            && row.get("resume_generation").is_none_or(|g| g.is_u64())
             && scheduler["phase"] == "preparing"
             && text(&scheduler["branch"]) == "scheduler/todo-3649-work"
             && !text(&scheduler["worktree"]).is_empty()
@@ -285,6 +289,7 @@ pub fn proposal(
         "expected_state_sha256":hash(row),"request_sha256":request_binding(row),
         "launch_key":row["scheduler"]["key"],"source_head":SOURCE_HEAD,"spec_sha256":spec_sha,
         "review_tree":REVIEW_TREE,"checkout_head":CHECKOUT_HEAD,
+        "generation_present":row.get("resume_generation").is_some(),"generation_before":row["resume_generation"].as_u64().unwrap_or(0),
         "selected_selector":crate::quota_recovery::safe_openai_selector(health,None,now),
         "model":plan.selected_model,"effort":plan.selected_effort,
         "prior_not_before":row["scheduler"]["not_before"],
@@ -345,6 +350,19 @@ fn current_for(
     {
         return false;
     }
+    if row["scheduler"]["phase"] == "running" {
+        let Some(job) = job else {
+            return false;
+        };
+        if row["status"] != "doing"
+            || row["scheduler"]["job"] != job["id"]
+            || !row["jobs"]
+                .as_array()
+                .is_some_and(|ids| ids.as_slice() == [job["id"].clone()])
+        {
+            return false;
+        }
+    }
     let proof = &row["scheduler"]["unstarted_review"];
     let Some(registration) = registration(normal) else {
         return false;
@@ -357,6 +375,28 @@ fn current_for(
                 .as_array()
                 .is_some_and(|ids| ids.as_slice() == [job["id"].clone()])
         {
+            if !row["worker_receipt"].is_null() {
+                let before = proof["generation_before"].as_u64();
+                if row["worker_receipt"]["job"] != job["id"]
+                    || row["worker_receipt"]["generation"] != row["resume_generation"]
+                    || before.and_then(|g| g.checked_add(1)) != row["resume_generation"].as_u64()
+                    || job["todo_resume_generation"] != row["resume_generation"]
+                {
+                    return false;
+                }
+                original.as_object_mut().unwrap().remove("worker_receipt");
+                if proof["generation_present"] == true {
+                    original["resume_generation"] = proof["generation_before"].clone();
+                } else {
+                    original
+                        .as_object_mut()
+                        .unwrap()
+                        .remove("resume_generation");
+                }
+                if row["scheduler"]["key"].is_null() {
+                    original["scheduler"]["key"] = proof["launch_key"].clone();
+                }
+            }
             original["status"] = json!("todo");
             original["jobs"] = json!([]);
             original["scheduler"].as_object_mut().unwrap().remove("job");
@@ -377,8 +417,9 @@ fn current_for(
     fields.insert("not_before".into(), proof["prior_not_before"].clone());
     fields.insert("resource_wait".into(), proof["prior_resource_wait"].clone());
     let mut pending = pending(&original, spec_sha, true);
-    pending.reservation_unchanged = proof["request_sha256"] == request_binding(row)
-        && proof["launch_key"] == row["scheduler"]["key"]
+    pending.reservation_unchanged = pending.reservation_unchanged
+        && proof["request_sha256"] == request_binding(&original)
+        && proof["launch_key"] == original["scheduler"]["key"]
         && proof["source_head"] == SOURCE_HEAD
         && proof["review_tree"] == REVIEW_TREE
         && proof["checkout_head"] == CHECKOUT_HEAD
@@ -424,7 +465,7 @@ pub fn admission(
     if row["scheduler"]["unstarted_review"] != job["unstarted_review"]
         || selection["unstarted_review"] != job["unstarted_review"]
         || job["todo_id"] != 3649
-        || job["launch_key"] != row["scheduler"]["key"]
+        || job["launch_key"] != row["scheduler"]["unstarted_review"]["launch_key"]
         || path(&job["cwd"]) != path(&row["scheduler"]["worktree"])
         || job["model"] != "gpt-6-luna"
         || job["effort"] != "max"
@@ -729,6 +770,44 @@ mod tests {
         row["scheduler"]["phase"] = json!("running");
         assert!(admission(
             &row, &job, &normal, &health, &authors, SPEC_SHA, 1000.
+        ));
+        for field in ["unlinked", "wrong_job", "missing_jobs", "wrong_status"] {
+            let mut changed = row.clone();
+            match field {
+                "unlinked" => changed["scheduler"]["job"] = Value::Null,
+                "wrong_job" => changed["scheduler"]["job"] = json!("other"),
+                "missing_jobs" => changed["jobs"] = json!([]),
+                _ => changed["status"] = json!("todo"),
+            }
+            assert!(
+                !admission(&changed, &job, &normal, &health, &authors, SPEC_SHA, 1000.),
+                "{field}"
+            );
+        }
+        let mut assigned = row.clone();
+        let mut assigned_job = job.clone();
+        assigned["resume_generation"] = json!(1);
+        assigned["worker_receipt"] = json!({"job":"new-review","generation":1});
+        assigned["scheduler"]["key"] = Value::Null;
+        assigned_job["todo_resume_generation"] = json!(1);
+        assert!(admission(
+            &assigned,
+            &assigned_job,
+            &normal,
+            &health,
+            &authors,
+            SPEC_SHA,
+            1000.
+        ));
+        assigned["worker_receipt"]["job"] = json!("other");
+        assert!(!admission(
+            &assigned,
+            &assigned_job,
+            &normal,
+            &health,
+            &authors,
+            SPEC_SHA,
+            1000.
         ));
         for (field, value) in [
             ("model", json!("gpt-6.1-sol")),

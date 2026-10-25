@@ -24,7 +24,7 @@ func acquireReviewRegistration() (observed bool) {
 		return false
 	}
 	moduleStable := func() bool {
-		git := exec.CommandContext(ctx, "git", "-C", omb3255SourceRoot, "rev-parse", revision+":record-recovery", "HEAD:record-recovery")
+		git := reviewRegistrationGit(ctx, "rev-parse", revision+":record-recovery", "HEAD:record-recovery")
 		hideCommand(git)
 		git.WaitDelay = time.Second
 		modules, err := git.Output()
@@ -33,7 +33,7 @@ func acquireReviewRegistration() (observed bool) {
 		}
 		// This Go module has no local replacements. Compare its tracked
 		// working inputs too; a later unrelated documentation commit is fine.
-		git = exec.CommandContext(ctx, "git", "-C", omb3255SourceRoot, "diff", "--quiet", revision, "--", "record-recovery")
+		git = reviewRegistrationGit(ctx, "diff", "--quiet", revision, "--", "record-recovery")
 		hideCommand(git)
 		git.WaitDelay = time.Second
 		return git.Run() == nil
@@ -76,4 +76,9 @@ func acquireReviewRegistration() (observed bool) {
 		}
 	}()
 	return inspectReviewRegistration(rpc.Call) && inspectReviewContinuation(func(endpoint string) (obj, error) { return omb3255NormalGET(ctx, endpoint) }) && protection() && moduleStable() && binary.Unchanged()
+}
+
+func reviewRegistrationGit(ctx context.Context, args ...string) *exec.Cmd {
+	argv := append([]string{"--no-replace-objects", "-C", omb3255SourceRoot}, args...)
+	return exec.CommandContext(ctx, "git", argv...)
 }

@@ -536,7 +536,7 @@ impl Runtime for System {
             && read(vec!["git".into(),"-C".into(),cwd.into(),"status".into(),"--porcelain".into()]).is_some_and(|s|s.trim().is_empty())
     }
     fn unstarted_review_registration(&self) -> Value {
-        let producer = "D:/CC/Tools/record-recovery/record-recovery.exe";
+        let producer = cc_job_policy::unstarted_review_state::PRODUCER;
         if self.recovery_protected(producer).unwrap_or(true) { return Value::Null; }
         let mut call = Call::new(vec![producer.into(), "review-registration-metadata".into()], vec![], 50.);
         call.cwd = Some(PathBuf::from("D:/CC/Work/unattended-operations-20261013-wt/todo-3255-godd"));

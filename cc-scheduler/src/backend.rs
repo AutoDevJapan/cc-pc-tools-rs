@@ -544,7 +544,7 @@ impl RealBackend {
 impl Backend for RealBackend {
     fn unstarted_review_inventory(&mut self) -> Result<Value> {self.collected_quota_inventory(true)}
     fn unstarted_review_registration(&mut self) -> Result<Value> {
-        let producer = self.tools.join("record-recovery/record-recovery.exe");
+        let producer = PathBuf::from(cc_job_policy::unstarted_review_state::PRODUCER);
         self.guard_workspace_path(producer.to_str().ok_or(Error("InputRejected"))?)?;
         let mut command = invocation(&[producer.to_str().ok_or(Error("InputRejected"))?, "review-registration-metadata"], Some(50));
         command.cwd = Some("D:/CC/Work/unattended-operations-20261013-wt/todo-3255-godd".into());

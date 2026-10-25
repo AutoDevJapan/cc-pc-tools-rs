@@ -64,6 +64,10 @@ jobs登録と最終admissionは同じ公開selectorを再検証し、実launch�
 ## 固定の正常入力と一件のCAS
 
 `record-recovery review-registration-metadata` は追加引数を拒否する。
+この有限caseのproducerは、レビュー済みsourceから同じ3255作業場所の
+`record-recovery-3255.exe` へ直接生成し、通常guardとsource/build対応を確認して使う。
+全体のToolsへ新しい資格を追加するための例外は作らない。元3649の受付/再確認が
+終わるまで、この必要な生成物と元sourceを保持する。
 読取資格がある固定Codex実行物を保持し、通常のthread/read、turns/list、items/listだけを
 使う。元3387の固定thread/turn、開始終了時刻、cwd、commandExecutionのID、正常終了と
 原command/stdoutの全byte SHAを照合する。itemsは最大4ページ、各100件までで、
@@ -88,6 +92,15 @@ jobs登録と最終admissionは同じ公開selectorを再検証し、実launch�
 specは通常ToDoが生成する `D:/CC/Tools/todo/specs/3649-<32桁hex>.md` の名前空間だけを
 読取前に許す。リンク・reparse pointを拒否し、開いたstream自体を1MiB+1で制限する。
 この限定と固定内容SHAは、別のpathや別ToDoのspecを読む許可ではない。
+元173c入力は通常guardでclearを確認してから内容を表示せず再照合し、4007バイト・
+SHA0699a3aa…・BOM/CRなしだった。通常ToDoのBOM/改行正規化後も同じSHAになる。
+これは登録済みspecを手動で読んだ結果ではなく、実受入時にはその内容SHAも確認する。
+
+最終受付はrunningのstatus/唯一のjob参照/候補jobを一致させる。通常の新worker受領で
+世代が1増えkeyが消える場合も、同じjobとworker_receiptの対応がある場合だけ、
+判定用のコピーを元世代/keyへ戻して比較する。保存行の世代/keyを書き戻さない。
+producerのmodule/Git作業入力の比較は置換参照を無効化し、置換で異なる木を同じに
+見せる実Git fixtureを拒否する。元の固定対象やbranchを変更する処理ではない。
 
 PC上のCargoを直接起動せず配布物を得るため、既存Build speedの正常資源受付と
 package-toolsをこのbranchの有限な配布に使う。通常テスト成功後だけjobs/schedulerの

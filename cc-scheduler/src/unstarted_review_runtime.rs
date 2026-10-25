@@ -130,8 +130,15 @@ pub fn run<B: Backend>(engine: &mut Scheduler<B>, expected: Option<&str>) -> Res
             live_worker_absent: true,
         },
         engine.backend.clock(),
-    )
-    .map_err(|_| Error("UnstartedReviewIneligible"))?;
+    );
+    let proposed = match proposed {
+        Ok(p) => p,
+        Err(reason) => {
+            return Ok(
+                json!({"id":3649,"eligible":false,"reason":format!("{reason:?}"),"saved":false,"launched":0}),
+            );
+        }
+    };
     let report = json!({"id":3649,"eligible":true,"state_sha256":proposed.state_sha256(),"saved":false,"launched":0});
     let Some(expected) = expected else {
         return Ok(report);

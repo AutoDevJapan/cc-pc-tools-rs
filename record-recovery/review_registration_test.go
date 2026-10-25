@@ -227,9 +227,13 @@ func TestReviewRegistrationRejectsDuplicatesAcrossBoundedPages(t *testing.T) {
 }
 
 func TestUnstartedReviewRuntimeRootsDoNotReacquireCompletedOldReviews(t *testing.T) {
-	refs:=unstartedReviewRuntimeRoots()
-	if len(refs)!=1 || refs[0].ID!="837aab36-0c9d-4867-8b9f-db9952bc3931" || refs[0].Start!=1792942185190 || refs[0].Finish!=1792943381103 {
+	refs := unstartedReviewRuntimeRoots()
+	if len(refs) != 2 || refs[0].ID != "837aab36-0c9d-4867-8b9f-db9952bc3931" || refs[0].Start != 1792942185190 || refs[0].Finish != 1792943381103 || refs[1].ID != "6d821a13-a98a-4c7b-ac81-ca82eb8012cd" {
 		t.Fatal("new review binding widened or changed")
 	}
-	for _,old:=range append(omb3255ExpectedRoots(),reviewAdmissionExpectedRoots()...){if refs[0].ID==old.ID{t.Fatal("old completed review reintroduced")}}
+	for _, old := range append(omb3255ExpectedRoots(), reviewAdmissionExpectedRoots()...) {
+		if refs[0].ID == old.ID || refs[1].ID == old.ID {
+			t.Fatal("old completed review reintroduced")
+		}
+	}
 }

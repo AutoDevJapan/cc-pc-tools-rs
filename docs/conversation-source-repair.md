@@ -1,5 +1,7 @@
 # 終了済み一般受付と質問回答の競合を1件だけ復旧する（ToDo3853）
 
+Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/513
+
 ## 契約
 
 `conversation source-repair --request-id ID --message-id ID --actor-todo-id N
@@ -9,8 +11,10 @@
 
 正規senderの現在の質問、版、decision、元ToDoと、Discord APIから新たに取得した
 本人投稿のID/thread/author/作成/編集/本文hash/参照/添付を独立に照合する。
-先行する一般受付の原取得ファイルには通常の保護判定を行い、原bytesと状態内の
-投稿版を照合する。原文のコピーで新しい資格を作らない。
+`source-sha256` は通常受付の投稿版（ordinaryVersion）のhashとする。新入口は
+保護未確認の一般受付原ファイルを開かず、存在・通常ファイル・size/更新日時だけを
+保存する。登録済み受付の投稿版と実job・仕様・prompt・現在APIを独立に照合する。
+原文のコピーで新しい資格を作らない。既存source-linkのSHA契約は変更しない。
 
 保守担当の登録・実job・仕様・実行prompt・作業場所を確認する。元製品の登録先と
 保守担当の登録先は別でよいが、それぞれ通常の保護判定を通す。一般受付は保守基盤

@@ -17,3 +17,15 @@
   hash照合付き原子更新、通常lease下で1件復旧、metadata/hashと配送readbackを保存。
 - 管理chatの記録先キー: work/reply2913-newpost-1563926324979175525。
   本文・秘密・添付は記録しない。実読/実反映は配送とは別に追う。
+
+## 2026-10-26 実装中
+
+- Issue513。Red commit3ffede09で通常foreign拒否と新CLI終了1を確認。
+- source-repair実装後、33種類の誤関連付け/未終了/資格不足の拒否、5種類の途中失敗と
+  応答紛失後の再開、既存source-link回帰が成功。配備済みtodo.exeを隔離DBへ接続し、
+  元worker/世代/jobを保った全文instruction登録と再呼出しの不変性も成功。
+- 保護未確認の原一般受付ファイルは開かない。新契約のsource-sha256は通常受付の
+  ordinaryVersion。原ファイルはstatだけ保持し、正規APIから新たにcanonicalを作る。
+  原bytesのhashを確認したと主張しない。既存source-linkのrawSHA契約は変更しない。
+- 共通Source資格は元製品の登録rootで通常refresh成功を確認した。作業場所のSource資格を
+  コピーや例外登録で作らない。個別の非Source内部記録は一般guardの許可対象へ広げない。

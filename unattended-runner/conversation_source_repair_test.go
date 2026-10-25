@@ -20,6 +20,64 @@ func sourceRepairFixture(t *testing.T) (*conversationFixture, []string, []byte) 
 	return prepareSourceRepairFixture(t, conversationTest(t, true))
 }
 
+func TestConversationSourceRepairBindsOriginalDecisionSeparatelyFromIdentity(t *testing.T) {
+	for _, kind := range []string{"valid", "missing", "null", "array", "string", "different-original", "changed-file", "different-identity"} {
+		t.Run(kind, func(t *testing.T) {
+			f := conversationTest(t, true)
+			f.originalDecision = json.RawMessage(`{"todo_id":42,"resources":[{"kind":"synthetic","id":"one-scope"}],"decision":"direction","scope":{"retained":"original-scope"}}`)
+			if os.WriteFile(f.input.DecisionFile, f.originalDecision, 0600) != nil {
+				t.Fatal("original decision input")
+			}
+			f, args, _ := prepareSourceRepairFixture(t, f)
+			switch kind {
+			case "missing":
+				backend := f.r.Run
+				f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+					raw, err := backend(ctx, path, args...)
+					if err == nil && path == conversationSender && len(args) != 0 && args[0] == "recovery-replies" {
+						var reply map[string]any
+						if json.Unmarshal([]byte(raw), &reply) != nil {
+							t.Fatal("synthetic proof")
+						}
+						delete(reply, "original_decision")
+						b, _ := json.Marshal(reply)
+						raw = string(b)
+					}
+					return raw, err
+				}
+			case "null":
+				f.originalDecision = json.RawMessage(`null`)
+			case "array":
+				f.originalDecision = json.RawMessage(`[]`)
+			case "string":
+				f.originalDecision = json.RawMessage(`"different"`)
+			case "different-original":
+				f.originalDecision = json.RawMessage(`{"todo_id":42,"scope":{"retained":"another-scope"}}`)
+			case "changed-file":
+				if os.WriteFile(f.q.DecisionFile, []byte(`{"todo_id":42,"scope":"another-file"}`), 0600) != nil {
+					t.Fatal("changed decision fixture")
+				}
+			case "different-identity":
+				f.decision = json.RawMessage(`{"action":"other","todo_id":42}`)
+			}
+			before, _ := os.ReadFile(f.r.TodoPath)
+			code, _ := intakeLinkCLI(t, f, args)
+			if (code == 0) != (kind == "valid") {
+				t.Fatal("original decision and normalized identity were conflated", kind, code)
+			}
+			if kind != "valid" {
+				after, _ := os.ReadFile(f.r.TodoPath)
+				if !bytes.Equal(before, after) {
+					t.Fatal("rejected original decision changed the task")
+				}
+				if _, err := os.Stat(filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, "replies", f.replies[0].Message+".json")); !os.IsNotExist(err) {
+					t.Fatal("rejected decision published canonical source")
+				}
+			}
+		})
+	}
+}
+
 func prepareSourceRepairFixture(t *testing.T, f *conversationFixture) (*conversationFixture, []string, []byte) {
 	t.Helper()
 	f, args, source := prepareIntakeLinkFixture(t, f)

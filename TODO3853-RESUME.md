@@ -89,3 +89,21 @@
   Goだけを修正し、native受入のfixtureが末尾改行を持つことも明示確認する。
   Rust runtime sourceは55733837から変わらないため、3872の新実行物を受領し、
   このGo差分の関連nativeテストだけをやり直す。新しいCargo releaseは重ねない。
+
+## 2026-10-26 本番配布と有限入口の原票照合修正
+
+- PR515は最新72b38aedの必要CI成功・別モデルMust0後に2a609eaaへ正常merge。
+  native84e79278とrunner8e1bfa89を通常runner byte lease下でatomic更新し、
+  hash/DACL/旧receiver終了を確認した。全定期タスクの再起動は0。
+- 原2913/3852のbaselineをhashで保存。実source-repairは通常lease busy後に有限再試行し、
+  canonical作成前にconversation unavailableで拒否。原データ・担当・世代は未変更。
+- 正規APIの返信body SHA、question SHA、owner/thread/requestは一致した。
+  失敗原因はfixed decision原票のhashを、正規化済みidentity hashへ比較していたこと。
+  original_decisionのhashは原票と一致し、identityは質問indexと一致することを確認。
+  本文・秘密・添付を報告/別Sourceへコピーせず、metadataだけ管理chatへ保存した。
+- この不一致を別の合成原票とidentityでRed再現。repairQuestionSourceで既存APIの
+  original_decisionを原票へ、identityを元identity hashへ別々に結び直す。
+  欠落/null/非object/別原票/別identityは拒否。原質問やindexを手で書き換えない。
+- Rust source不変。配布済み最新nativeを隔離DBへ接続する会話全回帰を実行中。
+  scheduler/todo-3853-decision-sourceへ分離し、最新mainへffした。変更はGoと合成テスト、
+  この注記だけ。追補PRの別モデルreviewと最新候補CI後にrunnerだけ更新し、1件復旧を再開する。

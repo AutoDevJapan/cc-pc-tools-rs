@@ -20,6 +20,10 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// PR497's accepted Windows installation is the independent current
+	// baseline, not an arbitrary digest declared by the new candidate.
+	// Evidence: docs/evidence/skills-3080-guard-installed-c397.json.
+	"ea7cbb49d73a37e972c0072a500406ab1f7f0b62f2ea1926b9ef149ad1e36f12": "c397910d3fc560ca61a31c6382494ac43c866852",
 	// PR476 distribution was independently accepted before this revision. Its
 	// exact current hash and build revision were rechecked without changing it.
 	// Evidence: docs/evidence/skills-3080-guard-installed-a5da.json.

@@ -69,6 +69,7 @@ type skillsRequest struct {
 	Review         *skillsResultRequest  `json:"review,omitempty"`
 	Result         *skillsResultRequest  `json:"result,omitempty"`
 	Runtime        *skillsRuntimeRequest `json:"runtime,omitempty"`
+	Consume        *skillsConsumeRequest `json:"consume,omitempty"`
 }
 
 var skillsName = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
@@ -151,7 +152,7 @@ func skillsParseManifest(raw []byte) (skillsManifest, bool) {
 func skillsFlag(args []string) bool {
 	for _, a := range args {
 		a = strings.TrimLeft(a, "-")
-		for _, f := range []string{"qualify-skills3080", "create-skills3080", "receive-skills3080-result", "verify-skills3080-update"} {
+		for _, f := range []string{"qualify-skills3080", "create-skills3080", "create-skills3080-forward", "consume-skills3080", "receive-skills3080-result", "verify-skills3080-update"} {
 			if a == f || strings.HasPrefix(a, f+"=") {
 				return true
 			}
@@ -165,7 +166,7 @@ func runSkillsCLI(args []string, out io.Writer, run func(string, string) object)
 		op := strings.TrimPrefix(strings.TrimPrefix(args[0], "-"), "-")
 		if args[0] == "-"+op || args[0] == "--"+op {
 			switch op {
-			case "qualify-skills3080", "create-skills3080", "receive-skills3080-result", "verify-skills3080-update":
+			case "qualify-skills3080", "create-skills3080", "create-skills3080-forward", "consume-skills3080", "receive-skills3080-result", "verify-skills3080-update":
 				result = run(op, args[1])
 			}
 		}
@@ -189,7 +190,7 @@ func runSkillsCLI(args []string, out io.Writer, run func(string, string) object)
 	return 0
 }
 
-var skillsReason = regexp.MustCompile(`^(arguments|request|scope|writer|manifest|review|source|existing_target|physical_parent|protection|result_binding|result_unavailable|native_context|create_failed|unqualified)$`)
+var skillsReason = regexp.MustCompile(`^(arguments|request|scope|writer|manifest|review|source|existing_target|physical_parent|protection|result_binding|result_unavailable|native_context|creation_evidence|current_identity|current_bytes|create_failed|unqualified)$`)
 
 func skillsScopeBytes(raw []byte) bool {
 	if hashBytes(raw) != skillsScopeSHA {

@@ -184,9 +184,12 @@ targetが既知の新SHA、backupが既知の旧SHAで、並行変更がない�
 実際のコマンド・requestとsource/evidence/EXEのhash、対象別の未達理由は
 担当の私的配布記録と元ToDoに保存する。原保護台帳は未復旧のまま保持する。
 
-## 作成済み出力を後から使うときの未達
+## 作成済み出力を後から使うとき
 
 現在のCreateNew成功結果は、作成時のファイルIDを永続化していない。
 成功件数と現在のhashだけを作成済み出力の読取資格へ転用しない。
-[合成反例と最小修復案](skills-3080-created-resource-provenance.md)を参照する。
+過去14の[合成反例と当時の修復案](skills-3080-created-resource-provenance.md)は保持する。
+今後の新規作成については、[forward発行と同buffer消費](skills-3080-forward-consumption.md)
+を実装する。作成時OS IDや長期の物理連続性を本人の新しい必須条件へ昇格させず、
+原作成の履歴、許可された公開内容、現在の消費handle、未証明の物理連続性を分ける。
 この未達は、過去の正規作成・配布や、既に検証済みの使用成功を無効にするものではない。

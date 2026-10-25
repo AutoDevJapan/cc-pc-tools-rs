@@ -1,0 +1,30 @@
+{
+  "domain": "skills-3080-guard-installed-baseline-v1",
+  "purpose": "exact already accepted software baseline for the normal next ToDo3686 update; grants no data access",
+  "repository": "AutoDevJapan/cc-pc-tools-rs",
+  "repository_id": 1406818713,
+  "public_source_commit": "a5da2f694ab70589fb1dd29ed874d06df56bc579",
+  "source_pr": 476,
+  "source_pr_state": "MERGED",
+  "source_pr_merged_at": "2026-10-24T21:02:31Z",
+  "reviewed_head": "308bb105cca13939082b31108128bad03a9c1845",
+  "prior_ci_all16_completed": true,
+  "prior_ci_failures": 0,
+  "observed_installed_sha256": "ba35332c45b5bb9f35c4465ee209c123be1309ec554ef0976c8240d232c451c1",
+  "original_backup_sha256": "0abb667593f4694ac98dca40a9e386de25fe52363d9b6d32699d840b04ab5b9a",
+  "original_parent_acceptance_receipt_sha256": "a37b53e7b8894b8d3e352ce571a0220718fd9ee4637ceba85c79ce47388726e5",
+  "observed_buildinfo": {
+    "GOOS": "windows",
+    "module": "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard",
+    "vcs_modified": false,
+    "vcs_revision": "a5da2f694ab70589fb1dd29ed874d06df56bc579",
+    "GOARCH": "amd64",
+    "go_version": "go1.27.0"
+  },
+  "previous_owner_group_DACL_equality_verified": true,
+  "SACL_verified": false,
+  "general_access_granted": false,
+  "original_registry_recovered": false,
+  "new_candidate_not_yet_built": true,
+  "executables_modified_by_this_observation": false
+}

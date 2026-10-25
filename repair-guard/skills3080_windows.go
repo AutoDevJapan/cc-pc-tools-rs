@@ -71,7 +71,7 @@ type skillsRequest struct {
 	Runtime        *skillsRuntimeRequest `json:"runtime,omitempty"`
 }
 
-var skillsName = regexp.MustCompile(`^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$`)
+var skillsName = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 var skillsPublicRepository = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]*/[A-Za-z0-9][A-Za-z0-9_.-]*$`)
 
 func skillsDigest(s string) bool { return modelDigestValid(s) && s != strings.Repeat("0", 64) }

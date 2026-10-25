@@ -94,7 +94,8 @@ func skillsStrict(data []byte, v any) bool {
 	if len(data) == 0 || len(data) > 16<<20 || !utf8.Valid(data) {
 		return false
 	}
-	if _, ok := conversationJSON(data); !ok {
+	tree, ok := conversationJSON(data)
+	if !ok || !skillsCanonicalJSON(tree, v) {
 		return false
 	}
 	d := json.NewDecoder(bytes.NewReader(data))

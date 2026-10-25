@@ -31,7 +31,8 @@
 ```
 
 未知field・文章の追記・任意指示・別親・write可能なsandbox・未登録・古いcaller・
-偽admissionは拒否する。scopeは現在consumerの起動前specと実launch prompt、
+偽admissionは拒否する。宣言されたkeyの正確な綴り・大文字小文字もnested fieldまで
+必須とする。scopeは現在consumerの起動前specと実launch prompt、
 実nativeのsession/cwd/開始から実観測時刻までの入力・model/effortへ結ぶ。
 後付けの別依頼や未知の追加user入力を拒否し、返却前にも同じ照合を行う。
 running jobへ架空の終了時刻を保存せず、assistant本文も入力証明には使わない。

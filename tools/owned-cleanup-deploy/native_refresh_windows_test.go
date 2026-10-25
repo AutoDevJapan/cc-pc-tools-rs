@@ -6,10 +6,35 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
 )
+
+func TestOriginalEventSnapshotAllowsItsExistingAppenderAndRejectsAliases(t *testing.T) {
+	l := fixture(t)
+	p := filepath.Join(filepath.Dir(l.Target), "events.jsonl")
+	if e := os.WriteFile(p, []byte("original complete event\n"), 0600); e != nil {
+		t.Fatal(e)
+	}
+	writer, e := openPin(p, syscall.GENERIC_WRITE, 3, 3)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer writer.close()
+	b, e := readProofEvents(p)
+	if e != nil || string(b) != "original complete event\n" {
+		t.Fatalf("original append stream rejected: %v", e)
+	}
+	writer.close()
+	if e = os.Link(p, p+".external"); e != nil {
+		t.Fatal(e)
+	}
+	if _, e = readProofEvents(p); e == nil {
+		t.Fatal("linked event stream accepted")
+	}
+}
 
 func TestSoftwareRenameRetriesOnlyFiniteSharingViolations(t *testing.T) {
 	for _, kind := range []string{"transient-sharing", "persistent-sharing", "collision", "permission"} {

@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"io"
 	"strings"
 	"syscall"
 )
@@ -25,6 +26,31 @@ var nativePrior = installProofPin{
 	"d569fd6f47c51dbf0bb4681fcbf3b63f13451b8e42704d381e01cdf3d4135363",
 	"8e0071e0b27d1de5e84020e5fdd2ae07e83e72edf298e1b16dd2caaf357d322d",
 	"item_18",
+}
+
+func readProofEvents(path string) ([]byte, error) {
+	ps, e := parents(path)
+	if e != nil {
+		return nil, e
+	}
+	defer closePins(ps)
+	// The original actor is still running and owns an append handle. Keep
+	// the same namespace pinned while taking a bounded byte snapshot. Only
+	// the independently pinned complete event line can qualify below; this
+	// snapshot is not authority for current or partially appended events.
+	p, e := openPin(path, syscall.GENERIC_READ, 3, 3)
+	if e != nil {
+		return nil, e
+	}
+	defer p.close()
+	if p.info.FileAttributes&0x10 != 0 {
+		return nil, errCode("INVALID_PROOF")
+	}
+	b, e := io.ReadAll(io.LimitReader(p.f, 64<<20+1))
+	if e != nil || len(b) > 64<<20 {
+		return nil, errCode("PROOF_LIMIT")
+	}
+	return b, nil
 }
 
 // Read the original successful broker command event, not the copied receipt.
@@ -102,7 +128,7 @@ func nativePriorInstall(events []byte, expected installProofPin) error {
 }
 
 func refreshNativeProof(apply bool) ([]map[string]any, error) {
-	b, e := readPinned("D:/CC/Tools/codex-jobs/jobs/20261025-165120-todo-3757/events.jsonl", 64<<20)
+	b, e := readProofEvents("D:/CC/Tools/codex-jobs/jobs/20261025-165120-todo-3757/events.jsonl")
 	if e != nil {
 		return nil, e
 	}

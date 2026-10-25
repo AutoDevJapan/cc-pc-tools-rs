@@ -20,6 +20,10 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// PR524's reviewed and accepted runtime, independently read back before
+	// repairing the creator-reader's handling of an older accepted issuer.
+	// Evidence: docs/evidence/skills-3080-guard-installed-60a1.json.
+	"916bff404f54548814152efcd186dd772b33fd32872fd86fa88bc8d8718df9e3": "60a1b82b62d60cfcd66136aa4527041af643c4d6",
 	// PR520's already accepted installation. The later canonical-key defect
 	// is a separate parser repair, not a retroactive claim about its inputs.
 	// Evidence: docs/evidence/skills-3080-guard-installed-bb1a.json.

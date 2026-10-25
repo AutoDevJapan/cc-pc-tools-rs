@@ -1,0 +1,37 @@
+package main
+
+import (
+ "encoding/json"
+ "fmt"
+ "math"
+ "os"
+)
+
+func main(){
+ checks:=0
+ need:=func(ok bool, label string){checks++;if !ok{panic(label)}}
+ smooth:=func(a,b,x float64)(float64,bool){if !(b>a)||math.IsNaN(x)||math.IsInf(x,0){return 0,false};t:=math.Max(0,math.Min(1,(x-a)/(b-a)));return t*t*(3-2*t),true}
+ for _,r:=range []struct{x,want float64}{{-2,0},{0,0},{.25,.15625},{.5,.5},{.75,.84375},{1,1},{4,1}}{got,ok:=smooth(0,1,r.x);need(ok&&math.Abs(got-r.want)<1e-12,"ascending smoothstep oracle")}
+ _,ok:=smooth(1,0,.5);need(!ok,"reversed GLSL edges rejected")
+ _,ok=smooth(0,0,.5);need(!ok,"zero width rejected")
+ _,ok=smooth(0,1,math.NaN());need(!ok,"NaN rejected")
+ farthest:=0.0
+ for _,x:=range []float64{0,2}{for _,y:=range []float64{0,2}{for _,z:=range []float64{0,2}{d:=math.Sqrt((x-10)*(x-10)+y*y+z*z);farthest=math.Max(farthest,d)}}}
+ need(math.Abs(farthest-math.Sqrt(108))<1e-12,"origin outside bounds maximum")
+ need(farthest>math.Sqrt(12),"scene diagonal alone insufficient outside origin")
+ lag,wobble:=1.4,.7;wireRadius:=farthest+lag+wobble
+ need(wireRadius-lag-wobble>=farthest,"terminal solid radius includes worst lag and modulation")
+ density:=func(n,r float64)float64{return n/(math.Pi*r*r)}
+ need(math.Abs(density(144,5)/density(144,10)-4)<1e-12,"half disk radius fourfold approximate density")
+ iterations:=func(w,h,cell float64)int{return int(math.Ceil(w/cell)*math.Ceil(h/cell))}
+ need(iterations(600,300,10)==1800,"CSS cell count")
+ need((600*2)*(300*2)==4*600*300,"DPR affects buffer area quadratically")
+ need(iterations(1200,600,20)==1800,"DPR-scaled physical units conserve CSS cell count");need(iterations(1200,600,10)==7200,"wrong unscaled physical cell count detects fourfold change")
+ matrix:=[]int{0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5};seen:=map[int]bool{};sum:=0
+ for _,v:=range matrix{need(v>=0&&v<16&&!seen[v],"Bayer threshold permutation");seen[v]=true;sum+=v};need(sum==120,"threshold mean independent oracle")
+ omega:=.6
+ for _,fps:=range []int{30,60,120,144}{angle:=0.0;for i:=0;i<fps;i++{angle+=omega/float64(fps)};need(math.Abs(angle-.6)<1e-12,"time-based angular speed refresh parity")}
+ need(.01*30!=.01*60,"per-frame increment is refresh dependent")
+ result:=map[string]any{"domain":"skills-3080-independent-procedure-math-v1","todo":3080,"job":os.Getenv("CC_JOB_ID"),"checks":checks,"passed":true,"basis":"Independent numeric boundary oracles for the live model planning cases; not a renderer, GLSL compiler, library, server or performance test","upstream_code_executed":false,"GPU_or_UI_execution":false,"source_originals_changed":false,"new_ledger_adoptions":0}
+ b,e:=json.MarshalIndent(result,"","  ");if e!=nil{panic(e)};path:=".ci-work/todo3080/webdesign-next14-independent-math-v2-receipt074042.json";f,e:=os.OpenFile(path,os.O_WRONLY|os.O_CREATE|os.O_EXCL,0600);if e!=nil{panic(e)};_,e=f.Write(append(b,'\n'));if e!=nil{panic(e)};if e=f.Close();e!=nil{panic(e)};fmt.Println(string(b))
+}

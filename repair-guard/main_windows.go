@@ -324,6 +324,8 @@ func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "  -create-skills3080 string\n    \tconsume the same reviewed bytes through exclusive new creation")
 	fmt.Fprintln(output, "  -receive-skills3080-result string\n    \treceive one registered public final response and bounded native model projection")
 	fmt.Fprintln(output, "  -verify-skills3080-update string\n    \tqualify the reviewed merged Windows guard update only; no data access")
+	fmt.Fprintln(output, "  --verify-omb-producer-3255")
+	fmt.Fprintln(output, "    \tcompare four original OMB software components; no source or data access grant")
 }
 
 func verifyCurrentSuccession(taskID int) object {
@@ -345,6 +347,9 @@ func verifyCurrentSuccession(taskID int) object {
 }
 
 func runGuardCLI(args []string, stdout, stderr io.Writer, currentVerifier func(int) object) int {
+	if omb3255FlagPresent(args) {
+		return runOMB3255CLI(args, stdout, verifyOMB3255Software)
+	}
 	if skillsFlag(args) {
 		return runSkillsCLI(args, stdout, skillsOperation)
 	}

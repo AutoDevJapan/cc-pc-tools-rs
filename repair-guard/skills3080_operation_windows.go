@@ -197,7 +197,7 @@ func skillsOperation(op, path string) object {
 	reg.writer = r.Writer
 	result := object{"qualified": true, "domain": "skills-3080-purpose-v1", "todo_id": 3080, "general_access_granted": false, "original_registry_recovered": false, "request_sha256": hashBytes(raw)}
 	if op == "receive-skills3080-result" {
-		if r.Runtime != nil || r.Result == nil || r.Review != nil || r.ManifestCommit != "" || r.ManifestPath != "" || r.ManifestSHA != "" || !skillsResultID(*r.Result) {
+		if r.Consume != nil || r.Runtime != nil || r.Result == nil || r.Review != nil || r.ManifestCommit != "" || r.ManifestPath != "" || r.ManifestSHA != "" || !skillsResultID(*r.Result) {
 			return fail("request")
 		}
 		received, reason := skillsReceive(*r.Result, reg, &fs, false)
@@ -211,9 +211,15 @@ func skillsOperation(op, path string) object {
 		return result
 	}
 	if op == "verify-skills3080-update" {
+		if r.Consume != nil {
+			return fail("request")
+		}
 		return skillsRuntimeQualification(r, reg, &fs)
 	}
-	if r.Runtime != nil || r.Result != nil || r.Review == nil || r.Writer.Task != 3080 || !skillsResultID(*r.Review) {
+	if op == "consume-skills3080" {
+		return skillsConsumeOperation(r, reg, &fs)
+	}
+	if r.Consume != nil || r.Runtime != nil || r.Result != nil || r.Review == nil || r.Writer.Task != 3080 || !skillsResultID(*r.Review) {
 		return fail("request")
 	}
 	manifestRaw, ok := skillsManifestBytes(r)
@@ -240,7 +246,17 @@ func skillsOperation(op, path string) object {
 	result["source_commit"] = r.ManifestCommit
 	result["file_count"] = len(manifest.Files)
 	result["created_files"] = 0
-	if op == "create-skills3080" {
+	var producer skillsProducer
+	if op == "create-skills3080-forward" {
+		producer, ok = skillsProducerObservation(&fs)
+		if !ok || len(manifest.Files) > 128 || skillsForwardInvocation(path, r.Writer.Workspace) == "" {
+			return fail("source")
+		}
+	}
+	if op == "qualify-skills3080" {
+		result["forward_native_invocation"] = skillsForwardInvocation(path, r.Writer.Workspace)
+	}
+	if op == "create-skills3080" || op == "create-skills3080-forward" {
 		// Re-read current ownership at the actual mutation boundary, rather than
 		// consuming a stale preflight receipt. The same manifest bytes stay held.
 		fresh, ok := skillsRegistryRead(ids)
@@ -252,6 +268,13 @@ func skillsOperation(op, path string) object {
 			return object{"qualified": false, "reason": reason, "created_files": count, "partial_operation_possible": true}
 		}
 		result["created_files"] = count
+		if op == "create-skills3080-forward" {
+			evidence, ok := skillsIssueCreated(r, hashBytes(raw), manifest, skillsCentralRoot, &fs, producer)
+			if !ok {
+				return object{"qualified": false, "reason": "creation_evidence", "created_files": count, "partial_operation_possible": true}
+			}
+			result["creation_evidence"] = evidence
+		}
 	}
 	return result
 }

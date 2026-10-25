@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"reflect"
 	"time"
 	"unicode/utf8"
 )
@@ -130,10 +131,11 @@ func omb3255NativeMetadataState(data []byte, refs []omb3255RuntimeRef) ([]omb325
 	var header []byte
 	selected := make(map[string][]byte)
 	selectedFields := make(map[string]map[string]json.RawMessage)
-	wanted := make(map[string]bool)
+	wanted := make(map[string]omb3255RuntimeRef)
 	for _, ref := range refs {
-		wanted[ref.TurnID] = true
+		wanted[ref.TurnID] = ref
 	}
+	repeated := false
 	for len(data) != 0 {
 		end := bytes.IndexByte(data, '\n')
 		if end < 0 || end > 4<<20 {
@@ -174,11 +176,25 @@ func omb3255NativeMetadataState(data []byte, refs []omb3255RuntimeRef) ([]omb325
 		if raw, exists := payload["turn_id"]; exists && json.Unmarshal(raw, &turn) != nil {
 			return fail("native_turn_unavailable")
 		}
-		if !wanted[turn] {
+		ref, wantedTurn := wanted[turn]
+		if !wantedTurn {
 			continue
 		}
 		if header == nil {
 			return fail("native_header_unavailable")
+		}
+		var stamp string
+		if json.Unmarshal(row["timestamp"], &stamp) != nil {
+			return fail("native_context_time_unavailable")
+		}
+		at, err := time.Parse(time.RFC3339Nano, stamp)
+		if err != nil {
+			return fail("native_context_time_unavailable")
+		}
+		if at.Before(time.UnixMilli(ref.StartedAt)) || at.After(time.UnixMilli(ref.FinishedAt)) {
+			// A later resume may retain this turn's ID. Its context is outside
+			// the original execution and must neither fill nor overwrite it.
+			continue
 		}
 		fields := map[string]json.RawMessage{"turn_id": payload["turn_id"]}
 		for _, key := range []string{"model", "effort"} {
@@ -187,8 +203,11 @@ func omb3255NativeMetadataState(data []byte, refs []omb3255RuntimeRef) ([]omb325
 			}
 		}
 		if previous := selectedFields[turn]; previous != nil {
-			if bytes.Equal(previous["model"], fields["model"]) && bytes.Equal(previous["effort"], fields["effort"]) {
-				return fail("native_context_repeated")
+			if omb3255SameNativeValue(previous["model"], fields["model"]) && omb3255SameNativeValue(previous["effort"], fields["effort"]) {
+				// Keep the first actual timestamp and values. Every later matching
+				// context is independently selected inside the same run's window.
+				repeated = true
+				continue
 			}
 			return fail("native_context_conflicting")
 		}
@@ -208,5 +227,16 @@ func omb3255NativeMetadataState(data []byte, refs []omb3255RuntimeRef) ([]omb325
 			state = "observed"
 		}
 	}
+	if state == "observed" && repeated {
+		state = "observed_repeated"
+	}
 	return results, true, state
+}
+
+func omb3255SameNativeValue(a, b json.RawMessage) bool {
+	if len(a) == 0 || len(b) == 0 {
+		return len(a) == len(b)
+	}
+	var left, right any
+	return json.Unmarshal(a, &left) == nil && json.Unmarshal(b, &right) == nil && reflect.DeepEqual(left, right)
 }

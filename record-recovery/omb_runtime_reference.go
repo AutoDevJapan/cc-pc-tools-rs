@@ -54,6 +54,7 @@ func omb3255ExpectedRoots() []omb3255ExpectedRoot {
 		{"99a7ab65-f323-4713-af30-430ac8353e44", 1792918682533, 1792918902897, "783c2e86813c3a0c3b78f28c44f707bb76270e965d84df8f5054ce66a392041d"},
 		{"597bb81b-9c79-4253-bc2c-ebd4a1698432", 1792920365040, 1792920470454, "ea9a10404079d46d3b41f38832b31ffea5729a649604847b056bb0143a01a322"},
 		{"eb52e183-c1b3-459e-b1b1-345b4284e9b7", 1792920764387, 1792920906296, "087770860ea9d7a3cda28d39b32128dc9dbc1e77050cee621a14f7f18608009b"},
+		{"0f97d9c1-fbce-4189-b6ce-60761a9ec6a7", 1792922527431, 1792922742447, "92c4f727c0d6f0e8696ab1297ebb887bcd9ad9b97bd2412076a80c85467b9f9c"},
 	}
 }
 
@@ -305,7 +306,7 @@ func omb3255CollectRefs(ctx context.Context, rpc *omb3255MetadataRPC, revision s
 }
 
 func omb3255CollectRefsFrom(get func(string) (obj, error), call func(string, obj) (obj, error), revision string, commitMS int64, expectedRoots []omb3255ExpectedRoot) ([]omb3255RuntimeRef, string, error) {
-	if get == nil || call == nil || len(expectedRoots) == 0 || len(expectedRoots) > 14 {
+	if get == nil || call == nil || len(expectedRoots) == 0 || len(expectedRoots) > 15 {
 		return nil, "", omb3255RuntimeUnavailable
 	}
 	profile, err := get("/api/bots?messages=0")
@@ -435,7 +436,7 @@ func omb3255BuildIdentity() (string, int64) {
 
 func omb3255RuntimeStage(value string) string {
 	switch value {
-	case "platform_unavailable", "dependency_unavailable", "source_identity_unavailable", "source_guard_unavailable", "binary_guard_unavailable", "binary_open_unavailable", "binary_identity_unavailable", "metadata_reader_unavailable", "metadata_reader_close_unavailable", "normal_binding_unavailable", "source_open_unavailable", "source_read_unavailable", "source_recheck_unavailable", "source_close_unavailable", "native_size_unavailable", "native_encoding_unavailable", "native_line_unavailable", "native_json_unavailable", "native_row_unavailable", "native_payload_unavailable", "native_identity_unavailable", "native_header_unavailable", "native_turn_unavailable", "native_context_repeated", "native_context_conflicting", "context_unavailable", "observed":
+	case "platform_unavailable", "dependency_unavailable", "source_identity_unavailable", "source_guard_unavailable", "binary_guard_unavailable", "binary_open_unavailable", "binary_identity_unavailable", "metadata_reader_unavailable", "metadata_reader_close_unavailable", "normal_binding_unavailable", "source_open_unavailable", "source_read_unavailable", "source_recheck_unavailable", "source_close_unavailable", "native_size_unavailable", "native_encoding_unavailable", "native_line_unavailable", "native_json_unavailable", "native_row_unavailable", "native_payload_unavailable", "native_identity_unavailable", "native_header_unavailable", "native_turn_unavailable", "native_context_repeated", "native_context_conflicting", "native_context_time_unavailable", "context_unavailable", "observed", "observed_repeated":
 		return value
 	}
 	return "unavailable"

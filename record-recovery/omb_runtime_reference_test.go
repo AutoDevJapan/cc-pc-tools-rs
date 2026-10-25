@@ -203,13 +203,13 @@ func TestOMB3255RuntimeNativePathAcceptsOnlyExactLocalAliases(t *testing.T) {
 	}
 }
 
-func TestOMB3255RuntimeAdmitsFourteenFixedReviewsAndRejectsScopeExpansion(t *testing.T) {
+func TestOMB3255RuntimeAdmitsFifteenFixedReviewsAndRejectsScopeExpansion(t *testing.T) {
 	get, call, _ := omb3255ReferenceFixture()
 	job := get["/api/threads/"+omb3255Task+"/job?scope=job&since=1792848636233&full=1"]
 	text := "synthetic final review"
 	var wanted []omb3255ExpectedRoot
 	var nodes, turns []any
-	for i := 0; i < 14; i++ {
+	for i := 0; i < 15; i++ {
 		start := int64(1792848636000 + i*600000)
 		id := fmt.Sprintf("synthetic-root-%d", i)
 		wanted = append(wanted, omb3255ExpectedRoot{id, start, start + 30000, omb3255TextSHA(text)})
@@ -228,7 +228,7 @@ func TestOMB3255RuntimeAdmitsFourteenFixedReviewsAndRejectsScopeExpansion(t *tes
 		return call[method], nil
 	}
 	refs, _, err := omb3255CollectRefsFrom(read, rpc, "", 0, wanted)
-	if err != nil || len(refs) != 14 || gets != 2 || rpcs != 16 {
+	if err != nil || len(refs) != 15 || gets != 2 || rpcs != 17 {
 		t.Fatalf("fixed reviews not admitted: refs=%d get=%d rpc=%d err=%v", len(refs), gets, rpcs, err)
 	}
 	gets, rpcs = 0, 0

@@ -133,7 +133,7 @@ func TestOMB3255NativeMetadataActualFieldsAndBounds(t *testing.T) {
 	for name, data := range map[string]string{
 		"wrong header":          strings.Replace(good, "synthetic-native-thread", "different-thread", 1),
 		"wrong later header":    good + `{"type":"session_meta","payload":{"id":"different-thread"}}` + "\n",
-		"duplicate context":     good + strings.Split(good, "\n")[1] + "\n",
+		"conflicting context":   good + strings.Replace(strings.Split(good, "\n")[1], "gpt-6-luna", "gpt-6.1-sol", 1) + "\n",
 		"malformed tail":        good + "{broken}\n",
 		"duplicate unknown key": good + `{"type":"unused","x":1,"x":2}` + "\n",
 		"missing header":        strings.Split(good, "\n")[1] + "\n",
@@ -213,11 +213,14 @@ func TestOMB3255RuntimeMainArguments(t *testing.T) {
 func TestOMB3255RuntimeDiagnosticsAreBoundedAndDoNotGrantProof(t *testing.T) {
 	ref, data := omb3255ReaderFixture()
 	contextLine := strings.Split(data, "\n")[1] + "\n"
-	for _, tc := range []struct{ name, input, state string }{
-		{"positive", data, "observed"},
-		{"invalid json", data + "{private-invalid}\n", "native_json_unavailable"},
-		{"same context", data + contextLine, "native_context_repeated"},
-		{"changed context", data + strings.Replace(contextLine, "gpt-6-luna", "gpt-6.1-sol", 1), "native_context_conflicting"},
+	for _, tc := range []struct {
+		name, input, state string
+		observed           bool
+	}{
+		{"positive", data, "observed", true},
+		{"invalid json", data + "{private-invalid}\n", "native_json_unavailable", false},
+		{"same context", data + contextLine, "observed_repeated", true},
+		{"changed context", data + strings.Replace(contextLine, "gpt-6-luna", "gpt-6.1-sol", 1), "native_context_conflicting", false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			stream := &omb3255SyntheticRuntimeStream{Reader: strings.NewReader(tc.input)}
@@ -229,7 +232,7 @@ func TestOMB3255RuntimeDiagnosticsAreBoundedAndDoNotGrantProof(t *testing.T) {
 			if result.state != tc.state || stream.closes != 1 || len(result.records) != 1 {
 				t.Fatalf("diagnosis/close mismatch: state=%s close=%d", result.state, stream.closes)
 			}
-			if tc.name != "positive" && result.records[0].Observation != omb3255ContextUnavailable() {
+			if !tc.observed && result.records[0].Observation != omb3255ContextUnavailable() {
 				t.Fatal("diagnostic returned partial proof")
 			}
 			var out bytes.Buffer
@@ -246,5 +249,55 @@ func TestOMB3255RuntimeDiagnosticsAreBoundedAndDoNotGrantProof(t *testing.T) {
 	var decoded map[string]any
 	if json.Unmarshal(out.Bytes(), &decoded) != nil || decoded["acquisition_state"] != "unavailable" || strings.Contains(out.String(), "private") {
 		t.Fatal("unknown diagnostic text escaped")
+	}
+}
+
+func TestOMB3255NativeMetadataFoldsOnlyConsistentContextsInOriginalWindow(t *testing.T) {
+	ref, data := omb3255ReaderFixture()
+	line := strings.Split(data, "\n")[1] + "\n"
+	for _, second := range []string{
+		line,
+		strings.Replace(line, "13:31:00Z", "13:32:00Z", 1),
+		strings.Replace(line, "2026-10-24T13:31:00Z", "2026-10-24T13:30:36.233Z", 1),
+		strings.Replace(line, "2026-10-24T13:31:00Z", "2026-10-24T13:35:28.582Z", 1),
+		strings.Replace(line, "gpt-6-luna", `gpt-\u0036-luna`, 1),
+	} {
+		obs, ok, state := omb3255NativeMetadataState([]byte(data+second), []omb3255RuntimeRef{ref})
+		if !ok || state != "observed_repeated" || len(obs) != 1 || obs[0].Model == nil || *obs[0].Model != "gpt-6-luna" || obs[0].Effort == nil || *obs[0].Effort != "low" || obs[0].ContextAt == nil || obs[0].ContextAt.Format(time.RFC3339) != "2026-10-24T13:31:00Z" {
+			t.Fatalf("same actual values were discarded: valid=%v state=%s", ok, state)
+		}
+	}
+	for name, second := range map[string]string{
+		"different model":       strings.Replace(line, "gpt-6-luna", "gpt-6.1-sol", 1),
+		"different effort":      strings.Replace(line, `"effort":"low"`, `"effort":"max"`, 1),
+		"effort removed":        strings.Replace(line, `,"effort":"low"`, "", 1),
+		"null instead of value": strings.Replace(line, `"effort":"low"`, `"effort":null`, 1),
+		"bad timestamp":         strings.Replace(line, "2026-10-24T13:31:00Z", "private-invalid-time", 1),
+	} {
+		t.Run(name, func(t *testing.T) {
+			obs, ok, _ := omb3255NativeMetadataState([]byte(data+second), []omb3255RuntimeRef{ref})
+			if ok || obs != nil {
+				t.Fatal("conflicting or out-of-window context supplied proof")
+			}
+		})
+	}
+	for _, stamp := range []string{"2026-10-24T13:30:36.232Z", "2026-10-24T13:35:28.583Z"} {
+		outside := strings.Replace(line, "2026-10-24T13:31:00Z", stamp, 1)
+		outside = strings.Replace(outside, "gpt-6-luna", "gpt-6.1-sol", 1)
+		outside = strings.Replace(outside, `"effort":"low"`, `"effort":"max"`, 1)
+		obs, ok, _ := omb3255NativeMetadataState([]byte(data+outside), []omb3255RuntimeRef{ref})
+		if !ok || obs[0].Model == nil || *obs[0].Model != "gpt-6-luna" || obs[0].Effort == nil || *obs[0].Effort != "low" {
+			t.Fatal("outside execution overwrote the actual original observation")
+		}
+		onlyOutside := strings.Split(data, "\n")[0] + "\n" + outside
+		obs, ok, _ = omb3255NativeMetadataState([]byte(onlyOutside), []omb3255RuntimeRef{ref})
+		if !ok || obs[0] != omb3255ContextUnavailable() {
+			t.Fatal("outside-only context manufactured an original observation")
+		}
+	}
+	missing := strings.Replace(data, `,"model":"gpt-6-luna"`, "", 1)
+	obs, ok, _ := omb3255NativeMetadataState([]byte(missing+strings.Split(missing, "\n")[1]+"\n"), []omb3255RuntimeRef{ref})
+	if !ok || obs[0].Model != nil || obs[0].ModelState != "missing" || obs[0].Effort == nil || *obs[0].Effort != "low" {
+		t.Fatal("consistent missing model became a requested model")
 	}
 }

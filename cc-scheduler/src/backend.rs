@@ -523,7 +523,7 @@ impl Backend for RealBackend {
         let producer = self.tools.join("record-recovery/record-recovery.exe");
         self.guard_workspace_path(producer.to_str().ok_or(Error("InputRejected"))?)?;
         let mut command = invocation(&[producer.to_str().ok_or(Error("InputRejected"))?, "review-registration-metadata"], Some(50));
-        command.cwd = Some(PathBuf::from("D:/CC/Work/unattended-operations-20261013-wt/todo-3255-godd"));
+        command.cwd = Some("D:/CC/Work/unattended-operations-20261013-wt/todo-3255-godd".into());
         let result = self.runner.run(&command)?;
         if result.code != 0 || result.stdout.len() > 8192 { return Err(Error("RegistrationUnavailable")); }
         serde_json::from_str(&result.stdout).map_err(|_| Error("RegistrationUnavailable"))

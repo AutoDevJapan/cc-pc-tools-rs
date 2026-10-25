@@ -397,6 +397,9 @@ func skillsReviewAuthorBound(parent skillsTask, expected string, child, origin o
 
 func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, review bool) (skillsReceived, string) {
 	var out skillsReceived
+	if r.Task == 3686 && !review {
+		return skillsReceiveOriginalRepair(r, reg, s)
+	}
 	if r.Task < 1 || !skillsDigest(r.SpecSHA) || (r.FinalSHA != "" && !skillsDigest(r.FinalSHA)) {
 		return out, "result_binding"
 	}
@@ -492,6 +495,9 @@ func skillsNativeJob(s *skillsFS, job object) ([]object, bool) {
 	return skillsNativeProjection(io.LimitReader(stream, (256<<20)+1), id, str(job["cwd"]), start, end)
 }
 func skillsNativeProjection(input io.Reader, id, cwd string, start, end time.Time) ([]object, bool) {
+	return skillsNativeProjectionBound(input, id, cwd, start, end, nil)
+}
+func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end time.Time, proof *skillsNativeResultProof) ([]object, bool) {
 	if end.Before(start) {
 		return nil, false
 	}
@@ -509,7 +515,7 @@ func skillsNativeProjection(input io.Reader, id, cwd string, start, end time.Tim
 		if json.Unmarshal(raw, &envelope) != nil {
 			return nil, false
 		}
-		if envelope.Type != "session_meta" && envelope.Type != "turn_context" {
+		if envelope.Type != "session_meta" && envelope.Type != "turn_context" && (proof == nil || envelope.Type != "response_item") {
 			continue
 		}
 		m, ok := conversationJSON(raw)
@@ -529,6 +535,12 @@ func skillsNativeProjection(input io.Reader, id, cwd string, start, end time.Tim
 			return nil, false
 		}
 		if at.Before(start) || at.After(end) {
+			continue
+		}
+		if envelope.Type == "response_item" {
+			if !session || !proof.observe(raw, at) {
+				return nil, false
+			}
 			continue
 		}
 		if value, exists := p["cwd"]; exists && (!same(str(value), cwd) || str(value) == "") {
@@ -562,7 +574,7 @@ func skillsNativeProjection(input io.Reader, id, cwd string, start, end time.Tim
 			return nil, false
 		}
 	}
-	return out, scanner.Err() == nil && session && len(out) > 0
+	return out, scanner.Err() == nil && session && len(out) > 0 && (proof == nil || proof.bound())
 }
 func skillsResultID(r skillsResultRequest) bool {
 	m := currentSubworkJobName.FindStringSubmatch(r.Job)

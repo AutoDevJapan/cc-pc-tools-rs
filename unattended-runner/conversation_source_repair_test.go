@@ -827,6 +827,10 @@ func TestConversationSourceRepairNativeSecondReplySurvivesPartialNoteAndRetry(t 
 	if code, _ := intakeLinkCLI(t, f, args); code != 0 {
 		t.Fatal("first preserving delivery")
 	}
+	firstRow, _ := f.r.todo(42)
+	if !strings.HasSuffix(firstRow.Note, "\n") {
+		t.Fatal("fixture must exercise the preserved trailing newline")
+	}
 	second := f.reply(t, 9, "a later synthetic direction")
 	server(t, f.r, func(w http.ResponseWriter, req *http.Request) {
 		for _, reply := range f.replies {

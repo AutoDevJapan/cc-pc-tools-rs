@@ -287,7 +287,9 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	}
 	if !hasNoteMarker(row.Note, marker) {
 		instructions := r.conversationReplyInstructions(q, reply, req, receipt, marker)
-		note := strings.TrimRight(row.Note, "\r\n") + "\n\n" + instructions
+		// A prior preserving delivery binds every byte of this prefix, including
+		// its trailing newline. Append without rewriting that saved evidence.
+		note := row.Note + "\n\n" + instructions
 		if len(note) > 1<<20 {
 			return errors.New("conversation delivery note limit exceeded")
 		}

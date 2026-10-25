@@ -83,3 +83,9 @@
   reply blockだけを結合する修正を追加。後の正常回答で同じwaitが消費されても、
   先の投稿は配送履歴として保ち、先の回答版の実反映やsession読取を推定しない。
   この追加差分のnative確認・別モデル差分review・最新CI成功後に配布する。
+
+- 3873の固定55733837レビューはMust1（GoのTrimRightが旧note末尾改行を消し、
+  Rustのprefix SHA照合を止める）を返した。元noteの全bytesを保って追記するよう
+  Goだけを修正し、native受入のfixtureが末尾改行を持つことも明示確認する。
+  Rust runtime sourceは55733837から変わらないため、3872の新実行物を受領し、
+  このGo差分の関連nativeテストだけをやり直す。新しいCargo releaseは重ねない。

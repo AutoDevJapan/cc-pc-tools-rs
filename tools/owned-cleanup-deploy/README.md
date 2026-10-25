@@ -90,3 +90,9 @@ bytes・公開名の実体に分けて記録し、元失敗でどの条件だっ
 volume/file IDを照合し、CreationTimeの異なるcacheをidentityに含めない。
 元pinは閉じずに同じfile IDを保持するため、別物への差替えやID再利用は受理しない。
 これは配布補助のstage/backupの照合であり、safe-deleteの原birth受領は変更しない。
+最後に元のAPI失敗の原因も再現できた。Win32へ渡すFileNameの終端NULを取り除き、
+byte countだけに依存していたため、後続memoryの内容によって別の名前になる。
+旧bufferの後ろに非0の64byteを置くRedでは、実際に指定と異なる名前へのrenameを
+検出した。UTF-16終端NULを明示してFileNameLengthのbyte countからだけ除外する
+修正でGreen。公式の[FILE_RENAME_INFO定義](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_rename_info)
+のFileName説明と照合した。後続memoryの内容に依存する処理を残していない。

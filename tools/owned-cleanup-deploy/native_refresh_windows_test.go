@@ -3,14 +3,58 @@
 package main
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"syscall"
 	"testing"
+	"unsafe"
 )
+
+func TestNativeRenameBufferHasExplicitUTF16TerminatorOutsideNameLength(t *testing.T) {
+	b, e := nativeRenameBuffer(`C:\fixture\日本語.exe`)
+	if e != nil {
+		t.Fatal(e)
+	}
+	n := int(binary.LittleEndian.Uint32(b[16:20]))
+	if n == 0 || len(b) != 20+n+2 || b[len(b)-2] != 0 || b[len(b)-1] != 0 {
+		t.Fatal("Win32 FileName lacks an explicit terminator outside its byte count")
+	}
+	if binary.LittleEndian.Uint64(b[:8]) != 0 || binary.LittleEndian.Uint64(b[8:16]) != 0 {
+		t.Fatal("replace/flags/root must be zero")
+	}
+}
+
+func TestNativeRenameDoesNotConsumeTrailingNonzeroMemory(t *testing.T) {
+	l := fixture(t)
+	p, e := prepare(l)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer p.close()
+	dest := l.Target + ".renamed"
+	b, e := nativeRenameBuffer(dest)
+	if e != nil {
+		t.Fatal(e)
+	}
+	n := len(b)
+	for range 64 {
+		b = append(b, 0x41)
+	}
+	ok, _, e := kernel.NewProc("SetFileInformationByHandle").Call(p.old.f.Fd(), 3, uintptr(unsafe.Pointer(&b[0])), uintptr(n))
+	runtime.KeepAlive(b)
+	if ok == 0 {
+		t.Fatalf("Win32 rename consumed bytes after FileName: %v", e)
+	}
+	if !p.old.namedAs(dest) || !missing(l.Target) {
+		t.Fatal("native renamed object appeared outside the exact destination name")
+	}
+	content(t, dest, "old")
+}
 
 func TestOriginalEventSnapshotAllowsItsExistingAppenderAndRejectsAliases(t *testing.T) {
 	l := fixture(t)

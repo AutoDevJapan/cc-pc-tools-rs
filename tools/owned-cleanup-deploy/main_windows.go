@@ -310,19 +310,9 @@ func cleanupReference(b []byte) error {
 // Rename the actual pinned object with ReplaceIfExists=false. A competing
 // destination is retained; path-based replacement never overwrites its bytes.
 func renameNoReplace(p *pin, destination string) error {
-	if unsafe.Sizeof(uintptr(0)) != 8 {
-		return errCode("UNSUPPORTED_PLATFORM")
-	}
-	words, e := syscall.UTF16FromString(filepath.Clean(destination))
+	buf, e := nativeRenameBuffer(destination)
 	if e != nil {
 		return e
-	}
-	words = words[:len(words)-1]
-	buf := make([]byte, 20+len(words)*2)
-	*(*uint32)(unsafe.Pointer(&buf[16])) = uint32(len(words) * 2)
-	for i, w := range words {
-		buf[20+i*2] = byte(w)
-		buf[21+i*2] = byte(w >> 8)
 	}
 	e = retrySharing(func() error {
 		ok, _, callErr := kernel.NewProc("SetFileInformationByHandle").Call(p.f.Fd(), 3, uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
@@ -336,6 +326,25 @@ func renameNoReplace(p *pin, destination string) error {
 		return fmt.Errorf("RENAME_COLLISION_OR_BUSY:%w", e)
 	}
 	return nil
+}
+
+func nativeRenameBuffer(destination string) ([]byte, error) {
+	if unsafe.Sizeof(uintptr(0)) != 8 {
+		return nil, errCode("UNSUPPORTED_PLATFORM")
+	}
+	words, e := syscall.UTF16FromString(filepath.Clean(destination))
+	if e != nil {
+		return nil, e
+	}
+	// FileNameLength excludes NUL, while the Win32 DOS-path conversion also
+	// consumes a terminated wide string. Never rely on zeroed heap padding.
+	buf := make([]byte, 20+len(words)*2)
+	*(*uint32)(unsafe.Pointer(&buf[16])) = uint32((len(words) - 1) * 2)
+	for i, w := range words {
+		buf[20+i*2] = byte(w)
+		buf[21+i*2] = byte(w >> 8)
+	}
+	return buf, nil
 }
 
 // Windows may briefly hold a reader while scanning a just-written file. Keep

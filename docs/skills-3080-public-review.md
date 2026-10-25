@@ -34,9 +34,32 @@ JSON後の文章、重複keyは拒否する。実データとGitHubの証明が�
 }
 ```
 
-filesはmanifestを必ず含み、`.gitattributes`または既存のSkills3080文書・公開証拠の
-名前空間に限定する。各fileの相対path、Git blob ID、SHA256、byte数を宣言する。
+filesはmanifestを必ず含み、`.gitattributes`、既存のSkills3080文書・公開証拠、
+または元3080の検査器`tools/skills-3080-catalog`直下のGo source/testと`go.mod`に
+限定する。検査器の子directory、他のtool、実行物、設定秘密は含めない。
+各fileの相対path、Git blob ID、SHA256、byte数を宣言する。
 最大128file、各16MiB、合計32MiB。一般の公開repo・他製品・私的scopeには流用しない。
+
+変更前後の比較が必要なら、同じ起動前JSONに任意の`comparison`を1つ含める。
+`instructions`は`skillsPublicReviewComparisonInstructions`と完全一致させる。
+
+```json
+"comparison": {
+  "commit": "固定baseの40桁commit",
+  "files": [
+    {"path":"head filesと同じ選択path","blob":"baseのblob ID","sha256":"baseのSHA256","bytes":123},
+    {"path":"head filesにある新しい選択path","absent":true}
+  ]
+}
+```
+
+base filesはheadで選択した全pathを、同じ綴りで1回ずつ宣言する。新規pathだけを
+`absent:true`とし、その場合blob/SHA/bytesは指定しない。公開GitHubの比較metadataで
+baseがheadの正規祖先であること、両固定treeのregular blobと正確なbytes、又は
+baseでの不在を照合する。baseの宣言が別pathの読取範囲を増やすことはない。
+合計32MiBにはbaseも含める。変更と必要な支持を読む範囲を分けて報告し、変更が
+ない部分を全読したとはしない。受領条件は未mergeでも同じで、comparison結果を
+全出力のCreateNew用内容受入へ転用することは実装でも拒否する。
 
 照合は次の順で行う。
 
@@ -51,6 +74,21 @@ filesはmanifestを必ず含み、`.gitattributes`または既存のSkills3080�
    合うuser入力がないassistant本文は射影へ取り込まない。その後だけ原応答を
    読み、同bufferのfinal digest・job metadataと一致させる。
 5. 返却直前にも実consumerを再確認する。返すのはexact原応答と限定metadataだけ。
+
+型付き仕様の実入力は`prompt.md`だけとはしない。正規schedulerの登録promptと
+実specの境界、実subworkの番号/kindから作る固定文、実sandboxの固定guidanceを
+照合する。その上で、正常ランナーが保存する`execution-prompt.md`が、同じpromptと
+正規の運用方針・固定site文だけからできていることを確認し、nativeへ完全一致させる。
+任意の先行user・仕様後の自由文・追加画像・別の後続userを拒否する。
+
+起動時のAGENTS/環境の構造化メッセージは作業のuser入力と分ける。元の登録authorの
+同じrepository/cwdに属する正規sessionの初期指示digestと、callerの厳密な環境形式を
+照合し、最初の1件だけを認める。本文を返したり、元のAGENTSファイルの分類を解除する
+ものではない。sessionの初期metadataは再開authorより前のことがあるが、作業の入力と
+finalの開始終了窓を広げる証拠には使わない。運用方針のsnapshotを現在の正本へ
+照合できない場合は保留し、元記録を現在版へ書き換えない。
+caller自身の初期指示は、作業入力の射影より前に独立した必須条件として照合する。
+bootstrapが欠落した記録を、完全一致する作業入力だけで代用することはできない。
 
 公開済みの固定入力は未mergeでもこのread-only経路で確認できる。`main`との
 compareを読取条件にしない。CreateNewは従来どおりmain merge、個別notice、内容review、
@@ -86,3 +124,25 @@ final fieldのbytesが含まれることと、原文をモデルへ表示・意�
 `skills3080_history_windows_test.go`。未mergeの正例、private/別source/author、
 後付けscope、未登録/別consumer、欠落/改変/aliasと時刻窓・phaseの負例を確認する。
 原台帳・一般guard・未知9・旧14/28hold・647拒否・既存成功を変更しない。
+
+## 同じ公開修復担当の履歴継続
+
+原003920の310Bも、原spec4323・prompt081ed6b9・実job/launch/thread/cwd/元の
+開始終了時刻・原final SHA2a8a0768を保持する固定移行とする。旧211205とは別で、
+両者を起動前からtypedだったとはしない。現在の023556も文章仕様のまま保持する。
+
+**今後の起動前**に元3686の仕様全体をJSONへする場合は、public reviewと同じ
+repo/commit/author/author_spec_path/manifest/filesの構造を使い、domainだけを
+`skills-3080-public-repair-v1`、instructionsを`skillsPublicRepairInstructions`の
+完全一致にする。元3080のauthorとmanifestをanchorにし、入力は同じ公開namespaceと
+`repair-guard`直下のGo source/test・go.modだけ。comparisonは使わない。
+任意の自由文や私的資料を足すことはできない。
+
+受領requestのresultには元job/spec SHA/final SHAに加えて、原の保存済みJSON仕様を
+持つ`spec_path`（正規の`D:/CC/Tools/todo/specs/3686-32桁ID.md`）を指定する。
+このpathは新しい一般読取先ではなく、実起動promptと同一のtyped仕様を検証する
+ための限定metadataである。現在のToDo specが進んでいても、同じ登録履歴内の
+author・実launch・PUBLIC固定入力・native入力/期待final/厳密時間窓を先に照合し、
+その後だけ元結果を開く。異なる登録済みjobでも、正しいtyped起動ならjob別の
+固定表を追加しない。未登録・未来世代・private/後付けscopeは拒否する。
+既存の文章仕様をこのJSONへ事後置換して資格を作ることはできない。

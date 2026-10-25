@@ -324,6 +324,7 @@ func printGuardUsage(output io.Writer) {
 	fmt.Fprintln(output, "  -create-skills3080 string\n    \tconsume the same reviewed bytes through exclusive new creation")
 	fmt.Fprintln(output, "  -create-skills3080-forward string\n    \tCreateNew and issue current-handle evidence for one canonical native invocation")
 	fmt.Fprintln(output, "  -consume-skills3080 string\n    \treturn exact public bytes from pinned current handles after native creation verification")
+	fmt.Fprintln(output, "  --consume-skills3080-admitted\n    \tconsume only the actual registered readonly caller's immutable public Skill scope")
 	fmt.Fprintln(output, "  -receive-skills3080-result string\n    \treceive one registered public final response and bounded native model projection")
 	fmt.Fprintln(output, "  -verify-skills3080-update string\n    \tqualify the reviewed merged Windows guard update only; no data access")
 	fmt.Fprintln(output, "  --verify-omb-producer-3255")

@@ -54,3 +54,23 @@ native IDと時刻の入力整合を、元assignment/応答との同一性や閲
 実データ受入は未完。この内部関数だけでは歴史的4559の取得を完了しない。
 PR486の固定f727/正式13success、元PR448のf340/正式6success/読了M0、
 実四件比較0・固定二件snapshot0と、原仕様・本人回答・未知依存を保持する。
+
+## 元4559との入力整合を確かめる接続処理
+
+将来のproducerが渡す対応情報について、元4559のassignment・bot・task・原応答ID、
+開始終了時刻・実行回数・completed/doneが保存済みの値と完全一致した場合だけ、
+渡されたstream取得関数を一度呼ぶ。native thread/turnの値は欠落・同値を拒否する。
+stream自身が返す対応情報を読取前後に照合し、取得・読取・再照合・closeのエラー、
+または情報の変化があれば途中の値を返さない。取得済みstreamは終了までに閉じる。
+
+この処理もファイルやネットワークを開かず、CLI入口を持たない。対応情報の一致は
+呼出元の申告同士の整合だけで、資料の真正性・原本の不変性・同時差替えへの原子的な
+保証ではない。source_qualified、execution_verified、access_grantedはfalseを維持する。
+正規producerによる資料の資格確認と原実行/nativeの正式な対応の取得は別途必要である。
+
+- Given: 元実行の固定情報とstream側の対応情報が一致し、有効な対象contextがある。
+  Then: そのcontextの値だけを返し、streamを一度だけ閉じる。資格や実行証明は返さない。
+- Given: 原応答・時刻・回数などが異なる、またはnative識別子が無い。
+  Then: stream取得関数を呼ばずunavailableとする。
+- Given: 読取前後に対応情報が変わる、照合/closeが失敗する、または読取が失敗する。
+  Then: 取得済みstreamを閉じ、部分的に見えた観測値を返さない。

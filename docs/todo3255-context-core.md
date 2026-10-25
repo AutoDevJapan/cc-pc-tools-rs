@@ -74,3 +74,27 @@ stream自身が返す対応情報を読取前後に照合し、取得・読取�
   Then: stream取得関数を呼ばずunavailableとする。
 - Given: 読取前後に対応情報が変わる、照合/closeが失敗する、または読取が失敗する。
   Then: 取得済みstreamを閉じ、部分的に見えた観測値を返さない。
+
+## OMBの通信記録からnative識別子の候補を得る処理
+
+公開producerの `server/drivers/native.ts` は通信を `at/dir/source/msg` で包む。
+`codex.ts` の thread/start・thread/resume、turn/start に対する応答には、返された
+native thread/turn IDがある。この包みをCodex本来のcontext JSONLとして扱わない。
+
+新しい内部関数はio.Readerと開始終了時刻だけを受け、範囲内の同じRPC IDで結ばれた
+thread応答→turn要求と応答→同じthread/turnの正常終了を順番に確認する。
+返された識別子が無いときに、要求のthread IDやsession.startedで補わない。
+RPC失敗、別のturn、重複・複数の実行、途中の読取エラー、破損・境界超過では
+途中で得た識別子も捨てる。入力1MiB、行64KiB、深さ64、重複key拒否を維持する。
+
+戻り値は非公開の識別子候補だけで、model・effort・要求本文は取り出さない。
+ファイル・通信・認証を開かず、CLIやJSON出力を追加しない。識別子候補を元4559の
+対応情報へ自動的に付けたり、contextを合成したりしない。原記録の資格、元assignment・
+応答との対応、配布版の一致は別途必要で、これだけで正式な対応を証明しない。
+
+- Given: 対象時間内で要求IDと各応答が一致し、同じnative thread/turnが正常終了する。
+  Then: 応答に実際にある識別子候補だけを返す。要求model/effortは返さない。
+- Given: 要求だけ、応答ID違い、返却thread欠落、別thread/turnの終了、複数の実行。
+  Then: 候補を返さず、要求値から補わない。
+- Given: 正常な組の後に読取失敗・破損・重複key・上限超過がある。
+  Then: 先に見えた候補も返さない。

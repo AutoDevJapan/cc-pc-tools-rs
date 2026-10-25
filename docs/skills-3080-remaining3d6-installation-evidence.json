@@ -1,0 +1,612 @@
+{
+  "todo": 3080,
+  "job": "20261025-074042-todo-3080",
+  "observed_at": "2026-10-25T06:56:30.6037051+00:00",
+  "overall_complete": false,
+  "new_targets_created": 6,
+  "files_readback_verified": 36,
+  "old_target_writes": 0,
+  "unknown_existing_body_reads": 0,
+  "general_access_granted": false,
+  "original_registry_recovered": false,
+  "operation_manifest": "skills-3080-operations/create-remaining3d6-074042.json",
+  "operation_manifest_sha256": "12d0b617a97c9a11eadc815628c55982442e828f4817fdf8a09e604b4ce9dc34",
+  "operation_manifest_main_commit": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+  "installed_manifest": "skills-3080-installed-remaining3d6-manifest.json",
+  "installed_manifest_sha256": "fbbcadff61a1642954d7a2de44fc5c7dc70cc2e7d208767ae83e55dd8f73b84c",
+  "designs": "skills-3080-remaining3d6-designs.json",
+  "designs_sha256": "d2a44bbe5dbcdbf61c4b3d897c1dd9e8efdab6d715a2178b8bb54e2c8072f5d6",
+  "files": [
+    {
+      "bytes": 1568,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "ee49fbe2adf5e702f36b54ccf9ef752f2cf92332ff1dd1fdd4a531265c860716",
+      "target": "3d-falling-leaves/SKILL.md"
+    },
+    {
+      "bytes": 1541,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "d011960b8e6805996de19d0d38faf58233cc004fa960a28ed0736e8ec3a4db70",
+      "target": "3d-falling-leaves/references/guide.md"
+    },
+    {
+      "bytes": 5214,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "63adf8b5ec0d96d397f56ff09facd9f68248f6ed881a2e05427f1c4e3ccf1d11",
+      "target": "3d-falling-leaves/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-falling-leaves/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1939,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0ac215201214d1fe1031e6dd04dc69a71ebf754f769f9d7ffcf037a9cc8eb4d6",
+      "target": "3d-falling-leaves/references/source.json"
+    },
+    {
+      "bytes": 1692,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "9b99c878a6d6ff57c51d34b7adf878bf12b86f71c475a99e5c539431130fe938",
+      "target": "3d-falling-leaves/references/sources.md"
+    },
+    {
+      "bytes": 1523,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "1e22d5ef696f295501974f4cdebdf170a7d17295a6611d60491b7d953e6bc1f6",
+      "target": "3d-orbit-inspect-demo/SKILL.md"
+    },
+    {
+      "bytes": 1067,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "da005bb0a5e330b0c321ca55cf3f0ad4fdc6e9193f499a30a00833d9666c979f",
+      "target": "3d-orbit-inspect-demo/references/guide.md"
+    },
+    {
+      "bytes": 9908,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "70011ca8c3c67185088f3171f94fb55dbbcd6a79e46fe4e0fc90b2d0b7317240",
+      "target": "3d-orbit-inspect-demo/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-orbit-inspect-demo/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1781,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "640dc6b9dd63b01c62c425e77519fd8d6b9be5a64eb82481e5b30c0c3ca20434",
+      "target": "3d-orbit-inspect-demo/references/source.json"
+    },
+    {
+      "bytes": 1439,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "c115acdac235a3d57630dd903824853defe55e464126c961322add012cb04fc8",
+      "target": "3d-orbit-inspect-demo/references/sources.md"
+    },
+    {
+      "bytes": 1428,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "974f2f4b24aca3d79926669eb63d00442fba28290f648b6f471f9786679f7b37",
+      "target": "3d-sky-rays/SKILL.md"
+    },
+    {
+      "bytes": 1000,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "4d76b46ae77780185c94847e8d4108dd431d8eb6ce1d45bac2058958cbb70abc",
+      "target": "3d-sky-rays/references/guide.md"
+    },
+    {
+      "bytes": 4918,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "1b70c0cf1cdb44769f56f429016904e39cef5f85d3832412dd3eb8dbfda94c97",
+      "target": "3d-sky-rays/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-sky-rays/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1787,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0b9fba79241ca3909d424f7823bad7d360a0d9cd7942699076e0c0dcd42dab8e",
+      "target": "3d-sky-rays/references/source.json"
+    },
+    {
+      "bytes": 1445,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "ab8a430debc1ae086faba60fddb9a3bf7238d9572c0beb50e04f2ea8ded5ed63",
+      "target": "3d-sky-rays/references/sources.md"
+    },
+    {
+      "bytes": 1465,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "36591a8f48e3305d31bb2fc2494beb8f6fe471ef9ce8e1263287b5a642cfb4e7",
+      "target": "3d-ultra-realistic-water/SKILL.md"
+    },
+    {
+      "bytes": 1429,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "2d0684f3a8b7c4bad62afc646a53d3951a9f5edc01069bcfb3758a03e9778c29",
+      "target": "3d-ultra-realistic-water/references/guide.md"
+    },
+    {
+      "bytes": 10833,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "54e31ca705a4fbac10a93f1a4b9297be35e8eec798bb64eedb6f38ef65246a30",
+      "target": "3d-ultra-realistic-water/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-ultra-realistic-water/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1817,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "a75ca3001c5c5e753ec27ebed6249f517d01ec222781aa683204730111c6aa17",
+      "target": "3d-ultra-realistic-water/references/source.json"
+    },
+    {
+      "bytes": 1474,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "e649c3d0e6d4d2e20df4e0d3e7e139286871cae7ccd628cffea7a7c2fec025bf",
+      "target": "3d-ultra-realistic-water/references/sources.md"
+    },
+    {
+      "bytes": 1500,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2ab205f408c994f5fd4226fea6035562c6ff854715bdeaa10cd4e02713947b1",
+      "target": "3d-underwater-god-rays/SKILL.md"
+    },
+    {
+      "bytes": 1335,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "ef1f589cd3192c46c30a7beda2cfa9815ceafed9abf2f45982f7286ff8e57d55",
+      "target": "3d-underwater-god-rays/references/guide.md"
+    },
+    {
+      "bytes": 9994,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "1ddd8ac574ddf6545a16008d7531f95cd4c707e0ffa977e987715b3b456c4f21",
+      "target": "3d-underwater-god-rays/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-underwater-god-rays/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1824,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "945f2cc1c2325c099ff1ec484fba80c9bc55c50cdae9661027b776ddc4d9887b",
+      "target": "3d-underwater-god-rays/references/source.json"
+    },
+    {
+      "bytes": 1482,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "ca9a86933c48a0c2b92f97842cc30ce5d7ff54792d5963bfbf4d2404590945aa",
+      "target": "3d-underwater-god-rays/references/sources.md"
+    },
+    {
+      "bytes": 1454,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0f581b374683edc71fa3a3afe1bfeed1446181bcf69d65c9ab2e453807b7bf5b",
+      "target": "3d-wood-lighting-scorecard/SKILL.md"
+    },
+    {
+      "bytes": 1347,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "36663e316490d40a064e9074b617cad7b3bb5428fcb6e64b5496b0c2de0f7621",
+      "target": "3d-wood-lighting-scorecard/references/guide.md"
+    },
+    {
+      "bytes": 11318,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "9c2594010aab8cf2bde1ab862fa336187e8220fd1b9c27a005a4ef83fd2d8809",
+      "target": "3d-wood-lighting-scorecard/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-wood-lighting-scorecard/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1822,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "3994129a2d43e3ca53d9b3dc0052b13b5cc533b8e893569956eb2ae68b182050",
+      "target": "3d-wood-lighting-scorecard/references/source.json"
+    },
+    {
+      "bytes": 1479,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "964fda32f25acc5023d496639ba3a4771278a30753a7232c3cb400d932823f44",
+      "target": "3d-wood-lighting-scorecard/references/sources.md"
+    }
+  ],
+  "creation_result": {
+    "created_files": 36,
+    "domain": "skills-3080-purpose-v1",
+    "file_count": 36,
+    "general_access_granted": false,
+    "manifest_sha256": "12d0b617a97c9a11eadc815628c55982442e828f4817fdf8a09e604b4ce9dc34",
+    "operation": "CreateNew",
+    "original_registry_recovered": false,
+    "qualified": true,
+    "request_sha256": "6f569c8f3ce8cc7b5015a7bcaebf5e7148c9866271fac3a995905ec79186e6c8",
+    "source_commit": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+    "todo_id": 3080
+  },
+  "creation_wrapper": "skills-3080-remaining3d6-create-receipt.json",
+  "creation_wrapper_sha256": "7715f1af242ed065fc47d3df31d5ca23b3f3010f05cd538740d47f83521970fd",
+  "readback_receipt": "skills-3080-remaining3d6-readback-receipt.json",
+  "readback_receipt_sha256": "b1d5d1ab4d0895db5c320743c98a4ffaac92cb5062485669afaea93b8e23fa81",
+  "acceptance_review": {
+    "todo": 3810,
+    "job": "20261025-154203-todo-3810",
+    "model": "gpt-6-luna",
+    "effort": "max",
+    "model_origin": "owner_request",
+    "effort_origin": "owner_request",
+    "native_verified": true,
+    "parent_original_full_read": true,
+    "spec_sha256": "0a39cb14e6c61b9a08df8e654134cdfde9bb1d685c3de3354871d363dfbed808",
+    "raw_sha256": "5b8d65e4f05c2dc801beae0349780bd03f1ef25301d24106a23cb9cd71b90b08",
+    "raw_bytes": 1248,
+    "manifest_sha256": "12d0b617a97c9a11eadc815628c55982442e828f4817fdf8a09e604b4ce9dc34",
+    "must": 0,
+    "scope": "Original3807 full36 and exact MIT1/reuse5; review3810 changed4 outputs fullread plus32 unchanged byte reuse. Parent read6 source primaries+MIT1, support0; no central presence/use by reviewer",
+    "outputs_changed_after_review": false
+  },
+  "discovery": {
+    "checked_at": "2026-10-25T06:56:30.6037051+00:00",
+    "method": "Actual six observed rows from the fresh skills/list forceReload; full known set80",
+    "model_called": false,
+    "targets": 6,
+    "found_count": 6,
+    "parse_error_count": 0,
+    "same_names_other_paths": 0,
+    "found": [
+      {
+        "name": "3d-falling-leaves",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-orbit-inspect-demo",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-sky-rays",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-ultra-realistic-water",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-underwater-god-rays",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-wood-lighting-scorecard",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      }
+    ],
+    "process_tree_exit_confirmed": true,
+    "pending_stdout_read_drained": true,
+    "diagnostic": {
+      "scan_traversal_limit_count": 2,
+      "context_budget_marker_count": 0,
+      "raw_stderr_not_saved": true
+    },
+    "original_receipt": "skills-3080-remaining3d6-discovery-receipt.json",
+    "original_receipt_sha256": "1ca2fc38f15a81be692c2d20f5e1363a26ba2fcfb097db30fc44b81a55dbe248",
+    "limit": "Exact80 unique enabled identities and6new descriptions; no unknown names or bodies retained, no full-context or warning-cause claim"
+  },
+  "retained_known_metadata": {
+    "checked_at": "2026-10-25T06:56:30.6037051+00:00",
+    "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+    "model_called": false,
+    "label": "detailed",
+    "targets": 80,
+    "total_discovered_metadata": 362,
+    "found_count": 80,
+    "parse_error_count": 0,
+    "notification_count": 2,
+    "same_names_other_paths": 0,
+    "known_target_names_sha256": "2d9ef027e7cd7116531371e6818bba86334296db558ca9726f16e2fa3799844a",
+    "enabled_count": 80,
+    "new_description_match_count": 6,
+    "found_rows_omitted_to_avoid_existing_names": true,
+    "observed_row_count": 80,
+    "observed_unique_names_sha256": "2d9ef027e7cd7116531371e6818bba86334296db558ca9726f16e2fa3799844a",
+    "duplicate_observed_names": 0,
+    "all_requested_enabled": true,
+    "new_target_rows": [
+      {
+        "name": "3d-falling-leaves",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-orbit-inspect-demo",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-sky-rays",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-ultra-realistic-water",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-underwater-god-rays",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-wood-lighting-scorecard",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      }
+    ],
+    "process_tree_exit_confirmed": true,
+    "pending_stdout_read_drained": true,
+    "failure": null,
+    "diagnostic": {
+      "scan_traversal_limit_count": 2,
+      "context_budget_marker_count": 0,
+      "raw_stderr_not_saved": true
+    },
+    "limit": "Only counts and a fingerprint of already public managed target names are retained. No existing names/paths, unknown metadata, body text or raw private catalog is saved. Scope is original3048, current3080adoptions and six newlycreated targets; no all-disk hash, pre-change equality, model-turn or context-budget proof.",
+    "managed_adoption_inventory_ids": [
+      "github:529ad226a165fa7c6a2e7a49959f227936408e7a349549b59ab0feeb437e27ce",
+      "github:faf798dc6ee8fc764680d048bc62d4579e6302a3f9cd28158b2229c8b39a46b2",
+      "github:d05f1de9d9c51e0126f79512bbfc6d0527d8b745994687686fc46328fbef8673",
+      "github:9572cbb50724f66e3a5165d06746747932d633b7507bb40f7401a980df082c60",
+      "github:1c650ad6db0ec99fae221dc302188220e7779742bd0471bc57a341d86ddf6196",
+      "github:7540b0b39f3053e2b24792a1be2c866c4b8e73bc7d3966642eb0a84c689252ea",
+      "github:467b9d6b107c183945edf987da7cdcb57b7311e42682b0ca0c3298807d36511f",
+      "github:9f2f48c4ee290e8d2aa53aa898d06e5665f4d956f35e5c495d00b972f7508879",
+      "github:902f0416f0d0bd4c4c62f6958623724e2ecd0024e6f7fb622818ef36712ebfcd",
+      "github:7aa67de263443f985337da44fa80d97db729d4b3ff6dfe3bc5e4e658f592822b",
+      "github:0a69193f05dcc27d1a0e6570aa2acf7389e9660a285f84510c39ce6f63197295",
+      "github:0c110b40278d18a05355221f5505335ab64ad88d32f402ac9ba46f8d2ab06de1",
+      "github:23cb6568e92b712b4a7ecd01a85999035e136f9cb66d75b0ef8f64bf5327819a",
+      "github:5ae150da91ada2aa1a46b553cc1d0e202c2cde7cb57304964377e160c7de4174",
+      "github:4d5592e0e8885ed948a2992604dcec1ba0e512816c263f8a6141666db8109622",
+      "github:5c561a5104441099f2de518551220c75fae0eeba9258abcebee533ec1f2ca0e7",
+      "github:055377d432d81b61af7a26c72df64895140fe57bac284e3bd67477a98afb2985",
+      "github:dfab8775869cc3ca898f53f46ba8a0855f19e61ec42d0619cca10ed988aeb5f5",
+      "github:0318ced22de8614c2913d996e59f02d18f4d42e60e9563c5bd983c01cd9518a4",
+      "github:62290525adf92ac2240a5d6de474b1454f578202d9fa92461dc79a6626e35402",
+      "github:ae8b453f96182867da017a74e12349c4e2000d2a5ef32705f3cc844c338d7adc",
+      "github:71a2f82b34ce70331fc531106c143b0e3332e22251017f377e63d072a6cb36ec",
+      "github:a3e5cb3352130bff6eb6d6320eea2ac71359fdb1cc36b580f6b882f4208924ec",
+      "github:c5ac6bf37010d859d7525686efd5a92d5df2de3c04d0ca63f06f8fe34b90a746",
+      "github:af8a59781a3ab4b96f7c7fe7ebb2a838dfa65293acf99f8ed7201cf53c38e4fc",
+      "github:ce166d7ba811d5f7f8ae37063d187dffc5a356a77738a09d0e83cf29c64d5328",
+      "github:1530721e547a0bef7412ef600719470cb5237407bdf7996c9a80b80a2ef2a439",
+      "github:b3f606e5e0512d2540f66637133b3d5f5d8ee7a563d99c99c5259a660ec1bd05",
+      "github:b42ae7debd7346ed232f75cdb212f9d8a9cb05bd347c93c8b7de82e8d5433fc8",
+      "github:8d45c064b59f58146ec2cd435cc55a71f835c1936934715b8b4a0cc231aac696",
+      "github:41f804392ff42c56ba7a05d1b269efdbb80f189a55b8979ccae5eb67771d05ed",
+      "github:e4ade76a7932447efe3dd6e777ab300a5a9a6f1cf13a392614b31c621906a016",
+      "github:a89e967becb119a2e1fde4392aaeb0c034ff9c683290947db8c690624fc9887e",
+      "github:89360b4dedcdf7fceccbef746956ad5f50a6c50126946fb12731aff46af0851b",
+      "github:29a0ba0843498fe31de765752ffa07dfd7835d47f3ac062d641e41169e601167",
+      "github:ac72b94f8ac90a84d51a96b3d16e288d93b11f455d2b33aa50d0d320af2029e1",
+      "github:0c071dac30d780613fbf2bbb1e5d81e62d028883da584cf9fa9bd68ca33a838b",
+      "github:dcfad5899bfe731a670bd01b4cfafa5a4aa3d03303f40df2b562279b41baf405",
+      "github:c51dc53e6bbbd50fb36e0dc24236e430698fe779352ac996e34115a0cbc5c882",
+      "github:efea3e18c8a1c529f0dc118a714c53698807049e54bc8775759fcba4a1fafbec",
+      "github:7e7b86ab5a899b4639cffd87d65ca9184dedb899d1ba98d46b6a74f2a49860ca",
+      "github:38bb0d4a6f21b0c29cbfa8b6214812a7cdea16a9216c058a1225711c9908280b",
+      "github:382998d3830f6337c6f2838a64421601e482aaf2ac3cb66841051d81e443cf6b",
+      "github:77f491d4d72871f2c31152c773d92fe3ee2377d8a0993b9673d562a01250c8e2",
+      "github:153988a15c1b7cf16741074f845ee57b203ee0315654f9f5d76196982b339d0e",
+      "github:d8dff1294478f735c0e39073429164e1bd87d6c0d78feb7315c839a0b187fa98",
+      "github:a5a3b85d3994a4db7d3a009b1aafbe6f5ba608b3dff72e59bd91378f23f8b9d1",
+      "github:0b5385b0e0a144c0e88b6a7f9317f92d50d78285ab48cf5164332d0af46ae35e",
+      "github:ad7dd0ac60bec1e813b9f90cf244ce880593d4fb4a0702de21348a1477b49300",
+      "github:eaf8e98a4a20bde971033d3afc6ff8622fdfff9e026871e86cc9dcfa9a860af5",
+      "github:47eaf17ef451cbe3e1435dce403be55f89a48c416b943671e48541380b005028",
+      "github:4e9631ebafe558782152a55e70d44f8e87d4080b542c738bccd5ad28fa9e492c",
+      "github:79d285cb8c6bd8ba7ba2afb6dc42bc341f77fb3b179fc473b19dab9acb91a0c9",
+      "github:709d1f4fe1039448270b3f743f5432fbeb31d85416d441d4dba335b9e2df97eb",
+      "github:70122bd962c6e17475151962141da342b373dc115a4383be3a7f50d6f4ad2216",
+      "github:57934e4f29ef479db656c2b1371bde1c4bc66382e9920b868b0576badda6e0e5",
+      "github:31c71080ac741cb3feeaa3bb3dbb57ac6a76efc26ab8dc75ab5c62cf03075bb1",
+      "github:3d98ac5b5f881acf71e673a93b79049d696259c36a80fd92a25d8f8a2ee24489",
+      "github:eecbfba6d29822509e21b1923bd81b051f45ab1f14461d42b51dff92f30faf90",
+      "github:4626a28f6ca9f66b3a74b43507b256211a1cf0fae273355b0cbb4f7ec2ea0e69",
+      "github:2f1222d0143baefe038638b6325bac4b1aa4a9c9989daa3ffcaf655e7f050715",
+      "github:fab88427bee2bdceb455b105d4cc67286c5137688358e999728494f258e7bd3a",
+      "github:7954413ce35f01682a5e1d2323dbd97230efe385a21df4f86c7040bfa845485c",
+      "github:32b954e6fb09280ec5b99faf879afdbbfdd5c7ca20ccedc3d59ba01b5ad9c856",
+      "github:896c34ba4a99ae3711407ba96fda39996823607f6a3b2e6ddd456f62af1b19a6",
+      "github:902a0a522b75574bc5a87780cf16f5ea986493124e4bdb578182b36bf6f21df5",
+      "github:796ba2120ce77e2b5a8f6eeba65b7e3367cc775594bdb59dbf4cf527094c069a"
+    ]
+  },
+  "explicit_application": {
+    "core_passed": true,
+    "example_kind_count": 6,
+    "source_scripts_executed": false,
+    "external_api_calls": 0,
+    "implicit_skill_selection_proven": false,
+    "fresh_separate_model_turn_executed": false,
+    "applications": {
+      "bounded_planning_cases": 6,
+      "central_writes": 0,
+      "domain": "skills-3080-remaining3d6-explicit-use-v1",
+      "explicit_skill_read": 6,
+      "fresh_discovery_completed_before_use": true,
+      "implicit_skill_selection_proved": false,
+      "installed_files": {
+        "3d-falling-leaves/SKILL.md": "ee49fbe2adf5e702f36b54ccf9ef752f2cf92332ff1dd1fdd4a531265c860716",
+        "3d-falling-leaves/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "3d-falling-leaves/references/guide.md": "d011960b8e6805996de19d0d38faf58233cc004fa960a28ed0736e8ec3a4db70",
+        "3d-falling-leaves/references/source.json": "0ac215201214d1fe1031e6dd04dc69a71ebf754f769f9d7ffcf037a9cc8eb4d6",
+        "3d-falling-leaves/references/sources.md": "9b99c878a6d6ff57c51d34b7adf878bf12b86f71c475a99e5c539431130fe938",
+        "3d-falling-leaves/references/upstream-original.txt": "63adf8b5ec0d96d397f56ff09facd9f68248f6ed881a2e05427f1c4e3ccf1d11",
+        "3d-orbit-inspect-demo/SKILL.md": "1e22d5ef696f295501974f4cdebdf170a7d17295a6611d60491b7d953e6bc1f6",
+        "3d-orbit-inspect-demo/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "3d-orbit-inspect-demo/references/guide.md": "da005bb0a5e330b0c321ca55cf3f0ad4fdc6e9193f499a30a00833d9666c979f",
+        "3d-orbit-inspect-demo/references/source.json": "640dc6b9dd63b01c62c425e77519fd8d6b9be5a64eb82481e5b30c0c3ca20434",
+        "3d-orbit-inspect-demo/references/sources.md": "c115acdac235a3d57630dd903824853defe55e464126c961322add012cb04fc8",
+        "3d-orbit-inspect-demo/references/upstream-original.txt": "70011ca8c3c67185088f3171f94fb55dbbcd6a79e46fe4e0fc90b2d0b7317240",
+        "3d-sky-rays/SKILL.md": "974f2f4b24aca3d79926669eb63d00442fba28290f648b6f471f9786679f7b37",
+        "3d-sky-rays/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "3d-sky-rays/references/guide.md": "4d76b46ae77780185c94847e8d4108dd431d8eb6ce1d45bac2058958cbb70abc",
+        "3d-sky-rays/references/source.json": "0b9fba79241ca3909d424f7823bad7d360a0d9cd7942699076e0c0dcd42dab8e",
+        "3d-sky-rays/references/sources.md": "ab8a430debc1ae086faba60fddb9a3bf7238d9572c0beb50e04f2ea8ded5ed63",
+        "3d-sky-rays/references/upstream-original.txt": "1b70c0cf1cdb44769f56f429016904e39cef5f85d3832412dd3eb8dbfda94c97",
+        "3d-ultra-realistic-water/SKILL.md": "36591a8f48e3305d31bb2fc2494beb8f6fe471ef9ce8e1263287b5a642cfb4e7",
+        "3d-ultra-realistic-water/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "3d-ultra-realistic-water/references/guide.md": "2d0684f3a8b7c4bad62afc646a53d3951a9f5edc01069bcfb3758a03e9778c29",
+        "3d-ultra-realistic-water/references/source.json": "a75ca3001c5c5e753ec27ebed6249f517d01ec222781aa683204730111c6aa17",
+        "3d-ultra-realistic-water/references/sources.md": "e649c3d0e6d4d2e20df4e0d3e7e139286871cae7ccd628cffea7a7c2fec025bf",
+        "3d-ultra-realistic-water/references/upstream-original.txt": "54e31ca705a4fbac10a93f1a4b9297be35e8eec798bb64eedb6f38ef65246a30",
+        "3d-underwater-god-rays/SKILL.md": "b2ab205f408c994f5fd4226fea6035562c6ff854715bdeaa10cd4e02713947b1",
+        "3d-underwater-god-rays/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "3d-underwater-god-rays/references/guide.md": "ef1f589cd3192c46c30a7beda2cfa9815ceafed9abf2f45982f7286ff8e57d55",
+        "3d-underwater-god-rays/references/source.json": "945f2cc1c2325c099ff1ec484fba80c9bc55c50cdae9661027b776ddc4d9887b",
+        "3d-underwater-god-rays/references/sources.md": "ca9a86933c48a0c2b92f97842cc30ce5d7ff54792d5963bfbf4d2404590945aa",
+        "3d-underwater-god-rays/references/upstream-original.txt": "1ddd8ac574ddf6545a16008d7531f95cd4c707e0ffa977e987715b3b456c4f21",
+        "3d-wood-lighting-scorecard/SKILL.md": "0f581b374683edc71fa3a3afe1bfeed1446181bcf69d65c9ab2e453807b7bf5b",
+        "3d-wood-lighting-scorecard/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "3d-wood-lighting-scorecard/references/guide.md": "36663e316490d40a064e9074b617cad7b3bb5428fcb6e64b5496b0c2de0f7621",
+        "3d-wood-lighting-scorecard/references/source.json": "3994129a2d43e3ca53d9b3dc0052b13b5cc533b8e893569956eb2ae68b182050",
+        "3d-wood-lighting-scorecard/references/sources.md": "964fda32f25acc5023d496639ba3a4771278a30753a7232c3cb400d932823f44",
+        "3d-wood-lighting-scorecard/references/upstream-original.txt": "9c2594010aab8cf2bde1ab862fa336187e8220fd1b9c27a005a4ef83fd2d8809"
+      },
+      "job": "20261025-074042-todo-3080",
+      "limits": [
+        "Examples cover finite drift, click ownership, weighted light, inverse residual, coordinate transforms and score comparison only.",
+        "No shader compilation, material appearance, physical cloth or full-scene path safety result is established.",
+        "Fresh skills/list discovery and explicit application are distinct from automatic model selection and full-context measurements."
+      ],
+      "manifest_sha256": "12d0b617a97c9a11eadc815628c55982442e828f4817fdf8a09e604b4ce9dc34",
+      "positive_and_negative_examples_passed": true,
+      "real_browser_game_scene_GPU_executed": false,
+      "source_commit": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+      "source_scripts_executed": 0,
+      "warning_cause_proved": false,
+      "whole16_complete": false
+    }
+  },
+  "application_result": "skills-3080-remaining3d6-application-result.json",
+  "application_result_sha256": "f7d31b5351a26bbed4d5811cbc2d17dd593feff1bbc11b847e54db57022b30bd",
+  "application_test_receipt": "skills-3080-remaining3d6-application-test-receipt.json",
+  "application_test_receipt_sha256": "4defd7490d928a887f9c7ef2b78fda717a543880c0e3564f4fda859c5a82fa17",
+  "application_source": "evidence/skills-3080-remaining3d6-use-074042.go.txt",
+  "application_source_sha256": "5d12236cfc10c4edd9827ee05869d9d17b149f8cfd2673c9d1256872f80788c7",
+  "application_models": "evidence/skills-3080-remaining3d6-models-074042.go.txt",
+  "application_models_sha256": "fe9eed5d9b98d903019ec1137bda2ff1ce725e0799943f7ad0e7a9ef630d48e6",
+  "discovery_receipt": "skills-3080-remaining3d6-discovery-receipt.json",
+  "discovery_receipt_sha256": "1ca2fc38f15a81be692c2d20f5e1363a26ba2fcfb097db30fc44b81a55dbe248",
+  "parent_active_entries_and_guides_fully_read": 12,
+  "installed_structure_pass": true,
+  "full_context_budget_proven": false,
+  "warning_cause_linked": false,
+  "new_unique_source_primary_readings": 0,
+  "public_result_delta_review_pending_at_recording": true,
+  "public_result_delta_currently_pending": true,
+  "purpose_software_correction": {
+    "pr": 497,
+    "review": 3805,
+    "source": "c397910d3fc560ca61a31c6382494ac43c866852",
+    "runtime_sha256": "ea7cbb49d73a37e972c0072a500406ab1f7f0b62f2ea1926b9ef149ad1e36f12",
+    "earlier_material8_arguments_failure_retained": true,
+    "earlier_material8_digit_source_failure_retained": true,
+    "original_manifest_request_unchanged": true,
+    "general_guard_changed": false
+  },
+  "limits": [
+    "Bounded positive/negative planning examples exercise finite near-zero leaf drift, hidden/resume clock, click ownership, normalized sky weights, inverse-wave residual/rebase, world-field/phase domains and score/capture conditions.",
+    "No shader compilation, browser scene, GPU performance, physical cloth, material realism or full-scene path acceptance is established.",
+    "Creation/readback and fresh80 target discovery are authentic required gates. Explicit current-worker use does not prove implicit model selection or full-context budget.",
+    "Traversal warnings remain observed with unproved cause. Original primary reading totals, all16 remainder, anonymous9/647holds and3048originals/junctions/backups remain."
+  ]
+}

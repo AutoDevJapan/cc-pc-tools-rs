@@ -1,0 +1,87 @@
+{
+  "checked_at": "2026-10-25T06:15:06.6823988+00:00",
+  "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+  "model_called": false,
+  "label": "detailed",
+  "targets": 74,
+  "total_discovered_metadata": 356,
+  "found_count": 74,
+  "parse_error_count": 0,
+  "notification_count": 2,
+  "same_names_other_paths": 0,
+  "known_target_names_sha256": "bb79276dbd2d8711f515f8ce2d54dd045343870f72884e10054d53e158e1cb2a",
+  "enabled_count": 74,
+  "new_description_match_count": 8,
+  "found_rows_omitted_to_avoid_existing_names": true,
+  "observed_row_count": 74,
+  "observed_unique_names_sha256": "bb79276dbd2d8711f515f8ce2d54dd045343870f72884e10054d53e158e1cb2a",
+  "duplicate_observed_names": 0,
+  "all_requested_enabled": true,
+  "new_target_rows": [
+    {
+      "name": "3d-cloth-material",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "3d-high-poly-models",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "3d-high-resolution-textures",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "3d-metal-material",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "3d-paper-material",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "3d-sky-background",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "3d-virtual-tour",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "3d-wood-material",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    }
+  ],
+  "process_tree_exit_confirmed": true,
+  "pending_stdout_read_drained": true,
+  "failure": null,
+  "diagnostic": {
+    "scan_traversal_limit_count": 2,
+    "context_budget_marker_count": 0,
+    "raw_stderr_not_saved": true
+  },
+  "limit": "Only counts and a fingerprint of already public managed target names are retained. No existing names/paths, unknown metadata, body text or raw private catalog is saved. Scope is original3048, current3080adoptions and eight newlycreated targets; no all-disk hash, pre-change equality, model-turn or context-budget proof."
+}

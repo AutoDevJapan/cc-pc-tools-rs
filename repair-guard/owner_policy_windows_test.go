@@ -127,7 +127,7 @@ func TestOwnerPolicyLegacyEvidenceIsTypedWithoutDisclosure(t *testing.T) {
 
 func ownerSourceFixture(t *testing.T) (string, object, ownerSourceAccess) {
 	t.Helper()
-	base, err := physical(t.TempDir())
+	base, err := physical(currentShortFixture(t))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,6 +169,15 @@ func TestOwnerRegisteredSourceNeedsNoTaskOrFileException(t *testing.T) {
 	if !bytes.Equal(before, after) {
 		t.Fatal("resource classification changed an explicit owner stop")
 	}
+}
+
+func TestOwnerSourceFixtureWithLongSubtestName(t *testing.T) {
+	t.Run(strings.Repeat("long-synthetic-fixture-", 20), func(t *testing.T) {
+		root, db, access := ownerSourceFixture(t)
+		if !ownerRegisteredSourceWith(filepath.Join(root, "main.go"), db, access).AccessAllowed {
+			t.Fatal("short owned fixture failed the real Git source verification")
+		}
+	})
 }
 
 func TestOwnerRegisteredSourceRejectsUnverifiedAndClientIdentity(t *testing.T) {

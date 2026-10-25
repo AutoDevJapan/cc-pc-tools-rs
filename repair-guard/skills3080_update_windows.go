@@ -17,9 +17,13 @@ type skillsRuntimeRequest struct {
 const skillsRuntimeTarget = "D:/CC/Tools/client-records/scrub391.exe"
 const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 
-// Independent previously published distribution facts (3258), not a caller
+// Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// PR476 distribution was independently accepted before this revision. Its
+	// exact current hash and build revision were rechecked without changing it.
+	// Evidence: docs/evidence/skills-3080-guard-installed-a5da.json.
+	"ba35332c45b5bb9f35c4465ee209c123be1309ec554ef0976c8240d232c451c1": "a5da2f694ab70589fb1dd29ed874d06df56bc579",
 	// Independent public 775e6f30 rebuild: every byte matches this installed
 	// artifact except the two declared Go cache action IDs (40 bytes). Both
 	// content IDs and all remaining 6,225,368 bytes match; neither PE was changed.

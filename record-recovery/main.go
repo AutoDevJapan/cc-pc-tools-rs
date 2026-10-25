@@ -853,6 +853,11 @@ func main() {
 	if os.Args[1] == "omb-runtime-metadata" {
 		os.Exit(runOMB3255RuntimeCLI(os.Args[2:], os.Stdout, omb3255AcquireRuntime))
 	}
+	if os.Args[1] == "required-checks-metadata" {
+		os.Exit(runRequiredChecksMetadataCLI(os.Args[2:], os.Stdout, func() ([]byte, error) {
+			return readReviewSnapshot(reviewMetadataStore)
+		}))
+	}
 	f := flag.NewFlagSet("recovery", flag.ContinueOnError)
 	f.SetOutput(io.Discard)
 	home := f.String("home", "D:/CC/Tools/discord-ask", "")

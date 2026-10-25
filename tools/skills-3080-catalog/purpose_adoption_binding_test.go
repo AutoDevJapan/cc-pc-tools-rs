@@ -18,7 +18,7 @@ func TestPurposeReceiptLoaderRejectsDuplicateKeysBeforeProjection(t *testing.T) 
 	if bytes.Count(raw, needle) != 1 {
 		t.Fatal("fixed mutation occurrence not unique")
 	}
-	for _, kind := range []string{"valid", "conflicting_inventory_id", "same_value_inventory_id", "conflicting_count", "trailing_value"} {
+	for _, kind := range []string{"valid", "conflicting_inventory_id", "same_value_inventory_id", "conflicting_count", "folded_inventory_id", "folded_count", "trailing_value"} {
 		t.Run(kind, func(t *testing.T) {
 			fixture := append([]byte(nil), raw...)
 			switch kind {
@@ -28,11 +28,16 @@ func TestPurposeReceiptLoaderRejectsDuplicateKeysBeforeProjection(t *testing.T) 
 				fixture = bytes.Replace(fixture, needle, append(append(append([]byte(nil), needle...), []byte(`, "inventory_id":`)...), needle...), 1)
 			case "conflicting_count":
 				fixture = append([]byte(`{"installed_new":999,`), bytes.TrimSpace(fixture)[1:]...)
+			case "folded_inventory_id":
+				fixture = bytes.Replace(fixture, needle, append([]byte(`"foreign-occurrence", "INVENTORY_ID":`), needle...), 1)
+			case "folded_count":
+				fixture = append([]byte(`{"INSTALLED_NEW":999,`), bytes.TrimSpace(fixture)[1:]...)
 			case "trailing_value":
 				fixture = append(fixture, []byte(` {"ignored":true}`)...)
 			}
 			var projection struct {
-				Rows []purposeAdoptionRow `json:"entries"`
+				Rows      []purposeAdoptionRow `json:"entries"`
+				Installed int                  `json:"installed_new"`
 			}
 			err := decodePublicReceipt(fixture, &projection)
 			if (err != nil) != (kind != "valid") {

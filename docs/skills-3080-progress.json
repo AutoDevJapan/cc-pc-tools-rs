@@ -437,8 +437,8 @@
     "source": "skills-3080-mizchi-partial-evaluation.json",
     "complete_definition": "本文の全path読取のみ。個別許諾・支持・採否・実導入は未完。"
   },
-  "all_fulltext_primary_paths_including_partial_sources": 583,
-  "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分193=583source paths。支持の全読/走査/部分読取・伏字付き手順・個別許諾・最終採否は別。全16資料は未完。",
+  "all_fulltext_primary_paths_including_partial_sources": 585,
+  "primary_coverage_definition": "既存10資料固定137+別枠mizchi76+MengTo全入口177+6mile部分195=585source paths。支持の全読/走査/部分読取・伏字付き手順・個別許諾・最終採否は別。全16資料は未完。",
   "external_revisions": {
     "count": 1,
     "target": "diagnosing-bugs",
@@ -1515,20 +1515,21 @@
     "excluded": 4
   },
   "sixmile_body_read_coverage": {
-    "metadata_only_primary": 0,
-    "full_body_read": 193,
-    "workflow_body_read": 267,
-    "without_assessment": 55355,
-    "definition": "Registered disjoint direct-reading cohorts, explicit reading amendments and separate comparison-only occurrences. Known saved bytes do not imply a reader or full reading; reuse/workflow, permission and current adoption stay separate.",
+    "metadata_only_primary": 1,
+    "full_body_read": 195,
+    "workflow_body_read": 354,
+    "without_assessment": 55265,
+    "definition": "Registered disjoint source observations, explicit reading amendments and comparison-only occurrences. Raw, masked workflow, earlier literal reuse, saved-unread primary, partial primary, support state and actual reader are separate. A received observation or stored byte identity is not permission, adoption, original unmasked reading or completion.",
     "expected": 55623,
     "complete": false,
-    "masked_workflow_body": 74,
-    "candidate_paths_assessed_or_notice_read": 268,
+    "masked_workflow_body": 159,
+    "candidate_paths_assessed_or_notice_read": 358,
     "source": "skills-3080-sixmile-evaluation-index.json",
-    "without_raw_full_read": 55430,
-    "comparison_only_primary": 1
+    "without_raw_full_read": 55428,
+    "comparison_only_primary": 1,
+    "partial_primary": 2
   },
-  "all_workflow_primary_paths_including_partial_sources": 657,
+  "all_workflow_primary_paths_including_partial_sources": 744,
   "primary_coverage_definition_additional": "workflow集計はraw本文と伏字付き手順を区別した構造化件数に従う。原文/支持の受領評価と、親が全raw本文を再読した主張は別。旧notice-only本文の親全読は一度だけ別追補として加え、元childの状態と支持の担当は保持する。",
   "rss_season_installation": {
     "content_review": 3591,
@@ -1661,8 +1662,8 @@
     "original_child_and_support_actors_preserved": true
   },
   "parent6_reflection_delta": {
-    "current_branch_raw": 583,
-    "current_branch_workflow": 657,
+    "current_branch_raw": 585,
+    "current_branch_workflow": 744,
     "main_accepted_snapshot": {
       "pr": 431,
       "merge": "ad8151c101a0820cbc365455ecfb85caef1d697a",
@@ -1895,5 +1896,48 @@
     "new_unique_source_readings": 0,
     "public_result_delta_review_pending_at_recording": true,
     "overall_complete": false
+  },
+  "sixmile_stream90_entrypoint_evaluation": {
+    "source": "skills-3080-sixmile-stream90-evaluation.json",
+    "candidate_paths": 90,
+    "full_body_read": 2,
+    "workflow_body_read": 87,
+    "literal_masked_primary": 84,
+    "exact_masked_primary_reuse": 1,
+    "unread_primary": 1,
+    "partial_primary": 2,
+    "notice_paths": 90,
+    "support": 445,
+    "support_saved_unread": 123,
+    "support_unsaved": 117,
+    "installed": 0,
+    "integrated": 0,
+    "excluded": 0,
+    "definition": "Parent received semantic reports, independently associated source/notice/package metadata and preserved original90 observation states. Reader is3719; parent is the receiver, not a new source-body reader. Later anonymous views and support supplements remain separate evidence."
+  },
+  "stream90_snapshot_scope": {
+    "immutable_artifact": "skills-3080-sixmile-stream90-evaluation.json",
+    "immutable_entries_sha256": "ed467d85e91aeddc3f0495df0b9cc5c4f574d5f5bb8a66a3b00e9d37d98884a4",
+    "independent_input_sha256": "661c6b70142269294d7191b1d2fc06c4a54a85ef6cab9501c233d6e8bd55044c",
+    "individual_permissions_added": 0,
+    "final_dispositions_added": 0,
+    "new_central_operations": 0,
+    "whole16_completion_attested": false
+  },
+  "new_created_normal_read_hold": {
+    "new_targets_physically_created": 14,
+    "new_files": 84,
+    "ordinary_instruction_paths_held": 28,
+    "last_successful_readback_logical_bytes": 63592,
+    "fresh_size_or_body_reads_after_hold": 0,
+    "target_names_or_paths_omitted": true,
+    "guard_client_resource": true,
+    "guard_classification_unverified": true,
+    "ordinary_access_allowed": false,
+    "qualified_creation_readback_discovery_is_not_ordinary_use": true,
+    "existing_anonymous9_unchanged": true,
+    "repair_todo": 3686,
+    "repair_registration_is_not_recovery": true,
+    "definition": "A later ordinary read attempt is held. Current usage of these newly created outputs is not accepted. The measured logical size belongs to the earlier successful bounded readback, not a fresh protected-resource measurement. No alternate copy/API/alias is used."
   }
 }

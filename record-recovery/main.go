@@ -850,6 +850,11 @@ func main() {
 			return readReviewSnapshot(reviewMetadataStore)
 		}))
 	}
+	if os.Args[1] == "required-checks-metadata" {
+		os.Exit(runRequiredChecksMetadataCLI(os.Args[2:], os.Stdout, func() ([]byte, error) {
+			return readReviewSnapshot(reviewMetadataStore)
+		}))
+	}
 	f := flag.NewFlagSet("recovery", flag.ContinueOnError)
 	f.SetOutput(io.Discard)
 	home := f.String("home", "D:/CC/Tools/discord-ask", "")

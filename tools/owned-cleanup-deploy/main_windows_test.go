@@ -201,7 +201,7 @@ func TestSoftwareUpdateRefusesCandidateAndOldPinChangesBeforeStaging(t *testing.
 	}
 }
 func TestSoftwareUpdateDoesNotOverwriteConcurrentNamespaces(t *testing.T) {
-	for _, phase := range []string{"target-before-retire", "backup", "target-before-publish"} {
+	for _, phase := range []string{"target-before-retire", "target-after-check", "backup", "target-before-publish"} {
 		t.Run(phase, func(t *testing.T) {
 			l := fixture(t)
 			p, e := prepare(l)
@@ -211,14 +211,16 @@ func TestSoftwareUpdateDoesNotOverwriteConcurrentNamespaces(t *testing.T) {
 			defer p.close()
 			h := hooks{}
 			switch phase {
-			case "target-before-retire":
-				h.beforeRetire = func() {
-					if e := os.Rename(l.Target, l.Target+".other-owner-original"); e != nil {
-						t.Fatal(e)
+			case "target-before-retire", "target-after-check":
+				compete := func() {
+					if e := os.Rename(l.Target, l.Target+".other-owner-original"); e == nil {
+						t.Fatal("pinned original could be renamed by another actor")
 					}
-					if e := os.WriteFile(l.Target, []byte("concurrent"), 0600); e != nil {
-						t.Fatal(e)
-					}
+				}
+				if phase == "target-before-retire" {
+					h.beforeRetire = compete
+				} else {
+					h.beforeRename = compete
 				}
 			case "backup":
 				h.beforeRetire = func() {
@@ -233,13 +235,18 @@ func TestSoftwareUpdateDoesNotOverwriteConcurrentNamespaces(t *testing.T) {
 					}
 				}
 			}
-			if e = p.install(h); e == nil {
-				t.Fatal("concurrent namespace accepted")
+			e = p.install(h)
+			pinRefusedCompetitor := phase == "target-before-retire" || phase == "target-after-check"
+			if (e == nil) != pinRefusedCompetitor {
+				t.Fatalf("wrong update result: %v", e)
 			}
 			switch phase {
-			case "target-before-retire":
-				content(t, l.Target, "concurrent")
-				content(t, l.Target+".other-owner-original", "old")
+			case "target-before-retire", "target-after-check":
+				content(t, l.Target, "new verified bytes")
+				content(t, l.Target+".before-todo3757", "old")
+				if !missing(l.Target + ".other-owner-original") {
+					t.Fatal("competitor moved the original")
+				}
 			case "backup":
 				content(t, l.Target, "old")
 				content(t, l.Target+".before-todo3757", "concurrent")
@@ -247,8 +254,85 @@ func TestSoftwareUpdateDoesNotOverwriteConcurrentNamespaces(t *testing.T) {
 				content(t, l.Target, "concurrent")
 				content(t, l.Target+".before-todo3757", "old")
 			}
+			if !pinRefusedCompetitor {
+				content(t, l.Target+".stage-todo3757", "new verified bytes")
+			}
 		})
 	}
+}
+
+func TestSoftwarePublishFailureReportsRestoreAndActualNamespaces(t *testing.T) {
+	for _, restoreFails := range []bool{false, true} {
+		t.Run(map[bool]string{false: "restored", true: "restore-failed"}[restoreFails], func(t *testing.T) {
+			l := fixture(t)
+			p, e := prepare(l)
+			if e != nil {
+				t.Fatal(e)
+			}
+			defer p.close()
+			calls := 0
+			e = p.install(hooks{rename: func(pin *pin, dest string) error {
+				calls++
+				if calls == 2 || calls == 3 && restoreFails {
+					return errCode("INJECTED_NAMESPACE_FAILURE")
+				}
+				return renameNoReplace(pin, dest)
+			}})
+			want := "PUBLISH_FAILED_RESTORED"
+			if restoreFails {
+				want = "PUBLISH_FAILED_RESTORE_FAILED"
+			}
+			if e == nil || e.Error() != want || !p.state.RestoreAttempted || p.state.Restored == restoreFails || p.state.Published || p.state.Verified {
+				t.Fatalf("wrong restore outcome: %v %+v", e, p.state)
+			}
+			content(t, l.Source, "new verified bytes")
+			content(t, l.Target+".stage-todo3757", "new verified bytes")
+			if restoreFails {
+				if p.state.PublicName != "absent" || !missing(l.Target) {
+					t.Fatal("missing public name hidden")
+				}
+				content(t, l.Target+".before-todo3757", "old")
+			} else {
+				if p.state.PublicName != "present" || !missing(l.Target+".before-todo3757") {
+					t.Fatal("successful restore not represented")
+				}
+				content(t, l.Target, "old")
+			}
+		})
+	}
+}
+
+func TestSoftwarePublishedButUnverifiedIsNotReportedAsUnchanged(t *testing.T) {
+	l := fixture(t)
+	p, e := prepare(l)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer p.close()
+	e = p.install(hooks{afterPublish: func(stage *pin) { stage.close() }})
+	if e == nil || e.Error() != "INSTALLED_READBACK_FAILED" || !p.state.Published || p.state.Verified || p.state.PublicName != "present" {
+		t.Fatalf("published result lost: %v %+v", e, p.state)
+	}
+	content(t, l.Target, "new verified bytes")
+	content(t, l.Target+".before-todo3757", "old")
+}
+
+func TestSoftwareRenameUsesProductionForwardSlashSpelling(t *testing.T) {
+	l := fixture(t)
+	l.Source, l.Target = filepath.ToSlash(l.Source), filepath.ToSlash(l.Target)
+	p, e := prepare(l)
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer p.close()
+	if e = p.install(hooks{}); e != nil {
+		t.Fatal(e)
+	}
+	if !p.state.Published || !p.state.Verified || p.state.PublicName != "present" {
+		t.Fatal("successful publication not verified")
+	}
+	content(t, l.Target, "new verified bytes")
+	content(t, l.Target+".before-todo3757", "old")
 }
 func TestSoftwarePinsDenyWritersAndExternalAliases(t *testing.T) {
 	l := fixture(t)

@@ -64,6 +64,12 @@ func (p *pin) hash() (string, error) {
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
+
+func (p *pin) at(path string) bool {
+	name := make([]uint16, 32768)
+	n, _, _ := kernel.NewProc("GetFinalPathNameByHandleW").Call(p.f.Fd(), uintptr(unsafe.Pointer(&name[0])), uintptr(len(name)), 0)
+	return n > 0 && n < uintptr(len(name)) && same(strings.TrimPrefix(syscall.UTF16ToString(name[:n]), `\\?\`), path)
+}
 func openPin(path string, access, share, disposition uint32) (*pin, error) {
 	if !filepath.IsAbs(path) || strings.ContainsAny(path, "\x00\r\n") {
 		return nil, errCode("INVALID_PATH")
@@ -98,6 +104,9 @@ func parents(path string) ([]*pin, error) {
 	for i := len(nodes) - 1; i >= 0; i-- {
 		p, e := openPin(nodes[i], 0x80, 3, 3)
 		if e != nil || p.info.FileAttributes&0x10 == 0 {
+			if p != nil {
+				p.close()
+			}
 			closePins(result)
 			return nil, errCode("ANCESTOR_UNVERIFIED")
 		}
@@ -270,7 +279,7 @@ func renameNoReplace(p *pin, destination string) error {
 	if unsafe.Sizeof(uintptr(0)) != 8 {
 		return errCode("UNSUPPORTED_PLATFORM")
 	}
-	words, e := syscall.UTF16FromString(destination)
+	words, e := syscall.UTF16FromString(filepath.Clean(destination))
 	if e != nil {
 		return e
 	}
@@ -316,6 +325,28 @@ type prepared struct {
 	leaf     leaf
 	old, new *pin
 	parents  []*pin
+	state    installState
+}
+
+type installState struct {
+	StageCreated     bool   `json:"stage_created"`
+	OldRetired       bool   `json:"old_retired"`
+	Published        bool   `json:"published"`
+	Verified         bool   `json:"verified"`
+	RestoreAttempted bool   `json:"restore_attempted"`
+	Restored         bool   `json:"restored"`
+	PublicName       string `json:"public_name_state"`
+}
+
+func namespaceState(path string) string {
+	_, e := os.Lstat(path)
+	if e == nil {
+		return "present"
+	}
+	if os.IsNotExist(e) {
+		return "absent"
+	}
+	return "unverified"
 }
 
 func prepare(l leaf) (*prepared, error) {
@@ -323,7 +354,9 @@ func prepare(l leaf) (*prepared, error) {
 	if e != nil {
 		return nil, e
 	}
-	old, e := openPin(l.Target, syscall.GENERIC_READ|0x20000|0x10000, 5, 3)
+	// This handle owns DELETE, while other handles may only read. A competing
+	// rename/delete cannot move the checked object during our own rename.
+	old, e := openPin(l.Target, syscall.GENERIC_READ|0x20000|0x10000, 1, 3)
 	if e != nil {
 		closePins(ps)
 		return nil, e
@@ -341,7 +374,7 @@ func prepare(l leaf) (*prepared, error) {
 		closePins(ps)
 		return nil, e
 	}
-	p := &prepared{l, old, n, ps}
+	p := &prepared{leaf: l, old: old, new: n, parents: ps}
 	a, e := old.hash()
 	b, be := n.hash()
 	if e != nil || be != nil || a != l.Old || b != l.New || old.info.FileAttributes&0x10 != 0 || n.info.FileAttributes&0x10 != 0 || old.info.FileSizeHigh != 0 || n.info.FileSizeHigh != 0 {
@@ -356,9 +389,18 @@ func prepare(l leaf) (*prepared, error) {
 }
 func (p *prepared) close() { p.old.close(); p.new.close(); closePins(p.parents) }
 
-type hooks struct{ beforeRetire, beforePublish func() }
+type hooks struct {
+	beforeRetire, beforeRename, beforePublish func()
+	afterPublish                              func(*pin)
+	rename                                    func(*pin, string) error
+}
 
 func (p *prepared) install(test hooks) error {
+	defer func() { p.state.PublicName = namespaceState(p.leaf.Target) }()
+	rename := renameNoReplace
+	if test.rename != nil {
+		rename = test.rename
+	}
 	stagePath := p.leaf.Target + ".stage-todo3757"
 	backup := p.leaf.Target + ".before-todo3757"
 	stage, e := openPin(stagePath, syscall.GENERIC_READ|syscall.GENERIC_WRITE|0x10000|0x40000|0x80000, 1, 1)
@@ -366,6 +408,7 @@ func (p *prepared) install(test hooks) error {
 		return e
 	}
 	defer stage.close()
+	p.state.StageCreated = true
 	if _, e = p.new.f.Seek(0, 0); e != nil {
 		return e
 	}
@@ -394,28 +437,48 @@ func (p *prepared) install(test hooks) error {
 	if !sameID {
 		return errCode("CONCURRENT_TARGET_CHANGED")
 	}
-	if e = renameNoReplace(p.old, backup); e != nil {
+	if !p.old.at(p.leaf.Target) {
+		return errCode("PINNED_PUBLIC_NAME_CHANGED")
+	}
+	if test.beforeRename != nil {
+		test.beforeRename()
+	}
+	if e = rename(p.old, backup); e != nil {
 		return e
 	}
+	p.state.OldRetired = true
 	if test.beforePublish != nil {
 		test.beforePublish()
 	}
-	if e = renameNoReplace(stage, p.leaf.Target); e != nil {
+	if e = rename(stage, p.leaf.Target); e != nil {
 		// Restore only this original object into an absent public name, never
 		// overwrite a concurrent writer or erase evidence after a partial step.
 		if missing(p.leaf.Target) {
-			_ = renameNoReplace(p.old, p.leaf.Target)
+			p.state.RestoreAttempted = true
+			if restoreErr := rename(p.old, p.leaf.Target); restoreErr != nil {
+				return errCode("PUBLISH_FAILED_RESTORE_FAILED")
+			}
+			p.state.Restored = true
+			if !p.old.at(p.leaf.Target) {
+				return errCode("PUBLISH_FAILED_RESTORE_UNVERIFIED")
+			}
+			return errCode("PUBLISH_FAILED_RESTORED")
 		}
-		return e
+		return errCode("PUBLISH_FAILED_TARGET_PRESENT_OR_UNVERIFIED")
+	}
+	p.state.Published = true
+	if test.afterPublish != nil {
+		test.afterPublish(stage)
 	}
 	h, e = stage.hash()
-	if e != nil || h != p.leaf.New {
+	if e != nil || h != p.leaf.New || !stage.at(p.leaf.Target) {
 		return errCode("INSTALLED_READBACK_FAILED")
 	}
 	old, e := p.old.hash()
-	if e != nil || old != p.leaf.Old {
+	if e != nil || old != p.leaf.Old || !p.old.at(backup) {
 		return errCode("BACKUP_CHANGED")
 	}
+	p.state.Verified = true
 	return nil
 }
 func run(apply bool) ([]map[string]any, error) {
@@ -442,16 +505,16 @@ func run(apply bool) ([]map[string]any, error) {
 		}
 		return rows, nil
 	}
-	lock, e := openPin("D:/CC/Tools/cleanup-8h/run.lock", syscall.GENERIC_READ|syscall.GENERIC_WRITE, 0, 4)
+	lock, e := openPin("D:/CC/Tools/cleanup-8h/run.lock", syscall.GENERIC_READ|syscall.GENERIC_WRITE, 0, 3)
 	if e != nil {
-		return nil, errCode("HOURLY_CLEANER_ACTIVE")
+		return nil, errCode("HOURLY_CLEANER_LOCK_MISSING_OR_BUSY")
 	}
 	defer lock.close()
 	// The consumer is installed before the producer starts writing v3 records.
 	for _, index := range []int{1, 0} {
 		p := ps[index]
 		e := p.install(hooks{})
-		row := map[string]any{"kind": p.leaf.Kind, "updated": e == nil, "old_sha256": p.leaf.Old, "new_sha256": p.leaf.New, "original_file_id": p.old.id()}
+		row := map[string]any{"kind": p.leaf.Kind, "updated": p.state.Published, "verified": p.state.Verified, "steps": p.state, "old_sha256": p.leaf.Old, "new_sha256": p.leaf.New, "original_file_id": p.old.id()}
 		if e != nil {
 			row["retained_reason"] = e.Error()
 			rows = append(rows, row)
@@ -471,7 +534,9 @@ func main() {
 	if e != nil {
 		r["reason"] = e.Error()
 	}
-	json.NewEncoder(os.Stdout).Encode(r)
+	if json.NewEncoder(os.Stdout).Encode(r) != nil {
+		os.Exit(1)
+	}
 	if e != nil {
 		os.Exit(1)
 	}

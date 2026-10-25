@@ -19,25 +19,38 @@
 審査拒否があれば同じ操作を別経路で行わない。
 
 新旧byte、原証拠、ソース、リンク・実体を確認してから更新する。祖先を保持し、
-書込みを共有しない原実体handleを使う。stageとbackupの既存名を上書きせず、
+書込み・削除を他handleへ共有しない原実体handleを使う。自分のDELETE権で
+renameし、直前に元handleの最終パスも照合する。stageとbackupの既存名を上書きせず、
 元実体のrenameと新stageの公開は両方ReplaceIfExists=falseで行う。owner/group/DACLを
 原handleからstageへコピーする。競合名は保持し、未知のcurrentをbackupへ昇格させない。
 旧実体は同じ場所の`.before-todo3757`へ保持する。
 
 既存1h清掃のrun.lockを保持し、cleanup consumer→safe-delete producerの順で更新する。
-2本とも事前照合に成功するまでどちらも変更しない。公開失敗時は元の実体を、名前が
+run.lockは既存のものだけを開き、不在を自分で補わない。2本とも事前照合に成功する
+までどちらも変更しない。公開失敗時は元の実体を、名前が
 存在しない場合に限って上書きなしで戻す。途中のstage/backupを自動的に削除しない。
-片方だけ成功した場合もresultsの各状態と全体失敗を分ける。
+片方だけ成功した場合もresultsの各状態と全体失敗を分ける。stepsはstage作成・
+元実体の退避・新実体の公開・確認・復元の試行/成否・公開名の有無を別々に返す。
+公開後の確認失敗でもupdatedはtrue、verifiedはfalseとなる。復元失敗も専用の
+エラーにし、公開名が無い状態を隠さない。途中物を勝手に削除して再試行しない。
 
 初回の実読取照合で、safe-deleteは元3650の旧SHAと一致したが、cleanup現用は
 元2491の古いmanifestのSHAに一致しなかった。`--apply`は未実行、実更新は0。
 cleanupの後続配布は、元2488の2026-10-13 16:46の保存履歴に残るSHA 6975fc...を
 取得した。新しいpinはこの独立した原履歴に由来し、未知のcurrentを観測して
 作った値ではない。原handoffの固定SHAと元ToDoの参照を照合し、現物一致を
-これから確認する。原2491の古いSHAを後続版の証拠に書き換えない。
+確認した元3daの実--checkは両方qualified:true/changed:falseだった。原2491の
+古いSHAを後続版の証拠に書き換えない。現在の補助のMust修正後の最終審査・配布は
+別に確認する。
 この未一致を、この補助のfixture成功や実物清掃の成功へ読み替えない。
 
 Windowsのfixtureは新旧SHA、元inode/ACL保持、候補/旧版差替え、hardlink、stage/backup、
 退避直前・退避先・公開直前の競合を検証する。nativeの上書きを有効にしたRedで
 競合名を失う2ケースを実測し、上書きなしへ戻したGreenとrace/vetが成功した。
 最初のfixture読取共有modeとvetのpointer表現の誤りは原失敗logに保持した。
+別モデルのMust2は、確認後の競合rename拒否と復元失敗の表示で修正した。
+元の削除共有と復元エラーの混同へ戻したRedで3ケースを検出し、修正後のGreenを
+確認した。元DACLをstageと異なるprotectedへ設定し、権限コピーを外すRedも検出する。
+前向きslashの本番と同じパス表記、復元成功/失敗の実物配置、公開後の確認失敗を
+fixtureで確認する。Hostedの生security descriptor比較は、内部offset/paddingを除き
+owner/groupのSID・ACL本体・protected状態を厳密に比較するよう修正した。

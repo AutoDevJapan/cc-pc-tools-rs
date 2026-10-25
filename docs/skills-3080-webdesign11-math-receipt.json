@@ -1,0 +1,17 @@
+{
+  "abstract_lifecycle_answers_are_guidance_not_runtime_proof": true,
+  "actual_model_negative_scenarios": 11,
+  "actual_model_positive_scenarios": 11,
+  "actual_qualified_instruction_source_files": 22,
+  "central_files_opened": 0,
+  "coordinate_damping_CSS_area_and_signed_phase_examples": true,
+  "job": "20261025-074042-todo-3080",
+  "live_use_record_sha256": "f6c72362471ca9e7f4ac95ee773eac07e8830f06826227aa1e5833d530f12471",
+  "model_texts_human_semantic_not_automatically_graded": true,
+  "new_model_API_calls": 0,
+  "new_owner_image_approval_inferred": false,
+  "numeric_invariants_checked": 79,
+  "numeric_invariants_passed": true,
+  "renderer_or_SDK_or_GPU_tested": false,
+  "source_scripts_executed": 0
+}

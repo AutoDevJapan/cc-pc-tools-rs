@@ -22,6 +22,11 @@
       "file": "skills-3080-game6-designs.json",
       "sha256": "a13525c510e92f10dd5d7bb5daf6e06f6f0096113bb45c1b23e2fdfae2ea7fe8",
       "target_count": 6
+    },
+    {
+      "file": "skills-3080-utility8-designs.json",
+      "sha256": "96818107c2c604c5298aeb86c1c7b23ee1b23eb593fcb0f7e4489793701c2951",
+      "target_count": 8
     }
   ]
 }

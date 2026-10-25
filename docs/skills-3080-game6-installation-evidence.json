@@ -578,5 +578,16 @@
     "Original scripts, engines, UI, renderer, assets and external APIs were not executed/copied.",
     "Six new metadata targets and58known-managed names were found; traversal warnings2 do not prove their cause, full discovery, all context or implicit selection.",
     "Original primary reading totals are unchanged; all16-source remainder and the9unknown/647denied holds persist."
-  ]
+  ],
+  "public_result_delta_currently_pending": false,
+  "public_result_delta_acceptance": {
+    "pr": 487,
+    "head": "633e8c7d863b10dd904aa0b5b4d1cd81a5827ccb",
+    "merge": "8a0ba18de7707f888b1fb320b42db61caaba08e2",
+    "review": 3781,
+    "actual_luna_max": true,
+    "must": 0,
+    "all7_ci_complete": true,
+    "failed": 0
+  }
 }

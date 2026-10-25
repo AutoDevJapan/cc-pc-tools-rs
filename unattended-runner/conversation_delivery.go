@@ -226,6 +226,10 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 				return err
 			}
 			if ready {
+				switch req.Phase {
+				case "conversation_reply_delivered", "conversation_reply_applied", "conversation_direction_recorded", "conversation_implementation_recorded", "conversation_source_verified":
+					return nil
+				}
 				req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
 				return r.save()
 			}
@@ -424,15 +428,21 @@ func conversationDeliveryRecordedWithMode(row *TodoRow, q ConversationQuestion, 
 			Domain    string                    `json:"domain"`
 			SHA       string                    `json:"answer_file_sha256"`
 			Answer    conversationAnswerReceipt `json:"answer"`
-			Wait      struct {
-				SHA      string `json:"question_receipt_sha256"`
-				Question struct {
-					Request string `json:"request_id"`
-				} `json:"question"`
-			} `json:"wait"`
+			Wait      json.RawMessage           `json:"wait"`
+			Recipient json.RawMessage           `json:"recipient"`
 		}
-		if json.Unmarshal(raw, &record) == nil && record.Domain == "todo-owner-question-delivery-receipt-v1" && record.SHA == bytesHash(b) && record.Answer == answer && record.Wait.SHA == q.ReceiptSHA && record.Wait.Question.Request == q.SenderID {
+		var wait struct {
+			SHA      string `json:"question_receipt_sha256"`
+			Question struct {
+				Request string `json:"request_id"`
+			} `json:"question"`
+			Origin json.RawMessage `json:"origin"`
+		}
+		if json.Unmarshal(raw, &record) == nil && json.Unmarshal(record.Wait, &wait) == nil && record.Domain == "todo-owner-question-delivery-receipt-v1" && record.SHA == bytesHash(b) && record.Answer == answer && wait.SHA == q.ReceiptSHA && wait.Question.Request == q.SenderID {
 			if preserve && (record.Preserved == nil || !*record.Preserved) {
+				return false
+			}
+			if preserve && (len(wait.Origin) == 0 || string(wait.Origin) == "null" || canonicalHash(record.Wait) != canonicalHash(row.QuestionWait) || canonicalHash(record.Recipient) != canonicalHash(wait.Origin)) {
 				return false
 			}
 			matched++

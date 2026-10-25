@@ -159,6 +159,7 @@ func conversationTest(t *testing.T, wait bool) *conversationFixture {
 					for _, arg := range args {
 						if arg == "--preserve-question-wait" {
 							record["preserved_wait"] = true
+							record["recipient"] = wait.(map[string]any)["origin"]
 						}
 					}
 					row["owner_question_delivery_receipts"] = append(saved, record)

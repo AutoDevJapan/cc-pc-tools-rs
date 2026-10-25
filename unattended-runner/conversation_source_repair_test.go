@@ -37,6 +37,12 @@ func prepareSourceRepairFixture(t *testing.T, f *conversationFixture) (*conversa
 	db["projects"].(map[string]any)[f.q.Project] = filepath.Join(f.r.Config.Home, "origin")
 	items := db["items"].([]any)
 	items[0].(map[string]any)["project"] = f.q.Project
+	origin := items[0].(map[string]any)
+	wait := origin["owner_question_wait"].(map[string]any)
+	if wait["origin"] == nil {
+		scheduler, _ := origin["scheduler"].(map[string]any)
+		wait["origin"] = map[string]any{"resume_generation": origin["resume_generation"], "worker_receipt": origin["worker_receipt"], "job": scheduler["job"], "key": scheduler["key"]}
+	}
 	actor := items[1].(map[string]any)
 	actor["scheduler"].(map[string]any)["key"] = "actor-key"
 	intake := items[2].(map[string]any)
@@ -584,7 +590,11 @@ func TestConversationSourceRepairNeverAcceptsNonPreservingEvidence(t *testing.T)
 					delete(record, "preserved_wait")
 				}
 				if kind == "answer" || kind == "mixed" {
-					row["owner_question_answer_receipts"] = []any{record}
+					row["owner_question_answer_receipts"] = []any{map[string]any{
+						"domain": "todo-owner-question-answer-receipt-v1", "wait": record["wait"],
+						"answer": record["answer"], "answer_file_sha256": record["answer_file_sha256"],
+						"applied_at": f.r.Now().Format(time.RFC3339Nano),
+					}}
 					if kind == "answer" {
 						delete(row, "owner_question_delivery_receipts")
 					}
@@ -602,6 +612,62 @@ func TestConversationSourceRepairNeverAcceptsNonPreservingEvidence(t *testing.T)
 			after, _ := os.ReadFile(f.r.TodoPath)
 			if !bytes.Equal(before, after) || req.Phase == "conversation_reply_delivered" {
 				t.Fatal("conflicting receipt changed task or claimed delivery")
+			}
+		})
+	}
+}
+
+func TestConversationSourceRepairReplayKeepsAdvancedPhase(t *testing.T) {
+	for _, phase := range []string{"conversation_reply_applied", "conversation_direction_recorded", "conversation_implementation_recorded", "conversation_source_verified"} {
+		t.Run(phase, func(t *testing.T) {
+			f, args, _ := sourceRepairFixture(t)
+			if code, _ := intakeLinkCLI(t, f, args); code != 0 {
+				t.Fatal("initial repair")
+			}
+			req := f.r.State.ConversationCaptures[f.replies[0].Message]
+			req.Phase = phase
+			if f.r.save() != nil {
+				t.Fatal("advanced state")
+			}
+			before, _ := os.ReadFile(f.r.TodoPath)
+			if code, _ := intakeLinkCLI(t, f, args); code != 0 || req.Phase != phase {
+				t.Fatal("replay moved an advanced phase backwards", code, req.Phase)
+			}
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if !bytes.Equal(before, after) {
+				t.Fatal("replay rewrote the original task")
+			}
+		})
+	}
+}
+
+func TestConversationSourceRepairRejectsHistoricalWaitOrRecipient(t *testing.T) {
+	for _, change := range []string{"generation", "wait-note", "recipient"} {
+		t.Run(change, func(t *testing.T) {
+			f, args, _ := sourceRepairFixture(t)
+			if code, _ := intakeLinkCLI(t, f, args); code != 0 {
+				t.Fatal("initial repair")
+			}
+			repairMutateRow(t, f, 42, func(row map[string]any) {
+				wait := row["owner_question_wait"].(map[string]any)
+				switch change {
+				case "generation":
+					row["resume_generation"] = 8
+					wait["origin"].(map[string]any)["resume_generation"] = 8
+				case "wait-note":
+					wait["block_note"] = "later wait with the same question"
+				case "recipient":
+					record := row["owner_question_delivery_receipts"].([]any)[0].(map[string]any)
+					record["recipient"] = map[string]any{"resume_generation": 99}
+				}
+			})
+			before, _ := os.ReadFile(f.r.TodoPath)
+			if code, _ := intakeLinkCLI(t, f, args); code == 0 {
+				t.Fatal("historical wait or recipient proved current delivery")
+			}
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if !bytes.Equal(before, after) {
+				t.Fatal("conflicting evidence rewrote the task")
 			}
 		})
 	}

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -31,7 +32,12 @@ type omb3255Fixture struct {
 
 func newOMB3255Fixture(t *testing.T) omb3255Fixture {
 	t.Helper()
-	root := t.TempDir()
+	// Service TEMP may use an 8.3 alias. Give the synthetic inputs the same
+	// physical spelling required by the unchanged production handle checks.
+	root, err := physical(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
 	f := omb3255Fixture{spec: omb3255Spec{root: root}, body: make(map[string][]byte)}
 	for _, name := range []string{"signature.json", "public-baseline.json", "original-install.json"} {
 		path, body := filepath.Join(root, name), []byte("independently retained "+name)
@@ -50,6 +56,32 @@ func newOMB3255Fixture(t *testing.T) omb3255Fixture {
 		f.body[path] = body
 	}
 	return f
+}
+
+func TestOMB3255FixtureWithServiceShortTemp(t *testing.T) {
+	root := t.TempDir()
+	name, err := syscall.UTF16PtrFromString(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	buffer := make([]uint16, 32768)
+	n, err := syscall.GetShortPathName(name, &buffer[0], uint32(len(buffer)))
+	if err != nil || n == 0 || n >= uint32(len(buffer)) {
+		t.Fatal("cannot inspect fixture short path")
+	}
+	short := syscall.UTF16ToString(buffer[:n])
+	if same(short, root) {
+		t.Skip("fixture filesystem has no 8.3 alias")
+	}
+	t.Setenv("TEMP", short)
+	t.Setenv("TMP", short)
+	t.Run("inherited", func(t *testing.T) {
+		f := newOMB3255Fixture(t)
+		got := f.verify()
+		if got.Status != "matched" || got.SoftwareMatches == nil || !*got.SoftwareMatches || !got.EvidenceVerified {
+			t.Fatal("fixture inherited an unresolved service TEMP short-name alias")
+		}
+	})
 }
 
 func (f omb3255Fixture) verify() omb3255Result {

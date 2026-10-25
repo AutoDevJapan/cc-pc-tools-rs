@@ -109,13 +109,16 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 	case "replies":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "output", &opts.Output)
-	case "source-link", "direction-record", "implementation-record":
+	case "recover-answered", "source-link", "direction-record", "implementation-record":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "actor-todo-id", &todo)
 		conversationStringFlag(fs, "message-id", &opts.Message)
 		conversationStringFlag(fs, "source-sha256", &opts.SourceSHA)
 		conversationStringFlag(fs, "revision", &opts.Revision)
-		if opts.Command == "source-link" {
+		if opts.Command == "recover-answered" {
+			conversationStringFlag(fs, "thread", &opts.Thread)
+		}
+		if opts.Command == "source-link" || opts.Command == "recover-answered" {
 			conversationStringFlag(fs, "intake-todo-id", &intakeTodo)
 		}
 		if opts.Command == "implementation-record" {
@@ -172,7 +175,7 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		if !conversationID.MatchString(opts.RequestID) || opts.ReasonFile == "" {
 			return opts, errConversationArguments
 		}
-	case "source-link", "direction-record", "implementation-record":
+	case "recover-answered", "source-link", "direction-record", "implementation-record":
 		var ok bool
 		opts.Todo, ok = number(todo)
 		if _, messageOK := number(opts.Message); !ok || !messageOK || !conversationID.MatchString(opts.RequestID) || !shaPattern.MatchString(opts.SourceSHA) || !regexpRevision(opts.Revision) {
@@ -181,7 +184,12 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		if opts.Command == "implementation-record" && opts.EvidenceFile == "" {
 			return opts, errConversationArguments
 		}
-		if opts.Command == "source-link" {
+		if opts.Command == "recover-answered" {
+			if _, ok := number(opts.Thread); !ok {
+				return opts, errConversationArguments
+			}
+		}
+		if opts.Command == "source-link" || opts.Command == "recover-answered" {
 			opts.IntakeTodo, ok = number(intakeTodo)
 			// The assigned intake worker may link its own reply. The backend
 			// still verifies that worker and keeps it separate from the origin.
@@ -382,6 +390,14 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 				err = errConversationArguments
 			} else {
 				result, err = backend.conversationWithdraw(ctx, opts.RequestID, opts.ReasonFile)
+			}
+		case "recover-answered":
+			if backend, ok := runner.(interface {
+				conversationRecoverAnswered(context.Context, conversationCLIOptions) (map[string]any, error)
+			}); ok {
+				result, err = backend.conversationRecoverAnswered(ctx, opts)
+			} else {
+				err = errConversationArguments
 			}
 		case "source-link", "source-verify", "source-reacquire", "implementation-record", "close":
 			if backend, ok := runner.(interface {

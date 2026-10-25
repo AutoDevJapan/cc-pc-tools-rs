@@ -12,3 +12,6 @@ func omb3255AcquireAdmissionRuntime() omb3255RuntimeAcquisition {
 func acquireUnstartedReviewRuntime() omb3255RuntimeAcquisition {
 	return omb3255RuntimeAcquisition{state: "platform_unavailable"}
 }
+func acquirePrivateReviewRuntime() omb3255RuntimeAcquisition {
+	return omb3255RuntimeAcquisition{state: "platform_unavailable"}
+}

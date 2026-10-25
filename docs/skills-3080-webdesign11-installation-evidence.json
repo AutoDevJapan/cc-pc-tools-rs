@@ -912,5 +912,17 @@
     "fresh_other_job_use_verified": false,
     "current_creator_qualified_use_and_discovery_not_retracted": true,
     "whole16_complete": false
+  },
+  "fresh_qualified_use_acceptance": {
+    "evidence": "skills-3080-webdesign11-fresh-qualified-use074042.json",
+    "sha256": "8580c45d6da18877799eb3bd65d55b9b27a3b73a5fe49f9445cd38f62f995fe1",
+    "different_actual_model_turn_verified": true,
+    "qualified_current_buffer_files": 22,
+    "positive_cases": 11,
+    "negative_cases": 11,
+    "general_guard_access_granted": false,
+    "ordinary_all_agents_availability_proven": false,
+    "whole_run_unconditional_scope_compliance_claimed": false,
+    "extra_policy_read_audit_pending": true
   }
 }

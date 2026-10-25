@@ -286,9 +286,9 @@
   "site_entries_with_body": 9862,
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
-  "candidate_designs": 75,
-  "independently_accepted": 75,
-  "installed": 75,
+  "candidate_designs": 89,
+  "independently_accepted": 89,
+  "installed": 89,
   "integrated": 3,
   "excluded": 14,
   "units": {
@@ -346,15 +346,15 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "Legacy28 plus directly sourced actual designs47; pending drafts/catalog rows are not installations and75 is not a cap",
+    "candidate_designs": "Legacy28 plus directly sourced actual designs61; pending drafts/catalog rows are not installations and89 is not a cap",
     "additional_authored_drafts_not_in_plans": 3,
-    "authored_total": 78,
-    "installed": 75,
+    "authored_total": 92,
+    "installed": 89,
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "Legacy acceptances plus individually scoped direct designs. For the six game outputs, original3775 reading and3777 source-specific correction acceptance were bound to exact manifest bytes. Actual creation, metadata discovery and bounded explicit use are separately evidenced; no whole-catalog, renderer or full-context acceptance is implied. The newest public result delta still requires review/CI/merge.",
-    "not_semantically_disposed_occurrences": 73128,
+    "not_semantically_disposed_occurrences": 73114,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
@@ -612,7 +612,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-25T15:13:20.0501700+00:00",
+  "recorded_at": "2026-10-25T20:43:11.2427901+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -700,7 +700,7 @@
     "fixed_roster": "skills-3080-mengto-fixed-entrypoints.json",
     "expected": 177,
     "complete": true,
-    "installed": 43,
+    "installed": 57,
     "complete_definition": "本文path読取と評価の受領。支持/第三者権利/実導入/実適用は未完。",
     "source": "skills-3080-mengto-partial-evaluation.json",
     "unread": 0,
@@ -1698,7 +1698,7 @@
     "current_individual_rights_entries": 5,
     "main_accepted_excluded_before_this_delta": 8,
     "branch_excluded": 14,
-    "branch_pending": 73128,
+    "branch_pending": 73114,
     "primary_and_support_read_states_unchanged": true,
     "existing_primary_amendment_separate": true,
     "source_scripts_executed": false,
@@ -2051,5 +2051,34 @@
     "integration_comparison_definition": "Source procedure bodies are parent-read. Comparisons use known public metadata only; comparison-target central bodies are unread and current presence/equality and final adoption are unresolved.",
     "notice_path_map": "skills-3080-webdesign-next20-notice-map074042.json",
     "notice_path_map_sha256": "212490e54a8a97bd86d1893f4666165e0e7e17c090bbf9e9ec68a6a12e5b04e0"
+  },
+  "webdesign_next14_installation": {
+    "evidence": "skills-3080-webdesign-next14-installation-evidence.json",
+    "created": 14,
+    "files": 84,
+    "returned_current_buffer_files": 84,
+    "live_instruction_files": 28,
+    "structure_passed": 14,
+    "fresh_discovery_found": 14,
+    "positive_examples": 14,
+    "negative_examples": 14,
+    "numeric_invariants": 40,
+    "new_unique_source_readings": 0,
+    "public_result_delta_review_pending": true,
+    "full_context_budget_proven": false,
+    "warning_cause_linked": false,
+    "overall_complete": false
+  },
+  "webdesign11_fresh_qualified_use": {
+    "evidence": "skills-3080-webdesign11-fresh-qualified-use074042.json",
+    "sha256": "8580c45d6da18877799eb3bd65d55b9b27a3b73a5fe49f9445cd38f62f995fe1",
+    "different_actual_model_turn_verified": true,
+    "qualified_current_buffer_files": 22,
+    "positive_cases": 11,
+    "negative_cases": 11,
+    "general_guard_access_granted": false,
+    "ordinary_all_agents_availability_proven": false,
+    "whole_run_unconditional_scope_compliance_claimed": false,
+    "extra_policy_read_audit_pending": true
   }
 }

@@ -1,0 +1,510 @@
+{
+  "targets": [
+    {
+      "name": "build-threejs-scroll-worlds",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "scrollを逆に戻すと状態が変わり、camera補間中に見えないhotspotが操作を奪う。",
+      "negative": "事前生成した動画の連結を、実geometry・camera・raycastのある3D世界と説明する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "9331240e9df283734e9889a71aed6f01d973b21ed6d94600143d7cc4cf640a46"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "952d97d35ae5aa11f63525f239bc67fc0c90e689ec72f99dfed2f6ec8a2e6bc2"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "bb36c79ff435045f57a7f3ec3f50c27d37087c2e5a5ab1b17b6ba219d3f2c091"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "f19d7b2d75a51b3d783e0af03c03b670ead64920c41016315906b469e021d764"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "1e8a44115ef8ec185e08116460d34158cc3975ba35dcc754de6f783fa5ec4c01"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/build-threejs-scroll-worlds/SKILL.md"
+      ]
+    },
+    {
+      "name": "build-wireframe-scan-reveal",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "拡大した子meshでwireとsolidの前線が離れ、完了後も未表示の島が残る。",
+      "negative": "一時cageを捨てる際、元meshと共有したgeometryまでdisposeして完成表示を壊す。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "7035bb2b3b83ba93cf74d123566226b2520d3622d0bfbb3fea51c5d02cc0f861"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "c536c3bcd9f80605f3facc538685c9dfd02b88bd106335b28b2dac7bc9074bbf"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "daaa8ef15435580ae7934fb1c9d8797d2d71038b90be707e3edd49e9c8c1cb54"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "4d26f50026c7974025c5486c3221edd7ef2cefb581f384041313e634449e54d0"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "52b676363c0756f46996660b584639200ebdf11c41dc5ec1495ab6d734ecb831"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/build-wireframe-scan-reveal/SKILL.md"
+      ]
+    },
+    {
+      "name": "clean-minimal-beige-light-mode",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "暖かいprocess説明の案で、薄いpanel境界と本文・操作の区別を比較する。",
+      "negative": "装飾の小さなprogressや承認cardを、実際の処理・承認完了の証拠として表示する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "5296e3b56f172147da7415c31baf2dea6652d926b9cd167d40c1c647f298fd88"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "544a15b849b03c27ac5dfa04653a555d99b94a49b781afc025496a38f3e389c9"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "675e5d268ae36ae4aa59ff06cdaf19f67169defedc7a2cf5e7ca03a8f3eadb05"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "72a194bcf3acd8e7e77e367897632c0d374f9781cdf726afbca4a27dae0953ad"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "0233ed8c1c6c5a26584bc1432e348f8a0117aeecbb3fc41c5feaa251058acfc4"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/clean-minimal-beige-light-mode/SKILL.md"
+      ]
+    },
+    {
+      "name": "cobejs",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "globeのresize後に寸法と回転速度が端末ごとに変わり、route後もlistenerが残る。",
+      "negative": "原例のmarkerを本人の実拠点とし、他libraryのDPR規約をそのまま適用する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "8e8046b4cbf2c336b9325f5e42ba81accf416617626fa4267699855838ff1190"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "c2675cd5fd28900aa2ddf7c910dfaca5a7285203f422059c684af774e3a907ec"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "4f050b7495a5b19d05fb89736c6c61df4feacab07f23aae20cf8a8a79a53bbef"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "a670d708a567a3a2119303ccfe9931c4be4a9cd67035bebd4c0e8d9e628fbff6"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "14ef165ea09720059485627354a51c0cb14e547b98c2431dcea8cd37d1398366"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/cobejs/SKILL.md"
+      ]
+    },
+    {
+      "name": "corner-lasers",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "角で交わる光線と霧が別々に置かれ、emitterから照らす空間として見えない。",
+      "negative": "角laserだけの依頼を、画面全体の再設計や新WebGL engineの導入へ広げる。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "042fa78cfe8297343f3e9d70748281dc293f7cbe4196637daf5604b6802ac892"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "22080372a1c25bd2b2cb85fa6e596341fa2e5c45d5f8fefb98b31c43044196e0"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "7a6766480ca8f5aa98d7f8dd92ccd378c8b32db139cb5ef0f3fd1c9930aee565"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "419a464b542124926d2d0258d84e6c3daf7184758492f6c9bdfdb8ef1fc7e564"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "148af91d97a2eb29f0fddee964bbad8c84a263c002bd672a06d47d3e28406340"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/corner-lasers/SKILL.md"
+      ]
+    },
+    {
+      "name": "dark-blue-contrasting-clean",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "承認した濃紺の画面で、重点CTAと静かな索引・footerの強弱が付かない。",
+      "negative": "青い装飾dotを実稼働の証拠にしたり、承認なしに画面全体を濃紺へ変える。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "bbd2e2538c270f78f212db6256e433666d91f0b3a383c6b49d88299a0a0ebb01"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "0217d6bc0d304424643ab22ac0c7aa92e4967377726f54fda687952178a37eeb"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "d92603c74fc0835e1ca4ed1c8b367ea453e67c5f4c990e60d3e2c3178c341aeb"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "43428c26b04362d2c4a567f54ebec2217a21a877a7a41516b907373b397d02c6"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "550a6b1136992c25f50ccba7096a0046867b46d2997bdf1ad0912f8ce163abe4"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/dark-blue-contrasting-clean/SKILL.md"
+      ]
+    },
+    {
+      "name": "dark-glass-clean-layout",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "承認済みの暗いworkspaceで、左右の情報と中心stageを落ち着いた階層に整理する。",
+      "negative": "実データのない監視画面へsystem IDや運用logを創作して信頼性を演出する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "3e77b79a9f15b2432cf7cad9eb8c83591ef4679626273cfcdc198d05f95e8845"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "55e0b194845d31061a179bfafe66eba7a922150a51506f8547e5619e6d971603"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "e51661080ce76a5386f2490406c95d5ad8e50f0d44ef55b0d972fb87a0baa560"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "7ede58dc794036232201282c83445bb099de9cad6a3bb8195046091cf6a2c73b"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "22ba8c7b75e3d0b066a1f29e0c4c2923ceb5bef8c7f21cc18b2c5d882754a1e2"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/dark-glass-clean-layout/SKILL.md"
+      ]
+    },
+    {
+      "name": "dither-background",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "承認した暗い背景が細かな乱数noiseになり、角pixelと大きな雲状の構図が見えない。",
+      "negative": "ditherをデータの精度や均等な量子化誤差の証明にし、重要な情報へ適用する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "ddc58e5911ae3beeeb19154045ed7143c189a3064ff91e07ef135380c8c12c4b"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "91bf0d1218e655da664e4a47f69624f860c533f300c685100b915b7407314554"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "aa6520dc7dcb8dc3dc9a382a4363b57cad01a6745fbc05ce609539d38663c40b"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "5cb22b3422f949ec0c0a75ca5b784389b4ceea1861ff7e828bcba3de54470e38"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "22cb1f727a24ac84533789dbf9e52b10941f814a1328fd48ac0a29ab3bd60aec"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/dither-background/SKILL.md"
+      ]
+    },
+    {
+      "name": "dither-laser-dark-mode",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "承認した暗い画面で、背景textureとlaser、panelの強弱がばらばらになっている。",
+      "negative": "laserのscanを実際の処理進捗に見せ、全面の強い明滅で操作や文字を隠す。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "44af39ccb61528c5e1e90340f17ae192d1bc5af011376a2061d3bdedb2165503"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "3bde180d2cc222f573f204b61727f3ae74f442c821bf01dc33cecc392529aa94"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "afbf1b3161ea8c5b92f69fef0abdeb299f128aaa055730998cae32d1896d7e57"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "ae74218c26ebe21ac8bf35e02301f42328b366dce6d149a1be0066a376563768"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "5e6f216abf9325cd3a3bf725cb9eff7fd004917cf9a32f1c2b8ffa1a979604c7"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/dither-laser-dark-mode/SKILL.md"
+      ]
+    },
+    {
+      "name": "documentary-brutalist-agency",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "承認済みの制作サイトで、実績・思想・工程・FAQの順序と写真collageを整理する。",
+      "negative": "架空の顧客や受賞・推薦文を加え、大きな文字や不規則な配置だけで実績を演出する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "789788b9e9f6d3abca66c6624bad3ef7c675f961c03e46a9c628c7ee3c75fb47"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "1b7a6804454e7f909c6fb86c100debe91d35c43e773ef90b3f0f5cf54cd9e490"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "0659ce40f776437f419ed66506e318c38ac8003bb735cfaff12664899dfa903b"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "ce9cb77c9f324942c087ca4b71379ac29025ef56ea699f485f44b4a00e5c62fc"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "0a745b0bf2e6f6b993642fcb52b9c145781f06b8270f07fb8086695b90f2487c"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/documentary-brutalist-agency/SKILL.md"
+      ]
+    },
+    {
+      "name": "editorial-portfolio-chapters",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "承認済みportfolioで、作品ごとの章とserviceからcontactへの流れを組み直す。",
+      "negative": "作品titleやactionをhoverまで隠し、参照作品のidentityや画像・成果を転用する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "7759a5991ce205561fc26b7a609733fbe33669cc210a917bbc765463889f9d6c"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "ed35a2d49c368742e041ca506b5b564a5fff6179c30116c1be86d7d2a29af610"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "763b2eb851228aee7af65914b2f45f062677e03a17f8d2dd50441bdd733b5d8e"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "af87a0f0e75fe53556e65e281503aac7f247d0f793fdc90a8a5957ab48911d07"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "ede0c6089312891edda6aac2cc5add02dd9ac47a02927641566c81cccdfcd83e"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/editorial-portfolio-chapters/SKILL.md"
+      ]
+    },
+    {
+      "name": "editorial-service-booking",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "承認した予約サイトで、menu比較の選択が戻る操作や一時エラーで失われる。",
+      "negative": "空き枠表示だけで予約確定とし、架空の口コミ・資格・効果や実課金の試験を加える。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "5deb701790cfdabeb2d352ab01a3a001470cbea73ec4e67bee427e3f1b8bac37"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "afe0396d9c231d59d6cb9cfc42650121fdacde6aa16dcef408f3b1b704d738fb"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "a02695cff83e0c419f17a9ace237ac543f677a75e3242c51ce9f16c801eccbd2"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "6758da4badf9609d86ffa93044a9c8b660263f0d5828366afb5912f5a0128940"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "95aab8244b6bce28e30df7a2e5bc2ba38564e3af86891e0416746a192a152893"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/editorial-service-booking/SKILL.md"
+      ]
+    },
+    {
+      "name": "falling-leaves",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "承認した葉の背景が画面内回転だけになり、面と縁の変化がない紙吹雪に見える。",
+      "negative": "sourceの色や描画コストの断言を全rendererへ当てはめ、実測なしで性能や見た目を保証する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "499e022b8ecce85b374ac1bfc94f21eb4327358236ab2f0389bf0ec0503caedf"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "d03ba4cbcba52a50f2d6e0fca0f80151a1632cc3a84df9e6e65fdd6db4a483da"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "8776f677ccb9e5a18d7950cffe960b32f1c1e1c9aff1c2be0868316a1f1c7ace"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "5b5370e2f9f38e591b5d2f25d8c08cf2994dc7a0ecd75c9870c058d9b827290b"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "c0b88e3127e267f7f6a83ad70045c9173e511882ca2f3580249d88dbac0dceb4"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/falling-leaves/SKILL.md"
+      ]
+    },
+    {
+      "name": "fire-paper-loader",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "本人が確認したloaderがmain threadの重い初期処理で止まり、進捗と終了の引渡しも跳ぶ。",
+      "negative": "演出のcreepを実進捗率にし、sourceのevalや一律のterminate禁止をそのまま導入する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "0cdaf31b1490c234c6e1587da207ef7bf51e5ca97c01a2f681ff12729dafe75d"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "77c46108ee06f237971672f56365263a40fb9ab699a8ee5ece9715c0bf7d3854"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "d8ff1f0e60ea73f1a98e3c4991e1a3ffa9484e989fb175c2410058dfdc93d30b"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "97991df114e5151f77bbf608b9cdaca36d9c47bdb6eee7dafc29c96468801e00"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "7e71ca5bb51fed8d015a5c1101c7a1f4b385afa0dc9f435ba9bdea198eeedfce"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/fire-paper-loader/SKILL.md"
+      ]
+    }
+  ],
+  "root": "D:/CC/Skills",
+  "snapshot_definition": "At successful qualified consume; no claim of immutable filesystem state after handles closed."
+}

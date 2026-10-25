@@ -15,6 +15,9 @@ Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/513
 保護未確認の一般受付原ファイルを開かず、存在・通常ファイル・size/更新日時だけを
 保存する。登録済み受付の投稿版と実job・仕様・prompt・現在APIを独立に照合する。
 原文のコピーで新しい資格を作らない。既存source-linkのSHA契約は変更しない。
+固定のdecision原票は正規APIの`original_decision`とcanonical hashで照合する。
+正規化済み`decision_identity`は質問版のidentity hashと別に照合する。両者は
+異なる文書であり、同じSHAを要求しない。原票の欠落・null・object以外・不一致は拒否する。
 
 保守担当の登録・実job・仕様・実行prompt・作業場所を確認する。元製品の登録先と
 保守担当の登録先は別でよいが、それぞれ通常の保護判定を通す。一般受付は保守基盤

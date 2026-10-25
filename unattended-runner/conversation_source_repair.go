@@ -155,7 +155,7 @@ func repairAttachmentIdentity(raw json.RawMessage) string {
 	return canonicalHash(items)
 }
 
-func (r *Runner) repairQuestionSource(ctx context.Context, q ConversationQuestion) bool {
+func (r *Runner) repairQuestionSource(ctx context.Context, q ConversationQuestion, proof *conversationProof) bool {
 	if !q.Wait || q.SenderID != "conversation-v1-"+bytesHash([]byte(q.RequestID))[:32] {
 		return false
 	}
@@ -168,11 +168,18 @@ func (r *Runner) repairQuestionSource(ctx context.Context, q ConversationQuestio
 	}
 	body, e1 := boundedRegular(q.BodyFile)
 	decision, e2 := boundedRegular(q.DecisionFile)
-	return e1 == nil && e2 == nil && bytesHash(body) == q.QuestionSHA && canonicalHash(json.RawMessage(decision)) == q.DecisionSHA
+	// The sender's identity is normalized (owner, resource order and scope),
+	// while the fixed input preserves the complete original decision document.
+	// Bind each to its own fresh sender field; they need not have the same SHA.
+	var original map[string]json.RawMessage
+	return e1 == nil && e2 == nil && proof != nil && bytesHash(body) == q.QuestionSHA &&
+		canonicalHash(proof.Decision) == q.DecisionSHA &&
+		json.Unmarshal(proof.OriginalDecision, &original) == nil && original != nil &&
+		canonicalHash(json.RawMessage(decision)) == canonicalHash(proof.OriginalDecision)
 }
 
 func (r *Runner) conversationSourceRepair(ctx context.Context, opts conversationCLIOptions, q ConversationQuestion, proof *conversationProof, reply conversationReply) (map[string]any, error) {
-	if opts.Todo == q.Todo || opts.IntakeTodo == q.Todo || opts.IntakeTodo == opts.Todo || bytesHash([]byte(reply.Body)) != opts.BodySHA || !r.repairQuestionSource(ctx, q) {
+	if opts.Todo == q.Todo || opts.IntakeTodo == q.Todo || opts.IntakeTodo == opts.Todo || bytesHash([]byte(reply.Body)) != opts.BodySHA || !r.repairQuestionSource(ctx, q, proof) {
 		return nil, errImplementation
 	}
 	old := r.State.Requests[reply.Message]

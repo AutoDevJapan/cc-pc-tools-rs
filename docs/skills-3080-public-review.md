@@ -78,6 +78,9 @@ Git blob生bytesを独立に照合したもの。元の不完全な3847の仕様
 限定native metadataではterminal phaseは`final_answer`。原431Bは元job終了の
 1468ms前に記録されており、元の開始終了窓を広げない。job metadata containerに
 final fieldのbytesが含まれることと、原文をモデルへ表示・意味読了したことを分ける。
+この固定経路でも、保存prompt/receiptとnativeの入力・期待final digest・model/effort・
+厳密時間窓を先に照合し、その後だけ原応答fileを開く。native不一致では原応答を
+開かない。file/job metadataのco-alterationもnativeの原digestとは一致しない。
 
 合成fixtureは`skills3080_public_review_windows_test.go`と
 `skills3080_history_windows_test.go`。未mergeの正例、private/別source/author、

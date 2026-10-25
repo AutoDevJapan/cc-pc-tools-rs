@@ -90,25 +90,16 @@ func skillsReceiveOriginalRepair(r skillsResultRequest, reg skillsRegistry, s *s
 	// The actual saved launch prompt contains the byte-identical original
 	// spec. Both independent digests predate the new implementation. The
 	// immutable launch receipt also binds the actual registered job ID.
-	prompt, body, reason := skillsHistoricalFilesAt(s, skillsJobsRoot, a, spec, job, r.FinalSHA)
+	body, native, reason := skillsHistoricalFilesAt(s, skillsJobsRoot, a, spec, job, r.FinalSHA, func(proof *skillsNativeResultProof) ([]object, bool) { return skillsHistoricalNative(s, job, proof) })
 	if reason != "" {
 		return out, reason
-	}
-	native, ok := skillsHistoricalNative(s, job, &skillsNativeResultProof{prompt: prompt, body: body})
-	if !ok {
-		return out, "native_context"
-	}
-	for _, n := range native {
-		if skillsModel(str(n["model"])) != skillsModel(a.Model) || n["effort"] != a.Effort {
-			return out, "native_context"
-		}
 	}
 	out = skillsReceived{Body: body, Spec: spec, Native: native, Metadata: object{"id": a.Job, "task": 3686, "status": job["status"], "model": a.Model, "effort": a.Effort, "exit_code": job["exit_code"], "thread_id": a.Thread, "spec_sha256": a.SpecSHA, "final_sha256": hashBytes(body), "spec_binding": "original_registered_author", "consumer_job": reg.writer.Job}}
 	return out, ""
 }
 
 // The alternate root is a synthetic-test seam, never a request field.
-func skillsHistoricalFilesAt(s *skillsFS, root string, a skillsHistoricalResult, spec []byte, job object, finalSHA string) ([]byte, []byte, string) {
+func skillsHistoricalFilesAt(s *skillsFS, root string, a skillsHistoricalResult, spec []byte, job object, finalSHA string, nativeProof func(*skillsNativeResultProof) ([]object, bool)) ([]byte, []object, string) {
 	prompt, ok := s.read(filepath.Join(root, a.Job, "prompt.md"), 4<<20)
 	if !ok || hashBytes(prompt) != a.PromptSHA || !bytes.Contains(prompt, append([]byte("\n依頼:\n"), spec...)) {
 		return nil, nil, "result_binding"
@@ -120,11 +111,22 @@ func skillsHistoricalFilesAt(s *skillsFS, root string, a skillsHistoricalResult,
 	if !ok || !skillsStrict(receipt, &launch) || launch.ID != a.Job {
 		return nil, nil, "result_binding"
 	}
+	// The fixed historical route follows the same pre-body order as typed
+	// reviews. A wrong native input/digest/model/window must not open its result.
+	native, ok := nativeProof(&skillsNativeResultProof{prompt: prompt, finalSHA: finalSHA})
+	if !ok || len(native) == 0 {
+		return nil, nil, "native_context"
+	}
+	for _, n := range native {
+		if skillsModel(str(n["model"])) != skillsModel(a.Model) || n["effort"] != a.Effort {
+			return nil, nil, "native_context"
+		}
+	}
 	body, ok := s.read(filepath.Join(root, a.Job, "last_message.md"), 2<<20)
 	if !ok || hashBytes(body) != finalSHA || !bytes.Equal(body, []byte(str(job["last_message"]))) {
 		return nil, nil, "result_unavailable"
 	}
-	return prompt, body, ""
+	return body, native, ""
 }
 
 // Read only this exact native session at its initial length. Do not infer

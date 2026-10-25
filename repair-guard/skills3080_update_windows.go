@@ -20,6 +20,10 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// PR510's already accepted Windows distribution, reobserved before this
+	// repair. This exact software pair grants no access to review/data paths.
+	// Evidence: docs/evidence/skills-3080-guard-installed-e1a4.json.
+	"29118cd151cc9ccec8bb6a371382e2a3cc2507d5b36e3837f6cc87793b5b21fb": "e1a4c21dc6241c140d4d7364d34f42b16d7005be",
 	// PR506's accepted installation, reobserved before this repair. This is
 	// one software identity, not a candidate-selected data-access exception.
 	// Evidence: docs/evidence/skills-3080-guard-installed-7ba6.json.

@@ -210,6 +210,9 @@ targetが既知の新SHA、backupが既知の旧SHAで、並行変更がない�
 
 ## 作成済み出力を後から使うとき
 
+公開レビューのraw受領は、[起動前の型付き公開入力](skills-3080-public-review.md)と
+既存の固定移行を使う。main mergeと内容レビュー後の配置受入とは分ける。
+
 現在のCreateNew成功結果は、作成時のファイルIDを永続化していない。
 成功件数と現在のhashだけを作成済み出力の読取資格へ転用しない。
 過去14の[合成反例と当時の修復案](skills-3080-created-resource-provenance.md)は保持する。

@@ -21,11 +21,20 @@ typedな入力がそろわない場合は固定の理由だけを返す。
 対象は、未起動・実行履歴空・停止/依存なし・現在の登録予約が固定173cのreviewを
 指す同じ3649/localai-web-rs。元の保存要求Opus/max・originabsentを保持する。
 出所は元3387の同job/thread/turn/command itemと原command/stdout SHAに結ぶ。
-上流の新しい本人固有指定が未確認なら不適格とし、origin欠落だけで切り替えない。
+origin欠落だけで切り替えない。元のAI登録との一致に加え、同3255へこの有限修復の
+続行を結んだ親の正規返信を、そのmessage ID/全文SHA/所属threadへ照合する。
+これを本人の指示や全上流の読了の証明へ昇格させない。初期草稿の
+`current_owner_scope_verified` はこの意味を超えていたため削除する。
+本人固有指定・新しいowner_instruction・停止・仕様変更が記録されていれば不適格。
+元のmodel_origin/effort_originの欠落は、切替後も欠落のまま保持する。
 新たなToDo、レビュー、予約key、別のworktree、再delegateは作らない。
 
 移行元のAnthropic枠は、現在の通常OAuth更新でverified/exhaustedであることが必要。
-移行先のOpenAI枠はverified/availableで、APIキーや追加支出を使わないことが必要。
+移行先は正常なOpenCodex namespaceへ結んだ具体的な公開selectorを選ぶ。そのselectorが
+参照する一意のアカウント自身について、codex OAuth/認証あり/追加支出無効/正常な
+利用可能quotaを確認する。別のavailableアカウントで未知の選択先を代用しない。
+privateなアカウントIDやmappingは保持・出力せず、公開selectorだけをcapsuleへ残す。
+jobs登録と最終admissionは同じ公開selectorを再検証し、実launchにもそのnamespaceを使う。
 観測は60秒以内、未来は1秒まで。対象モデルはgpt-6-luna/maxで、実作者と同じ
 モデルなら不適格。カタログに載っていることだけで利用可能とはしない。
 
@@ -65,11 +74,26 @@ typedな入力がそろわない場合は固定の理由だけを返す。
 
 `scheduler prepare-unstarted-review --id 3649` は検証だけを行う。
 `--apply --expected-state-sha256 <SHA256>` を付けた場合も起動はしない。
-正常producer、現在のGit共通領域/branch/clean/fixed173c、固定spec SHA、元作者2件、
+正常producer、現在のGit共通領域/branch/clean、元作者2件のnative_turn_contextモデル、
+固定spec SHAと次の二つのGit対象、
 現在のOAuth集約、既存3649のjob/process不在を確認する。scheduler.lockとtodo.lockを使い、
 行全体が一致する場合だけ切替capsuleを保存し、quota専用の期限/理由をcapsule内へ移す。
 元のmodel/effort/originの欠落、予約key/branch/worktree、依存、仕様、noteは書き換えない。
 公開APIは任意JSON patchや任意producer pathを受け取らない。
+
+レビュー対象は固定173c/tree cad96aであり、実行用の独立checkoutは保存済み1497a932で
+ある。2026-10-26の通常guard/Git metadataでもHEAD1497a932を確認した。元のcheckoutを
+173cへ変更しない。固定対象treeと実行checkout HEADを別々に確認し、jobs最終受付でも
+再確認する。単に173cのobjectが存在することだけを現在のHEAD一致とはしない。
+specは通常ToDoが生成する `D:/CC/Tools/todo/specs/3649-<32桁hex>.md` の名前空間だけを
+読取前に許す。リンク・reparse pointを拒否し、開いたstream自体を1MiB+1で制限する。
+この限定と固定内容SHAは、別のpathや別ToDoのspecを読む許可ではない。
+
+PC上のCargoを直接起動せず配布物を得るため、既存Build speedの正常資源受付と
+package-toolsをこのbranchの有限な配布に使う。通常テスト成功後だけjobs/schedulerの
+2クレートをrelease buildし、実revision/tree/2実行物SHA/容量/run IDを付けて1日保持する。
+既存ケースの5実行物と混ぜず、既存の共有資源ゲートと容量設定は保持する。
+共有workflow変更を全件テストへする既存選択規則は保ち、その理由を実行票へ残す。
 
 通常prepareはこのcapsuleを再検証してから元Opusのquota早期returnを通り、Luna/maxを
 新しい選択として保存する。元要求のoriginをpolicyへ補完する操作ではない。

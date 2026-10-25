@@ -1,8 +1,8 @@
 //! Normal inputs and CAS for the fixed unstarted review. No new worker or key.
 use crate::{backend::Backend, common::*, engine::Scheduler, policy};
 use cc_job_policy::unstarted_review_state as state;
-use serde_json::{json, Value};
-use std::{fs::File, io::Read, time::Duration};
+use serde_json::{Value, json};
+use std::time::Duration;
 
 pub(crate) struct Evidence {
     pub normal: Value,
@@ -12,25 +12,7 @@ pub(crate) struct Evidence {
 }
 
 pub(crate) fn writers(jobs: &[Value]) -> Result<Vec<String>> {
-    let mut authors = Vec::new();
-    for (id, todo) in state::WRITERS.iter().zip([3387, 3648]) {
-        let found: Vec<_> = jobs.iter().filter(|j| j["id"] == *id).collect();
-        if found.len() != 1 || found[0]["todo_id"] != todo || found[0]["status"] != "succeeded" {
-            return Err(Error("ReviewSourceUnavailable"));
-        }
-        let values = cc_job_policy::author_models(found[0]);
-        if values.is_empty()
-            || values
-                .iter()
-                .any(|m| cc_job_policy::quota_recovery::provider(m).is_none())
-        {
-            return Err(Error("ReviewSourceUnavailable"));
-        }
-        authors.extend(values);
-    }
-    authors.sort();
-    authors.dedup();
-    Ok(authors)
+    state::observed_authors(jobs).ok_or(Error("ReviewSourceUnavailable"))
 }
 
 fn no_worker(item: &Value, jobs: &[Value], ps: &policy::Processes, now: f64) -> bool {
@@ -52,10 +34,7 @@ fn collect<B: Backend>(engine: &mut Scheduler<B>, item: &Value, repo: &str) -> R
         return Err(Error("ResourceWait"));
     }
     let authors = writers(&jobs)?;
-    let mut bytes = Vec::new();
-    File::open(s(&item["spec"]))?
-        .take(1024 * 1024 + 1)
-        .read_to_end(&mut bytes)?;
+    let bytes = cc_job_policy::unstarted_review_spec::read(std::path::Path::new(s(&item["spec"])))?;
     if bytes.is_empty() || bytes.len() > 1024 * 1024 {
         return Err(Error("InputRejected"));
     }
@@ -64,7 +43,7 @@ fn collect<B: Backend>(engine: &mut Scheduler<B>, item: &Value, repo: &str) -> R
         return Err(Error("InputChanged"));
     }
     let normal = engine.backend.unstarted_review_registration()?;
-    let health = engine.backend.quota_recovery_inventory()?;
+    let health = engine.backend.unstarted_review_inventory()?;
     Ok(Evidence {
         normal,
         health,

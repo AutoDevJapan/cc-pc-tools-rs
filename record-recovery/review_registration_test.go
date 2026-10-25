@@ -168,3 +168,68 @@ func TestReviewRegistrationModuleIdentityDoesNotUseWholeRepositoryHEAD(t *testin
 		}
 	}
 }
+
+func TestReviewRegistrationContinuationIsTheParentReplyAndNeverAnOwnerClaim(t *testing.T) {
+	for _, scenario := range []string{"positive", "wrong_thread", "user_role", "changed", "duplicate", "unavailable"} {
+		t.Run(scenario, func(t *testing.T) {
+			get := func(endpoint string) (obj, error) {
+				if endpoint == "/api/bots?messages=0" {
+					thread := reviewContinuationThread
+					if scenario == "wrong_thread" {
+						thread = "other"
+					}
+					return obj{"bots": []any{obj{"id": "2e2cb951-341e-4a2b-89f6-0ad084845edb", "tasks": []any{obj{"threadId": thread}}}}}, nil
+				}
+				if scenario == "unavailable" {
+					return nil, errors.New("unavailable")
+				}
+				m := obj{"id": reviewContinuationMessage, "role": "bot", "kind": "text", "text": "synthetic continuation"}
+				if scenario == "user_role" {
+					m["role"] = "user"
+				}
+				if scenario == "changed" {
+					m["text"] = "other"
+				}
+				messages := []any{m}
+				if scenario == "duplicate" {
+					messages = append(messages, m)
+				}
+				return obj{"messages": messages}, nil
+			}
+			if got := inspectReviewContinuationAgainst(get, omb3255TextSHA("synthetic continuation")); got != (scenario == "positive") {
+				t.Fatal(scenario, got)
+			}
+		})
+	}
+}
+
+func TestReviewRegistrationRejectsDuplicatesAcrossBoundedPages(t *testing.T) {
+	root, turns, entry := registrationFixture()
+	pages := 0
+	call := func(method string, args obj) (obj, error) {
+		switch method {
+		case "thread/read":
+			return root, nil
+		case "thread/turns/list":
+			return turns, nil
+		case "thread/items/list":
+			pages++
+			if pages == 1 {
+				return obj{"data": []any{entry}, "nextCursor": "second"}, nil
+			}
+			return obj{"data": []any{entry}}, nil
+		}
+		return nil, errors.New("unexpected")
+	}
+	if inspectReviewRegistrationAgainst(call, omb3255TextSHA("synthetic command only"), omb3255TextSHA("synthetic result only")) {
+		t.Fatal("duplicate across pages accepted")
+	}
+}
+
+func TestUnstartedReviewRuntimeRootsDoNotReacquireCompletedOldReviews(t *testing.T) {
+	refs:=unstartedReviewRuntimeRoots()
+	if len(refs)!=1 || refs[0].ID!="837aab36-0c9d-4867-8b9f-db9952bc3931" || refs[0].Start!=1792942185190 || refs[0].Finish!=1792943381103 {
+		t.Fatal("new review binding widened or changed")
+	}
+	for _,old:=range append(omb3255ExpectedRoots(),reviewAdmissionExpectedRoots()...){if refs[0].ID==old.ID{t.Fatal("old completed review reintroduced")}}
+}

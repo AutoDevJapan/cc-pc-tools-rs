@@ -24,7 +24,7 @@ pub struct Registration<'a> {
     pub completed_successfully: bool,
     pub added_3649: bool,
     pub omitted_origin_flags: bool,
-    pub current_owner_scope_verified: bool,
+    pub continuation_bound: bool,
 }
 
 impl Registration<'_> {
@@ -41,7 +41,7 @@ impl Registration<'_> {
             && self.completed_successfully
             && self.added_3649
             && self.omitted_origin_flags
-            && self.current_owner_scope_verified
+            && self.continuation_bound
     }
 }
 
@@ -224,7 +224,7 @@ mod tests {
                 completed_successfully: true,
                 added_3649: true,
                 omitted_origin_flags: true,
-                current_owner_scope_verified: true,
+                continuation_bound: true,
             },
             OAuthInventory {
                 observed_at: 1000.,
@@ -311,7 +311,7 @@ mod tests {
                 7 => changed.completed_successfully = false,
                 8 => changed.added_3649 = false,
                 9 => changed.omitted_origin_flags = false,
-                _ => changed.current_owner_scope_verified = false,
+                _ => changed.continuation_bound = false,
             }
             assert_eq!(
                 plan(pending, changed, inventory, 1000., Some(&["gpt-6.1-sol"])),

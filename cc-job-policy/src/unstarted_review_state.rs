@@ -1,11 +1,44 @@
 //! Decode the existing scheduler row and construct one compare-and-swap update.
 //! No filesystem, HTTP, process or shared-store access occurs in this module.
 use crate::unstarted_review::{self as rule, OAuthInventory, Origin, Pending, Registration};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 pub const SOURCE_HEAD: &str = "173c3a4aa925bb03c8e1c109ea598e05f7d0dc9a";
 pub const SPEC_SHA: &str = "0699a3aa47d93e2cc1014964f4f913bbb6f1d986bb9fb3fa52159453bebd441e";
 pub const WRITERS: [&str; 2] = ["20261024-201241-todo-3387", "20261024-220456-todo-3648"];
+pub const REVIEW_TREE: &str = "cad96a1891817f8c0a0b08d82c89dba2567ee2d4";
+pub const CHECKOUT_HEAD: &str = "1497a9326e4c579699f9eb55e5a74b86f530c993";
+
+pub fn spec_path_matches(value: &str) -> bool {
+    let normalized = value.replace('\\', "/").to_ascii_lowercase();
+    let Some(name) = normalized
+        .strip_prefix("d:/cc/tools/todo/specs/3649-")
+        .and_then(|p| p.strip_suffix(".md"))
+    else {
+        return false;
+    };
+    name.len() == 32 && name.bytes().all(|b| b.is_ascii_hexdigit())
+}
+
+pub fn observed_authors(jobs: &[Value]) -> Option<Vec<String>> {
+    let mut authors = Vec::new();
+    for (id, todo) in WRITERS.iter().zip([3387, 3648]) {
+        let rows: Vec<_> = jobs.iter().filter(|j| j["id"] == *id).collect();
+        if rows.len() != 1
+            || rows[0]["todo_id"] != todo
+            || rows[0]["status"] != "succeeded"
+            || rows[0]["execution_observed"]["source"] != "native_turn_context"
+            || crate::quota_recovery::provider(text(&rows[0]["execution_observed"]["model"]))
+                .is_none()
+        {
+            return None;
+        }
+        authors.extend(crate::author_models(rows[0]));
+    }
+    authors.sort();
+    authors.dedup();
+    Some(authors)
+}
 
 fn text(value: &Value) -> &str {
     value.as_str().unwrap_or("")
@@ -77,10 +110,13 @@ pub fn registration(normal: &Value) -> Option<Registration<'_>> {
         completed_successfully: r["completed_successfully"] == true,
         added_3649: r["added_3649"] == true,
         omitted_origin_flags: r["omitted_origin_flags"] == true,
-        // This means the fixed original AI registration and current absent
-        // origins agree. It does not prove the absence of every historical
-        // owner message; any newly recorded override invalidates the row CAS.
-        current_owner_scope_verified: true,
+        // The parent supplied this finite continuation. It is NOT a claim
+        // about the owner's historical model choices or a new owner message.
+        continuation_bound: r["continuation_thread"] == "7c5faa87-6f1e-49c7-92d6-08d6448bfbe6"
+            && r["continuation_message"] == "360df070-ccac-48a2-bc86-a6a18851164a"
+            && r["continuation_sha256"]
+                == "6de3b1080e0d3b780517fffa5db3c5dc928727071656316534b75a4a2ba67e36"
+            && r["continuation_source"] == "parent_bot",
     })
 }
 
@@ -154,7 +190,10 @@ fn inventory(health: &Value, now: f64) -> OAuthInventory {
             now,
         ),
         openai_verified_available: health["openai"]["available"] == true,
-        subscription_only_no_additional_spend: true, // aggregate() admits only the no-overage OAuth route.
+        subscription_only_no_additional_spend: crate::quota_recovery::safe_openai_selector(
+            health, None, now,
+        )
+        .is_some(),
     }
 }
 
@@ -245,6 +284,8 @@ pub fn proposal(
     let capsule = json!({"version":1,"todo_id":3649,"created_at":now,
         "expected_state_sha256":hash(row),"request_sha256":request_binding(row),
         "launch_key":row["scheduler"]["key"],"source_head":SOURCE_HEAD,"spec_sha256":spec_sha,
+        "review_tree":REVIEW_TREE,"checkout_head":CHECKOUT_HEAD,
+        "selected_selector":crate::quota_recovery::safe_openai_selector(health,None,now),
         "model":plan.selected_model,"effort":plan.selected_effort,
         "prior_not_before":row["scheduler"]["not_before"],
         "prior_resource_wait":row["scheduler"]["resource_wait"],
@@ -339,12 +380,23 @@ fn current_for(
     pending.reservation_unchanged = proof["request_sha256"] == request_binding(row)
         && proof["launch_key"] == row["scheduler"]["key"]
         && proof["source_head"] == SOURCE_HEAD
+        && proof["review_tree"] == REVIEW_TREE
+        && proof["checkout_head"] == CHECKOUT_HEAD
         && proof["spec_sha256"] == spec_sha;
     let refs: Vec<&str> = authors.iter().map(String::as_str).collect();
     proof["version"] == 1
         && proof["model"] == "gpt-6-luna"
         && proof["effort"] == "max"
         && proof["registration"] == normal["registration"]
+        && crate::quota_recovery::safe_openai_selector(
+            health,
+            Some(
+                job.map(|j| text(&j["capacity_account_selector"]))
+                    .unwrap_or_else(|| text(&proof["selected_selector"])),
+            ),
+            now,
+        )
+        .is_some()
         && row["scheduler"]["not_before"].is_null()
         && row["scheduler"]["resource_wait"].is_null()
         && rule::plan(
@@ -377,6 +429,7 @@ pub fn admission(
         || job["model"] != "gpt-6-luna"
         || job["effort"] != "max"
         || job["model_origin"] != "policy"
+        || job["effort_origin"] != "policy"
         || job["sandbox"] != "read-only"
         || job["task_type"] != "review"
         || job["review_source_jobs"] != json!(WRITERS)
@@ -426,9 +479,11 @@ mod tests {
                 "turn":"01a16d9d-54fe-77c0-9ce3-1a46594978fd","item":"exec-27beecc5-8f7a-47c3-927f-9f0a7208a390",
                 "command_sha256":"31ad65c65a2f203326add7cd2b1feb438034671fa12255603abdd40312976deb",
                 "output_sha256":"9eec3fe88e851eaaf196a27033696cee8a5e34bbae59d222c7fa3778c0a0d992",
-                "completed_successfully":true,"added_3649":true,"omitted_origin_flags":true}});
+                "completed_successfully":true,"added_3649":true,"omitted_origin_flags":true,
+                "continuation_thread":"7c5faa87-6f1e-49c7-92d6-08d6448bfbe6","continuation_message":"360df070-ccac-48a2-bc86-a6a18851164a",
+                "continuation_sha256":"6de3b1080e0d3b780517fffa5db3c5dc928727071656316534b75a4a2ba67e36","continuation_source":"parent_bot"}});
         let health = json!({"at":1000.,"anthropic":{"at":1000.,"verified":true,"exhausted":true,"available":false},
-            "openai":{"at":1000.,"verified":true,"exhausted":false,"available":true}});
+            "openai":{"at":1000.,"verified":true,"exhausted":false,"available":true,"safe_routes":[{"selector":"pabcdef","at":1000.,"verified":true}]}});
         (row, normal, health, vec!["gpt-6.1-sol".into()])
     }
 
@@ -522,42 +577,56 @@ mod tests {
                 "{field}"
             );
         }
-        assert!(proposal(
-            &original,
-            &normal,
-            &health,
-            &authors,
-            SPEC_SHA,
-            checked(false, true),
-            1000.
-        )
-        .is_err());
-        assert!(proposal(
-            &original,
-            &normal,
-            &health,
-            &authors,
-            SPEC_SHA,
-            checked(true, false),
-            1000.
-        )
-        .is_err());
-        assert!(proposal(
-            &original,
-            &normal,
-            &health,
-            &authors,
-            "changed",
-            checked(true, true),
-            1000.
-        )
-        .is_err());
+        assert!(
+            proposal(
+                &original,
+                &normal,
+                &health,
+                &authors,
+                SPEC_SHA,
+                checked(false, true),
+                1000.
+            )
+            .is_err()
+        );
+        assert!(
+            proposal(
+                &original,
+                &normal,
+                &health,
+                &authors,
+                SPEC_SHA,
+                checked(true, false),
+                1000.
+            )
+            .is_err()
+        );
+        assert!(
+            proposal(
+                &original,
+                &normal,
+                &health,
+                &authors,
+                "changed",
+                checked(true, true),
+                1000.
+            )
+            .is_err()
+        );
     }
 
     #[test]
     fn state_normal_registration_and_fresh_no_overage_health_are_required() {
         let (row, normal, health, authors) = fixture();
-        for field in ["command_sha256", "output_sha256", "item", "source_job"] {
+        for field in [
+            "command_sha256",
+            "output_sha256",
+            "item",
+            "source_job",
+            "continuation_message",
+            "continuation_sha256",
+            "continuation_source",
+        ] {
             let mut changed = normal.clone();
             changed["registration"][field] = json!("other");
             assert!(
@@ -576,50 +645,58 @@ mod tests {
         }
         let mut absent = normal.clone();
         absent["state"] = json!("unavailable");
-        assert!(proposal(
-            &row,
-            &absent,
-            &health,
-            &authors,
-            SPEC_SHA,
-            checked(true, true),
-            1000.
-        )
-        .is_err());
+        assert!(
+            proposal(
+                &row,
+                &absent,
+                &health,
+                &authors,
+                SPEC_SHA,
+                checked(true, true),
+                1000.
+            )
+            .is_err()
+        );
         let mut stale = health.clone();
         stale["openai"]["at"] = json!(939.);
-        assert!(proposal(
-            &row,
-            &normal,
-            &stale,
-            &authors,
-            SPEC_SHA,
-            checked(true, true),
-            1000.
-        )
-        .is_err());
+        assert!(
+            proposal(
+                &row,
+                &normal,
+                &stale,
+                &authors,
+                SPEC_SHA,
+                checked(true, true),
+                1000.
+            )
+            .is_err()
+        );
         let mut unavailable = health.clone();
         unavailable["anthropic"]["verified"] = json!(false);
-        assert!(proposal(
-            &row,
-            &normal,
-            &unavailable,
-            &authors,
-            SPEC_SHA,
-            checked(true, true),
-            1000.
-        )
-        .is_err());
-        assert!(proposal(
-            &row,
-            &normal,
-            &health,
-            &["openai/gpt-6-luna".into()],
-            SPEC_SHA,
-            checked(true, true),
-            1000.
-        )
-        .is_err());
+        assert!(
+            proposal(
+                &row,
+                &normal,
+                &unavailable,
+                &authors,
+                SPEC_SHA,
+                checked(true, true),
+                1000.
+            )
+            .is_err()
+        );
+        assert!(
+            proposal(
+                &row,
+                &normal,
+                &health,
+                &["openai/gpt-6-luna".into()],
+                SPEC_SHA,
+                checked(true, true),
+                1000.
+            )
+            .is_err()
+        );
     }
 
     #[test]
@@ -641,7 +718,7 @@ mod tests {
         row["scheduler"]["selection"] = json!({"unstarted_review":proof,"model":"gpt-6-luna","effort":"max",
             "sandbox":"read-only","network":false,"mcp_profile":"minimal","add_dirs":["D:/CC"]});
         let job = json!({"id":"new-review","todo_id":3649,"launch_key":"same-reservation","cwd":"D:/CC/example/todo-3649-work",
-            "model":"gpt-6-luna","effort":"max","model_origin":"policy","task_type":"review","sandbox":"read-only",
+            "model":"gpt-6-luna","effort":"max","model_origin":"policy","effort_origin":"policy","task_type":"review","sandbox":"read-only","capacity_account_selector":"pabcdef",
             "network":false,"mcp_profile":"minimal","add_dirs":["D:/CC"],"unstarted_review":proof,"review_source_jobs":WRITERS});
         assert!(admission(
             &row, &job, &normal, &health, &authors, SPEC_SHA, 1000.
@@ -655,6 +732,8 @@ mod tests {
         ));
         for (field, value) in [
             ("model", json!("gpt-6.1-sol")),
+            ("effort_origin", json!("owner_request")),
+            ("capacity_account_selector", json!("p000000")),
             ("sandbox", json!("danger-full-access")),
             ("network", json!(true)),
             ("launch_key", json!("other")),
@@ -672,5 +751,21 @@ mod tests {
         assert!(!admission(
             &row, &job, &normal, &health, &authors, SPEC_SHA, 1000.
         ));
+    }
+
+    #[test]
+    fn author_requests_alone_never_establish_the_observed_model() {
+        let mut jobs = vec![
+            json!({"id":WRITERS[0],"todo_id":3387,"status":"succeeded","model":"gpt-6.1-sol"}),
+            json!({"id":WRITERS[1],"todo_id":3648,"status":"succeeded","model":"gpt-6.1-sol"}),
+        ];
+        assert!(observed_authors(&jobs).is_none());
+        for job in &mut jobs {
+            job["execution_observed"] =
+                json!({"source":"native_turn_context","model":"gpt-6.1-sol"});
+        }
+        assert_eq!(observed_authors(&jobs), Some(vec!["gpt-6.1-sol".into()]));
+        jobs[1]["execution_observed"]["source"] = json!("requested_model");
+        assert!(observed_authors(&jobs).is_none());
     }
 }

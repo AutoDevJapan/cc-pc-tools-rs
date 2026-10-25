@@ -12,6 +12,50 @@ const reviewRegistrationItem = "exec-27beecc5-8f7a-47c3-927f-9f0a7208a390"
 const reviewRegistrationCommandSHA = "31ad65c65a2f203326add7cd2b1feb438034671fa12255603abdd40312976deb"
 const reviewRegistrationOutputSHA = "9eec3fe88e851eaaf196a27033696cee8a5e34bbae59d222c7fa3778c0a0d992"
 const reviewRegistrationCWD = "D:/CC/Work/unattended-operations-20261013-wt/todo-3387-discord"
+const reviewContinuationThread = "7c5faa87-6f1e-49c7-92d6-08d6448bfbe6"
+const reviewContinuationMessage = "360df070-ccac-48a2-bc86-a6a18851164a"
+const reviewContinuationSHA = "6de3b1080e0d3b780517fffa5db3c5dc928727071656316534b75a4a2ba67e36"
+
+func inspectReviewContinuation(get func(string) (obj, error)) bool {
+	return inspectReviewContinuationAgainst(get, reviewContinuationSHA)
+}
+
+func inspectReviewContinuationAgainst(get func(string) (obj, error), expectedSHA string) bool {
+	profile, err := get("/api/bots?messages=0")
+	if err != nil {
+		return false
+	}
+	linked := 0
+	for _, raw := range omb3255Array(profile["bots"]) {
+		bot := omb3255Object(raw)
+		if bot["id"] != "2e2cb951-341e-4a2b-89f6-0ad084845edb" {
+			continue
+		}
+		for _, v := range omb3255Array(bot["tasks"]) {
+			if omb3255Object(v)["threadId"] == reviewContinuationThread {
+				linked++
+			}
+		}
+	}
+	if linked != 1 {
+		return false
+	}
+	page, err := get("/api/threads/" + reviewContinuationThread + "/messages?around=" + reviewContinuationMessage + "&limit=1")
+	if err != nil {
+		return false
+	}
+	matched := 0
+	for _, raw := range omb3255Array(page["messages"]) {
+		m := omb3255Object(raw)
+		if m["id"] == reviewContinuationMessage {
+			if m["role"] != "bot" || m["kind"] != "text" || omb3255TextSHA(omb3255Text(m["text"])) != expectedSHA {
+				return false
+			}
+			matched++
+		}
+	}
+	return matched == 1
+}
 
 func reviewRegistrationModuleMatch(gitOutput []byte) bool {
 	parts := strings.Fields(string(gitOutput))
@@ -66,6 +110,7 @@ func inspectReviewRegistrationAgainst(call func(string, obj) (obj, error), comma
 	// a reason to walk an unbounded transcript or read native files.
 	var cursor any
 	seen := map[string]bool{}
+	found := 0
 	for index := 0; index < 4; index++ {
 		params := obj{"threadId": reviewRegistrationThread, "turnId": reviewRegistrationTurn, "limit": 100, "sortDirection": "asc"}
 		if cursor != nil {
@@ -93,16 +138,22 @@ func inspectReviewRegistrationAgainst(call func(string, obj) (obj, error), comma
 		if count == 1 {
 			// ID equality and the full original command/output hashes bind the
 			// one API item, not a global claim about other transcript contents.
-			return true
+			found++
+			if found > 1 {
+				return false
+			}
 		}
 		cursor = page["nextCursor"]
+		if cursor == nil {
+			return found == 1
+		}
 		text, ok := cursor.(string)
 		if !ok || text == "" || len(text) > 8192 || seen[text] {
 			return false
 		}
 		seen[text] = true
 	}
-	return false
+	return found == 1
 }
 
 func runReviewRegistrationCLI(args []string, out io.Writer, acquire func() bool) int {
@@ -114,7 +165,8 @@ func runReviewRegistrationCLI(args []string, out io.Writer, acquire func() bool)
 	result := obj{"ok": true, "kind": "original-review-registration-3649-v1", "todo_id": 3649, "state": "unavailable", "registration": nil, "producer": reviewAdmissionProducer(), "owner_origin_proved": false, "fallback_authorized": false, "live_state_changed": false, "data_access_granted": false}
 	if observed {
 		result["state"] = "observed"
-		result["registration"] = obj{"source_job": "20261024-201241-todo-3387", "thread": reviewRegistrationThread, "turn": reviewRegistrationTurn, "item": reviewRegistrationItem, "command_sha256": reviewRegistrationCommandSHA, "output_sha256": reviewRegistrationOutputSHA, "completed_successfully": true, "added_3649": true, "omitted_origin_flags": true}
+		result["registration"] = obj{"source_job": "20261024-201241-todo-3387", "thread": reviewRegistrationThread, "turn": reviewRegistrationTurn, "item": reviewRegistrationItem, "command_sha256": reviewRegistrationCommandSHA, "output_sha256": reviewRegistrationOutputSHA, "completed_successfully": true, "added_3649": true, "omitted_origin_flags": true,
+			"continuation_thread": reviewContinuationThread, "continuation_message": reviewContinuationMessage, "continuation_sha256": reviewContinuationSHA, "continuation_source": "parent_bot"}
 	}
 	if json.NewEncoder(out).Encode(result) != nil {
 		return 1

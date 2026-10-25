@@ -208,6 +208,9 @@ func omb3255AcquireRuntime() (result omb3255RuntimeAcquisition) {
 func omb3255AcquireAdmissionRuntime() omb3255RuntimeAcquisition {
 	return omb3255AcquireRuntimeFor(reviewAdmissionExpectedRoots())
 }
+func acquireUnstartedReviewRuntime() omb3255RuntimeAcquisition {
+	return omb3255AcquireRuntimeFor(unstartedReviewRuntimeRoots())
+}
 
 func omb3255AcquireRuntimeFor(expected []omb3255ExpectedRoot) (result omb3255RuntimeAcquisition) {
 	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)

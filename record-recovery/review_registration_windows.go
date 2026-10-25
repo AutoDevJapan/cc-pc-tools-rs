@@ -75,5 +75,5 @@ func acquireReviewRegistration() (observed bool) {
 			observed = false
 		}
 	}()
-	return inspectReviewRegistration(rpc.Call) && protection() && moduleStable() && binary.Unchanged()
+	return inspectReviewRegistration(rpc.Call) && inspectReviewContinuation(func(endpoint string) (obj, error) { return omb3255NormalGET(ctx, endpoint) }) && protection() && moduleStable() && binary.Unchanged()
 }

@@ -869,6 +869,9 @@ func main() {
 	if os.Args[1] == "review-registration-metadata" {
 		os.Exit(runReviewRegistrationCLI(os.Args[2:], os.Stdout, acquireReviewRegistration))
 	}
+	if os.Args[1] == "unstarted-review-runtime-metadata" {
+		os.Exit(runOMB3255RuntimeCLI(os.Args[2:], os.Stdout, acquireUnstartedReviewRuntime))
+	}
 	f := flag.NewFlagSet("recovery", flag.ContinueOnError)
 	f.SetOutput(io.Discard)
 	home := f.String("home", "D:/CC/Tools/discord-ask", "")

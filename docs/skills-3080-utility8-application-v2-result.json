@@ -1,0 +1,281 @@
+{
+  "actual_job": "20261025-074042-todo-3080",
+  "all_bounded_cases_passed": true,
+  "application_source_sha256": "fde8faed362addae8fbc4d5a36701e7286ded4f2a20e5cc31c06dfd38ffdef6d",
+  "cases": {
+    "audit-reference-originality": {
+      "actual_installed_archive_comparisons": [
+        {
+          "active_is_not_identical": true,
+          "current_evidence": "browser-video-recording/references/upstream-original.txt",
+          "exact_author_notice_retained": true,
+          "exact_bytes": true,
+          "legal_conclusion": false,
+          "reference_evidence": "fixed manifest source SHA256 9c9aa4307a6d7bac1bc7dad29cc68468d22be35f9ad5b7b5f48522b1070a4c64",
+          "role": "retained upstream procedure for audit",
+          "target": "browser-video-recording"
+        },
+        {
+          "active_is_not_identical": true,
+          "current_evidence": "stitched-full-page-capture/references/upstream-original.txt",
+          "exact_author_notice_retained": true,
+          "exact_bytes": true,
+          "legal_conclusion": false,
+          "reference_evidence": "fixed manifest source SHA256 0ff78c19ffd8162e4cb3c44d5e225ab570c55082d2098a73ffb7dad8d295ed01",
+          "role": "retained upstream procedure for audit",
+          "target": "stitched-full-page-capture"
+        },
+        {
+          "active_is_not_identical": true,
+          "current_evidence": "video-to-superprompt/references/upstream-original.txt",
+          "exact_author_notice_retained": true,
+          "exact_bytes": true,
+          "legal_conclusion": false,
+          "reference_evidence": "fixed manifest source SHA256 2b0db0096fb715f9e5c6be419f2be5caf0df5e1991ac019308185e2d72c2f950",
+          "role": "retained upstream procedure for audit",
+          "target": "video-to-superprompt"
+        },
+        {
+          "active_is_not_identical": true,
+          "current_evidence": "html-to-interaction-prompts/references/upstream-original.txt",
+          "exact_author_notice_retained": true,
+          "exact_bytes": true,
+          "legal_conclusion": false,
+          "reference_evidence": "fixed manifest source SHA256 59b800616a70b89b2d5b3d85b8b138c3d22afc83a23fe7e565e08bd1610a8999",
+          "role": "retained upstream procedure for audit",
+          "target": "html-to-interaction-prompts"
+        },
+        {
+          "active_is_not_identical": true,
+          "current_evidence": "optimize-web-animations/references/upstream-original.txt",
+          "exact_author_notice_retained": true,
+          "exact_bytes": true,
+          "legal_conclusion": false,
+          "reference_evidence": "fixed manifest source SHA256 37a8f512bb22a4f2112e4ed388068c0cd184d312d64ee00a993da5bf04ded947",
+          "role": "retained upstream procedure for audit",
+          "target": "optimize-web-animations"
+        },
+        {
+          "active_is_not_identical": true,
+          "current_evidence": "build-game-changelog/references/upstream-original.txt",
+          "exact_author_notice_retained": true,
+          "exact_bytes": true,
+          "legal_conclusion": false,
+          "reference_evidence": "fixed manifest source SHA256 02cae71e942ccd8eab6ec84b7e0a990cb079155ec459bad71bff83f6464827fa",
+          "role": "retained upstream procedure for audit",
+          "target": "build-game-changelog"
+        },
+        {
+          "active_is_not_identical": true,
+          "current_evidence": "test-playable-web-games/references/upstream-original.txt",
+          "exact_author_notice_retained": true,
+          "exact_bytes": true,
+          "legal_conclusion": false,
+          "reference_evidence": "fixed manifest source SHA256 4e22866b1eae238420d48de06ba1df11e70e033a02097575acde827a94d25f9a",
+          "role": "retained upstream procedure for audit",
+          "target": "test-playable-web-games"
+        },
+        {
+          "active_is_not_identical": true,
+          "current_evidence": "audit-reference-originality/references/upstream-original.txt",
+          "exact_author_notice_retained": true,
+          "exact_bytes": true,
+          "legal_conclusion": false,
+          "reference_evidence": "fixed manifest source SHA256 8b8b5e6c6174ff790f08541e444fe64b48f8d078b1f5783b36c3204a690616b6",
+          "role": "retained upstream procedure for audit",
+          "target": "audit-reference-originality"
+        }
+      ],
+      "legal_verdict_or_automatic_deletion": false,
+      "matching_bytes_not_automatic_violation": true,
+      "scope": "Only the eight newly created packages; no unknown central bodies or supplied third-party media.",
+      "unknown_conditions_not_passed": true
+    },
+    "browser-video-recording": {
+      "actual_cursor_asset_or_browser_recording": false,
+      "cursor_top_left_for_output_pixel_hotspot_2_3": [
+        198,
+        117
+      ],
+      "data_model_output_point": [
+        200,
+        120
+      ],
+      "result_before_click_and_outside_crop_rejected": true,
+      "synthetic_video_is_not_continuous_browser_recording": true
+    },
+    "build-game-changelog": {
+      "draft_not_shipped": true,
+      "fixture_ledger": [
+        {
+          "ID": "d103",
+          "Version": "2.5.3",
+          "Source": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "Date": "2026-10-04",
+          "State": "succeeded"
+        },
+        {
+          "ID": "d102",
+          "Version": "2.5.2",
+          "Source": "cccccccccccccccccccccccccccccccccccccccc",
+          "Date": "2026-10-03",
+          "State": "succeeded"
+        },
+        {
+          "ID": "d100",
+          "Version": "2.5.1",
+          "Source": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "Date": "2026-10-01",
+          "State": "succeeded"
+        }
+      ],
+      "latest_shipped_version": "2.5.3",
+      "negative_duplicate_and_invalid_date_rejected": true,
+      "real_deployment_or_menu_UI": false,
+      "rollback_same_source_retained": true,
+      "unknown_provenance_kept": true
+    },
+    "html-to-interaction-prompts": {
+      "HTML_or_script_executed": false,
+      "inert_fixture_sha256": "195992ce7715f157a070992fd6080dac8abd88c213a0a6eb4f5fe92235f62848",
+      "prompt": "同じcardにhoverまたはkeyboard focusがある時のopacity変化を対象とする。元sourceはCSSで、GSAP等の追加根拠はない。実browserの応答は未観測。対象へ移す時は元の許可と同範囲の画像回答を保持する。",
+      "runtime_observed": false,
+      "screenshot_only_not_runtime_or_library_proof": true,
+      "source_locations": [
+        "style#motion selector .card:hover/.card:focus-visible",
+        "button#card"
+      ],
+      "static_source_inspected": true
+    },
+    "optimize-web-animations": {
+      "bounded_state_model": {
+        "Visible": true,
+        "Disposed": true,
+        "Frame": false,
+        "Generation": 2,
+        "SimulationTicks": 1,
+        "DiscardedLate": 1,
+        "SharedAlive": true
+      },
+      "heap_leak_ruled_out": false,
+      "negative_late_loader_rejected": true,
+      "real_CSS_RAF_or_GPU_profile": false,
+      "shared_other_owner_resource_preserved": true
+    },
+    "stitched-full-page-capture": {
+      "declared_document_ranges": [
+        {
+          "From": 0,
+          "Through": 600,
+          "Width": 1280
+        },
+        {
+          "From": 600,
+          "Through": 1200,
+          "Width": 1280
+        },
+        {
+          "From": 1200,
+          "Through": 1440,
+          "Width": 1280
+        }
+      ],
+      "gap_and_mixed_width_rejected": true,
+      "image_content_sticky_header_DPR_or_real_page_proved": false,
+      "range_coverage_valid": true
+    },
+    "test-playable-web-games": {
+      "fixture_scope_satisfied": true,
+      "no_nonexistent_boss_or_mobile_requirement_added": true,
+      "real_browser_scope_satisfied": false,
+      "selected_journeys": [
+        "save-migration",
+        "render-feedback"
+      ],
+      "unperformed_real_play_explicit": true
+    },
+    "video-to-superprompt": {
+      "actual_encoded_video_sha256": "7d5dfb92886e4e667aae3f47ae4f2707aa1da87620e8c808eed73e677d452536",
+      "actual_prompt": "解析用の自己生成動画は2秒、320x240、24fps。0.5秒のsampleは赤、1.5秒は青。二つのsampleから切替時刻や全中間frameの動きは断定しない。元HTML・scroll入力・cursorはなく、pinやlibraryの同定は推論としても根拠がない。素材はこの自己生成fixtureで、外部の素材取得やUI実装の依頼ではない。",
+      "all_intermediate_frames_or_exact_transition_inspected": false,
+      "browser_input_or_source_library_inferred": false,
+      "decoded_sample_times_seconds": [
+        0.5,
+        1.5
+      ],
+      "fps": "24/1",
+      "frames_reported": 48,
+      "height": 240,
+      "sample_colors": [
+        "red",
+        "blue"
+      ],
+      "video_seconds": 2,
+      "width": 320
+    }
+  },
+  "creation_wrapper_sha256": "405af6d191692d68855cfb43cfa4e261cf0bb916518d186cb50372509cd55e5b",
+  "domain": "skills3080-utility8-explicit-use-v1",
+  "explicit_current_worker_application": true,
+  "installed_output_hashes": {
+    "audit-reference-originality/SKILL.md": "ffe20c1f5f4efdb542ff16032d7cb3e396cf25eba968618789e33e01dc7c7571",
+    "audit-reference-originality/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+    "audit-reference-originality/references/guide.md": "8e3b09f617352c2cc4e828a02accdf8a0c9949f3f8fbd818bc13aed2f2296138",
+    "audit-reference-originality/references/source.json": "9ed1072010ef92f5a3f4f2717b4f18111cc27aba9c42b9ae4c3a56321353a803",
+    "audit-reference-originality/references/sources.md": "58430119a6ae3c17d8e7124a5838eb2037bfe9554783a39ee7c508be34abf300",
+    "audit-reference-originality/references/upstream-original.txt": "8b8b5e6c6174ff790f08541e444fe64b48f8d078b1f5783b36c3204a690616b6",
+    "browser-video-recording/SKILL.md": "ea02be48096c9a3846e88b74bc640dcd8c040098292c2600b7aadacf6893e8fe",
+    "browser-video-recording/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+    "browser-video-recording/references/guide.md": "935bee192b6fdf1ac2b34438d787c87d0a3eeed0ba6399fe97c85a6e3cafd90f",
+    "browser-video-recording/references/source.json": "63b5d53b80368a23343afcee259184aa3b844e03f35c48702e2ab901b3a9b02b",
+    "browser-video-recording/references/sources.md": "67ee9146c881d9f8dd36e48ae51f6f879e5482c5234d8ca1afd2fd27db471514",
+    "browser-video-recording/references/upstream-original.txt": "9c9aa4307a6d7bac1bc7dad29cc68468d22be35f9ad5b7b5f48522b1070a4c64",
+    "build-game-changelog/SKILL.md": "dc4b1dc513222c262ae653d12c7734e4d86223dfe01475692ad17d8ad64021aa",
+    "build-game-changelog/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+    "build-game-changelog/references/guide.md": "264c807e23aa8aa6c14e03582cf25fb2123cfb7731e338b6504f99263b7aa183",
+    "build-game-changelog/references/source.json": "3c03723d15d1fa0d71b8d7690af81afcf2d89d0ecca1f19c4465a39173b5501f",
+    "build-game-changelog/references/sources.md": "d2ead7bd4c2e0e65a74614287c623c14773403b46f3aab1a5d7d39b8db397b53",
+    "build-game-changelog/references/upstream-original.txt": "02cae71e942ccd8eab6ec84b7e0a990cb079155ec459bad71bff83f6464827fa",
+    "html-to-interaction-prompts/SKILL.md": "4cf18a4eae90c0b3e36cfc9735ba7da5eeb960662f7debec508c4b7fec4343f4",
+    "html-to-interaction-prompts/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+    "html-to-interaction-prompts/references/guide.md": "0892798d5f10e3bf354e0093a8aa36e52d43ac1519664fb3edf914f9e56cbb44",
+    "html-to-interaction-prompts/references/source.json": "78f8fa26b122c5582fe0324062fee23411e6fcc6cd623900b7d33aa6d83cfa77",
+    "html-to-interaction-prompts/references/sources.md": "88de93fdab99231ebcf6ad3c234485b247b5ae99fa79376867004cf85bb63f4d",
+    "html-to-interaction-prompts/references/upstream-original.txt": "59b800616a70b89b2d5b3d85b8b138c3d22afc83a23fe7e565e08bd1610a8999",
+    "optimize-web-animations/SKILL.md": "b711db3f0b329915af77eeeaa0d5780191d48af96a19e90d905564af6f617b58",
+    "optimize-web-animations/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+    "optimize-web-animations/references/guide.md": "e85a7cb8005a78a20cd0f34aeaca6d077b9e8fdcab07474180254818da758d52",
+    "optimize-web-animations/references/source.json": "dc3e7b1af15522f8ba35c6a844e32b41d941d17a9b2ee8e3a10b1a7b419ddbe1",
+    "optimize-web-animations/references/sources.md": "f6369f4526b29585bc27636b2becc936266634d5aef753da1abf5f806a94c924",
+    "optimize-web-animations/references/upstream-original.txt": "37a8f512bb22a4f2112e4ed388068c0cd184d312d64ee00a993da5bf04ded947",
+    "stitched-full-page-capture/SKILL.md": "5627937797eabbc793ffe0906695751c7ee7babeb1439bf2a398b0aeb95c5765",
+    "stitched-full-page-capture/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+    "stitched-full-page-capture/references/guide.md": "486a8451e83b9fbcf175cf52c1c230dcc7de201433813a3041aa4570d87026e7",
+    "stitched-full-page-capture/references/source.json": "a946c169352504a87f2375c216b5127f2e4b5154e42c5a19a4f48fc02ae3b297",
+    "stitched-full-page-capture/references/sources.md": "b28875f476949a7516ccd8080fbe42aa62c3e580ee0159e528be7b8bcd18bbf6",
+    "stitched-full-page-capture/references/upstream-original.txt": "0ff78c19ffd8162e4cb3c44d5e225ab570c55082d2098a73ffb7dad8d295ed01",
+    "test-playable-web-games/SKILL.md": "6365ae530f82777c56e6fea3bf34efdb95d09c250c632d6aa891d9ad05c2df87",
+    "test-playable-web-games/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+    "test-playable-web-games/references/guide.md": "daa857bd964872cf4bea536d7d42cb58a1a959bdfd92938c662ddeccc900a0b8",
+    "test-playable-web-games/references/source.json": "8f8936b106c46df79a6f252a35ceff9b162fcf2c7770d1498bd5f377cb0bf6b6",
+    "test-playable-web-games/references/sources.md": "6ba6e71e93d954f7368c1b1e1fc91acef42541902da6fcbf69173a26e0532a63",
+    "test-playable-web-games/references/upstream-original.txt": "4e22866b1eae238420d48de06ba1df11e70e033a02097575acde827a94d25f9a",
+    "video-to-superprompt/SKILL.md": "2405f6b58ab051728f4e21ce4264dbd2d04cc65619caf0e3b205b8b72f80af91",
+    "video-to-superprompt/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+    "video-to-superprompt/references/guide.md": "66f2baa498f7266ab8a1a0ca7b2845626c35dbf9a4554c6a59bc0a67e5bf86bd",
+    "video-to-superprompt/references/source.json": "e5c893c09f0c6be38afa07f78336a7874d8c551f2094b99d591ef6067137d224",
+    "video-to-superprompt/references/sources.md": "c140ec3a3d1fab5b028f0f2ffdd98e4202044c17e94fd34fe51818679c4337e0",
+    "video-to-superprompt/references/upstream-original.txt": "2b0db0096fb715f9e5c6be419f2be5caf0df5e1991ac019308185e2d72c2f950"
+  },
+  "limits": "Only eight newly installed known packages. Actual byte/notice comparison and an encoded synthetic video/frame inspection accompany bounded data models; real browser capture/play, full-page image content, CSS/RAF runtime and heap were not tested.",
+  "manifest_sha256": "7e95c0cac90d6a5e0b83c3236b5320da95fe6b600798abd41c75fb0a0e8f734d",
+  "network_requests": 0,
+  "new_central_writes": 0,
+  "new_separate_model_turn_or_implicit_selection": false,
+  "overall16_complete": false,
+  "probe_receipt_sha256": "6c1badd61cf0ac18cf422fec3300d7382bdc6905a5605576d529cf0351b0b9b2",
+  "real_browser_game_UI_or_GPU_execution": false,
+  "revalidates_original_result_after_review3789": true,
+  "source_commit": "a815e8e5d67a13cdc54cd95e6df5f0c2aa434e05",
+  "source_scripts_executed": false
+}

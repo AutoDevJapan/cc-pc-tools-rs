@@ -1,0 +1,105 @@
+{
+  "active_hashes": {
+    "author-game-levels/SKILL.md": "9f35297638b35f15df6328900cf547795057b9651474b4cc707888db66f415f4",
+    "author-game-levels/references/guide.md": "0b867151bcb96749c554e5fbc7c34b69b74091301d3d54e7536b04a967c458f1",
+    "build-threejs-enemy-systems/SKILL.md": "7d2fb047c7ab7032f24e243560166c63da4d41f53eb12a0a7e2d610c9f680216",
+    "build-threejs-enemy-systems/references/guide.md": "3ef280f9a1706190e58c58dc5b464695dd57248633f5fce9e534e67647c43726",
+    "design-action-combat/SKILL.md": "63854a47342048716be2691e41ce2848c66bf9391f0f450176ec325214bb2194",
+    "design-action-combat/references/guide.md": "5107177ff91cb84098bef3987ddd999a1355b134f6285ce1ff6eab864b9b95c7",
+    "design-game-encounters/SKILL.md": "67bef3c967e938367f4c9d8ed0316fff6966cd6f2b915b5393daa11e0ba768cd",
+    "design-game-encounters/references/guide.md": "41f20929d0ad9f2ce47df5c70813433c644f18ac87e1a155c6b8c1714e58d368",
+    "optimize-threejs-games/SKILL.md": "4a40dba0e9da1f9c3f49cdfdca392bd3328310f3eb8128c793ac528a2b98d421",
+    "optimize-threejs-games/references/guide.md": "0ad9560c8d5b7941a39f25c30e8e633e066ef21f9b430222074d870427fece52",
+    "tune-enemy-ai/SKILL.md": "ffdc39fb174415ec762661cd8ada0f4546490ee022abca83eaef29d53b58ee3b",
+    "tune-enemy-ai/references/guide.md": "902e04255af8180c5a2307e696d70b937fc55c1339c0d6bec4edbf55888cb4b7"
+  },
+  "actual_game_executed": false,
+  "actual_gpu_benchmark": false,
+  "applied_at": "2026-10-25T00:36:08.7433425Z",
+  "author_levels": {
+    "flat_requirement_conditional": true,
+    "limits": "Data-contract example only. No collision geometry, actual traversal, lighting renderer or device performance was executed.",
+    "local_light_cleanup_preserves_world_owner": true,
+    "missing_nav_reset_and_duplicate_ID_rejected": true,
+    "vertical_allowed_when_spec_allows": true
+  },
+  "build_enemy_systems": {
+    "definition_id": "guard-type",
+    "definition_unchanged": true,
+    "instance_A_health": 80,
+    "instance_B_health": 100,
+    "limits": "Simple shared immutable data and validation only; real rig normalization, placeholder rendering and gameplay LOD were not executed.",
+    "lod_preserves_contract": true,
+    "missing_socket_and_duplicate_move_rejected": true
+  },
+  "design_action_combat": {
+    "active_interval_ticks": "[20,30)",
+    "distinct_target_preserved": true,
+    "duplicate_hit_rejected": true,
+    "health": {
+      "enemy-A": 93,
+      "enemy-B": 93
+    },
+    "limits": "Discrete declared contact events only. Does not prove continuous-collision/frame-skip handling or animation readability.",
+    "resolved_events": [
+      "swing-A|enemy-A|hit1",
+      "swing-A|enemy-B|hit1"
+    ],
+    "startup_recovery_invalid_conditions_rejected": true
+  },
+  "design_encounters": {
+    "declared_attack_capacity": 1,
+    "limits": "Minimal fixed-state capacity and entitlement example, not production durable rewards, camera visibility or encounter-quality acceptance.",
+    "released_slot_reassigned": true,
+    "reward_balance": 50,
+    "same_entitlement_deduplicated_across_retry": true
+  },
+  "external_apis": 0,
+  "implicit_skill_selection_proven": false,
+  "job": "20261025-074042-todo-3080",
+  "manifest_sha256": "2141bfa3a4d04fd62398741f5e80627e8cb0ef36815ccec6643711540d8bc924",
+  "new_charges": 0,
+  "new_separate_model_turn_executed": false,
+  "optimize_games": {
+    "actual_gpu_benchmark": false,
+    "after_median_ms": 19,
+    "after_p95_ms": 90,
+    "before_median_ms": 24,
+    "before_p95_ms": 100,
+    "changed_quality_and_warmup_rejected": true,
+    "comparison_method": "Recorded same workload fields; different before/after source builds allowed and stated",
+    "cpu_or_gpu_bottleneck_proved": false,
+    "gameplay_contact_regression_detected_separately": true,
+    "limits": "These synthetic statistics exercise the comparison method only, not a real renderer, device speedup or GPU profiling.",
+    "sample_count_each": 8,
+    "source": "explicit synthetic input traces, not observed real frame timing"
+  },
+  "renderer_executed": false,
+  "tune_enemy_ai": {
+    "death": "defeated",
+    "interrupt": "stagger",
+    "limits": "Declared deterministic state fixture; not a production AI, navigation solver, fairness or game-quality measurement.",
+    "path_failure": {
+      "State": "reposition",
+      "Target": "enemy-test",
+      "Since": 16,
+      "PathGeneration": 5
+    },
+    "stale_result_ignored": true,
+    "start": {
+      "State": "pursue",
+      "Target": "enemy-test",
+      "Since": 10,
+      "PathGeneration": 4
+    },
+    "target_loss": {
+      "State": "investigate",
+      "Target": "",
+      "Since": 11,
+      "PathGeneration": 5
+    }
+  },
+  "ui_changed": false,
+  "upstream_scripts_executed": false,
+  "whole16_complete": false
+}

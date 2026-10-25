@@ -1,0 +1,39 @@
+# ToDo3755: 最初のツール前のprotocol 429停止
+
+作業ブランチ: scheduler/todo-3755-429。親3628の清掃は複製せず、依存待ちへ変えない。
+
+開始時の確認: 3642/3704の正規statusと該当job.jsonではOpus5.5/max、正規protocol 429、steps/tokens=0、各13分/約5時間後のrecovery cancelを確認した。手動復旧で完了したレビューと、429/404/未読の失敗を区別して保持する。旧容量raw state/logや認証ファイルは読まない。
+
+原因: events.rsは正規errorをquotaとして保存するが、jobs.rsのsupervise_attemptは子のpollが終了するまで待ち続ける。retry_429/capacityおよび通常schedulerのquota_recoveryへ届かない。
+
+実装方針: 既存supervisor内で最初のツール前の正規capacity/quotaエラーに有限の猶予を設ける。実ツール・通常完了・新しいturn・認証/取消を区別し、既存pause_idle_agentで凍結、元の所有/世代と未実行のtoolを再照合してから保存・排出する。quotaは無条件に別枠へ逃がさず既存schedulerの実OAuth検証へ返す。新しい常駐/監視/タスクは作らない。
+
+Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/481 。
+
+確認済み: Red commit 6a156575（nextest 6d2e1239、停止回収のassertで失敗）。最初の9テストは132e76f3で全成功。Windowsの実controllerツリー回収と、同じspecを保つ既存quota証明/CLI/通常ToDo割当/再応答はa4d6a4dcで2/2成功。実プロセスは31.594秒でfailed/quota/drained、元の子と監督の終了を確認。旧監督を生存のままにした初回のquota結合fixtureは「source has not drained」で正しく拒否された。監督終了をcreation timeの交代で正しく表すfixtureへ直し成功し、拒否を製品成功へ書き換えていない。
+
+確認済み: cc-jobs全体と、既存quotaのcc-scheduler/cc-job-policy関連563件は全成功。cc-jobsのdoctestは0件成功、全target Clippy成功。workspace全体は実行していない。
+
+追加の自己点検: 子停止直後のdrained保存が失敗すると監督が通常終了し、回収の印を失うRedをe3a9f286で確認。stoppingを保持し、readerを排出してから厳密な終端保存でdrainedを確定する修正を加えた。停止前保存/停止失敗/最終保存失敗の対照を追加し、b6eb169eで13件全成功。Windows実プロセスは32.227秒で終了した。旧563件の全部は重ねず、この影響範囲を確認した。
+
+Issue481/PR484。別モデルの固定読取3762はbase177385c8/head788fd233、実job20261025-080957-todo-3762。実turn_contextはgrok-4.6/xhigh、2026-10-24T23:10:35.09Z。原応答はまだ受領していない。実装モデルSolとは別。xai/grok-4.7の最初の登録は既存ToDo CLIのslash制限でValueError/行未作成。登録CLIの試案はRed/Greenを確認した後取り下げ、既存の成功実績があるgrok-4.6を使った。ToDo本体は変更・配布していない。
+
+共有ToDoの64MiB書込上限で親3628の結果追記が失敗した。既存archive-historyで3628の2履歴45,506bytesを不変segment（SHA6ca94fb1…）へ保管し、元のnote/状態/待ちを保持して追記を再実行、読返し成功。親のwait_onは3757/3758で、この修復待ちは追加していない。容量修復の既存担当3651があるため複製しない。
+
+元ToDoと親への候補記録は[3755:protocol-stall-candidate:788fd233]。完全ログ、再開JSON、正規checkpoint saved=trueと全checks=trueは.ci-work/3755へ保持する。現用codex_jobsは3726の独立build/deployment receiptでsource2e173041/sha2c79d836と照合できる。通常guardは未分類、古いmodel資格はfalseのまま保持する。旧容量raw state/logや認証を読まない。変更後artifactは未配布。
+
+3762原応答を受領: SHA256 0acc750fe8ed58f03e9625bda9dbefd04df9cdbb9c8c989b9a8fd9ac7724e85b。指定9対象と必要周辺を読了、未変更parity全件/任意scheduler詳細は未読、テスト未実行を区別した読取完了。元3762のみdone。Must2はstop失敗後の凍結維持と実owner_question_wait/decision_waitの保護。Fakeのkeep_paused空実装を補い、実キー/doingを使うテストへ直すと両件のRedを確認した。
+
+Must対応: stop失敗時はkeep_paused、停止意図を呼出側のdurable baselineにも保持し、根の終了だけでdrained/再試行にしない。既存quota資格でも同世代の未完collectionと実質問/判断待ちを拒否。古いreceiptはnull fieldでdigestを変えない。凍結後のlockはtry取得にした。fd14f5eeでは32関連テスト全成功、Windows実ツリーも32.356秒で終了した。基盤563件は変更が無い部分を再利用し、全workspaceは重ねない。reviewの未知開始イベントのSuggestionも保護へ加える。
+
+追加差分レビュー3767は登録済み、まだ実job無し。準備のtool_failedを正規に記録して有限期限後に再確認中。新しい固定headに仕様を更新してから同じ項目で再開する。元のterminal差分(f6421e2e)のCIはcc-jobs成功/Rust解析中で、最新Must対応のCI成功とはしない。
+
+Must対応の3クレートClippy/doctestと未知開始2unitは成功。固定839da6e9を3767が実job20261025-084729-todo-3767で読取中、thread01a17050-7973-77f0-bfd0-9bab88c638e0。準備のtool_failedは既存期限後の再試行で復旧し、直接子job起動なし。現839のrelease候補はd8bfaabd…/9,181,696bytesを1回生成したが未配布。
+
+追加の並行版確認: 839のsource digestへprotocol_stallを加えると、旧schedulerが作るv1復旧票と一致しないRedを取得。指紋自体は変更せず、受信時のeligible_sourceで現在の未完collectionを拒否する形へ訂正した。988d98beでquota/CLI/schedulerの19関連テスト全成功、legacy票一致とstopping拒否を確認。先のGreenとRed採取の呼出し回収が重なったため、最終Greenはすべての先行command終了後に固定ソースで取り直した。この新差分は3767の固定839レビューへ混ぜず、別に追加確認する。
+
+最新839のcheckpointは共有scheduler.lockでTimeoutError。先の788はsaved=true。ブランチは一度も変更せず、成果はcommit/pushと.ci-work/3755の完全ログ/再開情報へ保持する。同じロック失敗を無限再試行しない。
+
+残る工程: 3767のMust対応レビュー受領、v1互換の小差分の追加確認、最新候補の必要CI、通常merge、現用ソースとの差分確認、最終ソースの実行物生成とCAS配布、配布版の有限回収と実OAuth応答、親/元ToDo/Discordへの通知なし結果保存。
+
+一時所有: 129a07b50c418d82809693dd1dc27887。safe-deleteのplan/別呼出し削除/finishで閉じる。新しいbranchへ変更していない。

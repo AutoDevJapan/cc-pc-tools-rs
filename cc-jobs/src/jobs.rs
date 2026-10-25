@@ -1270,6 +1270,8 @@ impl Context {
         let mut notifier = None;
         let mut exit = None;
         let mut cleanup_failed = false;
+        let mut protocol_reclaimed = false;
+        let mut reclaimed_failure = None;
         let mut tool_yielded = false;
         let mut progress = None;
         #[cfg(windows)]
@@ -1359,6 +1361,8 @@ impl Context {
             let mut next_poll = 0.;
             let mut exited_at = None;
             let mut next_yield_check = 0.;
+            let mut pretool = crate::pretool_failure::PretoolFailure::default();
+            let mut next_protocol_check = 0.;
             loop {
                 let ev = match qrx.recv_timeout(std::time::Duration::from_millis(500)) {
                     Ok(ev) => Some(ev),
@@ -1388,6 +1392,7 @@ impl Context {
                     }
                 }
                 if let Some(ev) = ev {
+                    pretool.event(&ev, self.rt.mono());
                     job["last_event_at"] = ev["_ts"].clone();
                     self.apply_recorded(&mut job, &ev, &output);
                     if s(&ev, "type") == "item.completed"
@@ -1421,6 +1426,34 @@ impl Context {
                 }
                 if changed || progress.deferred {
                     progress.save(self, &mut job)?;
+                }
+                if !protocol_reclaimed
+                    && self.rt.mono() >= next_protocol_check
+                    && let Some(failure) = pretool.due(self.rt.mono())
+                    && p.poll()?.is_none()
+                {
+                    next_protocol_check = self.rt.mono() + 3.;
+                    let reaped = match progress.save_required(self, &mut job) {
+                        Ok(()) => {
+                            let result = self.reap_pretool_failure(&mut job, failure);
+                            // reap mutates job only after its intent is saved.
+                            // A failed prefix save must not advance this baseline.
+                            progress.durable = job.clone();
+                            result
+                        }
+                        Err(error) => Err(error),
+                    };
+                    match reaped {
+                        Ok(true) => {
+                            reclaimed_failure = Some((
+                                job["last_failure_kind"].clone(),
+                                job["last_error"].clone(),
+                            ));
+                            protocol_reclaimed = true;
+                        }
+                        Ok(false) => (),
+                        Err(error) => self.yield_diagnostic(&error),
+                    }
                 }
                 if !had_event
                     && self.rt.mono() >= next_yield_check
@@ -1482,6 +1515,18 @@ impl Context {
             Ok(())
         })();
         let attempt_failed = work.is_err();
+        let protocol_attempted = protocol_reclaimed
+            || cc_job_policy::quota_recovery::collection_pending(&job);
+        if protocol_reclaimed {
+            job["protocol_stall"]["stage"] = json!("drained");
+        }
+        if !truth(&job["turn_completed"])
+            && !["auth", "cancel"].contains(&s(&job, "last_failure_kind"))
+            && let Some((kind, message)) = reclaimed_failure
+        {
+            job["last_failure_kind"] = kind;
+            job["last_error"] = message;
+        }
         if tool_yielded {
             if let Some(n) = &mut notifier {
                 n.close();
@@ -1534,7 +1579,8 @@ impl Context {
         {
             self.yield_diagnostic(&error);
         }
-        if s(&job, "last_failure_kind") == "capacity" && !cleanup_failed && !attempt_failed {
+        if s(&job, "last_failure_kind") == "capacity" && !cleanup_failed && !attempt_failed
+            && (!protocol_attempted || protocol_reclaimed) {
             job["capacity_inventory"] = self.capacity_inventory(&job);
         }
         let gate = match self.queue_lock() {
@@ -1607,6 +1653,7 @@ impl Context {
         // message must not escape that bound through the same-model retry.
         let retry = !cleanup_failed
             && !attempt_failed
+            && (!protocol_attempted || protocol_reclaimed)
             && if s(&job, "last_failure_kind") == "capacity" {
                 if gate.is_none(){false}
                 else if todo_unavailable {self.defer_capacity_lock(&mut job)}
@@ -1616,7 +1663,12 @@ impl Context {
                     self.end_capacity_owner(&mut job);
                     false
                 }
-            } else if ["cancel", "auth", "request_failed"].contains(&s(&job, "last_failure_kind")) {
+            } else if ["cancel", "auth", "request_failed"].contains(&s(&job, "last_failure_kind"))
+                || (protocol_attempted && s(&job, "last_failure_kind") == "quota")
+            {
+                // Return the real cause to the existing scheduler. It verifies
+                // exhaustion, scope and healthy OAuth before another model is
+                // admitted; never blindly repeat this stalled quota request.
                 false
             } else {
                 self.retry_429(&mut job, cfg)

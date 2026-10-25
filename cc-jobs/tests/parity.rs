@@ -11,6 +11,8 @@ mod finished_work_handoff;
 mod finite_owner_wait_repair;
 #[path = "support/quota_recovery.rs"]
 mod quota_recovery_tests;
+#[path = "support/pretool_failure.rs"]
+mod pretool_failure;
 #[path = "support/no_action.rs"]
 mod no_action;
 #[cfg(windows)]
@@ -6458,6 +6460,8 @@ struct Fake {
     pause_allowed: AtomicBool,
     pause_calls: AtomicUsize,
     paused_stop_failure: Arc<AtomicBool>,
+    kept_failed_pause: Arc<AtomicUsize>,
+    resumed_failed_pause: Arc<AtomicUsize>,
     paused_stop_failure_pid: Arc<AtomicU32>,
     pause_recoveries: Mutex<Vec<String>>,
     fail_queued_save: AtomicBool,
@@ -6521,6 +6525,8 @@ impl Fake {
             pause_allowed: AtomicBool::new(false),
             pause_calls: AtomicUsize::new(0),
             paused_stop_failure: Arc::new(AtomicBool::new(false)),
+            kept_failed_pause: Arc::new(AtomicUsize::new(0)),
+            resumed_failed_pause: Arc::new(AtomicUsize::new(0)),
             paused_stop_failure_pid: Arc::new(AtomicU32::new(0)),
             pause_recoveries: Mutex::new(Vec::new()),
             fail_queued_save: AtomicBool::new(false),
@@ -6717,9 +6723,23 @@ impl Runtime for Fake {
             alive: Arc<AtomicBool>,
             fail: Arc<AtomicBool>,
             fail_pid: Arc<AtomicU32>,
+            kept: Arc<AtomicUsize>,
+            resumed: Arc<AtomicUsize>,
+            failed: bool,
+            keep: bool,
+        }
+        impl Drop for Guard {
+            fn drop(&mut self) {
+                if self.failed && !self.keep {
+                    self.resumed.fetch_add(1, Ordering::Relaxed);
+                }
+            }
         }
         impl Paused for Guard {
-            fn keep_paused(&mut self) {}
+            fn keep_paused(&mut self) {
+                self.keep = true;
+                if self.failed { self.kept.fetch_add(1, Ordering::Relaxed); }
+            }
             fn arm_process(&mut self, _: u32, _: u64) -> io::Result<()> {
                 Ok(())
             }
@@ -6731,6 +6751,7 @@ impl Runtime for Fake {
                     || self.fail_pid.load(Ordering::Relaxed) == self.pid)
                     && self.fail.swap(false, Ordering::Relaxed)
                 {
+                    self.failed = true;
                     return Err(io::Error::other("fixture stop failed"));
                 }
                 self.kills.lock().unwrap().push(self.pid);
@@ -6748,6 +6769,10 @@ impl Runtime for Fake {
             alive: self.child_alive.clone(),
             fail: self.paused_stop_failure.clone(),
             fail_pid: self.paused_stop_failure_pid.clone(),
+            kept: self.kept_failed_pause.clone(),
+            resumed: self.resumed_failed_pause.clone(),
+            failed: false,
+            keep: false,
         }))
     }
     fn diagnostic(&self, message: &str) {
@@ -10484,6 +10509,39 @@ mod task_notifier {
 }
 mod end_to_end {
     use super::*;
+    #[test]
+    fn windows_pretool_protocol_429_drains_the_real_controller_tree_within_its_deadline() {
+        let t = E2e::new();
+        // An opt-in deployment probe consumes an exact copy of the installed
+        // executable. It still uses only isolated synthetic fixture processes.
+        if let Ok(exe) = std::env::var("CC_JOBS_PROTOCOL_PROBE_EXE") {
+            fs::copy(exe, &t.exe).unwrap();
+        }
+        fs::copy(env!("CARGO_BIN_EXE_cc_jobs_fixture"), t.tmp.0.join("bin/codex.exe")).unwrap();
+        fs::write(t.tmp.0.join("bin/codex.cmd"), b"@echo off\r\n\"%~dp0codex.exe\" %*\r\n").unwrap();
+        let jid = t.start("pretool-429-hold", &t.tmp.0, b"synthetic pretool failure");
+        t.until_phase("protocol_error", || {
+            t.rec.join("pretool.identity.json").exists() && t.job(&jid)["last_failure_kind"] == "quota"
+        });
+        let running = t.job(&jid);
+        let native: Value = serde_json::from_slice(&fs::read(t.rec.join("pretool.identity.json")).unwrap()).unwrap();
+        t.until_phase_for("protocol_drained", Duration::from_secs(50), || {
+            TERMINAL.contains(&s(&t.job(&jid), "status"))
+        });
+        let result = t.job(&jid);
+        assert_eq!(result["status"], "failed");
+        assert_eq!(result["last_failure_kind"], "quota");
+        assert_eq!(result["protocol_stall"]["stage"], "drained");
+        assert_eq!(result["protocol_stall"]["grace_seconds"], 30.);
+        assert_eq!(result["steps"], 0);
+        assert!(result["cancel_requested"] != true);
+        assert!(result["retry_count"].as_u64().unwrap_or(0) == 0);
+        assert_ne!(proc_created(native["pid"].as_u64().unwrap() as u32), native["created"].as_u64());
+        assert_ne!(proc_created(running["codex_pid"].as_u64().unwrap() as u32), running["codex_pid_created"].as_u64());
+        t.until_phase("protocol_supervisor_exit", || {
+            proc_created(running["pid"].as_u64().unwrap() as u32) != running["pid_created"].as_u64()
+        });
+    }
     #[test]
     fn windows_snapshot_sharing_keeps_the_native_child_alive_and_delivers_its_result() {
         use std::os::windows::fs::OpenOptionsExt;

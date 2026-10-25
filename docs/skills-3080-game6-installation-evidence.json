@@ -1,0 +1,582 @@
+{
+  "todo": 3080,
+  "job": "20261025-074042-todo-3080",
+  "observed_at": "2026-10-25T00:36:10.1945471+00:00",
+  "overall_complete": false,
+  "new_targets_created": 6,
+  "files_readback_verified": 36,
+  "old_target_writes": 0,
+  "unknown_existing_body_reads": 0,
+  "general_access_granted": false,
+  "original_registry_recovered": false,
+  "operation_manifest": "skills-3080-operations/create-game6-074042.json",
+  "operation_manifest_sha256": "2141bfa3a4d04fd62398741f5e80627e8cb0ef36815ccec6643711540d8bc924",
+  "operation_manifest_main_commit": "affcc70d2d9a329128120402c6500409b3d81abf",
+  "installed_manifest": "skills-3080-installed-game6-manifest.json",
+  "installed_manifest_sha256": "6c9cee3d9d708a4c78476a9e4ca849318708a35d52165904912c40c46ef1b609",
+  "designs": "skills-3080-game6-designs.json",
+  "designs_sha256": "a13525c510e92f10dd5d7bb5daf6e06f6f0096113bb45c1b23e2fdfae2ea7fe8",
+  "files": [
+    {
+      "bytes": 1420,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "63854a47342048716be2691e41ce2848c66bf9391f0f450176ec325214bb2194",
+      "target": "design-action-combat/SKILL.md"
+    },
+    {
+      "bytes": 1911,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "5107177ff91cb84098bef3987ddd999a1355b134f6285ce1ff6eab864b9b95c7",
+      "target": "design-action-combat/references/guide.md"
+    },
+    {
+      "bytes": 1866,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0b6289f0c651987554e2c82dda45e18582eb2a21412672778ed76cd1a214df17",
+      "target": "design-action-combat/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "design-action-combat/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1654,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "cf558f0ef67f018ae48da67edaf35a29d8eabc26b106abdbb8a5d8918b02e679",
+      "target": "design-action-combat/references/source.json"
+    },
+    {
+      "bytes": 1268,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "521095eb5fba325a0e89d267522af11fbe1208766b8f49d8b612bb83f3cfa00f",
+      "target": "design-action-combat/references/sources.md"
+    },
+    {
+      "bytes": 1352,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "ffdc39fb174415ec762661cd8ada0f4546490ee022abca83eaef29d53b58ee3b",
+      "target": "tune-enemy-ai/SKILL.md"
+    },
+    {
+      "bytes": 1730,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "902e04255af8180c5a2307e696d70b937fc55c1339c0d6bec4edbf55888cb4b7",
+      "target": "tune-enemy-ai/references/guide.md"
+    },
+    {
+      "bytes": 1700,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "13bcd0294240d0520bb1e132871ffe6f1ab36ff7c00868483f2f3490dab4e360",
+      "target": "tune-enemy-ai/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "tune-enemy-ai/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1583,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b878b09dbea15e97be674bc775e9f03afc652d158cd83edfab32557b7612d480",
+      "target": "tune-enemy-ai/references/source.json"
+    },
+    {
+      "bytes": 1216,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b9511d779c2cb2594845b5ab530e9d4d162033f7d19bcc522129553d122d4b1d",
+      "target": "tune-enemy-ai/references/sources.md"
+    },
+    {
+      "bytes": 1526,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "7d2fb047c7ab7032f24e243560166c63da4d41f53eb12a0a7e2d610c9f680216",
+      "target": "build-threejs-enemy-systems/SKILL.md"
+    },
+    {
+      "bytes": 1944,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "3ef280f9a1706190e58c58dc5b464695dd57248633f5fce9e534e67647c43726",
+      "target": "build-threejs-enemy-systems/references/guide.md"
+    },
+    {
+      "bytes": 4418,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b33c08b3296ea1a39d37705be29d773db428ef8a337a92f3640eb2cb6792bbb8",
+      "target": "build-threejs-enemy-systems/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "build-threejs-enemy-systems/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1691,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "8cd2b5355e92d9a0364d26f8a58083eedd205646fa5a4de3b4329fd5c5d9128c",
+      "target": "build-threejs-enemy-systems/references/source.json"
+    },
+    {
+      "bytes": 1238,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "41f3e1fb20179d3f47034254d6ac06f10bf7cbc9de7a2835f040bf785a14c301",
+      "target": "build-threejs-enemy-systems/references/sources.md"
+    },
+    {
+      "bytes": 1327,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "67bef3c967e938367f4c9d8ed0316fff6966cd6f2b915b5393daa11e0ba768cd",
+      "target": "design-game-encounters/SKILL.md"
+    },
+    {
+      "bytes": 1763,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "41f20929d0ad9f2ce47df5c70813433c644f18ac87e1a155c6b8c1714e58d368",
+      "target": "design-game-encounters/references/guide.md"
+    },
+    {
+      "bytes": 1033,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0cb2da5d4fbc25815fbd57b4627b9fafb1b3cc050712e7103476b214f7514a61",
+      "target": "design-game-encounters/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "design-game-encounters/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1636,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "e8ac5f85102901215d3631d9e7f34c80b56970c1db2af66ffa124b5abc9891a9",
+      "target": "design-game-encounters/references/source.json"
+    },
+    {
+      "bytes": 1224,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "4040eb180e861dc5514360353e48cc260a027983d306063017bd1653977058d7",
+      "target": "design-game-encounters/references/sources.md"
+    },
+    {
+      "bytes": 1558,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "9f35297638b35f15df6328900cf547795057b9651474b4cc707888db66f415f4",
+      "target": "author-game-levels/SKILL.md"
+    },
+    {
+      "bytes": 1783,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0b867151bcb96749c554e5fbc7c34b69b74091301d3d54e7536b04a967c458f1",
+      "target": "author-game-levels/references/guide.md"
+    },
+    {
+      "bytes": 4374,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "df8da94bf505ed20f3d9062151354a5c6901ca4dc3d5b0c6f493a700277c3644",
+      "target": "author-game-levels/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "author-game-levels/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1654,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "6853a3cbba3e9d6ca217066b24d09b567422eb9767106281f3e666bcc43351a0",
+      "target": "author-game-levels/references/source.json"
+    },
+    {
+      "bytes": 1267,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "9824d1241cda9bdfe3c90b9ea14c3251fd88810dc083b2ded1bfee66bc6f971d",
+      "target": "author-game-levels/references/sources.md"
+    },
+    {
+      "bytes": 1453,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "4a40dba0e9da1f9c3f49cdfdca392bd3328310f3eb8128c793ac528a2b98d421",
+      "target": "optimize-threejs-games/SKILL.md"
+    },
+    {
+      "bytes": 1730,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0ad9560c8d5b7941a39f25c30e8e633e066ef21f9b430222074d870427fece52",
+      "target": "optimize-threejs-games/references/guide.md"
+    },
+    {
+      "bytes": 1682,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "d50e8c26ae8130b5cb37da32835024ab281090f107bd52caa476b80a60f2e2b5",
+      "target": "optimize-threejs-games/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "optimize-threejs-games/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1707,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "6d7a75f6bfe8b5f0499a6ca2172d57bab8b8718700514050083b0f4a98c6494a",
+      "target": "optimize-threejs-games/references/source.json"
+    },
+    {
+      "bytes": 1275,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "ba638edbf4de5d7e761548a4772e7e2788d382058066e5e12ce660df510d1449",
+      "target": "optimize-threejs-games/references/sources.md"
+    }
+  ],
+  "creation_result": {
+    "created_files": 36,
+    "domain": "skills-3080-purpose-v1",
+    "file_count": 36,
+    "general_access_granted": false,
+    "manifest_sha256": "2141bfa3a4d04fd62398741f5e80627e8cb0ef36815ccec6643711540d8bc924",
+    "operation": "CreateNew",
+    "original_registry_recovered": false,
+    "qualified": true,
+    "request_sha256": "a7a92aed62f572ecff390d785f7360b0db740ce2a676da94cdea86d74b724e28",
+    "source_commit": "affcc70d2d9a329128120402c6500409b3d81abf",
+    "todo_id": 3080
+  },
+  "creation_wrapper": "skills-3080-game6-create-receipt.json",
+  "creation_wrapper_sha256": "911d91490ff9ce44d044052fc1df967cb2eb045854eed072677fcbace9164a7d",
+  "readback_receipt": "skills-3080-game6-readback-receipt.json",
+  "readback_receipt_sha256": "d45023e7769fa87a03a8b47f750c2e37ad34b44438482ecbf0b9838c32c0855d",
+  "acceptance_review": {
+    "todo": 3777,
+    "job": "20261025-091917-todo-3777",
+    "model": "gpt-6-luna",
+    "effort": "max",
+    "model_origin": "owner_request",
+    "effort_origin": "owner_request",
+    "native_verified": true,
+    "parent_original_full_read": true,
+    "spec_sha256": "e3fb1feb1f6100e655a50f44991d0b5de950e37aca394b270102fc0dbf9aed25",
+    "raw_sha256": "da49ec829789a13eb186f48679158639cc7b2e4e22c87042f16845bddabd1050",
+    "raw_bytes": 1221,
+    "manifest_sha256": "2141bfa3a4d04fd62398741f5e80627e8cb0ef36815ccec6643711540d8bc924",
+    "must": 0,
+    "scope": "New12 source descriptions read; unchanged24 reused from original3775 full36 reading through exact-byte comparison"
+  },
+  "prior_rejected_review": {
+    "todo": 3775,
+    "job": "20261025-090133-todo-3775",
+    "raw_sha256": "575ba9113f513e0809ef2d3f0855f509cd4a1d8c3df81f089d6801e4d986790b",
+    "must": 1,
+    "source_description_correction": "Flat-world change attributed only to the original author-game-levels; each other source now has its own actual changes",
+    "rejected_manifest_sha256": "26799afa71ad513f69a10a20c2d6456b432b664ad7de2e3a58c565b76c5f94e0",
+    "old_original_unchanged": true
+  },
+  "discovery": {
+    "checked_at": "2026-10-25T00:35:30.3385534+00:00",
+    "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+    "model_called": false,
+    "label": "installed",
+    "targets": 6,
+    "total_discovered_metadata": 340,
+    "found_count": 6,
+    "parse_error_count": 0,
+    "notification_count": 2,
+    "same_names_other_paths": 0,
+    "found": [
+      {
+        "name": "author-game-levels",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "build-threejs-enemy-systems",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "design-action-combat",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "design-game-encounters",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "optimize-threejs-games",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "tune-enemy-ai",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      }
+    ],
+    "process_tree_exit_confirmed": true,
+    "pending_stdout_read_drained": true,
+    "failure": null,
+    "diagnostic": {
+      "scan_traversal_limit_count": 2,
+      "context_budget_marker_count": 0,
+      "raw_stderr_not_saved": true
+    },
+    "limit": "Only requested target metadata is retained. No full private catalog or unknown body text is saved. No model turn or context-budget proof; discovery-internal file parsing is not a semantic body review."
+  },
+  "retained_known_metadata": {
+    "checked_at": "2026-10-25T00:36:10.1945471+00:00",
+    "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+    "model_called": false,
+    "label": "created",
+    "targets": 58,
+    "total_discovered_metadata": 340,
+    "found_count": 58,
+    "parse_error_count": 0,
+    "notification_count": 2,
+    "same_names_other_paths": 0,
+    "known_target_names_sha256": "c3158d4c2718c6b97e9b9858e613626ac02ce21d9e59f079216d067725e767e8",
+    "enabled_count": 58,
+    "new_description_match_count": 6,
+    "found_rows_omitted_to_avoid_existing_names": true,
+    "process_tree_exit_confirmed": true,
+    "pending_stdout_read_drained": true,
+    "failure": null,
+    "diagnostic": {
+      "scan_traversal_limit_count": 2,
+      "context_budget_marker_count": 0,
+      "raw_stderr_not_saved": true
+    },
+    "limit": "Only counts and a fingerprint of already public managed target names are retained. No existing names/paths, unknown metadata, body text or raw private catalog is saved. Scope is original3048, current3080adoptions and six newlycreated targets; no all-disk hash, pre-change equality, model-turn or context-budget proof.",
+    "managed_adoption_inventory_ids": [
+      "github:529ad226a165fa7c6a2e7a49959f227936408e7a349549b59ab0feeb437e27ce",
+      "github:faf798dc6ee8fc764680d048bc62d4579e6302a3f9cd28158b2229c8b39a46b2",
+      "github:d05f1de9d9c51e0126f79512bbfc6d0527d8b745994687686fc46328fbef8673",
+      "github:9572cbb50724f66e3a5165d06746747932d633b7507bb40f7401a980df082c60",
+      "github:1c650ad6db0ec99fae221dc302188220e7779742bd0471bc57a341d86ddf6196",
+      "github:7540b0b39f3053e2b24792a1be2c866c4b8e73bc7d3966642eb0a84c689252ea",
+      "github:467b9d6b107c183945edf987da7cdcb57b7311e42682b0ca0c3298807d36511f",
+      "github:9f2f48c4ee290e8d2aa53aa898d06e5665f4d956f35e5c495d00b972f7508879",
+      "github:902f0416f0d0bd4c4c62f6958623724e2ecd0024e6f7fb622818ef36712ebfcd",
+      "github:7aa67de263443f985337da44fa80d97db729d4b3ff6dfe3bc5e4e658f592822b",
+      "github:0a69193f05dcc27d1a0e6570aa2acf7389e9660a285f84510c39ce6f63197295",
+      "github:0c110b40278d18a05355221f5505335ab64ad88d32f402ac9ba46f8d2ab06de1",
+      "github:23cb6568e92b712b4a7ecd01a85999035e136f9cb66d75b0ef8f64bf5327819a",
+      "github:5ae150da91ada2aa1a46b553cc1d0e202c2cde7cb57304964377e160c7de4174",
+      "github:4d5592e0e8885ed948a2992604dcec1ba0e512816c263f8a6141666db8109622",
+      "github:5c561a5104441099f2de518551220c75fae0eeba9258abcebee533ec1f2ca0e7",
+      "github:055377d432d81b61af7a26c72df64895140fe57bac284e3bd67477a98afb2985",
+      "github:dfab8775869cc3ca898f53f46ba8a0855f19e61ec42d0619cca10ed988aeb5f5",
+      "github:0318ced22de8614c2913d996e59f02d18f4d42e60e9563c5bd983c01cd9518a4",
+      "github:62290525adf92ac2240a5d6de474b1454f578202d9fa92461dc79a6626e35402",
+      "github:ae8b453f96182867da017a74e12349c4e2000d2a5ef32705f3cc844c338d7adc",
+      "github:71a2f82b34ce70331fc531106c143b0e3332e22251017f377e63d072a6cb36ec",
+      "github:a3e5cb3352130bff6eb6d6320eea2ac71359fdb1cc36b580f6b882f4208924ec",
+      "github:c5ac6bf37010d859d7525686efd5a92d5df2de3c04d0ca63f06f8fe34b90a746",
+      "github:af8a59781a3ab4b96f7c7fe7ebb2a838dfa65293acf99f8ed7201cf53c38e4fc",
+      "github:ce166d7ba811d5f7f8ae37063d187dffc5a356a77738a09d0e83cf29c64d5328",
+      "github:1530721e547a0bef7412ef600719470cb5237407bdf7996c9a80b80a2ef2a439",
+      "github:b3f606e5e0512d2540f66637133b3d5f5d8ee7a563d99c99c5259a660ec1bd05",
+      "github:b42ae7debd7346ed232f75cdb212f9d8a9cb05bd347c93c8b7de82e8d5433fc8",
+      "github:8d45c064b59f58146ec2cd435cc55a71f835c1936934715b8b4a0cc231aac696",
+      "github:41f804392ff42c56ba7a05d1b269efdbb80f189a55b8979ccae5eb67771d05ed",
+      "github:e4ade76a7932447efe3dd6e777ab300a5a9a6f1cf13a392614b31c621906a016",
+      "github:a89e967becb119a2e1fde4392aaeb0c034ff9c683290947db8c690624fc9887e",
+      "github:89360b4dedcdf7fceccbef746956ad5f50a6c50126946fb12731aff46af0851b",
+      "github:29a0ba0843498fe31de765752ffa07dfd7835d47f3ac062d641e41169e601167",
+      "github:ac72b94f8ac90a84d51a96b3d16e288d93b11f455d2b33aa50d0d320af2029e1",
+      "github:0c071dac30d780613fbf2bbb1e5d81e62d028883da584cf9fa9bd68ca33a838b",
+      "github:dcfad5899bfe731a670bd01b4cfafa5a4aa3d03303f40df2b562279b41baf405",
+      "github:c51dc53e6bbbd50fb36e0dc24236e430698fe779352ac996e34115a0cbc5c882",
+      "github:efea3e18c8a1c529f0dc118a714c53698807049e54bc8775759fcba4a1fafbec",
+      "github:7e7b86ab5a899b4639cffd87d65ca9184dedb899d1ba98d46b6a74f2a49860ca",
+      "github:38bb0d4a6f21b0c29cbfa8b6214812a7cdea16a9216c058a1225711c9908280b",
+      "github:382998d3830f6337c6f2838a64421601e482aaf2ac3cb66841051d81e443cf6b",
+      "github:77f491d4d72871f2c31152c773d92fe3ee2377d8a0993b9673d562a01250c8e2",
+      "github:153988a15c1b7cf16741074f845ee57b203ee0315654f9f5d76196982b339d0e"
+    ]
+  },
+  "explicit_application": {
+    "core_passed": true,
+    "example_kind_count": 6,
+    "source_scripts_executed": false,
+    "external_api_calls": 0,
+    "implicit_skill_selection_proven": false,
+    "fresh_separate_model_turn_executed": false,
+    "game_examples": {
+      "active_hashes": {
+        "author-game-levels/SKILL.md": "9f35297638b35f15df6328900cf547795057b9651474b4cc707888db66f415f4",
+        "author-game-levels/references/guide.md": "0b867151bcb96749c554e5fbc7c34b69b74091301d3d54e7536b04a967c458f1",
+        "build-threejs-enemy-systems/SKILL.md": "7d2fb047c7ab7032f24e243560166c63da4d41f53eb12a0a7e2d610c9f680216",
+        "build-threejs-enemy-systems/references/guide.md": "3ef280f9a1706190e58c58dc5b464695dd57248633f5fce9e534e67647c43726",
+        "design-action-combat/SKILL.md": "63854a47342048716be2691e41ce2848c66bf9391f0f450176ec325214bb2194",
+        "design-action-combat/references/guide.md": "5107177ff91cb84098bef3987ddd999a1355b134f6285ce1ff6eab864b9b95c7",
+        "design-game-encounters/SKILL.md": "67bef3c967e938367f4c9d8ed0316fff6966cd6f2b915b5393daa11e0ba768cd",
+        "design-game-encounters/references/guide.md": "41f20929d0ad9f2ce47df5c70813433c644f18ac87e1a155c6b8c1714e58d368",
+        "optimize-threejs-games/SKILL.md": "4a40dba0e9da1f9c3f49cdfdca392bd3328310f3eb8128c793ac528a2b98d421",
+        "optimize-threejs-games/references/guide.md": "0ad9560c8d5b7941a39f25c30e8e633e066ef21f9b430222074d870427fece52",
+        "tune-enemy-ai/SKILL.md": "ffdc39fb174415ec762661cd8ada0f4546490ee022abca83eaef29d53b58ee3b",
+        "tune-enemy-ai/references/guide.md": "902e04255af8180c5a2307e696d70b937fc55c1339c0d6bec4edbf55888cb4b7"
+      },
+      "actual_game_executed": false,
+      "actual_gpu_benchmark": false,
+      "applied_at": "2026-10-25T00:36:08.7433425Z",
+      "author_levels": {
+        "flat_requirement_conditional": true,
+        "limits": "Data-contract example only. No collision geometry, actual traversal, lighting renderer or device performance was executed.",
+        "local_light_cleanup_preserves_world_owner": true,
+        "missing_nav_reset_and_duplicate_ID_rejected": true,
+        "vertical_allowed_when_spec_allows": true
+      },
+      "build_enemy_systems": {
+        "definition_id": "guard-type",
+        "definition_unchanged": true,
+        "instance_A_health": 80,
+        "instance_B_health": 100,
+        "limits": "Simple shared immutable data and validation only; real rig normalization, placeholder rendering and gameplay LOD were not executed.",
+        "lod_preserves_contract": true,
+        "missing_socket_and_duplicate_move_rejected": true
+      },
+      "design_action_combat": {
+        "active_interval_ticks": "[20,30)",
+        "distinct_target_preserved": true,
+        "duplicate_hit_rejected": true,
+        "health": {
+          "enemy-A": 93,
+          "enemy-B": 93
+        },
+        "limits": "Discrete declared contact events only. Does not prove continuous-collision/frame-skip handling or animation readability.",
+        "resolved_events": [
+          "swing-A|enemy-A|hit1",
+          "swing-A|enemy-B|hit1"
+        ],
+        "startup_recovery_invalid_conditions_rejected": true
+      },
+      "design_encounters": {
+        "declared_attack_capacity": 1,
+        "limits": "Minimal fixed-state capacity and entitlement example, not production durable rewards, camera visibility or encounter-quality acceptance.",
+        "released_slot_reassigned": true,
+        "reward_balance": 50,
+        "same_entitlement_deduplicated_across_retry": true
+      },
+      "external_apis": 0,
+      "implicit_skill_selection_proven": false,
+      "job": "20261025-074042-todo-3080",
+      "manifest_sha256": "2141bfa3a4d04fd62398741f5e80627e8cb0ef36815ccec6643711540d8bc924",
+      "new_charges": 0,
+      "new_separate_model_turn_executed": false,
+      "optimize_games": {
+        "actual_gpu_benchmark": false,
+        "after_median_ms": 19,
+        "after_p95_ms": 90,
+        "before_median_ms": 24,
+        "before_p95_ms": 100,
+        "changed_quality_and_warmup_rejected": true,
+        "comparison_method": "Recorded same workload fields; different before/after source builds allowed and stated",
+        "cpu_or_gpu_bottleneck_proved": false,
+        "gameplay_contact_regression_detected_separately": true,
+        "limits": "These synthetic statistics exercise the comparison method only, not a real renderer, device speedup or GPU profiling.",
+        "sample_count_each": 8,
+        "source": "explicit synthetic input traces, not observed real frame timing"
+      },
+      "renderer_executed": false,
+      "tune_enemy_ai": {
+        "death": "defeated",
+        "interrupt": "stagger",
+        "limits": "Declared deterministic state fixture; not a production AI, navigation solver, fairness or game-quality measurement.",
+        "path_failure": {
+          "State": "reposition",
+          "Target": "enemy-test",
+          "Since": 16,
+          "PathGeneration": 5
+        },
+        "stale_result_ignored": true,
+        "start": {
+          "State": "pursue",
+          "Target": "enemy-test",
+          "Since": 10,
+          "PathGeneration": 4
+        },
+        "target_loss": {
+          "State": "investigate",
+          "Target": "",
+          "Since": 11,
+          "PathGeneration": 5
+        }
+      },
+      "ui_changed": false,
+      "upstream_scripts_executed": false,
+      "whole16_complete": false
+    }
+  },
+  "application_result": "skills-3080-game6-application-result.json",
+  "application_result_sha256": "d235cc6cad1fb774a5e995db167d91a3065fd43843f8c28148da5c42b7ddeaa0",
+  "application_test_receipt": "skills-3080-game6-application-test-receipt.json",
+  "application_test_receipt_sha256": "c9451f4527c317c65093e0693c474b854f29d740b8a20375412811e3918f6545",
+  "application_source": "evidence/skills-3080-game6-use-074042.go.txt",
+  "application_source_sha256": "96391f4ce9209fe09e007a640dab5057b7f751224d7025dc409290b8f08ed74c",
+  "installed_structure_pass": true,
+  "full_context_budget_proven": false,
+  "warning_cause_linked": false,
+  "new_unique_source_primary_readings": 0,
+  "public_result_delta_review_pending_at_recording": true,
+  "limits": [
+    "Synthetic state/data/contact/reward/level/statistical examples are actual applications of the explicitly read installed guides, not a real game or GPU performance acceptance.",
+    "Original scripts, engines, UI, renderer, assets and external APIs were not executed/copied.",
+    "Six new metadata targets and58known-managed names were found; traversal warnings2 do not prove their cause, full discovery, all context or implicit selection.",
+    "Original primary reading totals are unchanged; all16-source remainder and the9unknown/647denied holds persist."
+  ]
+}

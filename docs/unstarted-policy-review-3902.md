@@ -1,6 +1,6 @@
 # 未起動3900のOAuth再評価
 
-元3902。対象は既存jobs/schedulerの通常受付だけ。SDK実装3894、3649の固定特例、
+元3902、[Issue530](https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/530)。対象は既存jobs/schedulerの通常受付だけ。SDK実装3894、3649の固定特例、
 3669の実行後復旧、原registry、認証、runnerを変更しない。
 
 3900の現在仕様はSHA256 `e8b9f72b283c1add07eb93e0b554fd8d6b3598bec4e4ef7fa5cd64d1d28c418e`。

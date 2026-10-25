@@ -52,6 +52,7 @@ fn launch_inputs(item: &Value) -> Value {
         "console_request":item["scheduler"]["console_request"],
         "console_fresh_request":item["scheduler"]["console_fresh_request"],
         "unstarted_review":item["scheduler"]["unstarted_review"],
+        "initial_review":item["scheduler"]["initial_review"],
         "targeted_hold":crate::targeted_dispatch::held(item)})
 }
 
@@ -1233,12 +1234,13 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
             return Ok(None);
         }
         let unstarted = crate::unstarted_review_runtime::prepare(self, i, repo)?;
+        let initial = crate::initial_review::prepare(self, i, repo)?;
         let requested_model = if truth(&i["model"]) {
             &i["model"]
         } else {
             &i["scheduler"]["console_request"]["options"]["model"]
         };
-        if let Some(until) = if unstarted.is_none() { self
+        if let Some(until) = if unstarted.is_none() && initial.is_none() { self
             .backend
             .resource_until(&json!({"model":requested_model}))?
         } else { None } {
@@ -1543,11 +1545,15 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 crate::unstarted_review_runtime::select(&item, &mut selection, evidence,
                     &cc_job_policy::product_retry::digest(text.as_bytes()), self.backend.clock())?;
             }
+            if let Some(evidence) = &initial {
+                crate::initial_review::select(self,&item,&mut selection,evidence,
+                    &cc_job_policy::product_retry::digest(text.as_bytes()))?;
+            }
             let conflict = excluded
                 .iter()
                 .any(|author| cc_ask::job_policy::same_model(author, s(&selection["model"])));
             let owner_choice = selection["model_origin"] == "owner_request";
-            let quota_choice= if unstarted.is_some() { true } else {
+            let quota_choice= if unstarted.is_some() || initial.is_some() { true } else {
                 crate::quota_recovery::prepare(&mut self.backend,&item,source,&jobs,&mut selection,
                     &cc_job_policy::product_retry::digest(text.as_bytes()))?
             };
@@ -1575,7 +1581,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             selection["task_type"] = json!("review");
             // Check the selected review provider too: a legacy GPT hint can
             // route to a depleted default before the CLI ever sees it.
-            if let Some(until)=self.backend.resource_until(&selection)? {
+            if let Some(until)=if initial.is_none() {self.backend.resource_until(&selection)?} else {None} {
                 self.edit(&item["id"],|row| {
                     if row["status"] == "todo" && row["scheduler"]["key"] == item["scheduler"]["key"]
                         && launch_inputs(row) == launch_inputs(&item) {

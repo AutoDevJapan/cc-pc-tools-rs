@@ -132,10 +132,10 @@ func normalizeStreamTransport(raw []byte) ([]byte, *StreamTransportNormalization
 }
 
 func verifyStreamNormalization(r StreamReceipt) error {
-	// Only historical receipts with neither retained original nor normalization
-	// use the older externally recovered origin. Every new original must bind
-	// the canonical chunk even when no transport replacement was needed.
-	if r.Original=="" && r.Normalization==nil{return nil}
+	// Every actual retained receipt has its original protocol message. There is
+	// no origin-less historical format to preserve here. Never let deleting both
+	// fields downgrade a new receipt into an unauthenticated compatibility path.
+	if !strings.HasPrefix(r.Original,"OTHER373_CHUNK_V1\n"){return errors.New("retained original protocol message required")}
 	original:=[]byte(r.Original)
 	if streamHash(original)!=r.OriginalSHA{return errors.New("normalization original differs")}
 	begin,end:=bytes.IndexByte(original,'{'),bytes.LastIndexByte(original,'}')

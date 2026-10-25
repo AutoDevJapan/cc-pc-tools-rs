@@ -60,3 +60,26 @@ func TestOther373UnmaskedOriginalAlsoBindsCanonicalMeaning(t *testing.T){
  r.Chunk=[]byte(`{"read":[2,0,0,true,true,20]}`);r.SHA=streamHash(r.Chunk)
  if verifyStreamNormalization(r)==nil{t.Fatal("rehashed canonical read promotion severed unchanged original")}
 }
+
+func TestOther373DroppingOriginalAndNormalizationCannotDowngradeNewReceipt(t *testing.T) {
+	for _, masked := range []bool{false, true} {
+		name := "unmasked"
+		payload := `{"read":[3,1,0,false,true,20],"metadata":false}`
+		if masked { name = "masked"; payload = strings.Replace(payload, `"metadata":false`, `"metadata":[REDACTED]`, 1) }
+		t.Run(name, func(t *testing.T) {
+			normalized, proof := normalizeStreamTransport([]byte(payload))
+			v, err := streamJSON(normalized); if err != nil { t.Fatal(err) }
+			canonical, err := json.Marshal(v); if err != nil { t.Fatal(err) }
+			original := "OTHER373_CHUNK_V1\n" + payload + "\n"
+			r := StreamReceipt{Original: original, OriginalSHA: streamHash([]byte(original)), Chunk: canonical, SHA: streamHash(canonical), Normalization: proof}
+			if err := verifyStreamNormalization(r); err != nil { t.Fatal(err) }
+			r.Original = ""
+			r.Normalization = nil
+			r.Chunk = []byte(`{"read":[2,0,0,true,true,20],"metadata":false}`)
+			r.SHA = streamHash(r.Chunk)
+			if verifyStreamNormalization(r) == nil { t.Fatal("missing original and normalization downgraded a new receipt") }
+			r.OriginalSHA = streamHash(nil)
+			if verifyStreamNormalization(r) == nil { t.Fatal("rehashed empty original accepted") }
+		})
+	}
+}

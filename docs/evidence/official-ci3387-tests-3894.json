@@ -1,0 +1,66 @@
+{
+  "domain": "official-ci3387-local-software-tests-3894-v1",
+  "repository": "AutoDevJapan/cc-pc-tools-rs",
+  "repository_id": 1406818713,
+  "issue": 526,
+  "implementation_todo": 3894,
+  "candidate_received": "c252cf51a13a451dda54c1063d8c3a6bac1a3ef4",
+  "tested_source": "ad5f42338b76fc59c2ee26b8af7551d1d288c268",
+  "tested_guard_tree": "d26c9912cb56d57fc804045141297b69f24998a9",
+  "integrated_main": "329dbd43ab84bdf0894bb6e1df2ade1be67eb335",
+  "platform": "windows/amd64",
+  "go": "1.27.0",
+  "gomaxprocs": 2,
+  "package_parallelism": 2,
+  "race_compiler": "existing LLVM-MinGW UCRT gcc shim",
+  "red": {
+    "test": "TestOfficialCI3894MachineRefusal",
+    "exit": 1,
+    "observed": "legacy parser rejected the new preparation flag without the required bounded machine JSON; no input was opened"
+  },
+  "checks": [
+    {
+      "command": "go test -race -p=2 -json -count=1 -run '^(TestOfficialCI389[34]|TestCI3574|TestOwnerPolicy|TestOwnerRegisteredSource|TestOwnerOrigin|TestOwnerMembership|TestOwnerUnknownNonRepository|TestCurrentSuccessionCLI|TestSkills3080CLIIsolation|TestSkills3080ForwardCLIIsAnOperation|TestSkills3080FreshConsumerCLI)' .",
+      "pass_events_including_subcases": 108,
+      "failures": 0,
+      "skips": 0,
+      "exit": 0
+    },
+    {
+      "command": "go test -race -p=2 -json -count=1 ./internal/officialci3893",
+      "pass_events_including_subcases": 103,
+      "failures": 0,
+      "skips": 0,
+      "exit": 0
+    },
+    {
+      "command": "go vet -p=2 . ./internal/officialci3893",
+      "exit": 0
+    }
+  ],
+  "corrected_failures": [
+    "The first compiler path used C:/msys64 instead of the installed toolchain; the original failure was preserved.",
+    "MSYS2 GCC hit a ThreadSanitizer startup address allocation failure (Windows error 87); the successful runs used the existing LLVM-MinGW UCRT compiler.",
+    "Repeated journal close could close a reused raw Windows directory handle and cause runtime.semawakeup error 6. Close is now idempotent; a regression checks 32 real replacement event handles remain valid."
+  ],
+  "coverage": [
+    "exact independent GitHub metadata pins and latest workflow run",
+    "fixed environment and fresh original normal ownership receipt",
+    "exclusive durable DPAPI journal restart, tamper, copy, torn frame and prefix replay",
+    "whole-record compare and concurrent/repeated consumer refusal",
+    "same archive buffer for size/hash and ZIP parsing",
+    "created root, directories and file physical identities; same verified file bytes",
+    "ZIP traversal, absolute/ADS/alias names, duplicate kinds, CRC/size and expansion limits",
+    "reparse, hardlink, streams, replacements, unknown tree entries and public empty directories",
+    "CLI argument mixing and existing guard/source/classification boundaries"
+  ],
+  "live_sdk_downloads": 0,
+  "live_sdk_preparations": 0,
+  "runner_registrations_or_launches": 0,
+  "registration_or_remove_token_requests": 0,
+  "cargo_gpu_civ6": 0,
+  "general_access_granted": false,
+  "original_registry_recovered": false,
+  "formal_ci_verified": false,
+  "production_acceptance_verified": false
+}

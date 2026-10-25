@@ -294,7 +294,7 @@ func official3894SourceCheck(ctx context.Context, saved *official3894Source, con
 	parent, provider, creator := reg.Tasks[3387], reg.Tasks[3888], reg.Tasks[3894]
 	b := oc.FixedBinding("", "", "", "")
 	if parent.Project != "cc-pc-tools-rs" || creator.Project != parent.Project || provider.Project != "localai-web-rs" ||
-		!skillsHasJob(parent, b.ParentJob) || !skillsHasJob(provider, b.OriginalProviderJob) || skillsHeld(parent) || skillsHeld(provider) || skillsHeld(creator) || parent.Status == "done" || provider.Status == "done" {
+		!skillsHasJob(parent, b.ParentJob) || !skillsHasJob(provider, b.OriginalProviderJob) || skillsHeld(parent) || skillsHeld(provider) || skillsHeld(creator) || parent.Status == "done" || provider.Status == "done" || parent.Status == "block" || provider.Status == "block" || creator.Status == "block" {
 		return result, official3894Error("original_task_lineage_or_stop")
 	}
 	actorID, _ := strconv.Atoi(m[2])
@@ -423,6 +423,7 @@ type official3894Authority struct {
 	owned          official3894Owned
 	raw            []byte
 	issuerIdentity oc.Identity
+	started        time.Time
 	fs             *oc.NativeFS
 	consume        bool
 }
@@ -430,6 +431,12 @@ type official3894Authority struct {
 func (a official3894Authority) Observe(ctx context.Context) (oc.Evidence, error) {
 	var out oc.Evidence
 	observed := time.Now()
+	if _, e := official3894OwnedCheck(a.raw, a.source, a.started); e != nil {
+		return out, e
+	}
+	if a.fs.ParentIdentity() != (oc.Identity{Volume: a.owned.Volume, FileID: a.owned.FileID, Birth: a.owned.Birth}) {
+		return out, oc.ErrDenied
+	}
 	if _, e := official3894SourceCheck(ctx, &a.source, a.consume); e != nil {
 		return out, e
 	}
@@ -564,7 +571,7 @@ func official3894Operation(ctx context.Context, op, id string) (object, error) {
 		if e = fs.EmptyParent(); e != nil {
 			return official3894Summary(next), e
 		}
-		a := official3894Authority{source: source, owned: owned, raw: raw, issuerIdentity: issuerIdentity, fs: fs}
+		a := official3894Authority{source: source, owned: owned, raw: raw, issuerIdentity: issuerIdentity, started: start, fs: fs}
 		engine, e := oc.New(oc.FixedBinding(source.Head, source.Registration, official3894Hash(raw), source.CreatorJob), a, official3894Archive(archive), store, fs)
 		if e != nil {
 			return official3894Summary(store.ticket), e
@@ -593,7 +600,7 @@ func official3894Operation(ctx context.Context, op, id string) (object, error) {
 	if e != nil {
 		return official3894Summary(t), e
 	}
-	a := official3894Authority{source: t.Source, owned: owned, raw: t.Owned, issuerIdentity: t.IssuerIdentity, fs: fs, consume: op == "consume"}
+	a := official3894Authority{source: t.Source, owned: owned, raw: t.Owned, issuerIdentity: t.IssuerIdentity, started: t.Started, fs: fs, consume: op == "consume"}
 	engine, e := oc.New(oc.FixedBinding(t.Source.Head, t.Source.Registration, official3894Hash(t.Owned), t.Source.CreatorJob), a, official3894Archive(nil), store, fs)
 	if e != nil {
 		return official3894Summary(t), e

@@ -155,14 +155,20 @@ func TestOfficialCI3894FreshIssuerReceipt(t *testing.T) {
 
 func official3894JournalFixture(t *testing.T) (*official3894Journal, oc.Receipt) {
 	t.Helper()
-	path := filepath.Join(t.TempDir(), "creation")
-	s, e := official3894OpenStore(path, true)
+	// This is an already newly created synthetic test directory, not an SDK
+	// adoption. Windows CI may spell RUNNER_TEMP through a junction/8.3 alias.
+	root, e := ownerPhysicalPath(t.TempDir())
 	if e != nil {
 		t.Fatal(e)
 	}
+	path := filepath.Join(root, "creation")
+	s, e := official3894OpenStore(path, true)
+	if e != nil {
+		t.Fatalf("open new synthetic journal: %v", e)
+	}
 	ticket := official3894Ticket{Domain: official3894Domain, Started: time.Now().UTC(), Source: official3894Source{Head: strings.Repeat("a", 40), Registration: strings.Repeat("b", 64), CreatorJob: "synthetic-3894"}}
 	if e = s.start(ticket); e != nil {
-		t.Fatal(e)
+		t.Fatalf("start synthetic journal: %v", e)
 	}
 	ticket.Owned = []byte(`{"synthetic":"issuer-output"}`)
 	if e = s.append(ticket); e != nil {

@@ -154,9 +154,7 @@ func newFixture(t *testing.T) *fixture {
 	t.Helper()
 	anchor := os.Getenv("CC_3893_FIXTURE_ROOT")
 	if anchor == "" {
-		// Formal CI uses its existing job-owned RUNNER_TEMP through testing.
-		// PC development supplies the normal safe-delete-owned outer anchor.
-		anchor = t.TempDir()
+		t.Fatal("the test process did not bind its new synthetic anchor")
 	}
 	parent, err := os.MkdirTemp(anchor, "case-")
 	if err != nil {

@@ -100,6 +100,33 @@
   "remaining_acceptance": [
     "Observe a genuine eligible same-scope quota transition through normal preparation, CLI, admission and native execution. Existing accepted owner-request reviews are separate evidence and are not relabelled as a policy recovery."
   ],
+  "runtime_successor": {
+    "pr": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/516",
+    "source_head": "918f4bf82a63d82618c92c536737797bb3aaad02",
+    "merge": "5241274fb8a23460bfe916069deaf3402c3e8bf2",
+    "contains_deployed_e1a4c21d": true,
+    "github_compare_status": "ahead",
+    "github_compare_ahead_by": 17,
+    "earlier_windows_receipt_is_historical": true,
+    "old_candidate_redeployed": false
+  },
+  "post_deployment_binding_observation": {
+    "observed_at": "2026-10-26T05:06:11+09:00",
+    "source": "normal installed status --json response, public project metadata only",
+    "returned_project_rows": 362,
+    "returned_finite_reviews": 105,
+    "reviews_since_own_runtime_update": 21,
+    "reviews_since_update_with_saved_spec_sha256": 21,
+    "original_spec_binding_observed": true,
+    "all_records_quota_scan_at": "2026-10-26T05:04:43+09:00",
+    "all_records_quota_scan_returned_project_rows": 3305,
+    "returned_quota_sources_with_saved_spec_sha256": 0,
+    "returned_automatic_quota_recovery_capsules": 0,
+    "live_policy_quota_recovery_accepted": false,
+    "unread_or_out_of_scope_records_inferred": false,
+    "owner_request_or_startup_switch_used_as_postrun_proof": false,
+    "new_model_execution_or_build_or_deployment": false
+  },
   "parent_skills_complete": false,
   "guard_settings_queue_accounts_credentials_changed": false
 }

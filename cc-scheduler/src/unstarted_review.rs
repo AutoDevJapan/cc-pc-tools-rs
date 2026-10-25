@@ -153,12 +153,15 @@ pub fn plan(
     let authors = author_models
         .filter(|models| !models.is_empty())
         .ok_or(Reason::AuthorModelUnverified)?;
-    if authors.iter().any(|model| model.is_empty()) {
+    if authors
+        .iter()
+        .any(|model| cc_job_policy::quota_recovery::provider(model).is_none())
+    {
         return Err(Reason::AuthorModelUnverified);
     }
     if authors
         .iter()
-        .any(|model| matches!(*model, "gpt-6-luna" | "openai/gpt-6-luna"))
+        .any(|model| cc_ask::job_policy::same_model(model, "gpt-6-luna"))
     {
         return Err(Reason::SameAuthorModel);
     }
@@ -342,6 +345,10 @@ mod tests {
         );
         assert_eq!(
             plan(pending, proof, inventory, 1000., Some(&[])),
+            Err(Reason::AuthorModelUnverified)
+        );
+        assert_eq!(
+            plan(pending, proof, inventory, 1000., Some(&["unrecognized"])),
             Err(Reason::AuthorModelUnverified)
         );
         assert_eq!(

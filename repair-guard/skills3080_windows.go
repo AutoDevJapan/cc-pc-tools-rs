@@ -59,6 +59,7 @@ type skillsResultRequest struct {
 	Job      string `json:"job"`
 	SpecSHA  string `json:"spec_sha256"`
 	FinalSHA string `json:"final_sha256,omitempty"`
+	SpecPath string `json:"spec_path,omitempty"`
 }
 type skillsRequest struct {
 	Domain         string                `json:"domain"`
@@ -152,7 +153,7 @@ func skillsParseManifest(raw []byte) (skillsManifest, bool) {
 func skillsFlag(args []string) bool {
 	for _, a := range args {
 		a = strings.TrimLeft(a, "-")
-		for _, f := range []string{"qualify-skills3080", "create-skills3080", "create-skills3080-forward", "consume-skills3080", "receive-skills3080-result", "verify-skills3080-update"} {
+		for _, f := range []string{"qualify-skills3080", "create-skills3080", "create-skills3080-forward", "consume-skills3080", "consume-skills3080-admitted", "receive-skills3080-result", "verify-skills3080-update"} {
 			if a == f || strings.HasPrefix(a, f+"=") {
 				return true
 			}
@@ -162,6 +163,9 @@ func skillsFlag(args []string) bool {
 }
 func runSkillsCLI(args []string, out io.Writer, run func(string, string) object) int {
 	result := object{"qualified": false, "reason": "arguments"}
+	if len(args) == 1 && args[0] == "--consume-skills3080-admitted" {
+		result = run("consume-skills3080-admitted", "")
+	}
 	if len(args) == 2 && filepath.IsAbs(args[1]) {
 		op := strings.TrimPrefix(strings.TrimPrefix(args[0], "-"), "-")
 		if args[0] == "-"+op || args[0] == "--"+op {

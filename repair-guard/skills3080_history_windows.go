@@ -71,6 +71,16 @@ func skillsRegisteredGeneration(row skillsTask, author, consumer string) bool {
 func skillsReceiveOriginalRepair(r skillsResultRequest, reg skillsRegistry, s *skillsFS) (skillsReceived, string) {
 	var out skillsReceived
 	a := skillsOriginalRepair
+	if r.Job != a.Job {
+		if r == skillsLegacyPublicRepair003920 {
+			a = skillsRepair003920
+		} else {
+			return skillsReceiveTypedRepair(r, reg, s)
+		}
+	}
+	if r.SpecPath != "" {
+		return out, "result_binding"
+	}
 	// No caller-supplied historical path, spec snapshot, receipt or author.
 	if r.Task != 3686 || r.Job != a.Job || r.SpecSHA != a.SpecSHA || !skillsDigest(r.FinalSHA) {
 		return out, "result_binding"
@@ -94,7 +104,13 @@ func skillsReceiveOriginalRepair(r skillsResultRequest, reg skillsRegistry, s *s
 	if reason != "" {
 		return out, reason
 	}
+	if r == skillsLegacyPublicRepair003920 && len(body) != 310 {
+		return out, "result_unavailable"
+	}
 	out = skillsReceived{Body: body, Spec: spec, Native: native, Metadata: object{"id": a.Job, "task": 3686, "status": job["status"], "model": a.Model, "effort": a.Effort, "exit_code": job["exit_code"], "thread_id": a.Thread, "spec_sha256": a.SpecSHA, "final_sha256": hashBytes(body), "spec_binding": "original_registered_author", "consumer_job": reg.writer.Job}}
+	if r == skillsLegacyPublicRepair003920 {
+		out.Metadata["spec_binding"] = "fixed_legacy_public_repair_003920"
+	}
 	return out, ""
 }
 
@@ -132,10 +148,19 @@ func skillsHistoricalFilesAt(s *skillsFS, root string, a skillsHistoricalResult,
 // Read only this exact native session at its initial length. Do not infer
 // continuity with another job's thread; preserve the original strict window.
 func skillsHistoricalNative(s *skillsFS, job object, proof *skillsNativeResultProof) ([]object, bool) {
+	end, e := time.Parse(time.RFC3339Nano, str(job["finished_at"]))
+	if e != nil {
+		return nil, false
+	}
+	return skillsNativeWindow(s, job, proof, end)
+}
+
+// A live consumer has no finished_at. Its immutable input is checked only up
+// to an actual observation time, without inventing or changing job metadata.
+func skillsNativeWindow(s *skillsFS, job object, proof *skillsNativeResultProof, end time.Time) ([]object, bool) {
 	id := str(job["thread_id"])
 	start, e := time.Parse(time.RFC3339Nano, str(job["started_at"]))
-	end, e2 := time.Parse(time.RFC3339Nano, str(job["finished_at"]))
-	if e != nil || e2 != nil || end.Before(start) || !skillsUUID.MatchString(id) {
+	if e != nil || end.Before(start) || !skillsUUID.MatchString(id) {
 		return nil, false
 	}
 	home, e := os.UserHomeDir()
@@ -184,6 +209,7 @@ type skillsNativeResultProof struct {
 	prompt, body, lastFinal []byte
 	promptAt, finalAt       time.Time
 	finalSHA                string
+	inputOnly               bool
 }
 
 func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
@@ -197,6 +223,9 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 		return false
 	}
 	v := envelope.Payload
+	if p.inputOnly && v.Role == "assistant" {
+		return true
+	}
 	// codex-cli 0.163.0's generated MessagePhase schema and the original
 	// job's native metadata both use final_answer. Unknown/partial/commentary
 	// phases cannot prove a terminal response. No timestamp tolerance is added.
@@ -223,7 +252,7 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 	}
 	if v.Role == "user" && strings.Contains(text.String(), string(p.prompt)) {
 		p.promptAt = at
-	} else if v.Role == "user" && p.finalSHA != "" && !p.promptAt.IsZero() {
+	} else if v.Role == "user" && ((p.finalSHA != "" && !p.promptAt.IsZero()) || (p.inputOnly && (!p.promptAt.IsZero() || strings.Contains(text.String(), "\n依頼:\n")))) {
 		// The typed contract fixes the review's complete user input. An unknown
 		// later user message cannot silently expand that public classification.
 		return false
@@ -236,6 +265,9 @@ func (p *skillsNativeResultProof) observe(raw []byte, at time.Time) bool {
 }
 
 func (p *skillsNativeResultProof) bound() bool {
+	if p.inputOnly {
+		return len(p.prompt) > 0 && !p.promptAt.IsZero()
+	}
 	if len(p.prompt) == 0 || p.promptAt.IsZero() || p.finalAt.IsZero() || p.finalAt.Before(p.promptAt) {
 		return false
 	}

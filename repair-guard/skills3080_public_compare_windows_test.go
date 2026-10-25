@@ -21,6 +21,24 @@ func TestSkills3080PublicValidatorNamespace(t *testing.T) {
 	}
 }
 
+func TestSkills3080ComparisonResultCannotBecomeCreationAcceptance(t *testing.T) {
+	c := skillsPublicScopeFixture()
+	received := skillsReceived{Metadata: object{"model": "gpt-6-luna", "effort": "max"}, Native: []object{{"model": "gpt-6-luna", "effort": "max"}}, Body: []byte(`SKILLS3080_ACCEPTANCE {"domain":"skills-3080-review-v1","manifest_sha256":"` + c.ManifestSHA + `","accepted":true,"must":0}`)}
+	received.Spec, _ = json.Marshal(c)
+	if !skillsReviewAccepted(received, c.ManifestSHA, "gpt-6.1-sol") {
+		t.Fatal("control content review not exercised")
+	}
+	c.Instructions = skillsPublicReviewComparisonInstructions
+	c.Comparison = &skillsPublicReviewComparison{Commit: strings.Repeat("2", 40), Files: []skillsPublicReviewBaseFile{{Path: c.ManifestPath, Absent: true}}}
+	received.Spec, _ = json.Marshal(c)
+	if _, ok := skillsParsePublicReview(received.Spec); !ok {
+		t.Fatal("comparison control is invalid")
+	}
+	if skillsReviewAccepted(received, c.ManifestSHA, "gpt-6.1-sol") {
+		t.Fatal("raw change review became whole-output acceptance")
+	}
+}
+
 func TestSkills3080PublicComparisonProvesBothSelectedTrees(t *testing.T) {
 	for _, kind := range []string{"valid_unmerged", "valid_added", "no_ancestor", "identical", "wrong_base", "wrong_merge_base", "base_commit", "base_tree", "base_symlink", "base_sha", "base_bytes", "base_blob", "undeclared_old_file", "false_absence", "different_path", "missing_base_path", "duplicate_base", "other_namespace", "protected", "wrong_instructions"} {
 		t.Run(kind, func(t *testing.T) {

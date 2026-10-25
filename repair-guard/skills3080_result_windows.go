@@ -285,7 +285,7 @@ func skillsResultBindingWith(r skillsResultRequest, reg skillsRegistry, job obje
 		return false
 	}
 	publicResult := skillsOriginalParentReview
-	if skillsPublicReviewCandidate(r, reg, spec) {
+	if skillsPublicReviewCandidate(r, reg, spec) || skillsConsumerResultCandidate(r, reg, spec) {
 		publicResult = r
 	}
 	return skillsResultBindingKnown(r, reg, job, spec, forReview, originals, publicResult)
@@ -424,6 +424,9 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 	if r.Task == 3686 && !review {
 		return skillsReceiveOriginalRepair(r, reg, s)
 	}
+	if r.SpecPath != "" {
+		return out, "result_binding"
+	}
 	if r.Task < 1 || !skillsDigest(r.SpecSHA) || (r.FinalSHA != "" && !skillsDigest(r.FinalSHA)) {
 		return out, "result_binding"
 	}
@@ -468,6 +471,7 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 	// before opening the result. Creation retains its separate merge/notice
 	// and acceptance checks.
 	publicScope, publicInput := skillsPublicReviewScopeFor(r, spec)
+	consumerScope, consumerInput := skillsParseConsumer(spec)
 	var native []object
 	if publicInput {
 		if !skillsPublicReviewAuthor(publicScope, reg, row, job, s) || !skillsPublicReviewInputs(publicScope, reg.writer.Workspace, s) {
@@ -479,11 +483,23 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 			return out, "native_context"
 		}
 	}
+	if consumerInput {
+		if !skillsConsumerAuthor(consumerScope, reg, job, s) {
+			return out, "result_binding"
+		}
+		if _, _, _, reason := skillsConsumerProvenance(consumerScope, reg, s); reason != "" {
+			return out, reason
+		}
+		native, ok = skillsPublicReviewNative(s, job, spec, r.FinalSHA)
+		if !ok {
+			return out, "native_context"
+		}
+	}
 	body, ok := s.read(filepath.Join(skillsJobsRoot, r.Job, "last_message.md"), 2<<20)
 	if !ok || !bytes.Equal(body, []byte(str(job["last_message"]))) || (r.FinalSHA != "" && hashBytes(body) != r.FinalSHA) || (r.Task == 3709 && hashBytes(body) != skillsReplacementReviewFinal) || (r == skillsPublicReview3850 && len(body) != 4020) {
 		return out, "result_unavailable"
 	}
-	if !publicInput {
+	if !publicInput && !consumerInput {
 		native, ok = skillsNativeJob(s, job)
 	}
 	if !ok || (r.Task == 3709 && !skillsReplacementNativeBound(native)) {
@@ -497,6 +513,10 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 		if r == skillsPublicReview3850 {
 			out.Metadata["public_input_scope"] = "fixed_legacy_migration_3850"
 		}
+	}
+	if consumerInput {
+		out.Metadata["public_input_scope"] = "immutable_admitted_public_consumer"
+		out.Metadata["manifest_sha256"] = consumerScope.ManifestSHA
 	}
 	return out, ""
 }

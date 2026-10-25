@@ -58,7 +58,8 @@ base filesはheadで選択した全pathを、同じ綴りで1回ずつ宣言す�
 baseがheadの正規祖先であること、両固定treeのregular blobと正確なbytes、又は
 baseでの不在を照合する。baseの宣言が別pathの読取範囲を増やすことはない。
 合計32MiBにはbaseも含める。変更と必要な支持を読む範囲を分けて報告し、変更が
-ない部分を全読したとはしない。受領条件は未mergeでも同じで、配置受入には使わない。
+ない部分を全読したとはしない。受領条件は未mergeでも同じで、comparison結果を
+全出力のCreateNew用内容受入へ転用することは実装でも拒否する。
 
 照合は次の順で行う。
 
@@ -108,3 +109,25 @@ final fieldのbytesが含まれることと、原文をモデルへ表示・意�
 `skills3080_history_windows_test.go`。未mergeの正例、private/別source/author、
 後付けscope、未登録/別consumer、欠落/改変/aliasと時刻窓・phaseの負例を確認する。
 原台帳・一般guard・未知9・旧14/28hold・647拒否・既存成功を変更しない。
+
+## 同じ公開修復担当の履歴継続
+
+原003920の310Bも、原spec4323・prompt081ed6b9・実job/launch/thread/cwd/元の
+開始終了時刻・原final SHA2a8a0768を保持する固定移行とする。旧211205とは別で、
+両者を起動前からtypedだったとはしない。現在の023556も文章仕様のまま保持する。
+
+**今後の起動前**に元3686の仕様全体をJSONへする場合は、public reviewと同じ
+repo/commit/author/author_spec_path/manifest/filesの構造を使い、domainだけを
+`skills-3080-public-repair-v1`、instructionsを`skillsPublicRepairInstructions`の
+完全一致にする。元3080のauthorとmanifestをanchorにし、入力は同じ公開namespaceと
+`repair-guard`直下のGo source/test・go.modだけ。comparisonは使わない。
+任意の自由文や私的資料を足すことはできない。
+
+受領requestのresultには元job/spec SHA/final SHAに加えて、原の保存済みJSON仕様を
+持つ`spec_path`（正規の`D:/CC/Tools/todo/specs/3686-32桁ID.md`）を指定する。
+このpathは新しい一般読取先ではなく、実起動promptと同一のtyped仕様を検証する
+ための限定metadataである。現在のToDo specが進んでいても、同じ登録履歴内の
+author・実launch・PUBLIC固定入力・native入力/期待final/厳密時間窓を先に照合し、
+その後だけ元結果を開く。異なる登録済みjobでも、正しいtyped起動ならjob別の
+固定表を追加しない。未登録・未来世代・private/後付けscopeは拒否する。
+既存の文章仕様をこのJSONへ事後置換して資格を作ることはできない。

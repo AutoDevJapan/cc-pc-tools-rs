@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,6 +12,44 @@ import (
 	"testing"
 	"unsafe"
 )
+
+func TestOriginalCleanupReferenceRejectsNewOrAmbiguousEvidence(t *testing.T) {
+	history := map[string]any{"spec": cleanupHandoff, "updated": "2026-10-13 16:46"}
+	row := map[string]any{"id": 2488, "project": "cc-pc-tools-rs", "spec_history": []any{history}}
+	for _, kind := range []string{"original", "missing", "new-only", "wrong-project", "wrong-source", "wrong-time", "duplicate-id", "duplicate-reference", "unrelated-legacy-types"} {
+		t.Run(kind, func(t *testing.T) {
+			b, _ := json.Marshal(row)
+			var candidate map[string]any
+			json.Unmarshal(b, &candidate)
+			items := []any{candidate}
+			switch kind {
+			case "missing":
+				items = nil
+			case "new-only":
+				candidate["spec"] = cleanupHandoff
+				delete(candidate, "spec_history")
+			case "wrong-project":
+				candidate["project"] = "other"
+			case "wrong-source":
+				candidate["spec_history"] = []any{map[string]any{"spec": cleanupHandoff + ".copy", "updated": "2026-10-13 16:46"}}
+			case "wrong-time":
+				candidate["spec_history"] = []any{map[string]any{"spec": cleanupHandoff, "updated": "2026-10-25 14:40"}}
+			case "duplicate-id":
+				items = append(items, row)
+			case "duplicate-reference":
+				candidate["spec_history"] = []any{history, history}
+			case "unrelated-legacy-types":
+				items = append(items, map[string]any{"id": 7, "project": 123, "spec_history": "old-schema"})
+			}
+			b, _ = json.Marshal(map[string]any{"items": items})
+			e := cleanupReference(b)
+			want := kind == "original" || kind == "unrelated-legacy-types"
+			if (e == nil) != want {
+				t.Fatalf("original reference accepted=%v want=%v", e == nil, want)
+			}
+		})
+	}
+}
 
 func fixture(t *testing.T) leaf {
 	t.Helper()

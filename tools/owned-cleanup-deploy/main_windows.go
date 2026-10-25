@@ -27,7 +27,9 @@ const sourceRoot = "D:/CC/Work/unattended-operations-20261013-wt/todo-3757-3628"
 const evidenceRoot = sourceRoot + "/codex-owned-8bfa50250f964b4f84235c754c7cf821"
 const sourceHead = "89f2411f752bfd3d548a4b5a25da1fc9062bd505"
 const oldSafe = "7e1737b6bcd7f1b015998e8594527dbab3f211b68cbe8ad3b82f6a46bca39514"
-const oldCleanup = "d72a2bd62e3f5c491234e22b17a7533a3d9b25d7944691f96fc4d79e895b8d24"
+const oldCleanup = "6975fc67257bb45012f96dc42091e26fab9bf19a065e00740ab0476e307b2f9b"
+const cleanupHandoff = "D:/CC/Tools/todo/specs/2488-e4aec9aa1c54483d9c28b0b55fa56317.md"
+const cleanupHandoffSHA = "8fc610dafd546168cc6120c130542c69890d4c820c198e13ef2c3ddfdac6a74f"
 
 type leaf struct{ Kind, Source, Target, Old, New string }
 
@@ -177,8 +179,19 @@ func originalProofs() error {
 		Schema, Todo int
 		Cleanup      string `json:"cleanup_sha256"`
 	}
-	if json.Unmarshal(b, &m) != nil || m.Schema != 1 || m.Todo != 2491 || !strings.EqualFold(m.Cleanup, oldCleanup) {
+	if json.Unmarshal(b, &m) != nil || m.Schema != 1 || m.Todo != 2491 || !strings.EqualFold(m.Cleanup, "d72a2bd62e3f5c491234e22b17a7533a3d9b25d7944691f96fc4d79e895b8d24") {
 		return errCode("ORIGINAL_CLEANUP_MANIFEST_INVALID")
+	}
+	// The earlier 2491 manifest is deliberately not the installed baseline.
+	// Original parent 2488 saved the subsequent deployment hash on October 13;
+	// verify its archived original bytes and reference before opening current.
+	b, e = readPinned(cleanupHandoff, 1<<20)
+	if e != nil || sha(b) != cleanupHandoffSHA || !strings.Contains(strings.ToLower(string(b)), "cleanup"+oldCleanup) || !strings.Contains(string(b), "578cbc6c6126690761680bc1a307c1118726e9e5") {
+		return errCode("ORIGINAL_CLEANUP_HANDOFF_CHANGED")
+	}
+	b, e = readPinned("D:/CC/Tools/todo/todo.json", 96<<20)
+	if e != nil || cleanupReference(b) != nil {
+		return errCode("ORIGINAL_CLEANUP_REFERENCE_MISSING")
 	}
 	for _, args := range [][]string{{"remote", "get-url", "origin"}, {"merge-base", "--is-ancestor", sourceHead, "origin/main"}, {"diff", "--quiet", sourceHead, "HEAD", "--", "safe-delete", "cleanup-8h", "Cargo.toml", "Cargo.lock"}, {"diff", "--quiet", "HEAD", "--", "safe-delete", "cleanup-8h", "Cargo.toml", "Cargo.lock"}} {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
@@ -209,6 +222,44 @@ func originalProofs() error {
 	}
 	if revision != sourceHead || modified != "false" {
 		return errCode("BUILD_SOURCE_CHANGED")
+	}
+	return nil
+}
+
+// Decode only the original task; legacy types in unrelated tasks are not this
+// software update's authority. A historical source is not a new data receipt.
+func cleanupReference(b []byte) error {
+	var table struct {
+		Items []json.RawMessage `json:"items"`
+	}
+	if json.Unmarshal(b, &table) != nil {
+		return errCode("INVALID_TASK_TABLE")
+	}
+	found := 0
+	selected := 0
+	for _, raw := range table.Items {
+		var key struct {
+			ID int `json:"id"`
+		}
+		if json.Unmarshal(raw, &key) != nil || key.ID != 2488 {
+			continue
+		}
+		selected++
+		var task struct {
+			Project string                           `json:"project"`
+			History []struct{ Spec, Updated string } `json:"spec_history"`
+		}
+		if json.Unmarshal(raw, &task) != nil || task.Project != "cc-pc-tools-rs" {
+			return errCode("INVALID_ORIGINAL_TASK")
+		}
+		for _, h := range task.History {
+			if same(h.Spec, cleanupHandoff) && h.Updated == "2026-10-13 16:46" {
+				found++
+			}
+		}
+	}
+	if selected != 1 || found != 1 {
+		return errCode("ORIGINAL_CLEANUP_REFERENCE_MISSING")
 	}
 	return nil
 }

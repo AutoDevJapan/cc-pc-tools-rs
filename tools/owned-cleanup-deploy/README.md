@@ -6,7 +6,10 @@
 
 原safe-deleteの根拠は元3650の正規成功イベントitem_174を、その原JSON行のSHAで
 固定したもの。Issue471→PR475→元3650をたどって取得し、旧byteの観測から原記録を
-生成していない。cleanupは元2491の原manifestを保持する。候補2本はreview/CI/merge
+生成していない。cleanupは元2491の原manifestを保持し、後続の更新は元2488が
+2026-10-13に保存した原handoffのbyteと、正規ToDoのspec_history参照を照合する。
+これはソフトの更新来歴であり、一時データの原create/release受領には使わない。
+候補2本はreview/CI/merge
 済み89f2411のビルドbyteを固定し、Rust候補は自分のCargo出力から単一リンクの
 同byteコピーを用いる。コピーを再ビルドや元の配布証拠とは呼ばない。
 
@@ -28,7 +31,10 @@
 
 初回の実読取照合で、safe-deleteは元3650の旧SHAと一致したが、cleanup現用は
 元2491の古いmanifestのSHAに一致しなかった。`--apply`は未実行、実更新は0。
-cleanupの後続配布の原記録を照合し、資格が揃うまで古いpinを変更しない。
+cleanupの後続配布は、元2488の2026-10-13 16:46の保存履歴に残るSHA 6975fc...を
+取得した。新しいpinはこの独立した原履歴に由来し、未知のcurrentを観測して
+作った値ではない。原handoffの固定SHAと元ToDoの参照を照合し、現物一致を
+これから確認する。原2491の古いSHAを後続版の証拠に書き換えない。
 この未一致を、この補助のfixture成功や実物清掃の成功へ読み替えない。
 
 Windowsのfixtureは新旧SHA、元inode/ACL保持、候補/旧版差替え、hardlink、stage/backup、

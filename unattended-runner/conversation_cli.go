@@ -121,7 +121,7 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		if opts.Command == "implementation-record" {
 			conversationStringFlag(fs, "evidence-file", &opts.EvidenceFile)
 		}
-	case "source-verify", "source-reacquire":
+	case "recover-question", "source-verify", "source-reacquire":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "message-id", &opts.Message)
 	case "close":
@@ -189,7 +189,7 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 				return opts, errConversationArguments
 			}
 		}
-	case "source-verify", "source-reacquire":
+	case "recover-question", "source-verify", "source-reacquire":
 		if _, ok := number(opts.Message); !ok || !conversationID.MatchString(opts.RequestID) {
 			return opts, errConversationArguments
 		}
@@ -383,7 +383,7 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 			} else {
 				result, err = backend.conversationWithdraw(ctx, opts.RequestID, opts.ReasonFile)
 			}
-		case "source-link", "source-verify", "source-reacquire", "implementation-record", "close":
+		case "recover-question", "source-link", "source-verify", "source-reacquire", "implementation-record", "close":
 			if backend, ok := runner.(interface {
 				conversationImplementationCommand(context.Context, conversationCLIOptions) (map[string]any, error)
 			}); ok {

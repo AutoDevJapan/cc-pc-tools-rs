@@ -76,12 +76,13 @@ impl Fixture {
     fn snapshot(&self) {
         let db = self.db();
         for (i, name) in [(0, "origin"), (1, "actor")] {
+            let project = db["items"][i]["project"].as_str().unwrap();
             self.write(&format!("{name}-expected.json"), &db["items"][i]);
             self.write(
                 &format!("{name}-scope.json"),
                 &json!({"domain":"discord-conversation-todo-scope-v1",
-                "todo_id":(i+1).to_string(),"project":"tools",
-                    "project_path_sha256":sha(db["projects"]["tools"].as_str().unwrap().as_bytes())}),
+                "todo_id":(i+1).to_string(),"project":project,
+                    "project_path_sha256":sha(db["projects"][project].as_str().unwrap().as_bytes())}),
             );
         }
     }
@@ -233,6 +234,104 @@ fn implementation_keeps_cancelled_origin_and_records_only_actual_actor() {
     let bytes = fs::read(f.temp.path().join("todo.json")).unwrap();
     assert_eq!(f.ok(false)["changed"], false);
     assert_eq!(fs::read(f.temp.path().join("todo.json")).unwrap(), bytes);
+}
+
+fn ordinary_implementation() -> Fixture {
+    let f = Fixture::implementation();
+    let mut input: Value =
+        serde_json::from_slice(&fs::read(f.temp.path().join("input.json")).unwrap()).unwrap();
+    let key = sha(format!("unattended-owner-v1\0{}\0{}", "123", "124").as_bytes());
+    let context = json!({"source":"discord-api-v10","read_only":true,"request_id":"sender-question","thread_id":"123","question_message_id":"123","owner_id":"456","original_question":input["original_question"],
+        "owner_replies":[{"todo_id":1,"message_id":"124","author_id":"456","question_thread_id":"123","question_message_id":"123","body":input["owner_reply"],"timestamp":input["created_at"]}]});
+    let source = json!({"source":"discord-api-v10","record_version":2,"key":&key[..32],"thread_id":"123","message_id":"124","author_id":"456","text":input["owner_reply"],"created_at":input["created_at"],"question_context":serde_json::to_string(&context).unwrap()});
+    fs::create_dir_all(f.temp.path().join("requests")).unwrap();
+    f.write("requests/124.json", &source);
+    let source_path = f.temp.path().join("requests/124.json");
+    input["intake_source_file"] = json!(source_path);
+    input["intake_source_sha256"] = json!(sha(&fs::read(&source_path).unwrap()));
+    f.write("input.json", &input);
+    let root = f.temp.path().join("independent-intake");
+    fs::create_dir(&root).unwrap();
+    let mut db = f.db();
+    db["projects"]["intake"] = json!(root);
+    db["items"][1]["project"] = json!("intake");
+    db["items"][1]["note"] = json!(format!("unattended-owner-receipt:{}", &key[..32]));
+    db["items"][1]["scheduler"]["worktree"] = json!(root);
+    f.write("todo.json", &db);
+    f.write(
+        "jobs/actual-worker/job.json",
+        &json!({"id":"actual-worker","todo_id":2,"status":"running","cwd":root}),
+    );
+    let assignment = format!(
+        "Original source: {} thread 123 reply 124",
+        source_path.display()
+    );
+    fs::write(f.temp.path().join("actor.md"), &assignment).unwrap();
+    fs::write(
+        f.temp.path().join("jobs/actual-worker/prompt.md"),
+        &assignment,
+    )
+    .unwrap();
+    f.snapshot();
+    f
+}
+
+#[test]
+fn implementation_accepts_only_source_bound_independent_project_assignment() {
+    let f = ordinary_implementation();
+    let before = f.db();
+    f.ok(false);
+    let after = f.db();
+    assert_eq!(before["projects"], after["projects"]);
+    assert_eq!(before["items"][1], after["items"][1]);
+    for key in [
+        "status",
+        "owner_stopped",
+        "wait_on",
+        "scheduler",
+        "jobs",
+        "spec",
+    ] {
+        assert_eq!(before["items"][0][key], after["items"][0][key]);
+    }
+    assert_eq!(
+        after["items"][0]["owner_implementation_records"][0]["actor_scope"]["project"],
+        "intake"
+    );
+    f.snapshot();
+    assert_eq!(f.ok(true)["changed"], false);
+}
+
+#[test]
+fn implementation_source_assignment_rejects_wrong_source_and_foreign_job() {
+    for change in [
+        "hash", "copy", "owner", "origin", "reply", "key", "spec", "prompt", "job", "scope",
+    ] {
+        let f = ordinary_implementation();
+        let mut input: Value =
+            serde_json::from_slice(&fs::read(f.temp.path().join("input.json")).unwrap()).unwrap();
+        match change {
+            "hash"=>input["intake_source_sha256"]=json!("0".repeat(64)),
+            "copy"=>{let p=f.temp.path().join("copy/requests");fs::create_dir_all(&p).unwrap();fs::copy(f.temp.path().join("requests/124.json"),p.join("124.json")).unwrap();input["intake_source_file"]=json!(p.join("124.json"));},
+            "owner"|"origin"|"reply"|"key"=>{
+                let p=f.temp.path().join("requests/124.json");
+                let mut raw:Value=serde_json::from_slice(&fs::read(&p).unwrap()).unwrap();
+                match change {
+                    "owner"=>raw["author_id"]=json!("999"),
+                    "key"=>raw["key"]=json!("0".repeat(32)),
+                    _=>{let mut context:Value=serde_json::from_str(raw["question_context"].as_str().unwrap()).unwrap();if change=="origin" {context["owner_replies"][0]["todo_id"]=json!(99);}else{context["owner_replies"][0]["body"]=json!("other answer");}raw["question_context"]=json!(serde_json::to_string(&context).unwrap());}
+                }
+                f.write("requests/124.json",&raw);input["intake_source_sha256"]=json!(sha(&fs::read(p).unwrap()));
+            },
+            "spec"=>fs::write(f.temp.path().join("actor.md"),"unrelated").unwrap(),
+            "prompt"=>fs::write(f.temp.path().join("jobs/actual-worker/prompt.md"),"unrelated").unwrap(),
+            "job"=>f.write("jobs/actual-worker/job.json",&json!({"id":"actual-worker","todo_id":99,"status":"running","cwd":f.temp.path().join("independent-intake")})),
+            "scope"=>{let mut db=f.db();db["projects"]["intake"]=json!(f.temp.path());f.write("todo.json",&db);},
+            _=>unreachable!()
+        }
+        f.write("input.json", &input);
+        f.reject_unchanged(false);
+    }
 }
 
 #[test]
@@ -432,6 +531,7 @@ fn implementation_acceptance_runs_go_with_this_canonical_writer() {
         "TestImplementationNativeLostWriteResponseReplaysAndNewReplyHoldsClose",
         "TestImplementationNativeSourceGenerationRetainsMissingOrDifferentOriginal",
         "TestImplementationNativeNewStopDefersExplicitCloseAndPreservesReceipt",
+        "TestImplementationNativeOrdinaryProjectPreservesWaitAndCloses",
     ] {
         assert!(
             events

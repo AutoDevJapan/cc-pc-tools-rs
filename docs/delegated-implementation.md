@@ -35,6 +35,21 @@ ToDo writerは同じロックで両方のスナップショットを照合し、
 
 ## 利用順
 
+投稿済み質問が`reserved`に残る場合は、先に
+`conversation recover-question --request-id <元request> --message-id <本人reply>`
+を使う。正規senderの読取証拠から質問を回復し、リンク投稿を再送しない。
+元作業の技術待ちや本人停止は解除しない。
+
+通常受付担当が元作業と別プロジェクトの場合は、その担当自身をactor/intakeとして
+source-linkする。登録rootの付替えは不要。原受付の受信キーと原本・元質問、
+実ジョブの保存仕様と実プロンプトを照合し、両rootのguardはそれぞれ維持する。
+implementation-recordは`intake_source_file`と`intake_source_sha256`を用途付き入力へ含め、
+Rust側も同じ原本と割当・別々のscope/snapshotを確認する。原本のコピーでは代用しない。
+
+継続担当が過去の実操作を照合して記録する場合は、executionへ実操作元のジョブと
+今回確認した根拠を書く。記録担当の現在ジョブを過去の実操作元と偽らない。
+記録のapplied_atは、現在のcanonical sourceを取得してから実反映を照合した日時とする。
+
 ```text
 unattended-runner.exe conversation source-verify --request-id <元request> --message-id <本人reply>
 unattended-runner.exe conversation source-reacquire --request-id <元request> --message-id <本人reply>

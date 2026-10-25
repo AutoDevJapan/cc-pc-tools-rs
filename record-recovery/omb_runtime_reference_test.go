@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -199,5 +200,39 @@ func TestOMB3255RuntimeNativePathAcceptsOnlyExactLocalAliases(t *testing.T) {
 		if _, ok := omb3255AdmitNativePath(raw, wanted); ok {
 			t.Fatal("different path or namespace alias admitted")
 		}
+	}
+}
+
+func TestOMB3255RuntimeAdmitsThirteenFixedReviewsAndRejectsScopeExpansion(t *testing.T) {
+	get, call, _ := omb3255ReferenceFixture()
+	job := get["/api/threads/"+omb3255Task+"/job?scope=job&since=1792848636233&full=1"]
+	text := "synthetic final review"
+	var wanted []omb3255ExpectedRoot
+	var nodes, turns []any
+	for i := 0; i < 13; i++ {
+		start := int64(1792848636000 + i*600000)
+		id := fmt.Sprintf("synthetic-root-%d", i)
+		wanted = append(wanted, omb3255ExpectedRoot{id, start, start + 30000, omb3255TextSHA(text)})
+		nodes = append(nodes, obj{"id": id, "rootId": id, "depth": json.Number("0"), "botId": omb3255Bot, "threadId": omb3255Task, "status": "completed", "outcome": "done", "executions": json.Number("1"), "startedAt": json.Number(strconv.FormatInt(start, 10)), "finishedAt": json.Number(strconv.FormatInt(start+30000, 10)), "result": text})
+		turns = append(turns, obj{"id": fmt.Sprintf("synthetic-turn-%d", i), "startedAt": json.Number(strconv.FormatInt(start/1000+1, 10)), "completedAt": json.Number(strconv.FormatInt(start/1000+20, 10)), "status": "completed", "itemsView": "notLoaded", "items": []any{}, "error": nil})
+	}
+	job["nodes"] = nodes
+	call["thread/turns/list"]["data"] = turns
+	gets, rpcs := 0, 0
+	read := func(endpoint string) (obj, error) { gets++; return get[endpoint], nil }
+	rpc := func(method string, params obj) (obj, error) {
+		rpcs++
+		if method == "thread/items/list" {
+			return obj{"data": []any{obj{"turnId": params["turnId"], "item": obj{"type": "agentMessage", "phase": "final_answer", "text": text}}}}, nil
+		}
+		return call[method], nil
+	}
+	refs, _, err := omb3255CollectRefsFrom(read, rpc, "", 0, wanted)
+	if err != nil || len(refs) != 13 || gets != 2 || rpcs != 15 {
+		t.Fatalf("fixed reviews not admitted: refs=%d get=%d rpc=%d err=%v", len(refs), gets, rpcs, err)
+	}
+	gets, rpcs = 0, 0
+	if refs, _, err := omb3255CollectRefsFrom(read, rpc, "", 0, append(wanted, wanted[0])); err == nil || refs != nil || gets != 0 || rpcs != 0 {
+		t.Fatal("oversized scope reached metadata sources")
 	}
 }

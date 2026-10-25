@@ -50,6 +50,9 @@ func omb3255ExpectedRoots() []omb3255ExpectedRoot {
 		{"52ef5176-3f6c-429a-b5a3-7a4124708fb0", 1792908928181, 1792909013394, "9a6d5d5fc4006ce793a2f04ba8fe7c3010b2eda9b38b467610d85d0dc3afede6"},
 		{"6a573c2d-6f09-4bf8-8b55-f3ff2861322d", 1792909070946, 1792909140454, "18c604b5ad182d724bcb7e241e811546dd04b1976645d20ab6cc7dca0ce0ee67"},
 		{"7ca1e6e2-d92a-4824-acf7-32fe7f900356", 1792911581971, 1792911732909, "803b54fc916377cf8a8b6aa30445100370edabff2abc2b664b669c94b93c0276"},
+		{"6725f3b5-6599-4948-af90-09997fb922cd", 1792917963844, 1792918443665, "74bc4b2807726761bc46a65e8260952a46f7c3ed48835afbac83811defd6999b"},
+		{"99a7ab65-f323-4713-af30-430ac8353e44", 1792918682533, 1792918902897, "783c2e86813c3a0c3b78f28c44f707bb76270e965d84df8f5054ce66a392041d"},
+		{"597bb81b-9c79-4253-bc2c-ebd4a1698432", 1792920365040, 1792920470454, "ea9a10404079d46d3b41f38832b31ffea5729a649604847b056bb0143a01a322"},
 	}
 }
 
@@ -301,7 +304,7 @@ func omb3255CollectRefs(ctx context.Context, rpc *omb3255MetadataRPC, revision s
 }
 
 func omb3255CollectRefsFrom(get func(string) (obj, error), call func(string, obj) (obj, error), revision string, commitMS int64, expectedRoots []omb3255ExpectedRoot) ([]omb3255RuntimeRef, string, error) {
-	if get == nil || call == nil || len(expectedRoots) == 0 || len(expectedRoots) > 10 {
+	if get == nil || call == nil || len(expectedRoots) == 0 || len(expectedRoots) > 13 {
 		return nil, "", omb3255RuntimeUnavailable
 	}
 	profile, err := get("/api/bots?messages=0")

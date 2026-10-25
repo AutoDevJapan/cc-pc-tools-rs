@@ -155,7 +155,14 @@ func conversationTest(t *testing.T, wait bool) *conversationFixture {
 						saved = row["owner_question_delivery_receipts"].([]any)
 					}
 					b, _ := os.ReadFile(args[3])
-					row["owner_question_delivery_receipts"] = append(saved, map[string]any{"domain": "todo-owner-question-delivery-receipt-v1", "answer": proof, "answer_file_sha256": bytesHash(b), "wait": wait})
+					record := map[string]any{"domain": "todo-owner-question-delivery-receipt-v1", "answer": proof, "answer_file_sha256": bytesHash(b), "wait": wait}
+					for _, arg := range args {
+						if arg == "--preserve-question-wait" {
+							record["preserved_wait"] = true
+							record["recipient"] = wait.(map[string]any)["origin"]
+						}
+					}
+					row["owner_question_delivery_receipts"] = append(saved, record)
 					row["note"] = string(data)
 					if row["scheduler"] == nil {
 						row["scheduler"] = map[string]any{}

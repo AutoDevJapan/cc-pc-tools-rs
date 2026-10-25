@@ -103,6 +103,34 @@ func omb3255Text(v any) string { value, _ := v.(string); return value }
 func omb3255SamePath(a, b string) bool {
 	return a != "" && b != "" && strings.EqualFold(filepath.Clean(strings.ReplaceAll(a, "/", string(filepath.Separator))), filepath.Clean(strings.ReplaceAll(b, "/", string(filepath.Separator))))
 }
+
+// The normal Codex API can return a Win32 extended local-drive path. Admit
+// only an equivalent spelling of the fixed native path, then hand the fixed
+// ordinary path to the handle reader. UNC/device/namespace aliases stay denied.
+func omb3255AdmitNativePath(raw, expected string) (string, bool) {
+	value := strings.ReplaceAll(raw, `\`, "/")
+	if strings.HasPrefix(value, "//?/") {
+		value = value[4:]
+		if len(value) < 3 || !((value[0] >= 'A' && value[0] <= 'Z') || (value[0] >= 'a' && value[0] <= 'z')) || value[1:3] != ":/" {
+			return "", false
+		}
+	} else if strings.HasPrefix(value, "//") {
+		return "", false
+	}
+	if strings.ContainsRune(value, 0) {
+		return "", false
+	}
+	for index, component := range strings.Split(value, "/") {
+		if (component == "" && index > 0) || component == "." || component == ".." || strings.TrimRight(component, " .") != component ||
+			(strings.Contains(component, ":") && !(index == 0 && len(component) == 2 && component[1] == ':')) {
+			return "", false
+		}
+	}
+	if !omb3255SamePath(value, strings.ReplaceAll(expected, `\`, "/")) {
+		return "", false
+	}
+	return expected, true
+}
 func omb3255TextSHA(text string) string {
 	sum := sha256.Sum256([]byte(text))
 	return hex.EncodeToString(sum[:])
@@ -318,8 +346,8 @@ func omb3255CollectRefsFrom(get func(string) (obj, error), call func(string, obj
 	if omb3255Text(thread["id"]) != omb3255NativeThread || omb3255Int(thread["createdAt"]) != 1792848636 || !omb3255SamePath(omb3255Text(thread["cwd"]), cwd) || len(omb3255Array(thread["turns"])) != 0 {
 		return nil, "", omb3255RuntimeUnavailable
 	}
-	path := omb3255Text(thread["path"])
-	if !omb3255SamePath(path, omb3255ExpectedNativePath()) {
+	path, pathOK := omb3255AdmitNativePath(omb3255Text(thread["path"]), omb3255ExpectedNativePath())
+	if !pathOK {
 		return nil, "", omb3255RuntimeUnavailable
 	}
 	turns, err := call("thread/turns/list", obj{"threadId": omb3255NativeThread, "limit": 32, "sortDirection": "asc", "itemsView": "notLoaded"})

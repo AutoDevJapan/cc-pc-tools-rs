@@ -28,6 +28,8 @@ readerはclear/unverified/protectedと各boolean・カテゴリの整合を検�
 ## 原本の読取と出力
 
 sourceは正常APIが同じ固定会話の原本と示した、ユーザープロファイル内の固定JSONL一件。
+APIの`\\?\X:\...`形式は、同じ固定ファイルを指すローカルドライブ表記だけ通常形式へ戻す。
+UNC・device/Volume名前空間・dot成分・末尾dot/space・ADS・別pathは受けず、原本を移動しない。
 任意path・他bot・他会話を受ける引数は設けない。読取と検証は同じWindows handleに結ぶ。
 reparse、hard link、物理path不一致、読取前後の変更、close失敗は値を返さない。
 書込・削除の共有を認めず、64MiB/行4MiB/深さ64・重複key拒否で有限に読む。

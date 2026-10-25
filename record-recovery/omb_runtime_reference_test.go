@@ -179,3 +179,25 @@ func TestOMB3255RuntimeSecondConversionBounds(t *testing.T) {
 		}
 	}
 }
+
+func TestOMB3255RuntimeNativePathAcceptsOnlyExactLocalAliases(t *testing.T) {
+	wanted := `C:\synthetic\.codex\sessions\2026\10\24\original.jsonl`
+	for _, raw := range []string{wanted, `\\?\` + wanted, "c:/synthetic/.codex/sessions/2026/10/24/original.jsonl"} {
+		if got, ok := omb3255AdmitNativePath(raw, wanted); !ok || got != wanted {
+			t.Fatal("exact local spelling rejected")
+		}
+	}
+	for _, raw := range []string{
+		`\\?\UNC\host\share\original.jsonl`, `\\?\Volume{synthetic}\original.jsonl`,
+		`\\.\C:\synthetic\.codex\sessions\2026\10\24\original.jsonl`,
+		`\\?\C:\synthetic\.codex\sessions\2026\10\24\..\24\original.jsonl`,
+		`\\?\C:\synthetic\.codex\sessions\2026\10\24\original.jsonl.`,
+		`\\?\C:\synthetic\.codex\sessions\2026\10\24\original.jsonl `,
+		wanted + ":stream", strings.Replace(wanted, "original", "different", 1),
+		strings.Replace(wanted, "C:", "D:", 1), wanted + string(rune(0)),
+	} {
+		if _, ok := omb3255AdmitNativePath(raw, wanted); ok {
+			t.Fatal("different path or namespace alias admitted")
+		}
+	}
+}

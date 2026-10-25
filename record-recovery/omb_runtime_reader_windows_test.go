@@ -7,10 +7,25 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
 )
+
+func TestOMB3255RuntimeReferenceAdmitsExactLocalVerbatimPath(t *testing.T) {
+	get, call, wanted := omb3255ReferenceFixture()
+	native := omb3255Object(call["thread/read"]["thread"])
+	native["path"] = `\\?\` + strings.ReplaceAll(omb3255ExpectedNativePath(), "/", `\`)
+	refs, path, err := omb3255CollectRefsFrom(func(endpoint string) (obj, error) {
+		return get[endpoint], nil
+	}, func(method string, _ obj) (obj, error) {
+		return call[method], nil
+	}, "", 0, wanted)
+	if err != nil || len(refs) != 1 || path != omb3255ExpectedNativePath() {
+		t.Fatal("normal API's exact extended local path was not admitted")
+	}
+}
 
 func omb3255RuntimeTestRoot(t *testing.T) string {
 	t.Helper()

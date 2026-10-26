@@ -27,12 +27,10 @@ docs/skills-3080-tencent-MIT.txt -text
 /docs/skills-3080-season-blend-model.go.txt text eol=lf
 /docs/skills-3080-sixmile-next20-evaluation.json text eol=lf
 /docs/skills-3080-body-alias-scan.json text eol=lf
-
 docs/skills-3080-sixmile-three-cohort-snapshot.json text eol=lf
 docs/skills-3080-sixmile-parent6-evaluation.json text eol=lf
 docs/skills-3080-primary-reading-amendments.json text eol=lf
 docs/skills-3080-mcp-sibling-duplicate-evidence.json text eol=lf
-
 docs/skills-3080-sixmile-next75-evaluation.json text eol=lf
 docs/skills-3080-reading-prose-history.json text eol=lf
 docs/skills-3080-sixmile-received50-evaluation.json text eol=lf
@@ -52,9 +50,9 @@ docs/skills-3080-execution-queue-summary.json text eol=lf
 /docs/skills-3080-sixmile-partial-evaluation.json text eol=lf
 /docs/skills-3080-adoptions.json text eol=lf
 docs/skills-3080-sixmile-received-next50-evaluation.json text eol=lf
-
 # Preserve exact reviewed operation bytes, including intentional JSON CRLF.
 /docs/skills-3080-operations/*.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-sixmile-stream90-evaluation.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 /docs/skills-3080-four-designs.json text eol=lf
 /docs/skills-3080-installed-four-manifest.json text eol=lf
 /docs/skills-3080-four-installation-evidence.json text eol=lf
@@ -70,3 +68,195 @@ docs/skills-3080-sixmile-received-next50-evaluation.json text eol=lf
 /docs/skills-3080-game6-application-result.json text eol=lf
 /docs/skills-3080-game6-application-test-receipt.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
 /docs/evidence/skills-3080-game6-use-074042.go.txt text eol=lf
+/docs/skills-3080-utility8-designs.json text eol=lf
+/docs/skills-3080-installed-utility8-manifest.json text eol=lf
+/docs/skills-3080-utility8-installation-evidence.json text eol=lf
+/docs/skills-3080-utility8-create-receipt.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-utility8-readback-receipt.json text eol=lf
+/docs/skills-3080-utility8-application-result.json text eol=lf
+/docs/skills-3080-utility8-application-test-receipt.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-utility8-discovery-receipt.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-utility8-fixture-preparation.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/evidence/skills-3080-utility8-use-074042.go.txt text eol=lf
+/docs/evidence/skills-3080-utility8-use-v2-074042.go.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/evidence/skills-3080-utility8-receipt-contract-v2-074042.go.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-utility8-application-v2-result.json text eol=lf
+/docs/skills-3080-utility8-application-v2-test-receipt.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-utility8-probe-receipt.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-utility8-receipt-regression-red.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-utility8-receipt-regression-green.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/evidence/skills-3080-guard-installed-a5da.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-material-camera8-designs.json text eol=lf
+/docs/skills-3080-installed-material-camera8-manifest.json text eol=lf
+/docs/skills-3080-material-camera8-installation-evidence.json text eol=lf
+/docs/skills-3080-material-camera8-create-receipt.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-material-camera8-readback-receipt.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-material-camera8-application-result.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-material-camera8-application-test-receipt.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-material-camera8-discovery-receipt.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/evidence/skills-3080-material-camera8-use-074042.go.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/evidence/skills-3080-material-camera8-models-074042.go.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-remaining3d6-designs.json text eol=lf
+/docs/skills-3080-installed-remaining3d6-manifest.json text eol=lf
+/docs/skills-3080-remaining3d6-installation-evidence.json text eol=lf
+/docs/skills-3080-remaining3d6-create-receipt.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-remaining3d6-readback-receipt.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-remaining3d6-application-result.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-remaining3d6-application-test-receipt.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-remaining3d6-discovery-receipt.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/evidence/skills-3080-remaining3d6-use-074042.go.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/evidence/skills-3080-remaining3d6-models-074042.go.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-webdesign11-inputs074042.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-webdesign-next14-inputs074042.json text eol=lf
+/docs/evidence/skills-3080-transport-unknown074042.go.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/evidence/skills-3080-transport-unknown074042-test.go.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-installed-webdesign11-manifest.json text eol=lf
+/docs/skills-3080-webdesign11-designs.json text eol=lf
+/docs/skills-3080-webdesign11-create-evidence.json text eol=lf
+/docs/skills-3080-webdesign11-consume-evidence.json text eol=lf
+/docs/skills-3080-webdesign11-application-result.json text eol=lf
+/docs/skills-3080-webdesign11-math-receipt.json text eol=lf
+/docs/skills-3080-webdesign11-discovery-receipt.json text eol=lf
+/docs/skills-3080-webdesign11-installation-evidence.json text eol=lf
+/docs/skills-3080-webdesign11-ordinary-use-hold.json text eol=lf
+/docs/skills-3080-webdesign-next20-inputs074042.json text eol=lf
+/docs/skills-3080-webdesign-next20-notice-map074042.json text eol=lf
+/docs/skills-3080-webdesign-external-reference-pins074042.json text eol=lf
+/docs/evidence/skills-3080-real-caller-acceptance-gaps074042.json text eol=lf
+/docs/skills-3080-installed-webdesign-next14-manifest.json text eol=lf
+/docs/skills-3080-webdesign-next14-*.json text eol=lf
+/docs/skills-3080-webdesign11-fresh-qualified-use074042.json text eol=lf
+/docs/evidence/skills-3080-next14-independent-math074042.go.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/evidence/skills-3080-next20-current-creator-case074042.json text eol=lf
+/docs/skills-3080-sixmile-next42-evaluation.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+/docs/skills-3080-installed-webdesign-next20-manifest.json text eol=lf
+/docs/skills-3080-webdesign-next20-*.json text eol=lf
+/docs/evidence/skills-3080-next20-independent-math074042.go.txt -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/skills-3080-owner-direction-evidence.md text eol=lf
+docs/skills-3080-owner-direction-verification.json text eol=lf
+docs/skills-3080-received-evidence-acceptance.md text eol=lf
+/docs/skills-3080-operations/create-design-reference-090101.json text eol=lf
+/docs/skills-3080-design-reference-input090101.json text eol=lf
+/docs/skills-3080-design-reference-input-acceptance090101.md text eol=lf
+docs/skills-3080-operations/create-combat6-090101.json text eol=lf
+docs/skills-3080-combat6-reviewed-bundle090101.json text eol=lf
+docs/skills-3080-combat6-input090101.json text eol=lf
+docs/skills-3080-combat6-notice-map090101.json text eol=lf
+docs/skills-3080-combat6-source-evaluation090101.json text eol=lf
+docs/skills-3080-combat6-structure-receipt090101.json text eol=lf
+docs/skills-3080-combat6-input-acceptance090101.md text eol=lf
+/docs/evidence/skills-3080-combat6-independent-models090101.go.txt text eol=lf
+/docs/skills-3080-combat6-actual-bundle090101.json text eol=lf
+/docs/skills-3080-combat6-actual-structure090101.json text eol=lf
+/docs/skills-3080-combat6-application-result090101.json text eol=lf
+/docs/skills-3080-combat6-consume-evidence090101.json text eol=lf
+/docs/skills-3080-combat6-context-observation090101.json text eol=lf
+/docs/skills-3080-combat6-create-evidence090101.json text eol=lf
+/docs/skills-3080-combat6-designs090101.json text eol=lf
+/docs/skills-3080-combat6-discovery-receipt090101.json text eol=lf
+/docs/skills-3080-combat6-independent-use3927-evidence090101.json text eol=lf
+/docs/skills-3080-combat6-installation-evidence090101.json text eol=lf
+/docs/skills-3080-combat6-model-test-receipt090101.json text eol=lf
+/docs/skills-3080-design-combat7-acceptance090101.md text eol=lf
+/docs/skills-3080-design-reference-actual-bundle090101.json text eol=lf
+/docs/skills-3080-design-reference-application-result090101.json text eol=lf
+/docs/skills-3080-design-reference-consume-evidence090101.json text eol=lf
+/docs/skills-3080-design-reference-create-evidence090101.json text eol=lf
+/docs/skills-3080-design-reference-designs090101.json text eol=lf
+/docs/skills-3080-design-reference-discovery-receipt090101.json text eol=lf
+/docs/skills-3080-design-reference-installation-evidence090101.json text eol=lf
+/docs/skills-3080-design-reference-notice-map090101.json text eol=lf
+/docs/skills-3080-design-reference-structure-receipt090101.json text eol=lf
+/docs/skills-3080-installed-combat6-manifest090101.json text eol=lf
+/docs/skills-3080-installed-design-reference-manifest090101.json text eol=lf
+/docs/skills-3080-voltagent-design24-evaluation090101.json text eol=lf
+/tools/skills-3080-catalog/design_combat_current_test.go text eol=lf
+/docs/skills-3080-operations/revise-design-reference1-proposed090101.json text eol=lf
+/docs/skills-3080-design-reference-own-revision1-plan090101.json text eol=lf
+/docs/skills-3080-design-reference-own-revision1-acceptance090101.md text eol=lf
+/docs/skills-3080-own-revision1-implementation-goal090101.md text eol=lf
+/docs/skills-3080-own-revision1-native-recovery-goal090101.md text eol=lf
+/docs/skills-3080-operations/create-codex3-090101.json text eol=lf
+/docs/skills-3080-codex3-reviewed-bundle090101.json text eol=lf
+/docs/skills-3080-codex3-notice-map090101.json text eol=lf
+/docs/skills-3080-mcp-site-duplicate-evidence090101.json text eol=lf
+/docs/skills-3080-codex3-input090101.json text eol=lf
+/docs/skills-3080-codex3-source-meaning090101.json text eol=lf
+/docs/skills-3080-codex3-structure-receipt090101.json text eol=lf
+/docs/skills-3080-codex3-input-acceptance090101.md text eol=lf
+/repair-guard/testdata/skills3080-revision1-*.json -text
+/docs/skills-3080-codex3-actual-bundle090101.json text eol=lf
+/docs/skills-3080-installed-codex3-manifest090101.json text eol=lf
+/docs/skills-3080-codex3-create-evidence090101.json text eol=lf
+/docs/skills-3080-codex3-consume-evidence090101.json text eol=lf
+/docs/skills-3080-codex3-actual-structure090101.json text eol=lf
+/docs/skills-3080-codex3-application-result090101.json text eol=lf
+/docs/skills-3080-codex3-discovery-receipt090101.json text eol=lf
+/docs/skills-3080-codex3-independent-use3935-evidence090101.json text eol=lf
+/docs/skills-3080-codex3-context-observation090101.json text eol=lf
+/docs/skills-3080-codex3-designs090101.json text eol=lf
+/docs/skills-3080-codex3-installation-evidence090101.json text eol=lf
+/docs/skills-3080-progress.json text eol=lf
+/docs/skills-3080-execution-evidence.json text eol=lf
+/docs/skills-3080-execution-queue-summary.json text eol=lf
+/docs/skills-3080-sixmile-next35-physical090101.json text eol=lf
+/docs/skills-3080-sixmile-next35-evaluation090101.json text eol=lf
+/docs/skills-3080-next35-support121-independent-proof090101.json text eol=lf
+/tools/skills-3080-catalog/received_next35_test.go text eol=lf
+docs/skills-3080-codex3-after542-current20-evidence170221.json -text
+docs/skills-3080-design-reference-revision1-application170221.json -text
+docs/skills-3080-design-reference-revision1-apply-evidence170221.json -text
+docs/skills-3080-design-reference-revision1-consume-evidence090101.json -text
+docs/skills-3080-operations/create-illustration-craft-175504.json -text
+docs/skills-3080-illustration-craft-reviewed-bundle175504.json -text
+docs/skills-3080-illustration-craft-source-meaning175504.json -text
+docs/skills-3080-illustration-craft-notice-map175504.json -text
+docs/skills-3080-illustration-craft-input175504.json -text
+docs/skills-3080-illustration-craft-structure175504.json -text
+docs/skills-3080-sixmile-next7-physical175504.json -text
+docs/skills-3080-sixmile-next7-evaluation175504.json -text
+docs/skills-3080-craft-and-next7-input-acceptance175504.md -text
+
+docs/skills-3080-craft-actual-bundle214717.json -text
+
+docs/skills-3080-installed-craft-manifest214717.json -text
+
+docs/skills-3080-craft-create-evidence214717.json -text
+
+docs/skills-3080-craft-consume7-evidence214717.json -text
+
+docs/skills-3080-craft-current-instruction2-evidence214717.json -text
+
+docs/skills-3080-craft-actual-structure214717.json -text
+
+docs/skills-3080-craft-discovery214717.json -text
+
+docs/skills-3080-craft-application214717.json -text
+
+docs/skills-3080-craft-designs214717.json -text
+
+docs/skills-3080-craft-installation-evidence214717.json -text
+
+docs/skills-3080-operations/craft-result-review-snapshot214717.json -text
+
+docs/skills-3080-craft-results-acceptance214717.md -text
+
+docs/skills-3080-other193-evaluation214717.json -text
+
+docs/skills-3080-other193-retained-physical214717.json -text
+
+docs/skills-3080-other193-reception214717.md -text
+
+docs/skills-3080-operations/create-security-coverage-214717.json -text
+
+docs/skills-3080-security-coverage-reviewed-bundle214717.json -text
+
+docs/skills-3080-security-coverage-source-meaning214717.json -text
+
+docs/skills-3080-security-coverage-notice-map214717.json -text
+
+docs/skills-3080-security-coverage-structure214717.json -text
+
+docs/skills-3080-security-coverage-input214717.json -text
+
+docs/skills-3080-security-coverage-input-acceptance214717.md -text

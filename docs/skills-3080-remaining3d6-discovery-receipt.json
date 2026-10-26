@@ -1,0 +1,73 @@
+{
+  "checked_at": "2026-10-25T06:56:30.6037051+00:00",
+  "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+  "model_called": false,
+  "label": "detailed",
+  "targets": 80,
+  "total_discovered_metadata": 362,
+  "found_count": 80,
+  "parse_error_count": 0,
+  "notification_count": 2,
+  "same_names_other_paths": 0,
+  "known_target_names_sha256": "2d9ef027e7cd7116531371e6818bba86334296db558ca9726f16e2fa3799844a",
+  "enabled_count": 80,
+  "new_description_match_count": 6,
+  "found_rows_omitted_to_avoid_existing_names": true,
+  "observed_row_count": 80,
+  "observed_unique_names_sha256": "2d9ef027e7cd7116531371e6818bba86334296db558ca9726f16e2fa3799844a",
+  "duplicate_observed_names": 0,
+  "all_requested_enabled": true,
+  "new_target_rows": [
+    {
+      "name": "3d-falling-leaves",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "3d-orbit-inspect-demo",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "3d-sky-rays",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "3d-ultra-realistic-water",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "3d-underwater-god-rays",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    },
+    {
+      "name": "3d-wood-lighting-scorecard",
+      "selected_central_path": true,
+      "enabled_present": true,
+      "enabled": true,
+      "description_matches": true
+    }
+  ],
+  "process_tree_exit_confirmed": true,
+  "pending_stdout_read_drained": true,
+  "failure": null,
+  "diagnostic": {
+    "scan_traversal_limit_count": 2,
+    "context_budget_marker_count": 0,
+    "raw_stderr_not_saved": true
+  },
+  "limit": "Only counts and a fingerprint of already public managed target names are retained. No existing names/paths, unknown metadata, body text or raw private catalog is saved. Scope is original3048, current3080adoptions and six newlycreated targets; no all-disk hash, pre-change equality, model-turn or context-budget proof."
+}

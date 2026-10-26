@@ -106,17 +106,18 @@ type Request struct {
 	Origin                 *ProgressOrigin `json:"origin,omitempty"`
 	Conversation           string          `json:"conversation_request_id,omitempty"`
 	// An intake-index recovery never proves a delivery, including after restart.
-	ConversationSourceRecovered  bool                     `json:"conversation_source_recovered,omitempty"`
-	ConversationRecoveryNote     string                   `json:"conversation_recovery_note,omitempty"`
-	ConversationSourceGeneration string                   `json:"conversation_source_generation,omitempty"`
-	ConversationIntakeLinkSHA    string                   `json:"conversation_intake_link_sha256,omitempty"`
-	MessageType                  *int                     `json:"message_type,omitempty"`
-	Attachments                  *[]historyReadAttachment `json:"attachments,omitempty"`
-	DeliveryVersion              string                   `json:"delivery_version,omitempty"`
-	Binding                      *IntakeBinding           `json:"task_binding,omitempty"`
-	PendingOwner                 string                   `json:"pending_owner,omitempty"`
-	NextAction                   string                   `json:"next_action,omitempty"`
-	HistoryWatch                 *HistoryWatch            `json:"history_watch,omitempty"`
+	ConversationSourceRecovered    bool                     `json:"conversation_source_recovered,omitempty"`
+	ConversationRecoveryNote       string                   `json:"conversation_recovery_note,omitempty"`
+	ConversationSourceGeneration   string                   `json:"conversation_source_generation,omitempty"`
+	ConversationIntakeLinkSHA      string                   `json:"conversation_intake_link_sha256,omitempty"`
+	ConversationAttachmentMetadata json.RawMessage          `json:"conversation_attachment_metadata,omitempty"`
+	MessageType                    *int                     `json:"message_type,omitempty"`
+	Attachments                    *[]historyReadAttachment `json:"attachments,omitempty"`
+	DeliveryVersion                string                   `json:"delivery_version,omitempty"`
+	Binding                        *IntakeBinding           `json:"task_binding,omitempty"`
+	PendingOwner                   string                   `json:"pending_owner,omitempty"`
+	NextAction                     string                   `json:"next_action,omitempty"`
+	HistoryWatch                   *HistoryWatch            `json:"history_watch,omitempty"`
 }
 type State struct {
 	Domain       string              `json:"domain"`

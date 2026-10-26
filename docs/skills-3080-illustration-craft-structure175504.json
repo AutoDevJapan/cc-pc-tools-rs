@@ -1,0 +1,9 @@
+{
+  "bundle": "skills-3080-illustration-craft-reviewed-bundle175504.json",
+  "bundle_sha256": "fbd6549a4ecaad87ca09e867ff76a6f806f5c0a37ad5a57fcac80ed7ce7b0dbd",
+  "method": "Existing3048 in-memory explicit bundle checker plus exact two complete fixed source URL checks",
+  "exit": 0,
+  "stdout": "PASS: 1 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+  "actual_central_placement_implied": false,
+  "actual_anatomy_or_render_success_implied": false
+}

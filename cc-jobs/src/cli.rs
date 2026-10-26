@@ -891,7 +891,7 @@ impl Context {
             job["model_origin"] = json!(origin);
         }
         if let Some(model) = a.value("model-recovery-from") {
-            if !["gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna"]
+            if !["gpt-6.1-sol", "gpt-6-astra", "gpt-6-luna", "grok-4.7"]
                 .iter()
                 .any(|known| cc_job_policy::same_model(model, known))
             {
@@ -907,13 +907,18 @@ impl Context {
         job["sandbox"] = json!(policy.sandbox);
         job["approval_policy"] = json!(policy.approval);
         job["approvals_reviewer"] = json!(policy.reviewer);
-        if retry_key.is_none() {
+        let quota_inventory=self.prepared_quota_inventory(a)?;
+        // This fixed prepared review has an explicit minimal profile. The
+        // injected unattended instructions mention Chrome; that generic text
+        // must not widen its scope before the independent admission check.
+        let unstarted_review = quota_inventory["unstarted_registration"]["state"] == "observed"
+            || quota_inventory["initial_review"]==true;
+        if retry_key.is_none() && !unstarted_review {
             job["mcp_profile"] = json!(cc_chrome::profile(
                 s(&job, "mcp_profile"),
                 std::str::from_utf8(&bytes).unwrap()
             ));
         }
-        let quota_inventory=self.prepared_quota_inventory(a)?;
         // Intake uses the short publication gate; history reconciliation remains outside it.
         let _queue = self.queue_lock_for("registration", std::time::Duration::from_secs(60))?;
         // Shared lock order: queue -> job state (when present) -> ToDo. Hold through registration.
@@ -1265,7 +1270,7 @@ impl Context {
         self.validate_review_launch(&mut job,quota_choice)?;
         cc_job_policy::apply_managed_launch_policy(&mut job);
         cc_job_policy::launch_context::reconcile_resume(&mut job, &conversation_source);
-        if crate::capacity::review_job(&job)
+        if (crate::capacity::review_job(&job) || job["subwork"]["kind"] == "research")
             && job["sandbox"] == "read-only"
             && job["todo_id"].as_u64().is_some_and(|id| id > 0)
             && !s(&job, "launch_key").is_empty()
@@ -1280,7 +1285,8 @@ impl Context {
                 })
                 .filter(|row| row["spec"].as_str().is_some_and(|spec| !spec.is_empty()))
             {
-                job["finite_review"] = json!({"todo_id":job["todo_id"],"spec":row["spec"],"launch_key":job["launch_key"]});
+                let field = if crate::capacity::review_job(&job) { "finite_review" } else { "finite_subwork" };
+                job[field] = json!({"todo_id":job["todo_id"],"spec":row["spec"],"launch_key":job["launch_key"]});
                 if let Some(expected) = row["scheduler"]["selection"]["finite_review_spec_sha256"].as_str() {
                     let spec = self.read_file(Path::new(s(row, "spec")))?;
                     let spec_text = std::str::from_utf8(&spec)
@@ -1289,11 +1295,15 @@ impl Context {
                         || cc_job_policy::product_retry::digest(&spec) != expected
                         || !std::str::from_utf8(&bytes).unwrap()
                             .contains(&format!("\n依頼:\n{spec_text}"))
-                        || (quota_choice && job["quota_recovery"]["spec_sha256"] != expected)
+                        || (quota_choice && if job["initial_review"].is_object() {
+                            job["initial_review"]["spec_sha256"] != expected
+                        } else if job["unstarted_review"].is_object() {
+                            job["unstarted_review"]["spec_sha256"] != expected
+                        } else { job["quota_recovery"]["spec_sha256"] != expected })
                     {
                         return Err(Error::new("finite review specification changed before registration"));
                     }
-                    job["finite_review"]["spec_sha256"] = json!(expected);
+                    job[field]["spec_sha256"] = json!(expected);
                 } else if quota_choice {
                     return Err(Error::new("quota recovery has no prepared specification binding"));
                 }
@@ -1615,7 +1625,15 @@ impl Context {
             std::time::Duration::from_secs(if no_action_check { 2 } else { 60 }),
         )?;
         let lock = if no_action_check {
-            FileLock::try_acquire(&self.job_dir(&a.id).join("state.lock"))?
+            match FileLock::try_acquire(&self.job_dir(&a.id).join("state.lock")) {
+                Ok(lock) => lock,
+                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock
+                    || matches!(error.raw_os_error(), Some(32 | 33)) => {
+                    writeln!(out, "{}", json!({"outcome":"deferred","job":a.id,"reason":"state_lock_busy"}))?;
+                    return Ok(0);
+                }
+                Err(error) => return Err(error.into()),
+            }
         } else {
             self.job_lock(&a.id, "state.lock")?
         };

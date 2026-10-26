@@ -1,0 +1,740 @@
+{
+  "todo": 3080,
+  "job": "20261025-074042-todo-3080",
+  "observed_at": "2026-10-25T06:15:06.6823988+00:00",
+  "overall_complete": false,
+  "new_targets_created": 8,
+  "files_readback_verified": 48,
+  "old_target_writes": 0,
+  "unknown_existing_body_reads": 0,
+  "general_access_granted": false,
+  "original_registry_recovered": false,
+  "operation_manifest": "skills-3080-operations/create-material-camera8-074042.json",
+  "operation_manifest_sha256": "e41f3b1b908bf097c38f8260ef667b35caadd06dfb1b47ca6ae0faec657a2a81",
+  "operation_manifest_main_commit": "def3c8a84dae05636ae007f34fbb8a9870b60a53",
+  "installed_manifest": "skills-3080-installed-material-camera8-manifest.json",
+  "installed_manifest_sha256": "ca5ce1c31ec635839448047f7405a842102178e1f57749c782e893e716b70cc6",
+  "designs": "skills-3080-material-camera8-designs.json",
+  "designs_sha256": "8a9ced2e88f39f7f0c3b159e588eefd2d761fed84836028bac680f398de4b900",
+  "files": [
+    {
+      "bytes": 1607,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "c7f7b589e1d8c6187e6f6c64a487c3bfcd72ac9884c07e56a2f3b26ad21f25bd",
+      "target": "3d-cloth-material/SKILL.md"
+    },
+    {
+      "bytes": 1405,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "c08b0b8c77344dae526c3c5805feda735ed09ee66097b8a0ecb659db797a7cea",
+      "target": "3d-cloth-material/references/guide.md"
+    },
+    {
+      "bytes": 9799,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "c5a4a06037b65ae9958438462ef696cd15a7434b3a170d36a5e90e482edbbf3c",
+      "target": "3d-cloth-material/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-cloth-material/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1866,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "e8222ccdc1147048f9683c040a86f266c83f2d21df2cde24c3b1b90fb2e777e1",
+      "target": "3d-cloth-material/references/source.json"
+    },
+    {
+      "bytes": 1415,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "51f6852e35d563755fbc70ae96973c4aa2c4094d8199925a9487841b73e785b0",
+      "target": "3d-cloth-material/references/sources.md"
+    },
+    {
+      "bytes": 1351,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "2c0eb99461ed597e3ca3fafa0cabd210676cb441e9618b9dba99c5c132419ed6",
+      "target": "3d-high-poly-models/SKILL.md"
+    },
+    {
+      "bytes": 1405,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "5e3bd19686fa4b4976d3ba53446d3792dd5212f21916460dd5605ad21a0bafce",
+      "target": "3d-high-poly-models/references/guide.md"
+    },
+    {
+      "bytes": 5745,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "a95cdb4d72e98aaeb4ed04a36b07bb26eab9d19496e4c2be590145f4d519cc4d",
+      "target": "3d-high-poly-models/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-high-poly-models/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1763,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "9377450b0fa3b019f7f5db278de3f83afbefda12a6517c634d00ee8ed3839f5b",
+      "target": "3d-high-poly-models/references/source.json"
+    },
+    {
+      "bytes": 1316,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "277aa5e3c908a1e037771a1d220547194c40e14465567a7e2cdf6ed31fa76072",
+      "target": "3d-high-poly-models/references/sources.md"
+    },
+    {
+      "bytes": 1429,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "ccb698e702e33620efd624754e9fb351c93a6982b9785e69528d4d4e569cdac8",
+      "target": "3d-high-resolution-textures/SKILL.md"
+    },
+    {
+      "bytes": 1429,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "f91bbe9da72098b1fa942a4bfae3848744d19049df27ee6f4808e143aae829f0",
+      "target": "3d-high-resolution-textures/references/guide.md"
+    },
+    {
+      "bytes": 5753,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "6bda76f3420184bde18cf5f0d543727543cf8d9a96f3b5393cd7044e09bfe5aa",
+      "target": "3d-high-resolution-textures/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-high-resolution-textures/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1803,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "c805ff5f55ce2b03dc9535e86b4dcdf3beb3f0210cf73b75fa3bd4d743bbbd00",
+      "target": "3d-high-resolution-textures/references/source.json"
+    },
+    {
+      "bytes": 1356,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "294940a04f39c2e97c187d8bdd5d44ad197eee0c119e67591020517f94384ac0",
+      "target": "3d-high-resolution-textures/references/sources.md"
+    },
+    {
+      "bytes": 1395,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "cdea44fc078510ed08e52563a65521b4cec3642531fe9918a7f104bc2efd9d4e",
+      "target": "3d-metal-material/SKILL.md"
+    },
+    {
+      "bytes": 1450,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "4c47d91804e30e9fadc7a382fb86119547ac946fcd742df17e31e784871e7f88",
+      "target": "3d-metal-material/references/guide.md"
+    },
+    {
+      "bytes": 10281,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "db4911870fc3717d99d71016c0afc38a7f61b1b43f3bfaa8d501cdf69301462e",
+      "target": "3d-metal-material/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-metal-material/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1788,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "11f737543ef291bd76435936a9097901c2c592bb386c7c88b7ac7f2e8ecba0d6",
+      "target": "3d-metal-material/references/source.json"
+    },
+    {
+      "bytes": 1340,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "f88c0e1b4907636630362feca083b0b89ac16de19360de60f21f19ec2a9b47ef",
+      "target": "3d-metal-material/references/sources.md"
+    },
+    {
+      "bytes": 1420,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "63d3074ac6771b09db6bd8fcb49d37c0573b4d90457875872c038de366bcf186",
+      "target": "3d-paper-material/SKILL.md"
+    },
+    {
+      "bytes": 1419,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "5154164585e885b7a9ef67a3dcfa0abd0bc86676e31003f3c0e1746478d2e37d",
+      "target": "3d-paper-material/references/guide.md"
+    },
+    {
+      "bytes": 9448,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "546863de8cdb5ee6c50a0dc423ffd4356f93542ed8642521d514ce7b5243dbe0",
+      "target": "3d-paper-material/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-paper-material/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1802,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "82a9ca46701beaf50504c0e4d27b9751faf266d9276551ba4c2484814fb7270f",
+      "target": "3d-paper-material/references/source.json"
+    },
+    {
+      "bytes": 1355,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "1192f518808e42e89516a3ee0808a0dd4ba5bd4c6c055c931a352469ce6781b9",
+      "target": "3d-paper-material/references/sources.md"
+    },
+    {
+      "bytes": 1305,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "f3ba82136be889b535404ef772ab6e8d3c6b0a9498468dd79da1083b81adc8f7",
+      "target": "3d-sky-background/SKILL.md"
+    },
+    {
+      "bytes": 1405,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "3ae3ae82e1b1e2383f0b22b21365c54ce07266a66393268e965940d2f9db35bc",
+      "target": "3d-sky-background/references/guide.md"
+    },
+    {
+      "bytes": 5015,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "74a4a1bf52e0f3c0075cf8aca7c80e6d6a46014796a4047dba4150ddf9c31f81",
+      "target": "3d-sky-background/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-sky-background/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1767,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "ef35f3df3dbf80d35ff01772b6156b04067c327b00826716b22179973245e86b",
+      "target": "3d-sky-background/references/source.json"
+    },
+    {
+      "bytes": 1320,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "40615eec717ab647498aad1504456f4c3d89016d03d5769a15aba4103e95a373",
+      "target": "3d-sky-background/references/sources.md"
+    },
+    {
+      "bytes": 1461,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "6d7628a8d8bd4e8e84b30e3ff869978886b04a032e9ba8c14317d77a8125a455",
+      "target": "3d-virtual-tour/SKILL.md"
+    },
+    {
+      "bytes": 1463,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "896150f4380fe91a1a415d73b5b41d388d420e7ab6d20cf52635f9997eb3cf3a",
+      "target": "3d-virtual-tour/references/guide.md"
+    },
+    {
+      "bytes": 9098,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "e1626474c570185db9a41baba57baac8c551620e98203a90a56e03fcc5a44e86",
+      "target": "3d-virtual-tour/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-virtual-tour/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1773,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "eb5eda4cf0741b2926dad71343c74e77a024e932b1d2f8e79e00748ac4ced5f4",
+      "target": "3d-virtual-tour/references/source.json"
+    },
+    {
+      "bytes": 1326,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "fc418d5e3dd8a10efb86619adf36f1880737dedac662c9f8058679133ab6ce11",
+      "target": "3d-virtual-tour/references/sources.md"
+    },
+    {
+      "bytes": 1413,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "fc96360552577d98b27fcc5a4c9641a6d0d94f9f85763f67c0472282bcc3c760",
+      "target": "3d-wood-material/SKILL.md"
+    },
+    {
+      "bytes": 1464,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "e5d0c8bc5f9430747d1a095c728d8ac6a148ad304f72fbda33459af5015aba4d",
+      "target": "3d-wood-material/references/guide.md"
+    },
+    {
+      "bytes": 11039,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0f7748f4e947c1d3c4a286ab83cd6b8afcfa9bc6cd4a069f0a1d7f2a3c1d872a",
+      "target": "3d-wood-material/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "3d-wood-material/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1796,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "d868d9d7ca331302e573c86644a103d19afd615eabafcf09832eac1c9b0e3329",
+      "target": "3d-wood-material/references/source.json"
+    },
+    {
+      "bytes": 1348,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "c068dfe0fec3a9df2173440f18b20f177cc5440fe7ac5fbd1cd4fd16ed5d2689",
+      "target": "3d-wood-material/references/sources.md"
+    }
+  ],
+  "creation_result": {
+    "created_files": 48,
+    "domain": "skills-3080-purpose-v1",
+    "file_count": 48,
+    "general_access_granted": false,
+    "manifest_sha256": "e41f3b1b908bf097c38f8260ef667b35caadd06dfb1b47ca6ae0faec657a2a81",
+    "operation": "CreateNew",
+    "original_registry_recovered": false,
+    "qualified": true,
+    "request_sha256": "89085313a648caaddca412b1e88f34d4e8e84bb15ffd49968ea7053cc1490163",
+    "source_commit": "def3c8a84dae05636ae007f34fbb8a9870b60a53",
+    "todo_id": 3080
+  },
+  "creation_wrapper": "skills-3080-material-camera8-create-receipt.json",
+  "creation_wrapper_sha256": "5c9cbdf5afd7f9624df7cefc8b02e2828765b054d7983c66f64b50021432880a",
+  "readback_receipt": "skills-3080-material-camera8-readback-receipt.json",
+  "readback_receipt_sha256": "0c77e79355de66414eae4e10432ecf2add0cea37bbc0a2cedc5a67373ea3e27a",
+  "acceptance_review": {
+    "todo": 3799,
+    "job": "20261025-140531-todo-3799",
+    "model": "gpt-6-luna",
+    "effort": "max",
+    "model_origin": "owner_request",
+    "effort_origin": "owner_request",
+    "native_verified": true,
+    "parent_original_full_read": true,
+    "spec_sha256": "099d54c0aa89e878bb272caded89c03306eab3f10c95074417f959acbc30a5d1",
+    "raw_sha256": "39cab8dad5c0ef4aa0f2d8735def51dded2b93713c70357ed96d2577af644522",
+    "raw_bytes": 784,
+    "manifest_sha256": "e41f3b1b908bf097c38f8260ef667b35caadd06dfb1b47ca6ae0faec657a2a81",
+    "must": 0,
+    "scope": "All48 contents,8originals,8saved supports; exact MIT full1/identical reuse7; no central presence/use by reviewer",
+    "outputs_changed_after_review": false
+  },
+  "discovery": {
+    "checked_at": "2026-10-25T06:15:06.6823988+00:00",
+    "method": "Actual eight observed rows from the fresh skills/list forceReload; full known set74",
+    "model_called": false,
+    "targets": 8,
+    "found_count": 8,
+    "parse_error_count": 0,
+    "same_names_other_paths": 0,
+    "found": [
+      {
+        "name": "3d-cloth-material",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-high-poly-models",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-high-resolution-textures",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-metal-material",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-paper-material",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-sky-background",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-virtual-tour",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-wood-material",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      }
+    ],
+    "process_tree_exit_confirmed": true,
+    "pending_stdout_read_drained": true,
+    "diagnostic": {
+      "scan_traversal_limit_count": 2,
+      "context_budget_marker_count": 0,
+      "raw_stderr_not_saved": true
+    },
+    "original_receipt": "skills-3080-material-camera8-discovery-receipt.json",
+    "original_receipt_sha256": "03fd08c2b5808c37d3d857bc5d7f9a0b22fc42b26c998f27452c06e7dca5184c",
+    "limit": "Exact74 unique enabled identities and8new descriptions; no unknown names or bodies retained, no full-context or warning-cause claim"
+  },
+  "retained_known_metadata": {
+    "checked_at": "2026-10-25T06:15:06.6823988+00:00",
+    "method": "fresh installed Codex app-server initialize + skills/list forceReload",
+    "model_called": false,
+    "label": "detailed",
+    "targets": 74,
+    "total_discovered_metadata": 356,
+    "found_count": 74,
+    "parse_error_count": 0,
+    "notification_count": 2,
+    "same_names_other_paths": 0,
+    "known_target_names_sha256": "bb79276dbd2d8711f515f8ce2d54dd045343870f72884e10054d53e158e1cb2a",
+    "enabled_count": 74,
+    "new_description_match_count": 8,
+    "found_rows_omitted_to_avoid_existing_names": true,
+    "observed_row_count": 74,
+    "observed_unique_names_sha256": "bb79276dbd2d8711f515f8ce2d54dd045343870f72884e10054d53e158e1cb2a",
+    "duplicate_observed_names": 0,
+    "all_requested_enabled": true,
+    "new_target_rows": [
+      {
+        "name": "3d-cloth-material",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-high-poly-models",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-high-resolution-textures",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-metal-material",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-paper-material",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-sky-background",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-virtual-tour",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      },
+      {
+        "name": "3d-wood-material",
+        "selected_central_path": true,
+        "enabled_present": true,
+        "enabled": true,
+        "description_matches": true
+      }
+    ],
+    "process_tree_exit_confirmed": true,
+    "pending_stdout_read_drained": true,
+    "failure": null,
+    "diagnostic": {
+      "scan_traversal_limit_count": 2,
+      "context_budget_marker_count": 0,
+      "raw_stderr_not_saved": true
+    },
+    "limit": "Only counts and a fingerprint of already public managed target names are retained. No existing names/paths, unknown metadata, body text or raw private catalog is saved. Scope is original3048, current3080adoptions and eight newlycreated targets; no all-disk hash, pre-change equality, model-turn or context-budget proof.",
+    "managed_adoption_inventory_ids": [
+      "github:529ad226a165fa7c6a2e7a49959f227936408e7a349549b59ab0feeb437e27ce",
+      "github:faf798dc6ee8fc764680d048bc62d4579e6302a3f9cd28158b2229c8b39a46b2",
+      "github:d05f1de9d9c51e0126f79512bbfc6d0527d8b745994687686fc46328fbef8673",
+      "github:9572cbb50724f66e3a5165d06746747932d633b7507bb40f7401a980df082c60",
+      "github:1c650ad6db0ec99fae221dc302188220e7779742bd0471bc57a341d86ddf6196",
+      "github:7540b0b39f3053e2b24792a1be2c866c4b8e73bc7d3966642eb0a84c689252ea",
+      "github:467b9d6b107c183945edf987da7cdcb57b7311e42682b0ca0c3298807d36511f",
+      "github:9f2f48c4ee290e8d2aa53aa898d06e5665f4d956f35e5c495d00b972f7508879",
+      "github:902f0416f0d0bd4c4c62f6958623724e2ecd0024e6f7fb622818ef36712ebfcd",
+      "github:7aa67de263443f985337da44fa80d97db729d4b3ff6dfe3bc5e4e658f592822b",
+      "github:0a69193f05dcc27d1a0e6570aa2acf7389e9660a285f84510c39ce6f63197295",
+      "github:0c110b40278d18a05355221f5505335ab64ad88d32f402ac9ba46f8d2ab06de1",
+      "github:23cb6568e92b712b4a7ecd01a85999035e136f9cb66d75b0ef8f64bf5327819a",
+      "github:5ae150da91ada2aa1a46b553cc1d0e202c2cde7cb57304964377e160c7de4174",
+      "github:4d5592e0e8885ed948a2992604dcec1ba0e512816c263f8a6141666db8109622",
+      "github:5c561a5104441099f2de518551220c75fae0eeba9258abcebee533ec1f2ca0e7",
+      "github:055377d432d81b61af7a26c72df64895140fe57bac284e3bd67477a98afb2985",
+      "github:dfab8775869cc3ca898f53f46ba8a0855f19e61ec42d0619cca10ed988aeb5f5",
+      "github:0318ced22de8614c2913d996e59f02d18f4d42e60e9563c5bd983c01cd9518a4",
+      "github:62290525adf92ac2240a5d6de474b1454f578202d9fa92461dc79a6626e35402",
+      "github:ae8b453f96182867da017a74e12349c4e2000d2a5ef32705f3cc844c338d7adc",
+      "github:71a2f82b34ce70331fc531106c143b0e3332e22251017f377e63d072a6cb36ec",
+      "github:a3e5cb3352130bff6eb6d6320eea2ac71359fdb1cc36b580f6b882f4208924ec",
+      "github:c5ac6bf37010d859d7525686efd5a92d5df2de3c04d0ca63f06f8fe34b90a746",
+      "github:af8a59781a3ab4b96f7c7fe7ebb2a838dfa65293acf99f8ed7201cf53c38e4fc",
+      "github:ce166d7ba811d5f7f8ae37063d187dffc5a356a77738a09d0e83cf29c64d5328",
+      "github:1530721e547a0bef7412ef600719470cb5237407bdf7996c9a80b80a2ef2a439",
+      "github:b3f606e5e0512d2540f66637133b3d5f5d8ee7a563d99c99c5259a660ec1bd05",
+      "github:b42ae7debd7346ed232f75cdb212f9d8a9cb05bd347c93c8b7de82e8d5433fc8",
+      "github:8d45c064b59f58146ec2cd435cc55a71f835c1936934715b8b4a0cc231aac696",
+      "github:41f804392ff42c56ba7a05d1b269efdbb80f189a55b8979ccae5eb67771d05ed",
+      "github:e4ade76a7932447efe3dd6e777ab300a5a9a6f1cf13a392614b31c621906a016",
+      "github:a89e967becb119a2e1fde4392aaeb0c034ff9c683290947db8c690624fc9887e",
+      "github:89360b4dedcdf7fceccbef746956ad5f50a6c50126946fb12731aff46af0851b",
+      "github:29a0ba0843498fe31de765752ffa07dfd7835d47f3ac062d641e41169e601167",
+      "github:ac72b94f8ac90a84d51a96b3d16e288d93b11f455d2b33aa50d0d320af2029e1",
+      "github:0c071dac30d780613fbf2bbb1e5d81e62d028883da584cf9fa9bd68ca33a838b",
+      "github:dcfad5899bfe731a670bd01b4cfafa5a4aa3d03303f40df2b562279b41baf405",
+      "github:c51dc53e6bbbd50fb36e0dc24236e430698fe779352ac996e34115a0cbc5c882",
+      "github:efea3e18c8a1c529f0dc118a714c53698807049e54bc8775759fcba4a1fafbec",
+      "github:7e7b86ab5a899b4639cffd87d65ca9184dedb899d1ba98d46b6a74f2a49860ca",
+      "github:38bb0d4a6f21b0c29cbfa8b6214812a7cdea16a9216c058a1225711c9908280b",
+      "github:382998d3830f6337c6f2838a64421601e482aaf2ac3cb66841051d81e443cf6b",
+      "github:77f491d4d72871f2c31152c773d92fe3ee2377d8a0993b9673d562a01250c8e2",
+      "github:153988a15c1b7cf16741074f845ee57b203ee0315654f9f5d76196982b339d0e",
+      "github:d8dff1294478f735c0e39073429164e1bd87d6c0d78feb7315c839a0b187fa98",
+      "github:a5a3b85d3994a4db7d3a009b1aafbe6f5ba608b3dff72e59bd91378f23f8b9d1",
+      "github:0b5385b0e0a144c0e88b6a7f9317f92d50d78285ab48cf5164332d0af46ae35e",
+      "github:ad7dd0ac60bec1e813b9f90cf244ce880593d4fb4a0702de21348a1477b49300",
+      "github:eaf8e98a4a20bde971033d3afc6ff8622fdfff9e026871e86cc9dcfa9a860af5",
+      "github:47eaf17ef451cbe3e1435dce403be55f89a48c416b943671e48541380b005028",
+      "github:4e9631ebafe558782152a55e70d44f8e87d4080b542c738bccd5ad28fa9e492c",
+      "github:79d285cb8c6bd8ba7ba2afb6dc42bc341f77fb3b179fc473b19dab9acb91a0c9",
+      "github:709d1f4fe1039448270b3f743f5432fbeb31d85416d441d4dba335b9e2df97eb",
+      "github:70122bd962c6e17475151962141da342b373dc115a4383be3a7f50d6f4ad2216",
+      "github:57934e4f29ef479db656c2b1371bde1c4bc66382e9920b868b0576badda6e0e5",
+      "github:31c71080ac741cb3feeaa3bb3dbb57ac6a76efc26ab8dc75ab5c62cf03075bb1",
+      "github:3d98ac5b5f881acf71e673a93b79049d696259c36a80fd92a25d8f8a2ee24489",
+      "github:eecbfba6d29822509e21b1923bd81b051f45ab1f14461d42b51dff92f30faf90",
+      "github:4626a28f6ca9f66b3a74b43507b256211a1cf0fae273355b0cbb4f7ec2ea0e69",
+      "github:2f1222d0143baefe038638b6325bac4b1aa4a9c9989daa3ffcaf655e7f050715"
+    ]
+  },
+  "explicit_application": {
+    "core_passed": true,
+    "example_kind_count": 8,
+    "source_scripts_executed": false,
+    "external_api_calls": 0,
+    "implicit_skill_selection_proven": false,
+    "fresh_separate_model_turn_executed": false,
+    "applications": {
+      "bounded_planning_cases": 8,
+      "central_writes": 0,
+      "domain": "skills-3080-material-camera8-explicit-use-v1",
+      "explicit_skill_read": 8,
+      "fresh_discovery_completed_before_use": true,
+      "implicit_skill_selection_proved": false,
+      "installed_files": {
+        "3d-cloth-material/SKILL.md": "c7f7b589e1d8c6187e6f6c64a487c3bfcd72ac9884c07e56a2f3b26ad21f25bd",
+        "3d-cloth-material/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "3d-cloth-material/references/guide.md": "c08b0b8c77344dae526c3c5805feda735ed09ee66097b8a0ecb659db797a7cea",
+        "3d-cloth-material/references/source.json": "e8222ccdc1147048f9683c040a86f266c83f2d21df2cde24c3b1b90fb2e777e1",
+        "3d-cloth-material/references/sources.md": "51f6852e35d563755fbc70ae96973c4aa2c4094d8199925a9487841b73e785b0",
+        "3d-cloth-material/references/upstream-original.txt": "c5a4a06037b65ae9958438462ef696cd15a7434b3a170d36a5e90e482edbbf3c",
+        "3d-high-poly-models/SKILL.md": "2c0eb99461ed597e3ca3fafa0cabd210676cb441e9618b9dba99c5c132419ed6",
+        "3d-high-poly-models/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "3d-high-poly-models/references/guide.md": "5e3bd19686fa4b4976d3ba53446d3792dd5212f21916460dd5605ad21a0bafce",
+        "3d-high-poly-models/references/source.json": "9377450b0fa3b019f7f5db278de3f83afbefda12a6517c634d00ee8ed3839f5b",
+        "3d-high-poly-models/references/sources.md": "277aa5e3c908a1e037771a1d220547194c40e14465567a7e2cdf6ed31fa76072",
+        "3d-high-poly-models/references/upstream-original.txt": "a95cdb4d72e98aaeb4ed04a36b07bb26eab9d19496e4c2be590145f4d519cc4d",
+        "3d-high-resolution-textures/SKILL.md": "ccb698e702e33620efd624754e9fb351c93a6982b9785e69528d4d4e569cdac8",
+        "3d-high-resolution-textures/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "3d-high-resolution-textures/references/guide.md": "f91bbe9da72098b1fa942a4bfae3848744d19049df27ee6f4808e143aae829f0",
+        "3d-high-resolution-textures/references/source.json": "c805ff5f55ce2b03dc9535e86b4dcdf3beb3f0210cf73b75fa3bd4d743bbbd00",
+        "3d-high-resolution-textures/references/sources.md": "294940a04f39c2e97c187d8bdd5d44ad197eee0c119e67591020517f94384ac0",
+        "3d-high-resolution-textures/references/upstream-original.txt": "6bda76f3420184bde18cf5f0d543727543cf8d9a96f3b5393cd7044e09bfe5aa",
+        "3d-metal-material/SKILL.md": "cdea44fc078510ed08e52563a65521b4cec3642531fe9918a7f104bc2efd9d4e",
+        "3d-metal-material/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "3d-metal-material/references/guide.md": "4c47d91804e30e9fadc7a382fb86119547ac946fcd742df17e31e784871e7f88",
+        "3d-metal-material/references/source.json": "11f737543ef291bd76435936a9097901c2c592bb386c7c88b7ac7f2e8ecba0d6",
+        "3d-metal-material/references/sources.md": "f88c0e1b4907636630362feca083b0b89ac16de19360de60f21f19ec2a9b47ef",
+        "3d-metal-material/references/upstream-original.txt": "db4911870fc3717d99d71016c0afc38a7f61b1b43f3bfaa8d501cdf69301462e",
+        "3d-paper-material/SKILL.md": "63d3074ac6771b09db6bd8fcb49d37c0573b4d90457875872c038de366bcf186",
+        "3d-paper-material/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "3d-paper-material/references/guide.md": "5154164585e885b7a9ef67a3dcfa0abd0bc86676e31003f3c0e1746478d2e37d",
+        "3d-paper-material/references/source.json": "82a9ca46701beaf50504c0e4d27b9751faf266d9276551ba4c2484814fb7270f",
+        "3d-paper-material/references/sources.md": "1192f518808e42e89516a3ee0808a0dd4ba5bd4c6c055c931a352469ce6781b9",
+        "3d-paper-material/references/upstream-original.txt": "546863de8cdb5ee6c50a0dc423ffd4356f93542ed8642521d514ce7b5243dbe0",
+        "3d-sky-background/SKILL.md": "f3ba82136be889b535404ef772ab6e8d3c6b0a9498468dd79da1083b81adc8f7",
+        "3d-sky-background/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "3d-sky-background/references/guide.md": "3ae3ae82e1b1e2383f0b22b21365c54ce07266a66393268e965940d2f9db35bc",
+        "3d-sky-background/references/source.json": "ef35f3df3dbf80d35ff01772b6156b04067c327b00826716b22179973245e86b",
+        "3d-sky-background/references/sources.md": "40615eec717ab647498aad1504456f4c3d89016d03d5769a15aba4103e95a373",
+        "3d-sky-background/references/upstream-original.txt": "74a4a1bf52e0f3c0075cf8aca7c80e6d6a46014796a4047dba4150ddf9c31f81",
+        "3d-virtual-tour/SKILL.md": "6d7628a8d8bd4e8e84b30e3ff869978886b04a032e9ba8c14317d77a8125a455",
+        "3d-virtual-tour/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "3d-virtual-tour/references/guide.md": "896150f4380fe91a1a415d73b5b41d388d420e7ab6d20cf52635f9997eb3cf3a",
+        "3d-virtual-tour/references/source.json": "eb5eda4cf0741b2926dad71343c74e77a024e932b1d2f8e79e00748ac4ced5f4",
+        "3d-virtual-tour/references/sources.md": "fc418d5e3dd8a10efb86619adf36f1880737dedac662c9f8058679133ab6ce11",
+        "3d-virtual-tour/references/upstream-original.txt": "e1626474c570185db9a41baba57baac8c551620e98203a90a56e03fcc5a44e86",
+        "3d-wood-material/SKILL.md": "fc96360552577d98b27fcc5a4c9641a6d0d94f9f85763f67c0472282bcc3c760",
+        "3d-wood-material/references/LICENSE.txt": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+        "3d-wood-material/references/guide.md": "e5d0c8bc5f9430747d1a095c728d8ac6a148ad304f72fbda33459af5015aba4d",
+        "3d-wood-material/references/source.json": "d868d9d7ca331302e573c86644a103d19afd615eabafcf09832eac1c9b0e3329",
+        "3d-wood-material/references/sources.md": "c068dfe0fec3a9df2173440f18b20f177cc5440fe7ac5fbd1cd4fd16ed5d2689",
+        "3d-wood-material/references/upstream-original.txt": "0f7748f4e947c1d3c4a286ab83cd6b8afcfa9bc6cd4a069f0a1d7f2a3c1d872a"
+      },
+      "job": "20261025-074042-todo-3080",
+      "limits": [
+        "Examples cover units, counting, budget, layer responsibility and state transitions only.",
+        "No shader compilation, material appearance, physical cloth or full-scene path safety result is established.",
+        "Fresh skills/list discovery and explicit application are distinct from automatic model selection and full-context measurements."
+      ],
+      "manifest_sha256": "e41f3b1b908bf097c38f8260ef667b35caadd06dfb1b47ca6ae0faec657a2a81",
+      "positive_and_negative_examples_passed": true,
+      "real_browser_game_scene_GPU_executed": false,
+      "source_commit": "def3c8a84dae05636ae007f34fbb8a9870b60a53",
+      "source_scripts_executed": 0,
+      "warning_cause_proved": false,
+      "whole16_complete": false
+    }
+  },
+  "application_result": "skills-3080-material-camera8-application-result.json",
+  "application_result_sha256": "e7bb7c737b45ea7fdfba7ec1ba05174691976579e8f2c53324664f56db8efcf6",
+  "application_test_receipt": "skills-3080-material-camera8-application-test-receipt.json",
+  "application_test_receipt_sha256": "ad81b74ae1acab3e06739df5f58fc361746b44a6199e8fa13e81694051411fea",
+  "application_source": "evidence/skills-3080-material-camera8-use-074042.go.txt",
+  "application_source_sha256": "ff2000f2a790dff5b5b13a0c74071e907adfe4c64ba997644bdd32c05ed10384",
+  "application_models": "evidence/skills-3080-material-camera8-models-074042.go.txt",
+  "application_models_sha256": "8677f65098745136c7449a078a9938676a1bb67eaeecfdc2d02290c03d3a2eff",
+  "discovery_receipt": "skills-3080-material-camera8-discovery-receipt.json",
+  "discovery_receipt_sha256": "03fd08c2b5808c37d3d857bc5d7f9a0b22fc42b26c998f27452c06e7dca5184c",
+  "parent_active_entries_and_guides_fully_read": 16,
+  "installed_structure_pass": true,
+  "full_context_budget_proven": false,
+  "warning_cause_linked": false,
+  "new_unique_source_primary_readings": 0,
+  "public_result_delta_review_pending_at_recording": true,
+  "public_result_delta_currently_pending": false,
+  "purpose_software_correction": {
+    "pr": 497,
+    "review": 3805,
+    "source": "c397910d3fc560ca61a31c6382494ac43c866852",
+    "runtime_sha256": "ea7cbb49d73a37e972c0072a500406ab1f7f0b62f2ea1926b9ef149ad1e36f12",
+    "old_relative_arguments_failure_preserved": true,
+    "old_digit_target_source_failure_preserved": true,
+    "original_manifest_request_unchanged": true,
+    "general_guard_changed": false
+  },
+  "limits": [
+    "Bounded positive/negative planning examples exercise rest units, triangle/pass counts, mip bytes/upgrade peak, conductor/coating layers, ordered paper coverage, sky roles, navigation state and stable grain signals.",
+    "No shader compilation, browser scene, GPU performance, physical cloth, material realism or full-scene path acceptance is established.",
+    "Creation/readback and fresh74 target discovery are authentic required gates. Explicit current-worker use does not prove implicit model selection or full-context budget.",
+    "Traversal warnings remain observed with unproved cause. Original primary reading totals, all16 remainder, anonymous9/647holds and3048originals/junctions/backups remain."
+  ],
+  "public_result_delta_acceptance": {
+    "pr": 498,
+    "head": "f37ad5aef35bfb6d0de38ab8c96bde4002993161",
+    "merge": "d5c04f9dd0e5d90c286b013139ab37f2a0d76c50",
+    "review": 3809,
+    "actual_luna_max": true,
+    "must": 0,
+    "all7_ci_complete": true,
+    "failed": 0
+  }
+}

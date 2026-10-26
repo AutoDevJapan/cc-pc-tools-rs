@@ -1,0 +1,192 @@
+{
+  "source": "evidence/skills-3080-combat6-independent-models090101.go.txt",
+  "source_sha256": "1f0f15ebff06ea6dbc3c54fe727aab83aacf6e05d7473cc6dffc8cc2b1d588d3",
+  "exit": 0,
+  "stdout_sha256": "6af58fe26f05fd182e544f63cac8675a1c6e77f315d54cb4c3522548ad70ba87",
+  "result": {
+    "GPU_or_renderer_execution": 0,
+    "actual_FPS_measured": false,
+    "cases": [
+      {
+        "name": "hold_precedes_minimum_ramp",
+        "target": "lightning-energy-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "released_ramp_floor_is_nonzero",
+        "target": "lightning-energy-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "negative_floor_before_hold_would_move",
+        "target": "lightning-energy-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "transparent_coverage_preserves_background",
+        "target": "fire-smoke-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "opaque_black_smoke_occludes_background",
+        "target": "fire-smoke-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "negative_additive_black_cannot_occlude",
+        "target": "fire-smoke-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "premultiplied_once_not_twice",
+        "target": "fire-smoke-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "descending_fade_endpoints",
+        "target": "fire-smoke-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "descending_fade_bounded_monotonic",
+        "target": "fire-smoke-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "negative_reversed_smoothstep_edges_rejected",
+        "target": "fire-smoke-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "advection_height_coordinate_inverse",
+        "target": "fire-smoke-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "two_half_float_RGBA_targets_color_only_bytes",
+        "target": "ice-frost-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "exit_medium_total_internal_reflection",
+        "target": "ice-frost-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "normal_incidence_no_total_internal_reflection",
+        "target": "water-crystal-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "absorption_coefficient_and_length_units_match",
+        "target": "water-crystal-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "ray_starts_inside_has_zero_entry",
+        "target": "ice-frost-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "parallel_ray_outside_half_space_misses",
+        "target": "ice-frost-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "outside_inward_ray_sorted_entry_exit",
+        "target": "ice-frost-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "growth_queue_has_stable_explicit_tie_key",
+        "target": "ice-frost-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "new_effect_random_stream_does_not_consume_layout",
+        "target": "fire-smoke-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "negative_shared_random_consumption_changes_layout",
+        "target": "fire-smoke-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "shoulder_relative_hand_translates_with_shoulder",
+        "target": "game-dev-combat-animation",
+        "pass": true
+      },
+      {
+        "name": "zero_direction_requires_explicit_rejection",
+        "target": "game-dev-combat-animation",
+        "pass": true
+      },
+      {
+        "name": "nonzero_direction_is_normalized",
+        "target": "game-dev-combat-animation",
+        "pass": true
+      },
+      {
+        "name": "negative_antiparallel_linear_direction_is_degenerate",
+        "target": "game-dev-combat-animation",
+        "pass": true
+      },
+      {
+        "name": "strip_and_closeup_share_observed_conditions",
+        "target": "game-dev-combat-skill-polish",
+        "pass": true
+      },
+      {
+        "name": "negative_closeup_revision_mismatch_rejected",
+        "target": "game-dev-combat-skill-polish",
+        "pass": true
+      },
+      {
+        "name": "negative_clock_mismatch_rejected",
+        "target": "game-dev-combat-skill-polish",
+        "pass": true
+      },
+      {
+        "name": "reaction_not_before_arrival_on_common_clock",
+        "target": "game-dev-combat-skill-polish",
+        "pass": true
+      },
+      {
+        "name": "negative_click_time_reaction_precedes_contact",
+        "target": "game-dev-combat-skill-polish",
+        "pass": true
+      },
+      {
+        "name": "repeated_ticks_do_not_repeat_ground_event",
+        "target": "lightning-energy-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "overlapping_pulses_are_retained_not_overwritten",
+        "target": "water-crystal-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "rain_slots_do_not_overwrite_reserved_hero_slots",
+        "target": "water-crystal-skill-vfx",
+        "pass": true
+      },
+      {
+        "name": "negative_rain_overflow_refused_without_clobber",
+        "target": "water-crystal-skill-vfx",
+        "pass": true
+      }
+    ],
+    "count": 34,
+    "domain": "skills3080-combat6-independent-models-v1",
+    "failures": 0,
+    "health_or_visual_compliance_proved": false,
+    "new_central_operations": 0,
+    "real_rig_acceptance": false,
+    "scope": "Independent arithmetic and lifecycle examples only; fixtures are not actual game implementation or renderer acceptance",
+    "upstream_module_execution": 0
+  },
+  "actual_renderer_or_GPU": false,
+  "source_modules_executed": 0
+}

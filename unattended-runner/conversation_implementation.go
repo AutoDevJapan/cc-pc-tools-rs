@@ -191,6 +191,9 @@ func (r *Runner) conversationImplementationCommand(ctx context.Context, opts con
 	if opts.Command == "source-link" {
 		return r.conversationIntakeLink(ctx, opts, q, proof, *reply)
 	}
+	if opts.Command == "source-repair" {
+		return r.conversationSourceRepair(ctx, opts, q, proof, *reply)
+	}
 	if opts.Command == "source-reacquire" {
 		return r.conversationSourceReacquire(ctx, q, proof, *reply)
 	}

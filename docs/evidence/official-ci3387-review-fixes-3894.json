@@ -1,0 +1,61 @@
+{
+  "todo": 3894,
+  "issue": 526,
+  "pr": 528,
+  "previous_review_head": "b635432cffbefe979bfe7bbb9c62bd071deb51bb",
+  "review": {
+    "todo": 3900,
+    "actual_model": "gpt-6-luna",
+    "actual_effort": "max",
+    "native_context_and_input_spec_matched": true,
+    "original_response_bytes": 4128,
+    "original_response_sha256": "4a7a8836b1ee89f97e522f2f55a98bfe8809103bc967994ca10929f9044c60e1",
+    "must_count": 2,
+    "subsequent_review_pending": true
+  },
+  "fixes": [
+    "Bind the nominated independent original jobs to their actual task/source ownership; refuse typed-subwork or parent-field substitutions.",
+    "Write the actual public handoff inside the verified-byte callback; writer errors and short writes never commit consumed. Require process exit zero after the final durable commit."
+  ],
+  "task_type_evidence": "Normal original-job metadata confirms that 3387, 3888 and 3894 have no parent_job_id/subwork. Do not manufacture typed ancestry for independent implementations.",
+  "red": {
+    "exit": 1,
+    "bad_independent_registration_cases": 11,
+    "output_failure_committed_consumed": true,
+    "output_was_after_commit": true,
+    "original_log_sha256": "afb3aafc98336047a6c7b378140295d054cc1a21c1a3678fa3dc0ce0061c4d51"
+  },
+  "final_tests": {
+    "goos": "windows",
+    "goarch": "amd64",
+    "race": true,
+    "gomaxprocs": 2,
+    "package_parallelism": 2,
+    "guard_pass_including_subcases": 170,
+    "core_pass_including_subcases": 103,
+    "fail": 0,
+    "skip": 0,
+    "vet_exit": 0,
+    "guard_log_sha256": "9a9214efd91881c3a36b6c899b1ceb2764c35f27a344c4d75de8e5bc411386bf",
+    "core_log_sha256": "514a26431f8c322a7d7d8fc8153d54662e3f45005ffea6c0324bad32e38fcc1c"
+  },
+  "retained_failure": {
+    "scope": "synthetic root-replacement fixture setup",
+    "error": "Windows ERROR_ACCESS_DENIED on rename",
+    "directory_attributes": 16,
+    "reparse": false,
+    "isolated_repetitions_passed": 10,
+    "actual_lock_owner": "unconfirmed",
+    "fix": "At most500ms retry of the same synthetic rename for access/sharing denial only. Persistent failure still fails; production guard/ACL unchanged."
+  },
+  "source_sha256": {
+    "repair-guard/officialci3894_windows.go": "1eb0133e6923f58a83dcd2b13219133f033c6e9bfb680f65aed5e4614d13a998",
+    "repair-guard/officialci3894_windows_test.go": "4686f7e2f13959651de3e2d5d01d257b8d4200c5fa8573f4df8d3e1bcae0f8d5",
+    "repair-guard/officialci3894_review_windows_test.go": "efebe705fa7a665f9ecc7922ddefefb013f840542912f6b3ab17e02c2c6ec36b",
+    "repair-guard/internal/officialci3893/engine_windows_test.go": "826491adc06c93654b9fff486a495d40c0a01d0174037a35046f00bf2d9ef84d",
+    "docs/official-ci3387-purpose.md": "df1a908a05312c3a71c459c7f2cfd384152a5794bd3095931cf88559cb91086e"
+  },
+  "real_sdk_prepared": false,
+  "installed_update": false,
+  "local_cargo_gpu_civ6": 0
+}

@@ -1,0 +1,1945 @@
+{
+  "todo": 3080,
+  "domain": "skills-3080-received-design24-v1",
+  "scope": "A disjoint received semantic cohort, not24 installed Skills or brand UI implementations",
+  "source_repo": "VoltAgent/awesome-design-md",
+  "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+  "parent_original_semantic_derivation_job": "20261025-074042-todo-3080",
+  "reader_job": "20261025-142809-todo-3778",
+  "entries": [
+    {
+      "inventory_id": "github:81073e22fb3daee089be78165ebc5f631bd78d9eb9feda51eda44b6ba1075926",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/1win/DESIGN.md",
+      "source_sha256": "64d02d344cb16d68b6882054f35e3bfb7241ad60dc8b7f84f6636a7d1379496a",
+      "source_git_blob": "ba28da8ae0f39c358befc9d4d91f077c2672466d",
+      "source_bytes": 23906,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 66,
+      "reader_state": [
+        2,
+        0,
+        0,
+        true,
+        true,
+        463
+      ],
+      "semantic_source_chunk": "c648f7eb9a4a411d8c203c657f28b90e",
+      "semantic_source_chunk_sha256": "85cbf3c4a7999d52941ec6c954dff4613e27ed4a0fd80591045d88687bede1db",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": true,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 0,
+      "case_manifest_index": 3,
+      "case_sha256": "daa5a650409e702566e680ad261d7f03baaf9edabeeb10f0c2f926a82d23ae1f",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "sourceはhome/promotions/betting/vip-clubを分析したと述べるが、今回の実site観測ではない。READMEはgetdesign.mdへの移転案内で、移転先/preview/downloadは未訪問。",
+          "ex-*はkit-mirrorの例示で、抽出されたbrand componentではないと明記する。実サイトの測定値/完成例の実装と同一視しない。",
+          "featured pricing例のbackgroundはink(#f0f2f5)、textはon-primary(#ffffff)。polarity-flipの説明と別に、明るい面同士の可読性を要確認。実contrast測定/描画は0。",
+          "bodyまでInter600+を要求し、hoverは未文書化とする。日本語fallback、focus/keyboard等まで確認済みではない。root MITをfont/商標/game artwork/外部serviceの包括許諾へしない。"
+        ],
+        "inventory_id": "github:81073e22fb3daee089be78165ebc5f631bd78d9eb9feda51eda44b6ba1075926",
+        "negative": "全文をbrand cloneの実装指示として使い、白いfeatured面へ白字を当て、全日本語を600+で合格とする。",
+        "new_copy_grants": 0,
+        "positive": "本人確認済みの暗い媒体catalogueで、画像の多色性とnav/actionの色を分けて検証する案。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 66,
+        "reader_state": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          463
+        ],
+        "required_changes": [
+          "承認対象へ一般的なcontent/chrome分離として適応し、brand固有の名称・賭け機能・画像やtokenを無条件にコピーしない。",
+          "featured例の色契約と状態別可読性を確認し、実日本語/狭幅/操作領域/hover・focus等の必要状態を検証する。",
+          "fontの利用条件/実fallbackと本人の同じ画像回答を確認し、sourceのopensource主張だけで使用済み/承認済みにしない。"
+        ],
+        "semantic_source_chunk": "c648f7eb9a4a411d8c203c657f28b90e",
+        "semantic_source_chunk_sha256": "85cbf3c4a7999d52941ec6c954dff4613e27ed4a0fd80591045d88687bede1db",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 23906,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "ba28da8ae0f39c358befc9d4d91f077c2672466d",
+        "source_path": "design-md/1win/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "64d02d344cb16d68b6882054f35e3bfb7241ad60dc8b7f84f6636a7d1379496a",
+        "unmet": [
+          "brand実site/最新仕様/色contrast・font/状態/実表示/画像回答/個別素材・service権利/中央本文比較0。"
+        ],
+        "use": "暗い高密度の画像catalogueで、操作色とcontentの色を分ける設計参考。",
+        "value": "chromeを暗いsurface ladderと2つのaction色に絞り、画像rail/左nav/狭幅bottom sheetを役割別に説明する点が有用。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/1win/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:2ea5661b6fc6abeffad371d7874e26ea8d28e51b0c82cebf5da54faac8c3c062",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/airbnb/DESIGN.md",
+      "source_sha256": "add34130d67209ad105346d60fe2b290728b9711683969db4b7760e29477a5fe",
+      "source_git_blob": "088254920b745ed12c9ad14429f3cd96128ab9b2",
+      "source_bytes": 30517,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 67,
+      "reader_state": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        545
+      ],
+      "semantic_source_chunk": "c648f7eb9a4a411d8c203c657f28b90e",
+      "semantic_source_chunk_sha256": "85cbf3c4a7999d52941ec6c954dff4613e27ed4a0fd80591045d88687bede1db",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 1,
+      "case_manifest_index": 4,
+      "case_sha256": "f1cf467ab065754dad1ac244c133ade75173b698da4d2519e4469b1da2791139",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "独自font Cereal/Circularと商標/写真/Mapbox等をroot MITで包括受入しない。Inter代替やline-height2%調整はsourceの提案で、実font/日本語/最新siteを確認していない。",
+          "冒頭の軽いdisplay500/600・button32pxという概説に対し、定義には700やbutton8px/特定pillがある。brandらしさの文章を全tokenの厳密仕様へしない。",
+          "loading/map/error input組合せ/hover抽出等の欠測をsource自身が明示する。公共webのdark mode不存在等の記述も固定snapshotの主張で、現在の観測ではない。",
+          "tap寸法や見た目のpaddingからAAAを示唆するが、実hit area/keyboard/contrastや適合全体は検証していない。article/marketing/listingごとのcontent幅も条件を整理する必要がある。"
+        ],
+        "inventory_id": "github:2ea5661b6fc6abeffad371d7874e26ea8d28e51b0c82cebf5da54faac8c3c062",
+        "negative": "独自fontの使用権や全状態を未確認でbrand cloneし、見た目のpaddingだけでAAA済みとする。",
+        "new_copy_grants": 0,
+        "positive": "写真主体の一覧と詳細で、検索入力とsticky summaryの狭幅変形を検証する設計比較。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 67,
+        "reader_state": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          545
+        ],
+        "required_changes": [
+          "汎用的な写真/検索/情報階層の比較へ抽象化し、brand名・独自font・素材・textをそのまま移さない。",
+          "対象locale/viewport/状態/実hit areaを確認し、欠測と抽出値/推測値を分ける。sourceの適合呼称を合格証拠にしない。",
+          "本人の具体画像回答へ結び、READMEの移転先/previewを未取得のまま実観測済みにしない。"
+        ],
+        "semantic_source_chunk": "c648f7eb9a4a411d8c203c657f28b90e",
+        "semantic_source_chunk_sha256": "85cbf3c4a7999d52941ec6c954dff4613e27ed4a0fd80591045d88687bede1db",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 30517,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "088254920b745ed12c9ad14429f3cd96128ab9b2",
+        "source_path": "design-md/airbnb/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "add34130d67209ad105346d60fe2b290728b9711683969db4b7760e29477a5fe",
+        "unmet": [
+          "最新site/移転先/独自font・写真/実状態/実hit area/適合性・画像承認/中央本文比較0。"
+        ],
+        "use": "写真中心のmarketplaceで、検索segment/card/sticky予約領域を役割別に組み立てる設計参考。",
+        "value": "単一accent、白いcanvas、写真と情報の階層、mobileでの検索overlay/下部summaryへの変形を比較できる。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/airbnb/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:58a04e40485ac999821844a9ee119fe0fbfaa7c7a15bba37273f8ede7ba05cdc",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/airtable/DESIGN.md",
+      "source_sha256": "1d225e511213044d3c705bde50265ad010932bfd8a15740a144dd4f480128889",
+      "source_git_blob": "d885f4984c2ca5c2840a62e2d828167957c02385",
+      "source_bytes": 35266,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 68,
+      "reader_state": [
+        3,
+        2,
+        0,
+        false,
+        true,
+        554
+      ],
+      "semantic_source_chunk": "c648f7eb9a4a411d8c203c657f28b90e",
+      "semantic_source_chunk_sha256": "85cbf3c4a7999d52941ec6c954dff4613e27ed4a0fd80591045d88687bede1db",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 2,
+      "case_manifest_index": 5,
+      "case_sha256": "7f3eff7d42119d78f8a2c56fb7b42a145b9541a584dfcb6fffec53b7bb3dcc78",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "対象は主にmarketing surfacesで、業務の内部data-gridそのものの設計ではない。96pxのsection rhythmや一画面一primary等を全業務画面へ一般化しない。",
+          "CSS変数名にprimaryとあってもlink blueで、実primary CTAはnear-blackとする。変数名/見た目/使用役割を照合する有用な例だが、実CSSを今回観測していない。",
+          "Haasのmain systemとInter Display475/575のpricingを区別する。独自font/ロゴ/顧客UI screenshot等の権利・fallbackや5%調整の妥当性を確認していない。",
+          "no-hover/未抽出error-success/animationの欠測があり、npxのlint実行を勧める。今回のshell実行/新software導入の許可にはしない。40px iconを見た目で補う説明やAAAの呼称も実hit area/全適合の証明ではない。"
+        ],
+        "inventory_id": "github:58a04e40485ac999821844a9ee119fe0fbfaa7c7a15bba37273f8ede7ba05cdc",
+        "negative": "CSSのprimaryという変数名だけでCTAを青にし、96px余白をdenseな業務表へ移し、見た目だけでAAAとする。",
+        "new_copy_grants": 0,
+        "positive": "承認済みのmarketingページで、白い段落とsignature面、pricingの別type/shapeを役割別に検証する比較。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 68,
+        "reader_state": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          554
+        ],
+        "required_changes": [
+          "marketing/pricing/操作UIの用途とlocaleごとに値を選び、実字体/狭幅/状態/画像回答を確認する。",
+          "命名だけからsemantic colorを決めず、現在のconsumer/実表示へ照合する。signature/pastelの推測と確定値を分ける。",
+          "lintは実consumerと許可/影響範囲を確認して別工程へ扱い、root MITを外部font/ロゴ/UI素材やserviceへ包括適用しない。"
+        ],
+        "semantic_source_chunk": "c648f7eb9a4a411d8c203c657f28b90e",
+        "semantic_source_chunk_sha256": "85cbf3c4a7999d52941ec6c954dff4613e27ed4a0fd80591045d88687bede1db",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 35266,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "d885f4984c2ca5c2840a62e2d828167957c02385",
+        "source_path": "design-md/airtable/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "1d225e511213044d3c705bde50265ad010932bfd8a15740a144dd4f480128889",
+        "unmet": [
+          "最新site/getdesign/独自font/素材・顧客性/実contrast・hit area/状態/画像回答/実lint/中央比較0。"
+        ],
+        "use": "白いeditorial marketing面とpricingの別sub-systemを比較する設計参考。",
+        "value": "signature cardの色面と白い面を交互にし、リンク色とprimary action色を役割で区別し、pricingだけのfont/shapeを分ける点が有用。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/airtable/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:91832bf4a629eefc77bac18b30c6f041894000265b6c7d5ba2b77d11f032329c",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/aljazeera/DESIGN.md",
+      "source_sha256": "37614fc72658ffa30faca01049bd1efa8a9baafa4750501405eeea66f149466a",
+      "source_git_blob": "339e75bd715247700180cc6636c3f97027036ca1",
+      "source_bytes": 28031,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 69,
+      "reader_state": [
+        2,
+        0,
+        0,
+        true,
+        true,
+        594
+      ],
+      "semantic_source_chunk": "c648f7eb9a4a411d8c203c657f28b90e",
+      "semantic_source_chunk_sha256": "85cbf3c4a7999d52941ec6c954dff4613e27ed4a0fd80591045d88687bede1db",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": true,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 0,
+      "case_manifest_index": 6,
+      "case_sha256": "0c55cf11a17414aa4789819725e1f5642196b8bd9429df98cd92901024787989",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "news面とnetwork面は同じidentityでもpolarityとpaletteの役割が違う。newsのsuccess/warning未定義を一般業務formの状態不要と読み替えない。",
+          "proprietary wordmarkのlogo artをtext faceで近似しないとsource自身が述べる。Roboto利用可という主張やroot MITを、写真/portrait/商標/外部serviceの使用権へ広げない。",
+          "6px縦paddingと16px labelに周囲row spacingを足して44px目標を述べるが、周囲の余白が実hit領域かは未記録。寸法/contrast/実操作を確認したわけではない。",
+          "ex-pricing/cart/auth/modal等は追加の例示compositionで、siteから抽出されたcomponentではないと明記する。元site観測や必要な製品機能の証明にしない。"
+        ],
+        "inventory_id": "github:91832bf4a629eefc77bac18b30c6f041894000265b6c7d5ba2b77d11f032329c",
+        "negative": "orangeを全CTAへ、live赤を全業務warningへ適用し、周囲余白だけでcontrolが44pxと決めつける。",
+        "new_copy_grants": 0,
+        "positive": "更新feedと会社情報を別面にし、ブランド表示・更新status・actionを役割別に検証する設計比較。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 69,
+        "reader_state": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          594
+        ],
+        "required_changes": [
+          "対象用途/状態の意味を先に決め、newsとcorporateのpaletteを機械的に混ぜず、brand固有素材をコピーしない。",
+          "実日本語/見出し密度/keyboard・状態/狭幅・hit領域と画像回答を確認し、抽出値/推測/未測定を分ける。",
+          "移転先/previewは未訪問を保ち、illustrative例を元siteの実測や本人要件へ昇格しない。"
+        ],
+        "semantic_source_chunk": "c648f7eb9a4a411d8c203c657f28b90e",
+        "semantic_source_chunk_sha256": "85cbf3c4a7999d52941ec6c954dff4613e27ed4a0fd80591045d88687bede1db",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 28031,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "339e75bd715247700180cc6636c3f97027036ca1",
+        "source_path": "design-md/aljazeera/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "37614fc72658ffa30faca01049bd1efa8a9baafa4750501405eeea66f149466a",
+        "unmet": [
+          "最新site/getdesign/写真・wordmark・font/実hit area/contrast・状態/画像回答/中央本文比較0。"
+        ],
+        "use": "記事/更新timelineと企業network面で、identity色・status色・操作色を分ける設計参考。",
+        "value": "newsの白いflat gridとnetworkの暗いpanelを別sub-surfaceにし、orangeをidentity、赤をlive、黒を操作へ分担する説明が有用。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/aljazeera/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:1f357778021c7d35e72cf64acd84924abe22965eaea3467e60df94e9f83354f7",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/apple/DESIGN.md",
+      "source_sha256": "83fbc614443a9b3d7569e9956a43e7b8740f9d0f939f58b8154f7a7cec3002b2",
+      "source_git_blob": "0d37e1e5f6b621ccbdc666f6d9c82f2ada26208b",
+      "source_bytes": 37096,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 70,
+      "reader_state": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        562
+      ],
+      "semantic_source_chunk": "e5dc9162a30b4fa8bd270be1c74309d6",
+      "semantic_source_chunk_sha256": "d20b17d312265164b15257bcc3e29e1872816a41f5130645969638813a01fa8e",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 1,
+      "case_manifest_index": 7,
+      "case_sha256": "685b8fa14151af9d941d81e0fa978cb40d462ce4985a15e9add413e3ee3a2932",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "明暗タイルは角0/縦80px、商品カード18px、購入CTAはpill、utilityは8pxなど用途で形を分ける。Action Blueと暗背景用Sky Link Blue、focus色も区別する。",
+          "press scale(0.95)、2px focus outline、44px円形操作は説明がある一方、hoverを記録しない規則とフォームerror/動画操作/カードdark counterpartの未取得を明記する。",
+          "行358の『12px以下には負の字間を使わない』とfine-print/navの-0.12px、tagline600と700の説明、Inter代替の行高1.44と下限1.47の指示は調整が必要。breakpoint表419/735/833と要約480/734/834境界も統一されていない。",
+          "READMEは分析の移転先を案内するだけ。現行Appleサイトやfonts/画像の権利、操作実測を確認した証拠にはならない。"
+        ],
+        "inventory_id": "github:1f357778021c7d35e72cf64acd84924abe22965eaea3467e60df94e9f83354f7",
+        "negative": "密な管理表にも56px見出し/80px余白を必須にする、又はSF Pro・商品画像と『単一の影』をそのまま使用可能/全Appleの実仕様と扱う。",
+        "new_copy_grants": 0,
+        "positive": "許諾済みの商品写真があり、明暗タイルで区切る紹介案を画像で比較し、承認範囲内で部品別に適用する。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 70,
+        "reader_state": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          562
+        ],
+        "required_changes": [
+          "一般化するならブランドの必須値を普遍ルールへ移さず、対象の日本語/Windows書体と読みやすさを確かめて値を決める。SF Proや製品画像・ロゴの取得/転載権は個別に確認する。",
+          "字間・tagline・代替行高・画面幅の矛盾を出典行付きで解消し、missing hover/error/keyboard/固定バーの遮蔽を必要な受入へ補う。新しい見た目は本人の同じ画像範囲の回答後に実装する。"
+        ],
+        "semantic_source_chunk": "e5dc9162a30b4fa8bd270be1c74309d6",
+        "semantic_source_chunk_sha256": "d20b17d312265164b15257bcc3e29e1872816a41f5130645969638813a01fa8e",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 37096,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "0d37e1e5f6b621ccbdc666f6d9c82f2ada26208b",
+        "source_path": "design-md/apple/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "83fbc614443a9b3d7569e9956a43e7b8740f9d0f939f58b8154f7a7cec3002b2",
+        "unmet": [
+          "移転先/現行サイト未取得・非実行。独自font/写真/ロゴの個別利用条件は未確認。hover/error等とWindows日本語表示/対象実測は未確認。",
+          "377行のspacingラベル候補は同じbytesの構造照合を試したが厳密抽出条件に合わず補完しなかった。mask1を保持し、既読frontmatter値から秘密値を復元しない。"
+        ],
+        "use": "写真を中心に、明暗の全面タイルと小さな操作部品を組み合わせる製品紹介の設計参考。",
+        "value": "影を製品画像に限定し、明暗で区切り、操作ブルーを背景別に変える役割分担と、商品一覧・選択肢・固定購入バーの別部品が具体的。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/apple/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:9ba7125a9147052a845fd3d4fefefd3ea6af5f1545d07fead6b57dbdbc5ac8c5",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/binance/DESIGN.md",
+      "source_sha256": "378ff97d568ccbc316519b9d45a29d6649ed8961c9c486c3ed4cea7501d72371",
+      "source_git_blob": "27ec482198f450621b747a007e3135656b95f70e",
+      "source_bytes": 39918,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 71,
+      "reader_state": [
+        3,
+        2,
+        0,
+        false,
+        true,
+        634
+      ],
+      "semantic_source_chunk": "e5dc9162a30b4fa8bd270be1c74309d6",
+      "semantic_source_chunk_sha256": "d20b17d312265164b15257bcc3e29e1872816a41f5130645969638813a01fa8e",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 2,
+      "case_manifest_index": 8,
+      "case_sha256": "b7a8ded43ad68c18e1bc00bc57ea51c93e8daa49351b35b6333d92713b83b908",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "marketingのdarkと取引dialogのlight、数値/本文の書体分担、背景色差で階層を作るflat card、markets列・FAQ・cookie選択肢が具体化される。",
+          "trading色を『button背景にしない』と行389で記す一方、frontmatterと509/511/576はBuy/Sell用のsolid背景を定義。一般accent無しの説明に対してturquoiseとevent gradientの限定例外もある。",
+          "40pxCTAと周辺余白で44px/AAAを満たすという601行の断定は測定証拠がなく、28pxinline・黄色linkのlight面適合やcolor以外の表示も別検証が必要。",
+          "marketingのスクリーンショット等に基づく分析で、orderbook/position/実chart設定、validation、animation、theme切替は未取得。例示利用者数/残高/No.1/安全性コピーは今回の実績・保証ではない。"
+        ],
+        "inventory_id": "github:9ba7125a9147052a845fd3d4fefefd3ea6af5f1545d07fead6b57dbdbc5ac8c5",
+        "negative": "この分析だけで金融取引UIの安全性・残高・ランキング・適合を保証する、未取得の注文画面や資産ID/QRを流用する。",
+        "new_copy_grants": 0,
+        "positive": "実取引を伴わない承認済みの情報表示案で、価格方向を符号/矢印/色に分け、light/dark別に部品を比較する。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 71,
+        "reader_state": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          634
+        ],
+        "required_changes": [
+          "売買用button背景の例外、turquoise/event gradientの限定範囲、40pxと適合断定を修正して、実hit area・focus・色/矢印・明暗の可読性で確かめる。",
+          "BinanceNova/Plex、coin画像/QR/store badgeやブランドコピーはroot MITで利用可能にしない。所有する素材・書体と未実績の文言へ置換し、UI画像承認後に必要範囲の検査を行う。"
+        ],
+        "semantic_source_chunk": "e5dc9162a30b4fa8bd270be1c74309d6",
+        "semantic_source_chunk_sha256": "d20b17d312265164b15257bcc3e29e1872816a41f5130645969638813a01fa8e",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 39918,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "27ec482198f450621b747a007e3135656b95f70e",
+        "source_path": "design-md/binance/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "378ff97d568ccbc316519b9d45a29d6649ed8961c9c486c3ed4cea7501d72371",
+        "unmet": [
+          "市場の最新値/実サービス/取引API/サイトは調査しない。本文分析であり取引契約・送金・資産操作は0。",
+          "438行のspacing候補は厳密抽出条件不成立のため補完なし。336行は文脈限定の例示copyを行内で伏せた1物理行、438行はcore1行。mask2は実秘密2件という意味ではない。"
+        ],
+        "use": "暗い紹介面と明るい取引面を分け、数字・本文・操作色の役割を整理する設計参考。",
+        "value": "同じ黄色CTAを二つのsurfaceで使い、数値専用書体と価格方向の色/矢印、tableとfilterを別役割にする点が具体的。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/binance/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:169083a07928c0f6dca015b7d57e5ae25d563bd28dc66b23c518d6b0530d7389",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/bmw-m/DESIGN.md",
+      "source_sha256": "824a1707c0a8d1609d72477d0fa211b9ebe4bdeb3e1fd701790af7b7bb669a4a",
+      "source_git_blob": "fb1cd84a66900406038017902fb42a0e3e67122d",
+      "source_bytes": 30697,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 72,
+      "reader_state": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        503
+      ],
+      "semantic_source_chunk": "e5dc9162a30b4fa8bd270be1c74309d6",
+      "semantic_source_chunk_sha256": "d20b17d312265164b15257bcc3e29e1872816a41f5130645969638813a01fa8e",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 1,
+      "case_manifest_index": 9,
+      "case_sha256": "bb31ccfe7e44558a42111ca31d89ef14041ef6e09d60231ca963aad3f740599e",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "三色stripeはbrand identity、CTAは白text/outline、写真はfull bleed、specは値とlabelを分ける。copyright/写真/driver肖像はこのtextのMITから自動許諾しない。",
+          "説明の『navは700』とnav-link400、hero内64pxとYAML96px、specセル40pxとYAML/部品24px、chatbotを円形例外とする説明と矩形card定義が一致しない。『軽〜中程度の書体』という冒頭と700displayの範囲も分ける必要。",
+          "stripeの色を公開guideline由来としてcanonicalとする主張は本文内の主張であり、今回その別資料を取得/照合していない。スクリーンショットの黒背景推定/色判別の限界、cookieによる遮蔽も明記される。",
+          "configurator/orderの詳細、validation、timingは未取得。hover禁止の手順と本文中のhover記述が併存し、48px操作/44pxの適合主張も実環境の検査ではない。"
+        ],
+        "inventory_id": "github:169083a07928c0f6dca015b7d57e5ae25d563bd28dc66b23c518d6b0530d7389",
+        "negative": "一般業務フォームにも黒/700対300/角0を義務にする、又は未読guideline/写真・Mロゴ・driver肖像の利用権を本文の断定から確定する。",
+        "new_copy_grants": 0,
+        "positive": "利用権の確認できた車両等の写真を使う編集案で、ブランド署名と操作の意味を分け、96px余白と密な技術表を画像で比較する。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 72,
+        "reader_state": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          503
+        ],
+        "required_changes": [
+          "nav書体、hero/spec余白、chatbot形状、色出典の検証状態を整理し、BMW M固有の『必ず』を普遍規則にしない。",
+          "BMW独自font/stripe/ロゴ/車両写真/肖像を許諾済みとせず、利用素材と日本語Windows fallbackを選び、focus/hover/keyboard/縮小表示を対象に応じて補う。見た目は本人画像回答後に実装する。"
+        ],
+        "semantic_source_chunk": "e5dc9162a30b4fa8bd270be1c74309d6",
+        "semantic_source_chunk_sha256": "d20b17d312265164b15257bcc3e29e1872816a41f5130645969638813a01fa8e",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 30697,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "fb1cd84a66900406038017902fb42a0e3e67122d",
+        "source_path": "design-md/bmw-m/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "824a1707c0a8d1609d72477d0fa211b9ebe4bdeb3e1fd701790af7b7bb669a4a",
+        "unmet": [
+          "現行BMW M/外部guideline未取得。動的carousel/configurator/フォームと実可読性の検証0。",
+          "333行spacing候補は同bytes構造チェックのみ、厳密抽出条件不成立で元値補完なし。mask1/rawfalseを保持。"
+        ],
+        "use": "モータースポーツ系の写真中心・黒基調の編集ページを構成する設計参考。",
+        "value": "ブランドstripeを操作色へ流用せず、角0の写真/表と円形操作を分け、モデル・技術値・記事・carouselを別部品として説明する。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/bmw-m/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:ada8f5d06a46b5490ff8c6c566fbad297f9395ddf6acf05d9f9830270b83f172",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/bmw/DESIGN.md",
+      "source_sha256": "b7268279e7c98e85fb80890e06765f4ee8340ba1ea1ccb5a8a5b134de43dac3e",
+      "source_git_blob": "8cb0be59fa1d2e839d5eddec3a4876f326f176bc",
+      "source_bytes": 27907,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 73,
+      "reader_state": [
+        3,
+        2,
+        0,
+        false,
+        true,
+        544
+      ],
+      "semantic_source_chunk": "e5dc9162a30b4fa8bd270be1c74309d6",
+      "semantic_source_chunk_sha256": "d20b17d312265164b15257bcc3e29e1872816a41f5130645969638813a01fa8e",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 2,
+      "case_manifest_index": 10,
+      "case_sha256": "ebaee2d618535d1d0bbf8abc32d5d490e54434b637a3ed8cf1c7ca33cd6c35e3",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "青CTA、白canvas、navy hero、M印はM文脈だけという役割を分ける。selected tileはborder増加とpadding調整を別定義し、inventoryは16px/商品24pxを分ける。",
+          "『darkはheroのみ/1page一つ』とdarkなpre-footer CTA、連続surface禁止と例示light→light、厳密な矩形/円の二択とrare pill/modal等が併存。BMW Mのcard32pxという比較も72番の24/40定義と合わない。",
+          "nav700という説明とneutral400 token、creamというdescriptionとcanvas #ffffffなど観測/例外/主張の区別が必要。filter/configurator部品の説明はあるが価格・予約・dealerデータ連携を検証したものではない。",
+          "フォームerror/successは色tokenだけで実状態未取得。cookieでhero欠測の可能性、animation外、独自font非公開の制約を記す。48px/AAAやtab>44pxも実測の証拠ではない。"
+        ],
+        "inventory_id": "github:ada8f5d06a46b5490ff8c6c566fbad297f9395ddf6acf05d9f9830270b83f172",
+        "negative": "Mとcorporateを同じ配色/余白の一式として混ぜる、又は写真・商標・書体や未接続の在庫/予約フローを利用済み/完成とする。",
+        "new_copy_grants": 0,
+        "positive": "承認済みの製品一覧案で、軽い紹介gridから密な在庫filterへ同じ操作文法を保ちながら密度を変える。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 73,
+        "reader_state": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          544
+        ],
+        "required_changes": [
+          "hero/CTAのsurface例外、形状例外、連続band、nav書体、Mとの比較値を対応する部品ごとに修正し、原文の混同を一般規則へ輸入しない。",
+          "一般UIへ応用する場合は所有素材と許可された書体、日本語の字幅/weight/line-heightを確かめる。色tokenからvalidation完成やdealer連携済みとせず、本人が承認した画像範囲内で必要な状態を補う。"
+        ],
+        "semantic_source_chunk": "e5dc9162a30b4fa8bd270be1c74309d6",
+        "semantic_source_chunk_sha256": "d20b17d312265164b15257bcc3e29e1872816a41f5130645969638813a01fa8e",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 27907,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "8cb0be59fa1d2e839d5eddec3a4876f326f176bc",
+        "source_path": "design-md/bmw/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "b7268279e7c98e85fb80890e06765f4ee8340ba1ea1ccb5a8a5b134de43dac3e",
+        "unmet": [
+          "現行サイト/在庫subdomain/外部素材・書体条件は未取得。実UI/予約/注文/本番反映0。",
+          "358行は伏字のまま意味未確認。369行spacing候補は厳密抽出条件不成立で補完なし。mask2は実秘密数/不存在の保証ではない。"
+        ],
+        "use": "白いcorporate面に青い矩形CTAと商品/在庫カードを組み、密度を変える設計参考。",
+        "value": "黒基調のBMW Mと違い、80pxsection、商品4/5列、inventory/filter/selected option、灰footerを使う密度別の部品例になる。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/bmw/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:bb7403bd5252cb9cbfe98be9a1efc6c909a41c40189d21b5dd6c39b374930596",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/bugatti/DESIGN.md",
+      "source_sha256": "375f0a20ada88cdee5e995ca7edcfbd584ddf5f887024deebd1bc75bfd55b1bc",
+      "source_git_blob": "c6067fed091f2edfc787fe52aa8f61bd7c2a672f",
+      "source_bytes": 28535,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 74,
+      "reader_state": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        454
+      ],
+      "semantic_source_chunk": "ac83b7e209d94c5e8620a4bf13d75698",
+      "semantic_source_chunk_sha256": "a3ad91696162357dcc781a114fccfd58a8faa4d8c22f270c01e64832976315ef",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 1,
+      "case_manifest_index": 11,
+      "case_sha256": "5438f3875c881600ddf2df5b671498af9a04977b311f5ee5774f8dd3279ba731",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "64px/400/4pxtrackingのdisplay、16pxserif本文、14pxmono操作、120pxsectionとsparse grid。写真を主にし、操作以外は角0とする。",
+          "text-linkはYAMLでbutton/monoだが本文356行はbody/serif。hero余白はYAML96、layout64、component96–200で揺れる。tablet newsroom2列とlayoutのtablet1列も統一が必要。",
+          "『唯一の非monochromeはlink/装飾なし』という断定にwarning/success色・card surfaceの例外があり、ブランド間の『唯一/最多』比較を今回検証していない。",
+          "root palette外の白/暗surfaceはスクリーンショット推定。451行はvalidationを一般基準から推定、454行は疎な捕捉画面に一般的な自動車仕様レイアウトを補ったと明記。観測済み実仕様と分ける必要がある。"
+        ],
+        "inventory_id": "github:bb7403bd5252cb9cbfe98be9a1efc6c909a41c40189d21b5dd6c39b374930596",
+        "negative": "疎なスクリーンショットから補った仕様/フォームをBugattiの実装事実にする、又はmono/serif/120pxを密な業務フォームにも義務にする。",
+        "new_copy_grants": 0,
+        "positive": "利用権を確認した写真を使う承認済み紹介案で、書体の役割と余白を変えながら階層を比較する。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 74,
+        "reader_state": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          454
+        ],
+        "required_changes": [
+          "inferred validation/specと実観測tokenを明示して、link書体・hero余白・tablet grid・色例外を部品ごとに整合させる。『hoverを記録しない』を実装の欠測許容にせずfocus/press/error等の必要状態を補う。",
+          "独自3font・wordmark・車両写真をroot MITで利用可能にせず、対象素材の個別条件、日本語Windowsfallback、画像上の文字可読性と40pxicon/44pxCTA実hit areaを確認する。見た目は同じ画像範囲の本人回答後に実装。"
+        ],
+        "semantic_source_chunk": "ac83b7e209d94c5e8620a4bf13d75698",
+        "semantic_source_chunk_sha256": "a3ad91696162357dcc781a114fccfd58a8faa4d8c22f270c01e64832976315ef",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 28535,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "c6067fed091f2edfc787fe52aa8f61bd7c2a672f",
+        "source_path": "design-md/bugatti/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "375f0a20ada88cdee5e995ca7edcfbd584ddf5f887024deebd1bc75bfd55b1bc",
+        "unmet": [
+          "現行site/newsroom/configurator/外部font条件は未取得。実render/状態検査/本番操作0。",
+          "299行は伏字のまま。mask1を実秘密数/不存在の証明にしない。"
+        ],
+        "use": "写真・書体・余白で階層を作る最小限の高級製品紹介の設計参考。",
+        "value": "display/serif本文/mono操作の三役、透明pillと角0の写真、採用案内/記事/仕様値を別部品として切り分ける。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/bugatti/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:1eb19dc8bf4445417775e1ef347a9c7c6e2ea62a0357d6da060e18d481a6f7cf",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/cal/DESIGN.md",
+      "source_sha256": "8cd21b7d67e94c899843d517f4b426e4fee33d47354a433d6a63ebcf79d5a654",
+      "source_git_blob": "1f8525c5bb7510000a1a986ae7be4c413054adb3",
+      "source_bytes": 31176,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 75,
+      "reader_state": [
+        3,
+        10,
+        0,
+        false,
+        true,
+        542
+      ],
+      "semantic_source_chunk": "ac83b7e209d94c5e8620a4bf13d75698",
+      "semantic_source_chunk_sha256": "a3ad91696162357dcc781a114fccfd58a8faa4d8c22f270c01e64832976315ef",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 10,
+      "case_manifest_index": 12,
+      "case_sha256": "c2161796cd139938ad1fda85e8dd30c794c5153f546935f88454077791f1ee17",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "Cal Sans600displayとInter400–600本文/UI、96pxsection、12pxcard/8px操作/16px大きな画像、pricing4→2→1列を記述。",
+          "『footerだけがdark』とfeatured pricing反転、pastelはavatarだけという規則とbadge/製品断片、Interをdisplayに使わない規則と代替説明が併存。codeのInterという説明とJetBrains tokenも対応整理が必要。",
+          "40pxCTA/36pxiconについて、円形シルエットが44px不足を補う・周囲pillでhit areaを満たすという断定は操作領域の実測証拠ではない。hover追加禁止と本文のhover下線/影も衝突する。",
+          "selectorでbutton variants0となった原因をstyled anchorと説明し、screenshot+baselineで補ったと記す。Cal Sans非公開/専用許諾という本文の主張もfont一次許諾を今回照合した事実ではない。"
+        ],
+        "inventory_id": "github:1eb19dc8bf4445417775e1ef347a9c7c6e2ea62a0357d6da060e18d481a6f7cf",
+        "negative": "marketing screenshotのslotを実予約可能と扱う、取れていないwidget/validationや5星評価を実績とする、又は円形36pxだけで適合確定する。",
+        "new_copy_grants": 0,
+        "positive": "承認済みのSaaS紹介案で、利用許諾と表示データを確認した製品fragmentをfeature claimと分けて見せる。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 75,
+        "reader_state": [
+          3,
+          10,
+          0,
+          false,
+          true,
+          542
+        ],
+        "required_changes": [
+          "dark/featured、pastel用途、書体代替、hoverの例外を部品別に修正し、anchor/buttonの意味・keyboard・focus・actual hit areaを実受入で確かめる。",
+          "製品画面を使うなら表示データの利用範囲と素材/字体の個別条件を確認し、予約widget/validation/confirmationの未取得を残す。対象日本語Windows表示を確認し、本人の画像回答後に実装する。"
+        ],
+        "semantic_source_chunk": "ac83b7e209d94c5e8620a4bf13d75698",
+        "semantic_source_chunk_sha256": "a3ad91696162357dcc781a114fccfd58a8faa4d8c22f270c01e64832976315ef",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 31176,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "1f8525c5bb7510000a1a986ae7be4c413054adb3",
+        "source_path": "design-md/cal/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "8cd21b7d67e94c899843d517f4b426e4fee33d47354a433d6a63ebcf79d5a654",
+        "unmet": [
+          "実予約widget/アカウント/連携/外部サイトは未取得。font許諾/現行価格・顧客実績は未確認。実UI操作0。",
+          "10物理行の伏字を保持。185/290/293/364/405/434/436/500/513/522の内容は、明示的な固定識別子の補完を記録しない限り復元/新raw読了へ加算しない。"
+        ],
+        "use": "製品UIの断片を主役にする、白/黒CTA・灰card・暗footerのSaaS紹介構成の設計参考。",
+        "value": "abstract featureを灰card、具体的product fragmentを白cardに分け、nav-pill内のactive、pricing featured反転など部品の意味を示す。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/cal/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:d0910107ad6c4882fe15f6f0069f9afaef596b68894ee6f472a1d421d5513d99",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/claude/DESIGN.md",
+      "source_sha256": "3d972f34f8d4f33b442fa28220cf3b7ca2f13c0a97c468e3988148f82521f9df",
+      "source_git_blob": "f92dc464d9bfdb6c6306f45a9ce406c6fca17432",
+      "source_bytes": 33586,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 76,
+      "reader_state": [
+        3,
+        2,
+        0,
+        false,
+        true,
+        589
+      ],
+      "semantic_source_chunk": "ac83b7e209d94c5e8620a4bf13d75698",
+      "semantic_source_chunk_sha256": "a3ad91696162357dcc781a114fccfd58a8faa4d8c22f270c01e64832976315ef",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 2,
+      "case_manifest_index": 13,
+      "case_sha256": "4f78e69275e146b78a8acc6f939284b5f1b4085d91e798f3fe95a8b1395c3212",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "serif400display、sans400/500本文/UI、mono code、cream/coral/darkの役割分担と8/12/16pxのradius階層を示す。",
+          "pricing3列に4種類のplanを挙げ、後半は4→2→1と説明。connector tablet/mobile列数、20px tileとlayout24px、coral callout32pxと説明48pxも不整合がある。",
+          "coralをprimary/大きなcalloutに限定する指示とcoral badge、markを白反転しない指示とfooterのon-dark wordmarkなど、例外と部品仕様を整理する必要。hover記録禁止とhover影の記載も併存する。",
+          "fontの専用許諾/非公開という本文主張、logo SVG、顧客avatar/コードやUIはrootMITで包括許諾しない。40/36pxの大きさと全体の可読性/操作適合を今回測定していない。"
+        ],
+        "inventory_id": "github:d0910107ad6c4882fe15f6f0069f9afaef596b68894ee6f472a1d421d5513d99",
+        "negative": "この静的分析からClaudeの実機能/モデル能力/現在のplanやcomputer-use動画を検証済みとする、又はAnthropic logo/独自fontをそのまま使用する。",
+        "new_copy_grants": 0,
+        "positive": "承認済みの開発ツール紹介案で、許諾済みのコード例を横scroll可能なdark cardに置き、抽象feature説明と区別する。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 76,
+        "reader_state": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          589
+        ],
+        "required_changes": [
+          "列数・padding・coral/mark例外の矛盾を対応部品単位で解消し、動的demoの欠測を静的画面で検証済みにしない。",
+          "素材/書体の個別条件を確認して日本語Windows表示へ合わせる。code mockupの表示内容と権限、focus/keyboard/validation/scrollを実受入で確かめ、本人の同じ画像範囲の回答後に実装する。"
+        ],
+        "semantic_source_chunk": "ac83b7e209d94c5e8620a4bf13d75698",
+        "semantic_source_chunk_sha256": "a3ad91696162357dcc781a114fccfd58a8faa4d8c22f270c01e64832976315ef",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 33586,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "f92dc464d9bfdb6c6306f45a9ce406c6fca17432",
+        "source_path": "design-md/claude/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "3d972f34f8d4f33b442fa28220cf3b7ca2f13c0a97c468e3988148f82521f9df",
+        "unmet": [
+          "実chat/モデル/API/連携/サイト/動画は調査・実行0。font/brand素材の個別許諾未確認。",
+          "303行は例示copy filterの行内伏字、400行はcoreの全行伏字。mask2/rawfalseを保持し、公開font名の他行一致を新raw全読へ加算しない。"
+        ],
+        "use": "温かい地色・serif見出し・暗いコード例を組み合わせる、開発製品紹介の設計参考。",
+        "value": "feature説明のcream cardと実製品/コードmockupのdark cardを分け、code横scroll・connector tile・focus ringを具体部品で示す。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/claude/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:e6c1e34949481f232f2e1daca565b39050924feb8ff27adc0c00489eaca3b094",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/clay/DESIGN.md",
+      "source_sha256": "1abd803a207fbe950a06e155adcd6013c2e149b13e7b88844f5069f9d3d99eb3",
+      "source_git_blob": "4934340cffe12633bc7dd7800fb19237c8768c3f",
+      "source_bytes": 25705,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 77,
+      "reader_state": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        541
+      ],
+      "semantic_source_chunk": "ac83b7e209d94c5e8620a4bf13d75698",
+      "semantic_source_chunk_sha256": "a3ad91696162357dcc781a114fccfd58a8faa4d8c22f270c01e64832976315ef",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 1,
+      "case_manifest_index": 14,
+      "case_sha256": "1feb5c099023ac21615605f3d56aea67d30f4134bb769f8f490128601234bf72",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "72px/500の丸いdisplay、12px操作/16pxcontent/24pxfeature、黒CTAと色面上の反転button、96pxsectionを具体化する。",
+          "色ごとに用途を提案する一方、紹介画面における割当であり、実CRMデータの意味や色だけの状態識別を検証したものではない。pink上のwhite18pxtext等は実可読性の確認を要する。",
+          "button-on-colorは説明でwhiteだがYAMLはcanvas #fffaf0。pricing3–4列/desktop3列/4→2→1が揺れる。『6色』はfeature面の集合でmint/coral accentやsemantic色の全面禁止ではない。",
+          "Plain Blackの専用許諾/非公開という本文主張、commissioned3Dやmascotは素材の一次条件を今回確認していない。animation/validation/実product table・formula・builderは明示的に対象外。"
+        ],
+        "inventory_id": "github:e6c1e34949481f232f2e1daca565b39050924feb8ff27adc0c00489eaca3b094",
+        "negative": "Clayの発注キャラクターをMIT素材とする、又は実CRM/agent連携・顧客実績・formula機能を紹介cardだけで完成扱いする。",
+        "new_copy_grants": 0,
+        "positive": "承認済みの説明案で、利用権のある立体素材とproduct fragmentを使い、色面の役割を文章/見出しでも示す。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 77,
+        "reader_state": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          541
+        ],
+        "required_changes": [
+          "色面集合とaccent/semanticの範囲、反転button背景、pricing列数を整合させる。『常に3D/この色順』を一般UIの必須ルールへ拡張せず、必要なfocus/keyboard/errorを補う。",
+          "独自font・発注3D・mascot・product screenshot/顧客quoteの利用条件を個別に確認する。日本語Windowsでのdisplay字間/色面可読性/44px実hit areaを確かめ、本人が回答した画像範囲で実装する。"
+        ],
+        "semantic_source_chunk": "ac83b7e209d94c5e8620a4bf13d75698",
+        "semantic_source_chunk_sha256": "a3ad91696162357dcc781a114fccfd58a8faa4d8c22f270c01e64832976315ef",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 25705,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "4934340cffe12633bc7dd7800fb19237c8768c3f",
+        "source_path": "design-md/clay/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "1abd803a207fbe950a06e155adcd6013c2e149b13e7b88844f5069f9d3d99eb3",
+        "unmet": [
+          "現行site/実product/CRM/enrichment/API/3D生成は調査・実行0。3D制作の資源割当や新費用は発生させない。",
+          "383行は伏字を保持しmask1/rawfalse。font・素材条件は本文主張と実確認を区別する。"
+        ],
+        "use": "色付きfeatureカードと立体イラストでデータ製品を説明する紹介ページの設計参考。",
+        "value": "明るいcreamの地とfooter、6種類のfeature surface、dark tealのfeatured tier、product UI fragmentの役割を区別する。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/clay/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:0ac90c94668115079d0d70fe3f091f8ce2a803705f2883432e05ad90027413ac",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/clickhouse/DESIGN.md",
+      "source_sha256": "50987e29b603cc7503ebe724af810fcf43845e96fdd4083e0fbe5fe00d2cdd2e",
+      "source_git_blob": "f9b61f0a2be93c3e0b396a9a1b4ae1df02791cf9",
+      "source_bytes": 25986,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 78,
+      "reader_state": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        544
+      ],
+      "semantic_source_chunk": "ac83b7e209d94c5e8620a4bf13d75698",
+      "semantic_source_chunk_sha256": "a3ad91696162357dcc781a114fccfd58a8faa4d8c22f270c01e64832976315ef",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 1,
+      "case_manifest_index": 15,
+      "case_sha256": "0e5f54f8c93b95fe1273d89455454fdccd334ca5ff856008923f97ef6221d1bd",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "72/56/40/32pxInter700display、16px本文400、mono code、40px操作8pxradius、content12px、96pxsectionの定義がある。",
+          "code/terminalの内部chromeと外側のelevationを分け、statを背景なし黄色text、yellow surface上を黒textとする役割分担。badgeの黄色例外やsemantic/code色をbrand accentと区別する必要がある。",
+          "『丸いbutton禁止』という文と8pxbutton定義、pricing3–4列と4→2→1の範囲、yellow band内black CTAの独立token未定義は補足が要る。36pxiconが中心にある事実はhit area適合の証拠ではない。",
+          "539行は黄色hexをscreenshot採取で公式値とは異なりうると明記。stat/benchmark/顧客logoは本文中の紹介で、性能測定・利用実績・素材権利の確認結果ではない。実Cloudのconsole/monitoring/browserは対象外。"
+        ],
+        "inventory_id": "github:0ac90c94668115079d0d70fe3f091f8ce2a803705f2883432e05ad90027413ac",
+        "negative": "この紹介分析をquery consoleの仕様/DB性能の証明にする、近似yellowを公式brand保証とする、又は他社logo/統計を自分の実績にする。",
+        "new_copy_grants": 0,
+        "positive": "承認済みのデータ製品紹介案で、利用条件を確認した無害なSQL例をcode cardに示し、測定済みの数字だけをstatに置く。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 78,
+        "reader_state": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          544
+        ],
+        "required_changes": [
+          "pixel近似/公式未確認、badge/semantic例外、buttonの形状表現、pricing列数とyellow面の反転CTAを明確化し、hover/error/keyboard/実hit areaを必要範囲で補う。",
+          "実績の数字・logo・コード例を使うなら出所と利用条件を確認する。font名のopen-sourceという本文主張から配布物すべての権利へ広げず、対象日本語Windows表示を確かめ、本人画像回答後に実装する。"
+        ],
+        "semantic_source_chunk": "ac83b7e209d94c5e8620a4bf13d75698",
+        "semantic_source_chunk_sha256": "a3ad91696162357dcc781a114fccfd58a8faa4d8c22f270c01e64832976315ef",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 25986,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "f9b61f0a2be93c3e0b396a9a1b4ae1df02791cf9",
+        "source_path": "design-md/clickhouse/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "50987e29b603cc7503ebe724af810fcf43845e96fdd4083e0fbe5fe00d2cdd2e",
+        "unmet": [
+          "現行site/DB/SQL/Cloud/API/benchmarkは調査・実行0。customer logoやfont配布条件の個別確認なし。",
+          "376行は伏字のまま。mask1を実秘密1件/不存在の保証としない。"
+        ],
+        "use": "SQLや製品画面を見せながら性能系製品を説明する、dark基調の設計参考。",
+        "value": "黄色CTA/大きなstatと、暗いcode/product card、黄色feature/featured tierを区別し、mono codeの横scrollを具体化する。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/clickhouse/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:1fcc1ee174142e05a21a3533a565f2663b7be4a4693be38e0c5b4a68030d8ba9",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/cohere/DESIGN.md",
+      "source_sha256": "1c49a5a5f88d43841d4f4afa33831328d47a5715048700a3b75086a822575883",
+      "source_git_blob": "cc8bdf0482e7609c93a35d9b4526293d575dde8d",
+      "source_bytes": 20020,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 79,
+      "reader_state": [
+        2,
+        0,
+        0,
+        true,
+        true,
+        451
+      ],
+      "semantic_source_chunk": "ac83b7e209d94c5e8620a4bf13d75698",
+      "semantic_source_chunk_sha256": "a3ad91696162357dcc781a114fccfd58a8faa4d8c22f270c01e64832976315ef",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": true,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 0,
+      "case_manifest_index": 16,
+      "case_sha256": "0be12084ec15aec1ccd4ae9c8527de63f086ea97f46bb02afcbd4b4ec0e09b58",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "white editorialとdeep-green/navy product band、near-black primary pill、coral taxonomy/blue linkを区別。22pxmedia/8pxproduct/4pxutilityなど用途でradiusを変える。",
+          "researchは題名/topic/dateをruleで区切り、contactは2列入力を1列へ。iteration443–445はinvented dashboardを避け、構造に忠実なplaceholderを使うと記す。",
+          "mobile breakpoints/comfortable targetの説明は450行のdesktopと既存pattern由来で、今回の実モバイル観測ではない。error色もvalidation-likeな抽出であり送信状態の動作検証ではない。",
+          "YAMLのprimaryはnear-blackのみだが本文338はwhite反転もあり、blog active fillやinput/focus/validation等は色や文章があっても完整な状態定義ではない。独自font/icon・trust logo・3D/写真は別の素材条件。"
+        ],
+        "inventory_id": "github:1fcc1ee174142e05a21a3533a565f2663b7be4a4693be38e0c5b4a68030d8ba9",
+        "negative": "推定mobileや未表示testimonialを実観測とする、agent mockupを実稼働/接続済みとする、又はtrust logoを利用許諾/自社導入実績の証明にする。",
+        "new_copy_grants": 0,
+        "positive": "承認済みの研究索引案で、架空の研究成果や顧客実績を埋めず、placeholderと実資料のpublication rowを区別して見せる。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 79,
+        "reader_state": [
+          2,
+          0,
+          0,
+          true,
+          true,
+          451
+        ],
+        "required_changes": [
+          "desktop観測とmobile推定、late-load skeletonを保持し、足りないactive/focus/error/反転部品を対象の実仕様で補う。未記録variantを勝手に観測済みの例へ加えない。",
+          "font/icon/media/企業logoの利用条件と日本語Windowsfallbackを確認する。画面幅境界、keyboard、form/rowの実可読性と操作領域を確かめ、本人画像回答後に実装する。"
+        ],
+        "semantic_source_chunk": "ac83b7e209d94c5e8620a4bf13d75698",
+        "semantic_source_chunk_sha256": "a3ad91696162357dcc781a114fccfd58a8faa4d8c22f270c01e64832976315ef",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 20020,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "cc8bdf0482e7609c93a35d9b4526293d575dde8d",
+        "source_path": "design-md/cohere/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "1c49a5a5f88d43841d4f4afa33831328d47a5715048700a3b75086a822575883",
+        "unmet": [
+          "現行site/実AI/agent/API/form送信/mobile再撮影は調査・実行0。font/写真/企業logoの個別許諾未確認。",
+          "mask0はこのfilterで伏せた行がなかった実測であり、秘密/PII不存在の保証ではない。"
+        ],
+        "use": "研究記事・製品紹介・問い合わせを、面の色と行構造で分ける企業向けAIサイトの設計参考。",
+        "value": "96px級の大見出しと抑えた本文、open research row/大きなtaxonomy chip/media cardを使い分け、架空dashboard内容を作らない規則が具体的。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/cohere/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:1d9ed2644de30f3939c093d95afc8d1d7c3b0da2e31cf3d97095aac1262aeb31",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/coinbase/DESIGN.md",
+      "source_sha256": "c8c67800dd7f58fcc87ed7d267a3bba862e3419e499e8a66d67731a69d2de1d6",
+      "source_git_blob": "02bd7262fcca3db250d109a69a641ce677a7d784",
+      "source_bytes": 25853,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 80,
+      "reader_state": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        570
+      ],
+      "semantic_source_chunk": "ac83b7e209d94c5e8620a4bf13d75698",
+      "semantic_source_chunk_sha256": "a3ad91696162357dcc781a114fccfd58a8faa4d8c22f270c01e64832976315ef",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 1,
+      "case_manifest_index": 17,
+      "case_sha256": "d6f61047fc051fbb8113dd03c89ed5b98471d88022aefdca9892a76afea870d3",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "Display400の80pxhero、Mono18px数値、100pxpill CTA44/56px、24pxcard、48pxinputなどを記述。第三者cookie widgetの色をブランドCTAと誤認しない基準が具体的。",
+          "display familyをheroのみとする説明とsection/CTA見出しのDisplay定義、shadow無しの冒頭とhover一段の表、nav640/768pxとhero40px/段階36pxなどで範囲が揺れる。",
+          "price changeを色だけで表す記述は符号/文章/補助識別と実表示を確認する必要。44px高さ/32pxicon+rowpaddingからAAA/実48px領域を確定した証拠はない。",
+          "規制/機関向けbadgeや残高を示すproduct mockup、ブランドfont/iconは実契約/現在の取引仕様/自社実績/利用許諾の証明ではない。validationはfocus以外未取得。"
+        ],
+        "inventory_id": "github:1d9ed2644de30f3939c093d95afc8d1d7c3b0da2e31cf3d97095aac1262aeb31",
+        "negative": "この分析を注文/送金/規制適合の仕様書にする、cookie widgetの色をブランドと取り違える、又は他社画面の残高やbadgeを自社実績にする。",
+        "new_copy_grants": 0,
+        "positive": "承認済みの情報表示案で、実資産を含まない許諾済みmockupと検証済み数値を使い、方向を色/符号/labelで示す。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 80,
+        "reader_state": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          570
+        ],
+        "required_changes": [
+          "family/見出し範囲・shadow例外・nav/hero breakpointsを整合させ、価格方向を色のみに依存させない表示とkeyboard/focus/errorを補う。",
+          "独自font/icon/製品画面/規制badgeの利用根拠を個別に確認し、本文の印象から安全性や実績を保証しない。対象日本語Windows・実hit areaを検証し、本人画像回答後に実装する。"
+        ],
+        "semantic_source_chunk": "ac83b7e209d94c5e8620a4bf13d75698",
+        "semantic_source_chunk_sha256": "a3ad91696162357dcc781a114fccfd58a8faa4d8c22f270c01e64832976315ef",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 25853,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "02bd7262fcca3db250d109a69a641ce677a7d784",
+        "source_path": "design-md/coinbase/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "c8c67800dd7f58fcc87ed7d267a3bba862e3419e499e8a66d67731a69d2de1d6",
+        "unmet": [
+          "現行site/login/注文/市場/金融API/資産操作は調査・実行0。font/商標/製品画面の個別利用条件未確認。",
+          "394行は伏字のまま。mask1は実秘密数/不存在の保証ではない。"
+        ],
+        "use": "白い紹介面と暗い製品mockupを重ね、数値表と操作色を整理する設計参考。",
+        "value": "blue CTAと価格方向のsemantic色、Display/Sans/Monoの三役、dark/light/outline button、単一shadow tierと重なったcardを別定義にする。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/coinbase/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:2fb5055c1983fc0115552c26bc8e654e7f64547be814d552d23ca525917bcb88",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/composio/DESIGN.md",
+      "source_sha256": "e7db886dabecca61f29b83e8f46d7a1e8a43889d30b81bc6e48162ccaafcbb2f",
+      "source_git_blob": "fe8d23a93af8c927b49c2bf7e4c05e9378c33a4c",
+      "source_bytes": 20606,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 81,
+      "reader_state": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        506
+      ],
+      "semantic_source_chunk": "ac83b7e209d94c5e8620a4bf13d75698",
+      "semantic_source_chunk_sha256": "a3ad91696162357dcc781a114fccfd58a8faa4d8c22f270c01e64832976315ef",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 1,
+      "case_manifest_index": 18,
+      "case_sha256": "336926e751e7e7f73056a1396845458eee536f1a0f3e111ea1473af203ec8c32",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "72px/500displayと13pxmono code、8pxCTA40px、12/16pxcard、near-blackの地と青glow、4→2→1のtoolkit gridを記述。",
+          "terminal paneはYAML/部品でsurface-card #181818だがpalette/明度段の説明ではsurface-card-elevated #222222。mobile navは640px表と768px説明で揺れる。『pill』という呼称とfullpill禁止/8px定義の範囲も明確化が必要。",
+          "40px+paddingからAA/AAAを断定する482行は実hit areaの測定ではない。focus以外validation未取得と記すが、入力focusの具体状態も部品一覧では十分に記載されていない。",
+          "cookie widgetからCTA色を採らない基準は有用。toolkitロゴ/星数/接続statusやterminal出力は紹介用mockupであり、実integration・利用実績・サービス権限の証拠ではない。"
+        ],
+        "inventory_id": "github:2fb5055c1983fc0115552c26bc8e654e7f64547be814d552d23ca525917bcb88",
+        "negative": "heroのterminalを実行する、toolkit cardを接続/権限付与済みと扱う、又はmobile1pane化だけで他paneの内容を捨てても検証済みとする。",
+        "new_copy_grants": 0,
+        "positive": "承認済みの開発ツール紹介案で、利用条件を確認した無害なcode/outputをmockupと明示し、paneと操作を区別して見せる。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 81,
+        "reader_state": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          506
+        ],
+        "required_changes": [
+          "terminalの明度段、nav幅境界、8pxCTAの呼称を整合させ、focus/keyboard/error/可読性と実操作領域を必要範囲で補う。4paneを1paneへ畳むときの情報欠落も対象内容で検証する。",
+          "abcDiatypeやtoolkit企業logo/製品画面・quoteの利用条件を個別確認し、掲載だけで新MCP権限/連携/契約を有効にしない。日本語Windows表示を確かめ、本人の画像回答後に実装する。"
+        ],
+        "semantic_source_chunk": "ac83b7e209d94c5e8620a4bf13d75698",
+        "semantic_source_chunk_sha256": "a3ad91696162357dcc781a114fccfd58a8faa4d8c22f270c01e64832976315ef",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 20606,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "fe8d23a93af8c927b49c2bf7e4c05e9378c33a4c",
+        "source_path": "design-md/composio/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "e7db886dabecca61f29b83e8f46d7a1e8a43889d30b81bc6e48162ccaafcbb2f",
+        "unmet": [
+          "現行site/login/CLI/agent/API/MCP/外部連携は調査・実行0。font/ロゴ/掲載物の個別許諾未確認。",
+          "346行は伏字のまま。mask1を実秘密数/不存在の保証としない。"
+        ],
+        "use": "複数のコード/出力を並べて統合ツールを説明する、dark基調の設計参考。",
+        "value": "2×2 terminal pane、blue spotlight、明度差のelevationとmono codeを組み、toolkit grid・検索・CTAを別部品として定義する。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/composio/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:c360adc5d2ca8fdb2ff7077b16d9512ac72844afd7de9e1c70109cca98c8503b",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/cursor/DESIGN.md",
+      "source_sha256": "a3db9b3019dc2f514fdee7cd0ca0a5232c0bd0119e23178e8eebaf6916258d9d",
+      "source_git_blob": "f457973ed6dfb504a2b42a02845734f52bc399a8",
+      "source_bytes": 21771,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 82,
+      "reader_state": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        537
+      ],
+      "semantic_source_chunk": "d5a7129f84c64061b9e30f28ac9756de",
+      "semantic_source_chunk_sha256": "b231f2c942995f6e4942adf2409c45aed0fbe048d972b63b3fe33c610f407aad",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 1,
+      "case_manifest_index": 19,
+      "case_sha256": "d80eece307fcf210a4b1aa18ac43ff9a9088b634a9fe50b905a99391c3d5d91b",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "72px/400display、8pxCTA40px、黒download44px、12pxcard、80pxsection。timelineはThinking/Grep/Read/Edit/Doneに対応する専用色で、一般action色へ広げないと明記。",
+          "『橙が唯一のaction色』に対してhero主操作はinkのdownloadという例外。IDE-paneはYAML/部品8pxだがradius表12px。nav境界640/768px、全section80pxとCTA96pxなど適用範囲を整理する必要がある。",
+          "gold Done上のwhite11pxlabel、40px+paddingでAA/AAAという断定、1pane化で隠れる情報は実可読性/操作領域/情報保持を検証した証拠ではない。",
+          "独自CursorGothicや比較card・testimonial・IDE画像の権利はrootMITに包括しない。font代替を含む提案値、animation/validation/製品内部の欠測を実仕様と区別する。"
+        ],
+        "inventory_id": "github:c360adc5d2ca8fdb2ff7077b16d9512ac72844afd7de9e1c70109cca98c8503b",
+        "negative": "timeline pastelを一般の操作色に流用する、mockupのDoneで実編集完了と報告する、又は掲載されたmacOS文言だけで他OS工程を追加する。",
+        "new_copy_grants": 0,
+        "positive": "承認済みの開発ツール紹介案で、利用条件を確認したmockupと実態を持つ工程labelを区別して見せる。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 82,
+        "reader_state": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          537
+        ],
+        "required_changes": [
+          "download例外・pane radius・nav/CTA余白を整合させ、timeline label/色/実状態を対応させる。demoのDoneを実作業完了へ読み替えず、focus/error/keyboardと1pane表示の情報保持を補う。",
+          "字体/製品画像/quote/比較主張の個別条件、日本語Windows表示と実hit areaを確かめ、本人が回答した画像範囲で実装する。OS別download文言をWindows完成前の他OS実装要件へ広げない。"
+        ],
+        "semantic_source_chunk": "d5a7129f84c64061b9e30f28ac9756de",
+        "semantic_source_chunk_sha256": "b231f2c942995f6e4942adf2409c45aed0fbe048d972b63b3fe33c610f407aad",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 21771,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "f457973ed6dfb504a2b42a02845734f52bc399a8",
+        "source_path": "design-md/cursor/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "a3db9b3019dc2f514fdee7cd0ca0a5232c0bd0119e23178e8eebaf6916258d9d",
+        "unmet": [
+          "現行site/実IDE/agent/CLI/download/外部サービスは調査・実行0。字体/画像/比較実績の個別条件未確認。",
+          "373行は伏字のまま。mask1/rawfalseを保持し、秘密数/不存在の保証にはしない。"
+        ],
+        "use": "明るい紹介面の中でIDE・agent timeline・コードを見せる設計参考。",
+        "value": "warm cream/橙CTAと、製品内の5色timelineを別役割にし、白card/細線の深さ、multi-pane mockupとmono codeを具体化する。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/cursor/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:37022ef72fed3ce5dd509de586daa6faa23e92ed64eb874548ff84997af04c7b",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/dell-1996/DESIGN.md",
+      "source_sha256": "e186c614b1223fe7015670472ac6bc84b5b3fdd5de5325b3ce5bfb7fbe9c8d6e",
+      "source_git_blob": "09285a8a2fcb13c2e452a01164682e84f6fafcba",
+      "source_bytes": 34592,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 83,
+      "reader_state": [
+        3,
+        4,
+        0,
+        false,
+        true,
+        632
+      ],
+      "semantic_source_chunk": "d5a7129f84c64061b9e30f28ac9756de",
+      "semantic_source_chunk_sha256": "b231f2c942995f6e4942adf2409c45aed0fbe048d972b63b3fe33c610f407aad",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 4,
+      "case_manifest_index": 20,
+      "case_sha256": "4289624e80876912c381b3927d3194222007ffd659dda11815bc83d313aeee3d",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "760px固定table/8px黒枠と8色tintを中核に、modern mobileでは枠縮小/単列化/操作領域拡大を提案。現代のresponsive案は当時観測の事実と分ける必要がある。",
+          "563行は入力formを3captureで見ていないが時代のwidgetから補うと明記。ex-*10面はauto-derived illustrativeでSaaS転用を含み、実Dellのauth/cart/modal/toastの採取ではない。派生scriptやpreview routeは資料内の参照で実行しない。",
+          "赤はCTA/連絡用だけという規則と赤award seal、soft shadow禁止とex-modal/toastのshadow説明、mono-capsというtable説明とTimes caption tokenなどの不整合がある。",
+          "fontが全OSに必ず存在する、歴史上の年代/唯一性等は本文の説明で今回検証していない。古い連絡先・商品/受賞seal・著作権行・GIF/ロゴは利用可能な実データや自社実績にしない。"
+        ],
+        "inventory_id": "github:37022ef72fed3ce5dd509de586daa6faa23e92ed64eb874548ff84997af04c7b",
+        "negative": "自動派生のauth/cartを実1996年採取とする、当時の連絡先/award sealを自社実績として使う、又は固定760px/小さな操作を現在も無検証で強制する。",
+        "new_copy_grants": 0,
+        "positive": "明示承認されたretro案で、利用権を持つ架空でない自分の内容を、色帯/硬い枠/serifで再構成し、modern操作性を別に検証する。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 83,
+        "reader_state": [
+          3,
+          4,
+          0,
+          false,
+          true,
+          632
+        ],
+        "required_changes": [
+          "観測/歴史説明/現代responsive再現/自動派生例の出所を分け、色/影/表headerの矛盾を修正する。table風の見た目と実際の文書構造・keyboard/focus・小画面の4列footerの可読性を両立させる。",
+          "連絡先を複写せず、商品写真・商標・受賞表現・字体の個別条件を確認する。古いOS文言を現在の配布/対応保証へしない。日本語Windows表示を確かめ、本人の画像回答後に実装する。"
+        ],
+        "semantic_source_chunk": "d5a7129f84c64061b9e30f28ac9756de",
+        "semantic_source_chunk_sha256": "b231f2c942995f6e4942adf2409c45aed0fbe048d972b63b3fe33c610f407aad",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 34592,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "09285a8a2fcb13c2e452a01164682e84f6fafcba",
+        "source_path": "design-md/dell-1996/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "e186c614b1223fe7015670472ac6bc84b5b3fdd5de5325b3ce5bfb7fbe9c8d6e",
+        "unmet": [
+          "原snapshot/現行site/歴史一次資料/製品画像は未取得。派生script/preview/kit生成/実UIは実行0。",
+          "初回351行の連絡先表記をfilterが分類しきれず表示した限界を保持。原値/断片は再表示せず、同bytesでwhole-line補正。最終mask4は351/502/539/632、後半2行の表示漏れを予防した。mask数は実秘密数ではない。"
+        ],
+        "use": "1990年代catalog風の枠・色帯・serif本文・stickerを組み合わせる、歴史的な見た目の再解釈の参考。",
+        "value": "黒いpage frame、白い題名bar+製品別tint+写真notchのribbon card、display900とserif14pxの差、硬いbevelを具体化する。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/dell-1996/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:85184591aa1737236b5775a50417b25fb8c9d3eb245a6189489137d81e01ba4a",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/dji/DESIGN.md",
+      "source_sha256": "c8a57520b87286869a88cdd2c07f21080ebda9fb3eee315b11d95c752582c1a9",
+      "source_git_blob": "8d0826603e57570579d0d95a367999667171dbc2",
+      "source_bytes": 42268,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 84,
+      "reader_state": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        882
+      ],
+      "semantic_source_chunk": "d5a7129f84c64061b9e30f28ac9756de",
+      "semantic_source_chunk_sha256": "b231f2c942995f6e4942adf2409c45aed0fbe048d972b63b3fe33c610f407aad",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 1,
+      "case_manifest_index": 21,
+      "case_sha256": "ff6b1fc8af07b7804974f1e4658531d3939de4eaa95474bd07a435f005613a5d",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "selectedは2pxblue ring+23pxpadding、default1px+24px、unavailable dashed+Out of Stockの文言を組み合わせる。固定barは価格とcart/buyを持ち、影はfloating要素へ限定する。",
+          "『同じsurfaceに青は一つ』に対しprimary/store-blueのほかcard link-blueが存在。mobile比較列は635行で単列stack、643行で横scrollと揺れる。all negative tracking/400-600の概説にも0tracking/500役割の例外がある。",
+          "ex-*10面はkit-mirror illustrativeで、fashion/DTCのactual cartという定型説明やmono-caps header/medium shadowが混在。全体のOpen Sans/flat tileルールや実store採取へ一般化しない。",
+          "32/40/48px操作、写真上white ghostや小さなbadge、sticky barの到達性は実hit area/keyboard/焦点遮蔽の検証ではない。商品logotypeは文字scaleではなくartworkと本文が区別する。"
+        ],
+        "inventory_id": "github:85184591aa1737236b5775a50417b25fb8c9d3eb245a6189489137d81e01ba4a",
+        "negative": "派生auth/cart/modalを実DJIから取得した機能にする、青い選択ringだけで注文可能/在庫確認済みとする、又は比較表のstackとscrollを未決のまま適合済みにする。",
+        "new_copy_grants": 0,
+        "positive": "承認済みの製品選択案で、利用条件を確認した画像を使い、選択を枠と意味あるlabel、利用不可を破線と文言で示す。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 84,
+        "reader_state": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          882
+        ],
+        "required_changes": [
+          "blueのrole/面ごとの適用範囲、比較表のmobile方式、typography例外を整合させ、nativeと派生10例を区別する。focus/keyboard/選択・在庫の意味や固定barの情報保持を対象の実仕様で補う。",
+          "ドローン/カメラ写真・logotype・製品仕様/価格・fontの個別出所と利用条件を確認する。日本語Windows/写真上の文字/小画面のcart-buypairを検査し、本人が回答した画像範囲で実装する。"
+        ],
+        "semantic_source_chunk": "d5a7129f84c64061b9e30f28ac9756de",
+        "semantic_source_chunk_sha256": "b231f2c942995f6e4942adf2409c45aed0fbe048d972b63b3fe33c610f407aad",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 42268,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "8d0826603e57570579d0d95a367999667171dbc2",
+        "source_path": "design-md/dji/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "c8a57520b87286869a88cdd2c07f21080ebda9fb3eee315b11d95c752582c1a9",
+        "unmet": [
+          "現行site/store/cart/注文/商品/外部資源は調査・実行0。製品写真/商標/仕様/字体の個別条件未確認。",
+          "607行は例示specを含む1行の行内伏字。core0/illustrative1、rawfalseを保持し、別行で読んだspecと合わせて新raw全読へ加算しない。"
+        ],
+        "use": "写真中心の製品紹介と、選択肢・数量・固定購入barを分けるcommerce表示の設計参考。",
+        "value": "square tile/pill CTA/8pxoption、brand/store別blue、default/selected/unavailableの枠・余白・文言、storeとbrand footerの別部品が具体的。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/dji/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:9715a93ba760329dd7a641a793323236042ccab442ddecf5cee43eb5df0fd559",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/elevenlabs/DESIGN.md",
+      "source_sha256": "3b359acfaafadbb499c7ed3eebe813a76e0be497a7157b77de207fe275068a66",
+      "source_git_blob": "4d13eb977b5fb8f596b69a1ecc8f6de42c1a54a9",
+      "source_bytes": 20943,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 85,
+      "reader_state": [
+        3,
+        2,
+        0,
+        false,
+        true,
+        504
+      ],
+      "semantic_source_chunk": "d5a7129f84c64061b9e30f28ac9756de",
+      "semantic_source_chunk_sha256": "b231f2c942995f6e4942adf2409c45aed0fbe048d972b63b3fe33c610f407aad",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 2,
+      "case_manifest_index": 22,
+      "case_sha256": "b676d5369bfdd770c0e9292de240628f3d725e4975ed87ff781210e10df5d9dc",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "64px/300display、15px/500pill40px、44pxinput、16/24pxcard、96pxsection、波形cardとvoice row/optional previewを記述。装飾orbを操作色/本文色にしない境界が具体的。",
+          "『色はorbだけ/明るい面』という概説にrare Agents dark hero、featured dark tier、semantic色の例外。orbは内容を持たない背景とする説明と、copy背後のorb card/heroの関係を明確にする必要がある。",
+          "outlineをink borderと呼びながら具体値hairline-strong、nav640/768px、40pxpill/32pxicon+rowpaddingからAA/AAA/48px領域を断定する点は補足/実測が必要。hover未記録とhover shadowの表も併存する。",
+          "代替字体をopen-sourceと述べる列挙は個々の配布条件/weightを今回確認していない。音声metadata・波形・quoteは利用可能な声や生成音声、実権利の証拠ではなく、animation/validationも未取得。"
+        ],
+        "inventory_id": "github:9715a93ba760329dd7a641a793323236042ccab442ddecf5cee43eb5df0fd559",
+        "negative": "紹介波形を実生成/再生成功とする、voice rowの掲載を声の利用権と扱う、又はfont代替候補をすべて無料/使用可能と見なす。",
+        "new_copy_grants": 0,
+        "positive": "承認済みの音声製品紹介案で、利用権を確認したpreviewとvoice metadataを区別し、装飾orbを操作状態と混同させない。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 85,
+        "reader_state": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          504
+        ],
+        "required_changes": [
+          "dark例外・orbと内容の層・outline値・nav境界を整理し、font代替の個別条件を確認する。play/pause/focus/error/keyboard/波形の読み上げ代替と実hit areaを対象の実仕様で補う。",
+          "他人の声/音声/quote・製品画面・独自fontの利用条件を個別確認する。日本語Windows表示と装飾が文字を妨げないことを確かめ、本人が回答した画像範囲で実装する。"
+        ],
+        "semantic_source_chunk": "d5a7129f84c64061b9e30f28ac9756de",
+        "semantic_source_chunk_sha256": "b231f2c942995f6e4942adf2409c45aed0fbe048d972b63b3fe33c610f407aad",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 20943,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "4d13eb977b5fb8f596b69a1ecc8f6de42c1a54a9",
+        "source_path": "design-md/elevenlabs/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "3b359acfaafadbb499c7ed3eebe813a76e0be497a7157b77de207fe275068a66",
+        "unmet": [
+          "現行site/既存契約/実音声/生成/再生/TTS/API/agentは調査・実行0。声/製品画面/字体の個別利用条件未確認。",
+          "268/351行を伏字のまま保持。mask2/rawfalseを実秘密数や不存在の保証にしない。"
+        ],
+        "use": "音声製品の紹介で、音声一覧/波形previewと装飾gradientを分ける設計参考。",
+        "value": "Waldenburg300displayとInter本文、ink pill、off-white/白card、32pxvoice iconとrow、装飾orbの用途を別部品にする。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/elevenlabs/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:132c1a2e6a42f923d4ec0d0159859ac473d2999d493dc1b39cab2dbdc35998c8",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/expo/DESIGN.md",
+      "source_sha256": "1be7e129b6f75afaa12318a7c51ab22f6f74a214dec22c4827cecc519f112363",
+      "source_git_blob": "7d25b5dc1d502f008e7f61f55dbd644082c07b6d",
+      "source_bytes": 21660,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 86,
+      "reader_state": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        526
+      ],
+      "semantic_source_chunk": "f27a9e5c08644f32b019d76e9a3514cd",
+      "semantic_source_chunk_sha256": "4cb48b606f7f9a86c24981b57dc33939d6f2e109cc5c3b699c5618e9e0572686",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 1,
+      "case_manifest_index": 23,
+      "case_sha256": "42d42209df17b7c7ea95f0122d8a30d44cb7165545fdaff89ba6d0c584d58e3d",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "Inter600display/400本文とmono code、8pxCTA40px・12pxcontent・16pxdevice card、96pxsectionを定義する。heroの装飾をaction色や他bandへ広げない境界がある。",
+          "blueはbutton/CTAに使わないという476/484行に対しbutton-tertiary-textはblue。pillと呼ぶ説明と8px/fullpill禁止、nav640/768px、search input44pxという説明と汎用text-inputだけの定義も整理が必要。",
+          "40px+paddingからAA/AAAとする説明、device compositeをmobile一画面にする情報保持、hover未記録とhover影は実検査の証拠ではない。fontがfreeなのでlicensing concern無しという523行の一般化は個別配布条件の確認に代わらない。",
+          "端末画面・ecosystem logo・testimonialは素材/表示データ/実績の個別条件を持つ。macOS/iPhoneの例を対象製品のOS要件や本番build成功へ読み替えない。"
+        ],
+        "inventory_id": "github:132c1a2e6a42f923d4ec0d0159859ac473d2999d493dc1b39cab2dbdc35998c8",
+        "negative": "device mockupをEAS build/配布成功の証明にする、Apple端末の例から他OS工程を追加する、又はfreefontという一句で配布物すべての条件を確認不要にする。",
+        "new_copy_grants": 0,
+        "positive": "承認済みの開発製品紹介案で、利用条件を確認した対象端末のpreviewとコード例を示し、工程の表示と実build結果を区別する。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 86,
+        "reader_state": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          526
+        ],
+        "required_changes": [
+          "tertiary linkの意味とCTA規則、8pxの呼称、nav幅境界、input名称を整合させる。focus/error/keyboard/画面縮小の情報保持と実hit areaを必要範囲で補う。",
+          "font/端末画像/製品画面/企業logoの個別条件と表示データを確認する。日本語Windows表示・対象端末を実要件に合わせ、本人が回答した画像範囲で実装する。"
+        ],
+        "semantic_source_chunk": "f27a9e5c08644f32b019d76e9a3514cd",
+        "semantic_source_chunk_sha256": "4cb48b606f7f9a86c24981b57dc33939d6f2e109cc5c3b699c5618e9e0572686",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 21660,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "7d25b5dc1d502f008e7f61f55dbd644082c07b6d",
+        "source_path": "design-md/expo/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "1be7e129b6f75afaa12318a7c51ab22f6f74a214dec22c4827cecc519f112363",
+        "unmet": [
+          "現行site/SDK/build/配布/EAS/端末/simulator/外部APIは調査・実行0。font/端末画像/商標/掲載物の個別条件未確認。",
+          "362行は伏字のまま。mask1/rawfalseは実秘密数/不存在の保証ではない。"
+        ],
+        "use": "端末previewとコード/作業工程を見せる開発プラットフォーム紹介の設計参考。",
+        "value": "black CTAとblue本文link、heroだけのsky wash、device composite、dark code/feature、workflow stepとecosystem logoを別役割で具体化する。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/expo/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:09222baac6148b9fd751ac5e31c52e4d527e90efdb014d0db93f9bcd6a958110",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/ferrari/DESIGN.md",
+      "source_sha256": "1199e2832641cac7e384aaf3b1f3db87f992240cea5d3d1eee04d9dc00acb17c",
+      "source_git_blob": "3c6b43ab529cbddae51f09a2a659d123baf4a1f0",
+      "source_bytes": 24365,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 87,
+      "reader_state": [
+        3,
+        1,
+        0,
+        false,
+        true,
+        531
+      ],
+      "semantic_source_chunk": "f27a9e5c08644f32b019d76e9a3514cd",
+      "semantic_source_chunk_sha256": "4cb48b606f7f9a86c24981b57dc33939d6f2e109cc5c3b699c5618e9e0572686",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 1,
+      "case_manifest_index": 24,
+      "case_sha256": "3e1b5cd573b4736b994f7c052751bbe2c57f18f7e1f4f513264393c9b61adad7",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "cinematic heroは写真全面/余白0、editorialは1280px容器、白preowned4列、48px矩形CTA、4pxinput、badgeだけpillとする役割分担。",
+          "redをCTA/mark/positionだけへ限定する規則とred livery bandの例外、Hypersailだけという黄の範囲とglobal focus-ringの説明、nav640/768px、hero128px間隔と写真面0pxの適用関係は整理が必要。",
+          "hover色を保持しpreviewでは使わないと明記する一方、hover shadow表もある。資料のpreview制限を実装のfocus/hover/keyboard不足の許可へ広げず、48px高さやpaddingから適合を確定しない。",
+          "driver肖像/氏名/チームbadge、Cavallino、車両写真、FerrariSansや代替字体、数値/価格は個別条件と出所を持つ。実telemetryやconfigurator/validation/animationの欠測を保持する。"
+        ],
+        "inventory_id": "github:09222baac6148b9fd751ac5e31c52e4d527e90efdb014d0db93f9bcd6a958110",
+        "negative": "紹介面からレース結果/在庫/configurator接続済みとする、driver/チームbadgeを無条件に転載する、又は全カードに同じcolumn/paddingを強制する。",
+        "new_copy_grants": 0,
+        "positive": "承認済みの写真中心の紹介案で、許諾済み写真と実データを持つspec/日程を分け、dark heroと密なlight listingの密度差を比較する。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 87,
+        "reader_state": [
+          3,
+          1,
+          0,
+          false,
+          true,
+          531
+        ],
+        "required_changes": [
+          "red/yellow例外、nav境界、hero余白の層、grid familyとpreview状態の範囲を部品別に明確化する。焦点表示/小画面の写真crop・数値可読性/実hit areaを対象仕様で補う。",
+          "商標/車両写真/肖像/掲載値/字体の利用条件を個別確認する。代替候補をまとめて無料と扱わず、日本語Windows表示を確かめ、本人が回答した画像範囲で実装する。"
+        ],
+        "semantic_source_chunk": "f27a9e5c08644f32b019d76e9a3514cd",
+        "semantic_source_chunk_sha256": "4cb48b606f7f9a86c24981b57dc33939d6f2e109cc5c3b699c5618e9e0572686",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 24365,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "3c6b43ab529cbddae51f09a2a659d123baf4a1f0",
+        "source_path": "design-md/ferrari/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "1199e2832641cac7e384aaf3b1f3db87f992240cea5d3d1eee04d9dc00acb17c",
+        "unmet": [
+          "現行site/レース/在庫/configurator/telemetry/外部APIは調査・実行0。肖像/商標/画像/価格/字体の個別条件未確認。",
+          "362行は伏字のまま。mask1/rawfalseは実秘密数/不存在の保証ではない。"
+        ],
+        "use": "写真を主役にした暗い編集面と、白い商品一覧/レース行を組み分ける設計参考。",
+        "value": "0pxCTA、display500と大きな700数値、scarce red、96/128pxの間隔、driver/spec/calendar/preownedを別部品として記述する。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/ferrari/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:493603f56dd6b7c39087cd61159a9aabb47dd0343be91eb15d6c62d3cd2243ef",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/figma/DESIGN.md",
+      "source_sha256": "716ce8431f47eb8b8135552710e3c4d538bccccf1202e4ceac5428c9aada9972",
+      "source_git_blob": "75e79fea9aadc35d4c9a0c75db631be927525f08",
+      "source_bytes": 32316,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 88,
+      "reader_state": [
+        3,
+        2,
+        0,
+        false,
+        true,
+        578
+      ],
+      "semantic_source_chunk": "f27a9e5c08644f32b019d76e9a3514cd",
+      "semantic_source_chunk_sha256": "4cb48b606f7f9a86c24981b57dc33939d6f2e109cc5c3b699c5618e9e0572686",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 2,
+      "case_manifest_index": 25,
+      "case_sha256": "14782aa29109a0a3560834bd447e3c8a899c04cb1714e38a227e4f430c08bd90",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "86px/340display、18px/320本文、20px/480button、24pxcolor panel/48pxpadding、50pxpill。逆色circleのwhite baseは描画時約16%alpha、scrimは約60%と説明するので、tokenだけで同色塗りの不具合と断定しない。",
+          "footerはYAML/部品504でwhiteだがsurface/known-gapsでinverse black、padding64pxと96pxも併存。template padding16pxとlayout24px、全CTA白黒という概説とmagenta promo例外の適用範囲を整理する必要。",
+          "navとheroに同じprimaryがある説明と『同一viewportにprimary2個なら片方neutralize』の指示は、nav例外やactual layoutを確かめず機械適用しない。button20px font/lineHeight1.4とtap説明の20px line-heightも区別する。",
+          "568行はnpxによるlintを勧めるがこの閲覧では実行しない。pastel exactness、proprietary font/UI/template/顧客logoの権利やdynamic marquee、contact errorは確認済みにしない。"
+        ],
+        "inventory_id": "github:493603f56dd6b7c39087cd61159a9aabb47dd0343be91eb15d6c62d3cd2243ef",
+        "negative": "tokenの白baseからalphaを無視してwhite-on-whiteと決めつける、近似pastelを公式値とする、又はlint記述/静的checkmarkだけで検査・plan機能完成と報告する。",
+        "new_copy_grants": 0,
+        "positive": "承認済みの紹介/比較案で、許諾済み内容をpastel story panelと意味のあるselected tabで分け、mobileで各tier情報を保持する。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 88,
+        "reader_state": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          578
+        ],
+        "required_changes": [
+          "footer色/余白・template padding・promo/primary例外を整合させ、inverse alphaを機械定義にも明示する。visible focus ring/error、accordionと縮小product mockの情報保持、keyboard/実hit areaを補う。",
+          "字体/ロゴ/template/製品画面の個別条件とpixel近似を保持し、日本語Windowsのvariable weight表示を確認する。npxの記述をそのまま起動せず、必要な検査は範囲/版/許可を確認して親が行い、見た目は本人画像回答後に実装する。"
+        ],
+        "semantic_source_chunk": "f27a9e5c08644f32b019d76e9a3514cd",
+        "semantic_source_chunk_sha256": "4cb48b606f7f9a86c24981b57dc33939d6f2e109cc5c3b699c5618e9e0572686",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 32316,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "75e79fea9aadc35d4c9a0c75db631be927525f08",
+        "source_path": "design-md/figma/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "716ce8431f47eb8b8135552710e3c4d538bccccf1202e4ceac5428c9aada9972",
+        "unmet": [
+          "現行site/Figmaファイル/plugin/CLI/npx/外部package/フォームは調査・実行0。字体/ロゴ/template/UIの個別利用条件未確認。",
+          "4行は例示filterでdescriptionを伏せ、492行はcore全行伏字。mask2/rawfalseを保持し、秘密数/不存在の保証にはしない。"
+        ],
+        "use": "白黒の操作部と大きなpastel story panel、pricing比較/問い合わせを組み分ける設計参考。",
+        "value": "figmaSansの細かなvariable weight、taxonomy専用mono、black selected tab、magenta promo例外と、mobile accordion/table変換を具体化する。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/figma/DESIGN.md"
+    },
+    {
+      "inventory_id": "github:8b685589079c90a64733fcee5e18f6589a2f4beb84b9904f4eedae03750d5374",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/framer/DESIGN.md",
+      "source_sha256": "a5d47dddacf5a04577cec0be6fe0fc53b7402254c7686874af3e59bcc7588cb4",
+      "source_git_blob": "8351555233ee9379c47bfb57c557e64f0b6c7488",
+      "source_bytes": 29119,
+      "classification": "design_reference",
+      "reader_job": "20261025-142809-todo-3778",
+      "reader_row": 89,
+      "reader_state": [
+        3,
+        2,
+        0,
+        false,
+        true,
+        544
+      ],
+      "semantic_source_chunk": "f27a9e5c08644f32b019d76e9a3514cd",
+      "semantic_source_chunk_sha256": "4cb48b606f7f9a86c24981b57dc33939d6f2e109cc5c3b699c5618e9e0572686",
+      "source_body_directly_read_by_parent_in_this_derivation": false,
+      "source_body_read_complete": false,
+      "source_body_workflow_read_complete": true,
+      "source_body_mask_count": 2,
+      "case_manifest_index": 26,
+      "case_sha256": "9ecdc862756e4f3743da83079fbdcb1397927428323e8494c2dc4ce46b294e12",
+      "meaning": {
+        "final_disposition": false,
+        "findings": [
+          "110px/500/lineHeight0.85/-5.5pxdisplayとInter body15px、100pxpill、20pxpricing card、30pxlargegradient等を記述。gradientをsection全体でなく個別showcaseへ限定する。",
+          "primary button14px line-height+上下10pxなら記載値だけでは34pxで、44px保証に足りない。pricing tab>=40pxも追加min-height等の根拠は未取得。実siteが不適合と断定せず、文書の保証を補正する。",
+          "pricing比較の横scroll/accordion、98px最小breakpoint、pricing padding24/20px、gradient padding32/30pxと幅別radius20/30pxは、部品/幅の対応を明確化する必要がある。",
+          "496行は可読性のためにも負の字間比を緩めるなと強制するが、そのまま対象の受入条件にはしない。特定字体/OpenType、極端なtracking/行高、推定template、未取得validationを実可読性/権利/動作確認へ置き換えない。534行のnpxは資料内コマンド参照のみ。"
+        ],
+        "inventory_id": "github:8b685589079c90a64733fcee5e18f6589a2f4beb84b9904f4eedae03750d5374",
+        "negative": "字間比を守るために読めない表示を正当化する、記載paddingだけで44pxを保証する、又は他pageから推定したtemplate surfaceを直接抽出/権利確認済みにする。",
+        "new_copy_grants": 0,
+        "positive": "承認済みのbuilder紹介案で、許諾済み作品のpreviewと装飾gradientを区別し、選択を明度段とlabelで示して実読性も確認する。",
+        "reader_job": "20261025-142809-todo-3778",
+        "reader_row": 89,
+        "reader_state": [
+          3,
+          2,
+          0,
+          false,
+          true,
+          544
+        ],
+        "required_changes": [
+          "button/tabの高さ保証、比較表の変形方式/幅、padding/radius variantを具体定義し、98px値の出所を確認する。字間比固定の強制は対象日本語Windowsの可読性/拡大/keyboard/focus/error受入に合わせて改訂する。",
+          "GT Walsheim/代替font・template/site screenshot・作品/商標の個別条件、pixel gradientと推定surfaceの区別を保持する。必要な検査の版/範囲/許可を親が確認し、資料のnpxをこの閲覧で起動せず、見た目は本人画像回答後に実装する。"
+        ],
+        "semantic_source_chunk": "f27a9e5c08644f32b019d76e9a3514cd",
+        "semantic_source_chunk_sha256": "4cb48b606f7f9a86c24981b57dc33939d6f2e109cc5c3b699c5618e9e0572686",
+        "source_body_directly_read_by_parent_in_this_derivation": false,
+        "source_bytes": 29119,
+        "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+        "source_git_blob": "8351555233ee9379c47bfb57c557e64f0b6c7488",
+        "source_path": "design-md/framer/DESIGN.md",
+        "source_repo": "VoltAgent/awesome-design-md",
+        "source_sha256": "a5d47dddacf5a04577cec0be6fe0fc53b7402254c7686874af3e59bcc7588cb4",
+        "unmet": [
+          "現行site/builder/template購入/CLI/npx/外部package/フォームは調査・実行0。字体/template/掲載作品/商標の個別利用条件未確認。",
+          "419/471行は伏字のまま。mask2/rawfalseを保持し、実秘密数/不存在の保証にはしない。"
+        ],
+        "use": "dark canvasの明度段・gradient showcase tile・大きなdisplayでbuilderを紹介する設計参考。",
+        "value": "white primary/charcoal secondary、canvas→surface1→surface2のselected、focus blue ring、商品mockupと個別gradient cardを分ける。"
+      },
+      "individual_author_notice": {
+        "path": "LICENSE",
+        "sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+        "applies_to": "Selected author analysis text only, not brand assets/fonts/service functions",
+        "current_parent_exact_notice_checked": true
+      },
+      "current_source_new_semantic_raw_credit": 0,
+      "final_disposition": false,
+      "central_operations": 0,
+      "path": "design-md/framer/DESIGN.md"
+    }
+  ],
+  "counts": {
+    "candidate_paths": 24,
+    "raw_unmasked_primary_full_read": 3,
+    "masked_workflow_primary": 21,
+    "workflow_primary_full_read": 24,
+    "primary_bytes": 691839
+  },
+  "original_reader_masks_and_unmet_scope_preserved": true,
+  "new_parent_semantic_raw_read": 0,
+  "public_projection_pending": false,
+  "new_ledger_adoptions": 0,
+  "whole16_complete": false,
+  "case_operation_manifest": "skills-3080-operations/create-design-reference-090101.json",
+  "case_operation_manifest_sha256": "fc92df3fdb1338c8de904691161eeccacf8c31256dd5e5fd7a5a4eb9fad48f85"
+}

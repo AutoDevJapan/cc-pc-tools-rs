@@ -51,6 +51,8 @@ fn launch_inputs(item: &Value) -> Value {
         "resume_generation":item["resume_generation"],"worker_receipt":item["worker_receipt"],
         "console_request":item["scheduler"]["console_request"],
         "console_fresh_request":item["scheduler"]["console_fresh_request"],
+        "unstarted_review":item["scheduler"]["unstarted_review"],
+        "initial_review":item["scheduler"]["initial_review"],
         "targeted_hold":crate::targeted_dispatch::held(item)})
 }
 
@@ -364,6 +366,9 @@ impl<B: Backend> Scheduler<B> {
                 return;
             }
             i["status"] = json!("doing");
+            if i["subwork"].is_object() {
+                assign_worker(i, s(&j["id"]));
+            }
             remove(i, "dependency_ready");
             if !arr(&i["jobs"]).contains(&j["id"]) {
                 push(&mut i["jobs"], j["id"].clone());
@@ -1228,18 +1233,38 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
         if i["product_review_allocation"].is_object() && !self.backend.product_review_allowed(i) {
             return Err(Error("InputRejected"));
         }
-        if n(&i["scheduler"]["not_before"]) > self.backend.clock() {
+        let cooldown = n(&i["scheduler"]["not_before"]) > self.backend.clock();
+        // A previous generic failure cooldown is not a reason to run an
+        // exhausted Grok again. Only a full fresh quota capsule below can
+        // proceed early; every owner/resource/technical wait stays intact.
+        let quota_recheck = cooldown
+            && i["subwork"].is_object()
+            && i["scheduler"]["phase"] == "retry"
+            && i["scheduler"]["last_stop"] == "failed"
+            && i["scheduler"]["resource_wait"].is_null()
+            && i["scheduler"]["preparation_failure"].is_null()
+            && !crate::targeted_dispatch::held(i)
+            && self.backend.jobs()?.iter().any(|source| {
+                source["id"] == i["scheduler"]["last_job"]
+                    && owns_workspace(i, source)
+                    && source["status"] == "failed"
+                    && cc_job_policy::quota_recovery::provider(s(&source["model"])) == Some("xai")
+                    && cc_job_policy::quota_recovery::quota_source(source)
+            });
+        if cooldown && !quota_recheck {
             return Ok(None);
         }
+        let unstarted = crate::unstarted_review_runtime::prepare(self, i, repo)?;
+        let initial = crate::initial_review::prepare(self, i, repo)?;
         let requested_model = if truth(&i["model"]) {
             &i["model"]
         } else {
             &i["scheduler"]["console_request"]["options"]["model"]
         };
-        if let Some(until) = self
+        if let Some(until) = if unstarted.is_none() && initial.is_none() { self
             .backend
             .resource_until(&json!({"model":requested_model}))?
-        {
+        } else { None } {
             self.edit(&i["id"], |row| {
                 if row["status"] == "todo" && launch_inputs(row) == launch_inputs(i) {
                     if !row["scheduler"].is_object() {
@@ -1288,7 +1313,7 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
         let now = self.backend.clock();
         let mut reserved = false;
         let item=self.edit(&i["id"],|row|{if s(&row["status"])!="todo"||!truth(&row["dispatchable"])||!arr(&row["wait_on"]).is_empty(){return;}
-if launch_inputs(row)!=expected_inputs || n(&row["scheduler"]["not_before"])>now {return;}
+if launch_inputs(row)!=expected_inputs || (n(&row["scheduler"]["not_before"])>now && !quota_recheck) {return;}
 reserved=true;
 if !row["scheduler"].is_object(){row["scheduler"]=json!({});}
 if let Some(recovered)=recovered {merge(&mut row["scheduler"], recovered);}
@@ -1297,7 +1322,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         if !reserved
             || s(&item["status"]) != "todo"
             || !truth(&item["scheduler"]["key"])
-            || n(&item["scheduler"]["not_before"]) > self.backend.clock()
+            || (n(&item["scheduler"]["not_before"]) > self.backend.clock() && !quota_recheck)
         {
             return Ok(None);
         }
@@ -1520,8 +1545,11 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
         }
         if cc_ask::job_policy::review_task("", s(&selection["task_type"]))
             || s(&item["subwork"]["kind"]) == "review"
+            || unstarted.is_some()
         {
-            let sources = cc_ask::job_policy::review_source_jobs(&item, &self.todo()?);
+            let sources = if unstarted.is_some() {
+                cc_job_policy::unstarted_review_state::WRITERS.iter().map(|id| id.to_string()).collect()
+            } else { cc_ask::job_policy::review_source_jobs(&item, &self.todo()?) };
             let mut excluded = Vec::<String>::new();
             for id in &sources {
                 let author=jobs.iter().find(|job|s(&job["id"])==id)
@@ -1534,13 +1562,24 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 || truth(&accepted_options["model"])
                 || selection["model_explicit"] == true
                 || selection["model_origin"] == "owner_request";
+            if let Some(evidence) = &unstarted {
+                crate::unstarted_review_runtime::select(&item, &mut selection, evidence,
+                    &cc_job_policy::product_retry::digest(text.as_bytes()), self.backend.clock())?;
+            }
+            if let Some(evidence) = &initial {
+                crate::initial_review::select(self,&item,&mut selection,evidence,
+                    &cc_job_policy::product_retry::digest(text.as_bytes()))?;
+            }
             let conflict = excluded
                 .iter()
                 .any(|author| cc_ask::job_policy::same_model(author, s(&selection["model"])));
             let owner_choice = selection["model_origin"] == "owner_request";
-            let quota_choice=crate::quota_recovery::prepare(&mut self.backend,&item,source,&jobs,&mut selection,
-                &cc_job_policy::product_retry::digest(text.as_bytes()))?;
-            if quota_choice && conflict {
+            selection["review_excluded_models"] = json!(excluded);
+            let quota_choice= if unstarted.is_some() || initial.is_some() { true } else {
+                crate::quota_recovery::prepare(&mut self.backend,&item,source,&jobs,&mut selection,
+                    &cc_job_policy::product_retry::digest(text.as_bytes()))?
+            };
+            if quota_choice && excluded.iter().any(|author| cc_job_policy::same_model(author, s(&selection["model"]))) {
                 return Err(Error("ReviewModelConflict"));
             }
             if explicit && owner_choice && conflict {
@@ -1564,7 +1603,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             selection["task_type"] = json!("review");
             // Check the selected review provider too: a legacy GPT hint can
             // route to a depleted default before the CLI ever sees it.
-            if let Some(until)=self.backend.resource_until(&selection)? {
+            if let Some(until)=if initial.is_none() {self.backend.resource_until(&selection)?} else {None} {
                 self.edit(&item["id"],|row| {
                     if row["status"] == "todo" && row["scheduler"]["key"] == item["scheduler"]["key"]
                         && launch_inputs(row) == launch_inputs(&item) {
@@ -1574,6 +1613,13 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 })?;
                 return Ok(None);
             }
+        }
+        if item["subwork"]["kind"] == "research" {
+            crate::quota_recovery::prepare(&mut self.backend, &item, source, &jobs, &mut selection,
+                &cc_job_policy::product_retry::digest(text.as_bytes()))?;
+        }
+        if quota_recheck && !selection["quota_recovery"].is_object() {
+            return Ok(None);
         }
         if !valid_model(s(&selection["model"])) {
             return Err(Error("ValueError"));
@@ -1684,7 +1730,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             }
         }
         if cc_job_policy::review_task(s(&item["title"]), s(&selection["task_type"]))
-            || item["subwork"]["kind"] == "review"
+            || ["review", "research"].contains(&s(&item["subwork"]["kind"]))
         {
             // Bind the same bytes embedded above, before the launch CLI can
             // observe a later edit at the saved specification's path.

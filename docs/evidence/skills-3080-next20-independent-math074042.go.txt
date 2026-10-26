@@ -1,0 +1,36 @@
+package main
+
+import("encoding/json";"fmt";"math";"os")
+
+// Independent boundary oracles for the retained live planning examples.
+// No upstream code, renderer, SDK, UI, device or network is executed.
+func main(){
+ checks:=0;need:=func(ok bool,label string){checks++;if !ok{panic(label)}}
+ chapterLength:=func(n int,d,m float64)float64{return float64(n)*d+float64(n-1)*m}
+ for _,c:=range []struct{n int;d,m,want float64}{{1,100,50,100},{2,100,50,250},{3,100,50,400},{4,80,20,380}}{need(chapterLength(c.n,c.d,c.m)==c.want,"no movement after last chapter")}
+ need(chapterLength(3,100,50)!=3*(100+50),"counterexample: extra final movement adds50")
+ chapter:=func(y float64,n int,d,m float64)(int,float64){i:=int(math.Floor(math.Max(0,y)/(d+m)));if i>=n-1{return n-1,0};local:=math.Max(0,y)-float64(i)*(d+m);return i,math.Max(0,math.Min(1,(local-d)/m))}
+ for _,c:=range []struct{y float64;i int;t float64}{{0,0,0},{99,0,0},{100,0,0},{125,0,.5},{149,0,.98},{150,1,0},{275,1,.5},{300,2,0},{400,2,0}}{i,t:=chapter(c.y,3,100,50);need(i==c.i&&math.Abs(t-c.t)<1e-12,"chapter jump and reverse are direct functions of current position")}
+ for _,u:=range []float64{0,.25,.5,.75,1}{for _,v:=range []float64{0,.125,.5}{z:=1-2*u;r:=math.Sqrt(math.Max(0,1-z*z));x,y:=r*math.Cos(2*math.Pi*v),r*math.Sin(2*math.Pi*v);need(math.Abs(x*x+y*y+z*z-1)<1e-12,"sphere sampling stays on unit surface including poles")}}
+ density:=func(n,r float64)float64{return n/(4*math.Pi*r*r)}
+ need(math.Abs(density(100,2)/density(100,1)-.25)<1e-12,"surface density quarter on doubled radius; not a visibility or performance claim")
+ need(400*2*300*2==4*400*300,"DPR2 quadruples backing pixel area")
+ scale:=math.Max(400.0/800,400.0/600);visibleW:=800*scale;cropX:=(visibleW-400)/2
+ need(math.Abs(scale-2.0/3)<1e-12&&math.Abs(cropX-200.0/3)<1e-12,"object-fit cover crop oracle")
+ need(math.Abs((0+cropX)/scale-100)<1e-12,"left container edge maps to cropped source100, not0")
+ need(math.Abs((400+cropX)/scale-700)<1e-12,"right edge maps to source700, not800")
+ for _,c:=range []struct{x,z,v,indices int}{{1,1,4,6},{2,3,12,36},{10,4,55,240}}{need((c.x+1)*(c.z+1)==c.v&&6*c.x*c.z==c.indices,"grid boundary vertex and index counts")}
+ timeAngle:=func(fps int)float64{a:=0.0;for i:=0;i<fps;i++{a+=.7/float64(fps)};return a}
+ need(math.Abs(timeAngle(30)-.7)<1e-12&&math.Abs(timeAngle(144)-.7)<1e-12,"common clock refresh parity")
+ need(.01*30!=.01*144,"counterexample: frame increment changes speed")
+ fixed:=func(frame float64,frames int)int{acc:=0.0;steps:=0;for i:=0;i<frames;i++{acc+=frame;for acc+1e-12>=1.0/60{acc-=1.0/60;steps++}};return steps}
+ need(fixed(1.0/30,30)==60&&fixed(1.0/120,120)==60,"fixed step accumulator common one-second oracle")
+ need(fixed(0,60)==0,"paused clock creates no simulated ticks")
+ smooth:=func(a,b,x float64)(float64,bool){if !(b>a)||math.IsNaN(x)||math.IsInf(x,0){return 0,false};t:=math.Max(0,math.Min(1,(x-a)/(b-a)));return t*t*(3-2*t),true}
+ value,ok:=smooth(0,1,.5);need(ok&&value==.5,"finite ascending shader ramp")
+ _,ok=smooth(1,0,.5);need(!ok,"reversed edges rejected")
+ _,ok=smooth(0,0,.5);need(!ok,"zero width rejected")
+ _,ok=smooth(0,1,math.Inf(1));need(!ok,"nonfinite input rejected")
+ result:=map[string]any{"domain":"skills-3080-independent-procedure-math-v1","todo":3080,"job":os.Getenv("CC_JOB_ID"),"checks":checks,"passed":true,"basis":"Independent numeric boundary oracles for the retained20 planning examples; no renderer, GLSL compiler, Matter/Three SDK, server, UI, live clock/device or performance test","manifest_sha256":"df3a781e73580f2fb5e7a00cba71d18d6aec889277d4713ab5d5d61d8d2d0ad7","upstream_code_executed":false,"GPU_or_UI_execution":false,"new_ledger_adoptions":0,"audit80_read_success_claimed":false}
+ b,e:=json.MarshalIndent(result,"","  ");if e!=nil{panic(e)};f,e:=os.OpenFile(".ci-work/todo3080/webdesign-next20-independent-math-receipt074042.json",os.O_CREATE|os.O_EXCL|os.O_WRONLY,0600);if e!=nil{panic(e)};defer f.Close();if _,e=f.Write(append(b,'\n'));e!=nil{panic(e)};fmt.Println(string(b))
+}

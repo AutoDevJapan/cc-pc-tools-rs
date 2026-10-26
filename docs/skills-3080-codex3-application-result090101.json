@@ -1,0 +1,36 @@
+{
+  "domain": "skills3080-codex3-parent-explicit-application-v1",
+  "job": "20261026-090101-todo-3080",
+  "actual_same_buffer_proof": "codex3-consumed20-current-proof090101.json",
+  "parent_live_instruction_files_read": 6,
+  "instruction_bytes": 10406,
+  "cases": [
+    {
+      "target": "build-daily-inspiration-sites",
+      "positive": "提供済みの複数参照について版・範囲・確認済み名称と独自内容・画像回答・担当別の実結果を結ぶ制作要件の整理に適用する",
+      "negative": "単一の障害修復から日次収集、5件固定、新名称や別製品公開を作らない",
+      "result": "3つの独立した確定参照なら3件の対応表と欠落範囲を保持する。静止画だけの動作や公開実績は推測しない。",
+      "UI_implemented": false
+    },
+    {
+      "target": "generate-reference-inspired-brand-worlds",
+      "positive": "承認済み名称と意味を保ち、提供画像の構図・質感と固有要素を区別して一軸の改訂を比較する",
+      "negative": "割合や4変更で権利が確定したとせず、原の架空例を製品名へ移さない",
+      "result": "元画像と編集対象を分け、原版・返却版の実寸法と文字を確認する計画を適用。新画像生成やUI実装の許可にはしない。",
+      "image_generated": false
+    },
+    {
+      "target": "web-technique-to-skill",
+      "positive": "実際に動作を確かめた距離発火を、速度変化・静止時の反例と状態/単位/終了処理に分けて記録する",
+      "negative": "未動作コードや静止画像だけでrenderer/性能を成功とせず全gallery改訂を課さない",
+      "result": "手順の適用判断として、固定版と実runtimeの必要証拠、距離基準と時間基準の反例、未測定の描画を分ける。今回は新たな実ブラウザ描画を主張しない。",
+      "renderer_tested": false
+    }
+  ],
+  "fresh_independent_actual_CLI": "fresh3935-actual-cli-native-proof090101.json",
+  "new_source_read_credit": 0,
+  "source_scripts_executed": 0,
+  "new_service_actions": 0,
+  "implicit_selection_proven": false,
+  "new_owner_questions": 0
+}

@@ -1,0 +1,354 @@
+{
+  "creation_receipt_sha256": "405af6d191692d68855cfb43cfa4e261cf0bb916518d186cb50372509cd55e5b",
+  "creation_request_sha256": "d4294453c880d53072054253550b192fc9c141d935ee225f71ad854e02508e5b",
+  "files": [
+    {
+      "bytes": 1542,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "dc4b1dc513222c262ae653d12c7734e4d86223dfe01475692ad17d8ad64021aa",
+      "target": "build-game-changelog/SKILL.md"
+    },
+    {
+      "bytes": 2054,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "264c807e23aa8aa6c14e03582cf25fb2123cfb7731e338b6504f99263b7aa183",
+      "target": "build-game-changelog/references/guide.md"
+    },
+    {
+      "bytes": 8694,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "02cae71e942ccd8eab6ec84b7e0a990cb079155ec459bad71bff83f6464827fa",
+      "target": "build-game-changelog/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "build-game-changelog/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1786,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "3c03723d15d1fa0d71b8d7690af81afcf2d89d0ecca1f19c4465a39173b5501f",
+      "target": "build-game-changelog/references/source.json"
+    },
+    {
+      "bytes": 1339,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "d2ead7bd4c2e0e65a74614287c623c14773403b46f3aab1a5d7d39b8db397b53",
+      "target": "build-game-changelog/references/sources.md"
+    },
+    {
+      "bytes": 1574,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "6365ae530f82777c56e6fea3bf34efdb95d09c250c632d6aa891d9ad05c2df87",
+      "target": "test-playable-web-games/SKILL.md"
+    },
+    {
+      "bytes": 1882,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "daa857bd964872cf4bea536d7d42cb58a1a959bdfd92938c662ddeccc900a0b8",
+      "target": "test-playable-web-games/references/guide.md"
+    },
+    {
+      "bytes": 1715,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "4e22866b1eae238420d48de06ba1df11e70e033a02097575acde827a94d25f9a",
+      "target": "test-playable-web-games/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "test-playable-web-games/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1810,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "8f8936b106c46df79a6f252a35ceff9b162fcf2c7770d1498bd5f377cb0bf6b6",
+      "target": "test-playable-web-games/references/source.json"
+    },
+    {
+      "bytes": 1363,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "6ba6e71e93d954f7368c1b1e1fc91acef42541902da6fcbf69173a26e0532a63",
+      "target": "test-playable-web-games/references/sources.md"
+    },
+    {
+      "bytes": 1634,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "ffe20c1f5f4efdb542ff16032d7cb3e396cf25eba968618789e33e01dc7c7571",
+      "target": "audit-reference-originality/SKILL.md"
+    },
+    {
+      "bytes": 2051,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "8e3b09f617352c2cc4e828a02accdf8a0c9949f3f8fbd818bc13aed2f2296138",
+      "target": "audit-reference-originality/references/guide.md"
+    },
+    {
+      "bytes": 7064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "8b8b5e6c6174ff790f08541e444fe64b48f8d078b1f5783b36c3204a690616b6",
+      "target": "audit-reference-originality/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "audit-reference-originality/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1884,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "9ed1072010ef92f5a3f4f2717b4f18111cc27aba9c42b9ae4c3a56321353a803",
+      "target": "audit-reference-originality/references/source.json"
+    },
+    {
+      "bytes": 1433,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "58430119a6ae3c17d8e7124a5838eb2037bfe9554783a39ee7c508be34abf300",
+      "target": "audit-reference-originality/references/sources.md"
+    },
+    {
+      "bytes": 1711,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "ea02be48096c9a3846e88b74bc640dcd8c040098292c2600b7aadacf6893e8fe",
+      "target": "browser-video-recording/SKILL.md"
+    },
+    {
+      "bytes": 1996,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "935bee192b6fdf1ac2b34438d787c87d0a3eeed0ba6399fe97c85a6e3cafd90f",
+      "target": "browser-video-recording/references/guide.md"
+    },
+    {
+      "bytes": 6146,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "9c9aa4307a6d7bac1bc7dad29cc68468d22be35f9ad5b7b5f48522b1070a4c64",
+      "target": "browser-video-recording/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "browser-video-recording/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1875,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "63b5d53b80368a23343afcee259184aa3b844e03f35c48702e2ab901b3a9b02b",
+      "target": "browser-video-recording/references/source.json"
+    },
+    {
+      "bytes": 1424,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "67ee9146c881d9f8dd36e48ae51f6f879e5482c5234d8ca1afd2fd27db471514",
+      "target": "browser-video-recording/references/sources.md"
+    },
+    {
+      "bytes": 1526,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "5627937797eabbc793ffe0906695751c7ee7babeb1439bf2a398b0aeb95c5765",
+      "target": "stitched-full-page-capture/SKILL.md"
+    },
+    {
+      "bytes": 1868,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "486a8451e83b9fbcf175cf52c1c230dcc7de201433813a3041aa4570d87026e7",
+      "target": "stitched-full-page-capture/references/guide.md"
+    },
+    {
+      "bytes": 3775,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0ff78c19ffd8162e4cb3c44d5e225ab570c55082d2098a73ffb7dad8d295ed01",
+      "target": "stitched-full-page-capture/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "stitched-full-page-capture/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1864,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "a946c169352504a87f2375c216b5127f2e4b5154e42c5a19a4f48fc02ae3b297",
+      "target": "stitched-full-page-capture/references/source.json"
+    },
+    {
+      "bytes": 1413,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b28875f476949a7516ccd8080fbe42aa62c3e580ee0159e528be7b8bcd18bbf6",
+      "target": "stitched-full-page-capture/references/sources.md"
+    },
+    {
+      "bytes": 1572,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "2405f6b58ab051728f4e21ce4264dbd2d04cc65619caf0e3b205b8b72f80af91",
+      "target": "video-to-superprompt/SKILL.md"
+    },
+    {
+      "bytes": 1922,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "66f2baa498f7266ab8a1a0ca7b2845626c35dbf9a4554c6a59bc0a67e5bf86bd",
+      "target": "video-to-superprompt/references/guide.md"
+    },
+    {
+      "bytes": 5538,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "2b0db0096fb715f9e5c6be419f2be5caf0df5e1991ac019308185e2d72c2f950",
+      "target": "video-to-superprompt/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "video-to-superprompt/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1884,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "e5c893c09f0c6be38afa07f78336a7874d8c551f2094b99d591ef6067137d224",
+      "target": "video-to-superprompt/references/source.json"
+    },
+    {
+      "bytes": 1433,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "c140ec3a3d1fab5b028f0f2ffdd98e4202044c17e94fd34fe51818679c4337e0",
+      "target": "video-to-superprompt/references/sources.md"
+    },
+    {
+      "bytes": 1663,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "4cf18a4eae90c0b3e36cfc9735ba7da5eeb960662f7debec508c4b7fec4343f4",
+      "target": "html-to-interaction-prompts/SKILL.md"
+    },
+    {
+      "bytes": 1974,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0892798d5f10e3bf354e0093a8aa36e52d43ac1519664fb3edf914f9e56cbb44",
+      "target": "html-to-interaction-prompts/references/guide.md"
+    },
+    {
+      "bytes": 15114,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "59b800616a70b89b2d5b3d85b8b138c3d22afc83a23fe7e565e08bd1610a8999",
+      "target": "html-to-interaction-prompts/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "html-to-interaction-prompts/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1941,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "78f8fa26b122c5582fe0324062fee23411e6fcc6cd623900b7d33aa6d83cfa77",
+      "target": "html-to-interaction-prompts/references/source.json"
+    },
+    {
+      "bytes": 1489,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "88de93fdab99231ebcf6ad3c234485b247b5ae99fa79376867004cf85bb63f4d",
+      "target": "html-to-interaction-prompts/references/sources.md"
+    },
+    {
+      "bytes": 1594,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b711db3f0b329915af77eeeaa0d5780191d48af96a19e90d905564af6f617b58",
+      "target": "optimize-web-animations/SKILL.md"
+    },
+    {
+      "bytes": 2129,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "e85a7cb8005a78a20cd0f34aeaca6d077b9e8fdcab07474180254818da758d52",
+      "target": "optimize-web-animations/references/guide.md"
+    },
+    {
+      "bytes": 8257,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "37a8f512bb22a4f2112e4ed388068c0cd184d312d64ee00a993da5bf04ded947",
+      "target": "optimize-web-animations/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "optimize-web-animations/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1900,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "dc3e7b1af15522f8ba35c6a844e32b41d941d17a9b2ee8e3a10b1a7b419ddbe1",
+      "target": "optimize-web-animations/references/source.json"
+    },
+    {
+      "bytes": 1449,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "f6369f4526b29585bc27636b2becc936266634d5aef753da1abf5f806a94c924",
+      "target": "optimize-web-animations/references/sources.md"
+    }
+  ],
+  "files_readback_verified": 48,
+  "general_access_granted": false,
+  "job": "20261025-074042-todo-3080",
+  "manifest_sha256": "7e95c0cac90d6a5e0b83c3236b5320da95fe6b600798abd41c75fb0a0e8f734d",
+  "new_central_writes_by_verifier": 0,
+  "new_targets_created": 8,
+  "old_target_writes": 0,
+  "old_unknown_body_reads": 0,
+  "original_registry_recovered": false,
+  "overall16_complete": false,
+  "source_execution": false,
+  "verified_at": "2026-10-25T01:59:17.3444764Z"
+}

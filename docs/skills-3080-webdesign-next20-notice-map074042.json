@@ -1,0 +1,354 @@
+{
+  "domain": "skills-3080-author-notice-path-map-v1",
+  "todo": 3080,
+  "job": "20261025-074042-todo-3080",
+  "source": "MengTo/Skills",
+  "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+  "complete_tree_raw_sha256": "78e159cb1fabd9072bf8a6c667fe55aed8d1525cfffb2a5d2b94932e1faefc59",
+  "complete_tree_git_sha": "8afedc8719f37d2026b55aef282ac27d8d873d76",
+  "tree_truncated": false,
+  "source_count": 20,
+  "notice_name_rule": "case-insensitive basename contains LICENSE/LICENCE, NOTICE, COPYING, COPYRIGHT or THIRD.PARTY; includes prefixed names such as THREE-LICENSE.txt",
+  "ancestor_rule": "root or an ancestor directory of the copied procedure",
+  "all_applicable_notice_paths_checked": true,
+  "selected_sources": [
+    {
+      "source_path": "agent-skills/web-design/glass-dark-mode-clock/SKILL.md",
+      "source_sha256": "7be1a8d076cd1e940f33ae6a6f5b9aaaa91c1078c15b511623a38da30b3397ce",
+      "source_git_blob": "57b3d88eb995748c9a781e5e5449bfcb54bd13ce",
+      "source_bytes": 4151,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "glass-dark-mode-clock/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/globe-particles/SKILL.md",
+      "source_sha256": "b29b372a1790954ea97746dc1ca62d82cc605c00ba4b88d95c3a1f0dcba4e171",
+      "source_git_blob": "b55295f3f06354e1173761fb94fc53d766280663",
+      "source_bytes": 9887,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "globe-particles/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/high-contrast-skeuomorphic-clean/SKILL.md",
+      "source_sha256": "6381a8257a1a42df490a12ce0902fb7b70acd50c8d231e86aaaed29d33fdee81",
+      "source_git_blob": "8e31221e976310d9da9bf1b6bd287a4900058ca4",
+      "source_bytes": 4713,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "high-contrast-skeuomorphic-clean/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/horizontal-scroll-scenes/SKILL.md",
+      "source_sha256": "5b9c76db937e4286a569286cf0295e3b2c4e92cc9aad1b8d03439346bf615a40",
+      "source_git_blob": "25703f60fe06ac48a0e560f4ebe540f89a053bfb",
+      "source_bytes": 10120,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "horizontal-scroll-scenes/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/html-demo/SKILL.md",
+      "source_sha256": "e0c8a5e1cd371be0cd499118cd8de8419ad43709a5e502897f7a44b877f3f276",
+      "source_git_blob": "78864efdfb1ced6ddac73e553d5c2731e45bd278",
+      "source_bytes": 14485,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "html-demo/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/image-first-grid-layout/SKILL.md",
+      "source_sha256": "76aa7e263f9c5b81920622c6c9e175a09eef10bf3d8c11a7d3edf5c95fe58abf",
+      "source_git_blob": "0db1d1e9a06c9967cebfafbc3885d7e71123300f",
+      "source_bytes": 4551,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "image-first-grid-layout/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/light-mode-paper-technical/SKILL.md",
+      "source_sha256": "f09d5b7cb8263b19d0aecc2e305a4d5f249a71187004860b8ff72272026a3f31",
+      "source_git_blob": "97ae8257385b0b6346b511cd68f05e01bec51573",
+      "source_bytes": 4189,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "light-mode-paper-technical/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/matterjs/SKILL.md",
+      "source_sha256": "eeb1d2f6521e337dd5a5f0743ba00c00dd81f6e22b22a6f26c5d77fc44f16be4",
+      "source_git_blob": "b6938096a87c7a0cbdef6deef00d6b7efb1cc203",
+      "source_bytes": 2227,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "matterjs/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/mesh-gradient-dark-blue-clean/SKILL.md",
+      "source_sha256": "4c91c0ba4ccd73389f6bd0fc15b5065dc6c64866ee829249f98fb669c152ce33",
+      "source_git_blob": "f8997859ac5df2c8f44275d9875bad607124c19d",
+      "source_bytes": 9875,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "mesh-gradient-dark-blue-clean/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/operational-enterprise-ai/SKILL.md",
+      "source_sha256": "fbbf4387d16cfb23c95eec0caacb4f204e51ad9fcc2bf2c9e9db9dd451fec566",
+      "source_git_blob": "22fd9b0f1daca4dbc5c2d3975d42b59ac2c42dee",
+      "source_bytes": 4641,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "operational-enterprise-ai/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/paper-cinder-transition/SKILL.md",
+      "source_sha256": "690c85e4b5e2e858960d901a974d5fe7edbe60e8ffbb28a30def63d479fbeb0d",
+      "source_git_blob": "9c6aa8f93736012880cdbeab46fd495cbe63d9d5",
+      "source_bytes": 11558,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "paper-cinder-transition/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/product-proof-saas/SKILL.md",
+      "source_sha256": "eb033e97a506e6a1155c98c861efc4bc99aa0f1afd33d99105d091f3e4b3d801",
+      "source_git_blob": "6c7381c167ddf682d6715fe5cbb1cf0960fd15d5",
+      "source_bytes": 4357,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "product-proof-saas/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/reveal-hover-effect/SKILL.md",
+      "source_sha256": "08650ccaa54b30d3d58dbdae4dfb4dab2ef1820a16a2e4c8973428be977debd8",
+      "source_git_blob": "9a8986f1e08894bff1394f0654c4df5340a789e0",
+      "source_bytes": 10442,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "reveal-hover-effect/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/scroll-scrubbed-visual-sequence/SKILL.md",
+      "source_sha256": "a98df66caf5861caf04ccd109dae86d45f7b4aa280540dac4827a7081630cd5a",
+      "source_git_blob": "ef5f0e104961a78d712eea0b96f44e0a5802bd36",
+      "source_bytes": 4640,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "scroll-scrubbed-visual-sequence/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/split-layout-technical/SKILL.md",
+      "source_sha256": "ae8e02a4461773e0d4c04a3ef367cad1a7b6933565549d3296e4a0e54a8b1c0b",
+      "source_git_blob": "406722079067f9f8d45069f727bdf28f9e582f71",
+      "source_bytes": 4258,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "split-layout-technical/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/technical-wireframe-info-layout/SKILL.md",
+      "source_sha256": "1960e7805000cece8f3d5edd87d89232e31caa5d43a9000842bb29cad4de5597",
+      "source_git_blob": "d47a87edb1576d2a79b84989bcf8abbc30539f9d",
+      "source_bytes": 4272,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "technical-wireframe-info-layout/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/threejs-landscape/SKILL.md",
+      "source_sha256": "fa361bdf1008be41e9447ebe1e9e195a6d0ecc9a781a8e8c63ac25cdc7aedc86",
+      "source_git_blob": "d2317169f082d7ee367e9f547069859c80c0d483",
+      "source_bytes": 8466,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "threejs-landscape/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/threejs-towers/SKILL.md",
+      "source_sha256": "f184ccfbad0ce6ed6e00731decf2fa044109c2bcd40fc9793e4e2de3ee4bb0a7",
+      "source_git_blob": "9cc6dfe97cfc480d806468dcfcf756ab2bfadd32",
+      "source_bytes": 8254,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "threejs-towers/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/threejs-weather/SKILL.md",
+      "source_sha256": "c87f93d7189459fda61cadad78fa938498c0612a106c6084746ee5784fb1d6bd",
+      "source_git_blob": "166e1e0af6dfe5cbb240e1f720ebfc15e09fb352",
+      "source_bytes": 7941,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "threejs-weather/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    },
+    {
+      "source_path": "agent-skills/web-design/webgl-laser/SKILL.md",
+      "source_sha256": "da5aef6c1b15ae0a98b545a5d51ac323c4614484e7faaa2346ec15d2b76dc21e",
+      "source_git_blob": "5a2a1963ae6c4fc2dc42ea4a7be861383fb32001",
+      "source_bytes": 9398,
+      "applicable_ancestor_notices": [
+        {
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+          "bytes": 1064,
+          "path": "LICENSE"
+        }
+      ],
+      "copied_notice_target": "webgl-laser/references/LICENSE.txt",
+      "applicability": "Selected author procedure text only; no third-party assets/fonts/software/service rights."
+    }
+  ],
+  "unrelated_THREE_notice_not_applied": true,
+  "root_MIT_not_general_asset_permission": true,
+  "new_owner_rights_grants": 0,
+  "central_operations": 0,
+  "new_final_decisions": 0,
+  "complete_tree_matching_notice_blobs": [
+    {
+      "git_blob": "b3a5f823a69b4b010f92930ac09e8a776daf65c6",
+      "bytes": 1064,
+      "path": "LICENSE"
+    },
+    {
+      "git_blob": "cf781430404b0ae0ba7d8dea3457a3515dd7c9b9",
+      "bytes": 1081,
+      "path": "agent-skills/web-design/scroll-world-storytelling/demo/threejs/assets/THREE-LICENSE.txt"
+    }
+  ],
+  "unrelated_notice_boundary": "THREE-LICENSE.txt is within an un-copied demo asset subtree, not an ancestor of any copied procedure. Its metadata was checked; this does not claim a new literal read or redistribute that asset."
+}

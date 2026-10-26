@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "origin_todo_id": 3628,
+  "observed_at": "2026-10-26T16:43:40.7568207+09:00",
+  "whole_drive_scan": false,
+  "inventory": {
+    "status": "complete_device_inventory",
+    "volume_count": 5,
+    "partition_count": 7,
+    "disk_count": 3,
+    "volumes": [
+      {
+        "drive": null,
+        "status": "available",
+        "health": "healthy",
+        "total_bytes": 886042624,
+        "free_bytes": 60854272,
+        "comparison_time": "2026-10-24T22:42:09Z",
+        "free_change_bytes": 0
+      },
+      {
+        "drive": "C",
+        "status": "available",
+        "health": "healthy",
+        "total_bytes": 3999776370688,
+        "free_bytes": 360328798208,
+        "comparison_time": "2026-10-24T22:42:09Z",
+        "free_change_bytes": 243585724416
+      },
+      {
+        "drive": null,
+        "status": "available",
+        "health": "unknown",
+        "total_bytes": 100663296,
+        "free_bytes": 64386048,
+        "comparison_time": "2026-10-24T22:42:09Z",
+        "free_change_bytes": 0
+      },
+      {
+        "drive": "D",
+        "status": "available",
+        "health": "healthy",
+        "total_bytes": 4000768323584,
+        "free_bytes": 2159039172608,
+        "comparison_time": "2026-10-24T22:42:09Z",
+        "free_change_bytes": -70326370304
+      },
+      {
+        "drive": "E",
+        "status": "available",
+        "health": "healthy",
+        "total_bytes": 2000395272192,
+        "free_bytes": 858052489216,
+        "comparison_time": "2026-10-24T22:42:09Z",
+        "free_change_bytes": 0
+      }
+    ]
+  },
+  "scan_status": [
+    {
+      "drive": "C",
+      "status": "partial_protected",
+      "logical_bytes": null
+    },
+    {
+      "drive": "D",
+      "status": "partial_protected",
+      "logical_bytes": null
+    },
+    {
+      "drive": "E",
+      "status": "partial_protected",
+      "logical_bytes": null
+    }
+  ],
+  "cleanup": {
+    "executed_by": "3628 implementation job 20261026-162711",
+    "distinct_removed_roots": 3,
+    "source_todos": [
+      2528,
+      2706,
+      2827
+    ],
+    "logical_candidate_bytes": 28052766519,
+    "successfully_removed_logical_bytes": 28052766519,
+    "observed_free_change_bytes": 25442521088,
+    "exact_physical_reclaimed_bytes": null,
+    "files": 12533,
+    "directories_excluding_roots": 2045,
+    "source_and_git_preserved": true,
+    "release_retained": true,
+    "all_targets_absent": true,
+    "force_delete": false,
+    "existing_hourly_lock_reused": true,
+    "previous_12_root_cleanup_included": false,
+    "owner_manual_cleanup_included": false,
+    "e_touched": false
+  },
+  "classification": {
+    "os_and_recovery": "retain EFI/recovery/MSR; latest EFI health unavailable; earlier dirty observation retained",
+    "active_or_unfinished": "retain source with unfinished owner tasks and dirty source; a completed review does not finish the producer",
+    "owner_data": "retain pre-existing E archive; free space exceeds 500GiB",
+    "regenerable": "Cargo metadata, clean/published source, task completion, live-job and guard checks required before removal",
+    "confirmed_finished_unnecessary": "3 new generated debug trees removed and absence/source preservation verified",
+    "owner_decision_pending": "no new owner question; prior four app removals remain applied and closed",
+    "protection_unverified": "retain 2 additional build roots unmeasured, plus existing unknown drive roots; no automatic permit"
+  },
+  "next": {
+    "periodic_inventory": "existing6h task, next2026-10-26T21:06:46+09:00",
+    "cleanup_recurrence": "existing3942 implementation",
+    "c_growth": "existing3796/3815/3816, quota repair3939",
+    "original_protection_recovery": "existing2467",
+    "all_cleanup_complete": false,
+    "owner_input_required": false
+  }
+}

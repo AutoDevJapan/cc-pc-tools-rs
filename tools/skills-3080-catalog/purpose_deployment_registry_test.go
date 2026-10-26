@@ -129,7 +129,7 @@ func TestPurposeGameSixReusesActualDeploymentAndIndividualSourceValidation(t *te
 }
 
 func TestPurposeCommonHeaderRejectsBothCreationCountersAndMixedReceipts(t *testing.T) {
-	for _, s := range []purposeDeploymentSpec{fourPurposeSpec(), gameSixPurposeSpec()} {
+	for _, s := range []purposeDeploymentSpec{fourPurposeSpec(), gameSixPurposeSpec(), utilityEightPurposeSpec()} {
 		for _, kind := range []string{"valid", "created_files", "file_count", "other_set_manifest", "other_set_receipt", "wrong_origin"} {
 			t.Run(s.ReceiptFile+"/"+kind, func(t *testing.T) {
 				var e purposeFourReceipt

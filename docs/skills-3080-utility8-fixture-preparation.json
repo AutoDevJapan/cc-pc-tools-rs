@@ -1,0 +1,47 @@
+{
+  "actual_job": "20261025-074042-todo-3080",
+  "kind": "synthetic internal red-to-blue video fixture, not browser recording or app UI",
+  "file": "utility8-fixture-color-transition074042.mp4",
+  "bytes": 3023,
+  "sha256": "7d5dfb92886e4e667aae3f47ae4f2707aa1da87620e8c808eed73e677d452536",
+  "probe": {
+    "programs": [],
+    "stream_groups": [],
+    "streams": [
+      {
+        "index": 0,
+        "codec_type": "video",
+        "width": 320,
+        "height": 240,
+        "r_frame_rate": "24/1",
+        "avg_frame_rate": "24/1",
+        "start_time": "0.000000",
+        "duration": "2.000000",
+        "nb_frames": "48"
+      }
+    ],
+    "format": {
+      "duration": "2.000000",
+      "size": "3023"
+    }
+  },
+  "frames": [
+    {
+      "time": "0.5",
+      "path": "utility8-fixture-red074042.png",
+      "sha256": "8de9d1da9b7175de21c0e229d8a2d784d96301a0637c48f58e2dfa5b2be78726",
+      "bytes": 799
+    },
+    {
+      "time": "1.5",
+      "path": "utility8-fixture-blue074042.png",
+      "sha256": "f704434ecccf2e94de73bf72e72e55efbded0726ba2aaf4dabeb1083b8d44399",
+      "bytes": 800
+    }
+  ],
+  "source_script_execution": 0,
+  "network": 0,
+  "GPU": 0,
+  "central_operations": 0,
+  "skill_use_executed": false
+}

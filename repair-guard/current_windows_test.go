@@ -17,7 +17,7 @@ import (
 
 func currentFixtureGit(t *testing.T, root string, args ...string) {
 	t.Helper()
-	cmd := exec.Command("git", append([]string{"-C", root}, args...)...)
+	cmd := exec.Command("git", append([]string{"-c", "core.longpaths=true", "-C", root}, args...)...)
 	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
 	if b, err := cmd.CombinedOutput(); err != nil {
 		t.Fatalf("fixture git failed: %v: %s", err, b)

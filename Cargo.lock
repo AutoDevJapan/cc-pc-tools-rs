@@ -482,6 +482,7 @@ checksum = "1c133bc6a41be0d194c306b5506d15e6feeea7b1d6604bd3f8310dfb2ca96486"
 name = "cleanup-8h"
 version = "0.1.0"
 dependencies = [
+ "cc-jobs",
  "serde_json",
 ]
 

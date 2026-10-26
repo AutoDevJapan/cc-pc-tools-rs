@@ -14,22 +14,23 @@ import (
 )
 
 type conversationFixture struct {
-	r             *Runner
-	input         ConversationAskInput
-	question      string
-	created       string
-	decision      json.RawMessage
-	replies       []conversationReply
-	commands      []string
-	posts         int
-	close         int
-	lost          bool
-	deny          bool
-	q             ConversationQuestion
-	answerFailure bool
-	waitFailure   bool
-	edited        map[string]string
-	archived      bool
+	r                *Runner
+	input            ConversationAskInput
+	question         string
+	created          string
+	decision         json.RawMessage
+	originalDecision json.RawMessage
+	replies          []conversationReply
+	commands         []string
+	posts            int
+	close            int
+	lost             bool
+	deny             bool
+	q                ConversationQuestion
+	answerFailure    bool
+	waitFailure      bool
+	edited           map[string]string
+	archived         bool
 }
 
 func conversationTest(t *testing.T, wait bool) *conversationFixture {
@@ -87,7 +88,11 @@ func conversationTest(t *testing.T, wait bool) *conversationFixture {
 				}
 				versions[reply.Message] = v
 			}
-			b, _ := json.Marshal(conversationProof{Domain: "new-owner-recovery-messages", ReadOnly: true, Source: "discord-api-v10", RequestID: sender, Thread: f.question, Owner: r.State.Destination.Owner, Fingerprint: strings.Repeat("a", 64), Question: f.question, Created: f.created, Progress: "610", Body: "aかbを選んでください。", Decision: f.decision, Replies: f.replies, ReplyVersions: versions})
+			original := f.originalDecision
+			if original == nil {
+				original = f.decision
+			}
+			b, _ := json.Marshal(conversationProof{Domain: "new-owner-recovery-messages", ReadOnly: true, Source: "discord-api-v10", RequestID: sender, Thread: f.question, Owner: r.State.Destination.Owner, Fingerprint: strings.Repeat("a", 64), Question: f.question, Created: f.created, Progress: "610", Body: "aかbを選んでください。", Decision: f.decision, OriginalDecision: original, Replies: f.replies, ReplyVersions: versions})
 			return string(b), nil
 		case "question-wait":
 			if f.waitFailure {
@@ -155,7 +160,14 @@ func conversationTest(t *testing.T, wait bool) *conversationFixture {
 						saved = row["owner_question_delivery_receipts"].([]any)
 					}
 					b, _ := os.ReadFile(args[3])
-					row["owner_question_delivery_receipts"] = append(saved, map[string]any{"domain": "todo-owner-question-delivery-receipt-v1", "answer": proof, "answer_file_sha256": bytesHash(b), "wait": wait})
+					record := map[string]any{"domain": "todo-owner-question-delivery-receipt-v1", "answer": proof, "answer_file_sha256": bytesHash(b), "wait": wait}
+					for _, arg := range args {
+						if arg == "--preserve-question-wait" {
+							record["preserved_wait"] = true
+							record["recipient"] = wait.(map[string]any)["origin"]
+						}
+					}
+					row["owner_question_delivery_receipts"] = append(saved, record)
 					row["note"] = string(data)
 					if row["scheduler"] == nil {
 						row["scheduler"] = map[string]any{}

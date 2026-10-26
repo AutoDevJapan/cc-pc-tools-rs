@@ -1,0 +1,84 @@
+package main
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+// Mutations use their own fixture hash to reach presence guards. Live callers
+// use independently fixed original hashes, which are tested separately.
+func TestUtility8RequiredReceiptFields(t *testing.T) {
+	for _, file := range []string{"utility8-purpose-create074042.json", "utility8-fixture-probe074042.json"} {
+		original, e := os.ReadFile(filepath.Join(utility8P, file))
+		if e != nil {
+			t.Fatal(e)
+		}
+		for _, kind := range []string{"valid", "missing_exit", "missing_timeout", "timeout", "missing_stderr", "wrong_digest"} {
+			t.Run(file+"/"+kind, func(t *testing.T) {
+				var m map[string]any
+				if json.Unmarshal(original, &m) != nil {
+					t.Fatal("fixture shape")
+				}
+				switch kind {
+				case "missing_exit":
+					delete(m, "exit")
+				case "missing_timeout":
+					delete(m, "timed_out")
+				case "timeout":
+					m["timed_out"] = true
+				case "missing_stderr":
+					delete(m, "stderr")
+				}
+				raw, e := json.Marshal(m)
+				if e != nil {
+					t.Fatal(e)
+				}
+				want := u8SHA(raw)
+				if kind == "wrong_digest" {
+					want = strings.Repeat("0", 64)
+				}
+				_, e = u8CommandReceipt(raw, want)
+				if (e == nil) != (kind == "valid") {
+					t.Fatalf("%s accepted=%v err=%v", kind, e == nil, e)
+				}
+			})
+		}
+	}
+	raw, e := os.ReadFile(filepath.Join(utility8P, "utility8-purpose-create074042.json"))
+	if e != nil {
+		t.Fatal(e)
+	}
+	var wrapper map[string]any
+	json.Unmarshal(raw, &wrapper)
+	for _, kind := range []string{"valid", "missing_general", "missing_registry", "general_true", "registry_true", "missing_qualified"} {
+		t.Run("creation/"+kind, func(t *testing.T) {
+			var c map[string]any
+			if json.Unmarshal([]byte(wrapper["stdout"].(string)), &c) != nil {
+				t.Fatal("creation fixture")
+			}
+			switch kind {
+			case "missing_general":
+				delete(c, "general_access_granted")
+			case "missing_registry":
+				delete(c, "original_registry_recovered")
+			case "general_true":
+				c["general_access_granted"] = true
+			case "registry_true":
+				c["original_registry_recovered"] = true
+			case "missing_qualified":
+				delete(c, "qualified")
+			}
+			b, e := json.Marshal(c)
+			if e != nil {
+				t.Fatal(e)
+			}
+			_, e = u8CreationCommit(b)
+			if (e == nil) != (kind == "valid") {
+				t.Fatalf("%s accepted=%v err=%v", kind, e == nil, e)
+			}
+		})
+	}
+}

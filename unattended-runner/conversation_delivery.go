@@ -87,6 +87,9 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 		}
 	}
 	old := r.conversationRequest(reply.Message)
+	if old != nil && old.Conversation == q.RequestID && len(old.ConversationAttachmentMetadata) != 0 && !r.repairLiveMetadata(ctx, q, old) {
+		return nil, errors.New("conversation repaired source version differs")
+	}
 	if old == nil || (old.Conversation == q.RequestID && old.Todo == 0 && old.Phase == "conversation_capture_pending") {
 		path := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".json")
 		if _, statErr := os.Lstat(path); !os.IsNotExist(statErr) {
@@ -182,7 +185,9 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 
 func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQuestion, reply conversationReply, req *Request) error {
 	if req.Phase == "conversation_reply_delivered" || req.Phase == "conversation_reply_applied" || req.Phase == "conversation_direction_recorded" || req.Phase == "conversation_implementation_recorded" || req.Phase == "conversation_source_verified" {
-		return nil
+		if len(req.ConversationAttachmentMetadata) == 0 {
+			return nil
+		}
 	}
 	row, err := r.conversationTask(ctx, q.Todo)
 	if err != nil {
@@ -213,6 +218,30 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 			// intake loss. Delivery proof cannot prove application of a different
 			// source SHA, even if a canonical answer was already committed.
 			req.ConversationRecoveryNote = "再取得で受領元が置換済み。メモの旧受領SHAを現在版の反映証拠にしない。実反映と質問の締めは未確認。現在のsource_receipt_sha256=" + bytesHash(receipt)
+		}
+		preserve := len(req.ConversationAttachmentMetadata) != 0
+		if preserve {
+			// A separate explicit normal answer can consume a parked delivery.
+			// Observe both receipts, never issue another answer or call this an
+			// intact wait. A later hold/owner stays outside this historical proof.
+			ready := conversationRepairedDeliveryAfterAnswer(row, q, answer, b, r.Now())
+			var err error
+			if !ready {
+				ready, err = conversationPreservedReplyReady(row, q, answer, b)
+			}
+			if err != nil {
+				return err
+			}
+			if ready {
+				switch req.Phase {
+				case "conversation_reply_delivered", "conversation_reply_applied", "conversation_direction_recorded", "conversation_implementation_recorded", "conversation_source_verified":
+					return nil
+				}
+				req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
+				return r.save()
+			}
+			// This path is shared by the finite repair and the ordinary tick.
+			return r.deliverConversationReplyKeepingWait(ctx, row, q, reply, req, receipt, marker, true)
 		}
 		if conversationDeliveryRecorded(row, q, answer, b) || conversationAnswerRecorded(row, q, answer, b) {
 			req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
@@ -258,7 +287,9 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	}
 	if !hasNoteMarker(row.Note, marker) {
 		instructions := r.conversationReplyInstructions(q, reply, req, receipt, marker)
-		note := strings.TrimRight(row.Note, "\r\n") + "\n\n" + instructions
+		// A prior preserving delivery binds every byte of this prefix, including
+		// its trailing newline. Append without rewriting that saved evidence.
+		note := row.Note + "\n\n" + instructions
 		if len(note) > 1<<20 {
 			return errors.New("conversation delivery note limit exceeded")
 		}
@@ -378,20 +409,125 @@ func conversationWaitOwnerUnchanged(row *TodoRow) bool {
 }
 
 func conversationDeliveryRecorded(row *TodoRow, q ConversationQuestion, answer conversationAnswerReceipt, b []byte) bool {
+	return conversationDeliveryRecordedWithMode(row, q, answer, b, false)
+}
+
+// A normal answer is a distinct later operation. Its exact original wait can
+// consume either this reply or a later post to the same question. The prior
+// preserved receipt still proves only this reply's historical delivery, never
+// that this version was applied, that the wait remains, or that a session read it.
+func conversationRepairedDeliveryAfterAnswer(row *TodoRow, q ConversationQuestion, answer conversationAnswerReceipt, b []byte, now time.Time) bool {
+	if conversationWaitRecorded(row, q) {
+		return false
+	}
+	matched := 0
+	for _, raw := range row.QuestionAnswers {
+		var applied struct {
+			Domain string                    `json:"domain"`
+			Wait   json.RawMessage           `json:"wait"`
+			Answer conversationAnswerReceipt `json:"answer"`
+			SHA    string                    `json:"answer_file_sha256"`
+			At     string                    `json:"applied_at"`
+		}
+		if json.Unmarshal(raw, &applied) != nil || applied.Domain != "todo-owner-question-answer-receipt-v1" {
+			continue
+		}
+		if applied.Answer == answer {
+			if applied.SHA != bytesHash(b) {
+				continue
+			}
+		} else {
+			// A different version of the same post never inherits this proof. A
+			// later message may consume the question, retaining the earlier source.
+			next, e1 := number(applied.Answer.Message)
+			previous, e2 := number(answer.Message)
+			expected := answer
+			expected.Message, expected.ReplySHA, expected.Acquired, expected.ReceiptSHA = applied.Answer.Message, applied.Answer.ReplySHA, applied.Answer.Acquired, applied.Answer.ReceiptSHA
+			if !e1 || !e2 || next <= previous || expected != applied.Answer || !shaPattern.MatchString(applied.SHA) || !shaPattern.MatchString(applied.Answer.ReplySHA) || !shaPattern.MatchString(applied.Answer.ReceiptSHA) {
+				continue
+			}
+		}
+		var wait struct {
+			SHA      string          `json:"question_receipt_sha256"`
+			Origin   json.RawMessage `json:"origin"`
+			Question struct {
+				Request string `json:"request_id"`
+			} `json:"question"`
+		}
+		appliedAt, err := time.Parse(time.RFC3339Nano, applied.At)
+		acceptedAt, acquiredErr := time.Parse(time.RFC3339Nano, applied.Answer.Acquired)
+		if err != nil || acquiredErr != nil || appliedAt.Before(acceptedAt) || appliedAt.After(now) || json.Unmarshal(applied.Wait, &wait) != nil || wait.SHA != q.ReceiptSHA || wait.Question.Request != q.SenderID || len(wait.Origin) == 0 || string(wait.Origin) == "null" {
+			continue
+		}
+		deliveries := 0
+		for _, saved := range row.QuestionDeliveries {
+			var delivery struct {
+				Domain    string                    `json:"domain"`
+				Preserved bool                      `json:"preserved_wait"`
+				Wait      json.RawMessage           `json:"wait"`
+				Recipient json.RawMessage           `json:"recipient"`
+				Answer    conversationAnswerReceipt `json:"answer"`
+				SHA       string                    `json:"answer_file_sha256"`
+				At        string                    `json:"delivered_at"`
+			}
+			if json.Unmarshal(saved, &delivery) != nil || !delivery.Preserved || delivery.Domain != "todo-owner-question-delivery-receipt-v1" || delivery.Answer != answer || delivery.SHA != bytesHash(b) || canonicalHash(delivery.Wait) != canonicalHash(applied.Wait) || canonicalHash(delivery.Recipient) != canonicalHash(wait.Origin) {
+				continue
+			}
+			deliveredAt, err := time.Parse(time.RFC3339Nano, delivery.At)
+			acquiredAt, acquiredErr := time.Parse(time.RFC3339Nano, answer.Acquired)
+			if err == nil && acquiredErr == nil && !deliveredAt.Before(acquiredAt) && !appliedAt.Before(deliveredAt) {
+				deliveries++
+			}
+		}
+		if deliveries == 1 {
+			matched++
+		}
+	}
+	return matched == 1
+}
+
+// The repair promises an intact original wait, rather than merely a historical
+// receipt. An ordinary answer for this question disproves that promise even if
+// a prior preserving delivery is also present. Check the invariant before either
+// accepting a receipt or making a new canonical delivery.
+func conversationPreservedReplyReady(row *TodoRow, q ConversationQuestion, answer conversationAnswerReceipt, b []byte) (bool, error) {
+	if row.Status != "block" || conversationQuestionAnswered(row, q) || !conversationWaitRecorded(row, q) || !conversationWaitOwnerUnchanged(row) {
+		return false, errors.New("conversation repaired question wait differs")
+	}
+	if conversationDeliveryRecordedWithMode(row, q, answer, b, true) {
+		return true, nil
+	}
+	if conversationDeliveryRecorded(row, q, answer, b) {
+		return false, errors.New("conversation non-preserving delivery evidence differs")
+	}
+	return false, nil
+}
+
+func conversationDeliveryRecordedWithMode(row *TodoRow, q ConversationQuestion, answer conversationAnswerReceipt, b []byte, preserve bool) bool {
 	matched := 0
 	for _, raw := range row.QuestionDeliveries {
 		var record struct {
-			Domain string                    `json:"domain"`
-			SHA    string                    `json:"answer_file_sha256"`
-			Answer conversationAnswerReceipt `json:"answer"`
-			Wait   struct {
-				SHA      string `json:"question_receipt_sha256"`
-				Question struct {
-					Request string `json:"request_id"`
-				} `json:"question"`
-			} `json:"wait"`
+			Preserved *bool                     `json:"preserved_wait"`
+			Domain    string                    `json:"domain"`
+			SHA       string                    `json:"answer_file_sha256"`
+			Answer    conversationAnswerReceipt `json:"answer"`
+			Wait      json.RawMessage           `json:"wait"`
+			Recipient json.RawMessage           `json:"recipient"`
 		}
-		if json.Unmarshal(raw, &record) == nil && record.Domain == "todo-owner-question-delivery-receipt-v1" && record.SHA == bytesHash(b) && record.Answer == answer && record.Wait.SHA == q.ReceiptSHA && record.Wait.Question.Request == q.SenderID {
+		var wait struct {
+			SHA      string `json:"question_receipt_sha256"`
+			Question struct {
+				Request string `json:"request_id"`
+			} `json:"question"`
+			Origin json.RawMessage `json:"origin"`
+		}
+		if json.Unmarshal(raw, &record) == nil && json.Unmarshal(record.Wait, &wait) == nil && record.Domain == "todo-owner-question-delivery-receipt-v1" && record.SHA == bytesHash(b) && record.Answer == answer && wait.SHA == q.ReceiptSHA && wait.Question.Request == q.SenderID {
+			if preserve && (record.Preserved == nil || !*record.Preserved) {
+				return false
+			}
+			if preserve && (len(wait.Origin) == 0 || string(wait.Origin) == "null" || canonicalHash(record.Wait) != canonicalHash(row.QuestionWait) || canonicalHash(record.Recipient) != canonicalHash(wait.Origin)) {
+				return false
+			}
 			matched++
 		}
 	}
@@ -399,6 +535,10 @@ func conversationDeliveryRecorded(row *TodoRow, q ConversationQuestion, answer c
 }
 
 func (r *Runner) deliverContinuedConversationReply(ctx context.Context, row *TodoRow, q ConversationQuestion, reply conversationReply, req *Request, receipt []byte, marker string) error {
+	return r.deliverConversationReplyKeepingWait(ctx, row, q, reply, req, receipt, marker, false)
+}
+
+func (r *Runner) deliverConversationReplyKeepingWait(ctx context.Context, row *TodoRow, q ConversationQuestion, reply conversationReply, req *Request, receipt []byte, marker string, preserve bool) error {
 	note := row.Note + "\n\n" + r.conversationReplyInstructions(q, reply, req, receipt, marker)
 	if len(note) > 1<<20 {
 		return errors.New("conversation delivery note limit exceeded")
@@ -420,12 +560,25 @@ func (r *Runner) deliverContinuedConversationReply(ctx context.Context, row *Tod
 	if err != nil {
 		return err
 	}
-	if _, err := r.Run(ctx, conversationTodo, "question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile, "--delivery-only", "--delivery-note-file", noteFile, "--expected-state-file", expectedFile, "--scope-file", scopeFile); err != nil {
+	args := []string{"question-answer", fmt.Sprint(q.Todo), "--answer-file", answerFile, "--delivery-only", "--delivery-note-file", noteFile, "--expected-state-file", expectedFile, "--scope-file", scopeFile}
+	if preserve {
+		args = append(args, "--preserve-question-wait")
+	}
+	if _, err := r.Run(ctx, conversationTodo, args...); err != nil {
 		return errors.New("conversation continued answer delivery deferred")
 	}
 	current, err := r.todo(q.Todo)
-	if err != nil || current.Project != q.Project || !conversationDeliveryRecorded(current, q, answer, b) {
+	if preserve {
+		current, err = r.conversationTask(ctx, q.Todo)
+	}
+	if err != nil || current.Project != q.Project || !conversationDeliveryRecordedWithMode(current, q, answer, b, preserve) {
 		return errors.New("conversation continued answer readback deferred")
+	}
+	if preserve {
+		ready, err := conversationPreservedReplyReady(current, q, answer, b)
+		if err != nil || !ready {
+			return errors.New("conversation preserved answer readback deferred")
+		}
 	}
 	req.Todo, req.Phase = q.Todo, "conversation_reply_delivered"
 	return r.save()

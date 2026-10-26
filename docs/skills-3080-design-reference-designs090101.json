@@ -1,0 +1,24 @@
+{
+  "todo": 3080,
+  "batch_is_not_total_scope_or_count_cap": true,
+  "targets": [
+    {
+      "name": "design-reference-evidence",
+      "inventory_id": "github:81073e22fb3daee089be78165ebc5f631bd78d9eb9feda51eda44b6ba1075926",
+      "source_repo": "VoltAgent/awesome-design-md",
+      "source_commit": "3b605329240ce735b510037cca322f1831fdd7f8",
+      "source_path": "design-md/1win/DESIGN.md",
+      "source_sha256": "64d02d344cb16d68b6882054f35e3bfb7241ad60dc8b7f84f6636a7d1379496a",
+      "entrypoint_sha256": "46d27821c8690cb0c35d91949c459a14778c685f501b9626df47d041d8343a77",
+      "description": "Webデザインの分析資料を確認し、観測・派生例・未確認の仕様や素材条件を分けるときに使う。",
+      "primary_license": "MIT",
+      "individual_notice_sha256": "6d4bdc9a9cf30e7beb593475fdcdbf29f981ea6bd7923f202866145409f87b44",
+      "rights_scope": "Selected author analysis/procedure texts only; no brand images/fonts/voices/service or contract rights",
+      "supporting_case_count": 23,
+      "supporting_cases_are_not23_extra_Skills": true,
+      "positive": "提供したデザイン分析資料の観測・推定・派生例を分け、採用条件を根拠に結ぶ。",
+      "negative": "mockupやroot MITだけで実処理の成功、AA/AAA適合、素材の利用権を確定する。",
+      "actual_manifest": "skills-3080-installed-design-reference-manifest090101.json"
+    }
+  ]
+}

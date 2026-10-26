@@ -1,0 +1,53 @@
+{
+  "todo": 3080,
+  "targets": [
+    {
+      "name": "build-daily-inspiration-sites",
+      "inventory_id": "github:c87324cb088076b4914c3d5b89f3bcaea02a41d1f3e52302444ab262a4023097",
+      "source_repo": "MengTo/Skills",
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_path": "agent-skills/codex/build-daily-inspiration-sites/SKILL.md",
+      "source_sha256": "ba888108ec029d796484d8f18f600763bbf18d9313f1da2a48b5031a944d429c",
+      "entrypoint_sha256": "6a2436f390902ac6dfd5738cd71d34298daddd5da9e716cf08386bc22b95eaee",
+      "primary_license": "MIT",
+      "individual_notice_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "rights_scope": "Selected authored primary and two supporting texts; no third-party fonts, images, marks, services or unread helpers",
+      "positive": "依頼された複数の承認済み参照案について、各担当の素材・要件・実結果の対応が失われる。",
+      "negative": "単一画面の不具合修正を、日次収集・別製品の命名・5サイトの新規公開へ広げる。",
+      "actual_manifest": "skills-3080-installed-codex3-manifest090101.json"
+    },
+    {
+      "name": "generate-reference-inspired-brand-worlds",
+      "inventory_id": "github:2a870985e62a2a51dfadeb4158d6d1c23c46ea4b401e0a5ef269e304204bbfb9",
+      "source_repo": "MengTo/Skills",
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_path": "agent-skills/codex/generate-reference-inspired-brand-worlds/SKILL.md",
+      "source_sha256": "ac378caa7a2093d1f34c0d96b0e21739b6826526ce58b0afe57adebc888fd363",
+      "entrypoint_sha256": "3dd7ced115a62c30464b63a9db680a79d65397d2f4464a22fc199262f8e14f2c",
+      "primary_license": "MIT",
+      "individual_notice_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "rights_scope": "Selected authored primary and two supporting texts; no third-party fonts, images, marks, services or unread helpers",
+      "positive": "既存の承認した名前と意味を保ち、同じ参照に近づけた改訂案を、前版を残して比較したい。",
+      "negative": "同じ画面の技術修復で、未指定の新ブランド名や人物・ロゴを作り、元参照の素材を転載する。",
+      "actual_manifest": "skills-3080-installed-codex3-manifest090101.json"
+    },
+    {
+      "name": "web-technique-to-skill",
+      "inventory_id": "github:e356efe1da77694b896e38273195eb56a9308917ceee70da0e8f0e8f251bb5d9",
+      "source_repo": "MengTo/Skills",
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_path": "agent-skills/codex/web-technique-to-skill/SKILL.md",
+      "source_sha256": "8868b6b6940ef886cff768d2bf3227d5e96db2bce148e796c827d9f711ed284b",
+      "entrypoint_sha256": "77273321cb99977de3698ba98b6a868f7b93d63f26b8a0329740558d09bec697",
+      "primary_license": "MIT",
+      "individual_notice_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "rights_scope": "Selected authored primary and two supporting texts; no third-party fonts, images, marks, services or unread helpers",
+      "positive": "既存の距離ベースのカーソル演出を、速度を変えても間隔を保つ仕組みとして再利用したい。",
+      "negative": "動いていないコードを読んだだけで実証済みとし、全デモ・全gallery・無関係なSkillの改訂を毎回義務にする。",
+      "actual_manifest": "skills-3080-installed-codex3-manifest090101.json"
+    }
+  ],
+  "new_global_primary_read_credit": 0,
+  "whole16_complete": false,
+  "batch_is_not_total_scope_or_count_cap": true
+}

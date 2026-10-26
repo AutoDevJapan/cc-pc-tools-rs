@@ -1,0 +1,82 @@
+{
+  "todo": 3894,
+  "issue": 526,
+  "pr": 528,
+  "previous_head": "b0262bbd35feca29d8d057860b59aee7f3eb2938",
+  "received_reviews": [
+    {
+      "todo": 3918,
+      "head": "e8035106955b87c77574e2a6f88dddc1ab780ddd",
+      "must": 1,
+      "suggestion": 1,
+      "native_source": "native_turn_context",
+      "model": "gpt-6-luna--fast",
+      "effort": "max",
+      "original_agent_message_bytes": 2210,
+      "original_agent_message_sha256": "43d2d3897f40b46f23bd0c2e1f52af808f74fc42369af33faa3e02654588ef2f",
+      "normal_wait_readback_matches": true,
+      "fixed_in_this_delta": true
+    },
+    {
+      "todo": 3919,
+      "head": "b0262bbd35feca29d8d057860b59aee7f3eb2938",
+      "must": 0,
+      "native_source": "native_turn_context",
+      "model": "gpt-6-luna--fast",
+      "effort": "max",
+      "original_agent_message_bytes": 1740,
+      "original_agent_message_sha256": "aab87dea7aec64f5ba69d243f2209afb7bc063411f80e4524fcd545d100d1887",
+      "normal_wait_readback_matches": true,
+      "scope": "finite software comparison only; not repeated"
+    }
+  ],
+  "author": {
+    "native_source": "native_turn_context",
+    "model": "gpt-6.1-sol",
+    "effort": "max",
+    "distinct_from_review_models": true
+  },
+  "red": {
+    "actual_json_alias_cases": 16,
+    "alias_cases_previously_reached_authority": true,
+    "wait_presence_projection_failed": true,
+    "original_exit": 1,
+    "literal_id_selection_followup_exit": 1,
+    "original_log_sha256": "eb9ea41aba64d2354bff56e479a19f258a985161ecd908e67f7a723d32f5f727",
+    "id_selection_log_sha256": "eb5de9189e3c8dba9480a07b09d78fb327db69e709ef6ece847324c46eaa3a4f"
+  },
+  "fixes": [
+    "Exact canonical authority keys are checked before Go struct decoding, including nested and Unicode case aliases.",
+    "Literal positive task ID is validated before wanted-row selection, so an ID alias cannot hide a nominated task.",
+    "Only finite authority metadata is retained; private question/stop-request bodies become presence, and notes/history are discarded.",
+    "Existing Skills projection keeps its default nil-hook contract.",
+    "Documentation distinguishes durable Failed from retained Consuming if failure-state saving fails."
+  ],
+  "tests": {
+    "guard_pass_including_subcases": 197,
+    "race": true,
+    "gomaxprocs": 2,
+    "package_parallelism": 2,
+    "fail": 0,
+    "skip": 0,
+    "vet_exit": 0,
+    "guard_log_sha256": "86d6235bdd0d0253315655e732da3668bc50f58c8d914e39073eea4dc39f1fd6",
+    "unchanged_core_pass": 103,
+    "unchanged_core_log_sha256": "514a26431f8c322a7d7d8fc8153d54662e3f45005ffea6c0324bad32e38fcc1c",
+    "core_tree": "b78629852829b0cd76d5dffd3a3633b49a571af8"
+  },
+  "source_sha256": {
+    "repair-guard/officialci3894_windows.go": "ee4a6ae3e5a1211b18071ee03f70d698e1534e2d7d167c1d426bf45e90aea127",
+    "repair-guard/officialci3894_metadata_windows.go": "ba57e0aaf18f2a87130f22ba9f5b86866a471cfcf93ed02d7342accda7318090",
+    "repair-guard/officialci3894_metadata_windows_test.go": "f529318eed112b9ca87505b5b665af4ae8191f800575460422d39023d8c6cef0",
+    "repair-guard/skills3080_result_windows.go": "d0470ecffcb2a78adbbcf809edc080999d8db414c6ff6b2afa65095cde3bed2a",
+    "docs/official-ci3387-purpose.md": "5cfdd142eeb5d4566551151a36fac3a3647ce7c2b4b5e0f0f931fb1996e65caa"
+  },
+  "latest_delta_review_pending": true,
+  "latest_head_ci_pending": true,
+  "merge": false,
+  "installed_update": false,
+  "actual_software_comparison": false,
+  "real_sdk_prepared": false,
+  "local_cargo_gpu_civ6": 0
+}

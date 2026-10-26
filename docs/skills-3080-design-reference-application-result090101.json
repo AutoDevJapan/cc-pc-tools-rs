@@ -1,0 +1,81 @@
+{
+  "domain": "skills3080-explicit-current-application-v1",
+  "job": "20261026-090101-todo-3080",
+  "model": "gpt-6.1-sol",
+  "effort": "max",
+  "at": "2026-10-26T02:19:37.2125562+00:00",
+  "entry_sha256": "46d27821c8690cb0c35d91949c459a14778c685f501b9626df47d041d8343a77",
+  "guide_sha256": "6b108a0400ea82859cdc8dcd3083e7cc0562b57c121e2d0c3c26cb6ed9c0e127",
+  "actual_buffers_read": [
+    {
+      "index": 22,
+      "sha256": "b676d5369bfdd770c0e9292de240628f3d725e4975ed87ff781210e10df5d9dc",
+      "bytes": 3195,
+      "read_source": "actual qualified consumer content_utf8"
+    },
+    {
+      "index": 3,
+      "sha256": "daa5a650409e702566e680ad261d7f03baaf9edabeeb10f0c2f926a82d23ae1f",
+      "bytes": 2855,
+      "read_source": "actual qualified consumer content_utf8"
+    },
+    {
+      "index": 20,
+      "sha256": "4289624e80876912c381b3927d3194222007ffd659dda11815bc83d313aeee3d",
+      "bytes": 3455,
+      "read_source": "actual qualified consumer content_utf8"
+    },
+    {
+      "index": 1,
+      "sha256": "6b108a0400ea82859cdc8dcd3083e7cc0562b57c121e2d0c3c26cb6ed9c0e127",
+      "bytes": 1704,
+      "read_source": "actual qualified consumer content_utf8"
+    },
+    {
+      "index": 0,
+      "sha256": "46d27821c8690cb0c35d91949c459a14778c685f501b9626df47d041d8343a77",
+      "bytes": 1983,
+      "read_source": "actual qualified consumer content_utf8"
+    }
+  ],
+  "explicit_invocation": true,
+  "parent_meaning_read_entry_guide_selected_cases": true,
+  "cases": [
+    {
+      "case_index": 3,
+      "question": "白いfeatured面と白い文字の記載を、そのまま可読性不良の実測結果にできるか。",
+      "answer": "記載されたtokenの組合せは要確認の根拠になる。背景のalpha、重ね順、状態、実表示を確認してから判定する。kit-mirrorの派生例を実サイトの観測へ昇格させない。",
+      "positive": "画像と同じ範囲の本人回答を保持し、承認された対象でcontentと操作色を分け、実際の可読性を確かめる。",
+      "negative": "白字を無検証で移植し、root MITだけで画像・字体・商標の権利まで取得済みにする。",
+      "outcome": "要確認の条件と派生例の限界を説明できた",
+      "render_or_live_contrast_test": false
+    },
+    {
+      "case_index": 20,
+      "question": "1996年の観測と資料中のauth/cart、現在向けresponsive案を同じ事実として採用できるか。",
+      "answer": "分ける。auth/cart等は自動派生の例、responsive案は現在向け再解釈であり、当時の実観測の証拠にならない。古い連絡先・受賞表現・商品画像を自社の実績へ転用しない。",
+      "positive": "利用権のある内容でretro案を作り、現在の操作領域・keyboard・日本語・狭い画面を別に確認する。",
+      "negative": "派生auth/cartを当時の実機能と呼び、固定760pxや小さい操作部を現在にも無条件に強制する。",
+      "outcome": "歴史・観測・派生・現在の受入を区別できた",
+      "historical_or_live_site_verification": false
+    },
+    {
+      "case_index": 22,
+      "question": "紹介ページの波形やvoice rowは、音声生成・再生成功と声の利用権を証明するか。",
+      "answer": "証明しない。静的な紹介表現、実生成、実再生、契約枠、声の利用条件を別に確認する。44px/AA/AAA等の記載だけで操作領域や適合の確認済みにしない。",
+      "positive": "許諾を確認したpreviewと説明用metadataを区別し、装飾orbと実状態を分けて必要な操作状態を確認する。",
+      "negative": "波形の掲載を生成成功、voice rowを利用許諾、代替字体の列挙を全字体の無料利用許諾とする。",
+      "outcome": "紹介表現と実処理・権利の根拠を区別できた",
+      "service_calls": 0,
+      "audio_generated": 0
+    }
+  ],
+  "original_raw24_new_semantic_read": false,
+  "new_global_read_credit": 0,
+  "implicit_selection_tested": false,
+  "renderer_tested": false,
+  "UI_implemented": false,
+  "assets_or_font_grants": 0,
+  "historical_flag_clarification": "original_source_bytes_not_copied describes the earlier semantic derivation stage. This actual 52-file package includes 24 preserved originals / 691839 bytes. Machine preservation is not new parent semantic reading.",
+  "whole16_complete": false
+}

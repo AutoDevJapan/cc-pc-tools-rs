@@ -1,0 +1,6 @@
+{
+  "exit": 0,
+  "timed_out": false,
+  "stdout": "{\r\n    \"programs\": [\r\n\r\n    ],\r\n    \"stream_groups\": [\r\n\r\n    ],\r\n    \"streams\": [\r\n        {\r\n            \"index\": 0,\r\n            \"codec_type\": \"video\",\r\n            \"width\": 320,\r\n            \"height\": 240,\r\n            \"r_frame_rate\": \"24/1\",\r\n            \"avg_frame_rate\": \"24/1\",\r\n            \"start_time\": \"0.000000\",\r\n            \"duration\": \"2.000000\",\r\n            \"nb_frames\": \"48\"\r\n        }\r\n    ],\r\n    \"format\": {\r\n        \"duration\": \"2.000000\",\r\n        \"size\": \"3023\"\r\n    }\r\n}\r\n",
+  "stderr": ""
+}

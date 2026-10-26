@@ -15,7 +15,7 @@
     },
     {
       "file": "skills-3080-mengto-partial-evaluation.json",
-      "sha256": "abefee8bcb0da8a91f22505a02feb68880c015f57d16001ef523bd951c9c954b",
+      "sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55",
       "rows": 177
     },
     {
@@ -87,12 +87,47 @@
       "file": "skills-3080-sixmile-received-next50-evaluation.json",
       "sha256": "2ccaa01ecbd197b1400201e751165f7eb3013389af75c5be806dd863fb839257",
       "rows": 50
+    },
+    {
+      "file": "skills-3080-sixmile-stream90-evaluation.json",
+      "sha256": "0c43d68d890419946dba55672fcb54ef8249ffd005f045705c38765696d39d6a",
+      "rows": 90
+    },
+    {
+      "file": "skills-3080-sixmile-next42-evaluation.json",
+      "sha256": "8f8e2b5287983b8700519bca67d3a8a2e7e3f3ae0c145651b96df2457c7af2ed",
+      "rows": 42
+    },
+    {
+      "file": "skills-3080-voltagent-design24-evaluation090101.json",
+      "sha256": "05e67cdefac9d5805d7b7ca4c37f3d0cf2560780dfaf3e57b74473513af975af",
+      "rows": 24
+    },
+    {
+      "file": "skills-3080-mcp-site-duplicate-evidence090101.json",
+      "sha256": "fe4547ae7954867716800ec6d8308d400a1be326ae4749d03d02a4227ab3defa",
+      "rows": 1
+    },
+    {
+      "file": "skills-3080-sixmile-next35-evaluation090101.json",
+      "sha256": "f9f1ce7ea694c97c37a33ac51ff6d60af6a0b3544feb4ae8f72effd637da34b0",
+      "rows": 35
+    },
+    {
+      "file": "skills-3080-sixmile-next7-evaluation175504.json",
+      "sha256": "fc0b959225aedbd8312e74b1897fd3eb069230fa43da380ba90bbd6327e25ecf",
+      "rows": 7
+    },
+    {
+      "file": "skills-3080-other193-evaluation214717.json",
+      "sha256": "0876f3bade4de4e4d7effaa3a3620c73267af5cb7b013aef71f97a2cb6f7dccf",
+      "rows": 193
     }
   ],
   "adoption_ledger": {
     "file": "skills-3080-adoptions.json",
-    "sha256": "55e1dd6034b1268ce2fec5edbe0d8fcc4522557eb33b75b572623394a7b0e370",
-    "rows": 59
+    "sha256": "6b3cd7dbb3ab2ebe4a7ea23d24895b277e3a351cb386dd26b3753e97ac3b4103",
+    "rows": 138
   },
   "definition": "Assessment record references and existing final decisions only. No semantic/individual licence approval is inherited through equal bytes. The fixed catalog remains the complete occurrence universe; all holds are retained."
 }

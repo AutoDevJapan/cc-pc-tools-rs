@@ -1,0 +1,90 @@
+package main
+
+// Independent arithmetic and lifecycle examples for the six authored guides.
+// This program does not load or run upstream modules, a renderer, GPU or game.
+import (
+ "encoding/json"
+ "fmt"
+ "math"
+ "os"
+ "sort"
+)
+
+type check struct{Name string `json:"name"`;Target string `json:"target"`;Pass bool `json:"pass"`}
+type vec struct{X,Y,Z float64}
+func add(a,b vec)vec{return vec{a.X+b.X,a.Y+b.Y,a.Z+b.Z}}
+func scale(a vec,s float64)vec{return vec{a.X*s,a.Y*s,a.Z*s}}
+func close(a,b float64)bool{return math.Abs(a-b)<1e-10}
+func fade(a,b,x float64)(float64,bool){if !(a<b){return 0,false};t:=math.Max(0,math.Min(1,(x-a)/(b-a)));return t*t*(3-2*t),true}
+func step(dt,ramp,floor float64,hold bool)float64{if hold{return 0};return dt*math.Max(floor,ramp)}
+func over(premultiplied,background,alpha float64)float64{return premultiplied+background*(1-alpha)}
+func hash32(v uint32)uint32{v^=v>>16;v*=0x7feb352d;v^=v>>15;v*=0x846ca68b;return v^(v>>16)}
+type randomStream struct{seed,counter uint32}
+func(r *randomStream)next()uint32{r.counter++;return hash32(r.seed^r.counter)}
+func unit(v vec)(vec,bool){n:=math.Sqrt(v.X*v.X+v.Y*v.Y+v.Z*v.Z);if n<1e-9||math.IsNaN(n)||math.IsInf(n,0){return vec{},false};return scale(v,1/n),true}
+type capture struct{revision,camera,clock string;pose float64}
+func sameCapture(a,b capture)bool{return a==b}
+func validReaction(arrival,reaction float64)bool{return !math.IsNaN(arrival)&&!math.IsNaN(reaction)&&arrival>=0&&reaction>=arrival}
+func allocateRain(pool []int,reserved int,id int)bool{for i:=reserved;i<len(pool);i++{if pool[i]==0{pool[i]=id;return true}};return false}
+func tir(eta,cosIncident float64)bool{return 1-eta*eta*(1-cosIncident*cosIncident)<0}
+func boxX(origin,direction float64)(float64,float64,bool){
+ if direction==0{if origin < -1||origin>1{return 0,0,false};return 0,math.Inf(1),true}
+ a,b:=(-1-origin)/direction,(1-origin)/direction;if a>b{a,b=b,a};if b<0{return 0,0,false};return math.Max(0,a),b,true
+}
+func main(){
+ checks:=[]check{};record:=func(name,target string,pass bool){checks=append(checks,check{name,target,pass})}
+ fire:="fire-smoke-skill-vfx";anim:="game-dev-combat-animation";polish:="game-dev-combat-skill-polish";ice:="ice-frost-skill-vfx";bolt:="lightning-energy-skill-vfx";water:="water-crystal-skill-vfx"
+ record("hold_precedes_minimum_ramp",bolt,step(.1,0,.05,true)==0)
+ record("released_ramp_floor_is_nonzero",bolt,close(step(.1,0,.05,false),.005))
+ badHold:=.1*math.Max(.05,0);record("negative_floor_before_hold_would_move",bolt,badHold>0&&step(.1,0,.05,true)==0)
+ record("transparent_coverage_preserves_background",fire,close(over(0,.8,0),.8))
+ record("opaque_black_smoke_occludes_background",fire,over(0,.8,1)==0)
+ record("negative_additive_black_cannot_occlude",fire,.8+0==.8&&over(0,.8,.5)<.8)
+ straight,alpha,bg:=.6,.4,.2;premult:=straight*alpha
+ record("premultiplied_once_not_twice",fire,close(over(premult,bg,alpha),.36)&&!close(over(premult*alpha,bg,alpha),.36))
+ lo,_:=fade(.7,2.4,.2);hi,_:=fade(.7,2.4,3)
+ record("descending_fade_endpoints",fire,1-lo==1&&1-hi==0)
+ previous:=1.;monotonic:=true;for i:=0;i<=100;i++{s,ok:=fade(.7,2.4,float64(i)*.04);v:=1-s;monotonic=monotonic&&ok&&v>=0&&v<=previous;previous=v}
+ record("descending_fade_bounded_monotonic",fire,monotonic)
+ _,ok:=fade(2.4,.7,1);record("negative_reversed_smoothstep_edges_rejected",fire,!ok)
+ y0,h:=2.,3.;g:=y0*math.Log1p(h/y0);restored:=y0*math.Expm1(g/y0)
+ record("advection_height_coordinate_inverse",fire,close(h,restored))
+ record("two_half_float_RGBA_targets_color_only_bytes",ice,2*2048*1855*4*2==60784640)
+ record("exit_medium_total_internal_reflection",ice,tir(1.57,.5))
+ record("normal_incidence_no_total_internal_reflection",water,!tir(1.57,1))
+ meters:=math.Exp(-.7*2);centimeters:=math.Exp(-.007*200)
+ record("absorption_coefficient_and_length_units_match",water,close(meters,centimeters))
+ a,b,hit:=boxX(0,1);record("ray_starts_inside_has_zero_entry",ice,hit&&a==0&&b==1)
+ _,_,hit=boxX(2,0);record("parallel_ray_outside_half_space_misses",ice,!hit)
+ a,b,hit=boxX(2,-1);record("outside_inward_ray_sorted_entry_exit",ice,hit&&a==1&&b==3)
+ type event struct{time float64;id int};q:=[]event{{1,3},{.5,8},{1,1}};sort.Slice(q,func(i,j int)bool{if q[i].time==q[j].time{return q[i].id<q[j].id};return q[i].time<q[j].time})
+ record("growth_queue_has_stable_explicit_tie_key",ice,q[0].id==8&&q[1].id==1&&q[2].id==3)
+ baseline,layout,fx:=randomStream{seed:31},randomStream{seed:31},randomStream{seed:97};layoutStable:=true
+ for i:=0;i<8;i++{for k:=0;k<3;k++{fx.next()};layoutStable=layoutStable&&baseline.next()==layout.next()}
+ record("new_effect_random_stream_does_not_consume_layout",fire,layoutStable)
+ shared,control:=randomStream{seed:31},randomStream{seed:31};shared.next()
+ record("negative_shared_random_consumption_changes_layout",fire,shared.next()!=control.next())
+ S:=vec{1,2,3};u,f:=vec{1,0,0},vec{0,1,0};hand:=add(S,add(scale(u,2),scale(f,1)));delta:=vec{3,-1,2};moved:=add(add(S,delta),add(scale(u,2),scale(f,1)))
+ record("shoulder_relative_hand_translates_with_shoulder",anim,moved==add(hand,delta))
+ _,ok=unit(vec{});record("zero_direction_requires_explicit_rejection",anim,!ok)
+ normalized,valid:=unit(vec{3,4,0});record("nonzero_direction_is_normalized",anim,valid&&close(normalized.X,.6)&&close(normalized.Y,.8))
+ aDir,bDir:=vec{1,0,0},vec{-1,0,0};mid:=scale(add(aDir,bDir),.5)
+ record("negative_antiparallel_linear_direction_is_degenerate",anim,mid==(vec{}))
+ strip,zoom:=capture{"fixed-A","game","sim",1.2},capture{"fixed-A","game","sim",1.2}
+ record("strip_and_closeup_share_observed_conditions",polish,sameCapture(strip,zoom))
+ zoom.revision="unreviewed-B";record("negative_closeup_revision_mismatch_rejected",polish,!sameCapture(strip,zoom))
+ zoom=strip;zoom.clock="wall";record("negative_clock_mismatch_rejected",polish,!sameCapture(strip,zoom))
+ record("reaction_not_before_arrival_on_common_clock",polish,validReaction(1.2,1.3))
+ record("negative_click_time_reaction_precedes_contact",polish,!validReaction(1.2,0))
+ emit:=map[string]bool{};count:=0;for i:=0;i<4;i++{key:="cast7:g2:junction4";if !emit[key]{emit[key]=true;count++}}
+ record("repeated_ticks_do_not_repeat_ground_event",bolt,count==1)
+ pulses:=[]float64{1,1.1};now:=1.2;active:=0;for _,start:=range pulses{if now>=start&&now<start+.5{active++}}
+ record("overlapping_pulses_are_retained_not_overwritten",water,active==2)
+ pool:=[]int{71,72,0,0,0};allocated:=true;for i:=0;i<3;i++{allocated=allocated&&allocateRain(pool,2,100+i)}
+ record("rain_slots_do_not_overwrite_reserved_hero_slots",water,allocated&&pool[0]==71&&pool[1]==72)
+ before:=append([]int(nil),pool...);refused:=!allocateRain(pool,2,104);unchanged:=true;for i:=range pool{unchanged=unchanged&&pool[i]==before[i]}
+ record("negative_rain_overflow_refused_without_clobber",water,refused&&unchanged)
+ failures:=0;for _,c:=range checks{if !c.Pass{failures++}}
+ result:=map[string]any{"domain":"skills3080-combat6-independent-models-v1","cases":checks,"count":len(checks),"failures":failures,"upstream_module_execution":0,"GPU_or_renderer_execution":0,"real_rig_acceptance":false,"health_or_visual_compliance_proved":false,"actual_FPS_measured":false,"new_central_operations":0,"scope":"Independent arithmetic and lifecycle examples only; fixtures are not actual game implementation or renderer acceptance"}
+ raw,e:=json.MarshalIndent(result,"","  ");if e!=nil{panic(e)};fmt.Println(string(raw));if failures>0{os.Exit(1)}
+}

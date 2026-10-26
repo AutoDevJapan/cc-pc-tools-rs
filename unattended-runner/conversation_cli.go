@@ -40,6 +40,7 @@ type conversationCLIOptions struct {
 	Output            string
 	Message           string
 	SourceSHA         string
+	BodySHA           string
 	Revision          string
 	EvidenceFile      string
 }
@@ -109,14 +110,17 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 	case "replies":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "output", &opts.Output)
-	case "source-link", "direction-record", "implementation-record":
+	case "source-link", "source-repair", "direction-record", "implementation-record":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "actor-todo-id", &todo)
 		conversationStringFlag(fs, "message-id", &opts.Message)
 		conversationStringFlag(fs, "source-sha256", &opts.SourceSHA)
 		conversationStringFlag(fs, "revision", &opts.Revision)
-		if opts.Command == "source-link" {
+		if opts.Command == "source-link" || opts.Command == "source-repair" {
 			conversationStringFlag(fs, "intake-todo-id", &intakeTodo)
+		}
+		if opts.Command == "source-repair" {
+			conversationStringFlag(fs, "body-sha256", &opts.BodySHA)
 		}
 		if opts.Command == "implementation-record" {
 			conversationStringFlag(fs, "evidence-file", &opts.EvidenceFile)
@@ -172,7 +176,7 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		if !conversationID.MatchString(opts.RequestID) || opts.ReasonFile == "" {
 			return opts, errConversationArguments
 		}
-	case "source-link", "direction-record", "implementation-record":
+	case "source-link", "source-repair", "direction-record", "implementation-record":
 		var ok bool
 		opts.Todo, ok = number(todo)
 		if _, messageOK := number(opts.Message); !ok || !messageOK || !conversationID.MatchString(opts.RequestID) || !shaPattern.MatchString(opts.SourceSHA) || !regexpRevision(opts.Revision) {
@@ -181,7 +185,10 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		if opts.Command == "implementation-record" && opts.EvidenceFile == "" {
 			return opts, errConversationArguments
 		}
-		if opts.Command == "source-link" {
+		if opts.Command == "source-repair" && !shaPattern.MatchString(opts.BodySHA) {
+			return opts, errConversationArguments
+		}
+		if opts.Command == "source-link" || opts.Command == "source-repair" {
 			opts.IntakeTodo, ok = number(intakeTodo)
 			// The assigned intake worker may link its own reply. The backend
 			// still verifies that worker and keeps it separate from the origin.
@@ -383,7 +390,7 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 			} else {
 				result, err = backend.conversationWithdraw(ctx, opts.RequestID, opts.ReasonFile)
 			}
-		case "recover-question", "source-link", "source-verify", "source-reacquire", "implementation-record", "close":
+		case "recover-question", "source-link", "source-repair", "source-verify", "source-reacquire", "implementation-record", "close":
 			if backend, ok := runner.(interface {
 				conversationImplementationCommand(context.Context, conversationCLIOptions) (map[string]any, error)
 			}); ok {

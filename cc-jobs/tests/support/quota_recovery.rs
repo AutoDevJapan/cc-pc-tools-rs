@@ -143,6 +143,112 @@ fn child(t: &Test) -> Value {
 }
 
 #[test]
+fn grok_existing_research_is_admitted_through_registration_start_and_final_queue_scope() {
+    use cc_job_policy::subwork;
+    let (t, mut row, mut source) = setup();
+    let mut f = subwork_support::Fixture::new();
+    f.register();
+    f.db["items"][0]["status"] = json!("wait");
+    f.jobs[0]["status"] = json!("succeeded");
+    f.jobs[0]["subwork_live"] = json!(false);
+    t.put(f.jobs[0].clone());
+    let mut relation = f.db["items"][1]["subwork"].clone();
+    relation["kind"] = json!("research");
+    row["subwork"] = relation.clone();
+    row["project"] = json!("alias");
+    row["task_type"] = json!("research");
+    row["model"] = json!("gpt-6.1-sol");
+    row["scheduler"]["worktree"] = f.db["items"][1]["scheduler"]["worktree"].clone();
+    row["scheduler"]["branch"] = f.db["items"][1]["scheduler"]["branch"].clone();
+    source["model"] = json!("grok-4.7");
+    source["task_type"] = json!("research");
+    source["subwork"] = relation.clone();
+    source["cwd"] = row["scheduler"]["worktree"].clone();
+    source["finite_subwork"] = source["finite_review"].take();
+    source["subwork_spec"] = row["spec"].clone();
+    t.put(source.clone());
+    let mut target = row["scheduler"]["selection"].clone();
+    target["cwd"] = source["cwd"].clone();
+    target["model"] = row["model"].clone();
+    target["task_type"] = json!("research");
+    target["quota_recovery"] = cc_job_policy::quota_recovery::receipt(
+        &row,
+        &source,
+        &target,
+        &t.rt.quota_recovery_inventory.lock().unwrap(),
+        t.rt.epoch(),
+    )
+    .unwrap();
+    row["scheduler"]["selection"] = target;
+    row["scheduler"]["subwork_admission"] = subwork::admission(&row);
+    f.db["items"][1] = row.clone();
+    let save = |db: &Value| fs::write(t.ctx.root.join("todo.json"), db.to_string()).unwrap();
+    save(&f.db);
+    let prompt = format!(
+        "Scheduler prompt\n依頼:\n{}",
+        fs::read_to_string(row["spec"].as_str().unwrap()).unwrap()
+    );
+    t.run(
+        &[
+            "--todo-id",
+            "2",
+            "--launch-key",
+            s(&row["scheduler"], "key"),
+            "--subwork-of",
+            "1",
+            "--assigned-needs",
+            "",
+            "--cwd",
+            s(&source, "cwd"),
+            "--model",
+            "gpt-6.1-sol",
+            "--model-origin",
+            "policy",
+            "--model-recovery-from",
+            "grok-4.7",
+            "--effort",
+            "max",
+            "--task-type",
+            "research",
+            "--sandbox",
+            "read-only",
+            "--mcp-profile",
+            "minimal",
+        ],
+        prompt.as_bytes(),
+    )
+    .unwrap();
+    let j = child(&t);
+    assert_eq!(j["subwork"], source["subwork"]);
+    assert_eq!(
+        j["finite_subwork"]["spec_sha256"],
+        source["finite_subwork"]["spec_sha256"]
+    );
+    assert!(j["parent_job_id"].is_null());
+    let paths = cc_todo::Paths::at(&t.ctx.root, &t.ctx.jobs);
+    let mut db = cc_todo::load(&paths.store).unwrap();
+    cc_todo::execute(
+        &mut db,
+        &cc_todo::Command::Start {
+            id: 2,
+            job: s(&j, "id").into(),
+            progress: None,
+        },
+        &paths,
+    )
+    .unwrap();
+    fs::write(&paths.store, db.to_string()).unwrap();
+    let slot = t.ctx.admit(s(&j, "id")).unwrap();
+    assert!(slot.is_some());
+    let admitted = t.ctx.load(s(&j, "id")).unwrap();
+    assert_eq!(admitted["status"], "running");
+    assert_eq!(admitted["model"], "gpt-6.1-sol");
+    assert_eq!(admitted["subwork"], source["subwork"]);
+    assert_eq!(admitted["approval_policy"], source["approval_policy"]);
+    assert_eq!(admitted["subwork_spec"], source["subwork_spec"]);
+}
+
+#[test]
 fn verified_quota_review_keeps_luna_max_fast_through_cli_and_queue_admission() {
     let (t, row, _) = setup();
     register(&t).unwrap();

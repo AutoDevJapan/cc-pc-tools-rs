@@ -46,6 +46,7 @@ type conversationIntakeLinkReceipt struct {
 	OrdinarySHA string `json:"ordinary_source_sha256"`
 	IntakeSHA   string `json:"intake_snapshot_sha256"`
 	CaptureSHA  string `json:"capture_sha256"`
+	RepairSHA   string `json:"finished_intake_repair_sha256,omitempty"`
 }
 
 func linkStopped(raw json.RawMessage) bool {
@@ -264,17 +265,26 @@ func (r *Runner) conversationIntakeRetained(q ConversationQuestion, req *Request
 	dir := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies")
 	b, err := boundedRegular(filepath.Join(dir, req.Message+".intake-link.json"))
 	var link conversationIntakeLinkReceipt
-	if err != nil || bytesHash(b) != req.ConversationIntakeLinkSHA || json.Unmarshal(b, &link) != nil || link.Domain != "discord-conversation-intake-link-v1" || link.Request != q.RequestID || link.Origin != q.Todo || link.Message != req.Message || link.QuestionSHA != q.ReceiptSHA || link.Intake == 0 || link.Actor == 0 || !validJob(link.Job) || !regexpRevision(link.Revision) {
+	if err != nil || bytesHash(b) != req.ConversationIntakeLinkSHA || json.Unmarshal(b, &link) != nil || (link.Domain != "discord-conversation-intake-link-v1" && link.Domain != conversationRepairDomain) || link.Request != q.RequestID || link.Origin != q.Todo || link.Message != req.Message || link.QuestionSHA != q.ReceiptSHA || link.Intake == 0 || link.Actor == 0 || !validJob(link.Job) || !regexpRevision(link.Revision) {
 		return false
 	}
-	for _, sha := range []string{link.RawSHA, link.OrdinarySHA, link.IntakeSHA, link.CaptureSHA} {
+	for _, sha := range []string{link.OrdinarySHA, link.IntakeSHA, link.CaptureSHA} {
 		if !shaPattern.MatchString(sha) {
 			return false
 		}
 	}
-	original, err := boundedRegular(filepath.Join(r.Config.Home, "requests", req.Message+".json"))
-	if err != nil || bytesHash(original) != link.RawSHA {
-		return false
+	if link.Domain == conversationRepairDomain {
+		if link.RawSHA != "" || !r.conversationRepairRetained(q, req, link) {
+			return false
+		}
+	} else {
+		if link.RepairSHA != "" || !shaPattern.MatchString(link.RawSHA) {
+			return false
+		}
+		original, err := boundedRegular(filepath.Join(r.Config.Home, "requests", req.Message+".json"))
+		if err != nil || bytesHash(original) != link.RawSHA {
+			return false
+		}
 	}
 	snapshot, err := boundedRegular(filepath.Join(dir, req.Message+".intake-"+link.IntakeSHA+".json"))
 	var intake Request

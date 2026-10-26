@@ -109,7 +109,7 @@ JSON document. This is a one-shot handoff, not a retryable delivery queue.
 
 `--verify-official-ci3387-update` takes no arguments. After normal source merge
 and actual implementation-actor qualification it compares only the single
-PR524 publisher's previously accepted guard SHA/build revision, returning its
+PR525 publisher's previously accepted guard SHA/build revision, returning its
 current physical identity for the existing AdminBroker update CAS. Unknown
 software fails without disclosing or adopting its observed digest. It creates
 no SDK/journal, updates nothing, and grants no general path or data access.
@@ -123,6 +123,12 @@ fields. Question and stop-request bodies become only presence metadata; their
 contents, notes and history are not decoded into the authority projection. The
 existing Skills reader keeps its prior consumer contract through the unchanged
 default entry point.
+
+The comparison pin follows the independent producer's actual installed-runtime
+verification for PR525 (`038bc257`, SHA `ccb5e797…`). The earlier PR524 receipt
+describes a superseded installation and is retained as historical evidence.
+The new pin is projected from the producer's normal metadata, source/merge and
+formal CI; an observed mismatch never becomes an authority or a fallback pin.
 
 Implementation evidence is attached to Issue 526 and its PR. At specification
 time no formal CI, merge, installed update or real SDK acceptance is claimed.

@@ -1,6 +1,6 @@
 {
   "todo": 3669,
-  "status": "implementation_deployed_postrun_recovery_capsule_observed_native_acceptance_pending",
+  "status": "complete_implementation_deployed_postrun_recovery_qualified",
   "implementation": {
     "pr": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/454",
     "reviewed_head": "a35c7aaba7ad47dc8d4d14f776d411c8ee84eb85",
@@ -97,9 +97,7 @@
     "old_runtime_backups_retained_bytes": 22177280,
     "old_runtime_backups_reason": "Rollback for the two runtime files; no global process termination or unverified removal."
   },
-  "remaining_acceptance": [
-    "Receive and qualify the already-recorded scheduler/CLI/admission/native and runtime distribution evidence for the observed real postrun3815 recovery from producer3939. Direct native/prompt/spec reads remain unverified by guard and were not attempted; no substitute owner-request or startup proof is accepted."
-  ],
+  "remaining_acceptance": [],
   "runtime_successor": {
     "pr": "https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/516",
     "source_head": "918f4bf82a63d82618c92c536737797bb3aaad02",
@@ -190,6 +188,48 @@
     "existing_producer_results_requested_from": 3939,
     "new_model_execution_or_build_or_deployment": false,
     "full_runtime_acceptance_complete": false
+  },
+  "final_qualification_20261026": {
+    "source": "normal completed producer3939 result and its published final evidence, matched to independently checked3815 capsule",
+    "producer_job": "20261026-190103-todo-3939",
+    "producer_exit_code": 0,
+    "producer_result_command": "codex_jobs wait 20261026-190103-todo-3939 --timeout 5",
+    "producer_result_envelope_sha256": "7f6ca4518857c0345c5434f2b86e5ac8eaf76d9b18d187a77f27165e0626e324",
+    "published_evidence_url": "https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/543#issuecomment-6413418396",
+    "published_evidence_body_sha256": "4974b8a4e237d4cda7df3fd9e09c43aacffd384b7f46b5500b3483b5f5f87a12",
+    "published_evidence_body_bytes": 2318,
+    "matches_observed_target_job_and_source_head": true,
+    "producer_verified_native_turn_context": "gpt-6-astra/max",
+    "producer_verified_original_parent_spec_and_permissions": true,
+    "producer_verified_author_exclusions": true,
+    "target_steps": 24,
+    "target_finished_at": "2026-10-26T17:57:15+09:00",
+    "parent3796_restarted_at": "2026-10-26T19:00:30+09:00",
+    "normal_result_received_by_parent3796": true,
+    "accepted_runtime_source": "64470087dfe85441107fdb3a8bfbb928963cb1f2",
+    "accepted_runtime_merge": "5c97b72ecb4073f081d972fa3105ff009bf455ab",
+    "producer_reported_windows_update_at": "2026-10-26T17:48:00+09:00",
+    "producer_reported_normal_admin_cas_distribution_lock_and_acl_retained": true,
+    "healthy_jobs_stopped": 0,
+    "qualified_native_evidence_received": true,
+    "this_worker_direct_native_prompt_spec_reads": false,
+    "guard_unverified_originals_reacquired": false,
+    "fast_request_contract": {
+      "ref": "5c97b72ecb4073f081d972fa3105ff009bf455ab",
+      "jobs_blob": "9a6d3d7f3133f04bafce9ab1ab433aba99f8813c",
+      "pool_retry_blob": "21e272a5d9ca5d674ac8df9915eaeeb338ad01f7",
+      "gpt_astra_requested_tier": "fast",
+      "launch_settings": ["service_tier=fast", "features.fast_mode=true"],
+      "original_luna_cli_admission_fast_regression_passed": true,
+      "upstream_fast_or_max_effective_amount_observed": false
+    },
+    "native_input_model_effort_correspondence_qualified_via_producer": true,
+    "original_luna_policy_behavior_covered_by_red_green": true,
+    "real_astra_execution_not_relabelled_as_original3661_luna_execution": true,
+    "old_guard_limited_reads_remain_unverified": true,
+    "full_runtime_acceptance_complete": true,
+    "new_model_execution_or_build_or_deployment": false,
+    "required_small_audit_receipts_retained": true
   },
   "parent_skills_complete": false,
   "guard_settings_queue_accounts_credentials_changed": false

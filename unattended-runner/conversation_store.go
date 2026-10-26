@@ -57,6 +57,8 @@ type ConversationQuestion struct {
 	ReplyCursor      string   `json:"reply_cursor,omitempty"`
 	Attachments      []string `json:"attachments,omitempty"`
 	AttachmentHashes []string `json:"attachment_sha256,omitempty"`
+	// Operational receipt, separate from the immutable ask input and Wait flag.
+	ExplicitWait *conversationExplicitWaitReceipt `json:"explicit_wait,omitempty"`
 }
 
 type conversationIndex struct {

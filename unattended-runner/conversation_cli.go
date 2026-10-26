@@ -130,6 +130,9 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		conversationStringFlag(fs, "message-id", &opts.Message)
 	case "close":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
+	case "wait":
+		conversationStringFlag(fs, "request-id", &opts.RequestID)
+		fs.Var(&conversationBoolFlag{value: &opts.CheckOnly}, "check-only", "")
 	case "withdraw":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "reason-file", &opts.ReasonFile)
@@ -200,7 +203,7 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		if _, ok := number(opts.Message); !ok || !conversationID.MatchString(opts.RequestID) {
 			return opts, errConversationArguments
 		}
-	case "close":
+	case "close", "wait":
 		if !conversationID.MatchString(opts.RequestID) {
 			return opts, errConversationArguments
 		}
@@ -309,7 +312,7 @@ func conversationCLI(args []string, out io.Writer) int {
 		if opts.Command == "status" {
 			return conversationCLIWithLoader(args, out, loadConversationStatusRunner)
 		}
-		if (opts.Command == "replies" && opts.Output != "") || (opts.Command == "log" && opts.CheckOnly) {
+		if (opts.Command == "replies" && opts.Output != "") || ((opts.Command == "log" || opts.Command == "wait") && opts.CheckOnly) {
 			return conversationCLIWithLoader(args, out, loadConversationRepliesRunner)
 		}
 	}
@@ -390,6 +393,15 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 			} else {
 				result, err = backend.conversationWithdraw(ctx, opts.RequestID, opts.ReasonFile)
 			}
+		case "wait":
+			backend, ok := runner.(interface {
+				conversationWait(context.Context, string, bool) (map[string]any, error)
+			})
+			if !ok {
+				err = errConversationArguments
+			} else {
+				result, err = backend.conversationWait(ctx, opts.RequestID, opts.CheckOnly)
+			}
 		case "source-link", "source-repair", "source-verify", "source-reacquire", "implementation-record", "close":
 			if backend, ok := runner.(interface {
 				conversationImplementationCommand(context.Context, conversationCLIOptions) (map[string]any, error)
@@ -429,6 +441,9 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 
 func conversationQuestionPublic(q ConversationQuestion) map[string]any {
 	result := map[string]any{"domain": conversationDomain, "request_id": q.RequestID, "todo_id": q.Todo, "phase": q.Phase, "wait_requested": q.Wait}
+	if q.ExplicitWait != nil {
+		result["explicit_wait"] = q.ExplicitWait
+	}
 	if q.Phase == "duplicate" {
 		result["outcome"] = "existing_question_images_differ"
 		if q.ExistingURL != "" {

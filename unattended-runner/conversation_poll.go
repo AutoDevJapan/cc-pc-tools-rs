@@ -63,7 +63,7 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 	var waiting []ConversationQuestion
 	for _, id := range orderedConversationKeys(index) {
 		q := index.Questions[id]
-		if q.Wait && (q.Phase == "waiting" || q.Phase == "answered") {
+		if q.Phase == "waiting" || ((q.Wait || q.ExplicitWait != nil) && q.Phase == "answered") {
 			waiting = append(waiting, q)
 		}
 	}

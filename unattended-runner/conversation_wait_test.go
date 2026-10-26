@@ -180,6 +180,27 @@ func TestConversationExplicitWaitLostSuccessfulResponseReconcilesReceipt(t *test
 	})
 }
 
+func TestConversationExplicitWaitLostIndexPublicationStillGetsMinuteDelivery(t *testing.T) {
+	explicitWaitVariants(t, func(t *testing.T, f *conversationFixture) {
+		originalIndex, _ := os.ReadFile(f.r.conversationPath())
+		if _, err := f.r.conversationWait(context.Background(), f.q.RequestID, false); err != nil {
+			t.Fatal(err)
+		}
+		// Simulate restart with the last durable index from before its publish,
+		// while keeping the separately committed canonical wait and intent.
+		if err := os.WriteFile(f.r.conversationPath(), originalIndex, 0600); err != nil {
+			t.Fatal(err)
+		}
+		f.reply(t, 8, "answer after index-save interruption")
+		health := Health{}
+		f.r.processConversations(context.Background(), &health)
+		row, _ := f.r.todo(42)
+		if len(health.Errors) != 0 || health.ConversationChecked != 1 || row.Status != "todo" || len(row.QuestionAnswers) != 1 {
+			t.Fatalf("committed wait missed minute processing: %v", health.Errors)
+		}
+	})
+}
+
 func TestConversationExplicitWaitConcurrentOwnerChangeRejectsCAS(t *testing.T) {
 	explicitWaitVariants(t, func(t *testing.T, f *conversationFixture) {
 		backend := f.r.Run

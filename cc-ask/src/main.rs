@@ -33,6 +33,8 @@ enum Commands {
     RecoveryRepairOrigin(cc_ask::recovery_messages::RepairOriginArgs),
     /// Resume one repaired ask from its unchanged saved intent.
     RecoveryResumeAsk(cc_ask::recovery_messages::ResumeAskArgs),
+    /// Inspect or explicitly reconcile the single qualified silent pending log slot.
+    RecoveryReconcilePending(cc_ask::recovery_messages::ReconcilePendingArgs),
     /// Read only an exact new recovery question; never consumes replies or starts work.
     RecoveryReplies(cc_ask::recovery_messages::RepliesArgs),
     /// Archive one applied new recovery question, then verify it by GET.
@@ -419,6 +421,12 @@ fn run(command: Commands) -> Result<()> {
         Commands::RecoveryReplies(args) => {
             println!("{}", cc_ask::recovery_messages::replies(&mut ctx, &args)?)
         }
+        Commands::RecoveryReconcilePending(args) => {
+            println!(
+                "{}",
+                cc_ask::recovery_messages::reconcile_pending(&mut ctx, &args)?
+            )
+        }
         Commands::RecoveryClose(args) => {
             println!("{}", cc_ask::recovery_messages::close(&mut ctx, &args)?)
         }
@@ -561,7 +569,20 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
-
+    #[test]
+    fn pending_reconcile_has_a_separate_read_only_precheck_command() {
+        let parsed = super::Cli::try_parse_from([
+            "discord_ask",
+            "recovery-reconcile-pending",
+            "--qualification-file",
+            "qualified.json",
+            "--check-only",
+        ]);
+        assert!(
+            parsed.is_ok(),
+            "target-only pending reconciliation needs its own command"
+        );
+    }
     #[test]
     fn independent_recovery_cli_requires_exact_inputs_and_reply_thread() {
         let cli = Cli::try_parse_from([

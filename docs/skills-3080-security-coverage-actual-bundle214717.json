@@ -64,5 +64,6 @@
   ],
   "central_operations": 0,
   "new_adoptions": 0,
-  "whole16_complete": false
+  "whole16_complete": false,
+  "new_adoptions_definition": "new_adoptions=0は、このbundle/manifestの組立・検証自体が追加採用を行わないという操作単位の値。security-audit-coverageの実配置1件と採用状態はskills-3080-adoptions.jsonの対応entryとinstallation-evidenceで別に記録する。"
 }

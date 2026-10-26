@@ -386,6 +386,14 @@ fn state(
             return Err("JOB_SCAN_LIMIT");
         }
         let raw = job(ctx, id);
+        if let Ok(raw) = &raw
+            && (build_reference(raw, &debug)
+                || raw["related_todo_ids"]
+                    .as_array()
+                    .is_some_and(|ids| ids.contains(&expected["id"])))
+        {
+            return Err("SAVED_BUILD_REFERENCE_RETAINED");
+        }
         let complete = raw.as_ref().is_ok_and(|j| {
             !field(j, "status").is_empty()
                 && Path::new(field(j, "cwd")).is_absolute()
@@ -611,6 +619,7 @@ struct Artifacts {
     units: BTreeMap<String, BTreeSet<String>>,
     fingerprints: BTreeMap<String, BTreeSet<String>>,
     build_dirs: BTreeSet<String>,
+    compiled_build_dirs: BTreeSet<String>,
     out_dirs: BTreeSet<String>,
     roots: BTreeSet<String>,
     examples: BTreeSet<String>,
@@ -684,6 +693,7 @@ impl Artifacts {
         let _pins = pin_ancestors(&fingerprint).map_err(|_| "CARGO_FINGERPRINT_UNVERIFIED")?;
         let mut fingerprints: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
         let mut build_dirs = BTreeSet::new();
+        let mut compiled_build_dirs = BTreeSet::new();
         let mut out_dirs = BTreeSet::new();
         let mut roots = BTreeSet::new();
         let mut examples = BTreeSet::new();
@@ -852,6 +862,9 @@ impl Artifacts {
                                     }
                                     if unit == "build-script-build" {
                                         build_dirs.insert(name.to_owned());
+                                        if prefix == "build-script-" {
+                                            compiled_build_dirs.insert(name.to_owned());
+                                        }
                                         if prefix == "run-build-script-" {
                                             let output = work
                                                 .join("target/debug/build")
@@ -903,6 +916,7 @@ impl Artifacts {
             units,
             fingerprints,
             build_dirs,
+            compiled_build_dirs,
             out_dirs,
             roots,
             examples,
@@ -991,7 +1005,8 @@ impl Artifacts {
                         self.out_dirs.contains(&parts[1])
                             && ["output", "stderr", "root-output", "invoked.timestamp"]
                                 .contains(&name.as_str())
-                            || binary
+                            || self.compiled_build_dirs.contains(&parts[1])
+                                && binary
                                 && (stem == "build-script-build"
                                     || stem == "build_script_build" && extension == "pdb"
                                     || stem.starts_with("build_script_build-") && unit(stem))
@@ -1677,6 +1692,7 @@ mod tests {
                     ]),
                 )]),
                 build_dirs: BTreeSet::new(),
+                compiled_build_dirs: BTreeSet::new(),
                 out_dirs: BTreeSet::new(),
                 roots: BTreeSet::from([
                     "fixture.exe".into(),
@@ -2242,6 +2258,8 @@ mod tests {
         fs::create_dir_all(&dir).unwrap();
         let mut a = f.artifacts();
         a.build_dirs.insert("fixture-0123456789abcdef".into());
+        a.compiled_build_dirs
+            .insert("fixture-0123456789abcdef".into());
         a.units
             .get_mut("0123456789abcdef")
             .unwrap()
@@ -2266,6 +2284,52 @@ mod tests {
         ));
         assert!(!a.known(Path::new("build/fixture-0123456789abcdef/saved.pdb"), false));
         f.kept();
+    }
+    #[test]
+    fn run_build_marker_never_authorizes_a_compiler_pdb_alias() {
+        let f = Fixture::new();
+        fs::write(f.work.join("build.rs"), b"fn main() {}\n").unwrap();
+        let run = "fixture-aaaaaaaaaaaaaaaa";
+        let compiled = "fixture-bbbbbbbbbbbbbbbb";
+        for (dir, marker) in [
+            (run, "run-build-script-build-script-build"),
+            (compiled, "build-script-build-script-build"),
+        ] {
+            let fp = f.work.join("target/debug/.fingerprint").join(dir);
+            fs::create_dir_all(&fp).unwrap();
+            fs::write(fp.join(marker), []).unwrap();
+            fs::write(fp.join(format!("{marker}.json")), FINGERPRINT_JSON).unwrap();
+            fs::create_dir_all(f.work.join("target/debug/build").join(dir)).unwrap();
+        }
+        let out = f.work.join("target/debug/build").join(run).join("out");
+        fs::create_dir(&out).unwrap();
+        fs::write(
+            out.parent().unwrap().join("root-output"),
+            out.to_string_lossy().as_bytes(),
+        )
+        .unwrap();
+        let a = Artifacts::load(&f.ctx, &f.work, f.budget().until).unwrap();
+        assert!(a.known(
+            Path::new(&format!("build/{compiled}/build_script_build.pdb")),
+            false
+        ));
+        assert!(!a.known(
+            Path::new(&format!("build/{run}/build_script_build.pdb")),
+            false
+        ));
+        let file = out.parent().unwrap().join("build_script_build.pdb");
+        fs::write(&file, b"unique preserved source").unwrap();
+        assert_eq!(
+            inventory(
+                &f.work.join("target/debug"),
+                &a,
+                &f.budget(),
+                &mut Stats::default()
+            )
+            .err(),
+            Some("UNKNOWN_BUILD_CONTENT")
+        );
+        assert_eq!(fs::read(file).unwrap(), b"unique preserved source");
     }
     #[test]
     fn a_new_optional_profile_name_is_never_an_allowed_lock_directory() {
@@ -2361,6 +2425,30 @@ mod tests {
                 assert_eq!(result, Ok(()));
             }
             assert_eq!(fs::read(dir.join("job.json")).unwrap(), partial);
+            for protection in [
+                json!({"last_message":format!("saved origin {}",f.work.join("target/debug").display())}),
+                json!({"related_todo_ids":[1]}),
+            ] {
+                let mut protected = json!({"id":id,"todo_id":2,"status":"running","cwd":other});
+                for (key, value) in protection.as_object().unwrap() {
+                    protected[key] = value.clone();
+                }
+                let bytes = serde_json::to_vec(&protected).unwrap();
+                fs::write(dir.join("job.json"), &bytes).unwrap();
+                assert_eq!(
+                    state(
+                        &f.ctx,
+                        &f.store,
+                        &f.row,
+                        &f.work,
+                        &f.origin,
+                        f.budget().until,
+                        &[id.into()]
+                    ),
+                    Err("SAVED_BUILD_REFERENCE_RETAINED")
+                );
+                assert_eq!(fs::read(dir.join("job.json")).unwrap(), bytes);
+            }
         }
         f.kept();
     }

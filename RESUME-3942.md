@@ -60,5 +60,17 @@ single-link delivery SHA2424d6e21755b1f44e831a143c64ed530c030ae71df907797264b3c9
 manifest同証拠dir/build-manifest-4da310a3a87a4a6485e228619f2ea3e62bcb988e.private.json、
 SHA5c9dd7cbb245f12655d1714898c05bb180c1f45c57d645c18f3cc0cad1751756、149入力。
 この最新pinを含む最終差分review/CI後にmerge/配布/通常task実発火へ進む。古い候補は実配布しない。
+
+20:48の区切り: 3962 reviewで、partial rawjobの明示保護参照がclaim差替えで消える点、
+run-build marker領域でもcompiler PDB aliasを許す点のMust2を受領。raw参照/関連ToDo IDを先に
+保護判定、compiled_build_dirsをcompiler markerだけへ分離しactual marker load回帰を追加。
+52関連Windowsテスト/Clippy成功（3962-tests.log、3962-clippy-fixed.log）。Go pinは4da旧候補で未配布。
+3963（job20261026-204516-todo-3963）はnormal legacy owner metadataの有限read-only調査中。
+実機active観測に、cwdあり/work_owner全欠落のlegacy closed jobsが6程度あり、claim不足で全target保持。
+unknownをexit扱いせず、元Root/jobを書かず、normal authoritative scopeで独立targetを継続できる設計を
+3963で確認する。調査結果を受領して最小修正・実data dry-run・追加review→最新pin/CI/merge/実配布。
+実3960のデータはdone/保存source/正規check1回で残存、通常1h taskの実回収受入未了。
+実物回収0/現用7fbc49保持。自分のdebug生成物は全テスト/反映後に正規Cargo clean等で回収し、
+必要release/配布票/原結果を保持する。元3570や他担当のcanonical recordを直接修復しない。
 safe-delete/3757、3939、元3628/3796/3815/3816のソース/状態/原scopeは変更しない。
 既削除8件を再回収・二重計上しない。本人回答とPC操作は不要。

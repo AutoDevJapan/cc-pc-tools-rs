@@ -91,3 +91,8 @@ Go pin commit0da6b8ac。上の旧pin未確定という記載は当時の履歴�
 最新delivery SHA2424d6e21755b1f44e831a143c64ed530c030ae71df907797264b3c9ac387b8f、
 149入力manifest SHA5c9dd7cbb245f12655d1714898c05bb180c1f45c57d645c18f3cc0cad1751756。
 旧pinは履歴であり、最新sourceの審査・実更新へ流用しない。
+
+3962の追加Must2（partial rawjobの明示保護参照、run-build領域へのcompiler PDB aliasの誤許容）を
+保護参照先行・compiled marker専用集合へ修正し、52関連Windowsテスト/Clippy成功。
+normal legacyの保持scope調査3963は別の有限read-only工程で追う。コードがsourceにあることと
+現用反映・通常taskの回収成功は区別し、まだ本実装の実回収0を保持する。

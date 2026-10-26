@@ -1,9 +1,12 @@
 package main
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"testing"
+	"time"
 )
 
 func other193Reading(raw []json.RawMessage) (int, error) {
@@ -25,6 +28,40 @@ func other193Reading(raw []json.RawMessage) (int, error) {
 		return 0, fmt.Errorf("raw/masked observation promoted")
 	}
 	return state, nil
+}
+
+func TestProgressUpdateTimeIncludesReferencedCurrentReadingAmendments(t *testing.T) {
+	var progress struct {
+		Recorded string `json:"recorded_at"`
+		Cohort   struct {
+			File string `json:"evaluation"`
+			SHA  string `json:"evaluation_sha256"`
+		} `json:"received_other193"`
+	}
+	loadPublicReceipt(t, "skills-3080-progress.json", &progress)
+	updated, err := time.Parse(time.RFC3339Nano, progress.Recorded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var cohort struct {
+		Amendments []struct {
+			Observed string `json:"observed_at"`
+		} `json:"parent_primary_read_amendments"`
+	}
+	raw := loadPublicReceipt(t, progress.Cohort.File, &cohort)
+	hash := sha256.Sum256(raw)
+	if hex.EncodeToString(hash[:]) != progress.Cohort.SHA {
+		t.Fatal("current cohort pin differs")
+	}
+	for _, amendment := range cohort.Amendments {
+		observed, err := time.Parse(time.RFC3339Nano, amendment.Observed)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if updated.Before(observed) {
+			t.Fatal("progress update time predates its referenced new reading; stamp only after final projection")
+		}
+	}
 }
 
 func TestReceivedOther193PreservesOriginalUnreadAndSeparateCurrentAmendment(t *testing.T) {

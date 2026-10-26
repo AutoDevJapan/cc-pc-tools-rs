@@ -1,0 +1,9 @@
+{
+  "method": "Existing3048 Go in-memory checker",
+  "exit": 0,
+  "stdout": "PASS: 1 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+  "stderr": "",
+  "central_root_read": false,
+  "deployment_implied": false,
+  "actual_audit_or_validator_execution": false
+}

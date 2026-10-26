@@ -1,0 +1,223 @@
+{
+  "publisher": {
+    "full_name": "cloudflare/security-audit-skill",
+    "owner": "cloudflare",
+    "public": true,
+    "default_branch": "main",
+    "commit": "c1c8a8c1471069fb0e188eeaff69b8e8db6564a8"
+  },
+  "complete_tree_sha256": "c37547841bcb1429eb2243535f9d4438b1bd4f9b387d00d2476469869690d3bc",
+  "root_tree": "8cd03bb3941496e441d6248aaae2429a35b93cc3",
+  "tree": [
+    {
+      "path": "LICENSE",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6dbc9ecb3a5b9080e95b962869e8c7ab16cfdc20",
+      "size": 1078,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/6dbc9ecb3a5b9080e95b962869e8c7ab16cfdc20"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "c80305c88cd5087db37f76a0d230c1fc092c864c",
+      "size": 6950,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/c80305c88cd5087db37f76a0d230c1fc092c864c"
+    },
+    {
+      "path": "skills",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "c89e5c2d7ac3c21cb3e73c6fb58a2796825dde03",
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/trees/c89e5c2d7ac3c21cb3e73c6fb58a2796825dde03"
+    },
+    {
+      "path": "skills/security-audit",
+      "mode": "040000",
+      "type": "tree",
+      "sha": "ccbc33ed119b28c3ef7b44a7e2081ab191ad63af",
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/trees/ccbc33ed119b28c3ef7b44a7e2081ab191ad63af"
+    },
+    {
+      "path": "skills/security-audit/AI-AND-LLM.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "02ba9039eca4cec811fefc77bce0d7349b379aae",
+      "size": 10617,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/02ba9039eca4cec811fefc77bce0d7349b379aae"
+    },
+    {
+      "path": "skills/security-audit/ATTACK-CLASSES.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "18a2beb4dbb554fb52b0a0293b8bd9108207f8fa",
+      "size": 15695,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/18a2beb4dbb554fb52b0a0293b8bd9108207f8fa"
+    },
+    {
+      "path": "skills/security-audit/CLIENT-SIDE.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8ba673e9e7e3d02f5518aa0219bcbeec7957531b",
+      "size": 8594,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/8ba673e9e7e3d02f5518aa0219bcbeec7957531b"
+    },
+    {
+      "path": "skills/security-audit/CLOUD-AND-DEPLOYMENT.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5569f76c7740744aa3f60aaa89eaefe275f2e6c9",
+      "size": 8291,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/5569f76c7740744aa3f60aaa89eaefe275f2e6c9"
+    },
+    {
+      "path": "skills/security-audit/DATA-ISOLATION-AND-LIFECYCLE.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "0cba1fa463b62c9b0caba710a201e29c1eecd0ec",
+      "size": 7798,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/0cba1fa463b62c9b0caba710a201e29c1eecd0ec"
+    },
+    {
+      "path": "skills/security-audit/DESKTOP-MOBILE-AND-LOCAL-IPC.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "d6230098651bff6348d3868c11f566bfb1306e7f",
+      "size": 8739,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/d6230098651bff6348d3868c11f566bfb1306e7f"
+    },
+    {
+      "path": "skills/security-audit/HUNTING.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "377d4dcfbe88a049379448cd7892717185401597",
+      "size": 22446,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/377d4dcfbe88a049379448cd7892717185401597"
+    },
+    {
+      "path": "skills/security-audit/MEMORY-SAFETY-AND-BINARY.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "86ff4920752661fc4a31a35ca4f962ace5dd5f48",
+      "size": 10513,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/86ff4920752661fc4a31a35ca4f962ace5dd5f48"
+    },
+    {
+      "path": "skills/security-audit/PROTOCOLS-RPC-AND-MESSAGING.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b04ab88f852224838fdc9683d9fcccd858b0778a",
+      "size": 7483,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/b04ab88f852224838fdc9683d9fcccd858b0778a"
+    },
+    {
+      "path": "skills/security-audit/RECONNAISSANCE.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1a170a93ab76b93dc5ac268a5b690beb423a8aa9",
+      "size": 15902,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/1a170a93ab76b93dc5ac268a5b690beb423a8aa9"
+    },
+    {
+      "path": "skills/security-audit/RESOURCE-EXHAUSTION-AND-AVAILABILITY.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "6cbbd1e2cfa482068c8279c2f7da9db43d3f54b8",
+      "size": 7476,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/6cbbd1e2cfa482068c8279c2f7da9db43d3f54b8"
+    },
+    {
+      "path": "skills/security-audit/SKILL.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "92178dad304d3f63e37582a297026a7874e12c62",
+      "size": 22026,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/92178dad304d3f63e37582a297026a7874e12c62"
+    },
+    {
+      "path": "skills/security-audit/SUPPLY-CHAIN-AND-RELEASE.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "bf96aed0803bc07471483ab129dea86759c3e305",
+      "size": 7258,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/bf96aed0803bc07471483ab129dea86759c3e305"
+    },
+    {
+      "path": "skills/security-audit/VALIDATION-AND-REPORTING.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "5e200d7387e665e53e0e4190fa4a5814c334c507",
+      "size": 17843,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/5e200d7387e665e53e0e4190fa4a5814c334c507"
+    },
+    {
+      "path": "skills/security-audit/WEB-PROTOCOL-AND-AUTH.md",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "1a099fa575cf52a61e9a627f91b61015120fa517",
+      "size": 12300,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/1a099fa575cf52a61e9a627f91b61015120fa517"
+    },
+    {
+      "path": "skills/security-audit/report-schema.json",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "55815a3687a45fff63d8ebf20068611bd6ad6d9a",
+      "size": 14494,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/55815a3687a45fff63d8ebf20068611bd6ad6d9a"
+    },
+    {
+      "path": "skills/security-audit/validate-coverage-ledger.cjs",
+      "mode": "100755",
+      "type": "blob",
+      "sha": "0ef58657bef18b26a92321df6c8e3d31bc8e6659",
+      "size": 33522,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/0ef58657bef18b26a92321df6c8e3d31bc8e6659"
+    },
+    {
+      "path": "skills/security-audit/validate-coverage-ledger.test.cjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "b1444f57e1b021a61175733b8c356171861c8701",
+      "size": 28483,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/b1444f57e1b021a61175733b8c356171861c8701"
+    },
+    {
+      "path": "skills/security-audit/validate-findings.cjs",
+      "mode": "100755",
+      "type": "blob",
+      "sha": "2843feceddb7e30bf10d6e4f7bbe6640e4c57799",
+      "size": 28806,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/2843feceddb7e30bf10d6e4f7bbe6640e4c57799"
+    },
+    {
+      "path": "skills/security-audit/validate-findings.test.cjs",
+      "mode": "100644",
+      "type": "blob",
+      "sha": "8d245b226bbe2fdf28b46b3203b99c2824039d2d",
+      "size": 26384,
+      "url": "https://api.github.com/repos/cloudflare/security-audit-skill/git/blobs/8d245b226bbe2fdf28b46b3203b99c2824039d2d"
+    }
+  ],
+  "truncated": false,
+  "selected_authored_paths": [
+    "skills/security-audit/SKILL.md",
+    "skills/security-audit/HUNTING.md",
+    "skills/security-audit/RECONNAISSANCE.md",
+    "skills/security-audit/VALIDATION-AND-REPORTING.md"
+  ],
+  "applicable_notice": {
+    "path": "LICENSE",
+    "sha256": "e598e694aa506650c7192d5ea3be0e50aca0d356ea00551c53429f0b01eb6391",
+    "git_blob": "6dbc9ecb3a5b9080e95b962869e8c7ab16cfdc20",
+    "bytes": 1078,
+    "copyright": "2025-2026 Cloudflare, Inc.",
+    "license": "MIT"
+  },
+  "individual_scope": "Only four selected authored workflow texts and fixed MIT notice. No third-party target code/data/assets/services or unread domain/validator material",
+  "parent_all_selected_source_and_notice_read": true,
+  "new_external_requests": 0,
+  "new_grants_beyond_notice": 0,
+  "new_installs": 0
+}

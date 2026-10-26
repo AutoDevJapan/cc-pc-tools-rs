@@ -1,0 +1,32 @@
+{
+  "todo": 3080,
+  "author_job": "20261026-214717-todo-3080",
+  "proposed_skill": "security-audit-coverage",
+  "source_count": 4,
+  "files": 9,
+  "artifacts": {
+    "create-security-coverage-214717.json": "81d9a2ced2d4a2a54ff7dfa99127feff55475db4c7e1907aacfa50a2a8c61712",
+    "skills-3080-security-coverage-reviewed-bundle214717.json": "08886ea5c82476ce99f5d91f92d63f19062cd3311510f42224332414f38a9729",
+    "skills-3080-security-coverage-source-meaning214717.json": "dba8d51dc00897d8be852d011b99719c2e793b2759329b8f79b83ca9bddc693e",
+    "skills-3080-security-coverage-notice-map214717.json": "80cad6a088464dc9bcaffd1624219c461881da3438871c81a11f3e4f33fd47b4",
+    "skills-3080-security-coverage-structure214717.json": "d894ba05879f040b44486ecc6d70ba707de2fb2cbee2e7131cd3748c39d83327"
+  },
+  "source_body_bytes": 78217,
+  "notice_bytes": 1078,
+  "local_metadata_discovery": {
+    "requested_names": 1,
+    "found": 0,
+    "other_path_same_names": 0,
+    "total_metadata": 432,
+    "parse_errors": 0,
+    "model_called": false,
+    "own_process_tree_exit": true,
+    "pending_stdout_read_drained": true,
+    "physical_absence_proven": false
+  },
+  "new_adoptions": 0,
+  "central_writes": 0,
+  "copy_root_or_unrelated_unknown_body_access": 0,
+  "full_content_review_pending": true,
+  "whole16_complete": false
+}

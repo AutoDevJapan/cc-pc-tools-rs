@@ -99,8 +99,9 @@ also enters the authenticated registration digest and is checked on reuse.
 Job metadata projection discards prompts and responses without decoding them.
 
 Consumption writes the public JSON response inside the verified-byte callback.
-Both a writer error and a short write fail the callback and retain the explicit
-failed state; neither is marked consumed or retried. The response describes the
+Both a writer error and a short write fail the callback. A successful failure
+save retains `failed`; failure of that save retains `consuming`. Neither state
+can be marked consumed or retried. The response describes the
 in-flight `consuming` state. The caller must capture stdout programmatically and
 require process exit zero, which follows the durable `consumed` commit. A final
 commit failure after output still returns nonzero and never appends a second
@@ -115,6 +116,13 @@ no SDK/journal, updates nothing, and grants no general path or data access.
 Actual distinct-model review, same-head formal CI and current ACL/CAS checks
 remain required before deployment. This is the 3894 software comparison path;
 the separate 3686-specific update qualification is not reused.
+
+The finite task reader validates exact canonical authority keys before any Go
+struct decode, including Unicode case-fold aliases and nested subwork/admission
+fields. Question and stop-request bodies become only presence metadata; their
+contents, notes and history are not decoded into the authority projection. The
+existing Skills reader keeps its prior consumer contract through the unchanged
+default entry point.
 
 Implementation evidence is attached to Issue 526 and its PR. At specification
 time no formal CI, merge, installed update or real SDK acceptance is claimed.

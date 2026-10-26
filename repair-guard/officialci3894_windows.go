@@ -542,8 +542,12 @@ func official3894Registry(ctx context.Context) (skillsRegistry, bool) {
 	if !ok {
 		return skillsRegistry{}, false
 	}
-	r, ok := skillsRegistryProjection(ownerDeadlineReader{ctx: ctx, input: io.LimitReader(f, 512<<20+1)}, []int{3387, 3888, 3894})
+	r, ok := official3894RegistryProjection(ownerDeadlineReader{ctx: ctx, input: io.LimitReader(f, 512<<20+1)})
 	return r, ok && ctx.Err() == nil
+}
+
+func official3894RegistryProjection(input io.Reader) (skillsRegistry, bool) {
+	return skillsRegistryProjectionWith(input, []int{3387, 3888, 3894}, official3894TaskMetadata)
 }
 
 func official3894Download(ctx context.Context) ([]byte, error) {

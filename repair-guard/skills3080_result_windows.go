@@ -67,6 +67,12 @@ type skillsRegistry struct {
 // Metadata projection: never retain titles, notes, history, unrelated rows or
 // private department names. Only the declared self project and requested IDs.
 func skillsRegistryProjection(input io.Reader, ids []int) (skillsRegistry, bool) {
+	return skillsRegistryProjectionWith(input, ids, nil)
+}
+
+// A finite consumer can project stricter task metadata before struct decoding.
+// Existing Skills consumers retain their original reader and result contract.
+func skillsRegistryProjectionWith(input io.Reader, ids []int, project func([]byte) ([]byte, bool)) (skillsRegistry, bool) {
 	out := skillsRegistry{Tasks: map[int]skillsTask{}}
 	wanted := map[int]bool{}
 	for _, id := range ids {
@@ -85,6 +91,9 @@ func skillsRegistryProjection(input io.Reader, ids []int) (skillsRegistry, bool)
 			return out, false
 		}
 		seen[key] = true
+		if project != nil && ((key != "projects" && strings.EqualFold(key, "projects")) || (key != "items" && strings.EqualFold(key, "items"))) {
+			return out, false
+		}
 		switch key {
 		case "projects":
 			tok, e := d.Token()
@@ -99,6 +108,9 @@ func skillsRegistryProjection(input io.Reader, ids []int) (skillsRegistry, bool)
 					return out, false
 				}
 				keys[name] = true
+				if project != nil && name != "cc-pc-tools-rs" && strings.EqualFold(name, "cc-pc-tools-rs") {
+					return out, false
+				}
 				if name == "cc-pc-tools-rs" {
 					if d.Decode(&out.Root) != nil {
 						return out, false
@@ -126,18 +138,31 @@ func skillsRegistryProjection(input io.Reader, ids []int) (skillsRegistry, bool)
 				var id struct {
 					ID int `json:"id"`
 				}
-				if json.Unmarshal(raw, &id) != nil {
+				if project != nil {
+					var ok bool
+					id.ID, ok = skillsRegistryTaskID(raw)
+					if !ok {
+						return out, false
+					}
+				} else if json.Unmarshal(raw, &id) != nil {
 					return out, false
 				}
 				if wanted[id.ID] {
 					if _, exists := out.Tasks[id.ID]; exists {
 						return out, false
 					}
+					if project != nil {
+						var ok bool
+						raw, ok = project(raw)
+						if !ok {
+							return out, false
+						}
+					}
 					if _, ok := conversationJSON(raw); !ok {
 						return out, false
 					}
 					var row skillsTask
-					if json.Unmarshal(raw, &row) != nil {
+					if json.Unmarshal(raw, &row) != nil || row.ID != id.ID {
 						return out, false
 					}
 					out.Tasks[id.ID] = row
@@ -160,6 +185,44 @@ func skillsRegistryProjection(input io.Reader, ids []int) (skillsRegistry, bool)
 		return out, false
 	}
 	return out, seen["projects"] && seen["items"] && same(out.Root, roots[3]) && len(out.Tasks) == len(wanted)
+}
+
+// A strict consumer selects rows by the literal canonical ID, before deciding
+// which task metadata to decode. An ID alias must not hide a nominated row in
+// the unrelated-row branch. Other fields are discarded without decoding them.
+func skillsRegistryTaskID(raw []byte) (int, bool) {
+	d := json.NewDecoder(bytes.NewReader(raw))
+	first, e := d.Token()
+	if e != nil || first != json.Delim('{') {
+		return 0, false
+	}
+	id, found := 0, false
+	for d.More() {
+		key, e := d.Token()
+		name, ok := key.(string)
+		if e != nil || !ok {
+			return 0, false
+		}
+		if strings.EqualFold(name, "id") {
+			if name != "id" || found || d.Decode(&id) != nil || id <= 0 {
+				return 0, false
+			}
+			found = true
+		} else {
+			var discard ownerDiscardJSON
+			if d.Decode(&discard) != nil {
+				return 0, false
+			}
+		}
+	}
+	last, e := d.Token()
+	if e != nil || last != json.Delim('}') {
+		return 0, false
+	}
+	if _, e := d.Token(); e != io.EOF {
+		return 0, false
+	}
+	return id, found
 }
 func skillsRegistryRead(ids []int) (skillsRegistry, bool) {
 	s := skillsFS{blocked: skillsBlocked}

@@ -143,7 +143,7 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 		// Captures and delivery remain sequential. An exhausted delivery budget
 		// is visible and retried from the same question and source version.
 		if ctx.Err() == nil {
-			if q.Actor != nil && q.Phase == "posted" && len(result.proof.Replies) == 0 {
+			if q.RecoveredIntake == 0 && q.Actor != nil && q.Phase == "posted" && len(result.proof.Replies) == 0 {
 				updated, err := r.conversationActorWait(ctx, index, q)
 				if err != nil {
 					health.Errors = append(health.Errors, "conversation_wait_deferred")

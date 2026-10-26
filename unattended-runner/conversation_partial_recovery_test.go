@@ -502,3 +502,70 @@ func TestConversationRecoveryRejectsSameProjectAndExistingWait(t *testing.T) {
 		})
 	}
 }
+
+func TestConversationOrdinaryRecoveryCannotTakeOverBoundActor(t *testing.T) {
+	for _, command := range []string{"source-link", "recover-question"} {
+		t.Run(command, func(t *testing.T) {
+			a := actorTest(t, false)
+			f, args, source := prepareIntakeLinkFixture(t, a.conversationFixture)
+			f.replies[0].Todo = 1171
+			f.r.State.Requests[f.replies[0].Message].Todo = 43
+			for i, flag := range args {
+				if flag == "--intake-todo-id" {
+					args[i+1] = "43"
+				}
+			}
+			f, args, _ = prepareOrdinaryProjectFixture(t, f, args, source)
+			index, err := f.r.loadConversations()
+			if err != nil {
+				t.Fatal(err)
+			}
+			q := index.Questions[f.q.RequestID]
+			if q.Actor == nil || q.Actor.Todo != 3277 || !q.WaitDeferred || q.Phase != "posted" {
+				t.Fatal("bound actor positive control missing")
+			}
+			if command == "source-link" {
+				// The origin can regain an ordinary technical hold while the
+				// bound recipient still owns the deferred question wait.
+				a.mutate(t, 1171, func(row map[string]any) { row["status"] = "wait" })
+			}
+			if command == "recover-question" {
+				q.Phase = "reserved"
+				index.Questions[q.RequestID] = q
+				if publish(f.r.conversationPath(), index) != nil {
+					t.Fatal("reserved fixture")
+				}
+				args = []string{command, "--request-id", q.RequestID, "--message-id", f.replies[0].Message}
+			}
+			before, _ := os.ReadFile(f.r.TodoPath)
+			beforeIndex, _ := os.ReadFile(f.r.conversationPath())
+			replies := filepath.Join(f.r.Config.Home, "conversations", q.RequestID, "replies", "*")
+			filesBefore, _ := filepath.Glob(replies)
+			code, _ := intakeLinkCLI(t, f, args)
+			after, _ := os.ReadFile(f.r.TodoPath)
+			afterIndex, _ := os.ReadFile(f.r.conversationPath())
+			filesAfter, _ := filepath.Glob(replies)
+			if code == 0 || !bytes.Equal(before, after) || !bytes.Equal(beforeIndex, afterIndex) ||
+				canonicalHash(filesBefore) != canonicalHash(filesAfter) || f.r.State.ConversationCaptures[f.replies[0].Message] != nil || f.posts != 1 {
+				t.Fatal("ordinary recovery changed a bound actor's delivery route", code)
+			}
+		})
+	}
+}
+
+func TestConversationIndexRejectsRecoveryBoundToActor(t *testing.T) {
+	a := actorTest(t, false)
+	q := a.ask(t)
+	index, err := a.r.loadConversations()
+	if err != nil || q.Actor == nil || !q.WaitDeferred {
+		t.Fatal("bound actor positive control missing", err)
+	}
+	q.RecoveredIntake = 43
+	index.Questions[q.RequestID] = q
+	if publish(a.r.conversationPath(), index) != nil {
+		t.Fatal("mixed route fixture")
+	}
+	if _, err := a.r.loadConversations(); err == nil {
+		t.Fatal("persisted question admitted both recovery and actor delivery routes")
+	}
+}

@@ -18,7 +18,7 @@ func (r *Runner) recoverConversationQuestion(ctx context.Context, opts conversat
 	}
 	q, ok := index.Questions[opts.RequestID]
 	req := r.State.Requests[opts.Message]
-	if !ok || req == nil || req.Source != "discord-api-v10" || req.Author != r.State.Destination.Owner || req.Guild != r.State.Destination.Guild || req.Conversation != "" || req.Todo == 0 || req.Key != requestKey(req.Thread, req.Message) {
+	if !ok || !ordinaryRecoveryRoute(q) || req == nil || req.Source != "discord-api-v10" || req.Author != r.State.Destination.Owner || req.Guild != r.State.Destination.Guild || req.Conversation != "" || req.Todo == 0 || req.Key != requestKey(req.Thread, req.Message) {
 		return nil, errImplementation
 	}
 	if q.Phase != "reserved" {
@@ -112,8 +112,14 @@ func (r *Runner) recoverConversationQuestion(ctx context.Context, opts conversat
 // This path repairs a standalone ordinary intake, never an origin's live or
 // already consumed question wait. Keep this admission rule shared by discovery
 // and linking so periodic processing cannot suppress normal answer delivery.
+// A bound actor owns a separate delivery transaction even while the origin has
+// no question wait. These two routes must never share the same stored question.
+func ordinaryRecoveryRoute(q ConversationQuestion) bool {
+	return q.Actor == nil && !q.WaitDeferred
+}
+
 func ordinaryRecoveryEligible(q ConversationQuestion, origin, intake *TodoRow) bool {
-	return origin != nil && intake != nil && origin.Project == q.Project && intake.Project != q.Project && intake.ID != q.Todo &&
+	return ordinaryRecoveryRoute(q) && origin != nil && intake != nil && origin.Project == q.Project && intake.Project != q.Project && intake.ID != q.Todo &&
 		(q.RecoveredIntake == 0 || q.RecoveredIntake == intake.ID) &&
 		(len(origin.QuestionWait) == 0 || string(origin.QuestionWait) == "null") &&
 		!conversationWaitRecorded(origin, q) && !conversationQuestionAnswered(origin, q)

@@ -1,0 +1,181 @@
+{
+  "todo": 3080,
+  "writer": "20261026-214717-todo-3080",
+  "selected": [
+    {
+      "name": "aspnet-core",
+      "inventory_id": "github:cf6f7ec9164d7c060bece5c5f7b795336c97510f860dff6718b8b7c8b48d1360",
+      "source": {
+        "repository": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/aspnet-core/SKILL.md",
+        "sha256": "1f487ef3565e5ac1ee6c93cbeb9ac666292b30285877c82ddb0a77c9777fe92f",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/.curated/aspnet-core/LICENSE.txt",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "c71ed6e705c44038fbcd2e37a3e12c3a81683fdf",
+      "source_bytes": 5544,
+      "notice_git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+      "notice_bytes": 11357,
+      "notice_current_full_reader": "20261026-214717-todo-3080",
+      "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+      "copyright_placeholder_not_filled": true,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "current_mask0_is_not_secret_absence_proof": true,
+      "unknown_target_existence_and_body_unchecked": true,
+      "actual_service_or_product_execution": 0
+    },
+    {
+      "name": "chatgpt-apps",
+      "inventory_id": "github:2e0ee243c19dfad463737e0c64bf90a78204a90843582ff815d73cb73541cc74",
+      "source": {
+        "repository": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/chatgpt-apps/SKILL.md",
+        "sha256": "c3a13a659ce26e9d067b5a97c321e8abec6d8e878afce31b7e841dfcf2635c3a",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/.curated/chatgpt-apps/LICENSE.txt",
+          "sha256": "a7f55b2cb68997f729e6199720d4d3cae47633aba0254a84b2d36ab284be9d45",
+          "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "6280a08c57db44ab622dcccbd853e01005edfcbd",
+      "source_bytes": 19626,
+      "notice_git_blob": "145d9443e3e7da910ac0b1e7c8afda86cfefde3a",
+      "notice_bytes": 10774,
+      "notice_current_full_reader": "20261026-214717-todo-3080",
+      "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+      "copyright_placeholder_not_filled": true,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "current_mask0_is_not_secret_absence_proof": true,
+      "unknown_target_existence_and_body_unchecked": true,
+      "actual_service_or_product_execution": 0
+    },
+    {
+      "name": "linear",
+      "inventory_id": "github:9e252728557935c94f42fb035570096eb391db7d500c02340e0d4e40c67d1ab3",
+      "source": {
+        "repository": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/linear/SKILL.md",
+        "sha256": "ce0f39c95b6c9190f8ea33614393cdb556b2684dd8388ded394e9cb915f42601",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/.curated/linear/LICENSE.txt",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "6982ccbe4835ed207f6c7c0b2f011d903dbe2960",
+      "source_bytes": 4952,
+      "notice_git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+      "notice_bytes": 11357,
+      "notice_current_full_reader": "20261026-214717-todo-3080",
+      "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+      "copyright_placeholder_not_filled": true,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "current_mask0_is_not_secret_absence_proof": true,
+      "unknown_target_existence_and_body_unchecked": true,
+      "actual_service_or_product_execution": 0
+    },
+    {
+      "name": "security-ownership-map",
+      "inventory_id": "github:f941ef30176f5c72f8d352e8c9b00e297b883496f08a7f6072ab6b4ea6958d19",
+      "source": {
+        "repository": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/security-ownership-map/SKILL.md",
+        "sha256": "f06c1a59247569326702c945f397af163ea96cf2ecfdf2dde280605bf89a3ec8",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/.curated/security-ownership-map/LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+          "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "0164d0d8809825dc5bccc99e87cafb8345a6be72",
+      "source_bytes": 8736,
+      "notice_git_blob": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+      "notice_bytes": 10776,
+      "notice_current_full_reader": "20261026-214717-todo-3080",
+      "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+      "copyright_placeholder_not_filled": true,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "current_mask0_is_not_secret_absence_proof": true,
+      "unknown_target_existence_and_body_unchecked": true,
+      "actual_service_or_product_execution": 0
+    },
+    {
+      "name": "security-threat-model",
+      "inventory_id": "github:14d10577531b4a117e0cde0105666ccfbb607f0ea0c9f9d0a65316ee4310bec5",
+      "source": {
+        "repository": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/security-threat-model/SKILL.md",
+        "sha256": "1283c0dd62a8104d9edda4583569b5d8510b4ddaa45120687c999250fd96bad2",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/.curated/security-threat-model/LICENSE.txt",
+          "sha256": "4dd13869245e356246a5b770723247bbb80a8f07a181d1d3d873a1734297cdb9",
+          "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "abd3c1c95d49c4e0e0664f198f4bf168c6291aec",
+      "source_bytes": 5561,
+      "notice_git_blob": "13e25df86ce06eb6488e6a6bc5c5847f5dedc352",
+      "notice_bytes": 10776,
+      "notice_current_full_reader": "20261026-214717-todo-3080",
+      "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+      "copyright_placeholder_not_filled": true,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "current_mask0_is_not_secret_absence_proof": true,
+      "unknown_target_existence_and_body_unchecked": true,
+      "actual_service_or_product_execution": 0
+    },
+    {
+      "name": "winui-app",
+      "inventory_id": "github:8a9bf2614b7f256bd700a1d77025f3765863dead67ce65b645d34589d75f150f",
+      "source": {
+        "repository": "openai/skills",
+        "commit": "49f948faa9258a0c61caceaf225e179651397431",
+        "path": "skills/.curated/winui-app/SKILL.md",
+        "sha256": "917341ec9eb688d73e21362910a7178a92b2ae49544b7d8f17ee9e19adfe2ea8",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "skills/.curated/winui-app/LICENSE.txt",
+          "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+          "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "28e67e8677f0ab74ac921ec85dd80888f7d53fa7",
+      "source_bytes": 11272,
+      "notice_git_blob": "7a4a3ea2424c09fbe48d455aed1eaa94d9124835",
+      "notice_bytes": 11357,
+      "notice_current_full_reader": "20261026-214717-todo-3080",
+      "scope": "Selected authored primary workflow text under its exact per-package Apache-2.0 notice only; no supporting scripts/templates/third-party documentation/assets/services or unknown original/private data rights; changed files marked and original text/license preserved",
+      "copyright_placeholder_not_filled": true,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "current_mask0_is_not_secret_absence_proof": true,
+      "unknown_target_existence_and_body_unchecked": true,
+      "actual_service_or_product_execution": 0
+    }
+  ],
+  "new_global_primary_credit": 0,
+  "supporting_metadata_occurrences": 55,
+  "unread_support_rights_accepted": false,
+  "new_grants_outside_selected_primary": 0,
+  "central_operations": 0,
+  "new_adoptions": 0,
+  "whole16_complete": false
+}

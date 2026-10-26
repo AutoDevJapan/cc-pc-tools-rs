@@ -1,0 +1,47 @@
+{
+  "todo": 3080,
+  "targets": [
+    {
+      "name": "orange-clean-paper-saas",
+      "inventory_id": "github:d069b46afe20612b0a7740204ef71f0a4d55da7dd92293978eb60ad2c84b1128",
+      "source_repo": "MengTo/Skills",
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_path": "agent-skills/web-design/orange-clean-paper-saas/SKILL.md",
+      "source_sha256": "4f532470971c92edd7407dfba5ec6656e0377c213903bd68bd82281b7ea39788",
+      "entrypoint_sha256": "4c59a83938cc516d083261a0b26b7836b76c3530d55329553135bedd9901f450",
+      "primary_license": "MIT",
+      "individual_notice_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "selected_scope": "Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution",
+      "rights_scope": "Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution",
+      "positive": "合意したonboardingのフォームと製品panelを、暖色の紙面で整理したい。",
+      "negative": "一つの入力エラーを直す依頼で全画面のbrandを変え、例の料金や実績を製品へ採用する。",
+      "actual_manifest": "skills-3080-installed-pricing2-manifest214717.json",
+      "unknown_central_body_not_compared": true,
+      "actual_original_parent_reader": "20261026-214717-todo-3080",
+      "new_global_primary_credit": 0
+    },
+    {
+      "name": "pricing-page",
+      "inventory_id": "github:9c6a936947bd96735fc78821b61854f74ceef411c91ed8d0447bfc4a528b30e6",
+      "source_repo": "MengTo/Skills",
+      "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+      "source_path": "agent-skills/web-design/pricing-page/SKILL.md",
+      "source_sha256": "9b3af6174e379042ea1579f5d62b6fb0030fe6298d35b417488ac1e5ef8159db",
+      "entrypoint_sha256": "001c2280b493ea754cfa7542dd0b6e3f73d924143a85284c3c50c34597f54cc6",
+      "primary_license": "MIT",
+      "individual_notice_sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "selected_scope": "Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution",
+      "rights_scope": "Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution",
+      "positive": "承認済みの商品価格と周期を、料金表・年額表示・申込み先へ一致させたい。",
+      "negative": "原文のプラン例や割引率を採用し、画面の切替だけで本番の課金成功とする。",
+      "actual_manifest": "skills-3080-installed-pricing2-manifest214717.json",
+      "unknown_central_body_not_compared": true,
+      "actual_original_parent_reader": "20261026-214717-todo-3080",
+      "new_global_primary_credit": 0
+    }
+  ],
+  "not_an_adoption_cap": true,
+  "batch_is_not_total_scope_or_count_cap": true,
+  "new_global_source_read_credit": 0,
+  "whole16_complete": false
+}

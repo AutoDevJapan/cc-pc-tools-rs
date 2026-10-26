@@ -8,7 +8,7 @@
   "entrypoints_expected": 177,
   "entrypoints_fulltext_read": 177,
   "entrypoints_unread": 0,
-  "installed": 91,
+  "installed": 93,
   "integrated": 2,
   "excluded": 0,
   "central_write": 22,
@@ -18300,7 +18300,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -18373,7 +18373,8 @@
           "body_read": false
         }
       ],
-      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。"
+      "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
+      "current_installation_evidence": "skills-3080-pricing2-installation-evidence214717.json"
     },
     {
       "inventory_id": "github:18792806f4834cf3234d332b2cac284341de5593f2b97f278d9d242983f408f7",
@@ -18665,7 +18666,7 @@
       "selected_scope_notice_verified": true,
       "third_party_assets_or_support_rights_accepted": false,
       "support_read_complete": false,
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -18726,7 +18727,8 @@
         }
       ],
       "parent_policy_correction": "上流の好み/機器/採点/測定値を本人方針へ昇格しない。本文作者のMITと第三者素材の権利を区別。未保存支持の一律取得・全支持監査を新義務にせず、有用な原則の適用範囲を限定して検討する。既存本人回答・通常操作・既存契約内の利用を再承認待ちにしない。",
-      "parent_edit_note": "3535の価格プラン作成と本人の増額支出を同一視する案、無料試用を設計案だけへ制限する案を採用せず訂正。原応答は不変。"
+      "parent_edit_note": "3535の価格プラン作成と本人の増額支出を同一視する案、無料試用を設計案だけへ制限する案を採用せず訂正。原応答は不変。",
+      "current_installation_evidence": "skills-3080-pricing2-installation-evidence214717.json"
     },
     {
       "inventory_id": "github:e2c6fc5952daacfe897bb58ada65c3ddd45b09e89af7744acd8c94d234aceded",
@@ -22623,13 +22625,13 @@
   "amendment_job": "20261024-123649-todo-3080",
   "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts.",
   "current_installation_update": {
-    "evidence": "skills-3080-motion4-installation-evidence214717.json",
-    "added": 4,
-    "current_installed": 91,
+    "evidence": "skills-3080-pricing2-installation-evidence214717.json",
+    "added": 2,
+    "current_installed": 93,
     "original_readers_masks_and_unknown_profiles_unchanged": true,
-    "source_scope": "Four selected authored workflow texts and notice only; unknown central/support/service/media rights not accepted",
-    "previous_projection_commit": "cf7ed154e569e8237c51389dd45528de536b7f1e",
-    "previous_projection_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55"
+    "source_scope": "Two selected authored workflows and exactMIT notice only; media/services/unread support conditions not accepted",
+    "previous_projection_commit": "a3fa720e4ffc4fedaf8b0f087ed12f18c9b6a92e",
+    "previous_projection_sha256": "98e88e29c6dba09a2ae327ceeb93dbc291a096f021378ca482dc07a7a1f56878"
   },
   "previous_installation_updates": [
     {
@@ -22707,6 +22709,15 @@
       "current_installed": 87,
       "original_readers_masks_and_unknown_profiles_unchanged": true,
       "source_scope": "Selected construction/contact procedure; unacquired style kit/resources and unknown central comparisons remain unresolved"
+    },
+    {
+      "evidence": "skills-3080-motion4-installation-evidence214717.json",
+      "added": 4,
+      "current_installed": 91,
+      "original_readers_masks_and_unknown_profiles_unchanged": true,
+      "source_scope": "Four selected authored workflow texts and notice only; unknown central/support/service/media rights not accepted",
+      "previous_projection_commit": "cf7ed154e569e8237c51389dd45528de536b7f1e",
+      "previous_projection_sha256": "4f8cce1504589195706b5392f4de08b4766b6269c1acfdd8c3eaa28aeee5eb55"
     }
   ]
 }

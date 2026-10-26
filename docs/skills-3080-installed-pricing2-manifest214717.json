@@ -1,0 +1,86 @@
+{
+  "definition": "Actual newly created2; contents derived only from12 current qualified buffers in one normal bounded batch; not an atomic snapshot across files or historical continuity proof",
+  "targets": [
+    {
+      "name": "orange-clean-paper-saas",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "合意したonboardingのフォームと製品panelを、暖色の紙面で整理したい。",
+      "negative": "一つの入力エラーを直す依頼で全画面のbrandを変え、例の料金や実績を製品へ採用する。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/orange-clean-paper-saas/SKILL.md",
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/LICENSE"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "4c59a83938cc516d083261a0b26b7836b76c3530d55329553135bedd9901f450"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "82f0d22eb3cb35a6754b1e1297a5ef393db7eac88ffd47022b8fa797d5615698"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "4f532470971c92edd7407dfba5ec6656e0377c213903bd68bd82281b7ea39788"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "8af1d102dcdcbd1296a31d59a9ae884c22e1a2f939d20c58ef9d79d1f6168a75"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "2cbf4f293c41cb3e17c870d60734e9c586c53801f1946177ac2c9b16efaa1ca6"
+        }
+      ]
+    },
+    {
+      "name": "pricing-page",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "承認済みの商品価格と周期を、料金表・年額表示・申込み先へ一致させたい。",
+      "negative": "原文のプラン例や割引率を採用し、画面の切替だけで本番の課金成功とする。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/pricing-page/SKILL.md",
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/LICENSE"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "001c2280b493ea754cfa7542dd0b6e3f73d924143a85284c3c50c34597f54cc6"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "04bb2d556e30a96f0f7b35ab51e1cdd19e473415f9041515ff79b345d72fe81a"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "9b3af6174e379042ea1579f5d62b6fb0030fe6298d35b417488ac1e5ef8159db"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "5e5f4d4251f02bb1acc414e3b3a9bd3a061dce6b9e120d5fa007dfd0d8712484"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "854c04a301ea1b38e181edfa0670d95c38674a0ac44bacf9e3bbc99d958b9f04"
+        }
+      ]
+    }
+  ],
+  "central_operations": 0,
+  "new_adoptions": 0,
+  "new_adoptions_definition": "Serialization/checking performs no new adoption. Two actual placements and their separate ledger are evidenced by the installation record.",
+  "root": "D:/CC/Skills",
+  "creator_job": "20261026-214717-todo-3080",
+  "current_consumer_job": "20261026-214717-todo-3080",
+  "snapshot_definition": "Actual newly created2; contents derived only from12 current qualified buffers in one normal bounded batch; not an atomic snapshot across files or historical continuity proof"
+}

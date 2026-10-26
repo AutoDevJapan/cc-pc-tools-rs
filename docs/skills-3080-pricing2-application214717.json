@@ -1,0 +1,77 @@
+{
+  "todo": 3080,
+  "actual_parent_job": "20261026-214717-todo-3080",
+  "applied_at": "2026-10-26T21:44:50.9016036+00:00",
+  "actual_model": "gpt-6.1-sol",
+  "effort": "max",
+  "method": "Current actual Codex turn explicitly read4 qualified current instruction buffers and applied these5 bounded decisions; no new model, browser or payment calls",
+  "instruction_files": 4,
+  "instruction_bytes": 8036,
+  "instruction_pins": [
+    {
+      "target": "orange-clean-paper-saas/SKILL.md",
+      "sha256": "4c59a83938cc516d083261a0b26b7836b76c3530d55329553135bedd9901f450",
+      "bytes": 1936
+    },
+    {
+      "target": "orange-clean-paper-saas/references/guide.md",
+      "sha256": "82f0d22eb3cb35a6754b1e1297a5ef393db7eac88ffd47022b8fa797d5615698",
+      "bytes": 1581
+    },
+    {
+      "target": "pricing-page/SKILL.md",
+      "sha256": "001c2280b493ea754cfa7542dd0b6e3f73d924143a85284c3c50c34597f54cc6",
+      "bytes": 2155
+    },
+    {
+      "target": "pricing-page/references/guide.md",
+      "sha256": "04bb2d556e30a96f0f7b35ab51e1cdd19e473415f9041515ff79b345d72fe81a",
+      "bytes": 2364
+    }
+  ],
+  "scenarios": [
+    {
+      "target": "orange-clean-paper-saas",
+      "kind": "positive textual applicability",
+      "input": "An approved onboarding form and a labelled sample product panel need distinct semantic states",
+      "decision": "Assign separate surface/text/CTA/focus/error roles and preserve form-first reading and keyboard/error access on narrow screens. Product statistics remain actual evidence or clearly identified samples.",
+      "actual_effect": "Produced scoped acceptance conditions, no UI rendering or application mutation"
+    },
+    {
+      "target": "orange-clean-paper-saas",
+      "kind": "negative applicability",
+      "input": "A request to repair a form error is interpreted as permission to rename and restyle the whole product",
+      "decision": "Keep the repair and original product scope. Do not treat warm colours, a mockup balance or demo names as real business proof. Same-image answer remains required for any later appearance implementation.",
+      "actual_effect": "No new product name, UI or user-facing promise introduced"
+    },
+    {
+      "target": "pricing-page",
+      "kind": "positive textual arithmetic",
+      "input": "Hypothetical same-condition monthly1000 units and annual9600 units, no actual product or currency selected",
+      "decision": "Annual total9600 is billed-period total, monthly equivalent800 differs from monthly billing, and20percent compares against12000 annualized baseline. Keep currency/tax/cycle and CTA product identity explicit.",
+      "actual_effect": "Local decimal arithmetic confirmed800 and0.2; no actual price, charge or contract selected"
+    },
+    {
+      "target": "pricing-page",
+      "kind": "negative applicability",
+      "input": "A source recommends three plans, free trial and money-back guarantee",
+      "decision": "These are examples, not approved new product terms. Use existing saved conditions first; do not impose a plan cap, guarantee, popularity or conversion claim. Only genuinely missing owner-only decisions would be asked once.",
+      "actual_effect": "No payment, card access, test checkout, new fee, question or contractual promise performed"
+    },
+    {
+      "target": "all2",
+      "kind": "real current result publication",
+      "input": "Canonical CreateNew produced12 files once; current same-ID/hash buffers25048B and fresh metadata439 contain2 enabled matching names",
+      "decision": "Mark these2 as actually new only in the separate current result bundle and ledger, keep original2a provisional input unchanged. Metadata discovery and explicit usage are not live UI, billing success, implicit selection or full16 completion.",
+      "actual_effect": "Carry this distinction into actual result artifacts; original source/notice bytes unchanged"
+    }
+  ],
+  "all_scenario_meanings_applied": true,
+  "explicit_skill_use": true,
+  "implicit_selection_proven": false,
+  "actual_UI_implementation": false,
+  "actual_browser_render": false,
+  "actual_billing_or_checkout": false,
+  "new_source_primary_read_credit": 0,
+  "whole16_complete": false
+}

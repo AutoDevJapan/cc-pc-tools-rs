@@ -82,6 +82,11 @@
       "file": "skills-3080-motion4-designs214717.json",
       "sha256": "080ccec3ceca4feef1c95f51197f947327e524e6264758ecebda7d72e4a72794",
       "target_count": 4
+    },
+    {
+      "file": "skills-3080-pricing2-designs214717.json",
+      "sha256": "c8a04ab89cda4670919e01e254e18886a1eb8a68fb255a8b4af2f52139aa445b",
+      "target_count": 2
     }
   ]
 }

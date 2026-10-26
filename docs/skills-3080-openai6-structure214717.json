@@ -1,0 +1,13 @@
+{
+  "bundle": {
+    "file": "skills-3080-openai6-reviewed-bundle214717.json",
+    "sha256": "15cebd153b38ddf24285198d12ee18902bb5ad16819f6266ca26dfb44c8bf211"
+  },
+  "method": "Existing3048 explicit in-memory checker",
+  "exit": 0,
+  "stdout": "PASS: 6 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+  "stderr": "",
+  "new_provisional_state_metadata_does_not_change_any36_output_buffer": true,
+  "actual_rendering_or_service_runtime": false,
+  "central_operations": 0
+}

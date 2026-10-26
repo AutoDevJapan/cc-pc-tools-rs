@@ -59,5 +59,6 @@
   "root": "D:/CC/Skills",
   "creator_job": "20261026-214717-todo-3080",
   "current_consumer_job": "20261026-214717-todo-3080",
-  "snapshot_definition": "Actual once-only new target; all9 contents came from current qualified same-read buffers in two normal SDK batches. Each read time is independent; no atomic cross-batch snapshot or continuity claim."
+  "snapshot_definition": "Actual once-only new target; all9 contents came from current qualified same-read buffers in two normal SDK batches. Each read time is independent; no atomic cross-batch snapshot or continuity claim.",
+  "new_adoptions_definition": "new_adoptions=0は、このbundle/manifestの組立・検証自体が追加採用を行わないという操作単位の値。security-audit-coverageの実配置1件と採用状態はskills-3080-adoptions.jsonの対応entryとinstallation-evidenceで別に記録する。"
 }

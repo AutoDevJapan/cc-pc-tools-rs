@@ -1,16 +1,16 @@
 {
   "state": "complete",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
-  "manifest_sha256": "e1adf063e9ebbd97d9304f5eec916e4c9a1a0a7c5dcb5fdceaf164f242231085",
-  "queue_sha256": "349c5be7e56bf2c59249e9896b722aeec34ddb552d332f43e669a5ed7541fabb",
+  "manifest_sha256": "155a3d65ad90777922923791189083ed522b59fd6a2ab87330f0042da9968f5b",
+  "queue_sha256": "99e7edbdb808df48ff80fa59c69b99bb9dca04f0fcfc2fa0cf493a923f2c614a",
   "occurrences": 73220,
-  "occurrences_with_assessment_records": 1044,
+  "occurrences_with_assessment_records": 1068,
   "recorded_final_occurrences": 139,
   "stages": {
-    "assessed_needs_current_disposition": 911,
+    "assessed_needs_current_disposition": 935,
     "held_body_unavailable": 428,
     "held_execution_review": 647,
-    "needs_semantic_and_individual_rights_review": 71095,
+    "needs_semantic_and_individual_rights_review": 71071,
     "recorded_final_disposition": 139
   },
   "recorded_final_dispositions": {

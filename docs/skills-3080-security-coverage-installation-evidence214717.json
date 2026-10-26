@@ -38,11 +38,11 @@
   "referenced_artifacts": {
     "bundle": {
       "file": "skills-3080-security-coverage-actual-bundle214717.json",
-      "sha256": "0b7e4419ba53dc1cd98539dad184370742b938b5c807ff2a86689b1cc465490f"
+      "sha256": "1980a2ed4071bd8df239efdedf17ab2b511e2278ef86eadbbf60c5880896df4b"
     },
     "manifest": {
       "file": "skills-3080-installed-security-coverage-manifest214717.json",
-      "sha256": "5ca961526e8ab76e0ec87c0bf6c627b73e28a6c5c3261752e34590a049f7b27c"
+      "sha256": "1384be8ab78e70c938bb9407d3b001156fab01f16e435d9dd5ff76091cfa754f"
     },
     "creation": {
       "file": "skills-3080-security-coverage-create-evidence214717.json",
@@ -54,7 +54,7 @@
     },
     "structure": {
       "file": "skills-3080-security-coverage-actual-structure214717.json",
-      "sha256": "03077cddc8b3062c1db5409600b52d7a255e47993cbf14b534c07711d0194324"
+      "sha256": "70267dd1d45a3b1047b1580e673eff39101c3fceebd014a74171552f040c29d1"
     },
     "discovery": {
       "file": "skills-3080-security-coverage-discovery214717.json",
@@ -81,5 +81,14 @@
   "originals_are_records_not_owner_instructions": true,
   "third_party_assets_services_or_unknown_central_rights_accepted": false,
   "public_result_review_pending": true,
-  "whole16_complete": false
+  "whole16_complete": false,
+  "accepted_initial_result_review": {
+    "file": "skills-3080-security-coverage-final-review214717.json",
+    "sha256": "5ce92797263ddb21294592c512f2177439905a61192375f789479af9aa9d9d08",
+    "head": "bfbd4bf5476e3956f00600700bc9a03f3f562965",
+    "PR": 560,
+    "Must": 0,
+    "Suggestion": 2
+  },
+  "current_counter_definition_clarification_pending_review": true
 }

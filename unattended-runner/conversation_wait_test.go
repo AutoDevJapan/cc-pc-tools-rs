@@ -506,3 +506,17 @@ func TestConversationExplicitWaitNativeCLIDeadlineAfterCommitKeepsReceipt(t *tes
 		t.Fatalf("CLI hid the durable wait after deadline: code=%d output=%s", code, out.String())
 	}
 }
+
+func TestConversationExplicitWaitNeverParksTheOriginOfAnotherRecipient(t *testing.T) {
+	f := actorTest(t, false)
+	f.input.Wait = false
+	f.ask(t)
+	before, _ := os.ReadFile(f.r.TodoPath)
+	if _, err := f.r.conversationWait(context.Background(), f.q.RequestID, false); err == nil {
+		t.Fatal("original-task wait accepted a question bound to a different recipient")
+	}
+	after, _ := os.ReadFile(f.r.TodoPath)
+	if string(before) != string(after) {
+		t.Fatal("the existing recipient contract was changed")
+	}
+}

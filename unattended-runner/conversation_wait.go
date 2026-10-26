@@ -131,6 +131,11 @@ func (r *Runner) conversationWait(ctx context.Context, requestID string, checkOn
 	if !exists || !conversationID.MatchString(requestID) || q.Phase == "reserved" || q.Phase == "withdrawn" || q.Phase == "closed" || q.Phase == "applied" {
 		return nil, errConversationWait
 	}
+	// The finite resumed-recipient contract owns its separate question/wait
+	// envelope. This original-task operation must never park its origin row.
+	if q.Actor != nil {
+		return nil, errConversationWait
+	}
 	row, err := r.conversationTask(ctx, q.Todo)
 	if err != nil || row.Project != q.Project {
 		return nil, errConversationWait

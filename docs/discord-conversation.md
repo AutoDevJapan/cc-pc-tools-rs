@@ -122,6 +122,21 @@ CLIは設定の開始時刻・用途・絶対パス、投稿先のID、独立し
 元スレッドは `--thread`、JSONの `origin_thread_id`、または `scope.origin_thread_id`
 で指定し、複数ある指定は一致させる。通常の質問にはGo側へ `--wait` を渡す。
 既存の別の待機状態を質問待ちへ勝手に変更しない。
+
+元作業の質問と正規に再開した現在の担当が異なる場合は、通常askの
+`--scheduler-item <現在担当>` と `--scheduler-job <実job>` を両方渡す。
+decision.todo_idと元質問の要求IDは変更しない。現在対応するのは正規3638/3650の
+証拠を持つ元1171/担当3277だけで、一般のactor指定を権限にしない。
+仕様・登録root・実job・本人停止を確認して、担当用の質問待ちと回答配送を別に結ぶ。
+依存待ち中は送信済みの`posted`と`wait_deferred:true`を返し、依存を保持する。
+その間の回答全文も同じ担当のメモと次の指示文へ原子的に保存する。
+編集回答はメモに履歴を保ち、指示文の同じ回答ブロックを最新の全文へ置き換える。
+詳しい条件は[再開担当と元の質問](resumed-conversation.md)に記録する。
+
+確認できる失敗は`conversation unavailable: <固定段階>`で返す。
+`actor_scope`、`task_scope`、`original_task`、`input_mismatch`は対象照合、
+`send_pending`、`verification_pending`、`wait_pending`、`deadline`は未確認の工程を示す。
+busyは従来どおり終了コード2。未知の失敗の出力互換性を保ち、生の下位エラーは出さない。
 `ask --attach <元画像>` は画像を質問の開始メッセージへ直接添付する。
 長い質問の背景・選択肢も同じ質問スレッドへ通知なしで続ける。
 本人は質問側だけを開いて回答できる。AIの進捗は別の通知なし投稿へ記録する。

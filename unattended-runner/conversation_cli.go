@@ -25,6 +25,8 @@ type conversationCLIOptions struct {
 	Command           string
 	RequestID         string
 	Todo              uint64
+	ActorTodo         uint64
+	ActorJob          string
 	IntakeTodo        uint64
 	OriginThread      string
 	BodyFile          string
@@ -87,9 +89,12 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 	fs := flag.NewFlagSet("conversation "+opts.Command, flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	var todo string
+	var actor string
 	var intakeTodo string
 	switch opts.Command {
 	case "ask":
+		conversationStringFlag(fs, "scheduler-item", &actor)
+		conversationStringFlag(fs, "scheduler-job", &opts.ActorJob)
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "todo-id", &todo)
 		conversationStringFlag(fs, "origin-thread", &opts.OriginThread)
@@ -149,6 +154,12 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 	switch opts.Command {
 	case "ask":
 		var ok bool
+		if actor != "" || opts.ActorJob != "" {
+			opts.ActorTodo, ok = number(actor)
+			if !ok || !validJob(opts.ActorJob) {
+				return opts, errConversationArguments
+			}
+		}
 		opts.Todo, ok = number(todo)
 		if !ok || opts.RequestID == "" || opts.BodyFile == "" || opts.DecisionFile == "" {
 			return opts, errConversationArguments
@@ -354,7 +365,7 @@ func conversationCLIWithTimeout(args []string, out io.Writer, load func(string) 
 		switch opts.Command {
 		case "ask":
 			var question ConversationQuestion
-			question, err = runner.conversationAsk(ctx, ConversationAskInput{RequestID: opts.RequestID, Todo: opts.Todo, OriginThread: opts.OriginThread, BodyFile: opts.BodyFile, DecisionFile: opts.DecisionFile, Title: opts.Title, Wait: opts.Wait, Attachments: opts.Attachments})
+			question, err = runner.conversationAsk(ctx, ConversationAskInput{RequestID: opts.RequestID, Todo: opts.Todo, ActorTodo: opts.ActorTodo, ActorJob: opts.ActorJob, OriginThread: opts.OriginThread, BodyFile: opts.BodyFile, DecisionFile: opts.DecisionFile, Title: opts.Title, Wait: opts.Wait, Attachments: opts.Attachments})
 			result = conversationQuestionPublic(question)
 		case "log":
 			if opts.CheckOnly {
@@ -437,7 +448,12 @@ func conversationCLIWithTimeout(args []string, out io.Writer, load func(string) 
 		}
 	}
 	if err != nil || (ctx.Err() != nil && !committedWait) {
-		_, _ = io.WriteString(out, "conversation unavailable\n")
+		stage := conversationFailureStage(err)
+		if stage == "operation_pending" {
+			_, _ = io.WriteString(out, "conversation unavailable\n")
+		} else {
+			_, _ = io.WriteString(out, "conversation unavailable: "+stage+"\n")
+		}
 		return 1
 	}
 	data, err := json.Marshal(result)
@@ -457,6 +473,10 @@ func conversationQuestionPublic(q ConversationQuestion) map[string]any {
 	result := map[string]any{"domain": conversationDomain, "request_id": q.RequestID, "todo_id": q.Todo, "phase": q.Phase, "wait_requested": q.Wait}
 	if q.ExplicitWait != nil {
 		result["explicit_wait"] = q.ExplicitWait
+	}
+	if q.Actor != nil {
+		result["actor_todo_id"] = q.Actor.Todo
+		result["wait_deferred"] = q.WaitDeferred
 	}
 	if q.Phase == "duplicate" {
 		result["outcome"] = "existing_question_images_differ"

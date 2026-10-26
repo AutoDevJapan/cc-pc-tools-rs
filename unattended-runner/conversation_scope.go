@@ -25,6 +25,19 @@ func (r *Runner) conversationScopeFile(row *TodoRow, q ConversationQuestion) (st
 	if err != nil {
 		return "", err
 	}
+	if actor := row.conversationActorBinding; actor != nil {
+		if len(row.conversationOriginState) == 0 || row.ID != actor.Todo {
+			return "", errors.New("conversation actor unverified")
+		}
+		originFile := filepath.Join(r.Config.Home, "conversations", q.RequestID, "origin-state.json")
+		if err = writeText(originFile, string(row.conversationOriginState)); err != nil {
+			return "", err
+		}
+		b, err = json.Marshal(map[string]string{"domain": "discord-conversation-actor-todo-scope-v1", "todo_id": scope.Todo, "project": scope.Project, "project_path_sha256": scope.RootSHA, "origin_state_file": originFile, "actor_spec_sha256": actor.SpecSHA, "origin_spec_sha256": actor.OriginSpecSHA})
+		if err != nil {
+			return "", err
+		}
+	}
 	path := filepath.Join(r.Config.Home, "conversations", q.RequestID, "todo-scope.json")
 	return path, writeText(path, string(b))
 }

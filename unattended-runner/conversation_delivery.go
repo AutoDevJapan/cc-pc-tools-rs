@@ -96,7 +96,7 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 			b, readErr := boundedRegular(path)
 			var saved Request
 			var savedProof conversationProof
-			if readErr != nil || json.Unmarshal(b, &saved) != nil || json.Unmarshal([]byte(saved.Context), &savedProof) != nil || saved.RecordVersion != 2 || saved.Source != "discord-api-v10" || saved.Conversation != q.RequestID || saved.Thread != q.Thread || saved.Guild != r.State.Destination.Guild || saved.Author != reply.Author || saved.Message != reply.Message || saved.Created != reply.Created || saved.Key != requestKey(q.Thread, reply.Message) || (saved.Todo != 0 && saved.Todo != q.Todo) || savedProof.RequestID != q.SenderID || savedProof.Thread != q.Thread || savedProof.Question != q.Message || savedProof.Owner != r.State.Destination.Owner || savedProof.Source != "discord-api-v10" || canonicalHash(savedProof.Decision) != q.DecisionSHA || bytesHash([]byte(savedProof.Body)) != q.QuestionSHA {
+			if readErr != nil || json.Unmarshal(b, &saved) != nil || json.Unmarshal([]byte(saved.Context), &savedProof) != nil || saved.RecordVersion != 2 || saved.Source != "discord-api-v10" || saved.Conversation != q.RequestID || saved.Thread != q.Thread || saved.Guild != r.State.Destination.Guild || saved.Author != reply.Author || saved.Message != reply.Message || saved.Created != reply.Created || saved.Key != requestKey(q.Thread, reply.Message) || (saved.Todo != 0 && saved.Todo != conversationRecipient(q)) || savedProof.RequestID != q.SenderID || savedProof.Thread != q.Thread || savedProof.Question != q.Message || savedProof.Owner != r.State.Destination.Owner || savedProof.Source != "discord-api-v10" || canonicalHash(savedProof.Decision) != q.DecisionSHA || bytesHash([]byte(savedProof.Body)) != q.QuestionSHA {
 				return nil, errors.New("conversation saved owner source differs")
 			}
 			// Restore the original private source without overwriting its bytes or
@@ -131,7 +131,7 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 		}
 		// A committed receipt can outlive a lost state-save response. Do not
 		// overwrite its canonical original while that response is reconciled.
-		row, err := r.todo(q.Todo)
+		row, err := r.todo(conversationRecipient(q))
 		if err != nil {
 			return nil, errors.New("conversation implementation state unavailable")
 		}
@@ -188,7 +188,10 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	if complete && q.Wait && len(req.ConversationAttachmentMetadata) == 0 {
 		return nil
 	}
-	row, err := r.conversationTask(ctx, q.Todo)
+	if q.Actor != nil {
+		return r.deliverConversationActorReply(ctx, q, reply, req)
+	}
+	row, err := r.conversationDeliveryTask(ctx, q)
 	if err != nil {
 		return err
 	}
@@ -336,7 +339,7 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 		if _, err = r.Run(ctx, conversationTodo, "edit", fmt.Sprint(q.Todo), "--note-file", noteFile, "--expected-note-sha256", bytesHash([]byte(row.Note)), "--scope-file", scopeFile, "--expected-state-file", expectedFile); err != nil {
 			return errors.New("conversation normal task delivery deferred")
 		}
-		row, err = r.conversationTask(ctx, q.Todo)
+		row, err = r.conversationDeliveryTask(ctx, q)
 		if err != nil || row.Project != q.Project || !hasNoteMarker(row.Note, marker) {
 			return errors.New("conversation task delivery readback deferred")
 		}
@@ -373,7 +376,7 @@ func conversationReplyMarker(q ConversationQuestion, req *Request) string {
 
 func (r *Runner) conversationReplyInstructions(q ConversationQuestion, reply conversationReply, req *Request, receipt []byte, marker string) string {
 	path := filepath.Join(r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".json")
-	instructions := fmt.Sprintf("%s\n本人の回答と元の質問: %s\n元ToDo %d。取得元はDiscord正規API、本人IDと元質問・判断範囲を照合済みです。担当は原文と質問の範囲を読んで実作業へ反映し、受領と実反映を分けて記録してください。\n検証後の反映記録は %s へ保存します。必要項目: source=discord-api-v10, request_id=%s, origin_todo_id=%d, todo_id=%d, thread_id=%s, question_message_id=%s, message_id=%s, author_id=%s, job_id（実際の担当）, revision（40桁）, applied_at（RFC3339）, completion（反映した内容）, verification（execution/origin_saved/identityの各確認結果を文字列で）。追加費用など元質問を超える許可に拡大しないでください。\n", marker, path, q.Todo, filepath.Join(r.Config.Home, "applied", reply.Message+".json"), q.SenderID, q.Todo, q.Todo, q.Thread, q.Message, reply.Message, reply.Author)
+	instructions := fmt.Sprintf("%s\n本人の回答と元の質問: %s\n元ToDo %d、配送先担当 %d。取得元はDiscord正規API、本人IDと元質問・判断範囲を照合済みです。担当は原文と質問の範囲を読んで実作業へ反映し、受領と実反映を分けて記録してください。\n検証後の反映記録は %s へ保存します。必要項目: source=discord-api-v10, request_id=%s, origin_todo_id=%d, todo_id=%d, thread_id=%s, question_message_id=%s, message_id=%s, author_id=%s, job_id（実際の担当）, revision（40桁）, applied_at（RFC3339）, completion（反映した内容）, verification（execution/origin_saved/identityの各確認結果を文字列で）。追加費用など元質問を超える許可に拡大しないでください。\n", marker, path, conversationOrigin(q), conversationRecipient(q), filepath.Join(r.Config.Home, "applied", reply.Message+".json"), q.SenderID, conversationOrigin(q), conversationRecipient(q), q.Thread, q.Message, reply.Message, reply.Author)
 	instructions += fmt.Sprintf("返信版の照合: reply_sha256=%s, source_receipt_sha256=%s を反映記録へ含めてください。現在の私的原文を読み返してから記録し、編集前の証跡を新しい本文の反映証拠にしないでください。\n", canonicalHash(reply), bytesHash(receipt))
 	instructions += fmt.Sprintf("元回答時刻=%s、編集時刻=%s、取得時刻=%s。現在の直接指示・停止・依存・元仕様と許可範囲を保持し、古い回答で新しい指示を上書きしないでください。\n", req.Created, req.Edited, req.Acquired)
 	instructions += "以下は、上の本人IDと元質問に対応するDiscord回答の全文です。要約や省略はしていません。\n<discord-owner-answer>\n" + reply.Body + "\n</discord-owner-answer>\n"
@@ -709,7 +712,11 @@ func (r *Runner) processConversationMaintenance(ctx context.Context, health *Hea
 			return
 		}
 		if q.Phase == "reserved" || (q.Phase == "posted" && q.Wait) {
-			_, err := r.conversationAsk(ctx, ConversationAskInput{RequestID: q.RequestID, Todo: q.Todo, OriginThread: q.OriginThread, BodyFile: q.BodyFile, DecisionFile: q.DecisionFile, Title: q.Title, Wait: q.Wait, Attachments: q.Attachments})
+			input := ConversationAskInput{RequestID: q.RequestID, Todo: q.Todo, OriginThread: q.OriginThread, BodyFile: q.BodyFile, DecisionFile: q.DecisionFile, Title: q.Title, Wait: q.Wait, Attachments: q.Attachments}
+			if q.Actor != nil {
+				input.ActorTodo, input.ActorJob = q.Actor.Todo, q.Actor.Job
+			}
+			_, err := r.conversationAsk(ctx, input)
 			if err != nil {
 				health.Errors = append(health.Errors, "conversation_send_pending")
 			}
@@ -786,6 +793,7 @@ func (r *Runner) processConversationReplies(ctx context.Context, index *conversa
 		wasClosed := q.Phase == "closed"
 		if !wasClosed || (req.Phase != "conversation_reply_applied" && req.Phase != "conversation_direction_recorded" && req.Phase != "conversation_implementation_recorded") {
 			q.Phase = "answered"
+			q.WaitDeferred = false
 		}
 		index.Questions[id] = q
 		if publish(r.conversationPath(), index) != nil {

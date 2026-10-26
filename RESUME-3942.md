@@ -131,3 +131,55 @@ single-link delivery SHA7d1d86f361eba1a05e7c21b8c37077836fe56f3b209871064a2c9300
 60関連Windows成功/0skip、末尾のpath hint保持回帰1件も成功、ClippyとGo race/vet成功。
 Cargo入力はこのbuildHeadから最終pinコミットまで変更しない。新RCの正常read-only実対象照合、
 固定別modelレビュー/同HEAD CI/追加PR merge/新suffix CAS/実回収を続ける。
+23時台の追加受入: PR551はreview3975（実gpt-6-sol/max/16steps、native01a17876-adfe-7001-a07d-5f04de07a5c5、
+原SHA cc5b76dc046d61aba8aa82cec35c1d04dce9c76bb483d1499556c82d84a01f9d）でMust0。
+同HEAD6a5のCI（関連626成功1skip/doctest/Clippy/CodeQL）成功後、fe70a449へ通常merge。
+正規AdminBroker check20261026-140027-ba191bde93fbba91d282358755931e38 qualifiedtrueの後、
+apply20261026-140040-998935e13191aee2aff250a1e476ae4dで現用7d1...へ更新/verify。
+元11cd backup suffix todo3942-scope、元7fbc backup、ACL、PT1H task定義、safe-delete a413e654は保持。
+ただし通常Task23:03:31/23:23:50等の実行はexit0だが初期2対象をOTHER_OWNER_SCOPE_UNVERIFIEDとして保持し実削除0。
+正常cursorだけで古いbatch→wrapを有限に進め、手書きreset/qualifierコピー/新所有登録はしていない。
+
+独立read-only調査3977はsource読了したが、同時刻のS4U/Interactiveの稼働集合を独立に取得できず根因未確定。
+原返答とnative照合は元job20261026-232056-todo-3977に保持。親の一度50秒以内の既存Task内診断は
+正常AdminBroker20261026-142350-d8720364fdebfdb01ca5233c7f1f9cf9、20.061sで終了、
+guard匿名JSONを21件（unverified20/clear1）観測した。一般削除希望とforeign scopeの失敗を分離するだけの
+観測は取れず、同一job/同一時点であると断定しない。private path/nameなし、Task定義不変更、常駐なし。
+原結果 s4u-guard-observation.json と既存RUNTIME jsonlを保持。
+
+次の最小変更は許可条件を一切変えず、scopeのraw/index/未公開/CWD/世代/hint/親/pin/guard/historyの
+保持理由を匿名の固定codeへ分け、正常APIのこのprocess自身のhandle/kernel観測とactive job記録最大件数を
+追加する。観測未実施はnull、例外文やPID/元仕様/私的名を出さない。privacy回帰と各理由の保持回帰を追加、
+cleanupの51 tests/0skipとClippy、Go race/vet成功。実回収は依然0、source/Git/release/原記録を保持。
+次回の配布は旧3757→7fbc→初回3942 11cd→二回目3942 7d1の両normal broker原proofを検証して鎖を保ち、
+新suffix todo3942-observeで前backupを上書きしない。data権限/guard/normal process mutationを変えない。
+自己観測と理由を同じ通常S4U実行で取ってから、失敗した条件の根因だけを修正する。
+
+一時diag test追記は元byteへ復元済み。後の通常testでdebug試験exeが上書きされるため、旧rc-scope-proof.ps1の
+フィルタが0testsなら実対象資格の再確認として数えない。元の22:28 resultOK/14,020,506B/削除0原logは保持。
+自分のdebugは再テスト/診断依存が残る間保持し、最終受入後に回収する。旧Sourceのupstream refはGitHubの
+merge後自動削除があり得る。保存確認はnormal origin/main到達性も照合し、古いbranch不存在を未保存断定へ使わない。
+観測版Rust source edc9c11c1b0d68198d46f9cbedd5ba718b7e3e1fを保存/push、clean通常release成功。
+単一リンクdelivery SHAbe3d6dcc4ee2c43db9259c777f3a9faf03e970a84a05aa37b4da6dba15a69af1、
+149入力manifest SHA9fb4805deee9147f420612c0745dc7dc08a7c8789c36222ac9146712d445fc04。
+51関連test/0skip、Clippy、Go race/vet成功。observed-self/理由は匿名固定値だけで、許可述語は不変更。
+Goの次回oldは現用7d1をnormal broker原proofで検証し、元3757と初回11cdの鎖も維持する。
+まだこの観測版は未配布。別モデルMust0/同HEAD CI後に追加PRを通常mergeし、source/cas/aclを照合して
+suffix todo3942-observeで反映、既存S4U taskの同一実行でretention理由/active最大件数/自己handle-kernelを得る。
+元の実対象2件と自分のdebug回収は未完了、実回収0を保持。本人判断やPC操作は不要。
+review3979（job20261026-235758-todo-3979/37steps、native01a178b8-882a-7ca0-9d5e-d6bba5742b05、
+原SHA41a638ba659bec8ab5e2655ef23bce9e3715a337a9df43cd4e24a5421d7af063）は固定fe70→2057の5対象読了。
+Must1は新保持コードのraw/status/CWD/created/directory/history6経路の回帰不足で、synthetic実FSを使い
+各固定code・候補payload・foreign source・元job/index保持を検証する表形式回帰を追加し成功。
+Suggestionの前/現配布世代エラー混同もstatic phase別codeへ分離し、両世代の誤表示を検出する回帰追加、
+Go race/vetとClippy成功。許可述語とprivacy/新規data所有/guard/元recordは不変更。
+この差分はまだ別modelの確認前。Rust test sourceが配布票の入力へ含まれるため、新しいclean releaseと
+manifestを作り直してpinを更新する。51既存関連成功+追加6経路の回帰成功、full workspaceを再度要求しない。
+現用7d1/実回収0/元2件と自己debug未回収、元record/必要release保持、owner入力不要を維持。
+3979修正後source9e1d0186707f49a61f9f56a1a6644e56bbf8de1bでclean通常release終了0。
+delivery SHAdde2d2856c204eb094d77b9e9688996ead292843ecf8cff1d6f8fc3dedf931b0、
+149入力manifest SHA2f489a2ba87083d4448d2ce243d57ff9ca34043011f3c2c573d3b24e5b47fd90。
+元edc/be3/manifestは履歴として保持し、最新資格へ流用しない。
+52関連のうち既存51成功と新6経路表形式回帰1件（6入力）を最終sourceで成功、Clippy/Go race/vet成功。
+このpin差分と追加test/phase codeだけを限定別model reviewし、同HEAD CI後に観測版を通常反映する。
+現用7d1、実回収0、元2対象/自己debug未回収を保持。本人の判断・PC操作は不要。

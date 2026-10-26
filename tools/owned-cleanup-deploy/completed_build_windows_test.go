@@ -10,7 +10,7 @@ import (
 
 func TestCompletedBuildGenerationUsesTheSameCASACLAndNoReplace(t *testing.T) {
 	l := fixture(t)
-	p, e := prepareAt(l, "todo3942-scope")
+	p, e := prepareAt(l, "todo3942-observe")
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -60,7 +60,7 @@ func TestCompletedBuildIdentityDoesNotAdoptUnknownOrOtherSoftware(t *testing.T) 
 			}
 		})
 	}
-	if completedLeaf.Target != leaves[1].Target || completedLeaf.Old != completedPreviousSHA || completedLeaf.Kind != "cleanup-8h" || completedLeaf.Target == nativeLeaf.Target {
+	if completedLeaf.Target != leaves[1].Target || completedLeaf.Old != completedCurrentSHA || completedLeaf.Kind != "cleanup-8h" || completedLeaf.Target == nativeLeaf.Target {
 		t.Fatal("cleanup-only scope changed")
 	}
 }
@@ -106,6 +106,33 @@ func TestCompletedPreviousGenerationRequiresTheOriginalVerifiedCleanupOnlyInstal
 				t.Fatal("previous generation qualification differs")
 			}
 		})
+	}
+}
+
+func TestCurrentGenerationCannotSkipThePreviousInstallChain(t *testing.T) {
+	encode := func(head, old, next string) []byte {
+		row := map[string]any{"kind": "cleanup-8h", "old_sha256": old, "new_sha256": next, "updated": true, "verified": true, "steps": map[string]any{"old_retired": true, "published": true, "verified": true}}
+		out, _ := json.Marshal(map[string]any{"domain": "completed-build-cleanup-software-3942", "source_head": head, "qualified": true, "results": []any{row}})
+		b, _ := json.Marshal(map[string]any{"exit": 0, "stdout": string(out)})
+		return b
+	}
+	good := encode(completedCurrentHead, completedPreviousSHA, completedCurrentSHA)
+	if completedCurrentGeneration(good) != nil {
+		t.Fatal("current original generation rejected")
+	}
+	if completedPreviousGeneration(good) == nil {
+		t.Fatal("current record adopted as earlier original")
+	}
+	for _, b := range [][]byte{encode(completedCurrentHead, leaves[1].New, completedCurrentSHA), encode(completedPreviousHead, completedPreviousSHA, completedCurrentSHA), encode(completedCurrentHead, completedPreviousSHA, "unknown")} {
+		if e := completedCurrentGeneration(b); e == nil || e.Error() != "COMPLETED_CURRENT_INSTALL_UNVERIFIED" {
+			t.Fatal("broken install chain accepted")
+		}
+	}
+	if e := completedCurrentGeneration([]byte("invalid broker")); e == nil || e.Error() != "COMPLETED_CURRENT_BROKER_UNVERIFIED" {
+		t.Fatal("current broker error mislabeled")
+	}
+	if e := completedPreviousGeneration([]byte("invalid broker")); e == nil || e.Error() != "COMPLETED_PREVIOUS_BROKER_UNVERIFIED" {
+		t.Fatal("previous broker error mislabeled")
 	}
 }
 

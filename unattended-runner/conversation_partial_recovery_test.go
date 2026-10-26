@@ -395,3 +395,110 @@ func TestConversationOrdinaryProjectGuardsBothDistinctRoots(t *testing.T) {
 		})
 	}
 }
+
+func TestConversationOrdinaryLinkRejectsLiveQuestionWaitBeforeCapture(t *testing.T) {
+	for _, phase := range []string{"waiting", "answered", "posted"} {
+		t.Run(phase, func(t *testing.T) {
+			f, args, _ := ordinaryProjectFixture(t)
+			index, err := f.r.loadConversations()
+			if err != nil {
+				t.Fatal(err)
+			}
+			q := index.Questions[f.q.RequestID]
+			q.Wait = true
+			q.Phase = phase
+			if _, err := f.r.Run(context.Background(), conversationTodo, "question-wait", "42", "--question-file", q.ReceiptFile); err != nil {
+				t.Fatal(err)
+			}
+			index.Questions[q.RequestID] = q
+			if publish(f.r.conversationPath(), index) != nil {
+				t.Fatal("fixture")
+			}
+			before, _ := os.ReadFile(f.r.TodoPath)
+			beforeIndex, _ := os.ReadFile(f.r.conversationPath())
+			code, _ := intakeLinkCLI(t, f, args)
+			after, _ := os.ReadFile(f.r.TodoPath)
+			afterIndex, _ := os.ReadFile(f.r.conversationPath())
+			if code == 0 || !bytes.Equal(before, after) || !bytes.Equal(beforeIndex, afterIndex) || f.r.State.ConversationCaptures[f.replies[0].Message] != nil {
+				t.Fatal("live question wait was consumed or its source captured", phase, code)
+			}
+			if _, err := os.Stat(filepath.Join(f.r.Config.Home, "conversations", q.RequestID, "replies", f.replies[0].Message+".intake-link.json")); !os.IsNotExist(err) {
+				t.Fatal("rejected live question wrote link evidence", err)
+			}
+		})
+	}
+}
+
+func TestConversationOrdinaryLinkRejectsOtherRecoveryAndAnsweredQuestion(t *testing.T) {
+	for _, change := range []string{"other-intake", "answered"} {
+		t.Run(change, func(t *testing.T) {
+			f, args, _ := ordinaryProjectFixture(t)
+			index, err := f.r.loadConversations()
+			if err != nil {
+				t.Fatal(err)
+			}
+			q := index.Questions[f.q.RequestID]
+			if change == "other-intake" {
+				q.RecoveredIntake = 999
+				index.Questions[q.RequestID] = q
+				if publish(f.r.conversationPath(), index) != nil {
+					t.Fatal("fixture")
+				}
+			} else {
+				answer := conversationAnswerReceipt{RequestID: q.SenderID, Todo: "42", Thread: q.Thread, Question: q.Message, QuestionSHA: q.ReceiptSHA}
+				f.mutateTodo(t, func(row map[string]any) {
+					row["owner_question_answer_receipts"] = []any{map[string]any{"wait": map[string]any{"question_receipt_sha256": q.ReceiptSHA, "question": map[string]any{"request_id": q.SenderID}}, "answer": answer}}
+				})
+			}
+			before, _ := os.ReadFile(f.r.TodoPath)
+			code, _ := intakeLinkCLI(t, f, args)
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if code == 0 || !bytes.Equal(before, after) || f.r.State.ConversationCaptures[f.replies[0].Message] != nil {
+				t.Fatal("previous answer or recovery identity was replaced", code)
+			}
+		})
+	}
+}
+
+func TestConversationRecoveryRejectsSameProjectAndExistingWait(t *testing.T) {
+	for _, change := range []string{"same-project", "live-wait"} {
+		t.Run(change, func(t *testing.T) {
+			f, _, _ := ordinaryProjectFixture(t)
+			index, err := f.r.loadConversations()
+			if err != nil {
+				t.Fatal(err)
+			}
+			q := index.Questions[f.q.RequestID]
+			if change == "same-project" {
+				var db map[string]any
+				_ = readJSON(f.r.TodoPath, maxTodo, &db)
+				for _, raw := range db["items"].([]any) {
+					row := raw.(map[string]any)
+					if row["id"] == float64(43) {
+						row["project"] = q.Project
+					}
+				}
+				if publish(f.r.TodoPath, db) != nil {
+					t.Fatal("fixture")
+				}
+			} else {
+				if _, err := f.r.Run(context.Background(), conversationTodo, "question-wait", "42", "--question-file", q.ReceiptFile); err != nil {
+					t.Fatal(err)
+				}
+			}
+			q.Phase = "reserved"
+			index.Questions[q.RequestID] = q
+			if publish(f.r.conversationPath(), index) != nil {
+				t.Fatal("fixture")
+			}
+			before, _ := os.ReadFile(f.r.TodoPath)
+			beforeIndex, _ := os.ReadFile(f.r.conversationPath())
+			code, _ := intakeLinkCLI(t, f, []string{"recover-question", "--request-id", q.RequestID, "--message-id", f.replies[0].Message})
+			after, _ := os.ReadFile(f.r.TodoPath)
+			afterIndex, _ := os.ReadFile(f.r.conversationPath())
+			if code == 0 || !bytes.Equal(before, after) || !bytes.Equal(beforeIndex, afterIndex) {
+				t.Fatal("ordinary recovery suppressed an existing delivery path", code)
+			}
+		})
+	}
+}

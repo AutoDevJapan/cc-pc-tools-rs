@@ -24,6 +24,9 @@ Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/489
   記録を作った現在の実ジョブと、実操作を行った過去のジョブを取り違えない。
 - source-linkと実反映記録は、元の技術待ちを質問待ちへ置き換えず、解除・再起動しない。
   closeは全現在返信の反映、元の停止と依存、PATCH後GETを引き続き確認する。
+- 回復と別projectのsource-linkは、元に生きた質問待ちも同じ質問への回答済み記録もなく、
+  質問がpostedである独立受付だけに使う。
+  waiting/answered、別の回復先番号、同一projectの回復は、原本のcaptureやlink票を作る前に拒否する。
 - 回復した会話には元受付番号を保存し、毎分処理も質問待ちの作成と元担当への再指示を行わない。
   未結合の返信や編集版は自動適用せず、`conversation_recovered_reply_pending`として残す。
   この入口で結べるのは、不変の通常受付原本と一致する版に限る。
@@ -46,7 +49,8 @@ Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/489
 - `cc-todo/tests/direction_record.rs`が、別rootの原本付き入力と、コピー・別本人・
   別元作業・無関係な仕様/prompt・別job・root変更の拒否を確認する。
 - 変更前のGo処理では予約回復と別プロジェクトの正常系が失敗した。
-  変更後の新しいGo正常系・拒否系は成功した。関連Go回帰は416件成功、106件省略。
+  初版の新しいGo正常系・拒否系は成功し、その時点の関連Go回帰は416件成功、106件省略だった。
+  最新main統合後の関連Go回帰は510件成功、111件省略。
   省略した実CLI結合テストは、Cargo資源を持つ担当が変更後のToDo実行物を使って別に確認する。
 - 配布中の旧ToDo実行物では、新しい結合テストが`direction_input_invalid`で失敗した。
   これは変更前の再現であり、変更後のRustテスト・配布の成功を示すものではない。
@@ -70,3 +74,15 @@ CIではコピー原本の拒否テストも失敗していた。
 未知projectのケースは元のscope証拠を保ったまま拒否を確認するよう直し、
 コピー先をspec/promptに書いた場合にも正規home外ならRust側で拒否するテストへ補強した。
 変更後のRust・実CLIの結果は別に取得する。
+
+候補9004aa79は独立Cargoチェック3993でRust26件・race有効の実CLI結合の必須6件が成功し、
+doctest対象0件とClippyも終了0を確認した。
+別モデル3994の追加Mustで見つかった生きた質問待ちの抑止は、Go側の回復・link共通の適格性確認へ直す。
+新しい拒否テストは変更前に5ケースで失敗し、修正後に全ケースが成功した。
+Rustのソースと依存は変えず、このGo修正は同じ検証済み実行物を使う実CLI結合で確認する。
+
+## 配備順序
+
+新しい`recovered_intake_todo_id`を書き込む前に、常駐runnerとtodo.exeを検証済みの版へ更新する。
+旧runnerは未知フィールドを拒否するため、候補のworktree実行物を本番homeへ向けてrecover/linkを試さない。
+既存の定期実行の停止・再開状態と稼働中の旧実行物を照合し、更新後の通常CLIで回復・実反映記録・closeを行う。

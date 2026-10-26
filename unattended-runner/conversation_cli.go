@@ -429,6 +429,9 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 
 func conversationQuestionPublic(q ConversationQuestion) map[string]any {
 	result := map[string]any{"domain": conversationDomain, "request_id": q.RequestID, "todo_id": q.Todo, "phase": q.Phase, "wait_requested": q.Wait}
+	if q.RecoveredIntake != 0 {
+		result["recovered_intake_todo_id"] = q.RecoveredIntake
+	}
 	if q.Phase == "duplicate" {
 		result["outcome"] = "existing_question_images_differ"
 		if q.ExistingURL != "" {

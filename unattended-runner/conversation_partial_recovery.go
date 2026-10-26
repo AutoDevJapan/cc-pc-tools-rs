@@ -22,7 +22,7 @@ func (r *Runner) recoverConversationQuestion(ctx context.Context, opts conversat
 		return nil, errImplementation
 	}
 	if q.Phase != "reserved" {
-		if q.Thread != req.Thread || q.Phase == "withdrawn" {
+		if q.Thread != req.Thread || q.Phase == "withdrawn" || q.RecoveredIntake != req.Todo {
 			return nil, errImplementation
 		}
 		row, err := r.conversationTask(ctx, req.Todo)
@@ -39,14 +39,14 @@ func (r *Runner) recoverConversationQuestion(ctx context.Context, opts conversat
 		if !recoveryReplyMatches(proof, req) {
 			return nil, errImplementation
 		}
-		return map[string]any{"recovered": true, "reused": true, "phase": q.Phase, "request_id": q.RequestID, "origin_resumed": false}, nil
+		return map[string]any{"recovered": true, "reused": true, "phase": q.Phase, "recovered_intake_todo_id": q.RecoveredIntake, "request_id": q.RequestID, "origin_resumed": false}, nil
 	}
 	origin, err := r.conversationTask(ctx, q.Todo)
 	if err != nil || origin.Project != q.Project {
 		return nil, errImplementation
 	}
 	intake, err := r.conversationTask(ctx, req.Todo)
-	if err != nil {
+	if err != nil || intake.Project == origin.Project {
 		return nil, errImplementation
 	}
 	q.Thread, q.Message = req.Thread, req.Thread
@@ -94,6 +94,9 @@ func (r *Runner) recoverConversationQuestion(ctx context.Context, opts conversat
 	b, _ := json.MarshalIndent(receipt, "", "  ")
 	q.ReceiptFile = filepath.Join(r.Config.Home, "conversations", q.RequestID, "question.json")
 	q.ReceiptSHA = bytesHash(b)
+	if !ordinaryRecoveryEligible(q, origin, intake) {
+		return nil, errImplementation
+	}
 	if writeConversationOnce(q.ReceiptFile, b) != nil {
 		return nil, errImplementation
 	}
@@ -103,7 +106,17 @@ func (r *Runner) recoverConversationQuestion(ctx context.Context, opts conversat
 	if publish(r.conversationPath(), index) != nil {
 		return nil, errImplementation
 	}
-	return map[string]any{"recovered": true, "request_id": q.RequestID, "question_thread_id": q.Thread, "origin_resumed": false, "new_question_sent": false}, nil
+	return map[string]any{"recovered": true, "request_id": q.RequestID, "question_thread_id": q.Thread, "recovered_intake_todo_id": q.RecoveredIntake, "origin_resumed": false, "new_question_sent": false}, nil
+}
+
+// This path repairs a standalone ordinary intake, never an origin's live or
+// already consumed question wait. Keep this admission rule shared by discovery
+// and linking so periodic processing cannot suppress normal answer delivery.
+func ordinaryRecoveryEligible(q ConversationQuestion, origin, intake *TodoRow) bool {
+	return origin != nil && intake != nil && origin.Project == q.Project && intake.Project != q.Project && intake.ID != q.Todo &&
+		(q.RecoveredIntake == 0 || q.RecoveredIntake == intake.ID) &&
+		(len(origin.QuestionWait) == 0 || string(origin.QuestionWait) == "null") &&
+		!conversationWaitRecorded(origin, q) && !conversationQuestionAnswered(origin, q)
 }
 
 func recoveryReplyMatches(proof *conversationProof, req *Request) bool {
@@ -132,6 +145,9 @@ func (r *Runner) ordinaryAssignment(q ConversationQuestion, message string, row 
 	var saved Request
 	var sourceContext conversationProof
 	if err != nil || json.Unmarshal(b, &saved) != nil || ordinaryVersion(&saved) != ordinaryVersion(old) || saved.Key != old.Key || json.Unmarshal([]byte(saved.Context), &sourceContext) != nil || sourceContext.Source != "discord-api-v10" || !sourceContext.ReadOnly || sourceContext.Owner != old.Author || sourceContext.Thread != q.Thread || sourceContext.Question != q.Message || sourceContext.RequestID != q.SenderID || canonicalHash(sourceContext.Decision) != q.DecisionSHA || bytesHash([]byte(sourceContext.Body)) != q.QuestionSHA {
+		return "", "", false
+	}
+	if sourceContext.Fingerprint != "" && sourceContext.Fingerprint != q.Fingerprint {
 		return "", "", false
 	}
 	for _, reply := range sourceContext.Replies {

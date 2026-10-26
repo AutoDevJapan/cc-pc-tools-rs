@@ -39,6 +39,8 @@ ToDo writerは同じロックで両方のスナップショットを照合し、
 `conversation recover-question --request-id <元request> --message-id <本人reply>`
 を使う。正規senderの読取証拠から質問を回復し、リンク投稿を再送しない。
 元作業の技術待ちや本人停止は解除しない。
+この回復は別projectの独立受付専用で、元に生きた質問待ちがある場合は拒否する。
+常駐runnerとtodo.exeを更新してから使い、候補実行物で本番の索引だけを先に変更しない。
 
 通常受付担当が元作業と別プロジェクトの場合は、その担当自身をactor/intakeとして
 source-linkする。登録rootの付替えは不要。原受付の受信キーと原本・元質問、

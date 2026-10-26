@@ -152,6 +152,9 @@ func (r *Runner) conversationIntakeLink(ctx context.Context, opts conversationCL
 	}
 	crossProject := rows[1].Project != q.Project || rows[2].Project != q.Project
 	if crossProject {
+		if q.Phase != "posted" || !ordinaryRecoveryEligible(q, rows[0], rows[1]) {
+			return nil, errImplementation
+		}
 		if _, _, ok := r.ordinaryAssignment(q, opts.Message, rows[2]); !ok || opts.IntakeTodo != opts.Todo {
 			return nil, errImplementation
 		}
@@ -240,7 +243,7 @@ func (r *Runner) conversationIntakeLink(ctx context.Context, opts conversationCL
 			return nil, err
 		}
 		current, ok := index.Questions[q.RequestID]
-		if !ok || r.conversationCloseIdentity(current) != r.conversationCloseIdentity(q) {
+		if !ok || r.conversationCloseIdentity(current) != r.conversationCloseIdentity(q) || (current.RecoveredIntake != 0 && current.RecoveredIntake != opts.IntakeTodo) {
 			return nil, errImplementation
 		}
 		current.RecoveredIntake = opts.IntakeTodo

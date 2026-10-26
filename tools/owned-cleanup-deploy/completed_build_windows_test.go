@@ -10,7 +10,7 @@ import (
 
 func TestCompletedBuildGenerationUsesTheSameCASACLAndNoReplace(t *testing.T) {
 	l := fixture(t)
-	p, e := prepareAt(l, "todo3942")
+	p, e := prepareAt(l, "todo3942-scope")
 	if e != nil {
 		t.Fatal(e)
 	}

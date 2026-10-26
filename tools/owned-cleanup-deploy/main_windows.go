@@ -416,7 +416,7 @@ func prepare(l leaf) (*prepared, error) {
 	return prepareAt(l, "todo3757")
 }
 func prepareAt(l leaf, suffix string) (*prepared, error) {
-	if suffix != "todo3757" && suffix != "todo3757-native-proof" && suffix != "todo3942" {
+	if suffix != "todo3757" && suffix != "todo3757-native-proof" && suffix != "todo3942" && suffix != "todo3942-scope" {
 		return nil, errCode("INVALID_UPDATE_GENERATION")
 	}
 	ps, e := parents(l.Target)

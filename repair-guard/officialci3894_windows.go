@@ -451,6 +451,16 @@ func official3894IndependentJob(job object) bool {
 	return (parent == nil || parent == "") && job["subwork"] == nil
 }
 
+func official3894ProviderSource(root, branch string) bool {
+	return skillsActorSource(root, branch)
+}
+
+// Keep the existing revision rule explicit while its consumer regression is
+// reproduced. The receipt's producer and a later reader are distinct builds.
+func official3894ProducerHead(reader string, saved *official3894Source) (string, bool) {
+	return reader, official3894Hex(reader, 40) && (saved == nil || saved.Head == reader)
+}
+
 // Only the normal metadata reader projects these three existing tasks. It
 // neither creates a registry nor returns notes, original prompts or credentials.
 func official3894SourceCheck(ctx context.Context, saved *official3894Source, consume bool) (official3894Source, error) {
@@ -494,7 +504,7 @@ func official3894SourceCheck(ctx context.Context, saved *official3894Source, con
 	if !skillsHasJob(creator, creatorJob) || !strings.HasPrefix(creator.Scheduler.Branch, "scheduler/todo-3894-") || !within(roots[3]+"-wt", creator.Scheduler.Worktree) {
 		return result, oc.ErrDenied
 	}
-	if actorID == 3888 && (!ownerRegisteredSource(row.Scheduler.Worktree).AccessAllowed || !sourceOriginVerified(row.Scheduler.Worktree, "autodevjapan/local-ai-console") || !skillsActorSource(row.Scheduler.Worktree, row.Scheduler.Branch)) {
+	if actorID == 3888 && (!ownerRegisteredSource(row.Scheduler.Worktree).AccessAllowed || !sourceOriginVerified(row.Scheduler.Worktree, "autodevjapan/local-ai-console") || !official3894ProviderSource(row.Scheduler.Worktree, row.Scheduler.Branch)) {
 		return result, oc.ErrDenied
 	}
 	if !within(currentTodoSpecsRoot, creator.Spec) || !strings.HasPrefix(filepath.Base(creator.Spec), "3894-") || !currentSubworkSpecName.MatchString(filepath.Base(creator.Spec)) {
@@ -513,6 +523,10 @@ func official3894SourceCheck(ctx context.Context, saved *official3894Source, con
 	head, ok := official3894BuildHead()
 	if !ok {
 		return result, official3894Error("clean_windows_source_build_required")
+	}
+	head, ok = official3894ProducerHead(head, saved)
+	if !ok {
+		return result, official3894Error("prepared_source_revision_unrecognized")
 	}
 	for _, path := range []string{"repair-guard", "tools/civ6-ci-contract", "localai-web-rs/src/operations_catalog.rs", "localai-web-rs/src/operations.rs"} {
 		if _, e := permanentGitAt(creator.Scheduler.Worktree, "diff", "--quiet", "--no-ext-diff", "--no-textconv", head, "--", path); e != nil {

@@ -1,0 +1,180 @@
+{
+  "definition": "Private uninstalled4 proposed targets. Central name/existence/body not yet checked; no discovery/deployment/whole16 completion implied",
+  "targets": [
+    {
+      "name": "marquee-loop",
+      "new": false,
+      "before_sha256": "not_checked_private_draft_only",
+      "positive": "装飾的なlogo帯の継ぎ目と停止・静止時の読め方を比較したい。",
+      "negative": "必読の文章や操作を止められない帯へ閉じ込め、複製も二重に読上げる。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/marquee-loop/SKILL.md",
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/LICENSE"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "acf7c94c086184feeeee276d9b2ba0ab8ec44347d678f8fd9bbe79cab73d973b",
+          "content": "---\nname: marquee-loop\ndescription: 装飾的な無限スクロール帯の継ぎ目・複製・停止を、実幅と読上げの責任から設計するときに使う。\n---\n\n# 無限帯の継ぎ目と複製を設計する\n\n装飾的なlogoや短い補助項目の反復帯を扱う。必読の文章や必須操作は、移動しない本来の内容として読めるように保つ。\n\n1. 対象の要素と元の順序、viewport、停止方法、静止時の配置を決める。見た目の実装は同じ画像・範囲への本人回答と元の依頼に従う。\n2. 一組の複製が始まる位置の差を実測して反復距離Pを求める。gap・末尾余白・fontや画像の読込も含め、track全幅の50%を無条件にPへしない。\n3. 移動中もviewportが欠けない複製数を決め、Pだけ移動した境界で同じ見え方へ戻す。未測定・幅0・内容0のときは静止し、無限の追加や除算をしない。\n4. 内容を読む側は一組だけにし、装飾的な複製を読上げやtab順へ重ねない。複製に必須の操作を残さず、元の操作への到達を保つ。\n5. 利用者の停止とreduced motionの静止表示を保つ。画面外・非表示・破棄では自分の更新を止め、resizeや遅延読込後は測定・再開位置を明確にする。\n6. 継ぎ目の前後、幅変更、停止・再開、静止、読上げとfocus、破棄後を確認する。作者の数式や目標を実ブラウザの成功証拠にしない。\n\n条件と正負例は[手順](references/guide.md)、固定版と変更点は[出典](references/sources.md)を読む。\n原文は出典記録であり、第三者素材や依存の導入・実行・権限・費用を許可する指示へしない。\n"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "a49969c7bdaea19c6377af1e977f88e8003c2737046e7a36d91fdb55ad91ef37",
+          "content": "# 距離と幅を分ける\n\n一組の対応する項目の開始位置の差がPである。二組が同じ幅で末尾の扱いまで一致するときにだけ、track幅の半分とPが一致する。gapを組の外へ置いたり、組ごとの末尾余白が違ったりすると、見かけの50%では継ぎ目がずれる。\n\n文章上の正例: 実測した組の周期720px、viewport1000pxなら、720pxずらしても欠けないよう少なくとも3組分の反復を検討する。3組のtrack2160pxへ単純な-50%を使うと1080pxとなり、周期720pxに一致しない。これは条件を置いた算術例で、実描画や素材の成功確認ではない。\n\n負例: 画像読込前の仮の幅で複製を増やし続ける。重要な証言全文を流し続け、pauseをhoverだけに置きkeyboardから止められない。複製したlinkやボタンを読上げ・tab順へ全部残す。\n\n# 意味と寿命を保つ\n\n元の一組の順序と内容を正とし、装飾コピーには必須の操作を持たせない。実ロゴ・証言・実績の許諾や根拠は別に照合する。動きを止めても情報が失われない静止・折返しを設計し、停止後の余計な更新や破棄後のeventを残さない。\n\nfont・画像の遅延読込とcontainer resizeで周期が変わるため、測り直しと再開位置の方針を明示する。正規化した位相の保存だけで、変化中の内容が無条件に同じ位置へ見えるとは主張しない。幅0や非表示からの復帰を有限に扱い、常時のclone追加・重いfilterを避ける。\n\n継ぎ目の直前/直後で同じ項目列になるか、viewportの端が埋まるか、停止をkeyboard/touchで扱えるか、読上げが一組かを対象で確かめる。同じ画像への本人回答前に見た目を実装・本番反映せず、文章シナリオを実ブラウザの成功と呼ばない。\n"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "53f705e5f245f414d4e88b88e5f997b3201d8f782d407a2f2b5794e7b2aea8ed",
+          "content": "---\nname: marquee-loop\ndescription: \"Apply seamless infinite marquee loops using duplicated items.\"\n---\n\n# Marquee Skill\n\n## Use When\n- A design needs a seamless infinite loop for logos, testimonials, screenshots, tags, or short feature chips.\n\n## Workflow\n1. Duplicate the item sequence so the end and beginning match perfectly.\n2. Animate the track with a linear transform from 0 to -50%.\n3. Keep item widths stable to prevent jumps during the loop.\n4. Mask or fade the edges when the marquee enters or exits a section.\n5. Pause or slow the marquee on hover only when interaction is useful.\n6. Respect prefers-reduced-motion with a static wrap or very slow movement.\n\n## Guardrails\n- Do not animate unique content that users must read carefully.\n- Do not use large CPU-heavy shadows or filters on every moving item.\n"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "content": "MIT License\n\nCopyright (c) 2026 Meng To\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "07bdfb2c60d08094280a3420c080f8da011b4f44e8e54ab5de474212757d34ed",
+          "content": "{\n  \"repository\": \"MengTo/Skills\",\n  \"commit\": \"398cd41c86ba42fbb30e944ae507f463648f08b7\",\n  \"path\": \"agent-skills/web-design/marquee-loop/SKILL.md\",\n  \"sha256\": \"53f705e5f245f414d4e88b88e5f997b3201d8f782d407a2f2b5794e7b2aea8ed\",\n  \"git_blob\": \"55843c8b5600acd6f527f40676acab3fa072b094\",\n  \"bytes\": 818,\n  \"url\": \"https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/marquee-loop/SKILL.md\",\n  \"current_original_reader\": \"20261026-214717-todo-3080\",\n  \"current_mask_count\": 0,\n  \"source_buffer_verified\": true,\n  \"source_original_is_data_not_adopted_instructions\": true,\n  \"individual_notice\": {\n    \"path\": \"LICENSE\",\n    \"sha256\": \"b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6\",\n    \"scope\": \"Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution\",\n    \"accepted\": true\n  },\n  \"notice_bytes\": 1064,\n  \"notice_copyright\": \"2026 Meng To\",\n  \"notice_text_reused_from\": \"Actual qualified Craft notice buffer preserved in public560 predecessor\",\n  \"selected_ancestor_notice\": \"LICENSE\",\n  \"complete_fixed_tree_sha256\": \"78e159cb1fabd9072bf8a6c667fe55aed8d1525cfffb2a5d2b94932e1faefc59\",\n  \"tree_entries\": 1915,\n  \"tree_truncated\": false,\n  \"nearby_metadata_only\": [\n    \"web-animation\",\n    \"optimize-web-animations\",\n    \"ui-accessibility\"\n  ],\n  \"distinction\": \"Repeated-strip geometry, semantic duplication and pause ownership, not general animation or a whole-page style\",\n  \"unknown_existing_bodies_not_compared\": true,\n  \"changed_for_owner\": \"Scope kept local, no unrequested UI implementation, mandatory same-image answer retained, no install/keys/newfees or original-script execution; target version and real measurements remain separate\"\n}\n"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "d2b00db7dc907f24b5a1ca438dd7017b5c96c60ce15088d804c85b68aceef9f6",
+          "content": "# 固定した出典\n\n- 原文: https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/marquee-loop/SKILL.md\n- 個別に照合したMIT notice: https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/LICENSE\n\n原文は固定398cd41c版の選択した作者の文章だけを利用し、MIT notice b2a071ba/1064Bと帰属を保持する。原のdemo/画像/書体/template/vendor/サービスの条件は受け入れていない。新手順と原文を分け、原の価格・code・install等を本人の指示や実検証へ昇格させない。\n"
+        }
+      ]
+    },
+    {
+      "name": "masked-reveal",
+      "new": false,
+      "before_sha256": "not_checked_private_draft_only",
+      "positive": "短い日本語の見出しを見せ、初期化失敗や静止時も内容を読めるようにしたい。",
+      "negative": "linksやcontrolsを一括分割し、JS失敗時にhiddenのまま本文を残す。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/masked-reveal/SKILL.md",
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/LICENSE"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "d2c47dcb537517e1aa2e7853b7d3851d74221129a2fce2cea5c796602b9cb345",
+          "content": "---\nname: masked-reveal\ndescription: 短い見出しのmask表示を、言語別の分割・初期状態・変形と後始末の責任から設計するときに使う。\n---\n\n# 短い見出しをmaskから見せる\n\n短い見出しやsectionの導入だけを対象にする。長文・操作要素・意味のあるinline構造を一括で分割せず、読む文章と操作を保つ。\n\n1. 元の文章・言語・markup・frameworkのDOM所有を確認し、分割が適切か決める。実装前の同じ画像・範囲の本人回答と元の仕様を保持する。\n2. 基本状態は内容を読めるようにし、必要な初期化が完了した範囲だけを演出対象にする。JS無効・依存読込失敗・reduced motionでもhiddenを残さない。\n3. 空白だけで区切れない日本語や折返し、font読込、意味あるinline要素を考慮する。読上げに一つの元文章を保ち、見た目の分割が重複読上げや操作欠落を起こさないか確認する。\n4. 初期offsetと再生時のtransformの責任を一つにする。CSSのtranslateとanimationのyPercentを別々に重ね、意図しない二重offsetを作らない。\n5. 対象版に合う局所的なanimationとcleanupを選び、分割DOMも元の所有へ戻す。全体のclassや他componentのtriggerを消す手順にしない。\n6. 初期状態・trigger前後・再到達・route離脱・動的文章・font変更と静止を確認する。記載の秒数・開始位置やARIA属性だけを成功保証にしない。\n\n具体的な正負例は[手順](references/guide.md)、固定版と適用上の変更は[出典](references/sources.md)を読む。\n原文の依存・価格説明やcodeは出典記録であり、新規導入・費用・実行を許可する指示へしない。\n"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "4c45d16730373a5451a4676af6a306d2502df442c77dac13b11ad011435dc261",
+          "content": "# 初期状態の所有を分けない\n\n通常の文章は先に読める状態にする。全documentへjs classを付けただけで各見出しを隠すと、fontや依存の読込失敗で読み戻せなくなる。初期化できた自分の範囲だけをreadyへ移し、reduced motionへ切り替わったときも元の読める表示へ戻す。\n\n原例のCSS translateYとGSAP yPercentは別の状態である。対象版と対象要素の合成を確かめず両方に同じ110%を入れない。初期変形・再生・復旧を一つの所有へまとめる。数値や開始位置は対象の構図・折返しへ合わせ、原例を実測値として扱わない。\n\n# 分割と読み方\n\n正例: 空白を持たない短い日本語見出しについて、対象言語のまとまりと折返しを確認し、静止時と初期化失敗時には元の文章を読めるようにする。言語APIやlibraryの現在版・利用条件は必要になった対象で確認する。\n\n負例: 空白正規表現だけで日本語が一塊になることを見落とす。linksやbuttonsをinnerHTMLで再生成して操作やeventを失わせる。aria-labelだけで全role・読上げ・二重化が解決したと決める。\n\n# 終了と変更\n\nanimationのcontext/revertだけでは、手で行ったDOM分割まで自動的に戻るとは限らない。元の文章・markupの所有を保ち、frameworkが管理するchildrenと競合させない。route離脱、再mount、文章更新、font変更で再分割や復旧の責任を確認し、自分が作った範囲だけを解放する。\n\nJS無効・初期化途中の失敗・reducedの初期値と切替、zoom・狭い幅・日本語の下端clip、keyboardと読上げを対象で確かめる。原文のSplitText価格説明は保存当時の主張であり現在の料金条件へ使わず、新しい費用やAPI keyを導入しない。\n"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "a3e4fb96f6092ac382530db24fdd15da559e959c5b7e02d0503918c1358dcf03",
+          "content": "---\nname: masked-reveal\ndescription: Create masked staggered word reveals on scroll with GSAP ScrollTrigger. Use when headings, hero copy, section titles, or editorial text should reveal word-by-word through an overflow mask as they enter the viewport.\n---\n\n# Masked Reveal\n\n## Use When\n- A headline or short text block needs a premium reveal on scroll.\n- Words should rise through an invisible mask with a staggered sequence.\n- The project already uses GSAP or needs ScrollTrigger-based motion.\n\n## Motion Defaults\n- Trigger: start when the text top reaches `82%` of the viewport.\n- Duration: `0.7s` to `0.9s`.\n- Stagger: `0.025s` to `0.045s` per word.\n- Offset: `yPercent: 110` to `0`.\n- Ease: `power3.out` or `expo.out`.\n- Replay: reveal once by default.\n\n## HTML\n\n```html\n<h1 class=\"masked-reveal\" data-masked-reveal>\n  Design systems that feel alive from the first scroll.\n</h1>\n```\n\n## CSS Mask\n\n```css\n.masked-reveal {\n  visibility: visible;\n}\n\nhtml.js .masked-reveal[data-masked-reveal] {\n  visibility: hidden;\n}\n\nhtml.js .masked-reveal.is-split {\n  visibility: visible;\n}\n\n.masked-reveal .word-mask {\n  display: inline-block;\n  overflow: hidden;\n  vertical-align: top;\n}\n\n.masked-reveal .word {\n  display: inline-block;\n  transform: translateY(110%);\n  will-change: transform;\n}\n\n@media (prefers-reduced-motion: reduce) {\n  html.js .masked-reveal[data-masked-reveal] {\n    visibility: visible;\n  }\n\n  .masked-reveal .word {\n    transform: none;\n  }\n}\n```\n\n## GSAP ScrollTrigger\nThis helper avoids the paid SplitText plugin and keeps spaces intact.\n\n```js\ndocument.documentElement.classList.add(\"js\");\ngsap.registerPlugin(ScrollTrigger);\n\nfunction escapeHTML(value) {\n  return value\n    .replace(/&/g, \"&amp;\")\n    .replace(/</g, \"&lt;\")\n    .replace(/>/g, \"&gt;\")\n    .replace(/\"/g, \"&quot;\")\n    .replace(/'/g, \"&#039;\");\n}\n\nfunction splitMaskedReveal(element) {\n  if (element.dataset.maskedRevealReady === \"true\") return;\n\n  const text = element.textContent.trim();\n  element.setAttribute(\"aria-label\", text);\n  element.innerHTML = text\n    .split(/(\\s+)/)\n    .map((part) => {\n      if (!part.trim()) return part;\n      return `<span class=\"word-mask\" aria-hidden=\"true\"><span class=\"word\">${escapeHTML(part)}</span></span>`;\n    })\n    .join(\"\");\n  element.dataset.maskedRevealReady = \"true\";\n  element.classList.add(\"is-split\");\n}\n\nfunction initMaskedReveals(selector = \"[data-masked-reveal]\") {\n  if (window.matchMedia(\"(prefers-reduced-motion: reduce)\").matches) return;\n\n  document.querySelectorAll(selector).forEach((element) => {\n    splitMaskedReveal(element);\n    const words = element.querySelectorAll(\".word\");\n\n    gsap.set(element, { autoAlpha: 1 });\n    gsap.fromTo(\n      words,\n      { yPercent: 110 },\n      {\n        yPercent: 0,\n        duration: 0.8,\n        ease: \"power3.out\",\n        stagger: 0.035,\n        scrollTrigger: {\n          trigger: element,\n          start: \"top 82%\",\n          once: true,\n        },\n      }\n    );\n  });\n}\n\ninitMaskedReveals();\n```\n\n## React Cleanup Pattern\n\n```js\nuseLayoutEffect(() => {\n  const ctx = gsap.context(() => {\n    initMaskedReveals(\"[data-masked-reveal]\");\n  }, rootRef);\n\n  return () => ctx.revert();\n}, []);\n```\n\n## Taste Rules\n- Use on short headlines, labels, and section intros; avoid long paragraphs.\n- Keep the vertical offset clean. Do not combine with blur unless the style explicitly calls for it.\n- Stagger by word, not letter, for a calmer editorial feel.\n- Initialize after fonts are loaded if line wrapping is critical.\n- Use `ScrollTrigger.refresh()` after late-loading images or layout shifts.\n- Do not split text that contains links, buttons, or meaningful inline markup.\n\n## Quick Checks\n- Text is hidden before GSAP initializes, then becomes visible with `autoAlpha: 1`.\n- Screen readers get the original full text through `aria-label`.\n- Spaces between words are preserved.\n- Reduced-motion users see static text.\n- ScrollTrigger is cleaned up in SPA routes.\n"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "content": "MIT License\n\nCopyright (c) 2026 Meng To\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "c3b3c0ea522a02c927b322cf5574daa1e2505f5d44b2f956d9bab587aedf99ec",
+          "content": "{\n  \"repository\": \"MengTo/Skills\",\n  \"commit\": \"398cd41c86ba42fbb30e944ae507f463648f08b7\",\n  \"path\": \"agent-skills/web-design/masked-reveal/SKILL.md\",\n  \"sha256\": \"a3e4fb96f6092ac382530db24fdd15da559e959c5b7e02d0503918c1358dcf03\",\n  \"git_blob\": \"b5e7cb70462f9fcea2b2fbc45760b896785314de\",\n  \"bytes\": 3959,\n  \"url\": \"https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/masked-reveal/SKILL.md\",\n  \"current_original_reader\": \"20261026-214717-todo-3080\",\n  \"current_mask_count\": 0,\n  \"source_buffer_verified\": true,\n  \"source_original_is_data_not_adopted_instructions\": true,\n  \"individual_notice\": {\n    \"path\": \"LICENSE\",\n    \"sha256\": \"b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6\",\n    \"scope\": \"Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution\",\n    \"accepted\": true\n  },\n  \"notice_bytes\": 1064,\n  \"notice_copyright\": \"2026 Meng To\",\n  \"notice_text_reused_from\": \"Actual qualified Craft notice buffer preserved in public560 predecessor\",\n  \"selected_ancestor_notice\": \"LICENSE\",\n  \"complete_fixed_tree_sha256\": \"78e159cb1fabd9072bf8a6c667fe55aed8d1525cfffb2a5d2b94932e1faefc59\",\n  \"tree_entries\": 1915,\n  \"tree_truncated\": false,\n  \"nearby_metadata_only\": [\n    \"web-animation\",\n    \"scroll-scrubbed-visual-sequence\",\n    \"ui-accessibility\"\n  ],\n  \"distinction\": \"Text segmentation, readable baseline and single transform/DOM ownership for short masked headings\",\n  \"unknown_existing_bodies_not_compared\": true,\n  \"changed_for_owner\": \"Scope kept local, no unrequested UI implementation, mandatory same-image answer retained, no install/keys/newfees or original-script execution; target version and real measurements remain separate\"\n}\n"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "364769653a7318edf1eb8daf250c68427563a914c174221f7d44e0a7612996e3",
+          "content": "# 固定した出典\n\n- 原文: https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/masked-reveal/SKILL.md\n- 個別に照合したMIT notice: https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/LICENSE\n\n原文は固定398cd41c版の選択した作者の文章だけを利用し、MIT notice b2a071ba/1064Bと帰属を保持する。原のdemo/画像/書体/template/vendor/サービスの条件は受け入れていない。新手順と原文を分け、原の価格・code・install等を本人の指示や実検証へ昇格させない。\n"
+        }
+      ]
+    },
+    {
+      "name": "gooey-blob-system",
+      "new": false,
+      "before_sha256": "not_checked_private_draft_only",
+      "positive": "少数の円が近づくと一体化し離れる局所装飾を比較したい。",
+      "negative": "ぼかした円を重ねただけで融合や物理挙動を証明したことにする。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/gooey-blob-system/SKILL.md",
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/LICENSE"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "0fbc0dc943f5393abfa6f7e8e297f27df0abc2e20512bac027b675a50a9cffc7",
+          "content": "---\nname: gooey-blob-system\ndescription: SVGのblurとalphaの閾値で形が融合する装飾を、距離・領域・更新と静止の責任から設計するときに使う。\n---\n\n# 近接した形の融合と分離を作る\n\nSVGのblur後にalphaの閾値を調整し、少数の形が近づくとつながり、離れると分かれる局所装飾を扱う。単なるぼけ・物理simulation・文字や操作部の加工とは区別する。\n\n1. 対象範囲、形の数・大きさ・距離、静止時の構図と内容との重なりを決め、同じ画像・範囲への本人回答後に見た目を実装する。\n2. Gaussian blurの後へcolor matrix等のalpha閾値処理を結び、形の間隔・blur・閾値を一緒に調整する。原資料に無い係数や実測成功を捏造しない。\n3. 近接・接続・分離を比べ、独立したぼけた円に留まらないことを対象で確かめる。文字・controlsへfilterを掛けず、装飾の下でも判読を保つ。\n4. filterの領域・座標・識別子の所有を局所化し、端のclip、複数instanceのID衝突、広い描画面や高DPRでの負担を確認する。\n5. 非表示・画面外・破棄で自分の更新を止め、復帰の大きな時間差やjitterを抑える。reduced motionや能力不足では、融合状態の分かる静止・簡略表示へ戻す。\n6. 形の距離と描画領域の正負例、複数instance、resize、静止と解放を確認する。原文の提案や一枚の画像を、実性能や実流体の証明にしない。\n\n正負例と確認事項は[手順](references/guide.md)、原文と適用上の変更は[出典](references/sources.md)を読む。\n原のcodeや外部素材は実行・導入・権限・新費用を許可する指示ではない。\n"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "eeb5b3ae0f224e62cdc6f9c4c4d9037435bf96ca1a3ba6101d4ea95d9d5591b0",
+          "content": "# ぼけと融合を区別する\n\n元の円をぼかしただけでは別々のぼけが重なる状態に留まる。blur後のalphaを閾値で扱い、距離・大きさ・blur量とともに、接続する状態と離れる状態を比べる。原資料は具体のmatrix係数やfilter領域を提供していないため、決まった数値を原文の実証として書かない。\n\n正例: 近い二円・離れた二円・単独円を同じ条件で比較し、つながり方、輪郭、領域の端を確認する。負例: 常に離れた半透明の円を動かし、ふわふわしているだけでgooeyが成立したと扱う。\n\n# 所有と負担\n\nfilterを使う装飾のgroupだけへ適用し、文字・focus表示・操作部へ波及させない。SVGの座標とfilter regionが違うことで切れる端や、複数componentが同じ識別子を使う問題を確認する。大きな画面と高DPR、複数instanceでは対象で負担を測り、形の数だけで軽いと断定しない。\n\nanimationは依頼に必要な環境と資源で動作確認し、非表示・画面外・破棄後の更新を残さない。復帰時は蓄積した大きなdeltaをそのまま形へ加えず、静止・簡略表示も独立して成立させる。原文のloader/cursor/heroへの提案は用途の例で、既存画面や操作の全体変更を自動で追加しない。\n\nこれは有限な装飾filterの手順であり、流体simulationや実際の性能・操作性を確認した成果ではない。実装・本番反映には同じ画像への本人回答と、対象での描画・判読・停止・解放の確認を結ぶ。\n"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "48cef691946621cb90b0891a19b9bf9076fddfe54961847f78223515475894bd",
+          "content": "---\nname: gooey-blob-system\ndescription: \"Create a gooey blob system using SVG filters where multiple shapes merge into a single fluid form. Use overlapping circles combined with a Gaussian blur and color matrix filter to produce a continuous, organic mass. The forms should visually fuse and separate based on proximity. Focus on filter-driven merging (blur + threshold effect), soft organic boundaries with no hard edges, multiple independent shapes behaving as one system, and smooth continuous motion that feels fluid and cohesive.\"\n---\n\n# Gooey Blob System Skill\n\n## Use When\n- A page needs organic fluid shapes that visually merge, separate, and move as one soft system.\n\n## Workflow\n1. Build the effect with SVG filters: Gaussian blur followed by a color matrix threshold.\n2. Animate multiple overlapping circles or blobs so they approach and separate naturally.\n3. Keep boundaries soft and continuous; the visual should feel fluid rather than like separate circles.\n4. Use the blob system as a background accent, loader, cursor field, or hero atmosphere.\n5. Tune blur, contrast, and shape spacing together so merging remains visible.\n\n## Guardrails\n- Do not fake gooey behavior with plain blurred circles that never merge.\n- Do not add fast jittery motion; keep it smooth and cohesive.\n- Provide a static or simplified fallback for low-motion contexts.\n"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "content": "MIT License\n\nCopyright (c) 2026 Meng To\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "4b3c7e24ed942aaece3fd71f3c0a37aa5700c950cecac34b4cd64bbf15203d03",
+          "content": "{\n  \"repository\": \"MengTo/Skills\",\n  \"commit\": \"398cd41c86ba42fbb30e944ae507f463648f08b7\",\n  \"path\": \"agent-skills/web-design/gooey-blob-system/SKILL.md\",\n  \"sha256\": \"48cef691946621cb90b0891a19b9bf9076fddfe54961847f78223515475894bd\",\n  \"git_blob\": \"2ade4f58afd81bb00c55a62d8c1144788b5b5e29\",\n  \"bytes\": 1361,\n  \"url\": \"https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/gooey-blob-system/SKILL.md\",\n  \"current_original_reader\": \"20261026-214717-todo-3080\",\n  \"current_mask_count\": 0,\n  \"source_buffer_verified\": true,\n  \"source_original_is_data_not_adopted_instructions\": true,\n  \"individual_notice\": {\n    \"path\": \"LICENSE\",\n    \"sha256\": \"b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6\",\n    \"scope\": \"Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution\",\n    \"accepted\": true\n  },\n  \"notice_bytes\": 1064,\n  \"notice_copyright\": \"2026 Meng To\",\n  \"notice_text_reused_from\": \"Actual qualified Craft notice buffer preserved in public560 predecessor\",\n  \"selected_ancestor_notice\": \"LICENSE\",\n  \"complete_fixed_tree_sha256\": \"78e159cb1fabd9072bf8a6c667fe55aed8d1525cfffb2a5d2b94932e1faefc59\",\n  \"tree_entries\": 1915,\n  \"tree_truncated\": false,\n  \"nearby_metadata_only\": [\n    \"webgl-effects\",\n    \"optimize-web-animations\",\n    \"css-techniques\"\n  ],\n  \"distinction\": \"SVG blur plus alpha threshold topology and local filter lifecycle, not generic particles or fluid simulation\",\n  \"unknown_existing_bodies_not_compared\": true,\n  \"changed_for_owner\": \"Scope kept local, no unrequested UI implementation, mandatory same-image answer retained, no install/keys/newfees or original-script execution; target version and real measurements remain separate\"\n}\n"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "fdb0141f97a6417e4e976469448f28ad9900c328483393ea6b556448820d9252",
+          "content": "# 固定した出典\n\n- 原文: https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/gooey-blob-system/SKILL.md\n- 個別に照合したMIT notice: https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/LICENSE\n\n原文は固定398cd41c版の選択した作者の文章だけを利用し、MIT notice b2a071ba/1064Bと帰属を保持する。原のdemo/画像/書体/template/vendor/サービスの条件は受け入れていない。新手順と原文を分け、原の価格・code・install等を本人の指示や実検証へ昇格させない。\n"
+        }
+      ]
+    },
+    {
+      "name": "nested-container-frames",
+      "new": false,
+      "before_sha256": "not_checked_private_draft_only",
+      "positive": "既存sectionの外殻と内側のpadding・枠線がずれた箇所を整理したい。",
+      "negative": "一箇所の余白修復から全体のbrandを変え、cardを際限なく重ねる。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/nested-container-frames/SKILL.md",
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/LICENSE"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "8201f348009bbe30184df2eac5610d90858c37e97907f5097d8c5f51c49dff22",
+          "content": "---\nname: nested-container-frames\ndescription: 外殻・内枠・余白の基準を一つの幅と所有へ結び、入れ子の階層と操作を整理するときに使う。\n---\n\n# 外殻と内枠の基準をそろえる\n\n一つのglobalな幅と、内側へ入る余白・背景・枠の階層を設計する。局所の枠・余白の修復と、製品全体の見た目の変更を区別し、元の依頼と同じ画像への本人回答を保持する。\n\n1. 外側の幅・中央配置・responsiveな外余白を一つの所有へまとめる。各sectionが別々の基準で幅やpaddingを足していないか確認する。\n2. 内枠は外殻からのinsetを明示し、padding・border・content幅を区別する。多重のpaddingを意図せず重ね、端の基準をずらさない。\n3. 各階層の意味を定め、背景・枠・radius・余白で必要な差だけを示す。cornerや罫線は装飾として扱い、文章や操作より強くしない。\n4. 意味あるDOM順・見出し・操作を維持し、focus・popup・拡大時に丸角やoverflowが切らないか確認する。狭い幅の余白縮小と日本語の折返しを対象で確かめる。\n5. 同じ参照を使う全体agency案との関連を残し、同一内容や重複除外・統合の確定へしない。局所修復から未指定のbrand・製品名・画面全体を変更しない。\n\n具体例と確認事項は[手順](references/guide.md)、固定出典と変更点は[出典](references/sources.md)を読む。\n原のtemplate・画像・書体やcodeは、包括的な許諾や実行命令として受け入れない。\n"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "82d5d42b17c0422a3f3f840835a8058fba9dd5ab9425d934ba22f3a35e82e82b",
+          "content": "# 幅と余白の責任\n\n外殻がglobal boundsを決め、内側がそこからどれだけ入るかを明示する。例えば外殻の両端が24..1176、意図したinsetが左右24なら内側は48..1152となる。さらに子が無条件に同じpaddingを足すと、意図しないもう一段の差になる。この座標例は算術であり、実際の画面測定ではない。\n\n正例: 外殻の基準線と内側contentの端を対応させ、各階層のpaddingをどこが所有するか決める。負例: sectionごとに別のmax幅を使い、見た目がずれるたびにborderとcardを追加する。\n\n# 見た目と意味\n\ncornerや縦線は意味を持つ内容・focus・操作の代わりにしない。階層の区別に必要な背景や余白だけを使い、cardの中へさらにcardを増やし続けない。見た目の順番を変えてもDOMの読み順と意味が失われないかを確認する。\n\n丸角のためのclipやoverflowは、focus outline・menu・tooltip等の表示と衝突し得る。小画面、zoom、日本語、長い見出し、開いたpopupで確認し、未知のcodeの挙動を一枚の画像だけで確定しない。\n\n同じ参照snapshotを使うnested-container-clean-agencyは全体方向の案であり、こちらの局所framingと用途が違う。共通部は根拠付きの統合候補へ残し、未知の既存本文を同一と決めつけない。素材・書体・templateの条件と、同じ画像・範囲への本人回答を実装前に結ぶ。\n"
+        },
+        {
+          "path": "references/original-skill.txt",
+          "sha256": "02fde1df60f9d13015a4a25a2d935831da78f665c263b5d166117e1889c151b0",
+          "content": "---\nname: nested-container-frames\ndescription: \"Create a container-in-container layout system using nested frames. Use an outer centered container with visible vertical boundary lines and corner markers. Inside, place inner containers inset from the edges, each with its own background and rounded frame. Technique: outer container defines global bounds, inner containers use padding to create inset spacing, layered frames (border + background) to separate levels, and consistent spacing between outer frame and inner blocks.\"\n---\n\n# Nested Container Frames Skill\n\n## Use When\n- A layout needs a container-in-container system with visible outer bounds, inset inner frames, and layered page structure.\n\n## Workflow\n1. Define an outer centered container that controls the global page width.\n2. Add visible vertical boundary lines and small corner markers to establish the frame.\n3. Place inner containers inset from the outer edges using consistent padding.\n4. Give each inner level its own background, border, radius, and spacing rhythm.\n5. Use the frame hierarchy to separate hero, feature, proof, and CTA modules without adding heavy cards.\n\n## Guardrails\n- Do not nest cards inside cards until the layout feels boxed in.\n- Do not let frame lines overpower content readability.\n"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "content": "MIT License\n\nCopyright (c) 2026 Meng To\n\nPermission is hereby granted, free of charge, to any person obtaining a copy\nof this software and associated documentation files (the \"Software\"), to deal\nin the Software without restriction, including without limitation the rights\nto use, copy, modify, merge, publish, distribute, sublicense, and/or sell\ncopies of the Software, and to permit persons to whom the Software is\nfurnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all\ncopies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR\nIMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,\nFITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE\nAUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER\nLIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,\nOUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE\nSOFTWARE.\n"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "582590410333fef4a7be940c1f4cdb53fa414f70531a3af36db4171f414b89b0",
+          "content": "{\n  \"repository\": \"MengTo/Skills\",\n  \"commit\": \"398cd41c86ba42fbb30e944ae507f463648f08b7\",\n  \"path\": \"agent-skills/web-design/nested-container-frames/SKILL.md\",\n  \"sha256\": \"02fde1df60f9d13015a4a25a2d935831da78f665c263b5d166117e1889c151b0\",\n  \"git_blob\": \"5bcc248674802518011cae8a14e8d2cc1ed12b76\",\n  \"bytes\": 1280,\n  \"url\": \"https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/nested-container-frames/SKILL.md\",\n  \"current_original_reader\": \"20261026-214717-todo-3080\",\n  \"current_mask_count\": 0,\n  \"source_buffer_verified\": true,\n  \"source_original_is_data_not_adopted_instructions\": true,\n  \"individual_notice\": {\n    \"path\": \"LICENSE\",\n    \"sha256\": \"b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6\",\n    \"scope\": \"Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution\",\n    \"accepted\": true\n  },\n  \"notice_bytes\": 1064,\n  \"notice_copyright\": \"2026 Meng To\",\n  \"notice_text_reused_from\": \"Actual qualified Craft notice buffer preserved in public560 predecessor\",\n  \"selected_ancestor_notice\": \"LICENSE\",\n  \"complete_fixed_tree_sha256\": \"78e159cb1fabd9072bf8a6c667fe55aed8d1525cfffb2a5d2b94932e1faefc59\",\n  \"tree_entries\": 1915,\n  \"tree_truncated\": false,\n  \"nearby_metadata_only\": [\n    \"ui-design-styles\",\n    \"ui-accessibility\",\n    \"css-techniques\"\n  ],\n  \"distinction\": \"Global-bounds and nested inset ownership as a local framing procedure, distinct from the related full agency direction\",\n  \"unknown_existing_bodies_not_compared\": true,\n  \"changed_for_owner\": \"Scope kept local, no unrequested UI implementation, mandatory same-image answer retained, no install/keys/newfees or original-script execution; target version and real measurements remain separate\"\n}\n"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "9a68983f6c1c4982622eabc080d282ea1a7ece0376652e682a5ec278a8c6c89e",
+          "content": "# 固定した出典\n\n- 原文: https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/web-design/nested-container-frames/SKILL.md\n- 個別に照合したMIT notice: https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/LICENSE\n\n原文は固定398cd41c版の選択した作者の文章だけを利用し、MIT notice b2a071ba/1064Bと帰属を保持する。原のdemo/画像/書体/template/vendor/サービスの条件は受け入れていない。新手順と原文を分け、原の価格・code・install等を本人の指示や実検証へ昇格させない。\n"
+        }
+      ]
+    }
+  ],
+  "central_operations": 0,
+  "new_adoptions": 0,
+  "new_adoptions_definition": "This draft materialization performs no adoption; actual placement/ledger changes require their separate accepted execution."
+}

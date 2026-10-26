@@ -1,0 +1,107 @@
+{
+  "todo": 3080,
+  "writer": "20261026-214717-todo-3080",
+  "selected": [
+    {
+      "name": "marquee-loop",
+      "source": {
+        "repository": "MengTo/Skills",
+        "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+        "path": "agent-skills/web-design/marquee-loop/SKILL.md",
+        "sha256": "53f705e5f245f414d4e88b88e5f997b3201d8f782d407a2f2b5794e7b2aea8ed",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "LICENSE",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "scope": "Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "55843c8b5600acd6f527f40676acab3fa072b094",
+      "source_bytes": 818,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "source_current_read_mask0": true,
+      "scope": "Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution",
+      "embedded_third_party_materials_accepted": false,
+      "central_existence_or_unknown_body_not_checked": true,
+      "actual_browser_render_or_performance_not_proven": true
+    },
+    {
+      "name": "masked-reveal",
+      "source": {
+        "repository": "MengTo/Skills",
+        "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+        "path": "agent-skills/web-design/masked-reveal/SKILL.md",
+        "sha256": "a3e4fb96f6092ac382530db24fdd15da559e959c5b7e02d0503918c1358dcf03",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "LICENSE",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "scope": "Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "b5e7cb70462f9fcea2b2fbc45760b896785314de",
+      "source_bytes": 3959,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "source_current_read_mask0": true,
+      "scope": "Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution",
+      "embedded_third_party_materials_accepted": false,
+      "central_existence_or_unknown_body_not_checked": true,
+      "actual_browser_render_or_performance_not_proven": true
+    },
+    {
+      "name": "gooey-blob-system",
+      "source": {
+        "repository": "MengTo/Skills",
+        "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+        "path": "agent-skills/web-design/gooey-blob-system/SKILL.md",
+        "sha256": "48cef691946621cb90b0891a19b9bf9076fddfe54961847f78223515475894bd",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "LICENSE",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "scope": "Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "2ade4f58afd81bb00c55a62d8c1144788b5b5e29",
+      "source_bytes": 1361,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "source_current_read_mask0": true,
+      "scope": "Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution",
+      "embedded_third_party_materials_accepted": false,
+      "central_existence_or_unknown_body_not_checked": true,
+      "actual_browser_render_or_performance_not_proven": true
+    },
+    {
+      "name": "nested-container-frames",
+      "source": {
+        "repository": "MengTo/Skills",
+        "commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+        "path": "agent-skills/web-design/nested-container-frames/SKILL.md",
+        "sha256": "02fde1df60f9d13015a4a25a2d935831da78f665c263b5d166117e1889c151b0",
+        "acquisition": "already-acquired",
+        "license": {
+          "path": "LICENSE",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+          "scope": "Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution",
+          "accepted": true
+        }
+      },
+      "source_git_blob": "5bcc248674802518011cae8a14e8d2cc1ed12b76",
+      "source_bytes": 1280,
+      "current_original_full_reader": "20261026-214717-todo-3080",
+      "source_current_read_mask0": true,
+      "scope": "Only this selected authored workflow text and preserved root MIT notice; no demo/media/fonts/template/vendor distribution or service rights; no source code execution",
+      "embedded_third_party_materials_accepted": false,
+      "central_existence_or_unknown_body_not_checked": true,
+      "actual_browser_render_or_performance_not_proven": true
+    }
+  ],
+  "not_a_count_or_scope_cap": true,
+  "new_grants_for_unselected_material": 0,
+  "central_operations": 0,
+  "new_adoptions": 0,
+  "whole16_complete": false
+}

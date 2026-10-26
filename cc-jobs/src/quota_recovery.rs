@@ -1,6 +1,42 @@
 use crate::*;
 use std::path::Path;
 
+/// Fixed scalar fields only: no prompts, replies, errors, account IDs or paths.
+pub(crate) fn status_metadata(job: &Value) -> Value {
+    let mut v = json!({"metadata_only":true});
+    if crate::queue::valid_job_id(s(job,"id")) { v["id"] = job["id"].clone(); }
+    for key in ["todo_id", "steps", "capacity_same_model_retry_count", "capacity_retry_count", "capacity_wait_count"] {
+        v[key] = job[key].as_u64().map_or(Value::Null, |n| json!(n));
+    }
+    for (key, allowed) in [
+        ("status", &["queued","starting","running","succeeded","failed","lost","cancelled","canceled"][..]),
+        ("model_origin", &["policy","owner_request"][..]),
+        ("effort_origin", &["policy","owner_request"][..]),
+        ("effort", &["none","minimal","low","medium","high","xhigh","max"][..]),
+        ("last_failure_kind", &["quota","capacity","transient","auth","cancel","request_failed"][..]),
+    ] { v[key] = if allowed.contains(&s(job,key)) {job[key].clone()} else {Value::Null}; }
+    if cc_job_policy::quota_recovery::provider(s(job,"model")).is_some() {
+        v["model"] = job["model"].clone();
+    }
+    let selector = s(job, "capacity_account_selector");
+    if cc_job_policy::quota_retry::public_selector(selector) { v["selector"] = json!(selector); }
+    let finite = if job["finite_subwork"].is_object() {&job["finite_subwork"]} else {&job["finite_review"]};
+    let sha = s(finite, "spec_sha256");
+    if sha.len() == 64 && sha.bytes().all(|b| b.is_ascii_hexdigit()) { v["spec_sha256"] = json!(sha); }
+    let observed = &job["execution_observed"];
+    if observed["source"] == "native_turn_context"
+        && [s(job,"model"), crate::pool_retry::launch_model(job).as_str()].contains(&s(observed,"model")) {
+        v["native"]["model"] = observed["model"].clone();
+        if ["none","minimal","low","medium","high","xhigh","max"].contains(&s(observed,"effort")) {v["native"]["effort"] = observed["effort"].clone();}
+        if ["fast","priority","default","standard","flex","ultrafast"].contains(&s(observed,"service_tier")) {v["native"]["service_tier"] = observed["service_tier"].clone();}
+    }
+    if job["quota_recovery"].is_object() {
+        v["recovery_version"] = job["quota_recovery"]["version"].as_u64().map_or(Value::Null, |n| json!(n));
+        if crate::queue::valid_job_id(s(&job["quota_recovery"], "source_job")) { v["recovery_source_job"] = job["quota_recovery"]["source_job"].clone(); }
+    }
+    v
+}
+
 impl Context {
     /// Slow refreshed OAuth metadata is collected before queue/state/ToDo locks.
     pub(crate) fn prepared_quota_inventory(&self, a: &crate::cli::Args) -> Result<Value> {
@@ -145,7 +181,14 @@ impl Context {
         if row["scheduler"]["phase"] != "prepared" || row["scheduler"]["key"] != job["launch_key"] {
             return Err(Error::new("quota recovery preparation generation changed"));
         }
+        if proof["version"] == 2 {
+            job["capacity_account_selector"] = proof["retry"]["selector"].clone();
+        }
         self.verify_quota_recovery(proof, row, job, inventory, true)?;
+        if proof["version"] == 2 {
+            let source = self.load(s(proof, "source_job"))?;
+            cc_job_policy::quota_retry::inherit(job, &source, proof);
+        }
         job["quota_recovery"] = proof.clone();
         Ok(true)
     }
@@ -180,12 +223,9 @@ impl Context {
             cc_job_policy::quota_recovery::verify(proof, row, &source, job, old_at)
         };
         if !verified
-            || !cc_job_policy::quota_recovery::healthy_transition(
-                inventory,
-                s(&source, "model"),
-                s(job, "model"),
-                now,
-            )
+            || !cc_job_policy::quota_recovery::transition(&source, job, inventory, now)
+            || (!registration && proof["version"] == 2
+                && !cc_job_policy::quota_retry::inherited(job, &source, proof))
         {
             return Err(Error::new(
                 "quota recovery source, scope, generation or OAuth availability changed",

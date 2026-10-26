@@ -456,27 +456,30 @@ pub fn resource_deadline(job: &Value, now: f64) -> Option<f64> {
     if job["status"] == "succeeded" {
         return None;
     }
-    let explicit = job["resource_wait"]["until"]
-        .as_f64()
-        .filter(|until| until.is_finite() && *until > now);
+    let explicit = job["resource_wait"]["until"].as_f64().filter(|until| until.is_finite());
     let out = Output {
         code: 1,
         stdout: String::new(),
         stderr: s(&job["last_error"]).into(),
     };
-    if explicit.is_none() && classify_output(&out).0 != "ResourceWait" {
+    let classified = classify_output(&out).0 == "ResourceWait";
+    if explicit.is_none() && !classified && n(&job["retry_not_before"]) <= now && n(&job["rate_limit_reset_at"]) <= now {
         return None;
     }
-    Some(
+    // A historical failure is a fixed observation. Re-reading its text must
+    // not manufacture another hour of exhaustion after its deadline elapsed.
+    let observed = epoch(&job["finished_at"]);
+    let fallback = if classified && observed > 0. && observed.is_finite() { observed + 3600. } else { 0. };
+    let until =
         [
-            explicit.unwrap_or(now + 3600.),
+            explicit.unwrap_or(fallback),
             n(&job["retry_not_before"]),
             n(&job["rate_limit_reset_at"]),
         ]
         .into_iter()
         .filter(|t| t.is_finite())
-        .fold(now, f64::max),
-    )
+        .fold(0., f64::max);
+    (now.is_finite() && until > now).then_some(until)
 }
 
 /// Reuse recorded quota evidence; never probe a depleted subscription on every scheduler tick.

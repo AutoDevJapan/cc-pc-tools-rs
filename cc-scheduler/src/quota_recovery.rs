@@ -59,6 +59,29 @@ pub(crate) fn prepare(
         selection["task_type"] = json!("review");
     }
     let health = backend.quota_recovery_inventory()?;
+    if cc_job_policy::quota_recovery::provider(s(&source["model"])) == Some("openai") {
+        if let Some(selector) = cc_job_policy::quota_retry::selector(source, &health, backend.clock()) {
+            selection["model"] = source["model"].clone();
+            selection["capacity_account_selector"] = json!(selector);
+        } else {
+            let excluded = arr(&selection["review_excluded_models"]);
+            let next = ["anthropic/claude-opus-5-5", "anthropic/claude-sonnet-5-5"].into_iter().find(|model| {
+                let mut target = selection.clone(); target["model"] = json!(model);
+                !excluded.iter().any(|author| cc_job_policy::same_model(s(author), model))
+                    && cc_job_policy::quota_recovery::transition(source, &target, &health, backend.clock())
+                    && backend.model_exists(model)
+            }).ok_or(Error("ResourceWait"))?;
+            selection["model"] = json!(next);
+            selection.as_object_mut().unwrap().remove("capacity_account_selector");
+        }
+        selection["model_origin"] = json!("policy");
+    } else if cc_job_policy::quota_retry::tracked(source)
+        && cc_job_policy::quota_recovery::provider(s(&selection["model"])) == Some("openai")
+    {
+        let selector = cc_job_policy::quota_recovery::safe_openai_selector(&health, None, backend.clock())
+            .ok_or(Error("ResourceWait"))?;
+        selection["capacity_account_selector"] = json!(selector);
+    }
     if cc_job_policy::quota_recovery::provider(s(&source["model"])) == Some("xai") {
         let excluded = arr(&selection["review_excluded_models"]);
         let next = [

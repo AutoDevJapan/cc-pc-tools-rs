@@ -319,6 +319,34 @@ fn gpt_quota_does_not_admit_unknown_routes_reused_aliases_stops_or_exhausted_bud
 }
 
 #[test]
+fn gpt_quota_changes_provider_only_after_same_gpt_budget_or_verified_exhaustion() {
+    for exhausted in [false, true] {
+        let (mut f, mut sub) = gpt_research_fixture();
+        f.e.backend.quota_inventory["anthropic"] = json!({"at":T,"verified":true,"available":true,"exhausted":false});
+        if exhausted {
+            f.e.backend.quota_inventory["openai"]["exhausted"] = json!(true);
+            f.e.backend.quota_inventory["openai"]["available"] = json!(false);
+            f.e.backend.quota_inventory["openai"]["safe_routes"] = json!([]);
+        } else {
+            f.e.backend.records[1]["capacity_same_model_retry_count"] = json!(3);
+        }
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let p = f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap()).unwrap().unwrap();
+        let s = &p["scheduler"]["selection"];
+        assert_eq!(s["model"], "anthropic/claude-opus-5-5");
+        assert_eq!(s["effort"], "max");
+        assert_eq!(s["model_origin"], "policy");
+        assert_eq!(s["quota_recovery"]["retry"]["switch_count"], 1);
+        assert_eq!(s["quota_recovery"]["retry"]["same_model_count"], if exhausted {1} else {3});
+        sub.db["items"][1]["model_origin"] = json!("owner_request");
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let owner = f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap()).unwrap().unwrap();
+        assert_eq!(owner["scheduler"]["selection"]["model"], "gpt-6.1-sol");
+        assert!(owner["scheduler"]["selection"]["quota_recovery"].is_null());
+    }
+}
+
+#[test]
 fn historic_quota_failure_never_moves_its_deadline_on_each_observation() {
     use cc_scheduler::preparation::resource_deadline;
     let source = json!({"status":"failed","finished_at":iso(T-7200.),
@@ -330,6 +358,29 @@ fn historic_quota_failure_never_moves_its_deadline_on_each_observation() {
     reset["rate_limit_reset_at"] = json!(T+900.);
     assert_eq!(resource_deadline(&reset, T), Some(T+900.));
     assert_eq!(resource_deadline(&reset, T+901.), None);
+}
+
+#[test]
+fn gpt_quota_budget_survives_a_provider_change_and_cannot_start_over_on_a_new_source() {
+    let (mut f, sub) = gpt_research_fixture();
+    f.e.backend.records[1]["capacity_same_model_retry_count"] = json!(3);
+    f.e.backend.quota_inventory["anthropic"] = json!({"at":T,"verified":true,"available":true,"exhausted":false});
+    let p = f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap()).unwrap().unwrap();
+    let proof = &p["scheduler"]["selection"]["quota_recovery"];
+    let mut next = f.e.backend.records[1].clone();
+    next["id"] = json!("next-source");
+    next["model"] = json!("anthropic/claude-opus-5-5");
+    cc_job_policy::quota_retry::inherit(&mut next, &f.e.backend.records[1], proof);
+    next["quota_recovery"] = proof.clone();
+    assert_eq!(next["capacity_same_model_retry_count"], 3);
+    assert_eq!(next["capacity_retry_count"], 1);
+    let mut health = f.e.backend.quota_inventory.clone();
+    health["anthropic"]["exhausted"] = json!(true);
+    health["anthropic"]["available"] = json!(false);
+    let target = json!({"model":"gpt-6.1-sol","capacity_account_selector":"p000002"});
+    assert!(!cc_job_policy::quota_recovery::transition(&next, &target, &health, T));
+    next["capacity_same_model_retry_count"] = json!(0);
+    assert!(!cc_job_policy::quota_recovery::transition(&next, &target, &health, T));
 }
 
 #[test]

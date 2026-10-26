@@ -1234,22 +1234,31 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
             return Err(Error("InputRejected"));
         }
         let cooldown = n(&i["scheduler"]["not_before"]) > self.backend.clock();
-        // A previous generic failure cooldown is not a reason to run an
-        // exhausted Grok again. Only a full fresh quota capsule below can
-        // proceed early; every owner/resource/technical wait stays intact.
-        let quota_recheck = cooldown
-            && i["subwork"].is_object()
-            && i["scheduler"]["phase"] == "retry"
+        // Only a complete fresh capsule can reconsider the automatic delay
+        // from this same drained quota source. Explicit source resets and
+        // independent owner/resource/technical waits remain authoritative.
+        let automatic_preparation_wait = i["scheduler"]["phase"] == "preparing"
+            && i["scheduler"]["preparation_failure"]["reason"] == "resource_wait"
+            && i["scheduler"]["resource_wait"]["reason"] == "http_429"
+            && i["scheduler"]["resource_wait"]["until"] == i["scheduler"]["not_before"]
+            && i["scheduler"]["preparation_failure"]["retry_at"] == i["scheduler"]["not_before"];
+        let generic_retry = i["scheduler"]["phase"] == "retry"
             && i["scheduler"]["last_stop"] == "failed"
             && i["scheduler"]["resource_wait"].is_null()
-            && i["scheduler"]["preparation_failure"].is_null()
+            && i["scheduler"]["preparation_failure"].is_null();
+        let quota_recheck = cooldown
+            && i["subwork"].is_object()
+            && (generic_retry || automatic_preparation_wait)
             && !crate::targeted_dispatch::held(i)
             && self.backend.jobs()?.iter().any(|source| {
                 source["id"] == i["scheduler"]["last_job"]
                     && owns_workspace(i, source)
                     && source["status"] == "failed"
-                    && cc_job_policy::quota_recovery::provider(s(&source["model"])) == Some("xai")
                     && cc_job_policy::quota_recovery::quota_source(source)
+                    && ((generic_retry && cc_job_policy::quota_recovery::provider(s(&source["model"])) == Some("xai"))
+                        || (cc_job_policy::quota_recovery::provider(s(&source["model"])) == Some("openai")
+                            && cc_job_policy::quota_recovery::eligible_source(i, source)
+                            && crate::preparation::resource_deadline(source, self.backend.clock()).is_none()))
             });
         if cooldown && !quota_recheck {
             return Ok(None);

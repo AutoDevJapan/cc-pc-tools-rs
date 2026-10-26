@@ -42,6 +42,26 @@ fn save(t: &Test, row: &Value) {
     )
     .unwrap();
 }
+
+#[test]
+fn quota_status_reads_one_job_without_returning_bodies_paths_or_account_metadata() {
+    let (t, _, mut source) = setup();
+    source["last_error"] = json!("PRIVATE_ERROR_BODY");
+    source["last_message"] = json!("PRIVATE_RESPONSE");
+    source["capacity_inventory"] = json!({"account_id":"PRIVATE_ACCOUNT"});
+    t.put(source.clone());
+    let (code, output, _) = t.cli(&["status", "--job-id", "quota-reader", "--json"]);
+    assert_eq!(code.unwrap(), 0);
+    let metadata: Value = serde_json::from_str(&output).unwrap();
+    assert_eq!(metadata["id"], "quota-reader");
+    assert_eq!(metadata["spec_sha256"], source["finite_review"]["spec_sha256"]);
+    assert!(metadata["metadata_only"] == true);
+    assert!(!output.contains("PRIVATE_"));
+    assert!(!output.contains(&t.ctx.root.to_string_lossy().to_string()));
+    assert!(t.cli(&["status", "--job-id", "../other", "--json"]).0.is_err());
+    assert!(t.cli(&["status", "--job-id", "quota-reader"]).0.is_err());
+    assert!(t.cli(&["status", "--job-id", "quota-reader", "--json", "--all"]).0.is_err());
+}
 fn register(t: &Test) -> Result<i32> {
     let prompt = format!(
         "Scheduler prompt\n依頼:\n{}",
@@ -144,6 +164,17 @@ fn child(t: &Test) -> Value {
 
 #[test]
 fn grok_existing_research_is_admitted_through_registration_start_and_final_queue_scope() {
+    research_admission(false, "normal");
+}
+
+#[test]
+fn gpt_quota_research_preserves_its_selected_route_and_budget_through_final_queue_admission() {
+    for case in ["normal", "selected_unknown", "budget_changed", "history_changed", "source_changed"] {
+        research_admission(true, case);
+    }
+}
+
+fn research_admission(gpt: bool, case: &str) {
     use cc_job_policy::subwork;
     let (t, mut row, mut source) = setup();
     let mut f = subwork_support::Fixture::new();
@@ -160,17 +191,31 @@ fn grok_existing_research_is_admitted_through_registration_start_and_final_queue
     row["model"] = json!("gpt-6.1-sol");
     row["scheduler"]["worktree"] = f.db["items"][1]["scheduler"]["worktree"].clone();
     row["scheduler"]["branch"] = f.db["items"][1]["scheduler"]["branch"].clone();
-    source["model"] = json!("grok-4.7");
+    source["model"] = json!(if gpt {"gpt-6.1-sol"} else {"grok-4.7"});
     source["task_type"] = json!("research");
     source["subwork"] = relation.clone();
     source["cwd"] = row["scheduler"]["worktree"].clone();
     source["finite_subwork"] = source["finite_review"].take();
     source["subwork_spec"] = row["spec"].clone();
+    if gpt {
+        source["capacity_same_model_retry_count"] = json!(1);
+        source["capacity_retry_count"] = json!(0);
+        source["capacity_wait_count"] = json!(1);
+        source["capacity_account_selector"] = json!("p000001");
+        source["capacity_tried_accounts"] = json!(["p000001"]);
+        source["capacity_history"] = json!([{"kind":"same_model_account_retry","account_selector":"p000001"}]);
+        let mut health = t.rt.quota_recovery_inventory.lock().unwrap();
+        health["openai"]["safe_routes"] = json!([
+            {"selector":"p000002","aliases":["p000002"],"at":t.rt.epoch(),"verified":true},
+            {"selector":"p000003","aliases":["p000003"],"at":t.rt.epoch(),"verified":true}
+        ]);
+    }
     t.put(source.clone());
     let mut target = row["scheduler"]["selection"].clone();
     target["cwd"] = source["cwd"].clone();
     target["model"] = row["model"].clone();
     target["task_type"] = json!("research");
+    if gpt { target["capacity_account_selector"] = json!("p000002"); }
     target["quota_recovery"] = cc_job_policy::quota_recovery::receipt(
         &row,
         &source,
@@ -188,8 +233,7 @@ fn grok_existing_research_is_admitted_through_registration_start_and_final_queue
         "Scheduler prompt\n依頼:\n{}",
         fs::read_to_string(row["spec"].as_str().unwrap()).unwrap()
     );
-    t.run(
-        &[
+    let mut args = vec![
             "--todo-id",
             "2",
             "--launch-key",
@@ -204,8 +248,6 @@ fn grok_existing_research_is_admitted_through_registration_start_and_final_queue
             "gpt-6.1-sol",
             "--model-origin",
             "policy",
-            "--model-recovery-from",
-            "grok-4.7",
             "--effort",
             "max",
             "--task-type",
@@ -214,10 +256,9 @@ fn grok_existing_research_is_admitted_through_registration_start_and_final_queue
             "read-only",
             "--mcp-profile",
             "minimal",
-        ],
-        prompt.as_bytes(),
-    )
-    .unwrap();
+        ];
+    if !gpt { args.extend(["--model-recovery-from", "grok-4.7"]); }
+    t.run(&args, prompt.as_bytes()).unwrap();
     let j = child(&t);
     assert_eq!(j["subwork"], source["subwork"]);
     assert_eq!(
@@ -238,7 +279,34 @@ fn grok_existing_research_is_admitted_through_registration_start_and_final_queue
     )
     .unwrap();
     fs::write(&paths.store, db.to_string()).unwrap();
-    let slot = t.ctx.admit(s(&j, "id")).unwrap();
+    if gpt {
+        assert_eq!(j["capacity_same_model_retry_count"], 2);
+        assert_eq!(j["capacity_wait_count"], 1);
+        assert_eq!(j["capacity_history"].as_array().unwrap().len(), 2);
+        assert_eq!(j["capacity_account_selector"], "p000002");
+        let native = codex_args(&j);
+        assert!(native.windows(2).any(|args| args == ["-m", "p000002/gpt-6.1-sol"]));
+        match case {
+            "selected_unknown" => t.rt.quota_recovery_inventory.lock().unwrap()["openai"]["safe_routes"][0]["verified"] = json!(false),
+            "source_changed" => {
+                let mut changed = source.clone(); changed["capacity_wait_count"] = json!(2); t.put(changed);
+            }
+            "budget_changed" | "history_changed" => {
+                let mut changed = j.clone();
+                if case == "budget_changed" {changed["capacity_same_model_retry_count"] = json!(0);}
+                else {changed["capacity_history"] = json!([]);}
+                t.put(changed);
+            }
+            _ => (),
+        }
+    }
+    let slot = t.ctx.admit(s(&j, "id"));
+    if case != "normal" {
+        assert!(slot.is_err() || slot.unwrap().is_none(), "{case}");
+        assert_ne!(t.ctx.load(s(&j, "id")).unwrap()["status"], "running");
+        return;
+    }
+    let slot = slot.unwrap();
     assert!(slot.is_some());
     let admitted = t.ctx.load(s(&j, "id")).unwrap();
     assert_eq!(admitted["status"], "running");
@@ -246,6 +314,7 @@ fn grok_existing_research_is_admitted_through_registration_start_and_final_queue
     assert_eq!(admitted["subwork"], source["subwork"]);
     assert_eq!(admitted["approval_policy"], source["approval_policy"]);
     assert_eq!(admitted["subwork_spec"], source["subwork_spec"]);
+    assert_eq!(t.ctx.load("quota-reader").unwrap(), source);
 }
 
 #[test]

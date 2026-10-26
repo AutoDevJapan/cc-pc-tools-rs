@@ -1,6 +1,7 @@
 # GPTの利用枠待ちで研究が再開されない問題（ToDo4017）
 
 対象: AutoDevJapan/cc-pc-tools-rs、repository ID 1406818713。
+対応Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/570 。
 元3080の読み取り専用研究3719を同じ仕様・権限・担当関係で再開する。
 原Issue283、598件の研究完了、他担当の原資料は本修復の完了対象ではない。
 
@@ -38,6 +39,13 @@ Red: 変更前の公開本体に新しいscheduler回帰4件を実行し、3件�
 コマンド: `cargo nextest run --locked -p cc-scheduler -E 'test(gpt_quota_) | test(historic_quota_)'`。
 完全stderr SHA256: 1ce6c6462cce89a21c67b9e68df4c7c19b28cf43da76a2885c53651dc16db188。
 
-Green、利用側テスト、別モデルレビュー、CI、マージ、Windows配布、元3719の
+初期Greenではpolicy/schedulerの関連21件、jobsの登録・最終受付9件が成功した。
+選択枠だけ不明になり別の正常枠が残る場合、登録後の履歴・回数・sourceの変更も拒否した。
+その後、provider変更後の失敗でも予算が戻らない回帰と、通常CLIによる一件限定の
+`status --job-id ID --json`を追加した。このモードはbody・path・error・口座を返さず、
+現在の仕事の固定metadataだけを読む。全jobの読み込みやrefreshは行わない。
+最終候補の関連5クレートは共有ゲートで順番を待っている。成功前に全件成功と扱わない。
+
+最終Green、別モデルレビュー、CI、マージ、Windows配布、元3719の
 実再開・tool処理、親3080へのCAS受領は未完了。登録だけで完了にはしない。
 一時領域所有ID: df33b3e0d7170e637ab7900564257515。

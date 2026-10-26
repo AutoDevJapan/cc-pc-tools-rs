@@ -648,10 +648,11 @@ fn state_holding_scopes(
         // the mutable raw record is complete and now points somewhere else.
         // Do not let record selection shadow either observation's scope.
         if let Some(scope) = &published {
-            for hint in positive_scope_paths(scope)?
-                .into_iter()
-                .filter(|hint| !hint.is_empty())
-            {
+            let paths = positive_scope_paths(scope)?;
+            if paths.iter().all(|hint| hint.is_empty()) {
+                return Err("OTHER_SCOPE_INDEX_UNAVAILABLE");
+            }
+            for hint in paths.into_iter().filter(|hint| !hint.is_empty()) {
                 if hold_independent_scope(&work_pins, Path::new(hint), false, scope_leases)? {
                     return Err("OTHER_JOB_ACTIVE_OR_WAITING");
                 }
@@ -867,19 +868,7 @@ fn state_holding_scopes(
         if build_reference(&j, &debug) {
             return Err("SAVED_BUILD_REFERENCE_RETAINED");
         }
-        let owner = &j["work_owner"];
-        let mut touches = j["todo_id"] == expected["id"]
-            || j["related_todo_ids"]
-                .as_array()
-                .is_some_and(|xs| xs.contains(&expected["id"]))
-            || [field(&j, "cwd"), field(owner, "worktree")]
-                .iter()
-                .any(|p| {
-                    !p.is_empty() && (inside(work, Path::new(p)) || inside(Path::new(p), work))
-                })
-            || (!field(owner, "branch").is_empty()
-                && owner["branch"] == expected["scheduler"]["branch"]
-                && owner["git_common"] == origin["work_owner"]["git_common"]);
+        let mut touches = scope_touches(&j, expected, work, origin);
         for hint in positive_scope_paths(&j)?
             .into_iter()
             .filter(|hint| !hint.is_empty())
@@ -3412,6 +3401,8 @@ mod tests {
             "full-published-ancestor",
             "full-published-descendant",
             "full-published-unavailable",
+            "full-published-empty",
+            "full-raw-parent",
         ] {
             let mut raw = json!({"id":id,"todo_id":2,"project":"legacy-original","status":"running","cwd":other,"created_at":"2026-10-26T00:00:00Z"});
             let mut db = json!({"projects":{"cc-pc-tools-rs":f.work,"legacy-original":other,"legacy-display":other},"items":[f.row,{"id":2,"project":"legacy-display","status":"done","jobs":[id]}]});
@@ -3436,10 +3427,13 @@ mod tests {
                 "published-hint" => {
                     published = json!({"cwd":other,"created_at":raw["created_at"],"registered_cwd":alias,"work_owner":{}})
                 }
-                "full-cwd" | "full-owner" => {
+                "full-cwd" | "full-owner" | "full-raw-parent" => {
                     raw["work_owner"] = json!({"repository":"autodevjapan/cc-pc-tools-rs","git_common":other,"worktree":if case == "full-owner" {&alias} else {&other},"branch":"scheduler/todo-2-fixture"});
                     if case == "full-cwd" {
                         raw["cwd"] = json!(alias);
+                    }
+                    if case == "full-raw-parent" {
+                        raw["parent_job_id"] = f.origin["id"].clone();
                     }
                 }
                 "published-claim" => {
@@ -3470,6 +3464,7 @@ mod tests {
                             published["registered_cwd"] = json!(descendant)
                         }
                         "full-published-unavailable" => published = Value::Null,
+                        "full-published-empty" => published = json!({}),
                         _ => unreachable!(),
                     }
                 }
@@ -3495,11 +3490,13 @@ mod tests {
             } else {
                 assert_eq!(
                     result,
-                    Err(if case == "full-published-unavailable" {
-                        "OTHER_SCOPE_INDEX_UNAVAILABLE"
-                    } else {
-                        "OTHER_JOB_ACTIVE_OR_WAITING"
-                    }),
+                    Err(
+                        if ["full-published-unavailable", "full-published-empty"].contains(&case) {
+                            "OTHER_SCOPE_INDEX_UNAVAILABLE"
+                        } else {
+                            "OTHER_JOB_ACTIVE_OR_WAITING"
+                        }
+                    ),
                     "{case}"
                 );
                 assert_eq!(stats.builds.candidates, 0, "{case}");

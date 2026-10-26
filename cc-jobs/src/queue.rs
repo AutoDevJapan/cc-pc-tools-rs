@@ -728,8 +728,28 @@ impl Context {
             // A redirected canonical record is unknown, never an omitted owner.
             if kind.is_symlink() {return Err(Error::new("active job record is redirected"));}
             if !kind.is_dir() {continue;}
+            // Match normal history discovery: a directory without job.json is
+            // not a new worker. Published IDs are merged below and stay unknown.
+            match fs::symlink_metadata(entry.path().join("job.json")) {
+                Err(e) if e.kind()==std::io::ErrorKind::NotFound=>continue,
+                Err(e)=>return Err(e.into()),
+                Ok(metadata)=>{
+                    #[cfg(windows)]
+                    {
+                        use std::os::windows::fs::MetadataExt;
+                        if metadata.file_attributes()&0x400!=0 {return Err(Error::new("active job metadata is redirected"));}
+                    }
+                    if !metadata.is_file() {return Err(Error::new("active job metadata is not a file"));}
+                }
+            }
             if self.admission_active(&self.admission_record(&id)) {ids.push(id);}
             if ids.len()>4096 {return Err(Error::new("active job snapshot limit"));}
+        }
+        if let Ok(published)=self.index_ids(&index) {
+            for id in published {
+                if !ids.iter().any(|known|known==id) && self.admission_active(&self.admission_record(id)) {ids.push(id.to_owned());}
+                if ids.len()>4096 {return Err(Error::new("active job snapshot limit"));}
+            }
         }
         ids.sort();
         Ok(ids)

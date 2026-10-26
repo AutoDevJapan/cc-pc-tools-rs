@@ -39,9 +39,11 @@ job and its exact registered Git worktree qualify. Current remote ownership,
 common directory, branch, saved/pushed source and ignored/untracked debug data are
 checked. A waiting/live sibling, dependent unfinished work or live resource marker
 retains that target. No arbitrary path or ownership registration is accepted.
-The existing queue's fresh complete active-ID snapshot is read under queue.lock;
-it includes queued siblings and avoids rescanning terminal history. A missing,
-incomplete, stale or unreadable snapshot retains the candidate. Explicit saved
+The existing queue's active-ID snapshot is read under queue.lock; it includes
+queued siblings. A fresh complete index is reused. Otherwise the normal admission
+rules inspect current canonical job metadata with a deadline, preserving published
+unknown IDs and leaving jobs/index unchanged. No prompt or event history is read.
+An unavailable or incomplete observation retains the candidate. Explicit saved
 debug-build references in canonical metadata also retain their original artifacts.
 
 Existing queue/state/ToDo byte locks, the exact shared Cargo target lock and Cargo's

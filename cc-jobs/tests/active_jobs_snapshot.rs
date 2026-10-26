@@ -34,7 +34,7 @@ fn active_snapshot_is_read_only_fresh_complete_and_keeps_waiting_ids() {
         };
         fs::write(&path, &bytes).unwrap();
         let result = ctx.active_job_ids_snapshot();
-        if kind == "valid" {
+        if ["valid", "incomplete", "stale", "future"].contains(&kind) {
             assert_eq!(result.unwrap(), ids);
         } else {
             assert!(result.unwrap().is_empty(), "{kind}");
@@ -54,6 +54,7 @@ fn stale_index_inspection_finds_unindexed_waiters_without_mutating_the_old_index
     let stale = b"{\"scan_complete\":true,\"scanned_at\":1,\"ids\":[]}";
     let index = ctx.jobs.join(".queue-index.json");
     fs::write(&index, stale).unwrap();
+    fs::create_dir(ctx.jobs.join("non_job_metadata")).unwrap();
     for (id, status) in [
         ("20261026-000001-todo-1", "queued"),
         ("20261026-000002-todo-2", "running"),

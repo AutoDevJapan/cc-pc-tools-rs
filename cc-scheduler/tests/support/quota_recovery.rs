@@ -1,8 +1,215 @@
 use super::*;
 
+#[test]
+fn grok_quota_selects_a_healthy_independent_model_for_existing_subwork() {
+    let (mut f, mut sub) = grok_fixture();
+    f.e.backend.records[1]["model"] = json!("grok-4.7");
+    sub.db["items"][1]["model"] = json!("grok-4.7");
+    write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+    let prepared =
+        f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap())
+            .unwrap()
+            .unwrap();
+    let selection = &prepared["scheduler"]["selection"];
+    assert_eq!(selection["model"], "gpt-6-astra");
+    assert_eq!(selection["review_excluded_models"], json!(["gpt-6.1-sol"]));
+    assert!(selection["quota_recovery"].is_object());
+    assert!(prepared["scheduler"]["resume_session"].is_null());
+    assert_eq!(prepared["subwork"], sub.db["items"][1]["subwork"]);
+    assert_eq!(prepared["spec"], sub.db["items"][1]["spec"]);
+    assert_eq!(f.e.backend.records[1]["model"], "grok-4.7");
+}
+
+#[test]
+fn grok_legacy_error_is_read_without_rewriting_history_or_backfilling_research_sha() {
+    for research in [false, true] {
+        let (mut f, mut sub) = grok_fixture();
+        let source = &mut f.e.backend.records[1];
+        source["model"] = json!("grok-4.7");
+        source["last_failure_kind"] = json!("transient");
+        source["last_error"] = json!(
+            "Error running remote compact task: unexpected status 402 Payment Required: Grok Build usage balance exhausted"
+        );
+        sub.db["items"][1]["model"] = json!("grok-4.7");
+        if research {
+            sub.db["items"][1]["task_type"] = json!("research");
+            sub.db["items"][1]["subwork"]["kind"] = json!("research");
+            source["subwork"] = sub.db["items"][1]["subwork"].clone();
+            source["task_type"] = json!("research");
+            source.as_object_mut().unwrap().remove("finite_review");
+        }
+        let original = source.clone();
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let prepared =
+            f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap())
+                .unwrap()
+                .unwrap();
+        assert_eq!(f.e.backend.records[1], original);
+        assert_eq!(
+            prepared["scheduler"]["selection"]["quota_recovery"].is_object(),
+            !research
+        );
+        if research {
+            assert_eq!(prepared["scheduler"]["selection"]["model"], "grok-4.7");
+            assert!(prepared["scheduler"]["selection"]["finite_review_spec_sha256"].is_string());
+        }
+    }
+}
+
+#[test]
+fn grok_research_recovery_retains_scope_parent_and_kind_after_parent_exit() {
+    let (mut f, mut sub) = grok_fixture();
+    let row = &mut sub.db["items"][1];
+    row["subwork"]["kind"] = json!("research");
+    row["task_type"] = json!("research");
+    row["model"] = json!("grok-4.7");
+    let source = &mut f.e.backend.records[1];
+    source["model"] = json!("grok-4.7");
+    source["subwork"] = row["subwork"].clone();
+    source["task_type"] = json!("research");
+    source["finite_subwork"] = source["finite_review"].take();
+    let original = source.clone();
+    write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+    let prepared =
+        f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap())
+            .unwrap()
+            .unwrap();
+    let selection = &prepared["scheduler"]["selection"];
+    assert_eq!(selection["model"], "gpt-6.1-sol");
+    assert_eq!(selection["task_type"], "research");
+    assert!(selection["quota_recovery"].is_object());
+    for field in ["sandbox", "mcp_profile", "add_dirs", "network"] {
+        assert_eq!(selection[field], original[field], "{field}");
+    }
+    assert_eq!(prepared["subwork"], original["subwork"]);
+    assert_eq!(f.e.backend.records[1], original);
+}
+
 pub(super) fn inventory(at: f64) -> Value {
     json!({"at":at,"anthropic":{"at":at,"verified":true,"exhausted":true,"available":false},
         "openai":{"at":at,"verified":true,"exhausted":false,"available":true}})
+}
+
+fn grok_fixture() -> (Fixture, subwork_support::Fixture) {
+    let (mut f, mut sub) = fixture();
+    sub.register();
+    sub.db["items"][1]["subwork"]["kind"] = json!("review");
+    f.e.backend.records[1]["subwork"] = sub.db["items"][1]["subwork"].clone();
+    f.e.backend.records[1]["subwork_spec"] = sub.db["items"][1]["spec"].clone();
+    f.e.backend.records[1]["assigned_needs"] = sub.db["items"][1]["needs"].clone();
+    f.e.backend.records[1]["subwork_validated"] = json!(true);
+    sub.db["items"][0]["status"] = json!("wait");
+    f.e.backend.records[0]["status"] = json!("succeeded");
+    write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+    (f, sub)
+}
+
+#[test]
+fn grok_normal_scheduler_link_transfers_the_generation_and_quota_capsule_once() {
+    let (mut f, mut sub) = grok_fixture();
+    sub.db["items"][1]["model"] = json!("grok-4.7");
+    f.e.backend.records[1]["model"] = json!("grok-4.7");
+    write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+    let prepared =
+        f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap())
+            .unwrap()
+            .unwrap();
+    let key = prepared["scheduler"]["key"].clone();
+    let mut next = f.e.backend.records[1].clone();
+    next["id"] = json!("new-reader");
+    next["status"] = json!("queued");
+    next["launch_key"] = key.clone();
+    next["model"] = prepared["scheduler"]["selection"]["model"].clone();
+    next["todo_resume_generation"] = json!(1);
+    f.e.link(&json!(2), &next, &key).unwrap();
+    let assigned = f.get(2);
+    assert_eq!(assigned["resume_generation"], 1);
+    assert_eq!(
+        assigned["worker_receipt"],
+        json!({"job":"new-reader","generation":1})
+    );
+    assert!(assigned["scheduler"]["key"].is_null());
+    assert!(cc_job_policy::quota_recovery::verify(
+        &prepared["scheduler"]["selection"]["quota_recovery"],
+        &assigned,
+        &f.e.backend.records[1],
+        &next,
+        T
+    ));
+    f.e.link(&json!(2), &next, &key).unwrap();
+    assert_eq!(f.get(2), assigned);
+}
+
+#[test]
+fn grok_legacy_unreceived_generation_stays_historical_while_new_assignment_is_verified() {
+    let (mut f, mut sub) = grok_fixture();
+    sub.db["items"][1]["model"] = json!("grok-4.7");
+    f.e.backend.records[1]["model"] = json!("grok-4.7");
+    f.e.backend.records[1]["todo_resume_generation"] = json!(1);
+    let original = f.e.backend.records[1].clone();
+    write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+    let prepared =
+        f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap())
+            .unwrap()
+            .unwrap();
+    let proof = &prepared["scheduler"]["selection"]["quota_recovery"];
+    assert_eq!(proof["legacy_unreceived_source"], true);
+    assert_eq!(proof["resume_generation"], 0);
+    let mut next = original.clone();
+    next["id"] = json!("new-reader");
+    next["status"] = json!("queued");
+    next["model"] = prepared["scheduler"]["selection"]["model"].clone();
+    next["launch_key"] = prepared["scheduler"]["key"].clone();
+    f.e.link(&json!(2), &next, &next["launch_key"]).unwrap();
+    assert!(cc_job_policy::quota_recovery::verify(
+        proof,
+        &f.get(2),
+        &original,
+        &next,
+        T
+    ));
+    assert_eq!(f.e.backend.records[1], original);
+    for change in ["generation", "receipt", "relation", "needs", "checkout"] {
+        let mut bad = prepared.clone();
+        match change {
+            "generation" => bad["resume_generation"] = json!(2),
+            "receipt" => bad["worker_receipt"] = json!({"job":null,"generation":0}),
+            "relation" => bad["subwork"]["origin_job_id"] = json!("other-author"),
+            "needs" => bad["needs"] = json!(["cargo"]),
+            "checkout" => bad["scheduler"]["worktree"] = json!(sub.repo),
+            _ => unreachable!(),
+        }
+        assert!(
+            !cc_job_policy::quota_recovery::eligible_source(&bad, &original),
+            "{change}"
+        );
+    }
+}
+
+#[test]
+fn grok_verified_quota_rechecks_the_old_transient_cooldown_without_releasing_other_waits() {
+    for case in ["quota", "transient", "owner_stop", "resource_wait"] {
+        let (mut f, mut sub) = grok_fixture();
+        sub.db["items"][1]["model"] = json!("grok-4.7");
+        sub.db["items"][1]["scheduler"]["not_before"] = json!(T + 3600.);
+        sub.db["items"][1]["scheduler"]["phase"] = json!("retry");
+        sub.db["items"][1]["scheduler"]["last_stop"] = json!("failed");
+        f.e.backend.records[1]["model"] = json!("grok-4.7");
+        match case {
+            "transient" => f.e.backend.records[1]["last_failure_kind"] = json!("transient"),
+            "owner_stop" => sub.db["items"][1]["stopped"] = json!(true),
+            "resource_wait" => {
+                sub.db["items"][1]["scheduler"]["resource_wait"] = json!({"until":T+3600.})
+            }
+            _ => (),
+        }
+        write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+        let prepared =
+            f.e.prepare(&sub.db["items"][1], sub.repo.to_str().unwrap())
+                .unwrap();
+        assert_eq!(prepared.is_some(), case == "quota", "{case}");
+        assert_eq!(f.get(2)["scheduler"]["not_before"], T + 3600.);
+    }
 }
 
 fn fixture() -> (Fixture, subwork_support::Fixture) {

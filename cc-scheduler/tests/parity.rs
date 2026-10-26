@@ -404,10 +404,10 @@ fn console_subwork_uses_normal_admission_and_recovers_lost_response() {
         let row = f.get(2);
         assert_eq!(row["spec"], sub.db["items"][1]["spec"]);
         assert_eq!(row["scheduler"]["console_request"], request);
-        assert_eq!(
-            row["scheduler"]["key"],
-            sub.db["items"][1]["scheduler"]["key"]
-        );
+        assert!(row["scheduler"]["key"].is_null());
+        assert_eq!(row["worker_receipt"], json!({"job":row["scheduler"]["job"],"generation":1}));
+        assert_eq!(row["resume_generation"], 1);
+        assert_eq!(row["scheduler"]["subwork_admission"]["key"], sub.db["items"][1]["scheduler"]["key"]);
         let mut candidate = sub.child_job();
         candidate["id"] = row["scheduler"]["job"].clone();
         candidate["subwork_spec"] = row["spec"].clone();

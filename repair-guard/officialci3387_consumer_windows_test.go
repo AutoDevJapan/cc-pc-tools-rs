@@ -178,7 +178,7 @@ func TestOfficialCI3387MergeLookupKeepsFailureClassesAndFixedEndpoint(t *testing
 				}
 				return []byte(tc.output), tc.err
 			})
-			if got != tc.want || calls != 1 || strings.Contains(got.reason(), "synthetic-private-value") {
+			if got != tc.want || calls != 1 {
 				t.Fatalf("status classification changed: got=%v want=%v calls=%d", got, tc.want, calls)
 			}
 		})
@@ -197,7 +197,7 @@ func TestOfficialCI3387MergeLookupKeepsFailureClassesAndFixedEndpoint(t *testing
 func TestOfficialCI3387MergeDiagnosticUsesOnlyBoundedClasses(t *testing.T) {
 	reader := strings.Repeat("a", 40)
 	for _, side := range []string{"reader", "producer"} {
-		for _, result := range []official3894MergeOutcome{official3894MergeUnknown, official3894MergeCommandFailed, official3894MergeNotMerged, official3894MergeResponseInvalid, 255} {
+		for _, result := range []official3894MergeOutcome{official3894MergeUnknown, official3894MergeCommandFailed, official3894MergeNotMerged, official3894MergeResponseInvalid, official3894MergeDeadline, official3894MergeCancelled, 255} {
 			checked := 0
 			_, err := official3894SourceRevision(reader, &official3894Source{Head: official3387PreparedProducer}, func(string) bool {
 				t.Fatal("failed metadata lookup caused input inspection")
@@ -216,6 +216,71 @@ func TestOfficialCI3387MergeDiagnosticUsesOnlyBoundedClasses(t *testing.T) {
 			if err == nil || err.Error() != "normal_"+side+"_source_merge_"+result.reason()+"_"+head || checked != calls {
 				t.Fatalf("lost bounded merge context: err=%v calls=%d", err, checked)
 			}
+		}
+	}
+}
+
+func TestOfficialCI3387MergeLookupDistinguishesFinishedBudget(t *testing.T) {
+	for _, kind := range []string{"deadline", "cancelled"} {
+		t.Run(kind, func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			if kind == "deadline" {
+				cancel()
+				ctx, cancel = context.WithTimeout(context.Background(), -1)
+			} else {
+				cancel()
+			}
+			defer cancel()
+			if ctx.Err() == nil {
+				t.Fatal("budget fixture must already be finished")
+			}
+			result := official3894MergeLookup(ctx, strings.Repeat("a", 40), func(context.Context, string, ...string) ([]byte, error) {
+				// The command wrapper intentionally returns only a generic error.
+				return nil, errors.New("synthetic-private-value")
+			})
+			if result == official3894MergeConfirmed || result.reason() != kind {
+				t.Fatalf("finished operation was confused with a transport failure: got=%s want=%s", result.reason(), kind)
+			}
+		})
+	}
+}
+
+func TestOfficialCI3387MergeDiagnosticDoesNotExposeCommandData(t *testing.T) {
+	reader := strings.Repeat("a", 40)
+	for _, commandErr := range []error{nil, errors.New("synthetic-private-error")} {
+		_, err := official3894SourceRevision(reader, nil, func(string) bool {
+			t.Fatal("a rejected command reached input inspection")
+			return false
+		}, func(head string) official3894MergeOutcome {
+			return official3894MergeLookup(context.Background(), head, func(context.Context, string, ...string) ([]byte, error) {
+				return []byte("synthetic-private-output"), commandErr
+			})
+		})
+		if err == nil || strings.Contains(err.Error(), "synthetic-private") || !strings.HasSuffix(err.Error(), reader) {
+			t.Fatalf("command data escaped the source boundary: %v", err)
+		}
+	}
+}
+
+func TestOfficialCI3387SameRevisionHasOneMergeCheck(t *testing.T) {
+	reader := strings.Repeat("a", 40)
+	for _, saved := range []*official3894Source{nil, {Head: reader}} {
+		calls, inspected := 0, false
+		got, err := official3894SourceRevision(reader, saved, func(head string) bool {
+			if head != reader || calls != 1 {
+				t.Fatal("input inspection did not follow one check of the same revision")
+			}
+			inspected = true
+			return true
+		}, func(head string) official3894MergeOutcome {
+			calls++
+			if head != reader || inspected {
+				t.Fatal("same-revision merge lookup changed its order or target")
+			}
+			return official3894MergeConfirmed
+		})
+		if err != nil || got != reader || calls != 1 || !inspected {
+			t.Fatalf("same source was checked repeatedly: head=%s err=%v calls=%d", got, err, calls)
 		}
 	}
 }

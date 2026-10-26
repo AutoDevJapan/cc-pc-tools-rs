@@ -37,6 +37,8 @@ const (
 	official3894MergeCommandFailed
 	official3894MergeNotMerged
 	official3894MergeResponseInvalid
+	official3894MergeDeadline
+	official3894MergeCancelled
 )
 
 func (m official3894MergeOutcome) reason() string {
@@ -47,6 +49,10 @@ func (m official3894MergeOutcome) reason() string {
 		return "not_merged"
 	case official3894MergeResponseInvalid:
 		return "response_invalid"
+	case official3894MergeDeadline:
+		return "deadline"
+	case official3894MergeCancelled:
+		return "cancelled"
 	default:
 		return "not_confirmed"
 	}
@@ -95,6 +101,12 @@ func official3894MergeLookup(ctx context.Context, head string, command func(cont
 	}
 	raw, e := command(ctx, official3894Gate, "api", "repos/AutoDevJapan/cc-pc-tools-rs/compare/"+head+"...main", "--jq", ".status")
 	if e != nil {
+		switch ctx.Err() {
+		case context.DeadlineExceeded:
+			return official3894MergeDeadline
+		case context.Canceled:
+			return official3894MergeCancelled
+		}
 		return official3894MergeCommandFailed
 	}
 	switch strings.TrimSpace(string(raw)) {

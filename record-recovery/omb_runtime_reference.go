@@ -149,6 +149,10 @@ type omb3255MetadataRPC struct {
 }
 
 func omb3255StartMetadataRPC(ctx context.Context) (*omb3255MetadataRPC, error) {
+	return omb3255StartMetadataRPCAt(ctx, omb3255SourceRoot)
+}
+
+func omb3255StartMetadataRPCAt(ctx context.Context, sourceRoot string) (*omb3255MetadataRPC, error) {
 	cmd := exec.CommandContext(ctx, omb3255Codex, "app-server", "--listen", "stdio://")
 	hideCommand(cmd)
 	cmd.WaitDelay = time.Second
@@ -160,7 +164,7 @@ func omb3255StartMetadataRPC(ctx context.Context) (*omb3255MetadataRPC, error) {
 		}
 		cmd.Env = append(cmd.Env, entry)
 	}
-	cmd.Dir = omb3255SourceRoot
+	cmd.Dir = sourceRoot
 	cmd.Stderr = io.Discard
 	input, err := cmd.StdinPipe()
 	if err != nil {

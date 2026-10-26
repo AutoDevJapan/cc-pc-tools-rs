@@ -423,27 +423,27 @@ func TestNativeReplacementLinksStreamsAndUnknownEntries(t *testing.T) {
 			case "unknown-data":
 				err = os.WriteFile(f.path(r, "unrelated-auth.json"), []byte("synthetic unrelated data"), 0600)
 			case "missing":
-				err = os.Rename(file, filepath.Join(f.parent, "retained-file"))
+				err = fixtureRename(file, filepath.Join(f.parent, "retained-file"))
 			case "changed-bytes":
 				err = os.WriteFile(file, []byte("different synthetic bytes"), 0600)
 			case "same-bytes-new-file":
-				err = os.Rename(file, filepath.Join(f.parent, "retained-file"))
+				err = fixtureRename(file, filepath.Join(f.parent, "retained-file"))
 				if err == nil {
 					err = os.WriteFile(file, []byte("synthetic public bytes"), 0600)
 				}
 			case "new-root":
-				err = os.Rename(f.path(r, ""), filepath.Join(f.parent, "retained-root"))
+				err = fixtureRename(f.path(r, ""), filepath.Join(f.parent, "retained-root"))
 				if err == nil {
 					err = os.Mkdir(f.path(r, ""), 0700)
 				}
 			case "same-files-new-directory":
 				saved := filepath.Join(f.parent, "retained-bin")
-				err = os.Rename(f.path(r, "bin"), saved)
+				err = fixtureRename(f.path(r, "bin"), saved)
 				if err == nil {
 					err = os.Mkdir(f.path(r, "bin"), 0700)
 				}
 				if err == nil {
-					err = os.Rename(filepath.Join(saved, "example.txt"), file)
+					err = fixtureRename(filepath.Join(saved, "example.txt"), file)
 				}
 			case "hardlink":
 				err = os.Link(file, filepath.Join(f.parent, "retained-link"))
@@ -453,7 +453,7 @@ func TestNativeReplacementLinksStreamsAndUnknownEntries(t *testing.T) {
 				err = os.WriteFile(f.path(r, "")+":synthetic", []byte("synthetic stream"), 0600)
 			case "junction":
 				saved := filepath.Join(f.parent, "retained-bin")
-				err = os.Rename(f.path(r, "bin"), saved)
+				err = fixtureRename(f.path(r, "bin"), saved)
 				if err == nil {
 					err = fixtureJunction(f.path(r, "bin"), saved)
 					if err == nil {
@@ -486,6 +486,21 @@ func TestNativeReplacementLinksStreamsAndUnknownEntries(t *testing.T) {
 				t.Fatal("changed physical tree consumed")
 			}
 		})
+	}
+}
+
+// Windows can transiently deny the synthetic replacement setup after creation.
+// The observed directory had ordinary attributes and ten isolated repetitions
+// succeeded. Bound the same rename's sharing/access-denied retry; a persistent
+// lock still fails setup. No permissions or production validation are changed.
+func fixtureRename(from, to string) error {
+	deadline := time.Now().Add(500 * time.Millisecond)
+	for {
+		err := os.Rename(from, to)
+		if (!errors.Is(err, syscall.ERROR_ACCESS_DENIED) && !errors.Is(err, syscall.Errno(32))) || !time.Now().Before(deadline) {
+			return err
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 

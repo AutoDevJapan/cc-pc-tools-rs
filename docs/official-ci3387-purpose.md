@@ -88,5 +88,23 @@ this PR's original workflow. Expiry is fixed at creation plus 24 hours to allow
 normal resource waiting; time never establishes permission. The source, actual
 actor and current CI metadata are rechecked independently on every operation.
 
+The parent, implementation and CI provider are ordinary independent tasks.
+Their IDs do not assert typed subwork ancestry. The finite request nominates
+the three exact original jobs; each is checked against its registered task,
+actual source owner, repository, workspace, branch and original task type.
+The implementation and parent must share their actual Git common directory.
+Implementation/provider subwork, admission or parent-job fields are refused,
+including attempts to borrow review/check authority. This original-job proof
+also enters the authenticated registration digest and is checked on reuse.
+Job metadata projection discards prompts and responses without decoding them.
+
+Consumption writes the public JSON response inside the verified-byte callback.
+Both a writer error and a short write fail the callback and retain the explicit
+failed state; neither is marked consumed or retried. The response describes the
+in-flight `consuming` state. The caller must capture stdout programmatically and
+require process exit zero, which follows the durable `consumed` commit. A final
+commit failure after output still returns nonzero and never appends a second
+JSON document. This is a one-shot handoff, not a retryable delivery queue.
+
 Implementation evidence is attached to Issue 526 and its PR. At specification
 time no formal CI, merge, installed update or real SDK acceptance is claimed.

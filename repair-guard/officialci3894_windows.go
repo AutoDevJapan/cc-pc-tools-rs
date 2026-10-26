@@ -29,6 +29,7 @@ const official3894Store = "D:/CC/Tools/client-records/official-ci3387.creation-v
 const official3894Domain = "official-ci3387-ordinary-implementation-3894-v1"
 const official3894Safe = "D:/CC/Tools/safe-delete/safe-delete.exe"
 const official3894Temp = "C:/Users/makhmeto/AppData/Local/Temp"
+const official3894OriginalCreator = "20261026-064014-todo-3894"
 
 type official3894Source struct {
 	Head, Registration, CreatorJob, Workspace, Branch, SpecSHA string
@@ -99,7 +100,7 @@ type official3894Error string
 
 func (e official3894Error) Error() string { return string(e) }
 
-func runOfficial3894CLI(args []string, out io.Writer, operation func(context.Context, string, string) (object, error)) int {
+func runOfficial3894CLI(args []string, out io.Writer, operation func(context.Context, string, string, func(object) error) (object, error)) int {
 	op, id, ok := official3894Parse(args)
 	if !ok {
 		_ = json.NewEncoder(out).Encode(official3894Failure("arguments"))
@@ -107,7 +108,25 @@ func runOfficial3894CLI(args []string, out io.Writer, operation func(context.Con
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 	defer cancel()
-	r, e := operation(ctx, op, id)
+	handed := false
+	handoff := func(result object) error {
+		if op != "consume" || handed {
+			return oc.ErrDenied
+		}
+		handed = true
+		return json.NewEncoder(official3894ExactWriter{out}).Encode(result)
+	}
+	r, e := operation(ctx, op, id, handoff)
+	// A failed/partial public handoff must never get a second JSON document.
+	if handed {
+		if e != nil {
+			return 1
+		}
+		return 0
+	}
+	if op == "consume" && e == nil {
+		r, e = official3894Failure("consumer_handoff_required"), oc.ErrDenied
+	}
 	if e != nil {
 		// Preserve bounded, non-secret ownership/state metadata, never public file
 		// bodies from a callback whose durable terminal save did not succeed.
@@ -129,6 +148,32 @@ func runOfficial3894CLI(args []string, out io.Writer, operation func(context.Con
 		return 1
 	}
 	return 0
+}
+
+type official3894ExactWriter struct{ io.Writer }
+
+func (w official3894ExactWriter) Write(p []byte) (int, error) {
+	n, e := w.Writer.Write(p)
+	if e == nil && n != len(p) {
+		e = io.ErrShortWrite
+	}
+	return n, e
+}
+
+type official3894Consumer interface {
+	Consume(context.Context, string, func([]oc.Payload) error) error
+}
+
+func official3894Consume(ctx context.Context, engine official3894Consumer, id string, summary func() object, handoff func(object) error) error {
+	return engine.Consume(ctx, id, func(p []oc.Payload) error {
+		r := summary()
+		r["purpose_verified"] = true
+		delete(r, "reason")
+		r["files"] = p
+		// The core still holds the verified physical objects and its durable
+		// state is consuming. Only a successful actual write permits consumed.
+		return handoff(r)
+	})
 }
 
 // Explicit environment projection: do not read all environment variables and
@@ -278,6 +323,125 @@ func official3894BuildHead() (string, bool) {
 	return head, official3894Hex(head, 40) && settings["vcs.modified"] == "false" && settings["GOOS"] == "windows" && settings["GOARCH"] == "amd64"
 }
 
+func official3894TaskLineage(reg skillsRegistry) bool {
+	parent, provider, creator := reg.Tasks[3387], reg.Tasks[3888], reg.Tasks[3894]
+	b := oc.FixedBinding("", "", "", "")
+	// These are nominated ordinary independent tasks, not typed subwork. A
+	// review/check parent field must never supply their implementation authority.
+	independent := func(row skillsTask) bool {
+		return row.Subwork == (skillsSubwork{}) && row.Scheduler.SubworkParent == "" && row.Scheduler.Admission == nil
+	}
+	active := func(row skillsTask) bool {
+		return row.Status == "todo" || row.Status == "doing" || row.Status == "wait"
+	}
+	return parent.ID == 3387 && provider.ID == 3888 && creator.ID == 3894 &&
+		parent.Project == "cc-pc-tools-rs" && creator.Project == parent.Project && provider.Project == "localai-web-rs" &&
+		skillsHasJob(parent, b.ParentJob) && skillsHasJob(provider, b.OriginalProviderJob) &&
+		skillsHasJob(creator, official3894OriginalCreator) && independent(provider) && independent(creator) &&
+		!skillsHeld(parent) && !skillsHeld(provider) && !skillsHeld(creator) && active(parent) && active(provider) && (active(creator) || creator.Status == "done")
+}
+
+// Read job metadata without decoding prompt, notes, last_message or native
+// content. The normal source reader holds this original record's file handle.
+func official3894ReadJob(s *skillsFS, id string) (object, bool) {
+	if !currentSubworkJobName.MatchString(id) {
+		return nil, false
+	}
+	f, ok := s.open(filepath.Join(skillsJobsRoot, id, "job.json"), 4<<20)
+	if !ok {
+		return nil, false
+	}
+	return official3894JobProjection(io.LimitReader(f, 4<<20+1), id)
+}
+
+func official3894JobProjection(input io.Reader, id string) (object, bool) {
+	d := json.NewDecoder(input)
+	d.UseNumber()
+	first, e := d.Token()
+	if e != nil || first != json.Delim('{') {
+		return nil, false
+	}
+	allowed := map[string]bool{}
+	for _, k := range []string{"id", "todo_id", "project", "task_type", "parent_job_id", "subwork", "work_owner", "scope_source", "cwd", "status", "launch_key", "codex_pid", "codex_pid_created"} {
+		allowed[k] = true
+	}
+	out, seen := object{}, map[string]bool{}
+	for d.More() {
+		key, e := d.Token()
+		k, ok := key.(string)
+		if e != nil || !ok || seen[k] {
+			return nil, false
+		}
+		seen[k] = true
+		if allowed[k] {
+			var raw json.RawMessage
+			if d.Decode(&raw) != nil {
+				return nil, false
+			}
+			// Validate duplicate nested metadata without decoding ignored text.
+			wrapped := append([]byte(`{"value":`), raw...)
+			wrapped = append(wrapped, '}')
+			value, ok := conversationJSON(wrapped)
+			if !ok {
+				return nil, false
+			}
+			out[k] = value["value"]
+		} else {
+			var discard ownerDiscardJSON
+			if d.Decode(&discard) != nil {
+				return nil, false
+			}
+		}
+	}
+	if _, e := d.Token(); e != nil {
+		return nil, false
+	}
+	if _, e := d.Token(); e != io.EOF {
+		return nil, false
+	}
+	return out, out["id"] == id
+}
+
+// The owner's finite request nominates these exact original independent jobs.
+// Confirm each original job's actual task and source ownership; hashing the
+// resulting metadata binds their relation on reuse without publishing requests.
+func official3894OriginalLineage(reg skillsRegistry, read func(string) (object, bool)) (string, bool) {
+	b := oc.FixedBinding("", "", "", "")
+	proof := []object{}
+	common := ""
+	for _, origin := range []struct {
+		task                  int
+		job, repository, kind string
+	}{
+		{3387, b.ParentJob, "autodevjapan/cc-pc-tools-rs", "research"},
+		{3888, b.OriginalProviderJob, "autodevjapan/local-ai-console", "implementation"},
+		{3894, official3894OriginalCreator, "autodevjapan/cc-pc-tools-rs", "implementation"},
+	} {
+		row := reg.Tasks[origin.task]
+		job, ok := read(origin.job)
+		owner := obj(job["work_owner"])
+		if !ok || job["id"] != origin.job || !skillsJobTask(job, origin.task) || job["project"] != row.Project || job["task_type"] != origin.kind || job["scope_source"] != "launcher" ||
+			!official3894IndependentJob(job) || len(owner) != 4 || !strings.EqualFold(str(owner["repository"]), origin.repository) || str(owner["git_common"]) == "" ||
+			!same(str(job["cwd"]), row.Scheduler.Worktree) || !same(str(owner["worktree"]), row.Scheduler.Worktree) || owner["branch"] != row.Scheduler.Branch {
+			return "", false
+		}
+		if origin.task == 3387 {
+			common = str(owner["git_common"])
+		}
+		if origin.task == 3894 && !same(common, str(owner["git_common"])) {
+			return "", false
+		}
+		proof = append(proof, object{"id": origin.job, "todo_id": origin.task, "project": row.Project, "task_type": origin.kind, "work_owner": owner})
+	}
+	raw, e := json.Marshal(proof)
+	return official3894Hash(raw), e == nil
+}
+
+func official3894IndependentJob(job object) bool {
+	parent := job["parent_job_id"]
+	return (parent == nil || parent == "") && job["subwork"] == nil
+}
+
 // Only the normal metadata reader projects these three existing tasks. It
 // neither creates a registry nor returns notes, original prompts or credentials.
 func official3894SourceCheck(ctx context.Context, saved *official3894Source, consume bool) (official3894Source, error) {
@@ -291,10 +455,9 @@ func official3894SourceCheck(ctx context.Context, saved *official3894Source, con
 	if !ok {
 		return result, official3894Error("normal_task_metadata_unavailable")
 	}
-	parent, provider, creator := reg.Tasks[3387], reg.Tasks[3888], reg.Tasks[3894]
+	creator := reg.Tasks[3894]
 	b := oc.FixedBinding("", "", "", "")
-	if parent.Project != "cc-pc-tools-rs" || creator.Project != parent.Project || provider.Project != "localai-web-rs" ||
-		!skillsHasJob(parent, b.ParentJob) || !skillsHasJob(provider, b.OriginalProviderJob) || skillsHeld(parent) || skillsHeld(provider) || skillsHeld(creator) || parent.Status == "done" || provider.Status == "done" || parent.Status == "block" || provider.Status == "block" || creator.Status == "block" {
+	if !official3894TaskLineage(reg) {
 		return result, official3894Error("original_task_lineage_or_stop")
 	}
 	actorID, _ := strconv.Atoi(m[2])
@@ -304,8 +467,12 @@ func official3894SourceCheck(ctx context.Context, saved *official3894Source, con
 	}
 	s := skillsFS{blocked: skillsBlocked}
 	defer s.close()
-	job, ok := skillsReadJob(&s, caller)
-	if !ok || !skillsJobTask(job, actorID) || job["status"] != "running" || !official3894Descendant(job) || !same(str(job["cwd"]), row.Scheduler.Worktree) || job["launch_key"] != row.Scheduler.Key {
+	origins, ok := official3894OriginalLineage(reg, func(id string) (object, bool) { return official3894ReadJob(&s, id) })
+	if !ok {
+		return result, official3894Error("original_registered_job_lineage_required")
+	}
+	job, ok := official3894ReadJob(&s, caller)
+	if !ok || !skillsJobTask(job, actorID) || job["task_type"] != "implementation" || !official3894IndependentJob(job) || job["status"] != "running" || !official3894Descendant(job) || !same(str(job["cwd"]), row.Scheduler.Worktree) || job["launch_key"] != row.Scheduler.Key {
 		return result, official3894Error("native_actor_identity_required")
 	}
 	if saved == nil && actorID != 3894 {
@@ -349,7 +516,7 @@ func official3894SourceCheck(ctx context.Context, saved *official3894Source, con
 	}
 	// Only immutable registration fields enter the binding. Normal progress,
 	// waiting and new provider jobs cannot silently replace the original purpose.
-	proof, _ := json.Marshal(struct{ Root, Spec, SpecSHA, Workspace, Branch, ParentJob, ProviderJob string }{reg.Root, creator.Spec, specSHA, creator.Scheduler.Worktree, creator.Scheduler.Branch, b.ParentJob, b.OriginalProviderJob})
+	proof, _ := json.Marshal(struct{ Root, Spec, SpecSHA, Workspace, Branch, ParentJob, ProviderJob, OriginalJobs string }{reg.Root, creator.Spec, specSHA, creator.Scheduler.Worktree, creator.Scheduler.Branch, b.ParentJob, b.OriginalProviderJob, origins})
 	result = official3894Source{head, official3894Hash(proof), creatorJob, creator.Scheduler.Worktree, creator.Scheduler.Branch, specSHA}
 	if saved != nil && result != *saved {
 		return result, oc.ErrDenied
@@ -497,7 +664,7 @@ func official3894Summary(t official3894Ticket) object {
 	return r
 }
 
-func official3894Operation(ctx context.Context, op, id string) (object, error) {
+func official3894Operation(ctx context.Context, op, id string, handoff func(object) error) (object, error) {
 	// These are purpose-specific native metadata records. No normal data path
 	// classification is modified by opening this fixed journal.
 	store, e := official3894OpenStore(official3894Store, op == "prepare")
@@ -605,11 +772,10 @@ func official3894Operation(ctx context.Context, op, id string) (object, error) {
 	if e != nil {
 		return official3894Summary(t), e
 	}
-	var payloads []oc.Payload
 	if op == "verify" {
 		e = engine.Resume(ctx, id)
 	} else if op == "consume" {
-		e = engine.Consume(ctx, id, func(p []oc.Payload) error { payloads = p; return nil })
+		e = official3894Consume(ctx, engine, id, func() object { return official3894Summary(store.ticket) }, handoff)
 	} else {
 		e = oc.ErrDenied
 	}
@@ -619,9 +785,6 @@ func official3894Operation(ctx context.Context, op, id string) (object, error) {
 	}
 	result["purpose_verified"] = true
 	delete(result, "reason")
-	if op == "consume" {
-		result["files"] = payloads
-	}
 	return result, nil
 }
 

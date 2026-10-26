@@ -43,7 +43,10 @@ func TestOfficialCI3894CLI(t *testing.T) {
 		t.Run(strings.Join(args, " "), func(t *testing.T) {
 			var out bytes.Buffer
 			called := false
-			code := runOfficial3894CLI(args, &out, func(context.Context, string, string) (object, error) { called = true; return nil, nil })
+			code := runOfficial3894CLI(args, &out, func(context.Context, string, string, func(object) error) (object, error) {
+				called = true
+				return nil, nil
+			})
 			var result object
 			if code != 2 || called || json.Unmarshal(out.Bytes(), &result) != nil || result["purpose_verified"] != false || result["access_allowed"] != false || result["original_registry_recovered"] != false || result["launch_performed"] != false {
 				t.Fatalf("bad refusal: %d %v %s", code, called, out.String())
@@ -53,7 +56,7 @@ func TestOfficialCI3894CLI(t *testing.T) {
 	for _, args := range [][]string{{"--prepare-official-ci3387"}, {"--verify-official-ci3387", id}, {"--consume-official-ci3387", id}} {
 		var out bytes.Buffer
 		calls := 0
-		code := runOfficial3894CLI(args, &out, func(ctx context.Context, op, receipt string) (object, error) {
+		code := runOfficial3894CLI(args, &out, func(ctx context.Context, op, receipt string, handoff func(object) error) (object, error) {
 			calls++
 			if _, ok := ctx.Deadline(); !ok {
 				t.Error("missing finite deadline")
@@ -63,6 +66,9 @@ func TestOfficialCI3894CLI(t *testing.T) {
 			}
 			r := official3894Failure("")
 			r["purpose_verified"] = true
+			if op == "consume" {
+				return nil, handoff(r)
+			}
 			return r, nil
 		})
 		if code != 0 || calls != 1 {

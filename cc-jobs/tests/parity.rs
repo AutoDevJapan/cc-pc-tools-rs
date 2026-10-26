@@ -2084,6 +2084,49 @@ mod capacity_regressions {
     }
 
     #[test]
+    fn grok_recovery_hint_preserves_the_real_failed_model() {
+        let t = Test::new();
+        t.run(&["--auto-model", "gpt-6-astra", "--model-origin", "policy",
+            "--model-recovery-from", "grok-4.7", "--effort", "max"], b"Recover once").unwrap();
+        let saved = t.ctx.list_jobs(&HashSet::new()).into_iter().find(|job| s(job, "name") == "x").unwrap();
+        assert_eq!(saved["model_recovery_from"], "grok-4.7");
+        assert!(saved["review_excluded_models"].is_null());
+    }
+
+    #[test]
+    fn no_action_state_contention_defers_without_reading_proof_or_cancelling() {
+        let t = Test::new();
+        let original = t.put(job(json!({"id":"held","status":"running"})));
+        let state = FileLock::acquire(&t.ctx.job_dir("held").join("state.lock")).unwrap();
+        let missing = t.ctx.root.join("unread-proof.json");
+        let (result, out, _) = t.cli(&["cancel", "held", "--if-todo-ready", "--recovery",
+            "--todo-id", "2", "--cancel-key", "state-contention", "--no-action-check", missing.to_str().unwrap()]);
+        assert_eq!(result.unwrap(), 0);
+        assert_eq!(serde_json::from_str::<Value>(&out).unwrap()["reason"], "state_lock_busy");
+        assert_eq!(t.ctx.load("held").unwrap(), original);
+        drop(state);
+    }
+
+    #[test]
+    fn grok_remote_compaction_quota_is_protocol_evidence_and_survives_a_generic_terminal() {
+        let message = "Error running remote compact task: unexpected status 402 Payment Required: Provider error 402: {\"error\":\"Grok Build usage balance exhausted\"}, url: http://127.0.0.1:10101/v1/responses";
+        let mut j = json!({});
+        apply_event(&mut j, &json!({"type":"error","message":message}));
+        apply_event(&mut j, &json!({"type":"turn.failed","error":{"message":"Remote compaction failed"}}));
+        assert_eq!(j["last_failure_kind"], "quota");
+        for (event, kind) in [
+            (json!({"type":"turn.failed","error":{"message":message}}), Some("quota")),
+            (json!({"type":"error","message":"HTTP 402 Payment Required"}), Some("transient")),
+            (json!({"type":"error","message":"remote compaction connection reset"}), Some("transient")),
+            (json!({"type":"error","code":"cancelled","message":message}), Some("cancel")),
+            (json!({"type":"error","code":"authentication_failed","message":message}), Some("auth")),
+            (json!({"type":"item.completed","message":message}), None),
+        ] {
+            assert_eq!(cc_jobs::capacity::failure_kind(&event), kind, "{event}");
+        }
+    }
+
+    #[test]
     fn review_model_recovery_excludes_the_failed_model_only_for_current_routing() {
         let t = Test::new();
         t.put(job(json!({"id":"opus-author","status":"succeeded",

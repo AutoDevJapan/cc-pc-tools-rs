@@ -534,6 +534,9 @@ impl RealBackend {
                 "policy".into()
             },
         ]);
+        if let Some(failed) = selection["model_recovery_from"].as_str() {
+            invocation.args.extend(["--model-recovery-from".into(), failed.into()]);
+        }
         if let Some(value) = selection["mcp_profile"].as_str() {
             invocation
                 .args

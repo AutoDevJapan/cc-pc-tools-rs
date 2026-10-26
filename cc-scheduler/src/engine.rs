@@ -1553,11 +1553,12 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 .iter()
                 .any(|author| cc_ask::job_policy::same_model(author, s(&selection["model"])));
             let owner_choice = selection["model_origin"] == "owner_request";
+            selection["review_excluded_models"] = json!(excluded);
             let quota_choice= if unstarted.is_some() || initial.is_some() { true } else {
                 crate::quota_recovery::prepare(&mut self.backend,&item,source,&jobs,&mut selection,
                     &cc_job_policy::product_retry::digest(text.as_bytes()))?
             };
-            if quota_choice && conflict {
+            if quota_choice && excluded.iter().any(|author| cc_job_policy::same_model(author, s(&selection["model"]))) {
                 return Err(Error("ReviewModelConflict"));
             }
             if explicit && owner_choice && conflict {
@@ -1591,6 +1592,10 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
                 })?;
                 return Ok(None);
             }
+        }
+        if item["subwork"]["kind"] == "research" {
+            crate::quota_recovery::prepare(&mut self.backend, &item, source, &jobs, &mut selection,
+                &cc_job_policy::product_retry::digest(text.as_bytes()))?;
         }
         if !valid_model(s(&selection["model"])) {
             return Err(Error("ValueError"));
@@ -1701,7 +1706,7 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             }
         }
         if cc_job_policy::review_task(s(&item["title"]), s(&selection["task_type"]))
-            || item["subwork"]["kind"] == "review"
+            || ["review", "research"].contains(&s(&item["subwork"]["kind"]))
         {
             // Bind the same bytes embedded above, before the launch CLI can
             // observe a later edit at the saved specification's path.

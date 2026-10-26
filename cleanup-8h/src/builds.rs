@@ -992,9 +992,35 @@ fn source(
     git(
         ctx,
         work,
-        &["merge-base", "--is-ancestor", "HEAD", "@{upstream}"],
+        &["rev-parse", "--symbolic-full-name", "@{upstream}"],
         until,
     )
+    .and_then(|upstream| {
+        if !upstream.trim().starts_with("refs/remotes/origin/") {
+            return Err("SOURCE_NOT_PUSHED");
+        }
+        git(
+            ctx,
+            work,
+            &["merge-base", "--is-ancestor", "HEAD", upstream.trim()],
+            until,
+        )
+    })
+    // Normal merged work remains published after its topic ref is removed
+    // or omitted by this repository's limited fetch configuration.
+    .or_else(|_| {
+        git(
+            ctx,
+            work,
+            &[
+                "merge-base",
+                "--is-ancestor",
+                "HEAD",
+                "refs/remotes/origin/main",
+            ],
+            until,
+        )
+    })
     .map_err(|_| "SOURCE_NOT_PUSHED")?;
     if !git(ctx, work, &["ls-files", "-z", "--", "target/debug"], until)?.is_empty() {
         return Err("TRACKED_BUILD_DATA");
@@ -2504,6 +2530,84 @@ mod tests {
                 .exists()
         );
     }
+    #[test]
+    fn merged_main_source_remains_published_without_topic_tracking_refs() {
+        for published in [false, true] {
+            let f = Fixture::new();
+            let until = f.budget().until;
+            git(
+                &f.ctx,
+                &f.work,
+                &["update-ref", "refs/remotes/origin/main", "HEAD"],
+                until,
+            )
+            .unwrap();
+            git(
+                &f.ctx,
+                &f.work,
+                &[
+                    "update-ref",
+                    "-d",
+                    "refs/remotes/origin/scheduler/todo-1-fixture",
+                ],
+                until,
+            )
+            .unwrap();
+            if !published {
+                fs::write(
+                    f.work.join("unpublished-source.rs"),
+                    b"// preserved source\n",
+                )
+                .unwrap();
+                git(&f.ctx, &f.work, &["add", "unpublished-source.rs"], until).unwrap();
+                git(
+                    &f.ctx,
+                    &f.work,
+                    &["-c", "core.hooksPath=NUL", "commit", "-m", "unpublished"],
+                    until,
+                )
+                .unwrap();
+                git(
+                    &f.ctx,
+                    &f.work,
+                    &["branch", "local-only-backup", "HEAD"],
+                    until,
+                )
+                .unwrap();
+                git(
+                    &f.ctx,
+                    &f.work,
+                    &["branch", "--set-upstream-to=local-only-backup"],
+                    until,
+                )
+                .unwrap();
+            }
+            let mut stats = Stats::default();
+            let result = f.run(true, false, &mut stats);
+            if published {
+                assert_eq!(result, Ok(()));
+                assert_eq!(stats.builds.completed, 1);
+                assert_eq!(stats.builds.removed_bytes, f.bytes());
+            } else {
+                assert_eq!(result, Err("SOURCE_NOT_PUSHED"));
+                assert_eq!(stats.builds.removed_bytes, 0);
+                assert_eq!(
+                    fs::read(
+                        f.work
+                            .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
+                    )
+                    .unwrap(),
+                    [7; 17]
+                );
+                assert_eq!(
+                    fs::read(f.work.join("unpublished-source.rs")).unwrap(),
+                    b"// preserved source\n"
+                );
+            }
+            f.kept();
+        }
+    }
+
     #[test]
     fn saved_but_unpublished_source_is_not_cleanup_qualified() {
         let f = Fixture::new();

@@ -15,6 +15,7 @@ pub mod product_review;
 mod quota_recovery;
 pub mod initial_review;
 pub mod registration_resume;
+pub mod received_input;
 pub mod resume_checkpoint;
 pub mod targeted_dispatch;
 pub mod unstarted_review;

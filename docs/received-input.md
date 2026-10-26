@@ -25,7 +25,8 @@ ToDoの現在のscheduler.job/keyとの一致や、現在の起動受付の証�
 出力の `source_kind` はschedulerの保存記録の種類であり、本人直入力やDiscord authorではない。
 親edgeは、ToDoのsubworkと実jobのsubwork/parent_job_id、親の実jobとToDoを照合する。
 subwork_validatedとsubwork_owner_job_idも受領時の記録に合わせる。
-親が終了していた場合は、記録されたorigin_job_idを検証し、現在のjob_idはnullのまま返す。
+記録されたorigin_job_idを検証し、job_idには受付時の親workerを返す。
+受付時にliveな親がいなければjob_idはnullで、その後の親の生死はこの値から判定しない。
 この最小APIの親照合は、同じprojectと登録scopeの記録に限定する。
 構造化された元provider参照・本人性・画像等への対象対応は、この保存形式にはないため、
 その不足を固定の理由で返す。現在の依頼の有効性や画像の承認可否は判定しない。
@@ -38,7 +39,8 @@ spec保存前の改行/BOM、provider変換前のnative raw行は復元も同一
 ファイルを二度取得し、選択行と登録scope、選択jobの照合項目、本文、親edgeが変化したら拒否する。
 この比較は取得期間中の一致を確認するもので、過去の不変性や改変履歴の証明ではない。
 他ToDoの進捗や選択jobのトークン更新だけでは拒否しない。
-通常のファイル共有で開き、既存writerの書込みやatomic replaceを妨げない。
+通常のファイル共有で開き、既存writerと並行して読み取る。
+atomic replaceの一時失敗は既存writerの再試行で吸収する。
 2回目のguard/IOの失敗も元の理由で返し、本文の変更と混同しない。
 
 通常のdispatchとsubworkの既知の追記、通常の実行指示、固定レビューの閲覧用指示を扱う。

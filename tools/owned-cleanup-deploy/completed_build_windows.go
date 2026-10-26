@@ -17,10 +17,10 @@ import (
 )
 
 const completedRoot = "D:/CC/Work/unattended-operations-20261013-wt/todo-3942-work"
-const completedHead = "9e1d0186707f49a61f9f56a1a6644e56bbf8de1b"
-const completedBuildJob = "20261026-205513-todo-3942"
-const completedManifestPath = "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-5249eb2a5e0382b871074f454633ec84/build-manifest-9e1d0186707f49a61f9f56a1a6644e56bbf8de1b.private.json"
-const completedManifestSHA = "2f489a2ba87083d4448d2ce243d57ff9ca34043011f3c2c573d3b24e5b47fd90"
+const completedHead = "396d83d988b65607cf12c9375d691b7daef42387"
+const completedBuildJob = "20261027-032215-todo-3942"
+const completedManifestPath = "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-5249eb2a5e0382b871074f454633ec84/build-manifest-396d83d988b65607cf12c9375d691b7daef42387.private.json"
+const completedManifestSHA = "8571c44be11579e60de3ece3928a55917d7817e94447a100db2568a6c69ba135"
 const completedPreviousProof = "D:/CC/Tools/admin-broker/results/20261026-124621-7006f98d9abcd959c150132e6f3bcea1.json"
 const completedPreviousProofSHA = "c0e1455fd8acd3e9ca61d8f3d84f5299db31868da9cce1310e501bfc66747722"
 const completedPreviousHead = "5c9fce950d30c682e5f36fca3506af72aeb352a5"
@@ -29,8 +29,12 @@ const completedCurrentProof = "D:/CC/Tools/admin-broker/results/20261026-140040-
 const completedCurrentProofSHA = "31a4bdf4486f8175b96f1fe8ec2ab9d51aa302551f52fb77a507e19ab1e5a7ff"
 const completedCurrentHead = "c2ea7b0b7c81b05789d46dc76eb0b1fd4c8eb7bd"
 const completedCurrentSHA = "7d1d86f361eba1a05e7c21b8c37077836fe56f3b209871064a2c930040772bba"
+const completedObservedProof = "D:/CC/Tools/admin-broker/results/20261026-153502-03ac7d6649c83b16bb064a90c37f41cd.json"
+const completedObservedProofSHA = "4787670b8a7e8bade25dd3c7bdf59ce2652fe5843f20d3c1fc48c9128d003d2d"
+const completedObservedHead = "9e1d0186707f49a61f9f56a1a6644e56bbf8de1b"
+const completedObservedSHA = "dde2d2856c204eb094d77b9e9688996ead292843ecf8cff1d6f8fc3dedf931b0"
 
-var completedLeaf = leaf{"cleanup-8h", completedRoot + "/target/release/cleanup-8h-delivery-" + completedHead + ".exe", "D:/CC/Tools/cleanup-8h/cleanup-8h.exe", completedCurrentSHA, "dde2d2856c204eb094d77b9e9688996ead292843ecf8cff1d6f8fc3dedf931b0"}
+var completedLeaf = leaf{"cleanup-8h", completedRoot + "/target/release/cleanup-8h-delivery-" + completedHead + ".exe", "D:/CC/Tools/cleanup-8h/cleanup-8h.exe", completedObservedSHA, "64309eade35838560970175f4052d925d7443818856e40524c082a0f565b10c0"}
 var completedInputs = []string{"Cargo.toml", "Cargo.lock", "cleanup-8h", "cc-jobs", "cc-job-policy", "cc-chrome", "cc-task-title", "cc-redact"}
 
 type completedManifest struct {
@@ -139,6 +143,9 @@ func completedPreviousGeneration(b []byte) error {
 func completedCurrentGeneration(b []byte) error {
 	return verifiedCompletedGeneration(b, completedCurrentHead, completedPreviousSHA, completedCurrentSHA, "COMPLETED_CURRENT")
 }
+func completedObservedGeneration(b []byte) error {
+	return verifiedCompletedGeneration(b, completedObservedHead, completedCurrentSHA, completedObservedSHA, "COMPLETED_OBSERVED")
+}
 func verifiedCompletedGeneration(b []byte, expectedHead, expectedOld, expectedNew, phase string) error {
 	var broker struct {
 		Exit   int    `json:"exit"`
@@ -201,6 +208,13 @@ func completedProofs() error {
 		return errCode("COMPLETED_CURRENT_RECEIPT_CHANGED")
 	}
 	if e = completedCurrentGeneration(b); e != nil {
+		return e
+	}
+	b, e = readPinned(completedObservedProof, 1<<20)
+	if e != nil || sha(b) != completedObservedProofSHA {
+		return errCode("COMPLETED_OBSERVED_RECEIPT_CHANGED")
+	}
+	if e = completedObservedGeneration(b); e != nil {
 		return e
 	}
 	b, e = readPinned("D:/CC/Tools/todo/todo.json", 64<<20)
@@ -280,7 +294,7 @@ func refreshCompletedBuild(apply bool) ([]map[string]any, error) {
 	if e := completedProofs(); e != nil {
 		return nil, e
 	}
-	p, e := prepareAt(completedLeaf, "todo3942-observe")
+	p, e := prepareAt(completedLeaf, "todo3942-legacy")
 	if e != nil {
 		return nil, e
 	}

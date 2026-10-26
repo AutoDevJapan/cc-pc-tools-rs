@@ -114,12 +114,17 @@ struct Pinned {
 }
 impl Pinned {
     fn open(path: &Path, deleting: bool) -> io::Result<Self> {
-        Self::open_mode(path, deleting, false)
+        Self::open_mode(path, deleting, 1, if deleting { 0 } else { 3 })
     }
     fn attributes(path: &Path) -> io::Result<Self> {
-        Self::open_mode(path, false, true)
+        Self::open_mode(path, false, 0, 7)
     }
-    fn open_mode(path: &Path, deleting: bool, attributes_only: bool) -> io::Result<Self> {
+    fn retention_attributes(path: &Path) -> io::Result<Self> {
+        // FILE_TRAVERSE participates in name sharing without granting
+        // FILE_LIST_DIRECTORY or reading any file contents.
+        Self::open_mode(path, false, 0x20, 3)
+    }
+    fn open_mode(path: &Path, deleting: bool, access: u32, share: u32) -> io::Result<Self> {
         if !path.is_absolute() {
             return Err(invalid());
         }
@@ -129,16 +134,8 @@ impl Pinned {
         let raw = unsafe {
             CreateFileW(
                 name.as_ptr(),
-                READ_ATTRIBUTES
-                    | if attributes_only { 0 } else { 1 }
-                    | if deleting { DELETE } else { 0 },
-                if attributes_only {
-                    7
-                } else if deleting {
-                    0
-                } else {
-                    3
-                },
+                READ_ATTRIBUTES | access | if deleting { DELETE } else { 0 },
+                share,
                 ptr::null(),
                 3,
                 0x02000000 | 0x00200000,
@@ -232,13 +229,31 @@ fn normalized(path: &str) -> String {
         .to_owned()
 }
 fn pin_ancestors(path: &Path) -> io::Result<Vec<Pinned>> {
+    pin_ancestor_mode(path, false, false)
+}
+fn pin_retention_ancestors(path: &Path, allow_missing: bool) -> io::Result<Vec<Pinned>> {
+    pin_ancestor_mode(path, true, allow_missing)
+}
+fn pin_ancestor_mode(
+    path: &Path,
+    attributes_only: bool,
+    allow_missing: bool,
+) -> io::Result<Vec<Pinned>> {
     let mut result = Vec::new();
     let ancestors: Vec<_> = path
         .ancestors()
         .filter(|p| !p.as_os_str().is_empty())
         .collect();
     for ancestor in ancestors.into_iter().rev() {
-        let pinned = Pinned::open(ancestor, false)?;
+        let pinned = match if attributes_only {
+            Pinned::retention_attributes(ancestor)
+        } else {
+            Pinned::open(ancestor, false)
+        } {
+            Ok(pin) => pin,
+            Err(error) if allow_missing && error.kind() == io::ErrorKind::NotFound => break,
+            Err(error) => return Err(error),
+        };
         if !pinned.directory() {
             return Err(invalid());
         }

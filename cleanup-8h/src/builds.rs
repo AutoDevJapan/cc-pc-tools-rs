@@ -410,6 +410,158 @@ fn scope_touches(j: &Value, expected: &Value, work: &Path, origin: &Value) -> bo
                 || j["work_owner"]["git_common"] == origin["work_owner"]["git_common"]))
 }
 
+fn canonical_registered_retention_scope(
+    db: &Value,
+    raw: &Value,
+    id: &str,
+    expected: &Value,
+    work: &Path,
+    origin: &Value,
+) -> Check<(Value, Vec<PathBuf>)> {
+    let todo = raw["todo_id"]
+        .as_u64()
+        .filter(|v| *v > 0)
+        .ok_or("OTHER_SCOPE_UNPUBLISHED")?;
+    let matches: Vec<_> = rows(db)?.iter().filter(|row| row["id"] == todo).collect();
+    if matches.len() != 1
+        || !matches[0]["jobs"]
+            .as_array()
+            .is_some_and(|jobs| jobs.iter().any(|job| job == id))
+    {
+        return Err("OTHER_SCOPE_UNPUBLISHED");
+    }
+    let registration = db["projects"][field(raw, "project")]
+        .as_str()
+        .filter(|v| !v.is_empty())
+        .ok_or("OTHER_SCOPE_UNPUBLISHED")?;
+    let valid = |p: &str| {
+        absolute(Path::new(p))
+            && !Path::new(p).components().any(|c| {
+                matches!(
+                    c,
+                    std::path::Component::ParentDir | std::path::Component::CurDir
+                )
+            })
+    };
+    if !valid(registration) {
+        return Err("OTHER_SCOPE_REGISTRATION_UNVERIFIED");
+    }
+    // These are pre-existing control-plane declarations, not new ownership.
+    // Keep every positive scope from the raw job and its normal ToDo history.
+    let mut scope =
+        json!({"cwd":raw["cwd"],"created_at":raw["created_at"],"registered_cwd":registration});
+    let mut paths = vec![PathBuf::from(registration)];
+    if scope_touches(&scope, expected, work, origin) {
+        return Err("OTHER_JOB_ACTIVE_OR_WAITING");
+    }
+    for row in rows(db)?.iter().filter(|row| {
+        row["jobs"]
+            .as_array()
+            .is_some_and(|jobs| jobs.iter().any(|job| job == id))
+    }) {
+        if row["id"].as_u64().is_none_or(|id| id == 0)
+            || rows(db)?
+                .iter()
+                .filter(|other| other["id"] == row["id"])
+                .count()
+                != 1
+        {
+            return Err("OTHER_SCOPE_UNPUBLISHED");
+        }
+        let row_registration = db["projects"][field(row, "project")]
+            .as_str()
+            .filter(|v| !v.is_empty())
+            .ok_or("OTHER_SCOPE_REGISTRATION_UNVERIFIED")?;
+        for hint in [
+            field(&row["scheduler"], "worktree"),
+            field(&row["subwork"]["owner"], "worktree"),
+            row_registration,
+        ] {
+            if hint.is_empty() {
+                continue;
+            }
+            if !valid(hint) {
+                return Err("OTHER_SCOPE_REGISTRATION_UNVERIFIED");
+            }
+            scope["registered_cwd"] = json!(hint);
+            if scope_touches(&scope, expected, work, origin) {
+                return Err("OTHER_JOB_ACTIVE_OR_WAITING");
+            }
+            paths.push(PathBuf::from(hint));
+        }
+        if row["id"] == expected["id"]
+            || (!field(&row["scheduler"], "branch").is_empty()
+                && row["scheduler"]["branch"] == expected["scheduler"]["branch"])
+        {
+            return Err("OTHER_JOB_ACTIVE_OR_WAITING");
+        }
+    }
+    scope["registered_cwd"] = json!(registration);
+    Ok((scope, paths))
+}
+
+fn hold_independent_scope(
+    work: &[Pinned],
+    path: &Path,
+    allow_missing: bool,
+    leases: &mut Vec<Pinned>,
+) -> Check<bool> {
+    if !absolute(path)
+        || path.components().any(|c| {
+            matches!(
+                c,
+                std::path::Component::ParentDir | std::path::Component::CurDir
+            )
+        })
+    {
+        return Err("OTHER_SCOPE_HINT_UNVERIFIED");
+    }
+    let pins = pin_retention_ancestors(path, allow_missing)
+        .map_err(|_| "OTHER_SCOPE_DIRECTORY_UNVERIFIED")?;
+    let Some(work_leaf) = work.last() else {
+        return Err("WORKTREE_BOUNDARY");
+    };
+    let Some(scope_leaf) = pins.last() else {
+        return Err("OTHER_SCOPE_DIRECTORY_UNVERIFIED");
+    };
+    let identity = |p: &Pinned| (p.info.serial, p.info.index_high, p.info.index_low);
+    let complete = pins.len()
+        == path
+            .ancestors()
+            .filter(|p| !p.as_os_str().is_empty())
+            .count();
+    // Compare both containment directions by held physical directory IDs.
+    // An allowed missing name has no leaf identity: its nearest existing
+    // ancestor is not the missing scope, but may still be inside the worktree.
+    let touches = pins.iter().any(|p| identity(p) == identity(work_leaf))
+        || (complete && work.iter().any(|p| identity(p) == identity(scope_leaf)));
+    leases.extend(pins);
+    Ok(touches)
+}
+
+fn positive_scope_paths(v: &Value) -> Check<[&str; 5]> {
+    for parent in [&v["work_owner"], &v["subwork"], &v["subwork"]["owner"]] {
+        if !parent.is_null() && !parent.is_object() {
+            return Err("OTHER_SCOPE_HINT_UNVERIFIED");
+        }
+    }
+    let values = [
+        &v["cwd"],
+        &v["registered_cwd"],
+        &v["work_owner"]["worktree"],
+        &v["work_owner"]["git_common"],
+        &v["subwork"]["owner"]["worktree"],
+    ];
+    let mut paths = [""; 5];
+    for (path, value) in paths.iter_mut().zip(values) {
+        if !value.is_null() {
+            *path = value.as_str().ok_or("OTHER_SCOPE_HINT_UNVERIFIED")?;
+        }
+    }
+    Ok(paths)
+}
+
+#[cfg(test)]
 #[allow(clippy::too_many_arguments)]
 fn state_with_scope_guard(
     ctx: &Context,
@@ -421,6 +573,32 @@ fn state_with_scope_guard(
     active: &[String],
     scope_guard: &dyn Fn(&Path) -> io::Result<bool>,
 ) -> Check<()> {
+    state_holding_scopes(
+        ctx,
+        store,
+        expected,
+        work,
+        origin,
+        until,
+        active,
+        scope_guard,
+        &mut Vec::new(),
+    )
+}
+
+#[allow(clippy::too_many_arguments)]
+fn state_holding_scopes(
+    ctx: &Context,
+    store: &Path,
+    expected: &Value,
+    work: &Path,
+    origin: &Value,
+    until: Instant,
+    active: &[String],
+    scope_guard: &dyn Fn(&Path) -> io::Result<bool>,
+    scope_leases: &mut Vec<Pinned>,
+) -> Check<()> {
+    let work_pins = pin_retention_ancestors(work, false).map_err(|_| "WORKTREE_BOUNDARY")?;
     let db = read(ctx, store, 64 * 1024 * 1024)?;
     let rows = rows(&db)?;
     let matches: Vec<_> = rows.iter().filter(|r| r["id"] == expected["id"]).collect();
@@ -447,6 +625,9 @@ fn state_with_scope_guard(
             return Err("JOB_SCAN_LIMIT");
         }
         let raw = job(ctx, id);
+        if let Ok(raw) = &raw {
+            positive_scope_paths(raw)?;
+        }
         if let Ok(raw) = &raw
             && (build_reference(raw, &debug)
                 || raw["related_todo_ids"]
@@ -455,11 +636,27 @@ fn state_with_scope_guard(
         {
             return Err("SAVED_BUILD_REFERENCE_RETAINED");
         }
-        let published = ctx.published_job_scope_observation(id);
-        if let Ok(Some(scope)) = &published
+        let published = ctx
+            .published_job_scope_observation(id)
+            .map_err(|_| "OTHER_SCOPE_INDEX_UNAVAILABLE")?;
+        if let Some(scope) = &published
             && (scope_touches(scope, expected, work, origin) || build_reference(scope, &debug))
         {
             return Err("OTHER_JOB_ACTIVE_OR_WAITING");
+        }
+        // Published declarations remain positive retention evidence even when
+        // the mutable raw record is complete and now points somewhere else.
+        // Do not let record selection shadow either observation's scope.
+        if let Some(scope) = &published {
+            let paths = positive_scope_paths(scope)?;
+            if paths.iter().all(|hint| hint.is_empty()) {
+                return Err("OTHER_SCOPE_INDEX_UNAVAILABLE");
+            }
+            for hint in paths.into_iter().filter(|hint| !hint.is_empty()) {
+                if hold_independent_scope(&work_pins, Path::new(hint), false, scope_leases)? {
+                    return Err("OTHER_JOB_ACTIVE_OR_WAITING");
+                }
+            }
         }
         let complete = raw.as_ref().is_ok_and(|j| {
             !field(j, "status").is_empty()
@@ -483,7 +680,6 @@ fn state_with_scope_guard(
                 {
                     return Err("OTHER_JOB_ACTIVE_OR_WAITING");
                 }
-                let published = published.map_err(|_| "OTHER_SCOPE_INDEX_UNAVAILABLE")?;
                 let claim = match ctx.published_job_work_claim(id) {
                     Ok(claim) => claim,
                     Err(_) => {
@@ -493,7 +689,19 @@ fn state_with_scope_guard(
                         let raw = observed
                             .as_ref()
                             .map_err(|_| "OTHER_SCOPE_RAW_UNAVAILABLE")?;
-                        let scope = published.as_ref().ok_or("OTHER_SCOPE_UNPUBLISHED")?;
+                        let registered_scope;
+                        let mut registration_paths = Vec::new();
+                        let from_registration = published.is_none();
+                        let scope = if let Some(scope) = published.as_ref() {
+                            scope
+                        } else {
+                            let (scope, paths) = canonical_registered_retention_scope(
+                                &db, raw, id, expected, work, origin,
+                            )?;
+                            registered_scope = scope;
+                            registration_paths = paths;
+                            &registered_scope
+                        };
                         let cwd = Path::new(field(raw, "cwd"));
                         if ![
                             "running",
@@ -555,10 +763,83 @@ fn state_with_scope_guard(
                                 }
                             }
                         }
-                        let _scope_pins =
-                            pin_ancestors(cwd).map_err(|_| "OTHER_SCOPE_DIRECTORY_UNVERIFIED")?;
-                        if scope_guard(cwd).map_err(|_| "OTHER_SCOPE_GUARD_UNAVAILABLE")? {
-                            return Err("OTHER_SCOPE_GUARD_UNVERIFIED");
+                        if from_registration {
+                            // Retention metadata only: no directory enumeration,
+                            // file content, Git lookup or data permission is used.
+                            // Keep the no-reparse directory identities through
+                            // the final recheck and every actual deletion.
+                            // A removed historical directory is still retained
+                            // as its original registered scope; never recreate
+                            // it or classify the supervisor as exited. Missing
+                            // names are allowed only after the native worker is
+                            // independently checked inactive. Final state repeats
+                            // this lookup while all existing ancestors stay held.
+                            let allow_missing = ["succeeded", "failed", "cancelled"]
+                                .contains(&field(raw, "status"))
+                                && (raw["work_owner_live"].is_null()
+                                    || raw["work_owner_live"] == false)
+                                && cc_jobs::parse_iso(field(raw, "finished_at"))
+                                    .is_some_and(|at| at > 0. && at <= ctx.rt.epoch())
+                                && (raw["codex_pid"].is_null()
+                                    || raw["codex_pid"]
+                                        .as_u64()
+                                        .is_some_and(|pid| pid > 0 && pid <= u32::MAX as u64))
+                                && ctx
+                                    .is_ours_checked(raw, "codex_pid")
+                                    .is_ok_and(|live| !live);
+                            for hint in [
+                                field(raw, "registered_cwd"),
+                                field(&raw["work_owner"], "worktree"),
+                                field(&raw["work_owner"], "git_common"),
+                                field(&raw["subwork"]["owner"], "worktree"),
+                            ] {
+                                if !hint.is_empty() {
+                                    registration_paths.push(PathBuf::from(hint));
+                                }
+                            }
+                            // Pin every positive declaration, not just cwd:
+                            // a different spelling may redirect to the candidate.
+                            // Only the original historical cwd may be missing.
+                            for path in std::iter::once(cwd)
+                                .chain(registration_paths.iter().map(PathBuf::as_path))
+                            {
+                                if !absolute(path) {
+                                    return Err("OTHER_SCOPE_HINT_UNVERIFIED");
+                                }
+                                if hold_independent_scope(
+                                    &work_pins,
+                                    path,
+                                    allow_missing && path.as_os_str() == cwd.as_os_str(),
+                                    scope_leases,
+                                )? {
+                                    return Err("OTHER_JOB_ACTIVE_OR_WAITING");
+                                }
+                            }
+                        } else {
+                            let pins = pin_ancestors(cwd)
+                                .map_err(|_| "OTHER_SCOPE_DIRECTORY_UNVERIFIED")?;
+                            scope_leases.extend(pins);
+                            if scope_guard(cwd).map_err(|_| "OTHER_SCOPE_GUARD_UNAVAILABLE")? {
+                                return Err("OTHER_SCOPE_GUARD_UNVERIFIED");
+                            }
+                            for observation in [raw, scope] {
+                                for hint in positive_scope_paths(observation)?
+                                    .into_iter()
+                                    .filter(|hint| !hint.is_empty())
+                                {
+                                    if !absolute(Path::new(hint)) {
+                                        return Err("OTHER_SCOPE_HINT_UNVERIFIED");
+                                    }
+                                    if hold_independent_scope(
+                                        &work_pins,
+                                        Path::new(hint),
+                                        false,
+                                        scope_leases,
+                                    )? {
+                                        return Err("OTHER_JOB_ACTIVE_OR_WAITING");
+                                    }
+                                }
+                            }
                         }
                         if scope_touches(raw, expected, work, origin) {
                             return Err("OTHER_JOB_ACTIVE_OR_WAITING");
@@ -587,19 +868,16 @@ fn state_with_scope_guard(
         if build_reference(&j, &debug) {
             return Err("SAVED_BUILD_REFERENCE_RETAINED");
         }
-        let owner = &j["work_owner"];
-        let touches = j["todo_id"] == expected["id"]
-            || j["related_todo_ids"]
-                .as_array()
-                .is_some_and(|xs| xs.contains(&expected["id"]))
-            || [field(&j, "cwd"), field(owner, "worktree")]
-                .iter()
-                .any(|p| {
-                    !p.is_empty() && (inside(work, Path::new(p)) || inside(Path::new(p), work))
-                })
-            || (!field(owner, "branch").is_empty()
-                && owner["branch"] == expected["scheduler"]["branch"]
-                && owner["git_common"] == origin["work_owner"]["git_common"]);
+        let mut touches = scope_touches(&j, expected, work, origin);
+        for hint in positive_scope_paths(&j)?
+            .into_iter()
+            .filter(|hint| !hint.is_empty())
+        {
+            if !absolute(Path::new(hint)) {
+                return Err("OTHER_SCOPE_HINT_UNVERIFIED");
+            }
+            touches |= hold_independent_scope(&work_pins, Path::new(hint), false, scope_leases)?;
+        }
         if touches && (unknown || live(ctx, &j)?) {
             return Err("OTHER_JOB_ACTIVE_OR_WAITING");
         }
@@ -714,9 +992,35 @@ fn source(
     git(
         ctx,
         work,
-        &["merge-base", "--is-ancestor", "HEAD", "@{upstream}"],
+        &["rev-parse", "--symbolic-full-name", "@{upstream}"],
         until,
     )
+    .and_then(|upstream| {
+        if !upstream.trim().starts_with("refs/remotes/origin/") {
+            return Err("SOURCE_NOT_PUSHED");
+        }
+        git(
+            ctx,
+            work,
+            &["merge-base", "--is-ancestor", "HEAD", upstream.trim()],
+            until,
+        )
+    })
+    // Normal merged work remains published after its topic ref is removed
+    // or omitted by this repository's limited fetch configuration.
+    .or_else(|_| {
+        git(
+            ctx,
+            work,
+            &[
+                "merge-base",
+                "--is-ancestor",
+                "HEAD",
+                "refs/remotes/origin/main",
+            ],
+            until,
+        )
+    })
     .map_err(|_| "SOURCE_NOT_PUSHED")?;
     if !git(ctx, work, &["ls-files", "-z", "--", "target/debug"], until)?.is_empty() {
         return Err("TRACKED_BUILD_DATA");
@@ -1532,7 +1836,8 @@ fn candidate(
     let (j, _states) = original(ctx, expected, work)?;
     let _todo = lock(&store.with_file_name("todo.lock"))?;
     let db = read(ctx, store, 64 * 1024 * 1024)?;
-    state_with_scope_guard(
+    let mut scope_leases = Vec::new();
+    state_holding_scopes(
         ctx,
         store,
         expected,
@@ -1541,6 +1846,7 @@ fn candidate(
         budget.until,
         &active,
         &guard,
+        &mut scope_leases,
     )?;
     let head = source(ctx, &db, expected, &j, work, budget.until)?;
     let artifacts = Artifacts::load(ctx, work, budget.until)?;
@@ -1563,7 +1869,7 @@ fn candidate(
     }
     // Re-read original state/source after potentially slow enumeration. The
     // queue, state, ToDo, target and Cargo profile locks remain held throughout.
-    if let Err(e) = state_with_scope_guard(
+    if let Err(e) = state_holding_scopes(
         ctx,
         store,
         expected,
@@ -1572,6 +1878,7 @@ fn candidate(
         budget.until,
         &active,
         &guard,
+        &mut scope_leases,
     )
     .and_then(|()| {
         if source(ctx, &db, expected, &j, work, budget.until)? != head {
@@ -2224,6 +2531,84 @@ mod tests {
         );
     }
     #[test]
+    fn merged_main_source_remains_published_without_topic_tracking_refs() {
+        for published in [false, true] {
+            let f = Fixture::new();
+            let until = f.budget().until;
+            git(
+                &f.ctx,
+                &f.work,
+                &["update-ref", "refs/remotes/origin/main", "HEAD"],
+                until,
+            )
+            .unwrap();
+            git(
+                &f.ctx,
+                &f.work,
+                &[
+                    "update-ref",
+                    "-d",
+                    "refs/remotes/origin/scheduler/todo-1-fixture",
+                ],
+                until,
+            )
+            .unwrap();
+            if !published {
+                fs::write(
+                    f.work.join("unpublished-source.rs"),
+                    b"// preserved source\n",
+                )
+                .unwrap();
+                git(&f.ctx, &f.work, &["add", "unpublished-source.rs"], until).unwrap();
+                git(
+                    &f.ctx,
+                    &f.work,
+                    &["-c", "core.hooksPath=NUL", "commit", "-m", "unpublished"],
+                    until,
+                )
+                .unwrap();
+                git(
+                    &f.ctx,
+                    &f.work,
+                    &["branch", "local-only-backup", "HEAD"],
+                    until,
+                )
+                .unwrap();
+                git(
+                    &f.ctx,
+                    &f.work,
+                    &["branch", "--set-upstream-to=local-only-backup"],
+                    until,
+                )
+                .unwrap();
+            }
+            let mut stats = Stats::default();
+            let result = f.run(true, false, &mut stats);
+            if published {
+                assert_eq!(result, Ok(()));
+                assert_eq!(stats.builds.completed, 1);
+                assert_eq!(stats.builds.removed_bytes, f.bytes());
+            } else {
+                assert_eq!(result, Err("SOURCE_NOT_PUSHED"));
+                assert_eq!(stats.builds.removed_bytes, 0);
+                assert_eq!(
+                    fs::read(
+                        f.work
+                            .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
+                    )
+                    .unwrap(),
+                    [7; 17]
+                );
+                assert_eq!(
+                    fs::read(f.work.join("unpublished-source.rs")).unwrap(),
+                    b"// preserved source\n"
+                );
+            }
+            f.kept();
+        }
+    }
+
+    #[test]
     fn saved_but_unpublished_source_is_not_cleanup_qualified() {
         let f = Fixture::new();
         let db = read(&f.ctx, &f.store, 64 * 1024 * 1024).unwrap();
@@ -2567,10 +2952,13 @@ mod tests {
         fs::create_dir(&dir).unwrap();
         fs::write(dir.join("job.json"), b"null").unwrap();
         let other = f.root.join("independent");
+        fs::create_dir(&other).unwrap();
+        let common = f.root.join("shared-git-metadata");
+        fs::create_dir(&common).unwrap();
         for same_scope in [false, true] {
             fs::write(dir.join("job.json"), b"null").unwrap();
             let tree = if same_scope { &f.work } else { &other };
-            let claim = json!({"todo_id":2,"work_owner":{"repository":"autodevjapan/cc-pc-tools-rs","git_common":f.work.join(".git"),"worktree":tree,"branch":if same_scope {"scheduler/todo-1-fixture"} else {"scheduler/todo-2-fixture"}}});
+            let claim = json!({"todo_id":2,"work_owner":{"repository":"autodevjapan/cc-pc-tools-rs","git_common":common,"worktree":tree,"branch":if same_scope {"scheduler/todo-1-fixture"} else {"scheduler/todo-2-fixture"}}});
             fs::write(f.ctx.jobs.join(".queue-index.json"),serde_json::to_vec(&json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[id],"owners":{id:claim}})).unwrap()).unwrap();
             fs::write(
                 &f.store,
@@ -2653,6 +3041,7 @@ mod tests {
         let original = serde_json::to_vec(&raw).unwrap();
         fs::write(f.ctx.job_dir(id).join("job.json"), &original).unwrap();
         let published = json!({"cwd":other,"created_at":raw["created_at"],"work_owner":{}});
+        fs::create_dir(f.root.join("another-execution-directory")).unwrap();
         for case in [
             "valid",
             "wrong-cwd",
@@ -2767,6 +3156,667 @@ mod tests {
     }
 
     #[test]
+    fn unpublished_registered_jobs_keep_their_scope_without_adopting_or_reading_foreign_data() {
+        let f = Fixture::new();
+        let id = "20261026-000002-legacy";
+        let other = f.root.join("legacy-existing-directory");
+        fs::create_dir(&other).unwrap();
+        let registration = f.root.join("different-original-registration");
+        fs::create_dir(&registration).unwrap();
+        fs::write(other.join("foreign-source.txt"), b"preserved foreign data").unwrap();
+        fs::create_dir(f.ctx.job_dir(id)).unwrap();
+        let pid = std::process::id();
+        let raw = json!({"id":id,"todo_id":2,"project":"legacy-original","status":"succeeded","cwd":other,"created_at":"2026-10-26T00:00:00Z","pid":pid,"pid_created":f.ctx.rt.proc_created(pid)});
+        let record = serde_json::to_vec(&raw).unwrap();
+        fs::write(f.ctx.job_dir(id).join("job.json"), &record).unwrap();
+        let original_store=serde_json::to_vec(&json!({"projects":{"cc-pc-tools-rs":f.work,"legacy-original":other,"legacy-display":f.root.join("different-original-registration")},"items":[f.row,{"id":2,"project":"legacy-display","status":"done","jobs":[id]}]})).unwrap();
+        fs::write(&f.store, &original_store).unwrap();
+        let index = serde_json::to_vec(
+            &json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[],"owners":{}}),
+        )
+        .unwrap();
+        fs::write(f.ctx.jobs.join(".queue-index.json"), &index).unwrap();
+        assert!(f.ctx.is_ours_checked(&raw, "pid").unwrap());
+        let mut leases = Vec::new();
+        state_holding_scopes(
+            &f.ctx,
+            &f.store,
+            &f.row,
+            &f.work,
+            &f.origin,
+            f.budget().until,
+            &[id.into()],
+            &|_| panic!("retaining registered metadata must not request foreign data access"),
+            &mut leases,
+        )
+        .unwrap();
+        assert!(!leases.is_empty());
+        let renamed = f.root.join("renamed-legacy-directory");
+        assert!(fs::rename(&other, &renamed).is_err());
+        let renamed_registration = f.root.join("renamed-registration");
+        assert!(fs::rename(&registration, &renamed_registration).is_err());
+        drop(leases);
+        fs::rename(&other, &renamed).unwrap();
+        fs::rename(&renamed, &other).unwrap();
+        fs::rename(&registration, &renamed_registration).unwrap();
+        fs::rename(&renamed_registration, &registration).unwrap();
+        let mut stats = Stats::default();
+        f.run(true, false, &mut stats).unwrap();
+        assert_eq!(stats.builds.completed, 1);
+        assert_eq!(stats.builds.removed_bytes, f.bytes());
+        assert_eq!(
+            fs::read(f.ctx.job_dir(id).join("job.json")).unwrap(),
+            record
+        );
+        assert_eq!(fs::read(&f.store).unwrap(), original_store);
+        assert_eq!(
+            fs::read(f.ctx.jobs.join(".queue-index.json")).unwrap(),
+            index
+        );
+        assert_eq!(
+            fs::read(other.join("foreign-source.txt")).unwrap(),
+            b"preserved foreign data"
+        );
+        f.kept();
+    }
+
+    #[test]
+    fn unpublished_scope_needs_original_history_registration_and_nonredirected_directory() {
+        let f = Fixture::new();
+        let id = "20261026-000002-legacy";
+        let other = f.root.join("legacy-directory");
+        fs::create_dir(&other).unwrap();
+        fs::write(other.join("source.txt"), b"foreign source").unwrap();
+        fs::create_dir(f.ctx.job_dir(id)).unwrap();
+        let raw = json!({"id":id,"todo_id":2,"project":"legacy","status":"running","cwd":other,"created_at":"2026-10-26T00:00:00Z"});
+        let record = serde_json::to_vec(&raw).unwrap();
+        fs::write(f.ctx.job_dir(id).join("job.json"), &record).unwrap();
+        fs::write(
+            f.ctx.jobs.join(".queue-index.json"),
+            serde_json::to_vec(
+                &json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[],"owners":{}}),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        for case in [
+            "no-history",
+            "no-registration",
+            "root-registration-missing",
+            "duplicate-root-without-job",
+            "duplicate-related-root-without-job",
+            "overlap",
+            "invalid-registration",
+        ] {
+            let mut db = json!({"projects":{"cc-pc-tools-rs":f.work,"legacy":other},"items":[f.row,{"id":2,"project":"legacy","status":"done","jobs":[id]}]});
+            match case {
+                "no-history" => db["items"][1]["jobs"] = json!([]),
+                "no-registration" => db["projects"]["legacy"] = Value::Null,
+                "root-registration-missing" => db["items"][1]["project"] = json!("unregistered"),
+                "duplicate-root-without-job" => db["items"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(json!({"id":2,"project":"legacy","jobs":[]})),
+                "duplicate-related-root-without-job" => {
+                    db["items"].as_array_mut().unwrap().extend([
+                        json!({"id":3,"project":"legacy","jobs":[id]}),
+                        json!({"id":3,"project":"legacy","jobs":[]}),
+                    ]);
+                }
+                "overlap" => db["projects"]["legacy"] = json!(f.work),
+                "invalid-registration" => db["projects"]["legacy"] = json!("D:relative"),
+                _ => unreachable!(),
+            }
+            let original = serde_json::to_vec(&db).unwrap();
+            fs::write(&f.store, &original).unwrap();
+            assert!(
+                state_holding_scopes(
+                    &f.ctx,
+                    &f.store,
+                    &f.row,
+                    &f.work,
+                    &f.origin,
+                    f.budget().until,
+                    &[id.into()],
+                    &|_| Ok(false),
+                    &mut Vec::new()
+                )
+                .is_err(),
+                "{case}"
+            );
+            assert_eq!(fs::read(&f.store).unwrap(), original);
+            assert_eq!(
+                fs::read(f.ctx.job_dir(id).join("job.json")).unwrap(),
+                record
+            );
+            assert_eq!(
+                fs::read(other.join("source.txt")).unwrap(),
+                b"foreign source"
+            );
+            assert_eq!(
+                fs::read(
+                    f.work
+                        .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
+                )
+                .unwrap(),
+                [7; 17]
+            );
+            f.kept();
+        }
+        let alias = f.root.join("legacy-alias");
+        let reply = f
+            .ctx
+            .rt
+            .call(cc_jobs::Call::new(
+                vec![
+                    "cmd.exe".into(),
+                    "/d".into(),
+                    "/c".into(),
+                    "mklink".into(),
+                    "/J".into(),
+                    alias.to_string_lossy().replace('/', "\\"),
+                    f.work.to_string_lossy().replace('/', "\\"),
+                ],
+                vec![],
+                10.,
+            ))
+            .unwrap();
+        assert_eq!(reply.code, 0);
+        let mut redirected = raw.clone();
+        redirected["cwd"] = json!(alias);
+        fs::write(
+            f.ctx.job_dir(id).join("job.json"),
+            serde_json::to_vec(&redirected).unwrap(),
+        )
+        .unwrap();
+        fs::write(&f.store,serde_json::to_vec(&json!({"projects":{"cc-pc-tools-rs":f.work,"legacy":other},"items":[f.row,{"id":2,"project":"legacy","status":"done","jobs":[id]}]})).unwrap()).unwrap();
+        assert_eq!(
+            state_holding_scopes(
+                &f.ctx,
+                &f.store,
+                &f.row,
+                &f.work,
+                &f.origin,
+                f.budget().until,
+                &[id.into()],
+                &|_| Ok(false),
+                &mut Vec::new()
+            ),
+            Err("OTHER_SCOPE_DIRECTORY_UNVERIFIED")
+        );
+        assert_eq!(
+            fs::read(
+                f.work
+                    .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
+            )
+            .unwrap(),
+            [7; 17]
+        );
+        fs::remove_dir(alias).unwrap();
+        f.kept();
+    }
+
+    #[test]
+    fn every_positive_registered_scope_rejects_directory_aliases_before_deletion() {
+        let f = Fixture::new();
+        let id = "20261026-000002-legacy";
+        let other = f.root.join("foreign-directory");
+        fs::create_dir(&other).unwrap();
+        fs::write(other.join("source.txt"), b"foreign source stays").unwrap();
+        fs::create_dir(f.ctx.job_dir(id)).unwrap();
+        let alias = f.root.join("registered-alias");
+        let reply = f
+            .ctx
+            .rt
+            .call(cc_jobs::Call::new(
+                vec![
+                    "cmd.exe".into(),
+                    "/d".into(),
+                    "/c".into(),
+                    "mklink".into(),
+                    "/J".into(),
+                    alias.to_string_lossy().replace('/', "\\"),
+                    f.work.to_string_lossy().replace('/', "\\"),
+                ],
+                vec![],
+                10.,
+            ))
+            .unwrap();
+        assert_eq!(reply.code, 0);
+        let index = serde_json::to_vec(
+            &json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[],"owners":{}}),
+        )
+        .unwrap();
+        fs::write(f.ctx.jobs.join(".queue-index.json"), &index).unwrap();
+        for case in [
+            "raw-project",
+            "root-project",
+            "scheduler",
+            "subwork",
+            "raw-registration",
+            "raw-owner",
+            "raw-git-common",
+            "raw-subwork",
+        ] {
+            let mut raw = json!({"id":id,"todo_id":2,"project":"legacy-original","status":"running","cwd":other,"created_at":"2026-10-26T00:00:00Z"});
+            let mut db = json!({"projects":{"cc-pc-tools-rs":f.work,"legacy-original":other,"legacy-display":other},"items":[f.row,{"id":2,"project":"legacy-display","status":"done","jobs":[id]}]});
+            match case {
+                "raw-project" => db["projects"]["legacy-original"] = json!(alias),
+                "root-project" => db["projects"]["legacy-display"] = json!(alias),
+                "scheduler" => db["items"][1]["scheduler"] = json!({"worktree":alias}),
+                "subwork" => db["items"][1]["subwork"] = json!({"owner":{"worktree":alias}}),
+                "raw-registration" => raw["registered_cwd"] = json!(alias),
+                "raw-owner" => raw["work_owner"] = json!({"worktree":alias}),
+                "raw-git-common" => raw["work_owner"] = json!({"git_common":alias}),
+                "raw-subwork" => raw["subwork"] = json!({"owner":{"worktree":alias}}),
+                _ => unreachable!(),
+            }
+            let record = serde_json::to_vec(&raw).unwrap();
+            let store = serde_json::to_vec(&db).unwrap();
+            fs::write(f.ctx.job_dir(id).join("job.json"), &record).unwrap();
+            fs::write(&f.store, &store).unwrap();
+            let mut stats = Stats::default();
+            assert_eq!(
+                f.run(true, false, &mut stats),
+                Err("OTHER_SCOPE_DIRECTORY_UNVERIFIED"),
+                "{case}"
+            );
+            assert_eq!(stats.builds.removed_bytes, 0, "{case}");
+            assert_eq!(stats.builds.completed, 0, "{case}");
+            assert_eq!(
+                fs::read(f.ctx.job_dir(id).join("job.json")).unwrap(),
+                record
+            );
+            assert_eq!(fs::read(&f.store).unwrap(), store);
+            assert_eq!(
+                fs::read(f.ctx.jobs.join(".queue-index.json")).unwrap(),
+                index
+            );
+            assert_eq!(
+                fs::read(other.join("source.txt")).unwrap(),
+                b"foreign source stays"
+            );
+            assert_eq!(
+                fs::read(
+                    f.work
+                        .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
+                )
+                .unwrap(),
+                [7; 17]
+            );
+            f.kept();
+        }
+        fs::remove_dir(alias).unwrap();
+    }
+
+    #[test]
+    fn short_name_scope_aliases_keep_ancestor_equal_and_descendant_artifacts() {
+        fn short(path: &Path) -> PathBuf {
+            // This Windows acceptance fixture requires an NTFS volume that
+            // generates 8.3 names. An unsupported fixture volume is an explicit
+            // environment failure, never a silently skipped safety acceptance.
+            let name = wide(path.as_os_str());
+            let mut value = vec![0u16; 32_768];
+            let len =
+                unsafe { GetShortPathNameW(name.as_ptr(), value.as_mut_ptr(), value.len() as u32) }
+                    as usize;
+            assert!(len > 0 && len < value.len());
+            let result = PathBuf::from(String::from_utf16(&value[..len]).unwrap());
+            assert!(
+                !same(path, &result),
+                "Windows acceptance fixture volume must generate NTFS 8.3 aliases"
+            );
+            result
+        }
+        let f = Fixture::new();
+        let id = "20261026-000002-legacy";
+        let other = f.root.join("independent-registered-directory");
+        fs::create_dir(&other).unwrap();
+        fs::write(other.join("source.txt"), b"foreign source stays").unwrap();
+        fs::create_dir(f.ctx.job_dir(id)).unwrap();
+        let alias = short(&f.work);
+        let ancestor = short(&f.root);
+        let descendant = short(&f.work.join("target/debug"));
+        let independent = short(&other);
+        for case in [
+            "independent",
+            "independent-complete-published",
+            "raw-project",
+            "root-project",
+            "scheduler",
+            "subwork",
+            "raw-registration",
+            "raw-owner",
+            "raw-git-common",
+            "raw-subwork",
+            "raw-cwd",
+            "ancestor",
+            "descendant",
+            "published-cwd",
+            "published-hint",
+            "full-cwd",
+            "full-owner",
+            "published-claim",
+            "full-published-cwd",
+            "full-published-registration",
+            "full-published-worktree",
+            "full-published-git-common",
+            "full-published-subwork",
+            "full-published-ancestor",
+            "full-published-descendant",
+            "full-published-unavailable",
+            "full-published-empty",
+            "full-raw-parent",
+        ] {
+            let mut raw = json!({"id":id,"todo_id":2,"project":"legacy-original","status":"running","cwd":other,"created_at":"2026-10-26T00:00:00Z"});
+            let mut db = json!({"projects":{"cc-pc-tools-rs":f.work,"legacy-original":other,"legacy-display":other},"items":[f.row,{"id":2,"project":"legacy-display","status":"done","jobs":[id]}]});
+            let mut published = Value::Null;
+            match case {
+                "independent" => db["projects"]["legacy-original"] = json!(independent),
+                "raw-project" => db["projects"]["legacy-original"] = json!(alias),
+                "root-project" => db["projects"]["legacy-display"] = json!(alias),
+                "scheduler" => db["items"][1]["scheduler"] = json!({"worktree":alias}),
+                "subwork" => db["items"][1]["subwork"] = json!({"owner":{"worktree":alias}}),
+                "raw-registration" => raw["registered_cwd"] = json!(alias),
+                "raw-owner" => raw["work_owner"] = json!({"worktree":alias}),
+                "raw-git-common" => raw["work_owner"] = json!({"git_common":alias}),
+                "raw-subwork" => raw["subwork"] = json!({"owner":{"worktree":alias}}),
+                "raw-cwd" => raw["cwd"] = json!(alias),
+                "ancestor" => db["projects"]["legacy-original"] = json!(ancestor),
+                "descendant" => db["projects"]["legacy-original"] = json!(descendant),
+                "published-cwd" => {
+                    raw["cwd"] = json!(alias);
+                    published = json!({"cwd":alias,"created_at":raw["created_at"],"work_owner":{}});
+                }
+                "published-hint" => {
+                    published = json!({"cwd":other,"created_at":raw["created_at"],"registered_cwd":alias,"work_owner":{}})
+                }
+                "full-cwd" | "full-owner" | "full-raw-parent" => {
+                    raw["work_owner"] = json!({"repository":"autodevjapan/cc-pc-tools-rs","git_common":other,"worktree":if case == "full-owner" {&alias} else {&other},"branch":"scheduler/todo-2-fixture"});
+                    if case == "full-cwd" {
+                        raw["cwd"] = json!(alias);
+                    }
+                    if case == "full-raw-parent" {
+                        raw["parent_job_id"] = f.origin["id"].clone();
+                    }
+                }
+                "published-claim" => {
+                    raw = Value::Null;
+                    published = json!({"todo_id":2,"work_owner":{"repository":"autodevjapan/cc-pc-tools-rs","git_common":other,"worktree":alias,"branch":"scheduler/todo-2-fixture"}});
+                }
+                "independent-complete-published" => {
+                    raw["work_owner"] = json!({"repository":"autodevjapan/cc-pc-tools-rs","git_common":other,"worktree":other,"branch":"scheduler/todo-2-fixture"});
+                    published = json!({"cwd":other,"registered_cwd":independent});
+                }
+                case if case.starts_with("full-published-") => {
+                    raw["work_owner"] = json!({"repository":"autodevjapan/cc-pc-tools-rs","git_common":other,"worktree":other,"branch":"scheduler/todo-2-fixture"});
+                    published = json!({"cwd":other,"created_at":raw["created_at"],"work_owner":{}});
+                    match case {
+                        "full-published-cwd" => published["cwd"] = json!(alias),
+                        "full-published-registration" => published["registered_cwd"] = json!(alias),
+                        "full-published-worktree" => {
+                            published["work_owner"]["worktree"] = json!(alias)
+                        }
+                        "full-published-git-common" => {
+                            published["work_owner"]["git_common"] = json!(alias)
+                        }
+                        "full-published-subwork" => {
+                            published["subwork"] = json!({"owner":{"worktree":alias}})
+                        }
+                        "full-published-ancestor" => published["registered_cwd"] = json!(ancestor),
+                        "full-published-descendant" => {
+                            published["registered_cwd"] = json!(descendant)
+                        }
+                        "full-published-unavailable" => published = Value::Null,
+                        "full-published-empty" => published = json!({}),
+                        _ => unreachable!(),
+                    }
+                }
+                _ => unreachable!(),
+            }
+            let index = if published.is_null() && case != "full-published-unavailable" {
+                json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[],"owners":{}})
+            } else {
+                json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[id],"owners":{id:published}})
+            };
+            let record = serde_json::to_vec(&raw).unwrap();
+            let store = serde_json::to_vec(&db).unwrap();
+            let index = serde_json::to_vec(&index).unwrap();
+            fs::write(f.ctx.job_dir(id).join("job.json"), &record).unwrap();
+            fs::write(&f.store, &store).unwrap();
+            fs::write(f.ctx.jobs.join(".queue-index.json"), &index).unwrap();
+            let mut stats = Stats::default();
+            let independent_case = case.starts_with("independent");
+            let result = f.run(!independent_case, false, &mut stats);
+            if independent_case {
+                assert_eq!(result, Ok(()));
+                assert_eq!(stats.builds.candidates, 1);
+            } else {
+                assert_eq!(
+                    result,
+                    Err(
+                        if ["full-published-unavailable", "full-published-empty"].contains(&case) {
+                            "OTHER_SCOPE_INDEX_UNAVAILABLE"
+                        } else {
+                            "OTHER_JOB_ACTIVE_OR_WAITING"
+                        }
+                    ),
+                    "{case}"
+                );
+                assert_eq!(stats.builds.candidates, 0, "{case}");
+            }
+            assert_eq!(stats.builds.removed_bytes, 0, "{case}");
+            assert_eq!(
+                fs::read(f.ctx.job_dir(id).join("job.json")).unwrap(),
+                record
+            );
+            assert_eq!(fs::read(&f.store).unwrap(), store);
+            assert_eq!(
+                fs::read(f.ctx.jobs.join(".queue-index.json")).unwrap(),
+                index
+            );
+            assert_eq!(
+                fs::read(other.join("source.txt")).unwrap(),
+                b"foreign source stays"
+            );
+            assert_eq!(
+                fs::read(
+                    f.work
+                        .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
+                )
+                .unwrap(),
+                [7; 17]
+            );
+            f.kept();
+        }
+    }
+
+    #[test]
+    fn malformed_scope_hints_are_not_treated_as_empty_independent_observations() {
+        let f = Fixture::new();
+        let id = "20261026-000002-legacy";
+        let other = f.root.join("valid-independent-scope");
+        fs::create_dir(&other).unwrap();
+        fs::write(other.join("source.txt"), b"foreign source stays").unwrap();
+        fs::create_dir(f.ctx.job_dir(id)).unwrap();
+        fs::write(&f.store, serde_json::to_vec(&json!({"projects":{"cc-pc-tools-rs":f.work,"legacy":other},"items":[f.row,{"id":2,"project":"legacy","status":"done","jobs":[id]}]})).unwrap()).unwrap();
+        for mode in ["published-complete", "published-partial", "raw-unpublished"] {
+            for case in [
+                "registration",
+                "cwd",
+                "worktree",
+                "git-common",
+                "subwork-tree",
+                "owner-container",
+                "subwork-container",
+                "subwork-owner",
+            ] {
+                let mut raw = json!({"id":id,"todo_id":2,"project":"legacy","status":"running","cwd":other,"created_at":"2026-10-26T00:00:00Z"});
+                if mode == "published-complete" {
+                    raw["work_owner"] = json!({"repository":"autodevjapan/cc-pc-tools-rs","git_common":other,"worktree":other,"branch":"scheduler/todo-2-fixture"});
+                }
+                let mut published =
+                    json!({"cwd":other,"created_at":raw["created_at"],"work_owner":{}});
+                let observation = if mode == "raw-unpublished" {
+                    &mut raw
+                } else {
+                    &mut published
+                };
+                match case {
+                    "registration" => observation["registered_cwd"] = json!([f.work]),
+                    "cwd" => observation["cwd"] = json!([f.work]),
+                    "worktree" => observation["work_owner"] = json!({"worktree":[f.work]}),
+                    "git-common" => observation["work_owner"] = json!({"git_common":true}),
+                    "subwork-tree" => {
+                        observation["subwork"] = json!({"owner":{"worktree":{"path":f.work}}})
+                    }
+                    "owner-container" => observation["work_owner"] = json!("unknown"),
+                    "subwork-container" => observation["subwork"] = json!(42),
+                    "subwork-owner" => observation["subwork"] = json!({"owner":[]}),
+                    _ => unreachable!(),
+                }
+                let index = if mode == "raw-unpublished" {
+                    json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[],"owners":{}})
+                } else {
+                    json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[id],"owners":{id:published}})
+                };
+                let raw = serde_json::to_vec(&raw).unwrap();
+                let index = serde_json::to_vec(&index).unwrap();
+                fs::write(f.ctx.job_dir(id).join("job.json"), &raw).unwrap();
+                fs::write(f.ctx.jobs.join(".queue-index.json"), &index).unwrap();
+                let mut stats = Stats::default();
+                assert_eq!(
+                    f.run(true, false, &mut stats),
+                    Err("OTHER_SCOPE_HINT_UNVERIFIED"),
+                    "{mode}/{case}"
+                );
+                assert_eq!(stats.builds.removed_bytes, 0);
+                assert_eq!(fs::read(f.ctx.job_dir(id).join("job.json")).unwrap(), raw);
+                assert_eq!(
+                    fs::read(f.ctx.jobs.join(".queue-index.json")).unwrap(),
+                    index
+                );
+                assert_eq!(
+                    fs::read(other.join("source.txt")).unwrap(),
+                    b"foreign source stays"
+                );
+                assert_eq!(
+                    fs::read(
+                        f.work
+                            .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
+                    )
+                    .unwrap(),
+                    [7; 17]
+                );
+                f.kept();
+            }
+        }
+    }
+
+    #[test]
+    fn missing_registered_execution_directory_never_proves_supervisor_exit_or_recreates_data() {
+        let f = Fixture::new();
+        let id = "20261026-000002-legacy";
+        let registered = f.root.join("registered-existing-parent");
+        fs::create_dir(&registered).unwrap();
+        let missing = registered.join("historical-removed-directory");
+        fs::create_dir(f.ctx.job_dir(id)).unwrap();
+        let pid = std::process::id();
+        let good = json!({"id":id,"todo_id":2,"project":"legacy","status":"succeeded","cwd":missing,"created_at":"2026-10-25T00:00:00Z","finished_at":"2026-10-26T00:00:00Z","pid":pid,"pid_created":f.ctx.rt.proc_created(pid)});
+        fs::write(&f.store,serde_json::to_vec(&json!({"projects":{"cc-pc-tools-rs":f.work,"legacy":registered},"items":[f.row,{"id":2,"project":"legacy","status":"done","jobs":[id]}]})).unwrap()).unwrap();
+        fs::write(
+            f.ctx.jobs.join(".queue-index.json"),
+            serde_json::to_vec(
+                &json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[],"owners":{}}),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        for case in [
+            "valid",
+            "false-owner",
+            "null-owner",
+            "unknown-owner",
+            "numeric-owner",
+            "object-owner",
+            "alternate-spelling-hint",
+            "running",
+            "live-owner",
+            "live-native",
+            "unknown-finish",
+            "malformed-native",
+        ] {
+            let mut raw = good.clone();
+            match case {
+                "running" => raw["status"] = json!("running"),
+                "live-owner" => raw["work_owner_live"] = json!(true),
+                "false-owner" => raw["work_owner_live"] = json!(false),
+                "null-owner" => raw["work_owner_live"] = Value::Null,
+                "unknown-owner" => raw["work_owner_live"] = json!("unknown"),
+                "numeric-owner" => raw["work_owner_live"] = json!(0),
+                "object-owner" => raw["work_owner_live"] = json!({}),
+                "alternate-spelling-hint" => {
+                    let spelling = missing.to_string_lossy().to_uppercase();
+                    assert_ne!(missing.as_os_str(), std::ffi::OsStr::new(&spelling));
+                    raw["registered_cwd"] = json!(spelling);
+                }
+                "live-native" => {
+                    raw["codex_pid"] = json!(pid);
+                    raw["codex_pid_created"] = json!(f.ctx.rt.proc_created(pid));
+                }
+                "unknown-finish" => raw["finished_at"] = Value::Null,
+                "malformed-native" => raw["codex_pid"] = json!("unknown"),
+                _ => (),
+            }
+            let original = serde_json::to_vec(&raw).unwrap();
+            fs::write(f.ctx.job_dir(id).join("job.json"), &original).unwrap();
+            assert!(f.ctx.is_ours_checked(&raw, "pid").unwrap());
+            let mut held = Vec::new();
+            let result = state_holding_scopes(
+                &f.ctx,
+                &f.store,
+                &f.row,
+                &f.work,
+                &f.origin,
+                f.budget().until,
+                &[id.into()],
+                &|_| panic!("no foreign data access"),
+                &mut held,
+            );
+            assert_eq!(
+                result.is_ok(),
+                ["valid", "false-owner", "null-owner"].contains(&case),
+                "{case}"
+            );
+            assert!(!missing.exists());
+            assert_eq!(
+                fs::read(f.ctx.job_dir(id).join("job.json")).unwrap(),
+                original
+            );
+            assert_eq!(
+                fs::read(
+                    f.work
+                        .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
+                )
+                .unwrap(),
+                [7; 17]
+            );
+            drop(held);
+            f.kept();
+        }
+        fs::write(
+            f.ctx.job_dir(id).join("job.json"),
+            serde_json::to_vec(&good).unwrap(),
+        )
+        .unwrap();
+        let mut stats = Stats::default();
+        f.run(true, false, &mut stats).unwrap();
+        assert_eq!(stats.builds.completed, 1);
+        assert!(!missing.exists());
+        f.kept();
+    }
+
+    #[test]
     fn remaining_scope_failure_codes_preserve_real_candidate_foreign_source_and_records() {
         let f = Fixture::new();
         let id = "20261026-000002-legacy";
@@ -2790,7 +3840,6 @@ mod tests {
                 "status" => raw["status"] = json!("unclassified"),
                 "cwd" => {
                     raw["cwd"] = json!("D:relative");
-                    scope["cwd"] = raw["cwd"].clone();
                 }
                 "created" => {
                     raw["created_at"] = Value::Null;
@@ -2802,7 +3851,7 @@ mod tests {
                 }
                 "history" => {
                     scope["todo_id"] = json!(2);
-                    scope["work_owner"] = json!({"repository":"autodevjapan/cc-pc-tools-rs","git_common":f.work.join(".git"),"worktree":other,"branch":"scheduler/todo-2-fixture"});
+                    scope["work_owner"] = json!({"repository":"autodevjapan/cc-pc-tools-rs","git_common":other,"worktree":other,"branch":"scheduler/todo-2-fixture"});
                 }
                 _ => unreachable!(),
             }

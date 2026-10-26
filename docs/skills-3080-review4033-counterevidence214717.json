@@ -1,0 +1,78 @@
+{
+  "accounting": {
+    "assessed_and_final_intersection": 137,
+    "assessed_needs_current_disposition": 947,
+    "does_not_invent_missing_assessment_or_literal_read": true,
+    "equation": "1084 = 947 + 137; 143 = 137 + 6; 1090 union = 1084 + 6, not an equality between independent counters",
+    "final_without_registered_assessment_artifact": [
+      {
+        "final_disposition": "excluded",
+        "inventory_id": "github:9a4792733ddd9ccbd3883f80adaa44d2f3214af2c971850d106896cf0238c55f"
+      },
+      {
+        "final_disposition": "excluded",
+        "inventory_id": "site:triage"
+      },
+      {
+        "final_disposition": "excluded",
+        "inventory_id": "site:obsidian-cli-d54e74"
+      },
+      {
+        "final_disposition": "excluded",
+        "inventory_id": "site:setup-pre-commit"
+      },
+      {
+        "final_disposition": "excluded",
+        "inventory_id": "site:scaffold-exercises"
+      },
+      {
+        "final_disposition": "excluded",
+        "inventory_id": "site:migrate-to-shoehorn-d43a0b"
+      }
+    ],
+    "occurrences": 73220,
+    "occurrences_with_assessment_records": 1084,
+    "pinned_queue_sha256": "7bce222ea1639d196f778dced3fa5ab139df9efe42da04d312cacad7debcd4b2",
+    "recorded_final_occurrences": 143
+  },
+  "consumer": "20261026-214717-todo-3080",
+  "digest_counterexample": {
+    "Must63_digit_claim_reproduced": false,
+    "actual_bytes": 39811,
+    "actual_sha256": "7f8c57d2db03d02fa256a2a1b4eea332678ea474aa30fe0a3e615aaaf89adb5a",
+    "all27_original_scope_digests_have64_characters": true,
+    "blob": "ef5ecb9cb23e6e7e827012d0acaa1b7bc6e0f097",
+    "declared_and_actual_length": 64,
+    "declared_sha256": "7f8c57d2db03d02fa256a2a1b4eea332678ea474aa30fe0a3e615aaaf89adb5a",
+    "groups_of8": [
+      "7f8c57d2",
+      "db03d02f",
+      "a256a2a1",
+      "b4eea332",
+      "678ea474",
+      "aa30fe0a",
+      "3e615aaa",
+      "f89adb5a"
+    ],
+    "original_input_and_output_unchanged": true,
+    "path": "docs/skills-3080-other4-250253-evaluation214717.json"
+  },
+  "domain": "skills3080-review4033-counterevidence-v1",
+  "fixed_head": "2a5761b170c445fa8fa7f9e0b9d7d4ced6ff274a",
+  "new_adoptions": 0,
+  "new_body_reads": 0,
+  "new_rights_grants": 0,
+  "original_review_or_spec_rewritten": false,
+  "prior_review": {
+    "Must": 1,
+    "Suggestion": 2,
+    "job": "20261027-055020-todo-4033",
+    "qualified_original_preserved": true,
+    "raw_bytes": 2359,
+    "raw_sha256": "c8645e3ffb10bb7aa04bf09703f3935c986284fe3bc9a25ce4cdf987f7e1db43",
+    "spec_sha256": "e64f035859e98f2eda5772c876740c1b596ec1f013a40749b4f04646199f1c59",
+    "task": 4033
+  },
+  "test_input_scope": "create-pricing2 and the added Go test were both in the separate full4032 review12/spec2b6ce0e5f06c00d4b7ba3c73fb154e4b0dd6bea924d8ef10760a749858ae573b, normal1717B/c3ffa894e45718e3d0b7c8827b4c3ce909606a7c841426e6c7a483784d21a932 M0. Neither reviewer claimed to run tests.",
+  "whole16_complete": false
+}

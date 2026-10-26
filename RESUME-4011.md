@@ -34,6 +34,19 @@ Temp環境の直下`codex-owned-4cb6ff17c2a5bc05e8f02b5965371108`。
 一時launcherだけで、必要なsource/実測は先に保持する。終了時はplan→別exec通常削除→finish。
 削除拒否時は同じ操作を再試行せずquarantine。タブ/コンテナ/自作常駐0。
 
+04:29の終了準備：Temp内の3launcher/PS5 parser sourceは`.ci-work/4011/temp-sources/`へ保存し、
+safe-delete planの同じ絶対path/1131論理B/3entriesを別execの通常削除で回収、
+finishの`state=source_absent`を確認した。必要ソース/実測/Broker原結果は保持済み。
+次の実適用時には新しい所有Tempをcreateし、終了したこの所有IDを再使用しない。
+263fa48f時点の正規checkpoint-workspaceはexit1、stderrは
+`workspace checkpoint failed TimeoutError`。source workspace_checkpoint.rs:145-146の
+通常共有scheduler.lockの30秒待ち取得と整合する。request/stdout/stderrを同.ci-workへ保存した。
+branch変更0、保存成功とは扱わず、同じ失敗の再試行/lock停止・奪取/手書き更新0。
+ドラフトPR568 https://github.com/AutoDevJapan/cc-pc-tools-rs/pull/568 を作成した。
+レビューの未決事項と未適用を本文へ明記し、完了やマージ済みとはしていない。
+安全に進められる独立工程は終わったため、4014の正規完了待ちに4011だけを記録し、
+同じbranch/担当/元specから再開する。3796の4011待ち、3628の3942待ち、6h/1hは維持する。
+
 追加の有限確認：PS5.1実parserでも4sourceすべてエラー0。SystemRestore ScopeSnapshotsは未設定で、
 Microsoft仕様ではsystem restore対象のsystem fileだけを追跡する。ユーザーTemp canaryの
 保持を一般VSS全volume保護やSystemRestoreの必須機能と同一視しない。

@@ -23,6 +23,9 @@ pub(super) struct BuildStats {
     partial_deletions: u64,
     bounded: bool,
     cursor_unverified: bool,
+    active_job_records_max: Option<u64>,
+    self_handle_observation: Option<&'static str>,
+    self_kernel_observation: Option<&'static str>,
     reasons: BTreeMap<&'static str, u64>,
 }
 impl BuildStats {
@@ -46,8 +49,29 @@ impl BuildStats {
             "retained_measured_remaining_bytes":self.retained_bytes,"retained_bytes_unmeasured":self.unmeasured,
             "partial_deletions":self.partial_deletions,"limit_or_deadline":self.bounded,
             "cursor_unverified":self.cursor_unverified,
+            "active_job_records_max":self.active_job_records_max,
+            "self_handle_observation":self.self_handle_observation,
+            "self_kernel_observation":self.self_kernel_observation,
             "retention_reasons":self.reasons,"profile_lock_scaffolding_retained":true,
             "whole_pc_scan":false})
+    }
+}
+
+fn kernel_observation_diagnostic(observation: &io::Result<Option<u64>>) -> &'static str {
+    match observation {
+        Ok(Some(birth)) if *birth > 0 => "available",
+        Ok(_) => "missing",
+        Err(error) => match error.to_string().as_str() {
+            "documented caller birth time unavailable" => "caller_handle_unavailable",
+            "documented caller ancestry unavailable" => "caller_parent_unavailable",
+            "native process ancestry layout disagrees with ToolHelp" => "caller_layout_unverified",
+            "invalid process identity snapshot" => "invalid_snapshot",
+            "process identity snapshot did not stabilize" => "unstable_snapshot",
+            value if value.starts_with("process identity snapshot NTSTATUS ") => {
+                "kernel_query_failed"
+            }
+            _ => "unavailable",
+        },
     }
 }
 
@@ -459,7 +483,7 @@ fn state_with_scope_guard(
                 {
                     return Err("OTHER_JOB_ACTIVE_OR_WAITING");
                 }
-                let published = published.map_err(|_| "OTHER_OWNER_SCOPE_UNVERIFIED")?;
+                let published = published.map_err(|_| "OTHER_SCOPE_INDEX_UNAVAILABLE")?;
                 let claim = match ctx.published_job_work_claim(id) {
                     Ok(claim) => claim,
                     Err(_) => {
@@ -468,8 +492,8 @@ fn state_with_scope_guard(
                         // retention evidence only, never new ownership or exit.
                         let raw = observed
                             .as_ref()
-                            .map_err(|_| "OTHER_OWNER_SCOPE_UNVERIFIED")?;
-                        let scope = published.as_ref().ok_or("OTHER_OWNER_SCOPE_UNVERIFIED")?;
+                            .map_err(|_| "OTHER_SCOPE_RAW_UNAVAILABLE")?;
+                        let scope = published.as_ref().ok_or("OTHER_SCOPE_UNPUBLISHED")?;
                         let cwd = Path::new(field(raw, "cwd"));
                         if ![
                             "running",
@@ -481,20 +505,32 @@ fn state_with_scope_guard(
                             "lost",
                         ]
                         .contains(&field(raw, "status"))
-                            || !absolute(cwd)
+                        {
+                            return Err("OTHER_SCOPE_STATUS_UNVERIFIED");
+                        }
+                        if !absolute(cwd)
                             || cwd.components().any(|c| {
                                 matches!(
                                     c,
                                     std::path::Component::ParentDir | std::path::Component::CurDir
                                 )
                             })
-                            || !same(cwd, Path::new(field(scope, "cwd")))
-                            || cc_jobs::parse_iso(field(raw, "created_at")).is_none()
-                            || raw["created_at"] != scope["created_at"]
-                            || !field(raw, "parent_job_id").is_empty()
+                        {
+                            return Err("OTHER_SCOPE_CWD_UNVERIFIED");
+                        }
+                        if !same(cwd, Path::new(field(scope, "cwd"))) {
+                            return Err("OTHER_SCOPE_CWD_CHANGED");
+                        }
+                        if cc_jobs::parse_iso(field(raw, "created_at")).is_none() {
+                            return Err("OTHER_SCOPE_CREATED_UNVERIFIED");
+                        }
+                        if raw["created_at"] != scope["created_at"] {
+                            return Err("OTHER_SCOPE_GENERATION_CHANGED");
+                        }
+                        if !field(raw, "parent_job_id").is_empty()
                             || !field(scope, "parent_job_id").is_empty()
                         {
-                            return Err("OTHER_OWNER_SCOPE_UNVERIFIED");
+                            return Err("OTHER_SCOPE_PARENT_UNRESOLVED");
                         }
                         for observation in [raw, scope] {
                             for hint in [
@@ -515,14 +551,14 @@ fn state_with_scope_guard(
                                             )
                                         }))
                                 {
-                                    return Err("OTHER_OWNER_SCOPE_UNVERIFIED");
+                                    return Err("OTHER_SCOPE_HINT_UNVERIFIED");
                                 }
                             }
                         }
                         let _scope_pins =
-                            pin_ancestors(cwd).map_err(|_| "OTHER_OWNER_SCOPE_UNVERIFIED")?;
-                        if scope_guard(cwd).map_err(|_| "OTHER_OWNER_SCOPE_UNVERIFIED")? {
-                            return Err("OTHER_OWNER_SCOPE_UNVERIFIED");
+                            pin_ancestors(cwd).map_err(|_| "OTHER_SCOPE_DIRECTORY_UNVERIFIED")?;
+                        if scope_guard(cwd).map_err(|_| "OTHER_SCOPE_GUARD_UNAVAILABLE")? {
+                            return Err("OTHER_SCOPE_GUARD_UNVERIFIED");
                         }
                         if scope_touches(raw, expected, work, origin) {
                             return Err("OTHER_JOB_ACTIVE_OR_WAITING");
@@ -540,7 +576,7 @@ fn state_with_scope_guard(
                     })
                     .collect();
                 if owners.len() != 1 {
-                    return Err("OTHER_OWNER_SCOPE_UNVERIFIED");
+                    return Err("OTHER_SCOPE_HISTORY_UNVERIFIED");
                 }
                 (claim, true)
             }
@@ -1486,6 +1522,13 @@ fn candidate(
     let active = ctx
         .active_job_ids_snapshot()
         .map_err(|_| "ACTIVE_JOB_INDEX_UNVERIFIED")?;
+    stats.builds.active_job_records_max = Some(
+        stats
+            .builds
+            .active_job_records_max
+            .unwrap_or(0)
+            .max(active.len() as u64),
+    );
     let (j, _states) = original(ctx, expected, work)?;
     let _todo = lock(&store.with_file_name("todo.lock"))?;
     let db = read(ctx, store, 64 * 1024 * 1024)?;
@@ -1549,6 +1592,20 @@ pub(super) fn run(apply: bool, outer: &Budget, stats: &mut Stats) {
         let mut ctx = Context::installed().map_err(|_| "STATE_UNAVAILABLE")?;
         ctx.root = JOBS_ROOT.into();
         ctx.jobs = ctx.root.join("jobs");
+        // Anonymous read-only observations of this process, not authority to
+        // mutate another process or relax any candidate/guard predicate.
+        stats.builds.self_handle_observation =
+            Some(match ctx.rt.proc_created_checked(std::process::id()) {
+                Ok(Some(birth)) if birth > 0 => "available",
+                Ok(_) => "missing",
+                Err(error) if error.kind() == io::ErrorKind::PermissionDenied => {
+                    "permission_denied"
+                }
+                Err(_) => "unavailable",
+            });
+        stats.builds.self_kernel_observation = Some(kernel_observation_diagnostic(
+            &ctx.rt.observed_process_birth(std::process::id()),
+        ));
         let store = Path::new(TODO);
         let db = read(&ctx, store, 64 * 1024 * 1024)?;
         let mut candidates: Vec<_> = rows(&db)?.iter().filter(|r| selected(r)).collect();
@@ -2601,23 +2658,28 @@ mod tests {
             "wrong-cwd",
             "wrong-generation",
             "relative-hint",
+            "projection-missing",
             "owner-touches",
             "registered-touches",
             "saved-reference",
             "parent",
+            "parent-unresolved",
             "unpublished",
             "guard-unknown",
+            "guard-error",
         ] {
             let mut scope = published.clone();
             let mut ids = vec![id];
             match case {
-                "wrong-cwd" => scope["cwd"] = json!(f.root),
+                "wrong-cwd" => scope["cwd"] = json!(f.root.join("another-execution-directory")),
                 "wrong-generation" => scope["created_at"] = json!("2020-01-01T00:00:00Z"),
                 "relative-hint" => scope["registered_cwd"] = json!("../other"),
+                "projection-missing" => scope = Value::Null,
                 "owner-touches" => scope["work_owner"]["worktree"] = json!(f.work),
                 "registered-touches" => scope["registered_cwd"] = json!(f.work),
                 "saved-reference" => scope["source"] = json!(f.work.join("target/debug")),
                 "parent" => scope["parent_job_id"] = f.origin["id"].clone(),
+                "parent-unresolved" => scope["parent_job_id"] = json!("20261026-000003-unknown"),
                 "unpublished" => ids.clear(),
                 _ => (),
             }
@@ -2631,9 +2693,27 @@ mod tests {
                 &f.origin,
                 f.budget().until,
                 &[id.into()],
-                &|_| Ok(case == "guard-unknown"),
+                &|_| {
+                    if case == "guard-error" {
+                        Err(io::Error::other("fixture guard unavailable"))
+                    } else {
+                        Ok(case == "guard-unknown")
+                    }
+                },
             );
-            assert_eq!(result.is_ok(), case == "valid", "{case}");
+            let expected = match case {
+                "valid" => Ok(()),
+                "wrong-cwd" => Err("OTHER_SCOPE_CWD_CHANGED"),
+                "wrong-generation" => Err("OTHER_SCOPE_GENERATION_CHANGED"),
+                "relative-hint" => Err("OTHER_SCOPE_HINT_UNVERIFIED"),
+                "projection-missing" => Err("OTHER_SCOPE_INDEX_UNAVAILABLE"),
+                "parent-unresolved" => Err("OTHER_SCOPE_PARENT_UNRESOLVED"),
+                "unpublished" => Err("OTHER_SCOPE_UNPUBLISHED"),
+                "guard-unknown" => Err("OTHER_SCOPE_GUARD_UNVERIFIED"),
+                "guard-error" => Err("OTHER_SCOPE_GUARD_UNAVAILABLE"),
+                _ => Err("OTHER_JOB_ACTIVE_OR_WAITING"),
+            };
+            assert_eq!(result, expected, "{case}");
             assert_eq!(
                 fs::read(f.ctx.job_dir(id).join("job.json")).unwrap(),
                 original
@@ -2662,6 +2742,28 @@ mod tests {
             b"keep foreign source"
         );
         f.kept();
+    }
+
+    #[test]
+    fn anonymous_identity_diagnostics_never_emit_private_error_text_or_invent_observations() {
+        let error = Err(io::Error::other("private user path and credential text"));
+        let tag = kernel_observation_diagnostic(&error);
+        assert_eq!(tag, "unavailable");
+        assert_eq!(
+            kernel_observation_diagnostic(&Err(io::Error::other(
+                "documented caller birth time unavailable"
+            ))),
+            "caller_handle_unavailable"
+        );
+        let stats = BuildStats {
+            self_kernel_observation: Some(tag),
+            ..BuildStats::default()
+        };
+        let json = stats.json();
+        assert!(json["active_job_records_max"].is_null());
+        assert!(json["self_handle_observation"].is_null());
+        assert!(!json.to_string().contains("private user path"));
+        assert!(!json.to_string().contains("credential text"));
     }
     #[test]
     fn cargo_hardlinks_inside_the_plan_are_removed_once_and_external_links_are_retained() {

@@ -131,3 +131,31 @@ single-link delivery SHA7d1d86f361eba1a05e7c21b8c37077836fe56f3b209871064a2c9300
 60関連Windows成功/0skip、末尾のpath hint保持回帰1件も成功、ClippyとGo race/vet成功。
 Cargo入力はこのbuildHeadから最終pinコミットまで変更しない。新RCの正常read-only実対象照合、
 固定別modelレビュー/同HEAD CI/追加PR merge/新suffix CAS/実回収を続ける。
+23時台の追加受入: PR551はreview3975（実gpt-6-sol/max/16steps、native01a17876-adfe-7001-a07d-5f04de07a5c5、
+原SHA cc5b76dc046d61aba8aa82cec35c1d04dce9c76bb483d1499556c82d84a01f9d）でMust0。
+同HEAD6a5のCI（関連626成功1skip/doctest/Clippy/CodeQL）成功後、fe70a449へ通常merge。
+正規AdminBroker check20261026-140027-ba191bde93fbba91d282358755931e38 qualifiedtrueの後、
+apply20261026-140040-998935e13191aee2aff250a1e476ae4dで現用7d1...へ更新/verify。
+元11cd backup suffix todo3942-scope、元7fbc backup、ACL、PT1H task定義、safe-delete a413e654は保持。
+ただし通常Task23:03:31/23:23:50等の実行はexit0だが初期2対象をOTHER_OWNER_SCOPE_UNVERIFIEDとして保持し実削除0。
+正常cursorだけで古いbatch→wrapを有限に進め、手書きreset/qualifierコピー/新所有登録はしていない。
+
+独立read-only調査3977はsource読了したが、同時刻のS4U/Interactiveの稼働集合を独立に取得できず根因未確定。
+原返答とnative照合は元job20261026-232056-todo-3977に保持。親の一度50秒以内の既存Task内診断は
+正常AdminBroker20261026-142350-d8720364fdebfdb01ca5233c7f1f9cf9、20.061sで終了、
+guard匿名JSONを21件（unverified20/clear1）観測した。一般削除希望とforeign scopeの失敗を分離するだけの
+観測は取れず、同一job/同一時点であると断定しない。private path/nameなし、Task定義不変更、常駐なし。
+原結果 s4u-guard-observation.json と既存RUNTIME jsonlを保持。
+
+次の最小変更は許可条件を一切変えず、scopeのraw/index/未公開/CWD/世代/hint/親/pin/guard/historyの
+保持理由を匿名の固定codeへ分け、正常APIのこのprocess自身のhandle/kernel観測とactive job記録最大件数を
+追加する。観測未実施はnull、例外文やPID/元仕様/私的名を出さない。privacy回帰と各理由の保持回帰を追加、
+cleanupの51 tests/0skipとClippy、Go race/vet成功。実回収は依然0、source/Git/release/原記録を保持。
+次回の配布は旧3757→7fbc→初回3942 11cd→二回目3942 7d1の両normal broker原proofを検証して鎖を保ち、
+新suffix todo3942-observeで前backupを上書きしない。data権限/guard/normal process mutationを変えない。
+自己観測と理由を同じ通常S4U実行で取ってから、失敗した条件の根因だけを修正する。
+
+一時diag test追記は元byteへ復元済み。後の通常testでdebug試験exeが上書きされるため、旧rc-scope-proof.ps1の
+フィルタが0testsなら実対象資格の再確認として数えない。元の22:28 resultOK/14,020,506B/削除0原logは保持。
+自分のdebugは再テスト/診断依存が残る間保持し、最終受入後に回収する。旧Sourceのupstream refはGitHubの
+merge後自動削除があり得る。保存確認はnormal origin/main到達性も照合し、古いbranch不存在を未保存断定へ使わない。

@@ -25,8 +25,12 @@ const completedPreviousProof = "D:/CC/Tools/admin-broker/results/20261026-124621
 const completedPreviousProofSHA = "c0e1455fd8acd3e9ca61d8f3d84f5299db31868da9cce1310e501bfc66747722"
 const completedPreviousHead = "5c9fce950d30c682e5f36fca3506af72aeb352a5"
 const completedPreviousSHA = "11cd5c8bbe855065ea27788543a79a70b4d63827f18e7bed918856e3526e2bd7"
+const completedCurrentProof = "D:/CC/Tools/admin-broker/results/20261026-140040-998935e13191aee2aff250a1e476ae4d.json"
+const completedCurrentProofSHA = "31a4bdf4486f8175b96f1fe8ec2ab9d51aa302551f52fb77a507e19ab1e5a7ff"
+const completedCurrentHead = "c2ea7b0b7c81b05789d46dc76eb0b1fd4c8eb7bd"
+const completedCurrentSHA = "7d1d86f361eba1a05e7c21b8c37077836fe56f3b209871064a2c930040772bba"
 
-var completedLeaf = leaf{"cleanup-8h", completedRoot + "/target/release/cleanup-8h-delivery-" + completedHead + ".exe", "D:/CC/Tools/cleanup-8h/cleanup-8h.exe", completedPreviousSHA, "7d1d86f361eba1a05e7c21b8c37077836fe56f3b209871064a2c930040772bba"}
+var completedLeaf = leaf{"cleanup-8h", completedRoot + "/target/release/cleanup-8h-delivery-" + completedHead + ".exe", "D:/CC/Tools/cleanup-8h/cleanup-8h.exe", completedCurrentSHA, "7d1d86f361eba1a05e7c21b8c37077836fe56f3b209871064a2c930040772bba"}
 var completedInputs = []string{"Cargo.toml", "Cargo.lock", "cleanup-8h", "cc-jobs", "cc-job-policy", "cc-chrome", "cc-task-title", "cc-redact"}
 
 type completedManifest struct {
@@ -130,6 +134,12 @@ func completedTodoReference(b []byte) error {
 }
 
 func completedPreviousGeneration(b []byte) error {
+	return verifiedCompletedGeneration(b, completedPreviousHead, leaves[1].New, completedPreviousSHA)
+}
+func completedCurrentGeneration(b []byte) error {
+	return verifiedCompletedGeneration(b, completedCurrentHead, completedPreviousSHA, completedCurrentSHA)
+}
+func verifiedCompletedGeneration(b []byte, expectedHead, expectedOld, expectedNew string) error {
 	var broker struct {
 		Exit   int    `json:"exit"`
 		Stdout string `json:"stdout"`
@@ -156,11 +166,11 @@ func completedPreviousGeneration(b []byte) error {
 			} `json:"steps"`
 		} `json:"results"`
 	}
-	if json.Unmarshal([]byte(broker.Stdout), &result) != nil || result.Domain != "completed-build-cleanup-software-3942" || result.Head != completedPreviousHead || !result.Qualified || result.Data || result.Guard || len(result.Results) != 1 {
+	if json.Unmarshal([]byte(broker.Stdout), &result) != nil || result.Domain != "completed-build-cleanup-software-3942" || result.Head != expectedHead || !result.Qualified || result.Data || result.Guard || len(result.Results) != 1 {
 		return errCode("COMPLETED_PREVIOUS_INSTALL_UNVERIFIED")
 	}
 	r := result.Results[0]
-	if r.Kind != "cleanup-8h" || !r.Updated || !r.Verified || r.Old != leaves[1].New || r.New != completedPreviousSHA || !r.Steps.OldRetired || !r.Steps.Published || !r.Steps.Verified {
+	if r.Kind != "cleanup-8h" || !r.Updated || !r.Verified || r.Old != expectedOld || r.New != expectedNew || !r.Steps.OldRetired || !r.Steps.Published || !r.Steps.Verified {
 		return errCode("COMPLETED_PREVIOUS_INSTALL_UNVERIFIED")
 	}
 	return nil
@@ -184,6 +194,13 @@ func completedProofs() error {
 		return errCode("COMPLETED_PREVIOUS_RECEIPT_CHANGED")
 	}
 	if e = completedPreviousGeneration(b); e != nil {
+		return e
+	}
+	b, e = readPinned(completedCurrentProof, 1<<20)
+	if e != nil || sha(b) != completedCurrentProofSHA {
+		return errCode("COMPLETED_CURRENT_RECEIPT_CHANGED")
+	}
+	if e = completedCurrentGeneration(b); e != nil {
 		return e
 	}
 	b, e = readPinned("D:/CC/Tools/todo/todo.json", 64<<20)
@@ -263,7 +280,7 @@ func refreshCompletedBuild(apply bool) ([]map[string]any, error) {
 	if e := completedProofs(); e != nil {
 		return nil, e
 	}
-	p, e := prepareAt(completedLeaf, "todo3942-scope")
+	p, e := prepareAt(completedLeaf, "todo3942-observe")
 	if e != nil {
 		return nil, e
 	}

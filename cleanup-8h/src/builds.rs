@@ -417,21 +417,17 @@ fn canonical_registered_retention_scope(
     expected: &Value,
     work: &Path,
     origin: &Value,
-) -> Check<Value> {
+) -> Check<(Value, Vec<PathBuf>)> {
     let todo = raw["todo_id"]
         .as_u64()
         .filter(|v| *v > 0)
         .ok_or("OTHER_SCOPE_UNPUBLISHED")?;
-    let matches: Vec<_> = rows(db)?
-        .iter()
-        .filter(|row| {
-            row["id"] == todo
-                && row["jobs"]
-                    .as_array()
-                    .is_some_and(|jobs| jobs.iter().any(|job| job == id))
-        })
-        .collect();
-    if matches.len() != 1 {
+    let matches: Vec<_> = rows(db)?.iter().filter(|row| row["id"] == todo).collect();
+    if matches.len() != 1
+        || !matches[0]["jobs"]
+            .as_array()
+            .is_some_and(|jobs| jobs.iter().any(|job| job == id))
+    {
         return Err("OTHER_SCOPE_UNPUBLISHED");
     }
     let registration = db["projects"][field(raw, "project")]
@@ -454,6 +450,7 @@ fn canonical_registered_retention_scope(
     // Keep every positive scope from the raw job and its normal ToDo history.
     let mut scope =
         json!({"cwd":raw["cwd"],"created_at":raw["created_at"],"registered_cwd":registration});
+    let mut paths = vec![PathBuf::from(registration)];
     if scope_touches(&scope, expected, work, origin) {
         return Err("OTHER_JOB_ACTIVE_OR_WAITING");
     }
@@ -462,10 +459,23 @@ fn canonical_registered_retention_scope(
             .as_array()
             .is_some_and(|jobs| jobs.iter().any(|job| job == id))
     }) {
+        if row["id"].as_u64().is_none_or(|id| id == 0)
+            || rows(db)?
+                .iter()
+                .filter(|other| other["id"] == row["id"])
+                .count()
+                != 1
+        {
+            return Err("OTHER_SCOPE_UNPUBLISHED");
+        }
+        let row_registration = db["projects"][field(row, "project")]
+            .as_str()
+            .filter(|v| !v.is_empty())
+            .ok_or("OTHER_SCOPE_REGISTRATION_UNVERIFIED")?;
         for hint in [
             field(&row["scheduler"], "worktree"),
             field(&row["subwork"]["owner"], "worktree"),
-            db["projects"][field(row, "project")].as_str().unwrap_or(""),
+            row_registration,
         ] {
             if hint.is_empty() {
                 continue;
@@ -477,6 +487,7 @@ fn canonical_registered_retention_scope(
             if scope_touches(&scope, expected, work, origin) {
                 return Err("OTHER_JOB_ACTIVE_OR_WAITING");
             }
+            paths.push(PathBuf::from(hint));
         }
         if row["id"] == expected["id"]
             || (!field(&row["scheduler"], "branch").is_empty()
@@ -486,7 +497,7 @@ fn canonical_registered_retention_scope(
         }
     }
     scope["registered_cwd"] = json!(registration);
-    Ok(scope)
+    Ok((scope, paths))
 }
 
 #[cfg(test)]
@@ -599,13 +610,16 @@ fn state_holding_scopes(
                             .as_ref()
                             .map_err(|_| "OTHER_SCOPE_RAW_UNAVAILABLE")?;
                         let registered_scope;
+                        let mut registration_paths = Vec::new();
                         let from_registration = published.is_none();
                         let scope = if let Some(scope) = published.as_ref() {
                             scope
                         } else {
-                            registered_scope = canonical_registered_retention_scope(
+                            let (scope, paths) = canonical_registered_retention_scope(
                                 &db, raw, id, expected, work, origin,
                             )?;
+                            registered_scope = scope;
+                            registration_paths = paths;
                             &registered_scope
                         };
                         let cwd = Path::new(field(raw, "cwd"));
@@ -682,7 +696,8 @@ fn state_holding_scopes(
                             // this lookup while all existing ancestors stay held.
                             let allow_missing = ["succeeded", "failed", "cancelled"]
                                 .contains(&field(raw, "status"))
-                                && raw["work_owner_live"] != true
+                                && (raw["work_owner_live"].is_null()
+                                    || raw["work_owner_live"] == false)
                                 && cc_jobs::parse_iso(field(raw, "finished_at"))
                                     .is_some_and(|at| at > 0. && at <= ctx.rt.epoch())
                                 && (raw["codex_pid"].is_null()
@@ -692,10 +707,30 @@ fn state_holding_scopes(
                                 && ctx
                                     .is_ours_checked(raw, "codex_pid")
                                     .is_ok_and(|live| !live);
-                            scope_leases.extend(
-                                pin_retention_ancestors(cwd, allow_missing)
-                                    .map_err(|_| "OTHER_SCOPE_DIRECTORY_UNVERIFIED")?,
-                            );
+                            for hint in [
+                                field(raw, "registered_cwd"),
+                                field(&raw["work_owner"], "worktree"),
+                                field(&raw["work_owner"], "git_common"),
+                                field(&raw["subwork"]["owner"], "worktree"),
+                            ] {
+                                if !hint.is_empty() {
+                                    registration_paths.push(PathBuf::from(hint));
+                                }
+                            }
+                            // Pin every positive declaration, not just cwd:
+                            // a different spelling may redirect to the candidate.
+                            // Only the original historical cwd may be missing.
+                            for path in std::iter::once(cwd)
+                                .chain(registration_paths.iter().map(PathBuf::as_path))
+                            {
+                                if !absolute(path) {
+                                    return Err("OTHER_SCOPE_HINT_UNVERIFIED");
+                                }
+                                scope_leases.extend(
+                                    pin_retention_ancestors(path, allow_missing && same(path, cwd))
+                                        .map_err(|_| "OTHER_SCOPE_DIRECTORY_UNVERIFIED")?,
+                                );
+                            }
                         } else {
                             scope_leases.extend(
                                 pin_ancestors(cwd)
@@ -2920,6 +2955,8 @@ mod tests {
         let id = "20261026-000002-legacy";
         let other = f.root.join("legacy-existing-directory");
         fs::create_dir(&other).unwrap();
+        let registration = f.root.join("different-original-registration");
+        fs::create_dir(&registration).unwrap();
         fs::write(other.join("foreign-source.txt"), b"preserved foreign data").unwrap();
         fs::create_dir(f.ctx.job_dir(id)).unwrap();
         let pid = std::process::id();
@@ -2950,9 +2987,13 @@ mod tests {
         assert!(!leases.is_empty());
         let renamed = f.root.join("renamed-legacy-directory");
         assert!(fs::rename(&other, &renamed).is_err());
+        let renamed_registration = f.root.join("renamed-registration");
+        assert!(fs::rename(&registration, &renamed_registration).is_err());
         drop(leases);
         fs::rename(&other, &renamed).unwrap();
         fs::rename(&renamed, &other).unwrap();
+        fs::rename(&registration, &renamed_registration).unwrap();
+        fs::rename(&renamed_registration, &registration).unwrap();
         let mut stats = Stats::default();
         f.run(true, false, &mut stats).unwrap();
         assert_eq!(stats.builds.completed, 1);
@@ -2995,6 +3036,9 @@ mod tests {
         for case in [
             "no-history",
             "no-registration",
+            "root-registration-missing",
+            "duplicate-root-without-job",
+            "duplicate-related-root-without-job",
             "overlap",
             "invalid-registration",
         ] {
@@ -3002,6 +3046,17 @@ mod tests {
             match case {
                 "no-history" => db["items"][1]["jobs"] = json!([]),
                 "no-registration" => db["projects"]["legacy"] = Value::Null,
+                "root-registration-missing" => db["items"][1]["project"] = json!("unregistered"),
+                "duplicate-root-without-job" => db["items"]
+                    .as_array_mut()
+                    .unwrap()
+                    .push(json!({"id":2,"project":"legacy","jobs":[]})),
+                "duplicate-related-root-without-job" => {
+                    db["items"].as_array_mut().unwrap().extend([
+                        json!({"id":3,"project":"legacy","jobs":[id]}),
+                        json!({"id":3,"project":"legacy","jobs":[]}),
+                    ]);
+                }
                 "overlap" => db["projects"]["legacy"] = json!(f.work),
                 "invalid-registration" => db["projects"]["legacy"] = json!("D:relative"),
                 _ => unreachable!(),
@@ -3096,6 +3151,99 @@ mod tests {
     }
 
     #[test]
+    fn every_positive_registered_scope_rejects_directory_aliases_before_deletion() {
+        let f = Fixture::new();
+        let id = "20261026-000002-legacy";
+        let other = f.root.join("foreign-directory");
+        fs::create_dir(&other).unwrap();
+        fs::write(other.join("source.txt"), b"foreign source stays").unwrap();
+        fs::create_dir(f.ctx.job_dir(id)).unwrap();
+        let alias = f.root.join("registered-alias");
+        let reply = f
+            .ctx
+            .rt
+            .call(cc_jobs::Call::new(
+                vec![
+                    "cmd.exe".into(),
+                    "/d".into(),
+                    "/c".into(),
+                    "mklink".into(),
+                    "/J".into(),
+                    alias.to_string_lossy().replace('/', "\\"),
+                    f.work.to_string_lossy().replace('/', "\\"),
+                ],
+                vec![],
+                10.,
+            ))
+            .unwrap();
+        assert_eq!(reply.code, 0);
+        let index = serde_json::to_vec(
+            &json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[],"owners":{}}),
+        )
+        .unwrap();
+        fs::write(f.ctx.jobs.join(".queue-index.json"), &index).unwrap();
+        for case in [
+            "raw-project",
+            "root-project",
+            "scheduler",
+            "subwork",
+            "raw-registration",
+            "raw-owner",
+            "raw-git-common",
+            "raw-subwork",
+        ] {
+            let mut raw = json!({"id":id,"todo_id":2,"project":"legacy-original","status":"running","cwd":other,"created_at":"2026-10-26T00:00:00Z"});
+            let mut db = json!({"projects":{"cc-pc-tools-rs":f.work,"legacy-original":other,"legacy-display":other},"items":[f.row,{"id":2,"project":"legacy-display","status":"done","jobs":[id]}]});
+            match case {
+                "raw-project" => db["projects"]["legacy-original"] = json!(alias),
+                "root-project" => db["projects"]["legacy-display"] = json!(alias),
+                "scheduler" => db["items"][1]["scheduler"] = json!({"worktree":alias}),
+                "subwork" => db["items"][1]["subwork"] = json!({"owner":{"worktree":alias}}),
+                "raw-registration" => raw["registered_cwd"] = json!(alias),
+                "raw-owner" => raw["work_owner"] = json!({"worktree":alias}),
+                "raw-git-common" => raw["work_owner"] = json!({"git_common":alias}),
+                "raw-subwork" => raw["subwork"] = json!({"owner":{"worktree":alias}}),
+                _ => unreachable!(),
+            }
+            let record = serde_json::to_vec(&raw).unwrap();
+            let store = serde_json::to_vec(&db).unwrap();
+            fs::write(f.ctx.job_dir(id).join("job.json"), &record).unwrap();
+            fs::write(&f.store, &store).unwrap();
+            let mut stats = Stats::default();
+            assert_eq!(
+                f.run(true, false, &mut stats),
+                Err("OTHER_SCOPE_DIRECTORY_UNVERIFIED"),
+                "{case}"
+            );
+            assert_eq!(stats.builds.removed_bytes, 0, "{case}");
+            assert_eq!(stats.builds.completed, 0, "{case}");
+            assert_eq!(
+                fs::read(f.ctx.job_dir(id).join("job.json")).unwrap(),
+                record
+            );
+            assert_eq!(fs::read(&f.store).unwrap(), store);
+            assert_eq!(
+                fs::read(f.ctx.jobs.join(".queue-index.json")).unwrap(),
+                index
+            );
+            assert_eq!(
+                fs::read(other.join("source.txt")).unwrap(),
+                b"foreign source stays"
+            );
+            assert_eq!(
+                fs::read(
+                    f.work
+                        .join("target/debug/deps/libfixture-0123456789abcdef.rmeta")
+                )
+                .unwrap(),
+                [7; 17]
+            );
+            f.kept();
+        }
+        fs::remove_dir(alias).unwrap();
+    }
+
+    #[test]
     fn missing_registered_execution_directory_never_proves_supervisor_exit_or_recreates_data() {
         let f = Fixture::new();
         let id = "20261026-000002-legacy";
@@ -3116,6 +3264,11 @@ mod tests {
         .unwrap();
         for case in [
             "valid",
+            "false-owner",
+            "null-owner",
+            "unknown-owner",
+            "numeric-owner",
+            "object-owner",
             "running",
             "live-owner",
             "live-native",
@@ -3126,6 +3279,11 @@ mod tests {
             match case {
                 "running" => raw["status"] = json!("running"),
                 "live-owner" => raw["work_owner_live"] = json!(true),
+                "false-owner" => raw["work_owner_live"] = json!(false),
+                "null-owner" => raw["work_owner_live"] = Value::Null,
+                "unknown-owner" => raw["work_owner_live"] = json!("unknown"),
+                "numeric-owner" => raw["work_owner_live"] = json!(0),
+                "object-owner" => raw["work_owner_live"] = json!({}),
                 "live-native" => {
                     raw["codex_pid"] = json!(pid);
                     raw["codex_pid_created"] = json!(f.ctx.rt.proc_created(pid));
@@ -3149,7 +3307,11 @@ mod tests {
                 &|_| panic!("no foreign data access"),
                 &mut held,
             );
-            assert_eq!(result.is_ok(), case == "valid", "{case}");
+            assert_eq!(
+                result.is_ok(),
+                ["valid", "false-owner", "null-owner"].contains(&case),
+                "{case}"
+            );
             assert!(!missing.exists());
             assert_eq!(
                 fs::read(f.ctx.job_dir(id).join("job.json")).unwrap(),

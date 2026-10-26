@@ -224,3 +224,8 @@ fresh55 regression/0skip（特別なreal probeを含まない）とClippy/Go rac
 次はこの固定RCの別model reviewと同HEAD CI、normal merge/原proof鎖-CAS-ACLでlegacy suffix配布、
 既存S4U task実発火/実回収・不在/sourceGitRelease/free前後/保留/自己debug回収を完遂する。
 現用はまだdde2、実回収0。過去8件の二重計上なし、ownerの操作・判断は不要。
+[3942:resume-021442-review3986]
+現job20261027-021442-todo-3942、Root dependency_generation5/元jobs/current scheduler/CWD/branchの対応を確認。3757/3986はdone。HEAD104d5522とsource Gitcleanから正常再開。
+review3986/job20261027-020220-todo-3986は48steps/exit0、native01a1792a-75b3-72e0-98b8-bca612919792のturn_contextで実gpt-6-sol/maxを照合。原応答SHA757063826de5cf96234cf338826924cd6f6f638a6cd2cc23ea14e4a9a1d99bb2、固定234d→104dの6対象+必要参照読了。Must3: Rootの登録欠落/同ID重複を見逃す、登録positive scopeのjunction別名をcwdだけのpinが見逃す、不正型work_owner_liveを欠落cwdのinactive条件へ通す。
+各指摘の実害をsynthetic実FSで再現しRed4件を確認。最小修正はRoot ID一意と元job所属/両側登録必須、全positive scopeのno-reparse metadata/name handleを適用完了まで保持、欠落cwdのownerはnull/falseだけ。元Root/job/index/所有/guardを改変しない。最新RC306/ccf3は新修正を含まないため未配布、再生成して原配布票を保持する。実回収0/元2対象と自己debug未回収/本人対応不要。
+3986の3Must修正後、実Windows synthetic56件/0skipが成功（review3986-green-final.log）、Clippy全targetsも成功。リンク別名8種類はcandidateを実削除しないこと、追加のRoot欠落・重複3入力と不正owner型3入力を保持すること、異なる登録scopeのrename拒否/解放後rename成功を確認。old306/ccf3を未配布のまま保持し、新sourceの配布票へ更新する。

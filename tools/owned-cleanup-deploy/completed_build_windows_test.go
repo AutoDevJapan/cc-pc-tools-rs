@@ -10,7 +10,7 @@ import (
 
 func TestCompletedBuildGenerationUsesTheSameCASACLAndNoReplace(t *testing.T) {
 	l := fixture(t)
-	p, e := prepareAt(l, "todo3942")
+	p, e := prepareAt(l, "todo3942-scope")
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -60,8 +60,52 @@ func TestCompletedBuildIdentityDoesNotAdoptUnknownOrOtherSoftware(t *testing.T) 
 			}
 		})
 	}
-	if completedLeaf.Target != leaves[1].Target || completedLeaf.Old != leaves[1].New || completedLeaf.Kind != "cleanup-8h" || completedLeaf.Target == nativeLeaf.Target {
+	if completedLeaf.Target != leaves[1].Target || completedLeaf.Old != completedPreviousSHA || completedLeaf.Kind != "cleanup-8h" || completedLeaf.Target == nativeLeaf.Target {
 		t.Fatal("cleanup-only scope changed")
+	}
+}
+
+func TestCompletedPreviousGenerationRequiresTheOriginalVerifiedCleanupOnlyInstall(t *testing.T) {
+	for _, kind := range []string{"valid", "broker-failed", "other-head", "other-domain", "not-qualified", "data-granted", "guard-changed", "not-updated", "not-verified", "wrong-old", "wrong-new", "not-published", "backup-not-retired", "extra-software"} {
+		t.Run(kind, func(t *testing.T) {
+			steps := map[string]any{"old_retired": true, "published": true, "verified": true}
+			row := map[string]any{"kind": "cleanup-8h", "old_sha256": leaves[1].New, "new_sha256": completedPreviousSHA, "updated": true, "verified": true, "steps": steps}
+			result := map[string]any{"domain": "completed-build-cleanup-software-3942", "source_head": completedPreviousHead, "qualified": true, "data_access_granted": false, "general_guard_changed": false, "results": []any{row}}
+			exit := 0
+			switch kind {
+			case "broker-failed":
+				exit = 1
+			case "other-head":
+				result["source_head"] = "unknown"
+			case "other-domain":
+				result["domain"] = "other"
+			case "not-qualified":
+				result["qualified"] = false
+			case "data-granted":
+				result["data_access_granted"] = true
+			case "guard-changed":
+				result["general_guard_changed"] = true
+			case "not-updated":
+				row["updated"] = false
+			case "not-verified":
+				row["verified"] = false
+			case "wrong-old":
+				row["old_sha256"] = "unknown"
+			case "wrong-new":
+				row["new_sha256"] = "unknown"
+			case "not-published":
+				steps["published"] = false
+			case "backup-not-retired":
+				steps["old_retired"] = false
+			case "extra-software":
+				result["results"] = []any{row, row}
+			}
+			out, _ := json.Marshal(result)
+			b, _ := json.Marshal(map[string]any{"exit": exit, "stdout": string(out)})
+			if (completedPreviousGeneration(b) == nil) != (kind == "valid") {
+				t.Fatal("previous generation qualification differs")
+			}
+		})
 	}
 }
 

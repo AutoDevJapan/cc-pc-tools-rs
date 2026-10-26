@@ -97,3 +97,37 @@ build jobはcurrent20261026-205513-todo-3942。Go cleanup専用pinを更新、ra
 旧4da候補の原記録には元AdminBroker結果を使い、今回のrawを旧実績へ流用しない。
 別モデルreview3967は固定35163d70→5c9fce95の3対象を通常schedulerで受付済み、起動待ち。
 実モデルと結果を受領しMust0/最終pinの差分照合/同head CIを確認後、通常merge/現用配布/実発火へ進む。
+22時台の実発火後: PR548は同HEAD必要CI/Windows全体3009成功9skip/doctest/Clippy/CodeQL成功後、
+68b742fd05f2c8809a139c36028f7b9e82672bc2へ通常merge。既存AdminBroker/CAS/ACLで
+現用cleanup SHA11cd5c8bbe855065ea27788543a79a70b4d63827f18e7bed918856e3526e2bd7へ更新済み。
+元7fbc49 backup、ACL、Task定義PT1H、safe-delete a413e654は保持。正常task手動3回と
+21:58:44の定時発火/exit0を実確認したが、実回収は0。最初は正常lock保持2、次の定時は
+OTHER_OWNER_SCOPE_UNVERIFIED2。既削除8件を再加算していない。カーソルは正常taskだけが更新。
+
+匿名read-only実測で、新しい正常running jobにToDo/project/Repoの無い既存実行場所があり、
+現PIDは正常live、公開indexの保持projectionもpartialであることを確認した。
+元job/CWD/created_atと既にnormal queueへ公開された同じCWD/created_atを結び、
+両側の明示的保持scope/保存参照/関連IDを先に保持してから、guard clearの既存C/D実行場所だけを
+reparse無しにpinし、独立した候補を進める修正中。ToDoやGitの新しい所有登録は行わず、
+unknownをexitへ昇格しない。自身のデータは依然として元Root/成功job/Git所有/全排他で資格確認する。
+published partial observation APIは読み取り専用、原job/Root/indexは不変。未公開/世代不一致/
+CWD違い/保護不明/祖先reparse/親不明/重なるscopeは保持。新回帰はforeign sourceと元metadata保持、
+正常scopeの独立生成物だけ実削除することまで確認した。60関連Windowsテストが成功、
+追加の公開hint保持修正後の該当2件とClippy、Go race/vetも成功。
+
+稼働中11cd版からの次のCASは、元3757の原proofに加え、正常brokerの自分の初回配布結果
+D:/CC/Tools/admin-broker/results/20261026-124621-7006f98d9abcd959c150132e6f3bcea1.json
+(SHAc0e1455fd8acd3e9ca61d8f3d84f5299db31868da9cce1310e501bfc66747722)を独立にpinして鎖を保持する。
+新suffix todo3942-scopeで元backupを上書きせず、safe-deleteは変更しない。
+現在branchは同じscheduler/todo-3942-work、main68b742fdへ正常FF済み。
+次: この追加修正をcommit、clean新release/149入力manifest/Go pin→実別model review Must0→
+同HEAD CI/追加PR通常merge→同じ正規AdminBroker配布→既存1h task再発火/3757・3960実回収→
+source/Git/release/空き前後/保留の確認→自分のdebugを正常Cargo clean等で回収する。
+実回収0/本人対応不要/原台帳保持を引き継ぐ。最新進行はtarget/release/acceptance-3942.jsonも参照。
+追加修正source c2ea7b0b7c81b05789d46dc76eb0b1fd4c8eb7bdはcommit/push済み。
+clean通常release成功、149入力manifest SHAb447019b022bb59ee3b87f3840b9387c1f01f5e6e976bdcec0e3910b559692c5、
+single-link delivery SHA7d1d86f361eba1a05e7c21b8c37077836fe56f3b209871064a2c930040772bba。
+新manifestの既存実行物SHAは原broker proofで検証した11cdであり、現在の未知bytesから作っていない。
+60関連Windows成功/0skip、末尾のpath hint保持回帰1件も成功、ClippyとGo race/vet成功。
+Cargo入力はこのbuildHeadから最終pinコミットまで変更しない。新RCの正常read-only実対象照合、
+固定別modelレビュー/同HEAD CI/追加PR merge/新suffix CAS/実回収を続ける。

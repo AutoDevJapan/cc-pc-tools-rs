@@ -1,0 +1,51 @@
+{
+  "definition": "Actual created-once target; seven buffers returned to creator175504 at their recorded read times. Current consumer214717 separately verified the two instruction buffers. Not an atomic current seven-file snapshot.",
+  "targets": [
+    {
+      "name": "illustration-craft",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "承認済みの人物画で握り・腕・接地の崩れを、参照と接写・実寸で確かめたい。",
+      "negative": "風景の色変更へ人物生成を加える、採点だけで身体と権利や本人画像確認を済ませる。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/illustration/illustration-bold-pop/SKILL.md",
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/illustration/illustration-bold-pop/references/craft.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "2c3cc4f59d15617a23f4fc9561123b443366cb89ba1b476a04a7d23990b9e3ef"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "e4bb751dd84cebcc639e73e90d2f6acfbbb309d8c039f7e390d9806ecde7ea92"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "bfc7480c0ca1228ad265f340727a698704f2df558c69f7e3bebf602000ca3430"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "31a7a2fbb601494870ab2478ff0c844bfd09283425bf4842d671dd83addaaf13"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "b95b32ee439b9bca85b7e4de9d236efb261a974f0c944739011e005274105184"
+        },
+        {
+          "path": "references/upstream-style-original.txt",
+          "sha256": "41d760636f5942d732b35d68ace26f99d62a75ad1bfd3bbe0326ae723378f45d"
+        }
+      ]
+    }
+  ],
+  "central_operations": 0,
+  "root": "D:/CC/Skills",
+  "creator_job": "20261026-175504-todo-3080",
+  "current_consumer_job": "20261026-214717-todo-3080",
+  "snapshot_definition": "Created-once7 current IDs and same-buffer hashes at original successful read; current214717 instructions2 separately verified. No historical physical continuity or current OS writer assertion."
+}

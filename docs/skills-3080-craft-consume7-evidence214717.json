@@ -1,0 +1,116 @@
+{
+  "job": "20261026-175504-todo-3080",
+  "manifest_sha256": "ed9da837d40f2d48bc129a445eea1c820460fcb2aa7e4cb9a6b7062136aa1541",
+  "qualified_current_buffers": 7,
+  "bytes": 40753,
+  "bounded_batches": 1,
+  "instruction_files": 2,
+  "instruction_bytes": 5698,
+  "producer": {
+    "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+    "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+  },
+  "runtime_producer": {
+    "sha256": "02c8cad70e44f2bc4cd4e5a70dfdaf581a7ee6896eb63449fe1606eb28f5b5be",
+    "revision": "f30f9e763e25884fa48d1cce0cac22da1cebfb69"
+  },
+  "current_IDs_match_creation": true,
+  "all_same_read_buffers_match_manifest": true,
+  "each_file_at_successful_read_time": true,
+  "historical_physical_continuity_proven": false,
+  "current_OS_writer": "unproved",
+  "general_access_granted": false,
+  "original_registry_recovered": false,
+  "new_creations": 0,
+  "new_ledger_adoptions": 0,
+  "new_global_primary_credit": 0,
+  "response_sha256": "05a4cdb22eb5eb41386858cb022b234bac715c08433c79c6ebd23f98721189ab",
+  "qualified_files": 7,
+  "files": [
+    {
+      "index": 0,
+      "target": "illustration-craft/SKILL.md",
+      "sha256": "2c3cc4f59d15617a23f4fc9561123b443366cb89ba1b476a04a7d23990b9e3ef",
+      "bytes": 1955,
+      "created_and_current_object_identity_sha256": "966e129916ebb3bc8e3ea84d7be44abe9e99addbfc4a172872125941124b2cfa",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "actual_read_consumer": "20261026-175504-todo-3080",
+      "role": "Original successful seven-file observation; resumed two instructions have a separate receipt"
+    },
+    {
+      "index": 1,
+      "target": "illustration-craft/references/guide.md",
+      "sha256": "e4bb751dd84cebcc639e73e90d2f6acfbbb309d8c039f7e390d9806ecde7ea92",
+      "bytes": 3743,
+      "created_and_current_object_identity_sha256": "1c4786c481f8deb6490435b6e9c2b540383060d0a6b9ee113a99cd1861b063d0",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "actual_read_consumer": "20261026-175504-todo-3080",
+      "role": "Original successful seven-file observation; resumed two instructions have a separate receipt"
+    },
+    {
+      "index": 2,
+      "target": "illustration-craft/references/upstream-original.txt",
+      "sha256": "bfc7480c0ca1228ad265f340727a698704f2df558c69f7e3bebf602000ca3430",
+      "bytes": 10528,
+      "created_and_current_object_identity_sha256": "aeaa879b9e53fe06b263e9fd328cd7cd73398a08d6ddb0adbc7a2ab210efc437",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "actual_read_consumer": "20261026-175504-todo-3080",
+      "role": "Original successful seven-file observation; resumed two instructions have a separate receipt"
+    },
+    {
+      "index": 3,
+      "target": "illustration-craft/references/LICENSE.txt",
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "bytes": 1064,
+      "created_and_current_object_identity_sha256": "c37e688765d465b535f47df6f97d70c5672b38be9117f6e07fbbc84756e8cb9c",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "actual_read_consumer": "20261026-175504-todo-3080",
+      "role": "Original successful seven-file observation; resumed two instructions have a separate receipt"
+    },
+    {
+      "index": 4,
+      "target": "illustration-craft/references/source.json",
+      "sha256": "31a7a2fbb601494870ab2478ff0c844bfd09283425bf4842d671dd83addaaf13",
+      "bytes": 2034,
+      "created_and_current_object_identity_sha256": "1759cae79d4924b6ae559022549540fee19e962d85aed34ec077f5b0e3d7432c",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "actual_read_consumer": "20261026-175504-todo-3080",
+      "role": "Original successful seven-file observation; resumed two instructions have a separate receipt"
+    },
+    {
+      "index": 5,
+      "target": "illustration-craft/references/sources.md",
+      "sha256": "b95b32ee439b9bca85b7e4de9d236efb261a974f0c944739011e005274105184",
+      "bytes": 1007,
+      "created_and_current_object_identity_sha256": "5db547791e5e82f99530ed02ec14e8e6d41e7b0336c10b60a9bf24b3933f724a",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "actual_read_consumer": "20261026-175504-todo-3080",
+      "role": "Original successful seven-file observation; resumed two instructions have a separate receipt"
+    },
+    {
+      "index": 6,
+      "target": "illustration-craft/references/upstream-style-original.txt",
+      "sha256": "41d760636f5942d732b35d68ace26f99d62a75ad1bfd3bbe0326ae723378f45d",
+      "bytes": 20422,
+      "created_and_current_object_identity_sha256": "287691be4a87964c57b4fcc91062e776e58ea21a21b930ed3e0ad4523458ced7",
+      "creation_ID_matches_current": true,
+      "same_handle_buffer_returned": true,
+      "reviewed_bytes_equal": true,
+      "actual_read_consumer": "20261026-175504-todo-3080",
+      "role": "Original successful seven-file observation; resumed two instructions have a separate receipt"
+    }
+  ],
+  "identity_digest_definition": "SHA256 UTF8(volume + LF + file_id_128) from equal actual original/current objects; raw platform IDs remain in private receipts"
+}

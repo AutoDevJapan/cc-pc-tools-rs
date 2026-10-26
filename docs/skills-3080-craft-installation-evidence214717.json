@@ -1,0 +1,84 @@
+{
+  "todo": 3080,
+  "result_publisher_job": "20261026-214717-todo-3080",
+  "creator_job": "20261026-175504-todo-3080",
+  "new_targets_created": 1,
+  "successful_CreateNew_count": 1,
+  "files_original_readback_verified": 7,
+  "bytes": 40753,
+  "current_instruction_buffers": 2,
+  "current_instruction_bytes": 5698,
+  "input_PR": 549,
+  "input_PR_merge": "b94340703680b20cb87794497bb59432aab544d4",
+  "original_creation_manifest": "skills-3080-operations/create-illustration-craft-175504.json",
+  "original_creation_manifest_sha": "ed9da837d40f2d48bc129a445eea1c820460fcb2aa7e4cb9a6b7062136aa1541",
+  "original_creation_input_head": "4aeec4d2849a7367ad0d9da6427564f911828bf5",
+  "original_content_review": {
+    "todo": 3956,
+    "job": "20261026-201302-todo-3956",
+    "saved_spec": "D:/CC/Tools/todo/specs/3956-3c16e7553f3d498483fbb9a58472afcd.md",
+    "saved_spec_sha": "619345277188c8c497fd2588b1e82d2aca42c03e5fe4a313a4cff4a672fbee3f",
+    "fullcontent_comparison": false,
+    "actual_author": "20261026-175504-todo-3080",
+    "manifest_sha": "ed9da837d40f2d48bc129a445eea1c820460fcb2aa7e4cb9a6b7062136aa1541",
+    "raw_bytes": 1671,
+    "raw_sha": "ecfcced329eb446d2be6e7828e65b763b4358b5e679cf4947a884ce3430b57ee",
+    "parent_full_original_read": true,
+    "independent_native_LunaMax": true,
+    "Must": 0,
+    "Suggestion": 1,
+    "freeze_for_creation_and_consumers": true,
+    "do_not_edit3956_again": true,
+    "old2192_wrong_author_result_is_not_authority": true
+  },
+  "referenced_artifacts": {
+    "bundle": {
+      "file": "skills-3080-craft-actual-bundle214717.json",
+      "sha256": "0fe27b47fd0a6a264c6d3df22f77a65e0645254fc7607c30c96f62e878bb2fd2"
+    },
+    "manifest": {
+      "file": "skills-3080-installed-craft-manifest214717.json",
+      "sha256": "ea4834c3fe5160b830fe37b7c5d9d8edfdfccf1942708cd31619f46b6d04a3ea"
+    },
+    "creation": {
+      "file": "skills-3080-craft-create-evidence214717.json",
+      "sha256": "c4f9856572be022ebc4c5a4a27be8bbcf8551d46b130ccf085d7d03e7c03f4a1"
+    },
+    "read7": {
+      "file": "skills-3080-craft-consume7-evidence214717.json",
+      "sha256": "2c3f3eda8c696763dbab441fd59aed1e992d7083f6e6c4c23161b1e9ab37e560"
+    },
+    "current_instructions": {
+      "file": "skills-3080-craft-current-instruction2-evidence214717.json",
+      "sha256": "86745812debee4a68f5d85a0a82949a900ab90b15803d77eec2b788dd801ca42"
+    },
+    "structure": {
+      "file": "skills-3080-craft-actual-structure214717.json",
+      "sha256": "9ad6d33570b4dbad7f7a4d1949f898618592840ef9339a10f2564f19198c70d4"
+    },
+    "discovery": {
+      "file": "skills-3080-craft-discovery214717.json",
+      "sha256": "a42fddb74e0ae61833bb5ea4ef70479ab5a0c8c3a4726da8a8f7e1ccfebd6ce9"
+    },
+    "application": {
+      "file": "skills-3080-craft-application214717.json",
+      "sha256": "c50341f04d406a26463e2993d98fb256e81c0ad0e9a8814b3c736dbc98fc9a8e"
+    },
+    "design": {
+      "file": "skills-3080-craft-designs214717.json",
+      "sha256": "2613f893169141fd17579fa2b44dcb1620632baefa4d7c670043c2999cda7682"
+    }
+  },
+  "qualified_native_root_source": "Actual exact own call183 and original CLI stdout; caller-supplied receipt alone is not authority",
+  "first_read_only_failure": "Exact canonical command reconstruction used different slash spelling of SAME original request. Original failed response retained; correct original native spelling verified. No creation repeated, no new source fetched, no guard change.",
+  "reading_times": "Each at its successful read time; original seven and new two not an atomic current seven-file snapshot",
+  "model_application": "Real current Codex turn, explicitly read two qualified instruction buffers, three textual scenario decisions; no actual image rendering",
+  "new_global_source_raw_credit": 0,
+  "implicit_skill_selection_proven": false,
+  "new_image_render_or_anatomy_validation": 0,
+  "new_UI_implementation": 0,
+  "originals_are_records_not_owner_instructions": true,
+  "third_party_assets_services_or_unknown_central_rights_accepted": false,
+  "public_result_review_pending": true,
+  "whole16_complete": false
+}

@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -139,5 +140,60 @@ func TestConversationSourceSenderBudgetIsFiniteAndRequestScoped(t *testing.T) {
 	}
 	if conversationFailureStage(conversationSenderFailure(`{"domain":"new-owner-recovery-messages","delivery":"not_verified","failure_stage":"operation_pending"}`)) != "send_pending" {
 		t.Fatal("unconfirmed sender result lost its public pending stage")
+	}
+}
+
+func TestConversationSourceMaintenanceDefersShortTurnBeforeAnyChild(t *testing.T) {
+	f, _ := originReferenceFixture(t)
+	ix, _ := f.r.loadConversations()
+	old := ix.Questions[f.input.RequestID]
+	q := old
+	q.RequestID = fixedConversationOrigin.RequestID
+	q.SenderID = fixedConversationOrigin.SenderID
+	dir := filepath.Join(f.r.Config.Home, "conversations", q.RequestID)
+	if os.MkdirAll(dir, 0700) != nil {
+		t.Fatal("new private source directory")
+	}
+	for _, name := range []string{"question.txt", "decision.json", "actor-succession.json"} {
+		b, err := os.ReadFile(filepath.Join(f.r.Config.Home, "conversations", old.RequestID, name))
+		if err != nil || os.WriteFile(filepath.Join(dir, name), b, 0600) != nil {
+			t.Fatal("copy exact fixture", err)
+		}
+	}
+	q.BodyFile, q.DecisionFile = filepath.Join(dir, "question.txt"), filepath.Join(dir, "decision.json")
+	delete(ix.Questions, old.RequestID)
+	ix.Questions[q.RequestID] = q
+	if publish(f.r.conversationPath(), ix) != nil {
+		t.Fatal("index")
+	}
+	f.input.RequestID = q.RequestID
+	backend := f.r.Run
+	calls := 0
+	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+		calls++
+		return backend(ctx, path, args...)
+	}
+	before, _ := os.ReadFile(f.r.TodoPath)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	health := Health{}
+	f.r.processConversationMaintenance(ctx, &health, map[string]bool{})
+	if calls != 0 || len(health.Errors) != 1 || health.Errors[0] != "conversation_source_send_budget_deferred" {
+		t.Fatal("short periodic turn started the fixed sender", calls, health.Errors)
+	}
+	after, _ := os.ReadFile(f.r.TodoPath)
+	if string(before) != string(after) {
+		t.Fatal("deferral changed original work")
+	}
+	afterIndex, err := f.r.loadConversations()
+	if err != nil || afterIndex.Cursor != q.RequestID {
+		t.Fatal("deferred turn did not advance the maintenance cursor")
+	}
+	long, stop := context.WithTimeout(context.Background(), time.Minute)
+	defer stop()
+	health = Health{}
+	f.r.processConversationMaintenance(long, &health, map[string]bool{})
+	if calls == 0 || len(health.Errors) != 0 {
+		t.Fatal("valid long turn was not admitted", calls, health.Errors)
 	}
 }

@@ -25,3 +25,8 @@ HTTPのbind/GET/POST境界でもtransport/timeout/rate limitの固定分類を�
 未分類の送信結果は公開send_pendingとして残す。
 固定source要求のsenderだけは55秒を上限とし、readerの20秒とHTTP処理を含める。
 呼出し元の60秒またはperiodic処理の短いcontextは引き続き優先し、他のコマンドは延長しない。
+常駐巡回の残り時間が55秒未満なら、この固定質問の送信は子処理を起動する前に保留する。
+元3751の修復担当が同じ入力の通常CLIを実行し、回答受信の既存毎分処理は維持する。
+POST後のsender_network/rate_limitedは配送保証ではない。
+Pending予約がありAPIで投稿を発見できない場合、自動でPOSTし直さず、元担当が同じ予約と正規APIの点検を続ける。
+GETで配送を確認できない状態を、本人回答待ちや配送完了へ変えない。

@@ -109,6 +109,11 @@ fn real_http_boundaries_preserve_transport_stage_and_unknown_post_receipt() {
         ("URLError: fixture-private-network-detail", "network"),
         ("TimeoutExpired: fixture-private-timeout-detail", "network"),
         ("Discord API rate limited", "rate_limited"),
+        ("Discord API rate limited; retry later", "rate_limited"),
+        (
+            "Discord upload rate limited: private-detail",
+            "rate_limited",
+        ),
     ] {
         for (method, path) in [
             ("GET", "/users/@me".to_owned()),
@@ -132,7 +137,11 @@ fn real_http_boundaries_preserve_transport_stage_and_unknown_post_receipt() {
                 let ledger = Ledger::load(&f.home).unwrap();
                 assert!(ledger.effect(&args.request_id, "question:0").is_some());
                 assert!(ledger.receipt(&args.request_id, "question:0").is_none());
-                assert!(ask(&mut f.context(), &args).is_err());
+                let retry = ask(&mut f.context(), &args).unwrap_err();
+                assert_eq!(
+                    ask_failure_report(&retry)["failure_stage"],
+                    "operation_pending"
+                );
                 assert!(f.server.lock().unwrap().posts.is_empty());
             } else {
                 assert_eq!(

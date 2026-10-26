@@ -127,7 +127,7 @@ pub(super) fn failure_stage(error: &str) -> &'static str {
         SOURCE_DEADLINE => "deadline",
         TRANSPORT_PENDING => "network",
         "recovery-messages.lock is busy" | "todo.lock is busy" => "busy",
-        "Discord API rate limited" => "rate_limited",
+        _ if error.starts_with("Discord API rate limited") || error.starts_with("Discord upload rate limited") => "rate_limited",
         _ if error.starts_with("URLError:") => "network",
         _ => "operation_pending",
     }
@@ -142,7 +142,9 @@ pub(super) fn redact_http_error(error: &str, fallback: &str) -> String {
         || error.starts_with("TimeoutExpired:")
     {
         TRANSPORT_PENDING.into()
-    } else if error == "Discord API rate limited" {
+    } else if error.starts_with("Discord API rate limited")
+        || error.starts_with("Discord upload rate limited")
+    {
         "Discord API rate limited".into()
     } else {
         fallback.into()

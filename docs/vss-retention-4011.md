@@ -52,32 +52,54 @@ FilterManagerとVSS/WindowsBackup/SystemRestoreの追加warning/errorは取得�
 本担当開始時の空きはC354,815,750,144B/D2,145,847,541,760B/E858,052,489,216B。
 Cの回収0。C空き差とVSS割当差の残り約7.185GBは元3796の未解明範囲として保持する。
 
-## 別モデルに提出する具体手順（未適用）
+## 修正した具体手順（未適用・追加レビュー前）
 
-`tools/vss-4011/configure.ps1`は既存C→C/50GiB、MS provider 1、他volume snapshotなし、
-明示DisableSRなし、事前割当後も200GiB以上空くこと、MinDiffAreaFileSize未設定を再確認する。
-既存VolSnapキーのDWORD **MinDiffAreaFileSize=51200MiB（50GiB）**だけを原子的に設定する。
-全PCに効く設定であることを明示し、現在の唯一のC関連付けだけであることを実適用前にも確認する。
-現在の50GiB上限を増やさず、その範囲を先に割り当てて以後の領域拡張を不要にする狙い。
-この値で実際の割当が50GiBになることは未確認であり、実測を受入条件にする。
-既存ポイントが並行して新たに現れても削除する処理はなく、保存先/上限は変更しない。
-大きなPC共通minimumが将来の別volumeバックアップへ及ぼす影響をレビューで扱う。
+初回の51200MiB案は適用しない。初期確保がsnapshotごとなら2世代が既存上限へ
+収まらない可能性を指摘されたため、**3200MiB（3.125GiB）**へ候補を修正した。
+2世代の初期確保合計は6.25GiBで、50GiB上限に対し43.75GiBの余地を残す。
+これは小さな初期割当による拡張の頻度を減らす候補であり、その後の拡張をなくす保証ではない。
+通常の世代保持と実際の拡張を確認してから効果を判定する。旧50GiBのminimumは未適用である。
 
-`create-point.ps1`を同じAdminBrokerから一度実行し、SystemRestore.CreateRestorePointの
-BEGIN/END通常操作で「ToDo4011 VSS retention verification」を作る。Windows自身のVSS排他を使う。
-同名があれば重複作成せず、成功戻り値と実登録を別に記録する。サービス/他workerを止めない。
-既存creation frequencyを変更しない。既存snapshotが現れても保持する。
+`configure.ps1`は既存C→C/50GiB、MS provider 1、他volume snapshotなし、明示DisableSRなし、
+事前割当後も200GiB以上空くこと、MinDiffAreaFileSize未設定、出力receipt未作成を再確認する。
+既存VolSnapキーのDWORD **MinDiffAreaFileSize=3200**だけを書き、before不存在/target/実readbackを保存する。
+空の原設定を新造せず、関連付け/上限/作成頻度/既存snapshotは変更しない。
+このminimumはPC共通なので、今後別volumeやbackupの小さい上限を追加する担当には本記録と
+元3796/3628への返却を参照させ、元4011がその新しい保持仕様まで検証したと扱わない。
 
-前後に本担当所有Tempの小さな既知データを用意し、可能なら新しいsnapshotのその完全一致path
-だけを個別guard後に読み、上書き前のデータを保持していることを確認する。
-未知のsnapshot内容を一覧走査せず、取得資格が成立しなければ別path/コピーで回避しない。
-通常I/Oの続く有限な観測区間で同じsnapshot、差分使用増、割当50GiB/上限50GiB、
-新しい24/25/35なしを確認し、観測時間と未検証の長期間/再起動を明示する。
+追加レビューMust解消後、以下を同じ担当が通常AdminBrokerから有限に行う。
 
-登録だけでは完了にせず、割当が意図どおりにならない場合は有効化成功と呼ばず追加調査する。
-この手順には削除/縮小/再関連付け/無効化/OS再起動がなく、Dへの私的データ移動もない。
-レジストリを戻す必要が生じたら本担当が追加したDWORDだけを元の未設定へ戻す案を
-別途結果とともに扱い、既存snapshot/関連付けはそのままにする。
+1. 変更直前の匿名観測を保存し、configureの実readbackを確認する。変更時刻を以降の
+   `observe.ps1 -SinceUtc`の開始点にし、0件と取得失敗/上限到達を区別する。
+2. `create-point.ps1 -Stage A`で通常SystemRestore BEGIN/ENDを一度実行する。
+   既存creation frequencyは0のまま。事前token/実戻り値/登録されたown descriptionと
+   sequence/作成後tokenを保存する。新snapshotを1件に絞れなければ対応不明として全て保持する。
+3. 実割当が少なくとも3200MiBへ増えたこと、persistent/state12、事前token保持を確認する。
+   割当が320MiB等のままなら即時反映を証明できないので次のpointを作らずrollbackする。
+4. `-Stage B -FirstReceiptPath <Aの実receipt>`で2件目を一度実行する。
+   Aのtokenが残っていることと、quota内に新しい初期割当+1GiBの余地があることを直前確認する。
+   A/B両方のpoint・token・persistent/state12・既存世代不減を確認する。
+5. 新しい24/25/33/35/36、取得失敗、部分取得、作成失敗がないことを確認する。
+   33も「正常なcleaning成功」とせず、今回の新規作成で保持世代を押し出していないか判定する。
+6. 通常I/Oで差分が増えて初期割当を超える拡張を観測し、2token保持と上限50GiB不変を確認する。
+   01:45/02:40の障害時間帯か、障害前に相当する実使用増を含む有限な観測まで継続する。
+   短い低負荷区間だけで「25を解消」と完了しない。時間が必要なら既存ToDoの正規
+   `wait-retry --after ... --reason ...`を使い、新しい監視/task/point作成loopを追加しない。
+
+rollbackの実行担当も元4011とし、条件は割当が想定と違う、24/25/33/35/36の新規発生、
+point作成失敗（既存SRの実行結果を含む）、保持対象token/世代数の減少である。
+`rollback.ps1 -AppliedReceiptPath ...`は4011のbefore不存在/target3200/成功readback/現在DWORDを
+照合し、**本担当が加えたMinDiffAreaFileSize値だけ**を元の未設定へ戻す。
+値が変わっていたら他担当の変更を保持して止め、snapshot・関連付け・上限を削除/縮小しない。
+registry readbackの不存在とdriverの実効値復帰は区別し、即時の効果を未確認のまま断定しない。
+反映に再起動が必要と判明した場合も先に自分の値を戻し、必要な復帰条件を既存窓口で準備する。
+本人にPC操作を割り当てたり、未検証のログオン復帰を前提に再起動したりしない。
+
+作成呼出し前は「要求結果不明」のphaseを先に保存し、タイムアウトを未作成と断定しない。
+BEGIN/ENDの非0でも実登録を読める場合は先に記録し、同名/既存receiptがあれば自動再作成しない。
+各point作成の前後にwriterを観測し、自分の作成呼出し中にlist writersを重ねない。
+SystemRestoreの選択的追跡を一般VSSの全ユーザーファイル保護と同一視せず、未分類Cファイルや
+snapshot内容を別path/コピーで回避して読まない。過去point復旧/実OS rollbackは未実施のまま区別する。
 
 ## 一次資料
 
@@ -91,12 +113,19 @@ BEGIN/END通常操作で「ToDo4011 VSS retention verification」を作る。Win
 私的な匿名実測とBroker request/戻り値は自分の`.ci-work/4011/`へ保存し、公開ソースには
 volume GUID、ホスト名、元ファイルpath、タスクの引数、実データ、認証情報を含めない。
 
-## 適用前レビューの受付
+## 適用前レビューの結果
 
 固定base461e0ab5→a229c070の6ファイルを、通常の独立レビュー4014へ登録した。
-実job20261027-041610-todo-4014、正常statusでOpus5.5/max/runningを確認。
-途中の6ファイル読了報告ではmin=maxの設定が世代数を減らすおそれを調査中であり、
-最終判断は未受領。OS変更はまだ0、候補を採用・適用・修復済みとは扱わない。
+実job20261027-041610-todo-4014、最終succeeded/exit0/16steps。
+正常statusのexecution_observedはnative_turn_context/anthropic/claude-opus-5-5/maxで、
+author/excluded gpt-6.1-solと異なる実行を確認。固定6ファイル全文読了、Must2/Suggestion7。
+原応答6548字は自分の.ci-workへ保持し、SHA256は
+E1E5F63F1297860FD36030C450EEA2C25D4BE39A231A59FEB5C40F34C6449BE1。
+Mustはmin=maxの根拠不足/世代減少リスクと、2世代確認・33/36・rollback条件の不足。
+上の3200MiB候補とA/B作成、事前/事後token、rollback、0件判別へソースを修正した。
+修正後の追加固定レビュー・実OS適用・実保持はまだ未完了であり、Must0とは扱わない。
+他のSuggestionのうち将来backup影響/有効範囲/障害時間帯/phase/登録先行/空イベントも反映する。
+OS変更は0、Dへの無損失移行を現在0件だけで実行できるとは断定しない。
 
 SystemRestoreのScopeSnapshotsは未設定。Microsoftの仕様上、ユーザーTemp canaryの
 保持を一般VSS全volume保護やSystemRestoreの必須機能と同一視できない。

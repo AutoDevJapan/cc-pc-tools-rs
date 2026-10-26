@@ -1,5 +1,29 @@
 # 元4011の再開情報
 
+## 最新：4014の最終回答を受領し、修正候補を保存（OS未適用）
+
+4014は04:30:59にsucceeded/exit0/16stepsで終了。固定6ファイル読了、Must2/Suggestion7。
+原応答`.ci-work/4011/review-4014-final.md`、6548字、SHA256
+E1E5F63F1297860FD36030C450EEA2C25D4BE39A231A59FEB5C40F34C6449BE1。
+正常status execution_observed/native_turn_contextはanthropic/claude-opus-5-5/max、
+author/excludedはgpt-6.1-solで別モデルを照合した。
+4011 wait --on4014の時点で既にdoneだったため、通常CLIは4011を即時todoへ解放した。
+4014を再待機せず、元4011の同branch/元specを通常schedulerが再開する状態を保持する。
+この担当からstart/done/blockやschedulerの所有欄の手書きはしない。
+
+指摘の修正候補：MinDiffAreaFileSizeを51200から3200MiBへ下げ、二世代のA/B実生成と
+事前token全保持/新token一意確認、BEGIN/END要求結果不明phase、非0時の登録記録先行、
+初期割当実反映/33・36/保持世代減少/作成失敗のrollback条件と自分のDWORDだけを戻す
+rollback.ps1を追加。observeのSinceUtcと正常0件/失敗/上限到達の区別も修正した。
+OS操作はまだ0。初期割当・増分単位・無再起動反映を実証したことにはしていない。
+次の担当は新しい実jobで所有が成立した後、最新HEADのこの追加差分を通常--spec付き
+独立reviewへ渡し、Must解消後にAdminBrokerで実適用/point2件/保持を確認する。
+01:45/02:40か同等差分増を含む観測が必要なら既存ToDo wait-retryで有限に再開し、
+新しいtask/監視/point作成loopを作らない。rollback条件はdocs/vss-retention-4011.mdの最新版。
+過去point復旧・OS再起動/rollback、最終CI/merge/親への完了返却は未完了。
+
+以下のreview待ち/50GiB事前割当は時点を付けた履歴であり、現在の採用手順ではない。
+
 job `20261027-040011-todo-4011`、branch `scheduler/todo-4011-c-volsnap25-vss`。
 開始HEAD `461e0ab5`。branch変更なし、資源割当なし、Cargo/GPU/Civ6使用なし。
 originの実所有者はGitHub APIでAutoDevJapan/cc-pc-tools-rsと確認。

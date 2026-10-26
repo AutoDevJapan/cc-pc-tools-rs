@@ -1,4 +1,4 @@
-param([Parameter(Mandatory=$true)][string]$OutputPath)
+param([Parameter(Mandatory=$true)][string]$OutputPath,[string]$SinceUtc)
 $ErrorActionPreference = 'Stop'
 trap {
     [Console]::Error.WriteLine(('observer_failure line={0} id={1}' -f $_.InvocationInfo.ScriptLineNumber,$_.FullyQualifiedErrorId))
@@ -94,7 +94,13 @@ try {
     $cGuid = if($cVolume -match '\{[^}]+\}') {$Matches[0]} else {''}
     $fltmcText=(& "$env:SystemRoot/System32/fltmc.exe" volumes 2>&1 | Out-String)
     $cKernel=if($fltmcText -match '(?m)^\s*C:\s+(\S+)') {$Matches[1]} else {''}
-    $events = @(Get-WinEvent -FilterHashtable @{LogName='System';ProviderName='volsnap';StartTime=[DateTime]::Now.AddDays(-3)} -MaxEvents 100 -ErrorAction Stop)
+    $start=if($SinceUtc){[DateTimeOffset]::Parse($SinceUtc).LocalDateTime}else{[DateTime]::Now.AddDays(-3)}
+    try {
+        $events = @(Get-WinEvent -FilterHashtable @{LogName='System';ProviderName='volsnap';StartTime=$start} -MaxEvents 100 -ErrorAction Stop)
+    } catch {
+        if($_.FullyQualifiedErrorId -like 'NoMatchingEventsFound*') {$events=@()} else {throw}
+    }
+    $result.volsnap_query=[ordered]@{start_utc=$start.ToUniversalTime().ToString('o');max_events=100;returned=$events.Count;limit_partial_possible=($events.Count -ge 100);complete=($events.Count -lt 100)}
     $result.volsnap = @($events | ForEach-Object {
         $xml=[xml]$_.ToXml()
         $values=@($xml.Event.EventData.Data | ForEach-Object {if($_ -is [string]){$_}else{$_.InnerText}})

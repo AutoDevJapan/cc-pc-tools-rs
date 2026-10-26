@@ -76,5 +76,19 @@ native turn_contextでOpus5.5/maxを照合した。
   runner.lock内の作業入力を書いてから使い、中断した不完全なCAS入力はRustが拒否し、
   次の同じ操作で書き直す。正規の質問receiptや保護原本は書き換えない。
 
-統合確認4009では、e31df774のRust関連120件とGo race/native受入を確認中。
+統合確認4009から、e31df774のRust関連120件とGo race/native受入を受領した。
 これ以後のGo追加差分は、同じRust候補で確認し、別モデルの最終差分レビューへ渡す。
+
+## 統合確認4009の受領
+
+実job20261027-034850-todo-4009と対応native turn_contextでOpus5.5/maxを照合。
+原応答SHA256は013e1636edc2637472d1b36808efedd20710c71bdfa41e1e206bd17cee8cf27a。
+統合のMustは、Wait=falseかつActor付きの配送済み回答が再処理される点の1件。
+早期returnを `complete && (q.Wait || q.Actor != nil)` とする修正を631ed63eに含めた。
+既存の受信担当の完了済み経路を維持し、明示待機の現在の元担当に限る解除は後段で確認する。
+同担当の4ケース（applied保持・受信担当done・指示文の消費・メモの置換）を正式な
+会話回帰へ取り込み、raceで確認する。旧候補と現統合候補の記録を区別する記述も更新。
+
+4009はRust120件・doctest・統合候補のGo race/native（190トップ＋443サブ、skip 0）・
+go vetを実行した。sourceはe31df774のまま保ち、証拠だけを284169b4へ保存した。
+631ed63e以後は同じRust候補でGoの修正範囲を確認し、最終差分レビューで解消を照合する。

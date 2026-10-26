@@ -31,10 +31,14 @@ Issue561 / PR562。元の制作担当3684は3992と3995の依存待ちであり�
   4008から初回Must解消と新Must（大きな行のwithdraw）を受領し、その修正と
   CIで動く合成版の回帰、段階を戻さない監査、commit後の期限/状態の応答を追加。
   詳細と原応答SHA/実モデルはdocs/conversation-explicit-wait-review.md。
-- Cargo/統合読取4009はOpus/maxで実行中。
+- Cargo/統合読取4009をOpus/maxの実job/native contextで受領済み。
   候補 D:/CC/Work/unattended-operations-20261013-wt/todo-4009-cli/target/debug/todo.exe
   SHA256=5005c82b3995b6605a460e1a14db785c684626600339f9e3021bdfdf4a6cae2b。
   Rust実装は統合e31df774から追加変更なし。この候補を今後のGo native確認に使う。
+- 631ed63eで新候補を使うGo会話関連race/nativeとvetが成功（95.812秒）。
+  4009のMust（Actorかつwait=falseの完了済み経路）は同commitの1行修正で対応済み。
+  4009の4つの再現ケースを正式なconversation_actor_audit_test.goに取り込み、race成功。
+  後続の変更は固定診断とテスト・文書のみ。最終差分の別モデル再確認を登録する。
 - e31df774以後のGo追加差分の最終別モデルレビューとCI・merge・配布が残る。
   再開tempのdeploy.ps1は2実行物だけをrunner.lock内で差し替え、前後SHAを照合する
   配布用の準備。構文確認のみで未実行。Go候補e31版は旧候補なので、その後の修正を含む

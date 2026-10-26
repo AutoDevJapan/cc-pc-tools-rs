@@ -522,12 +522,27 @@ func TestConversationExplicitWaitNeverParksTheOriginOfAnotherRecipient(t *testin
 	f.input.Wait = false
 	f.ask(t)
 	before, _ := os.ReadFile(f.r.TodoPath)
-	if _, err := f.r.conversationWait(context.Background(), f.q.RequestID, false); err == nil {
-		t.Fatal("original-task wait accepted a question bound to a different recipient")
+	indexBefore, _ := os.ReadFile(f.r.conversationPath())
+	for _, checkOnly := range []bool{false, true} {
+		if _, err := f.r.conversationWait(context.Background(), f.q.RequestID, checkOnly); err == nil {
+			t.Fatal("original-task wait accepted a question bound to a different recipient")
+		}
 	}
 	after, _ := os.ReadFile(f.r.TodoPath)
-	if string(before) != string(after) {
+	indexAfter, _ := os.ReadFile(f.r.conversationPath())
+	if string(before) != string(after) || string(indexBefore) != string(indexAfter) {
 		t.Fatal("the existing recipient contract was changed")
+	}
+	for _, name := range []string{"wait-state.json", "wait-intent.json"} {
+		if _, err := os.Lstat(filepath.Join(f.r.Config.Home, "conversations", f.q.RequestID, name)); !os.IsNotExist(err) {
+			t.Fatal("original-task wait created a recipient artifact")
+		}
+	}
+	var out bytes.Buffer
+	code := conversationCLIWithLoader([]string{"wait", "--request-id=" + f.q.RequestID, "--check-only"}, &out,
+		func(string) (conversationCLIBackend, func(), error) { return f.r, func() {}, nil })
+	if code != 1 || out.String() != "conversation unavailable: actor_scope\n" {
+		t.Fatal("recipient mismatch lost its fixed diagnostic stage")
 	}
 }
 

@@ -168,7 +168,7 @@ func (r *Runner) conversationWait(ctx context.Context, requestID string, checkOn
 	// The finite resumed-recipient contract owns its separate question/wait
 	// envelope. This original-task operation must never park its origin row.
 	if q.Actor != nil {
-		return nil, errConversationWait
+		return nil, errors.New("conversation actor unverified")
 	}
 	row, err := r.conversationTask(ctx, q.Todo)
 	if err != nil || row.Project != q.Project {

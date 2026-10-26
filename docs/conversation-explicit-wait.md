@@ -38,9 +38,17 @@ CLI、毎分poll、合成ToDoとの統合を対象とし、その候補で実CLI
 正規候補によるGoのExplicitWait/ActualCanonical統合は成功（22.170秒）。
 待機→回答→元ToDo再開、回答先行、追加回答・編集、所有・質問の不一致、依存・停止、
 応答紛失、待機保存後のrunner index保存中断を合成データと実CLIで確認した。
-関連Rust95件とdoctestの結果・候補SHAは[確認担当の記録](todo-3997-cargo-validation.md)。
+統合前のRust95件とdoctestの結果・旧候補SHAは[確認担当の記録](todo-3997-cargo-validation.md)。
 同担当の全体fmtで見つかった既存product_retryテストの書式は親で修正し、
-変更した3ファイルのrustfmt確認に成功した。実装ソースと候補のbyteは同じ。
+変更した3ファイルのrustfmt確認に成功した。これは統合前の確認記録である。
+
+mainとの統合後は4009がRust関連120件（conversation_wait 47、parity 38、
+conversation_full_reply 11、product_retry 9、answered_wait 8、対象ライブラリ7）と
+doctestを確認した。対象外のライブラリ26件は選択範囲から除外した。
+統合候補のSHA256は5005c82b3995b6605a460e1a14db785c684626600339f9e3021bdfdf4a6cae2b、
+Rustのビルド元はe31df774である。その後のGo修正でもRustソースは同じ候補を使い、
+631ed63eで会話関連のrace/nativeテストとgo vetに成功した（95.812秒）。
+nativeは実CLIのロックと状態遷移を検査し、CIの合成版ではGoの振り分けを常時検査する。
 
 元の実質問でも正規APIの読取確認が成功し、本人回答0件と親の依存待ちを確認。
 この段階で親の待機や原質問は変更していない。別モデルレビュー・CI・merge・

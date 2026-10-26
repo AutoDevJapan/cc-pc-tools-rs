@@ -264,9 +264,33 @@ func official3894Match(raw []byte, want object) bool {
 }
 
 func official3894GitHub(ctx context.Context) error {
+	return official3894GitHubWith(ctx, official3894Command)
+}
+
+func official3894GitHubWith(ctx context.Context, command func(context.Context, string, ...string) ([]byte, error)) error {
+	queueTimedOut := false
 	for i, p := range official3894Pins() {
-		b, e := official3894Command(ctx, official3894Gate, "api", "--hostname", "github.com", p.endpoint, "--jq", p.query)
-		if e != nil || !official3894Match(b, p.expected) {
+		b, e := command(ctx, official3894Gate, "api", "--hostname", "github.com", p.endpoint, "--jq", p.query)
+		if e != nil {
+			return official3894Error("github_metadata_pin_" + strconv.Itoa(i+1))
+		}
+		// Keep the receipt's original run/attempt/job binding. A normal retry
+		// may be prepared only when this exact original job never executed and
+		// GitHub independently reports its 24-hour unassigned-queue timeout.
+		if i == 4 && official3387CancelledQueueReply(b, p.expected) {
+			queueTimedOut = true
+			continue
+		}
+		if i == 6 && queueTimedOut {
+			if !official3387CancelledQueueReply(b, p.expected) {
+				return official3894Error("github_metadata_pin_7")
+			}
+			if err := official3387UnassignedTimeoutProof(ctx, command); err != nil {
+				return err
+			}
+			continue
+		}
+		if !official3894Match(b, p.expected) {
 			return official3894Error("github_metadata_pin_" + strconv.Itoa(i+1))
 		}
 	}

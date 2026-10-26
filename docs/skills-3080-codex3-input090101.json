@@ -1,0 +1,53 @@
+{
+  "todo": 3080,
+  "job": "20261026-090101-todo-3080",
+  "stage": "authored input only; no current target absence or installation acceptance",
+  "proposed_targets": 3,
+  "outputs": 20,
+  "source_repo": "MengTo/Skills",
+  "source_commit": "398cd41c86ba42fbb30e944ae507f463648f08b7",
+  "targets": [
+    {
+      "name": "build-daily-inspiration-sites",
+      "source_path": "agent-skills/codex/build-daily-inspiration-sites/SKILL.md",
+      "sha256": "ba888108ec029d796484d8f18f600763bbf18d9313f1da2a48b5031a944d429c",
+      "proposed_purpose": "提供済みの複数のUI参照から制作を進めるとき、根拠・独自内容・担当別の受入条件を結ぶ。",
+      "positive": "依頼された複数の承認済み参照案について、各担当の素材・要件・実結果の対応が失われる。",
+      "negative": "単一画面の不具合修正を、日次収集・別製品の命名・5サイトの新規公開へ広げる。",
+      "planned_files": 7,
+      "current_target_absence_checked": false
+    },
+    {
+      "name": "generate-reference-inspired-brand-worlds",
+      "source_path": "agent-skills/codex/generate-reference-inspired-brand-worlds/SKILL.md",
+      "sha256": "ac378caa7a2093d1f34c0d96b0e21739b6826526ce58b0afe57adebc888fd363",
+      "proposed_purpose": "参照画像から複数の美術案を作るとき、共有する構図と変える固有要素・版・採用条件を整理する。",
+      "positive": "既存の承認した名前と意味を保ち、同じ参照に近づけた改訂案を、前版を残して比較したい。",
+      "negative": "同じ画面の技術修復で、未指定の新ブランド名や人物・ロゴを作り、元参照の素材を転載する。",
+      "planned_files": 7,
+      "current_target_absence_checked": false
+    },
+    {
+      "name": "web-technique-to-skill",
+      "source_path": "agent-skills/codex/web-technique-to-skill/SKILL.md",
+      "sha256": "8868b6b6940ef886cff768d2bf3227d5e96db2bce148e796c827d9f711ed284b",
+      "proposed_purpose": "動作を確認したWeb表現から一つの仕組みを抽出し、失敗例・数値・実証範囲と出典をSkillへ残す。",
+      "positive": "既存の距離ベースのカーソル演出を、速度を変えても間隔を保つ仕組みとして再利用したい。",
+      "negative": "動いていないコードを読んだだけで実証済みとし、全デモ・全gallery・無関係なSkillの改訂を毎回義務にする。",
+      "planned_files": 6,
+      "current_target_absence_checked": false
+    }
+  ],
+  "source_originals_and_supports_literal_read": 6,
+  "source_originals_bytes": 45145,
+  "normal_original_guards_clear": 6,
+  "operation": "skills-3080-operations/create-codex3-090101.json",
+  "operation_sha256": "e79f958f08c7ab4a28607ec29869d99b1fdc645758989dfa6cb08a5145cf5b06",
+  "individual_notice_map": "skills-3080-codex3-notice-map090101.json",
+  "new_global_primary_credit": 0,
+  "new_final_dispositions": 0,
+  "new_central_operations": 0,
+  "whole16_complete": false,
+  "source_helpers_or_images_executed": 0,
+  "comparison": "Startup metadata only; body equivalence and target absence not claimed"
+}

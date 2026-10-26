@@ -254,6 +254,9 @@ func (r *Runner) conversationReplySourceMessage(ctx context.Context, q Conversat
 		return stamp, false, errConversationCloseSource
 	}
 	var contextProof conversationProof
+	if canonicalHash(saved.ConversationAttachmentMetadata) != canonicalHash(req.ConversationAttachmentMetadata) || canonicalHash(saved.MessageType) != canonicalHash(req.MessageType) || canonicalHash(saved.Attachments) != canonicalHash(req.Attachments) {
+		return stamp, false, errConversationCloseSource
+	}
 	if json.Unmarshal([]byte(req.Context), &contextProof) != nil {
 		return stamp, false, errConversationCloseSource
 	}
@@ -283,6 +286,9 @@ func (r *Runner) conversationReplySourceMessage(ctx context.Context, q Conversat
 	}
 	if live.Content != reply.Body || live.Edited != req.Edited {
 		return stamp, false, nil
+	}
+	if len(req.ConversationAttachmentMetadata) != 0 && !r.repairLiveMetadata(ctx, q, req) {
+		return stamp, false, errConversationCloseSource
 	}
 	return stamp, true, nil
 }

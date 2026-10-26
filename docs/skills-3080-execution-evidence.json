@@ -15,7 +15,7 @@
     },
     {
       "file": "skills-3080-mengto-partial-evaluation.json",
-      "sha256": "68b0eefb50760f952ea86ac738ce0cab2d183500076515f9f186bc2e539af232",
+      "sha256": "976b2fb45de5eddffebd54e1f7a340653e943c1dd75445be9987f35a28b181f8",
       "rows": 177
     },
     {
@@ -87,12 +87,22 @@
       "file": "skills-3080-sixmile-received-next50-evaluation.json",
       "sha256": "2ccaa01ecbd197b1400201e751165f7eb3013389af75c5be806dd863fb839257",
       "rows": 50
+    },
+    {
+      "file": "skills-3080-sixmile-stream90-evaluation.json",
+      "sha256": "0c43d68d890419946dba55672fcb54ef8249ffd005f045705c38765696d39d6a",
+      "rows": 90
+    },
+    {
+      "file": "skills-3080-sixmile-next42-evaluation.json",
+      "sha256": "8f8e2b5287983b8700519bca67d3a8a2e7e3f3ae0c145651b96df2457c7af2ed",
+      "rows": 42
     }
   ],
   "adoption_ledger": {
     "file": "skills-3080-adoptions.json",
-    "sha256": "55344b7ccbc11ce113bd697441f7d5e943a7525c5215de7e0e784275405a4b12",
-    "rows": 49
+    "sha256": "e0614a2d226d5a487a6e9a2aaad52c4ed3831b0fbeb4a6f5ea9df9af069efd3e",
+    "rows": 126
   },
   "definition": "Assessment record references and existing final decisions only. No semantic/individual licence approval is inherited through equal bytes. The fixed catalog remains the complete occurrence universe; all holds are retained."
 }

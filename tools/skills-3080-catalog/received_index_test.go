@@ -39,13 +39,15 @@ func withoutReceivedIndex(current sixmileCohortIndex, cohorts []ReceivedCohort) 
 			entries = append(entries, e)
 		}
 		c, n := current.Cohorts[5+i], a.Counts
-		if c.ID != r.ID || c.Artifact != r.Artifact || c.Paths != n["candidates"] || c.Raw != n["primary_raw"] || c.Workflow != n["primary_workflow"] || c.Support != n["support"] || c.Saved != n["saved"] || c.Read != n["direct_raw_support"] || c.MaskedSupport != n["direct_masked_support"] || c.WorkflowSupport != n["full_workflow_support"] || c.Reused != n["same_byte_notice_reuse"]+n["ordered_notice_difference"] || c.Scan != n["scan"] || c.Partial != n["partial"] || c.SavedUnread != n["saved_unread"] || c.Unsaved != n["unsaved"] {
+		if c.ID != r.ID || c.Artifact != r.Artifact || c.Paths != n["candidates"] || c.Raw != n["primary_raw"] || c.Workflow != n["primary_workflow"] || c.Metadata != n["primary_saved_unread"] || c.PrimaryPartial != n["primary_partial"] || c.Support != n["support"] || c.Saved != n["saved"] || c.Read != n["direct_raw_support"] || c.MaskedSupport != n["direct_masked_support"] || c.WorkflowSupport != n["full_workflow_support"] || c.Reused != n["same_byte_notice_reuse"]+n["same_byte_support_reuse"]+n["ordered_notice_difference"] || c.Scan != n["scan"] || c.Partial != n["partial"] || c.SavedUnread != n["saved_unread"] || c.Unsaved != n["unsaved"] {
 			return bad()
 		}
 		current.Paths -= c.Paths
 		current.Raw -= c.Raw
 		current.Workflow -= c.Workflow
 		current.Masked -= c.Workflow - c.Raw
+		current.Metadata -= c.Metadata
+		current.PrimaryPartial -= c.PrimaryPartial
 		current.NotRaw += c.Raw
 		current.Unassessed += c.Paths
 		current.Support -= c.Support
@@ -60,6 +62,9 @@ func withoutReceivedIndex(current sixmileCohortIndex, cohorts []ReceivedCohort) 
 		current.Unsaved -= c.Unsaved
 	}
 	current.Cohorts = current.Cohorts[:5]
+	if current.PrimaryPartial != 0 {
+		return bad()
+	}
 	return current, entries, nil
 }
 
@@ -95,7 +100,11 @@ func TestReceivedIndexExtensionsRetainAllCurrentCategories(t *testing.T) {
 					if err != nil {
 						t.Fatal(err)
 					}
-					if base.Paths != 168 || base.Raw != 153 || base.Workflow != 167 || len(entries) != 100 {
+					wantEntries := 0
+					for _, r := range receivedRegistrations {
+						wantEntries += r.Spec.Counts["candidates"]
+					}
+					if base.Paths != 168 || base.Raw != 153 || base.Workflow != 167 || len(entries) != wantEntries {
 						t.Fatal("registered extensions changed historical coverage")
 					}
 				} else if err == nil {

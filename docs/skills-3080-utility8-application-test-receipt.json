@@ -1,0 +1,6 @@
+{
+  "exit": 0,
+  "timed_out": false,
+  "stdout": "=== RUN   TestUtility8ExplicitApplications\n8 explicit applications passed; actual new-package evidence + synthetic video; browser/game/GPU/runtime claims remain false\n--- PASS: TestUtility8ExplicitApplications (0.01s)\nPASS\nok  \tcommand-line-arguments\t0.033s\n",
+  "stderr": ""
+}

@@ -31,6 +31,18 @@ type skillsIOStatus struct{ Status, Information uintptr }
 var skillsNtCreateFile = syscall.NewLazyDLL("ntdll.dll").NewProc("NtCreateFile")
 
 func skillsOpenAt(parent syscall.Handle, name string, directory, create bool) (syscall.Handle, bool) {
+	return skillsOpenAtSharing(parent, name, directory, create, false)
+}
+
+// Only canonical append logs use write sharing. Central outputs always retain
+// the original deny-write/deny-delete handle through validation and consumption.
+func skillsOpenAtSharing(parent syscall.Handle, name string, directory, create, appendLog bool) (syscall.Handle, bool) {
+	return skillsOpenAtAccess(parent, name, directory, create, appendLog, false)
+}
+
+// DELETE access is only used by the exact own-revision operation. It does not
+// grant write access to an existing leaf or change normal read sharing.
+func skillsOpenAtAccess(parent syscall.Handle, name string, directory, create, appendLog, rename bool) (syscall.Handle, bool) {
 	if name == "" || name == "." || name == ".." || strings.ContainsAny(name, `/\:`) {
 		return 0, false
 	}
@@ -44,7 +56,13 @@ func skillsOpenAt(parent syscall.Handle, name string, directory, create bool) (s
 	var status skillsIOStatus
 	var h syscall.Handle
 	access := uint32(syscall.GENERIC_READ | 0x100000) // explicit SYNCHRONIZE for native synchronous I/O
+	if rename {
+		access |= 0x10000
+	}
 	share := uint32(syscall.FILE_SHARE_READ)
+	if appendLog && !directory && !create {
+		share |= syscall.FILE_SHARE_WRITE
+	}
 	options := uint32(0x00200000 | 0x20 | 0x40)
 	if directory {
 		access = 0x100000 | 0x80 | 1
@@ -75,6 +93,9 @@ type skillsFS struct {
 	dirs    map[string]syscall.Handle
 	files   []*os.File
 	blocked func(string) bool
+	created map[string]*os.File
+	// Fixed internal stage names only; never paths, source bytes or OS errors.
+	failureStage string
 }
 
 // Open only the declared regular object; keep it non-sharing until the caller
@@ -285,6 +306,10 @@ func skillsCreate(m skillsManifest, root string, s *skillsFS) (int, string) {
 		}
 		f := os.NewFile(uintptr(h), path)
 		s.files = append(s.files, f)
+		if s.created == nil {
+			s.created = map[string]*os.File{}
+		}
+		s.created[output.Target] = f
 		if hashBytes(output.body) != output.SHA {
 			return count, "manifest"
 		}

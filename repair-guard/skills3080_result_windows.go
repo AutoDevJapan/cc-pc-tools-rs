@@ -67,6 +67,12 @@ type skillsRegistry struct {
 // Metadata projection: never retain titles, notes, history, unrelated rows or
 // private department names. Only the declared self project and requested IDs.
 func skillsRegistryProjection(input io.Reader, ids []int) (skillsRegistry, bool) {
+	return skillsRegistryProjectionWith(input, ids, nil)
+}
+
+// A finite consumer can project stricter task metadata before struct decoding.
+// Existing Skills consumers retain their original reader and result contract.
+func skillsRegistryProjectionWith(input io.Reader, ids []int, project func([]byte) ([]byte, bool)) (skillsRegistry, bool) {
 	out := skillsRegistry{Tasks: map[int]skillsTask{}}
 	wanted := map[int]bool{}
 	for _, id := range ids {
@@ -85,6 +91,9 @@ func skillsRegistryProjection(input io.Reader, ids []int) (skillsRegistry, bool)
 			return out, false
 		}
 		seen[key] = true
+		if project != nil && ((key != "projects" && strings.EqualFold(key, "projects")) || (key != "items" && strings.EqualFold(key, "items"))) {
+			return out, false
+		}
 		switch key {
 		case "projects":
 			tok, e := d.Token()
@@ -99,6 +108,9 @@ func skillsRegistryProjection(input io.Reader, ids []int) (skillsRegistry, bool)
 					return out, false
 				}
 				keys[name] = true
+				if project != nil && name != "cc-pc-tools-rs" && strings.EqualFold(name, "cc-pc-tools-rs") {
+					return out, false
+				}
 				if name == "cc-pc-tools-rs" {
 					if d.Decode(&out.Root) != nil {
 						return out, false
@@ -126,18 +138,31 @@ func skillsRegistryProjection(input io.Reader, ids []int) (skillsRegistry, bool)
 				var id struct {
 					ID int `json:"id"`
 				}
-				if json.Unmarshal(raw, &id) != nil {
+				if project != nil {
+					var ok bool
+					id.ID, ok = skillsRegistryTaskID(raw)
+					if !ok {
+						return out, false
+					}
+				} else if json.Unmarshal(raw, &id) != nil {
 					return out, false
 				}
 				if wanted[id.ID] {
 					if _, exists := out.Tasks[id.ID]; exists {
 						return out, false
 					}
+					if project != nil {
+						var ok bool
+						raw, ok = project(raw)
+						if !ok {
+							return out, false
+						}
+					}
 					if _, ok := conversationJSON(raw); !ok {
 						return out, false
 					}
 					var row skillsTask
-					if json.Unmarshal(raw, &row) != nil {
+					if json.Unmarshal(raw, &row) != nil || row.ID != id.ID {
 						return out, false
 					}
 					out.Tasks[id.ID] = row
@@ -160,6 +185,44 @@ func skillsRegistryProjection(input io.Reader, ids []int) (skillsRegistry, bool)
 		return out, false
 	}
 	return out, seen["projects"] && seen["items"] && same(out.Root, roots[3]) && len(out.Tasks) == len(wanted)
+}
+
+// A strict consumer selects rows by the literal canonical ID, before deciding
+// which task metadata to decode. An ID alias must not hide a nominated row in
+// the unrelated-row branch. Other fields are discarded without decoding them.
+func skillsRegistryTaskID(raw []byte) (int, bool) {
+	d := json.NewDecoder(bytes.NewReader(raw))
+	first, e := d.Token()
+	if e != nil || first != json.Delim('{') {
+		return 0, false
+	}
+	id, found := 0, false
+	for d.More() {
+		key, e := d.Token()
+		name, ok := key.(string)
+		if e != nil || !ok {
+			return 0, false
+		}
+		if strings.EqualFold(name, "id") {
+			if name != "id" || found || d.Decode(&id) != nil || id <= 0 {
+				return 0, false
+			}
+			found = true
+		} else {
+			var discard ownerDiscardJSON
+			if d.Decode(&discard) != nil {
+				return 0, false
+			}
+		}
+	}
+	last, e := d.Token()
+	if e != nil || last != json.Delim('}') {
+		return 0, false
+	}
+	if _, e := d.Token(); e != io.EOF {
+		return 0, false
+	}
+	return id, found
 }
 func skillsRegistryRead(ids []int) (skillsRegistry, bool) {
 	s := skillsFS{blocked: skillsBlocked}
@@ -281,6 +344,26 @@ func skillsResultBinding(r skillsResultRequest, reg skillsRegistry, job object, 
 	return skillsResultBindingWith(r, reg, job, spec, forReview, skillsOriginalSpecs)
 }
 func skillsResultBindingWith(r skillsResultRequest, reg skillsRegistry, job object, spec []byte, forReview bool, originals map[int]string) bool {
+	if r == skillsPublicReview3850 && !skillsPublicReview3850Metadata(job) {
+		return false
+	}
+	publicResult := skillsOriginalParentReview
+	if skillsPublicReviewCandidate(r, reg, spec) || skillsConsumerResultCandidate(r, reg, spec) {
+		publicResult = r
+	}
+	return skillsResultBindingKnown(r, reg, job, spec, forReview, originals, publicResult)
+}
+
+// The parent independently identified this exact public response before this
+// repair. Parentage alone does not classify every child review as public.
+var skillsOriginalParentReview = skillsResultRequest{
+	Task: 3847, Job: "20261025-215831-todo-3847",
+	SpecSHA:  "902cb85702fff34a93089c65504f14ba636d92070d2d7a735577618cf5af4dda",
+	FinalSHA: "3a69abde4602353425769ad988a82f38d124afe56c3371a96102f284c607cbb4",
+}
+
+// Alternative identities are a unit-test seam, never request fields.
+func skillsResultBindingKnown(r skillsResultRequest, reg skillsRegistry, job object, spec []byte, forReview bool, originals map[int]string, publicResult skillsResultRequest) bool {
 	row, ok := reg.Tasks[r.Task]
 	parent, hasParent := reg.Tasks[3080]
 	if !ok || !hasParent || parent.Project != "cc-pc-tools-rs" || row.Project != parent.Project || !skillsHasJob(row, r.Job) || !skillsLatest(row, r.Job) || !skillsJobTask(job, r.Task) || job["id"] != r.Job || job["status"] != "succeeded" || job["exit_code"] != json.Number("0") || !same(str(job["cwd"]), row.Scheduler.Worktree) || hashBytes(spec) != r.SpecSHA {
@@ -297,10 +380,14 @@ func skillsResultBindingWith(r skillsResultRequest, reg skillsRegistry, job obje
 	}
 	// New acceptance reviewers must be real registered child reviews, not a
 	// caller-created result file or another public/private task with similar text.
-	return (forReview || (row.Subwork.Parent == 3686 && strings.Contains(string(spec), "SKILLS3080_IMPLEMENTATION_REVIEW "))) && row.Subwork.Kind == "review" && (row.Subwork.Parent == 3080 || row.Subwork.Parent == 3686) && job["sandbox"] == "read-only" &&
+	// The real public parent may receive its registered review's raw response
+	// before accepting a manifest or merging. A missing acceptance marker is
+	// still rejected by skillsReviewAccepted, never rewritten here.
+	publicParentResult := !forReview && r == publicResult && row.Subwork.Parent == 3080 && reg.writer.Task == 3080 && skillsDigest(r.FinalSHA)
+	return (forReview || publicParentResult || (row.Subwork.Parent == 3686 && strings.Contains(string(spec), "SKILLS3080_IMPLEMENTATION_REVIEW "))) && row.Subwork.Kind == "review" && (row.Subwork.Parent == 3080 || row.Subwork.Parent == 3686) && job["sandbox"] == "read-only" &&
 		conversationNumber(obj(job["subwork"])["parent_todo_id"]) == uint64(row.Subwork.Parent) &&
 		obj(job["subwork"])["origin_job_id"] == row.Subwork.ParentJob &&
-		skillsReviewAdmissionBound(row, job) && skillsReviewParentBound(reg, row, forReview, str(job["parent_job_id"])) &&
+		skillsReviewAdmissionBound(row, job) && skillsReviewParentBound(reg, row, forReview || publicParentResult, str(job["parent_job_id"])) &&
 		same(str(obj(job["finite_review"])["spec"]), row.Spec)
 }
 
@@ -397,6 +484,12 @@ func skillsReviewAuthorBound(parent skillsTask, expected string, child, origin o
 
 func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, review bool) (skillsReceived, string) {
 	var out skillsReceived
+	if r.Task == 3686 && !review {
+		return skillsReceiveOriginalRepair(r, reg, s)
+	}
+	if r.SpecPath != "" {
+		return out, "result_binding"
+	}
 	if r.Task < 1 || !skillsDigest(r.SpecSHA) || (r.FinalSHA != "" && !skillsDigest(r.FinalSHA)) {
 		return out, "result_binding"
 	}
@@ -436,15 +529,58 @@ func skillsReceive(r skillsResultRequest, reg skillsRegistry, s *skillsFS, revie
 	default:
 		return out, "result_binding"
 	}
+	// A typed scope or this exact legacy migration establishes a candidate,
+	// never permission by itself. Verify public source and original author
+	// before opening the result. Creation retains its separate merge/notice
+	// and acceptance checks.
+	publicScope, publicInput := skillsPublicReviewScopeFor(r, spec)
+	consumerScope, consumerInput := skillsParseConsumer(spec)
+	var native []object
+	if publicInput {
+		if !skillsPublicReviewAuthor(publicScope, reg, row, job, s) || !skillsPublicReviewInputs(publicScope, reg.writer.Workspace, s) {
+			return out, "result_binding"
+		}
+		// Detect a scope/spec added after launch before reading its raw result.
+		native, ok = skillsPublicReviewNative(s, job, spec, r.FinalSHA)
+		if !ok {
+			return out, "native_context"
+		}
+	}
+	if consumerInput {
+		if !skillsConsumerAuthor(consumerScope, reg, job, s) {
+			return out, "result_binding"
+		}
+		if _, _, _, reason := skillsConsumerProvenance(consumerScope, reg, s); reason != "" {
+			return out, reason
+		}
+		native, ok = skillsPublicReviewNative(s, job, spec, r.FinalSHA)
+		if !ok {
+			return out, "native_context"
+		}
+	}
 	body, ok := s.read(filepath.Join(skillsJobsRoot, r.Job, "last_message.md"), 2<<20)
-	if !ok || !bytes.Equal(body, []byte(str(job["last_message"]))) || (r.FinalSHA != "" && hashBytes(body) != r.FinalSHA) || (r.Task == 3709 && hashBytes(body) != skillsReplacementReviewFinal) {
+	if !ok || !bytes.Equal(body, []byte(str(job["last_message"]))) || (r.FinalSHA != "" && hashBytes(body) != r.FinalSHA) || (r.Task == 3709 && hashBytes(body) != skillsReplacementReviewFinal) || (r == skillsPublicReview3850 && len(body) != 4020) {
 		return out, "result_unavailable"
 	}
-	native, ok := skillsNativeJob(s, job)
+	if !publicInput && !consumerInput {
+		native, ok = skillsNativeJob(s, job)
+	}
 	if !ok || (r.Task == 3709 && !skillsReplacementNativeBound(native)) {
 		return out, "native_context"
 	}
 	out = skillsReceived{Body: body, Spec: spec, Native: native, Metadata: object{"id": r.Job, "task": r.Task, "status": job["status"], "model": job["model"], "effort": job["effort"], "exit_code": job["exit_code"], "thread_id": job["thread_id"], "spec_sha256": r.SpecSHA, "final_sha256": hashBytes(body)}}
+	if publicInput {
+		out.Metadata["public_input_commit"] = publicScope.Commit
+		out.Metadata["public_input_file_count"] = len(publicScope.Files)
+		out.Metadata["public_input_scope"] = "immutable_typed_prelaunch_spec"
+		if r == skillsPublicReview3850 {
+			out.Metadata["public_input_scope"] = "fixed_legacy_migration_3850"
+		}
+	}
+	if consumerInput {
+		out.Metadata["public_input_scope"] = "immutable_admitted_public_consumer"
+		out.Metadata["manifest_sha256"] = consumerScope.ManifestSHA
+	}
 	return out, ""
 }
 
@@ -492,6 +628,9 @@ func skillsNativeJob(s *skillsFS, job object) ([]object, bool) {
 	return skillsNativeProjection(io.LimitReader(stream, (256<<20)+1), id, str(job["cwd"]), start, end)
 }
 func skillsNativeProjection(input io.Reader, id, cwd string, start, end time.Time) ([]object, bool) {
+	return skillsNativeProjectionBound(input, id, cwd, start, end, nil)
+}
+func skillsNativeProjectionBound(input io.Reader, id, cwd string, start, end time.Time, proof *skillsNativeResultProof) ([]object, bool) {
 	if end.Before(start) {
 		return nil, false
 	}
@@ -509,7 +648,20 @@ func skillsNativeProjection(input io.Reader, id, cwd string, start, end time.Tim
 		if json.Unmarshal(raw, &envelope) != nil {
 			return nil, false
 		}
-		if envelope.Type != "session_meta" && envelope.Type != "turn_context" {
+		if envelope.Type != "session_meta" && envelope.Type != "turn_context" && (proof == nil || envelope.Type != "response_item") {
+			continue
+		}
+		if envelope.Type == "response_item" {
+			at, e := time.Parse(time.RFC3339Nano, envelope.Timestamp)
+			if e != nil {
+				return nil, false
+			}
+			if at.Before(start) || at.After(end) {
+				continue
+			}
+			if !session || !proof.observe(raw, at) {
+				return nil, false
+			}
 			continue
 		}
 		m, ok := conversationJSON(raw)
@@ -562,7 +714,7 @@ func skillsNativeProjection(input io.Reader, id, cwd string, start, end time.Tim
 			return nil, false
 		}
 	}
-	return out, scanner.Err() == nil && session && len(out) > 0
+	return out, scanner.Err() == nil && session && len(out) > 0 && (proof == nil || proof.bound())
 }
 func skillsResultID(r skillsResultRequest) bool {
 	m := currentSubworkJobName.FindStringSubmatch(r.Job)

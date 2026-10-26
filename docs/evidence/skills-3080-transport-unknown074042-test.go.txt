@@ -1,0 +1,85 @@
+package main
+
+import("encoding/json";"strings";"testing")
+
+func TestOther373SourceAndReadingStateBoundaries(t *testing.T){
+	for _,kind:=range []string{"valid_raw","valid_masked","valid_partial","valid_scan","valid_unread","valid_redacted_metadata","redacted_required_boundary","wrong_repo","wrong_commit","wrong_body","wrong_unit","raw_masked","partial_as_full","unread_invented_actor","missing_unmet_reason","grant","execution","duplicate_key","invalid_utf8"}{t.Run(kind,func(t *testing.T){
+		roster:=make([]StreamRow,373);r:=&roster[0];r.Ordinal=1;r.ID="github:"+strings.Repeat("a",64);r.Unit="github_skill_variant";r.Entry.Repo="repo/source";r.Entry.Commit=strings.Repeat("c",40);r.Entry.Path="skill/variant.md";r.Entry.SHA=strings.Repeat("b",64);r.Entry.Blob=strings.Repeat("d",40);r.Entry.Bytes=123
+		e:=map[string]any{"row":1,"source":[]any{r.ID,r.Entry.Repo,r.Entry.Commit,r.Entry.Path,r.Entry.SHA,r.Entry.Blob,r.Entry.Bytes},"unit":r.Unit,"read":[]any{2,0,0,true,true,20},"use":"用途","value":"個別の有用性","reason":"原文の根拠","positive":"正例","negative":"近接負例","candidate_disposition":"未確定の提案","findings":[]any{},"required_changes":[]any{},"notices":[]any{},"support":[]any{}}
+		boundary:=map[string]any{"source_executed":false,"copy_license_accepted":false,"new_final_dispositions":0,"central_operations":0}
+		chunk:=map[string]any{"domain":"othergit373-chunk-v1","roster_sha256":streamRosterSHA,"chunk_id":strings.Repeat("e",32),"reader_job":"20261025-100000-todo-3778","reader_todo":3778,"first_ordinal":1,"entries":[]any{e},"boundaries":boundary}
+		valid:=strings.HasPrefix(kind,"valid_")
+		switch kind{
+		case "valid_masked":e["read"]=[]any{3,2,0,false,true,20}
+		case "valid_partial","valid_scan","partial_as_full":state:=6;if kind=="valid_scan"{state=7};e["read"]=[]any{state,1,0,false,false,7};e["block_reason"]="specific unread range";e["unread_line_ranges"]=[]any{[]any{8,20}};if kind=="partial_as_full"{e["read"].([]any)[4]=true}
+		case "valid_unread","unread_invented_actor","missing_unmet_reason":e["read"]=[]any{1,nil,nil,false,false,0};e["block_reason"]="exact source read refused; retained";if kind=="unread_invented_actor"{e["read"].([]any)[2]=0};if kind=="missing_unmet_reason"{delete(e,"block_reason")}
+		case "wrong_repo":e["source"].([]any)[1]="other/repo"
+		case "wrong_commit":e["source"].([]any)[2]=strings.Repeat("f",40)
+		case "wrong_body":e["source"].([]any)[4]=strings.Repeat("0",64)
+		case "wrong_unit":e["unit"]="github_skill_entry"
+		case "raw_masked":e["read"].([]any)[1]=1
+		case "grant":boundary["copy_license_accepted"]=true
+		case "execution":boundary["source_executed"]=true
+		case "valid_redacted_metadata":chunk["metadata_probe"]=false
+		}
+		raw,err:=json.Marshal(chunk);if err!=nil{t.Fatal(err)};if kind=="duplicate_key"{raw=[]byte(`{"entries":[],"entries":[]}`)};if kind=="invalid_utf8"{raw=[]byte{'"',0xff,'"'}}
+		if kind=="valid_redacted_metadata"{raw=[]byte(strings.Replace(string(raw),`"metadata_probe":false`,`"metadata_probe":[REDACTED]`,1))}
+		if kind=="redacted_required_boundary"{raw=[]byte(strings.Replace(string(raw),`"source_executed":false`,`"source_executed":[REDACTED]`,1))}
+		_,_,err=validateStreamChunk(raw,StreamJournal{},roster);if (err==nil)!=valid{t.Fatalf("%s validation differs: %v",kind,err)}
+	})}
+}
+
+func TestOther373TransportUnknownValuesPreserveQuotedTextAndProvenance(t *testing.T){
+ raw:=[]byte(`{"unknown":[REDACTED],"literal":"[REDACTED]","escaped":"\"[REDACTED]","nested":[[REDACTED],{"x":[REDACTED]}]}`)
+ normalized,p:=normalizeStreamTransport(raw)
+ if p==nil||p.UnknownValues!=3||len(p.Offsets)!=3{t.Fatal("unknown transport values not accounted")}
+ v,err:=streamJSON(normalized);if err!=nil{t.Fatal(err)}
+ m:=v.(map[string]any)
+ if m["unknown"]!=nil||m["literal"]!="[REDACTED]"||m["escaped"]!="\"[REDACTED]"{t.Fatal("hidden scalar inferred or quoted text changed")}
+ canonical,err:=json.Marshal(v);if err!=nil{t.Fatal(err)}
+ original:="OTHER373_CHUNK_V1\n"+string(raw)+"\n"
+ r:=StreamReceipt{Original:original,OriginalSHA:streamHash([]byte(original)),Chunk:canonical,SHA:streamHash(canonical),Normalization:p}
+ if err=verifyStreamNormalization(r);err!=nil{t.Fatal(err)}
+ wire,err:=json.MarshalIndent(r,"","  ");if err!=nil{t.Fatal(err)}
+ var roundtrip StreamReceipt;if err=json.Unmarshal(wire,&roundtrip);err!=nil{t.Fatal(err)}
+ if err=verifyStreamNormalization(roundtrip);err!=nil{t.Fatalf("saved indented receipt must retain canonical meaning: %v",err)}
+ dropped:=roundtrip;dropped.Normalization=nil
+ if verifyStreamNormalization(dropped)==nil{t.Fatal("dropping normalization must not sever original/canonical provenance")}
+ r.Normalization.Offsets[0]++
+ if verifyStreamNormalization(r)==nil{t.Fatal("forged transform offset accepted")}
+ for _,invalid:=range []string{`{"x":[REDACTED]true}`,`{"x":true,"x":[REDACTED]}`,`{"x":[OTHER]}`} {
+  b,_:=normalizeStreamTransport([]byte(invalid));if _,e:=streamJSON(b);e==nil{t.Fatal("non-transport syntax/duplicate accepted")}
+ }
+}
+
+func TestOther373UnmaskedOriginalAlsoBindsCanonicalMeaning(t *testing.T){
+ original:="OTHER373_CHUNK_V1\n"+`{"read":[3,1,0,false,true,20]}`+"\n"
+ canonical:=[]byte(`{"read":[3,1,0,false,true,20]}`)
+ r:=StreamReceipt{Original:original,OriginalSHA:streamHash([]byte(original)),Chunk:canonical,SHA:streamHash(canonical)}
+ if e:=verifyStreamNormalization(r);e!=nil{t.Fatal(e)}
+ r.Chunk=[]byte(`{"read":[2,0,0,true,true,20]}`);r.SHA=streamHash(r.Chunk)
+ if verifyStreamNormalization(r)==nil{t.Fatal("rehashed canonical read promotion severed unchanged original")}
+}
+
+func TestOther373DroppingOriginalAndNormalizationCannotDowngradeNewReceipt(t *testing.T) {
+	for _, masked := range []bool{false, true} {
+		name := "unmasked"
+		payload := `{"read":[3,1,0,false,true,20],"metadata":false}`
+		if masked { name = "masked"; payload = strings.Replace(payload, `"metadata":false`, `"metadata":[REDACTED]`, 1) }
+		t.Run(name, func(t *testing.T) {
+			normalized, proof := normalizeStreamTransport([]byte(payload))
+			v, err := streamJSON(normalized); if err != nil { t.Fatal(err) }
+			canonical, err := json.Marshal(v); if err != nil { t.Fatal(err) }
+			original := "OTHER373_CHUNK_V1\n" + payload + "\n"
+			r := StreamReceipt{Original: original, OriginalSHA: streamHash([]byte(original)), Chunk: canonical, SHA: streamHash(canonical), Normalization: proof}
+			if err := verifyStreamNormalization(r); err != nil { t.Fatal(err) }
+			r.Original = ""
+			r.Normalization = nil
+			r.Chunk = []byte(`{"read":[2,0,0,true,true,20],"metadata":false}`)
+			r.SHA = streamHash(r.Chunk)
+			if verifyStreamNormalization(r) == nil { t.Fatal("missing original and normalization downgraded a new receipt") }
+			r.OriginalSHA = streamHash(nil)
+			if verifyStreamNormalization(r) == nil { t.Fatal("rehashed empty original accepted") }
+		})
+	}
+}

@@ -1,0 +1,65 @@
+{
+  "domain": "official-ci3387-independent-guard-baseline-v1",
+  "repository": "AutoDevJapan/cc-pc-tools-rs",
+  "repository_id": 1406818713,
+  "publisher_task": 3686,
+  "publisher_pull_request": 525,
+  "reviewed_head": "d0b6e6809b2e7d7f6b505ad9194484919aaa000b",
+  "reported_current_source_head": "038bc2570014132321919bf6758d68979506b741",
+  "reported_current_sha256": "ccb5e797e6b5627d98ade2a562f2f98f3c121a5403e1523071afc07f73af4556",
+  "previous_source_head": "60a1b82b62d60cfcd66136aa4527041af643c4d6",
+  "previous_sha256": "916bff404f54548814152efcd186dd772b33fd32872fd86fa88bc8d8718df9e3",
+  "source": "Normal publisher ToDo note history, including the literal installed-runtime qualification reported at2026-10-26 07:24 JST. Metadata projection only; original prompt, answers and bodies are not reproduced.",
+  "publisher_actual_literal_qualification": {
+    "exit_code": 0,
+    "qualified": true,
+    "already_current": true,
+    "current_sha256": "ccb5e797e6b5627d98ade2a562f2f98f3c121a5403e1523071afc07f73af4556",
+    "source_head": "038bc2570014132321919bf6758d68979506b741",
+    "data_access_granted": false,
+    "original_registry_recovered": false
+  },
+  "publisher_review": {
+    "todo": 3896,
+    "reported_actual_model": "gpt-6-luna",
+    "reported_effort": "max",
+    "must": 0,
+    "original_sha256": "4b905b00427d51ca4b9ec97d8688b9347062e87fa504564a9423d9d2e2405735",
+    "not_restarted": true
+  },
+  "independently_checked_public_ci": [
+    {
+      "run": 40236489114,
+      "attempt": 1,
+      "conclusion": "success"
+    },
+    {
+      "run": 40236489187,
+      "attempt": 1,
+      "conclusion": "success"
+    },
+    {
+      "run": 40236489190,
+      "attempt": 1,
+      "conclusion": "success"
+    }
+  ],
+  "reviewed_and_actual_merge_guard_inputs_match": true,
+  "publisher_owner_group_dacl_preserved": true,
+  "sacl_verified": false,
+  "comparison_by3894_before_this_fix": "Rejected the stale PR524 pair; no observed unknown digest was returned or adopted.",
+  "actual_038bc_pair_comparison_by3894_performed": false,
+  "this_task_update_performed": false,
+  "sdk_created": false,
+  "general_access_granted": false,
+  "original_registry_recovered": false,
+  "pin_fix_tests": {
+    "selected_pass_including_subcases": 19,
+    "race": true,
+    "fail": 0,
+    "skip": 0,
+    "vet_exit": 0,
+    "scope": "InstalledSoftwarePin plus actual CLI dispatch/refusal boundaries; unchanged source/metadata/native tests retain their valid prior receipts",
+    "log_sha256": "993d39dbc23793fd0307f49c21dfaba687f96c9f0ebc2d08b47075922413a1dc"
+  }
+}

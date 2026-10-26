@@ -1,0 +1,40 @@
+{
+  "todo": 3894,
+  "issue": 526,
+  "pr": 528,
+  "previous_head": "e8035106955b87c77574e2a6f88dddc1ab780ddd",
+  "change": "Finite input-free software comparison for only the independently published PR524 guard baseline. No update, general grant, SDK creation or registry operation.",
+  "reason": "Normal guard self-path classification is unverified. Do not borrow the3686-only qualification or adopt an observed target hash.",
+  "baseline_evidence": "docs/evidence/skills-3080-guard-installed-60a1.json",
+  "baseline_source": "60a1b82b62d60cfcd66136aa4527041af643c4d6",
+  "baseline_sha256": "916bff404f54548814152efcd186dd772b33fd32872fd86fa88bc8d8718df9e3",
+  "qualifications": [
+    "Actual registered ordinary3894 actor and nominated original-job/source ownership",
+    "Clean Windows build and merged matching guard build inputs",
+    "Only fixed target; exact published digest and clean Windows build revision",
+    "Return physical identity; do not disclose/adopt unknown hashes",
+    "Distinct-model review, exact-head CI, current ACL and AdminBroker CAS remain separate required deployment gates"
+  ],
+  "tests": {
+    "guard_pass_including_subcases": 176,
+    "race": true,
+    "fail": 0,
+    "skip": 0,
+    "vet_exit": 0,
+    "log_sha256": "73fc9c160c2c5a54eeaa34166bbd4c9922628d023f5c5ab89112c708f417093f",
+    "unchanged_core_pass": 103,
+    "core_log_sha256": "514a26431f8c322a7d7d8fc8153d54662e3f45005ffea6c0324bad32e38fcc1c"
+  },
+  "source_sha256": {
+    "repair-guard/officialci3894_windows.go": "e1d792e03bc2a2624d6391969257cbf78c4cae18a42c27b2a76c5389a89d326a",
+    "repair-guard/officialci3894_windows_test.go": "602bb42a468ca727b61d659ce0bb3def5ff8d901d3c1b3ce213ddbe666f1f74e",
+    "repair-guard/officialci3894_review_windows_test.go": "0f8642aa033bf0e53a3ccd678c2dda79bc4bea9a2e5219f2138fe3129aa22406",
+    "repair-guard/main_windows.go": "e6ac4eb45dae15b75b3c91c24ea359ee64ba7024407c4cef170d81cbe0f059b1",
+    "docs/official-ci3387-purpose.md": "58973f5f5892c9427a98fbaf5c261b2bd8e0c2a1cbfaec245e50ab541d4bcab5"
+  },
+  "actual_software_comparison_performed": false,
+  "actual_sdk_prepared": false,
+  "installed_update": false,
+  "review_pending": true,
+  "local_cargo_gpu_civ6": 0
+}

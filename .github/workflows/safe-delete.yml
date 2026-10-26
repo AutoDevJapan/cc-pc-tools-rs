@@ -2,9 +2,9 @@ name: Owned temporary data cleanup
 on:
   push:
     branches: [main]
-    paths: ['safe-delete/**', '.github/workflows/safe-delete.yml']
+    paths: ['safe-delete/**', 'tools/owned-cleanup-deploy/**', '.github/workflows/safe-delete.yml']
   pull_request:
-    paths: ['safe-delete/**', '.github/workflows/safe-delete.yml']
+    paths: ['safe-delete/**', 'tools/owned-cleanup-deploy/**', '.github/workflows/safe-delete.yml']
 # Cancel only superseded PR runs; source admission rejects obsolete main heads.
 concurrency:
   group: ${{ github.workflow }}-pr-head-v2-${{ github.event_name == 'pull_request' && github.run_attempt == 1 && github.event.pull_request.number || github.run_id }}
@@ -63,3 +63,10 @@ jobs:
       - run: go test -race -v ./...
       - run: go vet ./...
       - run: go build -trimpath .
+
+      - name: Verify the finite owned software update
+        working-directory: tools/owned-cleanup-deploy
+        run: go test -race -v ./...
+      - name: Vet the finite owned software update
+        working-directory: tools/owned-cleanup-deploy
+        run: go vet ./...

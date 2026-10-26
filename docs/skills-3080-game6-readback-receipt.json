@@ -1,0 +1,270 @@
+{
+  "creation_receipt_sha256": "911d91490ff9ce44d044052fc1df967cb2eb045854eed072677fcbace9164a7d",
+  "creation_request_sha256": "a7a92aed62f572ecff390d785f7360b0db740ce2a676da94cdea86d74b724e28",
+  "files": [
+    {
+      "bytes": 1420,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "63854a47342048716be2691e41ce2848c66bf9391f0f450176ec325214bb2194",
+      "target": "design-action-combat/SKILL.md"
+    },
+    {
+      "bytes": 1911,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "5107177ff91cb84098bef3987ddd999a1355b134f6285ce1ff6eab864b9b95c7",
+      "target": "design-action-combat/references/guide.md"
+    },
+    {
+      "bytes": 1866,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0b6289f0c651987554e2c82dda45e18582eb2a21412672778ed76cd1a214df17",
+      "target": "design-action-combat/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "design-action-combat/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1654,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "cf558f0ef67f018ae48da67edaf35a29d8eabc26b106abdbb8a5d8918b02e679",
+      "target": "design-action-combat/references/source.json"
+    },
+    {
+      "bytes": 1268,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "521095eb5fba325a0e89d267522af11fbe1208766b8f49d8b612bb83f3cfa00f",
+      "target": "design-action-combat/references/sources.md"
+    },
+    {
+      "bytes": 1352,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "ffdc39fb174415ec762661cd8ada0f4546490ee022abca83eaef29d53b58ee3b",
+      "target": "tune-enemy-ai/SKILL.md"
+    },
+    {
+      "bytes": 1730,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "902e04255af8180c5a2307e696d70b937fc55c1339c0d6bec4edbf55888cb4b7",
+      "target": "tune-enemy-ai/references/guide.md"
+    },
+    {
+      "bytes": 1700,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "13bcd0294240d0520bb1e132871ffe6f1ab36ff7c00868483f2f3490dab4e360",
+      "target": "tune-enemy-ai/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "tune-enemy-ai/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1583,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b878b09dbea15e97be674bc775e9f03afc652d158cd83edfab32557b7612d480",
+      "target": "tune-enemy-ai/references/source.json"
+    },
+    {
+      "bytes": 1216,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b9511d779c2cb2594845b5ab530e9d4d162033f7d19bcc522129553d122d4b1d",
+      "target": "tune-enemy-ai/references/sources.md"
+    },
+    {
+      "bytes": 1526,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "7d2fb047c7ab7032f24e243560166c63da4d41f53eb12a0a7e2d610c9f680216",
+      "target": "build-threejs-enemy-systems/SKILL.md"
+    },
+    {
+      "bytes": 1944,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "3ef280f9a1706190e58c58dc5b464695dd57248633f5fce9e534e67647c43726",
+      "target": "build-threejs-enemy-systems/references/guide.md"
+    },
+    {
+      "bytes": 4418,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b33c08b3296ea1a39d37705be29d773db428ef8a337a92f3640eb2cb6792bbb8",
+      "target": "build-threejs-enemy-systems/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "build-threejs-enemy-systems/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1691,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "8cd2b5355e92d9a0364d26f8a58083eedd205646fa5a4de3b4329fd5c5d9128c",
+      "target": "build-threejs-enemy-systems/references/source.json"
+    },
+    {
+      "bytes": 1238,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "41f3e1fb20179d3f47034254d6ac06f10bf7cbc9de7a2835f040bf785a14c301",
+      "target": "build-threejs-enemy-systems/references/sources.md"
+    },
+    {
+      "bytes": 1327,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "67bef3c967e938367f4c9d8ed0316fff6966cd6f2b915b5393daa11e0ba768cd",
+      "target": "design-game-encounters/SKILL.md"
+    },
+    {
+      "bytes": 1763,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "41f20929d0ad9f2ce47df5c70813433c644f18ac87e1a155c6b8c1714e58d368",
+      "target": "design-game-encounters/references/guide.md"
+    },
+    {
+      "bytes": 1033,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0cb2da5d4fbc25815fbd57b4627b9fafb1b3cc050712e7103476b214f7514a61",
+      "target": "design-game-encounters/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "design-game-encounters/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1636,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "e8ac5f85102901215d3631d9e7f34c80b56970c1db2af66ffa124b5abc9891a9",
+      "target": "design-game-encounters/references/source.json"
+    },
+    {
+      "bytes": 1224,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "4040eb180e861dc5514360353e48cc260a027983d306063017bd1653977058d7",
+      "target": "design-game-encounters/references/sources.md"
+    },
+    {
+      "bytes": 1558,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "9f35297638b35f15df6328900cf547795057b9651474b4cc707888db66f415f4",
+      "target": "author-game-levels/SKILL.md"
+    },
+    {
+      "bytes": 1783,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0b867151bcb96749c554e5fbc7c34b69b74091301d3d54e7536b04a967c458f1",
+      "target": "author-game-levels/references/guide.md"
+    },
+    {
+      "bytes": 4374,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "df8da94bf505ed20f3d9062151354a5c6901ca4dc3d5b0c6f493a700277c3644",
+      "target": "author-game-levels/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "author-game-levels/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1654,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "6853a3cbba3e9d6ca217066b24d09b567422eb9767106281f3e666bcc43351a0",
+      "target": "author-game-levels/references/source.json"
+    },
+    {
+      "bytes": 1267,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "9824d1241cda9bdfe3c90b9ea14c3251fd88810dc083b2ded1bfee66bc6f971d",
+      "target": "author-game-levels/references/sources.md"
+    },
+    {
+      "bytes": 1453,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "4a40dba0e9da1f9c3f49cdfdca392bd3328310f3eb8128c793ac528a2b98d421",
+      "target": "optimize-threejs-games/SKILL.md"
+    },
+    {
+      "bytes": 1730,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "0ad9560c8d5b7941a39f25c30e8e633e066ef21f9b430222074d870427fece52",
+      "target": "optimize-threejs-games/references/guide.md"
+    },
+    {
+      "bytes": 1682,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "d50e8c26ae8130b5cb37da32835024ab281090f107bd52caa476b80a60f2e2b5",
+      "target": "optimize-threejs-games/references/upstream-original.txt"
+    },
+    {
+      "bytes": 1064,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6",
+      "target": "optimize-threejs-games/references/LICENSE.txt"
+    },
+    {
+      "bytes": 1707,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "6d7a75f6bfe8b5f0499a6ca2172d57bab8b8718700514050083b0f4a98c6494a",
+      "target": "optimize-threejs-games/references/source.json"
+    },
+    {
+      "bytes": 1275,
+      "regular_non_reparse_single_link": true,
+      "reviewed_bytes_equal": true,
+      "sha256": "ba638edbf4de5d7e761548a4772e7e2788d382058066e5e12ce660df510d1449",
+      "target": "optimize-threejs-games/references/sources.md"
+    }
+  ],
+  "files_readback_verified": 36,
+  "general_access_granted": false,
+  "job": "20261025-074042-todo-3080",
+  "manifest_sha256": "2141bfa3a4d04fd62398741f5e80627e8cb0ef36815ccec6643711540d8bc924",
+  "new_central_writes_by_verifier": 0,
+  "new_targets_created": 6,
+  "old_target_writes": 0,
+  "old_unknown_body_reads": 0,
+  "original_registry_recovered": false,
+  "overall16_complete": false,
+  "source_execution": false,
+  "verified_at": "2026-10-25T00:35:04.7537491Z"
+}

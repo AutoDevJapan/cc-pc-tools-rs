@@ -850,6 +850,34 @@ func main() {
 			return readReviewSnapshot(reviewMetadataStore)
 		}))
 	}
+	if os.Args[1] == "omb-runtime-metadata" {
+		os.Exit(runOMB3255RuntimeCLI(os.Args[2:], os.Stdout, omb3255AcquireRuntime))
+	}
+	if os.Args[1] == "required-checks-metadata" {
+		os.Exit(runRequiredChecksMetadataCLI(os.Args[2:], os.Stdout, func() ([]byte, error) {
+			return readReviewSnapshot(reviewMetadataStore)
+		}))
+	}
+	if os.Args[1] == "review-admission-metadata" {
+		os.Exit(runReviewAdmissionCLI(os.Args[2:], os.Stdout, func() ([]byte, error) {
+			return readReviewSnapshot(reviewMetadataStore)
+		}))
+	}
+	if os.Args[1] == "review-admission-runtime-metadata" {
+		os.Exit(runOMB3255RuntimeCLI(os.Args[2:], os.Stdout, omb3255AcquireAdmissionRuntime))
+	}
+	if os.Args[1] == "review-registration-metadata" {
+		os.Exit(runReviewRegistrationCLI(os.Args[2:], os.Stdout, acquireReviewRegistration))
+	}
+	if os.Args[1] == "unstarted-review-runtime-metadata" {
+		os.Exit(runOMB3255RuntimeCLI(os.Args[2:], os.Stdout, acquireUnstartedReviewRuntime))
+	}
+	if os.Args[1] == "private-review-runtime-metadata" {
+		os.Exit(runOMB3255RuntimeCLI(os.Args[2:], os.Stdout, acquirePrivateReviewRuntime))
+	}
+	if os.Args[1] == "consumer-review-runtime-metadata" {
+		os.Exit(runOMB3255RuntimeCLI(os.Args[2:], os.Stdout, acquireConsumerReviewRuntime))
+	}
 	f := flag.NewFlagSet("recovery", flag.ContinueOnError)
 	f.SetOutput(io.Discard)
 	home := f.String("home", "D:/CC/Tools/discord-ask", "")

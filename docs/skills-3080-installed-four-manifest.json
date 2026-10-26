@@ -1,0 +1,150 @@
+{
+  "targets": [
+    {
+      "name": "timezone-helper",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "明示されたUTC日時を対象地域へ換算し日付・offsetと曖昧さを示す。",
+      "negative": "ISTと日付を推測し静的DST表だけで現在時刻を答える。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "37d39d42082edd6ba79e277d2379a8fd966bdbf73c9c2db1d2e4e4aa3bbee17d"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "ebe0acb69d07d0d52597075ed8d18c0dfec5da305361b37329a5b41fb2576ecd"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "00450b770985f6503277cb66c618c8d87895e25deb990361245e880f42f21531"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "075d3caa6b49b892db8b162e58589649c501c6866066d4c1d8832eafb3242fa7"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "d2c436214cbd30f5a8a5d33df9ddce2e792a40eaabd440770d40179104f23619"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "594a12ec0d1dd6f13cf98c0713c08fbce04f0a0a3526cbb860ae92b951a90b90"
+        }
+      ],
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/tobewin/timezone-helper/SKILL.md"
+      ]
+    },
+    {
+      "name": "exam-generator",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "問題7件と答案の対応、選択5問各3点と記述2問各10点の満点35点を照合する。",
+      "negative": "自然数の定義を未指定で○×にし、配点85点を満点100点と保証する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "b70bb3d0c778b725da3bc8dc10827e62db47e054266809b4b3ef2655a3588724"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "3ee35861f7056e425682fc33f49fa61199aa9309fd73d6dba96b24d858a15c28"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "0d318602a4340f22b09035567cb2ea480513a40cccd43e112c6eb177b361c826"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "e17c2ebfc6fd181e3a81514592e597ac7c753c3494ea40482ae7e21c3c3322df"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "b0ad22a1535ef7b1eb19b805b1a32c021d7a587b09d16d11e849b76e984adb06"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "6438cb90e0955835b648a381eeca13cd19ed659b56e9dcd437a638545003f83e"
+        }
+      ],
+      "sources": [
+        "https://github.com/6mile/skills/blob/920714f17d81e0a95c7a9bc51faf0a7921cd982d/skills/tobewin/exam-generator/SKILL.md"
+      ]
+    },
+    {
+      "name": "build-game-inventory",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "満杯の鞄で装備と所持品を交換し、不成立と再配送でもIDと数量を保持する。",
+      "negative": "メモリの変更だけで永続化の成功や二重取引の防止を保証する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "9e7052ec20bfae22acd05f256b2356d16d95010e17db309ac0e8d5e2a977426f"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "639c5205998af68ab387b9bbe2cd27b8a558b9fb9437693997299fc7453e5b35"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "361fed9d464173899301651ea3e1313ce17f28472a236edcb0e022763bb945ee"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "f86ce95547447bcbd6496230a510c8c372a0ffbc50b8e5f81265d5871d82a29c"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "3e32c86c68d39f93b016ffbe95f4a6d32d6fb425c5a095bf434f1b7416aed405"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/game-development/build-game-inventory/SKILL.md"
+      ]
+    },
+    {
+      "name": "implement-fog-of-war",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "閉門・開門と高さで視線を判定し、表示とAIを分けて標的を更新する。",
+      "negative": "霧の静止画だけで壁越しの攻撃と索敵も正しいと報告する。",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "07bc49f78ede5b35b2f14239d0efecd620017e4b3218fedb8ca1eb5467e2c5ef"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "4b78bddfa66748530d1dbf6918f474372adcf428519b5acda1be32f6d281769c"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "9b425e603f3328877c38649645052f4a13222f350796d329b59bb8804a4e6965"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "43fcf5ec912381033a4650bebb654f0524043507cbd8966766ed96f7aa8acb44"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "081448529ea450cb6acd2d13a7edca30a63117fd60a3385b41fcccd14acabafe"
+        }
+      ],
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/codex/implement-fog-of-war/SKILL.md"
+      ]
+    }
+  ],
+  "absence_evidence": "four-purpose-preflight074042.json and the same request revalidated by four-purpose-create074042.json",
+  "creation_receipt_sha256": "b315aaeb5c6cbfeb0d4af84982102fb86f5e375a4a82e7dbdc9d49008f012aac"
+}

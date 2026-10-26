@@ -15,3 +15,20 @@ Release binaries use the Windows GUI subsystem. The guard uses CREATE_NO_WINDOW,
 The existing task uses elevated S4U logon, hourly repetition, StartWhenAvailable, IgnoreNew, a ten-minute limit and two bounded retries. Deployment and prior task XML are in deploy-2491/. The parent integrates source/review/CI/merge.
 
 Focused checks: `cargo nextest run --locked -p cleanup-8h`, `cargo clippy --locked -p cleanup-8h --all-targets -- -D warnings`, and `cargo build --release --locked -p cleanup-8h`. Tests exercise real Windows deletion, open-file failure, junctions, pinned-root rename, hard links, source adjacency, expired deadlines, run locks, root boundaries and recycle metadata.
+
+Owned safe-delete quarantine wrappers use the same hourly run and lock. The fixed
+Go producer verifies original create/release/move outputs, current ToDo and source
+preservation, ordinary protection and physical identity. A finite child holds the
+original ID lock while Rust validates its entire metadata plan and deletes only
+the `files` payload with the existing exclusive handles. Rust then requests finish
+and checks the matching ID and canonical `quarantine_removed` result. The wrapper
+and original evidence remain. Qualification failures, incomplete deletion and
+finish failures are distinct; a failed owned wrapper never falls through to generic
+deletion. Legacy wrappers lacking provenance are retained. Candidate logical bytes,
+actual removed bytes, unmeasured retained candidates and net Windows free space are
+recorded separately. No new task, root or guard exception is introduced.
+
+The Windows integration test compiles the Go test producer and exercises the actual
+Go/Rust process protocol with synthetic canonical records and disposable data.
+It also checks canonical finish and evidence retention. Go is required for this
+affected test; the existing Windows CI already provisions it.

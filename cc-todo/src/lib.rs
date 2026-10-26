@@ -288,6 +288,9 @@ pub enum Command {
         /// Deliver to a later active generation without releasing the old question wait.
         #[arg(long, requires_all = ["delivery_note_file", "expected_state_file"])]
         delivery_only: bool,
+        /// Park the exact original answer without releasing its question or retiring its owner.
+        #[arg(long, requires = "delivery_only")]
+        preserve_question_wait: bool,
         #[arg(long)]
         scope_file: Option<PathBuf>,
     },
@@ -1435,10 +1438,16 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             delivery_note_file,
             expected_state_file,
             delivery_only,
+            preserve_question_wait,
             ..
         } => output.push(
             (if *delivery_only {
-                conversation_wait::deliver(
+                let deliver = if *preserve_question_wait {
+                    conversation_wait::deliver_preserving_wait
+                } else {
+                    conversation_wait::deliver
+                };
+                deliver(
                     db,
                     paths,
                     *id,

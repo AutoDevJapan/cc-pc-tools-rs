@@ -1,0 +1,17 @@
+{
+  "GPU_or_UI_execution": false,
+  "audit80_read_success_claimed": false,
+  "basis": "Independent numeric boundary oracles for the retained20 planning examples; no renderer, GLSL compiler, Matter/Three SDK, server, UI, live clock/device or performance test",
+  "checks": 45,
+  "domain": "skills-3080-independent-procedure-math-v1",
+  "job": "20261025-074042-todo-3080",
+  "manifest_sha256": "df3a781e73580f2fb5e7a00cba71d18d6aec889277d4713ab5d5d61d8d2d0ad7",
+  "new_ledger_adoptions": 0,
+  "passed": true,
+  "todo": 3080,
+  "upstream_code_executed": false,
+  "implementation": "evidence/skills-3080-next20-independent-math074042.go.txt",
+  "implementation_sha256": "eaf8e201c9143548b58e91282fce6095ea840613372333f7c7f0ce6486b54d4c",
+  "application_result_sha256": "5a1241e9de293236d9e7244e8587fd9bffc6b2010250e79a53a0891067d87e29",
+  "original_observation_stage": "Independent numeric checks before adoption and audit acceptance; no rendered/UI/SDK success or old audit80 success was asserted."
+}

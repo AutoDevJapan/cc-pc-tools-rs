@@ -21,6 +21,7 @@ mod owner_wait_repair;
 mod pause;
 pub mod platform;
 pub mod pool_retry;
+mod pretool_failure;
 pub mod queue;
 pub mod queue_status;
 mod quota_recovery;

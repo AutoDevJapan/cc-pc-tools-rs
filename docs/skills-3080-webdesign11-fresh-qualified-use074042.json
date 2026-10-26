@@ -1,0 +1,232 @@
+{
+  "domain": "skills-3080-fresh-qualified-reader-result-v1",
+  "todo": 3080,
+  "reader_todo": 3885,
+  "reader_job": "20261026-051732-todo-3885",
+  "creator_job": "20261025-074042-todo-3080",
+  "manifest_sha256": "0510c7e5d90934f87c8ec97cdf408d923b2e4cab622c144852e61d62821a509b",
+  "reader_spec_sha256": "acb4b1c9480cb682f7ed3966e90cecdc81807571647ba2ba1bf36dc4206dc845",
+  "actual_model": "gpt-6-luna",
+  "effort": "max",
+  "model_origin": "owner_request",
+  "effort_origin": "owner_request",
+  "parent_native_model_and_cwd_verified": true,
+  "native": {
+    "native_input_sha256": "c1fa8941c1930cd4f1f9d6f8405885997383f2dbe0e4bd5bc85577a0adad5a2a",
+    "shell_profile_warning": true,
+    "CLI_stdout_sha256": "c103bbb3cf4755925b81d765d4166ab6c0e59a6035843ac0022d6b0352f2577f",
+    "output_at": "2026-10-25T20:19:54.019Z",
+    "exit_code_not_independently_forwarded": true,
+    "call_at": "2026-10-25T20:19:51.117Z",
+    "CLI_JSON_sha256": "7431ad78ee1d98e40186892bc80c296b5eb8e5c4722de9f813e4afcfaa2c68d9",
+    "call_id": "call_4d76fee2b71d4a31864aecd5be18bfaf",
+    "exit_code": null
+  },
+  "runtime_producer": {
+    "sha256": "1eba87708c1d5ad8cccca60485ef2e78e9cdcee3db24852a914dd32dc2ef9b5c",
+    "revision": "bb1a9df569b326bcfcaa14684243aa27479ad7fe"
+  },
+  "original_producer": {
+    "sha256": "29118cd151cc9ccec8bb6a371382e2a3cc2507d5b36e3837f6cc87793b5b21fb",
+    "revision": "e1a4c21dc6241c140d4d7364d34f42b16d7005be"
+  },
+  "original_producer_revalidated": true,
+  "current_ID_and_same_buffer": true,
+  "files": 22,
+  "bytes": 34474,
+  "file_tuples": [
+    {
+      "manifest_index": 0,
+      "sha256": "fb7b10bcc4bf72f1d45f50e891ac3e136aedd7c6cc78f1f78f86cc7ca1c8a16f",
+      "bytes": 1714
+    },
+    {
+      "manifest_index": 1,
+      "sha256": "9c1c4df0b81248ff23aa61a6644f7b63c309d3e3ead7a2fd763dd8527531f1e1",
+      "bytes": 2113
+    },
+    {
+      "manifest_index": 6,
+      "sha256": "cccec1ea030d8131fdf40e8627e9f494e2106b0777c43a7135381c064c518d03",
+      "bytes": 1605
+    },
+    {
+      "manifest_index": 7,
+      "sha256": "541f9c659652681e7bb036aba522b91fae2bc3380f0f72b5efe177d7b24303ec",
+      "bytes": 2901
+    },
+    {
+      "manifest_index": 13,
+      "sha256": "b00077d1177860638f8e603e29a88c54e8a26f9bd05d2fba945e8196f05a7b9a",
+      "bytes": 1397
+    },
+    {
+      "manifest_index": 14,
+      "sha256": "5443a37958a7569d0fdf7f95a1ffadb3fdf6193f07dd063e892b10d45fc7277b",
+      "bytes": 1558
+    },
+    {
+      "manifest_index": 19,
+      "sha256": "28c5e3a5de3609696f504858c11967e8e031945d13f99dab951cfd0e2757c70b",
+      "bytes": 1615
+    },
+    {
+      "manifest_index": 20,
+      "sha256": "438f6ae53c1d79069e55ec1bcb89d1f148fad1fc01a5e007bf6bc1b5cbc0a2af",
+      "bytes": 1764
+    },
+    {
+      "manifest_index": 25,
+      "sha256": "c58185e34806d6c1c207d09a6131a584af5551ec32e50b272aa423caf05f97cb",
+      "bytes": 1380
+    },
+    {
+      "manifest_index": 26,
+      "sha256": "0dde9896f4c41e4ca75cf78003d2b2cfe9267b08e4b4928b84ed9674636494e5",
+      "bytes": 1415
+    },
+    {
+      "manifest_index": 31,
+      "sha256": "54f15ce3a0b96731f006a08604e5802a4c637e3cf7360a4ef68add7e2248637d",
+      "bytes": 1368
+    },
+    {
+      "manifest_index": 32,
+      "sha256": "be91290f1fb1f0332629717eecdebff8dda36337e04e48855814ee190ed128fc",
+      "bytes": 1415
+    },
+    {
+      "manifest_index": 37,
+      "sha256": "f6abeb65b7fc64df88c21fa3201828aae746c17328372359a5582e747859e765",
+      "bytes": 1696
+    },
+    {
+      "manifest_index": 38,
+      "sha256": "baa66403e83b2ca8196aba7df43e52f82ee9dcf7c923344a328223a3ab6dc73d",
+      "bytes": 1856
+    },
+    {
+      "manifest_index": 43,
+      "sha256": "b271aaf190a76f5b725db34447a1ddb60ca1d0d9b7cb0cf37b02c154cea46d4c",
+      "bytes": 1391
+    },
+    {
+      "manifest_index": 44,
+      "sha256": "a4fef80f1e25039c69b4846be749cc2b6d8d3bb87709be870a33baac56b7f9d3",
+      "bytes": 1330
+    },
+    {
+      "manifest_index": 49,
+      "sha256": "b1b6ebc47b1679cd02fe2cee76294e43a3cc9636a99ec494cf2d33d6c2a880b4",
+      "bytes": 1330
+    },
+    {
+      "manifest_index": 50,
+      "sha256": "fd4bad453dd65d8bccb4afdb321f4f1c5fed852e25857b52c91bfb9218d6935d",
+      "bytes": 1363
+    },
+    {
+      "manifest_index": 55,
+      "sha256": "f805af95e7cf9147cbf8c6c59aa8041b9c406e2fda8ce4f1e07c1d63fe6f572d",
+      "bytes": 1264
+    },
+    {
+      "manifest_index": 56,
+      "sha256": "8b2f8fc9fd53ebe00fa08be526a26eab85b6b0de29f4698ab5bf9d6806b1f53e",
+      "bytes": 1345
+    },
+    {
+      "manifest_index": 61,
+      "sha256": "9dfb83d60d8ef57064f03749e503e6f3dffe1efb1a6480a3fd0dffbc99acfab1",
+      "bytes": 1289
+    },
+    {
+      "manifest_index": 62,
+      "sha256": "5ca9513980a29ef697ca1a3766440709abebadfa8fa62efbd4728244db4f8519",
+      "bytes": 1365
+    }
+  ],
+  "positive_cases": 11,
+  "negative_cases": 11,
+  "model_use_definition": "Actual different read-only caller returned examples from its one qualified current-buffer call; parent read the complete original meanings with target identifiers masked.",
+  "semantic_examples": [
+    {
+      "instruction_index": 0,
+      "positive": "承認済み画像の紹介heroで受動的な浅い奥行きをpointerへ連動",
+      "negative": "直接回転して確認する製品viewerへ同じcamera方式を強制"
+    },
+    {
+      "instruction_index": 6,
+      "positive": "対応判定と静止表示を備えた装飾cursor trail",
+      "negative": "CSSで足りる強調へ特定shader graphを追加"
+    },
+    {
+      "instruction_index": 13,
+      "positive": "実在する制作実績とserviceを大見出し・補助列で紹介",
+      "negative": "情報編集・比較が主の管理画面へ装飾gridを強制"
+    },
+    {
+      "instruction_index": 19,
+      "positive": "一つのheroに装飾粒子を添え画面外で停止",
+      "negative": "衝突・堆積が要件の物理simulationを装飾粒子で代用"
+    },
+    {
+      "instruction_index": 25,
+      "positive": "hero背景の光帯と文字の可読性・静止表示を両立",
+      "negative": "背景変更の依頼でページ全体の情報設計まで変更"
+    },
+    {
+      "instruction_index": 31,
+      "positive": "承認済み背景に遠景へ薄れる装飾grid",
+      "negative": "正確な計測gridへ装飾用の移動・退色を混入"
+    },
+    {
+      "instruction_index": 37,
+      "positive": "実際の送信・成功・失敗を文字とsemantic属性で示し光を補助",
+      "negative": "実状態が無い区切り線を処理中や成功に見せる"
+    },
+    {
+      "instruction_index": 43,
+      "positive": "紹介ページの雲背景で最も明るい位置でも本文を読める",
+      "negative": "密な業務画面の既定デザインにする"
+    },
+    {
+      "instruction_index": 49,
+      "positive": "同じ画像の承認後に暗い背景・細い光・glass面を揃える",
+      "negative": "背景だけの修正でnavや表も変更"
+    },
+    {
+      "instruction_index": 55,
+      "positive": "実際の章・注釈・引用へ辿れる本文と索引",
+      "negative": "短いblogへ架空のfolioや引用を追加"
+    },
+    {
+      "instruction_index": 61,
+      "positive": "実測指標を説明・操作・データ・可視化へ分ける",
+      "negative": "未計測の紹介ページへliveや進捗率を捏造"
+    }
+  ],
+  "historical_physical_continuity_proven": false,
+  "current_os_writer": "unproved",
+  "original_registry_recovered": false,
+  "general_guard_access_granted": false,
+  "ordinary_all_agents_availability_proven": false,
+  "implicit_routing_proven": false,
+  "product_rendering_executed": false,
+  "raw_final_sha256": "685bec21da3002411b6e0147cc4386f5d310bb329d2f0ce2bb2cd47462005912",
+  "raw_final_bytes": 4292,
+  "CLI_JSON_sha256": "7431ad78ee1d98e40186892bc80c296b5eb8e5c4722de9f813e4afcfaa2c68d9",
+  "extra_policy_read_audit": {
+    "self_reported_read_after_guard_denial": true,
+    "target_type": "startup owner policy document",
+    "parent_independent_scope_audit_complete": false,
+    "whole_run_unconditional_scope_compliance_claimed": false,
+    "not_used_as_review_basis_reported": true,
+    "no_reread_reported": true
+  },
+  "previous_ordinary_guard_hold_reversed": false,
+  "previous_failed_acceptances_retained": true,
+  "new_adoptions": 0,
+  "new_central_writes": 0,
+  "whole16_complete": false
+}

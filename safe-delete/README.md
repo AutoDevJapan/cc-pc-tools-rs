@@ -1,5 +1,35 @@
 # 所有付き一時フォルダーの退避
 
+## 元担当の利用解除を既存の清掃へ渡す
+
+新規createはすべてv3で、祖先と作成物のvolume/file ID・birthを残す。
+schedulerの担当は元ジョブ・元ToDoの捕捉が必須で、失敗時はフォルダーを作らない。
+CI等のscheduler外はordinary-onlyと明示し、通常plan/finishだけを使う。
+このmodeを後からschedulerの所有へ付け替えることはできない。通常planの
+512MiB上限と別execへの提出は従来どおり。
+
+元担当だけが、特定IDの作業終了・不要・保持なし・依存なし・再生成可を
+`safe-delete.exe release --id <ID> --disposable`で記録する。旧v2の原受領を検証する
+場合は`--producer-job <元ジョブ>`、旧退避の原受領には`--move-job <退避ジョブ>`も使う。
+これらは正規ジョブを探す手掛かりであり、証明ファイルの登録や所有の付け替えではない。
+create/release/quarantineは、それぞれ単独の通常CLI呼出しで出力を受領する。
+echo、複合コマンド、出力欠落、失敗、重複出力は原受領として受け付けない。
+
+releaseは同じ元ToDoの実担当だけが行える。元のcreate出力・現在の仕様と保持指示・
+Gitの未コミット/未push成果・現物のリンクと全一覧を照合する。元ToDo全体の完了は
+条件にも証明にも使わない。再生成できないもの、必要なソース/記録が混在するものは
+通常の清掃へ渡さず保持する。解除を新しいcollectorが自己申告する機能はない。
+
+既存Rust cleanup-8hは`cleanup-lease --path <既存退避先>`を子として呼ぶ。
+Goは原受領・元ID・現状態・一般guard・同一実体・全項目を照合し、元IDのOSロックを
+保持して有限な計画だけを返す。Rustがpayloadだけを処理し、成功後にfinishを返す。
+原receiptは`quarantine_removed`となり、理由と証拠の親フォルダーは残る。
+退避先索引や手編集したreleaseだけでは候補にならない。資格失敗時に汎用削除へ
+戻さず、未測定の容量と0バイトを区別する。新しい監視/定期タスクは作らない。
+
+`inspect-retired --id <ID>`はcanonical storeを読むだけで、実物を動かさない。
+仕様、旧v2の制限と受入は[ToDo3757](../docs/owned-retirement-3757.md)を参照する。
+
 ## Consoleの画面テストで作成した一時データ
 
 今回の元の作成記録に一致する所有IDだけを、`quarantine --id <ID> --reason windows` から保全付きで退避する。通常のplanと他のGit保護は変えない。公式GitHubのrun・job・PR・main応答を原文ごとにハッシュ固定し、成功した同じソース、mainへの統合、配布物2件の実ハッシュを照合する。作成記録・所有者・処理の終了・Gitの保存状態・全項目の安定を確認し、元のGit情報を含めた全データを同じCドライブの削除希望へ移す。移動前後の全メタデータ・内部別名・原記録を照合する。削除や別フォルダーの許可は含まない。

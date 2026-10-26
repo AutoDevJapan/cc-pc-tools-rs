@@ -127,6 +127,8 @@ pub fn public_selector(s: &str) -> bool {
 /// The selector names the exact healthy subscription, never just its provider.
 pub fn plan(source: &Value, target: &Value, health: &Value, now: f64) -> Option<Value> {
     use crate::quota_recovery::provider;
+    if [source["retry_not_before"].as_f64(), source["rate_limit_reset_at"].as_f64(), source["resource_wait"]["until"].as_f64()]
+        .into_iter().flatten().any(|at| !at.is_finite() || at > now) { return None; }
     let (same, switches) = budget(source)?;
     if provider(text(&source["model"])) != Some("openai") {
         if switches >= MAX

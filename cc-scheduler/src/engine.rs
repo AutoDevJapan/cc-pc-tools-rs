@@ -1237,29 +1237,8 @@ if truth(&current["scheduler"]["question_close_pending"]){e.backend.close_questi
         // Only a complete fresh capsule can reconsider the automatic delay
         // from this same drained quota source. Explicit source resets and
         // independent owner/resource/technical waits remain authoritative.
-        let automatic_preparation_wait = i["scheduler"]["phase"] == "preparing"
-            && i["scheduler"]["preparation_failure"]["reason"] == "resource_wait"
-            && i["scheduler"]["resource_wait"]["reason"] == "http_429"
-            && i["scheduler"]["resource_wait"]["until"] == i["scheduler"]["not_before"]
-            && i["scheduler"]["preparation_failure"]["retry_at"] == i["scheduler"]["not_before"];
-        let generic_retry = i["scheduler"]["phase"] == "retry"
-            && i["scheduler"]["last_stop"] == "failed"
-            && i["scheduler"]["resource_wait"].is_null()
-            && i["scheduler"]["preparation_failure"].is_null();
-        let quota_recheck = cooldown
-            && i["subwork"].is_object()
-            && (generic_retry || automatic_preparation_wait)
-            && !crate::targeted_dispatch::held(i)
-            && self.backend.jobs()?.iter().any(|source| {
-                source["id"] == i["scheduler"]["last_job"]
-                    && owns_workspace(i, source)
-                    && source["status"] == "failed"
-                    && cc_job_policy::quota_recovery::quota_source(source)
-                    && ((generic_retry && cc_job_policy::quota_recovery::provider(s(&source["model"])) == Some("xai"))
-                        || (cc_job_policy::quota_recovery::provider(s(&source["model"])) == Some("openai")
-                            && cc_job_policy::quota_recovery::eligible_source(i, source)
-                            && crate::preparation::resource_deadline(source, self.backend.clock()).is_none()))
-            });
+        let quota_recheck = cooldown && crate::preparation::quota_recheck_candidate(
+            i, &self.backend.jobs()?, self.backend.clock());
         if cooldown && !quota_recheck {
             return Ok(None);
         }
@@ -2042,6 +2021,11 @@ if !truth(&row["scheduler"]["key"]){let attempt=add_count(&row["scheduler"]["att
             })
             .collect();
         let mut queue = priority_queue(&eligible, pri, self.backend.clock());
+        // Reconsider only the same source's automatic quota delay. Do not
+        // rewrite its stored deadline or make prepare's proof optional.
+        queue.extend(eligible.iter().filter(|item| {
+            crate::preparation::quota_recheck_candidate(item, &jobs, self.backend.clock())
+        }).cloned());
         let ranks = cc_job_policy::priority::todo_priorities_for_jobs(&db, &jobs, pri).ranks;
         // Rotation is only a tie breaker within the owner's priority class.
         queue.sort_by(|a, b| {

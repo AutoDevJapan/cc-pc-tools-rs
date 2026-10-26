@@ -297,6 +297,54 @@ fn gpt_quota_rechecks_only_an_expired_source_and_its_automatic_preparation_wait(
 }
 
 #[test]
+fn gpt_quota_automatic_wait_is_rechecked_through_normal_targeted_dispatch() {
+    let (mut f, mut sub) = gpt_research_fixture();
+    f.e.backend.clock += 7200.;
+    let now = f.e.backend.clock;
+    for job in &mut f.e.backend.records { job["created_at"] = json!(iso(T-300.)); }
+    let health = &mut f.e.backend.quota_inventory;
+    health["at"] = json!(now);
+    health["openai"]["at"] = json!(now);
+    for route in health["openai"]["safe_routes"].as_array_mut().unwrap() {route["at"] = json!(now);}
+    let row = &mut sub.db["items"][1];
+    row["scheduler"]["phase"] = json!("preparing");
+    row["scheduler"]["not_before"] = json!(now+3600.);
+    row["scheduler"]["resource_wait"] = json!({"reason":"http_429","until":now+3600.});
+    row["scheduler"]["preparation_failure"] = json!({"reason":"resource_wait","at":now-60.,"retry_at":now+3600.});
+    write_json(&f.e.todo_path, &sub.db, 1).unwrap();
+    write_json(&f.e.root.join("config.json"), &f.cfg, 1).unwrap();
+    write_json(&f.e.root.join("priorities.json"), &f.pri, 1).unwrap();
+    f.e.state["last_launch"] = json!(0);
+    f.e.persist().unwrap();
+    assert!(cc_scheduler::preparation::quota_recheck_candidate(&sub.db["items"][1], &f.e.backend.records, now));
+    let report = cc_scheduler::targeted_dispatch::run(&mut f.e, 2).unwrap();
+    assert_eq!(report["launched"], "launched1", "report={report}, engine={}, preparation={}", f.e.report, f.get(2)["scheduler"]["preparation_failure"]);
+    assert_eq!(f.e.backend.launched.len(), 1);
+    assert_eq!(f.e.backend.launched[0]["item"]["scheduler"]["selection"]["capacity_account_selector"], "p000002");
+}
+
+#[test]
+fn gpt_quota_normal_candidate_keeps_question_close_and_other_resource_deadlines() {
+    for case in ["question_close", "owner", "source_reset", "other_resource", "different_failure"] {
+        let (mut f, mut sub) = gpt_research_fixture();
+        let row = &mut sub.db["items"][1];
+        row["scheduler"]["phase"] = json!("preparing");
+        row["scheduler"]["not_before"] = json!(T+3600.);
+        row["scheduler"]["resource_wait"] = json!({"reason":"http_429","until":T+3600.});
+        row["scheduler"]["preparation_failure"] = json!({"reason":"resource_wait","retry_at":T+3600.});
+        match case {
+            "question_close" => row["scheduler"]["question_close_pending"] = json!(true),
+            "owner" => row["owner_stopped"] = json!(true),
+            "source_reset" => f.e.backend.records[1]["rate_limit_reset_at"] = json!(T+900.),
+            "other_resource" => row["scheduler"]["resource_wait"]["reason"] = json!("memory"),
+            "different_failure" => row["scheduler"]["preparation_failure"]["reason"] = json!("tool_failed"),
+            _ => unreachable!(),
+        }
+        assert!(!cc_scheduler::preparation::quota_recheck_candidate(row, &f.e.backend.records, T), "{case}");
+    }
+}
+
+#[test]
 fn gpt_quota_does_not_admit_unknown_routes_reused_aliases_stops_or_exhausted_budgets() {
     for case in ["unknown", "no_routes", "used_alias", "stale", "budget", "history", "stop", "dependency"] {
         let (mut f, mut sub) = gpt_research_fixture();

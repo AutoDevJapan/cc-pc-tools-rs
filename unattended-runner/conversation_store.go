@@ -372,7 +372,7 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 	if err != nil {
 		return zero, err
 	}
-	if row.Status == "done" || (row.Status == "recovery_unverified" && actor == nil) {
+	if (row.Status == "done" || row.Status == "recovery_unverified") && actor == nil {
 		return zero, errors.New("conversation original task unavailable")
 	}
 	body, err := boundedRegular(input.BodyFile)
@@ -478,6 +478,14 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 		dir := filepath.Join(r.Config.Home, "conversations", input.RequestID)
 		q = ConversationQuestion{RequestID: input.RequestID, SenderID: "conversation-v1-" + bytesHash([]byte(input.RequestID))[:32], Todo: input.Todo, Project: row.Project, OriginThread: input.OriginThread, InputSHA: inputHash, BodyFile: filepath.Join(dir, "question.txt"), DecisionFile: filepath.Join(dir, "decision.json"), Title: input.Title, Wait: input.Wait, Phase: "reserved", Created: r.Now().UTC().Format(time.RFC3339Nano)}
 		q.Actor = actor
+		if actor != nil {
+			if len(actor.proof) == 0 {
+				return zero, errors.New("conversation actor unverified")
+			}
+			if err = writeConversationOnce(filepath.Join(dir, "actor-succession.json"), actor.proof); err != nil {
+				return zero, err
+			}
+		}
 		q.Attachments, q.AttachmentHashes = paths, hashes
 		if err = writeConversationOnce(q.BodyFile, body); err != nil {
 			return zero, err
@@ -589,6 +597,9 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 				continue
 			}
 			if canonical.SenderID == q.SenderID || canonical.Thread == q.Thread {
+				if !sameConversationActor(canonical.Actor, q.Actor) {
+					return zero, errors.New("conversation actor differs")
+				}
 				if canonical.SenderID != q.SenderID || canonical.Thread != q.Thread || canonical.Todo != q.Todo || canonical.Project != q.Project || canonical.Fingerprint != q.Fingerprint || canonical.QuestionSHA != q.QuestionSHA || canonical.DecisionSHA != q.DecisionSHA || !slices.Equal(canonical.AttachmentHashes, report.Images) {
 					return zero, errors.New("conversation canonical question differs")
 				}

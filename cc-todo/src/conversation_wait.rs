@@ -449,11 +449,21 @@ pub fn actor_note_instruction(
     if changes_spec {
         return fail("note_invalid");
     }
+    let row = &db["items"][row_index(db, id)?];
+    // question-answer adds the complete reply after releasing this exact wait.
+    // Appending it during the preceding edit would duplicate it in the prompt.
+    if !row[WAIT_KEY].is_null() {
+        return Ok(None);
+    }
     let data = bytes(note_file.ok_or("conversation_note_invalid")?)?;
     let note = std::str::from_utf8(&data).map_err(|_| "conversation_note_invalid")?;
-    let row = &db["items"][row_index(db, id)?];
+    let note = note
+        .trim_start_matches('\u{feff}')
+        .replace("\r\n", "\n")
+        .replace('\r', "\n");
+    let previous = text(row, "note").replace("\r\n", "\n").replace('\r', "\n");
     let suffix = note
-        .strip_prefix(text(row, "note"))
+        .strip_prefix(&previous)
         .and_then(|s| s.strip_prefix("\n\n"))
         .filter(|s| s.starts_with("conversation-owner-reply:") && !s.contains('\0'))
         .ok_or("conversation_note_invalid")?;

@@ -64,6 +64,10 @@ func actorTest(t *testing.T, native bool) *actorFixture {
 	}
 	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
 		if strings.Contains(path, "scrub391") && args[0] == "--verify-current-succession" {
+			row, err := f.r.todo(3277)
+			if err != nil || (row.Status != "todo" && row.Status != "doing" && row.Status != "wait") {
+				return "", errors.New("live admission does not accept a held or completed actor")
+			}
 			b, _ := json.Marshal(a.proof)
 			return string(b), nil
 		}
@@ -150,7 +154,7 @@ func TestConversationActorPreservesOriginDependencyAndFullReply(t *testing.T) {
 			if canonicalHash(origin) != canonicalHash(before) || actor.Status != "wait" || canonicalHash(actor.WaitOn) != canonicalHash([]uint64{3751}) || len(actor.QuestionWait) != 0 {
 				t.Fatal("original or dependency was changed")
 			}
-			if !strings.Contains(actor.Note, "<discord-owner-answer>\n"+reply.Body+"\n</discord-owner-answer>") || !strings.Contains(actor.Scheduler.OwnerInstruction, "<discord-owner-answer>\n"+reply.Body+"\n</discord-owner-answer>") || !strings.Contains(actor.Note, "origin_todo_id=1171, todo_id=3277") || f.r.State.Requests[reply.Message].Todo != 3277 {
+			if !strings.Contains(actor.Note, "<discord-owner-answer>\n"+reply.Body+"\n</discord-owner-answer>") || !strings.Contains(actor.conversationInstruction(), "<discord-owner-answer>\n"+reply.Body+"\n</discord-owner-answer>") || !strings.Contains(actor.Note, "origin_todo_id=1171, todo_id=3277") || f.r.State.Requests[reply.Message].Todo != 3277 {
 				t.Fatal("full reply did not reach the actual actor")
 			}
 			f.r.NoticeAttempted = false
@@ -176,11 +180,16 @@ func TestConversationActorRejectsForeignChangedOrStoppedScope(t *testing.T) {
 			case "origin":
 				f.input.Todo = 1889
 			case "spec":
-				f.proof["spec_sha256"] = strings.Repeat("a", 64)
+				if os.WriteFile(filepath.Join(f.r.Config.Home, "actor.md"), []byte("changed current spec"), 0600) != nil {
+					t.Fatal("spec")
+				}
 			case "root":
-				f.proof["registered_path_sha256"] = strings.Repeat("a", 64)
+				f.mutate(t, 3277, func(row map[string]any) { row["spec"] = filepath.Join(f.r.Config.Home, "other.md") })
 			case "source":
-				f.proof["source_kind"] = "assistant_quote"
+				path := filepath.Join(f.r.Config.Home, "conversations", f.input.RequestID, "actor-succession.json")
+				if os.WriteFile(path, []byte(`{"source_kind":"assistant_quote"}`), 0600) != nil {
+					t.Fatal("source")
+				}
 			case "job":
 				f.input.ActorJob = "foreign-worker"
 			case "owner-stop":
@@ -259,6 +268,63 @@ func TestConversationActorCanonicalWaitAfterDependencyAndOriginStopRace(t *testi
 			if len(health.Errors) != 0 || actor.Status != "todo" || f.r.State.Requests[reply.Message].Todo != 3277 || len(actor.QuestionAnswers) != 1 {
 				t.Fatalf("actual recipient answer failed: %v", health.Errors)
 			}
+			if strings.Count(actor.conversationInstruction(), "<discord-owner-answer>") != 1 {
+				t.Fatal("one question answer must reach the pending prompt once")
+			}
+		})
+	}
+}
+
+func TestConversationActorCompletedTasksCloseAndReplayWithoutNewAdmission(t *testing.T) {
+	for _, completed := range [][]uint64{{3277}, {1171}, {1171, 3277}} {
+		t.Run(fmt.Sprint(completed), func(t *testing.T) {
+			f := actorTest(t, false)
+			q := f.ask(t)
+			reply := f.reply(t, 8, "a")
+			f.replies[0].Todo = 1171
+			f.r.processConversations(context.Background(), &Health{})
+			path := filepath.Join(f.r.Config.Home, "conversations", q.RequestID, "replies", reply.Message+".json")
+			b, err := boundedRegular(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			application := map[string]any{"source": "discord-api-v10", "request_id": q.SenderID, "origin_todo_id": 1171, "todo_id": 3277, "thread_id": q.Thread, "question_message_id": q.Message, "message_id": reply.Message, "author_id": reply.Author, "job_id": "worker-3277", "revision": strings.Repeat("a", 40), "applied_at": f.r.Now().Format(time.RFC3339Nano), "completion": "same scope applied", "reply_sha256": canonicalHash(f.replies[0]), "source_receipt_sha256": bytesHash(b), "verification": map[string]string{"execution": "checked", "origin_saved": "retained", "identity": "same question"}}
+			if publish(filepath.Join(f.r.Config.Home, "applied", reply.Message+".json"), application) != nil {
+				t.Fatal("application")
+			}
+			for _, id := range completed {
+				f.mutate(t, id, func(row map[string]any) { row["status"] = "done" })
+			}
+			// The live admission verifier rejects completed tasks. A historical
+			// source proof may confirm only this already-delivered question.
+			backend := f.r.Run
+			f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+				if strings.Contains(path, "scrub391") && args[0] == "--verify-current-succession" {
+					return "", errors.New("completed task cannot be admitted")
+				}
+				return backend(ctx, path, args...)
+			}
+			before, _ := os.ReadFile(f.r.TodoPath)
+			health := Health{}
+			f.r.NoticeAttempted = false
+			f.r.processConversations(context.Background(), &health)
+			index, err := f.r.loadConversations()
+			if err != nil || len(health.Errors) != 0 || index.Questions[q.RequestID].Phase != "closed" {
+				t.Fatalf("completed actor question did not close: %v %v", err, health.Errors)
+			}
+			replayed, err := f.r.conversationAsk(context.Background(), f.input)
+			if err != nil || replayed.RequestID != q.RequestID || replayed.Phase != "closed" || f.posts != 1 {
+				t.Fatalf("completed receipt was not returned: %v", err)
+			}
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if string(before) != string(after) {
+				t.Fatal("closing or replay changed completed work")
+			}
+			changed := f.input
+			changed.RequestID = "new-question-after-completion"
+			if _, err = f.r.conversationAsk(context.Background(), changed); err == nil {
+				t.Fatal("historical proof admitted a new question")
+			}
 		})
 	}
 }
@@ -312,10 +378,65 @@ func TestConversationActorCanonicalEditedReplyReplacesPendingPrompt(t *testing.T
 	health = Health{}
 	f.r.processConversations(context.Background(), &health)
 	row, _ := f.r.todo(3277)
-	if len(health.Errors) != 0 || !strings.Contains(row.Scheduler.OwnerInstruction, f.replies[0].Body) || strings.Contains(row.Scheduler.OwnerInstruction, reply.Body) || row.Status != "wait" || canonicalHash(row.WaitOn) != canonicalHash([]uint64{3751}) {
+	if len(health.Errors) != 0 || !strings.Contains(row.conversationInstruction(), f.replies[0].Body) || strings.Contains(row.conversationInstruction(), reply.Body) || row.Status != "wait" || canonicalHash(row.WaitOn) != canonicalHash([]uint64{3751}) {
 		t.Fatalf("edited answer did not replace the exact pending prompt: %v", health.Errors)
 	}
 	if !strings.Contains(row.Note, reply.Body) || !strings.Contains(row.Note, f.replies[0].Body) {
 		t.Fatal("note lost answer history")
 	}
+}
+
+func TestConversationActorCompletedReceiptStillRejectsChangedScope(t *testing.T) {
+	for _, change := range []string{"source", "spec", "project", "stopped"} {
+		t.Run(change, func(t *testing.T) {
+			f := actorTest(t, false)
+			q := f.ask(t)
+			f.mutate(t, 3277, func(row map[string]any) { row["status"] = "done" })
+			index, err := f.r.loadConversations()
+			if err != nil {
+				t.Fatal(err)
+			}
+			q.Phase = "answered"
+			index.Questions[q.RequestID] = q
+			if publish(f.r.conversationPath(), index) != nil {
+				t.Fatal("index")
+			}
+			if _, err = f.r.conversationAsk(context.Background(), f.input); err != nil {
+				t.Fatal("valid receipt replay failed", err)
+			}
+			switch change {
+			case "source":
+				if os.WriteFile(filepath.Join(f.r.Config.Home, "conversations", q.RequestID, "actor-succession.json"), []byte("changed proof"), 0600) != nil {
+					t.Fatal("proof")
+				}
+			case "spec":
+				if os.WriteFile(filepath.Join(f.r.Config.Home, "actor.md"), []byte("changed spec"), 0600) != nil {
+					t.Fatal("spec")
+				}
+			case "project":
+				f.mutate(t, 3277, func(row map[string]any) { row["project"] = "other" })
+			case "stopped":
+				f.mutate(t, 1171, func(row map[string]any) { row["owner_stopped"] = true })
+			}
+			before, _ := os.ReadFile(f.r.TodoPath)
+			if _, err = f.r.conversationAsk(context.Background(), f.input); err == nil {
+				t.Fatal("changed completed identity accepted")
+			}
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if string(before) != string(after) || f.posts != 1 {
+				t.Fatal("metadata replay changed work or sent a question")
+			}
+		})
+	}
+}
+
+func TestConversationActorIgnoresUnrelatedMalformedInstruction(t *testing.T) {
+	f := actorTest(t, false)
+	f.mutate(t, 3751, func(row map[string]any) {
+		row["scheduler"] = map[string]any{"owner_instruction": map[string]any{"unknown": true}}
+	})
+	if _, err := f.r.todo(3277); err != nil {
+		t.Fatal("unrelated malformed instruction hid a valid recipient")
+	}
+	f.ask(t)
 }

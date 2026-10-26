@@ -11,13 +11,19 @@ import (
 	"strings"
 )
 
+// The finite native source is documented in docs/current-product-succession.md.
+const conversationSuccessionSession = "01a16c0c-18a9-7570-ab4e-9522ffa8d6d0"
+const conversationSuccessionEvent = "e0cff4ef85745ffb93ddcc36d1fb9626c4c098967406d8875a672d58c1684465"
+const conversationSuccessionAt = "2026-10-24T11:26:20.672Z"
+
 type conversationActor struct {
-	Todo          uint64 `json:"todo_id"`
-	Job           string `json:"job_id"`
-	OriginSpecSHA string `json:"origin_spec_sha256"`
-	SpecSHA       string `json:"spec_sha256"`
-	RootSHA       string `json:"registered_path_sha256"`
-	SourceSHA     string `json:"succession_sha256"`
+	proof         json.RawMessage // Transient: persisted separately before reservation.
+	Todo          uint64          `json:"todo_id"`
+	Job           string          `json:"job_id"`
+	OriginSpecSHA string          `json:"origin_spec_sha256"`
+	SpecSHA       string          `json:"spec_sha256"`
+	RootSHA       string          `json:"registered_path_sha256"`
+	SourceSHA     string          `json:"succession_sha256"`
 }
 
 func conversationRecipient(q ConversationQuestion) uint64 {
@@ -35,7 +41,7 @@ func conversationOrigin(q ConversationQuestion) uint64 {
 }
 
 func sameConversationActor(a, b *conversationActor) bool {
-	return (a == nil && b == nil) || (a != nil && b != nil && *a == *b)
+	return (a == nil && b == nil) || (a != nil && b != nil && canonicalHash(a) == canonicalHash(b))
 }
 
 func conversationPathSHA(path string) string {
@@ -77,11 +83,24 @@ func (r *Runner) conversationActorForAsk(ctx context.Context, input Conversation
 		return nil, err
 	}
 	var saved *conversationActor
-	if q, exists := index.Questions[input.RequestID]; exists {
+	q, exists := index.Questions[input.RequestID]
+	if alias, ok := index.Aliases[input.RequestID]; ok {
+		q, exists = index.Questions[alias.Target]
+	}
+	var historical json.RawMessage
+	readonly := false
+	if exists {
 		saved = q.Actor
+		readonly = q.Phase == "answered" || q.Phase == "applied" || q.Phase == "closed"
+		if saved != nil && q.Phase != "reserved" {
+			historical, err = r.conversationActorProof(q)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 	if saved != nil && saved.Job != input.ActorJob {
-		current, err := r.verifyConversationActor(ctx, input.Todo, input.ActorTodo, input.ActorJob, origin, nil)
+		current, err := r.checkConversationActor(ctx, input.Todo, input.ActorTodo, input.ActorJob, origin, nil, historical, readonly)
 		if err != nil {
 			return nil, err
 		}
@@ -89,21 +108,38 @@ func (r *Runner) conversationActorForAsk(ctx context.Context, input Conversation
 		if !sameConversationActor(current, saved) {
 			return nil, errors.New("conversation actor differs")
 		}
-		return r.verifyConversationActor(ctx, input.Todo, input.ActorTodo, saved.Job, origin, saved)
+		return r.checkConversationActor(ctx, input.Todo, input.ActorTodo, saved.Job, origin, saved, historical, readonly)
 	}
-	return r.verifyConversationActor(ctx, input.Todo, input.ActorTodo, input.ActorJob, origin, saved)
+	return r.checkConversationActor(ctx, input.Todo, input.ActorTodo, input.ActorJob, origin, saved, historical, readonly)
 }
 
 func (r *Runner) verifyConversationActor(ctx context.Context, originID, actorID uint64, jobID string, origin *TodoRow, saved *conversationActor) (*conversationActor, error) {
+	return r.checkConversationActor(ctx, originID, actorID, jobID, origin, saved, nil, false)
+}
+
+func (r *Runner) conversationActorProof(q ConversationQuestion) (json.RawMessage, error) {
+	if q.Actor == nil || !conversationID.MatchString(q.RequestID) {
+		return nil, errors.New("conversation actor unverified")
+	}
+	b, err := boundedRegular(filepath.Join(r.Config.Home, "conversations", q.RequestID, "actor-succession.json"))
+	if err != nil || canonicalHash(json.RawMessage(b)) != q.Actor.SourceSHA {
+		return nil, errors.New("conversation actor unverified")
+	}
+	return b, nil
+}
+
+// A retained proof confirms an existing question only; it can never reserve a
+// question, register a wait or deliver new instructions after work has ended.
+func (r *Runner) checkConversationActor(ctx context.Context, originID, actorID uint64, jobID string, origin *TodoRow, saved *conversationActor, historical json.RawMessage, readonly bool) (*conversationActor, error) {
 	fail := errors.New("conversation actor unverified")
-	if originID != 1171 || actorID != 3277 || origin.ID != originID || origin.Project != "GitDo" || origin.Status == "done" || conversationActorHeld(origin.conversationState) || !validJob(jobID) {
+	if originID != 1171 || actorID != 3277 || origin.ID != originID || origin.Project != "GitDo" || (!readonly && origin.Status != "recovery_unverified" && origin.Status != "todo" && origin.Status != "doing" && origin.Status != "wait") || conversationActorHeld(origin.conversationState) || !validJob(jobID) {
 		return nil, fail
 	}
 	actor, err := r.conversationTask(ctx, actorID)
 	if err != nil || actor.Project != origin.Project || actor.conversationRoot != origin.conversationRoot || conversationActorHeld(actor.conversationState) {
 		return nil, fail
 	}
-	if actor.Status != "doing" && actor.Status != "todo" && actor.Status != "wait" && !(actor.Status == "block" && len(actor.QuestionWait) != 0 && string(actor.QuestionWait) != "null" && saved != nil) {
+	if !readonly && actor.Status != "doing" && actor.Status != "todo" && actor.Status != "wait" && !(actor.Status == "block" && len(actor.QuestionWait) != 0 && string(actor.QuestionWait) != "null" && saved != nil) {
 		return nil, fail
 	}
 	// The original job remains a provenance anchor after normal scheduler resume.
@@ -134,7 +170,10 @@ func (r *Runner) verifyConversationActor(ctx context.Context, originID, actorID 
 	if readJSON(filepath.Join(jobs, jobID, "job.json"), 1<<20, &job) != nil || job.ID != jobID || job.Todo != actorID || !filepath.IsAbs(job.Cwd) || actor.Scheduler.Worktree == "" || conversationPathSHA(job.Cwd) != conversationPathSHA(actor.Scheduler.Worktree) || job.Stopped || job.Cancel || job.Reason == "manual" || job.Reason == "person" || job.Status == "cancelled" || job.Status == "canceled" {
 		return nil, fail
 	}
-	raw, err := r.Run(ctx, "D:/CC/Tools/client-records/scrub391.exe", "--verify-current-succession", fmt.Sprint(actorID))
+	raw := string(historical)
+	if historical == nil {
+		raw, err = r.Run(ctx, "D:/CC/Tools/client-records/scrub391.exe", "--verify-current-succession", fmt.Sprint(actorID))
+	}
 	var proof struct {
 		Domain      string `json:"domain"`
 		Verified    bool   `json:"verified"`
@@ -152,7 +191,7 @@ func (r *Runner) verifyConversationActor(ctx context.Context, originID, actorID 
 		At          string `json:"source_at"`
 	}
 	var actorSpec, originSpec string
-	if err != nil || json.Unmarshal([]byte(raw), &proof) != nil || proof.Domain != "current-product-succession-v1" || !proof.Verified || proof.Origin != 3638 || proof.Actor != 3650 || proof.Todo != actorID || proof.Project != actor.Project || proof.Registry == nil || *proof.Registry || proof.RootSHA != conversationPathSHA(actor.conversationRoot) || proof.Kind != "native_user" || proof.Session != "01a16c0c-18a9-7570-ab4e-9522ffa8d6d0" || proof.EventSHA != "e0cff4ef85745ffb93ddcc36d1fb9626c4c098967406d8875a672d58c1684465" || proof.At != "2026-10-24T11:26:20.672Z" || json.Unmarshal(actor.Spec, &actorSpec) != nil || json.Unmarshal(origin.Spec, &originSpec) != nil || !filepath.IsAbs(actorSpec) || !filepath.IsAbs(originSpec) || proof.SpecPathSHA != conversationPathSHA(actorSpec) {
+	if err != nil || json.Unmarshal([]byte(raw), &proof) != nil || proof.Domain != "current-product-succession-v1" || !proof.Verified || proof.Origin != 3638 || proof.Actor != 3650 || proof.Todo != actorID || proof.Project != actor.Project || proof.Registry == nil || *proof.Registry || proof.RootSHA != conversationPathSHA(actor.conversationRoot) || proof.Kind != "native_user" || proof.Session != conversationSuccessionSession || proof.EventSHA != conversationSuccessionEvent || proof.At != conversationSuccessionAt || json.Unmarshal(actor.Spec, &actorSpec) != nil || json.Unmarshal(origin.Spec, &originSpec) != nil || !filepath.IsAbs(actorSpec) || !filepath.IsAbs(originSpec) || proof.SpecPathSHA != conversationPathSHA(actorSpec) {
 		return nil, fail
 	}
 	// No spec is opened before the official finite verifier succeeds.
@@ -165,6 +204,7 @@ func (r *Runner) verifyConversationActor(ctx context.Context, originID, actorID 
 		return nil, fail
 	}
 	bound := &conversationActor{Todo: actorID, Job: jobID, OriginSpecSHA: bytesHash(o), SpecSHA: bytesHash(a), RootSHA: proof.RootSHA, SourceSHA: canonicalHash(proof)}
+	bound.proof, _ = json.Marshal(proof)
 	if saved != nil && !sameConversationActor(bound, saved) {
 		return nil, fail
 	}
@@ -172,6 +212,18 @@ func (r *Runner) verifyConversationActor(ctx context.Context, originID, actorID 
 }
 
 func (r *Runner) conversationActorRow(ctx context.Context, q ConversationQuestion) (*TodoRow, error) {
+	var proof json.RawMessage
+	if q.Phase != "reserved" {
+		var err error
+		proof, err = r.conversationActorProof(q)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return r.conversationActorRowWithProof(ctx, q, proof, false)
+}
+
+func (r *Runner) conversationActorRowWithProof(ctx context.Context, q ConversationQuestion, historical json.RawMessage, readonly bool) (*TodoRow, error) {
 	origin, err := r.conversationTask(ctx, q.Todo)
 	if err != nil {
 		return nil, err
@@ -183,7 +235,7 @@ func (r *Runner) conversationActorRow(ctx context.Context, q ConversationQuestio
 	if err != nil {
 		return nil, err
 	}
-	if _, err = r.verifyConversationActor(ctx, q.Todo, q.Actor.Todo, q.Actor.Job, origin, q.Actor); err != nil {
+	if _, err = r.checkConversationActor(ctx, q.Todo, q.Actor.Todo, q.Actor.Job, origin, q.Actor, historical, readonly); err != nil {
 		return nil, err
 	}
 	row, err := r.conversationTask(ctx, q.Actor.Todo)
@@ -241,6 +293,9 @@ func (r *Runner) conversationActorWait(ctx context.Context, index *conversationI
 		pending = pending || dependency.Status != "done"
 	}
 	if pending {
+		if q.WaitDeferred {
+			return q, nil
+		}
 		q.WaitDeferred = true
 		index.Questions[q.RequestID] = q
 		return q, publish(r.conversationPath(), index)
@@ -311,11 +366,11 @@ func (r *Runner) deliverConversationActorReply(ctx context.Context, q Conversati
 			return errors.New("conversation normal task delivery deferred")
 		}
 		row, err = r.todo(delivery.Todo)
-		if err != nil || !hasNoteMarker(row.Note, marker) || !hasNoteMarker(row.Scheduler.OwnerInstruction, marker) {
+		if err != nil || !hasNoteMarker(row.Note, marker) || !hasNoteMarker(row.conversationInstruction(), marker) {
 			return errors.New("conversation task delivery readback deferred")
 		}
 	}
-	if !hasNoteMarker(row.Scheduler.OwnerInstruction, marker) {
+	if !hasNoteMarker(row.conversationInstruction(), marker) {
 		return errors.New("conversation task prompt delivery unverified")
 	}
 	req.Todo, req.Phase = delivery.Todo, "conversation_reply_delivered"

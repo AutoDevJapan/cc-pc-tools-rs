@@ -131,7 +131,7 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 		}
 		// A committed receipt can outlive a lost state-save response. Do not
 		// overwrite its canonical original while that response is reconciled.
-		row, err := r.todo(q.Todo)
+		row, err := r.todo(conversationRecipient(q))
 		if err != nil {
 			return nil, errors.New("conversation implementation state unavailable")
 		}

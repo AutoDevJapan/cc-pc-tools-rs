@@ -190,10 +190,16 @@ type TodoRow struct {
 		Job string `json:"job"`
 	} `json:"worker_receipt"`
 	Scheduler struct {
-		Job              string `json:"job"`
-		Worktree         string `json:"worktree"`
-		OwnerInstruction string `json:"owner_instruction"`
+		Job              string          `json:"job"`
+		Worktree         string          `json:"worktree"`
+		OwnerInstruction json.RawMessage `json:"owner_instruction"`
 	} `json:"scheduler"`
+}
+
+func (row *TodoRow) conversationInstruction() string {
+	var text string
+	_ = json.Unmarshal(row.Scheduler.OwnerInstruction, &text)
+	return text
 }
 
 func (r *Runner) todo(id uint64) (*TodoRow, error) {

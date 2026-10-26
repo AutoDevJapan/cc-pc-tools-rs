@@ -347,9 +347,16 @@ func (r *Runner) conversationCloseReply(ctx context.Context, q ConversationQuest
 
 func (r *Runner) conversationCloseSnapshot(ctx context.Context, q ConversationQuestion, proof *conversationProof, mark bool) (map[string]conversationCloseStamp, bool, error) {
 	stamps := make(map[string]conversationCloseStamp)
-	row, err := r.todo(conversationRecipient(q))
+	var row *TodoRow
+	var err error
 	if q.Actor != nil {
-		row, err = r.conversationActorRow(ctx, q)
+		var proof json.RawMessage
+		proof, err = r.conversationActorProof(q)
+		if err == nil {
+			row, err = r.conversationActorRowWithProof(ctx, q, proof, true)
+		}
+	} else {
+		row, err = r.todo(q.Todo)
 	}
 	if err != nil || row.ID != conversationRecipient(q) || row.Project == "owner" || strings.TrimSpace(q.Project) == "" || row.Project != q.Project {
 		return stamps, false, errConversationCloseApplied

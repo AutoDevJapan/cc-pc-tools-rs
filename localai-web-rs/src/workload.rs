@@ -1399,7 +1399,7 @@ fn aggregate_progress(
                 cc_todo::StoreError::InvalidJson(_) => {
                     "共有ToDoのJSONが不正です。集計を更新できません。"
                 }
-                cc_todo::StoreError::Io(_) => {
+                cc_todo::StoreError::Io(_) | cc_todo::StoreError::History(_) => {
                     "共有ToDoを取得できませんでした。集計を更新できません。"
                 }
             }

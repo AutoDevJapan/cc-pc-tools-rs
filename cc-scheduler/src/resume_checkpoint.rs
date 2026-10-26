@@ -170,9 +170,7 @@ pub fn run<B: Backend>(
         .push(receipt);
     row["scheduler"]["branch"] = proof["after_branch"].clone();
     row["updated"] = json!(chrono::Local::now().format("%Y-%m-%d %H:%M").to_string());
-    cc_job_policy::todo_store::check_size(encode(&fresh, 1).len())
-        .map_err(|_| Error("InputRejected"))?;
-    write_json(&engine.todo_path, &fresh, 1)?;
+    write_todo(&engine.todo_path, &fresh)?;
     report["saved"] = json!(true);
     Ok(report)
 }

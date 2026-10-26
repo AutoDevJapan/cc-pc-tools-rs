@@ -1,17 +1,10 @@
 use crate::preparation::{failure_reason, owns_workspace};
 use crate::{
-    backend::{Backend, safe_text, valid_effort, valid_model},
+    backend::{safe_text, valid_effort, valid_model, Backend},
     common::*,
     policy::*,
 };
 use cc_job_policy::{cancellation, todo_wait};
-fn todo_store_error(error: cc_job_policy::todo_store::Error) -> Error {
-    match error {
-        cc_job_policy::todo_store::Error::TooLarge => Error("todo_store_too_large: limit 64 MiB"),
-        cc_job_policy::todo_store::Error::InvalidJson(_) => Error("todo_store_invalid_json"),
-        cc_job_policy::todo_store::Error::Io(e) => e.into(),
-    }
-}
 fn invalid_subwork(error: &str, stage: &'static str) -> Error {
     // Emit only fixed classifications. Never print a store value or an
     // unrecognized error, and preserve the caller's existing failure code.
@@ -291,8 +284,7 @@ impl<B: Backend> Scheduler<B> {
         }
         row["updated"] = json!(chrono::Local::now().format("%Y-%m-%d %H:%M").to_string());
         let out = row.clone();
-        cc_job_policy::todo_store::check_size(encode(&db, 1).len()).map_err(todo_store_error)?;
-        write_json(&self.todo_path, &db, 1)?;
+        write_todo(&self.todo_path, &db)?;
         Ok(out)
     }
     pub fn sample(&mut self, cfg: &Value) -> Result<(Value, Processes, Vec<Value>)> {
@@ -847,9 +839,7 @@ impl<B: Backend> Scheduler<B> {
                 && projects[s(&item["project"])] == snapshot["projects"][s(&item["project"])]
         });
         if !released.is_empty() {
-            cc_job_policy::todo_store::check_size(encode(&db, 1).len())
-                .map_err(todo_store_error)?;
-            write_json(&self.todo_path, &db, 1)?;
+            write_todo(&self.todo_path, &db)?;
             self.report["dependencies_released"] = json!(released);
         }
         Ok(())

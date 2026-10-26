@@ -245,6 +245,9 @@ fn wide(path: &Path) -> Vec<u16> {
     path.as_os_str().encode_wide().chain(Some(0)).collect()
 }
 pub fn write_json(path: &Path, v: &Value, indent: usize) -> Result<()> {
+    if path.file_name().is_some_and(|name| name == "todo.json") {
+        return write_todo(path, v);
+    }
     backup(path)?;
     let temp = path.with_file_name(format!(
         "{}.{}.tmp",
@@ -274,6 +277,23 @@ pub fn write_json(path: &Path, v: &Value, indent: usize) -> Result<()> {
         thread::sleep(Duration::from_millis(20));
     }
     Err(Error("PermissionError"))
+}
+
+pub(crate) fn todo_store_error(error: cc_job_policy::todo_store::Error) -> Error {
+    match error {
+        cc_job_policy::todo_store::Error::TooLarge => Error("todo_store_too_large: limit 64 MiB"),
+        cc_job_policy::todo_store::Error::InvalidJson(_) => Error("todo_store_invalid_json"),
+        cc_job_policy::todo_store::Error::Io(e) => e.into(),
+        cc_job_policy::todo_store::Error::History(reason) => {
+            // Preserve the detailed failure in the job log, with the scheduler's
+            // existing fixed, non-content-bearing return classification.
+            eprintln!("todo_store_archive_failed: {reason}");
+            Error("todo_store_archive_failed")
+        }
+    }
+}
+pub(crate) fn write_todo(path: &Path, db: &Value) -> Result<()> {
+    cc_job_policy::todo_store::write(path, db).map_err(todo_store_error)
 }
 
 /// Nonblocking OS lock. A second tick returns immediately; reboot releases it.

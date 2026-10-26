@@ -337,6 +337,9 @@ fn question_recovery_guard_path(p: &std::path::Path) -> Result<()> {
 
 pub fn atomic_json(p: &std::path::Path, v: &Value, indent: usize) -> Result<()> {
     question_recovery_guard_path(p)?;
+    if p.file_name().is_some_and(|name| name == "todo.json") {
+        return cc_job_policy::todo_store::write(p, v).map_err(|e| e.to_string());
+    }
     let mut buf = Vec::new();
     let spaces = vec![b' '; indent];
     let fmt = serde_json::ser::PrettyFormatter::with_indent(&spaces);
@@ -344,9 +347,6 @@ pub fn atomic_json(p: &std::path::Path, v: &Value, indent: usize) -> Result<()> 
     serde::Serialize::serialize(v, &mut ser).map_err(|_| "ValueError".to_string())?;
     if p.file_name().is_some_and(|name| name == "state.json") {
         crate::question_store::check_size(buf.len()).map_err(|e| e.to_string())?;
-    }
-    if p.file_name().is_some_and(|name| name == "todo.json") {
-        cc_job_policy::todo_store::check_size(buf.len()).map_err(|e| e.to_string())?;
     }
     let temp = p.with_file_name(format!(
         "{}.{}.tmp",

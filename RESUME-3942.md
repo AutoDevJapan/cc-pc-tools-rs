@@ -159,3 +159,11 @@ cleanupの51 tests/0skipとClippy、Go race/vet成功。実回収は依然0、so
 フィルタが0testsなら実対象資格の再確認として数えない。元の22:28 resultOK/14,020,506B/削除0原logは保持。
 自分のdebugは再テスト/診断依存が残る間保持し、最終受入後に回収する。旧Sourceのupstream refはGitHubの
 merge後自動削除があり得る。保存確認はnormal origin/main到達性も照合し、古いbranch不存在を未保存断定へ使わない。
+観測版Rust source edc9c11c1b0d68198d46f9cbedd5ba718b7e3e1fを保存/push、clean通常release成功。
+単一リンクdelivery SHAbe3d6dcc4ee2c43db9259c777f3a9faf03e970a84a05aa37b4da6dba15a69af1、
+149入力manifest SHA9fb4805deee9147f420612c0745dc7dc08a7c8789c36222ac9146712d445fc04。
+51関連test/0skip、Clippy、Go race/vet成功。observed-self/理由は匿名固定値だけで、許可述語は不変更。
+Goの次回oldは現用7d1をnormal broker原proofで検証し、元3757と初回11cdの鎖も維持する。
+まだこの観測版は未配布。別モデルMust0/同HEAD CI後に追加PRを通常mergeし、source/cas/aclを照合して
+suffix todo3942-observeで反映、既存S4U taskの同一実行でretention理由/active最大件数/自己handle-kernelを得る。
+元の実対象2件と自分のdebug回収は未完了、実回収0を保持。本人判断やPC操作は不要。

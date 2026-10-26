@@ -59,7 +59,7 @@ func TestConsumerReviewOwnDelegatedBuildMarker(t *testing.T) {
 	if err != nil || len(got) != 2 || got[1].ID != own["id"] {
 		t.Fatal("the exact build's delegated read review was omitted")
 	}
-	for _, change := range []string{"wrong parent", "self parent", "no parent", "old build", "old time", "duplicate"} {
+	for _, change := range []string{"wrong parent", "self parent", "no parent", "old build", "old time", "duplicate", "conflicting parent", "conflicting result", "conflicting actor"} {
 		t.Run(change, func(t *testing.T) {
 			copyNode := obj{}
 			for key, value := range own {
@@ -79,9 +79,23 @@ func TestConsumerReviewOwnDelegatedBuildMarker(t *testing.T) {
 				copyNode["startedAt"] = json.Number("1")
 			case "duplicate":
 				job["nodes"] = append(omb3255Array(job["nodes"]), copyNode)
+			case "conflicting parent", "conflicting result", "conflicting actor":
+				conflict := obj{}
+				for key, value := range own {
+					conflict[key] = value
+				}
+				switch change {
+				case "conflicting parent":
+					conflict["parentId"] = "11111111-1111-4111-8111-111111111111"
+				case "conflicting result":
+					conflict["result"] = "different result"
+				case "conflicting actor":
+					conflict["botId"] = "different actor"
+				}
+				job["nodes"] = append(omb3255Array(job["nodes"]), conflict)
 			}
 			got, err := consumerReviewChooseNodes(job, revision, 1792986000000, wanted)
-			if change == "duplicate" {
+			if change == "duplicate" || strings.HasPrefix(change, "conflicting ") {
 				if err == nil {
 					t.Fatal("ambiguous own review was accepted")
 				}

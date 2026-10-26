@@ -298,6 +298,9 @@ func omb3255ChooseNodesFor(job obj, revision string, commitMS int64, wanted []om
 		return nil, omb3255RuntimeUnavailable
 	}
 	if len(own) == 1 {
+		if len(byID[own[0].ID]) != 1 {
+			return nil, omb3255RuntimeUnavailable
+		}
 		for _, expected := range wanted {
 			if expected.ID == own[0].ID {
 				return nil, omb3255RuntimeUnavailable

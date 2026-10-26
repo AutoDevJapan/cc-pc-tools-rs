@@ -17,16 +17,16 @@ import (
 )
 
 const completedRoot = "D:/CC/Work/unattended-operations-20261013-wt/todo-3942-work"
-const completedHead = "5c9fce950d30c682e5f36fca3506af72aeb352a5"
+const completedHead = "c2ea7b0b7c81b05789d46dc76eb0b1fd4c8eb7bd"
 const completedBuildJob = "20261026-205513-todo-3942"
-const completedManifestPath = "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-5249eb2a5e0382b871074f454633ec84/build-manifest-5c9fce950d30c682e5f36fca3506af72aeb352a5.private.json"
-const completedManifestSHA = "933aaed6f7a1c4e108c5e2d75c81b9d9b0c534469db6ee9594282350b1b696dc"
+const completedManifestPath = "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-5249eb2a5e0382b871074f454633ec84/build-manifest-c2ea7b0b7c81b05789d46dc76eb0b1fd4c8eb7bd.private.json"
+const completedManifestSHA = "b447019b022bb59ee3b87f3840b9387c1f01f5e6e976bdcec0e3910b559692c5"
 const completedPreviousProof = "D:/CC/Tools/admin-broker/results/20261026-124621-7006f98d9abcd959c150132e6f3bcea1.json"
 const completedPreviousProofSHA = "c0e1455fd8acd3e9ca61d8f3d84f5299db31868da9cce1310e501bfc66747722"
 const completedPreviousHead = "5c9fce950d30c682e5f36fca3506af72aeb352a5"
 const completedPreviousSHA = "11cd5c8bbe855065ea27788543a79a70b4d63827f18e7bed918856e3526e2bd7"
 
-var completedLeaf = leaf{"cleanup-8h", completedRoot + "/target/release/cleanup-8h-delivery-" + completedHead + ".exe", "D:/CC/Tools/cleanup-8h/cleanup-8h.exe", completedPreviousSHA, "11cd5c8bbe855065ea27788543a79a70b4d63827f18e7bed918856e3526e2bd7"}
+var completedLeaf = leaf{"cleanup-8h", completedRoot + "/target/release/cleanup-8h-delivery-" + completedHead + ".exe", "D:/CC/Tools/cleanup-8h/cleanup-8h.exe", completedPreviousSHA, "7d1d86f361eba1a05e7c21b8c37077836fe56f3b209871064a2c930040772bba"}
 var completedInputs = []string{"Cargo.toml", "Cargo.lock", "cleanup-8h", "cc-jobs", "cc-job-policy", "cc-chrome", "cc-task-title", "cc-redact"}
 
 type completedManifest struct {

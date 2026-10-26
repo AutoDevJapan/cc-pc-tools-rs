@@ -124,3 +124,10 @@ D:/CC/Tools/admin-broker/results/20261026-124621-7006f98d9abcd959c150132e6f3bcea
 同HEAD CI/追加PR通常merge→同じ正規AdminBroker配布→既存1h task再発火/3757・3960実回収→
 source/Git/release/空き前後/保留の確認→自分のdebugを正常Cargo clean等で回収する。
 実回収0/本人対応不要/原台帳保持を引き継ぐ。最新進行はtarget/release/acceptance-3942.jsonも参照。
+追加修正source c2ea7b0b7c81b05789d46dc76eb0b1fd4c8eb7bdはcommit/push済み。
+clean通常release成功、149入力manifest SHAb447019b022bb59ee3b87f3840b9387c1f01f5e6e976bdcec0e3910b559692c5、
+single-link delivery SHA7d1d86f361eba1a05e7c21b8c37077836fe56f3b209871064a2c930040772bba。
+新manifestの既存実行物SHAは原broker proofで検証した11cdであり、現在の未知bytesから作っていない。
+60関連Windows成功/0skip、末尾のpath hint保持回帰1件も成功、ClippyとGo race/vet成功。
+Cargo入力はこのbuildHeadから最終pinコミットまで変更しない。新RCの正常read-only実対象照合、
+固定別modelレビュー/同HEAD CI/追加PR merge/新suffix CAS/実回収を続ける。

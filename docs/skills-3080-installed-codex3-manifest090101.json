@@ -1,0 +1,124 @@
+{
+  "definition": "Actual newly created3; contents derived only from current qualified20 buffers, not the creation request",
+  "targets": [
+    {
+      "name": "build-daily-inspiration-sites",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "依頼された複数の承認済み参照案について、各担当の素材・要件・実結果の対応が失われる。",
+      "negative": "単一画面の不具合修正を、日次収集・別製品の命名・5サイトの新規公開へ広げる。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/codex/build-daily-inspiration-sites/SKILL.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "6a2436f390902ac6dfd5738cd71d34298daddd5da9e716cf08386bc22b95eaee"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "e4c80cc7d3150fac202b0b327ebd3e01a3452d486afd7334a27941b153c71088"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "ba888108ec029d796484d8f18f600763bbf18d9313f1da2a48b5031a944d429c"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "605cb11f3e7e1e5477a2e64199100910cce59a11f0604aaa41f14b167b924f65"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "e3c1f75dfbc5672a292bcc5ed5a5cd8b14ab2908ef957b4e63c869a5d4ab1297"
+        },
+        {
+          "path": "references/upstream-support-original.txt",
+          "sha256": "3a169c5f20c9046c2f5120738b116619ef843c6b990673446de5bac138a3e801"
+        }
+      ]
+    },
+    {
+      "name": "generate-reference-inspired-brand-worlds",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "既存の承認した名前と意味を保ち、同じ参照に近づけた改訂案を、前版を残して比較したい。",
+      "negative": "同じ画面の技術修復で、未指定の新ブランド名や人物・ロゴを作り、元参照の素材を転載する。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/codex/generate-reference-inspired-brand-worlds/SKILL.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "3dd7ced115a62c30464b63a9db680a79d65397d2f4464a22fc199262f8e14f2c"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "87ef45aba21eb1a1cbd952c2cb76a2faf90239579548e1a33455ea4d4a3f213a"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "ac378caa7a2093d1f34c0d96b0e21739b6826526ce58b0afe57adebc888fd363"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "3102d6f0a650b3c346268cd1e04d41a91a03306582564195853825ff3bb24026"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "474123c80a6d8c65d654de37bbd85fe39b5434f191ccaabfb9f03929434be32e"
+        },
+        {
+          "path": "references/upstream-support-original.txt",
+          "sha256": "4c9633c7e0b93c39eb836ef75b70f9ad9e3646ddbe951c688dfa38861c3e1328"
+        }
+      ]
+    },
+    {
+      "name": "web-technique-to-skill",
+      "new": true,
+      "before_sha256": "absent",
+      "positive": "既存の距離ベースのカーソル演出を、速度を変えても間隔を保つ仕組みとして再利用したい。",
+      "negative": "動いていないコードを読んだだけで実証済みとし、全デモ・全gallery・無関係なSkillの改訂を毎回義務にする。",
+      "sources": [
+        "https://github.com/MengTo/Skills/blob/398cd41c86ba42fbb30e944ae507f463648f08b7/agent-skills/codex/web-technique-to-skill/SKILL.md"
+      ],
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "77273321cb99977de3698ba98b6a868f7b93d63f26b8a0329740558d09bec697"
+        },
+        {
+          "path": "references/guide.md",
+          "sha256": "51409efb207abaa0bff9a2f3dbcf80e22510170c098c1f7c38a6da1722910627"
+        },
+        {
+          "path": "references/upstream-original.txt",
+          "sha256": "8868b6b6940ef886cff768d2bf3227d5e96db2bce148e796c827d9f711ed284b"
+        },
+        {
+          "path": "references/LICENSE.txt",
+          "sha256": "b2a071ba22fefd803f4e9d1f5c777dd79c62d191695586a1a73fd4d0ebd051c6"
+        },
+        {
+          "path": "references/source.json",
+          "sha256": "7b2a331dfb6ba3f113ff91be79406d0a71f492d508e683fead5f704c867eb035"
+        },
+        {
+          "path": "references/sources.md",
+          "sha256": "0bba18abac44775c2c5c2afd7d4e16ffb3c5e28b89ab85ff06066b308b0bbbd2"
+        }
+      ]
+    }
+  ],
+  "central_operations": 0,
+  "root": "D:/CC/Skills",
+  "snapshot_definition": "Actual new-only3 from qualified current20 returned buffers; no body hash from a private/unknown existing Skill is asserted"
+}

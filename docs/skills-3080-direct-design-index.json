@@ -62,6 +62,11 @@
       "file": "skills-3080-combat6-designs090101.json",
       "sha256": "a65cbaf5b421874c2422b2f3b6abbe861fba6dedf5cec0af4adda5b302771ebd",
       "target_count": 6
+    },
+    {
+      "file": "skills-3080-codex3-designs090101.json",
+      "sha256": "4b129b864db55045666eb20fb54774da44234cd28f044c795f748f2eb278216c",
+      "target_count": 3
     }
   ]
 }

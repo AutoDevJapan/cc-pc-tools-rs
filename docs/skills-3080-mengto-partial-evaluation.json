@@ -8,7 +8,7 @@
   "entrypoints_expected": 177,
   "entrypoints_fulltext_read": 177,
   "entrypoints_unread": 0,
-  "installed": 83,
+  "installed": 86,
   "integrated": 2,
   "excluded": 0,
   "central_write": 22,
@@ -4928,7 +4928,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -4949,7 +4949,8 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "current_installation_evidence": "skills-3080-codex3-installation-evidence090101.json"
     },
     {
       "inventory_id": "github:81c0d1fc229eee7483f38692fa31acb1bcf44060d104e51b728c9b47c9e40a43",
@@ -5422,7 +5423,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -5442,7 +5443,8 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "current_installation_evidence": "skills-3080-codex3-installation-evidence090101.json"
     },
     {
       "inventory_id": "github:4e9631ebafe558782152a55e70d44f8e87d4080b542c738bccd5ad28fa9e492c",
@@ -6621,7 +6623,7 @@
           "scan_only": false
         }
       ],
-      "installed_by_todo3080": false,
+      "installed_by_todo3080": true,
       "integrated_by_todo3080": false,
       "excluded_by_todo3080": false,
       "independent_review_complete": false,
@@ -6640,7 +6642,8 @@
         "final_disposition_accepted": false,
         "raw_sha256": "bc66608b036b8d2e072cad3e5717fb2e2a9e300479fb266b6abd72de289722a0",
         "scope": "公開上流由来の候補提案。中央の内部比較や私的な例は原応答へ保全し公開へ転載しない。"
-      }
+      },
+      "current_installation_evidence": "skills-3080-codex3-installation-evidence090101.json"
     },
     {
       "inventory_id": "github:d1addf6726ef6e57c8c23d268c78b571e7808e45e3190621301aea970f9515e1",
@@ -22614,11 +22617,11 @@
   "amendment_job": "20261024-123649-todo-3080",
   "amendment_definition": "Document amendment time; individual source retrieval and reading times remain in their own receipts.",
   "current_installation_update": {
-    "evidence": "skills-3080-combat6-installation-evidence090101.json",
-    "added": 6,
-    "current_installed": 83,
+    "evidence": "skills-3080-codex3-installation-evidence090101.json",
+    "added": 3,
+    "current_installed": 86,
     "source_body_reading_and_notice_support_states_unchanged": true,
-    "definition": "Six actual new procedures; shared VFX source is reference only, not seventh adoption or new source reading"
+    "definition": "Three actual procedures from already parent-read177 sources; five author source texts include two supports, not additional adoptions"
   },
   "previous_installation_updates": [
     {
@@ -22675,6 +22678,13 @@
       "current_installed": 77,
       "source_body_reading_and_notice_support_states_unchanged": true,
       "definition": "Installation projection only; original177 source assessments and prior updates retained"
+    },
+    {
+      "evidence": "skills-3080-combat6-installation-evidence090101.json",
+      "added": 6,
+      "current_installed": 83,
+      "source_body_reading_and_notice_support_states_unchanged": true,
+      "definition": "Six actual new procedures; shared VFX source is reference only, not seventh adoption or new source reading"
     }
   ]
 }

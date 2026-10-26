@@ -45,6 +45,7 @@ func TestDesignAndCombatCurrentBuffersBindEveryReviewedOutput(t *testing.T) {
 	}{
 		{"design-reference", "create-design-reference-090101.json", "fc92df3fdb1338c8de904691161eeccacf8c31256dd5e5fd7a5a4eb9fad48f85", 52},
 		{"combat6", "create-combat6-090101.json", "8078d9521ba61039000c915c7e904fd1aff9def8a832a19de377c4c0ac6c0758", 40},
+		{"codex3", "create-codex3-090101.json", "e79f958f08c7ab4a28607ec29869d99b1fdc645758989dfa6cb08a5145cf5b06", 20},
 	} {
 		t.Run(spec.group, func(t *testing.T) {
 			var op struct {

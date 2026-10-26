@@ -286,9 +286,9 @@
   "site_entries_with_body": 9862,
   "site_entries_without_body": 428,
   "execution_held_shapes": 647,
-  "candidate_designs": 116,
-  "independently_accepted": 116,
-  "installed": 116,
+  "candidate_designs": 119,
+  "independently_accepted": 119,
+  "installed": 119,
   "integrated": 3,
   "excluded": 15,
   "units": {
@@ -346,15 +346,15 @@
     "actual_installed": 8
   },
   "candidate_count_definitions": {
-    "candidate_designs": "Legacy28 plus directly sourced actual designs88; pending drafts/catalog rows are not installations and116 is not a cap",
+    "candidate_designs": "Legacy28 plus directly sourced actual designs91; pending drafts and catalog rows are not installations;119 is not a cap",
     "additional_authored_drafts_not_in_plans": 3,
-    "authored_total": 119,
-    "installed": 116,
+    "authored_total": 122,
+    "installed": 119,
     "pending_plan_targets": 0,
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "Legacy acceptances plus individually scoped direct designs. For the six game outputs, original3775 reading and3777 source-specific correction acceptance were bound to exact manifest bytes. Actual creation, metadata discovery and bounded explicit use are separately evidenced; no whole-catalog, renderer or full-context acceptance is implied. The newest public result delta still requires review/CI/merge.",
-    "not_semantically_disposed_occurrences": 73086,
+    "not_semantically_disposed_occurrences": 73083,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
@@ -700,7 +700,7 @@
     "fixed_roster": "skills-3080-mengto-fixed-entrypoints.json",
     "expected": 177,
     "complete": true,
-    "installed": 83,
+    "installed": 86,
     "complete_definition": "本文path読取と評価の受領。支持/第三者権利/実導入/実適用は未完。",
     "source": "skills-3080-mengto-partial-evaluation.json",
     "unread": 0,
@@ -1699,7 +1699,7 @@
     "current_individual_rights_entries": 5,
     "main_accepted_excluded_before_this_delta": 8,
     "branch_excluded": 15,
-    "branch_pending": 73086,
+    "branch_pending": 73083,
     "primary_and_support_read_states_unchanged": true,
     "existing_primary_amendment_separate": true,
     "source_scripts_executed": false,
@@ -2194,5 +2194,22 @@
     "copy_grants": 0,
     "central_operations": 0,
     "review_pending": true
+  },
+  "codex3_installation": {
+    "evidence": "skills-3080-codex3-installation-evidence090101.json",
+    "created": 3,
+    "files": 20,
+    "bytes": 61129,
+    "current_instruction_files": 6,
+    "parent_positive_negative_pairs": 3,
+    "fresh_discovery_found": 3,
+    "independent_consumer": 3935,
+    "independent_current_instruction_bytes": 10406,
+    "parse_errors": 0,
+    "new_global_source_read_credit": 0,
+    "image_or_renderer_tested": false,
+    "implicit_selection_proven": false,
+    "public_delta_review_pending": true,
+    "whole16_complete": false
   }
 }

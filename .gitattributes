@@ -185,3 +185,17 @@ docs/skills-3080-combat6-input-acceptance090101.md text eol=lf
 /docs/skills-3080-codex3-structure-receipt090101.json text eol=lf
 /docs/skills-3080-codex3-input-acceptance090101.md text eol=lf
 /repair-guard/testdata/skills3080-revision1-*.json -text
+/docs/skills-3080-codex3-actual-bundle090101.json text eol=lf
+/docs/skills-3080-installed-codex3-manifest090101.json text eol=lf
+/docs/skills-3080-codex3-create-evidence090101.json text eol=lf
+/docs/skills-3080-codex3-consume-evidence090101.json text eol=lf
+/docs/skills-3080-codex3-actual-structure090101.json text eol=lf
+/docs/skills-3080-codex3-application-result090101.json text eol=lf
+/docs/skills-3080-codex3-discovery-receipt090101.json text eol=lf
+/docs/skills-3080-codex3-independent-use3935-evidence090101.json text eol=lf
+/docs/skills-3080-codex3-context-observation090101.json text eol=lf
+/docs/skills-3080-codex3-designs090101.json text eol=lf
+/docs/skills-3080-codex3-installation-evidence090101.json text eol=lf
+/docs/skills-3080-progress.json text eol=lf
+/docs/skills-3080-execution-evidence.json text eol=lf
+/docs/skills-3080-execution-queue-summary.json text eol=lf

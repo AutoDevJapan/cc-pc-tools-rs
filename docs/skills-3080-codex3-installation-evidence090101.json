@@ -1,0 +1,65 @@
+{
+  "todo": 3080,
+  "job": "20261026-090101-todo-3080",
+  "new_targets_created": 3,
+  "files_readback_verified": 20,
+  "bytes": 61129,
+  "operation_manifest": "skills-3080-operations/create-codex3-090101.json",
+  "operation_manifest_sha256": "e79f958f08c7ab4a28607ec29869d99b1fdc645758989dfa6cb08a5145cf5b06",
+  "operation_manifest_main_commit": "dec7a2db06acfe6324c57162695423aa31f402a4",
+  "referenced_artifacts": {
+    "bundle": {
+      "file": "skills-3080-codex3-actual-bundle090101.json",
+      "sha256": "6265323e8389dd4c74808337f0ac2805d046c1827fe028801a3d8349beaa5206"
+    },
+    "installed_manifest": {
+      "file": "skills-3080-installed-codex3-manifest090101.json",
+      "sha256": "faf86bd2c70590495aa5128f222cdb6f408a05cd42f6dc800b8dd6c241c91d17"
+    },
+    "creation": {
+      "file": "skills-3080-codex3-create-evidence090101.json",
+      "sha256": "1c963e50d900a2fe6ab699229211c2046f7bbc1676e841dbd2249154edf389cd"
+    },
+    "consumption": {
+      "file": "skills-3080-codex3-consume-evidence090101.json",
+      "sha256": "5aab5983839d37cd5ebb33c05ace0d36e4a330aec0027b6d6e7cdf1ea8427fe0"
+    },
+    "structure": {
+      "file": "skills-3080-codex3-actual-structure090101.json",
+      "sha256": "17f4f15b893a3300c0565334418b09023e68cd6a451378b367f8b14e908caca3"
+    },
+    "application": {
+      "file": "skills-3080-codex3-application-result090101.json",
+      "sha256": "1a03f434935be7d33fa73ac447fc6a66ef4055165cbb561bd328fc8195998f01"
+    },
+    "discovery": {
+      "file": "skills-3080-codex3-discovery-receipt090101.json",
+      "sha256": "76edacfc9575481c2adf4be17d5f33ab50e91e639dad7c0f43ee156cbc95caad"
+    },
+    "independent_use": {
+      "file": "skills-3080-codex3-independent-use3935-evidence090101.json",
+      "sha256": "f93a17ead85cb4fa09075053584c8ff8d230e273bcf24cec5949aad011b5f10d"
+    },
+    "context": {
+      "file": "skills-3080-codex3-context-observation090101.json",
+      "sha256": "f9b9a2d674fcb30d598be52cb096d0b77f1c22f2394d6dc3bcecc5b7bad2b4ba"
+    },
+    "designs": {
+      "file": "skills-3080-codex3-designs090101.json",
+      "sha256": "4b129b864db55045666eb20fb54774da44234cd28f044c795f748f2eb278216c"
+    }
+  },
+  "content_review_task": 3933,
+  "content_review_spec_frozen": true,
+  "content_review_must": 0,
+  "review_raw_sha256": "f2b821653c297f8cc8f25b8d039598314ab9294cff4721ccc2c67d19b3e4ea36",
+  "after_review_seven_content_blobs_unchanged": true,
+  "new_global_raw_read_credit": 0,
+  "third_party_rights_accepted": false,
+  "real_image_or_renderer_acceptance": false,
+  "UI_implemented": false,
+  "whole16_complete": false,
+  "public_result_delta_review_pending": true,
+  "individual_support_notice_map": "skills-3080-codex3-notice-map090101.json",
+  "content_review_suggestion": "Standalone per-folder source.json/sources.md names only primary; the exact two support paths and hashes remain in the included original texts, full operation and individual notice map. No claim this suggestion is already implemented."
+}

@@ -1,0 +1,116 @@
+{
+  "received_original": {
+    "todo": 3935,
+    "job": "20261026-145902-todo-3935",
+    "parent_job": "20261026-090101-todo-3080",
+    "spec_sha256": "2445bc17567a4172c90b33a22db71fd7f8adcfe263ff2952a8c9008f507e17e2",
+    "raw_sha256": "ec86adfb3216650b0963e0893769b8bb9233e10e7912ea95b892461a8643da67",
+    "raw_bytes": 2071,
+    "parent_full_original_read": true,
+    "native": [
+      {
+        "timestamp": "2026-10-26T05:59:53.940Z",
+        "model": "gpt-6-luna",
+        "effort": "max",
+        "service_tier": null
+      }
+    ],
+    "both_origins_owner_request": true,
+    "admitted_consumer_scope": true,
+    "code_review_acceptance_implied": false,
+    "native_instruction_read_not_implied_by_metadata_alone": true,
+    "native_output_bodies_returned": false
+  },
+  "actual_CLI": {
+    "domain": "skills3080-admitted-independent-use-native-v1",
+    "job": "20261026-145902-todo-3935",
+    "task": 3935,
+    "author_job": "20261026-090101-todo-3080",
+    "actual_model": "gpt-6-luna",
+    "effort": "max",
+    "spec_sha256": "2445bc17567a4172c90b33a22db71fd7f8adcfe263ff2952a8c9008f507e17e2",
+    "original_input_sha256": "1b861b3d8656028fc6b87b766072e66a56932d54f12e68a1aa56bab1c58088ef",
+    "saved_spec_diff_is_only_CRLF_to_LF": true,
+    "native_call_id": "call_914913ec49be4962a7bebd550d4e2a93",
+    "native_call_timestamp": "2026-10-26T06:01:49.747Z",
+    "actual_CLI_invocations": 1,
+    "actual_CLI_exit_code": 0,
+    "actual_CLI_qualified": true,
+    "original_CLI_stdout_sha256": "252712a014d5d1fdc884d9f6ced35e72dc060b383257615dcd77c179c57d2a3d",
+    "producer": {
+      "sha256": "3a0f5065eb6ae56fdcc0a1f0ef78131f999e2331a0412b01faea91260adffeaa",
+      "revision": "a067ff63db64a88fc218fc4c8400552454d5d691"
+    },
+    "runtime_producer": {
+      "sha256": "3a0f5065eb6ae56fdcc0a1f0ef78131f999e2331a0412b01faea91260adffeaa",
+      "revision": "a067ff63db64a88fc218fc4c8400552454d5d691"
+    },
+    "actual_buffers": 6,
+    "actual_bytes": 10406,
+    "files": [
+      {
+        "index": 0,
+        "sha256": "6a2436f390902ac6dfd5738cd71d34298daddd5da9e716cf08386bc22b95eaee",
+        "bytes": 1927,
+        "actual_current_ID_matches_original_creation": true,
+        "same_handle_buffer_returned": true
+      },
+      {
+        "index": 1,
+        "sha256": "e4c80cc7d3150fac202b0b327ebd3e01a3452d486afd7334a27941b153c71088",
+        "bytes": 1587,
+        "actual_current_ID_matches_original_creation": true,
+        "same_handle_buffer_returned": true
+      },
+      {
+        "index": 7,
+        "sha256": "3dd7ced115a62c30464b63a9db680a79d65397d2f4464a22fc199262f8e14f2c",
+        "bytes": 1931,
+        "actual_current_ID_matches_original_creation": true,
+        "same_handle_buffer_returned": true
+      },
+      {
+        "index": 8,
+        "sha256": "87ef45aba21eb1a1cbd952c2cb76a2faf90239579548e1a33455ea4d4a3f213a",
+        "bytes": 1459,
+        "actual_current_ID_matches_original_creation": true,
+        "same_handle_buffer_returned": true
+      },
+      {
+        "index": 14,
+        "sha256": "77273321cb99977de3698ba98b6a868f7b93d63f26b8a0329740558d09bec697",
+        "bytes": 1992,
+        "actual_current_ID_matches_original_creation": true,
+        "same_handle_buffer_returned": true
+      },
+      {
+        "index": 15,
+        "sha256": "51409efb207abaa0bff9a2f3dbcf80e22510170c098c1f7c38a6da1722910627",
+        "bytes": 1510,
+        "actual_current_ID_matches_original_creation": true,
+        "same_handle_buffer_returned": true
+      }
+    ],
+    "network_access_required": false,
+    "parent_already_had_same6_successful_buffers": true,
+    "denied_audit_indices_requested": 0,
+    "code_review_acceptance_implied": false,
+    "raw_same_buffers_full_read_and3_positive_negative_examples_parent_checked": true,
+    "implicit_skill_selection_proved": false,
+    "renderer_tested": false,
+    "current_OS_writer": "unproved",
+    "historical_physical_continuity_proven": false,
+    "general_access_granted": false,
+    "original_registry_recovered": false,
+    "new_central_operations": 0
+  },
+  "original_response_bytes": 2071,
+  "original_response_sha256": "ec86adfb3216650b0963e0893769b8bb9233e10e7912ea95b892461a8643da67",
+  "parent_read_all_meanings_and_limits": true,
+  "positive_negative_pairs": 3,
+  "metadata_is_not_model_use": true,
+  "model_use_is_explicit_not_implicit": true,
+  "code_review_acceptance_implied": false,
+  "actual_image_generation_or_UI_implementation": false,
+  "wrapper": "Original native three input_text blocks: Script completed, exact JSON, exit_code=0; earlier two-block assumption failure retained separately"
+}

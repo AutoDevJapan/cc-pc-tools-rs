@@ -1,0 +1,10 @@
+{
+  "bundle": "skills-3080-codex3-actual-bundle090101.json",
+  "bundle_sha256": "6265323e8389dd4c74808337f0ac2805d046c1827fe028801a3d8349beaa5206",
+  "method": "Existing3048 checker on the bundle reconstructed only from current actual returned bytes",
+  "exit": 0,
+  "stdout": "PASS: 3 explicit skills; structure, descriptions, references, hashes, scenario pairs; in-memory bundle only; no deployment implied\n",
+  "stderr": "",
+  "central_file_recreation": 0,
+  "real_renderer_implied": false
+}

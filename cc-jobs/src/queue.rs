@@ -689,6 +689,21 @@ impl Context {
                 now >= at && now - at < 30.
             })
     }
+    /// Read the normally maintained, recently reconciled active/queued IDs.
+    /// The caller holds queue.lock until it finishes using this snapshot, so
+    /// registration/requeue cannot introduce an unobserved owner in between.
+    /// Unlike admission preparation, this API never scans or writes history.
+    pub fn active_job_ids_snapshot(&self) -> Result<Vec<String>> {
+        let index = self.read_admission_index()?;
+        if !self.index_fresh(&index) {
+            return Err(Error::new("active job index is not fresh and complete"));
+        }
+        let ids = self.index_ids(&index)?;
+        if ids.len() > 4096 {
+            return Err(Error::new("active job snapshot limit"));
+        }
+        Ok(ids.into_iter().map(str::to_owned).collect())
+    }
     /// Prepare history WITHOUT the queue gate. One scanner serves concurrent
     /// launchers; only active candidates and registrations are reread at commit.
     /// Lock order is scan -> queue -> state, never queue -> scan.

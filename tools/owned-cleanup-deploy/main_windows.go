@@ -416,7 +416,7 @@ func prepare(l leaf) (*prepared, error) {
 	return prepareAt(l, "todo3757")
 }
 func prepareAt(l leaf, suffix string) (*prepared, error) {
-	if suffix != "todo3757" && suffix != "todo3757-native-proof" {
+	if suffix != "todo3757" && suffix != "todo3757-native-proof" && suffix != "todo3942" {
 		return nil, errCode("INVALID_UPDATE_GENERATION")
 	}
 	ps, e := parents(l.Target)
@@ -612,6 +612,10 @@ func run(apply bool) ([]map[string]any, error) {
 	return rows, nil
 }
 func main() {
+	if len(os.Args) == 2 && (os.Args[1] == "--completed-build-check" || os.Args[1] == "--completed-build-apply") {
+		completedBuildMain(os.Args[1] == "--completed-build-apply")
+		return
+	}
 	if len(os.Args) != 2 || (os.Args[1] != "--check" && os.Args[1] != "--apply" && os.Args[1] != "--native-proof-check" && os.Args[1] != "--native-proof-apply") {
 		fmt.Println(`{"qualified":false,"reason":"INVALID_ARGUMENTS"}`)
 		os.Exit(2)

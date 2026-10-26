@@ -35,3 +35,16 @@ Issue: https://github.com/AutoDevJapan/cc-pc-tools-rs/issues/545 。
 cleanup-8hはbinaryのみでdoctest対象なし。既存cc-jobs依存を追加したため、最終CIはロック変更の
 通常選択規則に従って全workspace/doctestを1回実行する。PCでは同じ全件を重ねない。
 元の管理caseと3757の原記録は変更しない。詳細な原結果は本担当の所有証拠フォルダーへ保存する。
+
+初回レビュー3949は実job20261026-170920-todo-3949、native turn_context
+01a17742-80f9-73e3-90e6-fae38ec11207のgpt-6-sol/max、62 steps、終了0。
+固定a46543ec→0d90458aの7対象を読了し、未知の子の生成元確認・最終ルート不在・変化後残量の
+Must3件を返した。原応答SHA256は8880b93c349b02875a4bcde4cf4566ac696888ef25aa978cf81c5f693b9fb1ce。
+Cargo metadataとfingerprint照合、最終再列挙、変化時の残量未測定で修正した。保存された明示的な
+ビルド出所参照も保持する。件数上限とcursorに関するSuggestionも、通常active snapshotの読取APIと
+破損cursorの保持・先頭からの有限走査へ反映した。追加差分のレビューはこれから受ける。
+
+配布には既存owned-cleanup-deployのCAS/ACL/no-replace処理を再利用する新世代を用意した。
+対象はcleanup-8hだけ。safe-deleteのソース・配布byteは変更しない。
+配布pinは初期0d90458a候補のままで、レビュー修正後のbuild/manifestへ差し替えるまでは実配布しない。
+現用版更新・通常タスク発火・本実装による実物の回収はまだ0。

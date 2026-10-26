@@ -1,13 +1,12 @@
 //! Completed registered PC-tool work only; no path/owner registration interface.
 use super::*;
 use cc_jobs::{Context, FileLock};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 const JOBS_ROOT: &str = r"D:\CC\Tools\codex-jobs";
 const TODO: &str = r"D:\CC\Tools\todo\todo.json";
 const MAX_ROWS: usize = 512;
 const MAX_TARGETS: u64 = 4;
-const MAX_JOBS: usize = 20_000;
 const PROFILE_LOCKS: [&str; 3] = [".cargo-lock", ".cargo-build-lock", ".cargo-artifact-lock"];
 
 #[derive(Default)]
@@ -23,6 +22,7 @@ pub(super) struct BuildStats {
     unmeasured: u64,
     partial_deletions: u64,
     bounded: bool,
+    cursor_unverified: bool,
     reasons: BTreeMap<&'static str, u64>,
 }
 impl BuildStats {
@@ -45,8 +45,22 @@ impl BuildStats {
             "already_absent_or_empty":self.absent,"retained":self.retained,
             "retained_measured_remaining_bytes":self.retained_bytes,"retained_bytes_unmeasured":self.unmeasured,
             "partial_deletions":self.partial_deletions,"limit_or_deadline":self.bounded,
+            "cursor_unverified":self.cursor_unverified,
             "retention_reasons":self.reasons,"profile_lock_scaffolding_retained":true,
             "whole_pc_scan":false})
+    }
+}
+
+fn cursor_after(ctx: &Context, path: &Path, stats: &mut BuildStats) -> u64 {
+    if matches!(fs::symlink_metadata(path),Err(e) if e.kind()==io::ErrorKind::NotFound) {
+        return u64::MAX;
+    }
+    match read(ctx, path, 4096).ok().and_then(|v| v["after"].as_u64()) {
+        Some(value) => value,
+        None => {
+            stats.cursor_unverified = true;
+            u64::MAX
+        }
     }
 }
 
@@ -178,6 +192,9 @@ fn original(ctx: &Context, row: &Value, work: &Path) -> Check<(Value, Vec<HeldLo
         }
         held.push(lock(&ctx.job_dir(jid).join("state.lock"))?);
         let j = job(ctx, jid)?;
+        if build_reference(&j, &work.join("target/debug")) {
+            return Err("SAVED_BUILD_REFERENCE_RETAINED");
+        }
         if j["todo_id"] != row["id"] || live(ctx, &j)? {
             return Err("ORIGIN_ACTIVE_OR_UNKNOWN");
         }
@@ -232,6 +249,29 @@ fn related(row: &Value, other: &Value, work: &Path) -> bool {
                     Path::new(field(&other["subwork"]["owner"], "worktree")),
                 )))
 }
+// A saved explicit build-source reference is not a disposable-cache declaration.
+// Inspect canonical metadata in memory only; never print its text or open specs.
+fn build_reference(value: &Value, debug: &Path) -> bool {
+    match value {
+        Value::String(s) => {
+            let needle = key(debug);
+            let text = s.replace('/', "\\").to_lowercase();
+            text.match_indices(&needle).any(|(offset, _)| {
+                text[offset + needle.len()..]
+                    .chars()
+                    .next()
+                    .is_none_or(|c| {
+                        c == '\\'
+                            || c.is_whitespace()
+                            || matches!(c, '\'' | '"' | '`' | ')' | ']' | '}' | ';' | ',')
+                    })
+            })
+        }
+        Value::Array(xs) => xs.iter().any(|v| build_reference(v, debug)),
+        Value::Object(xs) => xs.values().any(|v| build_reference(v, debug)),
+        _ => false,
+    }
+}
 fn state(
     ctx: &Context,
     store: &Path,
@@ -239,6 +279,7 @@ fn state(
     work: &Path,
     origin: &Value,
     until: Instant,
+    active: &[String],
 ) -> Check<()> {
     let db = read(ctx, store, 64 * 1024 * 1024)?;
     let rows = rows(&db)?;
@@ -249,24 +290,20 @@ fn state(
     if rows.iter().any(|r| related(expected, r, work)) {
         return Err("DEPENDENT_WORK_RETAINED");
     }
-    // Canonical job metadata only. Do not read prompts, logs, credentials or
-    // trust a stale queue cache that could omit a waiting/legacy worker.
-    let _jobs = pin_ancestors(&ctx.jobs).map_err(|_| "JOBS_UNVERIFIED")?;
-    for (n, e) in fs::read_dir(&ctx.jobs)
-        .map_err(|_| "JOBS_UNVERIFIED")?
-        .enumerate()
-    {
-        if n >= MAX_JOBS || Instant::now() >= until {
+    let debug = work.join("target/debug");
+    if build_reference(&db, &debug) {
+        return Err("SAVED_BUILD_REFERENCE_RETAINED");
+    }
+    // The existing owner index was freshly reconciled under the queue lock.
+    // Re-read its active/queued records, never terminal prompts/logs/history.
+    for id in active {
+        if Instant::now() >= until {
             return Err("JOB_SCAN_LIMIT");
         }
-        let e = e.map_err(|_| "JOBS_UNVERIFIED")?;
-        let id = e.file_name().to_string_lossy().into_owned();
-        if !cc_jobs::queue::valid_job_id(&id)
-            || !e.file_type().map_err(|_| "JOBS_UNVERIFIED")?.is_dir()
-        {
-            continue;
+        let j = job(ctx, id)?;
+        if build_reference(&j, &debug) {
+            return Err("SAVED_BUILD_REFERENCE_RETAINED");
         }
-        let j = job(ctx, &id)?;
         let owner = &j["work_owner"];
         let touches = j["todo_id"] == expected["id"]
             || j["related_todo_ids"]
@@ -439,6 +476,280 @@ struct Plan {
     nodes: Vec<Node>,
     bytes: u64,
 }
+struct Artifacts {
+    targets: BTreeSet<String>,
+    hashes: BTreeSet<String>,
+    units: BTreeMap<String, BTreeSet<String>>,
+}
+impl Artifacts {
+    fn load(ctx: &Context, work: &Path, until: Instant) -> Check<Self> {
+        let mut call = cc_jobs::Call::new(
+            vec![
+                ctx.rt
+                    .which("cargo.exe")
+                    .ok_or("CARGO_METADATA_UNVERIFIED")?,
+                "metadata".into(),
+                "--locked".into(),
+                "--offline".into(),
+                "--no-deps".into(),
+                "--format-version".into(),
+                "1".into(),
+            ],
+            vec![],
+            until
+                .saturating_duration_since(Instant::now())
+                .as_secs_f64()
+                .min(10.),
+        );
+        call.cwd = Some(work.to_path_buf());
+        let out = ctx.rt.call(call).map_err(|_| "CARGO_METADATA_UNVERIFIED")?;
+        if out.code != 0 || out.stdout.len() > 4 * 1024 * 1024 {
+            return Err("CARGO_METADATA_UNVERIFIED");
+        }
+        let metadata: Value =
+            serde_json::from_slice(&out.stdout).map_err(|_| "CARGO_METADATA_UNVERIFIED")?;
+        if !same(
+            Path::new(field(&metadata, "target_directory")),
+            &work.join("target"),
+        ) {
+            return Err("CARGO_TARGET_CHANGED");
+        }
+        let targets = metadata["packages"]
+            .as_array()
+            .ok_or("CARGO_METADATA_UNVERIFIED")?
+            .iter()
+            .flat_map(|p| p["targets"].as_array().into_iter().flatten())
+            .filter_map(|t| t["name"].as_str())
+            .map(|s| s.replace('-', "_"))
+            .collect();
+        let fingerprint = work.join("target/debug/.fingerprint");
+        let _pins = pin_ancestors(&fingerprint).map_err(|_| "CARGO_FINGERPRINT_UNVERIFIED")?;
+        let mut hashes = BTreeSet::new();
+        let mut units: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+        for (count, entry) in fs::read_dir(&fingerprint)
+            .map_err(|_| "CARGO_FINGERPRINT_UNVERIFIED")?
+            .enumerate()
+        {
+            if count >= 40_000 || Instant::now() >= until {
+                return Err("ENTRY_LIMIT");
+            }
+            let path = entry.map_err(|_| "CARGO_FINGERPRINT_UNVERIFIED")?.path();
+            let p = Pinned::open(&path, false).map_err(|_| "CARGO_FINGERPRINT_UNVERIFIED")?;
+            if !p.directory() {
+                return Err("CARGO_FINGERPRINT_UNVERIFIED");
+            }
+            let name = path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .ok_or("CARGO_FINGERPRINT_UNVERIFIED")?;
+            let hash = name.rsplit('-').next().unwrap_or("");
+            if hash.len() != 16 || !hash.bytes().all(|b| b.is_ascii_hexdigit()) {
+                return Err("CARGO_FINGERPRINT_UNVERIFIED");
+            }
+            // Cargo owns a unit only when its corresponding marker and JSON
+            // metadata both exist. An arbitrary file copied into deps is not proof.
+            let mut proof = false;
+            for e in fs::read_dir(&path).map_err(|_| "CARGO_FINGERPRINT_UNVERIFIED")? {
+                let e = e.map_err(|_| "CARGO_FINGERPRINT_UNVERIFIED")?;
+                let n = e.file_name().to_string_lossy().into_owned();
+                if n.ends_with(".json")
+                    && [
+                        "lib-",
+                        "bin-",
+                        "test-",
+                        "build-script-",
+                        "run-build-script-",
+                    ]
+                    .iter()
+                    .any(|prefix| n.starts_with(prefix))
+                {
+                    let marker = path.join(n.trim_end_matches(".json"));
+                    if let (Ok(pin), Ok(metadata)) = (
+                        Pinned::open(&marker, false),
+                        read(ctx, &e.path(), 256 * 1024),
+                    ) {
+                        let valid = !pin.directory()
+                            && pin.info.links == 1
+                            && metadata["rustc"].is_u64()
+                            && metadata["deps"].is_array()
+                            && metadata["local"].is_array();
+                        proof |= valid;
+                        if valid {
+                            let marker = n.trim_end_matches(".json");
+                            for prefix in [
+                                "test-integration-test-",
+                                "test-example-",
+                                "test-bench-",
+                                "test-lib-",
+                                "test-bin-",
+                                "run-build-script-",
+                                "build-script-",
+                                "lib-",
+                                "bin-",
+                            ] {
+                                if let Some(unit) = marker.strip_prefix(prefix) {
+                                    units
+                                        .entry(hash.to_ascii_lowercase())
+                                        .or_default()
+                                        .insert(unit.replace('-', "_"));
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if proof {
+                hashes.insert(hash.to_ascii_lowercase());
+            }
+        }
+        Ok(Self {
+            targets,
+            hashes,
+            units,
+        })
+    }
+    fn known(&self, relative: &Path, directory: bool) -> bool {
+        let parts: Vec<_> = relative
+            .iter()
+            .map(|x| x.to_string_lossy().into_owned())
+            .collect();
+        if parts.is_empty() {
+            return directory;
+        }
+        let name = parts.last().unwrap();
+        let extension = Path::new(name)
+            .extension()
+            .and_then(|x| x.to_str())
+            .unwrap_or("");
+        let stem = Path::new(name)
+            .file_stem()
+            .and_then(|x| x.to_str())
+            .unwrap_or("");
+        let hashed = |text: &str| {
+            text.rsplit('-')
+                .next()
+                .is_some_and(|hash| self.hashes.contains(hash))
+        };
+        let unit = |text: &str| {
+            text.rsplit_once('-').is_some_and(|(name, hash)| {
+                self.units.get(hash).is_some_and(|units| {
+                    units.contains(&name.replace('-', "_"))
+                        || name
+                            .strip_prefix("lib")
+                            .is_some_and(|name| units.contains(&name.replace('-', "_")))
+                })
+            })
+        };
+        let binary = matches!(
+            extension,
+            "exe"
+                | "dll"
+                | "pdb"
+                | "d"
+                | "rlib"
+                | "rmeta"
+                | "lib"
+                | "exp"
+                | "a"
+                | "o"
+                | "obj"
+                | "bc"
+        );
+        if parts.len() == 1 {
+            return if directory {
+                ["deps", "build", ".fingerprint", "incremental", "examples"]
+                    .contains(&name.as_str())
+            } else {
+                PROFILE_LOCKS.contains(&name.as_str())
+                    || binary
+                        && (self.targets.contains(&stem.replace('-', "_"))
+                            || self
+                                .targets
+                                .contains(&stem.trim_start_matches("lib").replace('-', "_")))
+            };
+        }
+        match parts[0].as_str() {
+            "deps" => !directory && parts.len() == 2 && binary && unit(stem),
+            "examples" => {
+                !directory
+                    && parts.len() == 2
+                    && binary
+                    && (unit(stem) || self.targets.contains(&stem.replace('-', "_")))
+            }
+            ".fingerprint" => {
+                if parts.len() == 2 {
+                    return directory && hashed(name);
+                }
+                parts.len() == 3
+                    && !directory
+                    && hashed(&parts[1])
+                    && (name == "invoked.timestamp"
+                        || extension.is_empty()
+                            && [
+                                "lib-",
+                                "bin-",
+                                "test-",
+                                "dep-",
+                                "output-",
+                                "build-script-",
+                                "run-build-script-",
+                            ]
+                            .iter()
+                            .any(|prefix| name.starts_with(prefix))
+                        || extension == "json"
+                            && [
+                                "lib-",
+                                "bin-",
+                                "test-",
+                                "build-script-",
+                                "run-build-script-",
+                            ]
+                            .iter()
+                            .any(|prefix| name.starts_with(prefix)))
+            }
+            "build" => {
+                if parts.len() == 2 {
+                    return directory && hashed(name);
+                }
+                if !hashed(&parts[1]) {
+                    return false;
+                }
+                if parts.len() == 3 {
+                    return if directory {
+                        name == "out"
+                    } else {
+                        ["output", "stderr", "root-output", "invoked.timestamp"]
+                            .contains(&name.as_str())
+                            || binary
+                                && (stem == "build-script-build"
+                                    || stem.starts_with("build_script_build-") && hashed(stem))
+                    };
+                }
+                parts[2] == "out"
+                    && (directory
+                        || binary
+                        || matches!(extension, "rs" | "c" | "cpp" | "h" | "bin"))
+            }
+            "incremental" => {
+                self.targets
+                    .iter()
+                    .any(|target| parts[1].starts_with(&format!("{target}-")))
+                    && (directory
+                        || matches!(
+                            name.as_str(),
+                            "dep-graph.bin"
+                                | "query-cache.bin"
+                                | "work-products.bin"
+                                | "metadata.rmeta"
+                                | "thin-lto-past-keys.bin"
+                        )
+                        || matches!(extension, "o" | "obj" | "bc" | "lock"))
+            }
+            _ => false,
+        }
+    }
+}
 fn preserved(relative: &Path) -> bool {
     let parts: Vec<_> = relative
         .iter()
@@ -457,11 +768,17 @@ fn preserved(relative: &Path) -> bool {
                 || ["receipt.json", "ledger.json", "runtime-manifest.json"].contains(&p.as_str()))
     })
 }
-fn inventory(root: &Path, budget: &Budget, stats: &mut Stats) -> Check<Plan> {
+fn inventory(
+    root: &Path,
+    artifacts: &Artifacts,
+    budget: &Budget,
+    stats: &mut Stats,
+) -> Check<Plan> {
     fn visit(
         root: &Path,
         path: &Path,
         plan: &mut Plan,
+        artifacts: &Artifacts,
         budget: &Budget,
         stats: &mut Stats,
         depth: usize,
@@ -477,6 +794,9 @@ fn inventory(root: &Path, budget: &Budget, stats: &mut Stats) -> Check<Plan> {
         let p = Pinned::open(path, false).map_err(|_| "LINK_OR_BUSY")?;
         if p.info.links != 1 || p.info.attributes & 3 != 0 {
             return Err("LINK_OR_ATTRIBUTES");
+        }
+        if !artifacts.known(rel, p.directory()) {
+            return Err("UNKNOWN_BUILD_CONTENT");
         }
         if depth == 1
             && p.directory()
@@ -516,6 +836,7 @@ fn inventory(root: &Path, budget: &Budget, stats: &mut Stats) -> Check<Plan> {
                     root,
                     &e.map_err(|_| "CONTENTS_UNVERIFIED")?.path(),
                     plan,
+                    artifacts,
                     budget,
                     stats,
                     depth + 1,
@@ -528,7 +849,7 @@ fn inventory(root: &Path, budget: &Budget, stats: &mut Stats) -> Check<Plan> {
         nodes: Vec::new(),
         bytes: 0,
     };
-    visit(root, root, &mut plan, budget, stats, 0)?;
+    visit(root, root, &mut plan, artifacts, budget, stats, 0)?;
     Ok(plan)
 }
 impl Plan {
@@ -547,7 +868,13 @@ impl Plan {
         }
         Ok(pins)
     }
-    fn remove(&self, mut pins: Vec<Pinned>, budget: &Budget, stats: &mut Stats) -> Check<()> {
+    fn remove(
+        &self,
+        root: &Path,
+        mut pins: Vec<Pinned>,
+        budget: &Budget,
+        stats: &mut Stats,
+    ) -> Check<()> {
         // Postorder from our complete immutable set of exclusive handles.
         for n in self.nodes.iter().rev() {
             let p = pins.pop().ok_or("BUILD_CONTENT_CHANGED")?;
@@ -578,7 +905,27 @@ impl Plan {
             }
         }
         if self.nodes.iter().any(|n| !matches!(fs::symlink_metadata(&n.path), Err(e) if e.kind()==io::ErrorKind::NotFound)) { return Err("ABSENCE_UNVERIFIED"); }
+        for entry in fs::read_dir(root).map_err(|_| "ABSENCE_UNVERIFIED")? {
+            budget.check(stats).map_err(|_| "DEADLINE_OR_ENTRY_LIMIT")?;
+            let entry = entry.map_err(|_| "ABSENCE_UNVERIFIED")?;
+            if !PROFILE_LOCKS
+                .iter()
+                .any(|name| entry.file_name() == OsStr::new(name))
+            {
+                return Err("ARTIFACT_SET_NOT_EMPTY");
+            }
+        }
         Ok(())
+    }
+    fn apply(&self, root: &Path, pins: Vec<Pinned>, budget: &Budget, stats: &mut Stats) {
+        if let Err(e) = self.remove(root, pins, budget, stats) {
+            stats.builds.partial_deletions += 1;
+            stats.failures += 1;
+            // The old plan does not measure added/replaced/otherwise changed data.
+            stats.builds.retain(e, None);
+        } else {
+            stats.builds.completed += 1;
+        }
     }
 }
 
@@ -629,13 +976,29 @@ fn candidate(
             Err(_) => return Err("CARGO_PROFILE_LOCK_UNVERIFIED"),
         }
     }
+    let children = fs::read_dir(&root)
+        .map_err(|_| "CONTENTS_UNVERIFIED")?
+        .collect::<io::Result<Vec<_>>>()
+        .map_err(|_| "CONTENTS_UNVERIFIED")?;
+    if children.iter().all(|e| {
+        PROFILE_LOCKS
+            .iter()
+            .any(|name| e.file_name() == OsStr::new(name))
+    }) {
+        stats.builds.absent += 1;
+        return Ok(());
+    }
     let _queue = lock(&ctx.root.join("queue.lock"))?;
+    let active = ctx
+        .active_job_ids_snapshot()
+        .map_err(|_| "ACTIVE_JOB_INDEX_UNVERIFIED")?;
     let (j, _states) = original(ctx, expected, work)?;
     let _todo = lock(&store.with_file_name("todo.lock"))?;
     let db = read(ctx, store, 64 * 1024 * 1024)?;
-    state(ctx, store, expected, work, &j, budget.until)?;
+    state(ctx, store, expected, work, &j, budget.until, &active)?;
     let head = source(ctx, &db, expected, &j, work, budget.until)?;
-    let plan = inventory(&root, budget, stats)?;
+    let artifacts = Artifacts::load(ctx, work, budget.until)?;
+    let plan = inventory(&root, &artifacts, budget, stats)?;
     if plan.nodes.is_empty() {
         stats.builds.absent += 1;
         return Ok(());
@@ -645,7 +1008,7 @@ fn candidate(
     let pins = match plan.hold(budget, stats) {
         Ok(p) => p,
         Err(e) => {
-            stats.builds.retain(e, Some(plan.bytes));
+            stats.builds.retain(e, None);
             return Ok(());
         }
     };
@@ -654,30 +1017,17 @@ fn candidate(
     }
     // Re-read original state/source after potentially slow enumeration. The
     // queue, state, ToDo, target and Cargo profile locks remain held throughout.
-    if let Err(e) = state(ctx, store, expected, work, &j, budget.until).and_then(|()| {
+    if let Err(e) = state(ctx, store, expected, work, &j, budget.until, &active).and_then(|()| {
         if source(ctx, &db, expected, &j, work, budget.until)? != head {
             Err("SOURCE_CHANGED")
         } else {
             Ok(())
         }
     }) {
-        stats.builds.retain(e, Some(plan.bytes));
+        stats.builds.retain(e, None);
         return Ok(());
     }
-    let before = stats.builds.removed_bytes;
-    if let Err(e) = plan.remove(pins, budget, stats) {
-        stats.builds.partial_deletions += 1;
-        stats.failures += 1;
-        stats.builds.retain(
-            e,
-            Some(
-                plan.bytes
-                    .saturating_sub(stats.builds.removed_bytes - before),
-            ),
-        );
-    } else {
-        stats.builds.completed += 1;
-    }
+    plan.apply(&root, pins, budget, stats);
     Ok(())
 }
 
@@ -691,13 +1041,7 @@ pub(super) fn run(apply: bool, outer: &Budget, stats: &mut Stats) {
         let mut candidates: Vec<_> = rows(&db)?.iter().filter(|r| selected(r)).collect();
         candidates.sort_by_key(|r| std::cmp::Reverse(r["id"].as_u64().unwrap()));
         let cursor = Path::new(RUNTIME).join("completed-build-cursor.json");
-        let after = match fs::symlink_metadata(&cursor) {
-            Err(e) if e.kind() == io::ErrorKind::NotFound => u64::MAX,
-            Ok(_) => read(&ctx, &cursor, 4096)?["after"]
-                .as_u64()
-                .ok_or("CURSOR_UNVERIFIED")?,
-            Err(_) => return Err("CURSOR_UNVERIFIED"),
-        };
+        let after = cursor_after(&ctx, &cursor, &mut stats.builds);
         if !candidates.iter().any(|r| r["id"].as_u64().unwrap() < after) { /* start a new finite pass */
         } else {
             candidates.retain(|r| r["id"].as_u64().unwrap() < after);
@@ -740,7 +1084,10 @@ pub(super) fn run(apply: bool, outer: &Budget, stats: &mut Stats) {
             }
         }
         stats.builds.bounded |= candidates.len() > MAX_ROWS;
-        if apply && let Some(last) = last {
+        if apply
+            && !stats.builds.cursor_unverified
+            && let Some(last) = last
+        {
             // Cursor is scheduling only, never evidence of ownership/completion.
             let tmp = cursor.with_extension(format!("{}.tmp", std::process::id()));
             let mut f = OpenOptions::new()
@@ -764,6 +1111,7 @@ pub(super) fn run(apply: bool, outer: &Budget, stats: &mut Stats) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    const FINGERPRINT_JSON: &[u8] = br#"{"rustc":1,"deps":[],"local":[]}"#;
 
     struct Fixture {
         root: PathBuf,
@@ -789,6 +1137,14 @@ mod tests {
             ctx.root = root.join("tools/codex-jobs");
             ctx.jobs = ctx.root.join("jobs");
             fs::create_dir_all(&ctx.jobs).unwrap();
+            fs::write(
+                ctx.jobs.join(".queue-index.json"),
+                serde_json::to_vec(
+                    &json!({"scan_complete":true,"scanned_at":ctx.rt.epoch(),"ids":[]}),
+                )
+                .unwrap(),
+            )
+            .unwrap();
             let store = root.join("tools/todo/todo.json");
             fs::create_dir_all(store.parent().unwrap()).unwrap();
             fs::write(ctx.root.join("queue.lock"), []).unwrap();
@@ -804,11 +1160,17 @@ mod tests {
             fs::write(work.join(".gitignore"), b"target/\n").unwrap();
             fs::write(
                 work.join("Cargo.toml"),
-                b"[package]\nname=\"fixture\"\nversion=\"0.1.0\"\n",
+                b"[workspace]\n\n[package]\nname=\"fixture\"\nversion=\"0.1.0\"\n",
             )
             .unwrap();
             fs::create_dir(work.join("src")).unwrap();
             fs::write(work.join("src/main.rs"), b"fn main() {}\n").unwrap();
+            fs::write(work.join("src/lib.rs"), b"pub fn fixture() {}\n").unwrap();
+            fs::write(
+                work.join("Cargo.lock"),
+                b"version = 4\n\n[[package]]\nname = \"fixture\"\nversion = \"0.1.0\"\n",
+            )
+            .unwrap();
             git(&ctx, &work, &["add", "."], until).unwrap();
             git(
                 &ctx,
@@ -868,9 +1230,25 @@ mod tests {
             )
             .unwrap();
             fs::create_dir_all(work.join("target/debug/deps")).unwrap();
+            fs::create_dir_all(work.join("target/debug/.fingerprint/fixture-0123456789abcdef"))
+                .unwrap();
+            fs::write(
+                work.join("target/debug/.fingerprint/fixture-0123456789abcdef/lib-fixture.json"),
+                FINGERPRINT_JSON,
+            )
+            .unwrap();
+            fs::write(
+                work.join("target/debug/.fingerprint/fixture-0123456789abcdef/lib-fixture"),
+                [],
+            )
+            .unwrap();
             fs::create_dir_all(work.join("target/release")).unwrap();
             fs::write(work.join("target/debug/.cargo-lock"), []).unwrap();
-            fs::write(work.join("target/debug/deps/cache.bin"), [7; 17]).unwrap();
+            fs::write(
+                work.join("target/debug/deps/fixture-0123456789abcdef.rmeta"),
+                [7; 17],
+            )
+            .unwrap();
             fs::write(work.join("target/release/keep.exe"), [8; 19]).unwrap();
             let target = cc_jobs::cache::resolved(work.join("target")).unwrap();
             fs::write(cc_jobs::gate::target_lock(&ctx.root, &target), []).unwrap();
@@ -888,6 +1266,19 @@ mod tests {
                 until: Instant::now() + Duration::from_secs(30),
                 max_entries: 200_000,
             }
+        }
+        fn artifacts(&self) -> Artifacts {
+            Artifacts {
+                targets: BTreeSet::from(["fixture".into()]),
+                hashes: BTreeSet::from(["0123456789abcdef".into()]),
+                units: BTreeMap::from([(
+                    "0123456789abcdef".into(),
+                    BTreeSet::from(["fixture".into()]),
+                )]),
+            }
+        }
+        fn bytes(&self) -> u64 {
+            17 + FINGERPRINT_JSON.len() as u64
         }
         fn run(&self, apply: bool, guard: bool, stats: &mut Stats) -> Check<()> {
             candidate(
@@ -923,14 +1314,18 @@ mod tests {
         let before = fs::read(&f.store).unwrap();
         let job_before = fs::read(f.ctx.job_dir(field(&f.origin, "id")).join("job.json")).unwrap();
         f.run(false, false, &mut stats).unwrap();
-        assert!(f.work.join("target/debug/deps/cache.bin").is_file());
-        assert_eq!(stats.builds.candidate_bytes, 17);
+        assert!(
+            f.work
+                .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                .is_file()
+        );
+        assert_eq!(stats.builds.candidate_bytes, f.bytes());
         assert_eq!(stats.builds.removed_bytes, 0);
         let mut apply = Stats::default();
         f.run(true, false, &mut apply).unwrap();
         assert!(!f.work.join("target/debug/deps").exists());
         assert!(f.work.join("target/debug/.cargo-lock").is_file());
-        assert_eq!(apply.builds.removed_bytes, 17);
+        assert_eq!(apply.builds.removed_bytes, f.bytes());
         assert_eq!(apply.builds.completed, 1);
         f.kept();
         assert_eq!(fs::read(&f.store).unwrap(), before);
@@ -953,8 +1348,12 @@ mod tests {
             Err("GUARD_UNKNOWN_OR_PROTECTED")
         );
         b.run(true, false, &mut stats).unwrap();
-        assert!(a.work.join("target/debug/deps/cache.bin").exists());
-        assert_eq!(stats.builds.removed_bytes, 17);
+        assert!(
+            a.work
+                .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                .exists()
+        );
+        assert_eq!(stats.builds.removed_bytes, b.bytes());
         a.kept();
         b.kept();
     }
@@ -970,7 +1369,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            state(&f.ctx, &f.store, &f.row, &f.work, &f.origin, until),
+            state(&f.ctx, &f.store, &f.row, &f.work, &f.origin, until, &[]),
             Err("ORIGINAL_STATE_CHANGED")
         );
         fs::write(
@@ -989,15 +1388,60 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            state(&f.ctx, &f.store, &f.row, &f.work, &f.origin, until),
+            state(
+                &f.ctx,
+                &f.store,
+                &f.row,
+                &f.work,
+                &f.origin,
+                until,
+                &[id.to_owned()]
+            ),
             Err("OTHER_JOB_ACTIVE_OR_WAITING")
         );
         let mut running = f.origin.clone();
         running["pid"] = json!(std::process::id());
         running["pid_created"] = json!(cc_jobs::proc_created(std::process::id()).unwrap());
         assert!(live(&f.ctx, &running).unwrap());
-        assert!(f.work.join("target/debug/deps/cache.bin").exists());
+        assert!(
+            f.work
+                .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                .exists()
+        );
         f.kept();
+    }
+    #[test]
+    fn a_saved_runtime_build_source_reference_keeps_the_original_artifacts() {
+        let f = Fixture::new();
+        let debug = f.work.join("target/debug");
+        let proof = json!({"id":2,"status":"done","note":format!("runtime source {}\\fixture.exe",debug.display())});
+        fs::write(
+            &f.store,
+            serde_json::to_vec(&json!({"items":[f.row,proof]})).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            state(
+                &f.ctx,
+                &f.store,
+                &f.row,
+                &f.work,
+                &f.origin,
+                f.budget().until,
+                &[]
+            ),
+            Err("SAVED_BUILD_REFERENCE_RETAINED")
+        );
+        assert!(
+            f.work
+                .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                .exists()
+        );
+        f.kept();
+        assert!(!build_reference(
+            &json!(format!("{}-sibling/file", debug.display())),
+            &debug
+        ));
     }
     #[test]
     fn dependencies_dirty_source_and_changed_ownership_are_retained() {
@@ -1024,7 +1468,11 @@ mod tests {
             source(&f.ctx, &db, &f.row, &f.origin, &f.work, f.budget().until),
             Err("SOURCE_NOT_SAVED")
         );
-        assert!(f.work.join("target/debug/deps/cache.bin").exists());
+        assert!(
+            f.work
+                .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                .exists()
+        );
     }
     #[test]
     fn saved_but_unpublished_source_is_not_cleanup_qualified() {
@@ -1048,18 +1496,26 @@ mod tests {
             source(&f.ctx, &db, &f.row, &f.origin, &f.work, until),
             Err("SOURCE_NOT_PUSHED")
         );
-        assert!(f.work.join("target/debug/deps/cache.bin").exists());
+        assert!(
+            f.work
+                .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                .exists()
+        );
         f.kept();
     }
     #[test]
     fn open_runtime_or_evidence_prevents_any_deletion_and_unknown_size_is_not_zero() {
         let f = Fixture::new();
-        let open = fs::File::open(f.work.join("target/debug/deps/cache.bin")).unwrap();
+        let open = fs::File::open(
+            f.work
+                .join("target/debug/deps/fixture-0123456789abcdef.rmeta"),
+        )
+        .unwrap();
         let mut stats = Stats::default();
         f.run(true, false, &mut stats).unwrap();
         assert_eq!(stats.builds.completed, 0);
         assert_eq!(stats.builds.removed_bytes, 0);
-        assert_eq!(stats.builds.retained_bytes, 17);
+        assert_eq!(stats.builds.retained_bytes, 0);
         drop(open);
         fs::write(
             f.work.join("target/debug/deps/receipt.json"),
@@ -1069,8 +1525,8 @@ mod tests {
         let err = f.run(true, false, &mut stats).unwrap_err();
         assert_eq!(err, "SOURCE_OR_EVIDENCE_RETAINED");
         stats.builds.retain(err, None);
-        assert_eq!(stats.builds.unmeasured, 1);
-        assert_eq!(stats.builds.retained_bytes, 17);
+        assert_eq!(stats.builds.unmeasured, 2);
+        assert_eq!(stats.builds.retained_bytes, 0);
         f.kept();
     }
     #[test]
@@ -1109,7 +1565,7 @@ mod tests {
     #[test]
     fn a_running_executable_retains_the_entire_build_set() {
         let f = Fixture::new();
-        let exe = f.work.join("target/debug/fixture-runtime.exe");
+        let exe = f.work.join("target/debug/fixture.exe");
         fs::copy(std::env::current_exe().unwrap(), &exe).unwrap();
         let ready = f.root.join("child-ready");
         struct Running(std::process::Child);
@@ -1142,7 +1598,11 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(stats.builds.completed, 0);
         assert_eq!(stats.builds.removed_bytes, 0);
-        assert!(f.work.join("target/debug/deps/cache.bin").exists());
+        assert!(
+            f.work
+                .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                .exists()
+        );
         assert!(exe.exists());
         f.kept();
     }
@@ -1159,19 +1619,64 @@ mod tests {
         let root = f.work.join("target/debug");
         let mut stats = Stats::default();
         let budget = f.budget();
-        let plan = inventory(&root, &budget, &mut stats).unwrap();
-        fs::write(root.join("deps/cache.bin"), [1; 18]).unwrap();
+        let plan = inventory(&root, &f.artifacts(), &budget, &mut stats).unwrap();
+        fs::write(root.join("deps/fixture-0123456789abcdef.rmeta"), [1; 18]).unwrap();
         assert!(plan.hold(&budget, &mut stats).is_err());
-        let plan = inventory(&root, &budget, &mut stats).unwrap();
+        let plan = inventory(&root, &f.artifacts(), &budget, &mut stats).unwrap();
         let pins = plan.hold(&budget, &mut stats).unwrap();
         fs::write(root.join("deps/new.bin"), [2; 7]).unwrap();
-        assert_eq!(
-            plan.remove(pins, &budget, &mut stats),
-            Err("DELETE_INCOMPLETE")
-        );
+        plan.apply(&root, pins, &budget, &mut stats);
         assert_eq!(stats.builds.removed_bytes, 18);
         assert_eq!(stats.builds.completed, 0);
+        assert_eq!(stats.builds.unmeasured, 1);
+        assert_eq!(stats.builds.retained_bytes, 0);
         assert_eq!(fs::read(root.join("deps/new.bin")).unwrap(), vec![2; 7]);
+        f.kept();
+    }
+    #[test]
+    fn unknown_children_are_not_adopted_by_extension_or_fingerprint_hash() {
+        let f = Fixture::new();
+        for name in ["notes.md", "notes-0123456789abcdef.rmeta"] {
+            let path = f.work.join("target/debug/deps").join(name);
+            fs::write(&path, b"unique original").unwrap();
+            assert_eq!(
+                inventory(
+                    &f.work.join("target/debug"),
+                    &f.artifacts(),
+                    &f.budget(),
+                    &mut Stats::default()
+                )
+                .err(),
+                Some("UNKNOWN_BUILD_CONTENT")
+            );
+            assert!(
+                f.work
+                    .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                    .exists()
+            );
+            fs::remove_file(path).unwrap();
+        }
+        f.kept();
+    }
+    #[test]
+    fn a_new_root_file_prevents_absence_and_marks_remaining_bytes_unmeasured() {
+        let f = Fixture::new();
+        let root = f.work.join("target/debug");
+        let budget = f.budget();
+        let mut stats = Stats::default();
+        let plan = inventory(&root, &f.artifacts(), &budget, &mut stats).unwrap();
+        let pins = plan.hold(&budget, &mut stats).unwrap();
+        fs::write(root.join("new-notes.md"), b"new original").unwrap();
+        plan.apply(&root, pins, &budget, &mut stats);
+        assert_eq!(stats.builds.completed, 0);
+        assert_eq!(stats.builds.partial_deletions, 1);
+        assert_eq!(stats.builds.unmeasured, 1);
+        assert_eq!(stats.builds.retained_bytes, 0);
+        assert_eq!(stats.builds.removed_bytes, f.bytes());
+        assert_eq!(
+            fs::read(root.join("new-notes.md")).unwrap(),
+            b"new original"
+        );
         f.kept();
     }
     #[test]
@@ -1198,10 +1703,34 @@ mod tests {
             max_entries: 100,
         };
         assert_eq!(
-            inventory(&f.work.join("target/debug"), &budget, &mut Stats::default()).err(),
+            inventory(
+                &f.work.join("target/debug"),
+                &f.artifacts(),
+                &budget,
+                &mut Stats::default()
+            )
+            .err(),
             Some("DEADLINE_OR_ENTRY_LIMIT")
         );
-        assert!(f.work.join("target/debug/deps/cache.bin").exists());
+        assert!(
+            f.work
+                .join("target/debug/deps/fixture-0123456789abcdef.rmeta")
+                .exists()
+        );
+    }
+    #[test]
+    fn corrupt_scheduling_cursor_does_not_grant_authority_or_stop_a_fresh_scan() {
+        let f = Fixture::new();
+        let path = f.root.join("cursor.json");
+        let mut stats = BuildStats::default();
+        fs::write(&path, b"invalid original cursor").unwrap();
+        assert_eq!(cursor_after(&f.ctx, &path, &mut stats), u64::MAX);
+        assert!(stats.cursor_unverified);
+        assert_eq!(fs::read(&path).unwrap(), b"invalid original cursor");
+        fs::write(&path, br#"{"after":42}"#).unwrap();
+        let mut stats = BuildStats::default();
+        assert_eq!(cursor_after(&f.ctx, &path, &mut stats), 42);
+        assert!(!stats.cursor_unverified);
     }
     #[test]
     fn child_junction_and_external_hardlink_are_preserved() {
@@ -1212,7 +1741,7 @@ mod tests {
         fs::write(outside.join("original.bin"), [9; 11]).unwrap();
         fs::hard_link(outside.join("original.bin"), root.join("deps/hard.bin")).unwrap();
         assert_eq!(
-            inventory(&root, &f.budget(), &mut Stats::default()).err(),
+            inventory(&root, &f.artifacts(), &f.budget(), &mut Stats::default()).err(),
             Some("LINK_OR_ATTRIBUTES")
         );
         fs::remove_file(root.join("deps/hard.bin")).unwrap();
@@ -1227,7 +1756,7 @@ mod tests {
             .unwrap();
         assert!(status.success());
         assert_eq!(
-            inventory(&root, &f.budget(), &mut Stats::default()).err(),
+            inventory(&root, &f.artifacts(), &f.budget(), &mut Stats::default()).err(),
             Some("LINK_OR_BUSY")
         );
         fs::remove_dir(&linked).unwrap();

@@ -11,7 +11,10 @@ fn main() {
         if args.len() != 2 || args[0] != "--request-file" {
             return Err(ReadError("input_rejected"));
         }
-        let mut host = SystemHost;
+        if !std::path::Path::new(&args[1]).is_absolute() {
+            return Err(ReadError("input_rejected"));
+        }
+        let mut host = SystemHost::default();
         let bytes = host.read(std::path::Path::new(&args[1]), 64 * 1024)?;
         inspect(&mut host, &Layout::production(), &parse_request(&bytes)?)
     })();

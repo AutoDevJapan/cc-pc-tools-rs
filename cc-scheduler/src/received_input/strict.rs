@@ -66,6 +66,7 @@ impl<'de> Deserialize<'de> for Unique {
     }
 }
 pub(super) fn parse(bytes: &[u8]) -> Result<Value> {
+    let bytes = bytes.strip_prefix(b"\xef\xbb\xbf").unwrap_or(bytes);
     serde_json::from_slice::<Unique>(bytes)
         .map(|u| u.0)
         .map_err(|_| ReadError("input_rejected"))

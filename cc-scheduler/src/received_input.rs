@@ -96,7 +96,7 @@ fn edge_valid(v: &Value) -> bool {
     v.is_null()
         || (keys(v, &["todo_id", "job_id", "origin_job_id", "kind"], &[])
             && v["todo_id"].as_u64().is_some_and(|n| n > 0)
-            && id(s(&v["job_id"]))
+            && (v["job_id"].is_null() || id(s(&v["job_id"])))
             && id(s(&v["origin_job_id"]))
             && ["research", "review", "check"].contains(&s(&v["kind"])))
 }
@@ -156,7 +156,7 @@ fn bytes(host: &mut impl Host, path: &Path, limit: usize) -> Result<Vec<u8>> {
     Ok(bytes)
 }
 fn record(host: &mut impl Host, path: &Path, limit: usize) -> Result<Value> {
-    strict::parse(&bytes(host, path, limit)?)
+    strict::parse(&bytes(host, path, limit)?).map_err(|_| ReadError("record_invalid_json"))
 }
 fn one(db: &Value, todo: u64) -> Result<&Value> {
     let rows = db["items"].as_array().ok_or(ReadError("invalid_record"))?;
@@ -196,10 +196,19 @@ fn parent(
     scope: &str,
 ) -> Result<(Value, Vec<Value>)> {
     let relation = &row["subwork"];
-    if relation.is_null() && j["subwork"].is_null() && j["parent_job_id"].is_null() {
+    if relation.is_null()
+        && j["subwork"].is_null()
+        && j["parent_job_id"].is_null()
+        && j["subwork_owner_job_id"].is_null()
+        && j["subwork_validated"] != true
+    {
         return Ok((Value::Null, Vec::new()));
     }
-    if !relation.is_object() || j["subwork"] != *relation {
+    if !relation.is_object()
+        || j["subwork"] != *relation
+        || j["subwork_validated"] != true
+        || j["subwork_owner_job_id"] != j["parent_job_id"]
+    {
         return reject("parent_mismatch");
     }
     let parent_id = relation["parent_todo_id"]
@@ -207,16 +216,16 @@ fn parent(
         .filter(|n| *n > 0 && *n != row["id"].as_u64().unwrap())
         .ok_or(ReadError("parent_mismatch"))?;
     let origin = s(&relation["origin_job_id"]);
-    let current = s(&j["parent_job_id"]);
+    let current = j["parent_job_id"].as_str();
     if !id(origin)
-        || !id(current)
+        || (!j["parent_job_id"].is_null() && !current.is_some_and(id))
         || !["check", "review", "research"].contains(&s(&relation["kind"]))
     {
         return reject("parent_mismatch");
     }
     let p = one(db, parent_id).map_err(|_| ReadError("parent_mismatch"))?;
     if !listed(p, origin)
-        || !listed(p, current)
+        || current.is_some_and(|current| !listed(p, current))
         || !p["subwork"].is_null()
         || p["project"] != row["project"]
         || path_key(s(&db["projects"][s(&p["project"])])) != path_key(scope)
@@ -225,7 +234,11 @@ fn parent(
     }
     // Preserve the original edge and the actual current parent separately.
     let mut records = Vec::new();
-    for parent_job in BTreeSet::from([origin, current]) {
+    let mut parents = BTreeSet::from([origin]);
+    if let Some(current) = current {
+        parents.insert(current);
+    }
+    for parent_job in parents {
         let pj = job(host, l, parent_job)?;
         if pj["id"] != parent_job
             || pj["todo_id"] != parent_id
@@ -276,15 +289,18 @@ fn spec_paths(row: &Value, l: &Layout, todo: u64) -> Result<Vec<PathBuf>> {
     }
     Ok(paths)
 }
-fn matches_spec(tail: &str, spec: &str, row: &Value) -> bool {
-    if tail == spec {
-        return true;
-    }
-    if row["subwork"].is_object() {
-        let suffix=format!("\nこの作業はToDo {}の独立した{}です。保存済み仕様の有限な範囲だけを扱い、主担当の完了を前提にせず結果を返してください。主担当のソースを編集したり、独立したPRの作成やマージを担当したりしないでください。\n",row["subwork"]["parent_todo_id"],s(&row["subwork"]["kind"]));
-        return tail.strip_prefix(spec) == Some(suffix.as_str());
-    }
-    false
+fn matches_spec(dispatch: &str, spec: &str, row: &Value) -> bool {
+    let suffix = if row["subwork"].is_object() {
+        format!("\nこの作業はToDo {}の独立した{}です。保存済み仕様の有限な範囲だけを扱い、主担当の完了を前提にせず結果を返してください。主担当のソースを編集したり、独立したPRの作成やマージを担当したりしないでください。\n",row["subwork"]["parent_todo_id"],s(&row["subwork"]["kind"]))
+    } else {
+        String::new()
+    };
+    // Match the complete saved spec and the known suffix from the end. The
+    // delimiter may legitimately appear in earlier results, answers or the spec.
+    dispatch
+        .strip_suffix(&suffix)
+        .and_then(|v| v.strip_suffix(spec))
+        .is_some_and(|prefix| prefix.ends_with("\n依頼:\n"))
 }
 fn observe(host: &mut impl Host, l: &Layout, r: &Value) -> Result<Value> {
     let db = record(host, &l.todo, cc_job_policy::todo_store::MAX_BYTES)?;
@@ -321,6 +337,17 @@ fn observe(host: &mut impl Host, l: &Layout, r: &Value) -> Result<Value> {
     if kind != s(&r["source_kind"]) {
         return reject("source_mismatch");
     }
+    if j["finite_research_approval"].is_object() || j["original_product_retry"].is_object() {
+        return reject("unsupported_received_variant");
+    }
+    let console = &row["scheduler"]["console_request"];
+    if (row["product_review_allocation"].is_object() && row["scheduler"]["job"] == j["id"])
+        || (console["prompt"].is_string()
+            && row["scheduler"]["console_receipts"][s(&console["key"])]["launch_key"]
+                == j["launch_key"])
+    {
+        return reject("unsupported_dispatch_variant");
+    }
     let key = s(&j["launch_key"]);
     if key.len() != 32 || !key.bytes().all(|b| b.is_ascii_hexdigit()) {
         return reject("invalid_record");
@@ -336,8 +363,11 @@ fn observe(host: &mut impl Host, l: &Layout, r: &Value) -> Result<Value> {
     let received = bytes(host, &received_path, BODY_LIMIT)?;
     let text = std::str::from_utf8(&dispatch).map_err(|_| ReadError("invalid_utf8"))?;
     std::str::from_utf8(&received).map_err(|_| ReadError("invalid_utf8"))?;
-    let header = format!("\n元の登録作業場所: {scope}\n");
-    if !text.contains(&header) {
+    if text
+        .lines()
+        .find_map(|line| line.strip_prefix("元の登録作業場所: "))
+        != Some(scope)
+    {
         return reject("scope_mismatch");
     }
     let mut guidance = match s(&j["sandbox"]) {
@@ -356,16 +386,12 @@ fn observe(host: &mut impl Host, l: &Layout, r: &Value) -> Result<Value> {
     if received != expected_received {
         return reject("received_mismatch");
     }
-    let tail = text
-        .split_once("\n依頼:\n")
-        .ok_or(ReadError("spec_mismatch"))?
-        .1;
     let paths = spec_paths(row, l, r["todo_id"].as_u64().unwrap())?;
     let mut matched = Vec::new();
     for path in &paths {
         let spec = bytes(host, path, RECORD_LIMIT)?;
         let body = std::str::from_utf8(&spec).map_err(|_| ReadError("invalid_utf8"))?;
-        if !body.trim().is_empty() && matches_spec(tail, body, row) {
+        if !body.trim().is_empty() && matches_spec(text, body, row) {
             matched.push((path, spec));
         }
     }
@@ -382,6 +408,7 @@ fn observe(host: &mut impl Host, l: &Layout, r: &Value) -> Result<Value> {
             "id":j["id"],"todo_id":j["todo_id"],"project":j["project"],"cwd":j["cwd"],
             "registered_cwd":j["registered_cwd"],"work_owner":j["work_owner"],"subwork_spec":j["subwork_spec"],
             "fixed_review_requalification":j["fixed_review_requalification"],
+            "subwork_validated":j["subwork_validated"],"subwork_owner_job_id":j["subwork_owner_job_id"],
             "scope_source":j["scope_source"],"sandbox":j["sandbox"],"launch_key":j["launch_key"],
             "prompt_source":j["prompt_source"],"prompt":j["prompt"],"subwork":j["subwork"],"parent_origin":j["parent_origin"],"parent_job_id":j["parent_job_id"]}});
     let digest = cc_job_policy::product_retry::digest;
@@ -397,14 +424,21 @@ fn observe(host: &mut impl Host, l: &Layout, r: &Value) -> Result<Value> {
         "upstream_reference":null,"target_binding":null,
         "delegation_edge_recorded":!edge.is_null(),
         "gaps":["upstream_provider_reference_not_recorded","target_binding_not_recorded","human_identity_not_attested"],
-        "hash_domain":"saved_file_bytes","historical_immutability_attested":false}),
+        "hash_domain":"saved_file_bytes","binding_hash_domain":"selected_record_projection_json_utf8",
+        "historical_immutability_attested":false}),
     )
 }
 /// Two bounded observations of the selected binding, not a historical immutability proof.
 pub fn inspect(host: &mut impl Host, l: &Layout, request: &Request) -> Result<Value> {
     let started = host.now();
     let first = observe(host, l, &request.0)?;
-    let second = observe(host, l, &request.0).map_err(|_| ReadError("changed_during_read"))?;
+    let second = observe(host, l, &request.0).map_err(|e| match e.0 {
+        "received_mismatch" | "spec_mismatch" | "todo_job_mismatch" | "scope_mismatch"
+        | "parent_mismatch" | "path_mismatch" | "source_mismatch" => {
+            ReadError("changed_during_read")
+        }
+        _ => e,
+    })?;
     if first != second {
         return reject("changed_during_read");
     }

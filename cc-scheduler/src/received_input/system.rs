@@ -2,11 +2,7 @@ use super::{strict, Host, ReadError, Result};
 use std::{
     fs::File,
     io::{self, Read},
-    os::windows::{
-        fs::{MetadataExt, OpenOptionsExt},
-        io::AsRawHandle,
-        process::CommandExt,
-    },
+    os::windows::{fs::MetadataExt, io::AsRawHandle, process::CommandExt},
     path::Path,
     process::{Command, Stdio},
     sync::mpsc,
@@ -18,7 +14,25 @@ use windows_sys::Win32::Storage::FileSystem::{
 };
 
 /// The normal local host: fixed guard, no profile or environment-selected data roots.
-pub struct SystemHost;
+pub struct SystemHost {
+    deadline: Instant,
+}
+impl Default for SystemHost {
+    fn default() -> Self {
+        Self {
+            deadline: Instant::now() + Duration::from_secs(45),
+        }
+    }
+}
+impl SystemHost {
+    fn check_deadline(&self) -> Result<()> {
+        if Instant::now() >= self.deadline {
+            Err(ReadError("query_deadline"))
+        } else {
+            Ok(())
+        }
+    }
+}
 fn io_error(e: io::Error) -> ReadError {
     ReadError(match e.kind() {
         io::ErrorKind::NotFound => "not_found",
@@ -62,14 +76,11 @@ fn guard_verdict(stdout: &[u8]) -> Result<bool> {
 }
 impl Host for SystemHost {
     fn read(&mut self, path: &Path, limit: usize) -> Result<Vec<u8>> {
+        self.check_deadline()?;
         no_links(path)?;
-        // Deny write/delete sharing for this read. The second observation still
-        // verifies files replaced between reads; it cannot prove earlier history.
-        let mut file = File::options()
-            .read(true)
-            .share_mode(1)
-            .open(path)
-            .map_err(io_error)?;
+        // Use the ordinary READ|WRITE|DELETE sharing contract. A read-only API
+        // must not make the existing snapshot writer's atomic replace fail.
+        let mut file = File::open(path).map_err(io_error)?;
         if !file.metadata().map_err(io_error)?.is_file() {
             return Err(ReadError("invalid_record"));
         }
@@ -89,9 +100,11 @@ impl Host for SystemHost {
             return Err(ReadError("too_large"));
         }
         no_links(path)?;
+        self.check_deadline()?;
         Ok(bytes)
     }
     fn guard(&mut self, path: &Path) -> Result<bool> {
+        self.check_deadline()?;
         let mut command = Command::new("D:/CC/Tools/client-records/scrub391.exe");
         command
             .arg("--guard-path")
@@ -118,21 +131,29 @@ impl Host for SystemHost {
                 command.env(key, value);
             }
         }
-        let mut child = command.spawn().map_err(io_error)?;
+        // Reuse the existing suspended-spawn/Job Object implementation so the
+        // fixed guard's Git children cannot escape timeout cleanup by racing spawn.
+        let (mut child, group) = cc_ask::ProcessGroup::spawn(&mut command)
+            .map_err(|_| ReadError("guard_unavailable"))?;
         let out = capture(child.stdout.take().unwrap());
         let err = capture(child.stderr.take().unwrap());
-        let deadline = Instant::now() + Duration::from_secs(15);
+        let deadline = self.deadline.min(Instant::now() + Duration::from_secs(15));
         let status = loop {
             match child.try_wait() {
                 Ok(Some(status)) => break status,
                 Ok(None) if Instant::now() < deadline => thread::sleep(Duration::from_millis(20)),
                 _ => {
-                    let _ = child.kill();
+                    group.stop(&mut child);
                     let _ = child.wait();
+                    self.check_deadline()?;
                     return Err(ReadError("guard_unavailable"));
                 }
             }
         };
+        // The fixed guard does not intentionally leave background services.
+        // Also close inherited pipes held by its descendants after root exit.
+        group.stop(&mut child);
+        let _ = child.wait();
         let stdout = out
             .recv_timeout(deadline.saturating_duration_since(Instant::now()))
             .map_err(|_| ReadError("guard_unavailable"))?
@@ -144,6 +165,7 @@ impl Host for SystemHost {
         if !status.success() || stdout.len() > 16384 || stderr.len() > 16384 {
             return Err(ReadError("guard_unavailable"));
         }
+        self.check_deadline()?;
         guard_verdict(&stdout)
     }
     fn now(&self) -> String {
@@ -162,5 +184,19 @@ mod tests {
         for bytes in [br#"{}"#.as_slice(),br#"{"ok":true,"access_allowed":true,"client_resource":true,"classification_unverified":false}"#] {
             assert_eq!(guard_verdict(bytes),Err(ReadError("guard_unavailable")));
         }
+    }
+    #[test]
+    fn query_deadline_is_shared_by_reads_and_guards() {
+        let mut host = SystemHost {
+            deadline: Instant::now(),
+        };
+        assert_eq!(
+            host.read(Path::new("D:/never-read"), 10).unwrap_err(),
+            ReadError("query_deadline")
+        );
+        assert_eq!(
+            host.guard(Path::new("D:/never-spawn")).unwrap_err(),
+            ReadError("query_deadline")
+        );
     }
 }

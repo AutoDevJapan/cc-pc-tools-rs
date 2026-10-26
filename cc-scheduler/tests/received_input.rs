@@ -1,7 +1,7 @@
 use cc_scheduler::received_input::{inspect, parse_request, Host, Layout, ReadError};
 use serde_json::{json, Value};
 use std::{
-    collections::BTreeMap,
+    collections::{BTreeMap, BTreeSet},
     path::{Path, PathBuf},
 };
 
@@ -11,10 +11,21 @@ struct Fixture {
     denied: bool,
     fail_read: Option<PathBuf>,
     mutate: Option<(PathBuf, Vec<u8>)>,
+    seen_reads: BTreeSet<PathBuf>,
+    repeat_read_error: Option<(PathBuf, ReadError)>,
+    seen_guards: BTreeSet<PathBuf>,
+    repeat_guard_error: Option<ReadError>,
 }
 impl Host for Fixture {
     fn read(&mut self, path: &Path, _: usize) -> Result<Vec<u8>, ReadError> {
         self.reads += 1;
+        if !self.seen_reads.insert(path.to_path_buf()) {
+            if let Some((p, error)) = &self.repeat_read_error {
+                if p == path {
+                    return Err(*error);
+                }
+            }
+        }
         if self.fail_read.as_deref() == Some(path) {
             return Err(ReadError("permission_denied"));
         }
@@ -27,7 +38,12 @@ impl Host for Fixture {
         }
         result
     }
-    fn guard(&mut self, _: &Path) -> Result<bool, ReadError> {
+    fn guard(&mut self, path: &Path) -> Result<bool, ReadError> {
+        if !self.seen_guards.insert(path.to_path_buf()) {
+            if let Some(error) = self.repeat_guard_error {
+                return Err(error);
+            }
+        }
         Ok(!self.denied)
     }
     fn now(&self) -> String {
@@ -81,6 +97,10 @@ fn fixture() -> (Fixture, Value) {
             denied: false,
             fail_read: None,
             mutate: None,
+            seen_reads: BTreeSet::new(),
+            repeat_read_error: None,
+            seen_guards: BTreeSet::new(),
+            repeat_guard_error: None,
         },
         json!({
             "todo_id":7,"job_id":job_id(),"registered_scope":"D:/work","source_kind":"scheduler_dispatch"
@@ -145,7 +165,7 @@ fn file_permission_utf8_size_and_duplicate_keys_fail_without_echoing_input() {
         layout().todo,
         br#"{"items":[],"items":[{"secret":"DO_NOT_DISCLOSE"}]}"#.to_vec(),
     );
-    assert_eq!(query(&mut f, &r).unwrap_err().0, "input_rejected");
+    assert_eq!(query(&mut f, &r).unwrap_err().0, "record_invalid_json");
     assert!(
         parse_request(br#"{"expected":{"parent_edge":{"kind":"review","kind":"check"}}}"#).is_err()
     );
@@ -217,7 +237,7 @@ fn system_host_bounds_regular_files_and_rejects_hardlinks() {
     let dir = tempfile::tempdir().unwrap();
     let path = dir.path().join("input");
     std::fs::write(&path, b"bytes").unwrap();
-    let mut host = cc_scheduler::received_input::SystemHost;
+    let mut host = cc_scheduler::received_input::SystemHost::default();
     assert_eq!(host.read(&path, 5).unwrap(), b"bytes");
     assert_eq!(host.read(&path, 4).unwrap_err().0, "too_large");
     let alias = dir.path().join("alias");
@@ -248,6 +268,140 @@ fn actual_managed_sandbox_and_fixed_review_guidance_are_preserved() {
     let report = query(&mut f, &r).unwrap();
     assert_eq!(report["human_identity_attested"], false);
     assert_eq!(report["source_kind"], "scheduler_dispatch");
+}
+
+#[test]
+fn delimiters_in_previous_results_and_inside_the_spec_preserve_the_exact_body() {
+    let (mut f, r) = fixture();
+    let spec = "hello\n依頼:\nquoted nested request\n";
+    let dispatch =
+        format!("previous result\n依頼:\nold request\n元の登録作業場所: D:/work\n依頼:\n{spec}");
+    f.files.insert(
+        layout().specs.join("7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.md"),
+        spec.as_bytes().to_vec(),
+    );
+    f.files.insert(
+        layout()
+            .prompts
+            .join("7-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.md"),
+        dispatch.as_bytes().to_vec(),
+    );
+    f.files.insert(
+        layout().jobs.join(job_id()).join("prompt.md"),
+        (dispatch + cc_job_policy::WRITE_GUIDANCE)
+            .as_bytes()
+            .to_vec(),
+    );
+    assert_eq!(query(&mut f, &r).unwrap()["spec_bytes"], spec.len());
+    let (mut f, r) = fixture();
+    let p = layout()
+        .prompts
+        .join("7-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.md");
+    let source = String::from_utf8(f.files[&p].clone()).unwrap();
+    let forged = source.replace(
+        "元の登録作業場所: D:/work",
+        "元の登録作業場所: D:/other\nprevious note\n元の登録作業場所: D:/work",
+    );
+    f.files.insert(p, forged.as_bytes().to_vec());
+    f.files.insert(
+        layout().jobs.join(job_id()).join("prompt.md"),
+        (forged + cc_job_policy::WRITE_GUIDANCE).as_bytes().to_vec(),
+    );
+    assert_eq!(query(&mut f, &r).unwrap_err().0, "scope_mismatch");
+}
+
+#[test]
+fn subwork_requires_its_actual_scheduler_suffix() {
+    let (mut f, r) = subwork_fixture();
+    let source = "worker\n元の登録作業場所: D:/work\n依頼:\nhello\n";
+    f.files.insert(
+        layout()
+            .prompts
+            .join("7-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.md"),
+        source.as_bytes().to_vec(),
+    );
+    f.files.insert(
+        layout().jobs.join(job_id()).join("prompt.md"),
+        (source.to_owned() + cc_job_policy::WRITE_GUIDANCE)
+            .as_bytes()
+            .to_vec(),
+    );
+    assert_eq!(query(&mut f, &r).unwrap_err().0, "spec_mismatch");
+}
+
+#[test]
+fn infrastructure_errors_on_the_second_observation_keep_their_actual_reason() {
+    for error in [
+        "guard_unavailable",
+        "classification_unverified",
+        "permission_denied",
+    ] {
+        let (mut f, r) = fixture();
+        f.repeat_guard_error = Some(ReadError(error));
+        assert_eq!(query(&mut f, &r).unwrap_err().0, error);
+    }
+    let (mut f, r) = fixture();
+    f.repeat_read_error = Some((layout().todo, ReadError("io_error")));
+    assert_eq!(query(&mut f, &r).unwrap_err().0, "io_error");
+}
+
+#[test]
+fn bom_in_existing_json_records_does_not_change_body_hashes() {
+    let (mut f, r) = fixture();
+    let baseline = query(&mut f, &r).unwrap();
+    for path in [layout().todo, layout().jobs.join(job_id()).join("job.json")] {
+        f.files.insert(
+            path.clone(),
+            [b"\xef\xbb\xbf".as_slice(), f.files[&path].as_slice()].concat(),
+        );
+    }
+    let report = query(&mut f, &r).unwrap();
+    assert_eq!(report["version"], baseline["version"]);
+    assert_eq!(
+        report["binding_hash_domain"],
+        "selected_record_projection_json_utf8"
+    );
+}
+
+#[test]
+fn known_unimplemented_writer_variants_return_specific_reasons() {
+    for field in ["finite_research_approval", "original_product_retry"] {
+        let (mut f, r) = fixture();
+        update_json(&mut f, layout().jobs.join(job_id()).join("job.json"), |v| {
+            v[field] = json!({"state":"registered"})
+        });
+        assert_eq!(
+            query(&mut f, &r).unwrap_err().0,
+            "unsupported_received_variant"
+        );
+    }
+    let (mut f, r) = fixture();
+    update_json(&mut f, layout().todo, |v| {
+        v["items"][0]["scheduler"] = json!({"console_request":{"key":"accepted","prompt":"synthetic handoff"},
+            "console_receipts":{"accepted":{"launch_key":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}}});
+    });
+    assert_eq!(
+        query(&mut f, &r).unwrap_err().0,
+        "unsupported_dispatch_variant"
+    );
+}
+
+#[test]
+fn cli_rejects_a_relative_request_path_without_echoing_it() {
+    use std::{os::windows::process::CommandExt, process::Command};
+    let output = Command::new(env!("CARGO_BIN_EXE_received_input"))
+        .args(["--request-file", "relative-DO_NOT_ECHO.json"])
+        .env_clear()
+        .creation_flags(0x08000000)
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stderr.is_empty());
+    let report: Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["code"], "input_rejected");
+    assert!(!String::from_utf8(output.stdout)
+        .unwrap()
+        .contains("DO_NOT_ECHO"));
 }
 fn update_json(f: &mut Fixture, path: PathBuf, edit: impl FnOnce(&mut Value)) {
     let mut v: Value = serde_json::from_slice(&f.files[&path]).unwrap();
@@ -320,12 +474,15 @@ fn mismatched_identity_source_scope_and_version_are_rejected() {
             json!("0".repeat(64))
         };
         r["expected"] = version;
-        assert!(query(&mut f, &r).is_err(), "{field}");
+        assert_eq!(
+            query(&mut f, &r).unwrap_err().0,
+            "version_mismatch",
+            "{field}"
+        );
     }
 }
 
-#[test]
-fn saved_parent_edges_are_verified_without_guessing_from_text() {
+fn subwork_fixture() -> (Fixture, Value) {
     let (mut f, mut r) = fixture();
     let l = layout();
     let edge = json!({"parent_todo_id":3,"origin_job_id":"parent","kind":"review","owner":{}});
@@ -340,6 +497,8 @@ fn saved_parent_edges_are_verified_without_guessing_from_text() {
         v["subwork"] = edge;
         v["parent_job_id"] = json!("parent");
         v["subwork_spec"] = json!(l.specs.join("7-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.md"));
+        v["subwork_validated"] = json!(true);
+        v["subwork_owner_job_id"] = json!("parent");
     });
     f.files.insert(
         l.jobs.join("parent/job.json"),
@@ -347,6 +506,24 @@ fn saved_parent_edges_are_verified_without_guessing_from_text() {
             .unwrap(),
     );
     r["source_kind"] = json!("scheduler_subwork");
+    let source = l.prompts.join("7-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.md");
+    let mut dispatch = f.files[&source].clone();
+    dispatch.extend_from_slice("\nこの作業はToDo 3の独立したreviewです。保存済み仕様の有限な範囲だけを扱い、主担当の完了を前提にせず結果を返してください。主担当のソースを編集したり、独立したPRの作成やマージを担当したりしないでください。\n".as_bytes());
+    f.files.insert(source, dispatch.clone());
+    f.files.insert(
+        l.jobs.join(job_id()).join("prompt.md"),
+        [
+            dispatch.as_slice(),
+            cc_job_policy::WRITE_GUIDANCE.as_bytes(),
+        ]
+        .concat(),
+    );
+    (f, r)
+}
+#[test]
+fn saved_parent_edges_are_verified_without_guessing_from_text() {
+    let (mut f, r) = subwork_fixture();
+    let l = layout();
     let report = query(&mut f, &r).unwrap();
     assert_eq!(report["version"]["parent_edge"]["todo_id"], 3);
     assert_eq!(report["version"]["parent_edge"]["origin_job_id"], "parent");
@@ -354,6 +531,41 @@ fn saved_parent_edges_are_verified_without_guessing_from_text() {
         v["todo_id"] = json!(4)
     });
     assert_eq!(query(&mut f, &r).unwrap_err().0, "parent_mismatch");
+}
+
+#[test]
+fn ended_parent_keeps_the_recorded_origin_and_null_current_job() {
+    let (mut f, mut r) = subwork_fixture();
+    let child = layout().jobs.join(job_id()).join("job.json");
+    update_json(&mut f, child.clone(), |v| {
+        v["parent_job_id"] = Value::Null;
+        v["subwork_owner_job_id"] = Value::Null;
+    });
+    let report = query(&mut f, &r).unwrap();
+    assert_eq!(report["version"]["parent_edge"]["todo_id"], 3);
+    assert_eq!(report["version"]["parent_edge"]["origin_job_id"], "parent");
+    assert!(report["version"]["parent_edge"]["job_id"].is_null());
+    r["expected"] = report["version"].clone();
+    assert!(query(&mut f, &r).is_ok());
+    update_json(&mut f, child.clone(), |v| {
+        v["subwork_validated"] = json!(false)
+    });
+    assert_eq!(query(&mut f, &r).unwrap_err().0, "parent_mismatch");
+    update_json(&mut f, child, |v| {
+        v["subwork_validated"] = json!(true);
+        v["subwork_owner_job_id"] = json!("not-the-current-parent");
+    });
+    assert_eq!(query(&mut f, &r).unwrap_err().0, "parent_mismatch");
+}
+
+#[test]
+fn system_host_read_can_coexist_with_the_normal_store_writer() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("store");
+    std::fs::write(&path, b"complete snapshot").unwrap();
+    let _writer = std::fs::File::options().write(true).open(&path).unwrap();
+    let mut host = cc_scheduler::received_input::SystemHost::default();
+    assert_eq!(host.read(&path, 1024).unwrap(), b"complete snapshot");
 }
 
 #[test]

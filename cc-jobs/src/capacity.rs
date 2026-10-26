@@ -50,6 +50,7 @@ pub fn failure_kind(event: &Value) -> Option<&'static str> {
         } else if text.contains("quota")
             || text.contains("usage limit")
             || text.contains("429 too many requests")
+            || cc_job_policy::quota_recovery::grok_balance_exhausted(&message)
         {
             "quota"
         } else if code == "request_failed" {

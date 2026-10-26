@@ -353,6 +353,9 @@ func TestConversationRecoveredMaintenanceNeverResendsOrReleasesOrigin(t *testing
 				commands := len(f.commands)
 				health := Health{}
 				f.r.processConversations(context.Background(), &health)
+				if _, err := f.r.conversationAsk(context.Background(), f.input); err != nil {
+					t.Fatal("same request replay failed", err)
+				}
 				after, _ := os.ReadFile(f.r.TodoPath)
 				if !bytes.Equal(before, after) || f.posts != 1 || len(health.Errors) != 0 {
 					t.Fatal("maintenance changed original or failed", state, health.Errors)

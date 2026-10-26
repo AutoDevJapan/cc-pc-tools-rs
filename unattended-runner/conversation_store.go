@@ -461,6 +461,15 @@ func (r *Runner) conversationAsk(ctx context.Context, input ConversationAskInput
 			return zero, err
 		}
 	}
+	if q.RecoveredIntake != 0 {
+		if q.Project != row.Project || q.Phase == "reserved" {
+			return zero, errors.New("conversation recovered question differs")
+		}
+		if _, err := r.conversationProof(ctx, q); err != nil {
+			return zero, err
+		}
+		return q, nil
+	}
 	if q.Phase != "reserved" && !(q.Wait && q.Phase == "posted") {
 		if q.Project != row.Project {
 			return zero, errors.New("conversation original project differs")

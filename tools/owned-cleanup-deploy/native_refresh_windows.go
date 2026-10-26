@@ -11,13 +11,13 @@ import (
 	"syscall"
 )
 
-const nativeSourceHead = "8b65cb4f8cbfd3a7f557d6fb8f7622c847233657"
+const nativeSourceHead = "77b654e688b985efae47ff595151c33454b4a03b"
 
 var nativeLeaf = leaf{
-	"safe-delete", evidenceRoot + "/safe-delete-8b65cb4f.exe",
+	"safe-delete", evidenceRoot + "/safe-delete-apostrophe.exe",
 	"D:/CC/Tools/safe-delete/safe-delete.exe",
 	"286a22b24412cc19138c083e09a93f4626de9058f329fad256e3f377b1e3b73b",
-	"1703dcee44cb4d2412bd141959a45284aedf31f5a65fe8fa3ae807a20fb17e56",
+	"a413e654c44e3c51342c16b8c8d8416e0bba41befb3f28c69cdb8b5bd1389461",
 }
 
 type installProofPin struct{ EventSHA, OutputSHA, Item string }

@@ -66,7 +66,8 @@ PR496の通常merge後、既存CC-AdminBroker経由で2本を16:54:28 JSTに実�
 新しいsafe-deleteで作った自分の4096Bの受入データは、元createの正規記録が
 二重引用符の`-Command`形式だったためreleaseがORIGINAL_CREATE_UNVERIFIEDを
 返して保持された。引用符の両形式を受理し、echo/未知shell/複合実行を拒否する
-8b65cb4fのclean buildだけを`--native-proof-check`/`--native-proof-apply`で反映する。
+引用符内の二重apostropheも扱う77b654e6のclean buildだけを
+`--native-proof-check`/`--native-proof-apply`で反映する。元8b65の候補は履歴として保持する。
 callerからpath/hash/receiptは受け取らない。これはsoftware更新の追加世代であり、
 データの所有IDごとの例外ではない。
 

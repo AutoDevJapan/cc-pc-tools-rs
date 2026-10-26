@@ -37,6 +37,8 @@ const (
 	validationParent
 	validationPhysical
 	validationEvidence
+	validationEvidenceStale
+	validationEvidenceFuture
 )
 
 func (s validationStage) reason() string {
@@ -65,6 +67,10 @@ func (s validationStage) reason() string {
 		return "physical_tree_not_verified"
 	case validationEvidence:
 		return "authority_evidence_changed"
+	case validationEvidenceStale:
+		return "authority_evidence_stale"
+	case validationEvidenceFuture:
+		return "authority_evidence_in_future"
 	default:
 		return "validation_not_verified"
 	}
@@ -246,8 +252,16 @@ func (e *Engine) authorize(ctx context.Context) error {
 		return err
 	}
 	age := e.now().Sub(o.Observed)
-	if o.Binding != e.binding || o.Asset != e.asset || age < 0 || age > time.Minute ||
-		!o.SourceVerified || !o.JobVerified || !o.Active || !o.OfficialPublicAsset ||
+	if o.Binding != e.binding || o.Asset != e.asset {
+		return invalidAt(validationEvidence)
+	}
+	if age < 0 {
+		return invalidAt(validationEvidenceFuture)
+	}
+	if age > time.Minute {
+		return invalidAt(validationEvidenceStale)
+	}
+	if !o.SourceVerified || !o.JobVerified || !o.Active || !o.OfficialPublicAsset ||
 		!o.FreshOwnedAnchor || o.Parent != e.fs.ParentIdentity() {
 		return invalidAt(validationEvidence)
 	}
@@ -393,9 +407,6 @@ func (e *Engine) Resume(ctx context.Context, id string) error {
 		return callbackError
 	})
 	if err != nil && callbackError == nil {
-		if ctx.Err() != nil {
-			return ctx.Err()
-		}
 		return validationFailure{validationPhysical, err}
 	}
 	return err

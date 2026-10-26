@@ -867,7 +867,7 @@ func official3894InstalledBaseline(sha, head string) bool {
 		(sha == official3894RepairGuardSHA && head == official3894RepairGuardHead)
 }
 
-// Qualifies only comparison of the single previously published guard software.
+// Qualifies only comparison of the known previously published guard software.
 // It performs no update, SDK creation, data read grant or general classification.
 // Review/CI acceptance and the existing AdminBroker CAS remain separate gates.
 func official3894Update(ctx context.Context) (object, error) {

@@ -5,6 +5,8 @@ use crate::{
     policy::*,
 };
 use cc_job_policy::{cancellation, todo_wait};
+#[path = "note_history.rs"]
+mod note_history;
 fn todo_store_error(error: cc_job_policy::todo_store::Error) -> Error {
     match error {
         cc_job_policy::todo_store::Error::TooLarge => Error("todo_store_too_large: limit 64 MiB"),
@@ -278,20 +280,27 @@ impl<B: Backend> Scheduler<B> {
                 return Err(Error("InputRejected"));
             }
         }
-        let row = db["items"]
-            .as_array_mut()
+        let index = db["items"]
+            .as_array()
             .ok_or(Error("ValueError"))?
-            .iter_mut()
-            .find(|row| row["id"] == *id)
+            .iter()
+            .position(|row| row["id"] == *id)
             .ok_or(Error("ValueError"))?;
+        let row = &mut db["items"][index];
         let before = row.clone();
         action(row);
         if *row == before {
             return Ok(before);
         }
+        let preserved = note_history::preserve(&before, row)?;
         row["updated"] = json!(chrono::Local::now().format("%Y-%m-%d %H:%M").to_string());
-        let out = row.clone();
-        cc_job_policy::todo_store::check_size(encode(&db, 1).len()).map_err(todo_store_error)?;
+        let size = encode(&db, 1).len();
+        if preserved && size > cc_job_policy::todo_store::MAX_BYTES {
+            note_history::make_room(&self.todo_path, &mut db)?;
+        } else {
+            cc_job_policy::todo_store::check_size(size).map_err(todo_store_error)?;
+        }
+        let out = db["items"][index].clone();
         write_json(&self.todo_path, &db, 1)?;
         Ok(out)
     }

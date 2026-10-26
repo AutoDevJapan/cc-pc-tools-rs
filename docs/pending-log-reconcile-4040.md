@@ -61,6 +61,12 @@ classification_unverified/access_allowed=falseを返したため、本担当は�
 
 OSの既存2ロックを資格の実体として使う。時刻だけでロックを奪わず、登録に未知のlease項目が
 現れた場合も拒否する。親PIDが再利用された場合は作成時刻の照合で拒否する。
+Relayのsession IDは固定した申告値と照合するもので、OSプロセスがその会話を所有することを
+暗号学的に証明しない。元Relayが資格を作成・実行する運用を維持する。
+expires_atは、全GET後・永続保存前の受付期限。受付後は生存する本CLIが既存2ロックを保持し、
+同じ送信資格のもとでqualificationとattemptを保存する。attempt後に追加のlease判定・GET・
+本文生成を行わず、準備済みの同じHTTP要求を送る。lockedまたは状態不明のthreadでは
+attemptを保存しない。既存exact投稿のGET採用はlockedのままでも可能。
 資格を作る前に正規pathの保護判定と元Relayの所有を確認する。
 `journal_sha256`や`registry_sha256`が変われば資格を新しく照合する。
 GET範囲が変わった場合も新precheckを行い、古いtokenを強制適用しない。
@@ -73,3 +79,12 @@ check-onlyは候補数・hash・lease確認・attempt有無を返すが投稿・
 
 この追記event形式を読めない旧senderへ実行版を戻さない。元Pending/Intent/eventを旧版に
 合わせて削除・改変することもない。
+適用は、レビューとCIを通した本機能を既存Windowsの正規CLIへ配布した後だけ行う。
+作業用のdebug/release候補から本番journalへ追記しない。現用source・配布receipt・並行writerの
+照合が終わるまで、候補の作成やcheck-onlyを配布・適用済みとは扱わない。
+
+出力の`qualification_input_sha256`は資格JSONの生バイトSHA256、attemptの
+`qualification_receipt_sha256`は保存したqualification receiptのSHA256。
+保存済みreceiptの検証は当時のPendingのdigestに結び、現在の本文分割や表示形式で
+過去のeffectを再生成しない。履歴のCASはID・本文・author・quiet/media等の検証対象に結び、
+リアクションだけの変化は不一致の理由にしない。

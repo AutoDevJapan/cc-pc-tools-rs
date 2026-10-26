@@ -568,6 +568,7 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     #[test]
     fn pending_reconcile_has_a_separate_read_only_precheck_command() {
         let parsed = super::Cli::try_parse_from([
@@ -582,8 +583,6 @@ mod tests {
             "target-only pending reconciliation needs its own command"
         );
     }
-    use super::*;
-
     #[test]
     fn independent_recovery_cli_requires_exact_inputs_and_reply_thread() {
         let cli = Cli::try_parse_from([

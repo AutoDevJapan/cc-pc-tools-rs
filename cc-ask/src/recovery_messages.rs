@@ -909,7 +909,7 @@ enum Event {
     PendingRecoveryAttempt {
         request_id: String,
         phase: String,
-        qualification_sha256: String,
+        qualification_receipt_sha256: String,
         attempt_id: String,
     },
     PendingRecoveryResult {

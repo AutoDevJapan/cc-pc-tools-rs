@@ -10,6 +10,10 @@ fn hash(bytes: &[u8]) -> String {
 struct Fault {
     history: u8,
     posts_without_attempt: usize,
+    reject_get_before_first_submit: bool,
+    gets_after_attempt_before_submit: usize,
+    locked: bool,
+    unknown_lock_state: bool,
 }
 
 struct AuditMock {
@@ -27,6 +31,19 @@ impl Effects for AuditMock {
         body: Option<&Value>,
         discord: bool,
     ) -> Result<Value> {
+        if method == "GET" && self.faults.lock().unwrap().reject_get_before_first_submit {
+            let ledger: Value =
+                serde_json::from_slice(&fs::read(self.inner.home.join(LEDGER)).unwrap()).unwrap();
+            let attempted = ledger["events"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|e| e["event"] == "pending_recovery_attempt");
+            if attempted && self.inner.server.lock().unwrap().posts.len() == 1 {
+                self.faults.lock().unwrap().gets_after_attempt_before_submit += 1;
+                return Err("a GET after attempt would consume the slot without POST".into());
+            }
+        }
         if method == "POST" {
             let ledger: Value =
                 serde_json::from_slice(&fs::read(self.inner.home.join(LEDGER)).unwrap()).unwrap();
@@ -76,6 +93,14 @@ impl Effects for AuditMock {
                 .max()
                 .ok_or("no starter")?;
             value["last_message_id"] = json!(last.to_string());
+            if self.faults.lock().unwrap().unknown_lock_state {
+                value["thread_metadata"]
+                    .as_object_mut()
+                    .unwrap()
+                    .remove("locked");
+            } else {
+                value["thread_metadata"]["locked"] = json!(self.faults.lock().unwrap().locked);
+            }
         }
         Ok(value)
     }
@@ -222,6 +247,13 @@ impl Case {
         self.run_save(Ledger::append)
     }
     fn run_save(&mut self, save: fn(&mut Ledger, &Path, Event) -> Result<()>) -> Result<Value> {
+        self.run_using(save, |_| Ok(()))
+    }
+    fn run_using(
+        &mut self,
+        save: fn(&mut Ledger, &Path, Event) -> Result<()>,
+        verify_lease: fn(&pr::Qualification) -> Result<()>,
+    ) -> Result<Value> {
         let scope = pr::Scope {
             run: "automation:2026-10-26T18:34:26.422Z",
             outer: &self.outer,
@@ -233,7 +265,7 @@ impl Case {
             thread: &self.thread,
             bot: BOT,
         };
-        pr::reconcile_with_store(&mut self.ctx, &self.args, &scope, |_| Ok(()), save)
+        pr::reconcile_with_store(&mut self.ctx, &self.args, &scope, verify_lease, save)
     }
     fn precheck(&mut self) {
         self.args.check_only = true;
@@ -286,6 +318,14 @@ fn pending_reconcile_precheck_is_read_only_and_qualified_apply_sends_once() {
     assert_eq!(out["flags"], SILENT | EMBEDS);
     assert_eq!(out["owner_mentions"], 0);
     assert_eq!(c.posts(), 1);
+    let mut normal = c.f.log(&c.id, &c.body, false);
+    normal.thread = Some(c.thread.clone());
+    assert_eq!(log(&mut c.ctx, &normal).unwrap()["delivery"], "verified");
+    assert_eq!(
+        c.posts(),
+        1,
+        "normal retry after reconciliation must only GET"
+    );
     c.refresh();
     c.precheck();
     let repeated = c.run().unwrap();
@@ -527,6 +567,235 @@ fn pending_reconcile_original_normal_retry_stays_get_only() {
         pr::reconcile_pending(&mut c.ctx, &c.args).is_err(),
         "production command must pin the original authorized request"
     );
+}
+
+#[test]
+fn pending_reconcile_attempt_is_followed_by_post_without_a_fallible_get() {
+    let mut c = Case::new();
+    c.precheck();
+    c.faults.lock().unwrap().reject_get_before_first_submit = true;
+    let result = c.run();
+    assert_eq!(
+        c.posts(),
+        1,
+        "a saved attempt must not be consumed by a later preflight GET"
+    );
+    assert_eq!(result.unwrap()["delivery"], "verified");
+    assert_eq!(c.faults.lock().unwrap().gets_after_attempt_before_submit, 0);
+}
+
+thread_local! { static LEASE_GUARD_HOME: RefCell<Option<PathBuf>> = const { RefCell::new(None) }; }
+fn lease_guard(_: &pr::Qualification) -> Result<()> {
+    LEASE_GUARD_HOME.with(|p| {
+        let ledger = Ledger::load(p.borrow().as_ref().unwrap())?;
+        if ledger
+            .events
+            .iter()
+            .any(|e| matches!(e, Event::PendingRecoveryAttempt { .. }))
+        {
+            Err("lease admission must finish before reserving the attempt".into())
+        } else {
+            Ok(())
+        }
+    })
+}
+
+#[test]
+fn pending_reconcile_attempt_has_no_later_lease_admission_failure() {
+    let mut c = Case::new();
+    c.precheck();
+    LEASE_GUARD_HOME.with(|p| *p.borrow_mut() = Some(c.f.home.clone()));
+    let result = c.run_using(Ledger::append, lease_guard);
+    assert_eq!(result.unwrap()["delivery"], "verified");
+    assert_eq!(c.posts(), 1);
+}
+
+#[test]
+fn pending_reconcile_locked_or_unknown_send_state_reserves_no_attempt() {
+    for unknown in [false, true] {
+        let mut c = Case::new();
+        let original = c.saved();
+        {
+            let mut faults = c.faults.lock().unwrap();
+            faults.locked = true;
+            faults.unknown_lock_state = unknown;
+        }
+        assert!(c.run().unwrap_err().contains("locked"));
+        assert_eq!(c.saved(), original);
+        assert_eq!(c.posts(), 0);
+        // Reading/adopting an exact existing message does not require sending.
+        let existing = c.remote();
+        c.precheck();
+        assert_eq!(c.run().unwrap()["message_id"], existing);
+        assert_eq!(c.posts(), 0);
+    }
+}
+
+#[test]
+fn pending_reconcile_same_body_without_tag_or_with_a_different_tag_stops() {
+    for tag in ["", "\n\n-# recovery:another-request:log:0"] {
+        let mut c = Case::new();
+        let original = c.saved();
+        c.f.add_reply(&c.thread, BOT, &format!("{}{tag}", c.body), true);
+        assert!(c.run().unwrap_err().contains("same bot body"));
+        assert_eq!(c.posts(), 0);
+        assert_eq!(c.saved(), original);
+    }
+}
+
+#[test]
+fn pending_reconcile_duplicate_or_mismatched_attempt_is_rejected_by_the_journal() {
+    let mut c = Case::new();
+    c.precheck();
+    c.run().unwrap();
+    let original: Value = serde_json::from_slice(&c.saved()).unwrap();
+    for key in [
+        "duplicate",
+        "request_id",
+        "phase",
+        "qualification_receipt_sha256",
+        "attempt_id",
+    ] {
+        let mut changed = original.clone();
+        let events = changed["events"].as_array_mut().unwrap();
+        let index = events
+            .iter()
+            .position(|e| e["event"] == "pending_recovery_attempt")
+            .unwrap();
+        if key == "duplicate" {
+            events.insert(index + 1, events[index].clone());
+        } else {
+            events[index][key] = json!("mismatch");
+        }
+        fs::write(c.f.home.join(LEDGER), serde_json::to_vec(&changed).unwrap()).unwrap();
+        assert!(Ledger::load(&c.f.home).is_err(), "accepted {key}");
+        assert_eq!(c.posts(), 1);
+    }
+}
+
+#[test]
+fn pending_reconcile_reactions_do_not_invalidate_the_absence_precheck() {
+    let mut c = Case::new();
+    c.precheck();
+    c.f.server
+        .lock()
+        .unwrap()
+        .messages
+        .get_mut(&c.thread)
+        .unwrap()[0]["reactions"] = json!([{"count":1}]);
+    assert_eq!(c.run().unwrap()["delivery"], "verified");
+    assert_eq!(c.posts(), 1);
+}
+
+#[test]
+fn pending_reconcile_historical_receipt_keeps_its_stored_effect_format() {
+    let c = Case::new();
+    let mut ledger = Ledger::load(&c.f.home).unwrap();
+    let mut historical = ledger.effect(&c.id, "log:0").unwrap().clone();
+    historical.content = format!("previous presentation: {}", historical.content);
+    for event in &mut ledger.events {
+        if let Event::Pending {
+            request_id, effect, ..
+        } = event
+        {
+            if request_id == &c.id {
+                *effect = historical.clone();
+            }
+        }
+    }
+    let mut binding = c.q.clone();
+    binding["journal_sha256"] = json!(hash(&serde_json::to_vec_pretty(&ledger).unwrap()));
+    let mut receipt = json!({"binding":binding,"input_sha256":hash(&serde_json::to_vec(&binding).unwrap()),
+        "effect_sha256":digest(&serde_json::to_value(&historical).unwrap()).unwrap(),
+        "history_sha256":"a".repeat(64),"command_id":""});
+    receipt["command_id"] = json!(digest(&receipt).unwrap());
+    ledger
+        .append(
+            &c.f.home,
+            serde_json::from_value(
+                json!({"event":"pending_qualification","qualification":receipt}),
+            )
+            .unwrap(),
+        )
+        .unwrap();
+    let saved = Ledger::load(&c.f.home).unwrap();
+    assert_eq!(saved.effect(&c.id, "log:0"), Some(&historical));
+    let request = saved.request(&c.id).unwrap();
+    let current = effect(
+        request,
+        "log:0",
+        Target::Thread {
+            thread: c.thread.clone(),
+        },
+        &c.body,
+        false,
+        false,
+    )
+    .unwrap();
+    assert_ne!(
+        saved.effect(&c.id, "log:0"),
+        Some(&current),
+        "historical loading must not regenerate today's presentation"
+    );
+    assert_eq!(c.posts(), 0);
+}
+
+#[cfg(windows)]
+#[test]
+fn pending_reconcile_lease_process_fixture() {
+    let Ok(path) = std::env::var("CC_4040_LEASE_FIXTURE") else {
+        return;
+    };
+    let q: pr::Qualification = serde_json::from_slice(&fs::read(path).unwrap()).unwrap();
+    assert_eq!(
+        pr::lease(&q).is_ok(),
+        std::env::var("CC_4040_LEASE_EXPECT").unwrap() == "valid"
+    );
+}
+
+#[cfg(windows)]
+#[test]
+fn pending_reconcile_real_parent_identity_admits_lease_and_refuses_a_reused_pid() {
+    use std::os::windows::{io::AsRawHandle, process::CommandExt};
+    use windows_sys::Win32::{Foundation::*, System::Threading::*};
+    let mut c = Case::new();
+    let mut birth: FILETIME = unsafe { std::mem::zeroed() };
+    let mut end = birth;
+    let mut kernel = birth;
+    let mut user = birth;
+    assert_ne!(
+        unsafe {
+            GetProcessTimes(
+                GetCurrentProcess(),
+                &mut birth,
+                &mut end,
+                &mut kernel,
+                &mut user,
+            )
+        },
+        0
+    );
+    let stamp = ((birth.dwHighDateTime as u64) << 32) | birth.dwLowDateTime as u64;
+    c.q["lease"]["holder_pid"] = json!(std::process::id());
+    c.q["lease"]["expires_at"] =
+        json!((chrono::Utc::now() + chrono::Duration::minutes(2)).to_rfc3339());
+    for (expected, created) in [("valid", stamp), ("invalid", stamp + 1)] {
+        c.q["lease"]["holder_created_filetime"] = json!(created);
+        c.write();
+        let mut child = std::process::Command::new(std::env::current_exe().unwrap())
+            .args(["--exact", "recovery_messages::tests::pending_reconcile_tests::pending_reconcile_lease_process_fixture"])
+            .env("CC_4040_LEASE_FIXTURE", &c.args.qualification_file).env("CC_4040_LEASE_EXPECT",expected)
+            .stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null())
+            .creation_flags(CREATE_NO_WINDOW).spawn().unwrap();
+        let wait = unsafe { WaitForSingleObject(child.as_raw_handle() as _, 15_000) };
+        if wait != WAIT_OBJECT_0 {
+            let _ = child.kill();
+        }
+        let exit = child.wait().unwrap();
+        assert_eq!(wait, WAIT_OBJECT_0, "lease fixture timed out");
+        assert!(exit.success(), "lease fixture {expected}: {exit}");
+    }
+    assert_eq!(c.posts(), 0);
 }
 
 #[test]

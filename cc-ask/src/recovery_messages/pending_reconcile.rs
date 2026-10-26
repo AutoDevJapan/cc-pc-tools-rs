@@ -156,11 +156,10 @@ impl Qualification {
         Ok(())
     }
 
-    fn request(&self, ledger: &Ledger) -> Result<(Request, Effect)> {
-        let request = ledger.request(&self.request_id).ok_or(INVALID)?.clone();
+    fn saved<'a>(&self, ledger: &'a Ledger) -> Result<(&'a Request, &'a Effect)> {
+        let request = ledger.request(&self.request_id).ok_or(INVALID)?;
         if request.request_id != self.request_id
             || request.fingerprint != self.fingerprint
-            || request.fingerprint()? != self.fingerprint
             || sha(request.body.as_bytes()) != self.body_sha256
             || request.body.len() != self.body_utf8_bytes
             || request.notify
@@ -169,12 +168,26 @@ impl Qualification {
             || request.destination.guild != self.guild_id
             || ledger.bot(&self.request_id) != Some(self.bot_id.as_str())
             || !matches!(&request.operation, Kind::Log {thread: Some(t)} if t == &self.thread_id)
-            || parts(&request.body).len() != 1
         {
             return Err(INVALID.into());
         }
+        let saved = ledger.effect(&self.request_id, PHASE).ok_or(INVALID)?;
+        if saved.notify
+            || !saved.images.is_empty()
+            || !matches!(&saved.target, Target::Thread {thread} if thread == &self.thread_id)
+        {
+            return Err(INVALID.into());
+        }
+        Ok((request, saved))
+    }
+
+    fn request(&self, ledger: &Ledger) -> Result<(Request, Effect)> {
+        let (request, saved) = self.saved(ledger)?;
+        if request.fingerprint()? != self.fingerprint || parts(&request.body).len() != 1 {
+            return Err(INVALID.into());
+        }
         let expected = effect(
-            &request,
+            request,
             PHASE,
             Target::Thread {
                 thread: self.thread_id.clone(),
@@ -183,7 +196,7 @@ impl Qualification {
             false,
             false,
         )?;
-        if ledger.effect(&self.request_id, PHASE) != Some(&expected)
+        if saved != &expected
             || ledger.events.iter().any(|e| {
                 matches!(e, Event::Pending {request_id, phase, ..}
                 if request_id == &self.request_id && phase != PHASE)
@@ -191,7 +204,7 @@ impl Qualification {
         {
             return Err(INVALID.into());
         }
-        Ok((request, expected))
+        Ok((request.clone(), expected))
     }
 }
 
@@ -342,13 +355,19 @@ pub(super) fn lease(_: &Qualification) -> Result<()> {
 
 // A short/empty page alone is never absence evidence. The complete scan must
 // include the forum starter and the channel's unchanged last-message watermark.
+struct History {
+    sha256: String,
+    candidates: Vec<(String, String)>,
+    postable: bool,
+}
+
 fn history(
     api: &mut RecoveryApi<'_>,
     ledger: &Ledger,
     request: &Request,
     q: &Qualification,
     effect: &Effect,
-) -> Result<(String, Vec<(String, String)>)> {
+) -> Result<History> {
     api.assert_bot_thread(&q.thread_id)?;
     // Prove that this bot can read the exact known starter, including content.
     // Discord can return an empty history when READ_MESSAGE_HISTORY is absent.
@@ -439,21 +458,72 @@ fn history(
                 core::s(&message["id"]),
             )?;
             found.push((q.thread_id.clone(), snowflake(core::s(&message["id"]))?));
+        } else if message["author"]["id"] == q.bot_id
+            && content
+                .split_once("\n\n-# recovery:")
+                .map_or(content, |(body, _)| body)
+                == request.body
+        {
+            return Err(
+                "pending reconcile found the same bot body without its exact tag; no POST".into(),
+            );
         }
     }
+    let end_channel = api.channel(&q.thread_id)?;
     if !rows.iter().any(|r| r["id"] == q.thread_id)
         || !rows.iter().any(|r| r["id"] == last)
-        || api.channel(&q.thread_id)?["last_message_id"] != last
+        || end_channel["last_message_id"] != last
     {
         return Err("pending reconcile history has no stable complete range".into());
     }
     if found.len() > 1 {
         return Err("pending reconcile duplicate candidates retained; no POST".into());
     }
-    Ok((
-        digest(&json!({"thread":q.thread_id,"last":last,"messages":rows}))?,
-        found,
-    ))
+    // Bind evidence relevant to absence/identity, not mutable reactions or embeds.
+    let stable: Vec<_> = rows.iter().map(|m| json!({
+        "id":m["id"],"channel_id":m["channel_id"],"author_id":m["author"]["id"],
+        "body_sha256":sha(core::s(&m["content"]).as_bytes()),"flags":m["flags"],
+        "mentions":m["mentions"],"mention_everyone":m["mention_everyone"],"mention_roles":m["mention_roles"],
+        "attachments":m["attachments"],"webhook_id":m["webhook_id"],"timestamp":m["timestamp"]
+    })).collect();
+    Ok(History {
+        sha256: digest(&json!({"thread":q.thread_id,"last":last,"messages":stable}))?,
+        candidates: found,
+        postable: channel["thread_metadata"]["locked"] == false
+            && end_channel["thread_metadata"]["locked"] == false,
+    })
+}
+
+/// All fallible payload preparation happens before the durable attempt. Once
+/// reserved, the only operation before the response is the HTTP submit itself.
+struct PendingPost {
+    url: String,
+    payload: Value,
+}
+
+impl PendingPost {
+    fn prepare(api: &RecoveryApi<'_>, request: &Request, effect: &Effect) -> Result<Self> {
+        let Target::Thread { thread } = &effect.target else {
+            return Err(INVALID.into());
+        };
+        if effect.notify || !effect.images.is_empty() || !api.allow_new_posts {
+            return Err(INVALID.into());
+        }
+        let mut payload = effect.payload(&api.destination.owner);
+        payload["nonce"] =
+            json!(&digest(&json!({"fingerprint":request.fingerprint,"phase":PHASE}))?[..24]);
+        payload["enforce_nonce"] = json!(true);
+        Ok(Self {
+            url: format!("{API}/channels/{}/messages", snowflake(thread)?),
+            payload,
+        })
+    }
+
+    fn send(self, api: &mut RecoveryApi<'_>) -> Result<Value> {
+        api.effects
+            .http("POST", &self.url, Some(&self.payload), true)
+            .map_err(|_| PENDING.into())
+    }
 }
 
 fn attempted(ledger: &Ledger, id: &str) -> bool {
@@ -468,13 +538,9 @@ pub(super) fn validate_events(ledger: &Ledger) -> Result<()> {
     for (i, event) in ledger.events.iter().enumerate() {
         match event {
             Event::PendingQualification { qualification: qr } => {
-                let prefix = Ledger {
-                    domain: ledger.domain.clone(),
-                    version: ledger.version,
-                    events: ledger.events[..i].to_vec(),
-                };
                 let q = &qr.binding;
-                let (_, effect) = q.request(&prefix)?;
+                let prior = &ledger.events[..i];
+                let (_, effect) = q.saved(ledger)?;
                 let mut for_command = qr.as_ref().clone();
                 for_command.command_id.clear();
                 if q.domain != QUAL_DOMAIN
@@ -482,10 +548,19 @@ pub(super) fn validate_events(ledger: &Ledger) -> Result<()> {
                     || q.phase != PHASE
                     || q.relay_session != RELAY
                     || q.lease.kind != "existing-runner-and-sender-locks-v1"
-                    || prefix.posted(&q.request_id, PHASE).is_some()
-                    || prefix.receipt(&q.request_id, PHASE).is_some()
-                    || prefix.complete(&q.request_id)
-                    || attempted(&prefix, &q.request_id)
+                    || !prior.iter().any(|e| {
+                        matches!(e, Event::Pending {request_id, phase, ..}
+                        if request_id == &q.request_id && phase == PHASE)
+                    })
+                    || prior.iter().any(|e| match e {
+                        Event::Posted { request_id, .. }
+                        | Event::Verified { request_id, .. }
+                        | Event::DeliveryVerified { request_id }
+                        | Event::PendingRecoveryAttempt { request_id, .. } => {
+                            request_id == &q.request_id
+                        }
+                        _ => false,
+                    })
                     || qr.command_id
                         != digest(&serde_json::to_value(for_command).map_err(|_| INVALID)?)?
                     || [
@@ -521,16 +596,16 @@ pub(super) fn validate_events(ledger: &Ledger) -> Result<()> {
             Event::PendingRecoveryAttempt {
                 request_id,
                 phase,
-                qualification_sha256,
+                qualification_receipt_sha256,
                 attempt_id,
             } => {
                 let invalid_attempt = phase != PHASE
-                    || qualified.get(qualification_sha256) != Some(request_id)
-                    || latest.get(request_id) != Some(qualification_sha256)
+                    || qualified.get(qualification_receipt_sha256) != Some(request_id)
+                    || latest.get(request_id) != Some(qualification_receipt_sha256)
                     || ledger.events[..i].iter().any(|e| matches!(e,
                         Event::Posted {request_id:id, phase:p, ..} | Event::Verified {request_id:id, phase:p, ..}
                         if id == request_id && p == phase))
-                    || attempt_id != qualification_sha256
+                    || attempt_id != qualification_receipt_sha256
                     || attempts
                         .insert(request_id.clone(), attempt_id.clone())
                         .is_some();
@@ -580,7 +655,14 @@ pub(super) fn reconcile_with_store(
     verify_lease: fn(&Qualification) -> Result<()>,
     save: Save,
 ) -> Result<Value> {
-    let input = regular(&args.qualification_file, 16 * 1024)?;
+    let qualification_path = if args.qualification_file.is_absolute() {
+        args.qualification_file.clone()
+    } else {
+        std::env::current_dir()
+            .map_err(|_| INVALID)?
+            .join(&args.qualification_file)
+    };
+    let input = regular(&qualification_path, 16 * 1024)?;
     let q: Qualification = serde_json::from_slice(&input).map_err(|_| INVALID)?;
     q.identity(scope)?;
     verify_lease(&q)?;
@@ -604,17 +686,25 @@ pub(super) fn reconcile_with_store(
     if api.bot != q.bot_id {
         return Err(INVALID.into());
     }
-    let (history_sha, candidates) = history(&mut api, &ledger, &request, &q, &effect)?;
+    let audit = history(&mut api, &ledger, &request, &q, &effect)?;
+    let candidates = &audit.candidates;
+    if candidates.is_empty() && !audit.postable && !attempted(&ledger, &q.request_id) {
+        return Err(
+            "pending reconcile thread is locked or its send state is unknown; no attempt reserved"
+                .into(),
+        );
+    }
+    let post = PendingPost::prepare(&api, &request, &effect)?;
     let qr = QualificationReceipt {
         binding: q.clone(),
         input_sha256: sha(&input),
         effect_sha256: digest(&serde_json::to_value(&effect).map_err(|_| INVALID)?)?,
-        history_sha256: history_sha,
+        history_sha256: audit.sha256,
         command_id: String::new(),
     };
     let command_id = digest(&serde_json::to_value(&qr).map_err(|_| INVALID)?)?;
     let report = json!({"domain":QUAL_DOMAIN,"request_id":q.request_id,"phase":PHASE,
-        "check_only":args.check_only,"command_id":command_id,"qualification_sha256":sha(&input),
+        "check_only":args.check_only,"command_id":command_id,"qualification_input_sha256":sha(&input),
         "journal_sha256":q.journal_sha256,"registry_sha256":registry_sha,"history_sha256":qr.history_sha256,
         "exact_candidates":candidates.len(),"attempt_recorded":attempted(&ledger,&q.request_id),
         "lease_verified":true,"delivery":"pending","new_posts":0});
@@ -626,7 +716,7 @@ pub(super) fn reconcile_with_store(
     }
     // Recheck bytes and caller after all GETs, immediately before journal writes.
     verify_lease(&q)?;
-    if regular(&args.qualification_file, 16 * 1024)? != input
+    if regular(&qualification_path, 16 * 1024)? != input
         || regular(&home.join(LEDGER), LEDGER_BYTES)? != original
         || registration(&home, &q, &request)? != registry_sha
     {
@@ -659,13 +749,12 @@ pub(super) fn reconcile_with_store(
         Event::PendingRecoveryAttempt {
             request_id: q.request_id.clone(),
             phase: PHASE.into(),
-            qualification_sha256: attempt_id.clone(),
+            qualification_receipt_sha256: attempt_id.clone(),
             attempt_id: attempt_id.clone(),
         },
     )?;
     // Both durable saves must have succeeded. This is the only submit site.
-    verify_lease(&q)?;
-    let response = api.submit(&ledger, &request, PHASE, &effect, &[]);
+    let response = post.send(&mut api);
     save(
         &mut ledger,
         &home,
@@ -696,8 +785,8 @@ pub(super) fn reconcile_with_store(
         }
     }
     // Even a received response is only a hint. Never POST again on GET failure.
-    let (_, found) = history(&mut api, &ledger, &request, &q, &effect)?;
-    let [(thread, message)] = found.as_slice() else {
+    let after = history(&mut api, &ledger, &request, &q, &effect)?;
+    let [(thread, message)] = after.candidates.as_slice() else {
         return Err(PENDING.into());
     };
     let receipt = api.verify(&ledger, &request, &effect, thread, message)?;

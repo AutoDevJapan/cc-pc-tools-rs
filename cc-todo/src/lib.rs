@@ -273,6 +273,9 @@ pub enum Command {
         question_file: PathBuf,
         #[arg(long)]
         scope_file: Option<PathBuf>,
+        /// Bind a later explicit wait to the exact row inspected by its caller.
+        #[arg(long)]
+        expected_state_file: Option<PathBuf>,
     },
     /// Apply one exact owner answer and return the original task to ordinary scheduling.
     QuestionAnswer {
@@ -1037,6 +1040,12 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
             scope_file,
             expected_state_file,
             ..
+        }
+        | Command::QuestionWait {
+            id,
+            scope_file,
+            expected_state_file,
+            ..
         } => {
             if let Some(path) = scope_file {
                 conversation_wait::check_scope(db, *id, path)?;
@@ -1045,8 +1054,7 @@ pub fn execute(db: &mut Value, cmd: &Command, paths: &Paths) -> Result<Vec<Strin
                 conversation_wait::check_snapshot(db, *id, path)?;
             }
         }
-        Command::QuestionWait { id, scope_file, .. }
-        | Command::QuestionAnswer { id, scope_file, .. }
+        Command::QuestionAnswer { id, scope_file, .. }
         | Command::QuestionWithdraw { id, scope_file, .. } => {
             if let Some(path) = scope_file {
                 conversation_wait::check_scope(db, *id, path)?;

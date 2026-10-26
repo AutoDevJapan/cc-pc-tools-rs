@@ -37,6 +37,8 @@ func TestConversationCLIParseCommandsAndOptions(t *testing.T) {
 		{"log_explicit_false", append(append([]string{}, logs...), "--notify=false"), conversationCLIOptions{Config: conversationDefaultConfig, Command: "log", RequestID: "progress-2823", Title: "作業の進捗", BodyFile: "progress.txt"}},
 		{"replies", []string{"replies", "--request-id=question-2823"}, conversationCLIOptions{Config: conversationDefaultConfig, Command: "replies", RequestID: "question-2823"}},
 		{"status", []string{"status"}, conversationCLIOptions{Config: conversationDefaultConfig, Command: "status"}},
+		{"wait", []string{"wait", "--request-id=question-2823"}, conversationCLIOptions{Config: conversationDefaultConfig, Command: "wait", RequestID: "question-2823"}},
+		{"wait_check", []string{"wait", "--request-id=question-2823", "--check-only"}, conversationCLIOptions{Config: conversationDefaultConfig, Command: "wait", RequestID: "question-2823", CheckOnly: true}},
 		{"config_prefix", []string{"--config", "custom.json", "status"}, conversationCLIOptions{Config: "custom.json", Command: "status"}},
 		{"config_equals", []string{"--config=custom.json", "status"}, conversationCLIOptions{Config: "custom.json", Command: "status"}},
 		{"decimal_uint64", []string{"ask", "--decision-file=decision.json", "--body-file=question.txt", "--origin-thread=500", "--todo-id=18446744073709551615", "--request-id=question-2823"}, conversationCLIOptions{Config: conversationDefaultConfig, Command: "ask", RequestID: "question-2823", Todo: ^uint64(0), OriginThread: "500", BodyFile: "question.txt", DecisionFile: "decision.json"}},
@@ -64,6 +66,11 @@ func TestConversationCLIRejectsInvalidArgumentsBeforeLoading(t *testing.T) {
 		{"status_extra", []string{"status", "private-argument"}}, {"status_separator", []string{"status", "--"}},
 		{"status_flag", []string{"status", "--request-id=private"}},
 		{"replies_missing", []string{"replies"}}, {"replies_empty", []string{"replies", "--request-id= "}},
+		{"wait_missing", []string{"wait"}}, {"wait_invalid", []string{"wait", "--request-id=bad/private"}},
+		{"wait_no_body", []string{"wait", "--request-id=q", "--body-file=private"}},
+		{"wait_no_notify", []string{"wait", "--request-id=q", "--notify"}},
+		{"wait_no_rebind", []string{"wait", "--request-id=q", "--todo-id=42"}},
+		{"wait_duplicate", []string{"wait", "--request-id=q", "--check-only", "--check-only"}},
 		{"replies_duplicate", []string{"replies", "--request-id=one", "-request-id=two"}},
 		{"replies_extra", []string{"replies", "--request-id=one", "private-extra"}},
 		{"replies_unknown", []string{"replies", "--request-id=one", "--private-flag=private"}},
@@ -158,6 +165,11 @@ func (f *conversationCLIFake) conversationReplies(ctx context.Context, requestID
 	f.command, f.ctx, f.request = "replies", ctx, requestID
 	return f.result, f.err
 }
+func (f *conversationCLIFake) conversationWait(ctx context.Context, requestID string, check bool) (map[string]any, error) {
+	f.command, f.ctx, f.request = "wait", ctx, requestID
+	f.log.CheckOnly = check
+	return f.result, f.err
+}
 func (f *conversationCLIFake) conversationStatus() (map[string]any, error) {
 	if f.observe != nil {
 		f.observe()
@@ -172,6 +184,7 @@ func TestConversationCLIDispatchesContractAndOnlyParentJSON(t *testing.T) {
 		append(conversationAskArgs(), "--wait=false"),
 		append(conversationLogArgs(), "--thread=600", "--notify", "--attach=one.png", "--attach=two.mp4"),
 		conversationLogArgs(), {"replies", "--request-id=question-2823"}, {"status"},
+		{"wait", "--request-id=question-2823"}, {"wait", "--request-id=question-2823", "--check-only"},
 	} {
 		t.Run(args[0], func(t *testing.T) {
 			fake := &conversationCLIFake{result: map[string]any{"phase": "verified"}, question: ConversationQuestion{RequestID: "question-2823", Todo: 2823, Phase: "posted"}}
@@ -210,6 +223,9 @@ func TestConversationCLIDispatchesContractAndOnlyParentJSON(t *testing.T) {
 			}
 			if fake.command == "replies" && fake.request != "question-2823" {
 				t.Fatal("reply request identity was lost")
+			}
+			if fake.command == "wait" && (fake.request != "question-2823" || fake.log.CheckOnly != (len(args) == 3)) {
+				t.Fatal("wait identity or inspection flag was lost")
 			}
 			want, err := json.Marshal(result)
 			if err != nil || out.String() != string(want)+"\n" {

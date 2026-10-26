@@ -35,8 +35,15 @@ healthには対象数・確認数・失敗数・60秒間隔を出す。質問台
 unattended-runner.exe conversation [--config <path>] ask --request-id <id> --todo-id <元ToDo番号> --origin-thread <元スレッドID> --body-file <本文ファイル> --decision-file <判断範囲JSON> [--title <題名>] [--wait] [--attach <元画像> ...]
 unattended-runner.exe conversation [--config <path>] log --request-id <id> --title <題名> --body-file <本文ファイル> [--thread <進捗スレッドID>] [--notify] [--attach <画像> ...]
 unattended-runner.exe conversation [--config <path>] replies --request-id <id>
+unattended-runner.exe conversation [--config <path>] wait --request-id <元ID> [--check-only]
 unattended-runner.exe conversation [--config <path>] status
 ```
+
+`ask --wait=false` で独立工程を続けた後は、同じIDの `wait` で回答待ちへ移す。
+元の入力を `ask --wait=true` へ変えて再送しない。APIで既存回答が見つかれば
+先に元ToDoへ届け、未回答として待機を作らない。依存待ち・停止・別質問を
+解除しない。`--check-only` は読取だけであり、登録可能という最終判断は
+通常ToDoロック下の状態照合で行う。[仕様と受入条件](conversation-explicit-wait.md)。
 
 設定ファイルを省略した場合は
 `D:/CC/Tools/discord-ask/unattended/config.json` を使う。

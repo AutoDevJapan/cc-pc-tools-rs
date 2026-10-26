@@ -135,6 +135,9 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		conversationStringFlag(fs, "message-id", &opts.Message)
 	case "close":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
+	case "wait":
+		conversationStringFlag(fs, "request-id", &opts.RequestID)
+		fs.Var(&conversationBoolFlag{value: &opts.CheckOnly}, "check-only", "")
 	case "withdraw":
 		conversationStringFlag(fs, "request-id", &opts.RequestID)
 		conversationStringFlag(fs, "reason-file", &opts.ReasonFile)
@@ -211,7 +214,7 @@ func parseConversationCLI(args []string) (conversationCLIOptions, error) {
 		if _, ok := number(opts.Message); !ok || !conversationID.MatchString(opts.RequestID) {
 			return opts, errConversationArguments
 		}
-	case "close":
+	case "close", "wait":
 		if !conversationID.MatchString(opts.RequestID) {
 			return opts, errConversationArguments
 		}
@@ -320,7 +323,7 @@ func conversationCLI(args []string, out io.Writer) int {
 		if opts.Command == "status" {
 			return conversationCLIWithLoader(args, out, loadConversationStatusRunner)
 		}
-		if (opts.Command == "replies" && opts.Output != "") || (opts.Command == "log" && opts.CheckOnly) {
+		if (opts.Command == "replies" && opts.Output != "") || ((opts.Command == "log" || opts.Command == "wait") && opts.CheckOnly) {
 			return conversationCLIWithLoader(args, out, loadConversationRepliesRunner)
 		}
 	}
@@ -332,12 +335,16 @@ func conversationCLIWithLoader(args []string, out io.Writer, load func(string) (
 }
 
 func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (conversationCLIBackend, func(), error), guard func(context.Context, string) bool) int {
+	return conversationCLIWithTimeout(args, out, load, guard, conversationCLIDeadline)
+}
+
+func conversationCLIWithTimeout(args []string, out io.Writer, load func(string) (conversationCLIBackend, func(), error), guard func(context.Context, string) bool, budget time.Duration) int {
 	opts, err := parseConversationCLI(args)
 	if err != nil {
 		_, _ = io.WriteString(out, "invalid conversation arguments\n")
 		return 1
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), conversationCLIDeadline)
+	ctx, cancel := context.WithTimeout(context.Background(), budget)
 	defer cancel()
 	if opts.Output != "" && !conversationRepliesOutput(ctx, opts.Output, guard) {
 		_, _ = io.WriteString(out, "conversation unavailable\n")
@@ -401,6 +408,15 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 			} else {
 				result, err = backend.conversationWithdraw(ctx, opts.RequestID, opts.ReasonFile)
 			}
+		case "wait":
+			backend, ok := runner.(interface {
+				conversationWait(context.Context, string, bool) (map[string]any, error)
+			})
+			if !ok {
+				err = errConversationArguments
+			} else {
+				result, err = backend.conversationWait(ctx, opts.RequestID, opts.CheckOnly)
+			}
 		case "source-link", "source-repair", "source-verify", "source-reacquire", "implementation-record", "close":
 			if backend, ok := runner.(interface {
 				conversationImplementationCommand(context.Context, conversationCLIOptions) (map[string]any, error)
@@ -421,7 +437,24 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 			result, err = runner.conversationStatus()
 		}
 	}
-	if err != nil || ctx.Err() != nil {
+	committedWait := false
+	if opts.Command == "wait" && err == nil {
+		if ack, ok := result.(map[string]any); ok && ack["outcome"] == "waiting" && ack["task_status"] == "block" {
+			sha, _ := ack["wait_receipt_sha256"].(string)
+			committedWait = shaPattern.MatchString(sha)
+			if committedWait && ctx.Err() != nil {
+				ack["deadline"] = "after_wait_commit"
+			}
+		}
+		if ack, ok := result.(map[string]any); ok && ack["outcome"] == "question_answered" {
+			sha, _ := ack["answer_receipt_sha256"].(string)
+			committedWait = shaPattern.MatchString(sha)
+			if committedWait && ctx.Err() != nil {
+				ack["deadline"] = "after_answer_commit"
+			}
+		}
+	}
+	if err != nil || (ctx.Err() != nil && !committedWait) {
 		stage := conversationFailureStage(err)
 		if stage == "operation_pending" {
 			_, _ = io.WriteString(out, "conversation unavailable\n")
@@ -445,6 +478,9 @@ func conversationCLIWithGuard(args []string, out io.Writer, load func(string) (c
 
 func conversationQuestionPublic(q ConversationQuestion) map[string]any {
 	result := map[string]any{"domain": conversationDomain, "request_id": q.RequestID, "todo_id": q.Todo, "phase": q.Phase, "wait_requested": q.Wait}
+	if q.ExplicitWait != nil {
+		result["explicit_wait"] = q.ExplicitWait
+	}
 	if q.Actor != nil {
 		result["actor_todo_id"] = q.Actor.Todo
 		result["wait_deferred"] = q.WaitDeferred

@@ -28,6 +28,10 @@ type withdrawalFixture struct {
 }
 
 func withdrawalTest(t *testing.T, native bool) *withdrawalFixture {
+	return withdrawalTestWithWait(t, native, true)
+}
+
+func withdrawalTestWithWait(t *testing.T, native, askWait bool) *withdrawalFixture {
 	t.Helper()
 	var f *conversationFixture
 	if native {
@@ -35,6 +39,7 @@ func withdrawalTest(t *testing.T, native bool) *withdrawalFixture {
 	} else {
 		f = conversationTest(t, true)
 	}
+	f.input.Wait = askWait
 	f.mutateTodo(t, func(row map[string]any) {
 		row["resume_generation"] = 7
 		row["worker_receipt"] = map[string]any{"job": "worker-42", "generation": 7}
@@ -77,7 +82,7 @@ func withdrawalTest(t *testing.T, native bool) *withdrawalFixture {
 				if len(args) != 10 || args[2] != "--question-file" || args[4] != "--reason-file" || args[6] != "--expected-state-file" || args[8] != "--scope-file" {
 					t.Fatal("canonical command contract differs")
 				}
-				origin, err := boundedRegular(args[7])
+				origin, err := boundedRegularUpTo(args[7], maxTodo)
 				current, readErr := f.r.withdrawalRow(42)
 				if err != nil || readErr != nil || canonicalHash(json.RawMessage(origin)) != canonicalHash(json.RawMessage(current)) {
 					return "", errors.New("conversation_state_changed")
@@ -100,6 +105,23 @@ func withdrawalTest(t *testing.T, native bool) *withdrawalFixture {
 					return "", errors.New("result lost after commit")
 				}
 				return "{}", nil
+			}
+		case "question-wait":
+			if !native && !askWait {
+				row, err := f.r.conversationTask(ctx, f.input.Todo)
+				if err != nil {
+					return "", err
+				}
+				out, err := backend(ctx, path, args...)
+				if err == nil {
+					f.mutateTodo(t, func(row map[string]any) {
+						wait := row["owner_question_wait"].(map[string]any)
+						wait["domain"] = "todo-owner-question-wait-v1"
+					})
+					origin := conversationOwnerIdentity(row)
+					f.mutateTodo(t, func(row map[string]any) { row["owner_question_wait"].(map[string]any)["origin"] = origin })
+				}
+				return out, err
 			}
 		case "recovery-log":
 			if w.commands == 0 {

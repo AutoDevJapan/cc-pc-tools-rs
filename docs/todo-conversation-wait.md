@@ -19,6 +19,12 @@ todo question-wait <id> --question-file <JSONファイル>
 todo question-answer <id> --answer-file <JSONファイル>
 ```
 
+後から明示的に待機へ移す呼出側は `question-wait` に
+`--expected-state-file <直前の元ToDo行JSON>` も渡す。
+通常のToDoロック内で行全体を比較し、再試行の既存待機を返す前にも競合を拒否する。
+応答が失われた時は現在の正規待機receiptを読み返して照合する。
+古いsnapshotを使って現在の担当・依存・停止へ待機を作らない。
+
 どちらも既存CLIの経路で `todo.lock` を取得し、最新の全ToDoを読んで検査する。
 成功した変更だけを既存の原子的保存へ渡す。拒否では保存しない。
 同じ入力の再試行も保存しない。ロック外の古いスナップショットで解除を決めない。

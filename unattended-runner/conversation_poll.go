@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -35,6 +36,31 @@ type conversationPollSnapshot struct {
 	Checks  map[string]conversationPollCheck `json:"checks"`
 }
 
+// The canonical wait can be committed before the runner's index save fails.
+// Read only scheduling metadata once; delivery still guards the selected task
+// and validates its exact live owner and wait under the normal mutation path.
+func (r *Runner) conversationCanonicalWaits() (map[uint64]*TodoRow, error) {
+	var db struct {
+		Items []struct {
+			ID      uint64          `json:"id"`
+			Project string          `json:"project"`
+			Wait    json.RawMessage `json:"owner_question_wait"`
+		} `json:"items"`
+	}
+	if err := readJSON(r.TodoPath, maxTodo, &db); err != nil {
+		return nil, err
+	}
+	rows := make(map[uint64]*TodoRow)
+	for _, row := range db.Items {
+		if _, duplicate := rows[row.ID]; duplicate {
+			rows[row.ID] = nil // only this task's ambiguous hint is unusable
+			continue
+		}
+		rows[row.ID] = &TodoRow{ID: row.ID, Project: row.Project, QuestionWait: row.Wait}
+	}
+	return rows, nil
+}
+
 func (r *Runner) conversationPollSnapshot() (conversationPollSnapshot, error) {
 	snapshot := conversationPollSnapshot{Domain: "discord-conversation-poll-v1", Checks: map[string]conversationPollCheck{}}
 	err := readJSON(filepath.Join(r.Config.Home, "conversation-poll-health.json"), maxState, &snapshot)
@@ -61,10 +87,28 @@ func (r *Runner) processConversations(ctx context.Context, health *Health) {
 		health.Errors = append(health.Errors, "conversation_poll_history_deferred")
 	}
 	var waiting []ConversationQuestion
+	var canonicalWaits map[uint64]*TodoRow
+	canonicalRead := false
 	for _, id := range orderedConversationKeys(index) {
 		q := index.Questions[id]
-		if q.Wait && (q.Phase == "waiting" || q.Phase == "answered" || (q.Actor != nil && q.Phase == "posted")) {
+		if q.Phase == "waiting" || ((q.Wait || q.ExplicitWait != nil) && q.Phase == "answered") || (q.Wait && q.Actor != nil && q.Phase == "posted") {
 			waiting = append(waiting, q)
+		} else if !q.Wait && q.Phase == "posted" {
+			if !canonicalRead {
+				canonicalRead = true
+				canonicalWaits, err = r.conversationCanonicalWaits()
+				if err != nil {
+					health.Errors = append(health.Errors, "conversation_wait_readback_deferred")
+				}
+			}
+			if row := canonicalWaits[q.Todo]; row != nil && row.Project == q.Project && len(row.QuestionWait) != 0 && string(row.QuestionWait) != "null" && r.conversationExactWait(row.QuestionWait, q) {
+				var wait struct {
+					Origin json.RawMessage `json:"origin"`
+				}
+				_ = json.Unmarshal(row.QuestionWait, &wait)
+				q.ExplicitWait = &conversationExplicitWaitReceipt{WaitSHA: canonicalHash(row.QuestionWait), OriginSHA: canonicalHash(wait.Origin)}
+				waiting = append(waiting, q)
+			}
 		}
 	}
 	// Oldest checked first if an API outage consumes this finite tick. Healthy

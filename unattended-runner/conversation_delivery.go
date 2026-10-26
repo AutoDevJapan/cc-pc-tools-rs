@@ -184,10 +184,9 @@ func (r *Runner) captureConversationReply(ctx context.Context, q ConversationQue
 }
 
 func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQuestion, reply conversationReply, req *Request) error {
-	if req.Phase == "conversation_reply_delivered" || req.Phase == "conversation_reply_applied" || req.Phase == "conversation_direction_recorded" || req.Phase == "conversation_implementation_recorded" || req.Phase == "conversation_source_verified" {
-		if len(req.ConversationAttachmentMetadata) == 0 {
-			return nil
-		}
+	complete := req.Phase == "conversation_reply_delivered" || req.Phase == "conversation_reply_applied" || req.Phase == "conversation_direction_recorded" || req.Phase == "conversation_implementation_recorded" || req.Phase == "conversation_source_verified"
+	if complete && (q.Wait || q.Actor != nil) && len(req.ConversationAttachmentMetadata) == 0 {
+		return nil
 	}
 	if q.Actor != nil {
 		return r.deliverConversationActorReply(ctx, q, reply, req)
@@ -195,6 +194,16 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	row, err := r.conversationDeliveryTask(ctx, q)
 	if err != nil {
 		return err
+	}
+	wait, err := r.conversationReplyUsesWait(row, q)
+	if err != nil {
+		return err
+	}
+	if complete {
+		pendingRelease := wait && !q.Wait && r.conversationExactWait(row.QuestionWait, q) && conversationWaitUnchanged(row, q) && conversationWaitOwnerUnchanged(row)
+		if len(req.ConversationAttachmentMetadata) == 0 && !pendingRelease {
+			return nil
+		}
 	}
 	if row.Project != q.Project {
 		return errors.New("conversation original task project differs")
@@ -209,7 +218,7 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 		return err
 	}
 	marker := conversationReplyMarker(q, req)
-	if q.Wait {
+	if wait {
 		// Every waiting reply, including a second reply, gets an immutable input
 		// before any edit. Reacquisition must not silently replace that version.
 		answer, b, answerFile, reacquired, err := r.conversationAnswerInput(q, reply, req, receipt)
@@ -267,25 +276,25 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 			return r.save()
 		}
 	}
-	if req.ConversationSourceRecovered && !hasNoteMarker(row.Note, marker) && (!q.Wait || conversationQuestionAnswered(row, q)) {
+	if req.ConversationSourceRecovered && !hasNoteMarker(row.Note, marker) && (!wait || conversationQuestionAnswered(row, q)) {
 		return errors.New("conversation recovered source delivery proof unavailable")
 	}
 	// Later replies and edits remain bound to the already answered question.
 	// The canonical delivery-only operation updates the pending prompt without
 	// releasing another wait or taking ownership from a live worker.
-	if q.Wait && conversationQuestionAnswered(row, q) {
+	if wait && conversationQuestionAnswered(row, q) {
 		return r.deliverContinuedConversationReply(ctx, row, q, reply, req, receipt, marker)
 	}
-	if q.Wait && conversationContinuedWait(row, q) {
+	if wait && conversationContinuedWait(row, q) {
 		return r.deliverContinuedConversationReply(ctx, row, q, reply, req, receipt, marker)
 	}
-	if q.Wait && !conversationQuestionAnswered(row, q) && !conversationWaitOwnerUnchanged(row) {
+	if wait && !conversationQuestionAnswered(row, q) && !conversationWaitOwnerUnchanged(row) {
 		return errors.New("conversation original question generation differs")
 	}
 	// Never append to an overwritten question hold or manufacture its missing
 	// marker. Only an intact canonical wait or its durable answer can proceed.
-	imported := q.Wait && row.Status == "block" && conversationWaitRecorded(row, q) && row.Note == "ジョブの結果に判断が必要です。"
-	if q.Wait && !conversationQuestionAnswered(row, q) && !conversationWaitUnchanged(row, q) && !imported {
+	imported := wait && row.Status == "block" && conversationWaitRecorded(row, q) && row.Note == "ジョブの結果に判断が必要です。"
+	if wait && !conversationQuestionAnswered(row, q) && !conversationWaitUnchanged(row, q) && !imported {
 		return errors.New("conversation original question wait differs")
 	}
 	if !hasNoteMarker(row.Note, marker) {
@@ -339,7 +348,7 @@ func (r *Runner) deliverConversationReply(ctx context.Context, q ConversationQue
 	// The reply reference must be durable before the task becomes runnable.
 	// Recheck after the edit; question-answer remains the final locked authority.
 	// A lost successful response is reconciled without releasing a later block.
-	if q.Wait && !conversationQuestionAnswered(row, q) {
+	if wait && !conversationQuestionAnswered(row, q) {
 		if !conversationWaitUnchanged(row, q) || !conversationWaitOwnerUnchanged(row) {
 			return errors.New("conversation original question wait differs")
 		}

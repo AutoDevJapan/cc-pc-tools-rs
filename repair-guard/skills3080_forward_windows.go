@@ -269,7 +269,13 @@ func skillsConsumeCreatedCurrent(m skillsManifest, creation skillsRequest, reque
 }
 
 func skillsConsumeOperation(r skillsRequest, reg skillsRegistry, s *skillsFS) object {
-	fail := func(reason string) object { return object{"qualified": false, "reason": reason} }
+	fail := func(reason string, stages ...string) object {
+		out := object{"qualified": false, "reason": reason}
+		if len(stages) == 1 && stages[0] != "" {
+			out["failure_stage"] = stages[0]
+		}
+		return out
+	}
 	c := r.Consume
 	if c == nil || r.Writer.Task != 3080 || r.Runtime != nil || r.Result != nil || r.Review == nil || !skillsResultID(*r.Review) ||
 		!skillsWriterValid(c.Creator) || !skillsDigest(c.RequestSHA) || !filepath.IsAbs(c.RequestPath) || !within(c.Creator.Workspace, c.RequestPath) ||
@@ -287,34 +293,18 @@ func skillsConsumeOperation(r skillsRequest, reg skillsRegistry, s *skillsFS) ob
 		*creation.Review != *r.Review || creation.ManifestCommit != r.ManifestCommit || creation.ManifestPath != r.ManifestPath || creation.ManifestSHA != r.ManifestSHA {
 		return fail("creation_evidence")
 	}
-	manifestRaw, ok := skillsManifestBytes(r)
-	if !ok {
-		return fail("manifest")
-	}
-	m, ok := skillsParseManifest(manifestRaw)
-	if !ok || m.Writer != c.Creator || !skillsSourcesBound(m, s) {
-		return fail("source")
-	}
-	review, reason := skillsReceive(*r.Review, reg, s, true)
-	if reason != "" || !skillsReviewAccepted(review, r.ManifestSHA, str(creator["model"])) {
-		return fail("review")
-	}
-	producer, ok := skillsProducerObservation(s)
-	if !ok {
-		return fail("source")
-	}
-	evidence, ok := skillsReadCreationNative(s, creator, *c)
-	if !ok {
-		return fail("creation_evidence")
+	m, evidence, producer, stage := skillsCreatedProvenance(creation, *c, creator, s)
+	if stage != "" {
+		return fail(skillsCreatedFailureReason(stage), stage)
 	}
 	result, reason := skillsConsumeCreatedCurrent(m, creation, c.RequestSHA, evidence, skillsCentralRoot, s, c.Indices, producer)
 	if reason != "" {
-		return fail(reason)
+		return fail(reason, "current_snapshot")
 	}
 	// Owner stop/current generation can change while provenance is checked.
 	fresh, ok := skillsRegistryRead([]int{3080, 3686})
 	if !ok || !skillsWriterCheck(r.Writer, fresh, s, os.Getenv("CC_JOB_ID")) {
-		return fail("writer")
+		return fail("writer", "writer_recheck")
 	}
 	result["manifest_sha256"] = r.ManifestSHA
 	result["native_call_id"] = c.CallID

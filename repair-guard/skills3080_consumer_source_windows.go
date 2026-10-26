@@ -2,6 +2,75 @@ package main
 
 import "strings"
 
+// Both creator and admitted readers reuse the exact native CreateNew proof.
+// Publication and content-review acceptance were checked by that accepted
+// issuer; a later read must not acquire a new dependency on remote availability
+// or reopen the original review as though the reader were its author.
+type skillsCreatedChecks struct {
+	installed func(*skillsFS) (skillsProducer, bool)
+	native    func(*skillsFS, object, skillsConsumeRequest) (skillsCreatedEvidence, bool)
+	manifest  func(skillsCreatedEvidence, skillsRequest, string, skillsProducer) ([]byte, bool)
+	sources   func(skillsManifest, *skillsFS) bool
+}
+
+func skillsCreatedProvenance(creation skillsRequest, c skillsConsumeRequest, creator object, s *skillsFS) (skillsManifest, skillsCreatedEvidence, skillsProducer, string) {
+	return skillsCreatedProvenanceWith(creation, c, creator, s, skillsCreatedChecks{skillsInstalledProducer, skillsReadCreationNative, skillsCreatedPublicManifest, skillsSourcesBound})
+}
+
+// Internal test seams are never request fields. No central leaf is opened here.
+func skillsCreatedProvenanceWith(creation skillsRequest, c skillsConsumeRequest, creator object, s *skillsFS, checks skillsCreatedChecks) (skillsManifest, skillsCreatedEvidence, skillsProducer, string) {
+	var m skillsManifest
+	var e skillsCreatedEvidence
+	var current skillsProducer
+	if creation.Writer != c.Creator || !skillsDigest(c.RequestSHA) {
+		return m, e, current, "creation_request"
+	}
+	current, ok := checks.installed(s)
+	if !ok {
+		return m, e, current, "installed_producer"
+	}
+	e, ok = checks.native(s, creator, c)
+	if !ok {
+		return m, e, current, "creation_native"
+	}
+	if !skillsCreationHeaderBound(e, creation, c.RequestSHA, current) {
+		return m, e, current, "creation_header"
+	}
+	raw, ok := checks.manifest(e, creation, c.RequestSHA, current)
+	if !ok {
+		return m, e, current, "created_manifest"
+	}
+	m, ok = skillsParseManifest(raw)
+	if !ok || m.Writer != c.Creator {
+		return m, e, current, "manifest_shape"
+	}
+	s.failureStage = ""
+	if !checks.sources(m, s) {
+		stage := s.failureStage
+		if stage == "" {
+			stage = "source_provenance"
+		}
+		return m, e, current, stage
+	}
+	if !skillsCreatedBound(e, creation, c.RequestSHA, m, e.Producer) {
+		return m, e, current, "creation_binding"
+	}
+	return m, e, current, ""
+}
+
+func skillsCreatedFailureReason(stage string) string {
+	switch {
+	case stage == "":
+		return ""
+	case stage == "installed_producer" || stage == "manifest_shape" || strings.HasPrefix(stage, "source_"):
+		return "source"
+	case stage == "created_manifest":
+		return "manifest"
+	default:
+		return "creation_evidence"
+	}
+}
+
 // This header is only received from skillsReadCreationNative, after the exact
 // canonical tool issuer/call/request/time/regular-session checks. It is not a
 // request-supplied receipt or an independent bool that classifies source data.

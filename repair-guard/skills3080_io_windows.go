@@ -85,6 +85,8 @@ type skillsFS struct {
 	files   []*os.File
 	blocked func(string) bool
 	created map[string]*os.File
+	// Fixed internal stage names only; never paths, source bytes or OS errors.
+	failureStage string
 }
 
 // Open only the declared regular object; keep it non-sharing until the caller

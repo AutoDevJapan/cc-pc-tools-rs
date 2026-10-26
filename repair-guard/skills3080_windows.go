@@ -179,11 +179,15 @@ func runSkillsCLI(args []string, out io.Writer, run func(string, string) object)
 	// Never leak callback error text, names, paths or arbitrary metadata on refusal.
 	if result["qualified"] != true {
 		created, partial := result["created_files"], result["partial_operation_possible"]
+		stage, _ := result["failure_stage"].(string)
 		reason := str(result["reason"])
 		if !skillsReason.MatchString(reason) {
 			reason = "unqualified"
 		}
 		result = object{"qualified": false, "reason": reason}
+		if skillsFixedFailureStage(stage) {
+			result["failure_stage"] = stage
+		}
 		if n, ok := created.(int); ok && n >= 0 && n <= 1024 && partial == true {
 			result["created_files"] = n
 			result["partial_operation_possible"] = true
@@ -196,6 +200,17 @@ func runSkillsCLI(args []string, out io.Writer, run func(string, string) object)
 }
 
 var skillsReason = regexp.MustCompile(`^(arguments|request|scope|writer|manifest|review|source|existing_target|physical_parent|protection|result_binding|result_unavailable|native_context|creation_evidence|current_identity|current_bytes|create_failed|unqualified)$`)
+
+func skillsFixedFailureStage(stage string) bool {
+	switch stage {
+	case "creation_request", "installed_producer", "creation_native", "creation_header", "created_manifest", "manifest_shape",
+		"source_provenance", "source_claims", "source_catalog_open", "source_catalog_integrity", "source_anchor", "source_commit",
+		"source_index_open", "source_index_integrity", "source_selected_paths", "source_notice_or_catalog", "source_support_package",
+		"source_tree", "source_object", "creation_binding", "current_snapshot", "writer_recheck":
+		return true
+	}
+	return false
+}
 
 func skillsScopeBytes(raw []byte) bool {
 	if hashBytes(raw) != skillsScopeSHA {

@@ -166,26 +166,8 @@ func skillsConsumerProvenance(c skillsConsumerScope, reg skillsRegistry, s *skil
 	if !ok || hashBytes(raw) != c.Consume.RequestSHA || !skillsStrict(raw, &creation) || creation.Domain != "skills-3080-operation-v1" || creation.Writer != c.Consume.Creator || creation.Consume != nil || creation.Result != nil || creation.Runtime != nil || creation.Review == nil || *creation.Review != c.Review || creation.ManifestCommit != c.ManifestCommit || creation.ManifestPath != c.ManifestPath || creation.ManifestSHA != c.ManifestSHA {
 		return m, e, current, "creation_evidence"
 	}
-	current, ok = skillsInstalledProducer(s)
-	if !ok {
-		return m, e, current, "source"
-	}
-	e, ok = skillsReadCreationNative(s, creator, c.Consume)
-	if !ok || !skillsCreationHeaderBound(e, creation, c.Consume.RequestSHA, current) {
-		return m, e, current, "creation_evidence"
-	}
-	manifestRaw, ok := skillsCreatedPublicManifest(e, creation, c.Consume.RequestSHA, current)
-	if !ok {
-		return m, e, current, "manifest"
-	}
-	m, ok = skillsParseManifest(manifestRaw)
-	if !ok || m.Writer != c.Consume.Creator || !skillsSourcesBound(m, s) {
-		return m, e, current, "source"
-	}
-	if !skillsCreatedBound(e, creation, c.Consume.RequestSHA, m, e.Producer) {
-		return m, e, current, "creation_evidence"
-	}
-	return m, e, current, ""
+	m, e, current, stage := skillsCreatedProvenance(creation, c.Consume, creator, s)
+	return m, e, current, skillsCreatedFailureReason(stage)
 }
 
 func skillsFreshConsumerOperation() object {

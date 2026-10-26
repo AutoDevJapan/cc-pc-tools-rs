@@ -20,6 +20,15 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// The subsequent official-CI update is independently reproduced from its
+	// public merged source. Only its two Go build action-ID fields differ;
+	// both content IDs and every remaining byte match. No PE was rewritten.
+	// Evidence: docs/evidence/skills-3080-guard-baseline-f5f.json.
+	"f3927b8850258098d54dae87196ae382960dc83a5b6e7dd11354ab97ffd07cdf": "f5f846a8470b544846e4c9ce43306061bf5668f9",
+	// PR525 was independently accepted and deployed before the later CI-tool
+	// update. Preserve its native issuance without rewriting the old receipt.
+	// Evidence: docs/evidence/skills-3080-guard-installed-038bc.json.
+	"ccb5e797e6b5627d98ade2a562f2f98f3c121a5403e1523071afc07f73af4556": "038bc2570014132321919bf6758d68979506b741",
 	// PR524's reviewed and accepted runtime, independently read back before
 	// repairing the creator-reader's handling of an older accepted issuer.
 	// Evidence: docs/evidence/skills-3080-guard-installed-60a1.json.

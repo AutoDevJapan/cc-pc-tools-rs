@@ -21,8 +21,12 @@ const completedHead = "5c9fce950d30c682e5f36fca3506af72aeb352a5"
 const completedBuildJob = "20261026-205513-todo-3942"
 const completedManifestPath = "C:/Users/makhmeto/AppData/Local/Temp/codex-owned-5249eb2a5e0382b871074f454633ec84/build-manifest-5c9fce950d30c682e5f36fca3506af72aeb352a5.private.json"
 const completedManifestSHA = "933aaed6f7a1c4e108c5e2d75c81b9d9b0c534469db6ee9594282350b1b696dc"
+const completedPreviousProof = "D:/CC/Tools/admin-broker/results/20261026-124621-7006f98d9abcd959c150132e6f3bcea1.json"
+const completedPreviousProofSHA = "c0e1455fd8acd3e9ca61d8f3d84f5299db31868da9cce1310e501bfc66747722"
+const completedPreviousHead = "5c9fce950d30c682e5f36fca3506af72aeb352a5"
+const completedPreviousSHA = "11cd5c8bbe855065ea27788543a79a70b4d63827f18e7bed918856e3526e2bd7"
 
-var completedLeaf = leaf{"cleanup-8h", completedRoot + "/target/release/cleanup-8h-delivery-" + completedHead + ".exe", "D:/CC/Tools/cleanup-8h/cleanup-8h.exe", leaves[1].New, "11cd5c8bbe855065ea27788543a79a70b4d63827f18e7bed918856e3526e2bd7"}
+var completedLeaf = leaf{"cleanup-8h", completedRoot + "/target/release/cleanup-8h-delivery-" + completedHead + ".exe", "D:/CC/Tools/cleanup-8h/cleanup-8h.exe", completedPreviousSHA, "11cd5c8bbe855065ea27788543a79a70b4d63827f18e7bed918856e3526e2bd7"}
 var completedInputs = []string{"Cargo.toml", "Cargo.lock", "cleanup-8h", "cc-jobs", "cc-job-policy", "cc-chrome", "cc-task-title", "cc-redact"}
 
 type completedManifest struct {
@@ -125,6 +129,43 @@ func completedTodoReference(b []byte) error {
 	return nil
 }
 
+func completedPreviousGeneration(b []byte) error {
+	var broker struct {
+		Exit   int    `json:"exit"`
+		Stdout string `json:"stdout"`
+	}
+	if json.Unmarshal(b, &broker) != nil || broker.Exit != 0 {
+		return errCode("COMPLETED_PREVIOUS_BROKER_UNVERIFIED")
+	}
+	var result struct {
+		Domain    string `json:"domain"`
+		Head      string `json:"source_head"`
+		Qualified bool   `json:"qualified"`
+		Data      bool   `json:"data_access_granted"`
+		Guard     bool   `json:"general_guard_changed"`
+		Results   []struct {
+			Kind     string `json:"kind"`
+			Updated  bool   `json:"updated"`
+			Verified bool   `json:"verified"`
+			Old      string `json:"old_sha256"`
+			New      string `json:"new_sha256"`
+			Steps    struct {
+				OldRetired bool `json:"old_retired"`
+				Published  bool `json:"published"`
+				Verified   bool `json:"verified"`
+			} `json:"steps"`
+		} `json:"results"`
+	}
+	if json.Unmarshal([]byte(broker.Stdout), &result) != nil || result.Domain != "completed-build-cleanup-software-3942" || result.Head != completedPreviousHead || !result.Qualified || result.Data || result.Guard || len(result.Results) != 1 {
+		return errCode("COMPLETED_PREVIOUS_INSTALL_UNVERIFIED")
+	}
+	r := result.Results[0]
+	if r.Kind != "cleanup-8h" || !r.Updated || !r.Verified || r.Old != leaves[1].New || r.New != completedPreviousSHA || !r.Steps.OldRetired || !r.Steps.Published || !r.Steps.Verified {
+		return errCode("COMPLETED_PREVIOUS_INSTALL_UNVERIFIED")
+	}
+	return nil
+}
+
 func completedProofs() error {
 	// Independently pinned original successful 3757 broker event, not a hash
 	// learned from the currently installed executable or a copied receipt.
@@ -133,6 +174,16 @@ func completedProofs() error {
 		return e
 	}
 	if e = nativePriorInstall(b, nativePrior); e != nil {
+		return e
+	}
+	// Keep the original 3757 chain and bind the already installed 3942
+	// generation to its original successful normal broker result. Never learn
+	// the expected old bytes from the currently installed executable.
+	b, e = readPinned(completedPreviousProof, 1<<20)
+	if e != nil || sha(b) != completedPreviousProofSHA {
+		return errCode("COMPLETED_PREVIOUS_RECEIPT_CHANGED")
+	}
+	if e = completedPreviousGeneration(b); e != nil {
 		return e
 	}
 	b, e = readPinned("D:/CC/Tools/todo/todo.json", 64<<20)
@@ -212,7 +263,7 @@ func refreshCompletedBuild(apply bool) ([]map[string]any, error) {
 	if e := completedProofs(); e != nil {
 		return nil, e
 	}
-	p, e := prepareAt(completedLeaf, "todo3942")
+	p, e := prepareAt(completedLeaf, "todo3942-scope")
 	if e != nil {
 		return nil, e
 	}

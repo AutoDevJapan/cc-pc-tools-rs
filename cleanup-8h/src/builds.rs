@@ -351,6 +351,7 @@ fn relative_build_reference(value: &Value) -> bool {
         _ => false,
     }
 }
+#[cfg(test)]
 fn state(
     ctx: &Context,
     store: &Path,
@@ -359,6 +360,42 @@ fn state(
     origin: &Value,
     until: Instant,
     active: &[String],
+) -> Check<()> {
+    state_with_scope_guard(ctx, store, expected, work, origin, until, active, &|_| {
+        Ok(true)
+    })
+}
+
+fn scope_touches(j: &Value, expected: &Value, work: &Path, origin: &Value) -> bool {
+    j["todo_id"] == expected["id"]
+        || (!field(j, "parent_job_id").is_empty() && j["parent_job_id"] == origin["id"])
+        || j["related_todo_ids"]
+            .as_array()
+            .is_some_and(|xs| xs.contains(&expected["id"]))
+        || [
+            field(j, "cwd"),
+            field(j, "registered_cwd"),
+            field(&j["work_owner"], "worktree"),
+            field(&j["subwork"]["owner"], "worktree"),
+        ]
+        .iter()
+        .any(|p| !p.is_empty() && (inside(work, Path::new(p)) || inside(Path::new(p), work)))
+        || (!field(&j["work_owner"], "branch").is_empty()
+            && j["work_owner"]["branch"] == expected["scheduler"]["branch"]
+            && (field(&j["work_owner"], "git_common").is_empty()
+                || j["work_owner"]["git_common"] == origin["work_owner"]["git_common"]))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn state_with_scope_guard(
+    ctx: &Context,
+    store: &Path,
+    expected: &Value,
+    work: &Path,
+    origin: &Value,
+    until: Instant,
+    active: &[String],
+    scope_guard: &dyn Fn(&Path) -> io::Result<bool>,
 ) -> Check<()> {
     let db = read(ctx, store, 64 * 1024 * 1024)?;
     let rows = rows(&db)?;
@@ -394,6 +431,12 @@ fn state(
         {
             return Err("SAVED_BUILD_REFERENCE_RETAINED");
         }
+        let published = ctx.published_job_scope_observation(id);
+        if let Ok(Some(scope)) = &published
+            && (scope_touches(scope, expected, work, origin) || build_reference(scope, &debug))
+        {
+            return Err("OTHER_JOB_ACTIVE_OR_WAITING");
+        }
         let complete = raw.as_ref().is_ok_and(|j| {
             !field(j, "status").is_empty()
                 && Path::new(field(j, "cwd")).is_absolute()
@@ -416,9 +459,77 @@ fn state(
                 {
                     return Err("OTHER_JOB_ACTIVE_OR_WAITING");
                 }
-                let claim = ctx
-                    .published_job_work_claim(id)
-                    .map_err(|_| "OTHER_OWNER_SCOPE_UNVERIFIED")?;
+                let published = published.map_err(|_| "OTHER_OWNER_SCOPE_UNVERIFIED")?;
+                let claim = match ctx.published_job_work_claim(id) {
+                    Ok(claim) => claim,
+                    Err(_) => {
+                        // A normal admission publication binds this observed
+                        // execution directory to the same canonical job. It is
+                        // retention evidence only, never new ownership or exit.
+                        let raw = observed
+                            .as_ref()
+                            .map_err(|_| "OTHER_OWNER_SCOPE_UNVERIFIED")?;
+                        let scope = published.as_ref().ok_or("OTHER_OWNER_SCOPE_UNVERIFIED")?;
+                        let cwd = Path::new(field(raw, "cwd"));
+                        if ![
+                            "running",
+                            "queued",
+                            "starting",
+                            "succeeded",
+                            "failed",
+                            "cancelled",
+                            "lost",
+                        ]
+                        .contains(&field(raw, "status"))
+                            || !absolute(cwd)
+                            || cwd.components().any(|c| {
+                                matches!(
+                                    c,
+                                    std::path::Component::ParentDir | std::path::Component::CurDir
+                                )
+                            })
+                            || !same(cwd, Path::new(field(scope, "cwd")))
+                            || cc_jobs::parse_iso(field(raw, "created_at")).is_none()
+                            || raw["created_at"] != scope["created_at"]
+                            || !field(raw, "parent_job_id").is_empty()
+                            || !field(scope, "parent_job_id").is_empty()
+                        {
+                            return Err("OTHER_OWNER_SCOPE_UNVERIFIED");
+                        }
+                        for observation in [raw, scope] {
+                            for hint in [
+                                field(observation, "registered_cwd"),
+                                field(&observation["work_owner"], "worktree"),
+                                field(&observation["work_owner"], "git_common"),
+                                field(&observation["subwork"]["owner"], "worktree"),
+                            ] {
+                                let path = Path::new(hint);
+                                if !hint.is_empty()
+                                    && (hint.contains('\0')
+                                        || !path.is_absolute()
+                                        || path.components().any(|c| {
+                                            matches!(
+                                                c,
+                                                std::path::Component::ParentDir
+                                                    | std::path::Component::CurDir
+                                            )
+                                        }))
+                                {
+                                    return Err("OTHER_OWNER_SCOPE_UNVERIFIED");
+                                }
+                            }
+                        }
+                        let _scope_pins =
+                            pin_ancestors(cwd).map_err(|_| "OTHER_OWNER_SCOPE_UNVERIFIED")?;
+                        if scope_guard(cwd).map_err(|_| "OTHER_OWNER_SCOPE_UNVERIFIED")? {
+                            return Err("OTHER_OWNER_SCOPE_UNVERIFIED");
+                        }
+                        if scope_touches(raw, expected, work, origin) {
+                            return Err("OTHER_JOB_ACTIVE_OR_WAITING");
+                        }
+                        continue;
+                    }
+                };
                 let owners: Vec<_> = rows
                     .iter()
                     .filter(|row| {
@@ -1378,7 +1489,16 @@ fn candidate(
     let (j, _states) = original(ctx, expected, work)?;
     let _todo = lock(&store.with_file_name("todo.lock"))?;
     let db = read(ctx, store, 64 * 1024 * 1024)?;
-    state(ctx, store, expected, work, &j, budget.until, &active)?;
+    state_with_scope_guard(
+        ctx,
+        store,
+        expected,
+        work,
+        &j,
+        budget.until,
+        &active,
+        &guard,
+    )?;
     let head = source(ctx, &db, expected, &j, work, budget.until)?;
     let artifacts = Artifacts::load(ctx, work, budget.until)?;
     let plan = inventory(&root, &artifacts, budget, stats)?;
@@ -1400,7 +1520,17 @@ fn candidate(
     }
     // Re-read original state/source after potentially slow enumeration. The
     // queue, state, ToDo, target and Cargo profile locks remain held throughout.
-    if let Err(e) = state(ctx, store, expected, work, &j, budget.until, &active).and_then(|()| {
+    if let Err(e) = state_with_scope_guard(
+        ctx,
+        store,
+        expected,
+        work,
+        &j,
+        budget.until,
+        &active,
+        &guard,
+    )
+    .and_then(|()| {
         if source(ctx, &db, expected, &j, work, budget.until)? != head {
             Err("SOURCE_CHANGED")
         } else {
@@ -2450,6 +2580,87 @@ mod tests {
                 assert_eq!(fs::read(dir.join("job.json")).unwrap(), bytes);
             }
         }
+        f.kept();
+    }
+
+    #[test]
+    fn published_legacy_execution_scope_is_retention_only_and_preserves_all_positive_hints() {
+        let f = Fixture::new();
+        let id = "20261026-000002-legacy";
+        let other = f.root.join("normal-existing-execution-directory");
+        fs::create_dir(&other).unwrap();
+        fs::write(other.join("source.txt"), b"keep foreign source").unwrap();
+        fs::create_dir(f.ctx.job_dir(id)).unwrap();
+        let raw =
+            json!({"id":id,"status":"running","cwd":other,"created_at":"2026-10-26T00:00:00Z"});
+        let original = serde_json::to_vec(&raw).unwrap();
+        fs::write(f.ctx.job_dir(id).join("job.json"), &original).unwrap();
+        let published = json!({"cwd":other,"created_at":raw["created_at"],"work_owner":{}});
+        for case in [
+            "valid",
+            "wrong-cwd",
+            "wrong-generation",
+            "relative-hint",
+            "owner-touches",
+            "registered-touches",
+            "saved-reference",
+            "parent",
+            "unpublished",
+            "guard-unknown",
+        ] {
+            let mut scope = published.clone();
+            let mut ids = vec![id];
+            match case {
+                "wrong-cwd" => scope["cwd"] = json!(f.root),
+                "wrong-generation" => scope["created_at"] = json!("2020-01-01T00:00:00Z"),
+                "relative-hint" => scope["registered_cwd"] = json!("../other"),
+                "owner-touches" => scope["work_owner"]["worktree"] = json!(f.work),
+                "registered-touches" => scope["registered_cwd"] = json!(f.work),
+                "saved-reference" => scope["source"] = json!(f.work.join("target/debug")),
+                "parent" => scope["parent_job_id"] = f.origin["id"].clone(),
+                "unpublished" => ids.clear(),
+                _ => (),
+            }
+            let index = serde_json::to_vec(&json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":ids,"owners":{id:scope}})).unwrap();
+            fs::write(f.ctx.jobs.join(".queue-index.json"), &index).unwrap();
+            let result = state_with_scope_guard(
+                &f.ctx,
+                &f.store,
+                &f.row,
+                &f.work,
+                &f.origin,
+                f.budget().until,
+                &[id.into()],
+                &|_| Ok(case == "guard-unknown"),
+            );
+            assert_eq!(result.is_ok(), case == "valid", "{case}");
+            assert_eq!(
+                fs::read(f.ctx.job_dir(id).join("job.json")).unwrap(),
+                original
+            );
+            assert_eq!(
+                fs::read(f.ctx.jobs.join(".queue-index.json")).unwrap(),
+                index
+            );
+            assert_eq!(
+                fs::read(other.join("source.txt")).unwrap(),
+                b"keep foreign source"
+            );
+            f.kept();
+        }
+        fs::write(f.ctx.jobs.join(".queue-index.json"),serde_json::to_vec(&json!({"scan_complete":true,"scanned_at":f.ctx.rt.epoch(),"ids":[id],"owners":{id:published}})).unwrap()).unwrap();
+        let mut stats = Stats::default();
+        f.run(true, false, &mut stats).unwrap();
+        assert_eq!(stats.builds.completed, 1);
+        assert_eq!(stats.builds.removed_bytes, f.bytes());
+        assert_eq!(
+            fs::read(f.ctx.job_dir(id).join("job.json")).unwrap(),
+            original
+        );
+        assert_eq!(
+            fs::read(other.join("source.txt")).unwrap(),
+            b"keep foreign source"
+        );
         f.kept();
     }
     #[test]

@@ -882,6 +882,17 @@ impl Context {
         if !std::path::Path::new(s(&claim["work_owner"],"worktree")).is_absolute() || !std::path::Path::new(s(&claim["work_owner"],"git_common")).is_absolute() {return Err(Error::new("work claim paths unverified"));}
         Ok(claim)
     }
+    /// Read an already published retention observation, including legacy jobs
+    /// without a ToDo or Git repository. Partial fields can retain a scope;
+    /// they never register an owner or qualify that scope for deletion.
+    pub fn published_job_scope_observation(&self, id: &str) -> Result<Option<Value>> {
+        if !valid_job_id(id) { return Err(Error::new("invalid scope observation id")); }
+        let index = self.read_admission_index()?;
+        if !self.index_ids(&index)?.contains(&id) { return Ok(None); }
+        let scope = index["owners"][id].clone();
+        if !scope.is_object() { return Err(Error::new("published scope observation unavailable")); }
+        Ok(Some(scope))
+    }
     /// Called under the gate after preparation. Never reads terminal history.
     pub(crate) fn admission_jobs(&self) -> Result<Vec<Value>> {
         self.indexed_admission_jobs(false)

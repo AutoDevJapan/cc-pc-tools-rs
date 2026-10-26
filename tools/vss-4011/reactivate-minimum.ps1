@@ -6,14 +6,15 @@ param(
 $ErrorActionPreference='Stop'
 trap { [Console]::Error.WriteLine(('reactivation_failure line={0} id={1}' -f $_.InvocationInfo.ScriptLineNumber,$_.FullyQualifiedErrorId)); exit 1 }
 . (Join-Path $PSScriptRoot 'common.ps1')
-if((Get-Vss4011FileHash $QueryExe) -cne $QueryExeSha256) {throw 'READ_ONLY_QUERY_BINARY_CHANGED'}
 $ledger=Split-Path -Parent (Get-Vss4011ReceiptPath 'configuration-request')
 $requestPath=Join-Path $ledger 'reactivation-request.private.json'
 $resultPath=Join-Path $ledger ('reactivation-'+$Mode.ToLowerInvariant()+'-result.private.json')
 function ReadMinimum {
+    $script:lastMinimumQuery=$null
     $si=New-Object Diagnostics.ProcessStartInfo
     $si.FileName=$QueryExe;$si.UseShellExecute=$false;$si.CreateNoWindow=$true
     $si.RedirectStandardOutput=$true;$si.RedirectStandardError=$true
+    if((Get-Vss4011FileHash $QueryExe) -cne $QueryExeSha256) {throw 'READ_ONLY_QUERY_BINARY_CHANGED'}
     $p=[Diagnostics.Process]::Start($si)
     $out=$p.StandardOutput.ReadToEndAsync();$err=$p.StandardError.ReadToEndAsync()
     if(-not $p.WaitForExit(30000)) {
@@ -22,8 +23,9 @@ function ReadMinimum {
         throw 'READ_ONLY_QUERY_NOT_FINISHED_RECONCILE_NO_RETRY'
     }
     $text=$out.GetAwaiter().GetResult();[void]$err.GetAwaiter().GetResult()
-    if($p.ExitCode -ne 0) {throw 'READ_ONLY_QUERY_FAILED'}
     $row=$text|ConvertFrom-Json
+    if($row.source -eq 'IVssSnapshotMgmt2' -and $row.hresult -match '^0x[0-9A-F]{8}$') {$script:lastMinimumQuery=$row}
+    if($p.ExitCode -ne 0) {throw 'READ_ONLY_QUERY_FAILED'}
     if($row.source -ne 'IVssSnapshotMgmt2' -or $row.phase -ne 'GetMinDiffAreaSize' -or $row.hresult -ne '0x00000000' -or $row.changes -ne 0 -or $row.minimum_bytes -le 0) {throw 'READ_ONLY_QUERY_RESULT_INVALID'}
     return $row
 }
@@ -38,11 +40,12 @@ try {
         if($present -and ($key.GetValue('MinDiffAreaFileSize') -ne 3200 -or $key.GetValueKind('MinDiffAreaFileSize') -ne [Microsoft.Win32.RegistryValueKind]::DWord)) {throw 'SETTING_CHANGED_PRESERVE_OTHER_ACTOR'}
         if($present) {$key.DeleteValue('MinDiffAreaFileSize',$true);$key.Flush()}
         if('MinDiffAreaFileSize' -in $key.GetValueNames()) {throw 'UNDO_READBACK_FAILED'}
-        $result=[ordered]@{todo=4011;phase='registry_absent_provider_observation_follows';utc=[DateTime]::UtcNow.ToString('o');snapshot_deletion_requests=0;registry_present=$false}
+        $result=[ordered]@{todo=4011;phase='registry_absent_provider_observation_follows';utc=[DateTime]::UtcNow.ToString('o');snapshot_deletion_requests=0;registry_present=$false;already_absent=(-not $present);storage=$null;shadows=@();metadata_error=$null}
+        try {$c=Get-Vss4011CVolume;$result.storage=Get-Vss4011Storage $c.DeviceID;$result.shadows=@(Get-Vss4011Shadows $c.DeviceID)} catch {$result.metadata_error=$_.Exception.HResult}
         # The registry result survives even if the subsequent read-only API fails.
         Write-Vss4011NewReceipt $resultPath $result
         Write-Output ($result|ConvertTo-Json)
-        ReadMinimum|ConvertTo-Json
+        try {ReadMinimum|ConvertTo-Json} catch {Write-Output ('provider_query_unverified_after_registry_restored hresult='+$_.Exception.HResult)}
         exit 0
     }
     if(Test-Path -LiteralPath $requestPath) {throw 'REACTIVATION_ATTEMPT_EXISTS_NO_RETRY'}
@@ -53,6 +56,7 @@ try {
     if($prior.todo -ne 4011 -or $prior.before_present -ne $false -or $prior.target_MB -ne 3200 -or $rollback.todo -ne 4011 -or $rollback.phase -ne 'registry_absent_driver_effect_unverified' -or $attempt.todo -ne 4011 -or $attempt.phase -ne 'attempt_failed_or_outcome_unresolved_no_retry') {throw 'ORIGINAL_ATTEMPT_AND_ROLLBACK_NOT_RECONCILED'}
     $c=Get-Vss4011CVolume;$storage=Get-Vss4011Storage $c.DeviceID
     if($storage.maximum_bytes -ne 50GB -or [uint64]$c.FreeSpace -lt (3200MB+200GB)) {throw 'CAPACITY_OR_MAXIMUM_CHANGED'}
+    if([uint64]$storage.allocated_bytes+3200MB -gt 50GB) {throw 'INSUFFICIENT_QUOTA_HEADROOM_PRESERVE_GENERATIONS'}
     $providers=@(Get-CimInstance Win32_ShadowProvider)
     if($providers.Count -ne 1 -or $providers[0].Name -ne 'Microsoft Software Shadow Copy provider 1.0') {throw 'PROVIDER_CHANGED'}
     foreach($path in @('HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore','HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\SystemRestore')) {
@@ -68,7 +72,7 @@ try {
     if($before.minimum_bytes -ne 320MB) {throw 'ORIGINAL_PROVIDER_MINIMUM_CHANGED'}
     $request=[ordered]@{schema=1;todo=4011;actor_job=$env:CC_JOB_ID;phase='reactivation_call_pending_outcome_unknown';utc=[DateTime]::UtcNow.ToString('o');before_present=$false;target_MB=3200;before_provider=$before;storage=$storage;shadows=$shadows;query_exe_sha256=$QueryExeSha256;snapshot_creations=0;snapshot_deletion_requests=0}
     Write-Vss4011NewReceipt $requestPath $request
-    $set=$false
+    $set=$false;$after=$null;$script:lastMinimumQuery=$null
     try {
         $key.SetValue('MinDiffAreaFileSize',3200,[Microsoft.Win32.RegistryValueKind]::DWord);$set=$true;$key.Flush()
         $after=ReadMinimum
@@ -77,9 +81,19 @@ try {
         if(@($tokens|Where-Object {$_ -notin $afterTokens}).Count -ne 0) {throw 'GENERATION_CHANGED_DURING_SETTING'}
         $result=[ordered]@{schema=1;todo=4011;phase='provider_minimum_verified_retention_and_io_effect_unverified';utc=[DateTime]::UtcNow.ToString('o');before_provider=$before;after_provider=$after;snapshot_creations=0;snapshot_deletion_requests=0;original_token_count=$tokens.Count;all_original_tokens_present=$true}
         Write-Vss4011NewReceipt $resultPath $result
-        Write-Output ($result|ConvertTo-Json -Depth 10)
     } catch {
-        if($set -and $key.GetValue('MinDiffAreaFileSize') -eq 3200 -and $key.GetValueKind('MinDiffAreaFileSize') -eq [Microsoft.Win32.RegistryValueKind]::DWord) {$key.DeleteValue('MinDiffAreaFileSize',$true);$key.Flush()}
-        throw
+        $cause=$_
+        if($null -eq $after) {$after=$script:lastMinimumQuery}
+        $failure=[ordered]@{schema=1;todo=4011;phase='reactivation_failed_retention_unverified';utc=[DateTime]::UtcNow.ToString('o');failure_code=if($cause.Exception.Message -cmatch '^[A-Z_]+$'){$cause.Exception.Message}else{'WINDOWS_FAILURE_OR_OUTCOME_UNRESOLVED'};failure_hresult=$cause.Exception.HResult;after_provider=$after;setting_before_rollback_present=$false;setting_before_rollback_value=$null;setting_before_rollback_kind=$null;own_value_removed=$false;registry_readback_absent=$null;rollback_error=$null;snapshot_deletion_requests=0}
+        try {
+            $failure.setting_before_rollback_present='MinDiffAreaFileSize' -in $key.GetValueNames()
+            if($failure.setting_before_rollback_present){$failure.setting_before_rollback_value=$key.GetValue('MinDiffAreaFileSize');$failure.setting_before_rollback_kind=[string]$key.GetValueKind('MinDiffAreaFileSize')}
+            if($set -and $failure.setting_before_rollback_value -eq 3200 -and $failure.setting_before_rollback_kind -eq 'DWord') {$key.DeleteValue('MinDiffAreaFileSize',$true);$key.Flush();$failure.own_value_removed=$true}
+            $failure.registry_readback_absent=('MinDiffAreaFileSize' -notin $key.GetValueNames())
+        } catch {$failure.rollback_error=$_.Exception.HResult}
+        if(-not (Test-Path -LiteralPath $resultPath)){Write-Vss4011NewReceipt $resultPath $failure}
+        throw $cause
     }
+    # Console/transport output failure must not undo a saved successful result.
+    Write-Output ($result|ConvertTo-Json -Depth 10)
 } finally {$key.Dispose()}

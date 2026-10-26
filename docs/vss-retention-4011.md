@@ -192,7 +192,7 @@ C6E06B8DD21CAC5282A7B2FF9F480991D770E39EF0851C6FC7B5CFE04A519A3Aを保持。
 観測・rollback判断が終わるまでこのworktreeと無視対象のos-v2を保持し、別checkoutから実行しない。
 observerの出力先にはos-v2を指定しない。原request/resultを上書き・削除しない。
 
-05:53直前にはWindowsが05:43作成point262とpersistent C snapshotを1件持っていたため、
+05:53直前には本担当以外で05:43作成されたpoint262とpersistent C snapshotが1件あったため、
 以前の0件観測を流用せず、新たな既存世代として保持した。05:54:19のconfigureは終了0で
 3200DWORDの保存・型・readbackを確認。C→C/50GiBは不変。
 05:54:32のA要求BEGIN/ENDは共に0だが、05:54:46直後のCIM登録はまだ旧1件のみだった。
@@ -219,6 +219,8 @@ rollback時には新tokenが現れ、05:56の正常再照合でown description�
 設定開始後のvolsnap新イベント0、complete true/errors0だが、短期の保持に限る。
 Goの有限・読取専用`minimum_windows.go`で正規IVssSnapshotMgmt2.GetMinDiffAreaSizeを照会し、
 05:58:56 HRESULT0/335,544,320B（320MiB）を実取得した。登録やdriver全体の復旧の証明ではない。
+Goのchanges0は「設定変更の関数を呼ばない」というコード上の記述で、COM起動に伴う
+手動サービスの開始などを実測して0と保証する値ではない。
 Go通常build/vet成功。API GUID・vtableはMicrosoft WinSDK vsmgmt.hと照合し、
 snapshotの作成/削除/移動/resize、volume内容の読み取り機能は持たない。
 
@@ -242,13 +244,18 @@ DWORD3200を一度設定し、正規provider値が3200MiB/readback型値一致/�
 未達/例外時は自分が書いた同型同値だけを元の未設定へ戻す。初期割当の成功には読み替えない。
 
 以後の通常I/Oで、既存2tokenとpoint262/263、上限不変、新24/25/33/35/36なし、
-provider minimumと実割当の拡張量/増加速度を観測する。default時と大きなminimum時を
-区別し、少なくとも実割当増1回/使用増1GiBと次の01:45・02:40両時刻を含む1夜を必要とする。
-新しいsnapshot/pointは追加しない。最大48h/2夜、条件未達または異常なら
+provider minimumと実割当の拡張量/増加速度を観測する。前後のsample時刻とtoken集合を保存し、
+**集合が同じ区間の割当増だけ**を既存世代の拡張として扱う。集合に新tokenが現れた区間は
+本担当以外の新世代作成を含む区間として分け、合計割当増を既存世代の拡張やminimum効果へ流用しない。
+Microsoftが保証するのは初期minimumなので、既存世代で拡張の違いが出ないだけでは無効と断定しない。
+通常の新世代について作成前後を明確に照合できた場合だけ初期割当の別証拠にする。
+default時と大きなminimum時を区別し、少なくとも同じtoken区間の実割当増/使用増1GiB、
+次の01:45・02:40両時刻を含む1夜の保持を確認する。刻みや初期予約の因果が不明なら効果未検証と記録する。
+担当から新しいsnapshot/pointは追加しない。最大48h/2夜、初期効果の証拠未達または異常なら
 `-Mode Undo`でこの追記requestに対応する自分の3200DWORDだけを未設定へ戻す。
 別の値や型なら保持し、registryが不存在でも区別して記録する。必要pointを消して見かけ上改善しない。
 記録は同じworktree/os-v2のまま保持し、原結果を消す再試行・審査拒否の迂回は行わない。
-この限定候補はまだ未実行で、実データ保持と証拠の十分性を別モデルへ確認してから適用する。
+この限定候補は4039の確認と指摘対応を経て適用する。原Aの厳密gate未達を成功へ変えるものではない。
 
 PS5.1/7で8source構文確認とA判定receiptのJSON往復テスト成功。新しいsettingの実適用/
 途中停止後の動作はまだ未検証。既存claimの維持と新phaseを明示し、新たなpoint作成loopを作らない。
@@ -262,3 +269,21 @@ PS5.1/7で8source構文確認とA判定receiptのJSON往復テスト成功。新
 親への最初の実適用結果note保存は共有ToDoの64MiB上限で失敗したため、自己4011の過去メモ7件だけを
 正規archive-historyで原文21,443B/ハッシュ/通常history読返しを保って別保管し、3796/3628への
 同結果保存を成功させた。他担当の履歴や状態を清掃/改変せず、この修復を容量清掃成功に加算しない。
+
+06時台の追加照合：既存point262の作成要求者は未特定であり、Windows自身の自動作成とは断定しない。
+05:57:23のSystemRestore8303/0x80070057は、SnapshotPathと現在のDeviceObjectを匿名照合して
+point262側のtoken305F...へ一致した。今回追加したA側のtokenEFA3...は06:09:53の
+8302/ErrorCode0へ一致し、対象整理を正常完了した。2世代ともpersistent/state12を保持した。
+同providerには過去の8303/80070057と8302/0が混在しており、8303が25の原因だと因果を確定しない。
+約1000万files等のcounterはC全域の独立棚卸しではなく、このSystemRestore処理が返した数値である。
+通常権限の最初のtoken照合はCIM初期化失敗で0件と表示されたため採用せず、失敗票と
+AdminBroker正常再照合を分けた。06:11使用5,523,341,312B/割当6,158,565,376B/max50GiB、新volsnap0。
+TaskScheduler Operationalは元からdisabledで履歴未取得。新たな有効化/監視を追加していない。
+
+4039は固定1344aa13→1109ff05の4対象全文と必要参照を読了、実Opus5.5/max/succeeded/exit0/20steps。
+新pointを作らない方針とGo ABI/解放は妥当、Must3（Apply失敗票/Undoのhelper依存/初期と拡張の混同）。
+実装側で失敗票に返ったprovider値・自己値/型・復帰/readbackを保存し、hash検査をgetter直前へ移動した。
+Undoはregistry結果を先に保存し、helper不在/不一致でもregistry復帰を妨げない。metadata取得失敗も記録する。
+成功出力をApplyのcatch外へ移し、quota余地も追加した。観測条件は上の同token/新token区別へ修正。
+既にレビューした目的と操作範囲を広げず、3件の具体修正を構文/JSON往復と実操作の結果で確認する。
+未実行の異常経路やdriverの再起動後の状態を検証済みとは言わない。

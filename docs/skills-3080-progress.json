@@ -612,7 +612,7 @@
     "guard_client_resource": true,
     "state": "classification_unverified"
   },
-  "recorded_at": "2026-10-26T14:35:57.3891765+00:00",
+  "recorded_at": "2026-10-26T15:42:01.7656873+00:00",
   "total_skill_named_body_read_definition": "This field preserves the historical complete-source subset only. Current raw/workflow primary coverage is projected from the canonical source components and sixmile evaluation index in all_fulltext_primary_paths_including_partial_sources/all_workflow_primary_paths_including_partial_sources, not copied here.",
   "openai_entrypoint_evaluation": {
     "rights_accepted": false,
@@ -2346,7 +2346,7 @@
   },
   "security_coverage_input": {
     "proposal": "skills-3080-security-coverage-input214717.json",
-    "proposal_sha256": "010f8bf6b803d9f884781c0d81c2447d9dd38195445f0dd72d126479860bc25d",
+    "proposal_sha256": "6a79f661f5f96377f16f5d7512447ac423910e988f1de02736c3645bfbf7eea5",
     "new_adoptions": 0,
     "central_writes": 0,
     "not_part_of_counted_authored_design_index": true,

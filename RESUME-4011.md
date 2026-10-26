@@ -2,6 +2,12 @@
 
 ## 2026-10-27 05:03再開担当の現在値
 
+05:32の最終読返し：4028は通常schedulerから**job20261027-053028-todo-4028**でdoingへ進んだ。
+4011は正規wait/on4028、3796はon4011を確認。次は未起動と誤認せずこの同じ実4028を受領する。
+親3628は独立の新担当050823による更新でon3796へ変化していた。本4011は親の依存/状態を変更0。
+元依頼は親を3796/4011待ちへ付け替えず6h容量/1h清掃を保つ指定なので、この観測差と原指定を
+親の正規noteに返して、親自身の元担当が独立運用を維持するよう伝える。parent stateを手書きしない。
+
 固定実装d2a3aaf35be967edfe96eb4a06777a0357193da1を**追加レビュー4028**へ--spec/親4011/
 kind review/Opus5.5 maxで登録済み。spec `.ci-work/4011/review-3-spec.md`、固定e1c3ffef→d2a3aaf3の9対象。
 05:29の正規dispatch-subworkはexit0、status todo/activefalse/launchednull/**allowance_now0**。

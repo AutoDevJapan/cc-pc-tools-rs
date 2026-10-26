@@ -2099,7 +2099,8 @@ mod capacity_regressions {
         let original = t.put(job(json!({"id":"held","status":"running"})));
         let state = FileLock::acquire(&t.ctx.job_dir("held").join("state.lock")).unwrap();
         let missing = t.ctx.root.join("unread-proof.json");
-        let (result, out, _) = t.cli(&["cancel", "held", "--recovery", "--no-action-check", missing.to_str().unwrap()]);
+        let (result, out, _) = t.cli(&["cancel", "held", "--if-todo-ready", "--recovery",
+            "--todo-id", "2", "--cancel-key", "state-contention", "--no-action-check", missing.to_str().unwrap()]);
         assert_eq!(result.unwrap(), 0);
         assert_eq!(serde_json::from_str::<Value>(&out).unwrap()["reason"], "state_lock_busy");
         assert_eq!(t.ctx.load("held").unwrap(), original);

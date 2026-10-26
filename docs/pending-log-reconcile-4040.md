@@ -63,7 +63,7 @@ OSの既存2ロックを資格の実体として使う。時刻だけでロッ�
 現れた場合も拒否する。親PIDが再利用された場合は作成時刻の照合で拒否する。
 Relayのsession IDは固定した申告値と照合するもので、OSプロセスがその会話を所有することを
 暗号学的に証明しない。元Relayが資格を作成・実行する運用を維持する。
-expires_atは、全GET後・永続保存前の受付期限。受付後は生存する本CLIが既存2ロックを保持し、
+expires_atは、POST前に必要な全GETの後、qualification保存前の受付期限。受付後は生存する本CLIが既存2ロックを保持し、
 同じ送信資格のもとでqualificationとattemptを保存する。attempt後に追加のlease判定・GET・
 本文生成を行わず、準備済みの同じHTTP要求を送る。lockedまたは状態不明のthreadでは
 attemptを保存しない。既存exact投稿のGET採用はlockedのままでも可能。
@@ -88,3 +88,8 @@ check-onlyは候補数・hash・lease確認・attempt有無を返すが投稿・
 保存済みreceiptの検証は当時のPendingのdigestに結び、現在の本文分割や表示形式で
 過去のeffectを再生成しない。履歴のCASはID・本文・author・quiet/media等の検証対象に結び、
 リアクションだけの変化は不一致の理由にしない。
+タグのないbot投稿の重複候補を探す場合だけCRと本文前後の空白を除き、前置きや本文内の
+タグ区切りがあっても本文全体を含む候補があれば停止する。既存投稿の採用には引き続き
+元の本文・正規tag・author・quiet/media等の完全一致を要求し、この正規化を採用資格へ使わない。
+履歴hashのmentionsはID、attachmentsはID・filename・size・content_typeへ限定し、
+プロフィールや添付URLだけの変化では確認済みの同一性を変えない。

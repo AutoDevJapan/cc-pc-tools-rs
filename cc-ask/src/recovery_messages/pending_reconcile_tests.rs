@@ -120,6 +120,9 @@ struct Case {
 }
 impl Case {
     fn new() -> Self {
+        Self::with_body("対応不要。予約済み通常報告の回復テストです。\n")
+    }
+    fn with_body(body: &str) -> Self {
         let f = Fixture::new();
         let mut ctx = f.context();
         let anchor = log(
@@ -128,7 +131,7 @@ impl Case {
         )
         .unwrap();
         let thread = core::s(&anchor["thread_id"]).to_owned();
-        let body = "対応不要。予約済み通常報告の回復テストです。\n".to_owned();
+        let body = body.to_owned();
         let outer = format!(
             "normal-log-{}",
             hash(
@@ -614,6 +617,7 @@ fn pending_reconcile_attempt_has_no_later_lease_admission_failure() {
 fn pending_reconcile_locked_or_unknown_send_state_reserves_no_attempt() {
     for unknown in [false, true] {
         let mut c = Case::new();
+        c.precheck();
         let original = c.saved();
         {
             let mut faults = c.faults.lock().unwrap();
@@ -623,6 +627,10 @@ fn pending_reconcile_locked_or_unknown_send_state_reserves_no_attempt() {
         assert!(c.run().unwrap_err().contains("locked"));
         assert_eq!(c.saved(), original);
         assert_eq!(c.posts(), 0);
+        c.args.check_only = true;
+        c.args.expected_precheck = None;
+        assert!(c.run().unwrap_err().contains("locked"));
+        assert_eq!(c.saved(), original);
         // Reading/adopting an exact existing message does not require sending.
         let existing = c.remote();
         c.precheck();
@@ -640,6 +648,45 @@ fn pending_reconcile_same_body_without_tag_or_with_a_different_tag_stops() {
         assert!(c.run().unwrap_err().contains("same bot body"));
         assert_eq!(c.posts(), 0);
         assert_eq!(c.saved(), original);
+    }
+}
+
+#[test]
+fn pending_reconcile_transformed_duplicate_body_never_authorizes_a_post() {
+    for shape in 0..3 {
+        let mut c = if shape == 2 {
+            Case::with_body(
+                "対応不要。元の報告です。\n\n-# recovery:quoted-in-the-body\n報告の続きです。\n",
+            )
+        } else {
+            Case::new()
+        };
+        assert!(
+            c.run().is_ok(),
+            "the valid initial record must reach precheck"
+        );
+        let original = c.saved();
+        let duplicate = match shape {
+            0 => c.body.trim_end().to_owned(),
+            1 => format!("既存の作業への報告\n{}", c.body),
+            _ => format!("{}\n\n-# recovery:another-request:log:0", c.body),
+        };
+        c.f.add_reply(&c.thread, BOT, &duplicate, true);
+        if let Ok(checked) = c.run() {
+            c.args.check_only = false;
+            c.args.expected_precheck = Some(core::s(&checked["command_id"]).to_owned());
+            let _ = c.run();
+        }
+        assert_eq!(
+            c.posts(),
+            0,
+            "transformed duplicate shape {shape} allowed a POST"
+        );
+        assert_eq!(
+            c.saved(),
+            original,
+            "ambiguity must retain the original journal"
+        );
     }
 }
 
@@ -683,6 +730,40 @@ fn pending_reconcile_reactions_do_not_invalidate_the_absence_precheck() {
         .messages
         .get_mut(&c.thread)
         .unwrap()[0]["reactions"] = json!([{"count":1}]);
+    assert_eq!(c.run().unwrap()["delivery"], "verified");
+    assert_eq!(c.posts(), 1);
+}
+
+#[test]
+fn pending_reconcile_profile_and_attachment_urls_do_not_change_identity_evidence() {
+    let mut c = Case::new();
+    let other = c.f.add_reply(&c.thread, BOT, "別の通常投稿", true);
+    {
+        let mut state = c.f.server.lock().unwrap();
+        let message = state
+            .messages
+            .get_mut(&c.thread)
+            .unwrap()
+            .iter_mut()
+            .find(|m| m["id"] == other)
+            .unwrap();
+        message["mentions"] = json!([{"id":"900","username":"old-name"}]);
+        message["attachments"] = json!([{"id":"901","filename":"public.png","size":10,"content_type":"image/png","url":"https://example.invalid/old","proxy_url":"https://example.invalid/old-proxy"}]);
+    }
+    c.precheck();
+    {
+        let mut state = c.f.server.lock().unwrap();
+        let message = state
+            .messages
+            .get_mut(&c.thread)
+            .unwrap()
+            .iter_mut()
+            .find(|m| m["id"] == other)
+            .unwrap();
+        message["mentions"][0]["username"] = json!("new-name");
+        message["attachments"][0]["url"] = json!("https://example.invalid/new");
+        message["attachments"][0]["proxy_url"] = json!("https://example.invalid/new-proxy");
+    }
     assert_eq!(c.run().unwrap()["delivery"], "verified");
     assert_eq!(c.posts(), 1);
 }
@@ -751,6 +832,18 @@ fn pending_reconcile_lease_process_fixture() {
         pr::lease(&q).is_ok(),
         std::env::var("CC_4040_LEASE_EXPECT").unwrap() == "valid"
     );
+    let acknowledgement = std::env::var("CC_4040_LEASE_ACK").unwrap();
+    let mut marker = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(acknowledgement)
+        .unwrap();
+    marker
+        .write_all(&[u8::from(
+            std::env::var("CC_4040_LEASE_EXPECT").unwrap() == "valid",
+        )])
+        .unwrap();
+    marker.sync_all().unwrap();
 }
 
 #[cfg(windows)]
@@ -782,9 +875,11 @@ fn pending_reconcile_real_parent_identity_admits_lease_and_refuses_a_reused_pid(
     for (expected, created) in [("valid", stamp), ("invalid", stamp + 1)] {
         c.q["lease"]["holder_created_filetime"] = json!(created);
         c.write();
+        let acknowledgement = c.f.root.path().join(format!("lease-{expected}.ack"));
         let mut child = std::process::Command::new(std::env::current_exe().unwrap())
             .args(["--exact", "recovery_messages::tests::pending_reconcile_tests::pending_reconcile_lease_process_fixture"])
             .env("CC_4040_LEASE_FIXTURE", &c.args.qualification_file).env("CC_4040_LEASE_EXPECT",expected)
+            .env("CC_4040_LEASE_ACK",&acknowledgement)
             .stdout(std::process::Stdio::null()).stderr(std::process::Stdio::null())
             .creation_flags(CREATE_NO_WINDOW).spawn().unwrap();
         let wait = unsafe { WaitForSingleObject(child.as_raw_handle() as _, 15_000) };
@@ -794,6 +889,11 @@ fn pending_reconcile_real_parent_identity_admits_lease_and_refuses_a_reused_pid(
         let exit = child.wait().unwrap();
         assert_eq!(wait, WAIT_OBJECT_0, "lease fixture timed out");
         assert!(exit.success(), "lease fixture {expected}: {exit}");
+        assert_eq!(
+            fs::read(acknowledgement).unwrap(),
+            vec![u8::from(expected == "valid")],
+            "the actual fixture must run; zero selected tests are not a lease check"
+        );
     }
     assert_eq!(c.posts(), 0);
 }

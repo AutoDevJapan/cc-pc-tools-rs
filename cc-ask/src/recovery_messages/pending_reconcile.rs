@@ -437,6 +437,8 @@ fn history(
     }
     let mut found = Vec::new();
     let tag = format!("recovery:{}:{}", &q.fingerprint[..24], PHASE);
+    let normalized_body = request.body.replace('\r', "");
+    let normalized_body = normalized_body.trim();
     for message in &rows {
         let content = message["content"]
             .as_str()
@@ -459,10 +461,8 @@ fn history(
             )?;
             found.push((q.thread_id.clone(), snowflake(core::s(&message["id"]))?));
         } else if message["author"]["id"] == q.bot_id
-            && content
-                .split_once("\n\n-# recovery:")
-                .map_or(content, |(body, _)| body)
-                == request.body
+            && !normalized_body.is_empty()
+            && content.replace('\r', "").contains(normalized_body)
         {
             return Err(
                 "pending reconcile found the same bot body without its exact tag; no POST".into(),
@@ -480,12 +480,18 @@ fn history(
         return Err("pending reconcile duplicate candidates retained; no POST".into());
     }
     // Bind evidence relevant to absence/identity, not mutable reactions or embeds.
-    let stable: Vec<_> = rows.iter().map(|m| json!({
+    let stable: Vec<_> = rows.iter().map(|m| {
+        let mentions = m["mentions"].as_array().map(|values| values.iter()
+            .map(|v| v["id"].clone()).collect::<Vec<_>>());
+        let attachments = m["attachments"].as_array().map(|values| values.iter()
+            .map(|v| json!({"id":v["id"],"filename":v["filename"],"size":v["size"],"content_type":v["content_type"]}))
+            .collect::<Vec<_>>());
+        json!({
         "id":m["id"],"channel_id":m["channel_id"],"author_id":m["author"]["id"],
         "body_sha256":sha(core::s(&m["content"]).as_bytes()),"flags":m["flags"],
-        "mentions":m["mentions"],"mention_everyone":m["mention_everyone"],"mention_roles":m["mention_roles"],
-        "attachments":m["attachments"],"webhook_id":m["webhook_id"],"timestamp":m["timestamp"]
-    })).collect();
+        "mentions":mentions,"mention_everyone":m["mention_everyone"],"mention_roles":m["mention_roles"],
+        "attachments":attachments,"webhook_id":m["webhook_id"],"timestamp":m["timestamp"]
+    })}).collect();
     Ok(History {
         sha256: digest(&json!({"thread":q.thread_id,"last":last,"messages":stable}))?,
         candidates: found,

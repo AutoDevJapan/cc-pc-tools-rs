@@ -41,7 +41,9 @@ func conversationOrigin(q ConversationQuestion) uint64 {
 }
 
 func sameConversationActor(a, b *conversationActor) bool {
-	return (a == nil && b == nil) || (a != nil && b != nil && canonicalHash(a) == canonicalHash(b))
+	return (a == nil && b == nil) || (a != nil && b != nil &&
+		a.Todo == b.Todo && a.Job == b.Job && a.OriginSpecSHA == b.OriginSpecSHA &&
+		a.SpecSHA == b.SpecSHA && a.RootSHA == b.RootSHA && a.SourceSHA == b.SourceSHA)
 }
 
 func conversationPathSHA(path string) string {
@@ -171,7 +173,10 @@ func (r *Runner) checkConversationActor(ctx context.Context, originID, actorID u
 		return nil, fail
 	}
 	raw := string(historical)
-	if historical == nil {
+	// Running/runnable recipients need today's admission for a wait or a new
+	// instruction. Only an exact question hold (checked again by its caller)
+	// or metadata-only receipt processing can use the saved source proof.
+	if historical == nil || (!readonly && actor.Status != "block") {
 		raw, err = r.Run(ctx, "D:/CC/Tools/client-records/scrub391.exe", "--verify-current-succession", fmt.Sprint(actorID))
 	}
 	var proof struct {

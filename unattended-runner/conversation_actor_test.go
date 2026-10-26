@@ -184,7 +184,14 @@ func TestConversationActorRejectsForeignChangedOrStoppedScope(t *testing.T) {
 					t.Fatal("spec")
 				}
 			case "root":
-				f.mutate(t, 3277, func(row map[string]any) { row["spec"] = filepath.Join(f.r.Config.Home, "other.md") })
+				var db map[string]any
+				if readJSON(f.r.TodoPath, maxTodo, &db) != nil {
+					t.Fatal("store")
+				}
+				db["projects"].(map[string]any)["GitDo"] = filepath.Join(f.r.Config.Home, "different-root")
+				if publish(f.r.TodoPath, db) != nil {
+					t.Fatal("root")
+				}
 			case "source":
 				path := filepath.Join(f.r.Config.Home, "conversations", f.input.RequestID, "actor-succession.json")
 				if os.WriteFile(path, []byte(`{"source_kind":"assistant_quote"}`), 0600) != nil {
@@ -439,4 +446,41 @@ func TestConversationActorIgnoresUnrelatedMalformedInstruction(t *testing.T) {
 		t.Fatal("unrelated malformed instruction hid a valid recipient")
 	}
 	f.ask(t)
+}
+
+func TestConversationActorPostedTasksRequireCurrentAdmission(t *testing.T) {
+	for _, operation := range []string{"register-wait", "deliver-reply"} {
+		t.Run(operation, func(t *testing.T) {
+			f := actorTest(t, false)
+			f.ask(t)
+			f.mutate(t, 3277, func(row map[string]any) { row["status"] = "doing" })
+			f.mutate(t, 3751, func(row map[string]any) { row["status"] = "done" })
+			backend := f.r.Run
+			f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+				if strings.Contains(path, "scrub391") && args[0] == "--verify-current-succession" {
+					return `{"verified":false}`, nil
+				}
+				return backend(ctx, path, args...)
+			}
+			before, _ := os.ReadFile(f.r.TodoPath)
+			if operation == "register-wait" {
+				_, err := f.r.conversationAsk(context.Background(), f.input)
+				if err == nil || conversationFailureStage(err) != "actor_scope" {
+					t.Fatal("revoked current admission registered the posted wait")
+				}
+			} else {
+				reply := f.reply(t, 8, "new instruction after revocation")
+				f.replies[0].Todo = 1171
+				health := Health{}
+				f.r.processConversations(context.Background(), &health)
+				if len(health.Errors) == 0 || f.r.State.Requests[reply.Message].Todo != 0 {
+					t.Fatal("revoked current admission delivered a new instruction")
+				}
+			}
+			after, _ := os.ReadFile(f.r.TodoPath)
+			if string(before) != string(after) || f.posts != 1 {
+				t.Fatal("revoked scope changed task or sent a new question")
+			}
+		})
+	}
 }

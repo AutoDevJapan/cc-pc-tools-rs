@@ -458,7 +458,8 @@ pub fn actor_note_instruction(
     let data = bytes(note_file.ok_or("conversation_note_invalid")?)?;
     let note = std::str::from_utf8(&data).map_err(|_| "conversation_note_invalid")?;
     let note = note
-        .trim_start_matches('\u{feff}')
+        .strip_prefix('\u{feff}')
+        .unwrap_or(note)
         .replace("\r\n", "\n")
         .replace('\r', "\n");
     let previous = text(row, "note").replace("\r\n", "\n").replace('\r', "\n");

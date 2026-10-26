@@ -183,3 +183,35 @@ delivery SHAdde2d2856c204eb094d77b9e9688996ead292843ecf8cff1d6f8fc3dedf931b0、
 52関連のうち既存51成功と新6経路表形式回帰1件（6入力）を最終sourceで成功、Clippy/Go race/vet成功。
 このpin差分と追加test/phase codeだけを限定別model reviewし、同HEAD CI後に観測版を通常反映する。
 現用7d1、実回収0、元2対象/自己debug未回収を保持。本人の判断・PC操作は不要。
+01時台の同一実行観測: PR553は実review3981 Must0/同HEAD CI52成功0skip/CodeQL後、
+234d04dcacd313755375534d4c2fa9d574f58de2へnormal merge。正規AdminBroker check153445...→
+apply20261026-153502-03ac7d6649c83b16bb064a90c37f41cdで現用dde2へupdated/verified。
+normal S4U Taskはself_handle/self_kernel available、active最大13、exact OTHER_SCOPE_UNPUBLISHED2で保持。
+これにより一般guardの不調や自己snapshot失敗ではなく、canonicalで稼働扱いだがterminalとしてindexから
+正常に外れた旧jobの保持scopeが扱えない契約差だと確認。元jobを終了扱いにしたりindexを書き直していない。
+
+通常権限の匿名probeでも未公開旧job2件を再現。両方succeeded/元todo_idとnormal jobs履歴対応あり/
+normal projects登録あり/codex_pidの正常API結果false。supervisor pidは不明で占有のまま。
+一方は元cwdが既存、もう一方は既に削除された過去cwd。プロジェクト表記の差はそのまま保持し、
+両側のnormal登録・元job・関連Rootの全positive scopeを合算する。私的project/path/仕様は表示しない。
+
+追加実装は公開indexのないjobも、normal raw todo_idと元Root.jobs、既存projects登録で保持用scopeだけを
+メモリ上で照合する。data所有/exitの証拠にはせず、元job/Root/index/所有を不変更。candidate自身の
+元成功job/Git所有/guard clear/保存push/全OS lock/inode保持/再照合は従来どおり。
+他scopeはディレクトリ属性とFILE_TRAVERSEだけを開き、列挙/ファイル内容/Git参照/削除をしない。
+全祖先no-reparse・物理名を照合し、SHARE_DELETE無しのhandleを最終適用まで保持する。
+READ_ATTRIBUTESだけではrename阻止しないことを実Windows回帰で検出し、FILE_TRAVERSEで阻止/解放後rename成功を確認。
+client/不明scopeを削除可能にせず、declared scopeと使用中資源を保持するためだけに使う。
+欠落cwdはterminal+正常finished時刻+native workerの正常APIでinactive確認+live owner無しの場合だけ、
+存在する祖先を保持して同じmissing lookupを最終再照合する。元supervisorの終了とは判定せず、
+新ディレクトリの作成や登録をしない。live/unknown worker/不正record/重複Root/履歴欠落/登録欠落/
+重なるscope/相対path/reparseは保持。実体欠落は回収bytesに数えない。
+
+実Root3960を通常権限でreal candidate apply=falseに通し、active最大26でもOK/候補14,020,506B/実削除0を確認。
+一時probe追記は元byteへ復元し、copyで古いmtimeになったことで診断入りtest exeが再利用された点も検出した。
+復元後はsource mtimeを現在へ更新し、fresh再compileの55 regressions/0skipとClippy成功。
+旧56件logにはreadonly probe1件が含まれるため、synthetic55件と別の実対象照合を混同しない。
+元source/record/dataは不変更。通常test exeはprobeなしへ再生成済み、0tests成功を資格証明へ使わない。
+Go race/vet成功、normal latest installの原broker SHA4787670b8a7e8bade25dd3c7bdf59ce2652fe5843f20d3c1fc48c9128d003d2dも
+旧3世代の証明へ追加して鎖を保持し、suffix todo3942-legacyでold dde2 backupを上書きせず反映予定。
+現用dde2/初期実対象2件と自己debug未回収/実回収0/owner対応不要を維持。

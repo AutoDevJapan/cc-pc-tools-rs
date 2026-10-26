@@ -689,6 +689,104 @@ impl Context {
                 now >= at && now - at < 30.
             })
     }
+    /// Read current active/queued IDs without changing jobs or their index.
+    /// The caller holds queue.lock until it finishes using this snapshot, so
+    /// registration/requeue cannot introduce an unobserved owner in between.
+    /// Inspect canonical metadata with admission's occupied/unknown rules plus
+    /// live supervisors, which admission may have already removed from its index.
+    /// Never write/reconcile the persistent index or start workers.
+    pub fn active_job_ids_snapshot(&self) -> Result<Vec<String>> {
+        #[cfg(windows)]
+        {
+            use std::os::windows::fs::MetadataExt;
+            for path in [&self.jobs,self.jobs.join(".queue-index.json").as_path()] {
+                match fs::symlink_metadata(path) {
+                    Ok(metadata) if metadata.file_attributes()&0x400!=0=>return Err(Error::new("active job metadata is redirected")),
+                    Err(e) if e.kind()==std::io::ErrorKind::NotFound=>(),
+                    Err(e)=>return Err(e.into()),_=>(),
+                }
+            }
+        }
+        let index = self.read_admission_index()?;
+        let until=std::time::Instant::now()+std::time::Duration::from_secs(30);
+        let mut ids=Vec::new();
+        for (count,entry) in fs::read_dir(&self.jobs)?.enumerate() {
+            if count>=100_000 || std::time::Instant::now()>=until {return Err(Error::new("active job inspection limit"));}
+            let entry=entry?;let kind=entry.file_type()?;
+            let id=entry.file_name().to_string_lossy().into_owned();
+            if !valid_job_id(&id) {continue;}
+            #[cfg(windows)]
+            {
+                use std::os::windows::fs::MetadataExt;
+                if fs::symlink_metadata(entry.path())?.file_attributes()&0x400!=0 {return Err(Error::new("active job record is redirected"));}
+            }
+            // A redirected canonical record is unknown, never an omitted owner.
+            if kind.is_symlink() {return Err(Error::new("active job record is redirected"));}
+            if !kind.is_dir() {continue;}
+            // Match normal history discovery: a directory without job.json is
+            // not a new worker. Published IDs are merged below and stay unknown.
+            match fs::symlink_metadata(entry.path().join("job.json")) {
+                Err(e) if e.kind()==std::io::ErrorKind::NotFound=>continue,
+                Err(e)=>return Err(e.into()),
+                Ok(metadata)=>{
+                    #[cfg(windows)]
+                    {
+                        use std::os::windows::fs::MetadataExt;
+                        if metadata.file_attributes()&0x400!=0 {return Err(Error::new("active job metadata is redirected"));}
+                    }
+                    if !metadata.is_file() {return Err(Error::new("active job metadata is not a file"));}
+                }
+            }
+            let job=self.admission_record(&id);
+            if self.retention_snapshot_active(&job) {ids.push(id);}
+            if ids.len()>4096 {return Err(Error::new("active job snapshot limit"));}
+        }
+        if let Ok(published)=self.index_ids(&index) {
+            for id in published {
+                let job=self.admission_record(id);
+                if !ids.iter().any(|known|known==id) && self.retention_snapshot_active(&job) {ids.push(id.to_owned());}
+                if ids.len()>4096 {return Err(Error::new("active job snapshot limit"));}
+            }
+        }
+        ids.sort();
+        Ok(ids)
+    }
+    // Retention inspection only: do not alter execution admission, process
+    // mutation authority, or the original job record. Old jobs may lack a
+    // recorded PID birth. An actual kernel birth strictly AFTER their normal
+    // finished interval disproves that PID slot, without inventing its birth.
+    // A matching/earlier/unavailable observation remains occupied.
+    fn retention_snapshot_active(&self, job: &Value) -> bool {
+        LIVE.contains(&s(job, "status"))
+            || s(job, "status") == "starting"
+            || job["work_owner_live"] == true
+            || self.tool_handoff_pending(job)
+            || ["pid", "codex_pid"].iter().any(|key| {
+                match self.is_ours_checked(job, key) {
+                    Ok(active) => active,
+                    Err(_) => {
+                        if !["succeeded", "failed", "cancelled"].contains(&s(job, "status")) {
+                            return true;
+                        }
+                        let created = &job[format!("{key}_created")];
+                        if !created.is_null() && created.as_u64() != Some(0) {
+                            return true;
+                        }
+                        let interval = parse_iso(s(job, "created_at"))
+                            .zip(parse_iso(s(job, "finished_at")));
+                        let observed = job[*key].as_u64()
+                            .and_then(|pid| u32::try_from(pid).ok())
+                            .and_then(|pid| self.rt.observed_process_birth(pid).ok().flatten());
+                        !interval.zip(observed).is_some_and(|((start, end), birth)| {
+                            let now = self.rt.epoch();
+                            let birth = birth as f64 / 10_000_000. - 11_644_473_600.;
+                            start > 0. && start <= end && end <= now
+                                && birth > end + 60. && birth <= now + 1.
+                        })
+                    }
+                }
+            })
+    }
     /// Prepare history WITHOUT the queue gate. One scanner serves concurrent
     /// launchers; only active candidates and registrations are reread at commit.
     /// Lock order is scan -> queue -> state, never queue -> scan.
@@ -771,6 +869,18 @@ impl Context {
         self.rt
             .diagnostic(&format!("history scan metrics: {metrics}"));
         Ok(())
+    }
+    /// Preserve the normally published immutable work claim when execution
+    /// metadata is unavailable. This observation cannot prove exit or qualify
+    /// that job's own data for deletion; callers can only retain its scope.
+    pub fn published_job_work_claim(&self,id:&str)->Result<Value> {
+        if !valid_job_id(id) {return Err(Error::new("invalid work claim id"));}
+        let index=self.read_admission_index()?;
+        if !self.index_ids(&index)?.contains(&id) {return Err(Error::new("work claim is not published"));}
+        let claim=index["owners"][id].clone();
+        if !claim.is_object() || ["repository","git_common","worktree","branch"].iter().any(|key|s(&claim["work_owner"],key).is_empty()) || claim["todo_id"].as_u64().is_none() {return Err(Error::new("work claim incomplete"));}
+        if !std::path::Path::new(s(&claim["work_owner"],"worktree")).is_absolute() || !std::path::Path::new(s(&claim["work_owner"],"git_common")).is_absolute() {return Err(Error::new("work claim paths unverified"));}
+        Ok(claim)
     }
     /// Called under the gate after preparation. Never reads terminal history.
     pub(crate) fn admission_jobs(&self) -> Result<Vec<Value>> {

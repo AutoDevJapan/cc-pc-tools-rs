@@ -102,12 +102,17 @@
       "file": "skills-3080-voltagent-design24-evaluation090101.json",
       "sha256": "05e67cdefac9d5805d7b7ca4c37f3d0cf2560780dfaf3e57b74473513af975af",
       "rows": 24
+    },
+    {
+      "file": "skills-3080-mcp-site-duplicate-evidence090101.json",
+      "sha256": "fe4547ae7954867716800ec6d8308d400a1be326ae4749d03d02a4227ab3defa",
+      "rows": 1
     }
   ],
   "adoption_ledger": {
     "file": "skills-3080-adoptions.json",
-    "sha256": "90206077b3824da02b3cfa8a71e003a5b7c39dbf0614522bdf920f14c0ecd890",
-    "rows": 133
+    "sha256": "4032a346b01a3bc8fecac1ac59a2a7cdbddd292541b48a95d4156fb8dd4ec807",
+    "rows": 134
   },
   "definition": "Assessment record references and existing final decisions only. No semantic/individual licence approval is inherited through equal bytes. The fixed catalog remains the complete occurrence universe; all holds are retained."
 }

@@ -290,7 +290,7 @@
   "independently_accepted": 116,
   "installed": 116,
   "integrated": 3,
-  "excluded": 14,
+  "excluded": 15,
   "units": {
     "github_agent_procedure": 483,
     "github_design_example": 199,
@@ -354,7 +354,7 @@
     "archived_draft_targets": 8,
     "archived_draft_is_subset_of_batch03": true,
     "independently_accepted": "Legacy acceptances plus individually scoped direct designs. For the six game outputs, original3775 reading and3777 source-specific correction acceptance were bound to exact manifest bytes. Actual creation, metadata discovery and bounded explicit use are separately evidenced; no whole-catalog, renderer or full-context acceptance is implied. The newest public result delta still requires review/CI/merge.",
-    "not_semantically_disposed_occurrences": 73087,
+    "not_semantically_disposed_occurrences": 73086,
     "additional_draft_sources": [
       "skills-3080-mizchi-sql-draft.json",
       "skills-3080-mizchi-mutation-draft.json"
@@ -1691,20 +1691,30 @@
   },
   "individual_rights_and_mcp_duplicates_delta": {
     "new_individual_rights_exclusions": 4,
-    "new_duplicate_exclusions": 2,
-    "total_new_exclusions": 6,
+    "new_duplicate_exclusions": 3,
+    "total_new_exclusions": 7,
     "original_duplicate_rows_preserved": 7,
     "original_rights_row_preserved": 1,
-    "current_duplicate_entries": 9,
+    "current_duplicate_entries": 10,
     "current_individual_rights_entries": 5,
     "main_accepted_excluded_before_this_delta": 8,
-    "branch_excluded": 14,
-    "branch_pending": 73087,
+    "branch_excluded": 15,
+    "branch_pending": 73086,
     "primary_and_support_read_states_unchanged": true,
     "existing_primary_amendment_separate": true,
     "source_scripts_executed": false,
     "central_operations": 0,
-    "review_pending": true
+    "review_pending": true,
+    "before_site_duplicate1_snapshot": {
+      "new_individual_rights_exclusions": 4,
+      "new_duplicate_exclusions": 2,
+      "total_new_exclusions": 6,
+      "current_duplicate_entries": 9,
+      "branch_excluded": 14,
+      "branch_pending": 73087,
+      "definition": "Historical bounded display before one exact site occurrence; not current ledger counts"
+    },
+    "latest_site_duplicate_evidence": "skills-3080-mcp-site-duplicate-evidence090101.json"
   },
   "sixmile_next75_entrypoint_evaluation": {
     "source": "skills-3080-sixmile-next75-evaluation.json",
@@ -2174,5 +2184,15 @@
     "renderer_tested": false,
     "source_body_reading_counts_unchanged": true,
     "public_delta_review_pending": true
+  },
+  "site_canonical_duplicate1": {
+    "evidence": "skills-3080-mcp-site-duplicate-evidence090101.json",
+    "working_excluded_occurrence": 1,
+    "main_added": 0,
+    "source_semantic_raw_credit": 0,
+    "source_workflow_credit": 0,
+    "copy_grants": 0,
+    "central_operations": 0,
+    "review_pending": true
   }
 }

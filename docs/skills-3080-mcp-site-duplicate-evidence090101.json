@@ -44,9 +44,9 @@
   "source_meaning_reused_from_existing_adopted_procedure": true,
   "proposed_disposition": "excluded",
   "proposed_scope": "Only the duplicate primary occurrence at this exact site/upstream pin; not exclusion of unseen helpers or a transfer of rights. Retain official/canonical source and notice once.",
-  "new_final_dispositions": 0,
+  "new_final_dispositions": 1,
   "central_operations": 0,
-  "phase": "public proposal; final disposition not yet applied",
+  "phase": "working ledger delta awaiting result acceptance",
   "catalog_sha256": "2d73c9a038a41cc220a9687b935bfa1e0b315b65d9bd6d3e54ddb4111972876c",
   "catalog_entry_effective_pin": {
     "repository": "anthropics/skills",
@@ -135,7 +135,21 @@
     "support_fingerprint_definition": "Sort support entries by relative path bytes; concatenate UTF-8 mode + space + type + space + git_blob_sha1 + space + relative_path + LF; SHA-256 of the concatenation. Size is metadata verified by the preserved official tree proof, outside this fingerprint.",
     "package_blob_paths_definition": "Primary SKILL.md1 + official individual LICENSE.txt1 + support8 = package blob paths10; there is no publication identity entry in this official package."
   },
-  "stage": "Public assessment proposal for one exact duplicate occurrence; ledger disposition, independent result review, CI and main acceptance remain",
+  "stage": "One exact duplicate disposition recorded on working branch; independent result review, CI and main acceptance remain",
   "support_fingerprint_independently_recomputed": true,
-  "package_metadata_is_not_helper_semantic_or_license_acceptance": true
+  "package_metadata_is_not_helper_semantic_or_license_acceptance": true,
+  "entries": [
+    {
+      "inventory_id": "site:mcp-builder-6a45e1",
+      "source_repo": "anthropics/skills",
+      "source_commit": "dbd4588f9e1033efb41dad4bef2f7947c8993d44",
+      "path": "skills/mcp-builder/SKILL.md",
+      "source_sha256": "0f4592dcb53cf2b5d6b7febee6b4152018b565551a1c29e3c612f57b218ab295",
+      "assessment": "Exact fixed-upstream duplicate assessment; semantic content reused from accepted canonical record, not a new source reading",
+      "copy_license_accepted": false,
+      "new_raw_semantic_primary_credit": 0,
+      "canonical_inventory_id": "github:e4ade76a7932447efe3dd6e777ab300a5a9a6f1cf13a392614b31c621906a016"
+    }
+  ],
+  "main_final_dispositions_added": 0
 }

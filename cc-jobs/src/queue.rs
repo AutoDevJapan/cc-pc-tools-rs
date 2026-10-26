@@ -738,18 +738,54 @@ impl Context {
                 }
             }
             let job=self.admission_record(&id);
-            if self.admission_active(&job) || self.is_ours(&job,"pid") {ids.push(id);}
+            if self.retention_snapshot_active(&job) {ids.push(id);}
             if ids.len()>4096 {return Err(Error::new("active job snapshot limit"));}
         }
         if let Ok(published)=self.index_ids(&index) {
             for id in published {
                 let job=self.admission_record(id);
-                if !ids.iter().any(|known|known==id) && (self.admission_active(&job) || self.is_ours(&job,"pid")) {ids.push(id.to_owned());}
+                if !ids.iter().any(|known|known==id) && self.retention_snapshot_active(&job) {ids.push(id.to_owned());}
                 if ids.len()>4096 {return Err(Error::new("active job snapshot limit"));}
             }
         }
         ids.sort();
         Ok(ids)
+    }
+    // Retention inspection only: do not alter execution admission, process
+    // mutation authority, or the original job record. Old jobs may lack a
+    // recorded PID birth. An actual kernel birth strictly AFTER their normal
+    // finished interval disproves that PID slot, without inventing its birth.
+    // A matching/earlier/unavailable observation remains occupied.
+    fn retention_snapshot_active(&self, job: &Value) -> bool {
+        LIVE.contains(&s(job, "status"))
+            || s(job, "status") == "starting"
+            || job["work_owner_live"] == true
+            || self.tool_handoff_pending(job)
+            || ["pid", "codex_pid"].iter().any(|key| {
+                match self.is_ours_checked(job, key) {
+                    Ok(active) => active,
+                    Err(_) => {
+                        if !["succeeded", "failed", "cancelled"].contains(&s(job, "status")) {
+                            return true;
+                        }
+                        let created = &job[format!("{key}_created")];
+                        if !created.is_null() && created.as_u64() != Some(0) {
+                            return true;
+                        }
+                        let interval = parse_iso(s(job, "created_at"))
+                            .zip(parse_iso(s(job, "finished_at")));
+                        let observed = job[*key].as_u64()
+                            .and_then(|pid| u32::try_from(pid).ok())
+                            .and_then(|pid| self.rt.observed_process_birth(pid).ok().flatten());
+                        !interval.zip(observed).is_some_and(|((start, end), birth)| {
+                            let now = self.rt.epoch();
+                            let birth = birth as f64 / 10_000_000. - 11_644_473_600.;
+                            start > 0. && start <= end && end <= now
+                                && birth > end + 60. && birth <= now + 1.
+                        })
+                    }
+                }
+            })
     }
     /// Prepare history WITHOUT the queue gate. One scanner serves concurrent
     /// launchers; only active candidates and registrations are reread at commit.

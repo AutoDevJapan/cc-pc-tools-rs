@@ -74,3 +74,15 @@ unknownをexit扱いせず、元Root/jobを書かず、normal authoritative scop
 必要release/配布票/原結果を保持する。元3570や他担当のcanonical recordを直接修復しない。
 safe-delete/3757、3939、元3628/3796/3815/3816のソース/状態/原scopeは変更しない。
 既削除8件を再回収・二重計上しない。本人回答とPC操作は不要。
+
+21:15の再開後: current job20261026-205513-todo-3942、依存世代3の正常リンクと元3757/3963/3964 doneを確認。
+3964は実gpt-6-sol/max/24 steps、固定bc4→35163d70の2対象読了Must/Suggestion/Nit0。
+3963の実gpt-6-sol/max/49steps調査を受領。通常metadataだけの匿名read-only実測で、
+管理者権限では残るlegacy1件のcodex PIDが、元job終了後に実際に作成された別プロセスへの再利用だった。
+元記録からPID birthを作らず、既存kernel観測と正常created_at/finished_at区間の比較だけを
+清掃用保持snapshotへ限定して追加。60秒以内/一致/以前/未来/未知/不正な区間は保持し、
+実行・待機・ハンドオフ・live ownerは保持。通常admission/Context.is_ours_checked/kill権限と
+原Root/job/indexを変更しない。対象自身の削除資格は従来の元成功jobと全排他で別途確認する。
+59関連Windowsテスト/0skipとClippy成功（legacy-pid-related-tests.log、legacy-pid-clippy.log）。
+次はこの最小差分の固定別モデルreview、最新source release/149入力配布票/Go pin、同HEAD CI、
+通常merge/CAS配布/既存1h task実発火/実3960回収/自分のdebug回収。現用更新/実回収はまだ0。

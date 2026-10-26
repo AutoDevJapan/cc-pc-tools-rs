@@ -45,3 +45,26 @@ CLIの一回限りの復旧hintは本当のgrok-4.7を受け付け、作者の�
 関連4クレートの実行中、no-action取消しのstate.lock競合がOS error33として露出した。
 この経路は非待機のtry_acquireを使うため、競合をtodo.lock同様のdeferredとして返すよう
 修正した。元jobと取消し意図は変えず、次の正規再試行に戻す。個別の競合回帰も追加した。
+
+## 通常schedulerの受領処理の追加修復
+
+PR544/7293dee6を正式CI・別モデルのMust0後にマージし、Windowsのjobs/schedulerへ
+反映した。これは依頼全体の完了ではない。実再開の追跡で、通常schedulerのlinkが
+CLI Startと異なり、世代とworker receiptを保存しないことが判明した。
+新しいjobの予定世代1と元ToDoの実世代0が食い違い、quotaの照合で拒否される。
+CLI Startだけの旧テストで通常linkの差を取り逃したため、通常linkの回帰を追加した。
+
+- 新しいsubworkのlinkは、CLIと同じassign_workerで世代・受領印を一度だけ記録する。
+  同じjobの再受領で世代を増やさず、予約解除後も同じsubwork admissionで受付する。
+- 旧schedulerが受領印を残さなかったGrokの有限作業だけは、保存された予定世代が
+  元ToDoの実世代+1であること、受領印が無いこと、登録済みsubworkの関係・仕様・資源・
+  worktreeが同一であることを照合する。旧jobや元ToDoの世代を補完・変更せず、
+  capsuleに未受領の旧経路であることを結び、新workerの実受領だけを検証する。
+- 通常の失敗で付いた待ち時間は、Grokの実quotaと元の有限作業・停止なしを確認し、
+  新しいOAuth観測と同じscopeの完全なquota capsuleが成立した場合に限り再評価する。
+  元期限は起動の実受領まで保持し、resource/owner/質問/依存/技術待ちは解除しない。
+  元仕様SHAのない旧researchは、この経路でもSHAを捏造せず通常の起動時記録を待つ。
+
+追加Redは通常link・旧未受領世代・quota再確認の3件すべてで不具合を再現した。
+通常のsubwork・quota・登録・Start後の最終受付を含む関連58件を再確認する。
+最終差分の別モデルレビュー・正式CI・再配布・元3815/3816の実再開は別途確認する。

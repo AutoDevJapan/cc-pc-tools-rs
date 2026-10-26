@@ -401,10 +401,29 @@ pub fn eligible_source(item: &Value, source: &Value) -> bool {
         && finite_spec(source)["launch_key"] == source["launch_key"]
         && generation(item, "dependency_generation")
             == generation(source, "todo_dependency_generation")
-        && source_generation == Some(generation(item, "resume_generation"))
+        && (source_generation == Some(generation(item, "resume_generation"))
+            || legacy_unreceived_source(item, source))
         && timestamp(&source["started_at"])
             .zip(timestamp(&source["finished_at"]))
             .is_some_and(|(a, b)| b >= a)
+}
+
+/// Old normal-scheduler links published the job's planned next generation but
+/// never consumed it with Start. Do not rewrite either historical generation.
+/// Only an actually registered, identical finite subwork without any receipt
+/// may use this bridge; an explicit resume or another worker invalidates it.
+fn legacy_unreceived_source(item: &Value, source: &Value) -> bool {
+    provider(s(source, "model")) == Some("xai")
+        && item["worker_receipt"].is_null()
+        && source["todo_resume_generation"].as_u64()
+            == generation(item, "resume_generation").checked_add(1)
+        && item["subwork"].is_object()
+        && source["subwork_validated"] == true
+        && source["subwork"] == item["subwork"]
+        && source["subwork_spec"] == item["spec"]
+        && source["assigned_needs"] == item["needs"]
+        && crate::work_owner::norm(std::path::Path::new(s(source, "cwd")))
+            == crate::work_owner::norm(std::path::Path::new(s(&item["scheduler"], "worktree")))
 }
 
 /// The caller proves drain and author independence separately. A digest binds
@@ -458,13 +477,15 @@ pub fn receipt(
         let q = &health[provider];
         safe_health[provider] = json!({"at":q["at"],"verified":q["verified"],"exhausted":q["exhausted"],"available":q["available"]});
     }
-    Some(
-        json!({"version":1,"source_job":source["id"],"source_sha256":digest(&source_binding(source)),
+    let mut proof = json!({"version":1,"source_job":source["id"],"source_sha256":digest(&source_binding(source)),
         "resume_generation":generation(item,"resume_generation"),
         "request_sha256":digest(&request(item)),"launch_key":target["launch_key"],
         "model":target["model"],"effort":target["effort"],"model_origin":"policy",
-        "spec_sha256":spec_sha256,"scope_sha256":digest(&scope(target)),"health":safe_health}),
-    )
+        "spec_sha256":spec_sha256,"scope_sha256":digest(&scope(target)),"health":safe_health});
+    if legacy_unreceived_source(item, source) {
+        proof["legacy_unreceived_source"] = json!(true);
+    }
+    Some(proof)
 }
 
 pub fn verify(proof: &Value, item: &Value, source: &Value, target: &Value, now: f64) -> bool {
@@ -482,6 +503,11 @@ pub fn verify(proof: &Value, item: &Value, source: &Value, target: &Value, now: 
             return false;
         }
         prepared["resume_generation"] = json!(before);
+        if proof["legacy_unreceived_source"] == true {
+            // The new worker receipt above proves this single transfer. Its
+            // absence before transfer was bound by the original capsule.
+            prepared["worker_receipt"] = Value::Null;
+        }
     }
     receipt(&prepared, source, target, &proof["health"], now).is_some_and(|p| p == *proof)
 }

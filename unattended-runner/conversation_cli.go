@@ -446,6 +446,13 @@ func conversationCLIWithTimeout(args []string, out io.Writer, load func(string) 
 				ack["deadline"] = "after_wait_commit"
 			}
 		}
+		if ack, ok := result.(map[string]any); ok && ack["outcome"] == "question_answered" {
+			sha, _ := ack["answer_receipt_sha256"].(string)
+			committedWait = shaPattern.MatchString(sha)
+			if committedWait && ctx.Err() != nil {
+				ack["deadline"] = "after_answer_commit"
+			}
+		}
 	}
 	if err != nil || (ctx.Err() != nil && !committedWait) {
 		stage := conversationFailureStage(err)

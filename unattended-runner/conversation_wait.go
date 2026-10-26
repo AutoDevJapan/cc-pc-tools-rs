@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 )
 
 type conversationExplicitWaitReceipt struct {
@@ -21,6 +22,35 @@ type conversationWaitIntent struct {
 }
 
 var errConversationWait = errors.New("conversation explicit wait deferred")
+
+// A late readback is read-only and finite. Explicit cancellation is preserved;
+// only an expired CLI deadline may use this small postcommit receipt budget.
+func (r *Runner) conversationWaitReadback(ctx context.Context, q ConversationQuestion) (*TodoRow, error) {
+	row, err := r.conversationTask(ctx, q.Todo)
+	if err != nil && errors.Is(ctx.Err(), context.DeadlineExceeded) {
+		readback, cancel := context.WithTimeout(context.WithoutCancel(ctx), 3*time.Second)
+		defer cancel()
+		return r.conversationTask(readback, q.Todo)
+	}
+	return row, err
+}
+
+func (r *Runner) conversationWaitAnswerAcknowledged(result map[string]any, q ConversationQuestion) bool {
+	current, err := r.todo(q.Todo)
+	if err != nil || current.Project != q.Project {
+		return false
+	}
+	receipt := r.conversationExactAnswerReceipt(current, q)
+	if len(receipt) == 0 {
+		return false
+	}
+	// The canonical question is answered; later edits/media may still need
+	// delivery. Do not claim every current reply was delivered on this path.
+	result["outcome"], result["phase"], result["task_status"] = "question_answered", "answered", current.Status
+	result["answer_receipt_sha256"] = canonicalHash(receipt)
+	result["reply_processing"] = "deferred"
+	return true
+}
 
 func conversationOwnerIdentity(row *TodoRow) json.RawMessage {
 	var v struct {
@@ -54,6 +84,10 @@ func (r *Runner) conversationExactWait(raw json.RawMessage, q ConversationQuesti
 }
 
 func (r *Runner) conversationExactAnswer(row *TodoRow, q ConversationQuestion) bool {
+	return len(r.conversationExactAnswerReceipt(row, q)) != 0
+}
+
+func (r *Runner) conversationExactAnswerReceipt(row *TodoRow, q ConversationQuestion) json.RawMessage {
 	for _, raw := range row.QuestionAnswers {
 		var receipt struct {
 			Domain string                    `json:"domain"`
@@ -63,10 +97,10 @@ func (r *Runner) conversationExactAnswer(row *TodoRow, q ConversationQuestion) b
 		a := &receipt.Answer
 		if json.Unmarshal(raw, &receipt) == nil && receipt.Domain == "todo-owner-question-answer-receipt-v1" && r.conversationExactWait(receipt.Wait, q) &&
 			a.Domain == "discord-conversation-answer-v1" && a.RequestID == q.SenderID && a.Todo == fmt.Sprint(q.Todo) && a.Thread == q.Thread && a.Question == q.Message && a.Fingerprint == q.Fingerprint && a.QuestionSHA == q.ReceiptSHA && a.Author == r.State.Destination.Owner && a.Source == "discord-api-v10" {
-			return true
+			return raw
 		}
 	}
-	return false
+	return nil
 }
 
 // The canonical current wait is the authority, even if a process died before
@@ -169,6 +203,9 @@ func (r *Runner) conversationWait(ctx context.Context, requestID string, checkOn
 		health := Health{}
 		r.processConversationReplies(ctx, index, requestID, q, proof, &health)
 		if len(health.Errors) != 0 || ctx.Err() != nil {
+			if r.conversationWaitAnswerAcknowledged(result, q) {
+				return result, nil
+			}
 			return nil, errConversationWait
 		}
 		result["outcome"], result["phase"] = "owner_reply_delivered", index.Questions[requestID].Phase
@@ -223,7 +260,7 @@ func (r *Runner) conversationWait(ctx context.Context, requestID string, checkOn
 		}
 		_, _ = r.Run(ctx, conversationTodo, "question-wait", fmt.Sprint(q.Todo), "--question-file", q.ReceiptFile, "--scope-file", scope, "--expected-state-file", path)
 		// Read back even after a lost successful subprocess response.
-		current, readErr := r.conversationTask(ctx, q.Todo)
+		current, readErr := r.conversationWaitReadback(ctx, q)
 		if readErr != nil || current.Project != q.Project || !r.conversationExactWait(current.QuestionWait, q) || !conversationWaitUnchanged(current, q) || !conversationWaitOwnerUnchanged(current) || canonicalHash(conversationOwnerIdentity(current)) != canonicalHash(intent.Origin) {
 			return nil, errConversationWait
 		}
@@ -254,7 +291,9 @@ func (r *Runner) conversationWait(ctx context.Context, requestID string, checkOn
 		health := Health{}
 		r.processConversationReplies(ctx, index, requestID, q, fresh, &health)
 		if len(health.Errors) != 0 || ctx.Err() != nil {
-			result["reply_delivery"] = "deferred"
+			if !r.conversationWaitAnswerAcknowledged(result, q) {
+				result["reply_delivery"] = "deferred"
+			}
 			return result, nil
 		}
 		result["outcome"], result["phase"] = "owner_reply_delivered", index.Questions[requestID].Phase

@@ -51,7 +51,8 @@ func explicitWaitTest(t *testing.T, native bool) *conversationFixture {
 			out, err := backend(ctx, path, args...)
 			if path == conversationTodo && args[0] == "question-answer" && err == nil {
 				f.mutateTodo(t, func(row map[string]any) {
-					for _, raw := range row["owner_question_answer_receipts"].([]any) {
+					answers, _ := row["owner_question_answer_receipts"].([]any)
+					for _, raw := range answers {
 						raw.(map[string]any)["domain"] = "todo-owner-question-answer-receipt-v1"
 					}
 				})
@@ -227,39 +228,40 @@ func TestConversationExplicitWaitConcurrentOwnerChangeRejectsCAS(t *testing.T) {
 	})
 }
 
-func TestConversationExplicitWaitNativeLaterRepliesEditsAndLostAnswerResponse(t *testing.T) {
-	f := explicitWaitTest(t, true)
-	ctx := context.Background()
-	if _, err := f.r.conversationWait(ctx, f.q.RequestID, false); err != nil {
-		t.Fatal(err)
-	}
-	backend := f.r.Run
-	lost := false
-	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
-		out, err := backend(ctx, path, args...)
-		if path == conversationTodo && args[0] == "question-answer" && err == nil && !lost {
-			lost = true
-			return "", errors.New("synthetic lost answer response")
+func TestConversationExplicitWaitLaterRepliesEditsAndLostAnswerResponse(t *testing.T) {
+	explicitWaitVariants(t, func(t *testing.T, f *conversationFixture) {
+		ctx := context.Background()
+		if _, err := f.r.conversationWait(ctx, f.q.RequestID, false); err != nil {
+			t.Fatal(err)
 		}
-		return out, err
-	}
-	f.reply(t, 8, "a: original answer")
-	for attempt := 0; attempt < 2; attempt++ {
+		backend := f.r.Run
+		lost := false
+		f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+			out, err := backend(ctx, path, args...)
+			if path == conversationTodo && args[0] == "question-answer" && err == nil && !lost {
+				lost = true
+				return "", errors.New("synthetic lost answer response")
+			}
+			return out, err
+		}
+		f.reply(t, 8, "a: original answer")
+		for attempt := 0; attempt < 2; attempt++ {
+			health := Health{}
+			f.r.processConversations(ctx, &health)
+			if attempt == 1 && len(health.Errors) != 0 {
+				t.Fatal(health.Errors)
+			}
+		}
+		f.reply(t, 10, "extra owner instruction")
+		f.replies[0].Body = "b: edited owner answer"
+		f.edited = map[string]string{f.replies[0].Message: f.replies[1].Created}
 		health := Health{}
 		f.r.processConversations(ctx, &health)
-		if attempt == 1 && len(health.Errors) != 0 {
-			t.Fatal(health.Errors)
+		row, _ := f.r.todo(42)
+		if !lost || len(health.Errors) != 0 || row.Status != "todo" || len(row.QuestionAnswers) != 1 || len(row.QuestionDeliveries) != 2 || !strings.Contains(row.Note, "b: edited owner answer") || !strings.Contains(row.Note, "extra owner instruction") {
+			t.Fatalf("later versions were lost or released another wait: %v", health.Errors)
 		}
-	}
-	f.reply(t, 10, "extra owner instruction")
-	f.replies[0].Body = "b: edited owner answer"
-	f.edited = map[string]string{f.replies[0].Message: f.replies[1].Created}
-	health := Health{}
-	f.r.processConversations(ctx, &health)
-	row, _ := f.r.todo(42)
-	if !lost || len(health.Errors) != 0 || row.Status != "todo" || len(row.QuestionAnswers) != 1 || len(row.QuestionDeliveries) != 2 || !strings.Contains(row.Note, "b: edited owner answer") || !strings.Contains(row.Note, "extra owner instruction") {
-		t.Fatalf("later versions were lost or released another wait: %v", health.Errors)
-	}
+	})
 }
 
 func TestConversationExplicitWaitAnswerArrivingDuringRegistrationIsDelivered(t *testing.T) {
@@ -316,55 +318,57 @@ func TestConversationExplicitWaitNativeRefusesDifferentQuestionOwnerAndHolds(t *
 	}
 }
 
-func TestConversationExplicitWaitNativeReplyToAnotherQuestionKeepsCurrentWait(t *testing.T) {
-	f := explicitWaitTest(t, true)
-	ctx := context.Background()
-	first := f.q
-	stamp, _ := time.Parse(time.RFC3339Nano, f.created)
-	f.created = stamp.Add(time.Second).Format(time.RFC3339Nano)
-	f.question = snowflake(stamp.Add(time.Second))
-	f.input.RequestID = "another-independent-question"
-	f.decision = json.RawMessage(`{"action":"second-question","todo_id":42}`)
-	if err := os.WriteFile(f.input.DecisionFile, f.decision, 0600); err != nil {
-		t.Fatal(err)
-	}
-	f.ask(t)
-	// Both real synthetic questions were posted while work was runnable.
-	// Register A through the actual locked CLI before B's answer arrives.
-	row, _ := f.r.conversationTask(ctx, 42)
-	scope, _ := f.r.conversationScopeFile(row, first)
-	snapshot, _ := f.r.conversationSnapshotFile(row, first, "second-question")
-	if _, err := f.r.Run(ctx, conversationTodo, "question-wait", "42", "--question-file", first.ReceiptFile, "--scope-file", scope, "--expected-state-file", snapshot); err != nil {
-		t.Fatal(err)
-	}
-	row, _ = f.r.todo(42)
-	wait := canonicalHash(row.QuestionWait)
-	reply := f.reply(t, 8, "answer for independent question B")
-	result, err := f.r.conversationWait(ctx, f.q.RequestID, false)
-	row, _ = f.r.todo(42)
-	if err != nil || result["outcome"] != "owner_reply_delivered" || row.Status != "block" || canonicalHash(row.QuestionWait) != wait || len(row.QuestionAnswers) != 0 || !strings.Contains(row.Note, reply.Body) {
-		t.Fatalf("independent answer was lost or current wait changed: %v %v", result, err)
-	}
+func TestConversationExplicitWaitReplyToAnotherQuestionKeepsCurrentWait(t *testing.T) {
+	explicitWaitVariants(t, func(t *testing.T, f *conversationFixture) {
+		ctx := context.Background()
+		first := f.q
+		stamp, _ := time.Parse(time.RFC3339Nano, f.created)
+		f.created = stamp.Add(time.Second).Format(time.RFC3339Nano)
+		f.question = snowflake(stamp.Add(time.Second))
+		f.input.RequestID = "another-independent-question"
+		f.decision = json.RawMessage(`{"action":"second-question","todo_id":42}`)
+		if err := os.WriteFile(f.input.DecisionFile, f.decision, 0600); err != nil {
+			t.Fatal(err)
+		}
+		f.ask(t)
+		// Both real synthetic questions were posted while work was runnable.
+		// Register A through the actual locked CLI before B's answer arrives.
+		row, _ := f.r.conversationTask(ctx, 42)
+		scope, _ := f.r.conversationScopeFile(row, first)
+		snapshot, _ := f.r.conversationSnapshotFile(row, first, "second-question")
+		if _, err := f.r.Run(ctx, conversationTodo, "question-wait", "42", "--question-file", first.ReceiptFile, "--scope-file", scope, "--expected-state-file", snapshot); err != nil {
+			t.Fatal(err)
+		}
+		row, _ = f.r.todo(42)
+		wait := canonicalHash(row.QuestionWait)
+		reply := f.reply(t, 8, "answer for independent question B")
+		result, err := f.r.conversationWait(ctx, f.q.RequestID, false)
+		row, _ = f.r.todo(42)
+		if err != nil || result["outcome"] != "owner_reply_delivered" || row.Status != "block" || canonicalHash(row.QuestionWait) != wait || len(row.QuestionAnswers) != 0 || !strings.Contains(row.Note, reply.Body) {
+			t.Fatalf("independent answer was lost or current wait changed: %v %v", result, err)
+		}
+	})
 }
 
-func TestConversationExplicitWaitNativeContinuedDeliveryKeepsNewGeneration(t *testing.T) {
-	f := explicitWaitTest(t, true)
-	f.mutateTodo(t, func(row map[string]any) { row["resume_generation"] = 1 })
-	if _, err := f.r.conversationWait(context.Background(), f.q.RequestID, false); err != nil {
-		t.Fatal(err)
-	}
-	f.mutateTodo(t, func(row map[string]any) {
-		row["status"], row["resume_generation"] = "doing", 2
-		row["worker_receipt"] = map[string]any{"job": nil, "generation": 2}
-		row["note"] = "New direct instruction and current work remain."
+func TestConversationExplicitWaitContinuedDeliveryKeepsNewGeneration(t *testing.T) {
+	explicitWaitVariants(t, func(t *testing.T, f *conversationFixture) {
+		f.mutateTodo(t, func(row map[string]any) { row["resume_generation"] = 1 })
+		if _, err := f.r.conversationWait(context.Background(), f.q.RequestID, false); err != nil {
+			t.Fatal(err)
+		}
+		f.mutateTodo(t, func(row map[string]any) {
+			row["status"], row["resume_generation"] = "doing", 2
+			row["worker_receipt"] = map[string]any{"job": nil, "generation": 2}
+			row["note"] = "New direct instruction and current work remain."
+		})
+		reply := f.reply(t, 8, "owner answer retained across continued work")
+		health := Health{}
+		f.r.processConversations(context.Background(), &health)
+		row, _ := f.r.todo(42)
+		if len(health.Errors) != 0 || row.Status != "doing" || len(row.QuestionAnswers) != 0 || len(row.QuestionDeliveries) != 1 || !strings.Contains(row.Note, reply.Body) || string(row.ResumeGeneration) != "2" || !conversationWaitRecorded(row, f.q) {
+			t.Fatalf("continued answer lost or new generation released: %v", health.Errors)
+		}
 	})
-	reply := f.reply(t, 8, "owner answer retained across continued work")
-	health := Health{}
-	f.r.processConversations(context.Background(), &health)
-	row, _ := f.r.todo(42)
-	if len(health.Errors) != 0 || row.Status != "doing" || len(row.QuestionAnswers) != 0 || len(row.QuestionDeliveries) != 1 || !strings.Contains(row.Note, reply.Body) || string(row.ResumeGeneration) != "2" || !conversationWaitRecorded(row, f.q) {
-		t.Fatalf("continued answer lost or new generation released: %v", health.Errors)
-	}
 }
 
 func TestConversationExplicitWaitLargeSnapshotCanRetryBeforeCommit(t *testing.T) {
@@ -462,49 +466,55 @@ func TestConversationExplicitWaitInspectionAndAliasCreateNoArtifacts(t *testing.
 	})
 }
 
-func TestConversationExplicitWaitNativeWithdrawalPreservesAskAndReplays(t *testing.T) {
-	w := withdrawalTestWithWait(t, true, false)
-	f := w.f
-	if _, err := f.r.conversationWait(context.Background(), f.q.RequestID, false); err != nil {
-		t.Fatal(err)
-	}
-	for attempt := 0; attempt < 2; attempt++ {
-		result, err := f.r.conversationWithdraw(context.Background(), f.q.RequestID, w.reason)
-		if err != nil || result["archived"] != true || result["withdrawn"] != true {
-			t.Fatalf("explicit wait withdrawal failed: %v %v", result, err)
-		}
-	}
-	index, _ := f.r.loadConversations()
-	q := index.Questions[f.q.RequestID]
-	row, _ := f.r.todo(42)
-	if q.Wait || q.InputSHA != f.q.InputSHA || q.Phase != "withdrawn" || row.Status != "todo" || len(row.QuestionAnswers) != 0 || w.patches != 1 {
-		t.Fatal("withdrawal changed ask input, manufactured answer or repeated archive")
+func TestConversationExplicitWaitWithdrawalPreservesAskAndReplays(t *testing.T) {
+	for _, native := range []bool{false, true} {
+		t.Run(fmt.Sprintf("native=%t", native), func(t *testing.T) {
+			w := withdrawalTestWithWait(t, native, false)
+			f := w.f
+			f.mutateTodo(t, func(row map[string]any) { row["note_history"] = []any{strings.Repeat("h", 1100<<10)} })
+			if _, err := f.r.conversationWait(context.Background(), f.q.RequestID, false); err != nil {
+				t.Fatal(err)
+			}
+			for attempt := 0; attempt < 2; attempt++ {
+				result, err := f.r.conversationWithdraw(context.Background(), f.q.RequestID, w.reason)
+				if err != nil || result["archived"] != true || result["withdrawn"] != true {
+					t.Fatalf("explicit wait withdrawal failed: %v %v", result, err)
+				}
+			}
+			index, _ := f.r.loadConversations()
+			q := index.Questions[f.q.RequestID]
+			row, _ := f.r.todo(42)
+			if q.Wait || q.InputSHA != f.q.InputSHA || q.Phase != "withdrawn" || row.Status != "todo" || len(row.QuestionAnswers) != 0 || w.patches != 1 {
+				t.Fatal("withdrawal changed ask input, manufactured answer or repeated archive")
+			}
+		})
 	}
 }
 
-func TestConversationExplicitWaitNativeCLIDeadlineAfterCommitKeepsReceipt(t *testing.T) {
-	f := explicitWaitTest(t, true)
-	backend := f.r.Run
-	reads := 0
-	f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
-		if args[0] == "recovery-replies" {
-			reads++
-			if reads == 2 {
-				<-ctx.Done() // deadline only after the actual canonical commit/readback
-				return "", ctx.Err()
+func TestConversationExplicitWaitCLIDeadlineAfterCommitKeepsReceipt(t *testing.T) {
+	explicitWaitVariants(t, func(t *testing.T, f *conversationFixture) {
+		backend := f.r.Run
+		reads := 0
+		f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+			if args[0] == "recovery-replies" {
+				reads++
+				if reads == 2 {
+					<-ctx.Done() // deadline only after the actual canonical commit/readback
+					return "", ctx.Err()
+				}
 			}
+			return backend(ctx, path, args...)
 		}
-		return backend(ctx, path, args...)
-	}
-	var out bytes.Buffer
-	code := conversationCLIWithTimeout([]string{"wait", "--request-id=" + f.q.RequestID}, &out,
-		func(string) (conversationCLIBackend, func(), error) { return f.r, func() {}, nil },
-		func(context.Context, string) bool { return true }, 2*time.Second)
-	var ack map[string]any
-	row, _ := f.r.todo(42)
-	if code != 0 || json.Unmarshal(out.Bytes(), &ack) != nil || ack["deadline"] != "after_wait_commit" || ack["reply_check"] != "deferred" || ack["outcome"] != "waiting" || row.Status != "block" || !conversationWaitRecorded(row, f.q) {
-		t.Fatalf("CLI hid the durable wait after deadline: code=%d output=%s", code, out.String())
-	}
+		var out bytes.Buffer
+		code := conversationCLIWithTimeout([]string{"wait", "--request-id=" + f.q.RequestID}, &out,
+			func(string) (conversationCLIBackend, func(), error) { return f.r, func() {}, nil },
+			func(context.Context, string) bool { return true }, 2*time.Second)
+		var ack map[string]any
+		row, _ := f.r.todo(42)
+		if code != 0 || json.Unmarshal(out.Bytes(), &ack) != nil || ack["deadline"] != "after_wait_commit" || ack["reply_check"] != "deferred" || ack["outcome"] != "waiting" || row.Status != "block" || !conversationWaitRecorded(row, f.q) {
+			t.Fatalf("CLI hid the durable wait after deadline: code=%d output=%s", code, out.String())
+		}
+	})
 }
 
 func TestConversationExplicitWaitNeverParksTheOriginOfAnotherRecipient(t *testing.T) {
@@ -519,4 +529,118 @@ func TestConversationExplicitWaitNeverParksTheOriginOfAnotherRecipient(t *testin
 	if string(before) != string(after) {
 		t.Fatal("the existing recipient contract was changed")
 	}
+}
+
+func TestConversationExplicitWaitContinuedAuditKeepsAppliedPhase(t *testing.T) {
+	explicitWaitVariants(t, func(t *testing.T, f *conversationFixture) {
+		f.mutateTodo(t, func(row map[string]any) { row["resume_generation"] = 1 })
+		if _, err := f.r.conversationWait(context.Background(), f.q.RequestID, false); err != nil {
+			t.Fatal(err)
+		}
+		f.mutateTodo(t, func(row map[string]any) {
+			row["status"], row["resume_generation"] = "doing", 2
+			row["worker_receipt"] = map[string]any{"job": nil, "generation": 2}
+			row["note"] = "Current work in the continued generation."
+		})
+		reply := f.reply(t, 8, "retained answer in continued work")
+		health := Health{}
+		f.r.processConversations(context.Background(), &health)
+		if len(health.Errors) != 0 {
+			t.Fatal(health.Errors)
+		}
+		request := f.r.conversationRequest(reply.Message)
+		request.Phase = "conversation_direction_recorded"
+		index, _ := f.r.loadConversations()
+		if err := f.r.deliverConversationReply(context.Background(), index.Questions[f.q.RequestID], reply, request); err != nil {
+			t.Fatal(err)
+		}
+		row, _ := f.r.todo(42)
+		if request.Phase != "conversation_direction_recorded" || len(row.QuestionDeliveries) != 1 || row.Status != "doing" || string(row.ResumeGeneration) != "2" {
+			t.Fatal("audit downgraded application state or repeated delivery")
+		}
+	})
+}
+
+func TestConversationExplicitWaitKeepsCompletedActorDeliveryFastPath(t *testing.T) {
+	f := actorTest(t, false)
+	f.input.Wait = false
+	f.ask(t)
+	f.reply(t, 8, "already delivered to the original bound recipient")
+	f.replies[0].Todo = f.input.Todo
+	health := Health{}
+	f.r.processConversations(context.Background(), &health)
+	request := f.r.conversationRequest(f.replies[0].Message)
+	if len(health.Errors) != 0 || request == nil || request.Phase != "conversation_reply_delivered" {
+		t.Fatalf("positive recipient delivery missing: %v", health.Errors)
+	}
+	f.r.Run = func(context.Context, string, ...string) (string, error) {
+		t.Fatal("completed recipient delivery was needlessly readmitted")
+		return "", errors.New("unexpected command")
+	}
+	if err := f.r.deliverConversationReply(context.Background(), f.q, f.replies[0], request); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestConversationExplicitWaitCLIDeadlineBeforeReadbackStillAcknowledgesCommit(t *testing.T) {
+	explicitWaitVariants(t, func(t *testing.T, f *conversationFixture) {
+		backend := f.r.Run
+		f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+			out, err := backend(ctx, path, args...)
+			if path == conversationTodo && args[0] == "question-wait" && err == nil {
+				<-ctx.Done()
+				return "", ctx.Err()
+			}
+			return out, err
+		}
+		var out bytes.Buffer
+		code := conversationCLIWithTimeout([]string{"wait", "--request-id=" + f.q.RequestID}, &out,
+			func(string) (conversationCLIBackend, func(), error) { return f.r, func() {}, nil },
+			func(context.Context, string) bool { return true }, 2*time.Second)
+		var ack map[string]any
+		row, _ := f.r.todo(42)
+		if code != 0 || json.Unmarshal(out.Bytes(), &ack) != nil || ack["deadline"] != "after_wait_commit" || ack["outcome"] != "waiting" || row.Status != "block" || !conversationWaitRecorded(row, f.q) {
+			t.Fatalf("deadline prevented bounded readback: code=%d output=%s", code, out.String())
+		}
+	})
+}
+
+func TestConversationExplicitWaitPostAnswerFailureReportsActualTaskState(t *testing.T) {
+	explicitWaitVariants(t, func(t *testing.T, f *conversationFixture) {
+		backend := f.r.Run
+		statePath := filepath.Join(f.r.Config.Home, "unattended-state.json")
+		backup := statePath + ".before"
+		blocked := false
+		t.Cleanup(func() {
+			if blocked {
+				if err := os.Remove(statePath); err != nil {
+					t.Error(err)
+				}
+				if err := os.Rename(backup, statePath); err != nil {
+					t.Error(err)
+				}
+			}
+		})
+		f.r.Run = func(ctx context.Context, path string, args ...string) (string, error) {
+			out, err := backend(ctx, path, args...)
+			if path == conversationTodo && args[0] == "question-wait" && err == nil {
+				f.reply(t, 8, "answer committed before the runner state save failed")
+			}
+			if path == conversationTodo && args[0] == "question-answer" && err == nil && !blocked {
+				if err := os.Rename(statePath, backup); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Mkdir(statePath, 0700); err != nil {
+					t.Fatal(err)
+				}
+				blocked = true
+			}
+			return out, err
+		}
+		result, err := f.r.conversationWait(context.Background(), f.q.RequestID, false)
+		row, _ := f.r.todo(42)
+		if err != nil || !blocked || result["outcome"] != "question_answered" || result["task_status"] != "todo" || result["reply_processing"] != "deferred" || !shaPattern.MatchString(fmt.Sprint(result["answer_receipt_sha256"])) || row.Status != "todo" || len(row.QuestionAnswers) != 1 {
+			t.Fatalf("old block was reported after committed answer: %v %v", result, err)
+		}
+	})
 }

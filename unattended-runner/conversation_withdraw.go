@@ -90,7 +90,7 @@ func (r *Runner) withdrawalRecorded(q ConversationQuestion, record *conversation
 	if err != nil || bytesHash(b) != q.ReceiptSHA || json.Unmarshal(b, &expected) != nil {
 		return false, errConversationWithdraw
 	}
-	originBytes, err := boundedRegular(filepath.Join(r.Config.Home, "conversations", q.RequestID, "withdrawal-origin.json"))
+	originBytes, err := boundedRegularUpTo(filepath.Join(r.Config.Home, "conversations", q.RequestID, "withdrawal-origin.json"), maxTodo)
 	var origin struct {
 		Generation json.RawMessage `json:"resume_generation"`
 		Worker     json.RawMessage `json:"worker_receipt"`
@@ -216,7 +216,11 @@ func (r *Runner) conversationWithdraw(ctx context.Context, requestID, reasonFile
 	}
 	validateFiles := func() error {
 		for path, expected := range map[string]string{originPath: record.OriginSHA, savedReason: record.ReasonSHA, q.ReceiptFile: q.ReceiptSHA} {
-			b, err := boundedRegular(path)
+			ceiling := 1 << 20
+			if path == originPath {
+				ceiling = maxTodo
+			}
+			b, err := boundedRegularUpTo(path, ceiling)
 			if err != nil || bytesHash(b) != expected {
 				return errConversationWithdraw
 			}
@@ -292,7 +296,7 @@ func (r *Runner) conversationWithdraw(ctx context.Context, requestID, reasonFile
 			return nil, errConversationWithdraw
 		}
 		origin := row.conversationState
-		if writeConversationOnce(originPath, origin) != nil || writeConversationOnce(savedReason, reason) != nil {
+		if writeConversationOnceUpTo(originPath, origin, maxTodo) != nil || writeConversationOnce(savedReason, reason) != nil {
 			return nil, errConversationWithdraw
 		}
 		record = &conversationWithdrawal{Domain: conversationWithdrawalDomain, Question: q, ReasonSHA: bytesHash(reason), OriginSHA: bytesHash(origin), ProofSHA: proofSHA, Phase: "prepared"}

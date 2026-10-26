@@ -16,7 +16,7 @@ anthropic/claude-opus-5-5 / max / 当該worktreeを照合した。
   既存の継続配送とRustのロック内判定を使い、現在の担当・世代を維持する。
   nativeの2質問と継続世代のテストで確認した。
 - Must 2: 大きな行snapshotを小さな不変receipt用の読取へ渡さず、runner.lock内の
-  固定CAS入力としてwriteTextで原子的に置換する。1MiB超の合成行で、
+  固定CAS入力としてwriteTextで書き込む。1MiB超の合成行で、
   commit前の失敗→同じ行の再実行→待機登録をnativeでも確認した。
 - 失敗した初回試行でintentを永続化せず、正規待機を読み返した後に保存する。
   未登録の古い世代が、正当な次の試行を永久に止める問題を解消する。
@@ -52,3 +52,29 @@ origin/main 461e0ab5の受信担当の修復を取り込み、4ファイルの�
 この元ToDo向けの明示待機操作は、別の受信担当に結ばれた質問のorigin行へ
 待機を作らない。既存の受信担当用の受付・待機・配送の経路は変更しない。
 統合直後のGo TestConversationは成功（28.338秒、native候補は別担当で再作成する）。
+
+## 再確認4008への対応
+
+固定59d463b6→1e5da9e7の読取を受領。実job20261027-034359-todo-4008の
+native turn_contextでOpus5.5/maxを照合した。
+原応答SHA256は2df78619e570af1c2b4a5f964bed81cb05aba0327e3ef70078733d9d5f520773。
+初回のMust 1と、待機登録のMust 2は解消済みとの評価。
+新たに取り下げ側の同じsnapshot上限がMustとなった。
+
+- 行snapshot用の保存・読取をmaxTodoでそろえ、question/reply envelopeは従来の
+  1MiBを保持した。1MiB超の履歴を持つ行で、明示待機の取り下げと再実行を確認する。
+- 継続世代の配送済み回答は、毎分の監査でapplied等の段階を下げず、配送を繰り返さない。
+  mainから統合した受信担当の完了済み経路も従来の早期returnを保つ。
+- Must 1の2ケース・取り下げ・期限後の応答を合成版でも実行し、CIのGo回帰として
+  常時確認する。実ToDo CLIのロックや世代の保持は引き続きnative版でも確認する。
+- 期限がcommit後・読戻し前に来た時だけ、3秒以内の読取で正規guardと待機を再確認する。
+  明示的なcancelでは延長せず、期限後に新しいToDo変更を始めない。
+- 回答の正規receiptを確認でき、後続の保存等が未完了なら、実際のtask_statusと
+  question_answered / reply_processing=deferredを返す。
+  最新の全返信や編集の配送・本人判断の実反映が完了したとの主張にはしない。
+- writeTextは書込み中のファイルを原子的に置換する関数ではないため、その表現を訂正した。
+  runner.lock内の作業入力を書いてから使い、中断した不完全なCAS入力はRustが拒否し、
+  次の同じ操作で書き直す。正規の質問receiptや保護原本は書き換えない。
+
+統合確認4009では、e31df774のRust関連120件とGo race/native受入を確認中。
+これ以後のGo追加差分は、同じRust候補で確認し、別モデルの最終差分レビューへ渡す。

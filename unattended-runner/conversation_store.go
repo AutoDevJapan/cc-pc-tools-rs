@@ -167,19 +167,28 @@ func canonicalHash(value any) string {
 }
 
 func boundedRegular(path string) ([]byte, error) {
+	return boundedRegularUpTo(path, 1<<20)
+}
+
+// Selected canonical rows use maxTodo; question/reply envelopes keep 1MiB.
+func boundedRegularUpTo(path string, ceiling int) ([]byte, error) {
 	info, err := os.Lstat(path)
-	if err != nil || !info.Mode().IsRegular() || info.Size() > 1<<20 {
+	if err != nil || !info.Mode().IsRegular() || info.Size() > int64(ceiling) {
 		return nil, errors.New("conversation input unavailable")
 	}
 	b, err := os.ReadFile(path)
-	if err != nil || len(b) > 1<<20 {
+	if err != nil || len(b) > ceiling {
 		return nil, errors.New("conversation input unavailable")
 	}
 	return b, nil
 }
 
 func writeConversationOnce(path string, data []byte) error {
-	if previous, err := boundedRegular(path); err == nil {
+	return writeConversationOnceUpTo(path, data, 1<<20)
+}
+
+func writeConversationOnceUpTo(path string, data []byte, ceiling int) error {
+	if previous, err := boundedRegularUpTo(path, ceiling); err == nil {
 		if string(previous) != string(data) {
 			return errors.New("conversation immutable input differs")
 		}
@@ -214,7 +223,7 @@ func writeConversationOnce(path string, data []byte) error {
 	if err = os.Link(f.Name(), path); err == nil {
 		return nil
 	}
-	if previous, readErr := boundedRegular(path); readErr == nil && string(previous) == string(data) {
+	if previous, readErr := boundedRegularUpTo(path, ceiling); readErr == nil && string(previous) == string(data) {
 		return nil
 	}
 	return err

@@ -31,19 +31,20 @@ type skillsRevisionRequest struct {
 }
 
 type skillsRevisionEvidence struct {
-	Domain         string                 `json:"domain"`
-	Writer         skillsWriter           `json:"writer"`
-	RequestSHA     string                 `json:"request_sha256"`
-	ManifestCommit string                 `json:"manifest_commit"`
-	ManifestPath   string                 `json:"manifest_path"`
-	ManifestSHA    string                 `json:"manifest_sha256"`
-	CreationSHA    string                 `json:"creation_request_sha256"`
-	CreationCall   string                 `json:"creation_native_call_id"`
-	Review         skillsResultRequest    `json:"review"`
-	Producer       skillsProducer         `json:"producer"`
-	Original       skillsCreatedFile      `json:"original"`
-	Pending        skillsCreatedFile      `json:"pending"`
-	History        skillsCreatedDirectory `json:"history_directory"`
+	Domain         string                       `json:"domain"`
+	Writer         skillsWriter                 `json:"writer"`
+	RequestSHA     string                       `json:"request_sha256"`
+	ManifestCommit string                       `json:"manifest_commit"`
+	ManifestPath   string                       `json:"manifest_path"`
+	ManifestSHA    string                       `json:"manifest_sha256"`
+	CreationSHA    string                       `json:"creation_request_sha256"`
+	CreationCall   string                       `json:"creation_native_call_id"`
+	Review         skillsResultRequest          `json:"review"`
+	Producer       skillsProducer               `json:"producer"`
+	Original       skillsCreatedFile            `json:"original"`
+	Pending        skillsCreatedFile            `json:"pending"`
+	History        skillsCreatedDirectory       `json:"history_directory"`
+	Recovery       *skillsRevisionRecoveryProof `json:"native_recovery,omitempty"`
 }
 
 func skillsRevisionManifestShape(old, next skillsManifest) bool {
@@ -313,7 +314,8 @@ func skillsRevisionEvidenceBound(e skillsRevisionEvidence, r skillsRequest, orig
 		e.ManifestCommit == r.ManifestCommit && e.ManifestPath == r.ManifestPath && e.ManifestSHA == r.ManifestSHA && e.Review == *r.Review &&
 		e.CreationSHA == skillsRevisionCreationSHA && e.CreationCall == skillsRevisionCreationCall && skillsAcceptedProducer(e.Producer, current) &&
 		len(original.Files) == 52 && e.Original == original.Files[27] && e.Pending.Target == skillsRevisionPending && e.Pending.SHA == skillsRevisionNewSHA && e.Pending.Size == 10097 &&
-		e.Pending.ID != e.Original.ID && e.Pending.ID.File != "" && e.History.Relative == filepath.ToSlash(filepath.Dir(skillsRevisionHistory)) && e.History.ID.File != ""
+		e.Pending.ID != e.Original.ID && e.Pending.ID.File != "" && e.History.Relative == filepath.ToSlash(filepath.Dir(skillsRevisionHistory)) && e.History.ID.File != "" &&
+		(e.Recovery == nil || *e.Recovery == skillsRevisionRecoveryAudit())
 }
 
 func skillsRevisionOperation(op, path string, raw []byte, r skillsRequest, reg skillsRegistry, s *skillsFS) object {
@@ -366,8 +368,12 @@ func skillsRevisionOperation(op, path string, raw []byte, r skillsRequest, reg s
 			return fail("request")
 		}
 		if c.Prepared != nil {
-			if _, reason := skillsReadRevisionReceipt(s, *c.Prepared, "prepare-skills3080-revision", r, reg, original, current); reason != "" {
+			e, reason := skillsReadRevisionReceipt(s, *c.Prepared, "prepare-skills3080-revision", r, reg, original, current)
+			if reason != "" {
 				return fail(reason)
+			}
+			if e.Recovery != nil {
+				result["native_recovery"] = e.Recovery
 			}
 			result["operation"], result["apply_native_invocation"] = "qualify_own_revision1", skillsRevisionInvocation("apply-skills3080-revision", path, r.Writer.Workspace)
 			return result
@@ -394,6 +400,9 @@ func skillsRevisionOperation(op, path string, raw []byte, r skillsRequest, reg s
 	if op == "prepare-skills3080-revision" {
 		if c.Prepared != nil || c.Applied != nil || len(c.Indices) != 0 {
 			return fail("request")
+		}
+		if !skillsRevisionPrepareNative(s, r.Writer, path) {
+			return fail("native_invocation")
 		}
 		evidence, reason = skillsRevisionPrepare(old, original, skillsCentralRoot, next, s)
 		if reason != "" {
@@ -425,7 +434,7 @@ func skillsRevisionOperation(op, path string, raw []byte, r skillsRequest, reg s
 				return fail("request")
 			}
 			applied, reason := skillsReadRevisionReceipt(s, *c.Applied, "apply-skills3080-revision", r, reg, original, current)
-			if reason != "" || applied.Pending != evidence.Pending || applied.History != evidence.History {
+			if reason != "" || applied.Pending != evidence.Pending || applied.History != evidence.History || !skillsRevisionRecoveryEqual(applied.Recovery, evidence.Recovery) {
 				return fail("creation_evidence")
 			}
 			result, reason := skillsConsumeCurrent(next, skillsRevisionSnapshot(original, applied, next), skillsCentralRoot, s, c.Indices)
@@ -436,6 +445,9 @@ func skillsRevisionOperation(op, path string, raw []byte, r skillsRequest, reg s
 				return fail("writer")
 			}
 			result["revision_native_call_id"], result["manifest_sha256"], result["revision_producer"] = c.Applied.CallID, r.ManifestSHA, applied.Producer
+			if applied.Recovery != nil {
+				result["native_recovery"] = applied.Recovery
+			}
 			return result
 		} else {
 			return fail("request")

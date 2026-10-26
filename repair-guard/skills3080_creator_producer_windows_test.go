@@ -8,7 +8,7 @@ import (
 )
 
 func TestSkills3080CreatorConsumeAfterProducerUpdate(t *testing.T) {
-	for _, kind := range []string{"same_producer", "accepted_03a", "accepted_29118", "unknown_producer", "wrong_revision", "other_writer", "other_request", "other_manifest", "other_review", "old_receipt", "missing_file", "changed_bytes", "replacement", "hardlink", "protected_leaf"} {
+	for _, kind := range []string{"same_producer", "accepted_03a", "accepted_29118", "accepted_3a0", "unknown_producer", "wrong_revision", "other_writer", "other_request", "other_manifest", "other_review", "old_receipt", "missing_file", "changed_bytes", "replacement", "hardlink", "protected_leaf"} {
 		t.Run(kind, func(t *testing.T) {
 			m, creation, evidence, root := skillsForwardFixture(t)
 			sha := evidence.RequestSHA
@@ -19,6 +19,8 @@ func TestSkills3080CreatorConsumeAfterProducerUpdate(t *testing.T) {
 			path := filepath.Join(root, filepath.FromSlash(m.Files[0].Target))
 			blocked := func(string) bool { return false }
 			switch kind {
+			case "accepted_3a0":
+				evidence.Producer = skillsProducer{"3a0f5065eb6ae56fdcc0a1f0ef78131f999e2331a0412b01faea91260adffeaa", "a067ff63db64a88fc218fc4c8400552454d5d691"}
 			case "accepted_29118":
 				evidence.Producer = skillsProducer{"29118cd151cc9ccec8bb6a371382e2a3cc2507d5b36e3837f6cc87793b5b21fb", "e1a4c21dc6241c140d4d7364d34f42b16d7005be"}
 			case "unknown_producer":
@@ -60,7 +62,7 @@ func TestSkills3080CreatorConsumeAfterProducerUpdate(t *testing.T) {
 			fs := skillsFS{blocked: blocked}
 			defer fs.close()
 			result, reason := skillsConsumeCreatedCurrent(m, creation, sha, evidence, root, &fs, []int{0}, current)
-			positive := kind == "same_producer" || kind == "accepted_03a" || kind == "accepted_29118"
+			positive := kind == "same_producer" || kind == "accepted_03a" || kind == "accepted_29118" || kind == "accepted_3a0"
 			if positive {
 				if reason != "" || result["qualified"] != true {
 					t.Fatalf("known issued output rejected: %s", reason)

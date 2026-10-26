@@ -20,6 +20,10 @@ const skillsGuardModule = "github.com/AutoDevJapan/cc-pc-tools-rs/repair-guard"
 // Independent previously accepted distribution facts (3258 and3686), not a caller
 // supplied baseline or an assertion made by the artifact being installed.
 var skillsGuardBaselines = map[string]string{
+	// PR540's accepted merged-source build, formal Luna reviews and the
+	// original parent's native prepare/20-buffer issuance, preserved as issued.
+	// Evidence: docs/evidence/skills-3080-guard-installed-a067.json.
+	"3a0f5065eb6ae56fdcc0a1f0ef78131f999e2331a0412b01faea91260adffeaa": "a067ff63db64a88fc218fc4c8400552454d5d691",
 	// PR536's independently accepted Windows distribution and original
 	// parent's 92-buffer receipt; never learned from the proposed new binary.
 	// Evidence: docs/evidence/skills-3080-guard-installed-52d417.json.

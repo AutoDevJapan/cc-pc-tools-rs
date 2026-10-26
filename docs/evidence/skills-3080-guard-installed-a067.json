@@ -1,0 +1,28 @@
+{
+  "domain": "skills-3080-accepted-software-baseline-v1",
+  "public_source_commit": "a067ff63db64a88fc218fc4c8400552454d5d691",
+  "installed_sha256": "3a0f5065eb6ae56fdcc0a1f0ef78131f999e2331a0412b01faea91260adffeaa",
+  "original_distribution_job": "20261026-134255-todo-3686",
+  "formal_review": {
+    "task": 3896,
+    "implementation_head": "f28d7ff27ee96c1aa0eae873f89fa35a67e2488f",
+    "implementation_response_sha256": "30ed5a6a8b45bbd212e35f4267028ce907350f3be5962cfa56a3c2b9753c890d",
+    "combined_job": "20261026-142256-todo-3896",
+    "combined_spec_sha256": "7684c52579b234791cf006ae440ed5c8822ba712fbb1fa71f1df1ca78a1f86ee",
+    "combined_response_sha256": "3e9c1e455bd12f6f06d5ac75808fb3e8acd7679e6c20f0de31f70e2feb04f637",
+    "must": 0
+  },
+  "independent_native_observation": {
+    "creator": "20261026-090101-todo-3080",
+    "prepare_call_id": "call_31fa406e37984d8c8b532a62dd25b922",
+    "input_sha256": "f49660100a01d8ad27abe051042f11d3edaf63b427465ffa3bd18ef2d6b25628",
+    "tool_blocks_sha256": "37b20cca9ffa6a1c274951695a13c2dca49dc83a58cc73d2ca5cc456b9154049",
+    "stdout_sha256": "c68b627e8b2c3f802c385152f1eb1b3f0392f7215ecf2fb30e1c17ae02e2a4fa",
+    "canonical_call_matched": false,
+    "projection_scope": "only the named tool call and result in the canonical original native session; no final response or unrelated message"
+  },
+  "software_only": true,
+  "general_access_granted": false,
+  "original_registry_recovered": false,
+  "note": "The original formal review, exact-head CI and Windows distribution were accepted before this repair. The canonical original creator independently returned this producer in its prepare and new 20-file issuance. Retaining this software producer does not make the mismatched prepare canonical or classify unknown data. This public record is provenance, never an input authority."
+}
